@@ -67,16 +67,17 @@ model VerificationToken {
 }
 
 model Event {
-  id          String   @id @default(cuid())
-  title       String
-  description String?
-  game        String?
-  startAt     DateTime
-  maxPlayers  Int?
-  pointReward Int      @default(50)
-  type        String   @default("community")
-  status      String   @default("open")
-  createdAt   DateTime @default(now())
+  id             String   @id @default(cuid())
+  title          String
+  description    String?
+  game           String?
+  startAt        DateTime
+  maxPlayers     Int?
+  pointReward    Int      @default(50)
+  type           String   @default("community")
+  status         String   @default("open")
+  discordEventId String?  @unique
+  createdAt      DateTime @default(now())
 
   registrations EventRegistration[]
   tournament    Tournament?
