@@ -1,7 +1,6 @@
 import { GuildScheduledEvent, GuildScheduledEventStatus } from "discord.js";
 import { prisma } from "@/lib/prisma";
 
-// Discord Entity-Typen → unser Status-System
 function mapStatus(status: GuildScheduledEventStatus): string {
   switch (status) {
     case GuildScheduledEventStatus.Scheduled: return "open";
@@ -12,7 +11,6 @@ function mapStatus(status: GuildScheduledEventStatus): string {
   }
 }
 
-// Spiel aus dem Event-Namen/Beschreibung erkennen
 function detectGame(name: string, description?: string | null): string | null {
   const text = `${name} ${description ?? ""}`.toLowerCase();
   const games: Record<string, string> = {
@@ -33,12 +31,16 @@ function detectGame(name: string, description?: string | null): string | null {
   return null;
 }
 
-// Maximale Spieleranzahl aus Beschreibung extrahieren (z.B. "16 Spieler" oder "max 32")
 function detectMaxPlayers(description?: string | null): number | null {
   if (!description) return null;
   const match = description.match(/(?:max\.?\s*|bis zu\s*|slots?:?\s*)(\d+)/i)
     ?? description.match(/(\d+)\s*(?:spieler|player|slots?|plätze)/i);
   return match ? parseInt(match[1]) : null;
+}
+
+// Hilfsfunktion: Event anhand discordEventId finden
+async function findEventByDiscordId(discordEventId: string) {
+  return prisma.event.findUnique({ where: { discordEventId } });
 }
 
 export async function syncEvent(discordEvent: GuildScheduledEvent) {
@@ -53,10 +55,7 @@ export async function syncEvent(discordEvent: GuildScheduledEvent) {
     const game = detectGame(name, description);
     const maxPlayers = detectMaxPlayers(description);
 
-    // Existiert das Event schon? (anhand discordEventId im description-Feld als Marker)
-    const existing = await prisma.event.findFirst({
-      where: { description: { contains: `discord:${discordEventId}` } },
-    });
+    const existing = await findEventByDiscordId(discordEventId);
 
     if (existing) {
       await prisma.event.update({
@@ -71,15 +70,11 @@ export async function syncEvent(discordEvent: GuildScheduledEvent) {
       });
       console.log(`  ↻ Event aktualisiert: ${name}`);
     } else {
-      // Beschreibung mit Discord-ID als Marker speichern
-      const fullDescription = description
-        ? `${description}\n\ndiscord:${discordEventId}`
-        : `discord:${discordEventId}`;
-
       await prisma.event.create({
         data: {
           title: name,
-          description: fullDescription,
+          description: description ?? null,
+          discordEventId,
           startAt: scheduledStartAt,
           status,
           type: "community",
@@ -91,19 +86,54 @@ export async function syncEvent(discordEvent: GuildScheduledEvent) {
       console.log(`  ✚ Event erstellt: ${name}`);
     }
   } catch (err) {
-    console.error("Fehler beim Sync:", err);
+    console.error("Fehler beim Event-Sync:", err);
   }
 }
 
 export async function updateEventStatus(discordEventId: string, status: string) {
   try {
-    const event = await prisma.event.findFirst({
-      where: { description: { contains: `discord:${discordEventId}` } },
-    });
+    const event = await findEventByDiscordId(discordEventId);
     if (event) {
       await prisma.event.update({ where: { id: event.id }, data: { status } });
     }
   } catch (err) {
     console.error("Fehler beim Status-Update:", err);
+  }
+}
+
+// Discord-Teilnahme → WebApp-Registrierung
+export async function syncAttendee(
+  discordEventId: string,
+  discordUserId: string,
+  action: "add" | "remove"
+) {
+  try {
+    const event = await findEventByDiscordId(discordEventId);
+    if (!event) {
+      console.log(`  ⚠ Event ${discordEventId} nicht in DB gefunden`);
+      return;
+    }
+
+    const user = await prisma.user.findUnique({ where: { discordId: discordUserId } });
+    if (!user) {
+      console.log(`  ⚠ User ${discordUserId} hat noch keinen WebApp-Account`);
+      return;
+    }
+
+    if (action === "add") {
+      await prisma.eventRegistration.upsert({
+        where: { userId_eventId: { userId: user.id, eventId: event.id } },
+        create: { userId: user.id, eventId: event.id },
+        update: {}, // already exists → no-op
+      });
+      console.log(`  ✅ ${user.name ?? discordUserId} → Event "${event.title}" angemeldet (Discord)`);
+    } else {
+      await prisma.eventRegistration.deleteMany({
+        where: { userId: user.id, eventId: event.id },
+      });
+      console.log(`  ✖ ${user.name ?? discordUserId} → Event "${event.title}" abgemeldet (Discord)`);
+    }
+  } catch (err) {
+    console.error("Fehler beim Attendee-Sync:", err);
   }
 }

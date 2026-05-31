@@ -2,7 +2,7 @@ import {
   Client, GatewayIntentBits, Events,
   GuildScheduledEventStatus, VoiceState,
 } from "discord.js";
-import { syncEvent, updateEventStatus } from "./sync";
+import { syncEvent, updateEventStatus, syncAttendee } from "./sync";
 import { trackVoice, trackMessage, handleMemberJoin } from "./activity";
 
 const client = new Client({
@@ -70,6 +70,14 @@ client.on(Events.GuildScheduledEventUpdate, async (_, e) => {
   if (e.status === GuildScheduledEventStatus.Completed) await updateEventStatus(e.id, "finished");
 });
 client.on(Events.GuildScheduledEventDelete, async (e) => { await updateEventStatus(e.id, "finished"); });
+
+// Discord-Teilnahme → WebApp-Registrierung
+client.on(Events.GuildScheduledEventUserAdd, async (event, user) => {
+  await syncAttendee(event.id, user.id, "add");
+});
+client.on(Events.GuildScheduledEventUserRemove, async (event, user) => {
+  await syncAttendee(event.id, user.id, "remove");
+});
 
 client.login(process.env.DISCORD_BOT_TOKEN);
 export default client;
