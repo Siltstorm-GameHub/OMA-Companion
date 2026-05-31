@@ -9,14 +9,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Discord({
       authorization: { params: { scope: "identify email guilds" } },
+      // HIER EINGEFÜGT: Zwingt NextAuth, deine echte Discord-ID als User-ID zu nutzen
+      profile(profile) {
+        return {
+          id: profile.id, // Das ist deine echte, numerische Discord-ID!
+          name: profile.username,
+          email: profile.email,
+          image: profile.avatar
+            ? `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png`
+            : null,
+          role: "user", // Standardrolle für neue User
+        };
+      },
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    // account hier hinzugefügt, um beim Erst-Login die ID abzugreifen
+    async jwt({ token, user, account }) {
       // 1. Initialer Login-Moment (Erstregistrierung oder frischer Login)
       if (user) {
-        token.id = user.id;
-        // Beim allerersten Login geben wir standardmäßig die Rolle "user"
+        // Wenn vorhanden, nutzen wir die providerAccountId (reine Discord-ID)
+        token.id = account?.providerAccountId ?? user.id;
         token.role = "user";
       } 
       // 2. Nachfolgende Seitenaufrufe (User existiert bereits in der DB)
