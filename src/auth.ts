@@ -28,19 +28,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async jwt({ token, user, account }) {
       // ID beim initialen Login setzen
       if (user) {
-        token.id = account?.providerAccountId ?? user.id;
+        token.id = user.id; // Echter DB-Primary-Key, NICHT providerAccountId
+        token.discordId = account?.providerAccountId;
       }
-      // Rolle bei JEDEM Aufruf frisch aus der DB laden (initial + Folgeaufrufe)
+      // Rolle bei JEDEM Aufruf frisch aus der DB laden
       if (token.id) {
         try {
           const dbUser = await prisma.user.findUnique({
             where: { id: token.id as string },
-            select: { role: true },
+            select: { id: true, role: true },
           });
+          console.log(`[AUTH] token.id=${token.id} discordId=${token.discordId} dbUser=${JSON.stringify(dbUser)}`);
           token.role = dbUser?.role ?? "user";
         } catch (error) {
-          console.error("Fehler beim Laden der Benutzerrolle:", error);
-          // Bei Fehler: bestehende Rolle behalten, nicht auf "user" zurücksetzen
+          console.error("[AUTH] DB-Fehler beim Laden der Rolle:", error);
           if (!token.role) token.role = "user";
         }
       }
