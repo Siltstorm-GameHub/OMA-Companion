@@ -26,14 +26,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     // account hier hinzugefügt, um beim Erst-Login die ID abzugreifen
     async jwt({ token, user, account }) {
-      // 1. Initialer Login-Moment (Erstregistrierung oder frischer Login)
+      // ID beim initialen Login setzen
       if (user) {
-        // Wenn vorhanden, nutzen wir die providerAccountId (reine Discord-ID)
         token.id = account?.providerAccountId ?? user.id;
-        token.role = "user";
-      } 
-      // 2. Nachfolgende Seitenaufrufe (User existiert bereits in der DB)
-      else if (token.id) {
+      }
+      // Rolle bei JEDEM Aufruf frisch aus der DB laden (initial + Folgeaufrufe)
+      if (token.id) {
         try {
           const dbUser = await prisma.user.findUnique({
             where: { id: token.id as string },
@@ -42,7 +40,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.role = dbUser?.role ?? "user";
         } catch (error) {
           console.error("Fehler beim Laden der Benutzerrolle:", error);
-          token.role = "user";
+          // Bei Fehler: bestehende Rolle behalten, nicht auf "user" zurücksetzen
+          if (!token.role) token.role = "user";
         }
       }
       return token;
