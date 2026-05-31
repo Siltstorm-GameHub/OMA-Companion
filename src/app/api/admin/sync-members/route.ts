@@ -38,8 +38,8 @@ export async function POST() {
   // Bots herausfiltern
   const humans = allMembers.filter((m) => !m.user.bot);
 
-  let created = 0;
   let updated = 0;
+  let skipped = 0;
 
   for (const member of humans) {
     const discordId = member.user.id;
@@ -48,28 +48,39 @@ export async function POST() {
       ? `https://cdn.discordapp.com/avatars/${discordId}/${member.user.avatar}.png`
       : null;
 
-    const existing = await prisma.user.findUnique({ where: { discordId } });
+    // 1. Per discordId suchen (bereits verknüpfte User)
+    let existing = await prisma.user.findUnique({ where: { discordId } });
+
+    // 2. Falls nicht gefunden: über Account-Tabelle suchen (OAuth-Login ohne discordId)
+    if (!existing) {
+      const account = await prisma.account.findUnique({
+        where: {
+          provider_providerAccountId: { provider: "discord", providerAccountId: discordId },
+        },
+        include: { user: true },
+      });
+      if (account?.user) {
+        existing = account.user;
+        // discordId nachträglich setzen damit zukünftige Syncs direkt treffen
+        await prisma.user.update({
+          where: { id: existing.id },
+          data: { discordId },
+        });
+      }
+    }
 
     if (existing) {
       await prisma.user.update({
-        where: { discordId },
+        where: { id: existing.id },
         data: { username, image: avatar ?? existing.image },
       });
       updated++;
     } else {
-      await prisma.user.create({
-        data: {
-          discordId,
-          username,
-          name: username,
-          image: avatar,
-        },
-      });
-      created++;
+      skipped++; // Noch kein Account → muss sich selbst einloggen
     }
   }
 
-  return NextResponse.json({ success: true, total: humans.length, created, updated });
+  return NextResponse.json({ success: true, total: humans.length, updated, skipped });
 }
 
 interface DiscordMember {
