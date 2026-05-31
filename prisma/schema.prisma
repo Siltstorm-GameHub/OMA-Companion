@@ -1,0 +1,218 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+
+  discordId     String?   @unique
+  username      String?
+  role          String    @default("user") // user | moderator | admin
+  points        Int       @default(0)
+  level         Int       @default(1)
+  streak        Int       @default(0)
+  lastActiveAt  DateTime?
+  createdAt     DateTime  @default(now())
+
+  accounts      Account[]
+  sessions      Session[]
+  eventRegistrations        EventRegistration[]
+  pointTransactions         PointTransaction[]
+  tournamentParticipants    TournamentParticipant[]
+  teamMemberships           TeamMember[]
+  matchEntries              MatchEntry[]
+  questProgress             UserQuestProgress[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  @@unique([identifier, token])
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  game        String?
+  startAt     DateTime
+  maxPlayers  Int?
+  pointReward Int      @default(50)
+  type        String   @default("community")
+  status      String   @default("open")
+  createdAt   DateTime @default(now())
+
+  registrations EventRegistration[]
+  tournament    Tournament?
+}
+
+model EventRegistration {
+  id        String   @id @default(cuid())
+  userId    String
+  eventId   String
+  joinedAt  DateTime @default(now())
+  attended  Boolean  @default(false)
+  user      User     @relation(fields: [userId], references: [id])
+  event     Event    @relation(fields: [eventId], references: [id])
+  @@unique([userId, eventId])
+}
+
+model Tournament {
+  id           String   @id @default(cuid())
+  eventId      String   @unique
+  // single_elimination | double_elimination | round_robin | ffa | coop_stats
+  format       String   @default("single_elimination")
+  status       String   @default("pending")
+  // JSON: {"1": 100, "2": 50, "3": 25} — Punkte pro Platzierung
+  pointsConfig String?
+  // JSON: ["Kills","Assists","Punkte"] — für ffa/coop_stats sichtbare Stat-Spalten
+  statFields   String?
+  createdAt    DateTime @default(now())
+  event        Event    @relation(fields: [eventId], references: [id])
+
+  participants TournamentParticipant[]
+  matches      Match[]
+  teams        Team[]
+}
+
+model TournamentParticipant {
+  id           String     @id @default(cuid())
+  tournamentId String
+  userId       String
+  seed         Int?
+  eliminated   Boolean    @default(false)
+  finalRank    Int?
+  tournament   Tournament @relation(fields: [tournamentId], references: [id])
+  user         User       @relation(fields: [userId], references: [id])
+  @@unique([tournamentId, userId])
+}
+
+// Nur für team_vs_team-Formate
+model Team {
+  id           String       @id @default(cuid())
+  tournamentId String
+  name         String
+  color        String?
+  tournament   Tournament   @relation(fields: [tournamentId], references: [id])
+  members      TeamMember[]
+  matchEntries MatchEntry[]
+}
+
+model TeamMember {
+  id     String @id @default(cuid())
+  teamId String
+  userId String
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id])
+  @@unique([teamId, userId])
+}
+
+model Match {
+  id           String       @id @default(cuid())
+  tournamentId String
+  round        Int
+  position     Int
+  title        String?
+  scheduledAt  DateTime?
+  notes        String?
+  // 1v1 / single_elimination: player1Id/player2Id/score1/score2/winnerId
+  player1Id    String?
+  player2Id    String?
+  winnerId     String?
+  score1       Int?
+  score2       Int?
+  playedAt     DateTime?
+  tournament   Tournament   @relation(fields: [tournamentId], references: [id])
+  // ffa / coop_stats / team_vs_team: eine Zeile pro Teilnehmer
+  entries      MatchEntry[]
+}
+
+// Flexible Teilnehmer-Zeile für FFA, Coop und Team-Matches
+model MatchEntry {
+  id        String  @id @default(cuid())
+  matchId   String
+  // Entweder userId (Einzelspieler) oder teamId (Team)
+  userId    String?
+  teamId    String?
+  placement Int?    // Platzierung (1 = Erster)
+  score     Int?    // Numerischer Score/Punkte im Match
+  // JSON: {"Kills": 12, "Assists": 3} — passend zu Tournament.statFields
+  statsJson String?
+  match     Match   @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  user      User?   @relation(fields: [userId], references: [id])
+  team      Team?   @relation(fields: [teamId], references: [id])
+}
+
+model Quest {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  // VOICE_MINUTES | MESSAGES | EVENT_ATTEND | TOURNAMENT
+  type        String
+  target      Int
+  reward      Int
+  month       Int
+  year        Int
+  createdAt   DateTime @default(now())
+
+  progress    UserQuestProgress[]
+}
+
+model UserQuestProgress {
+  id          String    @id @default(cuid())
+  userId      String
+  questId     String
+  current     Int       @default(0)
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  rewarded    Boolean   @default(false)
+
+  user        User      @relation(fields: [userId], references: [id])
+  quest       Quest     @relation(fields: [questId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questId])
+}
+
+model PointTransaction {
+  id        String   @id @default(cuid())
+  userId    String
+  amount    Int
+  reason    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
