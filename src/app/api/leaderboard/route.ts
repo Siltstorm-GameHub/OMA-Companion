@@ -9,7 +9,7 @@ export async function GET() {
     select: {
       id: true,
       username: true,
-      avatar: true,
+      image: true,
       points: true,
       level: true,
       _count: {
