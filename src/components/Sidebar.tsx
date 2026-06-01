@@ -42,9 +42,8 @@ export default function Sidebar() {
     });
   }
 
-  const user = session?.user as { role?: string; points?: number } | undefined;
-  const role = user?.role ?? "user";
-  const points = user?.points ?? 0;
+  const role   = session?.user?.role   ?? "user";
+  const points = session?.user?.points ?? 0;
   const level = getLevel(points);
   const nextPts = getNextLevelPoints(points);
   const prevPts = getNextLevelPoints(points - 1);
