@@ -48,7 +48,7 @@ export default async function PointsPage() {
       </div>
 
       {me && (
-        <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
             <p className="text-xs text-gray-400 mb-1">Meine Punkte</p>
             <p className="text-2xl font-semibold text-white">{me.points.toLocaleString("de-DE")}</p>

@@ -12,7 +12,7 @@ const TABS = [
 export default function AdminNav() {
   const pathname = usePathname();
   return (
-    <div className="flex gap-1 mb-6 bg-gray-900 border border-white/5 rounded-xl p-1 w-fit">
+    <div className="flex gap-1 mb-6 bg-gray-900 border border-white/5 rounded-xl p-1 w-fit max-w-full overflow-x-auto">
       {TABS.map(({ href, label, icon: Icon, exact }) => {
         const active = exact ? pathname === href : pathname.startsWith(href);
         return (

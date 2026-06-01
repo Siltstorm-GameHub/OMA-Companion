@@ -36,7 +36,7 @@ export default async function LeaderboardPage() {
 
       {/* Top 3 Podium */}
       {users.length >= 3 && (
-        <div className="grid grid-cols-3 gap-3 mb-6">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-6">
           {[users[1], users[0], users[2]].map((u, podiumIdx) => {
             const actualRank = podiumIdx === 0 ? 2 : podiumIdx === 1 ? 1 : 3;
             const rank = getRank(u.points);
