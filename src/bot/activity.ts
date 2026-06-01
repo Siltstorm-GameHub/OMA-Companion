@@ -2,23 +2,22 @@ import { prisma } from "@/lib/prisma";
 import { awardPoints, checkAndAwardStreak } from "@/lib/points";
 import { updateQuestProgress } from "@/lib/quests";
 
-// User per Discord-ID finden oder anlegen
-async function findUser(discordId: string, username?: string) {
-  let user = await prisma.user.findUnique({ where: { discordId } });
-  if (!user && username) {
-    user = await prisma.user.findFirst({ where: { name: username } });
-  }
-  return user;
+/** User per Discord-ID finden. Nur discordId — kein unzuverlässiger Name-Fallback. */
+async function findUser(discordId: string) {
+  return prisma.user.findUnique({ where: { discordId } });
 }
 
-// Nachrichtenzähler pro User (zurückgesetzt nach je 10 Nachrichten)
-const messageCounters = new Map<string, number>();
-// Täglicher Message-Bonus bereits vergeben?
-const dailyMessageBonus = new Map<string, string>(); // userId -> date string
+// Nachrichtenzähler pro User (im Speicher; zurückgesetzt nach je 10)
+const messageCounters  = new Map<string, number>();
+// Täglicher Message-Bonus: userId → Datum-String
+const dailyMessageBonus = new Map<string, string>();
 
 export async function trackMessage(discordId: string) {
   const user = await findUser(discordId);
-  if (!user) return;
+  if (!user) {
+    console.log(`  ⚠ trackMessage: kein User für Discord-ID ${discordId} gefunden`);
+    return;
+  }
 
   await checkAndAwardStreak(user.id);
 
@@ -31,6 +30,7 @@ export async function trackMessage(discordId: string) {
     await awardPoints(user.id, "MESSAGE_10");
   }
 
+  // Quest-Fortschritt: 1 Nachricht
   await updateQuestProgress(user.id, "MESSAGES", 1);
 
   // Täglicher Chat-Bonus (einmal pro Tag)
@@ -42,39 +42,46 @@ export async function trackMessage(discordId: string) {
 }
 
 export async function trackVoice(discordId: string, minutes: number) {
+  if (minutes < 1) return; // unter 1 Minute ignorieren
+
   const user = await findUser(discordId);
-  if (!user) return;
+  if (!user) {
+    console.log(`  ⚠ trackVoice: kein User für Discord-ID ${discordId} gefunden`);
+    return;
+  }
 
   await checkAndAwardStreak(user.id);
 
+  // Volle Stunden vergüten
   const fullHours = Math.floor(minutes / 60);
   for (let i = 0; i < fullHours; i++) {
     await awardPoints(user.id, "VOICE_HOUR");
   }
 
-  // Täglicher Voice-Bonus ab 30 Minuten
+  // Täglicher Voice-Bonus ab 30 Minuten (einmal pro Tag)
   if (minutes >= 30) {
-    const today = new Date().toDateString();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     const existing = await prisma.pointTransaction.findFirst({
       where: {
         userId: user.id,
         reason: "Täglich im Voice aktiv",
-        createdAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) },
+        createdAt: { gte: today },
       },
     });
     if (!existing) await awardPoints(user.id, "VOICE_DAILY_BONUS");
   }
 
-  if (minutes >= 1) {
-    await updateQuestProgress(user.id, "VOICE_MINUTES", Math.floor(minutes));
-    console.log(`  🎙 ${discordId}: ${Math.round(minutes)}min Voice → Punkte vergeben`);
-  }
+  // Quest-Fortschritt: gerundete Minuten
+  await updateQuestProgress(user.id, "VOICE_MINUTES", Math.floor(minutes));
+
+  console.log(`  🎙 ${discordId} (${user.name ?? user.username}): ${Math.round(minutes)}min Voice`);
 }
 
 export async function handleMemberJoin(discordId: string, username: string) {
   // Kurz warten damit OAuth-Login zuerst den User anlegt
   await new Promise((r) => setTimeout(r, 5000));
-  const user = await findUser(discordId, username);
+  const user = await findUser(discordId);
   if (user && user.points === 0) {
     await awardPoints(user.id, "FIRST_LOGIN");
     console.log(`🎉 Willkommens-Punkte für ${username}`);
