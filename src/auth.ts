@@ -36,9 +36,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         try {
           const dbUser = await prisma.user.findUnique({
             where: { id: token.id as string },
-            select: { id: true, role: true },
+            select: { role: true },
           });
-          console.log(`[AUTH] token.id=${token.id} discordId=${token.discordId} dbUser=${JSON.stringify(dbUser)}`);
           token.role = dbUser?.role ?? "user";
         } catch (error) {
           console.error("[AUTH] DB-Fehler beim Laden der Rolle:", error);
