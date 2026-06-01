@@ -95,11 +95,12 @@ export default async function PointsPage() {
         <h2 className="text-sm font-medium text-white mb-3">🎯 Level & Ränge</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { range: "0 – 499",    rank: "Neuling",     color: "text-gray-400",   lvl: "1–5" },
-            { range: "500 – 1.999", rank: "Kämpfer",   color: "text-blue-400",   lvl: "6–10" },
-            { range: "2.000 – 4.999", rank: "Elite",   color: "text-purple-400", lvl: "11–20" },
-            { range: "5.000 – 9.999", rank: "Legende", color: "text-amber-400",  lvl: "21–30" },
-            { range: "10.000+",   rank: "Grandmaster", color: "text-red-400",    lvl: "31+" },
+            { range: "0 – 499",          rank: "Neuling",     color: "text-gray-400",    lvl: "1–5"   },
+            { range: "500 – 2.999",       rank: "Kämpfer",     color: "text-emerald-400", lvl: "6–15"  },
+            { range: "3.000 – 9.999",     rank: "Veteran",     color: "text-blue-400",    lvl: "16–25" },
+            { range: "10.000 – 24.999",   rank: "Elite",       color: "text-purple-400",  lvl: "26–35" },
+            { range: "25.000 – 59.999",   rank: "Legende",     color: "text-amber-400",   lvl: "36–45" },
+            { range: "60.000+",           rank: "Grandmaster", color: "text-red-400",     lvl: "46+"   },
           ].map((r) => (
             <div key={r.rank} className="bg-gray-800 rounded-lg p-3 text-center">
               <p className={`text-sm font-semibold ${r.color}`}>{r.rank}</p>

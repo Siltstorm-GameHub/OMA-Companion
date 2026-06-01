@@ -12,11 +12,12 @@ const CATEGORY_ICONS: Record<PointCategory, string> = {
 };
 
 const RANKS = [
-  { label: "Neuling",     range: "0 – 499",       color: "text-gray-400",   dot: "bg-gray-400" },
-  { label: "Kämpfer",     range: "500 – 1.999",    color: "text-blue-400",   dot: "bg-blue-400" },
-  { label: "Elite",       range: "2.000 – 4.999",  color: "text-purple-400", dot: "bg-purple-400" },
-  { label: "Legende",     range: "5.000 – 9.999",  color: "text-amber-400",  dot: "bg-amber-400" },
-  { label: "Grandmaster", range: "10.000+",        color: "text-red-400",    dot: "bg-red-400" },
+  { label: "Neuling",     range: "0 – 499",         color: "text-gray-400",    dot: "bg-gray-400",    est: "Erste Tage" },
+  { label: "Kämpfer",     range: "500 – 2.999",      color: "text-emerald-400", dot: "bg-emerald-400", est: "~2–3 Wochen" },
+  { label: "Veteran",     range: "3.000 – 9.999",    color: "text-blue-400",    dot: "bg-blue-400",    est: "~2–3 Monate" },
+  { label: "Elite",       range: "10.000 – 24.999",  color: "text-purple-400",  dot: "bg-purple-400",  est: "~6 Monate" },
+  { label: "Legende",     range: "25.000 – 59.999",  color: "text-amber-400",   dot: "bg-amber-400",   est: "~1 Jahr" },
+  { label: "Grandmaster", range: "60.000+",           color: "text-red-400",     dot: "bg-red-400",     est: "2+ Jahre" },
 ];
 
 // Regeln nach Kategorie gruppieren
@@ -79,7 +80,10 @@ export default function PointsInfoModal() {
                         <span className={`w-2 h-2 rounded-full shrink-0 ${r.dot}`} />
                         <span className={`text-sm font-semibold ${r.color}`}>{r.label}</span>
                       </div>
-                      <span className="text-xs text-gray-500">{r.range} Pts</span>
+                      <div className="text-right">
+                        <p className="text-xs text-gray-500">{r.range} Pts</p>
+                        <p className="text-[10px] text-gray-700">{r.est}</p>
+                      </div>
                     </div>
                   ))}
                 </div>
