@@ -50,23 +50,38 @@ client.once(Events.ClientReady, async (c) => {
 
 // Voice-Aktivität
 client.on(Events.VoiceStateUpdate, async (oldState: VoiceState, newState: VoiceState) => {
-  const userId = newState.member?.user.id;
-  if (!userId || newState.member?.user.bot) return;
+  // 1. Absicherung: Existiert das Member überhaupt und ist es kein Bot?
+  if (!newState.member || newState.member.user.bot) return;
+  
+  const userId = newState.member.user.id;
 
-  const joined = !oldState.channel && newState.channel;
-  const left   = oldState.channel && !newState.channel;
+  // 2. Prüfen, ob wirklich der Kanal gewechselt, betreten oder verlassen wurde
+  // (Verhindert Fehler, wenn jemand nur sein Mikrofon stummschaltet)
+  const joined = !oldState.channelId && newState.channelId;
+  const left   = oldState.channelId && !newState.channelId;
+  const moved  = oldState.channelId && newState.channelId && oldState.channelId !== newState.channelId;
 
+  // Fall A: User betritt einen Sprachkanal
   if (joined) {
     voiceJoinTimes.set(userId, Date.now());
-    console.log(`🎙 ${newState.member?.displayName} betritt Voice`);
+    console.log(`🎙 ${newState.member.displayName} betritt Voice`);
   }
 
-  if (left) {
+  // Fall B: User verlässt den Sprachkanal komplett oder wechselt ihn
+  if (left || moved) {
     const joinTime = voiceJoinTimes.get(userId);
     if (joinTime) {
       const minutes = (Date.now() - joinTime) / 1000 / 60;
       voiceJoinTimes.delete(userId);
+      
+      // Daten an Supabase übertragen
       await trackVoice(userId, minutes);
+      console.log(`🤫 ${newState.member.displayName} hat Voice verlassen (${minutes.toFixed(2)} Min.)`);
+    }
+
+    // Wenn er den Kanal nur GEWECHSELT hat, starten wir die Zeitmessung für den neuen Kanal direkt neu
+    if (moved) {
+      voiceJoinTimes.set(userId, Date.now());
     }
   }
 });
