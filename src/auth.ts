@@ -23,6 +23,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
+  events: {
+    // discordId beim Login automatisch in User-Tabelle speichern
+    // → Bot kann User danach per discordId finden
+    async signIn({ user, account }) {
+      if (account?.provider === "discord" && account.providerAccountId && user.id) {
+        try {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { discordId: account.providerAccountId },
+          });
+        } catch {
+          // Ignorieren falls discordId schon gesetzt (unique constraint)
+        }
+      }
+    },
+  },
   callbacks: {
     // account hier hinzugefügt, um beim Erst-Login die ID abzugreifen
     async jwt({ token, user, account }) {

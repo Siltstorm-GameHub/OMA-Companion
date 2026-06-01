@@ -21,10 +21,31 @@ const voiceJoinTimes = new Map<string, number>();
 
 client.once(Events.ClientReady, async (c) => {
   console.log(`✅ Bot online: ${c.user.tag}`);
+
   const guild = await c.guilds.fetch(process.env.DISCORD_GUILD_ID!);
-  const events = await guild.scheduledEvents.fetch();
-  for (const [, event] of events) await syncEvent(event);
-  console.log(`✅ ${events.size} Events synchronisiert`);
+
+  // Discord-Events synchronisieren
+  const scheduledEvents = await guild.scheduledEvents.fetch();
+  for (const [, event] of scheduledEvents) await syncEvent(event);
+  console.log(`✅ ${scheduledEvents.size} Events synchronisiert`);
+
+  // Voice-Tracking: bereits aktive User erfassen
+  // (falls Bot neugestartet wurde während User im Voice waren)
+  const channels = await guild.channels.fetch();
+  let voiceUsersFound = 0;
+  for (const [, channel] of channels) {
+    if (channel?.isVoiceBased() && "members" in channel) {
+      for (const [memberId, member] of channel.members) {
+        if (!member.user.bot) {
+          voiceJoinTimes.set(memberId, Date.now());
+          voiceUsersFound++;
+        }
+      }
+    }
+  }
+  if (voiceUsersFound > 0) {
+    console.log(`🎙 ${voiceUsersFound} User bereits im Voice – Tracking gestartet`);
+  }
 });
 
 // Voice-Aktivität
