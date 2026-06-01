@@ -7,7 +7,9 @@
     "build": "prisma generate && next build",
     "postinstall": "prisma generate",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+"bot:dev": "ts-node src/bot/run.ts",
+    "bot:start": "ts-node src/bot/run.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",
