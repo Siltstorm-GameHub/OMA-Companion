@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import {
-  LayoutDashboard, CalendarDays, Trophy, Star, User, Swords,
+  LayoutDashboard, CalendarDays, Trophy, User, Swords,
   LogOut, ShieldCheck, Zap, ChevronLeft, ChevronRight, Scroll,
 } from "lucide-react";
 import Image from "next/image";
@@ -11,13 +11,12 @@ import { useState, useEffect } from "react";
 import { getLevel, getNextLevelPoints } from "@/lib/points";
 
 const NAV = [
-  { label: "Dashboard",    href: "/dashboard",   icon: LayoutDashboard },
-  { label: "Quests",       href: "/quests",       icon: Scroll },
-  { label: "Events",       href: "/events",       icon: CalendarDays },
-  { label: "Turnier",      href: "/tournament",   icon: Swords },
-  { label: "Rangliste",    href: "/leaderboard",  icon: Trophy },
-  { label: "Punktesystem", href: "/points",       icon: Star },
-  { label: "Mein Profil",  href: "/profile",      icon: User },
+  { label: "Dashboard",   href: "/dashboard",  icon: LayoutDashboard },
+  { label: "Quests",      href: "/quests",      icon: Scroll },
+  { label: "Events",      href: "/events",      icon: CalendarDays },
+  { label: "Turnier",     href: "/tournament",  icon: Swords },
+  { label: "Rangliste",   href: "/leaderboard", icon: Trophy },
+  { label: "Mein Profil", href: "/profile",     icon: User },
 ];
 
 const ROLE_CONFIG: Record<string, { label: string; cls: string }> = {

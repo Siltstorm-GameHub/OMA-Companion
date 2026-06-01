@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { getRank, getLevel, getNextLevelPoints } from "@/lib/points";
+import PointsInfoModal from "./PointsInfoModal";
 import { QUEST_TYPE_META, type QuestType } from "@/lib/quests";
 import { Trophy, Star, CalendarDays, Swords, Zap, Clock, MessageSquare } from "lucide-react";
 
@@ -176,7 +177,10 @@ export default async function ProfilePage() {
                 {rank.label}
               </span>
             </div>
-            <p className="text-sm text-gray-500 mb-3">Mitglied seit {memberSince} · {earnedBadges.length} Abzeichen</p>
+            <div className="flex items-center gap-2 mb-3 flex-wrap">
+              <p className="text-sm text-gray-500">Mitglied seit {memberSince} · {earnedBadges.length} Abzeichen</p>
+              <PointsInfoModal />
+            </div>
 
             {/* XP Bar */}
             <div className="max-w-xs">
