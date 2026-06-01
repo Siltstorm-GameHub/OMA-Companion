@@ -117,3 +117,13 @@ client.on(Events.GuildScheduledEventUserRemove, async (event, user) => {
 
 client.login(process.env.DISCORD_BOT_TOKEN);
 export default client;
+
+// Einfacher Mini-Webserver, damit Render nicht nach offenen Ports meckert
+import http from "http";
+const PORT = process.env.PORT || 3000;
+http.createServer((req, res) => {
+  res.writeHead(200, { "Content-Type": "text/plain" });
+  res.end("Bot is running smoothly!");
+}).listen(PORT, () => {
+  console.log(`🌍 Mini-Webserver läuft auf Port ${PORT} für Render Port-Binding`);
+});
