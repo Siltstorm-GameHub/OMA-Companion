@@ -52,9 +52,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         try {
           const dbUser = await prisma.user.findUnique({
             where: { id: token.id as string },
-            select: { role: true },
+            select: { role: true, points: true, level: true },
           });
-          token.role = dbUser?.role ?? "user";
+          token.role   = dbUser?.role   ?? "user";
+          token.points = dbUser?.points ?? 0;
+          token.level  = dbUser?.level  ?? 1;
         } catch (error) {
           console.error("[AUTH] DB-Fehler beim Laden der Rolle:", error);
           if (!token.role) token.role = "user";
@@ -65,7 +67,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async session({ session, token }) {
       if (session.user && token) {
         session.user.id = token.id as string;
-        (session.user as { role?: string }).role = token.role as string;
+        const u = session.user as { role?: string; points?: number; level?: number };
+        u.role   = token.role   as string;
+        u.points = token.points as number;
+        u.level  = token.level  as number;
       }
       return session;
     },
