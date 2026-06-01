@@ -1,8 +1,9 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getRank, getNextLevelPoints, getLevel } from "@/lib/points";
-import { Trophy, CalendarDays, Star, Users, ChevronRight, Zap, ShieldAlert } from "lucide-react"; // ShieldAlert hinzugefügt
+import { Trophy, CalendarDays, Star, Users, ChevronRight, Zap, ShieldAlert } from "lucide-react";
 import Link from "next/link";
+import { SectionHeader } from "@/components/SectionHeader";
 
 const MEDAL = ["🥇", "🥈", "🥉"];
 
@@ -97,8 +98,8 @@ export default async function DashboardPage() {
       <div className="flex items-end justify-between">
         <div className="flex items-center gap-6">
           <div>
-            <p className="text-sm text-gray-500 mb-1">Willkommen zurück</p>
-            <h1 className="text-2xl font-bold text-white tracking-tight">Hey, {firstName} 👋</h1>
+            <p className="text-xs text-gray-500 mb-1 uppercase tracking-widest font-medium">Willkommen zurück</p>
+            <h1 className="text-3xl font-bold text-white tracking-tight">Hey, {firstName} 👋</h1>
           </div>
           
           {/* HIER DEN ADMIN BUTTON ANZEIGEN, WENN DIE ROLLE PASST */}
