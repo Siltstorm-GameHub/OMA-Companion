@@ -10,7 +10,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!session) redirect("/login");
 
   return (
-    <div className="flex h-screen text-white" style={{ background: "var(--bg-base, #09090f)" }}>
+    <div className="flex h-screen text-white" style={{ background: "var(--bg-base, #080c18)" }}>
       {/* Desktop Sidebar */}
       <div className="hidden md:flex">
         <Sidebar />

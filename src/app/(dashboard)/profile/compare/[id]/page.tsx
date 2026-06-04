@@ -53,7 +53,7 @@ function Avatar({ user, accent }: { user: UserData; accent: string }) {
           : <div className="w-full h-full bg-gradient-to-br from-rose-600 to-rose-950 flex items-center justify-center text-2xl font-bold text-white">
               {(user.username ?? user.name ?? "?")[0].toUpperCase()}
             </div>}
-        <div className="absolute -bottom-1.5 -right-1.5 bg-rose-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md ring-2 ring-[#09090f]">
+        <div className="absolute -bottom-1.5 -right-1.5 bg-rose-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md ring-2 ring-[#080c18]">
           Lv.{getLevel(user.points)}
         </div>
       </div>

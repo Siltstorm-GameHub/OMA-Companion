@@ -166,7 +166,7 @@ export default async function PublicProfilePage({
               : <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-rose-600 to-rose-950 flex items-center justify-center text-2xl font-bold text-white">
                   {displayName[0].toUpperCase()}
                 </div>}
-            <div className="absolute -bottom-2 -right-2 bg-rose-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-lg ring-2 ring-[#09090f]">
+            <div className="absolute -bottom-2 -right-2 bg-rose-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-lg ring-2 ring-[#080c18]">
               Lv.{level}
             </div>
           </div>

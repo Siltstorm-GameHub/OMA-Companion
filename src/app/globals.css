@@ -1,9 +1,9 @@
 @import "tailwindcss";
 
 :root {
-  --bg-base:        #07070e;
-  --bg-surface:     #0d0d18;
-  --bg-elevated:    #12121f;
+  --bg-base:        #080c18;
+  --bg-surface:     #0d1020;
+  --bg-elevated:    #121628;
   --border-dim:     rgba(255,255,255,0.06);
   --border-glow:    rgba(244,63,94,0.35);
   --rose-glow:      rgba(244,63,94,0.15);
@@ -126,13 +126,13 @@ a, button, [role="button"] {
 
 /* ── Glassmorphism utilities ────────────────────────────────────── */
 .glass {
-  background: rgba(13,13,24,0.78);
+  background: rgba(8,12,24,0.78);
   backdrop-filter: blur(20px) saturate(1.5);
   -webkit-backdrop-filter: blur(20px) saturate(1.5);
   border: 1px solid var(--border-dim);
 }
 .glass-heavy {
-  background: rgba(7,7,14,0.92);
+  background: rgba(5,8,18,0.92);
   backdrop-filter: blur(28px) saturate(1.7);
   -webkit-backdrop-filter: blur(28px) saturate(1.7);
   border: 1px solid rgba(255,255,255,0.055);

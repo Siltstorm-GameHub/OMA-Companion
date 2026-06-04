@@ -63,7 +63,7 @@ export function PointsChart({ data }: Props) {
           strokeWidth={2}
           fill="url(#pointsGradient)"
           dot={false}
-          activeDot={{ r: 4, fill: "#f43f5e", stroke: "#09090f", strokeWidth: 2 }}
+          activeDot={{ r: 4, fill: "#f43f5e", stroke: "#080c18", strokeWidth: 2 }}
         />
       </AreaChart>
     </ResponsiveContainer>
