@@ -63,7 +63,7 @@ export default async function ProfilePage() {
     await Promise.all([
       prisma.user.findUnique({
         where: { id: userId },
-        select: { id: true, name: true, username: true, image: true, points: true, level: true, streak: true, createdAt: true, activeTitle: true, profileTheme: true },
+        select: { id: true, name: true, username: true, image: true, points: true, level: true, streak: true, createdAt: true, activeTitle: true, profileTheme: true, statusMessage: true },
       }),
       prisma.pointTransaction.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, take: 20 }),
       prisma.eventRegistration.findMany({
@@ -153,6 +153,7 @@ export default async function ProfilePage() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-0.5">
               <h1 className="text-2xl font-bold text-white tracking-tight">{displayName}</h1>
+
               <span className={`text-xs px-2 py-0.5 rounded-lg font-semibold border ${rank.color} bg-white/[0.04] border-white/10`}>
                 {rank.label}
               </span>
@@ -162,6 +163,9 @@ export default async function ProfilePage() {
                 </span>
               )}
             </div>
+            {user.statusMessage && (
+              <p className="text-xs text-gray-400 italic mb-1">„{user.statusMessage}"</p>
+            )}
             <div className="flex items-center gap-2 mb-3 flex-wrap">
               <p className="text-xs text-gray-500">Mitglied seit {memberSince} · {earnedBadges.length} Abzeichen</p>
               <PointsInfoModal />

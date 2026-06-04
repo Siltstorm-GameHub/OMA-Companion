@@ -27,6 +27,8 @@ model User {
   // Shop / Cosmetics
   activeTitle    String?   // z.B. "Veteran", "Champion"
   profileTheme   String    @default("default") // default | cyber | golden | void | emerald | crimson
+  nameColor      String?   // hex color, z.B. "#f59e0b"
+  statusMessage  String?   // max 60 Zeichen, sichtbar im Profil
   streakShield   Boolean   @default(false)
   xpBoostUntil   DateTime?
 
@@ -59,10 +61,12 @@ model ShopItem {
   category    String
   // common | rare | epic | legendary
   rarity      String   @default("common")
-  stock       Int?     // null = unbegrenzt
-  active      Boolean  @default(true)
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
+  stock         Int?      // null = unbegrenzt
+  active        Boolean   @default(true)
+  sortOrder     Int       @default(0)
+  availableFrom DateTime? // null = sofort verfügbar
+  availableTo   DateTime? // null = kein Ablaufdatum
+  createdAt     DateTime  @default(now())
 
   purchases   ShopPurchase[]
 }

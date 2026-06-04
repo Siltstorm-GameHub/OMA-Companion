@@ -12,25 +12,32 @@ interface ShopItem {
 }
 
 interface Props {
-  item: ShopItem;
+  item: ShopItem & { availableTo?: Date | null; availableFrom?: Date | null };
   owned: boolean;
   canAfford: boolean;
   soldOut: boolean;
   myPoints: number;
   activeTitle: string | null;
   profileTheme: string;
+  nameColor: string | null;
+  statusMessage: string | null;
+  ownsStatusMessage: boolean;
   purchaseId?: string;
   consumed?: boolean;
 }
 
 export default function ShopItemCard({
-  item, owned, canAfford, soldOut, myPoints, activeTitle, profileTheme, purchaseId, consumed,
+  item, owned, canAfford, soldOut, myPoints, activeTitle, profileTheme,
+  nameColor, statusMessage, ownsStatusMessage, purchaseId, consumed,
 }: Props) {
-  const [loading, setLoading]       = useState(false);
-  const [localOwned, setOwned]      = useState(owned);
-  const [localTitle, setTitle]      = useState(activeTitle);
-  const [localTheme, setTheme]      = useState(profileTheme);
-  const [localConsumed, setConsumed] = useState(consumed ?? false);
+  const [loading, setLoading]         = useState(false);
+  const [localOwned, setOwned]        = useState(owned);
+  const [localTitle, setTitle]        = useState(activeTitle);
+  const [localTheme, setTheme]        = useState(profileTheme);
+  const [localColor, setColor]        = useState(nameColor);
+  const [localStatus, setStatus]      = useState(statusMessage ?? "");
+  const [editingStatus, setEditingStatus] = useState(false);
+  const [localConsumed, setConsumed]  = useState(consumed ?? false);
   const [showSuggest, setShowSuggest] = useState(false);
   const [suggestGame, setSuggestGame] = useState("");
   const [suggestNote, setSuggestNote] = useState("");
@@ -39,7 +46,18 @@ export default function ShopItemCard({
   const rarity = RARITY_CONFIG[item.rarity as keyof typeof RARITY_CONFIG] ?? RARITY_CONFIG.common;
   const isTitle  = item.type === "title";
   const isTheme  = item.type === "profile_theme";
-  const isActive = isTitle ? localTitle === item.value : isTheme ? localTheme === item.value : false;
+  const isColor  = item.type === "name_color";
+  const isActive = isTitle ? localTitle === item.value
+                 : isTheme ? localTheme === item.value
+                 : isColor ? localColor === item.value
+                 : false;
+
+  // Saisonale Anzeige
+  const now = new Date();
+  const notYetAvailable = item.availableFrom ? item.availableFrom > now : false;
+  const daysLeft = item.availableTo
+    ? Math.ceil((item.availableTo.getTime() - now.getTime()) / 86400000)
+    : null;
 
   // Repeatable items can be bought multiple times
   const isRepeatable = ["streak_shield", "xp_boost", "event_slot"].includes(item.type);
@@ -71,6 +89,36 @@ export default function ShopItemCard({
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleActivateColor(color: string | null) {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/shop/name-color", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ color }),
+      });
+      if (res.ok) {
+        setColor(color);
+        toast.success(color ? "Namensfarbe aktiviert" : "Namensfarbe zurückgesetzt");
+        router.refresh();
+      }
+    } finally { setLoading(false); }
+  }
+
+  async function handleSaveStatus() {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/shop/status-message", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: localStatus }),
+      });
+      if (res.ok) {
+        setEditingStatus(false);
+        toast.success("Status-Nachricht gespeichert");
+        router.refresh();
+      }
+    } finally { setLoading(false); }
   }
 
   async function handleLulSuggest() {
@@ -136,13 +184,33 @@ export default function ShopItemCard({
       } to-transparent`} />
 
       <div className="relative p-4">
+        {/* Saisonales Banner */}
+        {daysLeft !== null && daysLeft <= 14 && daysLeft > 0 && (
+          <div className="absolute top-0 inset-x-0 bg-gradient-to-r from-orange-500/20 to-transparent px-3 py-1 text-[10px] text-orange-300 font-medium flex items-center gap-1">
+            ⏳ Noch {daysLeft} {daysLeft === 1 ? "Tag" : "Tage"}
+          </div>
+        )}
+        {notYetAvailable && item.availableFrom && (
+          <div className="absolute top-0 inset-x-0 bg-gradient-to-r from-blue-500/20 to-transparent px-3 py-1 text-[10px] text-blue-300 font-medium">
+            🔒 Ab {item.availableFrom.toLocaleDateString("de-DE", { day: "2-digit", month: "long" })}
+          </div>
+        )}
+
         {/* Icon + Rarity */}
-        <div className="flex items-start justify-between mb-3">
+        <div className={`flex items-start justify-between mb-3 ${(daysLeft !== null && daysLeft <= 14) || notYetAvailable ? "mt-5" : ""}`}>
           <div className="text-3xl leading-none">{item.icon}</div>
           <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${rarity.color} ${rarity.border} bg-white/[0.04]`}>
             {rarity.label}
           </span>
         </div>
+
+        {/* Name color preview */}
+        {isColor && (
+          <div className="mb-3 flex items-center gap-2">
+            <div className="w-4 h-4 rounded-full border border-white/20" style={{ backgroundColor: item.value }} />
+            <span className="text-xs font-semibold" style={{ color: item.value }}>Dein Name</span>
+          </div>
+        )}
 
         {/* Theme preview */}
         {isTheme && (
@@ -186,22 +254,50 @@ export default function ShopItemCard({
               </button>
             )}
 
+            {/* Namensfarbe aktivieren */}
+            {alreadyOwned && isColor && (
+              <button
+                onClick={() => handleActivateColor(isActive ? null : item.value)}
+                disabled={loading}
+                className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-all border disabled:opacity-50 ${
+                  isActive
+                    ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/25 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20"
+                    : "glass border-white/[0.1] text-gray-400 hover:text-white hover:border-white/[0.2]"
+                }`}
+              >
+                {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : isActive ? "Aktiv ✓" : "Aktivieren"}
+              </button>
+            )}
+
+            {/* Status-Nachricht bearbeiten */}
+            {alreadyOwned && item.type === "status_message" && (
+              <button
+                onClick={() => setEditingStatus(s => !s)}
+                className="text-xs px-3 py-1.5 rounded-lg font-medium glass border border-blue-500/25 text-blue-300 hover:border-blue-400/40 transition-all"
+              >
+                ✏️ Bearbeiten
+              </button>
+            )}
+
             {/* Buy button */}
             {!alreadyOwned && (
               <button
                 onClick={handleBuy}
-                disabled={loading || soldOut || !canAfford}
+                disabled={loading || soldOut || !canAfford || notYetAvailable}
                 className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium transition-all active:scale-[0.97] disabled:opacity-50 ${
-                  soldOut
+                  notYetAvailable
+                    ? "bg-white/[0.04] text-gray-600 border border-white/[0.06] cursor-not-allowed"
+                    : soldOut
                     ? "bg-white/[0.04] text-gray-600 border border-white/[0.06] cursor-not-allowed"
                     : !canAfford
                     ? "bg-white/[0.04] text-red-400 border border-red-500/20 cursor-not-allowed"
                     : "bg-rose-600 hover:bg-rose-500 text-white shadow-[0_0_12px_rgba(244,63,94,0.2)]"
                 }`}
               >
-                {loading ? <Loader2 className="w-3 h-3 animate-spin" /> :
-                 soldOut  ? <><Lock className="w-3 h-3" /> Ausverkauft</> :
-                 !canAfford ? <><Lock className="w-3 h-3" /> Zu teuer</> :
+                {loading          ? <Loader2 className="w-3 h-3 animate-spin" /> :
+                 notYetAvailable  ? <><Lock className="w-3 h-3" /> Bald verfügbar</> :
+                 soldOut          ? <><Lock className="w-3 h-3" /> Ausverkauft</> :
+                 !canAfford       ? <><Lock className="w-3 h-3" /> Zu teuer</> :
                  <><ShoppingCart className="w-3 h-3" /> Kaufen</>}
               </button>
             )}
@@ -217,7 +313,7 @@ export default function ShopItemCard({
             )}
 
             {/* Owned badge for non-activatable items */}
-            {alreadyOwned && !isTitle && item.type !== "lul_suggest" && (
+            {alreadyOwned && !isTitle && !isColor && item.type !== "lul_suggest" && item.type !== "status_message" && (
               <span className="flex items-center gap-1 text-xs text-emerald-400 font-medium">
                 <Check className="w-3 h-3" /> {item.type === "tournament_sponsor" ? "Sponsor aktiv" : "Besessen"}
               </span>
@@ -229,6 +325,30 @@ export default function ShopItemCard({
             )}
           </div>
         </div>
+
+        {/* Status-Nachricht Editor */}
+        {editingStatus && (
+          <div className="mt-3 pt-3 border-t border-white/[0.06] space-y-2">
+            <input
+              type="text"
+              maxLength={60}
+              placeholder="Deine Status-Nachricht (max. 60 Zeichen)"
+              value={localStatus}
+              onChange={e => setStatus(e.target.value)}
+              className="w-full text-xs bg-white/[0.04] border border-white/[0.1] rounded-lg px-3 py-2 text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/40"
+            />
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[10px] text-gray-600">{localStatus.length}/60</span>
+              <button
+                onClick={handleSaveStatus}
+                disabled={loading}
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-50 transition-all"
+              >
+                {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : "Speichern"}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* LUL-Vorschlag Formular */}
         {showSuggest && (

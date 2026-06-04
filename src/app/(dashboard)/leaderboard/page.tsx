@@ -24,7 +24,7 @@ export default async function LeaderboardPage() {
     take: 50,
     select: {
       id: true, name: true, username: true, image: true,
-      points: true, level: true, streak: true,
+      points: true, level: true, streak: true, nameColor: true, activeTitle: true,
       _count: { select: { tournamentParticipants: true, eventRegistrations: true } },
     },
   });
@@ -144,10 +144,20 @@ export default async function LeaderboardPage() {
 
                 {/* Name + Rang */}
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-medium truncate leading-tight ${isMe ? "text-rose-300" : "text-white"}`}>
-                    {displayName}
-                    {isMe && <span className="text-[10px] text-gray-500 ml-1 font-normal">du</span>}
-                  </p>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <p
+                      className={`text-sm font-medium truncate leading-tight ${isMe && !u.nameColor ? "text-rose-300" : !u.nameColor ? "text-white" : ""}`}
+                      style={u.nameColor ? { color: u.nameColor } : undefined}
+                    >
+                      {displayName}
+                      {isMe && <span className="text-[10px] text-gray-500 ml-1 font-normal">du</span>}
+                    </p>
+                    {u.activeTitle && (
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium hidden sm:inline ${TITLE_STYLES[u.activeTitle] ?? "text-gray-400 border-white/10"}`}>
+                        {u.activeTitle}
+                      </span>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className={`text-[10px] font-medium ${rank.color}`}>{rank.label}</span>
                     {u.streak > 0 && <span className="text-[10px] text-orange-400">🔥 {u.streak}d</span>}

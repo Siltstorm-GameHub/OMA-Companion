@@ -14,15 +14,26 @@ export const CATEGORY_CONFIG = {
 } as const;
 
 export const TYPE_CONFIG: Record<string, { label: string; icon: string; desc: string }> = {
-  title:              { label: "Titel",              icon: "🎖️", desc: "Zeige deinen Status neben deinem Namen — im Profil und im Leaderboard." },
+  title:              { label: "Titel",               icon: "🎖️", desc: "Zeige deinen Status neben deinem Namen — im Profil und im Leaderboard." },
   badge:              { label: "Exklusive Abzeichen", icon: "💎", desc: "Shop-exklusive Badges die man nicht durch Aktivität verdienen kann." },
-  profile_theme:      { label: "Profil-Themes",      icon: "🎨", desc: "Personalisiere deinen Hero-Banner mit einem eigenen Farbschema." },
-  xp_boost:          { label: "XP-Boost",            icon: "⚡", desc: "Verdiene temporär mehr Punkte auf alle Aktivitäten." },
-  streak_shield:     { label: "Streak-Schutz",       icon: "🛡️", desc: "Schütze deinen Streak vor Verlust wenn du einen Tag verpasst." },
-  event_slot:        { label: "Event-Slot",           icon: "🎟️", desc: "Überspringe die Warteliste bei ausgebuchten Events." },
-  discord_role:      { label: "Discord-Rolle",        icon: "🎭", desc: "Erhalte sofort eine exklusive Rolle im Discord-Server." },
-  lul_suggest:       { label: "Spieltag-Vorschlag",  icon: "🎮", desc: "Schlage ein Spiel für den nächsten LUL-Spieltag vor." },
-  tournament_sponsor:{ label: "Turnier-Sponsoring",  icon: "🏅", desc: "Dein Name erscheint als Community-Sponsor auf Turnier-Seiten." },
+  profile_theme:      { label: "Profil-Themes",       icon: "🎨", desc: "Personalisiere deinen Hero-Banner mit einem eigenen Farbschema." },
+  name_color:        { label: "Namens-Farben",        icon: "🖌️", desc: "Hebe deinen Namen im Leaderboard mit einer exklusiven Farbe hervor." },
+  xp_boost:          { label: "XP-Boost",             icon: "⚡", desc: "Verdiene temporär mehr Punkte auf alle Aktivitäten." },
+  streak_shield:     { label: "Streak-Schutz",        icon: "🛡️", desc: "Schütze deinen Streak vor Verlust wenn du einen Tag verpasst." },
+  event_slot:        { label: "Event-Slot",            icon: "🎟️", desc: "Überspringe die Warteliste bei ausgebuchten Events." },
+  discord_role:      { label: "Discord-Rolle",         icon: "🎭", desc: "Erhalte sofort eine exklusive Rolle im Discord-Server." },
+  lul_suggest:       { label: "Spieltag-Vorschlag",   icon: "🎮", desc: "Schlage ein Spiel für den nächsten LUL-Spieltag vor." },
+  tournament_sponsor:{ label: "Turnier-Sponsoring",   icon: "🏅", desc: "Dein Name erscheint als Community-Sponsor auf Turnier-Seiten." },
+  status_message:    { label: "Status-Nachricht",     icon: "💬", desc: "Zeige eine eigene Nachricht unter deinem Namen im Profil." },
+};
+
+export const NAME_COLOR_OPTIONS: Record<string, { label: string; hex: string; tw: string }> = {
+  gold:    { label: "Gold",    hex: "#f59e0b", tw: "text-amber-400"   },
+  rose:    { label: "Rose",    hex: "#fb7185", tw: "text-rose-400"    },
+  cyan:    { label: "Cyan",    hex: "#22d3ee", tw: "text-cyan-400"    },
+  violet:  { label: "Violet",  hex: "#c084fc", tw: "text-purple-400"  },
+  emerald: { label: "Emerald", hex: "#34d399", tw: "text-emerald-400" },
+  orange:  { label: "Orange",  hex: "#fb923c", tw: "text-orange-400"  },
 };
 
 export const PROFILE_THEMES: Record<string, { from: string; to: string; via: string; border: string }> = {
@@ -71,7 +82,7 @@ export async function purchaseItem(userId: string, itemId: string) {
   if (item.stock !== null && item.stock <= 0) return { error: "Ausverkauft" };
 
   // Doppelkauf für dauerhafte Items verhindern (außer Einmalitems)
-  const isRepeatable = ["streak_shield", "xp_boost", "event_slot", "lul_suggest"].includes(item.type);
+  const isRepeatable = ["streak_shield", "xp_boost", "event_slot", "lul_suggest", "name_color"].includes(item.type);
   if (!isRepeatable) {
     const existing = await prisma.shopPurchase.findFirst({ where: { userId, itemId } });
     if (existing) return { error: "Bereits gekauft" };
@@ -109,6 +120,9 @@ export async function purchaseItem(userId: string, itemId: string) {
   }
   if (item.type === "discord_role" && user.discordId) {
     await assignDiscordRole(user.discordId, item.value);
+  }
+  if (item.type === "name_color") {
+    await prisma.user.update({ where: { id: userId }, data: { nameColor: item.value } });
   }
 
   return { purchase, item };
