@@ -5,6 +5,7 @@ import { getRank, getLevel, getNextLevelPoints, getLevelStartPoints } from "@/li
 import PointsInfoModal from "./PointsInfoModal";
 import { QUEST_TYPE_META, type QuestType } from "@/lib/quests";
 import { Trophy, Star, CalendarDays, Swords, Zap, Clock, MessageSquare, CheckCircle2 } from "lucide-react";
+import { RelativeTime } from "@/components/RelativeTime";
 
 interface Badge {
   id: string; icon: string; name: string; desc: string;
@@ -315,11 +316,7 @@ export default async function ProfilePage() {
                 <div key={tx.id} className="flex items-start justify-between px-4 py-3 gap-2 hover:bg-white/[0.02] transition-colors">
                   <div className="min-w-0">
                     <p className="text-xs text-gray-300 truncate">{tx.reason}</p>
-                    <p className="text-[10px] text-gray-600 mt-0.5">
-                      {new Date(tx.createdAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })}
-                      {" · "}
-                      {new Date(tx.createdAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
-                    </p>
+                    <RelativeTime date={tx.createdAt} className="text-[10px] text-gray-600 mt-0.5 block" />
                   </div>
                   <span className={`text-xs font-bold shrink-0 ${tx.amount > 0 ? "text-emerald-400" : "text-red-400"}`}>
                     {tx.amount > 0 ? "+" : ""}{tx.amount}

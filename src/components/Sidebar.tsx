@@ -182,9 +182,10 @@ export default function Sidebar() {
         <div className={`flex items-center mb-2.5 ${collapsed ? "justify-center" : "gap-2.5"}`}>
           <div className="relative shrink-0 group">
             {session?.user?.image ? (
-              <img
+              <Image
                 src={session.user.image}
                 alt="avatar"
+                width={32} height={32}
                 className="w-8 h-8 rounded-full ring-1 ring-white/10"
               />
             ) : (
