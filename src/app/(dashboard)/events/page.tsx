@@ -373,7 +373,6 @@ export default async function EventsPage() {
                     </span>
                     {discordEventUrl && (
                       <a href={discordEventUrl} target="_blank" rel="noopener noreferrer"
-                        onClick={e => e.stopPropagation()}
                         className="flex items-center gap-1 text-[10px] text-gray-500 hover:text-rose-400 transition-colors">
                         <ExternalLink className="w-3 h-3" /> Discord
                       </a>
