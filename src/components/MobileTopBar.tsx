@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -8,7 +8,7 @@ import {
   Menu, X, LayoutDashboard, CalendarDays, Trophy, Scroll,
   User, Swords, Star, ShieldCheck, LogOut, Zap,
 } from "lucide-react";
-import { getLevel, getNextLevelPoints } from "@/lib/points";
+import { getLevel, getNextLevelPoints, getLevelStartPoints } from "@/lib/points";
 
 const NAV = [
   { label: "Dashboard",       href: "/dashboard",  icon: LayoutDashboard },
@@ -32,16 +32,35 @@ const ROUTE_TITLES: Record<string, string> = {
 };
 
 export default function MobileTopBar() {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen]         = useState(false);
+  const [dragX, setDragX]       = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const touchStartX             = React.useRef(0);
   const pathname = usePathname();
   const { data: session } = useSession();
+
+  // Swipe-to-close: swipe left ≥ 60 px closes the drawer
+  function onTouchStart(e: React.TouchEvent) {
+    touchStartX.current = e.touches[0].clientX;
+    setDragging(true);
+    setDragX(0);
+  }
+  function onTouchMove(e: React.TouchEvent) {
+    const delta = e.touches[0].clientX - touchStartX.current;
+    if (delta < 0) setDragX(delta); // only track leftward swipe
+  }
+  function onTouchEnd() {
+    setDragging(false);
+    if (dragX < -60) setOpen(false);
+    setDragX(0);
+  }
 
   const role      = session?.user?.role   ?? "user";
   const points    = session?.user?.points ?? 0;
   const level     = getLevel(points);
-  const nextPts   = getNextLevelPoints(points);
-  const prevPts   = getNextLevelPoints(points - 1);
-  const progress  = nextPts > prevPts
+  const nextPts  = getNextLevelPoints(points);
+  const prevPts  = getLevelStartPoints(points);
+  const progress = nextPts > prevPts
     ? Math.min(100, Math.round(((points - prevPts) / (nextPts - prevPts)) * 100))
     : 100;
   const isStaff   = role === "admin" || role === "moderator";
@@ -82,10 +101,16 @@ export default function MobileTopBar() {
 
       {/* ── Drawer ──────────────────────────────────────────────── */}
       <aside
-        style={{ background: "rgba(9,9,15,0.97)" }}
-        className={`fixed top-0 left-0 bottom-0 z-50 md:hidden w-72 border-r border-white/[0.06] flex flex-col transition-transform duration-300 ease-out backdrop-blur-xl ${
-          open ? "translate-x-0" : "-translate-x-full"
-        }`}
+        style={{
+          background: "rgba(9,9,15,0.97)",
+          transform: open ? `translateX(${Math.max(dragX, -288)}px)` : "translateX(-100%)",
+          transition: dragging ? "none" : "transform 300ms cubic-bezier(0.16,1,0.3,1)",
+          opacity: open ? Math.max(0.5, 1 + dragX / 288) : 1,
+        }}
+        className="fixed top-0 left-0 bottom-0 z-50 md:hidden w-72 border-r border-white/[0.06] flex flex-col backdrop-blur-xl"
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
       >
         {/* Drawer header */}
         <div className="flex items-center justify-between px-4 h-14 border-b border-white/[0.06] shrink-0">
@@ -154,7 +179,7 @@ export default function MobileTopBar() {
           <div className="flex items-center gap-3 mb-3">
             <div className="relative shrink-0">
               {session?.user?.image ? (
-                <img src={session.user.image} alt="avatar" className="w-10 h-10 rounded-full ring-1 ring-white/10" />
+                <Image src={session.user.image} alt="avatar" width={40} height={40} className="w-10 h-10 rounded-full ring-1 ring-white/10" />
               ) : (
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-rose-600 to-rose-950 flex items-center justify-center text-sm font-bold text-white ring-1 ring-white/10">
                   {displayName[0]}
