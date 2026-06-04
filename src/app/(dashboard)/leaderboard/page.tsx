@@ -4,6 +4,7 @@ import { getRank, getLevel } from "@/lib/points";
 import { Trophy, Swords, CalendarDays, Zap } from "lucide-react";
 import { CountUp } from "@/components/CountUp";
 import Link from "next/link";
+import Image from "next/image";
 
 const MEDAL_BG = [
   "from-amber-500/15 border-amber-500/25 shadow-[0_0_24px_rgba(245,158,11,0.12)]",   // 🥇
@@ -73,7 +74,7 @@ export default async function LeaderboardPage() {
 
                 <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden ring-2 ring-white/10 mb-2 shrink-0">
                   {u.image
-                    ? <img src={u.image} alt="" className="w-full h-full object-cover" />
+                    ? <Image src={u.image} alt={displayName} width={48} height={48} className="w-full h-full object-cover" />
                     : <div className={`w-full h-full flex items-center justify-center text-sm font-bold ${isMe ? "bg-rose-500/20 text-rose-300" : "bg-white/[0.07] text-gray-300"}`}>
                         {displayName[0].toUpperCase()}
                       </div>}
@@ -132,7 +133,7 @@ export default async function LeaderboardPage() {
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div className="w-8 h-8 rounded-full shrink-0 overflow-hidden ring-1 ring-white/[0.08]">
                     {u.image
-                      ? <img src={u.image} alt="" className="w-full h-full object-cover" />
+                      ? <Image src={u.image} alt={displayName} width={32} height={32} className="w-full h-full object-cover" />
                       : <div className={`w-full h-full flex items-center justify-center text-xs font-bold ${isMe ? "bg-rose-500/20 text-rose-300" : "bg-white/[0.05] text-gray-400"}`}>
                           {displayName[0].toUpperCase()}
                         </div>}

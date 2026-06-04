@@ -105,12 +105,10 @@ export default async function EventsPage() {
                 <p className="text-[10px] text-gray-500 uppercase tracking-wide mt-0.5 font-medium">
                   {date.toLocaleString("de-DE", { month: "short" })}
                 </p>
-                <div className="flex items-center justify-center gap-0.5 mt-1.5 text-gray-600">
-                  <Clock className="w-2.5 h-2.5" />
-                  <span className="text-[9px] tabular-nums">
-                    {date.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
-                  </span>
-                </div>
+                <RelativeTime
+                  date={date}
+                  className="text-[9px] text-gray-600 mt-1.5 block tabular-nums"
+                />
               </div>
 
               {/* ── Content ─────────────────────────────────────────── */}

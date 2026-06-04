@@ -6,6 +6,7 @@ import {
   Zap, ShieldAlert, Clock, Swords, User, TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { CountUp } from "@/components/CountUp";
 
 const MEDAL = ["🥇", "🥈", "🥉"];
@@ -101,7 +102,7 @@ export default async function DashboardPage() {
             <div className="relative shrink-0">
               <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden ring-2 ring-rose-500/25 shadow-[0_0_32px_rgba(244,63,94,0.2)]">
                 {avatarUrl ? (
-                  <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" />
+                  <Image src={avatarUrl} alt={displayName} width={80} height={80} className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-rose-600 to-rose-950 flex items-center justify-center text-2xl font-bold text-white">
                     {firstName[0]?.toUpperCase()}
@@ -305,7 +306,7 @@ export default async function DashboardPage() {
                     </div>
                     <div className="w-8 h-8 rounded-full shrink-0 overflow-hidden ring-1 ring-white/[0.08]">
                       {u.image
-                        ? <img src={u.image} alt="" className="w-full h-full object-cover" />
+                        ? <Image src={u.image} alt={name} width={32} height={32} className="w-full h-full object-cover" />
                         : <div className={`w-full h-full flex items-center justify-center text-xs font-bold ${isMe ? "bg-rose-500/20 text-rose-300" : "bg-white/[0.05] text-gray-400"}`}>
                             {name[0].toUpperCase()}
                           </div>}
