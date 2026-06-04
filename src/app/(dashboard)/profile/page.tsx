@@ -8,6 +8,7 @@ import { Trophy, Star, CalendarDays, Swords, Zap, Clock, MessageSquare, CheckCir
 import { RelativeTime } from "@/components/RelativeTime";
 import Image from "next/image";
 import { PointsChart } from "@/components/PointsChart";
+import { PROFILE_THEMES, TITLE_STYLES, SHOP_BADGE_META } from "@/lib/shop";
 
 interface Badge {
   id: string; icon: string; name: string; desc: string;
@@ -58,11 +59,11 @@ export default async function ProfilePage() {
   const month = now.getMonth() + 1;
   const year  = now.getFullYear();
 
-  const [user, transactions, eventRegs, tournamentParticipations, matchWins, questsWithProgress] =
+  const [user, transactions, eventRegs, tournamentParticipations, matchWins, questsWithProgress, shopBadges] =
     await Promise.all([
       prisma.user.findUnique({
         where: { id: userId },
-        select: { id: true, name: true, username: true, image: true, points: true, level: true, streak: true, createdAt: true },
+        select: { id: true, name: true, username: true, image: true, points: true, level: true, streak: true, createdAt: true, activeTitle: true, profileTheme: true },
       }),
       prisma.pointTransaction.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, take: 20 }),
       prisma.eventRegistration.findMany({
@@ -87,6 +88,10 @@ export default async function ProfilePage() {
         where: { month, year },
         include: { progress: { where: { userId } } },
         orderBy: { createdAt: "asc" },
+      }),
+      prisma.shopPurchase.findMany({
+        where: { userId, item: { type: "badge" } },
+        include: { item: { select: { value: true } } },
       }),
     ]);
 
@@ -124,13 +129,14 @@ export default async function ProfilePage() {
   const earnedBadges = badges.filter(b => b.earned);
   const memberSince  = new Date(user.createdAt).toLocaleDateString("de-DE", { month: "long", year: "numeric" });
   const displayName  = user.username ?? user.name ?? "Unbekannt";
+  const theme        = PROFILE_THEMES[user.profileTheme ?? "default"] ?? PROFILE_THEMES.default;
 
   return (
     <div className="p-5 sm:p-6 max-w-5xl mx-auto space-y-5 animate-fade-in">
 
       {/* ── Hero ────────────────────────────────────────────────────── */}
       <div className="glass card-shine relative overflow-hidden rounded-2xl p-6">
-        <div className="absolute inset-0 bg-gradient-to-br from-rose-500/14 via-transparent to-violet-500/10 pointer-events-none" />
+        <div className={`absolute inset-0 bg-gradient-to-br ${theme.from} ${theme.via} ${theme.to} pointer-events-none`} />
         <div className="absolute inset-0 bg-grid opacity-30 pointer-events-none" />
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-rose-500/25 to-transparent pointer-events-none" />
 
@@ -150,6 +156,11 @@ export default async function ProfilePage() {
               <span className={`text-xs px-2 py-0.5 rounded-lg font-semibold border ${rank.color} bg-white/[0.04] border-white/10`}>
                 {rank.label}
               </span>
+              {user.activeTitle && (
+                <span className={`text-xs px-2.5 py-0.5 rounded-lg font-semibold border ${TITLE_STYLES[user.activeTitle] ?? "text-gray-400 bg-white/[0.05] border-white/10"}`}>
+                  {user.activeTitle}
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-2 mb-3 flex-wrap">
               <p className="text-xs text-gray-500">Mitglied seit {memberSince} · {earnedBadges.length} Abzeichen</p>
@@ -197,6 +208,26 @@ export default async function ProfilePage() {
             <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">
               🏅 Abzeichen <span className="text-gray-600 normal-case">({earnedBadges.length}/{badges.length})</span>
             </h2>
+
+            {/* Shop-Badges */}
+            {shopBadges.length > 0 && (
+              <div className="mb-4">
+                <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-2">Shop-Exklusiv</p>
+                <div className="flex flex-wrap gap-2">
+                  {shopBadges.map(p => {
+                    const meta = SHOP_BADGE_META[p.item.value];
+                    if (!meta) return null;
+                    return (
+                      <div key={p.id} title={meta.desc}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium glass text-amber-300 border-amber-500/25 bg-amber-500/[0.06]">
+                        <span>{meta.icon}</span>
+                        {meta.name}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             {Object.entries(BADGE_CATEGORY_LABELS).map(([cat, label]) => {
               const catBadges = badges.filter(b => b.category === cat);
               if (!catBadges.length) return null;

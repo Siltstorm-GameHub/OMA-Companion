@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import {
   Menu, X, LayoutDashboard, CalendarDays, Trophy, Scroll,
-  User, Star, ShieldCheck, LogOut, Zap,
+  User, Star, ShieldCheck, LogOut, Zap, ShoppingBag,
 } from "lucide-react";
 import { getLevel, getNextLevelPoints, getLevelStartPoints } from "@/lib/points";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -15,6 +15,7 @@ const NAV = [
   { label: "Dashboard",       href: "/dashboard",  icon: LayoutDashboard },
   { label: "Events",          href: "/events",      icon: CalendarDays },
   { label: "Quests",          href: "/quests",      icon: Scroll },
+  { label: "Shop",            href: "/shop",        icon: ShoppingBag },
   { label: "Level-Up-League", href: "/lul",         icon: Star },
   { label: "Rangliste",       href: "/leaderboard", icon: Trophy },
   { label: "Mein Profil",     href: "/profile",     icon: User },

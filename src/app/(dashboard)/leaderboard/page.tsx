@@ -5,6 +5,7 @@ import { Trophy, Swords, CalendarDays, Zap } from "lucide-react";
 import { CountUp } from "@/components/CountUp";
 import Link from "next/link";
 import Image from "next/image";
+import { TITLE_STYLES } from "@/lib/shop";
 
 const MEDAL_BG = [
   "from-amber-500/15 border-amber-500/25 shadow-[0_0_24px_rgba(245,158,11,0.12)]",   // 🥇

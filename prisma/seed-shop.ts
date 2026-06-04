@@ -1,0 +1,42 @@
+import { prisma } from "../src/lib/prisma";
+
+const ITEMS = [
+  // ── Titel ──────────────────────────────────────────────────────
+  { name: "Veteran",       description: "Zeige allen, dass du schon lange dabei bist.",            icon: "🎖️", price:   500, type: "title",          value: "Veteran",       category: "cosmetic",  rarity: "common",    sortOrder: 10 },
+  { name: "Champion",      description: "Der Titel der Sieger. Verdient durch harte Arbeit.",       icon: "🏆", price:  1000, type: "title",          value: "Champion",      category: "cosmetic",  rarity: "rare",      sortOrder: 11 },
+  { name: "OG Member",     description: "Nur für die Allerersten. Zeige deine Treue.",              icon: "👑", price:  1500, type: "title",          value: "OG Member",     category: "cosmetic",  rarity: "epic",      sortOrder: 12 },
+  { name: "Arena-Meister", description: "Herrscher der Turniere und Wettkämpfe.",                   icon: "⚔️", price:  1200, type: "title",          value: "Arena-Meister", category: "cosmetic",  rarity: "rare",      sortOrder: 13 },
+  { name: "Shadow",        description: "Geheimnisvoll. Selten gesehen, oft gefürchtet.",           icon: "🌑", price:   800, type: "title",          value: "Shadow",        category: "cosmetic",  rarity: "rare",      sortOrder: 14 },
+  { name: "Legende",       description: "Nur wenige erreichen diesen Status. Bist du einer?",      icon: "✨", price:  3000, type: "title",          value: "Legende",       category: "cosmetic",  rarity: "legendary", sortOrder: 15 },
+
+  // ── Exklusive Badges ───────────────────────────────────────────
+  { name: "💎 Whale",       description: "Für die großen Punktesammler der Community.",             icon: "💎", price:  2000, type: "badge",          value: "shop_whale",    category: "cosmetic",  rarity: "epic",      sortOrder: 20 },
+  { name: "🎯 Sharpshooter",description: "Präzise, schnell, unaufhaltsam.",                        icon: "🎯", price:  1000, type: "badge",          value: "shop_sharp",    category: "cosmetic",  rarity: "rare",      sortOrder: 21 },
+  { name: "🌟 All-Star",    description: "Einer der Besten in allem was du tust.",                  icon: "🌟", price:  1500, type: "badge",          value: "shop_allstar",  category: "cosmetic",  rarity: "epic",      sortOrder: 22 },
+
+  // ── Profil-Themes ──────────────────────────────────────────────
+  { name: "Cyber Blue",    description: "Elektrisches Blau-Cyan — futuristisch und kalt.",          icon: "🔵", price:   800, type: "profile_theme",  value: "cyber",         category: "cosmetic",  rarity: "rare",      sortOrder: 30 },
+  { name: "Golden",        description: "Gold und Amber — für die Champions unter euch.",           icon: "🟡", price:  1000, type: "profile_theme",  value: "golden",        category: "cosmetic",  rarity: "rare",      sortOrder: 31 },
+  { name: "Void Purple",   description: "Tiefdunkles Violett — mysteriös und mächtig.",             icon: "🟣", price:   800, type: "profile_theme",  value: "void",          category: "cosmetic",  rarity: "rare",      sortOrder: 32 },
+  { name: "Emerald",       description: "Leuchtendes Grün — frisch und vital.",                     icon: "🟢", price:   800, type: "profile_theme",  value: "emerald",       category: "cosmetic",  rarity: "common",    sortOrder: 33 },
+  { name: "Crimson",       description: "Tiefes Dunkelrot — für die harten Kämpfer.",               icon: "🔴", price:   600, type: "profile_theme",  value: "crimson",       category: "cosmetic",  rarity: "common",    sortOrder: 34 },
+
+  // ── Boosts & Privileges ────────────────────────────────────────
+  { name: "Streak-Schutz", description: "Verhindert einmalig einen Streak-Verlust wenn du einen Tag verpasst.", icon: "🛡️", price: 300, type: "streak_shield", value: "1", category: "boost",     rarity: "common",    sortOrder: 40 },
+  { name: "XP-Boost 7 Tage",description: "+50% Punkte auf alle Aktivitäten für 7 Tage.",           icon: "⚡", price:  1500, type: "xp_boost",       value: "7",             category: "boost",     rarity: "rare",      sortOrder: 41 },
+  { name: "Event-Slot",    description: "Garantierter Platz bei einem ausgebuchten Event — überspringt die Warteliste.", icon: "🎟️", price: 200, type: "event_slot", value: "1", category: "privilege", rarity: "common",    sortOrder: 42 },
+];
+
+async function main() {
+  console.log("Seeding shop items...");
+  for (const item of ITEMS) {
+    await prisma.shopItem.upsert({
+      where:  { id: item.name }, // we use name as stable key for upsert
+      update: item,
+      create: { ...item, id: item.name.toLowerCase().replace(/[^a-z0-9]/g, "-") },
+    });
+  }
+  console.log(`✅ ${ITEMS.length} shop items seeded.`);
+}
+
+main().catch(console.error).finally(() => prisma.$disconnect());
