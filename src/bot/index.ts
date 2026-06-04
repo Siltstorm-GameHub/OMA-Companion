@@ -4,6 +4,7 @@ import {
 } from "discord.js";
 import { syncEvent, updateEventStatus, syncAttendee } from "./sync";
 import { trackVoice, trackMessage, handleMemberJoin } from "./activity";
+import { setClient, notifyMonthlyLeaderboard } from "./notify";
 
 const client = new Client({
   intents: [
@@ -21,6 +22,8 @@ const voiceJoinTimes = new Map<string, number>();
 
 client.once(Events.ClientReady, async (c) => {
   console.log(`✅ Bot online: ${c.user.tag}`);
+  setClient(client);
+  scheduleMonthlyLeaderboard();
 
   const guild = await c.guilds.fetch(process.env.DISCORD_GUILD_ID!);
 
@@ -114,6 +117,19 @@ client.on(Events.GuildScheduledEventUserAdd, async (event, user) => {
 client.on(Events.GuildScheduledEventUserRemove, async (event, user) => {
   await syncAttendee(event.id, user.id, "remove");
 });
+
+// Monatliche Rangliste: jeden 1. des Monats um 12:00 Uhr
+let _lastLeaderboardMonth = -1;
+function scheduleMonthlyLeaderboard() {
+  setInterval(async () => {
+    const now = new Date();
+    if (now.getDate() === 1 && now.getHours() === 12 && now.getMonth() !== _lastLeaderboardMonth) {
+      _lastLeaderboardMonth = now.getMonth();
+      await notifyMonthlyLeaderboard();
+      console.log("📊 Monatliche Rangliste gepostet");
+    }
+  }, 60 * 60 * 1000); // stündlich prüfen
+}
 
 client.login(process.env.DISCORD_BOT_TOKEN);
 export default client;

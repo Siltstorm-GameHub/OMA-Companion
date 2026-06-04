@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { awardPoints, checkAndAwardStreak } from "@/lib/points";
 import { updateQuestProgress } from "@/lib/quests";
+import { notifyLevelUp, notifyQuestCompleted } from "./notify";
 
 /** User per Discord-ID finden. Nur discordId — kein unzuverlässiger Name-Fallback. */
 async function findUser(discordId: string) {
@@ -27,11 +28,17 @@ export async function trackMessage(discordId: string) {
   // Alle 10 Nachrichten → Punkte
   if (count >= 10) {
     messageCounters.set(user.id, 0);
-    await awardPoints(user.id, "MESSAGE_10");
+    const result = await awardPoints(user.id, "MESSAGE_10");
+    if (result?.leveledUp && user.discordId) {
+      await notifyLevelUp(user.discordId, result.user.level);
+    }
   }
 
   // Quest-Fortschritt: 1 Nachricht
-  await updateQuestProgress(user.id, "MESSAGES", 1);
+  const completedQuests = await updateQuestProgress(user.id, "MESSAGES", 1);
+  if (user.discordId) {
+    for (const q of completedQuests) await notifyQuestCompleted(user.discordId, q.title, q.reward);
+  }
 
   // Täglicher Chat-Bonus (einmal pro Tag)
   const today = new Date().toDateString();
@@ -55,7 +62,10 @@ export async function trackVoice(discordId: string, minutes: number) {
   // Volle Stunden vergüten
   const fullHours = Math.floor(minutes / 60);
   for (let i = 0; i < fullHours; i++) {
-    await awardPoints(user.id, "VOICE_HOUR");
+    const result = await awardPoints(user.id, "VOICE_HOUR");
+    if (result?.leveledUp && user.discordId) {
+      await notifyLevelUp(user.discordId, result.user.level);
+    }
   }
 
   // Täglicher Voice-Bonus ab 30 Minuten (einmal pro Tag)
@@ -73,7 +83,10 @@ export async function trackVoice(discordId: string, minutes: number) {
   }
 
   // Quest-Fortschritt: gerundete Minuten
-  await updateQuestProgress(user.id, "VOICE_MINUTES", Math.floor(minutes));
+  const voiceQuests = await updateQuestProgress(user.id, "VOICE_MINUTES", Math.floor(minutes));
+  if (user.discordId) {
+    for (const q of voiceQuests) await notifyQuestCompleted(user.discordId, q.title, q.reward);
+  }
 
   console.log(`  🎙 ${discordId} (${user.name ?? user.username}): ${Math.round(minutes)}min Voice`);
 }

@@ -1,5 +1,6 @@
 import { GuildScheduledEvent, GuildScheduledEventStatus } from "discord.js";
 import { prisma } from "@/lib/prisma";
+import { notifyNewEvent, notifyEventStarted, notifyEventEnded, notifyTournamentStarted } from "./notify";
 
 function mapStatus(status: GuildScheduledEventStatus): string {
   switch (status) {
@@ -70,7 +71,7 @@ export async function syncEvent(discordEvent: GuildScheduledEvent) {
       });
       console.log(`  ↻ Event aktualisiert: ${name}`);
     } else {
-      await prisma.event.create({
+      const created = await prisma.event.create({
         data: {
           title: name,
           description: description ?? null,
@@ -84,6 +85,7 @@ export async function syncEvent(discordEvent: GuildScheduledEvent) {
         },
       });
       console.log(`  ✚ Event erstellt: ${name}`);
+      await notifyNewEvent({ title: created.title, game: created.game, startAt: created.startAt, maxPlayers: created.maxPlayers, pointReward: created.pointReward });
     }
   } catch (err) {
     console.error("Fehler beim Event-Sync:", err);
@@ -93,8 +95,30 @@ export async function syncEvent(discordEvent: GuildScheduledEvent) {
 export async function updateEventStatus(discordEventId: string, status: string) {
   try {
     const event = await findEventByDiscordId(discordEventId);
-    if (event) {
-      await prisma.event.update({ where: { id: event.id }, data: { status } });
+    if (!event) return;
+
+    await prisma.event.update({ where: { id: event.id }, data: { status } });
+
+    if (status === "active") {
+      await notifyEventStarted({ title: event.title, game: event.game });
+
+      // Turnier-Notification wenn vorhanden
+      const tournament = await prisma.tournament.findUnique({
+        where:   { eventId: event.id },
+        include: {
+          participants: {
+            include: { user: { select: { username: true, name: true, discordId: true } } },
+          },
+        },
+      });
+      if (tournament) {
+        await notifyTournamentStarted({ format: tournament.format, event: { title: event.title, game: event.game }, participants: tournament.participants });
+      }
+    }
+
+    if (status === "finished") {
+      const attendeeCount = await prisma.eventRegistration.count({ where: { eventId: event.id } });
+      await notifyEventEnded({ title: event.title }, attendeeCount);
     }
   } catch (err) {
     console.error("Fehler beim Status-Update:", err);
