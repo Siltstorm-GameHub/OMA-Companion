@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Trophy, CalendarDays, History } from "lucide-react";
-import { buildLulStandings, LUL_POINTS } from "@/lib/lul";
+import { buildLulStandings, LUL_POINTS, type LulStandingRow } from "@/lib/lul";
 
 const MEDAL      = ["🥇", "🥈", "🥉"];
 const MEDAL_BG   = ["rgba(251,191,36,0.12)", "rgba(156,163,175,0.1)", "rgba(180,83,9,0.12)"];
@@ -54,35 +54,58 @@ export default async function LulSeasonPage({ params }: { params: Promise<{ id: 
           },
         },
       },
+      legacyEntries: {
+        include: { user: { select: { id: true, name: true, username: true, image: true } } },
+        orderBy: { totalPts: "desc" },
+      },
     },
   });
   if (!season) notFound();
 
-  // Points only from finished spieltage
-  const finishedEntries = season.spieltage
-    .filter(st => st.status === "finished")
-    .flatMap(st => st.entries);
-  const standings = buildLulStandings(finishedEntries);
+  // ── Legacy season: use stored aggregates directly ──────────────────
+  let fullStandings: LulStandingRow[] = [];
+  let finishedCount = 0;
 
-  // All players ever registered in this season (any spieltag, any status)
-  const allPlayerMap = new Map<string, { id: string; name: string | null; username: string | null; image: string | null }>();
-  for (const st of season.spieltage) {
-    for (const e of st.entries) {
-      if (!allPlayerMap.has(e.userId)) allPlayerMap.set(e.userId, e.user);
+  if (season.isLegacy) {
+    fullStandings = season.legacyEntries.map(e => ({
+      userId:      e.userId,
+      name:        uname(e.user),
+      image:       e.user.image,
+      totalPts:    e.totalPts,
+      asPlayer:    e.asPlayer,
+      asSpectator: e.asSpectator,
+      wins:        e.wins,
+      champs:      e.champs,
+      trost:       e.trost,
+      dominion:    e.dominion,
+      votes:       e.votes,
+    })).sort((a, b) => b.totalPts - a.totalPts || b.wins - a.wins);
+    finishedCount = season.totalSpieltage; // treat all as finished
+  } else {
+    // ── Regular season ────────────────────────────────────────────────
+    const finishedEntries = season.spieltage
+      .filter(st => st.status === "finished")
+      .flatMap(st => st.entries);
+    const standings = buildLulStandings(finishedEntries);
+
+    const allPlayerMap = new Map<string, { id: string; name: string | null; username: string | null; image: string | null }>();
+    for (const st of season.spieltage) {
+      for (const e of st.entries) {
+        if (!allPlayerMap.has(e.userId)) allPlayerMap.set(e.userId, e.user);
+      }
     }
+
+    fullStandings = [...allPlayerMap.values()].map(user => {
+      const s = standings.find(r => r.userId === user.id);
+      return s ?? {
+        userId: user.id, name: uname(user), image: user.image,
+        totalPts: 0, asPlayer: 0, asSpectator: 0,
+        wins: 0, champs: 0, trost: 0, dominion: 0, votes: 0,
+      };
+    }).sort((a, b) => b.totalPts - a.totalPts || b.wins - a.wins || b.champs - a.champs);
+
+    finishedCount = season.spieltage.filter(st => st.status === "finished").length;
   }
-
-  // Merge: players with 0 pts still appear
-  const fullStandings = [...allPlayerMap.values()].map(user => {
-    const s = standings.find(r => r.userId === user.id);
-    return s ?? {
-      userId: user.id, name: uname(user), image: user.image,
-      totalPts: 0, asPlayer: 0, asSpectator: 0,
-      wins: 0, champs: 0, trost: 0, dominion: 0, votes: 0,
-    };
-  }).sort((a, b) => b.totalPts - a.totalPts || b.wins - a.wins || b.champs - a.champs);
-
-  const finishedCount = season.spieltage.filter(st => st.status === "finished").length;
   const myRow  = fullStandings.find(s => s.userId === userId);
   const myRank = fullStandings.findIndex(s => s.userId === userId) + 1;
 
@@ -281,8 +304,16 @@ export default async function LulSeasonPage({ params }: { params: Promise<{ id: 
         </div>
       </div>
 
-      {/* ── Spielplan ──────────────────────────────────────────────────── */}
-      <div>
+      {/* ── Legacy notice ──────────────────────────────────────────────── */}
+      {season.isLegacy && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-purple-800/30 bg-purple-950/20 text-sm text-purple-300">
+          <History className="w-4 h-4 shrink-0" />
+          Diese Saison wurde als Legacy-Import archiviert. Die Statistiken wurden direkt als Saison-Endergebnis eingetragen.
+        </div>
+      )}
+
+      {/* ── Spielplan (nur reguläre Saisons) ───────────────────────────── */}
+      {!season.isLegacy && <div>
         <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
           <CalendarDays className="w-3.5 h-3.5" /> Spielplan
         </h2>
@@ -417,7 +448,7 @@ export default async function LulSeasonPage({ params }: { params: Promise<{ id: 
             );
           })}
         </div>
-      </div>
+      </div>}
     </div>
   );
 }
