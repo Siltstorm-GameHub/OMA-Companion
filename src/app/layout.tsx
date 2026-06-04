@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { SessionProvider } from "@/components/SessionProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { AnimatedBackground } from "@/components/AnimatedBackground";
 import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
@@ -21,11 +22,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
       </head>
-      <body className="antialiased bg-gray-950">
-        <div aria-hidden="true" className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 0 }}>
-          <div className="blob-a" />
-          <div className="blob-b" />
-        </div>
+      <body className="antialiased" style={{ background: "var(--bg-base, #07070e)" }}>
+        {/* Animated particle canvas — fixed behind everything */}
+        <AnimatedBackground />
+
         <div style={{ position: "relative", zIndex: 1, minHeight: "100dvh", display: "flex", flexDirection: "column" }}>
           <ThemeProvider>
             <SessionProvider>{children}</SessionProvider>

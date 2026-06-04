@@ -354,3 +354,8 @@ a, button, [role="button"] {
 [data-theme="light"] .bg-grid {
   background-image: radial-gradient(circle, rgba(0,0,0,0.05) 1px, transparent 1px);
 }
+
+/* Animated background — lighter in light mode */
+[data-theme="light"] [data-animated-bg] {
+  opacity: 0.2 !important;
+}
