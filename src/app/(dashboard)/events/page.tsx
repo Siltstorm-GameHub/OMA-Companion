@@ -21,23 +21,47 @@ export default async function EventsPage() {
   const session = await auth();
   const userId  = session?.user?.id;
 
-  const eventsRaw = await prisma.event.findMany({
-    orderBy: [{ status: "asc" }, { startAt: "asc" }],
-    include: {
-      _count:     { select: { registrations: true } },
-      tournament: { include: { _count: { select: { participants: true, matches: true } } } },
-      ...(userId ? { registrations: { where: { userId } } } : {}),
-    },
-  });
+  const [eventsRaw, myTournamentRegs] = await Promise.all([
+    prisma.event.findMany({
+      orderBy: [{ status: "asc" }, { startAt: "asc" }],
+      include: {
+        _count:       { select: { registrations: true } },
+        registrations: userId ? { where: { userId } } : false,
+        tournament:   true,
+      },
+    }),
+    userId
+      ? prisma.eventRegistration.findMany({
+          where:  { userId, event: { tournament: { isNot: null } } },
+          select: { eventId: true },
+        })
+      : Promise.resolve([]),
+  ]);
 
-  const myTournamentRegs = userId
-    ? await prisma.eventRegistration.findMany({
-        where:  { userId, event: { tournament: { isNot: null } } },
-        select: { eventId: true },
-      })
+  // Tournament participant/match counts — separate query to avoid nested _count issues
+  const tournamentIds = eventsRaw
+    .map(e => e.tournament?.id)
+    .filter((id): id is string => !!id);
+
+  const tournamentCounts = tournamentIds.length
+    ? await Promise.all(
+        tournamentIds.map(id =>
+          Promise.all([
+            prisma.tournamentParticipant.count({ where: { tournamentId: id } }),
+            prisma.match.count({ where: { tournamentId: id } }),
+          ]).then(([participants, matches]) => ({ id, participants, matches }))
+        )
+      )
     : [];
 
-  const events = eventsRaw;
+  const countMap = new Map(tournamentCounts.map(c => [c.id, c]));
+
+  const events = eventsRaw.map(ev => ({
+    ...ev,
+    tournament: ev.tournament
+      ? { ...ev.tournament, _count: countMap.get(ev.tournament.id) ?? { participants: 0, matches: 0 } }
+      : null,
+  }));
 
   const registeredEventIds = new Set(myTournamentRegs.map(r => r.eventId));
   const openCount          = events.filter(e => e.status === "open" || e.status === "active").length;
