@@ -41,6 +41,7 @@ model User {
   lulEntries                LulEntry[]
   lulLegacyEntries          LulLegacyEntry[]
   shopPurchases             ShopPurchase[]
+  lulSuggestions            LulSuggestion[]
 }
 
 // ── Shop ────────────────────────────────────────────────────────────────────
@@ -75,8 +76,22 @@ model ShopPurchase {
   expiresAt DateTime?
   consumed  Boolean   @default(false) // für Einmalitems (Streak-Schutz, Event-Slot)
 
-  user      User      @relation(fields: [userId], references: [id])
-  item      ShopItem  @relation(fields: [itemId], references: [id])
+  user        User           @relation(fields: [userId], references: [id])
+  item        ShopItem       @relation(fields: [itemId], references: [id])
+  lulSuggestion LulSuggestion?
+}
+
+model LulSuggestion {
+  id         String      @id @default(cuid())
+  purchaseId String      @unique
+  userId     String
+  game       String
+  note       String?
+  status     String      @default("pending") // pending | accepted | rejected
+  createdAt  DateTime    @default(now())
+
+  purchase   ShopPurchase @relation(fields: [purchaseId], references: [id])
+  user       User         @relation(fields: [userId], references: [id])
 }
 
 model Account {
