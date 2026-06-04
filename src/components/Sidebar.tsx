@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { useState, useEffect } from "react";
-import { getLevel, getNextLevelPoints } from "@/lib/points";
+import { getLevel, getNextLevelPoints, getLevelStartPoints } from "@/lib/points";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 const NAV = [
@@ -47,8 +47,8 @@ export default function Sidebar() {
   const role    = session?.user?.role   ?? "user";
   const points  = session?.user?.points ?? 0;
   const level   = getLevel(points);
-  const nextPts = getNextLevelPoints(points);
-  const prevPts = getNextLevelPoints(points - 1);
+  const nextPts  = getNextLevelPoints(points);
+  const prevPts  = getLevelStartPoints(points);
   const progress = nextPts > prevPts
     ? Math.min(100, Math.round(((points - prevPts) / (nextPts - prevPts)) * 100))
     : 100;

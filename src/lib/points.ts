@@ -84,10 +84,21 @@ export function getRank(points: number): { label: string; color: string } {
   return                      { label: "Neuling",     color: "text-gray-400" };
 }
 
+/** Gesamtpunkte am Beginn des aktuellen Levels (untere Grenze) */
+export function getLevelStartPoints(points: number): number {
+  const lvl = getLevel(points);
+  if (lvl <= 1)  return 0;
+  if (lvl <= 5)  return (lvl - 1) * 100;
+  if (lvl <= 15) return 500  + (lvl - 6)  * 250;
+  if (lvl <= 25) return 3000 + (lvl - 16) * 700;
+  if (lvl <= 35) return 10000 + (lvl - 26) * 1500;
+  if (lvl <= 45) return 25000 + (lvl - 36) * 3500;
+  return               60000 + (lvl - 46) * 10000;
+}
+
 export function getLevelProgress(points: number): number {
-  const lvl    = getLevel(points);
-  const lvlMin = getNextLevelPoints(points - 1); // Threshold dieses Levels
-  const lvlMax = getNextLevelPoints(points);      // Threshold nächsten Levels
+  const lvlMin = getLevelStartPoints(points);
+  const lvlMax = getNextLevelPoints(points);
   if (lvlMax <= lvlMin) return 100;
   return Math.min(100, Math.round(((points - lvlMin) / (lvlMax - lvlMin)) * 100));
 }
