@@ -8,7 +8,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
   providers: [
     Discord({
-      authorization: { params: { scope: "identify email guilds" } },
+      authorization: { params: { scope: "identify email guilds", prompt: "none" } },
       // HIER EINGEFÜGT: Zwingt NextAuth, deine echte Discord-ID als User-ID zu nutzen
       profile(profile) {
         return {
