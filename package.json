@@ -8,7 +8,7 @@
     "postinstall": "prisma generate",
     "start": "next start",
     "lint": "eslint",
-"bot:dev": "npx tsx src/bot/run.ts",
+    "bot:dev": "npx tsx src/bot/run.ts",
     "bot:start": "npx tsx src/bot/run.ts"
   },
   "dependencies": {
@@ -20,7 +20,8 @@
     "next-auth": "^5.0.0-beta.31",
     "prisma": "6.4.1",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "sonner": "^2.0.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
