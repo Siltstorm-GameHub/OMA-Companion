@@ -30,19 +30,14 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const { id: seasonId } = await params;
   const { entries }: { entries: LegacyRow[] } = await req.json();
 
-  if (!entries?.length) {
-    await prisma.lulLegacyEntry.deleteMany({ where: { seasonId } });
-    return NextResponse.json({ ok: true });
+  await prisma.lulLegacyEntry.deleteMany({ where: { seasonId } });
+
+  if (entries?.length) {
+    await prisma.lulLegacyEntry.createMany({
+      data: entries.map(e => ({ seasonId, ...e })),
+    });
   }
 
-  await prisma.$transaction([
-    prisma.lulLegacyEntry.deleteMany({ where: { seasonId } }),
-    prisma.lulLegacyEntry.createMany({
-      data: entries.map(e => ({ seasonId, ...e })),
-    }),
-  ]);
-
-  // Mark season as archived after saving legacy data
   await prisma.lulSeason.update({
     where: { id: seasonId },
     data: { isLegacy: true, status: "archived" },
