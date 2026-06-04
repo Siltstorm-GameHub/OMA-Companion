@@ -44,6 +44,7 @@ type Event = { id: string };
 const FORMATS = [
   { value: "single_elimination", label: "Einzel-Eliminierung", desc: "Klassisches K.O.-System" },
   { value: "round_robin",        label: "Jeder gegen Jeden",   desc: "Alle spielen gegen alle" },
+  { value: "liga",               label: "Liga",                desc: "Spieltage, Tabelle mit S/U/N und Punkten" },
   { value: "ffa",                label: "Free for All",        desc: "Alle gegeneinander, Platzierung zählt" },
   { value: "coop_stats",         label: "Kooperativ (Stats)",  desc: "Alle zusammen, individuelle Stats" },
 ];
@@ -74,6 +75,8 @@ export default function TournamentManager({
   const [pts1, setPts1] = useState(100);
   const [pts2, setPts2] = useState(50);
   const [pts3, setPts3] = useState(25);
+  const [ptsWin, setPtsWin] = useState(3);
+  const [ptsDraw, setPtsDraw] = useState(1);
   const [statInput, setStatInput] = useState("Kills, Assists, Punkte");
   const [autoGenerate, setAutoGenerate] = useState(true);
   const [selectedForBracket, setSelectedForBracket] = useState<string[]>([]);
@@ -95,8 +98,9 @@ export default function TournamentManager({
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   // ── Derived ──────────────────────────────────────────────────────────
-  const isFfa = tournament?.format === "ffa" || tournament?.format === "coop_stats";
-  const is1v1 = !isFfa;
+  const isFfa  = tournament?.format === "ffa" || tournament?.format === "coop_stats";
+  const isLiga = tournament?.format === "liga";
+  const is1v1  = !isFfa;
   const statFields: string[] = tournament?.statFields ? JSON.parse(tournament.statFields) : [];
   const pointsConfig: Record<string, number> = tournament?.pointsConfig
     ? JSON.parse(tournament.pointsConfig)
@@ -105,7 +109,9 @@ export default function TournamentManager({
   // ── Handlers ─────────────────────────────────────────────────────────
   async function createTournament() {
     setLoading(true);
-    const config = { "1": pts1, "2": pts2, "3": pts3 };
+    const config = format === "liga"
+      ? { win: ptsWin, draw: ptsDraw }
+      : { "1": pts1, "2": pts2, "3": pts3 };
     const fields =
       format === "ffa" || format === "coop_stats"
         ? statInput.split(",").map((s) => s.trim()).filter(Boolean)
@@ -163,7 +169,7 @@ export default function TournamentManager({
     }
   }
 
-  async function submit1v1(matchId: string, winnerId: string) {
+  async function submit1v1(matchId: string, winnerId: string | null, isDraw = false) {
     if (!tournament) return;
     const s = scores1v1[matchId];
     setLoading(true);
@@ -171,7 +177,7 @@ export default function TournamentManager({
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        matchId, winnerId,
+        matchId, winnerId, isDraw,
         score1: s?.s1 ? Number(s.s1) : null,
         score2: s?.s2 ? Number(s.s2) : null,
       }),
@@ -261,21 +267,37 @@ export default function TournamentManager({
         {/* Points */}
         <div>
           <label className="text-xs text-gray-400 uppercase tracking-wide block mb-2">
-            Punkte pro Platzierung
+            {format === "liga" ? "Punkte pro Ergebnis (Ligapunkte)" : "Punkte pro Platzierung"}
           </label>
-          <div className="flex gap-3">
-            {([["🥇 1.", pts1, setPts1], ["🥈 2.", pts2, setPts2], ["🥉 3.", pts3, setPts3]] as const).map(
-              ([label, val, set]) => (
-                <div key={label} className="flex-1">
-                  <label className="text-xs text-gray-500 block mb-1">{label}</label>
-                  <input type="number" value={val}
-                    onChange={(e) => (set as (v: number) => void)(Number(e.target.value))}
-                    className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-center"
-                  />
-                </div>
-              )
-            )}
-          </div>
+          {format === "liga" ? (
+            <div className="flex gap-3">
+              {([["🏆 Sieg", ptsWin, setPtsWin], ["🤝 Unentschieden", ptsDraw, setPtsDraw]] as const).map(
+                ([label, val, set]) => (
+                  <div key={label} className="flex-1">
+                    <label className="text-xs text-gray-500 block mb-1">{label}</label>
+                    <input type="number" value={val} min={0}
+                      onChange={(e) => (set as (v: number) => void)(Number(e.target.value))}
+                      className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-center"
+                    />
+                  </div>
+                )
+              )}
+            </div>
+          ) : (
+            <div className="flex gap-3">
+              {([["🥇 1.", pts1, setPts1], ["🥈 2.", pts2, setPts2], ["🥉 3.", pts3, setPts3]] as const).map(
+                ([label, val, set]) => (
+                  <div key={label} className="flex-1">
+                    <label className="text-xs text-gray-500 block mb-1">{label}</label>
+                    <input type="number" value={val}
+                      onChange={(e) => (set as (v: number) => void)(Number(e.target.value))}
+                      className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-center"
+                    />
+                  </div>
+                )
+              )}
+            </div>
+          )}
         </div>
 
         {/* Stat fields (FFA/Coop only) */}
@@ -381,13 +403,14 @@ export default function TournamentManager({
         )}
 
         {is1v1
-          ? /* ── 1v1 / bracket view ──────────────────────── */
+          ? /* ── 1v1 / bracket / liga view ─────────────────── */
             Array.from({ length: rounds }, (_, i) => i + 1).map((round) => {
               const rMatches = tournament.matches.filter((m) => m.round === round);
-              const rLabel =
-                round === rounds       ? "Finale"
-                : round === rounds - 1 ? "Halbfinale"
-                : round === rounds - 2 ? "Viertelfinale"
+              const rLabel = isLiga
+                ? `Spieltag ${round}`
+                : round === rounds       ? "Finale"
+                : round === rounds - 1  ? "Halbfinale"
+                : round === rounds - 2  ? "Viertelfinale"
                 : `Runde ${round}`;
               return (
                 <div key={round}>
@@ -396,7 +419,8 @@ export default function TournamentManager({
                     {rMatches.map((match) => {
                       const p1 = allUsers.find((u) => u.id === match.player1Id);
                       const p2 = allUsers.find((u) => u.id === match.player2Id);
-                      const isPlayed = !!match.winnerId;
+                      const isPlayed = !!match.winnerId || !!match.playedAt;
+                      const isDraw   = !!match.playedAt && !match.winnerId;
                       const isPending = !!p1 && !!p2 && !isPlayed;
                       return (
                         <div key={match.id}
@@ -421,6 +445,11 @@ export default function TournamentManager({
                             </div>
                           </div>
                           {/* Players */}
+                          {isDraw && (
+                            <div className="px-3 py-1 bg-amber-900/20 border-b border-gray-700 text-center">
+                              <span className="text-xs text-amber-400 font-medium">Unentschieden</span>
+                            </div>
+                          )}
                           {[
                             { player: p1, score: match.score1, id: match.player1Id, key: "s1" },
                             { player: p2, score: match.score2, id: match.player2Id, key: "s2" },
@@ -428,10 +457,11 @@ export default function TournamentManager({
                             <div key={idx}
                               className={`flex items-center justify-between px-3 py-2 text-sm ${
                                 idx === 0 ? "border-b border-gray-700" : ""
-                              } ${match.winnerId === id ? "bg-green-900/20" : ""}`}>
+                              } ${match.winnerId === id ? "bg-green-900/20" : isDraw ? "bg-amber-900/10" : ""}`}>
                               <span className={
                                 match.winnerId === id ? "text-white font-medium" :
                                 match.winnerId && match.winnerId !== id ? "text-gray-600" :
+                                isDraw ? "text-amber-200" :
                                 player ? "text-white" : "text-gray-600 italic"
                               }>
                                 {player ? userName(player) : "TBD"}
@@ -459,6 +489,12 @@ export default function TournamentManager({
                                 className="flex-1 text-xs bg-gray-700 hover:bg-rose-600 text-white rounded px-2 py-1.5 transition-colors truncate">
                                 {p1 ? userName(p1) : "?"} gewinnt
                               </button>
+                              {isLiga && (
+                                <button onClick={() => submit1v1(match.id, null, true)} disabled={loading}
+                                  className="shrink-0 text-xs bg-gray-700 hover:bg-amber-700 text-amber-300 rounded px-2 py-1.5 transition-colors">
+                                  Unentschieden
+                                </button>
+                              )}
                               <button onClick={() => submit1v1(match.id, match.player2Id!)} disabled={loading}
                                 className="flex-1 text-xs bg-gray-700 hover:bg-rose-600 text-white rounded px-2 py-1.5 transition-colors truncate">
                                 {p2 ? userName(p2) : "?"} gewinnt
@@ -607,7 +643,7 @@ export default function TournamentManager({
             {is1v1 && (
               <>
                 <div>
-                  <label className="text-xs text-gray-500 block mb-1">Runde</label>
+                  <label className="text-xs text-gray-500 block mb-1">{isLiga ? "Spieltag" : "Runde"}</label>
                   <input type="number" min={1} value={mRound} onChange={(e) => setMRound(Number(e.target.value))}
                     className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2"
                   />
