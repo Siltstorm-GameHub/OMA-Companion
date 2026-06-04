@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { Activity } from "lucide-react";
+import { EmptyState } from "@/components/EmptyState";
 import Image from "next/image";
 import { RelativeTime } from "@/components/RelativeTime";
 import Link from "next/link";
@@ -100,7 +101,13 @@ export default async function FeedPage() {
 
       <div className="glass card-shine rounded-2xl overflow-hidden divide-y divide-white/[0.04]">
         {items.length === 0 && (
-          <p className="text-sm text-gray-600 text-center py-10">Noch keine Aktivitäten</p>
+          <div className="p-4">
+            <EmptyState
+              type="feed"
+              title="Noch keine Aktivitäten"
+              description="Hier erscheinen Anmeldungen, Punkte und Turnier-Ergebnisse aus der Community."
+            />
+          </div>
         )}
         {items.map((item, i) => {
           const cfg = TYPE_CONFIG[item.type] ?? TYPE_CONFIG.points;

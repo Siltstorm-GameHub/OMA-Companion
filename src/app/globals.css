@@ -374,5 +374,52 @@ button:active, [role="button"]:active {
 
 /* Animated background — lighter in light mode */
 [data-theme="light"] [data-animated-bg] {
-  opacity: 0.15 !important;
+  opacity: 0.12 !important;
 }
+
+/* ── prefers-reduced-motion ─────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  /* Stop all CSS animations */
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  /* Hide the animated canvas entirely */
+  [data-animated-bg] {
+    display: none !important;
+  }
+  /* Keep progress bars visible but static */
+  .progress-shimmer {
+    background: rgba(244,63,94,0.8) !important;
+    animation: none !important;
+  }
+}
+
+/* ── Light Mode fixes ───────────────────────────────────────────── */
+[data-theme="light"] .glass-heavy {
+  background: rgba(230,232,245,0.95) !important;
+  border-color: rgba(0,0,0,0.08) !important;
+}
+[data-theme="light"] .glass-nav {
+  background: rgba(240,241,252,0.96) !important;
+  border-color: rgba(0,0,0,0.07) !important;
+}
+/* Gradient text in light mode */
+[data-theme="light"] .text-gradient-gaming {
+  background: linear-gradient(135deg, #e11d48 0%, #7c3aed 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+/* Card hover in light mode */
+[data-theme="light"] .card-hover:hover {
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.06) !important;
+}
+/* Progress bar in light mode */
+[data-theme="light"] .progress-shimmer {
+  box-shadow: 0 0 8px rgba(244,63,94,0.3) !important;
+}
+/* Neon effects — subtle in light mode */
+[data-theme="light"] .neon-rose   { text-shadow: 0 0 8px rgba(225,29,72,0.4) !important; }
+[data-theme="light"] .neon-violet { text-shadow: 0 0 8px rgba(124,58,237,0.4) !important; }

@@ -104,7 +104,7 @@ export default function LigaView({
         <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
           <Trophy className="w-3.5 h-3.5 text-amber-400" /> Tabelle
         </h2>
-        <div className="bg-gray-900 border border-white/5 rounded-2xl overflow-hidden">
+        <div className="glass rounded-2xl overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-white/5 text-[10px] text-gray-500 uppercase tracking-wider">
@@ -207,7 +207,7 @@ export default function LigaView({
 
                     return (
                       <div key={match.id}
-                        className={`bg-gray-900 border rounded-xl px-4 py-3 flex items-center gap-3 ${
+                        className={`glass border rounded-xl px-4 py-3 flex items-center gap-3 ${
                           isMyMatch ? "border-rose-800/40" : "border-white/5"
                         } ${played ? "opacity-80" : ""}`}
                       >
@@ -297,7 +297,7 @@ export default function LigaView({
       )}
 
       {matches.length === 0 && (
-        <div className="bg-gray-900 border border-white/5 rounded-2xl p-10 text-center text-gray-500 text-sm">
+        <div className="glass rounded-2xl p-10 text-center text-gray-500 text-sm">
           Noch keine Matches angelegt.
         </div>
       )}

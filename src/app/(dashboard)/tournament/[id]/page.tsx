@@ -113,7 +113,7 @@ export default async function TournamentDetailPage({
       </Link>
 
       {/* ── Header ─────────────────────────────────────────────────────── */}
-      <div className="bg-gray-900 border border-white/5 rounded-2xl p-5 mb-5">
+      <div className="glass rounded-2xl p-5 mb-5">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
             <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -141,15 +141,15 @@ export default async function TournamentDetailPage({
         </div>
 
         <div className="grid grid-cols-3 gap-3 mt-4">
-          <div className="bg-gray-800 rounded-xl p-3 text-center">
+          <div className="glass-heavy rounded-xl p-3 text-center">
             <p className="text-lg font-semibold text-white">{event.registrations.length}</p>
             <p className="text-xs text-gray-500 mt-0.5">Teilnehmer</p>
           </div>
-          <div className="bg-gray-800 rounded-xl p-3 text-center">
+          <div className="glass-heavy rounded-xl p-3 text-center">
             <p className="text-lg font-semibold text-rose-400">+{event.pointReward}</p>
             <p className="text-xs text-gray-500 mt-0.5">Punkte</p>
           </div>
-          <div className="bg-gray-800 rounded-xl p-3 text-center">
+          <div className="glass-heavy rounded-xl p-3 text-center">
             <p className="text-lg font-semibold text-white">
               {t ? `${playedMatches}/${totalMatches}` : "–"}
             </p>
@@ -176,7 +176,7 @@ export default async function TournamentDetailPage({
 
       {/* ── Content ────────────────────────────────────────────────────── */}
       {!t ? (
-        <div className="bg-gray-900 border border-white/5 rounded-2xl p-10 text-center">
+        <div className="glass rounded-2xl p-10 text-center">
           <Swords className="w-10 h-10 mx-auto mb-3 text-gray-700" />
           <p className="text-gray-400 font-medium">Noch kein Spielplan erstellt.</p>
           <p className="text-gray-600 text-sm mt-1">Ein Admin erstellt den Spielplan im Admin-Bereich.</p>
@@ -188,7 +188,7 @@ export default async function TournamentDetailPage({
             <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
               <Users className="w-3.5 h-3.5" /> Teilnehmer
             </h2>
-            <div className="bg-gray-900 border border-white/5 rounded-2xl divide-y divide-white/5">
+            <div className="glass rounded-2xl divide-y divide-white/5">
               {event.registrations.map(({ user }, i) => {
                 const isMe = user.id === userId;
                 const wins = t.matches.filter(m => m.winnerId === user.id).length;

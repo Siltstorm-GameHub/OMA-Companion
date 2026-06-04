@@ -140,6 +140,11 @@ export function AnimatedBackground() {
       animId = requestAnimationFrame(draw);
     }
 
+    // Respect prefers-reduced-motion
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return;
+    }
+
     resize();
     draw();
 

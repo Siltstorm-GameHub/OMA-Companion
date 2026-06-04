@@ -32,7 +32,7 @@ export default function BracketView({
 }) {
   if (!matches.length) {
     return (
-      <div className="bg-gray-900 border border-white/5 rounded-2xl p-10 text-center text-gray-500 text-sm">
+      <div className="glass rounded-2xl p-10 text-center text-gray-500 text-sm">
         Noch keine Matches angelegt.
       </div>
     );
@@ -90,7 +90,7 @@ export default function BracketView({
                       >
                         {/* Scheduled time if set */}
                         {match.scheduledAt && (
-                          <div className="px-2 py-1 bg-gray-800/80 border-b border-white/5 text-[10px] text-gray-500 text-center">
+                          <div className="px-2 py-1 rgba(255,255,255,0.04) border-b border-white/5 text-[10px] text-gray-500 text-center">
                             {new Date(match.scheduledAt).toLocaleString("de-DE", {
                               day: "2-digit", month: "2-digit",
                               hour: "2-digit", minute: "2-digit",
@@ -113,14 +113,14 @@ export default function BracketView({
                               key={idx}
                               className={`flex items-center justify-between px-2.5 py-2 ${
                                 idx === 0 ? "border-b border-white/5" : ""
-                              } ${isWinner ? "bg-emerald-900/20" : "bg-gray-900"}`}
+                              } ${isWinner ? "bg-emerald-900/20" : ""glass""}`}
                             >
                               <div className="flex items-center gap-1.5 min-w-0">
                                 {user?.image ? (
                                   <img src={user.image} alt="" className="w-5 h-5 rounded-full shrink-0" />
                                 ) : (
                                   <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 ${
-                                    isMe ? "bg-rose-900/50 text-rose-300" : "bg-gray-700 text-gray-400"
+                                    isMe ? "bg-rose-900/50 text-rose-300" : "bg-white/[0.06] text-gray-400"
                                   }`}>
                                     {user ? uname(user)[0].toUpperCase() : "?"}
                                   </div>
