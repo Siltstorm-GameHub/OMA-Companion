@@ -83,16 +83,17 @@ export async function updateQuestProgress(
   userId: string,
   type: QuestType,
   increment: number
-) {
-  const now = new Date();
+): Promise<{ title: string; reward: number }[]> {
+  const now   = new Date();
   const month = now.getMonth() + 1;
-  const year = now.getFullYear();
+  const year  = now.getFullYear();
 
   const quests = await prisma.quest.findMany({ where: { type, month, year } });
-  if (!quests.length) return;
+  if (!quests.length) return [];
+
+  const completed: { title: string; reward: number }[] = [];
 
   for (const quest of quests) {
-    // Early exit: already completed this quest this month
     const existing = await prisma.userQuestProgress.findUnique({
       where: { userId_questId: { userId, questId: quest.id } },
       select: { id: true, current: true, completed: true },
@@ -100,42 +101,30 @@ export async function updateQuestProgress(
     if (existing?.completed) continue;
 
     const prevCurrent = existing?.current ?? 0;
-    const newCurrent = Math.min(prevCurrent + increment, quest.target);
+    const newCurrent  = Math.min(prevCurrent + increment, quest.target);
 
     if (existing) {
-      await prisma.userQuestProgress.update({
-        where: { id: existing.id },
-        data: { current: newCurrent },
-      });
+      await prisma.userQuestProgress.update({ where: { id: existing.id }, data: { current: newCurrent } });
     } else {
-      await prisma.userQuestProgress.create({
-        data: { userId, questId: quest.id, current: newCurrent },
-      });
+      await prisma.userQuestProgress.create({ data: { userId, questId: quest.id, current: newCurrent } });
     }
 
-    // Complete if target reached
     if (newCurrent >= quest.target) {
       await prisma.userQuestProgress.update({
         where: { userId_questId: { userId, questId: quest.id } },
-        data: { completed: true, completedAt: new Date(), rewarded: true },
+        data:  { completed: true, completedAt: new Date(), rewarded: true },
       });
 
-      // Award points exactly once
       await prisma.$transaction([
-        prisma.user.update({
-          where: { id: userId },
-          data: { points: { increment: quest.reward } },
-        }),
-        prisma.pointTransaction.create({
-          data: {
-            userId,
-            amount: quest.reward,
-            reason: `Quest abgeschlossen: ${quest.title}`,
-          },
-        }),
+        prisma.user.update({ where: { id: userId }, data: { points: { increment: quest.reward } } }),
+        prisma.pointTransaction.create({ data: { userId, amount: quest.reward, reason: `Quest abgeschlossen: ${quest.title}` } }),
       ]);
+
+      completed.push({ title: quest.title, reward: quest.reward });
     }
   }
+
+  return completed;
 }
 
 export const QUEST_TYPE_META: Record<
