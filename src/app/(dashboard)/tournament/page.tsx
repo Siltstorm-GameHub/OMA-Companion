@@ -76,7 +76,7 @@ export default async function TournamentPage() {
               const hasTournament = !!event.tournament;
               return (
                 <Link key={event.id} href={`/tournament/${event.id}`}
-                  className="flex items-center gap-4 bg-gray-900 border border-gray-800 hover:border-gray-600 rounded-xl p-4 transition-colors group">
+                  className="card-hover-glow flex items-center gap-4 bg-gray-900 border border-gray-800 rounded-xl p-4 group">
                   <div className="text-center w-12 shrink-0">
                     <p className="text-xl font-semibold text-white leading-none">{new Date(event.startAt).getDate()}</p>
                     <p className="text-xs text-gray-500 uppercase">{new Date(event.startAt).toLocaleString("de-DE", { month: "short" })}</p>

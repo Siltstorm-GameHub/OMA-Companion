@@ -132,7 +132,7 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {stats.map(({ label, value, icon: Icon, sub, accent, iconCls, valCls }) => (
           <div key={label}
-            className="relative overflow-hidden rounded-2xl p-4 group cursor-default"
+            className="card-hover relative overflow-hidden rounded-2xl p-4 group cursor-default"
             style={{
               background: "rgba(15,15,23,0.8)",
               border: "1px solid rgba(255,255,255,0.06)",
@@ -175,7 +175,7 @@ export default async function DashboardPage() {
               const s = STATUS_CONFIG[ev.status];
               return (
                 <Link key={ev.id} href="/events"
-                  className="flex items-center gap-3.5 px-4 py-3.5 hover:bg-white/[0.03] transition-colors group">
+                  className="flex items-center gap-3.5 px-4 py-3.5 hover:bg-white/[0.03] transition-colors group card-hover-glow rounded-none">
                   <div className="text-center w-10 shrink-0 bg-gray-800/60 rounded-lg py-1.5">
                     <p className="text-base font-bold text-white leading-none">
                       {new Date(ev.startAt).getDate()}
