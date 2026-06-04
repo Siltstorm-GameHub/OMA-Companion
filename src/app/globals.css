@@ -148,3 +148,77 @@ a, button, [role="button"] {
 .animate-fade-in-scale {
   animation: fade-in-scale 0.25s ease both;
 }
+
+/* ── Light Mode ─────────────────────────────────────────────────── */
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* Custom properties */
+  --bg-base:      #f2f2f7;
+  --bg-surface:   #ffffff;
+  --bg-elevated:  #e8e8f0;
+  --border-dim:   rgba(0,0,0,0.07);
+  --border-glow:  rgba(244,63,94,0.2);
+  --rose-glow:    rgba(244,63,94,0.06);
+  --shadow-card:  0 1px 3px rgba(0,0,0,0.07), 0 8px 24px rgba(0,0,0,0.05);
+
+  /* Gray scale — inverted so dark surfaces become light */
+  --color-gray-950: oklch(0.985 0.002 247.858);
+  --color-gray-900: oklch(0.967 0.003 264.542);
+  --color-gray-800: oklch(0.928 0.006 264.531);
+  --color-gray-700: oklch(0.872 0.010 258.338);
+  --color-gray-600: oklch(0.707 0.022 261.325);
+  --color-gray-500: oklch(0.551 0.018 264.364);
+  --color-gray-400: oklch(0.446 0.013 264.364);
+  --color-gray-300: oklch(0.373 0.013 260.750);
+  --color-gray-200: oklch(0.278 0.033 256.848);
+  --color-gray-100: oklch(0.210 0.034 264.665);
+  --color-gray-50:  oklch(0.145 0.028 261.692);
+}
+
+[data-theme="light"] body {
+  background-color: var(--bg-base);
+  color: #1a1a26;
+}
+
+/* text-white → dark text on light backgrounds */
+[data-theme="light"] .text-white { color: #1a1a26 !important; }
+
+/* Glass surfaces */
+[data-theme="light"] .glass {
+  background: rgba(255,255,255,0.82);
+  backdrop-filter: blur(16px) saturate(1.6);
+  -webkit-backdrop-filter: blur(16px) saturate(1.6);
+  border: 1px solid rgba(0,0,0,0.07);
+}
+[data-theme="light"] .glass-heavy {
+  background: rgba(240,240,248,0.95);
+  backdrop-filter: blur(24px) saturate(1.8);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  border: 1px solid rgba(0,0,0,0.06);
+}
+
+/* Sidebar */
+[data-theme="light"] aside {
+  background: rgba(248,248,254,0.94) !important;
+  border-color: rgba(0,0,0,0.07) !important;
+}
+
+/* Body blobs — softer in light mode */
+[data-theme="light"] body::before {
+  background: radial-gradient(ellipse, rgba(244,63,94,0.07) 0%, transparent 70%);
+  opacity: 0.6;
+}
+[data-theme="light"] body::after {
+  background: radial-gradient(ellipse, rgba(99,102,241,0.05) 0%, transparent 70%);
+  opacity: 0.5;
+}
+
+/* Scrollbar */
+[data-theme="light"] ::-webkit-scrollbar-thumb       { background: rgba(0,0,0,0.10); }
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.18); }
+
+/* Card hover — lighter shadow */
+[data-theme="light"] .card-hover:hover {
+  box-shadow: 0 8px 32px rgba(0,0,0,0.10), 0 0 0 1px rgba(0,0,0,0.06) !important;
+}
