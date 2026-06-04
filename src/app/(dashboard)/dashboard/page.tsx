@@ -91,7 +91,7 @@ export default async function DashboardPage() {
       {/* ── Hero Banner ────────────────────────────────────────────── */}
       <div className="relative overflow-hidden border-b border-white/[0.06]">
         {/* Background layers */}
-        <div className="absolute inset-0 bg-gradient-to-br from-rose-500/14 via-[#07070e] to-violet-500/10 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-br from-rose-500/14 via-[#080c18] to-violet-500/10 pointer-events-none" />
         <div className="absolute inset-0 bg-grid opacity-40 pointer-events-none" />
         <div className="absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full bg-rose-500/10 blur-3xl pointer-events-none" />
         <div className="absolute -bottom-20 -left-20 w-80 h-80 rounded-full bg-violet-500/8 blur-3xl pointer-events-none" />
@@ -112,7 +112,7 @@ export default async function DashboardPage() {
                   </div>
                 )}
               </div>
-              <div className="absolute -bottom-2 -right-2 bg-gradient-to-r from-rose-600 to-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-lg ring-2 ring-[#07070e] shadow-[0_0_10px_rgba(244,63,94,0.5)]">
+              <div className="absolute -bottom-2 -right-2 bg-gradient-to-r from-rose-600 to-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-lg ring-2 ring-[#080c18] shadow-[0_0_10px_rgba(244,63,94,0.5)]">
                 Lv.{myLevel}
               </div>
             </div>

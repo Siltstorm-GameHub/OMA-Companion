@@ -5,7 +5,7 @@ export default function GlobalNotFound() {
   return (
     <div
       className="min-h-screen flex items-center justify-center p-6"
-      style={{ background: "#09090f" }}
+      style={{ background: "#080c18" }}
     >
       <div
         className="rounded-2xl p-10 max-w-md w-full text-center relative overflow-hidden"

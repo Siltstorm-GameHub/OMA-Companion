@@ -22,7 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
       </head>
-      <body className="antialiased" style={{ background: "var(--bg-base, #07070e)" }}>
+      <body className="antialiased" style={{ background: "var(--bg-base, #080c18)" }}>
         {/* Hex-Grid canvas — fixed, behind content but above body bg */}
         <AnimatedBackground />
 

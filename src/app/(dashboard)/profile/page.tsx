@@ -141,7 +141,7 @@ export default async function ProfilePage() {
               : <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-rose-500 to-violet-700 flex items-center justify-center text-2xl font-black text-white">
                   {displayName[0].toUpperCase()}
                 </div>}
-            <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-400 border-2 border-[#09090f] shadow-[0_0_8px_#34d399] glow-active" />
+            <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-400 border-2 border-[#080c18] shadow-[0_0_8px_#34d399] glow-active" />
           </div>
 
           <div className="flex-1 min-w-0">

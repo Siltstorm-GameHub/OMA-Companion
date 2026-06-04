@@ -186,7 +186,7 @@ export default function MobileTopBar() {
                   {displayName[0]}
                 </div>
               )}
-              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 border-2 border-[#09090f] shadow-[0_0_8px_#34d399]" />
+              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 border-2 border-[#080c18] shadow-[0_0_8px_#34d399]" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-white truncate">{displayName}</p>
