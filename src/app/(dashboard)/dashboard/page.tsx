@@ -3,11 +3,12 @@ import { prisma } from "@/lib/prisma";
 import { getRank, getNextLevelPoints, getLevelStartPoints, getLevel } from "@/lib/points";
 import {
   Trophy, CalendarDays, Star, Users, ChevronRight,
-  Zap, ShieldAlert, Clock, Swords, User, TrendingUp,
+  Zap, ShieldAlert, Clock, Activity, User, TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { CountUp } from "@/components/CountUp";
+import { LevelUpCelebration } from "@/components/LevelUpCelebration";
 
 const MEDAL = ["🥇", "🥈", "🥉"];
 
@@ -75,16 +76,17 @@ export default async function DashboardPage() {
 
   const quickActions = [
     { href: "/events",      icon: CalendarDays, label: "Events",     color: "text-blue-400",    bg: "bg-blue-500/10   border-blue-500/20"   },
+    { href: "/feed",        icon: Activity,     label: "Feed",       color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20"},
     { href: "/lul",         icon: Star,         label: "Liga",       color: "text-amber-400",   bg: "bg-amber-500/10  border-amber-500/20"  },
     { href: "/leaderboard", icon: Trophy,        label: "Rangliste",  color: "text-rose-400",    bg: "bg-rose-500/10   border-rose-500/20"   },
-    { href: "/tournament",  icon: Swords,        label: "Turnier",    color: "text-purple-400",  bg: "bg-purple-500/10 border-purple-500/20" },
-    { href: "/points",      icon: TrendingUp,    label: "Punkte",     color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20"},
+    { href: "/points",      icon: TrendingUp,    label: "Punkte",     color: "text-purple-400",  bg: "bg-purple-500/10 border-purple-500/20" },
     { href: "/profile",     icon: User,          label: "Profil",     color: "text-sky-400",     bg: "bg-sky-500/10    border-sky-500/20"    },
     ...(isStaff ? [{ href: "/admin", icon: ShieldAlert, label: "Admin", color: "text-rose-300", bg: "bg-rose-500/10 border-rose-500/20" }] : []),
   ];
 
   return (
     <div className="animate-fade-in">
+      <LevelUpCelebration level={myLevel} points={myPoints} />
 
       {/* ── Hero Banner ────────────────────────────────────────────── */}
       <div className="relative overflow-hidden border-b border-white/[0.05]">

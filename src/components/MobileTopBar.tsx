@@ -6,15 +6,15 @@ import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import {
   Menu, X, LayoutDashboard, CalendarDays, Trophy, Scroll,
-  User, Swords, Star, ShieldCheck, LogOut, Zap,
+  User, Star, ShieldCheck, LogOut, Zap,
 } from "lucide-react";
 import { getLevel, getNextLevelPoints, getLevelStartPoints } from "@/lib/points";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const NAV = [
   { label: "Dashboard",       href: "/dashboard",  icon: LayoutDashboard },
-  { label: "Quests",          href: "/quests",      icon: Scroll },
   { label: "Events",          href: "/events",      icon: CalendarDays },
-  { label: "Turnier",         href: "/tournament",  icon: Swords },
+  { label: "Quests",          href: "/quests",      icon: Scroll },
   { label: "Level-Up-League", href: "/lul",         icon: Star },
   { label: "Rangliste",       href: "/leaderboard", icon: Trophy },
   { label: "Mein Profil",     href: "/profile",     icon: User },
@@ -22,9 +22,10 @@ const NAV = [
 
 const ROUTE_TITLES: Record<string, string> = {
   "/dashboard":  "Dashboard",
-  "/quests":     "Quests",
+  "/feed":       "Aktivitäts-Feed",
   "/events":     "Events",
-  "/tournament": "Turnier",
+  "/quests":     "Quests",
+  "/tournament": "Turnier-Details",
   "/lul":        "Level-Up-League",
   "/leaderboard":"Rangliste",
   "/profile":    "Mein Profil",
@@ -209,13 +210,18 @@ export default function MobileTopBar() {
             </div>
           </div>
 
-          <button
-            onClick={() => signOut()}
-            className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-sm text-gray-500 hover:text-white hover:bg-white/[0.05] transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            Abmelden
-          </button>
+          <div className="flex items-center gap-2">
+            <div className="flex-1">
+              <ThemeToggle />
+            </div>
+            <button
+              onClick={() => signOut()}
+              className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm text-gray-500 hover:text-white hover:bg-white/[0.05] transition-colors shrink-0"
+              title="Abmelden"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </aside>
     </>
