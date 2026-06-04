@@ -88,6 +88,36 @@ export function buildLulStandings(
   );
 }
 
+// Merges regular season standings with legacy season totals into one all-time table.
+export function mergeStandings(
+  regular: LulStandingRow[],
+  legacy:  LulStandingRow[],
+): LulStandingRow[] {
+  const map = new Map<string, LulStandingRow>();
+
+  for (const r of regular) map.set(r.userId, { ...r });
+
+  for (const l of legacy) {
+    const existing = map.get(l.userId);
+    if (!existing) {
+      map.set(l.userId, { ...l });
+    } else {
+      existing.totalPts    += l.totalPts;
+      existing.asPlayer    += l.asPlayer;
+      existing.asSpectator += l.asSpectator;
+      existing.wins        += l.wins;
+      existing.champs      += l.champs;
+      existing.trost       += l.trost;
+      existing.dominion    += l.dominion;
+      existing.votes       += l.votes;
+    }
+  }
+
+  return [...map.values()].sort(
+    (a, b) => b.totalPts - a.totalPts || b.wins - a.wins || b.champs - a.champs
+  );
+}
+
 export function hasDominionBonus(winFlags: boolean[]): boolean {
   if (winFlags.length < 3) return false;
   return winFlags.slice(-3).every(Boolean);

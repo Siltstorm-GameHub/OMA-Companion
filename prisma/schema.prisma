@@ -33,6 +33,7 @@ model User {
   matchEntries              MatchEntry[]
   questProgress             UserQuestProgress[]
   lulEntries                LulEntry[]
+  lulLegacyEntries          LulLegacyEntry[]
 }
 
 model Account {
@@ -228,11 +229,32 @@ model LulSeason {
   name           String?  // optionaler Anzeigename
   period         String?  // "Mai 2026 - Dezember 2026"
   totalSpieltage Int      @default(8)
-  // upcoming | active | finished
+  // upcoming | active | finished | archived
   status         String   @default("upcoming")
+  // true = Vergangene Saison, Daten nur als Endergebnis importiert
+  isLegacy       Boolean  @default(false)
   createdAt      DateTime @default(now())
 
-  spieltage LulSpieltag[]
+  spieltage     LulSpieltag[]
+  legacyEntries LulLegacyEntry[]
+}
+
+// Aggregiertes Saison-Endergebnis für vergangene Saisons ohne Spieltag-Details
+model LulLegacyEntry {
+  id          String    @id @default(cuid())
+  seasonId    String
+  userId      String
+  totalPts    Int       @default(0)
+  asPlayer    Int       @default(0)  // Einsätze als Mitspieler
+  asSpectator Int       @default(0)  // Einsätze als Zuschauer
+  wins        Int       @default(0)  // Game Winner
+  champs      Int       @default(0)  // Community-Champ
+  trost       Int       @default(0)  // Trostpreis
+  dominion    Int       @default(0)  // Dominion Bonus
+  votes       Int       @default(0)  // Votes
+  season      LulSeason @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id])
+  @@unique([seasonId, userId])
 }
 
 model LulSpieltag {

@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Trophy, History } from "lucide-react";
-import { buildLulStandings, LUL_POINTS } from "@/lib/lul";
+import { buildLulStandings, mergeStandings, LUL_POINTS } from "@/lib/lul";
 
 const MEDAL      = ["🥇", "🥈", "🥉"];
 const MEDAL_BG   = ["rgba(251,191,36,0.12)", "rgba(156,163,175,0.1)", "rgba(180,83,9,0.12)"];
@@ -23,36 +23,47 @@ function uname(u: { name: string | null; username: string | null }) {
   return u.username ?? u.name ?? "Unbekannt";
 }
 
-async function fetchAllTimeEntries() {
-  // All finished spieltag entries across all seasons
-  return prisma.lulEntry.findMany({
-    where: {
-      spieltag: { status: "finished" },
-    },
-    include: {
-      user: { select: { id: true, name: true, username: true, image: true } },
-    },
-  });
-}
-
 export default async function LulAllTimePage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
   const userId = session.user.id;
 
-  const [entries, seasons] = await Promise.all([
-    fetchAllTimeEntries(),
+  const [regularEntries, legacyEntries, seasons] = await Promise.all([
+    // Regular entries from finished spieltage
+    prisma.lulEntry.findMany({
+      where: { spieltag: { status: "finished" } },
+      include: { user: { select: { id: true, name: true, username: true, image: true } } },
+    }),
+    // Legacy entries (whole-season aggregates)
+    prisma.lulLegacyEntry.findMany({
+      include: { user: { select: { id: true, name: true, username: true, image: true } } },
+    }),
     prisma.lulSeason.findMany({
       orderBy: { number: "asc" },
-      select: { id: true, number: true, name: true, status: true },
+      select: { id: true, number: true, name: true, status: true, isLegacy: true },
     }),
   ]);
 
-  const standings = buildLulStandings(entries);
+  const regularStandings = buildLulStandings(regularEntries);
+  const legacyStandings  = legacyEntries.map(e => ({
+    userId:      e.userId,
+    name:        e.user.username ?? e.user.name ?? "Unbekannt",
+    image:       e.user.image,
+    totalPts:    e.totalPts,
+    asPlayer:    e.asPlayer,
+    asSpectator: e.asSpectator,
+    wins:        e.wins,
+    champs:      e.champs,
+    trost:       e.trost,
+    dominion:    e.dominion,
+    votes:       e.votes,
+  }));
+  const standings = mergeStandings(regularStandings, legacyStandings);
   const myRow     = standings.find(s => s.userId === userId);
   const myRank    = standings.findIndex(s => s.userId === userId) + 1;
 
-  const finishedSeasons = seasons.filter(s => s.status === "finished" || s.status === "archived");
+  const finishedSeasons  = seasons.filter(s => s.status === "finished" || s.status === "archived");
+  const legacySeasonIds  = new Set(legacyEntries.map(e => e.seasonId));
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6 animate-fade-in">

@@ -16,6 +16,10 @@ async function fetchLulData() {
             },
           },
         },
+        legacyEntries: {
+          include: { user: { select: { id: true, name: true, username: true, image: true } } },
+          orderBy: { totalPts: "desc" },
+        },
       },
     }),
     prisma.user.findMany({
