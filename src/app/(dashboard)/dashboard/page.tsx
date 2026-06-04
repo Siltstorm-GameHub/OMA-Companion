@@ -296,8 +296,8 @@ export default async function DashboardPage() {
                 const name = u.username ?? u.name ?? "Unbekannt";
                 const isMe = u.id === userId;
                 return (
-                  <div key={u.id}
-                    className={`flex items-center gap-3 px-4 py-3 transition-colors ${isMe ? "bg-rose-500/[0.07]" : "hover:bg-white/[0.02]"}`}>
+                  <Link key={u.id} href={isMe ? "/profile" : `/profile/${u.id}`}
+                    className={`flex items-center gap-3 px-4 py-3 transition-colors ${isMe ? "bg-rose-500/[0.07]" : "hover:bg-white/[0.03]"}`}>
                     <div className="w-6 text-center shrink-0">
                       {i < 3
                         ? <span className="text-base leading-none">{MEDAL[i]}</span>
@@ -319,7 +319,7 @@ export default async function DashboardPage() {
                     <p className={`text-sm font-bold tabular-nums shrink-0 ${i === 0 ? "text-amber-400" : "text-white"}`}>
                       {u.points.toLocaleString("de-DE")}
                     </p>
-                  </div>
+                  </Link>
                 );
               })}
             </div>
