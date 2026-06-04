@@ -24,10 +24,10 @@ export default async function AdminUsersPage() {
         <SyncMembersButton />
       </div>
 
-      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div className="glass card-shine rounded-2xl overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-800 text-xs text-gray-500 uppercase tracking-wide">
+            <tr className="border-b border-white/[0.05] text-xs text-gray-500 uppercase tracking-wide">
               <th className="text-left px-4 py-3 font-medium">Nutzer</th>
               <th className="text-left px-4 py-3 font-medium">Discord ID</th>
               <th className="text-left px-4 py-3 font-medium">Rolle</th>
@@ -36,9 +36,9 @@ export default async function AdminUsersPage() {
               <th className="text-left px-4 py-3 font-medium">Aktionen</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-800">
+          <tbody className="divide-y divide-white/[0.04]">
             {users.map((user) => (
-              <tr key={user.id} className="hover:bg-gray-800/30">
+              <tr key={user.id} className="hover:bg-white/[0.02]">
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
                     {user.image ? (

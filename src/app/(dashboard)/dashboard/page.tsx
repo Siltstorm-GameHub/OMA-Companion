@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getRank, getNextLevelPoints, getLevelStartPoints, getLevel } from "@/lib/points";
 import {
   Trophy, CalendarDays, Star, Users, ChevronRight,
-  Zap, ShieldAlert, Clock, Activity, User, TrendingUp,
+  Zap, ShieldAlert, Clock, Activity, User, TrendingUp, Scroll,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -32,7 +32,11 @@ export default async function DashboardPage() {
   const userId   = session?.user?.id;
   const userRole = (session?.user as { role?: string })?.role ?? "user";
 
-  const [memberCount, activeEvents, upcomingEvents, topUsers, me] = await Promise.all([
+  const now   = new Date();
+  const month = now.getMonth() + 1;
+  const year  = now.getFullYear();
+
+  const [memberCount, activeEvents, upcomingEvents, topUsers, me, myQuestsDone] = await Promise.all([
     prisma.user.count(),
     prisma.event.count({ where: { status: { in: ["open", "active"] } } }),
     prisma.event.findMany({
@@ -52,6 +56,9 @@ export default async function DashboardPage() {
           select: { points: true, level: true, name: true, image: true, username: true },
         })
       : null,
+    userId
+      ? prisma.userQuestProgress.count({ where: { userId, completed: true, quest: { month, year } } })
+      : 0,
   ]);
 
   const myPoints    = me?.points   ?? 0;
@@ -196,11 +203,11 @@ export default async function DashboardPage() {
         {/* ── Community Stats ──────────────────────────────────────── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: "Mitglieder",    value: memberCount,  icon: Users,        accent: "from-rose-500/10",    iconCls: "text-rose-400    bg-rose-500/10    border-rose-500/15",    val: "text-rose-200"    },
-            { label: "Aktive Events", value: activeEvents, icon: CalendarDays, accent: "from-emerald-500/10", iconCls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/15", val: "text-emerald-200" },
-            { label: "Meine Punkte",  value: myPoints,     icon: Star,         accent: "from-amber-500/10",   iconCls: "text-amber-400   bg-amber-500/10   border-amber-500/15",   val: "text-amber-200"   },
-            { label: "Mein Level",    value: myLevel,      icon: Zap,          accent: "from-purple-500/10",  iconCls: "text-purple-400  bg-purple-500/10  border-purple-500/15",  val: "text-purple-200"  },
-          ].map(({ label, value, icon: Icon, accent, iconCls, val }, i) => (
+            { label: "Mitglieder",      value: memberCount,    icon: Users,        sub: "im Server",          accent: "from-rose-500/10",    iconCls: "text-rose-400    bg-rose-500/10    border-rose-500/15",    val: "text-rose-200"    },
+            { label: "Aktive Events",   value: activeEvents,   icon: CalendarDays, sub: "gerade offen",       accent: "from-emerald-500/10", iconCls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/15", val: "text-emerald-200" },
+            { label: "Mein Rang",       value: leaderboardRank ?? 0, icon: Trophy, sub: `von ${memberCount}`, accent: "from-amber-500/10",   iconCls: "text-amber-400   bg-amber-500/10   border-amber-500/15",   val: "text-amber-200"   },
+            { label: "Quests diesen Monat", value: myQuestsDone, icon: Scroll,    sub: "abgeschlossen",       accent: "from-purple-500/10",  iconCls: "text-purple-400  bg-purple-500/10  border-purple-500/15",  val: "text-purple-200"  },
+          ].map(({ label, value, icon: Icon, sub, accent, iconCls, val }, i) => (
             <div key={label}
               className={`card-hover card-shine glass rounded-2xl p-4 relative overflow-hidden group cursor-default animate-slide-up stagger-${i + 1}`}>
               <div className={`absolute inset-0 bg-gradient-to-br ${accent} to-transparent opacity-80 group-hover:opacity-100 transition-opacity pointer-events-none`} />
@@ -208,9 +215,10 @@ export default async function DashboardPage() {
                 <Icon className="w-4 h-4" />
               </div>
               <p className={`relative text-2xl sm:text-3xl font-black tabular-nums tracking-tight leading-none ${val}`}>
-                <CountUp to={value} duration={800 + i * 80} />
+                {i === 2 && value > 0 ? `#` : ""}<CountUp to={value} duration={800 + i * 80} />
               </p>
-              <p className="relative text-xs text-gray-400 font-medium mt-2">{label}</p>
+              <p className="relative text-xs text-gray-400 font-medium mt-1.5">{label}</p>
+              <p className="relative text-[10px] text-gray-600 mt-0.5">{sub}</p>
             </div>
           ))}
         </div>
