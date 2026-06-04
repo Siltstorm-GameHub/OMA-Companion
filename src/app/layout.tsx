@@ -12,7 +12,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="de">
       <body className="antialiased bg-gray-950">
-        <SessionProvider>{children}</SessionProvider>
+        {/* Animated background blobs */}
+        <div aria-hidden="true" className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 0 }}>
+          <div className="blob-a" />
+          <div className="blob-b" />
+        </div>
+        <div style={{ position: "relative", zIndex: 1, minHeight: "100dvh", display: "flex", flexDirection: "column" }}>
+          <SessionProvider>{children}</SessionProvider>
+        </div>
         <Toaster
           position="top-right"
           theme="dark"
