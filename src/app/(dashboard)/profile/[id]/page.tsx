@@ -66,7 +66,7 @@ export default async function PublicProfilePage({
     redirect("/profile");
   }
 
-  const [user, transactions, eventRegs, tournamentParticipations, matchWins, leaderboardRank, totalUsers] =
+  const [user, transactions, eventRegs, tournamentParticipations, matchWins, totalUsers] =
     await Promise.all([
       prisma.user.findUnique({
         where: { id },
@@ -97,13 +97,12 @@ export default async function PublicProfilePage({
         take: 10,
       }),
       prisma.match.count({ where: { winnerId: id } }),
-      prisma.user.count({ where: { points: { gt: 0 } } }).then(async () =>
-        prisma.user.count({ where: { points: { gt: (await prisma.user.findUnique({ where: { id }, select: { points: true } }))?.points ?? 0 } } }) + 1
-      ),
       prisma.user.count(),
     ]);
 
   if (!user) notFound();
+
+  const leaderboardRank = await prisma.user.count({ where: { points: { gt: user.points } } }) + 1;
 
   // ── Stats ableiten ──────────────────────────────────────────────────────
   const totalPoints  = user.points;
