@@ -21,22 +21,23 @@ export default async function EventsPage() {
   const session = await auth();
   const userId  = session?.user?.id;
 
-  const [events, myTournamentRegs] = await Promise.all([
-    prisma.event.findMany({
-      orderBy: [{ status: "asc" }, { startAt: "asc" }],
-      include: {
-        _count: { select: { registrations: true } },
-        ...(userId ? { registrations: { where: { userId } } } : {}),
-        tournament: { include: { _count: { select: { participants: true, matches: true } } } },
-      },
-    }),
-    userId
-      ? prisma.eventRegistration.findMany({
-          where: { userId, event: { tournament: { isNot: null } } },
-          select: { eventId: true },
-        })
-      : Promise.resolve([]),
-  ]);
+  const eventsRaw = await prisma.event.findMany({
+    orderBy: [{ status: "asc" }, { startAt: "asc" }],
+    include: {
+      _count:     { select: { registrations: true } },
+      tournament: { include: { _count: { select: { participants: true, matches: true } } } },
+      ...(userId ? { registrations: { where: { userId } } } : {}),
+    },
+  });
+
+  const myTournamentRegs = userId
+    ? await prisma.eventRegistration.findMany({
+        where:  { userId, event: { tournament: { isNot: null } } },
+        select: { eventId: true },
+      })
+    : [];
+
+  const events = eventsRaw;
 
   const registeredEventIds = new Set(myTournamentRegs.map(r => r.eventId));
   const openCount          = events.filter(e => e.status === "open" || e.status === "active").length;
@@ -293,9 +294,6 @@ export default async function EventsPage() {
             const isFull       = !!(ev.maxPlayers && ev._count.registrations >= ev.maxPlayers);
             const canRegister  = ev.status === "open" || ev.status === "active";
             const isTournament = !!ev.tournament;
-
-            const cleanDescription = ev.description
-              ?.replace(/\n?\ndiscord:[^\n]*/g, "").trim() || null;
 
             const discordEventUrl = ev.discordEventId && GUILD_ID
               ? `https://discord.com/events/${GUILD_ID}/${ev.discordEventId}` : null;
