@@ -1,7 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronUp, Trophy, Settings, Users, UserPlus, Search } from "lucide-react";
+import { ChevronDown, ChevronUp, Trophy, Settings, Users, UserPlus, Search, Trash2 } from "lucide-react";
 import TournamentManager from "./TournamentManager";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };
@@ -44,6 +44,15 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
     const q = search.toLowerCase();
     return allUsers.filter((u) => userName(u).toLowerCase().includes(q));
   }, [allUsers, search]);
+
+  async function deleteTournament() {
+    if (!tournament) return;
+    if (!confirm(`Turnier für "${event.title}" wirklich löschen?\n\nAlle Matches und Teilnehmer-Daten werden entfernt. Das Event selbst bleibt bestehen.`)) return;
+    setLoading(true);
+    await fetch(`/api/tournaments/${tournament.id}`, { method: "DELETE" });
+    setLoading(false);
+    router.refresh();
+  }
 
   async function saveEventSettings() {
     setLoading(true);
@@ -124,23 +133,51 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
           <div className="p-4">
             {/* EINSTELLUNGEN */}
             {tab === "settings" && (
-              <div className="flex flex-wrap gap-3 items-end">
-                <div>
-                  <label className="text-xs text-gray-500 block mb-1">Status</label>
-                  <select value={status} onChange={(e) => setStatus(e.target.value)}
-                    className="text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2">
-                    {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
-                  </select>
+              <div className="space-y-4">
+                <div className="flex flex-wrap gap-3 items-end">
+                  <div>
+                    <label className="text-xs text-gray-500 block mb-1">Status</label>
+                    <select value={status} onChange={(e) => setStatus(e.target.value)}
+                      className="text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2">
+                      {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 block mb-1">Punkte bei Teilnahme</label>
+                    <input type="number" value={pointReward} onChange={(e) => setPointReward(Number(e.target.value))}
+                      className="w-24 text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2" />
+                  </div>
+                  <button onClick={saveEventSettings} disabled={loading}
+                    className="text-sm bg-rose-600 hover:bg-rose-500 text-white rounded-lg px-4 py-2 disabled:opacity-50">
+                    Speichern
+                  </button>
                 </div>
-                <div>
-                  <label className="text-xs text-gray-500 block mb-1">Punkte bei Teilnahme</label>
-                  <input type="number" value={pointReward} onChange={(e) => setPointReward(Number(e.target.value))}
-                    className="w-24 text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2" />
-                </div>
-                <button onClick={saveEventSettings} disabled={loading}
-                  className="text-sm bg-rose-600 hover:bg-rose-500 text-white rounded-lg px-4 py-2 disabled:opacity-50">
-                  Speichern
-                </button>
+
+                {tournament && (
+                  <div className="border border-red-900/40 rounded-lg p-3 bg-red-950/10">
+                    <div className="flex items-center justify-between gap-4 flex-wrap">
+                      <div>
+                        <p className="text-sm font-medium text-white flex items-center gap-2">
+                          <Trophy className="w-3.5 h-3.5 text-amber-400" />
+                          Turnier vorhanden
+                          <span className="text-xs text-gray-500 font-normal">
+                            · {tournament.format} · {tournament.matches.length} Matches · {tournament.participants.length} Teilnehmer
+                          </span>
+                        </p>
+                        <p className="text-xs text-gray-600 mt-0.5">
+                          Löscht alle Matches, Teilnehmer-Daten und den Turnierbaum. Das Event bleibt bestehen.
+                        </p>
+                      </div>
+                      <button
+                        onClick={deleteTournament}
+                        disabled={loading}
+                        className="flex items-center gap-1.5 text-sm text-red-400 hover:text-white hover:bg-red-700 border border-red-800/50 hover:border-red-700 rounded-lg px-3 py-2 transition-colors disabled:opacity-50 shrink-0"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" /> Turnier löschen
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
