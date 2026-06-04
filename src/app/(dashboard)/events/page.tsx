@@ -87,7 +87,7 @@ export default async function EventsPage() {
           return (
             <div
               key={ev.id}
-              className="card-hover glass rounded-2xl p-5 flex items-start gap-5 relative overflow-hidden group"
+              className="card-hover card-shine glass rounded-2xl p-5 flex items-start gap-5 relative overflow-hidden group animate-slide-up"
               style={{ animationDelay: `${idx * 40}ms` }}
             >
               {/* Status accent left bar */}
