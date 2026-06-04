@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { CalendarDays, ExternalLink, Users, Zap, Clock } from "lucide-react";
+import { CalendarDays, ExternalLink, Users, Zap } from "lucide-react";
 import SyncButton from "./SyncButton";
 import RegisterButton from "./RegisterButton";
+import { RelativeTime } from "@/components/RelativeTime";
 
 const STATUS_CONFIG: Record<string, {
   label: string;
