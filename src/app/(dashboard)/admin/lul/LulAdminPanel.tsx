@@ -1,9 +1,9 @@
 "use client";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import {
   Plus, Trophy, ChevronDown, ChevronUp, Trash2, Save,
-  Users, Gamepad2, Lock, RefreshCw, Archive, History, UserPlus, X,
+  Users, Gamepad2, Lock, RefreshCw, Archive, History, UserPlus, X, Search,
 } from "lucide-react";
 import type { LulAdminSeasons } from "./page";
 
@@ -28,6 +28,8 @@ function LulSpieltagEditor({
 }) {
   const [tab, setTab] = useState<"players" | "spectators" | "awards">("players");
   const [loading, setLoading] = useState(false);
+  const [playerSearch, setPlayerSearch] = useState("");
+  const [spectatorSearch, setSpectatorSearch] = useState("");
 
   // Draft state
   const initEntries = () => {
@@ -62,6 +64,17 @@ function LulSpieltagEditor({
   const [spectatorIds, setSpectatorIds] = useState<string[]>(
     spieltag.entries.filter(e => e.role === "spectator").map(e => e.userId)
   );
+
+  const filteredPlayerUsers = useMemo(() => {
+    const q = playerSearch.toLowerCase().trim();
+    return q ? allUsers.filter(u => uname(u).toLowerCase().includes(q)) : allUsers;
+  }, [allUsers, playerSearch]);
+
+  const filteredSpectatorUsers = useMemo(() => {
+    const q = spectatorSearch.toLowerCase().trim();
+    const base = allUsers.filter(u => !playerIds.includes(u.id));
+    return q ? base.filter(u => uname(u).toLowerCase().includes(q)) : base;
+  }, [allUsers, spectatorSearch, playerIds]);
 
   function ensureEntry(userId: string, role: "player" | "spectator") {
     if (!entries[userId]) {
@@ -257,8 +270,18 @@ function LulSpieltagEditor({
               Game Winner auto
             </button>
           </div>
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500" />
+            <input
+              type="text"
+              placeholder="User suchen..."
+              value={playerSearch}
+              onChange={e => setPlayerSearch(e.target.value)}
+              className="w-full text-xs bg-gray-800 border border-gray-700 text-white rounded-lg pl-8 pr-3 py-1.5 placeholder:text-gray-600"
+            />
+          </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-36 overflow-y-auto">
-            {allUsers.map(u => (
+            {filteredPlayerUsers.map(u => (
               <label key={u.id} className="flex items-center gap-1.5 p-1.5 rounded bg-gray-800 hover:bg-gray-700 cursor-pointer text-xs">
                 <input type="checkbox" checked={playerIds.includes(u.id)} onChange={() => togglePlayer(u.id)} className="rounded shrink-0" />
                 <span className="text-white truncate">{uname(u)}</span>
@@ -323,8 +346,18 @@ function LulSpieltagEditor({
       {tab === "spectators" && (
         <div className="space-y-2">
           <p className="text-xs text-gray-400">Zuschauer auswählen (Discord- oder Twitch-Teilnehmer):</p>
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500" />
+            <input
+              type="text"
+              placeholder="User suchen..."
+              value={spectatorSearch}
+              onChange={e => setSpectatorSearch(e.target.value)}
+              className="w-full text-xs bg-gray-800 border border-gray-700 text-white rounded-lg pl-8 pr-3 py-1.5 placeholder:text-gray-600"
+            />
+          </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-64 overflow-y-auto">
-            {allUsers.filter(u => !playerIds.includes(u.id)).map(u => (
+            {filteredSpectatorUsers.map(u => (
               <label key={u.id} className="flex items-center gap-1.5 p-1.5 rounded bg-gray-800 hover:bg-gray-700 cursor-pointer text-xs">
                 <input type="checkbox" checked={spectatorIds.includes(u.id)} onChange={() => toggleSpectator(u.id)} className="rounded shrink-0" />
                 <span className="text-white truncate">{uname(u)}</span>
