@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { generateMonthlyQuests, QUEST_TYPE_META, type QuestType } from "@/lib/quests";
-import { Trophy, Lock, CheckCircle2, Clock } from "lucide-react";
+import { Trophy, Lock, CheckCircle2, Clock, Scroll } from "lucide-react";
 import QuestRegenerateButton from "./QuestRegenerateButton";
 
 const MONTH_NAMES = [
@@ -19,16 +19,13 @@ export default async function QuestsPage() {
 
   const now = new Date();
   const month = now.getMonth() + 1;
-  const year = now.getFullYear();
+  const year  = now.getFullYear();
 
-  // Tage bis Monatsende
   const daysInMonth = new Date(year, month, 0).getDate();
-  const daysLeft = daysInMonth - now.getDate();
+  const daysLeft    = daysInMonth - now.getDate();
 
-  // Aktuelle Quests generieren falls nötig
   await generateMonthlyQuests(month, year);
 
-  // Aktuelle Quests + Verlauf (letzte 3 abgeschlossene Monate)
   const [currentQuests, historyQuests] = await Promise.all([
     prisma.quest.findMany({
       where: { month, year },
@@ -38,21 +35,20 @@ export default async function QuestsPage() {
     prisma.quest.findMany({
       where: {
         OR: [
-          { year: year, month: { lt: month } },
+          { year, month: { lt: month } },
           { year: year - 1 },
         ],
         progress: { some: { userId } },
       },
       include: { progress: { where: { userId } } },
       orderBy: [{ year: "desc" }, { month: "desc" }],
-      take: 9, // max 3 vergangene Monate × 3 Quests
+      take: 9,
     }),
   ]);
 
   const completedCount = currentQuests.filter(q => q.progress[0]?.completed).length;
-  const allDone = completedCount === currentQuests.length && currentQuests.length > 0;
+  const allDone        = completedCount === currentQuests.length && currentQuests.length > 0;
 
-  // Vergangene Monate gruppieren
   const historyByMonth = new Map<string, typeof historyQuests>();
   for (const q of historyQuests) {
     const key = `${q.year}-${q.month}`;
@@ -61,23 +57,27 @@ export default async function QuestsPage() {
   }
 
   return (
-    <div className="p-6 max-w-2xl mx-auto space-y-8">
+    <div className="p-5 sm:p-6 max-w-2xl mx-auto space-y-6 animate-fade-in">
 
       {/* ── Header ─────────────────────────────────────────────────── */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">
-            {MONTH_NAMES[month - 1]} {year}
-          </p>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Monatliche Quests</h1>
-          <div className="flex items-center gap-3 mt-2 flex-wrap">
+          <div className="flex items-center gap-2.5 mb-1">
+            <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+              <Scroll className="w-4 h-4 text-amber-400" />
+            </div>
+            <h1 className="text-2xl font-bold text-white tracking-tight">Quests</h1>
+          </div>
+          <div className="flex items-center gap-3 mt-1.5 flex-wrap ml-10">
             <span className={`text-sm ${allDone ? "text-emerald-400 font-medium" : "text-gray-500"}`}>
               {completedCount} von {currentQuests.length} abgeschlossen
             </span>
+            <span className="text-gray-700">·</span>
             <span className="flex items-center gap-1 text-xs text-gray-600">
               <Clock className="w-3 h-3" />
-              Zurückgesetzt in {daysLeft} {daysLeft === 1 ? "Tag" : "Tagen"}
+              Reset in {daysLeft} {daysLeft === 1 ? "Tag" : "Tagen"}
             </span>
+            <span className="text-xs text-gray-700">{MONTH_NAMES[month - 1]} {year}</span>
           </div>
         </div>
 
@@ -85,10 +85,10 @@ export default async function QuestsPage() {
           {/* Progress ring */}
           <div className="relative w-14 h-14">
             <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-              <circle cx="18" cy="18" r="15.9" fill="none" stroke="#1f2937" strokeWidth="3" />
+              <circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="3" />
               <circle
                 cx="18" cy="18" r="15.9" fill="none"
-                stroke={allDone ? "#10b981" : "#be123c"}
+                stroke={allDone ? "#10b981" : "#f43f5e"}
                 strokeWidth="3"
                 strokeDasharray={`${currentQuests.length ? (completedCount / currentQuests.length) * 100 : 0} 100`}
                 strokeLinecap="round"
@@ -105,8 +105,8 @@ export default async function QuestsPage() {
 
       {/* "Alle abgeschlossen"-Banner */}
       {allDone && (
-        <div className="flex items-center gap-3 bg-emerald-900/20 border border-emerald-700/30 rounded-2xl p-4">
-          <CheckCircle2 className="w-6 h-6 text-emerald-400 shrink-0" />
+        <div className="flex items-center gap-3 glass rounded-2xl p-4 border-emerald-500/20 bg-emerald-500/[0.06]">
+          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
           <div>
             <p className="text-sm font-semibold text-emerald-300">Alle Quests diesen Monat abgeschlossen! 🎉</p>
             <p className="text-xs text-emerald-700 mt-0.5">
@@ -116,26 +116,28 @@ export default async function QuestsPage() {
         </div>
       )}
 
-      {/* ── Aktuelle Quest-Karten ───────────────────────────────────── */}
+      {/* ── Aktuelle Quest-Karten ─────────────────────────────────── */}
       <div className="space-y-3">
-        {currentQuests.map(quest => {
-          const type = quest.type as QuestType;
-          const meta = QUEST_TYPE_META[type];
-          const progress = quest.progress[0];
-          const current = Math.min(progress?.current ?? 0, quest.target);
+        {currentQuests.map((quest, idx) => {
+          const type      = quest.type as QuestType;
+          const meta      = QUEST_TYPE_META[type];
+          const progress  = quest.progress[0];
+          const current   = Math.min(progress?.current ?? 0, quest.target);
           const completed = progress?.completed ?? false;
-          const pct = quest.target > 0 ? Math.round((current / quest.target) * 100) : 0;
+          const pct       = quest.target > 0 ? Math.round((current / quest.target) * 100) : 0;
 
           return (
             <div key={quest.id}
-              className={`relative overflow-hidden rounded-2xl border transition-all ${
-                completed
-                  ? "bg-gray-900 border-emerald-800/40"
-                  : "bg-gray-900 border-white/5 hover:border-white/10"
-              }`}>
-              {/* Farbiger Gradient-Streifen links */}
-              <div className={`absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b ${meta.bar} rounded-l-2xl`} />
-              <div className={`absolute inset-0 bg-gradient-to-br ${meta.bg} to-transparent opacity-50 pointer-events-none`} />
+              className={`card-hover card-shine glass relative overflow-hidden rounded-2xl animate-slide-up`}
+              style={{ animationDelay: `${idx * 50}ms` }}>
+
+              {/* Farbiger Streifen links */}
+              <div className={`absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b ${meta.bar} rounded-l-2xl`} />
+              <div className={`absolute inset-0 bg-gradient-to-br ${meta.bg} to-transparent opacity-40 pointer-events-none`} />
+
+              {completed && (
+                <div className="absolute inset-0 bg-emerald-500/[0.04] pointer-events-none" />
+              )}
 
               <div className="relative pl-5 pr-5 py-4">
                 <div className="flex items-start justify-between gap-3">
@@ -146,21 +148,20 @@ export default async function QuestsPage() {
                         <h3 className={`font-semibold ${completed ? "text-emerald-300" : "text-white"}`}>
                           {quest.title}
                         </h3>
-                        {completed ? (
-                          <span className="inline-flex items-center gap-1 text-xs bg-emerald-900/30 text-emerald-400 border border-emerald-700/30 px-2 py-0.5 rounded-full font-medium">
+                        {completed && (
+                          <span className="inline-flex items-center gap-1 text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-medium">
                             <CheckCircle2 className="w-3 h-3" /> Abgeschlossen
                           </span>
-                        ) : null}
+                        )}
                       </div>
                       <p className="text-sm text-gray-400 mt-0.5">{quest.description}</p>
                     </div>
                   </div>
 
-                  {/* Belohnung */}
                   <div className={`shrink-0 flex items-center gap-1.5 text-sm font-bold px-3 py-1.5 rounded-xl border ${
                     completed
-                      ? "bg-emerald-900/20 text-emerald-400 border-emerald-700/30"
-                      : `${meta.bg} ${meta.color} border-white/10`
+                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                      : "bg-white/[0.04] text-amber-400 border-white/[0.08]"
                   }`}>
                     {completed ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Trophy className="w-3.5 h-3.5" />}
                     +{quest.reward} Pts
@@ -170,22 +171,17 @@ export default async function QuestsPage() {
                 {/* Fortschrittsbalken */}
                 <div className="mt-4">
                   <div className="flex items-center justify-between mb-1.5 text-xs">
-                    <span className="text-gray-500">
-                      {current} / {quest.target} {meta.unit}
-                    </span>
-                    <span className={`font-semibold ${completed ? "text-emerald-400" : meta.color}`}>
-                      {pct}%
-                    </span>
+                    <span className="text-gray-500">{current} / {quest.target} {meta.unit}</span>
+                    <span className={`font-semibold ${completed ? "text-emerald-400" : meta.color}`}>{pct}%</span>
                   </div>
-                  <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+                  <div className="h-2 bg-white/[0.05] rounded-full overflow-hidden">
                     <div
-                      className={`h-full rounded-full bg-gradient-to-r ${meta.bar} transition-all duration-700`}
+                      className={`h-full rounded-full bg-gradient-to-r ${meta.bar} transition-all duration-700 ${completed ? "" : "shadow-[0_0_8px_rgba(244,63,94,0.3)]"}`}
                       style={{ width: `${pct}%` }}
                     />
                   </div>
                 </div>
 
-                {/* Abgeschlossen: Gesperrter Hinweis */}
                 {completed && (
                   <div className="flex items-center gap-1.5 mt-3 text-xs text-emerald-700">
                     <Lock className="w-3 h-3" />
@@ -198,101 +194,78 @@ export default async function QuestsPage() {
         })}
       </div>
 
-      {/* ── Info-Box ────────────────────────────────────────────────── */}
-      <div className="bg-gray-900/60 border border-white/5 rounded-2xl p-4">
-        <p className="text-xs font-semibold text-gray-400 mb-2">So funktionieren Quests</p>
-        <ul className="space-y-1.5 text-xs text-gray-500">
-          <li className="flex items-start gap-2">
-            <span className="shrink-0">🎙️</span>
-            <span><span className="text-gray-400">Sprachkanal:</span> Minuten werden beim Verlassen des Voice automatisch gezählt</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="shrink-0">💬</span>
-            <span><span className="text-gray-400">Nachrichten:</span> Jede Nachricht im Discord-Server zählt</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="shrink-0">📅</span>
-            <span><span className="text-gray-400">Events:</span> Zählt bei der Anmeldung</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="shrink-0">⚔️</span>
-            <span><span className="text-gray-400">Turniere:</span> Zählt bei der Teilnahme</span>
-          </li>
+      {/* ── Info-Box ──────────────────────────────────────────────── */}
+      <div className="glass rounded-2xl p-4">
+        <p className="text-xs font-semibold text-gray-400 mb-3">So funktionieren Quests</p>
+        <ul className="space-y-2 text-xs text-gray-500">
+          {[
+            { icon: "🎙️", label: "Sprachkanal", desc: "Minuten werden beim Verlassen des Voice automatisch gezählt" },
+            { icon: "💬", label: "Nachrichten",  desc: "Jede Nachricht im Discord-Server zählt" },
+            { icon: "📅", label: "Events",       desc: "Zählt bei der Anmeldung" },
+            { icon: "⚔️", label: "Turniere",     desc: "Zählt bei der Teilnahme" },
+          ].map(item => (
+            <li key={item.label} className="flex items-start gap-2">
+              <span className="shrink-0">{item.icon}</span>
+              <span><span className="text-gray-400">{item.label}:</span> {item.desc}</span>
+            </li>
+          ))}
         </ul>
-        <p className="mt-3 text-xs text-gray-600 flex items-center gap-1.5">
+        <p className="mt-3 text-xs text-gray-600 flex items-center gap-1.5 border-t border-white/[0.04] pt-3">
           <Lock className="w-3 h-3" />
           Jede Quest ist nur einmal pro Monat abschließbar. Am 1. des Monats gibt es neue Quests.
         </p>
       </div>
 
-      {/* ── Verlauf vergangener Monate ──────────────────────────────── */}
+      {/* ── Verlauf vergangener Monate ────────────────────────────── */}
       {historyByMonth.size > 0 && (
         <div>
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4">
+          <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-4">
             Vergangene Monate
           </h2>
-          <div className="space-y-4">
+          <div className="space-y-3">
             {Array.from(historyByMonth.entries()).map(([key, quests]) => {
-              const [y, m] = key.split("-").map(Number);
+              const [y, m]        = key.split("-").map(Number);
               const monthCompleted = quests.filter(q => q.progress[0]?.completed).length;
-              const totalPts = quests.reduce(
-                (sum, q) => sum + (q.progress[0]?.completed ? q.reward : 0),
-                0
-              );
+              const totalPts       = quests.reduce((sum, q) => sum + (q.progress[0]?.completed ? q.reward : 0), 0);
 
               return (
-                <div key={key} className="bg-gray-900 border border-white/5 rounded-2xl overflow-hidden">
-                  {/* Monats-Header */}
-                  <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
+                <div key={key} className="glass card-shine rounded-2xl overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.05]">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-white">
-                        {MONTH_NAMES[m - 1]} {y}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        {monthCompleted}/{quests.length} abgeschlossen
-                      </span>
+                      <span className="text-sm font-medium text-white">{MONTH_NAMES[m - 1]} {y}</span>
+                      <span className="text-xs text-gray-600">{monthCompleted}/{quests.length} abgeschlossen</span>
                     </div>
                     {totalPts > 0 && (
-                      <span className="text-xs font-semibold text-amber-400">+{totalPts} Pts verdient</span>
+                      <span className="text-xs font-semibold text-amber-400">+{totalPts} Pts</span>
                     )}
                   </div>
-
-                  {/* Quest-Zeilen */}
-                  <div className="divide-y divide-white/5">
+                  <div className="divide-y divide-white/[0.04]">
                     {quests.map(quest => {
-                      const meta = QUEST_TYPE_META[quest.type as QuestType];
-                      const p = quest.progress[0];
-                      const done = p?.completed ?? false;
+                      const meta    = QUEST_TYPE_META[quest.type as QuestType];
+                      const p       = quest.progress[0];
+                      const done    = p?.completed ?? false;
                       const current = Math.min(p?.current ?? 0, quest.target);
-                      const pct = quest.target > 0 ? Math.round((current / quest.target) * 100) : 0;
+                      const pct     = quest.target > 0 ? Math.round((current / quest.target) * 100) : 0;
 
                       return (
-                        <div key={quest.id} className={`flex items-center gap-3 px-4 py-3 ${!done ? "opacity-50" : ""}`}>
+                        <div key={quest.id} className={`flex items-center gap-3 px-4 py-3 ${!done ? "opacity-40" : ""}`}>
                           <span className="text-lg shrink-0">{meta.icon}</span>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-white truncate">{quest.title}</span>
-                            </div>
-                            {/* Mini-Fortschrittsbalken */}
+                            <span className="text-sm font-medium text-white truncate">{quest.title}</span>
                             <div className="flex items-center gap-2 mt-1">
-                              <div className="flex-1 h-1 bg-gray-800 rounded-full overflow-hidden max-w-24">
-                                <div
-                                  className={`h-full rounded-full bg-gradient-to-r ${meta.bar}`}
-                                  style={{ width: `${pct}%` }}
-                                />
+                              <div className="flex-1 h-1 bg-white/[0.05] rounded-full overflow-hidden max-w-24">
+                                <div className={`h-full rounded-full bg-gradient-to-r ${meta.bar}`} style={{ width: `${pct}%` }} />
                               </div>
                               <span className="text-[10px] text-gray-600">{current}/{quest.target}</span>
                             </div>
                           </div>
-                          <div className="shrink-0">
-                            {done ? (
-                              <span className="flex items-center gap-1 text-xs text-emerald-400 font-semibold">
-                                <CheckCircle2 className="w-3.5 h-3.5" /> +{quest.reward} Pts
-                              </span>
-                            ) : (
-                              <span className="text-xs text-gray-600">Nicht abgeschlossen</span>
-                            )}
-                          </div>
+                          {done ? (
+                            <span className="flex items-center gap-1 text-xs text-emerald-400 font-semibold shrink-0">
+                              <CheckCircle2 className="w-3.5 h-3.5" /> +{quest.reward} Pts
+                            </span>
+                          ) : (
+                            <span className="text-xs text-gray-600 shrink-0">Nicht abgeschlossen</span>
+                          )}
                         </div>
                       );
                     })}

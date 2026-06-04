@@ -1,11 +1,15 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { getRank, getLevel, getNextLevelPoints } from "@/lib/points";
-import PointsInfoModal from "./PointsInfoModal";
 import { QUEST_TYPE_META, type QuestType } from "@/lib/quests";
-import { Trophy, Star, CalendarDays, Swords, Zap, Clock, MessageSquare, CheckCircle2 } from "lucide-react";
+import {
+  Trophy, Star, CalendarDays, Swords, Zap, Clock,
+  MessageSquare, CheckCircle2, ArrowLeft,
+} from "lucide-react";
+import Link from "next/link";
 
+// ── Badge-Logik (identisch mit eigenem Profil) ─────────────────────────────
 interface Badge {
   id: string; icon: string; name: string; desc: string;
   earned: boolean;
@@ -19,25 +23,25 @@ function computeBadges(data: {
 }): Badge[] {
   const { points, maxStreak, voiceHours, messageCount, eventCount, tournamentCount, tournamentWins } = data;
   return [
-    { id: "welcome",   icon: "🎉", name: "Willkommen",      desc: "Erstmals angemeldet",            earned: true,                 category: "community"  },
-    { id: "streak_3",  icon: "🔥", name: "3-Tage-Streak",   desc: "3 Tage am Stück aktiv",          earned: maxStreak >= 3,       category: "community"  },
-    { id: "streak_7",  icon: "🔥", name: "Wochenstreaker",  desc: "7 Tage am Stück aktiv",          earned: maxStreak >= 7,       category: "community"  },
-    { id: "streak_30", icon: "🔥", name: "Monatsstreaker",  desc: "30 Tage am Stück aktiv",         earned: maxStreak >= 30,      category: "community"  },
-    { id: "voice_1h",  icon: "🎙️", name: "Voice-Fan",       desc: "1 Stunde im Sprachkanal",        earned: voiceHours >= 1,      category: "aktivitaet" },
-    { id: "voice_10h", icon: "🎙️", name: "Voice-Veteran",   desc: "10 Stunden im Sprachkanal",      earned: voiceHours >= 10,     category: "aktivitaet" },
-    { id: "voice_50h", icon: "🎙️", name: "Voice-Legende",   desc: "50 Stunden im Sprachkanal",      earned: voiceHours >= 50,     category: "aktivitaet" },
-    { id: "msg_50",    icon: "💬", name: "Gesprächig",      desc: "50 Nachrichten gesendet",        earned: messageCount >= 50,   category: "aktivitaet" },
-    { id: "msg_500",   icon: "💬", name: "Chatterbox",      desc: "500 Nachrichten gesendet",       earned: messageCount >= 500,  category: "aktivitaet" },
-    { id: "event_1",   icon: "📅", name: "Teilnehmer",      desc: "1 Event besucht",                earned: eventCount >= 1,      category: "events"     },
-    { id: "event_5",   icon: "📅", name: "Eventgänger",     desc: "5 Events besucht",               earned: eventCount >= 5,      category: "events"     },
-    { id: "event_10",  icon: "📅", name: "Stammgast",       desc: "10 Events besucht",              earned: eventCount >= 10,     category: "events"     },
-    { id: "t_1",       icon: "⚔️", name: "Turnierkämpfer",  desc: "1 Turnier gespielt",             earned: tournamentCount >= 1, category: "turniere"   },
-    { id: "t_win",     icon: "🏆", name: "Champion",        desc: "Erstes Turnier gewonnen",        earned: tournamentWins >= 1,  category: "turniere"   },
-    { id: "t_win_5",   icon: "👑", name: "Dynastiegründer", desc: "5 Turniersiege",                 earned: tournamentWins >= 5,  category: "turniere"   },
-    { id: "pts_500",   icon: "⭐", name: "Aufsteiger",      desc: "500 Punkte erreicht",            earned: points >= 500,        category: "punkte"     },
-    { id: "pts_2k",    icon: "🌟", name: "Erfahren",        desc: "2.000 Punkte erreicht",          earned: points >= 2000,       category: "punkte"     },
-    { id: "pts_5k",    icon: "💫", name: "Elite",           desc: "5.000 Punkte erreicht",          earned: points >= 5000,       category: "punkte"     },
-    { id: "pts_10k",   icon: "✨", name: "Grandmaster",     desc: "10.000 Punkte erreicht",         earned: points >= 10000,      category: "punkte"     },
+    { id: "welcome",   icon: "🎉", name: "Willkommen",      desc: "Erstmals angemeldet",        earned: true,                 category: "community"  },
+    { id: "streak_3",  icon: "🔥", name: "3-Tage-Streak",   desc: "3 Tage am Stück aktiv",      earned: maxStreak >= 3,       category: "community"  },
+    { id: "streak_7",  icon: "🔥", name: "Wochenstreaker",  desc: "7 Tage am Stück aktiv",      earned: maxStreak >= 7,       category: "community"  },
+    { id: "streak_30", icon: "🔥", name: "Monatsstreaker",  desc: "30 Tage am Stück aktiv",     earned: maxStreak >= 30,      category: "community"  },
+    { id: "voice_1h",  icon: "🎙️", name: "Voice-Fan",       desc: "1 Stunde im Sprachkanal",    earned: voiceHours >= 1,      category: "aktivitaet" },
+    { id: "voice_10h", icon: "🎙️", name: "Voice-Veteran",   desc: "10 Stunden im Sprachkanal",  earned: voiceHours >= 10,     category: "aktivitaet" },
+    { id: "voice_50h", icon: "🎙️", name: "Voice-Legende",   desc: "50 Stunden im Sprachkanal",  earned: voiceHours >= 50,     category: "aktivitaet" },
+    { id: "msg_50",    icon: "💬", name: "Gesprächig",      desc: "50 Nachrichten gesendet",    earned: messageCount >= 50,   category: "aktivitaet" },
+    { id: "msg_500",   icon: "💬", name: "Chatterbox",      desc: "500 Nachrichten gesendet",   earned: messageCount >= 500,  category: "aktivitaet" },
+    { id: "event_1",   icon: "📅", name: "Teilnehmer",      desc: "1 Event besucht",            earned: eventCount >= 1,      category: "events"     },
+    { id: "event_5",   icon: "📅", name: "Eventgänger",     desc: "5 Events besucht",           earned: eventCount >= 5,      category: "events"     },
+    { id: "event_10",  icon: "📅", name: "Stammgast",       desc: "10 Events besucht",          earned: eventCount >= 10,     category: "events"     },
+    { id: "t_1",       icon: "⚔️", name: "Turnierkämpfer",  desc: "1 Turnier gespielt",         earned: tournamentCount >= 1, category: "turniere"   },
+    { id: "t_win",     icon: "🏆", name: "Champion",        desc: "Erstes Turnier gewonnen",    earned: tournamentWins >= 1,  category: "turniere"   },
+    { id: "t_win_5",   icon: "👑", name: "Dynastiegründer", desc: "5 Turniersiege",             earned: tournamentWins >= 5,  category: "turniere"   },
+    { id: "pts_500",   icon: "⭐", name: "Aufsteiger",      desc: "500 Punkte erreicht",        earned: points >= 500,        category: "punkte"     },
+    { id: "pts_2k",    icon: "🌟", name: "Erfahren",        desc: "2.000 Punkte erreicht",      earned: points >= 2000,       category: "punkte"     },
+    { id: "pts_5k",    icon: "💫", name: "Elite",           desc: "5.000 Punkte erreicht",      earned: points >= 5000,       category: "punkte"     },
+    { id: "pts_10k",   icon: "✨", name: "Grandmaster",     desc: "10.000 Punkte erreicht",     earned: points >= 10000,      category: "punkte"     },
   ];
 }
 
@@ -46,49 +50,62 @@ const BADGE_CATEGORY_LABELS = {
   events: "Events", turniere: "Turniere", punkte: "Punkte",
 };
 
-export default async function ProfilePage() {
+// ── Page ────────────────────────────────────────────────────────────────────
+export default async function PublicProfilePage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
   const session = await auth();
-  if (!session?.user?.id) redirect("/login");
-  const userId = session.user.id;
+  const viewerId = session?.user?.id;
 
-  const now   = new Date();
-  const month = now.getMonth() + 1;
-  const year  = now.getFullYear();
+  // Eigenes Profil → weiterleiten
+  if (viewerId === id) {
+    const { redirect } = await import("next/navigation");
+    redirect("/profile");
+  }
 
-  const [user, transactions, eventRegs, tournamentParticipations, matchWins, questsWithProgress] =
+  const [user, transactions, eventRegs, tournamentParticipations, matchWins, leaderboardRank, totalUsers] =
     await Promise.all([
       prisma.user.findUnique({
-        where: { id: userId },
-        select: { id: true, name: true, username: true, image: true, points: true, level: true, streak: true, createdAt: true },
+        where: { id },
+        select: {
+          id: true, name: true, username: true, image: true,
+          points: true, level: true, streak: true, createdAt: true,
+        },
       }),
-      prisma.pointTransaction.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, take: 20 }),
+      // Punkte-Transaktionen — nur für Badge-Berechnung, nicht öffentlich anzeigen
+      prisma.pointTransaction.findMany({ where: { userId: id }, select: { reason: true } }),
       prisma.eventRegistration.findMany({
-        where: { userId },
+        where: { userId: id },
         include: { event: { select: { title: true, startAt: true, game: true } } },
-        orderBy: { joinedAt: "desc" }, take: 5,
+        orderBy: { joinedAt: "desc" },
+        take: 5,
       }),
       prisma.tournamentParticipant.findMany({
-        where: { userId },
+        where: { userId: id },
         include: {
           tournament: {
             include: {
               event: { select: { title: true } },
-              matches: { where: { OR: [{ player1Id: userId }, { player2Id: userId }] } },
+              matches: { where: { OR: [{ player1Id: id }, { player2Id: id }] } },
             },
           },
         },
-        orderBy: { id: "desc" }, take: 10,
+        orderBy: { id: "desc" },
+        take: 10,
       }),
-      prisma.match.count({ where: { winnerId: userId } }),
-      prisma.quest.findMany({
-        where: { month, year },
-        include: { progress: { where: { userId } } },
-        orderBy: { createdAt: "asc" },
-      }),
+      prisma.match.count({ where: { winnerId: id } }),
+      prisma.user.count({ where: { points: { gt: 0 } } }).then(async () =>
+        prisma.user.count({ where: { points: { gt: (await prisma.user.findUnique({ where: { id }, select: { points: true } }))?.points ?? 0 } } }) + 1
+      ),
+      prisma.user.count(),
     ]);
 
-  if (!user) redirect("/login");
+  if (!user) notFound();
 
+  // ── Stats ableiten ──────────────────────────────────────────────────────
   const totalPoints  = user.points;
   const rank         = getRank(totalPoints);
   const level        = getLevel(totalPoints);
@@ -104,13 +121,30 @@ export default async function ProfilePage() {
   const hadStreak30  = transactions.some(t => t.reason.includes("30-Tage"));
   const maxStreak    = hadStreak30 ? 30 : hadStreak7 ? 7 : user.streak >= 3 ? user.streak : 0;
 
-  const badges      = computeBadges({ points: totalPoints, maxStreak, voiceHours, messageCount, eventCount: eventRegs.length, tournamentCount: tournamentParticipations.length, tournamentWins: matchWins });
+  const badges       = computeBadges({ points: totalPoints, maxStreak, voiceHours, messageCount, eventCount: eventRegs.length, tournamentCount: tournamentParticipations.length, tournamentWins: matchWins });
   const earnedBadges = badges.filter(b => b.earned);
   const memberSince  = new Date(user.createdAt).toLocaleDateString("de-DE", { month: "long", year: "numeric" });
   const displayName  = user.username ?? user.name ?? "Unbekannt";
 
+  // Aktuelle Quests des Users (nur öffentlich sichtbarer Fortschritt)
+  const now   = new Date();
+  const month = now.getMonth() + 1;
+  const year  = now.getFullYear();
+  const questsWithProgress = await prisma.quest.findMany({
+    where: { month, year },
+    include: { progress: { where: { userId: id } } },
+    orderBy: { createdAt: "asc" },
+  });
+
   return (
     <div className="p-5 sm:p-6 max-w-5xl mx-auto space-y-5 animate-fade-in">
+
+      {/* ── Zurück-Navigation ──────────────────────────────────────── */}
+      <Link href="/leaderboard"
+        className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-white transition-colors group">
+        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+        Zurück zur Rangliste
+      </Link>
 
       {/* ── Hero ────────────────────────────────────────────────────── */}
       <div className="glass card-shine relative overflow-hidden rounded-2xl p-6">
@@ -119,15 +153,19 @@ export default async function ProfilePage() {
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-rose-500/25 to-transparent pointer-events-none" />
 
         <div className="relative flex items-center gap-5 flex-wrap">
+          {/* Avatar */}
           <div className="relative shrink-0">
             {user.image
-              ? <img src={user.image} alt="avatar" className="w-20 h-20 rounded-2xl ring-2 ring-rose-500/25 object-cover shadow-[0_0_24px_rgba(244,63,94,0.2)]" />
+              ? <img src={user.image} alt={displayName} className="w-20 h-20 rounded-2xl ring-2 ring-rose-500/25 object-cover shadow-[0_0_24px_rgba(244,63,94,0.2)]" />
               : <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-rose-600 to-rose-950 flex items-center justify-center text-2xl font-bold text-white">
                   {displayName[0].toUpperCase()}
                 </div>}
-            <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-400 border-2 border-[#09090f] shadow-[0_0_8px_#34d399] glow-active" />
+            <div className="absolute -bottom-2 -right-2 bg-rose-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-lg ring-2 ring-[#09090f]">
+              Lv.{level}
+            </div>
           </div>
 
+          {/* Info */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-0.5">
               <h1 className="text-2xl font-bold text-white tracking-tight">{displayName}</h1>
@@ -135,10 +173,9 @@ export default async function ProfilePage() {
                 {rank.label}
               </span>
             </div>
-            <div className="flex items-center gap-2 mb-4 flex-wrap">
-              <p className="text-xs text-gray-500">Mitglied seit {memberSince} · {earnedBadges.length} Abzeichen</p>
-              <PointsInfoModal />
-            </div>
+            <p className="text-xs text-gray-500 mb-4">
+              Mitglied seit {memberSince} · {earnedBadges.length} Abzeichen
+            </p>
 
             {/* XP Bar */}
             <div className="max-w-xs">
@@ -151,6 +188,13 @@ export default async function ProfilePage() {
               </div>
               <p className="text-[10px] text-gray-600 mt-1">{xpPct}% zum nächsten Level</p>
             </div>
+          </div>
+
+          {/* Rang-Block */}
+          <div className="glass-heavy rounded-2xl px-5 py-4 text-center shrink-0 self-start hidden sm:block">
+            <p className="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Rang</p>
+            <p className="text-3xl font-black text-white tabular-nums leading-none">#{leaderboardRank}</p>
+            <p className="text-[9px] text-gray-600 mt-1">von {totalUsers}</p>
           </div>
         </div>
       </div>
@@ -206,10 +250,10 @@ export default async function ProfilePage() {
             })}
           </section>
 
-          {/* Quest-Fortschritt */}
+          {/* Quest-Fortschritt — öffentlich sichtbar */}
           {questsWithProgress.length > 0 && (
             <section>
-              <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">📜 Monatliche Quests</h2>
+              <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">📜 Quests diesen Monat</h2>
               <div className="space-y-2">
                 {questsWithProgress.map(quest => {
                   const meta    = QUEST_TYPE_META[quest.type as QuestType];
@@ -226,10 +270,7 @@ export default async function ProfilePage() {
                           <span className={`text-sm font-medium ${done ? "text-emerald-300" : "text-white"}`}>{quest.title}</span>
                           {done && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />}
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-xs text-gray-500">{current}/{quest.target}</span>
-                          <span className="text-xs text-amber-400 font-semibold">+{quest.reward} Pts</span>
-                        </div>
+                        <span className="text-xs text-gray-500">{current}/{quest.target}</span>
                       </div>
                       <div className="h-1.5 bg-white/[0.05] rounded-full overflow-hidden">
                         <div className={`h-full rounded-full bg-gradient-to-r ${meta.bar} transition-all`} style={{ width: `${pct}%` }} />
@@ -250,8 +291,8 @@ export default async function ProfilePage() {
               <div className="glass card-shine rounded-2xl overflow-hidden divide-y divide-white/[0.04]">
                 {tournamentParticipations.map(p => {
                   const myMatches = p.tournament.matches;
-                  const winsCount = myMatches.filter(m => m.winnerId === userId).length;
-                  const losses    = myMatches.filter(m => m.winnerId && m.winnerId !== userId).length;
+                  const winsCount = myMatches.filter(m => m.winnerId === id).length;
+                  const losses    = myMatches.filter(m => m.winnerId && m.winnerId !== id).length;
                   return (
                     <div key={p.id} className="flex items-center gap-3 px-4 py-3">
                       <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/15 flex items-center justify-center shrink-0">
@@ -281,16 +322,15 @@ export default async function ProfilePage() {
           )}
         </div>
 
-        {/* ── Rechte Spalte ──────────────────────────────────────────── */}
+        {/* ── Rechte Spalte — Aktivität ──────────────────────────────── */}
         <div className="space-y-5">
-          {/* Aktivitäts-Stats */}
           <section>
             <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">📊 Aktivität</h2>
             <div className="glass card-shine rounded-2xl overflow-hidden divide-y divide-white/[0.04]">
               {[
-                { icon: <Clock className="w-3.5 h-3.5" />,         label: "Voice-Stunden",  value: `${voiceHours}h`,          color: "text-violet-400" },
-                { icon: <MessageSquare className="w-3.5 h-3.5" />, label: "Nachrichten",    value: `~${messageCount}`,        color: "text-blue-400"   },
-                { icon: <CalendarDays className="w-3.5 h-3.5" />,  label: "Events besucht", value: String(eventRegs.length),  color: "text-emerald-400"},
+                { icon: <Clock className="w-3.5 h-3.5" />,         label: "Voice-Stunden",  value: `${voiceHours}h`,           color: "text-violet-400" },
+                { icon: <MessageSquare className="w-3.5 h-3.5" />, label: "Nachrichten",    value: `~${messageCount}`,         color: "text-blue-400"   },
+                { icon: <CalendarDays className="w-3.5 h-3.5" />,  label: "Events besucht", value: String(eventRegs.length),   color: "text-emerald-400"},
                 { icon: <Swords className="w-3.5 h-3.5" />,        label: "Turniere",       value: String(tournamentParticipations.length), color: "text-amber-400" },
               ].map(s => (
                 <div key={s.label} className="flex items-center justify-between px-4 py-3">
@@ -304,30 +344,23 @@ export default async function ProfilePage() {
             </div>
           </section>
 
-          {/* Punkte-Historie */}
-          <section>
-            <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">⭐ Punkte-Historie</h2>
-            <div className="glass card-shine rounded-2xl overflow-hidden divide-y divide-white/[0.04] max-h-96 overflow-y-auto">
-              {transactions.length === 0 && (
-                <p className="text-xs text-gray-600 text-center py-6">Noch keine Punkte verdient.</p>
-              )}
-              {transactions.map(tx => (
-                <div key={tx.id} className="flex items-start justify-between px-4 py-3 gap-2 hover:bg-white/[0.02] transition-colors">
-                  <div className="min-w-0">
-                    <p className="text-xs text-gray-300 truncate">{tx.reason}</p>
+          {/* Zuletzt besuchte Events */}
+          {eventRegs.length > 0 && (
+            <section>
+              <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">📅 Letzte Events</h2>
+              <div className="glass card-shine rounded-2xl overflow-hidden divide-y divide-white/[0.04]">
+                {eventRegs.map(reg => (
+                  <div key={reg.id} className="px-4 py-3">
+                    <p className="text-sm font-medium text-white truncate">{reg.event.title}</p>
                     <p className="text-[10px] text-gray-600 mt-0.5">
-                      {new Date(tx.createdAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })}
-                      {" · "}
-                      {new Date(tx.createdAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
+                      {new Date(reg.event.startAt).toLocaleDateString("de-DE", { day: "2-digit", month: "short", year: "numeric" })}
+                      {reg.event.game ? ` · ${reg.event.game}` : ""}
                     </p>
                   </div>
-                  <span className={`text-xs font-bold shrink-0 ${tx.amount > 0 ? "text-emerald-400" : "text-red-400"}`}>
-                    {tx.amount > 0 ? "+" : ""}{tx.amount}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </section>
+                ))}
+              </div>
+            </section>
+          )}
         </div>
       </div>
     </div>
