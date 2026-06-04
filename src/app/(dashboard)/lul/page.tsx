@@ -51,6 +51,9 @@ export default async function LulOverviewPage() {
     .filter((st) => st.status === "finished")
     .flatMap((st) => st.entries) ?? [];
 
+  const allActiveEntries = activeSeason?.spieltage
+    .flatMap((st) => st.entries) ?? [];
+
   const standings  = buildLulStandings(activeEntries);
   const myRank     = standings.findIndex((s) => s.userId === userId) + 1;
   const myPoints   = standings.find((s) => s.userId === userId)?.totalPts ?? 0;
@@ -81,7 +84,7 @@ export default async function LulOverviewPage() {
             <div className="bg-black/20 rounded-xl p-3 text-center">
               <Star className="w-4 h-4 mx-auto mb-1 text-amber-400" />
               <p className="text-lg font-bold text-white">
-                {new Set(activeEntries.map((e) => e.userId)).size}
+                {new Set(allActiveEntries.map((e) => e.userId)).size}
               </p>
               <p className="text-[10px] text-gray-500 uppercase tracking-wide">Teilnehmer</p>
             </div>
