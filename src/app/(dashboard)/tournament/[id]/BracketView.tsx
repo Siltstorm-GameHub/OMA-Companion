@@ -113,7 +113,7 @@ export default function BracketView({
                               key={idx}
                               className={`flex items-center justify-between px-2.5 py-2 ${
                                 idx === 0 ? "border-b border-white/5" : ""
-                              } ${isWinner ? "bg-emerald-900/20" : ""glass""}`}
+                              } ${isWinner ? "bg-emerald-900/20" : "glass"}`}
                             >
                               <div className="flex items-center gap-1.5 min-w-0">
                                 {user?.image ? (
