@@ -33,9 +33,19 @@ export default async function FeedPage() {
     prisma.match.findMany({
       where: { winnerId: { not: null }, playedAt: { not: null } },
       orderBy: { playedAt: "desc" }, take: 15,
-      include: { winner: { select: { id: true, name: true, username: true, image: true } } },
+      select: { id: true, winnerId: true, playedAt: true },
     }),
   ]);
+
+  // Gewinner-User separat laden
+  const winnerIds = [...new Set(tournamentWins.map(m => m.winnerId!))];
+  const winnerUsers = winnerIds.length
+    ? await prisma.user.findMany({
+        where: { id: { in: winnerIds } },
+        select: { id: true, name: true, username: true, image: true },
+      })
+    : [];
+  const winnerMap = new Map(winnerUsers.map(u => [u.id, u]));
 
   type Item = { id: string; type: string; userId: string; userName: string; userImage: string | null; text: string; amount?: number; createdAt: Date };
 
@@ -59,15 +69,20 @@ export default async function FeedPage() {
       text:      `hat sich für "${reg.event.title}" angemeldet`,
       createdAt: reg.joinedAt,
     })),
-    ...tournamentWins.filter(m => m.winner).map(m => ({
-      id:        `win-${m.id}`,
-      type:      "win",
-      userId:    m.winner!.id,
-      userName:  m.winner!.username ?? m.winner!.name ?? "?",
-      userImage: m.winner!.image,
-      text:      "hat ein Match gewonnen 🏆",
-      createdAt: m.playedAt!,
-    })),
+    ...tournamentWins
+      .filter(m => m.winnerId && winnerMap.has(m.winnerId))
+      .map(m => {
+        const winner = winnerMap.get(m.winnerId!)!;
+        return {
+          id:        `win-${m.id}`,
+          type:      "win",
+          userId:    winner.id,
+          userName:  winner.username ?? winner.name ?? "?",
+          userImage: winner.image,
+          text:      "hat ein Match gewonnen 🏆",
+          createdAt: m.playedAt!,
+        };
+      }),
   ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 50);
 
   return (
