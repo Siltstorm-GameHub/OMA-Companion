@@ -99,12 +99,15 @@ export default async function LeaderboardPage() {
       {/* ── Vollständige Liste ────────────────────────────────────── */}
       <div className="glass card-shine rounded-2xl overflow-hidden">
         {/* Header */}
-        <div className="grid grid-cols-[2rem_1fr_auto] sm:grid-cols-[2rem_1fr_5rem_4rem_4rem_5rem] gap-x-3 px-4 py-2.5 border-b border-white/[0.05] text-[10px] font-semibold text-gray-600 uppercase tracking-widest">
-          <span>#</span>
-          <span>Spieler</span>
-          <span className="hidden sm:block text-right">Siege</span>
-          <span className="hidden sm:block text-right">Events</span>
-          <span className="hidden sm:block text-right">Lvl</span>
+        <div className="flex items-center gap-3 px-4 py-2.5 border-b border-white/[0.05] text-[10px] font-semibold text-gray-600 uppercase tracking-widest">
+          <span className="w-7">#</span>
+          <span className="w-9" />
+          <span className="flex-1">Spieler</span>
+          <span className="hidden sm:flex items-center gap-4 mr-2">
+            <span className="w-10 text-right">Siege</span>
+            <span className="w-10 text-right">Events</span>
+            <span className="w-8 text-right">Lvl</span>
+          </span>
           <span className="text-right">Punkte</span>
         </div>
 
@@ -117,58 +120,57 @@ export default async function LeaderboardPage() {
 
             return (
               <Link key={u.id} href={isMe ? "/profile" : `/profile/${u.id}`}
-                className={`grid grid-cols-[2rem_1fr_auto] sm:grid-cols-[2rem_1fr_5rem_4rem_4rem_5rem] gap-x-3 items-center px-4 py-3 transition-colors cursor-pointer ${
+                className={`flex items-center gap-3 px-4 py-3 transition-colors cursor-pointer ${
                   isMe ? "bg-rose-500/[0.06]" : "hover:bg-white/[0.03]"
                 } animate-slide-up`}
                 style={{ animationDelay: `${Math.min(i * 20, 300)}ms` }}>
 
                 {/* Rang */}
-                <div className="text-center">
+                <div className="w-7 text-center shrink-0">
                   {i < 3
                     ? <span className="text-base leading-none">{MEDALS[i]}</span>
                     : <span className={`text-xs font-bold ${isMe ? "text-rose-400" : "text-gray-600"}`}>{i + 1}</span>}
                 </div>
 
-                {/* Spieler */}
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-8 h-8 rounded-full shrink-0 overflow-hidden ring-1 ring-white/[0.08]">
-                    {u.image
-                      ? <Image src={u.image} alt={displayName} width={32} height={32} className="w-full h-full object-cover" />
-                      : <div className={`w-full h-full flex items-center justify-center text-xs font-bold ${isMe ? "bg-rose-500/20 text-rose-300" : "bg-white/[0.05] text-gray-400"}`}>
-                          {displayName[0].toUpperCase()}
-                        </div>}
-                  </div>
-                  <div className="min-w-0">
-                    <p className={`text-sm font-medium truncate leading-tight ${isMe ? "text-rose-300" : "text-white"}`}>
-                      {displayName}
-                      {isMe && <span className="text-[10px] text-gray-500 ml-1 font-normal">du</span>}
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-[10px] font-medium ${rank.color}`}>{rank.label}</span>
-                      {u.streak > 0 && <span className="text-[10px] text-orange-400">🔥 {u.streak}d</span>}
-                    </div>
+                {/* Avatar */}
+                <div className="w-9 h-9 rounded-full shrink-0 overflow-hidden ring-1 ring-white/[0.08]">
+                  {u.image
+                    ? <Image src={u.image} alt={displayName} width={36} height={36} className="w-full h-full object-cover" />
+                    : <div className={`w-full h-full flex items-center justify-center text-xs font-bold ${isMe ? "bg-rose-500/20 text-rose-300" : "bg-white/[0.05] text-gray-400"}`}>
+                        {displayName[0].toUpperCase()}
+                      </div>}
+                </div>
+
+                {/* Name + Rang */}
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-medium truncate leading-tight ${isMe ? "text-rose-300" : "text-white"}`}>
+                    {displayName}
+                    {isMe && <span className="text-[10px] text-gray-500 ml-1 font-normal">du</span>}
+                  </p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className={`text-[10px] font-medium ${rank.color}`}>{rank.label}</span>
+                    {u.streak > 0 && <span className="text-[10px] text-orange-400">🔥 {u.streak}d</span>}
+                    {/* On mobile: show compact stats inline */}
+                    <span className="sm:hidden text-[10px] text-gray-600 flex items-center gap-1">
+                      <Swords className="w-2.5 h-2.5" />{userWins}
+                      <CalendarDays className="w-2.5 h-2.5 ml-1" />{u._count.eventRegistrations}
+                    </span>
                   </div>
                 </div>
 
-                {/* Stats — hidden on mobile */}
-                <div className="hidden sm:flex items-center justify-end gap-1 text-sm text-gray-300">
-                  <Swords className="w-3 h-3 text-gray-600" />
-                  {userWins}
-                </div>
-                <div className="hidden sm:flex items-center justify-end gap-1 text-sm text-gray-300">
-                  <CalendarDays className="w-3 h-3 text-gray-600" />
-                  {u._count.eventRegistrations}
-                </div>
-                <div className="hidden sm:flex items-center justify-end gap-1 text-sm text-gray-300">
-                  <Zap className="w-3 h-3 text-gray-600" />
-                  {getLevel(u.points)}
+                {/* Stats — desktop only */}
+                <div className="hidden sm:flex items-center gap-4 text-sm text-gray-400 shrink-0">
+                  <span className="flex items-center gap-1 text-xs"><Swords className="w-3 h-3 text-gray-600" />{userWins}</span>
+                  <span className="flex items-center gap-1 text-xs"><CalendarDays className="w-3 h-3 text-gray-600" />{u._count.eventRegistrations}</span>
+                  <span className="flex items-center gap-1 text-xs"><Zap className="w-3 h-3 text-gray-600" />{getLevel(u.points)}</span>
                 </div>
 
                 {/* Punkte */}
-                <div className="text-right">
-                  <span className={`text-sm font-bold tabular-nums ${i === 0 ? "text-amber-400" : isMe ? "text-rose-300" : "text-white"}`}>
+                <div className="text-right shrink-0">
+                  <p className={`text-sm font-bold tabular-nums ${i === 0 ? "text-amber-400" : isMe ? "text-rose-300" : "text-white"}`}>
                     {u.points.toLocaleString("de-DE")}
-                  </span>
+                  </p>
+                  <p className="text-[10px] text-gray-600">Pts</p>
                 </div>
               </Link>
             );

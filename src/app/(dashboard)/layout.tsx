@@ -4,6 +4,7 @@ import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import MobileTopBar from "@/components/MobileTopBar";
 import { OnboardingModal } from "@/components/OnboardingModal";
+import { BackToTop } from "@/components/BackToTop";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -31,6 +32,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
       {/* Onboarding für neue User */}
       <OnboardingModal />
+
+      {/* Back to top */}
+      <BackToTop />
     </div>
   );
 }

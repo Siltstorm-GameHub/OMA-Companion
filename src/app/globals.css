@@ -111,6 +111,16 @@ a, button, [role="button"] {
     transform 120ms ease;
 }
 
+/* Klick-Feedback auf Buttons */
+button:active, [role="button"]:active {
+  transform: scale(0.97);
+}
+
+/* Pointer auf alle klickbaren Cards */
+.card-hover {
+  cursor: pointer;
+}
+
 /* ── Focus ─────────────────────────────────────────────────────── */
 :focus-visible {
   outline: 2px solid rgba(244,63,94,0.7);
@@ -126,16 +136,23 @@ a, button, [role="button"] {
 
 /* ── Glassmorphism utilities ────────────────────────────────────── */
 .glass {
-  background: rgba(8,12,24,0.52);
-  backdrop-filter: blur(20px) saturate(1.5);
-  -webkit-backdrop-filter: blur(20px) saturate(1.5);
+  background: rgba(8,12,24,0.62);
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
   border: 1px solid var(--border-dim);
 }
 .glass-heavy {
-  background: rgba(5,8,18,0.72);
-  backdrop-filter: blur(28px) saturate(1.7);
-  -webkit-backdrop-filter: blur(28px) saturate(1.7);
+  background: rgba(5,8,18,0.80);
+  backdrop-filter: blur(28px) saturate(1.8);
+  -webkit-backdrop-filter: blur(28px) saturate(1.8);
   border: 1px solid rgba(255,255,255,0.07);
+}
+/* Slightly more opaque for text-heavy sidebar/nav areas */
+.glass-nav {
+  background: rgba(6,9,20,0.88);
+  backdrop-filter: blur(32px) saturate(1.8);
+  -webkit-backdrop-filter: blur(32px) saturate(1.8);
+  border: 1px solid rgba(255,255,255,0.06);
 }
 
 /* ── Gaming gradient text ───────────────────────────────────────── */

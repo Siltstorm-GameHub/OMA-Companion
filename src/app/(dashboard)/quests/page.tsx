@@ -83,20 +83,22 @@ export default async function QuestsPage() {
 
         <div className="flex items-center gap-3 shrink-0">
           {/* Progress ring */}
-          <div className="relative w-14 h-14">
+          <div className="relative w-16 h-16">
             <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-              <circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="3" />
+              <circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="2.5" />
               <circle
                 cx="18" cy="18" r="15.9" fill="none"
                 stroke={allDone ? "#10b981" : "#f43f5e"}
-                strokeWidth="3"
+                strokeWidth="2.5"
                 strokeDasharray={`${currentQuests.length ? (completedCount / currentQuests.length) * 100 : 0} 100`}
                 strokeLinecap="round"
                 className="transition-all duration-700"
+                style={{ filter: allDone ? "drop-shadow(0 0 4px #10b981)" : "drop-shadow(0 0 4px #f43f5e)" }}
               />
             </svg>
-            <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-white">
-              {completedCount}/{currentQuests.length}
+            <span className="absolute inset-0 flex flex-col items-center justify-center leading-none">
+              <span className="text-sm font-black text-white">{completedCount}/{currentQuests.length}</span>
+              <span className="text-[8px] text-gray-600 mt-0.5">Quests</span>
             </span>
           </div>
           {isStaff && <QuestRegenerateButton />}
