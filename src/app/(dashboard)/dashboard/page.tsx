@@ -89,29 +89,30 @@ export default async function DashboardPage() {
       <LevelUpCelebration level={myLevel} points={myPoints} />
 
       {/* ── Hero Banner ────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden border-b border-white/[0.05]">
+      <div className="relative overflow-hidden border-b border-white/[0.06]">
         {/* Background layers */}
-        <div className="absolute inset-0 bg-gradient-to-br from-rose-500/10 via-[#09090f] to-purple-500/8 pointer-events-none" />
-        <div className="absolute inset-0 bg-grid opacity-30 pointer-events-none" />
-        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-rose-500/8 blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-1/3 w-64 h-32 bg-purple-500/6 blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-rose-500/20 to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-br from-rose-500/14 via-[#07070e] to-violet-500/10 pointer-events-none" />
+        <div className="absolute inset-0 bg-grid opacity-40 pointer-events-none" />
+        <div className="absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full bg-rose-500/10 blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-20 -left-20 w-80 h-80 rounded-full bg-violet-500/8 blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-rose-500/30 to-transparent pointer-events-none" />
+        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent pointer-events-none" />
 
         <div className="relative px-5 pt-8 pb-6 max-w-5xl mx-auto">
           <div className="flex items-center gap-5">
 
             {/* Avatar */}
             <div className="relative shrink-0">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden ring-2 ring-rose-500/25 shadow-[0_0_32px_rgba(244,63,94,0.2)]">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden ring-2 ring-rose-500/40 shadow-[0_0_40px_rgba(244,63,94,0.3)] pulse-glow-rose">
                 {avatarUrl ? (
                   <Image src={avatarUrl} alt={displayName} width={80} height={80} className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-rose-600 to-rose-950 flex items-center justify-center text-2xl font-bold text-white">
+                  <div className="w-full h-full bg-gradient-to-br from-rose-500 to-violet-700 flex items-center justify-center text-2xl font-black text-white">
                     {firstName[0]?.toUpperCase()}
                   </div>
                 )}
               </div>
-              <div className="absolute -bottom-2 -right-2 bg-rose-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-lg ring-2 ring-[#09090f]">
+              <div className="absolute -bottom-2 -right-2 bg-gradient-to-r from-rose-600 to-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-lg ring-2 ring-[#07070e] shadow-[0_0_10px_rgba(244,63,94,0.5)]">
                 Lv.{myLevel}
               </div>
             </div>
@@ -119,8 +120,8 @@ export default async function DashboardPage() {
             {/* Name + XP */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-                  Hey, {firstName}!
+                <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                  Hey, <span className="text-gradient-gaming">{firstName}</span>!
                 </h1>
                 <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-lg ${ROLE_STYLE[userRole] ?? ROLE_STYLE.user}`}>
                   {ROLE_LABEL[userRole] ?? "Mitglied"}
@@ -148,9 +149,9 @@ export default async function DashboardPage() {
 
             {/* Rang */}
             {leaderboardRank && (
-              <div className="glass-heavy rounded-2xl px-4 py-3 text-center shrink-0 hidden sm:block">
+              <div className="glass-heavy rounded-2xl px-4 py-3 text-center shrink-0 hidden sm:block border border-white/[0.08] shadow-[0_0_24px_rgba(139,92,246,0.1)]">
                 <p className="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Rang</p>
-                <p className="text-3xl font-black text-white tabular-nums leading-none">
+                <p className="text-3xl font-black tabular-nums leading-none text-gradient-gaming">
                   #{leaderboardRank}
                 </p>
                 <p className="text-[9px] text-gray-600 mt-1">von {memberCount}</p>

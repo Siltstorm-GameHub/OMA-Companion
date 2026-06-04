@@ -57,8 +57,8 @@ export default function Sidebar() {
 
   return (
     <aside
-      style={{ background: "rgba(9,9,15,0.92)" }}
-      className={`flex flex-col shrink-0 border-r border-white/[0.05] backdrop-blur-xl transition-all duration-200 ${
+      style={{ background: "rgba(7,7,14,0.95)", borderRight: "1px solid rgba(255,255,255,0.055)" }}
+      className={`flex flex-col shrink-0 backdrop-blur-2xl transition-all duration-200 ${
         collapsed ? "w-14" : "w-56"
       }`}
     >
@@ -66,17 +66,19 @@ export default function Sidebar() {
       <div className={`flex items-center h-16 border-b border-white/[0.05] relative ${
         collapsed ? "justify-center px-0" : "px-4"
       }`}>
+        {/* Top accent line */}
+        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-rose-500/40 to-transparent" />
+
         <div className={`flex items-center gap-2.5 min-w-0 ${collapsed ? "justify-center" : ""}`}>
-          {/* Logo with glow */}
-          <div className="w-9 h-9 rounded-xl overflow-hidden shrink-0 shadow-[0_0_16px_rgba(244,63,94,0.25)] ring-1 ring-rose-500/20">
+          <div className="w-9 h-9 rounded-xl overflow-hidden shrink-0 shadow-[0_0_20px_rgba(244,63,94,0.35)] ring-1 ring-rose-500/30">
             <Image src="/OMALogoNew.png" alt="OMA" width={36} height={36} className="w-full h-full object-cover" />
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <p className="text-sm font-bold text-white tracking-tight">OMA</p>
+              <p className="text-sm font-black text-white tracking-widest uppercase">OMA</p>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399]" />
-                <span className="text-[10px] text-gray-500 font-medium tracking-wide">ONLINE</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399] glow-active" />
+                <span className="text-[10px] text-emerald-500/80 font-semibold tracking-widest uppercase">Online</span>
               </div>
             </div>
           )}
@@ -102,25 +104,28 @@ export default function Sidebar() {
               key={href}
               href={href}
               title={collapsed ? label : undefined}
-              className={`group relative flex items-center rounded-lg text-sm font-medium transition-all duration-150 ${
+              className={`group relative flex items-center rounded-xl text-sm font-medium transition-all duration-150 ${
                 collapsed ? "justify-center p-2.5" : "gap-2.5 px-3 py-2.5"
               } ${
                 active
-                  ? "bg-rose-500/10 text-rose-200 shadow-[inset_0_0_0_1px_rgba(244,63,94,0.15)]"
-                  : "text-gray-500 hover:text-gray-200 hover:bg-white/[0.04]"
+                  ? "bg-gradient-to-r from-rose-500/15 to-rose-500/5 text-rose-200 shadow-[inset_0_0_0_1px_rgba(244,63,94,0.2)]"
+                  : "text-gray-500 hover:text-gray-100 hover:bg-white/[0.05]"
               }`}
             >
-              {/* Active left-border accent */}
+              {/* Active left-border accent — neon glow */}
               {active && !collapsed && (
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-full bg-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.6)]" />
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-full bg-rose-400 shadow-[0_0_10px_rgba(244,63,94,0.8),0_0_20px_rgba(244,63,94,0.4)]" />
+              )}
+              {active && collapsed && (
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-full bg-rose-400 shadow-[0_0_10px_rgba(244,63,94,0.8)]" />
               )}
 
               <Icon
-                className={`w-4 h-4 shrink-0 transition-colors ${
-                  active ? "text-rose-400" : "text-gray-600 group-hover:text-gray-400"
+                className={`w-4 h-4 shrink-0 transition-all ${
+                  active ? "text-rose-400 drop-shadow-[0_0_6px_rgba(244,63,94,0.8)]" : "text-gray-600 group-hover:text-gray-300"
                 }`}
               />
-              {!collapsed && <span className="flex-1">{label}</span>}
+              {!collapsed && <span className={`flex-1 font-medium ${active ? "font-semibold" : ""}`}>{label}</span>}
 
               {/* Tooltip when collapsed */}
               {collapsed && (
@@ -144,16 +149,16 @@ export default function Sidebar() {
             <Link
               href="/admin"
               title={collapsed ? "Admin-Bereich" : undefined}
-              className={`group relative flex items-center rounded-lg text-sm font-medium transition-all duration-150 ${
+              className={`group relative flex items-center rounded-xl text-sm font-medium transition-all duration-150 ${
                 collapsed ? "justify-center p-2.5" : "gap-2.5 px-3 py-2.5"
               } ${
                 pathname.startsWith("/admin")
-                  ? "bg-purple-500/10 text-purple-200 shadow-[inset_0_0_0_1px_rgba(168,85,247,0.15)]"
-                  : "text-gray-500 hover:text-gray-200 hover:bg-white/[0.04]"
+                  ? "bg-gradient-to-r from-purple-500/15 to-purple-500/5 text-purple-200 shadow-[inset_0_0_0_1px_rgba(168,85,247,0.2)]"
+                  : "text-gray-500 hover:text-gray-100 hover:bg-white/[0.05]"
               }`}
             >
               {pathname.startsWith("/admin") && !collapsed && (
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-full bg-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.6)]" />
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-full bg-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.8),0_0_20px_rgba(168,85,247,0.4)]" />
               )}
               <ShieldCheck
                 className={`w-4 h-4 shrink-0 ${
