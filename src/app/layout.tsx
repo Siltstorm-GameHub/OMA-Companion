@@ -23,10 +23,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="antialiased" style={{ background: "var(--bg-base, #07070e)" }}>
-        {/* Animated particle canvas — fixed behind everything */}
+        {/* Hex-Grid canvas — fixed, behind content but above body bg */}
         <AnimatedBackground />
 
-        <div style={{ position: "relative", zIndex: 1, minHeight: "100dvh", display: "flex", flexDirection: "column" }}>
+        <div style={{ position: "relative", zIndex: 2, minHeight: "100dvh", display: "flex", flexDirection: "column" }}>
           <ThemeProvider>
             <SessionProvider>{children}</SessionProvider>
           </ThemeProvider>
