@@ -3,6 +3,31 @@ import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { updateQuestProgress } from "@/lib/quests";
 
+// Standard round-robin scheduling algorithm (circle method)
+export function generateRoundRobin(participantIds: string[], tournamentId: string) {
+  const ids = [...participantIds];
+  if (ids.length % 2 !== 0) ids.push("BYE"); // ghost player
+  const n     = ids.length;
+  const rounds = n - 1;
+  const matches = [];
+
+  for (let round = 1; round <= rounds; round++) {
+    let pos = 1;
+    for (let i = 0; i < n / 2; i++) {
+      const home = ids[i];
+      const away = ids[n - 1 - i];
+      if (home !== "BYE" && away !== "BYE") {
+        matches.push({ tournamentId, round, position: pos, player1Id: home, player2Id: away, winnerId: null });
+        pos++;
+      }
+    }
+    // rotate: fix index 0, rotate the rest
+    const last = ids.pop()!;
+    ids.splice(1, 0, last);
+  }
+  return matches;
+}
+
 function generateBracket(participantIds: string[], tournamentId: string) {
   const n = participantIds.length;
   const slots = Math.pow(2, Math.ceil(Math.log2(n)));
