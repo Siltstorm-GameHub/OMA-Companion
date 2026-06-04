@@ -22,9 +22,12 @@ const ITEMS = [
   { name: "Crimson",       description: "Tiefes Dunkelrot — für die harten Kämpfer.",               icon: "🔴", price:   600, type: "profile_theme",  value: "crimson",       category: "cosmetic",  rarity: "common",    sortOrder: 34 },
 
   // ── Boosts & Privileges ────────────────────────────────────────
-  { name: "Streak-Schutz", description: "Verhindert einmalig einen Streak-Verlust wenn du einen Tag verpasst.", icon: "🛡️", price: 300, type: "streak_shield", value: "1", category: "boost",     rarity: "common",    sortOrder: 40 },
-  { name: "XP-Boost 7 Tage",description: "+50% Punkte auf alle Aktivitäten für 7 Tage.",           icon: "⚡", price:  1500, type: "xp_boost",       value: "7",             category: "boost",     rarity: "rare",      sortOrder: 41 },
-  { name: "Event-Slot",    description: "Garantierter Platz bei einem ausgebuchten Event — überspringt die Warteliste.", icon: "🎟️", price: 200, type: "event_slot", value: "1", category: "privilege", rarity: "common",    sortOrder: 42 },
+  { name: "Streak-Schutz",     description: "Verhindert einmalig einen Streak-Verlust wenn du einen Tag verpasst.",                                icon: "🛡️", price:  300, type: "streak_shield",      value: "1",            category: "boost",     rarity: "common",    sortOrder: 40 },
+  { name: "XP-Boost 7 Tage",  description: "+50% Punkte auf alle Aktivitäten für 7 Tage.",                                                        icon: "⚡", price: 1500, type: "xp_boost",           value: "7",            category: "boost",     rarity: "rare",      sortOrder: 41 },
+  { name: "Event-Slot",        description: "Garantierter Platz bei einem ausgebuchten Event — überspringt die Warteliste.",                       icon: "🎟️", price:  200, type: "event_slot",         value: "1",            category: "privilege", rarity: "common",    sortOrder: 42 },
+  { name: "Discord-Rolle",     description: "Erhalte sofort die exklusive Shop-Veteran Rolle im Discord — sichtbar für alle.",                     icon: "🎭", price: 2000, type: "discord_role",       value: "CONFIGURE_ME", category: "privilege", rarity: "epic",      sortOrder: 43 },
+  { name: "Spieltag-Vorschlag",description: "Schlage ein Spiel für den nächsten LUL-Spieltag vor. Dein Vorschlag wird zur Abstimmung gestellt.",  icon: "🎮", price:  800, type: "lul_suggest",        value: "1",            category: "privilege", rarity: "rare",      sortOrder: 44 },
+  { name: "Turnier-Sponsoring",description: "Dein Name erscheint als Community-Sponsor auf der nächsten Turnier-Seite. Ewiger Ruhm garantiert.", icon: "🏅", price: 3500, type: "tournament_sponsor", value: "1",            category: "privilege", rarity: "legendary", sortOrder: 45 },
 ];
 
 async function main() {

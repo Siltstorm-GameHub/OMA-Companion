@@ -8,10 +8,22 @@ export const RARITY_CONFIG = {
 } as const;
 
 export const CATEGORY_CONFIG = {
-  cosmetic:  { label: "Kosmetik",  icon: "🎨" },
-  boost:     { label: "Boosts",    icon: "⚡" },
+  cosmetic:  { label: "Kosmetik",    icon: "🎨" },
+  boost:     { label: "Boosts",      icon: "⚡" },
   privilege: { label: "Privilegien", icon: "🎟️" },
 } as const;
+
+export const TYPE_CONFIG: Record<string, { label: string; icon: string; desc: string }> = {
+  title:              { label: "Titel",              icon: "🎖️", desc: "Zeige deinen Status neben deinem Namen — im Profil und im Leaderboard." },
+  badge:              { label: "Exklusive Abzeichen", icon: "💎", desc: "Shop-exklusive Badges die man nicht durch Aktivität verdienen kann." },
+  profile_theme:      { label: "Profil-Themes",      icon: "🎨", desc: "Personalisiere deinen Hero-Banner mit einem eigenen Farbschema." },
+  xp_boost:          { label: "XP-Boost",            icon: "⚡", desc: "Verdiene temporär mehr Punkte auf alle Aktivitäten." },
+  streak_shield:     { label: "Streak-Schutz",       icon: "🛡️", desc: "Schütze deinen Streak vor Verlust wenn du einen Tag verpasst." },
+  event_slot:        { label: "Event-Slot",           icon: "🎟️", desc: "Überspringe die Warteliste bei ausgebuchten Events." },
+  discord_role:      { label: "Discord-Rolle",        icon: "🎭", desc: "Erhalte sofort eine exklusive Rolle im Discord-Server." },
+  lul_suggest:       { label: "Spieltag-Vorschlag",  icon: "🎮", desc: "Schlage ein Spiel für den nächsten LUL-Spieltag vor." },
+  tournament_sponsor:{ label: "Turnier-Sponsoring",  icon: "🏅", desc: "Dein Name erscheint als Community-Sponsor auf Turnier-Seiten." },
+};
 
 export const PROFILE_THEMES: Record<string, { from: string; to: string; via: string; border: string }> = {
   default: { from: "from-rose-500/14",    via: "via-transparent", to: "to-violet-500/10", border: "via-rose-500/25"    },
@@ -37,10 +49,20 @@ export const SHOP_BADGE_META: Record<string, { icon: string; name: string; desc:
   shop_allstar: { icon: "🌟", name: "All-Star",    desc: "Bester in allem" },
 };
 
+async function assignDiscordRole(discordId: string, roleId: string) {
+  const guildId = process.env.DISCORD_GUILD_ID;
+  const token   = process.env.DISCORD_BOT_TOKEN;
+  if (!guildId || !token || !roleId || roleId === "CONFIGURE_ME") return;
+  await fetch(`https://discord.com/api/v10/guilds/${guildId}/members/${discordId}/roles/${roleId}`, {
+    method:  "PUT",
+    headers: { Authorization: `Bot ${token}` },
+  });
+}
+
 /** Kauft ein Item. Gibt null zurück wenn Punkte nicht reichen oder Item nicht verfügbar. */
 export async function purchaseItem(userId: string, itemId: string) {
   const [user, item] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userId }, select: { points: true } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { points: true, discordId: true } }),
     prisma.shopItem.findUnique({ where: { id: itemId } }),
   ]);
 
@@ -49,7 +71,7 @@ export async function purchaseItem(userId: string, itemId: string) {
   if (item.stock !== null && item.stock <= 0) return { error: "Ausverkauft" };
 
   // Doppelkauf für dauerhafte Items verhindern (außer Einmalitems)
-  const isRepeatable = ["streak_shield", "xp_boost", "event_slot"].includes(item.type);
+  const isRepeatable = ["streak_shield", "xp_boost", "event_slot", "lul_suggest"].includes(item.type);
   if (!isRepeatable) {
     const existing = await prisma.shopPurchase.findFirst({ where: { userId, itemId } });
     if (existing) return { error: "Bereits gekauft" };
@@ -84,6 +106,9 @@ export async function purchaseItem(userId: string, itemId: string) {
   }
   if (item.type === "streak_shield") {
     await prisma.user.update({ where: { id: userId }, data: { streakShield: true } });
+  }
+  if (item.type === "discord_role" && user.discordId) {
+    await assignDiscordRole(user.discordId, item.value);
   }
 
   return { purchase, item };

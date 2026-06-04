@@ -1,9 +1,53 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { ShoppingBag } from "lucide-react";
-import { RARITY_CONFIG, CATEGORY_CONFIG, PROFILE_THEMES } from "@/lib/shop";
+import { RARITY_CONFIG, TYPE_CONFIG } from "@/lib/shop";
 import { CountUp } from "@/components/CountUp";
 import ShopItemCard from "./ShopItemCard";
+
+// Sektionen: jede hat einen Titel, Beschreibung und die Item-Typen die dazu gehören
+const SECTIONS = [
+  {
+    key:   "cosmetic-titles",
+    label: "Titel",
+    icon:  "🎖️",
+    desc:  "Zeige deinen Status neben deinem Namen — im Profil und im Leaderboard.",
+    types: ["title"],
+    grid:  "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
+  },
+  {
+    key:   "cosmetic-badges",
+    label: "Exklusive Abzeichen",
+    icon:  "💎",
+    desc:  "Shop-exklusive Badges die man nicht durch Aktivität verdienen kann.",
+    types: ["badge"],
+    grid:  "grid-cols-1 sm:grid-cols-3",
+  },
+  {
+    key:   "cosmetic-themes",
+    label: "Profil-Themes",
+    icon:  "🎨",
+    desc:  "Personalisiere deinen Hero-Banner mit einem eigenen Farbschema.",
+    types: ["profile_theme"],
+    grid:  "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
+  },
+  {
+    key:   "boosts",
+    label: "Boosts",
+    icon:  "⚡",
+    desc:  "Temporäre oder einmalige Vorteile für mehr Punkte und Streak-Schutz.",
+    types: ["xp_boost", "streak_shield"],
+    grid:  "grid-cols-1 sm:grid-cols-2",
+  },
+  {
+    key:   "privileges",
+    label: "Privilegien",
+    icon:  "🎟️",
+    desc:  "Besondere Rechte und Aktionen die nur Shop-Käufer nutzen können.",
+    types: ["event_slot", "discord_role", "lul_suggest", "tournament_sponsor"],
+    grid:  "grid-cols-1 sm:grid-cols-2",
+  },
+] as const;
 
 export default async function ShopPage() {
   const session = await auth();
@@ -12,7 +56,7 @@ export default async function ShopPage() {
   const [items, me, myPurchases] = await Promise.all([
     prisma.shopItem.findMany({
       where:   { active: true },
-      orderBy: [{ category: "asc" }, { sortOrder: "asc" }],
+      orderBy: [{ sortOrder: "asc" }],
     }),
     userId
       ? prisma.user.findUnique({
@@ -23,26 +67,22 @@ export default async function ShopPage() {
     userId
       ? prisma.shopPurchase.findMany({
           where:  { userId },
-          select: { itemId: true, consumed: true, expiresAt: true },
+          select: { id: true, itemId: true, consumed: true, expiresAt: true },
         })
       : [],
   ]);
 
   const purchasedIds  = new Set(myPurchases.map(p => p.itemId));
+  const purchaseMap   = new Map(myPurchases.map(p => [p.itemId, p]));
   const myPoints      = me?.points ?? 0;
   const xpBoostActive = me?.xpBoostUntil && me.xpBoostUntil > new Date();
 
-  // Nach Kategorien gruppieren
-  const byCategory = items.reduce<Record<string, typeof items>>((acc, item) => {
-    if (!acc[item.category]) acc[item.category] = [];
-    acc[item.category].push(item);
-    return acc;
-  }, {});
-
-  const categoryOrder = ["cosmetic", "boost", "privilege"];
+  // Rarity-Verteilung für den Header
+  const ownedCount = purchasedIds.size;
+  const totalCount = items.length;
 
   return (
-    <div className="p-5 sm:p-6 max-w-5xl mx-auto space-y-8 animate-fade-in">
+    <div className="p-5 sm:p-6 max-w-5xl mx-auto space-y-10 animate-fade-in">
 
       {/* ── Header ──────────────────────────────────────────────────── */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -53,7 +93,12 @@ export default async function ShopPage() {
             </div>
             <h1 className="text-2xl font-bold text-white tracking-tight">Shop</h1>
           </div>
-          <p className="text-sm text-gray-500 ml-10">Gib deine Punkte für exklusive Belohnungen aus</p>
+          <p className="text-sm text-gray-500 ml-10">
+            Gib deine Punkte für exklusive Belohnungen aus
+            {me && (
+              <span className="ml-2 text-gray-600">· {ownedCount}/{totalCount} besessen</span>
+            )}
+          </p>
         </div>
 
         {/* Mein Guthaben */}
@@ -72,7 +117,7 @@ export default async function ShopPage() {
       {(xpBoostActive || me?.streakShield) && (
         <div className="glass rounded-2xl p-4 border border-emerald-500/20 bg-emerald-500/[0.04]">
           <p className="text-xs font-semibold text-emerald-400 mb-2">✅ Aktive Belohnungen</p>
-          <div className="flex gap-4 flex-wrap">
+          <div className="flex gap-3 flex-wrap">
             {xpBoostActive && (
               <span className="text-xs text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">
                 ⚡ XP-Boost aktiv bis {new Date(me!.xpBoostUntil!).toLocaleDateString("de-DE")}
@@ -87,22 +132,41 @@ export default async function ShopPage() {
         </div>
       )}
 
-      {/* ── Items nach Kategorie ─────────────────────────────────────── */}
-      {categoryOrder.map(cat => {
-        const catItems = byCategory[cat];
-        if (!catItems?.length) return null;
-        const cfg = CATEGORY_CONFIG[cat as keyof typeof CATEGORY_CONFIG];
+      {/* ── Sektionen ───────────────────────────────────────────────── */}
+      {SECTIONS.map(section => {
+        const sectionItems = items.filter(i => (section.types as readonly string[]).includes(i.type));
+        if (!sectionItems.length) return null;
+
+        const ownedInSection = sectionItems.filter(i => purchasedIds.has(i.id)).length;
 
         return (
-          <div key={cat}>
-            <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-              <span>{cfg.icon}</span> {cfg.label}
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {catItems.map(item => {
-                const owned    = purchasedIds.has(item.id);
+          <section key={section.key}>
+            {/* Sektions-Header */}
+            <div className="flex items-end justify-between mb-4 gap-2">
+              <div>
+                <h2 className="flex items-center gap-2 text-base font-semibold text-white">
+                  <span>{section.icon}</span>
+                  {section.label}
+                </h2>
+                <p className="text-xs text-gray-600 mt-0.5">{section.desc}</p>
+              </div>
+              {me && (
+                <span className="text-[10px] text-gray-600 shrink-0 mb-0.5">
+                  {ownedInSection}/{sectionItems.length}
+                </span>
+              )}
+            </div>
+
+            {/* Trennlinie */}
+            <div className="h-px bg-gradient-to-r from-white/[0.06] to-transparent mb-4" />
+
+            {/* Item-Grid */}
+            <div className={`grid gap-3 ${section.grid}`}>
+              {sectionItems.map(item => {
+                const owned     = purchasedIds.has(item.id);
                 const canAfford = myPoints >= item.price;
-                const soldOut  = item.stock !== null && item.stock <= 0;
+                const soldOut   = item.stock !== null && item.stock <= 0;
+                const purchase  = purchaseMap.get(item.id);
 
                 return (
                   <ShopItemCard
@@ -114,11 +178,13 @@ export default async function ShopPage() {
                     myPoints={myPoints}
                     activeTitle={me?.activeTitle ?? null}
                     profileTheme={me?.profileTheme ?? "default"}
+                    purchaseId={purchase?.id}
+                    consumed={purchase?.consumed}
                   />
                 );
               })}
             </div>
-          </div>
+          </section>
         );
       })}
     </div>

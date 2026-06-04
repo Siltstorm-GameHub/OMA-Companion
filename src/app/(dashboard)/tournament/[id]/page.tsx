@@ -59,6 +59,12 @@ export default async function TournamentDetailPage({
 
   if (!event) notFound();
 
+  const sponsors = await prisma.shopPurchase.findMany({
+    where:   { consumed: false, item: { type: "tournament_sponsor" } },
+    include: { user: { select: { username: true, name: true } } },
+    orderBy: { createdAt: "asc" },
+  });
+
   const isRegistered = event.registrations.some((r) => r.userId === userId);
   const s = STATUS_STYLES[event.status] ?? STATUS_STYLES.finished;
   const t = event.tournament;
@@ -164,6 +170,17 @@ export default async function TournamentDetailPage({
               <p className="text-xs text-amber-600 uppercase tracking-wide font-medium">Turniersieger</p>
               <p className="text-white font-semibold">{userName(winner)}</p>
             </div>
+          </div>
+        )}
+
+        {sponsors.length > 0 && (
+          <div className="mt-4 flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] text-gray-600 uppercase tracking-widest">Community-Sponsoren</span>
+            {sponsors.map(s => (
+              <span key={s.id} className="text-xs px-2.5 py-1 rounded-full border border-amber-500/20 bg-amber-500/[0.06] text-amber-300 font-medium">
+                🏅 {s.user.username ?? s.user.name ?? "Unbekannt"}
+              </span>
+            ))}
           </div>
         )}
 
