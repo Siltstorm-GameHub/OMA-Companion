@@ -32,6 +32,7 @@ model User {
   teamMemberships           TeamMember[]
   matchEntries              MatchEntry[]
   questProgress             UserQuestProgress[]
+  lulEntries                LulEntry[]
 }
 
 model Account {
@@ -217,4 +218,56 @@ model PointTransaction {
   reason    String
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id])
+}
+
+// ── Level-Up-League ─────────────────────────────────────────────────────────
+
+model LulSeason {
+  id             String   @id @default(cuid())
+  number         Int      // Saison-Nummer (1, 2, ...)
+  name           String?  // optionaler Anzeigename
+  period         String?  // "Mai 2026 - Dezember 2026"
+  totalSpieltage Int      @default(8)
+  // upcoming | active | finished
+  status         String   @default("upcoming")
+  createdAt      DateTime @default(now())
+
+  spieltage LulSpieltag[]
+}
+
+model LulSpieltag {
+  id           String    @id @default(cuid())
+  seasonId     String
+  number       Int       // 1-8
+  game         String    // "Brawlhalla"
+  gameType     String?   // "Beat-em Up"
+  platform     String?   // "PC/Konsole"
+  scheduledAt  DateTime?
+  // upcoming | active | finished
+  status       String    @default("upcoming")
+  // JSON: {"1": 10, "2": 5, "3": 3} – Punkte pro Spielplatzierung
+  pointsConfig String?
+  season       LulSeason @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  entries      LulEntry[]
+}
+
+model LulEntry {
+  id             String      @id @default(cuid())
+  spieltagId     String
+  userId         String
+  // player | spectator
+  role           String      @default("player")
+  // JSON number[]: Punkte pro Runde (max 10), nur für Mitspieler
+  roundScores    String?
+  totalGameScore Int         @default(0)
+  placement      Int?        // Spieltagsplatzierung (1 = Sieger)
+  gameWinner     Boolean     @default(false) // Mitspieler-Sieg
+  communityChamp Boolean     @default(false) // Zuschauer-Umfragesieg
+  trostpreis     Boolean     @default(false) // Trostpreis-Umfrage
+  voted          Boolean     @default(false) // hat an Umfrage teilgenommen
+  dominionBonus  Boolean     @default(false) // 3 Siege in Folge
+  lulPoints      Int         @default(0)     // LUL-Punkte gesamt für diesen Spieltag
+  spieltag       LulSpieltag @relation(fields: [spieltagId], references: [id], onDelete: Cascade)
+  user           User        @relation(fields: [userId], references: [id])
+  @@unique([spieltagId, userId])
 }
