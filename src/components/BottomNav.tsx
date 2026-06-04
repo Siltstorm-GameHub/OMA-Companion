@@ -17,10 +17,9 @@ export default function BottomNav() {
 
   return (
     <nav
-      style={{ background: "rgba(9,9,15,0.92)" }}
-      className="fixed bottom-0 left-0 right-0 z-40 md:hidden backdrop-blur-2xl border-t border-white/[0.06] safe-area-pb"
+      style={{ background: "rgba(7,7,14,0.96)" }}
+      className="fixed bottom-0 left-0 right-0 z-40 md:hidden backdrop-blur-2xl border-t border-white/[0.07] safe-area-pb"
     >
-      {/* Horizontally scrollable — all 7 items always accessible */}
       <div className="flex items-stretch h-16 overflow-x-auto scrollbar-none px-1">
         {NAV.map(({ label, href, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + "/");
@@ -30,23 +29,25 @@ export default function BottomNav() {
               href={href}
               className="flex-shrink-0 flex flex-col items-center justify-center gap-1 relative transition-colors px-3 min-w-[60px]"
             >
-              {/* Active pill indicator */}
+              {/* Neon top indicator */}
               {active && (
-                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-b-full bg-rose-400 shadow-[0_2px_8px_rgba(244,63,94,0.6)]" />
+                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-b-full bg-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.9),0_2px_14px_rgba(244,63,94,0.5)]" />
               )}
 
               <div className={`flex items-center justify-center w-9 h-9 rounded-xl transition-all ${
                 active
-                  ? "bg-rose-500/12 text-rose-400 shadow-[0_0_16px_rgba(244,63,94,0.15)]"
+                  ? "bg-rose-500/15 shadow-[0_0_20px_rgba(244,63,94,0.2)]"
                   : "text-gray-600"
               }`}>
                 <Icon
-                  className="w-5 h-5 transition-transform"
+                  className={`w-5 h-5 transition-all ${
+                    active ? "text-rose-400 drop-shadow-[0_0_6px_rgba(244,63,94,0.9)]" : ""
+                  }`}
                   style={{ transform: active ? "scale(1.15)" : "scale(1)" }}
                   strokeWidth={active ? 2.5 : 2}
                 />
               </div>
-              <span className={`text-[9px] font-medium tracking-wide leading-none whitespace-nowrap ${
+              <span className={`text-[9px] font-semibold tracking-wide leading-none whitespace-nowrap ${
                 active ? "text-rose-400" : "text-gray-600"
               }`}>
                 {label}

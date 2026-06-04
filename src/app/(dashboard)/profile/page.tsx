@@ -130,15 +130,15 @@ export default async function ProfilePage() {
 
       {/* ── Hero ────────────────────────────────────────────────────── */}
       <div className="glass card-shine relative overflow-hidden rounded-2xl p-6">
-        <div className="absolute inset-0 bg-gradient-to-br from-rose-500/10 via-transparent to-purple-500/8 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-br from-rose-500/14 via-transparent to-violet-500/10 pointer-events-none" />
         <div className="absolute inset-0 bg-grid opacity-30 pointer-events-none" />
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-rose-500/25 to-transparent pointer-events-none" />
 
         <div className="relative flex items-center gap-5 flex-wrap">
           <div className="relative shrink-0">
             {user.image
-              ? <Image src={user.image} alt="avatar" width={80} height={80} className="w-20 h-20 rounded-2xl ring-2 ring-rose-500/25 object-cover shadow-[0_0_24px_rgba(244,63,94,0.2)]" />
-              : <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-rose-600 to-rose-950 flex items-center justify-center text-2xl font-bold text-white">
+              ? <Image src={user.image} alt="avatar" width={80} height={80} className="w-20 h-20 rounded-2xl ring-2 ring-rose-500/40 object-cover shadow-[0_0_40px_rgba(244,63,94,0.3)]" />
+              : <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-rose-500 to-violet-700 flex items-center justify-center text-2xl font-black text-white">
                   {displayName[0].toUpperCase()}
                 </div>}
             <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-400 border-2 border-[#09090f] shadow-[0_0_8px_#34d399] glow-active" />
