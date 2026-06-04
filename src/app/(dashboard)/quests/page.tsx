@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { generateMonthlyQuests, QUEST_TYPE_META, type QuestType } from "@/lib/quests";
 import { Trophy, Lock, CheckCircle2, Clock, Scroll } from "lucide-react";
+import { EmptyState } from "@/components/EmptyState";
 import QuestRegenerateButton from "./QuestRegenerateButton";
 
 const MONTH_NAMES = [
@@ -120,6 +121,13 @@ export default async function QuestsPage() {
 
       {/* ── Aktuelle Quest-Karten ─────────────────────────────────── */}
       <div className="space-y-3">
+        {currentQuests.length === 0 && (
+          <EmptyState
+            type="quests"
+            title="Keine Quests verfügbar"
+            description="Quests werden am Anfang jeden Monats generiert. Schau später nochmal vorbei!"
+          />
+        )}
         {currentQuests.map((quest, idx) => {
           const type      = quest.type as QuestType;
           const meta      = QUEST_TYPE_META[type];

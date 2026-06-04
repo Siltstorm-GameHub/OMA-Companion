@@ -5,6 +5,7 @@ import SyncButton from "./SyncButton";
 import RegisterButton from "./RegisterButton";
 import { RelativeTime } from "@/components/RelativeTime";
 import Link from "next/link";
+import { EmptyState } from "@/components/EmptyState";
 
 const STATUS_CONFIG: Record<string, {
   label: string; badge: string; bar: string; glow: string; dot: string;
@@ -301,13 +302,11 @@ export default async function EventsPage() {
 
         <div className="space-y-3">
           {events.length === 0 && (
-            <div className="glass rounded-2xl p-12 text-center">
-              <div className="w-12 h-12 rounded-2xl bg-white/[0.04] flex items-center justify-center mx-auto mb-4">
-                <CalendarDays className="w-6 h-6 text-gray-600" />
-              </div>
-              <p className="text-gray-400 font-medium">Keine Events vorhanden</p>
-              <p className="text-gray-600 text-sm mt-1">Klicke auf "Discord sync" um Events zu laden.</p>
-            </div>
+            <EmptyState
+              type="events"
+              title="Noch keine Events"
+              description="Events werden automatisch von Discord synchronisiert. Klicke auf \"Discord sync\" um sie zu laden."
+            />
           )}
 
           {events.map((ev, idx) => {

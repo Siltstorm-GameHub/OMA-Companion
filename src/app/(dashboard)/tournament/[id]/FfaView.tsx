@@ -79,7 +79,7 @@ export default function FfaView({
           <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
             <Trophy className="w-3.5 h-3.5 text-amber-400" /> Gesamtranking
           </h2>
-          <div className="bg-gray-900 border border-white/5 rounded-2xl overflow-hidden">
+          <div className="glass rounded-2xl overflow-hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-white/5 text-[10px] text-gray-500 uppercase tracking-wider">
@@ -140,7 +140,7 @@ export default function FfaView({
           </h2>
           <div className="space-y-2">
             {upcomingMatches.map(match => (
-              <div key={match.id} className="bg-gray-900 border border-white/5 rounded-xl px-4 py-3 flex items-center gap-3">
+              <div key={match.id} className="glass rounded-xl px-4 py-3 flex items-center gap-3">
                 {match.scheduledAt && (
                   <div className="shrink-0 text-center w-12">
                     <p className="text-sm font-bold text-white">{new Date(match.scheduledAt).getDate()}</p>
@@ -162,7 +162,7 @@ export default function FfaView({
                     const u = findUser(e.userId);
                     const isMe = e.userId === userId;
                     return u ? (
-                      <span key={e.id} className={`text-xs px-2 py-0.5 rounded-full border ${isMe ? "border-rose-700 text-rose-300 bg-rose-900/20" : "border-white/10 text-gray-400 bg-gray-800"}`}>
+                      <span key={e.id} className={`text-xs px-2 py-0.5 rounded-full border ${isMe ? "border-rose-700 text-rose-300 bg-rose-900/20" : "border-white/10 text-gray-400 glass-heavy"}`}>
                         {uname(u)}
                       </span>
                     ) : null;
@@ -194,7 +194,7 @@ export default function FfaView({
               const myEntry = match.entries.find(e => e.userId === userId);
 
               return (
-                <div key={match.id} className={`bg-gray-900 border rounded-xl overflow-hidden ${myEntry ? "border-rose-800/40" : "border-white/5"}`}>
+                <div key={match.id} className={`glass border rounded-xl overflow-hidden ${myEntry ? "border-rose-800/40" : "border-white/5"}`}>
                   <button
                     className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/[0.02] text-left"
                     onClick={() => toggle(match.id)}>
@@ -227,7 +227,7 @@ export default function FfaView({
                     <div className="border-t border-white/5 overflow-x-auto">
                       <table className="w-full text-xs">
                         <thead>
-                          <tr className="border-b border-white/5 text-[10px] text-gray-500 uppercase tracking-wider bg-gray-800/50">
+                          <tr className="border-b border-white/5 text-[10px] text-gray-500 uppercase tracking-wider rgba(255,255,255,0.03)">
                             <th className="text-left px-4 py-2 font-medium">Platz</th>
                             <th className="text-left px-4 py-2 font-medium">Spieler</th>
                             {statFields.map(f => (
@@ -280,7 +280,7 @@ export default function FfaView({
       )}
 
       {matches.length === 0 && (
-        <div className="bg-gray-900 border border-white/5 rounded-2xl p-10 text-center text-gray-500 text-sm">
+        <div className="glass rounded-2xl p-10 text-center text-gray-500 text-sm">
           Noch keine Matches angelegt.
         </div>
       )}

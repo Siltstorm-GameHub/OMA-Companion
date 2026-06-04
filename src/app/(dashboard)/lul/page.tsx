@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Trophy, CalendarDays, ChevronRight, Flame, Star, Crown, Gamepad2, History, Zap, Users } from "lucide-react";
+import { EmptyState } from "@/components/EmptyState";
 import { buildLulStandings, LUL_POINTS } from "@/lib/lul";
 
 const STATUS_LABEL: Record<string, { label: string; cls: string; dot: string; bar: string }> = {
@@ -288,13 +289,11 @@ export default async function LulOverviewPage() {
       </Link>
 
       {seasons.length === 0 && (
-        <div className="glass rounded-2xl p-12 text-center">
-          <div className="w-12 h-12 rounded-2xl bg-white/[0.04] flex items-center justify-center mx-auto mb-4">
-            <Trophy className="w-6 h-6 text-gray-700" />
-          </div>
-          <p className="text-gray-400 font-medium">Noch keine Liga-Saison angelegt.</p>
-          <p className="text-gray-600 text-sm mt-1">Ein Admin erstellt die Saison im Admin-Bereich.</p>
-        </div>
+        <EmptyState
+          type="tournaments"
+          title="Noch keine Liga-Saison"
+          description="Ein Admin legt die erste Saison im Admin-Bereich an."
+        />
       )}
     </div>
   );
