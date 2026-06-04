@@ -305,7 +305,7 @@ export default async function EventsPage() {
             <EmptyState
               type="events"
               title="Noch keine Events"
-              description="Events werden automatisch von Discord synchronisiert. Klicke auf \"Discord sync\" um sie zu laden."
+              description={'Events werden automatisch von Discord synchronisiert. Klicke auf "Discord sync" um sie zu laden.'}
             />
           )}
 
