@@ -2,7 +2,7 @@
 import { useState } from "react";
 import {
   Plus, Trophy, ChevronDown, ChevronUp, Trash2, Save,
-  Users, Gamepad2, Lock, RefreshCw,
+  Users, Gamepad2, Lock, RefreshCw, Archive,
 } from "lucide-react";
 import type { LulAdminSeasons } from "./page";
 
@@ -524,8 +524,8 @@ export default function LulAdminPanel({
     await loadSeasons();
   }
 
-  const STATUS_OPTS = ["upcoming", "active", "finished"];
-  const STATUS_LABEL: Record<string, string> = { upcoming: "Geplant", active: "Läuft", finished: "Beendet" };
+  const STATUS_OPTS = ["upcoming", "active", "finished", "archived"];
+  const STATUS_LABEL: Record<string, string> = { upcoming: "Geplant", active: "Läuft", finished: "Beendet", archived: "Archiviert" };
 
   return (
     <div className="space-y-4">
@@ -599,6 +599,18 @@ export default function LulAdminPanel({
                   className="text-xs bg-gray-800 border border-gray-700 text-white rounded px-2 py-1">
                   {STATUS_OPTS.map(s => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
                 </select>
+                {season.status === "finished" && (
+                  <button
+                    onClick={() => {
+                      if (confirm(`Saison ${season.number} archivieren?\n\nDie Saison wird gesperrt und in das All-Time Leaderboard übertragen. Keine weiteren Änderungen möglich.`)) {
+                        updateSeasonStatus(season.id, "archived");
+                      }
+                    }}
+                    title="Saison archivieren"
+                    className="flex items-center gap-1 text-xs text-purple-400 hover:text-white hover:bg-purple-900/30 border border-purple-800/30 rounded px-2 py-1 transition-colors">
+                    <Archive className="w-3 h-3" /> Archivieren
+                  </button>
+                )}
                 <button onClick={() => deleteSeason(season.id)}
                   className="text-gray-600 hover:text-red-500 transition-colors p-1.5 rounded">
                   <Trash2 className="w-3.5 h-3.5" />
