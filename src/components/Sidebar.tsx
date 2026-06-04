@@ -9,6 +9,7 @@ import {
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { getLevel, getNextLevelPoints } from "@/lib/points";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const NAV = [
   { label: "Dashboard",       href: "/dashboard",  icon: LayoutDashboard },
@@ -169,6 +170,11 @@ export default function Sidebar() {
           </div>
         )}
       </nav>
+
+      {/* ── Theme toggle ─────────────────────────────────────────── */}
+      <div className={`${collapsed ? "px-1.5 pb-1" : "px-2 pb-1"}`}>
+        <ThemeToggle collapsed={collapsed} />
+      </div>
 
       {/* ── User ─────────────────────────────────────────────────── */}
       <div className={`border-t border-white/[0.05] ${collapsed ? "p-2" : "p-3"}`}>
