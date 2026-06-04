@@ -11,12 +11,13 @@ import {
 import { getLevel, getNextLevelPoints } from "@/lib/points";
 
 const NAV = [
-  { label: "Dashboard",    href: "/dashboard",  icon: LayoutDashboard },
-  { label: "Quests",       href: "/quests",      icon: Scroll },
-  { label: "Events",       href: "/events",      icon: CalendarDays },
-  { label: "Turnier",      href: "/tournament",  icon: Swords },
-  { label: "Rangliste",    href: "/leaderboard", icon: Trophy },
-  { label: "Mein Profil",  href: "/profile",     icon: User },
+  { label: "Dashboard",       href: "/dashboard",  icon: LayoutDashboard },
+  { label: "Quests",          href: "/quests",      icon: Scroll },
+  { label: "Events",          href: "/events",      icon: CalendarDays },
+  { label: "Turnier",         href: "/tournament",  icon: Swords },
+  { label: "Level-Up-League", href: "/lul",         icon: Star },
+  { label: "Rangliste",       href: "/leaderboard", icon: Trophy },
+  { label: "Mein Profil",     href: "/profile",     icon: User },
 ];
 
 const ROUTE_TITLES: Record<string, string> = {
@@ -24,6 +25,7 @@ const ROUTE_TITLES: Record<string, string> = {
   "/quests":     "Quests",
   "/events":     "Events",
   "/tournament": "Turnier",
+  "/lul":        "Level-Up-League",
   "/leaderboard":"Rangliste",
   "/profile":    "Mein Profil",
   "/admin":      "Admin",
@@ -34,44 +36,43 @@ export default function MobileTopBar() {
   const pathname = usePathname();
   const { data: session } = useSession();
 
-  const role   = session?.user?.role   ?? "user";
-  const points = session?.user?.points ?? 0;
-  const level  = getLevel(points);
-  const nextPts = getNextLevelPoints(points);
-  const prevPts = getNextLevelPoints(points - 1);
-  const progress = nextPts > prevPts
+  const role      = session?.user?.role   ?? "user";
+  const points    = session?.user?.points ?? 0;
+  const level     = getLevel(points);
+  const nextPts   = getNextLevelPoints(points);
+  const prevPts   = getNextLevelPoints(points - 1);
+  const progress  = nextPts > prevPts
     ? Math.min(100, Math.round(((points - prevPts) / (nextPts - prevPts)) * 100))
     : 100;
-  const isStaff = role === "admin" || role === "moderator";
+  const isStaff   = role === "admin" || role === "moderator";
   const displayName = session?.user?.name ?? "Gast";
 
-  // Page title
-  const title = Object.entries(ROUTE_TITLES).find(([p]) =>
-    pathname === p || pathname.startsWith(p + "/")
-  )?.[1] ?? "OMA";
+  const title = Object.entries(ROUTE_TITLES)
+    .find(([p]) => pathname === p || pathname.startsWith(p + "/"))?.[1] ?? "OMA";
 
   return (
     <>
-      {/* Top bar */}
-      <header className="fixed top-0 left-0 right-0 z-40 md:hidden h-14 bg-gray-950/95 backdrop-blur-md border-b border-white/5 flex items-center px-4">
-        {/* Logo */}
-        <Link href="/dashboard" className="flex items-center gap-2 mr-auto">
-          <div className="w-7 h-7 rounded-lg overflow-hidden bg-gray-900 shrink-0">
+      {/* ── Top bar ─────────────────────────────────────────────── */}
+      <header
+        style={{ background: "rgba(9,9,15,0.9)" }}
+        className="fixed top-0 left-0 right-0 z-40 md:hidden h-14 backdrop-blur-2xl border-b border-white/[0.06] flex items-center px-4 gap-3"
+      >
+        <Link href="/dashboard" className="flex items-center gap-2.5 mr-auto min-w-0">
+          <div className="w-7 h-7 rounded-lg overflow-hidden shrink-0 ring-1 ring-rose-500/20 shadow-[0_0_10px_rgba(244,63,94,0.2)]">
             <Image src="/OMALogoNew.png" alt="OMA" width={28} height={28} className="w-full h-full object-cover" />
           </div>
-          <span className="text-sm font-bold text-white">{title}</span>
+          <span className="text-sm font-semibold text-white truncate">{title}</span>
         </Link>
 
-        {/* Hamburger */}
         <button
           onClick={() => setOpen(true)}
-          className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+          className="flex items-center justify-center w-9 h-9 rounded-xl text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors"
         >
           <Menu className="w-5 h-5" />
         </button>
       </header>
 
-      {/* Overlay */}
+      {/* ── Overlay ─────────────────────────────────────────────── */}
       {open && (
         <div
           className="fixed inset-0 z-50 md:hidden bg-black/60 backdrop-blur-sm"
@@ -79,21 +80,24 @@ export default function MobileTopBar() {
         />
       )}
 
-      {/* Drawer */}
-      <aside className={`fixed top-0 left-0 bottom-0 z-50 md:hidden w-72 bg-gray-950 border-r border-white/5 flex flex-col transition-transform duration-300 ease-out ${
-        open ? "translate-x-0" : "-translate-x-full"
-      }`}>
+      {/* ── Drawer ──────────────────────────────────────────────── */}
+      <aside
+        style={{ background: "rgba(9,9,15,0.97)" }}
+        className={`fixed top-0 left-0 bottom-0 z-50 md:hidden w-72 border-r border-white/[0.06] flex flex-col transition-transform duration-300 ease-out backdrop-blur-xl ${
+          open ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
         {/* Drawer header */}
-        <div className="flex items-center justify-between px-4 h-14 border-b border-white/5 shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg overflow-hidden bg-gray-900">
+        <div className="flex items-center justify-between px-4 h-14 border-b border-white/[0.06] shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg overflow-hidden ring-1 ring-rose-500/20 shadow-[0_0_10px_rgba(244,63,94,0.2)]">
               <Image src="/OMALogoNew.png" alt="OMA" width={28} height={28} className="w-full h-full object-cover" />
             </div>
-            <span className="text-sm font-bold text-white">Old Masters Ally</span>
+            <span className="text-sm font-bold text-white tracking-tight">Old Masters Ally</span>
           </div>
           <button
             onClick={() => setOpen(false)}
-            className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition-colors"
+            className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 hover:text-white hover:bg-white/[0.06] transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -108,31 +112,36 @@ export default function MobileTopBar() {
                 key={href}
                 href={href}
                 onClick={() => setOpen(false)}
-                className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all ${
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all relative ${
                   active
-                    ? "bg-rose-500/10 text-rose-300"
-                    : "text-gray-500 hover:text-white hover:bg-white/5"
+                    ? "bg-rose-500/10 text-rose-200 shadow-[inset_0_0_0_1px_rgba(244,63,94,0.15)]"
+                    : "text-gray-500 hover:text-gray-200 hover:bg-white/[0.04]"
                 }`}
               >
+                {active && (
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-full bg-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.6)]" />
+                )}
                 <Icon className={`w-5 h-5 ${active ? "text-rose-400" : "text-gray-600"}`} />
                 {label}
-                {active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-rose-400" />}
               </Link>
             );
           })}
 
           {isStaff && (
             <div className="pt-3">
-              <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest px-3 mb-1.5">Verwaltung</p>
+              <p className="text-[9px] font-semibold text-gray-600 uppercase tracking-[0.12em] px-3 mb-1.5">Verwaltung</p>
               <Link
                 href="/admin"
                 onClick={() => setOpen(false)}
-                className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all ${
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all relative ${
                   pathname.startsWith("/admin")
-                    ? "bg-purple-500/10 text-purple-300"
-                    : "text-gray-500 hover:text-white hover:bg-white/5"
+                    ? "bg-purple-500/10 text-purple-200 shadow-[inset_0_0_0_1px_rgba(168,85,247,0.15)]"
+                    : "text-gray-500 hover:text-gray-200 hover:bg-white/[0.04]"
                 }`}
               >
+                {pathname.startsWith("/admin") && (
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-full bg-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.6)]" />
+                )}
                 <ShieldCheck className={`w-5 h-5 ${pathname.startsWith("/admin") ? "text-purple-400" : "text-gray-600"}`} />
                 Admin-Bereich
               </Link>
@@ -141,17 +150,17 @@ export default function MobileTopBar() {
         </nav>
 
         {/* User section */}
-        <div className="p-4 border-t border-white/5 shrink-0">
+        <div className="p-4 border-t border-white/[0.06] shrink-0">
           <div className="flex items-center gap-3 mb-3">
             <div className="relative shrink-0">
               {session?.user?.image ? (
-                <img src={session.user.image} alt="avatar" className="w-10 h-10 rounded-full ring-2 ring-white/10" />
+                <img src={session.user.image} alt="avatar" className="w-10 h-10 rounded-full ring-1 ring-white/10" />
               ) : (
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-rose-700 to-rose-950 flex items-center justify-center text-sm font-bold text-white">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-rose-600 to-rose-950 flex items-center justify-center text-sm font-bold text-white ring-1 ring-white/10">
                   {displayName[0]}
                 </div>
               )}
-              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 border-2 border-gray-950 shadow-[0_0_6px_#34d399]" />
+              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 border-2 border-[#09090f] shadow-[0_0_8px_#34d399]" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-white truncate">{displayName}</p>
@@ -161,21 +170,23 @@ export default function MobileTopBar() {
 
           {/* XP bar */}
           <div className="mb-3">
-            <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
+            <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-rose-700 to-rose-500 rounded-full"
+                className="h-full bg-gradient-to-r from-rose-600 to-rose-400 rounded-full transition-all duration-700"
                 style={{ width: `${progress}%` }}
               />
             </div>
             <div className="flex justify-between text-[10px] text-gray-600 mt-1">
-              <span className="flex items-center gap-1"><Zap className="w-2.5 h-2.5 text-amber-500" />Level {level}</span>
+              <span className="flex items-center gap-1">
+                <Zap className="w-2.5 h-2.5 text-amber-400" />Level {level}
+              </span>
               <span>{progress}%</span>
             </div>
           </div>
 
           <button
             onClick={() => signOut()}
-            className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-sm text-gray-500 hover:text-white hover:bg-white/5 transition-colors"
+            className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-sm text-gray-500 hover:text-white hover:bg-white/[0.05] transition-colors"
           >
             <LogOut className="w-4 h-4" />
             Abmelden
