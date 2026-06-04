@@ -132,14 +132,23 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {stats.map(({ label, value, icon: Icon, sub, accent, iconCls, valCls }) => (
           <div key={label}
-            className="relative overflow-hidden bg-gray-900 border border-white/5 rounded-2xl p-4 hover:border-white/10 transition-colors">
-            <div className={`absolute inset-0 bg-gradient-to-br ${accent} pointer-events-none`} />
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-3 ${iconCls}`}>
+            className="relative overflow-hidden rounded-2xl p-4 group cursor-default"
+            style={{
+              background: "rgba(15,15,23,0.8)",
+              border: "1px solid rgba(255,255,255,0.06)",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.4), 0 8px 24px rgba(0,0,0,0.2)",
+            }}>
+            {/* Gradient glow overlay */}
+            <div className={`absolute inset-0 bg-gradient-to-br ${accent} opacity-70 group-hover:opacity-100 transition-opacity pointer-events-none`} />
+            {/* Top edge accent */}
+            <div className="absolute top-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none" />
+
+            <div className={`relative w-8 h-8 rounded-lg flex items-center justify-center mb-3 ${iconCls} ring-1 ring-inset ring-white/5`}>
               <Icon className="w-4 h-4" />
             </div>
-            <p className={`text-2xl font-bold tabular-nums ${valCls}`}>{value.toLocaleString("de-DE")}</p>
-            <p className="text-xs text-gray-400 mt-0.5">{label}</p>
-            <p className="text-[10px] text-gray-600 mt-1">{sub}</p>
+            <p className={`relative text-2xl font-bold tabular-nums ${valCls}`}>{value.toLocaleString("de-DE")}</p>
+            <p className="relative text-xs text-gray-400 mt-0.5">{label}</p>
+            <p className="relative text-[10px] text-gray-600 mt-1">{sub}</p>
           </div>
         ))}
       </div>
@@ -157,7 +166,8 @@ export default async function DashboardPage() {
               Alle <ChevronRight className="w-3 h-3" />
             </Link>
           </div>
-          <div className="bg-gray-900 border border-white/5 rounded-2xl overflow-hidden divide-y divide-white/5">
+          <div className="rounded-2xl overflow-hidden divide-y divide-white/[0.05]"
+            style={{ background: "rgba(15,15,23,0.8)", border: "1px solid rgba(255,255,255,0.06)", boxShadow: "0 4px 24px rgba(0,0,0,0.2)" }}>
             {upcomingEvents.length === 0 && (
               <p className="text-sm text-gray-600 p-5 text-center">Keine anstehenden Events.</p>
             )}
@@ -206,7 +216,8 @@ export default async function DashboardPage() {
               Alle <ChevronRight className="w-3 h-3" />
             </Link>
           </div>
-          <div className="bg-gray-900 border border-white/5 rounded-2xl overflow-hidden divide-y divide-white/5">
+          <div className="rounded-2xl overflow-hidden divide-y divide-white/[0.05]"
+            style={{ background: "rgba(15,15,23,0.8)", border: "1px solid rgba(255,255,255,0.06)", boxShadow: "0 4px 24px rgba(0,0,0,0.2)" }}>
             {topUsers.map((u, i) => {
               const displayName = u.username ?? u.name ?? "Unbekannt";
               const isMe = u.id === userId;
