@@ -192,7 +192,7 @@ export default function Sidebar() {
                 {session?.user?.name?.[0] ?? "?"}
               </div>
             )}
-            <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-[#09090f] shadow-[0_0_8px_#34d399]" />
+            <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-[#09090f] shadow-[0_0_8px_#34d399] glow-active" />
             {collapsed && (
               <span className="pointer-events-none absolute left-full ml-2.5 px-2.5 py-1 rounded-lg bg-[#141420] border border-white/10 text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-xl">
                 {session?.user?.name ?? "Gast"}
@@ -241,7 +241,7 @@ export default function Sidebar() {
             </div>
             <div className="h-1 bg-white/[0.06] rounded-full overflow-hidden">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-rose-600 to-rose-400 transition-all duration-700"
+                className="h-full rounded-full progress-shimmer shadow-[0_0_6px_rgba(244,63,94,0.5)] transition-all duration-700"
                 style={{ width: `${progress}%` }}
               />
             </div>

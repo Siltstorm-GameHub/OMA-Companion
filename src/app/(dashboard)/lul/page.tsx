@@ -61,7 +61,7 @@ export default async function LulOverviewPage() {
 
       {/* ── Hero Banner ────────────────────────────────────────────── */}
       {activeSeason && (
-        <div className="glass rounded-2xl p-6 relative overflow-hidden">
+        <div className="glass card-shine rounded-2xl p-6 relative overflow-hidden">
           {/* Decorative gradient */}
           <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 via-transparent to-rose-500/6 pointer-events-none" />
           <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-500/25 to-transparent pointer-events-none" />

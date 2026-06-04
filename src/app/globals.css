@@ -149,6 +149,80 @@ a, button, [role="button"] {
   animation: fade-in-scale 0.25s ease both;
 }
 
+/* ── Slide up (for list items) ──────────────────────────────────── */
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-slide-up { animation: slide-up 0.35s cubic-bezier(0.16,1,0.3,1) both; }
+
+/* Stagger delays */
+.stagger-1 { animation-delay:  40ms; }
+.stagger-2 { animation-delay:  80ms; }
+.stagger-3 { animation-delay: 120ms; }
+.stagger-4 { animation-delay: 160ms; }
+.stagger-5 { animation-delay: 200ms; }
+.stagger-6 { animation-delay: 240ms; }
+
+/* ── Shimmer (progress bars, skeletons) ─────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+.progress-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(244,63,94,0.7) 0%,
+    rgba(244,63,94,1)   40%,
+    rgba(251,113,133,1) 50%,
+    rgba(244,63,94,1)   60%,
+    rgba(244,63,94,0.7) 100%
+  );
+  background-size: 200% auto;
+  animation: shimmer 2.4s linear infinite;
+}
+
+/* ── Shine sweep (on card hover) ────────────────────────────────── */
+@keyframes shine-sweep {
+  0%   { left: -60%; opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { left: 110%; opacity: 0; }
+}
+.card-shine {
+  overflow: hidden;
+}
+.card-shine::after {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  left: -60%;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent);
+  transform: skewX(-15deg);
+  opacity: 0;
+  pointer-events: none;
+}
+.card-shine:hover::after {
+  animation: shine-sweep 0.7s ease forwards;
+}
+
+/* ── Glow pulse (active status rings) ──────────────────────────── */
+@keyframes glow-ring {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(52,211,153,0.4); }
+  50%       { box-shadow: 0 0 0 4px rgba(52,211,153,0); }
+}
+.glow-active { animation: glow-ring 2s ease-in-out infinite; }
+
+/* ── Subtle dot grid background ─────────────────────────────────── */
+.bg-grid {
+  background-image: radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+[data-theme="light"] .bg-grid {
+  background-image: radial-gradient(circle, rgba(0,0,0,0.05) 1px, transparent 1px);
+}
+
 /* ── Light Mode ─────────────────────────────────────────────────── */
 [data-theme="light"] {
   color-scheme: light;
