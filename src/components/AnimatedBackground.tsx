@@ -1,45 +1,41 @@
 "use client";
 import { useEffect, useRef } from "react";
 
-// ── Hex-Grid + Glow-Pulse Background ─────────────────────────────────────────
-// Draws a honeycomb grid where individual cells periodically light up
-// with a rose/violet glow. A slow drift keeps it alive without being distracting.
+const HEX_SIZE = 38;
+const GAP      = 5;
+const STEP     = HEX_SIZE * 2 + GAP;
 
-const HEX_SIZE   = 36;   // radius of each hexagon
-const GAP        = 4;    // gap between hexagons
-const STEP       = HEX_SIZE * 2 + GAP;
-
-// Color palette — rose and violet
-const PULSE_COLORS = [
+const PULSE_COLORS: [number, number, number][] = [
   [244,  63,  94],  // rose-500
-  [244,  63,  94],  // rose (weighted)
+  [244,  63,  94],  // rose (extra weight)
   [139,  92, 246],  // violet-500
   [167, 139, 250],  // violet-300
   [251, 113, 133],  // rose-400
 ];
 
 interface Cell {
-  col: number;
-  row: number;
   cx: number;
   cy: number;
-  phase: number;       // current animation phase (0 = idle, 1 = peak glow)
-  speed: number;       // how fast it pulses
-  color: number[];
+  phase: number;
+  speed: number;
+  color: [number, number, number];
   active: boolean;
-  timer: number;       // countdown until next activation
+  timer: number;
 }
 
 function hexPath(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number) {
   ctx.beginPath();
   for (let i = 0; i < 6; i++) {
-    const angle = (Math.PI / 3) * i - Math.PI / 6;
-    const x = cx + r * Math.cos(angle);
-    const y = cy + r * Math.sin(angle);
-    if (i === 0) ctx.moveTo(x, y);
-    else         ctx.lineTo(x, y);
+    const a = (Math.PI / 3) * i - Math.PI / 6;
+    const x = cx + r * Math.cos(a);
+    const y = cy + r * Math.sin(a);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
   }
   ctx.closePath();
+}
+
+function randomColor(): [number, number, number] {
+  return PULSE_COLORS[Math.floor(Math.random() * PULSE_COLORS.length)];
 }
 
 export function AnimatedBackground() {
@@ -58,23 +54,20 @@ export function AnimatedBackground() {
     function buildGrid() {
       if (!canvas) return;
       cells = [];
-      const w = canvas.width;
-      const h = canvas.height;
-
-      const cols = Math.ceil(w / (STEP * 0.75)) + 2;
-      const rows = Math.ceil(h / STEP) + 2;
+      const cols = Math.ceil(canvas.width  / (STEP * 0.75)) + 3;
+      const rows = Math.ceil(canvas.height / STEP) + 3;
 
       for (let col = -1; col < cols; col++) {
         for (let row = -1; row < rows; row++) {
           const cx = col * STEP * 0.75;
           const cy = row * STEP + (col % 2 === 0 ? 0 : STEP / 2);
           cells.push({
-            col, row, cx, cy,
+            cx, cy,
             phase:  0,
-            speed:  Math.random() * 0.008 + 0.004,
-            color:  PULSE_COLORS[Math.floor(Math.random() * PULSE_COLORS.length)],
+            speed:  Math.random() * 0.01 + 0.005,
+            color:  randomColor(),
             active: false,
-            timer:  Math.random() * 400 + 100,
+            timer:  Math.random() * 300 + 60,
           });
         }
       }
@@ -87,67 +80,58 @@ export function AnimatedBackground() {
       buildGrid();
     }
 
-    // Randomly activate cells over time
-    function tickActivations() {
-      const now = t;
+    function draw() {
+      if (!canvas || !ctx) return;
+      t++;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
       for (const cell of cells) {
+        // Tick timer → activate
         if (!cell.active) {
           cell.timer--;
           if (cell.timer <= 0) {
             cell.active = true;
             cell.phase  = 0;
-            cell.color  = PULSE_COLORS[Math.floor(Math.random() * PULSE_COLORS.length)];
+            cell.color  = randomColor();
             cell.speed  = Math.random() * 0.012 + 0.005;
-            // Re-schedule next activation
-            cell.timer  = Math.random() * 600 + 200;
+            cell.timer  = Math.random() * 500 + 150;
           }
         }
-      }
-    }
 
-    function draw() {
-      if (!canvas || !ctx) return;
-      t++;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      tickActivations();
-
-      for (const cell of cells) {
-        // Advance phase for active cells
+        // Advance phase
         if (cell.active) {
           cell.phase += cell.speed;
           if (cell.phase >= Math.PI) {
-            cell.phase  = 0;
             cell.active = false;
+            cell.phase  = 0;
           }
         }
 
-        const glowAlpha = cell.active ? Math.sin(cell.phase) : 0;
+        const glow = cell.active ? Math.sin(cell.phase) : 0;
+        const [r, g, b] = cell.color;
 
-        // ── Base hex outline ──────────────────────────────────────
+        // ── Always-visible hex border ─────────────────────────────
         hexPath(ctx, cell.cx, cell.cy, HEX_SIZE - GAP / 2);
-        ctx.strokeStyle = `rgba(255,255,255,${0.028 + glowAlpha * 0.04})`;
-        ctx.lineWidth   = 0.5 + glowAlpha * 0.8;
+        ctx.strokeStyle = `rgba(255,255,255,${0.07 + glow * 0.25})`;
+        ctx.lineWidth   = 0.7 + glow * 1.4;
         ctx.stroke();
 
-        // ── Glow fill when active ─────────────────────────────────
-        if (glowAlpha > 0.01) {
-          const [r, g, b] = cell.color;
-
+        // ── Glow effects when active ──────────────────────────────
+        if (glow > 0.02) {
           // Inner fill
           hexPath(ctx, cell.cx, cell.cy, HEX_SIZE - GAP / 2);
-          ctx.fillStyle = `rgba(${r},${g},${b},${glowAlpha * 0.07})`;
+          ctx.fillStyle = `rgba(${r},${g},${b},${glow * 0.12})`;
           ctx.fill();
 
-          // Radial glow from center
+          // Outer radial glow (bleeds beyond hex edges)
           const grad = ctx.createRadialGradient(
             cell.cx, cell.cy, 0,
-            cell.cx, cell.cy, HEX_SIZE
+            cell.cx, cell.cy, HEX_SIZE * 1.6
           );
-          grad.addColorStop(0,   `rgba(${r},${g},${b},${glowAlpha * 0.18})`);
-          grad.addColorStop(0.5, `rgba(${r},${g},${b},${glowAlpha * 0.07})`);
+          grad.addColorStop(0,   `rgba(${r},${g},${b},${glow * 0.30})`);
+          grad.addColorStop(0.4, `rgba(${r},${g},${b},${glow * 0.12})`);
           grad.addColorStop(1,   `rgba(${r},${g},${b},0)`);
-
-          hexPath(ctx, cell.cx, cell.cy, HEX_SIZE * 1.5);
+          hexPath(ctx, cell.cx, cell.cy, HEX_SIZE * 1.6);
           ctx.fillStyle = grad;
           ctx.fill();
         }
@@ -171,10 +155,17 @@ export function AnimatedBackground() {
   return (
     <canvas
       ref={canvasRef}
-      className="fixed inset-0 pointer-events-none"
       aria-hidden="true"
       data-animated-bg
-      style={{ zIndex: 0 }}
+      style={{
+        position:      "fixed",
+        top:           0,
+        left:          0,
+        width:         "100%",
+        height:        "100%",
+        zIndex:        1,          // above body blobs (z-index 0), below content (z-index 2)
+        pointerEvents: "none",
+      }}
     />
   );
 }

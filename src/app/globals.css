@@ -63,10 +63,10 @@ body::after {
   100% { transform: translate(-30px, 60px) scale(1.12); }
 }
 
-/* Everything above the blobs */
+/* Content above hex-grid canvas (z-index 1) */
 #__next, main, aside, header, nav, footer {
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 
 /* ── Hover-lift for cards ───────────────────────────────────────── */
