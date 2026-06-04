@@ -6,6 +6,7 @@ import PointsInfoModal from "./PointsInfoModal";
 import { QUEST_TYPE_META, type QuestType } from "@/lib/quests";
 import { Trophy, Star, CalendarDays, Swords, Zap, Clock, MessageSquare, CheckCircle2 } from "lucide-react";
 import { RelativeTime } from "@/components/RelativeTime";
+import Image from "next/image";
 
 interface Badge {
   id: string; icon: string; name: string; desc: string;
@@ -122,7 +123,7 @@ export default async function ProfilePage() {
         <div className="relative flex items-center gap-5 flex-wrap">
           <div className="relative shrink-0">
             {user.image
-              ? <img src={user.image} alt="avatar" className="w-20 h-20 rounded-2xl ring-2 ring-rose-500/25 object-cover shadow-[0_0_24px_rgba(244,63,94,0.2)]" />
+              ? <Image src={user.image} alt="avatar" width={80} height={80} className="w-20 h-20 rounded-2xl ring-2 ring-rose-500/25 object-cover shadow-[0_0_24px_rgba(244,63,94,0.2)]" />
               : <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-rose-600 to-rose-950 flex items-center justify-center text-2xl font-bold text-white">
                   {displayName[0].toUpperCase()}
                 </div>}

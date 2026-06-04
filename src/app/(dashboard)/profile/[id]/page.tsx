@@ -8,6 +8,7 @@ import {
   MessageSquare, CheckCircle2, ArrowLeft,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 // ── Badge-Logik (identisch mit eigenem Profil) ─────────────────────────────
 interface Badge {
@@ -155,7 +156,7 @@ export default async function PublicProfilePage({
           {/* Avatar */}
           <div className="relative shrink-0">
             {user.image
-              ? <img src={user.image} alt={displayName} className="w-20 h-20 rounded-2xl ring-2 ring-rose-500/25 object-cover shadow-[0_0_24px_rgba(244,63,94,0.2)]" />
+              ? <Image src={user.image} alt={displayName} width={80} height={80} className="w-20 h-20 rounded-2xl ring-2 ring-rose-500/25 object-cover shadow-[0_0_24px_rgba(244,63,94,0.2)]" />
               : <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-rose-600 to-rose-950 flex items-center justify-center text-2xl font-bold text-white">
                   {displayName[0].toUpperCase()}
                 </div>}
