@@ -25,9 +25,9 @@ export default async function EventsPage() {
     prisma.event.findMany({
       orderBy: [{ status: "asc" }, { startAt: "asc" }],
       include: {
-        _count:         { select: { registrations: true } },
-        registrations:  userId ? { where: { userId } } : false,
-        tournament:     { include: { _count: { select: { participants: true, matches: true } } } },
+        _count: { select: { registrations: true } },
+        ...(userId ? { registrations: { where: { userId } } } : {}),
+        tournament: { include: { _count: { select: { participants: true, matches: true } } } },
       },
     }),
     userId
