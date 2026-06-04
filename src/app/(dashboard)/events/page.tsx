@@ -1,9 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { CalendarDays, ExternalLink, Users, Zap } from "lucide-react";
+import { CalendarDays, ExternalLink, Users, Zap, Swords, Trophy, ChevronRight } from "lucide-react";
 import SyncButton from "./SyncButton";
 import RegisterButton from "./RegisterButton";
 import { RelativeTime } from "@/components/RelativeTime";
+import Link from "next/link";
 
 const STATUS_CONFIG: Record<string, {
   label: string;
@@ -24,15 +25,37 @@ export default async function EventsPage() {
   const session = await auth();
   const userId = session?.user?.id;
 
-  const events = await prisma.event.findMany({
-    orderBy: [{ status: "asc" }, { startAt: "asc" }],
-    include: {
-      _count: { select: { registrations: true } },
-      registrations: userId ? { where: { userId } } : false,
-    },
-  });
+  const [events, myTournamentRegs] = await Promise.all([
+    prisma.event.findMany({
+      orderBy: [{ status: "asc" }, { startAt: "asc" }],
+      include: {
+        _count: { select: { registrations: true } },
+        registrations: userId ? { where: { userId } } : false,
+      },
+    }),
+    userId
+      ? prisma.eventRegistration.findMany({
+          where: {
+            userId,
+            event: { tournament: { isNot: null } },
+          },
+          include: {
+            event: {
+              include: {
+                tournament: { include: { _count: { select: { participants: true, matches: true } } } },
+                _count: { select: { registrations: true } },
+              },
+            },
+          },
+          orderBy: { joinedAt: "desc" },
+        })
+      : Promise.resolve([]),
+  ]);
 
   const openCount = events.filter(e => e.status === "open" || e.status === "active").length;
+
+  const activeTournaments  = myTournamentRegs.filter(r => r.event.status !== "finished");
+  const finishedTournaments = myTournamentRegs.filter(r => r.event.status === "finished");
 
   return (
     <div className="p-5 sm:p-6 max-w-4xl mx-auto space-y-5 animate-fade-in">
@@ -54,6 +77,104 @@ export default async function EventsPage() {
         </div>
         <SyncButton />
       </div>
+
+      {/* ── Meine Turniere ─────────────────────────────────────────── */}
+      {myTournamentRegs.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-white flex items-center gap-2">
+              <Swords className="w-4 h-4 text-purple-400" /> Meine Turniere
+            </h2>
+          </div>
+
+          <div className="space-y-2">
+            {/* Aktive zuerst */}
+            {activeTournaments.map(({ event }) => {
+              const t    = event.tournament!;
+              const date = new Date(event.startAt);
+              const statusCls =
+                event.status === "active"  ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" :
+                event.status === "open"    ? "text-blue-400    bg-blue-500/10    border-blue-500/20"    :
+                event.status === "closed"  ? "text-amber-400   bg-amber-500/10   border-amber-500/20"   :
+                                             "text-gray-500    bg-white/[0.04]   border-white/[0.06]";
+              const statusLabel =
+                event.status === "active"  ? "Läuft" :
+                event.status === "open"    ? "Anmeldung offen" :
+                event.status === "closed"  ? "Geschlossen" : "Beendet";
+              const dotCls =
+                event.status === "active"  ? "bg-emerald-400 animate-pulse" :
+                event.status === "open"    ? "bg-blue-400"    :
+                event.status === "closed"  ? "bg-amber-400"   : "bg-gray-600";
+
+              return (
+                <Link key={event.id} href={`/tournament/${event.id}`}
+                  className="card-hover card-shine glass flex items-center gap-4 rounded-2xl p-4 relative overflow-hidden group border border-purple-500/10">
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-transparent pointer-events-none" />
+                  <div className="absolute left-0 top-4 bottom-4 w-[3px] rounded-r-full bg-purple-400" />
+
+                  <div className="relative glass-heavy rounded-xl px-3 py-2.5 text-center min-w-[48px] shrink-0">
+                    <p className="text-lg font-bold text-white leading-none tabular-nums">{date.getDate()}</p>
+                    <p className="text-[9px] text-gray-500 uppercase tracking-wide mt-0.5">
+                      {date.toLocaleString("de-DE", { month: "short" })}
+                    </p>
+                    <RelativeTime date={date} className="text-[8px] text-gray-600 mt-1 block" />
+                  </div>
+
+                  <div className="relative flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Trophy className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      <p className="font-semibold text-white truncate group-hover:text-rose-200 transition-colors">
+                        {event.title}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
+                      {event.game && <span>{event.game}</span>}
+                      <span className="flex items-center gap-1">
+                        <Users className="w-3 h-3" />{t._count.participants} Teilnehmer
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Swords className="w-3 h-3" />{t._count.matches} Matches
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="relative flex items-center gap-2 shrink-0">
+                    <span className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium border ${statusCls}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${dotCls}`} />
+                      {statusLabel}
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-purple-400 transition-colors" />
+                  </div>
+                </Link>
+              );
+            })}
+
+            {/* Vergangene kompakt */}
+            {finishedTournaments.length > 0 && (
+              <div className="glass card-shine rounded-2xl overflow-hidden divide-y divide-white/[0.04]">
+                {finishedTournaments.map(({ event }) => (
+                  <Link key={event.id} href={`/tournament/${event.id}`}
+                    className="flex items-center gap-3.5 px-4 py-3 hover:bg-white/[0.025] transition-colors group opacity-60 hover:opacity-100">
+                    <Trophy className="w-4 h-4 text-gray-600 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white truncate group-hover:text-rose-300 transition-colors">
+                        {event.title}
+                      </p>
+                      <p className="text-[10px] text-gray-600 mt-0.5">
+                        {new Date(event.startAt).toLocaleDateString("de-DE", { day: "2-digit", month: "long", year: "numeric" })}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-xs text-gray-600 border border-white/[0.06] px-2 py-0.5 rounded-full">Beendet</span>
+                      <ChevronRight className="w-3.5 h-3.5 text-gray-600 group-hover:text-rose-400 transition-colors" />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Event List ─────────────────────────────────────────────── */}
       <div className="space-y-3">

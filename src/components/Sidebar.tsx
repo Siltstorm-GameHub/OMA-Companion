@@ -3,8 +3,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import {
-  LayoutDashboard, CalendarDays, Trophy, User, Swords,
-  LogOut, ShieldCheck, Zap, ChevronLeft, ChevronRight, Scroll, Star,
+  LayoutDashboard, CalendarDays, Trophy, User,
+  LogOut, ShieldCheck, Zap, ChevronLeft, ChevronRight, Scroll, Star, Activity,
 } from "lucide-react";
 import Image from "next/image";
 import { useState, useEffect } from "react";
@@ -13,9 +13,9 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 
 const NAV = [
   { label: "Dashboard",       href: "/dashboard",  icon: LayoutDashboard },
-  { label: "Quests",          href: "/quests",      icon: Scroll },
+  { label: "Feed",            href: "/feed",        icon: Activity },
   { label: "Events",          href: "/events",      icon: CalendarDays },
-  { label: "Turnier",         href: "/tournament",  icon: Swords },
+  { label: "Quests",          href: "/quests",      icon: Scroll },
   { label: "Level-Up-League", href: "/lul",         icon: Star },
   { label: "Rangliste",       href: "/leaderboard", icon: Trophy },
   { label: "Mein Profil",     href: "/profile",     icon: User },

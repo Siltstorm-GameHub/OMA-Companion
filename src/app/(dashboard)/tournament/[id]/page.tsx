@@ -108,7 +108,7 @@ export default async function TournamentDetailPage({
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
-      <Link href="/tournament" className="flex items-center gap-2 text-sm text-gray-500 hover:text-white mb-5 transition-colors w-fit">
+      <Link href="/events" className="flex items-center gap-2 text-sm text-gray-500 hover:text-white mb-5 transition-colors w-fit group">
         <ArrowLeft className="w-4 h-4" /> Zurück
       </Link>
 

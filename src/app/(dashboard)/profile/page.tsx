@@ -7,6 +7,7 @@ import { QUEST_TYPE_META, type QuestType } from "@/lib/quests";
 import { Trophy, Star, CalendarDays, Swords, Zap, Clock, MessageSquare, CheckCircle2 } from "lucide-react";
 import { RelativeTime } from "@/components/RelativeTime";
 import Image from "next/image";
+import { PointsChart } from "@/components/PointsChart";
 
 interface Badge {
   id: string; icon: string; name: string; desc: string;
@@ -100,6 +101,19 @@ export default async function ProfilePage() {
     ? Math.min(100, Math.round(((totalPoints - prevLevelPts) / (nextLevelPts - prevLevelPts)) * 100))
     : 100;
 
+  // Chart-Daten: kumulierte Punkte über Zeit (letzte 30 Einträge → chronologisch)
+  const chartData = (() => {
+    const sorted = [...transactions].reverse(); // älteste zuerst
+    let running = Math.max(0, totalPoints - transactions.reduce((s, t) => s + t.amount, 0));
+    return sorted.slice(-30).map(tx => {
+      running += tx.amount;
+      return {
+        date: new Date(tx.createdAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }),
+        points: Math.max(0, running),
+      };
+    });
+  })();
+
   const voiceHours   = transactions.filter(t => t.reason.includes("Sprachkanal")).length;
   const messageCount = transactions.filter(t => t.reason.includes("Nachrichten")).length * 10;
   const hadStreak7   = transactions.some(t => t.reason.includes("7-Tage"));
@@ -137,7 +151,7 @@ export default async function ProfilePage() {
                 {rank.label}
               </span>
             </div>
-            <div className="flex items-center gap-2 mb-4 flex-wrap">
+            <div className="flex items-center gap-2 mb-3 flex-wrap">
               <p className="text-xs text-gray-500">Mitglied seit {memberSince} · {earnedBadges.length} Abzeichen</p>
               <PointsInfoModal />
             </div>
@@ -305,6 +319,16 @@ export default async function ProfilePage() {
               ))}
             </div>
           </section>
+
+          {/* Punkte-Chart */}
+          {chartData.length >= 2 && (
+            <section>
+              <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">📈 Punkte-Verlauf</h2>
+              <div className="glass card-shine rounded-2xl p-4">
+                <PointsChart data={chartData} />
+              </div>
+            </section>
+          )}
 
           {/* Punkte-Historie */}
           <section>

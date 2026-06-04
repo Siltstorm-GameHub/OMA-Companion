@@ -139,12 +139,18 @@ export default async function PublicProfilePage({
   return (
     <div className="p-5 sm:p-6 max-w-5xl mx-auto space-y-5 animate-fade-in">
 
-      {/* ── Zurück-Navigation ──────────────────────────────────────── */}
-      <Link href="/leaderboard"
-        className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-white transition-colors group">
-        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-        Zurück zur Rangliste
-      </Link>
+      {/* ── Navigation ─────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between">
+        <Link href="/leaderboard"
+          className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-white transition-colors group">
+          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+          Rangliste
+        </Link>
+        <Link href={`/profile/compare/${id}`}
+          className="inline-flex items-center gap-2 text-xs glass border border-white/[0.08] hover:border-rose-500/30 text-gray-400 hover:text-white px-3 py-2 rounded-xl transition-all">
+          ⚔️ Mit mir vergleichen
+        </Link>
+      </div>
 
       {/* ── Hero ────────────────────────────────────────────────────── */}
       <div className="glass card-shine relative overflow-hidden rounded-2xl p-6">

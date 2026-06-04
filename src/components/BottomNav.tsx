@@ -1,14 +1,13 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, CalendarDays, Trophy, Scroll, User, Swords, Star } from "lucide-react";
+import { LayoutDashboard, CalendarDays, Trophy, Scroll, User, Star } from "lucide-react";
 
 const NAV = [
   { label: "Home",      href: "/dashboard",  icon: LayoutDashboard },
   { label: "Events",    href: "/events",      icon: CalendarDays },
   { label: "Quests",    href: "/quests",      icon: Scroll },
   { label: "Liga",      href: "/lul",         icon: Star },
-  { label: "Turnier",   href: "/tournament",  icon: Swords },
   { label: "Rangliste", href: "/leaderboard", icon: Trophy },
   { label: "Profil",    href: "/profile",     icon: User },
 ];
