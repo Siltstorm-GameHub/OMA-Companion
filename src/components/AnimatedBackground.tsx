@@ -1,39 +1,45 @@
 "use client";
 import { useEffect, useRef } from "react";
 
-interface Particle {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  radius: number;
-  opacity: number;
-  pulseSpeed: number;
-  pulseOffset: number;
-  color: string;
-}
+// ── Hex-Grid + Glow-Pulse Background ─────────────────────────────────────────
+// Draws a honeycomb grid where individual cells periodically light up
+// with a rose/violet glow. A slow drift keeps it alive without being distracting.
 
-const COLORS = [
-  "244,63,94",   // rose
-  "244,63,94",   // rose (weighted heavier)
-  "139,92,246",  // violet
-  "167,139,250", // violet-light
-  "255,255,255", // white
+const HEX_SIZE   = 36;   // radius of each hexagon
+const GAP        = 4;    // gap between hexagons
+const STEP       = HEX_SIZE * 2 + GAP;
+
+// Color palette — rose and violet
+const PULSE_COLORS = [
+  [244,  63,  94],  // rose-500
+  [244,  63,  94],  // rose (weighted)
+  [139,  92, 246],  // violet-500
+  [167, 139, 250],  // violet-300
+  [251, 113, 133],  // rose-400
 ];
 
-function createParticle(w: number, h: number): Particle {
-  const color = COLORS[Math.floor(Math.random() * COLORS.length)];
-  return {
-    x:           Math.random() * w,
-    y:           Math.random() * h,
-    vx:          (Math.random() - 0.5) * 0.3,
-    vy:          (Math.random() - 0.5) * 0.3,
-    radius:      Math.random() * 1.5 + 0.5,
-    opacity:     Math.random() * 0.4 + 0.15,
-    pulseSpeed:  Math.random() * 0.008 + 0.004,
-    pulseOffset: Math.random() * Math.PI * 2,
-    color,
-  };
+interface Cell {
+  col: number;
+  row: number;
+  cx: number;
+  cy: number;
+  phase: number;       // current animation phase (0 = idle, 1 = peak glow)
+  speed: number;       // how fast it pulses
+  color: number[];
+  active: boolean;
+  timer: number;       // countdown until next activation
+}
+
+function hexPath(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number) {
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const angle = (Math.PI / 3) * i - Math.PI / 6;
+    const x = cx + r * Math.cos(angle);
+    const y = cy + r * Math.sin(angle);
+    if (i === 0) ctx.moveTo(x, y);
+    else         ctx.lineTo(x, y);
+  }
+  ctx.closePath();
 }
 
 export function AnimatedBackground() {
@@ -46,68 +52,104 @@ export function AnimatedBackground() {
     if (!ctx) return;
 
     let animId: number;
-    let particles: Particle[] = [];
+    let cells: Cell[] = [];
     let t = 0;
+
+    function buildGrid() {
+      if (!canvas) return;
+      cells = [];
+      const w = canvas.width;
+      const h = canvas.height;
+
+      const cols = Math.ceil(w / (STEP * 0.75)) + 2;
+      const rows = Math.ceil(h / STEP) + 2;
+
+      for (let col = -1; col < cols; col++) {
+        for (let row = -1; row < rows; row++) {
+          const cx = col * STEP * 0.75;
+          const cy = row * STEP + (col % 2 === 0 ? 0 : STEP / 2);
+          cells.push({
+            col, row, cx, cy,
+            phase:  0,
+            speed:  Math.random() * 0.008 + 0.004,
+            color:  PULSE_COLORS[Math.floor(Math.random() * PULSE_COLORS.length)],
+            active: false,
+            timer:  Math.random() * 400 + 100,
+          });
+        }
+      }
+    }
 
     function resize() {
       if (!canvas) return;
       canvas.width  = window.innerWidth;
       canvas.height = window.innerHeight;
-      // Re-seed particles on resize to fill new dimensions
-      const count = Math.min(Math.floor((canvas.width * canvas.height) / 14000), 90);
-      particles = Array.from({ length: count }, () =>
-        createParticle(canvas.width, canvas.height)
-      );
+      buildGrid();
+    }
+
+    // Randomly activate cells over time
+    function tickActivations() {
+      const now = t;
+      for (const cell of cells) {
+        if (!cell.active) {
+          cell.timer--;
+          if (cell.timer <= 0) {
+            cell.active = true;
+            cell.phase  = 0;
+            cell.color  = PULSE_COLORS[Math.floor(Math.random() * PULSE_COLORS.length)];
+            cell.speed  = Math.random() * 0.012 + 0.005;
+            // Re-schedule next activation
+            cell.timer  = Math.random() * 600 + 200;
+          }
+        }
+      }
     }
 
     function draw() {
       if (!canvas || !ctx) return;
-      t += 1;
+      t++;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      tickActivations();
 
-      const CONNECTION_DIST = 130;
-
-      // Update + draw particles
-      for (let i = 0; i < particles.length; i++) {
-        const p = particles[i];
-
-        // Move
-        p.x += p.vx;
-        p.y += p.vy;
-
-        // Wrap around edges
-        if (p.x < -10) p.x = canvas.width  + 10;
-        if (p.x > canvas.width  + 10) p.x = -10;
-        if (p.y < -10) p.y = canvas.height + 10;
-        if (p.y > canvas.height + 10) p.y = -10;
-
-        // Pulse opacity
-        const pulse = Math.sin(t * p.pulseSpeed + p.pulseOffset) * 0.15;
-        const alpha = Math.max(0.05, Math.min(0.6, p.opacity + pulse));
-
-        // Draw particle
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${p.color},${alpha})`;
-        ctx.fill();
-
-        // Draw connections
-        for (let j = i + 1; j < particles.length; j++) {
-          const q = particles[j];
-          const dx = p.x - q.x;
-          const dy = p.y - q.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-
-          if (dist < CONNECTION_DIST) {
-            const lineAlpha = (1 - dist / CONNECTION_DIST) * 0.12;
-            // Blend colors of the two particles
-            ctx.beginPath();
-            ctx.moveTo(p.x, p.y);
-            ctx.lineTo(q.x, q.y);
-            ctx.strokeStyle = `rgba(${p.color},${lineAlpha})`;
-            ctx.lineWidth = 0.6;
-            ctx.stroke();
+      for (const cell of cells) {
+        // Advance phase for active cells
+        if (cell.active) {
+          cell.phase += cell.speed;
+          if (cell.phase >= Math.PI) {
+            cell.phase  = 0;
+            cell.active = false;
           }
+        }
+
+        const glowAlpha = cell.active ? Math.sin(cell.phase) : 0;
+
+        // ── Base hex outline ──────────────────────────────────────
+        hexPath(ctx, cell.cx, cell.cy, HEX_SIZE - GAP / 2);
+        ctx.strokeStyle = `rgba(255,255,255,${0.028 + glowAlpha * 0.04})`;
+        ctx.lineWidth   = 0.5 + glowAlpha * 0.8;
+        ctx.stroke();
+
+        // ── Glow fill when active ─────────────────────────────────
+        if (glowAlpha > 0.01) {
+          const [r, g, b] = cell.color;
+
+          // Inner fill
+          hexPath(ctx, cell.cx, cell.cy, HEX_SIZE - GAP / 2);
+          ctx.fillStyle = `rgba(${r},${g},${b},${glowAlpha * 0.07})`;
+          ctx.fill();
+
+          // Radial glow from center
+          const grad = ctx.createRadialGradient(
+            cell.cx, cell.cy, 0,
+            cell.cx, cell.cy, HEX_SIZE
+          );
+          grad.addColorStop(0,   `rgba(${r},${g},${b},${glowAlpha * 0.18})`);
+          grad.addColorStop(0.5, `rgba(${r},${g},${b},${glowAlpha * 0.07})`);
+          grad.addColorStop(1,   `rgba(${r},${g},${b},0)`);
+
+          hexPath(ctx, cell.cx, cell.cy, HEX_SIZE * 1.5);
+          ctx.fillStyle = grad;
+          ctx.fill();
         }
       }
 
@@ -131,8 +173,8 @@ export function AnimatedBackground() {
       ref={canvasRef}
       className="fixed inset-0 pointer-events-none"
       aria-hidden="true"
-      style={{ zIndex: 0, opacity: 0.65 }}
       data-animated-bg
+      style={{ zIndex: 0 }}
     />
   );
 }
