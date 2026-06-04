@@ -33,11 +33,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </div>
         <Toaster
           position="top-right"
-          theme="system"
+          theme="dark"
           toastOptions={{
             style: {
-              borderRadius: "12px",
+              background: "rgba(15,15,23,0.92)",
+              backdropFilter: "blur(16px)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: "14px",
               fontSize: "13px",
+              color: "#ededf0",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
             },
           }}
         />
