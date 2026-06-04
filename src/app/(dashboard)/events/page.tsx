@@ -23,11 +23,11 @@ export default async function EventsPage() {
 
   const [eventsRaw, myTournamentRegs] = await Promise.all([
     prisma.event.findMany({
-      orderBy: [{ status: "asc" }, { startAt: "asc" }],
-      include: {
-        _count:       { select: { registrations: true } },
-        registrations: userId ? { where: { userId } } : false,
-        tournament:   true,
+      orderBy:  [{ status: "asc" }, { startAt: "asc" }],
+      include:  {
+        _count:     { select: { registrations: true } },
+        tournament: true,
+        ...(userId ? { registrations: { where: { userId } } } : {}),
       },
     }),
     userId
