@@ -2,6 +2,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { toast } from "sonner";
 import { ChevronDown, ChevronUp, Trophy, Settings, Users, UserPlus, Search, Trash2, AlertTriangle } from "lucide-react";
 import TournamentManager from "./TournamentManager";
 
@@ -34,7 +35,6 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
   const [bulkSelected, setBulkSelected] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
-  const [bulkResult, setBulkResult] = useState<string | null>(null);
   const router = useRouter();
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "admin";
@@ -58,8 +58,10 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
       `Diese Aktion kann nicht rückgängig gemacht werden.`
     )) return;
     setLoading(true);
-    await fetch(`/api/admin/events?eventId=${event.id}`, { method: "DELETE" });
+    const res = await fetch(`/api/admin/events?eventId=${event.id}`, { method: "DELETE" });
     setLoading(false);
+    if (res.ok) toast.success(`"${event.title}" wurde gelöscht`);
+    else toast.error("Fehler beim Löschen");
     router.refresh();
   }
 
@@ -69,17 +71,20 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
     setLoading(true);
     await fetch(`/api/tournaments/${tournament.id}`, { method: "DELETE" });
     setLoading(false);
+    toast.success("Turnier gelöscht");
     router.refresh();
   }
 
   async function saveEventSettings() {
     setLoading(true);
-    await fetch("/api/admin/events", {
+    const res = await fetch("/api/admin/events", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ eventId: event.id, status, pointReward }),
     });
     setLoading(false);
+    if (res.ok) toast.success("Event-Einstellungen gespeichert");
+    else toast.error("Fehler beim Speichern");
     router.refresh();
   }
 
@@ -91,7 +96,8 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
       body: JSON.stringify({ userIds: [userId] }),
     });
     const data = await res.json();
-    setBulkResult(data.added ? `✅ Hinzugefügt` : `ℹ️ Bereits angemeldet`);
+    if (data.added) toast.success("Teilnehmer hinzugefügt");
+    else toast.info("Bereits angemeldet");
     setLoading(false);
     router.refresh();
   }
@@ -105,7 +111,7 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
       body: JSON.stringify({ userIds: bulkSelected }),
     });
     const data = await res.json();
-    setBulkResult(`✅ ${data.added} hinzugefügt, ${data.skipped} bereits dabei`);
+    toast.success(`${data.added} hinzugefügt${data.skipped ? `, ${data.skipped} bereits dabei` : ""}`);
     setBulkSelected([]);
     setLoading(false);
     router.refresh();
@@ -252,7 +258,6 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
                     <UserPlus className="w-3.5 h-3.5" />
                     {bulkSelected.length > 0 ? `${bulkSelected.length} hinzufügen` : "Hinzufügen"}
                   </button>
-                  {bulkResult && <span className="text-xs text-green-400">{bulkResult}</span>}
                 </div>
 
                 {/* User-Liste */}

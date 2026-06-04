@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { toast } from "sonner";
 import {
   Plus, Trophy, ChevronDown, ChevronUp, Trash2, Save,
   Users, Gamepad2, Lock, RefreshCw, Archive,
@@ -161,6 +162,7 @@ function LulSpieltagEditor({
       body: JSON.stringify({ entries: payload }),
     });
     setLoading(false);
+    toast.success("Entwurf gespeichert");
     onRefresh();
   }
 
@@ -168,12 +170,14 @@ function LulSpieltagEditor({
     if (!confirm(`Spieltag ${spieltag.number} (${spieltag.game}) wirklich finalisieren? LUL-Punkte werden berechnet und können nicht mehr geändert werden.`)) return;
     setLoading(true);
     await saveDraft();
-    await fetch(`/api/lul/spieltage/${spieltag.id}`, {
+    const res = await fetch(`/api/lul/spieltage/${spieltag.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ finalize: true }),
     });
     setLoading(false);
+    if (res.ok) toast.success(`Spieltag ${spieltag.number} finalisiert – LUL-Punkte vergeben`);
+    else toast.error("Fehler beim Finalisieren");
     onRefresh();
   }
 
@@ -479,12 +483,14 @@ export default function LulAdminPanel({
     });
     setLoading(false);
     setShowSeasonForm(false);
+    toast.success("Saison erstellt");
     await loadSeasons();
   }
 
   async function deleteSeason(id: string) {
     if (!confirm("Saison und alle Spieltage löschen?")) return;
     await fetch(`/api/lul/seasons/${id}`, { method: "DELETE" });
+    toast.success("Saison gelöscht");
     await loadSeasons();
   }
 
@@ -494,6 +500,8 @@ export default function LulAdminPanel({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
+    const label: Record<string, string> = { active: "aktiviert", finished: "abgeschlossen", archived: "archiviert", upcoming: "auf Geplant gesetzt" };
+    toast.success(`Saison ${label[status] ?? "aktualisiert"}`);
     await loadSeasons();
   }
 
@@ -502,7 +510,7 @@ export default function LulAdminPanel({
     setLoading(true);
     const season = seasons.find(s => s.id === seasonId);
     const nextNum = (season?.spieltage.length ?? 0) + 1;
-    await fetch("/api/lul/spieltage", {
+    const res = await fetch("/api/lul/spieltage", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -513,6 +521,8 @@ export default function LulAdminPanel({
       }),
     });
     setLoading(false);
+    if (res.ok) { toast.success(`Spieltag ${nextNum} – ${stGame} erstellt`); }
+    else toast.error("Fehler beim Erstellen");
     setShowSpieltagForm(null);
     setStGame(""); setStGameType(""); setStPlatform(""); setStDate("");
     await loadSeasons();
@@ -521,6 +531,7 @@ export default function LulAdminPanel({
   async function deleteSpieltag(id: string) {
     if (!confirm("Spieltag löschen?")) return;
     await fetch(`/api/lul/spieltage/${id}`, { method: "DELETE" });
+    toast.success("Spieltag gelöscht");
     await loadSeasons();
   }
 

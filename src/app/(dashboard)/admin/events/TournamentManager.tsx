@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   Trophy, Plus, Trash2, Clock, ChevronDown, ChevronUp,
   Save, X, Settings, Users, UserPlus, UserMinus, RotateCcw,
@@ -82,8 +83,8 @@ function CreationForm({
       }),
     });
     setLoading(false);
-    if (res.ok) onCreated(await res.json());
-    else { const e = await res.json(); alert(e.error); }
+    if (res.ok) { toast.success("Turnier erstellt"); onCreated(await res.json()); }
+    else { const e = await res.json(); toast.error(e.error ?? "Fehler beim Erstellen"); }
   }
 
   return (
@@ -316,10 +317,10 @@ export default function TournamentManager({
     setLoading(false);
     if (res.ok) {
       const data = await res.json();
-      alert(`${data.generated} Matches generiert.`);
+      toast.success(`${data.generated} Matches generiert`);
     } else {
       const e = await res.json();
-      alert(e.error);
+      toast.error(e.error ?? "Fehler beim Generieren");
     }
     router.refresh();
   }
@@ -339,7 +340,7 @@ export default function TournamentManager({
       setAddParticipantId("");
     } else {
       const e = await res.json();
-      alert(e.error);
+      toast.error(e.error ?? "Fehler beim Hinzufügen");
     }
   }
 

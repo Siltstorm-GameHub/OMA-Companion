@@ -18,14 +18,79 @@ html, body {
 body {
   background-color: var(--bg-base);
   color: #ededf0;
-  /* Ambient glow — subtle rose at top, hint of violet below */
-  background-image:
-    radial-gradient(ellipse 90% 45% at 50% -10%, rgba(244,63,94,0.07) 0%, transparent 100%),
-    radial-gradient(ellipse 60% 40% at 90% 110%,  rgba(99,102,241,0.04) 0%, transparent 100%);
   background-attachment: fixed;
 }
 
-/* ── Transitions (interactive only) ───────────────────────────── */
+/* ── Animated mesh gradient blobs ──────────────────────────────── */
+body::before,
+body::after {
+  content: '';
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(80px);
+  opacity: 0.55;
+}
+
+body::before {
+  width: 600px;
+  height: 400px;
+  top: -120px;
+  left: -100px;
+  background: radial-gradient(ellipse, rgba(244,63,94,0.12) 0%, transparent 70%);
+  animation: blob-drift-a 18s ease-in-out infinite alternate;
+}
+
+body::after {
+  width: 500px;
+  height: 500px;
+  bottom: -150px;
+  right: -80px;
+  background: radial-gradient(ellipse, rgba(99,102,241,0.09) 0%, transparent 70%);
+  animation: blob-drift-b 22s ease-in-out infinite alternate;
+}
+
+@keyframes blob-drift-a {
+  0%   { transform: translate(0, 0) scale(1); }
+  33%  { transform: translate(80px, 40px) scale(1.1); }
+  66%  { transform: translate(-40px, 80px) scale(0.95); }
+  100% { transform: translate(60px, -30px) scale(1.05); }
+}
+
+@keyframes blob-drift-b {
+  0%   { transform: translate(0, 0) scale(1); }
+  33%  { transform: translate(-60px, -50px) scale(1.08); }
+  66%  { transform: translate(50px, -80px) scale(0.92); }
+  100% { transform: translate(-30px, 60px) scale(1.1); }
+}
+
+/* Everything above the blobs */
+#__next, main, aside, header, nav, footer {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Hover-lift for cards ───────────────────────────────────────── */
+.card-hover {
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease !important;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.08) !important;
+}
+
+/* Glow-border variant for interactive cards */
+.card-hover-glow {
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease !important;
+}
+.card-hover-glow:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.4), 0 0 20px rgba(244,63,94,0.08) !important;
+  border-color: rgba(244,63,94,0.2) !important;
+}
+
+/* ── Transitions (interactive elements) ────────────────────────── */
 a, button, [role="button"] {
   transition:
     color 120ms ease,
@@ -44,30 +109,20 @@ a, button, [role="button"] {
 }
 
 /* ── Scrollbar ─────────────────────────────────────────────────── */
-::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.08);
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255,255,255,0.15);
-}
+::-webkit-scrollbar       { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
 
 /* ── Glassmorphism utilities ────────────────────────────────────── */
 .glass {
-  background: rgba(15, 15, 23, 0.75);
+  background: rgba(15,15,23,0.75);
   backdrop-filter: blur(16px) saturate(1.4);
   -webkit-backdrop-filter: blur(16px) saturate(1.4);
   border: 1px solid var(--border-dim);
 }
 .glass-heavy {
-  background: rgba(9, 9, 15, 0.88);
+  background: rgba(9,9,15,0.88);
   backdrop-filter: blur(24px) saturate(1.6);
   -webkit-backdrop-filter: blur(24px) saturate(1.6);
   border: 1px solid var(--border-dim);
@@ -78,23 +133,18 @@ a, button, [role="button"] {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* ── Glow helpers ──────────────────────────────────────────────── */
-.glow-rose {
-  box-shadow: 0 0 20px rgba(244,63,94,0.15), 0 0 60px rgba(244,63,94,0.05);
-}
-.glow-rose-sm {
-  box-shadow: 0 0 10px rgba(244,63,94,0.12);
-}
-
 /* ── Animations ────────────────────────────────────────────────── */
 @keyframes fade-in {
-  from { opacity: 0; transform: translateY(4px); }
+  from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-@keyframes shimmer {
-  0%   { background-position: -200% 0; }
-  100% { background-position:  200% 0; }
+@keyframes fade-in-scale {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
 }
 .animate-fade-in {
-  animation: fade-in 0.25s ease both;
+  animation: fade-in 0.3s ease both;
+}
+.animate-fade-in-scale {
+  animation: fade-in-scale 0.25s ease both;
 }
