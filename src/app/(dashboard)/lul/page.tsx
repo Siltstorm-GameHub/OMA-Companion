@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Trophy, CalendarDays, ChevronRight, Flame, Star, Crown, Gamepad2 } from "lucide-react";
+import { Trophy, CalendarDays, ChevronRight, Flame, Star, Crown, Gamepad2, History } from "lucide-react";
 import { buildLulStandings, LUL_POINTS } from "@/lib/lul";
 
 const STATUS_LABEL: Record<string, { label: string; cls: string; dot: string }> = {
@@ -177,7 +177,7 @@ export default async function LulOverviewPage() {
                             </span>
                           </div>
                         </td>
-                        <td className="px-2 py-3 text-center text-gray-500 tabular-nums text-xs">{s.games}</td>
+                        <td className="px-2 py-3 text-center text-gray-500 tabular-nums text-xs">{s.asPlayer + s.asSpectator}</td>
                         <td className="px-2 py-3 text-center text-amber-400 font-semibold tabular-nums text-xs">{s.wins}</td>
                         <td className="px-2 py-3 text-center text-purple-400 font-semibold tabular-nums text-xs">{s.champs}</td>
                         <td className="px-4 py-3 text-right font-bold text-white text-base tabular-nums">{s.totalPts}</td>
@@ -262,6 +262,17 @@ export default async function LulOverviewPage() {
           </div>
         </div>
       )}
+
+      {/* All-Time Link */}
+      <Link href="/lul/alltime"
+        className="flex items-center gap-3 rounded-xl px-4 py-3 border border-purple-800/30 bg-purple-950/20 hover:bg-purple-950/40 transition-colors group">
+        <History className="w-5 h-5 text-purple-400 shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-white">All-Time Rangliste</p>
+          <p className="text-xs text-gray-500">Gesamtstatistiken über alle Saisons</p>
+        </div>
+        <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-purple-400 transition-colors" />
+      </Link>
 
       {seasons.length === 0 && (
         <div className="bg-gray-900 border border-white/5 rounded-2xl p-12 text-center">
