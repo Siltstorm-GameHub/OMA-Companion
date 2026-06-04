@@ -32,6 +32,14 @@ const SECTIONS = [
     grid:  "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
   },
   {
+    key:   "cosmetic-colors",
+    label: "Namens-Farben",
+    icon:  "🖌️",
+    desc:  "Hebe deinen Namen im Leaderboard mit einer exklusiven Farbe hervor.",
+    types: ["name_color"],
+    grid:  "grid-cols-2 sm:grid-cols-3",
+  },
+  {
     key:   "boosts",
     label: "Boosts",
     icon:  "⚡",
@@ -44,7 +52,7 @@ const SECTIONS = [
     label: "Privilegien",
     icon:  "🎟️",
     desc:  "Besondere Rechte und Aktionen die nur Shop-Käufer nutzen können.",
-    types: ["event_slot", "discord_role", "lul_suggest", "tournament_sponsor"],
+    types: ["event_slot", "discord_role", "lul_suggest", "tournament_sponsor", "status_message"],
     grid:  "grid-cols-1 sm:grid-cols-2",
   },
 ] as const;
@@ -61,7 +69,7 @@ export default async function ShopPage() {
     userId
       ? prisma.user.findUnique({
           where:  { id: userId },
-          select: { points: true, activeTitle: true, profileTheme: true, xpBoostUntil: true, streakShield: true },
+          select: { points: true, activeTitle: true, profileTheme: true, nameColor: true, statusMessage: true, xpBoostUntil: true, streakShield: true },
         })
       : null,
     userId
@@ -72,10 +80,14 @@ export default async function ShopPage() {
       : [],
   ]);
 
-  const purchasedIds  = new Set(myPurchases.map(p => p.itemId));
-  const purchaseMap   = new Map(myPurchases.map(p => [p.itemId, p]));
-  const myPoints      = me?.points ?? 0;
-  const xpBoostActive = me?.xpBoostUntil && me.xpBoostUntil > new Date();
+  const purchasedIds      = new Set(myPurchases.map(p => p.itemId));
+  const purchaseMap       = new Map(myPurchases.map(p => [p.itemId, p]));
+  const myPoints          = me?.points ?? 0;
+  const xpBoostActive     = me?.xpBoostUntil && me.xpBoostUntil > new Date();
+  const ownsStatusMessage = myPurchases.some(p =>
+    items.find(i => i.id === p.itemId)?.type === "status_message"
+  );
+  const now = new Date();
 
   // Rarity-Verteilung für den Header
   const ownedCount = purchasedIds.size;
@@ -134,7 +146,10 @@ export default async function ShopPage() {
 
       {/* ── Sektionen ───────────────────────────────────────────────── */}
       {SECTIONS.map(section => {
-        const sectionItems = items.filter(i => (section.types as readonly string[]).includes(i.type));
+        const sectionItems = items.filter(i =>
+          (section.types as readonly string[]).includes(i.type) &&
+          !(i.availableFrom && i.availableFrom > now && !purchasedIds.has(i.id)) // noch nicht verfügbar = trotzdem anzeigen, aber gesperrt
+        );
         if (!sectionItems.length) return null;
 
         const ownedInSection = sectionItems.filter(i => purchasedIds.has(i.id)).length;
@@ -178,6 +193,9 @@ export default async function ShopPage() {
                     myPoints={myPoints}
                     activeTitle={me?.activeTitle ?? null}
                     profileTheme={me?.profileTheme ?? "default"}
+                    nameColor={me?.nameColor ?? null}
+                    statusMessage={me?.statusMessage ?? null}
+                    ownsStatusMessage={ownsStatusMessage}
                     purchaseId={purchase?.id}
                     consumed={purchase?.consumed}
                   />
