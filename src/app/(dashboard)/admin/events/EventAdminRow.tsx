@@ -1,7 +1,8 @@
 "use client";
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronUp, Trophy, Settings, Users, UserPlus, Search, Trash2 } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { ChevronDown, ChevronUp, Trophy, Settings, Users, UserPlus, Search, Trash2, AlertTriangle } from "lucide-react";
 import TournamentManager from "./TournamentManager";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };
@@ -35,6 +36,8 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
   const [loading, setLoading] = useState(false);
   const [bulkResult, setBulkResult] = useState<string | null>(null);
   const router = useRouter();
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "admin";
 
   const registeredIds = new Set(event.registrations.map((r) => r.userId));
   const userName = (u: User) => u.username ?? u.name ?? "?";
@@ -44,6 +47,21 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
     const q = search.toLowerCase();
     return allUsers.filter((u) => userName(u).toLowerCase().includes(q));
   }, [allUsers, search]);
+
+  async function deleteEvent() {
+    if (!confirm(
+      `Event "${event.title}" KOMPLETT löschen?\n\n` +
+      `Dies entfernt unwiderruflich:\n` +
+      `• ${event._count.registrations} Anmeldung(en)\n` +
+      `${tournament ? `• Das Turnier mit allen Matches und Teilnehmern\n` : ""}` +
+      `• Das Event selbst\n\n` +
+      `Diese Aktion kann nicht rückgängig gemacht werden.`
+    )) return;
+    setLoading(true);
+    await fetch(`/api/admin/events?eventId=${event.id}`, { method: "DELETE" });
+    setLoading(false);
+    router.refresh();
+  }
 
   async function deleteTournament() {
     if (!tournament) return;
@@ -174,6 +192,30 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
                         className="flex items-center gap-1.5 text-sm text-red-400 hover:text-white hover:bg-red-700 border border-red-800/50 hover:border-red-700 rounded-lg px-3 py-2 transition-colors disabled:opacity-50 shrink-0"
                       >
                         <Trash2 className="w-3.5 h-3.5" /> Turnier löschen
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {isAdmin && (
+                  <div className="border border-red-900/60 rounded-lg p-3 bg-red-950/20">
+                    <div className="flex items-center justify-between gap-4 flex-wrap">
+                      <div>
+                        <p className="text-sm font-medium text-red-300 flex items-center gap-2">
+                          <AlertTriangle className="w-3.5 h-3.5" />
+                          Event komplett löschen
+                        </p>
+                        <p className="text-xs text-gray-600 mt-0.5">
+                          Entfernt das Event, alle {event._count.registrations} Anmeldung(en){tournament ? ", das Turnier und alle Matches" : ""} dauerhaft.
+                          Nur für Admins sichtbar.
+                        </p>
+                      </div>
+                      <button
+                        onClick={deleteEvent}
+                        disabled={loading}
+                        className="flex items-center gap-1.5 text-sm text-white bg-red-700 hover:bg-red-600 rounded-lg px-3 py-2 transition-colors disabled:opacity-50 shrink-0"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" /> Event löschen
                       </button>
                     </div>
                   </div>

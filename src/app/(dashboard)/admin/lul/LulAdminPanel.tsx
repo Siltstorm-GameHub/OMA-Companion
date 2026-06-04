@@ -1,29 +1,15 @@
 "use client";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import {
-  Plus, Trophy, ChevronDown, ChevronUp, Trash2, Check, Save,
-  Users, Eye, Gamepad2, Lock, RefreshCw,
+  Plus, Trophy, ChevronDown, ChevronUp, Trash2, Save,
+  Users, Gamepad2, Lock, RefreshCw,
 } from "lucide-react";
+import type { LulAdminSeasons } from "./page";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };
-type LulEntry = {
-  id: string; userId: string; role: string;
-  roundScores: string | null; totalGameScore: number;
-  placement: number | null; gameWinner: boolean;
-  communityChamp: boolean; trostpreis: boolean;
-  voted: boolean; dominionBonus: boolean; lulPoints: number;
-  user: User;
-};
-type LulSpieltag = {
-  id: string; number: number; game: string; gameType: string | null;
-  platform: string | null; scheduledAt: string | null; status: string;
-  pointsConfig: string | null; entries: LulEntry[];
-};
-type LulSeason = {
-  id: string; number: number; name: string | null; period: string | null;
-  totalSpieltage: number; status: string; spieltage: LulSpieltag[];
-};
+type LulSeason  = LulAdminSeasons[number];
+type LulSpieltag = LulSeason["spieltage"][number];
+type LulEntry    = LulSpieltag["entries"][number];
 
 const uname = (u: User) => u.username ?? u.name ?? "?";
 const MEDAL = ["🥇", "🥈", "🥉"];
@@ -450,10 +436,9 @@ export default function LulAdminPanel({
   seasons: initialSeasons,
   allUsers,
 }: {
-  seasons: LulSeason[];
+  seasons: LulAdminSeasons;
   allUsers: User[];
 }) {
-  const router = useRouter();
   const [seasons, setSeasons] = useState(initialSeasons);
   const [loading, setLoading] = useState(false);
   const [expandedSeason, setExpandedSeason] = useState<string | null>(
@@ -480,9 +465,9 @@ export default function LulAdminPanel({
 
   async function loadSeasons() {
     const res = await fetch("/api/lul/seasons");
-    const data = await res.json();
+    if (!res.ok) return;
+    const data: LulAdminSeasons = await res.json();
     setSeasons(data);
-    router.refresh();
   }
 
   async function createSeason() {
