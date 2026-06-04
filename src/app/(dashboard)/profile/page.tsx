@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
-import { getRank, getLevel, getNextLevelPoints } from "@/lib/points";
+import { getRank, getLevel, getNextLevelPoints, getLevelStartPoints } from "@/lib/points";
 import PointsInfoModal from "./PointsInfoModal";
 import { QUEST_TYPE_META, type QuestType } from "@/lib/quests";
 import { Trophy, Star, CalendarDays, Swords, Zap, Clock, MessageSquare, CheckCircle2 } from "lucide-react";
@@ -93,7 +93,7 @@ export default async function ProfilePage() {
   const rank         = getRank(totalPoints);
   const level        = getLevel(totalPoints);
   const nextLevelPts = getNextLevelPoints(totalPoints);
-  const prevLevelPts = getNextLevelPoints(totalPoints - 1);
+  const prevLevelPts = getLevelStartPoints(totalPoints);
   const xpPct        = nextLevelPts > prevLevelPts
     ? Math.min(100, Math.round(((totalPoints - prevLevelPts) / (nextLevelPts - prevLevelPts)) * 100))
     : 100;

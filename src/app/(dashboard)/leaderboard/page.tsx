@@ -89,7 +89,7 @@ export default async function LeaderboardPage() {
 
                 {/* Rang-Badge */}
                 <span className="absolute top-2 right-2 text-[10px] font-bold text-gray-500">#{actualRank}</span>
-              </div>
+              </Link>
             );
           })}
         </div>

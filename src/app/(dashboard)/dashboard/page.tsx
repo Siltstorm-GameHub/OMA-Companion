@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { getRank, getNextLevelPoints, getLevel } from "@/lib/points";
+import { getRank, getNextLevelPoints, getLevelStartPoints, getLevel } from "@/lib/points";
 import {
   Trophy, CalendarDays, Star, Users, ChevronRight,
   Zap, ShieldAlert, Clock, Swords, User, TrendingUp,
@@ -56,7 +56,7 @@ export default async function DashboardPage() {
   const myLevel     = getLevel(myPoints);
   const rank        = getRank(myPoints);
   const nextPts     = getNextLevelPoints(myPoints);
-  const prevPts     = getNextLevelPoints(myPoints - 1);
+  const prevPts     = getLevelStartPoints(myPoints);
   const xpProgress  = nextPts > prevPts
     ? Math.min(100, Math.round(((myPoints - prevPts) / (nextPts - prevPts)) * 100))
     : 100;
