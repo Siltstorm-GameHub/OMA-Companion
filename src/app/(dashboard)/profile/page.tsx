@@ -1,10 +1,9 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
-import { getRank, getLevel, getNextLevelPoints, getLevelStartPoints } from "@/lib/points";
 import PointsInfoModal from "./PointsInfoModal";
 import { QUEST_TYPE_META, type QuestType } from "@/lib/quests";
-import { Trophy, Star, CalendarDays, Swords, Zap, Clock, MessageSquare, CheckCircle2 } from "lucide-react";
+import { Trophy, Star, CalendarDays, Swords, Clock, MessageSquare, CheckCircle2, Zap } from "lucide-react";
 import { RelativeTime } from "@/components/RelativeTime";
 import Image from "next/image";
 import { PointsChart } from "@/components/PointsChart";
@@ -63,7 +62,7 @@ export default async function ProfilePage() {
     await Promise.all([
       prisma.user.findUnique({
         where: { id: userId },
-        select: { id: true, name: true, username: true, image: true, points: true, level: true, streak: true, createdAt: true, activeTitle: true, profileTheme: true, statusMessage: true },
+        select: { id: true, name: true, username: true, image: true, points: true, streak: true, createdAt: true, activeTitle: true, profileTheme: true, statusMessage: true, goalItemId: true, birthday: true, birthdayBoostUntil: true },
       }),
       prisma.pointTransaction.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, take: 20 }),
       prisma.eventRegistration.findMany({
@@ -98,13 +97,20 @@ export default async function ProfilePage() {
   if (!user) redirect("/login");
 
   const totalPoints  = user.points;
-  const rank         = getRank(totalPoints);
-  const level        = getLevel(totalPoints);
-  const nextLevelPts = getNextLevelPoints(totalPoints);
-  const prevLevelPts = getLevelStartPoints(totalPoints);
-  const xpPct        = nextLevelPts > prevLevelPts
-    ? Math.min(100, Math.round(((totalPoints - prevLevelPts) / (nextLevelPts - prevLevelPts)) * 100))
-    : 100;
+
+  // Wunschliste
+  const wishlist = await prisma.wishlistItem.findMany({
+    where:   { userId },
+    include: { item: { select: { id: true, name: true, icon: true, price: true } } },
+    orderBy: { createdAt: "asc" },
+  });
+
+  // Sparziel
+  const goalItem = user.goalItemId
+    ? await prisma.shopItem.findUnique({ where: { id: user.goalItemId }, select: { id: true, name: true, icon: true, price: true } })
+    : null;
+  const goalPct  = goalItem ? Math.min(100, Math.round((totalPoints / goalItem.price) * 100)) : 0;
+  const goalLeft = goalItem ? Math.max(0, goalItem.price - totalPoints) : 0;
 
   // Chart-Daten: kumulierte Punkte über Zeit (letzte 30 Einträge → chronologisch)
   const chartData = (() => {
@@ -153,10 +159,6 @@ export default async function ProfilePage() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-0.5">
               <h1 className="text-2xl font-bold text-white tracking-tight">{displayName}</h1>
-
-              <span className={`text-xs px-2 py-0.5 rounded-lg font-semibold border ${rank.color} bg-white/[0.04] border-white/10`}>
-                {rank.label}
-              </span>
               {user.activeTitle && (
                 <span className={`text-xs px-2.5 py-0.5 rounded-lg font-semibold border ${TITLE_STYLES[user.activeTitle] ?? "text-gray-400 bg-white/[0.05] border-white/10"}`}>
                   {user.activeTitle}
@@ -166,22 +168,28 @@ export default async function ProfilePage() {
             {user.statusMessage && (
               <p className="text-xs text-gray-400 italic mb-1">„{user.statusMessage}"</p>
             )}
+            {user.birthdayBoostUntil && user.birthdayBoostUntil > new Date() && (
+              <p className="text-xs text-amber-400 mb-1">🎂 Geburtstags-Boost aktiv — 2× Punkte!</p>
+            )}
             <div className="flex items-center gap-2 mb-3 flex-wrap">
               <p className="text-xs text-gray-500">Mitglied seit {memberSince} · {earnedBadges.length} Abzeichen</p>
+              <span className="text-xs font-bold text-amber-400">{totalPoints.toLocaleString("de-DE")} Pts</span>
               <PointsInfoModal />
             </div>
 
-            {/* XP Bar */}
-            <div className="max-w-xs">
-              <div className="flex justify-between text-xs text-gray-500 mb-1.5">
-                <span className="flex items-center gap-1"><Zap className="w-3 h-3 text-amber-400" />Level {level}</span>
-                <span>{totalPoints.toLocaleString("de-DE")} / {nextLevelPts.toLocaleString("de-DE")} Pts</span>
+            {/* Sparziel-Fortschrittsbalken */}
+            {goalItem && (
+              <div className="max-w-xs">
+                <div className="flex justify-between text-xs text-gray-500 mb-1.5">
+                  <span className="flex items-center gap-1">🎯 {goalItem.icon} {goalItem.name}</span>
+                  <span>{goalPct}%</span>
+                </div>
+                <div className="h-2 bg-white/[0.06] rounded-full overflow-hidden">
+                  <div className="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.4)] transition-all duration-1000" style={{ width: `${goalPct}%` }} />
+                </div>
+                <p className="text-[10px] text-gray-600 mt-1">Noch {goalLeft.toLocaleString("de-DE")} Punkte bis zum Kauf</p>
               </div>
-              <div className="h-2 bg-white/[0.06] rounded-full overflow-hidden">
-                <div className="h-full rounded-full progress-shimmer shadow-[0_0_10px_rgba(244,63,94,0.4)] transition-all duration-1000" style={{ width: `${xpPct}%` }} />
-              </div>
-              <p className="text-[10px] text-gray-600 mt-1">{xpPct}% zum nächsten Level</p>
-            </div>
+            )}
           </div>
         </div>
       </div>
@@ -256,6 +264,27 @@ export default async function ProfilePage() {
               );
             })}
           </section>
+
+          {/* Wunschliste */}
+          {wishlist.length > 0 && (
+            <section>
+              <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">❤️ Wunschliste</h2>
+              <div className="flex flex-wrap gap-2">
+                {wishlist.map(w => {
+                  const pct = Math.min(100, Math.round((totalPoints / w.item.price) * 100));
+                  return (
+                    <div key={w.id} className="glass rounded-xl px-3 py-2 border border-white/[0.06] flex items-center gap-2">
+                      <span>{w.item.icon}</span>
+                      <div>
+                        <p className="text-xs text-white font-medium">{w.item.name}</p>
+                        <p className="text-[10px] text-gray-600">{pct}% gespart · {w.item.price.toLocaleString("de-DE")} Pts</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
 
           {/* Quest-Fortschritt */}
           {questsWithProgress.length > 0 && (

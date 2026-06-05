@@ -8,7 +8,7 @@ export async function GET() {
     orderBy: { createdAt: "desc" },
     select: {
       id: true, name: true, username: true, email: true,
-      image: true, role: true, points: true, level: true,
+      image: true, role: true, points: true,
       createdAt: true, discordId: true,
       _count: { select: { eventRegistrations: true, tournamentParticipants: true } },
     },

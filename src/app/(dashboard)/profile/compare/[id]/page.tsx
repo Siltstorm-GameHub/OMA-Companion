@@ -1,7 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import { getRank, getLevel } from "@/lib/points";
 import { ArrowLeft, Trophy, CalendarDays, Swords, Zap, Star } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -10,7 +9,7 @@ async function fetchUserData(id: string) {
   const [user, eventCount, matchWins, transactions] = await Promise.all([
     prisma.user.findUnique({
       where: { id },
-      select: { id: true, name: true, username: true, image: true, points: true, level: true, streak: true },
+      select: { id: true, name: true, username: true, image: true, points: true, streak: true },
     }),
     prisma.eventRegistration.count({ where: { userId: id } }),
     prisma.match.count({ where: { winnerId: id } }),
@@ -53,13 +52,10 @@ function Avatar({ user, accent }: { user: UserData; accent: string }) {
           : <div className="w-full h-full bg-gradient-to-br from-rose-600 to-rose-950 flex items-center justify-center text-2xl font-bold text-white">
               {(user.username ?? user.name ?? "?")[0].toUpperCase()}
             </div>}
-        <div className="absolute -bottom-1.5 -right-1.5 bg-rose-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md ring-2 ring-[#080c18]">
-          Lv.{getLevel(user.points)}
-        </div>
       </div>
       <div className="text-center">
         <p className="font-bold text-white text-sm">{user.username ?? user.name ?? "?"}</p>
-        <p className={`text-xs font-medium ${getRank(user.points).color}`}>{getRank(user.points).label}</p>
+        <p className="text-xs font-medium text-amber-400">{user.points.toLocaleString("de-DE")} Pts</p>
       </div>
     </div>
   );

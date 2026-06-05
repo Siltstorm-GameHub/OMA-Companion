@@ -32,3 +32,18 @@ export async function PATCH(req: NextRequest) {
 
   return NextResponse.json({ ok: true, item });
 }
+
+// DELETE: Item dauerhaft entfernen
+export async function DELETE(req: NextRequest) {
+  if (!await requireAdmin()) return NextResponse.json({ error: "Keine Berechtigung" }, { status: 403 });
+
+  const { id } = await req.json();
+  if (!id) return NextResponse.json({ error: "ID fehlt" }, { status: 400 });
+
+  // Erst Käufe löschen, dann Item
+  await prisma.shopPurchase.deleteMany({ where: { itemId: id } });
+  await prisma.wishlistItem.deleteMany({ where: { itemId: id } });
+  await prisma.shopItem.delete({ where: { id } });
+
+  return NextResponse.json({ ok: true });
+}

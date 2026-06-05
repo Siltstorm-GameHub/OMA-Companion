@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, ShoppingCart, Loader2, Star, Lock, Send } from "lucide-react";
+import { Check, ShoppingCart, Loader2, Star, Lock, Send, Target, Heart } from "lucide-react";
 import { toast } from "sonner";
 import { RARITY_CONFIG, TITLE_STYLES } from "@/lib/shop";
 
@@ -22,13 +22,15 @@ interface Props {
   nameColor: string | null;
   statusMessage: string | null;
   ownsStatusMessage: boolean;
-  purchaseId?: string;
-  consumed?: boolean;
+  goalItemId:   string | null;
+  onWishlist?:  boolean;
+  purchaseId?:  string;
+  consumed?:    boolean;
 }
 
 export default function ShopItemCard({
   item, owned, canAfford, soldOut, myPoints, activeTitle, profileTheme,
-  nameColor, statusMessage, ownsStatusMessage, purchaseId, consumed,
+  nameColor, statusMessage, ownsStatusMessage, goalItemId, onWishlist, purchaseId, consumed,
 }: Props) {
   const [loading, setLoading]         = useState(false);
   const [localOwned, setOwned]        = useState(owned);
@@ -38,6 +40,11 @@ export default function ShopItemCard({
   const [localStatus, setStatus]      = useState(statusMessage ?? "");
   const [editingStatus, setEditingStatus] = useState(false);
   const [localConsumed, setConsumed]  = useState(consumed ?? false);
+  const [localGoal,    setGoal]       = useState(goalItemId);
+  const [inWishlist,   setWishlist]   = useState(onWishlist ?? false);
+  const isGoal = localGoal === item.id;
+  // Fortschritt zum Ziel
+  const goalPct = isGoal ? Math.min(100, Math.round((myPoints / item.price) * 100)) : 0;
   const [showSuggest, setShowSuggest] = useState(false);
   const [suggestGame, setSuggestGame] = useState("");
   const [suggestNote, setSuggestNote] = useState("");
@@ -102,6 +109,36 @@ export default function ShopItemCard({
         setColor(color);
         toast.success(color ? "Namensfarbe aktiviert" : "Namensfarbe zurückgesetzt");
         router.refresh();
+      }
+    } finally { setLoading(false); }
+  }
+
+  async function handleToggleWishlist() {
+    setLoading(true);
+    try {
+      const method = inWishlist ? "DELETE" : "POST";
+      const res = await fetch("/api/wishlist", {
+        method, headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemId: item.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? "Fehler"); return; }
+      setWishlist(!inWishlist);
+      toast.success(inWishlist ? "Von Wunschliste entfernt" : "❤️ Zur Wunschliste hinzugefügt");
+    } finally { setLoading(false); }
+  }
+
+  async function handleSetGoal() {
+    setLoading(true);
+    try {
+      const newGoal = isGoal ? null : item.id;
+      const res = await fetch("/api/shop/goal", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemId: newGoal }),
+      });
+      if (res.ok) {
+        setGoal(newGoal);
+        toast.success(newGoal ? `🎯 Ziel gesetzt: ${item.name}` : "Ziel entfernt");
       }
     } finally { setLoading(false); }
   }
@@ -229,6 +266,20 @@ export default function ShopItemCard({
         <p className="font-bold text-white text-sm mb-1">{item.name}</p>
         <p className="text-xs text-gray-500 leading-relaxed mb-4">{item.description}</p>
 
+        {/* Sparziel-Fortschrittsbalken */}
+        {isGoal && !alreadyOwned && (
+          <div className="mb-3">
+            <div className="flex justify-between text-[10px] text-gray-500 mb-1">
+              <span className="flex items-center gap-1"><Target className="w-2.5 h-2.5 text-amber-400" /> Mein Ziel</span>
+              <span>{goalPct}% · noch {Math.max(0, item.price - myPoints).toLocaleString("de-DE")} Pts</span>
+            </div>
+            <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+              <div className="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-300 transition-all duration-700 shadow-[0_0_6px_rgba(245,158,11,0.4)]"
+                style={{ width: `${goalPct}%` }} />
+            </div>
+          </div>
+        )}
+
         {/* Price + CTA */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5">
@@ -276,6 +327,30 @@ export default function ShopItemCard({
                 className="text-xs px-3 py-1.5 rounded-lg font-medium glass border border-blue-500/25 text-blue-300 hover:border-blue-400/40 transition-all"
               >
                 ✏️ Bearbeiten
+              </button>
+            )}
+
+            {/* Wunschliste-Button */}
+            {!alreadyOwned && (
+              <button onClick={handleToggleWishlist} disabled={loading} title={inWishlist ? "Von Wunschliste entfernen" : "Zur Wunschliste"}
+                className={`p-1.5 rounded-lg transition-all border ${
+                  inWishlist
+                    ? "text-rose-400 border-rose-500/30 bg-rose-500/10"
+                    : "text-gray-600 border-white/[0.06] hover:text-rose-400 hover:border-rose-500/20"
+                }`}>
+                <Heart className="w-3.5 h-3.5" fill={inWishlist ? "currentColor" : "none"} />
+              </button>
+            )}
+
+            {/* Sparziel-Button (nur für nicht-besessene Items) */}
+            {!alreadyOwned && (
+              <button onClick={handleSetGoal} disabled={loading} title={isGoal ? "Ziel entfernen" : "Als Sparziel setzen"}
+                className={`p-1.5 rounded-lg transition-all border ${
+                  isGoal
+                    ? "text-amber-400 border-amber-500/30 bg-amber-500/10"
+                    : "text-gray-600 border-white/[0.06] hover:text-amber-400 hover:border-amber-500/20"
+                }`}>
+                <Target className="w-3.5 h-3.5" />
               </button>
             )}
 

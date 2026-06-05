@@ -1,10 +1,9 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import { getRank, getLevel, getNextLevelPoints, getLevelStartPoints } from "@/lib/points";
 import { QUEST_TYPE_META, type QuestType } from "@/lib/quests";
 import {
-  Trophy, Star, CalendarDays, Swords, Zap, Clock,
+  Trophy, Star, CalendarDays, Swords, Zap, Clock, // Zap für Streak-Icon
   MessageSquare, CheckCircle2, ArrowLeft,
 } from "lucide-react";
 import Link from "next/link";
@@ -73,7 +72,7 @@ export default async function PublicProfilePage({
         where: { id },
         select: {
           id: true, name: true, username: true, image: true,
-          points: true, level: true, streak: true, createdAt: true,
+          points: true, streak: true, createdAt: true,
         },
       }),
       // Punkte-Transaktionen — nur für Badge-Berechnung, nicht öffentlich anzeigen
@@ -107,13 +106,6 @@ export default async function PublicProfilePage({
 
   // ── Stats ableiten ──────────────────────────────────────────────────────
   const totalPoints  = user.points;
-  const rank         = getRank(totalPoints);
-  const level        = getLevel(totalPoints);
-  const nextLevelPts = getNextLevelPoints(totalPoints);
-  const prevLevelPts = getLevelStartPoints(totalPoints);
-  const xpPct        = nextLevelPts > prevLevelPts
-    ? Math.min(100, Math.round(((totalPoints - prevLevelPts) / (nextLevelPts - prevLevelPts)) * 100))
-    : 100;
 
   const voiceHours   = transactions.filter(t => t.reason.includes("Sprachkanal")).length;
   const messageCount = transactions.filter(t => t.reason.includes("Nachrichten")).length * 10;
@@ -166,34 +158,17 @@ export default async function PublicProfilePage({
               : <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-rose-600 to-rose-950 flex items-center justify-center text-2xl font-bold text-white">
                   {displayName[0].toUpperCase()}
                 </div>}
-            <div className="absolute -bottom-2 -right-2 bg-rose-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-lg ring-2 ring-[#080c18]">
-              Lv.{level}
-            </div>
           </div>
 
           {/* Info */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-0.5">
               <h1 className="text-2xl font-bold text-white tracking-tight">{displayName}</h1>
-              <span className={`text-xs px-2 py-0.5 rounded-lg font-semibold border ${rank.color} bg-white/[0.04] border-white/10`}>
-                {rank.label}
-              </span>
             </div>
-            <p className="text-xs text-gray-500 mb-4">
+            <p className="text-xs text-gray-500 mb-2">
               Mitglied seit {memberSince} · {earnedBadges.length} Abzeichen
             </p>
-
-            {/* XP Bar */}
-            <div className="max-w-xs">
-              <div className="flex justify-between text-xs text-gray-500 mb-1.5">
-                <span className="flex items-center gap-1"><Zap className="w-3 h-3 text-amber-400" />Level {level}</span>
-                <span>{totalPoints.toLocaleString("de-DE")} / {nextLevelPts.toLocaleString("de-DE")} Pts</span>
-              </div>
-              <div className="h-2 bg-white/[0.06] rounded-full overflow-hidden">
-                <div className="h-full rounded-full progress-shimmer shadow-[0_0_10px_rgba(244,63,94,0.4)] transition-all duration-1000" style={{ width: `${xpPct}%` }} />
-              </div>
-              <p className="text-[10px] text-gray-600 mt-1">{xpPct}% zum nächsten Level</p>
-            </div>
+            <p className="text-sm font-bold text-amber-400">{totalPoints.toLocaleString("de-DE")} Punkte</p>
           </div>
 
           {/* Rang-Block */}

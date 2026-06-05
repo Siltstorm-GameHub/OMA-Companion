@@ -11,7 +11,7 @@ export default async function AdminUsersPage() {
     orderBy: [{ role: "desc" }, { points: "desc" }],
     select: {
       id: true, name: true, username: true, email: true,
-      image: true, role: true, points: true, level: true,
+      image: true, role: true, points: true,
       discordId: true, createdAt: true,
       _count: { select: { eventRegistrations: true } },
     },
@@ -64,7 +64,6 @@ export default async function AdminUsersPage() {
                 </td>
                 <td className="px-4 py-3 text-center">
                   <span className="text-white font-medium">{user.points.toLocaleString("de-DE")}</span>
-                  <span className="text-gray-500 text-xs ml-1">Lvl {user.level}</span>
                 </td>
                 <td className="px-4 py-3 text-center text-gray-400">
                   {user._count.eventRegistrations}

@@ -39,7 +39,7 @@ export default async function TournamentDetailPage({
     include: {
       registrations: {
         include: {
-          user: { select: { id: true, name: true, username: true, image: true, points: true, level: true } },
+          user: { select: { id: true, name: true, username: true, image: true, points: true } },
         },
         orderBy: { joinedAt: "asc" },
       },
@@ -223,7 +223,7 @@ export default async function TournamentDetailPage({
                       <p className={`text-sm truncate font-medium ${isMe ? "text-rose-300" : "text-white"}`}>
                         {userName(user)}{isMe && " (du)"}
                       </p>
-                      <p className="text-[10px] text-gray-600">Lvl {user.level}</p>
+                      <p className="text-[10px] text-gray-600">{user.points.toLocaleString("de-DE")} Pts</p>
                     </div>
                     {wins > 0 && <span className="text-xs text-emerald-400 shrink-0">{wins}W</span>}
                   </div>

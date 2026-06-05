@@ -19,8 +19,8 @@ model User {
   username      String?
   role          String    @default("user") // user | moderator | admin
   points        Int       @default(0)
-  level         Int       @default(1)
   streak        Int       @default(0)
+  goalItemId    String?   // Shop-Item das als Sparziel gesetzt wurde
   lastActiveAt  DateTime?
   createdAt     DateTime  @default(now())
 
@@ -29,8 +29,10 @@ model User {
   profileTheme   String    @default("default") // default | cyber | golden | void | emerald | crimson
   nameColor      String?   // hex color, z.B. "#f59e0b"
   statusMessage  String?   // max 60 Zeichen, sichtbar im Profil
-  streakShield   Boolean   @default(false)
-  xpBoostUntil   DateTime?
+  streakShield        Boolean   @default(false)
+  xpBoostUntil        DateTime?
+  birthday            DateTime? // Nur Datum relevant (month/day)
+  birthdayBoostUntil  DateTime? // 2x Punkte bis zu diesem Zeitpunkt
 
   accounts      Account[]
   sessions      Session[]
@@ -44,6 +46,11 @@ model User {
   lulLegacyEntries          LulLegacyEntry[]
   shopPurchases             ShopPurchase[]
   lulSuggestions            LulSuggestion[]
+  dailySpins                DailySpin[]
+  wishlistItems             WishlistItem[]
+  auctionBids               AuctionBid[]
+  currentAuctions           ShopAuction[]  @relation("currentAuctions")
+  wonAuctions               ShopAuction[]  @relation("wonAuctions")
 }
 
 // ── Shop ────────────────────────────────────────────────────────────────────
@@ -68,7 +75,9 @@ model ShopItem {
   availableTo   DateTime? // null = kein Ablaufdatum
   createdAt     DateTime  @default(now())
 
-  purchases   ShopPurchase[]
+  purchases     ShopPurchase[]
+  auctions      ShopAuction[]
+  wishlistItems WishlistItem[]
 }
 
 model ShopPurchase {
@@ -96,6 +105,63 @@ model LulSuggestion {
 
   purchase   ShopPurchase @relation(fields: [purchaseId], references: [id])
   user       User         @relation(fields: [userId], references: [id])
+}
+
+// ── Täglicher Gratis-Spin ──────────────────────────────────────────────────
+model DailySpin {
+  id         String   @id @default(cuid())
+  userId     String
+  date       String   // "YYYY-MM-DD" — ein Spin pro Tag
+  prizeType  String   // "points" | "nothing"
+  prizeValue String   // Punkte als String oder "0"
+  prizeLabel String   // Anzeigetext
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id])
+  @@unique([userId, date])
+}
+
+// ── Wunschliste ────────────────────────────────────────────────────────────
+model WishlistItem {
+  id        String   @id @default(cuid())
+  userId    String
+  itemId    String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+  item      ShopItem @relation(fields: [itemId], references: [id])
+  @@unique([userId, itemId])
+}
+
+// ── Auktionen ──────────────────────────────────────────────────────────────
+model ShopAuction {
+  id               String    @id @default(cuid())
+  itemId           String
+  startPrice       Int
+  minBidStep       Int       @default(50)
+  currentBid       Int       @default(0)
+  currentBidderId  String?
+  endsAt           DateTime
+  // active | ended | cancelled
+  status           String    @default("active")
+  winnerId         String?
+  createdAt        DateTime  @default(now())
+
+  item             ShopItem  @relation(fields: [itemId], references: [id])
+  currentBidder    User?     @relation("currentAuctions", fields: [currentBidderId], references: [id])
+  winner           User?     @relation("wonAuctions",     fields: [winnerId],         references: [id])
+  bids             AuctionBid[]
+}
+
+model AuctionBid {
+  id        String      @id @default(cuid())
+  auctionId String
+  userId    String
+  amount    Int
+  createdAt DateTime    @default(now())
+
+  auction   ShopAuction @relation(fields: [auctionId], references: [id])
+  user      User        @relation(fields: [userId], references: [id])
 }
 
 model Account {

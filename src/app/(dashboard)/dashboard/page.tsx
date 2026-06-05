@@ -1,6 +1,5 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { getRank, getNextLevelPoints, getLevelStartPoints, getLevel } from "@/lib/points";
 import {
   Trophy, CalendarDays, Star, Users, ChevronRight,
   Zap, ShieldAlert, Clock, Activity, User, TrendingUp, Scroll,
@@ -8,7 +7,6 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import { CountUp } from "@/components/CountUp";
-import { LevelUpCelebration } from "@/components/LevelUpCelebration";
 
 const MEDAL = ["🥇", "🥈", "🥉"];
 
@@ -48,12 +46,12 @@ export default async function DashboardPage() {
     prisma.user.findMany({
       orderBy: { points: "desc" },
       take: 5,
-      select: { id: true, username: true, name: true, image: true, points: true, level: true },
+      select: { id: true, username: true, name: true, image: true, points: true },
     }),
     userId
       ? prisma.user.findUnique({
           where:  { id: userId },
-          select: { points: true, level: true, name: true, image: true, username: true },
+          select: { points: true, name: true, image: true, username: true },
         })
       : null,
     userId
@@ -61,16 +59,7 @@ export default async function DashboardPage() {
       : 0,
   ]);
 
-  const myPoints    = me?.points   ?? 0;
-  const myLevel     = getLevel(myPoints);
-  const rank        = getRank(myPoints);
-  const nextPts     = getNextLevelPoints(myPoints);
-  const prevPts     = getLevelStartPoints(myPoints);
-  const xpProgress  = nextPts > prevPts
-    ? Math.min(100, Math.round(((myPoints - prevPts) / (nextPts - prevPts)) * 100))
-    : 100;
-  const xpCurrent   = myPoints - prevPts;
-  const xpNeeded    = nextPts  - prevPts;
+  const myPoints    = me?.points ?? 0;
 
   const leaderboardRank = userId && me
     ? await prisma.user.count({ where: { points: { gt: myPoints } } }) + 1
@@ -93,7 +82,6 @@ export default async function DashboardPage() {
 
   return (
     <div className="animate-fade-in">
-      <LevelUpCelebration level={myLevel} points={myPoints} />
 
       {/* ── Hero Banner ────────────────────────────────────────────── */}
       <div className="relative overflow-hidden border-b border-white/[0.06]">
@@ -119,9 +107,6 @@ export default async function DashboardPage() {
                   </div>
                 )}
               </div>
-              <div className="absolute -bottom-2 -right-2 bg-gradient-to-r from-rose-600 to-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-lg ring-2 ring-[#080c18] shadow-[0_0_10px_rgba(244,63,94,0.5)]">
-                Lv.{myLevel}
-              </div>
             </div>
 
             {/* Name + XP */}
@@ -134,24 +119,7 @@ export default async function DashboardPage() {
                   {ROLE_LABEL[userRole] ?? "Mitglied"}
                 </span>
               </div>
-              <p className="text-xs text-gray-500 mb-3">{rank.label}</p>
-
-              {/* XP Bar */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5 text-[11px] text-gray-500">
-                  <span>
-                    <span className="text-white font-medium">{xpCurrent.toLocaleString("de-DE")}</span>
-                    {" "}/ {xpNeeded.toLocaleString("de-DE")} XP
-                  </span>
-                  <span className="text-gray-600">{xpProgress}% → Lv.{myLevel + 1}</span>
-                </div>
-                <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full progress-shimmer shadow-[0_0_10px_rgba(244,63,94,0.4)] transition-all duration-1000"
-                    style={{ width: `${xpProgress}%` }}
-                  />
-                </div>
-              </div>
+              <p className="text-xs text-amber-400 font-semibold mb-3">{myPoints.toLocaleString("de-DE")} Punkte</p>
             </div>
 
             {/* Rang */}
@@ -173,16 +141,6 @@ export default async function DashboardPage() {
               <p className="text-base font-bold text-amber-400 tabular-nums mt-0.5">
                 <CountUp to={myPoints} duration={900} />
               </p>
-            </div>
-            <div className="w-px h-6 bg-white/[0.06] shrink-0" />
-            <div className="shrink-0">
-              <p className="text-[9px] text-gray-600 uppercase tracking-widest">Level</p>
-              <p className="text-base font-bold text-rose-300 tabular-nums mt-0.5">{myLevel}</p>
-            </div>
-            <div className="w-px h-6 bg-white/[0.06] shrink-0" />
-            <div className="shrink-0">
-              <p className="text-[9px] text-gray-600 uppercase tracking-widest">Nächstes Level</p>
-              <p className="text-base font-bold text-white tabular-nums mt-0.5">{nextPts.toLocaleString("de-DE")} Pts</p>
             </div>
             {leaderboardRank && (
               <>
@@ -326,7 +284,7 @@ export default async function DashboardPage() {
                       <p className={`text-sm font-medium truncate leading-tight ${isMe ? "text-rose-300" : "text-white"}`}>
                         {name}{isMe && <span className="text-[10px] text-gray-500 ml-1 font-normal">du</span>}
                       </p>
-                      <p className="text-[10px] text-gray-600">Lv.{u.level}</p>
+                      <p className="text-[10px] text-gray-600">{u.points.toLocaleString("de-DE")} Pts</p>
                     </div>
                     <p className={`text-sm font-bold tabular-nums shrink-0 ${i === 0 ? "text-amber-400" : "text-white"}`}>
                       {u.points.toLocaleString("de-DE")}

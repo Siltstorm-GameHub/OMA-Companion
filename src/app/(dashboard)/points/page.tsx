@@ -1,7 +1,7 @@
-import { POINT_RULES, CATEGORY_LABELS, DAILY_CAPS, type PointCategory, getRank, getLevel, getNextLevelPoints, getLevelStartPoints } from "@/lib/points";
+import { POINT_RULES, CATEGORY_LABELS, DAILY_CAPS, type PointCategory } from "@/lib/points";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { Star, Zap } from "lucide-react";
+import { Star } from "lucide-react";
 import { CountUp } from "@/components/CountUp";
 import { RelativeTime } from "@/components/RelativeTime";
 
@@ -36,7 +36,7 @@ export default async function PointsPage() {
 
   const [me, myTransactions] = await Promise.all([
     userId
-      ? prisma.user.findUnique({ where: { id: userId }, select: { points: true, level: true, streak: true } })
+      ? prisma.user.findUnique({ where: { id: userId }, select: { points: true, streak: true } })
       : null,
     userId
       ? prisma.pointTransaction.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, take: 20 })
@@ -54,13 +54,6 @@ export default async function PointsPage() {
   }, {});
 
   const myPoints    = me?.points ?? 0;
-  const myLevel     = getLevel(myPoints);
-  const rank        = getRank(myPoints);
-  const nextPts     = getNextLevelPoints(myPoints);
-  const prevPts     = getLevelStartPoints(myPoints);
-  const xpProgress  = nextPts > prevPts
-    ? Math.min(100, Math.round(((myPoints - prevPts) / (nextPts - prevPts)) * 100))
-    : 100;
 
   return (
     <div className="p-5 sm:p-6 max-w-4xl mx-auto space-y-6 animate-fade-in">
@@ -73,7 +66,7 @@ export default async function PointsPage() {
           </div>
           <h1 className="text-2xl font-bold text-white tracking-tight">Punktesystem</h1>
         </div>
-        <p className="text-sm text-gray-500 ml-10">Wie du Punkte verdienst & Level aufsteigst</p>
+        <p className="text-sm text-gray-500 ml-10">Wie du Punkte verdienst</p>
       </div>
 
       {/* ── Meine Stats ─────────────────────────────────────────────── */}
@@ -84,42 +77,13 @@ export default async function PointsPage() {
 
           <div className="relative flex items-center gap-5 flex-wrap">
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap mb-3">
-                <p className="text-2xl font-black text-amber-400 tabular-nums">
-                  <CountUp to={myPoints} duration={900} />
-                  <span className="text-base font-medium text-amber-500/70 ml-1">Pts</span>
-                </p>
-                <span className={`text-xs px-2 py-0.5 rounded-lg border font-semibold ${rank.color} bg-white/[0.04] border-white/10`}>
-                  {rank.label}
-                </span>
-              </div>
-
-              {/* XP Bar */}
-              <div className="max-w-sm">
-                <div className="flex justify-between text-xs text-gray-500 mb-1.5">
-                  <span className="flex items-center gap-1">
-                    <Zap className="w-3 h-3 text-amber-400" /> Level {myLevel}
-                  </span>
-                  <span>{xpProgress}% → Level {myLevel + 1}</span>
-                </div>
-                <div className="h-2 bg-white/[0.06] rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full progress-shimmer shadow-[0_0_10px_rgba(244,63,94,0.4)] transition-all duration-1000"
-                    style={{ width: `${xpProgress}%` }}
-                  />
-                </div>
-                <div className="flex justify-between text-[10px] text-gray-600 mt-1">
-                  <span>{(myPoints - prevPts).toLocaleString("de-DE")} XP</span>
-                  <span>{(nextPts - prevPts).toLocaleString("de-DE")} XP bis Level {myLevel + 1}</span>
-                </div>
-              </div>
+              <p className="text-2xl font-black text-amber-400 tabular-nums mb-3">
+                <CountUp to={myPoints} duration={900} />
+                <span className="text-base font-medium text-amber-500/70 ml-1">Pts</span>
+              </p>
             </div>
 
             <div className="flex gap-3 shrink-0">
-              <div className="glass-heavy rounded-xl px-4 py-3 text-center">
-                <p className="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Level</p>
-                <p className="text-2xl font-black text-white tabular-nums">{myLevel}</p>
-              </div>
               {me.streak > 0 && (
                 <div className="glass-heavy rounded-xl px-4 py-3 text-center">
                   <p className="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Streak</p>
@@ -168,26 +132,6 @@ export default async function PointsPage() {
         </div>
       </div>
 
-      {/* ── Level & Ränge ───────────────────────────────────────────── */}
-      <div>
-        <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">🎯 Level & Ränge</p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
-          {RANK_ROWS.map((r) => {
-            const isMyRank = me && getRank(me.points).label === r.rank;
-            return (
-              <div key={r.rank}
-                className={`card-shine glass rounded-2xl p-3.5 text-center relative overflow-hidden border ${r.accent} ${isMyRank ? "ring-1 ring-white/20" : ""}`}>
-                {isMyRank && (
-                  <div className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399]" />
-                )}
-                <p className={`text-sm font-bold ${r.color}`}>{r.rank}</p>
-                <p className="text-[10px] text-gray-500 mt-1.5 leading-tight">{r.range}</p>
-                <p className="text-[10px] text-gray-600 mt-0.5">Lv. {r.lvl}</p>
-              </div>
-            );
-          })}
-        </div>
-      </div>
 
       {/* ── Letzte Transaktionen ────────────────────────────────────── */}
       {myTransactions.length > 0 && (
