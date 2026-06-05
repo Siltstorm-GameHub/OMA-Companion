@@ -320,7 +320,7 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
               <TournamentManager
                 event={{ id: event.id }}
                 tournament={tournament ?? null}
-                allUsers={allUsers}
+                allUsers={allUsers.filter(u => registeredIds.has(u.id))}
               />
             )}
           </div>
