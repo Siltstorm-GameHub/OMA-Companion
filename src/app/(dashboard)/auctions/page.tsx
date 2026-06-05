@@ -24,12 +24,12 @@ async function resolveExpiredAuctions() {
 }
 
 export default async function AuctionsPage() {
-  await resolveExpiredAuctions();
+  await resolveExpiredAuctions().catch(() => {});
 
   const session = await auth();
   const userId  = session?.user?.id;
 
-  const [auctions, me] = await Promise.all([
+  const [auctions, me, recentlyEnded] = await Promise.all([
     prisma.shopAuction.findMany({
       where:   { status: "active" },
       include: {
@@ -38,19 +38,18 @@ export default async function AuctionsPage() {
         bids:          { orderBy: { createdAt: "desc" }, take: 5, include: { user: { select: { username: true, name: true } } } },
       },
       orderBy: { endsAt: "asc" },
-    }),
+    }).catch(() => [] as never[]),
     userId ? prisma.user.findUnique({ where: { id: userId }, select: { points: true } }) : null,
+    prisma.shopAuction.findMany({
+      where:   { status: "ended" },
+      include: {
+        item:   { select: { name: true, icon: true } },
+        winner: { select: { username: true, name: true } },
+      },
+      orderBy: { endsAt: "desc" },
+      take: 5,
+    }).catch(() => [] as never[]),
   ]);
-
-  const recentlyEnded = await prisma.shopAuction.findMany({
-    where:   { status: "ended" },
-    include: {
-      item:   { select: { name: true, icon: true } },
-      winner: { select: { username: true, name: true } },
-    },
-    orderBy: { endsAt: "desc" },
-    take: 5,
-  });
 
   return (
     <div className="p-5 sm:p-6 max-w-4xl mx-auto space-y-8 animate-fade-in">

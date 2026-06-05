@@ -33,7 +33,7 @@ export async function GET() {
 
   const existing = await prisma.dailySpin.findUnique({
     where: { userId_date: { userId: session.user.id, date: todayStr() } },
-  });
+  }).catch(() => null);
 
   return NextResponse.json({
     alreadySpun: !!existing,
@@ -50,7 +50,7 @@ export async function POST() {
   // Bereits heute gedreht?
   const existing = await prisma.dailySpin.findUnique({
     where: { userId_date: { userId, date: todayStr() } },
-  });
+  }).catch(() => null);
   if (existing) return NextResponse.json({ error: "Heute bereits gedreht", result: existing }, { status: 400 });
 
   const prize = rollPrize();
