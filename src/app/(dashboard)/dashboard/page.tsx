@@ -72,18 +72,26 @@ export default async function DashboardPage() {
       {/* ── Hero Banner ─────────────────────────────────────────────── */}
       <div className="relative overflow-hidden" style={{ borderBottom: "1px solid rgba(20,184,166,0.10)" }}>
         {/* Layered 3D background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-teal-500/12 via-transparent to-red-900/8 pointer-events-none" />
-        <div className="absolute inset-0 bg-grid opacity-50 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-br from-teal-500/14 via-transparent to-red-900/10 pointer-events-none" />
+        <div className="absolute inset-0 bg-grid opacity-70 pointer-events-none" />
+        <div className="absolute inset-0 bg-grid-lines opacity-60 pointer-events-none" />
         {/* Teal blob top-left */}
-        <div className="absolute -top-32 -left-20 w-96 h-96 rounded-full blur-3xl pointer-events-none"
-          style={{ background: "radial-gradient(ellipse, rgba(20,184,166,0.18) 0%, transparent 70%)" }} />
+        <div className="absolute -top-32 -left-20 w-[480px] h-96 rounded-full blur-3xl pointer-events-none"
+          style={{ background: "radial-gradient(ellipse, rgba(20,184,166,0.22) 0%, transparent 70%)" }} />
         {/* Crimson blob bottom-right */}
         <div className="absolute -bottom-20 -right-20 w-80 h-80 rounded-full blur-3xl pointer-events-none"
-          style={{ background: "radial-gradient(ellipse, rgba(153,27,27,0.14) 0%, transparent 70%)" }} />
+          style={{ background: "radial-gradient(ellipse, rgba(153,27,27,0.18) 0%, transparent 70%)" }} />
+        {/* Center depth glow */}
+        <div className="absolute inset-0 pointer-events-none"
+          style={{ background: "radial-gradient(ellipse 70% 120% at 50% 50%, rgba(20,184,166,0.05) 0%, transparent 100%)" }} />
         {/* Top edge highlight */}
-        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-teal-500/40 to-transparent pointer-events-none" />
+        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-teal-500/50 to-transparent pointer-events-none" />
         {/* Bottom edge glow */}
-        <div className="absolute bottom-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-teal-500/20 to-transparent pointer-events-none" />
+        <div className="absolute bottom-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-teal-500/30 to-transparent pointer-events-none" />
+        {/* Scanlines-Effekt */}
+        <div className="absolute inset-0 pointer-events-none opacity-30" style={{
+          backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.04) 3px, rgba(0,0,0,0.04) 4px)"
+        }} />
 
         <div className="relative px-5 pt-7 pb-6 max-w-5xl mx-auto">
           <div className="flex items-center gap-5">
@@ -149,7 +157,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* ── Content ─────────────────────────────────────────────────── */}
-      <div className="px-4 sm:px-6 py-5 max-w-5xl mx-auto space-y-6">
+      <div className="px-4 sm:px-6 py-5 max-w-5xl mx-auto space-y-6 relative">
 
         {/* ── Stats ── 4 Karten mit 3D-Tiefe ──────────────────────── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
