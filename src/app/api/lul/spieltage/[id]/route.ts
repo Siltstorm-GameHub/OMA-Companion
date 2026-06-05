@@ -103,10 +103,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       const bonus = hasDominionBonus(history);
       const pts   = calcLulPoints({ ...entry, dominionBonus: bonus });
 
+      const oldPts = entry.lulPoints;
       await prisma.lulEntry.update({
         where: { id: entry.id },
         data:  { dominionBonus: bonus, lulPoints: pts },
       });
+      // LuL-Punkte fließen in rankPoints (delta, damit Re-Finalisierung korrekt ist)
+      const delta = pts - oldPts;
+      if (delta !== 0) {
+        await prisma.user.update({
+          where: { id: entry.userId },
+          data:  { rankPoints: { increment: delta } },
+        });
+      }
     }
 
     const finalized = await prisma.lulSpieltag.update({

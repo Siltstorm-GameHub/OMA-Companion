@@ -30,6 +30,9 @@ export const POINT_RULES = {
 export type PointRule     = keyof typeof POINT_RULES;
 export type PointCategory = "turnier" | "event" | "aktivitaet" | "streak" | "community";
 
+// Kategorien die auch rankPoints vergeben
+const RANK_POINT_CATEGORIES = new Set<PointCategory>(["turnier", "event"]);
+
 export const CATEGORY_LABELS: Record<PointCategory, string> = {
   turnier:     "Turniere",
   event:       "Events",
@@ -66,14 +69,19 @@ export async function awardPoints(userId: string, rule: PointRule, customReason?
   const hasBirthdayBoost = userBoost?.birthdayBoostUntil && userBoost.birthdayBoostUntil > new Date();
   const finalAmount = hasBirthdayBoost ? amount * 2 : amount;
 
+  const givesRankPoints = RANK_POINT_CATEGORIES.has(POINT_RULES[rule].category as PointCategory);
+
   const [transaction, updated] = await prisma.$transaction([
     prisma.pointTransaction.create({
       data: { userId, amount: finalAmount, reason: (customReason ?? reason) + (hasBirthdayBoost ? " 🎂×2" : "") },
     }),
     prisma.user.update({
       where:  { id: userId },
-      data:   { points: { increment: finalAmount } },
-      select: { id: true, points: true },
+      data:   {
+        points:     { increment: finalAmount },
+        ...(givesRankPoints && { rankPoints: { increment: finalAmount } }),
+      },
+      select: { id: true, points: true, rankPoints: true },
     }),
   ]);
 
