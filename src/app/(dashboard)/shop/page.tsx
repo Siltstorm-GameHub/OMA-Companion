@@ -1,9 +1,11 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { ShoppingBag } from "lucide-react";
-import { RARITY_CONFIG, TYPE_CONFIG } from "@/lib/shop";
+import { RARITY_CONFIG, TYPE_CONFIG, GIFT_MONTHLY_LIMIT } from "@/lib/shop";
 import { CountUp } from "@/components/CountUp";
 import ShopItemCard from "./ShopItemCard";
+import GiftPoints from "./GiftPoints";
+import BundleCard from "./BundleCard";
 
 // Sektionen: jede hat einen Titel, Beschreibung und die Item-Typen die dazu gehören
 const SECTIONS = [
@@ -89,6 +91,20 @@ export default async function ShopPage() {
   );
   const now = new Date();
 
+  // Bereits diesen Monat verschenkte Punkte
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const giftSum = userId ? await prisma.pointTransaction.aggregate({
+    where: { userId, reason: { startsWith: "Punkte verschenkt" }, createdAt: { gte: monthStart } },
+    _sum:  { amount: true },
+  }) : null;
+  const alreadyGifted = Math.abs(giftSum?._sum.amount ?? 0);
+
+  // Bundles: Sub-Items auflösen + Normalpreis berechnen
+  const bundleItems = items.filter(i => i.type === "bundle");
+  const allSubItemIds = bundleItems.flatMap(b => { try { return JSON.parse(b.value) as string[]; } catch { return []; } });
+  const subItemsMap  = new Map((await prisma.shopItem.findMany({ where: { id: { in: allSubItemIds } }, select: { id: true, name: true, icon: true, price: true } })).map(i => [i.id, i]));
+  const regularItems = items.filter(i => i.type !== "bundle");
+
   // Rarity-Verteilung für den Header
   const ownedCount = purchasedIds.size;
   const totalCount = items.length;
@@ -144,11 +160,41 @@ export default async function ShopPage() {
         </div>
       )}
 
+      {/* ── Bundles ─────────────────────────────────────────────────── */}
+      {bundleItems.length > 0 && (
+        <section>
+          <div className="flex items-end justify-between mb-4 gap-2">
+            <div>
+              <h2 className="flex items-center gap-2 text-base font-semibold text-white">
+                🎁 Bundle-Deals
+              </h2>
+              <p className="text-xs text-gray-600 mt-0.5">Mehrere Items zusammen — günstiger als einzeln.</p>
+            </div>
+          </div>
+          <div className="h-px bg-gradient-to-r from-white/[0.06] to-transparent mb-4" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {bundleItems.map(bundle => {
+              const subIds:   string[] = (() => { try { return JSON.parse(bundle.value); } catch { return []; } })();
+              const subItems = subIds.map(id => subItemsMap.get(id)).filter(Boolean) as { id: string; name: string; icon: string; price: number }[];
+              const normalPrice = subItems.reduce((s, i) => s + i.price, 0);
+              return (
+                <BundleCard
+                  key={bundle.id}
+                  item={{ ...bundle, subItems, normalPrice }}
+                  owned={purchasedIds.has(bundle.id)}
+                  canAfford={myPoints >= bundle.price}
+                  myPoints={myPoints}
+                />
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {/* ── Sektionen ───────────────────────────────────────────────── */}
       {SECTIONS.map(section => {
-        const sectionItems = items.filter(i =>
-          (section.types as readonly string[]).includes(i.type) &&
-          !(i.availableFrom && i.availableFrom > now && !purchasedIds.has(i.id)) // noch nicht verfügbar = trotzdem anzeigen, aber gesperrt
+        const sectionItems = regularItems.filter(i =>
+          (section.types as readonly string[]).includes(i.type)
         );
         if (!sectionItems.length) return null;
 
@@ -205,6 +251,19 @@ export default async function ShopPage() {
           </section>
         );
       })}
+      {/* ── Punkte verschenken ──────────────────────────────────────── */}
+      {me && (
+        <section>
+          <div className="flex items-end justify-between mb-4 gap-2">
+            <div>
+              <h2 className="flex items-center gap-2 text-base font-semibold text-white">🎁 Verschenken</h2>
+              <p className="text-xs text-gray-600 mt-0.5">Schicke einem anderen Member Punkte — bis zu {GIFT_MONTHLY_LIMIT.toLocaleString("de-DE")} pro Monat.</p>
+            </div>
+          </div>
+          <div className="h-px bg-gradient-to-r from-white/[0.06] to-transparent mb-4" />
+          <GiftPoints myPoints={myPoints} alreadyGifted={alreadyGifted} />
+        </section>
+      )}
     </div>
   );
 }
