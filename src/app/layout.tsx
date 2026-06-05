@@ -3,6 +3,7 @@ import "./globals.css";
 import { SessionProvider } from "@/components/SessionProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AnimatedBackground } from "@/components/AnimatedBackground";
+import { CursorGlow } from "@/components/CursorGlow";
 import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
@@ -25,6 +26,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="antialiased" style={{ background: "var(--bg-base, #080c18)" }}>
         {/* Hex-Grid canvas — fixed, behind content but above body bg */}
         <AnimatedBackground />
+        {/* Cursor-Lichtschein — folgt der Maus mit Lerp */}
+        <CursorGlow />
 
         <div style={{ position: "relative", zIndex: 2, minHeight: "100dvh", display: "flex", flexDirection: "column" }}>
           <ThemeProvider>
