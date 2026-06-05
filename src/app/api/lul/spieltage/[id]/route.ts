@@ -41,6 +41,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const spieltag = await prisma.lulSpieltag.findUnique({ where: { id: spieltagId } });
     if (!spieltag) return NextResponse.json({ error: "Nicht gefunden" }, { status: 404 });
 
+    const incomingUserIds = (entries as EntryInput[]).map(e => e.userId);
+
+    // Delete entries that were removed from the list
+    await prisma.lulEntry.deleteMany({
+      where: { spieltagId, userId: { notIn: incomingUserIds } },
+    });
+
     for (const e of entries as EntryInput[]) {
       const scores: number[] = e.roundScores ?? [];
       const total = scores.reduce((s, v) => s + v, 0);
