@@ -26,7 +26,7 @@ export function BackToTop() {
     <button
       onClick={scrollToTop}
       aria-label="Nach oben scrollen"
-      className={`fixed bottom-24 right-4 md:bottom-6 md:right-6 z-50 w-10 h-10 rounded-xl glass-heavy flex items-center justify-center text-gray-400 hover:text-white border border-white/[0.08] hover:border-rose-500/30 shadow-lg transition-all duration-300 active:scale-95 ${
+      className={`fixed right-4 md:right-6 z-50 w-11 h-11 rounded-xl glass-heavy back-to-top-btn flex items-center justify-center text-gray-400 hover:text-white border border-white/[0.08] hover:border-rose-500/30 shadow-lg transition-all duration-300 active:scale-95 ${
         visible
           ? "opacity-100 translate-y-0 pointer-events-auto"
           : "opacity-0 translate-y-4 pointer-events-none"

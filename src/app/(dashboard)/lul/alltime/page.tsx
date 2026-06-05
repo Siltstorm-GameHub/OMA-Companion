@@ -72,7 +72,7 @@ export default async function LulAllTimePage() {
       </Link>
 
       {/* Header */}
-      <div className="bg-gradient-to-br from-purple-950/50 to-gray-900 border border-purple-800/20 rounded-2xl p-6">
+      <div className="bg-gradient-to-br from-purple-950/50 to-gray-900 border border-purple-800/20 rounded-2xl p-4 sm:p-6">
         <div className="flex items-center gap-3 mb-1">
           <History className="w-6 h-6 text-purple-400" />
           <h1 className="text-xl font-bold text-white">All-Time Rangliste</h1>

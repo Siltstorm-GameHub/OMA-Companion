@@ -62,7 +62,7 @@ export default async function LulOverviewPage() {
 
       {/* ── Hero Banner ────────────────────────────────────────────── */}
       {activeSeason && (
-        <div className="glass card-shine rounded-2xl p-6 relative overflow-hidden">
+        <div className="glass card-shine rounded-2xl p-4 sm:p-6 relative overflow-hidden">
           {/* Decorative gradient */}
           <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 via-transparent to-rose-500/6 pointer-events-none" />
           <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-500/25 to-transparent pointer-events-none" />
@@ -139,15 +139,16 @@ export default async function LulOverviewPage() {
               </Link>
             </div>
             <div className="glass rounded-2xl overflow-hidden">
-              <table className="w-full text-sm">
+              <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[300px]">
                 <thead>
                   <tr className="border-b border-white/[0.05] text-[10px] text-gray-500 uppercase tracking-wider">
-                    <th className="text-left px-4 py-3 font-medium">#</th>
-                    <th className="text-left px-4 py-3 font-medium">Spieler</th>
+                    <th className="text-left px-3 py-3 font-medium">#</th>
+                    <th className="text-left px-3 py-3 font-medium">Spieler</th>
                     <th className="text-center px-2 py-3 font-medium">Sp</th>
                     <th className="text-center px-2 py-3 font-medium">🏆</th>
                     <th className="text-center px-2 py-3 font-medium">👑</th>
-                    <th className="text-right px-4 py-3 font-medium">Pkt</th>
+                    <th className="text-right px-3 py-3 font-medium">Pkt</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/[0.04]">
@@ -183,6 +184,7 @@ export default async function LulOverviewPage() {
                   })}
                 </tbody>
               </table>
+              </div>
             </div>
           </div>
         )}

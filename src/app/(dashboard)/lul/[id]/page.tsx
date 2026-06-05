@@ -116,7 +116,7 @@ export default async function LulSeasonPage({ params }: { params: Promise<{ id: 
       </Link>
 
       {/* ── Season Header ──────────────────────────────────────────────── */}
-      <div className="bg-gradient-to-br from-amber-950/50 to-gray-900 border border-amber-800/20 rounded-2xl p-6">
+      <div className="bg-gradient-to-br from-amber-950/50 to-gray-900 border border-amber-800/20 rounded-2xl p-4 sm:p-6">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-xl font-bold text-white">

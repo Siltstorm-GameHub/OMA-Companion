@@ -105,17 +105,18 @@ export default function LigaView({
           <Trophy className="w-3.5 h-3.5 text-amber-400" /> Tabelle
         </h2>
         <div className="glass rounded-2xl overflow-hidden">
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[360px]">
             <thead>
               <tr className="border-b border-white/5 text-[10px] text-gray-500 uppercase tracking-wider">
-                <th className="text-left px-4 py-2.5 font-medium">#</th>
-                <th className="text-left px-4 py-2.5 font-medium">Spieler</th>
+                <th className="text-left px-3 py-2.5 font-medium">#</th>
+                <th className="text-left px-3 py-2.5 font-medium">Spieler</th>
                 <th className="text-center px-2 py-2.5 font-medium" title="Spiele">Sp</th>
                 <th className="text-center px-2 py-2.5 font-medium text-emerald-600" title="Siege">S</th>
                 <th className="text-center px-2 py-2.5 font-medium text-amber-600" title="Unentschieden">U</th>
                 <th className="text-center px-2 py-2.5 font-medium text-gray-600" title="Niederlagen">N</th>
                 <th className="text-center px-2 py-2.5 font-medium">Tore</th>
-                <th className="text-right px-4 py-2.5 font-medium">Pkt</th>
+                <th className="text-right px-3 py-2.5 font-medium">Pkt</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -169,6 +170,7 @@ export default function LigaView({
               )}
             </tbody>
           </table>
+          </div>
         </div>
         <p className="text-[11px] text-gray-700 mt-1.5 px-1">
           Sieg = 3 Pkt · Unentschieden = 1 Pkt · Niederlage = 0 Pkt

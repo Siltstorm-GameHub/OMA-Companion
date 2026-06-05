@@ -239,6 +239,26 @@ button:active, [role="button"]:active { transform: scale(0.97); }
   padding-right: env(safe-area-inset-right, 0px);
 }
 
+/* Mobile TopBar: base height 56px + notch safe area on top */
+.topbar-mobile {
+  padding-top: calc(0.75rem + env(safe-area-inset-top, 0px));
+  min-height:  calc(3.5rem  + env(safe-area-inset-top, 0px));
+}
+
+/* Mobile main content: clears TopBar (3.5rem) + notch, BottomNav (5rem) + home indicator */
+.main-content-mobile {
+  padding-top:    calc(3.5rem + env(safe-area-inset-top,    0px));
+  padding-bottom: calc(5rem   + env(safe-area-inset-bottom, 0px));
+}
+
+/* Back-to-top button: above BottomNav on mobile, fixed position on desktop */
+.back-to-top-btn {
+  bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+}
+@media (min-width: 768px) {
+  .back-to-top-btn { bottom: 1.5rem; }
+}
+
 /* ── Animations ────────────────────────────────────────────────── */
 @keyframes fade-in        { from { opacity:0; transform:translateY(8px);  } to { opacity:1; transform:translateY(0);  } }
 @keyframes fade-in-scale  { from { opacity:0; transform:scale(0.96);      } to { opacity:1; transform:scale(1);      } }
