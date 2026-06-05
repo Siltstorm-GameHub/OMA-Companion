@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import {
   Trophy, CalendarDays, Star, Users, ChevronRight,
-  Zap, ShieldAlert, Clock, Activity, User, TrendingUp, Scroll,
+  Zap, ShieldAlert, Clock, User, TrendingUp, Scroll,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -72,7 +72,6 @@ export default async function DashboardPage() {
 
   const quickActions = [
     { href: "/events",      icon: CalendarDays, label: "Events",     color: "text-blue-400",    bg: "bg-blue-500/10   border-blue-500/20"   },
-    { href: "/feed",        icon: Activity,     label: "Feed",       color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20"},
     { href: "/lul",         icon: Star,         label: "Liga",       color: "text-amber-400",   bg: "bg-amber-500/10  border-amber-500/20"  },
     { href: "/leaderboard", icon: Trophy,        label: "Rangliste",  color: "text-rose-400",    bg: "bg-rose-500/10   border-rose-500/20"   },
     { href: "/points",      icon: TrendingUp,    label: "Punkte",     color: "text-purple-400",  bg: "bg-purple-500/10 border-purple-500/20" },

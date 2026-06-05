@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import {
   LayoutDashboard, CalendarDays, Trophy, User,
-  LogOut, ShieldCheck, ChevronLeft, ChevronRight, Scroll, Star, Activity, ShoppingBag, Target, Gavel,
+  LogOut, ShieldCheck, ChevronLeft, ChevronRight, Scroll, Star, ShoppingBag, Target,
 } from "lucide-react";
 import Image from "next/image";
 import { useState, useEffect } from "react";
@@ -12,11 +12,9 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 
 const NAV = [
   { label: "Dashboard",       href: "/dashboard",  icon: LayoutDashboard },
-  { label: "Feed",            href: "/feed",        icon: Activity },
   { label: "Events",          href: "/events",      icon: CalendarDays },
   { label: "Quests",          href: "/quests",      icon: Scroll },
   { label: "Shop",            href: "/shop",        icon: ShoppingBag },
-  { label: "Auktionen",       href: "/auctions",    icon: Gavel },
   { label: "Level-Up-League", href: "/lul",         icon: Star },
   { label: "Rangliste",       href: "/leaderboard", icon: Trophy },
   { label: "Mein Profil",     href: "/profile",     icon: User },
