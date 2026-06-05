@@ -99,7 +99,7 @@ export default async function CompareProfilePage({
       </Link>
 
       {/* Header */}
-      <div className="glass card-shine rounded-2xl p-6 relative overflow-hidden">
+      <div className="glass card-shine rounded-2xl p-4 sm:p-6 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-rose-500/8 via-transparent to-blue-500/8 pointer-events-none" />
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none" />
 

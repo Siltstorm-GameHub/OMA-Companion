@@ -68,7 +68,7 @@ export default function MobileTopBar() {
       {/* ── Top bar ─────────────────────────────────────────────── */}
       <header
         style={{ background: "rgba(9,9,15,0.9)" }}
-        className="fixed top-0 left-0 right-0 z-40 md:hidden h-14 backdrop-blur-2xl border-b border-white/[0.06] flex items-center px-4 gap-3"
+        className="fixed top-0 left-0 right-0 z-40 md:hidden backdrop-blur-2xl border-b border-white/[0.06] flex items-end px-4 gap-3 pb-3 topbar-mobile"
       >
         <Link href="/dashboard" className="flex items-center gap-2.5 mr-auto min-w-0">
           <div className="w-7 h-7 rounded-lg overflow-hidden shrink-0 ring-1 ring-rose-500/20 shadow-[0_0_10px_rgba(244,63,94,0.2)]">

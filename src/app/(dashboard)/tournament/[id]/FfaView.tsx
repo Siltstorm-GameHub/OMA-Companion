@@ -80,7 +80,8 @@ export default function FfaView({
             <Trophy className="w-3.5 h-3.5 text-amber-400" /> Gesamtranking
           </h2>
           <div className="glass rounded-2xl overflow-hidden">
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[300px]">
               <thead>
                 <tr className="border-b border-white/5 text-[10px] text-gray-500 uppercase tracking-wider">
                   <th className="text-left px-4 py-2.5 font-medium">#</th>
@@ -128,6 +129,7 @@ export default function FfaView({
                 })}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       )}
