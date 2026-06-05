@@ -66,14 +66,15 @@ export default async function DashboardPage() {
       ? prisma.userQuestProgress.count({ where: { userId, completed: true, quest: { month, year } } })
       : 0,
     prisma.quest.count({ where: { month, year } }),
-    userId
-      ? prisma.userQuestProgress.findMany({
-          where: { userId, quest: { month, year } },
-          include: { quest: true },
-          orderBy: { quest: { reward: "desc" } },
-          take: 4,
-        })
-      : [],
+    // Alle Quests des Monats laden — inkl. User-Progress (auch wenn noch nicht gestartet)
+    prisma.quest.findMany({
+      where:   { month, year },
+      orderBy: { reward: "desc" },
+      take: 4,
+      include: userId
+        ? { progress: { where: { userId } } }
+        : { progress: false },
+    }),
     prisma.lulSeason.findFirst({
       where: { status: "active" },
       include: {
@@ -440,41 +441,45 @@ export default async function DashboardPage() {
                   </div>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className="text-[10px] text-gray-600">Punkte</p>
+                  <p className="text-[10px] text-gray-600">Verdient</p>
                   <p className="text-xs font-bold text-teal-400">
-                    {myMonthQuests.filter(q => q.completed).reduce((s, q) => s + q.quest.reward, 0).toLocaleString("de-DE")}
+                    {myMonthQuests
+                      .filter(q => q.progress[0]?.completed)
+                      .reduce((s, q) => s + q.reward, 0)
+                      .toLocaleString("de-DE")} 🪙
                   </p>
                 </div>
               </div>
 
               {/* Quest-Liste */}
               {myMonthQuests.length === 0 ? (
-                <p className="text-xs text-gray-600 p-5 text-center">
-                  {totalMonthQuests === 0 ? "Keine Quests diesen Monat" : "Melde dich an um Quests zu sehen"}
-                </p>
-              ) : myMonthQuests.map((qp, i) => {
-                const pct = Math.min(Math.round((qp.current / qp.quest.target) * 100), 100);
+                <p className="text-xs text-gray-600 p-5 text-center">Keine Quests diesen Monat</p>
+              ) : myMonthQuests.map((quest, i) => {
+                const prog      = quest.progress[0];
+                const completed = prog?.completed ?? false;
+                const current   = prog?.current   ?? 0;
+                const pct       = Math.min(Math.round((current / quest.target) * 100), 100);
                 return (
-                  <div key={qp.id}
+                  <div key={quest.id}
                     className="flex items-center gap-2.5 px-3.5 py-2.5"
                     style={{ borderBottom: i < myMonthQuests.length - 1 ? "1px solid rgba(20,184,166,0.05)" : "" }}>
                     <div className="shrink-0">
-                      {qp.completed
+                      {completed
                         ? <CheckCircle2 className="w-4 h-4 text-teal-400" />
                         : <Circle className="w-4 h-4 text-gray-700" />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className={`text-xs font-medium truncate ${qp.completed ? "text-gray-500 line-through" : "text-white"}`}>
-                        {qp.quest.title}
+                      <p className={`text-xs font-medium truncate ${completed ? "text-gray-500 line-through" : "text-white"}`}>
+                        {quest.title}
                       </p>
-                      {!qp.completed && (
+                      {!completed && (
                         <div className="mt-1 h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.05)" }}>
                           <div className="h-full rounded-full bg-teal-500/60 transition-all" style={{ width: `${pct}%` }} />
                         </div>
                       )}
                     </div>
-                    <span className={`text-[10px] font-semibold shrink-0 ${qp.completed ? "text-teal-500" : "text-gray-600"}`}>
-                      +{qp.quest.reward}
+                    <span className={`text-[10px] font-semibold shrink-0 ${completed ? "text-teal-500" : "text-gray-600"}`}>
+                      +{quest.reward} 🪙
                     </span>
                   </div>
                 );
