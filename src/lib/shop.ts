@@ -70,6 +70,11 @@ async function assignDiscordRole(discordId: string, roleId: string) {
   });
 }
 
+// ── Verschenken ───────────────────────────────────────────────────────────────
+export const GIFT_MIN          =   50;   // Mindestbetrag
+export const GIFT_MAX_SINGLE   =  500;   // Max pro Transaktion
+export const GIFT_MONTHLY_LIMIT = 1000;  // Max pro Monat (gesamt verschenkt)
+
 /** Kauft ein Item. Gibt null zurück wenn Punkte nicht reichen oder Item nicht verfügbar. */
 export async function purchaseItem(userId: string, itemId: string) {
   const [user, item] = await Promise.all([
@@ -82,7 +87,7 @@ export async function purchaseItem(userId: string, itemId: string) {
   if (item.stock !== null && item.stock <= 0) return { error: "Ausverkauft" };
 
   // Doppelkauf für dauerhafte Items verhindern (außer Einmalitems)
-  const isRepeatable = ["streak_shield", "xp_boost", "event_slot", "lul_suggest", "name_color"].includes(item.type);
+  const isRepeatable = ["streak_shield", "xp_boost", "event_slot", "lul_suggest", "name_color", "bundle"].includes(item.type);
   if (!isRepeatable) {
     const existing = await prisma.shopPurchase.findFirst({ where: { userId, itemId } });
     if (existing) return { error: "Bereits gekauft" };
@@ -123,6 +128,23 @@ export async function purchaseItem(userId: string, itemId: string) {
   }
   if (item.type === "name_color") {
     await prisma.user.update({ where: { id: userId }, data: { nameColor: item.value } });
+  }
+
+  // Bundle: für jedes Sub-Item eine ShopPurchase anlegen (falls noch nicht besessen)
+  if (item.type === "bundle") {
+    const subItemIds: string[] = JSON.parse(item.value);
+    const subItems = await prisma.shopItem.findMany({ where: { id: { in: subItemIds } } });
+    const alreadyOwned = await prisma.shopPurchase.findMany({
+      where: { userId, itemId: { in: subItemIds } },
+      select: { itemId: true },
+    });
+    const ownedSet = new Set(alreadyOwned.map(p => p.itemId));
+    const toCreate = subItems.filter(si => !ownedSet.has(si.id));
+    if (toCreate.length > 0) {
+      await prisma.shopPurchase.createMany({
+        data: toCreate.map(si => ({ userId, itemId: si.id, price: 0 })),
+      });
+    }
   }
 
   return { purchase, item };

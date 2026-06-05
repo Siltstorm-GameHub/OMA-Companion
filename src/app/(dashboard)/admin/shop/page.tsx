@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { RARITY_CONFIG, TYPE_CONFIG } from "@/lib/shop";
 import ShopAdminPanel from "./ShopAdminPanel";
+import ShopItemCreator from "./ShopItemCreator";
 
 export default async function AdminShopPage() {
   const items = await prisma.shopItem.findMany({ orderBy: [{ category: "asc" }, { sortOrder: "asc" }] });
@@ -13,6 +14,9 @@ export default async function AdminShopPage() {
 
   return (
     <div className="space-y-6">
+      {/* Neues Item erstellen */}
+      <ShopItemCreator />
+
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
         {[

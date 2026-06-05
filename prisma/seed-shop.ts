@@ -37,6 +37,12 @@ const ITEMS = [
   { name: "Spieltag-Vorschlag",description: "Schlage ein Spiel für den nächsten LUL-Spieltag vor. Dein Vorschlag wird zur Abstimmung gestellt.",  icon: "🎮", price:  800, type: "lul_suggest",        value: "1",            category: "privilege", rarity: "rare",      sortOrder: 44 },
   { name: "Turnier-Sponsoring",description: "Dein Name erscheint als Community-Sponsor auf der nächsten Turnier-Seite. Ewiger Ruhm garantiert.", icon: "🏅", price: 3500, type: "tournament_sponsor", value: "1",            category: "privilege", rarity: "legendary", sortOrder: 45 },
   { name: "Status-Nachricht",  description: "Zeige eine eigene kurze Nachricht unter deinem Namen im Profil — für alle sichtbar.",                icon: "💬", price:  750, type: "status_message",    value: "1",            category: "privilege", rarity: "rare",      sortOrder: 46 },
+
+  // ── Bundles ────────────────────────────────────────────────────
+  // value = JSON-Array der enthaltenen ShopItem-IDs
+  { name: "Starter-Paket",    description: "Veteran-Titel + Emerald-Theme + Streak-Schutz — perfekt für den Einstieg. Spart 350 Punkte.", icon: "🎁", price: 1050, type: "bundle", value: JSON.stringify(["veteran", "emerald", "streak-shield"]), category: "cosmetic", rarity: "rare",      sortOrder: 50 },
+  { name: "Champion-Bundle",  description: "Champion-Titel + Golden-Theme + XP-Boost — für ambitionierte Spieler. Spart 500 Punkte.",    icon: "🎁", price: 3000, type: "bundle", value: JSON.stringify(["champion", "golden", "xp-boost-7"]),   category: "cosmetic", rarity: "epic",      sortOrder: 51 },
+  { name: "Legende-Bundle",   description: "Legende-Titel + Void-Theme + Whale-Badge + Discord-Rolle. Spart 1.100 Punkte.",               icon: "🎁", price: 6400, type: "bundle", value: JSON.stringify(["legende", "void-purple", "whale", "discord-rolle"]), category: "cosmetic", rarity: "legendary", sortOrder: 52 },
 ];
 
 async function main() {
