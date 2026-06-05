@@ -189,18 +189,17 @@ export default async function LeaderboardPage() {
       <div className="glass rounded-2xl overflow-hidden"
         style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.45), 0 0 0 1px rgba(20,184,166,0.07)" }}>
 
-        {/* Spalten-Header */}
-        <div className="grid grid-cols-[2rem_2.5rem_1fr_auto] sm:grid-cols-[2rem_2.5rem_1fr_auto_auto_auto] items-center gap-3 px-4 py-2.5"
-          style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-          <span className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest">#</span>
+        {/* Spalten-Header — festes Grid, alle Spalten immer sichtbar */}
+        {/* grid: # | Avatar | Name | Siege | Events | Punkte | Münzen */}
+        <div className="grid items-center gap-x-3 px-4 py-2.5 text-[10px] font-semibold text-gray-600 uppercase tracking-widest"
+          style={{ gridTemplateColumns: "2rem 2.25rem 1fr 4rem 4rem 5rem 5rem", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+          <span>#</span>
           <span />
-          <span className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest">Spieler</span>
-          <span className="hidden sm:flex items-center gap-4 text-[10px] font-semibold text-gray-600 uppercase tracking-widest">
-            <span className="w-8 text-right flex items-center gap-1 justify-end"><Swords className="w-3 h-3" />Siege</span>
-            <span className="w-10 text-right flex items-center gap-1 justify-end"><CalendarDays className="w-3 h-3" />Events</span>
-          </span>
-          <span className="hidden sm:block text-[10px] font-semibold text-gray-600 uppercase tracking-widest text-right">⭐ Punkte</span>
-          <span className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest text-right">🪙 Münzen</span>
+          <span>Spieler</span>
+          <span className="text-center flex items-center justify-center gap-1"><Swords className="w-3 h-3" />Siege</span>
+          <span className="text-center flex items-center justify-center gap-1"><CalendarDays className="w-3 h-3" />Events</span>
+          <span className="text-center">⭐ Punkte</span>
+          <span className="text-center">🪙 Münzen</span>
         </div>
 
         <div className="divide-y divide-white/[0.04]">
@@ -220,83 +219,92 @@ export default async function LeaderboardPage() {
               ? "bg-teal-500/[0.05] hover:bg-teal-500/[0.08]"
               : "hover:bg-white/[0.025]";
 
+            const nameColor = i === 0 ? "text-amber-300"
+              : i === 1 ? "text-slate-300"
+              : i === 2 ? "text-orange-300"
+              : isMe    ? "text-teal-300"
+              : "text-white";
+
+            const ptsColor = i === 0 ? "text-amber-400"
+              : i === 1 ? "text-slate-400"
+              : i === 2 ? "text-orange-400"
+              : isMe    ? "text-teal-400"
+              : "text-white";
+
             return (
               <Link key={u.id}
                 href={isMe ? "/profile" : `/profile/${u.id}`}
-                className={`grid grid-cols-[2rem_2.5rem_1fr_auto] sm:grid-cols-[2rem_2.5rem_1fr_auto_auto_auto] items-center gap-3 px-4 py-3 transition-colors ${rowAccent} animate-slide-up`}
-                style={{ animationDelay: `${Math.min(i * 15, 300)}ms` }}>
+                className={`grid items-center gap-x-3 px-4 py-3 transition-colors ${rowAccent} animate-slide-up`}
+                style={{
+                  gridTemplateColumns: "2rem 2.25rem 1fr 4rem 4rem 5rem 5rem",
+                  animationDelay: `${Math.min(i * 15, 300)}ms`,
+                }}>
 
-                {/* Rang */}
-                <div className="text-center shrink-0">
+                {/* # Rang */}
+                <div className="text-center">
                   {isTop3
-                    ? <span className="text-lg leading-none">{MEDALS[i]}</span>
+                    ? <span className="text-base leading-none">{MEDALS[i]}</span>
                     : <span className={`text-xs font-bold ${isMe ? "text-teal-400" : "text-gray-600"}`}>{i + 1}</span>}
                 </div>
 
                 {/* Avatar */}
-                <div className={`w-9 h-9 rounded-full shrink-0 overflow-hidden
+                <div className={`w-9 h-9 rounded-full overflow-hidden
                   ${isTop3 ? "ring-2" : "ring-1"}
                   ${i === 0 ? "ring-amber-400/50" : i === 1 ? "ring-slate-400/40" : i === 2 ? "ring-orange-500/40" : isMe ? "ring-teal-400/40" : "ring-white/[0.08]"}`}>
                   {u.image
                     ? <Image src={u.image} alt={displayName} width={36} height={36} className="w-full h-full object-cover" />
-                    : <div className={`w-full h-full flex items-center justify-center text-xs font-bold
-                        ${isMe ? "bg-teal-500/20 text-teal-300" : "bg-white/[0.05] text-gray-400"}`}>
+                    : <div className={`w-full h-full flex items-center justify-center text-xs font-bold ${isMe ? "bg-teal-500/20 text-teal-300" : "bg-white/[0.05] text-gray-400"}`}>
                         {displayName[0].toUpperCase()}
                       </div>}
                 </div>
 
-                {/* Name + Infos */}
+                {/* Name */}
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <p className={`text-sm font-semibold truncate leading-tight
-                      ${i === 0 ? "text-amber-300" : i === 1 ? "text-slate-300" : i === 2 ? "text-orange-300" : isMe ? "text-teal-300" : "text-white"}`}
+                    <p className={`text-sm font-semibold truncate leading-tight ${nameColor}`}
                       style={u.nameColor && !isTop3 && !isMe ? { color: u.nameColor } : undefined}>
                       {displayName}
                       {isMe && <span className="text-[10px] text-gray-500 ml-1 font-normal">du</span>}
                     </p>
                     {u.activeTitle && (
-                      <span className={`text-[9px] px-1.5 py-0.5 rounded border font-medium hidden sm:inline ${TITLE_STYLES[u.activeTitle] ?? "text-gray-400 border-white/10"}`}>
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded border font-medium ${TITLE_STYLES[u.activeTitle] ?? "text-gray-400 border-white/10"}`}>
                         {u.activeTitle}
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    {u.streak > 0 && (
-                      <span className="text-[10px] text-orange-400 flex items-center gap-0.5">
-                        <Flame className="w-2.5 h-2.5" />{u.streak}d
-                      </span>
-                    )}
-                    {/* Mobile: Stats inline */}
-                    <span className="sm:hidden text-[10px] text-gray-600 flex items-center gap-2">
-                      {userWins > 0 && <span className="flex items-center gap-0.5"><Swords className="w-2.5 h-2.5" />{userWins}</span>}
-                      <span className="flex items-center gap-0.5"><CalendarDays className="w-2.5 h-2.5" />{u._count.eventRegistrations}</span>
+                  {u.streak > 0 && (
+                    <span className="text-[10px] text-orange-400 flex items-center gap-0.5 mt-0.5">
+                      <Flame className="w-2.5 h-2.5" />{u.streak}d Streak
                     </span>
-                  </div>
+                  )}
                 </div>
 
-                {/* Stats — Desktop */}
-                <div className="hidden sm:flex items-center gap-4 shrink-0">
-                  <span className="w-8 text-right text-xs text-gray-500 font-medium tabular-nums">{userWins}</span>
-                  <span className="w-10 text-right text-xs text-gray-500 font-medium tabular-nums">{u._count.eventRegistrations}</span>
+                {/* Siege */}
+                <div className="text-center">
+                  <p className="text-sm font-bold tabular-nums text-white">{userWins}</p>
+                  <p className="text-[9px] text-gray-600">Siege</p>
                 </div>
 
-                {/* Punkte (rankPoints) — Desktop */}
-                <div className="hidden sm:block text-right shrink-0">
-                  <p className={`text-sm font-black tabular-nums
-                    ${i === 0 ? "text-amber-400" : i === 1 ? "text-slate-400" : i === 2 ? "text-orange-400" : isMe ? "text-teal-400" : "text-white"}`}>
+                {/* Events */}
+                <div className="text-center">
+                  <p className="text-sm font-bold tabular-nums text-white">{u._count.eventRegistrations}</p>
+                  <p className="text-[9px] text-gray-600">Events</p>
+                </div>
+
+                {/* Punkte */}
+                <div className="text-center">
+                  <p className={`text-sm font-black tabular-nums ${ptsColor}`}>
                     {u.rankPoints.toLocaleString("de-DE")}
                   </p>
+                  <p className="text-[9px] text-gray-600">Punkte</p>
                 </div>
 
-                {/* Münzen (points) */}
-                <div className="text-right shrink-0">
-                  <p className="text-sm font-bold tabular-nums text-amber-500/80">
+                {/* Münzen */}
+                <div className="text-center">
+                  <p className="text-sm font-bold tabular-nums text-amber-500/90">
                     {u.points.toLocaleString("de-DE")}
                   </p>
-                  {/* Mobile: zeige rankPoints hier auch */}
-                  <p className="sm:hidden text-[10px] text-gray-600 tabular-nums">
-                    {u.rankPoints.toLocaleString("de-DE")} Pts
-                  </p>
+                  <p className="text-[9px] text-gray-600">Münzen</p>
                 </div>
 
               </Link>
