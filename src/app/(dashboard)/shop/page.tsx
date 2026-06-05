@@ -93,6 +93,11 @@ export default async function ShopPage() {
   );
   const now = new Date();
 
+  // Aktive Auktionen zählen (graceful)
+  const activeAuctionCount = await prisma.shopAuction.count({
+    where: { status: "active", endsAt: { gt: new Date() } },
+  }).catch(() => 0);
+
   // Tages-Spin Status (graceful — Tabelle existiert evtl. noch nicht)
   const todayStr  = new Date().toISOString().slice(0, 10);
   const todaySpin = userId ? await prisma.dailySpin.findUnique({
@@ -192,10 +197,21 @@ export default async function ShopPage() {
           </div>
           <div>
             <p className="text-sm font-semibold text-white">Auktionen</p>
-            <p className="text-xs text-gray-500">Biete auf limitierte Items — Höchstbietender gewinnt</p>
+            <p className="text-xs text-gray-500">
+              {activeAuctionCount > 0
+                ? <span className="text-emerald-400 font-medium">{activeAuctionCount} aktive Auktion{activeAuctionCount !== 1 ? "en" : ""} — jetzt mitbieten!</span>
+                : "Aktuell keine aktiven Auktionen"}
+            </p>
           </div>
         </div>
-        <span className="text-gray-600 group-hover:text-white transition-colors">→</span>
+        <div className="flex items-center gap-2.5 shrink-0">
+          {activeAuctionCount > 0 && (
+            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-emerald-500 text-[10px] font-black text-white">
+              {activeAuctionCount}
+            </span>
+          )}
+          <span className="text-gray-600 group-hover:text-white transition-colors">→</span>
+        </div>
       </Link>
 
       {/* ── Bundles ─────────────────────────────────────────────────── */}

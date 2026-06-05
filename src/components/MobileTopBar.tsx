@@ -22,7 +22,6 @@ const NAV = [
 
 const ROUTE_TITLES: Record<string, string> = {
   "/dashboard":  "Dashboard",
-  "/feed":       "Aktivitäts-Feed",
   "/events":     "Events",
   "/quests":     "Quests",
   "/tournament": "Turnier-Details",
