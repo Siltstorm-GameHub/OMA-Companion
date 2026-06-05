@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { awardPoints } from "@/lib/points";
 import { updateQuestProgress } from "@/lib/quests";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -27,7 +26,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (existing) return NextResponse.json({ error: "Bereits registriert" }, { status: 400 });
 
   const registration = await prisma.eventRegistration.create({ data: { userId, eventId } });
-  await awardPoints(userId, "EVENT_ATTEND");
+
+  // Award the event's configured coin reward (no rankPoints for event sign-ups)
+  if (event.pointReward > 0) {
+    await prisma.$transaction([
+      prisma.user.update({ where: { id: userId }, data: { points: { increment: event.pointReward } } }),
+      prisma.pointTransaction.create({ data: { userId, amount: event.pointReward, reason: `Event-Anmeldung: ${event.title}` } }),
+    ]);
+  }
+
   await updateQuestProgress(userId, "EVENT_ATTEND", 1);
   return NextResponse.json(registration, { status: 201 });
 }

@@ -287,19 +287,26 @@ export default function TournamentManager({
   // ── Handlers ─────────────────────────────────────────────────────────
 
   async function reload() {
-    router.refresh();
-    // Re-fetch tournament data to update local state
     const res = await fetch(`/api/events/${event.id}`).catch(() => null);
-    if (!res?.ok) return;
+    if (res?.ok) {
+      const data = await res.json();
+      if (data.tournament) setTournament(data.tournament);
+    }
+    router.refresh();
   }
 
   async function deleteTournament() {
     if (!tournament || !confirm("Turnier wirklich löschen? Alle Matches werden entfernt.")) return;
     setLoading(true);
-    await fetch(`/api/tournaments/${tournament.id}`, { method: "DELETE" });
+    const res = await fetch(`/api/tournaments/${tournament.id}`, { method: "DELETE" });
     setLoading(false);
-    setTournament(null);
-    router.refresh();
+    if (res.ok) {
+      toast.success("Turnier gelöscht");
+      setTournament(null);
+      router.refresh();
+    } else {
+      toast.error("Fehler beim Löschen des Turniers");
+    }
   }
 
   async function saveSettings() {
