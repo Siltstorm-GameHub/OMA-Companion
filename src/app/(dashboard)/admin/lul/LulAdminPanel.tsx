@@ -290,8 +290,9 @@ function LulSpieltagEditor({
           </div>
 
           {playerIds.length > 0 && (
-            <div className="overflow-x-auto rounded-lg border border-gray-700">
-              <table className="w-full text-xs min-w-[600px]">
+            <div className="overflow-x-auto rounded-lg border border-gray-700 -mx-1 px-1">
+              <p className="text-[10px] text-gray-600 mb-1 sm:hidden">← scrollbar →</p>
+              <table className="w-full text-xs min-w-[580px]">
                 <thead>
                   <tr className="bg-gray-800 border-b border-gray-700 text-gray-400">
                     <th className="text-left px-3 py-2">Spieler</th>
