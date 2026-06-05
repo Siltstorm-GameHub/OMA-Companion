@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Pencil, X, Check, ChevronDown, ChevronUp, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Pencil, X, Check, ChevronDown, ChevronUp, Eye, EyeOff, Loader2, Trash2 } from "lucide-react";
 
 type ShopItem = {
   id: string; name: string; description: string; icon: string;
@@ -80,6 +80,20 @@ export default function ShopAdminPanel({ items, rarityConfig, typeConfig }: Prop
       router.refresh();
     } catch { toast.error("Netzwerkfehler"); }
     finally  { setSaving(false); }
+  }
+
+  async function deleteItem(item: ShopItem) {
+    if (!confirm(`"${item.name}" wirklich dauerhaft löschen? Alle Käufe werden ebenfalls gelöscht.`)) return;
+    setSaving(true);
+    try {
+      await fetch("/api/admin/shop", {
+        method:  "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ id: item.id }),
+      });
+      toast.success("Item gelöscht");
+      router.refresh();
+    } finally { setSaving(false); }
   }
 
   async function toggleActive(item: ShopItem) {
@@ -166,6 +180,11 @@ export default function ShopAdminPanel({ items, rarityConfig, typeConfig }: Prop
 
                     {/* Aktionen */}
                     <div className="flex items-center gap-1 shrink-0">
+                      <button onClick={() => deleteItem(item)} disabled={saving}
+                        title="Item löschen"
+                        className="p-1.5 rounded-lg text-gray-700 hover:text-red-400 hover:bg-red-500/[0.06] transition-all">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                       <button onClick={() => toggleActive(item)} disabled={saving}
                         title={item.active ? "Deaktivieren" : "Aktivieren"}
                         className="p-1.5 rounded-lg text-gray-600 hover:text-white hover:bg-white/[0.06] transition-all">

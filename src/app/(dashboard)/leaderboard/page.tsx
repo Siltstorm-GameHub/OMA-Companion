@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { getRank, getLevel } from "@/lib/points";
-import { Trophy, Swords, CalendarDays, Zap } from "lucide-react";
+import { Trophy, Swords, CalendarDays } from "lucide-react";
 import { CountUp } from "@/components/CountUp";
 import Link from "next/link";
 import Image from "next/image";
@@ -24,7 +23,7 @@ export default async function LeaderboardPage() {
     take: 50,
     select: {
       id: true, name: true, username: true, image: true,
-      points: true, level: true, streak: true, nameColor: true, activeTitle: true,
+      points: true, streak: true, nameColor: true, activeTitle: true,
       _count: { select: { tournamentParticipants: true, eventRegistrations: true } },
     },
   });
@@ -57,7 +56,6 @@ export default async function LeaderboardPage() {
           {([1, 0, 2] as const).map((dataIdx, podiumIdx) => {
             const u            = users[dataIdx];
             const actualRank   = dataIdx + 1;
-            const rank         = getRank(u.points);
             const displayName  = u.username ?? u.name ?? "?";
             const isMe         = u.id === userId;
             // Middle card is taller
@@ -87,7 +85,6 @@ export default async function LeaderboardPage() {
                 <p className={`text-xs font-bold mt-1 tabular-nums ${MEDAL_LABEL_COLOR[dataIdx]}`}>
                   <CountUp to={u.points} duration={700 + podiumIdx * 100} />
                 </p>
-                <p className={`text-[10px] mt-0.5 ${MEDAL_LABEL_COLOR[dataIdx]} opacity-70`}>{rank.label}</p>
 
                 {/* Rang-Badge */}
                 <span className="absolute top-2 right-2 text-[10px] font-bold text-gray-500">#{actualRank}</span>
@@ -114,7 +111,6 @@ export default async function LeaderboardPage() {
 
         <div className="divide-y divide-white/[0.04]">
           {users.map((u, i) => {
-            const rank        = getRank(u.points);
             const displayName = u.username ?? u.name ?? "Unbekannt";
             const isMe        = u.id === userId;
             const userWins    = winMap.get(u.id) ?? 0;
@@ -159,7 +155,7 @@ export default async function LeaderboardPage() {
                     )}
                   </div>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <span className={`text-[10px] font-medium ${rank.color}`}>{rank.label}</span>
+                    <span className="text-[10px] text-gray-600">{u.points.toLocaleString("de-DE")} Pts</span>
                     {u.streak > 0 && <span className="text-[10px] text-orange-400">🔥 {u.streak}d</span>}
                     {/* On mobile: show compact stats inline */}
                     <span className="sm:hidden text-[10px] text-gray-600 flex items-center gap-1">
@@ -173,7 +169,6 @@ export default async function LeaderboardPage() {
                 <div className="hidden sm:flex items-center gap-4 text-sm text-gray-400 shrink-0">
                   <span className="flex items-center gap-1 text-xs"><Swords className="w-3 h-3 text-gray-600" />{userWins}</span>
                   <span className="flex items-center gap-1 text-xs"><CalendarDays className="w-3 h-3 text-gray-600" />{u._count.eventRegistrations}</span>
-                  <span className="flex items-center gap-1 text-xs"><Zap className="w-3 h-3 text-gray-600" />{getLevel(u.points)}</span>
                 </div>
 
                 {/* Punkte */}

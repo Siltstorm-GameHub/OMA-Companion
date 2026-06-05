@@ -4,7 +4,8 @@ import {
 } from "discord.js";
 import { syncEvent, updateEventStatus, syncAttendee } from "./sync";
 import { trackVoice, trackMessage, handleMemberJoin } from "./activity";
-import { setClient, notifyMonthlyLeaderboard } from "./notify";
+import { setClient, notifyMonthlyLeaderboard, notifyBirthday } from "./notify";
+import { prisma } from "@/lib/prisma";
 
 const client = new Client({
   intents: [
@@ -24,6 +25,7 @@ client.once(Events.ClientReady, async (c) => {
   console.log(`✅ Bot online: ${c.user.tag}`);
   setClient(client);
   scheduleMonthlyLeaderboard();
+  checkBirthdays(); // sofort beim Start prüfen
 
   const guild = await c.guilds.fetch(process.env.DISCORD_GUILD_ID!);
 
@@ -118,11 +120,45 @@ client.on(Events.GuildScheduledEventUserRemove, async (event, user) => {
   await syncAttendee(event.id, user.id, "remove");
 });
 
+// Geburtstags-Boost: täglich prüfen
+async function checkBirthdays() {
+  const now   = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day   = String(now.getDate()).padStart(2, "0");
+
+  // User mit Geburtstag heute (gespeichert als 2000-MM-DD)
+  const usersWithBirthday = await prisma.user.findMany({
+    where: {
+      birthday: { not: null },
+      birthdayBoostUntil: { lt: now }, // kein aktiver Boost mehr
+    },
+    select: { id: true, username: true, name: true, discordId: true, birthday: true },
+  });
+
+  for (const user of usersWithBirthday) {
+    if (!user.birthday) continue;
+    const bMonth = String(user.birthday.getMonth() + 1).padStart(2, "0");
+    const bDay   = String(user.birthday.getDate()).padStart(2, "0");
+    if (bMonth !== month || bDay !== day) continue;
+
+    // 24h Boost aktivieren
+    const until = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    await prisma.user.update({ where: { id: user.id }, data: { birthdayBoostUntil: until } });
+
+    // Discord-Nachricht
+    if (user.discordId) await notifyBirthday(user.discordId, user.username ?? user.name ?? "Jemand");
+    console.log(`🎂 Geburtstags-Boost aktiviert für ${user.username ?? user.name}`);
+  }
+}
+
 // Monatliche Rangliste: jeden 1. des Monats um 12:00 Uhr
 let _lastLeaderboardMonth = -1;
 function scheduleMonthlyLeaderboard() {
   setInterval(async () => {
     const now = new Date();
+    // Täglich um 8 Uhr Geburtstage prüfen
+    if (now.getHours() === 8 && now.getMinutes() < 60) await checkBirthdays();
+
     if (now.getDate() === 1 && now.getHours() === 12 && now.getMonth() !== _lastLeaderboardMonth) {
       _lastLeaderboardMonth = now.getMonth();
       await notifyMonthlyLeaderboard();

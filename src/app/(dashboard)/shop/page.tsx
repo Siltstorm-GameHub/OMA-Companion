@@ -6,6 +6,8 @@ import { CountUp } from "@/components/CountUp";
 import ShopItemCard from "./ShopItemCard";
 import GiftPoints from "./GiftPoints";
 import BundleCard from "./BundleCard";
+import DailySpin from "./DailySpin";
+import Link from "next/link";
 
 // Sektionen: jede hat einen Titel, Beschreibung und die Item-Typen die dazu gehören
 const SECTIONS = [
@@ -71,7 +73,7 @@ export default async function ShopPage() {
     userId
       ? prisma.user.findUnique({
           where:  { id: userId },
-          select: { points: true, activeTitle: true, profileTheme: true, nameColor: true, statusMessage: true, xpBoostUntil: true, streakShield: true },
+          select: { points: true, activeTitle: true, profileTheme: true, nameColor: true, statusMessage: true, goalItemId: true, xpBoostUntil: true, streakShield: true },
         })
       : null,
     userId
@@ -90,6 +92,17 @@ export default async function ShopPage() {
     items.find(i => i.id === p.itemId)?.type === "status_message"
   );
   const now = new Date();
+
+  // Tages-Spin Status
+  const todayStr  = new Date().toISOString().slice(0, 10);
+  const todaySpin = userId ? await prisma.dailySpin.findUnique({
+    where: { userId_date: { userId, date: todayStr } },
+  }) : null;
+
+  // Wunschliste
+  const wishlistItemIds = userId
+    ? new Set((await prisma.wishlistItem.findMany({ where: { userId }, select: { itemId: true } })).map(w => w.itemId))
+    : new Set<string>();
 
   // Bereits diesen Monat verschenkte Punkte
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -159,6 +172,29 @@ export default async function ShopPage() {
           </div>
         </div>
       )}
+
+      {/* ── Tages-Spin ──────────────────────────────────────────────── */}
+      {me && (
+        <DailySpin
+          alreadySpun={!!todaySpin}
+          lastResult={todaySpin ? { prizeLabel: todaySpin.prizeLabel, prizeType: todaySpin.prizeType } : null}
+        />
+      )}
+
+      {/* ── Auktionen-Teaser ────────────────────────────────────────── */}
+      <Link href="/auctions"
+        className="flex items-center justify-between gap-3 glass card-shine rounded-2xl border border-rose-500/10 px-5 py-4 hover:border-rose-500/20 transition-all group">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-rose-500/10 border border-rose-500/15 flex items-center justify-center shrink-0">
+            <span className="text-lg">🔨</span>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-white">Auktionen</p>
+            <p className="text-xs text-gray-500">Biete auf limitierte Items — Höchstbietender gewinnt</p>
+          </div>
+        </div>
+        <span className="text-gray-600 group-hover:text-white transition-colors">→</span>
+      </Link>
 
       {/* ── Bundles ─────────────────────────────────────────────────── */}
       {bundleItems.length > 0 && (
@@ -242,6 +278,8 @@ export default async function ShopPage() {
                     nameColor={me?.nameColor ?? null}
                     statusMessage={me?.statusMessage ?? null}
                     ownsStatusMessage={ownsStatusMessage}
+                    goalItemId={me?.goalItemId ?? null}
+                    onWishlist={wishlistItemIds.has(item.id)}
                     purchaseId={purchase?.id}
                     consumed={purchase?.consumed}
                   />

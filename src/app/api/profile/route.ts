@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { getRank, getNextLevelPoints } from "@/lib/points";
 
 export async function GET() {
   const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
-  }
+  if (!session?.user) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
@@ -18,10 +15,5 @@ export async function GET() {
   });
 
   if (!user) return NextResponse.json({ error: "User nicht gefunden" }, { status: 404 });
-
-  return NextResponse.json({
-    ...user,
-    tier: getRank(user.points).label,
-    nextLevelAt: getNextLevelPoints(user.points),
-  });
+  return NextResponse.json(user);
 }

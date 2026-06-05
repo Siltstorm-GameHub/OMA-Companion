@@ -6,9 +6,8 @@ import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import {
   Menu, X, LayoutDashboard, CalendarDays, Trophy, Scroll,
-  User, Star, ShieldCheck, LogOut, Zap, ShoppingBag,
+  User, Star, ShieldCheck, LogOut, ShoppingBag,
 } from "lucide-react";
-import { getLevel, getNextLevelPoints, getLevelStartPoints } from "@/lib/points";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 const NAV = [
@@ -59,12 +58,6 @@ export default function MobileTopBar() {
 
   const role      = session?.user?.role   ?? "user";
   const points    = session?.user?.points ?? 0;
-  const level     = getLevel(points);
-  const nextPts  = getNextLevelPoints(points);
-  const prevPts  = getLevelStartPoints(points);
-  const progress = nextPts > prevPts
-    ? Math.min(100, Math.round(((points - prevPts) / (nextPts - prevPts)) * 100))
-    : 100;
   const isStaff   = role === "admin" || role === "moderator";
   const displayName = session?.user?.name ?? "Gast";
 
@@ -191,23 +184,7 @@ export default function MobileTopBar() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-white truncate">{displayName}</p>
-              <p className="text-xs text-gray-500">Level {level} · {points.toLocaleString("de-DE")} Pts</p>
-            </div>
-          </div>
-
-          {/* XP bar */}
-          <div className="mb-3">
-            <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-rose-600 to-rose-400 rounded-full transition-all duration-700"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-            <div className="flex justify-between text-[10px] text-gray-600 mt-1">
-              <span className="flex items-center gap-1">
-                <Zap className="w-2.5 h-2.5 text-amber-400" />Level {level}
-              </span>
-              <span>{progress}%</span>
+              <p className="text-xs text-amber-400 font-semibold">{points.toLocaleString("de-DE")} Punkte</p>
             </div>
           </div>
 

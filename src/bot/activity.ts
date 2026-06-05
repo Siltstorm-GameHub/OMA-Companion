@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { awardPoints, checkAndAwardStreak } from "@/lib/points";
 import { updateQuestProgress } from "@/lib/quests";
-import { notifyLevelUp, notifyQuestCompleted } from "./notify";
+import { notifyQuestCompleted } from "./notify";
 
 /** User per Discord-ID finden. Nur discordId — kein unzuverlässiger Name-Fallback. */
 async function findUser(discordId: string) {
@@ -28,10 +28,7 @@ export async function trackMessage(discordId: string) {
   // Alle 10 Nachrichten → Punkte
   if (count >= 10) {
     messageCounters.set(user.id, 0);
-    const result = await awardPoints(user.id, "MESSAGE_10");
-    if (result?.leveledUp && user.discordId) {
-      await notifyLevelUp(user.discordId, result.user.level);
-    }
+    await awardPoints(user.id, "MESSAGE_10");
   }
 
   // Quest-Fortschritt: 1 Nachricht
@@ -62,10 +59,7 @@ export async function trackVoice(discordId: string, minutes: number) {
   // Volle Stunden vergüten
   const fullHours = Math.floor(minutes / 60);
   for (let i = 0; i < fullHours; i++) {
-    const result = await awardPoints(user.id, "VOICE_HOUR");
-    if (result?.leveledUp && user.discordId) {
-      await notifyLevelUp(user.discordId, result.user.level);
-    }
+    await awardPoints(user.id, "VOICE_HOUR");
   }
 
   // Täglicher Voice-Bonus ab 30 Minuten (einmal pro Tag)
