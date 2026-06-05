@@ -67,9 +67,23 @@ function CreationForm({
   const [coinsWin, setCoinsWin]       = useState(30);
   const [coinsDraw, setCoinsDraw]     = useState(10);
   const [statInput, setStatInput]     = useState("Kills, Assists, Punkte");
-  const [autoGenerate, setAutoGenerate] = useState(true);
+  const [autoGenerate, setAutoGenerate] = useState(false);
   const [selected, setSelected]       = useState<string[]>([]);
   const [loading, setLoading]         = useState(false);
+
+  const supportsAutoGenerate = format === "single_elimination" || format === "round_robin" || format === "liga";
+
+  const AUTO_LABEL: Record<string, string> = {
+    single_elimination: "KO-Baum automatisch aus Teilnehmern generieren",
+    round_robin:        "Alle Paarungen (Jeder gegen Jeden) automatisch generieren",
+    liga:               "Spielplan (Hin- & Rückrunde) automatisch generieren",
+  };
+
+  const AUTO_DESC: Record<string, string> = {
+    single_elimination: "Zufällige Auslosung · BYE-Freilose werden automatisch vergeben",
+    round_robin:        "Jeder spielt gegen jeden anderen genau einmal",
+    liga:               "Alle Spieltage werden als Hin- & Rückrunde angelegt",
+  };
 
   async function create() {
     setLoading(true);
@@ -178,29 +192,85 @@ function CreationForm({
         </div>
       )}
 
-      {/* Auto-bracket */}
-      {format === "single_elimination" && (
-        <div>
-          <label className="flex items-center gap-2 cursor-pointer mb-3">
-            <input type="checkbox" checked={autoGenerate} onChange={e => setAutoGenerate(e.target.checked)} className="rounded" />
-            <span className="text-sm text-gray-300">Bracket automatisch aus Teilnehmern generieren</span>
+      {/* Auto-generate bracket / schedule */}
+      {supportsAutoGenerate && (
+        <div className={`rounded-xl border p-4 transition-colors ${
+          autoGenerate ? "border-rose-500/40 bg-rose-950/20" : "border-gray-700 bg-gray-800/30"
+        }`}>
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={autoGenerate}
+              onChange={e => {
+                setAutoGenerate(e.target.checked);
+                if (e.target.checked && selected.length === 0) {
+                  // Alle registrierten Teilnehmer vorauswählen
+                  setSelected(allUsers.map(u => u.id));
+                }
+              }}
+              className="rounded mt-0.5 shrink-0"
+            />
+            <div>
+              <p className="text-sm font-medium text-white">{AUTO_LABEL[format]}</p>
+              <p className="text-xs text-gray-500 mt-0.5">{AUTO_DESC[format]}</p>
+            </div>
           </label>
+
           {autoGenerate && (
-            <>
-              <p className="text-xs text-gray-500 mb-2">Teilnehmer auswählen ({selected.length} gewählt):</p>
-              <div className="grid grid-cols-3 gap-1.5 max-h-40 overflow-y-auto">
+            <div className="mt-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-gray-400">
+                  Teilnehmer auswählen
+                  <span className="text-rose-400 font-semibold ml-1">({selected.length} von {allUsers.length})</span>
+                </p>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setSelected(allUsers.map(u => u.id))}
+                    className="text-[11px] text-gray-500 hover:text-white transition-colors">
+                    Alle
+                  </button>
+                  <span className="text-gray-700">·</span>
+                  <button type="button" onClick={() => setSelected([])}
+                    className="text-[11px] text-gray-500 hover:text-white transition-colors">
+                    Keine
+                  </button>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-44 overflow-y-auto pr-1">
                 {allUsers.map(u => (
-                  <label key={u.id} className="flex items-center gap-2 p-2 rounded-lg bg-gray-800 hover:bg-gray-700 cursor-pointer text-xs">
+                  <label key={u.id} className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer text-xs transition-colors ${
+                    selected.includes(u.id) ? "bg-rose-900/30 border border-rose-800/50" : "bg-gray-800 hover:bg-gray-700 border border-transparent"
+                  }`}>
                     <input type="checkbox"
                       checked={selected.includes(u.id)}
-                      onChange={e => setSelected(e.target.checked ? [...selected, u.id] : selected.filter(id => id !== u.id))}
+                      onChange={e => setSelected(e.target.checked
+                        ? [...selected, u.id]
+                        : selected.filter(id => id !== u.id)
+                      )}
                       className="rounded shrink-0"
                     />
                     <span className="text-white truncate">{userName(u)}</span>
                   </label>
                 ))}
               </div>
-            </>
+              {selected.length >= 2 && format === "round_robin" && (
+                <p className="text-[11px] text-gray-600">
+                  → {selected.length} Spieler · {(selected.length * (selected.length - 1)) / 2} Matches
+                </p>
+              )}
+              {selected.length >= 2 && format === "liga" && (
+                <p className="text-[11px] text-gray-600">
+                  → {selected.length} Spieler · {selected.length * (selected.length - 1)} Matches ({(selected.length - 1)} Spieltage)
+                </p>
+              )}
+              {selected.length >= 2 && format === "single_elimination" && (
+                <p className="text-[11px] text-gray-600">
+                  → {selected.length} Spieler · {Math.ceil(Math.log2(selected.length))} Runden
+                </p>
+              )}
+              {selected.length < 2 && (
+                <p className="text-[11px] text-amber-600">Mindestens 2 Teilnehmer auswählen.</p>
+              )}
+            </div>
           )}
         </div>
       )}

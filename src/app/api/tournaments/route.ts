@@ -87,9 +87,23 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  if (resolvedFormat === "single_elimination" && autoGenerate !== false && participantIds?.length >= 2) {
-    const bracketMatches = generateBracket(participantIds, tournament.id);
-    await prisma.match.createMany({ data: bracketMatches });
+  if (autoGenerate && participantIds?.length >= 2) {
+    if (resolvedFormat === "single_elimination") {
+      const bracketMatches = generateBracket(participantIds, tournament.id);
+      await prisma.match.createMany({ data: bracketMatches });
+    } else if (resolvedFormat === "round_robin") {
+      const rrMatches = generateRoundRobin(participantIds, tournament.id);
+      await prisma.match.createMany({ data: rrMatches });
+    } else if (resolvedFormat === "liga") {
+      // Liga = Hin- & Rückrunde (doppeltes Round-Robin)
+      const hinrunde  = generateRoundRobin(participantIds, tournament.id);
+      const maxRound  = hinrunde.length ? Math.max(...hinrunde.map(m => m.round)) : 0;
+      const rueckrunde = generateRoundRobin([...participantIds].reverse(), tournament.id).map(m => ({
+        ...m,
+        round: m.round + maxRound,
+      }));
+      await prisma.match.createMany({ data: [...hinrunde, ...rueckrunde] });
+    }
   }
 
   await prisma.event.update({ where: { id: eventId }, data: { status: "active", type: "tournament" } });
