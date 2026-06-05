@@ -233,15 +233,20 @@ export default function TournamentManager({
   // ── Settings edit state ───────────────────────────────────────────────
   const initSettings = () => {
     if (!tournament) return { status: "active", pts1: 100, pts2: 50, pts3: 25, ptsWin: 3, ptsDraw: 1, statInput: "" };
-    const pc = tournament.pointsConfig ? JSON.parse(tournament.pointsConfig) : {};
-    const sf = tournament.statFields   ? JSON.parse(tournament.statFields)   : [];
+    const pc: Record<string, number | { coins?: number; points?: number }> =
+      tournament.pointsConfig ? JSON.parse(tournament.pointsConfig) : {};
+    const sf = tournament.statFields ? JSON.parse(tournament.statFields) : [];
+    const extract = (v: number | { coins?: number; points?: number } | undefined, fallback: number): number => {
+      if (v == null) return fallback;
+      return typeof v === "number" ? v : (v.points ?? v.coins ?? fallback);
+    };
     return {
-      status:   tournament.status,
-      pts1:     pc["1"]    ?? 100,
-      pts2:     pc["2"]    ?? 50,
-      pts3:     pc["3"]    ?? 25,
-      ptsWin:   pc["win"]  ?? 3,
-      ptsDraw:  pc["draw"] ?? 1,
+      status:    tournament.status,
+      pts1:      extract(pc["1"],   100),
+      pts2:      extract(pc["2"],   50),
+      pts3:      extract(pc["3"],   25),
+      ptsWin:    extract(pc["win"], 3),
+      ptsDraw:   extract(pc["draw"],1),
       statInput: sf.join(", "),
     };
   };
@@ -280,7 +285,24 @@ export default function TournamentManager({
   const is1v1  = !isFfa;
   const isRoundRobin = tournament.format === "round_robin";
   const statFields: string[] = tournament.statFields ? JSON.parse(tournament.statFields) : [];
-  const pointsConfig: Record<string, number> = tournament.pointsConfig ? JSON.parse(tournament.pointsConfig) : {};
+  // pointsConfig kann zwei Formate haben:
+  //   Erstellung: {"1": {coins: 200, points: 100}, ...} oder {"win": 30, "draw": 10}
+  //   Einstellungen: {"1": 100, ...} (nur Punkte)
+  const pointsConfigRaw: Record<string, number | { coins: number; points: number }> =
+    tournament.pointsConfig ? JSON.parse(tournament.pointsConfig) : {};
+  // Normalisierung: extrahiert immer eine Zahl (bei Objekt: points-Wert)
+  const getConfigVal = (key: string): number => {
+    const v = pointsConfigRaw[key];
+    if (v == null) return 0;
+    return typeof v === "number" ? v : (v.points ?? v.coins ?? 0);
+  };
+  const getCoinsVal = (key: string): number => {
+    const v = pointsConfigRaw[key];
+    if (v == null) return 0;
+    return typeof v === "number" ? v : (v.coins ?? 0);
+  };
+  // Für Anzeige im Header (Münzen oder Punkte)
+  const pointsConfig = pointsConfigRaw as Record<string, number>;
   const rounds = tournament.matches.length ? Math.max(...tournament.matches.map(m => m.round)) : 0;
   const formatLabel = FORMATS.find(f => f.value === tournament.format)?.label ?? tournament.format;
 
@@ -505,10 +527,10 @@ export default function TournamentManager({
             tournament.status === "finished" ? "bg-gray-800 text-gray-500"      :
                                                "bg-amber-900/40 text-amber-300"
           }`}>{tournament.status}</span>
-          {Object.keys(pointsConfig).length > 0 && (
+          {Object.keys(pointsConfigRaw).length > 0 && (
             tournament.format === "liga"
-              ? <span className="text-xs text-gray-500">🏆{pointsConfig["win"]} 🤝{pointsConfig["draw"]} Pkt</span>
-              : <span className="text-xs text-gray-500">🥇{pointsConfig["1"] ?? 0} 🥈{pointsConfig["2"] ?? 0} 🥉{pointsConfig["3"] ?? 0} Pkt</span>
+              ? <span className="text-xs text-gray-500">🏆{getCoinsVal("win")} 🤝{getCoinsVal("draw")} 🪙</span>
+              : <span className="text-xs text-gray-500">🥇{getConfigVal("1")} 🥈{getConfigVal("2")} 🥉{getConfigVal("3")} Pts</span>
           )}
           {statFields.length > 0 && (
             <span className="text-xs text-gray-600">Stats: {statFields.join(", ")}</span>
