@@ -39,7 +39,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  await requireRole("admin");
+  await requireRole("moderator");
   const { id } = await params;
 
   const tournament = await prisma.tournament.findUnique({
