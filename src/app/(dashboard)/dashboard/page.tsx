@@ -186,10 +186,7 @@ export default async function DashboardPage() {
               <h2 className="text-sm font-semibold text-white flex items-center gap-2">
                 <CalendarDays className="w-4 h-4 text-teal-500/70" /> Nächste Events
               </h2>
-              <Link href="/events" className="text-xs flex items-center gap-0.5 transition-colors"
-                style={{ color: "#14b8a6" }}
-                onMouseOver={e => (e.currentTarget.style.color = "#2dd4bf")}
-                onMouseOut={e => (e.currentTarget.style.color = "#14b8a6")}>
+              <Link href="/events" className="text-xs flex items-center gap-0.5 transition-colors text-teal-500 hover:text-teal-300">
                 Alle <ChevronRight className="w-3 h-3" />
               </Link>
             </div>
@@ -203,10 +200,8 @@ export default async function DashboardPage() {
                 const date = new Date(ev.startAt);
                 return (
                   <Link key={ev.id} href="/events"
-                    className="flex items-center gap-3.5 px-4 py-3.5 transition-colors group"
-                    style={{ borderColor: "rgba(20,184,166,0.05)" }}
-                    onMouseOver={e => (e.currentTarget.style.background = "rgba(20,184,166,0.03)")}
-                    onMouseOut={e => (e.currentTarget.style.background = "")}>
+                    className="flex items-center gap-3.5 px-4 py-3.5 transition-colors group hover:bg-teal-500/[0.03]"
+                    style={{ borderColor: "rgba(20,184,166,0.05)" }}>
                     <div className="text-center min-w-[40px] shrink-0 glass-heavy rounded-xl py-2 px-1.5"
                       style={{ border: "1px solid rgba(20,184,166,0.10)" }}>
                       <p className="text-sm font-bold text-white leading-none tabular-nums">{date.getDate()}</p>
@@ -256,13 +251,11 @@ export default async function DashboardPage() {
                 const isMe = u.id === userId;
                 return (
                   <Link key={u.id} href={isMe ? "/profile" : `/profile/${u.id}`}
-                    className={`flex items-center gap-3 px-4 py-3 transition-colors`}
+                    className={`flex items-center gap-3 px-4 py-3 transition-colors ${!isMe ? "hover:bg-white/[0.02]" : ""}`}
                     style={{
                       background: isMe ? "rgba(20,184,166,0.06)" : "",
                       borderBottom: i < topUsers.length - 1 ? "1px solid rgba(20,184,166,0.05)" : "",
-                    }}
-                    onMouseOver={e => !isMe && (e.currentTarget.style.background = "rgba(255,255,255,0.02)")}
-                    onMouseOut={e => !isMe && (e.currentTarget.style.background = "")}>
+                    }}>
                     <div className="w-6 text-center shrink-0">
                       {i < 3
                         ? <span className="text-base leading-none">{MEDAL[i]}</span>
