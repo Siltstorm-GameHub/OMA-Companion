@@ -2,11 +2,6 @@
 import { useState, useEffect } from "react";
 import { Sun, Moon } from "lucide-react";
 
-const THEME_COLORS = {
-  light: "#f2f2f7",
-  dark:  "#080c18",
-} as const;
-
 export function ThemeToggle({ collapsed }: { collapsed?: boolean }) {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
 
@@ -16,49 +11,26 @@ export function ThemeToggle({ collapsed }: { collapsed?: boolean }) {
   }, []);
 
   function toggle() {
-    const next  = theme === "dark" ? "light" : "dark";
-    const color = THEME_COLORS[next];
+    const next = theme === "dark" ? "light" : "dark";
 
-    // ── Overlay erzeugen ─────────────────────────────────────────
-    const overlay = document.createElement("div");
-    Object.assign(overlay.style, {
-      position:      "fixed",
-      inset:         "0",
-      background:    color,
-      zIndex:        "99999",
-      pointerEvents: "none",
-    });
-    document.body.appendChild(overlay);
-
-    // ── Kreis-Animation via Web Animations API ───────────────────
-    // Startet sofort und braucht keinen rAF-Trick
-    const expand = overlay.animate(
-      [
-        { clipPath: "circle(0% at 0% 100%)" },
-        { clipPath: "circle(150% at 0% 100%)" },
-      ],
-      {
-        duration: 700,
-        easing:   "cubic-bezier(0.4, 0, 0.2, 1)",
-        fill:     "forwards",
-      }
-    );
-
-    // Theme wechseln wenn der Kreis den Bildschirm vollständig bedeckt (~70%)
-    setTimeout(() => {
+    const apply = () => {
       setTheme(next);
       localStorage.setItem("theme", next);
       document.documentElement.setAttribute("data-theme", next);
-    }, 490);
-
-    // Nach der Expand-Animation: kurz einblenden lassen, dann wegfaden
-    expand.onfinish = () => {
-      const fade = overlay.animate(
-        [{ opacity: 1 }, { opacity: 0 }],
-        { duration: 220, easing: "ease", fill: "forwards" }
-      );
-      fade.onfinish = () => overlay.remove();
     };
+
+    // View Transitions API: Browser snapshott den alten Zustand,
+    // wendet das neue Theme an, animiert den Übergang per CSS
+    const vt = (document as Document & {
+      startViewTransition?: (fn: () => void) => void;
+    }).startViewTransition;
+
+    if (vt) {
+      vt(apply);
+    } else {
+      // Fallback für Browser ohne View Transitions (Firefox)
+      apply();
+    }
   }
 
   const label = theme === "dark" ? "Light Mode" : "Dark Mode";
