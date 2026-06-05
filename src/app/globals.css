@@ -11,6 +11,22 @@
   --shadow-card:    0 1px 3px rgba(0,0,0,0.6), 0 8px 24px rgba(0,0,0,0.4);
 }
 
+/* ── Theme-Transition (View Transitions API) ───────────────────── */
+/* Altes Theme bleibt sichtbar und still */
+::view-transition-old(root) {
+  animation: none;
+  z-index: 1;
+}
+/* Neues Theme wächst als Kreis von unten-links */
+::view-transition-new(root) {
+  z-index: 2;
+  clip-path: circle(0% at 0% 100%);
+  animation: theme-circle-reveal 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+@keyframes theme-circle-reveal {
+  to { clip-path: circle(150% at 0% 100%); }
+}
+
 /* ── Base ──────────────────────────────────────────────────────── */
 html, body { overflow-x: hidden; }
 
