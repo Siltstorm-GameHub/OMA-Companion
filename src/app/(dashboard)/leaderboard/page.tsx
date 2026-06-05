@@ -19,11 +19,11 @@ export default async function LeaderboardPage() {
   const userId  = session?.user?.id;
 
   const users = await prisma.user.findMany({
-    orderBy: { points: "desc" },
+    orderBy: { rankPoints: "desc" },
     take: 50,
     select: {
       id: true, name: true, username: true, image: true,
-      points: true, streak: true, nameColor: true, activeTitle: true,
+      points: true, rankPoints: true, streak: true, nameColor: true, activeTitle: true,
       _count: { select: { tournamentParticipants: true, eventRegistrations: true } },
     },
   });
@@ -46,7 +46,7 @@ export default async function LeaderboardPage() {
           </div>
           <h1 className="text-2xl font-bold text-white tracking-tight">Rangliste</h1>
         </div>
-        <p className="text-sm text-gray-500 ml-10">Top {users.length} Spieler</p>
+        <p className="text-sm text-gray-500 ml-10">Top {users.length} Spieler · sortiert nach Prestige-Punkten</p>
       </div>
 
       {/* ── Podium Top 3 ─────────────────────────────────────────── */}
@@ -83,7 +83,10 @@ export default async function LeaderboardPage() {
                   {displayName}
                 </p>
                 <p className={`text-xs font-bold mt-1 tabular-nums ${MEDAL_LABEL_COLOR[dataIdx]}`}>
-                  <CountUp to={u.points} duration={700 + podiumIdx * 100} />
+                  <CountUp to={u.rankPoints} duration={700 + podiumIdx * 100} /> Pts
+                </p>
+                <p className="text-[10px] text-gray-600 mt-0.5">
+                  {u.points.toLocaleString("de-DE")} 🪙
                 </p>
 
                 {/* Rang-Badge */}
@@ -106,7 +109,7 @@ export default async function LeaderboardPage() {
             <span className="w-10 text-right">Events</span>
             <span className="w-8 text-right">Lvl</span>
           </span>
-          <span className="text-right">Punkte</span>
+          <span className="text-right">Punkte / Münzen</span>
         </div>
 
         <div className="divide-y divide-white/[0.04]">
@@ -155,7 +158,7 @@ export default async function LeaderboardPage() {
                     )}
                   </div>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-[10px] text-gray-600">{u.points.toLocaleString("de-DE")} Pts</span>
+                    <span className="text-[10px] text-gray-600">{u.rankPoints.toLocaleString("de-DE")} Pts · {u.points.toLocaleString("de-DE")} 🪙</span>
                     {u.streak > 0 && <span className="text-[10px] text-orange-400">🔥 {u.streak}d</span>}
                     {/* On mobile: show compact stats inline */}
                     <span className="sm:hidden text-[10px] text-gray-600 flex items-center gap-1">
@@ -171,12 +174,12 @@ export default async function LeaderboardPage() {
                   <span className="flex items-center gap-1 text-xs"><CalendarDays className="w-3 h-3 text-gray-600" />{u._count.eventRegistrations}</span>
                 </div>
 
-                {/* Punkte */}
+                {/* Punkte + Münzen */}
                 <div className="text-right shrink-0">
                   <p className={`text-sm font-bold tabular-nums ${i === 0 ? "text-amber-400" : isMe ? "text-rose-300" : "text-white"}`}>
-                    {u.points.toLocaleString("de-DE")}
+                    {u.rankPoints.toLocaleString("de-DE")}
                   </p>
-                  <p className="text-[10px] text-gray-600">Pts</p>
+                  <p className="text-[10px] text-gray-600">{u.points.toLocaleString("de-DE")} 🪙</p>
                 </div>
               </Link>
             );

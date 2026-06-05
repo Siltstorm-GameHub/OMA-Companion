@@ -18,7 +18,8 @@ model User {
   discordId     String?   @unique
   username      String?
   role          String    @default("user") // user | moderator | admin
-  points        Int       @default(0)
+  points        Int       @default(0)   // Münzen (Shop-Währung)
+  rankPoints    Int       @default(0)   // Prestige-Punkte (Events, Turniere, LuL)
   streak        Int       @default(0)
   goalItemId    String?   // Shop-Item das als Sparziel gesetzt wurde
   lastActiveAt  DateTime?

@@ -55,12 +55,12 @@ export default async function DashboardPage() {
       include: { _count: { select: { registrations: true } } },
     }),
     prisma.user.findMany({
-      orderBy: { points: "desc" },
+      orderBy: { rankPoints: "desc" },
       take: 5,
-      select: { id: true, username: true, name: true, image: true, points: true },
+      select: { id: true, username: true, name: true, image: true, points: true, rankPoints: true },
     }),
     userId
-      ? prisma.user.findUnique({ where: { id: userId }, select: { points: true, name: true, image: true, username: true } })
+      ? prisma.user.findUnique({ where: { id: userId }, select: { points: true, rankPoints: true, name: true, image: true, username: true } })
       : null,
     userId
       ? prisma.userQuestProgress.count({ where: { userId, completed: true, quest: { month, year } } })
@@ -100,8 +100,9 @@ export default async function DashboardPage() {
   const nextSpieltag = activeLulSeason?.spieltage[0] ?? null;
 
   const myPoints        = me?.points ?? 0;
+  const myRankPoints    = me?.rankPoints ?? 0;
   const leaderboardRank = userId && me
-    ? await prisma.user.count({ where: { points: { gt: myPoints } } }) + 1
+    ? await prisma.user.count({ where: { rankPoints: { gt: myRankPoints } } }) + 1
     : null;
 
   const displayName = me?.username ?? me?.name ?? session?.user?.name ?? "dort";
@@ -154,10 +155,13 @@ export default async function DashboardPage() {
               </h1>
               <div className="flex items-center gap-3 mt-1 flex-wrap">
                 <span className="text-xs font-bold" style={{ color: "#14b8a6" }}>
-                  <CountUp to={myPoints} duration={900} /> Punkte
+                  <CountUp to={myRankPoints} duration={900} /> Punkte
+                </span>
+                <span className="text-xs text-amber-500/80 font-semibold">
+                  🪙 <CountUp to={myPoints} duration={900} /> Münzen
                 </span>
                 {leaderboardRank && (
-                  <span className="text-xs text-gray-500">· Rang <span className="text-white font-bold">#{leaderboardRank}</span> von {memberCount}</span>
+                  <span className="text-xs text-gray-500">· Rang <span className="text-white font-bold">#{leaderboardRank}</span></span>
                 )}
               </div>
             </div>
@@ -401,7 +405,7 @@ export default async function DashboardPage() {
                       </p>
                     </div>
                     <p className={`text-xs font-bold tabular-nums shrink-0 ${i === 0 ? "aurora-text" : "text-gray-400"}`}>
-                      {u.points.toLocaleString("de-DE")}
+                      {u.rankPoints.toLocaleString("de-DE")}
                     </p>
                   </Link>
                 );

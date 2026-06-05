@@ -19,16 +19,11 @@ export function ThemeToggle({ collapsed }: { collapsed?: boolean }) {
       document.documentElement.setAttribute("data-theme", next);
     };
 
-    // View Transitions API: Browser snapshott den alten Zustand,
-    // wendet das neue Theme an, animiert den Übergang per CSS
-    const vt = (document as Document & {
-      startViewTransition?: (fn: () => void) => void;
-    }).startViewTransition;
-
-    if (vt) {
-      vt(apply);
+    // View Transitions API — `this` muss an document gebunden bleiben
+    if (typeof (document as Document & { startViewTransition?: unknown }).startViewTransition === "function") {
+      (document as Document & { startViewTransition: (fn: () => void) => void })
+        .startViewTransition(apply);
     } else {
-      // Fallback für Browser ohne View Transitions (Firefox)
       apply();
     }
   }

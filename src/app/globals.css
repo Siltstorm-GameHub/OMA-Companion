@@ -294,6 +294,34 @@ button:active, [role="button"]:active { transform: scale(0.97); }
   background-size: 24px 24px;
 }
 
+/* ── Depth background — Dark ────────────────────────────────────── */
+.depth-bg__blob {
+  background: radial-gradient(ellipse, rgba(20,184,166,0.06) 0%, transparent 70%);
+}
+.depth-bg__vignette {
+  background: radial-gradient(ellipse 110% 110% at 55% 45%, transparent 25%, rgba(2,6,5,0.60) 100%);
+}
+.depth-bg__line-top {
+  background: linear-gradient(90deg, transparent 5%, rgba(20,184,166,0.12) 30%, rgba(20,184,166,0.22) 50%, rgba(20,184,166,0.12) 70%, transparent 95%);
+}
+.depth-bg__line-mid {
+  background: linear-gradient(90deg, transparent 15%, rgba(20,184,166,0.04) 40%, rgba(20,184,166,0.07) 50%, rgba(20,184,166,0.04) 60%, transparent 85%);
+}
+
+/* ── Depth background — Light ───────────────────────────────────── */
+[data-theme="light"] .depth-bg__blob {
+  background: radial-gradient(ellipse, rgba(20,184,166,0.04) 0%, transparent 70%);
+}
+[data-theme="light"] .depth-bg__vignette {
+  background: radial-gradient(ellipse 110% 110% at 55% 45%, transparent 30%, rgba(220,235,232,0.50) 100%);
+}
+[data-theme="light"] .depth-bg__line-top {
+  background: linear-gradient(90deg, transparent 5%, rgba(20,184,166,0.10) 30%, rgba(20,184,166,0.18) 50%, rgba(20,184,166,0.10) 70%, transparent 95%);
+}
+[data-theme="light"] .depth-bg__line-mid {
+  background: linear-gradient(90deg, transparent 15%, rgba(20,184,166,0.04) 40%, rgba(20,184,166,0.06) 50%, rgba(20,184,166,0.04) 60%, transparent 85%);
+}
+
 /* ── Line grid — feiner Raster für Tiefe ───────────────────────── */
 .bg-grid-lines {
   background-image:
@@ -392,6 +420,20 @@ button:active, [role="button"]:active { transform: scale(0.97); }
 [data-theme="light"] .neon-teal    { text-shadow: 0 0 8px rgba(13,148,136,0.5) !important; }
 [data-theme="light"] .neon-crimson { text-shadow: 0 0 8px rgba(153,27,27,0.5) !important;  }
 [data-theme="light"] .neon-rose    { text-shadow: 0 0 8px rgba(13,148,136,0.5) !important; }
+
+/* Animationen im Light Mode anpassen */
+[data-theme="light"] .animate-glow-pulse {
+  animation: glow-pulse-light 3s ease-in-out infinite;
+}
+@keyframes glow-pulse-light {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(20,184,166,0.12), 0 0 20px rgba(20,184,166,0.06); }
+  50%       { box-shadow: 0 0 0 1px rgba(20,184,166,0.28), 0 0 32px rgba(20,184,166,0.12); }
+}
+[data-theme="light"] .scan-on-load::before {
+  background: linear-gradient(90deg, transparent, rgba(20,184,166,0.05), rgba(255,255,255,0.08), transparent);
+}
+/* Hex-Grid im Light Mode ausblenden */
+[data-theme="light"] [data-animated-bg] { opacity: 0.15; }
 
 /* ── Float — sanftes Schweben ───────────────────────────────────── */
 @keyframes float {
