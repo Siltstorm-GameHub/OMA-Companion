@@ -37,6 +37,11 @@ export default function MobileTopBar() {
   const [dragging, setDragging] = useState(false);
   const touchStartX             = React.useRef(0);
   const pathname = usePathname();
+
+  // Drawer automatisch schließen wenn Route wechselt
+  React.useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
   const { data: session } = useSession();
 
   // Swipe-to-close: swipe left ≥ 60 px closes the drawer
@@ -51,7 +56,7 @@ export default function MobileTopBar() {
   }
   function onTouchEnd() {
     setDragging(false);
-    if (dragX < -60) setOpen(false);
+    if (dragX < -40) setOpen(false);
     setDragX(0);
   }
 
@@ -85,23 +90,24 @@ export default function MobileTopBar() {
         </button>
       </header>
 
-      {/* ── Overlay ─────────────────────────────────────────────── */}
+      {/* ── Overlay (z-[48] damit es unter dem Drawer liegt) ────── */}
       {open && (
         <div
-          className="fixed inset-0 z-50 md:hidden bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-[48] md:hidden bg-black/70"
           onClick={() => setOpen(false)}
+          onTouchEnd={() => setOpen(false)}
         />
       )}
 
-      {/* ── Drawer ──────────────────────────────────────────────── */}
+      {/* ── Drawer (z-[49]) ─────────────────────────────────────── */}
       <aside
         style={{
           background: "rgba(9,9,15,0.97)",
-          transform: open ? `translateX(${Math.max(dragX, -288)}px)` : "translateX(-100%)",
+          transform: open ? `translateX(${Math.max(dragX, -256)}px)` : "translateX(-100%)",
           transition: dragging ? "none" : "transform 300ms cubic-bezier(0.16,1,0.3,1)",
-          opacity: open ? Math.max(0.5, 1 + dragX / 288) : 1,
+          opacity: open ? Math.max(0.5, 1 + dragX / 256) : 1,
         }}
-        className="fixed top-0 left-0 bottom-0 z-50 md:hidden w-72 border-r border-white/[0.06] flex flex-col backdrop-blur-xl"
+        className="fixed top-0 left-0 bottom-0 z-[49] md:hidden w-64 border-r border-white/[0.06] flex flex-col backdrop-blur-xl"
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
@@ -116,9 +122,10 @@ export default function MobileTopBar() {
           </div>
           <button
             onClick={() => setOpen(false)}
-            className="flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 hover:text-white hover:bg-white/[0.06] transition-colors"
+            className="flex items-center justify-center w-11 h-11 rounded-xl text-gray-400 hover:text-white hover:bg-white/[0.08] transition-colors active:scale-95"
+            aria-label="Menü schließen"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
