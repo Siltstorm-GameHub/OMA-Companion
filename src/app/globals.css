@@ -38,18 +38,8 @@
 html, body { overflow-x: hidden; }
 
 /* ── Mobile optimizations ──────────────────────────────────────── */
-/* Smooth scrolling & momentum on iOS */
-* { -webkit-tap-highlight-color: transparent; }
-html { scroll-behavior: smooth; }
-body { -webkit-overflow-scrolling: touch; }
-
-/* Prevent text resize on orientation change */
+/* Prevent text resize on orientation change (safe, no layout impact) */
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
-
-/* Better touch targets: all interactive elements min 44×44px */
-button, a, [role="button"], label[for], input[type="checkbox"], input[type="radio"] {
-  touch-action: manipulation;
-}
 
 /* Hide scrollbar but keep functionality */
 .scrollbar-none {
@@ -57,12 +47,6 @@ button, a, [role="button"], label[for], input[type="checkbox"], input[type="radi
   -ms-overflow-style: none;
 }
 .scrollbar-none::-webkit-scrollbar { display: none; }
-
-/* Horizontal scroll containers — visual fade indicator */
-.scroll-fade-x {
-  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 4%, black 96%, transparent 100%);
-  mask-image:         linear-gradient(to right, transparent 0%, black 4%, black 96%, transparent 100%);
-}
 
 body {
   background-color: var(--bg-base);
