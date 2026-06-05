@@ -30,8 +30,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
       {/* Mobile Top Bar + Drawer */}
       <MobileTopBar />
 
-      {/* Main Content — pt berücksichtigt TopBar + Notch, pb berücksichtigt BottomNav + Home-Indicator */}
-      <main className="flex-1 overflow-y-auto main-content-mobile md:pt-0 md:pb-0">
+      {/* Main Content */}
+      <main className="flex-1 overflow-y-auto pt-14 md:pt-0 pb-20 md:pb-0">
         {children}
       </main>
 
