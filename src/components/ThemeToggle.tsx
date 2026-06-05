@@ -2,6 +2,12 @@
 import { useState, useEffect } from "react";
 import { Sun, Moon } from "lucide-react";
 
+// Hintergrundfarben aus globals.css
+const THEME_COLORS = {
+  light: "#f2f2f7",
+  dark:  "#080c18",
+} as const;
+
 export function ThemeToggle({ collapsed }: { collapsed?: boolean }) {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
 
@@ -11,10 +17,46 @@ export function ThemeToggle({ collapsed }: { collapsed?: boolean }) {
   }, []);
 
   function toggle() {
-    const next = theme === "dark" ? "light" : "dark";
-    setTheme(next);
-    localStorage.setItem("theme", next);
-    document.documentElement.setAttribute("data-theme", next);
+    const next  = theme === "dark" ? "light" : "dark";
+    const color = THEME_COLORS[next];
+
+    // ── Kreis-Overlay erzeugen ─────────────────────────────────────
+    const overlay = document.createElement("div");
+    Object.assign(overlay.style, {
+      position:       "fixed",
+      inset:          "0",
+      background:     color,
+      clipPath:       "circle(0% at 0% 100%)",    // Startpunkt: Punkt in der unteren linken Ecke
+      zIndex:         "99999",
+      pointerEvents:  "none",
+      willChange:     "clip-path",
+      // Transition: Kreis expandiert nach oben-rechts
+      transition:     "clip-path 0.65s cubic-bezier(0.4, 0, 0.2, 1)",
+    });
+    document.body.appendChild(overlay);
+
+    // Einen Frame warten → dann Animation starten
+    // (zwei rAF stellen sicher, dass der Browser die Startwerte gecacht hat)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        overlay.style.clipPath = "circle(150% at 0% 100%)";
+      });
+    });
+
+    // Theme in der Mitte der Animation wechseln
+    const switchAt = 320; // ms
+    setTimeout(() => {
+      setTheme(next);
+      localStorage.setItem("theme", next);
+      document.documentElement.setAttribute("data-theme", next);
+    }, switchAt);
+
+    // Overlay entfernen — kurzes Fade-out damit kein harter Schnitt
+    setTimeout(() => {
+      overlay.style.transition = "opacity 0.25s ease";
+      overlay.style.opacity    = "0";
+      setTimeout(() => overlay.remove(), 260);
+    }, 680);
   }
 
   const label = theme === "dark" ? "Light Mode" : "Dark Mode";
