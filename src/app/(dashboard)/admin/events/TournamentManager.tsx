@@ -55,11 +55,17 @@ function CreationForm({
   onCreated: (t: Tournament) => void;
 }) {
   const [format, setFormat]           = useState("single_elimination");
+  // Münzen pro Platz
+  const [coins1, setCoins1]           = useState(200);
+  const [coins2, setCoins2]           = useState(100);
+  const [coins3, setCoins3]           = useState(50);
+  // Punkte (rankPoints) pro Platz — nur 1./2./3. geben Punkte
   const [pts1, setPts1]               = useState(100);
   const [pts2, setPts2]               = useState(50);
   const [pts3, setPts3]               = useState(25);
-  const [ptsWin, setPtsWin]           = useState(3);
-  const [ptsDraw, setPtsDraw]         = useState(1);
+  // Liga
+  const [coinsWin, setCoinsWin]       = useState(30);
+  const [coinsDraw, setCoinsDraw]     = useState(10);
   const [statInput, setStatInput]     = useState("Kills, Assists, Punkte");
   const [autoGenerate, setAutoGenerate] = useState(true);
   const [selected, setSelected]       = useState<string[]>([]);
@@ -68,8 +74,12 @@ function CreationForm({
   async function create() {
     setLoading(true);
     const config = format === "liga"
-      ? { win: ptsWin, draw: ptsDraw }
-      : { "1": pts1, "2": pts2, "3": pts3 };
+      ? { win: coinsWin, draw: coinsDraw }
+      : {
+          "1": { coins: coins1, points: pts1 },
+          "2": { coins: coins2, points: pts2 },
+          "3": { coins: coins3, points: pts3 },
+        };
     const fields = (format === "ffa" || format === "coop_stats")
       ? statInput.split(",").map(s => s.trim()).filter(Boolean)
       : null;
@@ -110,11 +120,11 @@ function CreationForm({
       {/* Points */}
       <div>
         <label className="text-xs text-gray-400 uppercase tracking-wide block mb-2">
-          {format === "liga" ? "Ligapunkte pro Ergebnis" : "Punkte pro Platzierung"}
+          {format === "liga" ? "🪙 Münzen pro Match-Ergebnis" : "Belohnungen pro Platzierung"}
         </label>
         {format === "liga" ? (
           <div className="flex gap-3">
-            {([["🏆 Sieg", ptsWin, setPtsWin], ["🤝 Unentschieden", ptsDraw, setPtsDraw]] as const).map(
+            {([["🏆 Sieg", coinsWin, setCoinsWin], ["🤝 Unentschieden", coinsDraw, setCoinsDraw]] as const).map(
               ([label, val, set]) => (
                 <div key={label} className="flex-1">
                   <label className="text-xs text-gray-500 block mb-1">{label}</label>
@@ -122,23 +132,37 @@ function CreationForm({
                     onChange={e => (set as (v: number) => void)(Number(e.target.value))}
                     className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-center"
                   />
+                  <p className="text-[10px] text-gray-600 mt-1 text-center">nur 🪙 Münzen</p>
                 </div>
               )
             )}
           </div>
         ) : (
-          <div className="flex gap-3">
-            {([["🥇 1.", pts1, setPts1], ["🥈 2.", pts2, setPts2], ["🥉 3.", pts3, setPts3]] as const).map(
-              ([label, val, set]) => (
-                <div key={label} className="flex-1">
-                  <label className="text-xs text-gray-500 block mb-1">{label}</label>
-                  <input type="number" value={val}
-                    onChange={e => (set as (v: number) => void)(Number(e.target.value))}
-                    className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-center"
-                  />
-                </div>
-              )
-            )}
+          <div className="space-y-2">
+            {/* Spalten-Header */}
+            <div className="grid grid-cols-3 gap-2 text-[10px] text-gray-500 uppercase tracking-wide px-1">
+              <span>Platz</span>
+              <span className="text-center">🪙 Münzen</span>
+              <span className="text-center">⭐ Punkte</span>
+            </div>
+            {([
+              ["🥇 1. Platz", coins1, setCoins1, pts1, setPts1],
+              ["🥈 2. Platz", coins2, setCoins2, pts2, setPts2],
+              ["🥉 3. Platz", coins3, setCoins3, pts3, setPts3],
+            ] as const).map(([label, cVal, cSet, pVal, pSet]) => (
+              <div key={label} className="grid grid-cols-3 gap-2 items-center">
+                <span className="text-xs text-gray-300 font-medium">{label}</span>
+                <input type="number" value={cVal} min={0}
+                  onChange={e => (cSet as (v: number) => void)(Number(e.target.value))}
+                  className="text-sm bg-gray-800 border border-gray-700 text-amber-300 rounded-lg px-2 py-1.5 text-center w-full"
+                />
+                <input type="number" value={pVal} min={0}
+                  onChange={e => (pSet as (v: number) => void)(Number(e.target.value))}
+                  className="text-sm bg-gray-800 border border-gray-700 text-teal-300 rounded-lg px-2 py-1.5 text-center w-full"
+                />
+              </div>
+            ))}
+            <p className="text-[10px] text-gray-600 pt-1">Münzen gehen an alle Platzierten · Punkte nur an 1./2./3.</p>
           </div>
         )}
       </div>
