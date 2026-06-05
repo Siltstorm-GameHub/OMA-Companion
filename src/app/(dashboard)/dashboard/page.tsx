@@ -116,8 +116,8 @@ export default async function DashboardPage() {
             {/* Name + Role */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-1">
-                <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                  Hey, <span className="text-gradient-gaming">{firstName}</span>!
+                <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight animate-blur-reveal">
+                  Hey, <span className="aurora-text">{firstName}</span>!
                 </h1>
                 <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-lg ${ROLE_STYLE[userRole] ?? ROLE_STYLE.user}`}>
                   {ROLE_LABEL[userRole] ?? "Mitglied"}
@@ -130,7 +130,7 @@ export default async function DashboardPage() {
 
             {/* Rang — 3D card */}
             {leaderboardRank && (
-              <div className="glass-heavy rounded-2xl px-4 py-3 text-center shrink-0 hidden sm:block"
+              <div className="glass-heavy rounded-2xl px-4 py-3 text-center shrink-0 hidden sm:block animate-float animate-glow-pulse"
                 style={{
                   border: "1px solid rgba(20,184,166,0.15)",
                   boxShadow: "0 0 24px rgba(20,184,166,0.08), 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(20,184,166,0.08)"
@@ -168,7 +168,7 @@ export default async function DashboardPage() {
             { label: "Quests diesen Monat", value: myQuestsDone,      icon: Scroll,       sub: "abgeschlossen",    accent: "rgba(153,27,27,0.10)",   glow: "rgba(153,27,27,0.06)",   iconCls: "text-red-400 bg-red-800/20 border-red-800/30",           val: "text-red-300"     },
           ].map(({ label, value, icon: Icon, sub, accent, glow, iconCls, val }, i) => (
             <div key={label}
-              className={`card-hover card-shine glass rounded-2xl p-4 relative overflow-hidden cursor-default animate-slide-up stagger-${i + 1}`}
+              className={`card-hover card-shine glass rounded-2xl p-4 relative overflow-hidden cursor-default animate-slide-up animate-glow-pulse scan-on-load stagger-${i + 1}`}
               style={{
                 background: `linear-gradient(135deg, ${accent} 0%, rgba(6,16,14,0.6) 100%)`,
                 boxShadow: `0 1px 0 rgba(255,255,255,0.04) inset, 0 4px 16px rgba(0,0,0,0.5), 0 0 0 1px rgba(20,184,166,0.06), 0 0 24px ${glow}`,
@@ -176,7 +176,8 @@ export default async function DashboardPage() {
               <div className={`relative w-8 h-8 rounded-xl flex items-center justify-center mb-3 border ${iconCls}`}>
                 <Icon className="w-4 h-4" />
               </div>
-              <p className={`relative text-2xl sm:text-3xl font-black tabular-nums tracking-tight leading-none ${val}`}>
+              <p className={`relative text-2xl sm:text-3xl font-black tabular-nums tracking-tight leading-none animate-number-pop ${val}`}
+                style={{ animationDelay: `${60 + i * 80}ms` }}>
                 {i === 2 && value > 0 ? "#" : ""}<CountUp to={value} duration={800 + i * 80} />
               </p>
               <p className="relative text-xs text-gray-400 font-medium mt-1.5">{label}</p>
@@ -285,7 +286,7 @@ export default async function DashboardPage() {
                       </p>
                       <p className="text-[10px] text-gray-600">{u.points.toLocaleString("de-DE")} Pts</p>
                     </div>
-                    <p className={`text-sm font-bold tabular-nums shrink-0 ${i === 0 ? "text-amber-400" : "text-gray-300"}`}>
+                    <p className={`text-sm font-bold tabular-nums shrink-0 ${i === 0 ? "aurora-text" : "text-gray-300"}`}>
                       {u.points.toLocaleString("de-DE")}
                     </p>
                   </Link>
