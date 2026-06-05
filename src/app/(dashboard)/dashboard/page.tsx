@@ -247,7 +247,7 @@ export default async function DashboardPage() {
           </Link>
 
           {/* Level-Up-League Hub-Kachel */}
-          <Link href="/level-up-league"
+          <Link href="/lul"
             className="card-hover card-shine glass rounded-2xl p-5 relative overflow-hidden group animate-slide-up stagger-2"
             style={{
               background: "linear-gradient(135deg, rgba(153,27,27,0.12) 0%, rgba(6,16,14,0.7) 60%, rgba(245,158,11,0.04) 100%)",
