@@ -8,9 +8,9 @@ export const POINT_RULES = {
   TOURNAMENT_TOP3:        { amount:  350, reason: "Top-3-Platzierung 🥉",     category: "turnier" },
   TOURNAMENT_PARTICIPATE: { amount:  175, reason: "Turnierteilnahme",         category: "turnier" },
   TOURNAMENT_WIN_MATCH:   { amount:   60, reason: "Match gewonnen",           category: "turnier" },
-  // Events
-  EVENT_ATTEND:           { amount:   80, reason: "Event besucht 📅",         category: "event" },
-  EVENT_ORGANIZE:         { amount:  200, reason: "Event organisiert",        category: "event" },
+  // Events — Anmeldung gibt nur Münzen (keine rankPoints)
+  EVENT_ATTEND:           { amount:   80, reason: "Event besucht 📅",         category: "aktivitaet" },
+  EVENT_ORGANIZE:         { amount:  200, reason: "Event organisiert",        category: "aktivitaet" },
   // Discord-Aktivität
   VOICE_HOUR:             { amount:   15, reason: "Stunde im Sprachkanal 🎙", category: "aktivitaet" },
   VOICE_DAILY_BONUS:      { amount:   30, reason: "Täglich im Voice aktiv",   category: "aktivitaet" },

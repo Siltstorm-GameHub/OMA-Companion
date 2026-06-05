@@ -115,20 +115,23 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       select: { pointsConfig: true },
     });
     if (tournament?.pointsConfig) {
-      const config = JSON.parse(tournament.pointsConfig) as Record<string, number>;
+      const config = JSON.parse(tournament.pointsConfig) as Record<string, number | { coins: number; points: number }>;
       for (const entry of entries) {
-        const pts = entry.placement != null ? config[String(entry.placement)] : undefined;
-        if (pts && entry.userId) {
-          await prisma.$transaction([
-            prisma.user.update({
-              where: { id: entry.userId },
-              data:  { points: { increment: pts }, rankPoints: { increment: pts } },
-            }),
-            prisma.pointTransaction.create({
-              data: { userId: entry.userId, amount: pts, reason: `Platz ${entry.placement} im Turnier` },
-            }),
-          ]);
-        }
+        if (entry.placement == null || !entry.userId) continue;
+        const raw = config[String(entry.placement)];
+        if (!raw) continue;
+        const coins      = typeof raw === "number" ? raw : raw.coins;
+        const rankPts    = typeof raw === "number" ? raw : raw.points;
+        const isTopThree = entry.placement <= 3;
+        await prisma.$transaction([
+          prisma.user.update({
+            where: { id: entry.userId },
+            data:  { points: { increment: coins }, ...(isTopThree && rankPts > 0 && { rankPoints: { increment: rankPts } }) },
+          }),
+          prisma.pointTransaction.create({
+            data: { userId: entry.userId, amount: coins, reason: `Platz ${entry.placement} im Turnier` },
+          }),
+        ]);
       }
     }
 
@@ -180,13 +183,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const config = JSON.parse(tournament.pointsConfig) as Record<string, number>;
     const drawPts = config["draw"];
     const winPts  = config["win"];
+    // Liga-Match-Ergebnisse geben nur Münzen (keine rankPoints — Punkte gibt's nur für Platzierungen)
     if (isDraw && drawPts && match.player1Id && match.player2Id) {
       for (const uid of [match.player1Id, match.player2Id]) {
         await prisma.$transaction([
-          prisma.user.update({
-            where: { id: uid },
-            data:  { points: { increment: drawPts }, rankPoints: { increment: drawPts } },
-          }),
+          prisma.user.update({ where: { id: uid }, data: { points: { increment: drawPts } } }),
           prisma.pointTransaction.create({
             data: { userId: uid, amount: drawPts, reason: "Unentschieden im Liga-Match" },
           }),
@@ -194,10 +195,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       }
     } else if (!isDraw && winPts && winnerId) {
       await prisma.$transaction([
-        prisma.user.update({
-          where: { id: winnerId },
-          data:  { points: { increment: winPts }, rankPoints: { increment: winPts } },
-        }),
+        prisma.user.update({ where: { id: winnerId }, data: { points: { increment: winPts } } }),
         prisma.pointTransaction.create({
           data: { userId: winnerId, amount: winPts, reason: "Sieg im Liga-Match" },
         }),

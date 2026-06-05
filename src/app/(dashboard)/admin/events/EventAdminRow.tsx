@@ -167,9 +167,10 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
                     </select>
                   </div>
                   <div>
-                    <label className="text-xs text-gray-500 block mb-1">Punkte bei Teilnahme</label>
+                    <label className="text-xs text-gray-500 block mb-1">🪙 Münzen bei Anmeldung</label>
                     <input type="number" value={pointReward} onChange={(e) => setPointReward(Number(e.target.value))}
-                      className="w-24 text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2" />
+                      className="w-28 text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2" />
+                    <p className="text-[10px] text-gray-600 mt-1">Nur Münzen — keine Punkte</p>
                   </div>
                   <button onClick={saveEventSettings} disabled={loading}
                     className="text-sm bg-rose-600 hover:bg-rose-500 text-white rounded-lg px-4 py-2 disabled:opacity-50">
