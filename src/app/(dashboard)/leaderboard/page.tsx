@@ -190,7 +190,7 @@ export default async function LeaderboardPage() {
         style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.45), 0 0 0 1px rgba(20,184,166,0.07)" }}>
 
         {/* Spalten-Header — festes Grid, alle Spalten immer sichtbar */}
-        {/* grid: # | Avatar | Name | Siege | Events | Punkte | Münzen */}
+        {/* grid: # | Avatar | Name | Siege | Events | Münzen | Punkte */}
         <div className="grid items-center gap-x-3 px-4 py-2.5 text-[10px] font-semibold text-gray-600 uppercase tracking-widest"
           style={{ gridTemplateColumns: "2rem 2.25rem 1fr 4rem 4rem 5rem 5rem", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
           <span>#</span>
@@ -198,8 +198,8 @@ export default async function LeaderboardPage() {
           <span>Spieler</span>
           <span className="text-center flex items-center justify-center gap-1"><Swords className="w-3 h-3" />Siege</span>
           <span className="text-center flex items-center justify-center gap-1"><CalendarDays className="w-3 h-3" />Events</span>
-          <span className="text-center">⭐ Punkte</span>
           <span className="text-center">🪙 Münzen</span>
+          <span className="text-center text-amber-400">⭐ Punkte</span>
         </div>
 
         <div className="divide-y divide-white/[0.04]">
@@ -291,20 +291,20 @@ export default async function LeaderboardPage() {
                   <p className="text-[9px] text-gray-600">Events</p>
                 </div>
 
-                {/* Punkte */}
-                <div className="text-center">
-                  <p className={`text-sm font-black tabular-nums ${ptsColor}`}>
-                    {u.rankPoints.toLocaleString("de-DE")}
-                  </p>
-                  <p className="text-[9px] text-gray-600">Punkte</p>
-                </div>
-
                 {/* Münzen */}
                 <div className="text-center">
-                  <p className="text-sm font-bold tabular-nums text-amber-500/90">
+                  <p className="text-sm font-bold tabular-nums text-gray-300">
                     {u.points.toLocaleString("de-DE")}
                   </p>
                   <p className="text-[9px] text-gray-600">Münzen</p>
+                </div>
+
+                {/* Punkte */}
+                <div className="text-center">
+                  <p className="text-sm font-black tabular-nums text-amber-400">
+                    {u.rankPoints.toLocaleString("de-DE")}
+                  </p>
+                  <p className="text-[9px] text-amber-600/70">Punkte</p>
                 </div>
 
               </Link>
