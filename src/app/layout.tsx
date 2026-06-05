@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { SessionProvider } from "@/components/SessionProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
@@ -10,6 +10,14 @@ export const metadata: Metadata = {
   title: "Old Masters Ally – Companion App",
   description: "Events, Turniere und Punktesystem für Old Masters",
   icons: { icon: "/OMALogoNew.png", apple: "/OMALogoNew.png" },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",  // iPhone notch support
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

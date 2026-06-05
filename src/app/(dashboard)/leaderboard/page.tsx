@@ -84,7 +84,7 @@ export default async function LeaderboardPage() {
   const myRank = userId ? users.findIndex(u => u.id === userId) + 1 : null;
 
   return (
-    <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6 animate-fade-in">
+    <div className="p-3 sm:p-6 max-w-4xl mx-auto space-y-5 sm:space-y-6 animate-fade-in">
 
       {/* ── Header ─────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
@@ -189,15 +189,17 @@ export default async function LeaderboardPage() {
       <div className="glass rounded-2xl overflow-hidden"
         style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.45), 0 0 0 1px rgba(20,184,166,0.07)" }}>
 
-        {/* Spalten-Header — festes Grid, alle Spalten immer sichtbar */}
-        {/* grid: # | Avatar | Name | Siege | Events | Münzen | Punkte */}
-        <div className="grid items-center gap-x-3 px-4 py-2.5 text-[10px] font-semibold text-gray-600 uppercase tracking-widest"
-          style={{ gridTemplateColumns: "2rem 2.25rem 1fr 4rem 4rem 5rem 5rem", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+        {/* Spalten-Header: # | Avatar | Name | [Siege] | [Events] | Münzen | Punkte */}
+        {/* Siege + Events werden auf Mobile ausgeblendet */}
+        <div className="grid items-center gap-x-3 px-4 py-2.5 text-[10px] font-semibold text-gray-600 uppercase tracking-widest
+          [grid-template-columns:2rem_2.25rem_1fr_5rem_5rem]
+          sm:[grid-template-columns:2rem_2.25rem_1fr_4rem_4rem_5rem_5rem]"
+          style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
           <span>#</span>
           <span />
           <span>Spieler</span>
-          <span className="text-center flex items-center justify-center gap-1"><Swords className="w-3 h-3" />Siege</span>
-          <span className="text-center flex items-center justify-center gap-1"><CalendarDays className="w-3 h-3" />Events</span>
+          <span className="hidden sm:flex text-center items-center justify-center gap-1"><Swords className="w-3 h-3" />Siege</span>
+          <span className="hidden sm:flex text-center items-center justify-center gap-1"><CalendarDays className="w-3 h-3" />Events</span>
           <span className="text-center">🪙 Münzen</span>
           <span className="text-center text-amber-400">⭐ Punkte</span>
         </div>
@@ -234,11 +236,10 @@ export default async function LeaderboardPage() {
             return (
               <Link key={u.id}
                 href={isMe ? "/profile" : `/profile/${u.id}`}
-                className={`grid items-center gap-x-3 px-4 py-3 transition-colors ${rowAccent} animate-slide-up`}
-                style={{
-                  gridTemplateColumns: "2rem 2.25rem 1fr 4rem 4rem 5rem 5rem",
-                  animationDelay: `${Math.min(i * 15, 300)}ms`,
-                }}>
+                className={`grid items-center gap-x-3 px-4 py-3 transition-colors ${rowAccent} animate-slide-up
+                  [grid-template-columns:2rem_2.25rem_1fr_5rem_5rem]
+                  sm:[grid-template-columns:2rem_2.25rem_1fr_4rem_4rem_5rem_5rem]`}
+                style={{ animationDelay: `${Math.min(i * 15, 300)}ms` }}>
 
                 {/* # Rang */}
                 <div className="text-center">
@@ -279,14 +280,14 @@ export default async function LeaderboardPage() {
                   )}
                 </div>
 
-                {/* Siege */}
-                <div className="text-center">
+                {/* Siege — nur ab sm */}
+                <div className="hidden sm:block text-center">
                   <p className="text-sm font-bold tabular-nums text-white">{userWins}</p>
                   <p className="text-[9px] text-gray-600">Siege</p>
                 </div>
 
-                {/* Events */}
-                <div className="text-center">
+                {/* Events — nur ab sm */}
+                <div className="hidden sm:block text-center">
                   <p className="text-sm font-bold tabular-nums text-white">{u._count.eventRegistrations}</p>
                   <p className="text-[9px] text-gray-600">Events</p>
                 </div>
