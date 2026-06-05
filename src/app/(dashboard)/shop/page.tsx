@@ -93,15 +93,17 @@ export default async function ShopPage() {
   );
   const now = new Date();
 
-  // Tages-Spin Status
+  // Tages-Spin Status (graceful — Tabelle existiert evtl. noch nicht)
   const todayStr  = new Date().toISOString().slice(0, 10);
   const todaySpin = userId ? await prisma.dailySpin.findUnique({
     where: { userId_date: { userId, date: todayStr } },
-  }) : null;
+  }).catch(() => null) : null;
 
-  // Wunschliste
+  // Wunschliste (graceful)
   const wishlistItemIds = userId
-    ? new Set((await prisma.wishlistItem.findMany({ where: { userId }, select: { itemId: true } })).map(w => w.itemId))
+    ? new Set(await prisma.wishlistItem.findMany({ where: { userId }, select: { itemId: true } })
+        .catch(() => [] as { itemId: string }[])
+        .then(r => r.map(w => w.itemId)))
     : new Set<string>();
 
   // Bereits diesen Monat verschenkte Punkte

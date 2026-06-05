@@ -62,7 +62,7 @@ export default async function ProfilePage() {
     await Promise.all([
       prisma.user.findUnique({
         where: { id: userId },
-        select: { id: true, name: true, username: true, image: true, points: true, streak: true, createdAt: true, activeTitle: true, profileTheme: true, statusMessage: true, goalItemId: true, birthday: true, birthdayBoostUntil: true },
+        select: { id: true, name: true, username: true, image: true, points: true, streak: true, createdAt: true, activeTitle: true, profileTheme: true, statusMessage: true, goalItemId: true },
       }),
       prisma.pointTransaction.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, take: 20 }),
       prisma.eventRegistration.findMany({
@@ -91,19 +91,19 @@ export default async function ProfilePage() {
       prisma.shopPurchase.findMany({
         where: { userId, item: { type: "badge" } },
         include: { item: { select: { value: true } } },
-      }),
+      }).catch(() => [] as { id: string; item: { value: string } }[]),
     ]);
 
   if (!user) redirect("/login");
 
   const totalPoints  = user.points;
 
-  // Wunschliste
+  // Wunschliste (graceful — Tabelle existiert evtl. noch nicht)
   const wishlist = await prisma.wishlistItem.findMany({
     where:   { userId },
     include: { item: { select: { id: true, name: true, icon: true, price: true } } },
     orderBy: { createdAt: "asc" },
-  });
+  }).catch(() => [] as { id: string; item: { id: string; name: string; icon: string; price: number } }[]);
 
   // Sparziel
   const goalItem = user.goalItemId
@@ -167,9 +167,6 @@ export default async function ProfilePage() {
             </div>
             {user.statusMessage && (
               <p className="text-xs text-gray-400 italic mb-1">„{user.statusMessage}"</p>
-            )}
-            {user.birthdayBoostUntil && user.birthdayBoostUntil > new Date() && (
-              <p className="text-xs text-amber-400 mb-1">🎂 Geburtstags-Boost aktiv — 2× Punkte!</p>
             )}
             <div className="flex items-center gap-2 mb-3 flex-wrap">
               <p className="text-xs text-gray-500">Mitglied seit {memberSince} · {earnedBadges.length} Abzeichen</p>
