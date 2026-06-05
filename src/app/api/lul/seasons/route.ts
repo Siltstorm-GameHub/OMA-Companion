@@ -8,7 +8,15 @@ export async function GET() {
     include: {
       spieltage: {
         orderBy: { number: "asc" },
-        include: { _count: { select: { entries: true } } },
+        include: {
+          entries: {
+            include: { user: { select: { id: true, name: true, username: true, image: true } } },
+          },
+        },
+      },
+      legacyEntries: {
+        include: { user: { select: { id: true, name: true, username: true, image: true } } },
+        orderBy: { totalPts: "desc" },
       },
     },
   });
