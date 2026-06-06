@@ -50,6 +50,7 @@ model User {
   dailySpins                DailySpin[]
   wishlistItems             WishlistItem[]
   auctionBids               AuctionBid[]
+  donations                 Donation[]
   currentAuctions           ShopAuction[]  @relation("currentAuctions")
   wonAuctions               ShopAuction[]  @relation("wonAuctions")
 }
@@ -339,6 +340,22 @@ model UserQuestProgress {
   quest       Quest     @relation(fields: [questId], references: [id], onDelete: Cascade)
 
   @@unique([userId, questId])
+}
+
+// ── Spendenpool ─────────────────────────────────────────────────────────────
+
+model Donation {
+  id        String   @id @default(cuid())
+  userId    String
+  amount    Float    // in Euro, nur für Admin sichtbar
+  month     Int      // 1–12
+  year      Int
+  note      String?  // optionale Admin-Notiz
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, month, year]) // eine Spende pro User pro Monat
 }
 
 model PointTransaction {
