@@ -325,22 +325,16 @@ button:active, [role="button"]:active { transform: scale(0.97); }
 
 /* ── Aurora Background — Blob-Animationen ───────────────────────── */
 
-/* Teal-Blob: oben-links → zieht diagonal nach rechts-unten und zurück */
+/* Teal-Blob: bewegt sich nach oben */
 @keyframes aurora-teal {
-  0%   { transform: translate(0%,    0%)   scale(1.00); }
-  25%  { transform: translate(12%,   8%)   scale(1.08); }
-  50%  { transform: translate(18%,  15%)   scale(0.95); }
-  75%  { transform: translate(6%,    6%)   scale(1.05); }
-  100% { transform: translate(0%,    0%)   scale(1.00); }
+  0%, 100% { transform: translateY(0%);   }
+  50%       { transform: translateY(-18%); }
 }
 
-/* Burgund-Blob: unten-rechts → zieht diagonal nach links-oben und zurück */
+/* Burgund-Blob: bewegt sich genau entgegengesetzt — nach unten */
 @keyframes aurora-crimson {
-  0%   { transform: translate(0%,    0%)   scale(1.00); }
-  25%  { transform: translate(-10%, -7%)   scale(1.06); }
-  50%  { transform: translate(-20%, -12%)  scale(0.94); }
-  75%  { transform: translate(-8%,  -5%)   scale(1.04); }
-  100% { transform: translate(0%,    0%)   scale(1.00); }
+  0%, 100% { transform: translateY(0%);  }
+  50%       { transform: translateY(18%); }
 }
 
 /* Kleiner Akzent-Blob: leicht kreisend */
@@ -351,8 +345,8 @@ button:active, [role="button"]:active { transform: scale(0.97); }
   100% { transform: translate(0%,  0%)  scale(1.00); }
 }
 
-.aurora-blob--teal    { animation: aurora-teal    18s ease-in-out infinite; }
-.aurora-blob--crimson { animation: aurora-crimson 22s ease-in-out infinite; }
+.aurora-blob--teal    { animation: aurora-teal    10s ease-in-out infinite; }
+.aurora-blob--crimson { animation: aurora-crimson 10s ease-in-out infinite; }
 .aurora-blob--accent  { animation: aurora-accent  14s ease-in-out infinite; }
 
 /* ── Particle Field — Animationen ───────────────────────────────── */
