@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import {
   LayoutDashboard, CalendarDays, Trophy, User,
-  ShieldCheck, Star, ShoppingBag, LogOut,
+  ShieldCheck, Star, ShoppingBag, LogOut, Heart,
 } from "lucide-react";
 import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
@@ -15,6 +15,7 @@ const NAV = [
   { label: "Shop",            href: "/shop",        icon: ShoppingBag },
   { label: "Level-Up-League", href: "/lul",         icon: Star },
   { label: "Rangliste",       href: "/leaderboard", icon: Trophy },
+  { label: "Spendenpool",     href: "/donations",   icon: Heart },
   { label: "Mein Profil",     href: "/profile",     icon: User },
 ];
 
