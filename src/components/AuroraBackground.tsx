@@ -19,7 +19,7 @@ export default function AuroraBackground() {
           top: "-15%",
           left: "-10%",
           background:
-            "radial-gradient(ellipse at center, rgba(20,184,166,0.38) 0%, rgba(13,148,136,0.18) 45%, transparent 72%)",
+            "radial-gradient(ellipse at center, rgba(20,184,166,0.75) 0%, rgba(13,148,136,0.40) 45%, transparent 72%)",
           filter: "blur(72px)",
         }}
       />
@@ -33,7 +33,7 @@ export default function AuroraBackground() {
           bottom: "-20%",
           right: "-15%",
           background:
-            "radial-gradient(ellipse at center, rgba(139,31,42,0.42) 0%, rgba(100,20,30,0.20) 45%, transparent 72%)",
+            "radial-gradient(ellipse at center, rgba(139,31,42,0.80) 0%, rgba(100,20,30,0.42) 45%, transparent 72%)",
           filter: "blur(80px)",
         }}
       />
