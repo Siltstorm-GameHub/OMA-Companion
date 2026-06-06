@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import Sidebar from "@/components/Sidebar";
-import BottomNav from "@/components/BottomNav";
 import MobileTopBar from "@/components/MobileTopBar";
 import { OnboardingModal } from "@/components/OnboardingModal";
 import { BackToTop } from "@/components/BackToTop";
@@ -29,12 +28,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <MobileTopBar />
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto pt-14 lg:pt-0 pb-20 lg:pb-0 lg:pl-20 min-w-0">
+      <main className="flex-1 overflow-y-auto pt-14 lg:pt-0 lg:pl-20 min-w-0">
         {children}
       </main>
-
-      {/* Mobile Bottom Nav */}
-      <BottomNav />
 
       {/* Onboarding für neue User */}
       <OnboardingModal />
