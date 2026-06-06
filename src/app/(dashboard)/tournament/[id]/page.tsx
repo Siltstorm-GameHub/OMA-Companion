@@ -71,12 +71,14 @@ export default async function TournamentDetailPage({
 
   // Alle bekannten Spieler: Turnier-Teilnehmer + Event-Registrierungen zusammenführen,
   // damit Match-Spieler auch dann aufgelöst werden wenn sie nicht als TournamentParticipant eingetragen sind
-  const mergedParticipants = t
+  type KnownUser = { id: string; name: string | null; username: string | null; image: string | null };
+  type KnownParticipant = { userId: string; user: KnownUser };
+  const mergedParticipants: KnownParticipant[] = t
     ? [
-        ...t.participants,
+        ...t.participants.map(p => ({ userId: p.userId, user: p.user as KnownUser })),
         ...event.registrations
           .filter(r => !t.participants.some(p => p.userId === r.userId))
-          .map(r => ({ userId: r.user.id, user: r.user })),
+          .map(r => ({ userId: r.user.id, user: r.user as KnownUser })),
       ]
     : [];
   const format = t?.format ?? "single_elimination";
