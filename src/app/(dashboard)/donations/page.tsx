@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import Image from "next/image";
-import { Heart, Flame, CalendarDays, Users, Euro } from "lucide-react";
+import { Heart, Flame, CalendarDays, Users, Euro, ShoppingCart, TrendingDown, Wallet } from "lucide-react";
 
 const MONTH_NAMES = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
 
@@ -31,16 +31,25 @@ function streakBadge(streak: number): { label: string; color: string; bg: string
   return null;
 }
 
+function fmt(n: number) {
+  return n.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 export default async function DonationsPage() {
   const session = await auth();
   const myId = session?.user?.id;
 
-  const donations = await prisma.donation.findMany({
-    include: { user: { select: { id: true, name: true, image: true } } },
-    orderBy: [{ year: "asc" }, { month: "asc" }],
-  });
+  const [donations, expenses] = await Promise.all([
+    prisma.donation.findMany({
+      include: { user: { select: { id: true, name: true, image: true } } },
+      orderBy: [{ year: "asc" }, { month: "asc" }],
+    }),
+    prisma.poolExpense.findMany({ orderBy: { date: "desc" } }),
+  ]);
 
-  const totalPool = donations.reduce((s, d) => s + d.amount, 0);
+  const totalPool  = donations.reduce((s, d) => s + d.amount, 0);
+  const totalSpent = expenses.reduce((s, e) => s + e.amount, 0);
+  const balance    = totalPool - totalSpent;
 
   // Monats-Historie
   const monthlyMap = new Map<string, { year: number; month: number; total: number; donors: number }>();
@@ -63,7 +72,7 @@ export default async function DonationsPage() {
     .map(({ user, entries }) => ({ user, streak: calcStreak(entries), totalMonths: entries.length }))
     .sort((a, b) => b.streak - a.streak || b.totalMonths - a.totalMonths);
 
-  const myEntry = myId ? userMap.get(myId) : null;
+  const myEntry  = myId ? userMap.get(myId) : null;
   const myStreak = myEntry ? calcStreak(myEntry.entries) : 0;
 
   return (
@@ -82,24 +91,57 @@ export default async function DonationsPage() {
         </p>
       </div>
 
-      {/* Pool-Gesamtbetrag */}
-      <div
-        className="rounded-2xl p-6 text-center"
-        style={{
-          background: "linear-gradient(135deg, rgba(20,184,166,0.12), rgba(20,184,166,0.04))",
-          border: "1px solid rgba(20,184,166,0.20)",
-          boxShadow: "0 0 40px rgba(20,184,166,0.08)",
-        }}
-      >
-        <p className="text-xs text-teal-400/70 font-semibold uppercase tracking-widest mb-1">Gesamter Pool</p>
-        <p className="text-5xl font-black text-white">
-          {totalPool.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          <span className="text-2xl text-teal-400 ml-1">€</span>
-        </p>
-        <p className="text-xs text-gray-500 mt-2">{donors.length} Unterstützer · {months.length} aktive Monate</p>
+      {/* Bilanz-Karten */}
+      <div className="grid grid-cols-3 gap-3">
+        {/* Einnahmen */}
+        <div
+          className="rounded-2xl p-4 text-center"
+          style={{
+            background: "linear-gradient(135deg, rgba(20,184,166,0.12), rgba(20,184,166,0.04))",
+            border: "1px solid rgba(20,184,166,0.20)",
+          }}
+        >
+          <div className="flex items-center justify-center gap-1.5 text-teal-400/70 mb-2">
+            <Euro className="w-3.5 h-3.5" />
+            <span className="text-[10px] font-semibold uppercase tracking-widest">Gesamt</span>
+          </div>
+          <p className="text-2xl font-black text-white tabular-nums">{fmt(totalPool)}<span className="text-sm text-teal-400 ml-0.5">€</span></p>
+        </div>
+
+        {/* Ausgaben */}
+        <div
+          className="rounded-2xl p-4 text-center"
+          style={{
+            background: "rgba(239,68,68,0.06)",
+            border: "1px solid rgba(239,68,68,0.15)",
+          }}
+        >
+          <div className="flex items-center justify-center gap-1.5 mb-2" style={{ color: "rgba(239,68,68,0.6)" }}>
+            <TrendingDown className="w-3.5 h-3.5" />
+            <span className="text-[10px] font-semibold uppercase tracking-widest">Ausgaben</span>
+          </div>
+          <p className="text-2xl font-black text-white tabular-nums">{fmt(totalSpent)}<span className="text-sm text-red-400 ml-0.5">€</span></p>
+        </div>
+
+        {/* Guthaben */}
+        <div
+          className="rounded-2xl p-4 text-center"
+          style={{
+            background: balance >= 0 ? "rgba(74,222,128,0.07)" : "rgba(239,68,68,0.07)",
+            border: `1px solid ${balance >= 0 ? "rgba(74,222,128,0.20)" : "rgba(239,68,68,0.20)"}`,
+          }}
+        >
+          <div className="flex items-center justify-center gap-1.5 mb-2" style={{ color: balance >= 0 ? "rgba(74,222,128,0.7)" : "rgba(239,68,68,0.7)" }}>
+            <Wallet className="w-3.5 h-3.5" />
+            <span className="text-[10px] font-semibold uppercase tracking-widest">Guthaben</span>
+          </div>
+          <p className="text-2xl font-black text-white tabular-nums">
+            {fmt(Math.abs(balance))}<span className="text-sm ml-0.5" style={{ color: balance >= 0 ? "#4ade80" : "#f87171" }}>€</span>
+          </p>
+        </div>
       </div>
 
-      {/* Meine Streak (nur wenn eingeloggt & gespendet) */}
+      {/* Meine Streak */}
       {myEntry && myStreak > 0 && (
         <div
           className="rounded-2xl p-4 flex items-center gap-4"
@@ -113,14 +155,46 @@ export default async function DonationsPage() {
             <p className="text-xs text-gray-500">Danke für deine Unterstützung 💚</p>
           </div>
           {streakBadge(myStreak) && (
-            <span
-              className="ml-auto text-xs font-bold px-2.5 py-1 rounded-lg shrink-0"
-              style={{ color: streakBadge(myStreak)!.color, background: streakBadge(myStreak)!.bg }}
-            >
+            <span className="ml-auto text-xs font-bold px-2.5 py-1 rounded-lg shrink-0"
+              style={{ color: streakBadge(myStreak)!.color, background: streakBadge(myStreak)!.bg }}>
               {streakBadge(myStreak)!.label}
             </span>
           )}
         </div>
+      )}
+
+      {/* Ausgaben-Liste */}
+      {expenses.length > 0 && (
+        <section>
+          <div className="flex items-center gap-2 mb-3">
+            <ShoppingCart className="w-4 h-4 text-gray-500" />
+            <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Wofür wurde gespendet?</h2>
+          </div>
+          <div className="space-y-2">
+            {expenses.map(e => (
+              <div
+                key={e.id}
+                className="flex items-start gap-3 px-4 py-3 rounded-xl"
+                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
+              >
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
+                  style={{ background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.15)" }}
+                >
+                  <ShoppingCart className="w-4 h-4 text-red-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white">{e.title}</p>
+                  {e.description && <p className="text-xs text-gray-500 mt-0.5">{e.description}</p>}
+                  <p className="text-xs text-gray-600 mt-1">
+                    {new Date(e.date).toLocaleDateString("de-DE", { day: "2-digit", month: "long", year: "numeric" })}
+                  </p>
+                </div>
+                <span className="text-sm font-bold text-red-400 shrink-0 tabular-nums">−{fmt(e.amount)} €</span>
+              </div>
+            ))}
+          </div>
+        </section>
       )}
 
       {/* Monats-Historie */}
@@ -143,7 +217,7 @@ export default async function DonationsPage() {
                 </div>
                 <div className="flex items-center gap-0.5 text-teal-400 font-bold text-sm">
                   <Euro className="w-3 h-3" />
-                  {m.total.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {fmt(m.total)}
                 </div>
               </div>
             ))}
@@ -161,7 +235,7 @@ export default async function DonationsPage() {
           <div className="space-y-2">
             {donors.map(({ user, streak, totalMonths }) => {
               const badge = streakBadge(streak);
-              const isMe = user.id === myId;
+              const isMe  = user.id === myId;
               return (
                 <div
                   key={user.id}
@@ -172,9 +246,11 @@ export default async function DonationsPage() {
                   }}
                 >
                   {user.image ? (
-                    <Image src={user.image} alt={user.name ?? ""} width={36} height={36} className="w-9 h-9 rounded-full shrink-0" style={{ outline: "1px solid rgba(20,184,166,0.2)" }} />
+                    <Image src={user.image} alt={user.name ?? ""} width={36} height={36}
+                      className="w-9 h-9 rounded-full shrink-0" style={{ outline: "1px solid rgba(20,184,166,0.2)" }} />
                   ) : (
-                    <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0" style={{ background: "linear-gradient(135deg,#0d9488,#115e59)" }}>
+                    <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0"
+                      style={{ background: "linear-gradient(135deg,#0d9488,#115e59)" }}>
                       {user.name?.[0] ?? "?"}
                     </div>
                   )}
@@ -189,10 +265,8 @@ export default async function DonationsPage() {
                     </p>
                   </div>
                   {badge && (
-                    <span
-                      className="text-xs font-bold px-2 py-1 rounded-lg shrink-0"
-                      style={{ color: badge.color, background: badge.bg }}
-                    >
+                    <span className="text-xs font-bold px-2 py-1 rounded-lg shrink-0"
+                      style={{ color: badge.color, background: badge.bg }}>
                       {badge.label}
                     </span>
                   )}
