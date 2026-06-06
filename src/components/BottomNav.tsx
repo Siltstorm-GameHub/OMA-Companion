@@ -1,13 +1,12 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, CalendarDays, Trophy, Scroll, User, Star } from "lucide-react";
+import { LayoutDashboard, CalendarDays, ShoppingBag, Trophy, User } from "lucide-react";
 
 const NAV = [
   { label: "Home",      href: "/dashboard",  icon: LayoutDashboard },
   { label: "Events",    href: "/events",      icon: CalendarDays },
-  { label: "Quests",    href: "/quests",      icon: Scroll },
-  { label: "Liga",      href: "/lul",         icon: Star },
+  { label: "Shop",      href: "/shop",        icon: ShoppingBag },
   { label: "Rangliste", href: "/leaderboard", icon: Trophy },
   { label: "Profil",    href: "/profile",     icon: User },
 ];
@@ -17,39 +16,65 @@ export default function BottomNav() {
 
   return (
     <nav
-      style={{ background: "rgba(7,7,14,0.96)" }}
-      className="fixed bottom-0 left-0 right-0 z-40 md:hidden backdrop-blur-2xl border-t border-white/[0.07] safe-area-pb"
+      style={{ background: "rgba(4,10,9,0.97)", borderTop: "1px solid rgba(20,184,166,0.09)" }}
+      className="fixed bottom-0 left-0 right-0 z-40 md:hidden backdrop-blur-2xl safe-area-pb"
     >
-      <div className="flex items-stretch h-16 overflow-x-auto scrollbar-none px-1">
+      <div className="flex items-stretch h-16">
         {NAV.map(({ label, href, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + "/");
           return (
             <Link
               key={href}
               href={href}
-              className="flex-shrink-0 flex flex-col items-center justify-center gap-1 relative transition-colors px-3 min-w-[60px]"
+              className="flex-1 flex flex-col items-center justify-center relative"
             >
-              {/* Neon top indicator */}
+              {/* Teal top indicator */}
               {active && (
-                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-b-full bg-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.9),0_2px_14px_rgba(244,63,94,0.5)]" />
+                <span
+                  className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[2px] rounded-b-full"
+                  style={{
+                    background: "#14b8a6",
+                    boxShadow: "0 0 10px rgba(20,184,166,0.9), 0 2px 16px rgba(20,184,166,0.5)",
+                  }}
+                />
               )}
 
-              <div className={`flex items-center justify-center w-9 h-9 rounded-xl transition-all ${
-                active
-                  ? "bg-rose-500/15 shadow-[0_0_20px_rgba(244,63,94,0.2)]"
-                  : "text-gray-600"
-              }`}>
+              {/* Icon chip */}
+              <div
+                className="flex items-center justify-center rounded-xl transition-all duration-200"
+                style={{
+                  width: active ? 44 : 36,
+                  height: active ? 32 : 32,
+                  background: active ? "rgba(20,184,166,0.12)" : "transparent",
+                  boxShadow: active ? "0 0 16px rgba(20,184,166,0.18)" : "none",
+                  border: active ? "1px solid rgba(20,184,166,0.20)" : "1px solid transparent",
+                }}
+              >
                 <Icon
-                  className={`w-5 h-5 transition-all ${
-                    active ? "text-rose-400 drop-shadow-[0_0_6px_rgba(244,63,94,0.9)]" : ""
-                  }`}
-                  style={{ transform: active ? "scale(1.15)" : "scale(1)" }}
-                  strokeWidth={active ? 2.5 : 2}
+                  style={{
+                    width: 20,
+                    height: 20,
+                    color: active ? "#2dd4bf" : "#4b5563",
+                    filter: active ? "drop-shadow(0 0 5px rgba(20,184,166,0.8))" : "none",
+                    strokeWidth: active ? 2.5 : 2,
+                    transition: "all 200ms",
+                  }}
                 />
               </div>
-              <span className={`text-[9px] font-semibold tracking-wide leading-none whitespace-nowrap ${
-                active ? "text-rose-400" : "text-gray-600"
-              }`}>
+
+              {/* Label — only visible when active */}
+              <span
+                style={{
+                  fontSize: 9,
+                  fontWeight: 600,
+                  letterSpacing: "0.05em",
+                  marginTop: 3,
+                  lineHeight: 1,
+                  color: active ? "#2dd4bf" : "transparent",
+                  transition: "color 200ms",
+                  userSelect: "none",
+                }}
+              >
                 {label}
               </span>
             </Link>
