@@ -4,12 +4,17 @@ import { prisma } from "@/lib/prisma";
 
 export async function PATCH(req: NextRequest) {
   await requireRole("moderator");
-  const { eventId, ...data } = await req.json();
+  const body = await req.json();
+  const { eventId, removeUserId, ...data } = body;
   if (!eventId) return NextResponse.json({ error: "eventId fehlt" }, { status: 400 });
-  const event = await prisma.event.update({
-    where: { id: eventId },
-    data,
-  });
+
+  // Teilnehmer aus Event entfernen (Moderator-Aktion)
+  if (removeUserId) {
+    await prisma.eventRegistration.deleteMany({ where: { eventId, userId: removeUserId } });
+    return NextResponse.json({ ok: true });
+  }
+
+  const event = await prisma.event.update({ where: { id: eventId }, data });
   return NextResponse.json(event);
 }
 
