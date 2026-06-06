@@ -7,7 +7,6 @@ const CATEGORY_ICONS: Record<PointCategory, string> = {
   turnier:    "⚔️",
   event:      "📅",
   aktivitaet: "🎙️",
-  streak:     "🔥",
   community:  "👥",
 };
 
