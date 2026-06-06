@@ -242,7 +242,7 @@ button:active, [role="button"]:active { transform: scale(0.97); }
 }
 
 /* Toaster: stay above BottomNav on mobile */
-@media (max-width: 767px) {
+@media (max-width: 1023px) {
   [data-sonner-toaster] {
     bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px)) !important;
   }
