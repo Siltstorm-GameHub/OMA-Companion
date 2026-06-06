@@ -4,7 +4,7 @@ import Sidebar from "@/components/Sidebar";
 import MobileTopBar from "@/components/MobileTopBar";
 import { OnboardingModal } from "@/components/OnboardingModal";
 import { BackToTop } from "@/components/BackToTop";
-import ParticleBackground from "@/components/ParticleBackground";
+import AuroraBackground from "@/components/AuroraBackground";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -13,8 +13,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <div className="flex h-screen text-white" style={{ background: "#06100e" }}>
 
-      {/* ── Particle Field Hintergrund ────────────────────────────── */}
-      <ParticleBackground />
+      {/* ── Aurora Hintergrund ───────────────────────────────────── */}
+      <AuroraBackground />
 
       {/* Desktop Sidebar */}
       <Sidebar />
