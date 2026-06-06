@@ -541,8 +541,6 @@ export default function TournamentManager({
       statFields.forEach(f => { if (row[f]) stats[f] = Number(row[f]); });
       return {
         id: e.id,
-        placement: row["__placement"] ? Number(row["__placement"]) : (e.placement ?? null),
-        score:     row["__score"]     ? Number(row["__score"])     : (e.score ?? null),
         statsJson: Object.keys(stats).length ? stats : null,
       };
     });
@@ -918,7 +916,6 @@ export default function TournamentManager({
                               {statFields.map(f => (
                                 <th key={f} className="text-center py-1.5 px-2 font-medium">{f}</th>
                               ))}
-                              <th className="text-center py-1.5 px-2 font-medium">Platz</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -940,13 +937,6 @@ export default function TournamentManager({
                                       />
                                     </td>
                                   ))}
-                                  <td className="py-1 px-2 text-center">
-                                    <input type="number" placeholder="–" min={1}
-                                      value={row["__placement"] ?? (entry.placement !== null ? String(entry.placement) : "")}
-                                      onChange={e => setFfaField(match.id, entry.userId ?? "", "__placement", e.target.value)}
-                                      className="w-14 bg-gray-700 border border-gray-600 text-white rounded px-1.5 py-1 text-center text-xs"
-                                    />
-                                  </td>
                                 </tr>
                               );
                             })}
