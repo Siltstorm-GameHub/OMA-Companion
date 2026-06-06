@@ -102,6 +102,12 @@ body::after {
 /* Content above blobs */
 #__next, main, aside, header, nav, footer { position: relative; z-index: 2; }
 
+/* Desktop sidebar: hide on mobile, show on md+ */
+aside.sidebar-desktop { display: none; }
+@media (min-width: 768px) {
+  aside.sidebar-desktop { display: flex; }
+}
+
 /* ── 3D Card System ─────────────────────────────────────────────── */
 /* Mehrschichtige Shadows: nahe + ferne Schatten + Teal-Glühen + Inset-Highlight */
 .card-hover {
