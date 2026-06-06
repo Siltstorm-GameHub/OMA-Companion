@@ -23,9 +23,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       </div>
 
       {/* Desktop Sidebar */}
-      <div className="hidden md:flex">
-        <Sidebar />
-      </div>
+      <Sidebar />
 
       {/* Mobile Top Bar + Drawer */}
       <MobileTopBar />

@@ -65,7 +65,7 @@ export default function Sidebar() {
   return (
     <aside
       style={{ background: "rgba(4,10,9,0.94)", borderRight: "1px solid rgba(20,184,166,0.09)" }}
-      className={`flex flex-col shrink-0 backdrop-blur-2xl transition-all duration-200 ${
+      className={`hidden md:flex flex-col shrink-0 backdrop-blur-2xl transition-all duration-200 ${
         collapsed ? "w-14" : "w-48"
       }`}
     >
