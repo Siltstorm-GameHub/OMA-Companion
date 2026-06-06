@@ -342,6 +342,15 @@ model UserQuestProgress {
 
 // ── Spendenpool ─────────────────────────────────────────────────────────────
 
+model PoolExpense {
+  id          String   @id @default(cuid())
+  title       String   // z.B. "Minecraft Server Oktober"
+  description String?  // optionale Details
+  amount      Float    // in Euro
+  date        DateTime // Datum der Ausgabe
+  createdAt   DateTime @default(now())
+}
+
 model Donation {
   id        String   @id @default(cuid())
   userId    String

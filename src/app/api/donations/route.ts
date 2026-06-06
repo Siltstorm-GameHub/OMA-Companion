@@ -1,15 +1,24 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// Public: Gesamtpool, Spender-Übersicht (ohne Beträge), Monats-Historie
+// Public: Gesamtpool, Ausgaben, Spender-Übersicht (ohne Beträge), Monats-Historie
 export async function GET() {
-  const donations = await prisma.donation.findMany({
-    include: { user: { select: { id: true, name: true, image: true } } },
-    orderBy: [{ year: "asc" }, { month: "asc" }],
-  });
+  const [donations, expenses] = await Promise.all([
+    prisma.donation.findMany({
+      include: { user: { select: { id: true, name: true, image: true } } },
+      orderBy: [{ year: "asc" }, { month: "asc" }],
+    }),
+    prisma.poolExpense.findMany({ orderBy: { date: "desc" } }),
+  ]);
 
-  // Gesamtpool
-  const totalPool = donations.reduce((s, d) => s + d.amount, 0);
+  // Gesamtpool & Bilanz
+  const totalPool    = donations.reduce((s, d) => s + d.amount, 0);
+  const totalSpent   = expenses.reduce((s, e) => s + e.amount, 0);
+  const balance      = totalPool - totalSpent;
+  const publicExpenses = expenses.map(e => ({
+    id: e.id, title: e.title, description: e.description,
+    amount: e.amount, date: e.date,
+  }));
 
   // Monats-Historie: Gesamtbetrag pro Monat (kein User-Betrag)
   const monthlyMap = new Map<string, { year: number; month: number; total: number; donors: number }>();
@@ -42,7 +51,7 @@ export async function GET() {
     return { user, streak, totalMonths };
   }).sort((a, b) => b.streak - a.streak || b.totalMonths - a.totalMonths);
 
-  return NextResponse.json({ totalPool, months, donors });
+  return NextResponse.json({ totalPool, totalSpent, balance, expenses: publicExpenses, months, donors });
 }
 
 function calcStreak(entries: { year: number; month: number }[]): number {
