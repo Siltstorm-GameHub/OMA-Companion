@@ -68,6 +68,17 @@ export default async function TournamentDetailPage({
   const isRegistered = event.registrations.some((r) => r.userId === userId);
   const s = STATUS_STYLES[event.status] ?? STATUS_STYLES.finished;
   const t = event.tournament;
+
+  // Alle bekannten Spieler: Turnier-Teilnehmer + Event-Registrierungen zusammenführen,
+  // damit Match-Spieler auch dann aufgelöst werden wenn sie nicht als TournamentParticipant eingetragen sind
+  const mergedParticipants = t
+    ? [
+        ...t.participants,
+        ...event.registrations
+          .filter(r => !t.participants.some(p => p.userId === r.userId))
+          .map(r => ({ userId: r.user.id, user: r.user })),
+      ]
+    : [];
   const format = t?.format ?? "single_elimination";
   const isFfa         = format === "ffa" || format === "coop_stats";
   const isElimination = format === "single_elimination" || format === "double_elimination";
