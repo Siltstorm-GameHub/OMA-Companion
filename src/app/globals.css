@@ -323,6 +323,38 @@ button:active, [role="button"]:active { transform: scale(0.97); }
 }
 .pulse-glow-rose { animation: pulse-glow-teal 2.5s ease-in-out infinite; }
 
+/* ── Aurora Background — Blob-Animationen ───────────────────────── */
+
+/* Teal-Blob: oben-links → zieht diagonal nach rechts-unten und zurück */
+@keyframes aurora-teal {
+  0%   { transform: translate(0%,    0%)   scale(1.00); }
+  25%  { transform: translate(12%,   8%)   scale(1.08); }
+  50%  { transform: translate(18%,  15%)   scale(0.95); }
+  75%  { transform: translate(6%,    6%)   scale(1.05); }
+  100% { transform: translate(0%,    0%)   scale(1.00); }
+}
+
+/* Burgund-Blob: unten-rechts → zieht diagonal nach links-oben und zurück */
+@keyframes aurora-crimson {
+  0%   { transform: translate(0%,    0%)   scale(1.00); }
+  25%  { transform: translate(-10%, -7%)   scale(1.06); }
+  50%  { transform: translate(-20%, -12%)  scale(0.94); }
+  75%  { transform: translate(-8%,  -5%)   scale(1.04); }
+  100% { transform: translate(0%,    0%)   scale(1.00); }
+}
+
+/* Kleiner Akzent-Blob: leicht kreisend */
+@keyframes aurora-accent {
+  0%   { transform: translate(0%,  0%)  scale(1.00); }
+  33%  { transform: translate(8%,  -6%) scale(1.12); }
+  66%  { transform: translate(-6%, 8%)  scale(0.92); }
+  100% { transform: translate(0%,  0%)  scale(1.00); }
+}
+
+.aurora-blob--teal    { animation: aurora-teal    18s ease-in-out infinite; }
+.aurora-blob--crimson { animation: aurora-crimson 22s ease-in-out infinite; }
+.aurora-blob--accent  { animation: aurora-accent  14s ease-in-out infinite; }
+
 /* ── Particle Field — Animationen ───────────────────────────────── */
 
 /* Normale Sterne: starkes Twinkle — fast komplett aus, dann hell auf */
