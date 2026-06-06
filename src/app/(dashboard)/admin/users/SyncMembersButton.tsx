@@ -14,7 +14,7 @@ export default function SyncMembersButton() {
     const res = await fetch("/api/admin/sync-members", { method: "POST" });
     const data = await res.json();
     if (data.success) {
-      setResult(`✅ ${data.total} Mitglieder · ${data.created} neu · ${data.updated} aktualisiert`);
+      setResult(`✅ ${data.total} Mitglieder · ${data.created} neu · ${data.updated} aktualisiert · ${data.total - data.created - data.updated} unverändert`);
       router.refresh();
     } else {
       setResult(`❌ ${data.error}`);

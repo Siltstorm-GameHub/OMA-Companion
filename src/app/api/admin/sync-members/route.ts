@@ -4,7 +4,7 @@ import { requireRole } from "@/lib/roles";
 export async function POST() {
   await requireRole("admin");
 
-  const guildId = process.env.DISCORD_GUILD_ID;
+  const guildId  = process.env.DISCORD_GUILD_ID;
   const botToken = process.env.DISCORD_BOT_TOKEN;
 
   if (!guildId || !botToken) {
@@ -16,18 +16,29 @@ export async function POST() {
 
   const { prisma } = await import("@/lib/prisma");
 
+  // ── Alle Guild-Mitglieder von Discord laden (paginiert à 1000) ────────
   let after = "0";
   let allMembers: DiscordMember[] = [];
 
-  // Discord paginiert Mitglieder in 1000er-Blöcken
   while (true) {
     const res = await fetch(
       `https://discord.com/api/v10/guilds/${guildId}/members?limit=1000&after=${after}`,
       { headers: { Authorization: `Bot ${botToken}` } }
     );
+
     if (!res.ok) {
-      return NextResponse.json({ error: `Discord API Fehler: ${res.status}` }, { status: 500 });
+      const body = await res.text();
+      const hint = res.status === 403
+        ? " — Stelle sicher dass der Bot den 'Server Members Intent' im Discord Developer Portal aktiviert hat (Privileged Gateway Intents)"
+        : res.status === 401
+        ? " — DISCORD_BOT_TOKEN ist ungültig"
+        : "";
+      return NextResponse.json(
+        { error: `Discord API Fehler ${res.status}${hint}: ${body}` },
+        { status: 500 }
+      );
     }
+
     const batch: DiscordMember[] = await res.json();
     if (!batch.length) break;
     allMembers = [...allMembers, ...batch];
@@ -38,20 +49,20 @@ export async function POST() {
   // Bots herausfiltern
   const humans = allMembers.filter((m) => !m.user.bot);
 
+  let created = 0;
   let updated = 0;
-  let skipped = 0;
 
   for (const member of humans) {
     const discordId = member.user.id;
-    const username = member.nick ?? member.user.global_name ?? member.user.username;
-    const avatar = member.user.avatar
+    const username  = member.nick ?? member.user.global_name ?? member.user.username;
+    const avatar    = member.user.avatar
       ? `https://cdn.discordapp.com/avatars/${discordId}/${member.user.avatar}.png`
       : null;
 
     // 1. Per discordId suchen (bereits verknüpfte User)
     let existing = await prisma.user.findUnique({ where: { discordId } });
 
-    // 2. Falls nicht gefunden: über Account-Tabelle suchen (OAuth-Login ohne discordId)
+    // 2. Falls nicht gefunden: über Account-Tabelle suchen (OAuth-Login ohne discordId im User)
     if (!existing) {
       const account = await prisma.account.findUnique({
         where: {
@@ -61,26 +72,52 @@ export async function POST() {
       });
       if (account?.user) {
         existing = account.user;
-        // discordId nachträglich setzen damit zukünftige Syncs direkt treffen
-        await prisma.user.update({
-          where: { id: existing.id },
-          data: { discordId },
-        });
+        // discordId nachträglich setzen damit zukünftige Syncs direkt greifen
+        await prisma.user.update({ where: { id: existing.id }, data: { discordId } });
       }
     }
 
     if (existing) {
+      // Vorhandenen User aktualisieren (Name + Avatar)
       await prisma.user.update({
         where: { id: existing.id },
-        data: { username, image: avatar ?? existing.image },
+        data: {
+          username,
+          // Avatar nur überschreiben wenn kein benutzerdefiniertes Bild vorhanden
+          ...(avatar && { image: avatar }),
+        },
       });
       updated++;
     } else {
-      skipped++; // Noch kein Account → muss sich selbst einloggen
+      // Neuen Stub-User anlegen + Account-Eintrag erstellen damit
+      // der PrismaAdapter beim Discord-OAuth-Login den User findet und korrekt verknüpft
+      // (ohne Account-Eintrag würde NextAuth einen zweiten Duplikat-User anlegen)
+      const newUser = await prisma.user.create({
+        data: {
+          discordId,
+          username,
+          name: username,
+          image: avatar,
+        },
+      });
+      await prisma.account.create({
+        data: {
+          userId:            newUser.id,
+          type:              "oauth",
+          provider:          "discord",
+          providerAccountId: discordId,
+        },
+      });
+      created++;
     }
   }
 
-  return NextResponse.json({ success: true, total: humans.length, updated, skipped });
+  return NextResponse.json({
+    success: true,
+    total:   humans.length,
+    created,
+    updated,
+  });
 }
 
 interface DiscordMember {
