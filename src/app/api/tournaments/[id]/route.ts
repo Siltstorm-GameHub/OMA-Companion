@@ -3,6 +3,38 @@ import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { generateRoundRobin } from "@/app/api/tournaments/route";
 
+// Gesamtranking für FFA/coop_stats berechnen: Stats über alle Matches summieren,
+// dann nach erstem Stat-Feld absteigend sortieren (weitere Felder als Tiebreaker)
+async function calcFfaRanking(tournamentId: string, statFields: string[]) {
+  const matches = await prisma.match.findMany({
+    where: { tournamentId, playedAt: { not: null } },
+    include: { entries: true },
+  });
+
+  const totals = new Map<string, { userId: string; stats: Record<string, number> }>();
+  for (const match of matches) {
+    for (const entry of match.entries) {
+      if (!entry.userId) continue;
+      if (!totals.has(entry.userId)) totals.set(entry.userId, { userId: entry.userId, stats: {} });
+      const t = totals.get(entry.userId)!;
+      if (entry.statsJson) {
+        const s = JSON.parse(entry.statsJson) as Record<string, number>;
+        for (const [k, v] of Object.entries(s)) {
+          t.stats[k] = (t.stats[k] ?? 0) + v;
+        }
+      }
+    }
+  }
+
+  return [...totals.values()].sort((a, b) => {
+    for (const f of statFields) {
+      const diff = (b.stats[f] ?? 0) - (a.stats[f] ?? 0);
+      if (diff !== 0) return diff;
+    }
+    return 0;
+  });
+}
+
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   await requireRole("moderator");
   const { id } = await params;
@@ -26,6 +58,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ generated: matchData.length });
   }
 
+  const existing = await prisma.tournament.findUnique({
+    where: { id },
+    select: { format: true, statFields: true, pointsConfig: true, status: true },
+  });
+
   const tournament = await prisma.tournament.update({
     where: { id },
     data: {
@@ -34,6 +71,35 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ...(statFields   !== undefined && { statFields:   statFields   ? JSON.stringify(statFields)   : null }),
     },
   });
+
+  // FFA/coop_stats: Punkte vergeben wenn Status → "finished"
+  const isFfa = existing?.format === "ffa" || existing?.format === "coop_stats";
+  if (isFfa && status === "finished" && existing?.status !== "finished") {
+    const fields: string[] = existing?.statFields ? JSON.parse(existing.statFields) : [];
+    const cfgRaw = existing?.pointsConfig ?? tournament.pointsConfig;
+    const cfg = cfgRaw ? JSON.parse(cfgRaw) as Record<string, number | { coins: number; points: number }> : null;
+
+    if (cfg && fields.length > 0) {
+      const ranked = await calcFfaRanking(id, fields);
+      for (let i = 0; i < Math.min(ranked.length, 3); i++) {
+        const { userId } = ranked[i];
+        const placement  = i + 1;
+        const raw        = cfg[String(placement)];
+        if (!raw) continue;
+        const coins   = typeof raw === "number" ? raw : (raw.coins ?? 0);
+        const rankPts = typeof raw === "number" ? 0  : (raw.points ?? 0);
+        await prisma.$transaction([
+          prisma.user.update({
+            where: { id: userId },
+            data:  { points: { increment: coins }, ...(rankPts > 0 && { rankPoints: { increment: rankPts } }) },
+          }),
+          prisma.pointTransaction.create({
+            data: { userId, amount: coins, reason: `Platz ${placement} im Turnier (Gesamt-Stats)` },
+          }),
+        ]);
+      }
+    }
+  }
 
   return NextResponse.json(tournament);
 }

@@ -88,15 +88,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json(reset);
   }
 
-  // FFA / coop_stats: update per-player entries + award placement points
+  // FFA / coop_stats: Stats pro Match speichern (keine Platzierung, keine Punkte hier)
+  // Gesamtranking + Punktevergabe erfolgt beim Abschluss des Turniers (status → "finished")
   if (entries) {
     await Promise.all(
-      entries.map((e: { id: string; placement?: number | null; score?: number | null; statsJson?: Record<string, number> | null }) =>
+      entries.map((e: { id: string; statsJson?: Record<string, number> | null }) =>
         prisma.matchEntry.update({
           where: { id: e.id },
           data: {
-            placement: e.placement ?? null,
-            score: e.score ?? null,
+            placement: null,
+            score:     null,
             statsJson: e.statsJson ? JSON.stringify(e.statsJson) : null,
           },
         })
@@ -108,32 +109,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       data: { playedAt: new Date() },
       include: { entries: true },
     });
-
-    // Award points based on placement and tournament pointsConfig
-    const tournament = await prisma.tournament.findUnique({
-      where: { id: tournamentId },
-      select: { pointsConfig: true },
-    });
-    if (tournament?.pointsConfig) {
-      const config = JSON.parse(tournament.pointsConfig) as Record<string, number | { coins: number; points: number }>;
-      for (const entry of entries) {
-        if (entry.placement == null || !entry.userId) continue;
-        const raw = config[String(entry.placement)];
-        if (!raw) continue;
-        const coins      = typeof raw === "number" ? raw : raw.coins;
-        const rankPts    = typeof raw === "number" ? raw : raw.points;
-        const isTopThree = entry.placement <= 3;
-        await prisma.$transaction([
-          prisma.user.update({
-            where: { id: entry.userId },
-            data:  { points: { increment: coins }, ...(isTopThree && rankPts > 0 && { rankPoints: { increment: rankPts } }) },
-          }),
-          prisma.pointTransaction.create({
-            data: { userId: entry.userId, amount: coins, reason: `Platz ${entry.placement} im Turnier` },
-          }),
-        ]);
-      }
-    }
 
     return NextResponse.json(match);
   }
