@@ -486,7 +486,7 @@ export default function TournamentManager({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        title: mTitle || null, scheduledAt: mScheduled || null,
+        title: mTitle || null, scheduledAt: mScheduled ? new Date(mScheduled).toISOString() : null,
         notes: mNotes || null, round: mRound,
         player1Id: is1v1 ? mP1 || null : null,
         player2Id: is1v1 ? mP2 || null : null,
