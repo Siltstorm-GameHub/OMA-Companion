@@ -248,28 +248,28 @@ export default async function TournamentDetailPage({
             {isElimination && (
               <BracketView
                 matches={t.matches as Parameters<typeof BracketView>[0]["matches"]}
-                participants={t.participants}
+                participants={mergedParticipants}
                 userId={userId}
               />
             )}
             {isRoundRobin && (
               <RoundRobinView
                 matches={t.matches as Parameters<typeof RoundRobinView>[0]["matches"]}
-                participants={t.participants}
+                participants={mergedParticipants}
                 userId={userId}
               />
             )}
             {isLiga && (
               <LigaView
                 matches={t.matches as Parameters<typeof LigaView>[0]["matches"]}
-                participants={t.participants}
+                participants={mergedParticipants}
                 userId={userId}
               />
             )}
             {isFfa && (
               <FfaView
                 matches={t.matches as Parameters<typeof FfaView>[0]["matches"]}
-                participants={t.participants}
+                participants={mergedParticipants}
                 statFields={t.statFields ? JSON.parse(t.statFields) : []}
                 userId={userId}
               />
