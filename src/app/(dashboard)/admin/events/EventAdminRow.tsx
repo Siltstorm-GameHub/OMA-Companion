@@ -3,7 +3,7 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { ChevronDown, ChevronUp, Trophy, Settings, Users, UserPlus, Search, Trash2, AlertTriangle } from "lucide-react";
+import { ChevronDown, ChevronUp, Trophy, Settings, Users, UserPlus, UserMinus, Search, Trash2, AlertTriangle } from "lucide-react";
 import TournamentManager from "./TournamentManager";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };
@@ -85,6 +85,19 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
     setLoading(false);
     if (res.ok) toast.success("Event-Einstellungen gespeichert");
     else toast.error("Fehler beim Speichern");
+    router.refresh();
+  }
+
+  async function removeUser(userId: string, name: string) {
+    if (!confirm(`"${name}" wirklich aus dem Event entfernen?`)) return;
+    setLoading(true);
+    await fetch("/api/admin/events", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ eventId: event.id, removeUserId: userId }),
+    });
+    setLoading(false);
+    toast.success(`${name} entfernt`);
     router.refresh();
   }
 
@@ -298,14 +311,24 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
                           {isReg && <span className="text-xs text-green-700 ml-2">angemeldet</span>}
                         </span>
 
-                        {/* Einzeln hinzufügen */}
-                        {!isReg && (
+                        {/* Hinzufügen / Entfernen */}
+                        {!isReg ? (
                           <button
                             onClick={() => addSingleUser(u.id)}
                             disabled={loading}
+                            title="Hinzufügen"
                             className="shrink-0 text-xs text-gray-500 hover:text-rose-400 hover:bg-rose-900/30 px-2 py-1 rounded transition-colors disabled:opacity-50"
                           >
                             <UserPlus className="w-3.5 h-3.5" />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => removeUser(u.id, userName(u))}
+                            disabled={loading}
+                            title="Aus Event entfernen"
+                            className="shrink-0 text-xs text-gray-600 hover:text-red-400 hover:bg-red-900/30 px-2 py-1 rounded transition-colors disabled:opacity-50"
+                          >
+                            <UserMinus className="w-3.5 h-3.5" />
                           </button>
                         )}
                       </div>
