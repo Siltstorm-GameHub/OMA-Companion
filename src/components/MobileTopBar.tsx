@@ -81,7 +81,7 @@ export default function MobileTopBar() {
       {/* ── Top bar ─────────────────────────────────────────────── */}
       <header
         style={{ background: "rgba(4,10,9,0.95)", borderBottom: "1px solid rgba(20,184,166,0.09)" }}
-        className="fixed top-0 left-0 right-0 z-40 md:hidden h-14 backdrop-blur-2xl flex items-center px-4 gap-3"
+        className="fixed top-0 left-0 right-0 z-40 lg:hidden h-14 backdrop-blur-2xl flex items-center px-4 gap-3"
       >
         {/* Subtile Teal-Linie oben */}
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-teal-500/40 to-transparent pointer-events-none" />
@@ -105,7 +105,7 @@ export default function MobileTopBar() {
       {/* ── Overlay (z-[48] damit es unter dem Drawer liegt) ────── */}
       {open && (
         <div
-          className="fixed inset-0 z-[48] md:hidden bg-black/70"
+          className="fixed inset-0 z-[48] lg:hidden bg-black/70"
           onClick={() => setOpen(false)}
           onTouchEnd={() => setOpen(false)}
         />
@@ -120,7 +120,7 @@ export default function MobileTopBar() {
           transition: dragging ? "none" : "transform 300ms cubic-bezier(0.16,1,0.3,1)",
           opacity: open ? Math.max(0.5, 1 + dragX / 256) : 1,
         }}
-        className="fixed top-0 left-0 bottom-0 z-[49] md:hidden w-64 flex flex-col backdrop-blur-xl"
+        className="fixed top-0 left-0 bottom-0 z-[49] lg:hidden w-64 flex flex-col backdrop-blur-xl"
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
