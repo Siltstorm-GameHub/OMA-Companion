@@ -37,11 +37,22 @@ export default function Sidebar() {
   const { data: session } = useSession();
   const [collapsed, setCollapsed] = useState(false);
   const [goal, setGoal] = useState<GoalData | null>(null);
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    setIsDesktop(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   useEffect(() => {
     const saved = localStorage.getItem("sidebar-collapsed");
     if (saved === "true") setCollapsed(true);
   }, []);
+
+  if (!isDesktop) return null;
 
   useEffect(() => {
     fetch("/api/shop/goal")
@@ -65,7 +76,7 @@ export default function Sidebar() {
   return (
     <aside
       style={{ background: "rgba(4,10,9,0.94)", borderRight: "1px solid rgba(20,184,166,0.09)" }}
-      className={`sidebar-desktop flex-col shrink-0 backdrop-blur-2xl transition-all duration-200 ${
+      className={`flex flex-col shrink-0 backdrop-blur-2xl transition-all duration-200 ${
         collapsed ? "w-14" : "w-48"
       }`}
     >
