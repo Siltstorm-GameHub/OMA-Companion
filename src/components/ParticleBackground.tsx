@@ -104,16 +104,21 @@ const PARTICLES: {
   { x: 96.7, y: 22.9, size: 1,   opacity: 0.23, delay:  280 },
 
   // ── Teal-Glow-Partikel (pulsieren stärker) ────────────────────────
-  { x: 10.2, y: 28.7, size: 3,   opacity: 0.9,  teal: true, delay:    0 },
-  { x: 26.5, y: 61.3, size: 2.5, opacity: 0.85, teal: true, delay:  700 },
-  { x: 44.8, y: 12.4, size: 3.5, opacity: 0.9,  teal: true, delay: 1400 },
-  { x: 61.7, y: 78.9, size: 2.5, opacity: 0.85, teal: true, delay:  350 },
-  { x: 34.3, y: 91.6, size: 2,   opacity: 0.80, teal: true, delay: 1050 },
-  { x: 73.9, y: 42.8, size: 3,   opacity: 0.9,  teal: true, delay: 1750 },
-  { x: 88.1, y: 20.5, size: 2.5, opacity: 0.85, teal: true, delay:  525 },
-  { x: 17.6, y: 56.2, size: 2,   opacity: 0.80, teal: true, delay: 1225 },
-  { x: 53.4, y: 34.1, size: 3,   opacity: 0.9,  teal: true, delay:  875 },
-  { x: 95.2, y: 68.4, size: 2.5, opacity: 0.85, teal: true, delay: 1575 },
+  { x:  5.8, y: 18.3, size: 2.5, opacity: 0.85, teal: true, delay:    0 },
+  { x: 14.1, y: 72.6, size: 3,   opacity: 0.90, teal: true, delay:  620 },
+  { x: 22.7, y: 38.4, size: 2,   opacity: 0.80, teal: true, delay: 1310 },
+  { x: 31.5, y: 91.2, size: 3.5, opacity: 0.90, teal: true, delay:  450 },
+  { x: 40.3, y:  7.9, size: 2.5, opacity: 0.85, teal: true, delay: 1740 },
+  { x: 49.0, y: 55.7, size: 3,   opacity: 0.90, teal: true, delay:  890 },
+  { x: 57.6, y: 27.1, size: 2,   opacity: 0.80, teal: true, delay:  230 },
+  { x: 65.4, y: 81.3, size: 2.5, opacity: 0.85, teal: true, delay: 1560 },
+  { x: 72.9, y: 14.6, size: 3,   opacity: 0.90, teal: true, delay:  750 },
+  { x: 80.2, y: 46.8, size: 3.5, opacity: 0.90, teal: true, delay: 1140 },
+  { x: 87.8, y: 69.5, size: 2,   opacity: 0.80, teal: true, delay:  380 },
+  { x: 93.5, y: 31.2, size: 2.5, opacity: 0.85, teal: true, delay: 1870 },
+  { x: 19.3, y: 49.6, size: 3,   opacity: 0.90, teal: true, delay: 1020 },
+  { x: 44.7, y: 84.3, size: 2.5, opacity: 0.85, teal: true, delay:  560 },
+  { x: 76.5, y:  3.8, size: 3,   opacity: 0.90, teal: true, delay: 1460 },
 ];
 
 export default function ParticleBackground() {
