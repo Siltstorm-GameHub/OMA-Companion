@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { QUEST_TYPE_META, type QuestType } from "@/lib/quests";
 import {
-  Trophy, Star, CalendarDays, Swords, Zap, Clock, // Zap für Streak-Icon
+  Trophy, Star, CalendarDays, Swords, Clock,
   MessageSquare, CheckCircle2, ArrowLeft,
 } from "lucide-react";
 import Link from "next/link";
@@ -17,16 +17,13 @@ interface Badge {
 }
 
 function computeBadges(data: {
-  points: number; maxStreak: number; voiceHours: number;
+  points: number; voiceHours: number;
   messageCount: number; eventCount: number;
   tournamentCount: number; tournamentWins: number;
 }): Badge[] {
-  const { points, maxStreak, voiceHours, messageCount, eventCount, tournamentCount, tournamentWins } = data;
+  const { points, voiceHours, messageCount, eventCount, tournamentCount, tournamentWins } = data;
   return [
     { id: "welcome",   icon: "🎉", name: "Willkommen",      desc: "Erstmals angemeldet",        earned: true,                 category: "community"  },
-    { id: "streak_3",  icon: "🔥", name: "3-Tage-Streak",   desc: "3 Tage am Stück aktiv",      earned: maxStreak >= 3,       category: "community"  },
-    { id: "streak_7",  icon: "🔥", name: "Wochenstreaker",  desc: "7 Tage am Stück aktiv",      earned: maxStreak >= 7,       category: "community"  },
-    { id: "streak_30", icon: "🔥", name: "Monatsstreaker",  desc: "30 Tage am Stück aktiv",     earned: maxStreak >= 30,      category: "community"  },
     { id: "voice_1h",  icon: "🎙️", name: "Voice-Fan",       desc: "1 Stunde im Sprachkanal",    earned: voiceHours >= 1,      category: "aktivitaet" },
     { id: "voice_10h", icon: "🎙️", name: "Voice-Veteran",   desc: "10 Stunden im Sprachkanal",  earned: voiceHours >= 10,     category: "aktivitaet" },
     { id: "voice_50h", icon: "🎙️", name: "Voice-Legende",   desc: "50 Stunden im Sprachkanal",  earned: voiceHours >= 50,     category: "aktivitaet" },
@@ -72,7 +69,7 @@ export default async function PublicProfilePage({
         where: { id },
         select: {
           id: true, name: true, username: true, image: true,
-          points: true, streak: true, createdAt: true,
+          points: true, createdAt: true,
         },
       }),
       // Punkte-Transaktionen — nur für Badge-Berechnung, nicht öffentlich anzeigen
@@ -109,11 +106,7 @@ export default async function PublicProfilePage({
 
   const voiceHours   = transactions.filter(t => t.reason.includes("Sprachkanal")).length;
   const messageCount = transactions.filter(t => t.reason.includes("Nachrichten")).length * 10;
-  const hadStreak7   = transactions.some(t => t.reason.includes("7-Tage"));
-  const hadStreak30  = transactions.some(t => t.reason.includes("30-Tage"));
-  const maxStreak    = hadStreak30 ? 30 : hadStreak7 ? 7 : user.streak >= 3 ? user.streak : 0;
-
-  const badges       = computeBadges({ points: totalPoints, maxStreak, voiceHours, messageCount, eventCount: eventRegs.length, tournamentCount: tournamentParticipations.length, tournamentWins: matchWins });
+  const badges       = computeBadges({ points: totalPoints, voiceHours, messageCount, eventCount: eventRegs.length, tournamentCount: tournamentParticipations.length, tournamentWins: matchWins });
   const earnedBadges = badges.filter(b => b.earned);
   const memberSince  = new Date(user.createdAt).toLocaleDateString("de-DE", { month: "long", year: "numeric" });
   const displayName  = user.username ?? user.name ?? "Unbekannt";
@@ -181,12 +174,11 @@ export default async function PublicProfilePage({
       </div>
 
       {/* ── Stats ───────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {[
           { icon: <Star className="w-4 h-4" />,        label: "Punkte",        value: totalPoints.toLocaleString("de-DE"), iconCls: "text-amber-400   bg-amber-500/10   border-amber-500/15",   accent: "from-amber-500/8"   },
           { icon: <CalendarDays className="w-4 h-4" />, label: "Events",        value: String(eventRegs.length),            iconCls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/15", accent: "from-emerald-500/8" },
           { icon: <Trophy className="w-4 h-4" />,       label: "Turnier-Siege", value: String(matchWins),                   iconCls: "text-rose-400    bg-rose-500/10    border-rose-500/15",    accent: "from-rose-500/8"    },
-          { icon: <Zap className="w-4 h-4" />,          label: "Streak",        value: user.streak > 0 ? `${user.streak}d 🔥` : "–", iconCls: "text-orange-400 bg-orange-500/10 border-orange-500/15", accent: "from-orange-500/8" },
         ].map((s, i) => (
           <div key={s.label} className={`card-hover card-shine glass relative overflow-hidden rounded-2xl p-4 animate-slide-up stagger-${i + 1}`}>
             <div className={`absolute inset-0 bg-gradient-to-br ${s.accent} to-transparent pointer-events-none`} />

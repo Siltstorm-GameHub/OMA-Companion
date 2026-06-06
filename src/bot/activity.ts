@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { awardPoints, checkAndAwardStreak } from "@/lib/points";
+import { awardPoints } from "@/lib/points";
 import { updateQuestProgress } from "@/lib/quests";
 import { notifyQuestCompleted } from "./notify";
 
@@ -19,8 +19,6 @@ export async function trackMessage(discordId: string) {
     console.log(`  ⚠ trackMessage: kein User für Discord-ID ${discordId} gefunden`);
     return;
   }
-
-  await checkAndAwardStreak(user.id);
 
   const count = (messageCounters.get(user.id) ?? 0) + 1;
   messageCounters.set(user.id, count);
@@ -53,8 +51,6 @@ export async function trackVoice(discordId: string, minutes: number) {
     console.log(`  ⚠ trackVoice: kein User für Discord-ID ${discordId} gefunden`);
     return;
   }
-
-  await checkAndAwardStreak(user.id);
 
   // Volle Stunden vergüten
   const fullHours = Math.floor(minutes / 60);

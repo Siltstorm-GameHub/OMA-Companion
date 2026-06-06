@@ -15,7 +15,7 @@ type Donation = {
   month: number;
   year: number;
   note: string | null;
-  createdAt: string;
+  createdAt: Date | string;
   user: { id: string; name: string | null; image: string | null };
 };
 

@@ -19,16 +19,12 @@ export const POINT_RULES = {
   REACTION_RECEIVED:      { amount:    2, reason: "Reaktion erhalten",        category: "aktivitaet" },
   // Community
   INVITE_MEMBER:          { amount:  150, reason: "Mitglied eingeladen 👥",   category: "community" },
-  STREAK_3D:              { amount:   60, reason: "3-Tage-Streak 🔥",         category: "streak" },
-  STREAK_7D:              { amount:  200, reason: "7-Tage-Streak 🔥🔥",       category: "streak" },
-  STREAK_30D:             { amount:  750, reason: "30-Tage-Streak 🔥🔥🔥",    category: "streak" },
-  STREAK_100D:            { amount: 3000, reason: "100-Tage-Streak 👑",       category: "streak" },
   FIRST_LOGIN:            { amount:  100, reason: "Erstes Login 🎉",          category: "community" },
   BIRTHDAY:               { amount:  150, reason: "Geburtstag 🎂",            category: "community" },
 } as const;
 
 export type PointRule     = keyof typeof POINT_RULES;
-export type PointCategory = "turnier" | "event" | "aktivitaet" | "streak" | "community";
+export type PointCategory = "turnier" | "event" | "aktivitaet" | "community";
 
 // Kategorien die auch rankPoints vergeben
 const RANK_POINT_CATEGORIES = new Set<PointCategory>(["turnier", "event"]);
@@ -37,7 +33,6 @@ export const CATEGORY_LABELS: Record<PointCategory, string> = {
   turnier:     "Turniere",
   event:       "Events",
   aktivitaet:  "Discord-Aktivität",
-  streak:      "Streaks",
   community:   "Community",
 };
 
@@ -88,33 +83,3 @@ export async function awardPoints(userId: string, rule: PointRule, customReason?
   return { transaction, user: updated };
 }
 
-// ─── Streak prüfen ─────────────────────────────────────────────────────────
-export async function checkAndAwardStreak(userId: string) {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { streak: true, lastActiveAt: true },
-  });
-  if (!user) return;
-
-  const now       = new Date();
-  const last      = user.lastActiveAt;
-  const yesterday = new Date(now); yesterday.setDate(yesterday.getDate() - 1); yesterday.setHours(0, 0, 0, 0);
-  const today     = new Date(now); today.setHours(0, 0, 0, 0);
-
-  let newStreak = user.streak;
-
-  if (!last || last < yesterday) {
-    newStreak = 1;
-  } else if (last >= yesterday && last < today) {
-    newStreak = user.streak + 1;
-  } else {
-    return;
-  }
-
-  await prisma.user.update({ where: { id: userId }, data: { streak: newStreak, lastActiveAt: now } });
-
-  if (newStreak === 3)   await awardPoints(userId, "STREAK_3D");
-  if (newStreak === 7)   await awardPoints(userId, "STREAK_7D");
-  if (newStreak === 30)  await awardPoints(userId, "STREAK_30D");
-  if (newStreak === 100) await awardPoints(userId, "STREAK_100D");
-}
