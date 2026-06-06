@@ -52,14 +52,15 @@ export default function Sidebar() {
     if (saved === "true") setCollapsed(true);
   }, []);
 
-  if (!isDesktop) return null;
-
   useEffect(() => {
+    if (!isDesktop) return;
     fetch("/api/shop/goal")
       .then(r => r.json())
       .then(data => setGoal(data))
       .catch(() => {});
-  }, [pathname]);
+  }, [pathname, isDesktop]);
+
+  if (!isDesktop) return null;
 
   function toggle() {
     setCollapsed((v) => {
