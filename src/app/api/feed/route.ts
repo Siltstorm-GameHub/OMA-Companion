@@ -48,7 +48,7 @@ export async function GET() {
     ...transactions.map(tx => ({
       id:        `tx-${tx.id}`,
       type:      tx.reason.includes("Level")   ? "levelup"  :
-                 tx.reason.includes("Streak")  ? "streak"   :
+                 tx.reason.includes("Streak")  ? "points"   :
                  tx.reason.includes("Turnier") ? "tournament" :
                  tx.reason.includes("Event")   ? "event"    : "points",
       userId:    tx.user.id,

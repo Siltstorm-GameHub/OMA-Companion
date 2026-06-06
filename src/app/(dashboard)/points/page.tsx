@@ -9,7 +9,6 @@ const CATEGORY_ICONS: Record<PointCategory, string> = {
   turnier:    "🏆",
   event:      "📅",
   aktivitaet: "🎙️",
-  streak:     "🔥",
   community:  "👥",
 };
 
@@ -17,7 +16,6 @@ const CATEGORY_ACCENT: Record<PointCategory, { icon: string; border: string; glo
   turnier:    { icon: "text-amber-400   bg-amber-500/10   border-amber-500/15",   border: "border-amber-500/10",   glow: "from-amber-500/5"   },
   event:      { icon: "text-blue-400    bg-blue-500/10    border-blue-500/15",    border: "border-blue-500/10",    glow: "from-blue-500/5"    },
   aktivitaet: { icon: "text-violet-400  bg-violet-500/10  border-violet-500/15",  border: "border-violet-500/10",  glow: "from-violet-500/5"  },
-  streak:     { icon: "text-orange-400  bg-orange-500/10  border-orange-500/15",  border: "border-orange-500/10",  glow: "from-orange-500/5"  },
   community:  { icon: "text-emerald-400 bg-emerald-500/10 border-emerald-500/15", border: "border-emerald-500/10", glow: "from-emerald-500/5" },
 };
 
@@ -36,7 +34,7 @@ export default async function PointsPage() {
 
   const [me, myTransactions] = await Promise.all([
     userId
-      ? prisma.user.findUnique({ where: { id: userId }, select: { points: true, streak: true } })
+      ? prisma.user.findUnique({ where: { id: userId }, select: { points: true } })
       : null,
     userId
       ? prisma.pointTransaction.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, take: 20 })
@@ -83,15 +81,6 @@ export default async function PointsPage() {
               </p>
             </div>
 
-            <div className="flex gap-3 shrink-0">
-              {me.streak > 0 && (
-                <div className="glass-heavy rounded-xl px-4 py-3 text-center">
-                  <p className="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Streak</p>
-                  <p className="text-2xl font-black text-orange-400 tabular-nums">{me.streak}d</p>
-                  <p className="text-[9px] text-orange-600 mt-0.5">🔥</p>
-                </div>
-              )}
-            </div>
           </div>
         </div>
       )}

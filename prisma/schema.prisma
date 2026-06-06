@@ -20,9 +20,7 @@ model User {
   role          String    @default("user") // user | moderator | admin
   points        Int       @default(0)   // Münzen (Shop-Währung)
   rankPoints    Int       @default(0)   // Prestige-Punkte (Events, Turniere, LuL)
-  streak        Int       @default(0)
   goalItemId    String?   // Shop-Item das als Sparziel gesetzt wurde
-  lastActiveAt  DateTime?
   createdAt     DateTime  @default(now())
 
   // Shop / Cosmetics

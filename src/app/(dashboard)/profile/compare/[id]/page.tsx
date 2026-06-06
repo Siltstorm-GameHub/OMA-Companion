@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Trophy, CalendarDays, Swords, Zap, Star } from "lucide-react";
+import { ArrowLeft, Trophy, CalendarDays, Swords, Star } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -9,7 +9,7 @@ async function fetchUserData(id: string) {
   const [user, eventCount, matchWins, transactions] = await Promise.all([
     prisma.user.findUnique({
       where: { id },
-      select: { id: true, name: true, username: true, image: true, points: true, streak: true },
+      select: { id: true, name: true, username: true, image: true, points: true },
     }),
     prisma.eventRegistration.count({ where: { userId: id } }),
     prisma.match.count({ where: { winnerId: id } }),
@@ -84,7 +84,6 @@ export default async function CompareProfilePage({
     { icon: <Star className="w-4 h-4" />,        label: "Punkte",         valA: me.points,       valB: opponent.points,       colorA: "bg-amber-500",  colorB: "bg-amber-400/50"  },
     { icon: <Trophy className="w-4 h-4" />,       label: "Turnier-Siege",  valA: me.matchWins,    valB: opponent.matchWins,    colorA: "bg-rose-500",   colorB: "bg-rose-400/50"   },
     { icon: <CalendarDays className="w-4 h-4" />, label: "Events",         valA: me.eventCount,   valB: opponent.eventCount,   colorA: "bg-blue-500",   colorB: "bg-blue-400/50"   },
-    { icon: <Zap className="w-4 h-4" />,          label: "Streak (Tage)",  valA: me.streak,       valB: opponent.streak,       colorA: "bg-orange-500", colorB: "bg-orange-400/50" },
     { icon: <Swords className="w-4 h-4" />,       label: "Voice-Stunden",  valA: me.voiceHours,   valB: opponent.voiceHours,   colorA: "bg-violet-500", colorB: "bg-violet-400/50" },
   ];
 

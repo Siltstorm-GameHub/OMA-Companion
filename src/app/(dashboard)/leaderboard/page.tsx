@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { Trophy, Swords, CalendarDays, Flame, Coins } from "lucide-react";
+import { Trophy, Swords, CalendarDays, Coins } from "lucide-react";
 import { CountUp } from "@/components/CountUp";
 import Link from "next/link";
 import Image from "next/image";
@@ -68,7 +68,7 @@ export default async function LeaderboardPage() {
     take: 50,
     select: {
       id: true, name: true, username: true, image: true,
-      points: true, rankPoints: true, streak: true,
+      points: true, rankPoints: true,
       nameColor: true, activeTitle: true,
       _count: { select: { tournamentParticipants: true, eventRegistrations: true } },
     },
@@ -177,7 +177,6 @@ export default async function LeaderboardPage() {
                 {/* Mini-Stats */}
                 <div className="flex items-center gap-2 mt-2 text-[10px] text-gray-600">
                   {userWins > 0 && <span className="flex items-center gap-0.5"><Swords className="w-2.5 h-2.5" />{userWins}</span>}
-                  {u.streak > 0 && <span className="flex items-center gap-0.5 text-orange-500"><Flame className="w-2.5 h-2.5" />{u.streak}</span>}
                 </div>
               </Link>
             );
@@ -273,11 +272,6 @@ export default async function LeaderboardPage() {
                       </span>
                     )}
                   </div>
-                  {u.streak > 0 && (
-                    <span className="text-[10px] text-orange-400 flex items-center gap-0.5 mt-0.5">
-                      <Flame className="w-2.5 h-2.5" />{u.streak}d Streak
-                    </span>
-                  )}
                 </div>
 
                 {/* Siege — nur ab sm */}
