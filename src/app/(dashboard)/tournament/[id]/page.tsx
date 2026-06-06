@@ -95,7 +95,7 @@ export default async function TournamentDetailPage({
       const maxRound = t.matches.length ? Math.max(...t.matches.map(m => m.round)) : 0;
       const finalMatch = t.matches.find(m => m.round === maxRound);
       winner = finalMatch?.winnerId
-        ? (t.participants.find(p => p.userId === finalMatch.winnerId)?.user ?? null)
+        ? (mergedParticipants.find(p => p.userId === finalMatch.winnerId)?.user ?? null)
         : null;
     } else if (isLiga) {
       // Liga: Spieler mit den meisten Punkten (Platz 1 in Tabelle = erster in participants mit meisten Siegen)
@@ -105,14 +105,14 @@ export default async function TournamentDetailPage({
         if (m.winnerId) winsMap.set(m.winnerId, (winsMap.get(m.winnerId) ?? 0) + 1);
       }
       const topId = [...winsMap.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
-      winner = topId ? (t.participants.find(p => p.userId === topId)?.user ?? null) : null;
+      winner = topId ? (mergedParticipants.find(p => p.userId === topId)?.user ?? null) : null;
     } else if (isFfa) {
       // FFA: Spieler mit Platz 1 in einem Match finden
       const winnerEntry = t.matches
         .flatMap(m => m.entries)
         .find(e => e.placement === 1);
       winner = winnerEntry?.userId
-        ? (t.participants.find(p => p.userId === winnerEntry.userId)?.user ?? null)
+        ? (mergedParticipants.find(p => p.userId === winnerEntry.userId)?.user ?? null)
         : null;
     }
   }
