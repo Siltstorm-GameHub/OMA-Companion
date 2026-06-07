@@ -5,8 +5,9 @@ import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import {
   ChevronDown, ChevronUp, Trophy, Settings, Users, UserPlus, UserMinus,
-  Search, Trash2, AlertTriangle, Repeat, X, GitBranch,
+  Search, Trash2, AlertTriangle, Repeat, X, GitBranch, Gamepad2, Swords, ExternalLink,
 } from "lucide-react";
+import Link from "next/link";
 import TournamentManager from "./TournamentManager";
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
@@ -123,6 +124,14 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
   const [newSeriesDesc, setNewSeriesDesc]   = useState("");
   const [seriesLoaded, setSeriesLoaded]     = useState(false);
 
+  /* ── Series settings state ── */
+  const [seriesFixedGame, setSeriesFixedGame]     = useState("");
+  const [seriesFixedFormat, setSeriesFixedFormat] = useState("");
+  const [propagateGame, setPropagateGame]         = useState(false);
+  const [propagateFormat, setPropagateFormat]     = useState(false);
+  const [seriesSettingsLoaded, setSeriesSettingsLoaded] = useState(false);
+  const [seriesSettingsSaving, setSeriesSettingsSaving] = useState(false);
+
   /* ── Scope modal ── */
   const [showScopeModal, setShowScopeModal] = useState(false);
   const [pendingSave, setPendingSave]       = useState<"single" | null>(null);
@@ -140,6 +149,20 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
         .catch(() => {});
     }
   }, [expanded, seriesLoaded]);
+
+  /* Load current series settings (fixedGame, fixedFormat) when expanded */
+  useEffect(() => {
+    if (expanded && event.seriesId && !seriesSettingsLoaded) {
+      fetch(`/api/admin/event-series?id=${event.seriesId}`)
+        .then(r => r.json())
+        .then(d => {
+          setSeriesFixedGame(d.fixedGame ?? "");
+          setSeriesFixedFormat(d.fixedFormat ?? "");
+          setSeriesSettingsLoaded(true);
+        })
+        .catch(() => {});
+    }
+  }, [expanded, event.seriesId, seriesSettingsLoaded]);
 
   const registeredIds = new Set(event.registrations.map(r => r.userId));
   const userName      = (u: User) => u.username ?? u.name ?? "?";
@@ -248,6 +271,31 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
     setLoading(false);
     toast.success("Turnier gelöscht");
     router.refresh();
+  }
+
+  async function saveSeriesSettings() {
+    if (!event.seriesId) return;
+    setSeriesSettingsSaving(true);
+    const res = await fetch("/api/admin/event-series", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        seriesId:       event.seriesId,
+        fixedGame:      seriesFixedGame.trim() || null,
+        fixedFormat:    seriesFixedFormat || null,
+        propagateGame,
+        propagateFormat,
+      }),
+    });
+    setSeriesSettingsSaving(false);
+    if (res.ok) {
+      toast.success("Reihen-Einstellungen gespeichert");
+      setPropagateGame(false);
+      setPropagateFormat(false);
+      router.refresh();
+    } else {
+      toast.error("Fehler beim Speichern der Reihe");
+    }
   }
 
   async function removeUser(userId: string, name: string) {
@@ -459,6 +507,73 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
                         Das Event wird aus der Reihe „{event.series.name}" entfernt. Die Reihe selbst bleibt bestehen.
                       </p>
                     )}
+
+                    {/* ── Reihen-Einstellungen (nur wenn in Reihe & behalten) ── */}
+                    {seriesMode === "keep" && event.seriesId && (
+                      <div className="border-t border-teal-500/10 pt-3 mt-1 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">
+                            Reihen-Konfiguration
+                          </p>
+                          <Link href={`/events/series/${event.seriesId}`}
+                            className="flex items-center gap-1 text-[10px] text-teal-600 hover:text-teal-400 transition-colors">
+                            <ExternalLink className="w-2.5 h-2.5" /> Reihe ansehen
+                          </Link>
+                        </div>
+
+                        {/* Festes Spiel */}
+                        <div>
+                          <label className="text-xs text-gray-500 flex items-center gap-1.5 mb-1">
+                            <Gamepad2 className="w-3 h-3" />
+                            Festes Spiel <span className="text-gray-600">(gilt für alle Events der Reihe)</span>
+                          </label>
+                          <input type="text" value={seriesFixedGame}
+                            onChange={e => setSeriesFixedGame(e.target.value)}
+                            placeholder="Leer = verschiedene Spiele möglich"
+                            className={inputCls} />
+                          <label className="flex items-center gap-2 mt-1.5 cursor-pointer">
+                            <input type="checkbox" checked={propagateGame}
+                              onChange={e => setPropagateGame(e.target.checked)}
+                              className="rounded accent-teal-500" />
+                            <span className="text-[11px] text-gray-500">
+                              Spiel auf alle Events der Reihe übertragen
+                            </span>
+                          </label>
+                        </div>
+
+                        {/* Festes Turnierformat */}
+                        <div>
+                          <label className="text-xs text-gray-500 flex items-center gap-1.5 mb-1">
+                            <Swords className="w-3 h-3" />
+                            Festes Turnierformat
+                          </label>
+                          <select value={seriesFixedFormat}
+                            onChange={e => setSeriesFixedFormat(e.target.value)}
+                            className={inputCls}>
+                            <option value="">– Kein festes Format (wechselt) –</option>
+                            <option value="single_elimination">Single Elimination</option>
+                            <option value="double_elimination">Double Elimination</option>
+                            <option value="round_robin">Round Robin</option>
+                            <option value="ffa">Free-for-All</option>
+                            <option value="coop_stats">Coop / Stats</option>
+                          </select>
+                          <label className="flex items-center gap-2 mt-1.5 cursor-pointer">
+                            <input type="checkbox" checked={propagateFormat}
+                              onChange={e => setPropagateFormat(e.target.checked)}
+                              className="rounded accent-teal-500" />
+                            <span className="text-[11px] text-gray-500">
+                              Format auf alle Turniere der Reihe übertragen
+                            </span>
+                          </label>
+                        </div>
+
+                        <button onClick={saveSeriesSettings}
+                          disabled={seriesSettingsSaving || loading}
+                          className="text-xs bg-teal-700 hover:bg-teal-600 text-white rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50">
+                          {seriesSettingsSaving ? "Speichert…" : "Reihe speichern"}
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Save hint für series + content change */}
@@ -523,70 +638,109 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
               )}
 
               {/* ── TEILNEHMER ── */}
-              {tab === "participants" && (
-                <div>
-                  <div className="flex items-center gap-2 mb-3 flex-wrap">
-                    <div className="relative flex-1 min-w-48">
-                      <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500" />
-                      <input type="text" placeholder="User suchen…" value={search} onChange={e => setSearch(e.target.value)}
-                        className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg pl-8 pr-3 py-2 placeholder:text-gray-600" />
+              {tab === "participants" && (() => {
+                const registeredUsers   = filteredUsers.filter(u =>  registeredIds.has(u.id));
+                const unregisteredUsers = filteredUsers.filter(u => !registeredIds.has(u.id));
+                return (
+                  <div className="space-y-3">
+                    {/* Suche + Bulk-Aktionen */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div className="relative flex-1 min-w-48">
+                        <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500" />
+                        <input type="text" placeholder="User suchen…" value={search}
+                          onChange={e => setSearch(e.target.value)}
+                          className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg pl-8 pr-3 py-2 placeholder:text-gray-600" />
+                      </div>
+                      {bulkSelected.length > 0 && (
+                        <button onClick={bulkAdd} disabled={loading}
+                          className="flex items-center gap-1.5 text-sm bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white rounded-lg px-3 py-1.5 whitespace-nowrap">
+                          <UserPlus className="w-3.5 h-3.5" />
+                          {bulkSelected.length} hinzufügen
+                        </button>
+                      )}
                     </div>
-                    <button onClick={() => setBulkSelected(filteredUsers.filter(u => !registeredIds.has(u.id)).map(u => u.id))}
-                      className="text-xs text-gray-400 hover:text-white px-2 py-1.5 rounded border border-gray-700 hover:border-gray-500 whitespace-nowrap">
-                      Alle auswählen
-                    </button>
-                    <button onClick={bulkAdd} disabled={loading || !bulkSelected.length}
-                      className="flex items-center gap-1.5 text-sm bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white rounded-lg px-3 py-1.5 whitespace-nowrap">
-                      <UserPlus className="w-3.5 h-3.5" />
-                      {bulkSelected.length > 0 ? `${bulkSelected.length} hinzufügen` : "Hinzufügen"}
-                    </button>
-                  </div>
 
-                  <div className="space-y-1 max-h-72 overflow-y-auto pr-1">
+                    {/* ── Angemeldete Teilnehmer ── */}
+                    {registeredUsers.length > 0 && (
+                      <div>
+                        <p className="text-[10px] font-semibold text-green-600 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
+                          Angemeldet ({registeredUsers.length})
+                        </p>
+                        <div className="space-y-1">
+                          {registeredUsers.map(u => (
+                            <div key={u.id} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-green-900/10 border border-green-900/25">
+                              {u.image
+                                ? <img src={u.image} alt="" className="w-7 h-7 rounded-full shrink-0" />
+                                : <div className="w-7 h-7 rounded-full bg-green-900/40 flex items-center justify-center text-xs font-semibold text-green-400 shrink-0">
+                                    {userName(u)[0].toUpperCase()}
+                                  </div>
+                              }
+                              <span className="flex-1 text-sm text-green-300 truncate font-medium">{userName(u)}</span>
+                              <button onClick={() => removeUser(u.id, userName(u))} disabled={loading}
+                                title="Abmelden"
+                                className="shrink-0 text-gray-600 hover:text-red-400 hover:bg-red-900/30 p-1.5 rounded transition-colors disabled:opacity-50">
+                                <UserMinus className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── Nicht angemeldete User ── */}
+                    {unregisteredUsers.length > 0 && (
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-gray-600 inline-block" />
+                            Nicht angemeldet ({unregisteredUsers.length})
+                          </p>
+                          <button
+                            onClick={() => setBulkSelected(unregisteredUsers.map(u => u.id))}
+                            className="text-[10px] text-gray-500 hover:text-white transition-colors">
+                            Alle auswählen
+                          </button>
+                        </div>
+                        <div className="space-y-1 max-h-56 overflow-y-auto pr-1">
+                          {unregisteredUsers.map(u => {
+                            const isSel = bulkSelected.includes(u.id);
+                            return (
+                              <div key={u.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                                isSel ? "bg-rose-900/15 border border-rose-900/30" : "bg-gray-800 hover:bg-gray-800/80"
+                              }`}>
+                                <input type="checkbox" checked={isSel}
+                                  onChange={e => setBulkSelected(
+                                    e.target.checked
+                                      ? [...bulkSelected, u.id]
+                                      : bulkSelected.filter(id => id !== u.id)
+                                  )}
+                                  className="rounded shrink-0 accent-rose-500" />
+                                {u.image
+                                  ? <img src={u.image} alt="" className="w-7 h-7 rounded-full shrink-0" />
+                                  : <div className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center text-xs font-semibold text-gray-300 shrink-0">
+                                      {userName(u)[0].toUpperCase()}
+                                    </div>
+                                }
+                                <span className="flex-1 text-sm text-white truncate">{userName(u)}</span>
+                                <button onClick={() => addSingleUser(u.id)} disabled={loading}
+                                  title="Anmelden"
+                                  className="shrink-0 text-gray-500 hover:text-rose-400 hover:bg-rose-900/30 p-1.5 rounded transition-colors disabled:opacity-50">
+                                  <UserPlus className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
                     {filteredUsers.length === 0 && (
                       <p className="text-sm text-gray-500 text-center py-4">Keine User gefunden.</p>
                     )}
-                    {filteredUsers.map(u => {
-                      const isReg = registeredIds.has(u.id);
-                      const isSel = bulkSelected.includes(u.id);
-                      return (
-                        <div key={u.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                          isReg ? "bg-green-900/10 border border-green-900/30" : "bg-gray-800 hover:bg-gray-750"
-                        }`}>
-                          {!isReg && (
-                            <input type="checkbox" checked={isSel}
-                              onChange={e => setBulkSelected(
-                                e.target.checked ? [...bulkSelected, u.id] : bulkSelected.filter(id => id !== u.id)
-                              )}
-                              className="rounded shrink-0" />
-                          )}
-                          {isReg && <span className="text-green-500 shrink-0">✓</span>}
-                          {u.image
-                            ? <img src={u.image} alt="" className="w-7 h-7 rounded-full shrink-0" />
-                            : <div className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center text-xs font-semibold text-gray-300 shrink-0">
-                                {userName(u)[0].toUpperCase()}
-                              </div>
-                          }
-                          <span className={`flex-1 text-sm truncate ${isReg ? "text-green-400" : "text-white"}`}>
-                            {userName(u)}
-                            {isReg && <span className="text-xs text-green-700 ml-2">angemeldet</span>}
-                          </span>
-                          {!isReg
-                            ? <button onClick={() => addSingleUser(u.id)} disabled={loading} title="Hinzufügen"
-                                className="shrink-0 text-xs text-gray-500 hover:text-rose-400 hover:bg-rose-900/30 px-2 py-1 rounded transition-colors disabled:opacity-50">
-                                <UserPlus className="w-3.5 h-3.5" />
-                              </button>
-                            : <button onClick={() => removeUser(u.id, userName(u))} disabled={loading} title="Entfernen"
-                                className="shrink-0 text-xs text-gray-600 hover:text-red-400 hover:bg-red-900/30 px-2 py-1 rounded transition-colors disabled:opacity-50">
-                                <UserMinus className="w-3.5 h-3.5" />
-                              </button>
-                          }
-                        </div>
-                      );
-                    })}
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* ── TURNIERBAUM ── */}
               {tab === "bracket" && (

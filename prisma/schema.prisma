@@ -200,6 +200,8 @@ model EventSeries {
   id          String   @id @default(cuid())
   name        String
   description String?
+  fixedGame   String?   // Wenn gesetzt: alle Events der Reihe nutzen dieses Spiel
+  fixedFormat String?   // Wenn gesetzt: alle Turniere der Reihe nutzen dieses Format
   createdAt   DateTime @default(now())
   events      Event[]
 }
