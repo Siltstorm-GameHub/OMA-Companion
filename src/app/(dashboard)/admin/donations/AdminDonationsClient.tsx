@@ -67,7 +67,7 @@ export default function AdminDonationsClient({
   const totalPool  = donations.reduce((s, d) => s + d.amount, 0);
   const totalSpent = expenses.reduce((s, e) => s + e.amount, 0);
   const balance    = totalPool - totalSpent;
-  const years      = [now.getFullYear(), now.getFullYear() - 1, now.getFullYear() - 2];
+  const years = [now.getFullYear() + 1, now.getFullYear(), now.getFullYear() - 1];
 
   async function handleAddDonation(e: React.FormEvent) {
     e.preventDefault();
