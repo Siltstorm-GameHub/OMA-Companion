@@ -73,11 +73,12 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
 
         {/* Series-Badge */}
         {event.series && (
-          <div className="flex items-center gap-1.5 mb-3">
+          <Link href={`/events/series/${event.seriesId}`}
+            className="flex items-center gap-1.5 mb-3 hover:opacity-80 transition-opacity group">
             <Repeat className="w-3.5 h-3.5 text-teal-400" />
-            <span className="text-xs text-teal-400 font-semibold">{event.series.name}</span>
-            <span className="text-xs text-gray-600">· Eventreihe</span>
-          </div>
+            <span className="text-xs text-teal-400 font-semibold group-hover:text-teal-300">{event.series.name}</span>
+            <span className="text-xs text-gray-600">· Eventreihe →</span>
+          </Link>
         )}
 
         <div className="flex items-start gap-4">

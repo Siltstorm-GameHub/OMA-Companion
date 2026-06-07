@@ -173,11 +173,12 @@ export default async function EventsPage() {
 
                 {/* Reihen-Badge */}
                 {hasSeries && (
-                  <div className="flex items-center gap-1 mb-1">
+                  <Link href={`/events/series/${ev.seriesId}`}
+                    className="flex items-center gap-1 mb-1 hover:text-teal-300 transition-colors group/series">
                     <Repeat className="w-3 h-3 text-teal-500 shrink-0" />
-                    <span className="text-[10px] text-teal-500 font-medium">{ev.series!.name}</span>
+                    <span className="text-[10px] text-teal-500 font-medium group-hover/series:text-teal-300">{ev.series!.name}</span>
                     <span className="text-[10px] text-gray-600">· Eventreihe</span>
-                  </div>
+                  </Link>
                 )}
 
                 {/* Titel */}
@@ -219,9 +220,9 @@ export default async function EventsPage() {
                   )}
                   {/* Alle Termine dieser Reihe */}
                   {hasSeries && (
-                    <Link href={`/events/${ev.id}`}
+                    <Link href={`/events/series/${ev.seriesId}`}
                       className="flex items-center gap-1 text-[10px] text-teal-600 hover:text-teal-400 transition-colors">
-                      <ChevronRight className="w-3 h-3" /> Alle Termine
+                      <ChevronRight className="w-3 h-3" /> Reihe ansehen
                     </Link>
                   )}
                 </div>

@@ -680,12 +680,6 @@ export default function TournamentManager({
             }`}>
             <Settings className="w-3.5 h-3.5" /> Einstellungen
           </button>
-          <button onClick={() => { setShowParticipants(!showParticipants); setShowSettings(false); }}
-            className={`flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors ${
-              showParticipants ? "bg-gray-700 text-white" : "text-gray-500 hover:text-white hover:bg-gray-800"
-            }`}>
-            <Users className="w-3.5 h-3.5" /> Teilnehmer ({tournament.participants.length})
-          </button>
           {tournament.status !== "finished" && (
             <button onClick={openFinalize} disabled={loading}
               className="flex items-center gap-1 text-xs bg-amber-600/20 text-amber-300 hover:bg-amber-600/30 border border-amber-600/30 px-2 py-1 rounded transition-colors disabled:opacity-50">
@@ -873,62 +867,13 @@ export default function TournamentManager({
         </div>
       )}
 
-      {/* ── Participants panel ────────────────────────────────────────── */}
-      {showParticipants && (
-        <div className="border border-gray-700 rounded-xl p-4 bg-gray-800/30 space-y-3">
-          <p className="text-sm font-medium text-white flex items-center gap-2">
-            <Users className="w-4 h-4 text-gray-400" /> Teilnehmer verwalten
-          </p>
-
-          {/* Current participants */}
-          <div className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto">
-            {tournament.participants.map(p => (
-              <div key={p.userId} className="flex items-center gap-2 bg-gray-800 rounded-lg px-2.5 py-1.5">
-                {p.user.image ? (
-                  <img src={p.user.image} alt="" className="w-5 h-5 rounded-full shrink-0" />
-                ) : (
-                  <div className="w-5 h-5 rounded-full bg-rose-900/40 flex items-center justify-center text-[9px] font-bold text-rose-400 shrink-0">
-                    {userName(p.user)[0]?.toUpperCase()}
-                  </div>
-                )}
-                <span className="text-xs text-white truncate flex-1">{userName(p.user)}</span>
-                <button onClick={() => removeParticipant(p.userId)} disabled={loading}
-                  className="text-gray-600 hover:text-red-500 transition-colors shrink-0">
-                  <UserMinus className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ))}
-            {tournament.participants.length === 0 && (
-              <p className="text-xs text-gray-600 col-span-2">Noch keine Teilnehmer.</p>
-            )}
-          </div>
-
-          {/* Add participant */}
-          {notInTournament.length > 0 && (
-            <div className="flex gap-2">
-              <select value={addParticipantId} onChange={e => setAddParticipantId(e.target.value)}
-                className="flex-1 text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2">
-                <option value="">Teilnehmer hinzufügen…</option>
-                {notInTournament.map(u => (
-                  <option key={u.id} value={u.id}>{userName(u)}</option>
-                ))}
-              </select>
-              <button onClick={addParticipant} disabled={loading || !addParticipantId}
-                className="flex items-center gap-1.5 text-sm bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white rounded-lg px-3 py-2">
-                <UserPlus className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
-
-          {/* Round Robin auto-generate */}
-          {isRoundRobin && tournament.participants.length >= 2 && (
-            <button onClick={generateRoundRobinMatches} disabled={loading}
-              className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 bg-blue-900/20 hover:bg-blue-900/30 border border-blue-900/40 rounded-lg px-3 py-2 transition-colors w-full justify-center">
-              <RefreshCw className="w-3.5 h-3.5" />
-              Alle Paarungen automatisch generieren ({tournament.participants.length} Spieler → {(tournament.participants.length * (tournament.participants.length - 1)) / 2} Matches)
-            </button>
-          )}
-        </div>
+      {/* Round Robin auto-generate (direkt sichtbar wenn relevant) */}
+      {isRoundRobin && tournament.participants.length >= 2 && !showSettings && !showFinalize && (
+        <button onClick={generateRoundRobinMatches} disabled={loading}
+          className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 bg-blue-900/20 hover:bg-blue-900/30 border border-blue-900/40 rounded-lg px-3 py-2 transition-colors w-full justify-center">
+          <RefreshCw className="w-3.5 h-3.5" />
+          Alle Paarungen generieren ({tournament.participants.length} Spieler → {(tournament.participants.length * (tournament.participants.length - 1)) / 2} Matches)
+        </button>
       )}
 
       {/* ── Match list ───────────────────────────────────────────────── */}
@@ -936,7 +881,7 @@ export default function TournamentManager({
         {tournament.matches.length === 0 && (
           <div className="text-center py-6 bg-gray-800/50 rounded-lg text-gray-500 text-sm border border-gray-700 border-dashed">
             {isRoundRobin
-              ? 'Öffne "Teilnehmer" und klicke auf "Paarungen generieren".'
+              ? 'Füge Teilnehmer im Reiter "Teilnehmer" hinzu, dann hier auf "Paarungen generieren" klicken.'
               : 'Noch keine Matches. Klicke unten auf "Match hinzufügen".'}
           </div>
         )}
