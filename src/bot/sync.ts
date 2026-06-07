@@ -1,108 +1,23 @@
-import { GuildScheduledEvent, GuildScheduledEventStatus } from "discord.js";
 import { prisma } from "@/lib/prisma";
-import { notifyNewEvent, notifyEventStarted, notifyEventEnded, notifyTournamentStarted } from "./notify";
+import { notifyEventStarted, notifyEventEnded, notifyTournamentStarted } from "./notify";
 
-function mapStatus(status: GuildScheduledEventStatus): string {
-  switch (status) {
-    case GuildScheduledEventStatus.Scheduled: return "open";
-    case GuildScheduledEventStatus.Active:    return "active";
-    case GuildScheduledEventStatus.Completed: return "finished";
-    case GuildScheduledEventStatus.Canceled:  return "finished";
-    default:                                  return "open";
-  }
-}
-
-function detectGame(name: string, description?: string | null): string | null {
-  const text = `${name} ${description ?? ""}`.toLowerCase();
-  const games: Record<string, string> = {
-    valorant: "Valorant",
-    "league of legends": "League of Legends",
-    lol: "League of Legends",
-    "cs2": "CS2",
-    "counter-strike": "CS2",
-    minecraft: "Minecraft",
-    fortnite: "Fortnite",
-    "rocket league": "Rocket League",
-    overwatch: "Overwatch",
-    apex: "Apex Legends",
-  };
-  for (const [key, value] of Object.entries(games)) {
-    if (text.includes(key)) return value;
-  }
-  return null;
-}
-
-function detectMaxPlayers(description?: string | null): number | null {
-  if (!description) return null;
-  const match = description.match(/(?:max\.?\s*|bis zu\s*|slots?:?\s*)(\d+)/i)
-    ?? description.match(/(\d+)\s*(?:spieler|player|slots?|plätze)/i);
-  return match ? parseInt(match[1]) : null;
-}
-
-// Hilfsfunktion: Event anhand discordEventId finden
+// Hilfsfunktion: Event anhand discordEventId finden (nur WebApp-Events haben eine discordEventId)
 async function findEventByDiscordId(discordEventId: string) {
   return prisma.event.findUnique({ where: { discordEventId } });
 }
 
-export async function syncEvent(discordEvent: GuildScheduledEvent) {
-  try {
-    const discordEventId = discordEvent.id;
-    const name = discordEvent.name;
-    const description = discordEvent.description;
-    const scheduledStartAt = discordEvent.scheduledStartAt;
-    if (!scheduledStartAt) return;
-
-    const status = mapStatus(discordEvent.status);
-    const game = detectGame(name, description);
-    const maxPlayers = detectMaxPlayers(description);
-
-    const existing = await findEventByDiscordId(discordEventId);
-
-    if (existing) {
-      await prisma.event.update({
-        where: { id: existing.id },
-        data: {
-          title: name,
-          startAt: scheduledStartAt,
-          status,
-          ...(game && { game }),
-          ...(maxPlayers && { maxPlayers }),
-        },
-      });
-      console.log(`  ↻ Event aktualisiert: ${name}`);
-    } else {
-      const created = await prisma.event.create({
-        data: {
-          title: name,
-          description: description ?? null,
-          discordEventId,
-          startAt: scheduledStartAt,
-          status,
-          type: "community",
-          pointReward: 50,
-          game,
-          maxPlayers,
-        },
-      });
-      console.log(`  ✚ Event erstellt: ${name}`);
-      await notifyNewEvent({ title: created.title, game: created.game, startAt: created.startAt, maxPlayers: created.maxPlayers, pointReward: created.pointReward });
-    }
-  } catch (err) {
-    console.error("Fehler beim Event-Sync:", err);
-  }
-}
-
+// Status eines WebApp-Events aktualisieren, wenn es in Discord den Status wechselt
+// (funktioniert nur für Events, die aus der WebApp heraus zu Discord gepusht wurden)
 export async function updateEventStatus(discordEventId: string, status: string) {
   try {
     const event = await findEventByDiscordId(discordEventId);
-    if (!event) return;
+    if (!event) return; // Kein WebApp-Event mit dieser Discord-ID → ignorieren
 
     await prisma.event.update({ where: { id: event.id }, data: { status } });
 
     if (status === "active") {
       await notifyEventStarted({ title: event.title, game: event.game });
 
-      // Turnier-Notification wenn vorhanden
       const tournament = await prisma.tournament.findUnique({
         where:   { eventId: event.id },
         include: {
@@ -112,7 +27,11 @@ export async function updateEventStatus(discordEventId: string, status: string) 
         },
       });
       if (tournament) {
-        await notifyTournamentStarted({ format: tournament.format, event: { title: event.title, game: event.game }, participants: tournament.participants });
+        await notifyTournamentStarted({
+          format: tournament.format,
+          event:  { title: event.title, game: event.game },
+          participants: tournament.participants,
+        });
       }
     }
 
@@ -126,6 +45,7 @@ export async function updateEventStatus(discordEventId: string, status: string) 
 }
 
 // Discord-Teilnahme → WebApp-Registrierung
+// Nur für Events, die aus der WebApp stammen (haben eine discordEventId in der DB)
 export async function syncAttendee(
   discordEventId: string,
   discordUserId: string,
@@ -133,10 +53,7 @@ export async function syncAttendee(
 ) {
   try {
     const event = await findEventByDiscordId(discordEventId);
-    if (!event) {
-      console.log(`  ⚠ Event ${discordEventId} nicht in DB gefunden`);
-      return;
-    }
+    if (!event) return; // Reines Discord-Event, nicht in der WebApp → ignorieren
 
     const user = await prisma.user.findUnique({ where: { discordId: discordUserId } });
     if (!user) {
@@ -146,9 +63,9 @@ export async function syncAttendee(
 
     if (action === "add") {
       await prisma.eventRegistration.upsert({
-        where: { userId_eventId: { userId: user.id, eventId: event.id } },
+        where:  { userId_eventId: { userId: user.id, eventId: event.id } },
         create: { userId: user.id, eventId: event.id },
-        update: {}, // already exists → no-op
+        update: {},
       });
       console.log(`  ✅ ${user.name ?? discordUserId} → Event "${event.title}" angemeldet (Discord)`);
     } else {

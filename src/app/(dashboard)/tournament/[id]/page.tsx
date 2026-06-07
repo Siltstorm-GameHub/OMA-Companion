@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Users, Trophy, Clock, Swords, ChevronDown } from "lucide-react";
+import { ArrowLeft, Users, Trophy, Clock, Swords, ChevronDown, Medal, StickyNote } from "lucide-react";
 import BracketView from "./BracketView";
 import RoundRobinView from "./RoundRobinView";
 import FfaView from "./FfaView";
@@ -203,6 +203,60 @@ export default async function TournamentDetailPage({
           </div>
         )}
       </div>
+
+      {/* ── Endplatzierung ─────────────────────────────────────────────── */}
+      {t && t.status === "finished" && t.finalRankingJson && (() => {
+        const finalIds: string[] = JSON.parse(t.finalRankingJson);
+        const medals = ["🥇", "🥈", "🥉"];
+        return (
+          <div className="glass rounded-2xl p-5 mb-5 space-y-3">
+            <div className="flex items-center gap-2">
+              <Medal className="w-4 h-4 text-amber-400" />
+              <h2 className="text-sm font-semibold text-white">Endplatzierung</h2>
+            </div>
+
+            <div className="space-y-1.5">
+              {finalIds.map((uid, i) => {
+                const participant = mergedParticipants.find(p => p.userId === uid);
+                const user = participant?.user;
+                const name = user ? (user.name || user.username || "Unbekannt") : "Unbekannt";
+                const isMe = uid === userId;
+                return (
+                  <div key={uid}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${i < 3 ? "bg-amber-500/[0.06] border border-amber-500/15" : "bg-white/[0.02] border border-white/[0.05]"} ${isMe ? "ring-1 ring-teal-500/30" : ""}`}>
+                    {/* Platz */}
+                    <span className="w-7 text-center shrink-0 text-base">
+                      {i < 3 ? medals[i] : <span className="text-xs text-gray-500 font-mono">{i + 1}.</span>}
+                    </span>
+                    {/* Avatar */}
+                    {user?.image
+                      ? <img src={user.image} alt="" className="w-7 h-7 rounded-full shrink-0 object-cover" />
+                      : <div className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-300 shrink-0">
+                          {name[0]?.toUpperCase() ?? "?"}
+                        </div>
+                    }
+                    {/* Name */}
+                    <span className={`flex-1 text-sm font-medium truncate ${isMe ? "text-teal-300" : i === 0 ? "text-amber-200" : "text-white"}`}>
+                      {name}{isMe && <span className="text-xs text-gray-500 ml-1.5">(du)</span>}
+                    </span>
+                    {i === 0 && (
+                      <Trophy className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Notiz */}
+            {t.finalRankingNote && (
+              <div className="flex items-start gap-2 mt-1 px-1">
+                <StickyNote className="w-3.5 h-3.5 text-gray-600 mt-0.5 shrink-0" />
+                <p className="text-xs text-gray-500 italic leading-relaxed">{t.finalRankingNote}</p>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ── Content ────────────────────────────────────────────────────── */}
       {!t ? (

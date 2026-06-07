@@ -38,7 +38,7 @@ async function calcFfaRanking(tournamentId: string, statFields: string[]) {
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   await requireRole("moderator");
   const { id } = await params;
-  const { status, pointsConfig, statFields, generateMatches, finalRanking } = await req.json();
+  const { status, pointsConfig, statFields, generateMatches, finalRanking, finalRankingNote } = await req.json();
 
   // Auto-generate round-robin matches from existing participants
   if (generateMatches === "round_robin") {
@@ -66,9 +66,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const tournament = await prisma.tournament.update({
     where: { id },
     data: {
-      ...(status       !== undefined && { status }),
-      ...(pointsConfig !== undefined && { pointsConfig: pointsConfig ? JSON.stringify(pointsConfig) : null }),
-      ...(statFields   !== undefined && { statFields:   statFields   ? JSON.stringify(statFields)   : null }),
+      ...(status            !== undefined && { status }),
+      ...(pointsConfig      !== undefined && { pointsConfig: pointsConfig ? JSON.stringify(pointsConfig) : null }),
+      ...(statFields        !== undefined && { statFields:   statFields   ? JSON.stringify(statFields)   : null }),
+      ...(finalRanking      !== undefined && Array.isArray(finalRanking) && { finalRankingJson: JSON.stringify(finalRanking) }),
+      ...(finalRankingNote  !== undefined && { finalRankingNote: finalRankingNote?.trim() || null }),
     },
   });
 

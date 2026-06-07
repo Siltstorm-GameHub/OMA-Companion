@@ -243,7 +243,11 @@ model Tournament {
   // JSON: {"1": 100, "2": 50, "3": 25} — Punkte pro Platzierung
   pointsConfig String?
   // JSON: ["Kills","Assists","Punkte"] — für ffa/coop_stats sichtbare Stat-Spalten
-  statFields   String?
+  statFields        String?
+  // Bestätigte Endplatzierung: JSON ["userId1","userId2",...]
+  finalRankingJson  String?
+  // Optionale Begründung für Änderungen (z.B. Disqualifikation)
+  finalRankingNote  String?
   createdAt    DateTime @default(now())
   event        Event    @relation(fields: [eventId], references: [id])
 

@@ -312,6 +312,7 @@ export default function TournamentManager({
   const [showFinalize, setShowFinalize]     = useState(false);
   const [rankingPreview, setRankingPreview] = useState<RankingEntry[] | null>(null);
   const [rankingLoading, setRankingLoading] = useState(false);
+  const [rankingNote, setRankingNote]       = useState("");
 
   // ── Settings edit state ───────────────────────────────────────────────
   const initSettings = () => {
@@ -605,8 +606,9 @@ export default function TournamentManager({
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        status: "finished",
-        finalRanking: rankingPreview.map(r => r.userId),
+        status:           "finished",
+        finalRanking:     rankingPreview.map(r => r.userId),
+        finalRankingNote: rankingNote.trim() || null,
       }),
     });
     setLoading(false);
@@ -614,6 +616,7 @@ export default function TournamentManager({
       toast.success("Turnier abgeschlossen & Punkte vergeben!");
       setShowFinalize(false);
       setRankingPreview(null);
+      setRankingNote("");
       setTournament(prev => prev ? { ...prev, status: "finished" } : prev);
       router.refresh();
     } else {
@@ -778,12 +781,28 @@ export default function TournamentManager({
           )}
 
           {rankingPreview && !rankingLoading && (
-            <button onClick={confirmFinalize} disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50"
-              style={{ background: "linear-gradient(135deg, #b45309, #d97706)" }}>
-              <Trophy className="w-4 h-4" />
-              {loading ? "Wird abgeschlossen…" : "Bestätigen & Punkte vergeben"}
-            </button>
+            <div className="space-y-3">
+              {/* Notizfeld */}
+              <div>
+                <label className="text-xs text-gray-500 block mb-1.5">
+                  Begründung für Änderungen <span className="text-gray-700">(optional)</span>
+                </label>
+                <textarea
+                  value={rankingNote}
+                  onChange={e => setRankingNote(e.target.value)}
+                  rows={2}
+                  placeholder="z.B. Spieler X wurde wegen Regelverstoßes disqualifiziert …"
+                  className="w-full rounded-xl px-3 py-2.5 text-sm text-white outline-none resize-none"
+                  style={{ background: "#0b1a17", border: "1px solid rgba(245,158,11,0.20)" }}
+                />
+              </div>
+              <button onClick={confirmFinalize} disabled={loading}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50"
+                style={{ background: "linear-gradient(135deg, #b45309, #d97706)" }}>
+                <Trophy className="w-4 h-4" />
+                {loading ? "Wird abgeschlossen…" : "Bestätigen & Punkte vergeben"}
+              </button>
+            </div>
           )}
         </div>
       )}
