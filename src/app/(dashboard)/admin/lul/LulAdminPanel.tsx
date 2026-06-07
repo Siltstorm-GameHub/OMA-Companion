@@ -32,6 +32,17 @@ function LulSpieltagEditor({
   const [spectatorSearch, setSpectatorSearch] = useState("");
 
   // Draft state
+  const initNumRounds = () => {
+    let max = 10;
+    for (const e of spieltag.entries) {
+      const scores: number[] = e.roundScores ? JSON.parse(e.roundScores) : [];
+      if (scores.length > max) max = scores.length;
+    }
+    return max;
+  };
+
+  const [numRounds, setNumRounds] = useState(initNumRounds);
+
   const initEntries = () => {
     const map: Record<string, {
       role: "player" | "spectator";
@@ -46,7 +57,7 @@ function LulSpieltagEditor({
       const scores: number[] = e.roundScores ? JSON.parse(e.roundScores) : [];
       map[e.userId] = {
         role: e.role as "player" | "spectator",
-        rounds: Array.from({ length: 10 }, (_, i) => scores[i] != null ? String(scores[i]) : ""),
+        rounds: Array.from({ length: numRounds }, (_, i) => scores[i] != null ? String(scores[i]) : ""),
         placement: e.placement != null ? String(e.placement) : "",
         gameWinner: e.gameWinner,
         communityChamp: e.communityChamp,
@@ -80,9 +91,24 @@ function LulSpieltagEditor({
     if (!entries[userId]) {
       setEntries(prev => ({
         ...prev,
-        [userId]: { role, rounds: Array(10).fill(""), placement: "", gameWinner: false, communityChamp: false, trostpreis: false, voted: false },
+        [userId]: { role, rounds: Array(numRounds).fill(""), placement: "", gameWinner: false, communityChamp: false, trostpreis: false, voted: false },
       }));
     }
+  }
+
+  function changeNumRounds(delta: number) {
+    setNumRounds(prev => {
+      const next = Math.max(1, prev + delta);
+      setEntries(cur => {
+        const updated: typeof cur = {};
+        for (const [uid, e] of Object.entries(cur)) {
+          const rounds = Array.from({ length: next }, (_, i) => e.rounds[i] ?? "");
+          updated[uid] = { ...e, rounds };
+        }
+        return updated;
+      });
+      return next;
+    });
   }
 
   function togglePlayer(userId: string) {
@@ -269,6 +295,18 @@ function LulSpieltagEditor({
               className="text-xs text-amber-400 hover:text-amber-300 bg-amber-900/20 hover:bg-amber-900/30 px-2 py-1 rounded transition-colors">
               Game Winner auto
             </button>
+            <div className="flex items-center gap-1 ml-auto text-xs">
+              <span className="text-gray-500">Runden:</span>
+              <button onClick={() => changeNumRounds(-1)} disabled={numRounds <= 1}
+                className="w-6 h-6 flex items-center justify-center rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-30 text-white font-bold transition-colors">
+                −
+              </button>
+              <span className="text-white font-semibold w-6 text-center tabular-nums">{numRounds}</span>
+              <button onClick={() => changeNumRounds(1)}
+                className="w-6 h-6 flex items-center justify-center rounded bg-gray-700 hover:bg-gray-600 text-white font-bold transition-colors">
+                +
+              </button>
+            </div>
           </div>
           <div className="relative">
             <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500" />
@@ -296,7 +334,7 @@ function LulSpieltagEditor({
                 <thead>
                   <tr className="bg-gray-800 border-b border-gray-700 text-gray-400">
                     <th className="text-left px-3 py-2">Spieler</th>
-                    {Array.from({length: 10}, (_, i) => (
+                    {Array.from({length: numRounds}, (_, i) => (
                       <th key={i} className="text-center px-1 py-2 w-12">R{i+1}</th>
                     ))}
                     <th className="text-center px-2 py-2">∑</th>
