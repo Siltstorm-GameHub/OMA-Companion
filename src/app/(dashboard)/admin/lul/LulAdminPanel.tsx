@@ -222,11 +222,30 @@ function LulSpieltagEditor({
 
   const isFinished = spieltag.status === "finished";
 
+  async function reopen() {
+    if (!confirm(`Spieltag ${spieltag.number} (${spieltag.game}) wirklich wiedereröffnen?\n\nDie LUL-Punkte werden zurückgesetzt und neu berechnet sobald du erneut finalisierst.`)) return;
+    setLoading(true);
+    await fetch(`/api/lul/spieltage/${spieltag.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "active" }),
+    });
+    setLoading(false);
+    toast.success("Spieltag wieder geöffnet");
+    onRefresh();
+  }
+
   if (isFinished) {
     return (
       <div className="p-4 space-y-3">
-        <div className="flex items-center gap-2 text-green-400 text-sm font-medium">
-          <Lock className="w-4 h-4" /> Abgeschlossen – Ergebnisse finalisiert
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-green-400 text-sm font-medium">
+            <Lock className="w-4 h-4" /> Abgeschlossen – Ergebnisse finalisiert
+          </div>
+          <button onClick={reopen} disabled={loading}
+            className="flex items-center gap-1.5 text-xs text-orange-400 hover:text-orange-300 bg-orange-900/20 hover:bg-orange-900/30 border border-orange-800/30 rounded-lg px-2.5 py-1.5 transition-colors disabled:opacity-50">
+            <RefreshCw className="w-3 h-3" /> Wiedereröffnen
+          </button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
