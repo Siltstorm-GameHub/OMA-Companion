@@ -3,6 +3,8 @@ import { auth } from "@/auth";
 import { CalendarDays, ExternalLink, Users, Zap, Swords, Trophy, ChevronRight, Check } from "lucide-react";
 import SyncButton from "./SyncButton";
 import RegisterButton from "./RegisterButton";
+import EventCreateForm from "./EventCreateForm";
+import EventAdminRow from "../admin/events/EventAdminRow";
 import { RelativeTime } from "@/components/RelativeTime";
 import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
@@ -21,14 +23,22 @@ const GUILD_ID = process.env.DISCORD_GUILD_ID ?? "";
 export default async function EventsPage() {
   const session = await auth();
   const userId  = session?.user?.id;
+  const role    = (session?.user as { role?: string } | undefined)?.role ?? "user";
+  const isMod   = role === "moderator" || role === "admin";
 
-  const [eventsRaw, myTournamentRegs] = await Promise.all([
+  const [eventsRaw, myTournamentRegs, allUsers] = await Promise.all([
     prisma.event.findMany({
       orderBy:  [{ status: "asc" }, { startAt: "asc" }],
       include:  {
         _count:     { select: { registrations: true } },
-        tournament: true,
-        ...(userId ? { registrations: { where: { userId } } } : {}),
+        tournament: isMod ? {
+          include: {
+            participants: { include: { user: { select: { id: true, name: true, username: true, image: true } } } },
+            matches: { orderBy: [{ round: "asc" }, { position: "asc" }], include: { entries: true } },
+            teams: { include: { members: { include: { user: { select: { id: true, name: true, username: true } } } } } },
+          },
+        } : true,
+        registrations: { select: { userId: true } },
       },
     }),
     userId
@@ -36,6 +46,9 @@ export default async function EventsPage() {
           where:  { userId, event: { tournament: { isNot: null } } },
           select: { eventId: true },
         })
+      : Promise.resolve([]),
+    isMod
+      ? prisma.user.findMany({ select: { id: true, name: true, username: true, image: true }, orderBy: { name: "asc" } })
       : Promise.resolve([]),
   ]);
 
@@ -96,8 +109,20 @@ export default async function EventsPage() {
               : "Alle Events"}
           </p>
         </div>
-        <SyncButton />
+        {isMod && <SyncButton />}
       </div>
+
+      {/* ── Admin-Tools ───────────────────────────────────────────────── */}
+      {isMod && (
+        <div className="space-y-3">
+          <EventCreateForm />
+          <div className="space-y-2">
+            {eventsRaw.map(ev => (
+              <EventAdminRow key={ev.id} event={ev as Parameters<typeof EventAdminRow>[0]["event"]} allUsers={allUsers} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Turnier-Section ───────────────────────────────────────────── */}
       {hasTournamentSection && (
