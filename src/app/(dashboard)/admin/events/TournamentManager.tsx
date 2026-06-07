@@ -720,8 +720,13 @@ export default function TournamentManager({
           {rankingPreview && !rankingLoading && (
             <div className="space-y-2">
               {rankingPreview.map((entry, idx) => {
-                const medals = ["🥇", "🥈", "🥉"];
-                const name = entry.user?.username ?? entry.user?.name ?? entry.userId;
+                const medals   = ["🥇", "🥈", "🥉"];
+                // Robuster Fallback: name > username > "Unbekannt"
+                const name     = (entry.user?.name || entry.user?.username)
+                  ?? allUsers.find(u => u.id === entry.userId)?.name
+                  ?? allUsers.find(u => u.id === entry.userId)?.username
+                  ?? "Unbekannt";
+                const avatar   = entry.user?.image ?? allUsers.find(u => u.id === entry.userId)?.image;
                 const hasReward = entry.coins > 0 || entry.rankPts > 0;
                 return (
                   <div key={entry.userId}
@@ -733,8 +738,16 @@ export default function TournamentManager({
                       {idx < 3 ? medals[idx] : <span className="text-xs text-gray-500">{idx + 1}.</span>}
                     </span>
 
-                    {/* Name */}
-                    <span className="flex-1 text-sm font-medium text-white truncate">{name}</span>
+                    {/* Avatar + Name */}
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      {avatar
+                        ? <img src={avatar} alt="" className="w-6 h-6 rounded-full shrink-0 object-cover" />
+                        : <div className="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center text-[10px] font-bold text-gray-300 shrink-0">
+                            {name[0]?.toUpperCase() ?? "?"}
+                          </div>
+                      }
+                      <span className="text-sm font-medium text-white truncate">{name}</span>
+                    </div>
 
                     {/* Score */}
                     <span className="text-xs text-gray-500 shrink-0">{entry.label}</span>

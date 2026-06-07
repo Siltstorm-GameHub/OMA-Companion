@@ -20,13 +20,16 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const cfg: Record<string, number | { coins: number; points: number }> =
     tournament.pointsConfig ? JSON.parse(tournament.pointsConfig) : {};
 
-  const format = tournament.format;
-  const userMap = new Map(tournament.participants.map(p => [p.userId, p.user]));
+  const format  = tournament.format;
+
+  // Alle bekannten User-IDs aus Participants sammeln
+  const userMap = new Map<string, { id: string; name: string | null; username: string | null; image: string | null }>(
+    tournament.participants.map(p => [p.userId, p.user])
+  );
 
   let ranking: { userId: string; score: number; label: string }[] = [];
 
   if (format === "ffa" || format === "coop_stats") {
-    // Stats über alle Matches summieren
     const fields: string[] = tournament.statFields ? JSON.parse(tournament.statFields) : [];
     const totals = new Map<string, { userId: string; stats: Record<string, number> }>();
 
@@ -57,25 +60,34 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     }));
 
   } else if (format === "single_elimination") {
-    // Siege aus Match-Ergebnissen zählen
     const wins = new Map<string, number>();
     for (const match of tournament.matches) {
       if (match.winnerId) wins.set(match.winnerId, (wins.get(match.winnerId) ?? 0) + 1);
     }
+
+    // Auch Spieler aus Match-player1Id/player2Id erfassen, falls nicht in participants
+    for (const match of tournament.matches) {
+      for (const uid of [match.player1Id, match.player2Id, match.winnerId]) {
+        if (uid && !userMap.has(uid)) userMap.set(uid, { id: uid, name: null, username: null, image: null });
+      }
+    }
+
     ranking = [...userMap.keys()]
       .map(uid => ({ userId: uid, score: wins.get(uid) ?? 0, label: `${wins.get(uid) ?? 0} Siege` }))
       .sort((a, b) => b.score - a.score);
 
   } else if (format === "round_robin" || format === "liga") {
-    // Punkte: Sieg = 3, Unentschieden = 1, Niederlage = 0
     const pts = new Map<string, number>();
     for (const match of tournament.matches) {
       const p1 = match.player1Id; const p2 = match.player2Id;
       if (!p1 || !p2) continue;
       if (!pts.has(p1)) pts.set(p1, 0);
       if (!pts.has(p2)) pts.set(p2, 0);
-      if (match.winnerId === p1) { pts.set(p1, pts.get(p1)! + 3); }
-      else if (match.winnerId === p2) { pts.set(p2, pts.get(p2)! + 3); }
+      // Spieler auch in userMap eintragen falls fehlend
+      if (!userMap.has(p1)) userMap.set(p1, { id: p1, name: null, username: null, image: null });
+      if (!userMap.has(p2)) userMap.set(p2, { id: p2, name: null, username: null, image: null });
+      if (match.winnerId === p1)       { pts.set(p1, pts.get(p1)! + 3); }
+      else if (match.winnerId === p2)  { pts.set(p2, pts.get(p2)! + 3); }
       else if (match.score1 !== null && match.score2 !== null && match.score1 === match.score2) {
         pts.set(p1, pts.get(p1)! + 1); pts.set(p2, pts.get(p2)! + 1);
       }
@@ -85,21 +97,38 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       .sort((a, b) => b.score - a.score);
 
   } else {
-    // Fallback: alle Teilnehmer ohne Wertung
     ranking = [...userMap.keys()].map(uid => ({ userId: uid, score: 0, label: "–" }));
+  }
+
+  // User-IDs sammeln, deren User-Daten wir noch nicht haben
+  const missingUserIds = ranking
+    .map(r => r.userId)
+    .filter(uid => {
+      const u = userMap.get(uid);
+      return !u || (!u.name && !u.username); // fehlt oder hat keinen Anzeigenamen
+    });
+
+  if (missingUserIds.length > 0) {
+    const fetchedUsers = await prisma.user.findMany({
+      where:  { id: { in: missingUserIds } },
+      select: { id: true, name: true, username: true, image: true },
+    });
+    for (const u of fetchedUsers) userMap.set(u.id, u);
   }
 
   // Punkte-Vorschau pro Platz
   const result = ranking.map((r, i) => {
     const placement = i + 1;
-    const raw = cfg[String(placement)];
-    const coins   = raw === undefined ? 0 : typeof raw === "number" ? raw : (raw.coins  ?? 0);
-    const rankPts = raw === undefined ? 0 : typeof raw === "number" ? 0   : (raw.points ?? 0);
-    const user = userMap.get(r.userId);
+    const raw    = cfg[String(placement)];
+    const coins  = raw === undefined ? 0 : typeof raw === "number" ? raw : (raw.coins  ?? 0);
+    const rankPts = raw === undefined ? 0 : typeof raw === "number" ? 0  : (raw.points ?? 0);
+    const user   = userMap.get(r.userId);
     return {
       placement,
       userId: r.userId,
-      user:   user ? { id: user.id, name: user.name, username: user.username, image: user.image } : null,
+      user:   user
+        ? { id: user.id, name: user.name, username: user.username, image: user.image }
+        : null,
       score:  r.score,
       label:  r.label,
       coins,
