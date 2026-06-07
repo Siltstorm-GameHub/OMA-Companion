@@ -134,13 +134,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         where: { id: entry.id },
         data:  { dominionBonus: bonus, lulPoints: pts },
       });
-      // LuL-Punkte fließen in rankPoints (delta, damit Re-Finalisierung korrekt ist)
+      // Delta auf rankPoints anwenden (korrekt bei Re-Finalisierung)
       const delta = pts - oldPts;
       if (delta !== 0) {
-        await prisma.user.update({
-          where: { id: entry.userId },
-          data:  { rankPoints: { increment: delta } },
-        });
+        const reason = `LUL Spieltag ${spieltag.number} – ${spieltag.game}`;
+        await prisma.$transaction([
+          prisma.user.update({
+            where: { id: entry.userId },
+            data:  { rankPoints: { increment: delta } },
+          }),
+          // Delta als Transaktion festhalten (kein Geburtstags-Boost)
+          prisma.pointTransaction.create({
+            data: { userId: entry.userId, amount: delta, reason },
+          }),
+        ]);
       }
     }
 
