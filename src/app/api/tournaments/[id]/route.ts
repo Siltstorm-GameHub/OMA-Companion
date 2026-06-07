@@ -3,8 +3,7 @@ import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { generateRoundRobin } from "@/app/api/tournaments/route";
 
-// Gesamtranking für FFA/coop_stats berechnen: Stats über alle Matches summieren,
-// dann nach erstem Stat-Feld absteigend sortieren (weitere Felder als Tiebreaker)
+// Gesamtranking für FFA/coop_stats berechnen
 async function calcFfaRanking(tournamentId: string, statFields: string[]) {
   const matches = await prisma.match.findMany({
     where: { tournamentId, playedAt: { not: null } },
@@ -35,12 +34,61 @@ async function calcFfaRanking(tournamentId: string, statFields: string[]) {
   });
 }
 
+/** Punkte-Konfiguration parsen → { coins, rankPts } pro Platzierung */
+function parsePlacementPts(
+  cfg: Record<string, number | { coins: number; points: number }> | null,
+  placement: number
+): { coins: number; rankPts: number } {
+  const raw = cfg?.[String(placement)];
+  if (!raw) return { coins: 0, rankPts: 0 };
+  if (typeof raw === "number") return { coins: raw, rankPts: raw }; // Zahl = gilt für beides
+  return { coins: raw.coins ?? 0, rankPts: raw.points ?? 0 };
+}
+
+/** Punkte für eine Reihenfolge von UserIds vergeben (increment) */
+async function awardPoints(
+  ranking: string[],
+  cfg: Record<string, number | { coins: number; points: number }> | null,
+  tournamentLabel: string,
+  direction: 1 | -1 = 1
+) {
+  for (let i = 0; i < ranking.length; i++) {
+    const userId    = ranking[i];
+    const placement = i + 1;
+    const { coins, rankPts } = parsePlacementPts(cfg, placement);
+    if (coins <= 0 && rankPts <= 0) continue;
+
+    const deltaCoins = coins   * direction;
+    const deltaRank  = rankPts * direction;
+
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: userId },
+        data: {
+          ...(deltaCoins !== 0 && { points:     { increment: deltaCoins } }),
+          ...(deltaRank  !== 0 && { rankPoints: { increment: deltaRank  } }),
+        },
+      }),
+      prisma.pointTransaction.create({
+        data: {
+          userId,
+          amount: deltaCoins,
+          reason: direction === 1
+            ? `Platz ${placement} beim Turnier (${tournamentLabel})`
+            : `Korrektur Platz ${placement} – Turnier (${tournamentLabel})`,
+        },
+      }),
+    ]);
+  }
+}
+
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   await requireRole("moderator");
   const { id } = await params;
-  const { status, pointsConfig, statFields, generateMatches, finalRanking, finalRankingNote } = await req.json();
+  const body = await req.json();
+  const { status, pointsConfig, statFields, generateMatches, finalRanking, finalRankingNote } = body;
 
-  // Auto-generate round-robin matches from existing participants
+  // Auto-generate round-robin matches
   if (generateMatches === "round_robin") {
     const existing = await prisma.match.count({ where: { tournamentId: id } });
     if (existing > 0) {
@@ -58,45 +106,59 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ generated: matchData.length });
   }
 
+  // Aktuellen DB-Zustand VORHER lesen (brauchen wir für Punkte-Rückabwicklung)
   const existing = await prisma.tournament.findUnique({
     where: { id },
-    select: { format: true, statFields: true, pointsConfig: true, status: true },
+    select: {
+      format:           true,
+      statFields:       true,
+      pointsConfig:     true,
+      status:           true,
+      finalRankingJson: true,
+      event:            { select: { title: true } },
+    },
   });
+  if (!existing) return NextResponse.json({ error: "Nicht gefunden" }, { status: 404 });
 
+  // Tournament updaten
   const tournament = await prisma.tournament.update({
     where: { id },
     data: {
-      ...(status            !== undefined && { status }),
-      ...(pointsConfig      !== undefined && { pointsConfig: pointsConfig ? JSON.stringify(pointsConfig) : null }),
-      ...(statFields        !== undefined && { statFields:   statFields   ? JSON.stringify(statFields)   : null }),
-      ...(finalRanking      !== undefined && Array.isArray(finalRanking) && { finalRankingJson: JSON.stringify(finalRanking) }),
-      ...(finalRankingNote  !== undefined && { finalRankingNote: finalRankingNote?.trim() || null }),
+      ...(status           !== undefined && { status }),
+      ...(pointsConfig     !== undefined && { pointsConfig: pointsConfig ? JSON.stringify(pointsConfig) : null }),
+      ...(statFields       !== undefined && { statFields:   statFields   ? JSON.stringify(statFields)   : null }),
+      ...(finalRanking     !== undefined && Array.isArray(finalRanking) && { finalRankingJson: JSON.stringify(finalRanking) }),
+      ...(finalRankingNote !== undefined && { finalRankingNote: finalRankingNote?.trim() || null }),
     },
   });
 
-  // Punkte vergeben wenn Status → "finished" und finalRanking übergeben wurde
-  if (status === "finished" && existing?.status !== "finished" && finalRanking && Array.isArray(finalRanking)) {
-    const cfgRaw = existing?.pointsConfig ?? tournament.pointsConfig;
-    const cfg = cfgRaw ? JSON.parse(cfgRaw) as Record<string, number | { coins: number; points: number }> : null;
+  // ── Punkte-Logik ────────────────────────────────────────────────────────────
+  const newRanking: string[] | null =
+    finalRanking && Array.isArray(finalRanking) ? finalRanking : null;
 
-    for (let i = 0; i < (finalRanking as string[]).length; i++) {
-      const userId    = (finalRanking as string[])[i];
-      const placement = i + 1;
-      const raw       = cfg?.[String(placement)];
-      if (!raw) continue;
-      const coins   = typeof raw === "number" ? raw : (raw.coins  ?? 0);
-      const rankPts = typeof raw === "number" ? 0   : (raw.points ?? 0);
-      if (coins <= 0 && rankPts <= 0) continue;
-      await prisma.$transaction([
-        prisma.user.update({
-          where: { id: userId },
-          data:  { points: { increment: coins }, ...(rankPts > 0 && { rankPoints: { increment: rankPts } }) },
-        }),
-        prisma.pointTransaction.create({
-          data: { userId, amount: coins, reason: `Platz ${placement} beim Turnier` },
-        }),
-      ]);
+  const isBecomingFinished = status === "finished" && existing.status !== "finished";
+  const isAlreadyFinished  = existing.status === "finished";
+
+  // Punkte vergeben wenn Turnier abgeschlossen wird/ist UND eine Platzierung vorliegt
+  if (newRanking && (isBecomingFinished || isAlreadyFinished)) {
+    const eventTitle  = existing.event?.title ?? id;
+
+    // Punkte-Config: bevorzuge die neu übergebene, sonst die gespeicherte
+    const cfgRaw: Record<string, number | { coins: number; points: number }> | null =
+      pointsConfig
+        ? (typeof pointsConfig === "string" ? JSON.parse(pointsConfig) : pointsConfig)
+        : existing.pointsConfig
+          ? JSON.parse(existing.pointsConfig)
+          : null;
+
+    // 1. Alte Punkte rückgängig machen (wenn vorher schon eine Platzierung vergeben war)
+    if (isAlreadyFinished && existing.finalRankingJson) {
+      const oldRanking = JSON.parse(existing.finalRankingJson) as string[];
+      await awardPoints(oldRanking, cfgRaw, eventTitle, -1); // direction = -1 → Abziehen
     }
+
+    // 2. Neue Punkte vergeben
+    await awardPoints(newRanking, cfgRaw, eventTitle, 1);
   }
 
   return NextResponse.json(tournament);
@@ -107,12 +169,18 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   const { id } = await params;
 
   const tournament = await prisma.tournament.findUnique({
-    where: { id },
-    select: { eventId: true },
+    where:  { id },
+    select: { eventId: true, status: true, finalRankingJson: true, pointsConfig: true, event: { select: { title: true } } },
   });
   if (!tournament) return NextResponse.json({ error: "Nicht gefunden" }, { status: 404 });
 
-  // Delete in dependency order; MatchEntry cascades from Match, TeamMember from Team
+  // Punkte zurückbuchen falls Turnier bereits abgeschlossen war
+  if (tournament.status === "finished" && tournament.finalRankingJson) {
+    const oldRanking = JSON.parse(tournament.finalRankingJson) as string[];
+    const cfgRaw = tournament.pointsConfig ? JSON.parse(tournament.pointsConfig) : null;
+    await awardPoints(oldRanking, cfgRaw, tournament.event?.title ?? id, -1);
+  }
+
   await prisma.match.deleteMany({ where: { tournamentId: id } });
   await prisma.team.deleteMany({ where: { tournamentId: id } });
   await prisma.tournamentParticipant.deleteMany({ where: { tournamentId: id } });
@@ -120,7 +188,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 
   await prisma.event.update({
     where: { id: tournament.eventId },
-    data: { status: "open", type: "community" },
+    data:  { status: "open", type: "community" },
   });
 
   return NextResponse.json({ ok: true });
