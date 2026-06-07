@@ -200,7 +200,7 @@ export default async function LulOverviewPage() {
                 const s = STATUS_LABEL[st.status] ?? STATUS_LABEL.upcoming;
                 const isNext = nextSpieltag?.id === st.id;
                 return (
-                  <Link key={st.id} href={`/lul/${activeSeason.id}`}
+                  <Link key={st.id} href={`/lul/spieltag/${st.id}`}
                     className={`card-hover flex items-center gap-3 glass rounded-xl px-4 py-3 relative overflow-hidden ${
                       isNext ? "ring-1 ring-amber-500/20" : ""
                     }`}>

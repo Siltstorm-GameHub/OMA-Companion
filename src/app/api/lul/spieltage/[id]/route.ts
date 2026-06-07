@@ -2,6 +2,25 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { calcLulPoints, hasDominionBonus } from "@/lib/lul";
+import { auth } from "@/auth";
+
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const session = await auth();
+  if (!session?.user?.id) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
+  const { id } = await params;
+  const spieltag = await prisma.lulSpieltag.findUnique({
+    where: { id },
+    include: {
+      season: { select: { id: true, name: true, number: true } },
+      entries: {
+        include: { user: { select: { id: true, name: true, username: true, image: true } } },
+        orderBy: { placement: "asc" },
+      },
+    },
+  });
+  if (!spieltag) return NextResponse.json({ error: "Nicht gefunden" }, { status: 404 });
+  return NextResponse.json(spieltag, { headers: { "Cache-Control": "no-store" } });
+}
 
 type EntryInput = {
   userId:         string;

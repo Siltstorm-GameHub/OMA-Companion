@@ -336,7 +336,8 @@ export default async function LulSeasonPage({ params }: { params: Promise<{ id: 
                 className={`rounded-xl overflow-hidden border ${isMeIn ? "border-amber-800/40" : "border-white/[0.05]"}`}
                 style={{ background: "rgba(15,15,23,0.8)" }}>
 
-                <div className="px-4 py-3 flex items-center gap-3">
+                <Link href={`/lul/spieltag/${st.id}`}
+                  className="px-4 py-3 flex items-center gap-3 hover:bg-white/[0.02] transition-colors">
                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold shrink-0 ${
                     isFinished ? "bg-amber-900/40 text-amber-300" :
                     hasEntries ? "bg-blue-900/40 text-blue-300" :
@@ -363,7 +364,7 @@ export default async function LulSeasonPage({ params }: { params: Promise<{ id: 
                       <span className={`text-[10px] px-2 py-0.5 rounded-full ${s.cls}`}>{s.label}</span>
                     </div>
                   </div>
-                </div>
+                </Link>
 
                 {hasEntries && (
                   <div className="border-t border-white/[0.05] px-4 py-3 space-y-3">
