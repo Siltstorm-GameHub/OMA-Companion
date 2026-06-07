@@ -21,20 +21,20 @@ export async function GET() {
   }));
 
   // Monats-Historie: Gesamtbetrag pro Monat (kein User-Betrag)
-  const monthlyMap = new Map<string, { year: number; month: number; total: number; donors: number }>();
+  const monthlyMap = new Map<string, { year: number; month: number; total: number; donorIds: Set<string> }>();
   for (const d of donations) {
     const key = `${d.year}-${d.month}`;
     const existing = monthlyMap.get(key);
     if (existing) {
       existing.total += d.amount;
-      existing.donors += 1;
+      existing.donorIds.add(d.userId);
     } else {
-      monthlyMap.set(key, { year: d.year, month: d.month, total: d.amount, donors: 1 });
+      monthlyMap.set(key, { year: d.year, month: d.month, total: d.amount, donorIds: new Set([d.userId]) });
     }
   }
-  const months = Array.from(monthlyMap.values()).sort((a, b) =>
-    a.year !== b.year ? a.year - b.year : a.month - b.month
-  );
+  const months = Array.from(monthlyMap.values())
+    .map(({ donorIds, ...rest }) => ({ ...rest, donors: donorIds.size }))
+    .sort((a, b) => a.year !== b.year ? a.year - b.year : a.month - b.month);
 
   // Spender: Streak berechnen (ohne Beträge)
   const userMap = new Map<string, { user: { id: string; name: string | null; image: string | null }; entries: { year: number; month: number }[] }>();
@@ -46,8 +46,12 @@ export async function GET() {
   }
 
   const donors = Array.from(userMap.values()).map(({ user, entries }) => {
-    const streak = calcStreak(entries);
-    const totalMonths = entries.length;
+    // Deduplizieren: mehrere Spenden im selben Monat zählen als ein Monat für die Streak
+    const uniqueMonths = Array.from(
+      new Map(entries.map(e => [`${e.year}-${e.month}`, e])).values()
+    );
+    const streak = calcStreak(uniqueMonths);
+    const totalMonths = uniqueMonths.length;
     return { user, streak, totalMonths };
   }).sort((a, b) => b.streak - a.streak || b.totalMonths - a.totalMonths);
 
