@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Trophy, CalendarDays, History } from "lucide-react";
+import { ArrowLeft, Trophy, CalendarDays, History, Radio } from "lucide-react";
 import { buildLulStandings, LUL_POINTS, type LulStandingRow } from "@/lib/lul";
 
 const MEDAL      = ["🥇", "🥈", "🥉"];
@@ -367,6 +367,62 @@ export default async function LulSeasonPage({ params }: { params: Promise<{ id: 
 
                 {hasEntries && (
                   <div className="border-t border-white/[0.05] px-4 py-3 space-y-3">
+
+                    {/* ── Live Ergebnisse (active Spieltag mit Rundendaten) ── */}
+                    {st.status === "active" && (() => {
+                      const liveRows = players
+                        .map(e => {
+                          const scores: number[] = e.roundScores ? JSON.parse(e.roundScores) : [];
+                          return { entry: e, scores, total: scores.reduce((s, v) => s + v, 0) };
+                        })
+                        .filter(r => r.scores.some(v => v > 0))
+                        .sort((a, b) => b.total - a.total);
+                      if (liveRows.length === 0) return null;
+                      const maxRounds = Math.max(...liveRows.map(r => r.scores.length));
+                      return (
+                        <div className="rounded-xl overflow-hidden border border-emerald-800/30 bg-emerald-950/10">
+                          <div className="px-3 py-2 flex items-center gap-2 border-b border-emerald-800/20">
+                            <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                            <span className="text-xs font-semibold text-emerald-400 uppercase tracking-widest">Live Ergebnisse</span>
+                          </div>
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-xs min-w-[400px]">
+                              <thead>
+                                <tr className="border-b border-white/[0.05] text-gray-600">
+                                  <th className="text-left px-3 py-2">#</th>
+                                  <th className="text-left px-3 py-2">Spieler</th>
+                                  {Array.from({ length: maxRounds }, (_, i) => (
+                                    <th key={i} className="text-center px-2 py-2 w-8">R{i + 1}</th>
+                                  ))}
+                                  <th className="text-right px-3 py-2 font-semibold text-white">∑</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {liveRows.map((row, i) => {
+                                  const isMe = row.entry.userId === userId;
+                                  return (
+                                    <tr key={row.entry.id}
+                                      className={`border-b border-white/[0.03] last:border-0 ${isMe ? "bg-amber-500/[0.04]" : ""}`}>
+                                      <td className="px-3 py-2 text-gray-500">{i < 3 ? MEDAL[i] : i + 1}</td>
+                                      <td className={`px-3 py-2 font-medium whitespace-nowrap ${isMe ? "text-amber-300" : "text-white"}`}>
+                                        {uname(row.entry.user)}{isMe && <span className="text-[10px] text-amber-600 ml-1">(du)</span>}
+                                      </td>
+                                      {Array.from({ length: maxRounds }, (_, ri) => (
+                                        <td key={ri} className="px-2 py-2 text-center tabular-nums text-gray-400">
+                                          {row.scores[ri] != null ? row.scores[ri] : "–"}
+                                        </td>
+                                      ))}
+                                      <td className="px-3 py-2 text-right font-bold tabular-nums text-amber-400">{row.total}</td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
                     {isFinished && (winner || champ || playedEntries.length > 0) && (
                       <div className="flex flex-wrap gap-2">
                         {winner && (
