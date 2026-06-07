@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { CalendarDays, ExternalLink, Users, Zap, Swords, Trophy, ChevronRight, Check } from "lucide-react";
+import { CalendarDays, ExternalLink, Users, Zap, Swords, Trophy, ChevronRight, Check, Repeat } from "lucide-react";
 import SyncButton from "./SyncButton";
 import RegisterButton from "./RegisterButton";
 import EventCreateForm from "./EventCreateForm";
@@ -31,6 +31,7 @@ export default async function EventsPage() {
       orderBy:  [{ status: "asc" }, { startAt: "asc" }],
       include:  {
         _count:     { select: { registrations: true } },
+        series:     { select: { id: true, name: true } },
         tournament: isMod ? {
           include: {
             participants: { include: { user: { select: { id: true, name: true, username: true, image: true } } } },
@@ -78,10 +79,12 @@ export default async function EventsPage() {
   }));
 
   const registeredEventIds = new Set(myTournamentRegs.map(r => r.eventId));
-  const openCount          = events.filter(e => e.status === "open" || e.status === "active").length;
+  const activeEvents   = events.filter(e => e.status !== "finished");
+  const finishedEvents = events.filter(e => e.status === "finished");
+  const openCount      = events.filter(e => e.status === "open" || e.status === "active").length;
 
-  // Turniere aufteilen
-  const tournamentEvents        = events.filter(ev => ev.tournament);
+  // Turniere aufteilen (nur aktive)
+  const tournamentEvents        = activeEvents.filter(ev => ev.tournament);
   const registeredTournaments   = tournamentEvents.filter(ev => registeredEventIds.has(ev.id));
   const openTournaments         = tournamentEvents.filter(
     ev => !registeredEventIds.has(ev.id) && (ev.status === "open" || ev.status === "active")
@@ -116,11 +119,27 @@ export default async function EventsPage() {
       {isMod && (
         <div className="space-y-3">
           <EventCreateForm />
-          <div className="space-y-2">
-            {eventsRaw.map(ev => (
-              <EventAdminRow key={ev.id} event={ev as Parameters<typeof EventAdminRow>[0]["event"]} allUsers={allUsers} />
-            ))}
-          </div>
+
+          {/* Aktive Events */}
+          {activeEvents.length > 0 && (
+            <div className="space-y-2">
+              {activeEvents.map(ev => (
+                <EventAdminRow key={ev.id} event={ev as Parameters<typeof EventAdminRow>[0]["event"]} allUsers={allUsers} />
+              ))}
+            </div>
+          )}
+
+          {/* Vergangene Events — weiterhin bearbeitbar */}
+          {finishedEvents.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest px-1 pt-1">
+                Vergangene Events (bearbeitbar)
+              </p>
+              {finishedEvents.map(ev => (
+                <EventAdminRow key={ev.id} event={ev as Parameters<typeof EventAdminRow>[0]["event"]} allUsers={allUsers} />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -316,7 +335,7 @@ export default async function EventsPage() {
         </div>
       )}
 
-      {/* ── Event List ────────────────────────────────────────────────── */}
+      {/* ── Aktive Events ─────────────────────────────────────────────── */}
       <div>
         {hasTournamentSection && (
           <div className="flex items-center gap-2 mb-3">
@@ -326,15 +345,15 @@ export default async function EventsPage() {
         )}
 
         <div className="space-y-3">
-          {events.length === 0 && (
+          {activeEvents.length === 0 && finishedEvents.length === 0 && (
             <EmptyState
               type="events"
               title="Noch keine Events"
-              description="Events werden im Admin-Bereich manuell eingetragen und automatisch zu Discord gepusht."
+              description="Events werden hier manuell eingetragen und automatisch zu Discord gepusht."
             />
           )}
 
-          {events.map((ev, idx) => {
+          {activeEvents.map((ev, idx) => {
             const s            = STATUS_CONFIG[ev.status] ?? STATUS_CONFIG.finished;
             const isRegistered = userId
               ? (ev.registrations as { userId: string }[])?.some(r => r.userId === userId)
@@ -342,30 +361,16 @@ export default async function EventsPage() {
             const isFull       = !!(ev.maxPlayers && ev._count.registrations >= ev.maxPlayers);
             const canRegister  = ev.status === "open" || ev.status === "active";
             const isTournament = !!ev.tournament;
-
             const discordEventUrl = ev.discordEventId && GUILD_ID
               ? `https://discord.com/events/${GUILD_ID}/${ev.discordEventId}` : null;
-
             const date = new Date(ev.startAt);
 
             return (
               <div key={ev.id}
-                className={`card-hover card-shine glass rounded-2xl p-5 flex items-start gap-5 relative overflow-hidden group animate-slide-up ${
-                  isRegistered ? "border border-emerald-500/10" : ""
-                }`}
+                className={`card-hover card-shine glass rounded-2xl p-5 flex items-start gap-5 relative overflow-hidden group animate-slide-up ${isRegistered ? "border border-emerald-500/10" : ""}`}
                 style={{ animationDelay: `${idx * 40}ms` }}>
-
-                {/* Status accent left bar */}
-                <div className={`absolute left-0 top-5 bottom-5 w-[3px] rounded-r-full ${
-                  isRegistered ? "bg-emerald-400" : s.bar
-                }`} />
-
-                {/* Subtle glow */}
-                <div className={`absolute inset-0 bg-gradient-to-r ${
-                  isRegistered ? "from-emerald-500/4" : s.glow
-                } to-transparent opacity-60 pointer-events-none`} />
-
-                {/* ── Date badge ──────────────────────────────────────── */}
+                <div className={`absolute left-0 top-5 bottom-5 w-[3px] rounded-r-full ${isRegistered ? "bg-emerald-400" : s.bar}`} />
+                <div className={`absolute inset-0 bg-gradient-to-r ${isRegistered ? "from-emerald-500/4" : s.glow} to-transparent opacity-60 pointer-events-none`} />
                 <div className="relative glass-heavy rounded-xl px-3 py-2.5 text-center min-w-[52px] shrink-0">
                   <p className="text-xl font-bold text-white leading-none tabular-nums">{date.getDate()}</p>
                   <p className="text-[10px] text-gray-500 uppercase tracking-wide mt-0.5 font-medium">
@@ -373,24 +378,28 @@ export default async function EventsPage() {
                   </p>
                   <RelativeTime date={date} className="text-[9px] text-gray-600 mt-1.5 block tabular-nums" />
                 </div>
-
-                {/* ── Content ─────────────────────────────────────────── */}
                 <div className="relative flex-1 min-w-0">
-                  {/* Title row — clean, no badge overload */}
+                  {/* Series-Badge */}
+                  {(ev as { series?: { name: string } | null }).series && (
+                    <Link href={`/events/${ev.id}`} className="inline-flex items-center gap-1 mb-1 group/series">
+                      <Repeat className="w-3 h-3 text-teal-500" />
+                      <span className="text-[10px] text-teal-500 group-hover/series:text-teal-300 transition-colors font-medium">
+                        {(ev as { series?: { name: string } | null }).series!.name}
+                      </span>
+                    </Link>
+                  )}
                   <div className="flex items-center gap-2 mb-1.5">
-                    <p className="font-semibold text-white text-base truncate group-hover:text-rose-200 transition-colors">
+                    <Link href={`/events/${ev.id}`}
+                      className="font-semibold text-white text-base truncate hover:text-teal-300 transition-colors">
                       {ev.title}
-                    </p>
+                    </Link>
                     {isTournament && <Swords className="w-3.5 h-3.5 text-purple-400 shrink-0" />}
                     {isRegistered && <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
                   </div>
-
-                  {/* Single meta row — only the essentials */}
                   <div className="flex items-center gap-3 flex-wrap">
                     {ev.game && <span className="text-xs text-gray-400 font-medium">{ev.game}</span>}
                     <span className="flex items-center gap-1 text-xs text-gray-500">
-                      <Users className="w-3 h-3" />
-                      {ev._count.registrations}{ev.maxPlayers ? ` / ${ev.maxPlayers}` : ""}
+                      <Users className="w-3 h-3" />{ev._count.registrations}{ev.maxPlayers ? ` / ${ev.maxPlayers}` : ""}
                     </span>
                     <span className="flex items-center gap-1 text-xs text-amber-400 font-semibold">
                       <Zap className="w-3 h-3" />+{ev.pointReward}
@@ -403,20 +412,13 @@ export default async function EventsPage() {
                     )}
                   </div>
                 </div>
-
-                {/* ── Actions ─────────────────────────────────────────── */}
                 <div className="relative flex flex-col items-end gap-2 shrink-0">
                   <span className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium ${s.badge}`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
                     {isFull && !isRegistered ? "Voll" : s.label}
                   </span>
                   {userId && canRegister && (
-                    <RegisterButton
-                      eventId={ev.id}
-                      isRegistered={isRegistered}
-                      isFull={isFull && !isRegistered}
-                      discordEventUrl={discordEventUrl}
-                    />
+                    <RegisterButton eventId={ev.id} isRegistered={isRegistered} isFull={isFull && !isRegistered} discordEventUrl={discordEventUrl} />
                   )}
                 </div>
               </div>
@@ -424,6 +426,54 @@ export default async function EventsPage() {
           })}
         </div>
       </div>
+
+      {/* ── Vergangene Events ─────────────────────────────────────────── */}
+      {finishedEvents.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <CalendarDays className="w-4 h-4 text-gray-600" />
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Vergangene Events</h2>
+          </div>
+          <div className="glass card-shine rounded-2xl overflow-hidden divide-y divide-white/[0.04]">
+            {finishedEvents.map(ev => {
+              const isTournament = !!ev.tournament;
+              const hasSeries    = !!(ev as { series?: { name: string } | null }).series;
+              const seriesName   = (ev as { series?: { name: string } | null }).series?.name;
+              const date = new Date(ev.startAt);
+              return (
+                <Link key={ev.id} href={`/events/${ev.id}`}
+                  className="flex items-center gap-3.5 px-4 py-3 opacity-50 hover:opacity-100 transition-opacity group">
+                  <div className="w-9 h-9 rounded-lg bg-gray-800/60 border border-white/[0.06] flex items-center justify-center shrink-0 text-center flex-col">
+                    <p className="text-xs font-bold text-gray-400 leading-none">{date.getDate()}</p>
+                    <p className="text-[8px] text-gray-600 uppercase">{date.toLocaleString("de-DE", { month: "short" })}</p>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      {hasSeries && <Repeat className="w-3 h-3 text-teal-600 shrink-0" />}
+                      <p className="text-sm font-medium text-gray-400 truncate group-hover:text-white transition-colors">{ev.title}</p>
+                      {isTournament && <Swords className="w-3 h-3 text-gray-600 shrink-0" />}
+                    </div>
+                    <p className="text-[10px] text-gray-600 mt-0.5">
+                      {hasSeries && <span className="text-teal-700 mr-1.5">{seriesName} ·</span>}
+                      {date.toLocaleDateString("de-DE", { day: "2-digit", month: "long", year: "numeric" })}
+                      {ev.game && <span className="ml-1.5">· {ev.game}</span>}
+                      <span className="ml-1.5">· {ev._count.registrations} Teilnehmer</span>
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {isTournament && (
+                      <span className="text-[10px] text-gray-600 hover:text-teal-400 transition-colors border border-white/[0.06] hover:border-teal-500/30 px-2.5 py-1 rounded-full flex items-center gap-1">
+                        <Trophy className="w-3 h-3" /> Ergebnisse
+                      </span>
+                    )}
+                    <ChevronRight className="w-3.5 h-3.5 text-gray-700 group-hover:text-gray-400 transition-colors" />
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

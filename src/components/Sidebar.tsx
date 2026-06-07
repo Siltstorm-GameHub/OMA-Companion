@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import {
   LayoutDashboard, CalendarDays, Trophy, User,
-  ShieldCheck, Star, ShoppingBag, LogOut, Heart,
+  ShieldCheck, Star, ShoppingBag, LogOut, Heart, ChevronUp,
 } from "lucide-react";
 import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
@@ -22,9 +22,11 @@ const NAV = [
 export default function Sidebar() {
   const pathname          = usePathname();
   const { data: session } = useSession();
-  const [isDesktop, setIsDesktop]   = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [avatarOpen, setAvatarOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const avatarRef    = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 1024px)");
@@ -34,75 +36,139 @@ export default function Sidebar() {
     return () => mq.removeEventListener("change", h);
   }, []);
 
-  // Close on route change
   useEffect(() => { setMobileOpen(false); }, [pathname]);
 
-  // Close on outside tap
+  // Close mobile menu on outside tap
   useEffect(() => {
     if (!mobileOpen) return;
     const onPointer = (e: PointerEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node))
         setMobileOpen(false);
-      }
     };
     document.addEventListener("pointerdown", onPointer);
     return () => document.removeEventListener("pointerdown", onPointer);
   }, [mobileOpen]);
 
+  // Close avatar dropdown on outside click
+  useEffect(() => {
+    if (!avatarOpen) return;
+    const onPointer = (e: PointerEvent) => {
+      if (avatarRef.current && !avatarRef.current.contains(e.target as Node))
+        setAvatarOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointer);
+    return () => document.removeEventListener("pointerdown", onPointer);
+  }, [avatarOpen]);
+
   const role    = session?.user?.role ?? "user";
   const isStaff = role === "admin" || role === "moderator";
 
-  // ── Desktop: always-visible floating pill ──────────────────────
+  // ── Desktop: horizontal bottom bar ────────────────────────────
   if (isDesktop) {
     return (
       <div
-        className="fixed left-4 top-1/2 -translate-y-1/2 z-50 flex flex-col items-center gap-1 py-3 px-2 rounded-2xl"
+        className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 px-3 py-2 rounded-2xl"
         style={{
-          background: "rgba(4,10,9,0.88)",
+          background: "rgba(4,10,9,0.90)",
           border: "1px solid rgba(20,184,166,0.12)",
-          backdropFilter: "blur(20px)",
-          boxShadow: "0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(20,184,166,0.06)",
+          backdropFilter: "blur(24px)",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.55), 0 0 0 1px rgba(20,184,166,0.06)",
         }}
       >
-        <Link href="/dashboard" className="mb-1 group relative">
-          <div className="w-8 h-8 rounded-xl overflow-hidden" style={{ boxShadow: "0 0 14px rgba(20,184,166,0.35)", outline: "1px solid rgba(20,184,166,0.25)" }}>
-            <Image src="/OMALogoNew.png" alt="OMA" width={32} height={32} className="w-full h-full object-cover" />
+        {/* Logo */}
+        <Link href="/dashboard" className="group relative flex items-center justify-center w-9 h-9 mr-1">
+          <div className="w-7 h-7 rounded-xl overflow-hidden" style={{ boxShadow: "0 0 14px rgba(20,184,166,0.35)", outline: "1px solid rgba(20,184,166,0.25)" }}>
+            <Image src="/OMALogoNew.png" alt="OMA" width={28} height={28} className="w-full h-full object-cover" />
           </div>
-          <Tooltip label="OMA Home" />
+          <Tooltip label="OMA Home" dir="up" />
         </Link>
 
-        <Divider />
+        <Divider vertical />
 
         {NAV.map(({ label, href, icon: Icon }) => (
-          <NavIconDesktop key={href} label={label} href={href} icon={Icon} active={pathname === href || pathname.startsWith(href + "/")} />
+          <NavIcon key={href} label={label} href={href} icon={Icon}
+            active={pathname === href || pathname.startsWith(href + "/")} />
         ))}
 
         {isStaff && (
           <>
-            <Divider />
-            <NavIconDesktop label="Admin" href="/admin" icon={ShieldCheck} active={pathname.startsWith("/admin")} danger />
+            <Divider vertical />
+            <NavIcon label="Admin" href="/admin" icon={ShieldCheck} active={pathname.startsWith("/admin")} danger />
           </>
         )}
 
-        <Divider />
-        <DesktopAvatarMenu session={session} />
+        <Divider vertical />
+
+        {/* Avatar + logout dropdown */}
+        <div ref={avatarRef} className="relative flex items-center justify-center">
+          <button
+            onClick={() => setAvatarOpen(v => !v)}
+            className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
+            style={avatarOpen ? { background: "rgba(20,184,166,0.14)", boxShadow: "0 0 14px rgba(20,184,166,0.20), inset 0 0 0 1px rgba(20,184,166,0.22)" } : undefined}
+            aria-label="Profil-Menü"
+          >
+            {session?.user?.image ? (
+              <Image src={session.user.image} alt="avatar" width={28} height={28}
+                className="w-7 h-7 rounded-full" style={{ outline: "1px solid rgba(20,184,166,0.22)" }} />
+            ) : (
+              <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                style={{ background: "linear-gradient(135deg, #0d9488, #115e59)", outline: "1px solid rgba(20,184,166,0.3)" }}>
+                {session?.user?.name?.[0] ?? "?"}
+              </div>
+            )}
+          </button>
+
+          {/* Dropdown */}
+          <div
+            className="absolute bottom-full mb-2 right-0 rounded-xl overflow-hidden"
+            style={{
+              background: "rgba(4,10,9,0.97)",
+              border: "1px solid rgba(20,184,166,0.14)",
+              backdropFilter: "blur(24px)",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
+              minWidth: 160,
+              transformOrigin: "bottom right",
+              transform: avatarOpen ? "scale(1) translateY(0)" : "scale(0.9) translateY(6px)",
+              opacity: avatarOpen ? 1 : 0,
+              pointerEvents: avatarOpen ? "auto" : "none",
+              transition: "transform 200ms cubic-bezier(0.16,1,0.3,1), opacity 150ms ease",
+            }}
+          >
+            <div className="px-3 py-2.5" style={{ borderBottom: "1px solid rgba(20,184,166,0.08)" }}>
+              <p className="text-xs font-semibold text-white">{session?.user?.name ?? "Gast"}</p>
+              <p className="text-[10px] mt-0.5" style={{ color: "rgba(20,184,166,0.7)" }}>
+                {(session?.user as { points?: number })?.points?.toLocaleString("de-DE") ?? 0} Münzen
+              </p>
+            </div>
+            <div className="p-1">
+              <Link href="/profile" onClick={() => setAvatarOpen(false)}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-gray-400 hover:text-teal-400 hover:bg-teal-500/8 transition-colors w-full">
+                <User style={{ width: 13, height: 13 }} />
+                Mein Profil
+              </Link>
+              <button
+                onClick={() => signOut()}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-gray-400 hover:text-red-400 hover:bg-red-500/8 transition-colors w-full"
+              >
+                <LogOut style={{ width: 13, height: 13 }} />
+                Abmelden
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
-  // ── Mobile: floating round FAB + popup panel to the right ──────
+  // ── Mobile: floating round FAB + popup panel ───────────────────
   return (
     <div ref={containerRef}>
-      {/* Backdrop */}
       {mobileOpen && (
-        <div
-          className="fixed inset-0 z-[44] bg-black/60"
-          style={{ backdropFilter: "blur(3px)" }}
-          onPointerDown={() => setMobileOpen(false)}
-        />
+        <div className="fixed inset-0 z-[44] bg-black/60" style={{ backdropFilter: "blur(3px)" }}
+          onPointerDown={() => setMobileOpen(false)} />
       )}
 
-      {/* FAB button */}
+      {/* FAB */}
       <button
         onClick={() => setMobileOpen(v => !v)}
         className="fixed left-4 bottom-24 z-[46] w-12 h-12 rounded-2xl flex items-center justify-center"
@@ -120,7 +186,7 @@ export default function Sidebar() {
         <Image src="/OMALogoNew.png" alt="OMA" width={28} height={28} className="w-7 h-7 rounded-lg object-cover" />
       </button>
 
-      {/* Popup panel — slides in from left, appears to the right of the FAB */}
+      {/* Popup */}
       <div
         className="fixed left-20 bottom-20 z-[45] rounded-2xl overflow-hidden"
         style={{
@@ -136,37 +202,34 @@ export default function Sidebar() {
           transition: "transform 250ms cubic-bezier(0.16,1,0.3,1), opacity 200ms ease",
         }}
       >
-        {/* User info header */}
         <div className="flex items-center gap-3 px-4 py-3" style={{ borderBottom: "1px solid rgba(20,184,166,0.08)" }}>
           {session?.user?.image ? (
-            <Image src={session.user.image} alt="avatar" width={32} height={32} className="w-8 h-8 rounded-full shrink-0" style={{ outline: "1px solid rgba(20,184,166,0.22)" }} />
+            <Image src={session.user.image} alt="avatar" width={32} height={32}
+              className="w-8 h-8 rounded-full shrink-0" style={{ outline: "1px solid rgba(20,184,166,0.22)" }} />
           ) : (
-            <div className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-xs font-bold text-white" style={{ background: "linear-gradient(135deg, #0d9488, #115e59)" }}>
+            <div className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-xs font-bold text-white"
+              style={{ background: "linear-gradient(135deg, #0d9488, #115e59)" }}>
               {session?.user?.name?.[0] ?? "?"}
             </div>
           )}
           <div className="min-w-0">
             <p className="text-sm font-semibold text-white truncate">{session?.user?.name ?? "Gast"}</p>
-            <p className="text-xs" style={{ color: "rgba(20,184,166,0.7)" }}>{session?.user?.points?.toLocaleString("de-DE") ?? 0} Punkte</p>
+            <p className="text-xs" style={{ color: "rgba(20,184,166,0.7)" }}>
+              {(session?.user as { points?: number })?.points?.toLocaleString("de-DE") ?? 0} Münzen
+            </p>
           </div>
         </div>
 
-        {/* Nav links */}
         <nav className="px-2 py-2 space-y-0.5">
           {NAV.map(({ label, href, icon: Icon }) => {
             const active = pathname === href || pathname.startsWith(href + "/");
             return (
-              <Link
-                key={href}
-                href={href}
+              <Link key={href} href={href}
                 className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all relative"
-                style={active ? {
-                  background: "rgba(20,184,166,0.12)",
-                  boxShadow: "inset 0 0 0 1px rgba(20,184,166,0.20)",
-                } : undefined}
-              >
+                style={active ? { background: "rgba(20,184,166,0.12)", boxShadow: "inset 0 0 0 1px rgba(20,184,166,0.20)" } : undefined}>
                 {active && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-full" style={{ background: "#14b8a6", boxShadow: "0 0 8px rgba(20,184,166,0.9)" }} />
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-full"
+                    style={{ background: "#14b8a6", boxShadow: "0 0 8px rgba(20,184,166,0.9)" }} />
                 )}
                 <Icon style={{ width: 17, height: 17, strokeWidth: active ? 2.5 : 2, color: active ? "#2dd4bf" : "#4b5563" }} />
                 <span style={{ fontSize: 14, fontWeight: active ? 600 : 500, color: active ? "#2dd4bf" : "#9ca3af" }}>{label}</span>
@@ -175,29 +238,18 @@ export default function Sidebar() {
           })}
 
           {isStaff && (
-            <Link
-              href="/admin"
+            <Link href="/admin"
               className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all relative"
-              style={pathname.startsWith("/admin") ? {
-                background: "rgba(153,27,27,0.12)",
-                boxShadow: "inset 0 0 0 1px rgba(153,27,27,0.20)",
-              } : undefined}
-            >
+              style={pathname.startsWith("/admin") ? { background: "rgba(153,27,27,0.12)", boxShadow: "inset 0 0 0 1px rgba(153,27,27,0.20)" } : undefined}>
               <ShieldCheck style={{ width: 17, height: 17, strokeWidth: 2, color: pathname.startsWith("/admin") ? "#f87171" : "#4b5563" }} />
               <span style={{ fontSize: 14, fontWeight: 500, color: pathname.startsWith("/admin") ? "#f87171" : "#9ca3af" }}>Admin</span>
             </Link>
           )}
         </nav>
 
-        {/* Sign out */}
         <div className="px-2 pb-2" style={{ borderTop: "1px solid rgba(20,184,166,0.07)" }}>
-          <button
-            onClick={() => signOut()}
-            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl transition-colors mt-1.5"
-            style={{ color: "#4b5563" }}
-            onMouseEnter={e => (e.currentTarget.style.color = "#2dd4bf")}
-            onMouseLeave={e => (e.currentTarget.style.color = "#4b5563")}
-          >
+          <button onClick={() => signOut()}
+            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl transition-colors mt-1.5 text-gray-500 hover:text-teal-400">
             <LogOut style={{ width: 17, height: 17 }} />
             <span style={{ fontSize: 14, fontWeight: 500 }}>Abmelden</span>
           </button>
@@ -207,16 +259,21 @@ export default function Sidebar() {
   );
 }
 
-// ── Desktop sub-components ──────────────────────────────────────────
+// ── Shared sub-components ───────────────────────────────────────
 
-function Divider() {
-  return <div className="w-6 h-px my-0.5" style={{ background: "rgba(20,184,166,0.10)" }} />;
+function Divider({ vertical }: { vertical?: boolean }) {
+  return vertical
+    ? <div className="h-6 w-px mx-0.5" style={{ background: "rgba(20,184,166,0.10)" }} />
+    : <div className="w-6 h-px my-0.5" style={{ background: "rgba(20,184,166,0.10)" }} />;
 }
 
-function Tooltip({ label }: { label: string }) {
+function Tooltip({ label, dir = "up" }: { label: string; dir?: "up" | "right" }) {
+  const pos = dir === "up"
+    ? "bottom-full mb-2 left-1/2 -translate-x-1/2"
+    : "left-full ml-3 top-1/2 -translate-y-1/2";
   return (
     <span
-      className="pointer-events-none absolute left-full ml-3 px-2.5 py-1 rounded-lg text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50"
+      className={`pointer-events-none absolute ${pos} px-2.5 py-1 rounded-lg text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50`}
       style={{ background: "#0a1512", border: "1px solid rgba(20,184,166,0.15)", boxShadow: "0 4px 12px rgba(0,0,0,0.4)" }}
     >
       {label}
@@ -224,7 +281,7 @@ function Tooltip({ label }: { label: string }) {
   );
 }
 
-function NavIconDesktop({ label, href, icon: Icon, active, danger }: {
+function NavIcon({ label, href, icon: Icon, active, danger }: {
   label: string; href: string; icon: React.ElementType; active: boolean; danger?: boolean;
 }) {
   const color  = danger ? (active ? "#f87171" : "#4b5563") : (active ? "#2dd4bf" : "#4b5563");
@@ -232,46 +289,13 @@ function NavIconDesktop({ label, href, icon: Icon, active, danger }: {
   const shadow = danger
     ? "0 0 14px rgba(153,27,27,0.20), inset 0 0 0 1px rgba(153,27,27,0.22)"
     : "0 0 14px rgba(20,184,166,0.20), inset 0 0 0 1px rgba(20,184,166,0.22)";
-  const dot    = danger ? "#b91c1c" : "#14b8a6";
 
   return (
-    <Link
-      href={href}
+    <Link href={href}
       className="group relative flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-150"
-      style={active ? { background: bg, boxShadow: shadow } : undefined}
-    >
+      style={active ? { background: bg, boxShadow: shadow } : undefined}>
       <Icon style={{ width: 18, height: 18, strokeWidth: active ? 2.5 : 2, color, filter: active ? `drop-shadow(0 0 5px ${color})` : "none", transition: "all 150ms" }} />
-      {active && (
-        <span className="absolute -left-[3px] top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-full" style={{ background: dot, boxShadow: `0 0 8px ${dot}` }} />
-      )}
-      <Tooltip label={label} />
+      <Tooltip label={label} dir="up" />
     </Link>
-  );
-}
-
-function DesktopAvatarMenu({ session }: { session: ReturnType<typeof useSession>["data"] }) {
-  return (
-    <div className="relative group flex items-center justify-center">
-      {session?.user?.image ? (
-        <Image src={session.user.image} alt="avatar" width={32} height={32} className="w-8 h-8 rounded-full cursor-pointer" style={{ outline: "1px solid rgba(20,184,166,0.22)" }} />
-      ) : (
-        <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white cursor-pointer" style={{ background: "linear-gradient(135deg, #0d9488, #115e59)", outline: "1px solid rgba(20,184,166,0.3)" }}>
-          {session?.user?.name?.[0] ?? "?"}
-        </div>
-      )}
-      <div className="pointer-events-none group-hover:pointer-events-auto absolute left-full ml-3 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150" style={{ minWidth: 140 }}>
-        <div className="px-3 py-2 rounded-xl text-xs text-gray-400" style={{ background: "#0a1512", border: "1px solid rgba(20,184,166,0.12)" }}>
-          {session?.user?.name ?? "Gast"}
-        </div>
-        <button
-          onClick={() => signOut()}
-          className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-gray-400 hover:text-teal-400 transition-colors"
-          style={{ background: "#0a1512", border: "1px solid rgba(20,184,166,0.12)" }}
-        >
-          <LogOut style={{ width: 13, height: 13 }} />
-          Abmelden
-        </button>
-      </div>
-    </div>
   );
 }

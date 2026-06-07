@@ -38,7 +38,7 @@ async function calcFfaRanking(tournamentId: string, statFields: string[]) {
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   await requireRole("moderator");
   const { id } = await params;
-  const { status, pointsConfig, statFields, generateMatches } = await req.json();
+  const { status, pointsConfig, statFields, generateMatches, finalRanking } = await req.json();
 
   // Auto-generate round-robin matches from existing participants
   if (generateMatches === "round_robin") {
@@ -72,32 +72,28 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     },
   });
 
-  // FFA/coop_stats: Punkte vergeben wenn Status → "finished"
-  const isFfa = existing?.format === "ffa" || existing?.format === "coop_stats";
-  if (isFfa && status === "finished" && existing?.status !== "finished") {
-    const fields: string[] = existing?.statFields ? JSON.parse(existing.statFields) : [];
+  // Punkte vergeben wenn Status → "finished" und finalRanking übergeben wurde
+  if (status === "finished" && existing?.status !== "finished" && finalRanking && Array.isArray(finalRanking)) {
     const cfgRaw = existing?.pointsConfig ?? tournament.pointsConfig;
     const cfg = cfgRaw ? JSON.parse(cfgRaw) as Record<string, number | { coins: number; points: number }> : null;
 
-    if (cfg && fields.length > 0) {
-      const ranked = await calcFfaRanking(id, fields);
-      for (let i = 0; i < Math.min(ranked.length, 3); i++) {
-        const { userId } = ranked[i];
-        const placement  = i + 1;
-        const raw        = cfg[String(placement)];
-        if (!raw) continue;
-        const coins   = typeof raw === "number" ? raw : (raw.coins ?? 0);
-        const rankPts = typeof raw === "number" ? 0  : (raw.points ?? 0);
-        await prisma.$transaction([
-          prisma.user.update({
-            where: { id: userId },
-            data:  { points: { increment: coins }, ...(rankPts > 0 && { rankPoints: { increment: rankPts } }) },
-          }),
-          prisma.pointTransaction.create({
-            data: { userId, amount: coins, reason: `Platz ${placement} im Turnier (Gesamt-Stats)` },
-          }),
-        ]);
-      }
+    for (let i = 0; i < (finalRanking as string[]).length; i++) {
+      const userId    = (finalRanking as string[])[i];
+      const placement = i + 1;
+      const raw       = cfg?.[String(placement)];
+      if (!raw) continue;
+      const coins   = typeof raw === "number" ? raw : (raw.coins  ?? 0);
+      const rankPts = typeof raw === "number" ? 0   : (raw.points ?? 0);
+      if (coins <= 0 && rankPts <= 0) continue;
+      await prisma.$transaction([
+        prisma.user.update({
+          where: { id: userId },
+          data:  { points: { increment: coins }, ...(rankPts > 0 && { rankPoints: { increment: rankPts } }) },
+        }),
+        prisma.pointTransaction.create({
+          data: { userId, amount: coins, reason: `Platz ${placement} beim Turnier` },
+        }),
+      ]);
     }
   }
 
