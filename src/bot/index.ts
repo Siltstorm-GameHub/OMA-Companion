@@ -2,7 +2,7 @@ import {
   Client, GatewayIntentBits, Events,
   GuildScheduledEventStatus, VoiceState,
 } from "discord.js";
-import { syncEvent, updateEventStatus, syncAttendee } from "./sync";
+import { updateEventStatus, syncAttendee } from "./sync";
 import { trackVoice, trackMessage, handleMemberJoin } from "./activity";
 import { setClient, notifyMonthlyLeaderboard, notifyBirthday } from "./notify";
 import { prisma } from "@/lib/prisma";
@@ -28,11 +28,6 @@ client.once(Events.ClientReady, async (c) => {
   checkBirthdays(); // sofort beim Start prüfen
 
   const guild = await c.guilds.fetch(process.env.DISCORD_GUILD_ID!);
-
-  // Discord-Events synchronisieren
-  const scheduledEvents = await guild.scheduledEvents.fetch();
-  for (const [, event] of scheduledEvents) await syncEvent(event);
-  console.log(`✅ ${scheduledEvents.size} Events synchronisiert`);
 
   // Voice-Tracking: bereits aktive User erfassen
   // (falls Bot neugestartet wurde während User im Voice waren)
@@ -103,10 +98,9 @@ client.on(Events.GuildMemberAdd, async (member) => {
   await handleMemberJoin(member.user.id, member.user.username);
 });
 
-// Discord Events
-client.on(Events.GuildScheduledEventCreate, async (e) => { await syncEvent(e); });
+// Discord Events → nur Status-Updates für Events, die aus der WebApp stammen
+// Kein Import von Discord-Events in die WebApp (Richtung: WebApp → Discord, nicht umgekehrt)
 client.on(Events.GuildScheduledEventUpdate, async (_, e) => {
-  await syncEvent(e);
   if (e.status === GuildScheduledEventStatus.Active)    await updateEventStatus(e.id, "active");
   if (e.status === GuildScheduledEventStatus.Completed) await updateEventStatus(e.id, "finished");
 });
