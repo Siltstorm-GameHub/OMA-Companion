@@ -7,7 +7,6 @@ import ShopItemCard from "./ShopItemCard";
 import GiftPoints from "./GiftPoints";
 import BundleCard from "./BundleCard";
 import DailySpin from "./DailySpin";
-import Link from "next/link";
 
 // Sektionen: jede hat einen Titel, Beschreibung und die Item-Typen die dazu gehören
 const SECTIONS = [
@@ -92,11 +91,6 @@ export default async function ShopPage() {
     items.find(i => i.id === p.itemId)?.type === "status_message"
   );
   const now = new Date();
-
-  // Aktive Auktionen zählen (graceful)
-  const activeAuctionCount = await prisma.shopAuction.count({
-    where: { status: "active", endsAt: { gt: new Date() } },
-  }).catch(() => 0);
 
   // Tages-Spin Status (graceful — Tabelle existiert evtl. noch nicht)
   const todayStr  = new Date().toISOString().slice(0, 10);
@@ -187,32 +181,6 @@ export default async function ShopPage() {
           lastResult={todaySpin ? { prizeLabel: todaySpin.prizeLabel, prizeType: todaySpin.prizeType } : null}
         />
       )}
-
-      {/* ── Auktionen-Teaser ────────────────────────────────────────── */}
-      <Link href="/auctions"
-        className="flex items-center justify-between gap-3 glass card-shine rounded-2xl border border-rose-500/10 px-5 py-4 hover:border-rose-500/20 transition-all group">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-rose-500/10 border border-rose-500/15 flex items-center justify-center shrink-0">
-            <span className="text-lg">🔨</span>
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-white">Auktionen</p>
-            <p className="text-xs text-gray-500">
-              {activeAuctionCount > 0
-                ? <span className="text-emerald-400 font-medium">{activeAuctionCount} aktive Auktion{activeAuctionCount !== 1 ? "en" : ""} — jetzt mitbieten!</span>
-                : "Aktuell keine aktiven Auktionen"}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2.5 shrink-0">
-          {activeAuctionCount > 0 && (
-            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-emerald-500 text-[10px] font-black text-white">
-              {activeAuctionCount}
-            </span>
-          )}
-          <span className="text-gray-600 group-hover:text-white transition-colors">→</span>
-        </div>
-      </Link>
 
       {/* ── Bundles ─────────────────────────────────────────────────── */}
       {bundleItems.length > 0 && (

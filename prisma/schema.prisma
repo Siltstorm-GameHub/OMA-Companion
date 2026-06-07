@@ -47,10 +47,7 @@ model User {
   lulSuggestions            LulSuggestion[]
   dailySpins                DailySpin[]
   wishlistItems             WishlistItem[]
-  auctionBids               AuctionBid[]
   donations                 Donation[]
-  currentAuctions           ShopAuction[]  @relation("currentAuctions")
-  wonAuctions               ShopAuction[]  @relation("wonAuctions")
 }
 
 // ── Shop ────────────────────────────────────────────────────────────────────
@@ -76,7 +73,6 @@ model ShopItem {
   createdAt     DateTime  @default(now())
 
   purchases     ShopPurchase[]
-  auctions      ShopAuction[]
   wishlistItems WishlistItem[]
 }
 
@@ -134,35 +130,6 @@ model WishlistItem {
 }
 
 // ── Auktionen ──────────────────────────────────────────────────────────────
-model ShopAuction {
-  id               String    @id @default(cuid())
-  itemId           String
-  startPrice       Int
-  minBidStep       Int       @default(50)
-  currentBid       Int       @default(0)
-  currentBidderId  String?
-  endsAt           DateTime
-  // active | ended | cancelled
-  status           String    @default("active")
-  winnerId         String?
-  createdAt        DateTime  @default(now())
-
-  item             ShopItem  @relation(fields: [itemId], references: [id])
-  currentBidder    User?     @relation("currentAuctions", fields: [currentBidderId], references: [id])
-  winner           User?     @relation("wonAuctions",     fields: [winnerId],         references: [id])
-  bids             AuctionBid[]
-}
-
-model AuctionBid {
-  id        String      @id @default(cuid())
-  auctionId String
-  userId    String
-  amount    Int
-  createdAt DateTime    @default(now())
-
-  auction   ShopAuction @relation(fields: [auctionId], references: [id])
-  user      User        @relation(fields: [userId], references: [id])
-}
 
 model Account {
   id                String  @id @default(cuid())
