@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import Image from "next/image";
 import { Heart, Flame, CalendarDays, Users, Euro, ShoppingCart, TrendingDown, Wallet } from "lucide-react";
+import DonationAdminPanel from "./DonationAdminPanel";
 
 const MONTH_NAMES = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
 
@@ -37,14 +38,22 @@ function fmt(n: number) {
 
 export default async function DonationsPage() {
   const session = await auth();
-  const myId = session?.user?.id;
+  const myId  = session?.user?.id;
+  const role  = (session?.user as { role?: string } | undefined)?.role ?? "user";
+  const isAdmin = role === "admin";
 
-  const [donations, expenses] = await Promise.all([
+  const [donations, expenses, allUsers, adminDonations, adminExpenses] = await Promise.all([
     prisma.donation.findMany({
       include: { user: { select: { id: true, name: true, image: true } } },
       orderBy: [{ year: "asc" }, { month: "asc" }],
     }),
     prisma.poolExpense.findMany({ orderBy: { date: "desc" } }),
+    isAdmin ? prisma.user.findMany({ select: { id: true, name: true, image: true }, orderBy: { name: "asc" } }) : Promise.resolve([]),
+    isAdmin ? prisma.donation.findMany({
+      include: { user: { select: { id: true, name: true, image: true } } },
+      orderBy: [{ year: "desc" }, { month: "desc" }, { createdAt: "desc" }],
+    }) : Promise.resolve([]),
+    isAdmin ? prisma.poolExpense.findMany({ orderBy: { date: "desc" } }) : Promise.resolve([]),
   ]);
 
   const totalPool  = donations.reduce((s, d) => s + d.amount, 0);
@@ -90,6 +99,15 @@ export default async function DonationsPage() {
           Kein Wettbewerb — nur gegenseitige Unterstützung.
         </p>
       </div>
+
+      {/* ── Admin-Panel ─────────────────────────────────────────────── */}
+      {isAdmin && (
+        <DonationAdminPanel
+          users={allUsers}
+          initialDonations={adminDonations as Parameters<typeof DonationAdminPanel>[0]["initialDonations"]}
+          initialExpenses={adminExpenses}
+        />
+      )}
 
       {/* Bilanz-Karten */}
       <div className="grid grid-cols-3 gap-3">
