@@ -196,6 +196,14 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+model EventSeries {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  events      Event[]
+}
+
 model Event {
   id             String   @id @default(cuid())
   title          String
@@ -207,8 +215,10 @@ model Event {
   type           String   @default("community")
   status         String   @default("open")
   discordEventId String?  @unique
+  seriesId       String?
   createdAt      DateTime @default(now())
 
+  series        EventSeries?        @relation(fields: [seriesId], references: [id])
   registrations EventRegistration[]
   tournament    Tournament?
 }

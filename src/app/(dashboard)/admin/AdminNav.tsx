@@ -1,16 +1,14 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, Users, LayoutDashboard, Star, ShoppingBag, Gavel, Heart } from "lucide-react";
+import { Users, LayoutDashboard, Star, ShoppingBag, Gavel } from "lucide-react";
 
 const TABS = [
-  { href: "/admin",             label: "Übersicht",      icon: LayoutDashboard, exact: true  },
-  { href: "/admin/events",      label: "Events",          icon: CalendarDays,    exact: false },
-  { href: "/admin/users",       label: "Nutzer & Rollen", icon: Users,           exact: false },
-  { href: "/admin/lul",         label: "Level-Up-League", icon: Star,            exact: false },
-  { href: "/admin/shop",        label: "Shop",            icon: ShoppingBag,     exact: false },
-  { href: "/admin/auctions",    label: "Auktionen",       icon: Gavel,           exact: false },
-  { href: "/admin/donations",   label: "Spendenpool",     icon: Heart,           exact: false },
+  { href: "/admin",          label: "Übersicht",      icon: LayoutDashboard, exact: true  },
+  { href: "/admin/users",    label: "Nutzer & Rollen", icon: Users,           exact: false },
+  { href: "/admin/lul",      label: "Level-Up-League", icon: Star,            exact: false },
+  { href: "/admin/shop",     label: "Shop",            icon: ShoppingBag,     exact: false },
+  { href: "/admin/auctions", label: "Auktionen",       icon: Gavel,           exact: false },
 ];
 
 export default function AdminNav() {

@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
   }
   const body = await req.json();
-  const { title, description, game, startAt, maxPlayers, pointReward, type } = body;
+  const { title, description, game, startAt, maxPlayers, pointReward, type, seriesId } = body;
 
   if (!title || !startAt) {
     return NextResponse.json({ error: "Titel und Datum sind Pflichtfelder" }, { status: 400 });
@@ -37,6 +37,7 @@ export async function POST(req: NextRequest) {
       maxPlayers: maxPlayers ? Number(maxPlayers) : null,
       pointReward: pointReward ? Number(pointReward) : 50,
       type: type ?? "community",
+      seriesId: seriesId || null,
     },
   });
 

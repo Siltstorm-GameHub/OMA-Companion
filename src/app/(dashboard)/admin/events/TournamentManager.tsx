@@ -28,6 +28,16 @@ type Tournament = {
 };
 type Event = { id: string };
 
+type RankingEntry = {
+  placement: number;
+  userId: string;
+  user: { id: string; name: string | null; username: string | null; image: string | null } | null;
+  score: number;
+  label: string;
+  coins: number;
+  rankPts: number;
+};
+
 const FORMATS = [
   { value: "single_elimination", label: "Einzel-Eliminierung", desc: "Klassisches K.O.-System" },
   { value: "round_robin",        label: "Jeder gegen Jeden",   desc: "Alle spielen gegen alle" },
@@ -299,6 +309,9 @@ export default function TournamentManager({
   const [showSettings, setShowSettings]     = useState(false);
   const [showParticipants, setShowParticipants] = useState(false);
   const [showAdd, setShowAdd]               = useState(false);
+  const [showFinalize, setShowFinalize]     = useState(false);
+  const [rankingPreview, setRankingPreview] = useState<RankingEntry[] | null>(null);
+  const [rankingLoading, setRankingLoading] = useState(false);
 
   // ── Settings edit state ───────────────────────────────────────────────
   const initSettings = () => {
@@ -569,6 +582,59 @@ export default function TournamentManager({
     router.refresh();
   }
 
+  async function openFinalize() {
+    if (!tournament) return;
+    setRankingLoading(true);
+    setShowFinalize(true);
+    setShowSettings(false);
+    setShowParticipants(false);
+    const res = await fetch(`/api/tournaments/${tournament.id}/ranking`);
+    if (res.ok) {
+      const data = await res.json();
+      setRankingPreview(data.ranking);
+    } else {
+      toast.error("Rangliste konnte nicht geladen werden");
+    }
+    setRankingLoading(false);
+  }
+
+  async function confirmFinalize() {
+    if (!tournament || !rankingPreview) return;
+    setLoading(true);
+    const res = await fetch(`/api/tournaments/${tournament.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        status: "finished",
+        finalRanking: rankingPreview.map(r => r.userId),
+      }),
+    });
+    setLoading(false);
+    if (res.ok) {
+      toast.success("Turnier abgeschlossen & Punkte vergeben!");
+      setShowFinalize(false);
+      setRankingPreview(null);
+      setTournament(prev => prev ? { ...prev, status: "finished" } : prev);
+      router.refresh();
+    } else {
+      toast.error("Fehler beim Abschließen");
+    }
+  }
+
+  function moveRankingUp(index: number) {
+    if (!rankingPreview || index === 0) return;
+    const updated = [...rankingPreview];
+    [updated[index - 1], updated[index]] = [updated[index], updated[index - 1]];
+    setRankingPreview(updated.map((r, i) => ({ ...r, placement: i + 1 })));
+  }
+
+  function moveRankingDown(index: number) {
+    if (!rankingPreview || index === rankingPreview.length - 1) return;
+    const updated = [...rankingPreview];
+    [updated[index], updated[index + 1]] = [updated[index + 1], updated[index]];
+    setRankingPreview(updated.map((r, i) => ({ ...r, placement: i + 1 })));
+  }
+
   function setFfaField(matchId: string, userId: string, field: string, val: string) {
     setFfaEdits(prev => ({
       ...prev,
@@ -617,12 +683,97 @@ export default function TournamentManager({
             }`}>
             <Users className="w-3.5 h-3.5" /> Teilnehmer ({tournament.participants.length})
           </button>
+          {tournament.status !== "finished" && (
+            <button onClick={openFinalize} disabled={loading}
+              className="flex items-center gap-1 text-xs bg-amber-600/20 text-amber-300 hover:bg-amber-600/30 border border-amber-600/30 px-2 py-1 rounded transition-colors disabled:opacity-50">
+              <Trophy className="w-3.5 h-3.5" /> Abschließen
+            </button>
+          )}
           <button onClick={deleteTournament} disabled={loading}
             className="flex items-center gap-1 text-xs text-red-500 hover:text-red-400 hover:bg-red-900/20 px-2 py-1 rounded transition-colors disabled:opacity-50">
             <Trash2 className="w-3.5 h-3.5" /> Löschen
           </button>
         </div>
       </div>
+
+      {/* ── Finalize panel ───────────────────────────────────────────── */}
+      {showFinalize && (
+        <div className="border border-amber-700/40 rounded-xl p-4 bg-amber-950/10 space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-amber-300 flex items-center gap-2">
+              <Trophy className="w-4 h-4" /> Endplatzierung bestätigen
+            </p>
+            <button onClick={() => { setShowFinalize(false); setRankingPreview(null); }}
+              className="text-gray-500 hover:text-white transition-colors">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <p className="text-xs text-gray-400">
+            Überprüfe die Endplatzierung und passe sie bei Bedarf an. Erst nach Bestätigung werden Punkte vergeben.
+          </p>
+
+          {rankingLoading && (
+            <p className="text-sm text-gray-500 text-center py-4">Rangliste wird berechnet…</p>
+          )}
+
+          {rankingPreview && !rankingLoading && (
+            <div className="space-y-2">
+              {rankingPreview.map((entry, idx) => {
+                const medals = ["🥇", "🥈", "🥉"];
+                const name = entry.user?.username ?? entry.user?.name ?? entry.userId;
+                const hasReward = entry.coins > 0 || entry.rankPts > 0;
+                return (
+                  <div key={entry.userId}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg"
+                    style={{ background: idx < 3 ? "rgba(245,158,11,0.07)" : "rgba(255,255,255,0.03)", border: `1px solid ${idx < 3 ? "rgba(245,158,11,0.18)" : "rgba(255,255,255,0.06)"}` }}>
+
+                    {/* Platz */}
+                    <span className="text-base w-6 text-center shrink-0">
+                      {idx < 3 ? medals[idx] : <span className="text-xs text-gray-500">{idx + 1}.</span>}
+                    </span>
+
+                    {/* Name */}
+                    <span className="flex-1 text-sm font-medium text-white truncate">{name}</span>
+
+                    {/* Score */}
+                    <span className="text-xs text-gray-500 shrink-0">{entry.label}</span>
+
+                    {/* Belohnung */}
+                    {hasReward && (
+                      <span className="text-xs text-amber-400 shrink-0 font-semibold">
+                        {entry.coins > 0 && `+${entry.coins}🪙`}
+                        {entry.rankPts > 0 && ` +${entry.rankPts}⭐`}
+                      </span>
+                    )}
+
+                    {/* Reihenfolge ändern */}
+                    <div className="flex flex-col gap-0.5 shrink-0">
+                      <button onClick={() => moveRankingUp(idx)} disabled={idx === 0}
+                        className="text-gray-600 hover:text-white disabled:opacity-20 transition-colors leading-none px-1">
+                        ▲
+                      </button>
+                      <button onClick={() => moveRankingDown(idx)} disabled={idx === rankingPreview.length - 1}
+                        className="text-gray-600 hover:text-white disabled:opacity-20 transition-colors leading-none px-1">
+                        ▼
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {rankingPreview && !rankingLoading && (
+            <button onClick={confirmFinalize} disabled={loading}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50"
+              style={{ background: "linear-gradient(135deg, #b45309, #d97706)" }}>
+              <Trophy className="w-4 h-4" />
+              {loading ? "Wird abgeschlossen…" : "Bestätigen & Punkte vergeben"}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* ── Settings panel ───────────────────────────────────────────── */}
       {showSettings && (
