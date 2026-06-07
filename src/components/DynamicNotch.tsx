@@ -123,13 +123,25 @@ export default function DynamicNotch() {
   const pathname          = usePathname();
   const { data: session } = useSession();
 
-  const [hovered,    setHovered]    = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [avatarOpen, setAvatarOpen] = useState(false);
-  const [isMobile,   setIsMobile]   = useState(false);
+  const [hovered,        setHovered]        = useState(false);
+  const [mobileOpen,     setMobileOpen]     = useState(false);
+  const [mobileClosing,  setMobileClosing]  = useState(false);
+  const [avatarOpen,     setAvatarOpen]     = useState(false);
+  const [isMobile,       setIsMobile]       = useState(false);
 
-  const notchRef   = useRef<HTMLDivElement>(null);
-  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const notchRef    = useRef<HTMLDivElement>(null);
+  const hoverTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const closeTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /* Schließt das mobile Dropdown mit Animations-Vorlauf */
+  const closeMobileMenu = useCallback(() => {
+    setMobileClosing(true);
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    closeTimer.current = setTimeout(() => {
+      setMobileOpen(false);
+      setMobileClosing(false);
+    }, 320); // muss zur notch-slide-up duration passen
+  }, []);
 
   /* Detect breakpoint */
   useEffect(() => {
@@ -141,20 +153,20 @@ export default function DynamicNotch() {
   }, []);
 
   /* Close on route change */
-  useEffect(() => { setMobileOpen(false); setAvatarOpen(false); }, [pathname]);
+  useEffect(() => { closeMobileMenu(); setAvatarOpen(false); }, [pathname, closeMobileMenu]);
 
   /* Close on outside click */
   useEffect(() => {
     if (!mobileOpen && !avatarOpen) return;
     const h = (e: PointerEvent) => {
       if (notchRef.current && !notchRef.current.contains(e.target as Node)) {
-        setMobileOpen(false);
+        closeMobileMenu();
         setAvatarOpen(false);
       }
     };
     document.addEventListener("pointerdown", h);
     return () => document.removeEventListener("pointerdown", h);
-  }, [mobileOpen, avatarOpen]);
+  }, [mobileOpen, avatarOpen, closeMobileMenu]);
 
   /* Hover with debounce */
   const handleMouseEnter = useCallback(() => {
@@ -275,7 +287,11 @@ export default function DynamicNotch() {
           position: "relative",
         }}>
           <button
-            onClick={() => { setMobileOpen(v => !v); setAvatarOpen(false); }}
+            onClick={() => {
+              if (mobileOpen) { closeMobileMenu(); }
+              else { setMobileOpen(true); setMobileClosing(false); }
+              setAvatarOpen(false);
+            }}
             aria-label={mobileOpen ? "Menü schließen" : "Menü öffnen"}
             style={{
               display: "flex", alignItems: "center", justifyContent: "center",
@@ -312,13 +328,14 @@ export default function DynamicNotch() {
         </div>
 
         {/* Mobile dropdown */}
-        {mobileOpen && (
+        {(mobileOpen || mobileClosing) && (
           <div style={{
             position: "absolute",
             top: "calc(100% + 10px)", left: "50%",
-            transform: "translateX(-50%)",
             ...GLASS, borderRadius: 18, minWidth: 240, overflow: "hidden",
-            animation: "notch-slide-down 350ms cubic-bezier(0.25,0.46,0.45,0.94)",
+            animation: mobileClosing
+              ? "notch-slide-up 320ms cubic-bezier(0.55, 0, 0.45, 1) forwards"
+              : "notch-slide-down 480ms cubic-bezier(0.22, 1, 0.36, 1) forwards",
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "14px 16px 12px", borderBottom: "1px solid rgba(20,184,166,0.09)" }}>
               <div style={{ width: 38, height: 38, borderRadius: "50%", overflow: "hidden", flexShrink: 0, outline: "1.5px solid rgba(20,184,166,0.24)" }}>
@@ -393,7 +410,7 @@ export default function DynamicNotch() {
         alignItems: "center",
         padding: "8px 14px",
         position: "relative",
-        transition: "box-shadow 500ms ease",
+        transition: "box-shadow 900ms ease",
         boxShadow: hovered
           ? "0 16px 56px rgba(0,0,0,0.65), 0 0 0 1px rgba(20,184,166,0.22), 0 0 40px rgba(20,184,166,0.08)"
           : "0 8px 40px rgba(0,0,0,0.60), 0 0 0 1px rgba(20,184,166,0.07)",
@@ -409,19 +426,15 @@ export default function DynamicNotch() {
            * Collapse: ease-in     → pill snaps back with acceleration
            */
           transition: hovered
-            ? "max-width 700ms cubic-bezier(0.22, 1, 0.36, 1)"
-            : "max-width 500ms cubic-bezier(0.55, 0, 0.45, 1)",
+            ? "max-width 1400ms cubic-bezier(0.16, 1, 0.3, 1)"
+            : "max-width 900ms cubic-bezier(0.7, 0, 0.84, 0)",
         }}>
           <div style={{
             display: "flex", alignItems: "center", gap: 3, paddingRight: 6,
             opacity: hovered ? 1 : 0,
-            /*
-             * Fade in with 160ms delay (pill starts expanding first),
-             * fade out instantly so it doesn't linger while collapsing
-             */
             transition: hovered
-              ? "opacity 280ms ease 160ms"
-              : "opacity 100ms ease 0ms",
+              ? "opacity 500ms ease 300ms"
+              : "opacity 150ms ease 0ms",
           }}>
             {NAV_LEFT.map(({ label, href, icon }) => (
               <NavLink key={href} label={label} href={href} icon={icon}
@@ -436,7 +449,7 @@ export default function DynamicNotch() {
             width: 1, height: 22, flexShrink: 0,
             background: "rgba(20,184,166,0.13)",
             opacity: hovered ? 1 : 0,
-            transition: hovered ? "opacity 280ms ease 160ms" : "opacity 100ms ease 0ms",
+            transition: hovered ? "opacity 500ms ease 300ms" : "opacity 150ms ease 0ms",
             marginRight: 8,
           }} />
         </div>
@@ -468,8 +481,8 @@ export default function DynamicNotch() {
           maxWidth: hovered ? 0 : 220,
           overflow: "hidden",
           transition: hovered
-            ? "max-width 400ms cubic-bezier(0.55, 0, 0.45, 1)"
-            : "max-width 400ms cubic-bezier(0.22, 1, 0.36, 1) 200ms",
+            ? "max-width 600ms cubic-bezier(0.7, 0, 0.84, 0)"
+            : "max-width 700ms cubic-bezier(0.16, 1, 0.3, 1) 300ms",
         }}>
           <span style={{
             display: "block",
@@ -479,8 +492,8 @@ export default function DynamicNotch() {
             opacity: hovered ? 0 : 1,
             transform: `translateX(${titleSlide})`,
             transition: hovered
-              ? "opacity 200ms ease 0ms, transform 500ms cubic-bezier(0.22, 1, 0.36, 1) 0ms"
-              : "opacity 250ms ease 280ms, transform 500ms cubic-bezier(0.22, 1, 0.36, 1) 0ms",
+              ? "opacity 250ms ease 0ms, transform 900ms cubic-bezier(0.16, 1, 0.3, 1) 0ms"
+              : "opacity 350ms ease 400ms, transform 900ms cubic-bezier(0.16, 1, 0.3, 1) 0ms",
           }}>
             {title}
           </span>
@@ -501,20 +514,20 @@ export default function DynamicNotch() {
           maxWidth: hovered ? 340 : 0,
           overflow: "hidden",
           transition: hovered
-            ? "max-width 700ms cubic-bezier(0.22, 1, 0.36, 1)"
-            : "max-width 500ms cubic-bezier(0.55, 0, 0.45, 1)",
+            ? "max-width 1400ms cubic-bezier(0.16, 1, 0.3, 1)"
+            : "max-width 900ms cubic-bezier(0.7, 0, 0.84, 0)",
         }}>
           <div style={{
             width: 1, height: 22, flexShrink: 0,
             background: "rgba(20,184,166,0.13)",
             opacity: hovered ? 1 : 0,
-            transition: hovered ? "opacity 280ms ease 160ms" : "opacity 100ms ease 0ms",
+            transition: hovered ? "opacity 500ms ease 300ms" : "opacity 150ms ease 0ms",
             marginLeft: 8,
           }} />
           <div style={{
             display: "flex", alignItems: "center", gap: 3, paddingLeft: 6,
             opacity: hovered ? 1 : 0,
-            transition: hovered ? "opacity 280ms ease 160ms" : "opacity 100ms ease 0ms",
+            transition: hovered ? "opacity 500ms ease 300ms" : "opacity 150ms ease 0ms",
           }}>
             {NAV_RIGHT.map(({ label, href, icon }) => (
               <NavLink key={href} label={label} href={href} icon={icon}
