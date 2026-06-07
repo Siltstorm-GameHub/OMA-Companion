@@ -39,7 +39,7 @@ export default async function AdminEventsPage() {
     <div className="space-y-3">
       {events.length === 0 && (
         <div className="text-center py-12 text-gray-500 bg-gray-900 border border-gray-800 rounded-xl">
-          Keine Events. Synchronisiere zuerst mit Discord.
+          Noch keine Events. Erstelle ein neues Event oben.
         </div>
       )}
       {events.map((event) => (
