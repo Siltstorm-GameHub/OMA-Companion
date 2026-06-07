@@ -21,12 +21,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "userId, amount, month und year sind Pflicht" }, { status: 400 });
   }
 
-  const donation = await prisma.donation.upsert({
-    where: { userId_month_year: { userId, month: Number(month), year: Number(year) } },
-    create: { userId, amount: Number(amount), month: Number(month), year: Number(year), note: note || null },
-    update: { amount: Number(amount), note: note || null },
+  const donation = await prisma.donation.create({
+    data: { userId, amount: Number(amount), month: Number(month), year: Number(year), note: note || null },
     include: { user: { select: { id: true, name: true } } },
   });
+
+  // 1 Münze pro gespendetem Cent
+  const coins = Math.round(Number(amount) * 100);
+  if (coins > 0) {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { points: { increment: coins } },
+    });
+    await prisma.pointTransaction.create({
+      data: {
+        userId,
+        amount: coins,
+        reason: `Spende ${Number(amount).toFixed(2)} € (${month}/${year})`,
+      },
+    });
+  }
 
   return NextResponse.json(donation);
 }
