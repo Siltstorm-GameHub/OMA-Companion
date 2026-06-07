@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { Trophy, Swords, CalendarDays, Coins } from "lucide-react";
+import { Trophy, Swords, Flame } from "lucide-react";
 import { CountUp } from "@/components/CountUp";
 import Link from "next/link";
 import Image from "next/image";
@@ -63,23 +63,55 @@ export default async function LeaderboardPage() {
   const session = await auth();
   const userId  = session?.user?.id;
 
-  const users = await prisma.user.findMany({
-    orderBy: { rankPoints: "desc" },
-    take: 50,
-    select: {
-      id: true, name: true, username: true, image: true,
-      points: true, rankPoints: true,
-      nameColor: true, activeTitle: true,
-      _count: { select: { tournamentParticipants: true, eventRegistrations: true } },
-    },
-  });
+  const [users, wins, donations] = await Promise.all([
+    prisma.user.findMany({
+      orderBy: { rankPoints: "desc" },
+      take: 50,
+      select: {
+        id: true, name: true, username: true, image: true,
+        points: true, rankPoints: true,
+        nameColor: true, activeTitle: true,
+        _count: { select: { tournamentParticipants: true } },
+      },
+    }),
+    prisma.match.groupBy({
+      by: ["winnerId"],
+      _count: { winnerId: true },
+      where: { winnerId: { not: null } },
+    }),
+    prisma.donation.findMany({ select: { userId: true, month: true, year: true } }),
+  ]);
 
-  const wins = await prisma.match.groupBy({
-    by: ["winnerId"],
-    _count: { winnerId: true },
-    where: { winnerId: { not: null } },
-  });
   const winMap = new Map(wins.map(w => [w.winnerId!, w._count.winnerId]));
+
+  // Spendenstreak pro User berechnen
+  function calcDonationStreak(entries: { month: number; year: number }[]): number {
+    if (entries.length === 0) return 0;
+    // Eindeutige Monate
+    const unique = Array.from(new Map(entries.map(e => [`${e.year}-${e.month}`, e])).values());
+    const sorted = unique.sort((a, b) => a.year !== b.year ? b.year - a.year : b.month - a.month);
+    const now = new Date();
+    let checkYear = now.getFullYear();
+    let checkMonth = now.getMonth() + 1;
+    let streak = 0;
+    for (const e of sorted) {
+      if (e.year === checkYear && e.month === checkMonth) {
+        streak++;
+        checkMonth--;
+        if (checkMonth === 0) { checkMonth = 12; checkYear--; }
+      } else break;
+    }
+    return streak;
+  }
+
+  const donationsByUser = new Map<string, { month: number; year: number }[]>();
+  for (const d of donations) {
+    if (!donationsByUser.has(d.userId)) donationsByUser.set(d.userId, []);
+    donationsByUser.get(d.userId)!.push({ month: d.month, year: d.year });
+  }
+  const streakMap = new Map(
+    Array.from(donationsByUser.entries()).map(([uid, entries]) => [uid, calcDonationStreak(entries)])
+  );
 
   const myRank = userId ? users.findIndex(u => u.id === userId) + 1 : null;
 
@@ -198,7 +230,7 @@ export default async function LeaderboardPage() {
           <span />
           <span>Spieler</span>
           <span className="hidden sm:flex text-center items-center justify-center gap-1"><Swords className="w-3 h-3" />Siege</span>
-          <span className="hidden sm:flex text-center items-center justify-center gap-1"><CalendarDays className="w-3 h-3" />Events</span>
+          <span className="hidden sm:flex text-center items-center justify-center gap-1"><Flame className="w-3 h-3 text-orange-400" />Streak</span>
           <span className="text-center">🪙 Münzen</span>
           <span className="text-center text-amber-400">⭐ Punkte</span>
         </div>
@@ -206,9 +238,10 @@ export default async function LeaderboardPage() {
         <div className="divide-y divide-white/[0.04]">
           {users.map((u, i) => {
             const displayName = u.username ?? u.name ?? "Unbekannt";
-            const isMe        = u.id === userId;
-            const userWins    = winMap.get(u.id) ?? 0;
-            const isTop3      = i < 3;
+            const isMe          = u.id === userId;
+            const userWins      = winMap.get(u.id) ?? 0;
+            const donationStreak = streakMap.get(u.id) ?? 0;
+            const isTop3        = i < 3;
 
             const rowAccent = i === 0
               ? "bg-amber-500/[0.04] hover:bg-amber-500/[0.07]"
@@ -280,10 +313,12 @@ export default async function LeaderboardPage() {
                   <p className="text-[9px] text-gray-600">Siege</p>
                 </div>
 
-                {/* Events — nur ab sm */}
+                {/* Spendenstreak — nur ab sm */}
                 <div className="hidden sm:block text-center">
-                  <p className="text-sm font-bold tabular-nums text-white">{u._count.eventRegistrations}</p>
-                  <p className="text-[9px] text-gray-600">Events</p>
+                  <p className="text-sm font-bold tabular-nums text-orange-400">
+                    {donationStreak > 0 ? `🔥 ${donationStreak}` : "—"}
+                  </p>
+                  <p className="text-[9px] text-gray-600">Monate</p>
                 </div>
 
                 {/* Münzen */}
