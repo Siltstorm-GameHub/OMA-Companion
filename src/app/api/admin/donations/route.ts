@@ -21,10 +21,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "userId, amount, month und year sind Pflicht" }, { status: 400 });
   }
 
-  const donation = await prisma.donation.create({
-    data: { userId, amount: Number(amount), month: Number(month), year: Number(year), note: note || null },
-    include: { user: { select: { id: true, name: true } } },
-  });
+  let donation;
+  try {
+    donation = await prisma.donation.create({
+      data: { userId, amount: Number(amount), month: Number(month), year: Number(year), note: note || null },
+      include: { user: { select: { id: true, name: true } } },
+    });
+  } catch (err) {
+    console.error("[donations POST]", err);
+    return NextResponse.json({ error: String(err) }, { status: 500 });
+  }
 
   // 1 Münze pro gespendetem Cent
   const coins = Math.round(Number(amount) * 100);
