@@ -159,37 +159,6 @@ export async function notifyBirthday(discordId: string, username: string) {
   await ch.send({ content: `🎂 <@${discordId}>`, embeds: [embed] });
 }
 
-// ── Auktion gewonnen ─────────────────────────────────────────────────────────
-
-export async function notifyAuctionWon(discordId: string, itemName: string, finalBid: number) {
-  if (!_client) return;
-  try {
-    const user = await _client.users.fetch(discordId);
-    const embed = new EmbedBuilder()
-      .setColor(0xf59e0b)
-      .setTitle("🏆 Auktion gewonnen!")
-      .setDescription(`Du hast die Auktion für **${itemName}** gewonnen!`)
-      .addFields({ name: "💰 Endgebot", value: `${finalBid.toLocaleString("de")} Punkte`, inline: true })
-      .setFooter({ text: "OMA Companion · Auktionen" })
-      .setTimestamp();
-    await user.send({ embeds: [embed] });
-  } catch { /* DMs deaktiviert */ }
-}
-
-export async function notifyAuctionOutbid(discordId: string, itemName: string, newBid: number) {
-  if (!_client) return;
-  try {
-    const user = await _client.users.fetch(discordId);
-    const embed = new EmbedBuilder()
-      .setColor(0xf43f5e)
-      .setTitle("📢 Überboten!")
-      .setDescription(`Jemand hat dein Gebot bei **${itemName}** übertroffen.\nNeues Höchstgebot: **${newBid.toLocaleString("de")} Punkte**`)
-      .setFooter({ text: "OMA Companion · Auktionen" })
-      .setTimestamp();
-    await user.send({ embeds: [embed] });
-  } catch { /* DMs deaktiviert */ }
-}
-
 // ── Monats-Rangliste ─────────────────────────────────────────────────────────
 
 export async function notifyMonthlyLeaderboard() {
