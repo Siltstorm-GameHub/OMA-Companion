@@ -24,6 +24,7 @@ type Participant = { userId: string; user: User };
 type Tournament = {
   id: string; status: string; format: string;
   pointsConfig: string | null; statFields: string | null;
+  finalRankingJson: string | null; finalRankingNote: string | null;
   participants: Participant[]; matches: Match[];
 };
 type Event = { id: string };
@@ -310,6 +311,7 @@ export default function TournamentManager({
   const [showParticipants, setShowParticipants] = useState(false);
   const [showAdd, setShowAdd]               = useState(false);
   const [showFinalize, setShowFinalize]     = useState(false);
+  const [isEditingRanking, setIsEditingRanking] = useState(false);
   const [rankingPreview, setRankingPreview] = useState<RankingEntry[] | null>(null);
   const [rankingLoading, setRankingLoading] = useState(false);
   const [rankingNote, setRankingNote]       = useState("");
@@ -585,10 +587,12 @@ export default function TournamentManager({
 
   async function openFinalize() {
     if (!tournament) return;
+    setIsEditingRanking(false);
     setRankingLoading(true);
     setShowFinalize(true);
     setShowSettings(false);
     setShowParticipants(false);
+    setRankingNote("");
     const res = await fetch(`/api/tournaments/${tournament.id}/ranking`);
     if (res.ok) {
       const data = await res.json();
@@ -599,28 +603,86 @@ export default function TournamentManager({
     setRankingLoading(false);
   }
 
+  async function openEditRanking() {
+    if (!tournament?.finalRankingJson) return;
+    setIsEditingRanking(true);
+    setShowFinalize(true);
+    setShowSettings(false);
+    setShowParticipants(false);
+    setRankingLoading(true);
+    setRankingNote(tournament.finalRankingNote ?? "");
+
+    const cfgRaw: Record<string, number | { coins: number; points: number }> =
+      tournament.pointsConfig ? JSON.parse(tournament.pointsConfig) : {};
+
+    const storedOrder = JSON.parse(tournament.finalRankingJson) as string[];
+
+    // Versuche aktuelle Rangliste (mit Labels/Scores) zu laden und in gespeicherter Reihenfolge zu sortieren
+    const res = await fetch(`/api/tournaments/${tournament.id}/ranking`);
+    if (res.ok) {
+      const data = await res.json();
+      const byId = new Map<string, RankingEntry>(data.ranking.map((r: RankingEntry) => [r.userId, r]));
+
+      const reordered = storedOrder.map((uid, i) => {
+        const calc     = byId.get(uid);
+        const user     = allUsers.find(u => u.id === uid) ?? null;
+        const placement = i + 1;
+        const raw      = cfgRaw[String(placement)];
+        const coins    = raw == null ? 0 : typeof raw === "number" ? raw : (raw.coins   ?? 0);
+        const rankPts  = raw == null ? 0 : typeof raw === "number" ? raw : (raw.points  ?? 0);
+        return calc
+          ? { ...calc, placement, coins, rankPts }
+          : { placement, userId: uid, user: user ? { id: user.id, name: user.name, username: user.username, image: user.image } : null, score: 0, label: "–", coins, rankPts };
+      });
+      setRankingPreview(reordered);
+    } else {
+      // Fallback: nur aus gespeicherter Reihenfolge rekonstruieren
+      const entries = storedOrder.map((uid, i) => {
+        const user    = allUsers.find(u => u.id === uid) ?? null;
+        const placement = i + 1;
+        const raw     = cfgRaw[String(placement)];
+        const coins   = raw == null ? 0 : typeof raw === "number" ? raw : (raw.coins  ?? 0);
+        const rankPts = raw == null ? 0 : typeof raw === "number" ? raw : (raw.points ?? 0);
+        return { placement, userId: uid, user: user ? { id: user.id, name: user.name, username: user.username, image: user.image } : null, score: 0, label: "–", coins, rankPts };
+      });
+      setRankingPreview(entries);
+    }
+    setRankingLoading(false);
+  }
+
   async function confirmFinalize() {
     if (!tournament || !rankingPreview) return;
     setLoading(true);
+    const body: Record<string, unknown> = {
+      finalRanking:     rankingPreview.map(r => r.userId),
+      finalRankingNote: rankingNote.trim() || null,
+    };
+    // Nur beim ersten Abschluss Status auf "finished" setzen
+    if (!isEditingRanking) {
+      body.status = "finished";
+    }
     const res = await fetch(`/api/tournaments/${tournament.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        status:           "finished",
-        finalRanking:     rankingPreview.map(r => r.userId),
-        finalRankingNote: rankingNote.trim() || null,
-      }),
+      body: JSON.stringify(body),
     });
     setLoading(false);
     if (res.ok) {
-      toast.success("Turnier abgeschlossen & Punkte vergeben!");
+      toast.success(
+        isEditingRanking
+          ? "Platzierung aktualisiert & Punkte neu verteilt!"
+          : "Turnier abgeschlossen & Punkte vergeben!"
+      );
       setShowFinalize(false);
+      setIsEditingRanking(false);
       setRankingPreview(null);
       setRankingNote("");
-      setTournament(prev => prev ? { ...prev, status: "finished" } : prev);
+      if (!isEditingRanking) {
+        setTournament(prev => prev ? { ...prev, status: "finished" } : prev);
+      }
       router.refresh();
     } else {
-      toast.error("Fehler beim Abschließen");
+      toast.error(isEditingRanking ? "Fehler beim Aktualisieren" : "Fehler beim Abschließen");
     }
   }
 
@@ -680,10 +742,15 @@ export default function TournamentManager({
             }`}>
             <Settings className="w-3.5 h-3.5" /> Einstellungen
           </button>
-          {tournament.status !== "finished" && (
+          {tournament.status !== "finished" ? (
             <button onClick={openFinalize} disabled={loading}
               className="flex items-center gap-1 text-xs bg-amber-600/20 text-amber-300 hover:bg-amber-600/30 border border-amber-600/30 px-2 py-1 rounded transition-colors disabled:opacity-50">
               <Trophy className="w-3.5 h-3.5" /> Abschließen
+            </button>
+          ) : (
+            <button onClick={openEditRanking} disabled={loading}
+              className="flex items-center gap-1 text-xs bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 border border-blue-600/30 px-2 py-1 rounded transition-colors disabled:opacity-50">
+              <RefreshCw className="w-3.5 h-3.5" /> Platzierung bearbeiten
             </button>
           )}
           <button onClick={deleteTournament} disabled={loading}
@@ -695,19 +762,29 @@ export default function TournamentManager({
 
       {/* ── Finalize panel ───────────────────────────────────────────── */}
       {showFinalize && (
-        <div className="border border-amber-700/40 rounded-xl p-4 bg-amber-950/10 space-y-4">
+        <div className={`border rounded-xl p-4 space-y-4 ${
+          isEditingRanking
+            ? "border-blue-700/40 bg-blue-950/10"
+            : "border-amber-700/40 bg-amber-950/10"
+        }`}>
           <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-amber-300 flex items-center gap-2">
-              <Trophy className="w-4 h-4" /> Endplatzierung bestätigen
+            <p className={`text-sm font-semibold flex items-center gap-2 ${isEditingRanking ? "text-blue-300" : "text-amber-300"}`}>
+              {isEditingRanking
+                ? <><RefreshCw className="w-4 h-4" /> Platzierung bearbeiten</>
+                : <><Trophy className="w-4 h-4" /> Endplatzierung bestätigen</>
+              }
             </p>
-            <button onClick={() => { setShowFinalize(false); setRankingPreview(null); }}
+            <button onClick={() => { setShowFinalize(false); setRankingPreview(null); setIsEditingRanking(false); }}
               className="text-gray-500 hover:text-white transition-colors">
               <X className="w-4 h-4" />
             </button>
           </div>
 
           <p className="text-xs text-gray-400">
-            Überprüfe die Endplatzierung und passe sie bei Bedarf an. Erst nach Bestätigung werden Punkte vergeben.
+            {isEditingRanking
+              ? "Passe die Platzierung an. Die alten Punkte werden automatisch rückgebucht und neu vergeben."
+              : "Überprüfe die Endplatzierung und passe sie bei Bedarf an. Erst nach Bestätigung werden Punkte vergeben."
+            }
           </p>
 
           {rankingLoading && (
@@ -792,9 +869,15 @@ export default function TournamentManager({
               </div>
               <button onClick={confirmFinalize} disabled={loading}
                 className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50"
-                style={{ background: "linear-gradient(135deg, #b45309, #d97706)" }}>
-                <Trophy className="w-4 h-4" />
-                {loading ? "Wird abgeschlossen…" : "Bestätigen & Punkte vergeben"}
+                style={{ background: isEditingRanking
+                  ? "linear-gradient(135deg, #1d4ed8, #3b82f6)"
+                  : "linear-gradient(135deg, #b45309, #d97706)"
+                }}>
+                {isEditingRanking ? <RefreshCw className="w-4 h-4" /> : <Trophy className="w-4 h-4" />}
+                {loading
+                  ? (isEditingRanking ? "Wird aktualisiert…" : "Wird abgeschlossen…")
+                  : (isEditingRanking ? "Platzierung aktualisieren & Punkte neu vergeben" : "Bestätigen & Punkte vergeben")
+                }
               </button>
             </div>
           )}

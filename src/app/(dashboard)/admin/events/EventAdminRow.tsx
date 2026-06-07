@@ -16,7 +16,7 @@ type MatchEntry = { id: string; userId: string | null; teamId: string | null; pl
 type Match = { id: string; round: number; position: number; title: string | null; scheduledAt: string | Date | null; notes: string | null; player1Id: string | null; player2Id: string | null; winnerId: string | null; score1: number | null; score2: number | null; playedAt: string | Date | null; entries: MatchEntry[] };
 type Participant = { userId: string; seed: number | null; eliminated: boolean; user: User };
 type Registration = { userId: string };
-type Tournament = { id: string; status: string; format: string; pointsConfig: string | null; statFields: string | null; participants: Participant[]; matches: Match[] };
+type Tournament = { id: string; status: string; format: string; pointsConfig: string | null; statFields: string | null; finalRankingJson: string | null; finalRankingNote: string | null; participants: Participant[]; matches: Match[] };
 type Series = { id: string; name: string; _count: { events: number } };
 type Event = {
   id: string; title: string; description: string | null; status: string; game: string | null;
