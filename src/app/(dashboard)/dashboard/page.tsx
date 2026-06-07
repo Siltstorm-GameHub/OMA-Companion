@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import {
   Trophy, CalendarDays, Users, ChevronRight,
   ShieldAlert, Clock, Scroll, Swords, CheckCircle2,
-  Circle, Zap,
+  Circle, Zap, Repeat,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -38,7 +38,7 @@ export default async function DashboardPage() {
   const [
     memberCount,
     activeEvents,
-    upcomingEvents,
+    activeSeries,
     topUsers,
     me,
     myQuestsDone,
@@ -48,11 +48,18 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     prisma.user.count(),
     prisma.event.count({ where: { status: { in: ["open", "active"] } } }),
-    prisma.event.findMany({
-      where:   { status: { in: ["open", "active"] }, startAt: { gte: now } },
-      orderBy: { startAt: "asc" },
-      take: 4,
-      include: { _count: { select: { registrations: true } } },
+    prisma.eventSeries.findMany({
+      where: { events: { some: { status: { in: ["open", "active", "closed"] } } } },
+      include: {
+        _count: { select: { events: true } },
+        events: {
+          where:   { status: { in: ["open", "active", "closed"] } },
+          orderBy: { startAt: "asc" },
+          take: 1,
+          select: { startAt: true, status: true },
+        },
+      },
+      take: 5,
     }),
     prisma.user.findMany({
       orderBy: { rankPoints: "desc" },
@@ -111,7 +118,11 @@ export default async function DashboardPage() {
   const avatarUrl   = me?.image ?? session?.user?.image ?? null;
   const isStaff     = userRole === "admin" || userRole === "moderator";
 
-  const nextEvent = upcomingEvents[0] ?? null;
+  const nextEvent = await prisma.event.findFirst({
+    where:   { status: { in: ["open", "active"] }, startAt: { gte: now } },
+    orderBy: { startAt: "asc" },
+    include: { _count: { select: { registrations: true } } },
+  });
 
   return (
     <div className="animate-fade-in">
@@ -315,11 +326,11 @@ export default async function DashboardPage() {
         {/* ── 3-Spalten: Events | Rangliste | Quests ──────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-          {/* Nächste Events */}
+          {/* Aktive Eventreihen */}
           <div className="animate-slide-up stagger-3">
             <div className="flex items-center justify-between mb-2.5">
               <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-                <CalendarDays className="w-3.5 h-3.5 text-teal-500/70" /> Events
+                <Repeat className="w-3.5 h-3.5 text-teal-500/70" /> Eventreihen
               </h2>
               <Link href="/events" className="text-[11px] flex items-center gap-0.5 text-teal-500 hover:text-teal-300 transition-colors">
                 Alle <ChevronRight className="w-3 h-3" />
@@ -327,29 +338,32 @@ export default async function DashboardPage() {
             </div>
             <div className="glass rounded-2xl overflow-hidden divide-y"
               style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.45), 0 0 0 1px rgba(20,184,166,0.07)" }}>
-              {upcomingEvents.length === 0 ? (
-                <p className="text-xs text-gray-600 p-5 text-center">Keine anstehenden Events</p>
-              ) : upcomingEvents.map((ev) => {
-                const s    = STATUS_CONFIG[ev.status];
-                const date = new Date(ev.startAt);
+              {activeSeries.length === 0 ? (
+                <p className="text-xs text-gray-600 p-5 text-center">Keine aktiven Eventreihen</p>
+              ) : activeSeries.map(series => {
+                const nextEv  = series.events[0];
+                const nextDate = nextEv ? new Date(nextEv.startAt) : null;
+                const s = nextEv ? STATUS_CONFIG[nextEv.status] : null;
                 return (
-                  <Link key={ev.id} href="/events"
+                  <Link key={series.id} href={`/events/series/${series.id}`}
                     className="flex items-center gap-3 px-3.5 py-3 transition-colors group hover:bg-teal-500/[0.03]"
                     style={{ borderColor: "rgba(20,184,166,0.06)" }}>
-                    <div className="text-center min-w-[34px] shrink-0 glass-heavy rounded-lg py-1.5 px-1"
-                      style={{ border: "1px solid rgba(20,184,166,0.10)" }}>
-                      <p className="text-xs font-bold text-white leading-none tabular-nums">{date.getDate()}</p>
-                      <p className="text-[8px] text-gray-500 uppercase tracking-wide mt-0.5">
-                        {date.toLocaleString("de-DE", { month: "short" })}
-                      </p>
+                    <div className="w-8 h-8 rounded-xl bg-teal-500/10 border border-teal-500/15 flex items-center justify-center shrink-0">
+                      <Repeat className="w-3.5 h-3.5 text-teal-400" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-white truncate group-hover:text-teal-300 transition-colors">
-                        {ev.title}
+                        {series.name}
                       </p>
                       <p className="text-[10px] text-gray-600 mt-0.5 flex items-center gap-1">
-                        <Clock className="w-2.5 h-2.5" />
-                        {date.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} Uhr
+                        {nextDate ? (
+                          <>
+                            <Clock className="w-2.5 h-2.5" />
+                            Nächstes: {nextDate.toLocaleDateString("de-DE", { day: "numeric", month: "short" })}
+                          </>
+                        ) : (
+                          <><CalendarDays className="w-2.5 h-2.5" />{series._count.events} Events</>
+                        )}
                       </p>
                     </div>
                     {s && (
