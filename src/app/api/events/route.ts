@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { createDiscordScheduledEvent } from "@/lib/discord-events";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -25,16 +26,33 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Titel und Datum sind Pflichtfelder" }, { status: 400 });
   }
 
+  const startDate = new Date(startAt);
+
   const event = await prisma.event.create({
     data: {
       title,
       description,
       game,
-      startAt: new Date(startAt),
+      startAt: startDate,
       maxPlayers: maxPlayers ? Number(maxPlayers) : null,
       pointReward: pointReward ? Number(pointReward) : 50,
       type: type ?? "community",
     },
   });
+
+  // Discord Scheduled Event automatisch anlegen
+  const discordEventId = await createDiscordScheduledEvent({
+    title,
+    startAt: startDate,
+    description: description ?? null,
+  });
+  if (discordEventId) {
+    await prisma.event.update({
+      where: { id: event.id },
+      data: { discordEventId },
+    });
+    event.discordEventId = discordEventId;
+  }
+
   return NextResponse.json(event, { status: 201 });
 }

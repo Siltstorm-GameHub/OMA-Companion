@@ -92,8 +92,8 @@ export default async function EventsPage() {
           </div>
           <p className="text-sm text-gray-500 ml-10">
             {openCount > 0
-              ? <><span className="text-emerald-400 font-medium">{openCount}</span> aktive Events · synchronisiert mit Discord</>
-              : "Synchronisiert mit Discord"}
+              ? <><span className="text-emerald-400 font-medium">{openCount}</span> aktive Events</>
+              : "Alle Events"}
           </p>
         </div>
         <SyncButton />
@@ -305,7 +305,7 @@ export default async function EventsPage() {
             <EmptyState
               type="events"
               title="Noch keine Events"
-              description={'Events werden automatisch von Discord synchronisiert. Klicke auf "Discord sync" um sie zu laden.'}
+              description="Events werden im Admin-Bereich manuell eingetragen und automatisch zu Discord gepusht."
             />
           )}
 
