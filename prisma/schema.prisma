@@ -361,8 +361,7 @@ model Donation {
   createdAt DateTime @default(now())
 
   user      User     @relation(fields: [userId], references: [id])
-
-  @@unique([userId, month, year]) // eine Spende pro User pro Monat
+  // Kein Unique-Constraint → mehrere Einträge pro User pro Monat möglich
 }
 
 model PointTransaction {
