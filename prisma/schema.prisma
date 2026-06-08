@@ -471,3 +471,26 @@ model LulEntry {
   user           User        @relation(fields: [userId], references: [id])
   @@unique([spieltagId, userId])
 }
+
+// ── Geplante Discord-Umfragen ─────────────────────────────────────────────
+model PollJob {
+  id          String    @id @default(cuid())
+  // "event_winner" | "lul_trostpreis" | "lul_community"
+  type        String
+  // eventId oder spieltagId (je nach type)
+  refId       String
+  // Discord Channel-ID, in dem die Umfrage gepostet wird
+  channelId   String
+  // Wann soll die Umfrage gesendet werden?
+  scheduledAt DateTime
+  // Laufzeit in Stunden (Standard: 168 = 1 Woche)
+  duration    Int       @default(168)
+  // "pending" | "sent" | "cancelled" | "failed"
+  status      String    @default("pending")
+  // Discord Message-ID nach dem Senden (zum Nachverfolgen)
+  messageId   String?
+  // Fehlermeldung falls status = "failed"
+  errorMsg    String?
+  createdAt   DateTime  @default(now())
+  sentAt      DateTime?
+}

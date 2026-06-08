@@ -6,6 +6,7 @@ import {
 import { updateEventStatus, syncAttendee } from "./sync";
 import { trackVoice, trackMessage, handleMemberJoin, trackReaction, trackInvite } from "./activity";
 import { setClient, notifyMonthlyLeaderboard, notifyBirthday, notifyEventReminder } from "./notify";
+import { processPendingPolls } from "./polls";
 import { awardPoints } from "@/lib/points";
 import { prisma } from "@/lib/prisma";
 
@@ -40,6 +41,7 @@ client.once(Events.ClientReady, async (c) => {
 
   setClient(client);
   scheduleMonthlyLeaderboard();
+  schedulePollChecker(client);
   // Bug-Fix: Geburtstage nicht beim Start prüfen (würde Nachrichten zu beliebigen Uhrzeiten senden)
   // Stattdessen nur täglich um 8 Uhr im Scheduler
 
@@ -221,6 +223,11 @@ async function checkBirthdays() {
     if (user.discordId) await notifyBirthday(user.discordId, user.username ?? user.name ?? "Jemand");
     console.log(`🎂 Geburtstags-Boost + Punkte für ${user.username ?? user.name}`);
   }
+}
+
+// ── Poll-Checker: läuft jede Minute ─────────────────────────────────────────
+function schedulePollChecker(client: Client) {
+  setInterval(() => processPendingPolls(client), 60 * 1000);
 }
 
 // ── Scheduler: läuft stündlich ───────────────────────────────────────────────
