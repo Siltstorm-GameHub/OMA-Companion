@@ -145,13 +145,12 @@ export default function FloatingPill() {
   }, []);
 
   return (
-    <div style={{
+    <div className="hidden lg:flex" style={{
       position: "fixed",
       top: "calc(2.25rem + 8px)",  // sits just below the 2.25rem news ticker + 8px gap
       left: "50%",
       transform: "translateX(-50%)",
       zIndex: 45,
-      display: "flex",
       alignItems: "center",
       gap: 2,
       padding: "5px 8px",
