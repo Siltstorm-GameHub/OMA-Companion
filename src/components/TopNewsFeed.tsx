@@ -70,7 +70,7 @@ export default function TopNewsFeed({ items }: Props) {
         left: 0,
         right: 0,
         zIndex: 45,
-        height: 36,
+        height: "2.25rem",
         background: "rgba(13,13,15,0.96)",
         borderBottom: "1px solid rgba(20,184,166,0.10)",
         backdropFilter: "blur(16px)",

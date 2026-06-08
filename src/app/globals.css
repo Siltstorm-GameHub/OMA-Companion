@@ -1,5 +1,23 @@
 @import "tailwindcss";
 
+/*
+ * ── Fluid base font-size ────────────────────────────────────────
+ * Da Tailwind alle Abstände, Schriftgrößen und Icon-Größen in rem
+ * berechnet, skaliert mit dieser einen Zeile die gesamte App mit
+ * dem Viewport — Text, Icons, Padding, alles proportional.
+ *
+ * Breakpoints:
+ *   320px  (kleines Handy)  → 13px
+ *   480px  (Handy)          → ~14px
+ *   768px  (Tablet)         → ~15.5px
+ *  1024px  (kleiner Desktop)→ ~16.7px
+ *  1280px  (Desktop)        → ~17.5px
+ *  1536px+ (großer Desktop) → 18px  (Maximum)
+ */
+html {
+  font-size: clamp(13px, calc(11.5px + 0.5vw), 18px);
+}
+
 /* ── Direction B: Gaming Identity ──────────────────────────────── */
 /* Primary:  Teal   #14b8a6  (TV-Screen im Logo)                    */
 /* Secondary: Red   #8b2020  (K-Letter / OM-Badge im Logo)          */

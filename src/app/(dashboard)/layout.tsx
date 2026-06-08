@@ -106,7 +106,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <FloatingPill />
 
       {/* ── Main Content — oben 36px Ticker + 46px Pill + 8px gap ── */}
-      <main className="pt-24 pb-10 min-w-0 px-0" style={{ position: "relative", zIndex: 2 }}>
+      {/* pt = 2.25rem ticker + 8px gap + ~2.75rem pill + 12px gap ≈ 5.5rem */}
+      <main className="pb-10 min-w-0 px-0" style={{ position: "relative", zIndex: 2, paddingTop: "calc(2.25rem + 2.75rem + 20px)" }}>
         {children}
       </main>
 
