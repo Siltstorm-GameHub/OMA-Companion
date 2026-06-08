@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { Users, CalendarDays, Trophy, Star, Zap } from "lucide-react";
 import { RelativeTime } from "@/components/RelativeTime";
+import ResetHistoryButton from "./ResetHistoryButton";
 
 export default async function AdminPage() {
   const [userCount, eventCount, tournamentCount, pointsTotal] = await Promise.all([
@@ -60,6 +61,12 @@ export default async function AdminPage() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Einmalige Bereinigung */}
+      <div>
+        <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">🔧 Datenbank-Wartung</h2>
+        <ResetHistoryButton />
       </div>
     </div>
   );

@@ -99,20 +99,20 @@ export default async function ProfilePage() {
         },
         orderBy: { createdAt: "desc" },
       }),
-      // Rang in der Gesamtrangliste
-      prisma.user.count({ where: { points: { gt: 0 } } }).then(async () => {
-        const higher = await prisma.user.count({ where: { points: { gt: (await prisma.user.findUnique({ where: { id: userId }, select: { points: true } }))?.points ?? 0 } } });
+      // Rang in der Gesamtrangliste (basiert auf rankPoints)
+      prisma.user.findUnique({ where: { id: userId }, select: { rankPoints: true } }).then(async (u) => {
+        const higher = await prisma.user.count({ where: { rankPoints: { gt: u?.rankPoints ?? 0 } } });
         return higher + 1;
       }),
     ]);
 
   if (!user) redirect("/login");
 
-  const totalPoints  = user.points;
-  const rankPoints   = user.rankPoints ?? totalPoints;
-  const currentRank  = getRank(totalPoints);
-  const nextRank     = getNextRank(totalPoints);
-  const rankPct      = nextRank ? Math.min(100, Math.round(((totalPoints - currentRank.min) / (nextRank.min - currentRank.min)) * 100)) : 100;
+  const totalPoints  = user.points;      // Münzen (Shop-Währung)
+  const rankPoints   = user.rankPoints;  // Ranglisten-Punkte (LuL, Turniere, Events)
+  const currentRank  = getRank(rankPoints);
+  const nextRank     = getNextRank(rankPoints);
+  const rankPct      = nextRank ? Math.min(100, Math.round(((rankPoints - currentRank.min) / (nextRank.min - currentRank.min)) * 100)) : 100;
 
   // Chart-Daten
   const chartData = (() => {
@@ -195,7 +195,7 @@ export default async function ProfilePage() {
               <div className="max-w-xs">
                 <div className="flex justify-between text-[10px] text-gray-500 mb-1">
                   <span>{currentRank.emoji} {currentRank.label}</span>
-                  <span>{nextRank.emoji} {nextRank.label} · {(nextRank.min - totalPoints).toLocaleString("de-DE")} Pts</span>
+                  <span>{nextRank.emoji} {nextRank.label} · {(nextRank.min - rankPoints).toLocaleString("de-DE")} Pts</span>
                 </div>
                 <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
                   <div
@@ -337,7 +337,7 @@ export default async function ProfilePage() {
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <span className="text-xs text-gray-500">{current}/{quest.target}</span>
-                          <span className="text-xs text-amber-400 font-semibold">+{quest.reward} Pts</span>
+                          <span className="text-xs text-amber-400 font-semibold">+{quest.reward} 🪙</span>
                         </div>
                       </div>
                       <div className="h-1.5 bg-white/[0.05] rounded-full overflow-hidden">
