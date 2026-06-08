@@ -1,7 +1,7 @@
 "use client";
 import { signIn } from "next-auth/react";
 import Image from "next/image";
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Trophy, CalendarDays, Scroll, Star, Swords, Zap, AlertTriangle } from "lucide-react";
 import { AnimatedBackground } from "@/components/AnimatedBackground";
@@ -13,10 +13,23 @@ const FEATURES = [
   { icon: Trophy,       color: "text-rose-400",    bg: "bg-rose-500/10   border-rose-500/20",   title: "Rangliste",       desc: "Tritt gegen die Community an und kämpfe um die Spitze." },
 ];
 
-export default function LoginPage() {
-  const [loading, setLoading] = useState(false);
+function ErrorBanner() {
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
+  if (!error) return null;
+  return (
+    <div className="mb-6 flex items-start gap-2.5 px-3.5 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-400">
+      <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+      <div>
+        <p className="font-semibold mb-0.5">Login fehlgeschlagen</p>
+        <p className="text-red-400/70 font-mono">{error}</p>
+      </div>
+    </div>
+  );
+}
+
+export default function LoginPage() {
+  const [loading, setLoading] = useState(false);
 
   function handleLogin() {
     setLoading(true);
@@ -113,15 +126,9 @@ export default function LoginPage() {
               </p>
 
               {/* Auth-Fehler anzeigen */}
-              {error && (
-                <div className="mb-6 flex items-start gap-2.5 px-3.5 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-400">
-                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-semibold mb-0.5">Login fehlgeschlagen</p>
-                    <p className="text-red-400/70 font-mono">{error}</p>
-                  </div>
-                </div>
-              )}
+              <Suspense fallback={null}>
+                <ErrorBanner />
+              </Suspense>
 
               {/* Discord-Button */}
               <button
