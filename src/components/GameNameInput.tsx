@@ -37,7 +37,7 @@ export default function GameNameInput({
   const containerRef                = useRef<HTMLDivElement>(null);
   const inputRef                    = useRef<HTMLInputElement>(null);
   const listRef                     = useRef<HTMLUListElement>(null);
-  const debounceRef                 = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef                 = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // Statische Vorschläge wenn Feld leer oder kein Steam-Ergebnis
   const staticSuggestions = value.trim().length === 0
