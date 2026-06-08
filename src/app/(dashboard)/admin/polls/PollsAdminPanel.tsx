@@ -8,6 +8,18 @@ import {
   Clock, CheckCircle2, XCircle, AlertCircle, Hash,
 } from "lucide-react";
 
+// ── Discord-Laufzeit-Optionen (exakt wie in Discord selbst) ─────
+const DURATION_OPTIONS = [
+  { label: "1 Stunde",   value: 1   },
+  { label: "2 Stunden",  value: 2   },
+  { label: "4 Stunden",  value: 4   },
+  { label: "8 Stunden",  value: 8   },
+  { label: "12 Stunden", value: 12  },
+  { label: "1 Tag",      value: 24  },
+  { label: "3 Tage",     value: 72  },
+  { label: "7 Tage",     value: 168 },
+];
+
 // ── Typen ────────────────────────────────────────────────────────
 
 interface EventItem {
@@ -21,6 +33,7 @@ interface Spieltag {
 interface PollJob {
   id: string; type: string; refId: string; channelId: string;
   scheduledAt: string; duration: number; status: string;
+  question: string | null;
   messageId: string | null; errorMsg: string | null;
   createdAt: string; sentAt: string | null;
 }
@@ -55,10 +68,12 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
   const [tab,  setTab]  = useState<"event" | "lul">("event");
 
   // ── Event-Poll-Form ──────────────────────────────────────────
-  const [evtId,    setEvtId]    = useState("");
-  const [evtChan,  setEvtChan]  = useState(process.env.NEXT_PUBLIC_DISCORD_DEFAULT_CHANNEL ?? "");
-  const [evtSched, setEvtSched] = useState("");
-  const [evtSaving, setEvtSaving] = useState(false);
+  const [evtId,       setEvtId]       = useState("");
+  const [evtChan,     setEvtChan]     = useState(process.env.NEXT_PUBLIC_DISCORD_DEFAULT_CHANNEL ?? "");
+  const [evtSched,    setEvtSched]    = useState("");
+  const [evtDuration, setEvtDuration] = useState(24);
+  const [evtQuestion, setEvtQuestion] = useState("");
+  const [evtSaving,   setEvtSaving]   = useState(false);
 
   async function scheduleEventPoll() {
     if (!evtId || !evtChan || !evtSched) { toast.error("Alle Felder ausfüllen"); return; }
@@ -67,7 +82,7 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
       const res = await fetch("/api/admin/polls", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "event_winner", refId: evtId, channelId: evtChan, scheduledAt: new Date(evtSched).toISOString(), duration: 24 }),
+        body: JSON.stringify({ type: "event_winner", refId: evtId, channelId: evtChan, scheduledAt: new Date(evtSched).toISOString(), duration: evtDuration, question: evtQuestion.trim() || evtAutoQ }),
       });
       if (!res.ok) { toast.error("Fehler beim Erstellen"); return; }
       const job = await res.json();
@@ -78,10 +93,13 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
   }
 
   // ── LUL-Poll-Form ────────────────────────────────────────────
-  const [lulId,       setLulId]       = useState("");
-  const [lulChan,     setLulChan]     = useState(process.env.NEXT_PUBLIC_DISCORD_DEFAULT_CHANNEL ?? "");
-  const [lulSched,    setLulSched]    = useState("");
-  const [lulSaving,   setLulSaving]   = useState(false);
+  const [lulId,          setLulId]          = useState("");
+  const [lulChan,        setLulChan]        = useState(process.env.NEXT_PUBLIC_DISCORD_DEFAULT_CHANNEL ?? "");
+  const [lulSched,       setLulSched]       = useState("");
+  const [lulDuration,    setLulDuration]    = useState(168);
+  const [lulQ1,          setLulQ1]          = useState("");
+  const [lulQ2,          setLulQ2]          = useState("");
+  const [lulSaving,      setLulSaving]      = useState(false);
 
   async function scheduleLulPolls() {
     if (!lulId || !lulChan || !lulSched) { toast.error("Alle Felder ausfüllen"); return; }
@@ -90,9 +108,9 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
       const scheduledAt = new Date(lulSched).toISOString();
       const [r1, r2] = await Promise.all([
         fetch("/api/admin/polls", { method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ type: "lul_trostpreis", refId: lulId, channelId: lulChan, scheduledAt, duration: 168 }) }),
+          body: JSON.stringify({ type: "lul_trostpreis", refId: lulId, channelId: lulChan, scheduledAt, duration: lulDuration, question: lulQ1.trim() || lulAutoQ1 }) }),
         fetch("/api/admin/polls", { method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ type: "lul_community", refId: lulId, channelId: lulChan, scheduledAt, duration: 168 }) }),
+          body: JSON.stringify({ type: "lul_community",  refId: lulId, channelId: lulChan, scheduledAt, duration: lulDuration, question: lulQ2.trim() || lulAutoQ2 }) }),
       ]);
       if (!r1.ok || !r2.ok) { toast.error("Fehler beim Erstellen"); return; }
       const [j1, j2] = await Promise.all([r1.json(), r2.json()]);
@@ -113,11 +131,14 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
   // Ausgewähltes Event
   const selEvent    = events.find(e => e.id === evtId);
   const evtPlayers  = selEvent?.registrations.map(r => r.user) ?? [];
+  const evtAutoQ    = selEvent ? `Wer gewinnt „${selEvent.title}"? 🏆` : "";
 
   // Ausgewählter Spieltag
   const selSpieltag = spieltage.find(s => s.id === lulId);
   const lulPlayers  = selSpieltag?.entries.filter(e => e.role === "player").map(e => e.user) ?? [];
   const lulViewers  = selSpieltag?.entries.filter(e => e.role === "spectator").map(e => e.user) ?? [];
+  const lulAutoQ1   = selSpieltag ? `Spieltag ${selSpieltag.number}: Wer verdient den Trostpreis? 🎁` : "";
+  const lulAutoQ2   = selSpieltag ? `Spieltag ${selSpieltag.number}: Wer gewinnt den Community-Support-Preis? 💛` : "";
 
   // Vorschlag für automatische Zeit
   function suggestEventTime() {
@@ -169,7 +190,8 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
             <div className="space-y-1.5">
               <label className="flex items-center gap-1.5 text-xs text-gray-400"><CalendarDays className="w-3.5 h-3.5"/>Event wählen</label>
               <select value={evtId} onChange={e => { setEvtId(e.target.value); }}
-                className="w-full rounded-xl px-3 py-2.5 text-sm text-white bg-white/[0.05] border border-white/[0.1] outline-none focus:border-indigo-500/40">
+                className="w-full rounded-xl px-3 py-2.5 text-sm text-white bg-gray-900 border border-white/[0.1] outline-none focus:border-indigo-500/40"
+                style={{ colorScheme: "dark" }}>
                 <option value="">— Event wählen —</option>
                 {events.map(e => (
                   <option key={e.id} value={e.id}>
@@ -202,12 +224,31 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
               </div>
             </div>
 
-            {/* Laufzeit — fix 24h für Events */}
+            {/* Frage */}
+            <div className="space-y-1.5 md:col-span-2">
+              <label className="text-xs text-gray-400">Umfrage-Frage</label>
+              <input
+                type="text"
+                value={evtQuestion}
+                onChange={e => setEvtQuestion(e.target.value)}
+                placeholder={evtAutoQ || "Wähle zuerst ein Event…"}
+                className="w-full rounded-xl px-3 py-2.5 text-sm text-white bg-white/[0.05] border border-white/[0.1] outline-none focus:border-indigo-500/40 placeholder-gray-600"
+              />
+              {evtAutoQ && !evtQuestion && (
+                <p className="text-[10px] text-gray-600">Automatischer Vorschlag — direkt editierbar (max. 300 Zeichen)</p>
+              )}
+            </div>
+
+            {/* Laufzeit */}
             <div className="space-y-1.5">
-              <label className="text-xs text-gray-400">Umfrage-Laufzeit</label>
-              <div className="rounded-xl px-3 py-2.5 text-sm text-gray-400 bg-white/[0.03] border border-white/[0.06]">
-                24 Stunden (fest für Event-Umfragen)
-              </div>
+              <label className="flex items-center gap-1.5 text-xs text-gray-400"><Clock className="w-3.5 h-3.5"/>Umfrage-Laufzeit</label>
+              <select value={evtDuration} onChange={e => setEvtDuration(Number(e.target.value))}
+                className="w-full rounded-xl px-3 py-2.5 text-sm text-white bg-gray-900 border border-white/[0.1] outline-none focus:border-indigo-500/40"
+                style={{ colorScheme: "dark" }}>
+                {DURATION_OPTIONS.map(o => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -246,7 +287,8 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
             <div className="space-y-1.5">
               <label className="flex items-center gap-1.5 text-xs text-gray-400"><Star className="w-3.5 h-3.5"/>Spieltag wählen</label>
               <select value={lulId} onChange={e => setLulId(e.target.value)}
-                className="w-full rounded-xl px-3 py-2.5 text-sm text-white bg-white/[0.05] border border-white/[0.1] outline-none focus:border-indigo-500/40">
+                className="w-full rounded-xl px-3 py-2.5 text-sm text-white bg-gray-900 border border-white/[0.1] outline-none focus:border-indigo-500/40"
+                style={{ colorScheme: "dark" }}>
                 <option value="">— Spieltag wählen —</option>
                 {spieltage.map(s => (
                   <option key={s.id} value={s.id}>
@@ -279,12 +321,38 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
               </div>
             </div>
 
-            {/* Laufzeit — fix 1 Woche für LUL */}
+            {/* Fragen */}
             <div className="space-y-1.5">
-              <label className="text-xs text-gray-400">Umfrage-Laufzeit</label>
-              <div className="rounded-xl px-3 py-2.5 text-sm text-gray-400 bg-white/[0.03] border border-white/[0.06]">
-                168 Stunden = 7 Tage (fest für LUL-Umfragen)
-              </div>
+              <label className="text-xs text-gray-400">🎁 Trostpreis-Frage</label>
+              <input
+                type="text"
+                value={lulQ1}
+                onChange={e => setLulQ1(e.target.value)}
+                placeholder={lulAutoQ1 || "Wähle zuerst einen Spieltag…"}
+                className="w-full rounded-xl px-3 py-2.5 text-sm text-white bg-white/[0.05] border border-white/[0.1] outline-none focus:border-amber-500/40 placeholder-gray-600"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs text-gray-400">💛 Community-Support-Frage</label>
+              <input
+                type="text"
+                value={lulQ2}
+                onChange={e => setLulQ2(e.target.value)}
+                placeholder={lulAutoQ2 || "Wähle zuerst einen Spieltag…"}
+                className="w-full rounded-xl px-3 py-2.5 text-sm text-white bg-white/[0.05] border border-white/[0.1] outline-none focus:border-violet-500/40 placeholder-gray-600"
+              />
+            </div>
+
+            {/* Laufzeit */}
+            <div className="space-y-1.5">
+              <label className="flex items-center gap-1.5 text-xs text-gray-400"><Clock className="w-3.5 h-3.5"/>Umfrage-Laufzeit</label>
+              <select value={lulDuration} onChange={e => setLulDuration(Number(e.target.value))}
+                className="w-full rounded-xl px-3 py-2.5 text-sm text-white bg-gray-900 border border-white/[0.1] outline-none focus:border-indigo-500/40"
+                style={{ colorScheme: "dark" }}>
+                {DURATION_OPTIONS.map(o => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -342,6 +410,9 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
                   <span className="text-sm text-white font-medium">{pollTypeLabel(job.type)}</span>
                   {statusBadge(job.status)}
                 </div>
+                {job.question && (
+                  <p className="text-xs text-gray-300 italic">„{job.question}"</p>
+                )}
                 <div className="flex items-center gap-3 text-[11px] text-gray-500 flex-wrap">
                   <span className="flex items-center gap-1"><Clock className="w-3 h-3"/>{toLocal(job.scheduledAt)}</span>
                   <span className="flex items-center gap-1"><Hash className="w-3 h-3"/>{job.channelId}</span>

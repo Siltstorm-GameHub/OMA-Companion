@@ -485,6 +485,8 @@ model PollJob {
   scheduledAt DateTime
   // Laufzeit in Stunden (Standard: 168 = 1 Woche)
   duration    Int       @default(168)
+  // Frage-Text (editierbar im Admin, wird 1:1 an Discord gesendet)
+  question    String?
   // "pending" | "sent" | "cancelled" | "failed"
   status      String    @default("pending")
   // Discord Message-ID nach dem Senden (zum Nachverfolgen)
