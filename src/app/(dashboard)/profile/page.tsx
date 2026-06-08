@@ -7,7 +7,6 @@ import { RARITY_CONFIG, type Rarity, MAX_SHOWCASE } from "@/lib/collectibles";
 import { Trophy, Star, CalendarDays, Swords, Clock, MessageSquare, CheckCircle2, Coins } from "lucide-react";
 import { RelativeTime } from "@/components/RelativeTime";
 import Image from "next/image";
-import { PointsChart } from "@/components/PointsChart";
 import CollectiblesShowcase from "./CollectiblesShowcase";
 import ProfileEditor from "./ProfileEditor";
 
@@ -62,13 +61,12 @@ export default async function ProfilePage() {
   const month = now.getMonth() + 1;
   const year  = now.getFullYear();
 
-  const [user, transactions, eventRegs, tournamentParticipations, tournamentWins, questsWithProgress, ownedCollectibles, leaderboardRank] =
+  const [user, eventRegs, tournamentParticipations, tournamentWins, questsWithProgress, ownedCollectibles, leaderboardRank] =
     await Promise.all([
       prisma.user.findUnique({
         where:  { id: userId },
         select: { id: true, name: true, username: true, image: true, points: true, rankPoints: true, createdAt: true, showcaseJson: true, birthday: true, bio: true },
       }),
-      prisma.pointTransaction.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, take: 30 }),
       prisma.eventRegistration.findMany({
         where:   { userId },
         include: { event: { select: { title: true, startAt: true, game: true } } },
@@ -116,21 +114,8 @@ export default async function ProfilePage() {
   const nextRank     = getNextRank(rankPoints);
   const rankPct      = nextRank ? Math.min(100, Math.round(((rankPoints - currentRank.min) / (nextRank.min - currentRank.min)) * 100)) : 100;
 
-  // Chart-Daten
-  const chartData = (() => {
-    const sorted = [...transactions].reverse();
-    let running = Math.max(0, totalPoints - transactions.reduce((s, t) => s + t.amount, 0));
-    return sorted.slice(-30).map(tx => {
-      running += tx.amount;
-      return {
-        date:   new Date(tx.createdAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }),
-        points: Math.max(0, running),
-      };
-    });
-  })();
-
-  const voiceHours   = transactions.filter(t => t.reason.includes("Sprachkanal")).length;
-  const messageCount = transactions.filter(t => t.reason.includes("Nachrichten")).length * 10;
+  const voiceHours   = 0;
+  const messageCount = 0;
   const badges       = computeBadges({ points: totalPoints, voiceHours, messageCount, eventCount: eventRegs.length, tournamentCount: tournamentParticipations.length, tournamentWins });
   const earnedBadges = badges.filter(b => b.earned);
   const memberSince  = new Date(user.createdAt).toLocaleDateString("de-DE", { month: "long", year: "numeric" });
@@ -435,62 +420,6 @@ export default async function ProfilePage() {
             </div>
           </section>
 
-          {/* Punkte-Chart */}
-          {chartData.length >= 2 && (
-            <section>
-              <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">📈 Punkte-Verlauf</h2>
-              <div className="glass card-shine rounded-2xl p-4">
-                <PointsChart data={chartData} />
-              </div>
-            </section>
-          )}
-
-          {/* Punkte-Historie */}
-          <section>
-            <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">⭐ Punkte-Historie</h2>
-            <div className="glass card-shine rounded-2xl overflow-hidden divide-y divide-white/[0.04] max-h-96 overflow-y-auto">
-              {transactions.length === 0 && (
-                <p className="text-xs text-gray-600 text-center py-6">Noch keine Punkte verdient.</p>
-              )}
-              {transactions.map(tx => {
-                const RANK_KW = ["LUL Spieltag", "Turniersieg", "Turnierfinale", "Top-3-Platzierung", "Rang-Punkte"];
-                const isRank  = RANK_KW.some(kw => tx.reason.includes(kw));
-                const isPos   = tx.amount > 0;
-                return (
-                  <div key={tx.id} className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors">
-                    {/* Typ-Icon */}
-                    <div className={`w-7 h-7 rounded-lg shrink-0 flex items-center justify-center text-sm leading-none ${
-                      isRank
-                        ? (isPos ? "bg-rose-500/10" : "bg-red-500/10")
-                        : (isPos ? "bg-amber-500/10" : "bg-red-500/10")
-                    }`}>
-                      {isRank ? "🏆" : "🪙"}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <p className="text-xs text-gray-300 truncate">{tx.reason}</p>
-                        <span className={`shrink-0 text-[9px] font-semibold px-1.5 py-0.5 rounded-full border ${
-                          isRank
-                            ? "bg-rose-500/10 text-rose-400 border-rose-500/20"
-                            : "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                        }`}>
-                          {isRank ? "Punkte" : "Münzen"}
-                        </span>
-                      </div>
-                      <RelativeTime date={tx.createdAt} className="text-[10px] text-gray-600 mt-0.5 block" />
-                    </div>
-                    <span className={`text-xs font-bold shrink-0 tabular-nums ${
-                      isRank
-                        ? (isPos ? "text-rose-400" : "text-red-400")
-                        : (isPos ? "text-amber-400" : "text-red-400")
-                    }`}>
-                      {isPos ? "+" : ""}{tx.amount.toLocaleString("de-DE")}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
         </div>
       </div>
     </div>
