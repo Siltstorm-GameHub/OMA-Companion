@@ -16,7 +16,7 @@ export default async function ShopPage() {
 
     prisma.collectibleCollection.findMany({
       where:   { active: true },
-      orderBy: { sortOrder: "asc" },
+      orderBy: { name: "asc" },
       include: { items: { orderBy: { sortOrder: "asc" } } },
     }),
 
@@ -42,6 +42,14 @@ export default async function ShopPage() {
         }).catch(() => null)
       : null,
   ]);
+
+  const RARITY_ORDER: Record<string, number> = { common: 0, rare: 1, epic: 2, legendary: 3 };
+  const sortedCollections = collections.map(col => ({
+    ...col,
+    items: [...col.items].sort(
+      (a, b) => (RARITY_ORDER[a.rarity] ?? 0) - (RARITY_ORDER[b.rarity] ?? 0)
+    ),
+  }));
 
   const myPoints  = user?.points ?? 0;
   const ownedSet  = new Set((ownedRaw as { collectibleItemId: string }[]).map(o => o.collectibleItemId));
@@ -81,7 +89,7 @@ export default async function ShopPage() {
 
       {/* Sammlungen */}
       <CollectiblesShop
-        collections={collections as Parameters<typeof CollectiblesShop>[0]["collections"]}
+        collections={sortedCollections as Parameters<typeof CollectiblesShop>[0]["collections"]}
         ownedIds={[...ownedSet]}
         myPoints={myPoints}
         isLoggedIn={!!userId}
