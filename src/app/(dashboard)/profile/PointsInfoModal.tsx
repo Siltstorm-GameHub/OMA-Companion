@@ -5,7 +5,6 @@ import { POINT_RULES, DAILY_CAPS, CATEGORY_LABELS, type PointCategory } from "@/
 
 const CATEGORY_ICONS: Record<PointCategory, string> = {
   turnier:    "⚔️",
-  event:      "📅",
   aktivitaet: "🎙️",
   community:  "👥",
 };

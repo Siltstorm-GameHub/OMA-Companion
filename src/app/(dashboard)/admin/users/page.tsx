@@ -64,7 +64,7 @@ export default async function AdminUsersPage() {
               <th className="text-left px-4 py-3 font-medium">Discord ID</th>
               <th className="text-center px-4 py-3 font-medium">Status</th>
               <th className="text-left px-4 py-3 font-medium">Rolle</th>
-              <th className="text-center px-4 py-3 font-medium">Punkte</th>
+              <th className="text-center px-4 py-3 font-medium">Münzen</th>
               <th className="text-center px-4 py-3 font-medium">Events</th>
               <th className="text-left px-4 py-3 font-medium">Aktionen</th>
             </tr>

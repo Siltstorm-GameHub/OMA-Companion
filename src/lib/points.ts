@@ -2,13 +2,14 @@ import { prisma } from "./prisma";
 
 // ─── Punkt-Regeln ──────────────────────────────────────────────────────────
 export const POINT_RULES = {
-  // Turniere
+  // Turnierplatzierungen → geben rankPoints (Rang-Währung)
   TOURNAMENT_WIN:         { amount: 1000, reason: "Turniersieg 🏆",          category: "turnier" },
   TOURNAMENT_FINALIST:    { amount:  600, reason: "Turnierfinale erreicht",   category: "turnier" },
   TOURNAMENT_TOP3:        { amount:  350, reason: "Top-3-Platzierung 🥉",     category: "turnier" },
-  TOURNAMENT_PARTICIPATE: { amount:  175, reason: "Turnierteilnahme",         category: "turnier" },
-  TOURNAMENT_WIN_MATCH:   { amount:   60, reason: "Match gewonnen",           category: "turnier" },
-  // Events — Anmeldung gibt nur Münzen (keine rankPoints)
+  // Turnierteilnahme → nur Münzen (keine rankPoints)
+  TOURNAMENT_PARTICIPATE: { amount:  175, reason: "Turnierteilnahme",         category: "aktivitaet" },
+  TOURNAMENT_WIN_MATCH:   { amount:   60, reason: "Match gewonnen",           category: "aktivitaet" },
+  // Events — nur Münzen (keine rankPoints)
   EVENT_ATTEND:           { amount:   80, reason: "Event besucht 📅",         category: "aktivitaet" },
   EVENT_ORGANIZE:         { amount:  200, reason: "Event organisiert",        category: "aktivitaet" },
   // Discord-Aktivität
@@ -24,16 +25,16 @@ export const POINT_RULES = {
 } as const;
 
 export type PointRule     = keyof typeof POINT_RULES;
-export type PointCategory = "turnier" | "event" | "aktivitaet" | "community";
+export type PointCategory = "turnier" | "aktivitaet" | "community";
 
-// Kategorien die auch rankPoints vergeben
-const RANK_POINT_CATEGORIES = new Set<PointCategory>(["turnier", "event"]);
+// Nur Turnierplatzierungen (1./2./3. Platz) geben rankPoints
+// Alles andere (Teilnahme, Events, Discord-Aktivität, Spin, Quests) gibt nur Münzen
+const RANK_POINT_CATEGORIES = new Set<PointCategory>(["turnier"]);
 
 export const CATEGORY_LABELS: Record<PointCategory, string> = {
-  turnier:     "Turniere",
-  event:       "Events",
-  aktivitaet:  "Discord-Aktivität",
-  community:   "Community",
+  turnier:    "Turnierplatzierungen",
+  aktivitaet: "Events & Discord-Aktivität",
+  community:  "Community",
 };
 
 // Tägliche Caps: verhindert Farming

@@ -4,13 +4,13 @@ import { prisma } from "@/lib/prisma";
 
 // Gewichtete Preistabelle
 const PRIZES = [
-  { type: "points", value: "10",  label: "10 Punkte",   weight: 30 },
-  { type: "points", value: "25",  label: "25 Punkte",   weight: 25 },
-  { type: "points", value: "50",  label: "50 Punkte",   weight: 20 },
-  { type: "points", value: "100", label: "100 Punkte",  weight: 12 },
-  { type: "points", value: "200", label: "200 Punkte",  weight: 8  },
-  { type: "points", value: "500", label: "500 Punkte",  weight: 4  },
-  { type: "nothing", value: "0", label: "Kein Glück",  weight: 1  },
+  { type: "points", value: "10",  label: "10 Münzen",   weight: 30 },
+  { type: "points", value: "25",  label: "25 Münzen",   weight: 25 },
+  { type: "points", value: "50",  label: "50 Münzen",   weight: 20 },
+  { type: "points", value: "100", label: "100 Münzen",  weight: 12 },
+  { type: "points", value: "200", label: "200 Münzen",  weight: 8  },
+  { type: "points", value: "500", label: "500 Münzen",  weight: 4  },
+  { type: "nothing", value: "0",  label: "Kein Glück",  weight: 1  },
 ] as const;
 
 function rollPrize() {

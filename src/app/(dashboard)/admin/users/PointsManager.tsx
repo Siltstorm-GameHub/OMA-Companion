@@ -30,13 +30,13 @@ export default function PointsManager({ userId, userName }: { userId: string; us
       });
       if (res.ok) {
         toast.success(
-          `${mode === "add" ? "+" : "-"}${num} Pts an ${userName}`,
+          `${mode === "add" ? "+" : "-"}${num} Münzen an ${userName}`,
           { description: reason.trim() }
         );
         reset();
         router.refresh();
       } else {
-        toast.error("Fehler beim Vergeben der Punkte");
+        toast.error("Fehler beim Vergeben der Münzen");
       }
     } catch {
       toast.error("Netzwerkfehler");
@@ -51,7 +51,7 @@ export default function PointsManager({ userId, userName }: { userId: string; us
         onClick={() => setOpen(true)}
         className="flex items-center gap-1 text-xs glass hover:bg-white/[0.06] border border-white/[0.08] hover:border-white/[0.15] text-gray-400 hover:text-white rounded-lg px-2 py-1.5 transition-all"
       >
-        <Plus className="w-3 h-3" /> Punkte
+        <Plus className="w-3 h-3" /> Münzen
       </button>
     );
   }
@@ -77,7 +77,7 @@ export default function PointsManager({ userId, userName }: { userId: string; us
       <input
         type="number"
         min="1"
-        placeholder="Punkte"
+        placeholder="Münzen"
         value={amount}
         onChange={(e) => setAmount(e.target.value)}
         className="w-20 text-xs glass border border-white/[0.08] text-white rounded-lg px-2 py-1.5 focus:border-rose-500/40 focus:outline-none"
