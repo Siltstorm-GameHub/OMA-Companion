@@ -174,7 +174,7 @@ export default async function QuestsPage() {
                       : "bg-white/[0.04] text-amber-400 border-white/[0.08]"
                   }`}>
                     {completed ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Trophy className="w-3.5 h-3.5" />}
-                    +{quest.reward} M�nzen
+                    +{quest.reward} Münzen
                   </div>
                 </div>
 
@@ -195,7 +195,7 @@ export default async function QuestsPage() {
                 {completed && (
                   <div className="flex items-center gap-1.5 mt-3 text-xs text-emerald-700">
                     <Lock className="w-3 h-3" />
-                    Für diesen Monat abgeschlossen · M�nzen wurden gutgeschrieben
+                    Für diesen Monat abgeschlossen · Münzen wurden gutgeschrieben
                   </div>
                 )}
               </div>
@@ -246,7 +246,7 @@ export default async function QuestsPage() {
                       <span className="text-xs text-gray-600">{monthCompleted}/{quests.length} abgeschlossen</span>
                     </div>
                     {totalPts > 0 && (
-                      <span className="text-xs font-semibold text-amber-400">+{totalPts} M�nzen</span>
+                      <span className="text-xs font-semibold text-amber-400">+{totalPts} Münzen</span>
                     )}
                   </div>
                   <div className="divide-y divide-white/[0.04]">
@@ -271,7 +271,7 @@ export default async function QuestsPage() {
                           </div>
                           {done ? (
                             <span className="flex items-center gap-1 text-xs text-emerald-400 font-semibold shrink-0">
-                              <CheckCircle2 className="w-3.5 h-3.5" /> +{quest.reward} M�nzen
+                              <CheckCircle2 className="w-3.5 h-3.5" /> +{quest.reward} Münzen
                             </span>
                           ) : (
                             <span className="text-xs text-gray-600 shrink-0">Nicht abgeschlossen</span>
