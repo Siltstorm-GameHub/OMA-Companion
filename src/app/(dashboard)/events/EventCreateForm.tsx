@@ -4,10 +4,6 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Plus, ChevronDown, ChevronUp, CalendarDays, Euro, Repeat } from "lucide-react";
 
-const GAME_OPTIONS = [
-  "", "Valorant", "League of Legends", "CS2", "Minecraft",
-  "Fortnite", "Rocket League", "Overwatch", "Apex Legends", "Andere",
-];
 
 const inputCls = "w-full rounded-xl px-3 py-2.5 text-sm text-white outline-none";
 const inputStyle = { background: "#0b1a17", border: "1px solid rgba(20,184,166,0.18)" };
@@ -118,9 +114,14 @@ export default function EventCreateForm() {
 
             <div>
               <label className="text-xs text-gray-500 mb-1 block">Spiel</label>
-              <select value={game} onChange={e => setGame(e.target.value)} className={inputCls} style={inputStyle}>
-                {GAME_OPTIONS.map(g => <option key={g} value={g}>{g || "– kein Spiel –"}</option>)}
-              </select>
+              <input
+                type="text"
+                value={game}
+                onChange={e => setGame(e.target.value)}
+                placeholder="z.B. Rocket League, R6 Siege …"
+                className={inputCls}
+                style={inputStyle}
+              />
             </div>
 
             <div>

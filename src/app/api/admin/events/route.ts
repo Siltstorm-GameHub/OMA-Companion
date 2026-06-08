@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
+import { deleteDiscordMessage, deleteDiscordScheduledEvent } from "@/lib/discord-events";
 
 export async function PATCH(req: NextRequest) {
   await requireRole("moderator");
@@ -50,17 +51,20 @@ export async function DELETE(req: NextRequest) {
   const eventId = searchParams.get("eventId");
   if (!eventId) return NextResponse.json({ error: "eventId fehlt" }, { status: 400 });
 
-  // Find associated tournament (if any) to cascade-delete sub-records
+  // Event + Discord-IDs vorab laden
+  const event = await prisma.event.findUnique({
+    where:  { id: eventId },
+    select: { discordEventId: true, discordMessageId: true, discordChannelId: true },
+  });
+
   const tournament = await prisma.tournament.findUnique({
-    where: { eventId },
+    where:  { eventId },
     select: { id: true },
   });
 
   await prisma.$transaction(async (tx) => {
     if (tournament) {
-      // MatchEntry cascades automatically from Match
       await tx.match.deleteMany({ where: { tournamentId: tournament.id } });
-      // TeamMember cascades automatically from Team
       await tx.team.deleteMany({ where: { tournamentId: tournament.id } });
       await tx.tournamentParticipant.deleteMany({ where: { tournamentId: tournament.id } });
       await tx.tournament.delete({ where: { id: tournament.id } });
@@ -68,6 +72,19 @@ export async function DELETE(req: NextRequest) {
     await tx.eventRegistration.deleteMany({ where: { eventId } });
     await tx.event.delete({ where: { id: eventId } });
   });
+
+  // Discord-Nachricht löschen (nach DB-Delete, Fehler ignorieren)
+  if (event?.discordMessageId) {
+    const channelId = event.discordChannelId ?? process.env.DISCORD_NEWS_CHANNEL_ID;
+    if (channelId) {
+      await deleteDiscordMessage(channelId, event.discordMessageId);
+    }
+  }
+
+  // Discord Scheduled Event löschen
+  if (event?.discordEventId) {
+    await deleteDiscordScheduledEvent(event.discordEventId);
+  }
 
   return NextResponse.json({ ok: true });
 }

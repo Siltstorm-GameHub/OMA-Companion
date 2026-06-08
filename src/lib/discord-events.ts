@@ -2,6 +2,7 @@
 
 /** Sendet eine Event-Ankündigung in den konfigurierten Events-Channel via REST API.
  *  Funktioniert direkt aus der WebApp heraus (kein discord.js-Client nötig). */
+/** Postet eine Event-Ankündigung und gibt die Discord Message-ID zurück (zum späteren Löschen). */
 export async function announceNewEvent(event: {
   title: string;
   game: string | null;
@@ -9,10 +10,10 @@ export async function announceNewEvent(event: {
   maxPlayers: number | null;
   pointReward: number;
   discordChannelId?: string | null;
-}): Promise<void> {
+}): Promise<string | null> {
   const channelId = event.discordChannelId ?? process.env.DISCORD_NEWS_CHANNEL_ID;
   const botToken  = process.env.DISCORD_BOT_TOKEN;
-  if (!channelId || !botToken) return;
+  if (!channelId || !botToken) return null;
 
   const startFormatted = event.startAt.toLocaleString("de-DE", {
     weekday: "long", day: "2-digit", month: "long",
@@ -27,17 +28,55 @@ export async function announceNewEvent(event: {
       { name: "🎮 Spiel",        value: event.game ?? "–",                                          inline: true },
       { name: "📆 Start",        value: startFormatted,                                             inline: true },
       { name: "👥 Max. Spieler", value: event.maxPlayers ? String(event.maxPlayers) : "Unbegrenzt", inline: true },
-      { name: "⭐ Punkte",       value: `+${event.pointReward} Pts bei Teilnahme`,                  inline: true },
+      { name: "⭐ Münzen",       value: `+${event.pointReward} Münzen bei Teilnahme`,               inline: true },
     ],
     footer:    { text: "OMA Companion · Events" },
     timestamp: new Date().toISOString(),
   };
 
-  await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
-    method:  "POST",
-    headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
-    body:    JSON.stringify({ embeds: [embed] }),
-  }).catch(err => console.error("[Discord] Event-Ankündigung fehlgeschlagen:", err));
+  try {
+    const res = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+      method:  "POST",
+      headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
+      body:    JSON.stringify({ embeds: [embed] }),
+    });
+    if (!res.ok) {
+      console.error("[Discord] Event-Ankündigung fehlgeschlagen:", res.status, await res.text());
+      return null;
+    }
+    const data = await res.json() as { id: string };
+    return data.id;
+  } catch (err) {
+    console.error("[Discord] Event-Ankündigung fehlgeschlagen:", err);
+    return null;
+  }
+}
+
+/** Löscht eine Discord-Nachricht (z.B. Event-Ankündigung beim Löschen des Events). */
+export async function deleteDiscordMessage(channelId: string, messageId: string): Promise<void> {
+  const botToken = process.env.DISCORD_BOT_TOKEN;
+  if (!botToken) return;
+  const res = await fetch(
+    `https://discord.com/api/v10/channels/${channelId}/messages/${messageId}`,
+    { method: "DELETE", headers: { Authorization: `Bot ${botToken}` } }
+  );
+  if (!res.ok && res.status !== 404) {
+    console.error("[Discord] Nachricht löschen fehlgeschlagen:", res.status);
+  }
+}
+
+/** Löscht ein Discord Scheduled Event. */
+export async function deleteDiscordScheduledEvent(discordEventId: string): Promise<void> {
+  const guildId  = process.env.DISCORD_GUILD_ID;
+  const botToken = process.env.DISCORD_BOT_TOKEN;
+  if (!guildId || !botToken) return;
+  const res = await fetch(
+    `https://discord.com/api/v10/guilds/${guildId}/scheduled-events/${discordEventId}`,
+    { method: "DELETE", headers: { Authorization: `Bot ${botToken}` } }
+  );
+  if (!res.ok && res.status !== 404) {
+    console.error("[Discord] Scheduled Event löschen fehlgeschlagen:", res.status);
+  }
 }
 
 
