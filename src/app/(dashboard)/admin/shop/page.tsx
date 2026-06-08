@@ -15,9 +15,9 @@ export default async function AdminShopPage() {
 
   const collections = raw.map(col => ({
     ...col,
-    items: [...col.items].sort(
-      (a, b) => (RARITY_ORDER[a.rarity] ?? 0) - (RARITY_ORDER[b.rarity] ?? 0)
-    ),
+    items: [...col.items]
+      .sort((a, b) => (RARITY_ORDER[a.rarity] ?? 0) - (RARITY_ORDER[b.rarity] ?? 0))
+      .map(i => ({ ...i, saleUntil: i.saleUntil?.toISOString() ?? null })),
   }));
 
   const totalItems  = collections.reduce((s, c) => s + c.items.length, 0);
