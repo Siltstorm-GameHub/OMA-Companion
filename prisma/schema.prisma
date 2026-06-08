@@ -20,18 +20,15 @@ model User {
   role          String    @default("user") // user | moderator | admin
   points        Int       @default(0)   // Münzen (Shop-Währung)
   rankPoints    Int       @default(0)   // Prestige-Punkte (Events, Turniere, LuL)
-  goalItemId    String?   // Shop-Item das als Sparziel gesetzt wurde
   createdAt     DateTime  @default(now())
 
-  // Shop / Cosmetics
-  activeTitle    String?   // z.B. "Veteran", "Champion"
-  profileTheme   String    @default("default") // default | cyber | golden | void | emerald | crimson
-  nameColor      String?   // hex color, z.B. "#f59e0b"
-  statusMessage  String?   // max 60 Zeichen, sichtbar im Profil
-  streakShield        Boolean   @default(false)
-  xpBoostUntil        DateTime?
-  birthday            DateTime? // Nur Datum relevant (month/day)
-  birthdayBoostUntil  DateTime? // 2x Punkte bis zu diesem Zeitpunkt
+  birthday           DateTime? // Nur Datum relevant (month/day)
+  birthdayBoostUntil DateTime? // 2x Punkte bis zu diesem Zeitpunkt
+  xpBoostUntil       DateTime?
+  streakShield       Boolean   @default(false)
+
+  // Collectibles Showcase: JSON-Array mit bis zu 5 CollectibleItem-IDs
+  showcaseJson  String?
 
   accounts      Account[]
   sessions      Session[]
@@ -46,11 +43,54 @@ model User {
   shopPurchases             ShopPurchase[]
   lulSuggestions            LulSuggestion[]
   dailySpins                DailySpin[]
-  wishlistItems             WishlistItem[]
   donations                 Donation[]
+  collectibles              UserCollectible[]
 }
 
-// ── Shop ────────────────────────────────────────────────────────────────────
+// ── Collectibles ─────────────────────────────────────────────────────────────
+
+model CollectibleCollection {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  game        String?              // z.B. "Rocket League"
+  coverEmoji  String   @default("🎮")
+  active      Boolean  @default(true)  // im Shop anzeigen?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  items       CollectibleItem[]
+}
+
+model CollectibleItem {
+  id           String   @id @default(cuid())
+  collectionId String
+  name         String
+  description  String?
+  emoji        String   @default("🎮")
+  rarity       String   @default("common") // common | rare | epic | legendary
+  price        Int
+  stock        Int?     // null = unbegrenzt
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  collection   CollectibleCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  owners       UserCollectible[]
+}
+
+model UserCollectible {
+  id                String   @id @default(cuid())
+  userId            String
+  collectibleItemId String
+  createdAt         DateTime @default(now())
+
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  collectibleItem   CollectibleItem @relation(fields: [collectibleItemId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, collectibleItemId])
+}
+
+// ── Shop (nur noch lul_suggest) ──────────────────────────────────────────────
 
 model ShopItem {
   id          String   @id @default(cuid())
@@ -73,7 +113,6 @@ model ShopItem {
   createdAt     DateTime  @default(now())
 
   purchases     ShopPurchase[]
-  wishlistItems WishlistItem[]
 }
 
 model ShopPurchase {
@@ -117,17 +156,6 @@ model DailySpin {
   @@unique([userId, date])
 }
 
-// ── Wunschliste ────────────────────────────────────────────────────────────
-model WishlistItem {
-  id        String   @id @default(cuid())
-  userId    String
-  itemId    String
-  createdAt DateTime @default(now())
-
-  user      User     @relation(fields: [userId], references: [id])
-  item      ShopItem @relation(fields: [itemId], references: [id])
-  @@unique([userId, itemId])
-}
 
 // ── Auktionen ──────────────────────────────────────────────────────────────
 

@@ -113,10 +113,7 @@ export async function purchaseItem(userId: string, itemId: string) {
       : []),
   ]);
 
-  // Sofortiger Effekt für dauerhafte Cosmetics
-  if (item.type === "profile_theme") {
-    await prisma.user.update({ where: { id: userId }, data: { profileTheme: item.value } });
-  }
+  // Sofortiger Effekt
   if (item.type === "xp_boost") {
     await prisma.user.update({ where: { id: userId }, data: { xpBoostUntil: expiresAt } });
   }
@@ -125,9 +122,6 @@ export async function purchaseItem(userId: string, itemId: string) {
   }
   if (item.type === "discord_role" && user.discordId) {
     await assignDiscordRole(user.discordId, item.value);
-  }
-  if (item.type === "name_color") {
-    await prisma.user.update({ where: { id: userId }, data: { nameColor: item.value } });
   }
 
   // Bundle: für jedes Sub-Item eine ShopPurchase anlegen (falls noch nicht besessen)
@@ -148,11 +142,6 @@ export async function purchaseItem(userId: string, itemId: string) {
   }
 
   return { purchase, item };
-}
-
-/** Aktiviert einen Titel (muss vorher gekauft worden sein) */
-export async function activateTitle(userId: string, title: string | null) {
-  return prisma.user.update({ where: { id: userId }, data: { activeTitle: title } });
 }
 
 /** Prüft ob User aktiven XP-Boost hat */

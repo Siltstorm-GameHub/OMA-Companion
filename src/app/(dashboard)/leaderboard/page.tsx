@@ -4,7 +4,6 @@ import { Trophy, Swords, Flame } from "lucide-react";
 import { CountUp } from "@/components/CountUp";
 import Link from "next/link";
 import Image from "next/image";
-import { TITLE_STYLES } from "@/lib/shop";
 
 const MEDALS = ["🥇", "🥈", "🥉"];
 
@@ -70,7 +69,6 @@ export default async function LeaderboardPage() {
       select: {
         id: true, name: true, username: true, image: true,
         points: true, rankPoints: true,
-        nameColor: true, activeTitle: true,
         _count: { select: { tournamentParticipants: true } },
       },
     }),
@@ -187,13 +185,6 @@ export default async function LeaderboardPage() {
                   {isMe && <span className="text-[10px] text-gray-500 ml-1 font-normal">du</span>}
                 </p>
 
-                {/* Titel */}
-                {u.activeTitle && (
-                  <span className={`text-[9px] px-1.5 py-0.5 rounded border font-medium mt-1 ${TITLE_STYLES[u.activeTitle] ?? "text-gray-400 border-white/10"}`}>
-                    {u.activeTitle}
-                  </span>
-                )}
-
                 {/* Punkte */}
                 <div className="mt-3 text-center">
                   <p className={`text-base sm:text-lg font-black tabular-nums ${cfg.pointsColor}`}>
@@ -295,15 +286,10 @@ export default async function LeaderboardPage() {
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <p className={`text-sm font-semibold truncate leading-tight ${nameColor}`}
-                      style={u.nameColor && !isTop3 && !isMe ? { color: u.nameColor } : undefined}>
+                      >
                       {displayName}
                       {isMe && <span className="text-[10px] text-gray-500 ml-1 font-normal">du</span>}
                     </p>
-                    {u.activeTitle && (
-                      <span className={`text-[9px] px-1.5 py-0.5 rounded border font-medium ${TITLE_STYLES[u.activeTitle] ?? "text-gray-400 border-white/10"}`}>
-                        {u.activeTitle}
-                      </span>
-                    )}
                   </div>
                 </div>
 
