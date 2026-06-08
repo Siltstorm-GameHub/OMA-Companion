@@ -3,12 +3,16 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ChevronDown, ChevronUp, ShoppingCart, Check, Loader2, Lock, Star, Package, ImageIcon } from "lucide-react";
+import { ChevronDown, ChevronUp, ShoppingCart, Check, Loader2, Lock, Star, Package, ImageIcon, Tag } from "lucide-react";
 import { RARITY_CONFIG, type Rarity } from "@/lib/collectibles";
 
 interface CollectibleItem {
   id: string; name: string; description: string | null; imageUrl: string | null;
-  rarity: string; price: number; stock: number | null; sortOrder: number;
+  rarity: string; stock: number | null; sortOrder: number;
+  // vorberechnet vom Server
+  displayPrice:  number;
+  originalPrice: number;
+  onSale:        boolean;
 }
 interface Collection {
   id: string; name: string; description: string | null; game: string | null;
@@ -24,8 +28,8 @@ interface Props {
 
 export default function CollectiblesShop({ collections, ownedIds, myPoints, isLoggedIn }: Props) {
   const router = useRouter();
-  const [open,   setOpen]   = useState<Record<string, boolean>>({});
-  const [buying, setBuying] = useState<string | null>(null);
+  const [open,       setOpen]       = useState<Record<string, boolean>>({});
+  const [buying,     setBuying]     = useState<string | null>(null);
   const [localOwned, setLocalOwned] = useState<Set<string>>(new Set(ownedIds));
 
   const toggleOpen = (id: string) => setOpen(o => ({ ...o, [id]: !o[id] }));
@@ -33,7 +37,7 @@ export default function CollectiblesShop({ collections, ownedIds, myPoints, isLo
   async function handleBuy(item: CollectibleItem) {
     if (!isLoggedIn) { toast.error("Bitte einloggen"); return; }
     if (localOwned.has(item.id)) return;
-    if (myPoints < item.price)   { toast.error("Nicht genug Münzen"); return; }
+    if (myPoints < item.displayPrice) { toast.error("Nicht genug Münzen"); return; }
 
     setBuying(item.id);
     try {
@@ -67,11 +71,12 @@ export default function CollectiblesShop({ collections, ownedIds, myPoints, isLo
   return (
     <div className="space-y-4">
       {collections.map(col => {
-        const isOpen      = open[col.id] ?? true;
-        const ownedInCol  = col.items.filter(i => localOwned.has(i.id)).length;
-        const total       = col.items.length;
-        const pct         = total > 0 ? Math.round((ownedInCol / total) * 100) : 0;
-        const complete    = ownedInCol === total && total > 0;
+        const isOpen     = open[col.id] ?? true;
+        const ownedInCol = col.items.filter(i => localOwned.has(i.id)).length;
+        const total      = col.items.length;
+        const pct        = total > 0 ? Math.round((ownedInCol / total) * 100) : 0;
+        const complete   = ownedInCol === total && total > 0;
+        const saleCount  = col.items.filter(i => i.onSale && !localOwned.has(i.id)).length;
 
         return (
           <div key={col.id} className="glass card-shine rounded-2xl overflow-hidden">
@@ -95,6 +100,7 @@ export default function CollectiblesShop({ collections, ownedIds, myPoints, isLo
                   <h2 className="text-base font-bold text-white">{col.name}</h2>
                   {col.game && <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">{col.game}</span>}
                   {complete && <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/25 text-amber-400 font-semibold">✓ Komplett</span>}
+                  {saleCount > 0 && <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/15 border border-rose-500/25 text-rose-400 font-semibold flex items-center gap-1"><Tag className="w-2.5 h-2.5" /> Sale</span>}
                 </div>
                 {col.description && <p className="text-xs text-gray-500 mt-0.5 truncate">{col.description}</p>}
 
@@ -119,7 +125,7 @@ export default function CollectiblesShop({ collections, ownedIds, myPoints, isLo
                 {col.items.map(item => {
                   const rarity    = RARITY_CONFIG[item.rarity as Rarity] ?? RARITY_CONFIG.common;
                   const owned     = localOwned.has(item.id);
-                  const canAfford = myPoints >= item.price;
+                  const canAfford = myPoints >= item.displayPrice;
                   const soldOut   = item.stock !== null && item.stock <= 0;
                   const isLoading = buying === item.id;
 
@@ -129,6 +135,14 @@ export default function CollectiblesShop({ collections, ownedIds, myPoints, isLo
                       className={`relative rounded-xl border overflow-hidden transition-all duration-200 ${rarity.border} ${rarity.glow} ${owned ? "opacity-70" : ""}`}
                     >
                       <div className={`absolute inset-0 bg-gradient-to-b ${rarity.bg} to-transparent pointer-events-none`} />
+
+                      {/* Sale-Badge */}
+                      {item.onSale && !owned && (
+                        <div className="absolute top-2 left-2 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-rose-500/20 border border-rose-500/30 z-10">
+                          <Tag className="w-2.5 h-2.5 text-rose-400" />
+                          <span className="text-[9px] font-bold text-rose-400">SALE</span>
+                        </div>
+                      )}
 
                       {/* Owned checkmark */}
                       {owned && (
@@ -160,22 +174,34 @@ export default function CollectiblesShop({ collections, ownedIds, myPoints, isLo
                           {rarity.label}
                         </span>
 
-                        {/* Price / action */}
+                        {/* Preis */}
+                        {item.onSale && !owned && (
+                          <p className="text-[10px] text-gray-500 line-through tabular-nums">
+                            {item.originalPrice.toLocaleString("de-DE")} 🪙
+                          </p>
+                        )}
+
+                        {/* Kauf-Button */}
                         {!owned ? (
                           <button
                             onClick={() => handleBuy(item)}
                             disabled={isLoading || soldOut || !canAfford || !isLoggedIn}
                             className={`w-full flex items-center justify-center gap-1.5 text-[11px] font-semibold px-2 py-1.5 rounded-lg transition-all active:scale-[0.97] disabled:opacity-50 mt-1 ${
-                              soldOut        ? "bg-white/[0.04] text-gray-600 border border-white/[0.06] cursor-not-allowed"
-                            : !canAfford    ? "bg-white/[0.04] text-red-400 border border-red-500/15 cursor-not-allowed"
-                            : !isLoggedIn   ? "bg-white/[0.04] text-gray-500 border border-white/[0.06] cursor-not-allowed"
-                            : "bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 border border-amber-500/25"
+                              soldOut
+                                ? "bg-white/[0.04] text-gray-600 border border-white/[0.06] cursor-not-allowed"
+                                : !canAfford
+                                ? "bg-white/[0.04] text-red-400 border border-red-500/15 cursor-not-allowed"
+                                : !isLoggedIn
+                                ? "bg-white/[0.04] text-gray-500 border border-white/[0.06] cursor-not-allowed"
+                                : item.onSale
+                                ? "bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/25"
+                                : "bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 border border-amber-500/25"
                             }`}
                           >
-                            {isLoading          ? <Loader2 className="w-3 h-3 animate-spin" />
-                           : soldOut            ? <><Lock className="w-3 h-3" /> Ausverkauft</>
-                           : !canAfford         ? <><Lock className="w-3 h-3" /> {item.price.toLocaleString("de-DE")}</>
-                           : <><ShoppingCart className="w-3 h-3" /> {item.price.toLocaleString("de-DE")}</>
+                            {isLoading ? <Loader2 className="w-3 h-3 animate-spin" />
+                           : soldOut   ? <><Lock className="w-3 h-3" /> Ausverkauft</>
+                           : !canAfford ? <><Lock className="w-3 h-3" /> {item.displayPrice.toLocaleString("de-DE")}</>
+                           : <><ShoppingCart className="w-3 h-3" /> {item.displayPrice.toLocaleString("de-DE")}</>
                             }
                           </button>
                         ) : (

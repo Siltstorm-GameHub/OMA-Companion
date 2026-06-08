@@ -11,17 +11,33 @@ export type Rarity = keyof typeof RARITY_CONFIG;
 
 export const MAX_SHOWCASE = 5;
 
+/** Effektiver Preis eines Items (Rabatt falls aktiv). */
+export function effectivePrice(item: { price: number; salePrice: number | null; saleUntil: Date | null }): number {
+  if (item.salePrice != null) {
+    if (item.saleUntil == null || new Date() <= new Date(item.saleUntil)) {
+      return item.salePrice;
+    }
+  }
+  return item.price;
+}
+
 /** Kauft ein Collectible-Item für den User. */
 export async function purchaseCollectible(userId: string, collectibleItemId: string) {
   const [user, item] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId }, select: { points: true } }),
-    prisma.collectibleItem.findUnique({ where: { id: collectibleItemId }, include: { collection: { select: { active: true } } } }),
+    prisma.collectibleItem.findUnique({
+      where:   { id: collectibleItemId },
+      include: { collection: { select: { active: true } } },
+    }),
   ]);
 
   if (!user || !item)                         return { error: "Item nicht gefunden" };
   if (!item.collection.active)                return { error: "Sammlung nicht verfügbar" };
-  if (user.points < item.price)               return { error: "Nicht genug Münzen" };
+  if (!item.active)                           return { error: "Item nicht verfügbar" };
   if (item.stock !== null && item.stock <= 0) return { error: "Ausverkauft" };
+
+  const price = effectivePrice(item);
+  if (user.points < price)                    return { error: "Nicht genug Münzen" };
 
   // Doppelkauf verhindern
   const existing = await prisma.userCollectible.findUnique({
@@ -31,8 +47,8 @@ export async function purchaseCollectible(userId: string, collectibleItemId: str
 
   await prisma.$transaction([
     prisma.userCollectible.create({ data: { userId, collectibleItemId } }),
-    prisma.user.update({ where: { id: userId }, data: { points: { decrement: item.price } } }),
-    prisma.pointTransaction.create({ data: { userId, amount: -item.price, reason: `Sammlung: ${item.name} gekauft` } }),
+    prisma.user.update({ where: { id: userId }, data: { points: { decrement: price } } }),
+    prisma.pointTransaction.create({ data: { userId, amount: -price, reason: `Sammlung: ${item.name} gekauft` } }),
     ...(item.stock !== null
       ? [prisma.collectibleItem.update({ where: { id: collectibleItemId }, data: { stock: { decrement: 1 } } })]
       : []),

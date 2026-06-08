@@ -70,6 +70,9 @@ model CollectibleItem {
   imageUrl     String?              // URL zum Figuren-Bild (Supabase Storage)
   rarity       String   @default("common") // common | rare | epic | legendary
   price        Int
+  salePrice    Int?                 // Rabattpreis (null = kein Rabatt)
+  saleUntil    DateTime?            // Rabatt läuft bis (null = unbegrenzt)
+  active       Boolean  @default(true)     // im Shop anzeigen?
   stock        Int?     // null = unbegrenzt
   sortOrder    Int      @default(0)
   createdAt    DateTime @default(now())
