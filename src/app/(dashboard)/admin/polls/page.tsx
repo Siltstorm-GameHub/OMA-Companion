@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { PollsAdminPanel } from "./PollsAdminPanel";
 
 export default async function PollsAdminPage() {
-  const [events, spieltage, jobs] = await Promise.all([
+  const [events, spieltage] = await Promise.all([
     prisma.event.findMany({
       where:   { status: { in: ["open", "active"] } },
       select:  { id: true, title: true, startAt: true, registrations: { select: { user: { select: { id: true, name: true, username: true } } } } },
@@ -17,10 +17,10 @@ export default async function PollsAdminPage() {
       orderBy: { scheduledAt: "desc" },
       take: 20,
     }),
-    prisma.pollJob.findMany({
-      orderBy: { scheduledAt: "desc" },
-    }),
   ]);
+
+  // PollJob-Tabelle könnte noch nicht existieren (Migration ausstehend)
+  const jobs = await prisma.pollJob.findMany({ orderBy: { scheduledAt: "desc" } }).catch(() => []);
 
   // Dates serialisieren
   const serialized = {
