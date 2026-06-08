@@ -4,12 +4,13 @@ import { isBotMessageEnabled, getBotMessageText, fillPlaceholders } from "@/lib/
 
 // ── Rang-Schwellen ───────────────────────────────────────────────────────────
 export const RANK_THRESHOLDS = [
-  { min:     0, label: "Neuling",     emoji: "🔰", color: 0x6b7280 },
-  { min:   500, label: "Kämpfer",     emoji: "⚔️", color: 0x4ade80 },
-  { min:  3000, label: "Veteran",     emoji: "🛡️", color: 0x60a5fa },
-  { min: 10000, label: "Elite",       emoji: "💎", color: 0xa855f7 },
-  { min: 25000, label: "Legende",     emoji: "🌟", color: 0xf59e0b },
-  { min: 60000, label: "Grandmaster", emoji: "👑", color: 0xef4444 },
+  { min:    0, label: "Neuling",               emoji: "🔰", color: 0x6b7280 },
+  { min:  100, label: "Zivi-Anwärter",         emoji: "📋", color: 0xa1a1aa },
+  { min:  200, label: "Rollator-Führerschein", emoji: "🛺", color: 0x4ade80 },
+  { min:  300, label: "Kamillenteetrinker",    emoji: "🍵", color: 0x2dd4bf },
+  { min:  400, label: "Heimbeirat",            emoji: "🏛️", color: 0x60a5fa },
+  { min:  500, label: "Pflegestufe 5",         emoji: "🩺", color: 0xa855f7 },
+  { min: 1000, label: "Old Master",            emoji: "👴", color: 0xf59e0b },
 ] as const;
 
 export function getRank(points: number) {

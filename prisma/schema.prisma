@@ -24,6 +24,7 @@ model User {
 
   birthday           DateTime? // Nur Datum relevant (month/day)
   birthdayBoostUntil DateTime? // 2x Punkte bis zu diesem Zeitpunkt
+  bio                String?   // Kurzer Gruß / Beschreibung (max. 200 Zeichen)
   xpBoostUntil       DateTime?
   streakShield       Boolean   @default(false)
 

@@ -1,0 +1,165 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Pencil, Check, X, Cake, MessageSquare, Loader2 } from "lucide-react";
+
+interface Props {
+  birthday: string | null; // "MM-DD" oder null
+  bio:      string | null;
+}
+
+const MAX_BIO = 200;
+
+export default function ProfileEditor({ birthday: initBirthday, bio: initBio }: Props) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+
+  const [birthday, setBirthday] = useState(initBirthday ?? "");
+  const [bio,      setBio]      = useState(initBio      ?? "");
+  const [saving,   setSaving]   = useState(false);
+
+  // Vorschau-Werte (was gerade in der DB steht)
+  const [savedBirthday, setSavedBirthday] = useState(initBirthday);
+  const [savedBio,      setSavedBio]      = useState(initBio);
+
+  async function save() {
+    setSaving(true);
+    try {
+      // Geburtstag (MM-DD)
+      const bdVal = birthday.trim() || null;
+      if (bdVal && !/^\d{2}-\d{2}$/.test(bdVal)) {
+        toast.error("Geburtstag bitte im Format MM-TT eingeben, z.B. 03-24");
+        return;
+      }
+
+      const [r1, r2] = await Promise.all([
+        fetch("/api/profile/birthday", {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({ birthday: bdVal }),
+        }),
+        fetch("/api/profile/bio", {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({ bio: bio.trim() || null }),
+        }),
+      ]);
+
+      if (!r1.ok || !r2.ok) { toast.error("Fehler beim Speichern"); return; }
+
+      setSavedBirthday(bdVal);
+      setSavedBio(bio.trim() || null);
+      setOpen(false);
+      toast.success("Profil gespeichert");
+      router.refresh();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function cancel() {
+    setBirthday(savedBirthday ?? "");
+    setBio(savedBio ?? "");
+    setOpen(false);
+  }
+
+  // Lesbares Datum für Anzeige
+  function formatBirthday(mmdd: string | null) {
+    if (!mmdd) return null;
+    const [m, d] = mmdd.split("-");
+    const months = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
+    return `${parseInt(d)}. ${months[parseInt(m) - 1]}`;
+  }
+
+  return (
+    <div>
+      {/* ── Anzeige (nicht-editierbar) ─────────────────────────────────── */}
+      {!open && (
+        <div className="flex flex-col gap-2">
+          {/* Bio */}
+          {savedBio ? (
+            <p className="text-sm text-gray-300 italic leading-relaxed">"{savedBio}"</p>
+          ) : (
+            <p className="text-xs text-gray-600 italic">Noch kein Gruß hinterlegt</p>
+          )}
+
+          {/* Geburtstag */}
+          <div className="flex items-center gap-4 flex-wrap">
+            {savedBirthday ? (
+              <span className="flex items-center gap-1.5 text-xs text-gray-400">
+                <Cake className="w-3.5 h-3.5 text-pink-400" />
+                {formatBirthday(savedBirthday)}
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5 text-xs text-gray-600">
+                <Cake className="w-3.5 h-3.5" />
+                Kein Geburtstag eingetragen
+              </span>
+            )}
+
+            <button
+              onClick={() => setOpen(true)}
+              className="flex items-center gap-1.5 text-[10px] px-2.5 py-1 rounded-lg border border-white/[0.08] text-gray-500 hover:text-white hover:border-white/[0.18] transition-colors"
+            >
+              <Pencil className="w-3 h-3" /> Profil bearbeiten
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Bearbeitungsformular ───────────────────────────────────────── */}
+      {open && (
+        <div className="glass rounded-2xl p-4 border border-indigo-500/20 space-y-4">
+          <p className="text-xs font-semibold text-indigo-300 uppercase tracking-wider">Profil bearbeiten</p>
+
+          {/* Bio */}
+          <div className="space-y-1.5">
+            <label className="flex items-center gap-1.5 text-xs text-gray-400">
+              <MessageSquare className="w-3.5 h-3.5" /> Gruß / Bio
+            </label>
+            <textarea
+              value={bio}
+              onChange={e => setBio(e.target.value.slice(0, MAX_BIO))}
+              rows={3}
+              placeholder="Schreib einen kurzen Gruß für alle, die dein Profil besuchen..."
+              className="w-full rounded-xl px-3 py-2.5 text-sm text-white resize-none outline-none bg-white/[0.05] border border-white/[0.1] focus:border-indigo-500/40 placeholder-gray-600"
+            />
+            <p className="text-[10px] text-gray-600 text-right">{bio.length}/{MAX_BIO}</p>
+          </div>
+
+          {/* Geburtstag */}
+          <div className="space-y-1.5">
+            <label className="flex items-center gap-1.5 text-xs text-gray-400">
+              <Cake className="w-3.5 h-3.5" /> Geburtstag
+            </label>
+            <input
+              type="text"
+              value={birthday}
+              onChange={e => setBirthday(e.target.value)}
+              placeholder="MM-TT  (z.B. 03-24 für 24. März)"
+              maxLength={5}
+              className="w-full rounded-xl px-3 py-2.5 text-sm text-white outline-none bg-white/[0.05] border border-white/[0.1] focus:border-pink-500/40 placeholder-gray-600"
+            />
+            <p className="text-[10px] text-gray-600">
+              Format: Monat-Tag · Jahreszahl wird nicht gespeichert · Du bekommst am Geburtstag einen Münzen-Boost 🎂
+            </p>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-1">
+            <button onClick={cancel}
+              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-white/[0.08] text-gray-500 hover:text-white transition-colors">
+              <X className="w-3 h-3" /> Abbrechen
+            </button>
+            <button onClick={save} disabled={saving}
+              className="flex items-center gap-1.5 text-xs px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium transition-colors disabled:opacity-50">
+              {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+              Speichern
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

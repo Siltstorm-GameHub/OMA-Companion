@@ -1,116 +1,162 @@
 "use client";
 import { useState } from "react";
-import { Info, X } from "lucide-react";
-import { POINT_RULES, DAILY_CAPS, CATEGORY_LABELS, type PointCategory } from "@/lib/points";
-
-const CATEGORY_ICONS: Record<PointCategory, string> = {
-  turnier:    "⚔️",
-  aktivitaet: "🎙️",
-  community:  "👥",
-};
+import { Info, X, Coins, Trophy } from "lucide-react";
 
 const RANKS = [
-  { label: "Neuling",     range: "0 – 499",         color: "text-gray-400",    dot: "bg-gray-400",    est: "Erste Tage" },
-  { label: "Kämpfer",     range: "500 – 2.999",      color: "text-emerald-400", dot: "bg-emerald-400", est: "~2–3 Wochen" },
-  { label: "Veteran",     range: "3.000 – 9.999",    color: "text-blue-400",    dot: "bg-blue-400",    est: "~2–3 Monate" },
-  { label: "Elite",       range: "10.000 – 24.999",  color: "text-purple-400",  dot: "bg-purple-400",  est: "~6 Monate" },
-  { label: "Legende",     range: "25.000 – 59.999",  color: "text-amber-400",   dot: "bg-amber-400",   est: "~1 Jahr" },
-  { label: "Grandmaster", range: "60.000+",           color: "text-red-400",     dot: "bg-red-400",     est: "2+ Jahre" },
+  { label: "Neuling",               emoji: "🔰", range: "0 – 99",    color: "text-gray-400"   },
+  { label: "Zivi-Anwärter",         emoji: "📋", range: "100 – 199", color: "text-zinc-300"   },
+  { label: "Rollator-Führerschein", emoji: "🛺", range: "200 – 299", color: "text-green-400"  },
+  { label: "Kamillenteetrinker",    emoji: "🍵", range: "300 – 399", color: "text-teal-400"   },
+  { label: "Heimbeirat",            emoji: "🏛️", range: "400 – 499", color: "text-blue-400"   },
+  { label: "Pflegestufe 5",         emoji: "🩺", range: "500 – 999", color: "text-purple-400" },
+  { label: "Old Master",            emoji: "👴", range: "1.000+",    color: "text-amber-400"  },
 ];
 
-// Regeln nach Kategorie gruppieren
-const byCategory = Object.entries(POINT_RULES).reduce<
-  Record<string, { key: string; rule: (typeof POINT_RULES)[keyof typeof POINT_RULES]; cap?: number }[]>
->((acc, [key, rule]) => {
-  const cat = rule.category;
-  if (!acc[cat]) acc[cat] = [];
-  acc[cat].push({ key, rule, cap: DAILY_CAPS[key as keyof typeof DAILY_CAPS] });
-  return acc;
-}, {});
+const COIN_SOURCES = [
+  {
+    group: "🎰 Shop & Belohnungen",
+    items: [
+      { label: "Tages-Spin",            note: "Einmal täglich", value: "bis 500" },
+      { label: "Quest abschließen",      note: "Monatliche Quests", value: "variabel" },
+      { label: "Geburtstag 🎂",         note: "Einmal pro Jahr + 24h Boost ×2", value: "150" },
+      { label: "Erstes Login",           note: "Einmalig", value: "100" },
+    ],
+  },
+  {
+    group: "📅 Events & Turniere",
+    items: [
+      { label: "Event besucht",          note: "Bei Teilnahme",        value: "80" },
+      { label: "Turnierteilnahme",       note: "Pro Anmeldung",        value: "175" },
+      { label: "Match gewonnen",         note: "Im Turnierverlauf",     value: "60" },
+    ],
+  },
+  {
+    group: "🎙️ Discord-Aktivität",
+    items: [
+      { label: "Sprachkanal",            note: "Pro Stunde (max. 6h/Tag)", value: "15" },
+      { label: "Täglich im Voice aktiv", note: "Tages-Bonus",           value: "30" },
+      { label: "10 Nachrichten",         note: "Max. 50 Nachrichten/Tag", value: "8" },
+      { label: "Täglich im Chat aktiv",  note: "Tages-Bonus",           value: "20" },
+      { label: "Reaktion erhalten",      note: "Max. 20 Pts/Tag",        value: "2" },
+    ],
+  },
+  {
+    group: "👥 Community",
+    items: [
+      { label: "Mitglied eingeladen",    note: "Pro erfolgreichem Invite", value: "150" },
+    ],
+  },
+];
+
+const RANK_SOURCES = [
+  { label: "Turniersieg 🏆",          note: "1. Platz",             value: "1.000" },
+  { label: "Turnierfinale",            note: "2. Platz",             value: "600"   },
+  { label: "Top-3-Platzierung 🥉",    note: "3. Platz",             value: "350"   },
+  { label: "LUL Spieltag",            note: "Je nach Leistung",     value: "variabel" },
+];
 
 export default function PointsInfoModal() {
   const [open, setOpen] = useState(false);
 
   return (
     <>
-      {/* Trigger */}
       <button
         onClick={() => setOpen(true)}
         title="Punktesystem erklären"
         className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-white border border-white/10 hover:border-white/20 px-2.5 py-1.5 rounded-lg transition-all"
       >
         <Info className="w-3.5 h-3.5" />
-        Punktesystem
+        Info
       </button>
 
-      {/* Overlay */}
       {open && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
-          onClick={() => setOpen(false)}
-        >
-          {/* Modal */}
-          <div
-            className="relative bg-gray-900 border border-white/10 rounded-2xl w-full max-w-md max-h-[85vh] flex flex-col shadow-2xl"
-            onClick={e => e.stopPropagation()}
-          >
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={() => setOpen(false)}>
+          <div className="relative bg-gray-900 border border-white/10 rounded-2xl w-full max-w-md max-h-[88vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
+
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-white/5 shrink-0">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06] shrink-0">
               <h2 className="font-semibold text-white">Punktesystem</h2>
-              <button
-                onClick={() => setOpen(false)}
-                className="text-gray-500 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/5"
-              >
+              <button onClick={() => setOpen(false)} className="text-gray-500 hover:text-white p-1 rounded-lg hover:bg-white/[0.06] transition-colors">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Content — scrollable */}
             <div className="overflow-y-auto flex-1 px-5 py-4 space-y-5">
+
+              {/* Zwei Währungen */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl bg-amber-500/8 border border-amber-500/15 p-3">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Coins className="w-4 h-4 text-amber-400 shrink-0" />
+                    <p className="text-sm font-bold text-amber-400">Münzen</p>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">Shop-Währung. Damit kaufst du Figuren und Items im Shop.</p>
+                </div>
+                <div className="rounded-xl bg-rose-500/8 border border-rose-500/15 p-3">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Trophy className="w-4 h-4 text-rose-400 shrink-0" />
+                    <p className="text-sm font-bold text-rose-400">Rang-Punkte</p>
+                  </div>
+                  <p className="text-[11px] text-gray-400 leading-relaxed">Prestige-Währung. Bestimmt deinen Rang in der Gesamtrangliste.</p>
+                </div>
+              </div>
 
               {/* Ränge */}
               <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-2">Ränge</p>
-                <div className="space-y-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <Trophy className="w-3.5 h-3.5 text-rose-400" />
+                  <p className="text-xs font-semibold text-rose-400 uppercase tracking-widest">Ränge (Rang-Punkte)</p>
+                </div>
+                <div className="rounded-xl bg-white/[0.02] border border-white/[0.05] divide-y divide-white/[0.04]">
                   {RANKS.map(r => (
-                    <div key={r.label} className="flex items-center justify-between py-1.5">
+                    <div key={r.label} className="flex items-center justify-between px-3 py-2">
                       <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full shrink-0 ${r.dot}`} />
+                        <span className="text-base leading-none">{r.emoji}</span>
                         <span className={`text-sm font-semibold ${r.color}`}>{r.label}</span>
                       </div>
-                      <div className="text-right">
-                        <p className="text-xs text-gray-500">{r.range} Pts</p>
-                        <p className="text-[10px] text-gray-700">{r.est}</p>
-                      </div>
+                      <span className="text-xs text-gray-500 tabular-nums">{r.range} Pts</span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="border-t border-white/5" />
-
-              {/* Punkte pro Aktion */}
+              {/* Rang-Punkte verdienen */}
               <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">Punkte pro Aktion</p>
-                <div className="space-y-4">
-                  {Object.entries(byCategory).map(([cat, rules]) => (
-                    <div key={cat}>
-                      <p className="text-xs text-gray-600 mb-1.5 flex items-center gap-1.5">
-                        <span>{CATEGORY_ICONS[cat as PointCategory]}</span>
-                        {CATEGORY_LABELS[cat as PointCategory]}
-                      </p>
-                      <div className="space-y-1">
-                        {rules.map(({ key, rule, cap }) => (
-                          <div key={key} className="flex items-center justify-between py-1">
-                            <div className="min-w-0 pr-3">
-                              <span className="text-xs text-gray-300">{rule.reason}</span>
-                              {cap !== undefined && (
-                                <span className="text-[10px] text-gray-600 ml-1.5">
-                                  (max {cap} Pts/Tag)
-                                </span>
-                              )}
+                <div className="flex items-center gap-2 mb-2">
+                  <Trophy className="w-3.5 h-3.5 text-rose-400" />
+                  <p className="text-xs font-semibold text-rose-400 uppercase tracking-widest">Rang-Punkte verdienen</p>
+                </div>
+                <div className="rounded-xl bg-white/[0.02] border border-white/[0.05] divide-y divide-white/[0.04]">
+                  {RANK_SOURCES.map(s => (
+                    <div key={s.label} className="flex items-center justify-between px-3 py-2.5 gap-3">
+                      <div className="min-w-0">
+                        <p className="text-xs text-gray-200">{s.label}</p>
+                        <p className="text-[10px] text-gray-600">{s.note}</p>
+                      </div>
+                      <span className="text-xs font-bold text-rose-400 shrink-0 tabular-nums">+{s.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Münzen verdienen */}
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Coins className="w-3.5 h-3.5 text-amber-400" />
+                  <p className="text-xs font-semibold text-amber-400 uppercase tracking-widest">Münzen verdienen</p>
+                </div>
+                <div className="space-y-2">
+                  {COIN_SOURCES.map(group => (
+                    <div key={group.group}>
+                      <p className="text-[10px] text-gray-600 font-medium mb-1 ml-1">{group.group}</p>
+                      <div className="rounded-xl bg-white/[0.02] border border-white/[0.05] divide-y divide-white/[0.04]">
+                        {group.items.map(s => (
+                          <div key={s.label} className="flex items-center justify-between px-3 py-2.5 gap-3">
+                            <div className="min-w-0">
+                              <p className="text-xs text-gray-200">{s.label}</p>
+                              <p className="text-[10px] text-gray-600">{s.note}</p>
                             </div>
-                            <span className="text-xs font-bold text-rose-400 shrink-0">+{rule.amount}</span>
+                            <span className="text-xs font-bold text-amber-400 shrink-0 tabular-nums">+{s.value}</span>
                           </div>
                         ))}
                       </div>
@@ -118,6 +164,7 @@ export default function PointsInfoModal() {
                   ))}
                 </div>
               </div>
+
             </div>
           </div>
         </div>
