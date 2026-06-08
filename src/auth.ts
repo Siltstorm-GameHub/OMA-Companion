@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
+  trustHost: true,
   providers: [
     Discord({
       authorization: { params: { scope: "identify email guilds", prompt: "none" } },
