@@ -218,7 +218,7 @@ export default async function ProfilePage() {
             <div className="mt-4 pt-4 border-t border-white/[0.06]">
               <ProfileEditor
                 birthday={user.birthday
-                  ? `${String(user.birthday.getMonth() + 1).padStart(2, "0")}-${String(user.birthday.getDate()).padStart(2, "0")}`
+                  ? `${String(user.birthday.getDate()).padStart(2, "0")}-${String(user.birthday.getMonth() + 1).padStart(2, "0")}`
                   : null}
                 bio={user.bio ?? null}
               />

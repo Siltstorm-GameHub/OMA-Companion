@@ -6,11 +6,19 @@ import { toast } from "sonner";
 import { Pencil, Check, X, Cake, MessageSquare, Loader2 } from "lucide-react";
 
 interface Props {
-  birthday: string | null; // "MM-DD" oder null
+  birthday: string | null; // "TT-MM" oder null (wird so an die Komponente übergeben)
   bio:      string | null;
 }
 
 const MAX_BIO = 200;
+
+// Lesbares Datum aus "TT-MM"
+function formatBirthday(ddmm: string | null) {
+  if (!ddmm) return null;
+  const [d, m] = ddmm.split("-");
+  const months = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
+  return `${parseInt(d)}. ${months[parseInt(m) - 1]}`;
+}
 
 export default function ProfileEditor({ birthday: initBirthday, bio: initBio }: Props) {
   const router = useRouter();
@@ -20,17 +28,16 @@ export default function ProfileEditor({ birthday: initBirthday, bio: initBio }: 
   const [bio,      setBio]      = useState(initBio      ?? "");
   const [saving,   setSaving]   = useState(false);
 
-  // Vorschau-Werte (was gerade in der DB steht)
+  // Zuletzt gespeicherte Werte für Anzeige & Abbrechen
   const [savedBirthday, setSavedBirthday] = useState(initBirthday);
   const [savedBio,      setSavedBio]      = useState(initBio);
 
   async function save() {
     setSaving(true);
     try {
-      // Geburtstag (MM-DD)
       const bdVal = birthday.trim() || null;
       if (bdVal && !/^\d{2}-\d{2}$/.test(bdVal)) {
-        toast.error("Geburtstag bitte im Format MM-TT eingeben, z.B. 03-24");
+        toast.error("Geburtstag bitte im Format TT-MM eingeben, z.B. 24-03");
         return;
       }
 
@@ -65,27 +72,17 @@ export default function ProfileEditor({ birthday: initBirthday, bio: initBio }: 
     setOpen(false);
   }
 
-  // Lesbares Datum für Anzeige
-  function formatBirthday(mmdd: string | null) {
-    if (!mmdd) return null;
-    const [m, d] = mmdd.split("-");
-    const months = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
-    return `${parseInt(d)}. ${months[parseInt(m) - 1]}`;
-  }
-
   return (
     <div>
-      {/* ── Anzeige (nicht-editierbar) ─────────────────────────────────── */}
+      {/* ── Anzeige ──────────────────────────────────────────────────── */}
       {!open && (
         <div className="flex flex-col gap-2">
-          {/* Bio */}
           {savedBio ? (
             <p className="text-sm text-gray-300 italic leading-relaxed">"{savedBio}"</p>
           ) : (
             <p className="text-xs text-gray-600 italic">Noch kein Gruß hinterlegt</p>
           )}
 
-          {/* Geburtstag */}
           <div className="flex items-center gap-4 flex-wrap">
             {savedBirthday ? (
               <span className="flex items-center gap-1.5 text-xs text-gray-400">
@@ -98,7 +95,6 @@ export default function ProfileEditor({ birthday: initBirthday, bio: initBio }: 
                 Kein Geburtstag eingetragen
               </span>
             )}
-
             <button
               onClick={() => setOpen(true)}
               className="flex items-center gap-1.5 text-[10px] px-2.5 py-1 rounded-lg border border-white/[0.08] text-gray-500 hover:text-white hover:border-white/[0.18] transition-colors"
@@ -109,7 +105,7 @@ export default function ProfileEditor({ birthday: initBirthday, bio: initBio }: 
         </div>
       )}
 
-      {/* ── Bearbeitungsformular ───────────────────────────────────────── */}
+      {/* ── Formular ─────────────────────────────────────────────────── */}
       {open && (
         <div className="glass rounded-2xl p-4 border border-indigo-500/20 space-y-4">
           <p className="text-xs font-semibold text-indigo-300 uppercase tracking-wider">Profil bearbeiten</p>
@@ -138,12 +134,12 @@ export default function ProfileEditor({ birthday: initBirthday, bio: initBio }: 
               type="text"
               value={birthday}
               onChange={e => setBirthday(e.target.value)}
-              placeholder="MM-TT  (z.B. 03-24 für 24. März)"
+              placeholder="TT-MM  (z.B. 24-03 für 24. März)"
               maxLength={5}
               className="w-full rounded-xl px-3 py-2.5 text-sm text-white outline-none bg-white/[0.05] border border-white/[0.1] focus:border-pink-500/40 placeholder-gray-600"
             />
             <p className="text-[10px] text-gray-600">
-              Format: Monat-Tag · Jahreszahl wird nicht gespeichert · Du bekommst am Geburtstag einen Münzen-Boost 🎂
+              Format: Tag-Monat · Jahreszahl wird nicht gespeichert · Du bekommst am Geburtstag einen Münzen-Boost 🎂
             </p>
           </div>
 
