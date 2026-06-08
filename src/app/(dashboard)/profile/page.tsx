@@ -144,34 +144,42 @@ export default async function ProfilePage() {
     <div className="p-5 sm:p-6 max-w-5xl mx-auto space-y-5 animate-fade-in">
 
       {/* ── Hero ────────────────────────────────────────────────────────── */}
-      <div className="glass card-shine relative overflow-hidden rounded-2xl p-6">
-        <div className="absolute inset-0 bg-gradient-to-br from-rose-500/10 via-transparent to-violet-500/8 pointer-events-none" />
-        <div className="absolute inset-0 bg-grid opacity-30 pointer-events-none" />
-        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-rose-500/25 to-transparent pointer-events-none" />
+      <div className="card-cut surface relative overflow-hidden p-6"
+        style={{ boxShadow: "0 0 0 1px rgba(139,92,246,0.12), 0 8px 32px rgba(0,0,0,0.5)" }}>
+        {/* Violet accent top-line */}
+        <div className="absolute top-0 inset-x-0 h-px"
+          style={{ background: "linear-gradient(90deg, transparent, rgba(139,92,246,0.35), transparent)" }} />
+        {/* Left accent bar */}
+        <div className="absolute left-0 top-0 bottom-0 w-[3px]"
+          style={{ background: "linear-gradient(180deg, #8b5cf6, transparent)" }} />
 
-        <div className="relative flex items-center gap-5 flex-wrap">
+        <div className="relative flex items-start gap-5 flex-wrap">
+          {/* Avatar */}
           <div className="relative shrink-0">
             {user.image
-              ? <Image src={user.image} alt="avatar" width={80} height={80} className="w-20 h-20 rounded-2xl ring-2 ring-rose-500/40 object-cover shadow-[0_0_40px_rgba(244,63,94,0.3)]" />
-              : <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-rose-500 to-violet-700 flex items-center justify-center text-2xl font-black text-white">
+              ? <Image src={user.image} alt="avatar" width={88} height={88}
+                  className="card-cut w-[88px] h-[88px] object-cover"
+                  style={{ boxShadow: "0 0 0 1px rgba(139,92,246,0.35), 0 0 32px rgba(139,92,246,0.15)" }} />
+              : <div className="card-cut w-[88px] h-[88px] flex items-center justify-center text-2xl font-black text-white"
+                  style={{ background: "linear-gradient(135deg, #6d28d9, #4f46e5)", boxShadow: "0 0 0 1px rgba(139,92,246,0.35)" }}>
                   {displayName[0].toUpperCase()}
                 </div>}
-            <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-400 border-2 border-[#080c18] shadow-[0_0_8px_#34d399]" />
+            <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-sm bg-emerald-400 border-2"
+              style={{ borderColor: "var(--bg-surface)", boxShadow: "0 0 8px rgba(52,211,153,0.8)" }} />
           </div>
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap mb-1">
-              <h1 className="text-2xl font-bold text-white tracking-tight">{displayName}</h1>
-              {/* Rang-Badge */}
-              <span className={`flex items-center gap-1 text-xs px-2.5 py-0.5 rounded-lg font-semibold border ${currentRank.color} ${currentRank.bg} ${currentRank.border}`}>
-                <span>{currentRank.emoji}</span>
-                {currentRank.label}
+            <p className="text-[10px] text-violet-400/60 uppercase tracking-[0.18em] font-semibold mb-1">Profil</p>
+            <div className="flex items-center gap-2.5 flex-wrap mb-1">
+              <h1 className="font-display text-2xl font-black text-white tracking-tight">{displayName}</h1>
+              <span className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-sm font-semibold border ${currentRank.color} ${currentRank.bg} ${currentRank.border}`}>
+                <span>{currentRank.emoji}</span>{currentRank.label}
               </span>
             </div>
-            <p className="text-xs text-gray-500 mb-3">Mitglied seit {memberSince} · {earnedBadges.length} Abzeichen · Platz #{leaderboardRank}</p>
+            <p className="text-[11px] text-gray-600 mb-3">Mitglied seit {memberSince} · {earnedBadges.length} Abzeichen · Platz #{leaderboardRank}</p>
 
             {/* Münzen */}
-            <div className="flex items-center gap-1.5 mb-3">
+            <div className="flex items-center gap-1.5 mb-4">
               <Coins className="w-3.5 h-3.5 text-amber-400" />
               <span className="text-sm font-bold text-amber-400 tabular-nums">{totalPoints.toLocaleString("de-DE")} Münzen</span>
               <PointsInfoModal />
@@ -180,21 +188,19 @@ export default async function ProfilePage() {
             {/* Rang-Fortschritt */}
             {nextRank && (
               <div className="max-w-xs">
-                <div className="flex justify-between text-[10px] text-gray-500 mb-1">
+                <div className="flex justify-between text-[10px] text-gray-600 mb-1.5">
                   <span>{currentRank.emoji} {currentRank.label}</span>
-                  <span>{nextRank.emoji} {nextRank.label} · {(nextRank.min - rankPoints).toLocaleString("de-DE")} Pts</span>
+                  <span className="tabular-nums">{(nextRank.min - rankPoints).toLocaleString("de-DE")} Pts bis {nextRank.label}</span>
                 </div>
-                <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-1000"
+                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
+                  <div className="h-full rounded-full transition-all duration-1000"
                     style={{
                       width: `${rankPct}%`,
-                      background: "linear-gradient(90deg, #14b8a6, #2dd4bf)",
-                      boxShadow: "0 0 8px rgba(20,184,166,0.5)",
-                    }}
-                  />
+                      background: "linear-gradient(90deg, #8b5cf6, #a78bfa)",
+                      boxShadow: "0 0 8px rgba(139,92,246,0.6)",
+                    }} />
                 </div>
-                <p className="text-[10px] text-gray-600 mt-1">{rankPct}% bis {nextRank.label}</p>
+                <p className="text-[10px] text-gray-700 mt-1 tabular-nums">{rankPct}% bis {nextRank.emoji} {nextRank.label}</p>
               </div>
             )}
             {!nextRank && (
@@ -204,7 +210,7 @@ export default async function ProfilePage() {
             )}
 
             {/* Bio & Geburtstag */}
-            <div className="mt-4 pt-4 border-t border-white/[0.06]">
+            <div className="mt-4 pt-4" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
               <ProfileEditor
                 birthday={user.birthday
                   ? `${String(user.birthday.getDate()).padStart(2, "0")}-${String(user.birthday.getMonth() + 1).padStart(2, "0")}`
@@ -224,11 +230,10 @@ export default async function ProfilePage() {
           { icon: <CalendarDays className="w-4 h-4" />,  label: "Events",        value: String(eventRegs.length),            iconCls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/15", accent: "from-emerald-500/8" },
           { icon: <Swords className="w-4 h-4" />,        label: "Turnier-Siege", value: String(tournamentWins),              iconCls: "text-indigo-400  bg-indigo-500/10  border-indigo-500/15",  accent: "from-indigo-500/8"  },
         ].map((s, i) => (
-          <div key={s.label} className={`card-hover card-shine glass relative overflow-hidden rounded-2xl p-4 animate-slide-up stagger-${i + 1}`}>
-            <div className={`absolute inset-0 bg-gradient-to-br ${s.accent} to-transparent pointer-events-none`} />
-            <div className={`relative w-8 h-8 rounded-xl flex items-center justify-center mb-3 border ${s.iconCls}`}>{s.icon}</div>
-            <p className="relative text-2xl font-black text-white tabular-nums">{s.value}</p>
-            <p className="relative text-xs text-gray-400 mt-1.5">{s.label}</p>
+          <div key={s.label} className={`card-cut-sm surface card-hover relative overflow-hidden p-4 animate-slide-up stagger-${i + 1}`}>
+            <div className={`w-8 h-8 rounded-sm flex items-center justify-center mb-3 border ${s.iconCls}`}>{s.icon}</div>
+            <p className="font-display text-2xl font-black text-white tabular-nums">{s.value}</p>
+            <p className="text-[11px] text-gray-600 mt-1">{s.label}</p>
           </div>
         ))}
       </div>
@@ -262,7 +267,7 @@ export default async function ProfilePage() {
               <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-1.5"><Gamepad2 className="w-3.5 h-3.5" /> Meine Sammlungen</h2>
               <div className="space-y-3">
                 {Object.values(collectiblesByCollection).map(({ collection, items }) => (
-                  <div key={collection.id} className="glass card-shine rounded-2xl p-4">
+                  <div key={collection.id} className="surface card-cut p-4">
                     <div className="flex items-center gap-2 mb-3">
                       {collection.coverImageUrl
                         ? <img src={collection.coverImageUrl} alt={collection.name} className="w-7 h-7 object-contain rounded" loading="lazy" />
@@ -298,7 +303,7 @@ export default async function ProfilePage() {
               🏅 Abzeichen <span className="text-gray-600 normal-case">({earnedBadges.length})</span>
             </h2>
             {earnedBadges.length === 0 && (
-              <div className="glass rounded-2xl p-6 text-center">
+              <div className="surface p-6 text-center">
                 <p className="text-gray-500 text-sm">Noch keine Abzeichen verdient</p>
                 <p className="text-xs text-gray-600 mt-1">Sei aktiv, nimm an Events teil und gewinne Turniere!</p>
               </div>
@@ -313,7 +318,7 @@ export default async function ProfilePage() {
                     <div className="flex flex-wrap gap-2">
                       {catBadges.map(badge => (
                         <div key={badge.id} title={badge.desc}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium glass text-white border-white/10 hover:border-white/20 transition-all">
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm border text-xs font-medium surface-elevated text-white border-white/[0.08] hover:border-violet-500/30 transition-all">
                           <span>{badge.icon}</span>
                           {badge.name}
                         </div>
@@ -337,7 +342,7 @@ export default async function ProfilePage() {
                   const pct     = Math.round((current / quest.target) * 100);
                   const done    = p?.completed ?? false;
                   return (
-                    <div key={quest.id} className={`glass card-shine rounded-xl px-4 py-3 relative overflow-hidden ${done ? "border-emerald-500/20" : ""}`}>
+                    <div key={quest.id} className={`surface card-cut-sm px-4 py-3 relative overflow-hidden`}>
                       <div className={`absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b ${meta.bar} rounded-l-xl`} />
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
@@ -347,7 +352,7 @@ export default async function ProfilePage() {
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <span className="text-xs text-gray-500">{current}/{quest.target}</span>
-                          <span className="text-xs text-amber-400 font-semibold">+{quest.reward} 🪙</span>
+                          <span className="text-xs text-amber-400 font-semibold flex items-center gap-0.5 tabular-nums">+{quest.reward}<Coins className="w-2.5 h-2.5" /></span>
                         </div>
                       </div>
                       <div className="h-1.5 bg-white/[0.05] rounded-full overflow-hidden">
@@ -366,7 +371,7 @@ export default async function ProfilePage() {
               <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
                 <Swords className="w-3.5 h-3.5" /> Turnier-Ergebnisse
               </h2>
-              <div className="glass card-shine rounded-2xl overflow-hidden divide-y divide-white/[0.04]">
+              <div className="surface overflow-hidden divide-y divide-white/[0.04]">
                 {tournamentParticipations.map(p => {
                   const myMatches = p.tournament.matches;
                   const wins      = myMatches.filter(m => m.winnerId === userId).length;
@@ -406,7 +411,7 @@ export default async function ProfilePage() {
           {/* Aktivitäts-Stats */}
           <section>
             <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">📊 Aktivität</h2>
-            <div className="glass card-shine rounded-2xl overflow-hidden divide-y divide-white/[0.04]">
+            <div className="surface overflow-hidden divide-y divide-white/[0.04]">
               {[
                 { icon: <Clock className="w-3.5 h-3.5" />,         label: "Voice-Stunden",  value: `${voiceHours}h`,          color: "text-violet-400" },
                 { icon: <MessageSquare className="w-3.5 h-3.5" />, label: "Nachrichten",    value: `~${messageCount}`,        color: "text-blue-400"   },
