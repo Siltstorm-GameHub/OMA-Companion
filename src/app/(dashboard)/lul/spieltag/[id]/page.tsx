@@ -4,7 +4,7 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft, Trophy, Gamepad2, Eye, Crown, Gift, Flame, CheckCircle2,
-  AlertTriangle, Star,
+  AlertTriangle, Star, Vote,
 } from "lucide-react";
 import { LUL_POINTS } from "@/lib/lul";
 import LiveRefresh from "./LiveRefresh";
@@ -54,6 +54,7 @@ export default async function LulSpieltagPage({
 
   const players    = spieltag.entries.filter((e) => e.role === "player");
   const spectators = spieltag.entries.filter((e) => e.role === "spectator");
+  const voters     = spieltag.entries.filter((e) => e.role === "voter");
 
   // Ermittle max. Rundenanzahl für Header-Spalten
   const maxRounds = players.reduce((max, e) => {
@@ -129,7 +130,7 @@ export default async function LulSpieltagPage({
         </div>
 
         {/* Mini-Stats */}
-        <div className="grid grid-cols-3 sm:grid-cols-3 gap-3 mt-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
           <div className="bg-black/20 rounded-xl p-3 text-center">
             <p className="text-lg font-semibold text-white">{players.length}</p>
             <p className="text-xs text-gray-500 mt-0.5">Mitspieler</p>
@@ -137,6 +138,10 @@ export default async function LulSpieltagPage({
           <div className="bg-black/20 rounded-xl p-3 text-center">
             <p className="text-lg font-semibold text-white">{spectators.length}</p>
             <p className="text-xs text-gray-500 mt-0.5">Zuschauer</p>
+          </div>
+          <div className="bg-black/20 rounded-xl p-3 text-center">
+            <p className="text-lg font-semibold text-white">{voters.length}</p>
+            <p className="text-xs text-gray-500 mt-0.5">Externe Votes</p>
           </div>
           <div className="bg-black/20 rounded-xl p-3 text-center">
             <p className="text-lg font-semibold text-white">{maxRounds}</p>
@@ -420,6 +425,79 @@ export default async function LulSpieltagPage({
                   <span className="ml-1">{item.pts} Pkt</span>
                 </span>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Externe Abstimmende ──────────────────────────────────── */}
+      {voters.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+            <Vote className="w-3.5 h-3.5" style={{ color: "#14b8a6" }} />
+            Externe Abstimmende
+          </h2>
+
+          <div
+            className="rounded-2xl overflow-hidden"
+            style={{
+              background: "rgba(12,12,20,0.95)",
+              border: "1px solid rgba(255,255,255,0.06)",
+            }}
+          >
+            <div className="divide-y divide-white/[0.04]">
+              {voters.map((entry) => {
+                const isMe = entry.userId === userId;
+                return (
+                  <div
+                    key={entry.id}
+                    className={`flex items-center gap-3 px-4 py-3 ${
+                      isMe ? "bg-teal-500/[0.04]" : ""
+                    }`}
+                  >
+                    {entry.user.image ? (
+                      <img
+                        src={entry.user.image}
+                        alt=""
+                        className={`w-8 h-8 rounded-full shrink-0 ring-1 ${
+                          isMe ? "ring-teal-400/40" : "ring-white/10"
+                        }`}
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-xs font-bold bg-white/[0.06] text-gray-400 ring-1 ring-white/5">
+                        {uname(entry.user)[0]?.toUpperCase()}
+                      </div>
+                    )}
+
+                    <p className={`font-semibold text-sm flex-1 leading-tight ${isMe ? "text-teal-300" : "text-white"}`}>
+                      {uname(entry.user)}
+                      {isMe && <span className="text-[10px] font-normal text-teal-600 ml-1.5">(du)</span>}
+                    </p>
+
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full shrink-0">
+                      <CheckCircle2 className="w-3 h-3" /> Abgestimmt
+                    </span>
+
+                    {/* LuL-Punkte */}
+                    <div className="text-right shrink-0 ml-2">
+                      <p className={`text-base font-bold tabular-nums ${isMe ? "text-teal-300" : "text-white"}`}>
+                        {entry.lulPoints}
+                      </p>
+                      <p className="text-[9px] text-gray-600">Pkt</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div
+              style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}
+              className="px-4 py-3"
+            >
+              <span className="text-[10px] text-gray-700">
+                ✅ <span className="text-gray-600">Abstimmung</span>
+                <span className="ml-1">+{LUL_POINTS.VOTE} Pkt</span>
+              </span>
             </div>
           </div>
         </div>
