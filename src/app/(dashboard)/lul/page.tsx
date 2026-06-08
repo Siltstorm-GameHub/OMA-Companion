@@ -2,8 +2,11 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import React from "react";
 import { Trophy, CalendarDays, ChevronRight, Flame, Star, Crown, Gamepad2, History, Zap, Users } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
+import { CountUp } from "@/components/CountUp";
+import { AvatarStack } from "@/components/AvatarStack";
 import { buildLulStandings, LUL_POINTS } from "@/lib/lul";
 
 const STATUS_LABEL: Record<string, { label: string; cls: string; dot: string; bar: string }> = {
@@ -81,14 +84,14 @@ export default async function LulOverviewPage() {
               {[
                 { icon: Gamepad2,  val: `${finishedCount}/${activeSeason.totalSpieltage}`, label: "Spieltage",   color: "text-amber-400" },
                 { icon: Users,     val: participantCount,                                  label: "Teilnehmer",  color: "text-blue-400" },
-                { icon: Flame,     val: myPoints,                                          label: "Meine Punkte", color: "text-rose-400" },
+                { icon: Flame,     val: <CountUp to={myPoints} duration={900} />,          label: "Meine Punkte", color: "text-rose-400" },
                 ...(myRank > 0
                   ? [{ icon: Crown, val: `#${myRank}`, label: "Mein Rang", color: "text-purple-400" }]
                   : [{ icon: Star,  val: "–",          label: "Mein Rang", color: "text-gray-500" }]),
               ].map(({ icon: Icon, val, label, color }) => (
                 <div key={label} className="glass-heavy rounded-xl p-3 text-center">
                   <Icon className={`w-4 h-4 mx-auto mb-1.5 ${color}`} />
-                  <p className="text-lg font-bold text-white tabular-nums leading-none">{val}</p>
+                  <p className="text-lg font-bold text-white tabular-nums leading-none">{val as React.ReactNode}</p>
                   <p className="text-[10px] text-gray-500 uppercase tracking-wide mt-1">{label}</p>
                 </div>
               ))}
@@ -198,29 +201,45 @@ export default async function LulOverviewPage() {
             <div className="space-y-2">
               {activeSeason.spieltage.map((st) => {
                 const s = STATUS_LABEL[st.status] ?? STATUS_LABEL.upcoming;
-                const isNext = nextSpieltag?.id === st.id;
+                const isNext   = nextSpieltag?.id === st.id;
+                const isActive = st.status === "active";
+                const allParticipants = st.entries.map(e => e.user);
+                const stripeColor = isActive
+                  ? "bg-emerald-400"
+                  : st.status === "upcoming"
+                  ? "bg-blue-400"
+                  : "bg-gray-600";
                 return (
                   <Link key={st.id} href={`/lul/spieltag/${st.id}`}
-                    className={`card-hover flex items-center gap-3 glass rounded-xl px-4 py-3 relative overflow-hidden ${
+                    className={`card-hover flex items-center gap-3 glass rounded-xl pl-3 pr-4 py-3 relative overflow-hidden ${
                       isNext ? "ring-1 ring-amber-500/20" : ""
                     }`}>
+                    {/* Status stripe left */}
+                    <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${stripeColor} rounded-l-xl`} />
                     {isNext && <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5 to-transparent pointer-events-none" />}
-                    <div className={`relative w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
+                    {isActive && <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-transparent pointer-events-none" />}
+                    <div className={`relative w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ml-1 ${
                       st.status === "finished" ? "bg-white/[0.05] text-gray-500" :
                       isNext ? "bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/20" :
+                      isActive ? "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/20" :
                       "bg-white/[0.04] text-gray-600"
                     }`}>
                       {st.number}
                     </div>
                     <div className="relative flex-1 min-w-0">
                       <p className="text-sm font-medium text-white truncate">{st.game}</p>
-                      {st.scheduledAt && (
-                        <p className="text-[10px] text-gray-500 mt-0.5">
-                          {new Date(st.scheduledAt).toLocaleDateString("de-DE", { day: "2-digit", month: "long" })}
-                          {" · "}
-                          {new Date(st.scheduledAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} Uhr
-                        </p>
-                      )}
+                      <div className="flex items-center gap-2 mt-1">
+                        {st.scheduledAt && (
+                          <p className="text-[10px] text-gray-500">
+                            {new Date(st.scheduledAt).toLocaleDateString("de-DE", { day: "2-digit", month: "long" })}
+                            {" · "}
+                            {new Date(st.scheduledAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} Uhr
+                          </p>
+                        )}
+                        {allParticipants.length > 0 && (
+                          <AvatarStack users={allParticipants} max={4} size="xs" />
+                        )}
+                      </div>
                     </div>
                     <div className="relative flex items-center gap-1.5 shrink-0">
                       <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />

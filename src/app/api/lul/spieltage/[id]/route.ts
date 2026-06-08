@@ -24,7 +24,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
 type EntryInput = {
   userId:         string;
-  role:           "player" | "spectator";
+  role:           "player" | "spectator" | "voter";
   roundScores?:   number[];
   placement?:     number | null;
   gameWinner:     boolean;

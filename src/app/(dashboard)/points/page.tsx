@@ -1,7 +1,7 @@
 import { POINT_RULES, CATEGORY_LABELS, DAILY_CAPS, type PointCategory } from "@/lib/points";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { Star } from "lucide-react";
+import { Star, TrendingUp, TrendingDown } from "lucide-react";
 import { CountUp } from "@/components/CountUp";
 import { RelativeTime } from "@/components/RelativeTime";
 
@@ -127,17 +127,35 @@ export default async function PointsPage() {
         <div>
           <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">Meine letzten Punkte</p>
           <div className="glass card-shine rounded-2xl overflow-hidden divide-y divide-white/[0.04]">
-            {myTransactions.map((tx) => (
-              <div key={tx.id} className="flex items-center justify-between px-4 py-3 hover:bg-white/[0.02] transition-colors">
-                <div className="min-w-0">
-                  <p className="text-sm text-white truncate">{tx.reason}</p>
-                  <RelativeTime date={tx.createdAt} className="text-[10px] text-gray-600 mt-0.5 block" />
+            {myTransactions.map((tx) => {
+              const isPos = tx.amount > 0;
+              return (
+                <div key={tx.id} className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors">
+                  {/* Icon pill */}
+                  <div className={`w-8 h-8 rounded-lg shrink-0 flex items-center justify-center ${
+                    isPos ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
+                  }`}>
+                    {isPos
+                      ? <TrendingUp className="w-4 h-4" />
+                      : <TrendingDown className="w-4 h-4" />
+                    }
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm text-white truncate">{tx.reason}</p>
+                    <RelativeTime date={tx.createdAt} className="text-[10px] text-gray-600 mt-0.5 block" />
+                  </div>
+                  {/* Amount badge */}
+                  <span className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-sm font-bold tabular-nums ${
+                    isPos
+                      ? "bg-emerald-500/12 text-emerald-400 ring-1 ring-emerald-500/20"
+                      : "bg-red-500/12 text-red-400 ring-1 ring-red-500/20"
+                  }`}>
+                    {isPos ? "+" : ""}{tx.amount}
+                    <span className="text-[10px] font-normal opacity-70">Pts</span>
+                  </span>
                 </div>
-                <span className={`text-sm font-bold shrink-0 ml-4 tabular-nums ${tx.amount > 0 ? "text-emerald-400" : "text-red-400"}`}>
-                  {tx.amount > 0 ? "+" : ""}{tx.amount} Pts
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

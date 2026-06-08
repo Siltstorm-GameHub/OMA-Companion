@@ -152,13 +152,14 @@ export default async function LulAllTimePage() {
                 {standings.map((s, i) => {
                   const isMe   = s.userId === userId;
                   const isTop3 = i < 3 && s.totalPts > 0;
+                  const podiumClass = isTop3 ? (i === 0 ? "podium-gold" : i === 1 ? "podium-silver" : "podium-bronze") : "";
                   return (
                     <tr key={s.userId}
                       style={{
                         borderBottom: "1px solid rgba(255,255,255,0.035)",
                         background: isMe ? "rgba(168,85,247,0.05)" : undefined,
                       }}
-                      className="transition-colors hover:bg-white/[0.015]">
+                      className={`transition-colors hover:bg-white/[0.015] ${podiumClass} ${isMe ? "ring-1 ring-inset ring-purple-400/15" : ""}`}>
 
                       <td className="px-4 py-3 text-center">
                         {isTop3 ? (

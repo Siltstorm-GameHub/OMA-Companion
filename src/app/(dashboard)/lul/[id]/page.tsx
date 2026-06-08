@@ -198,6 +198,7 @@ export default async function LulSeasonPage({ params }: { params: Promise<{ id: 
                 {fullStandings.map((s, i) => {
                   const isMe   = s.userId === userId;
                   const isTop3 = i < 3 && s.totalPts > 0;
+                  const podiumClass = isTop3 ? (i === 0 ? "podium-gold" : i === 1 ? "podium-silver" : "podium-bronze") : "";
 
                   return (
                     <tr key={s.userId}
@@ -205,7 +206,7 @@ export default async function LulSeasonPage({ params }: { params: Promise<{ id: 
                         borderBottom: "1px solid rgba(255,255,255,0.035)",
                         background: isMe ? "rgba(251,191,36,0.05)" : undefined,
                       }}
-                      className="transition-colors hover:bg-white/[0.015]">
+                      className={`transition-colors hover:bg-white/[0.015] ${podiumClass} ${isMe ? "ring-1 ring-inset ring-amber-400/15" : ""}`}>
 
                       {/* Rank */}
                       <td className="px-4 py-3 text-center">
