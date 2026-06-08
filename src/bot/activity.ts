@@ -90,3 +90,22 @@ export async function handleMemberJoin(discordId: string, username: string) {
     console.log(`🎉 Willkommens-Punkte für ${username}`);
   }
 }
+
+// Reaktions-Tracking: Punkte für den Autor der Nachricht (nicht den Reagierenden)
+export async function trackReaction(authorDiscordId: string) {
+  const user = await findUser(authorDiscordId);
+  if (!user) return;
+  await awardPoints(user.id, "REACTION_RECEIVED");
+}
+
+// Invite-Tracking: Punkte für den Einladenden
+// inviterDiscordId ist die Discord-ID des Users, der den Invite erstellt hat
+export async function trackInvite(inviterDiscordId: string, newMemberUsername: string) {
+  const user = await findUser(inviterDiscordId);
+  if (!user) {
+    console.log(`  ⚠ trackInvite: kein User für Inviter-ID ${inviterDiscordId} gefunden`);
+    return;
+  }
+  await awardPoints(user.id, "INVITE_MEMBER");
+  console.log(`👥 Invite-Punkte für ${user.username ?? user.name} (hat ${newMemberUsername} eingeladen)`);
+}

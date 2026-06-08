@@ -1,10 +1,11 @@
 import {
   Client, GatewayIntentBits, Events,
-  GuildScheduledEventStatus, VoiceState,
+  GuildScheduledEventStatus, VoiceState, Invite,
 } from "discord.js";
 import { updateEventStatus, syncAttendee } from "./sync";
-import { trackVoice, trackMessage, handleMemberJoin } from "./activity";
+import { trackVoice, trackMessage, handleMemberJoin, trackReaction, trackInvite } from "./activity";
 import { setClient, notifyMonthlyLeaderboard, notifyBirthday } from "./notify";
+import { awardPoints } from "@/lib/points";
 import { prisma } from "@/lib/prisma";
 
 const client = new Client({
@@ -15,6 +16,8 @@ const client = new Client({
     GatewayIntentBits.GuildVoiceStates,
     GatewayIntentBits.GuildScheduledEvents,
     GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMessageReactions, // für Reaktions-Tracking
+    GatewayIntentBits.GuildInvites,           // für Invite-Tracking
   ],
 });
 
@@ -25,13 +28,25 @@ client.once(Events.ClientReady, async (c) => {
   console.log(`✅ Bot online: ${c.user.tag}`);
   setClient(client);
   scheduleMonthlyLeaderboard();
-  checkBirthdays(); // sofort beim Start prüfen
+  // Bug-Fix: Geburtstage nicht beim Start prüfen (würde Nachrichten zu beliebigen Uhrzeiten senden)
+  // Stattdessen nur täglich um 8 Uhr im Scheduler
 
   const guild = await c.guilds.fetch(process.env.DISCORD_GUILD_ID!);
 
+  // Invite-Cache beim Start befüllen
+  try {
+    const guild   = await c.guilds.fetch(process.env.DISCORD_GUILD_ID!);
+    const invites = await guild.invites.fetch();
+    invites.forEach(inv => inviteCache.set(inv.code, inv.uses ?? 0));
+    console.log(`📨 ${invites.size} Invites gecacht`);
+  } catch (err) {
+    console.warn("⚠ Invite-Cache konnte nicht befüllt werden:", err);
+  }
+
   // Voice-Tracking: bereits aktive User erfassen
   // (falls Bot neugestartet wurde während User im Voice waren)
-  const channels = await guild.channels.fetch();
+  const guild2   = await c.guilds.fetch(process.env.DISCORD_GUILD_ID!);
+  const channels = await guild2.channels.fetch();
   let voiceUsersFound = 0;
   for (const [, channel] of channels) {
     if (channel?.isVoiceBased() && "members" in channel) {
@@ -92,9 +107,53 @@ client.on(Events.MessageCreate, async (message) => {
   await trackMessage(message.author.id);
 });
 
-// Neues Mitglied
+// Reaktions-Tracking: Punkte für den Nachrichten-Autor
+client.on(Events.MessageReactionAdd, async (reaction, user) => {
+  if (user.bot) return;
+  // Partielle Reaktionen (aus dem Cache gefallen) vollständig laden
+  if (reaction.partial) {
+    try { await reaction.fetch(); } catch { return; }
+  }
+  if (!reaction.message.guild || reaction.message.author?.bot) return;
+  const authorId = reaction.message.author?.id;
+  if (!authorId || authorId === user.id) return; // keine Selbst-Reaktionen werten
+  await trackReaction(authorId);
+});
+
+// Invite-Tracking: Invite-Nutzungen überwachen um Einladenden zu ermitteln
+const inviteCache = new Map<string, number>(); // code → uses
+
+client.on(Events.GuildCreate, async (guild) => {
+  const invites = await guild.invites.fetch().catch(() => null);
+  invites?.forEach(inv => inviteCache.set(inv.code, inv.uses ?? 0));
+});
+
+client.on(Events.InviteCreate, (invite: Invite) => {
+  inviteCache.set(invite.code, invite.uses ?? 0);
+});
+
+client.on(Events.InviteDelete, (invite: Invite) => {
+  inviteCache.delete(invite.code);
+});
+
 client.on(Events.GuildMemberAdd, async (member) => {
   if (member.user.bot) return;
+
+  // Welcher Invite wurde genutzt? (Nutzungszahl vergleichen)
+  const invitesBefore = new Map(inviteCache);
+  const invitesNow    = await member.guild.invites.fetch().catch(() => null);
+  if (invitesNow) {
+    invitesNow.forEach(inv => inviteCache.set(inv.code, inv.uses ?? 0));
+    for (const [code, usedBefore] of invitesBefore) {
+      const inviteNow = invitesNow.get(code);
+      if (inviteNow && (inviteNow.uses ?? 0) > usedBefore && inviteNow.inviter) {
+        await trackInvite(inviteNow.inviter.id, member.user.username);
+        break;
+      }
+    }
+  }
+
+  // Willkommens-Punkte
   await handleMemberJoin(member.user.id, member.user.username);
 });
 
@@ -114,17 +173,21 @@ client.on(Events.GuildScheduledEventUserRemove, async (event, user) => {
   await syncAttendee(event.id, user.id, "remove");
 });
 
-// Geburtstags-Boost: täglich prüfen
+// Geburtstags-Boost: täglich um 8 Uhr prüfen
 async function checkBirthdays() {
   const now   = new Date();
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const day   = String(now.getDate()).padStart(2, "0");
 
-  // User mit Geburtstag heute (gespeichert als 2000-MM-DD)
+  // Bug-Fix #1: null-Werte explizit einschließen —
+  // { lt: now } matcht keine null-Felder, deshalb OR-Bedingung
   const usersWithBirthday = await prisma.user.findMany({
     where: {
       birthday: { not: null },
-      birthdayBoostUntil: { lt: now }, // kein aktiver Boost mehr
+      OR: [
+        { birthdayBoostUntil: null },          // noch nie einen Boost gehabt
+        { birthdayBoostUntil: { lt: now } },   // letzter Boost abgelaufen
+      ],
     },
     select: { id: true, username: true, name: true, discordId: true, birthday: true },
   });
@@ -139,9 +202,12 @@ async function checkBirthdays() {
     const until = new Date(now.getTime() + 24 * 60 * 60 * 1000);
     await prisma.user.update({ where: { id: user.id }, data: { birthdayBoostUntil: until } });
 
+    // Bug-Fix #2: Geburtstags-Punkte vergeben (waren vorher nie ausgelöst)
+    await awardPoints(user.id, "BIRTHDAY");
+
     // Discord-Nachricht
     if (user.discordId) await notifyBirthday(user.discordId, user.username ?? user.name ?? "Jemand");
-    console.log(`🎂 Geburtstags-Boost aktiviert für ${user.username ?? user.name}`);
+    console.log(`🎂 Geburtstags-Boost + Punkte für ${user.username ?? user.name}`);
   }
 }
 

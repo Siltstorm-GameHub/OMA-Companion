@@ -110,22 +110,6 @@ export async function notifyTournamentStarted(tournament: {
   await ch.send({ content: mentions || undefined, embeds: [embed] });
 }
 
-// ── Level-Up ─────────────────────────────────────────────────────────────────
-
-export async function notifyLevelUp(discordId: string, newLevel: number) {
-  const ch = await getTextChannel(process.env.DISCORD_GENERAL_CHANNEL_ID);
-  if (!ch) return;
-
-  const embed = new EmbedBuilder()
-    .setColor(0xa855f7)
-    .setTitle("🎉 Level Up!")
-    .setDescription(`<@${discordId}> hat **Level ${newLevel}** erreicht! 🏆`)
-    .setFooter({ text: "OMA Companion · Fortschritt" })
-    .setTimestamp();
-
-  await ch.send({ embeds: [embed] });
-}
-
 // ── Quest abgeschlossen (DM) ─────────────────────────────────────────────────
 
 export async function notifyQuestCompleted(discordId: string, questTitle: string, reward: number) {
@@ -166,27 +150,62 @@ export async function notifyMonthlyLeaderboard() {
   if (!ch) return;
 
   const now       = new Date();
-  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const monthName = lastMonth.toLocaleDateString("de-DE", { month: "long", year: "numeric" });
+  // Zeitraum: Anfang und Ende des Vormonats
+  const firstOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
+  const firstOfThisMonth = new Date(now.getFullYear(), now.getMonth(),     1, 0, 0, 0, 0);
+  const monthName = firstOfLastMonth.toLocaleDateString("de-DE", { month: "long", year: "numeric" });
 
-  const topUsers = await prisma.user.findMany({
-    orderBy: { points: "desc" },
+  // Punkte gruppiert nach User aus Transaktionen des Vormonats
+  // (nur positive Buchungen zählen für die Rangliste)
+  const raw = await prisma.pointTransaction.groupBy({
+    by: ["userId"],
+    where: {
+      createdAt: { gte: firstOfLastMonth, lt: firstOfThisMonth },
+      amount:    { gt: 0 },
+    },
+    _sum: { amount: true },
+    orderBy: { _sum: { amount: "desc" } },
     take: 10,
-    select: { username: true, name: true, points: true, discordId: true },
   });
+
+  if (!raw.length) {
+    await ch.send({
+      embeds: [
+        new EmbedBuilder()
+          .setColor(0x6b7280)
+          .setTitle(`🏆 Monats-Rangliste · ${monthName}`)
+          .setDescription("Im vergangenen Monat wurden keine Punkte vergeben.")
+          .setFooter({ text: "OMA Companion · Leaderboard" })
+          .setTimestamp(),
+      ],
+    });
+    return;
+  }
+
+  // User-Daten nachladen
+  const userIds = raw.map(r => r.userId);
+  const users   = await prisma.user.findMany({
+    where:  { id: { in: userIds } },
+    select: { id: true, username: true, name: true, discordId: true },
+  });
+  const userMap = new Map(users.map(u => [u.id, u]));
 
   const medals = ["🥇", "🥈", "🥉"];
-  const lines = topUsers.map((u, i) => {
-    const name  = u.username ?? u.name ?? "Unbekannt";
+  const lines  = raw.map((row, i) => {
+    const u     = userMap.get(row.userId);
+    const name  = u?.username ?? u?.name ?? "Unbekannt";
     const medal = medals[i] ?? `**${i + 1}.**`;
-    const pts   = u.points.toLocaleString("de-DE");
-    return `${medal} ${u.discordId ? `<@${u.discordId}>` : name} — ${pts} Pts`;
+    const pts   = (row._sum.amount ?? 0).toLocaleString("de-DE");
+    return `${medal} ${u?.discordId ? `<@${u.discordId}>` : name} — **${pts} Pts**`;
   });
+
+  const totalPts = raw.reduce((s, r) => s + (r._sum.amount ?? 0), 0);
 
   const embed = new EmbedBuilder()
     .setColor(0xf59e0b)
     .setTitle(`🏆 Monats-Rangliste · ${monthName}`)
-    .setDescription(lines.join("\n") || "Keine Daten verfügbar.")
+    .setDescription(lines.join("\n"))
+    .addFields({ name: "Community gesamt", value: `${totalPts.toLocaleString("de-DE")} Pts verdient`, inline: true })
     .setFooter({ text: "OMA Companion · Leaderboard" })
     .setTimestamp();
 
