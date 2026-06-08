@@ -89,12 +89,12 @@ export default async function QuestsPage() {
               <circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="2.5" />
               <circle
                 cx="18" cy="18" r="15.9" fill="none"
-                stroke={allDone ? "#10b981" : "#8b5cf6"}
+                stroke={allDone ? "#10b981" : "#14b8a6"}
                 strokeWidth="2.5"
                 strokeDasharray={`${currentQuests.length ? (completedCount / currentQuests.length) * 100 : 0} 100`}
                 strokeLinecap="round"
                 className="transition-all duration-700"
-                style={{ filter: allDone ? "drop-shadow(0 0 4px #10b981)" : "drop-shadow(0 0 4px #8b5cf6)" }}
+                style={{ filter: allDone ? "drop-shadow(0 0 4px #10b981)" : "drop-shadow(0 0 4px #14b8a6)" }}
               />
             </svg>
             <span className="absolute inset-0 flex flex-col items-center justify-center leading-none">

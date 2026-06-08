@@ -47,7 +47,7 @@ export default function AuroraBackground() {
           top: "35%",
           left: "40%",
           background:
-            "radial-gradient(ellipse at center, rgba(139,92,246,0.08) 0%, transparent 70%)",
+            "radial-gradient(ellipse at center, rgba(20,184,166,0.08) 0%, transparent 70%)",
           filter: "blur(60px)",
         }}
       />
@@ -66,7 +66,7 @@ export default function AuroraBackground() {
         className="absolute top-0 inset-x-0 h-px"
         style={{
           background:
-            "linear-gradient(90deg, transparent 5%, rgba(139,92,246,0.20) 35%, rgba(139,92,246,0.38) 50%, rgba(139,92,246,0.20) 65%, transparent 95%)",
+            "linear-gradient(90deg, transparent 5%, rgba(20,184,166,0.20) 35%, rgba(20,184,166,0.38) 50%, rgba(20,184,166,0.20) 65%, transparent 95%)",
         }}
       />
     </div>

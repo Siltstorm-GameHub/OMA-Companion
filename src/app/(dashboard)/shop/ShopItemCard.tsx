@@ -201,10 +201,10 @@ export default function ShopItemCard({
   const THEME_PREVIEWS: Record<string, string> = {
     cyber:   "from-blue-500 to-cyan-400",
     golden:  "from-amber-500 to-yellow-400",
-    void:    "from-violet-600 to-purple-800",
+    void:    "from-teal-600 to-purple-800",
     emerald: "from-emerald-500 to-teal-400",
     crimson: "from-red-600 to-rose-800",
-    default: "from-rose-500 to-violet-500",
+    default: "from-rose-500 to-teal-500",
   };
 
   return (
@@ -381,7 +381,7 @@ export default function ShopItemCard({
             {alreadyOwned && item.type === "lul_suggest" && !localConsumed && (
               <button
                 onClick={() => setShowSuggest(s => !s)}
-                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium glass border border-violet-500/25 text-violet-300 hover:border-violet-400/40 transition-all"
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium glass border border-teal-500/25 text-teal-300 hover:border-teal-400/40 transition-all"
               >
                 <Gamepad2 className="w-3 h-3" /> Vorschlagen
               </button>
@@ -433,19 +433,19 @@ export default function ShopItemCard({
               placeholder="Spielname *"
               value={suggestGame}
               onChange={e => setSuggestGame(e.target.value)}
-              className="w-full text-xs bg-white/[0.04] border border-white/[0.1] rounded-lg px-3 py-2 text-white placeholder-gray-600 focus:outline-none focus:border-violet-500/40"
+              className="w-full text-xs bg-white/[0.04] border border-white/[0.1] rounded-lg px-3 py-2 text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/40"
             />
             <input
               type="text"
               placeholder="Notiz (optional)"
               value={suggestNote}
               onChange={e => setSuggestNote(e.target.value)}
-              className="w-full text-xs bg-white/[0.04] border border-white/[0.1] rounded-lg px-3 py-2 text-white placeholder-gray-600 focus:outline-none focus:border-violet-500/40"
+              className="w-full text-xs bg-white/[0.04] border border-white/[0.1] rounded-lg px-3 py-2 text-white placeholder-gray-600 focus:outline-none focus:border-teal-500/40"
             />
             <button
               onClick={handleLulSuggest}
               disabled={loading || !suggestGame.trim()}
-              className="flex items-center gap-1.5 w-full justify-center text-xs px-3 py-2 rounded-lg font-medium bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-50 transition-all"
+              className="flex items-center gap-1.5 w-full justify-center text-xs px-3 py-2 rounded-lg font-medium bg-teal-600 hover:bg-teal-500 text-white disabled:opacity-50 transition-all"
             >
               {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
               Vorschlag einreichen

@@ -358,7 +358,7 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
                 value={lulQ2}
                 onChange={e => setLulQ2(e.target.value)}
                 placeholder={lulAutoQ2 || "Wähle zuerst einen Spieltag…"}
-                className="w-full rounded-xl px-3 py-2.5 text-sm text-white bg-white/[0.05] border border-white/[0.1] outline-none focus:border-violet-500/40 placeholder-gray-600"
+                className="w-full rounded-xl px-3 py-2.5 text-sm text-white bg-white/[0.05] border border-white/[0.1] outline-none focus:border-teal-500/40 placeholder-gray-600"
               />
             </div>
 
@@ -391,13 +391,13 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
                   }
                 </div>
               </div>
-              <div className="rounded-xl bg-violet-500/5 border border-violet-500/15 p-3">
-                <p className="flex items-center gap-1.5 text-xs text-violet-400 font-semibold mb-2"><Heart className="w-3.5 h-3.5" /> Community-Support-Umfrage ({lulViewers.length} Zuschauer)</p>
+              <div className="rounded-xl bg-teal-500/5 border border-teal-500/15 p-3">
+                <p className="flex items-center gap-1.5 text-xs text-teal-400 font-semibold mb-2"><Heart className="w-3.5 h-3.5" /> Community-Support-Umfrage ({lulViewers.length} Zuschauer)</p>
                 <div className="flex flex-wrap gap-1.5">
                   {lulViewers.length === 0
                     ? <p className="text-xs text-gray-600 italic">Keine Zuschauer eingetragen</p>
                     : lulViewers.map(u => (
-                      <span key={u.id} className="text-xs px-2 py-0.5 rounded-full bg-violet-500/10 border border-violet-500/15 text-violet-300">
+                      <span key={u.id} className="text-xs px-2 py-0.5 rounded-full bg-teal-500/10 border border-teal-500/15 text-teal-300">
                         {u.username ?? u.name}
                       </span>
                     ))

@@ -29,7 +29,7 @@ function IllustrationEvents() {
       <circle cx="60" cy="58" r="5" fill="rgba(244,63,94,0.5)"/>
       {/* Floating sparkles */}
       <circle cx="100" cy="15" r="3" fill="rgba(244,63,94,0.4)"/>
-      <circle cx="20" cy="95" r="2" fill="rgba(139,92,246,0.4)"/>
+      <circle cx="20" cy="95" r="2" fill="rgba(20,184,166,0.4)"/>
       <circle cx="108" cy="78" r="2" fill="rgba(59,130,246,0.4)"/>
     </svg>
   );
@@ -39,9 +39,9 @@ function IllustrationQuests() {
   return (
     <svg viewBox="0 0 120 100" className="w-28 h-24" fill="none">
       {/* Scroll */}
-      <rect x="25" y="15" width="70" height="70" rx="8" fill="rgba(139,92,246,0.1)" stroke="rgba(139,92,246,0.3)" strokeWidth="1.5"/>
-      <rect x="15" y="15" width="15" height="70" rx="8" fill="rgba(139,92,246,0.15)" stroke="rgba(139,92,246,0.2)" strokeWidth="1.5"/>
-      <rect x="90" y="15" width="15" height="70" rx="8" fill="rgba(139,92,246,0.15)" stroke="rgba(139,92,246,0.2)" strokeWidth="1.5"/>
+      <rect x="25" y="15" width="70" height="70" rx="8" fill="rgba(20,184,166,0.1)" stroke="rgba(20,184,166,0.3)" strokeWidth="1.5"/>
+      <rect x="15" y="15" width="15" height="70" rx="8" fill="rgba(20,184,166,0.15)" stroke="rgba(20,184,166,0.2)" strokeWidth="1.5"/>
+      <rect x="90" y="15" width="15" height="70" rx="8" fill="rgba(20,184,166,0.15)" stroke="rgba(20,184,166,0.2)" strokeWidth="1.5"/>
       {/* Lines */}
       <line x1="35" y1="35" x2="85" y2="35" stroke="rgba(255,255,255,0.12)" strokeWidth="2" strokeLinecap="round"/>
       <line x1="35" y1="48" x2="75" y2="48" stroke="rgba(255,255,255,0.08)" strokeWidth="2" strokeLinecap="round"/>
@@ -78,7 +78,7 @@ function IllustrationFeed() {
       <rect x="82" y="68" width="18" height="4" rx="2" fill="rgba(255,255,255,0.08)"/>
       <rect x="20" y="78" width="35" height="4" rx="2" fill="rgba(255,255,255,0.05)"/>
       {/* Sparkles */}
-      <circle cx="15" cy="30" r="3" fill="rgba(139,92,246,0.4)"/>
+      <circle cx="15" cy="30" r="3" fill="rgba(20,184,166,0.4)"/>
       <circle cx="105" cy="25" r="2" fill="rgba(59,130,246,0.4)"/>
       <circle cx="108" cy="80" r="3" fill="rgba(251,191,36,0.3)"/>
     </svg>
@@ -101,7 +101,7 @@ function IllustrationTrophy() {
       {/* Sparkles */}
       <circle cx="20" cy="20" r="3" fill="rgba(244,63,94,0.4)"/>
       <circle cx="100" cy="18" r="4" fill="rgba(244,63,94,0.3)"/>
-      <circle cx="108" cy="75" r="2" fill="rgba(139,92,246,0.4)"/>
+      <circle cx="108" cy="75" r="2" fill="rgba(20,184,166,0.4)"/>
     </svg>
   );
 }
@@ -112,7 +112,7 @@ function IllustrationGeneric() {
       <circle cx="60" cy="45" r="28" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)" strokeWidth="1.5"/>
       <circle cx="60" cy="45" r="18" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.06)" strokeWidth="1"/>
       <circle cx="60" cy="45" r="6" fill="rgba(244,63,94,0.3)"/>
-      <circle cx="20" cy="20" r="3" fill="rgba(139,92,246,0.3)"/>
+      <circle cx="20" cy="20" r="3" fill="rgba(20,184,166,0.3)"/>
       <circle cx="100" cy="25" r="2" fill="rgba(59,130,246,0.3)"/>
       <circle cx="95" cy="75" r="3" fill="rgba(251,191,36,0.3)"/>
     </svg>

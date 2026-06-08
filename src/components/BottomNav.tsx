@@ -16,7 +16,7 @@ export default function BottomNav() {
 
   return (
     <nav
-      style={{ background: "rgba(13,13,15,0.97)", borderTop: "1px solid rgba(139,92,246,0.10)" }}
+      style={{ background: "rgba(13,13,15,0.97)", borderTop: "1px solid rgba(20,184,166,0.10)" }}
       className="fixed bottom-0 left-0 right-0 z-40 lg:hidden backdrop-blur-2xl safe-area-pb"
     >
       <div className="flex items-stretch h-16">
@@ -33,8 +33,8 @@ export default function BottomNav() {
                 <span
                   className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[2px] rounded-b-full"
                   style={{
-                    background: "#8b5cf6",
-                    boxShadow: "0 0 10px rgba(139,92,246,0.9), 0 2px 16px rgba(139,92,246,0.5)",
+                    background: "#14b8a6",
+                    boxShadow: "0 0 10px rgba(20,184,166,0.9), 0 2px 16px rgba(20,184,166,0.5)",
                   }}
                 />
               )}
@@ -45,17 +45,17 @@ export default function BottomNav() {
                 style={{
                   width: active ? 44 : 36,
                   height: 32,
-                  background: active ? "rgba(139,92,246,0.12)" : "transparent",
-                  boxShadow: active ? "0 0 16px rgba(139,92,246,0.15)" : "none",
-                  border: active ? "1px solid rgba(139,92,246,0.20)" : "1px solid transparent",
+                  background: active ? "rgba(20,184,166,0.12)" : "transparent",
+                  boxShadow: active ? "0 0 16px rgba(20,184,166,0.15)" : "none",
+                  border: active ? "1px solid rgba(20,184,166,0.20)" : "1px solid transparent",
                 }}
               >
                 <Icon
                   style={{
                     width: 20,
                     height: 20,
-                    color: active ? "#a78bfa" : "#4b5563",
-                    filter: active ? "drop-shadow(0 0 5px rgba(139,92,246,0.75))" : "none",
+                    color: active ? "#2dd4bf" : "#4b5563",
+                    filter: active ? "drop-shadow(0 0 5px rgba(20,184,166,0.75))" : "none",
                     strokeWidth: active ? 2.5 : 2,
                     transition: "all 200ms",
                   }}
@@ -70,7 +70,7 @@ export default function BottomNav() {
                   letterSpacing: "0.05em",
                   marginTop: 3,
                   lineHeight: 1,
-                  color: active ? "#a78bfa" : "rgba(107,114,128,0.85)",
+                  color: active ? "#2dd4bf" : "rgba(107,114,128,0.85)",
                   transition: "color 200ms",
                   userSelect: "none",
                 }}

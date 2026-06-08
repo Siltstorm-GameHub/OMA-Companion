@@ -79,9 +79,9 @@ export default function Sidebar() {
         className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center"
         style={{
           background:    "rgba(13,13,15,0.94)",
-          border:        "1px solid rgba(139,92,246,0.14)",
+          border:        "1px solid rgba(20,184,166,0.14)",
           backdropFilter:"blur(24px)",
-          boxShadow:     "0 8px 32px rgba(0,0,0,0.65), 0 0 0 1px rgba(139,92,246,0.06)",
+          boxShadow:     "0 8px 32px rgba(0,0,0,0.65), 0 0 0 1px rgba(20,184,166,0.06)",
           borderRadius:  12,
           padding:       "5px 8px",
           gap:           6,
@@ -92,7 +92,7 @@ export default function Sidebar() {
           className="flex items-center justify-center rounded-xl shrink-0"
           style={{ width: 34, height: 34 }}>
           <div className="w-[26px] h-[26px] rounded-sm overflow-hidden"
-            style={{ boxShadow: "0 0 14px rgba(139,92,246,0.35)", outline: "1px solid rgba(139,92,246,0.25)" }}>
+            style={{ boxShadow: "0 0 14px rgba(20,184,166,0.35)", outline: "1px solid rgba(20,184,166,0.25)" }}>
             <Image src="/OMALogoNew.png" alt="OMA" width={26} height={26} className="w-full h-full object-cover" />
           </div>
         </Link>
@@ -122,8 +122,8 @@ export default function Sidebar() {
             className="flex items-center justify-center rounded-xl shrink-0"
             style={{
               width: 34, height: 34,
-              background:  avatarOpen ? "rgba(139,92,246,0.14)" : "transparent",
-              boxShadow:   avatarOpen ? "0 0 14px rgba(139,92,246,0.20), inset 0 0 0 1px rgba(139,92,246,0.22)" : "none",
+              background:  avatarOpen ? "rgba(20,184,166,0.14)" : "transparent",
+              boxShadow:   avatarOpen ? "0 0 14px rgba(20,184,166,0.20), inset 0 0 0 1px rgba(20,184,166,0.22)" : "none",
               transition:  "background 150ms, box-shadow 150ms",
             }}
             aria-label="Profil-Menü"
@@ -131,9 +131,9 @@ export default function Sidebar() {
             {session?.user?.image
               ? <Image src={session.user.image} alt="avatar" width={26} height={26}
                   className="w-[26px] h-[26px] rounded-full"
-                  style={{ outline: "1px solid rgba(139,92,246,0.22)" }} />
+                  style={{ outline: "1px solid rgba(20,184,166,0.22)" }} />
               : <div className="w-[26px] h-[26px] rounded-sm flex items-center justify-center text-xs font-bold text-white"
-                  style={{ background: "linear-gradient(135deg, #6d28d9, #4f46e5)", outline: "1px solid rgba(139,92,246,0.3)" }}>
+                  style={{ background: "linear-gradient(135deg, #14b8a6, #8b2020)", outline: "1px solid rgba(20,184,166,0.3)" }}>
                   {session?.user?.name?.[0] ?? "?"}
                 </div>
             }
@@ -144,7 +144,7 @@ export default function Sidebar() {
             bottom:        "calc(100% + 8px)",
             right:         0,
             background:    "rgba(13,13,15,0.97)",
-            border:        "1px solid rgba(139,92,246,0.14)",
+            border:        "1px solid rgba(20,184,166,0.14)",
             backdropFilter:"blur(24px)",
             boxShadow:     "0 8px 32px rgba(0,0,0,0.7)",
             borderRadius:  8,
@@ -156,15 +156,15 @@ export default function Sidebar() {
             pointerEvents: avatarOpen ? "auto" : "none",
             transition:    "transform 180ms cubic-bezier(0.16,1,0.3,1), opacity 140ms ease",
           }}>
-            <div className="px-3 py-2.5" style={{ borderBottom: "1px solid rgba(139,92,246,0.08)" }}>
+            <div className="px-3 py-2.5" style={{ borderBottom: "1px solid rgba(20,184,166,0.08)" }}>
               <p className="text-xs font-semibold text-white">{session?.user?.name ?? "Gast"}</p>
-              <p className="text-[10px] mt-0.5" style={{ color: "rgba(139,92,246,0.7)" }}>
+              <p className="text-[10px] mt-0.5" style={{ color: "rgba(20,184,166,0.7)" }}>
                 {(session?.user as { points?: number })?.points?.toLocaleString("de-DE") ?? 0} Münzen
               </p>
             </div>
             <div className="p-1">
               <Link href="/profile" onClick={() => setAvatarOpen(false)}
-                className="flex items-center gap-2 w-full px-3 py-2 rounded-md text-xs text-gray-400 hover:text-violet-400 hover:bg-violet-500/[0.08] transition-colors">
+                className="flex items-center gap-2 w-full px-3 py-2 rounded-md text-xs text-gray-400 hover:text-teal-400 hover:bg-teal-500/[0.08] transition-colors">
                 <User style={{ width: 13, height: 13 }} /> Mein Profil
               </Link>
               <button onClick={() => signOut()}
@@ -191,10 +191,10 @@ export default function Sidebar() {
         onClick={() => setMobileOpen(v => !v)}
         className="fixed left-4 bottom-24 z-[46] w-12 h-12 rounded-2xl flex items-center justify-center"
         style={{
-          background:    mobileOpen ? "rgba(139,92,246,0.16)" : "rgba(13,13,15,0.94)",
-          border:        `1px solid ${mobileOpen ? "rgba(139,92,246,0.35)" : "rgba(139,92,246,0.15)"}`,
+          background:    mobileOpen ? "rgba(20,184,166,0.16)" : "rgba(13,13,15,0.94)",
+          border:        `1px solid ${mobileOpen ? "rgba(20,184,166,0.35)" : "rgba(20,184,166,0.15)"}`,
           backdropFilter:"blur(20px)",
-          boxShadow:     mobileOpen ? "0 0 24px rgba(139,92,246,0.22), 0 4px 20px rgba(0,0,0,0.5)" : "0 4px 20px rgba(0,0,0,0.5)",
+          boxShadow:     mobileOpen ? "0 0 24px rgba(20,184,166,0.22), 0 4px 20px rgba(0,0,0,0.5)" : "0 4px 20px rgba(0,0,0,0.5)",
           transition:    "all 200ms",
           borderRadius:  10,
         }}
@@ -209,9 +209,9 @@ export default function Sidebar() {
         bottom:        80,
         zIndex:        45,
         background:    "rgba(13,13,15,0.97)",
-        border:        "1px solid rgba(139,92,246,0.14)",
+        border:        "1px solid rgba(20,184,166,0.14)",
         backdropFilter:"blur(24px)",
-        boxShadow:     "0 8px 40px rgba(0,0,0,0.70), 0 0 0 1px rgba(139,92,246,0.07)",
+        boxShadow:     "0 8px 40px rgba(0,0,0,0.70), 0 0 0 1px rgba(20,184,166,0.07)",
         borderRadius:  12,
         minWidth:      200,
         overflow:      "hidden",
@@ -221,18 +221,18 @@ export default function Sidebar() {
         pointerEvents: mobileOpen ? "auto" : "none",
         transition:    "transform 240ms cubic-bezier(0.16,1,0.3,1), opacity 180ms ease",
       }}>
-        <div className="flex items-center gap-3 px-4 py-3" style={{ borderBottom: "1px solid rgba(139,92,246,0.08)" }}>
+        <div className="flex items-center gap-3 px-4 py-3" style={{ borderBottom: "1px solid rgba(20,184,166,0.08)" }}>
           {session?.user?.image
             ? <Image src={session.user.image} alt="avatar" width={32} height={32}
-                className="w-8 h-8 rounded-sm shrink-0" style={{ outline: "1px solid rgba(139,92,246,0.25)" }} />
+                className="w-8 h-8 rounded-sm shrink-0" style={{ outline: "1px solid rgba(20,184,166,0.25)" }} />
             : <div className="w-8 h-8 rounded-sm shrink-0 flex items-center justify-center text-xs font-bold text-white"
-                style={{ background: "linear-gradient(135deg, #6d28d9, #4f46e5)" }}>
+                style={{ background: "linear-gradient(135deg, #14b8a6, #8b2020)" }}>
                 {session?.user?.name?.[0] ?? "?"}
               </div>
           }
           <div className="min-w-0">
             <p className="text-sm font-semibold text-white truncate">{session?.user?.name ?? "Gast"}</p>
-            <p className="text-xs" style={{ color: "rgba(139,92,246,0.7)" }}>
+            <p className="text-xs" style={{ color: "rgba(20,184,166,0.7)" }}>
               {(session?.user as { points?: number })?.points?.toLocaleString("de-DE") ?? 0} Münzen
             </p>
           </div>
@@ -244,11 +244,11 @@ export default function Sidebar() {
             return (
               <Link key={href} href={href}
                 className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all relative"
-                style={active ? { background: "rgba(139,92,246,0.12)", boxShadow: "inset 0 0 0 1px rgba(139,92,246,0.18)" } : undefined}>
+                style={active ? { background: "rgba(20,184,166,0.12)", boxShadow: "inset 0 0 0 1px rgba(20,184,166,0.18)" } : undefined}>
                 {active && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-full"
-                  style={{ background: "#8b5cf6", boxShadow: "0 0 8px rgba(139,92,246,0.9)" }} />}
-                <Icon style={{ width: 17, height: 17, strokeWidth: active ? 2.5 : 2, color: active ? "#a78bfa" : "#4b5563" }} />
-                <span style={{ fontSize: 14, fontWeight: active ? 600 : 500, color: active ? "#a78bfa" : "#9ca3af" }}>{label}</span>
+                  style={{ background: "#14b8a6", boxShadow: "0 0 8px rgba(20,184,166,0.9)" }} />}
+                <Icon style={{ width: 17, height: 17, strokeWidth: active ? 2.5 : 2, color: active ? "#2dd4bf" : "#4b5563" }} />
+                <span style={{ fontSize: 14, fontWeight: active ? 600 : 500, color: active ? "#2dd4bf" : "#9ca3af" }}>{label}</span>
               </Link>
             );
           })}
@@ -262,7 +262,7 @@ export default function Sidebar() {
           )}
         </nav>
 
-        <div className="px-2 pb-2" style={{ borderTop: "1px solid rgba(139,92,246,0.07)" }}>
+        <div className="px-2 pb-2" style={{ borderTop: "1px solid rgba(20,184,166,0.07)" }}>
           <button onClick={() => signOut()}
             className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl transition-colors mt-1.5 text-gray-600 hover:text-red-400">
             <LogOut style={{ width: 17, height: 17 }} />
@@ -278,7 +278,7 @@ export default function Sidebar() {
 
 function Divider() {
   return (
-    <div className="h-6 w-px shrink-0" style={{ background: "rgba(139,92,246,0.12)" }} />
+    <div className="h-6 w-px shrink-0" style={{ background: "rgba(20,184,166,0.12)" }} />
   );
 }
 
@@ -288,17 +288,17 @@ function NavItem({
   label: string; href: string; icon: React.ElementType;
   active: boolean; expanded: boolean; danger?: boolean;
 }) {
-  const violet = "#a78bfa";
+  const teal = "#2dd4bf";
   const red    = "#f87171";
-  const accent = danger ? red : violet;
+  const accent = danger ? red : teal;
 
   const iconColor  = active ? accent : "#6b7280";
   const labelColor = active ? accent : "#9ca3af";
 
-  const activeBg     = danger ? "rgba(153,27,27,0.14)"  : "rgba(139,92,246,0.14)";
+  const activeBg     = danger ? "rgba(153,27,27,0.14)"  : "rgba(20,184,166,0.14)";
   const activeShadow = danger
     ? "0 0 12px rgba(153,27,27,0.18), inset 0 0 0 1px rgba(153,27,27,0.22)"
-    : "0 0 12px rgba(139,92,246,0.15), inset 0 0 0 1px rgba(139,92,246,0.22)";
+    : "0 0 12px rgba(20,184,166,0.15), inset 0 0 0 1px rgba(20,184,166,0.22)";
 
   return (
     <Link

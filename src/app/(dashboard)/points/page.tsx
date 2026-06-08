@@ -13,7 +13,7 @@ const CATEGORY_ICONS: Record<PointCategory, string> = {
 
 const CATEGORY_ACCENT: Record<PointCategory, { icon: string; border: string; glow: string }> = {
   turnier:    { icon: "text-amber-400   bg-amber-500/10   border-amber-500/15",   border: "border-amber-500/10",   glow: "from-amber-500/5"   },
-  aktivitaet: { icon: "text-violet-400  bg-violet-500/10  border-violet-500/15",  border: "border-violet-500/10",  glow: "from-violet-500/5"  },
+  aktivitaet: { icon: "text-teal-400  bg-teal-500/10  border-teal-500/15",  border: "border-teal-500/10",  glow: "from-teal-500/5"  },
   community:  { icon: "text-emerald-400 bg-emerald-500/10 border-emerald-500/15", border: "border-emerald-500/10", glow: "from-emerald-500/5" },
 };
 
