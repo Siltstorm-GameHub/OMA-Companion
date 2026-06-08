@@ -1,17 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
-
-async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user?.id) return null;
-  const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true } });
-  return user?.role === "admin" || user?.role === "moderator" ? user : null;
-}
 
 // PATCH: einzelnes Item updaten
 export async function PATCH(req: NextRequest) {
-  if (!await requireAdmin()) return NextResponse.json({ error: "Keine Berechtigung" }, { status: 403 });
+  await requireRole("admin");
 
   const { id, name, description, price, rarity, active, stock, availableFrom, availableTo } = await req.json();
   if (!id) return NextResponse.json({ error: "ID fehlt" }, { status: 400 });
@@ -35,7 +28,7 @@ export async function PATCH(req: NextRequest) {
 
 // DELETE: Item dauerhaft entfernen
 export async function DELETE(req: NextRequest) {
-  if (!await requireAdmin()) return NextResponse.json({ error: "Keine Berechtigung" }, { status: 403 });
+  await requireRole("admin");
 
   const { id } = await req.json();
   if (!id) return NextResponse.json({ error: "ID fehlt" }, { status: 400 });
