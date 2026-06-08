@@ -128,8 +128,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
       {/* Back to top */}
       <BackToTop />
 
-      {/* ── Mobile Bottom Nav ───────────────────────────────────── */}
-      <BottomNav />
+      {/* ── Mobile Bottom Nav (immer sichtbar auf Handy) ───────── */}
+      <div className="lg:hidden">
+        <BottomNav />
+      </div>
     </div>
   );
 }
