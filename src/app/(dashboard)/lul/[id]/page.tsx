@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Trophy, CalendarDays, History, Radio } from "lucide-react";
+import { ArrowLeft, Trophy, CalendarDays, History, Radio, Gamepad2, Eye, Crown, Gift, Flame, CheckCircle2, ChevronRight } from "lucide-react";
 import { buildLulStandings, LUL_POINTS, type LulStandingRow } from "@/lib/lul";
 
 const MEDAL      = ["🥇", "🥈", "🥉"];
@@ -17,13 +17,13 @@ const STATUS_LABEL: Record<string, { label: string; cls: string; dot: string }> 
 };
 
 const COLS = [
-  { key: "asPlayer",    label: "Spieler",    icon: "🎮", title: "Einsätze als Mitspieler",    cls: "text-blue-400",    bg: "bg-blue-500/10"    },
-  { key: "asSpectator", label: "Zuschauer",  icon: "👁️", title: "Einsätze als Zuschauer",     cls: "text-indigo-400",  bg: "bg-indigo-500/10"  },
-  { key: "wins",        label: "Siege",       icon: "🏆", title: "Game Winner",                cls: "text-amber-400",   bg: "bg-amber-500/10"   },
-  { key: "champs",      label: "Champ",       icon: "👑", title: "Community-Champ",            cls: "text-purple-400",  bg: "bg-purple-500/10"  },
-  { key: "trost",       label: "Trost",       icon: "🎁", title: "Trostpreis",                 cls: "text-rose-400",    bg: "bg-rose-500/10"    },
-  { key: "dominion",    label: "Dominion",    icon: "🔥", title: "Dominion Bonus (3 Siege)",   cls: "text-orange-400",  bg: "bg-orange-500/10"  },
-  { key: "votes",       label: "Votes",       icon: "✅", title: "Umfrage-Teilnahmen",         cls: "text-emerald-400", bg: "bg-emerald-500/10" },
+  { key: "asPlayer",    label: "Spieler",   Icon: Gamepad2,    title: "Einsätze als Mitspieler",   cls: "text-blue-400",    bg: "bg-blue-500/10"    },
+  { key: "asSpectator", label: "Zuschauer", Icon: Eye,         title: "Einsätze als Zuschauer",    cls: "text-indigo-400",  bg: "bg-indigo-500/10"  },
+  { key: "wins",        label: "Siege",     Icon: Trophy,      title: "Game Winner",               cls: "text-amber-400",   bg: "bg-amber-500/10"   },
+  { key: "champs",      label: "Champ",     Icon: Crown,       title: "Community-Champ",           cls: "text-purple-400",  bg: "bg-purple-500/10"  },
+  { key: "trost",       label: "Trost",     Icon: Gift,        title: "Trostpreis",                cls: "text-rose-400",    bg: "bg-rose-500/10"    },
+  { key: "dominion",    label: "Dominion",  Icon: Flame,       title: "Dominion Bonus (3 Siege)",  cls: "text-orange-400",  bg: "bg-orange-500/10"  },
+  { key: "votes",       label: "Votes",     Icon: CheckCircle2,title: "Umfrage-Teilnahmen",        cls: "text-emerald-400", bg: "bg-emerald-500/10" },
 ] as const;
 
 function fmtDate(d: Date | string) {
@@ -181,8 +181,8 @@ export default async function LulSeasonPage({ params }: { params: Promise<{ id: 
                     <th key={col.key} title={col.title}
                       className="text-center px-2 py-3 text-[10px] font-semibold uppercase tracking-widest whitespace-nowrap"
                       style={{ color: "rgba(255,255,255,0.3)" }}>
-                      <span className="mr-1">{col.icon}</span>
-                      <span className="hidden sm:inline">{col.label}</span>
+                      <col.Icon className="w-3.5 h-3.5 inline-block mr-1 align-middle" />
+                      <span className="hidden sm:inline align-middle">{col.label}</span>
                     </th>
                   ))}
                 </tr>
@@ -337,7 +337,7 @@ export default async function LulSeasonPage({ params }: { params: Promise<{ id: 
                 style={{ background: "rgba(15,15,23,0.8)" }}>
 
                 <Link href={`/lul/spieltag/${st.id}`}
-                  className="px-4 py-3 flex items-center gap-3 hover:bg-white/[0.02] transition-colors">
+                  className="px-4 py-3 flex items-center gap-3 hover:bg-white/[0.02] active:bg-white/[0.04] active:scale-[0.99] transition-all duration-150">
                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold shrink-0 ${
                     isFinished ? "bg-amber-900/40 text-amber-300" :
                     hasEntries ? "bg-blue-900/40 text-blue-300" :

@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import {
   Plus, Trophy, ChevronDown, ChevronUp, Trash2, Save,
   Users, Gamepad2, Lock, RefreshCw, Archive, History, UserPlus, X, Search,
+  Eye, Vote, Crown, Gift, Flame, CheckCircle2,
 } from "lucide-react";
 import type { LulAdminSeasons } from "./page";
 
@@ -296,7 +297,11 @@ function LulSpieltagEditor({
             className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
               tab === t ? "bg-gray-700 text-white" : "text-gray-500 hover:text-white"
             }`}>
-            {t === "players" ? "🎮 Mitspieler" : t === "spectators" ? "👁️ Zuschauer" : "🗳️ Umfrage"}
+            {t === "players"
+          ? <><Gamepad2 className="w-3.5 h-3.5 inline-block mr-1" />Mitspieler</>
+          : t === "spectators"
+          ? <><Eye className="w-3.5 h-3.5 inline-block mr-1" />Zuschauer</>
+          : <><Vote className="w-3.5 h-3.5 inline-block mr-1" />Umfrage</>}
           </button>
         ))}
       </div>
@@ -358,7 +363,7 @@ function LulSpieltagEditor({
                     ))}
                     <th className="text-center px-2 py-2">∑</th>
                     <th className="text-center px-2 py-2">Platz</th>
-                    <th className="text-center px-2 py-2">🏆</th>
+                    <th className="text-center px-2 py-2"><Trophy className="w-3.5 h-3.5 inline text-amber-400" /></th>
                   </tr>
                 </thead>
                 <tbody>
