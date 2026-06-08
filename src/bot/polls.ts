@@ -14,7 +14,8 @@ export async function processPendingPolls(client: Client) {
 
   for (const job of jobs) {
     try {
-      const { question, answers } = await buildPoll(job.type, job.refId);
+      const { question: autoQuestion, answers } = await buildPoll(job.type, job.refId);
+      const question = job.question?.trim() || autoQuestion;
 
       if (answers.length < 2) {
         await prisma.pollJob.update({

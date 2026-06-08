@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS "PollJob" (
   "channelId"   TEXT      NOT NULL,
   "scheduledAt" TIMESTAMP(3) NOT NULL,
   "duration"    INTEGER   NOT NULL DEFAULT 168,
+  "question"    TEXT,
   "status"      TEXT      NOT NULL DEFAULT 'pending',
   "messageId"   TEXT,
   "errorMsg"    TEXT,
