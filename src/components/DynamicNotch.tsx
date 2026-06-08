@@ -47,11 +47,11 @@ const ROUTE_TITLES: Record<string, string> = {
 
 /* ── Shared style constants ────────────────────────────────────────── */
 const GLASS: React.CSSProperties = {
-  background:           "rgba(4,10,9,0.93)",
-  border:               "1px solid rgba(20,184,166,0.17)",
+  background:           "rgba(13,13,15,0.94)",
+  border:               "1px solid rgba(139,92,246,0.18)",
   backdropFilter:       "blur(32px)",
   WebkitBackdropFilter: "blur(32px)",
-  boxShadow:            "0 8px 40px rgba(0,0,0,0.60), 0 0 0 1px rgba(20,184,166,0.07)",
+  boxShadow:            "0 8px 40px rgba(0,0,0,0.65), 0 0 0 1px rgba(139,92,246,0.08)",
 };
 
 /* ── NavLink ───────────────────────────────────────────────────────── */
@@ -62,7 +62,7 @@ function NavLink({
   active: boolean; danger?: boolean;
 }) {
   const [hov, setHov] = useState(false);
-  const activeColor   = danger ? "#f87171" : "#2dd4bf";
+  const activeColor   = danger ? "#f87171" : "#a78bfa";
   const inactiveColor = "#6b7280";
   const color = active ? activeColor : hov ? "#d1d5db" : inactiveColor;
 
@@ -77,20 +77,20 @@ function NavLink({
         alignItems: "center",
         gap: 7,
         padding: "7px 12px",
-        borderRadius: 12,
+        borderRadius: 10,
         whiteSpace: "nowrap",
         transition: "background 200ms ease, box-shadow 200ms ease",
         background: active
-          ? (danger ? "rgba(153,27,27,0.15)" : "rgba(20,184,166,0.13)")
+          ? (danger ? "rgba(153,27,27,0.15)" : "rgba(139,92,246,0.14)")
           : hov
-            ? (danger ? "rgba(153,27,27,0.08)" : "rgba(255,255,255,0.05)")
+            ? (danger ? "rgba(153,27,27,0.08)" : "rgba(139,92,246,0.07)")
             : "transparent",
         boxShadow: active
           ? (danger
             ? "inset 0 0 0 1px rgba(153,27,27,0.24)"
-            : "inset 0 0 0 1px rgba(20,184,166,0.22)")
+            : "inset 0 0 0 1px rgba(139,92,246,0.28)")
           : hov
-            ? "inset 0 0 0 1px rgba(255,255,255,0.07)"
+            ? "inset 0 0 0 1px rgba(139,92,246,0.12)"
             : "none",
       }}
     >
@@ -99,7 +99,7 @@ function NavLink({
           width: 17, height: 17,
           strokeWidth: active ? 2.5 : 2,
           color,
-          filter: active ? `drop-shadow(0 0 5px ${color})` : "none",
+          filter: active && !danger ? "drop-shadow(0 0 5px rgba(167,139,250,0.7))" : active && danger ? `drop-shadow(0 0 5px ${color})` : "none",
           transition: "color 200ms ease, filter 200ms ease",
           flexShrink: 0,
         }}
@@ -214,8 +214,8 @@ export default function DynamicNotch() {
         borderRadius: "50%",
         flexShrink: 0,
         outline: avatarOpen
-          ? "2px solid rgba(20,184,166,0.55)"
-          : "1.5px solid rgba(20,184,166,0.26)",
+          ? "2px solid rgba(139,92,246,0.60)"
+          : "1.5px solid rgba(139,92,246,0.28)",
         outlineOffset: 2,
         transition: "outline 150ms",
         overflow: "hidden",
@@ -229,7 +229,7 @@ export default function DynamicNotch() {
         <div style={{
           width: "100%", height: "100%",
           display: "flex", alignItems: "center", justifyContent: "center",
-          background: "linear-gradient(135deg, #0d9488, #115e59)",
+          background: "linear-gradient(135deg, #6d28d9, #4f46e5)",
           fontSize: 14, fontWeight: 700, color: "#fff",
         }}>
           {userName[0]?.toUpperCase() ?? "?"}
@@ -251,14 +251,14 @@ export default function DynamicNotch() {
       animation: "notch-fade-in 180ms ease",
       transformOrigin: "top right",
     }}>
-      <div style={{ padding: "12px 16px 10px", borderBottom: "1px solid rgba(20,184,166,0.09)" }}>
+      <div style={{ padding: "12px 16px 10px", borderBottom: "1px solid rgba(139,92,246,0.10)" }}>
         <p style={{ fontSize: 14, fontWeight: 600, color: "#fff", margin: 0 }}>{userName}</p>
-        <p style={{ fontSize: 12, color: "rgba(20,184,166,0.75)", margin: "3px 0 0" }}>{coins} Münzen</p>
+        <p style={{ fontSize: 12, color: "rgba(167,139,250,0.75)", margin: "3px 0 0" }}>{coins} Münzen</p>
       </div>
       <div style={{ padding: 8 }}>
         <Link href="/profile" onClick={() => setAvatarOpen(false)}
           style={{ display: "flex", alignItems: "center", gap: 9, padding: "9px 11px", borderRadius: 10, fontSize: 13.5, color: "#9ca3af", textDecoration: "none" }}
-          className="hover:text-teal-400 hover:bg-teal-500/8 transition-colors">
+          className="hover:text-violet-400 hover:bg-violet-500/8 transition-colors">
           <User style={{ width: 14, height: 14 }} /> Mein Profil
         </Link>
         <button onClick={() => signOut()}
@@ -296,21 +296,21 @@ export default function DynamicNotch() {
             style={{
               display: "flex", alignItems: "center", justifyContent: "center",
               width: 34, height: 34, borderRadius: 11, flexShrink: 0,
-              background: mobileOpen ? "rgba(20,184,166,0.15)" : "transparent",
-              border: mobileOpen ? "1px solid rgba(20,184,166,0.30)" : "1px solid transparent",
+              background: mobileOpen ? "rgba(139,92,246,0.15)" : "transparent",
+              border: mobileOpen ? "1px solid rgba(139,92,246,0.30)" : "1px solid transparent",
               transition: "all 200ms", cursor: "pointer",
             }}
           >
             {mobileOpen
-              ? <X            style={{ width: 17, height: 17, color: "#2dd4bf" }} />
+              ? <X            style={{ width: 17, height: 17, color: "#a78bfa" }} />
               : <AlignJustify style={{ width: 17, height: 17, color: "#6b7280" }} />
             }
           </button>
 
-          <div style={{ width: 1, height: 22, background: "rgba(20,184,166,0.13)", margin: "0 2px", flexShrink: 0 }} />
+          <div style={{ width: 1, height: 22, background: "rgba(139,92,246,0.14)", margin: "0 2px", flexShrink: 0 }} />
 
           <Link href="/dashboard" style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
-            <div style={{ width: 30, height: 30, borderRadius: 9, overflow: "hidden", boxShadow: "0 0 12px rgba(20,184,166,0.32)", outline: "1px solid rgba(20,184,166,0.24)" }}>
+            <div style={{ width: 30, height: 30, borderRadius: 9, overflow: "hidden", boxShadow: "0 0 12px rgba(139,92,246,0.32)", outline: "1px solid rgba(139,92,246,0.24)" }}>
               <Image src="/OMALogoNew.png" alt="OMA" width={30} height={30} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             </div>
           </Link>
@@ -319,7 +319,7 @@ export default function DynamicNotch() {
             {title}
           </span>
 
-          <div style={{ width: 1, height: 22, background: "rgba(20,184,166,0.13)", margin: "0 2px", flexShrink: 0 }} />
+          <div style={{ width: 1, height: 22, background: "rgba(139,92,246,0.14)", margin: "0 2px", flexShrink: 0 }} />
 
           <div style={{ position: "relative" }}>
             {AvatarButton}
@@ -337,16 +337,16 @@ export default function DynamicNotch() {
               ? "notch-slide-up 320ms cubic-bezier(0.55, 0, 0.45, 1) forwards"
               : "notch-slide-down 480ms cubic-bezier(0.22, 1, 0.36, 1) forwards",
           }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "14px 16px 12px", borderBottom: "1px solid rgba(20,184,166,0.09)" }}>
-              <div style={{ width: 38, height: 38, borderRadius: "50%", overflow: "hidden", flexShrink: 0, outline: "1.5px solid rgba(20,184,166,0.24)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "14px 16px 12px", borderBottom: "1px solid rgba(139,92,246,0.10)" }}>
+              <div style={{ width: 38, height: 38, borderRadius: "50%", overflow: "hidden", flexShrink: 0, outline: "1.5px solid rgba(139,92,246,0.28)" }}>
                 {session?.user?.image
                   ? <Image src={session.user.image} alt="avatar" width={38} height={38} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg, #0d9488, #115e59)", fontSize: 14, fontWeight: 700, color: "#fff" }}>{userName[0]?.toUpperCase() ?? "?"}</div>
+                  : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg, #6d28d9, #4f46e5)", fontSize: 14, fontWeight: 700, color: "#fff" }}>{userName[0]?.toUpperCase() ?? "?"}</div>
                 }
               </div>
               <div>
                 <p style={{ fontSize: 14, fontWeight: 600, color: "#fff", margin: 0 }}>{userName}</p>
-                <p style={{ fontSize: 12, color: "rgba(20,184,166,0.75)", margin: 0 }}>{coins} Münzen</p>
+                <p style={{ fontSize: 12, color: "rgba(167,139,250,0.75)", margin: 0 }}>{coins} Münzen</p>
               </div>
             </div>
 
@@ -357,14 +357,14 @@ export default function DynamicNotch() {
                   <Link key={href} href={href} style={{
                     display: "flex", alignItems: "center", gap: 11,
                     padding: "11px 12px", borderRadius: 12,
-                    background: active ? "rgba(20,184,166,0.12)" : "transparent",
-                    boxShadow: active ? "inset 0 0 0 1px rgba(20,184,166,0.22)" : "none",
+                    background: active ? "rgba(139,92,246,0.12)" : "transparent",
+                    boxShadow: active ? "inset 0 0 0 1px rgba(139,92,246,0.22)" : "none",
                     textDecoration: "none", position: "relative",
                     transition: "background 150ms", marginBottom: 2,
                   }}>
-                    {active && <span style={{ position: "absolute", left: 0, top: "50%", transform: "translateY(-50%)", width: 3, height: 18, borderRadius: 999, background: "#14b8a6", boxShadow: "0 0 8px rgba(20,184,166,0.9)" }} />}
-                    <Icon style={{ width: 17, height: 17, strokeWidth: active ? 2.5 : 2, color: active ? "#2dd4bf" : "#4b5563", flexShrink: 0 }} />
-                    <span style={{ fontSize: 14, fontWeight: active ? 600 : 500, color: active ? "#2dd4bf" : "#9ca3af" }}>{label}</span>
+                    {active && <span style={{ position: "absolute", left: 0, top: "50%", transform: "translateY(-50%)", width: 3, height: 18, borderRadius: 999, background: "#a78bfa", boxShadow: "0 0 8px rgba(139,92,246,0.9)" }} />}
+                    <Icon style={{ width: 17, height: 17, strokeWidth: active ? 2.5 : 2, color: active ? "#a78bfa" : "#4b5563", flexShrink: 0 }} />
+                    <span style={{ fontSize: 14, fontWeight: active ? 600 : 500, color: active ? "#a78bfa" : "#9ca3af" }}>{label}</span>
                   </Link>
                 );
               })}
@@ -381,7 +381,7 @@ export default function DynamicNotch() {
               )}
             </nav>
 
-            <div style={{ padding: "4px 10px 10px", borderTop: "1px solid rgba(20,184,166,0.08)" }}>
+            <div style={{ padding: "4px 10px 10px", borderTop: "1px solid rgba(139,92,246,0.08)" }}>
               <button onClick={() => signOut()} style={{ display: "flex", alignItems: "center", gap: 11, width: "100%", padding: "11px 12px", borderRadius: 12, background: "none", border: "none", cursor: "pointer", transition: "background 150ms" }} className="hover:bg-red-500/8 group/logout">
                 <LogOut style={{ width: 17, height: 17, color: "#4b5563" }} className="group-hover/logout:text-red-400 transition-colors" />
                 <span style={{ fontSize: 14, fontWeight: 500, color: "#6b7280" }} className="group-hover/logout:text-red-400 transition-colors">Abmelden</span>
@@ -412,8 +412,8 @@ export default function DynamicNotch() {
         position: "relative",
         transition: "box-shadow 900ms ease",
         boxShadow: hovered
-          ? "0 16px 56px rgba(0,0,0,0.65), 0 0 0 1px rgba(20,184,166,0.22), 0 0 40px rgba(20,184,166,0.08)"
-          : "0 8px 40px rgba(0,0,0,0.60), 0 0 0 1px rgba(20,184,166,0.07)",
+          ? "0 16px 56px rgba(0,0,0,0.65), 0 0 0 1px rgba(139,92,246,0.22), 0 0 40px rgba(139,92,246,0.08)"
+          : "0 8px 40px rgba(0,0,0,0.60), 0 0 0 1px rgba(139,92,246,0.07)",
       }}>
 
         {/* ── LEFT expansion ────────────────────────────────────────── */}
@@ -447,7 +447,7 @@ export default function DynamicNotch() {
           </div>
           <div style={{
             width: 1, height: 22, flexShrink: 0,
-            background: "rgba(20,184,166,0.13)",
+            background: "rgba(139,92,246,0.13)",
             opacity: hovered ? 1 : 0,
             transition: hovered ? "opacity 500ms ease 300ms" : "opacity 150ms ease 0ms",
             marginRight: 8,
@@ -458,8 +458,8 @@ export default function DynamicNotch() {
         <Link href="/dashboard" style={{ display: "flex", alignItems: "center", flexShrink: 0, marginRight: 10 }}>
           <div style={{
             width: 32, height: 32, borderRadius: 10, overflow: "hidden",
-            boxShadow: "0 0 14px rgba(20,184,166,0.32)",
-            outline: "1px solid rgba(20,184,166,0.24)",
+            boxShadow: "0 0 14px rgba(139,92,246,0.32)",
+            outline: "1px solid rgba(139,92,246,0.24)",
           }}>
             <Image src="/OMALogoNew.png" alt="OMA" width={32} height={32}
               style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -500,7 +500,7 @@ export default function DynamicNotch() {
         </div>
 
         {/* Divider between center and avatar */}
-        <div style={{ width: 1, height: 22, background: "rgba(20,184,166,0.13)", margin: "0 8px", flexShrink: 0 }} />
+        <div style={{ width: 1, height: 22, background: "rgba(139,92,246,0.13)", margin: "0 8px", flexShrink: 0 }} />
 
         {/* ── Avatar + dropdown ─────────────────────────────────────── */}
         <div style={{ position: "relative", flexShrink: 0, marginRight: 6 }}>
@@ -519,7 +519,7 @@ export default function DynamicNotch() {
         }}>
           <div style={{
             width: 1, height: 22, flexShrink: 0,
-            background: "rgba(20,184,166,0.13)",
+            background: "rgba(139,92,246,0.13)",
             opacity: hovered ? 1 : 0,
             transition: hovered ? "opacity 500ms ease 300ms" : "opacity 150ms ease 0ms",
             marginLeft: 8,
