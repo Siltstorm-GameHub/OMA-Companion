@@ -1,8 +1,8 @@
-import { Skeleton } from "@/components/Skeleton";
+﻿import { Skeleton } from "@/components/Skeleton";
 
 export default function LulLoading() {
   return (
-    <div className="p-5 sm:p-6 max-w-5xl mx-auto space-y-6 animate-fade-in">
+    <div className="p-5 sm:p-6 max-w-7xl mx-auto space-y-6 animate-fade-in">
       {/* Hero */}
       <div className="glass rounded-2xl p-6 space-y-4">
         <Skeleton className="h-6 w-48" />

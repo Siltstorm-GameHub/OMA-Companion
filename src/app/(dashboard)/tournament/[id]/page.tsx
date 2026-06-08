@@ -126,7 +126,7 @@ export default async function TournamentDetailPage({
   const totalMatches = t?.matches.length ?? 0;
 
   return (
-    <div className="p-4 sm:p-6 max-w-5xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       <Link href="/events" className="flex items-center gap-2 text-sm text-gray-500 hover:text-white mb-5 transition-colors w-fit group">
         <ArrowLeft className="w-4 h-4" /> Zurück
       </Link>

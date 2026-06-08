@@ -122,7 +122,7 @@ export default async function PublicProfilePage({
   });
 
   return (
-    <div className="p-5 sm:p-6 max-w-5xl mx-auto space-y-5 animate-fade-in">
+    <div className="p-5 sm:p-6 max-w-7xl mx-auto space-y-5 animate-fade-in">
 
       {/* ── Navigation ─────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">

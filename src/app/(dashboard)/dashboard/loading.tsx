@@ -1,4 +1,4 @@
-import { SkeletonHero, SkeletonStatCards, SkeletonList } from "@/components/Skeleton";
+﻿import { SkeletonHero, SkeletonStatCards, SkeletonList } from "@/components/Skeleton";
 import { Skeleton } from "@/components/Skeleton";
 
 export default function DashboardLoading() {
@@ -9,7 +9,7 @@ export default function DashboardLoading() {
         <SkeletonHero />
       </div>
 
-      <div className="px-4 sm:px-6 py-5 max-w-5xl mx-auto space-y-6">
+      <div className="px-4 sm:px-6 py-5 max-w-7xl mx-auto space-y-6">
         {/* Stats */}
         <SkeletonStatCards count={4} />
 

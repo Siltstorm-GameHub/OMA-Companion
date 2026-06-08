@@ -1,8 +1,8 @@
-import { Skeleton, SkeletonLeaderboardRow } from "@/components/Skeleton";
+﻿import { Skeleton, SkeletonLeaderboardRow } from "@/components/Skeleton";
 
 export default function LeaderboardLoading() {
   return (
-    <div className="p-5 sm:p-6 max-w-4xl mx-auto space-y-6 animate-fade-in">
+    <div className="p-5 sm:p-6 max-w-6xl mx-auto space-y-6 animate-fade-in">
       {/* Header */}
       <div className="space-y-2">
         <div className="flex items-center gap-2.5">

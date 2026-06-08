@@ -1,8 +1,8 @@
-import { Skeleton } from "@/components/Skeleton";
+﻿import { Skeleton } from "@/components/Skeleton";
 
 export default function ShopLoading() {
   return (
-    <div className="p-5 sm:p-6 max-w-5xl mx-auto space-y-8 animate-fade-in">
+    <div className="p-5 sm:p-6 max-w-7xl mx-auto space-y-8 animate-fade-in">
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div className="space-y-2">
           <div className="flex items-center gap-2.5">

@@ -1,4 +1,4 @@
-import { POINT_RULES, CATEGORY_LABELS, DAILY_CAPS, type PointCategory } from "@/lib/points";
+﻿import { POINT_RULES, CATEGORY_LABELS, DAILY_CAPS, type PointCategory } from "@/lib/points";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { Star, TrendingUp, TrendingDown } from "lucide-react";
@@ -53,7 +53,7 @@ export default async function PointsPage() {
   const myPoints    = me?.points ?? 0;
 
   return (
-    <div className="p-5 sm:p-6 max-w-4xl mx-auto space-y-6 animate-fade-in">
+    <div className="p-5 sm:p-6 max-w-6xl mx-auto space-y-6 animate-fade-in">
 
       {/* ── Header ──────────────────────────────────────────────────── */}
       <div>
