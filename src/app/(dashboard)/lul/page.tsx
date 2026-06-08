@@ -126,75 +126,11 @@ export default async function LulOverviewPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
+      {activeSeason && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
-        {/* ── Tabelle ─────────────────────────────────────────────── */}
-        {activeSeason && standings.length > 0 && (
-          <div className="lg:col-span-3">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-                <Trophy className="w-3.5 h-3.5 text-amber-400" />
-                {activeSeason.name ?? `Saison ${activeSeason.number}`} – Tabelle
-              </h2>
-              <Link href={`/lul/${activeSeason.id}`}
-                className="text-xs text-gray-500 hover:text-white flex items-center gap-1 transition-colors">
-                Details <ChevronRight className="w-3 h-3" />
-              </Link>
-            </div>
-            <div className="glass rounded-2xl overflow-hidden">
-              <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[300px]">
-                <thead>
-                  <tr className="border-b border-white/[0.05] text-[10px] text-gray-500 uppercase tracking-wider">
-                    <th className="text-left px-3 py-3 font-medium">#</th>
-                    <th className="text-left px-3 py-3 font-medium">Spieler</th>
-                    <th className="text-center px-2 py-3 font-medium">Sp</th>
-                    <th className="text-center px-2 py-3 font-medium">🏆</th>
-                    <th className="text-center px-2 py-3 font-medium">👑</th>
-                    <th className="text-right px-3 py-3 font-medium">Pkt</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/[0.04]">
-                  {standings.map((s, i) => {
-                    const isMe = s.userId === userId;
-                    return (
-                      <tr key={s.userId} className={`transition-colors ${isMe ? "bg-amber-500/[0.06]" : "hover:bg-white/[0.02]"}`}>
-                        <td className="px-4 py-3 text-center">
-                          {i < 3
-                            ? <span className="text-base">{MEDAL[i]}</span>
-                            : <span className="text-sm text-gray-600">{i + 1}</span>}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            {s.image ? (
-                              <img src={s.image} alt="" className="w-6 h-6 rounded-full ring-1 ring-white/[0.08] shrink-0" />
-                            ) : (
-                              <div className="w-6 h-6 rounded-full bg-amber-900/30 flex items-center justify-center text-[10px] font-bold text-amber-400 shrink-0">
-                                {s.name[0]?.toUpperCase()}
-                              </div>
-                            )}
-                            <span className={`font-medium truncate max-w-[120px] ${isMe ? "text-amber-300" : "text-white"}`}>
-                              {s.name}{isMe && <span className="text-gray-500 font-normal text-xs ml-1">du</span>}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-2 py-3 text-center text-gray-500 tabular-nums text-xs">{s.asPlayer + s.asSpectator}</td>
-                        <td className="px-2 py-3 text-center text-amber-400 font-semibold tabular-nums text-xs">{s.wins}</td>
-                        <td className="px-2 py-3 text-center text-purple-400 font-semibold tabular-nums text-xs">{s.champs}</td>
-                        <td className="px-4 py-3 text-right font-bold text-white tabular-nums">{s.totalPts}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── Spieltage ───────────────────────────────────────────── */}
-        {activeSeason && (
-          <div className="lg:col-span-2">
+          {/* ── Spieltage ─────────────────────────────────────────── */}
+          <div>
             <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
               <CalendarDays className="w-3.5 h-3.5" /> Spieltage
             </h2>
@@ -214,13 +150,12 @@ export default async function LulOverviewPage() {
                     className={`card-hover flex items-center gap-3 glass rounded-xl pl-3 pr-4 py-3 relative overflow-hidden ${
                       isNext ? "ring-1 ring-amber-500/20" : ""
                     }`}>
-                    {/* Status stripe left */}
                     <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${stripeColor} rounded-l-xl`} />
-                    {isNext && <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5 to-transparent pointer-events-none" />}
+                    {isNext  && <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5   to-transparent pointer-events-none" />}
                     {isActive && <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-transparent pointer-events-none" />}
                     <div className={`relative w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ml-1 ${
                       st.status === "finished" ? "bg-white/[0.05] text-gray-500" :
-                      isNext ? "bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/20" :
+                      isNext   ? "bg-amber-500/15   text-amber-300   ring-1 ring-amber-500/20"   :
                       isActive ? "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/20" :
                       "bg-white/[0.04] text-gray-600"
                     }`}>
@@ -250,8 +185,73 @@ export default async function LulOverviewPage() {
               })}
             </div>
           </div>
-        )}
-      </div>
+
+          {/* ── Kompakte Tabelle ──────────────────────────────────── */}
+          <div className="flex flex-col gap-3">
+            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+              <Trophy className="w-3.5 h-3.5 text-amber-400" /> Aktueller Stand
+            </h2>
+
+            {standings.length > 0 ? (
+              <div className="glass rounded-2xl overflow-hidden flex-1">
+                <div className="divide-y divide-white/[0.04]">
+                  {standings.map((s, i) => {
+                    const isMe = s.userId === userId;
+                    return (
+                      <div key={s.userId}
+                        className={`flex items-center gap-3 px-4 py-2.5 ${isMe ? "bg-amber-500/[0.06]" : "hover:bg-white/[0.02]"} transition-colors`}>
+                        {/* Rang */}
+                        <span className="w-6 text-center shrink-0">
+                          {i < 3
+                            ? <span className="text-sm">{MEDAL[i]}</span>
+                            : <span className="text-xs text-gray-600 tabular-nums">{i + 1}</span>}
+                        </span>
+                        {/* Avatar */}
+                        {s.image ? (
+                          <img src={s.image} alt="" className="w-7 h-7 rounded-full ring-1 ring-white/[0.08] shrink-0 object-cover" />
+                        ) : (
+                          <div className="w-7 h-7 rounded-full bg-amber-900/30 flex items-center justify-center text-[10px] font-bold text-amber-400 shrink-0">
+                            {s.name[0]?.toUpperCase()}
+                          </div>
+                        )}
+                        {/* Name */}
+                        <span className={`flex-1 min-w-0 text-sm font-medium truncate ${isMe ? "text-amber-300" : "text-white"}`}>
+                          {s.name}
+                          {isMe && <span className="text-gray-500 font-normal text-xs ml-1.5">du</span>}
+                        </span>
+                        {/* Punkte */}
+                        <span className="text-sm font-bold text-amber-400 tabular-nums shrink-0">
+                          {s.totalPts}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className="glass rounded-2xl px-4 py-8 text-center text-sm text-gray-600">
+                Noch keine Ergebnisse
+              </div>
+            )}
+
+            {/* Zur Saison-Übersicht */}
+            <Link href={`/lul/${activeSeason.id}`}
+              className="card-hover flex items-center gap-3 glass rounded-xl px-4 py-3 group">
+              <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+                <Trophy className="w-4 h-4 text-amber-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-white group-hover:text-amber-200 transition-colors truncate">
+                  {activeSeason.name ?? `Saison ${activeSeason.number}`}
+                </p>
+                <p className="text-[10px] text-gray-500 mt-0.5">Vollständige Saison-Übersicht</p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-amber-400 transition-colors shrink-0" />
+            </Link>
+          </div>
+
+        </div>
+      )}
 
       {/* ── Alle Saisons ───────────────────────────────────────────── */}
       {seasons.length > 1 && (
