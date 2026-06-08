@@ -4,6 +4,7 @@ import { ShoppingBag, Coins } from "lucide-react";
 import { CountUp } from "@/components/CountUp";
 import CollectiblesShop from "./CollectiblesShop";
 import DailySpin from "./DailySpin";
+import { effectivePrice } from "@/lib/collectibles";
 
 export default async function ShopPage() {
   const session = await auth();
@@ -44,11 +45,19 @@ export default async function ShopPage() {
   ]);
 
   const RARITY_ORDER: Record<string, number> = { common: 0, rare: 1, epic: 2, legendary: 3 };
+  const now = new Date();
   const sortedCollections = collections.map(col => ({
     ...col,
-    items: [...col.items].sort(
-      (a, b) => (RARITY_ORDER[a.rarity] ?? 0) - (RARITY_ORDER[b.rarity] ?? 0)
-    ),
+    items: col.items
+      .filter(i => i.active)
+      .map(i => ({
+        ...i,
+        // effektiven Preis vorberechnen (Rabatt läuft ggf. ab)
+        displayPrice:   effectivePrice(i),
+        originalPrice:  i.price,
+        onSale: i.salePrice != null && (i.saleUntil == null || now <= new Date(i.saleUntil)),
+      }))
+      .sort((a, b) => (RARITY_ORDER[a.rarity] ?? 0) - (RARITY_ORDER[b.rarity] ?? 0)),
   }));
 
   const myPoints  = user?.points ?? 0;
