@@ -7,14 +7,12 @@ import { RelativeTime } from "@/components/RelativeTime";
 
 const CATEGORY_ICONS: Record<PointCategory, string> = {
   turnier:    "🏆",
-  event:      "📅",
   aktivitaet: "🎙️",
   community:  "👥",
 };
 
 const CATEGORY_ACCENT: Record<PointCategory, { icon: string; border: string; glow: string }> = {
   turnier:    { icon: "text-amber-400   bg-amber-500/10   border-amber-500/15",   border: "border-amber-500/10",   glow: "from-amber-500/5"   },
-  event:      { icon: "text-blue-400    bg-blue-500/10    border-blue-500/15",    border: "border-blue-500/10",    glow: "from-blue-500/5"    },
   aktivitaet: { icon: "text-violet-400  bg-violet-500/10  border-violet-500/15",  border: "border-violet-500/10",  glow: "from-violet-500/5"  },
   community:  { icon: "text-emerald-400 bg-emerald-500/10 border-emerald-500/15", border: "border-emerald-500/10", glow: "from-emerald-500/5" },
 };

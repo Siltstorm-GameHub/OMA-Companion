@@ -118,7 +118,7 @@ export default function UserPointsHistoryModal({ userId, userName, userImage }: 
           )}
           <div className="min-w-0 flex-1">
             <p className="font-semibold text-white truncate">{displayName}</p>
-            <p className="text-xs text-gray-500">Punkte-Verlauf</p>
+            <p className="text-xs text-gray-500">Münzen-Verlauf</p>
           </div>
           <button onClick={() => setOpen(false)} className="p-2 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors">
             <X className="w-4 h-4" />
@@ -127,11 +127,12 @@ export default function UserPointsHistoryModal({ userId, userName, userImage }: 
 
         {/* Stats bar */}
         {user && (
-          <div className="grid grid-cols-3 gap-px bg-white/[0.04] border-b border-white/[0.06] shrink-0">
+          <div className="grid grid-cols-4 gap-px bg-white/[0.04] border-b border-white/[0.06] shrink-0">
             {[
-              { label: "Gesamt",   value: user.points.toLocaleString("de-DE"),    color: "text-amber-400" },
-              { label: "Verdient", value: `+${totalPos.toLocaleString("de-DE")}`, color: "text-emerald-400" },
-              { label: "Ausgaben", value: totalNeg.toLocaleString("de-DE"),       color: "text-red-400" },
+              { label: "Münzen",      value: user.points.toLocaleString("de-DE"),      color: "text-amber-400" },
+              { label: "Rang-Punkte", value: user.rankPoints.toLocaleString("de-DE"),  color: "text-rose-400" },
+              { label: "Verdient",    value: `+${totalPos.toLocaleString("de-DE")}`,   color: "text-emerald-400" },
+              { label: "Abzüge",      value: totalNeg.toLocaleString("de-DE"),         color: "text-red-400" },
             ].map(s => (
               <div key={s.label} className="bg-gray-950 px-4 py-3 text-center">
                 <p className={`text-lg font-black tabular-nums ${s.color}`}>{s.value}</p>
