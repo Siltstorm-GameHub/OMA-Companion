@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "eslint",
     "bot:dev": "npx tsx src/bot/run.ts",
-    "bot:start": "npx tsx src/bot/run.ts"
+    "bot:start": "npx tsx src/bot/run.ts",
+    "bot:prod": "NODE_ENV=production npx tsx src/bot/run.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",

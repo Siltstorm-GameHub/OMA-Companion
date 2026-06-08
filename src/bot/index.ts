@@ -278,15 +278,77 @@ async function checkEventReminders() {
   }
 }
 
-client.login(process.env.DISCORD_BOT_TOKEN);
+// ── Fehler-Handling: verhindert Crash bei unbehandelten Promises ────────────
+process.on("unhandledRejection", (err) => {
+  console.error("⚠ Unhandled rejection:", err);
+});
+process.on("uncaughtException", (err) => {
+  console.error("💥 Uncaught exception:", err);
+  // Kurz warten, dann sauber neu starten
+  setTimeout(() => process.exit(1), 500);
+});
+
+// ── Discord Disconnect → automatisch reconnecten ─────────────────────────────
+client.on(Events.ShardDisconnect, (event, shardId) => {
+  console.warn(`🔌 Shard ${shardId} getrennt (code ${event.code}). Reconnect läuft…`);
+});
+client.on(Events.ShardReconnecting, (shardId) => {
+  console.log(`🔄 Shard ${shardId} verbindet sich erneut…`);
+});
+client.on(Events.ShardResume, (shardId, replayed) => {
+  console.log(`✅ Shard ${shardId} wieder online (${replayed} Events nachgeholt)`);
+});
+client.on(Events.Error, (err) => {
+  console.error("❌ Discord Client Fehler:", err);
+});
+
+// ── Login mit automatischem Retry ────────────────────────────────────────────
+async function loginWithRetry(delay = 5000, attempt = 1) {
+  try {
+    await client.login(process.env.DISCORD_BOT_TOKEN);
+  } catch (err) {
+    const wait = Math.min(delay * attempt, 60_000); // max 60s
+    console.error(`❌ Login fehlgeschlagen (Versuch ${attempt}), retry in ${wait / 1000}s…`, err);
+    setTimeout(() => loginWithRetry(delay, attempt + 1), wait);
+  }
+}
+
+loginWithRetry();
 export default client;
 
-// Einfacher Mini-Webserver, damit Render nicht nach offenen Ports meckert
+// ── Health-Check Webserver ────────────────────────────────────────────────────
+// Dient als HTTP-Endpunkt für Railway / UptimeRobot / eigene Pings
 import http from "http";
 const PORT = process.env.PORT || 3000;
-http.createServer((req, res) => {
-  res.writeHead(200, { "Content-Type": "text/plain" });
-  res.end("Bot is running smoothly!");
-}).listen(PORT, () => {
-  console.log(`🌍 Mini-Webserver läuft auf Port ${PORT} für Render Port-Binding`);
+
+const server = http.createServer((req, res) => {
+  const status = client.isReady() ? 200 : 503;
+  res.writeHead(status, { "Content-Type": "application/json" });
+  res.end(JSON.stringify({
+    status:  client.isReady() ? "online" : "connecting",
+    uptime:  Math.floor(process.uptime()),
+    ping:    client.ws.ping,
+    guilds:  client.guilds.cache.size,
+    ts:      new Date().toISOString(),
+  }));
 });
+
+server.listen(PORT, () => {
+  console.log(`🌍 Health-Check Server läuft auf Port ${PORT}`);
+});
+
+// ── Self-Ping: alle 4 Minuten den eigenen Health-Endpoint pingen ──────────────
+// Verhindert Sleep auf Plattformen die den Container bei Inaktivität einschläfern.
+// Zusätzlicher Schutz neben externem UptimeRobot.
+const SELF_URL = process.env.SELF_HEALTH_URL; // z.B. https://oma-bot.railway.app/
+if (SELF_URL) {
+  setInterval(async () => {
+    try {
+      const res = await fetch(SELF_URL);
+      console.log(`💓 Self-ping: ${res.status}`);
+    } catch (err) {
+      console.warn("⚠ Self-ping fehlgeschlagen:", err);
+    }
+  }, 4 * 60 * 1000); // alle 4 Minuten
+  console.log(`💓 Self-ping aktiviert → ${SELF_URL}`);
+}
