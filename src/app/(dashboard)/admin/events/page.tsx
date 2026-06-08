@@ -9,8 +9,9 @@ export default async function AdminEventsPage() {
     prisma.event.findMany({
       orderBy: [{ status: "asc" }, { startAt: "asc" }],
       include: {
-        _count: { select: { registrations: true } },
+        _count:        { select: { registrations: true } },
         registrations: { select: { userId: true } },
+        series:        { select: { id: true, name: true } },
         tournament: {
           include: {
             participants: {

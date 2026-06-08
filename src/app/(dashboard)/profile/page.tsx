@@ -141,102 +141,118 @@ export default async function ProfilePage() {
   }, {});
 
   return (
-    <div className="p-5 sm:p-6 max-w-5xl mx-auto space-y-5 animate-fade-in">
+    <div className="animate-fade-in">
 
-      {/* ── Hero ────────────────────────────────────────────────────────── */}
-      <div className="card-cut surface relative overflow-hidden p-6"
-        style={{ boxShadow: "0 0 0 1px rgba(139,92,246,0.12), 0 8px 32px rgba(0,0,0,0.5)" }}>
-        {/* Violet accent top-line */}
-        <div className="absolute top-0 inset-x-0 h-px"
-          style={{ background: "linear-gradient(90deg, transparent, rgba(139,92,246,0.35), transparent)" }} />
-        {/* Left accent bar */}
-        <div className="absolute left-0 top-0 bottom-0 w-[3px]"
-          style={{ background: "linear-gradient(180deg, #8b5cf6, transparent)" }} />
+      {/* ════════════════════════════════════════════════════════════════ */}
+      {/* FACEIT-style Profile Header                                     */}
+      {/* ════════════════════════════════════════════════════════════════ */}
 
-        <div className="relative flex items-start gap-5 flex-wrap">
-          {/* Avatar */}
-          <div className="relative shrink-0">
-            {user.image
-              ? <Image src={user.image} alt="avatar" width={88} height={88}
-                  className="card-cut w-[88px] h-[88px] object-cover"
-                  style={{ boxShadow: "0 0 0 1px rgba(139,92,246,0.35), 0 0 32px rgba(139,92,246,0.15)" }} />
-              : <div className="card-cut w-[88px] h-[88px] flex items-center justify-center text-2xl font-black text-white"
-                  style={{ background: "linear-gradient(135deg, #6d28d9, #4f46e5)", boxShadow: "0 0 0 1px rgba(139,92,246,0.35)" }}>
-                  {displayName[0].toUpperCase()}
-                </div>}
-            <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-sm bg-emerald-400 border-2"
-              style={{ borderColor: "var(--bg-surface)", boxShadow: "0 0 8px rgba(52,211,153,0.8)" }} />
+      {/* ── Banner ──────────────────────────────────────────────────────── */}
+      <div className="relative overflow-hidden" style={{ height: "156px" }}>
+        {/* Dark violet gradient base */}
+        <div className="absolute inset-0"
+          style={{ background: "linear-gradient(135deg, #1a0a2e 0%, #130826 35%, #0d0d0f 85%)" }} />
+        {/* Radial glow accents */}
+        <div className="absolute inset-0"
+          style={{ backgroundImage: "radial-gradient(ellipse at 18% 70%, rgba(139,92,246,0.28) 0%, transparent 52%), radial-gradient(ellipse at 70% 30%, rgba(79,46,220,0.16) 0%, transparent 50%)" }} />
+        {/* Subtle grid */}
+        <div className="absolute inset-0 opacity-[0.035]"
+          style={{ backgroundImage: "linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
+        {/* Bottom fade to bg */}
+        <div className="absolute bottom-0 inset-x-0 h-28"
+          style={{ background: "linear-gradient(to bottom, transparent, var(--bg-base))" }} />
+      </div>
+
+      {/* ── Profile row — overlaps banner bottom ────────────────────────── */}
+      <div className="relative -mt-[4.5rem] px-5 sm:px-6 max-w-5xl mx-auto flex items-end gap-4">
+        {/* Avatar */}
+        <div className="relative z-10 shrink-0">
+          {user.image
+            ? <Image src={user.image} alt="avatar" width={96} height={96}
+                className="w-24 h-24 object-cover"
+                style={{ borderRadius: "4px", border: "3px solid rgba(139,92,246,0.55)", boxShadow: "0 0 0 1px rgba(139,92,246,0.18), 0 8px 32px rgba(0,0,0,0.85)" }} />
+            : <div className="w-24 h-24 flex items-center justify-center text-3xl font-black text-white"
+                style={{ borderRadius: "4px", background: "linear-gradient(135deg, #6d28d9, #4f46e5)", border: "3px solid rgba(139,92,246,0.55)", boxShadow: "0 8px 32px rgba(0,0,0,0.85)" }}>
+                {displayName[0].toUpperCase()}
+              </div>}
+          <span className="absolute bottom-0 right-0 w-4 h-4 bg-emerald-400 border-2"
+            style={{ borderRadius: "3px", borderColor: "var(--bg-base)", boxShadow: "0 0 8px rgba(52,211,153,0.8)" }} />
+        </div>
+
+        {/* Name + Rank */}
+        <div className="relative z-10 flex-1 min-w-0 pb-2">
+          <div className="flex items-center gap-2.5 flex-wrap mb-1">
+            <h1 className="font-display text-2xl sm:text-3xl font-black text-white tracking-tight leading-none">
+              {displayName}
+            </h1>
+            <span className={`flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-sm font-semibold border ${currentRank.color} ${currentRank.bg} ${currentRank.border}`}>
+              {currentRank.emoji} {currentRank.label}
+            </span>
           </div>
+          <p className="text-[11px] text-gray-500">Mitglied seit {memberSince}</p>
+        </div>
 
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] text-violet-400/60 uppercase tracking-[0.18em] font-semibold mb-1">Profil</p>
-            <div className="flex items-center gap-2.5 flex-wrap mb-1">
-              <h1 className="font-display text-2xl font-black text-white tracking-tight">{displayName}</h1>
-              <span className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-sm font-semibold border ${currentRank.color} ${currentRank.bg} ${currentRank.border}`}>
-                <span>{currentRank.emoji}</span>{currentRank.label}
-              </span>
-            </div>
-            <p className="text-[11px] text-gray-600 mb-3">Mitglied seit {memberSince} · {earnedBadges.length} Abzeichen · Platz #{leaderboardRank}</p>
-
-            {/* Münzen */}
-            <div className="flex items-center gap-1.5 mb-4">
-              <Coins className="w-3.5 h-3.5 text-amber-400" />
-              <span className="text-sm font-bold text-amber-400 tabular-nums">{totalPoints.toLocaleString("de-DE")} Münzen</span>
-              <PointsInfoModal />
-            </div>
-
-            {/* Rang-Fortschritt */}
-            {nextRank && (
-              <div className="max-w-xs">
-                <div className="flex justify-between text-[10px] text-gray-600 mb-1.5">
-                  <span>{currentRank.emoji} {currentRank.label}</span>
-                  <span className="tabular-nums">{(nextRank.min - rankPoints).toLocaleString("de-DE")} Pts bis {nextRank.label}</span>
-                </div>
-                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
-                  <div className="h-full rounded-full transition-all duration-1000"
-                    style={{
-                      width: `${rankPct}%`,
-                      background: "linear-gradient(90deg, #8b5cf6, #a78bfa)",
-                      boxShadow: "0 0 8px rgba(139,92,246,0.6)",
-                    }} />
-                </div>
-                <p className="text-[10px] text-gray-700 mt-1 tabular-nums">{rankPct}% bis {nextRank.emoji} {nextRank.label}</p>
-              </div>
-            )}
-            {!nextRank && (
-              <div className="flex items-center gap-1.5 text-xs text-amber-400 font-semibold">
-                <Crown className="w-3.5 h-3.5" /> Maximalen Rang erreicht
-              </div>
-            )}
-
-            {/* Bio & Geburtstag */}
-            <div className="mt-4 pt-4" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-              <ProfileEditor
-                birthday={user.birthday
-                  ? `${String(user.birthday.getDate()).padStart(2, "0")}-${String(user.birthday.getMonth() + 1).padStart(2, "0")}`
-                  : null}
-                bio={user.bio ?? null}
-              />
-            </div>
-          </div>
+        {/* Münzen — right side */}
+        <div className="relative z-10 hidden sm:flex items-center gap-2 pb-2 shrink-0">
+          <Coins className="w-4 h-4 text-amber-400" />
+          <span className="text-sm font-bold text-amber-400 tabular-nums">{totalPoints.toLocaleString("de-DE")}</span>
+          <PointsInfoModal />
         </div>
       </div>
 
-      {/* ── Stats ───────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { icon: <Coins className="w-4 h-4" />,        label: "Münzen",        value: totalPoints.toLocaleString("de-DE"), iconCls: "text-amber-400   bg-amber-500/10   border-amber-500/15",   accent: "from-amber-500/8"   },
-          { icon: <Trophy className="w-4 h-4" />,        label: "Rang-Position", value: `#${leaderboardRank}`,               iconCls: "text-rose-400    bg-rose-500/10    border-rose-500/15",    accent: "from-rose-500/8"    },
-          { icon: <CalendarDays className="w-4 h-4" />,  label: "Events",        value: String(eventRegs.length),            iconCls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/15", accent: "from-emerald-500/8" },
-          { icon: <Swords className="w-4 h-4" />,        label: "Turnier-Siege", value: String(tournamentWins),              iconCls: "text-indigo-400  bg-indigo-500/10  border-indigo-500/15",  accent: "from-indigo-500/8"  },
-        ].map((s, i) => (
-          <div key={s.label} className={`card-cut-sm surface card-hover relative overflow-hidden p-4 animate-slide-up stagger-${i + 1}`}>
-            <div className={`w-8 h-8 rounded-sm flex items-center justify-center mb-3 border ${s.iconCls}`}>{s.icon}</div>
-            <p className="font-display text-2xl font-black text-white tabular-nums">{s.value}</p>
-            <p className="text-[11px] text-gray-600 mt-1">{s.label}</p>
-          </div>
-        ))}
+      {/* ── Stats strip (FACEIT-style horizontal bar) ───────────────────── */}
+      <div className="mt-4 px-5 sm:px-6 max-w-5xl mx-auto">
+        <div className="grid grid-cols-4"
+          style={{ borderTop: "1px solid rgba(255,255,255,0.07)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+          {[
+            { value: String(eventRegs.length),   label: "Events"   },
+            { value: String(tournamentWins),      label: "Siege"    },
+            { value: String(earnedBadges.length), label: "Abzeichen"},
+            { value: `#${leaderboardRank}`,       label: "Rang"     },
+          ].map((s, i) => (
+            <div key={s.label} className="text-center py-4 px-2"
+              style={{ borderRight: i < 3 ? "1px solid rgba(255,255,255,0.07)" : "none" }}>
+              <p className="font-display text-xl sm:text-2xl font-black text-white tabular-nums leading-none">{s.value}</p>
+              <p className="text-[10px] text-gray-600 mt-1.5 uppercase tracking-widest">{s.label}</p>
+            </div>
+          ))}
+        </div>
       </div>
+
+      {/* ── Rang-Fortschrittsbalken ──────────────────────────────────────── */}
+      <div className="px-5 sm:px-6 max-w-5xl mx-auto py-3">
+        {nextRank ? (
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] text-gray-600 whitespace-nowrap shrink-0">{currentRank.emoji} {currentRank.label}</span>
+            <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
+              <div className="h-full rounded-full transition-all duration-1000"
+                style={{ width: `${rankPct}%`, background: "linear-gradient(90deg, #8b5cf6, #a78bfa)", boxShadow: "0 0 8px rgba(139,92,246,0.6)" }} />
+            </div>
+            <span className="text-[10px] text-gray-600 whitespace-nowrap shrink-0">{nextRank.emoji} {nextRank.label}</span>
+            <span className="text-[10px] text-violet-400 tabular-nums whitespace-nowrap shrink-0">{rankPct}%</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5 text-xs text-amber-400 font-semibold">
+            <Crown className="w-3.5 h-3.5" /> Maximalen Rang erreicht
+          </div>
+        )}
+      </div>
+
+      {/* ── Bio & Profil-Editor ──────────────────────────────────────────── */}
+      <div className="px-5 sm:px-6 max-w-5xl mx-auto pb-5"
+        style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+        <ProfileEditor
+          birthday={user.birthday
+            ? `${String(user.birthday.getDate()).padStart(2, "0")}-${String(user.birthday.getMonth() + 1).padStart(2, "0")}`
+            : null}
+          bio={user.bio ?? null}
+        />
+      </div>
+
+      {/* ════════════════════════════════════════════════════════════════ */}
+      {/* Content                                                         */}
+      {/* ════════════════════════════════════════════════════════════════ */}
+      <div className="px-5 sm:px-6 max-w-5xl mx-auto pt-5 space-y-5">
 
       {/* ── Collectibles Showcase ────────────────────────────────────────── */}
       <CollectiblesShowcase
@@ -431,6 +447,8 @@ export default async function ProfilePage() {
 
         </div>
       </div>
+
+      </div>{/* /content px wrapper */}
     </div>
   );
 }
