@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { createDiscordScheduledEvent } from "@/lib/discord-events";
+import { createDiscordScheduledEvent, announceNewEvent } from "@/lib/discord-events";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -54,6 +54,15 @@ export async function POST(req: NextRequest) {
     });
     event.discordEventId = discordEventId;
   }
+
+  // Discord-Ankündigung im Events-Channel (fire-and-forget)
+  announceNewEvent({
+    title:      event.title,
+    game:       event.game,
+    startAt:    event.startAt,
+    maxPlayers: event.maxPlayers,
+    pointReward: event.pointReward,
+  });
 
   return NextResponse.json(event, { status: 201 });
 }

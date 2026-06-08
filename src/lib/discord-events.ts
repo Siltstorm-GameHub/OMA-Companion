@@ -1,5 +1,45 @@
 // Hilfsfunktionen für Discord Scheduled Events
 
+/** Sendet eine Event-Ankündigung in den konfigurierten Events-Channel via REST API.
+ *  Funktioniert direkt aus der WebApp heraus (kein discord.js-Client nötig). */
+export async function announceNewEvent(event: {
+  title: string;
+  game: string | null;
+  startAt: Date;
+  maxPlayers: number | null;
+  pointReward: number;
+}): Promise<void> {
+  const channelId = process.env.DISCORD_EVENTS_CHANNEL_ID;
+  const botToken  = process.env.DISCORD_BOT_TOKEN;
+  if (!channelId || !botToken) return;
+
+  const startFormatted = event.startAt.toLocaleString("de-DE", {
+    weekday: "long", day: "2-digit", month: "long",
+    hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin",
+  });
+
+  const embed = {
+    color:       0x4ade80,
+    title:       `📅 Neues Event: ${event.title}`,
+    description: "Ein neues Community-Event wurde angekündigt! Meldet euch jetzt an.",
+    fields: [
+      { name: "🎮 Spiel",        value: event.game ?? "–",                                          inline: true },
+      { name: "📆 Start",        value: startFormatted,                                             inline: true },
+      { name: "👥 Max. Spieler", value: event.maxPlayers ? String(event.maxPlayers) : "Unbegrenzt", inline: true },
+      { name: "⭐ Punkte",       value: `+${event.pointReward} Pts bei Teilnahme`,                  inline: true },
+    ],
+    footer:    { text: "OMA Companion · Events" },
+    timestamp: new Date().toISOString(),
+  };
+
+  await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+    method:  "POST",
+    headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
+    body:    JSON.stringify({ embeds: [embed] }),
+  }).catch(err => console.error("[Discord] Event-Ankündigung fehlgeschlagen:", err));
+}
+
+
 export async function createDiscordScheduledEvent(event: {
   title: string;
   startAt: Date;
