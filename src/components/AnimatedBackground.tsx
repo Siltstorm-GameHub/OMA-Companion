@@ -6,11 +6,11 @@ const GAP      = 5;
 const STEP     = HEX_SIZE * 2 + GAP;
 
 const PULSE_COLORS: [number, number, number][] = [
-  [ 20, 184, 166],  // teal-500
-  [ 20, 184, 166],  // teal (extra weight)
-  [ 94, 234, 212],  // teal-300
-  [ 13, 148, 136],  // teal-600
-  [153,  27,  27],  // crimson accent
+  [139,  92, 246],  // violet-500  (dominant)
+  [139,  92, 246],  // violet-500  (extra weight)
+  [167, 139, 250],  // violet-400
+  [ 20, 184, 166],  // teal-500    (brand)
+  [109,  40, 217],  // violet-700
 ];
 
 interface Cell {
@@ -112,7 +112,7 @@ export function AnimatedBackground() {
 
         // ── Always-visible hex border ─────────────────────────────
         hexPath(ctx, cell.cx, cell.cy, HEX_SIZE - GAP / 2);
-        ctx.strokeStyle = `rgba(20,184,166,${0.05 + glow * 0.22})`;
+        ctx.strokeStyle = `rgba(139,92,246,${0.04 + glow * 0.18})`;
         ctx.lineWidth   = 0.6 + glow * 1.2;
         ctx.stroke();
 

@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import PointsInfoModal from "./PointsInfoModal";
 import { QUEST_TYPE_META, type QuestType } from "@/lib/quests";
 import { RARITY_CONFIG, type Rarity, MAX_SHOWCASE } from "@/lib/collectibles";
-import { Trophy, Star, CalendarDays, Swords, Clock, MessageSquare, CheckCircle2, Coins } from "lucide-react";
+import { Trophy, Star, CalendarDays, Swords, Clock, MessageSquare, CheckCircle2, Coins, Crown, Gamepad2 } from "lucide-react";
 import { RelativeTime } from "@/components/RelativeTime";
 import Image from "next/image";
 import CollectiblesShowcase from "./CollectiblesShowcase";
@@ -186,8 +186,12 @@ export default async function ProfilePage() {
                 </div>
                 <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
                   <div
-                    className={`h-full rounded-full transition-all duration-1000 ${currentRank.bg.replace("bg-", "bg-gradient-to-r from-").replace("/10", "")} to-white/10`}
-                    style={{ width: `${rankPct}%` }}
+                    className="h-full rounded-full transition-all duration-1000"
+                    style={{
+                      width: `${rankPct}%`,
+                      background: "linear-gradient(90deg, #14b8a6, #2dd4bf)",
+                      boxShadow: "0 0 8px rgba(20,184,166,0.5)",
+                    }}
                   />
                 </div>
                 <p className="text-[10px] text-gray-600 mt-1">{rankPct}% bis {nextRank.label}</p>
@@ -195,7 +199,7 @@ export default async function ProfilePage() {
             )}
             {!nextRank && (
               <div className="flex items-center gap-1.5 text-xs text-amber-400 font-semibold">
-                <span>👑</span> Maximalen Rang erreicht
+                <Crown className="w-3.5 h-3.5" /> Maximalen Rang erreicht
               </div>
             )}
 
@@ -255,14 +259,14 @@ export default async function ProfilePage() {
           {/* Meine Sammlungen */}
           {Object.keys(collectiblesByCollection).length > 0 && (
             <section>
-              <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">🎮 Meine Sammlungen</h2>
+              <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-1.5"><Gamepad2 className="w-3.5 h-3.5" /> Meine Sammlungen</h2>
               <div className="space-y-3">
                 {Object.values(collectiblesByCollection).map(({ collection, items }) => (
                   <div key={collection.id} className="glass card-shine rounded-2xl p-4">
                     <div className="flex items-center gap-2 mb-3">
                       {collection.coverImageUrl
                         ? <img src={collection.coverImageUrl} alt={collection.name} className="w-7 h-7 object-contain rounded" loading="lazy" />
-                        : <span className="text-lg">🎮</span>
+                        : <Gamepad2 className="w-7 h-7 text-gray-600" />
                       }
                       <span className="text-sm font-semibold text-white">{collection.name}</span>
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.05] border border-white/[0.08] text-gray-500">{items.length} Figuren</span>
@@ -275,7 +279,7 @@ export default async function ProfilePage() {
                             className={`flex flex-col items-center gap-0.5 px-2.5 py-2 rounded-xl border ${rarity.border} ${rarity.glow} bg-white/[0.02]`}>
                             {item.imageUrl
                               ? <img src={item.imageUrl} alt={item.name} className="w-9 h-9 object-contain" loading="lazy" />
-                              : <span className="text-2xl leading-none">🎮</span>
+                              : <Gamepad2 className="w-9 h-9 text-gray-600" />
                             }
                             <span className={`text-[9px] font-medium ${rarity.color}`}>{item.name}</span>
                           </div>
