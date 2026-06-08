@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { generateRoundRobin } from "@/app/api/tournaments/route";
+import { announceTournamentResult } from "@/lib/discord-notify";
 
 // Gesamtranking für FFA/coop_stats berechnen
 async function calcFfaRanking(tournamentId: string, statFields: string[]) {
@@ -115,7 +116,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       pointsConfig:     true,
       status:           true,
       finalRankingJson: true,
-      event:            { select: { title: true } },
+      event:            { select: { title: true, game: true, discordChannelId: true } },
     },
   });
   if (!existing) return NextResponse.json({ error: "Nicht gefunden" }, { status: 404 });
@@ -159,6 +160,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     // 2. Neue Punkte vergeben
     await awardPoints(newRanking, cfgRaw, eventTitle, 1);
+
+    // Discord-Ankündigung des Turnierergebnisses (fire-and-forget)
+    if (isBecomingFinished) {
+      announceTournamentResult({
+        tournamentId:     id,
+        eventTitle,
+        finalRanking:     newRanking,
+        cfgRaw,
+        format:           existing.format,
+        game:             existing.event?.game ?? null,
+        discordChannelId: existing.event?.discordChannelId ?? null,
+      }).catch(() => {});
+    }
   }
 
   return NextResponse.json(tournament);

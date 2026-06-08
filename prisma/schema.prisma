@@ -183,8 +183,9 @@ model Event {
   pointReward    Int      @default(50)
   type           String   @default("community")
   status         String   @default("open")
-  discordEventId String?  @unique
-  seriesId       String?
+  discordEventId   String?  @unique
+  discordChannelId String?  // Kanal-ID für Bot-Nachrichten (überschreibt DISCORD_EVENTS_CHANNEL_ID)
+  seriesId         String?
   createdAt      DateTime @default(now())
 
   series        EventSeries?        @relation(fields: [seriesId], references: [id])

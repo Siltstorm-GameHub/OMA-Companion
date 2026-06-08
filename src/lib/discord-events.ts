@@ -8,8 +8,9 @@ export async function announceNewEvent(event: {
   startAt: Date;
   maxPlayers: number | null;
   pointReward: number;
+  discordChannelId?: string | null;
 }): Promise<void> {
-  const channelId = process.env.DISCORD_EVENTS_CHANNEL_ID;
+  const channelId = event.discordChannelId ?? process.env.DISCORD_NEWS_CHANNEL_ID;
   const botToken  = process.env.DISCORD_BOT_TOKEN;
   if (!channelId || !botToken) return;
 
