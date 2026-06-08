@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import TournamentManager from "./TournamentManager";
+import GameNameInput from "@/components/GameNameInput";
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
 type User = { id: string; name: string | null; username: string | null; image: string | null };
@@ -553,10 +554,12 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
                             <Gamepad2 className="w-3 h-3" />
                             Festes Spiel <span className="text-gray-600">(gilt für alle Events der Reihe)</span>
                           </label>
-                          <input type="text" value={seriesFixedGame}
-                            onChange={e => setSeriesFixedGame(e.target.value)}
+                          <GameNameInput
+                            value={seriesFixedGame}
+                            onChange={setSeriesFixedGame}
                             placeholder="Leer = verschiedene Spiele möglich"
-                            className={inputCls} />
+                            className={inputCls}
+                          />
                           <label className="flex items-center gap-2 mt-1.5 cursor-pointer">
                             <input type="checkbox" checked={propagateGame}
                               onChange={e => setPropagateGame(e.target.checked)}
