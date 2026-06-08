@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import BottomTabBar from "@/components/BottomTabBar";
+import FloatingPill from "@/components/FloatingPill";
 import TopNewsFeed, { type NewsItem } from "@/components/TopNewsFeed";
 import { OnboardingModal } from "@/components/OnboardingModal";
 import { BackToTop } from "@/components/BackToTop";
@@ -102,13 +102,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
       {/* ── News-Ticker (oben) ──────────────────────────────────── */}
       <TopNewsFeed items={newsItems} />
 
-      {/* ── Main Content — oben 36px Ticker + unten Tab Bar ─────── */}
-      <main className="pt-14 pb-20 min-w-0" style={{ position: "relative", zIndex: 2 }}>
+      {/* ── Floating Pill Nav ───────────────────────────────────── */}
+      <FloatingPill />
+
+      {/* ── Main Content — oben 36px Ticker + 46px Pill + 8px gap ── */}
+      <main className="pt-24 pb-10 min-w-0" style={{ position: "relative", zIndex: 2 }}>
         {children}
       </main>
-
-      {/* ── Bottom Tab Bar ───────────────────────────────────────── */}
-      <BottomTabBar />
 
       {/* Onboarding für neue User */}
       <OnboardingModal />
