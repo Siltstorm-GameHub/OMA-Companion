@@ -70,6 +70,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     for (const e of entries as EntryInput[]) {
       const scores: number[] = e.roundScores ?? [];
       const total = scores.reduce((s, v) => s + v, 0);
+      // Punkte vorläufig berechnen (dominionBonus erst bei Finalisierung)
+      const draftPts = calcLulPoints({
+        role:          e.role,
+        gameWinner:    e.gameWinner,
+        communityChamp: e.communityChamp,
+        trostpreis:    e.trostpreis,
+        voted:         e.voted,
+        dominionBonus: false,
+      });
       await prisma.lulEntry.upsert({
         where:  { spieltagId_userId: { spieltagId, userId: e.userId } },
         create: {
@@ -84,7 +93,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           trostpreis:     e.trostpreis,
           voted:          e.voted,
           dominionBonus:  false,
-          lulPoints:      0,
+          lulPoints:      draftPts,
         },
         update: {
           role:           e.role,
@@ -95,6 +104,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           communityChamp: e.communityChamp,
           trostpreis:     e.trostpreis,
           voted:          e.voted,
+          lulPoints:      draftPts,
         },
       });
     }
