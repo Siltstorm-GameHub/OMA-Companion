@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { LUL_POINTS } from "@/lib/lul";
 import LiveRefresh from "./LiveRefresh";
+import { getGameCoverUrl, getGameFallbackGradient } from "@/lib/game-cover";
 
 const STATUS_LABEL: Record<string, string> = {
   upcoming: "Geplant",
@@ -52,6 +53,9 @@ export default async function LulSpieltagPage({
   const isActive    = spieltag.status === "active";
   const notFinal    = !isFinished;
 
+  const coverUrl       = getGameCoverUrl(spieltag.game);
+  const fallbackGrad   = getGameFallbackGradient(spieltag.game);
+
   const players    = spieltag.entries.filter((e) => e.role === "player");
   const spectators = spieltag.entries.filter((e) => e.role === "spectator");
   const voters     = spieltag.entries.filter((e) => e.role === "voter");
@@ -87,46 +91,67 @@ export default async function LulSpieltagPage({
 
       {/* Header */}
       <div
-        className="rounded-2xl p-4 sm:p-6"
-        style={{
-          background: "linear-gradient(135deg, rgba(139,32,32,0.15) 0%, rgba(12,12,20,0.95) 60%)",
-          border: "1px solid rgba(139,32,32,0.2)",
-        }}
+        className="rounded-2xl overflow-hidden"
+        style={{ border: "1px solid rgba(139,32,32,0.2)" }}
       >
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl font-bold text-white">
-                Spieltag {spieltag.number} — {spieltag.game}
-              </h1>
-              <LiveRefresh status={spieltag.status} />
-            </div>
-            <div className="flex items-center gap-3 mt-1 flex-wrap">
-              {spieltag.scheduledAt && (
-                <p className="text-sm text-gray-400">
-                  {new Date(spieltag.scheduledAt).toLocaleDateString("de-DE", {
-                    weekday: "long",
-                    day: "2-digit",
-                    month: "long",
-                    year: "numeric",
-                  })}
-                </p>
-              )}
-              {spieltag.gameType && (
-                <span className="text-xs text-gray-600">{spieltag.gameType}</span>
-              )}
-              {spieltag.platform && (
-                <span className="text-xs text-gray-600">· {spieltag.platform}</span>
-              )}
-            </div>
-          </div>
+        {/* Cover-Banner */}
+        <div
+          className="relative h-28 sm:h-36 w-full"
+          style={coverUrl ? {} : { background: fallbackGrad }}
+        >
+          {coverUrl && (
+            <img
+              src={coverUrl}
+              alt={spieltag.game}
+              className="w-full h-full object-cover object-center"
+            />
+          )}
+          {/* Dunkler Gradient-Overlay für Lesbarkeit */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background: "linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(13,13,15,0.85) 100%)",
+            }}
+          />
+          {/* Status-Badge oben rechts */}
           <span
-            className={`self-start shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full ${
+            className={`absolute top-3 right-3 text-xs font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm ${
               STATUS_COLOR[spieltag.status] ?? "text-gray-400 bg-white/5"
             }`}
           >
             {STATUS_LABEL[spieltag.status] ?? spieltag.status}
           </span>
+        </div>
+
+        <div
+          className="p-4 sm:p-6"
+          style={{ background: "linear-gradient(135deg, rgba(139,32,32,0.12) 0%, rgba(12,12,20,0.98) 60%)" }}
+        >
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-xl font-bold text-white">
+              Spieltag {spieltag.number} — {spieltag.game}
+            </h1>
+            <LiveRefresh status={spieltag.status} />
+          </div>
+          <div className="flex items-center gap-3 flex-wrap">
+            {spieltag.scheduledAt && (
+              <p className="text-sm text-gray-400">
+                {new Date(spieltag.scheduledAt).toLocaleDateString("de-DE", {
+                  weekday: "long",
+                  day: "2-digit",
+                  month: "long",
+                  year: "numeric",
+                })}
+              </p>
+            )}
+            {spieltag.gameType && (
+              <span className="text-xs text-gray-600">{spieltag.gameType}</span>
+            )}
+            {spieltag.platform && (
+              <span className="text-xs text-gray-600">· {spieltag.platform}</span>
+            )}
+          </div>
         </div>
 
         {/* Mini-Stats */}
@@ -148,7 +173,8 @@ export default async function LulSpieltagPage({
             <p className="text-xs text-gray-500 mt-0.5">Runden</p>
           </div>
         </div>
-      </div>
+        </div>{/* p-4 sm:p-6 */}
+      </div>{/* outer rounded-2xl */}
 
       {/* "Nicht final"-Hinweis */}
       {notFinal && spieltag.entries.length > 0 && (

@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { CountUp } from "@/components/CountUp";
 import { AvatarStack } from "@/components/AvatarStack";
 import { buildLulStandings, LUL_POINTS } from "@/lib/lul";
+import GameCover from "@/components/GameCover";
 
 const STATUS_LABEL: Record<string, { label: string; cls: string; dot: string; bar: string }> = {
   upcoming: { label: "Geplant",  cls: "text-blue-300 bg-blue-500/10 border border-blue-500/15",    dot: "bg-blue-400",   bar: "bg-blue-500/20" },
@@ -154,13 +155,16 @@ export default async function LulOverviewPage() {
                     <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${stripeColor} rounded-l-xl`} />
                     {isNext  && <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5   to-transparent pointer-events-none" />}
                     {isActive && <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-transparent pointer-events-none" />}
-                    <div className={`relative w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ml-1 ${
-                      st.status === "finished" ? "bg-white/[0.05] text-gray-500" :
-                      isNext   ? "bg-amber-500/15   text-amber-300   ring-1 ring-amber-500/20"   :
-                      isActive ? "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/20" :
-                      "bg-white/[0.04] text-gray-600"
-                    }`}>
-                      {st.number}
+                    <div className="relative shrink-0 ml-1">
+                      <GameCover game={st.game} className="w-14 h-9" rounded="rounded-lg" />
+                      <span className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold ring-1 ring-black ${
+                        st.status === "finished" ? "bg-gray-700 text-gray-400" :
+                        isNext   ? "bg-amber-500   text-black" :
+                        isActive ? "bg-emerald-500 text-black" :
+                        "bg-gray-800 text-gray-500"
+                      }`}>
+                        {st.number}
+                      </span>
                     </div>
                     <div className="relative flex-1 min-w-0">
                       <p className="text-sm font-medium text-white truncate">{st.game}</p>
