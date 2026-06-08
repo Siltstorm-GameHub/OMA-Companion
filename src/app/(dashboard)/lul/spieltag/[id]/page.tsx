@@ -67,6 +67,15 @@ export default async function SpieltagPage({ params }: { params: Promise<{ id: s
   const champ  = spectators.find(e => e.communityChamp);
   const trost  = players.find(e => e.trostpreis);
 
+  // ── Abstimmungs-Auswertung ─────────────────────────────────────
+  // Alle Einträge, bei denen voted=true gesetzt ist
+  const votedEntries    = spieltag.entries.filter(e => e.voted);
+  // Alle die hätten abstimmen können (Spieler + Zuschauer + externe Wähler)
+  const eligibleEntries = spieltag.entries;
+  const voteCount       = votedEntries.length;
+  const eligibleCount   = eligibleEntries.length;
+  const votePct         = eligibleCount > 0 ? Math.round((voteCount / eligibleCount) * 100) : 0;
+
   const seasonName = spieltag.season.name ?? `Saison ${spieltag.season.number}`;
 
   return (
@@ -432,6 +441,86 @@ export default async function SpieltagPage({ params }: { params: Promise<{ id: s
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── Abstimmungs-Übersicht ──────────────────────────────────── */}
+      {eligibleCount > 0 && (isActive || isFinished) && (
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Abstimmung</h2>
+            <span className="text-[10px] text-gray-700 ml-auto tabular-nums">
+              {voteCount} / {eligibleCount} ({votePct} %)
+            </span>
+          </div>
+
+          <div className="glass rounded-2xl p-4 space-y-3">
+            {/* Progress bar */}
+            <div className="w-full h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+              <div
+                className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                style={{ width: `${votePct}%` }}
+              />
+            </div>
+
+            {/* Voted list */}
+            {voteCount > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {votedEntries.map(e => {
+                  const isMe    = e.userId === userId;
+                  const roleLabel =
+                    e.role === "player"    ? { text: "Spieler",   cls: "bg-blue-500/10 text-blue-400 border-blue-500/20" } :
+                    e.role === "spectator" ? { text: "Zuschauer", cls: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20" } :
+                                            { text: "Extern",     cls: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" };
+                  return (
+                    <div key={e.id}
+                      className={`flex items-center gap-2 text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
+                        isMe
+                          ? "bg-emerald-900/20 border-emerald-700/40 text-emerald-300"
+                          : "bg-white/[0.04] border-white/[0.06] text-gray-300"
+                      }`}>
+                      {/* Avatar */}
+                      {e.user.image ? (
+                        <img src={e.user.image} alt="" className="w-5 h-5 rounded-full shrink-0 ring-1 ring-white/10" />
+                      ) : (
+                        <div className="w-5 h-5 rounded-full bg-white/[0.08] flex items-center justify-center text-[9px] font-bold text-gray-400 shrink-0">
+                          {uname(e.user)[0]?.toUpperCase()}
+                        </div>
+                      )}
+                      <span className="font-medium">{uname(e.user)}</span>
+                      {isMe && <span className="text-emerald-600 text-[10px]">(du)</span>}
+                      {/* Role badge */}
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded border font-medium ${roleLabel.cls}`}>
+                        {roleLabel.text}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-600 text-center py-2">Noch keine Abstimmungen.</p>
+            )}
+
+            {/* Not voted yet (only shown when active) */}
+            {isActive && voteCount < eligibleCount && (
+              <div className="pt-2 border-t border-white/[0.05]">
+                <p className="text-[10px] text-gray-600 mb-2">Noch nicht abgestimmt:</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {eligibleEntries.filter(e => !e.voted).map(e => (
+                    <span key={e.id}
+                      className={`text-[10px] px-2 py-1 rounded-lg border ${
+                        e.userId === userId
+                          ? "bg-amber-900/15 border-amber-800/20 text-amber-500"
+                          : "bg-white/[0.03] border-white/[0.05] text-gray-600"
+                      }`}>
+                      {uname(e.user)}{e.userId === userId && " (du)"}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
