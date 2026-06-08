@@ -16,8 +16,16 @@ export default function BottomNav() {
 
   return (
     <nav
-      style={{ background: "rgba(13,13,15,0.97)", borderTop: "1px solid rgba(20,184,166,0.10)" }}
-      className="fixed bottom-0 left-0 right-0 z-50 backdrop-blur-2xl safe-area-pb"
+      style={{
+        position: "fixed",
+        bottom: 0,
+        left: 0,
+        right: 0,
+        zIndex: 50,
+        background: "rgba(13,13,15,0.97)",
+        borderTop: "1px solid rgba(20,184,166,0.10)",
+      }}
+      className="backdrop-blur-2xl safe-area-pb"
     >
       <div className="flex items-stretch h-16">
         {NAV.map(({ label, href, icon: Icon }) => {
