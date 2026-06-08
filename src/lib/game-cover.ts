@@ -50,6 +50,20 @@ const GAME_MAP: Record<string, string> = {
   "deep rock galactic":     steam(548430),
   "helldivers 2":           steam(553850),
   "hunt showdown":          steam(594650),
+  "rainbow six siege":      steam(359550),
+  "rainbow 6 siege":        steam(359550),
+  "r6 siege":               steam(359550),
+  "r6s":                    steam(359550),
+  "rainbow six extraction": steam(1373780),
+  "far cry 6":              steam(1448420),
+  "far cry 5":              steam(552520),
+  "assassins creed odyssey":       steam(812140),
+  "assassins creed valhalla":      steam(2208920),
+  "assassins creed mirage":        steam(2096020),
+  "the division 2":         steam(2793470),
+  "ghost recon breakpoint": steam(1101552),
+  "for honor":              steam(304390),
+  "riders republic":        steam(1326220),
 
   // ─── MOBA ─────────────────────────────────────────────────────────
   "dota 2":                 steam(570),
@@ -199,6 +213,9 @@ export const KNOWN_GAMES: string[] = [
   // Shooter
   "CS2", "Counter-Strike 2", "Team Fortress 2", "Left 4 Dead 2",
   "Deep Rock Galactic", "Helldivers 2", "Hunt Showdown", "Warframe", "Paladins",
+  "Rainbow Six Siege", "Rainbow Six Extraction", "Far Cry 6", "Far Cry 5",
+  "Assassin's Creed Odyssey", "Assassin's Creed Valhalla", "Assassin's Creed Mirage",
+  "The Division 2", "Ghost Recon Breakpoint", "For Honor", "Riders Republic",
   // MOBA
   "Dota 2", "League of Legends", "Smite",
   // RPG / Action
