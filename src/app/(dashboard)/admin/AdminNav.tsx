@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Users, LayoutDashboard, Star, ShoppingBag } from "lucide-react";
+import { Users, LayoutDashboard, Star, ShoppingBag, Bot } from "lucide-react";
 
 type Role = "user" | "moderator" | "admin";
 
@@ -11,6 +11,7 @@ const TABS: { href: string; label: string; icon: typeof LayoutDashboard; exact: 
   { href: "/admin/lul",   label: "Level-Up-League", icon: Star,            exact: false, minRole: "moderator" },
   { href: "/admin/users", label: "Nutzer & Rollen", icon: Users,           exact: false, minRole: "admin"     },
   { href: "/admin/shop",  label: "Shop",            icon: ShoppingBag,     exact: false, minRole: "admin"     },
+  { href: "/admin/bot",   label: "Bot",             icon: Bot,             exact: false, minRole: "admin"     },
 ];
 
 const HIERARCHY: Role[] = ["user", "moderator", "admin"];

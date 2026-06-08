@@ -38,10 +38,11 @@ export async function PATCH(req: NextRequest) {
   const series = await prisma.eventSeries.update({
     where: { id: seriesId },
     data: {
-      ...(fields.name        !== undefined && { name: fields.name }),
-      ...(fields.description !== undefined && { description: fields.description }),
-      ...(fields.fixedGame   !== undefined && { fixedGame:   fields.fixedGame }),
-      ...(fields.fixedFormat !== undefined && { fixedFormat: fields.fixedFormat }),
+      ...(fields.name             !== undefined && { name:             fields.name }),
+      ...(fields.description      !== undefined && { description:      fields.description }),
+      ...(fields.fixedGame        !== undefined && { fixedGame:        fields.fixedGame }),
+      ...(fields.fixedFormat      !== undefined && { fixedFormat:      fields.fixedFormat }),
+      ...(fields.discordChannelId !== undefined && { discordChannelId: fields.discordChannelId }),
     },
   });
 
@@ -66,6 +67,14 @@ export async function PATCH(req: NextRequest) {
         data:  { format: fields.fixedFormat },
       });
     }
+  }
+
+  // 4) Discord-Kanal auf alle Events der Reihe übertragen (immer automatisch)
+  if (fields.discordChannelId !== undefined) {
+    await prisma.event.updateMany({
+      where: { seriesId },
+      data:  { discordChannelId: fields.discordChannelId || null },
+    });
   }
 
   return NextResponse.json({ ok: true, series });
