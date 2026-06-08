@@ -1,0 +1,108 @@
+import { Client, TextChannel } from "discord.js";
+import { prisma } from "@/lib/prisma";
+
+/**
+ * Prüft alle fälligen PollJobs und sendet sie als native Discord-Umfrage.
+ * Wird aus dem Bot-Scheduler (index.ts) jede Minute aufgerufen.
+ */
+export async function processPendingPolls(client: Client) {
+  const now  = new Date();
+  const jobs = await prisma.pollJob.findMany({
+    where: { status: "pending", scheduledAt: { lte: now } },
+  });
+  if (jobs.length === 0) return;
+
+  for (const job of jobs) {
+    try {
+      const { question, answers } = await buildPoll(job.type, job.refId);
+
+      if (answers.length < 2) {
+        await prisma.pollJob.update({
+          where: { id: job.id },
+          data:  { status: "failed", errorMsg: "Zu wenige Optionen (mind. 2 nötig)" },
+        });
+        continue;
+      }
+
+      // Discord erlaubt maximal 10 Antworten pro Poll
+      const limitedAnswers = answers.slice(0, 10);
+
+      const channel = await client.channels.fetch(job.channelId).catch(() => null);
+      if (!channel || !channel.isTextBased()) {
+        await prisma.pollJob.update({
+          where: { id: job.id },
+          data:  { status: "failed", errorMsg: `Kanal ${job.channelId} nicht gefunden oder kein Text-Kanal` },
+        });
+        continue;
+      }
+
+      const msg = await (channel as TextChannel).send({
+        poll: {
+          question:        { text: question },
+          answers:         limitedAnswers.map(a => ({ poll_media: { text: a } })),
+          duration:        job.duration,   // in Stunden
+          allow_multiselect: false,
+        },
+      });
+
+      await prisma.pollJob.update({
+        where: { id: job.id },
+        data:  { status: "sent", sentAt: new Date(), messageId: msg.id },
+      });
+
+      console.log(`📊 Poll gesendet: ${question} (${limitedAnswers.length} Optionen) → Kanal ${job.channelId}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[POLL] Fehler bei Job ${job.id}:`, msg);
+      await prisma.pollJob.update({
+        where: { id: job.id },
+        data:  { status: "failed", errorMsg: msg.slice(0, 500) },
+      });
+    }
+  }
+}
+
+// ── Poll-Inhalte je Typ zusammenbauen ───────────────────────────────────────
+
+async function buildPoll(type: string, refId: string): Promise<{ question: string; answers: string[] }> {
+  // ── Event-Sieger ──────────────────────────────────────────────────────────
+  if (type === "event_winner") {
+    const event = await prisma.event.findUnique({
+      where:   { id: refId },
+      include: { registrations: { include: { user: { select: { username: true, name: true } } } } },
+    });
+    if (!event) throw new Error(`Event ${refId} nicht gefunden`);
+    return {
+      question: `Wer gewinnt „${event.title}"? 🏆`,
+      answers:  event.registrations.map(r => r.user.username ?? r.user.name ?? "Unbekannt"),
+    };
+  }
+
+  // ── LUL Trostpreis ────────────────────────────────────────────────────────
+  if (type === "lul_trostpreis") {
+    const spieltag = await prisma.lulSpieltag.findUnique({
+      where:   { id: refId },
+      include: { entries: { where: { role: "player" }, include: { user: { select: { username: true, name: true } } } } },
+    });
+    if (!spieltag) throw new Error(`Spieltag ${refId} nicht gefunden`);
+    return {
+      question: `Spieltag ${spieltag.number}: Wer verdient den Trostpreis? 🎁`,
+      answers:  spieltag.entries.map(e => e.user.username ?? e.user.name ?? "Unbekannt"),
+    };
+  }
+
+  // ── LUL Community-Support ─────────────────────────────────────────────────
+  if (type === "lul_community") {
+    const spieltag = await prisma.lulSpieltag.findUnique({
+      where:   { id: refId },
+      include: { entries: { where: { role: "spectator" }, include: { user: { select: { username: true, name: true } } } } },
+    });
+    if (!spieltag) throw new Error(`Spieltag ${refId} nicht gefunden`);
+    return {
+      question: `Spieltag ${spieltag.number}: Wer gewinnt den Community-Support-Preis? 💛`,
+      answers:  spieltag.entries.map(e => e.user.username ?? e.user.name ?? "Unbekannt"),
+    };
+  }
+
+  throw new Error(`Unbekannter Poll-Typ: ${type}`);
+}
