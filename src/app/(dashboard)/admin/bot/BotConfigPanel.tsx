@@ -7,14 +7,21 @@ import { BOT_MESSAGES, type BotMessageKey, type BotPlaceholder } from "@/lib/bot
 
 interface DiscordEmoji { id: string; name: string; animated: boolean }
 
+// Welcher Kanal gehört zu welchem Nachrichtentyp?
+const LUL_KEYS: BotMessageKey[] = ["lul_suggest"];
+
 type Props = {
-  initial:     Record<string, string>;
-  channelId:   string | null;
-  channelName: string | null;
-  emojis:      DiscordEmoji[];
+  initial:         Record<string, string>;
+  newsChannelId:   string | null;
+  newsChannelName: string | null;
+  lulChannelId:    string | null;
+  lulChannelName:  string | null;
+  emojis:          DiscordEmoji[];
 };
 
-export default function BotConfigPanel({ initial, channelId, channelName, emojis }: Props) {
+export default function BotConfigPanel({
+  initial, newsChannelId, newsChannelName, lulChannelId, lulChannelName, emojis,
+}: Props) {
   const [values,       setValues]       = useState<Record<string, string>>(initial);
   const [saving,       setSaving]       = useState(false);
   const [dirty,        setDirty]        = useState(false);
@@ -80,8 +87,13 @@ export default function BotConfigPanel({ initial, channelId, channelName, emojis
 
   const keys = Object.keys(BOT_MESSAGES) as BotMessageKey[];
 
-  // Kanal-Badge
-  const channelLabel = channelName ? `#${channelName}` : channelId ?? "–";
+  // Kanal-Badge Helfer
+  function channelBadge(id: string | null, name: string | null) {
+    const label = name ? `#${name}` : id ?? null;
+    return { label: label ?? "–", id: id ?? null };
+  }
+  const newsBadge = channelBadge(newsChannelId, newsChannelName);
+  const lulBadge  = channelBadge(lulChannelId,  lulChannelName);
 
   return (
     <div className="space-y-4">
@@ -107,23 +119,35 @@ export default function BotConfigPanel({ initial, channelId, channelName, emojis
         </button>
       </div>
 
-      {/* Default-Kanal-Info */}
-      <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-800/60 border border-white/[0.06] text-xs text-gray-400">
-        <Hash className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-        <span>Standard-Kanal:</span>
-        <span className="font-semibold text-indigo-300">{channelLabel}</span>
-        {channelId && <span className="text-gray-600 font-mono ml-1">({channelId})</span>}
-        <span className="ml-auto text-gray-600 italic">Events mit eigenem Kanal nutzen diesen stattdessen</span>
+      {/* Kanal-Übersicht */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-800/60 border border-white/[0.06] text-xs text-gray-400">
+          <Hash className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+          <div className="min-w-0">
+            <p className="text-[10px] text-gray-600 uppercase tracking-wider font-semibold">News-Kanal</p>
+            <p className="font-semibold text-indigo-300 truncate">{newsBadge.label}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-800/60 border border-white/[0.06] text-xs text-gray-400">
+          <Hash className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+          <div className="min-w-0">
+            <p className="text-[10px] text-gray-600 uppercase tracking-wider font-semibold">LUL-Kanal</p>
+            <p className="font-semibold text-purple-300 truncate">{lulBadge.label}</p>
+          </div>
+        </div>
       </div>
 
       {/* Message cards */}
       <div className="space-y-3">
         {keys.map(key => {
-          const meta      = BOT_MESSAGES[key];
-          const enabled   = isEnabled(key);
-          const text      = get(`${key}_text`, meta.defaultText);
-          const isDefault = text === meta.defaultText;
+          const meta       = BOT_MESSAGES[key];
+          const enabled    = isEnabled(key);
+          const text       = get(`${key}_text`, meta.defaultText);
+          const isDefault  = text === meta.defaultText;
           const showPicker = pickerFor === key;
+          const isLul      = LUL_KEYS.includes(key);
+          const badge      = isLul ? lulBadge : newsBadge;
+          const badgeColor = isLul ? "text-purple-300" : "text-indigo-300";
 
           return (
             <div
@@ -148,6 +172,10 @@ export default function BotConfigPanel({ initial, channelId, channelName, emojis
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-white">{meta.label}</p>
                   <p className="text-[11px] text-gray-500 mt-0.5 truncate">{meta.description}</p>
+                  <div className="flex items-center gap-1 mt-1">
+                    <Hash className={`w-3 h-3 shrink-0 ${badgeColor}`} />
+                    <span className={`text-[10px] font-medium ${badgeColor}`}>{badge.label}</span>
+                  </div>
                 </div>
 
                 <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0 ${
