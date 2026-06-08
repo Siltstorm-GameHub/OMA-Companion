@@ -217,9 +217,10 @@ export default async function LulSpieltagPage({
                     const isTop3    = placement <= 3 && placement > 0;
 
                     const badges: { icon: React.ReactNode; label: string; color: string }[] = [];
-                    if (entry.gameWinner)    badges.push({ icon: <Trophy   className="w-3 h-3" />, label: "Sieger",   color: "text-amber-400" });
-                    if (entry.dominionBonus) badges.push({ icon: <Flame    className="w-3 h-3" />, label: "Dominion", color: "text-orange-400" });
-                    if (entry.trostpreis)    badges.push({ icon: <Gift     className="w-3 h-3" />, label: "Trost",    color: "text-rose-400"   });
+                    if (entry.gameWinner)    badges.push({ icon: <Trophy        className="w-3 h-3" />, label: "Sieger",    color: "text-amber-400"   });
+                    if (entry.dominionBonus) badges.push({ icon: <Flame         className="w-3 h-3" />, label: "Dominion",  color: "text-orange-400"  });
+                    if (entry.trostpreis)    badges.push({ icon: <Gift          className="w-3 h-3" />, label: "Trost",     color: "text-rose-400"    });
+                    if (entry.voted)         badges.push({ icon: <CheckCircle2  className="w-3 h-3" />, label: "Gevotet",   color: "text-emerald-400" });
 
                     return (
                       <tr
@@ -288,15 +289,24 @@ export default async function LulSpieltagPage({
                             {badges.length === 0 ? (
                               <span className="text-gray-800 text-sm">–</span>
                             ) : (
-                              badges.map((b, bi) => (
-                                <span
-                                  key={bi}
-                                  className={`inline-flex items-center gap-0.5 ${b.color}`}
-                                  title={b.label}
-                                >
-                                  {b.icon}
-                                </span>
-                              ))
+                              badges.map((b, bi) =>
+                                b.label === "Gevotet" ? (
+                                  <span
+                                    key={bi}
+                                    className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full"
+                                  >
+                                    {b.icon} Gevotet
+                                  </span>
+                                ) : (
+                                  <span
+                                    key={bi}
+                                    className={`inline-flex items-center gap-0.5 ${b.color}`}
+                                    title={b.label}
+                                  >
+                                    {b.icon}
+                                  </span>
+                                )
+                              )
                             )}
                           </div>
                         </td>
