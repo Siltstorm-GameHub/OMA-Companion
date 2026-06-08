@@ -6,10 +6,19 @@ import CollectiblesAdminPanel from "./CollectiblesAdminPanel";
 export default async function AdminShopPage() {
   await requireRole("admin");
 
-  const collections = await prisma.collectibleCollection.findMany({
-    orderBy: { sortOrder: "asc" },
+  const RARITY_ORDER: Record<string, number> = { common: 0, rare: 1, epic: 2, legendary: 3 };
+
+  const raw = await prisma.collectibleCollection.findMany({
+    orderBy: { name: "asc" },
     include: { items: { orderBy: { sortOrder: "asc" } } },
   });
+
+  const collections = raw.map(col => ({
+    ...col,
+    items: [...col.items].sort(
+      (a, b) => (RARITY_ORDER[a.rarity] ?? 0) - (RARITY_ORDER[b.rarity] ?? 0)
+    ),
+  }));
 
   const totalItems  = collections.reduce((s, c) => s + c.items.length, 0);
   const activeCount = collections.filter(c => c.active).length;

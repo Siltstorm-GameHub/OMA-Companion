@@ -3,12 +3,20 @@ import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 
 // GET: alle Sammlungen mit Items
+const RARITY_ORDER: Record<string, number> = { common: 0, rare: 1, epic: 2, legendary: 3 };
+
 export async function GET() {
   await requireRole("admin");
-  const collections = await prisma.collectibleCollection.findMany({
-    orderBy: { sortOrder: "asc" },
+  const raw = await prisma.collectibleCollection.findMany({
+    orderBy: { name: "asc" },
     include: { items: { orderBy: { sortOrder: "asc" } } },
   });
+  const collections = raw.map(col => ({
+    ...col,
+    items: [...col.items].sort(
+      (a, b) => (RARITY_ORDER[a.rarity] ?? 0) - (RARITY_ORDER[b.rarity] ?? 0)
+    ),
+  }));
   return NextResponse.json(collections);
 }
 
@@ -35,7 +43,7 @@ export async function PATCH(req: NextRequest) {
   const body = await req.json();
 
   if (body.type === "collection") {
-    const { id, ...data } = body;
+    const { id, type: _t, ...data } = body;
     const updated = await prisma.collectibleCollection.update({ where: { id }, data });
     return NextResponse.json(updated);
   }
