@@ -216,111 +216,111 @@ export default async function DashboardPage() {
       {/* ── Content ─────────────────────────────────────────────────── */}
       <div className="px-4 sm:px-6 py-5 max-w-5xl mx-auto space-y-5 relative">
 
-        {/* ── Hub-Kacheln: Events & LuL ────────────────────────────── */}
+        {/* ── Hub-Kacheln: FACEIT-style ─────────────────────────────── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
-          {/* Events Hub-Kachel */}
+          {/* Events Hub */}
           <Link href="/events"
-            className="card-cut surface card-hover group animate-slide-up stagger-1 p-5 relative overflow-hidden block accent-teal"
-            style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(20,184,166,0.10)" }}>
+            className="surface animate-slide-up stagger-1 group block overflow-hidden relative"
+            style={{ borderRadius: "6px", border: "1px solid rgba(20,184,166,0.12)", boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
 
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="card-cut-sm w-10 h-10 flex items-center justify-center shrink-0"
-                  style={{ background: "rgba(20,184,166,0.12)", border: "1px solid rgba(20,184,166,0.22)" }}>
-                  <CalendarDays className="w-5 h-5 text-teal-400" />
-                </div>
-                <div>
-                  <p className="text-[10px] text-teal-400/60 uppercase tracking-[0.14em] font-semibold">Events</p>
-                  <p className="font-display text-xl font-black text-white leading-tight tabular-nums">
-                    <CountUp to={activeEvents} duration={700} /> aktiv
-                  </p>
-                </div>
+            {/* Cover art area */}
+            <div className="relative overflow-hidden" style={{ height: "108px" }}>
+              {/* Art gradient */}
+              <div className="absolute inset-0"
+                style={{ background: "linear-gradient(135deg, #052e26 0%, #0a1f1c 50%, #0d0d0f 100%)" }} />
+              <div className="absolute inset-0"
+                style={{ backgroundImage: "radial-gradient(ellipse at 25% 60%, rgba(20,184,166,0.22) 0%, transparent 55%)" }} />
+              {/* Big watermark icon */}
+              <CalendarDays className="absolute -right-3 -bottom-3 w-28 h-28 text-teal-400/[0.07] group-hover:text-teal-400/[0.12] transition-colors" />
+              {/* Status badge */}
+              <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider"
+                style={{ background: "rgba(20,184,166,0.14)", border: "1px solid rgba(20,184,166,0.22)", color: "#2dd4bf" }}>
+                <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" />
+                <CountUp to={activeEvents} duration={700} /> aktiv
               </div>
-              <ChevronRight className="w-4 h-4 text-gray-700 group-hover:text-teal-400 group-hover:translate-x-0.5 transition-all mt-1" />
+              {/* Arrow */}
+              <ChevronRight className="absolute top-3 right-3 w-4 h-4 text-gray-700 group-hover:text-teal-400 group-hover:translate-x-0.5 transition-all" />
+              {/* Bottom gradient */}
+              <div className="absolute bottom-0 inset-x-0 h-12"
+                style={{ background: "linear-gradient(to bottom, transparent, var(--bg-surface))" }} />
             </div>
 
-            {nextEvent ? (
-              <div className="card-cut-sm p-3"
-                style={{ background: "rgba(20,184,166,0.05)", border: "1px solid rgba(20,184,166,0.09)" }}>
-                <p className="text-[10px] text-teal-500/60 uppercase tracking-widest font-semibold mb-1">Nächstes Event</p>
-                <p className="text-sm font-bold text-white truncate">{nextEvent.title}</p>
-                <div className="flex items-center gap-2 mt-1 text-[11px] text-gray-600">
-                  <Clock className="w-3 h-3" />
-                  {new Date(nextEvent.startAt).toLocaleDateString("de-DE", { day: "numeric", month: "short" })}
-                  {" · "}
-                  {new Date(nextEvent.startAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} Uhr
-                  <span className="ml-auto flex items-center gap-1 text-teal-400/70">
+            {/* Info area */}
+            <div className="px-4 pb-4 pt-2">
+              <p className="text-[9px] text-teal-400/50 uppercase tracking-[0.18em] font-semibold mb-0.5">Events</p>
+              <p className="font-display text-base font-black text-white leading-tight truncate">
+                {nextEvent ? nextEvent.title : "Keine anstehenden Events"}
+              </p>
+              {nextEvent ? (
+                <div className="flex items-center gap-3 mt-2 text-[11px] text-gray-500">
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    {new Date(nextEvent.startAt).toLocaleDateString("de-DE", { day: "numeric", month: "short" })}
+                    {" "}
+                    {new Date(nextEvent.startAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                  <span className="flex items-center gap-1 ml-auto">
                     <Users className="w-3 h-3" />
                     {nextEvent._count.registrations}{nextEvent.maxPlayers ? `/${nextEvent.maxPlayers}` : ""}
                   </span>
                 </div>
-              </div>
-            ) : (
-              <div className="card-cut-sm p-3 text-center"
-                style={{ background: "rgba(20,184,166,0.03)", border: "1px solid rgba(20,184,166,0.06)" }}>
-                <p className="text-xs text-gray-700">Keine anstehenden Events</p>
-              </div>
-            )}
+              ) : (
+                <p className="text-[11px] text-gray-600 mt-1">Alle Events ansehen →</p>
+              )}
+            </div>
           </Link>
 
-          {/* Level-Up-League Hub-Kachel */}
+          {/* Level-Up-League Hub */}
           <Link href="/lul"
-            className="card-cut surface card-hover group animate-slide-up stagger-2 p-5 relative overflow-hidden block accent-violet"
-            style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(139,92,246,0.10)" }}>
+            className="surface animate-slide-up stagger-2 group block overflow-hidden relative"
+            style={{ borderRadius: "6px", border: "1px solid rgba(139,92,246,0.12)", boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
 
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="card-cut-sm w-10 h-10 flex items-center justify-center shrink-0"
-                  style={{ background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.22)" }}>
-                  <Swords className="w-5 h-5 text-violet-400" />
-                </div>
-                <div>
-                  <p className="text-[10px] text-violet-400/60 uppercase tracking-[0.14em] font-semibold">Level-Up-League</p>
-                  <p className="font-display text-xl font-black text-white leading-tight">
-                    {activeLulSeason
-                      ? <>{activeLulSeason.name ?? `Saison ${activeLulSeason.number}`}</>
-                      : "Keine Saison"}
-                  </p>
-                </div>
+            {/* Cover art area */}
+            <div className="relative overflow-hidden" style={{ height: "108px" }}>
+              <div className="absolute inset-0"
+                style={{ background: "linear-gradient(135deg, #1a0a2e 0%, #100820 50%, #0d0d0f 100%)" }} />
+              <div className="absolute inset-0"
+                style={{ backgroundImage: "radial-gradient(ellipse at 25% 60%, rgba(139,92,246,0.22) 0%, transparent 55%)" }} />
+              <Swords className="absolute -right-3 -bottom-3 w-28 h-28 text-violet-400/[0.07] group-hover:text-violet-400/[0.12] transition-colors" />
+              {/* Season badge */}
+              <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider"
+                style={{ background: "rgba(139,92,246,0.14)", border: "1px solid rgba(139,92,246,0.22)", color: "#a78bfa" }}>
+                <span className="w-1.5 h-1.5 rounded-full bg-violet-400" style={{ boxShadow: activeLulSeason ? "0 0 6px rgba(139,92,246,0.8)" : "none" }} />
+                {activeLulSeason ? "Saison aktiv" : "Keine Saison"}
               </div>
-              <ChevronRight className="w-4 h-4 text-gray-700 group-hover:text-violet-400 group-hover:translate-x-0.5 transition-all mt-1" />
+              <ChevronRight className="absolute top-3 right-3 w-4 h-4 text-gray-700 group-hover:text-violet-400 group-hover:translate-x-0.5 transition-all" />
+              <div className="absolute bottom-0 inset-x-0 h-12"
+                style={{ background: "linear-gradient(to bottom, transparent, var(--bg-surface))" }} />
             </div>
 
-            {activeLulSeason ? (
-              <div className="card-cut-sm p-3"
-                style={{ background: "rgba(139,92,246,0.05)", border: "1px solid rgba(139,92,246,0.09)" }}>
-                {nextSpieltag ? (
-                  <>
-                    <p className="text-[10px] text-violet-400/60 uppercase tracking-widest font-semibold mb-1">
-                      Spieltag {nextSpieltag.number}
-                    </p>
-                    <p className="text-sm font-bold text-white truncate">{nextSpieltag.game}</p>
-                    <div className="flex items-center gap-2 mt-1 text-[11px] text-gray-600">
-                      {nextSpieltag.scheduledAt ? (
-                        <>
-                          <Clock className="w-3 h-3" />
-                          {new Date(nextSpieltag.scheduledAt).toLocaleDateString("de-DE", { day: "numeric", month: "short" })}
-                        </>
-                      ) : <span>Datum TBD</span>}
-                      {userId && myLulPoints > 0 && (
-                        <span className="ml-auto flex items-center gap-1 text-amber-400/70">
-                          <Zap className="w-3 h-3" />
-                          <span className="tabular-nums">{myLulPoints}</span> LUL-Pts
-                        </span>
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <p className="text-xs text-gray-700">Saison läuft — keine weiteren Spieltage</p>
-                )}
-              </div>
-            ) : (
-              <div className="card-cut-sm p-3 text-center"
-                style={{ background: "rgba(139,92,246,0.03)", border: "1px solid rgba(139,92,246,0.06)" }}>
-                <p className="text-xs text-gray-700">Keine aktive Saison</p>
-              </div>
-            )}
+            {/* Info area */}
+            <div className="px-4 pb-4 pt-2">
+              <p className="text-[9px] text-violet-400/50 uppercase tracking-[0.18em] font-semibold mb-0.5">Level-Up-League</p>
+              <p className="font-display text-base font-black text-white leading-tight truncate">
+                {activeLulSeason
+                  ? (activeLulSeason.name ?? `Saison ${activeLulSeason.number}`)
+                  : "Keine aktive Saison"}
+              </p>
+              {activeLulSeason && nextSpieltag ? (
+                <div className="flex items-center gap-3 mt-2 text-[11px] text-gray-500">
+                  <span className="flex items-center gap-1">
+                    <Swords className="w-3 h-3" />
+                    ST {nextSpieltag.number}: {nextSpieltag.game}
+                  </span>
+                  {userId && myLulPoints > 0 && (
+                    <span className="flex items-center gap-1 ml-auto text-amber-400/70">
+                      <Zap className="w-3 h-3" />
+                      <span className="tabular-nums">{myLulPoints}</span> Pts
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <p className="text-[11px] text-gray-600 mt-1">
+                  {activeLulSeason ? "Saison läuft — keine weiteren Spieltage" : "Liga ansehen →"}
+                </p>
+              )}
+            </div>
           </Link>
         </div>
 
@@ -463,7 +463,7 @@ export default async function DashboardPage() {
                   <p className="text-xs font-bold text-amber-400 tabular-nums flex items-center gap-1">
                     <Coins className="w-3 h-3" />
                     {myMonthQuests
-                      .filter(q => q.progress[0]?.completed)
+                      .filter(q => q.progress?.[0]?.completed)
                       .reduce((s, q) => s + q.reward, 0)
                       .toLocaleString("de-DE")}
                   </p>
@@ -477,7 +477,7 @@ export default async function DashboardPage() {
                   <p className="text-xs text-gray-600">Keine Quests diesen Monat</p>
                 </div>
               ) : myMonthQuests.map((quest, i) => {
-                const prog      = quest.progress[0];
+                const prog      = quest.progress?.[0];
                 const completed = prog?.completed ?? false;
                 const current   = prog?.current   ?? 0;
                 const pct       = Math.min(Math.round((current / quest.target) * 100), 100);

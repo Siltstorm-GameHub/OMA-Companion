@@ -145,7 +145,7 @@ export default async function EventsPage() {
           const isFull       = !!(ev.maxPlayers && ev._count.registrations >= ev.maxPlayers);
           const canRegister  = ev.status === "open" || ev.status === "active";
           const isTournament = !!ev.tournament;
-          const hasSeries    = !!ev.seriesId;
+          const hasSeries    = !!ev.series;
           const discordUrl   = ev.discordEventId && GUILD_ID
             ? `https://discord.com/events/${GUILD_ID}/${ev.discordEventId}` : null;
           const date = new Date(ev.startAt);
@@ -176,7 +176,7 @@ export default async function EventsPage() {
                   <Link href={`/events/series/${ev.seriesId}`}
                     className="flex items-center gap-1 mb-1 hover:text-teal-300 transition-colors group/series">
                     <Repeat className="w-3 h-3 text-teal-500 shrink-0" />
-                    <span className="text-[10px] text-teal-500 font-medium group-hover/series:text-teal-300">{ev.series!.name}</span>
+                    <span className="text-[10px] text-teal-500 font-medium group-hover/series:text-teal-300">{ev.series?.name}</span>
                     <span className="text-[10px] text-gray-600">· Eventreihe</span>
                   </Link>
                 )}
@@ -258,7 +258,7 @@ export default async function EventsPage() {
           <div className="glass card-shine rounded-2xl overflow-hidden divide-y divide-white/[0.04]">
             {finishedEvents.map(ev => {
               const isTournament = !!ev.tournament;
-              const hasSeries    = !!ev.seriesId;
+              const hasSeries    = !!ev.series;
               const date         = new Date(ev.startAt);
               return (
                 <Link key={ev.id} href={`/events/${ev.id}`}
@@ -274,7 +274,7 @@ export default async function EventsPage() {
                       {isTournament && <Trophy className="w-3 h-3 text-gray-600 shrink-0" />}
                     </div>
                     <p className="text-[10px] text-gray-600 mt-0.5">
-                      {hasSeries && <span className="text-teal-800 mr-1.5">{ev.series!.name} ·</span>}
+                      {hasSeries && <span className="text-teal-800 mr-1.5">{ev.series?.name} ·</span>}
                       {date.toLocaleDateString("de-DE", { day: "2-digit", month: "long", year: "numeric" })}
                       {ev.game && <span className="ml-1.5">· {ev.game}</span>}
                       <span className="ml-1.5">· {ev._count.registrations} Teilnehmer</span>
