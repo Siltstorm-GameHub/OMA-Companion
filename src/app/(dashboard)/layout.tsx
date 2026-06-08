@@ -108,7 +108,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <MobileTopBar />
 
       {/* ── Floating Pill Nav (nur Desktop) ─────────────────────── */}
-      <FloatingPill />
+      <div className="hidden lg:block">
+        <FloatingPill />
+      </div>
 
       {/* ── Main Content ────────────────────────────────────────── */}
       {/* Mobile:  36px Ticker + 56px MobileTopBar + 12px gap = 104px */}
