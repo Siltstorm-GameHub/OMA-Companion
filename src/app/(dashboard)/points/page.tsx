@@ -18,12 +18,13 @@ const CATEGORY_ACCENT: Record<PointCategory, { icon: string; border: string; glo
 };
 
 const RANK_ROWS = [
-  { range: "0 – 499",        rank: "Neuling",     color: "text-gray-400",    lvl: "1–5",   accent: "bg-gray-500/10  border-gray-500/15"  },
-  { range: "500 – 2.999",    rank: "Kämpfer",     color: "text-emerald-400", lvl: "6–15",  accent: "bg-emerald-500/10 border-emerald-500/15" },
-  { range: "3.000 – 9.999",  rank: "Veteran",     color: "text-blue-400",    lvl: "16–25", accent: "bg-blue-500/10  border-blue-500/15"  },
-  { range: "10.000 – 24.999",rank: "Elite",       color: "text-purple-400",  lvl: "26–35", accent: "bg-purple-500/10 border-purple-500/15" },
-  { range: "25.000 – 59.999",rank: "Legende",     color: "text-amber-400",   lvl: "36–45", accent: "bg-amber-500/10  border-amber-500/15" },
-  { range: "60.000+",        rank: "Grandmaster", color: "text-red-400",     lvl: "46+",   accent: "bg-red-500/10   border-red-500/15"   },
+  { range: "0 – 99",    emoji: "🔰", rank: "Neuling",               color: "text-gray-400",   accent: "bg-gray-500/10   border-gray-500/15"   },
+  { range: "100 – 199", emoji: "📋", rank: "Zivi-Anwärter",         color: "text-zinc-300",   accent: "bg-zinc-500/10   border-zinc-500/15"   },
+  { range: "200 – 299", emoji: "🛺", rank: "Rollator-Führerschein", color: "text-green-400",  accent: "bg-green-500/10  border-green-500/15"  },
+  { range: "300 – 399", emoji: "🍵", rank: "Kamillenteetrinker",    color: "text-teal-400",   accent: "bg-teal-500/10   border-teal-500/15"   },
+  { range: "400 – 499", emoji: "🏛️", rank: "Heimbeirat",            color: "text-blue-400",   accent: "bg-blue-500/10   border-blue-500/15"   },
+  { range: "500 – 999", emoji: "🩺", rank: "Pflegestufe 5",         color: "text-purple-400", accent: "bg-purple-500/10 border-purple-500/15" },
+  { range: "1.000+",    emoji: "👴", rank: "Old Master",            color: "text-amber-400",  accent: "bg-amber-500/10  border-amber-500/15"  },
 ];
 
 export default async function PointsPage() {

@@ -9,15 +9,17 @@ import { RelativeTime } from "@/components/RelativeTime";
 import Image from "next/image";
 import { PointsChart } from "@/components/PointsChart";
 import CollectiblesShowcase from "./CollectiblesShowcase";
+import ProfileEditor from "./ProfileEditor";
 
 // ── Rang-System ───────────────────────────────────────────────────────────────
 const RANK_THRESHOLDS = [
-  { min:     0, label: "Neuling",     emoji: "🔰", color: "text-gray-400",   bg: "bg-gray-500/10",   border: "border-gray-500/20"   },
-  { min:   500, label: "Kämpfer",     emoji: "⚔️", color: "text-green-400",  bg: "bg-green-500/10",  border: "border-green-500/20"  },
-  { min:  3000, label: "Veteran",     emoji: "🛡️", color: "text-blue-400",   bg: "bg-blue-500/10",   border: "border-blue-500/20"   },
-  { min: 10000, label: "Elite",       emoji: "💎", color: "text-purple-400", bg: "bg-purple-500/10", border: "border-purple-500/20" },
-  { min: 25000, label: "Legende",     emoji: "🌟", color: "text-amber-400",  bg: "bg-amber-500/10",  border: "border-amber-500/20"  },
-  { min: 60000, label: "Grandmaster", emoji: "👑", color: "text-red-400",    bg: "bg-red-500/10",    border: "border-red-500/20"    },
+  { min:    0, label: "Neuling",                emoji: "🔰", color: "text-gray-400",    bg: "bg-gray-500/10",    border: "border-gray-500/20"    },
+  { min:  100, label: "Zivi-Anwärter",          emoji: "📋", color: "text-zinc-300",    bg: "bg-zinc-500/10",    border: "border-zinc-500/20"    },
+  { min:  200, label: "Rollator-Führerschein",  emoji: "🛺", color: "text-green-400",   bg: "bg-green-500/10",   border: "border-green-500/20"   },
+  { min:  300, label: "Kamillenteetrinker",     emoji: "🍵", color: "text-teal-400",    bg: "bg-teal-500/10",    border: "border-teal-500/20"    },
+  { min:  400, label: "Heimbeirat",             emoji: "🏛️", color: "text-blue-400",    bg: "bg-blue-500/10",    border: "border-blue-500/20"    },
+  { min:  500, label: "Pflegestufe 5",          emoji: "🩺", color: "text-purple-400",  bg: "bg-purple-500/10",  border: "border-purple-500/20"  },
+  { min: 1000, label: "Old Master",             emoji: "👴", color: "text-amber-400",   bg: "bg-amber-500/10",   border: "border-amber-500/20"   },
 ] as const;
 
 function getRank(points: number) {
@@ -64,7 +66,7 @@ export default async function ProfilePage() {
     await Promise.all([
       prisma.user.findUnique({
         where:  { id: userId },
-        select: { id: true, name: true, username: true, image: true, points: true, rankPoints: true, createdAt: true, showcaseJson: true },
+        select: { id: true, name: true, username: true, image: true, points: true, rankPoints: true, createdAt: true, showcaseJson: true, birthday: true, bio: true },
       }),
       prisma.pointTransaction.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, take: 30 }),
       prisma.eventRegistration.findMany({
@@ -211,6 +213,16 @@ export default async function ProfilePage() {
                 <span>👑</span> Maximalen Rang erreicht
               </div>
             )}
+
+            {/* Bio & Geburtstag */}
+            <div className="mt-4 pt-4 border-t border-white/[0.06]">
+              <ProfileEditor
+                birthday={user.birthday
+                  ? `${String(user.birthday.getMonth() + 1).padStart(2, "0")}-${String(user.birthday.getDate()).padStart(2, "0")}`
+                  : null}
+                bio={user.bio ?? null}
+              />
+            </div>
           </div>
         </div>
       </div>
