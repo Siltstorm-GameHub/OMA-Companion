@@ -39,7 +39,7 @@ export async function processPendingPolls(client: Client) {
       const msg = await (channel as TextChannel).send({
         poll: {
           question:        { text: question },
-          answers:         limitedAnswers.map(a => ({ poll_media: { text: a } })),
+          answers:         limitedAnswers.map(a => ({ text: a })),
           duration:        job.duration,   // in Stunden
           allow_multiselect: false,
         },
