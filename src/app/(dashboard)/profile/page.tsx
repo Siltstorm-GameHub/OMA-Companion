@@ -149,12 +149,12 @@ export default async function ProfilePage() {
 
       {/* ── Banner ──────────────────────────────────────────────────────── */}
       <div className="relative overflow-hidden" style={{ height: "156px" }}>
-        {/* Dark violet gradient base */}
+        {/* Dark teal gradient base */}
         <div className="absolute inset-0"
-          style={{ background: "linear-gradient(135deg, #1a0a2e 0%, #130826 35%, #0d0d0f 85%)" }} />
+          style={{ background: "linear-gradient(135deg, #052e26 0%, #0a1f1c 35%, #0d0d0f 85%)" }} />
         {/* Radial glow accents */}
         <div className="absolute inset-0"
-          style={{ backgroundImage: "radial-gradient(ellipse at 18% 70%, rgba(139,92,246,0.28) 0%, transparent 52%), radial-gradient(ellipse at 70% 30%, rgba(79,46,220,0.16) 0%, transparent 50%)" }} />
+          style={{ backgroundImage: "radial-gradient(ellipse at 18% 70%, rgba(20,184,166,0.28) 0%, transparent 52%), radial-gradient(ellipse at 70% 30%, rgba(13,148,136,0.16) 0%, transparent 50%)" }} />
         {/* Subtle grid */}
         <div className="absolute inset-0 opacity-[0.035]"
           style={{ backgroundImage: "linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
@@ -170,9 +170,9 @@ export default async function ProfilePage() {
           {user.image
             ? <Image src={user.image} alt="avatar" width={96} height={96}
                 className="w-24 h-24 object-cover"
-                style={{ borderRadius: "4px", border: "3px solid rgba(139,92,246,0.55)", boxShadow: "0 0 0 1px rgba(139,92,246,0.18), 0 8px 32px rgba(0,0,0,0.85)" }} />
+                style={{ borderRadius: "4px", border: "3px solid rgba(20,184,166,0.55)", boxShadow: "0 0 0 1px rgba(20,184,166,0.18), 0 8px 32px rgba(0,0,0,0.85)" }} />
             : <div className="w-24 h-24 flex items-center justify-center text-3xl font-black text-white"
-                style={{ borderRadius: "4px", background: "linear-gradient(135deg, #6d28d9, #4f46e5)", border: "3px solid rgba(139,92,246,0.55)", boxShadow: "0 8px 32px rgba(0,0,0,0.85)" }}>
+                style={{ borderRadius: "4px", background: "linear-gradient(135deg, #14b8a6, #8b2020)", border: "3px solid rgba(20,184,166,0.55)", boxShadow: "0 8px 32px rgba(0,0,0,0.85)" }}>
                 {displayName[0].toUpperCase()}
               </div>}
           <span className="absolute bottom-0 right-0 w-4 h-4 bg-emerald-400 border-2"
@@ -226,10 +226,10 @@ export default async function ProfilePage() {
             <span className="text-[10px] text-gray-600 whitespace-nowrap shrink-0">{currentRank.emoji} {currentRank.label}</span>
             <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
               <div className="h-full rounded-full transition-all duration-1000"
-                style={{ width: `${rankPct}%`, background: "linear-gradient(90deg, #8b5cf6, #a78bfa)", boxShadow: "0 0 8px rgba(139,92,246,0.6)" }} />
+                style={{ width: `${rankPct}%`, background: "linear-gradient(90deg, #14b8a6, #2dd4bf)", boxShadow: "0 0 8px rgba(20,184,166,0.6)" }} />
             </div>
             <span className="text-[10px] text-gray-600 whitespace-nowrap shrink-0">{nextRank.emoji} {nextRank.label}</span>
-            <span className="text-[10px] text-violet-400 tabular-nums whitespace-nowrap shrink-0">{rankPct}%</span>
+            <span className="text-[10px] text-teal-400 tabular-nums whitespace-nowrap shrink-0">{rankPct}%</span>
           </div>
         ) : (
           <div className="flex items-center gap-1.5 text-xs text-amber-400 font-semibold">
@@ -334,7 +334,7 @@ export default async function ProfilePage() {
                     <div className="flex flex-wrap gap-2">
                       {catBadges.map(badge => (
                         <div key={badge.id} title={badge.desc}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm border text-xs font-medium surface-elevated text-white border-white/[0.08] hover:border-violet-500/30 transition-all">
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm border text-xs font-medium surface-elevated text-white border-white/[0.08] hover:border-teal-500/30 transition-all">
                           <span>{badge.icon}</span>
                           {badge.name}
                         </div>
@@ -429,7 +429,7 @@ export default async function ProfilePage() {
             <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">📊 Aktivität</h2>
             <div className="surface overflow-hidden divide-y divide-white/[0.04]">
               {[
-                { icon: <Clock className="w-3.5 h-3.5" />,         label: "Voice-Stunden",  value: `${voiceHours}h`,          color: "text-violet-400" },
+                { icon: <Clock className="w-3.5 h-3.5" />,         label: "Voice-Stunden",  value: `${voiceHours}h`,          color: "text-teal-400" },
                 { icon: <MessageSquare className="w-3.5 h-3.5" />, label: "Nachrichten",    value: `~${messageCount}`,        color: "text-blue-400"   },
                 { icon: <CalendarDays className="w-3.5 h-3.5" />,  label: "Events besucht", value: String(eventRegs.length),  color: "text-emerald-400"},
                 { icon: <Swords className="w-3.5 h-3.5" />,        label: "Turniere",       value: String(tournamentParticipations.length), color: "text-amber-400" },

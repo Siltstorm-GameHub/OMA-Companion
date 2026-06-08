@@ -130,7 +130,7 @@ export default async function LeaderboardPage() {
         </div>
         {myRank && myRank > 0 && (
           <div className="card-cut surface px-4 py-2.5 text-center hidden sm:block"
-            style={{ boxShadow: "0 0 0 1px rgba(139,92,246,0.12)" }}>
+            style={{ boxShadow: "0 0 0 1px rgba(20,184,166,0.12)" }}>
             <p className="text-[9px] text-gray-600 uppercase tracking-[0.14em]">Dein Rang</p>
             <p className="font-display text-xl font-black text-gradient-gaming">#{myRank}</p>
           </div>
@@ -174,7 +174,7 @@ export default async function LeaderboardPage() {
                   {u.image
                     ? <Image src={u.image} alt={displayName} width={80} height={80} className="w-full h-full object-cover" />
                     : <div className="w-full h-full flex items-center justify-center text-base font-black text-white"
-                        style={{ background: "linear-gradient(135deg, #6d28d9, #4f46e5)" }}>
+                        style={{ background: "linear-gradient(135deg, #14b8a6, #8b2020)" }}>
                         {displayName[0].toUpperCase()}
                       </div>}
                 </div>
@@ -241,19 +241,19 @@ export default async function LeaderboardPage() {
               : i === 2
               ? "bg-orange-500/[0.03] hover:bg-orange-600/[0.06]"
               : isMe
-              ? "bg-violet-500/[0.05] hover:bg-violet-500/[0.08]"
+              ? "bg-teal-500/[0.05] hover:bg-teal-500/[0.08]"
               : "hover:bg-white/[0.025]";
 
             const nameColor = i === 0 ? "text-amber-300"
               : i === 1 ? "text-slate-300"
               : i === 2 ? "text-orange-300"
-              : isMe    ? "text-violet-300"
+              : isMe    ? "text-teal-300"
               : "text-white";
 
             const ptsColor = i === 0 ? "text-amber-400"
               : i === 1 ? "text-slate-400"
               : i === 2 ? "text-orange-400"
-              : isMe    ? "text-violet-400"
+              : isMe    ? "text-teal-400"
               : "text-white";
 
             return (
@@ -268,16 +268,16 @@ export default async function LeaderboardPage() {
                 <div className="text-center">
                   {isTop3
                     ? <span className="text-base leading-none">{MEDALS[i]}</span>
-                    : <span className={`text-xs font-bold tabular-nums ${isMe ? "text-violet-400" : "text-gray-600"}`}>{i + 1}</span>}
+                    : <span className={`text-xs font-bold tabular-nums ${isMe ? "text-teal-400" : "text-gray-600"}`}>{i + 1}</span>}
                 </div>
 
                 {/* Avatar */}
                 <div className={`w-9 h-9 rounded-full overflow-hidden
                   ${isTop3 ? "ring-2" : "ring-1"}
-                  ${i === 0 ? "ring-amber-400/50" : i === 1 ? "ring-slate-400/40" : i === 2 ? "ring-orange-500/40" : isMe ? "ring-violet-400/40" : "ring-white/[0.08]"}`}>
+                  ${i === 0 ? "ring-amber-400/50" : i === 1 ? "ring-slate-400/40" : i === 2 ? "ring-orange-500/40" : isMe ? "ring-teal-400/40" : "ring-white/[0.08]"}`}>
                   {u.image
                     ? <Image src={u.image} alt={displayName} width={36} height={36} className="w-full h-full object-cover" />
-                    : <div className={`w-full h-full flex items-center justify-center text-xs font-bold ${isMe ? "bg-violet-500/20 text-violet-300" : "bg-white/[0.05] text-gray-400"}`}>
+                    : <div className={`w-full h-full flex items-center justify-center text-xs font-bold ${isMe ? "bg-teal-500/20 text-teal-300" : "bg-white/[0.05] text-gray-400"}`}>
                         {displayName[0].toUpperCase()}
                       </div>}
                 </div>

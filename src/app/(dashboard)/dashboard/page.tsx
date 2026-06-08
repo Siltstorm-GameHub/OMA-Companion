@@ -131,18 +131,18 @@ export default async function DashboardPage() {
       <div className="relative px-5 pt-8 pb-6 max-w-5xl mx-auto">
         {/* Dezente Trennlinie unten */}
         <div className="absolute bottom-0 inset-x-5 h-px"
-          style={{ background: "linear-gradient(90deg, transparent, rgba(139,92,246,0.18), transparent)" }} />
+          style={{ background: "linear-gradient(90deg, transparent, rgba(20,184,166,0.18), transparent)" }} />
 
         <div className="flex items-start gap-5">
           {/* Avatar mit Cut-Corner */}
           <div className="relative shrink-0">
             <div className="card-cut w-16 h-16 sm:w-20 sm:h-20 overflow-hidden"
-              style={{ boxShadow: "0 0 0 1px rgba(139,92,246,0.35), 0 0 32px rgba(139,92,246,0.12), 0 8px 24px rgba(0,0,0,0.6)" }}>
+              style={{ boxShadow: "0 0 0 1px rgba(20,184,166,0.35), 0 0 32px rgba(20,184,166,0.12), 0 8px 24px rgba(0,0,0,0.6)" }}>
               {avatarUrl ? (
                 <Image src={avatarUrl} alt={displayName} width={80} height={80} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-2xl font-black text-white"
-                  style={{ background: "linear-gradient(135deg, #6d28d9, #4f46e5, #0d9488)" }}>
+                  style={{ background: "linear-gradient(135deg, #14b8a6, #0d9488, #8b2020)" }}>
                   {firstName[0]?.toUpperCase()}
                 </div>
               )}
@@ -154,7 +154,7 @@ export default async function DashboardPage() {
 
           {/* Name + Badges */}
           <div className="flex-1 min-w-0 pt-1">
-            <p className="text-[10px] text-violet-400/60 uppercase tracking-[0.18em] font-semibold mb-1">Spieler</p>
+            <p className="text-[10px] text-teal-400/60 uppercase tracking-[0.18em] font-semibold mb-1">Spieler</p>
             <h1 className="font-display text-3xl sm:text-4xl font-black text-white leading-none tracking-tight">
               {firstName}
             </h1>
@@ -162,7 +162,7 @@ export default async function DashboardPage() {
               <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-sm border ${ROLE_STYLE[userRole] ?? ROLE_STYLE.user}`}>
                 {ROLE_LABEL[userRole] ?? "Mitglied"}
               </span>
-              <span className="text-xs font-bold tabular-nums text-violet-300">
+              <span className="text-xs font-bold tabular-nums text-teal-300">
                 <CountUp to={myRankPoints} duration={900} /> Pts
               </span>
               <span className="text-xs text-amber-400 font-bold tabular-nums flex items-center gap-1">
@@ -178,7 +178,7 @@ export default async function DashboardPage() {
           {/* Rang-Badge mit Cut-Corner */}
           {leaderboardRank && (
             <div className="card-cut surface px-5 py-3 text-center shrink-0 hidden sm:block"
-              style={{ boxShadow: "0 0 0 1px rgba(139,92,246,0.15), 0 0 24px rgba(139,92,246,0.05)" }}>
+              style={{ boxShadow: "0 0 0 1px rgba(20,184,166,0.15), 0 0 24px rgba(20,184,166,0.05)" }}>
               <p className="text-[9px] text-gray-600 uppercase tracking-[0.15em] mb-1">Rang</p>
               <p className="font-display text-3xl font-black tabular-nums leading-none text-gradient-gaming">
                 #{leaderboardRank}
@@ -201,7 +201,7 @@ export default async function DashboardPage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-6">
           {[
             { value: activeEvents,      label: "Aktive Events",  color: "text-teal-400"   },
-            { value: myQuestsDone,      label: `/ ${totalMonthQuests} Quests`, color: "text-violet-400" },
+            { value: myQuestsDone,      label: `/ ${totalMonthQuests} Quests`, color: "text-teal-400" },
             { value: memberCount,       label: "Mitglieder",     color: "text-gray-300"   },
             { value: leaderboardRank ? `#${leaderboardRank}` : "–", label: "Dein Rang", color: "text-amber-400" },
           ].map((s, i) => (
@@ -274,29 +274,29 @@ export default async function DashboardPage() {
           {/* Level-Up-League Hub */}
           <Link href="/lul"
             className="surface animate-slide-up stagger-2 group block overflow-hidden relative"
-            style={{ borderRadius: "6px", border: "1px solid rgba(139,92,246,0.12)", boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
+            style={{ borderRadius: "6px", border: "1px solid rgba(139,32,32,0.18)", boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
 
             {/* Cover art area */}
             <div className="relative overflow-hidden" style={{ height: "108px" }}>
               <div className="absolute inset-0"
-                style={{ background: "linear-gradient(135deg, #1a0a2e 0%, #100820 50%, #0d0d0f 100%)" }} />
+                style={{ background: "linear-gradient(135deg, #2e0a0a 0%, #1a0606 50%, #0d0d0f 100%)" }} />
               <div className="absolute inset-0"
-                style={{ backgroundImage: "radial-gradient(ellipse at 25% 60%, rgba(139,92,246,0.22) 0%, transparent 55%)" }} />
-              <Swords className="absolute -right-3 -bottom-3 w-28 h-28 text-violet-400/[0.07] group-hover:text-violet-400/[0.12] transition-colors" />
+                style={{ backgroundImage: "radial-gradient(ellipse at 25% 60%, rgba(139,32,32,0.28) 0%, transparent 55%)" }} />
+              <Swords className="absolute -right-3 -bottom-3 w-28 h-28 text-red-900/[0.15] group-hover:text-red-800/[0.25] transition-colors" />
               {/* Season badge */}
               <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider"
-                style={{ background: "rgba(139,92,246,0.14)", border: "1px solid rgba(139,92,246,0.22)", color: "#a78bfa" }}>
-                <span className="w-1.5 h-1.5 rounded-full bg-violet-400" style={{ boxShadow: activeLulSeason ? "0 0 6px rgba(139,92,246,0.8)" : "none" }} />
+                style={{ background: "rgba(139,32,32,0.20)", border: "1px solid rgba(139,32,32,0.35)", color: "#f87171" }}>
+                <span className="w-1.5 h-1.5 rounded-full bg-red-400" style={{ boxShadow: activeLulSeason ? "0 0 6px rgba(248,113,113,0.8)" : "none" }} />
                 {activeLulSeason ? "Saison aktiv" : "Keine Saison"}
               </div>
-              <ChevronRight className="absolute top-3 right-3 w-4 h-4 text-gray-700 group-hover:text-violet-400 group-hover:translate-x-0.5 transition-all" />
+              <ChevronRight className="absolute top-3 right-3 w-4 h-4 text-gray-700 group-hover:text-red-400 group-hover:translate-x-0.5 transition-all" />
               <div className="absolute bottom-0 inset-x-0 h-12"
                 style={{ background: "linear-gradient(to bottom, transparent, var(--bg-surface))" }} />
             </div>
 
             {/* Info area */}
             <div className="px-4 pb-4 pt-2">
-              <p className="text-[9px] text-violet-400/50 uppercase tracking-[0.18em] font-semibold mb-0.5">Level-Up-League</p>
+              <p className="text-[9px] text-red-400/50 uppercase tracking-[0.18em] font-semibold mb-0.5">Level-Up-League</p>
               <p className="font-display text-base font-black text-white leading-tight truncate">
                 {activeLulSeason
                   ? (activeLulSeason.name ?? `Saison ${activeLulSeason.number}`)
@@ -333,7 +333,7 @@ export default async function DashboardPage() {
               <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
                 <Repeat className="w-3.5 h-3.5 text-teal-500/70" /> Eventreihen
               </h2>
-              <Link href="/events" className="text-[11px] flex items-center gap-0.5 text-violet-500 hover:text-violet-300 transition-colors">
+              <Link href="/events" className="text-[11px] flex items-center gap-0.5 text-teal-500 hover:text-teal-300 transition-colors">
                 Alle <ChevronRight className="w-3 h-3" />
               </Link>
             </div>
@@ -388,7 +388,7 @@ export default async function DashboardPage() {
               <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
                 <Trophy className="w-3.5 h-3.5 text-amber-500/70" /> Rangliste
               </h2>
-              <Link href="/leaderboard" className="text-[11px] flex items-center gap-0.5 text-violet-500 hover:text-violet-300 transition-colors">
+              <Link href="/leaderboard" className="text-[11px] flex items-center gap-0.5 text-teal-500 hover:text-teal-300 transition-colors">
                 Alle <ChevronRight className="w-3 h-3" />
               </Link>
             </div>
@@ -401,7 +401,7 @@ export default async function DashboardPage() {
                   <Link key={u.id} href={isMe ? "/profile" : `/profile/${u.id}`}
                     className={`flex items-center gap-2.5 px-3.5 py-2.5 transition-colors ${!isMe ? "hover:bg-white/[0.025]" : ""}`}
                     style={{
-                      background: isMe ? "rgba(139,92,246,0.07)" : "",
+                      background: isMe ? "rgba(20,184,166,0.07)" : "",
                       borderBottom: i < topUsers.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "",
                     }}>
                     <div className="w-5 text-center shrink-0">
@@ -410,16 +410,16 @@ export default async function DashboardPage() {
                         : <span className="text-[10px] font-bold text-gray-600">{i + 1}</span>}
                     </div>
                     <div className="w-7 h-7 rounded-sm shrink-0 overflow-hidden"
-                      style={{ boxShadow: isMe ? "0 0 0 1px rgba(139,92,246,0.5)" : "0 0 0 1px rgba(255,255,255,0.08)" }}>
+                      style={{ boxShadow: isMe ? "0 0 0 1px rgba(20,184,166,0.5)" : "0 0 0 1px rgba(255,255,255,0.08)" }}>
                       {u.image
                         ? <Image src={u.image} alt={name} width={28} height={28} className="w-full h-full object-cover" />
                         : <div className="w-full h-full flex items-center justify-center text-[10px] font-bold"
-                            style={{ background: isMe ? "rgba(139,92,246,0.20)" : "rgba(255,255,255,0.05)", color: isMe ? "#a78bfa" : "#9ca3af" }}>
+                            style={{ background: isMe ? "rgba(20,184,166,0.20)" : "rgba(255,255,255,0.05)", color: isMe ? "#2dd4bf" : "#9ca3af" }}>
                             {name[0].toUpperCase()}
                           </div>}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold truncate" style={{ color: isMe ? "#a78bfa" : "white" }}>
+                      <p className="text-xs font-semibold truncate" style={{ color: isMe ? "#2dd4bf" : "white" }}>
                         {name}{isMe && <span className="text-[9px] text-gray-600 ml-1 font-normal">du</span>}
                       </p>
                     </div>
@@ -438,7 +438,7 @@ export default async function DashboardPage() {
               <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
                 <Scroll className="w-3.5 h-3.5 text-red-500/70" /> Quests
               </h2>
-              <Link href="/quests" className="text-[11px] flex items-center gap-0.5 text-violet-500 hover:text-violet-300 transition-colors">
+              <Link href="/quests" className="text-[11px] flex items-center gap-0.5 text-teal-500 hover:text-teal-300 transition-colors">
                 Alle <ChevronRight className="w-3 h-3" />
               </Link>
             </div>

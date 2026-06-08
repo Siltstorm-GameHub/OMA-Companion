@@ -179,9 +179,9 @@ export default async function EventsPage() {
                 {/* Reihen-Badge */}
                 {hasSeries && (
                   <Link href={`/events/series/${ev.seriesId}`}
-                    className="flex items-center gap-1 mb-1 hover:text-violet-300 transition-colors group/series">
-                    <Repeat className="w-3 h-3 text-violet-400 shrink-0" />
-                    <span className="text-[10px] text-violet-400 font-medium group-hover/series:text-violet-300">{ev.series?.name}</span>
+                    className="flex items-center gap-1 mb-1 hover:text-teal-300 transition-colors group/series">
+                    <Repeat className="w-3 h-3 text-teal-400 shrink-0" />
+                    <span className="text-[10px] text-teal-400 font-medium group-hover/series:text-teal-300">{ev.series?.name}</span>
                     <span className="text-[10px] text-gray-600">· Eventreihe</span>
                   </Link>
                 )}
@@ -189,7 +189,7 @@ export default async function EventsPage() {
                 {/* Titel */}
                 <div className="flex items-center gap-2 mb-1.5">
                   <Link href={`/events/${ev.id}`}
-                    className="font-semibold text-white text-base truncate hover:text-violet-300 transition-colors">
+                    className="font-semibold text-white text-base truncate hover:text-teal-300 transition-colors">
                     {ev.title}
                   </Link>
                   {isTournament && <Trophy className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
@@ -212,7 +212,7 @@ export default async function EventsPage() {
                   </span>
                   {discordUrl && (
                     <a href={discordUrl} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-[10px] text-gray-600 hover:text-violet-400 transition-colors">
+                      className="flex items-center gap-1 text-[10px] text-gray-600 hover:text-teal-400 transition-colors">
                       <ExternalLink className="w-3 h-3" /> Discord
                     </a>
                   )}
@@ -226,7 +226,7 @@ export default async function EventsPage() {
                   {/* Alle Termine dieser Reihe */}
                   {hasSeries && (
                     <Link href={`/events/series/${ev.seriesId}`}
-                      className="flex items-center gap-1 text-[10px] text-violet-600 hover:text-violet-400 transition-colors">
+                      className="flex items-center gap-1 text-[10px] text-teal-600 hover:text-teal-400 transition-colors">
                       <ChevronRight className="w-3 h-3" /> Reihe ansehen
                     </Link>
                   )}
@@ -274,12 +274,12 @@ export default async function EventsPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
-                      {hasSeries && <Repeat className="w-3 h-3 text-violet-700 shrink-0" />}
+                      {hasSeries && <Repeat className="w-3 h-3 text-teal-700 shrink-0" />}
                       <p className="text-sm font-medium text-gray-400 truncate group-hover:text-white transition-colors">{ev.title}</p>
                       {isTournament && <Trophy className="w-3 h-3 text-gray-600 shrink-0" />}
                     </div>
                     <p className="text-[10px] text-gray-600 mt-0.5">
-                      {hasSeries && <span className="text-violet-800 mr-1.5">{ev.series?.name} ·</span>}
+                      {hasSeries && <span className="text-teal-800 mr-1.5">{ev.series?.name} ·</span>}
                       {date.toLocaleDateString("de-DE", { day: "2-digit", month: "long", year: "numeric" })}
                       {ev.game && <span className="ml-1.5">· {ev.game}</span>}
                       <span className="ml-1.5">· {ev._count.registrations} Teilnehmer</span>

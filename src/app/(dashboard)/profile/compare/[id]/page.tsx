@@ -84,7 +84,7 @@ export default async function CompareProfilePage({
     { icon: <Star className="w-4 h-4" />,        label: "Punkte",         valA: me.points,       valB: opponent.points,       colorA: "bg-amber-500",  colorB: "bg-amber-400/50"  },
     { icon: <Trophy className="w-4 h-4" />,       label: "Turnier-Siege",  valA: me.matchWins,    valB: opponent.matchWins,    colorA: "bg-rose-500",   colorB: "bg-rose-400/50"   },
     { icon: <CalendarDays className="w-4 h-4" />, label: "Events",         valA: me.eventCount,   valB: opponent.eventCount,   colorA: "bg-blue-500",   colorB: "bg-blue-400/50"   },
-    { icon: <Swords className="w-4 h-4" />,       label: "Voice-Stunden",  valA: me.voiceHours,   valB: opponent.voiceHours,   colorA: "bg-violet-500", colorB: "bg-violet-400/50" },
+    { icon: <Swords className="w-4 h-4" />,       label: "Voice-Stunden",  valA: me.voiceHours,   valB: opponent.voiceHours,   colorA: "bg-teal-500", colorB: "bg-teal-400/50" },
   ];
 
   return (
