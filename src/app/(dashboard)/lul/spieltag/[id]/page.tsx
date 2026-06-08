@@ -10,7 +10,7 @@ const MEDAL_BG   = ["rgba(251,191,36,0.12)", "rgba(156,163,175,0.1)", "rgba(180,
 const MEDAL_RING = ["ring-amber-400/30", "ring-gray-400/20", "ring-amber-700/30"];
 
 const COLS = [
-  { key: "asPlayer",    label: "Spieler",   Icon: Gamepad2,    cls: "text-blue-400",    bg: "bg-blue-500/10"    },
+  { key: "asPlayer",    label: "Mitspieler", Icon: Gamepad2,    cls: "text-blue-400",    bg: "bg-blue-500/10"    },
   { key: "asSpectator", label: "Zuschauer", Icon: Eye,         cls: "text-indigo-400",  bg: "bg-indigo-500/10"  },
   { key: "wins",        label: "Siege",     Icon: Trophy,      cls: "text-amber-400",   bg: "bg-amber-500/10"   },
   { key: "champs",      label: "Champ",     Icon: Crown,       cls: "text-purple-400",  bg: "bg-purple-500/10"  },
@@ -88,7 +88,7 @@ export default async function LulAllTimePage() {
           </div>
           <div className="bg-black/20 rounded-xl p-3 text-center">
             <p className="text-lg font-semibold text-white">{standings.length}</p>
-            <p className="text-xs text-gray-500 mt-0.5">Spieler</p>
+            <p className="text-xs text-gray-500 mt-0.5">Mitspieler</p>
           </div>
           <div className="bg-black/20 rounded-xl p-3 text-center">
             <p className="text-lg font-semibold text-purple-400">{myRow?.totalPts ?? 0}</p>
