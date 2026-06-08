@@ -10,18 +10,21 @@ export const LUL_POINTS = {
 } as const;
 
 export function calcLulPoints(entry: {
+  role?:          string;
   gameWinner:     boolean;
   communityChamp: boolean;
   trostpreis:     boolean;
   voted:          boolean;
   dominionBonus:  boolean;
 }): number {
-  let pts = LUL_POINTS.GAME;
-  if (entry.gameWinner)     pts += LUL_POINTS.GAME_WINNER;
-  if (entry.communityChamp) pts += LUL_POINTS.COMMUNITY_CHAMP;
-  if (entry.trostpreis)     pts += LUL_POINTS.TROSTPREIS;
-  if (entry.voted)          pts += LUL_POINTS.VOTE;
-  if (entry.dominionBonus)  pts += LUL_POINTS.DOMINION;
+  // Reine Wähler (role="voter") bekommen keine Teilnahme-Punkte
+  const isVoterOnly = entry.role === "voter";
+  let pts = isVoterOnly ? 0 : LUL_POINTS.GAME;
+  if (!isVoterOnly && entry.gameWinner)     pts += LUL_POINTS.GAME_WINNER;
+  if (!isVoterOnly && entry.communityChamp) pts += LUL_POINTS.COMMUNITY_CHAMP;
+  if (!isVoterOnly && entry.trostpreis)     pts += LUL_POINTS.TROSTPREIS;
+  if (entry.voted)                          pts += LUL_POINTS.VOTE;
+  if (!isVoterOnly && entry.dominionBonus)  pts += LUL_POINTS.DOMINION;
   return pts;
 }
 

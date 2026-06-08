@@ -1,12 +1,14 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { toast } from "sonner";
+import { fireConfetti } from "@/components/ConfettiTrigger";
 import {
   Plus, Trophy, ChevronDown, ChevronUp, Trash2, Save,
   Users, Gamepad2, Lock, RefreshCw, Archive, History, UserPlus, X, Search,
   Eye, Vote, Crown, Gift, Flame, CheckCircle2,
 } from "lucide-react";
 import type { LulAdminSeasons } from "./page";
+import { UserPickerSheet } from "@/components/UserPickerSheet";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };
 type LulSeason  = LulAdminSeasons[number];
@@ -29,8 +31,21 @@ function LulSpieltagEditor({
 }) {
   const [tab, setTab] = useState<"players" | "spectators" | "awards">("players");
   const [loading, setLoading] = useState(false);
+  const TAB_ORDER: ("players" | "spectators" | "awards")[] = ["players", "spectators", "awards"];
+  const touchStartX = useRef<number | null>(null);
+  const onTouchStart = useCallback((e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; }, []);
+  const onTouchEnd   = useCallback((e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    if (Math.abs(dx) < 50) return;
+    const idx = TAB_ORDER.indexOf(tab);
+    if (dx < 0 && idx < TAB_ORDER.length - 1) setTab(TAB_ORDER[idx + 1]);
+    if (dx > 0 && idx > 0)                    setTab(TAB_ORDER[idx - 1]);
+    touchStartX.current = null;
+  }, [tab]);
   const [playerSearch, setPlayerSearch] = useState("");
   const [spectatorSearch, setSpectatorSearch] = useState("");
+  const [voterSearch, setVoterSearch] = useState("");
 
   // Draft state
   const initNumRounds = () => {
@@ -46,7 +61,7 @@ function LulSpieltagEditor({
 
   const initEntries = () => {
     const map: Record<string, {
-      role: "player" | "spectator";
+      role: "player" | "spectator" | "voter";
       rounds: string[];
       placement: string;
       gameWinner: boolean;
@@ -57,7 +72,7 @@ function LulSpieltagEditor({
     for (const e of spieltag.entries) {
       const scores: number[] = e.roundScores ? JSON.parse(e.roundScores) : [];
       map[e.userId] = {
-        role: e.role as "player" | "spectator",
+        role: e.role as "player" | "spectator" | "voter",
         rounds: Array.from({ length: numRounds }, (_, i) => scores[i] != null ? String(scores[i]) : ""),
         placement: e.placement != null ? String(e.placement) : "",
         gameWinner: e.gameWinner,
@@ -76,6 +91,9 @@ function LulSpieltagEditor({
   const [spectatorIds, setSpectatorIds] = useState<string[]>(
     spieltag.entries.filter(e => e.role === "spectator").map(e => e.userId)
   );
+  const [voterIds, setVoterIds] = useState<string[]>(
+    spieltag.entries.filter(e => e.role === "voter").map(e => e.userId)
+  );
 
   const filteredPlayerUsers = useMemo(() => {
     const q = playerSearch.toLowerCase().trim();
@@ -88,11 +106,30 @@ function LulSpieltagEditor({
     return q ? base.filter(u => uname(u).toLowerCase().includes(q)) : base;
   }, [allUsers, spectatorSearch, playerIds]);
 
-  function ensureEntry(userId: string, role: "player" | "spectator") {
+  const filteredVoterUsers = useMemo(() => {
+    const q = voterSearch.toLowerCase().trim();
+    const base = allUsers.filter(u => !playerIds.includes(u.id) && !spectatorIds.includes(u.id));
+    return q ? base.filter(u => uname(u).toLowerCase().includes(q)) : base;
+  }, [allUsers, voterSearch, playerIds, spectatorIds]);
+
+  function ensureEntry(userId: string, role: "player" | "spectator" | "voter") {
     if (!entries[userId]) {
       setEntries(prev => ({
         ...prev,
-        [userId]: { role, rounds: Array(numRounds).fill(""), placement: "", gameWinner: false, communityChamp: false, trostpreis: false, voted: false },
+        [userId]: { role, rounds: Array(numRounds).fill(""), placement: "", gameWinner: false, communityChamp: false, trostpreis: false, voted: role === "voter" },
+      }));
+    }
+  }
+
+  function toggleVoter(userId: string) {
+    if (voterIds.includes(userId)) {
+      setVoterIds(prev => prev.filter(id => id !== userId));
+      setEntries(prev => { const n = { ...prev }; delete n[userId]; return n; });
+    } else {
+      setVoterIds(prev => [...prev, userId]);
+      setEntries(prev => ({
+        ...prev,
+        [userId]: { role: "voter", rounds: Array(numRounds).fill(""), placement: "", gameWinner: false, communityChamp: false, trostpreis: false, voted: true },
       }));
     }
   }
@@ -180,11 +217,13 @@ function LulSpieltagEditor({
 
   async function saveDraft() {
     setLoading(true);
-    const allIds = [...playerIds, ...spectatorIds];
+    const allIds = [...playerIds, ...spectatorIds, ...voterIds];
     const payload = allIds.map(userId => {
       const e = entries[userId];
-      const role = playerIds.includes(userId) ? "player" : "spectator";
-      const scores = (e?.rounds ?? []).map(Number).filter((_, i) => i < (e?.rounds.findLastIndex(r => r !== "") ?? -1) + 1);
+      const role = playerIds.includes(userId) ? "player" : spectatorIds.includes(userId) ? "spectator" : "voter";
+      const scores = role !== "voter"
+        ? (e?.rounds ?? []).map(Number).filter((_, i) => i < (e?.rounds.findLastIndex(r => r !== "") ?? -1) + 1)
+        : [];
       return {
         userId,
         role,
@@ -193,7 +232,7 @@ function LulSpieltagEditor({
         gameWinner: e?.gameWinner ?? false,
         communityChamp: e?.communityChamp ?? false,
         trostpreis: e?.trostpreis ?? false,
-        voted: e?.voted ?? false,
+        voted: role === "voter" ? true : (e?.voted ?? false),
       };
     });
     await fetch(`/api/lul/spieltage/${spieltag.id}`, {
@@ -216,8 +255,10 @@ function LulSpieltagEditor({
       body: JSON.stringify({ finalize: true }),
     });
     setLoading(false);
-    if (res.ok) toast.success(`Spieltag ${spieltag.number} finalisiert – LUL-Punkte vergeben`);
-    else toast.error("Fehler beim Finalisieren");
+    if (res.ok) {
+      toast.success(`Spieltag ${spieltag.number} finalisiert – LUL-Punkte vergeben`);
+      fireConfetti();
+    } else toast.error("Fehler beim Finalisieren");
     onRefresh();
   }
 
@@ -289,21 +330,25 @@ function LulSpieltagEditor({
   }
 
   return (
-    <div className="p-4 space-y-4">
-      {/* Tabs */}
-      <div className="flex gap-1 bg-gray-800 rounded-lg p-1 w-fit">
-        {(["players", "spectators", "awards"] as const).map(t => (
-          <button key={t} onClick={() => setTab(t)}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-              tab === t ? "bg-gray-700 text-white" : "text-gray-500 hover:text-white"
-            }`}>
-            {t === "players"
-          ? <><Gamepad2 className="w-3.5 h-3.5 inline-block mr-1" />Mitspieler</>
-          : t === "spectators"
-          ? <><Eye className="w-3.5 h-3.5 inline-block mr-1" />Zuschauer</>
-          : <><Vote className="w-3.5 h-3.5 inline-block mr-1" />Umfrage</>}
-          </button>
-        ))}
+    <div className="p-4 space-y-4" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+      {/* Tabs — sticky + swipe-to-navigate */}
+      <div className="sticky top-0 z-10 -mx-4 px-4 pt-3 pb-2 bg-gray-900/95 backdrop-blur-sm border-b border-gray-800/60">
+        <div className="flex gap-1 bg-gray-800 rounded-lg p-1">
+          {(["players", "spectators", "awards"] as const).map(t => (
+            <button key={t} onClick={() => setTab(t)}
+              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                tab === t ? "bg-gray-700 text-white shadow-sm" : "text-gray-500 hover:text-gray-300"
+              }`}>
+              {t === "players"
+                ? <><Gamepad2 className="w-3.5 h-3.5" /><span className="hidden sm:inline">Mitspieler</span><span className="sm:hidden">Spieler</span></>
+                : t === "spectators"
+                ? <><Eye className="w-3.5 h-3.5" /><span className="hidden sm:inline">Zuschauer</span><span className="sm:hidden">Zusch.</span></>
+                : <><Vote className="w-3.5 h-3.5" /><span>Umfrage</span></>}
+            </button>
+          ))}
+        </div>
+        {/* Swipe hint — only on touch */}
+        <p className="text-[10px] text-gray-700 text-center mt-1.5 sm:hidden select-none">← wischen zum Wechseln →</p>
       </div>
 
       {/* Players tab */}
@@ -332,24 +377,14 @@ function LulSpieltagEditor({
               </button>
             </div>
           </div>
-          <div className="relative">
-            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500" />
-            <input
-              type="text"
-              placeholder="User suchen..."
-              value={playerSearch}
-              onChange={e => setPlayerSearch(e.target.value)}
-              className="w-full text-xs bg-gray-800 border border-gray-700 text-white rounded-lg pl-8 pr-3 py-1.5 placeholder:text-gray-600"
-            />
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-36 overflow-y-auto">
-            {filteredPlayerUsers.map(u => (
-              <label key={u.id} className="flex items-center gap-1.5 p-1.5 rounded bg-gray-800 hover:bg-gray-700 cursor-pointer text-xs">
-                <input type="checkbox" checked={playerIds.includes(u.id)} onChange={() => togglePlayer(u.id)} className="rounded shrink-0" />
-                <span className="text-white truncate">{uname(u)}</span>
-              </label>
-            ))}
-          </div>
+          <UserPickerSheet
+            label="Mitspieler"
+            users={filteredPlayerUsers}
+            selected={playerIds}
+            onToggle={togglePlayer}
+            searchValue={playerSearch}
+            onSearchChange={setPlayerSearch}
+          />
 
           {playerIds.length > 0 && (
             <div className="overflow-x-auto rounded-lg border border-gray-700 -mx-1 px-1">
@@ -409,24 +444,14 @@ function LulSpieltagEditor({
       {tab === "spectators" && (
         <div className="space-y-2">
           <p className="text-xs text-gray-400">Zuschauer auswählen (Discord- oder Twitch-Teilnehmer):</p>
-          <div className="relative">
-            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500" />
-            <input
-              type="text"
-              placeholder="User suchen..."
-              value={spectatorSearch}
-              onChange={e => setSpectatorSearch(e.target.value)}
-              className="w-full text-xs bg-gray-800 border border-gray-700 text-white rounded-lg pl-8 pr-3 py-1.5 placeholder:text-gray-600"
-            />
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-64 overflow-y-auto">
-            {filteredSpectatorUsers.map(u => (
-              <label key={u.id} className="flex items-center gap-1.5 p-1.5 rounded bg-gray-800 hover:bg-gray-700 cursor-pointer text-xs">
-                <input type="checkbox" checked={spectatorIds.includes(u.id)} onChange={() => toggleSpectator(u.id)} className="rounded shrink-0" />
-                <span className="text-white truncate">{uname(u)}</span>
-              </label>
-            ))}
-          </div>
+          <UserPickerSheet
+            label="Zuschauer"
+            users={filteredSpectatorUsers}
+            selected={spectatorIds}
+            onToggle={toggleSpectator}
+            searchValue={spectatorSearch}
+            onSearchChange={setSpectatorSearch}
+          />
         </div>
       )}
 
@@ -513,6 +538,43 @@ function LulSpieltagEditor({
                 );
               })}
             </div>
+          </div>
+
+          {/* Externe Wähler */}
+          <div className="border-t border-gray-700 pt-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Vote className="w-3.5 h-3.5 text-emerald-400" />
+              <label className="text-xs text-gray-400">Externe Wähler <span className="text-gray-600">(nur Abstimmung, keine Teilnahme-Punkte)</span></label>
+            </div>
+            <div className="relative mb-2">
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500" />
+              <input
+                type="text"
+                placeholder="User suchen..."
+                value={voterSearch}
+                onChange={e => setVoterSearch(e.target.value)}
+                className="w-full text-xs bg-gray-800 border border-gray-700 text-white rounded-lg pl-8 pr-3 py-1.5 placeholder:text-gray-600"
+              />
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-40 overflow-y-auto">
+              {filteredVoterUsers.map(u => (
+                <label key={u.id} className="flex items-center gap-1.5 p-1.5 rounded bg-gray-800 hover:bg-gray-700 cursor-pointer text-xs">
+                  <input type="checkbox" checked={voterIds.includes(u.id)} onChange={() => toggleVoter(u.id)} className="rounded shrink-0" />
+                  <span className="text-white truncate">{uname(u)}</span>
+                  {voterIds.includes(u.id) && (
+                    <span className="ml-auto text-emerald-500 text-[10px] shrink-0">+2</span>
+                  )}
+                </label>
+              ))}
+              {filteredVoterUsers.length === 0 && (
+                <p className="col-span-3 text-xs text-gray-600 py-1">Keine weiteren User verfügbar.</p>
+              )}
+            </div>
+            {voterIds.length > 0 && (
+              <p className="text-[10px] text-gray-600 mt-2">
+                {voterIds.length} externer Wähler ausgewählt – erhalten je +2 Pkt, keine Teilnahme-Punkte.
+              </p>
+            )}
           </div>
         </div>
       )}

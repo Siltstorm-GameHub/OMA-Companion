@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Trophy, Radio, Lock, Clock, Users, Gamepad2, Crown, Gift, CheckCircle2, Flame } from "lucide-react";
+import { ArrowLeft, Trophy, Radio, Lock, Clock, Users, Gamepad2, Eye, Crown, Gift, CheckCircle2, Flame, Vote } from "lucide-react";
 import { LiveRefresh } from "./LiveRefresh";
 
 export const dynamic = "force-dynamic";
@@ -45,6 +45,7 @@ export default async function SpieltagPage({ params }: { params: Promise<{ id: s
 
   const players    = spieltag.entries.filter(e => e.role === "player");
   const spectators = spieltag.entries.filter(e => e.role === "spectator");
+  const voters     = spieltag.entries.filter(e => e.role === "voter");
 
   // Build live rows (players with round scores, sorted by total)
   const liveRows = players
@@ -73,9 +74,24 @@ export default async function SpieltagPage({ params }: { params: Promise<{ id: s
       {/* Auto-refresh when active */}
       {isActive && <LiveRefresh intervalMs={8000} />}
 
-      {/* Back */}
+      {/* Sticky context strip — visible when scrolled past header */}
+      <div className="sticky top-0 z-20 -mx-4 sm:-mx-6 px-4 sm:px-6 py-2 glass-nav border-b border-white/[0.05] flex items-center gap-3 sm:hidden">
+        <Link href={`/lul/${spieltag.season.id}`}
+          className="text-gray-500 hover:text-white transition-colors shrink-0">
+          <ArrowLeft className="w-4 h-4" />
+        </Link>
+        <span className="text-xs text-gray-400 font-medium truncate flex-1">{spieltag.game}</span>
+        {isActive && (
+          <span className="live-ring shrink-0 text-emerald-400">
+            <Radio className="w-3.5 h-3.5 relative z-10" />
+          </span>
+        )}
+        {isFinished && <Lock className="w-3.5 h-3.5 text-gray-600 shrink-0" />}
+      </div>
+
+      {/* Back (desktop) */}
       <Link href={`/lul/${spieltag.season.id}`}
-        className="flex items-center gap-2 text-sm text-gray-500 hover:text-white transition-colors w-fit">
+        className="hidden sm:flex items-center gap-2 text-sm text-gray-500 hover:text-white transition-colors w-fit">
         <ArrowLeft className="w-4 h-4" /> {seasonName}
       </Link>
 
@@ -105,8 +121,10 @@ export default async function SpieltagPage({ params }: { params: Promise<{ id: s
 
           {/* Status badge */}
           {isActive && (
-            <div className="flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-900/20 border border-emerald-700/30 rounded-full px-3 py-1.5">
-              <Radio className="w-3.5 h-3.5 animate-pulse" />
+            <div className="flex items-center gap-2 text-xs text-emerald-400 bg-emerald-900/20 border border-emerald-700/30 rounded-full px-3 py-1.5">
+              <span className="live-ring shrink-0">
+                <Radio className="w-3.5 h-3.5 relative z-10" />
+              </span>
               Live
             </div>
           )}
@@ -129,6 +147,7 @@ export default async function SpieltagPage({ params }: { params: Promise<{ id: s
           <span className="flex items-center gap-1.5">
             <Users className="w-3.5 h-3.5" />
             {players.length} Mitspieler · {spectators.length} Zuschauer
+            {voters.length > 0 && ` · ${voters.length} Ext. Wähler`}
           </span>
         </div>
       </div>
@@ -365,7 +384,10 @@ export default async function SpieltagPage({ params }: { params: Promise<{ id: s
           {/* Spectators */}
           {spectators.length > 0 && (
             <div className="mt-4 glass rounded-2xl p-4">
-              <p className="text-xs text-gray-600 uppercase tracking-widest mb-3">👁️ Zuschauer</p>
+              <div className="flex items-center gap-1.5 mb-3">
+                <Eye className="w-3.5 h-3.5 text-gray-600" />
+                <p className="text-xs text-gray-600 uppercase tracking-widest">Zuschauer</p>
+              </div>
               <div className="flex flex-wrap gap-2">
                 {spectators.map(e => (
                   <div key={e.id}
@@ -374,11 +396,37 @@ export default async function SpieltagPage({ params }: { params: Promise<{ id: s
                         ? "bg-amber-900/20 border-amber-800/30 text-amber-300"
                         : "bg-white/[0.04] border-white/[0.06] text-gray-400"
                     }`}>
-                    {e.communityChamp && <span>👑</span>}
-                    {e.voted          && <span>✅</span>}
+                    {e.communityChamp && <Crown className="w-3 h-3 text-purple-400" />}
+                    {e.voted          && <CheckCircle2 className="w-3 h-3 text-emerald-400" />}
                     {uname(e.user)}
                     {e.userId === userId && <span className="text-amber-600">(du)</span>}
                     <span className="font-bold text-amber-400 ml-1">{e.lulPoints} Pkt</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* External Voters */}
+          {voters.length > 0 && (
+            <div className="mt-3 glass rounded-2xl p-4">
+              <div className="flex items-center gap-1.5 mb-3">
+                <Vote className="w-3.5 h-3.5 text-emerald-600" />
+                <p className="text-xs text-gray-600 uppercase tracking-widest">Externe Wähler</p>
+                <span className="text-[10px] text-gray-700 ml-1">· nur Abstimmung</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {voters.map(e => (
+                  <div key={e.id}
+                    className={`flex items-center gap-2 text-xs px-2.5 py-1.5 rounded-lg border ${
+                      e.userId === userId
+                        ? "bg-emerald-900/20 border-emerald-800/30 text-emerald-300"
+                        : "bg-white/[0.04] border-white/[0.06] text-gray-500"
+                    }`}>
+                    <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                    {uname(e.user)}
+                    {e.userId === userId && <span className="text-emerald-700">(du)</span>}
+                    <span className="font-bold text-emerald-500 ml-1">+2 Pkt</span>
                   </div>
                 ))}
               </div>
@@ -422,7 +470,10 @@ export default async function SpieltagPage({ params }: { params: Promise<{ id: s
           )}
           {spectators.length > 0 && (
             <div className="glass rounded-2xl p-4">
-              <p className="text-xs text-gray-600 uppercase tracking-widest mb-3">👁️ Zuschauer</p>
+              <div className="flex items-center gap-1.5 mb-3">
+                <Eye className="w-3.5 h-3.5 text-gray-600" />
+                <p className="text-xs text-gray-600 uppercase tracking-widest">Zuschauer</p>
+              </div>
               <div className="flex flex-wrap gap-2">
                 {spectators.map(e => (
                   <span key={e.id}
@@ -430,6 +481,26 @@ export default async function SpieltagPage({ params }: { params: Promise<{ id: s
                       e.userId === userId
                         ? "bg-amber-900/20 border-amber-800/30 text-amber-300"
                         : "bg-white/[0.04] border-white/[0.06] text-gray-400"
+                    }`}>
+                    {uname(e.user)}{e.userId === userId && " (du)"}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          {voters.length > 0 && (
+            <div className="glass rounded-2xl p-4">
+              <div className="flex items-center gap-1.5 mb-3">
+                <Vote className="w-3.5 h-3.5 text-emerald-600" />
+                <p className="text-xs text-gray-600 uppercase tracking-widest">Externe Wähler</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {voters.map(e => (
+                  <span key={e.id}
+                    className={`text-xs px-2.5 py-1.5 rounded-lg border ${
+                      e.userId === userId
+                        ? "bg-emerald-900/20 border-emerald-800/30 text-emerald-300"
+                        : "bg-white/[0.04] border-white/[0.06] text-gray-500"
                     }`}>
                     {uname(e.user)}{e.userId === userId && " (du)"}
                   </span>
