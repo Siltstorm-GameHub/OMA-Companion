@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import type { LulAdminSeasons } from "./page";
 import { UserPickerSheet } from "@/components/UserPickerSheet";
+import GameNameInput from "@/components/GameNameInput";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };
 type LulSeason  = LulAdminSeasons[number];
@@ -1078,8 +1079,12 @@ export default function LulAdminPanel({
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="text-xs text-gray-500 block mb-1">Spiel / Disziplin *</label>
-                        <input type="text" value={stGame} onChange={e => setStGame(e.target.value)} placeholder="z.B. Brawlhalla"
-                          className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2" />
+                        <GameNameInput
+                          value={stGame}
+                          onChange={setStGame}
+                          placeholder="z.B. Brawlhalla"
+                          className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2"
+                        />
                       </div>
                       <div>
                         <label className="text-xs text-gray-500 block mb-1">Spieltyp</label>

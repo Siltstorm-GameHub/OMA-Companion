@@ -186,6 +186,61 @@ const GAME_MAP: Record<string, string> = {
   "fortnite":               "https://cdn2.unrealengine.com/blade-1920x1080-1920x1080-1055684098.jpg",
 };
 
+/**
+ * Kanonische Anzeigenamen aller bekannten Spiele (für Autocomplete).
+ * Duplikate (Abkürzungen, Alternativen) sind bewusst entfernt.
+ */
+export const KNOWN_GAMES: string[] = [
+  // Fighting / Party
+  "Brawlhalla", "Mortal Kombat 1", "Mortal Kombat 11",
+  "Street Fighter 6", "Tekken 8", "Guilty Gear Strive",
+  // Battle Royale
+  "Apex Legends", "PUBG", "Fall Guys",
+  // Shooter
+  "CS2", "Counter-Strike 2", "Team Fortress 2", "Left 4 Dead 2",
+  "Deep Rock Galactic", "Helldivers 2", "Hunt Showdown", "Warframe", "Paladins",
+  // MOBA
+  "Dota 2", "League of Legends", "Smite",
+  // RPG / Action
+  "Elden Ring", "Baldur's Gate 3", "Dark Souls 3",
+  "The Witcher 3", "Cyberpunk 2077", "Monster Hunter Rise",
+  "Monster Hunter World", "Hades", "Dead Cells", "Hollow Knight",
+  // Survival / Crafting
+  "Rust", "Valheim", "Terraria", "Don't Starve Together",
+  "ARK: Survival Evolved", "ARK: Survival Ascended",
+  "The Forest", "Sons of the Forest", "Green Hell", "Subnautica",
+  // Coop / Party
+  "Among Us", "It Takes Two", "A Way Out",
+  "Overcooked 2", "Overcooked", "Pummel Party",
+  "Jackbox Party Pack", "Lethal Company", "Phasmophobia",
+  "Dead by Daylight", "Devour",
+  // Strategy
+  "Age of Empires 4", "Civilization 6", "Crusader Kings 3",
+  "Stellaris", "EU4", "Hearts of Iron 4",
+  "Total War: Warhammer 3", "Starcraft 2",
+  // Sports / Racing
+  "Rocket League", "FIFA 23", "FIFA 24",
+  "EA Sports FC 24", "EA Sports FC 25",
+  "F1 23", "F1 24", "Assetto Corsa", "DiRT Rally 2",
+  // Sandbox / Casual
+  "Minecraft", "Stardew Valley", "Factorio", "Satisfactory",
+  "GTA V", "No Man's Sky", "Sea of Thieves", "Roblox",
+  // Horror
+  "Resident Evil 4", "Resident Evil Village",
+  "Outlast", "The Quarry", "Little Nightmares 2",
+  // Simulation / Aufbau
+  "Cities: Skylines", "Cities: Skylines 2", "Planet Coaster",
+  "Two Point Hospital", "Two Point Campus", "PowerWash Simulator",
+  // Tabletop / Card
+  "Tabletop Simulator", "Hearthstone", "Gwent", "Slay the Spire",
+  // Sonstige
+  "Halo Infinite", "Destiny 2", "Overwatch 2",
+  "Valorant", "Fortnite", "Diablo IV",
+  "World of Warcraft", "Warcraft 3",
+  "Baldur's Gate 3", "Divinity: Original Sin 2",
+  "Path of Exile", "Slay the Spire",
+].sort((a, b) => a.localeCompare(b, "de"));
+
 /** Normalisiert einen Spielnamen für den Lookup */
 function normalizeGameName(name: string): string {
   return name
