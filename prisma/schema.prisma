@@ -50,14 +50,14 @@ model User {
 // ── Collectibles ─────────────────────────────────────────────────────────────
 
 model CollectibleCollection {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  game        String?              // z.B. "Rocket League"
-  coverEmoji  String   @default("🎮")
-  active      Boolean  @default(true)  // im Shop anzeigen?
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
+  id             String   @id @default(cuid())
+  name           String
+  description    String?
+  game           String?              // z.B. "Rocket League"
+  coverImageUrl  String?              // URL zum Cover-Bild (Supabase Storage)
+  active         Boolean  @default(true)  // im Shop anzeigen?
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
 
   items       CollectibleItem[]
 }
@@ -67,7 +67,7 @@ model CollectibleItem {
   collectionId String
   name         String
   description  String?
-  emoji        String   @default("🎮")
+  imageUrl     String?              // URL zum Figuren-Bild (Supabase Storage)
   rarity       String   @default("common") // common | rare | epic | legendary
   price        Int
   stock        Int?     // null = unbegrenzt

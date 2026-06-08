@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
       name:        body.name,
       description: body.description ?? null,
       game:        body.game        ?? null,
-      coverEmoji:  body.coverEmoji  ?? "🎮",
+      coverImageUrl: body.coverImageUrl ?? null,
       active:      body.active      ?? true,
       sortOrder:   body.sortOrder   ?? 0,
     },

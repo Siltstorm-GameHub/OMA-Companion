@@ -94,7 +94,7 @@ export default async function ProfilePage() {
         where:   { userId },
         include: {
           collectibleItem: {
-            include: { collection: { select: { id: true, name: true, coverEmoji: true } } },
+            include: { collection: { select: { id: true, name: true, coverImageUrl: true } } },
           },
         },
         orderBy: { createdAt: "desc" },
@@ -144,7 +144,7 @@ export default async function ProfilePage() {
 
   // Eigene Collectibles nach Sammlung gruppiert
   const collectiblesByCollection = ownedCollectibles.reduce<Record<string, {
-    collection: { id: string; name: string; coverEmoji: string };
+    collection: { id: string; name: string; coverImageUrl: string | null };
     items: typeof ownedCollectibles[0]["collectibleItem"][];
   }>>((acc, uc) => {
     const col = uc.collectibleItem.collection;
@@ -235,15 +235,15 @@ export default async function ProfilePage() {
       {/* ── Collectibles Showcase ────────────────────────────────────────── */}
       <CollectiblesShowcase
         showcaseItems={showcaseItems.map(i => ({
-          id:     i.id,
-          name:   i.name,
-          emoji:  i.emoji,
-          rarity: i.rarity,
+          id:       i.id,
+          name:     i.name,
+          imageUrl: i.imageUrl,
+          rarity:   i.rarity,
         }))}
         allOwned={ownedCollectibles.map(uc => ({
           id:             uc.collectibleItem.id,
           name:           uc.collectibleItem.name,
-          emoji:          uc.collectibleItem.emoji,
+          imageUrl:       uc.collectibleItem.imageUrl,
           rarity:         uc.collectibleItem.rarity,
           collectionName: uc.collectibleItem.collection.name,
         }))}
@@ -263,7 +263,10 @@ export default async function ProfilePage() {
                 {Object.values(collectiblesByCollection).map(({ collection, items }) => (
                   <div key={collection.id} className="glass card-shine rounded-2xl p-4">
                     <div className="flex items-center gap-2 mb-3">
-                      <span className="text-lg">{collection.coverEmoji}</span>
+                      {collection.coverImageUrl
+                        ? <img src={collection.coverImageUrl} alt={collection.name} className="w-7 h-7 object-contain rounded" loading="lazy" />
+                        : <span className="text-lg">🎮</span>
+                      }
                       <span className="text-sm font-semibold text-white">{collection.name}</span>
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.05] border border-white/[0.08] text-gray-500">{items.length} Figuren</span>
                     </div>
@@ -273,7 +276,10 @@ export default async function ProfilePage() {
                         return (
                           <div key={item.id} title={item.name}
                             className={`flex flex-col items-center gap-0.5 px-2.5 py-2 rounded-xl border ${rarity.border} ${rarity.glow} bg-white/[0.02]`}>
-                            <span className="text-2xl leading-none">{item.emoji}</span>
+                            {item.imageUrl
+                              ? <img src={item.imageUrl} alt={item.name} className="w-9 h-9 object-contain" loading="lazy" />
+                              : <span className="text-2xl leading-none">🎮</span>
+                            }
                             <span className={`text-[9px] font-medium ${rarity.color}`}>{item.name}</span>
                           </div>
                         );
