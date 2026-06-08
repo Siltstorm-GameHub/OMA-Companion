@@ -294,31 +294,34 @@ export default async function ProfilePage() {
           {/* Abzeichen */}
           <section>
             <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">
-              🏅 Abzeichen <span className="text-gray-600 normal-case">({earnedBadges.length}/{badges.length})</span>
+              🏅 Abzeichen <span className="text-gray-600 normal-case">({earnedBadges.length})</span>
             </h2>
-            {["Community","Aktivität","Events","Turniere","Punkte"].map(cat => {
-              const catBadges = badges.filter(b => b.category === cat);
-              if (!catBadges.length) return null;
-              return (
-                <div key={cat} className="mb-4">
-                  <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-2">{cat}</p>
-                  <div className="flex flex-wrap gap-2">
-                    {catBadges.map(badge => (
-                      <div key={badge.id} title={badge.desc}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-all ${
-                          badge.earned
-                            ? "glass text-white border-white/10 hover:border-white/20"
-                            : "bg-white/[0.02] border-white/[0.04] text-gray-600 opacity-40 grayscale"
-                        }`}>
-                        <span>{badge.icon}</span>
-                        {badge.name}
-                        {!badge.earned && <span className="text-gray-700 ml-0.5">🔒</span>}
-                      </div>
-                    ))}
+            {earnedBadges.length === 0 && (
+              <div className="glass rounded-2xl p-6 text-center">
+                <p className="text-gray-500 text-sm">Noch keine Abzeichen verdient</p>
+                <p className="text-xs text-gray-600 mt-1">Sei aktiv, nimm an Events teil und gewinne Turniere!</p>
+              </div>
+            )}
+            {earnedBadges.length > 0 && (
+              ["Community","Aktivität","Events","Turniere","Punkte"].map(cat => {
+                const catBadges = earnedBadges.filter(b => b.category === cat);
+                if (!catBadges.length) return null;
+                return (
+                  <div key={cat} className="mb-4">
+                    <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-2">{cat}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {catBadges.map(badge => (
+                        <div key={badge.id} title={badge.desc}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium glass text-white border-white/10 hover:border-white/20 transition-all">
+                          <span>{badge.icon}</span>
+                          {badge.name}
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </section>
 
           {/* Quest-Fortschritt */}
@@ -437,17 +440,43 @@ export default async function ProfilePage() {
               {transactions.length === 0 && (
                 <p className="text-xs text-gray-600 text-center py-6">Noch keine Punkte verdient.</p>
               )}
-              {transactions.map(tx => (
-                <div key={tx.id} className="flex items-start justify-between px-4 py-3 gap-2 hover:bg-white/[0.02] transition-colors">
-                  <div className="min-w-0">
-                    <p className="text-xs text-gray-300 truncate">{tx.reason}</p>
-                    <RelativeTime date={tx.createdAt} className="text-[10px] text-gray-600 mt-0.5 block" />
+              {transactions.map(tx => {
+                const RANK_KW = ["LUL Spieltag", "Turniersieg", "Turnierfinale", "Top-3-Platzierung", "Rang-Punkte"];
+                const isRank  = RANK_KW.some(kw => tx.reason.includes(kw));
+                const isPos   = tx.amount > 0;
+                return (
+                  <div key={tx.id} className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors">
+                    {/* Typ-Icon */}
+                    <div className={`w-7 h-7 rounded-lg shrink-0 flex items-center justify-center text-sm leading-none ${
+                      isRank
+                        ? (isPos ? "bg-rose-500/10" : "bg-red-500/10")
+                        : (isPos ? "bg-amber-500/10" : "bg-red-500/10")
+                    }`}>
+                      {isRank ? "🏆" : "🪙"}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="text-xs text-gray-300 truncate">{tx.reason}</p>
+                        <span className={`shrink-0 text-[9px] font-semibold px-1.5 py-0.5 rounded-full border ${
+                          isRank
+                            ? "bg-rose-500/10 text-rose-400 border-rose-500/20"
+                            : "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                        }`}>
+                          {isRank ? "Punkte" : "Münzen"}
+                        </span>
+                      </div>
+                      <RelativeTime date={tx.createdAt} className="text-[10px] text-gray-600 mt-0.5 block" />
+                    </div>
+                    <span className={`text-xs font-bold shrink-0 tabular-nums ${
+                      isRank
+                        ? (isPos ? "text-rose-400" : "text-red-400")
+                        : (isPos ? "text-amber-400" : "text-red-400")
+                    }`}>
+                      {isPos ? "+" : ""}{tx.amount.toLocaleString("de-DE")}
+                    </span>
                   </div>
-                  <span className={`text-xs font-bold shrink-0 ${tx.amount > 0 ? "text-emerald-400" : "text-red-400"}`}>
-                    {tx.amount > 0 ? "+" : ""}{tx.amount}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </section>
         </div>
