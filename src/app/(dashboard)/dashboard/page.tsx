@@ -169,9 +169,6 @@ export default async function DashboardPage() {
                 <Coins className="w-3 h-3" />
                 <CountUp to={myPoints} duration={900} />
               </span>
-              {leaderboardRank && (
-                <span className="text-xs text-gray-600">· Rang <span className="text-white font-bold">#{leaderboardRank}</span></span>
-              )}
             </div>
           </div>
 
@@ -203,7 +200,7 @@ export default async function DashboardPage() {
             { value: activeEvents,      label: "Aktive Events",  color: "text-teal-400"   },
             { value: myQuestsDone,      label: `/ ${totalMonthQuests} Quests`, color: "text-teal-400" },
             { value: memberCount,       label: "Mitglieder",     color: "text-gray-300"   },
-            { value: leaderboardRank ? `#${leaderboardRank}` : "–", label: "Dein Rang", color: "text-amber-400" },
+            { value: myPoints.toLocaleString("de-DE"),              label: "Deine Punkte", color: "text-amber-400" },
           ].map((s, i) => (
             <div key={i} className="card-cut-sm surface-elevated px-4 py-3">
               <p className={`font-display text-2xl font-black tabular-nums leading-tight ${s.color}`}>{s.value}</p>
