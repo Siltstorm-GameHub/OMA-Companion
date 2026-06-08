@@ -28,6 +28,12 @@ interface Props {
   onClose?: () => void;
 }
 
+// Erkennt anhand des Grundes ob eine Transaktion Rang-Punkte (nicht Münzen) vergibt
+const RANK_KEYWORDS = ["LUL Spieltag", "Turniersieg", "Turnierfinale", "Top-3-Platzierung", "Rang-Punkte"];
+function isRankPointsTx(reason: string) {
+  return RANK_KEYWORDS.some(kw => reason.includes(kw));
+}
+
 function groupByMonth(txs: Transaction[]) {
   const groups: Record<string, Transaction[]> = {};
   for (const tx of txs) {
@@ -104,9 +110,7 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
     tx.amount < 0
   );
 
-  const totalPos = transactions.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0);
-  const totalNeg = transactions.filter(t => t.amount < 0).reduce((s, t) => s + t.amount, 0);
-  const grouped  = groupByMonth(filtered);
+  const grouped = groupByMonth(filtered);
   const displayName = user?.username ?? user?.name ?? userName;
   const avatarSrc   = user?.image ?? userImage;
 
@@ -190,16 +194,14 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
 
         {/* Stats bar */}
         {user && (
-          <div className="grid grid-cols-4 gap-px bg-white/[0.04] border-b border-white/[0.06] shrink-0">
+          <div className="grid grid-cols-2 gap-px bg-white/[0.04] border-b border-white/[0.06] shrink-0">
             {[
-              { label: "Münzen",      value: user.points.toLocaleString("de-DE"),     color: "text-amber-400" },
-              { label: "Rang-Punkte", value: user.rankPoints.toLocaleString("de-DE"), color: "text-rose-400"  },
-              { label: "Verdient",    value: `+${totalPos.toLocaleString("de-DE")}`,  color: "text-emerald-400" },
-              { label: "Abzüge",      value: totalNeg.toLocaleString("de-DE"),        color: "text-red-400"   },
+              { label: "🪙 Münzen",      value: user.points.toLocaleString("de-DE"),     color: "text-amber-400" },
+              { label: "🏆 Rang-Punkte", value: user.rankPoints.toLocaleString("de-DE"), color: "text-rose-400"  },
             ].map(s => (
-              <div key={s.label} className="bg-gray-950 px-3 py-3 text-center">
-                <p className={`text-base font-black tabular-nums ${s.color}`}>{s.value}</p>
-                <p className="text-[10px] text-gray-600 mt-0.5">{s.label}</p>
+              <div key={s.label} className="bg-gray-950 px-3 py-4 text-center">
+                <p className={`text-xl font-black tabular-nums ${s.color}`}>{s.value}</p>
+                <p className="text-[10px] text-gray-600 mt-1">{s.label}</p>
               </div>
             ))}
           </div>
@@ -278,28 +280,46 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
                   </div>
                   <div className="divide-y divide-white/[0.03]">
                     {txs.map(tx => {
-                      const isPos = tx.amount > 0;
+                      const isPos   = tx.amount > 0;
+                      const isRank  = isRankPointsTx(tx.reason);
                       const d = new Date(tx.createdAt);
+
+                      // Farben: Rang-Punkte = rose/amber, Münzen = emerald/red
+                      const iconBg  = isRank
+                        ? (isPos ? "bg-rose-500/10 text-rose-400"   : "bg-red-500/10 text-red-400")
+                        : (isPos ? "bg-amber-500/10 text-amber-400" : "bg-red-500/10 text-red-400");
+                      const amtCls  = isRank
+                        ? (isPos ? "bg-rose-500/10 text-rose-400 ring-1 ring-rose-500/15"     : "bg-red-500/10 text-red-400 ring-1 ring-red-500/15")
+                        : (isPos ? "bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/15"  : "bg-red-500/10 text-red-400 ring-1 ring-red-500/15");
+
                       return (
                         <div key={tx.id} className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors">
-                          <div className={`w-8 h-8 rounded-lg shrink-0 flex items-center justify-center ${
-                            isPos ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"
-                          }`}>
-                            {isPos ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                          {/* Typ-Icon */}
+                          <div className={`w-8 h-8 rounded-lg shrink-0 flex items-center justify-center text-base leading-none ${iconBg}`}>
+                            {isRank ? "🏆" : "🪙"}
                           </div>
+
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm text-gray-200 truncate">{tx.reason}</p>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <p className="text-sm text-gray-200 truncate">{tx.reason}</p>
+                              {/* Typ-Badge */}
+                              <span className={`shrink-0 text-[9px] font-semibold px-1.5 py-0.5 rounded-full uppercase tracking-wide ${
+                                isRank
+                                  ? "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                                  : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                              }`}>
+                                {isRank ? "Punkte" : "Münzen"}
+                              </span>
+                            </div>
                             <p className="text-[10px] text-gray-600 mt-0.5">
                               {d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" })}
                               {" · "}
                               {d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
                             </p>
                           </div>
-                          <span className={`shrink-0 px-2 py-1 rounded-lg text-sm font-bold tabular-nums ${
-                            isPos
-                              ? "bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/15"
-                              : "bg-red-500/10 text-red-400 ring-1 ring-red-500/15"
-                          }`}>
+
+                          {/* Betrag */}
+                          <span className={`shrink-0 px-2 py-1 rounded-lg text-sm font-bold tabular-nums ${amtCls}`}>
                             {isPos ? "+" : ""}{tx.amount.toLocaleString("de-DE")}
                           </span>
                         </div>
