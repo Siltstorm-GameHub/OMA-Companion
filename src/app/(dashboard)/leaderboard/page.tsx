@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { Trophy, Swords, Flame } from "lucide-react";
+import { Trophy, Swords, Flame, Coins, Star } from "lucide-react";
 import { CountUp } from "@/components/CountUp";
 import Link from "next/link";
 import Image from "next/image";
@@ -192,8 +192,8 @@ export default async function LeaderboardPage() {
                     <span className="text-xs font-semibold ml-1 opacity-70">Pts</span>
                   </p>
                   <p className="text-[10px] text-gray-500 mt-0.5 flex items-center justify-center gap-1">
-                    <span>🪙</span>
-                    {u.points.toLocaleString("de-DE")}
+                    <Coins className="w-3 h-3 text-amber-500/60" />
+                    <span className="tabular-nums">{u.points.toLocaleString("de-DE")}</span>
                   </p>
                 </div>
 
@@ -222,8 +222,8 @@ export default async function LeaderboardPage() {
           <span>Spieler</span>
           <span className="hidden sm:flex text-center items-center justify-center gap-1"><Swords className="w-3 h-3" />Siege</span>
           <span className="hidden sm:flex text-center items-center justify-center gap-1"><Flame className="w-3 h-3 text-orange-400" />Streak</span>
-          <span className="text-center">🪙 Münzen</span>
-          <span className="text-center text-amber-400">⭐ Punkte</span>
+          <span className="flex items-center justify-center gap-1"><Coins className="w-3 h-3 text-amber-400" />Münzen</span>
+          <span className="flex items-center justify-center gap-1 text-amber-400"><Star className="w-3 h-3" />Punkte</span>
         </div>
 
         <div className="divide-y divide-white/[0.04]">
@@ -301,8 +301,8 @@ export default async function LeaderboardPage() {
 
                 {/* Spendenstreak — nur ab sm */}
                 <div className="hidden sm:block text-center">
-                  <p className="text-sm font-bold tabular-nums text-orange-400">
-                    {donationStreak > 0 ? `🔥 ${donationStreak}` : "—"}
+                  <p className="text-sm font-bold tabular-nums text-orange-400 flex items-center justify-center gap-1">
+                    {donationStreak > 0 ? <><Flame className="w-3.5 h-3.5 text-orange-400" />{donationStreak}</> : <span className="text-gray-600">—</span>}
                   </p>
                   <p className="text-[9px] text-gray-600">Monate</p>
                 </div>

@@ -1,5 +1,13 @@
-import type { Metadata, Viewport } from "next"; // Viewport wird für den viewport-Export benötigt
+import type { Metadata, Viewport } from "next";
+import { Space_Grotesk } from "next/font/google";
 import "./globals.css";
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-display",
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
 import { SessionProvider } from "@/components/SessionProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AnimatedBackground } from "@/components/AnimatedBackground";
@@ -20,7 +28,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="de" data-theme="dark" suppressHydrationWarning>
+    <html lang="de" data-theme="dark" suppressHydrationWarning className={spaceGrotesk.variable}>
       <head>
         {/* Prevent flash of wrong theme */}
         <script

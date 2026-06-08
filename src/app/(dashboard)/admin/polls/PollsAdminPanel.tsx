@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import {
   BarChart2, CalendarDays, Star, Plus, Trash2,
   Clock, CheckCircle2, XCircle, AlertCircle, Hash,
+  Trophy, Gift, Heart,
 } from "lucide-react";
 
 // ── Discord-Laufzeit-Optionen (exakt wie in Discord selbst) ─────
@@ -46,10 +47,10 @@ function toLocal(iso: string) {
 }
 
 function pollTypeLabel(type: string) {
-  if (type === "event_winner")   return "🏆 Event-Sieger";
-  if (type === "lul_trostpreis") return "🎁 Trostpreis";
-  if (type === "lul_community")  return "💛 Community-Support";
-  return type;
+  if (type === "event_winner")   return <span className="flex items-center gap-1"><Trophy className="w-3.5 h-3.5 text-amber-400" /> Event-Sieger</span>;
+  if (type === "lul_trostpreis") return <span className="flex items-center gap-1"><Gift className="w-3.5 h-3.5 text-amber-400" /> Trostpreis</span>;
+  if (type === "lul_community")  return <span className="flex items-center gap-1"><Heart className="w-3.5 h-3.5 text-yellow-400" /> Community-Support</span>;
+  return <span>{type}</span>;
 }
 
 function statusBadge(status: string) {
@@ -74,9 +75,15 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
   const [evtDuration, setEvtDuration] = useState(24);
   const [evtQuestion, setEvtQuestion] = useState("");
   const [evtSaving,   setEvtSaving]   = useState(false);
+  const [evtErrors,   setEvtErrors]   = useState<{ id?: string; chan?: string; sched?: string }>({});
 
   async function scheduleEventPoll() {
-    if (!evtId || !evtChan || !evtSched) { toast.error("Alle Felder ausfüllen"); return; }
+    const errs: typeof evtErrors = {};
+    if (!evtId)    errs.id    = "Bitte ein Event auswählen";
+    if (!evtChan)  errs.chan  = "Kanal-ID ist erforderlich";
+    if (!evtSched) errs.sched = "Zeitpunkt ist erforderlich";
+    if (Object.keys(errs).length) { setEvtErrors(errs); return; }
+    setEvtErrors({});
     setEvtSaving(true);
     try {
       const res = await fetch("/api/admin/polls", {
@@ -100,9 +107,15 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
   const [lulQ1,          setLulQ1]          = useState("");
   const [lulQ2,          setLulQ2]          = useState("");
   const [lulSaving,      setLulSaving]      = useState(false);
+  const [lulErrors,      setLulErrors]      = useState<{ id?: string; chan?: string; sched?: string }>({});
 
   async function scheduleLulPolls() {
-    if (!lulId || !lulChan || !lulSched) { toast.error("Alle Felder ausfüllen"); return; }
+    const errs: typeof lulErrors = {};
+    if (!lulId)    errs.id    = "Bitte einen Spieltag auswählen";
+    if (!lulChan)  errs.chan  = "Kanal-ID ist erforderlich";
+    if (!lulSched) errs.sched = "Zeitpunkt ist erforderlich";
+    if (Object.keys(errs).length) { setLulErrors(errs); return; }
+    setLulErrors({});
     setLulSaving(true);
     try {
       const scheduledAt = new Date(lulSched).toISOString();
@@ -189,8 +202,8 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
             {/* Event */}
             <div className="space-y-1.5">
               <label className="flex items-center gap-1.5 text-xs text-gray-400"><CalendarDays className="w-3.5 h-3.5"/>Event wählen</label>
-              <select value={evtId} onChange={e => { setEvtId(e.target.value); }}
-                className="w-full rounded-xl px-3 py-2.5 text-sm text-white bg-gray-900 border border-white/[0.1] outline-none focus:border-indigo-500/40"
+              <select value={evtId} onChange={e => { setEvtId(e.target.value); setEvtErrors(p => ({ ...p, id: undefined })); }}
+                className={`w-full rounded-xl px-3 py-2.5 text-sm text-white bg-gray-900 border outline-none focus:border-indigo-500/40 ${evtErrors.id ? "border-red-500/50" : "border-white/[0.1]"}`}
                 style={{ colorScheme: "dark" }}>
                 <option value="">— Event wählen —</option>
                 {events.map(e => (
@@ -199,22 +212,24 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
                   </option>
                 ))}
               </select>
+              {evtErrors.id && <p className="text-xs text-red-400 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{evtErrors.id}</p>}
             </div>
 
             {/* Kanal */}
             <div className="space-y-1.5">
               <label className="flex items-center gap-1.5 text-xs text-gray-400"><Hash className="w-3.5 h-3.5"/>Discord Kanal-ID</label>
-              <input type="text" value={evtChan} onChange={e => setEvtChan(e.target.value)}
+              <input type="text" value={evtChan} onChange={e => { setEvtChan(e.target.value); setEvtErrors(p => ({ ...p, chan: undefined })); }}
                 placeholder="z.B. 123456789012345678"
-                className="w-full rounded-xl px-3 py-2.5 text-sm text-white bg-white/[0.05] border border-white/[0.1] outline-none focus:border-indigo-500/40 placeholder-gray-600" />
+                className={`w-full rounded-xl px-3 py-2.5 text-sm text-white bg-white/[0.05] border outline-none focus:border-indigo-500/40 placeholder-gray-600 ${evtErrors.chan ? "border-red-500/50" : "border-white/[0.1]"}`} />
+              {evtErrors.chan && <p className="text-xs text-red-400 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{evtErrors.chan}</p>}
             </div>
 
             {/* Zeit */}
             <div className="space-y-1.5">
               <label className="flex items-center gap-1.5 text-xs text-gray-400"><Clock className="w-3.5 h-3.5"/>Zeitpunkt</label>
               <div className="flex gap-2">
-                <input type="datetime-local" value={evtSched} onChange={e => setEvtSched(e.target.value)}
-                  className="flex-1 rounded-xl px-3 py-2.5 text-sm text-white bg-white/[0.05] border border-white/[0.1] outline-none focus:border-indigo-500/40" />
+                <input type="datetime-local" value={evtSched} onChange={e => { setEvtSched(e.target.value); setEvtErrors(p => ({ ...p, sched: undefined })); }}
+                  className={`flex-1 rounded-xl px-3 py-2.5 text-sm text-white bg-white/[0.05] border outline-none focus:border-indigo-500/40 ${evtErrors.sched ? "border-red-500/50" : "border-white/[0.1]"}`} />
                 {selEvent && (
                   <button onClick={suggestEventTime}
                     className="text-xs px-3 rounded-xl border border-white/[0.08] text-gray-500 hover:text-indigo-400 hover:border-indigo-500/30 transition-colors whitespace-nowrap">
@@ -222,6 +237,7 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
                   </button>
                 )}
               </div>
+              {evtErrors.sched && <p className="text-xs text-red-400 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{evtErrors.sched}</p>}
             </div>
 
             {/* Frage */}
@@ -286,8 +302,8 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
             {/* Spieltag */}
             <div className="space-y-1.5">
               <label className="flex items-center gap-1.5 text-xs text-gray-400"><Star className="w-3.5 h-3.5"/>Spieltag wählen</label>
-              <select value={lulId} onChange={e => setLulId(e.target.value)}
-                className="w-full rounded-xl px-3 py-2.5 text-sm text-white bg-gray-900 border border-white/[0.1] outline-none focus:border-indigo-500/40"
+              <select value={lulId} onChange={e => { setLulId(e.target.value); setLulErrors(p => ({ ...p, id: undefined })); }}
+                className={`w-full rounded-xl px-3 py-2.5 text-sm text-white bg-gray-900 border outline-none focus:border-indigo-500/40 ${lulErrors.id ? "border-red-500/50" : "border-white/[0.1]"}`}
                 style={{ colorScheme: "dark" }}>
                 <option value="">— Spieltag wählen —</option>
                 {spieltage.map(s => (
@@ -296,22 +312,24 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
                   </option>
                 ))}
               </select>
+              {lulErrors.id && <p className="text-xs text-red-400 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{lulErrors.id}</p>}
             </div>
 
             {/* Kanal */}
             <div className="space-y-1.5">
               <label className="flex items-center gap-1.5 text-xs text-gray-400"><Hash className="w-3.5 h-3.5"/>Discord Kanal-ID</label>
-              <input type="text" value={lulChan} onChange={e => setLulChan(e.target.value)}
+              <input type="text" value={lulChan} onChange={e => { setLulChan(e.target.value); setLulErrors(p => ({ ...p, chan: undefined })); }}
                 placeholder="z.B. 123456789012345678"
-                className="w-full rounded-xl px-3 py-2.5 text-sm text-white bg-white/[0.05] border border-white/[0.1] outline-none focus:border-indigo-500/40 placeholder-gray-600" />
+                className={`w-full rounded-xl px-3 py-2.5 text-sm text-white bg-white/[0.05] border outline-none focus:border-indigo-500/40 placeholder-gray-600 ${lulErrors.chan ? "border-red-500/50" : "border-white/[0.1]"}`} />
+              {lulErrors.chan && <p className="text-xs text-red-400 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{lulErrors.chan}</p>}
             </div>
 
             {/* Zeit */}
             <div className="space-y-1.5">
               <label className="flex items-center gap-1.5 text-xs text-gray-400"><Clock className="w-3.5 h-3.5"/>Zeitpunkt</label>
               <div className="flex gap-2">
-                <input type="datetime-local" value={lulSched} onChange={e => setLulSched(e.target.value)}
-                  className="flex-1 rounded-xl px-3 py-2.5 text-sm text-white bg-white/[0.05] border border-white/[0.1] outline-none focus:border-indigo-500/40" />
+                <input type="datetime-local" value={lulSched} onChange={e => { setLulSched(e.target.value); setLulErrors(p => ({ ...p, sched: undefined })); }}
+                  className={`flex-1 rounded-xl px-3 py-2.5 text-sm text-white bg-white/[0.05] border outline-none focus:border-indigo-500/40 ${lulErrors.sched ? "border-red-500/50" : "border-white/[0.1]"}`} />
                 {selSpieltag?.scheduledAt && (
                   <button onClick={suggestLulTime}
                     className="text-xs px-3 rounded-xl border border-white/[0.08] text-gray-500 hover:text-indigo-400 hover:border-indigo-500/30 transition-colors whitespace-nowrap">
@@ -319,11 +337,12 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
                   </button>
                 )}
               </div>
+              {lulErrors.sched && <p className="text-xs text-red-400 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{lulErrors.sched}</p>}
             </div>
 
             {/* Fragen */}
             <div className="space-y-1.5">
-              <label className="text-xs text-gray-400">🎁 Trostpreis-Frage</label>
+              <label className="flex items-center gap-1.5 text-xs text-gray-400"><Gift className="w-3.5 h-3.5 text-amber-400/70" /> Trostpreis-Frage</label>
               <input
                 type="text"
                 value={lulQ1}
@@ -333,7 +352,7 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs text-gray-400">💛 Community-Support-Frage</label>
+              <label className="flex items-center gap-1.5 text-xs text-gray-400"><Heart className="w-3.5 h-3.5 text-yellow-400/70" /> Community-Support-Frage</label>
               <input
                 type="text"
                 value={lulQ2}
@@ -360,7 +379,7 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
           {selSpieltag && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="rounded-xl bg-amber-500/5 border border-amber-500/15 p-3">
-                <p className="text-xs text-amber-400 font-semibold mb-2">🎁 Trostpreis-Umfrage ({lulPlayers.length} Mitspieler)</p>
+                <p className="flex items-center gap-1.5 text-xs text-amber-400 font-semibold mb-2"><Gift className="w-3.5 h-3.5" /> Trostpreis-Umfrage ({lulPlayers.length} Mitspieler)</p>
                 <div className="flex flex-wrap gap-1.5">
                   {lulPlayers.length === 0
                     ? <p className="text-xs text-gray-600 italic">Keine Mitspieler eingetragen</p>
@@ -373,7 +392,7 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
                 </div>
               </div>
               <div className="rounded-xl bg-violet-500/5 border border-violet-500/15 p-3">
-                <p className="text-xs text-violet-400 font-semibold mb-2">💛 Community-Support-Umfrage ({lulViewers.length} Zuschauer)</p>
+                <p className="flex items-center gap-1.5 text-xs text-violet-400 font-semibold mb-2"><Heart className="w-3.5 h-3.5" /> Community-Support-Umfrage ({lulViewers.length} Zuschauer)</p>
                 <div className="flex flex-wrap gap-1.5">
                   {lulViewers.length === 0
                     ? <p className="text-xs text-gray-600 italic">Keine Zuschauer eingetragen</p>

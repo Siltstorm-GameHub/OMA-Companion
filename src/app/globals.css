@@ -1,28 +1,30 @@
 @import "tailwindcss";
 
-/* ── Brand Color System ─────────────────────────────────────────── */
-/* Primary:   Teal   #14b8a6  (TV-Screen im Logo)                   */
-/* Secondary: Crimson #991b1b (OМ-Badge + K im Logo)                */
+/* ── Direction B: Gaming Identity ──────────────────────────────── */
+/* Primary:  Teal   #14b8a6  (TV-Screen im Logo)                    */
+/* Gaming:   Violet #8b5cf6  (Energie, Rang, Prestige)              */
+/* Currency: Amber  #f59e0b  (Münzen, Punkte)                       */
 
 :root {
-  --bg-base:          #06100e;   /* Sehr dunkles Teal-Schwarz        */
-  --bg-surface:       #0b1a17;   /* Karten-Hintergrund               */
-  --bg-elevated:      #102019;   /* Erhöhte Elemente                 */
-  --border-dim:       rgba(20,184,166,0.08);
-  --border-glow:      rgba(20,184,166,0.40);
-  --teal-glow:        rgba(20,184,166,0.15);
-  --crimson-glow:     rgba(153,27,27,0.15);
+  --bg-base:          #0d0d0f;   /* Schwarzviolett-Dunkel            */
+  --bg-surface:       #13131a;   /* Karten-Hintergrund               */
+  --bg-elevated:      #1a1a24;   /* Erhöhte Elemente                 */
+  --border-dim:       rgba(255,255,255,0.07);
+  --border-glow:      rgba(139,92,246,0.35);
+  --violet-glow:      rgba(139,92,246,0.15);
+  --teal-glow:        rgba(20,184,166,0.12);
+  --crimson-glow:     rgba(153,27,27,0.10);
   --shadow-card:
     0 1px 0 rgba(255,255,255,0.04) inset,
-    0 2px 4px  rgba(0,0,0,0.60),
-    0 8px 24px rgba(0,0,0,0.45),
-    0 0 0 1px rgba(20,184,166,0.06);
+    0 2px 4px  rgba(0,0,0,0.70),
+    0 8px 24px rgba(0,0,0,0.50),
+    0 0 0 1px  rgba(255,255,255,0.06);
   --shadow-card-hover:
     0 1px 0 rgba(255,255,255,0.06) inset,
-    0 4px 8px  rgba(0,0,0,0.60),
-    0 20px 48px rgba(0,0,0,0.50),
-    0 0 0 1px  rgba(20,184,166,0.14),
-    0 0 40px   rgba(20,184,166,0.07);
+    0 4px 8px  rgba(0,0,0,0.70),
+    0 20px 48px rgba(0,0,0,0.60),
+    0 0 0 1px  rgba(139,92,246,0.25),
+    0 0 40px   rgba(139,92,246,0.08);
 }
 
 /* ── Dynamic Notch animations ──────────────────────────────────── */
@@ -51,6 +53,18 @@
 /* ── Base ──────────────────────────────────────────────────────── */
 html, body { overflow-x: hidden; }
 
+/* ── Focus-visible: Keyboard-Navigation ────────────────────────── */
+/* Sichtbarer Fokus-Ring für alle interaktiven Elemente             */
+:focus-visible {
+  outline: 2px solid rgba(20,184,166,0.75);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+/* Kein Fokus-Ring bei Maus-Klick (nur bei Tastatur) */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
 /* ── Mobile optimizations ──────────────────────────────────────── */
 /* Prevent text resize on orientation change (safe, no layout impact) */
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
@@ -64,7 +78,7 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 
 body {
   background-color: var(--bg-base);
-  color: #e8f0ef;
+  color: #e8e8f0;
   background-attachment: fixed;
 }
 
@@ -77,26 +91,26 @@ body::after {
   pointer-events: none;
   z-index: 0;
   filter: blur(130px);
-  opacity: 0.62;
+  opacity: 0.55;
 }
 
-/* Teal blob — oben links (TV-Screen-Farbe) */
+/* Violet blob — oben links (Gaming-Energie) */
 body::before {
   width: 900px;
   height: 650px;
   top: -250px;
   left: -200px;
-  background: radial-gradient(ellipse, rgba(20,184,166,0.28) 0%, transparent 70%);
+  background: radial-gradient(ellipse, rgba(109,40,217,0.30) 0%, transparent 70%);
   animation: blob-drift-a 22s ease-in-out infinite alternate;
 }
 
-/* Crimson blob — unten rechts (OМ-Badge-Farbe) */
+/* Teal blob — unten rechts (Brand-Farbe) */
 body::after {
   width: 750px;
   height: 750px;
   bottom: -220px;
   right: -150px;
-  background: radial-gradient(ellipse, rgba(153,27,27,0.24) 0%, transparent 70%);
+  background: radial-gradient(ellipse, rgba(20,184,166,0.20) 0%, transparent 70%);
   animation: blob-drift-b 28s ease-in-out infinite alternate;
 }
 
@@ -135,7 +149,7 @@ body::after {
 .card-hover-glow:hover {
   transform: translateY(-4px);
   box-shadow: var(--shadow-card-hover) !important;
-  border-color: rgba(20,184,166,0.25) !important;
+  border-color: rgba(139,92,246,0.25) !important;
 }
 
 /* Legacy compat */
@@ -172,8 +186,8 @@ button:active, [role="button"]:active { transform: scale(0.97); }
 /* ── Scrollbar ─────────────────────────────────────────────────── */
 ::-webkit-scrollbar       { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(20,184,166,0.15); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(20,184,166,0.30); }
+::-webkit-scrollbar-thumb { background: rgba(139,92,246,0.20); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(139,92,246,0.40); }
 
 /* ── Glassmorphism — Teal-getönt ────────────────────────────────── */
 .input-glass {
@@ -192,34 +206,66 @@ button:active, [role="button"]:active { transform: scale(0.97); }
 select.input-glass option { background: #0f1117; }
 
 .glass {
-  background: rgba(6,16,14,0.65);
-  backdrop-filter: blur(20px) saturate(1.6);
-  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  background: rgba(13,13,20,0.70);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
   border: 1px solid var(--border-dim);
   box-shadow:
-    inset 0 1px 0 rgba(20,184,166,0.06),   /* Teal-Highlight oben */
-    inset 0 -1px 0 rgba(0,0,0,0.3);        /* Schatten unten      */
+    inset 0 1px 0 rgba(255,255,255,0.05),
+    inset 0 -1px 0 rgba(0,0,0,0.3);
 }
 .glass-heavy {
-  background: rgba(4,12,10,0.82);
-  backdrop-filter: blur(28px) saturate(1.8);
-  -webkit-backdrop-filter: blur(28px) saturate(1.8);
-  border: 1px solid rgba(20,184,166,0.09);
+  background: rgba(10,10,16,0.88);
+  backdrop-filter: blur(28px) saturate(1.6);
+  -webkit-backdrop-filter: blur(28px) saturate(1.6);
+  border: 1px solid rgba(255,255,255,0.08);
   box-shadow:
-    inset 0 1px 0 rgba(20,184,166,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.06),
     inset 0 -1px 0 rgba(0,0,0,0.4);
 }
 .glass-nav {
-  background: rgba(4,10,9,0.92);
-  backdrop-filter: blur(32px) saturate(1.8);
-  -webkit-backdrop-filter: blur(32px) saturate(1.8);
-  border: 1px solid rgba(20,184,166,0.07);
+  background: rgba(10,10,15,0.94);
+  backdrop-filter: blur(32px) saturate(1.6);
+  -webkit-backdrop-filter: blur(32px) saturate(1.6);
+  border: 1px solid rgba(255,255,255,0.07);
+}
+
+/* ── Solid surfaces (no blur) — Direction B ────────────────────── */
+.surface {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-dim);
+}
+.surface-elevated {
+  background: var(--bg-elevated);
+  border: 1px solid rgba(255,255,255,0.09);
+}
+
+/* ── Cut-corner cards — Gaming aesthetic ───────────────────────── */
+.card-cut {
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+}
+.card-cut-sm {
+  clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 9px, 100% 100%, 9px 100%, 0 calc(100% - 9px));
+}
+.card-cut-tr {
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%);
+}
+
+/* ── Gaming accent bars ────────────────────────────────────────── */
+.accent-violet { border-left: 2px solid #8b5cf6 !important; }
+.accent-teal   { border-left: 2px solid #14b8a6 !important; }
+.accent-amber  { border-left: 2px solid #f59e0b !important; }
+
+/* ── Display font ──────────────────────────────────────────────── */
+.font-display {
+  font-family: var(--font-display, 'Space Grotesk', system-ui, sans-serif);
+  letter-spacing: -0.03em;
 }
 
 /* ── Brand gradient text ────────────────────────────────────────── */
-/* Teal → Crimson (Logo-Farben) */
+/* Violet → Teal (Gaming Identity) */
 .text-gradient-gaming {
-  background: linear-gradient(135deg, #2dd4bf 0%, #14b8a6 40%, #b91c1c 100%);
+  background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 45%, #14b8a6 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -238,12 +284,12 @@ select.input-glass option { background: #0f1117; }
 }
 
 /* ── Neon glow utilities ─────────────────────────────────────────── */
-.neon-teal    { text-shadow: 0 0 12px rgba(20,184,166,0.9),  0 0 28px rgba(20,184,166,0.5);  }
-.neon-crimson { text-shadow: 0 0 12px rgba(220,38,38,0.8),   0 0 28px rgba(220,38,38,0.4);   }
-.neon-amber   { text-shadow: 0 0 12px rgba(251,191,36,0.8),  0 0 24px rgba(251,191,36,0.4);  }
-/* Legacy compat */
-.neon-rose    { text-shadow: 0 0 12px rgba(20,184,166,0.8),  0 0 24px rgba(20,184,166,0.4);  }
-.neon-violet  { text-shadow: 0 0 12px rgba(153,27,27,0.8),   0 0 24px rgba(153,27,27,0.4);   }
+.neon-teal    { text-shadow: 0 0 12px rgba(20,184,166,0.9),   0 0 28px rgba(20,184,166,0.5);   }
+.neon-violet  { text-shadow: 0 0 12px rgba(139,92,246,0.95),  0 0 28px rgba(139,92,246,0.55);  }
+.neon-amber   { text-shadow: 0 0 12px rgba(251,191,36,0.8),   0 0 24px rgba(251,191,36,0.4);   }
+.neon-crimson { text-shadow: 0 0 12px rgba(220,38,38,0.8),    0 0 28px rgba(220,38,38,0.4);    }
+/* Legacy */
+.neon-rose    { text-shadow: 0 0 12px rgba(139,92,246,0.8),   0 0 24px rgba(139,92,246,0.4);   }
 
 /* ── Safe area ──────────────────────────────────────────────────── */
 .safe-area-pb { padding-bottom: env(safe-area-inset-bottom, 0px); }
@@ -307,11 +353,11 @@ select.input-glass option { background: #0f1117; }
 .progress-shimmer-violet {
   background: linear-gradient(
     90deg,
-    rgba(153,27,27,0.6)  0%,
-    rgba(185,28,28,1)    35%,
-    rgba(220,38,38,1)    50%,
-    rgba(185,28,28,1)    65%,
-    rgba(153,27,27,0.6)  100%
+    rgba(109,40,217,0.6)  0%,
+    rgba(139,92,246,1)    35%,
+    rgba(167,139,250,1)   50%,
+    rgba(139,92,246,1)    65%,
+    rgba(109,40,217,0.6)  100%
   );
   background-size: 200% auto;
   animation: shimmer 2.2s linear infinite;
