@@ -1,7 +1,6 @@
 import { requireRole, ROLE_LABELS, ROLE_STYLES } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import UserRoleManager from "./UserRoleManager";
-import PointsManager from "./PointsManager";
 import SyncMembersButton from "./SyncMembersButton";
 import UserPointsHistoryModal from "@/components/UserPointsHistoryModal";
 import { LogIn, UserX } from "lucide-react";
@@ -130,7 +129,6 @@ export default async function AdminUsersPage() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <UserRoleManager userId={user.id} currentRole={user.role} />
-                        <PointsManager userId={user.id} userName={user.username ?? user.name ?? "?"} />
                         <UserPointsHistoryModal
                           userId={user.id}
                           userName={user.username ?? user.name ?? "?"}

@@ -20,6 +20,8 @@ export async function PATCH(
     coins?:        number;
     rankPoints?:   number;
     clearHistory?: boolean;
+    reasonCoins?:  string;
+    reasonRank?:   string;
   };
 
   const user = await prisma.user.findUnique({
@@ -43,33 +45,36 @@ export async function PATCH(
       data:  { points: newCoins, rankPoints: newRankPoints },
     });
 
-    // Korrekturbuchung für Münzen (damit die Historie stimmt)
+    // Korrekturbuchung für Münzen
     if (body.coins !== undefined && !body.clearHistory) {
       const delta = newCoins - user.points;
       if (delta !== 0) {
-        await tx.pointTransaction.create({
-          data: { userId, amount: delta, reason: "⚙️ Admin-Korrektur (Münzen)" },
-        });
+        const reason = body.reasonCoins
+          ? `⚙️ ${body.reasonCoins}`
+          : "⚙️ Admin-Korrektur (Münzen)";
+        await tx.pointTransaction.create({ data: { userId, amount: delta, reason } });
       }
     } else if (body.coins !== undefined && body.clearHistory && newCoins > 0) {
-      // Startbuchung nach Löschen der Historie
-      await tx.pointTransaction.create({
-        data: { userId, amount: newCoins, reason: "⚙️ Admin-Festlegung (Münzen)" },
-      });
+      const reason = body.reasonCoins
+        ? `⚙️ ${body.reasonCoins}`
+        : "⚙️ Admin-Festlegung (Münzen)";
+      await tx.pointTransaction.create({ data: { userId, amount: newCoins, reason } });
     }
 
-    // Korrekturbuchung für Rang-Punkte
+    // Korrekturbuchung für Rang-Punkte (nur als Nachweis in der Historie)
     if (body.rankPoints !== undefined && !body.clearHistory) {
       const delta = newRankPoints - user.rankPoints;
       if (delta !== 0) {
-        await tx.pointTransaction.create({
-          data: { userId, amount: delta, reason: "⚙️ Admin-Korrektur (Rang-Punkte)" },
-        });
+        const reason = body.reasonRank
+          ? `⚙️ ${body.reasonRank}`
+          : "⚙️ Admin-Korrektur (Rang-Punkte)";
+        await tx.pointTransaction.create({ data: { userId, amount: delta, reason } });
       }
     } else if (body.rankPoints !== undefined && body.clearHistory && newRankPoints > 0) {
-      await tx.pointTransaction.create({
-        data: { userId, amount: newRankPoints, reason: "⚙️ Admin-Festlegung (Rang-Punkte)" },
-      });
+      const reason = body.reasonRank
+        ? `⚙️ ${body.reasonRank}`
+        : "⚙️ Admin-Festlegung (Rang-Punkte)";
+      await tx.pointTransaction.create({ data: { userId, amount: newRankPoints, reason } });
     }
   });
 

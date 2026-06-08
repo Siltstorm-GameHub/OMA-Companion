@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { Users, CalendarDays, Trophy, Star, Zap } from "lucide-react";
 import { RelativeTime } from "@/components/RelativeTime";
-import ResetHistoryButton from "./ResetHistoryButton";
+import ResetAllBalancesButton from "./ResetAllBalancesButton";
 
 export default async function AdminPage() {
   const [userCount, eventCount, tournamentCount, pointsTotal] = await Promise.all([
@@ -18,10 +18,10 @@ export default async function AdminPage() {
   });
 
   const stats = [
-    { label: "Nutzer gesamt",   value: userCount,                                           icon: Users,        iconCls: "text-rose-400 bg-rose-500/10 border-rose-500/15",       accent: "from-rose-500/8"    },
-    { label: "Events",          value: eventCount,                                          icon: CalendarDays, iconCls: "text-blue-400 bg-blue-500/10 border-blue-500/15",       accent: "from-blue-500/8"    },
-    { label: "Turniere",        value: tournamentCount,                                     icon: Trophy,       iconCls: "text-amber-400 bg-amber-500/10 border-amber-500/15",    accent: "from-amber-500/8"   },
-    { label: "Punkte vergeben", value: pointsTotal._sum.amount?.toLocaleString("de-DE") ?? "0", icon: Star,    iconCls: "text-purple-400 bg-purple-500/10 border-purple-500/15", accent: "from-purple-500/8"  },
+    { label: "Nutzer gesamt",   value: userCount,                                               icon: Users,        iconCls: "text-rose-400 bg-rose-500/10 border-rose-500/15",       accent: "from-rose-500/8"    },
+    { label: "Events",          value: eventCount,                                              icon: CalendarDays, iconCls: "text-blue-400 bg-blue-500/10 border-blue-500/15",       accent: "from-blue-500/8"    },
+    { label: "Turniere",        value: tournamentCount,                                         icon: Trophy,       iconCls: "text-amber-400 bg-amber-500/10 border-amber-500/15",    accent: "from-amber-500/8"   },
+    { label: "Münzen vergeben", value: pointsTotal._sum.amount?.toLocaleString("de-DE") ?? "0", icon: Star,         iconCls: "text-purple-400 bg-purple-500/10 border-purple-500/15", accent: "from-purple-500/8"  },
   ];
 
   return (
@@ -43,9 +43,12 @@ export default async function AdminPage() {
       {/* Letzte Aktivitäten */}
       <div>
         <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
-          <Zap className="w-3.5 h-3.5 text-amber-400" /> Letzte Punkte-Aktivitäten
+          <Zap className="w-3.5 h-3.5 text-amber-400" /> Letzte Aktivitäten
         </h2>
         <div className="glass card-shine rounded-2xl overflow-hidden divide-y divide-white/[0.04]">
+          {recentActivity.length === 0 && (
+            <p className="text-sm text-gray-600 px-4 py-6 text-center">Keine Aktivitäten vorhanden</p>
+          )}
           {recentActivity.map((tx) => (
             <div key={tx.id} className="flex items-center justify-between px-4 py-3 hover:bg-white/[0.02] transition-colors">
               <div className="min-w-0">
@@ -63,10 +66,10 @@ export default async function AdminPage() {
         </div>
       </div>
 
-      {/* Einmalige Bereinigung */}
+      {/* Reset */}
       <div>
         <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">🔧 Datenbank-Wartung</h2>
-        <ResetHistoryButton />
+        <ResetAllBalancesButton />
       </div>
     </div>
   );

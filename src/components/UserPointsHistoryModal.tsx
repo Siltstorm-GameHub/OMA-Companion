@@ -49,6 +49,8 @@ export default function UserPointsHistoryModal({ userId, userName, userImage }: 
   // Edit form state
   const [editCoins,      setEditCoins]      = useState("");
   const [editRank,       setEditRank]       = useState("");
+  const [reasonCoins,    setReasonCoins]    = useState("");
+  const [reasonRank,     setReasonRank]     = useState("");
   const [clearHistory,   setClearHistory]   = useState(false);
   const [confirmClear,   setConfirmClear]   = useState(false);
 
@@ -111,13 +113,21 @@ export default function UserPointsHistoryModal({ userId, userName, userImage }: 
       const res = await fetch(`/api/admin/users/${userId}/adjust`, {
         method:  "PATCH",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ coins: coinsNum, rankPoints: rankNum, clearHistory }),
+        body:    JSON.stringify({
+          coins:        coinsNum,
+          rankPoints:   rankNum,
+          clearHistory,
+          reasonCoins:  reasonCoins.trim() || undefined,
+          reasonRank:   reasonRank.trim()  || undefined,
+        }),
       });
       if (!res.ok) { toast.error("Fehler beim Speichern"); return; }
       toast.success(`✅ Werte für ${displayName} gespeichert`);
       setConfirmClear(false);
       setClearHistory(false);
-      await load(true); // neu laden
+      setReasonCoins("");
+      setReasonRank("");
+      await load(true);
     } catch {
       toast.error("Netzwerkfehler");
     } finally {
@@ -316,6 +326,13 @@ export default function UserPointsHistoryModal({ userId, userName, userImage }: 
                 className="w-full text-sm bg-white/[0.05] border border-white/[0.1] rounded-xl px-3 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-amber-500/40"
                 placeholder="Neuer Münzen-Stand"
               />
+              <input
+                type="text"
+                value={reasonCoins}
+                onChange={e => setReasonCoins(e.target.value)}
+                className="w-full text-sm bg-white/[0.05] border border-white/[0.1] rounded-xl px-3 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-amber-500/20"
+                placeholder="Grund (optional) – z.B. LUL Season 1 Münzen"
+              />
             </div>
 
             {/* Rang-Punkte */}
@@ -334,6 +351,13 @@ export default function UserPointsHistoryModal({ userId, userName, userImage }: 
                 onChange={e => setEditRank(e.target.value)}
                 className="w-full text-sm bg-white/[0.05] border border-white/[0.1] rounded-xl px-3 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-rose-500/40"
                 placeholder="Neuer Rang-Punkte-Stand"
+              />
+              <input
+                type="text"
+                value={reasonRank}
+                onChange={e => setReasonRank(e.target.value)}
+                className="w-full text-sm bg-white/[0.05] border border-white/[0.1] rounded-xl px-3 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-rose-500/20"
+                placeholder="Grund (optional) – z.B. LUL Season 1 Platz 3"
               />
             </div>
 
