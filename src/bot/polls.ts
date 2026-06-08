@@ -41,7 +41,7 @@ export async function processPendingPolls(client: Client) {
           question:        { text: question },
           answers:         limitedAnswers.map(a => ({ text: a })),
           duration:        job.duration,   // in Stunden
-          allow_multiselect: false,
+          allowMultiselect: false,
         },
       });
 
