@@ -1,6 +1,6 @@
 import { Client, EmbedBuilder, TextChannel } from "discord.js";
 import { prisma } from "@/lib/prisma";
-import { isBotMessageEnabled, getBotMessageText } from "@/lib/bot-config";
+import { isBotMessageEnabled, getBotMessageText, fillPlaceholders } from "@/lib/bot-config";
 
 // ── Rang-Schwellen ───────────────────────────────────────────────────────────
 export const RANK_THRESHOLDS = [
@@ -14,6 +14,14 @@ export const RANK_THRESHOLDS = [
 
 export function getRank(points: number) {
   return [...RANK_THRESHOLDS].reverse().find(r => points >= r.min) ?? RANK_THRESHOLDS[0];
+}
+
+// Datum-Formatter
+function fmtDate(d: Date) {
+  return d.toLocaleString("de-DE", {
+    weekday: "long", day: "2-digit", month: "long",
+    hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin",
+  });
 }
 
 let _client: Client | null = null;
@@ -45,16 +53,24 @@ export async function notifyNewEvent(event: {
   const ch = await getTextChannel(newsChannel(event.discordChannelId));
   if (!ch) return;
 
-  const text = await getBotMessageText("event_new");
+  const rawText = await getBotMessageText("event_new");
+  const text = fillPlaceholders(rawText, {
+    "{eventName}":  event.title,
+    "{game}":       event.game ?? "–",
+    "{date}":       fmtDate(event.startAt),
+    "{maxPlayers}": event.maxPlayers ? String(event.maxPlayers) : "Unbegrenzt",
+    "{points}":     String(event.pointReward),
+  });
+
   const embed = new EmbedBuilder()
     .setColor(0x4ade80)
     .setTitle(`📅 Neues Event: ${event.title}`)
     .setDescription(text)
     .addFields(
-      { name: "🎮 Spiel",        value: event.game ?? "–",                                                                                                         inline: true },
-      { name: "📆 Start",        value: event.startAt.toLocaleString("de-DE", { weekday: "long", day: "2-digit", month: "long", hour: "2-digit", minute: "2-digit" }), inline: true },
-      { name: "👥 Max. Spieler", value: event.maxPlayers ? String(event.maxPlayers) : "Unbegrenzt",                                                                inline: true },
-      { name: "⭐ Punkte",       value: `+${event.pointReward} Pts bei Teilnahme`,                                                                                 inline: true },
+      { name: "🎮 Spiel",        value: event.game ?? "–",                                                                                         inline: true },
+      { name: "📆 Start",        value: fmtDate(event.startAt),                                                                                    inline: true },
+      { name: "👥 Max. Spieler", value: event.maxPlayers ? String(event.maxPlayers) : "Unbegrenzt",                                                inline: true },
+      { name: "⭐ Punkte",       value: `+${event.pointReward} Pts bei Teilnahme`,                                                                 inline: true },
     )
     .setFooter({ text: "OMA Companion · Events" })
     .setTimestamp();
@@ -71,7 +87,12 @@ export async function notifyEventStarted(event: {
   const ch = await getTextChannel(newsChannel(event.discordChannelId));
   if (!ch) return;
 
-  const text = await getBotMessageText("event_started");
+  const rawText = await getBotMessageText("event_started");
+  const text = fillPlaceholders(rawText, {
+    "{eventName}": event.title,
+    "{game}":      event.game ?? "–",
+  });
+
   const embed = new EmbedBuilder()
     .setColor(0xf59e0b)
     .setTitle("🚀 Event läuft jetzt!")
@@ -93,7 +114,12 @@ export async function notifyEventEnded(
   const ch = await getTextChannel(newsChannel(event.discordChannelId));
   if (!ch) return;
 
-  const text = await getBotMessageText("event_ended");
+  const rawText = await getBotMessageText("event_ended");
+  const text = fillPlaceholders(rawText, {
+    "{eventName}":    event.title,
+    "{attendeeCount}": String(attendeeCount),
+  });
+
   const embed = new EmbedBuilder()
     .setColor(0x6b7280)
     .setTitle(`✅ Event beendet: ${event.title}`)
@@ -132,9 +158,9 @@ export async function notifyTournamentStarted(tournament: {
     .setColor(0xf43f5e)
     .setTitle(`⚔️ Turnier gestartet: ${tournament.event.title}`)
     .addFields(
-      { name: "🎮 Spiel",      value: tournament.event.game ?? "–",                        inline: true },
+      { name: "🎮 Spiel",      value: tournament.event.game ?? "–",                         inline: true },
       { name: "📋 Format",     value: FORMAT_LABELS[tournament.format] ?? tournament.format, inline: true },
-      { name: "👥 Teilnehmer", value: String(tournament.participants.length),               inline: true },
+      { name: "👥 Teilnehmer", value: String(tournament.participants.length),                inline: true },
     )
     .setFooter({ text: "OMA Companion · Turniere" })
     .setTimestamp();
@@ -166,11 +192,15 @@ export async function notifyBirthday(discordId: string, username: string) {
   const ch = await getTextChannel(newsChannel());
   if (!ch) return;
 
-  const text = await getBotMessageText("birthday");
+  const rawText = await getBotMessageText("birthday");
+  const text = fillPlaceholders(rawText, {
+    "{username}": `<@${discordId}>`,
+  });
+
   const embed = new EmbedBuilder()
     .setColor(0xf59e0b)
     .setTitle("🎂 Alles Gute zum Geburtstag!")
-    .setDescription(`<@${discordId}> ${text}`)
+    .setDescription(text)
     .setFooter({ text: "OMA Companion · Geburtstag" })
     .setTimestamp();
 
@@ -188,24 +218,31 @@ export async function notifyEventReminder(event: {
   const ch = await getTextChannel(newsChannel(event.discordChannelId));
   if (!ch) return;
 
-  const startFormatted = event.startAt.toLocaleString("de-DE", {
-    weekday: "long", day: "2-digit", month: "long",
-    hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin",
+  const registrationsStr = event.maxPlayers
+    ? `${event._count.registrations} / ${event.maxPlayers}`
+    : String(event._count.registrations);
+
+  const rawText = await getBotMessageText("event_reminder");
+  const text = fillPlaceholders(rawText, {
+    "{eventName}":    event.title,
+    "{game}":         event.game ?? "–",
+    "{date}":         fmtDate(event.startAt),
+    "{registrations}": registrationsStr,
+    "{maxPlayers}":   event.maxPlayers ? String(event.maxPlayers) : "Unbegrenzt",
+    "{points}":       String(event.pointReward),
   });
+
   const ping = process.env.DISCORD_EVENTS_PING ?? "@here";
-  const text = await getBotMessageText("event_reminder");
 
   const embed = new EmbedBuilder()
     .setColor(0xf59e0b)
     .setTitle(`⏰ Morgen: ${event.title}`)
     .setDescription(text)
     .addFields(
-      { name: "🎮 Spiel",       value: event.game ?? "–",                                                    inline: true },
-      { name: "📆 Start",       value: startFormatted,                                                        inline: true },
-      { name: "👥 Anmeldungen", value: event.maxPlayers
-          ? `${event._count.registrations} / ${event.maxPlayers}`
-          : String(event._count.registrations),                                                               inline: true },
-      { name: "⭐ Punkte",      value: `+${event.pointReward} Pts bei Teilnahme`,                            inline: true },
+      { name: "🎮 Spiel",       value: event.game ?? "–",                                   inline: true },
+      { name: "📆 Start",       value: fmtDate(event.startAt),                              inline: true },
+      { name: "👥 Anmeldungen", value: registrationsStr,                                    inline: true },
+      { name: "⭐ Punkte",      value: `+${event.pointReward} Pts bei Teilnahme`,           inline: true },
     )
     .setFooter({ text: "OMA Companion · Events" })
     .setTimestamp();
@@ -236,15 +273,21 @@ export async function notifyTournamentResult(data: {
 
   const winner        = data.ranking[0];
   const winnerMention = winner?.discordId ? `<@${winner.discordId}>` : winner?.name ?? "Unbekannt";
-  const text          = await getBotMessageText("tournament_result");
+
+  const rawText = await getBotMessageText("tournament_result");
+  const text = fillPlaceholders(rawText, {
+    "{eventName}": data.eventTitle,
+    "{game}":      data.game ?? "–",
+    "{winner}":    winnerMention,
+  });
 
   const embed = new EmbedBuilder()
     .setColor(0xf43f5e)
     .setTitle(`🏆 Turnierergebnis: ${data.eventTitle}`)
     .setDescription(`${text}\n\n${lines.join("\n") || "Keine Platzierungen verfügbar."}`)
     .addFields(
-      { name: "🎮 Spiel",  value: data.game ?? "–",                              inline: true },
-      { name: "📋 Format", value: FORMAT_LABELS[data.format] ?? data.format,     inline: true },
+      { name: "🎮 Spiel",  value: data.game ?? "–",                           inline: true },
+      { name: "📋 Format", value: FORMAT_LABELS[data.format] ?? data.format,  inline: true },
     )
     .setFooter({ text: "OMA Companion · Turniere" })
     .setTimestamp();
@@ -263,11 +306,16 @@ export async function notifyRankUp(
   const ch = await getTextChannel(newsChannel());
   if (!ch) return;
 
-  const text = await getBotMessageText("rank_up");
+  const rawText = await getBotMessageText("rank_up");
+  const text = fillPlaceholders(rawText, {
+    "{username}": `<@${discordId}>`,
+    "{rank}":     newRank.label,
+  });
+
   const embed = new EmbedBuilder()
     .setColor(newRank.color)
     .setTitle(`${newRank.emoji} Rang-Aufstieg!`)
-    .setDescription(`<@${discordId}> hat **${newRank.label}** erreicht! ${text}`)
+    .setDescription(text)
     .setFooter({ text: "OMA Companion · Rangliste" })
     .setTimestamp();
 
@@ -297,13 +345,16 @@ export async function notifyMonthlyLeaderboard() {
     take: 10,
   });
 
+  const rawText = await getBotMessageText("leaderboard");
+  const introText = fillPlaceholders(rawText, { "{month}": monthName });
+
   if (!raw.length) {
     await ch.send({
       embeds: [
         new EmbedBuilder()
           .setColor(0x6b7280)
           .setTitle(`🏆 Monats-Rangliste · ${monthName}`)
-          .setDescription("Im vergangenen Monat wurden keine Punkte vergeben.")
+          .setDescription(`${introText}\n\n_Im vergangenen Monat wurden keine Punkte vergeben._`)
           .setFooter({ text: "OMA Companion · Leaderboard" })
           .setTimestamp(),
       ],
@@ -332,7 +383,7 @@ export async function notifyMonthlyLeaderboard() {
   const embed = new EmbedBuilder()
     .setColor(0xf59e0b)
     .setTitle(`🏆 Monats-Rangliste · ${monthName}`)
-    .setDescription(lines.join("\n"))
+    .setDescription(`${introText}\n\n${lines.join("\n")}`)
     .addFields({ name: "Community gesamt", value: `${totalPts.toLocaleString("de-DE")} Pts verdient`, inline: true })
     .setFooter({ text: "OMA Companion · Leaderboard" })
     .setTimestamp();
