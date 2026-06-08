@@ -52,7 +52,8 @@ export default async function LulOverviewPage() {
 
   const allActiveEntries = activeSeason?.spieltage.flatMap((st) => st.entries) ?? [];
 
-  const standings    = buildLulStandings(activeEntries);
+  const hasUnfinishedSpieltage = activeSeason?.spieltage.some((st) => st.status !== "finished") ?? false;
+  const standings    = buildLulStandings(allActiveEntries);
   const myRank       = standings.findIndex((s) => s.userId === userId) + 1;
   const myPoints     = standings.find((s) => s.userId === userId)?.totalPts ?? 0;
   const nextSpieltag = activeSeason?.spieltage.find((st) => st.status !== "finished") ?? null;
@@ -190,6 +191,9 @@ export default async function LulOverviewPage() {
           <div className="flex flex-col gap-3">
             <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-2">
               <Trophy className="w-3.5 h-3.5 text-amber-400" /> Aktueller Stand
+              {hasUnfinishedSpieltage && standings.length > 0 && (
+                <span className="text-yellow-500/70 font-normal normal-case tracking-normal text-[10px]">(vorläufig)</span>
+              )}
             </h2>
 
             {standings.length > 0 ? (
