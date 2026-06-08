@@ -7,6 +7,7 @@ import {
   Repeat, Swords, Medal, TrendingUp, Check, Gamepad2, BarChart2,
 } from "lucide-react";
 import { RelativeTime } from "@/components/RelativeTime";
+import GameCover from "@/components/GameCover";
 
 const STATUS_CONFIG: Record<string, { label: string; badge: string; dot: string }> = {
   open:     { label: "Offen",   badge: "text-blue-300 bg-blue-500/10 border border-blue-500/20",          dot: "bg-blue-400"              },
@@ -187,9 +188,13 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
       {/* ── Reihen-Header ─────────────────────────────────────────────────── */}
       <div className="glass card-shine rounded-2xl p-6 space-y-4">
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center shrink-0">
-            <Repeat className="w-5 h-5 text-teal-400" />
-          </div>
+          {series.fixedGame ? (
+            <GameCover game={series.fixedGame} className="w-16 h-10" rounded="rounded-xl" />
+          ) : (
+            <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center shrink-0">
+              <Repeat className="w-5 h-5 text-teal-400" />
+            </div>
+          )}
           <div className="flex-1 min-w-0">
             <h1 className="text-2xl font-bold text-white tracking-tight">{series.name}</h1>
             {series.description && (
@@ -373,12 +378,14 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
                   }`}
                   style={{ animationDelay: `${idx * 30}ms` }}>
 
-                  <div className="glass-heavy rounded-xl px-3 py-2.5 text-center min-w-[48px] shrink-0">
-                    <p className="text-lg font-bold text-white leading-none tabular-nums">{date.getDate()}</p>
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wide mt-0.5">
-                      {date.toLocaleString("de-DE", { month: "short" })}
-                    </p>
-                    <RelativeTime date={date} className="text-[8px] text-gray-600 mt-0.5 block" />
+                  <div className="flex flex-col items-center gap-1 shrink-0">
+                    <GameCover game={ev.game ?? series.fixedGame} className="w-16 h-10" rounded="rounded-lg" />
+                    <div className="text-center">
+                      <p className="text-xs font-bold text-white tabular-nums leading-none">
+                        {date.getDate()}. {date.toLocaleString("de-DE", { month: "short" })}
+                      </p>
+                      <RelativeTime date={date} className="text-[9px] text-gray-600 mt-0.5 block" />
+                    </div>
                   </div>
 
                   <div className="flex-1 min-w-0">
@@ -430,11 +437,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
               return (
                 <Link key={ev.id} href={`/events/${ev.id}`}
                   className="flex items-center gap-3.5 px-4 py-3 opacity-60 hover:opacity-100 transition-opacity group">
-                  <div className="w-10 h-10 rounded-xl bg-gray-800/60 border border-white/[0.06] flex flex-col items-center justify-center shrink-0">
-                    <p className="text-xs font-bold text-gray-400 leading-none">{date.getDate()}</p>
-                    <p className="text-[8px] text-gray-600 uppercase">{date.toLocaleString("de-DE", { month: "short" })}</p>
-                    <p className="text-[7px] text-gray-700">{date.getFullYear()}</p>
-                  </div>
+                  <GameCover game={ev.game ?? series.fixedGame} className="w-12 h-8" rounded="rounded-md" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <p className="text-sm font-medium text-gray-400 truncate group-hover:text-white transition-colors">{ev.title}</p>
