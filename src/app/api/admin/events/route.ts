@@ -46,7 +46,7 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  await requireRole("admin");
+  await requireRole("moderator");
   const { searchParams } = new URL(req.url);
   const eventId = searchParams.get("eventId");
   if (!eventId) return NextResponse.json({ error: "eventId fehlt" }, { status: 400 });
