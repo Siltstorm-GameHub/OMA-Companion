@@ -10,7 +10,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!session) redirect("/login");
 
   return (
-    <div className="min-h-screen text-white" style={{ background: "#06100e" }}>
+    <div className="min-h-screen text-white" style={{ background: "#0d0d0f" }}>
 
       {/* ── Aurora Hintergrund ───────────────────────────────────── */}
       <AuroraBackground />
