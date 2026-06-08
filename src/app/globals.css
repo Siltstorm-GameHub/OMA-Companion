@@ -602,6 +602,16 @@ button:active, [role="button"]:active { transform: scale(0.97); }
   animation: scan-sweep 0.8s ease forwards;
 }
 
+/* ── active:scale für Link-Karten (card-hover) ──────────────────── */
+a.card-hover:active { transform: scale(0.985); }
+
+/* ── Value-Flash — Live-Werte aufleuchten wenn sie sich ändern ──── */
+@keyframes value-flash {
+  0%   { background-color: rgba(20,184,166,0.30); color: #fff; }
+  100% { background-color: transparent;           color: inherit; }
+}
+.value-flash { animation: value-flash 0.7s ease-out both; }
+
 /* ── prefers-reduced-motion ─────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

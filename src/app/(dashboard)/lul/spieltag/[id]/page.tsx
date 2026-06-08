@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Trophy, Radio, Lock, Clock, Users, Gamepad2 } from "lucide-react";
+import { ArrowLeft, Trophy, Radio, Lock, Clock, Users, Gamepad2, Crown, Gift, CheckCircle2, Flame } from "lucide-react";
 import { LiveRefresh } from "./LiveRefresh";
 
 export const dynamic = "force-dynamic";
@@ -199,7 +199,7 @@ export default async function SpieltagPage({ params }: { params: Promise<{ id: s
                           return (
                             <td key={ri} className="px-2 py-3 text-center tabular-nums">
                               {val != null ? (
-                                <span className={`inline-flex items-center justify-center min-w-[1.75rem] h-6 px-1.5 rounded-md text-xs font-semibold ${
+                                <span key={val} className={`inline-flex items-center justify-center min-w-[1.75rem] h-6 px-1.5 rounded-md text-xs font-semibold value-flash ${
                                   isMax ? "bg-amber-500/20 text-amber-300" : "text-gray-400"
                                 }`}>
                                   {val}
@@ -245,7 +245,7 @@ export default async function SpieltagPage({ params }: { params: Promise<{ id: s
             <div className="flex flex-wrap gap-2 mb-4">
               {winner && (
                 <div className="flex items-center gap-2 bg-amber-900/20 border border-amber-800/30 rounded-xl px-3 py-2.5">
-                  <span className="text-xl">🏆</span>
+                  <Trophy className="w-5 h-5 text-amber-400 shrink-0" />
                   <div>
                     <p className="text-[9px] text-amber-700 uppercase tracking-widest">Game Winner</p>
                     <p className="text-sm font-semibold text-amber-300">{uname(winner.user)}</p>
@@ -254,7 +254,7 @@ export default async function SpieltagPage({ params }: { params: Promise<{ id: s
               )}
               {champ && (
                 <div className="flex items-center gap-2 bg-purple-900/20 border border-purple-800/30 rounded-xl px-3 py-2.5">
-                  <span className="text-xl">👑</span>
+                  <Crown className="w-5 h-5 text-purple-400 shrink-0" />
                   <div>
                     <p className="text-[9px] text-purple-700 uppercase tracking-widest">Community-Champ</p>
                     <p className="text-sm font-semibold text-purple-300">{uname(champ.user)}</p>
@@ -263,7 +263,7 @@ export default async function SpieltagPage({ params }: { params: Promise<{ id: s
               )}
               {trost && (
                 <div className="flex items-center gap-2 bg-rose-900/20 border border-rose-800/30 rounded-xl px-3 py-2.5">
-                  <span className="text-xl">🎁</span>
+                  <Gift className="w-5 h-5 text-rose-400 shrink-0" />
                   <div>
                     <p className="text-[9px] text-rose-700 uppercase tracking-widest">Trostpreis</p>
                     <p className="text-sm font-semibold text-rose-300">{uname(trost.user)}</p>
@@ -338,12 +338,14 @@ export default async function SpieltagPage({ params }: { params: Promise<{ id: s
                         {maxRounds > 0 && (
                           <td className="px-2 py-3 text-center font-semibold tabular-nums text-gray-300 text-xs">{total}</td>
                         )}
-                        <td className="px-2 py-3 text-center text-sm">
-                          {row.entry.gameWinner    && "🏆"}
-                          {row.entry.communityChamp && "👑"}
-                          {row.entry.trostpreis     && "🎁"}
-                          {row.entry.dominionBonus  && "🔥"}
-                          {row.entry.voted          && "✅"}
+                        <td className="px-2 py-3 text-center">
+                          <span className="inline-flex items-center gap-0.5">
+                            {row.entry.gameWinner    && <Trophy      className="w-3.5 h-3.5 text-amber-400"   />}
+                            {row.entry.communityChamp && <Crown      className="w-3.5 h-3.5 text-purple-400"  />}
+                            {row.entry.trostpreis     && <Gift       className="w-3.5 h-3.5 text-rose-400"    />}
+                            {row.entry.dominionBonus  && <Flame      className="w-3.5 h-3.5 text-orange-400"  />}
+                            {row.entry.voted          && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />}
+                          </span>
                         </td>
                         <td className="px-4 py-3 text-right">
                           <span className={`text-base font-bold tabular-nums ${

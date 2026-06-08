@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Trophy, History } from "lucide-react";
+import { ArrowLeft, Trophy, History, Gamepad2, Eye, Crown, Gift, Flame, CheckCircle2 } from "lucide-react";
 import { buildLulStandings, mergeStandings, LUL_POINTS } from "@/lib/lul";
 
 const MEDAL      = ["🥇", "🥈", "🥉"];
@@ -10,13 +10,13 @@ const MEDAL_BG   = ["rgba(251,191,36,0.12)", "rgba(156,163,175,0.1)", "rgba(180,
 const MEDAL_RING = ["ring-amber-400/30", "ring-gray-400/20", "ring-amber-700/30"];
 
 const COLS = [
-  { key: "asPlayer",    label: "Spieler",   icon: "🎮", cls: "text-blue-400",    bg: "bg-blue-500/10"    },
-  { key: "asSpectator", label: "Zuschauer", icon: "👁️", cls: "text-indigo-400",  bg: "bg-indigo-500/10"  },
-  { key: "wins",        label: "Siege",     icon: "🏆", cls: "text-amber-400",   bg: "bg-amber-500/10"   },
-  { key: "champs",      label: "Champ",     icon: "👑", cls: "text-purple-400",  bg: "bg-purple-500/10"  },
-  { key: "trost",       label: "Trost",     icon: "🎁", cls: "text-rose-400",    bg: "bg-rose-500/10"    },
-  { key: "dominion",    label: "Dominion",  icon: "🔥", cls: "text-orange-400",  bg: "bg-orange-500/10"  },
-  { key: "votes",       label: "Votes",     icon: "✅", cls: "text-emerald-400", bg: "bg-emerald-500/10" },
+  { key: "asPlayer",    label: "Spieler",   Icon: Gamepad2,    cls: "text-blue-400",    bg: "bg-blue-500/10"    },
+  { key: "asSpectator", label: "Zuschauer", Icon: Eye,         cls: "text-indigo-400",  bg: "bg-indigo-500/10"  },
+  { key: "wins",        label: "Siege",     Icon: Trophy,      cls: "text-amber-400",   bg: "bg-amber-500/10"   },
+  { key: "champs",      label: "Champ",     Icon: Crown,       cls: "text-purple-400",  bg: "bg-purple-500/10"  },
+  { key: "trost",       label: "Trost",     Icon: Gift,        cls: "text-rose-400",    bg: "bg-rose-500/10"    },
+  { key: "dominion",    label: "Dominion",  Icon: Flame,       cls: "text-orange-400",  bg: "bg-orange-500/10"  },
+  { key: "votes",       label: "Votes",     Icon: CheckCircle2,cls: "text-emerald-400", bg: "bg-emerald-500/10" },
 ] as const;
 
 function uname(u: { name: string | null; username: string | null }) {
@@ -135,8 +135,8 @@ export default async function LulAllTimePage() {
                     <th key={col.key}
                       className="text-center px-2 py-3 text-[10px] font-semibold uppercase tracking-widest whitespace-nowrap"
                       style={{ color: "rgba(255,255,255,0.3)" }}>
-                      <span className="mr-1">{col.icon}</span>
-                      <span className="hidden sm:inline">{col.label}</span>
+                      <col.Icon className="w-3.5 h-3.5 inline-block mr-1 align-middle" />
+                      <span className="hidden sm:inline align-middle">{col.label}</span>
                     </th>
                   ))}
                 </tr>

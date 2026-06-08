@@ -41,9 +41,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </ThemeProvider>
         </div>
         <Toaster
-          position="bottom-right"
+          position="bottom-center"
           theme="dark"
+          offset={80}
           toastOptions={{
+            duration: 4000,
             style: {
               background: "rgba(15,15,23,0.92)",
               backdropFilter: "blur(16px)",

@@ -70,7 +70,7 @@ export default function BottomNav() {
                   letterSpacing: "0.05em",
                   marginTop: 3,
                   lineHeight: 1,
-                  color: active ? "#2dd4bf" : "transparent",
+                  color: active ? "#2dd4bf" : "rgba(107,114,128,0.85)",
                   transition: "color 200ms",
                   userSelect: "none",
                 }}

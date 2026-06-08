@@ -295,6 +295,7 @@ export default async function LulOverviewPage() {
           type="tournaments"
           title="Noch keine Liga-Saison"
           description="Ein Admin legt die erste Saison im Admin-Bereich an."
+          action={{ label: "Zum Admin-Bereich", href: "/admin/lul" }}
         />
       )}
     </div>
