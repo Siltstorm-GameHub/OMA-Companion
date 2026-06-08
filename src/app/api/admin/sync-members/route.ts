@@ -89,9 +89,7 @@ export async function POST() {
       });
       updated++;
     } else {
-      // Neuen Stub-User anlegen + Account-Eintrag erstellen damit
-      // der PrismaAdapter beim Discord-OAuth-Login den User findet und korrekt verknüpft
-      // (ohne Account-Eintrag würde NextAuth einen zweiten Duplikat-User anlegen)
+      // Neuen Stub-User anlegen
       const newUser = await prisma.user.create({
         data: {
           discordId,
@@ -100,14 +98,22 @@ export async function POST() {
           image: avatar,
         },
       });
-      await prisma.account.create({
-        data: {
-          userId:            newUser.id,
-          type:              "oauth",
-          provider:          "discord",
-          providerAccountId: discordId,
-        },
+
+      // Account-Eintrag nur anlegen wenn noch keiner existiert
+      // (verhindert, dass ein echtes OAuth-Login-Account mit Tokens überschrieben wird)
+      const existingAccount = await prisma.account.findUnique({
+        where: { provider_providerAccountId: { provider: "discord", providerAccountId: discordId } },
       });
+      if (!existingAccount) {
+        await prisma.account.create({
+          data: {
+            userId:            newUser.id,
+            type:              "oauth",
+            provider:          "discord",
+            providerAccountId: discordId,
+          },
+        });
+      }
       created++;
     }
   }
