@@ -12,7 +12,7 @@ export type Rarity = keyof typeof RARITY_CONFIG;
 export const MAX_SHOWCASE = 5;
 
 /** Effektiver Preis eines Items (Rabatt falls aktiv). */
-export function effectivePrice(item: { price: number; salePrice: number | null; saleUntil: Date | null }): number {
+export function effectivePrice(item: { price: number; salePrice: number | null; saleUntil: Date | string | null }): number {
   if (item.salePrice != null) {
     if (item.saleUntil == null || new Date() <= new Date(item.saleUntil)) {
       return item.salePrice;
