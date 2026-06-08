@@ -5,7 +5,8 @@ import { prisma } from "@/lib/prisma";
 export async function PATCH(req: NextRequest) {
   await requireRole("moderator");
   const body = await req.json();
-  const { eventId, removeUserId, seriesScope, ...data } = body;
+  const { eventId, removeUserId, seriesScope, discordChannelId, ...data } = body;
+  if (discordChannelId !== undefined) data.discordChannelId = discordChannelId;
   if (!eventId) return NextResponse.json({ error: "eventId fehlt" }, { status: 400 });
 
   // Teilnehmer aus Event entfernen (Moderator-Aktion)

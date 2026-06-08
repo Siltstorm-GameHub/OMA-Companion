@@ -4,7 +4,7 @@ import {
 } from "discord.js";
 import { updateEventStatus, syncAttendee } from "./sync";
 import { trackVoice, trackMessage, handleMemberJoin, trackReaction, trackInvite } from "./activity";
-import { setClient, notifyMonthlyLeaderboard, notifyBirthday } from "./notify";
+import { setClient, notifyMonthlyLeaderboard, notifyBirthday, notifyEventReminder } from "./notify";
 import { awardPoints } from "@/lib/points";
 import { prisma } from "@/lib/prisma";
 
@@ -211,20 +211,52 @@ async function checkBirthdays() {
   }
 }
 
-// Monatliche Rangliste: jeden 1. des Monats um 12:00 Uhr
+// ── Scheduler: läuft stündlich ───────────────────────────────────────────────
+// Prüft: Geburtstage (tägl. 8 Uhr), Event-Erinnerungen (tägl. 10 Uhr), Monats-Rangliste (1. um 12 Uhr)
+
 let _lastLeaderboardMonth = -1;
+// Set mit Event-IDs die bereits eine 24h-Erinnerung bekommen haben (in-memory, reicht für Bot-Laufzeit)
+const remindedEventIds = new Set<string>();
+
 function scheduleMonthlyLeaderboard() {
   setInterval(async () => {
     const now = new Date();
-    // Täglich um 8 Uhr Geburtstage prüfen
-    if (now.getHours() === 8 && now.getMinutes() < 60) await checkBirthdays();
+    const h   = now.getHours();
 
-    if (now.getDate() === 1 && now.getHours() === 12 && now.getMonth() !== _lastLeaderboardMonth) {
+    // 08:00 – Geburtstage prüfen
+    if (h === 8) await checkBirthdays();
+
+    // 10:00 – Event-Erinnerungen für Events die in 20–28h starten
+    if (h === 10) await checkEventReminders();
+
+    // 1. des Monats 12:00 – Monatliche Rangliste
+    if (now.getDate() === 1 && h === 12 && now.getMonth() !== _lastLeaderboardMonth) {
       _lastLeaderboardMonth = now.getMonth();
       await notifyMonthlyLeaderboard();
       console.log("📊 Monatliche Rangliste gepostet");
     }
   }, 60 * 60 * 1000); // stündlich prüfen
+}
+
+async function checkEventReminders() {
+  const now      = new Date();
+  const in20h    = new Date(now.getTime() + 20 * 60 * 60 * 1000);
+  const in28h    = new Date(now.getTime() + 28 * 60 * 60 * 1000);
+
+  const events = await prisma.event.findMany({
+    where: {
+      status:  { in: ["open", "upcoming"] },
+      startAt: { gte: in20h, lte: in28h },
+    },
+    include: { _count: { select: { registrations: true } } },
+  });
+
+  for (const event of events) {
+    if (remindedEventIds.has(event.id)) continue;
+    remindedEventIds.add(event.id);
+    await notifyEventReminder(event);
+    console.log(`📅 Event-Erinnerung gesendet: ${event.title}`);
+  }
 }
 
 client.login(process.env.DISCORD_BOT_TOKEN);

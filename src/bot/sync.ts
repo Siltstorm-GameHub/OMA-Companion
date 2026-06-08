@@ -3,7 +3,10 @@ import { notifyEventStarted, notifyEventEnded, notifyTournamentStarted } from ".
 
 // Hilfsfunktion: Event anhand discordEventId finden (nur WebApp-Events haben eine discordEventId)
 async function findEventByDiscordId(discordEventId: string) {
-  return prisma.event.findUnique({ where: { discordEventId } });
+  return prisma.event.findUnique({
+    where:  { discordEventId },
+    select: { id: true, title: true, game: true, status: true, discordChannelId: true },
+  });
 }
 
 // Status eines WebApp-Events aktualisieren, wenn es in Discord den Status wechselt
@@ -16,7 +19,7 @@ export async function updateEventStatus(discordEventId: string, status: string) 
     await prisma.event.update({ where: { id: event.id }, data: { status } });
 
     if (status === "active") {
-      await notifyEventStarted({ title: event.title, game: event.game });
+      await notifyEventStarted({ title: event.title, game: event.game, discordChannelId: event.discordChannelId });
 
       const tournament = await prisma.tournament.findUnique({
         where:   { eventId: event.id },
@@ -37,7 +40,7 @@ export async function updateEventStatus(discordEventId: string, status: string) 
 
     if (status === "finished") {
       const attendeeCount = await prisma.eventRegistration.count({ where: { eventId: event.id } });
-      await notifyEventEnded({ title: event.title }, attendeeCount);
+      await notifyEventEnded({ title: event.title, discordChannelId: event.discordChannelId }, attendeeCount);
     }
   } catch (err) {
     console.error("Fehler beim Status-Update:", err);

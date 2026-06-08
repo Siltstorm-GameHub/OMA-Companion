@@ -59,9 +59,15 @@ export async function awardPoints(userId: string, rule: PointRule, customReason?
     if ((todaySum._sum.amount ?? 0) >= cap) return null;
   }
 
+  // Punkte VOR der Vergabe lesen (für Rang-Wechsel-Erkennung im Bot)
+  const before = await prisma.user.findUnique({
+    where:  { id: userId },
+    select: { points: true, birthdayBoostUntil: true },
+  });
+  const pointsBefore = before?.points ?? 0;
+
   // Geburtstags-Boost: 2x Punkte wenn aktiv
-  const userBoost = await prisma.user.findUnique({ where: { id: userId }, select: { birthdayBoostUntil: true } });
-  const hasBirthdayBoost = userBoost?.birthdayBoostUntil && userBoost.birthdayBoostUntil > new Date();
+  const hasBirthdayBoost = before?.birthdayBoostUntil && before.birthdayBoostUntil > new Date();
   const finalAmount = hasBirthdayBoost ? amount * 2 : amount;
 
   const givesRankPoints = RANK_POINT_CATEGORIES.has(POINT_RULES[rule].category as PointCategory);
@@ -80,6 +86,6 @@ export async function awardPoints(userId: string, rule: PointRule, customReason?
     }),
   ]);
 
-  return { transaction, user: updated };
+  return { transaction, user: updated, pointsBefore };
 }
 

@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
   }
   const body = await req.json();
-  const { title, description, game, startAt, maxPlayers, pointReward, type, seriesId } = body;
+  const { title, description, game, startAt, maxPlayers, pointReward, type, seriesId, discordChannelId } = body;
 
   if (!title || !startAt) {
     return NextResponse.json({ error: "Titel und Datum sind Pflichtfelder" }, { status: 400 });
@@ -36,8 +36,9 @@ export async function POST(req: NextRequest) {
       startAt: startDate,
       maxPlayers: maxPlayers ? Number(maxPlayers) : null,
       pointReward: pointReward ? Number(pointReward) : 50,
-      type: type ?? "community",
-      seriesId: seriesId || null,
+      type:            type ?? "community",
+      seriesId:        seriesId || null,
+      discordChannelId: discordChannelId || null,
     },
   });
 
@@ -57,11 +58,12 @@ export async function POST(req: NextRequest) {
 
   // Discord-Ankündigung im Events-Channel (fire-and-forget)
   announceNewEvent({
-    title:      event.title,
-    game:       event.game,
-    startAt:    event.startAt,
-    maxPlayers: event.maxPlayers,
-    pointReward: event.pointReward,
+    title:            event.title,
+    game:             event.game,
+    startAt:          event.startAt,
+    maxPlayers:       event.maxPlayers,
+    pointReward:      event.pointReward,
+    discordChannelId: event.discordChannelId,
   });
 
   return NextResponse.json(event, { status: 201 });

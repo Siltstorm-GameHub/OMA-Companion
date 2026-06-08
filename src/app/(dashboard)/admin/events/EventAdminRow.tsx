@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import {
   ChevronDown, ChevronUp, Trophy, Settings, Users, UserPlus, UserMinus,
-  Search, Trash2, AlertTriangle, Repeat, X, GitBranch, Gamepad2, Swords, ExternalLink,
+  Search, Trash2, AlertTriangle, Repeat, X, GitBranch, Gamepad2, Swords, ExternalLink, Hash,
 } from "lucide-react";
 import Link from "next/link";
 import TournamentManager from "./TournamentManager";
@@ -21,6 +21,7 @@ type Series = { id: string; name: string; _count: { events: number } };
 type Event = {
   id: string; title: string; description: string | null; status: string; game: string | null;
   startAt: Date; maxPlayers: number | null; pointReward: number; type: string;
+  discordChannelId?: string | null;
   seriesId?: string | null;
   series?: { id: string; name: string } | null;
   _count: { registrations: number };
@@ -110,11 +111,12 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
   const isAdmin                   = session?.user?.role === "admin";
 
   /* ── Settings state ── */
-  const [status, setStatus]           = useState(event.status);
-  const [pointReward, setPointReward] = useState(event.pointReward);
-  const [title, setTitle]             = useState(event.title);
-  const [description, setDescription] = useState(event.description ?? "");
-  const [loading, setLoading]         = useState(false);
+  const [status, setStatus]                     = useState(event.status);
+  const [pointReward, setPointReward]           = useState(event.pointReward);
+  const [title, setTitle]                       = useState(event.title);
+  const [description, setDescription]           = useState(event.description ?? "");
+  const [discordChannelId, setDiscordChannelId] = useState(event.discordChannelId ?? "");
+  const [loading, setLoading]                   = useState(false);
 
   /* ── Series state ── */
   const [seriesMode, setSeriesMode]         = useState<"keep" | "none" | "existing" | "new">("keep");
@@ -206,12 +208,13 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
       }
 
       const body: Record<string, unknown> = {
-        eventId:     event.id,
+        eventId:          event.id,
         status,
         pointReward,
         title,
-        description: description || null,
-        seriesScope: scope,
+        description:      description || null,
+        discordChannelId: discordChannelId.trim() || null,
+        seriesScope:      scope,
       };
 
       if (resolvedSeriesId !== "KEEP") {
@@ -435,6 +438,26 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
                       <input type="number" value={pointReward} onChange={e => setPointReward(Number(e.target.value))}
                         className="w-28 text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2" />
                     </div>
+                  </div>
+
+                  {/* ── Discord-Kanal ── */}
+                  <div className="rounded-xl p-3 space-y-2" style={{ background: "rgba(88,101,242,0.05)", border: "1px solid rgba(88,101,242,0.15)" }}>
+                    <div className="flex items-center gap-2">
+                      <Hash className="w-3.5 h-3.5 text-indigo-400" />
+                      <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Discord-Kanal</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={discordChannelId}
+                      onChange={e => setDiscordChannelId(e.target.value)}
+                      placeholder="Kanal-ID (leer = Standard aus .env)"
+                      className={inputCls}
+                    />
+                    <p className="text-[10px] text-gray-600 leading-relaxed">
+                      Kanal-ID aus Discord (Rechtsklick auf Kanal → ID kopieren). Bot postet Ankündigungen,
+                      Erinnerungen und Ergebnisse für dieses Event in diesen Kanal.
+                      Leer lassen = globaler Standard-Kanal aus der Server-Konfiguration.
+                    </p>
                   </div>
 
                   {/* ── Eventreihe ── */}
