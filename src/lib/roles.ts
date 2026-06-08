@@ -16,14 +16,6 @@ export const ROLE_STYLES: Record<Role, string> = {
   admin:     "bg-purple-900/50 text-purple-300",
 };
 
-export function canManageEvents(role: Role) {
-  return role === "admin" || role === "moderator";
-}
-
-export function canManageTournaments(role: Role) {
-  return role === "admin" || role === "moderator";
-}
-
 export function canAwardPoints(role: Role) {
   return role === "admin";
 }

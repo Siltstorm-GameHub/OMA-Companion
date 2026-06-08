@@ -1,9 +1,11 @@
 import { prisma } from "@/lib/prisma";
+import { requireRole } from "@/lib/roles";
 import { RARITY_CONFIG, TYPE_CONFIG } from "@/lib/shop";
 import ShopAdminPanel from "./ShopAdminPanel";
 import ShopItemCreator from "./ShopItemCreator";
 
 export default async function AdminShopPage() {
+  await requireRole("admin");
   const items = await prisma.shopItem.findMany({ orderBy: [{ category: "asc" }, { sortOrder: "asc" }] });
 
   const stats = {
