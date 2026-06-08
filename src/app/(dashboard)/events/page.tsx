@@ -152,15 +152,20 @@ export default async function EventsPage() {
 
           return (
             <div key={ev.id}
-              className={`card-shine glass rounded-2xl p-5 flex items-start gap-4 relative overflow-hidden animate-slide-up ${isRegistered ? "border border-emerald-500/15" : ""}`}
-              style={{ animationDelay: `${idx * 40}ms` }}>
+              className="surface animate-slide-up relative overflow-hidden flex items-start gap-4 p-5"
+              style={{
+                borderRadius: 6,
+                border: isRegistered ? "1px solid rgba(52,211,153,0.18)" : "1px solid rgba(255,255,255,0.06)",
+                boxShadow: "0 4px 20px rgba(0,0,0,0.45)",
+                animationDelay: `${idx * 40}ms`,
+              }}>
 
               {/* Farbbalken links */}
-              <div className={`absolute left-0 top-5 bottom-5 w-[3px] rounded-r-full ${isRegistered ? "bg-emerald-400" : s.bar}`} />
+              <div className={`absolute left-0 top-4 bottom-4 w-[3px] rounded-r-full ${isRegistered ? "bg-emerald-400" : s.bar}`} />
               <div className={`absolute inset-0 bg-gradient-to-r ${isRegistered ? "from-emerald-500/4" : s.glow} to-transparent opacity-60 pointer-events-none`} />
 
               {/* Datum-Box */}
-              <div className="relative glass-heavy rounded-xl px-3 py-2.5 text-center min-w-[52px] shrink-0">
+              <div className="relative surface-elevated px-3 py-2.5 text-center min-w-[52px] shrink-0" style={{ borderRadius: 6, border: "1px solid rgba(255,255,255,0.07)" }}>
                 <p className="text-xl font-bold text-white leading-none tabular-nums">{date.getDate()}</p>
                 <p className="text-[10px] text-gray-500 uppercase tracking-wide mt-0.5 font-medium">
                   {date.toLocaleString("de-DE", { month: "short" })}
@@ -174,9 +179,9 @@ export default async function EventsPage() {
                 {/* Reihen-Badge */}
                 {hasSeries && (
                   <Link href={`/events/series/${ev.seriesId}`}
-                    className="flex items-center gap-1 mb-1 hover:text-teal-300 transition-colors group/series">
-                    <Repeat className="w-3 h-3 text-teal-500 shrink-0" />
-                    <span className="text-[10px] text-teal-500 font-medium group-hover/series:text-teal-300">{ev.series?.name}</span>
+                    className="flex items-center gap-1 mb-1 hover:text-violet-300 transition-colors group/series">
+                    <Repeat className="w-3 h-3 text-violet-400 shrink-0" />
+                    <span className="text-[10px] text-violet-400 font-medium group-hover/series:text-violet-300">{ev.series?.name}</span>
                     <span className="text-[10px] text-gray-600">· Eventreihe</span>
                   </Link>
                 )}
@@ -184,7 +189,7 @@ export default async function EventsPage() {
                 {/* Titel */}
                 <div className="flex items-center gap-2 mb-1.5">
                   <Link href={`/events/${ev.id}`}
-                    className="font-semibold text-white text-base truncate hover:text-teal-300 transition-colors">
+                    className="font-semibold text-white text-base truncate hover:text-violet-300 transition-colors">
                     {ev.title}
                   </Link>
                   {isTournament && <Trophy className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
@@ -207,7 +212,7 @@ export default async function EventsPage() {
                   </span>
                   {discordUrl && (
                     <a href={discordUrl} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-[10px] text-gray-600 hover:text-teal-400 transition-colors">
+                      className="flex items-center gap-1 text-[10px] text-gray-600 hover:text-violet-400 transition-colors">
                       <ExternalLink className="w-3 h-3" /> Discord
                     </a>
                   )}
@@ -221,7 +226,7 @@ export default async function EventsPage() {
                   {/* Alle Termine dieser Reihe */}
                   {hasSeries && (
                     <Link href={`/events/series/${ev.seriesId}`}
-                      className="flex items-center gap-1 text-[10px] text-teal-600 hover:text-teal-400 transition-colors">
+                      className="flex items-center gap-1 text-[10px] text-violet-600 hover:text-violet-400 transition-colors">
                       <ChevronRight className="w-3 h-3" /> Reihe ansehen
                     </Link>
                   )}
@@ -255,7 +260,7 @@ export default async function EventsPage() {
             <CalendarDays className="w-4 h-4 text-gray-600" />
             <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Vergangene Events</h2>
           </div>
-          <div className="glass card-shine rounded-2xl overflow-hidden divide-y divide-white/[0.04]">
+          <div className="surface overflow-hidden divide-y divide-white/[0.04]" style={{ borderRadius: 6, border: "1px solid rgba(255,255,255,0.06)" }}>
             {finishedEvents.map(ev => {
               const isTournament = !!ev.tournament;
               const hasSeries    = !!ev.series;
@@ -269,12 +274,12 @@ export default async function EventsPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
-                      {hasSeries && <Repeat className="w-3 h-3 text-teal-700 shrink-0" />}
+                      {hasSeries && <Repeat className="w-3 h-3 text-violet-700 shrink-0" />}
                       <p className="text-sm font-medium text-gray-400 truncate group-hover:text-white transition-colors">{ev.title}</p>
                       {isTournament && <Trophy className="w-3 h-3 text-gray-600 shrink-0" />}
                     </div>
                     <p className="text-[10px] text-gray-600 mt-0.5">
-                      {hasSeries && <span className="text-teal-800 mr-1.5">{ev.series?.name} ·</span>}
+                      {hasSeries && <span className="text-violet-800 mr-1.5">{ev.series?.name} ·</span>}
                       {date.toLocaleDateString("de-DE", { day: "2-digit", month: "long", year: "numeric" })}
                       {ev.game && <span className="ml-1.5">· {ev.game}</span>}
                       <span className="ml-1.5">· {ev._count.registrations} Teilnehmer</span>
