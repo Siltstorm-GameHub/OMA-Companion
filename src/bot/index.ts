@@ -5,9 +5,8 @@ import {
 } from "discord.js";
 import { updateEventStatus, syncAttendee } from "./sync";
 import { trackVoice, trackMessage, handleMemberJoin, trackReaction, trackInvite } from "./activity";
-import { setClient, notifyMonthlyLeaderboard, notifyBirthday, notifyEventReminder } from "./notify";
+import { setClient } from "./notify";
 import { processPendingPolls } from "./polls";
-import { awardPoints } from "@/lib/points";
 import { prisma } from "@/lib/prisma";
 
 const client = new Client({
@@ -40,8 +39,9 @@ client.once(Events.ClientReady, async (c) => {
   // ─────────────────────────────────────────────────────────────────────────
 
   setClient(client);
-  scheduleMonthlyLeaderboard();
   schedulePollChecker(client);
+  // Geburtstage, Event-Erinnerungen und Monats-Rangliste laufen jetzt
+  // zuverlässig als Vercel Cron Jobs — nicht mehr im Bot nötig.
   // Bug-Fix: Geburtstage nicht beim Start prüfen (würde Nachrichten zu beliebigen Uhrzeiten senden)
   // Stattdessen nur täglich um 8 Uhr im Scheduler
 
@@ -187,96 +187,15 @@ client.on(Events.GuildScheduledEventUserRemove, async (event, user) => {
   await syncAttendee(event.id, user.id, "remove");
 });
 
-// Geburtstags-Boost: täglich um 8 Uhr prüfen
-async function checkBirthdays() {
-  const now   = new Date();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day   = String(now.getDate()).padStart(2, "0");
-
-  // Bug-Fix #1: null-Werte explizit einschließen —
-  // { lt: now } matcht keine null-Felder, deshalb OR-Bedingung
-  const usersWithBirthday = await prisma.user.findMany({
-    where: {
-      birthday: { not: null },
-      OR: [
-        { birthdayBoostUntil: null },          // noch nie einen Boost gehabt
-        { birthdayBoostUntil: { lt: now } },   // letzter Boost abgelaufen
-      ],
-    },
-    select: { id: true, username: true, name: true, discordId: true, birthday: true },
-  });
-
-  for (const user of usersWithBirthday) {
-    if (!user.birthday) continue;
-    const bMonth = String(user.birthday.getMonth() + 1).padStart(2, "0");
-    const bDay   = String(user.birthday.getDate()).padStart(2, "0");
-    if (bMonth !== month || bDay !== day) continue;
-
-    // 24h Boost aktivieren
-    const until = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-    await prisma.user.update({ where: { id: user.id }, data: { birthdayBoostUntil: until } });
-
-    // Bug-Fix #2: Geburtstags-Punkte vergeben (waren vorher nie ausgelöst)
-    await awardPoints(user.id, "BIRTHDAY");
-
-    // Discord-Nachricht
-    if (user.discordId) await notifyBirthday(user.discordId, user.username ?? user.name ?? "Jemand");
-    console.log(`🎂 Geburtstags-Boost + Punkte für ${user.username ?? user.name}`);
-  }
-}
+// Geburtstage, Event-Erinnerungen und Monats-Rangliste wurden nach
+// Vercel Cron Jobs ausgelagert (src/app/api/cron/*).
+// Der Bot behandelt nur noch Echtzeit-WebSocket-Events.
 
 // ── Poll-Checker: läuft jede Minute ─────────────────────────────────────────
 function schedulePollChecker(client: Client) {
   setInterval(() => processPendingPolls(client), 60 * 1000);
 }
 
-// ── Scheduler: läuft stündlich ───────────────────────────────────────────────
-// Prüft: Geburtstage (tägl. 8 Uhr), Event-Erinnerungen (tägl. 10 Uhr), Monats-Rangliste (1. um 12 Uhr)
-
-let _lastLeaderboardMonth = -1;
-// Set mit Event-IDs die bereits eine 24h-Erinnerung bekommen haben (in-memory, reicht für Bot-Laufzeit)
-const remindedEventIds = new Set<string>();
-
-function scheduleMonthlyLeaderboard() {
-  setInterval(async () => {
-    const now = new Date();
-    const h   = now.getHours();
-
-    // 08:00 – Geburtstage prüfen
-    if (h === 8) await checkBirthdays();
-
-    // 10:00 – Event-Erinnerungen für Events die in 20–28h starten
-    if (h === 10) await checkEventReminders();
-
-    // 1. des Monats 12:00 – Monatliche Rangliste
-    if (now.getDate() === 1 && h === 12 && now.getMonth() !== _lastLeaderboardMonth) {
-      _lastLeaderboardMonth = now.getMonth();
-      await notifyMonthlyLeaderboard();
-      console.log("📊 Monatliche Rangliste gepostet");
-    }
-  }, 60 * 60 * 1000); // stündlich prüfen
-}
-
-async function checkEventReminders() {
-  const now      = new Date();
-  const in20h    = new Date(now.getTime() + 20 * 60 * 60 * 1000);
-  const in28h    = new Date(now.getTime() + 28 * 60 * 60 * 1000);
-
-  const events = await prisma.event.findMany({
-    where: {
-      status:  { in: ["open", "upcoming"] },
-      startAt: { gte: in20h, lte: in28h },
-    },
-    include: { _count: { select: { registrations: true } } },
-  });
-
-  for (const event of events) {
-    if (remindedEventIds.has(event.id)) continue;
-    remindedEventIds.add(event.id);
-    await notifyEventReminder(event);
-    console.log(`📅 Event-Erinnerung gesendet: ${event.title}`);
-  }
-}
 
 // ── Fehler-Handling: verhindert Crash bei unbehandelten Promises ────────────
 process.on("unhandledRejection", (err) => {
