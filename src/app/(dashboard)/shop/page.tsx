@@ -67,21 +67,22 @@ export default async function ShopPage() {
     <div className="p-5 sm:p-6 max-w-5xl mx-auto space-y-6 animate-fade-in">
 
       {/* Header */}
-      <div className="glass card-shine relative overflow-hidden rounded-2xl p-5">
-        <div className="absolute inset-0 bg-gradient-to-br from-amber-500/8 via-transparent to-orange-500/5 pointer-events-none" />
-        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-amber-500/25 to-transparent pointer-events-none" />
+      <div className="card-cut surface relative overflow-hidden p-5 accent-amber"
+        style={{ boxShadow: "0 0 0 1px rgba(245,158,11,0.10), 0 4px 24px rgba(0,0,0,0.5)" }}>
+        <div className="absolute top-0 inset-x-0 h-px"
+          style={{ background: "linear-gradient(90deg, transparent, rgba(245,158,11,0.20), transparent)" }} />
         <div className="relative flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+            <div className="card-cut-sm w-10 h-10 bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
               <ShoppingBag className="w-5 h-5 text-amber-400" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white">Shop</h1>
-              <p className="text-xs text-gray-500">Sammle exklusive Figuren und vervollständige Sammlungen</p>
+              <h1 className="font-display text-xl font-black text-white tracking-tight">Shop</h1>
+              <p className="text-[11px] text-gray-600">Sammle exklusive Figuren und vervollständige Sammlungen</p>
             </div>
           </div>
           {userId && (
-            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20">
+            <div className="card-cut-sm flex items-center gap-2 px-4 py-2 bg-amber-500/8 border border-amber-500/15">
               <Coins className="w-4 h-4 text-amber-400" />
               <span className="text-sm font-bold text-amber-400 tabular-nums">
                 <CountUp to={myPoints} /> Münzen

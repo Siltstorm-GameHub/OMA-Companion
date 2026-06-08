@@ -67,7 +67,7 @@ export default async function QuestsPage() {
             <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
               <Scroll className="w-4 h-4 text-amber-400" />
             </div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">Quests</h1>
+            <h1 className="font-display text-2xl font-black text-white tracking-tight">Quests</h1>
           </div>
           <div className="flex items-center gap-3 mt-1.5 flex-wrap ml-10">
             <span className={`text-sm ${allDone ? "text-emerald-400 font-medium" : "text-gray-500"}`}>
@@ -89,12 +89,12 @@ export default async function QuestsPage() {
               <circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="2.5" />
               <circle
                 cx="18" cy="18" r="15.9" fill="none"
-                stroke={allDone ? "#10b981" : "#f43f5e"}
+                stroke={allDone ? "#10b981" : "#8b5cf6"}
                 strokeWidth="2.5"
                 strokeDasharray={`${currentQuests.length ? (completedCount / currentQuests.length) * 100 : 0} 100`}
                 strokeLinecap="round"
                 className="transition-all duration-700"
-                style={{ filter: allDone ? "drop-shadow(0 0 4px #10b981)" : "drop-shadow(0 0 4px #f43f5e)" }}
+                style={{ filter: allDone ? "drop-shadow(0 0 4px #10b981)" : "drop-shadow(0 0 4px #8b5cf6)" }}
               />
             </svg>
             <span className="absolute inset-0 flex flex-col items-center justify-center leading-none">
@@ -108,7 +108,7 @@ export default async function QuestsPage() {
 
       {/* "Alle abgeschlossen"-Banner */}
       {allDone && (
-        <div className="flex items-center gap-3 glass rounded-2xl p-4 border-emerald-500/20 bg-emerald-500/[0.06]">
+        <div className="flex items-center gap-3 card-cut surface p-4" style={{ borderColor: "rgba(16,185,129,0.20)", background: "rgba(16,185,129,0.05)" }}>
           <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
           <div>
             <p className="text-sm font-semibold text-emerald-300">Alle Quests diesen Monat abgeschlossen! 🎉</p>
@@ -138,12 +138,11 @@ export default async function QuestsPage() {
 
           return (
             <div key={quest.id}
-              className={`card-hover card-shine glass relative overflow-hidden rounded-2xl animate-slide-up`}
+              className={`card-cut surface card-hover relative overflow-hidden animate-slide-up`}
               style={{ animationDelay: `${idx * 50}ms` }}>
 
               {/* Farbiger Streifen links */}
-              <div className={`absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b ${meta.bar} rounded-l-2xl`} />
-              <div className={`absolute inset-0 bg-gradient-to-br ${meta.bg} to-transparent opacity-40 pointer-events-none`} />
+              <div className={`absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b ${meta.bar}`} />
 
               {completed && (
                 <div className="absolute inset-0 bg-emerald-500/[0.04] pointer-events-none" />
@@ -205,7 +204,7 @@ export default async function QuestsPage() {
       </div>
 
       {/* ── Info-Box ──────────────────────────────────────────────── */}
-      <div className="glass rounded-2xl p-4">
+      <div className="surface p-4">
         <p className="text-xs font-semibold text-gray-400 mb-3">So funktionieren Quests</p>
         <ul className="space-y-2 text-xs text-gray-500">
           {[
@@ -239,7 +238,7 @@ export default async function QuestsPage() {
               const totalPts       = quests.reduce((sum, q) => sum + (q.progress[0]?.completed ? q.reward : 0), 0);
 
               return (
-                <div key={key} className="glass card-shine rounded-2xl overflow-hidden">
+                <div key={key} className="surface overflow-hidden">
                   <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.05]">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium text-white">{MONTH_NAMES[m - 1]} {y}</span>

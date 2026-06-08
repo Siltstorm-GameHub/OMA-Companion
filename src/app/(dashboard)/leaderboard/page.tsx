@@ -124,15 +124,15 @@ export default async function LeaderboardPage() {
               style={{ background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.25)", boxShadow: "0 0 20px rgba(245,158,11,0.10)" }}>
               <Trophy className="w-4.5 h-4.5 text-amber-400" />
             </div>
-            <h1 className="text-2xl font-black text-white tracking-tight">Rangliste</h1>
+            <h1 className="font-display text-2xl font-black text-white tracking-tight">Rangliste</h1>
           </div>
           <p className="text-xs text-gray-500 ml-11">Top {users.length} Spieler · sortiert nach Prestige-Punkten</p>
         </div>
         {myRank && myRank > 0 && (
-          <div className="glass-heavy rounded-xl px-4 py-2.5 text-center hidden sm:block animate-float"
-            style={{ border: "1px solid rgba(20,184,166,0.15)" }}>
-            <p className="text-[9px] text-gray-500 uppercase tracking-widest">Dein Rang</p>
-            <p className="text-xl font-black text-gradient-gaming">#{myRank}</p>
+          <div className="card-cut surface px-4 py-2.5 text-center hidden sm:block"
+            style={{ boxShadow: "0 0 0 1px rgba(139,92,246,0.12)" }}>
+            <p className="text-[9px] text-gray-600 uppercase tracking-[0.14em]">Dein Rang</p>
+            <p className="font-display text-xl font-black text-gradient-gaming">#{myRank}</p>
           </div>
         )}
       </div>
@@ -149,9 +149,9 @@ export default async function LeaderboardPage() {
             return (
               <Link key={u.id}
                 href={isMe ? "/profile" : `/profile/${u.id}`}
-                className={`card-hover relative flex flex-col items-center rounded-2xl p-4 sm:p-5 flex-1 max-w-[200px] overflow-hidden
-                  bg-gradient-to-b ${cfg.gradient} border ${cfg.border} ${cfg.heightOffset} ${cfg.order} transition-all`}
-                style={{ boxShadow: cfg.glow }}>
+                className={`card-cut card-hover relative flex flex-col items-center surface p-4 sm:p-5 flex-1 max-w-[200px] overflow-hidden
+                  ${cfg.heightOffset} ${cfg.order} transition-all`}
+                style={{ boxShadow: cfg.glow, borderColor: cfg.border.replace("border-", "") }}>
 
                 {/* Top-Linie */}
                 <div className={`absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent ${cfg.topLine} to-transparent`} />
@@ -174,7 +174,7 @@ export default async function LeaderboardPage() {
                   {u.image
                     ? <Image src={u.image} alt={displayName} width={80} height={80} className="w-full h-full object-cover" />
                     : <div className="w-full h-full flex items-center justify-center text-base font-black text-white"
-                        style={{ background: "linear-gradient(135deg, #0d9488, #115e59)" }}>
+                        style={{ background: "linear-gradient(135deg, #6d28d9, #4f46e5)" }}>
                         {displayName[0].toUpperCase()}
                       </div>}
                 </div>
@@ -208,8 +208,8 @@ export default async function LeaderboardPage() {
       )}
 
       {/* ── Vollständige Liste ────────────────────────────────────── */}
-      <div className="glass rounded-2xl overflow-hidden"
-        style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.45), 0 0 0 1px rgba(20,184,166,0.07)" }}>
+      <div className="surface overflow-hidden"
+        style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.45)" }}>
 
         {/* Spalten-Header: # | Avatar | Name | [Siege] | [Events] | Münzen | Punkte */}
         {/* Siege + Events werden auf Mobile ausgeblendet */}
@@ -241,19 +241,19 @@ export default async function LeaderboardPage() {
               : i === 2
               ? "bg-orange-500/[0.03] hover:bg-orange-600/[0.06]"
               : isMe
-              ? "bg-teal-500/[0.05] hover:bg-teal-500/[0.08]"
+              ? "bg-violet-500/[0.05] hover:bg-violet-500/[0.08]"
               : "hover:bg-white/[0.025]";
 
             const nameColor = i === 0 ? "text-amber-300"
               : i === 1 ? "text-slate-300"
               : i === 2 ? "text-orange-300"
-              : isMe    ? "text-teal-300"
+              : isMe    ? "text-violet-300"
               : "text-white";
 
             const ptsColor = i === 0 ? "text-amber-400"
               : i === 1 ? "text-slate-400"
               : i === 2 ? "text-orange-400"
-              : isMe    ? "text-teal-400"
+              : isMe    ? "text-violet-400"
               : "text-white";
 
             return (
@@ -268,16 +268,16 @@ export default async function LeaderboardPage() {
                 <div className="text-center">
                   {isTop3
                     ? <span className="text-base leading-none">{MEDALS[i]}</span>
-                    : <span className={`text-xs font-bold ${isMe ? "text-teal-400" : "text-gray-600"}`}>{i + 1}</span>}
+                    : <span className={`text-xs font-bold tabular-nums ${isMe ? "text-violet-400" : "text-gray-600"}`}>{i + 1}</span>}
                 </div>
 
                 {/* Avatar */}
                 <div className={`w-9 h-9 rounded-full overflow-hidden
                   ${isTop3 ? "ring-2" : "ring-1"}
-                  ${i === 0 ? "ring-amber-400/50" : i === 1 ? "ring-slate-400/40" : i === 2 ? "ring-orange-500/40" : isMe ? "ring-teal-400/40" : "ring-white/[0.08]"}`}>
+                  ${i === 0 ? "ring-amber-400/50" : i === 1 ? "ring-slate-400/40" : i === 2 ? "ring-orange-500/40" : isMe ? "ring-violet-400/40" : "ring-white/[0.08]"}`}>
                   {u.image
                     ? <Image src={u.image} alt={displayName} width={36} height={36} className="w-full h-full object-cover" />
-                    : <div className={`w-full h-full flex items-center justify-center text-xs font-bold ${isMe ? "bg-teal-500/20 text-teal-300" : "bg-white/[0.05] text-gray-400"}`}>
+                    : <div className={`w-full h-full flex items-center justify-center text-xs font-bold ${isMe ? "bg-violet-500/20 text-violet-300" : "bg-white/[0.05] text-gray-400"}`}>
                         {displayName[0].toUpperCase()}
                       </div>}
                 </div>
