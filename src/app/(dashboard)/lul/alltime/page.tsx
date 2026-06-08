@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+﻿import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -66,7 +66,7 @@ export default async function LulAllTimePage() {
   const legacySeasonIds  = new Set(legacyEntries.map(e => e.seasonId));
 
   return (
-    <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-5 sm:space-y-6 animate-fade-in">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-5 sm:space-y-6 animate-fade-in">
       <Link href="/lul" className="flex items-center gap-2 text-sm text-gray-500 hover:text-white transition-colors w-fit">
         <ArrowLeft className="w-4 h-4" /> Zurück zur Übersicht
       </Link>

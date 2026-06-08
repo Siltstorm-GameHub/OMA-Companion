@@ -1,8 +1,8 @@
-import { Skeleton, SkeletonStatCards } from "@/components/Skeleton";
+﻿import { Skeleton, SkeletonStatCards } from "@/components/Skeleton";
 
 export default function ProfileLoading() {
   return (
-    <div className="p-5 sm:p-6 max-w-5xl mx-auto space-y-5 animate-fade-in">
+    <div className="p-5 sm:p-6 max-w-7xl mx-auto space-y-5 animate-fade-in">
       {/* Hero */}
       <div className="glass rounded-2xl p-6">
         <div className="flex items-center gap-5 flex-wrap">

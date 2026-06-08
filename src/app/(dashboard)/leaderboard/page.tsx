@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+﻿import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { Trophy, Swords, Flame, Coins, Star } from "lucide-react";
 import { CountUp } from "@/components/CountUp";
@@ -114,7 +114,7 @@ export default async function LeaderboardPage() {
   const myRank = userId ? users.findIndex(u => u.id === userId) + 1 : null;
 
   return (
-    <div className="p-3 sm:p-6 max-w-4xl mx-auto space-y-5 sm:space-y-6 animate-fade-in">
+    <div className="p-3 sm:p-6 max-w-6xl mx-auto space-y-5 sm:space-y-6 animate-fade-in">
 
       {/* ── Header ─────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">

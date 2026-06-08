@@ -1,8 +1,8 @@
-import { Skeleton, SkeletonCard } from "@/components/Skeleton";
+﻿import { Skeleton, SkeletonCard } from "@/components/Skeleton";
 
 export default function EventsLoading() {
   return (
-    <div className="p-5 sm:p-6 max-w-4xl mx-auto space-y-5 animate-fade-in">
+    <div className="p-5 sm:p-6 max-w-6xl mx-auto space-y-5 animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="space-y-2">

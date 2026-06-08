@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+﻿import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import {
   Trophy, CalendarDays, Users, ChevronRight,
@@ -128,7 +128,7 @@ export default async function DashboardPage() {
     <div className="animate-fade-in">
 
       {/* ── Hero ──────────────────────────────────────────────────────── */}
-      <div className="relative px-5 pt-8 pb-6 max-w-5xl mx-auto">
+      <div className="relative px-5 pt-8 pb-6 max-w-7xl mx-auto">
         {/* Dezente Trennlinie unten */}
         <div className="absolute bottom-0 inset-x-5 h-px"
           style={{ background: "linear-gradient(90deg, transparent, rgba(20,184,166,0.18), transparent)" }} />
@@ -211,7 +211,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* ── Content ─────────────────────────────────────────────────── */}
-      <div className="px-4 sm:px-6 py-5 max-w-5xl mx-auto space-y-5 relative">
+      <div className="px-4 sm:px-6 py-5 max-w-7xl mx-auto space-y-5 relative">
 
         {/* ── Hub-Kacheln: FACEIT-style ─────────────────────────────── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

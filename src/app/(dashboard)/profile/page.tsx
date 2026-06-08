@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+﻿import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import PointsInfoModal from "./PointsInfoModal";
@@ -164,7 +164,7 @@ export default async function ProfilePage() {
       </div>
 
       {/* ── Profile row — overlaps banner bottom ────────────────────────── */}
-      <div className="relative -mt-[4.5rem] px-5 sm:px-6 max-w-5xl mx-auto flex items-end gap-4">
+      <div className="relative -mt-[4.5rem] px-5 sm:px-6 max-w-7xl mx-auto flex items-end gap-4">
         {/* Avatar */}
         <div className="relative z-10 shrink-0">
           {user.image
@@ -201,7 +201,7 @@ export default async function ProfilePage() {
       </div>
 
       {/* ── Stats strip (FACEIT-style horizontal bar) ───────────────────── */}
-      <div className="mt-4 px-5 sm:px-6 max-w-5xl mx-auto">
+      <div className="mt-4 px-5 sm:px-6 max-w-7xl mx-auto">
         <div className="grid grid-cols-4"
           style={{ borderTop: "1px solid rgba(255,255,255,0.07)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
           {[
@@ -220,7 +220,7 @@ export default async function ProfilePage() {
       </div>
 
       {/* ── Rang-Fortschrittsbalken ──────────────────────────────────────── */}
-      <div className="px-5 sm:px-6 max-w-5xl mx-auto py-3">
+      <div className="px-5 sm:px-6 max-w-7xl mx-auto py-3">
         {nextRank ? (
           <div className="flex items-center gap-3">
             <span className="text-[10px] text-gray-600 whitespace-nowrap shrink-0">{currentRank.emoji} {currentRank.label}</span>
@@ -239,7 +239,7 @@ export default async function ProfilePage() {
       </div>
 
       {/* ── Bio & Profil-Editor ──────────────────────────────────────────── */}
-      <div className="px-5 sm:px-6 max-w-5xl mx-auto pb-5"
+      <div className="px-5 sm:px-6 max-w-7xl mx-auto pb-5"
         style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
         <ProfileEditor
           birthday={user.birthday
@@ -252,7 +252,7 @@ export default async function ProfilePage() {
       {/* ════════════════════════════════════════════════════════════════ */}
       {/* Content                                                         */}
       {/* ════════════════════════════════════════════════════════════════ */}
-      <div className="px-5 sm:px-6 max-w-5xl mx-auto pt-5 space-y-5">
+      <div className="px-5 sm:px-6 max-w-7xl mx-auto pt-5 space-y-5">
 
       {/* ── Collectibles Showcase ────────────────────────────────────────── */}
       <CollectiblesShowcase

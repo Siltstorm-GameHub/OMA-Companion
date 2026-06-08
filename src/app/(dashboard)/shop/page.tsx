@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+﻿import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { ShoppingBag, Coins } from "lucide-react";
 import { CountUp } from "@/components/CountUp";
@@ -64,7 +64,7 @@ export default async function ShopPage() {
   const ownedSet  = new Set((ownedRaw as { collectibleItemId: string }[]).map(o => o.collectibleItemId));
 
   return (
-    <div className="p-5 sm:p-6 max-w-5xl mx-auto space-y-6 animate-fade-in">
+    <div className="p-5 sm:p-6 max-w-7xl mx-auto space-y-6 animate-fade-in">
 
       {/* Header */}
       <div className="card-cut surface relative overflow-hidden p-5 accent-amber"

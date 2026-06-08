@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+﻿import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/roles";
 import { Package, Layers } from "lucide-react";
 import CollectiblesAdminPanel from "./CollectiblesAdminPanel";
@@ -24,7 +24,7 @@ export default async function AdminShopPage() {
   const activeCount = collections.filter(c => c.active).length;
 
   return (
-    <div className="space-y-5 max-w-4xl">
+    <div className="space-y-5 max-w-6xl">
 
       {/* Header */}
       <div className="glass card-shine relative overflow-hidden rounded-2xl p-5">
