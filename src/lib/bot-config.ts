@@ -96,6 +96,17 @@ export const BOT_MESSAGES = {
       { key: "{month}", description: "Monatsname des Vormonats" },
     ] satisfies BotPlaceholder[],
   },
+  lul_suggest: {
+    label:       "LUL Spieltag-Vorschlag",
+    description: "Wenn ein User im Shop einen Spieltag-Vorschlag einlöst (DISCORD_LUL_CHANNEL_ID).",
+    defaultText: "🎮 **Spieltag-Vorschlag von {username}**\n**Spiel:** {game}{note}",
+    defaultOn:   true,
+    placeholders: [
+      { key: "{username}", description: "Name des Vorschlagenden" },
+      { key: "{game}",     description: "Vorgeschlagenes Spiel" },
+      { key: "{note}",     description: "Optionale Notiz (inkl. Zeilenumbruch, leer wenn keine Notiz)" },
+    ] satisfies BotPlaceholder[],
+  },
 } as const;
 
 export type BotMessageKey = keyof typeof BOT_MESSAGES;
