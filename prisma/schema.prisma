@@ -167,8 +167,9 @@ model EventSeries {
   id          String   @id @default(cuid())
   name        String
   description String?
-  fixedGame   String?   // Wenn gesetzt: alle Events der Reihe nutzen dieses Spiel
-  fixedFormat String?   // Wenn gesetzt: alle Turniere der Reihe nutzen dieses Format
+  fixedGame        String?  // Wenn gesetzt: alle Events der Reihe nutzen dieses Spiel
+  fixedFormat      String?  // Wenn gesetzt: alle Turniere der Reihe nutzen dieses Format
+  discordChannelId String?  // Kanal-ID für Bot-Nachrichten aller Events dieser Reihe
   createdAt   DateTime @default(now())
   events      Event[]
 }
@@ -355,6 +356,14 @@ model PointTransaction {
   reason    String
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id])
+}
+
+// ── Bot-Konfiguration ────────────────────────────────────────────────────────
+
+model BotConfig {
+  key       String   @id  // z.B. "event_new_enabled", "event_new_text"
+  value     String        // "true" / "false" / Freitext
+  updatedAt DateTime @updatedAt
 }
 
 // ── Level-Up-League ─────────────────────────────────────────────────────────

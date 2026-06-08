@@ -127,12 +127,13 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
   const [seriesLoaded, setSeriesLoaded]     = useState(false);
 
   /* ── Series settings state ── */
-  const [seriesFixedGame, setSeriesFixedGame]     = useState("");
-  const [seriesFixedFormat, setSeriesFixedFormat] = useState("");
-  const [propagateGame, setPropagateGame]         = useState(false);
-  const [propagateFormat, setPropagateFormat]     = useState(false);
-  const [seriesSettingsLoaded, setSeriesSettingsLoaded] = useState(false);
-  const [seriesSettingsSaving, setSeriesSettingsSaving] = useState(false);
+  const [seriesFixedGame, setSeriesFixedGame]               = useState("");
+  const [seriesFixedFormat, setSeriesFixedFormat]           = useState("");
+  const [seriesDiscordChannelId, setSeriesDiscordChannelId] = useState("");
+  const [propagateGame, setPropagateGame]                   = useState(false);
+  const [propagateFormat, setPropagateFormat]               = useState(false);
+  const [seriesSettingsLoaded, setSeriesSettingsLoaded]     = useState(false);
+  const [seriesSettingsSaving, setSeriesSettingsSaving]     = useState(false);
 
   /* ── Scope modal ── */
   const [showScopeModal, setShowScopeModal] = useState(false);
@@ -160,6 +161,7 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
         .then(d => {
           setSeriesFixedGame(d.fixedGame ?? "");
           setSeriesFixedFormat(d.fixedFormat ?? "");
+          setSeriesDiscordChannelId(d.discordChannelId ?? "");
           setSeriesSettingsLoaded(true);
         })
         .catch(() => {});
@@ -283,9 +285,10 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        seriesId:       event.seriesId,
-        fixedGame:      seriesFixedGame.trim() || null,
-        fixedFormat:    seriesFixedFormat || null,
+        seriesId:         event.seriesId,
+        fixedGame:        seriesFixedGame.trim() || null,
+        fixedFormat:      seriesFixedFormat || null,
+        discordChannelId: seriesDiscordChannelId.trim() || null,
         propagateGame,
         propagateFormat,
       }),
@@ -588,6 +591,22 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
                               Format auf alle Turniere der Reihe übertragen
                             </span>
                           </label>
+                        </div>
+
+                        {/* Discord-Kanal für die gesamte Reihe */}
+                        <div>
+                          <label className="text-xs text-gray-500 flex items-center gap-1.5 mb-1">
+                            <Hash className="w-3 h-3" />
+                            Discord-Kanal
+                            <span className="text-gray-600">(wird auf alle Events der Reihe übertragen)</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={seriesDiscordChannelId}
+                            onChange={e => setSeriesDiscordChannelId(e.target.value)}
+                            placeholder="Kanal-ID (leer = Standard aus .env)"
+                            className={inputCls}
+                          />
                         </div>
 
                         <button onClick={saveSeriesSettings}
