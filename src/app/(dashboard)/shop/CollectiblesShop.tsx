@@ -3,16 +3,16 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ChevronDown, ChevronUp, ShoppingCart, Check, Loader2, Lock, Star, Package } from "lucide-react";
+import { ChevronDown, ChevronUp, ShoppingCart, Check, Loader2, Lock, Star, Package, ImageIcon } from "lucide-react";
 import { RARITY_CONFIG, type Rarity } from "@/lib/collectibles";
 
 interface CollectibleItem {
-  id: string; name: string; description: string | null; emoji: string;
+  id: string; name: string; description: string | null; imageUrl: string | null;
   rarity: string; price: number; stock: number | null; sortOrder: number;
 }
 interface Collection {
   id: string; name: string; description: string | null; game: string | null;
-  coverEmoji: string; items: CollectibleItem[];
+  coverImageUrl: string | null; items: CollectibleItem[];
 }
 
 interface Props {
@@ -45,7 +45,7 @@ export default function CollectiblesShop({ collections, ownedIds, myPoints, isLo
       const data = await res.json();
       if (!res.ok) { toast.error(data.error ?? "Kauf fehlgeschlagen"); return; }
       setLocalOwned(s => new Set([...s, item.id]));
-      toast.success(`${item.emoji} ${item.name} zur Sammlung hinzugefügt!`);
+      toast.success(`${item.name} zur Sammlung hinzugefügt!`);
       router.refresh();
     } catch {
       toast.error("Netzwerkfehler");
@@ -81,10 +81,13 @@ export default function CollectiblesShop({ collections, ownedIds, myPoints, isLo
               onClick={() => toggleOpen(col.id)}
               className="w-full flex items-center gap-4 px-5 py-4 hover:bg-white/[0.02] transition-colors text-left"
             >
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 ${
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 overflow-hidden ${
                 complete ? "bg-amber-500/15 border border-amber-500/30" : "bg-white/[0.04] border border-white/[0.08]"
               }`}>
-                {col.coverEmoji}
+                {col.coverImageUrl
+                  ? <img src={col.coverImageUrl} alt={col.name} className="w-full h-full object-contain" />
+                  : <ImageIcon className="w-6 h-6 text-gray-600" />
+                }
               </div>
 
               <div className="flex-1 min-w-0">
@@ -135,8 +138,13 @@ export default function CollectiblesShop({ collections, ownedIds, myPoints, isLo
                       )}
 
                       <div className="relative p-3 flex flex-col items-center text-center gap-2">
-                        {/* Emoji */}
-                        <div className="text-4xl leading-none mt-1">{item.emoji}</div>
+                        {/* Bild */}
+                        <div className="w-16 h-16 flex items-center justify-center mt-1">
+                          {item.imageUrl
+                            ? <img src={item.imageUrl} alt={item.name} className="w-full h-full object-contain" loading="lazy" />
+                            : <ImageIcon className="w-8 h-8 text-gray-600" />
+                          }
+                        </div>
 
                         {/* Rarity stars */}
                         <div className="flex gap-0.5">

@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Pencil, X, Check, Plus, Loader2 } from "lucide-react";
+import { Pencil, X, Check, Plus, Loader2, ImageIcon } from "lucide-react";
 import { RARITY_CONFIG, type Rarity, MAX_SHOWCASE } from "@/lib/collectibles";
 
-interface ShowcaseItem { id: string; name: string; emoji: string; rarity: string }
-interface OwnedItem    { id: string; name: string; emoji: string; rarity: string; collectionName: string }
+interface ShowcaseItem { id: string; name: string; imageUrl: string | null; rarity: string }
+interface OwnedItem    { id: string; name: string; imageUrl: string | null; rarity: string; collectionName: string }
 
 interface Props {
   showcaseItems: ShowcaseItem[];
@@ -118,7 +118,10 @@ export default function CollectiblesShowcase({ showcaseItems, allOwned, maxSlots
                   >
                     {item ? (
                       <>
-                        <span className="text-3xl leading-none">{item.emoji}</span>
+                        {item.imageUrl
+                          ? <img src={item.imageUrl} alt={item.name} className="w-10 h-10 object-contain" loading="lazy" />
+                          : <ImageIcon className="w-7 h-7 text-gray-600" />
+                        }
                         <span className={`text-[9px] font-medium px-1 text-center leading-tight ${rarity?.color}`}>{item.name}</span>
                         {editing && (
                           <button
@@ -161,7 +164,10 @@ export default function CollectiblesShowcase({ showcaseItems, allOwned, maxSlots
                             : `${rarity.border} bg-white/[0.01] hover:bg-white/[0.04]`
                         }`}
                       >
-                        <span className="text-xl leading-none">{item.emoji}</span>
+                        {item.imageUrl
+                          ? <img src={item.imageUrl} alt={item.name} className="w-8 h-8 object-contain" loading="lazy" />
+                          : <ImageIcon className="w-5 h-5 text-gray-600" />
+                        }
                         <span className={`text-[9px] font-medium ${rarity.color}`}>{item.name}</span>
                         {isSelected && (
                           <span className="text-[8px] text-emerald-400 flex items-center gap-0.5">

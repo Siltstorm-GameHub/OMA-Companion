@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
       collectionId: body.collectionId,
       name:         body.name,
       description:  body.description ?? null,
-      emoji:        body.emoji       ?? "🎮",
+      imageUrl:     body.imageUrl    ?? null,
       rarity:       body.rarity      ?? "common",
       price:        Number(body.price),
       stock:        body.stock != null ? Number(body.stock) : null,
