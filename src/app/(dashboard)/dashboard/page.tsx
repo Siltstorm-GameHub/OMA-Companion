@@ -8,6 +8,7 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import { CountUp } from "@/components/CountUp";
+import { getGameCoverUrl } from "@/lib/game-cover";
 
 const MEDAL = ["🥇", "🥈", "🥉"];
 
@@ -223,23 +224,33 @@ export default async function DashboardPage() {
 
             {/* Cover art area */}
             <div className="relative overflow-hidden" style={{ height: "108px" }}>
-              {/* Art gradient */}
+              {/* Game cover background */}
+              {getGameCoverUrl(nextEvent?.game) ? (
+                <img
+                  src={getGameCoverUrl(nextEvent!.game)!}
+                  alt=""
+                  className="absolute inset-0 w-full h-full object-cover object-center scale-105 group-hover:scale-110 transition-transform duration-700"
+                />
+              ) : (
+                <div className="absolute inset-0"
+                  style={{ background: "linear-gradient(135deg, #052e26 0%, #0a1f1c 50%, #0d0d0f 100%)" }} />
+              )}
+              {/* Overlay */}
               <div className="absolute inset-0"
-                style={{ background: "linear-gradient(135deg, #052e26 0%, #0a1f1c 50%, #0d0d0f 100%)" }} />
+                style={{ background: "linear-gradient(135deg, rgba(5,46,38,0.75) 0%, rgba(13,13,15,0.55) 100%)" }} />
               <div className="absolute inset-0"
-                style={{ backgroundImage: "radial-gradient(ellipse at 25% 60%, rgba(20,184,166,0.22) 0%, transparent 55%)" }} />
-              {/* Big watermark icon */}
-              <CalendarDays className="absolute -right-3 -bottom-3 w-28 h-28 text-teal-400/[0.07] group-hover:text-teal-400/[0.12] transition-colors" />
+                style={{ backgroundImage: "radial-gradient(ellipse at 25% 60%, rgba(20,184,166,0.18) 0%, transparent 55%)" }} />
+              {!getGameCoverUrl(nextEvent?.game) && (
+                <CalendarDays className="absolute -right-3 -bottom-3 w-28 h-28 text-teal-400/[0.07] group-hover:text-teal-400/[0.12] transition-colors" />
+              )}
               {/* Status badge */}
               <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider"
                 style={{ background: "rgba(20,184,166,0.14)", border: "1px solid rgba(20,184,166,0.22)", color: "#2dd4bf" }}>
                 <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" />
                 <CountUp to={activeEvents} duration={700} /> aktiv
               </div>
-              {/* Arrow */}
               <ChevronRight className="absolute top-3 right-3 w-4 h-4 text-gray-700 group-hover:text-teal-400 group-hover:translate-x-0.5 transition-all" />
-              {/* Bottom gradient */}
-              <div className="absolute bottom-0 inset-x-0 h-12"
+              <div className="absolute bottom-0 inset-x-0 h-14"
                 style={{ background: "linear-gradient(to bottom, transparent, var(--bg-surface))" }} />
             </div>
 
@@ -275,11 +286,25 @@ export default async function DashboardPage() {
 
             {/* Cover art area */}
             <div className="relative overflow-hidden" style={{ height: "108px" }}>
+              {/* Game cover background */}
+              {getGameCoverUrl(nextSpieltag?.game) ? (
+                <img
+                  src={getGameCoverUrl(nextSpieltag!.game)!}
+                  alt=""
+                  className="absolute inset-0 w-full h-full object-cover object-center scale-105 group-hover:scale-110 transition-transform duration-700"
+                />
+              ) : (
+                <div className="absolute inset-0"
+                  style={{ background: "linear-gradient(135deg, #2e0a0a 0%, #1a0606 50%, #0d0d0f 100%)" }} />
+              )}
+              {/* Overlay */}
               <div className="absolute inset-0"
-                style={{ background: "linear-gradient(135deg, #2e0a0a 0%, #1a0606 50%, #0d0d0f 100%)" }} />
+                style={{ background: "linear-gradient(135deg, rgba(46,10,10,0.78) 0%, rgba(13,13,15,0.55) 100%)" }} />
               <div className="absolute inset-0"
-                style={{ backgroundImage: "radial-gradient(ellipse at 25% 60%, rgba(139,32,32,0.28) 0%, transparent 55%)" }} />
-              <Swords className="absolute -right-3 -bottom-3 w-28 h-28 text-red-900/[0.15] group-hover:text-red-800/[0.25] transition-colors" />
+                style={{ backgroundImage: "radial-gradient(ellipse at 25% 60%, rgba(139,32,32,0.22) 0%, transparent 55%)" }} />
+              {!getGameCoverUrl(nextSpieltag?.game) && (
+                <Swords className="absolute -right-3 -bottom-3 w-28 h-28 text-red-900/[0.15] group-hover:text-red-800/[0.25] transition-colors" />
+              )}
               {/* Season badge */}
               <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider"
                 style={{ background: "rgba(139,32,32,0.20)", border: "1px solid rgba(139,32,32,0.35)", color: "#f87171" }}>
@@ -287,7 +312,7 @@ export default async function DashboardPage() {
                 {activeLulSeason ? "Saison aktiv" : "Keine Saison"}
               </div>
               <ChevronRight className="absolute top-3 right-3 w-4 h-4 text-gray-700 group-hover:text-red-400 group-hover:translate-x-0.5 transition-all" />
-              <div className="absolute bottom-0 inset-x-0 h-12"
+              <div className="absolute bottom-0 inset-x-0 h-14"
                 style={{ background: "linear-gradient(to bottom, transparent, var(--bg-surface))" }} />
             </div>
 
