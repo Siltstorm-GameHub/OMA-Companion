@@ -115,9 +115,10 @@ export async function updateQuestProgress(
         data:  { completed: true, completedAt: new Date(), rewarded: true },
       });
 
+      // Quest-Belohnung = Münzen (user.points), KEINE rankPoints
       await prisma.$transaction([
         prisma.user.update({ where: { id: userId }, data: { points: { increment: quest.reward } } }),
-        prisma.pointTransaction.create({ data: { userId, amount: quest.reward, reason: `Quest abgeschlossen: ${quest.title}` } }),
+        prisma.pointTransaction.create({ data: { userId, amount: quest.reward, reason: `🎯 Quest: ${quest.title}` } }),
       ]);
 
       completed.push({ title: quest.title, reward: quest.reward });

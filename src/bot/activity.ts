@@ -8,15 +8,19 @@ async function findUser(discordId: string) {
   return prisma.user.findUnique({ where: { discordId } });
 }
 
-/** Nach Punkte-Vergabe prüfen ob der User einen neuen Rang erreicht hat. */
+/**
+ * Nach Punkte-Vergabe prüfen ob der User einen neuen Rang erreicht hat.
+ * Ränge basieren auf rankPoints — nur Turnier/Event-Kategorien ändern rankPoints.
+ * Discord-Aktivität (Voice, Messages) vergibt keine rankPoints → kein Rang-Aufstieg möglich.
+ */
 async function checkRankUp(
   user: { discordId: string | null; username: string | null; name: string | null },
-  pointsBefore: number,
-  pointsAfter: number,
+  rankPointsBefore: number,
+  rankPointsAfter: number,
 ) {
   if (!user.discordId) return;
-  const rankBefore = getRank(pointsBefore);
-  const rankAfter  = getRank(pointsAfter);
+  const rankBefore = getRank(rankPointsBefore);
+  const rankAfter  = getRank(rankPointsAfter);
   if (rankAfter.min > rankBefore.min) {
     await notifyRankUp(
       user.discordId,
@@ -42,11 +46,10 @@ export async function trackMessage(discordId: string) {
   const count = (messageCounters.get(user.id) ?? 0) + 1;
   messageCounters.set(user.id, count);
 
-  // Alle 10 Nachrichten → Punkte
+  // Alle 10 Nachrichten → Münzen (keine rankPoints → kein Rang-Aufstieg möglich)
   if (count >= 10) {
     messageCounters.set(user.id, 0);
-    const result = await awardPoints(user.id, "MESSAGE_10");
-    if (result) await checkRankUp(user, result.pointsBefore, result.user.points);
+    await awardPoints(user.id, "MESSAGE_10");
   }
 
   // Quest-Fortschritt: 1 Nachricht
@@ -55,12 +58,11 @@ export async function trackMessage(discordId: string) {
     for (const q of completedQuests) await notifyQuestCompleted(user.discordId, q.title, q.reward);
   }
 
-  // Täglicher Chat-Bonus (einmal pro Tag)
+  // Täglicher Chat-Bonus (einmal pro Tag) — nur Münzen, keine rankPoints
   const today = new Date().toDateString();
   if (dailyMessageBonus.get(user.id) !== today) {
     dailyMessageBonus.set(user.id, today);
-    const result = await awardPoints(user.id, "MESSAGE_DAILY_BONUS");
-    if (result) await checkRankUp(user, result.pointsBefore, result.user.points);
+    await awardPoints(user.id, "MESSAGE_DAILY_BONUS");
   }
 }
 
@@ -73,14 +75,13 @@ export async function trackVoice(discordId: string, minutes: number) {
     return;
   }
 
-  // Volle Stunden vergüten
+  // Volle Stunden vergüten — nur Münzen, keine rankPoints
   const fullHours = Math.floor(minutes / 60);
   for (let i = 0; i < fullHours; i++) {
-    const result = await awardPoints(user.id, "VOICE_HOUR");
-    if (result) await checkRankUp(user, result.pointsBefore, result.user.points);
+    await awardPoints(user.id, "VOICE_HOUR");
   }
 
-  // Täglicher Voice-Bonus ab 30 Minuten (einmal pro Tag)
+  // Täglicher Voice-Bonus ab 30 Minuten (einmal pro Tag) — nur Münzen
   if (minutes >= 30) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -92,8 +93,7 @@ export async function trackVoice(discordId: string, minutes: number) {
       },
     });
     if (!existing) {
-      const result = await awardPoints(user.id, "VOICE_DAILY_BONUS");
-      if (result) await checkRankUp(user, result.pointsBefore, result.user.points);
+      await awardPoints(user.id, "VOICE_DAILY_BONUS");
     }
   }
 
