@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 
 // Admin: alle Spenden mit Beträgen
 export async function GET() {
-  await requireRole("admin");
+  await requireRole("moderator");
   const donations = await prisma.donation.findMany({
     include: { user: { select: { id: true, name: true, image: true } } },
     orderBy: [{ year: "desc" }, { month: "desc" }, { createdAt: "desc" }],
@@ -14,7 +14,7 @@ export async function GET() {
 
 // Admin: Spende eintragen
 export async function POST(req: NextRequest) {
-  await requireRole("admin");
+  await requireRole("moderator");
   const { userId, amount, month, year, note } = await req.json();
 
   if (!userId || !amount || !month || !year) {

@@ -3,7 +3,7 @@ import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
-  await requireRole("admin");
+  await requireRole("moderator");
   const expenses = await prisma.poolExpense.findMany({
     orderBy: { date: "desc" },
   });
@@ -11,7 +11,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  await requireRole("admin");
+  await requireRole("moderator");
   const { title, description, amount, date } = await req.json();
 
   if (!title || !amount || !date) {
