@@ -56,8 +56,8 @@ export async function POST(req: NextRequest) {
     event.discordEventId = discordEventId;
   }
 
-  // Discord-Ankündigung im Events-Channel (fire-and-forget)
-  announceNewEvent({
+  // Discord-Ankündigung — Message-ID speichern für späteres Löschen
+  const discordMessageId = await announceNewEvent({
     title:            event.title,
     game:             event.game,
     startAt:          event.startAt,
@@ -65,6 +65,13 @@ export async function POST(req: NextRequest) {
     pointReward:      event.pointReward,
     discordChannelId: event.discordChannelId,
   });
+  if (discordMessageId) {
+    await prisma.event.update({
+      where: { id: event.id },
+      data:  { discordMessageId },
+    });
+    event.discordMessageId = discordMessageId;
+  }
 
   return NextResponse.json(event, { status: 201 });
 }

@@ -213,6 +213,7 @@ model Event {
   type           String   @default("community")
   status         String   @default("open")
   discordEventId   String?  @unique
+  discordMessageId String?  // Message-ID der Bot-Ankündigung (zum nachträglichen Löschen)
   discordChannelId String?  // Kanal-ID für Bot-Nachrichten (überschreibt DISCORD_EVENTS_CHANNEL_ID)
   seriesId         String?
   createdAt      DateTime @default(now())
