@@ -35,7 +35,6 @@ export async function DELETE(req: NextRequest) {
 
   // Erst Käufe löschen, dann Item
   await prisma.shopPurchase.deleteMany({ where: { itemId: id } });
-  await prisma.wishlistItem.deleteMany({ where: { itemId: id } });
   await prisma.shopItem.delete({ where: { id } });
 
   return NextResponse.json({ ok: true });

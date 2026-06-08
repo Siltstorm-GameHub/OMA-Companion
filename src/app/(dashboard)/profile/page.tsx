@@ -3,48 +3,53 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import PointsInfoModal from "./PointsInfoModal";
 import { QUEST_TYPE_META, type QuestType } from "@/lib/quests";
-import { Trophy, Star, CalendarDays, Swords, Clock, MessageSquare, CheckCircle2 } from "lucide-react";
+import { RARITY_CONFIG, type Rarity, MAX_SHOWCASE } from "@/lib/collectibles";
+import { Trophy, Star, CalendarDays, Swords, Clock, MessageSquare, CheckCircle2, Coins } from "lucide-react";
 import { RelativeTime } from "@/components/RelativeTime";
 import Image from "next/image";
 import { PointsChart } from "@/components/PointsChart";
-import { PROFILE_THEMES, TITLE_STYLES, SHOP_BADGE_META } from "@/lib/shop";
+import CollectiblesShowcase from "./CollectiblesShowcase";
 
-interface Badge {
-  id: string; icon: string; name: string; desc: string;
-  earned: boolean;
-  category: "community" | "aktivitaet" | "events" | "turniere" | "punkte";
+// ── Rang-System ───────────────────────────────────────────────────────────────
+const RANK_THRESHOLDS = [
+  { min:     0, label: "Neuling",     emoji: "🔰", color: "text-gray-400",   bg: "bg-gray-500/10",   border: "border-gray-500/20"   },
+  { min:   500, label: "Kämpfer",     emoji: "⚔️", color: "text-green-400",  bg: "bg-green-500/10",  border: "border-green-500/20"  },
+  { min:  3000, label: "Veteran",     emoji: "🛡️", color: "text-blue-400",   bg: "bg-blue-500/10",   border: "border-blue-500/20"   },
+  { min: 10000, label: "Elite",       emoji: "💎", color: "text-purple-400", bg: "bg-purple-500/10", border: "border-purple-500/20" },
+  { min: 25000, label: "Legende",     emoji: "🌟", color: "text-amber-400",  bg: "bg-amber-500/10",  border: "border-amber-500/20"  },
+  { min: 60000, label: "Grandmaster", emoji: "👑", color: "text-red-400",    bg: "bg-red-500/10",    border: "border-red-500/20"    },
+] as const;
+
+function getRank(points: number) {
+  return [...RANK_THRESHOLDS].reverse().find(r => points >= r.min) ?? RANK_THRESHOLDS[0];
 }
 
-function computeBadges(data: {
-  points: number; voiceHours: number;
-  messageCount: number; eventCount: number;
-  tournamentCount: number; tournamentWins: number;
-}): Badge[] {
-  const { points, voiceHours, messageCount, eventCount, tournamentCount, tournamentWins } = data;
+function getNextRank(points: number) {
+  return RANK_THRESHOLDS.find(r => r.min > points) ?? null;
+}
+
+// ── Aktivitäts-Abzeichen ──────────────────────────────────────────────────────
+interface Badge { id: string; icon: string; name: string; desc: string; earned: boolean; category: string }
+function computeBadges(d: { points: number; voiceHours: number; messageCount: number; eventCount: number; tournamentCount: number; tournamentWins: number }): Badge[] {
   return [
-    { id: "welcome",   icon: "🎉", name: "Willkommen",      desc: "Erstmals angemeldet",            earned: true,                 category: "community"  },
-    { id: "voice_1h",  icon: "🎙️", name: "Voice-Fan",       desc: "1 Stunde im Sprachkanal",        earned: voiceHours >= 1,      category: "aktivitaet" },
-    { id: "voice_10h", icon: "🎙️", name: "Voice-Veteran",   desc: "10 Stunden im Sprachkanal",      earned: voiceHours >= 10,     category: "aktivitaet" },
-    { id: "voice_50h", icon: "🎙️", name: "Voice-Legende",   desc: "50 Stunden im Sprachkanal",      earned: voiceHours >= 50,     category: "aktivitaet" },
-    { id: "msg_50",    icon: "💬", name: "Gesprächig",      desc: "50 Nachrichten gesendet",        earned: messageCount >= 50,   category: "aktivitaet" },
-    { id: "msg_500",   icon: "💬", name: "Chatterbox",      desc: "500 Nachrichten gesendet",       earned: messageCount >= 500,  category: "aktivitaet" },
-    { id: "event_1",   icon: "📅", name: "Teilnehmer",      desc: "1 Event besucht",                earned: eventCount >= 1,      category: "events"     },
-    { id: "event_5",   icon: "📅", name: "Eventgänger",     desc: "5 Events besucht",               earned: eventCount >= 5,      category: "events"     },
-    { id: "event_10",  icon: "📅", name: "Stammgast",       desc: "10 Events besucht",              earned: eventCount >= 10,     category: "events"     },
-    { id: "t_1",       icon: "⚔️", name: "Turnierkämpfer",  desc: "1 Turnier gespielt",             earned: tournamentCount >= 1, category: "turniere"   },
-    { id: "t_win",     icon: "🏆", name: "Champion",        desc: "Erstes Turnier gewonnen",        earned: tournamentWins >= 1,  category: "turniere"   },
-    { id: "t_win_5",   icon: "👑", name: "Dynastiegründer", desc: "5 Turniersiege",                 earned: tournamentWins >= 5,  category: "turniere"   },
-    { id: "pts_500",   icon: "⭐", name: "Aufsteiger",      desc: "500 Punkte erreicht",            earned: points >= 500,        category: "punkte"     },
-    { id: "pts_2k",    icon: "🌟", name: "Erfahren",        desc: "2.000 Punkte erreicht",          earned: points >= 2000,       category: "punkte"     },
-    { id: "pts_5k",    icon: "💫", name: "Elite",           desc: "5.000 Punkte erreicht",          earned: points >= 5000,       category: "punkte"     },
-    { id: "pts_10k",   icon: "✨", name: "Grandmaster",     desc: "10.000 Punkte erreicht",         earned: points >= 10000,      category: "punkte"     },
+    { id: "welcome",   icon: "🎉", name: "Willkommen",      desc: "Erstmals angemeldet",            earned: true,                     category: "Community"  },
+    { id: "voice_1h",  icon: "🎙️", name: "Voice-Fan",       desc: "1 Stunde im Sprachkanal",        earned: d.voiceHours >= 1,        category: "Aktivität"  },
+    { id: "voice_10h", icon: "🎙️", name: "Voice-Veteran",   desc: "10 Stunden im Sprachkanal",      earned: d.voiceHours >= 10,       category: "Aktivität"  },
+    { id: "voice_50h", icon: "🎙️", name: "Voice-Legende",   desc: "50 Stunden im Sprachkanal",      earned: d.voiceHours >= 50,       category: "Aktivität"  },
+    { id: "msg_50",    icon: "💬", name: "Gesprächig",      desc: "50 Nachrichten gesendet",        earned: d.messageCount >= 50,     category: "Aktivität"  },
+    { id: "msg_500",   icon: "💬", name: "Chatterbox",      desc: "500 Nachrichten gesendet",       earned: d.messageCount >= 500,    category: "Aktivität"  },
+    { id: "event_1",   icon: "📅", name: "Teilnehmer",      desc: "1 Event besucht",                earned: d.eventCount >= 1,        category: "Events"     },
+    { id: "event_5",   icon: "📅", name: "Eventgänger",     desc: "5 Events besucht",               earned: d.eventCount >= 5,        category: "Events"     },
+    { id: "event_10",  icon: "📅", name: "Stammgast",       desc: "10 Events besucht",              earned: d.eventCount >= 10,       category: "Events"     },
+    { id: "t_1",       icon: "⚔️", name: "Turnierkämpfer",  desc: "1 Turnier gespielt",             earned: d.tournamentCount >= 1,   category: "Turniere"   },
+    { id: "t_win",     icon: "🏆", name: "Champion",        desc: "Erstes Turnier gewonnen",        earned: d.tournamentWins >= 1,    category: "Turniere"   },
+    { id: "t_win_5",   icon: "👑", name: "Dynastiegründer", desc: "5 Turniersiege",                 earned: d.tournamentWins >= 5,    category: "Turniere"   },
+    { id: "pts_500",   icon: "⭐", name: "Aufsteiger",      desc: "500 Punkte erreicht",            earned: d.points >= 500,          category: "Punkte"     },
+    { id: "pts_2k",    icon: "🌟", name: "Erfahren",        desc: "2.000 Punkte erreicht",          earned: d.points >= 2000,         category: "Punkte"     },
+    { id: "pts_5k",    icon: "💫", name: "Elite",           desc: "5.000 Punkte erreicht",          earned: d.points >= 5000,         category: "Punkte"     },
+    { id: "pts_10k",   icon: "✨", name: "Grandmaster",     desc: "10.000 Punkte erreicht",         earned: d.points >= 10000,        category: "Punkte"     },
   ];
 }
-
-const BADGE_CATEGORY_LABELS = {
-  community: "Community", aktivitaet: "Aktivität",
-  events: "Events", turniere: "Turniere", punkte: "Punkte",
-};
 
 export default async function ProfilePage() {
   const session = await auth();
@@ -55,24 +60,24 @@ export default async function ProfilePage() {
   const month = now.getMonth() + 1;
   const year  = now.getFullYear();
 
-  const [user, transactions, eventRegs, tournamentParticipations, matchWins, questsWithProgress, shopBadges] =
+  const [user, transactions, eventRegs, tournamentParticipations, tournamentWins, questsWithProgress, ownedCollectibles, leaderboardRank] =
     await Promise.all([
       prisma.user.findUnique({
-        where: { id: userId },
-        select: { id: true, name: true, username: true, image: true, points: true, createdAt: true, activeTitle: true, profileTheme: true, statusMessage: true, goalItemId: true },
+        where:  { id: userId },
+        select: { id: true, name: true, username: true, image: true, points: true, rankPoints: true, createdAt: true, showcaseJson: true },
       }),
-      prisma.pointTransaction.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, take: 20 }),
+      prisma.pointTransaction.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, take: 30 }),
       prisma.eventRegistration.findMany({
-        where: { userId },
+        where:   { userId },
         include: { event: { select: { title: true, startAt: true, game: true } } },
         orderBy: { joinedAt: "desc" }, take: 5,
       }),
       prisma.tournamentParticipant.findMany({
-        where: { userId },
+        where:   { userId },
         include: {
           tournament: {
             include: {
-              event: { select: { title: true } },
+              event:   { select: { title: true } },
               matches: { where: { OR: [{ player1Id: userId }, { player2Id: userId }] } },
             },
           },
@@ -81,42 +86,42 @@ export default async function ProfilePage() {
       }),
       prisma.match.count({ where: { winnerId: userId } }),
       prisma.quest.findMany({
-        where: { month, year },
+        where:   { month, year },
         include: { progress: { where: { userId } } },
         orderBy: { createdAt: "asc" },
       }),
-      prisma.shopPurchase.findMany({
-        where: { userId, item: { type: "badge" } },
-        include: { item: { select: { value: true } } },
-      }).catch(() => [] as { id: string; item: { value: string } }[]),
+      prisma.userCollectible.findMany({
+        where:   { userId },
+        include: {
+          collectibleItem: {
+            include: { collection: { select: { id: true, name: true, coverEmoji: true } } },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+      // Rang in der Gesamtrangliste
+      prisma.user.count({ where: { points: { gt: 0 } } }).then(async () => {
+        const higher = await prisma.user.count({ where: { points: { gt: (await prisma.user.findUnique({ where: { id: userId }, select: { points: true } }))?.points ?? 0 } } });
+        return higher + 1;
+      }),
     ]);
 
   if (!user) redirect("/login");
 
   const totalPoints  = user.points;
+  const rankPoints   = user.rankPoints ?? totalPoints;
+  const currentRank  = getRank(totalPoints);
+  const nextRank     = getNextRank(totalPoints);
+  const rankPct      = nextRank ? Math.min(100, Math.round(((totalPoints - currentRank.min) / (nextRank.min - currentRank.min)) * 100)) : 100;
 
-  // Wunschliste (graceful — Tabelle existiert evtl. noch nicht)
-  const wishlist = await prisma.wishlistItem.findMany({
-    where:   { userId },
-    include: { item: { select: { id: true, name: true, icon: true, price: true } } },
-    orderBy: { createdAt: "asc" },
-  }).catch(() => [] as { id: string; item: { id: string; name: string; icon: string; price: number } }[]);
-
-  // Sparziel
-  const goalItem = user.goalItemId
-    ? await prisma.shopItem.findUnique({ where: { id: user.goalItemId }, select: { id: true, name: true, icon: true, price: true } })
-    : null;
-  const goalPct  = goalItem ? Math.min(100, Math.round((totalPoints / goalItem.price) * 100)) : 0;
-  const goalLeft = goalItem ? Math.max(0, goalItem.price - totalPoints) : 0;
-
-  // Chart-Daten: kumulierte Punkte über Zeit (letzte 30 Einträge → chronologisch)
+  // Chart-Daten
   const chartData = (() => {
-    const sorted = [...transactions].reverse(); // älteste zuerst
+    const sorted = [...transactions].reverse();
     let running = Math.max(0, totalPoints - transactions.reduce((s, t) => s + t.amount, 0));
     return sorted.slice(-30).map(tx => {
       running += tx.amount;
       return {
-        date: new Date(tx.createdAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }),
+        date:   new Date(tx.createdAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }),
         points: Math.max(0, running),
       };
     });
@@ -124,19 +129,36 @@ export default async function ProfilePage() {
 
   const voiceHours   = transactions.filter(t => t.reason.includes("Sprachkanal")).length;
   const messageCount = transactions.filter(t => t.reason.includes("Nachrichten")).length * 10;
-
-  const badges      = computeBadges({ points: totalPoints, voiceHours, messageCount, eventCount: eventRegs.length, tournamentCount: tournamentParticipations.length, tournamentWins: matchWins });
+  const badges       = computeBadges({ points: totalPoints, voiceHours, messageCount, eventCount: eventRegs.length, tournamentCount: tournamentParticipations.length, tournamentWins });
   const earnedBadges = badges.filter(b => b.earned);
   const memberSince  = new Date(user.createdAt).toLocaleDateString("de-DE", { month: "long", year: "numeric" });
   const displayName  = user.username ?? user.name ?? "Unbekannt";
-  const theme        = PROFILE_THEMES[user.profileTheme ?? "default"] ?? PROFILE_THEMES.default;
+
+  // Showcase-Items
+  const showcaseIds: string[] = (() => {
+    try { return JSON.parse(user.showcaseJson ?? "[]"); } catch { return []; }
+  })();
+  const showcaseItems = showcaseIds
+    .map(id => ownedCollectibles.find(o => o.collectibleItemId === id)?.collectibleItem ?? null)
+    .filter(Boolean) as typeof ownedCollectibles[0]["collectibleItem"][];
+
+  // Eigene Collectibles nach Sammlung gruppiert
+  const collectiblesByCollection = ownedCollectibles.reduce<Record<string, {
+    collection: { id: string; name: string; coverEmoji: string };
+    items: typeof ownedCollectibles[0]["collectibleItem"][];
+  }>>((acc, uc) => {
+    const col = uc.collectibleItem.collection;
+    if (!acc[col.id]) acc[col.id] = { collection: col, items: [] };
+    acc[col.id].items.push(uc.collectibleItem);
+    return acc;
+  }, {});
 
   return (
     <div className="p-5 sm:p-6 max-w-5xl mx-auto space-y-5 animate-fade-in">
 
-      {/* ── Hero ────────────────────────────────────────────────────── */}
+      {/* ── Hero ────────────────────────────────────────────────────────── */}
       <div className="glass card-shine relative overflow-hidden rounded-2xl p-6">
-        <div className={`absolute inset-0 bg-gradient-to-br ${theme.from} ${theme.via} ${theme.to} pointer-events-none`} />
+        <div className="absolute inset-0 bg-gradient-to-br from-rose-500/10 via-transparent to-violet-500/8 pointer-events-none" />
         <div className="absolute inset-0 bg-grid opacity-30 pointer-events-none" />
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-rose-500/25 to-transparent pointer-events-none" />
 
@@ -147,50 +169,59 @@ export default async function ProfilePage() {
               : <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-rose-500 to-violet-700 flex items-center justify-center text-2xl font-black text-white">
                   {displayName[0].toUpperCase()}
                 </div>}
-            <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-400 border-2 border-[#080c18] shadow-[0_0_8px_#34d399] glow-active" />
+            <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-400 border-2 border-[#080c18] shadow-[0_0_8px_#34d399]" />
           </div>
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap mb-0.5">
+            <div className="flex items-center gap-2 flex-wrap mb-1">
               <h1 className="text-2xl font-bold text-white tracking-tight">{displayName}</h1>
-              {user.activeTitle && (
-                <span className={`text-xs px-2.5 py-0.5 rounded-lg font-semibold border ${TITLE_STYLES[user.activeTitle] ?? "text-gray-400 bg-white/[0.05] border-white/10"}`}>
-                  {user.activeTitle}
-                </span>
-              )}
+              {/* Rang-Badge */}
+              <span className={`flex items-center gap-1 text-xs px-2.5 py-0.5 rounded-lg font-semibold border ${currentRank.color} ${currentRank.bg} ${currentRank.border}`}>
+                <span>{currentRank.emoji}</span>
+                {currentRank.label}
+              </span>
             </div>
-            {user.statusMessage && (
-              <p className="text-xs text-gray-400 italic mb-1">„{user.statusMessage}"</p>
-            )}
-            <div className="flex items-center gap-2 mb-3 flex-wrap">
-              <p className="text-xs text-gray-500">Mitglied seit {memberSince} · {earnedBadges.length} Abzeichen</p>
-              <span className="text-xs font-bold text-amber-400">{totalPoints.toLocaleString("de-DE")} Pts</span>
+            <p className="text-xs text-gray-500 mb-3">Mitglied seit {memberSince} · {earnedBadges.length} Abzeichen · Platz #{leaderboardRank}</p>
+
+            {/* Münzen */}
+            <div className="flex items-center gap-1.5 mb-3">
+              <Coins className="w-3.5 h-3.5 text-amber-400" />
+              <span className="text-sm font-bold text-amber-400 tabular-nums">{totalPoints.toLocaleString("de-DE")} Münzen</span>
               <PointsInfoModal />
             </div>
 
-            {/* Sparziel-Fortschrittsbalken */}
-            {goalItem && (
+            {/* Rang-Fortschritt */}
+            {nextRank && (
               <div className="max-w-xs">
-                <div className="flex justify-between text-xs text-gray-500 mb-1.5">
-                  <span className="flex items-center gap-1">🎯 {goalItem.icon} {goalItem.name}</span>
-                  <span>{goalPct}%</span>
+                <div className="flex justify-between text-[10px] text-gray-500 mb-1">
+                  <span>{currentRank.emoji} {currentRank.label}</span>
+                  <span>{nextRank.emoji} {nextRank.label} · {(nextRank.min - totalPoints).toLocaleString("de-DE")} Pts</span>
                 </div>
-                <div className="h-2 bg-white/[0.06] rounded-full overflow-hidden">
-                  <div className="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.4)] transition-all duration-1000" style={{ width: `${goalPct}%` }} />
+                <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-1000 ${currentRank.bg.replace("bg-", "bg-gradient-to-r from-").replace("/10", "")} to-white/10`}
+                    style={{ width: `${rankPct}%` }}
+                  />
                 </div>
-                <p className="text-[10px] text-gray-600 mt-1">Noch {goalLeft.toLocaleString("de-DE")} Punkte bis zum Kauf</p>
+                <p className="text-[10px] text-gray-600 mt-1">{rankPct}% bis {nextRank.label}</p>
+              </div>
+            )}
+            {!nextRank && (
+              <div className="flex items-center gap-1.5 text-xs text-amber-400 font-semibold">
+                <span>👑</span> Maximalen Rang erreicht
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* ── Stats ───────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      {/* ── Stats ───────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { icon: <Star className="w-4 h-4" />,        label: "Punkte",        value: totalPoints.toLocaleString("de-DE"), iconCls: "text-amber-400   bg-amber-500/10   border-amber-500/15",   accent: "from-amber-500/8"   },
-          { icon: <CalendarDays className="w-4 h-4" />, label: "Events",        value: String(eventRegs.length),            iconCls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/15", accent: "from-emerald-500/8" },
-          { icon: <Trophy className="w-4 h-4" />,       label: "Turnier-Siege", value: String(matchWins),                   iconCls: "text-rose-400    bg-rose-500/10    border-rose-500/15",    accent: "from-rose-500/8"    },
+          { icon: <Coins className="w-4 h-4" />,        label: "Münzen",        value: totalPoints.toLocaleString("de-DE"), iconCls: "text-amber-400   bg-amber-500/10   border-amber-500/15",   accent: "from-amber-500/8"   },
+          { icon: <Trophy className="w-4 h-4" />,        label: "Rang-Position", value: `#${leaderboardRank}`,               iconCls: "text-rose-400    bg-rose-500/10    border-rose-500/15",    accent: "from-rose-500/8"    },
+          { icon: <CalendarDays className="w-4 h-4" />,  label: "Events",        value: String(eventRegs.length),            iconCls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/15", accent: "from-emerald-500/8" },
+          { icon: <Swords className="w-4 h-4" />,        label: "Turnier-Siege", value: String(tournamentWins),              iconCls: "text-indigo-400  bg-indigo-500/10  border-indigo-500/15",  accent: "from-indigo-500/8"  },
         ].map((s, i) => (
           <div key={s.label} className={`card-hover card-shine glass relative overflow-hidden rounded-2xl p-4 animate-slide-up stagger-${i + 1}`}>
             <div className={`absolute inset-0 bg-gradient-to-br ${s.accent} to-transparent pointer-events-none`} />
@@ -201,41 +232,70 @@ export default async function ProfilePage() {
         ))}
       </div>
 
+      {/* ── Collectibles Showcase ────────────────────────────────────────── */}
+      <CollectiblesShowcase
+        showcaseItems={showcaseItems.map(i => ({
+          id:     i.id,
+          name:   i.name,
+          emoji:  i.emoji,
+          rarity: i.rarity,
+        }))}
+        allOwned={ownedCollectibles.map(uc => ({
+          id:             uc.collectibleItem.id,
+          name:           uc.collectibleItem.name,
+          emoji:          uc.collectibleItem.emoji,
+          rarity:         uc.collectibleItem.rarity,
+          collectionName: uc.collectibleItem.collection.name,
+        }))}
+        maxSlots={MAX_SHOWCASE}
+      />
+
+      {/* ── Haupt-Inhalt ─────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* ── Linke Spalte ───────────────────────────────────────────── */}
+        {/* ── Linke Spalte ──────────────────────────────────────────────── */}
         <div className="lg:col-span-2 space-y-5">
+
+          {/* Meine Sammlungen */}
+          {Object.keys(collectiblesByCollection).length > 0 && (
+            <section>
+              <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">🎮 Meine Sammlungen</h2>
+              <div className="space-y-3">
+                {Object.values(collectiblesByCollection).map(({ collection, items }) => (
+                  <div key={collection.id} className="glass card-shine rounded-2xl p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-lg">{collection.coverEmoji}</span>
+                      <span className="text-sm font-semibold text-white">{collection.name}</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.05] border border-white/[0.08] text-gray-500">{items.length} Figuren</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {items.map(item => {
+                        const rarity = RARITY_CONFIG[item.rarity as Rarity] ?? RARITY_CONFIG.common;
+                        return (
+                          <div key={item.id} title={item.name}
+                            className={`flex flex-col items-center gap-0.5 px-2.5 py-2 rounded-xl border ${rarity.border} ${rarity.glow} bg-white/[0.02]`}>
+                            <span className="text-2xl leading-none">{item.emoji}</span>
+                            <span className={`text-[9px] font-medium ${rarity.color}`}>{item.name}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* Abzeichen */}
           <section>
             <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">
               🏅 Abzeichen <span className="text-gray-600 normal-case">({earnedBadges.length}/{badges.length})</span>
             </h2>
-
-            {/* Shop-Badges */}
-            {shopBadges.length > 0 && (
-              <div className="mb-4">
-                <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-2">Shop-Exklusiv</p>
-                <div className="flex flex-wrap gap-2">
-                  {shopBadges.map(p => {
-                    const meta = SHOP_BADGE_META[p.item.value];
-                    if (!meta) return null;
-                    return (
-                      <div key={p.id} title={meta.desc}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium glass text-amber-300 border-amber-500/25 bg-amber-500/[0.06]">
-                        <span>{meta.icon}</span>
-                        {meta.name}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-            {Object.entries(BADGE_CATEGORY_LABELS).map(([cat, label]) => {
+            {["Community","Aktivität","Events","Turniere","Punkte"].map(cat => {
               const catBadges = badges.filter(b => b.category === cat);
               if (!catBadges.length) return null;
               return (
                 <div key={cat} className="mb-4">
-                  <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-2">{label}</p>
+                  <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-2">{cat}</p>
                   <div className="flex flex-wrap gap-2">
                     {catBadges.map(badge => (
                       <div key={badge.id} title={badge.desc}
@@ -254,27 +314,6 @@ export default async function ProfilePage() {
               );
             })}
           </section>
-
-          {/* Wunschliste */}
-          {wishlist.length > 0 && (
-            <section>
-              <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">❤️ Wunschliste</h2>
-              <div className="flex flex-wrap gap-2">
-                {wishlist.map(w => {
-                  const pct = Math.min(100, Math.round((totalPoints / w.item.price) * 100));
-                  return (
-                    <div key={w.id} className="glass rounded-xl px-3 py-2 border border-white/[0.06] flex items-center gap-2">
-                      <span>{w.item.icon}</span>
-                      <div>
-                        <p className="text-xs text-white font-medium">{w.item.name}</p>
-                        <p className="text-[10px] text-gray-600">{pct}% gespart · {w.item.price.toLocaleString("de-DE")} Pts</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          )}
 
           {/* Quest-Fortschritt */}
           {questsWithProgress.length > 0 && (
@@ -320,7 +359,7 @@ export default async function ProfilePage() {
               <div className="glass card-shine rounded-2xl overflow-hidden divide-y divide-white/[0.04]">
                 {tournamentParticipations.map(p => {
                   const myMatches = p.tournament.matches;
-                  const winsCount = myMatches.filter(m => m.winnerId === userId).length;
+                  const wins      = myMatches.filter(m => m.winnerId === userId).length;
                   const losses    = myMatches.filter(m => m.winnerId && m.winnerId !== userId).length;
                   return (
                     <div key={p.id} className="flex items-center gap-3 px-4 py-3">
@@ -330,10 +369,10 @@ export default async function ProfilePage() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-white truncate">{p.tournament.event.title}</p>
                         <p className="text-xs text-gray-500 mt-0.5">
-                          {winsCount > 0 ? `${winsCount} Siege` : ""}
-                          {winsCount > 0 && losses > 0 ? " · " : ""}
+                          {wins > 0 ? `${wins} Siege` : ""}
+                          {wins > 0 && losses > 0 ? " · " : ""}
                           {losses > 0 ? `${losses} Niederlagen` : ""}
-                          {winsCount === 0 && losses === 0 ? "Keine Matches gespielt" : ""}
+                          {wins === 0 && losses === 0 ? "Keine Matches gespielt" : ""}
                         </p>
                       </div>
                       <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${
@@ -351,8 +390,9 @@ export default async function ProfilePage() {
           )}
         </div>
 
-        {/* ── Rechte Spalte ──────────────────────────────────────────── */}
+        {/* ── Rechte Spalte ─────────────────────────────────────────────── */}
         <div className="space-y-5">
+
           {/* Aktivitäts-Stats */}
           <section>
             <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">📊 Aktivität</h2>
