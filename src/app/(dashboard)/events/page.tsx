@@ -8,6 +8,7 @@ import EventAdminRow from "../admin/events/EventAdminRow";
 import { RelativeTime } from "@/components/RelativeTime";
 import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
+import GameCover from "@/components/GameCover";
 
 const STATUS_CONFIG: Record<string, { label: string; badge: string; bar: string; glow: string; dot: string }> = {
   open:     { label: "Offen",   badge: "text-blue-300 bg-blue-500/10 border border-blue-500/20",             bar: "bg-blue-400",                             glow: "from-blue-500/5",    dot: "bg-blue-400"              },
@@ -164,13 +165,13 @@ export default async function EventsPage() {
               <div className={`absolute left-0 top-4 bottom-4 w-[3px] rounded-r-full ${isRegistered ? "bg-emerald-400" : s.bar}`} />
               <div className={`absolute inset-0 bg-gradient-to-r ${isRegistered ? "from-emerald-500/4" : s.glow} to-transparent opacity-60 pointer-events-none`} />
 
-              {/* Datum-Box */}
-              <div className="relative surface-elevated px-3 py-2.5 text-center min-w-[52px] shrink-0" style={{ borderRadius: 6, border: "1px solid rgba(255,255,255,0.07)" }}>
-                <p className="text-xl font-bold text-white leading-none tabular-nums">{date.getDate()}</p>
-                <p className="text-[10px] text-gray-500 uppercase tracking-wide mt-0.5 font-medium">
-                  {date.toLocaleString("de-DE", { month: "short" })}
-                </p>
-                <RelativeTime date={date} className="text-[9px] text-gray-600 mt-1.5 block tabular-nums" />
+              {/* Cover + Datum */}
+              <div className="relative shrink-0 flex flex-col items-center gap-1.5">
+                <GameCover game={ev.game} className="w-20 h-[52px]" rounded="rounded-lg" />
+                <div className="text-center">
+                  <p className="text-sm font-bold text-white leading-none tabular-nums">{date.getDate()}. {date.toLocaleString("de-DE", { month: "short" })}</p>
+                  <RelativeTime date={date} className="text-[9px] text-gray-600 mt-0.5 block tabular-nums" />
+                </div>
               </div>
 
               {/* Inhalt */}
@@ -268,10 +269,7 @@ export default async function EventsPage() {
               return (
                 <Link key={ev.id} href={`/events/${ev.id}`}
                   className="flex items-center gap-3.5 px-4 py-3 opacity-50 hover:opacity-100 transition-opacity group">
-                  <div className="w-9 h-9 rounded-lg bg-gray-800/60 border border-white/[0.06] flex items-center justify-center shrink-0 text-center flex-col">
-                    <p className="text-xs font-bold text-gray-400 leading-none">{date.getDate()}</p>
-                    <p className="text-[8px] text-gray-600 uppercase">{date.toLocaleString("de-DE", { month: "short" })}</p>
-                  </div>
+                  <GameCover game={ev.game} className="w-12 h-8" rounded="rounded-md" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       {hasSeries && <Repeat className="w-3 h-3 text-teal-700 shrink-0" />}

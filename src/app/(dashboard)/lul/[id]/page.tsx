@@ -7,6 +7,7 @@ import {
   CalendarDays, AlertTriangle, Users, Swords,
 } from "lucide-react";
 import { buildLulStandings, LUL_POINTS } from "@/lib/lul";
+import GameCover from "@/components/GameCover";
 
 const MEDAL      = ["🥇", "🥈", "🥉"];
 const MEDAL_BG   = ["rgba(251,191,36,0.12)", "rgba(156,163,175,0.1)", "rgba(180,83,9,0.12)"];
@@ -184,10 +185,18 @@ export default async function LulSeasonPage({
                       : "1px solid rgba(255,255,255,0.07)",
                   }}
                 >
+                  <div className="flex items-start gap-3">
+                    <div className="relative shrink-0">
+                      <GameCover game={st.game} className="w-16 h-10" rounded="rounded-lg" />
+                      <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-gray-900 flex items-center justify-center text-[9px] font-bold text-gray-400 ring-1 ring-white/10">
+                        {st.number}
+                      </span>
+                    </div>
+                  <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-white leading-tight truncate">
-                        Spieltag {st.number} – {st.game}
+                        {st.game}
                       </p>
                       {st.scheduledAt && (
                         <p className="text-[11px] text-gray-500 mt-0.5">
@@ -227,6 +236,8 @@ export default async function LulSeasonPage({
                       )}
                     </div>
                   )}
+                  </div>{/* flex-1 */}
+                  </div>{/* flex items-start gap-3 */}
                 </Link>
               );
             })
