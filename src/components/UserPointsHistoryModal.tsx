@@ -24,6 +24,8 @@ interface Props {
   userId: string;
   userName: string;
   userImage?: string | null;
+  defaultOpen?: boolean;
+  onClose?: () => void;
 }
 
 function groupByMonth(txs: Transaction[]) {
@@ -37,8 +39,8 @@ function groupByMonth(txs: Transaction[]) {
   return Object.entries(groups);
 }
 
-export default function UserPointsHistoryModal({ userId, userName, userImage }: Props) {
-  const [open, setOpen]                 = useState(false);
+export default function UserPointsHistoryModal({ userId, userName, userImage, defaultOpen = false, onClose }: Props) {
+  const [open, setOpen]                 = useState(defaultOpen);
   const [loading, setLoading]           = useState(false);
   const [saving, setSaving]             = useState(false);
   const [user, setUser]                 = useState<UserInfo | null>(null);
@@ -72,15 +74,26 @@ export default function UserPointsHistoryModal({ userId, userName, userImage }: 
     }
   }, [userId, loading, user]);
 
+  const handleClose = () => {
+    setOpen(false);
+    onClose?.();
+  };
+
   const handleOpen = () => {
     setOpen(true);
     setTab("history");
     load();
   };
 
+  // Auto-load when opened via defaultOpen
+  useEffect(() => {
+    if (defaultOpen) load();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     if (!open) return;
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") handleClose(); };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [open]);
@@ -137,19 +150,21 @@ export default function UserPointsHistoryModal({ userId, userName, userImage }: 
 
   return (
     <>
-      {/* Trigger */}
-      <button
-        onClick={handleOpen}
-        title="Verlauf & Anpassen"
-        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/15 transition-colors"
-      >
-        <Star className="w-3.5 h-3.5" />
-        Verlauf
-      </button>
+      {/* Trigger — nur wenn nicht extern gesteuert */}
+      {!defaultOpen && (
+        <button
+          onClick={handleOpen}
+          title="Verlauf & Anpassen"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/15 transition-colors"
+        >
+          <Star className="w-3.5 h-3.5" />
+          Verlauf
+        </button>
+      )}
 
       {/* Backdrop */}
       {open && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={() => setOpen(false)} />
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={handleClose} />
       )}
 
       {/* Drawer */}
@@ -168,7 +183,7 @@ export default function UserPointsHistoryModal({ userId, userName, userImage }: 
             <p className="font-semibold text-white truncate">{displayName}</p>
             <p className="text-xs text-gray-500">Admin · Verlauf & Anpassung</p>
           </div>
-          <button onClick={() => setOpen(false)} className="p-2 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors">
+          <button onClick={handleClose} className="p-2 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
