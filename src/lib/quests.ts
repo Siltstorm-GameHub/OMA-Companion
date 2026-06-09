@@ -88,7 +88,11 @@ export async function updateQuestProgress(
   const month = now.getMonth() + 1;
   const year  = now.getFullYear();
 
-  const quests = await prisma.quest.findMany({ where: { type, month, year } });
+  let quests = await prisma.quest.findMany({ where: { type, month, year } });
+  if (!quests.length) {
+    await generateMonthlyQuests(month, year);
+    quests = await prisma.quest.findMany({ where: { type, month, year } });
+  }
   if (!quests.length) return [];
 
   const completed: { title: string; reward: number }[] = [];

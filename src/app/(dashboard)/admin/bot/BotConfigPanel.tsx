@@ -2,8 +2,19 @@
 
 import { useState, useRef } from "react";
 import { toast } from "sonner";
-import { Bot, Save, RotateCcw, Hash, Smile, X } from "lucide-react";
+import { Bot, Save, RotateCcw, Hash, Smile, X, Plus, Trash2, Send, PenLine } from "lucide-react";
 import { BOT_MESSAGES, type BotMessageKey, type BotPlaceholder } from "@/lib/bot-config";
+
+type CustomTemplate = {
+  id:          string;
+  label:       string;
+  text:        string;
+  channelType: "news" | "lul";
+};
+
+function genId() {
+  return Math.random().toString(36).slice(2, 10);
+}
 
 interface DiscordEmoji { id: string; name: string; animated: boolean }
 
@@ -28,6 +39,22 @@ export default function BotConfigPanel({
   const [pickerFor,    setPickerFor]    = useState<BotMessageKey | null>(null);
   const textareaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
 
+  // ── Custom Templates state ─────────────────────────────────────────────────
+  function parseCustomTemplates(): CustomTemplate[] {
+    try { return JSON.parse(values["custom_templates"] ?? "[]"); } catch { return []; }
+  }
+  function saveCustomTemplates(tpls: CustomTemplate[]) {
+    setValues(v => ({ ...v, custom_templates: JSON.stringify(tpls) }));
+    setDirty(true);
+  }
+  const customTemplates = parseCustomTemplates();
+
+  const [editingTpl,   setEditingTpl]  = useState<CustomTemplate | null>(null);
+  const [newTplLabel,  setNewTplLabel]  = useState("");
+  const [newTplText,   setNewTplText]   = useState("");
+  const [newTplCh,     setNewTplCh]     = useState<"news" | "lul">("news");
+  const [sendingId,    setSendingId]    = useState<string | null>(null);
+
   // ── helpers ────────────────────────────────────────────────────────────────
   function get(key: string, fallback: string): string { return values[key] ?? fallback; }
 
@@ -43,6 +70,47 @@ export default function BotConfigPanel({
 
   function toggleEnabled(key: BotMessageKey) { set(`${key}_enabled`, isEnabled(key) ? "false" : "true"); }
   function resetText(key: BotMessageKey)      { set(`${key}_text`, BOT_MESSAGES[key].defaultText); }
+
+  // ── Custom template helpers ────────────────────────────────────────────────
+  function addCustomTemplate() {
+    if (!newTplLabel.trim() || !newTplText.trim()) { toast.error("Name und Text sind erforderlich"); return; }
+    const tpl: CustomTemplate = { id: genId(), label: newTplLabel.trim(), text: newTplText.trim(), channelType: newTplCh };
+    saveCustomTemplates([...customTemplates, tpl]);
+    setNewTplLabel(""); setNewTplText(""); setNewTplCh("news");
+    toast.success("Vorlage hinzugefügt – nicht vergessen zu speichern");
+  }
+
+  function deleteCustomTemplate(id: string) {
+    saveCustomTemplates(customTemplates.filter(t => t.id !== id));
+  }
+
+  function updateEditingTpl(field: keyof CustomTemplate, value: string) {
+    if (!editingTpl) return;
+    setEditingTpl({ ...editingTpl, [field]: value });
+  }
+
+  function saveEditingTpl() {
+    if (!editingTpl) return;
+    saveCustomTemplates(customTemplates.map(t => t.id === editingTpl.id ? editingTpl : t));
+    setEditingTpl(null);
+    toast.success("Vorlage aktualisiert – nicht vergessen zu speichern");
+  }
+
+  async function sendCustomTemplate(tpl: CustomTemplate) {
+    const channelId = tpl.channelType === "lul" ? lulChannelId : newsChannelId;
+    if (!channelId) { toast.error("Kanal-ID nicht konfiguriert"); return; }
+    setSendingId(tpl.id);
+    try {
+      const res = await fetch("/api/admin/bot-send", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ text: tpl.text, channelId }),
+      });
+      const data = await res.json() as { ok?: boolean; error?: string };
+      if (data.ok) toast.success(`„${tpl.label}" gesendet!`);
+      else         toast.error(data.error ?? "Fehler beim Senden");
+    } finally { setSendingId(null); }
+  }
 
   // Beliebigen String in Textarea an Cursor-Position einfügen
   function insertAtCursor(msgKey: BotMessageKey, code: string) {
@@ -300,6 +368,154 @@ export default function BotConfigPanel({
             </div>
           );
         })}
+      </div>
+
+      {/* ── Eigene Vorlagen ────────────────────────────────────────────────── */}
+      <div className="mt-6 space-y-3">
+        <div className="flex items-center gap-2 pb-1 border-b border-white/[0.05]">
+          <PenLine className="w-4 h-4 text-teal-400" />
+          <h2 className="text-sm font-bold text-white">Eigene Vorlagen</h2>
+          <span className="text-[10px] text-gray-600 ml-1">Manuell sendbare Nachrichten</span>
+        </div>
+
+        {/* Existing custom templates */}
+        {customTemplates.map(tpl => {
+          const isEditing  = editingTpl?.id === tpl.id;
+          const isSending  = sendingId === tpl.id;
+          const chLabel    = tpl.channelType === "lul" ? lulBadge.label : newsBadge.label;
+          const chColor    = tpl.channelType === "lul" ? "text-purple-300" : "text-indigo-300";
+
+          return (
+            <div key={tpl.id} className="glass card-shine rounded-2xl overflow-hidden">
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-white/[0.05]">
+                <div className="flex-1 min-w-0">
+                  {isEditing ? (
+                    <input
+                      className="w-full rounded-lg px-2 py-1 text-sm text-white bg-gray-800 border border-white/[0.08] outline-none focus:border-teal-500/40"
+                      value={editingTpl.label}
+                      onChange={e => updateEditingTpl("label", e.target.value)}
+                    />
+                  ) : (
+                    <p className="text-sm font-semibold text-white truncate">{tpl.label}</p>
+                  )}
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <Hash className={`w-3 h-3 shrink-0 ${chColor}`} />
+                    <span className={`text-[10px] font-medium ${chColor}`}>{chLabel}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {isEditing ? (
+                    <>
+                      <button onClick={saveEditingTpl}
+                        className="text-[11px] px-2.5 py-1 rounded-lg bg-teal-500/15 hover:bg-teal-500/25 text-teal-400 border border-teal-500/20 transition-colors">
+                        Übernehmen
+                      </button>
+                      <button onClick={() => setEditingTpl(null)}
+                        className="text-[11px] px-2 py-1 rounded-lg text-gray-500 hover:text-gray-300 transition-colors">
+                        Abbrechen
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button onClick={() => sendCustomTemplate(tpl)} disabled={isSending}
+                        className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/20 transition-colors disabled:opacity-40"
+                        title="Jetzt senden">
+                        <Send className="w-3 h-3" />
+                        {isSending ? "…" : "Senden"}
+                      </button>
+                      <button onClick={() => setEditingTpl(tpl)}
+                        className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg text-gray-500 hover:text-gray-300 border border-white/[0.06] hover:border-white/[0.12] transition-colors"
+                        title="Bearbeiten">
+                        <PenLine className="w-3 h-3" />
+                      </button>
+                      <button onClick={() => deleteCustomTemplate(tpl.id)}
+                        className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg text-gray-600 hover:text-red-400 border border-white/[0.06] hover:border-red-500/20 transition-colors"
+                        title="Löschen">
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="px-4 py-3 space-y-2">
+                {isEditing ? (
+                  <>
+                    <textarea
+                      className="w-full rounded-xl px-3 py-2.5 text-sm text-white bg-gray-800/80 border border-white/[0.06] focus:border-teal-500/40 outline-none resize-none transition-colors"
+                      rows={3}
+                      value={editingTpl.text}
+                      onChange={e => updateEditingTpl("text", e.target.value)}
+                    />
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-gray-600">Kanal:</span>
+                      {(["news", "lul"] as const).map(ch => (
+                        <button key={ch} onClick={() => updateEditingTpl("channelType", ch)}
+                          className={`text-[11px] px-2 py-0.5 rounded-lg border transition-colors ${
+                            editingTpl.channelType === ch
+                              ? "bg-teal-500/15 text-teal-400 border-teal-500/30"
+                              : "text-gray-500 border-white/[0.08] hover:border-white/[0.16]"
+                          }`}>
+                          {ch === "news" ? newsBadge.label : lulBadge.label}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-sm text-gray-400 whitespace-pre-wrap">{tpl.text}</p>
+                )}
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Create new template form */}
+        <div className="glass rounded-2xl overflow-hidden border border-teal-500/10">
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.05]">
+            <Plus className="w-3.5 h-3.5 text-teal-400" />
+            <span className="text-sm font-semibold text-white">Neue Vorlage</span>
+          </div>
+          <div className="px-4 py-3 space-y-2">
+            <input
+              className="w-full rounded-xl px-3 py-2 text-sm text-white bg-gray-800/80 border border-white/[0.06] focus:border-teal-500/40 outline-none transition-colors placeholder:text-gray-600"
+              placeholder="Name der Vorlage"
+              value={newTplLabel}
+              onChange={e => setNewTplLabel(e.target.value)}
+            />
+            <textarea
+              className="w-full rounded-xl px-3 py-2.5 text-sm text-white bg-gray-800/80 border border-white/[0.06] focus:border-teal-500/40 outline-none resize-none transition-colors placeholder:text-gray-600"
+              rows={3}
+              placeholder="Nachrichtentext… (Markdown erlaubt)"
+              value={newTplText}
+              onChange={e => setNewTplText(e.target.value)}
+            />
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-gray-600">Kanal:</span>
+                {(["news", "lul"] as const).map(ch => (
+                  <button key={ch} onClick={() => setNewTplCh(ch)}
+                    className={`text-[11px] px-2 py-0.5 rounded-lg border transition-colors ${
+                      newTplCh === ch
+                        ? "bg-teal-500/15 text-teal-400 border-teal-500/30"
+                        : "text-gray-500 border-white/[0.08] hover:border-white/[0.16]"
+                    }`}>
+                    {ch === "news" ? newsBadge.label : lulBadge.label}
+                  </button>
+                ))}
+              </div>
+              <button onClick={addCustomTemplate}
+                className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg bg-teal-500/15 hover:bg-teal-500/25 text-teal-400 border border-teal-500/20 transition-colors font-medium">
+                <Plus className="w-3 h-3" />
+                Hinzufügen
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <p className="text-[10px] text-gray-700 px-1">
+          Eigene Vorlagen werden nach dem Klick auf „Speichern" dauerhaft gespeichert.
+          Über „Senden" wird die Nachricht sofort in den gewählten Kanal gepostet.
+        </p>
       </div>
     </div>
   );

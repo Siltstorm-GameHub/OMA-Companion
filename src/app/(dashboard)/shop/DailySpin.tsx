@@ -2,21 +2,38 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2, Dices } from "lucide-react";
 
-const REEL_ITEMS = [
-  { label: "10 Punkte",  color: "text-gray-400",   bg: "bg-gray-500/10"   },
-  { label: "25 Punkte",  color: "text-blue-400",   bg: "bg-blue-500/10"   },
-  { label: "50 Punkte",  color: "text-emerald-400", bg: "bg-emerald-500/10" },
-  { label: "100 Punkte", color: "text-amber-400",  bg: "bg-amber-500/10"  },
-  { label: "200 Punkte", color: "text-orange-400", bg: "bg-orange-500/10" },
-  { label: "500 Punkte", color: "text-rose-400",   bg: "bg-rose-500/10"   },
-  { label: "Kein Glück", color: "text-gray-600",   bg: "bg-white/[0.04]"  },
+// ── Segmente im Uhrzeigersinn ab 12 Uhr ───────────────────────────────────
+const SEGMENTS = [
+  { label: "500 Münzen", line1: "500",  line2: "Münzen", fill: "#e11d48", text: "#fda4af" },
+  { label: "10 Münzen",  line1: "10",   line2: "Münzen", fill: "#374151", text: "#9ca3af" },
+  { label: "100 Münzen", line1: "100",  line2: "Münzen", fill: "#d97706", text: "#fef08a" },
+  { label: "Kein Glück", line1: "Kein", line2: "Glück",  fill: "#111827", text: "#4b5563" },
+  { label: "200 Münzen", line1: "200",  line2: "Münzen", fill: "#ea580c", text: "#fed7aa" },
+  { label: "25 Münzen",  line1: "25",   line2: "Münzen", fill: "#2563eb", text: "#bfdbfe" },
+  { label: "50 Münzen",  line1: "50",   line2: "Münzen", fill: "#059669", text: "#a7f3d0" },
 ];
 
+const N       = SEGMENTS.length;
+const SEG     = 360 / N;          // ≈ 51.43° pro Segment
+const SPIN_MS = 5500;
+const CX = 150, CY = 150, R = 135, R_TEXT = 90;
+
+// ── SVG-Hilfsfunktionen ────────────────────────────────────────────────────
+function pt(r: number, deg: number) {
+  const rad = ((deg - 90) * Math.PI) / 180;
+  return { x: CX + r * Math.cos(rad), y: CY + r * Math.sin(rad) };
+}
+function segPath(i: number) {
+  const { x: sx, y: sy } = pt(R, i * SEG);
+  const { x: ex, y: ey } = pt(R, (i + 1) * SEG);
+  return `M${CX},${CY} L${sx},${sy} A${R},${R},0,0,1,${ex},${ey} Z`;
+}
+
+// ── Props ──────────────────────────────────────────────────────────────────
 interface Props {
   alreadySpun: boolean;
-  lastResult:  { prizeLabel: string; prizeType: string } | null;
+  lastResult: { prizeLabel: string; prizeType: string } | null;
 }
 
 export default function DailySpin({ alreadySpun, lastResult }: Props) {
@@ -24,42 +41,40 @@ export default function DailySpin({ alreadySpun, lastResult }: Props) {
   const [spinning,  setSpinning]  = useState(false);
   const [done,      setDone]      = useState(alreadySpun);
   const [result,    setResult]    = useState(lastResult);
-  const [reelIndex, setReelIndex] = useState(0);
+  const [deg,       setDeg]       = useState(() => {
+    // Beim Laden: letztes Ergebnis zeigen falls vorhanden
+    if (!alreadySpun || !lastResult) return 0;
+    const idx = SEGMENTS.findIndex(s => s.label === lastResult.prizeLabel);
+    if (idx < 0) return 0;
+    return (360 - (idx + 0.5) * SEG + 3600) % 360;
+  });
+  const [animating, setAnimating] = useState(false);
 
   async function handleSpin() {
     if (done || spinning) return;
     setSpinning(true);
-
-    // Reel-Animation starten (schnelles Wechseln)
-    let tick = 0;
-    const interval = setInterval(() => {
-      setReelIndex(i => (i + 1) % REEL_ITEMS.length);
-      tick++;
-      if (tick > 25) clearInterval(interval); // ~2.5s
-    }, 80);
-
     try {
       const res  = await fetch("/api/shop/spin", { method: "POST" });
       const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? "Fehler"); return; }
 
-      // Warten bis Animation fertig
-      await new Promise(r => setTimeout(r, 2500));
-      clearInterval(interval);
+      // Gewinnfeld berechnen
+      const segIdx      = SEGMENTS.findIndex(s => s.label === data.prize.label);
+      const targetAngle = (segIdx + 0.5) * SEG;                      // Mitte des Segments im Rad
+      const targetDeg   = (360 - targetAngle + 3600) % 360;          // Rotation für Zeiger oben
+      const delta       = (targetDeg - (deg % 360) + 360) % 360;
+      const finalDeg    = deg + (delta === 0 ? 360 : delta) + 360 * 6; // mind. 6 Runden
 
-      if (!res.ok) { toast.error(data.error ?? "Fehler"); setSpinning(false); return; }
-
-      // Reel auf Ergebnis setzen
-      const resultIdx = REEL_ITEMS.findIndex(r => r.label === data.prize.label);
-      setReelIndex(resultIdx >= 0 ? resultIdx : 0);
+      setAnimating(true);
+      setDeg(finalDeg);
+      await new Promise(r => setTimeout(r, SPIN_MS + 400));
+      setAnimating(false);
 
       setResult({ prizeLabel: data.prize.label, prizeType: data.prize.type });
       setDone(true);
 
-      if (data.prize.type === "points") {
-        toast.success(`🎰 ${data.prize.label} gewonnen!`);
-      } else {
-        toast("🎰 Heute kein Glück — morgen wieder!", { description: "Drehe morgen erneut." });
-      }
+      if (data.prize.type === "points") toast.success(`🎰 ${data.prize.label} gewonnen!`);
+      else toast("🎰 Heute kein Glück — morgen wieder!", { description: "Drehe morgen erneut." });
 
       router.refresh();
     } catch {
@@ -69,52 +84,152 @@ export default function DailySpin({ alreadySpun, lastResult }: Props) {
     }
   }
 
-  const current = REEL_ITEMS[reelIndex];
-
   return (
     <div className="glass card-shine rounded-2xl border border-amber-500/15 overflow-hidden">
-      <div className="flex items-center gap-4 p-4 flex-wrap">
+      <div className="p-5 space-y-5">
 
-        {/* Icon */}
-        <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
-          <Dices className="w-5 h-5 text-amber-400" />
+        {/* Header */}
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+            <span className="text-xl">🎡</span>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-white">Täglicher Gratis-Spin</p>
+            <p className="text-xs text-gray-500">Einmal täglich drehen — gewinne bis zu 500 Münzen!</p>
+          </div>
         </div>
 
-        {/* Info */}
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-white">Täglicher Gratis-Spin</p>
-          <p className="text-xs text-gray-500">Einmal täglich drehen — gewinne bis zu 500 Punkte!</p>
-        </div>
+        {/* Glücksrad */}
+        <div className="flex flex-col items-center gap-5">
+          <div className="relative" style={{ width: 264, height: 264 }}>
 
-        {/* Reel display */}
-        <div className={`px-4 py-2 rounded-xl border text-sm font-bold tabular-nums min-w-[120px] text-center transition-all duration-75 ${current.color} ${current.bg} border-white/[0.08]`}>
-          {done ? (result?.prizeLabel ?? current.label) : spinning ? current.label : "❓ ???"}
-        </div>
+            {/* Äußerer Glow-Ring */}
+            <div className="absolute inset-0 rounded-full pointer-events-none"
+              style={{ boxShadow: "0 0 48px rgba(245,158,11,0.18), 0 0 96px rgba(245,158,11,0.08)" }} />
 
-        {/* Button */}
-        <button
-          onClick={handleSpin}
-          disabled={done || spinning}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all shrink-0 ${
-            done
-              ? "bg-white/[0.04] text-gray-600 border border-white/[0.06] cursor-not-allowed"
-              : "bg-amber-500 hover:bg-amber-400 text-black shadow-[0_0_16px_rgba(245,158,11,0.3)] active:scale-[0.97]"
-          }`}>
-          {spinning ? <Loader2 className="w-4 h-4 animate-spin" /> : "🎰"}
-          {done ? "Bereits gedreht" : spinning ? "Läuft..." : "Drehen!"}
-        </button>
+            {/* Zeiger */}
+            <div className="absolute z-20 pointer-events-none"
+              style={{ top: -2, left: "50%", transform: "translateX(-50%)" }}>
+              <svg width="24" height="32" viewBox="0 0 24 32">
+                <polygon points="12,30 1,3 23,3"
+                  fill="#f59e0b"
+                  stroke="#78350f"
+                  strokeWidth="1"
+                  filter="drop-shadow(0 2px 6px rgba(0,0,0,0.8))" />
+              </svg>
+            </div>
+
+            {/* Drehendes Rad */}
+            <svg
+              width="264" height="264"
+              viewBox="0 0 300 300"
+              style={{
+                transform: `rotate(${deg}deg)`,
+                transition: animating
+                  ? `transform ${SPIN_MS}ms cubic-bezier(0.17, 0.67, 0.12, 0.99)`
+                  : "none",
+                transformOrigin: "center",
+                willChange: "transform",
+                display: "block",
+              }}
+            >
+              <defs>
+                <radialGradient id="hubGrad" cx="38%" cy="35%" r="65%">
+                  <stop offset="0%" stopColor="#fcd34d" />
+                  <stop offset="100%" stopColor="#92400e" />
+                </radialGradient>
+                {/* Weißer Schimmer pro Segment oben */}
+                <radialGradient id="sheen" cx="50%" cy="0%" r="100%">
+                  <stop offset="0%" stopColor="rgba(255,255,255,0.12)" />
+                  <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+                </radialGradient>
+              </defs>
+
+              {/* Segmente */}
+              {SEGMENTS.map((seg, i) => {
+                const mid          = (i + 0.5) * SEG;
+                const { x: tx, y: ty } = pt(R_TEXT, mid);
+                return (
+                  <g key={i}>
+                    {/* Farbfläche */}
+                    <path d={segPath(i)} fill={seg.fill} />
+                    {/* Schimmer-Overlay */}
+                    <path d={segPath(i)} fill="url(#sheen)" />
+                    {/* Trennlinie */}
+                    <line
+                      x1={CX} y1={CY}
+                      x2={pt(R, i * SEG).x} y2={pt(R, i * SEG).y}
+                      stroke="rgba(0,0,0,0.45)" strokeWidth="1.5"
+                    />
+                    {/* Label */}
+                    <g transform={`translate(${tx},${ty}) rotate(${mid})`}
+                      style={{ userSelect: "none", pointerEvents: "none" }}>
+                      <text
+                        textAnchor="middle" y="-5"
+                        fontSize="12" fontWeight="800"
+                        fill={seg.text}
+                        fontFamily="system-ui,-apple-system,sans-serif"
+                      >{seg.line1}</text>
+                      <text
+                        textAnchor="middle" y="8"
+                        fontSize="7.5" fontWeight="600"
+                        fill={seg.text} opacity="0.85"
+                        fontFamily="system-ui,-apple-system,sans-serif"
+                      >{seg.line2}</text>
+                    </g>
+                  </g>
+                );
+              })}
+
+              {/* Äußerer Rand */}
+              <circle cx={CX} cy={CY} r={R + 1}
+                fill="none" stroke="rgba(245,158,11,0.55)" strokeWidth="3.5" />
+              <circle cx={CX} cy={CY} r={R - 1}
+                fill="none" stroke="rgba(0,0,0,0.6)" strokeWidth="3" />
+
+              {/* Nabe */}
+              <circle cx={CX} cy={CY} r="27"
+                fill="#0d0d0f" stroke="rgba(245,158,11,0.4)" strokeWidth="2.5" />
+              <circle cx={CX} cy={CY} r="17" fill="url(#hubGrad)" />
+              <circle cx={CX} cy={CY} r="7"
+                fill="#0d0d0f" stroke="rgba(245,158,11,0.25)" strokeWidth="1" />
+            </svg>
+          </div>
+
+          {/* Drehen-Button */}
+          <button
+            onClick={handleSpin}
+            disabled={done || spinning}
+            className={`w-full max-w-[220px] py-3 rounded-xl text-sm font-semibold transition-all ${
+              done
+                ? "bg-white/[0.04] text-gray-600 border border-white/[0.06] cursor-not-allowed"
+                : spinning
+                ? "bg-amber-700/60 text-amber-300 cursor-wait"
+                : "bg-amber-500 hover:bg-amber-400 text-black shadow-[0_0_24px_rgba(245,158,11,0.35)] hover:shadow-[0_0_32px_rgba(245,158,11,0.5)] active:scale-[0.97]"
+            }`}
+          >
+            {done ? "✓ Bereits gedreht" : spinning ? "🎡 Dreht…" : "🎡 Drehen!"}
+          </button>
+        </div>
       </div>
 
+      {/* Ergebnis-Footer */}
       {done && result && (
-        <div className="border-t border-white/[0.04] px-4 py-2 text-xs text-gray-600">
-          Heutiges Ergebnis: <span className="text-amber-400 font-medium">{result.prizeLabel}</span> · Nächster Spin in{" "}
-          {(() => {
-            const now = new Date();
-            const midnight = new Date(now); midnight.setHours(24,0,0,0);
-            const h = Math.floor((midnight.getTime() - now.getTime()) / 3600000);
-            const m = Math.floor(((midnight.getTime() - now.getTime()) % 3600000) / 60000);
-            return `${h}h ${m}m`;
-          })()}
+        <div className="border-t border-white/[0.04] px-5 py-2.5 flex items-center justify-between gap-4">
+          <p className="text-xs text-gray-500">
+            Ergebnis: <span className="text-amber-400 font-medium">{result.prizeLabel}</span>
+          </p>
+          <p className="text-xs text-gray-600 shrink-0">
+            {(() => {
+              const now = new Date();
+              const midnight = new Date(now);
+              midnight.setHours(24, 0, 0, 0);
+              const diff = midnight.getTime() - now.getTime();
+              const h = Math.floor(diff / 3_600_000);
+              const m = Math.floor((diff % 3_600_000) / 60_000);
+              return `Nächster Spin in ${h}h ${m}m`;
+            })()}
+          </p>
         </div>
       )}
     </div>
