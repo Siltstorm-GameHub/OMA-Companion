@@ -43,17 +43,13 @@ export default function MobileTopBar() {
 
   return (
     <header
-      style={{ background: "rgba(4,10,9,0.95)", borderBottom: "1px solid rgba(20,184,166,0.09)" }}
-      className="fixed top-0 left-0 right-0 z-40 lg:hidden h-14 backdrop-blur-2xl flex items-center px-4 gap-3"
+      style={{ background: "rgba(4,10,9,0.95)", borderBottom: "1px solid rgba(20,184,166,0.09)", top: "2.25rem" }}
+      className="fixed left-0 right-0 z-40 lg:hidden h-14 backdrop-blur-2xl flex items-center px-4 gap-3"
     >
       <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-teal-500/40 to-transparent pointer-events-none" />
 
-      {/* Logo + Title */}
-      <Link href="/dashboard" className="flex items-center gap-2.5 min-w-0 flex-1">
-        <div className="w-7 h-7 rounded-lg overflow-hidden shrink-0"
-          style={{ boxShadow: "0 0 12px rgba(20,184,166,0.35)", outline: "1px solid rgba(20,184,166,0.25)" }}>
-          <Image src="/OMALogoNew.png" alt="OMA" width={28} height={28} className="w-full h-full object-cover" />
-        </div>
+      {/* Seitentitel */}
+      <Link href="/dashboard" className="flex items-center min-w-0 flex-1">
         <span className="text-sm font-semibold text-white truncate">{title}</span>
       </Link>
 

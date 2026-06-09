@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { QUEST_TYPE_META, type QuestType } from "@/lib/quests";
 import {
   Trophy, Star, CalendarDays, Swords, Clock,
-  MessageSquare, CheckCircle2, ArrowLeft,
+  MessageSquare, CheckCircle2, ArrowLeft, Coins,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -63,23 +63,26 @@ export default async function PublicProfilePage({
     redirect("/profile");
   }
 
-  const [user, transactions, eventRegs, tournamentParticipations, matchWins, totalUsers] =
+  const [user, transactions, eventRegs, eventCount, tournamentParticipations, tournamentCount, matchWins, totalUsers] =
     await Promise.all([
       prisma.user.findUnique({
         where: { id },
         select: {
           id: true, name: true, username: true, image: true,
-          points: true, createdAt: true,
+          points: true, rankPoints: true, createdAt: true,
         },
       }),
       // Punkte-Transaktionen — nur für Badge-Berechnung, nicht öffentlich anzeigen
       prisma.pointTransaction.findMany({ where: { userId: id }, select: { reason: true } }),
+      // Letzte 5 Events für die Anzeige-Liste
       prisma.eventRegistration.findMany({
         where: { userId: id },
         include: { event: { select: { title: true, startAt: true, game: true } } },
         orderBy: { joinedAt: "desc" },
         take: 5,
       }),
+      // Gesamtzahl für Stats und Abzeichen
+      prisma.eventRegistration.count({ where: { userId: id } }),
       prisma.tournamentParticipant.findMany({
         where: { userId: id },
         include: {
@@ -93,20 +96,23 @@ export default async function PublicProfilePage({
         orderBy: { id: "desc" },
         take: 10,
       }),
+      // Gesamtzahl für Stats und Abzeichen
+      prisma.tournamentParticipant.count({ where: { userId: id } }),
       prisma.match.count({ where: { winnerId: id } }),
       prisma.user.count(),
     ]);
 
   if (!user) notFound();
 
-  const leaderboardRank = await prisma.user.count({ where: { points: { gt: user.points } } }) + 1;
+  // Rang basiert auf rankPoints — konsistent mit Leaderboard und eigenem Profil
+  const leaderboardRank = await prisma.user.count({ where: { rankPoints: { gt: user.rankPoints ?? 0 } } }) + 1;
 
   // ── Stats ableiten ──────────────────────────────────────────────────────
   const totalPoints  = user.points;
 
   const voiceHours   = transactions.filter(t => t.reason.includes("Sprachkanal")).length;
   const messageCount = transactions.filter(t => t.reason.includes("Nachrichten")).length * 10;
-  const badges       = computeBadges({ points: totalPoints, voiceHours, messageCount, eventCount: eventRegs.length, tournamentCount: tournamentParticipations.length, tournamentWins: matchWins });
+  const badges       = computeBadges({ points: totalPoints, voiceHours, messageCount, eventCount, tournamentCount, tournamentWins: matchWins });
   const earnedBadges = badges.filter(b => b.earned);
   const memberSince  = new Date(user.createdAt).toLocaleDateString("de-DE", { month: "long", year: "numeric" });
   const displayName  = user.username ?? user.name ?? "Unbekannt";
@@ -158,10 +164,14 @@ export default async function PublicProfilePage({
             <div className="flex items-center gap-2 flex-wrap mb-0.5">
               <h1 className="text-2xl font-bold text-white tracking-tight">{displayName}</h1>
             </div>
-            <p className="text-xs text-gray-500 mb-2">
+            <p className="text-xs text-gray-500 mb-1">
               Mitglied seit {memberSince} · {earnedBadges.length} Abzeichen
             </p>
-            <p className="text-sm font-bold text-amber-400">{totalPoints.toLocaleString("de-DE")} Punkte</p>
+            <div className="flex items-center gap-1 mb-2">
+              <Coins className="w-3 h-3 text-amber-400" />
+              <span className="text-xs text-amber-400 font-medium tabular-nums">{totalPoints.toLocaleString("de-DE")} Münzen</span>
+            </div>
+            <p className="text-sm font-bold text-teal-400">{(user.rankPoints ?? 0).toLocaleString("de-DE")} Punkte</p>
           </div>
 
           {/* Rang-Block */}
@@ -176,8 +186,8 @@ export default async function PublicProfilePage({
       {/* ── Stats ───────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {[
-          { icon: <Star className="w-4 h-4" />,        label: "Punkte",        value: totalPoints.toLocaleString("de-DE"), iconCls: "text-amber-400   bg-amber-500/10   border-amber-500/15",   accent: "from-amber-500/8"   },
-          { icon: <CalendarDays className="w-4 h-4" />, label: "Events",        value: String(eventRegs.length),            iconCls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/15", accent: "from-emerald-500/8" },
+          { icon: <Star className="w-4 h-4" />,        label: "Punkte",        value: (user.rankPoints ?? 0).toLocaleString("de-DE"), iconCls: "text-teal-400    bg-teal-500/10    border-teal-500/15",    accent: "from-teal-500/8"    },
+          { icon: <CalendarDays className="w-4 h-4" />, label: "Events",        value: String(eventCount),                  iconCls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/15", accent: "from-emerald-500/8" },
           { icon: <Trophy className="w-4 h-4" />,       label: "Turnier-Siege", value: String(matchWins),                   iconCls: "text-rose-400    bg-rose-500/10    border-rose-500/15",    accent: "from-rose-500/8"    },
         ].map((s, i) => (
           <div key={s.label} className={`card-hover card-shine glass relative overflow-hidden rounded-2xl p-4 animate-slide-up stagger-${i + 1}`}>

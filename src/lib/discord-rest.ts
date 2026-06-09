@@ -17,6 +17,8 @@ export interface DiscordEmbed {
   fields?:      { name: string; value: string; inline?: boolean }[];
   footer?:      { text: string };
   timestamp?:   string;
+  image?:       { url: string };
+  thumbnail?:   { url: string };
 }
 
 export async function sendDiscordMessage(

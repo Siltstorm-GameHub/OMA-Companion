@@ -5,8 +5,9 @@ import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import {
   ChevronDown, ChevronUp, Trophy, Settings, Users, UserPlus, UserMinus,
-  Search, Trash2, AlertTriangle, Repeat, X, GitBranch, Gamepad2, Swords, ExternalLink, Hash,
+  Search, Trash2, AlertTriangle, Repeat, X, GitBranch, Gamepad2, Swords, ExternalLink, Hash, CalendarPlus, RefreshCw,
 } from "lucide-react";
+import { describeMonthlyModes } from "@/lib/recurrence";
 import Link from "next/link";
 import TournamentManager from "./TournamentManager";
 import GameNameInput from "@/components/GameNameInput";
@@ -136,6 +137,11 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
   const [seriesSettingsLoaded, setSeriesSettingsLoaded]     = useState(false);
   const [seriesSettingsSaving, setSeriesSettingsSaving]     = useState(false);
 
+  /* ── Recurrence state ── */
+  const [recurrenceType, setRecurrenceType]             = useState<"" | "weekly" | "biweekly" | "monthly">("");
+  const [recurrenceMonthlyMode, setRecurrenceMonthlyMode] = useState<"dayOfMonth" | "weekdayOfMonth">("dayOfMonth");
+  const [generatingNext, setGeneratingNext]             = useState(false);
+
   /* ── Scope modal ── */
   const [showScopeModal, setShowScopeModal] = useState(false);
   const [pendingSave, setPendingSave]       = useState<"single" | null>(null);
@@ -163,6 +169,8 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
           setSeriesFixedGame(d.fixedGame ?? "");
           setSeriesFixedFormat(d.fixedFormat ?? "");
           setSeriesDiscordChannelId(d.discordChannelId ?? "");
+          setRecurrenceType(d.recurrenceType ?? "");
+          setRecurrenceMonthlyMode(d.recurrenceMonthlyMode ?? "dayOfMonth");
           setSeriesSettingsLoaded(true);
         })
         .catch(() => {});
@@ -286,10 +294,12 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        seriesId:         event.seriesId,
-        fixedGame:        seriesFixedGame.trim() || null,
-        fixedFormat:      seriesFixedFormat || null,
-        discordChannelId: seriesDiscordChannelId.trim() || null,
+        seriesId:              event.seriesId,
+        fixedGame:             seriesFixedGame.trim() || null,
+        fixedFormat:           seriesFixedFormat || null,
+        discordChannelId:      seriesDiscordChannelId.trim() || null,
+        recurrenceType:        recurrenceType || null,
+        recurrenceMonthlyMode: recurrenceType === "monthly" ? recurrenceMonthlyMode : null,
         propagateGame,
         propagateFormat,
       }),
@@ -302,6 +312,26 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
       router.refresh();
     } else {
       toast.error("Fehler beim Speichern der Reihe");
+    }
+  }
+
+  async function generateNextEvent() {
+    if (!event.seriesId) return;
+    setGeneratingNext(true);
+    const res = await fetch("/api/admin/event-series/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ seriesId: event.seriesId }),
+    });
+    setGeneratingNext(false);
+    if (res.ok) {
+      const { event: newEv } = await res.json();
+      const dateStr = new Date(newEv.startAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
+      toast.success(`Neuer Termin erstellt: ${newEv.title} am ${dateStr}`);
+      router.refresh();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      toast.error(err.error ?? "Fehler beim Erstellen des nächsten Termins");
     }
   }
 
@@ -612,11 +642,67 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
                           />
                         </div>
 
-                        <button onClick={saveSeriesSettings}
-                          disabled={seriesSettingsSaving || loading}
-                          className="text-xs bg-teal-700 hover:bg-teal-600 text-white rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50">
-                          {seriesSettingsSaving ? "Speichert…" : "Reihe speichern"}
-                        </button>
+                        {/* ── Wiederholung ── */}
+                        <div>
+                          <label className="text-xs text-gray-500 flex items-center gap-1.5 mb-1">
+                            <RefreshCw className="w-3 h-3" />
+                            Wiederholungsintervall
+                          </label>
+                          <select
+                            value={recurrenceType}
+                            onChange={e => setRecurrenceType(e.target.value as typeof recurrenceType)}
+                            className={inputCls}
+                          >
+                            <option value="">Keine Wiederholung</option>
+                            <option value="weekly">Wöchentlich</option>
+                            <option value="biweekly">Alle 2 Wochen</option>
+                            <option value="monthly">Monatlich</option>
+                          </select>
+
+                          {recurrenceType === "monthly" && (() => {
+                            const labels = describeMonthlyModes(new Date(event.startAt));
+                            return (
+                              <div className="mt-2 space-y-1.5">
+                                <p className="text-[10px] text-gray-500">
+                                  Basierend auf dem Datum dieses Events ({new Date(event.startAt).toLocaleDateString("de-DE")}):
+                                </p>
+                                {(["dayOfMonth", "weekdayOfMonth"] as const).map(mode => (
+                                  <button
+                                    key={mode}
+                                    type="button"
+                                    onClick={() => setRecurrenceMonthlyMode(mode)}
+                                    className="w-full text-left px-3 py-2 rounded-lg text-xs transition-all"
+                                    style={recurrenceMonthlyMode === mode
+                                      ? { background: "rgba(20,184,166,0.15)", border: "1px solid rgba(20,184,166,0.35)", color: "#2dd4bf" }
+                                      : { background: "transparent", border: "1px solid rgba(255,255,255,0.08)", color: "#6b7280" }
+                                    }
+                                  >
+                                    {labels[mode]}
+                                  </button>
+                                ))}
+                              </div>
+                            );
+                          })()}
+                        </div>
+
+                        <div className="flex gap-2 flex-wrap items-center">
+                          <button onClick={saveSeriesSettings}
+                            disabled={seriesSettingsSaving || loading}
+                            className="text-xs bg-teal-700 hover:bg-teal-600 text-white rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50">
+                            {seriesSettingsSaving ? "Speichert…" : "Reihe speichern"}
+                          </button>
+
+                          {recurrenceType && (
+                            <button
+                              onClick={generateNextEvent}
+                              disabled={generatingNext || loading}
+                              className="flex items-center gap-1.5 text-xs text-teal-300 hover:text-white border border-teal-600/40 hover:bg-teal-600 rounded-lg px-3 py-1.5 transition-all disabled:opacity-50"
+                            >
+                              <CalendarPlus className="w-3.5 h-3.5" />
+                              {generatingNext ? "Erstellt…" : "Nächsten Termin erstellen"}
+                            </button>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>

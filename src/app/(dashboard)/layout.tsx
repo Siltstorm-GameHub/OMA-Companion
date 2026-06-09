@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import FloatingPill from "@/components/FloatingPill";
 import TopNewsFeed, { type NewsItem } from "@/components/TopNewsFeed";
+import MobileTopBar from "@/components/MobileTopBar";
+import BottomNav from "@/components/BottomNav";
 import { OnboardingModal } from "@/components/OnboardingModal";
 import { BackToTop } from "@/components/BackToTop";
 import AuroraBackground from "@/components/AuroraBackground";
@@ -102,12 +104,21 @@ export default async function DashboardLayout({ children }: { children: React.Re
       {/* ── News-Ticker (oben) ──────────────────────────────────── */}
       <TopNewsFeed items={newsItems} />
 
-      {/* ── Floating Pill Nav ───────────────────────────────────── */}
-      <FloatingPill />
+      {/* ── Mobile Top Bar (nur Handy, kein Logo) ───────────────── */}
+      <MobileTopBar />
 
-      {/* ── Main Content — oben 36px Ticker + 46px Pill + 8px gap ── */}
-      {/* pt = 2.25rem ticker + 8px gap + ~2.75rem pill + 12px gap ≈ 5.5rem */}
-      <main className="pb-10 min-w-0 px-0" style={{ position: "relative", zIndex: 2, paddingTop: "calc(2.25rem + 2.75rem + 20px)" }}>
+      {/* ── Floating Pill Nav (nur Desktop) ─────────────────────── */}
+      <div className="hidden lg:block">
+        <FloatingPill />
+      </div>
+
+      {/* ── Main Content ────────────────────────────────────────── */}
+      {/* Mobile:  36px Ticker + 56px MobileTopBar = 92px         */}
+      {/* Desktop: 36px Ticker + 44px Pill + 20px gap = 100px    */}
+      <main
+        className="min-w-0 px-0 pb-24 lg:pb-10 pt-[92px] lg:pt-[100px]"
+        style={{ position: "relative", zIndex: 2 }}
+      >
         {children}
       </main>
 
@@ -116,6 +127,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
       {/* Back to top */}
       <BackToTop />
+
+      {/* ── Mobile Bottom Nav (immer sichtbar auf Handy) ───────── */}
+      <div className="lg:hidden">
+        <BottomNav />
+      </div>
     </div>
   );
 }
