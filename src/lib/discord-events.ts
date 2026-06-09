@@ -1,4 +1,5 @@
 // Hilfsfunktionen für Discord Scheduled Events
+import { getGameCoverUrl } from "@/lib/game-cover";
 
 /** Sendet eine Event-Ankündigung in den konfigurierten Events-Channel via REST API.
  *  Funktioniert direkt aus der WebApp heraus (kein discord.js-Client nötig). */
@@ -20,6 +21,8 @@ export async function announceNewEvent(event: {
     hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin",
   });
 
+  const coverUrl = getGameCoverUrl(event.game);
+
   const embed = {
     color:       0x4ade80,
     title:       `📅 Neues Event: ${event.title}`,
@@ -30,6 +33,7 @@ export async function announceNewEvent(event: {
       { name: "👥 Max. Spieler", value: event.maxPlayers ? String(event.maxPlayers) : "Unbegrenzt", inline: true },
       { name: "⭐ Münzen",       value: `+${event.pointReward} Münzen bei Teilnahme`,               inline: true },
     ],
+    ...(coverUrl && { image: { url: coverUrl } }),
     footer:    { text: "OMA Companion · Events" },
     timestamp: new Date().toISOString(),
   };
