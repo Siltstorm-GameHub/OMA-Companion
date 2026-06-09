@@ -124,7 +124,6 @@ export async function createDiscordScheduledEvent(event: {
   const imageDataUri = coverUrl ? await fetchImageAsDataUri(coverUrl) : null;
   if (event.game && !coverUrl)     console.warn(`[Discord] Kein Cover für Spiel: "${event.game}"`);
   if (coverUrl   && !imageDataUri) console.warn(`[Discord] Cover-Fetch fehlgeschlagen: ${coverUrl}`);
-  if (imageDataUri) console.log(`[Discord] Cover OK – ${Math.round(imageDataUri.length / 1024)} KB base64, MIME: ${imageDataUri.slice(5, 25)}`);
 
   const payload = {
     name: event.title,
@@ -149,22 +148,13 @@ export async function createDiscordScheduledEvent(event: {
     }
   );
 
-  const responseText = await res.text();
-  console.log(`[Discord] Scheduled Event Response ${res.status}:`, responseText.slice(0, 300));
-
   if (!res.ok) {
-    console.error("[Discord] Scheduled Event erstellen fehlgeschlagen:", res.status, responseText);
+    console.error("[Discord] Scheduled Event erstellen fehlgeschlagen:", res.status, await res.text());
     return null;
   }
 
-  try {
-    const data = JSON.parse(responseText) as { id: string; image: string | null };
-    console.log(`[Discord] Scheduled Event erstellt – id:${data.id} image:${data.image ?? "null"}`);
-    return data.id;
-  } catch {
-    console.error("[Discord] JSON-Parse fehlgeschlagen:", responseText.slice(0, 200));
-    return null;
-  }
+  const data = await res.json() as { id: string };
+  return data.id;
 }
 
 export async function updateDiscordScheduledEvent(
