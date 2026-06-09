@@ -20,9 +20,10 @@ export async function POST() {
     if (ev.discordEventId) {
       // Bereits verknüpft → aktualisieren
       const ok = await updateDiscordScheduledEvent(ev.discordEventId, {
-        title: ev.title,
-        startAt: ev.startAt,
+        title:       ev.title,
+        startAt:     ev.startAt,
         description: ev.description,
+        game:        ev.game,
       });
       if (ok) updated++;
       else failed++;
