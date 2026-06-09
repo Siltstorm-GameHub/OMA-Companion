@@ -1,4 +1,27 @@
 // Hilfsfunktionen für Discord Scheduled Events
+import { getGameCoverUrlAsync } from "@/lib/game-cover";
+
+/** Lädt ein Bild von einer URL und gibt es als Base64-Data-URI zurück. */
+async function fetchImageAsDataUri(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; OMACompanion/1.0)" },
+    });
+    if (!res.ok) {
+      console.error(`[Discord] Bild-Fetch fehlgeschlagen: ${res.status} ${url}`);
+      return null;
+    }
+    // Nur MIME-Typ, ohne Parameter (z.B. "image/jpeg; charset=…" → "image/jpeg")
+    const rawType   = res.headers.get("content-type") ?? "image/jpeg";
+    const mimeType  = rawType.split(";")[0].trim();
+    const buffer    = await res.arrayBuffer();
+    const base64    = Buffer.from(buffer).toString("base64");
+    return `data:${mimeType};base64,${base64}`;
+  } catch (err) {
+    console.error(`[Discord] Bild-Fetch Exception: ${err} ${url}`);
+    return null;
+  }
+}
 
 /** Sendet eine Event-Ankündigung in den konfigurierten Events-Channel via REST API.
  *  Funktioniert direkt aus der WebApp heraus (kein discord.js-Client nötig). */
@@ -20,6 +43,8 @@ export async function announceNewEvent(event: {
     hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin",
   });
 
+  const coverUrl = await getGameCoverUrlAsync(event.game);
+
   const embed = {
     color:       0x4ade80,
     title:       `📅 Neues Event: ${event.title}`,
@@ -30,6 +55,7 @@ export async function announceNewEvent(event: {
       { name: "👥 Max. Spieler", value: event.maxPlayers ? String(event.maxPlayers) : "Unbegrenzt", inline: true },
       { name: "⭐ Münzen",       value: `+${event.pointReward} Münzen bei Teilnahme`,               inline: true },
     ],
+    ...(coverUrl && { image: { url: coverUrl } }),
     footer:    { text: "OMA Companion · Events" },
     timestamp: new Date().toISOString(),
   };
@@ -84,6 +110,7 @@ export async function createDiscordScheduledEvent(event: {
   title: string;
   startAt: Date;
   description?: string | null;
+  game?: string | null;
 }): Promise<string | null> {
   const guildId  = process.env.DISCORD_GUILD_ID;
   const botToken = process.env.DISCORD_BOT_TOKEN;
@@ -91,6 +118,23 @@ export async function createDiscordScheduledEvent(event: {
 
   // End-Zeit: 2 Stunden nach Start (Discord verlangt End-Zeit für externe Events)
   const endAt = new Date(event.startAt.getTime() + 2 * 60 * 60 * 1000);
+
+  // Cover-Bild als Base64-Data-URI (Discord akzeptiert keine externen URLs)
+  const coverUrl     = await getGameCoverUrlAsync(event.game);
+  const imageDataUri = coverUrl ? await fetchImageAsDataUri(coverUrl) : null;
+  if (event.game && !coverUrl)     console.warn(`[Discord] Kein Cover für Spiel: "${event.game}"`);
+  if (coverUrl   && !imageDataUri) console.warn(`[Discord] Cover-Fetch fehlgeschlagen: ${coverUrl}`);
+
+  const payload = {
+    name: event.title,
+    scheduled_start_time: event.startAt.toISOString(),
+    scheduled_end_time:   endAt.toISOString(),
+    entity_type:    3, // EXTERNAL
+    entity_metadata: { location: "Online" },
+    privacy_level:  2, // GUILD_ONLY
+    description: event.description ?? undefined,
+    ...(imageDataUri && { image: imageDataUri }),
+  };
 
   const res = await fetch(
     `https://discord.com/api/v10/guilds/${guildId}/scheduled-events`,
@@ -100,15 +144,7 @@ export async function createDiscordScheduledEvent(event: {
         Authorization: `Bot ${botToken}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        name: event.title,
-        scheduled_start_time: event.startAt.toISOString(),
-        scheduled_end_time:   endAt.toISOString(),
-        entity_type:    3, // EXTERNAL
-        entity_metadata: { location: "Online" },
-        privacy_level:  2, // GUILD_ONLY
-        description: event.description ?? undefined,
-      }),
+      body: JSON.stringify(payload),
     }
   );
 
@@ -123,13 +159,16 @@ export async function createDiscordScheduledEvent(event: {
 
 export async function updateDiscordScheduledEvent(
   discordEventId: string,
-  event: { title: string; startAt: Date; description?: string | null }
+  event: { title: string; startAt: Date; description?: string | null; game?: string | null }
 ): Promise<boolean> {
   const guildId  = process.env.DISCORD_GUILD_ID;
   const botToken = process.env.DISCORD_BOT_TOKEN;
   if (!guildId || !botToken) return false;
 
   const endAt = new Date(event.startAt.getTime() + 2 * 60 * 60 * 1000);
+
+  const coverUrl     = await getGameCoverUrlAsync(event.game);
+  const imageDataUri = coverUrl ? await fetchImageAsDataUri(coverUrl) : null;
 
   const res = await fetch(
     `https://discord.com/api/v10/guilds/${guildId}/scheduled-events/${discordEventId}`,
@@ -144,6 +183,7 @@ export async function updateDiscordScheduledEvent(
         scheduled_start_time: event.startAt.toISOString(),
         scheduled_end_time:   endAt.toISOString(),
         description: event.description ?? undefined,
+        ...(imageDataUri && { image: imageDataUri }),
       }),
     }
   );

@@ -129,7 +129,7 @@ export default async function DashboardPage() {
     <div className="animate-fade-in">
 
       {/* ── Hero ──────────────────────────────────────────────────────── */}
-      <div className="relative px-5 pt-8 pb-6 max-w-7xl mx-auto">
+      <div className="relative px-5 pt-4 sm:pt-8 pb-6 max-w-7xl mx-auto">
         {/* Dezente Trennlinie unten */}
         <div className="absolute bottom-0 inset-x-5 h-px"
           style={{ background: "linear-gradient(90deg, transparent, rgba(20,184,166,0.18), transparent)" }} />
@@ -195,8 +195,19 @@ export default async function DashboardPage() {
           )}
         </div>
 
+        {/* ── Admin-Schnellzugriff (nur Mobile, nur Staff) ── */}
+        {isStaff && (
+          <Link href="/admin"
+            className="sm:hidden flex items-center gap-3 mt-4 px-4 py-3 rounded-xl group transition-all"
+            style={{ background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.18)" }}>
+            <ShieldAlert className="w-4 h-4 text-red-400 shrink-0" />
+            <span className="text-sm font-semibold text-red-400 flex-1">Admin-Bereich</span>
+            <ChevronRight className="w-4 h-4 text-red-400/50 group-hover:text-red-400 transition-colors" />
+          </Link>
+        )}
+
         {/* ── Stat-Streifen ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-6">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4 sm:mt-6">
           {[
             { value: activeEvents,      label: "Aktive Events",  color: "text-teal-400"   },
             { value: myQuestsDone,      label: `/ ${totalMonthQuests} Quests`, color: "text-teal-400" },

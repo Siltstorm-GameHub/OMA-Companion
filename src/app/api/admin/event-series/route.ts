@@ -38,11 +38,13 @@ export async function PATCH(req: NextRequest) {
   const series = await prisma.eventSeries.update({
     where: { id: seriesId },
     data: {
-      ...(fields.name             !== undefined && { name:             fields.name }),
-      ...(fields.description      !== undefined && { description:      fields.description }),
-      ...(fields.fixedGame        !== undefined && { fixedGame:        fields.fixedGame }),
-      ...(fields.fixedFormat      !== undefined && { fixedFormat:      fields.fixedFormat }),
-      ...(fields.discordChannelId !== undefined && { discordChannelId: fields.discordChannelId }),
+      ...(fields.name                 !== undefined && { name:                 fields.name }),
+      ...(fields.description          !== undefined && { description:          fields.description }),
+      ...(fields.fixedGame            !== undefined && { fixedGame:            fields.fixedGame }),
+      ...(fields.fixedFormat          !== undefined && { fixedFormat:          fields.fixedFormat }),
+      ...(fields.discordChannelId     !== undefined && { discordChannelId:     fields.discordChannelId }),
+      ...(fields.recurrenceType       !== undefined && { recurrenceType:       fields.recurrenceType || null }),
+      ...(fields.recurrenceMonthlyMode !== undefined && { recurrenceMonthlyMode: fields.recurrenceMonthlyMode || null }),
     },
   });
 

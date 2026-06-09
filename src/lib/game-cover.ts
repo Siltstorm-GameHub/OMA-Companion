@@ -285,6 +285,30 @@ export function getGameCoverUrl(gameName: string | null | undefined): string | n
 }
 
 /**
+ * Wie getGameCoverUrl, aber mit Live-Steam-Suche als Fallback.
+ * Geeignet für serverseitige Aufrufe (z.B. Discord-Sync).
+ */
+export async function getGameCoverUrlAsync(gameName: string | null | undefined): Promise<string | null> {
+  const staticUrl = getGameCoverUrl(gameName);
+  if (staticUrl) return staticUrl;
+  if (!gameName) return null;
+
+  try {
+    const res = await fetch(
+      `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(gameName)}&l=english&cc=DE&f=games`,
+      { headers: { "User-Agent": "OMA-Companion/1.0" } }
+    );
+    if (!res.ok) return null;
+    const data = await res.json() as { items: { id: number; name: string; type: string }[] };
+    const first = (data.items ?? []).find(i => i.type === "app");
+    if (first) return `https://cdn.cloudflare.steamstatic.com/steam/apps/${first.id}/capsule_616x353.jpg`;
+  } catch (err) {
+    console.error("[game-cover] Steam-Suche fehlgeschlagen:", err);
+  }
+  return null;
+}
+
+/**
  * Gibt eine konsistente Hintergrundfarbe als CSS-Gradient zurück,
  * basierend auf dem Spielnamen (für den Fallback-Fall).
  */

@@ -9,6 +9,7 @@ import { CountUp } from "@/components/CountUp";
 import { AvatarStack } from "@/components/AvatarStack";
 import { buildLulStandings, LUL_POINTS } from "@/lib/lul";
 import GameCover from "@/components/GameCover";
+import { getGenreIcon } from "@/lib/genre-icons";
 
 const STATUS_LABEL: Record<string, { label: string; cls: string; dot: string; bar: string }> = {
   upcoming: { label: "Geplant",  cls: "text-blue-300 bg-blue-500/10 border border-blue-500/15",    dot: "bg-blue-400",   bar: "bg-blue-500/20" },
@@ -63,7 +64,7 @@ export default async function LulOverviewPage() {
   const participantCount = new Set(allActiveEntries.map(e => e.userId)).size;
 
   return (
-    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-5 sm:space-y-6 animate-fade-in">
+    <div className="px-4 pb-4 pt-3 sm:p-6 max-w-7xl mx-auto space-y-5 sm:space-y-6 animate-fade-in">
 
       {/* ── Hero Banner ────────────────────────────────────────────── */}
       {activeSeason && (
@@ -167,7 +168,10 @@ export default async function LulOverviewPage() {
                       </span>
                     </div>
                     <div className="relative flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white truncate">{st.game}</p>
+                      <div className="flex items-center gap-1.5">
+                        {(() => { const icon = getGenreIcon(st.gameType); return icon ? <img src={icon.src} alt={icon.alt} className="w-3.5 h-3.5 object-contain shrink-0" /> : null; })()}
+                        <p className="text-sm font-medium text-white truncate">{st.game}</p>
+                      </div>
                       <div className="flex items-center gap-2 mt-1">
                         {st.scheduledAt && (
                           <p className="text-[10px] text-gray-500">
