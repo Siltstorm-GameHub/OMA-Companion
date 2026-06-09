@@ -113,10 +113,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
       </div>
 
       {/* ── Main Content ────────────────────────────────────────── */}
-      {/* Mobile:  36px Ticker + 56px MobileTopBar + 12px gap = 104px */}
-      {/* Desktop: 36px Ticker + 44px Pill + 20px gap = 100px        */}
+      {/* Mobile:  36px Ticker + 56px MobileTopBar = 92px         */}
+      {/* Desktop: 36px Ticker + 44px Pill + 20px gap = 100px    */}
       <main
-        className="min-w-0 px-0 pb-24 lg:pb-10 pt-[96px] lg:pt-[100px]"
+        className="min-w-0 px-0 pb-24 lg:pb-10 pt-[92px] lg:pt-[100px]"
         style={{ position: "relative", zIndex: 2 }}
       >
         {children}

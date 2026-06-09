@@ -7,6 +7,11 @@ import { prisma } from "@/lib/prisma";
  */
 export async function processPendingPolls(client: Client) {
   const now  = new Date();
+
+  // Gesendete Umfragen nach 8 Tagen automatisch löschen
+  const cutoff = new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000);
+  await prisma.pollJob.deleteMany({ where: { status: "sent", sentAt: { lte: cutoff } } });
+
   const jobs = await prisma.pollJob.findMany({
     where: { status: "pending", scheduledAt: { lte: now } },
   });

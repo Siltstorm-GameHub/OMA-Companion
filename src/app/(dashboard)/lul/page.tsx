@@ -63,7 +63,7 @@ export default async function LulOverviewPage() {
   const participantCount = new Set(allActiveEntries.map(e => e.userId)).size;
 
   return (
-    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-5 sm:space-y-6 animate-fade-in">
+    <div className="px-4 pb-4 pt-3 sm:p-6 max-w-7xl mx-auto space-y-5 sm:space-y-6 animate-fade-in">
 
       {/* ── Hero Banner ────────────────────────────────────────────── */}
       {activeSeason && (
