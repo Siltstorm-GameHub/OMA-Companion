@@ -150,14 +150,21 @@ export async function createDiscordScheduledEvent(event: {
   );
 
   const responseText = await res.text();
+  console.log(`[Discord] Scheduled Event Response ${res.status}:`, responseText.slice(0, 300));
+
   if (!res.ok) {
     console.error("[Discord] Scheduled Event erstellen fehlgeschlagen:", res.status, responseText);
     return null;
   }
 
-  const data = JSON.parse(responseText) as { id: string; image: string | null };
-  console.log(`[Discord] Scheduled Event erstellt – id:${data.id} image:${data.image ?? "null"}`);
-  return data.id;
+  try {
+    const data = JSON.parse(responseText) as { id: string; image: string | null };
+    console.log(`[Discord] Scheduled Event erstellt – id:${data.id} image:${data.image ?? "null"}`);
+    return data.id;
+  } catch {
+    console.error("[Discord] JSON-Parse fehlgeschlagen:", responseText.slice(0, 200));
+    return null;
+  }
 }
 
 export async function updateDiscordScheduledEvent(
