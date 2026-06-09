@@ -4,10 +4,7 @@ import {
   CalendarDays, ExternalLink, Users, Zap, Swords, Trophy,
   ChevronRight, Check, Repeat, Gamepad2,
 } from "lucide-react";
-import SyncButton from "./SyncButton";
 import RegisterButton from "./RegisterButton";
-import EventCreateForm from "./EventCreateForm";
-import EventAdminRow from "../admin/events/EventAdminRow";
 import { RelativeTime } from "@/components/RelativeTime";
 import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
@@ -32,28 +29,17 @@ const GUILD_ID = process.env.DISCORD_GUILD_ID ?? "";
 export default async function EventsPage() {
   const session = await auth();
   const userId  = session?.user?.id;
-  const role    = (session?.user as { role?: string } | undefined)?.role ?? "user";
-  const isMod   = role === "moderator" || role === "admin";
 
-  const [eventsRaw, allUsers, activeSeason] = await Promise.all([
+  const [events, activeSeason] = await Promise.all([
     prisma.event.findMany({
       orderBy: { startAt: "asc" },
       include: {
         _count:        { select: { registrations: true } },
         series:        { select: { id: true, name: true } },
-        tournament:    isMod ? {
-          include: {
-            participants: { include: { user: { select: { id: true, name: true, username: true, image: true } } } },
-            matches:      { orderBy: [{ round: "asc" }, { position: "asc" }], include: { entries: true } },
-            teams:        { include: { members: { include: { user: { select: { id: true, name: true, username: true } } } } } },
-          },
-        } : true,
+        tournament:    { select: { id: true } },
         registrations: { select: { userId: true } },
       },
     }),
-    isMod
-      ? prisma.user.findMany({ select: { id: true, name: true, username: true, image: true }, orderBy: { name: "asc" } })
-      : Promise.resolve([]),
     prisma.lulSeason.findFirst({
       where: { status: "active" },
       include: {
@@ -65,29 +51,10 @@ export default async function EventsPage() {
     }),
   ]);
 
-  // Tournament counts
-  const tournamentIds = eventsRaw.map(e => e.tournament?.id).filter((id): id is string => !!id);
-  const tournamentCounts = tournamentIds.length
-    ? await Promise.all(tournamentIds.map(id =>
-        Promise.all([
-          prisma.tournamentParticipant.count({ where: { tournamentId: id } }),
-          prisma.match.count({ where: { tournamentId: id } }),
-        ]).then(([participants, matches]) => ({ id, participants, matches }))
-      ))
-    : [];
-  const countMap = new Map(tournamentCounts.map(c => [c.id, c]));
-
-  const events = eventsRaw.map(ev => ({
-    ...ev,
-    tournament: ev.tournament
-      ? { ...ev.tournament, _count: countMap.get(ev.tournament.id) ?? { participants: 0, matches: 0 } }
-      : null,
-  }));
-
   // ── Unified chronological item list ──────────────────────────────────────
-  type EventItem   = { kind: "event"; date: Date; finished: boolean; ev: typeof events[number] };
-  type LulItem     = { kind: "lul";   date: Date | null; finished: boolean; st: NonNullable<typeof activeSeason>["spieltage"][number]; seasonLabel: string };
-  type AnyItem     = EventItem | LulItem;
+  type EventItem = { kind: "event"; date: Date; finished: boolean; ev: typeof events[number] };
+  type LulItem   = { kind: "lul";   date: Date | null; finished: boolean; st: NonNullable<typeof activeSeason>["spieltage"][number]; seasonLabel: string };
+  type AnyItem   = EventItem | LulItem;
 
   const seasonLabel = activeSeason?.name ?? (activeSeason ? `Saison ${activeSeason.number}` : "");
 
@@ -99,36 +66,27 @@ export default async function EventsPage() {
       ev,
     })),
     ...(activeSeason?.spieltage ?? []).map(st => ({
-      kind:        "lul" as const,
-      date:        st.scheduledAt ? new Date(st.scheduledAt) : null,
-      finished:    st.status === "finished",
+      kind:     "lul" as const,
+      date:     st.scheduledAt ? new Date(st.scheduledAt) : null,
+      finished: st.status === "finished",
       st,
       seasonLabel,
     })),
   ];
 
-  // Upcoming: ascending by date (soonest first) — null dates go last
-  // Finished: descending by date (most recent first)
-  const upcoming = allItems
+  const upcomingItems = allItems
     .filter(i => !i.finished)
     .sort((a, b) => (a.date?.getTime() ?? Infinity) - (b.date?.getTime() ?? Infinity));
 
-  const finished = allItems
+  const finishedItems = allItems
     .filter(i => i.finished)
     .sort((a, b) => (b.date?.getTime() ?? 0) - (a.date?.getTime() ?? 0));
 
-  const sortedItems = [...upcoming, ...finished];
-
-  const openCount = upcoming.filter(i =>
+  const openCount = upcomingItems.filter(i =>
     i.kind === "event"
       ? (i.ev.status === "open" || i.ev.status === "active")
       : i.st.status === "active"
   ).length;
-
-  // For admin panel
-  const activeEvents   = events.filter(e => e.status !== "finished");
-  const finishedEvents = events.filter(e => e.status === "finished")
-    .sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime());
 
   return (
     <div className="px-5 pb-5 pt-3 sm:p-6 max-w-6xl mx-auto space-y-6 animate-fade-in">
@@ -148,47 +106,19 @@ export default async function EventsPage() {
               : "Alle Events"}
           </p>
         </div>
-        {isMod && <SyncButton />}
       </div>
 
-      {/* ── Admin-Tools ───────────────────────────────────────────────── */}
-      {isMod && (
-        <div className="space-y-3">
-          <EventCreateForm />
-          {activeEvents.length > 0 && (
-            <div className="space-y-2">
-              {activeEvents.map(ev => (
-                <EventAdminRow key={ev.id} event={ev as Parameters<typeof EventAdminRow>[0]["event"]} allUsers={allUsers} />
-              ))}
-            </div>
-          )}
-          {finishedEvents.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest px-1 pt-1">
-                Vergangene Events (bearbeitbar)
-              </p>
-              {finishedEvents.map(ev => (
-                <EventAdminRow key={ev.id} event={ev as Parameters<typeof EventAdminRow>[0]["event"]} allUsers={allUsers} />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── Chronologische Gesamtliste ────────────────────────────────── */}
+      {/* ── Upcoming / Active items ───────────────────────────────────── */}
       <div className="space-y-2">
-        {sortedItems.length === 0 && (
+        {upcomingItems.length === 0 && finishedItems.length === 0 && (
           <EmptyState
             type="events"
             title="Noch keine Events"
-            description="Events werden hier manuell eingetragen und automatisch zu Discord gepusht."
+            description="Schau bald wieder vorbei – Events werden hier angekündigt."
           />
         )}
 
-        {sortedItems.map((item, idx) => {
-          const isFinished = item.finished;
-          const opacity    = isFinished ? "opacity-50 hover:opacity-100 transition-opacity" : "";
-
+        {upcomingItems.map((item, idx) => {
           /* ── Regular event card ── */
           if (item.kind === "event") {
             const { ev } = item;
@@ -206,7 +136,7 @@ export default async function EventsPage() {
 
             return (
               <div key={`ev-${ev.id}`}
-                className={`surface animate-slide-up relative overflow-hidden flex items-start gap-4 p-5 ${opacity}`}
+                className="surface animate-slide-up relative overflow-hidden flex items-start gap-4 p-5"
                 style={{
                   borderRadius: 6,
                   border: isRegistered ? "1px solid rgba(52,211,153,0.18)" : "1px solid rgba(255,255,255,0.06)",
@@ -301,16 +231,16 @@ export default async function EventsPage() {
 
           /* ── LuL Spieltag card ── */
           const { st } = item;
-          const s            = LUL_STATUS[st.status] ?? LUL_STATUS.upcoming;
-          const myEntry      = userId ? st.entries.find(e => e.userId === userId) : null;
-          const myRole       = (myEntry?.role ?? null) as "player" | "spectator" | null;
-          const playerCount  = st.entries.filter(e => e.role === "player").length;
-          const spectCount   = st.entries.filter(e => e.role === "spectator").length;
-          const date         = item.date;
+          const s           = LUL_STATUS[st.status] ?? LUL_STATUS.upcoming;
+          const myEntry     = userId ? st.entries.find(e => e.userId === userId) : null;
+          const myRole      = (myEntry?.role ?? null) as "player" | "spectator" | null;
+          const playerCount = st.entries.filter(e => e.role === "player").length;
+          const spectCount  = st.entries.filter(e => e.role === "spectator").length;
+          const date        = item.date;
 
           return (
             <div key={`lul-${st.id}`}
-              className={`surface animate-slide-up relative overflow-hidden flex items-start gap-4 p-5 ${opacity}`}
+              className="surface animate-slide-up relative overflow-hidden flex items-start gap-4 p-5"
               style={{
                 borderRadius: 6,
                 border: myRole ? "1px solid rgba(251,191,36,0.18)" : "1px solid rgba(255,255,255,0.06)",
@@ -384,6 +314,83 @@ export default async function EventsPage() {
           );
         })}
       </div>
+
+      {/* ── Finished items ─────────────────────────────────────────────── */}
+      {finishedItems.length > 0 && (
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-3 pb-1">
+            <div className="h-px flex-1 bg-white/[0.05]" />
+            <span className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest">Abgeschlossen</span>
+            <div className="h-px flex-1 bg-white/[0.05]" />
+          </div>
+
+          {finishedItems.map(item => {
+            if (item.kind === "event") {
+              const { ev } = item;
+              const discordUrl = ev.discordEventId && GUILD_ID
+                ? `https://discord.com/events/${GUILD_ID}/${ev.discordEventId}` : null;
+              return (
+                <div key={`ev-fin-${ev.id}`}
+                  className="flex items-center gap-3 px-4 py-2.5 rounded-lg border border-white/[0.04] bg-white/[0.015] opacity-50 hover:opacity-75 transition-opacity group">
+                  <GameCover game={ev.game} className="w-9 h-6 shrink-0" rounded="rounded" />
+                  <div className="flex-1 min-w-0">
+                    <Link href={`/events/${ev.id}`}
+                      className="text-sm text-gray-400 font-medium truncate block group-hover:text-gray-300 transition-colors">
+                      {ev.title}
+                    </Link>
+                    <p className="text-[10px] text-gray-600">
+                      {new Date(ev.startAt).toLocaleDateString("de-DE", { day: "2-digit", month: "short", year: "numeric" })}
+                      {ev.series && <> · {ev.series.name}</>}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="flex items-center gap-1 text-[10px] text-gray-600">
+                      <Users className="w-3 h-3" />{ev._count.registrations}
+                    </span>
+                    {discordUrl && (
+                      <a href={discordUrl} target="_blank" rel="noopener noreferrer"
+                        className="text-gray-700 hover:text-gray-500 transition-colors">
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                    <span className="text-[10px] text-gray-600 bg-gray-800/60 border border-white/[0.04] px-1.5 py-0.5 rounded">
+                      Beendet
+                    </span>
+                  </div>
+                </div>
+              );
+            }
+
+            const { st } = item;
+            return (
+              <div key={`lul-fin-${st.id}`}
+                className="flex items-center gap-3 px-4 py-2.5 rounded-lg border border-white/[0.04] bg-white/[0.015] opacity-50 hover:opacity-75 transition-opacity group">
+                <div className="w-9 h-6 shrink-0 flex items-center justify-center rounded bg-amber-900/20">
+                  <Swords className="w-3.5 h-3.5 text-amber-900/60" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <Link href={`/lul/spieltag/${st.id}`}
+                    className="text-sm text-gray-400 font-medium truncate block group-hover:text-gray-300 transition-colors">
+                    Spieltag {st.number}: {st.game}
+                  </Link>
+                  <p className="text-[10px] text-gray-600">
+                    Level-Up-League · {item.seasonLabel}
+                    {st.scheduledAt && <> · {new Date(st.scheduledAt).toLocaleDateString("de-DE", { day: "2-digit", month: "short", year: "numeric" })}</>}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="flex items-center gap-1 text-[10px] text-gray-600">
+                    <Gamepad2 className="w-3 h-3" />{st.entries.filter(e => e.role === "player").length}
+                  </span>
+                  <span className="text-[10px] text-gray-600 bg-gray-800/60 border border-white/[0.04] px-1.5 py-0.5 rounded">
+                    Beendet
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
