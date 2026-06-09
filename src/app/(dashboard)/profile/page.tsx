@@ -61,17 +61,20 @@ export default async function ProfilePage() {
   const month = now.getMonth() + 1;
   const year  = now.getFullYear();
 
-  const [user, eventRegs, tournamentParticipations, tournamentWins, questsWithProgress, ownedCollectibles, leaderboardRank, voiceHourCount, messageTxCount] =
+  const [user, eventRegs, eventCount, tournamentParticipations, tournamentCount, tournamentWins, questsWithProgress, ownedCollectibles, leaderboardRank, voiceHourCount, messageTxCount] =
     await Promise.all([
       prisma.user.findUnique({
         where:  { id: userId },
         select: { id: true, name: true, username: true, image: true, points: true, rankPoints: true, createdAt: true, showcaseJson: true, birthday: true, bio: true },
       }),
+      // Letzte 5 Events für die Anzeige-Liste
       prisma.eventRegistration.findMany({
         where:   { userId },
         include: { event: { select: { title: true, startAt: true, game: true } } },
         orderBy: { joinedAt: "desc" }, take: 5,
       }),
+      // Gesamtzahl für Stats und Abzeichen
+      prisma.eventRegistration.count({ where: { userId } }),
       prisma.tournamentParticipant.findMany({
         where:   { userId },
         include: {
@@ -84,6 +87,8 @@ export default async function ProfilePage() {
         },
         orderBy: { id: "desc" }, take: 10,
       }),
+      // Gesamtzahl für Stats und Abzeichen
+      prisma.tournamentParticipant.count({ where: { userId } }),
       prisma.match.count({ where: { winnerId: userId } }),
       prisma.quest.findMany({
         where:   { month, year },
@@ -119,7 +124,7 @@ export default async function ProfilePage() {
 
   const voiceHours   = voiceHourCount;
   const messageCount = messageTxCount * 10;
-  const badges       = computeBadges({ points: totalPoints, voiceHours, messageCount, eventCount: eventRegs.length, tournamentCount: tournamentParticipations.length, tournamentWins });
+  const badges       = computeBadges({ points: totalPoints, voiceHours, messageCount, eventCount, tournamentCount, tournamentWins });
   const earnedBadges = badges.filter(b => b.earned);
   const memberSince  = new Date(user.createdAt).toLocaleDateString("de-DE", { month: "long", year: "numeric" });
   const displayName  = user.username ?? user.name ?? "Unbekannt";
@@ -208,7 +213,7 @@ export default async function ProfilePage() {
         <div className="grid grid-cols-4"
           style={{ borderTop: "1px solid rgba(255,255,255,0.07)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
           {[
-            { value: String(eventRegs.length),   label: "Events"   },
+            { value: String(eventCount),          label: "Events"   },
             { value: String(tournamentWins),      label: "Siege"    },
             { value: String(earnedBadges.length), label: "Abzeichen"},
             { value: `#${leaderboardRank}`,       label: "Rang"     },
@@ -434,8 +439,8 @@ export default async function ProfilePage() {
               {[
                 { icon: <Clock className="w-3.5 h-3.5" />,         label: "Voice-Stunden",  value: `${voiceHours}h`,          color: "text-teal-400" },
                 { icon: <MessageSquare className="w-3.5 h-3.5" />, label: "Nachrichten",    value: `~${messageCount}`,        color: "text-blue-400"   },
-                { icon: <CalendarDays className="w-3.5 h-3.5" />,  label: "Events besucht", value: String(eventRegs.length),  color: "text-emerald-400"},
-                { icon: <Swords className="w-3.5 h-3.5" />,        label: "Turniere",       value: String(tournamentParticipations.length), color: "text-amber-400" },
+                { icon: <CalendarDays className="w-3.5 h-3.5" />,  label: "Events besucht", value: String(eventCount),     color: "text-emerald-400"},
+                { icon: <Swords className="w-3.5 h-3.5" />,        label: "Turniere",       value: String(tournamentCount), color: "text-amber-400" },
               ].map(s => (
                 <div key={s.label} className="flex items-center justify-between px-4 py-3">
                   <div className={`flex items-center gap-2 text-xs ${s.color}`}>
