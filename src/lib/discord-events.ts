@@ -159,13 +159,16 @@ export async function createDiscordScheduledEvent(event: {
 
 export async function updateDiscordScheduledEvent(
   discordEventId: string,
-  event: { title: string; startAt: Date; description?: string | null }
+  event: { title: string; startAt: Date; description?: string | null; game?: string | null }
 ): Promise<boolean> {
   const guildId  = process.env.DISCORD_GUILD_ID;
   const botToken = process.env.DISCORD_BOT_TOKEN;
   if (!guildId || !botToken) return false;
 
   const endAt = new Date(event.startAt.getTime() + 2 * 60 * 60 * 1000);
+
+  const coverUrl     = getGameCoverUrl(event.game);
+  const imageDataUri = coverUrl ? await fetchImageAsDataUri(coverUrl) : null;
 
   const res = await fetch(
     `https://discord.com/api/v10/guilds/${guildId}/scheduled-events/${discordEventId}`,
@@ -180,6 +183,7 @@ export async function updateDiscordScheduledEvent(
         scheduled_start_time: event.startAt.toISOString(),
         scheduled_end_time:   endAt.toISOString(),
         description: event.description ?? undefined,
+        ...(imageDataUri && { image: imageDataUri }),
       }),
     }
   );
