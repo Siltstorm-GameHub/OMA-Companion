@@ -785,6 +785,11 @@ export default function LulAdminPanel({
     initialSeasons.find(s => s.status === "active")?.id ?? initialSeasons[0]?.id ?? null
   );
   const [expandedSpieltag, setExpandedSpieltag] = useState<string | null>(null);
+  const [editingSpieltagId, setEditingSpieltagId] = useState<string | null>(null);
+  const [editGame, setEditGame] = useState("");
+  const [editGameType, setEditGameType] = useState("");
+  const [editPlatform, setEditPlatform] = useState("");
+  const [editDate, setEditDate] = useState("");
 
   // Inline Spieltag editing
   const [editingSpieltagId, setEditingSpieltagId] = useState<string | null>(null);
