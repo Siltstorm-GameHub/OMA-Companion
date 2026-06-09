@@ -9,6 +9,7 @@ import {
 import { LUL_POINTS } from "@/lib/lul";
 import LiveRefresh from "./LiveRefresh";
 import { getGameCoverUrl, getGameFallbackGradient } from "@/lib/game-cover";
+import { getGenreIcon } from "@/lib/genre-icons";
 
 const STATUS_LABEL: Record<string, string> = {
   upcoming: "Geplant",
@@ -145,9 +146,15 @@ export default async function LulSpieltagPage({
                 })}
               </p>
             )}
-            {spieltag.gameType && (
-              <span className="text-xs text-gray-600">{spieltag.gameType}</span>
-            )}
+            {spieltag.gameType && (() => {
+              const icon = getGenreIcon(spieltag.gameType);
+              return (
+                <span className="flex items-center gap-1.5 text-xs text-gray-500">
+                  {icon && <img src={icon.src} alt={icon.alt} className="w-4 h-4 object-contain" />}
+                  {spieltag.gameType}
+                </span>
+              );
+            })()}
             {spieltag.platform && (
               <span className="text-xs text-gray-600">· {spieltag.platform}</span>
             )}

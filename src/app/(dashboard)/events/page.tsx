@@ -11,6 +11,7 @@ import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
 import GameCover from "@/components/GameCover";
 import LulRegisterButton from "@/components/LulRegisterButton";
+import { getGenreIcon } from "@/lib/genre-icons";
 
 const EVENT_STATUS: Record<string, { label: string; badge: string; bar: string; glow: string; dot: string }> = {
   open:     { label: "Offen",   badge: "text-blue-300 bg-blue-500/10 border border-blue-500/20",             bar: "bg-blue-400",   glow: "from-blue-500/5",    dot: "bg-blue-400"              },
@@ -54,7 +55,6 @@ export default async function EventsPage() {
     }),
   ]);
 
-  // ── Unified chronological item list ──────────────────────────────────────
   type EventItem = { kind: "event"; date: Date; finished: boolean; ev: typeof events[number] };
   type LulItem   = { kind: "lul";   date: Date | null; finished: boolean; st: NonNullable<typeof activeSeason>["spieltage"][number]; seasonLabel: string };
   type AnyItem   = EventItem | LulItem;
@@ -94,7 +94,6 @@ export default async function EventsPage() {
   return (
     <div className="px-5 pb-5 pt-3 sm:p-6 max-w-6xl mx-auto space-y-6 animate-fade-in">
 
-      {/* ── Header ────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5 mb-1">
@@ -112,7 +111,6 @@ export default async function EventsPage() {
         {isMod && <SyncButton />}
       </div>
 
-      {/* ── Upcoming / Active items ───────────────────────────────────── */}
       <div className="space-y-2">
         {upcomingItems.length === 0 && finishedItems.length === 0 && (
           <EmptyState
@@ -123,7 +121,6 @@ export default async function EventsPage() {
         )}
 
         {upcomingItems.map((item, idx) => {
-          /* ── Regular event card ── */
           if (item.kind === "event") {
             const { ev } = item;
             const s            = EVENT_STATUS[ev.status] ?? EVENT_STATUS.finished;
@@ -147,11 +144,8 @@ export default async function EventsPage() {
                   boxShadow: "0 4px 20px rgba(0,0,0,0.45)",
                   animationDelay: `${idx * 30}ms`,
                 }}>
-
                 <div className={`absolute left-0 top-4 bottom-4 w-[3px] rounded-r-full ${isRegistered ? "bg-emerald-400" : s.bar}`} />
                 <div className={`absolute inset-0 bg-gradient-to-r ${isRegistered ? "from-emerald-500/4" : s.glow} to-transparent opacity-60 pointer-events-none`} />
-
-                {/* Cover + Datum */}
                 <div className="relative shrink-0 flex flex-col items-center gap-1.5">
                   <GameCover game={ev.game} className="w-20 h-[52px]" rounded="rounded-lg" />
                   <div className="text-center">
@@ -161,8 +155,6 @@ export default async function EventsPage() {
                     <RelativeTime date={date} className="text-[9px] text-gray-600 mt-0.5 block tabular-nums" />
                   </div>
                 </div>
-
-                {/* Inhalt */}
                 <div className="relative flex-1 min-w-0">
                   {hasSeries && (
                     <Link href={`/events/series/${ev.seriesId}`}
@@ -213,8 +205,6 @@ export default async function EventsPage() {
                     )}
                   </div>
                 </div>
-
-                {/* Status + Anmelden */}
                 <div className="relative flex flex-col items-end gap-2 shrink-0">
                   <span className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium ${s.badge}`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
@@ -233,7 +223,6 @@ export default async function EventsPage() {
             );
           }
 
-          /* ── LuL Spieltag card ── */
           const { st } = item;
           const s           = LUL_STATUS[st.status] ?? LUL_STATUS.upcoming;
           const myEntry     = userId ? st.entries.find(e => e.userId === userId) : null;
@@ -241,6 +230,7 @@ export default async function EventsPage() {
           const playerCount = st.entries.filter(e => e.role === "player").length;
           const spectCount  = st.entries.filter(e => e.role === "spectator").length;
           const date        = item.date;
+          const genreIcon   = getGenreIcon((st as { gameType?: string | null }).gameType);
 
           return (
             <div key={`lul-${st.id}`}
@@ -251,11 +241,8 @@ export default async function EventsPage() {
                 boxShadow: "0 4px 20px rgba(0,0,0,0.45)",
                 animationDelay: `${idx * 30}ms`,
               }}>
-
               <div className={`absolute left-0 top-4 bottom-4 w-[3px] rounded-r-full ${myRole ? "bg-amber-400" : s.bar}`} />
               <div className={`absolute inset-0 bg-gradient-to-r ${myRole ? "from-amber-500/5" : "from-transparent"} to-transparent opacity-60 pointer-events-none`} />
-
-              {/* Cover + Datum */}
               <div className="relative shrink-0 flex flex-col items-center gap-1.5">
                 <GameCover game={st.game} className="w-20 h-[52px]" rounded="rounded-lg" />
                 {date ? (
@@ -269,8 +256,6 @@ export default async function EventsPage() {
                   <p className="text-[10px] text-gray-600">Datum TBD</p>
                 )}
               </div>
-
-              {/* Inhalt */}
               <div className="relative flex-1 min-w-0">
                 <Link href="/lul"
                   className="flex items-center gap-1 mb-1 hover:text-amber-300 transition-colors group/lul">
@@ -282,10 +267,11 @@ export default async function EventsPage() {
                 <Link href={`/lul/spieltag/${st.id}`}
                   className="font-semibold text-white text-base truncate hover:text-amber-300 transition-colors block mb-1.5">
                   Spieltag {st.number}: {st.game}
-                  {st.gameType && <span className="text-sm text-gray-500 font-normal ml-2">{st.gameType}</span>}
+                  {(st as { gameType?: string | null }).gameType && <span className="text-sm text-gray-500 font-normal ml-2">{(st as { gameType?: string | null }).gameType}</span>}
                 </Link>
                 <div className="flex items-center gap-3 flex-wrap">
-                  {st.platform && <span className="text-xs text-gray-500">{st.platform}</span>}
+                  {genreIcon && <img src={genreIcon.src} alt={genreIcon.alt} className="w-4 h-4 object-contain" />}
+                  {(st as { platform?: string | null }).platform && <span className="text-xs text-gray-500">{(st as { platform?: string | null }).platform}</span>}
                   <span className="flex items-center gap-1 text-xs text-gray-500">
                     <Gamepad2 className="w-3 h-3" />{playerCount} Mitspieler
                   </span>
@@ -303,8 +289,6 @@ export default async function EventsPage() {
                   </Link>
                 </div>
               </div>
-
-              {/* Status + Anmelden */}
               <div className="relative flex flex-col items-end gap-2 shrink-0">
                 <span className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium ${s.badge}`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
@@ -319,7 +303,6 @@ export default async function EventsPage() {
         })}
       </div>
 
-      {/* ── Finished items ─────────────────────────────────────────────── */}
       {finishedItems.length > 0 && (
         <div className="space-y-1.5">
           <div className="flex items-center gap-3 pb-1">
