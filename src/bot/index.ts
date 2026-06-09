@@ -31,7 +31,7 @@ client.once(Events.ClientReady, async (c) => {
   // ── STATUS PERSONALISIERUNG ──────────────────────────────────────────────
   c.user.setPresence({
     activities: [{ 
-        name: 'https://oma-companion.vercel.app/', // <--- Hier deine echte Domain eintragen!
+        name: 'https://oma-app.de/', // <--- Hier deine echte Domain eintragen!
         type: ActivityType.Watching   // Zeigt "Schaut auf ..."
     }],
     status: PresenceUpdateStatus.Online, // Grüner Online-Punkt
