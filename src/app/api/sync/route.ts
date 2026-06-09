@@ -29,9 +29,10 @@ export async function POST() {
     } else {
       // Noch kein Discord-Event → neu anlegen
       const discordEventId = await createDiscordScheduledEvent({
-        title: ev.title,
-        startAt: ev.startAt,
+        title:       ev.title,
+        startAt:     ev.startAt,
         description: ev.description,
+        game:        ev.game,
       });
       if (discordEventId) {
         await prisma.event.update({ where: { id: ev.id }, data: { discordEventId } });

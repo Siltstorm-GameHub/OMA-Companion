@@ -45,8 +45,9 @@ export async function POST(req: NextRequest) {
   // Discord Scheduled Event automatisch anlegen
   const discordEventId = await createDiscordScheduledEvent({
     title,
-    startAt: startDate,
+    startAt:     startDate,
     description: description ?? null,
+    game:        game ?? null,
   });
   if (discordEventId) {
     await prisma.event.update({
