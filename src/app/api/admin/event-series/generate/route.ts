@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { calcNextDate, type RecurrenceType, type MonthlyMode } from "@/lib/recurrence";
+import { createDiscordScheduledEvent, announceNewEvent } from "@/lib/discord-events";
 
 /**
  * POST /api/admin/event-series/generate
@@ -34,18 +35,50 @@ export async function POST(req: NextRequest) {
     new Date(referenceEvent.startAt),
   );
 
+  const game            = series.fixedGame ?? lastEvent.game ?? null;
+  const discordChannelId = series.discordChannelId ?? lastEvent.discordChannelId ?? null;
+
   const newEvent = await prisma.event.create({
     data: {
-      title:           lastEvent.title,
-      game:            series.fixedGame ?? lastEvent.game ?? null,
-      startAt:         nextDate,
-      maxPlayers:      lastEvent.maxPlayers,
-      pointReward:     lastEvent.pointReward,
-      type:            lastEvent.type,
-      discordChannelId: series.discordChannelId ?? lastEvent.discordChannelId ?? null,
+      title:  lastEvent.title,
+      game,
+      startAt: nextDate,
+      maxPlayers:  lastEvent.maxPlayers,
+      pointReward: lastEvent.pointReward,
+      type:        lastEvent.type,
+      discordChannelId,
       seriesId,
     },
   });
+
+  // Discord Scheduled Event + Kanal-Ankündigung (mit Coverbild)
+  const [discordEventId, discordMessageId] = await Promise.all([
+    createDiscordScheduledEvent({
+      title:       newEvent.title,
+      startAt:     newEvent.startAt,
+      description: null,
+      game,
+    }),
+    announceNewEvent({
+      title:            newEvent.title,
+      game,
+      startAt:          newEvent.startAt,
+      maxPlayers:       newEvent.maxPlayers,
+      pointReward:      newEvent.pointReward,
+      discordChannelId,
+    }),
+  ]);
+
+  // IDs zurückschreiben
+  if (discordEventId || discordMessageId) {
+    await prisma.event.update({
+      where: { id: newEvent.id },
+      data: {
+        ...(discordEventId   && { discordEventId }),
+        ...(discordMessageId && { discordMessageId }),
+      },
+    });
+  }
 
   return NextResponse.json({ ok: true, event: newEvent });
 }
