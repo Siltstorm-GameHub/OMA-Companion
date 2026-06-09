@@ -5,6 +5,7 @@ import {
   ChevronRight, Check, Repeat, Gamepad2,
 } from "lucide-react";
 import RegisterButton from "./RegisterButton";
+import SyncButton from "./SyncButton";
 import { RelativeTime } from "@/components/RelativeTime";
 import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
@@ -29,6 +30,8 @@ const GUILD_ID = process.env.DISCORD_GUILD_ID ?? "";
 export default async function EventsPage() {
   const session = await auth();
   const userId  = session?.user?.id;
+  const role    = (session?.user as { role?: string } | undefined)?.role ?? "user";
+  const isMod   = role === "moderator" || role === "admin";
 
   const [events, activeSeason] = await Promise.all([
     prisma.event.findMany({
@@ -106,6 +109,7 @@ export default async function EventsPage() {
               : "Alle Events"}
           </p>
         </div>
+        {isMod && <SyncButton />}
       </div>
 
       {/* ── Upcoming / Active items ───────────────────────────────────── */}
