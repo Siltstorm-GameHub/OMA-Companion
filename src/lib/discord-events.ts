@@ -4,13 +4,21 @@ import { getGameCoverUrl } from "@/lib/game-cover";
 /** Lädt ein Bild von einer URL und gibt es als Base64-Data-URI zurück. */
 async function fetchImageAsDataUri(url: string): Promise<string | null> {
   try {
-    const res = await fetch(url, { next: { revalidate: 86400 } });
-    if (!res.ok) return null;
-    const contentType = res.headers.get("content-type") ?? "image/jpeg";
-    const buffer = await res.arrayBuffer();
-    const base64 = Buffer.from(buffer).toString("base64");
-    return `data:${contentType};base64,${base64}`;
-  } catch {
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; OMACompanion/1.0)" },
+    });
+    if (!res.ok) {
+      console.error(`[Discord] Bild-Fetch fehlgeschlagen: ${res.status} ${url}`);
+      return null;
+    }
+    // Nur MIME-Typ, ohne Parameter (z.B. "image/jpeg; charset=…" → "image/jpeg")
+    const rawType   = res.headers.get("content-type") ?? "image/jpeg";
+    const mimeType  = rawType.split(";")[0].trim();
+    const buffer    = await res.arrayBuffer();
+    const base64    = Buffer.from(buffer).toString("base64");
+    return `data:${mimeType};base64,${base64}`;
+  } catch (err) {
+    console.error(`[Discord] Bild-Fetch Exception: ${err} ${url}`);
     return null;
   }
 }
@@ -112,8 +120,10 @@ export async function createDiscordScheduledEvent(event: {
   const endAt = new Date(event.startAt.getTime() + 2 * 60 * 60 * 1000);
 
   // Cover-Bild als Base64-Data-URI (Discord akzeptiert keine externen URLs)
-  const coverUrl   = getGameCoverUrl(event.game);
+  const coverUrl     = getGameCoverUrl(event.game);
   const imageDataUri = coverUrl ? await fetchImageAsDataUri(coverUrl) : null;
+  if (event.game && !coverUrl)    console.warn(`[Discord] Kein Cover für Spiel: "${event.game}"`);
+  if (coverUrl   && !imageDataUri) console.warn(`[Discord] Cover-Fetch fehlgeschlagen: ${coverUrl}`);
 
   const res = await fetch(
     `https://discord.com/api/v10/guilds/${guildId}/scheduled-events`,
