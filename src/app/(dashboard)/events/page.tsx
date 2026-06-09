@@ -69,7 +69,10 @@ export default async function EventsPage() {
 
   // Aufteilen: aktiv vs. vergangen
   const activeEvents   = events.filter(e => e.status !== "finished");
-  const finishedEvents = events.filter(e => e.status === "finished");
+  // Vergangene Events neueste zuerst
+  const finishedEvents = events
+    .filter(e => e.status === "finished")
+    .sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime());
 
   // Pro Eventreihe nur das nächste (früheste) Event anzeigen
   const seenSeriesIds = new Set<string>();
