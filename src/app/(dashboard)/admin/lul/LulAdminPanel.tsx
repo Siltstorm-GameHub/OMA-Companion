@@ -5,7 +5,7 @@ import { fireConfetti } from "@/components/ConfettiTrigger";
 import {
   Plus, Trophy, ChevronDown, ChevronUp, Trash2, Save,
   Users, Gamepad2, Lock, RefreshCw, Archive, History, UserPlus, X, Search,
-  Eye, Vote, Crown, Gift, Flame, CheckCircle2,
+  Eye, Vote, Crown, Gift, Flame, CheckCircle2, PenLine, Check,
 } from "lucide-react";
 import type { LulAdminSeasons } from "./page";
 import { UserPickerSheet } from "@/components/UserPickerSheet";
@@ -786,6 +786,13 @@ export default function LulAdminPanel({
   );
   const [expandedSpieltag, setExpandedSpieltag] = useState<string | null>(null);
 
+  // Inline Spieltag editing
+  const [editingSpieltagId, setEditingSpieltagId] = useState<string | null>(null);
+  const [editGame, setEditGame] = useState("");
+  const [editGameType, setEditGameType] = useState("");
+  const [editPlatform, setEditPlatform] = useState("");
+  const [editDate, setEditDate] = useState("");
+
   // Create season form
   const [showSeasonForm, setShowSeasonForm] = useState(false);
   const [sNumber, setSNumber] = useState(initialSeasons.length + 1);
@@ -880,6 +887,28 @@ export default function LulAdminPanel({
     setShowSpieltagForm(null);
     setStGame(""); setStGameType(""); setStPlatform(""); setStDate("");
     await loadSeasons();
+  }
+
+  async function saveSpieltag(id: string) {
+    setLoading(true);
+    const res = await fetch(`/api/lul/spieltage/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        game: editGame || undefined,
+        gameType: editGameType || undefined,
+        platform: editPlatform || undefined,
+        scheduledAt: editDate || null,
+      }),
+    });
+    setLoading(false);
+    if (res.ok) {
+      toast.success("Spieltag aktualisiert");
+      setEditingSpieltagId(null);
+      await loadSeasons();
+    } else {
+      toast.error("Fehler beim Speichern");
+    }
   }
 
   async function deleteSpieltag(id: string) {
@@ -1032,31 +1061,88 @@ export default function LulAdminPanel({
                   return (
                     <div key={st.id} className="border border-gray-700 rounded-xl overflow-hidden">
                       <div className="flex items-center gap-3 px-4 py-3 bg-gray-800/40">
-                        <button onClick={() => setExpandedSpieltag(isStExp ? null : st.id)}
-                          className="flex-1 flex items-center gap-3 text-left min-w-0">
-                          <div className={`w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold shrink-0 ${
-                            st.status === "finished" ? "bg-amber-900/40 text-amber-300" : "bg-gray-700 text-gray-400"
-                          }`}>{st.number}</div>
-                          <div className="min-w-0">
-                            <p className="text-sm text-white font-medium">{st.game}</p>
-                            {st.scheduledAt && (
-                              <p className="text-[10px] text-gray-500">
-                                {new Date(st.scheduledAt).toLocaleDateString("de-DE", { day:"2-digit", month:"long", year:"numeric" })}
-                              </p>
-                            )}
+                        {editingSpieltagId === st.id ? (
+                          <div className="flex-1 space-y-2">
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="text-[10px] text-gray-500 block mb-1">Spiel *</label>
+                                <GameNameInput
+                                  value={editGame}
+                                  onChange={setEditGame}
+                                  placeholder="z.B. Brawlhalla"
+                                  className="w-full text-xs bg-gray-700 border border-gray-600 text-white rounded-lg px-2 py-1.5"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[10px] text-gray-500 block mb-1">Datum & Uhrzeit</label>
+                                <input type="datetime-local" value={editDate} onChange={e => setEditDate(e.target.value)}
+                                  className="w-full text-xs bg-gray-700 border border-gray-600 text-white rounded-lg px-2 py-1.5" />
+                              </div>
+                              <div>
+                                <label className="text-[10px] text-gray-500 block mb-1">Spieltyp</label>
+                                <input type="text" value={editGameType} onChange={e => setEditGameType(e.target.value)} placeholder="z.B. Beat-em Up"
+                                  className="w-full text-xs bg-gray-700 border border-gray-600 text-white rounded-lg px-2 py-1.5" />
+                              </div>
+                              <div>
+                                <label className="text-[10px] text-gray-500 block mb-1">Plattform</label>
+                                <input type="text" value={editPlatform} onChange={e => setEditPlatform(e.target.value)} placeholder="PC/Konsole"
+                                  className="w-full text-xs bg-gray-700 border border-gray-600 text-white rounded-lg px-2 py-1.5" />
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <button onClick={() => saveSpieltag(st.id)} disabled={loading || !editGame}
+                                className="flex items-center gap-1.5 text-xs bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white rounded-lg px-2.5 py-1.5">
+                                <Check className="w-3 h-3" /> Speichern
+                              </button>
+                              <button onClick={() => setEditingSpieltagId(null)}
+                                className="text-xs text-gray-500 hover:text-white px-2.5 py-1.5">
+                                Abbrechen
+                              </button>
+                            </div>
                           </div>
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded border ${stCls}`}>
-                            {STATUS_LABEL[st.status] ?? st.status}
-                          </span>
-                          <span className="text-xs text-gray-600">
-                            <Users className="w-3 h-3 inline mr-1" />{st.entries.length}
-                          </span>
-                        </button>
-                        <button onClick={() => deleteSpieltag(st.id)}
-                          className="text-gray-600 hover:text-red-500 transition-colors p-1 rounded">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                        {isStExp ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+                        ) : (
+                          <button onClick={() => setExpandedSpieltag(isStExp ? null : st.id)}
+                            className="flex-1 flex items-center gap-3 text-left min-w-0">
+                            <div className={`w-6 h-6 rounded-md flex items-center justify-center text-xs font-bold shrink-0 ${
+                              st.status === "finished" ? "bg-amber-900/40 text-amber-300" : "bg-gray-700 text-gray-400"
+                            }`}>{st.number}</div>
+                            <div className="min-w-0">
+                              <p className="text-sm text-white font-medium">{st.game}</p>
+                              {st.scheduledAt && (
+                                <p className="text-[10px] text-gray-500">
+                                  {new Date(st.scheduledAt).toLocaleDateString("de-DE", { day:"2-digit", month:"long", year:"numeric" })}
+                                </p>
+                              )}
+                            </div>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded border ${stCls}`}>
+                              {STATUS_LABEL[st.status] ?? st.status}
+                            </span>
+                            <span className="text-xs text-gray-600">
+                              <Users className="w-3 h-3 inline mr-1" />{st.entries.length}
+                            </span>
+                          </button>
+                        )}
+                        {editingSpieltagId !== st.id && (
+                          <>
+                            <button
+                              onClick={() => {
+                                setEditGame(st.game);
+                                setEditGameType(st.gameType ?? "");
+                                setEditPlatform(st.platform ?? "");
+                                setEditDate(st.scheduledAt ? new Date(st.scheduledAt).toISOString().slice(0, 16) : "");
+                                setEditingSpieltagId(st.id);
+                              }}
+                              className="text-gray-600 hover:text-amber-400 transition-colors p-1 rounded"
+                              title="Spieltag bearbeiten">
+                              <PenLine className="w-3.5 h-3.5" />
+                            </button>
+                            <button onClick={() => deleteSpieltag(st.id)}
+                              className="text-gray-600 hover:text-red-500 transition-colors p-1 rounded">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                            {isStExp ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+                          </>
+                        )}
                       </div>
 
                       {isStExp && (
