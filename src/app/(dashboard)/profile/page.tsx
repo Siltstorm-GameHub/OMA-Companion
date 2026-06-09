@@ -1,11 +1,13 @@
-﻿import { auth } from "@/auth";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import PointsInfoModal from "./PointsInfoModal";
 import { QUEST_TYPE_META, type QuestType } from "@/lib/quests";
 import { RARITY_CONFIG, type Rarity, MAX_SHOWCASE } from "@/lib/collectibles";
-import { Trophy, Star, CalendarDays, Swords, Clock, MessageSquare, CheckCircle2, Coins, Crown, Gamepad2 } from "lucide-react";
-import { RelativeTime } from "@/components/RelativeTime";
+import {
+  Trophy, Star, CalendarDays, Swords, Clock, MessageSquare,
+  CheckCircle2, Coins, Crown, Gamepad2,
+} from "lucide-react";
 import Image from "next/image";
 import CollectiblesShowcase from "./CollectiblesShowcase";
 import ProfileEditor from "./ProfileEditor";
@@ -24,12 +26,11 @@ const RANK_THRESHOLDS = [
 function getRank(points: number) {
   return [...RANK_THRESHOLDS].reverse().find(r => points >= r.min) ?? RANK_THRESHOLDS[0];
 }
-
 function getNextRank(points: number) {
   return RANK_THRESHOLDS.find(r => r.min > points) ?? null;
 }
 
-// ── Aktivitäts-Abzeichen ──────────────────────────────────────────────────────
+// ── Abzeichen ─────────────────────────────────────────────────────────────────
 interface Badge { id: string; icon: string; name: string; desc: string; earned: boolean; category: string }
 function computeBadges(d: { points: number; voiceHours: number; messageCount: number; eventCount: number; tournamentCount: number; tournamentWins: number }): Badge[] {
   return [
@@ -52,6 +53,11 @@ function computeBadges(d: { points: number; voiceHours: number; messageCount: nu
   ];
 }
 
+const BADGE_CATEGORY_LABELS = {
+  Community: "Community", Aktivität: "Aktivität",
+  Events: "Events", Turniere: "Turniere", Punkte: "Punkte",
+};
+
 export default async function ProfilePage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
@@ -67,13 +73,11 @@ export default async function ProfilePage() {
         where:  { id: userId },
         select: { id: true, name: true, username: true, image: true, points: true, rankPoints: true, createdAt: true, showcaseJson: true, birthday: true, bio: true },
       }),
-      // Letzte 5 Events für die Anzeige-Liste
       prisma.eventRegistration.findMany({
         where:   { userId },
         include: { event: { select: { title: true, startAt: true, game: true } } },
         orderBy: { joinedAt: "desc" }, take: 5,
       }),
-      // Gesamtzahl für Stats und Abzeichen
       prisma.eventRegistration.count({ where: { userId } }),
       prisma.tournamentParticipant.findMany({
         where:   { userId },
@@ -87,7 +91,6 @@ export default async function ProfilePage() {
         },
         orderBy: { id: "desc" }, take: 10,
       }),
-      // Gesamtzahl für Stats und Abzeichen
       prisma.tournamentParticipant.count({ where: { userId } }),
       prisma.match.count({ where: { winnerId: userId } }),
       prisma.quest.findMany({
@@ -104,23 +107,23 @@ export default async function ProfilePage() {
         },
         orderBy: { createdAt: "desc" },
       }),
-      // Rang in der Gesamtrangliste (basiert auf rankPoints)
       prisma.user.findUnique({ where: { id: userId }, select: { rankPoints: true } }).then(async (u) => {
         const higher = await prisma.user.count({ where: { rankPoints: { gt: u?.rankPoints ?? 0 } } });
         return higher + 1;
       }),
-      // Aktivitäts-Stats aus PointTransactions ableiten (je Transaktion = 1 Stunde / 10 Nachrichten)
       prisma.pointTransaction.count({ where: { userId, reason: { contains: "Sprachkanal" } } }),
       prisma.pointTransaction.count({ where: { userId, reason: { contains: "Nachrichten" } } }),
     ]);
 
   if (!user) redirect("/login");
 
-  const totalPoints  = user.points;      // Münzen (Shop-Währung)
-  const rankPoints   = user.rankPoints;  // Ranglisten-Punkte (LuL, Turniere, Events)
-  const currentRank  = getRank(rankPoints);
-  const nextRank     = getNextRank(rankPoints);
-  const rankPct      = nextRank ? Math.min(100, Math.round(((rankPoints - currentRank.min) / (nextRank.min - currentRank.min)) * 100)) : 100;
+  const totalPoints = user.points;
+  const rankPoints  = user.rankPoints;
+  const currentRank = getRank(rankPoints);
+  const nextRank    = getNextRank(rankPoints);
+  const rankPct     = nextRank
+    ? Math.min(100, Math.round(((rankPoints - currentRank.min) / (nextRank.min - currentRank.min)) * 100))
+    : 100;
 
   const voiceHours   = voiceHourCount;
   const messageCount = messageTxCount * 10;
@@ -129,7 +132,8 @@ export default async function ProfilePage() {
   const memberSince  = new Date(user.createdAt).toLocaleDateString("de-DE", { month: "long", year: "numeric" });
   const displayName  = user.username ?? user.name ?? "Unbekannt";
 
-  // Showcase-Items
+  const totalUsers = await prisma.user.count();
+
   const showcaseIds: string[] = (() => {
     try { return JSON.parse(user.showcaseJson ?? "[]"); } catch { return []; }
   })();
@@ -137,7 +141,6 @@ export default async function ProfilePage() {
     .map(id => ownedCollectibles.find(o => o.collectibleItemId === id)?.collectibleItem ?? null)
     .filter(Boolean) as typeof ownedCollectibles[0]["collectibleItem"][];
 
-  // Eigene Collectibles nach Sammlung gruppiert
   const collectiblesByCollection = ownedCollectibles.reduce<Record<string, {
     collection: { id: string; name: string; coverImageUrl: string | null };
     items: typeof ownedCollectibles[0]["collectibleItem"][];
@@ -149,131 +152,101 @@ export default async function ProfilePage() {
   }, {});
 
   return (
-    <div className="animate-fade-in">
+    <div className="p-5 sm:p-6 max-w-7xl mx-auto space-y-5 animate-fade-in">
 
-      {/* ════════════════════════════════════════════════════════════════ */}
-      {/* FACEIT-style Profile Header                                     */}
-      {/* ════════════════════════════════════════════════════════════════ */}
+      {/* ── Hero ────────────────────────────────────────────────────── */}
+      <div className="glass card-shine relative overflow-hidden rounded-2xl p-6">
+        <div className="absolute inset-0 bg-gradient-to-br from-teal-500/10 via-transparent to-teal-900/10 pointer-events-none" />
+        <div className="absolute inset-0 bg-grid opacity-30 pointer-events-none" />
+        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-teal-500/40 to-transparent pointer-events-none" />
 
-      {/* ── Banner ──────────────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden" style={{ height: "156px" }}>
-        {/* Dark teal gradient base */}
-        <div className="absolute inset-0"
-          style={{ background: "linear-gradient(135deg, #052e26 0%, #0a1f1c 35%, #0d0d0f 85%)" }} />
-        {/* Radial glow accents */}
-        <div className="absolute inset-0"
-          style={{ backgroundImage: "radial-gradient(ellipse at 18% 70%, rgba(20,184,166,0.28) 0%, transparent 52%), radial-gradient(ellipse at 70% 30%, rgba(13,148,136,0.16) 0%, transparent 50%)" }} />
-        {/* Subtle grid */}
-        <div className="absolute inset-0 opacity-[0.035]"
-          style={{ backgroundImage: "linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
-        {/* Bottom fade to bg */}
-        <div className="absolute bottom-0 inset-x-0 h-28"
-          style={{ background: "linear-gradient(to bottom, transparent, var(--bg-base))" }} />
-      </div>
-
-      {/* ── Profile row — overlaps banner bottom ────────────────────────── */}
-      <div className="relative -mt-[4.5rem] px-5 sm:px-6 max-w-7xl mx-auto flex items-end gap-4">
-        {/* Avatar */}
-        <div className="relative z-10 shrink-0">
-          {user.image
-            ? <Image src={user.image} alt="avatar" width={96} height={96}
-                className="w-24 h-24 object-cover"
-                style={{ borderRadius: "4px", border: "3px solid rgba(20,184,166,0.55)", boxShadow: "0 0 0 1px rgba(20,184,166,0.18), 0 8px 32px rgba(0,0,0,0.85)" }} />
-            : <div className="w-24 h-24 flex items-center justify-center text-3xl font-black text-white"
-                style={{ borderRadius: "4px", background: "linear-gradient(135deg, #14b8a6, #8b2020)", border: "3px solid rgba(20,184,166,0.55)", boxShadow: "0 8px 32px rgba(0,0,0,0.85)" }}>
-                {displayName[0].toUpperCase()}
-              </div>}
-          <span className="absolute bottom-0 right-0 w-4 h-4 bg-emerald-400 border-2"
-            style={{ borderRadius: "3px", borderColor: "var(--bg-base)", boxShadow: "0 0 8px rgba(52,211,153,0.8)" }} />
-        </div>
-
-        {/* Name + Rank */}
-        <div className="relative z-10 flex-1 min-w-0 pb-2">
-          <div className="flex items-center gap-2.5 flex-wrap mb-1">
-            <h1 className="font-display text-2xl sm:text-3xl font-black text-white tracking-tight leading-none">
-              {displayName}
-            </h1>
-            <span className={`flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-sm font-semibold border ${currentRank.color} ${currentRank.bg} ${currentRank.border}`}>
-              {currentRank.emoji} {currentRank.label}
-            </span>
+        <div className="relative flex items-center gap-5 flex-wrap">
+          {/* Avatar */}
+          <div className="relative shrink-0">
+            {user.image
+              ? <Image src={user.image} alt={displayName} width={80} height={80}
+                  className="w-20 h-20 rounded-2xl ring-2 ring-teal-500/40 object-cover shadow-[0_0_24px_rgba(20,184,166,0.25)]" />
+              : <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-teal-600 to-teal-950 flex items-center justify-center text-2xl font-bold text-white">
+                  {displayName[0].toUpperCase()}
+                </div>}
+            <span className="absolute bottom-1 right-1 w-3 h-3 bg-emerald-400 rounded-full border-2 border-[#0d0d0f]"
+              style={{ boxShadow: "0 0 6px rgba(52,211,153,0.8)" }} />
           </div>
-          <p className="text-[11px] text-gray-500">Mitglied seit {memberSince}</p>
-          <div className="flex items-center gap-1 mt-1">
-            <Coins className="w-3 h-3 text-amber-400" />
-            <span className="text-[11px] text-amber-400 font-medium tabular-nums">{totalPoints.toLocaleString("de-DE")} Münzen</span>
-          </div>
-        </div>
 
-        {/* Ranglisten-Punkte + Info — right side */}
-        <div className="relative z-10 hidden sm:flex items-center gap-2 pb-2 shrink-0">
-          <Star className="w-4 h-4 text-teal-400" />
-          <span className="text-sm font-bold text-teal-400 tabular-nums">{rankPoints.toLocaleString("de-DE")} Punkte</span>
-          <PointsInfoModal />
-        </div>
-      </div>
-
-      {/* ── Stats strip (FACEIT-style horizontal bar) ───────────────────── */}
-      <div className="mt-4 px-5 sm:px-6 max-w-7xl mx-auto">
-        <div className="grid grid-cols-4"
-          style={{ borderTop: "1px solid rgba(255,255,255,0.07)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-          {[
-            { value: String(eventCount),          label: "Events"   },
-            { value: String(tournamentWins),      label: "Siege"    },
-            { value: String(earnedBadges.length), label: "Abzeichen"},
-            { value: `#${leaderboardRank}`,       label: "Rang"     },
-          ].map((s, i) => (
-            <div key={s.label} className="text-center py-4 px-2"
-              style={{ borderRight: i < 3 ? "1px solid rgba(255,255,255,0.07)" : "none" }}>
-              <p className="font-display text-xl sm:text-2xl font-black text-white tabular-nums leading-none">{s.value}</p>
-              <p className="text-[10px] text-gray-600 mt-1.5 uppercase tracking-widest">{s.label}</p>
+          {/* Info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap mb-0.5">
+              <h1 className="text-2xl font-bold text-white tracking-tight">{displayName}</h1>
+              <span className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded font-semibold border ${currentRank.color} ${currentRank.bg} ${currentRank.border}`}>
+                {currentRank.emoji} {currentRank.label}
+              </span>
             </div>
-          ))}
+            <p className="text-xs text-gray-500 mb-1">
+              Mitglied seit {memberSince} · {earnedBadges.length} Abzeichen
+            </p>
+            <div className="flex items-center gap-1 mb-2">
+              <Coins className="w-3 h-3 text-amber-400" />
+              <span className="text-xs text-amber-400 font-medium tabular-nums">{totalPoints.toLocaleString("de-DE")} Münzen</span>
+            </div>
+            <p className="text-sm font-bold text-teal-400">{rankPoints.toLocaleString("de-DE")} Punkte</p>
+
+            {/* Rang-Fortschrittsbalken */}
+            <div className="mt-3 max-w-xs">
+              {nextRank ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] text-gray-600 whitespace-nowrap">{currentRank.emoji} {currentRank.label}</span>
+                  <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
+                    <div className="h-full rounded-full transition-all duration-1000"
+                      style={{ width: `${rankPct}%`, background: "linear-gradient(90deg, #14b8a6, #2dd4bf)", boxShadow: "0 0 6px rgba(20,184,166,0.6)" }} />
+                  </div>
+                  <span className="text-[9px] text-gray-600 whitespace-nowrap">{nextRank.emoji} {nextRank.label}</span>
+                  <span className="text-[9px] text-teal-400 tabular-nums">{rankPct}%</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1 text-[10px] text-amber-400 font-semibold">
+                  <Crown className="w-3 h-3" /> Maximalen Rang erreicht
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Rang-Block */}
+          <div className="glass-heavy rounded-2xl px-5 py-4 text-center shrink-0 self-start hidden sm:block">
+            <p className="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Rang</p>
+            <p className="text-3xl font-black text-white tabular-nums leading-none">#{leaderboardRank}</p>
+            <p className="text-[9px] text-gray-600 mt-1">von {totalUsers}</p>
+            <PointsInfoModal />
+          </div>
         </div>
       </div>
 
-      {/* ── Rang-Fortschrittsbalken ──────────────────────────────────────── */}
-      <div className="px-5 sm:px-6 max-w-7xl mx-auto py-3">
-        {nextRank ? (
-          <div className="flex items-center gap-3">
-            <span className="text-[10px] text-gray-600 whitespace-nowrap shrink-0">{currentRank.emoji} {currentRank.label}</span>
-            <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
-              <div className="h-full rounded-full transition-all duration-1000"
-                style={{ width: `${rankPct}%`, background: "linear-gradient(90deg, #14b8a6, #2dd4bf)", boxShadow: "0 0 8px rgba(20,184,166,0.6)" }} />
-            </div>
-            <span className="text-[10px] text-gray-600 whitespace-nowrap shrink-0">{nextRank.emoji} {nextRank.label}</span>
-            <span className="text-[10px] text-teal-400 tabular-nums whitespace-nowrap shrink-0">{rankPct}%</span>
+      {/* ── Stat-Karten ─────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        {[
+          { icon: <Star className="w-4 h-4" />,         label: "Punkte",        value: rankPoints.toLocaleString("de-DE"),   iconCls: "text-teal-400    bg-teal-500/10    border-teal-500/15",    accent: "from-teal-500/8"    },
+          { icon: <CalendarDays className="w-4 h-4" />,  label: "Events",        value: String(eventCount),                   iconCls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/15", accent: "from-emerald-500/8" },
+          { icon: <Trophy className="w-4 h-4" />,        label: "Turnier-Siege", value: String(tournamentWins),               iconCls: "text-rose-400    bg-rose-500/10    border-rose-500/15",    accent: "from-rose-500/8"    },
+        ].map((s, i) => (
+          <div key={s.label} className={`card-hover card-shine glass relative overflow-hidden rounded-2xl p-4 animate-slide-up stagger-${i + 1}`}>
+            <div className={`absolute inset-0 bg-gradient-to-br ${s.accent} to-transparent pointer-events-none`} />
+            <div className={`relative w-8 h-8 rounded-xl flex items-center justify-center mb-3 border ${s.iconCls}`}>{s.icon}</div>
+            <p className="relative text-2xl font-black text-white tabular-nums">{s.value}</p>
+            <p className="relative text-xs text-gray-400 mt-1.5">{s.label}</p>
           </div>
-        ) : (
-          <div className="flex items-center gap-1.5 text-xs text-amber-400 font-semibold">
-            <Crown className="w-3.5 h-3.5" /> Maximalen Rang erreicht
-          </div>
-        )}
+        ))}
       </div>
 
-      {/* ── Bio & Profil-Editor ──────────────────────────────────────────── */}
-      <div className="px-5 sm:px-6 max-w-7xl mx-auto pb-5"
-        style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-        <ProfileEditor
-          birthday={user.birthday
-            ? `${String(user.birthday.getDate()).padStart(2, "0")}-${String(user.birthday.getMonth() + 1).padStart(2, "0")}`
-            : null}
-          bio={user.bio ?? null}
-        />
-      </div>
+      {/* ── Profil-Editor (Geburtstag, Bio) ─────────────────────────── */}
+      <ProfileEditor
+        birthday={user.birthday
+          ? `${String(user.birthday.getDate()).padStart(2, "0")}-${String(user.birthday.getMonth() + 1).padStart(2, "0")}`
+          : null}
+        bio={user.bio ?? null}
+      />
 
-      {/* ════════════════════════════════════════════════════════════════ */}
-      {/* Content                                                         */}
-      {/* ════════════════════════════════════════════════════════════════ */}
-      <div className="px-5 sm:px-6 max-w-7xl mx-auto pt-5 space-y-5">
-
-      {/* ── Collectibles Showcase ────────────────────────────────────────── */}
+      {/* ── Collectibles Showcase ────────────────────────────────────── */}
       <CollectiblesShowcase
-        showcaseItems={showcaseItems.map(i => ({
-          id:       i.id,
-          name:     i.name,
-          imageUrl: i.imageUrl,
-          rarity:   i.rarity,
-        }))}
+        showcaseItems={showcaseItems.map(i => ({ id: i.id, name: i.name, imageUrl: i.imageUrl, rarity: i.rarity }))}
         allOwned={ownedCollectibles.map(uc => ({
           id:             uc.collectibleItem.id,
           name:           uc.collectibleItem.name,
@@ -284,23 +257,24 @@ export default async function ProfilePage() {
         maxSlots={MAX_SHOWCASE}
       />
 
-      {/* ── Haupt-Inhalt ─────────────────────────────────────────────────── */}
+      {/* ── Haupt-Inhalt ─────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* ── Linke Spalte ──────────────────────────────────────────────── */}
+        {/* ── Linke Spalte ─────────────────────────────────────────── */}
         <div className="lg:col-span-2 space-y-5">
 
           {/* Meine Sammlungen */}
           {Object.keys(collectiblesByCollection).length > 0 && (
             <section>
-              <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-1.5"><Gamepad2 className="w-3.5 h-3.5" /> Meine Sammlungen</h2>
+              <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                <Gamepad2 className="w-3.5 h-3.5" /> Meine Sammlungen
+              </h2>
               <div className="space-y-3">
                 {Object.values(collectiblesByCollection).map(({ collection, items }) => (
-                  <div key={collection.id} className="surface card-cut p-4">
+                  <div key={collection.id} className="glass card-shine rounded-2xl p-4">
                     <div className="flex items-center gap-2 mb-3">
                       {collection.coverImageUrl
                         ? <img src={collection.coverImageUrl} alt={collection.name} className="w-7 h-7 object-contain rounded" loading="lazy" />
-                        : <Gamepad2 className="w-7 h-7 text-gray-600" />
-                      }
+                        : <Gamepad2 className="w-7 h-7 text-gray-600" />}
                       <span className="text-sm font-semibold text-white">{collection.name}</span>
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.05] border border-white/[0.08] text-gray-500">{items.length} Figuren</span>
                     </div>
@@ -312,8 +286,7 @@ export default async function ProfilePage() {
                             className={`flex flex-col items-center gap-0.5 px-2.5 py-2 rounded-xl border ${rarity.border} ${rarity.glow} bg-white/[0.02]`}>
                             {item.imageUrl
                               ? <img src={item.imageUrl} alt={item.name} className="w-9 h-9 object-contain" loading="lazy" />
-                              : <Gamepad2 className="w-9 h-9 text-gray-600" />
-                            }
+                              : <Gamepad2 className="w-9 h-9 text-gray-600" />}
                             <span className={`text-[9px] font-medium ${rarity.color}`}>{item.name}</span>
                           </div>
                         );
@@ -325,37 +298,34 @@ export default async function ProfilePage() {
             </section>
           )}
 
-          {/* Abzeichen */}
+          {/* Abzeichen — alle anzeigen, unverdiente gesperrt */}
           <section>
             <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">
-              🏅 Abzeichen <span className="text-gray-600 normal-case">({earnedBadges.length})</span>
+              🏅 Abzeichen <span className="text-gray-600 normal-case">({earnedBadges.length}/{badges.length})</span>
             </h2>
-            {earnedBadges.length === 0 && (
-              <div className="surface p-6 text-center">
-                <p className="text-gray-500 text-sm">Noch keine Abzeichen verdient</p>
-                <p className="text-xs text-gray-600 mt-1">Sei aktiv, nimm an Events teil und gewinne Turniere!</p>
-              </div>
-            )}
-            {earnedBadges.length > 0 && (
-              ["Community","Aktivität","Events","Turniere","Punkte"].map(cat => {
-                const catBadges = earnedBadges.filter(b => b.category === cat);
-                if (!catBadges.length) return null;
-                return (
-                  <div key={cat} className="mb-4">
-                    <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-2">{cat}</p>
-                    <div className="flex flex-wrap gap-2">
-                      {catBadges.map(badge => (
-                        <div key={badge.id} title={badge.desc}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm border text-xs font-medium surface-elevated text-white border-white/[0.08] hover:border-teal-500/30 transition-all">
-                          <span>{badge.icon}</span>
-                          {badge.name}
-                        </div>
-                      ))}
-                    </div>
+            {Object.entries(BADGE_CATEGORY_LABELS).map(([cat, label]) => {
+              const catBadges = badges.filter(b => b.category === cat);
+              if (!catBadges.length) return null;
+              return (
+                <div key={cat} className="mb-4">
+                  <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-2">{label}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {catBadges.map(badge => (
+                      <div key={badge.id} title={badge.desc}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-all ${
+                          badge.earned
+                            ? "glass text-white border-white/10 hover:border-teal-500/30"
+                            : "bg-white/[0.02] border-white/[0.04] text-gray-600 opacity-40 grayscale"
+                        }`}>
+                        <span>{badge.icon}</span>
+                        {badge.name}
+                        {!badge.earned && <span className="text-gray-700 ml-0.5">🔒</span>}
+                      </div>
+                    ))}
                   </div>
-                );
-              })
-            )}
+                </div>
+              );
+            })}
           </section>
 
           {/* Quest-Fortschritt */}
@@ -370,7 +340,7 @@ export default async function ProfilePage() {
                   const pct     = Math.round((current / quest.target) * 100);
                   const done    = p?.completed ?? false;
                   return (
-                    <div key={quest.id} className={`surface card-cut-sm px-4 py-3 relative overflow-hidden`}>
+                    <div key={quest.id} className={`glass card-shine rounded-xl px-4 py-3 relative overflow-hidden ${done ? "border-emerald-500/20" : ""}`}>
                       <div className={`absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b ${meta.bar} rounded-l-xl`} />
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
@@ -399,7 +369,7 @@ export default async function ProfilePage() {
               <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
                 <Swords className="w-3.5 h-3.5" /> Turnier-Ergebnisse
               </h2>
-              <div className="surface overflow-hidden divide-y divide-white/[0.04]">
+              <div className="glass card-shine rounded-2xl overflow-hidden divide-y divide-white/[0.04]">
                 {tournamentParticipations.map(p => {
                   const myMatches = p.tournament.matches;
                   const wins      = myMatches.filter(m => m.winnerId === userId).length;
@@ -433,18 +403,18 @@ export default async function ProfilePage() {
           )}
         </div>
 
-        {/* ── Rechte Spalte ─────────────────────────────────────────────── */}
+        {/* ── Rechte Spalte ────────────────────────────────────────── */}
         <div className="space-y-5">
 
           {/* Aktivitäts-Stats */}
           <section>
             <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">📊 Aktivität</h2>
-            <div className="surface overflow-hidden divide-y divide-white/[0.04]">
+            <div className="glass card-shine rounded-2xl overflow-hidden divide-y divide-white/[0.04]">
               {[
-                { icon: <Clock className="w-3.5 h-3.5" />,         label: "Voice-Stunden",  value: `${voiceHours}h`,          color: "text-teal-400" },
-                { icon: <MessageSquare className="w-3.5 h-3.5" />, label: "Nachrichten",    value: `~${messageCount}`,        color: "text-blue-400"   },
-                { icon: <CalendarDays className="w-3.5 h-3.5" />,  label: "Events besucht", value: String(eventCount),     color: "text-emerald-400"},
-                { icon: <Swords className="w-3.5 h-3.5" />,        label: "Turniere",       value: String(tournamentCount), color: "text-amber-400" },
+                { icon: <Clock className="w-3.5 h-3.5" />,         label: "Voice-Stunden",  value: `${voiceHours}h`,           color: "text-teal-400"    },
+                { icon: <MessageSquare className="w-3.5 h-3.5" />, label: "Nachrichten",    value: `~${messageCount}`,         color: "text-blue-400"   },
+                { icon: <CalendarDays className="w-3.5 h-3.5" />,  label: "Events besucht", value: String(eventCount),         color: "text-emerald-400" },
+                { icon: <Swords className="w-3.5 h-3.5" />,        label: "Turniere",       value: String(tournamentCount),    color: "text-amber-400"  },
               ].map(s => (
                 <div key={s.label} className="flex items-center justify-between px-4 py-3">
                   <div className={`flex items-center gap-2 text-xs ${s.color}`}>
@@ -457,10 +427,26 @@ export default async function ProfilePage() {
             </div>
           </section>
 
+          {/* Letzte Events */}
+          {eventRegs.length > 0 && (
+            <section>
+              <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">📅 Letzte Events</h2>
+              <div className="glass card-shine rounded-2xl overflow-hidden divide-y divide-white/[0.04]">
+                {eventRegs.map(reg => (
+                  <div key={reg.id} className="px-4 py-3">
+                    <p className="text-sm font-medium text-white truncate">{reg.event.title}</p>
+                    <p className="text-[10px] text-gray-600 mt-0.5">
+                      {new Date(reg.event.startAt).toLocaleDateString("de-DE", { day: "2-digit", month: "short", year: "numeric" })}
+                      {reg.event.game ? ` · ${reg.event.game}` : ""}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
         </div>
       </div>
-
-      </div>{/* /content px wrapper */}
     </div>
   );
 }
