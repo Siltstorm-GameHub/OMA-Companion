@@ -122,8 +122,20 @@ export async function createDiscordScheduledEvent(event: {
   // Cover-Bild als Base64-Data-URI (Discord akzeptiert keine externen URLs)
   const coverUrl     = getGameCoverUrl(event.game);
   const imageDataUri = coverUrl ? await fetchImageAsDataUri(coverUrl) : null;
-  if (event.game && !coverUrl)    console.warn(`[Discord] Kein Cover für Spiel: "${event.game}"`);
+  if (event.game && !coverUrl)     console.warn(`[Discord] Kein Cover für Spiel: "${event.game}"`);
   if (coverUrl   && !imageDataUri) console.warn(`[Discord] Cover-Fetch fehlgeschlagen: ${coverUrl}`);
+  if (imageDataUri) console.log(`[Discord] Cover OK – ${Math.round(imageDataUri.length / 1024)} KB base64, MIME: ${imageDataUri.slice(5, 25)}`);
+
+  const payload = {
+    name: event.title,
+    scheduled_start_time: event.startAt.toISOString(),
+    scheduled_end_time:   endAt.toISOString(),
+    entity_type:    3, // EXTERNAL
+    entity_metadata: { location: "Online" },
+    privacy_level:  2, // GUILD_ONLY
+    description: event.description ?? undefined,
+    ...(imageDataUri && { image: imageDataUri }),
+  };
 
   const res = await fetch(
     `https://discord.com/api/v10/guilds/${guildId}/scheduled-events`,
@@ -133,25 +145,18 @@ export async function createDiscordScheduledEvent(event: {
         Authorization: `Bot ${botToken}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        name: event.title,
-        scheduled_start_time: event.startAt.toISOString(),
-        scheduled_end_time:   endAt.toISOString(),
-        entity_type:    3, // EXTERNAL
-        entity_metadata: { location: "Online" },
-        privacy_level:  2, // GUILD_ONLY
-        description: event.description ?? undefined,
-        ...(imageDataUri && { image: imageDataUri }),
-      }),
+      body: JSON.stringify(payload),
     }
   );
 
+  const responseText = await res.text();
   if (!res.ok) {
-    console.error("[Discord] Scheduled Event erstellen fehlgeschlagen:", res.status, await res.text());
+    console.error("[Discord] Scheduled Event erstellen fehlgeschlagen:", res.status, responseText);
     return null;
   }
 
-  const data = await res.json() as { id: string };
+  const data = JSON.parse(responseText) as { id: string; image: string | null };
+  console.log(`[Discord] Scheduled Event erstellt – id:${data.id} image:${data.image ?? "null"}`);
   return data.id;
 }
 
