@@ -198,12 +198,16 @@ export default async function ProfilePage() {
             </span>
           </div>
           <p className="text-[11px] text-gray-500">Mitglied seit {memberSince}</p>
+          <div className="flex items-center gap-1 mt-1">
+            <Coins className="w-3 h-3 text-amber-400" />
+            <span className="text-[11px] text-amber-400 font-medium tabular-nums">{totalPoints.toLocaleString("de-DE")} Münzen</span>
+          </div>
         </div>
 
-        {/* Münzen — right side */}
+        {/* Ranglisten-Punkte + Info — right side */}
         <div className="relative z-10 hidden sm:flex items-center gap-2 pb-2 shrink-0">
-          <Coins className="w-4 h-4 text-amber-400" />
-          <span className="text-sm font-bold text-amber-400 tabular-nums">{totalPoints.toLocaleString("de-DE")}</span>
+          <Star className="w-4 h-4 text-teal-400" />
+          <span className="text-sm font-bold text-teal-400 tabular-nums">{rankPoints.toLocaleString("de-DE")} Punkte</span>
           <PointsInfoModal />
         </div>
       </div>
