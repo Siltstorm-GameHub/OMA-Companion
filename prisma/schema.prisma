@@ -445,9 +445,10 @@ model LulSpieltag {
   game         String    // "Brawlhalla"
   gameType     String?   // "Beat-em Up"
   platform     String?   // "PC/Konsole"
-  scheduledAt  DateTime?
+  scheduledAt    DateTime?
+  discordEventId String?   @unique
   // upcoming | active | finished
-  status       String    @default("upcoming")
+  status         String    @default("upcoming")
   // JSON: {"1": 10, "2": 5, "3": 3} – Punkte pro Spielplatzierung
   pointsConfig String?
   season       LulSeason @relation(fields: [seasonId], references: [id], onDelete: Cascade)
