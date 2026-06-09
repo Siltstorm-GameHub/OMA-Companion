@@ -202,6 +202,8 @@ model EventSeries {
   fixedGame        String?  // Wenn gesetzt: alle Events der Reihe nutzen dieses Spiel
   fixedFormat      String?  // Wenn gesetzt: alle Turniere der Reihe nutzen dieses Format
   discordChannelId String?  // Kanal-ID für Bot-Nachrichten aller Events dieser Reihe
+  recurrenceType       String?  // "weekly" | "biweekly" | "monthly"
+  recurrenceMonthlyMode String? // "dayOfMonth" | "weekdayOfMonth" (nur bei monthly)
   createdAt   DateTime @default(now())
   events      Event[]
 }
