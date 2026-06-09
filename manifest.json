@@ -1,0 +1,57 @@
+{
+  "background_color": "#616161",
+  "description": "Old Masters Ally Companion App",
+  "dir": "auto",
+  "display": "standalone",
+  "name": "Old Masters Ally",
+  "orientation": "portrait",
+  "scope": "/",
+  "short_name": "OMA",
+  "start_url": "www.oma-app.de",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "https://www.oma-app.de/favicon.ico?favicon.0~jligekzltju.ico",
+      "type": "image/x-icon",
+      "sizes": "256x256",
+      "isSquare": true,
+      "isPng": false,
+      "isWebp": false,
+      "isJpg": false,
+      "width": 256,
+      "is512x512": false,
+      "is256x256": true,
+      "is192x192": false
+    },
+    {
+      "src": "https://www.oma-app.de/OMALogoNew.png",
+      "isSquare": false,
+      "isPng": true,
+      "isWebp": false,
+      "isJpg": false,
+      "width": 0,
+      "is512x512": false,
+      "is256x256": false,
+      "is192x192": false
+    },
+    {
+      "src": "https://www.oma-app.de/favicon.ico",
+      "type": "image/x-icon",
+      "isSquare": false,
+      "isPng": false,
+      "isWebp": false,
+      "isJpg": false,
+      "width": 0,
+      "is512x512": false,
+      "is256x256": false,
+      "is192x192": false
+    }
+  ],
+  "id": "oma",
+  "lang": "de",
+  "categories": [
+    "entertainment",
+    "events",
+    "games"
+  ]
+}
