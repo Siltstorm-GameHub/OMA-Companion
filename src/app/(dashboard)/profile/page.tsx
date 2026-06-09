@@ -61,7 +61,7 @@ export default async function ProfilePage() {
   const month = now.getMonth() + 1;
   const year  = now.getFullYear();
 
-  const [user, eventRegs, tournamentParticipations, tournamentWins, questsWithProgress, ownedCollectibles, leaderboardRank] =
+  const [user, eventRegs, tournamentParticipations, tournamentWins, questsWithProgress, ownedCollectibles, leaderboardRank, voiceHourCount, messageTxCount] =
     await Promise.all([
       prisma.user.findUnique({
         where:  { id: userId },
@@ -104,6 +104,9 @@ export default async function ProfilePage() {
         const higher = await prisma.user.count({ where: { rankPoints: { gt: u?.rankPoints ?? 0 } } });
         return higher + 1;
       }),
+      // Aktivitäts-Stats aus PointTransactions ableiten (je Transaktion = 1 Stunde / 10 Nachrichten)
+      prisma.pointTransaction.count({ where: { userId, reason: { contains: "Sprachkanal" } } }),
+      prisma.pointTransaction.count({ where: { userId, reason: { contains: "Nachrichten" } } }),
     ]);
 
   if (!user) redirect("/login");
@@ -114,8 +117,8 @@ export default async function ProfilePage() {
   const nextRank     = getNextRank(rankPoints);
   const rankPct      = nextRank ? Math.min(100, Math.round(((rankPoints - currentRank.min) / (nextRank.min - currentRank.min)) * 100)) : 100;
 
-  const voiceHours   = 0;
-  const messageCount = 0;
+  const voiceHours   = voiceHourCount;
+  const messageCount = messageTxCount * 10;
   const badges       = computeBadges({ points: totalPoints, voiceHours, messageCount, eventCount: eventRegs.length, tournamentCount: tournamentParticipations.length, tournamentWins });
   const earnedBadges = badges.filter(b => b.earned);
   const memberSince  = new Date(user.createdAt).toLocaleDateString("de-DE", { month: "long", year: "numeric" });
