@@ -1,6 +1,20 @@
 // Hilfsfunktionen für Discord Scheduled Events
 import { getGameCoverUrl } from "@/lib/game-cover";
 
+/** Lädt ein Bild von einer URL und gibt es als Base64-Data-URI zurück. */
+async function fetchImageAsDataUri(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url, { next: { revalidate: 86400 } });
+    if (!res.ok) return null;
+    const contentType = res.headers.get("content-type") ?? "image/jpeg";
+    const buffer = await res.arrayBuffer();
+    const base64 = Buffer.from(buffer).toString("base64");
+    return `data:${contentType};base64,${base64}`;
+  } catch {
+    return null;
+  }
+}
+
 /** Sendet eine Event-Ankündigung in den konfigurierten Events-Channel via REST API.
  *  Funktioniert direkt aus der WebApp heraus (kein discord.js-Client nötig). */
 /** Postet eine Event-Ankündigung und gibt die Discord Message-ID zurück (zum späteren Löschen). */
@@ -88,6 +102,7 @@ export async function createDiscordScheduledEvent(event: {
   title: string;
   startAt: Date;
   description?: string | null;
+  game?: string | null;
 }): Promise<string | null> {
   const guildId  = process.env.DISCORD_GUILD_ID;
   const botToken = process.env.DISCORD_BOT_TOKEN;
@@ -95,6 +110,10 @@ export async function createDiscordScheduledEvent(event: {
 
   // End-Zeit: 2 Stunden nach Start (Discord verlangt End-Zeit für externe Events)
   const endAt = new Date(event.startAt.getTime() + 2 * 60 * 60 * 1000);
+
+  // Cover-Bild als Base64-Data-URI (Discord akzeptiert keine externen URLs)
+  const coverUrl   = getGameCoverUrl(event.game);
+  const imageDataUri = coverUrl ? await fetchImageAsDataUri(coverUrl) : null;
 
   const res = await fetch(
     `https://discord.com/api/v10/guilds/${guildId}/scheduled-events`,
@@ -112,6 +131,7 @@ export async function createDiscordScheduledEvent(event: {
         entity_metadata: { location: "Online" },
         privacy_level:  2, // GUILD_ONLY
         description: event.description ?? undefined,
+        ...(imageDataUri && { image: imageDataUri }),
       }),
     }
   );
