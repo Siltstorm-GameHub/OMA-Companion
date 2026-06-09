@@ -1,5 +1,5 @@
 // Hilfsfunktionen für Discord Scheduled Events
-import { getGameCoverUrl } from "@/lib/game-cover";
+import { getGameCoverUrlAsync } from "@/lib/game-cover";
 
 /** Lädt ein Bild von einer URL und gibt es als Base64-Data-URI zurück. */
 async function fetchImageAsDataUri(url: string): Promise<string | null> {
@@ -43,7 +43,7 @@ export async function announceNewEvent(event: {
     hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin",
   });
 
-  const coverUrl = getGameCoverUrl(event.game);
+  const coverUrl = await getGameCoverUrlAsync(event.game);
 
   const embed = {
     color:       0x4ade80,
@@ -120,7 +120,7 @@ export async function createDiscordScheduledEvent(event: {
   const endAt = new Date(event.startAt.getTime() + 2 * 60 * 60 * 1000);
 
   // Cover-Bild als Base64-Data-URI (Discord akzeptiert keine externen URLs)
-  const coverUrl     = getGameCoverUrl(event.game);
+  const coverUrl     = await getGameCoverUrlAsync(event.game);
   const imageDataUri = coverUrl ? await fetchImageAsDataUri(coverUrl) : null;
   if (event.game && !coverUrl)     console.warn(`[Discord] Kein Cover für Spiel: "${event.game}"`);
   if (coverUrl   && !imageDataUri) console.warn(`[Discord] Cover-Fetch fehlgeschlagen: ${coverUrl}`);
@@ -167,7 +167,7 @@ export async function updateDiscordScheduledEvent(
 
   const endAt = new Date(event.startAt.getTime() + 2 * 60 * 60 * 1000);
 
-  const coverUrl     = getGameCoverUrl(event.game);
+  const coverUrl     = await getGameCoverUrlAsync(event.game);
   const imageDataUri = coverUrl ? await fetchImageAsDataUri(coverUrl) : null;
 
   const res = await fetch(
