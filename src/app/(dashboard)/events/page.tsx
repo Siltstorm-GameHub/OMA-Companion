@@ -1,14 +1,12 @@
-﻿import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { CalendarDays, ExternalLink, Users, Zap, Swords, Trophy, ChevronRight, Check, Repeat } from "lucide-react";
-import SyncButton from "./SyncButton";
+import { CalendarDays, ExternalLink, Users, Zap, Swords, Trophy, ChevronRight, Check, Repeat, Gamepad2 } from "lucide-react";
 import RegisterButton from "./RegisterButton";
-import EventCreateForm from "./EventCreateForm";
-import EventAdminRow from "../admin/events/EventAdminRow";
 import { RelativeTime } from "@/components/RelativeTime";
 import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
 import GameCover from "@/components/GameCover";
+import LulRegisterButton from "@/components/LulRegisterButton";
 
 const STATUS_CONFIG: Record<string, { label: string; badge: string; bar: string; glow: string; dot: string }> = {
   open:     { label: "Offen",   badge: "text-blue-300 bg-blue-500/10 border border-blue-500/20",             bar: "bg-blue-400",                             glow: "from-blue-500/5",    dot: "bg-blue-400"              },
@@ -17,55 +15,45 @@ const STATUS_CONFIG: Record<string, { label: string; badge: string; bar: string;
   finished: { label: "Beendet", badge: "text-gray-500 bg-white/[0.04] border border-white/[0.06]",          bar: "bg-gray-700",                             glow: "from-transparent",   dot: "bg-gray-600"              },
 };
 
+const SPIELTAG_STATUS: Record<string, { label: string; badge: string; bar: string; dot: string }> = {
+  upcoming: { label: "Geplant", badge: "text-blue-300 bg-blue-500/10 border border-blue-500/20",          bar: "bg-blue-400",                             dot: "bg-blue-400"              },
+  active:   { label: "Läuft",   badge: "text-emerald-300 bg-emerald-500/10 border border-emerald-500/20", bar: "bg-emerald-400 shadow-[0_0_8px_#34d399]", dot: "bg-emerald-400 animate-pulse" },
+  finished: { label: "Beendet", badge: "text-gray-500 bg-white/[0.04] border border-white/[0.06]",       bar: "bg-gray-700",                             dot: "bg-gray-600"              },
+};
+
 const GUILD_ID = process.env.DISCORD_GUILD_ID ?? "";
 
 export default async function EventsPage() {
   const session = await auth();
   const userId  = session?.user?.id;
-  const role    = (session?.user as { role?: string } | undefined)?.role ?? "user";
-  const isMod   = role === "moderator" || role === "admin";
 
-  const [eventsRaw, allUsers] = await Promise.all([
+  const [eventsRaw, activeSeason] = await Promise.all([
     prisma.event.findMany({
       orderBy: { startAt: "asc" },
       include: {
         _count:        { select: { registrations: true } },
         series:        { select: { id: true, name: true } },
-        tournament:    isMod ? {
-          include: {
-            participants: { include: { user: { select: { id: true, name: true, username: true, image: true } } } },
-            matches:      { orderBy: [{ round: "asc" }, { position: "asc" }], include: { entries: true } },
-            teams:        { include: { members: { include: { user: { select: { id: true, name: true, username: true } } } } } },
-          },
-        } : true,
+        tournament:    true,
         registrations: { select: { userId: true } },
       },
     }),
-    isMod
-      ? prisma.user.findMany({ select: { id: true, name: true, username: true, image: true }, orderBy: { name: "asc" } })
-      : Promise.resolve([]),
+    prisma.lulSeason.findFirst({
+      where: { status: "active" },
+      include: {
+        spieltage: {
+          where:   { status: { not: "finished" } },
+          orderBy: { number: "asc" },
+          include: {
+            entries: {
+              select: { userId: true, role: true },
+            },
+          },
+        },
+      },
+    }),
   ]);
 
-  // Tournament counts (separate query to avoid nested _count issues)
-  const tournamentIds = eventsRaw.map(e => e.tournament?.id).filter((id): id is string => !!id);
-  const tournamentCounts = tournamentIds.length
-    ? await Promise.all(
-        tournamentIds.map(id =>
-          Promise.all([
-            prisma.tournamentParticipant.count({ where: { tournamentId: id } }),
-            prisma.match.count({ where: { tournamentId: id } }),
-          ]).then(([participants, matches]) => ({ id, participants, matches }))
-        )
-      )
-    : [];
-  const countMap = new Map(tournamentCounts.map(c => [c.id, c]));
-
-  const events = eventsRaw.map(ev => ({
-    ...ev,
-    tournament: ev.tournament
-      ? { ...ev.tournament, _count: countMap.get(ev.tournament.id) ?? { participants: 0, matches: 0 } }
-      : null,
-  }));
+  const events = eventsRaw;
 
   // Aufteilen: aktiv vs. vergangen
   const activeEvents   = events.filter(e => e.status !== "finished");
@@ -75,62 +63,128 @@ export default async function EventsPage() {
   const seenSeriesIds = new Set<string>();
   const visibleActiveEvents = activeEvents.filter(ev => {
     const sid = ev.seriesId;
-    if (!sid) return true;            // Einzelevent → immer zeigen
-    if (seenSeriesIds.has(sid)) return false;  // Serie bereits vertreten → überspringen
+    if (!sid) return true;
+    if (seenSeriesIds.has(sid)) return false;
     seenSeriesIds.add(sid);
     return true;
   });
 
   const openCount = activeEvents.filter(e => e.status === "open" || e.status === "active").length;
+  const upcomingSpieltage = activeSeason?.spieltage ?? [];
 
   return (
     <div className="px-5 pb-5 pt-3 sm:p-6 max-w-6xl mx-auto space-y-6 animate-fade-in">
 
       {/* ── Header ────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2.5 mb-1">
-            <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-              <CalendarDays className="w-4 h-4 text-blue-400" />
-            </div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">Events</h1>
+      <div>
+        <div className="flex items-center gap-2.5 mb-1">
+          <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+            <CalendarDays className="w-4 h-4 text-blue-400" />
           </div>
-          <p className="text-sm text-gray-500 ml-10">
-            {openCount > 0
-              ? <><span className="text-emerald-400 font-medium">{openCount}</span> aktive Events</>
-              : "Alle Events"}
-          </p>
+          <h1 className="text-2xl font-bold text-white tracking-tight">Events</h1>
         </div>
-        {isMod && <SyncButton />}
+        <p className="text-sm text-gray-500 ml-10">
+          {openCount > 0
+            ? <><span className="text-emerald-400 font-medium">{openCount}</span> aktive Events</>
+            : "Alle Events"}
+        </p>
       </div>
 
-      {/* ── Admin-Tools ───────────────────────────────────────────────── */}
-      {isMod && (
+      {/* ── LuL Spieltage ─────────────────────────────────────────────── */}
+      {upcomingSpieltage.length > 0 && (
         <div className="space-y-3">
-          <EventCreateForm />
-          {activeEvents.length > 0 && (
-            <div className="space-y-2">
-              {activeEvents.map(ev => (
-                <EventAdminRow key={ev.id} event={ev as Parameters<typeof EventAdminRow>[0]["event"]} allUsers={allUsers} />
-              ))}
-            </div>
-          )}
-          {finishedEvents.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest px-1 pt-1">
-                Vergangene Events (bearbeitbar)
-              </p>
-              {finishedEvents.map(ev => (
-                <EventAdminRow key={ev.id} event={ev as Parameters<typeof EventAdminRow>[0]["event"]} allUsers={allUsers} />
-              ))}
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            <Swords className="w-4 h-4 text-amber-400" />
+            <h2 className="text-sm font-semibold text-white">Level-Up-League</h2>
+            <span className="text-xs text-amber-400/60">{activeSeason?.name ?? `Saison ${activeSeason?.number}`}</span>
+            <Link href="/lul" className="ml-auto text-[10px] text-gray-600 hover:text-amber-400 transition-colors flex items-center gap-0.5">
+              Alle ansehen <ChevronRight className="w-3 h-3" />
+            </Link>
+          </div>
+
+          {upcomingSpieltage.map((st, idx) => {
+            const s           = SPIELTAG_STATUS[st.status] ?? SPIELTAG_STATUS.upcoming;
+            const myEntry     = userId ? st.entries.find(e => e.userId === userId) : null;
+            const myRole      = myEntry?.role as "player" | "spectator" | null ?? null;
+            const playerCount = st.entries.filter(e => e.role === "player").length;
+            const spectCount  = st.entries.filter(e => e.role === "spectator").length;
+            const date        = st.scheduledAt ? new Date(st.scheduledAt) : null;
+
+            return (
+              <div key={st.id}
+                className="surface animate-slide-up relative overflow-hidden flex items-start gap-4 p-5"
+                style={{
+                  borderRadius: 6,
+                  border: myRole ? "1px solid rgba(251,191,36,0.18)" : "1px solid rgba(255,255,255,0.06)",
+                  boxShadow: "0 4px 20px rgba(0,0,0,0.45)",
+                  animationDelay: `${idx * 40}ms`,
+                }}>
+
+                {/* Farbbalken links */}
+                <div className={`absolute left-0 top-4 bottom-4 w-[3px] rounded-r-full ${myRole ? "bg-amber-400" : s.bar}`} />
+                <div className={`absolute inset-0 bg-gradient-to-r ${myRole ? "from-amber-500/5" : "from-transparent"} to-transparent opacity-60 pointer-events-none`} />
+
+                {/* Cover + Datum */}
+                <div className="relative shrink-0 flex flex-col items-center gap-1.5">
+                  <GameCover game={st.game} className="w-20 h-[52px]" rounded="rounded-lg" />
+                  {date && (
+                    <div className="text-center">
+                      <p className="text-sm font-bold text-white leading-none tabular-nums">{date.getDate()}. {date.toLocaleString("de-DE", { month: "short" })}</p>
+                      <RelativeTime date={date} className="text-[9px] text-gray-600 mt-0.5 block tabular-nums" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Inhalt */}
+                <div className="relative flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className="text-[10px] text-amber-400/70 font-medium uppercase tracking-wider">LuL Spieltag {st.number}</span>
+                    {myRole && (
+                      <span className="flex items-center gap-1 text-[10px] text-amber-400 font-medium">
+                        <Check className="w-3 h-3" /> Angemeldet
+                      </span>
+                    )}
+                  </div>
+                  <Link href={`/lul/spieltag/${st.id}`}
+                    className="font-semibold text-white text-base truncate hover:text-amber-300 transition-colors block mb-1.5">
+                    {st.game}
+                    {st.gameType && <span className="text-sm text-gray-500 font-normal ml-2">{st.gameType}</span>}
+                  </Link>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    {st.platform && <span className="text-xs text-gray-500">{st.platform}</span>}
+                    <span className="flex items-center gap-1 text-xs text-gray-500">
+                      <Gamepad2 className="w-3 h-3" />
+                      {playerCount} Mitspieler
+                    </span>
+                    {spectCount > 0 && (
+                      <span className="text-xs text-gray-500">{spectCount} Zuschauer</span>
+                    )}
+                    <Link href={`/lul/spieltag/${st.id}`}
+                      className="flex items-center gap-1 text-[10px] text-amber-600 hover:text-amber-400 transition-colors">
+                      <ChevronRight className="w-3 h-3" /> Details
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Rechte Seite */}
+                <div className="relative flex flex-col items-end gap-2 shrink-0">
+                  <span className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium ${s.badge}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+                    {s.label}
+                  </span>
+                  {userId && st.status !== "finished" && (
+                    <LulRegisterButton spieltagId={st.id} currentRole={myRole} />
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
       {/* ── Kommende Events ───────────────────────────────────────────── */}
       <div className="space-y-3">
-        {visibleActiveEvents.length === 0 && finishedEvents.length === 0 && (
+        {visibleActiveEvents.length === 0 && finishedEvents.length === 0 && upcomingSpieltage.length === 0 && (
           <EmptyState
             type="events"
             title="Noch keine Events"
@@ -217,14 +271,12 @@ export default async function EventsPage() {
                       <ExternalLink className="w-3 h-3" /> Discord
                     </a>
                   )}
-                  {/* Link zum Turnierbaum */}
                   {isTournament && (
                     <Link href={`/tournament/${ev.id}`}
                       className="flex items-center gap-1 text-[10px] text-purple-400 hover:text-purple-300 transition-colors">
                       <Swords className="w-3 h-3" /> Turnierbaum
                     </Link>
                   )}
-                  {/* Alle Termine dieser Reihe */}
                   {hasSeries && (
                     <Link href={`/events/series/${ev.seriesId}`}
                       className="flex items-center gap-1 text-[10px] text-teal-600 hover:text-teal-400 transition-colors">
