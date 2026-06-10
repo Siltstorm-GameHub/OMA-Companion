@@ -206,6 +206,7 @@ model EventSeries {
   recurrenceType       String?  // "weekly" | "biweekly" | "monthly"
   recurrenceMonthlyMode String? // "dayOfMonth" | "weekdayOfMonth" (nur bei monthly)
   statFields   String?  // JSON: ["Kills","Assists","Punkte"] — Stat-Spalten für alle Events der Reihe
+  baselineJson String?  // JSON: {"userId":{"points":0,"wins":0,"participations":0,"stats":{}}} — Historische Basisdaten
   createdAt   DateTime @default(now())
   events      Event[]
   results     SeriesResult[]

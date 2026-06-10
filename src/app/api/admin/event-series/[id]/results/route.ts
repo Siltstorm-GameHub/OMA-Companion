@@ -11,7 +11,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
 
   const series = await prisma.eventSeries.findUnique({
     where: { id },
-    select: { id: true, name: true, statFields: true },
+    select: { id: true, name: true, statFields: true, baselineJson: true },
   });
   if (!series) return NextResponse.json({ error: "Nicht gefunden" }, { status: 404 });
 
@@ -45,6 +45,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
       id: series.id,
       name: series.name,
       statFields: series.statFields ? (JSON.parse(series.statFields) as string[]) : [],
+      baselineJson: series.baselineJson ?? null,
     },
     events: events.map(ev => ({
       id: ev.id,

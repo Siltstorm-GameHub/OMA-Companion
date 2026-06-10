@@ -11,7 +11,10 @@ ALTER TABLE "CollectibleItem" ADD COLUMN IF NOT EXISTS "active" BOOLEAN NOT NULL
 ALTER TABLE "CollectibleItem" ADD COLUMN IF NOT EXISTS "salePrice" INTEGER;
 ALTER TABLE "CollectibleItem" ADD COLUMN IF NOT EXISTS "saleUntil" TIMESTAMP(3);
 
--- 4. Geplante Discord-Umfragen
+-- 4. EventSeries: Historische Basisdaten pro Spieler
+ALTER TABLE "EventSeries" ADD COLUMN IF NOT EXISTS "baselineJson" TEXT;
+
+-- 5. Geplante Discord-Umfragen
 CREATE TABLE IF NOT EXISTS "PollJob" (
   "id"          TEXT      NOT NULL PRIMARY KEY,
   "type"        TEXT      NOT NULL,

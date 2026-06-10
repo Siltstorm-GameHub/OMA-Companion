@@ -42,10 +42,18 @@ type StandingRow = {
   statTotals:     Record<string, number>;
 };
 
-/** Tabelle aus manuell erfassten SeriesResults */
+type BaselineEntry = {
+  points:         number;
+  wins:           number;
+  participations: number;
+  stats:          Record<string, number>;
+};
+
+/** Tabelle aus manuell erfassten SeriesResults + optionalen historischen Basisdaten */
 function computeStandingsFromResults(
   events: SeriesEvent[],
   statFields: string[],
+  baseline: Record<string, BaselineEntry> = {},
 ): StandingRow[] {
   const pts:         Record<string, number>               = {};
   const wins:        Record<string, number>               = {};
@@ -72,6 +80,19 @@ function computeStandingsFromResults(
             statTotals[uid][f] = (statTotals[uid][f] ?? 0) + (s[f] ?? 0);
           }
         } catch { /* ignore */ }
+      }
+    }
+  }
+
+  // Merge historical baseline
+  for (const [uid, b] of Object.entries(baseline)) {
+    pts[uid]  = (pts[uid]  ?? 0) + b.points;
+    wins[uid] = (wins[uid] ?? 0) + b.wins;
+    part[uid] = (part[uid] ?? 0) + b.participations;
+    if (statFields.length > 0) {
+      if (!statTotals[uid]) statTotals[uid] = {};
+      for (const f of statFields) {
+        statTotals[uid][f] = (statTotals[uid][f] ?? 0) + (b.stats[f] ?? 0);
       }
     }
   }
@@ -198,10 +219,16 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
     .filter(e => e.status === "finished")
     .sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime());
 
-  // Tabelle: bevorzugt SeriesResult, Fallback auf Turnier-Daten
-  const hasManualResults = series.events.some(e => e.seriesResults.length > 0);
+  const baseline: Record<string, BaselineEntry> = (() => {
+    if (!series.baselineJson) return {};
+    try { return JSON.parse(series.baselineJson) as Record<string, BaselineEntry>; }
+    catch { return {}; }
+  })();
+
+  // Tabelle: bevorzugt SeriesResult/Baseline, Fallback auf Turnier-Daten
+  const hasManualResults = series.events.some(e => e.seriesResults.length > 0) || Object.keys(baseline).length > 0;
   const standings = hasManualResults
-    ? computeStandingsFromResults(series.events, statFields)
+    ? computeStandingsFromResults(series.events, statFields, baseline)
     : computeStandingsFromTournaments(series.events);
 
   // User-Daten für Tabelle
