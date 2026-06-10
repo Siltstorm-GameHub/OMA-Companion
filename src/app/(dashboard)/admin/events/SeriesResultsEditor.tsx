@@ -4,12 +4,11 @@ import { toast } from "sonner";
 import { X, Save, Plus, Trash2, ChevronDown, ChevronUp, Settings, Trophy, UserPlus } from "lucide-react";
 
 type UserInfo = { id: string; name: string | null; username: string | null; image: string | null };
+type StatFieldConfig = { name: string; pts: number };
 
 type ResultRow = {
   userId: string;
   user: UserInfo;
-  placement: string;
-  points: string;
   stats: Record<string, string>;
 };
 
@@ -22,7 +21,7 @@ type SeriesEventData = {
 };
 
 type SeriesData = {
-  series: { id: string; name: string; statFields: string[] };
+  series: { id: string; name: string; statFields: StatFieldConfig[] };
   events: SeriesEventData[];
   allUsers: UserInfo[];
 };
@@ -32,6 +31,21 @@ const uname = (u: UserInfo) => u.username ?? u.name ?? "?";
 const inputCls =
   "bg-gray-800 border border-gray-700 text-white rounded-lg px-2.5 py-2 text-sm text-center focus:border-teal-500/50 outline-none w-full";
 
+function calcPoints(stats: Record<string, string>, fields: StatFieldConfig[]): number {
+  return fields.reduce((sum, f) => sum + (Number(stats[f.name]) || 0) * f.pts, 0);
+}
+
+/** Lade-Helper: unterstützt altes Format (string[]) und neues Format ({name,pts}[]) */
+function parseStatFields(raw: unknown): StatFieldConfig[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((f: unknown) => {
+    if (typeof f === "string") return { name: f, pts: 0 };
+    if (f && typeof f === "object" && "name" in f)
+      return { name: String((f as { name: unknown }).name), pts: Number((f as { pts?: unknown }).pts) || 0 };
+    return null;
+  }).filter(Boolean) as StatFieldConfig[];
+}
+
 export default function SeriesResultsEditor({
   seriesId,
   onClose,
@@ -39,31 +53,36 @@ export default function SeriesResultsEditor({
   seriesId: string;
   onClose: () => void;
 }) {
-  const [data, setData] = useState<SeriesData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [statFields, setStatFields] = useState<string[]>([]);
-  const [newField, setNewField] = useState("");
-  const [savingStats, setSavingStats] = useState(false);
+  const [data, setData]           = useState<SeriesData | null>(null);
+  const [loading, setLoading]     = useState(true);
+  const [statFields, setStatFields] = useState<StatFieldConfig[]>([]);
+  const [newFieldName, setNewFieldName] = useState("");
+  const [newFieldPts,  setNewFieldPts]  = useState("");
+  const [savingStats, setSavingStats]   = useState(false);
   const [expandedEvent, setExpandedEvent] = useState<string | null>(null);
-  const [eventDrafts, setEventDrafts] = useState<Record<string, ResultRow[]>>({});
-  const [savingEvent, setSavingEvent] = useState<string | null>(null);
+  const [eventDrafts, setEventDrafts]   = useState<Record<string, ResultRow[]>>({});
+  const [savingEvent, setSavingEvent]   = useState<string | null>(null);
   const [addPlayerOpen, setAddPlayerOpen] = useState<string | null>(null);
-  const [playerSearch, setPlayerSearch] = useState("");
+  const [playerSearch, setPlayerSearch]   = useState("");
 
   useEffect(() => {
     fetch(`/api/admin/event-series/${seriesId}/results`)
       .then(r => r.json())
-      .then((d: SeriesData & { events: Array<SeriesEventData & { results: Array<Omit<ResultRow, "placement" | "points" | "stats"> & { placement: number | null; points: number; stats: Record<string, number> }> }> }) => {
-        const fields: string[] = d.series.statFields ?? [];
+      .then((d: SeriesData & {
+        events: Array<SeriesEventData & {
+          results: Array<Omit<ResultRow, "stats"> & {
+            placement: number | null; points: number; stats: Record<string, number>;
+          }>;
+        }>;
+      }) => {
+        const fields = parseStatFields(d.series.statFields);
         setStatFields(fields);
         const drafts: Record<string, ResultRow[]> = {};
         for (const ev of d.events) {
           drafts[ev.id] = ev.results.map(r => ({
-            userId:    r.userId,
-            user:      r.user,
-            placement: r.placement != null ? String(r.placement) : "",
-            points:    String(r.points),
-            stats:     Object.fromEntries(fields.map(f => [f, r.stats[f] != null ? String(r.stats[f]) : ""])),
+            userId: r.userId,
+            user:   r.user,
+            stats:  Object.fromEntries(fields.map(f => [f.name, r.stats[f.name] != null ? String(r.stats[f.name]) : ""])),
           }));
         }
         setEventDrafts(drafts);
@@ -88,14 +107,15 @@ export default function SeriesResultsEditor({
     });
     setSavingStats(false);
     if (res.ok) {
-      toast.success("Stat-Felder gespeichert");
+      toast.success("Punktesystem gespeichert");
       if (data) setData({ ...data, series: { ...data.series, statFields } });
+      // Sync drafts: add missing fields, keep existing values
       setEventDrafts(prev => {
         const next: Record<string, ResultRow[]> = {};
         for (const [evId, rows] of Object.entries(prev)) {
           next[evId] = rows.map(r => ({
             ...r,
-            stats: Object.fromEntries(statFields.map(f => [f, r.stats[f] ?? ""])),
+            stats: Object.fromEntries(statFields.map(f => [f.name, r.stats[f.name] ?? ""])),
           }));
         }
         return next;
@@ -105,14 +125,26 @@ export default function SeriesResultsEditor({
     }
   }
 
-  function setRowField(eventId: string, userId: string, field: string, value: string) {
+  function addStatField() {
+    const name = newFieldName.trim();
+    if (!name || statFields.some(f => f.name === name)) return;
+    setStatFields(prev => [...prev, { name, pts: Number(newFieldPts) || 0 }]);
+    setNewFieldName("");
+    setNewFieldPts("");
+  }
+
+  function updateStatField(idx: number, key: "name" | "pts", value: string) {
+    setStatFields(prev => prev.map((f, i) =>
+      i === idx ? { ...f, [key]: key === "pts" ? Number(value) || 0 : value } : f
+    ));
+  }
+
+  function setRowStat(eventId: string, userId: string, field: string, value: string) {
     setEventDrafts(prev => ({
       ...prev,
-      [eventId]: (prev[eventId] ?? []).map(r => {
-        if (r.userId !== userId) return r;
-        if (field === "placement" || field === "points") return { ...r, [field]: value };
-        return { ...r, stats: { ...r.stats, [field]: value } };
-      }),
+      [eventId]: (prev[eventId] ?? []).map(r =>
+        r.userId !== userId ? r : { ...r, stats: { ...r.stats, [field]: value } }
+      ),
     }));
   }
 
@@ -122,8 +154,7 @@ export default function SeriesResultsEditor({
       ...prev,
       [eventId]: [...(prev[eventId] ?? []), {
         userId: user.id, user,
-        placement: "", points: "0",
-        stats: Object.fromEntries(statFields.map(f => [f, ""])),
+        stats: Object.fromEntries(statFields.map(f => [f.name, ""])),
       }],
     }));
     setAddPlayerOpen(null);
@@ -141,8 +172,8 @@ export default function SeriesResultsEditor({
     setSavingEvent(eventId);
     const results = (eventDrafts[eventId] ?? []).map(r => ({
       userId:    r.userId,
-      placement: r.placement ? Number(r.placement) : null,
-      points:    Number(r.points) || 0,
+      placement: null,
+      points:    calcPoints(r.stats, statFields),
       stats:     Object.fromEntries(Object.entries(r.stats).map(([k, v]) => [k, Number(v) || 0])),
     }));
     const res = await fetch(`/api/admin/event-series/${seriesId}/results`, {
@@ -182,56 +213,112 @@ export default function SeriesResultsEditor({
         </button>
       </div>
 
-      {/* ── Scrollable body ── */}
+      {/* ── Body ── */}
       <div className="flex-1 overflow-y-auto overscroll-contain">
         <div className="p-4 space-y-3 max-w-2xl mx-auto w-full pb-8">
 
-          {/* ── Stat-Felder ── */}
+          {/* ── Punktesystem ── */}
           <div className="bg-gray-900 border border-white/[0.06] rounded-xl p-4 space-y-3">
             <div className="flex items-center gap-2">
               <Settings className="w-4 h-4 text-teal-400 shrink-0" />
-              <p className="text-sm font-medium text-white">Stat-Felder der Reihe</p>
+              <p className="text-sm font-medium text-white">Punktesystem konfigurieren</p>
             </div>
             <p className="text-xs text-gray-500 leading-relaxed">
-              Diese Spalten gelten für alle Events dieser Reihe und erscheinen in der öffentlichen Tabelle.
+              Lege fest, welche Werte pro Event erfasst werden und wie viele Punkte jede Einheit gibt.
+              Die Gesamtpunkte eines Spielers werden automatisch berechnet.
             </p>
 
-            <div className="flex flex-wrap gap-2">
-              {statFields.map(f => (
-                <span key={f}
-                  className="flex items-center gap-1.5 text-xs bg-teal-900/30 border border-teal-700/30 text-teal-300 rounded-full pl-3 pr-2 py-1.5">
-                  {f}
-                  <button onClick={() => setStatFields(prev => prev.filter(x => x !== f))}
-                    className="text-teal-600 hover:text-red-400 transition-colors p-0.5">
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              ))}
-              {statFields.length === 0 && (
-                <span className="text-xs text-gray-600">Keine Stat-Felder – nur Platz &amp; Punkte werden erfasst.</span>
-              )}
-            </div>
+            {/* Existing fields */}
+            {statFields.length > 0 && (
+              <div className="space-y-2">
+                {/* Header */}
+                <div className="grid grid-cols-[1fr_6rem_2rem] gap-2 px-1">
+                  <span className="text-[10px] text-gray-600 uppercase tracking-widest font-semibold">Feld</span>
+                  <span className="text-[10px] text-gray-600 uppercase tracking-widest font-semibold text-center">Pkt / Einheit</span>
+                  <span />
+                </div>
+                {statFields.map((f, idx) => (
+                  <div key={idx} className="grid grid-cols-[1fr_6rem_2rem] gap-2 items-center">
+                    <input
+                      type="text"
+                      value={f.name}
+                      onChange={e => updateStatField(idx, "name", e.target.value)}
+                      placeholder="Feldname"
+                      className="text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 focus:border-teal-500/50 outline-none"
+                    />
+                    <div className="relative">
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        value={f.pts}
+                        onChange={e => updateStatField(idx, "pts", e.target.value)}
+                        className="text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-2 py-2 text-center w-full focus:border-teal-500/50 outline-none"
+                      />
+                    </div>
+                    <button onClick={() => setStatFields(prev => prev.filter((_, i) => i !== idx))}
+                      className="text-gray-600 active:text-red-500 p-1 rounded transition-colors flex items-center justify-center">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
 
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={newField}
-                onChange={e => setNewField(e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); const f = newField.trim(); if (f && !statFields.includes(f)) { setStatFields(p => [...p, f]); setNewField(""); } } }}
-                placeholder="z.B. Kills, Assists, Punkte…"
-                className="flex-1 text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2.5 placeholder:text-gray-600 focus:border-teal-500/50 outline-none"
-              />
-              <button
-                onClick={() => { const f = newField.trim(); if (f && !statFields.includes(f)) { setStatFields(p => [...p, f]); setNewField(""); } }}
-                className="flex items-center gap-1.5 text-sm bg-gray-700 active:bg-gray-600 text-white rounded-lg px-3 py-2.5 transition-colors whitespace-nowrap">
+            {statFields.length === 0 && (
+              <p className="text-xs text-gray-600 py-1">
+                Noch keine Felder definiert. Füge unten ein Feld hinzu.
+              </p>
+            )}
+
+            {/* Add new field */}
+            <div className="grid grid-cols-[1fr_6rem_auto] gap-2 items-end pt-1 border-t border-white/[0.05]">
+              <div>
+                <label className="text-[10px] text-gray-500 block mb-1">Neues Feld</label>
+                <input
+                  type="text"
+                  value={newFieldName}
+                  onChange={e => setNewFieldName(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addStatField(); } }}
+                  placeholder="z.B. Kills"
+                  className="text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 w-full focus:border-teal-500/50 outline-none placeholder:text-gray-600"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-500 block mb-1">Pkt / Einheit</label>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  value={newFieldPts}
+                  onChange={e => setNewFieldPts(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addStatField(); } }}
+                  placeholder="0"
+                  className="text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-2 py-2 text-center w-full focus:border-teal-500/50 outline-none placeholder:text-gray-600"
+                />
+              </div>
+              <button onClick={addStatField}
+                className="flex items-center gap-1.5 text-sm bg-gray-700 active:bg-gray-600 text-white rounded-lg px-3 py-2 transition-colors whitespace-nowrap">
                 <Plus className="w-4 h-4" />
               </button>
             </div>
 
+            {/* Points preview */}
+            {statFields.length > 0 && (
+              <div className="bg-gray-800/50 rounded-lg px-3 py-2.5 text-xs text-gray-400 leading-relaxed">
+                <span className="text-gray-600 font-medium">Formel: </span>
+                {statFields.map((f, i) => (
+                  <span key={i}>
+                    {i > 0 && <span className="text-gray-600"> + </span>}
+                    <span className="text-white">{f.name}</span>
+                    {f.pts !== 0 && <span className="text-amber-400"> ×{f.pts}</span>}
+                  </span>
+                ))}
+              </div>
+            )}
+
             <button onClick={saveStatFields} disabled={savingStats}
               className="flex items-center gap-1.5 text-sm bg-teal-700 active:bg-teal-600 disabled:opacity-50 text-white rounded-lg px-4 py-2.5 transition-colors w-full sm:w-auto justify-center sm:justify-start">
               <Save className="w-4 h-4" />
-              {savingStats ? "Speichern…" : "Stat-Felder speichern"}
+              {savingStats ? "Speichern…" : "Punktesystem speichern"}
             </button>
           </div>
 
@@ -242,12 +329,12 @@ export default function SeriesResultsEditor({
 
           {events.map(ev => {
             const isExpanded = expandedEvent === ev.id;
-            const draft = eventDrafts[ev.id] ?? [];
-            const takenIds = new Set(draft.map(r => r.userId));
+            const draft      = eventDrafts[ev.id] ?? [];
+            const takenIds   = new Set(draft.map(r => r.userId));
             const sortedDraft = [...draft].sort((a, b) => {
-              const pa = a.placement ? Number(a.placement) : 9999;
-              const pb = b.placement ? Number(b.placement) : 9999;
-              return pa - pb || uname(a.user).localeCompare(uname(b.user));
+              const pa = calcPoints(a.stats, statFields);
+              const pb = calcPoints(b.stats, statFields);
+              return pb - pa || uname(a.user).localeCompare(uname(b.user));
             });
             const isAddOpen = addPlayerOpen === ev.id;
             const filteredUsers = allUsers
@@ -257,7 +344,6 @@ export default function SeriesResultsEditor({
             return (
               <div key={ev.id} className="bg-gray-900 border border-white/[0.06] rounded-xl overflow-hidden">
 
-                {/* Event header */}
                 <button
                   onClick={() => setExpandedEvent(isExpanded ? null : ev.id)}
                   className="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-white/[0.03] transition-colors">
@@ -283,69 +369,76 @@ export default function SeriesResultsEditor({
 
                 {isExpanded && (
                   <div className="border-t border-white/[0.05] p-4 space-y-3">
+                    {statFields.length === 0 && (
+                      <p className="text-xs text-amber-600 bg-amber-900/10 border border-amber-800/20 rounded-lg px-3 py-2">
+                        Zuerst das Punktesystem oben konfigurieren.
+                      </p>
+                    )}
 
-                    {/* Player cards */}
-                    {sortedDraft.length === 0 && (
+                    {sortedDraft.length === 0 && statFields.length > 0 && (
                       <p className="text-xs text-gray-600 py-1">Noch keine Einträge – Spieler unten hinzufügen.</p>
                     )}
 
-                    {sortedDraft.map((row, idx) => (
-                      <div key={row.userId}
-                        className="bg-gray-800/60 border border-white/[0.05] rounded-lg p-3 space-y-2.5">
+                    {sortedDraft.map(row => {
+                      const computed = calcPoints(row.stats, statFields);
+                      return (
+                        <div key={row.userId}
+                          className="bg-gray-800/60 border border-white/[0.05] rounded-lg p-3 space-y-2.5">
 
-                        {/* Player name + delete */}
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            {row.user.image
-                              ? <img src={row.user.image} alt="" className="w-6 h-6 rounded-full shrink-0 object-cover" />
-                              : <div className="w-6 h-6 rounded-full bg-gray-600 flex items-center justify-center text-[10px] font-semibold text-gray-300 shrink-0">
-                                  {uname(row.user)[0]?.toUpperCase() ?? "?"}
-                                </div>
-                            }
-                            <span className="text-sm font-semibold text-white truncate">{uname(row.user)}</span>
-                            {row.placement && (
-                              <span className="text-[10px] text-gray-500 shrink-0">#{row.placement}</span>
-                            )}
-                          </div>
-                          <button onClick={() => removePlayer(ev.id, row.userId)}
-                            className="text-gray-600 active:text-red-500 p-1.5 rounded-lg active:bg-red-900/20 transition-colors shrink-0">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-
-                        {/* Platz + Punkte + Stats — responsive grid */}
-                        <div className={`grid gap-2 ${
-                          statFields.length === 0 ? "grid-cols-2" :
-                          statFields.length === 1 ? "grid-cols-3" :
-                          "grid-cols-2 sm:grid-cols-4"
-                        }`}>
-                          <div>
-                            <label className="text-[10px] text-gray-500 block mb-1 text-center">Platz</label>
-                            <input type="number" inputMode="numeric" min={1} value={row.placement}
-                              onChange={e => setRowField(ev.id, row.userId, "placement", e.target.value)}
-                              placeholder="–"
-                              className={inputCls}
-                            />
-                          </div>
-                          <div>
-                            <label className="text-[10px] text-gray-500 block mb-1 text-center">Punkte</label>
-                            <input type="number" inputMode="numeric" min={0} value={row.points}
-                              onChange={e => setRowField(ev.id, row.userId, "points", e.target.value)}
-                              className={inputCls}
-                            />
-                          </div>
-                          {statFields.map(f => (
-                            <div key={f}>
-                              <label className="text-[10px] text-gray-500 block mb-1 text-center truncate">{f}</label>
-                              <input type="number" inputMode="numeric" min={0} value={row.stats[f] ?? ""}
-                                onChange={e => setRowField(ev.id, row.userId, f, e.target.value)}
-                                className={inputCls}
-                              />
+                          {/* Player header */}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              {row.user.image
+                                ? <img src={row.user.image} alt="" className="w-6 h-6 rounded-full shrink-0 object-cover" />
+                                : <div className="w-6 h-6 rounded-full bg-gray-600 flex items-center justify-center text-[10px] font-semibold text-gray-300 shrink-0">
+                                    {uname(row.user)[0]?.toUpperCase() ?? "?"}
+                                  </div>
+                              }
+                              <span className="text-sm font-semibold text-white truncate">{uname(row.user)}</span>
                             </div>
-                          ))}
+                            <div className="flex items-center gap-2 shrink-0">
+                              {statFields.length > 0 && (
+                                <span className="text-xs font-bold text-amber-400 tabular-nums">
+                                  {computed.toLocaleString("de-DE")} Pkt
+                                </span>
+                              )}
+                              <button onClick={() => removePlayer(ev.id, row.userId)}
+                                className="text-gray-600 active:text-red-500 p-1.5 rounded-lg active:bg-red-900/20 transition-colors">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Stat inputs */}
+                          {statFields.length > 0 && (
+                            <div className={`grid gap-2 ${
+                              statFields.length === 1 ? "grid-cols-1" :
+                              statFields.length === 2 ? "grid-cols-2" :
+                              statFields.length <= 4  ? "grid-cols-2 sm:grid-cols-4" :
+                              "grid-cols-2 sm:grid-cols-3"
+                            }`}>
+                              {statFields.map(f => (
+                                <div key={f.name}>
+                                  <label className="text-[10px] text-gray-500 block mb-1 text-center truncate">
+                                    {f.name}
+                                    {f.pts > 0 && <span className="text-gray-700 ml-1">×{f.pts}</span>}
+                                  </label>
+                                  <input
+                                    type="number"
+                                    inputMode="numeric"
+                                    min={0}
+                                    value={row.stats[f.name] ?? ""}
+                                    onChange={e => setRowStat(ev.id, row.userId, f.name, e.target.value)}
+                                    placeholder="0"
+                                    className={inputCls}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
 
                     {/* Add player */}
                     {!isAddOpen ? (
@@ -393,8 +486,7 @@ export default function SeriesResultsEditor({
                       </div>
                     )}
 
-                    {/* Save button */}
-                    <button onClick={() => saveEvent(ev.id)} disabled={savingEvent === ev.id}
+                    <button onClick={() => saveEvent(ev.id)} disabled={savingEvent === ev.id || statFields.length === 0}
                       className="flex items-center gap-2 text-sm bg-amber-700 active:bg-amber-600 disabled:opacity-50 text-white rounded-lg px-4 py-2.5 transition-colors w-full sm:w-auto justify-center sm:justify-start">
                       <Save className="w-4 h-4" />
                       {savingEvent === ev.id ? "Speichern…" : "Ergebnisse speichern"}

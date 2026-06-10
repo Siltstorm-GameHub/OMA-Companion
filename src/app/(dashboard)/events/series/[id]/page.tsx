@@ -180,7 +180,18 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
 
   if (!series) notFound();
 
-  const statFields: string[] = series.statFields ? (JSON.parse(series.statFields) as string[]) : [];
+  const statFields: string[] = (() => {
+    if (!series.statFields) return [];
+    try {
+      const parsed = JSON.parse(series.statFields) as unknown;
+      if (!Array.isArray(parsed)) return [];
+      return parsed.map((f: unknown) => {
+        if (typeof f === "string") return f;
+        if (f && typeof f === "object" && "name" in f) return String((f as { name: unknown }).name);
+        return null;
+      }).filter(Boolean) as string[];
+    } catch { return []; }
+  })();
 
   const upcomingEvents = series.events.filter(e => e.status !== "finished");
   const pastEvents     = series.events
