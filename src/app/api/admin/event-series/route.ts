@@ -45,6 +45,11 @@ export async function PATCH(req: NextRequest) {
       ...(fields.discordChannelId     !== undefined && { discordChannelId:     fields.discordChannelId }),
       ...(fields.recurrenceType       !== undefined && { recurrenceType:       fields.recurrenceType || null }),
       ...(fields.recurrenceMonthlyMode !== undefined && { recurrenceMonthlyMode: fields.recurrenceMonthlyMode || null }),
+      ...(fields.statFields           !== undefined && {
+        statFields: Array.isArray(fields.statFields) && fields.statFields.length > 0
+          ? JSON.stringify(fields.statFields)
+          : null,
+      }),
     },
   });
 

@@ -30,79 +30,117 @@ type SeriesEvent = {
     pointsConfig:     string | null;
     participants:     { userId: string }[];
   } | null;
+  seriesResults: { userId: string; placement: number | null; points: number; statsJson: string | null }[];
 };
 
-/** Gesamttabelle: Punkte, Siege, Teilnahmen, Ø-Platzierung */
-function computeStandings(events: SeriesEvent[]) {
-  const pts:        Record<string, number>   = {};
-  const wins:       Record<string, number>   = {};
-  const part:       Record<string, number>   = {};
-  const placeSums:  Record<string, number>   = {};   // Summe aller Platzierungen
-  const placeCounts:Record<string, number>   = {};   // Anzahl Turniere mit Platzierung
+type StandingRow = {
+  userId:         string;
+  totalPoints:    number;
+  wins:           number;
+  participations: number;
+  avgPlacement:   number | null;
+  statTotals:     Record<string, number>;
+};
+
+/** Tabelle aus manuell erfassten SeriesResults */
+function computeStandingsFromResults(
+  events: SeriesEvent[],
+  statFields: string[],
+): StandingRow[] {
+  const pts:         Record<string, number>               = {};
+  const wins:        Record<string, number>               = {};
+  const part:        Record<string, number>               = {};
+  const placeSums:   Record<string, number>               = {};
+  const placeCounts: Record<string, number>               = {};
+  const statTotals:  Record<string, Record<string, number>> = {};
 
   for (const ev of events) {
-    const t = ev.tournament;
-    if (!t?.finalRankingJson) {
-      // Auch ohne finale Platzierung: Turnier-Teilnehmer zählen (0 Punkte)
-      if (t?.participants) {
-        for (const pa of t.participants) {
-          part[pa.userId] = (part[pa.userId] ?? 0) + 1;
-        }
+    for (const r of ev.seriesResults) {
+      const uid = r.userId;
+      pts[uid]  = (pts[uid]  ?? 0) + r.points;
+      part[uid] = (part[uid] ?? 0) + 1;
+      if (r.placement != null) {
+        placeSums[uid]   = (placeSums[uid]   ?? 0) + r.placement;
+        placeCounts[uid] = (placeCounts[uid] ?? 0) + 1;
+        if (r.placement === 1) wins[uid] = (wins[uid] ?? 0) + 1;
       }
-      continue;
-    }
-
-    let ranking: string[] = [];
-    let pointsMap: Record<string, number | { coins?: number; points?: number }> = {};
-    try {
-      ranking   = JSON.parse(t.finalRankingJson);
-      pointsMap = t.pointsConfig ? JSON.parse(t.pointsConfig) : {};
-    } catch { continue; }
-
-    ranking.forEach((uid, idx) => {
-      const placement = idx + 1;
-      // Punkte: normalisiert (Objekt oder Zahl)
-      const raw = pointsMap[String(placement)];
-      const p = raw == null ? 0
-        : typeof raw === "number" ? raw
-        : ((raw.coins ?? 0) + (raw.points ?? 0)) / 2; // Mittelwert falls beides angegeben
-      // Hier nehmen wir coins als Münzen-Wert für die Tabelle
-      const coins = raw == null ? 0
-        : typeof raw === "number" ? raw
-        : (raw.coins ?? 0);
-
-      pts[uid]          = (pts[uid]          ?? 0) + coins;
-      part[uid]         = (part[uid]         ?? 0) + 1;
-      placeSums[uid]    = (placeSums[uid]    ?? 0) + placement;
-      placeCounts[uid]  = (placeCounts[uid]  ?? 0) + 1;
-      if (placement === 1) wins[uid] = (wins[uid] ?? 0) + 1;
-    });
-
-    // Teilnehmer ohne finale Platzierung (Turnier-Teilnehmer aber nicht im Ranking)
-    for (const pa of t.participants) {
-      if (!ranking.includes(pa.userId)) {
-        part[pa.userId] = (part[pa.userId] ?? 0) + 1;
+      if (r.statsJson && statFields.length > 0) {
+        try {
+          const s = JSON.parse(r.statsJson) as Record<string, number>;
+          if (!statTotals[uid]) statTotals[uid] = {};
+          for (const f of statFields) {
+            statTotals[uid][f] = (statTotals[uid][f] ?? 0) + (s[f] ?? 0);
+          }
+        } catch { /* ignore */ }
       }
     }
   }
 
-  const userIds = Array.from(new Set([...Object.keys(pts), ...Object.keys(part)]));
-
-  return userIds
+  return Array.from(new Set([...Object.keys(pts), ...Object.keys(part)]))
     .map(uid => ({
       userId:         uid,
       totalPoints:    pts[uid]  ?? 0,
       wins:           wins[uid] ?? 0,
       participations: part[uid] ?? 0,
       avgPlacement:   placeCounts[uid]
-        ? Math.round((placeSums[uid] / placeCounts[uid]) * 10) / 10  // 1 Dezimalstelle
+        ? Math.round((placeSums[uid] / placeCounts[uid]) * 10) / 10
         : null,
+      statTotals: statTotals[uid] ?? {},
     }))
     .sort((a, b) =>
       b.totalPoints   - a.totalPoints  ||
       b.wins          - a.wins         ||
       (a.avgPlacement ?? 999) - (b.avgPlacement ?? 999) ||
       b.participations - a.participations
+    );
+}
+
+/** Fallback: Tabelle aus Turnier-Daten (kein SeriesResult vorhanden) */
+function computeStandingsFromTournaments(events: SeriesEvent[]): StandingRow[] {
+  const pts:        Record<string, number> = {};
+  const wins:       Record<string, number> = {};
+  const part:       Record<string, number> = {};
+  const placeSums:  Record<string, number> = {};
+  const placeCounts:Record<string, number> = {};
+
+  for (const ev of events) {
+    const t = ev.tournament;
+    if (!t?.finalRankingJson) {
+      if (t?.participants) {
+        for (const pa of t.participants) part[pa.userId] = (part[pa.userId] ?? 0) + 1;
+      }
+      continue;
+    }
+    let ranking: string[] = [];
+    let pointsMap: Record<string, number | { coins?: number; points?: number }> = {};
+    try { ranking = JSON.parse(t.finalRankingJson); pointsMap = t.pointsConfig ? JSON.parse(t.pointsConfig) : {}; }
+    catch { continue; }
+
+    ranking.forEach((uid, idx) => {
+      const placement = idx + 1;
+      const raw = pointsMap[String(placement)];
+      const coins = raw == null ? 0 : typeof raw === "number" ? raw : (raw.coins ?? 0);
+      pts[uid]          = (pts[uid]          ?? 0) + coins;
+      part[uid]         = (part[uid]         ?? 0) + 1;
+      placeSums[uid]    = (placeSums[uid]    ?? 0) + placement;
+      placeCounts[uid]  = (placeCounts[uid]  ?? 0) + 1;
+      if (placement === 1) wins[uid] = (wins[uid] ?? 0) + 1;
+    });
+    for (const pa of t.participants) {
+      if (!ranking.includes(pa.userId)) part[pa.userId] = (part[pa.userId] ?? 0) + 1;
+    }
+  }
+
+  return Array.from(new Set([...Object.keys(pts), ...Object.keys(part)]))
+    .map(uid => ({
+      userId: uid, totalPoints: pts[uid] ?? 0, wins: wins[uid] ?? 0,
+      participations: part[uid] ?? 0,
+      avgPlacement: placeCounts[uid] ? Math.round((placeSums[uid] / placeCounts[uid]) * 10) / 10 : null,
+      statTotals: {},
+    }))
+    .sort((a, b) =>
+      b.totalPoints - a.totalPoints || b.wins - a.wins ||
+      (a.avgPlacement ?? 999) - (b.avgPlacement ?? 999) || b.participations - a.participations
     );
 }
 
@@ -132,6 +170,9 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
               participants:     { select: { userId: true } },
             },
           },
+          seriesResults: {
+            select: { userId: true, placement: true, points: true, statsJson: true },
+          },
         },
       },
     },
@@ -139,13 +180,18 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
 
   if (!series) notFound();
 
+  const statFields: string[] = series.statFields ? (JSON.parse(series.statFields) as string[]) : [];
+
   const upcomingEvents = series.events.filter(e => e.status !== "finished");
   const pastEvents     = series.events
     .filter(e => e.status === "finished")
     .sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime());
 
-  // Gesamttabelle aus ALLEN Events berechnen (auch vergangene ohne Turnier)
-  const standings = computeStandings(series.events);
+  // Tabelle: bevorzugt SeriesResult, Fallback auf Turnier-Daten
+  const hasManualResults = series.events.some(e => e.seriesResults.length > 0);
+  const standings = hasManualResults
+    ? computeStandingsFromResults(series.events, statFields)
+    : computeStandingsFromTournaments(series.events);
 
   // User-Daten für Tabelle
   const standingUserIds = standings.map(s => s.userId);
@@ -161,7 +207,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
   const totalParticipantIds = new Set(
     series.events.flatMap(e => (e.registrations as { userId: string }[]).map(r => r.userId))
   );
-  const eventsWithResults = pastEvents.filter(e => e.tournament?.finalRankingJson);
+  const eventsWithResults = pastEvents.filter(e => e.seriesResults.length > 0 || e.tournament?.finalRankingJson);
 
   // Sieger aus pastEvents für die Terminliste
   const winnerMap = new Map<string, string>();
@@ -247,16 +293,17 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
             )}
           </div>
 
-          <div className="glass card-shine rounded-2xl overflow-hidden">
+          <div className="glass card-shine rounded-2xl overflow-hidden overflow-x-auto">
             {/* Tabellen-Header */}
-            <div className="grid items-center px-4 py-2.5 border-b border-white/[0.06]"
-              style={{ gridTemplateColumns: "2rem 1fr 4rem 4rem 4rem 5rem" }}>
+            <div className="grid items-center px-4 py-2.5 border-b border-white/[0.06] min-w-max"
+              style={{ gridTemplateColumns: `2rem 1fr 4rem 4rem 4rem${statFields.map(() => " 5rem").join("")} 5rem` }}>
               {[
                 { label: "#",        cls: "" },
                 { label: "Spieler",  cls: "" },
                 { label: "Siege",    cls: "text-center" },
                 { label: "Events",   cls: "text-center" },
                 { label: "Ø Platz",  cls: "text-center" },
+                ...statFields.map(f => ({ label: f, cls: "text-center" })),
                 { label: "Punkte",   cls: "text-right" },
               ].map(col => (
                 <span key={col.label}
@@ -274,9 +321,9 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
 
               return (
                 <div key={row.userId}
-                  className="grid items-center px-4 py-3 border-b border-white/[0.04] last:border-0 transition-colors hover:bg-white/[0.02]"
+                  className="grid items-center px-4 py-3 border-b border-white/[0.04] last:border-0 transition-colors hover:bg-white/[0.02] min-w-max"
                   style={{
-                    gridTemplateColumns: "2rem 1fr 4rem 4rem 4rem 5rem",
+                    gridTemplateColumns: `2rem 1fr 4rem 4rem 4rem${statFields.map(() => " 5rem").join("")} 5rem`,
                     background: isMe ? "rgba(20,184,166,0.05)" : "",
                     borderLeft: isMe ? "2px solid rgba(20,184,166,0.40)" : "2px solid transparent",
                   }}>
@@ -330,6 +377,17 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
                       <span className="text-xs text-gray-700">–</span>
                     )}
                   </div>
+
+                  {/* Stat-Felder */}
+                  {statFields.map(f => (
+                    <div key={f} className="text-center">
+                      <span className="text-sm text-gray-300 tabular-nums">
+                        {row.statTotals[f] != null && row.statTotals[f] > 0
+                          ? row.statTotals[f].toLocaleString("de-DE")
+                          : <span className="text-gray-700 text-xs">–</span>}
+                      </span>
+                    </div>
+                  ))}
 
                   {/* Punkte */}
                   <div className="text-right">

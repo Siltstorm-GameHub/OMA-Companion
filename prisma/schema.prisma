@@ -46,6 +46,7 @@ model User {
   dailySpins                DailySpin[]
   donations                 Donation[]
   collectibles              UserCollectible[]
+  seriesResults             SeriesResult[]
 }
 
 // ── Collectibles ─────────────────────────────────────────────────────────────
@@ -204,8 +205,10 @@ model EventSeries {
   discordChannelId String?  // Kanal-ID für Bot-Nachrichten aller Events dieser Reihe
   recurrenceType       String?  // "weekly" | "biweekly" | "monthly"
   recurrenceMonthlyMode String? // "dayOfMonth" | "weekdayOfMonth" (nur bei monthly)
+  statFields   String?  // JSON: ["Kills","Assists","Punkte"] — Stat-Spalten für alle Events der Reihe
   createdAt   DateTime @default(now())
   events      Event[]
+  results     SeriesResult[]
 }
 
 model Event {
@@ -228,6 +231,7 @@ model Event {
   series        EventSeries?        @relation(fields: [seriesId], references: [id])
   registrations EventRegistration[]
   tournament    Tournament?
+  seriesResults SeriesResult[]
 }
 
 model EventRegistration {
@@ -499,4 +503,20 @@ model PollJob {
   errorMsg    String?
   createdAt   DateTime  @default(now())
   sentAt      DateTime?
+}
+
+model SeriesResult {
+  id          String   @id @default(cuid())
+  seriesId    String
+  eventId     String
+  userId      String
+  placement   Int?
+  points      Int      @default(0)
+  statsJson   String?  // JSON: {"Kills": 5, "Assists": 3}
+
+  series EventSeries @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  event  Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user   User        @relation(fields: [userId], references: [id])
+
+  @@unique([eventId, userId])
 }

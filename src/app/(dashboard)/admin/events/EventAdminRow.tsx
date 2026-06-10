@@ -5,11 +5,12 @@ import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import {
   ChevronDown, ChevronUp, Trophy, Settings, Users, UserPlus, UserMinus,
-  Search, Trash2, AlertTriangle, Repeat, X, GitBranch, Gamepad2, Swords, ExternalLink, Hash, CalendarPlus, RefreshCw,
+  Search, Trash2, AlertTriangle, Repeat, X, GitBranch, Gamepad2, Swords, ExternalLink, Hash, CalendarPlus, RefreshCw, TableProperties,
 } from "lucide-react";
 import { describeMonthlyModes } from "@/lib/recurrence";
 import Link from "next/link";
 import TournamentManager from "./TournamentManager";
+import SeriesResultsEditor from "./SeriesResultsEditor";
 import GameNameInput from "@/components/GameNameInput";
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
@@ -136,6 +137,9 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
   const [propagateFormat, setPropagateFormat]               = useState(false);
   const [seriesSettingsLoaded, setSeriesSettingsLoaded]     = useState(false);
   const [seriesSettingsSaving, setSeriesSettingsSaving]     = useState(false);
+
+  /* ── Series results editor ── */
+  const [showSeriesEditor, setShowSeriesEditor] = useState(false);
 
   /* ── Recurrence state ── */
   const [recurrenceType, setRecurrenceType]             = useState<"" | "weekly" | "biweekly" | "monthly">("");
@@ -702,6 +706,14 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
                               {generatingNext ? "Erstellt…" : "Nächsten Termin erstellen"}
                             </button>
                           )}
+
+                          <button
+                            onClick={() => setShowSeriesEditor(true)}
+                            className="flex items-center gap-1.5 text-xs text-amber-300 hover:text-white border border-amber-600/40 hover:bg-amber-700 rounded-lg px-3 py-1.5 transition-all"
+                          >
+                            <TableProperties className="w-3.5 h-3.5" />
+                            Tabelle bearbeiten
+                          </button>
                         </div>
                       </div>
                     )}
@@ -885,6 +897,13 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
           </div>
         )}
       </div>
+
+      {showSeriesEditor && event.seriesId && (
+        <SeriesResultsEditor
+          seriesId={event.seriesId}
+          onClose={() => setShowSeriesEditor(false)}
+        />
+      )}
     </>
   );
 }
