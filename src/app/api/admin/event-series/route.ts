@@ -50,6 +50,7 @@ export async function PATCH(req: NextRequest) {
           ? JSON.stringify(fields.statFields)
           : null,
       }),
+      ...(fields.participationPts !== undefined && { participationPts: Number(fields.participationPts) || 0 }),
       ...(fields.baselineJson !== undefined && { baselineJson: fields.baselineJson || null }),
     },
   });

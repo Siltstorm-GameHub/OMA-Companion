@@ -205,8 +205,9 @@ model EventSeries {
   discordChannelId String?  // Kanal-ID für Bot-Nachrichten aller Events dieser Reihe
   recurrenceType       String?  // "weekly" | "biweekly" | "monthly"
   recurrenceMonthlyMode String? // "dayOfMonth" | "weekdayOfMonth" (nur bei monthly)
-  statFields   String?  // JSON: ["Kills","Assists","Punkte"] — Stat-Spalten für alle Events der Reihe
-  baselineJson String?  // JSON: {"userId":{"points":0,"wins":0,"participations":0,"stats":{}}} — Historische Basisdaten
+  statFields       String?  // JSON: [{"name":"Kills","pts":12},...] — Stat-Spalten für alle Events der Reihe
+  participationPts Int     @default(0)  // Punkte nur für Teilnahme (wird bei jedem Ergebnis-Eintrag addiert)
+  baselineJson     String?  // JSON: {"userId":{"points":0,"wins":0,"participations":0,"stats":{}}} — Historische Basisdaten
   createdAt   DateTime @default(now())
   events      Event[]
   results     SeriesResult[]

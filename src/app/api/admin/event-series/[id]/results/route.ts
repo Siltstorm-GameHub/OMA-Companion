@@ -11,7 +11,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
 
   const series = await prisma.eventSeries.findUnique({
     where: { id },
-    select: { id: true, name: true, statFields: true, baselineJson: true },
+    select: { id: true, name: true, statFields: true, participationPts: true, baselineJson: true },
   });
   if (!series) return NextResponse.json({ error: "Nicht gefunden" }, { status: 404 });
 
@@ -32,6 +32,8 @@ export async function GET(_req: NextRequest, { params }: Params) {
           user: { select: { id: true, name: true, username: true, image: true } },
         },
       },
+      tournament: { select: { participants: { select: { userId: true } } } },
+      registrations: { select: { userId: true } },
     },
   });
 
@@ -45,6 +47,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
       id: series.id,
       name: series.name,
       statFields: series.statFields ? (JSON.parse(series.statFields) as string[]) : [],
+      participationPts: series.participationPts,
       baselineJson: series.baselineJson ?? null,
     },
     events: events.map(ev => ({
@@ -52,6 +55,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
       title: ev.title,
       startAt: ev.startAt.toISOString(),
       status: ev.status,
+      participantUserIds: (ev.tournament?.participants ?? ev.registrations).map(p => p.userId),
       results: ev.seriesResults.map(r => ({
         userId: r.userId,
         user: r.user,

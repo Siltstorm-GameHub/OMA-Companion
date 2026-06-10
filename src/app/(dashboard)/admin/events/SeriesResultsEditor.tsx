@@ -27,10 +27,11 @@ type SeriesEventData = {
   startAt: string;
   status: string;
   results: ResultRow[];
+  participantUserIds: string[];
 };
 
 type SeriesData = {
-  series: { id: string; name: string; statFields: StatFieldConfig[]; baselineJson: string | null };
+  series: { id: string; name: string; statFields: StatFieldConfig[]; participationPts: number; baselineJson: string | null };
   events: SeriesEventData[];
   allUsers: UserInfo[];
 };
@@ -40,8 +41,8 @@ const uname = (u: UserInfo) => u.username ?? u.name ?? "?";
 const inputCls =
   "bg-gray-800 border border-gray-700 text-white rounded-lg px-2.5 py-2 text-sm text-center focus:border-teal-500/50 outline-none w-full";
 
-function calcPoints(stats: Record<string, string>, fields: StatFieldConfig[]): number {
-  return fields.reduce((sum, f) => sum + (Number(stats[f.name]) || 0) * f.pts, 0);
+function calcPoints(stats: Record<string, string>, fields: StatFieldConfig[], participationPts = 0): number {
+  return fields.reduce((sum, f) => sum + (Number(stats[f.name]) || 0) * f.pts, 0) + participationPts;
 }
 
 /** Lade-Helper: unterstützt altes Format (string[]) und neues Format ({name,pts}[]) */
@@ -65,6 +66,7 @@ export default function SeriesResultsEditor({
   const [data, setData]           = useState<SeriesData | null>(null);
   const [loading, setLoading]     = useState(true);
   const [statFields, setStatFields] = useState<StatFieldConfig[]>([]);
+  const [participationPts, setParticipationPts] = useState(0);
   const [newFieldName, setNewFieldName] = useState("");
   const [newFieldPts,  setNewFieldPts]  = useState("");
   const [savingStats, setSavingStats]   = useState(false);
@@ -94,6 +96,7 @@ export default function SeriesResultsEditor({
       }) => {
         const fields = parseStatFields(d.series.statFields);
         setStatFields(fields);
+        setParticipationPts(d.series.participationPts ?? 0);
         const drafts: Record<string, ResultRow[]> = {};
         for (const ev of d.events) {
           drafts[ev.id] = ev.results.map(r => ({
@@ -125,7 +128,7 @@ export default function SeriesResultsEditor({
           } catch { /* ignore */ }
         }
 
-        setData({ ...d, series: { ...d.series, statFields: fields } });
+        setData({ ...d, series: { ...d.series, statFields: fields, participationPts: d.series.participationPts ?? 0 } });
         setLoading(false);
       });
   }, [seriesId]);
@@ -142,12 +145,12 @@ export default function SeriesResultsEditor({
     const res = await fetch("/api/admin/event-series", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ seriesId, statFields }),
+      body: JSON.stringify({ seriesId, statFields, participationPts }),
     });
     setSavingStats(false);
     if (res.ok) {
       toast.success("Punktesystem gespeichert");
-      if (data) setData({ ...data, series: { ...data.series, statFields } });
+      if (data) setData({ ...data, series: { ...data.series, statFields, participationPts } });
       // Sync event drafts: add missing fields, keep existing values
       setEventDrafts(prev => {
         const next: Record<string, ResultRow[]> = {};
@@ -212,12 +215,25 @@ export default function SeriesResultsEditor({
     }));
   }
 
+  function importParticipants(ev: SeriesEventData) {
+    const existing = new Set((eventDrafts[ev.id] ?? []).map(r => r.userId));
+    const toAdd = ev.participantUserIds
+      .filter(uid => !existing.has(uid))
+      .map(uid => {
+        const user = (data?.allUsers ?? []).find(u => u.id === uid) ?? { id: uid, name: uid, username: null, image: null };
+        return { userId: uid, user, stats: Object.fromEntries(statFields.map(f => [f.name, ""])) };
+      });
+    if (toAdd.length === 0) { toast.info("Alle Teilnehmer bereits eingetragen"); return; }
+    setEventDrafts(prev => ({ ...prev, [ev.id]: [...(prev[ev.id] ?? []), ...toAdd] }));
+    toast.success(`${toAdd.length} Teilnehmer importiert`);
+  }
+
   async function saveEvent(eventId: string) {
     setSavingEvent(eventId);
     const results = (eventDrafts[eventId] ?? []).map(r => ({
       userId:    r.userId,
       placement: null,
-      points:    calcPoints(r.stats, statFields),
+      points:    calcPoints(r.stats, statFields, participationPts),
       stats:     Object.fromEntries(Object.entries(r.stats).map(([k, v]) => [k, Number(v) || 0])),
     }));
     const res = await fetch(`/api/admin/event-series/${seriesId}/results`, {
@@ -389,7 +405,26 @@ export default function SeriesResultsEditor({
               </button>
             </div>
 
-            {statFields.length > 0 && (
+            {/* Participation points */}
+            <div className="flex items-center gap-3 pt-1 border-t border-white/[0.05]">
+              <div className="flex-1 min-w-0">
+                <label className="text-[10px] text-gray-500 block mb-1">Punkte pro Teilnahme</label>
+                <p className="text-[10px] text-gray-700 leading-relaxed">
+                  Wird für jeden eingetragenen Spieler automatisch addiert.
+                  0 = keine Teilnahme-Punkte.
+                </p>
+              </div>
+              <input
+                type="number"
+                inputMode="decimal"
+                min={0}
+                value={participationPts}
+                onChange={e => setParticipationPts(Number(e.target.value) || 0)}
+                className="w-20 text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-2 py-2 text-center focus:border-teal-500/50 outline-none shrink-0"
+              />
+            </div>
+
+            {(statFields.length > 0 || participationPts > 0) && (
               <div className="bg-gray-800/50 rounded-lg px-3 py-2.5 text-xs text-gray-400 leading-relaxed">
                 <span className="text-gray-600 font-medium">Formel: </span>
                 {statFields.map((f, i) => (
@@ -399,6 +434,12 @@ export default function SeriesResultsEditor({
                     {f.pts !== 0 && <span className="text-amber-400"> ×{f.pts}</span>}
                   </span>
                 ))}
+                {participationPts > 0 && (
+                  <span>
+                    {statFields.length > 0 && <span className="text-gray-600"> + </span>}
+                    <span className="text-teal-400">{participationPts} pro Teilnahme</span>
+                  </span>
+                )}
               </div>
             )}
 
@@ -601,8 +642,8 @@ export default function SeriesResultsEditor({
             const draft      = eventDrafts[ev.id] ?? [];
             const takenIds   = new Set(draft.map(r => r.userId));
             const sortedDraft = [...draft].sort((a, b) => {
-              const pa = calcPoints(a.stats, statFields);
-              const pb = calcPoints(b.stats, statFields);
+              const pa = calcPoints(a.stats, statFields, participationPts);
+              const pb = calcPoints(b.stats, statFields, participationPts);
               return pb - pa || uname(a.user).localeCompare(uname(b.user));
             });
             const isAddOpen = addPlayerOpen === ev.id;
@@ -638,18 +679,28 @@ export default function SeriesResultsEditor({
 
                 {isExpanded && (
                   <div className="border-t border-white/[0.05] p-4 space-y-3">
-                    {statFields.length === 0 && (
+                    {statFields.length === 0 && participationPts === 0 && (
                       <p className="text-xs text-amber-600 bg-amber-900/10 border border-amber-800/20 rounded-lg px-3 py-2">
                         Zuerst das Punktesystem oben konfigurieren.
                       </p>
                     )}
 
-                    {sortedDraft.length === 0 && statFields.length > 0 && (
-                      <p className="text-xs text-gray-600 py-1">Noch keine Einträge – Spieler unten hinzufügen.</p>
+                    {/* Import participants button */}
+                    {ev.participantUserIds.length > 0 && (
+                      <button
+                        onClick={() => importParticipants(ev)}
+                        className="flex items-center justify-center gap-2 text-xs text-teal-400 active:text-white border border-teal-800/40 active:border-teal-600 rounded-lg px-3 py-2 w-full transition-colors">
+                        <UserPlus className="w-3.5 h-3.5" />
+                        {ev.participantUserIds.length} Teilnehmer importieren
+                      </button>
+                    )}
+
+                    {sortedDraft.length === 0 && (statFields.length > 0 || participationPts > 0) && (
+                      <p className="text-xs text-gray-600 py-1">Noch keine Einträge – Spieler oben importieren oder unten hinzufügen.</p>
                     )}
 
                     {sortedDraft.map(row => {
-                      const computed = calcPoints(row.stats, statFields);
+                      const computed = calcPoints(row.stats, statFields, participationPts);
                       return (
                         <div key={row.userId}
                           className="bg-gray-800/60 border border-white/[0.05] rounded-lg p-3 space-y-2.5">
@@ -665,7 +716,7 @@ export default function SeriesResultsEditor({
                               <span className="text-sm font-semibold text-white truncate">{uname(row.user)}</span>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
-                              {statFields.length > 0 && (
+                              {(statFields.length > 0 || participationPts > 0) && (
                                 <span className="text-xs font-bold text-amber-400 tabular-nums">
                                   {computed.toLocaleString("de-DE")} Pkt
                                 </span>
