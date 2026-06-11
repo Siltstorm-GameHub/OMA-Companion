@@ -25,6 +25,7 @@ const FORMAT_LABELS: Record<string, string> = {
 };
 
 type StatConfig = { participationPoints: number; stats: { field: string; pointsPer: number }[] };
+type LegacyRow  = { userId: string; points: number; participations: number; stats: Record<string, number> };
 
 type SeriesEventForStandings = {
   registrations: { userId: string }[];
@@ -36,14 +37,25 @@ type SeriesEventForStandings = {
   } | null;
 };
 
-/** Gesamttabelle auf Basis von seriesStatConfig */
+/** Gesamttabelle auf Basis von seriesStatConfig + optionalem Legacy-Stand */
 function computeStatStandings(
   events: SeriesEventForStandings[],
   cfg: StatConfig,
+  legacy: LegacyRow[],
 ) {
-  const pts:        Record<string, number> = {};
-  const part:       Record<string, number> = {};
+  const pts:        Record<string, number>                 = {};
+  const part:       Record<string, number>                 = {};
   const statTotals: Record<string, Record<string, number>> = {};
+
+  // Legacy-Werte als Startwert
+  for (const row of legacy) {
+    pts[row.userId]  = (pts[row.userId]  ?? 0) + row.points;
+    part[row.userId] = (part[row.userId] ?? 0) + row.participations;
+    if (!statTotals[row.userId]) statTotals[row.userId] = {};
+    for (const [field, val] of Object.entries(row.stats ?? {})) {
+      statTotals[row.userId][field] = (statTotals[row.userId][field] ?? 0) + val;
+    }
+  }
 
   for (const ev of events) {
     // Teilnahmen aus Registrierungen zählen
@@ -79,6 +91,7 @@ function computeStatStandings(
       totalPoints:    pts[uid]  ?? 0,
       participations: part[uid] ?? 0,
       stats:          statTotals[uid] ?? {},
+      hasLegacy:      legacy.some(l => l.userId === uid),
     }))
     .sort((a, b) => b.totalPoints - a.totalPoints || b.participations - a.participations);
 }
@@ -131,10 +144,14 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
     try { return series.seriesStatConfig ? JSON.parse(series.seriesStatConfig) : null; } catch { return null; }
   })() ?? { participationPoints: 0, stats: [] };
 
-  const hasStatConfig = statCfg.participationPoints > 0 || statCfg.stats.length > 0;
+  const legacyRows: LegacyRow[] = (() => {
+    try { return series.legacyStandings ? JSON.parse(series.legacyStandings) : []; } catch { return []; }
+  })();
+
+  const hasStatConfig = statCfg.participationPoints > 0 || statCfg.stats.length > 0 || legacyRows.length > 0;
 
   // Gesamttabelle berechnen
-  const standings = computeStatStandings(series.events, statCfg);
+  const standings = computeStatStandings(series.events, statCfg, legacyRows);
 
   // User-Daten für Tabelle
   const standingUserIds = standings.map(s => s.userId);
@@ -315,6 +332,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
                         <span className={`text-sm font-medium truncate ${isMe ? "text-teal-300" : "text-white"}`}>
                           {name}
                           {isMe && <span className="text-[10px] text-teal-600 ml-1.5">(du)</span>}
+                          {row.hasLegacy && <span className="text-[10px] text-gray-600 ml-1.5" title="Enthält historische Werte">*</span>}
                         </span>
                       </div>
 
