@@ -2,36 +2,28 @@ export type GenreIcon = { src: string; alt: string };
 
 const GENRE_RULES: { keywords: string[]; icon: GenreIcon }[] = [
   {
-    keywords: ["horror", "survival horror", "mystery", "grusel"],
-    icon: { src: "/Ghost%20New.png", alt: "Horror" },
+    keywords: ["beat-em up", "beat em up", "beat-em-up", "fighting", "fight", "prügler", "kampfspiel", "fighter"],
+    icon: { src: "/Beat-em-Up%20Icon.png", alt: "Beat-em-Up" },
   },
   {
-    keywords: ["shooter", "fps", "ego-shooter", "ego shooter", "first person", "taktik shooter", "taktisch", "tactical"],
-    icon: { src: "/Helmet%20New.png", alt: "Shooter" },
+    keywords: ["racing", "rennen", "rennspiel", "rennspiele", "kart"],
+    icon: { src: "/Racing%20Icon.png", alt: "Racing" },
   },
   {
-    keywords: ["battle royale", "pvp", "competitive", "br"],
-    icon: { src: "/Skull%201%20New.png", alt: "Battle Royale" },
+    keywords: ["arcade"],
+    icon: { src: "/Arcade%20Icon.png", alt: "Arcade" },
   },
   {
-    keywords: ["fighting", "fight", "beat-em up", "beat em up", "prügler", "kampfspiel", "fighter"],
-    icon: { src: "/Skull%202%20New.png", alt: "Fighting" },
+    keywords: ["sport", "sports", "sportspiel", "sportspiele", "fußball", "basketball", "tennis"],
+    icon: { src: "/Sport%20Icon.png", alt: "Sport" },
   },
   {
-    keywords: ["survival", "crafting", "building", "aufbau", "sandbox", "open world"],
-    icon: { src: "/Hammer%20New.png", alt: "Survival / Crafting" },
+    keywords: ["shooter", "fps", "ego-shooter", "ego shooter", "first person", "taktik shooter", "taktisch", "tactical", "battle royale"],
+    icon: { src: "/Shooter%20Icon.png", alt: "Shooter" },
   },
   {
-    keywords: ["strategy", "strategie", "moba", "rts", "echtzeit strategie", "tower defense", "aufbaustrategie"],
-    icon: { src: "/Crown%20New.png", alt: "Strategie" },
-  },
-  {
-    keywords: ["rpg", "action-rpg", "action rpg", "rollenspiel", "role playing", "adventure", "abenteuer", "dungeon"],
-    icon: { src: "/Diamond%20Icon%20New.png", alt: "RPG / Adventure" },
-  },
-  {
-    keywords: ["party", "coop", "co-op", "casual", "racing", "rennen", "sport", "simulation", "quiz", "arcade"],
-    icon: { src: "/Controller%20New.png", alt: "Party / Coop" },
+    keywords: ["community", "party", "quiz", "coop", "co-op", "casual"],
+    icon: { src: "/Community%20Icon.png", alt: "Community" },
   },
 ];
 
