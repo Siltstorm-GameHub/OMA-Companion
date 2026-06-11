@@ -42,9 +42,13 @@ export default async function AdminEventsPage() {
   const standaloneEvents: typeof events = [];
 
   for (const ev of events) {
-    if (ev.seriesId && ev.series) {
+    if (ev.seriesId) {
       if (!seriesMap.has(ev.seriesId)) {
-        seriesMap.set(ev.seriesId, { id: ev.seriesId, name: ev.series.name, events: [] });
+        seriesMap.set(ev.seriesId, {
+          id:     ev.seriesId,
+          name:   ev.series?.name ?? ev.seriesId,
+          events: [],
+        });
       }
       seriesMap.get(ev.seriesId)!.events.push(ev);
     } else {
