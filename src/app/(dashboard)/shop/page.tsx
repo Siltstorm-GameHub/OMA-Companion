@@ -1,6 +1,7 @@
 ﻿import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { ShoppingBag, Coins } from "lucide-react";
+import { ShoppingBag } from "lucide-react";
+import CoinIcon from "@/components/CoinIcon";
 import { CountUp } from "@/components/CountUp";
 import CollectiblesShop from "./CollectiblesShop";
 import DailySpin from "./DailySpin";
@@ -83,7 +84,7 @@ export default async function ShopPage() {
           </div>
           {userId && (
             <div className="card-cut-sm flex items-center gap-2 px-4 py-2 bg-amber-500/8 border border-amber-500/15">
-              <Coins className="w-4 h-4 text-amber-400" />
+              <CoinIcon size={16} />
               <span className="text-sm font-bold text-amber-400 tabular-nums">
                 <CountUp to={myPoints} /> Münzen
               </span>

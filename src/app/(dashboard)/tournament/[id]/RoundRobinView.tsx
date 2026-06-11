@@ -1,5 +1,6 @@
 "use client";
 import { Clock, Trophy } from "lucide-react";
+import WinIcon from "@/components/WinIcon";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };
 type Participant = { userId: string; user: User };
@@ -181,9 +182,7 @@ export default function RoundRobinView({
                     </div>
                   </div>
 
-                  {match.winnerId && (
-                    <Trophy className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                  )}
+                  {match.winnerId && <WinIcon size={14} />}
                 </div>
               );
             })}

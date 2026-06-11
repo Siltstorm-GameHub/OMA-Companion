@@ -1,6 +1,7 @@
 ﻿import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { Trophy, Swords, Flame, Coins, Star } from "lucide-react";
+import { Trophy, Swords, Flame, Star } from "lucide-react";
+import CoinIcon from "@/components/CoinIcon";
 import { CountUp } from "@/components/CountUp";
 import Link from "next/link";
 import Image from "next/image";
@@ -192,7 +193,7 @@ export default async function LeaderboardPage() {
                     <span className="text-xs font-semibold ml-1 opacity-70">Pts</span>
                   </p>
                   <p className="text-[10px] text-gray-500 mt-0.5 flex items-center justify-center gap-1">
-                    <Coins className="w-3 h-3 text-amber-500/60" />
+                    <CoinIcon size={12} />
                     <span className="tabular-nums">{u.points.toLocaleString("de-DE")}</span>
                   </p>
                 </div>
@@ -222,7 +223,7 @@ export default async function LeaderboardPage() {
           <span>Spieler</span>
           <span className="hidden sm:flex text-center items-center justify-center gap-1"><Swords className="w-3 h-3" />Siege</span>
           <span className="hidden sm:flex text-center items-center justify-center gap-1"><Flame className="w-3 h-3 text-orange-400" />Streak</span>
-          <span className="flex items-center justify-center gap-1"><Coins className="w-3 h-3 text-amber-400" />Münzen</span>
+          <span className="flex items-center justify-center gap-1"><CoinIcon size={12} />Münzen</span>
           <span className="flex items-center justify-center gap-1 text-amber-400"><Star className="w-3 h-3" />Punkte</span>
         </div>
 

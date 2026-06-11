@@ -196,12 +196,15 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
         {user && (
           <div className="grid grid-cols-2 gap-px bg-white/[0.04] border-b border-white/[0.06] shrink-0">
             {[
-              { label: "🪙 Münzen",      value: user.points.toLocaleString("de-DE"),     color: "text-amber-400" },
-              { label: "🏆 Rang-Punkte", value: user.rankPoints.toLocaleString("de-DE"), color: "text-rose-400"  },
+              { label: "Münzen",         value: user.points.toLocaleString("de-DE"),     color: "text-amber-400", coin: true },
+              { label: "🏆 Rang-Punkte", value: user.rankPoints.toLocaleString("de-DE"), color: "text-rose-400",  coin: false },
             ].map(s => (
               <div key={s.label} className="bg-gray-950 px-3 py-4 text-center">
                 <p className={`text-xl font-black tabular-nums ${s.color}`}>{s.value}</p>
-                <p className="text-[10px] text-gray-600 mt-1">{s.label}</p>
+                <p className="text-[10px] text-gray-600 mt-1 flex items-center justify-center gap-1">
+                  {s.coin && <img src="/Muenze Icon.png" alt="" width={11} height={11} style={{ objectFit: "contain" }} />}
+                  {s.label}
+                </p>
               </div>
             ))}
           </div>
@@ -296,7 +299,7 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
                         <div key={tx.id} className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors">
                           {/* Typ-Icon */}
                           <div className={`w-8 h-8 rounded-lg shrink-0 flex items-center justify-center text-base leading-none ${iconBg}`}>
-                            {isRank ? "🏆" : "🪙"}
+                            {isRank ? "🏆" : <img src="/Muenze Icon.png" alt="Münzen" width={18} height={18} style={{ objectFit: "contain" }} />}
                           </div>
 
                           <div className="min-w-0 flex-1">
@@ -347,7 +350,7 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
             {/* Münzen */}
             <div className="glass rounded-2xl p-4 space-y-3">
               <div className="flex items-center gap-2">
-                <span className="text-base">🪙</span>
+                <img src="/Muenze Icon.png" alt="" width={18} height={18} style={{ objectFit: "contain" }} />
                 <p className="text-sm font-semibold text-white">Münzen (Shop-Währung)</p>
                 {user && (
                   <span className="ml-auto text-xs text-gray-500 tabular-nums">Aktuell: {user.points.toLocaleString("de-DE")}</span>
