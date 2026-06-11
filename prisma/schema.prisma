@@ -206,6 +206,8 @@ model EventSeries {
   recurrenceMonthlyMode String? // "dayOfMonth" | "weekdayOfMonth" (nur bei monthly)
   // JSON: { participationPoints: 5, stats: [{ field: "Kills", pointsPer: 2 }] }
   seriesStatConfig String?
+  // JSON: [{ userId, points, participations, stats: { Kills: 45 } }]
+  legacyStandings String?
   createdAt   DateTime @default(now())
   events      Event[]
 }
