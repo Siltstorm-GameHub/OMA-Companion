@@ -204,6 +204,8 @@ model EventSeries {
   discordChannelId String?  // Kanal-ID für Bot-Nachrichten aller Events dieser Reihe
   recurrenceType       String?  // "weekly" | "biweekly" | "monthly"
   recurrenceMonthlyMode String? // "dayOfMonth" | "weekdayOfMonth" (nur bei monthly)
+  // JSON: { participationPoints: 5, stats: [{ field: "Kills", pointsPer: 2 }] }
+  seriesStatConfig String?
   createdAt   DateTime @default(now())
   events      Event[]
 }

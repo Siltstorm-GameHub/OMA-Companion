@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import {
   ChevronDown, ChevronUp, Trophy, Settings, Users, UserPlus, UserMinus,
-  Search, Trash2, AlertTriangle, Repeat, X, GitBranch, Gamepad2, Swords, ExternalLink, Hash, CalendarPlus, RefreshCw,
+  Search, Trash2, AlertTriangle, Repeat, X, GitBranch, Gamepad2, Swords, ExternalLink, Hash, CalendarPlus, RefreshCw, BarChart2, Plus,
 } from "lucide-react";
 import { describeMonthlyModes } from "@/lib/recurrence";
 import Link from "next/link";
@@ -137,6 +137,10 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
   const [seriesSettingsLoaded, setSeriesSettingsLoaded]     = useState(false);
   const [seriesSettingsSaving, setSeriesSettingsSaving]     = useState(false);
 
+  /* ── Series stat config state ── */
+  const [statParticipationPts, setStatParticipationPts] = useState(0);
+  const [statRows, setStatRows] = useState<{ field: string; pointsPer: number }[]>([]);
+
   /* ── Recurrence state ── */
   const [recurrenceType, setRecurrenceType]             = useState<"" | "weekly" | "biweekly" | "monthly">("");
   const [recurrenceMonthlyMode, setRecurrenceMonthlyMode] = useState<"dayOfMonth" | "weekdayOfMonth">("dayOfMonth");
@@ -171,6 +175,13 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
           setSeriesDiscordChannelId(d.discordChannelId ?? "");
           setRecurrenceType(d.recurrenceType ?? "");
           setRecurrenceMonthlyMode(d.recurrenceMonthlyMode ?? "dayOfMonth");
+          if (d.seriesStatConfig) {
+            try {
+              const cfg = JSON.parse(d.seriesStatConfig);
+              setStatParticipationPts(cfg.participationPoints ?? 0);
+              setStatRows(cfg.stats ?? []);
+            } catch { /* ignore */ }
+          }
           setSeriesSettingsLoaded(true);
         })
         .catch(() => {});
@@ -302,6 +313,10 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
         recurrenceMonthlyMode: recurrenceType === "monthly" ? recurrenceMonthlyMode : null,
         propagateGame,
         propagateFormat,
+        seriesStatConfig: JSON.stringify({
+          participationPoints: statParticipationPts,
+          stats: statRows.filter(r => r.field.trim()),
+        }),
       }),
     });
     setSeriesSettingsSaving(false);
@@ -683,6 +698,64 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
                               </div>
                             );
                           })()}
+                        </div>
+
+                        {/* ── Gesamttabellen-Statistiken ── */}
+                        <div className="space-y-3 pt-1">
+                          <label className="text-xs text-gray-500 flex items-center gap-1.5">
+                            <BarChart2 className="w-3 h-3" />
+                            Gesamttabellen-Konfiguration
+                            <span className="text-gray-600">(Punkte aus Event-Statistiken)</span>
+                          </label>
+
+                          {/* Teilnahme-Punkte */}
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-400 w-32 shrink-0">Punkte pro Teilnahme</span>
+                            <input
+                              type="number"
+                              min={0}
+                              value={statParticipationPts}
+                              onChange={e => setStatParticipationPts(Number(e.target.value))}
+                              className={`${inputCls} w-20`}
+                            />
+                          </div>
+
+                          {/* Stat-Zeilen */}
+                          <div className="space-y-1.5">
+                            {statRows.map((row, i) => (
+                              <div key={i} className="flex items-center gap-2">
+                                <input
+                                  type="text"
+                                  value={row.field}
+                                  onChange={e => setStatRows(prev => prev.map((r, j) => j === i ? { ...r, field: e.target.value } : r))}
+                                  placeholder="Stat-Name (z.B. Kills)"
+                                  className={`${inputCls} flex-1`}
+                                />
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={row.pointsPer}
+                                  onChange={e => setStatRows(prev => prev.map((r, j) => j === i ? { ...r, pointsPer: Number(e.target.value) } : r))}
+                                  placeholder="Pkt./Einheit"
+                                  className={`${inputCls} w-24`}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setStatRows(prev => prev.filter((_, j) => j !== i))}
+                                  className="text-gray-600 hover:text-red-400 transition-colors"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={() => setStatRows(prev => [...prev, { field: "", pointsPer: 1 }])}
+                              className="flex items-center gap-1 text-xs text-teal-500 hover:text-teal-300 transition-colors"
+                            >
+                              <Plus className="w-3 h-3" /> Statistik hinzufügen
+                            </button>
+                          </div>
                         </div>
 
                         <div className="flex gap-2 flex-wrap items-center">
