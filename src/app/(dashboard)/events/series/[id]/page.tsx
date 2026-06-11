@@ -24,86 +24,63 @@ const FORMAT_LABELS: Record<string, string> = {
   coop_stats:         "Coop / Stats",
 };
 
-type SeriesEvent = {
+type StatConfig = { participationPoints: number; stats: { field: string; pointsPer: number }[] };
+
+type SeriesEventForStandings = {
+  registrations: { userId: string }[];
   tournament: {
-    finalRankingJson: string | null;
-    pointsConfig:     string | null;
-    participants:     { userId: string }[];
+    participants: { userId: string }[];
+    matches: {
+      entries: { userId: string | null; statsJson: string | null }[];
+    }[];
   } | null;
 };
 
-/** Gesamttabelle: Punkte, Siege, Teilnahmen, Ø-Platzierung */
-function computeStandings(events: SeriesEvent[]) {
-  const pts:        Record<string, number>   = {};
-  const wins:       Record<string, number>   = {};
-  const part:       Record<string, number>   = {};
-  const placeSums:  Record<string, number>   = {};   // Summe aller Platzierungen
-  const placeCounts:Record<string, number>   = {};   // Anzahl Turniere mit Platzierung
+/** Gesamttabelle auf Basis von seriesStatConfig */
+function computeStatStandings(
+  events: SeriesEventForStandings[],
+  cfg: StatConfig,
+) {
+  const pts:        Record<string, number> = {};
+  const part:       Record<string, number> = {};
+  const statTotals: Record<string, Record<string, number>> = {};
 
   for (const ev of events) {
-    const t = ev.tournament;
-    if (!t?.finalRankingJson) {
-      // Auch ohne finale Platzierung: Turnier-Teilnehmer zählen (0 Punkte)
-      if (t?.participants) {
-        for (const pa of t.participants) {
-          part[pa.userId] = (part[pa.userId] ?? 0) + 1;
-        }
-      }
-      continue;
+    // Teilnahmen aus Registrierungen zählen
+    const registeredUserIds = new Set(ev.registrations.map(r => r.userId));
+    for (const uid of registeredUserIds) {
+      part[uid] = (part[uid] ?? 0) + 1;
+      pts[uid]  = (pts[uid]  ?? 0) + cfg.participationPoints;
     }
 
-    let ranking: string[] = [];
-    let pointsMap: Record<string, number | { coins?: number; points?: number }> = {};
-    try {
-      ranking   = JSON.parse(t.finalRankingJson);
-      pointsMap = t.pointsConfig ? JSON.parse(t.pointsConfig) : {};
-    } catch { continue; }
-
-    ranking.forEach((uid, idx) => {
-      const placement = idx + 1;
-      // Punkte: normalisiert (Objekt oder Zahl)
-      const raw = pointsMap[String(placement)];
-      const p = raw == null ? 0
-        : typeof raw === "number" ? raw
-        : ((raw.coins ?? 0) + (raw.points ?? 0)) / 2; // Mittelwert falls beides angegeben
-      // Hier nehmen wir coins als Münzen-Wert für die Tabelle
-      const coins = raw == null ? 0
-        : typeof raw === "number" ? raw
-        : (raw.coins ?? 0);
-
-      pts[uid]          = (pts[uid]          ?? 0) + coins;
-      part[uid]         = (part[uid]         ?? 0) + 1;
-      placeSums[uid]    = (placeSums[uid]    ?? 0) + placement;
-      placeCounts[uid]  = (placeCounts[uid]  ?? 0) + 1;
-      if (placement === 1) wins[uid] = (wins[uid] ?? 0) + 1;
-    });
-
-    // Teilnehmer ohne finale Platzierung (Turnier-Teilnehmer aber nicht im Ranking)
-    for (const pa of t.participants) {
-      if (!ranking.includes(pa.userId)) {
-        part[pa.userId] = (part[pa.userId] ?? 0) + 1;
+    // Stats aus MatchEntries aggregieren
+    if (!ev.tournament) continue;
+    for (const match of ev.tournament.matches) {
+      for (const entry of match.entries) {
+        if (!entry.userId) continue;
+        if (!entry.statsJson) continue;
+        let stats: Record<string, number> = {};
+        try { stats = JSON.parse(entry.statsJson); } catch { continue; }
+        for (const { field, pointsPer } of cfg.stats) {
+          const val = Number(stats[field] ?? 0);
+          if (!val) continue;
+          pts[entry.userId] = (pts[entry.userId] ?? 0) + val * pointsPer;
+          if (!statTotals[entry.userId]) statTotals[entry.userId] = {};
+          statTotals[entry.userId][field] = (statTotals[entry.userId][field] ?? 0) + val;
+        }
       }
     }
   }
 
   const userIds = Array.from(new Set([...Object.keys(pts), ...Object.keys(part)]));
-
   return userIds
     .map(uid => ({
       userId:         uid,
       totalPoints:    pts[uid]  ?? 0,
-      wins:           wins[uid] ?? 0,
       participations: part[uid] ?? 0,
-      avgPlacement:   placeCounts[uid]
-        ? Math.round((placeSums[uid] / placeCounts[uid]) * 10) / 10  // 1 Dezimalstelle
-        : null,
+      stats:          statTotals[uid] ?? {},
     }))
-    .sort((a, b) =>
-      b.totalPoints   - a.totalPoints  ||
-      b.wins          - a.wins         ||
-      (a.avgPlacement ?? 999) - (b.avgPlacement ?? 999) ||
-      b.participations - a.participations
-    );
+    .sort((a, b) => b.totalPoints - a.totalPoints || b.participations - a.participations);
 }
 
 export default async function SeriesDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -118,9 +95,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
         orderBy: { startAt: "asc" },
         include: {
           _count:        { select: { registrations: true } },
-          registrations: userId
-            ? { where: { userId }, select: { userId: true } }
-            : { select: { userId: true }, take: 0 },
+          registrations: { select: { userId: true } },
           tournament: {
             select: {
               id:               true,
@@ -130,6 +105,13 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
               finalRankingNote: true,
               pointsConfig:     true,
               participants:     { select: { userId: true } },
+              matches: {
+                select: {
+                  entries: {
+                    select: { userId: true, statsJson: true },
+                  },
+                },
+              },
             },
           },
         },
@@ -144,8 +126,15 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
     .filter(e => e.status === "finished")
     .sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime());
 
-  // Gesamttabelle aus ALLEN Events berechnen (auch vergangene ohne Turnier)
-  const standings = computeStandings(series.events);
+  // Stat-Konfiguration der Reihe parsen
+  const statCfg: StatConfig = (() => {
+    try { return series.seriesStatConfig ? JSON.parse(series.seriesStatConfig) : null; } catch { return null; }
+  })() ?? { participationPoints: 0, stats: [] };
+
+  const hasStatConfig = statCfg.participationPoints > 0 || statCfg.stats.length > 0;
+
+  // Gesamttabelle berechnen
+  const standings = computeStatStandings(series.events, statCfg);
 
   // User-Daten für Tabelle
   const standingUserIds = standings.map(s => s.userId);
@@ -159,7 +148,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
 
   // Gesamtstatistiken
   const totalParticipantIds = new Set(
-    series.events.flatMap(e => (e.registrations as { userId: string }[]).map(r => r.userId))
+    series.events.flatMap(e => e.registrations.map(r => r.userId))
   );
   const eventsWithResults = pastEvents.filter(e => e.tournament?.finalRankingJson);
 
@@ -237,118 +226,137 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
       </div>
 
       {/* ── Gesamttabelle ─────────────────────────────────────────────────── */}
-      {standings.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-amber-400" />
-            <h2 className="text-sm font-semibold text-white">Gesamttabelle</h2>
-            {eventsWithResults.length > 0 && (
-              <span className="text-xs text-gray-600">· {eventsWithResults.length} ausgewertete Events</span>
-            )}
-          </div>
+      {standings.length > 0 && hasStatConfig && (() => {
+        // Dynamische Spaltenbreiten: # + Spieler + Events + stat-Spalten + Punkte
+        const statCols = statCfg.stats;
+        const statColWidth = "4.5rem";
+        const gridCols = [
+          "2.5rem",          // #
+          "1fr",             // Spieler
+          "4rem",            // Events
+          ...statCols.map(() => statColWidth),
+          "5.5rem",          // Punkte
+        ].join(" ");
 
-          <div className="glass card-shine rounded-2xl overflow-x-auto">
-            <div className="min-w-[420px]">
-            {/* Tabellen-Header */}
-            <div className="grid items-center px-4 py-2.5 border-b border-white/[0.06]"
-              style={{ gridTemplateColumns: "2.5rem 1fr 5rem 5rem 5.5rem" }}>
-              {[
-                { label: "#",       cls: "" },
-                { label: "Spieler", cls: "" },
-                { label: "Events",  cls: "text-center" },
-                { label: "Ø Platz", cls: "text-center" },
-                { label: "Punkte",  cls: "text-right" },
-              ].map(col => (
-                <span key={col.label}
-                  className={`text-[10px] font-semibold text-gray-600 uppercase tracking-widest ${col.cls}`}>
-                  {col.label}
+        return (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Trophy className="w-4 h-4 text-amber-400" />
+              <h2 className="text-sm font-semibold text-white">Gesamttabelle</h2>
+              {eventsWithResults.length > 0 && (
+                <span className="text-xs text-gray-600">· {eventsWithResults.length} ausgewertete Events</span>
+              )}
+            </div>
+
+            {/* Punkte-Legende */}
+            <div className="flex flex-wrap gap-2">
+              {statCfg.participationPoints > 0 && (
+                <span className="text-[10px] px-2 py-1 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400">
+                  Teilnahme +{statCfg.participationPoints} Pkt.
+                </span>
+              )}
+              {statCols.map(s => (
+                <span key={s.field} className="text-[10px] px-2 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] text-gray-400">
+                  {s.field} × {s.pointsPer} Pkt.
                 </span>
               ))}
             </div>
 
-            {standings.map((row, idx) => {
-              const u     = userMap.get(row.userId);
-              const name  = u?.username ?? u?.name ?? row.userId.slice(0, 8);
-              const isMe  = userId === row.userId;
-              const rank  = idx + 1;
-
-              return (
-                <div key={row.userId}
-                  className="grid items-center px-4 py-3 border-b border-white/[0.04] last:border-0 transition-colors hover:bg-white/[0.02]"
-                  style={{
-                    gridTemplateColumns: "2.5rem 1fr 5rem 5rem 5.5rem",
-                    background: isMe ? "rgba(20,184,166,0.05)" : "",
-                    borderLeft: isMe ? "2px solid rgba(20,184,166,0.40)" : "2px solid transparent",
-                  }}>
-
-                  {/* Rang */}
-                  <div className="flex items-center justify-center">
-                    {rank <= 3
-                      ? <Medal className={`w-4 h-4 ${medalColors[rank - 1]}`} />
-                      : <span className="text-xs text-gray-600 font-mono tabular-nums">{rank}</span>
-                    }
-                  </div>
-
-                  {/* Spieler */}
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    {u?.image
-                      ? <img src={u.image} alt="" className="w-7 h-7 rounded-full shrink-0 object-cover" />
-                      : <div className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center text-xs font-semibold text-gray-400 shrink-0">
-                          {name[0]?.toUpperCase() ?? "?"}
-                        </div>
-                    }
-                    <span className={`text-sm font-medium truncate ${isMe ? "text-teal-300" : "text-white"}`}>
-                      {name}
-                      {isMe && <span className="text-[10px] text-teal-600 ml-1.5">(du)</span>}
+            <div className="glass card-shine rounded-2xl overflow-x-auto">
+              <div style={{ minWidth: `${300 + statCols.length * 72}px` }}>
+                {/* Header */}
+                <div className="grid items-center px-4 py-2.5 border-b border-white/[0.06]"
+                  style={{ gridTemplateColumns: gridCols }}>
+                  {[
+                    { label: "#",      cls: "" },
+                    { label: "Spieler",cls: "" },
+                    { label: "Events", cls: "text-center" },
+                    ...statCols.map(s => ({ label: s.field, cls: "text-center" })),
+                    { label: "Punkte", cls: "text-right" },
+                  ].map(col => (
+                    <span key={col.label}
+                      className={`text-[10px] font-semibold text-gray-600 uppercase tracking-widest truncate ${col.cls}`}>
+                      {col.label}
                     </span>
-                  </div>
-
-                  {/* Events */}
-                  <div className="text-center">
-                    <span className="text-sm text-gray-400 tabular-nums">{row.participations}</span>
-                  </div>
-
-                  {/* Ø Platz */}
-                  <div className="text-center">
-                    {row.avgPlacement != null ? (
-                      <span className={`text-sm font-semibold tabular-nums ${
-                        row.avgPlacement <= 1.5 ? "text-amber-400" :
-                        row.avgPlacement <= 2.5 ? "text-gray-300" :
-                        row.avgPlacement <= 3.5 ? "text-amber-700" :
-                        "text-gray-500"
-                      }`}>
-                        Ø {row.avgPlacement.toLocaleString("de-DE")}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-gray-700">–</span>
-                    )}
-                  </div>
-
-                  {/* Punkte */}
-                  <div className="text-right">
-                    <span className={`text-sm font-bold tabular-nums ${
-                      rank === 1 ? "text-amber-400" :
-                      rank === 2 ? "text-gray-300"  :
-                      rank === 3 ? "text-amber-600"  :
-                      "text-white"
-                    }`}>
-                      {row.totalPoints > 0
-                        ? row.totalPoints.toLocaleString("de-DE")
-                        : <span className="text-gray-700 font-normal text-xs">–</span>
-                      }
-                    </span>
-                  </div>
+                  ))}
                 </div>
-              );
-            })}
+
+                {standings.map((row, idx) => {
+                  const u    = userMap.get(row.userId);
+                  const name = u?.username ?? u?.name ?? row.userId.slice(0, 8);
+                  const isMe = userId === row.userId;
+                  const rank = idx + 1;
+
+                  return (
+                    <div key={row.userId}
+                      className="grid items-center px-4 py-3 border-b border-white/[0.04] last:border-0 transition-colors hover:bg-white/[0.02]"
+                      style={{
+                        gridTemplateColumns: gridCols,
+                        background:  isMe ? "rgba(20,184,166,0.05)" : "",
+                        borderLeft:  isMe ? "2px solid rgba(20,184,166,0.40)" : "2px solid transparent",
+                      }}>
+
+                      {/* Rang */}
+                      <div className="flex items-center justify-center">
+                        {rank <= 3
+                          ? <Medal className={`w-4 h-4 ${medalColors[rank - 1]}`} />
+                          : <span className="text-xs text-gray-600 font-mono tabular-nums">{rank}</span>
+                        }
+                      </div>
+
+                      {/* Spieler */}
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        {u?.image
+                          ? <img src={u.image} alt="" className="w-7 h-7 rounded-full shrink-0 object-cover" />
+                          : <div className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center text-xs font-semibold text-gray-400 shrink-0">
+                              {name[0]?.toUpperCase() ?? "?"}
+                            </div>
+                        }
+                        <span className={`text-sm font-medium truncate ${isMe ? "text-teal-300" : "text-white"}`}>
+                          {name}
+                          {isMe && <span className="text-[10px] text-teal-600 ml-1.5">(du)</span>}
+                        </span>
+                      </div>
+
+                      {/* Events */}
+                      <div className="text-center">
+                        <span className="text-sm text-gray-400 tabular-nums">{row.participations}</span>
+                      </div>
+
+                      {/* Stat-Spalten */}
+                      {statCols.map(s => (
+                        <div key={s.field} className="text-center">
+                          <span className="text-sm text-gray-300 tabular-nums">
+                            {row.stats[s.field] != null && row.stats[s.field] > 0
+                              ? row.stats[s.field].toLocaleString("de-DE")
+                              : <span className="text-gray-700">–</span>
+                            }
+                          </span>
+                        </div>
+                      ))}
+
+                      {/* Punkte */}
+                      <div className="text-right">
+                        <span className={`text-sm font-bold tabular-nums ${
+                          rank === 1 ? "text-amber-400" :
+                          rank === 2 ? "text-gray-300"  :
+                          rank === 3 ? "text-amber-600"  :
+                          "text-white"
+                        }`}>
+                          {row.totalPoints > 0
+                            ? row.totalPoints.toLocaleString("de-DE")
+                            : <span className="text-gray-700 font-normal text-xs">–</span>
+                          }
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
-
-          {standings.length === 0 && (
-            <p className="text-xs text-gray-600 text-center py-4">Noch keine abgeschlossenen Turniere in dieser Reihe.</p>
-          )}
-        </div>
-      )}
+        );
+      })()}
 
       {/* ── Kommende Termine ──────────────────────────────────────────────── */}
       {upcomingEvents.length > 0 && (
@@ -360,9 +368,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
           <div className="space-y-2">
             {upcomingEvents.map((ev, idx) => {
               const s    = STATUS_CONFIG[ev.status] ?? STATUS_CONFIG.finished;
-              const isReg = userId
-                ? (ev.registrations as { userId: string }[]).some(r => r.userId === userId)
-                : false;
+              const isReg = userId ? ev.registrations.some(r => r.userId === userId) : false;
               const date = new Date(ev.startAt);
 
               return (

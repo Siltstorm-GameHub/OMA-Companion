@@ -14,6 +14,9 @@ ALTER TABLE "CollectibleItem" ADD COLUMN IF NOT EXISTS "saleUntil" TIMESTAMP(3);
 -- 4. EventSeries: statFields
 ALTER TABLE "EventSeries" ADD COLUMN IF NOT EXISTS "statFields" TEXT;
 
+-- 4b. EventSeries: seriesStatConfig
+ALTER TABLE "EventSeries" ADD COLUMN IF NOT EXISTS "seriesStatConfig" TEXT;
+
 -- 5. Geplante Discord-Umfragen
 CREATE TABLE IF NOT EXISTS "PollJob" (
   "id"          TEXT      NOT NULL PRIMARY KEY,
