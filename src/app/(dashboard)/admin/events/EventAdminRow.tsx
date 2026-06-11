@@ -736,7 +736,7 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
                                 <input
                                   type="text"
                                   value={row.field}
-                                  onChange={e => setStatRows(prev => prev.map((r, j) => j === i ? { ...r, field: e.target.value } : r))}
+                                  onChange={e => { const v = e.target.value; setStatRows(prev => prev.map((r, j) => j === i ? { ...r, field: v } : r)); }}
                                   placeholder="Stat-Name (z.B. Kills)"
                                   className={`${inputCls} flex-1`}
                                 />
