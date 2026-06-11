@@ -105,7 +105,7 @@ function ScopeModal({
 }
 
 /* ── Main Component ──────────────────────────────────────────────────────── */
-export default function EventAdminRow({ event, allUsers }: { event: Event; allUsers: User[] }) {
+export default function EventAdminRow({ event, allUsers, hideSeries = false }: { event: Event; allUsers: User[]; hideSeries?: boolean }) {
   const [expanded, setExpanded]   = useState(false);
   const [tab, setTab]             = useState<Tab>("settings");
   const router                    = useRouter();
@@ -523,7 +523,7 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
                   </div>
 
                   {/* ── Eventreihe ── */}
-                  <div className="rounded-xl p-3 space-y-3" style={{ background: "rgba(20,184,166,0.04)", border: "1px solid rgba(20,184,166,0.12)" }}>
+                  {!hideSeries && <div className="rounded-xl p-3 space-y-3" style={{ background: "rgba(20,184,166,0.04)", border: "1px solid rgba(20,184,166,0.12)" }}>
                     <div className="flex items-center gap-2">
                       <Repeat className="w-3.5 h-3.5 text-teal-500" />
                       <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Eventreihe</span>
@@ -911,7 +911,7 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
                         </div>
                       </div>
                     )}
-                  </div>
+                  </div>}
 
                   {/* Save hint für series + content change */}
                   {needsScopeDialog && (
