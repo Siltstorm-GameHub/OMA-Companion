@@ -140,6 +140,7 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
   /* ── Series stat config state ── */
   const [statParticipationPts, setStatParticipationPts] = useState(0);
   const [statRows, setStatRows] = useState<{ field: string; pointsPer: number }[]>([]);
+  const statConfigInitialized = useRef(false);
 
   /* ── Legacy standings state ── */
   type LegacyRow = { userId: string; points: number; participations: number; stats: Record<string, number> };
@@ -180,15 +181,18 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
           setSeriesDiscordChannelId(d.discordChannelId ?? "");
           setRecurrenceType(d.recurrenceType ?? "");
           setRecurrenceMonthlyMode(d.recurrenceMonthlyMode ?? "dayOfMonth");
-          if (d.seriesStatConfig) {
-            try {
-              const cfg = JSON.parse(d.seriesStatConfig);
-              setStatParticipationPts(cfg.participationPoints ?? 0);
-              setStatRows(cfg.stats ?? []);
-            } catch { /* ignore */ }
-          }
-          if (d.legacyStandings) {
-            try { setLegacyRows(JSON.parse(d.legacyStandings)); } catch { /* ignore */ }
+          if (!statConfigInitialized.current) {
+            statConfigInitialized.current = true;
+            if (d.seriesStatConfig) {
+              try {
+                const cfg = JSON.parse(d.seriesStatConfig);
+                setStatParticipationPts(cfg.participationPoints ?? 0);
+                setStatRows(cfg.stats ?? []);
+              } catch { /* ignore */ }
+            }
+            if (d.legacyStandings) {
+              try { setLegacyRows(JSON.parse(d.legacyStandings)); } catch { /* ignore */ }
+            }
           }
           setSeriesSettingsLoaded(true);
         })
@@ -736,22 +740,30 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
                                 <input
                                   type="text"
                                   value={row.field}
-                                  onChange={e => { const v = e.target.value; setStatRows(prev => prev.map((r, j) => j === i ? { ...r, field: v } : r)); }}
+                                  onChange={e => {
+                                    const v = e.target.value;
+                                    const next = statRows.map((r, j) => j === i ? { ...r, field: v } : r);
+                                    setStatRows(next);
+                                  }}
                                   placeholder="Stat-Name (z.B. Kills)"
-                                  className={`${inputCls} flex-1`}
+                                  className="min-w-0 flex-1 rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors"
                                 />
                                 <input
                                   type="number"
                                   min={0}
                                   value={row.pointsPer}
-                                  onChange={e => setStatRows(prev => prev.map((r, j) => j === i ? { ...r, pointsPer: Number(e.target.value) } : r))}
+                                  onChange={e => {
+                                    const v = Number(e.target.value);
+                                    const next = statRows.map((r, j) => j === i ? { ...r, pointsPer: v } : r);
+                                    setStatRows(next);
+                                  }}
                                   placeholder="Pkt./Einheit"
                                   className={`${inputCls} w-24`}
                                 />
                                 <button
                                   type="button"
-                                  onClick={() => setStatRows(prev => prev.filter((_, j) => j !== i))}
-                                  className="text-gray-600 hover:text-red-400 transition-colors"
+                                  onClick={() => setStatRows(statRows.filter((_, j) => j !== i))}
+                                  className="text-gray-600 hover:text-red-400 transition-colors shrink-0"
                                 >
                                   <X className="w-3.5 h-3.5" />
                                 </button>
