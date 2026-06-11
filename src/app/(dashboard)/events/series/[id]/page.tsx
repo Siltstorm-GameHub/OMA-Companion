@@ -49,42 +49,77 @@ type BaselineEntry = {
   stats:          Record<string, number>;
 };
 
-/** Tabelle aus manuell erfassten SeriesResults + optionalen historischen Basisdaten */
-function computeStandingsFromResults(
+/**
+ * Gesamttabelle: pro Event werden SeriesResults bevorzugt; fehlen diese,
+ * wird auf Turnier-Daten zurückgefallen. Historische Basisdaten werden
+ * immer addiert. So erscheinen vergangene, aktive und historische Daten
+ * gemeinsam in der Gesamttabelle.
+ */
+function computeStandings(
   events: SeriesEvent[],
   statFields: string[],
   baseline: Record<string, BaselineEntry> = {},
 ): StandingRow[] {
-  const pts:         Record<string, number>               = {};
-  const wins:        Record<string, number>               = {};
-  const part:        Record<string, number>               = {};
-  const placeSums:   Record<string, number>               = {};
-  const placeCounts: Record<string, number>               = {};
+  const pts:         Record<string, number>                 = {};
+  const wins:        Record<string, number>                 = {};
+  const part:        Record<string, number>                 = {};
+  const placeSums:   Record<string, number>                 = {};
+  const placeCounts: Record<string, number>                 = {};
   const statTotals:  Record<string, Record<string, number>> = {};
 
   for (const ev of events) {
-    for (const r of ev.seriesResults) {
-      const uid = r.userId;
-      pts[uid]  = (pts[uid]  ?? 0) + r.points;
-      part[uid] = (part[uid] ?? 0) + 1;
-      if (r.placement != null) {
-        placeSums[uid]   = (placeSums[uid]   ?? 0) + r.placement;
-        placeCounts[uid] = (placeCounts[uid] ?? 0) + 1;
-        if (r.placement === 1) wins[uid] = (wins[uid] ?? 0) + 1;
+    if (ev.seriesResults.length > 0) {
+      // Manuell eingetragene Ergebnisse
+      for (const r of ev.seriesResults) {
+        const uid = r.userId;
+        pts[uid]  = (pts[uid]  ?? 0) + r.points;
+        part[uid] = (part[uid] ?? 0) + 1;
+        if (r.placement != null) {
+          placeSums[uid]   = (placeSums[uid]   ?? 0) + r.placement;
+          placeCounts[uid] = (placeCounts[uid] ?? 0) + 1;
+          if (r.placement === 1) wins[uid] = (wins[uid] ?? 0) + 1;
+        }
+        if (r.statsJson && statFields.length > 0) {
+          try {
+            const s = JSON.parse(r.statsJson) as Record<string, number>;
+            if (!statTotals[uid]) statTotals[uid] = {};
+            for (const f of statFields) {
+              statTotals[uid][f] = (statTotals[uid][f] ?? 0) + (s[f] ?? 0);
+            }
+          } catch { /* ignore */ }
+        }
       }
-      if (r.statsJson && statFields.length > 0) {
-        try {
-          const s = JSON.parse(r.statsJson) as Record<string, number>;
-          if (!statTotals[uid]) statTotals[uid] = {};
-          for (const f of statFields) {
-            statTotals[uid][f] = (statTotals[uid][f] ?? 0) + (s[f] ?? 0);
-          }
-        } catch { /* ignore */ }
+    } else {
+      // Fallback: Turnier-Rangliste
+      const t = ev.tournament;
+      if (!t?.finalRankingJson) {
+        if (t?.participants) {
+          for (const pa of t.participants) part[pa.userId] = (part[pa.userId] ?? 0) + 1;
+        }
+        continue;
+      }
+      let ranking: string[] = [];
+      let pointsMap: Record<string, number | { coins?: number; points?: number }> = {};
+      try { ranking = JSON.parse(t.finalRankingJson); pointsMap = t.pointsConfig ? JSON.parse(t.pointsConfig) : {}; }
+      catch { continue; }
+
+      ranking.forEach((uid, idx) => {
+        const placement = idx + 1;
+        const raw = pointsMap[String(placement)];
+        const coins = raw == null ? 0 : typeof raw === "number" ? raw : (raw.coins ?? 0);
+        pts[uid]         = (pts[uid]         ?? 0) + coins;
+        part[uid]        = (part[uid]        ?? 0) + 1;
+        placeSums[uid]   = (placeSums[uid]   ?? 0) + placement;
+        placeCounts[uid] = (placeCounts[uid] ?? 0) + 1;
+        if (placement === 1) wins[uid] = (wins[uid] ?? 0) + 1;
+      });
+      for (const pa of t.participants) {
+        if (!ranking.includes(pa.userId)) part[pa.userId] = (part[pa.userId] ?? 0) + 1;
       }
     }
   }
 
-  // Merge historical baseline
+  // Historische Basisdaten addieren
   for (const [uid, b] of Object.entries(baseline)) {
     pts[uid]  = (pts[uid]  ?? 0) + b.points;
     wins[uid] = (wins[uid] ?? 0) + b.wins;
@@ -113,55 +148,6 @@ function computeStandingsFromResults(
       b.wins          - a.wins         ||
       (a.avgPlacement ?? 999) - (b.avgPlacement ?? 999) ||
       b.participations - a.participations
-    );
-}
-
-/** Fallback: Tabelle aus Turnier-Daten (kein SeriesResult vorhanden) */
-function computeStandingsFromTournaments(events: SeriesEvent[]): StandingRow[] {
-  const pts:        Record<string, number> = {};
-  const wins:       Record<string, number> = {};
-  const part:       Record<string, number> = {};
-  const placeSums:  Record<string, number> = {};
-  const placeCounts:Record<string, number> = {};
-
-  for (const ev of events) {
-    const t = ev.tournament;
-    if (!t?.finalRankingJson) {
-      if (t?.participants) {
-        for (const pa of t.participants) part[pa.userId] = (part[pa.userId] ?? 0) + 1;
-      }
-      continue;
-    }
-    let ranking: string[] = [];
-    let pointsMap: Record<string, number | { coins?: number; points?: number }> = {};
-    try { ranking = JSON.parse(t.finalRankingJson); pointsMap = t.pointsConfig ? JSON.parse(t.pointsConfig) : {}; }
-    catch { continue; }
-
-    ranking.forEach((uid, idx) => {
-      const placement = idx + 1;
-      const raw = pointsMap[String(placement)];
-      const coins = raw == null ? 0 : typeof raw === "number" ? raw : (raw.coins ?? 0);
-      pts[uid]          = (pts[uid]          ?? 0) + coins;
-      part[uid]         = (part[uid]         ?? 0) + 1;
-      placeSums[uid]    = (placeSums[uid]    ?? 0) + placement;
-      placeCounts[uid]  = (placeCounts[uid]  ?? 0) + 1;
-      if (placement === 1) wins[uid] = (wins[uid] ?? 0) + 1;
-    });
-    for (const pa of t.participants) {
-      if (!ranking.includes(pa.userId)) part[pa.userId] = (part[pa.userId] ?? 0) + 1;
-    }
-  }
-
-  return Array.from(new Set([...Object.keys(pts), ...Object.keys(part)]))
-    .map(uid => ({
-      userId: uid, totalPoints: pts[uid] ?? 0, wins: wins[uid] ?? 0,
-      participations: part[uid] ?? 0,
-      avgPlacement: placeCounts[uid] ? Math.round((placeSums[uid] / placeCounts[uid]) * 10) / 10 : null,
-      statTotals: {},
-    }))
-    .sort((a, b) =>
-      b.totalPoints - a.totalPoints || b.wins - a.wins ||
-      (a.avgPlacement ?? 999) - (b.avgPlacement ?? 999) || b.participations - a.participations
     );
 }
 
@@ -225,11 +211,8 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
     catch { return {}; }
   })();
 
-  // Tabelle: bevorzugt SeriesResult/Baseline, Fallback auf Turnier-Daten
-  const hasManualResults = series.events.some(e => e.seriesResults.length > 0) || Object.keys(baseline).length > 0;
-  const standings = hasManualResults
-    ? computeStandingsFromResults(series.events, statFields, baseline)
-    : computeStandingsFromTournaments(series.events);
+  // Gesamttabelle: alle Events (mit SeriesResults oder Turnier-Fallback) + Basisdaten
+  const standings = computeStandings(series.events, statFields, baseline);
 
   // User-Daten für Tabelle
   const standingUserIds = standings.map(s => s.userId);

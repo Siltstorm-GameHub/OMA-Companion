@@ -279,7 +279,9 @@ export default function SeriesResultsEditor({
     setSavingBaseline(true);
     const bmap: Record<string, { points: number; wins: number; participations: number; stats: Record<string, number> }> = {};
     for (const row of baselineDraft) {
-      const pts = statFields.length > 0 ? calcPoints(row.stats, statFields) : Number(row.points) || 0;
+      const pts = calcPoints(row.stats, statFields)
+        + (Number(row.participations) || 0) * participationPts
+        + (statFields.length === 0 ? Number(row.points) || 0 : 0);
       bmap[row.userId] = {
         points:         pts,
         wins:           Number(row.wins) || 0,
@@ -476,7 +478,9 @@ export default function SeriesResultsEditor({
                 </p>
 
                 {baselineDraft.map(row => {
-                  const computed = statFields.length > 0 ? calcPoints(row.stats, statFields) : null;
+                  const computed = (statFields.length > 0 || participationPts > 0)
+                    ? calcPoints(row.stats, statFields) + (Number(row.participations) || 0) * participationPts
+                    : null;
                   return (
                     <div key={row.userId}
                       className="bg-gray-800/60 border border-white/[0.05] rounded-lg p-3 space-y-2.5">
