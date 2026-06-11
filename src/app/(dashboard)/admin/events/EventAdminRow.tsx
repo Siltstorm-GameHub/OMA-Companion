@@ -756,7 +756,7 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
                                     setStatRows(prev => prev.map((r, j) => j === i ? { ...r, pointsPer: v } : r));
                                   }}
                                   placeholder="Pkt./Einheit"
-                                  className={`${inputCls} w-24`}
+                                  className="w-24 shrink-0 rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors"
                                 />
                                 <button
                                   type="button"
@@ -805,20 +805,17 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
                                     </div>
                                     <div className="flex flex-wrap gap-2">
                                       <label className="flex items-center gap-1.5 text-[11px] text-gray-400">
-                                        Punkte
-                                        <input
-                                          type="number" min={0}
-                                          value={row.points}
-                                          onChange={e => setLegacyRows(prev => prev.map((r, j) => j === i ? { ...r, points: Number(e.target.value) } : r))}
-                                          className="w-16 rounded px-1.5 py-0.5 text-[11px] text-white bg-gray-800 border border-gray-700"
-                                        />
-                                      </label>
-                                      <label className="flex items-center gap-1.5 text-[11px] text-gray-400">
                                         Teilnahmen
                                         <input
                                           type="number" min={0}
                                           value={row.participations}
-                                          onChange={e => setLegacyRows(prev => prev.map((r, j) => j === i ? { ...r, participations: Number(e.target.value) } : r))}
+                                          onChange={e => setLegacyRows(prev => prev.map((r, j) => {
+                                            if (j !== i) return r;
+                                            const newPart = Number(e.target.value);
+                                            const calcPts = newPart * statParticipationPts
+                                              + statRows.filter(sr => sr.field.trim()).reduce((sum, sr) => sum + (r.stats[sr.field] ?? 0) * sr.pointsPer, 0);
+                                            return { ...r, participations: newPart, points: calcPts };
+                                          }))}
                                           className="w-16 rounded px-1.5 py-0.5 text-[11px] text-white bg-gray-800 border border-gray-700"
                                         />
                                       </label>
@@ -828,14 +825,24 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
                                           <input
                                             type="number" min={0}
                                             value={row.stats[s.field] ?? 0}
-                                            onChange={e => setLegacyRows(prev => prev.map((r, j) => j === i
-                                              ? { ...r, stats: { ...r.stats, [s.field]: Number(e.target.value) } }
-                                              : r
-                                            ))}
+                                            onChange={e => setLegacyRows(prev => prev.map((r, j) => {
+                                              if (j !== i) return r;
+                                              const newStats = { ...r.stats, [s.field]: Number(e.target.value) };
+                                              const calcPts = r.participations * statParticipationPts
+                                                + statRows.filter(sr => sr.field.trim()).reduce((sum, sr) => sum + (newStats[sr.field] ?? 0) * sr.pointsPer, 0);
+                                              return { ...r, stats: newStats, points: calcPts };
+                                            }))}
                                             className="w-16 rounded px-1.5 py-0.5 text-[11px] text-white bg-gray-800 border border-gray-700"
                                           />
                                         </label>
                                       ))}
+                                      {/* Auto-berechnete Punkte */}
+                                      <label className="flex items-center gap-1.5 text-[11px] text-teal-500">
+                                        Punkte (auto)
+                                        <span className="w-16 rounded px-1.5 py-0.5 text-[11px] text-teal-300 bg-teal-900/20 border border-teal-800/40 tabular-nums">
+                                          {row.points}
+                                        </span>
+                                      </label>
                                     </div>
                                   </div>
                                 );
