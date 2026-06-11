@@ -247,17 +247,17 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
             )}
           </div>
 
-          <div className="glass card-shine rounded-2xl overflow-hidden">
+          <div className="glass card-shine rounded-2xl overflow-x-auto">
+            <div className="min-w-[420px]">
             {/* Tabellen-Header */}
             <div className="grid items-center px-4 py-2.5 border-b border-white/[0.06]"
-              style={{ gridTemplateColumns: "2rem 1fr 4rem 4rem 4rem 5rem" }}>
+              style={{ gridTemplateColumns: "2.5rem 1fr 5rem 5rem 5.5rem" }}>
               {[
-                { label: "#",        cls: "" },
-                { label: "Spieler",  cls: "" },
-                { label: "Siege",    cls: "text-center" },
-                { label: "Events",   cls: "text-center" },
-                { label: "Ø Platz",  cls: "text-center" },
-                { label: "Punkte",   cls: "text-right" },
+                { label: "#",       cls: "" },
+                { label: "Spieler", cls: "" },
+                { label: "Events",  cls: "text-center" },
+                { label: "Ø Platz", cls: "text-center" },
+                { label: "Punkte",  cls: "text-right" },
               ].map(col => (
                 <span key={col.label}
                   className={`text-[10px] font-semibold text-gray-600 uppercase tracking-widest ${col.cls}`}>
@@ -276,7 +276,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
                 <div key={row.userId}
                   className="grid items-center px-4 py-3 border-b border-white/[0.04] last:border-0 transition-colors hover:bg-white/[0.02]"
                   style={{
-                    gridTemplateColumns: "2rem 1fr 4rem 4rem 4rem 5rem",
+                    gridTemplateColumns: "2.5rem 1fr 5rem 5rem 5.5rem",
                     background: isMe ? "rgba(20,184,166,0.05)" : "",
                     borderLeft: isMe ? "2px solid rgba(20,184,166,0.40)" : "2px solid transparent",
                   }}>
@@ -300,13 +300,6 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
                     <span className={`text-sm font-medium truncate ${isMe ? "text-teal-300" : "text-white"}`}>
                       {name}
                       {isMe && <span className="text-[10px] text-teal-600 ml-1.5">(du)</span>}
-                    </span>
-                  </div>
-
-                  {/* Siege */}
-                  <div className="text-center">
-                    <span className={`text-sm font-semibold tabular-nums ${row.wins > 0 ? "text-amber-400" : "text-gray-700"}`}>
-                      {row.wins > 0 ? `🏆 ${row.wins}` : "–"}
                     </span>
                   </div>
 
@@ -348,6 +341,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
                 </div>
               );
             })}
+            </div>
           </div>
 
           {standings.length === 0 && (
