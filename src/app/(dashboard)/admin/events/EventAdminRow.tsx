@@ -739,11 +739,10 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
                               <div key={i} className="flex items-center gap-2">
                                 <input
                                   type="text"
-                                  value={row.field}
-                                  onChange={e => {
+                                  defaultValue={row.field}
+                                  onBlur={e => {
                                     const v = e.target.value;
-                                    const next = statRows.map((r, j) => j === i ? { ...r, field: v } : r);
-                                    setStatRows(next);
+                                    setStatRows(prev => prev.map((r, j) => j === i ? { ...r, field: v } : r));
                                   }}
                                   placeholder="Stat-Name (z.B. Kills)"
                                   className="min-w-0 flex-1 rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors"
@@ -751,18 +750,17 @@ export default function EventAdminRow({ event, allUsers }: { event: Event; allUs
                                 <input
                                   type="number"
                                   min={0}
-                                  value={row.pointsPer}
-                                  onChange={e => {
+                                  defaultValue={row.pointsPer}
+                                  onBlur={e => {
                                     const v = Number(e.target.value);
-                                    const next = statRows.map((r, j) => j === i ? { ...r, pointsPer: v } : r);
-                                    setStatRows(next);
+                                    setStatRows(prev => prev.map((r, j) => j === i ? { ...r, pointsPer: v } : r));
                                   }}
                                   placeholder="Pkt./Einheit"
                                   className={`${inputCls} w-24`}
                                 />
                                 <button
                                   type="button"
-                                  onClick={() => setStatRows(statRows.filter((_, j) => j !== i))}
+                                  onClick={() => setStatRows(prev => prev.filter((_, j) => j !== i))}
                                   className="text-gray-600 hover:text-red-400 transition-colors shrink-0"
                                 >
                                   <X className="w-3.5 h-3.5" />
