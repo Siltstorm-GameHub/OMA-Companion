@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Users, Trophy, Clock, Swords, ChevronDown, Medal, StickyNote } from "lucide-react";
+import WinIcon from "@/components/WinIcon";
 import BracketView from "./BracketView";
 import RoundRobinView from "./RoundRobinView";
 import FfaView from "./FfaView";
@@ -178,7 +179,7 @@ export default async function TournamentDetailPage({
 
         {winner && (
           <div className="mt-4 flex items-center gap-3 bg-amber-900/20 border border-amber-800/30 rounded-xl p-3">
-            <Trophy className="w-5 h-5 text-amber-400 shrink-0" />
+            <WinIcon size={20} />
             <div>
               <p className="text-xs text-amber-600 uppercase tracking-wide font-medium">Turniersieger</p>
               <p className="text-white font-semibold">{userName(winner)}</p>
@@ -239,9 +240,7 @@ export default async function TournamentDetailPage({
                     <span className={`flex-1 text-sm font-medium truncate ${isMe ? "text-teal-300" : i === 0 ? "text-amber-200" : "text-white"}`}>
                       {name}{isMe && <span className="text-xs text-gray-500 ml-1.5">(du)</span>}
                     </span>
-                    {i === 0 && (
-                      <Trophy className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                    )}
+                    {i === 0 && <WinIcon size={14} />}
                   </div>
                 );
               })}

@@ -3,8 +3,9 @@ import { prisma } from "@/lib/prisma";
 import {
   Trophy, CalendarDays, Users, ChevronRight,
   ShieldAlert, Clock, Scroll, Swords, CheckCircle2,
-  Circle, Zap, Repeat, Coins,
+  Circle, Zap, Repeat,
 } from "lucide-react";
+import CoinIcon from "@/components/CoinIcon";
 import Link from "next/link";
 import Image from "next/image";
 import { CountUp } from "@/components/CountUp";
@@ -167,7 +168,7 @@ export default async function DashboardPage() {
                 <CountUp to={myRankPoints} duration={900} /> Pts
               </span>
               <span className="text-xs text-amber-400 font-bold tabular-nums flex items-center gap-1">
-                <Coins className="w-3 h-3" />
+                <CoinIcon size={12} />
                 <CountUp to={myPoints} duration={900} />
               </span>
             </div>
@@ -494,7 +495,7 @@ export default async function DashboardPage() {
                 <div className="text-right shrink-0">
                   <p className="text-[10px] text-gray-600">Verdient</p>
                   <p className="text-xs font-bold text-amber-400 tabular-nums flex items-center gap-1">
-                    <Coins className="w-3 h-3" />
+                    <CoinIcon size={12} />
                     {myMonthQuests
                       .filter(q => q.progress?.[0]?.completed)
                       .reduce((s, q) => s + q.reward, 0)
@@ -534,7 +535,7 @@ export default async function DashboardPage() {
                       )}
                     </div>
                     <span className={`text-[10px] font-semibold shrink-0 flex items-center gap-0.5 tabular-nums ${completed ? "text-amber-500" : "text-gray-700"}`}>
-                      +{quest.reward} <Coins className="w-2.5 h-2.5" />
+                      +{quest.reward} <CoinIcon size={10} />
                     </span>
                   </div>
                 );

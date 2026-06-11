@@ -4,8 +4,10 @@ import { notFound } from "next/navigation";
 import { QUEST_TYPE_META, type QuestType } from "@/lib/quests";
 import {
   Trophy, Star, CalendarDays, Swords, Clock,
-  MessageSquare, CheckCircle2, ArrowLeft, Coins,
+  MessageSquare, CheckCircle2, ArrowLeft,
 } from "lucide-react";
+import CoinIcon from "@/components/CoinIcon";
+import WinIcon from "@/components/WinIcon";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -168,7 +170,7 @@ export default async function PublicProfilePage({
               Mitglied seit {memberSince} · {earnedBadges.length} Abzeichen
             </p>
             <div className="flex items-center gap-1 mb-2">
-              <Coins className="w-3 h-3 text-amber-400" />
+              <CoinIcon size={12} />
               <span className="text-xs text-amber-400 font-medium tabular-nums">{totalPoints.toLocaleString("de-DE")} Münzen</span>
             </div>
             <p className="text-sm font-bold text-teal-400">{(user.rankPoints ?? 0).toLocaleString("de-DE")} Punkte</p>
@@ -188,7 +190,7 @@ export default async function PublicProfilePage({
         {[
           { icon: <Star className="w-4 h-4" />,        label: "Punkte",        value: (user.rankPoints ?? 0).toLocaleString("de-DE"), iconCls: "text-teal-400    bg-teal-500/10    border-teal-500/15",    accent: "from-teal-500/8"    },
           { icon: <CalendarDays className="w-4 h-4" />, label: "Events",        value: String(eventCount),                  iconCls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/15", accent: "from-emerald-500/8" },
-          { icon: <Trophy className="w-4 h-4" />,       label: "Turnier-Siege", value: String(matchWins),                   iconCls: "text-rose-400    bg-rose-500/10    border-rose-500/15",    accent: "from-rose-500/8"    },
+          { icon: <WinIcon size={16} />,                 label: "Turnier-Siege", value: String(matchWins),                   iconCls: "text-rose-400    bg-rose-500/10    border-rose-500/15",    accent: "from-rose-500/8"    },
         ].map((s, i) => (
           <div key={s.label} className={`card-hover card-shine glass relative overflow-hidden rounded-2xl p-4 animate-slide-up stagger-${i + 1}`}>
             <div className={`absolute inset-0 bg-gradient-to-br ${s.accent} to-transparent pointer-events-none`} />
@@ -279,7 +281,7 @@ export default async function PublicProfilePage({
                   return (
                     <div key={p.id} className="flex items-center gap-3 px-4 py-3">
                       <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/15 flex items-center justify-center shrink-0">
-                        <Trophy className="w-4 h-4 text-amber-400" />
+                        <WinIcon size={16} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-white truncate">{p.tournament.event.title}</p>
@@ -290,12 +292,12 @@ export default async function PublicProfilePage({
                           {winsCount === 0 && losses === 0 ? "Keine Matches gespielt" : ""}
                         </p>
                       </div>
-                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${
+                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border flex items-center gap-1 ${
                         p.finalRank === 1  ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
                         p.eliminated       ? "bg-white/[0.04] text-gray-500 border-white/[0.06]" :
                                              "bg-white/[0.04] text-gray-400 border-white/[0.06]"
                       }`}>
-                        {p.finalRank === 1 ? "🏆 Sieger" : p.eliminated ? "Ausgeschieden" : "Aktiv"}
+                        {p.finalRank === 1 ? <><WinIcon size={11} /> Sieger</> : p.eliminated ? "Ausgeschieden" : "Aktiv"}
                       </span>
                     </div>
                   );

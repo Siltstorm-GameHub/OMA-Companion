@@ -1,5 +1,6 @@
 "use client";
 import { Trophy, Clock } from "lucide-react";
+import WinIcon from "@/components/WinIcon";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };
 type Participant = { userId: string; user: User };
@@ -273,9 +274,7 @@ export default function LigaView({
                           </div>
                         </div>
 
-                        {played && !isDraw && match.winnerId && (
-                          <Trophy className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                        )}
+                        {played && !isDraw && match.winnerId && <WinIcon size={14} />}
                         {played && match.scheduledAt && (
                           <div className="shrink-0 text-[10px] text-gray-600 flex items-center gap-1">
                             <Clock className="w-3 h-3" />

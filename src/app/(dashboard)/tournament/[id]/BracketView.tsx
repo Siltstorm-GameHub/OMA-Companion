@@ -1,5 +1,6 @@
 "use client";
 import { Trophy } from "lucide-react";
+import WinIcon from "@/components/WinIcon";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };
 type Participant = { userId: string; user: User };
@@ -136,7 +137,7 @@ export default function BracketView({
                                 </span>
                               </div>
                               <div className="flex items-center gap-1 shrink-0">
-                                {isWinner && <Trophy className="w-3 h-3 text-amber-400" />}
+                                {isWinner && <WinIcon size={12} />}
                                 <span className={`font-mono text-xs font-semibold ${
                                   isWinner ? "text-emerald-300" :
                                   isLoser  ? "text-gray-700"   :

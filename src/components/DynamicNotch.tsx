@@ -253,7 +253,10 @@ export default function DynamicNotch() {
     }}>
       <div style={{ padding: "12px 16px 10px", borderBottom: "1px solid rgba(20,184,166,0.10)" }}>
         <p style={{ fontSize: 14, fontWeight: 600, color: "#fff", margin: 0 }}>{userName}</p>
-        <p style={{ fontSize: 12, color: "rgba(20,184,166,0.75)", margin: "3px 0 0" }}>{coins} Münzen</p>
+        <p style={{ fontSize: 12, color: "rgba(20,184,166,0.75)", margin: "3px 0 0", display: "flex", alignItems: "center", gap: 4 }}>
+          <img src="/Muenze Icon.png" alt="" width={11} height={11} style={{ objectFit: "contain" }} />
+          {coins} Münzen
+        </p>
       </div>
       <div style={{ padding: 8 }}>
         <Link href="/profile" onClick={() => setAvatarOpen(false)}
@@ -346,7 +349,10 @@ export default function DynamicNotch() {
               </div>
               <div>
                 <p style={{ fontSize: 14, fontWeight: 600, color: "#fff", margin: 0 }}>{userName}</p>
-                <p style={{ fontSize: 12, color: "rgba(20,184,166,0.75)", margin: 0 }}>{coins} Münzen</p>
+                <p style={{ fontSize: 12, color: "rgba(20,184,166,0.75)", margin: 0, display: "flex", alignItems: "center", gap: 4 }}>
+                  <img src="/Muenze Icon.png" alt="" width={11} height={11} style={{ objectFit: "contain" }} />
+                  {coins} Münzen
+                </p>
               </div>
             </div>
 

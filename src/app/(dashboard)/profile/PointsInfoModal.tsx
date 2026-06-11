@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { Info, X, Coins, Trophy } from "lucide-react";
+import { Info, X, Trophy } from "lucide-react";
+import CoinIcon from "@/components/CoinIcon";
 
 const RANKS = [
   { label: "Neuling",               emoji: "🔰", range: "0 – 99",    color: "text-gray-400"   },
@@ -87,7 +88,7 @@ export default function PointsInfoModal() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-xl bg-amber-500/8 border border-amber-500/15 p-3">
                   <div className="flex items-center gap-1.5 mb-1">
-                    <Coins className="w-4 h-4 text-amber-400 shrink-0" />
+                    <CoinIcon size={16} />
                     <p className="text-sm font-bold text-amber-400">Münzen</p>
                   </div>
                   <p className="text-[11px] text-gray-400 leading-relaxed">Shop-Währung. Damit kaufst du Figuren und Items im Shop.</p>
@@ -142,7 +143,7 @@ export default function PointsInfoModal() {
               {/* Münzen verdienen */}
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <Coins className="w-3.5 h-3.5 text-amber-400" />
+                  <CoinIcon size={14} />
                   <p className="text-xs font-semibold text-amber-400 uppercase tracking-widest">Münzen verdienen</p>
                 </div>
                 <div className="space-y-2">

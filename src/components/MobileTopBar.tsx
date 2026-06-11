@@ -89,7 +89,8 @@ export default function MobileTopBar() {
         >
           <div className="px-3 py-2.5" style={{ borderBottom: "1px solid rgba(20,184,166,0.08)" }}>
             <p className="text-xs font-semibold text-white">{session?.user?.name ?? "Gast"}</p>
-            <p className="text-[10px] mt-0.5" style={{ color: "rgba(20,184,166,0.7)" }}>
+            <p className="text-[10px] mt-0.5 flex items-center gap-1" style={{ color: "rgba(20,184,166,0.7)" }}>
+              <img src="/Muenze Icon.png" alt="" width={11} height={11} style={{ objectFit: "contain" }} />
               {(session?.user as { points?: number })?.points?.toLocaleString("de-DE") ?? 0} Münzen
             </p>
           </div>
