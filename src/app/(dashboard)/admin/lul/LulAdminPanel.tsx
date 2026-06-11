@@ -10,6 +10,7 @@ import {
 import type { LulAdminSeasons } from "./page";
 import { UserPickerSheet } from "@/components/UserPickerSheet";
 import GameNameInput from "@/components/GameNameInput";
+import { getGenreIcon } from "@/lib/genre-icons";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };
 type LulSeason  = LulAdminSeasons[number];
@@ -1105,7 +1106,10 @@ export default function LulAdminPanel({
                               st.status === "finished" ? "bg-amber-900/40 text-amber-300" : "bg-gray-700 text-gray-400"
                             }`}>{st.number}</div>
                             <div className="min-w-0">
-                              <p className="text-sm text-white font-medium">{st.game}</p>
+                              <div className="flex items-center gap-1.5">
+                                {(() => { const icon = getGenreIcon(st.gameType); return icon ? <img src={icon.src} alt={icon.alt} className="w-4 h-4 object-contain shrink-0" /> : null; })()}
+                                <p className="text-sm text-white font-medium">{st.game}</p>
+                              </div>
                               {st.scheduledAt && (
                                 <p className="text-[10px] text-gray-500">
                                   {new Date(st.scheduledAt).toLocaleDateString("de-DE", { day:"2-digit", month:"long", year:"numeric" })}
