@@ -1,6 +1,7 @@
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import EventAdminRow from "./EventAdminRow";
+import SeriesAdminRow from "./SeriesAdminRow";
 
 export default async function AdminEventsPage() {
   await requireRole("moderator");
@@ -36,6 +37,23 @@ export default async function AdminEventsPage() {
     }),
   ]);
 
+  // Gruppen: seriesId → { name, events[] }
+  const seriesMap = new Map<string, { id: string; name: string; events: typeof events }>();
+  const standaloneEvents: typeof events = [];
+
+  for (const ev of events) {
+    if (ev.seriesId && ev.series) {
+      if (!seriesMap.has(ev.seriesId)) {
+        seriesMap.set(ev.seriesId, { id: ev.seriesId, name: ev.series.name, events: [] });
+      }
+      seriesMap.get(ev.seriesId)!.events.push(ev);
+    } else {
+      standaloneEvents.push(ev);
+    }
+  }
+
+  const seriesGroups = Array.from(seriesMap.values());
+
   return (
     <div className="space-y-3">
       {events.length === 0 && (
@@ -43,7 +61,20 @@ export default async function AdminEventsPage() {
           Noch keine Events. Erstelle ein neues Event oben.
         </div>
       )}
-      {events.map((event) => (
+
+      {/* Eventreihen */}
+      {seriesGroups.map(group => (
+        <SeriesAdminRow
+          key={group.id}
+          seriesId={group.id}
+          seriesName={group.name}
+          events={group.events}
+          allUsers={allUsers}
+        />
+      ))}
+
+      {/* Einzelne Events (ohne Reihe) */}
+      {standaloneEvents.map(event => (
         <EventAdminRow key={event.id} event={event} allUsers={allUsers} />
       ))}
     </div>
