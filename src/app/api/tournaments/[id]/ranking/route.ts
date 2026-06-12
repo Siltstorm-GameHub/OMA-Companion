@@ -47,30 +47,21 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     if (format === "avg_stats") {
-      // Durchschnitt pro Runde berechnen
+      // Alle Felder pro Runde mitteln, dann Gesamtdurchschnitt bilden
       const averaged = [...totals.values()].map(t => {
-        const avg: Record<string, number> = {};
-        for (const [k, v] of Object.entries(t.stats)) {
-          avg[k] = t.rounds > 0 ? v / t.rounds : 0;
-        }
-        return { userId: t.userId, avg, rounds: t.rounds };
+        const fieldAvgs = fields.map(f => (t.rounds > 0 ? (t.stats[f] ?? 0) / t.rounds : 0));
+        const combined  = fields.length > 0 ? fieldAvgs.reduce((s, v) => s + v, 0) / fields.length : 0;
+        return { userId: t.userId, combined, rounds: t.rounds };
       });
 
-      const sorted = averaged.sort((a, b) => {
-        for (const f of fields) {
-          const diff = (b.avg[f] ?? 0) - (a.avg[f] ?? 0);
-          if (diff !== 0) return diff;
-        }
-        return 0;
-      });
+      const sorted = averaged.sort((a, b) => b.combined - a.combined);
 
-      ranking = sorted.map((t, i) => {
-        const mainVal = fields[0] ? (t.avg[fields[0]] ?? 0) : 0;
-        const display = mainVal % 1 === 0 ? String(mainVal) : mainVal.toFixed(2);
+      ranking = sorted.map(t => {
+        const display = t.combined % 1 === 0 ? String(t.combined) : t.combined.toFixed(2);
         return {
           userId: t.userId,
-          score:  Math.round(mainVal * 100) / 100,
-          label:  fields[0] ? `Ø ${display} ${fields[0]}/Runde (${t.rounds}R)` : `Platz ${i + 1}`,
+          score:  Math.round(t.combined * 100) / 100,
+          label:  `Ø ${display} (${t.rounds}R)`,
         };
       });
     } else {

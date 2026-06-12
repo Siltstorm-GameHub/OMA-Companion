@@ -9,7 +9,7 @@ export default function StatFieldEditor({
 }: {
   fields: string[];
   onChange: (next: string[]) => void;
-  isAvg?: boolean;
+  isAvg?: boolean; // kept for API compat, no longer changes rendering
 }) {
   const [input, setInput] = useState("");
 
@@ -32,14 +32,9 @@ export default function StatFieldEditor({
     <div className="space-y-2">
       {fields.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
-          {fields.map((f, i) => (
+          {fields.map((f) => (
             <span key={f}
-              className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg border ${
-                i === 0 && isAvg
-                  ? "bg-rose-900/30 border-rose-700/40 text-rose-200"
-                  : "bg-gray-800 border-gray-700 text-gray-200"
-              }`}>
-              {i === 0 && isAvg && <span className="text-[10px] text-rose-400 font-semibold mr-0.5">★</span>}
+              className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg border bg-gray-800 border-gray-700 text-gray-200">
               {f}
               <button type="button" onClick={() => remove(f)}
                 className="ml-0.5 text-gray-500 hover:text-red-400 transition-colors leading-none">
@@ -64,8 +59,8 @@ export default function StatFieldEditor({
         </button>
       </div>
       {isAvg && fields.length > 0 && (
-        <p className="text-[11px] text-rose-400/80">
-          ★ Das erste Feld ist der Hauptwert — der Sieger wird nach dem besten Durchschnitt dieses Werts ermittelt.
+        <p className="text-[11px] text-blue-400/80">
+          Alle Felder werden pro Runde gemittelt und zu einem Gesamtdurchschnitt zusammengerechnet — der beste Wert gewinnt.
         </p>
       )}
       {fields.length === 0 && (

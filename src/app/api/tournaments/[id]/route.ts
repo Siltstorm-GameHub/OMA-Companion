@@ -29,20 +29,12 @@ async function calcFfaRanking(tournamentId: string, statFields: string[], format
 
   if (format === "avg_stats") {
     return [...totals.values()]
-      .map(t => ({
-        userId: t.userId,
-        stats: Object.fromEntries(
-          Object.entries(t.stats).map(([k, v]) => [k, t.rounds > 0 ? v / t.rounds : 0])
-        ),
-        rounds: t.rounds,
-      }))
-      .sort((a, b) => {
-        for (const f of statFields) {
-          const diff = (b.stats[f] ?? 0) - (a.stats[f] ?? 0);
-          if (diff !== 0) return diff;
-        }
-        return 0;
-      });
+      .map(t => {
+        const fieldAvgs = statFields.map(f => (t.rounds > 0 ? (t.stats[f] ?? 0) / t.rounds : 0));
+        const combined  = statFields.length > 0 ? fieldAvgs.reduce((s, v) => s + v, 0) / statFields.length : 0;
+        return { userId: t.userId, stats: t.stats, rounds: t.rounds, combined };
+      })
+      .sort((a, b) => b.combined - a.combined);
   }
 
   return [...totals.values()].sort((a, b) => {
