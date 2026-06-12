@@ -5,7 +5,7 @@ import AdminDonationsClient from "./AdminDonationsClient";
 export default async function AdminDonationsPage() {
   await requireRole("admin");
 
-  const [donations, users, expenses] = await Promise.all([
+  const [donations, users, expenses, ideas] = await Promise.all([
     prisma.donation.findMany({
       include: { user: { select: { id: true, name: true, image: true } } },
       orderBy: [{ year: "desc" }, { month: "desc" }, { createdAt: "desc" }],
@@ -15,7 +15,8 @@ export default async function AdminDonationsPage() {
       select: { id: true, name: true, image: true },
     }),
     prisma.poolExpense.findMany({ orderBy: { date: "desc" } }),
+    prisma.poolIdea.findMany({ orderBy: { createdAt: "asc" } }),
   ]);
 
-  return <AdminDonationsClient donations={donations} users={users} expenses={expenses} />;
+  return <AdminDonationsClient donations={donations} users={users} expenses={expenses} ideas={ideas} />;
 }

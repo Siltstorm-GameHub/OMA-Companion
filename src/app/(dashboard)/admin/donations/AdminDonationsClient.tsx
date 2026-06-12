@@ -2,7 +2,7 @@
 import { useState, useTransition } from "react";
 import Image from "next/image";
 import { toast } from "sonner";
-import { Trash2, Plus, Euro, Heart, ShoppingCart, TrendingDown, Wallet } from "lucide-react";
+import { Trash2, Plus, Euro, Heart, ShoppingCart, TrendingDown, Wallet, Lightbulb, Pencil, Check, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 const MONTH_NAMES = ["Januar", "Februar", "März", "April", "Mai", "Juni",
@@ -17,6 +17,7 @@ type Expense = {
   id: string; title: string; description: string | null;
   amount: number; date: Date | string;
 };
+type Idea = { id: string; title: string; description: string | null; estimatedCost: number | null };
 type User = { id: string; name: string | null; image: string | null };
 
 const now = new Date();
@@ -41,14 +42,17 @@ export default function AdminDonationsClient({
   donations: initial,
   users,
   expenses: initialExpenses,
+  ideas: initialIdeas,
 }: {
   donations: Donation[];
   users: User[];
   expenses: Expense[];
+  ideas: Idea[];
 }) {
   const router = useRouter();
   const [donations, setDonations] = useState(initial);
   const [expenses,  setExpenses]  = useState(initialExpenses);
+  const [ideas,     setIdeas]     = useState(initialIdeas);
   const [isPending, startTransition] = useTransition();
 
   // Donation form
@@ -63,6 +67,17 @@ export default function AdminDonationsClient({
   const [exDesc,  setExDesc]   = useState("");
   const [exAmt,   setExAmt]    = useState("");
   const [exDate,  setExDate]   = useState(now.toISOString().slice(0, 10));
+
+  // Idea form
+  const [ideaTitle, setIdeaTitle] = useState("");
+  const [ideaDesc,  setIdeaDesc]  = useState("");
+  const [ideaCost,  setIdeaCost]  = useState("");
+
+  // Inline editing
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDesc,  setEditDesc]  = useState("");
+  const [editCost,  setEditCost]  = useState("");
 
   const totalPool  = donations.reduce((s, d) => s + d.amount, 0);
   const totalSpent = expenses.reduce((s, e) => s + e.amount, 0);
@@ -117,6 +132,53 @@ export default function AdminDonationsClient({
       await fetch(`/api/admin/donations/expenses/${id}`, { method: "DELETE" });
       toast.success("Ausgabe gelöscht");
       setExpenses(prev => prev.filter(e => e.id !== id));
+    });
+  }
+
+  async function handleAddIdea(e: React.FormEvent) {
+    e.preventDefault();
+    if (!ideaTitle.trim()) return;
+    startTransition(async () => {
+      const res = await fetch("/api/admin/donations/ideas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: ideaTitle, description: ideaDesc || null, estimatedCost: ideaCost || null }),
+      });
+      if (!res.ok) { toast.error("Fehler beim Speichern"); return; }
+      const idea = await res.json();
+      setIdeas(prev => [...prev, idea]);
+      setIdeaTitle(""); setIdeaDesc(""); setIdeaCost("");
+      router.refresh();
+    });
+  }
+
+  async function handleDeleteIdea(id: string) {
+    startTransition(async () => {
+      await fetch(`/api/admin/donations/ideas/${id}`, { method: "DELETE" });
+      setIdeas(prev => prev.filter(i => i.id !== id));
+      router.refresh();
+    });
+  }
+
+  function startEdit(idea: Idea) {
+    setEditingId(idea.id);
+    setEditTitle(idea.title);
+    setEditDesc(idea.description ?? "");
+    setEditCost(idea.estimatedCost != null ? String(idea.estimatedCost) : "");
+  }
+
+  async function handleSaveEdit(id: string) {
+    startTransition(async () => {
+      const res = await fetch(`/api/admin/donations/ideas/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: editTitle, description: editDesc || null, estimatedCost: editCost || null }),
+      });
+      if (!res.ok) { toast.error("Fehler beim Speichern"); return; }
+      const updated = await res.json();
+      setIdeas(prev => prev.map(i => i.id === id ? updated : i));
+      setEditingId(null);
+      router.refresh();
     });
   }
 
@@ -268,6 +330,107 @@ export default function AdminDonationsClient({
                   className="text-gray-600 hover:text-red-400 transition-colors p-1.5 rounded-lg hover:bg-red-500/10 shrink-0">
                   <Trash2 className="w-4 h-4" />
                 </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* ── Ideen verwalten ─────────────────────────────────────── */}
+      <section>
+        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+          <Lightbulb className="w-4 h-4 text-yellow-400" /> Ideen für mögliche Ausgaben
+        </h2>
+        <form onSubmit={handleAddIdea} className="rounded-2xl p-5 space-y-3 mb-4"
+          style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(234,179,8,0.18)" }}>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2">
+              <Input label="Titel">
+                <input type="text" value={ideaTitle} onChange={e => setIdeaTitle(e.target.value)} required
+                  placeholder="z.B. Neuer Gameserver"
+                  className={inputCls} style={{ background: "#0b1a17", border: "1px solid rgba(234,179,8,0.2)" }} />
+              </Input>
+            </div>
+            <Input label="Beschreibung (optional)">
+              <input type="text" value={ideaDesc} onChange={e => setIdeaDesc(e.target.value)}
+                placeholder="Details zur Idee"
+                className={inputCls} style={{ background: "#0b1a17", border: "1px solid rgba(234,179,8,0.2)" }} />
+            </Input>
+            <Input label="Schätzpreis in € (optional)">
+              <div className="relative">
+                <Euro className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+                <input type="number" min="0" step="0.01" value={ideaCost} onChange={e => setIdeaCost(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full rounded-xl pl-8 pr-3 py-2.5 text-sm text-white outline-none"
+                  style={{ background: "#0b1a17", border: "1px solid rgba(234,179,8,0.2)" }} />
+              </div>
+            </Input>
+          </div>
+          <button type="submit" disabled={isPending || !ideaTitle.trim()}
+            className="w-full rounded-xl py-2.5 text-sm font-semibold text-black transition-all disabled:opacity-50"
+            style={{ background: "linear-gradient(135deg, #ca8a04, #eab308)" }}>
+            {isPending ? "Wird gespeichert…" : "Idee hinzufügen"}
+          </button>
+        </form>
+
+        {ideas.length === 0 ? (
+          <p className="text-sm text-gray-600 text-center py-4">Noch keine Ideen eingetragen.</p>
+        ) : (
+          <div className="space-y-2">
+            {ideas.map(idea => (
+              <div key={idea.id} className="rounded-xl px-4 py-3"
+                style={{ background: "rgba(234,179,8,0.04)", border: "1px solid rgba(234,179,8,0.12)" }}>
+                {editingId === idea.id ? (
+                  <div className="space-y-2">
+                    <input value={editTitle} onChange={e => setEditTitle(e.target.value)}
+                      className={inputCls} style={{ background: "#0b1a17", border: "1px solid rgba(234,179,8,0.3)" }} />
+                    <div className="grid grid-cols-2 gap-2">
+                      <input value={editDesc} onChange={e => setEditDesc(e.target.value)}
+                        placeholder="Beschreibung"
+                        className={inputCls} style={{ background: "#0b1a17", border: "1px solid rgba(234,179,8,0.3)" }} />
+                      <div className="relative">
+                        <Euro className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+                        <input type="number" min="0" step="0.01" value={editCost} onChange={e => setEditCost(e.target.value)}
+                          placeholder="Schätzpreis"
+                          className="w-full rounded-xl pl-8 pr-3 py-2.5 text-sm text-white outline-none"
+                          style={{ background: "#0b1a17", border: "1px solid rgba(234,179,8,0.3)" }} />
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => handleSaveEdit(idea.id)} disabled={isPending}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-black"
+                        style={{ background: "#eab308" }}>
+                        <Check className="w-3 h-3" /> Speichern
+                      </button>
+                      <button onClick={() => setEditingId(null)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-400 hover:text-white transition-colors"
+                        style={{ background: "rgba(255,255,255,0.05)" }}>
+                        <X className="w-3 h-3" /> Abbrechen
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <Lightbulb className="w-4 h-4 text-yellow-400 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-white">{idea.title}</p>
+                      {idea.description && <p className="text-xs text-gray-500">{idea.description}</p>}
+                    </div>
+                    {idea.estimatedCost != null && (
+                      <span className="text-sm font-bold text-yellow-400 shrink-0 tabular-nums">
+                        ~{fmt(idea.estimatedCost)} €
+                      </span>
+                    )}
+                    <button onClick={() => startEdit(idea)} disabled={isPending}
+                      className="text-gray-600 hover:text-yellow-400 transition-colors p-1.5 rounded-lg hover:bg-yellow-500/10 shrink-0">
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => handleDeleteIdea(idea.id)} disabled={isPending}
+                      className="text-gray-600 hover:text-red-400 transition-colors p-1.5 rounded-lg hover:bg-red-500/10 shrink-0">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
