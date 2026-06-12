@@ -1,5 +1,7 @@
 ﻿import { prisma } from "@/lib/prisma";
-import { auth } from "@/auth";
+import { getSessionUser } from "@/lib/roles";
+import { getRank } from "@/lib/ranks";
+import { calcStreak } from "@/lib/streak";
 import { Trophy, Swords, Flame, Star } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
 import { CountUp } from "@/components/CountUp";
@@ -60,10 +62,10 @@ const PODIUM_CONFIG = [
 ];
 
 export default async function LeaderboardPage() {
-  const session = await auth();
-  const userId  = session?.user?.id;
+  const me     = await getSessionUser();
+  const userId = me?.id;
 
-  const [users, wins, donations] = await Promise.all([
+  const [users, wins, donationGroups] = await Promise.all([
     prisma.user.findMany({
       orderBy: { rankPoints: "desc" },
       take: 50,
@@ -78,38 +80,22 @@ export default async function LeaderboardPage() {
       _count: { winnerId: true },
       where: { winnerId: { not: null } },
     }),
-    prisma.donation.findMany({ select: { userId: true, month: true, year: true } }),
+    // Monat/Jahr-Paare pro User aggregieren — günstiger als alle Zeilen laden
+    prisma.donation.groupBy({
+      by: ["userId", "month", "year"],
+      orderBy: [{ userId: "asc" }, { year: "desc" }, { month: "desc" }],
+    }),
   ]);
 
   const winMap = new Map(wins.map(w => [w.winnerId!, w._count.winnerId]));
 
-  // Spendenstreak pro User berechnen
-  function calcDonationStreak(entries: { month: number; year: number }[]): number {
-    if (entries.length === 0) return 0;
-    // Eindeutige Monate
-    const unique = Array.from(new Map(entries.map(e => [`${e.year}-${e.month}`, e])).values());
-    const sorted = unique.sort((a, b) => a.year !== b.year ? b.year - a.year : b.month - a.month);
-    const now = new Date();
-    let checkYear = now.getFullYear();
-    let checkMonth = now.getMonth() + 1;
-    let streak = 0;
-    for (const e of sorted) {
-      if (e.year === checkYear && e.month === checkMonth) {
-        streak++;
-        checkMonth--;
-        if (checkMonth === 0) { checkMonth = 12; checkYear--; }
-      } else break;
-    }
-    return streak;
-  }
-
   const donationsByUser = new Map<string, { month: number; year: number }[]>();
-  for (const d of donations) {
+  for (const d of donationGroups) {
     if (!donationsByUser.has(d.userId)) donationsByUser.set(d.userId, []);
     donationsByUser.get(d.userId)!.push({ month: d.month, year: d.year });
   }
   const streakMap = new Map(
-    Array.from(donationsByUser.entries()).map(([uid, entries]) => [uid, calcDonationStreak(entries)])
+    Array.from(donationsByUser.entries()).map(([uid, entries]) => [uid, calcStreak(entries)])
   );
 
   const myRank = userId ? users.findIndex(u => u.id === userId) + 1 : null;
@@ -283,15 +269,15 @@ export default async function LeaderboardPage() {
                       </div>}
                 </div>
 
-                {/* Name */}
+                {/* Name + Rang */}
                 <div className="min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <p className={`text-sm font-semibold truncate leading-tight ${nameColor}`}
-                      >
-                      {displayName}
-                      {isMe && <span className="text-[10px] text-gray-500 ml-1 font-normal">du</span>}
-                    </p>
-                  </div>
+                  <p className={`text-sm font-semibold truncate leading-tight ${nameColor}`}>
+                    {displayName}
+                    {isMe && <span className="text-[10px] text-gray-500 ml-1 font-normal">du</span>}
+                  </p>
+                  <p className="text-[10px] text-gray-600 mt-0.5 truncate">
+                    {getRank(u.rankPoints).emoji} {getRank(u.rankPoints).label}
+                  </p>
                 </div>
 
                 {/* Siege — nur ab sm */}

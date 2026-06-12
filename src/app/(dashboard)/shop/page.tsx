@@ -1,5 +1,5 @@
-﻿import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
+﻿import { prisma } from "@/lib/prisma";
+import { getSessionUser } from "@/lib/roles";
 import { ShoppingBag } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
 import { CountUp } from "@/components/CountUp";
@@ -8,14 +8,10 @@ import DailySpin from "./DailySpin";
 import { effectivePrice } from "@/lib/collectibles";
 
 export default async function ShopPage() {
-  const session = await auth();
-  const userId  = session?.user?.id;
+  const me     = await getSessionUser();
+  const userId = me?.id;
 
-  const [user, collections, ownedRaw, lulItems, todaySpin] = await Promise.all([
-    userId
-      ? prisma.user.findUnique({ where: { id: userId }, select: { points: true } })
-      : null,
-
+  const [collections, ownedRaw, todaySpin] = await Promise.all([
     prisma.collectibleCollection.findMany({
       where:   { active: true },
       orderBy: { name: "asc" },
@@ -29,15 +25,6 @@ export default async function ShopPage() {
         })
       : [],
 
-    // LUL-Vorschlag (falls noch aktives Item existiert)
-    userId
-      ? prisma.shopPurchase.findMany({
-          where:   { userId, item: { type: "lul_suggest" } },
-          include: { item: { select: { id: true, name: true, icon: true, price: true } } },
-        }).catch(() => [])
-      : [],
-
-    // Tages-Spin Status
     userId
       ? prisma.dailySpin.findFirst({
           where: { userId, date: new Date().toISOString().slice(0, 10) },
@@ -61,7 +48,7 @@ export default async function ShopPage() {
       .sort((a, b) => (RARITY_ORDER[a.rarity] ?? 0) - (RARITY_ORDER[b.rarity] ?? 0)),
   }));
 
-  const myPoints  = user?.points ?? 0;
+  const myPoints  = me?.points ?? 0;
   const ownedSet  = new Set((ownedRaw as { collectibleItemId: string }[]).map(o => o.collectibleItemId));
 
   return (
@@ -100,6 +87,7 @@ export default async function ShopPage() {
           lastResult={todaySpin
             ? { prizeLabel: todaySpin.prizeLabel, prizeType: todaySpin.prizeType }
             : null}
+          initialPoints={myPoints}
         />
       )}
 

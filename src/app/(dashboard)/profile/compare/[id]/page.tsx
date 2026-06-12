@@ -10,7 +10,7 @@ async function fetchUserData(id: string) {
   const [user, eventCount, matchWins, transactions] = await Promise.all([
     prisma.user.findUnique({
       where: { id },
-      select: { id: true, name: true, username: true, image: true, points: true },
+      select: { id: true, name: true, username: true, image: true, points: true, rankPoints: true },
     }),
     prisma.eventRegistration.count({ where: { userId: id } }),
     prisma.match.count({ where: { winnerId: id } }),
@@ -56,7 +56,7 @@ function Avatar({ user, accent }: { user: UserData; accent: string }) {
       </div>
       <div className="text-center">
         <p className="font-bold text-white text-sm">{user.username ?? user.name ?? "?"}</p>
-        <p className="text-xs font-medium text-amber-400">{user.points.toLocaleString("de-DE")} Pts</p>
+        <p className="text-xs font-medium text-amber-400">{(user.rankPoints ?? 0).toLocaleString("de-DE")} Pts</p>
       </div>
     </div>
   );
@@ -72,17 +72,20 @@ export default async function CompareProfilePage({
   const meId    = session?.user?.id;
   if (!meId) notFound();
 
-  const [me, opponent, myRank, oppRank] = await Promise.all([
+  const [me, opponent] = await Promise.all([
     fetchUserData(meId),
     fetchUserData(id),
-    prisma.user.count({ where: { points: { gt: (await prisma.user.findUnique({ where: { id: meId }, select: { points: true } }))?.points ?? 0 } } }).then(c => c + 1),
-    prisma.user.count({ where: { points: { gt: (await prisma.user.findUnique({ where: { id }, select: { points: true } }))?.points ?? 0 } } }).then(c => c + 1),
   ]);
 
   if (!me || !opponent) notFound();
 
+  const [myRank, oppRank] = await Promise.all([
+    prisma.user.count({ where: { rankPoints: { gt: me.rankPoints ?? 0 } } }).then(c => c + 1),
+    prisma.user.count({ where: { rankPoints: { gt: opponent.rankPoints ?? 0 } } }).then(c => c + 1),
+  ]);
+
   const STATS = [
-    { icon: <Star className="w-4 h-4" />,        label: "Punkte",         valA: me.points,       valB: opponent.points,       colorA: "bg-amber-500",  colorB: "bg-amber-400/50"  },
+    { icon: <Star className="w-4 h-4" />,        label: "Rangpunkte",     valA: me.rankPoints ?? 0,    valB: opponent.rankPoints ?? 0,    colorA: "bg-amber-500",  colorB: "bg-amber-400/50"  },
     { icon: <WinIcon size={16} />,                 label: "Turnier-Siege",  valA: me.matchWins,    valB: opponent.matchWins,    colorA: "bg-rose-500",   colorB: "bg-rose-400/50"   },
     { icon: <CalendarDays className="w-4 h-4" />, label: "Events",         valA: me.eventCount,   valB: opponent.eventCount,   colorA: "bg-blue-500",   colorB: "bg-blue-400/50"   },
     { icon: <Swords className="w-4 h-4" />,       label: "Voice-Stunden",  valA: me.voiceHours,   valB: opponent.voiceHours,   colorA: "bg-teal-500", colorB: "bg-teal-400/50" },
@@ -147,14 +150,14 @@ export default async function CompareProfilePage({
 
       {/* Winner summary */}
       <div className="glass rounded-2xl p-4 text-center">
-        {me.points > opponent.points ? (
+        {(me.rankPoints ?? 0) > (opponent.rankPoints ?? 0) ? (
           <p className="text-sm text-white">
-            Du führst mit <span className="text-amber-400 font-bold">{(me.points - opponent.points).toLocaleString("de-DE")} Punkten</span> Vorsprung 🏆
+            Du führst mit <span className="text-amber-400 font-bold">{((me.rankPoints ?? 0) - (opponent.rankPoints ?? 0)).toLocaleString("de-DE")} Punkten</span> Vorsprung 🏆
           </p>
-        ) : me.points < opponent.points ? (
+        ) : (me.rankPoints ?? 0) < (opponent.rankPoints ?? 0) ? (
           <p className="text-sm text-white">
             <span className="font-semibold">{opponent.username ?? opponent.name}</span> führt mit{" "}
-            <span className="text-rose-400 font-bold">{(opponent.points - me.points).toLocaleString("de-DE")} Punkten</span> — hol auf! 💪
+            <span className="text-rose-400 font-bold">{((opponent.rankPoints ?? 0) - (me.rankPoints ?? 0)).toLocaleString("de-DE")} Punkten</span> — hol auf! 💪
           </p>
         ) : (
           <p className="text-sm text-gray-400">Gleichstand — ein fairer Kampf! 🤝</p>

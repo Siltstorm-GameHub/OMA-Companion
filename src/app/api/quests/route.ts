@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { getSessionUser } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { generateMonthlyQuests } from "@/lib/quests";
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const userId = session.user.id;
+  const me = await getSessionUser();
+  if (!me) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const userId = me.id;
 
   const now = new Date();
   const month = now.getMonth() + 1;
@@ -28,9 +28,8 @@ export async function GET() {
 
 // Admin: force-regenerate (deletes existing, creates new)
 export async function POST() {
-  const session = await auth();
-  const role = (session?.user as { role?: string })?.role;
-  if (role !== "admin" && role !== "moderator") {
+  const me = await getSessionUser();
+  if (me?.role !== "admin" && me?.role !== "moderator") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

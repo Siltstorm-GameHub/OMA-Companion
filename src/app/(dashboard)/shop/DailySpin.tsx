@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import confetti from "canvas-confetti";
 
 function useMidnightCountdown() {
   const [label, setLabel] = useState("");
@@ -25,13 +26,13 @@ function useMidnightCountdown() {
 
 // ── Segmente im Uhrzeigersinn ab 12 Uhr ───────────────────────────────────
 const SEGMENTS = [
-  { label: "200 Münzen", line1: "200",  line2: "Münzen", fill: "#e11d48", text: "#fda4af" },
-  { label: "10 Münzen",  line1: "10",   line2: "Münzen", fill: "#374151", text: "#9ca3af" },
-  { label: "100 Münzen", line1: "100",  line2: "Münzen", fill: "#d97706", text: "#fef08a" },
-  { label: "Kein Glück", line1: "Kein", line2: "Glück",  fill: "#111827", text: "#4b5563" },
-  { label: "200 Münzen", line1: "200",  line2: "Münzen", fill: "#ea580c", text: "#fed7aa" },
-  { label: "25 Münzen",  line1: "25",   line2: "Münzen", fill: "#2563eb", text: "#bfdbfe" },
-  { label: "50 Münzen",  line1: "50",   line2: "Münzen", fill: "#059669", text: "#a7f3d0" },
+  { label: "200 Münzen ⭐", line1: "200",  line2: "Münzen ⭐", fill: "#e11d48", text: "#fda4af" },
+  { label: "10 Münzen",    line1: "10",   line2: "Münzen",    fill: "#374151", text: "#9ca3af" },
+  { label: "100 Münzen",   line1: "100",  line2: "Münzen",    fill: "#d97706", text: "#fef08a" },
+  { label: "Kein Glück",   line1: "Kein", line2: "Glück",     fill: "#111827", text: "#4b5563" },
+  { label: "200 Münzen",   line1: "200",  line2: "Münzen",    fill: "#ea580c", text: "#fed7aa" },
+  { label: "25 Münzen",    line1: "25",   line2: "Münzen",    fill: "#2563eb", text: "#bfdbfe" },
+  { label: "50 Münzen",    line1: "50",   line2: "Münzen",    fill: "#059669", text: "#a7f3d0" },
 ];
 
 const N       = SEGMENTS.length;
@@ -52,16 +53,18 @@ function segPath(i: number) {
 
 // ── Props ──────────────────────────────────────────────────────────────────
 interface Props {
-  alreadySpun: boolean;
-  lastResult: { prizeLabel: string; prizeType: string } | null;
+  alreadySpun:   boolean;
+  lastResult:    { prizeLabel: string; prizeType: string } | null;
+  initialPoints: number;
 }
 
-export default function DailySpin({ alreadySpun, lastResult }: Props) {
+export default function DailySpin({ alreadySpun, lastResult, initialPoints }: Props) {
   const countdown = useMidnightCountdown();
   const router = useRouter();
   const [spinning,  setSpinning]  = useState(false);
   const [done,      setDone]      = useState(alreadySpun);
   const [result,    setResult]    = useState(lastResult);
+  const [points,    setPoints]    = useState(initialPoints);
   const [deg,       setDeg]       = useState(() => {
     // Beim Laden: letztes Ergebnis zeigen falls vorhanden
     if (!alreadySpun || !lastResult) return 0;
@@ -94,8 +97,19 @@ export default function DailySpin({ alreadySpun, lastResult }: Props) {
       setResult({ prizeLabel: data.prize.label, prizeType: data.prize.type });
       setDone(true);
 
-      if (data.prize.type === "points") toast.success(`🎰 ${data.prize.label} gewonnen!`);
-      else toast("🎰 Heute kein Glück — morgen wieder!", { description: "Drehe morgen erneut." });
+      if (data.prize.type === "points") {
+        const won = parseInt(data.prize.value ?? "0", 10);
+        if (won > 0) setPoints(p => p + won);
+        toast.success(`🎰 ${data.prize.label} gewonnen!`);
+        confetti({
+          particleCount: 120,
+          spread: 70,
+          origin: { y: 0.55 },
+          colors: ["#f59e0b", "#fcd34d", "#fef08a", "#ffffff"],
+        });
+      } else {
+        toast("🎰 Heute kein Glück — morgen wieder!", { description: "Drehe morgen erneut." });
+      }
 
       router.refresh();
     } catch {
@@ -152,9 +166,14 @@ export default function DailySpin({ alreadySpun, lastResult }: Props) {
           <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
             <span className="text-xl">🎡</span>
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-white">Täglicher Gratis-Spin</p>
             <p className="text-xs text-gray-500">Einmal täglich drehen — gewinne bis zu 200 Münzen!</p>
+          </div>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg shrink-0"
+            style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.15)" }}>
+            <span className="text-sm">🪙</span>
+            <span className="text-sm font-bold text-amber-400 tabular-nums">{points.toLocaleString("de-DE")}</span>
           </div>
         </div>
 
