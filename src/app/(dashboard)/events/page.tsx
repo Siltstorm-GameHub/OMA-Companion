@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/auth";
+import { getSessionUser } from "@/lib/roles";
 import {
   CalendarDays, ExternalLink, Users, Zap, Swords, Trophy,
   ChevronRight, Check, Repeat, Gamepad2,
@@ -29,10 +29,9 @@ const LUL_STATUS: Record<string, { label: string; badge: string; bar: string; do
 const GUILD_ID = process.env.DISCORD_GUILD_ID ?? "";
 
 export default async function EventsPage() {
-  const session = await auth();
-  const userId  = session?.user?.id;
-  const role    = (session?.user as { role?: string } | undefined)?.role ?? "user";
-  const isMod   = role === "moderator" || role === "admin";
+  const me     = await getSessionUser();
+  const userId = me?.id;
+  const isMod  = me?.role === "moderator" || me?.role === "admin";
 
   const [events, activeSeason] = await Promise.all([
     prisma.event.findMany({

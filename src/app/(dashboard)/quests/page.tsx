@@ -1,6 +1,6 @@
-import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
+import { getSessionUser } from "@/lib/roles";
 import { generateMonthlyQuests, QUEST_TYPE_META, type QuestType } from "@/lib/quests";
 import { Trophy, Lock, CheckCircle2, Clock, Scroll } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
@@ -12,11 +12,10 @@ const MONTH_NAMES = [
 ];
 
 export default async function QuestsPage() {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
-  const userId = session.user.id;
-  const role = (session.user as { role?: string }).role ?? "user";
-  const isStaff = role === "admin" || role === "moderator";
+  const me = await getSessionUser();
+  if (!me) redirect("/login");
+  const userId = me.id;
+  const isStaff = me.role === "admin" || me.role === "moderator";
 
   const now = new Date();
   const month = now.getMonth() + 1;
@@ -25,9 +24,8 @@ export default async function QuestsPage() {
   const daysInMonth = new Date(year, month, 0).getDate();
   const daysLeft    = daysInMonth - now.getDate();
 
-  await generateMonthlyQuests(month, year);
-
-  const [currentQuests, historyQuests] = await Promise.all([
+  const [, currentQuests, historyQuests] = await Promise.all([
+    generateMonthlyQuests(month, year),
     prisma.quest.findMany({
       where: { month, year },
       include: { progress: { where: { userId } } },
@@ -141,9 +139,6 @@ export default async function QuestsPage() {
               className={`card-cut surface card-hover relative overflow-hidden animate-slide-up`}
               style={{ animationDelay: `${idx * 50}ms` }}>
 
-              {/* Farbiger Streifen links */}
-              <div className={`absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b ${meta.bar}`} />
-
               {completed && (
                 <div className="absolute inset-0 bg-emerald-500/[0.04] pointer-events-none" />
               )}
@@ -151,7 +146,9 @@ export default async function QuestsPage() {
               <div className="relative pl-5 pr-5 py-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3 min-w-0">
-                    <span className="text-2xl mt-0.5 shrink-0">{meta.icon}</span>
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-gradient-to-br ${meta.bg} border border-white/[0.06]`}>
+                      <span className="text-xl">{meta.icon}</span>
+                    </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className={`font-semibold ${completed ? "text-emerald-300" : "text-white"}`}>

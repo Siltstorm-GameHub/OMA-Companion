@@ -2,6 +2,8 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { QUEST_TYPE_META, type QuestType } from "@/lib/quests";
+import { getRank, getNextRank } from "@/lib/ranks";
+import { computeBadges, BADGE_CATEGORY_LABELS } from "@/lib/badges";
 import {
   Trophy, Star, CalendarDays, Swords, Clock,
   MessageSquare, CheckCircle2, ArrowLeft,
@@ -11,44 +13,6 @@ import WinIcon from "@/components/WinIcon";
 import Link from "next/link";
 import Image from "next/image";
 
-// ── Badge-Logik (identisch mit eigenem Profil) ─────────────────────────────
-interface Badge {
-  id: string; icon: string; name: string; desc: string;
-  earned: boolean;
-  category: "community" | "aktivitaet" | "events" | "turniere" | "punkte";
-}
-
-function computeBadges(data: {
-  points: number; voiceHours: number;
-  messageCount: number; eventCount: number;
-  tournamentCount: number; tournamentWins: number;
-}): Badge[] {
-  const { points, voiceHours, messageCount, eventCount, tournamentCount, tournamentWins } = data;
-  return [
-    { id: "welcome",   icon: "🎉", name: "Willkommen",      desc: "Erstmals angemeldet",        earned: true,                 category: "community"  },
-    { id: "voice_1h",  icon: "🎙️", name: "Voice-Fan",       desc: "1 Stunde im Sprachkanal",    earned: voiceHours >= 1,      category: "aktivitaet" },
-    { id: "voice_10h", icon: "🎙️", name: "Voice-Veteran",   desc: "10 Stunden im Sprachkanal",  earned: voiceHours >= 10,     category: "aktivitaet" },
-    { id: "voice_50h", icon: "🎙️", name: "Voice-Legende",   desc: "50 Stunden im Sprachkanal",  earned: voiceHours >= 50,     category: "aktivitaet" },
-    { id: "msg_50",    icon: "💬", name: "Gesprächig",      desc: "50 Nachrichten gesendet",    earned: messageCount >= 50,   category: "aktivitaet" },
-    { id: "msg_500",   icon: "💬", name: "Chatterbox",      desc: "500 Nachrichten gesendet",   earned: messageCount >= 500,  category: "aktivitaet" },
-    { id: "event_1",   icon: "📅", name: "Teilnehmer",      desc: "1 Event besucht",            earned: eventCount >= 1,      category: "events"     },
-    { id: "event_5",   icon: "📅", name: "Eventgänger",     desc: "5 Events besucht",           earned: eventCount >= 5,      category: "events"     },
-    { id: "event_10",  icon: "📅", name: "Stammgast",       desc: "10 Events besucht",          earned: eventCount >= 10,     category: "events"     },
-    { id: "t_1",       icon: "⚔️", name: "Turnierkämpfer",  desc: "1 Turnier gespielt",         earned: tournamentCount >= 1, category: "turniere"   },
-    { id: "t_win",     icon: "🏆", name: "Champion",        desc: "Erstes Turnier gewonnen",    earned: tournamentWins >= 1,  category: "turniere"   },
-    { id: "t_win_5",   icon: "👑", name: "Dynastiegründer", desc: "5 Turniersiege",             earned: tournamentWins >= 5,  category: "turniere"   },
-    { id: "pts_500",   icon: "⭐", name: "Aufsteiger",      desc: "500 Punkte erreicht",        earned: points >= 500,        category: "punkte"     },
-    { id: "pts_2k",    icon: "🌟", name: "Erfahren",        desc: "2.000 Punkte erreicht",      earned: points >= 2000,       category: "punkte"     },
-    { id: "pts_5k",    icon: "💫", name: "Elite",           desc: "5.000 Punkte erreicht",      earned: points >= 5000,       category: "punkte"     },
-    { id: "pts_10k",   icon: "✨", name: "Grandmaster",     desc: "10.000 Punkte erreicht",     earned: points >= 10000,      category: "punkte"     },
-  ];
-}
-
-const BADGE_CATEGORY_LABELS = {
-  community: "Community", aktivitaet: "Aktivität",
-  events: "Events", turniere: "Turniere", punkte: "Punkte",
-};
-
 // ── Page ────────────────────────────────────────────────────────────────────
 export default async function PublicProfilePage({
   params,
@@ -56,7 +20,7 @@ export default async function PublicProfilePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const session = await auth();
+  const session  = await auth();
   const viewerId = session?.user?.id;
 
   // Eigenes Profil → weiterleiten
@@ -106,8 +70,14 @@ export default async function PublicProfilePage({
 
   if (!user) notFound();
 
-  // Rang basiert auf rankPoints — konsistent mit Leaderboard und eigenem Profil
   const leaderboardRank = await prisma.user.count({ where: { rankPoints: { gt: user.rankPoints ?? 0 } } }) + 1;
+
+  const rankPoints   = user.rankPoints ?? 0;
+  const rankRow      = getRank(rankPoints);
+  const nextRankRow  = getNextRank(rankPoints);
+  const rankPct      = nextRankRow
+    ? Math.min(100, Math.round(((rankPoints - rankRow.min) / (nextRankRow.min - rankRow.min)) * 100))
+    : 100;
 
   // ── Stats ableiten ──────────────────────────────────────────────────────
   const totalPoints  = user.points;
@@ -166,14 +136,28 @@ export default async function PublicProfilePage({
             <div className="flex items-center gap-2 flex-wrap mb-0.5">
               <h1 className="text-2xl font-bold text-white tracking-tight">{displayName}</h1>
             </div>
-            <p className="text-xs text-gray-500 mb-1">
+            <p className="text-xs text-gray-500 mb-2">
               Mitglied seit {memberSince} · {earnedBadges.length} Abzeichen
             </p>
-            <div className="flex items-center gap-1 mb-2">
+            {/* Rang-Badge */}
+            <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-semibold mb-2 ${rankRow.bg} ${rankRow.border} ${rankRow.color}`}>
+              <span>{rankRow.emoji}</span>
+              <span>{rankRow.label}</span>
+            </div>
+            {/* Rangpunkte + Fortschritt */}
+            <div className="mt-1">
+              <div className="flex items-center justify-between text-[10px] text-gray-600 mb-1">
+                <span>{rankPoints.toLocaleString("de-DE")} Pts</span>
+                {nextRankRow && <span>→ {nextRankRow.label} in {nextRankRow.min - rankPoints} Pts</span>}
+              </div>
+              <div className="h-1 bg-white/[0.06] rounded-full overflow-hidden max-w-[200px]">
+                <div className={`h-full rounded-full ${rankRow.color.replace("text-", "bg-")}`} style={{ width: `${rankPct}%` }} />
+              </div>
+            </div>
+            <div className="flex items-center gap-1 mt-2">
               <CoinIcon size={12} />
               <span className="text-xs text-amber-400 font-medium tabular-nums">{totalPoints.toLocaleString("de-DE")} Münzen</span>
             </div>
-            <p className="text-sm font-bold text-teal-400">{(user.rankPoints ?? 0).toLocaleString("de-DE")} Punkte</p>
           </div>
 
           {/* Rang-Block */}

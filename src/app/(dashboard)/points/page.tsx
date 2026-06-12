@@ -1,6 +1,7 @@
 ﻿import { POINT_RULES, CATEGORY_LABELS, DAILY_CAPS, type PointCategory } from "@/lib/points";
-import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { getSessionUser } from "@/lib/roles";
+import { getRank, getNextRank } from "@/lib/ranks";
 import { Star, TrendingUp, TrendingDown } from "lucide-react";
 import { CountUp } from "@/components/CountUp";
 import { RelativeTime } from "@/components/RelativeTime";
@@ -17,28 +18,13 @@ const CATEGORY_ACCENT: Record<PointCategory, { icon: string; border: string; glo
   community:  { icon: "text-emerald-400 bg-emerald-500/10 border-emerald-500/15", border: "border-emerald-500/10", glow: "from-emerald-500/5" },
 };
 
-const RANK_ROWS = [
-  { range: "0 – 99",    emoji: "🔰", rank: "Neuling",               color: "text-gray-400",   accent: "bg-gray-500/10   border-gray-500/15"   },
-  { range: "100 – 199", emoji: "📋", rank: "Zivi-Anwärter",         color: "text-zinc-300",   accent: "bg-zinc-500/10   border-zinc-500/15"   },
-  { range: "200 – 299", emoji: "🛺", rank: "Rollator-Führerschein", color: "text-green-400",  accent: "bg-green-500/10  border-green-500/15"  },
-  { range: "300 – 399", emoji: "🍵", rank: "Kamillenteetrinker",    color: "text-teal-400",   accent: "bg-teal-500/10   border-teal-500/15"   },
-  { range: "400 – 499", emoji: "🏛️", rank: "Heimbeirat",            color: "text-blue-400",   accent: "bg-blue-500/10   border-blue-500/15"   },
-  { range: "500 – 999", emoji: "🩺", rank: "Pflegestufe 5",         color: "text-purple-400", accent: "bg-purple-500/10 border-purple-500/15" },
-  { range: "1.000+",    emoji: "👴", rank: "Old Master",            color: "text-amber-400",  accent: "bg-amber-500/10  border-amber-500/15"  },
-];
-
 export default async function PointsPage() {
-  const session = await auth();
-  const userId  = session?.user?.id;
+  const me = await getSessionUser();
+  const userId = me?.id;
 
-  const [me, myTransactions] = await Promise.all([
-    userId
-      ? prisma.user.findUnique({ where: { id: userId }, select: { points: true } })
-      : null,
-    userId
-      ? prisma.pointTransaction.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, take: 20 })
-      : [],
-  ]);
+  const myTransactions = userId
+    ? await prisma.pointTransaction.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, take: 20 })
+    : [];
 
   // Regeln nach Kategorie gruppieren
   const byCategory = Object.entries(POINT_RULES).reduce<
@@ -50,7 +36,13 @@ export default async function PointsPage() {
     return acc;
   }, {});
 
-  const myPoints    = me?.points ?? 0;
+  const myPoints  = me?.points ?? 0;
+  const myRankPts = me?.rankPoints ?? 0;
+  const rankRow   = getRank(myRankPts);
+  const nextRank  = getNextRank(myRankPts);
+  const rankPct   = nextRank
+    ? Math.min(100, Math.round(((myRankPts - rankRow.min) / (nextRank.min - rankRow.min)) * 100))
+    : 100;
 
   return (
     <div className="px-5 pb-5 pt-3 sm:p-6 max-w-6xl mx-auto space-y-6 animate-fade-in">
@@ -73,13 +65,46 @@ export default async function PointsPage() {
           <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-amber-500/20 to-transparent pointer-events-none" />
 
           <div className="relative flex items-center gap-5 flex-wrap">
-            <div className="flex-1 min-w-0">
-              <p className="text-2xl font-black text-amber-400 tabular-nums mb-3">
+            {/* Münzen */}
+            <div className="flex-1 min-w-[120px]">
+              <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest mb-1">Münzen</p>
+              <p className="text-2xl font-black text-amber-400 tabular-nums">
                 <CountUp to={myPoints} duration={900} />
-                <span className="text-base font-medium text-amber-500/70 ml-1">Pts</span>
+                <span className="text-base font-medium text-amber-500/70 ml-1">🪙</span>
               </p>
             </div>
 
+            {/* Divider */}
+            <div className="w-px h-12 bg-white/[0.06] hidden sm:block" />
+
+            {/* Rang */}
+            <div className="flex-1 min-w-[140px]">
+              <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest mb-1">Rang</p>
+              <div className="flex items-center gap-2">
+                <span className="text-xl">{rankRow.emoji}</span>
+                <span className={`text-sm font-bold ${rankRow.color}`}>{rankRow.label}</span>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="w-px h-12 bg-white/[0.06] hidden sm:block" />
+
+            {/* Rang-Fortschritt */}
+            <div className="flex-1 min-w-[160px]">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest">Rangpunkte</p>
+                <span className="text-[10px] text-gray-600 tabular-nums">{myRankPts}{nextRank ? ` / ${nextRank.min}` : ""}</span>
+              </div>
+              <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full ${rankRow.color.replace("text-", "bg-")}`}
+                  style={{ width: `${rankPct}%` }}
+                />
+              </div>
+              {nextRank && (
+                <p className="text-[10px] text-gray-700 mt-1">Nächster Rang in {nextRank.min - myRankPts} Punkten</p>
+              )}
+            </div>
           </div>
         </div>
       )}

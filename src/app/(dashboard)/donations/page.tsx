@@ -1,28 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import Image from "next/image";
+import { calcStreak } from "@/lib/streak";
 import { Heart, Flame, CalendarDays, Users, Euro, ShoppingCart, TrendingDown, Wallet, Lightbulb } from "lucide-react";
 
 const MONTH_NAMES = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
-
-function calcStreak(entries: { year: number; month: number }[]): number {
-  if (entries.length === 0) return 0;
-  const sorted = [...entries].sort((a, b) =>
-    a.year !== b.year ? b.year - a.year : b.month - a.month
-  );
-  const now = new Date();
-  let checkYear  = now.getFullYear();
-  let checkMonth = now.getMonth() + 1;
-  let streak = 0;
-  for (const entry of sorted) {
-    if (entry.year === checkYear && entry.month === checkMonth) {
-      streak++;
-      checkMonth--;
-      if (checkMonth === 0) { checkMonth = 12; checkYear--; }
-    } else break;
-  }
-  return streak;
-}
 
 function streakBadge(streak: number): { label: string; color: string; bg: string } | null {
   if (streak >= 12) return { label: "12 Monate 🔥", color: "#f59e0b", bg: "rgba(245,158,11,0.12)" };
@@ -36,46 +18,68 @@ function fmt(n: number) {
 }
 
 export default async function DonationsPage() {
-  const [session, [donations, expenses, ideas]] = await Promise.all([
+  const [session, monthlyGroups, donorGroups, expenses, ideas] = await Promise.all([
     auth(),
-    Promise.all([
-      prisma.donation.findMany({
-        include: { user: { select: { id: true, name: true, image: true } } },
-        orderBy: [{ year: "asc" }, { month: "asc" }],
-      }),
-      prisma.poolExpense.findMany({ orderBy: { date: "desc" } }),
-      prisma.poolIdea.findMany({ orderBy: { createdAt: "asc" } }),
-    ]),
+    // Monatstotals: nur aggregierte Summen, kein User-Join nötig
+    prisma.donation.groupBy({
+      by: ["year", "month"],
+      _sum: { amount: true },
+      _count: { _all: true },
+      orderBy: [{ year: "desc" }, { month: "desc" }],
+    }),
+    // Streak-Basis: userId + Monat/Jahr-Kombinationen
+    prisma.donation.groupBy({
+      by: ["userId", "year", "month"],
+    }),
+    prisma.poolExpense.findMany({ orderBy: { date: "desc" } }),
+    prisma.poolIdea.findMany({ orderBy: { createdAt: "asc" } }),
   ]);
   const myId = session?.user?.id;
 
-  const totalPool  = donations.reduce((s, d) => s + d.amount, 0);
+  // Monatssummen direkt aus groupBy
+  const months = monthlyGroups.map(g => ({
+    year: g.year, month: g.month,
+    total: g._sum.amount ?? 0,
+    donors: g._count._all,
+  }));
+
+  const totalPool  = months.reduce((s, m) => s + m.total, 0);
   const totalSpent = expenses.reduce((s, e) => s + e.amount, 0);
   const balance    = totalPool - totalSpent;
 
-  // Monats-Historie
-  const monthlyMap = new Map<string, { year: number; month: number; total: number; donors: number }>();
-  for (const d of donations) {
-    const key = `${d.year}-${d.month}`;
-    const ex = monthlyMap.get(key);
-    if (ex) { ex.total += d.amount; ex.donors++; }
-    else monthlyMap.set(key, { year: d.year, month: d.month, total: d.amount, donors: 1 });
+  // Streak-Map aus Gruppen aufbauen
+  const entriesByUser = new Map<string, { year: number; month: number }[]>();
+  for (const g of donorGroups) {
+    if (!entriesByUser.has(g.userId)) entriesByUser.set(g.userId, []);
+    entriesByUser.get(g.userId)!.push({ year: g.year, month: g.month });
   }
-  const months = Array.from(monthlyMap.values())
-    .sort((a, b) => a.year !== b.year ? b.year - a.year : b.month - a.month);
 
-  // Spender (ohne individuelle Beträge)
-  const userMap = new Map<string, { user: { id: string; name: string | null; image: string | null }; entries: { year: number; month: number }[] }>();
-  for (const d of donations) {
-    if (!userMap.has(d.userId)) userMap.set(d.userId, { user: d.user, entries: [] });
-    userMap.get(d.userId)!.entries.push({ year: d.year, month: d.month });
-  }
-  const donors = Array.from(userMap.values())
-    .map(({ user, entries }) => ({ user, streak: calcStreak(entries), totalMonths: entries.length }))
-    .sort((a, b) => b.streak - a.streak || b.totalMonths - a.totalMonths);
+  // User-Infos für die Spender-Wall separat laden
+  const donorIds   = [...entriesByUser.keys()];
+  const donorUsers = donorIds.length
+    ? await prisma.user.findMany({
+        where:  { id: { in: donorIds } },
+        select: { id: true, name: true, image: true },
+      })
+    : [];
+  const userById = new Map(donorUsers.map(u => [u.id, u]));
 
-  const myEntry  = myId ? userMap.get(myId) : null;
-  const myStreak = myEntry ? calcStreak(myEntry.entries) : 0;
+  const donors = donorIds
+    .map(uid => {
+      const entries     = entriesByUser.get(uid)!;
+      const user        = userById.get(uid);
+      if (!user) return null;
+      return { user, streak: calcStreak(entries), totalMonths: entries.length };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b!.streak - a!.streak || b!.totalMonths - a!.totalMonths) as {
+      user: { id: string; name: string | null; image: string | null };
+      streak: number;
+      totalMonths: number;
+    }[];
+
+  const myStreak = myId ? calcStreak(entriesByUser.get(myId) ?? []) : 0;
+  const myEntry  = myId ? entriesByUser.has(myId) : false;
 
   return (
     <div className="max-w-2xl mx-auto px-4 pt-4 pb-8 sm:py-8 space-y-8">
@@ -165,7 +169,7 @@ export default async function DonationsPage() {
       </div>
 
       {/* Meine Streak */}
-      {myEntry && myStreak > 0 && (
+      {myEntry && myStreak > 0 && myId && (
         <div
           className="rounded-2xl p-4 flex items-center gap-4"
           style={{ background: "rgba(20,184,166,0.08)", border: "1px solid rgba(20,184,166,0.15)" }}
@@ -335,7 +339,7 @@ export default async function DonationsPage() {
         </section>
       )}
 
-      {donations.length === 0 && (
+      {months.length === 0 && donors.length === 0 && (
         <div className="text-center py-12 text-gray-600">
           <Heart className="w-10 h-10 mx-auto mb-3 opacity-30" />
           <p className="text-sm">Noch keine Spenden eingetragen.</p>

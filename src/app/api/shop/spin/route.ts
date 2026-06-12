@@ -8,7 +8,8 @@ const PRIZES = [
   { type: "points", value: "25",  label: "25 Münzen",   weight: 25 },
   { type: "points", value: "50",  label: "50 Münzen",   weight: 20 },
   { type: "points", value: "100", label: "100 Münzen",  weight: 12 },
-  { type: "points", value: "200", label: "200 Münzen",  weight: 12 },
+  { type: "points", value: "200", label: "200 Münzen ⭐", weight: 4  },
+  { type: "points", value: "200", label: "200 Münzen",  weight: 8  },
   { type: "nothing", value: "0",  label: "Kein Glück",  weight: 1  },
 ] as const;
 

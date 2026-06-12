@@ -1,6 +1,8 @@
-import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
+import { getSessionUser } from "@/lib/roles";
+import { getRank, getNextRank } from "@/lib/ranks";
+import { computeBadges, BADGE_CATEGORY_LABELS } from "@/lib/badges";
 import PointsInfoModal from "./PointsInfoModal";
 import { QUEST_TYPE_META, type QuestType } from "@/lib/quests";
 import { RARITY_CONFIG, type Rarity, MAX_SHOWCASE } from "@/lib/collectibles";
@@ -14,56 +16,10 @@ import Image from "next/image";
 import CollectiblesShowcase from "./CollectiblesShowcase";
 import ProfileEditor from "./ProfileEditor";
 
-// ── Rang-System ───────────────────────────────────────────────────────────────
-const RANK_THRESHOLDS = [
-  { min:    0, label: "Neuling",                emoji: "🔰", color: "text-gray-400",    bg: "bg-gray-500/10",    border: "border-gray-500/20"    },
-  { min:  100, label: "Zivi-Anwärter",          emoji: "📋", color: "text-zinc-300",    bg: "bg-zinc-500/10",    border: "border-zinc-500/20"    },
-  { min:  200, label: "Rollator-Führerschein",  emoji: "🛺", color: "text-green-400",   bg: "bg-green-500/10",   border: "border-green-500/20"   },
-  { min:  300, label: "Kamillenteetrinker",     emoji: "🍵", color: "text-teal-400",    bg: "bg-teal-500/10",    border: "border-teal-500/20"    },
-  { min:  400, label: "Heimbeirat",             emoji: "🏛️", color: "text-blue-400",    bg: "bg-blue-500/10",    border: "border-blue-500/20"    },
-  { min:  500, label: "Pflegestufe 5",          emoji: "🩺", color: "text-purple-400",  bg: "bg-purple-500/10",  border: "border-purple-500/20"  },
-  { min: 1000, label: "Old Master",             emoji: "👴", color: "text-amber-400",   bg: "bg-amber-500/10",   border: "border-amber-500/20"   },
-] as const;
-
-function getRank(points: number) {
-  return [...RANK_THRESHOLDS].reverse().find(r => points >= r.min) ?? RANK_THRESHOLDS[0];
-}
-function getNextRank(points: number) {
-  return RANK_THRESHOLDS.find(r => r.min > points) ?? null;
-}
-
-// ── Abzeichen ─────────────────────────────────────────────────────────────────
-interface Badge { id: string; icon: string; name: string; desc: string; earned: boolean; category: string }
-function computeBadges(d: { points: number; voiceHours: number; messageCount: number; eventCount: number; tournamentCount: number; tournamentWins: number }): Badge[] {
-  return [
-    { id: "welcome",   icon: "🎉", name: "Willkommen",      desc: "Erstmals angemeldet",            earned: true,                     category: "Community"  },
-    { id: "voice_1h",  icon: "🎙️", name: "Voice-Fan",       desc: "1 Stunde im Sprachkanal",        earned: d.voiceHours >= 1,        category: "Aktivität"  },
-    { id: "voice_10h", icon: "🎙️", name: "Voice-Veteran",   desc: "10 Stunden im Sprachkanal",      earned: d.voiceHours >= 10,       category: "Aktivität"  },
-    { id: "voice_50h", icon: "🎙️", name: "Voice-Legende",   desc: "50 Stunden im Sprachkanal",      earned: d.voiceHours >= 50,       category: "Aktivität"  },
-    { id: "msg_50",    icon: "💬", name: "Gesprächig",      desc: "50 Nachrichten gesendet",        earned: d.messageCount >= 50,     category: "Aktivität"  },
-    { id: "msg_500",   icon: "💬", name: "Chatterbox",      desc: "500 Nachrichten gesendet",       earned: d.messageCount >= 500,    category: "Aktivität"  },
-    { id: "event_1",   icon: "📅", name: "Teilnehmer",      desc: "1 Event besucht",                earned: d.eventCount >= 1,        category: "Events"     },
-    { id: "event_5",   icon: "📅", name: "Eventgänger",     desc: "5 Events besucht",               earned: d.eventCount >= 5,        category: "Events"     },
-    { id: "event_10",  icon: "📅", name: "Stammgast",       desc: "10 Events besucht",              earned: d.eventCount >= 10,       category: "Events"     },
-    { id: "t_1",       icon: "⚔️", name: "Turnierkämpfer",  desc: "1 Turnier gespielt",             earned: d.tournamentCount >= 1,   category: "Turniere"   },
-    { id: "t_win",     icon: "🏆", name: "Champion",        desc: "Erstes Turnier gewonnen",        earned: d.tournamentWins >= 1,    category: "Turniere"   },
-    { id: "t_win_5",   icon: "👑", name: "Dynastiegründer", desc: "5 Turniersiege",                 earned: d.tournamentWins >= 5,    category: "Turniere"   },
-    { id: "pts_500",   icon: "⭐", name: "Aufsteiger",      desc: "500 Punkte erreicht",            earned: d.points >= 500,          category: "Punkte"     },
-    { id: "pts_2k",    icon: "🌟", name: "Erfahren",        desc: "2.000 Punkte erreicht",          earned: d.points >= 2000,         category: "Punkte"     },
-    { id: "pts_5k",    icon: "💫", name: "Elite",           desc: "5.000 Punkte erreicht",          earned: d.points >= 5000,         category: "Punkte"     },
-    { id: "pts_10k",   icon: "✨", name: "Grandmaster",     desc: "10.000 Punkte erreicht",         earned: d.points >= 10000,        category: "Punkte"     },
-  ];
-}
-
-const BADGE_CATEGORY_LABELS = {
-  Community: "Community", Aktivität: "Aktivität",
-  Events: "Events", Turniere: "Turniere", Punkte: "Punkte",
-};
-
 export default async function ProfilePage() {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
-  const userId = session.user.id;
+  const me = await getSessionUser();
+  if (!me) redirect("/login");
+  const userId = me.id;
 
   const now   = new Date();
   const month = now.getMonth() + 1;

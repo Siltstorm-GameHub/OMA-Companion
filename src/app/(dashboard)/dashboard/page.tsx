@@ -1,5 +1,5 @@
-﻿import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
+﻿import { prisma } from "@/lib/prisma";
+import { getSessionUser } from "@/lib/roles";
 import {
   Trophy, CalendarDays, Users, ChevronRight,
   ShieldAlert, Clock, Scroll, Swords, CheckCircle2,
@@ -29,9 +29,9 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 export default async function DashboardPage() {
-  const session  = await auth();
-  const userId   = session?.user?.id;
-  const userRole = (session?.user as { role?: string })?.role ?? "user";
+  const sessionUser = await getSessionUser();
+  const userId      = sessionUser?.id;
+  const userRole    = sessionUser?.role ?? "user";
 
   const now   = new Date();
   const month = now.getMonth() + 1;
@@ -42,7 +42,6 @@ export default async function DashboardPage() {
     activeEvents,
     activeSeries,
     topUsers,
-    me,
     myQuestsDone,
     totalMonthQuests,
     myMonthQuests,
@@ -69,20 +68,14 @@ export default async function DashboardPage() {
       select: { id: true, username: true, name: true, image: true, points: true, rankPoints: true },
     }),
     userId
-      ? prisma.user.findUnique({ where: { id: userId }, select: { points: true, rankPoints: true, name: true, image: true, username: true } })
-      : null,
-    userId
       ? prisma.userQuestProgress.count({ where: { userId, completed: true, quest: { month, year } } })
       : 0,
     prisma.quest.count({ where: { month, year } }),
-    // Alle Quests des Monats laden — inkl. User-Progress (auch wenn noch nicht gestartet)
     prisma.quest.findMany({
       where:   { month, year },
       orderBy: { reward: "desc" },
       take: 4,
-      include: userId
-        ? { progress: { where: { userId } } }
-        : { progress: false },
+      include: { progress: userId ? { where: { userId }, take: 1 } : false },
     }),
     prisma.lulSeason.findFirst({
       where: { status: "active" },
@@ -96,28 +89,26 @@ export default async function DashboardPage() {
     }),
   ]);
 
-  // LuL: Meine Punkte in der aktiven Saison
-  const myLulPoints = activeLulSeason && userId
-    ? await prisma.lulEntry.aggregate({
-        where: {
-          userId,
-          spieltag: { seasonId: activeLulSeason.id },
-        },
-        _sum: { lulPoints: true },
-      }).then(r => r._sum.lulPoints ?? 0)
-    : 0;
-
   const nextSpieltag = activeLulSeason?.spieltage[0] ?? null;
+  const myPoints     = sessionUser?.points ?? 0;
+  const myRankPoints = sessionUser?.rankPoints ?? 0;
 
-  const myPoints        = me?.points ?? 0;
-  const myRankPoints    = me?.rankPoints ?? 0;
-  const leaderboardRank = userId && me
-    ? await prisma.user.count({ where: { rankPoints: { gt: myRankPoints } } }) + 1
-    : null;
+  // Unabhängige Follow-up-Queries parallelisieren
+  const [myLulPoints, leaderboardRank] = await Promise.all([
+    activeLulSeason && userId
+      ? prisma.lulEntry.aggregate({
+          where: { userId, spieltag: { seasonId: activeLulSeason.id } },
+          _sum: { lulPoints: true },
+        }).then(r => r._sum.lulPoints ?? 0)
+      : Promise.resolve(0),
+    userId
+      ? prisma.user.count({ where: { rankPoints: { gt: myRankPoints } } }).then(n => n + 1)
+      : Promise.resolve(null),
+  ]);
 
-  const displayName = me?.username ?? me?.name ?? session?.user?.name ?? "dort";
+  const displayName = sessionUser?.username ?? sessionUser?.name ?? "dort";
   const firstName   = displayName.split(" ")[0];
-  const avatarUrl   = me?.image ?? session?.user?.image ?? null;
+  const avatarUrl   = sessionUser?.image ?? null;
   const isStaff     = userRole === "admin" || userRole === "moderator";
 
   const nextEvent = await prisma.event.findFirst({
@@ -497,7 +488,7 @@ export default async function DashboardPage() {
                   <p className="text-xs font-bold text-amber-400 tabular-nums flex items-center gap-1">
                     <CoinIcon size={12} />
                     {myMonthQuests
-                      .filter(q => q.progress?.[0]?.completed)
+                      .filter(q => (q as { progress?: { completed: boolean }[] }).progress?.[0]?.completed)
                       .reduce((s, q) => s + q.reward, 0)
                       .toLocaleString("de-DE")}
                   </p>
@@ -511,7 +502,7 @@ export default async function DashboardPage() {
                   <p className="text-xs text-gray-600">Keine Quests diesen Monat</p>
                 </div>
               ) : myMonthQuests.map((quest, i) => {
-                const prog      = quest.progress?.[0];
+                const prog      = (quest as { progress?: { completed: boolean; current: number }[] }).progress?.[0];
                 const completed = prog?.completed ?? false;
                 const current   = prog?.current   ?? 0;
                 const pct       = Math.min(Math.round((current / quest.target) * 100), 100);
