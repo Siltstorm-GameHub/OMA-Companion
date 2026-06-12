@@ -454,11 +454,12 @@ model LulSpieltag {
   id           String    @id @default(cuid())
   seasonId     String
   number       Int       // 1-8
-  isSpecial    Boolean   @default(false)
-  title        String?   // Titel für Special Events
-  description  String?   // Beschreibung für Special Events
-  maxPlayers   Int?      // Maximale Spieleranzahl
-  game         String?   // "Brawlhalla" (optional bei Special Events)
+  isSpecial        Boolean   @default(false)
+  title            String?   // Titel für Special Events
+  description      String?   // Beschreibung für Special Events
+  maxPlayers       Int?      // Maximale Spieleranzahl
+  tournamentFormat String?   // single_elimination | double_elimination | round_robin | liga | ffa | coop_stats
+  game             String?   // "Brawlhalla" (optional bei Special Events)
   gameType     String?   // "Beat-em Up"
   platform     String?   // "PC/Konsole"
   scheduledAt    DateTime?

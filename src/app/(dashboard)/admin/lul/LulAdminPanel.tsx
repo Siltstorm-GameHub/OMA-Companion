@@ -20,6 +20,15 @@ type LulEntry    = LulSpieltag["entries"][number];
 const uname = (u: User) => u.username ?? u.name ?? "?";
 const MEDAL = ["🥇", "🥈", "🥉"];
 
+const TOURNAMENT_FORMATS = [
+  { value: "single_elimination", label: "Einzel-Eliminierung",  desc: "Klassisches K.O.-System" },
+  { value: "double_elimination", label: "Double Elimination",   desc: "Verlierer-Bracket als zweite Chance" },
+  { value: "round_robin",        label: "Jeder gegen Jeden",    desc: "Alle spielen gegen alle" },
+  { value: "liga",               label: "Liga",                 desc: "Spieltage, Tabelle mit S/U/N" },
+  { value: "ffa",                label: "Free for All",         desc: "Alle gegeneinander, Platzierung zählt" },
+  { value: "coop_stats",         label: "Kooperativ (Stats)",   desc: "Alle zusammen, individuelle Stats" },
+];
+
 function LulSpieltagEditor({
   spieltag,
   allUsers,
@@ -822,6 +831,10 @@ export default function LulAdminPanel({
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editMaxPlayers, setEditMaxPlayers] = useState("");
+  const [editTournamentFormat, setEditTournamentFormat] = useState("");
+
+  // Create spieltag: tournament format
+  const [stTournamentFormat, setStTournamentFormat] = useState("");
 
   async function loadSeasons() {
     const res = await fetch("/api/lul/seasons");
@@ -890,6 +903,7 @@ export default function LulAdminPanel({
         title: stIsSpecial ? stTitle : undefined,
         description: stIsSpecial && stDescription ? stDescription : undefined,
         maxPlayers: stIsSpecial && stMaxPlayers ? Number(stMaxPlayers) : undefined,
+        tournamentFormat: stTournamentFormat || null,
         game: stIsSpecial ? (stGame || null) : stGame,
         gameType: stGameType || null, platform: stPlatform || null,
         scheduledAt: stDate || null,
@@ -900,7 +914,7 @@ export default function LulAdminPanel({
     if (res.ok) { toast.success(`Spieltag ${nextNum} – ${stIsSpecial ? stTitle : stGame} erstellt`); }
     else toast.error("Fehler beim Erstellen");
     setShowSpieltagForm(null);
-    setStIsSpecial(false); setStTitle(""); setStDescription(""); setStMaxPlayers("");
+    setStIsSpecial(false); setStTitle(""); setStDescription(""); setStMaxPlayers(""); setStTournamentFormat("");
     setStGame(""); setStGameType(""); setStPlatform(""); setStDate("");
     await loadSeasons();
   }
@@ -917,6 +931,7 @@ export default function LulAdminPanel({
         title: editIsSpecial ? editTitle : null,
         description: editIsSpecial ? (editDescription || null) : null,
         maxPlayers: editIsSpecial && editMaxPlayers ? Number(editMaxPlayers) : null,
+        tournamentFormat: editTournamentFormat || null,
         game: editIsSpecial ? (editGame || null) : editGame,
         gameType: editGameType || null,
         platform: editPlatform || null,
@@ -1109,6 +1124,21 @@ export default function LulAdminPanel({
                                   <input type="number" min={1} value={editMaxPlayers} onChange={e => setEditMaxPlayers(e.target.value)} placeholder="z.B. 8"
                                     className="w-full text-xs bg-gray-700 border border-gray-600 text-white rounded-lg px-2 py-1.5" />
                                 </div>
+                                <div>
+                                  <label className="text-[10px] text-gray-500 block mb-1">Turnierformat (optional)</label>
+                                  <select value={editTournamentFormat} onChange={e => setEditTournamentFormat(e.target.value)}
+                                    className="w-full text-xs bg-gray-700 border border-gray-600 text-white rounded-lg px-2 py-1.5">
+                                    <option value="">– kein Format –</option>
+                                    {TOURNAMENT_FORMATS.map(f => (
+                                      <option key={f.value} value={f.value}>{f.label}</option>
+                                    ))}
+                                  </select>
+                                  {editTournamentFormat && (
+                                    <p className="text-[10px] text-gray-500 mt-0.5">
+                                      {TOURNAMENT_FORMATS.find(f => f.value === editTournamentFormat)?.desc}
+                                    </p>
+                                  )}
+                                </div>
                               </div>
                             )}
                             <div className="grid grid-cols-2 gap-2">
@@ -1161,6 +1191,11 @@ export default function LulAdminPanel({
                                     ⭐ Special
                                   </span>
                                 )}
+                                {st.tournamentFormat && (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 border border-gray-700 shrink-0">
+                                    {TOURNAMENT_FORMATS.find(f => f.value === st.tournamentFormat)?.label ?? st.tournamentFormat}
+                                  </span>
+                                )}
                                 {!st.isSpecial && (() => { const icon = getGenreIcon(st.gameType); return icon ? <img src={icon.src} alt={icon.alt} className="w-4 h-4 object-contain shrink-0" /> : null; })()}
                                 <p className="text-sm text-white font-medium truncate">
                                   {st.isSpecial ? (st.title ?? "Special Event") : (st.game ?? "–")}
@@ -1188,6 +1223,7 @@ export default function LulAdminPanel({
                                 setEditTitle(st.title ?? "");
                                 setEditDescription(st.description ?? "");
                                 setEditMaxPlayers(st.maxPlayers != null ? String(st.maxPlayers) : "");
+                                setEditTournamentFormat(st.tournamentFormat ?? "");
                                 setEditGame(st.game ?? "");
                                 setEditGameType(st.gameType ?? "");
                                 setEditPlatform(st.platform ?? "");
@@ -1250,6 +1286,21 @@ export default function LulAdminPanel({
                           <label className="text-xs text-gray-500 block mb-1">Max. Spieler (optional)</label>
                           <input type="number" min={1} value={stMaxPlayers} onChange={e => setStMaxPlayers(e.target.value)} placeholder="z.B. 8"
                             className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2" />
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500 block mb-1">Turnierformat (optional)</label>
+                          <select value={stTournamentFormat} onChange={e => setStTournamentFormat(e.target.value)}
+                            className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2">
+                            <option value="">– kein Format –</option>
+                            {TOURNAMENT_FORMATS.map(f => (
+                              <option key={f.value} value={f.value}>{f.label}</option>
+                            ))}
+                          </select>
+                          {stTournamentFormat && (
+                            <p className="text-[10px] text-gray-500 mt-1">
+                              {TOURNAMENT_FORMATS.find(f => f.value === stTournamentFormat)?.desc}
+                            </p>
+                          )}
                         </div>
                       </div>
                     )}

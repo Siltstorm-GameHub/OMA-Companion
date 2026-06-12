@@ -2,6 +2,7 @@ import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import EventAdminRow from "./EventAdminRow";
 import SeriesAdminRow from "./SeriesAdminRow";
+import EventCreateForm from "@/app/(dashboard)/events/EventCreateForm";
 
 export default async function AdminEventsPage() {
   await requireRole("moderator");
@@ -60,9 +61,11 @@ export default async function AdminEventsPage() {
 
   return (
     <div className="space-y-3">
+      <EventCreateForm />
+
       {events.length === 0 && (
         <div className="text-center py-12 text-gray-500 bg-gray-900 border border-gray-800 rounded-xl">
-          Noch keine Events. Erstelle ein neues Event oben.
+          Noch keine Events vorhanden.
         </div>
       )}
 

@@ -37,7 +37,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   await requireRole("moderator");
   const { id: spieltagId } = await params;
   const body = await req.json();
-  const { status, game, gameType, platform, scheduledAt, pointsConfig, entries, finalize, isSpecial, title, description, maxPlayers } = body;
+  const { status, game, gameType, platform, scheduledAt, pointsConfig, entries, finalize, isSpecial, title, description, maxPlayers, tournamentFormat } = body;
 
   // Simple metadata update
   if (!entries && !finalize) {
@@ -50,10 +50,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         ...(platform     !== undefined && { platform }),
         ...(scheduledAt  !== undefined && { scheduledAt: scheduledAt ? new Date(scheduledAt) : null }),
         ...(pointsConfig !== undefined && { pointsConfig: JSON.stringify(pointsConfig) }),
-        ...(isSpecial    !== undefined && { isSpecial }),
-        ...(title        !== undefined && { title }),
-        ...(description  !== undefined && { description }),
-        ...(maxPlayers   !== undefined && { maxPlayers }),
+        ...(isSpecial        !== undefined && { isSpecial }),
+        ...(title            !== undefined && { title }),
+        ...(description      !== undefined && { description }),
+        ...(maxPlayers       !== undefined && { maxPlayers }),
+        ...(tournamentFormat !== undefined && { tournamentFormat }),
       },
     });
     return NextResponse.json(updated);
