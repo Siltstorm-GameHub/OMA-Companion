@@ -157,7 +157,7 @@ export default async function LulOverviewPage() {
                     {isNext  && <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5   to-transparent pointer-events-none" />}
                     {isActive && <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-transparent pointer-events-none" />}
                     <div className="relative shrink-0 ml-1">
-                      <GameCover game={st.game} className="w-14 h-9" rounded="rounded-lg" />
+                      <GameCover game={st.game ?? ""} className="w-14 h-9" rounded="rounded-lg" />
                       <span className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold ring-1 ring-black ${
                         st.status === "finished" ? "bg-gray-700 text-gray-400" :
                         isNext   ? "bg-amber-500   text-black" :
@@ -169,8 +169,13 @@ export default async function LulOverviewPage() {
                     </div>
                     <div className="relative flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
-                        {(() => { const icon = getGenreIcon(st.gameType); return icon ? <img src={icon.src} alt={icon.alt} className="w-3.5 h-3.5 object-contain shrink-0" /> : null; })()}
-                        <p className="text-sm font-medium text-white truncate">{st.game}</p>
+                        {st.isSpecial && (
+                          <span className="text-[10px] font-medium text-violet-300 bg-violet-500/10 border border-violet-500/20 px-1.5 py-0.5 rounded-full shrink-0">⭐ Special</span>
+                        )}
+                        {!st.isSpecial && (() => { const icon = getGenreIcon(st.gameType); return icon ? <img src={icon.src} alt={icon.alt} className="w-3.5 h-3.5 object-contain shrink-0" /> : null; })()}
+                        <p className="text-sm font-medium text-white truncate">
+                          {st.isSpecial ? (st.title ?? "Special Event") : (st.game ?? "–")}
+                        </p>
                       </div>
                       <div className="flex items-center gap-2 mt-1">
                         {st.scheduledAt && (

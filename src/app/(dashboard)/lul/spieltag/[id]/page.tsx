@@ -54,8 +54,8 @@ export default async function LulSpieltagPage({
   const isActive    = spieltag.status === "active";
   const notFinal    = !isFinished;
 
-  const coverUrl       = getGameCoverUrl(spieltag.game);
-  const fallbackGrad   = getGameFallbackGradient(spieltag.game);
+  const coverUrl       = getGameCoverUrl(spieltag.game ?? "");
+  const fallbackGrad   = getGameFallbackGradient(spieltag.game ?? "");
 
   const players    = spieltag.entries.filter((e) => e.role === "player");
   const spectators = spieltag.entries.filter((e) => e.role === "spectator");
@@ -87,7 +87,9 @@ export default async function LulSpieltagPage({
           {seasonLabel}
         </Link>
         <span>/</span>
-        <span className="text-gray-400">Spieltag {spieltag.number}</span>
+        <span className="text-gray-400">
+          {spieltag.isSpecial ? (spieltag.title ?? "Special Event") : `Spieltag ${spieltag.number}`}
+        </span>
       </div>
 
       {/* Header */}
@@ -103,7 +105,7 @@ export default async function LulSpieltagPage({
           {coverUrl && (
             <img
               src={coverUrl}
-              alt={spieltag.game}
+              alt={spieltag.game ?? spieltag.title ?? ""}
               className="w-full h-full object-cover object-center"
             />
           )}
@@ -130,12 +132,22 @@ export default async function LulSpieltagPage({
         >
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2 flex-wrap">
+            {spieltag.isSpecial && (
+              <span className="inline-flex items-center gap-1 text-xs font-semibold text-violet-300 bg-violet-500/10 border border-violet-500/20 px-2 py-0.5 rounded-full">
+                ⭐ Special Event
+              </span>
+            )}
             <h1 className="text-xl font-bold text-white">
-              Spieltag {spieltag.number} — {spieltag.game}
+              {spieltag.isSpecial
+                ? `${spieltag.title ?? "Special Event"} — Spieltag ${spieltag.number}`
+                : `Spieltag ${spieltag.number} — ${spieltag.game}`}
             </h1>
             <LiveRefresh status={spieltag.status} />
           </div>
-          <div className="flex items-center gap-3 flex-wrap">
+          {spieltag.isSpecial && spieltag.description && (
+            <p className="text-sm text-gray-400 mt-0.5">{spieltag.description}</p>
+          )}
+          <div className="flex items-center gap-3 flex-wrap mt-0.5">
             {spieltag.scheduledAt && (
               <p className="text-sm text-gray-400">
                 {new Date(spieltag.scheduledAt).toLocaleDateString("de-DE", {
@@ -146,7 +158,12 @@ export default async function LulSpieltagPage({
                 })}
               </p>
             )}
-            {spieltag.gameType && (() => {
+            {spieltag.game && spieltag.isSpecial && (
+              <p className="text-xs text-gray-500 flex items-center gap-1">
+                <Gamepad2 className="w-3.5 h-3.5" /> {spieltag.game}
+              </p>
+            )}
+            {!spieltag.isSpecial && spieltag.gameType && (() => {
               const icon = getGenreIcon(spieltag.gameType);
               return (
                 <span className="flex items-center gap-1.5 text-xs text-gray-500">
@@ -157,6 +174,9 @@ export default async function LulSpieltagPage({
             })()}
             {spieltag.platform && (
               <span className="text-xs text-gray-600">· {spieltag.platform}</span>
+            )}
+            {spieltag.maxPlayers != null && (
+              <span className="text-xs text-gray-600">· Max. {spieltag.maxPlayers} Spieler</span>
             )}
           </div>
         </div>

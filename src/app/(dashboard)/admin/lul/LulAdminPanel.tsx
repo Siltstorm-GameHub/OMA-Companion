@@ -805,6 +805,10 @@ export default function LulAdminPanel({
 
   // Create spieltag form
   const [showSpieltagForm, setShowSpieltagForm] = useState<string | null>(null);
+  const [stIsSpecial, setStIsSpecial] = useState(false);
+  const [stTitle, setStTitle] = useState("");
+  const [stDescription, setStDescription] = useState("");
+  const [stMaxPlayers, setStMaxPlayers] = useState("");
   const [stGame, setStGame] = useState("");
   const [stGameType, setStGameType] = useState("");
   const [stPlatform, setStPlatform] = useState("");
@@ -812,6 +816,12 @@ export default function LulAdminPanel({
   const [stP1, setStP1] = useState(10);
   const [stP2, setStP2] = useState(5);
   const [stP3, setStP3] = useState(3);
+
+  // Edit spieltag special event fields
+  const [editIsSpecial, setEditIsSpecial] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editMaxPlayers, setEditMaxPlayers] = useState("");
 
   async function loadSeasons() {
     const res = await fetch("/api/lul/seasons");
@@ -866,7 +876,8 @@ export default function LulAdminPanel({
   }
 
   async function createSpieltag(seasonId: string) {
-    if (!stGame) return;
+    if (!stIsSpecial && !stGame) return;
+    if (stIsSpecial && !stTitle) return;
     setLoading(true);
     const season = seasons.find(s => s.id === seasonId);
     const nextNum = (season?.spieltage.length ?? 0) + 1;
@@ -874,29 +885,41 @@ export default function LulAdminPanel({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        seasonId, number: nextNum, game: stGame,
+        seasonId, number: nextNum,
+        isSpecial: stIsSpecial,
+        title: stIsSpecial ? stTitle : undefined,
+        description: stIsSpecial && stDescription ? stDescription : undefined,
+        maxPlayers: stIsSpecial && stMaxPlayers ? Number(stMaxPlayers) : undefined,
+        game: stIsSpecial ? (stGame || null) : stGame,
         gameType: stGameType || null, platform: stPlatform || null,
         scheduledAt: stDate || null,
         pointsConfig: { "1": stP1, "2": stP2, "3": stP3 },
       }),
     });
     setLoading(false);
-    if (res.ok) { toast.success(`Spieltag ${nextNum} – ${stGame} erstellt`); }
+    if (res.ok) { toast.success(`Spieltag ${nextNum} – ${stIsSpecial ? stTitle : stGame} erstellt`); }
     else toast.error("Fehler beim Erstellen");
     setShowSpieltagForm(null);
+    setStIsSpecial(false); setStTitle(""); setStDescription(""); setStMaxPlayers("");
     setStGame(""); setStGameType(""); setStPlatform(""); setStDate("");
     await loadSeasons();
   }
 
   async function saveSpieltag(id: string) {
+    if (editIsSpecial && !editTitle) return;
+    if (!editIsSpecial && !editGame) return;
     setLoading(true);
     const res = await fetch(`/api/lul/spieltage/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        game: editGame || undefined,
-        gameType: editGameType || undefined,
-        platform: editPlatform || undefined,
+        isSpecial: editIsSpecial,
+        title: editIsSpecial ? editTitle : null,
+        description: editIsSpecial ? (editDescription || null) : null,
+        maxPlayers: editIsSpecial && editMaxPlayers ? Number(editMaxPlayers) : null,
+        game: editIsSpecial ? (editGame || null) : editGame,
+        gameType: editGameType || null,
+        platform: editPlatform || null,
         scheduledAt: editDate || null,
       }),
     });
@@ -1062,9 +1085,35 @@ export default function LulAdminPanel({
                       <div className="flex items-center gap-3 px-4 py-3 bg-gray-800/40">
                         {editingSpieltagId === st.id ? (
                           <div className="flex-1 space-y-2">
+                            {/* Special Event toggle */}
+                            <label className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer border transition-colors ${
+                              editIsSpecial ? "bg-violet-900/20 border-violet-700/40" : "bg-gray-800/40 border-gray-700/40"
+                            }`}>
+                              <input type="checkbox" checked={editIsSpecial} onChange={e => setEditIsSpecial(e.target.checked)} className="rounded" />
+                              <span className="text-xs font-medium text-white flex items-center gap-1">⭐ Special Event</span>
+                            </label>
+                            {editIsSpecial && (
+                              <div className="grid grid-cols-2 gap-2">
+                                <div className="col-span-2">
+                                  <label className="text-[10px] text-gray-500 block mb-1">Event-Titel *</label>
+                                  <input type="text" value={editTitle} onChange={e => setEditTitle(e.target.value)} placeholder="z.B. OMA-Geburtstags-Event"
+                                    className="w-full text-xs bg-gray-700 border border-violet-700/40 text-white rounded-lg px-2 py-1.5" />
+                                </div>
+                                <div className="col-span-2">
+                                  <label className="text-[10px] text-gray-500 block mb-1">Beschreibung (optional)</label>
+                                  <input type="text" value={editDescription} onChange={e => setEditDescription(e.target.value)} placeholder="Kurze Beschreibung…"
+                                    className="w-full text-xs bg-gray-700 border border-gray-600 text-white rounded-lg px-2 py-1.5" />
+                                </div>
+                                <div>
+                                  <label className="text-[10px] text-gray-500 block mb-1">Max. Spieler (optional)</label>
+                                  <input type="number" min={1} value={editMaxPlayers} onChange={e => setEditMaxPlayers(e.target.value)} placeholder="z.B. 8"
+                                    className="w-full text-xs bg-gray-700 border border-gray-600 text-white rounded-lg px-2 py-1.5" />
+                                </div>
+                              </div>
+                            )}
                             <div className="grid grid-cols-2 gap-2">
                               <div>
-                                <label className="text-[10px] text-gray-500 block mb-1">Spiel *</label>
+                                <label className="text-[10px] text-gray-500 block mb-1">Spiel {editIsSpecial ? "(optional)" : "*"}</label>
                                 <GameNameInput
                                   value={editGame}
                                   onChange={setEditGame}
@@ -1089,7 +1138,7 @@ export default function LulAdminPanel({
                               </div>
                             </div>
                             <div className="flex gap-2">
-                              <button onClick={() => saveSpieltag(st.id)} disabled={loading || !editGame}
+                              <button onClick={() => saveSpieltag(st.id)} disabled={loading || (editIsSpecial ? !editTitle : !editGame)}
                                 className="flex items-center gap-1.5 text-xs bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white rounded-lg px-2.5 py-1.5">
                                 <Check className="w-3 h-3" /> Speichern
                               </button>
@@ -1107,8 +1156,15 @@ export default function LulAdminPanel({
                             }`}>{st.number}</div>
                             <div className="min-w-0">
                               <div className="flex items-center gap-1.5">
-                                {(() => { const icon = getGenreIcon(st.gameType); return icon ? <img src={icon.src} alt={icon.alt} className="w-4 h-4 object-contain shrink-0" /> : null; })()}
-                                <p className="text-sm text-white font-medium">{st.game}</p>
+                                {st.isSpecial && (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-900/40 text-violet-300 border border-violet-700/30 font-medium shrink-0">
+                                    ⭐ Special
+                                  </span>
+                                )}
+                                {!st.isSpecial && (() => { const icon = getGenreIcon(st.gameType); return icon ? <img src={icon.src} alt={icon.alt} className="w-4 h-4 object-contain shrink-0" /> : null; })()}
+                                <p className="text-sm text-white font-medium truncate">
+                                  {st.isSpecial ? (st.title ?? "Special Event") : (st.game ?? "–")}
+                                </p>
                               </div>
                               {st.scheduledAt && (
                                 <p className="text-[10px] text-gray-500">
@@ -1128,7 +1184,11 @@ export default function LulAdminPanel({
                           <>
                             <button
                               onClick={() => {
-                                setEditGame(st.game);
+                                setEditIsSpecial(st.isSpecial ?? false);
+                                setEditTitle(st.title ?? "");
+                                setEditDescription(st.description ?? "");
+                                setEditMaxPlayers(st.maxPlayers != null ? String(st.maxPlayers) : "");
+                                setEditGame(st.game ?? "");
                                 setEditGameType(st.gameType ?? "");
                                 setEditPlatform(st.platform ?? "");
                                 setEditDate(st.scheduledAt ? new Date(st.scheduledAt).toISOString().slice(0, 16) : "");
@@ -1164,9 +1224,38 @@ export default function LulAdminPanel({
                 {showSpieltagForm === season.id ? (
                   <div className="border border-gray-700 rounded-xl p-4 space-y-3">
                     <p className="text-sm font-medium text-white">Neuer Spieltag</p>
+                    {/* Special Event toggle */}
+                    <label className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer border transition-colors ${
+                      stIsSpecial ? "bg-violet-900/20 border-violet-700/40" : "bg-gray-800/40 border-gray-700/40"
+                    }`}>
+                      <input type="checkbox" checked={stIsSpecial} onChange={e => setStIsSpecial(e.target.checked)} className="rounded" />
+                      <div>
+                        <p className="text-sm font-medium text-white flex items-center gap-1.5">⭐ Special Event</p>
+                        <p className="text-xs text-gray-500 mt-0.5">Eigener Event-Name statt Spiel — zählt als normaler Spieltag.</p>
+                      </div>
+                    </label>
+                    {stIsSpecial && (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="col-span-2">
+                          <label className="text-xs text-gray-500 block mb-1">Event-Titel *</label>
+                          <input type="text" value={stTitle} onChange={e => setStTitle(e.target.value)} placeholder="z.B. OMA-Geburtstags-Event"
+                            className="w-full text-sm bg-gray-800 border border-violet-700/50 text-white rounded-lg px-3 py-2" />
+                        </div>
+                        <div className="col-span-2">
+                          <label className="text-xs text-gray-500 block mb-1">Beschreibung (optional)</label>
+                          <input type="text" value={stDescription} onChange={e => setStDescription(e.target.value)} placeholder="Kurze Beschreibung des Events…"
+                            className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2" />
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500 block mb-1">Max. Spieler (optional)</label>
+                          <input type="number" min={1} value={stMaxPlayers} onChange={e => setStMaxPlayers(e.target.value)} placeholder="z.B. 8"
+                            className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2" />
+                        </div>
+                      </div>
+                    )}
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="text-xs text-gray-500 block mb-1">Spiel / Disziplin *</label>
+                        <label className="text-xs text-gray-500 block mb-1">Spiel / Disziplin {stIsSpecial ? "(optional)" : "*"}</label>
                         <GameNameInput
                           value={stGame}
                           onChange={setStGame}
@@ -1207,9 +1296,12 @@ export default function LulAdminPanel({
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <button onClick={() => createSpieltag(season.id)} disabled={loading || !stGame}
-                        className="flex items-center gap-2 text-sm bg-amber-700 hover:bg-amber-600 disabled:opacity-50 text-white rounded-lg px-3 py-2">
-                        <Gamepad2 className="w-4 h-4" /> Spieltag erstellen
+                      <button onClick={() => createSpieltag(season.id)} disabled={loading || (stIsSpecial ? !stTitle : !stGame)}
+                        className={`flex items-center gap-2 text-sm disabled:opacity-50 text-white rounded-lg px-3 py-2 ${
+                          stIsSpecial ? "bg-violet-700 hover:bg-violet-600" : "bg-amber-700 hover:bg-amber-600"
+                        }`}>
+                        {stIsSpecial ? <span>⭐</span> : <Gamepad2 className="w-4 h-4" />}
+                        {stIsSpecial ? "Special Event erstellen" : "Spieltag erstellen"}
                       </button>
                       <button onClick={() => setShowSpieltagForm(null)}
                         className="text-sm text-gray-500 hover:text-white px-3 py-2">

@@ -28,7 +28,7 @@ interface EventItem {
   registrations: { user: { id: string; name: string | null; username: string | null } }[];
 }
 interface Spieltag {
-  id: string; number: number; game: string; scheduledAt: string | null; status: string;
+  id: string; number: number; game: string | null; scheduledAt: string | null; status: string;
   entries: { role: string; user: { id: string; name: string | null; username: string | null } }[];
 }
 interface PollJob {
@@ -308,7 +308,7 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
                 <option value="">— Spieltag wählen —</option>
                 {spieltage.map(s => (
                   <option key={s.id} value={s.id}>
-                    Spieltag {s.number} – {s.game} {s.scheduledAt ? `(${new Date(s.scheduledAt).toLocaleDateString("de-DE")})` : ""}
+                    Spieltag {s.number}{s.game ? ` – ${s.game}` : ""} {s.scheduledAt ? `(${new Date(s.scheduledAt).toLocaleDateString("de-DE")})` : ""}
                   </option>
                 ))}
               </select>
