@@ -95,7 +95,12 @@ export default async function ShopPage() {
 
       {/* Tages-Spin */}
       {userId && (
-        <DailySpin alreadySpun={!!todaySpin} lastResult={null} />
+        <DailySpin
+          alreadySpun={!!todaySpin}
+          lastResult={todaySpin
+            ? { prizeLabel: todaySpin.prizeLabel, prizeType: todaySpin.prizeType }
+            : null}
+        />
       )}
 
       {/* Sammlungen */}

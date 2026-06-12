@@ -36,16 +36,18 @@ function fmt(n: number) {
 }
 
 export default async function DonationsPage() {
-  const session = await auth();
-  const myId    = session?.user?.id;
-  const [donations, expenses, ideas] = await Promise.all([
-    prisma.donation.findMany({
-      include: { user: { select: { id: true, name: true, image: true } } },
-      orderBy: [{ year: "asc" }, { month: "asc" }],
-    }),
-    prisma.poolExpense.findMany({ orderBy: { date: "desc" } }),
-    prisma.poolIdea.findMany({ orderBy: { createdAt: "asc" } }),
+  const [session, [donations, expenses, ideas]] = await Promise.all([
+    auth(),
+    Promise.all([
+      prisma.donation.findMany({
+        include: { user: { select: { id: true, name: true, image: true } } },
+        orderBy: [{ year: "asc" }, { month: "asc" }],
+      }),
+      prisma.poolExpense.findMany({ orderBy: { date: "desc" } }),
+      prisma.poolIdea.findMany({ orderBy: { createdAt: "asc" } }),
+    ]),
   ]);
+  const myId = session?.user?.id;
 
   const totalPool  = donations.reduce((s, d) => s + d.amount, 0);
   const totalSpent = expenses.reduce((s, e) => s + e.amount, 0);
