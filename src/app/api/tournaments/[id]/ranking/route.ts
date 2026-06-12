@@ -29,15 +29,16 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
   let ranking: { userId: string; score: number; label: string }[] = [];
 
-  if (format === "ffa" || format === "coop_stats") {
+  if (format === "ffa" || format === "coop_stats" || format === "avg_stats") {
     const fields: string[] = tournament.statFields ? JSON.parse(tournament.statFields) : [];
-    const totals = new Map<string, { userId: string; stats: Record<string, number> }>();
+    const totals = new Map<string, { userId: string; stats: Record<string, number>; rounds: number }>();
 
     for (const match of tournament.matches) {
       for (const entry of match.entries) {
         if (!entry.userId) continue;
-        if (!totals.has(entry.userId)) totals.set(entry.userId, { userId: entry.userId, stats: {} });
+        if (!totals.has(entry.userId)) totals.set(entry.userId, { userId: entry.userId, stats: {}, rounds: 0 });
         const t = totals.get(entry.userId)!;
+        t.rounds += 1;
         if (entry.statsJson) {
           const s = JSON.parse(entry.statsJson) as Record<string, number>;
           for (const [k, v] of Object.entries(s)) t.stats[k] = (t.stats[k] ?? 0) + v;
@@ -45,19 +46,48 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       }
     }
 
-    const sorted = [...totals.values()].sort((a, b) => {
-      for (const f of fields) {
-        const diff = (b.stats[f] ?? 0) - (a.stats[f] ?? 0);
-        if (diff !== 0) return diff;
-      }
-      return 0;
-    });
+    if (format === "avg_stats") {
+      // Durchschnitt pro Runde berechnen
+      const averaged = [...totals.values()].map(t => {
+        const avg: Record<string, number> = {};
+        for (const [k, v] of Object.entries(t.stats)) {
+          avg[k] = t.rounds > 0 ? v / t.rounds : 0;
+        }
+        return { userId: t.userId, avg, rounds: t.rounds };
+      });
 
-    ranking = sorted.map((t, i) => ({
-      userId: t.userId,
-      score:  fields[0] ? (t.stats[fields[0]] ?? 0) : 0,
-      label:  fields[0] ? `${t.stats[fields[0]] ?? 0} ${fields[0]}` : `Platz ${i + 1}`,
-    }));
+      const sorted = averaged.sort((a, b) => {
+        for (const f of fields) {
+          const diff = (b.avg[f] ?? 0) - (a.avg[f] ?? 0);
+          if (diff !== 0) return diff;
+        }
+        return 0;
+      });
+
+      ranking = sorted.map((t, i) => {
+        const mainVal = fields[0] ? (t.avg[fields[0]] ?? 0) : 0;
+        const display = mainVal % 1 === 0 ? String(mainVal) : mainVal.toFixed(2);
+        return {
+          userId: t.userId,
+          score:  Math.round(mainVal * 100) / 100,
+          label:  fields[0] ? `Ø ${display} ${fields[0]}/Runde (${t.rounds}R)` : `Platz ${i + 1}`,
+        };
+      });
+    } else {
+      const sorted = [...totals.values()].sort((a, b) => {
+        for (const f of fields) {
+          const diff = (b.stats[f] ?? 0) - (a.stats[f] ?? 0);
+          if (diff !== 0) return diff;
+        }
+        return 0;
+      });
+
+      ranking = sorted.map((t, i) => ({
+        userId: t.userId,
+        score:  fields[0] ? (t.stats[fields[0]] ?? 0) : 0,
+        label:  fields[0] ? `${t.stats[fields[0]] ?? 0} ${fields[0]}` : `Platz ${i + 1}`,
+      }));
+    }
 
   } else if (format === "single_elimination") {
     const wins = new Map<string, number>();

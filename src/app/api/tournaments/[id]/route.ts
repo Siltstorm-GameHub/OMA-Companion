@@ -4,19 +4,20 @@ import { prisma } from "@/lib/prisma";
 import { generateRoundRobin } from "@/app/api/tournaments/route";
 import { announceTournamentResult } from "@/lib/discord-notify";
 
-// Gesamtranking für FFA/coop_stats berechnen
-async function calcFfaRanking(tournamentId: string, statFields: string[]) {
+// Gesamtranking für FFA/coop_stats/avg_stats berechnen
+async function calcFfaRanking(tournamentId: string, statFields: string[], format: string) {
   const matches = await prisma.match.findMany({
     where: { tournamentId, playedAt: { not: null } },
     include: { entries: true },
   });
 
-  const totals = new Map<string, { userId: string; stats: Record<string, number> }>();
+  const totals = new Map<string, { userId: string; stats: Record<string, number>; rounds: number }>();
   for (const match of matches) {
     for (const entry of match.entries) {
       if (!entry.userId) continue;
-      if (!totals.has(entry.userId)) totals.set(entry.userId, { userId: entry.userId, stats: {} });
+      if (!totals.has(entry.userId)) totals.set(entry.userId, { userId: entry.userId, stats: {}, rounds: 0 });
       const t = totals.get(entry.userId)!;
+      t.rounds += 1;
       if (entry.statsJson) {
         const s = JSON.parse(entry.statsJson) as Record<string, number>;
         for (const [k, v] of Object.entries(s)) {
@@ -24,6 +25,24 @@ async function calcFfaRanking(tournamentId: string, statFields: string[]) {
         }
       }
     }
+  }
+
+  if (format === "avg_stats") {
+    return [...totals.values()]
+      .map(t => ({
+        userId: t.userId,
+        stats: Object.fromEntries(
+          Object.entries(t.stats).map(([k, v]) => [k, t.rounds > 0 ? v / t.rounds : 0])
+        ),
+        rounds: t.rounds,
+      }))
+      .sort((a, b) => {
+        for (const f of statFields) {
+          const diff = (b.stats[f] ?? 0) - (a.stats[f] ?? 0);
+          if (diff !== 0) return diff;
+        }
+        return 0;
+      });
   }
 
   return [...totals.values()].sort((a, b) => {

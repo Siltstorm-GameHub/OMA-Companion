@@ -181,14 +181,15 @@ export default async function LulSpieltagPage({
             {spieltag.tournamentFormat && (
               <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
                 <Trophy className="w-3 h-3" />
-                {{
+                {({
                   single_elimination: "Einzel-Eliminierung",
                   double_elimination: "Double Elimination",
                   round_robin:        "Jeder gegen Jeden",
                   liga:               "Liga",
                   ffa:                "Free for All",
                   coop_stats:         "Kooperativ (Stats)",
-                }[spieltag.tournamentFormat] ?? spieltag.tournamentFormat}
+                  avg_stats:          "Durchschnittswerte",
+                } as Record<string, string>)[spieltag.tournamentFormat] ?? spieltag.tournamentFormat}
               </span>
             )}
           </div>
