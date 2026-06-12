@@ -460,6 +460,7 @@ model LulSpieltag {
   maxPlayers       Int?      // Maximale Spieleranzahl
   tournamentFormat String?   // single_elimination | double_elimination | round_robin | liga | ffa | coop_stats
   statFields       String?   // JSON: ["Kills","Assists"] — für ffa/coop_stats/avg_stats
+  matchesJson      String?   // JSON: [{id,p1,p2,s1,s2,winner}] — für 1v1-Formate
   game             String?   // "Brawlhalla" (optional bei Special Events)
   gameType     String?   // "Beat-em Up"
   platform     String?   // "PC/Konsole"
@@ -489,6 +490,7 @@ model LulEntry {
   voted          Boolean     @default(false) // hat an Umfrage teilgenommen
   dominionBonus  Boolean     @default(false) // 3 Siege in Folge
   lulPoints      Int         @default(0)     // LUL-Punkte gesamt für diesen Spieltag
+  statsJson      String?                     // JSON: {"Kills":12} — für ffa/coop_stats/avg_stats
   spieltag       LulSpieltag @relation(fields: [spieltagId], references: [id], onDelete: Cascade)
   user           User        @relation(fields: [userId], references: [id])
   @@unique([spieltagId, userId])

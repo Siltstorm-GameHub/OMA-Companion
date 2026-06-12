@@ -108,6 +108,32 @@ function LulSpieltagEditor({
     spieltag.entries.filter(e => e.role === "voter").map(e => e.userId)
   );
 
+  // Format detection
+  const fmt = spieltag.tournamentFormat ?? "";
+  const statFieldsList: string[] = (() => { try { return JSON.parse(spieltag.statFields ?? "[]"); } catch { return []; } })();
+  const isStatFmt = fmt === "ffa" || fmt === "coop_stats" || fmt === "avg_stats";
+  const is1v1Fmt  = fmt === "single_elimination" || fmt === "double_elimination" || fmt === "round_robin" || fmt === "liga";
+
+  // Stat tracking data: userId → {field: value}
+  const [statsData, setStatsData] = useState<Record<string, Record<string, string>>>(() => {
+    const map: Record<string, Record<string, string>> = {};
+    for (const e of spieltag.entries) {
+      if (e.statsJson) {
+        try {
+          const s = JSON.parse(e.statsJson) as Record<string, number>;
+          map[e.userId] = Object.fromEntries(Object.entries(s).map(([k, v]) => [k, String(v)]));
+        } catch { /* */ }
+      }
+    }
+    return map;
+  });
+
+  // 1v1 match results
+  type LulMatch = { id: string; p1: string; p2: string; s1: string; s2: string; winner: string };
+  const [matches, setMatches] = useState<LulMatch[]>(() => {
+    try { return JSON.parse(spieltag.matchesJson ?? "[]"); } catch { return []; }
+  });
+
   const filteredPlayerUsers = useMemo(() => {
     const q = playerSearch.toLowerCase().trim();
     return q ? allUsers.filter(u => uname(u).toLowerCase().includes(q)) : allUsers;
@@ -228,19 +254,98 @@ function LulSpieltagEditor({
     }
   }
 
+  // ── Stat-format helpers ──────────────────────────────────────────────────
+  function autoPlacementStat() {
+    const scored = playerIds.map(uid => {
+      const sd = statsData[uid] ?? {};
+      const total = statFieldsList.reduce((s, f) => s + (Number(sd[f]) || 0), 0);
+      return { uid, total };
+    }).sort((a, b) => b.total - a.total);
+    setEntries(prev => {
+      const next = { ...prev };
+      scored.forEach(({ uid }, i) => { if (next[uid]) next[uid] = { ...next[uid], placement: String(i + 1) }; });
+      return next;
+    });
+  }
+
+  function autoGameWinnerStat() {
+    const scored = playerIds.map(uid => {
+      const sd = statsData[uid] ?? {};
+      const total = statFieldsList.reduce((s, f) => s + (Number(sd[f]) || 0), 0);
+      return { uid, total };
+    }).sort((a, b) => b.total - a.total);
+    if (scored.length > 0) {
+      const winnerId = scored[0].uid;
+      setEntries(prev => {
+        const next = { ...prev };
+        for (const uid of playerIds) {
+          if (next[uid]) next[uid] = { ...next[uid], gameWinner: uid === winnerId };
+        }
+        return next;
+      });
+    }
+  }
+
+  // ── 1v1 / bracket helpers ────────────────────────────────────────────────
+  function computeStandings(): [string, { wins: number; draws: number; losses: number; pts: number }][] {
+    const pts = new Map<string, { wins: number; draws: number; losses: number; pts: number }>();
+    for (const uid of playerIds) pts.set(uid, { wins: 0, draws: 0, losses: 0, pts: 0 });
+    for (const m of matches) {
+      if (!m.p1 || !m.p2) continue;
+      if (m.winner === m.p1) {
+        const r1 = pts.get(m.p1); const r2 = pts.get(m.p2);
+        if (r1) { r1.wins++; r1.pts += 3; }
+        if (r2) r2.losses++;
+      } else if (m.winner === m.p2) {
+        const r2 = pts.get(m.p2); const r1 = pts.get(m.p1);
+        if (r2) { r2.wins++; r2.pts += 3; }
+        if (r1) r1.losses++;
+      } else if (m.winner === "draw") {
+        const r1 = pts.get(m.p1); const r2 = pts.get(m.p2);
+        if (r1) { r1.draws++; r1.pts += 1; }
+        if (r2) { r2.draws++; r2.pts += 1; }
+      }
+    }
+    return [...pts.entries()].sort((a, b) => b[1].pts - a[1].pts || b[1].wins - a[1].wins);
+  }
+
+  function autoPlacementMatch() {
+    const standings = computeStandings();
+    setEntries(prev => {
+      const next = { ...prev };
+      standings.forEach(([uid], i) => { if (next[uid]) next[uid] = { ...next[uid], placement: String(i + 1) }; });
+      const winnerId = standings[0]?.[0];
+      for (const uid of playerIds) {
+        if (next[uid]) next[uid] = { ...next[uid], gameWinner: uid === winnerId };
+      }
+      return next;
+    });
+  }
+
+  function addMatch() {
+    setMatches(prev => [...prev, { id: String(Date.now()), p1: "", p2: "", s1: "", s2: "", winner: "" }]);
+  }
+  function removeMatch(id: string) { setMatches(prev => prev.filter(m => m.id !== id)); }
+  function updateMatch(id: string, field: string, value: string) {
+    setMatches(prev => prev.map(m => m.id === id ? { ...m, [field]: value } : m));
+  }
+
   async function saveDraft() {
     setLoading(true);
     const allIds = [...playerIds, ...spectatorIds, ...voterIds];
     const payload = allIds.map(userId => {
       const e = entries[userId];
       const role = playerIds.includes(userId) ? "player" : spectatorIds.includes(userId) ? "spectator" : "voter";
-      const scores = role !== "voter"
+      const scores = !isStatFmt && role !== "voter"
         ? (e?.rounds ?? []).map(Number).filter((_, i) => i < (e?.rounds.findLastIndex(r => r !== "") ?? -1) + 1)
         : [];
+      const statsJson = isStatFmt && role === "player"
+        ? Object.fromEntries(statFieldsList.map(f => [f, Number(statsData[userId]?.[f]) || 0]))
+        : null;
       return {
-        userId,
-        role,
+        userId, role,
         roundScores: scores,
+        statsJson,
         placement: e?.placement ? Number(e.placement) : null,
         gameWinner: e?.gameWinner ?? false,
         communityChamp: e?.communityChamp ?? false,
@@ -248,10 +353,12 @@ function LulSpieltagEditor({
         voted: role === "voter" ? true : (e?.voted ?? false),
       };
     });
+    const body: Record<string, unknown> = { entries: payload };
+    if (is1v1Fmt) body.matchesJson = JSON.stringify(matches);
     await fetch(`/api/lul/spieltage/${spieltag.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ entries: payload }),
+      body: JSON.stringify(body),
     });
     setLoading(false);
     toast.success("Entwurf gespeichert");
@@ -259,7 +366,7 @@ function LulSpieltagEditor({
   }
 
   async function finalize() {
-    if (!confirm(`Spieltag ${spieltag.number} (${spieltag.game}) wirklich finalisieren? LUL-Punkte werden berechnet und können nicht mehr geändert werden.`)) return;
+    if (!confirm(`Spieltag ${spieltag.number} (${spieltag.title ?? spieltag.game ?? "Special Event"}) wirklich finalisieren? LUL-Punkte werden berechnet und können nicht mehr geändert werden.`)) return;
     setLoading(true);
     await saveDraft();
     const res = await fetch(`/api/lul/spieltage/${spieltag.id}`, {
@@ -278,7 +385,7 @@ function LulSpieltagEditor({
   const isFinished = spieltag.status === "finished";
 
   async function reopen() {
-    if (!confirm(`Spieltag ${spieltag.number} (${spieltag.game}) wirklich wiedereröffnen?\n\nDie LUL-Punkte werden zurückgesetzt und neu berechnet sobald du erneut finalisierst.`)) return;
+    if (!confirm(`Spieltag ${spieltag.number} (${spieltag.title ?? spieltag.game ?? "Special Event"}) wirklich wiedereröffnen?\n\nDie LUL-Punkte werden zurückgesetzt und neu berechnet sobald du erneut finalisierst.`)) return;
     setLoading(true);
     await fetch(`/api/lul/spieltage/${spieltag.id}`, {
       method: "PATCH",
@@ -367,88 +474,273 @@ function LulSpieltagEditor({
       {/* Players tab */}
       {tab === "players" && (
         <div className="space-y-3">
-          <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-xs text-gray-400">Mitspieler auswählen und Runden-Ergebnisse eintragen:</p>
-            <button onClick={autoPlacement}
-              className="text-xs text-blue-400 hover:text-blue-300 bg-blue-900/20 hover:bg-blue-900/30 px-2 py-1 rounded transition-colors">
-              Platzierung auto
-            </button>
-            <button onClick={autoGameWinner}
-              className="text-xs text-amber-400 hover:text-amber-300 bg-amber-900/20 hover:bg-amber-900/30 px-2 py-1 rounded transition-colors">
-              Game Winner auto
-            </button>
-            <div className="flex items-center gap-1 ml-auto text-xs">
-              <span className="text-gray-500">Runden:</span>
-              <button onClick={() => changeNumRounds(-1)} disabled={numRounds <= 1}
-                className="w-6 h-6 flex items-center justify-center rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-30 text-white font-bold transition-colors">
-                −
-              </button>
-              <span className="text-white font-semibold w-6 text-center tabular-nums">{numRounds}</span>
-              <button onClick={() => changeNumRounds(1)}
-                className="w-6 h-6 flex items-center justify-center rounded bg-gray-700 hover:bg-gray-600 text-white font-bold transition-colors">
-                +
-              </button>
-            </div>
-          </div>
-          <UserPickerSheet
-            label="Mitspieler"
-            users={filteredPlayerUsers}
-            selected={playerIds}
-            onToggle={togglePlayer}
-            searchValue={playerSearch}
-            onSearchChange={setPlayerSearch}
-          />
 
-          {playerIds.length > 0 && (
-            <div className="overflow-x-auto rounded-lg border border-gray-700 -mx-1 px-1">
-              <p className="text-[10px] text-gray-600 mb-1 sm:hidden">← scrollbar →</p>
-              <table className="w-full text-xs min-w-[580px]">
-                <thead>
-                  <tr className="bg-gray-800 border-b border-gray-700 text-gray-400">
-                    <th className="text-left px-3 py-2">Spieler</th>
-                    {Array.from({length: numRounds}, (_, i) => (
-                      <th key={i} className="text-center px-1 py-2 w-12">R{i+1}</th>
-                    ))}
-                    <th className="text-center px-2 py-2">∑</th>
-                    <th className="text-center px-2 py-2">Platz</th>
-                    <th className="text-center px-2 py-2"><Trophy className="w-3.5 h-3.5 inline text-amber-400" /></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {playerIds.map(uid => {
-                    const u = allUsers.find(u => u.id === uid);
-                    const e = entries[uid];
-                    if (!u || !e) return null;
-                    const total = e.rounds.reduce((s, v) => s + (Number(v) || 0), 0);
+          {/* ── Stat-Tracking (ffa / coop_stats / avg_stats) ─────────────── */}
+          {isStatFmt ? (
+            statFieldsList.length === 0 ? (
+              <p className="text-xs text-amber-400/80 bg-amber-900/10 border border-amber-800/30 rounded-lg px-3 py-2">
+                Keine Stat-Felder konfiguriert — bearbeite den Spieltag und füge Felder hinzu.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-xs text-gray-400">Statistiken pro Spieler eintragen:</p>
+                  <button onClick={autoPlacementStat}
+                    className="text-xs text-blue-400 hover:text-blue-300 bg-blue-900/20 hover:bg-blue-900/30 px-2 py-1 rounded transition-colors">
+                    Platzierung auto
+                  </button>
+                  <button onClick={autoGameWinnerStat}
+                    className="text-xs text-amber-400 hover:text-amber-300 bg-amber-900/20 hover:bg-amber-900/30 px-2 py-1 rounded transition-colors">
+                    Game Winner auto
+                  </button>
+                </div>
+                <UserPickerSheet label="Mitspieler" users={filteredPlayerUsers} selected={playerIds}
+                  onToggle={togglePlayer} searchValue={playerSearch} onSearchChange={setPlayerSearch} />
+                {playerIds.length > 0 && (
+                  <div className="overflow-x-auto rounded-lg border border-gray-700 -mx-1 px-1">
+                    <p className="text-[10px] text-gray-600 mb-1 sm:hidden">← scrollbar →</p>
+                    <table className="w-full text-xs min-w-[400px]">
+                      <thead>
+                        <tr className="bg-gray-800 border-b border-gray-700 text-gray-400">
+                          <th className="text-left px-3 py-2">Spieler</th>
+                          {statFieldsList.map(f => (
+                            <th key={f} className="text-center px-2 py-2 whitespace-nowrap">{f}</th>
+                          ))}
+                          <th className="text-center px-2 py-2">Platz</th>
+                          <th className="text-center px-2 py-2"><Trophy className="w-3.5 h-3.5 inline text-amber-400" /></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {playerIds.map(uid => {
+                          const u = allUsers.find(u => u.id === uid);
+                          const e = entries[uid];
+                          const sd = statsData[uid] ?? {};
+                          if (!u || !e) return null;
+                          return (
+                            <tr key={uid} className="border-b border-gray-800 last:border-0">
+                              <td className="px-3 py-1.5 text-white whitespace-nowrap font-medium">{uname(u)}</td>
+                              {statFieldsList.map(f => (
+                                <td key={f} className="px-1 py-1">
+                                  <input type="number" min={0} value={sd[f] ?? ""}
+                                    onChange={ev => setStatsData(prev => ({ ...prev, [uid]: { ...(prev[uid] ?? {}), [f]: ev.target.value } }))}
+                                    className="w-16 bg-gray-700 border border-gray-600 text-white rounded px-1 py-0.5 text-center text-xs"
+                                  />
+                                </td>
+                              ))}
+                              <td className="px-2 py-1">
+                                <input type="number" min={1} value={e.placement}
+                                  onChange={ev => setField(uid, "placement", ev.target.value)}
+                                  className="w-12 bg-gray-700 border border-gray-600 text-white rounded px-1 py-0.5 text-center text-xs"
+                                />
+                              </td>
+                              <td className="px-2 py-1 text-center">
+                                <input type="checkbox" checked={e.gameWinner}
+                                  onChange={ev => setField(uid, "gameWinner", ev.target.checked)}
+                                />
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )
+          ) : is1v1Fmt ? (
+            /* ── 1v1 / Bracket-Format ─────────────────────────────────────── */
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="text-xs text-gray-400">Spieler auswählen und Matches eintragen:</p>
+                <button onClick={addMatch}
+                  className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 bg-blue-900/20 hover:bg-blue-900/30 px-2 py-1 rounded transition-colors">
+                  <Plus className="w-3 h-3" /> Match
+                </button>
+                {matches.some(m => m.winner) && (
+                  <button onClick={autoPlacementMatch}
+                    className="text-xs text-amber-400 hover:text-amber-300 bg-amber-900/20 hover:bg-amber-900/30 px-2 py-1 rounded transition-colors">
+                    Platzierung auto
+                  </button>
+                )}
+              </div>
+
+              <UserPickerSheet label="Mitspieler" users={filteredPlayerUsers} selected={playerIds}
+                onToggle={togglePlayer} searchValue={playerSearch} onSearchChange={setPlayerSearch} />
+
+              {/* Match list */}
+              {matches.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-[10px] text-gray-600 uppercase tracking-wider">Matches</p>
+                  {matches.map((m) => {
+                    const u1 = allUsers.find(u => u.id === m.p1);
+                    const u2 = allUsers.find(u => u.id === m.p2);
                     return (
-                      <tr key={uid} className="border-b border-gray-800 last:border-0">
-                        <td className="px-3 py-1.5 text-white whitespace-nowrap font-medium">{uname(u)}</td>
-                        {e.rounds.map((val, ri) => (
-                          <td key={ri} className="px-1 py-1">
-                            <input type="number" min={0} value={val}
-                              onChange={ev => setRound(uid, ri, ev.target.value)}
-                              className="w-11 bg-gray-700 border border-gray-600 text-white rounded px-1 py-0.5 text-center text-xs"
-                            />
-                          </td>
-                        ))}
-                        <td className="px-2 py-1.5 text-center font-bold text-amber-400 tabular-nums">{total}</td>
-                        <td className="px-2 py-1">
-                          <input type="number" min={1} value={e.placement}
-                            onChange={ev => setField(uid, "placement", ev.target.value)}
-                            className="w-12 bg-gray-700 border border-gray-600 text-white rounded px-1 py-0.5 text-center text-xs"
-                          />
-                        </td>
-                        <td className="px-2 py-1 text-center">
-                          <input type="checkbox" checked={e.gameWinner}
-                            onChange={ev => setField(uid, "gameWinner", ev.target.checked)}
-                          />
-                        </td>
-                      </tr>
+                      <div key={m.id} className="flex items-center gap-1.5 bg-gray-800/60 rounded-lg p-2 flex-wrap">
+                        <select value={m.p1} onChange={e => updateMatch(m.id, "p1", e.target.value)}
+                          className="flex-1 min-w-[80px] text-xs bg-gray-700 border border-gray-600 text-white rounded px-2 py-1">
+                          <option value="">Spieler 1</option>
+                          {playerIds.map(uid => { const u = allUsers.find(u => u.id === uid); return u ? <option key={uid} value={uid}>{uname(u)}</option> : null; })}
+                        </select>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <input type="number" min={0} value={m.s1} onChange={e => updateMatch(m.id, "s1", e.target.value)}
+                            className="w-10 bg-gray-700 border border-gray-600 text-white rounded px-1 py-1 text-center text-xs" />
+                          <span className="text-gray-600 text-xs font-bold">:</span>
+                          <input type="number" min={0} value={m.s2} onChange={e => updateMatch(m.id, "s2", e.target.value)}
+                            className="w-10 bg-gray-700 border border-gray-600 text-white rounded px-1 py-1 text-center text-xs" />
+                        </div>
+                        <select value={m.p2} onChange={e => updateMatch(m.id, "p2", e.target.value)}
+                          className="flex-1 min-w-[80px] text-xs bg-gray-700 border border-gray-600 text-white rounded px-2 py-1">
+                          <option value="">Spieler 2</option>
+                          {playerIds.map(uid => { const u = allUsers.find(u => u.id === uid); return u ? <option key={uid} value={uid}>{uname(u)}</option> : null; })}
+                        </select>
+                        <select value={m.winner} onChange={e => updateMatch(m.id, "winner", e.target.value)}
+                          className="flex-1 min-w-[90px] text-xs bg-gray-700 border border-gray-600 text-white rounded px-2 py-1">
+                          <option value="">– Sieger –</option>
+                          {m.p1 && <option value={m.p1}>{u1 ? uname(u1) : m.p1} ✓</option>}
+                          {m.p2 && <option value={m.p2}>{u2 ? uname(u2) : m.p2} ✓</option>}
+                          {(fmt === "round_robin" || fmt === "liga") && <option value="draw">Unentschieden</option>}
+                        </select>
+                        <button onClick={() => removeMatch(m.id)} className="text-gray-600 hover:text-red-500 transition-colors p-1 rounded shrink-0">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     );
                   })}
-                </tbody>
-              </table>
+                </div>
+              )}
+
+              {/* Standings */}
+              {playerIds.length > 0 && matches.length > 0 && (() => {
+                const standings = computeStandings();
+                return (
+                  <div>
+                    <p className="text-[10px] text-gray-600 uppercase tracking-wider mb-1">Tabelle</p>
+                    <div className="overflow-x-auto rounded-lg border border-gray-700">
+                      <table className="w-full text-xs min-w-[320px]">
+                        <thead>
+                          <tr className="bg-gray-800 border-b border-gray-700 text-gray-400">
+                            <th className="text-left px-3 py-1.5">Spieler</th>
+                            <th className="text-center px-2 py-1.5 text-green-400">S</th>
+                            {(fmt === "round_robin" || fmt === "liga") && <th className="text-center px-2 py-1.5 text-gray-500">U</th>}
+                            <th className="text-center px-2 py-1.5 text-red-400">N</th>
+                            <th className="text-center px-2 py-1.5 text-amber-400 font-bold">Pkt</th>
+                            <th className="text-center px-2 py-1.5">Platz</th>
+                            <th className="text-center px-2 py-1.5"><Trophy className="w-3.5 h-3.5 inline text-amber-400" /></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {standings.map(([uid, s]) => {
+                            const u = allUsers.find(u => u.id === uid);
+                            const e = entries[uid];
+                            if (!u) return null;
+                            return (
+                              <tr key={uid} className="border-b border-gray-800 last:border-0">
+                                <td className="px-3 py-1.5 text-white font-medium whitespace-nowrap">{uname(u)}</td>
+                                <td className="px-2 py-1.5 text-center text-green-400 font-medium">{s.wins}</td>
+                                {(fmt === "round_robin" || fmt === "liga") && <td className="px-2 py-1.5 text-center text-gray-400">{s.draws}</td>}
+                                <td className="px-2 py-1.5 text-center text-red-400">{s.losses}</td>
+                                <td className="px-2 py-1.5 text-center font-bold text-amber-400">{s.pts}</td>
+                                <td className="px-2 py-1">
+                                  <input type="number" min={1} value={e?.placement ?? ""}
+                                    onChange={ev => setField(uid, "placement", ev.target.value)}
+                                    className="w-10 bg-gray-700 border border-gray-600 text-white rounded px-1 py-0.5 text-center text-xs"
+                                  />
+                                </td>
+                                <td className="px-2 py-1 text-center">
+                                  <input type="checkbox" checked={e?.gameWinner ?? false}
+                                    onChange={ev => setField(uid, "gameWinner", ev.target.checked)}
+                                  />
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
+          ) : (
+            /* ── Standard: Runden-Scores ──────────────────────────────────── */
+            <>
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="text-xs text-gray-400">Mitspieler auswählen und Runden-Ergebnisse eintragen:</p>
+                <button onClick={autoPlacement}
+                  className="text-xs text-blue-400 hover:text-blue-300 bg-blue-900/20 hover:bg-blue-900/30 px-2 py-1 rounded transition-colors">
+                  Platzierung auto
+                </button>
+                <button onClick={autoGameWinner}
+                  className="text-xs text-amber-400 hover:text-amber-300 bg-amber-900/20 hover:bg-amber-900/30 px-2 py-1 rounded transition-colors">
+                  Game Winner auto
+                </button>
+                <div className="flex items-center gap-1 ml-auto text-xs">
+                  <span className="text-gray-500">Runden:</span>
+                  <button onClick={() => changeNumRounds(-1)} disabled={numRounds <= 1}
+                    className="w-6 h-6 flex items-center justify-center rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-30 text-white font-bold transition-colors">
+                    −
+                  </button>
+                  <span className="text-white font-semibold w-6 text-center tabular-nums">{numRounds}</span>
+                  <button onClick={() => changeNumRounds(1)}
+                    className="w-6 h-6 flex items-center justify-center rounded bg-gray-700 hover:bg-gray-600 text-white font-bold transition-colors">
+                    +
+                  </button>
+                </div>
+              </div>
+              <UserPickerSheet label="Mitspieler" users={filteredPlayerUsers} selected={playerIds}
+                onToggle={togglePlayer} searchValue={playerSearch} onSearchChange={setPlayerSearch} />
+              {playerIds.length > 0 && (
+                <div className="overflow-x-auto rounded-lg border border-gray-700 -mx-1 px-1">
+                  <p className="text-[10px] text-gray-600 mb-1 sm:hidden">← scrollbar →</p>
+                  <table className="w-full text-xs min-w-[580px]">
+                    <thead>
+                      <tr className="bg-gray-800 border-b border-gray-700 text-gray-400">
+                        <th className="text-left px-3 py-2">Spieler</th>
+                        {Array.from({length: numRounds}, (_, i) => (
+                          <th key={i} className="text-center px-1 py-2 w-12">R{i+1}</th>
+                        ))}
+                        <th className="text-center px-2 py-2">∑</th>
+                        <th className="text-center px-2 py-2">Platz</th>
+                        <th className="text-center px-2 py-2"><Trophy className="w-3.5 h-3.5 inline text-amber-400" /></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {playerIds.map(uid => {
+                        const u = allUsers.find(u => u.id === uid);
+                        const e = entries[uid];
+                        if (!u || !e) return null;
+                        const total = e.rounds.reduce((s, v) => s + (Number(v) || 0), 0);
+                        return (
+                          <tr key={uid} className="border-b border-gray-800 last:border-0">
+                            <td className="px-3 py-1.5 text-white whitespace-nowrap font-medium">{uname(u)}</td>
+                            {e.rounds.map((val, ri) => (
+                              <td key={ri} className="px-1 py-1">
+                                <input type="number" min={0} value={val}
+                                  onChange={ev => setRound(uid, ri, ev.target.value)}
+                                  className="w-11 bg-gray-700 border border-gray-600 text-white rounded px-1 py-0.5 text-center text-xs"
+                                />
+                              </td>
+                            ))}
+                            <td className="px-2 py-1.5 text-center font-bold text-amber-400 tabular-nums">{total}</td>
+                            <td className="px-2 py-1">
+                              <input type="number" min={1} value={e.placement}
+                                onChange={ev => setField(uid, "placement", ev.target.value)}
+                                className="w-12 bg-gray-700 border border-gray-600 text-white rounded px-1 py-0.5 text-center text-xs"
+                              />
+                            </td>
+                            <td className="px-2 py-1 text-center">
+                              <input type="checkbox" checked={e.gameWinner}
+                                onChange={ev => setField(uid, "gameWinner", ev.target.checked)}
+                              />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
