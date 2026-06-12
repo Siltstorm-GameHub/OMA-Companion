@@ -61,15 +61,25 @@ export default async function LulSpieltagPage({
   const spectators = spieltag.entries.filter((e) => e.role === "spectator");
   const voters     = spieltag.entries.filter((e) => e.role === "voter");
 
-  // Ermittle max. Rundenanzahl für Header-Spalten
-  const maxRounds = players.reduce((max, e) => {
+  const fmt = spieltag.tournamentFormat ?? "";
+  const isStatFmt = fmt === "ffa" || fmt === "coop_stats" || fmt === "avg_stats";
+  const is1v1Fmt  = fmt === "single_elimination" || fmt === "double_elimination" || fmt === "round_robin" || fmt === "liga";
+  const statFieldsList: string[] = (() => { try { return JSON.parse(spieltag.statFields ?? "[]"); } catch { return []; } })();
+  type LulMatch = { id: string; p1: string; p2: string; s1: string; s2: string; winner: string };
+  const matchesList: LulMatch[] = (() => { try { return JSON.parse(spieltag.matchesJson ?? "[]"); } catch { return []; } })();
+
+  // Player lookup for public match display
+  const playerMap = new Map(spieltag.entries.map(e => [e.userId, e.user]));
+
+  // Ermittle max. Rundenanzahl für Header-Spalten (nur Standard-Format)
+  const maxRounds = !isStatFmt && !is1v1Fmt ? players.reduce((max, e) => {
     try {
       const rounds = JSON.parse(e.roundScores ?? "[]") as number[];
       return Math.max(max, rounds.length);
     } catch {
       return max;
     }
-  }, 0);
+  }, 0) : 0;
 
   const seasonLabel = spieltag.season.name ?? `Saison ${spieltag.season.number}`;
 
@@ -251,34 +261,30 @@ export default async function LulSpieltagPage({
             }}
           >
             <div className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse" style={{ minWidth: maxRounds > 0 ? `${480 + maxRounds * 56}px` : "480px" }}>
+              <table className="w-full text-sm border-collapse" style={{ minWidth: isStatFmt ? `${320 + statFieldsList.length * 80}px` : maxRounds > 0 ? `${480 + maxRounds * 56}px` : "480px" }}>
                 <thead>
                   <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
                     <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-600 uppercase tracking-widest w-10">#</th>
                     <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-600 uppercase tracking-widest">Spieler</th>
-                    {/* Runden-Spalten */}
-                    {Array.from({ length: maxRounds }, (_, i) => (
-                      <th
-                        key={i}
-                        className="text-center px-2 py-3 text-[10px] font-semibold text-gray-700 uppercase tracking-widest whitespace-nowrap"
-                      >
-                        R{i + 1}
-                      </th>
-                    ))}
-                    <th className="text-center px-3 py-3 text-[10px] font-semibold text-gray-600 uppercase tracking-widest whitespace-nowrap">Gesamt</th>
+                    {isStatFmt
+                      ? statFieldsList.map(f => (
+                          <th key={f} className="text-center px-3 py-3 text-[10px] font-semibold text-gray-600 uppercase tracking-widest whitespace-nowrap">{f}</th>
+                        ))
+                      : Array.from({ length: maxRounds }, (_, i) => (
+                          <th key={i} className="text-center px-2 py-3 text-[10px] font-semibold text-gray-700 uppercase tracking-widest whitespace-nowrap">R{i + 1}</th>
+                        ))
+                    }
+                    {!isStatFmt && <th className="text-center px-3 py-3 text-[10px] font-semibold text-gray-600 uppercase tracking-widest whitespace-nowrap">Gesamt</th>}
                     <th className="text-center px-2 py-3 text-[10px] font-semibold text-gray-600 uppercase tracking-widest whitespace-nowrap">Boni</th>
-                    <th
-                      className="text-right px-4 py-3 text-[10px] font-semibold uppercase tracking-widest whitespace-nowrap"
-                      style={{ color: "#14b8a6" }}
-                    >
-                      LuL-Pkt
-                    </th>
+                    <th className="text-right px-4 py-3 text-[10px] font-semibold uppercase tracking-widest whitespace-nowrap" style={{ color: "#14b8a6" }}>LuL-Pkt</th>
                   </tr>
                 </thead>
                 <tbody>
                   {players.map((entry, i) => {
                     let rounds: number[] = [];
                     try { rounds = JSON.parse(entry.roundScores ?? "[]"); } catch { /* ignore */ }
+                    let stats: Record<string, number> = {};
+                    if (isStatFmt) { try { stats = JSON.parse(entry.statsJson ?? "{}"); } catch { /* ignore */ } }
                     const isMe      = entry.userId === userId;
                     const placement = entry.placement ?? i + 1;
                     const isTop3    = placement <= 3 && placement > 0;
@@ -292,38 +298,18 @@ export default async function LulSpieltagPage({
                     return (
                       <tr
                         key={entry.id}
-                        style={{
-                          borderBottom: "1px solid rgba(255,255,255,0.035)",
-                          background: isMe ? "rgba(20,184,166,0.05)" : undefined,
-                        }}
-                        className={`transition-colors hover:bg-white/[0.015] ${
-                          isMe ? "ring-1 ring-inset ring-teal-400/15" : ""
-                        }`}
+                        style={{ borderBottom: "1px solid rgba(255,255,255,0.035)", background: isMe ? "rgba(20,184,166,0.05)" : undefined }}
+                        className={`transition-colors hover:bg-white/[0.015] ${isMe ? "ring-1 ring-inset ring-teal-400/15" : ""}`}
                       >
-                        {/* Rang */}
                         <td className="px-4 py-3 text-center">
-                          {isTop3 ? (
-                            <span className="text-base">{MEDAL[placement - 1]}</span>
-                          ) : (
-                            <span className="text-sm font-semibold text-gray-600">{placement}</span>
-                          )}
+                          {isTop3 ? <span className="text-base">{MEDAL[placement - 1]}</span> : <span className="text-sm font-semibold text-gray-600">{placement}</span>}
                         </td>
-
-                        {/* Spieler */}
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2.5">
                             {entry.user.image ? (
-                              <img
-                                src={entry.user.image}
-                                alt=""
-                                className={`w-8 h-8 rounded-full shrink-0 ring-1 ${
-                                  isMe ? "ring-teal-400/50" : "ring-white/10"
-                                }`}
-                              />
+                              <img src={entry.user.image} alt="" className={`w-8 h-8 rounded-full shrink-0 ring-1 ${isMe ? "ring-teal-400/50" : "ring-white/10"}`} />
                             ) : (
-                              <div
-                                className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-xs font-bold ring-1 ring-white/5 bg-white/[0.06] text-gray-400"
-                              >
+                              <div className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-xs font-bold ring-1 ring-white/5 bg-white/[0.06] text-gray-400">
                                 {uname(entry.user)[0]?.toUpperCase()}
                               </div>
                             )}
@@ -333,58 +319,40 @@ export default async function LulSpieltagPage({
                             </p>
                           </div>
                         </td>
-
-                        {/* Runden-Scores */}
-                        {Array.from({ length: maxRounds }, (_, ri) => (
-                          <td key={ri} className="px-2 py-3 text-center">
-                            <span className="text-sm tabular-nums text-gray-400">
-                              {rounds[ri] !== undefined ? rounds[ri] : "–"}
-                            </span>
+                        {isStatFmt
+                          ? statFieldsList.map(f => (
+                              <td key={f} className="px-3 py-3 text-center">
+                                <span className="text-sm tabular-nums text-gray-300">{stats[f] ?? "–"}</span>
+                              </td>
+                            ))
+                          : Array.from({ length: maxRounds }, (_, ri) => (
+                              <td key={ri} className="px-2 py-3 text-center">
+                                <span className="text-sm tabular-nums text-gray-400">{rounds[ri] !== undefined ? rounds[ri] : "–"}</span>
+                              </td>
+                            ))
+                        }
+                        {!isStatFmt && (
+                          <td className="px-3 py-3 text-center">
+                            <span className="text-sm font-semibold tabular-nums text-white">{entry.totalGameScore > 0 ? entry.totalGameScore : "–"}</span>
                           </td>
-                        ))}
-
-                        {/* Gesamtscore */}
-                        <td className="px-3 py-3 text-center">
-                          <span className="text-sm font-semibold tabular-nums text-white">
-                            {entry.totalGameScore > 0 ? entry.totalGameScore : "–"}
-                          </span>
-                        </td>
-
-                        {/* Boni */}
+                        )}
                         <td className="px-2 py-3 text-center">
                           <div className="flex items-center justify-center gap-1 flex-wrap">
                             {badges.length === 0 ? (
                               <span className="text-gray-800 text-sm">–</span>
-                            ) : (
-                              badges.map((b, bi) =>
-                                b.label === "Gevotet" ? (
-                                  <span
-                                    key={bi}
-                                    className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full"
-                                  >
-                                    {b.icon} Gevotet
-                                  </span>
-                                ) : (
-                                  <span
-                                    key={bi}
-                                    className={`inline-flex items-center gap-0.5 ${b.color}`}
-                                    title={b.label}
-                                  >
-                                    {b.icon}
-                                  </span>
-                                )
+                            ) : badges.map((b, bi) =>
+                              b.label === "Gevotet" ? (
+                                <span key={bi} className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">
+                                  {b.icon} Gevotet
+                                </span>
+                              ) : (
+                                <span key={bi} className={`inline-flex items-center gap-0.5 ${b.color}`} title={b.label}>{b.icon}</span>
                               )
                             )}
                           </div>
                         </td>
-
-                        {/* LuL-Punkte */}
                         <td className="px-4 py-3 text-right">
-                          <span
-                            className={`text-lg font-bold tabular-nums ${
-                              i === 0 ? "text-amber-400" : isMe ? "text-teal-300" : "text-white"
-                            }`}
-                          >
+                          <span className={`text-lg font-bold tabular-nums ${i === 0 ? "text-amber-400" : isMe ? "text-teal-300" : "text-white"}`}>
                             {entry.lulPoints}
                           </span>
                           <p className="text-[9px] text-gray-600">Pkt</p>
@@ -412,6 +380,43 @@ export default async function LulSpieltagPage({
                   <span className="ml-1">{item.pts} Pkt</span>
                 </span>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Matches (1v1-Formate) ────────────────────────────────── */}
+      {is1v1Fmt && matchesList.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+            <Trophy className="w-3.5 h-3.5" style={{ color: "#14b8a6" }} />
+            Matches
+          </h2>
+          <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(12,12,20,0.95)", border: "1px solid rgba(255,255,255,0.06)" }}>
+            <div className="divide-y divide-white/[0.04]">
+              {matchesList.map((m) => {
+                const u1 = playerMap.get(m.p1);
+                const u2 = playerMap.get(m.p2);
+                const winnerUser = m.winner && m.winner !== "draw" ? playerMap.get(m.winner) : null;
+                return (
+                  <div key={m.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                    <span className={`flex-1 text-sm font-semibold text-right ${m.winner === m.p1 ? "text-amber-300" : "text-gray-400"}`}>
+                      {u1 ? uname(u1) : "–"}
+                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`text-base font-bold tabular-nums ${m.winner === m.p1 ? "text-amber-300" : "text-gray-300"}`}>{m.s1 || "–"}</span>
+                      <span className="text-gray-700 font-bold">:</span>
+                      <span className={`text-base font-bold tabular-nums ${m.winner === m.p2 ? "text-amber-300" : "text-gray-300"}`}>{m.s2 || "–"}</span>
+                    </div>
+                    <span className={`flex-1 text-sm font-semibold ${m.winner === m.p2 ? "text-amber-300" : "text-gray-400"}`}>
+                      {u2 ? uname(u2) : "–"}
+                    </span>
+                    {m.winner === "draw" && (
+                      <span className="text-xs text-gray-500 bg-white/5 px-2 py-0.5 rounded-full shrink-0">Unentschieden</span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

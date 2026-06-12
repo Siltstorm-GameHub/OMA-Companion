@@ -26,6 +26,7 @@ type EntryInput = {
   userId:         string;
   role:           "player" | "spectator" | "voter";
   roundScores?:   number[];
+  statsJson?:     Record<string, number> | null;
   placement?:     number | null;
   gameWinner:     boolean;
   communityChamp: boolean;
@@ -37,7 +38,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   await requireRole("moderator");
   const { id: spieltagId } = await params;
   const body = await req.json();
-  const { status, game, gameType, platform, scheduledAt, pointsConfig, entries, finalize, isSpecial, title, description, maxPlayers, tournamentFormat, statFields } = body;
+  const { status, game, gameType, platform, scheduledAt, pointsConfig, entries, finalize, isSpecial, title, description, maxPlayers, tournamentFormat, statFields, matchesJson } = body;
 
   // Simple metadata update
   if (!entries && !finalize) {
@@ -56,13 +57,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         ...(maxPlayers       !== undefined && { maxPlayers }),
         ...(tournamentFormat !== undefined && { tournamentFormat }),
         ...(statFields       !== undefined && { statFields: statFields ? JSON.stringify(statFields) : null }),
+        ...(matchesJson      !== undefined && { matchesJson: matchesJson ?? null }),
       },
     });
     return NextResponse.json(updated);
   }
 
-  // Save draft entries (upsert without computing LUL points)
+  // Save draft entries + optional matchesJson on spieltag
   if (entries && !finalize) {
+    if (matchesJson !== undefined) {
+      await prisma.lulSpieltag.update({ where: { id: spieltagId }, data: { matchesJson: matchesJson ?? null } });
+    }
     const spieltag = await prisma.lulSpieltag.findUnique({ where: { id: spieltagId } });
     if (!spieltag) return NextResponse.json({ error: "Nicht gefunden" }, { status: 404 });
 
@@ -100,6 +105,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           voted:          e.voted,
           dominionBonus:  false,
           lulPoints:      draftPts,
+          statsJson:      e.statsJson ? JSON.stringify(e.statsJson) : null,
         },
         update: {
           role:           e.role,
@@ -111,6 +117,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           trostpreis:     e.trostpreis,
           voted:          e.voted,
           lulPoints:      draftPts,
+          statsJson:      e.statsJson ? JSON.stringify(e.statsJson) : null,
         },
       });
     }
