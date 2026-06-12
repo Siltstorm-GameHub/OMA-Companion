@@ -1,7 +1,27 @@
 "use client";
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+
+function useMidnightCountdown() {
+  const [label, setLabel] = useState("");
+  useEffect(() => {
+    function calc() {
+      const now = new Date();
+      const midnight = new Date(now);
+      midnight.setHours(24, 0, 0, 0);
+      const diff = midnight.getTime() - now.getTime();
+      const h = Math.floor(diff / 3_600_000);
+      const m = Math.floor((diff % 3_600_000) / 60_000);
+      const s = Math.floor((diff % 60_000) / 1_000);
+      setLabel(`${h}h ${m}m ${s}s`);
+    }
+    calc();
+    const id = setInterval(calc, 1_000);
+    return () => clearInterval(id);
+  }, []);
+  return label;
+}
 
 // ── Segmente im Uhrzeigersinn ab 12 Uhr ───────────────────────────────────
 const SEGMENTS = [
@@ -37,6 +57,7 @@ interface Props {
 }
 
 export default function DailySpin({ alreadySpun, lastResult }: Props) {
+  const countdown = useMidnightCountdown();
   const router = useRouter();
   const [spinning,  setSpinning]  = useState(false);
   const [done,      setDone]      = useState(alreadySpun);
@@ -104,7 +125,7 @@ export default function DailySpin({ alreadySpun, lastResult }: Props) {
           100% { transform: scale(1); opacity: 1; }
         }
         .spin-transition {
-          transition: transform ${SPIN_MS}ms cubic-bezier(0.16, 1, 0.3, 1);
+          transition: transform var(--spin-ms) cubic-bezier(0.16, 1, 0.3, 1);
         }
         .pointer-tick {
           transform-origin: 50% 100%;
@@ -168,11 +189,12 @@ export default function DailySpin({ alreadySpun, lastResult }: Props) {
               viewBox="0 0 300 300"
               className={animating ? "spin-transition" : undefined}
               style={{
+                "--spin-ms": `${SPIN_MS}ms`,
                 transform: `rotate(${deg}deg)`,
                 transformOrigin: "center",
                 willChange: animating ? "transform" : "auto",
                 display: "block",
-              }}
+              } as React.CSSProperties}
             >
               <defs>
                 <radialGradient id="hubGrad" cx="38%" cy="35%" r="65%">
@@ -260,16 +282,8 @@ export default function DailySpin({ alreadySpun, lastResult }: Props) {
           <p className="text-xs text-gray-500">
             Ergebnis: <span className="text-amber-400 font-medium">{result.prizeLabel}</span>
           </p>
-          <p className="text-xs text-gray-600 shrink-0">
-            {(() => {
-              const now = new Date();
-              const midnight = new Date(now);
-              midnight.setHours(24, 0, 0, 0);
-              const diff = midnight.getTime() - now.getTime();
-              const h = Math.floor(diff / 3_600_000);
-              const m = Math.floor((diff % 3_600_000) / 60_000);
-              return `Nächster Spin in ${h}h ${m}m`;
-            })()}
+          <p className="text-xs text-gray-600 shrink-0 tabular-nums">
+            {countdown ? `Nächster Spin in ${countdown}` : ""}
           </p>
         </div>
       )}
