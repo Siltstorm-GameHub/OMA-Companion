@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
   await requireRole("moderator");
-  const { seasonId, number, game, gameType, platform, scheduledAt, pointsConfig, isSpecial, title, description, maxPlayers, tournamentFormat } = await req.json();
+  const { seasonId, number, game, gameType, platform, scheduledAt, pointsConfig, isSpecial, title, description, maxPlayers, tournamentFormat, statFields } = await req.json();
   if (!seasonId || !number || (!isSpecial && !game))
     return NextResponse.json({ error: "seasonId, number und game sind Pflicht" }, { status: 400 });
 
@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
       description:      description      ?? null,
       maxPlayers:       maxPlayers       ?? null,
       tournamentFormat: tournamentFormat ?? null,
+      statFields:       statFields ? JSON.stringify(statFields) : null,
     },
   });
   return NextResponse.json(spieltag, { status: 201 });

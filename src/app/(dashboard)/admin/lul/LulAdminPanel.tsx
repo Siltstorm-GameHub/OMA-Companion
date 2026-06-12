@@ -11,6 +11,7 @@ import type { LulAdminSeasons } from "./page";
 import { UserPickerSheet } from "@/components/UserPickerSheet";
 import GameNameInput from "@/components/GameNameInput";
 import { getGenreIcon } from "@/lib/genre-icons";
+import StatFieldEditor from "@/components/StatFieldEditor";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };
 type LulSeason  = LulAdminSeasons[number];
@@ -836,6 +837,8 @@ export default function LulAdminPanel({
 
   // Create spieltag: tournament format
   const [stTournamentFormat, setStTournamentFormat] = useState("");
+  const [stStatFields, setStStatFields] = useState<string[]>([]);
+  const [editStatFields, setEditStatFields] = useState<string[]>([]);
 
   async function loadSeasons() {
     const res = await fetch("/api/lul/seasons");
@@ -905,6 +908,7 @@ export default function LulAdminPanel({
         description: stIsSpecial && stDescription ? stDescription : undefined,
         maxPlayers: stIsSpecial && stMaxPlayers ? Number(stMaxPlayers) : undefined,
         tournamentFormat: stTournamentFormat || null,
+        statFields: stStatFields.length ? stStatFields : null,
         game: stIsSpecial ? (stGame || null) : stGame,
         gameType: stGameType || null, platform: stPlatform || null,
         scheduledAt: stDate || null,
@@ -915,7 +919,7 @@ export default function LulAdminPanel({
     if (res.ok) { toast.success(`Spieltag ${nextNum} – ${stIsSpecial ? stTitle : stGame} erstellt`); }
     else toast.error("Fehler beim Erstellen");
     setShowSpieltagForm(null);
-    setStIsSpecial(false); setStTitle(""); setStDescription(""); setStMaxPlayers(""); setStTournamentFormat("");
+    setStIsSpecial(false); setStTitle(""); setStDescription(""); setStMaxPlayers(""); setStTournamentFormat(""); setStStatFields([]);
     setStGame(""); setStGameType(""); setStPlatform(""); setStDate("");
     await loadSeasons();
   }
@@ -933,6 +937,7 @@ export default function LulAdminPanel({
         description: editIsSpecial ? (editDescription || null) : null,
         maxPlayers: editIsSpecial && editMaxPlayers ? Number(editMaxPlayers) : null,
         tournamentFormat: editTournamentFormat || null,
+        statFields: editStatFields.length ? editStatFields : null,
         game: editIsSpecial ? (editGame || null) : editGame,
         gameType: editGameType || null,
         platform: editPlatform || null,
@@ -1140,6 +1145,16 @@ export default function LulAdminPanel({
                                     </p>
                                   )}
                                 </div>
+                                {(editTournamentFormat === "ffa" || editTournamentFormat === "coop_stats" || editTournamentFormat === "avg_stats") && (
+                                  <div className="col-span-2">
+                                    <label className="text-[10px] text-gray-500 block mb-1">Stat-Felder</label>
+                                    <StatFieldEditor
+                                      fields={editStatFields}
+                                      onChange={setEditStatFields}
+                                      isAvg={editTournamentFormat === "avg_stats"}
+                                    />
+                                  </div>
+                                )}
                               </div>
                             )}
                             <div className="grid grid-cols-2 gap-2">
@@ -1225,6 +1240,7 @@ export default function LulAdminPanel({
                                 setEditDescription(st.description ?? "");
                                 setEditMaxPlayers(st.maxPlayers != null ? String(st.maxPlayers) : "");
                                 setEditTournamentFormat(st.tournamentFormat ?? "");
+                                setEditStatFields(st.statFields ? JSON.parse(st.statFields) : []);
                                 setEditGame(st.game ?? "");
                                 setEditGameType(st.gameType ?? "");
                                 setEditPlatform(st.platform ?? "");
@@ -1303,6 +1319,16 @@ export default function LulAdminPanel({
                             </p>
                           )}
                         </div>
+                        {(stTournamentFormat === "ffa" || stTournamentFormat === "coop_stats" || stTournamentFormat === "avg_stats") && (
+                          <div className="col-span-2">
+                            <label className="text-xs text-gray-500 block mb-1">Stat-Felder</label>
+                            <StatFieldEditor
+                              fields={stStatFields}
+                              onChange={setStStatFields}
+                              isAvg={stTournamentFormat === "avg_stats"}
+                            />
+                          </div>
+                        )}
                       </div>
                     )}
                     <div className="grid grid-cols-2 gap-3">
