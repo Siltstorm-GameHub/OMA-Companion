@@ -1,8 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import Image from "next/image";
-import { Heart, Flame, CalendarDays, Users, Euro, ShoppingCart, TrendingDown, Wallet } from "lucide-react";
-import DonationAdminPanel from "./DonationAdminPanel";
+import { Heart, Flame, CalendarDays, Users, Euro, ShoppingCart, TrendingDown, Wallet, Lightbulb } from "lucide-react";
 
 const MONTH_NAMES = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
 
@@ -38,22 +37,14 @@ function fmt(n: number) {
 
 export default async function DonationsPage() {
   const session = await auth();
-  const myId  = session?.user?.id;
-  const role  = (session?.user as { role?: string } | undefined)?.role ?? "user";
-  const isAdmin = role === "admin";
-
-  const [donations, expenses, allUsers, adminDonations, adminExpenses] = await Promise.all([
+  const myId    = session?.user?.id;
+  const [donations, expenses, ideas] = await Promise.all([
     prisma.donation.findMany({
       include: { user: { select: { id: true, name: true, image: true } } },
       orderBy: [{ year: "asc" }, { month: "asc" }],
     }),
     prisma.poolExpense.findMany({ orderBy: { date: "desc" } }),
-    isAdmin ? prisma.user.findMany({ select: { id: true, name: true, image: true }, orderBy: { name: "asc" } }) : Promise.resolve([]),
-    isAdmin ? prisma.donation.findMany({
-      include: { user: { select: { id: true, name: true, image: true } } },
-      orderBy: [{ year: "desc" }, { month: "desc" }, { createdAt: "desc" }],
-    }) : Promise.resolve([]),
-    isAdmin ? prisma.poolExpense.findMany({ orderBy: { date: "desc" } }) : Promise.resolve([]),
+    prisma.poolIdea.findMany({ orderBy: { createdAt: "asc" } }),
   ]);
 
   const totalPool  = donations.reduce((s, d) => s + d.amount, 0);
@@ -120,15 +111,6 @@ export default async function DonationsPage() {
           <p className="text-[11px] text-gray-600 mt-1.5">Bis zu 5 € / Monat · PayPal</p>
         </div>
       </div>
-
-      {/* ── Admin-Panel ─────────────────────────────────────────────── */}
-      {isAdmin && (
-        <DonationAdminPanel
-          users={allUsers}
-          initialDonations={adminDonations as Parameters<typeof DonationAdminPanel>[0]["initialDonations"]}
-          initialExpenses={adminExpenses}
-        />
-      )}
 
       {/* Bilanz-Karten */}
       <div className="grid grid-cols-3 gap-3">
@@ -200,6 +182,41 @@ export default async function DonationsPage() {
             </span>
           )}
         </div>
+      )}
+
+      {/* Ideen-Liste */}
+      {ideas.length > 0 && (
+        <section>
+          <div className="flex items-center gap-2 mb-3">
+            <Lightbulb className="w-4 h-4 text-yellow-400/70" />
+            <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Wofür könnte das Geld ausgegeben werden?</h2>
+          </div>
+          <div className="space-y-2">
+            {ideas.map((idea, i) => (
+              <div
+                key={idea.id}
+                className="flex items-start gap-3 px-4 py-3 rounded-xl"
+                style={{ background: "rgba(234,179,8,0.04)", border: "1px solid rgba(234,179,8,0.12)" }}
+              >
+                <div
+                  className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold tabular-nums"
+                  style={{ background: "rgba(234,179,8,0.10)", color: "rgba(234,179,8,0.7)" }}
+                >
+                  {i + 1}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white">{idea.title}</p>
+                  {idea.description && <p className="text-xs text-gray-500 mt-0.5">{idea.description}</p>}
+                </div>
+                {idea.estimatedCost != null && (
+                  <span className="text-sm font-bold text-yellow-400/80 shrink-0 tabular-nums">
+                    ~{fmt(idea.estimatedCost)} €
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
       )}
 
       {/* Ausgaben-Liste */}

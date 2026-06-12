@@ -376,6 +376,14 @@ model PoolExpense {
   createdAt   DateTime @default(now())
 }
 
+model PoolIdea {
+  id            String   @id @default(cuid())
+  title         String   // z.B. "Neuer Gameserver"
+  description   String?  // optionale Details
+  estimatedCost Float?   // Schätzpreis in Euro
+  createdAt     DateTime @default(now())
+}
+
 model Donation {
   id        String   @id @default(cuid())
   userId    String
