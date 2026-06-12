@@ -114,14 +114,34 @@ function LulSpieltagEditor({
   const isStatFmt = fmt === "ffa" || fmt === "coop_stats" || fmt === "avg_stats";
   const is1v1Fmt  = fmt === "single_elimination" || fmt === "double_elimination" || fmt === "round_robin" || fmt === "liga";
 
-  // Stat tracking data: userId → {field: value}
-  const [statsData, setStatsData] = useState<Record<string, Record<string, string>>>(() => {
-    const map: Record<string, Record<string, string>> = {};
+  // Stat tracking data: userId → field → roundValues[]
+  const [numStatRounds, setNumStatRounds] = useState<number>(() => {
     for (const e of spieltag.entries) {
       if (e.statsJson) {
         try {
-          const s = JSON.parse(e.statsJson) as Record<string, number>;
-          map[e.userId] = Object.fromEntries(Object.entries(s).map(([k, v]) => [k, String(v)]));
+          const s = JSON.parse(e.statsJson) as Record<string, unknown>;
+          if (typeof s._rounds === "number" && s._rounds > 0) return s._rounds;
+        } catch { /* */ }
+      }
+    }
+    return 1;
+  });
+
+  const [statsData, setStatsData] = useState<Record<string, Record<string, string[]>>>(() => {
+    const map: Record<string, Record<string, string[]>> = {};
+    for (const e of spieltag.entries) {
+      if (e.statsJson) {
+        try {
+          const s = JSON.parse(e.statsJson) as Record<string, unknown>;
+          const nR = typeof s._rounds === "number" && s._rounds > 0 ? s._rounds : 1;
+          const fields: Record<string, string[]> = {};
+          for (const f of statFieldsList) {
+            const val = s[f];
+            if (Array.isArray(val)) fields[f] = Array.from({ length: nR }, (_, i) => String(val[i] ?? ""));
+            else if (typeof val === "number") fields[f] = [String(val), ...Array(nR - 1).fill("")];
+            else fields[f] = Array(nR).fill("");
+          }
+          map[e.userId] = fields;
         } catch { /* */ }
       }
     }
@@ -188,13 +208,39 @@ function LulSpieltagEditor({
     });
   }
 
+  function changeNumStatRounds(delta: number) {
+    setNumStatRounds(prev => {
+      const next = Math.max(1, prev + delta);
+      setStatsData(cur => {
+        const updated: typeof cur = {};
+        for (const uid of playerIds) {
+          const fields: Record<string, string[]> = {};
+          for (const f of statFieldsList) {
+            const arr = cur[uid]?.[f] ?? [];
+            fields[f] = Array.from({ length: next }, (_, i) => arr[i] ?? "");
+          }
+          updated[uid] = fields;
+        }
+        return updated;
+      });
+      return next;
+    });
+  }
+
   function togglePlayer(userId: string) {
     if (playerIds.includes(userId)) {
       setPlayerIds(prev => prev.filter(id => id !== userId));
       setEntries(prev => { const n = { ...prev }; delete n[userId]; return n; });
+      setStatsData(prev => { const n = { ...prev }; delete n[userId]; return n; });
     } else {
       setPlayerIds(prev => [...prev, userId]);
       ensureEntry(userId, "player");
+      if (isStatFmt) {
+        setStatsData(prev => ({
+          ...prev,
+          [userId]: Object.fromEntries(statFieldsList.map(f => [f, Array(numStatRounds).fill("")])),
+        }));
+      }
     }
   }
 
@@ -255,12 +301,25 @@ function LulSpieltagEditor({
   }
 
   // ── Stat-format helpers ──────────────────────────────────────────────────
+  function calcStatScore(uid: string) {
+    const fields = statsData[uid] ?? {};
+    if (fmt === "avg_stats") {
+      const fieldAvgs = statFieldsList.map(f => {
+        const arr = fields[f] ?? [];
+        const total = arr.reduce((s, v) => s + (Number(v) || 0), 0);
+        const filled = arr.filter(v => v !== "").length || 1;
+        return total / filled;
+      });
+      return fieldAvgs.length > 0 ? fieldAvgs.reduce((s, v) => s + v, 0) / fieldAvgs.length : 0;
+    }
+    return statFieldsList.reduce((s, f) => {
+      const arr = fields[f] ?? [];
+      return s + arr.reduce((ss, v) => ss + (Number(v) || 0), 0);
+    }, 0);
+  }
+
   function autoPlacementStat() {
-    const scored = playerIds.map(uid => {
-      const sd = statsData[uid] ?? {};
-      const total = statFieldsList.reduce((s, f) => s + (Number(sd[f]) || 0), 0);
-      return { uid, total };
-    }).sort((a, b) => b.total - a.total);
+    const scored = playerIds.map(uid => ({ uid, score: calcStatScore(uid) })).sort((a, b) => b.score - a.score);
     setEntries(prev => {
       const next = { ...prev };
       scored.forEach(({ uid }, i) => { if (next[uid]) next[uid] = { ...next[uid], placement: String(i + 1) }; });
@@ -269,11 +328,7 @@ function LulSpieltagEditor({
   }
 
   function autoGameWinnerStat() {
-    const scored = playerIds.map(uid => {
-      const sd = statsData[uid] ?? {};
-      const total = statFieldsList.reduce((s, f) => s + (Number(sd[f]) || 0), 0);
-      return { uid, total };
-    }).sort((a, b) => b.total - a.total);
+    const scored = playerIds.map(uid => ({ uid, score: calcStatScore(uid) })).sort((a, b) => b.score - a.score);
     if (scored.length > 0) {
       const winnerId = scored[0].uid;
       setEntries(prev => {
@@ -339,9 +394,14 @@ function LulSpieltagEditor({
       const scores = !isStatFmt && role !== "voter"
         ? (e?.rounds ?? []).map(Number).filter((_, i) => i < (e?.rounds.findLastIndex(r => r !== "") ?? -1) + 1)
         : [];
-      const statsJson = isStatFmt && role === "player"
-        ? Object.fromEntries(statFieldsList.map(f => [f, Number(statsData[userId]?.[f]) || 0]))
-        : null;
+      const statsJson = isStatFmt && role === "player" ? (() => {
+        const fields = statsData[userId] ?? {};
+        const data: Record<string, unknown> = { _rounds: numStatRounds };
+        for (const f of statFieldsList) {
+          data[f] = (fields[f] ?? []).map(v => Number(v) || 0);
+        }
+        return data;
+      })() : null;
       return {
         userId, role,
         roundScores: scores,
@@ -493,18 +553,52 @@ function LulSpieltagEditor({
                     className="text-xs text-amber-400 hover:text-amber-300 bg-amber-900/20 hover:bg-amber-900/30 px-2 py-1 rounded transition-colors">
                     Game Winner auto
                   </button>
+                  <div className="flex items-center gap-1 ml-auto text-xs">
+                    <span className="text-gray-500">Runden:</span>
+                    <button onClick={() => changeNumStatRounds(-1)} disabled={numStatRounds <= 1}
+                      className="w-6 h-6 flex items-center justify-center rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-30 text-white font-bold transition-colors">−</button>
+                    <span className="text-white font-semibold w-6 text-center tabular-nums">{numStatRounds}</span>
+                    <button onClick={() => changeNumStatRounds(1)}
+                      className="w-6 h-6 flex items-center justify-center rounded bg-gray-700 hover:bg-gray-600 text-white font-bold transition-colors">+</button>
+                  </div>
                 </div>
                 <UserPickerSheet label="Mitspieler" users={filteredPlayerUsers} selected={playerIds}
                   onToggle={togglePlayer} searchValue={playerSearch} onSearchChange={setPlayerSearch} />
                 {playerIds.length > 0 && (
                   <div className="overflow-x-auto rounded-lg border border-gray-700 -mx-1 px-1">
                     <p className="text-[10px] text-gray-600 mb-1 sm:hidden">← scrollbar →</p>
-                    <table className="w-full text-xs min-w-[400px]">
+                    <table className="w-full text-xs" style={{ minWidth: `${160 + numStatRounds * statFieldsList.length * 60 + statFieldsList.length * 48 + 90}px` }}>
                       <thead>
+                        {/* Gruppen-Header: Runde 1 | Runde 2 | … | Gesamt */}
+                        <tr className="bg-gray-800/80 border-b border-gray-700/50 text-gray-500">
+                          <th className="px-3 py-1" />
+                          {Array.from({ length: numStatRounds }, (_, ri) => (
+                            <th key={ri} colSpan={statFieldsList.length}
+                              className="text-center px-1 py-1 text-[10px] font-semibold uppercase tracking-wide border-l border-gray-700/50">
+                              R{ri + 1}
+                            </th>
+                          ))}
+                          <th colSpan={statFieldsList.length}
+                            className="text-center px-1 py-1 text-[10px] font-semibold uppercase tracking-wide border-l border-gray-700/50 text-amber-500/70">
+                            {fmt === "avg_stats" ? "Ø" : "Σ"}
+                          </th>
+                          <th className="px-2 py-1" />
+                          <th className="px-2 py-1" />
+                        </tr>
+                        {/* Feld-Header */}
                         <tr className="bg-gray-800 border-b border-gray-700 text-gray-400">
                           <th className="text-left px-3 py-2">Spieler</th>
+                          {Array.from({ length: numStatRounds }, (_, ri) =>
+                            statFieldsList.map(f => (
+                              <th key={`${ri}_${f}`} className="text-center px-1 py-2 whitespace-nowrap border-l border-gray-700/30 first:border-0">
+                                {f}
+                              </th>
+                            ))
+                          )}
                           {statFieldsList.map(f => (
-                            <th key={f} className="text-center px-2 py-2 whitespace-nowrap">{f}</th>
+                            <th key={`sum_${f}`} className="text-center px-2 py-2 whitespace-nowrap border-l border-gray-700/30 text-amber-400/70">
+                              {f}
+                            </th>
                           ))}
                           <th className="text-center px-2 py-2">Platz</th>
                           <th className="text-center px-2 py-2"><Trophy className="w-3.5 h-3.5 inline text-amber-400" /></th>
@@ -514,19 +608,44 @@ function LulSpieltagEditor({
                         {playerIds.map(uid => {
                           const u = allUsers.find(u => u.id === uid);
                           const e = entries[uid];
-                          const sd = statsData[uid] ?? {};
+                          const fields = statsData[uid] ?? {};
                           if (!u || !e) return null;
                           return (
                             <tr key={uid} className="border-b border-gray-800 last:border-0">
                               <td className="px-3 py-1.5 text-white whitespace-nowrap font-medium">{uname(u)}</td>
-                              {statFieldsList.map(f => (
-                                <td key={f} className="px-1 py-1">
-                                  <input type="number" min={0} value={sd[f] ?? ""}
-                                    onChange={ev => setStatsData(prev => ({ ...prev, [uid]: { ...(prev[uid] ?? {}), [f]: ev.target.value } }))}
-                                    className="w-16 bg-gray-700 border border-gray-600 text-white rounded px-1 py-0.5 text-center text-xs"
-                                  />
-                                </td>
-                              ))}
+                              {/* Per-round inputs */}
+                              {Array.from({ length: numStatRounds }, (_, ri) =>
+                                statFieldsList.map(f => {
+                                  const arr = fields[f] ?? [];
+                                  return (
+                                    <td key={`${ri}_${f}`} className="px-1 py-1 border-l border-gray-800/50 first:border-0">
+                                      <input type="number" min={0} value={arr[ri] ?? ""}
+                                        onChange={ev => setStatsData(prev => {
+                                          const cur = prev[uid]?.[f] ?? Array(numStatRounds).fill("");
+                                          const updated = [...cur];
+                                          updated[ri] = ev.target.value;
+                                          return { ...prev, [uid]: { ...(prev[uid] ?? {}), [f]: updated } };
+                                        })}
+                                        className="w-14 bg-gray-700 border border-gray-600 text-white rounded px-1 py-0.5 text-center text-xs"
+                                      />
+                                    </td>
+                                  );
+                                })
+                              )}
+                              {/* Totals / averages */}
+                              {statFieldsList.map(f => {
+                                const arr = (fields[f] ?? []).map(v => Number(v) || 0);
+                                const total = arr.reduce((s, v) => s + v, 0);
+                                const filled = arr.filter(v => v !== 0).length || 1;
+                                const display = fmt === "avg_stats"
+                                  ? (total / filled % 1 === 0 ? String(total / filled) : (total / filled).toFixed(1))
+                                  : String(total);
+                                return (
+                                  <td key={`sum_${f}`} className="px-2 py-1.5 text-center font-bold text-amber-400 tabular-nums border-l border-gray-800/50">
+                                    {display}
+                                  </td>
+                                );
+                              })}
                               <td className="px-2 py-1">
                                 <input type="number" min={1} value={e.placement}
                                   onChange={ev => setField(uid, "placement", ev.target.value)}
