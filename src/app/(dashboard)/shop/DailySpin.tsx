@@ -5,7 +5,7 @@ import { toast } from "sonner";
 
 // ── Segmente im Uhrzeigersinn ab 12 Uhr ───────────────────────────────────
 const SEGMENTS = [
-  { label: "500 Münzen", line1: "500",  line2: "Münzen", fill: "#e11d48", text: "#fda4af" },
+  { label: "200 Münzen", line1: "200",  line2: "Münzen", fill: "#e11d48", text: "#fda4af" },
   { label: "10 Münzen",  line1: "10",   line2: "Münzen", fill: "#374151", text: "#9ca3af" },
   { label: "100 Münzen", line1: "100",  line2: "Münzen", fill: "#d97706", text: "#fef08a" },
   { label: "Kein Glück", line1: "Kein", line2: "Glück",  fill: "#111827", text: "#4b5563" },
@@ -16,7 +16,7 @@ const SEGMENTS = [
 
 const N       = SEGMENTS.length;
 const SEG     = 360 / N;          // ≈ 51.43° pro Segment
-const SPIN_MS = 5500;
+const SPIN_MS = 6000;
 const CX = 150, CY = 150, R = 135, R_TEXT = 90;
 
 // ── SVG-Hilfsfunktionen ────────────────────────────────────────────────────
@@ -85,7 +85,45 @@ export default function DailySpin({ alreadySpun, lastResult }: Props) {
   }
 
   return (
-    <div className="glass card-shine rounded-2xl border border-amber-500/15 overflow-hidden">
+    <>
+      <style>{`
+        @keyframes pointerTick {
+          0%   { transform: rotate(0deg); }
+          28%  { transform: rotate(-15deg); }
+          55%  { transform: rotate(9deg); }
+          78%  { transform: rotate(-6deg); }
+          100% { transform: rotate(0deg); }
+        }
+        @keyframes glowSpin {
+          0%, 100% { opacity: 1; }
+          50%       { opacity: 0.45; }
+        }
+        @keyframes resultPop {
+          0%   { transform: scale(0.88); opacity: 0; }
+          60%  { transform: scale(1.04); opacity: 1; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        .spin-transition {
+          transition: transform ${SPIN_MS}ms cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .pointer-tick {
+          transform-origin: 50% 100%;
+          animation: pointerTick 0.19s ease-in-out infinite;
+        }
+        .glow-spin {
+          animation: glowSpin 0.38s ease-in-out infinite;
+        }
+        .result-pop {
+          animation: resultPop 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .spin-transition { transition: none !important; }
+          .pointer-tick    { animation: none !important; }
+          .glow-spin       { animation: none !important; }
+          .result-pop      { animation: none !important; }
+        }
+      `}</style>
+      <div className="glass card-shine rounded-2xl border border-amber-500/15 overflow-hidden">
       <div className="p-5 space-y-5">
 
         {/* Header */}
@@ -104,32 +142,35 @@ export default function DailySpin({ alreadySpun, lastResult }: Props) {
           <div className="relative" style={{ width: 264, height: 264 }}>
 
             {/* Äußerer Glow-Ring */}
-            <div className="absolute inset-0 rounded-full pointer-events-none"
-              style={{ boxShadow: "0 0 48px rgba(245,158,11,0.18), 0 0 96px rgba(245,158,11,0.08)" }} />
+            <div
+              className={`absolute inset-0 rounded-full pointer-events-none${spinning ? " glow-spin" : ""}`}
+              style={{ boxShadow: "0 0 48px rgba(245,158,11,0.22), 0 0 96px rgba(245,158,11,0.1)" }}
+            />
 
-            {/* Zeiger */}
+            {/* Zeiger — äußerer Positionierungs-Wrapper */}
             <div className="absolute z-20 pointer-events-none"
               style={{ top: -2, left: "50%", transform: "translateX(-50%)" }}>
-              <svg width="24" height="32" viewBox="0 0 24 32">
-                <polygon points="12,30 1,3 23,3"
-                  fill="#f59e0b"
-                  stroke="#78350f"
-                  strokeWidth="1"
-                  filter="drop-shadow(0 2px 6px rgba(0,0,0,0.8))" />
-              </svg>
+              {/* Innerer Wrapper nimmt die Tick-Rotation auf */}
+              <div className={spinning ? "pointer-tick" : undefined}>
+                <svg width="24" height="32" viewBox="0 0 24 32">
+                  <polygon points="12,30 1,3 23,3"
+                    fill="#f59e0b"
+                    stroke="#78350f"
+                    strokeWidth="1"
+                    filter="drop-shadow(0 2px 6px rgba(0,0,0,0.8))" />
+                </svg>
+              </div>
             </div>
 
             {/* Drehendes Rad */}
             <svg
               width="264" height="264"
               viewBox="0 0 300 300"
+              className={animating ? "spin-transition" : undefined}
               style={{
                 transform: `rotate(${deg}deg)`,
-                transition: animating
-                  ? `transform ${SPIN_MS}ms cubic-bezier(0.17, 0.67, 0.12, 0.99)`
-                  : "none",
                 transformOrigin: "center",
-                willChange: "transform",
+                willChange: animating ? "transform" : "auto",
                 display: "block",
               }}
             >
@@ -215,7 +256,7 @@ export default function DailySpin({ alreadySpun, lastResult }: Props) {
 
       {/* Ergebnis-Footer */}
       {done && result && (
-        <div className="border-t border-white/[0.04] px-5 py-2.5 flex items-center justify-between gap-4">
+        <div className="result-pop border-t border-white/[0.04] px-5 py-2.5 flex items-center justify-between gap-4">
           <p className="text-xs text-gray-500">
             Ergebnis: <span className="text-amber-400 font-medium">{result.prizeLabel}</span>
           </p>
@@ -233,5 +274,6 @@ export default function DailySpin({ alreadySpun, lastResult }: Props) {
         </div>
       )}
     </div>
+    </>
   );
 }
