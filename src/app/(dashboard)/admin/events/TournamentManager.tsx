@@ -39,6 +39,82 @@ type RankingEntry = {
   rankPts: number;
 };
 
+// ─── Stat-Felder Tag-Editor ──────────────────────────────────────────────────
+function StatFieldEditor({
+  fields,
+  onChange,
+  isAvg,
+}: {
+  fields: string[];
+  onChange: (next: string[]) => void;
+  isAvg?: boolean;
+}) {
+  const [input, setInput] = useState("");
+
+  function add() {
+    const v = input.trim();
+    if (!v || fields.includes(v)) return;
+    onChange([...fields, v]);
+    setInput("");
+  }
+
+  function remove(f: string) {
+    onChange(fields.filter(x => x !== f));
+  }
+
+  function onKey(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter") { e.preventDefault(); add(); }
+  }
+
+  return (
+    <div className="space-y-2">
+      {/* Tag-Liste */}
+      {fields.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {fields.map((f, i) => (
+            <span key={f}
+              className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg border ${
+                i === 0 && isAvg
+                  ? "bg-rose-900/30 border-rose-700/40 text-rose-200"
+                  : "bg-gray-800 border-gray-700 text-gray-200"
+              }`}>
+              {i === 0 && isAvg && <span className="text-[10px] text-rose-400 font-semibold mr-0.5">★</span>}
+              {f}
+              <button type="button" onClick={() => remove(f)}
+                className="ml-0.5 text-gray-500 hover:text-red-400 transition-colors leading-none">
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      {/* Eingabe */}
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={onKey}
+          placeholder="Feldname eingeben…"
+          className="flex-1 text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 focus:border-rose-500 outline-none"
+        />
+        <button type="button" onClick={add} disabled={!input.trim()}
+          className="flex items-center gap-1 text-sm bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-white rounded-lg px-3 py-2 transition-colors">
+          <Plus className="w-3.5 h-3.5" /> Hinzufügen
+        </button>
+      </div>
+      {isAvg && fields.length > 0 && (
+        <p className="text-[11px] text-rose-400/80">
+          ★ Das erste Feld ist der Hauptwert — der Sieger wird nach dem besten Durchschnitt dieses Werts ermittelt.
+        </p>
+      )}
+      {fields.length === 0 && (
+        <p className="text-[11px] text-gray-600">Noch keine Felder — gib mindestens einen Wert ein (z.B. Kills).</p>
+      )}
+    </div>
+  );
+}
+
 const FORMATS = [
   { value: "single_elimination", label: "Einzel-Eliminierung",       desc: "Klassisches K.O.-System" },
   { value: "round_robin",        label: "Jeder gegen Jeden",         desc: "Alle spielen gegen alle" },
@@ -78,7 +154,7 @@ function CreationForm({
   // Liga
   const [coinsWin, setCoinsWin]       = useState(30);
   const [coinsDraw, setCoinsDraw]     = useState(10);
-  const [statInput, setStatInput]     = useState("Kills, Assists, Punkte");
+  const [statFields, setStatFields]   = useState<string[]>(["Kills", "Assists", "Punkte"]);
   const [autoGenerate, setAutoGenerate] = useState(false);
   const [selected, setSelected]       = useState<string[]>([]);
   const [loading, setLoading]         = useState(false);
@@ -107,7 +183,7 @@ function CreationForm({
           "3": { coins: coins3, points: pts3 },
         };
     const fields = (format === "ffa" || format === "coop_stats" || format === "avg_stats")
-      ? statInput.split(",").map(s => s.trim()).filter(Boolean)
+      ? statFields
       : null;
     const res = await fetch("/api/tournaments", {
       method: "POST",
@@ -197,17 +273,13 @@ function CreationForm({
       {(format === "ffa" || format === "coop_stats" || format === "avg_stats") && (
         <div>
           <label className="text-xs text-gray-400 uppercase tracking-wide block mb-2">
-            Statistik-Felder (kommagetrennt)
+            Statistik-Felder
           </label>
-          <input type="text" value={statInput} onChange={e => setStatInput(e.target.value)}
-            placeholder="z.B. Kills, Assists, Punkte"
-            className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2"
+          <StatFieldEditor
+            fields={statFields}
+            onChange={setStatFields}
+            isAvg={format === "avg_stats"}
           />
-          {format === "avg_stats" && (
-            <p className="text-[11px] text-gray-500 mt-1.5">
-              Das erste Feld ist der Hauptwert. Der Sieger wird anhand des besten Durchschnitts dieses Werts über alle Runden ermittelt.
-            </p>
-          )}
         </div>
       )}
 
@@ -326,25 +398,29 @@ export default function TournamentManager({
 
   // ── Settings edit state ───────────────────────────────────────────────
   const initSettings = () => {
-    if (!tournament) return { status: "active", pts1: 100, pts2: 50, pts3: 25, ptsWin: 3, ptsDraw: 1, statInput: "" };
+    if (!tournament) return { status: "active", pts1: 100, pts2: 50, pts3: 25, ptsWin: 3, ptsDraw: 1 };
     const pc: Record<string, number | { coins?: number; points?: number }> =
       tournament.pointsConfig ? JSON.parse(tournament.pointsConfig) : {};
-    const sf = tournament.statFields ? JSON.parse(tournament.statFields) : [];
     const extract = (v: number | { coins?: number; points?: number } | undefined, fallback: number): number => {
       if (v == null) return fallback;
       return typeof v === "number" ? v : (v.points ?? v.coins ?? fallback);
     };
     return {
-      status:    tournament.status,
-      pts1:      extract(pc["1"],   100),
-      pts2:      extract(pc["2"],   50),
-      pts3:      extract(pc["3"],   25),
-      ptsWin:    extract(pc["win"], 3),
-      ptsDraw:   extract(pc["draw"],1),
-      statInput: sf.join(", "),
+      status:  tournament.status,
+      pts1:    extract(pc["1"],   100),
+      pts2:    extract(pc["2"],   50),
+      pts3:    extract(pc["3"],   25),
+      ptsWin:  extract(pc["win"], 3),
+      ptsDraw: extract(pc["draw"],1),
     };
   };
   const [settings, setSettings] = useState(initSettings);
+
+  const initStatFields = (): string[] => {
+    if (!tournament?.statFields) return [];
+    try { return JSON.parse(tournament.statFields) as string[]; } catch { return []; }
+  };
+  const [settingsStatFields, setSettingsStatFields] = useState<string[]>(initStatFields);
 
   // ── Participant management ────────────────────────────────────────────
   const [addParticipantId, setAddParticipantId] = useState("");
@@ -433,7 +509,7 @@ export default function TournamentManager({
       ? { win: settings.ptsWin, draw: settings.ptsDraw }
       : { "1": settings.pts1, "2": settings.pts2, "3": settings.pts3 };
     const fields = (tournament.format === "ffa" || tournament.format === "coop_stats" || tournament.format === "avg_stats")
-      ? settings.statInput.split(",").map((s: string) => s.trim()).filter((s: string) => s.length > 0)
+      ? settingsStatFields
       : null;
     const res = await fetch(`/api/tournaments/${tournament.id}`, {
       method: "PATCH",
@@ -447,6 +523,7 @@ export default function TournamentManager({
     if (res.ok) {
       const updated = await res.json();
       setTournament(prev => prev ? { ...prev, status: updated.status, pointsConfig: updated.pointsConfig, statFields: updated.statFields } : prev);
+      setSettingsStatFields(updated.statFields ? JSON.parse(updated.statFields) : []);
       setShowSettings(false);
     }
     setLoading(false);
@@ -937,12 +1014,13 @@ export default function TournamentManager({
               </div>
             )}
           </div>
-          {(tournament.format === "ffa" || tournament.format === "coop_stats") && (
+          {(tournament.format === "ffa" || tournament.format === "coop_stats" || tournament.format === "avg_stats") && (
             <div>
-              <label className="text-xs text-gray-500 block mb-1">Statistik-Felder (kommagetrennt)</label>
-              <input type="text" value={settings.statInput}
-                onChange={e => setSettings(s => ({ ...s, statInput: e.target.value }))}
-                className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2"
+              <label className="text-xs text-gray-500 block mb-1">Statistik-Felder</label>
+              <StatFieldEditor
+                fields={settingsStatFields}
+                onChange={setSettingsStatFields}
+                isAvg={tournament.format === "avg_stats"}
               />
             </div>
           )}
