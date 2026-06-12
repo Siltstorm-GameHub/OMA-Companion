@@ -268,7 +268,9 @@ export default async function LulSpieltagPage({
                     <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-600 uppercase tracking-widest">Spieler</th>
                     {isStatFmt
                       ? statFieldsList.map(f => (
-                          <th key={f} className="text-center px-3 py-3 text-[10px] font-semibold text-gray-600 uppercase tracking-widest whitespace-nowrap">{f}</th>
+                          <th key={f} className="text-center px-3 py-3 text-[10px] font-semibold text-gray-600 uppercase tracking-widest whitespace-nowrap">
+                            {f}{fmt === "avg_stats" ? " (Ø)" : ""}
+                          </th>
                         ))
                       : Array.from({ length: maxRounds }, (_, i) => (
                           <th key={i} className="text-center px-2 py-3 text-[10px] font-semibold text-gray-700 uppercase tracking-widest whitespace-nowrap">R{i + 1}</th>
@@ -283,8 +285,25 @@ export default async function LulSpieltagPage({
                   {players.map((entry, i) => {
                     let rounds: number[] = [];
                     try { rounds = JSON.parse(entry.roundScores ?? "[]"); } catch { /* ignore */ }
-                    let stats: Record<string, number> = {};
-                    if (isStatFmt) { try { stats = JSON.parse(entry.statsJson ?? "{}"); } catch { /* ignore */ } }
+                    // Parse stat totals (new format: arrays; old format: flat numbers)
+                    const stats: Record<string, string> = {};
+                    if (isStatFmt && entry.statsJson) {
+                      try {
+                        const s = JSON.parse(entry.statsJson) as Record<string, unknown>;
+                        const nR = typeof s._rounds === "number" && s._rounds > 0 ? s._rounds : 1;
+                        for (const f of statFieldsList) {
+                          const val = s[f];
+                          if (Array.isArray(val)) {
+                            const total = val.reduce((sum: number, v) => sum + (Number(v) || 0), 0);
+                            stats[f] = fmt === "avg_stats"
+                              ? (total / nR % 1 === 0 ? String(total / nR) : (total / nR).toFixed(1))
+                              : String(total);
+                          } else if (typeof val === "number") {
+                            stats[f] = String(val);
+                          }
+                        }
+                      } catch { /* ignore */ }
+                    }
                     const isMe      = entry.userId === userId;
                     const placement = entry.placement ?? i + 1;
                     const isTop3    = placement <= 3 && placement > 0;
