@@ -459,6 +459,7 @@ model LulSpieltag {
   description      String?   // Beschreibung für Special Events
   maxPlayers       Int?      // Maximale Spieleranzahl
   tournamentFormat String?   // single_elimination | double_elimination | round_robin | liga | ffa | coop_stats
+  statFields       String?   // JSON: ["Kills","Assists"] — für ffa/coop_stats/avg_stats
   game             String?   // "Brawlhalla" (optional bei Special Events)
   gameType     String?   // "Beat-em Up"
   platform     String?   // "PC/Konsole"
