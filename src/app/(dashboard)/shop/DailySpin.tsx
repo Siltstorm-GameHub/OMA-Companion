@@ -154,24 +154,18 @@ export default function DailySpin({ alreadySpun, lastResult }: Props) {
           </div>
           <div>
             <p className="text-sm font-semibold text-white">Täglicher Gratis-Spin</p>
-            <p className="text-xs text-gray-500">Einmal täglich drehen — gewinne bis zu 500 Münzen!</p>
+            <p className="text-xs text-gray-500">Einmal täglich drehen — gewinne bis zu 200 Münzen!</p>
           </div>
         </div>
 
         {/* Glücksrad */}
-        <div className="flex flex-col items-center gap-5">
-          <div className="relative" style={{ width: 264, height: 264 }}>
+        <div className="flex flex-col items-center gap-4">
+          {/* Äußerer Wrapper: kein overflow-hidden, damit der Zeiger sichtbar bleibt */}
+          <div className="relative" style={{ width: 264 }}>
 
-            {/* Äußerer Glow-Ring */}
-            <div
-              className={`absolute inset-0 rounded-full pointer-events-none${spinning ? " glow-spin" : ""}`}
-              style={{ boxShadow: "0 0 48px rgba(245,158,11,0.22), 0 0 96px rgba(245,158,11,0.1)" }}
-            />
-
-            {/* Zeiger — äußerer Positionierungs-Wrapper */}
+            {/* Zeiger — sitzt außerhalb des Clip-Containers */}
             <div className="absolute z-20 pointer-events-none"
               style={{ top: -2, left: "50%", transform: "translateX(-50%)" }}>
-              {/* Innerer Wrapper nimmt die Tick-Rotation auf */}
               <div className={spinning ? "pointer-tick" : undefined}>
                 <svg width="24" height="32" viewBox="0 0 24 32">
                   <polygon points="12,30 1,3 23,3"
@@ -182,6 +176,19 @@ export default function DailySpin({ alreadySpun, lastResult }: Props) {
                 </svg>
               </div>
             </div>
+
+            {/* Clip-Container: zeigt nur die obere Hälfte */}
+            <div style={{ width: 264, height: 132, overflow: "hidden", position: "relative" }}>
+
+              {/* Glow-Ring */}
+              <div
+                className={`absolute pointer-events-none${spinning ? " glow-spin" : ""}`}
+                style={{
+                  top: 0, left: 0, width: 264, height: 264,
+                  borderRadius: "50%",
+                  boxShadow: "0 0 48px rgba(245,158,11,0.22), 0 0 96px rgba(245,158,11,0.1)",
+                }}
+              />
 
             {/* Drehendes Rad */}
             <svg
@@ -257,7 +264,8 @@ export default function DailySpin({ alreadySpun, lastResult }: Props) {
               <circle cx={CX} cy={CY} r="7"
                 fill="#0d0d0f" stroke="rgba(245,158,11,0.25)" strokeWidth="1" />
             </svg>
-          </div>
+            </div>{/* Ende Clip-Container */}
+          </div>{/* Ende äußerer Wrapper */}
 
           {/* Drehen-Button */}
           <button
