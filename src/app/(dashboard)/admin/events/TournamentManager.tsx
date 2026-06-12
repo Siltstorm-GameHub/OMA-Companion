@@ -40,11 +40,12 @@ type RankingEntry = {
 };
 
 const FORMATS = [
-  { value: "single_elimination", label: "Einzel-Eliminierung", desc: "Klassisches K.O.-System" },
-  { value: "round_robin",        label: "Jeder gegen Jeden",   desc: "Alle spielen gegen alle" },
-  { value: "liga",               label: "Liga",                desc: "Spieltage, Tabelle mit S/U/N" },
-  { value: "ffa",                label: "Free for All",        desc: "Alle gegeneinander, Platzierung zählt" },
-  { value: "coop_stats",         label: "Kooperativ (Stats)",  desc: "Alle zusammen, individuelle Stats" },
+  { value: "single_elimination", label: "Einzel-Eliminierung",       desc: "Klassisches K.O.-System" },
+  { value: "round_robin",        label: "Jeder gegen Jeden",         desc: "Alle spielen gegen alle" },
+  { value: "liga",               label: "Liga",                      desc: "Spieltage, Tabelle mit S/U/N" },
+  { value: "ffa",                label: "Free for All",              desc: "Alle gegeneinander, Platzierung zählt" },
+  { value: "coop_stats",         label: "Kooperativ (Stats)",        desc: "Alle zusammen, individuelle Stats" },
+  { value: "avg_stats",          label: "Durchschnittswerte",        desc: "Sieger = bester Durchschnitt (z.B. Kills/Runde)" },
 ];
 
 const STATUS_OPTIONS = ["active", "finished", "pending"];
@@ -105,7 +106,7 @@ function CreationForm({
           "2": { coins: coins2, points: pts2 },
           "3": { coins: coins3, points: pts3 },
         };
-    const fields = (format === "ffa" || format === "coop_stats")
+    const fields = (format === "ffa" || format === "coop_stats" || format === "avg_stats")
       ? statInput.split(",").map(s => s.trim()).filter(Boolean)
       : null;
     const res = await fetch("/api/tournaments", {
@@ -193,13 +194,20 @@ function CreationForm({
       </div>
 
       {/* Stat fields */}
-      {(format === "ffa" || format === "coop_stats") && (
+      {(format === "ffa" || format === "coop_stats" || format === "avg_stats") && (
         <div>
-          <label className="text-xs text-gray-400 uppercase tracking-wide block mb-2">Statistik-Felder (kommagetrennt)</label>
+          <label className="text-xs text-gray-400 uppercase tracking-wide block mb-2">
+            Statistik-Felder (kommagetrennt)
+          </label>
           <input type="text" value={statInput} onChange={e => setStatInput(e.target.value)}
             placeholder="z.B. Kills, Assists, Punkte"
             className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2"
           />
+          {format === "avg_stats" && (
+            <p className="text-[11px] text-gray-500 mt-1.5">
+              Das erste Feld ist der Hauptwert. Der Sieger wird anhand des besten Durchschnitts dieses Werts über alle Runden ermittelt.
+            </p>
+          )}
         </div>
       )}
 
@@ -366,7 +374,7 @@ export default function TournamentManager({
   }
 
   // ── Derived ──────────────────────────────────────────────────────────
-  const isFfa  = tournament.format === "ffa" || tournament.format === "coop_stats";
+  const isFfa  = tournament.format === "ffa" || tournament.format === "coop_stats" || tournament.format === "avg_stats";
   const isLiga = tournament.format === "liga";
   const is1v1  = !isFfa;
   const isRoundRobin = tournament.format === "round_robin";
@@ -424,7 +432,7 @@ export default function TournamentManager({
     const config = isLigaFmt
       ? { win: settings.ptsWin, draw: settings.ptsDraw }
       : { "1": settings.pts1, "2": settings.pts2, "3": settings.pts3 };
-    const fields = (tournament.format === "ffa" || tournament.format === "coop_stats")
+    const fields = (tournament.format === "ffa" || tournament.format === "coop_stats" || tournament.format === "avg_stats")
       ? settings.statInput.split(",").map((s: string) => s.trim()).filter((s: string) => s.length > 0)
       : null;
     const res = await fetch(`/api/tournaments/${tournament.id}`, {

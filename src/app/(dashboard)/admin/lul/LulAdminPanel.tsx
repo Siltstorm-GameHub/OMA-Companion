@@ -27,6 +27,7 @@ const TOURNAMENT_FORMATS = [
   { value: "liga",               label: "Liga",                 desc: "Spieltage, Tabelle mit S/U/N" },
   { value: "ffa",                label: "Free for All",         desc: "Alle gegeneinander, Platzierung zählt" },
   { value: "coop_stats",         label: "Kooperativ (Stats)",   desc: "Alle zusammen, individuelle Stats" },
+  { value: "avg_stats",          label: "Durchschnittswerte",   desc: "Sieger = bester Durchschnitt (z.B. Kills/Runde)" },
 ];
 
 function LulSpieltagEditor({
