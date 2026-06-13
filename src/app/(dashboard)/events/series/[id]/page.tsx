@@ -322,16 +322,18 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
 
       {/* ── Gesamttabelle ─────────────────────────────────────────────────── */}
       {standings.length > 0 && hasStatConfig && (() => {
-        // Stat-Spalten: konfigurierte + zusätzliche aus persistierten Standings (MVP, Siege, etc.)
+        // Stat-Spalten: konfigurierte + explizit konfigurierte Sonder-Felder (MVP, Siegstat)
         const configuredFields = new Set(statCfg.stats.map(s => s.field));
         const reservedFields   = new Set(["participations", "__legacyPoints"]);
-        const extraFields = Array.from(
-          new Set(
-            standings.flatMap(row => Object.keys(row.stats).filter(f => !configuredFields.has(f) && !reservedFields.has(f)))
-          )
+        const specialFields    = new Set(
+          [statCfg.mvpStatField, statCfg.defaultWinnerTargetField].filter((f): f is string => !!f)
         );
-        const statCols     = statCfg.stats;
-        const allExtraCols = extraFields;
+        // Nur explizit konfigurierte Sonder-Felder anzeigen (keine veralteten Daten aus seriesStandingsJson)
+        const allExtraCols = [...specialFields].filter(
+          f => !configuredFields.has(f) && !reservedFields.has(f) &&
+               standings.some(row => (row.stats[f] ?? 0) > 0)
+        );
+        const statCols = statCfg.stats;
         const statColWidth = "4.5rem";
         const gridCols = [
           "2.5rem",
