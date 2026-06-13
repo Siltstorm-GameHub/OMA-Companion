@@ -204,10 +204,12 @@ model EventSeries {
   discordChannelId String?  // Kanal-ID für Bot-Nachrichten aller Events dieser Reihe
   recurrenceType       String?  // "weekly" | "biweekly" | "monthly"
   recurrenceMonthlyMode String? // "dayOfMonth" | "weekdayOfMonth" (nur bei monthly)
-  // JSON: { participationPoints: 5, stats: [{ field: "Kills", pointsPer: 2 }] }
+  // JSON: { participationPoints: 5, stats: [{ field: "Kills", pointsPer: 2 }], mvpStatField?: "MVP", defaultWinnerStatField?: "Kills", defaultWinnerTargetField?: "Siege" }
   seriesStatConfig String?
   // JSON: [{ userId, points, participations, stats: { Kills: 45 } }]
   legacyStandings String?
+  // JSON: { lastUpdated, processedEventIds: string[], raw: { userId: { participations, Kills, MVP, Siege, ... } } }
+  seriesStandingsJson String?
   createdAt   DateTime @default(now())
   events      Event[]
 }
@@ -227,6 +229,8 @@ model Event {
   discordChannelId String?   // Kanal-ID für Bot-Nachrichten (überschreibt DISCORD_EVENTS_CHANNEL_ID)
   seriesId         String?
   reminderSentAt   DateTime? // Gesetzt wenn 24h-Erinnerung verschickt (verhindert Doppel-Sendung)
+  // JSON: { mvpUserId?, winnerStatField?, seriesWinnerTargetField?, lockedAt }
+  completionData   String?
   createdAt      DateTime @default(now())
 
   series        EventSeries?        @relation(fields: [seriesId], references: [id])

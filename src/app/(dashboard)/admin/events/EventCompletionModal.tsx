@@ -1,0 +1,280 @@
+"use client";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { X, Trophy, Star, TrendingUp, CheckCircle2 } from "lucide-react";
+
+type User = { id: string; name: string | null; username: string | null; image: string | null };
+type MatchEntry = { userId: string | null; statsJson: string | null };
+type Match = { entries: MatchEntry[] };
+type Tournament = { statFields: string | null; matches: Match[] };
+
+type SeriesStatConfig = {
+  participationPoints: number;
+  stats: { field: string; pointsPer: number }[];
+  mvpStatField?: string;
+  defaultWinnerStatField?: string;
+  defaultWinnerTargetField?: string;
+};
+
+interface Props {
+  eventId: string;
+  eventTitle: string;
+  seriesId: string;
+  registeredUsers: User[];
+  tournament: Tournament | null;
+  seriesStatConfig: SeriesStatConfig | null;
+  onClose: () => void;
+}
+
+const inputCls = "w-full rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
+
+export default function EventCompletionModal({
+  eventId, eventTitle, registeredUsers, tournament, seriesStatConfig, onClose,
+}: Props) {
+  const router = useRouter();
+  const ref = useRef<HTMLDivElement>(null);
+
+  const [mvpUserId, setMvpUserId] = useState<string>("");
+  const [winnerStatField, setWinnerStatField] = useState<string>(seriesStatConfig?.defaultWinnerStatField ?? "");
+  const [seriesWinnerTargetField, setSeriesWinnerTargetField] = useState<string>(seriesStatConfig?.defaultWinnerTargetField ?? "");
+  const [loading, setLoading] = useState(false);
+
+  // Schließen via Außenklick
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [onClose]);
+
+  // Per-User-Stats aus Tournament-Daten berechnen
+  const userStats = (() => {
+    const totals: Record<string, Record<string, number>> = {};
+    if (!tournament) return totals;
+    for (const match of tournament.matches) {
+      for (const entry of match.entries) {
+        if (!entry.userId || !entry.statsJson) continue;
+        let parsed: Record<string, number> = {};
+        try { parsed = JSON.parse(entry.statsJson); } catch { continue; }
+        if (!totals[entry.userId]) totals[entry.userId] = {};
+        for (const [f, v] of Object.entries(parsed)) {
+          totals[entry.userId][f] = (totals[entry.userId][f] ?? 0) + Number(v);
+        }
+      }
+    }
+    return totals;
+  })();
+
+  // Verfügbare Stat-Felder aus dem Turnier
+  const tournamentStatFields: string[] = (() => {
+    if (!tournament?.statFields) return [];
+    try { return JSON.parse(tournament.statFields) as string[]; } catch { return []; }
+  })();
+
+  // Verfügbare Series-Stat-Felder (Ziel für Gewinner)
+  const seriesStatFields = (seriesStatConfig?.stats ?? []).map(s => s.field);
+
+  // Vorschau: wer würde mit dem aktuellen winnerStatField gewinnen?
+  const previewWinner = (() => {
+    if (!winnerStatField) return null;
+    let best: string | null = null;
+    let bestVal = -Infinity;
+    for (const [uid, stats] of Object.entries(userStats)) {
+      const v = stats[winnerStatField] ?? 0;
+      if (v > bestVal) { bestVal = v; best = uid; }
+    }
+    return best;
+  })();
+
+  const userName = (u: User) => u.username ?? u.name ?? "?";
+
+  async function handleConfirm() {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/admin/events/${eventId}/complete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mvpUserId:               mvpUserId || undefined,
+          winnerStatField:         winnerStatField || undefined,
+          seriesWinnerTargetField: seriesWinnerTargetField || undefined,
+        }),
+      });
+      if (res.ok) {
+        toast.success(`"${eventTitle}" abgeschlossen & Gesamttabelle aktualisiert`);
+        router.refresh();
+        onClose();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.error ?? "Fehler beim Abschließen");
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+      <div ref={ref} className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh]">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-teal-400" />
+            <h2 className="text-sm font-semibold text-white">Event abschließen</h2>
+          </div>
+          <button onClick={onClose} className="text-gray-600 hover:text-gray-400 transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="overflow-y-auto flex-1 p-5 space-y-5">
+          <p className="text-xs text-gray-500">
+            Mit dem Abschließen werden die Teilnahmen und Stats dieses Events in die Gesamttabelle der Reihe übertragen.
+            Status wird auf <span className="text-gray-300 font-medium">finished</span> gesetzt.
+          </p>
+
+          {/* ── Gewinner-Stat ── */}
+          {tournamentStatFields.length > 0 && seriesStatFields.length > 0 && (
+            <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(245,158,11,0.05)", border: "1px solid rgba(245,158,11,0.15)" }}>
+              <div className="flex items-center gap-2">
+                <Trophy className="w-3.5 h-3.5 text-amber-400" />
+                <span className="text-xs font-semibold text-amber-300">Event-Gewinner</span>
+              </div>
+
+              <div className="space-y-2">
+                <div>
+                  <label className="text-[11px] text-gray-500 block mb-1">
+                    Wer hat den höchsten Wert in…
+                  </label>
+                  <select value={winnerStatField} onChange={e => setWinnerStatField(e.target.value)} className={inputCls}>
+                    <option value="">– kein Gewinner-Stat –</option>
+                    {tournamentStatFields.map(f => <option key={f} value={f}>{f}</option>)}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[11px] text-gray-500 block mb-1">
+                    …bekommt +1 auf (Series-Stat)
+                  </label>
+                  <select value={seriesWinnerTargetField} onChange={e => setSeriesWinnerTargetField(e.target.value)} className={inputCls}>
+                    <option value="">– nicht tracken –</option>
+                    {seriesStatFields.map(f => <option key={f} value={f}>{f}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {previewWinner && winnerStatField && (
+                <div className="flex items-center gap-2 text-xs text-amber-400">
+                  <TrendingUp className="w-3.5 h-3.5" />
+                  <span>
+                    Aktueller Gewinner: <strong>{userName(registeredUsers.find(u => u.id === previewWinner)!) ?? previewWinner.slice(0, 8)}</strong>
+                    {" "}({userStats[previewWinner]?.[winnerStatField] ?? 0} {winnerStatField})
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── MVP-Wahl ── */}
+          {seriesStatConfig?.mvpStatField && (
+            <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(20,184,166,0.05)", border: "1px solid rgba(20,184,166,0.15)" }}>
+              <div className="flex items-center gap-2">
+                <Star className="w-3.5 h-3.5 text-teal-400" />
+                <span className="text-xs font-semibold text-teal-300">
+                  MVP des Events
+                  <span className="text-gray-500 font-normal ml-1">
+                    (+1 auf „{seriesStatConfig.mvpStatField}" in der Gesamttabelle)
+                  </span>
+                </span>
+              </div>
+              <div className="space-y-1 max-h-48 overflow-y-auto">
+                <label className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/[0.03] cursor-pointer transition-colors">
+                  <input
+                    type="radio"
+                    name="mvp"
+                    value=""
+                    checked={mvpUserId === ""}
+                    onChange={() => setMvpUserId("")}
+                    className="accent-teal-500"
+                  />
+                  <span className="text-sm text-gray-500 italic">Kein MVP</span>
+                </label>
+                {registeredUsers.map(u => (
+                  <label key={u.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+                    mvpUserId === u.id ? "bg-teal-500/10 border border-teal-500/20" : "hover:bg-white/[0.03]"
+                  }`}>
+                    <input
+                      type="radio"
+                      name="mvp"
+                      value={u.id}
+                      checked={mvpUserId === u.id}
+                      onChange={() => setMvpUserId(u.id)}
+                      className="accent-teal-500 shrink-0"
+                    />
+                    {u.image
+                      ? <img src={u.image} alt="" className="w-6 h-6 rounded-full shrink-0 object-cover" />
+                      : <div className="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center text-xs font-semibold text-gray-400 shrink-0">
+                          {userName(u)[0]?.toUpperCase()}
+                        </div>
+                    }
+                    <span className="text-sm text-white flex-1 truncate">{userName(u)}</span>
+                    {winnerStatField && userStats[u.id]?.[winnerStatField] != null && (
+                      <span className="text-xs text-gray-500 tabular-nums shrink-0">
+                        {userStats[u.id][winnerStatField]} {winnerStatField}
+                      </span>
+                    )}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── Zusammenfassung ── */}
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-2">
+            <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest">Wird übertragen</p>
+            <ul className="space-y-1 text-xs text-gray-400">
+              <li className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-teal-500 shrink-0" />
+                {registeredUsers.length} Teilnahme(n) → Gesamttabelle
+              </li>
+              {(seriesStatConfig?.stats ?? []).filter(s => {
+                return Object.values(userStats).some(us => (us[s.field] ?? 0) > 0);
+              }).map(s => (
+                <li key={s.field} className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+                  Stats „{s.field}" → werden summiert
+                </li>
+              ))}
+              {winnerStatField && seriesWinnerTargetField && (
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                  Gewinner ({winnerStatField}) → +1 auf „{seriesWinnerTargetField}"
+                </li>
+              )}
+              {mvpUserId && seriesStatConfig?.mvpStatField && (
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-teal-400 shrink-0" />
+                  MVP {userName(registeredUsers.find(u => u.id === mvpUserId)!)} → +1 auf „{seriesStatConfig.mvpStatField}"
+                </li>
+              )}
+            </ul>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex gap-3 px-5 py-4 border-t border-gray-800">
+          <button onClick={onClose} disabled={loading}
+            className="flex-1 text-sm border border-gray-700 hover:border-gray-600 text-gray-400 hover:text-white rounded-lg px-4 py-2 transition-colors disabled:opacity-50">
+            Abbrechen
+          </button>
+          <button onClick={handleConfirm} disabled={loading}
+            className="flex-1 text-sm bg-teal-600 hover:bg-teal-500 text-white rounded-lg px-4 py-2 transition-colors disabled:opacity-50 font-medium">
+            {loading ? "Wird abgeschlossen…" : "Abschließen & speichern"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

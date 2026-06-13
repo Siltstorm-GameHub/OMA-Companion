@@ -24,10 +24,24 @@ const FORMAT_LABELS: Record<string, string> = {
   coop_stats:         "Coop / Stats",
 };
 
-type StatConfig = { participationPoints: number; stats: { field: string; pointsPer: number }[] };
+type StatConfig = {
+  participationPoints: number;
+  stats: { field: string; pointsPer: number }[];
+  mvpStatField?: string;
+  defaultWinnerStatField?: string;
+  defaultWinnerTargetField?: string;
+};
 type LegacyRow  = { userId: string; points: number; participations: number; stats: Record<string, number> };
 
+type SeriesStandingsJson = {
+  lastUpdated: string;
+  processedEventIds: string[];
+  raw: Record<string, Record<string, number>>;
+};
+
 type SeriesEventForStandings = {
+  id: string;
+  completionData: string | null;
   registrations: { userId: string }[];
   tournament: {
     participants: { userId: string }[];
@@ -37,62 +51,86 @@ type SeriesEventForStandings = {
   } | null;
 };
 
-/** Gesamttabelle auf Basis von seriesStatConfig + optionalem Legacy-Stand */
+/**
+ * Gesamttabelle berechnen:
+ * 1. Persistierte Standings aus seriesStandingsJson (completed events)
+ * 2. On-demand für finished events OHNE completionData (Rückwärtskompatibilität)
+ * 3. Legacy-Werte
+ */
 function computeStatStandings(
   events: SeriesEventForStandings[],
   cfg: StatConfig,
   legacy: LegacyRow[],
+  persistedStandings: SeriesStandingsJson | null,
 ) {
-  const pts:        Record<string, number>                 = {};
-  const part:       Record<string, number>                 = {};
   const statTotals: Record<string, Record<string, number>> = {};
 
-  // Legacy-Werte als Startwert
-  for (const row of legacy) {
-    pts[row.userId]  = (pts[row.userId]  ?? 0) + row.points;
-    part[row.userId] = (part[row.userId] ?? 0) + row.participations;
-    if (!statTotals[row.userId]) statTotals[row.userId] = {};
-    for (const [field, val] of Object.entries(row.stats ?? {})) {
-      statTotals[row.userId][field] = (statTotals[row.userId][field] ?? 0) + val;
+  function add(uid: string, field: string, val: number) {
+    if (!statTotals[uid]) statTotals[uid] = {};
+    statTotals[uid][field] = (statTotals[uid][field] ?? 0) + val;
+  }
+
+  // 1. Persistierte Standings
+  if (persistedStandings) {
+    for (const [uid, stats] of Object.entries(persistedStandings.raw)) {
+      for (const [field, val] of Object.entries(stats)) {
+        add(uid, field, val);
+      }
     }
   }
 
+  // 2. On-demand für Events ohne completionData
+  const processedIds = new Set(persistedStandings?.processedEventIds ?? []);
   for (const ev of events) {
-    // Teilnahmen aus Registrierungen zählen
+    if (processedIds.has(ev.id)) continue; // bereits in persistierten Standings
+
     const registeredUserIds = new Set(ev.registrations.map(r => r.userId));
     for (const uid of registeredUserIds) {
-      part[uid] = (part[uid] ?? 0) + 1;
-      pts[uid]  = (pts[uid]  ?? 0) + cfg.participationPoints;
+      add(uid, "participations", 1);
     }
 
-    // Stats aus MatchEntries aggregieren
     if (!ev.tournament) continue;
     for (const match of ev.tournament.matches) {
       for (const entry of match.entries) {
-        if (!entry.userId) continue;
-        if (!entry.statsJson) continue;
+        if (!entry.userId || !entry.statsJson) continue;
         let stats: Record<string, number> = {};
         try { stats = JSON.parse(entry.statsJson); } catch { continue; }
-        for (const { field, pointsPer } of cfg.stats) {
+        for (const { field } of cfg.stats) {
           const val = Number(stats[field] ?? 0);
-          if (!val) continue;
-          pts[entry.userId] = (pts[entry.userId] ?? 0) + val * pointsPer;
-          if (!statTotals[entry.userId]) statTotals[entry.userId] = {};
-          statTotals[entry.userId][field] = (statTotals[entry.userId][field] ?? 0) + val;
+          if (val) add(entry.userId, field, val);
         }
       }
     }
   }
 
-  const userIds = Array.from(new Set([...Object.keys(pts), ...Object.keys(part)]));
+  // 3. Legacy-Werte
+  for (const row of legacy) {
+    add(row.userId, "participations", row.participations);
+    for (const [field, val] of Object.entries(row.stats ?? {})) {
+      add(row.userId, field, val);
+    }
+    // Punkte aus Legacy direkt addieren (als Sonderfeld)
+    if (row.points) add(row.userId, "__legacyPoints", row.points);
+  }
+
+  const userIds = Array.from(new Set(Object.keys(statTotals)));
   return userIds
-    .map(uid => ({
-      userId:         uid,
-      totalPoints:    pts[uid]  ?? 0,
-      participations: part[uid] ?? 0,
-      stats:          statTotals[uid] ?? {},
-      hasLegacy:      legacy.some(l => l.userId === uid),
-    }))
+    .map(uid => {
+      const s = statTotals[uid] ?? {};
+      const participations = s["participations"] ?? 0;
+      const legacyPts = s["__legacyPoints"] ?? 0;
+      let totalPoints = legacyPts + participations * cfg.participationPoints;
+      for (const { field, pointsPer } of cfg.stats) {
+        totalPoints += (s[field] ?? 0) * pointsPer;
+      }
+      return {
+        userId:         uid,
+        totalPoints,
+        participations,
+        stats:          s,
+        hasLegacy:      legacy.some(l => l.userId === uid),
+      };
+    })
     .sort((a, b) => b.totalPoints - a.totalPoints || b.participations - a.participations);
 }
 
@@ -150,8 +188,13 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
 
   const hasStatConfig = statCfg.participationPoints > 0 || statCfg.stats.length > 0 || legacyRows.length > 0;
 
+  // Persistierte Standings laden
+  const persistedStandings: SeriesStandingsJson | null = (() => {
+    try { return series.seriesStandingsJson ? JSON.parse(series.seriesStandingsJson) : null; } catch { return null; }
+  })();
+
   // Gesamttabelle berechnen
-  const standings = computeStatStandings(series.events, statCfg, legacyRows);
+  const standings = computeStatStandings(series.events, statCfg, legacyRows, persistedStandings);
 
   // User-Daten für Tabelle
   const standingUserIds = standings.map(s => s.userId);
@@ -169,15 +212,32 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
   );
   const eventsWithResults = pastEvents.filter(e => e.tournament?.finalRankingJson);
 
-  // Sieger aus pastEvents für die Terminliste
+  // Sieger + MVP aus pastEvents für die Terminliste
   const winnerMap = new Map<string, string>();
+  const mvpMap    = new Map<string, string>();
+  const statWinnerMap = new Map<string, string>(); // completionData event winner
+
   for (const ev of pastEvents) {
-    if (!ev.tournament?.finalRankingJson) continue;
-    try {
-      const ranking = JSON.parse(ev.tournament.finalRankingJson) as string[];
-      const wu = userMap.get(ranking[0]);
-      if (wu) winnerMap.set(ev.id, wu.username ?? wu.name ?? "");
-    } catch { /* ignore */ }
+    if (ev.tournament?.finalRankingJson) {
+      try {
+        const ranking = JSON.parse(ev.tournament.finalRankingJson) as string[];
+        const wu = userMap.get(ranking[0]);
+        if (wu) winnerMap.set(ev.id, wu.username ?? wu.name ?? "");
+      } catch { /* ignore */ }
+    }
+    if (ev.completionData) {
+      try {
+        const cd = JSON.parse(ev.completionData) as { mvpUserId?: string; eventWinnerId?: string; winnerStatField?: string };
+        if (cd.mvpUserId) {
+          const mu = userMap.get(cd.mvpUserId);
+          if (mu) mvpMap.set(ev.id, mu.username ?? mu.name ?? "");
+        }
+        if (cd.eventWinnerId && cd.winnerStatField) {
+          const wu = userMap.get(cd.eventWinnerId);
+          if (wu) statWinnerMap.set(ev.id, `${wu.username ?? wu.name ?? ""} (${cd.winnerStatField})`);
+        }
+      } catch { /* ignore */ }
+    }
   }
 
   const medalColors = ["text-amber-400", "text-gray-300", "text-amber-600"];
@@ -244,15 +304,24 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
 
       {/* ── Gesamttabelle ─────────────────────────────────────────────────── */}
       {standings.length > 0 && hasStatConfig && (() => {
-        // Dynamische Spaltenbreiten: # + Spieler + Events + stat-Spalten + Punkte
-        const statCols = statCfg.stats;
+        // Stat-Spalten: konfigurierte + zusätzliche aus persistierten Standings (MVP, Siege, etc.)
+        const configuredFields = new Set(statCfg.stats.map(s => s.field));
+        const reservedFields   = new Set(["participations", "__legacyPoints"]);
+        const extraFields = Array.from(
+          new Set(
+            standings.flatMap(row => Object.keys(row.stats).filter(f => !configuredFields.has(f) && !reservedFields.has(f)))
+          )
+        );
+        const statCols     = statCfg.stats;
+        const allExtraCols = extraFields;
         const statColWidth = "4.5rem";
         const gridCols = [
-          "2.5rem",          // #
-          "1fr",             // Spieler
-          "4rem",            // Events
+          "2.5rem",
+          "1fr",
+          "4rem",
           ...statCols.map(() => statColWidth),
-          "5.5rem",          // Punkte
+          ...allExtraCols.map(() => statColWidth),
+          "5.5rem",
         ].join(" ");
 
         return (
@@ -260,8 +329,10 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
             <div className="flex items-center gap-2">
               <Trophy className="w-4 h-4 text-amber-400" />
               <h2 className="text-sm font-semibold text-white">Gesamttabelle</h2>
-              {eventsWithResults.length > 0 && (
-                <span className="text-xs text-gray-600">· {eventsWithResults.length} ausgewertete Events</span>
+              {persistedStandings && (
+                <span className="text-xs text-gray-600">
+                  · {persistedStandings.processedEventIds.length} abgeschlossene Events
+                </span>
               )}
             </div>
 
@@ -277,10 +348,15 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
                   {s.field} × {s.pointsPer} Pkt.
                 </span>
               ))}
+              {allExtraCols.map(f => (
+                <span key={f} className="text-[10px] px-2 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400">
+                  {f}
+                </span>
+              ))}
             </div>
 
             <div className="glass card-shine rounded-2xl overflow-x-auto">
-              <div style={{ minWidth: `${300 + statCols.length * 72}px` }}>
+              <div style={{ minWidth: `${300 + (statCols.length + allExtraCols.length) * 72}px` }}>
                 {/* Header */}
                 <div className="grid items-center px-4 py-2.5 border-b border-white/[0.06]"
                   style={{ gridTemplateColumns: gridCols }}>
@@ -289,6 +365,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
                     { label: "Spieler",cls: "" },
                     { label: "Events", cls: "text-center" },
                     ...statCols.map(s => ({ label: s.field, cls: "text-center" })),
+                    ...allExtraCols.map(f => ({ label: f, cls: "text-center" })),
                     { label: "Punkte", cls: "text-right" },
                   ].map(col => (
                     <span key={col.label}
@@ -347,6 +424,18 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
                           <span className="text-sm text-gray-300 tabular-nums">
                             {row.stats[s.field] != null && row.stats[s.field] > 0
                               ? row.stats[s.field].toLocaleString("de-DE")
+                              : <span className="text-gray-700">–</span>
+                            }
+                          </span>
+                        </div>
+                      ))}
+
+                      {/* Extra-Spalten (MVP, Siege, etc.) */}
+                      {allExtraCols.map(f => (
+                        <div key={f} className="text-center">
+                          <span className="text-sm text-purple-300 tabular-nums">
+                            {row.stats[f] != null && row.stats[f] > 0
+                              ? row.stats[f].toLocaleString("de-DE")
                               : <span className="text-gray-700">–</span>
                             }
                           </span>
@@ -449,8 +538,10 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
           </div>
           <div className="glass card-shine rounded-2xl overflow-hidden divide-y divide-white/[0.04]">
             {pastEvents.map(ev => {
-              const date    = new Date(ev.startAt);
-              const winner  = winnerMap.get(ev.id);
+              const date       = new Date(ev.startAt);
+              const winner     = winnerMap.get(ev.id);
+              const mvp        = mvpMap.get(ev.id);
+              const statWinner = statWinnerMap.get(ev.id);
 
               return (
                 <Link key={ev.id} href={`/events/${ev.id}`}
@@ -466,6 +557,8 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
                       {ev.game && <span className="ml-1.5">· {ev.game}</span>}
                       {ev._count.registrations > 0 && <span className="ml-1.5">· {ev._count.registrations} Teilnehmer</span>}
                       {winner && <span className="ml-1.5 text-amber-700">· 🏆 {winner}</span>}
+                      {statWinner && !winner && <span className="ml-1.5 text-amber-700">· 🏆 {statWinner}</span>}
+                      {mvp && <span className="ml-1.5 text-teal-700">· ⭐ MVP: {mvp}</span>}
                     </p>
                   </div>
                   <ChevronRight className="w-3.5 h-3.5 text-gray-700 group-hover:text-gray-400 transition-colors shrink-0" />

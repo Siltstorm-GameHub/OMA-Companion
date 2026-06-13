@@ -5,12 +5,13 @@ import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import {
   ChevronDown, ChevronUp, Trophy, Settings, Users, UserPlus, UserMinus,
-  Search, Trash2, AlertTriangle, Repeat, X, GitBranch, Gamepad2, Swords, ExternalLink, Hash, CalendarPlus, RefreshCw, BarChart2, Plus,
+  Search, Trash2, AlertTriangle, Repeat, X, GitBranch, Gamepad2, Swords, ExternalLink, Hash, CalendarPlus, RefreshCw, BarChart2, Plus, CheckCircle2,
 } from "lucide-react";
 import { describeMonthlyModes } from "@/lib/recurrence";
 import Link from "next/link";
 import TournamentManager from "./TournamentManager";
 import GameNameInput from "@/components/GameNameInput";
+import EventCompletionModal from "./EventCompletionModal";
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
 type User = { id: string; name: string | null; username: string | null; image: string | null };
@@ -140,6 +141,9 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
   /* ── Series stat config state ── */
   const [statParticipationPts, setStatParticipationPts] = useState(0);
   const [statRows, setStatRows] = useState<{ field: string; pointsPer: number }[]>([]);
+  const [statMvpField, setStatMvpField]                       = useState("");
+  const [statDefaultWinnerField, setStatDefaultWinnerField]   = useState("");
+  const [statDefaultTargetField, setStatDefaultTargetField]   = useState("");
   const statConfigInitialized = useRef(false);
 
   /* ── Legacy standings state ── */
@@ -155,6 +159,9 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
   /* ── Scope modal ── */
   const [showScopeModal, setShowScopeModal] = useState(false);
   const [pendingSave, setPendingSave]       = useState<"single" | null>(null);
+
+  /* ── Completion modal ── */
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
 
   /* ── Participants state ── */
   const [bulkSelected, setBulkSelected] = useState<string[]>([]);
@@ -188,6 +195,9 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                 const cfg = JSON.parse(d.seriesStatConfig);
                 setStatParticipationPts(cfg.participationPoints ?? 0);
                 setStatRows(cfg.stats ?? []);
+                setStatMvpField(cfg.mvpStatField ?? "");
+                setStatDefaultWinnerField(cfg.defaultWinnerStatField ?? "");
+                setStatDefaultTargetField(cfg.defaultWinnerTargetField ?? "");
               } catch { /* ignore */ }
             }
             if (d.legacyStandings) {
@@ -328,6 +338,9 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
         seriesStatConfig: JSON.stringify({
           participationPoints: statParticipationPts,
           stats: statRows.filter(r => r.field.trim()),
+          ...(statMvpField.trim()          && { mvpStatField:             statMvpField.trim() }),
+          ...(statDefaultWinnerField.trim() && { defaultWinnerStatField:  statDefaultWinnerField.trim() }),
+          ...(statDefaultTargetField.trim() && { defaultWinnerTargetField: statDefaultTargetField.trim() }),
         }),
         legacyStandings: JSON.stringify(legacyRows),
       }),
@@ -421,6 +434,23 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
           onSingle={() => { setShowScopeModal(false); doSave("single"); }}
           onAll={()    => { setShowScopeModal(false); doSave("all");    }}
           onCancel={()  =>  setShowScopeModal(false)}
+        />
+      )}
+
+      {showCompletionModal && event.seriesId && (
+        <EventCompletionModal
+          eventId={event.id}
+          eventTitle={event.title}
+          seriesId={event.seriesId}
+          registeredUsers={allUsers.filter(u => registeredIds.has(u.id))}
+          tournament={tournament ?? null}
+          seriesStatConfig={(() => {
+            try {
+              const cfg = { participationPoints: statParticipationPts, stats: statRows, mvpStatField: statMvpField || undefined, defaultWinnerStatField: statDefaultWinnerField || undefined, defaultWinnerTargetField: statDefaultTargetField || undefined };
+              return cfg;
+            } catch { return null; }
+          })()}
+          onClose={() => setShowCompletionModal(false)}
         />
       )}
 
@@ -775,6 +805,41 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                               <Plus className="w-3 h-3" /> Statistik hinzufügen
                             </button>
                           </div>
+
+                          {/* MVP + Gewinner-Defaults */}
+                          <div className="border-t border-white/[0.05] pt-3 space-y-2">
+                            <p className="text-[10px] text-gray-600 uppercase tracking-widest font-semibold">Event-Abschluss Defaults</p>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-400 w-40 shrink-0">MVP-Stat-Feld</span>
+                              <input
+                                type="text"
+                                value={statMvpField}
+                                onChange={e => setStatMvpField(e.target.value)}
+                                placeholder="z.B. MVP (leer = kein MVP-Tracking)"
+                                className={`${inputCls} flex-1`}
+                              />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-400 w-40 shrink-0">Standard Gewinner-Stat</span>
+                              <input
+                                type="text"
+                                value={statDefaultWinnerField}
+                                onChange={e => setStatDefaultWinnerField(e.target.value)}
+                                placeholder="z.B. Kills"
+                                className={`${inputCls} flex-1`}
+                              />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-400 w-40 shrink-0">Standard Ziel-Stat</span>
+                              <input
+                                type="text"
+                                value={statDefaultTargetField}
+                                onChange={e => setStatDefaultTargetField(e.target.value)}
+                                placeholder="z.B. Siege"
+                                className={`${inputCls} flex-1`}
+                              />
+                            </div>
+                          </div>
                         </div>
 
                         {/* ── Legacy-Stand (Vorjahre / vor App-Einführung) ── */}
@@ -925,6 +990,30 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                     className="text-sm bg-rose-600 hover:bg-rose-500 text-white rounded-lg px-4 py-2 disabled:opacity-50 transition-colors">
                     {loading ? "Speichert…" : "Speichern"}
                   </button>
+
+                  {/* ── Event abschließen (nur für Series-Events ohne completionData) ── */}
+                  {event.seriesId && status !== "finished" && (
+                    <div className="border border-teal-800/40 rounded-lg p-3 bg-teal-950/10">
+                      <div className="flex items-center justify-between gap-4 flex-wrap">
+                        <div>
+                          <p className="text-sm font-medium text-white flex items-center gap-2">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-teal-400" />
+                            Event abschließen
+                          </p>
+                          <p className="text-xs text-gray-600 mt-0.5">
+                            Überträgt Teilnahmen und Stats in die Gesamttabelle der Reihe.
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => setShowCompletionModal(true)}
+                          disabled={loading}
+                          className="flex items-center gap-1.5 text-sm text-teal-300 hover:text-white hover:bg-teal-700 border border-teal-600/50 hover:border-teal-700 rounded-lg px-3 py-2 transition-colors disabled:opacity-50 shrink-0"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Abschließen
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Turnier-Danger-Zone */}
                   {tournament && (
