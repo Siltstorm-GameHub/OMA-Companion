@@ -52,10 +52,11 @@ type SeriesEventForStandings = {
 };
 
 /**
- * Gesamttabelle berechnen:
- * 1. Persistierte Standings aus seriesStandingsJson (completed events)
- * 2. On-demand für finished events OHNE completionData (Rückwärtskompatibilität)
- * 3. Legacy-Werte
+ * Gesamttabelle berechnen.
+ *
+ * Trennung: Legacy-Punkte kommen vorberechnet aus row.points und werden NICHT
+ * neu multipliziert. Nur Event-Stats (persistiert oder on-demand) werden über
+ * die seriesStatConfig in Punkte umgerechnet.
  */
 function computeStatStandings(
   events: SeriesEventForStandings[],
@@ -63,71 +64,88 @@ function computeStatStandings(
   legacy: LegacyRow[],
   persistedStandings: SeriesStandingsJson | null,
 ) {
-  const statTotals: Record<string, Record<string, number>> = {};
+  // Event-Beiträge (werden mit pointsConfig multipliziert)
+  const evPart:  Record<string, number>                 = {};
+  const evStats: Record<string, Record<string, number>> = {};
 
-  function add(uid: string, field: string, val: number) {
-    if (!statTotals[uid]) statTotals[uid] = {};
-    statTotals[uid][field] = (statTotals[uid][field] ?? 0) + val;
+  function addEv(uid: string, field: string, val: number) {
+    if (!evStats[uid]) evStats[uid] = {};
+    evStats[uid][field] = (evStats[uid][field] ?? 0) + val;
   }
 
-  // 1. Persistierte Standings
+  // 1. Persistierte Standings (aus abgeschlossenen Events)
   if (persistedStandings) {
     for (const [uid, stats] of Object.entries(persistedStandings.raw)) {
-      for (const [field, val] of Object.entries(stats)) {
-        add(uid, field, val);
+      evPart[uid] = (evPart[uid] ?? 0) + (stats["participations"] ?? 0);
+      for (const [f, v] of Object.entries(stats)) {
+        if (f !== "participations") addEv(uid, f, v);
       }
     }
   }
 
-  // 2. On-demand für Events ohne completionData
+  // 2. On-demand für Events OHNE completionData (Rückwärtskompatibilität)
   const processedIds = new Set(persistedStandings?.processedEventIds ?? []);
   for (const ev of events) {
-    if (processedIds.has(ev.id)) continue; // bereits in persistierten Standings
-
-    const registeredUserIds = new Set(ev.registrations.map(r => r.userId));
-    for (const uid of registeredUserIds) {
-      add(uid, "participations", 1);
+    if (processedIds.has(ev.id)) continue;
+    for (const { userId: uid } of ev.registrations) {
+      evPart[uid] = (evPart[uid] ?? 0) + 1;
     }
-
     if (!ev.tournament) continue;
     for (const match of ev.tournament.matches) {
       for (const entry of match.entries) {
         if (!entry.userId || !entry.statsJson) continue;
-        let stats: Record<string, number> = {};
-        try { stats = JSON.parse(entry.statsJson); } catch { continue; }
+        let s: Record<string, number> = {};
+        try { s = JSON.parse(entry.statsJson); } catch { continue; }
         for (const { field } of cfg.stats) {
-          const val = Number(stats[field] ?? 0);
-          if (val) add(entry.userId, field, val);
+          const v = Number(s[field] ?? 0);
+          if (v) addEv(entry.userId, field, v);
         }
       }
     }
   }
 
-  // 3. Legacy-Werte
+  // Legacy-Werte: Punkte vorberechnet (row.points), Stats + Teilnahmen nur für Anzeige
+  const legPts:  Record<string, number>                 = {};
+  const legPart: Record<string, number>                 = {};
+  const legStat: Record<string, Record<string, number>> = {};
   for (const row of legacy) {
-    add(row.userId, "participations", row.participations);
-    for (const [field, val] of Object.entries(row.stats ?? {})) {
-      add(row.userId, field, val);
+    legPts[row.userId]  = (legPts[row.userId]  ?? 0) + row.points;
+    legPart[row.userId] = (legPart[row.userId] ?? 0) + row.participations;
+    if (!legStat[row.userId]) legStat[row.userId] = {};
+    for (const [f, v] of Object.entries(row.stats ?? {})) {
+      legStat[row.userId][f] = (legStat[row.userId][f] ?? 0) + v;
     }
-    // Punkte aus Legacy direkt addieren (als Sonderfeld)
-    if (row.points) add(row.userId, "__legacyPoints", row.points);
   }
 
-  const userIds = Array.from(new Set(Object.keys(statTotals)));
-  return userIds
+  const allUids = new Set([
+    ...Object.keys(evPart),
+    ...Object.keys(evStats),
+    ...Object.keys(legPts),
+  ]);
+
+  return [...allUids]
     .map(uid => {
-      const s = statTotals[uid] ?? {};
-      const participations = s["participations"] ?? 0;
-      const legacyPts = s["__legacyPoints"] ?? 0;
-      let totalPoints = legacyPts + participations * cfg.participationPoints;
+      const ep = evPart[uid]  ?? 0;
+      const es = evStats[uid] ?? {};
+
+      // Punkte: Legacy vorberechnet + neue Event-Punkte
+      let totalPoints = (legPts[uid] ?? 0) + ep * cfg.participationPoints;
       for (const { field, pointsPer } of cfg.stats) {
-        totalPoints += (s[field] ?? 0) * pointsPer;
+        totalPoints += (es[field] ?? 0) * pointsPer;
       }
+
+      // Anzeige: Legacy + Event zusammengeführt
+      const displayPart = (legPart[uid] ?? 0) + ep;
+      const displayStats: Record<string, number> = { ...(legStat[uid] ?? {}) };
+      for (const [f, v] of Object.entries(es)) {
+        displayStats[f] = (displayStats[f] ?? 0) + v;
+      }
+
       return {
         userId:         uid,
         totalPoints,
-        participations,
-        stats:          s,
+        participations: displayPart,
+        stats:          displayStats,
         hasLegacy:      legacy.some(l => l.userId === uid),
       };
     })
