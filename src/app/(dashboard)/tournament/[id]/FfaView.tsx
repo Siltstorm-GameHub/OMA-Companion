@@ -116,10 +116,8 @@ export default function FfaView({
                   <tr className="border-b border-white/5 text-[10px] text-gray-500 uppercase tracking-wider">
                     <th className="text-left px-4 py-2.5 font-medium">#</th>
                     <th className="text-left px-4 py-2.5 font-medium">Spieler</th>
-                    {statFields.map(f => (
-                      <th key={f} className="text-center px-3 py-2.5 font-medium">
-                        {isAvg ? `Ø ${f}` : f}
-                      </th>
+                    {!isAvg && statFields.map(f => (
+                      <th key={f} className="text-center px-3 py-2.5 font-medium">{f}</th>
                     ))}
                     {isAvg && (
                       <th className="text-center px-3 py-2.5 font-medium text-amber-400">Ø Gesamt</th>
@@ -155,13 +153,11 @@ export default function FfaView({
                             </span>
                           </div>
                         </td>
-                        {statFields.map((f, fi) => (
+                        {!isAvg && statFields.map(f => (
                           <td key={f} className={`px-3 py-3 text-center tabular-nums font-semibold ${
                             i === 0 ? "text-amber-300" : i === 1 ? "text-gray-300" : i === 2 ? "text-amber-700" : "text-gray-400"
                           }`}>
-                            {isAvg
-                              ? fieldAvgs[fi].toFixed(2)
-                              : (r.stats[f] ?? "–")}
+                            {r.stats[f] ?? "–"}
                           </td>
                         ))}
                         {isAvg && (
@@ -293,11 +289,11 @@ export default function FfaView({
                         <thead>
                           <tr className="border-b border-white/5 text-[10px] text-gray-500 uppercase tracking-wider bg-white/[0.02]">
                             <th className="text-left px-4 py-2 font-medium">Spieler</th>
-                            {statFields.map(f => (
+                            {!isAvg && statFields.map(f => (
                               <th key={f} className="text-center px-3 py-2 font-medium">{f}</th>
                             ))}
                             {isAvg && (
-                              <th className="text-center px-3 py-2 font-medium text-amber-400">Ø</th>
+                              <th className="text-center px-3 py-2 font-medium text-amber-400">Ø Gesamt</th>
                             )}
                           </tr>
                         </thead>
@@ -326,7 +322,7 @@ export default function FfaView({
                                       </span>
                                     </div>
                                   </td>
-                                  {statFields.map(f => (
+                                  {!isAvg && statFields.map(f => (
                                     <td key={f} className="px-3 py-2.5 text-center text-gray-300 tabular-nums">
                                       {stats[f] ?? "–"}
                                     </td>
