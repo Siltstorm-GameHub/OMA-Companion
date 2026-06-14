@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   if (!await requireAdmin()) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { type, refId, channelId, scheduledAt, duration, question } = body;
+  const { type, refId, channelId, scheduledAt, duration, question, excludedUserIds } = body;
 
   if (!type || !refId || !channelId || !scheduledAt) {
     return NextResponse.json({ error: "Fehlende Pflichtfelder" }, { status: 400 });
@@ -36,10 +36,11 @@ export async function POST(req: NextRequest) {
       type,
       refId,
       channelId,
-      scheduledAt: new Date(scheduledAt),
-      duration:    duration ?? 168,
-      question:    question?.trim() || null,
-      status:      "pending",
+      scheduledAt:     new Date(scheduledAt),
+      duration:        duration ?? 168,
+      question:        question?.trim() || null,
+      excludedUserIds: Array.isArray(excludedUserIds) ? excludedUserIds : [],
+      status:          "pending",
     },
   });
 

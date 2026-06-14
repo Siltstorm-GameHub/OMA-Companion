@@ -34,7 +34,7 @@ interface Spieltag {
 interface PollJob {
   id: string; type: string; refId: string; channelId: string;
   scheduledAt: string; duration: number; status: string;
-  question: string | null;
+  question: string | null; excludedUserIds: string[];
   messageId: string | null; errorMsg: string | null;
   createdAt: string; sentAt: string | null;
 }
@@ -69,13 +69,14 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
   const [tab,  setTab]  = useState<"event" | "lul">("event");
 
   // ── Event-Poll-Form ──────────────────────────────────────────
-  const [evtId,       setEvtId]       = useState("");
-  const [evtChan,     setEvtChan]     = useState(process.env.NEXT_PUBLIC_DISCORD_DEFAULT_CHANNEL ?? "");
-  const [evtSched,    setEvtSched]    = useState("");
-  const [evtDuration, setEvtDuration] = useState(24);
-  const [evtQuestion, setEvtQuestion] = useState("");
-  const [evtSaving,   setEvtSaving]   = useState(false);
-  const [evtErrors,   setEvtErrors]   = useState<{ id?: string; chan?: string; sched?: string }>({});
+  const [evtId,          setEvtId]          = useState("");
+  const [evtChan,        setEvtChan]        = useState(process.env.NEXT_PUBLIC_DISCORD_DEFAULT_CHANNEL ?? "");
+  const [evtSched,       setEvtSched]       = useState("");
+  const [evtDuration,    setEvtDuration]    = useState(24);
+  const [evtQuestion,    setEvtQuestion]    = useState("");
+  const [evtExcluded,    setEvtExcluded]    = useState<Set<string>>(new Set());
+  const [evtSaving,      setEvtSaving]      = useState(false);
+  const [evtErrors,      setEvtErrors]      = useState<{ id?: string; chan?: string; sched?: string }>({});
 
   async function scheduleEventPoll() {
     const errs: typeof evtErrors = {};
@@ -89,7 +90,7 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
       const res = await fetch("/api/admin/polls", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "event_winner", refId: evtId, channelId: evtChan, scheduledAt: new Date(evtSched).toISOString(), duration: evtDuration, question: evtQuestion.trim() || evtAutoQ }),
+        body: JSON.stringify({ type: "event_winner", refId: evtId, channelId: evtChan, scheduledAt: new Date(evtSched).toISOString(), duration: evtDuration, question: evtQuestion.trim() || evtAutoQ, excludedUserIds: [...evtExcluded] }),
       });
       if (!res.ok) { toast.error("Fehler beim Erstellen"); return; }
       const job = await res.json();
@@ -106,6 +107,8 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
   const [lulDuration,    setLulDuration]    = useState(168);
   const [lulQ1,          setLulQ1]          = useState("");
   const [lulQ2,          setLulQ2]          = useState("");
+  const [lulExcPlayers,  setLulExcPlayers]  = useState<Set<string>>(new Set());
+  const [lulExcViewers,  setLulExcViewers]  = useState<Set<string>>(new Set());
   const [lulSaving,      setLulSaving]      = useState(false);
   const [lulErrors,      setLulErrors]      = useState<{ id?: string; chan?: string; sched?: string }>({});
 
@@ -121,9 +124,9 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
       const scheduledAt = new Date(lulSched).toISOString();
       const [r1, r2] = await Promise.all([
         fetch("/api/admin/polls", { method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ type: "lul_trostpreis", refId: lulId, channelId: lulChan, scheduledAt, duration: lulDuration, question: lulQ1.trim() || lulAutoQ1 }) }),
+          body: JSON.stringify({ type: "lul_trostpreis", refId: lulId, channelId: lulChan, scheduledAt, duration: lulDuration, question: lulQ1.trim() || lulAutoQ1, excludedUserIds: [...lulExcPlayers] }) }),
         fetch("/api/admin/polls", { method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ type: "lul_community",  refId: lulId, channelId: lulChan, scheduledAt, duration: lulDuration, question: lulQ2.trim() || lulAutoQ2 }) }),
+          body: JSON.stringify({ type: "lul_community",  refId: lulId, channelId: lulChan, scheduledAt, duration: lulDuration, question: lulQ2.trim() || lulAutoQ2, excludedUserIds: [...lulExcViewers] }) }),
       ]);
       if (!r1.ok || !r2.ok) { toast.error("Fehler beim Erstellen"); return; }
       const [j1, j2] = await Promise.all([r1.json(), r2.json()]);
@@ -145,6 +148,16 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
   const selEvent    = events.find(e => e.id === evtId);
   const evtPlayers  = selEvent?.registrations.map(r => r.user) ?? [];
   const evtAutoQ    = selEvent ? `Wer gewinnt „${selEvent.title}"? 🏆` : "";
+
+  function toggleEvtExclude(id: string) {
+    setEvtExcluded(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+  }
+  function toggleLulExcPlayer(id: string) {
+    setLulExcPlayers(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+  }
+  function toggleLulExcViewer(id: string) {
+    setLulExcViewers(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+  }
 
   // Ausgewählter Spieltag
   const selSpieltag = spieltage.find(s => s.id === lulId);
@@ -202,7 +215,7 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
             {/* Event */}
             <div className="space-y-1.5">
               <label className="flex items-center gap-1.5 text-xs text-gray-400"><CalendarDays className="w-3.5 h-3.5"/>Event wählen</label>
-              <select value={evtId} onChange={e => { setEvtId(e.target.value); setEvtErrors(p => ({ ...p, id: undefined })); }}
+              <select value={evtId} onChange={e => { setEvtId(e.target.value); setEvtErrors(p => ({ ...p, id: undefined })); setEvtExcluded(new Set()); }}
                 className={`w-full rounded-xl px-3 py-2.5 text-sm text-white bg-gray-900 border outline-none focus:border-indigo-500/40 ${evtErrors.id ? "border-red-500/50" : "border-white/[0.1]"}`}
                 style={{ colorScheme: "dark" }}>
                 <option value="">— Event wählen —</option>
@@ -284,17 +297,31 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
           {/* Vorschau Teilnehmer */}
           {selEvent && (
             <div className="rounded-xl bg-white/[0.02] border border-white/[0.05] p-3">
-              <p className="text-xs text-gray-500 mb-2">Optionen ({evtPlayers.length} Mitspieler):</p>
+              <p className="text-xs text-gray-500 mb-2">
+                Optionen ({evtPlayers.length - evtExcluded.size}/{evtPlayers.length} Mitspieler) — klicken zum Ausschließen:
+              </p>
               <div className="flex flex-wrap gap-1.5">
                 {evtPlayers.length === 0
                   ? <p className="text-xs text-gray-600 italic">Noch keine Anmeldungen</p>
-                  : evtPlayers.map(u => (
-                    <span key={u.id} className="text-xs px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/15 text-indigo-300">
-                      {u.username ?? u.name}
-                    </span>
-                  ))
+                  : evtPlayers.map(u => {
+                    const excluded = evtExcluded.has(u.id);
+                    return (
+                      <button key={u.id} type="button" onClick={() => toggleEvtExclude(u.id)}
+                        title={excluded ? "Wieder einschließen" : "Ausschließen"}
+                        className={`text-xs px-2 py-0.5 rounded-full border transition-all ${
+                          excluded
+                            ? "bg-red-500/10 border-red-500/20 text-red-400 line-through opacity-50"
+                            : "bg-indigo-500/10 border-indigo-500/15 text-indigo-300 hover:border-red-500/30 hover:text-red-400"
+                        }`}>
+                        {u.username ?? u.name}
+                      </button>
+                    );
+                  })
                 }
               </div>
+              {evtExcluded.size > 0 && (
+                <p className="text-[10px] text-red-400/70 mt-2">{evtExcluded.size} ausgeschlossen</p>
+              )}
             </div>
           )}
 
@@ -315,7 +342,7 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
             {/* Spieltag */}
             <div className="space-y-1.5">
               <label className="flex items-center gap-1.5 text-xs text-gray-400"><Star className="w-3.5 h-3.5"/>Spieltag wählen</label>
-              <select value={lulId} onChange={e => { setLulId(e.target.value); setLulErrors(p => ({ ...p, id: undefined })); }}
+              <select value={lulId} onChange={e => { setLulId(e.target.value); setLulErrors(p => ({ ...p, id: undefined })); setLulExcPlayers(new Set()); setLulExcViewers(new Set()); }}
                 className={`w-full rounded-xl px-3 py-2.5 text-sm text-white bg-gray-900 border outline-none focus:border-indigo-500/40 ${lulErrors.id ? "border-red-500/50" : "border-white/[0.1]"}`}
                 style={{ colorScheme: "dark" }}>
                 <option value="">— Spieltag wählen —</option>
@@ -392,30 +419,58 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
           {selSpieltag && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="rounded-xl bg-amber-500/5 border border-amber-500/15 p-3">
-                <p className="flex items-center gap-1.5 text-xs text-amber-400 font-semibold mb-2"><Gift className="w-3.5 h-3.5" /> Trostpreis-Umfrage ({lulPlayers.length} Mitspieler)</p>
+                <p className="flex items-center gap-1.5 text-xs text-amber-400 font-semibold mb-2">
+                  <Gift className="w-3.5 h-3.5" /> Trostpreis-Umfrage ({lulPlayers.length - lulExcPlayers.size}/{lulPlayers.length}) — klicken zum Ausschließen:
+                </p>
                 <div className="flex flex-wrap gap-1.5">
                   {lulPlayers.length === 0
                     ? <p className="text-xs text-gray-600 italic">Keine Mitspieler eingetragen</p>
-                    : lulPlayers.map(u => (
-                      <span key={u.id} className="text-xs px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/15 text-amber-300">
-                        {u.username ?? u.name}
-                      </span>
-                    ))
+                    : lulPlayers.map(u => {
+                      const excluded = lulExcPlayers.has(u.id);
+                      return (
+                        <button key={u.id} type="button" onClick={() => toggleLulExcPlayer(u.id)}
+                          title={excluded ? "Wieder einschließen" : "Ausschließen"}
+                          className={`text-xs px-2 py-0.5 rounded-full border transition-all ${
+                            excluded
+                              ? "bg-red-500/10 border-red-500/20 text-red-400 line-through opacity-50"
+                              : "bg-amber-500/10 border-amber-500/15 text-amber-300 hover:border-red-500/30 hover:text-red-400"
+                          }`}>
+                          {u.username ?? u.name}
+                        </button>
+                      );
+                    })
                   }
                 </div>
+                {lulExcPlayers.size > 0 && (
+                  <p className="text-[10px] text-red-400/70 mt-2">{lulExcPlayers.size} ausgeschlossen</p>
+                )}
               </div>
               <div className="rounded-xl bg-teal-500/5 border border-teal-500/15 p-3">
-                <p className="flex items-center gap-1.5 text-xs text-teal-400 font-semibold mb-2"><Heart className="w-3.5 h-3.5" /> Community-Support-Umfrage ({lulViewers.length} Zuschauer)</p>
+                <p className="flex items-center gap-1.5 text-xs text-teal-400 font-semibold mb-2">
+                  <Heart className="w-3.5 h-3.5" /> Community-Support-Umfrage ({lulViewers.length - lulExcViewers.size}/{lulViewers.length}) — klicken zum Ausschließen:
+                </p>
                 <div className="flex flex-wrap gap-1.5">
                   {lulViewers.length === 0
                     ? <p className="text-xs text-gray-600 italic">Keine Zuschauer eingetragen</p>
-                    : lulViewers.map(u => (
-                      <span key={u.id} className="text-xs px-2 py-0.5 rounded-full bg-teal-500/10 border border-teal-500/15 text-teal-300">
-                        {u.username ?? u.name}
-                      </span>
-                    ))
+                    : lulViewers.map(u => {
+                      const excluded = lulExcViewers.has(u.id);
+                      return (
+                        <button key={u.id} type="button" onClick={() => toggleLulExcViewer(u.id)}
+                          title={excluded ? "Wieder einschließen" : "Ausschließen"}
+                          className={`text-xs px-2 py-0.5 rounded-full border transition-all ${
+                            excluded
+                              ? "bg-red-500/10 border-red-500/20 text-red-400 line-through opacity-50"
+                              : "bg-teal-500/10 border-teal-500/15 text-teal-300 hover:border-red-500/30 hover:text-red-400"
+                          }`}>
+                          {u.username ?? u.name}
+                        </button>
+                      );
+                    })
                   }
                 </div>
+                {lulExcViewers.size > 0 && (
+                  <p className="text-[10px] text-red-400/70 mt-2">{lulExcViewers.size} ausgeschlossen</p>
+                )}
               </div>
             </div>
           )}
