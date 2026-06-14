@@ -1,0 +1,107 @@
+<svg width="100%" viewBox="0 0 680 400" role="img" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <title>OMA Companion Event Cover</title>
+  <desc>Modernes Event-Standard-Coverbild mit OMA-Logo</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="#06080f"/>
+      <stop offset="100%" stop-color="#0c0a16"/>
+    </linearGradient>
+    <linearGradient id="tealband" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#14b8a6" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#14b8a6" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="redband" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#8b2020" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#8b2020" stop-opacity="0.2"/>
+    </linearGradient>
+    <linearGradient id="divider" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#14b8a6" stop-opacity="0"/>
+      <stop offset="30%" stop-color="#14b8a6" stop-opacity="0.6"/>
+      <stop offset="70%" stop-color="#8b2020" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#8b2020" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="topline" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#14b8a6" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#14b8a6" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#14b8a6" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="clip">
+      <rect width="680" height="400"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#clip)">
+    <rect width="680" height="400" fill="url(#bg)"/>
+
+    <!-- Diagonal color bands -->
+    <polygon points="0,0 320,0 0,400" fill="url(#tealband)"/>
+    <polygon points="680,0 360,0 680,400" fill="url(#redband)"/>
+
+    <!-- Subtle dot grid top-left -->
+    <g fill="#ffffff" fill-opacity="0.04">
+      <circle cx="40" cy="40" r="1.2"/><circle cx="80" cy="40" r="1.2"/><circle cx="120" cy="40" r="1.2"/>
+      <circle cx="40" cy="80" r="1.2"/><circle cx="80" cy="80" r="1.2"/><circle cx="120" cy="80" r="1.2"/>
+      <circle cx="40" cy="120" r="1.2"/><circle cx="80" cy="120" r="1.2"/><circle cx="120" cy="120" r="1.2"/>
+    </g>
+    <!-- Subtle dot grid bottom-left -->
+    <g fill="#ffffff" fill-opacity="0.04">
+      <circle cx="40" cy="280" r="1.2"/><circle cx="80" cy="280" r="1.2"/><circle cx="120" cy="280" r="1.2"/>
+      <circle cx="40" cy="320" r="1.2"/><circle cx="80" cy="320" r="1.2"/><circle cx="120" cy="320" r="1.2"/>
+      <circle cx="40" cy="360" r="1.2"/><circle cx="80" cy="360" r="1.2"/><circle cx="120" cy="360" r="1.2"/>
+    </g>
+    <!-- Subtle dot grid top-right -->
+    <g fill="#ffffff" fill-opacity="0.04">
+      <circle cx="560" cy="40" r="1.2"/><circle cx="600" cy="40" r="1.2"/><circle cx="640" cy="40" r="1.2"/>
+      <circle cx="560" cy="80" r="1.2"/><circle cx="600" cy="80" r="1.2"/><circle cx="640" cy="80" r="1.2"/>
+      <circle cx="560" cy="120" r="1.2"/><circle cx="600" cy="120" r="1.2"/><circle cx="640" cy="120" r="1.2"/>
+    </g>
+    <!-- Subtle dot grid bottom-right -->
+    <g fill="#ffffff" fill-opacity="0.04">
+      <circle cx="560" cy="280" r="1.2"/><circle cx="600" cy="280" r="1.2"/><circle cx="640" cy="280" r="1.2"/>
+      <circle cx="560" cy="320" r="1.2"/><circle cx="600" cy="320" r="1.2"/><circle cx="640" cy="320" r="1.2"/>
+      <circle cx="560" cy="360" r="1.2"/><circle cx="600" cy="360" r="1.2"/><circle cx="640" cy="360" r="1.2"/>
+    </g>
+
+    <!-- Diagonal accent lines left -->
+    <line x1="-60" y1="0" x2="160" y2="400" stroke="#14b8a6" stroke-opacity="0.07" stroke-width="0.6"/>
+    <line x1="-20" y1="0" x2="200" y2="400" stroke="#14b8a6" stroke-opacity="0.05" stroke-width="0.6"/>
+    <line x1="20" y1="0" x2="240" y2="400" stroke="#14b8a6" stroke-opacity="0.03" stroke-width="0.6"/>
+
+    <!-- Diagonal accent lines right -->
+    <line x1="740" y1="0" x2="520" y2="400" stroke="#8b2020" stroke-opacity="0.08" stroke-width="0.6"/>
+    <line x1="700" y1="0" x2="480" y2="400" stroke="#8b2020" stroke-opacity="0.05" stroke-width="0.6"/>
+    <line x1="660" y1="0" x2="440" y2="400" stroke="#8b2020" stroke-opacity="0.03" stroke-width="0.6"/>
+
+    <!-- Corner cuts -->
+    <line x1="0" y1="28" x2="28" y2="0" stroke="#14b8a6" stroke-opacity="0.4" stroke-width="0.8"/>
+    <line x1="0" y1="22" x2="22" y2="0" stroke="#14b8a6" stroke-opacity="0.2" stroke-width="0.5"/>
+    <line x1="680" y1="28" x2="652" y2="0" stroke="#8b2020" stroke-opacity="0.4" stroke-width="0.8"/>
+    <line x1="680" y1="22" x2="658" y2="0" stroke="#8b2020" stroke-opacity="0.2" stroke-width="0.5"/>
+    <line x1="0" y1="372" x2="28" y2="400" stroke="#14b8a6" stroke-opacity="0.4" stroke-width="0.8"/>
+    <line x1="680" y1="372" x2="652" y2="400" stroke="#8b2020" stroke-opacity="0.4" stroke-width="0.8"/>
+
+    <!-- Top accent line -->
+    <line x1="0" y1="1" x2="680" y2="1" stroke="url(#topline)" stroke-width="1"/>
+
+    <!-- Horizontal divider above text -->
+    <line x1="140" y1="330" x2="540" y2="330" stroke="url(#divider)" stroke-width="0.8"/>
+
+    <!-- Side markers -->
+    <rect x="0" y="185" width="3" height="30" rx="1.5" fill="#14b8a6" fill-opacity="0.7"/>
+    <rect x="677" y="185" width="3" height="30" rx="1.5" fill="#8b2020" fill-opacity="0.7"/>
+
+    <!-- Logo -->
+    <image href="/OMALogoNew.png" x="240" y="62" width="200" height="200" preserveAspectRatio="xMidYMid meet"/>
+
+    <!-- Bottom label -->
+    <text x="340" y="358"
+      text-anchor="middle"
+      font-family="system-ui,ui-sans-serif,sans-serif"
+      font-size="10" font-weight="700" letter-spacing="5"
+      fill="#ffffff" fill-opacity="0.22">OMA COMPANION</text>
+
+    <!-- Dots flanking text -->
+    <circle cx="164" cy="354" r="2" fill="#14b8a6" fill-opacity="0.5"/>
+    <circle cx="516" cy="354" r="2" fill="#8b2020" fill-opacity="0.5"/>
+  </g>
+</svg>

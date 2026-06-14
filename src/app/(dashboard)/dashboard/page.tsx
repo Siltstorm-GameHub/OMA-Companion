@@ -9,7 +9,6 @@ import CoinIcon from "@/components/CoinIcon";
 import Link from "next/link";
 import Image from "next/image";
 import { CountUp } from "@/components/CountUp";
-import { getGameCoverUrl } from "@/lib/game-cover";
 import GameCover from "@/components/GameCover";
 
 const MEDAL = ["🥇", "🥈", "🥉"];
@@ -229,15 +228,19 @@ export default async function DashboardPage() {
             {/* Cover art area */}
             <div className="relative overflow-hidden" style={{ height: "108px" }}>
               {/* Game cover background */}
-              {getGameCoverUrl(nextEvent?.game) ? (
-                <img
-                  src={getGameCoverUrl(nextEvent!.game)!}
-                  alt=""
-                  className="absolute inset-0 w-full h-full object-cover object-center scale-105 group-hover:scale-110 transition-transform duration-700"
+              {nextEvent?.game ? (
+                <GameCover
+                  game={nextEvent.game}
+                  className="absolute inset-0 w-full h-full"
+                  rounded="rounded-none"
+                  imgClassName="w-full h-full object-cover object-center scale-105 group-hover:scale-110 transition-transform duration-700"
                 />
               ) : (
-                <div className="absolute inset-0"
-                  style={{ background: "linear-gradient(135deg, #052e26 0%, #0a1f1c 50%, #0d0d0f 100%)" }} />
+                <img
+                  src="/event-cover-default.svg"
+                  alt=""
+                  className="absolute inset-0 w-full h-full object-cover object-center"
+                />
               )}
               {/* Overlay */}
               <div className="absolute inset-0"

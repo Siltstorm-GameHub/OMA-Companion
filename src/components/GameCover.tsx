@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Gamepad2 } from "lucide-react";
-import { getGameCoverUrl, getGameFallbackGradient } from "@/lib/game-cover";
+import { getGameCoverUrl } from "@/lib/game-cover";
 
 interface GameCoverProps {
   game: string | null | undefined;
@@ -23,8 +22,7 @@ export default function GameCover({
   rounded = "rounded-lg",
   imgClassName = "w-full h-full object-cover",
 }: GameCoverProps) {
-  const staticUrl    = getGameCoverUrl(game);
-  const fallbackGrad = getGameFallbackGradient(game);
+  const staticUrl = getGameCoverUrl(game);
 
   const [dynamicUrl, setDynamicUrl] = useState<string | null | undefined>(
     // Sofort aus Cache bedienen falls vorhanden
@@ -60,7 +58,6 @@ export default function GameCover({
   return (
     <div
       className={`${className} ${rounded} overflow-hidden shrink-0 relative`}
-      style={showImage ? {} : { background: fallbackGrad }}
     >
       {showImage ? (
         <img
@@ -70,15 +67,11 @@ export default function GameCover({
           onError={() => setImgError(true)}
         />
       ) : (
-        <div className="w-full h-full flex items-center justify-center">
-          {game ? (
-            <span className="text-white/70 font-bold text-xs leading-none select-none">
-              {game.split(" ").slice(0, 2).map(w => w[0]?.toUpperCase()).join("")}
-            </span>
-          ) : (
-            <Gamepad2 className="w-4 h-4 text-white/40" />
-          )}
-        </div>
+        <img
+          src="/event-cover-default.svg"
+          alt=""
+          className="w-full h-full object-cover"
+        />
       )}
       {/* Subtiler Rand */}
       <div className="absolute inset-0 rounded-[inherit] ring-1 ring-inset ring-white/10 pointer-events-none" />
