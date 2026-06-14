@@ -37,6 +37,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             __html: `(function(){var t=localStorage.getItem("theme");if(t)document.documentElement.setAttribute("data-theme",t);})()`,
           }}
         />
+        {/* Service Worker registrieren */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js")}`,
+          }}
+        />
       </head>
       <body className="antialiased" style={{ background: "var(--bg-base, #080c18)" }}>
         {/* Hex-Grid canvas — fixed, behind content but above body bg */}
