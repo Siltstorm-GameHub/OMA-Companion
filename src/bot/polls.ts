@@ -19,7 +19,7 @@ export async function processPendingPolls(client: Client) {
 
   for (const job of jobs) {
     try {
-      const { question: autoQuestion, answers } = await buildPoll(job.type, job.refId);
+      const { question: autoQuestion, answers } = await buildPoll(job.type, job.refId, job.excludedUserIds);
       const question = job.question?.trim() || autoQuestion;
 
       if (answers.length < 2) {
@@ -70,17 +70,19 @@ export async function processPendingPolls(client: Client) {
 
 // ── Poll-Inhalte je Typ zusammenbauen ───────────────────────────────────────
 
-async function buildPoll(type: string, refId: string): Promise<{ question: string; answers: string[] }> {
+async function buildPoll(type: string, refId: string, excludedUserIds: string[] = []): Promise<{ question: string; answers: string[] }> {
   // ── Event-Sieger ──────────────────────────────────────────────────────────
   if (type === "event_winner") {
     const event = await prisma.event.findUnique({
       where:   { id: refId },
-      include: { registrations: { include: { user: { select: { username: true, name: true } } } } },
+      include: { registrations: { include: { user: { select: { id: true, username: true, name: true } } } } },
     });
     if (!event) throw new Error(`Event ${refId} nicht gefunden`);
     return {
       question: `Wer gewinnt „${event.title}"? 🏆`,
-      answers:  event.registrations.map(r => r.user.username ?? r.user.name ?? "Unbekannt"),
+      answers:  event.registrations
+        .filter(r => !excludedUserIds.includes(r.user.id))
+        .map(r => r.user.username ?? r.user.name ?? "Unbekannt"),
     };
   }
 
@@ -88,12 +90,14 @@ async function buildPoll(type: string, refId: string): Promise<{ question: strin
   if (type === "lul_trostpreis") {
     const spieltag = await prisma.lulSpieltag.findUnique({
       where:   { id: refId },
-      include: { entries: { where: { role: "player" }, include: { user: { select: { username: true, name: true } } } } },
+      include: { entries: { where: { role: "player" }, include: { user: { select: { id: true, username: true, name: true } } } } },
     });
     if (!spieltag) throw new Error(`Spieltag ${refId} nicht gefunden`);
     return {
       question: `Spieltag ${spieltag.number}: Wer verdient den Trostpreis? 🎁`,
-      answers:  spieltag.entries.map(e => e.user.username ?? e.user.name ?? "Unbekannt"),
+      answers:  spieltag.entries
+        .filter(e => !excludedUserIds.includes(e.user.id))
+        .map(e => e.user.username ?? e.user.name ?? "Unbekannt"),
     };
   }
 
@@ -101,12 +105,14 @@ async function buildPoll(type: string, refId: string): Promise<{ question: strin
   if (type === "lul_community") {
     const spieltag = await prisma.lulSpieltag.findUnique({
       where:   { id: refId },
-      include: { entries: { where: { role: "spectator" }, include: { user: { select: { username: true, name: true } } } } },
+      include: { entries: { where: { role: "spectator" }, include: { user: { select: { id: true, username: true, name: true } } } } },
     });
     if (!spieltag) throw new Error(`Spieltag ${refId} nicht gefunden`);
     return {
       question: `Spieltag ${spieltag.number}: Wer gewinnt den Community-Support-Preis? 💛`,
-      answers:  spieltag.entries.map(e => e.user.username ?? e.user.name ?? "Unbekannt"),
+      answers:  spieltag.entries
+        .filter(e => !excludedUserIds.includes(e.user.id))
+        .map(e => e.user.username ?? e.user.name ?? "Unbekannt"),
     };
   }
 
