@@ -102,7 +102,7 @@ export default function MobileTopBar() {
     <>
       <header
         style={{ background: "rgba(4,10,9,0.95)", borderBottom: "1px solid rgba(20,184,166,0.09)", top: "2.25rem" }}
-        className="fixed left-0 right-0 z-40 lg:hidden h-14 backdrop-blur-2xl flex items-center px-4 gap-3"
+        className="fixed left-0 right-0 z-50 lg:hidden h-14 backdrop-blur-2xl flex items-center px-4 gap-3"
       >
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-teal-500/40 to-transparent pointer-events-none" />
 
@@ -112,9 +112,11 @@ export default function MobileTopBar() {
 
         <button
           ref={btnRef}
-          onClick={() => setOpen(v => !v)}
+          onPointerDown={(e) => { e.stopPropagation(); setOpen(v => !v); }}
           className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center transition-all shrink-0"
-          style={open ? { outline: "2px solid rgba(20,184,166,0.5)", outlineOffset: 2 } : { outline: "1px solid rgba(20,184,166,0.22)", outlineOffset: 1 }}
+          style={open
+            ? { outline: "2px solid rgba(20,184,166,0.5)", outlineOffset: 2, touchAction: "manipulation" }
+            : { outline: "1px solid rgba(20,184,166,0.22)", outlineOffset: 1, touchAction: "manipulation" }}
           aria-label="Profil-Menü"
         >
           {session?.user?.image ? (
