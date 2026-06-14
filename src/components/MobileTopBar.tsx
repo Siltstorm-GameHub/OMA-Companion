@@ -4,6 +4,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { LogOut, User } from "lucide-react";
+import PwaInstallButton from "@/components/PwaInstallButton";
 import { useState, useRef, useEffect } from "react";
 
 const ROUTE_TITLES: Record<string, string> = {
@@ -95,6 +96,7 @@ export default function MobileTopBar() {
             </p>
           </div>
           <div className="p-1">
+            <PwaInstallButton />
             <Link href="/profile"
               className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-gray-400 hover:text-teal-400 hover:bg-teal-500/8 transition-colors">
               <User style={{ width: 13, height: 13 }} />
