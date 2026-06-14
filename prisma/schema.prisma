@@ -508,6 +508,8 @@ model PollJob {
   // Frage-Text (editierbar im Admin, wird 1:1 an Discord gesendet)
   question         String?
   excludedUserIds  String[]  @default([])
+  customAnswers    String[]  @default([])
+  allowMultiselect Boolean   @default(false)
   // "pending" | "sent" | "cancelled" | "failed"
   status      String    @default("pending")
   // Discord Message-ID nach dem Senden (zum Nachverfolgen)
