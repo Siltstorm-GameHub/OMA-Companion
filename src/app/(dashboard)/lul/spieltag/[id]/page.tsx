@@ -84,6 +84,14 @@ export default async function LulSpieltagPage({
   const players = fmt === "avg_stats"
     ? [...rawPlayers].sort((a, b) => calcCombinedAvg(b.statsJson) - calcCombinedAvg(a.statsJson))
     : rawPlayers;
+
+  // Anzahl Runden für avg_stats
+  const avgRounds = fmt === "avg_stats" ? rawPlayers.reduce((max, e) => {
+    try {
+      const s = JSON.parse(e.statsJson ?? "{}") as Record<string, unknown>;
+      return typeof s._rounds === "number" ? Math.max(max, s._rounds) : max;
+    } catch { return max; }
+  }, 1) : 0;
   const spectators = spieltag.entries.filter((e) => e.role === "spectator");
   const voters     = spieltag.entries.filter((e) => e.role === "voter");
   type LulMatch = { id: string; p1: string; p2: string; s1: string; s2: string; winner: string };
@@ -282,28 +290,60 @@ export default async function LulSpieltagPage({
             }}
           >
             <div className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse" style={{ minWidth: isStatFmt ? `${320 + (fmt === "avg_stats" ? 90 : statFieldsList.length * 80)}px` : maxRounds > 0 ? `${480 + maxRounds * 56}px` : "480px" }}>
+              <table className="w-full text-sm border-collapse" style={{
+                minWidth: fmt === "avg_stats"
+                  ? `${320 + avgRounds * statFieldsList.length * 56 + 90}px`
+                  : isStatFmt
+                    ? `${320 + statFieldsList.length * 80}px`
+                    : maxRounds > 0 ? `${480 + maxRounds * 56}px` : "480px"
+              }}>
                 <thead>
+                  {/* Gruppen-Kopfzeile nur bei avg_stats */}
+                  {fmt === "avg_stats" && (
+                    <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.04)", background: "rgba(255,255,255,0.015)" }}>
+                      <th colSpan={2} />
+                      {Array.from({ length: avgRounds }, (_, ri) => (
+                        <th key={ri} colSpan={statFieldsList.length}
+                          className="text-center px-2 py-1.5 text-[10px] font-semibold text-gray-500 uppercase tracking-widest whitespace-nowrap"
+                          style={{ borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
+                          R{ri + 1}
+                        </th>
+                      ))}
+                      <th className="text-center px-2 py-1.5 text-[10px] font-semibold uppercase tracking-widest whitespace-nowrap"
+                        style={{ color: "#f59e0b", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
+                        Ø Gesamt
+                      </th>
+                      <th colSpan={2} />
+                    </tr>
+                  )}
                   <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
                     <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-600 uppercase tracking-widest w-10">#</th>
                     <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-600 uppercase tracking-widest">Spieler</th>
-                    {isStatFmt && fmt !== "avg_stats"
-                      ? statFieldsList.map(f => (
-                          <th key={f} className="text-center px-3 py-3 text-[10px] font-semibold text-gray-600 uppercase tracking-widest whitespace-nowrap">
-                            {f}
+                    {fmt === "avg_stats"
+                      ? <>
+                          {Array.from({ length: avgRounds }, (_, ri) =>
+                            statFieldsList.map(f => (
+                              <th key={`${ri}_${f}`} className="text-center px-2 py-2.5 text-[10px] font-semibold text-gray-600 uppercase tracking-widest whitespace-nowrap"
+                                style={{ borderLeft: ri === 0 && f === statFieldsList[0] ? "1px solid rgba(255,255,255,0.06)" : undefined }}>
+                                {f}
+                              </th>
+                            ))
+                          )}
+                          <th className="text-center px-3 py-2.5 text-[10px] font-semibold uppercase tracking-widest whitespace-nowrap"
+                            style={{ color: "#f59e0b", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
+                            Ø
                           </th>
-                        ))
-                      : !isStatFmt
-                        ? Array.from({ length: maxRounds }, (_, ri) => (
+                        </>
+                      : isStatFmt
+                        ? statFieldsList.map(f => (
+                            <th key={f} className="text-center px-3 py-3 text-[10px] font-semibold text-gray-600 uppercase tracking-widest whitespace-nowrap">
+                              {f}
+                            </th>
+                          ))
+                        : Array.from({ length: maxRounds }, (_, ri) => (
                             <th key={ri} className="text-center px-2 py-3 text-[10px] font-semibold text-gray-700 uppercase tracking-widest whitespace-nowrap">R{ri + 1}</th>
                           ))
-                        : null
                     }
-                    {fmt === "avg_stats" && (
-                      <th className="text-center px-3 py-3 text-[10px] font-semibold uppercase tracking-widest whitespace-nowrap" style={{ color: "#f59e0b" }}>
-                        Ø Gesamt
-                      </th>
-                    )}
                     {!isStatFmt && <th className="text-center px-3 py-3 text-[10px] font-semibold text-gray-600 uppercase tracking-widest whitespace-nowrap">Gesamt</th>}
                     <th className="text-center px-2 py-3 text-[10px] font-semibold text-gray-600 uppercase tracking-widest whitespace-nowrap">Boni</th>
                     <th className="text-right px-4 py-3 text-[10px] font-semibold uppercase tracking-widest whitespace-nowrap" style={{ color: "#14b8a6" }}>LuL-Pkt</th>
@@ -313,38 +353,42 @@ export default async function LulSpieltagPage({
                   {players.map((entry, i) => {
                     let rounds: number[] = [];
                     try { rounds = JSON.parse(entry.roundScores ?? "[]"); } catch { /* ignore */ }
-                    // Parse stat totals (new format: arrays; old format: flat numbers)
-                    const stats: Record<string, string> = {};
+
+                    // Parse statsJson into per-round arrays and per-field averages
+                    let statRounds: Record<string, number[]> = {};
+                    let combinedAvg: number | null = null;
                     if (isStatFmt && entry.statsJson) {
                       try {
                         const s = JSON.parse(entry.statsJson) as Record<string, unknown>;
                         const nR = typeof s._rounds === "number" && s._rounds > 0 ? s._rounds : 1;
                         for (const f of statFieldsList) {
                           const val = s[f];
-                          if (Array.isArray(val)) {
-                            const total = val.reduce((sum: number, v) => sum + (Number(v) || 0), 0);
-                            stats[f] = fmt === "avg_stats"
-                              ? (total / nR % 1 === 0 ? String(total / nR) : (total / nR).toFixed(1))
-                              : String(total);
-                          } else if (typeof val === "number") {
-                            stats[f] = String(val);
-                          }
+                          statRounds[f] = Array.isArray(val)
+                            ? Array.from({ length: nR }, (_, ri) => Number(val[ri]) || 0)
+                            : typeof val === "number" ? [val] : [];
+                        }
+                        if (fmt === "avg_stats" && statFieldsList.length > 0) {
+                          const fieldAvgs = statFieldsList
+                            .filter(f => statRounds[f].length > 0)
+                            .map(f => statRounds[f].reduce((a, b) => a + b, 0) / statRounds[f].length);
+                          combinedAvg = fieldAvgs.length > 0
+                            ? fieldAvgs.reduce((a, b) => a + b, 0) / fieldAvgs.length
+                            : null;
                         }
                       } catch { /* ignore */ }
                     }
-                    // Kombinierter Durchschnitt für avg_stats (Ø aller Felder)
-                    const combinedAvg: number | null = fmt === "avg_stats" && statFieldsList.length > 0
-                      ? (() => {
-                          const filled = statFieldsList.filter(f => stats[f] !== undefined);
-                          return filled.length > 0
-                            ? filled.map(f => parseFloat(stats[f]!)).reduce((a, b) => a + b, 0) / filled.length
-                            : null;
-                        })()
-                      : null;
+                    // For non-avg stat formats: total per field
+                    const statTotals: Record<string, number> = {};
+                    if (isStatFmt && fmt !== "avg_stats") {
+                      for (const f of statFieldsList) {
+                        statTotals[f] = (statRounds[f] ?? []).reduce((a, b) => a + b, 0);
+                      }
+                    }
 
                     const isMe      = entry.userId === userId;
                     const placement = entry.placement ?? i + 1;
                     const isTop3    = placement <= 3 && placement > 0;
+                    const rankColor = i === 0 ? "#fbbf24" : i === 1 ? "#d1d5db" : i === 2 ? "#b45309" : "#6b7280";
 
                     const badges: { icon: React.ReactNode; label: string; color: string }[] = [];
                     if (entry.gameWinner)    badges.push({ icon: <Trophy        className="w-3 h-3" />, label: "Sieger",    color: "text-amber-400"   });
@@ -376,34 +420,40 @@ export default async function LulSpieltagPage({
                             </p>
                           </div>
                         </td>
-                        {isStatFmt && fmt !== "avg_stats"
+                        {fmt === "avg_stats"
+                          ? <>
+                              {Array.from({ length: avgRounds }, (_, ri) =>
+                                statFieldsList.map(f => (
+                                  <td key={`${ri}_${f}`} className="px-2 py-3 text-center">
+                                    <span className="text-sm tabular-nums text-gray-400">
+                                      {statRounds[f]?.[ri] !== undefined ? statRounds[f][ri] : "–"}
+                                    </span>
+                                  </td>
+                                ))
+                              )}
+                              <td className="px-3 py-3 text-center" style={{ borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
+                                <span className="text-sm tabular-nums font-bold" style={{ color: rankColor }}>
+                                  {combinedAvg !== null
+                                    ? (Number.isInteger(combinedAvg) ? combinedAvg : combinedAvg.toFixed(2))
+                                    : "–"}
+                                </span>
+                              </td>
+                            </>
+                          : isStatFmt
                           ? statFieldsList.map(f => (
                               <td key={f} className="px-3 py-3 text-center">
-                                <span className="text-sm tabular-nums text-gray-300">{stats[f] ?? "–"}</span>
+                                <span className="text-sm tabular-nums text-gray-300">{statTotals[f] ?? "–"}</span>
                               </td>
                             ))
-                          : !isStatFmt
-                          ? Array.from({ length: maxRounds }, (_, ri) => (
+                          : Array.from({ length: maxRounds }, (_, ri) => (
                               <td key={ri} className="px-2 py-3 text-center">
                                 <span className="text-sm tabular-nums text-gray-400">{rounds[ri] !== undefined ? rounds[ri] : "–"}</span>
                               </td>
                             ))
-                          : null
                         }
-                        {fmt === "avg_stats" && (
-                          <td className="px-3 py-3 text-center">
-                            <span className="text-sm tabular-nums font-bold" style={{
-                              color: i === 0 ? "#fbbf24" : i === 1 ? "#d1d5db" : i === 2 ? "#b45309" : "#6b7280"
-                            }}>
-                              {combinedAvg !== null
-                                ? (Number.isInteger(combinedAvg) ? combinedAvg : combinedAvg.toFixed(2))
-                                : "–"}
-                            </span>
-                          </td>
-                        )}
                         {!isStatFmt && (
                           <td className="px-3 py-3 text-center">
-                            <span className="text-sm font-semibold tabular-nums text-white">{entry.totalGameScore > 0 ? entry.totalGameScore : "–"}</span>
+                            <span className="text-sm font-semibold tabular-nums text-white">{rounds.reduce((a,b)=>a+b,0) || "–"}</span>
                           </td>
                         )}
                         <td className="px-2 py-3 text-center">
