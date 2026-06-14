@@ -83,7 +83,7 @@ export default async function TournamentDetailPage({
       ]
     : [];
   const format = t?.format ?? "single_elimination";
-  const isFfa         = format === "ffa" || format === "coop_stats";
+  const isFfa         = format === "ffa" || format === "coop_stats" || format === "avg_stats";
   const isElimination = format === "single_elimination" || format === "double_elimination";
   const isRoundRobin  = format === "round_robin";
   const isLiga        = format === "liga";
@@ -327,6 +327,7 @@ export default async function TournamentDetailPage({
                 participants={mergedParticipants}
                 statFields={t.statFields ? JSON.parse(t.statFields) : []}
                 userId={userId}
+                format={format}
               />
             )}
           </div>

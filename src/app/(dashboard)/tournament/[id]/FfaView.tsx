@@ -2,9 +2,9 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp, Trophy, Clock } from "lucide-react";
 
-type User = { id: string; name: string | null; username: string | null; image: string | null };
+type User        = { id: string; name: string | null; username: string | null; image: string | null };
 type Participant = { userId: string; user: User };
-type Entry = {
+type Entry       = {
   id: string; userId: string | null; teamId: string | null;
   placement: number | null; score: number | null; statsJson: string | null;
 };
@@ -14,19 +14,29 @@ type Match = {
   playedAt: string | Date | null; entries: Entry[];
 };
 
-const uname = (u: User | undefined | null) => u?.username ?? u?.name ?? "?";
-const MEDAL = ["🥇", "🥈", "🥉"];
+const uname  = (u: User | undefined | null) => u?.username ?? u?.name ?? "?";
+const MEDAL  = ["🥇", "🥈", "🥉"];
+
+/** Durchschnitt aller Stat-Werte eines Eintrags (für avg_stats) */
+function calcEntryAvg(statsJson: string | null, statFields: string[]): number | null {
+  if (!statsJson || statFields.length === 0) return null;
+  const s = JSON.parse(statsJson) as Record<string, number>;
+  const vals = statFields.map(f => s[f] ?? 0);
+  return vals.reduce((a, b) => a + b, 0) / vals.length;
+}
 
 export default function FfaView({
   matches,
   participants,
   statFields,
   userId,
+  format = "ffa",
 }: {
   matches: Match[];
   participants: Participant[];
   statFields: string[];
   userId: string;
+  format?: string;
 }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const toggle = (id: string) =>
@@ -36,15 +46,12 @@ export default function FfaView({
       return next;
     });
 
+  const isAvg    = format === "avg_stats";
   const findUser = (uid: string | null) =>
     uid ? participants.find(p => p.userId === uid)?.user : null;
 
-  // ── Gesamtranking: Stats über alle gespielten Matches summieren ──────
-  type PlayerTotal = {
-    userId: string; user: User;
-    stats: Record<string, number>;
-    matchCount: number;
-  };
+  // ── Gesamtranking ─────────────────────────────────────────────────────────
+  type PlayerTotal = { userId: string; user: User; stats: Record<string, number>; matchCount: number };
   const totals = new Map<string, PlayerTotal>();
 
   for (const p of participants) {
@@ -56,7 +63,6 @@ export default function FfaView({
       if (!e.userId) continue;
       let t = totals.get(e.userId);
       if (!t) {
-        // Spieler ist nicht in participants — trotzdem anzeigen
         const u = findUser(e.userId);
         if (!u) continue;
         t = { userId: e.userId, user: u, stats: {}, matchCount: 0 };
@@ -72,10 +78,18 @@ export default function FfaView({
     }
   }
 
-  // Ranking: nach erstem Stat-Feld absteigend, dann folgenden Feldern als Tiebreaker
+  // Für avg_stats: Durchschnitt pro Feld über alle Runden, dann Ø aller Felder
   const ranked = [...totals.values()]
     .filter(t => t.matchCount > 0)
     .sort((a, b) => {
+      if (isAvg) {
+        const avgOf = (t: PlayerTotal) =>
+          statFields.length > 0
+            ? statFields.map(f => (t.matchCount > 0 ? (t.stats[f] ?? 0) / t.matchCount : 0))
+                .reduce((s, v) => s + v, 0) / statFields.length
+            : 0;
+        return avgOf(b) - avgOf(a);
+      }
       for (const f of statFields) {
         const diff = (b.stats[f] ?? 0) - (a.stats[f] ?? 0);
         if (diff !== 0) return diff;
@@ -89,7 +103,7 @@ export default function FfaView({
   return (
     <div className="space-y-5">
 
-      {/* ── Gesamtranking ─────────────────────────────────────────────── */}
+      {/* ── Gesamtranking ───────────────────────────────────────────────── */}
       {ranked.length > 0 && (
         <div>
           <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
@@ -103,14 +117,25 @@ export default function FfaView({
                     <th className="text-left px-4 py-2.5 font-medium">#</th>
                     <th className="text-left px-4 py-2.5 font-medium">Spieler</th>
                     {statFields.map(f => (
-                      <th key={f} className="text-center px-3 py-2.5 font-medium">{f}</th>
+                      <th key={f} className="text-center px-3 py-2.5 font-medium">
+                        {isAvg ? `Ø ${f}` : f}
+                      </th>
                     ))}
-                    <th className="text-center px-3 py-2.5 font-medium">Matches</th>
+                    {isAvg && (
+                      <th className="text-center px-3 py-2.5 font-medium text-amber-400">Ø Gesamt</th>
+                    )}
+                    <th className="text-center px-3 py-2.5 font-medium">Runden</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
                   {ranked.map((r, i) => {
-                    const isMe = r.userId === userId;
+                    const isMe   = r.userId === userId;
+                    const fieldAvgs = statFields.map(f =>
+                      r.matchCount > 0 ? (r.stats[f] ?? 0) / r.matchCount : 0
+                    );
+                    const combined = isAvg && statFields.length > 0
+                      ? fieldAvgs.reduce((s, v) => s + v, 0) / statFields.length
+                      : null;
                     return (
                       <tr key={r.userId} className={`transition-colors ${isMe ? "bg-rose-950/30" : "hover:bg-white/[0.02]"}`}>
                         <td className="px-4 py-3 text-center">
@@ -120,25 +145,32 @@ export default function FfaView({
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
-                            {r.user.image ? (
-                              <img src={r.user.image} alt="" className="w-6 h-6 rounded-full shrink-0" />
-                            ) : (
-                              <div className="w-6 h-6 rounded-full bg-rose-900/30 flex items-center justify-center text-[10px] font-bold text-rose-400 shrink-0">
-                                {uname(r.user)[0].toUpperCase()}
-                              </div>
-                            )}
+                            {r.user.image
+                              ? <img src={r.user.image} alt="" className="w-6 h-6 rounded-full shrink-0" />
+                              : <div className="w-6 h-6 rounded-full bg-rose-900/30 flex items-center justify-center text-[10px] font-bold text-rose-400 shrink-0">
+                                  {uname(r.user)[0].toUpperCase()}
+                                </div>}
                             <span className={`font-medium ${isMe ? "text-rose-300" : "text-white"}`}>
                               {uname(r.user)}{isMe && " (du)"}
                             </span>
                           </div>
                         </td>
-                        {statFields.map(f => (
+                        {statFields.map((f, fi) => (
                           <td key={f} className={`px-3 py-3 text-center tabular-nums font-semibold ${
                             i === 0 ? "text-amber-300" : i === 1 ? "text-gray-300" : i === 2 ? "text-amber-700" : "text-gray-400"
                           }`}>
-                            {r.stats[f] ?? "–"}
+                            {isAvg
+                              ? fieldAvgs[fi].toFixed(2)
+                              : (r.stats[f] ?? "–")}
                           </td>
                         ))}
+                        {isAvg && (
+                          <td className={`px-3 py-3 text-center tabular-nums font-bold ${
+                            i === 0 ? "text-amber-300" : i === 1 ? "text-gray-300" : i === 2 ? "text-amber-700" : "text-gray-400"
+                          }`}>
+                            {combined !== null ? combined.toFixed(2) : "–"}
+                          </td>
+                        )}
                         <td className="px-3 py-3 text-center text-gray-500 text-xs">{r.matchCount}</td>
                       </tr>
                     );
@@ -147,16 +179,16 @@ export default function FfaView({
               </table>
             </div>
           </div>
-          {statFields.length > 0 && (
-            <p className="text-[10px] text-gray-600 mt-1.5 px-1">
-              Sortiert nach: <span className="text-gray-500">{statFields[0]}</span>
-              {statFields.length > 1 && <> · Tiebreaker: {statFields.slice(1).join(", ")}</>}
-            </p>
-          )}
+          <p className="text-[10px] text-gray-600 mt-1.5 px-1">
+            {isAvg
+              ? <>Sortiert nach kombiniertem Durchschnitt aller Felder</>
+              : <>Sortiert nach: <span className="text-gray-500">{statFields[0]}</span>
+                  {statFields.length > 1 && <> · Tiebreaker: {statFields.slice(1).join(", ")}</>}</>}
+          </p>
         </div>
       )}
 
-      {/* ── Ausstehende Matches ────────────────────────────────────────── */}
+      {/* ── Ausstehende Matches ─────────────────────────────────────────── */}
       {upcomingMatches.length > 0 && (
         <div>
           <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">
@@ -183,7 +215,7 @@ export default function FfaView({
                 </div>
                 <div className="flex flex-wrap gap-1 shrink-0">
                   {match.entries.slice(0, 4).map(e => {
-                    const u = findUser(e.userId);
+                    const u    = findUser(e.userId);
                     const isMe = e.userId === userId;
                     return u ? (
                       <span key={e.id} className={`text-xs px-2 py-0.5 rounded-full border ${
@@ -205,7 +237,7 @@ export default function FfaView({
         </div>
       )}
 
-      {/* ── Gespielte Matches mit Ergebnissen ─────────────────────────── */}
+      {/* ── Gespielte Matches mit Ergebnissen ───────────────────────────── */}
       {playedMatches.length > 0 && (
         <div>
           <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">
@@ -213,14 +245,25 @@ export default function FfaView({
           </h2>
           <div className="space-y-2">
             {playedMatches.map(match => {
-              const isExp    = expanded.has(match.id);
-              const myEntry  = match.entries.find(e => e.userId === userId);
+              const isExp   = expanded.has(match.id);
+              const myEntry = match.entries.find(e => e.userId === userId);
+
+              // Für avg_stats: Gewinner dieses Matches bestimmen
+              let matchWinnerId: string | null = null;
+              if (isAvg && statFields.length > 0) {
+                let best = -Infinity;
+                for (const e of match.entries) {
+                  const avg = calcEntryAvg(e.statsJson, statFields);
+                  if (avg !== null && avg > best) { best = avg; matchWinnerId = e.userId; }
+                }
+              }
 
               return (
                 <div key={match.id} className={`glass border rounded-xl overflow-hidden ${myEntry ? "border-rose-800/40" : "border-white/5"}`}>
                   <button
                     className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/[0.02] text-left"
-                    onClick={() => toggle(match.id)}>
+                    onClick={() => toggle(match.id)}
+                  >
                     <div className="flex items-center gap-3 min-w-0">
                       <span className="text-sm font-medium text-white truncate">
                         {match.title || `Match ${match.position}`}
@@ -229,6 +272,12 @@ export default function FfaView({
                         <span className="text-xs text-gray-600 flex items-center gap-1 shrink-0">
                           <Clock className="w-3 h-3" />
                           {new Date(match.playedAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })}
+                        </span>
+                      )}
+                      {isAvg && matchWinnerId && (
+                        <span className="text-xs text-amber-400 flex items-center gap-1 shrink-0">
+                          <Trophy className="w-3 h-3" />
+                          {uname(findUser(matchWinnerId))}
                         </span>
                       )}
                     </div>
@@ -247,31 +296,49 @@ export default function FfaView({
                             {statFields.map(f => (
                               <th key={f} className="text-center px-3 py-2 font-medium">{f}</th>
                             ))}
+                            {isAvg && (
+                              <th className="text-center px-3 py-2 font-medium text-amber-400">Ø</th>
+                            )}
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
-                          {match.entries.map(e => {
-                            const u     = findUser(e.userId);
-                            const stats = e.statsJson ? JSON.parse(e.statsJson) as Record<string, number> : {};
-                            const isMe  = e.userId === userId;
-                            return (
-                              <tr key={e.id} className={`transition-colors ${isMe ? "bg-rose-950/20" : "hover:bg-white/[0.02]"}`}>
-                                <td className="px-4 py-2.5">
-                                  <div className="flex items-center gap-1.5">
-                                    {u?.image && <img src={u.image} alt="" className="w-5 h-5 rounded-full" />}
-                                    <span className={`font-medium ${isMe ? "text-rose-300" : "text-white"}`}>
-                                      {u ? uname(u) : "?"}{isMe && " (du)"}
-                                    </span>
-                                  </div>
-                                </td>
-                                {statFields.map(f => (
-                                  <td key={f} className="px-3 py-2.5 text-center text-gray-300 tabular-nums">
-                                    {stats[f] ?? "–"}
+                          {[...match.entries]
+                            .sort((a, b) => {
+                              if (!isAvg) return 0;
+                              const aAvg = calcEntryAvg(a.statsJson, statFields) ?? -Infinity;
+                              const bAvg = calcEntryAvg(b.statsJson, statFields) ?? -Infinity;
+                              return bAvg - aAvg;
+                            })
+                            .map(e => {
+                              const u      = findUser(e.userId);
+                              const stats  = e.statsJson ? JSON.parse(e.statsJson) as Record<string, number> : {};
+                              const isMe   = e.userId === userId;
+                              const isWinner = isAvg && e.userId === matchWinnerId;
+                              const avg    = isAvg ? calcEntryAvg(e.statsJson, statFields) : null;
+                              return (
+                                <tr key={e.id} className={`transition-colors ${isMe ? "bg-rose-950/20" : "hover:bg-white/[0.02]"}`}>
+                                  <td className="px-4 py-2.5">
+                                    <div className="flex items-center gap-1.5">
+                                      {isWinner && <Trophy className="w-3 h-3 text-amber-400 shrink-0" />}
+                                      {u?.image && <img src={u.image} alt="" className="w-5 h-5 rounded-full" />}
+                                      <span className={`font-medium ${isWinner ? "text-amber-300" : isMe ? "text-rose-300" : "text-white"}`}>
+                                        {u ? uname(u) : "?"}{isMe && " (du)"}
+                                      </span>
+                                    </div>
                                   </td>
-                                ))}
-                              </tr>
-                            );
-                          })}
+                                  {statFields.map(f => (
+                                    <td key={f} className="px-3 py-2.5 text-center text-gray-300 tabular-nums">
+                                      {stats[f] ?? "–"}
+                                    </td>
+                                  ))}
+                                  {isAvg && (
+                                    <td className={`px-3 py-2.5 text-center tabular-nums font-bold ${isWinner ? "text-amber-300" : "text-gray-400"}`}>
+                                      {avg !== null ? avg.toFixed(2) : "–"}
+                                    </td>
+                                  )}
+                                </tr>
+                              );
+                            })}
                         </tbody>
                       </table>
                     </div>
