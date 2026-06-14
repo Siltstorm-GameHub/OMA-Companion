@@ -10,6 +10,8 @@ interface GameCoverProps {
   className?: string;
   /** Runde Ecken – Standard: "rounded-lg" */
   rounded?: string;
+  /** Zusätzliche Klassen für das <img>-Tag (z.B. für Hover-Animationen) */
+  imgClassName?: string;
 }
 
 /** Client-seitiger Cache: normalisierter Name → CDN-URL */
@@ -19,6 +21,7 @@ export default function GameCover({
   game,
   className = "w-16 h-10",
   rounded = "rounded-lg",
+  imgClassName = "w-full h-full object-cover",
 }: GameCoverProps) {
   const staticUrl    = getGameCoverUrl(game);
   const fallbackGrad = getGameFallbackGradient(game);
@@ -63,7 +66,7 @@ export default function GameCover({
         <img
           src={coverUrl}
           alt={game ?? ""}
-          className="w-full h-full object-cover"
+          className={imgClassName}
           onError={() => setImgError(true)}
         />
       ) : (
