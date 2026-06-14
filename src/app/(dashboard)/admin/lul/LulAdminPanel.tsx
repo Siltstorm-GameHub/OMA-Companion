@@ -567,7 +567,7 @@ function LulSpieltagEditor({
                 {playerIds.length > 0 && (
                   <div className="overflow-x-auto rounded-lg border border-gray-700 -mx-1 px-1">
                     <p className="text-[10px] text-gray-600 mb-1 sm:hidden">← scrollbar →</p>
-                    <table className="w-full text-xs" style={{ minWidth: `${160 + numStatRounds * statFieldsList.length * 60 + statFieldsList.length * 48 + 90}px` }}>
+                    <table className="w-full text-xs" style={{ minWidth: `${160 + numStatRounds * statFieldsList.length * 60 + (fmt === "avg_stats" ? 80 : statFieldsList.length * 48) + 90}px` }}>
                       <thead>
                         {/* Gruppen-Header: Runde 1 | Runde 2 | … | Gesamt */}
                         <tr className="bg-gray-800/80 border-b border-gray-700/50 text-gray-500">
@@ -578,9 +578,9 @@ function LulSpieltagEditor({
                               R{ri + 1}
                             </th>
                           ))}
-                          <th colSpan={statFieldsList.length}
+                          <th colSpan={1}
                             className="text-center px-1 py-1 text-[10px] font-semibold uppercase tracking-wide border-l border-gray-700/50 text-amber-500/70">
-                            {fmt === "avg_stats" ? "Ø" : "Σ"}
+                            {fmt === "avg_stats" ? "Ø Gesamt" : "Σ"}
                           </th>
                           <th className="px-2 py-1" />
                           <th className="px-2 py-1" />
@@ -595,11 +595,14 @@ function LulSpieltagEditor({
                               </th>
                             ))
                           )}
-                          {statFieldsList.map(f => (
-                            <th key={`sum_${f}`} className="text-center px-2 py-2 whitespace-nowrap border-l border-gray-700/30 text-amber-400/70">
-                              {f}
-                            </th>
-                          ))}
+                          {fmt === "avg_stats"
+                            ? <th className="text-center px-2 py-2 whitespace-nowrap border-l border-gray-700/30 text-amber-400/70">Ø</th>
+                            : statFieldsList.map(f => (
+                                <th key={`sum_${f}`} className="text-center px-2 py-2 whitespace-nowrap border-l border-gray-700/30 text-amber-400/70">
+                                  {f}
+                                </th>
+                              ))
+                          }
                           <th className="text-center px-2 py-2">Platz</th>
                           <th className="text-center px-2 py-2"><Trophy className="w-3.5 h-3.5 inline text-amber-400" /></th>
                         </tr>
@@ -632,20 +635,33 @@ function LulSpieltagEditor({
                                   );
                                 })
                               )}
-                              {/* Totals / averages */}
-                              {statFieldsList.map(f => {
-                                const arr = (fields[f] ?? []).map(v => Number(v) || 0);
-                                const total = arr.reduce((s, v) => s + v, 0);
-                                const filled = arr.filter(v => v !== 0).length || 1;
-                                const display = fmt === "avg_stats"
-                                  ? (total / filled % 1 === 0 ? String(total / filled) : (total / filled).toFixed(1))
-                                  : String(total);
-                                return (
-                                  <td key={`sum_${f}`} className="px-2 py-1.5 text-center font-bold text-amber-400 tabular-nums border-l border-gray-800/50">
-                                    {display}
-                                  </td>
-                                );
-                              })}
+                              {/* Gesamt: bei avg_stats ein kombinierter Ø, sonst Summen pro Feld */}
+                              {fmt === "avg_stats"
+                                ? (() => {
+                                    const fieldAvgs = statFieldsList.map(f => {
+                                      const arr = (fields[f] ?? []).map(v => Number(v) || 0);
+                                      const filled = arr.filter(v => v !== 0).length || 1;
+                                      return arr.reduce((s, v) => s + v, 0) / filled;
+                                    });
+                                    const combined = fieldAvgs.length > 0
+                                      ? fieldAvgs.reduce((s, v) => s + v, 0) / fieldAvgs.length
+                                      : 0;
+                                    const display = combined % 1 === 0 ? String(combined) : combined.toFixed(2);
+                                    return (
+                                      <td className="px-2 py-1.5 text-center font-bold text-amber-400 tabular-nums border-l border-gray-800/50">
+                                        {display}
+                                      </td>
+                                    );
+                                  })()
+                                : statFieldsList.map(f => {
+                                    const arr = (fields[f] ?? []).map(v => Number(v) || 0);
+                                    return (
+                                      <td key={`sum_${f}`} className="px-2 py-1.5 text-center font-bold text-amber-400 tabular-nums border-l border-gray-800/50">
+                                        {arr.reduce((s, v) => s + v, 0)}
+                                      </td>
+                                    );
+                                  })
+                              }
                               <td className="px-2 py-1">
                                 <input type="number" min={1} value={e.placement}
                                   onChange={ev => setField(uid, "placement", ev.target.value)}
