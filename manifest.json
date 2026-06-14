@@ -24,13 +24,13 @@
       "is192x192": false
     },
     {
-      "src": "https://oma-app.de/OMALogoNew.png",
+      "src": "https://oma-app.de/launchericon-512x512.png",
       "isSquare": false,
       "isPng": true,
       "isWebp": false,
       "isJpg": false,
       "width": 0,
-      "is512x512": false,
+      "is512x512": true,
       "is256x256": false,
       "is192x192": false
     },
