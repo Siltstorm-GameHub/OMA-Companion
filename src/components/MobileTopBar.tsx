@@ -106,7 +106,7 @@ export default function MobileTopBar() {
       >
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-teal-500/40 to-transparent pointer-events-none" />
 
-        <Link href="/dashboard" className="flex items-center min-w-0 flex-1">
+        <Link href="/dashboard" className="flex items-center min-w-0 flex-1" style={{ pointerEvents: "auto" }}>
           <span className="text-sm font-semibold text-white truncate">{title}</span>
         </Link>
 
@@ -115,8 +115,8 @@ export default function MobileTopBar() {
           onPointerDown={(e) => { e.stopPropagation(); setOpen(v => !v); }}
           className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center transition-all shrink-0"
           style={open
-            ? { outline: "2px solid rgba(20,184,166,0.5)", outlineOffset: 2, touchAction: "manipulation" }
-            : { outline: "1px solid rgba(20,184,166,0.22)", outlineOffset: 1, touchAction: "manipulation" }}
+            ? { outline: "2px solid rgba(20,184,166,0.5)", outlineOffset: 2, touchAction: "manipulation", position: "relative", zIndex: 200 }
+            : { outline: "1px solid rgba(20,184,166,0.22)", outlineOffset: 1, touchAction: "manipulation", position: "relative", zIndex: 200 }}
           aria-label="Profil-Menü"
         >
           {session?.user?.image ? (
