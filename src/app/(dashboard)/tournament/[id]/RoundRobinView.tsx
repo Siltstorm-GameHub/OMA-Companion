@@ -1,5 +1,6 @@
 "use client";
-import { Clock, Trophy } from "lucide-react";
+import { useState } from "react";
+import { Clock, Trophy, ChevronRight, ChevronLeft } from "lucide-react";
 import WinIcon from "@/components/WinIcon";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };
@@ -60,6 +61,8 @@ export default function RoundRobinView({
     (b.scored - b.conceded) - (a.scored - a.conceded)
   );
 
+  const [statsExpanded, setStatsExpanded] = useState(false);
+
   const findUser = (id: string | null) =>
     id ? participants.find(p => p.userId === id)?.user : null;
 
@@ -73,15 +76,23 @@ export default function RoundRobinView({
           <Trophy className="w-3.5 h-3.5 text-amber-400" /> Tabelle
         </h2>
         <div className="glass rounded-2xl overflow-hidden">
-          <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[320px]">
+          <button
+            className="sm:hidden flex items-center gap-1.5 text-[11px] text-gray-500 hover:text-gray-300 transition-colors py-2 px-4 w-full"
+            onClick={() => setStatsExpanded(v => !v)}
+          >
+            {statsExpanded
+              ? <><ChevronLeft className="w-3.5 h-3.5 shrink-0" />Statistiken ausblenden</>
+              : <><ChevronRight className="w-3.5 h-3.5 shrink-0" />Alle Statistiken anzeigen</>}
+          </button>
+          <div className={statsExpanded ? "overflow-x-auto" : "sm:overflow-x-auto"}>
+          <table className="w-full text-sm" style={statsExpanded ? { minWidth: "320px" } : {}}>
             <thead>
               <tr className="border-b border-white/5 text-[10px] text-gray-500 uppercase tracking-wider">
                 <th className="text-left px-4 py-2.5 font-medium">#</th>
                 <th className="text-left px-4 py-2.5 font-medium">Spieler</th>
-                <th className="text-center px-3 py-2.5 font-medium">S</th>
-                <th className="text-center px-3 py-2.5 font-medium">N</th>
-                <th className="text-center px-3 py-2.5 font-medium">Tore</th>
+                <th className={`text-center px-3 py-2.5 font-medium ${statsExpanded ? "" : "hidden sm:table-cell"}`}>S</th>
+                <th className={`text-center px-3 py-2.5 font-medium ${statsExpanded ? "" : "hidden sm:table-cell"}`}>N</th>
+                <th className={`text-center px-3 py-2.5 font-medium ${statsExpanded ? "" : "hidden sm:table-cell"}`}>Tore</th>
                 <th className="text-right px-4 py-2.5 font-medium">Pkt</th>
               </tr>
             </thead>
@@ -111,9 +122,9 @@ export default function RoundRobinView({
                         </span>
                       </div>
                     </td>
-                    <td className="px-3 py-3 text-center text-emerald-400 font-semibold">{s.w}</td>
-                    <td className="px-3 py-3 text-center text-gray-500">{s.l}</td>
-                    <td className="px-3 py-3 text-center text-gray-400 text-xs">
+                    <td className={`px-3 py-3 text-center text-emerald-400 font-semibold ${statsExpanded ? "" : "hidden sm:table-cell"}`}>{s.w}</td>
+                    <td className={`px-3 py-3 text-center text-gray-500 ${statsExpanded ? "" : "hidden sm:table-cell"}`}>{s.l}</td>
+                    <td className={`px-3 py-3 text-center text-gray-400 text-xs ${statsExpanded ? "" : "hidden sm:table-cell"}`}>
                       {s.scored}:{s.conceded}
                     </td>
                     <td className="px-4 py-3 text-right">

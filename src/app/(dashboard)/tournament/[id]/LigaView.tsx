@@ -1,5 +1,6 @@
 "use client";
-import { Trophy, Clock } from "lucide-react";
+import { useState } from "react";
+import { Trophy, Clock, ChevronRight, ChevronLeft } from "lucide-react";
 import WinIcon from "@/components/WinIcon";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };
@@ -87,6 +88,7 @@ export default function LigaView({
   participants: Participant[];
   userId: string;
 }) {
+  const [statsExpanded, setStatsExpanded] = useState(false);
   const standings = buildStandings(participants, matches);
   const findUser  = (id: string | null) => id ? participants.find(p => p.userId === id)?.user : null;
 
@@ -106,17 +108,25 @@ export default function LigaView({
           <Trophy className="w-3.5 h-3.5 text-amber-400" /> Tabelle
         </h2>
         <div className="glass rounded-2xl overflow-hidden">
-          <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[360px]">
+          <button
+            className="sm:hidden flex items-center gap-1.5 text-[11px] text-gray-500 hover:text-gray-300 transition-colors py-2 px-4 w-full"
+            onClick={() => setStatsExpanded(v => !v)}
+          >
+            {statsExpanded
+              ? <><ChevronLeft className="w-3.5 h-3.5 shrink-0" />Statistiken ausblenden</>
+              : <><ChevronRight className="w-3.5 h-3.5 shrink-0" />Alle Statistiken anzeigen</>}
+          </button>
+          <div className={statsExpanded ? "overflow-x-auto" : "sm:overflow-x-auto"}>
+          <table className="w-full text-sm" style={statsExpanded ? { minWidth: "360px" } : {}}>
             <thead>
               <tr className="border-b border-white/5 text-[10px] text-gray-500 uppercase tracking-wider">
                 <th className="text-left px-3 py-2.5 font-medium">#</th>
                 <th className="text-left px-3 py-2.5 font-medium">Spieler</th>
-                <th className="text-center px-2 py-2.5 font-medium" title="Spiele">Sp</th>
-                <th className="text-center px-2 py-2.5 font-medium text-emerald-600" title="Siege">S</th>
-                <th className="text-center px-2 py-2.5 font-medium text-amber-600" title="Unentschieden">U</th>
-                <th className="text-center px-2 py-2.5 font-medium text-gray-600" title="Niederlagen">N</th>
-                <th className="text-center px-2 py-2.5 font-medium">Tore</th>
+                <th className={`text-center px-2 py-2.5 font-medium ${statsExpanded ? "" : "hidden sm:table-cell"}`} title="Spiele">Sp</th>
+                <th className={`text-center px-2 py-2.5 font-medium text-emerald-600 ${statsExpanded ? "" : "hidden sm:table-cell"}`} title="Siege">S</th>
+                <th className={`text-center px-2 py-2.5 font-medium text-amber-600 ${statsExpanded ? "" : "hidden sm:table-cell"}`} title="Unentschieden">U</th>
+                <th className={`text-center px-2 py-2.5 font-medium text-gray-600 ${statsExpanded ? "" : "hidden sm:table-cell"}`} title="Niederlagen">N</th>
+                <th className={`text-center px-2 py-2.5 font-medium ${statsExpanded ? "" : "hidden sm:table-cell"}`}>Tore</th>
                 <th className="text-right px-3 py-2.5 font-medium">Pkt</th>
               </tr>
             </thead>
@@ -146,11 +156,11 @@ export default function LigaView({
                         </span>
                       </div>
                     </td>
-                    <td className="px-2 py-3 text-center text-gray-500 tabular-nums">{s.played}</td>
-                    <td className="px-2 py-3 text-center text-emerald-400 font-semibold tabular-nums">{s.w}</td>
-                    <td className="px-2 py-3 text-center text-amber-400 font-semibold tabular-nums">{s.d}</td>
-                    <td className="px-2 py-3 text-center text-gray-500 tabular-nums">{s.l}</td>
-                    <td className="px-2 py-3 text-center text-xs tabular-nums">
+                    <td className={`px-2 py-3 text-center text-gray-500 tabular-nums ${statsExpanded ? "" : "hidden sm:table-cell"}`}>{s.played}</td>
+                    <td className={`px-2 py-3 text-center text-emerald-400 font-semibold tabular-nums ${statsExpanded ? "" : "hidden sm:table-cell"}`}>{s.w}</td>
+                    <td className={`px-2 py-3 text-center text-amber-400 font-semibold tabular-nums ${statsExpanded ? "" : "hidden sm:table-cell"}`}>{s.d}</td>
+                    <td className={`px-2 py-3 text-center text-gray-500 tabular-nums ${statsExpanded ? "" : "hidden sm:table-cell"}`}>{s.l}</td>
+                    <td className={`px-2 py-3 text-center text-xs tabular-nums ${statsExpanded ? "" : "hidden sm:table-cell"}`}>
                       <span className="text-gray-400">{s.scored}:{s.conceded}</span>
                       <span className={`ml-1 text-[10px] ${diff > 0 ? "text-emerald-600" : diff < 0 ? "text-red-700" : "text-gray-700"}`}>
                         ({diff > 0 ? "+" : ""}{diff})

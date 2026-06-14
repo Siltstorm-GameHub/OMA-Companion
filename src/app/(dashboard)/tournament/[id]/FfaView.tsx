@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Trophy, Clock } from "lucide-react";
+import { ChevronDown, ChevronUp, ChevronRight, ChevronLeft, Trophy, Clock } from "lucide-react";
 
 type User        = { id: string; name: string | null; username: string | null; image: string | null };
 type Participant = { userId: string; user: User };
@@ -45,6 +45,7 @@ export default function FfaView({
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
+  const [tableExpanded, setTableExpanded] = useState(false);
 
   const isAvg    = format === "avg_stats";
   const findUser = (uid: string | null) =>
@@ -110,14 +111,24 @@ export default function FfaView({
             <Trophy className="w-3.5 h-3.5 text-amber-400" /> Gesamtranking
           </h2>
           <div className="glass rounded-2xl overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[300px]">
+            {!isAvg && statFields.length > 1 && (
+              <button
+                className="sm:hidden flex items-center gap-1.5 text-[11px] text-gray-500 hover:text-gray-300 transition-colors py-2 px-4 w-full"
+                onClick={() => setTableExpanded(v => !v)}
+              >
+                {tableExpanded
+                  ? <><ChevronLeft className="w-3.5 h-3.5 shrink-0" />Statistiken ausblenden</>
+                  : <><ChevronRight className="w-3.5 h-3.5 shrink-0" />Alle Statistiken anzeigen</>}
+              </button>
+            )}
+            <div className={tableExpanded ? "overflow-x-auto" : "sm:overflow-x-auto"}>
+              <table className="w-full text-sm" style={tableExpanded ? { minWidth: "300px" } : {}}>
                 <thead>
                   <tr className="border-b border-white/5 text-[10px] text-gray-500 uppercase tracking-wider">
                     <th className="text-left px-4 py-2.5 font-medium">#</th>
                     <th className="text-left px-4 py-2.5 font-medium">Spieler</th>
-                    {!isAvg && statFields.map(f => (
-                      <th key={f} className="text-center px-3 py-2.5 font-medium">{f}</th>
+                    {!isAvg && statFields.map((f, fi) => (
+                      <th key={f} className={`text-center px-3 py-2.5 font-medium ${fi > 0 && !tableExpanded ? "hidden sm:table-cell" : ""}`}>{f}</th>
                     ))}
                     {isAvg && (
                       <th className="text-center px-3 py-2.5 font-medium text-amber-400">Ø Gesamt</th>
@@ -153,10 +164,10 @@ export default function FfaView({
                             </span>
                           </div>
                         </td>
-                        {!isAvg && statFields.map(f => (
+                        {!isAvg && statFields.map((f, fi) => (
                           <td key={f} className={`px-3 py-3 text-center tabular-nums font-semibold ${
                             i === 0 ? "text-amber-300" : i === 1 ? "text-gray-300" : i === 2 ? "text-amber-700" : "text-gray-400"
-                          }`}>
+                          } ${fi > 0 && !tableExpanded ? "hidden sm:table-cell" : ""}`}>
                             {r.stats[f] ?? "–"}
                           </td>
                         ))}
