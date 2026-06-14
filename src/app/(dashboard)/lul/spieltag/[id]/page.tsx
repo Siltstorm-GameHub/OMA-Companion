@@ -57,14 +57,35 @@ export default async function LulSpieltagPage({
   const coverUrl       = getGameCoverUrl(spieltag.game ?? "");
   const fallbackGrad   = getGameFallbackGradient(spieltag.game ?? "");
 
-  const players    = spieltag.entries.filter((e) => e.role === "player");
-  const spectators = spieltag.entries.filter((e) => e.role === "spectator");
-  const voters     = spieltag.entries.filter((e) => e.role === "voter");
-
   const fmt = spieltag.tournamentFormat ?? "";
   const isStatFmt = fmt === "ffa" || fmt === "coop_stats" || fmt === "avg_stats";
   const is1v1Fmt  = fmt === "single_elimination" || fmt === "double_elimination" || fmt === "round_robin" || fmt === "liga";
   const statFieldsList: string[] = (() => { try { return JSON.parse(spieltag.statFields ?? "[]"); } catch { return []; } })();
+
+  function calcCombinedAvg(statsJson: string | null): number {
+    if (!statsJson || statFieldsList.length === 0) return -1;
+    try {
+      const s = JSON.parse(statsJson) as Record<string, unknown>;
+      const nR = typeof s._rounds === "number" && s._rounds > 0 ? s._rounds : 1;
+      const fieldAvgs = statFieldsList
+        .filter(f => s[f] !== undefined)
+        .map(f => {
+          const val = s[f];
+          const total = Array.isArray(val)
+            ? val.reduce((sum: number, v) => sum + (Number(v) || 0), 0)
+            : typeof val === "number" ? val : 0;
+          return total / nR;
+        });
+      return fieldAvgs.length > 0 ? fieldAvgs.reduce((a, b) => a + b, 0) / fieldAvgs.length : -1;
+    } catch { return -1; }
+  }
+
+  const rawPlayers = spieltag.entries.filter((e) => e.role === "player");
+  const players = fmt === "avg_stats"
+    ? [...rawPlayers].sort((a, b) => calcCombinedAvg(b.statsJson) - calcCombinedAvg(a.statsJson))
+    : rawPlayers;
+  const spectators = spieltag.entries.filter((e) => e.role === "spectator");
+  const voters     = spieltag.entries.filter((e) => e.role === "voter");
   type LulMatch = { id: string; p1: string; p2: string; s1: string; s2: string; winner: string };
   const matchesList: LulMatch[] = (() => { try { return JSON.parse(spieltag.matchesJson ?? "[]"); } catch { return []; } })();
 
