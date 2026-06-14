@@ -2,11 +2,18 @@ import { prisma } from "@/lib/prisma";
 import { PollsAdminPanel } from "./PollsAdminPanel";
 
 export default async function PollsAdminPage() {
-  const [events, spieltage] = await Promise.all([
+  const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+
+  const [events, recentClosedEvents, spieltage] = await Promise.all([
     prisma.event.findMany({
       where:   { status: { in: ["open", "active"] } },
-      select:  { id: true, title: true, startAt: true, registrations: { select: { user: { select: { id: true, name: true, username: true } } } } },
+      select:  { id: true, title: true, startAt: true, status: true, registrations: { select: { user: { select: { id: true, name: true, username: true } } } } },
       orderBy: { startAt: "asc" },
+    }),
+    prisma.event.findMany({
+      where:   { status: { in: ["closed", "finished"] }, startAt: { gte: threeDaysAgo } },
+      select:  { id: true, title: true, startAt: true, status: true, registrations: { select: { user: { select: { id: true, name: true, username: true } } } } },
+      orderBy: { startAt: "desc" },
     }),
     prisma.lulSpieltag.findMany({
       where:   { status: { in: ["upcoming", "active", "finished"] } },
@@ -22,9 +29,11 @@ export default async function PollsAdminPage() {
   // PollJob-Tabelle könnte noch nicht existieren (Migration ausstehend)
   const jobs = await prisma.pollJob.findMany({ orderBy: { scheduledAt: "desc" } }).catch(() => []);
 
+  const allEvents = [...events, ...recentClosedEvents];
+
   // Dates serialisieren
   const serialized = {
-    events: events.map(e => ({
+    events: allEvents.map(e => ({
       ...e,
       startAt: e.startAt.toISOString(),
       registrations: e.registrations,

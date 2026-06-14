@@ -24,7 +24,7 @@ const DURATION_OPTIONS = [
 // ── Typen ────────────────────────────────────────────────────────
 
 interface EventItem {
-  id: string; title: string; startAt: string;
+  id: string; title: string; startAt: string; status: string;
   registrations: { user: { id: string; name: string | null; username: string | null } }[];
 }
 interface Spieltag {
@@ -206,11 +206,24 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
                 className={`w-full rounded-xl px-3 py-2.5 text-sm text-white bg-gray-900 border outline-none focus:border-indigo-500/40 ${evtErrors.id ? "border-red-500/50" : "border-white/[0.1]"}`}
                 style={{ colorScheme: "dark" }}>
                 <option value="">— Event wählen —</option>
-                {events.map(e => (
-                  <option key={e.id} value={e.id}>
-                    {e.title} ({new Date(e.startAt).toLocaleDateString("de-DE")})
-                  </option>
-                ))}
+                {events.filter(e => e.status === "open" || e.status === "active").length > 0 && (
+                  <optgroup label="Aktive Events">
+                    {events.filter(e => e.status === "open" || e.status === "active").map(e => (
+                      <option key={e.id} value={e.id}>
+                        {e.title} ({new Date(e.startAt).toLocaleDateString("de-DE")})
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {events.filter(e => e.status === "closed" || e.status === "finished").length > 0 && (
+                  <optgroup label="Abgeschlossen (letzte 3 Tage)">
+                    {events.filter(e => e.status === "closed" || e.status === "finished").map(e => (
+                      <option key={e.id} value={e.id}>
+                        ✓ {e.title} ({new Date(e.startAt).toLocaleDateString("de-DE")})
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
               {evtErrors.id && <p className="text-xs text-red-400 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{evtErrors.id}</p>}
             </div>
