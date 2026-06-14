@@ -219,9 +219,9 @@ export default function LulSpieltagTable({
                       {!entry.gameWinner && !entry.dominionBonus && !entry.trostpreis && !entry.voted
                         ? <span className="text-gray-800 text-sm">–</span>
                         : <>
-                            {entry.gameWinner    && <Trophy       className="w-3 h-3 text-amber-400"   title="Sieger"   />}
-                            {entry.dominionBonus && <Flame        className="w-3 h-3 text-orange-400"  title="Dominion" />}
-                            {entry.trostpreis    && <Gift         className="w-3 h-3 text-rose-400"    title="Trost"    />}
+                            {entry.gameWinner    && <Trophy className="w-3 h-3 text-amber-400"  />}
+                            {entry.dominionBonus && <Flame  className="w-3 h-3 text-orange-400" />}
+                            {entry.trostpreis    && <Gift   className="w-3 h-3 text-rose-400"   />}
                             {entry.voted         && (
                               <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">
                                 <CheckCircle2 className="w-3 h-3" /> Gevotet
