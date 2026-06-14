@@ -267,11 +267,18 @@ export default async function LulSpieltagPage({
                     <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-600 uppercase tracking-widest w-10">#</th>
                     <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-600 uppercase tracking-widest">Spieler</th>
                     {isStatFmt
-                      ? statFieldsList.map(f => (
-                          <th key={f} className="text-center px-3 py-3 text-[10px] font-semibold text-gray-600 uppercase tracking-widest whitespace-nowrap">
-                            {f}{fmt === "avg_stats" ? " (Ø)" : ""}
-                          </th>
-                        ))
+                      ? <>
+                          {statFieldsList.map(f => (
+                            <th key={f} className="text-center px-3 py-3 text-[10px] font-semibold text-gray-600 uppercase tracking-widest whitespace-nowrap">
+                              {fmt === "avg_stats" ? `Ø ${f}` : f}
+                            </th>
+                          ))}
+                          {fmt === "avg_stats" && statFieldsList.length > 1 && (
+                            <th className="text-center px-3 py-3 text-[10px] font-semibold uppercase tracking-widest whitespace-nowrap" style={{ color: "#f59e0b" }}>
+                              Ø Gesamt
+                            </th>
+                          )}
+                        </>
                       : Array.from({ length: maxRounds }, (_, i) => (
                           <th key={i} className="text-center px-2 py-3 text-[10px] font-semibold text-gray-700 uppercase tracking-widest whitespace-nowrap">R{i + 1}</th>
                         ))
@@ -339,11 +346,24 @@ export default async function LulSpieltagPage({
                           </div>
                         </td>
                         {isStatFmt
-                          ? statFieldsList.map(f => (
-                              <td key={f} className="px-3 py-3 text-center">
-                                <span className="text-sm tabular-nums text-gray-300">{stats[f] ?? "–"}</span>
-                              </td>
-                            ))
+                          ? <>
+                              {statFieldsList.map(f => (
+                                <td key={f} className="px-3 py-3 text-center">
+                                  <span className="text-sm tabular-nums text-gray-300">{stats[f] ?? "–"}</span>
+                                </td>
+                              ))}
+                              {fmt === "avg_stats" && statFieldsList.length > 1 && (() => {
+                                const vals = statFieldsList.map(f => parseFloat(stats[f] ?? "0")).filter(v => !isNaN(v));
+                                const combined = vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+                                return (
+                                  <td className="px-3 py-3 text-center">
+                                    <span className="text-sm tabular-nums font-bold" style={{ color: i === 0 ? "#fbbf24" : "#9ca3af" }}>
+                                      {combined !== null ? (combined % 1 === 0 ? combined : combined.toFixed(2)) : "–"}
+                                    </span>
+                                  </td>
+                                );
+                              })()}
+                            </>
                           : Array.from({ length: maxRounds }, (_, ri) => (
                               <td key={ri} className="px-2 py-3 text-center">
                                 <span className="text-sm tabular-nums text-gray-400">{rounds[ri] !== undefined ? rounds[ri] : "–"}</span>
