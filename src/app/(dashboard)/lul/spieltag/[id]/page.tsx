@@ -261,28 +261,26 @@ export default async function LulSpieltagPage({
             }}
           >
             <div className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse" style={{ minWidth: isStatFmt ? `${320 + statFieldsList.length * 80}px` : maxRounds > 0 ? `${480 + maxRounds * 56}px` : "480px" }}>
+              <table className="w-full text-sm border-collapse" style={{ minWidth: isStatFmt ? `${320 + statFieldsList.length * 80 + (fmt === "avg_stats" ? 90 : 0)}px` : maxRounds > 0 ? `${480 + maxRounds * 56}px` : "480px" }}>
                 <thead>
                   <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
                     <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-600 uppercase tracking-widest w-10">#</th>
                     <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-600 uppercase tracking-widest">Spieler</th>
                     {isStatFmt
-                      ? <>
-                          {statFieldsList.map(f => (
-                            <th key={f} className="text-center px-3 py-3 text-[10px] font-semibold text-gray-600 uppercase tracking-widest whitespace-nowrap">
-                              {fmt === "avg_stats" ? `Ø ${f}` : f}
-                            </th>
-                          ))}
-                          {fmt === "avg_stats" && statFieldsList.length > 1 && (
-                            <th className="text-center px-3 py-3 text-[10px] font-semibold uppercase tracking-widest whitespace-nowrap" style={{ color: "#f59e0b" }}>
-                              Ø Gesamt
-                            </th>
-                          )}
-                        </>
-                      : Array.from({ length: maxRounds }, (_, i) => (
-                          <th key={i} className="text-center px-2 py-3 text-[10px] font-semibold text-gray-700 uppercase tracking-widest whitespace-nowrap">R{i + 1}</th>
+                      ? statFieldsList.map(f => (
+                          <th key={f} className="text-center px-3 py-3 text-[10px] font-semibold text-gray-600 uppercase tracking-widest whitespace-nowrap">
+                            {fmt === "avg_stats" ? `Ø ${f}` : f}
+                          </th>
+                        ))
+                      : Array.from({ length: maxRounds }, (_, ri) => (
+                          <th key={ri} className="text-center px-2 py-3 text-[10px] font-semibold text-gray-700 uppercase tracking-widest whitespace-nowrap">R{ri + 1}</th>
                         ))
                     }
+                    {fmt === "avg_stats" && (
+                      <th className="text-center px-3 py-3 text-[10px] font-semibold uppercase tracking-widest whitespace-nowrap" style={{ color: "#f59e0b" }}>
+                        Ø Gesamt
+                      </th>
+                    )}
                     {!isStatFmt && <th className="text-center px-3 py-3 text-[10px] font-semibold text-gray-600 uppercase tracking-widest whitespace-nowrap">Gesamt</th>}
                     <th className="text-center px-2 py-3 text-[10px] font-semibold text-gray-600 uppercase tracking-widest whitespace-nowrap">Boni</th>
                     <th className="text-right px-4 py-3 text-[10px] font-semibold uppercase tracking-widest whitespace-nowrap" style={{ color: "#14b8a6" }}>LuL-Pkt</th>
@@ -311,6 +309,16 @@ export default async function LulSpieltagPage({
                         }
                       } catch { /* ignore */ }
                     }
+                    // Kombinierter Durchschnitt für avg_stats (Ø aller Felder)
+                    const combinedAvg: number | null = fmt === "avg_stats" && statFieldsList.length > 0
+                      ? (() => {
+                          const filled = statFieldsList.filter(f => stats[f] !== undefined);
+                          return filled.length > 0
+                            ? filled.map(f => parseFloat(stats[f]!)).reduce((a, b) => a + b, 0) / filled.length
+                            : null;
+                        })()
+                      : null;
+
                     const isMe      = entry.userId === userId;
                     const placement = entry.placement ?? i + 1;
                     const isTop3    = placement <= 3 && placement > 0;
@@ -346,30 +354,28 @@ export default async function LulSpieltagPage({
                           </div>
                         </td>
                         {isStatFmt
-                          ? <>
-                              {statFieldsList.map(f => (
-                                <td key={f} className="px-3 py-3 text-center">
-                                  <span className="text-sm tabular-nums text-gray-300">{stats[f] ?? "–"}</span>
-                                </td>
-                              ))}
-                              {fmt === "avg_stats" && statFieldsList.length > 1 && (() => {
-                                const vals = statFieldsList.map(f => parseFloat(stats[f] ?? "0")).filter(v => !isNaN(v));
-                                const combined = vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
-                                return (
-                                  <td className="px-3 py-3 text-center">
-                                    <span className="text-sm tabular-nums font-bold" style={{ color: i === 0 ? "#fbbf24" : "#9ca3af" }}>
-                                      {combined !== null ? (combined % 1 === 0 ? combined : combined.toFixed(2)) : "–"}
-                                    </span>
-                                  </td>
-                                );
-                              })()}
-                            </>
+                          ? statFieldsList.map(f => (
+                              <td key={f} className="px-3 py-3 text-center">
+                                <span className="text-sm tabular-nums text-gray-300">{stats[f] ?? "–"}</span>
+                              </td>
+                            ))
                           : Array.from({ length: maxRounds }, (_, ri) => (
                               <td key={ri} className="px-2 py-3 text-center">
                                 <span className="text-sm tabular-nums text-gray-400">{rounds[ri] !== undefined ? rounds[ri] : "–"}</span>
                               </td>
                             ))
                         }
+                        {fmt === "avg_stats" && (
+                          <td className="px-3 py-3 text-center">
+                            <span className="text-sm tabular-nums font-bold" style={{
+                              color: i === 0 ? "#fbbf24" : i === 1 ? "#d1d5db" : i === 2 ? "#b45309" : "#6b7280"
+                            }}>
+                              {combinedAvg !== null
+                                ? (Number.isInteger(combinedAvg) ? combinedAvg : combinedAvg.toFixed(2))
+                                : "–"}
+                            </span>
+                          </td>
+                        )}
                         {!isStatFmt && (
                           <td className="px-3 py-3 text-center">
                             <span className="text-sm font-semibold tabular-nums text-white">{entry.totalGameScore > 0 ? entry.totalGameScore : "–"}</span>
