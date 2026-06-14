@@ -247,9 +247,6 @@ export default async function DashboardPage() {
                 style={{ background: "linear-gradient(135deg, rgba(5,46,38,0.75) 0%, rgba(13,13,15,0.55) 100%)" }} />
               <div className="absolute inset-0"
                 style={{ backgroundImage: "radial-gradient(ellipse at 25% 60%, rgba(20,184,166,0.18) 0%, transparent 55%)" }} />
-              {!getGameCoverUrl(nextEvent?.game) && (
-                <CalendarDays className="absolute -right-3 -bottom-3 w-28 h-28 text-teal-400/[0.07] group-hover:text-teal-400/[0.12] transition-colors" />
-              )}
               {/* Status badge */}
               <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider"
                 style={{ background: "rgba(20,184,166,0.14)", border: "1px solid rgba(20,184,166,0.22)", color: "#2dd4bf" }}>
@@ -310,9 +307,6 @@ export default async function DashboardPage() {
                 style={{ background: "linear-gradient(135deg, rgba(46,10,10,0.78) 0%, rgba(13,13,15,0.55) 100%)" }} />
               <div className="absolute inset-0"
                 style={{ backgroundImage: "radial-gradient(ellipse at 25% 60%, rgba(139,32,32,0.22) 0%, transparent 55%)" }} />
-              {!getGameCoverUrl(nextSpieltag?.game) && (
-                <Swords className="absolute -right-3 -bottom-3 w-28 h-28 text-red-900/[0.15] group-hover:text-red-800/[0.25] transition-colors" />
-              )}
               {/* Season badge */}
               <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider"
                 style={{ background: "rgba(139,32,32,0.20)", border: "1px solid rgba(139,32,32,0.35)", color: "#f87171" }}>
