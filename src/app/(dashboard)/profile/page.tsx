@@ -40,9 +40,8 @@ export default async function ProfilePage() {
       prisma.tournamentParticipant.findMany({
         where:   { userId },
         include: {
-          tournament: {
+          event: {
             include: {
-              event:   { select: { title: true } },
               matches: { where: { OR: [{ player1Id: userId }, { player2Id: userId }] } },
             },
           },
@@ -327,7 +326,7 @@ export default async function ProfilePage() {
               </h2>
               <div className="glass card-shine rounded-2xl overflow-hidden divide-y divide-white/[0.04]">
                 {tournamentParticipations.map(p => {
-                  const myMatches = p.tournament.matches;
+                  const myMatches = p.event.matches;
                   const wins      = myMatches.filter(m => m.winnerId === userId).length;
                   const losses    = myMatches.filter(m => m.winnerId && m.winnerId !== userId).length;
                   return (
@@ -336,7 +335,7 @@ export default async function ProfilePage() {
                         <WinIcon size={16} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-white truncate">{p.tournament.event.title}</p>
+                        <p className="text-sm font-medium text-white truncate">{p.event.title}</p>
                         <p className="text-xs text-gray-500 mt-0.5">
                           {wins > 0 ? `${wins} Siege` : ""}
                           {wins > 0 && losses > 0 ? " · " : ""}

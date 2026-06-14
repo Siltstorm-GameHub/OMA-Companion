@@ -44,16 +44,12 @@ export default async function TournamentDetailPage({
         },
         orderBy: { joinedAt: "asc" },
       },
-      tournament: {
-        include: {
-          participants: {
-            include: { user: { select: { id: true, name: true, username: true, image: true } } },
-          },
-          matches: {
-            orderBy: [{ round: "asc" }, { position: "asc" }],
-            include: { entries: true },
-          },
-        },
+      participants: {
+        include: { user: { select: { id: true, name: true, username: true, image: true } } },
+      },
+      matches: {
+        orderBy: [{ round: "asc" }, { position: "asc" }],
+        include: { entries: true },
       },
     },
   });
@@ -68,21 +64,21 @@ export default async function TournamentDetailPage({
 
   const isRegistered = event.registrations.some((r) => r.userId === userId);
   const s = STATUS_STYLES[event.status] ?? STATUS_STYLES.finished;
-  const t = event.tournament;
+  const hasTournament = !!event.format;
 
   // Alle bekannten Spieler: Turnier-Teilnehmer + Event-Registrierungen zusammenführen,
   // damit Match-Spieler auch dann aufgelöst werden wenn sie nicht als TournamentParticipant eingetragen sind
   type KnownUser = { id: string; name: string | null; username: string | null; image: string | null };
   type KnownParticipant = { userId: string; user: KnownUser };
-  const mergedParticipants: KnownParticipant[] = t
+  const mergedParticipants: KnownParticipant[] = hasTournament
     ? [
-        ...t.participants.map(p => ({ userId: p.userId, user: p.user as KnownUser })),
+        ...event.participants.map(p => ({ userId: p.userId, user: p.user as KnownUser })),
         ...event.registrations
-          .filter(r => !t.participants.some(p => p.userId === r.userId))
+          .filter(r => !event.participants.some(p => p.userId === r.userId))
           .map(r => ({ userId: r.user.id, user: r.user as KnownUser })),
       ]
     : [];
-  const format = t?.format ?? "single_elimination";
+  const format = event.format ?? "single_elimination";
   const isFfa         = format === "ffa" || format === "coop_stats" || format === "avg_stats";
   const isElimination = format === "single_elimination" || format === "double_elimination";
   const isRoundRobin  = format === "round_robin";
@@ -93,25 +89,22 @@ export default async function TournamentDetailPage({
 
   // Turnersieger ermitteln
   let winner: { name: string | null; username: string | null; image: string | null } | null = null;
-  if (t) {
+  if (hasTournament) {
     if (isElimination) {
-      const maxRound = t.matches.length ? Math.max(...t.matches.map(m => m.round)) : 0;
-      const finalMatch = t.matches.find(m => m.round === maxRound);
+      const maxRound = event.matches.length ? Math.max(...event.matches.map(m => m.round)) : 0;
+      const finalMatch = event.matches.find(m => m.round === maxRound);
       winner = finalMatch?.winnerId
         ? (mergedParticipants.find(p => p.userId === finalMatch.winnerId)?.user ?? null)
         : null;
     } else if (isLiga) {
-      // Liga: Spieler mit den meisten Punkten (Platz 1 in Tabelle = erster in participants mit meisten Siegen)
-      // vereinfacht: Spieler der die meisten Matches gewonnen hat
       const winsMap = new Map<string, number>();
-      for (const m of t.matches) {
+      for (const m of event.matches) {
         if (m.winnerId) winsMap.set(m.winnerId, (winsMap.get(m.winnerId) ?? 0) + 1);
       }
       const topId = [...winsMap.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
       winner = topId ? (mergedParticipants.find(p => p.userId === topId)?.user ?? null) : null;
     } else if (isFfa) {
-      // FFA: Spieler mit Platz 1 in einem Match finden
-      const winnerEntry = t.matches
+      const winnerEntry = event.matches
         .flatMap(m => m.entries)
         .find(e => e.placement === 1);
       winner = winnerEntry?.userId
@@ -121,10 +114,10 @@ export default async function TournamentDetailPage({
   }
 
   // Stats für Header
-  const playedMatches = t?.matches.filter(m =>
+  const playedMatches = event.matches.filter(m =>
     isElimination ? !!m.winnerId : !!m.playedAt
-  ).length ?? 0;
-  const totalMatches = t?.matches.length ?? 0;
+  ).length;
+  const totalMatches = event.matches.length;
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
@@ -138,7 +131,7 @@ export default async function TournamentDetailPage({
           <div>
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <h1 className="text-xl font-semibold text-white">{event.title}</h1>
-              {t && (
+              {hasTournament && (
                 <span className="text-xs px-2 py-0.5 rounded-full bg-rose-900/30 text-rose-300 border border-rose-800/30">
                   {FORMAT_LABELS[format] ?? format}
                 </span>
@@ -171,7 +164,7 @@ export default async function TournamentDetailPage({
           </div>
           <div className="glass-heavy rounded-xl p-3 text-center">
             <p className="text-lg font-semibold text-white">
-              {t ? `${playedMatches}/${totalMatches}` : "–"}
+              {hasTournament ? `${playedMatches}/${totalMatches}` : "–"}
             </p>
             <p className="text-xs text-gray-500 mt-0.5">Matches gespielt</p>
           </div>
@@ -206,8 +199,8 @@ export default async function TournamentDetailPage({
       </div>
 
       {/* ── Endplatzierung ─────────────────────────────────────────────── */}
-      {t && t.status === "finished" && t.finalRankingJson && (() => {
-        const finalIds: string[] = JSON.parse(t.finalRankingJson);
+      {hasTournament && event.tournamentStatus === "finished" && event.finalRankingJson && (() => {
+        const finalIds: string[] = JSON.parse(event.finalRankingJson!);
         const medals = ["🥇", "🥈", "🥉"];
         return (
           <div className="glass rounded-2xl p-5 mb-5 space-y-3">
@@ -247,10 +240,10 @@ export default async function TournamentDetailPage({
             </div>
 
             {/* Notiz */}
-            {t.finalRankingNote && (
+            {event.finalRankingNote && (
               <div className="flex items-start gap-2 mt-1 px-1">
                 <StickyNote className="w-3.5 h-3.5 text-gray-600 mt-0.5 shrink-0" />
-                <p className="text-xs text-gray-500 italic leading-relaxed">{t.finalRankingNote}</p>
+                <p className="text-xs text-gray-500 italic leading-relaxed">{event.finalRankingNote}</p>
               </div>
             )}
           </div>
@@ -258,7 +251,7 @@ export default async function TournamentDetailPage({
       })()}
 
       {/* ── Content ────────────────────────────────────────────────────── */}
-      {!t ? (
+      {!hasTournament ? (
         <div className="glass rounded-2xl p-10 text-center">
           <Swords className="w-10 h-10 mx-auto mb-3 text-gray-700" />
           <p className="text-gray-400 font-medium">Noch kein Spielplan erstellt.</p>
@@ -274,7 +267,7 @@ export default async function TournamentDetailPage({
             <div className="glass rounded-2xl divide-y divide-white/5">
               {event.registrations.map(({ user }, i) => {
                 const isMe = user.id === userId;
-                const wins = t.matches.filter(m => m.winnerId === user.id).length;
+                const wins = event.matches.filter(m => m.winnerId === user.id).length;
                 return (
                   <div key={user.id} className={`flex items-center gap-2.5 px-3 py-2.5 ${isMe ? "bg-rose-950/30" : ""}`}>
                     <span className="text-xs text-gray-700 w-4 shrink-0 text-center">{i + 1}</span>
@@ -302,30 +295,30 @@ export default async function TournamentDetailPage({
           <div className="lg:col-span-3">
             {isElimination && (
               <BracketView
-                matches={t.matches as Parameters<typeof BracketView>[0]["matches"]}
+                matches={event.matches as Parameters<typeof BracketView>[0]["matches"]}
                 participants={mergedParticipants}
                 userId={userId}
               />
             )}
             {isRoundRobin && (
               <RoundRobinView
-                matches={t.matches as Parameters<typeof RoundRobinView>[0]["matches"]}
+                matches={event.matches as Parameters<typeof RoundRobinView>[0]["matches"]}
                 participants={mergedParticipants}
                 userId={userId}
               />
             )}
             {isLiga && (
               <LigaView
-                matches={t.matches as Parameters<typeof LigaView>[0]["matches"]}
+                matches={event.matches as Parameters<typeof LigaView>[0]["matches"]}
                 participants={mergedParticipants}
                 userId={userId}
               />
             )}
             {isFfa && (
               <FfaView
-                matches={t.matches as Parameters<typeof FfaView>[0]["matches"]}
+                matches={event.matches as Parameters<typeof FfaView>[0]["matches"]}
                 participants={mergedParticipants}
-                statFields={t.statFields ? JSON.parse(t.statFields) : []}
+                statFields={event.statFields ? JSON.parse(event.statFields) : []}
                 userId={userId}
                 format={format}
               />

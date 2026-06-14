@@ -43,12 +43,10 @@ type SeriesEventForStandings = {
   id: string;
   completionData: string | null;
   registrations: { userId: string }[];
-  tournament: {
-    participants: { userId: string }[];
-    matches: {
-      entries: { userId: string | null; statsJson: string | null }[];
-    }[];
-  } | null;
+  finalRankingJson: string | null;
+  matches: {
+    entries: { userId: string | null; statsJson: string | null }[];
+  }[];
 };
 
 /**
@@ -90,8 +88,8 @@ function computeStatStandings(
     for (const { userId: uid } of ev.registrations) {
       evPart[uid] = (evPart[uid] ?? 0) + 1;
     }
-    if (!ev.tournament) continue;
-    for (const match of ev.tournament.matches) {
+    if (ev.matches.length === 0) continue;
+    for (const match of ev.matches) {
       for (const entry of match.entries) {
         if (!entry.userId || !entry.statsJson) continue;
         let s: Record<string, number> = {};
@@ -165,21 +163,11 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
         include: {
           _count:        { select: { registrations: true } },
           registrations: { select: { userId: true } },
-          tournament: {
+          participants:     { select: { userId: true } },
+          matches: {
             select: {
-              id:               true,
-              format:           true,
-              status:           true,
-              finalRankingJson: true,
-              finalRankingNote: true,
-              pointsConfig:     true,
-              participants:     { select: { userId: true } },
-              matches: {
-                select: {
-                  entries: {
-                    select: { userId: true, statsJson: true },
-                  },
-                },
+              entries: {
+                select: { userId: true, statsJson: true },
               },
             },
           },
@@ -228,7 +216,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
   const totalParticipantIds = new Set(
     series.events.flatMap(e => e.registrations.map(r => r.userId))
   );
-  const eventsWithResults = pastEvents.filter(e => e.tournament?.finalRankingJson);
+  const eventsWithResults = pastEvents.filter(e => e.finalRankingJson);
 
   // Sieger + MVP aus pastEvents für die Terminliste
   const winnerMap = new Map<string, string>();
@@ -236,9 +224,9 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
   const statWinnerMap = new Map<string, string>(); // completionData event winner
 
   for (const ev of pastEvents) {
-    if (ev.tournament?.finalRankingJson) {
+    if (ev.finalRankingJson) {
       try {
-        const ranking = JSON.parse(ev.tournament.finalRankingJson) as string[];
+        const ranking = JSON.parse(ev.finalRankingJson) as string[];
         const wu = userMap.get(ranking[0]);
         if (wu) winnerMap.set(ev.id, wu.username ?? wu.name ?? "");
       } catch { /* ignore */ }
@@ -520,7 +508,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
                       <span className="text-sm font-semibold text-white group-hover:text-teal-300 transition-colors truncate">
                         {ev.title}
                       </span>
-                      {ev.tournament && <Trophy className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
+                      {ev.format && <Trophy className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
                       {isReg && (
                         <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-medium shrink-0">
                           <Check className="w-3 h-3" /> Angemeldet
@@ -570,7 +558,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <p className="text-sm font-medium text-gray-400 truncate group-hover:text-white transition-colors">{ev.title}</p>
-                      {ev.tournament && <Trophy className="w-3 h-3 text-gray-600 shrink-0" />}
+                      {ev.format && <Trophy className="w-3 h-3 text-gray-600 shrink-0" />}
                     </div>
                     <p className="text-[10px] text-gray-600 mt-0.5">
                       {date.toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "short", year: "numeric" })}

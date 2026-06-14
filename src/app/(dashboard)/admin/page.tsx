@@ -7,7 +7,7 @@ export default async function AdminPage() {
   const [userCount, eventCount, tournamentCount, pointsTotal] = await Promise.all([
     prisma.user.count(),
     prisma.event.count(),
-    prisma.tournament.count(),
+    prisma.event.count({ where: { format: { not: null } } }),
     prisma.pointTransaction.aggregate({ _sum: { amount: true } }),
   ]);
 

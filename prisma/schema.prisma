@@ -237,9 +237,19 @@ model Event {
   completionData   String?
   createdAt      DateTime @default(now())
 
+  // Ehem. Tournament-Felder (zusammengeführt)
+  format           String?   // single_elimination | double_elimination | round_robin | ffa | coop_stats | avg_stats
+  tournamentStatus String?   // pending | active | complete | finalized
+  pointsConfig     String?   // JSON: {"1": 100, "2": 50, "3": 25}
+  statFields       String?   // JSON: ["Kills","Assists"]
+  finalRankingJson String?   // JSON: ["userId1","userId2"]
+  finalRankingNote String?
+
   series        EventSeries?        @relation(fields: [seriesId], references: [id])
   registrations EventRegistration[]
-  tournament    Tournament?
+  participants  TournamentParticipant[]
+  matches       Match[]
+  teams         Team[]
 }
 
 model EventRegistration {
@@ -253,48 +263,26 @@ model EventRegistration {
   @@unique([userId, eventId])
 }
 
-model Tournament {
-  id           String   @id @default(cuid())
-  eventId      String   @unique
-  // single_elimination | double_elimination | round_robin | ffa | coop_stats
-  format       String   @default("single_elimination")
-  status       String   @default("pending")
-  // JSON: {"1": 100, "2": 50, "3": 25} — Punkte pro Platzierung
-  pointsConfig String?
-  // JSON: ["Kills","Assists","Punkte"] — für ffa/coop_stats sichtbare Stat-Spalten
-  statFields        String?
-  // Bestätigte Endplatzierung: JSON ["userId1","userId2",...]
-  finalRankingJson  String?
-  // Optionale Begründung für Änderungen (z.B. Disqualifikation)
-  finalRankingNote  String?
-  createdAt    DateTime @default(now())
-  event        Event    @relation(fields: [eventId], references: [id])
-
-  participants TournamentParticipant[]
-  matches      Match[]
-  teams        Team[]
-}
-
 model TournamentParticipant {
-  id           String     @id @default(cuid())
-  tournamentId String
-  userId       String
-  seed         Int?
-  eliminated   Boolean    @default(false)
-  finalRank    Int?
-  tournament   Tournament @relation(fields: [tournamentId], references: [id])
-  user         User       @relation(fields: [userId], references: [id])
-  @@unique([tournamentId, userId])
+  id       String  @id @default(cuid())
+  eventId  String
+  userId   String
+  seed     Int?
+  eliminated Boolean @default(false)
+  finalRank  Int?
+  event    Event   @relation(fields: [eventId], references: [id])
+  user     User    @relation(fields: [userId], references: [id])
+  @@unique([eventId, userId])
 }
 
 // Nur für team_vs_team-Formate
 model Team {
-  id           String       @id @default(cuid())
-  tournamentId String
-  name         String
-  color        String?
-  tournament   Tournament   @relation(fields: [tournamentId], references: [id])
-  members      TeamMember[]
+  id       String     @id @default(cuid())
+  eventId  String
+  name     String
+  color    String?
+  event    Event      @relation(fields: [eventId], references: [id])
+  members  TeamMember[]
   matchEntries MatchEntry[]
 }
 
@@ -308,23 +296,23 @@ model TeamMember {
 }
 
 model Match {
-  id           String       @id @default(cuid())
-  tournamentId String
-  round        Int
-  position     Int
-  title        String?
-  scheduledAt  DateTime?
-  notes        String?
+  id        String     @id @default(cuid())
+  eventId   String
+  round     Int
+  position  Int
+  title     String?
+  scheduledAt DateTime?
+  notes     String?
   // 1v1 / single_elimination: player1Id/player2Id/score1/score2/winnerId
-  player1Id    String?
-  player2Id    String?
-  winnerId     String?
-  score1       Int?
-  score2       Int?
-  playedAt     DateTime?
-  tournament   Tournament   @relation(fields: [tournamentId], references: [id])
+  player1Id String?
+  player2Id String?
+  winnerId  String?
+  score1    Int?
+  score2    Int?
+  playedAt  DateTime?
+  event     Event      @relation(fields: [eventId], references: [id])
   // ffa / coop_stats / team_vs_team: eine Zeile pro Teilnehmer
-  entries      MatchEntry[]
+  entries   MatchEntry[]
 }
 
 // Flexible Teilnehmer-Zeile für FFA, Coop und Team-Matches

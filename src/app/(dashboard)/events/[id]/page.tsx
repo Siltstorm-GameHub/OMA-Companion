@@ -24,7 +24,6 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
     where: { id },
     include: {
       _count:        { select: { registrations: true } },
-      tournament:    true,
       registrations: userId ? { where: { userId }, select: { userId: true } } : { select: { userId: true }, take: 0 },
       series: {
         include: {
@@ -32,7 +31,6 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
             orderBy: { startAt: "asc" },
             include: {
               _count:        { select: { registrations: true } },
-              tournament:    { select: { id: true } },
               registrations: userId ? { where: { userId }, select: { userId: true } } : { select: { userId: true }, take: 0 },
             },
           },
@@ -94,7 +92,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-1">
               <h1 className="text-xl font-bold text-white">{event.title}</h1>
-              {event.tournament && <Trophy className="w-4 h-4 text-amber-400 shrink-0" />}
+              {event.format && <Trophy className="w-4 h-4 text-amber-400 shrink-0" />}
             </div>
 
             <div className="flex items-center gap-3 flex-wrap text-sm text-gray-400 mb-3">
@@ -141,7 +139,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
           {userId && canRegister && (
             <RegisterButton eventId={event.id} isRegistered={isRegistered} isFull={isFull && !isRegistered} discordEventUrl={discordUrl} />
           )}
-          {event.tournament && (
+          {event.format && (
             <Link href={`/tournament/${event.id}`}
               className="flex items-center gap-1.5 text-sm text-purple-400 hover:text-purple-300 transition-colors border border-purple-500/20 hover:border-purple-500/40 px-3 py-1.5 rounded-xl">
               <Trophy className="w-3.5 h-3.5" /> Turnierbaum ansehen
@@ -183,7 +181,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
                       <p className="text-sm font-medium text-white truncate group-hover:text-teal-300 transition-colors">
                         {ev.title}
                       </p>
-                      {ev.tournament && <Trophy className="w-3 h-3 text-amber-500 shrink-0" />}
+                      {ev.format && <Trophy className="w-3 h-3 text-amber-500 shrink-0" />}
                       {evReg && <Check className="w-3 h-3 text-emerald-400 shrink-0" />}
                     </div>
                     <p className="text-[10px] text-gray-600 mt-0.5">
@@ -229,7 +227,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
                       <p className="text-sm font-medium text-gray-400 truncate group-hover:text-white transition-colors">
                         {ev.title}
                       </p>
-                      {ev.tournament && <Trophy className="w-3 h-3 text-gray-600 shrink-0" />}
+                      {ev.format && <Trophy className="w-3 h-3 text-gray-600 shrink-0" />}
                       {evReg && <Check className="w-3 h-3 text-emerald-600 shrink-0" />}
                     </div>
                     <p className="text-[10px] text-gray-600 mt-0.5">

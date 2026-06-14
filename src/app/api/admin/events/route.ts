@@ -57,18 +57,10 @@ export async function DELETE(req: NextRequest) {
     select: { discordEventId: true, discordMessageId: true, discordChannelId: true },
   });
 
-  const tournament = await prisma.tournament.findUnique({
-    where:  { eventId },
-    select: { id: true },
-  });
-
   await prisma.$transaction(async (tx) => {
-    if (tournament) {
-      await tx.match.deleteMany({ where: { tournamentId: tournament.id } });
-      await tx.team.deleteMany({ where: { tournamentId: tournament.id } });
-      await tx.tournamentParticipant.deleteMany({ where: { tournamentId: tournament.id } });
-      await tx.tournament.delete({ where: { id: tournament.id } });
-    }
+    await tx.match.deleteMany({ where: { eventId } });
+    await tx.team.deleteMany({ where: { eventId } });
+    await tx.tournamentParticipant.deleteMany({ where: { eventId } });
     await tx.eventRegistration.deleteMany({ where: { eventId } });
     await tx.event.delete({ where: { id: eventId } });
   });

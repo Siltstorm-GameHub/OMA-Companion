@@ -29,7 +29,15 @@ type Event = {
   series?: { id: string; name: string } | null;
   _count: { registrations: number };
   registrations: Registration[];
-  tournament: Tournament | null;
+  // Tournament fields (now directly on Event)
+  format: string | null;
+  tournamentStatus: string | null;
+  pointsConfig: string | null;
+  statFields: string | null;
+  finalRankingJson: string | null;
+  finalRankingNote: string | null;
+  participants: Participant[];
+  matches: Match[];
 };
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
@@ -213,6 +221,21 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
   const registeredIds = new Set(event.registrations.map(r => r.userId));
   const userName      = (u: User) => u.username ?? u.name ?? "?";
 
+  // Adapter: map Event's tournament fields → Tournament shape for child components
+  const tournament: Tournament | null = event.format
+    ? {
+        id:               event.id,
+        status:           event.tournamentStatus ?? "active",
+        format:           event.format,
+        pointsConfig:     event.pointsConfig,
+        statFields:       event.statFields,
+        finalRankingJson: event.finalRankingJson,
+        finalRankingNote: event.finalRankingNote,
+        participants:     event.participants,
+        matches:          event.matches,
+      }
+    : null;
+
   const filteredUsers = useMemo(() => {
     if (!search.trim()) return allUsers;
     const q = search.toLowerCase();
@@ -314,7 +337,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
     if (!tournament) return;
     if (!confirm(`Turnier für "${event.title}" wirklich löschen?\n\nAlle Matches und Teilnehmer-Daten werden entfernt. Das Event selbst bleibt bestehen.`)) return;
     setLoading(true);
-    await fetch(`/api/tournaments/${tournament.id}`, { method: "DELETE" });
+    await fetch(`/api/tournaments/${event.id}`, { method: "DELETE" });
     setLoading(false);
     toast.success("Turnier gelöscht");
     router.refresh();
@@ -417,8 +440,6 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
     setLoading(false);
     router.refresh();
   }
-
-  const tournament = event.tournament;
 
   const TABS: { key: Tab; label: string; icon: React.ReactNode }[] = [
     { key: "settings",     label: "Einstellungen",                            icon: <Settings className="w-3.5 h-3.5" /> },
