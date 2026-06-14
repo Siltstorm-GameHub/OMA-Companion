@@ -3,26 +3,13 @@ import { prisma } from "@/lib/prisma";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import {
-  ArrowLeft, Trophy, Gamepad2, Eye, Crown, Gift, Flame, CheckCircle2,
+  ArrowLeft, Trophy, Gamepad2, Eye,
   CalendarDays, AlertTriangle, Users, Swords,
 } from "lucide-react";
 import { buildLulStandings, LUL_POINTS } from "@/lib/lul";
 import GameCover from "@/components/GameCover";
 import SpieltagDetails from "./SpieltagDetails";
-
-const MEDAL      = ["🥇", "🥈", "🥉"];
-const MEDAL_BG   = ["rgba(251,191,36,0.12)", "rgba(156,163,175,0.1)", "rgba(180,83,9,0.12)"];
-const MEDAL_RING = ["ring-amber-400/30", "ring-gray-400/20", "ring-amber-700/30"];
-
-const COLS = [
-  { key: "asPlayer",    label: "Mitspieler", Icon: Gamepad2,     cls: "text-teal-400",    bg: "bg-teal-500/10"    },
-  { key: "asSpectator", label: "Zuschauer",  Icon: Eye,          cls: "text-indigo-400",  bg: "bg-indigo-500/10"  },
-  { key: "wins",        label: "Siege",      Icon: Trophy,       cls: "text-amber-400",   bg: "bg-amber-500/10"   },
-  { key: "champs",      label: "Champ",      Icon: Crown,        cls: "text-rose-400",    bg: "bg-rose-500/10"    },
-  { key: "trost",       label: "Trost",      Icon: Gift,         cls: "text-orange-400",  bg: "bg-orange-500/10"  },
-  { key: "dominion",    label: "Dominion",   Icon: Flame,        cls: "text-orange-500",  bg: "bg-orange-600/10"  },
-  { key: "votes",       label: "Votes",      Icon: CheckCircle2, cls: "text-emerald-400", bg: "bg-emerald-500/10" },
-] as const;
+import LulStandingsTable from "../LulStandingsTable";
 
 const STATUS_LABEL: Record<string, string> = {
   upcoming: "Geplant",
@@ -274,121 +261,11 @@ export default async function LulSeasonPage({
                 </p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[560px] text-sm border-collapse">
-                  <thead>
-                    <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-                      <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-600 uppercase tracking-widest w-10">#</th>
-                      <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-600 uppercase tracking-widest">Spieler</th>
-                      <th className="text-right px-4 py-3 text-[10px] font-semibold uppercase tracking-widest whitespace-nowrap" style={{ color: "#14b8a6" }}>Gesamt</th>
-                      {COLS.map((col) => (
-                        <th
-                          key={col.key}
-                          className="text-center px-2 py-3 text-[10px] font-semibold uppercase tracking-widest whitespace-nowrap"
-                          style={{ color: "rgba(255,255,255,0.3)" }}
-                        >
-                          <col.Icon className="w-3.5 h-3.5 inline-block mr-1 align-middle" />
-                          <span className="hidden sm:inline align-middle">{col.label}</span>
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {standings.map((s, i) => {
-                      const isMe   = s.userId === userId;
-                      const isTop3 = i < 3 && s.totalPts > 0;
-                      return (
-                        <tr
-                          key={s.userId}
-                          style={{
-                            borderBottom: "1px solid rgba(255,255,255,0.035)",
-                            background: isMe ? "rgba(20,184,166,0.05)" : undefined,
-                          }}
-                          className={`transition-colors hover:bg-white/[0.015] ${
-                            isMe ? "ring-1 ring-inset ring-teal-400/15" : ""
-                          }`}
-                        >
-                          <td className="px-4 py-3 text-center">
-                            {isTop3 ? (
-                              <span
-                                className={`inline-flex items-center justify-center w-7 h-7 rounded-lg text-base ring-1 ${MEDAL_RING[i]}`}
-                                style={{ background: MEDAL_BG[i] }}
-                              >
-                                {MEDAL[i]}
-                              </span>
-                            ) : (
-                              <span className="text-sm font-semibold text-gray-600">{i + 1}</span>
-                            )}
-                          </td>
-
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-2.5">
-                              {s.image ? (
-                                <img
-                                  src={s.image}
-                                  alt=""
-                                  className={`w-8 h-8 rounded-full shrink-0 ring-1 ${
-                                    isMe ? "ring-teal-400/50" : "ring-white/10"
-                                  }`}
-                                />
-                              ) : (
-                                <div
-                                  className={`w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-xs font-bold ring-1 ${
-                                    isMe
-                                      ? "ring-teal-400/30"
-                                      : "bg-white/[0.06] text-gray-400 ring-white/5"
-                                  }`}
-                                  style={isMe ? { background: "rgba(20,184,166,0.15)", color: "#2dd4bf" } : {}}
-                                >
-                                  {s.name[0]?.toUpperCase()}
-                                </div>
-                              )}
-                              <p
-                                className={`font-semibold leading-tight ${
-                                  isMe ? "text-teal-300" : "text-white"
-                                }`}
-                              >
-                                {s.name}
-                                {isMe && (
-                                  <span className="text-[10px] font-normal text-teal-600 ml-1.5">(du)</span>
-                                )}
-                              </p>
-                            </div>
-                          </td>
-
-                          <td className="px-4 py-3 text-right">
-                            <span
-                              className={`text-lg font-bold tabular-nums ${
-                                i === 0 ? "text-amber-400" : isMe ? "text-teal-300" : "text-white"
-                              }`}
-                            >
-                              {s.totalPts}
-                            </span>
-                            <p className="text-[9px] text-gray-600">Pkt</p>
-                          </td>
-
-                          {COLS.map((col) => {
-                            const val = s[col.key as keyof typeof s] as number;
-                            return (
-                              <td key={col.key} className="px-2 py-3 text-center">
-                                {val > 0 ? (
-                                  <span
-                                    className={`inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1.5 rounded-md text-xs font-bold tabular-nums ${col.cls} ${col.bg}`}
-                                  >
-                                    {val}
-                                  </span>
-                                ) : (
-                                  <span className="text-gray-800 text-sm">–</span>
-                                )}
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <LulStandingsTable
+                standings={standings}
+                userId={userId}
+                variant="season"
+              />
             )}
 
             {/* Legende */}
