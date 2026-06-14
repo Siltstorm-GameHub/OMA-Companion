@@ -1,0 +1,55 @@
+{
+  "background_color": "#000000",
+  "description": "Events, Turniere und Punktesystem für Old Masters",
+  "dir": "ltr",
+  "display": "standalone",
+  "name": "Old Masters Ally",
+  "orientation": "any",
+  "scope": "/",
+  "short_name": "OMA-App",
+  "start_url": "https://oma-app.de",
+  "theme_color": "#b51717",
+  "icons": [
+    {
+      "src": "https://oma-app.de/favicon.ico?favicon.0~jligekzltju.ico",
+      "type": "image/x-icon",
+      "sizes": "256x256",
+      "isSquare": true,
+      "isPng": false,
+      "isWebp": false,
+      "isJpg": false,
+      "width": 256,
+      "is512x512": false,
+      "is256x256": true,
+      "is192x192": false
+    },
+    {
+      "src": "https://oma-app.de/OMALogoNew.png",
+      "isSquare": false,
+      "isPng": true,
+      "isWebp": false,
+      "isJpg": false,
+      "width": 0,
+      "is512x512": false,
+      "is256x256": false,
+      "is192x192": false
+    },
+    {
+      "src": "https://oma-app.de/favicon.ico",
+      "type": "image/x-icon",
+      "isSquare": false,
+      "isPng": false,
+      "isWebp": false,
+      "isJpg": false,
+      "width": 0,
+      "is512x512": false,
+      "is256x256": false,
+      "is192x192": false
+    }
+  ],
+  "id": "OMA",
+  "categories": [
+    "entertainment",
+    "games"
+  ]
+}
