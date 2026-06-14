@@ -41,24 +41,17 @@ export default function PwaInstallButton() {
       return;
     }
 
-    // Android/Chrome: auf beforeinstallprompt warten
+    // Sofort manuellen Modus zeigen — beforeinstallprompt feuert beim Seitenload,
+    // nicht wenn die Komponente mounted. Wenn es doch noch kommt, auf native upgraden.
+    setMode("manual");
+
     const handler = (e: Event) => {
       e.preventDefault();
       setPrompt(e as BeforeInstallPromptEvent);
       setMode("native");
     };
     window.addEventListener("beforeinstallprompt", handler);
-
-    // Fallback: wenn nach 2,5s kein Prompt kam (z.B. nach früherer Installation),
-    // trotzdem manuellen Hinweis anbieten
-    const fallback = setTimeout(() => {
-      setMode(prev => prev === "none" ? "manual" : prev);
-    }, 2500);
-
-    return () => {
-      window.removeEventListener("beforeinstallprompt", handler);
-      clearTimeout(fallback);
-    };
+    return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
 
   // Hint schließen bei Außenklick
