@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { buildLulStandings, LUL_POINTS } from "@/lib/lul";
 import GameCover from "@/components/GameCover";
+import SpieltagDetails from "./SpieltagDetails";
 
 const MEDAL      = ["🥇", "🥈", "🥉"];
 const MEDAL_BG   = ["rgba(251,191,36,0.12)", "rgba(156,163,175,0.1)", "rgba(180,83,9,0.12)"];
@@ -55,6 +56,7 @@ export default async function LulSeasonPage({
             include: {
               user: { select: { id: true, name: true, username: true, image: true } },
             },
+            orderBy: { placement: "asc" },
           },
         },
       },
@@ -238,6 +240,11 @@ export default async function LulSeasonPage({
                   )}
                   </div>{/* flex-1 */}
                   </div>{/* flex items-start gap-3 */}
+                  <SpieltagDetails
+                    entries={st.entries}
+                    tournamentFormat={st.tournamentFormat}
+                    statFieldsJson={st.statFields}
+                  />
                 </Link>
               );
             })
