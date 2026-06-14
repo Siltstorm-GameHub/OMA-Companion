@@ -261,20 +261,22 @@ export default async function LulSpieltagPage({
             }}
           >
             <div className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse" style={{ minWidth: isStatFmt ? `${320 + statFieldsList.length * 80 + (fmt === "avg_stats" ? 90 : 0)}px` : maxRounds > 0 ? `${480 + maxRounds * 56}px` : "480px" }}>
+              <table className="w-full text-sm border-collapse" style={{ minWidth: isStatFmt ? `${320 + (fmt === "avg_stats" ? 90 : statFieldsList.length * 80)}px` : maxRounds > 0 ? `${480 + maxRounds * 56}px` : "480px" }}>
                 <thead>
                   <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
                     <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-600 uppercase tracking-widest w-10">#</th>
                     <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-600 uppercase tracking-widest">Spieler</th>
-                    {isStatFmt
+                    {isStatFmt && fmt !== "avg_stats"
                       ? statFieldsList.map(f => (
                           <th key={f} className="text-center px-3 py-3 text-[10px] font-semibold text-gray-600 uppercase tracking-widest whitespace-nowrap">
-                            {fmt === "avg_stats" ? `Ø ${f}` : f}
+                            {f}
                           </th>
                         ))
-                      : Array.from({ length: maxRounds }, (_, ri) => (
-                          <th key={ri} className="text-center px-2 py-3 text-[10px] font-semibold text-gray-700 uppercase tracking-widest whitespace-nowrap">R{ri + 1}</th>
-                        ))
+                      : !isStatFmt
+                        ? Array.from({ length: maxRounds }, (_, ri) => (
+                            <th key={ri} className="text-center px-2 py-3 text-[10px] font-semibold text-gray-700 uppercase tracking-widest whitespace-nowrap">R{ri + 1}</th>
+                          ))
+                        : null
                     }
                     {fmt === "avg_stats" && (
                       <th className="text-center px-3 py-3 text-[10px] font-semibold uppercase tracking-widest whitespace-nowrap" style={{ color: "#f59e0b" }}>
@@ -353,17 +355,19 @@ export default async function LulSpieltagPage({
                             </p>
                           </div>
                         </td>
-                        {isStatFmt
+                        {isStatFmt && fmt !== "avg_stats"
                           ? statFieldsList.map(f => (
                               <td key={f} className="px-3 py-3 text-center">
                                 <span className="text-sm tabular-nums text-gray-300">{stats[f] ?? "–"}</span>
                               </td>
                             ))
-                          : Array.from({ length: maxRounds }, (_, ri) => (
+                          : !isStatFmt
+                          ? Array.from({ length: maxRounds }, (_, ri) => (
                               <td key={ri} className="px-2 py-3 text-center">
                                 <span className="text-sm tabular-nums text-gray-400">{rounds[ri] !== undefined ? rounds[ri] : "–"}</span>
                               </td>
                             ))
+                          : null
                         }
                         {fmt === "avg_stats" && (
                           <td className="px-3 py-3 text-center">
