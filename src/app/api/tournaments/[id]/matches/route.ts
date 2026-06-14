@@ -5,19 +5,19 @@ import { awardPoints } from "@/lib/points";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   await requireRole("moderator");
-  const { id: tournamentId } = await params;
+  const { id: eventId } = await params;
   const { title, round, position, player1Id, player2Id, scheduledAt, notes, entries } = await req.json();
 
   const resolvedRound = round ?? 1;
   let resolvedPosition = position;
   if (!resolvedPosition) {
-    const count = await prisma.match.count({ where: { tournamentId, round: resolvedRound } });
+    const count = await prisma.match.count({ where: { eventId, round: resolvedRound } });
     resolvedPosition = count + 1;
   }
 
   const match = await prisma.match.create({
     data: {
-      tournamentId,
+      eventId,
       round: resolvedRound,
       position: resolvedPosition,
       title: title ?? null,
@@ -42,29 +42,27 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   await requireRole("moderator");
-  const { id: tournamentId } = await params;
+  const { id: eventId } = await params;
   const body = await req.json();
   const { matchId, winnerId, score1, score2, isDraw, entries, action } = body;
 
   // ── Reset a match result ─────────────────────────────────────────────
   if (action === "reset") {
-    const tournament = await prisma.tournament.findUnique({
-      where: { id: tournamentId },
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
       select: { format: true },
     });
     const match = await prisma.match.findUnique({ where: { id: matchId } });
     if (!match) return NextResponse.json({ error: "Nicht gefunden" }, { status: 404 });
 
-    // For single_elimination: clear this winner from the next round slot
-    if (tournament?.format === "single_elimination" && match.winnerId) {
+    if (event?.format === "single_elimination" && match.winnerId) {
       const nextRound    = match.round + 1;
       const nextPosition = Math.ceil(match.position / 2);
       const nextMatch = await prisma.match.findFirst({
-        where: { tournamentId, round: nextRound, position: nextPosition },
+        where: { eventId, round: nextRound, position: nextPosition },
       });
       if (nextMatch) {
         const isFirstSlot = match.position % 2 === 1;
-        // Only clear the slot if it still contains the winner being undone
         if (isFirstSlot && nextMatch.player1Id === match.winnerId) {
           await prisma.match.update({
             where: { id: nextMatch.id },
@@ -77,8 +75,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           });
         }
       }
-      // If the tournament was auto-finished, reopen it
-      await prisma.tournament.update({ where: { id: tournamentId }, data: { status: "active" } });
+      await prisma.event.update({ where: { id: eventId }, data: { tournamentStatus: "active" } });
     }
 
     const reset = await prisma.match.update({
@@ -88,8 +85,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json(reset);
   }
 
-  // FFA / coop_stats: Stats pro Match speichern (keine Platzierung, keine Punkte hier)
-  // Gesamtranking + Punktevergabe erfolgt beim Abschluss des Turniers (status → "finished")
+  // FFA / coop_stats: Stats pro Match speichern
   if (entries) {
     await Promise.all(
       entries.map((e: { id: string; statsJson?: Record<string, number> | null }) =>
@@ -113,9 +109,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json(match);
   }
 
-  // 1v1 / liga / round_robin: update score + winner, optionally advance bracket
-  const tournament = await prisma.tournament.findUnique({
-    where: { id: tournamentId },
+  // 1v1 / liga / round_robin: update score + winner
+  const event = await prisma.event.findUnique({
+    where: { id: eventId },
     select: { format: true, pointsConfig: true },
   });
 
@@ -129,13 +125,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     },
   });
 
-  const isBracket = tournament?.format === "single_elimination";
+  const isBracket = event?.format === "single_elimination";
 
   if (isBracket) {
-    const nextRound = match.round + 1;
+    const nextRound    = match.round + 1;
     const nextPosition = Math.ceil(match.position / 2);
     const nextMatch = await prisma.match.findFirst({
-      where: { tournamentId, round: nextRound, position: nextPosition },
+      where: { eventId, round: nextRound, position: nextPosition },
     });
 
     if (nextMatch) {
@@ -145,20 +141,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         data: isFirstSlot ? { player1Id: winnerId } : { player2Id: winnerId },
       });
     } else {
-      // Final match done → award tournament points
       if (winnerId) {
         await awardPoints(winnerId, "TOURNAMENT_WIN");
         const loserId = match.player1Id === winnerId ? match.player2Id : match.player1Id;
         if (loserId) await awardPoints(loserId, "TOURNAMENT_TOP3");
       }
-      await prisma.tournament.update({ where: { id: tournamentId }, data: { status: "finished" } });
+      await prisma.event.update({ where: { id: eventId }, data: { tournamentStatus: "finished" } });
     }
-  } else if (tournament?.pointsConfig) {
-    // Liga / round_robin: award per-match points from pointsConfig
-    const config = JSON.parse(tournament.pointsConfig) as Record<string, number>;
+  } else if (event?.pointsConfig) {
+    const config  = JSON.parse(event.pointsConfig) as Record<string, number>;
     const drawPts = config["draw"];
     const winPts  = config["win"];
-    // Liga-Match-Ergebnisse geben nur Münzen (keine rankPoints — Punkte gibt's nur für Platzierungen)
     if (isDraw && drawPts && match.player1Id && match.player2Id) {
       for (const uid of [match.player1Id, match.player2Id]) {
         await prisma.$transaction([
@@ -183,7 +176,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   await requireRole("moderator");
-  await params; // ensure param is resolved
+  await params;
   const { matchId } = await req.json();
   await prisma.match.delete({ where: { id: matchId } });
   return NextResponse.json({ ok: true });

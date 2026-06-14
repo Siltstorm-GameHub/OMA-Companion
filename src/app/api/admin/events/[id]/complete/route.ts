@@ -45,13 +45,9 @@ export async function POST(
     include: {
       registrations: { select: { userId: true } },
       series: true,
-      tournament: {
+      matches: {
         include: {
-          matches: {
-            include: {
-              entries: { select: { userId: true, statsJson: true } },
-            },
-          },
+          entries: { select: { userId: true, statsJson: true } },
         },
       },
     },
@@ -69,8 +65,8 @@ export async function POST(
 
   // Per-User-Stats aus Match-Einträgen berechnen
   const userStats: Record<string, Record<string, number>> = {};
-  if (event.tournament) {
-    for (const match of event.tournament.matches) {
+  if (event.matches.length > 0) {
+    for (const match of event.matches) {
       for (const entry of match.entries) {
         if (!entry.userId || !entry.statsJson) continue;
         let parsed: Record<string, number> = {};

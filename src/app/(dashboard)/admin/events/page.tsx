@@ -14,20 +14,16 @@ export default async function AdminEventsPage() {
         _count:        { select: { registrations: true } },
         registrations: { select: { userId: true } },
         series:        { select: { id: true, name: true } },
-        tournament: {
+        participants: {
+          include: { user: { select: { id: true, name: true, username: true, image: true } } },
+        },
+        matches: {
+          orderBy: [{ round: "asc" }, { position: "asc" }],
+          include: { entries: true },
+        },
+        teams: {
           include: {
-            participants: {
-              include: { user: { select: { id: true, name: true, username: true, image: true } } },
-            },
-            matches: {
-              orderBy: [{ round: "asc" }, { position: "asc" }],
-              include: { entries: true },
-            },
-            teams: {
-              include: {
-                members: { include: { user: { select: { id: true, name: true, username: true } } } },
-              },
-            },
+            members: { include: { user: { select: { id: true, name: true, username: true } } } },
           },
         },
       },

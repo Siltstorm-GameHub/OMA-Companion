@@ -39,7 +39,6 @@ export default async function EventsPage() {
       include: {
         _count:        { select: { registrations: true } },
         series:        { select: { id: true, name: true } },
-        tournament:    { select: { id: true } },
         registrations: { select: { userId: true } },
       },
     }),
@@ -128,8 +127,8 @@ export default async function EventsPage() {
               : false;
             const isFull       = !!(ev.maxPlayers && ev._count.registrations >= ev.maxPlayers);
             const canRegister  = ev.status === "open" || ev.status === "active";
-            const isTournament = !!ev.tournament;
-            const hasSeries    = !!ev.series;
+            const isTournament = !!ev.format;
+            const hasSeries    = !!ev.seriesId;
             const discordUrl   = ev.discordEventId && GUILD_ID
               ? `https://discord.com/events/${GUILD_ID}/${ev.discordEventId}` : null;
             const date = item.date;

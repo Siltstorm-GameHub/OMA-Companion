@@ -4,10 +4,10 @@ import { prisma } from "@/lib/prisma";
 import { updateQuestProgress } from "@/lib/quests";
 
 // Standard round-robin scheduling algorithm (circle method)
-export function generateRoundRobin(participantIds: string[], tournamentId: string) {
+export function generateRoundRobin(participantIds: string[], eventId: string) {
   const ids = [...participantIds];
   if (ids.length % 2 !== 0) ids.push("BYE"); // ghost player
-  const n     = ids.length;
+  const n      = ids.length;
   const rounds = n - 1;
   const matches = [];
 
@@ -17,7 +17,7 @@ export function generateRoundRobin(participantIds: string[], tournamentId: strin
       const home = ids[i];
       const away = ids[n - 1 - i];
       if (home !== "BYE" && away !== "BYE") {
-        matches.push({ tournamentId, round, position: pos, player1Id: home, player2Id: away, winnerId: null });
+        matches.push({ eventId, round, position: pos, player1Id: home, player2Id: away, winnerId: null });
         pos++;
       }
     }
@@ -28,7 +28,7 @@ export function generateRoundRobin(participantIds: string[], tournamentId: strin
   return matches;
 }
 
-function generateBracket(participantIds: string[], tournamentId: string) {
+function generateBracket(participantIds: string[], eventId: string) {
   const n = participantIds.length;
   const slots = Math.pow(2, Math.ceil(Math.log2(n)));
   const rounds = Math.ceil(Math.log2(slots));
@@ -39,7 +39,7 @@ function generateBracket(participantIds: string[], tournamentId: string) {
 
   for (let pos = 0; pos < slots / 2; pos++) {
     matches.push({
-      tournamentId,
+      eventId,
       round: 1,
       position: pos + 1,
       player1Id: shuffled[pos * 2] === "BYE" ? null : shuffled[pos * 2],
@@ -56,7 +56,7 @@ function generateBracket(participantIds: string[], tournamentId: string) {
   for (let round = 2; round <= rounds; round++) {
     const matchesInRound = slots / Math.pow(2, round);
     for (let pos = 1; pos <= matchesInRound; pos++) {
-      matches.push({ tournamentId, round, position: pos, player1Id: null, player2Id: null, winnerId: null });
+      matches.push({ eventId, round, position: pos, player1Id: null, player2Id: null, winnerId: null });
     }
   }
 
@@ -68,37 +68,51 @@ export async function POST(req: NextRequest) {
   const { eventId, format, participantIds, pointsConfig, statFields, autoGenerate } = await req.json();
   if (!eventId) return NextResponse.json({ error: "eventId ist Pflicht" }, { status: 400 });
 
-  const existing = await prisma.tournament.findUnique({ where: { eventId } });
-  if (existing) return NextResponse.json({ error: "Turnier existiert bereits" }, { status: 400 });
+  const existing = await prisma.event.findUnique({ where: { id: eventId }, select: { tournamentStatus: true } });
+  if (existing?.tournamentStatus) return NextResponse.json({ error: "Turnier existiert bereits" }, { status: 400 });
 
   const resolvedFormat = format ?? "single_elimination";
 
-  const tournament = await prisma.tournament.create({
+  // Turnier-Daten direkt ins Event schreiben + Participants anlegen
+  const event = await prisma.event.update({
+    where: { id: eventId },
     data: {
-      eventId,
       format: resolvedFormat,
-      status: "active",
+      tournamentStatus: "active",
+      type: "tournament",
       pointsConfig: pointsConfig ? JSON.stringify(pointsConfig) : null,
       statFields: statFields ? JSON.stringify(statFields) : null,
-      participants:
-        participantIds?.length
-          ? { create: participantIds.map((userId: string, i: number) => ({ userId, seed: i + 1 })) }
-          : undefined,
+      participants: participantIds?.length
+        ? { create: participantIds.map((userId: string, i: number) => ({ userId, seed: i + 1 })) }
+        : undefined,
+    },
+    include: {
+      matches: {
+        orderBy: [{ round: "asc" }, { position: "asc" }],
+        include: { entries: true },
+      },
+      participants: {
+        include: { user: { select: { id: true, name: true, username: true, image: true } } },
+      },
+      teams: {
+        include: {
+          members: { include: { user: { select: { id: true, name: true, username: true } } } },
+        },
+      },
     },
   });
 
   if (autoGenerate && participantIds?.length >= 2) {
     if (resolvedFormat === "single_elimination") {
-      const bracketMatches = generateBracket(participantIds, tournament.id);
+      const bracketMatches = generateBracket(participantIds, eventId);
       await prisma.match.createMany({ data: bracketMatches });
     } else if (resolvedFormat === "round_robin") {
-      const rrMatches = generateRoundRobin(participantIds, tournament.id);
+      const rrMatches = generateRoundRobin(participantIds, eventId);
       await prisma.match.createMany({ data: rrMatches });
     } else if (resolvedFormat === "liga") {
-      // Liga = Hin- & Rückrunde (doppeltes Round-Robin)
-      const hinrunde  = generateRoundRobin(participantIds, tournament.id);
-      const maxRound  = hinrunde.length ? Math.max(...hinrunde.map(m => m.round)) : 0;
-      const rueckrunde = generateRoundRobin([...participantIds].reverse(), tournament.id).map(m => ({
+      const hinrunde   = generateRoundRobin(participantIds, eventId);
+      const maxRound   = hinrunde.length ? Math.max(...hinrunde.map(m => m.round)) : 0;
+      const rueckrunde = generateRoundRobin([...participantIds].reverse(), eventId).map(m => ({
         ...m,
         round: m.round + maxRound,
       }));
@@ -106,17 +120,16 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  await prisma.event.update({ where: { id: eventId }, data: { status: "active", type: "tournament" } });
-
-  // Award tournament quest progress to all participants
+  // Quest progress für alle Teilnehmer
   if (participantIds?.length) {
     await Promise.all(
       participantIds.map((uid: string) => updateQuestProgress(uid, "TOURNAMENT", 1))
     );
   }
 
-  const full = await prisma.tournament.findUnique({
-    where: { id: tournament.id },
+  // Matches nachladen falls gerade erstellt
+  const full = await prisma.event.findUnique({
+    where: { id: eventId },
     include: {
       matches: {
         orderBy: [{ round: "asc" }, { position: "asc" }],

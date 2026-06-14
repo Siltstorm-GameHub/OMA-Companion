@@ -58,19 +58,12 @@ export async function PATCH(req: NextRequest) {
     });
   }
 
-  // 3) Optional: Format auf alle Turniere der Reihe übertragen
+  // 3) Optional: Format auf alle Events der Reihe übertragen
   if (propagateFormat && fields.fixedFormat) {
-    const events = await prisma.event.findMany({
+    await prisma.event.updateMany({
       where: { seriesId },
-      select: { id: true },
+      data:  { format: fields.fixedFormat },
     });
-    const eventIds = events.map(e => e.id);
-    if (eventIds.length > 0) {
-      await prisma.tournament.updateMany({
-        where: { eventId: { in: eventIds } },
-        data:  { format: fields.fixedFormat },
-      });
-    }
   }
 
   // 4) Discord-Kanal auf alle Events der Reihe übertragen (immer automatisch)

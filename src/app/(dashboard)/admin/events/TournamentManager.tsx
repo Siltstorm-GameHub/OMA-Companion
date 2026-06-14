@@ -369,7 +369,11 @@ export default function TournamentManager({
       <CreationForm
         event={event}
         allUsers={allUsers}
-        onCreated={(t) => { setTournament(t); router.refresh(); }}
+        onCreated={(eventData) => {
+          const ev = eventData as unknown as { id: string; tournamentStatus: string | null; format: string; pointsConfig: string | null; statFields: string | null; finalRankingJson: string | null; finalRankingNote: string | null; participants: Participant[]; matches: Match[] };
+          setTournament({ id: ev.id, status: ev.tournamentStatus ?? "active", format: ev.format, pointsConfig: ev.pointsConfig, statFields: ev.statFields, finalRankingJson: ev.finalRankingJson, finalRankingNote: ev.finalRankingNote, participants: ev.participants, matches: ev.matches });
+          router.refresh();
+        }}
       />
     );
   }
@@ -447,7 +451,7 @@ export default function TournamentManager({
     });
     if (res.ok) {
       const updated = await res.json();
-      setTournament(prev => prev ? { ...prev, status: updated.status, pointsConfig: updated.pointsConfig, statFields: updated.statFields } : prev);
+      setTournament(prev => prev ? { ...prev, status: updated.tournamentStatus ?? prev.status, pointsConfig: updated.pointsConfig, statFields: updated.statFields } : prev);
       setSettingsStatFields(updated.statFields ? JSON.parse(updated.statFields) : []);
       setShowSettings(false);
     }

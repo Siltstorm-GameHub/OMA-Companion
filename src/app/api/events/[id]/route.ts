@@ -7,16 +7,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     where: { id },
     include: {
       _count: { select: { registrations: true } },
-      tournament: {
-        include: {
-          participants: {
-            include: { user: { select: { id: true, name: true, username: true, image: true } } },
-          },
-          matches: {
-            orderBy: [{ round: "asc" }, { position: "asc" }],
-            include: { entries: true },
-          },
-        },
+      participants: {
+        include: { user: { select: { id: true, name: true, username: true, image: true } } },
+      },
+      matches: {
+        orderBy: [{ round: "asc" }, { position: "asc" }],
+        include: { entries: true },
       },
     },
   });

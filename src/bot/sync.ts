@@ -21,19 +21,20 @@ export async function updateEventStatus(discordEventId: string, status: string) 
     if (status === "active") {
       await notifyEventStarted({ title: event.title, game: event.game, discordChannelId: event.discordChannelId });
 
-      const tournament = await prisma.tournament.findUnique({
-        where:   { eventId: event.id },
-        include: {
+      const eventWithTournament = await prisma.event.findUnique({
+        where:  { id: event.id },
+        select: {
+          format:       true,
           participants: {
             include: { user: { select: { username: true, name: true, discordId: true } } },
           },
         },
       });
-      if (tournament) {
+      if (eventWithTournament?.format) {
         await notifyTournamentStarted({
-          format: tournament.format,
-          event:  { title: event.title, game: event.game },
-          participants: tournament.participants,
+          format:       eventWithTournament.format,
+          event:        { title: event.title, game: event.game },
+          participants: eventWithTournament.participants,
         });
       }
     }
