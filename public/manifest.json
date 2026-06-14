@@ -22,9 +22,9 @@
       "purpose": "any maskable"
     },
     {
-      "src": "https://oma-app.de/favicon.ico",
+      "src": "https://oma-app.de/OMALogoNew.png",
       "sizes": "256x256",
-      "type": "image/x-icon"
+      "type": "image/png"
     }
   ]
 }
