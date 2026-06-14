@@ -4,7 +4,7 @@ import {
   ActivityType, PresenceUpdateStatus // <-- Neu hinzugefügt
 } from "discord.js";
 import { updateEventStatus, syncAttendee } from "./sync";
-import { trackVoice, trackMessage, handleMemberJoin, trackReaction, trackInvite } from "./activity";
+import { trackVoice, checkpointVoice, trackMessage, handleMemberJoin, trackReaction, trackInvite } from "./activity";
 import { setClient } from "./notify";
 import { processPendingPolls } from "./polls";
 import { prisma } from "@/lib/prisma";
@@ -22,8 +22,10 @@ const client = new Client({
   ],
 });
 
-// Voice-Tracking: Zeitpunkt des Betretens merken
+// Voice-Tracking: Zeitpunkt des Betretens merken (Discord-ID → Timestamp)
 const voiceJoinTimes = new Map<string, number>();
+// Bereits per Checkpoint gespeicherte Minuten pro User (Discord-ID → Minuten)
+const voiceCheckpointed = new Map<string, number>();
 
 client.once(Events.ClientReady, async (c) => {
   console.log(`✅ Bot online: ${c.user.tag}`);
@@ -75,6 +77,23 @@ client.once(Events.ClientReady, async (c) => {
   if (voiceUsersFound > 0) {
     console.log(`🎙 ${voiceUsersFound} User bereits im Voice – Tracking gestartet`);
   }
+
+  // Periodischer Checkpoint: alle 5 Minuten aktive Sessions speichern
+  // → Quest-Fortschritt + voiceMinutesTotal werden laufend aktualisiert
+  setInterval(async () => {
+    const now = Date.now();
+    for (const [discordId, joinTime] of voiceJoinTimes) {
+      const totalMinutes    = (now - joinTime) / 1000 / 60;
+      const alreadySaved    = voiceCheckpointed.get(discordId) ?? 0;
+      const deltaMinutes    = totalMinutes - alreadySaved;
+      if (deltaMinutes >= 1) {
+        voiceCheckpointed.set(discordId, totalMinutes);
+        await checkpointVoice(discordId, deltaMinutes).catch(err =>
+          console.error("⚠ checkpointVoice Fehler:", err),
+        );
+      }
+    }
+  }, 5 * 60 * 1000);
 });
 
 // Voice-Aktivität
@@ -100,17 +119,18 @@ client.on(Events.VoiceStateUpdate, async (oldState: VoiceState, newState: VoiceS
   if (left || moved) {
     const joinTime = voiceJoinTimes.get(userId);
     if (joinTime) {
-      const minutes = (Date.now() - joinTime) / 1000 / 60;
+      const totalMinutes      = (Date.now() - joinTime) / 1000 / 60;
+      const checkpointedMins  = voiceCheckpointed.get(userId) ?? 0;
       voiceJoinTimes.delete(userId);
-      
-      // Daten an Supabase übertragen
-      await trackVoice(userId, minutes);
-      console.log(`🤫 ${newState.member.displayName} hat Voice verlassen (${minutes.toFixed(2)} Min.)`);
+      voiceCheckpointed.delete(userId);
+
+      await trackVoice(userId, totalMinutes, checkpointedMins);
+      console.log(`🤫 ${newState.member.displayName} hat Voice verlassen (${totalMinutes.toFixed(2)} Min. gesamt, ${checkpointedMins.toFixed(0)} bereits gespeichert)`);
     }
 
-    // Wenn er den Kanal nur GEWECHSELT hat, starten wir die Zeitmessung für den neuen Kanal direkt neu
     if (moved) {
       voiceJoinTimes.set(userId, Date.now());
+      voiceCheckpointed.delete(userId); // neuer Kanal = neuer Checkpoint-Zähler
     }
   }
 });

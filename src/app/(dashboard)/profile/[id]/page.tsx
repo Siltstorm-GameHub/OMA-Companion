@@ -36,6 +36,7 @@ export default async function PublicProfilePage({
         select: {
           id: true, name: true, username: true, image: true,
           points: true, rankPoints: true, createdAt: true,
+          voiceMinutesTotal: true, messagesTotal: true,
         },
       }),
       // Punkte-Transaktionen — nur für Badge-Berechnung, nicht öffentlich anzeigen
@@ -82,8 +83,8 @@ export default async function PublicProfilePage({
   // ── Stats ableiten ──────────────────────────────────────────────────────
   const totalPoints  = user.points;
 
-  const voiceHours   = transactions.filter(t => t.reason.includes("Sprachkanal")).length;
-  const messageCount = transactions.filter(t => t.reason.includes("Nachrichten")).length * 10;
+  const voiceHours   = Math.floor((user.voiceMinutesTotal ?? 0) / 60);
+  const messageCount = user.messagesTotal ?? 0;
   const badges       = computeBadges({ points: totalPoints, voiceHours, messageCount, eventCount, tournamentCount, tournamentWins: matchWins });
   const earnedBadges = badges.filter(b => b.earned);
   const memberSince  = new Date(user.createdAt).toLocaleDateString("de-DE", { month: "long", year: "numeric" });

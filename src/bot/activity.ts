@@ -8,11 +8,6 @@ async function findUser(discordId: string) {
   return prisma.user.findUnique({ where: { discordId } });
 }
 
-/**
- * Nach Punkte-Vergabe prüfen ob der User einen neuen Rang erreicht hat.
- * Ränge basieren auf rankPoints — nur Turnier/Event-Kategorien ändern rankPoints.
- * Discord-Aktivität (Voice, Messages) vergibt keine rankPoints → kein Rang-Aufstieg möglich.
- */
 async function checkRankUp(
   user: { discordId: string | null; username: string | null; name: string | null },
   rankPointsBefore: number,
@@ -32,7 +27,7 @@ async function checkRankUp(
 }
 
 // Nachrichtenzähler pro User (im Speicher; zurückgesetzt nach je 10)
-const messageCounters  = new Map<string, number>();
+const messageCounters   = new Map<string, number>();
 // Täglicher Message-Bonus: userId → Datum-String
 const dailyMessageBonus = new Map<string, string>();
 
@@ -43,10 +38,16 @@ export async function trackMessage(discordId: string) {
     return;
   }
 
+  // Kumulierten Nachrichtenzähler erhöhen
+  await prisma.user.update({
+    where: { id: user.id },
+    data:  { messagesTotal: { increment: 1 } },
+  });
+
   const count = (messageCounters.get(user.id) ?? 0) + 1;
   messageCounters.set(user.id, count);
 
-  // Alle 10 Nachrichten → Münzen (keine rankPoints → kein Rang-Aufstieg möglich)
+  // Alle 10 Nachrichten → Münzen
   if (count >= 10) {
     messageCounters.set(user.id, 0);
     await awardPoints(user.id, "MESSAGE_10");
@@ -58,7 +59,7 @@ export async function trackMessage(discordId: string) {
     for (const q of completedQuests) await notifyQuestCompleted(user.discordId, q.title, q.reward);
   }
 
-  // Täglicher Chat-Bonus (einmal pro Tag) — nur Münzen, keine rankPoints
+  // Täglicher Chat-Bonus (einmal pro Tag)
   const today = new Date().toDateString();
   if (dailyMessageBonus.get(user.id) !== today) {
     dailyMessageBonus.set(user.id, today);
@@ -66,8 +67,43 @@ export async function trackMessage(discordId: string) {
   }
 }
 
-export async function trackVoice(discordId: string, minutes: number) {
-  if (minutes < 1) return; // unter 1 Minute ignorieren
+/**
+ * Periodischer Checkpoint für aktive Voice-Sessions.
+ * Speichert Quest-Fortschritt + voiceMinutesTotal ohne Punkte zu vergeben.
+ * Wird alle 5 Minuten für alle aktuell aktiven User aufgerufen.
+ * @param discordId  Discord-ID des Users
+ * @param minutes    Minuten SEIT dem letzten Checkpoint (Delta, kein Gesamt)
+ */
+export async function checkpointVoice(discordId: string, minutes: number) {
+  if (minutes < 1) return;
+  const user = await findUser(discordId);
+  if (!user) return;
+
+  const floored = Math.floor(minutes);
+  await prisma.user.update({
+    where: { id: user.id },
+    data:  { voiceMinutesTotal: { increment: floored } },
+  });
+
+  const completed = await updateQuestProgress(user.id, "VOICE_MINUTES", floored);
+  if (user.discordId) {
+    for (const q of completed) await notifyQuestCompleted(user.discordId, q.title, q.reward);
+  }
+  console.log(`  ⏱ Checkpoint ${user.name ?? user.username}: +${floored}min Voice`);
+}
+
+/**
+ * Vollständige Voice-Session abrechnen (beim Verlassen des Kanals).
+ * @param discordId         Discord-ID des Users
+ * @param totalMinutes      Gesamtdauer der Session in Minuten
+ * @param checkpointedMinutes Bereits via checkpointVoice gespeicherte Minuten (werden nicht doppelt gezählt)
+ */
+export async function trackVoice(
+  discordId: string,
+  totalMinutes: number,
+  checkpointedMinutes = 0,
+) {
+  if (totalMinutes < 1) return;
 
   const user = await findUser(discordId);
   if (!user) {
@@ -75,39 +111,46 @@ export async function trackVoice(discordId: string, minutes: number) {
     return;
   }
 
-  // Volle Stunden vergüten — nur Münzen, keine rankPoints
-  const fullHours = Math.floor(minutes / 60);
+  // Verbleibende Minuten (noch nicht per Checkpoint gespeichert)
+  const remainingMinutes = Math.max(0, totalMinutes - checkpointedMinutes);
+  const remainingFloored = Math.floor(remainingMinutes);
+
+  // voiceMinutesTotal + Quest nur für die verbleibenden Minuten
+  if (remainingFloored >= 1) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data:  { voiceMinutesTotal: { increment: remainingFloored } },
+    });
+    const voiceQuests = await updateQuestProgress(user.id, "VOICE_MINUTES", remainingFloored);
+    if (user.discordId) {
+      for (const q of voiceQuests) await notifyQuestCompleted(user.discordId, q.title, q.reward);
+    }
+  }
+
+  // Punkte basieren auf GESAMTER Session (volle Stunden)
+  const fullHours = Math.floor(totalMinutes / 60);
   for (let i = 0; i < fullHours; i++) {
     await awardPoints(user.id, "VOICE_HOUR");
   }
 
-  // Täglicher Voice-Bonus ab 30 Minuten (einmal pro Tag) — nur Münzen
-  if (minutes >= 30) {
+  // Täglicher Voice-Bonus ab 30 Minuten (einmal pro Tag)
+  if (totalMinutes >= 30) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const existing = await prisma.pointTransaction.findFirst({
       where: {
-        userId: user.id,
-        reason: "Täglich im Voice aktiv",
+        userId:    user.id,
+        reason:    "Täglich im Voice aktiv",
         createdAt: { gte: today },
       },
     });
-    if (!existing) {
-      await awardPoints(user.id, "VOICE_DAILY_BONUS");
-    }
+    if (!existing) await awardPoints(user.id, "VOICE_DAILY_BONUS");
   }
 
-  // Quest-Fortschritt: gerundete Minuten
-  const voiceQuests = await updateQuestProgress(user.id, "VOICE_MINUTES", Math.floor(minutes));
-  if (user.discordId) {
-    for (const q of voiceQuests) await notifyQuestCompleted(user.discordId, q.title, q.reward);
-  }
-
-  console.log(`  🎙 ${discordId} (${user.name ?? user.username}): ${Math.round(minutes)}min Voice`);
+  console.log(`  🎙 ${discordId} (${user.name ?? user.username}): ${Math.round(totalMinutes)}min Voice (${checkpointedMinutes}min bereits gespeichert)`);
 }
 
 export async function handleMemberJoin(discordId: string, username: string) {
-  // Kurz warten damit OAuth-Login zuerst den User anlegt
   await new Promise((r) => setTimeout(r, 5000));
   const user = await findUser(discordId);
   if (user && user.points === 0) {
@@ -116,15 +159,12 @@ export async function handleMemberJoin(discordId: string, username: string) {
   }
 }
 
-// Reaktions-Tracking: Punkte für den Autor der Nachricht (nicht den Reagierenden)
 export async function trackReaction(authorDiscordId: string) {
   const user = await findUser(authorDiscordId);
   if (!user) return;
   await awardPoints(user.id, "REACTION_RECEIVED");
 }
 
-// Invite-Tracking: Punkte für den Einladenden
-// inviterDiscordId ist die Discord-ID des Users, der den Invite erstellt hat
 export async function trackInvite(inviterDiscordId: string, newMemberUsername: string) {
   const user = await findUser(inviterDiscordId);
   if (!user) {
