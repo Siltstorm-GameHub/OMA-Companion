@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import {
   BarChart2, CalendarDays, Star, Plus, Trash2,
   Clock, CheckCircle2, XCircle, AlertCircle, Hash,
-  Trophy, Gift, Heart,
+  Trophy, Gift, Heart, Users, List, ToggleLeft, ToggleRight, X,
 } from "lucide-react";
 
 // ── Discord-Laufzeit-Optionen (exakt wie in Discord selbst) ─────
@@ -35,8 +35,60 @@ interface PollJob {
   id: string; type: string; refId: string; channelId: string;
   scheduledAt: string; duration: number; status: string;
   question: string | null; excludedUserIds: string[];
+  customAnswers: string[]; allowMultiselect: boolean;
   messageId: string | null; errorMsg: string | null;
   createdAt: string; sentAt: string | null;
+}
+
+// ── Wiederverwendbarer Editor für eigene Antwortmöglichkeiten ────
+function CustomAnswersEditor({ answers, onChange, accentClass = "indigo" }: {
+  answers: string[];
+  onChange: (a: string[]) => void;
+  accentClass?: string;
+}) {
+  const [input, setInput] = useState("");
+
+  function add() {
+    const v = input.trim();
+    if (!v || answers.includes(v)) return;
+    onChange([...answers, v]);
+    setInput("");
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
+          placeholder="Antwort eingeben…"
+          maxLength={55}
+          className="flex-1 rounded-xl px-3 py-2 text-sm text-white bg-white/[0.05] border border-white/[0.1] outline-none focus:border-indigo-500/40 placeholder-gray-600"
+        />
+        <button type="button" onClick={add}
+          className="px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-colors disabled:opacity-40"
+          disabled={!input.trim() || answers.length >= 10}>
+          <Plus className="w-4 h-4" />
+        </button>
+      </div>
+      {answers.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {answers.map((a, i) => (
+            <span key={i} className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300">
+              {a}
+              <button type="button" onClick={() => onChange(answers.filter((_, j) => j !== i))}
+                className="hover:text-red-400 transition-colors ml-0.5">
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <p className="text-[10px] text-gray-600">{answers.length}/10 Antworten · max. 55 Zeichen pro Antwort · Enter zum Hinzufügen</p>
+    </div>
+  );
 }
 interface Props { events: EventItem[]; spieltage: Spieltag[]; jobs: PollJob[]; }
 
@@ -75,6 +127,9 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
   const [evtDuration,    setEvtDuration]    = useState(24);
   const [evtQuestion,    setEvtQuestion]    = useState("");
   const [evtExcluded,    setEvtExcluded]    = useState<Set<string>>(new Set());
+  const [evtCustomMode,  setEvtCustomMode]  = useState(false);
+  const [evtCustomAns,   setEvtCustomAns]   = useState<string[]>([]);
+  const [evtMultiselect, setEvtMultiselect] = useState(false);
   const [evtSaving,      setEvtSaving]      = useState(false);
   const [evtErrors,      setEvtErrors]      = useState<{ id?: string; chan?: string; sched?: string }>({});
 
@@ -90,7 +145,7 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
       const res = await fetch("/api/admin/polls", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "event_winner", refId: evtId, channelId: evtChan, scheduledAt: new Date(evtSched).toISOString(), duration: evtDuration, question: evtQuestion.trim() || evtAutoQ, excludedUserIds: [...evtExcluded] }),
+        body: JSON.stringify({ type: "event_winner", refId: evtId, channelId: evtChan, scheduledAt: new Date(evtSched).toISOString(), duration: evtDuration, question: evtQuestion.trim() || evtAutoQ, excludedUserIds: [...evtExcluded], customAnswers: evtCustomMode ? evtCustomAns : [], allowMultiselect: evtMultiselect }),
       });
       if (!res.ok) { toast.error("Fehler beim Erstellen"); return; }
       const job = await res.json();
@@ -107,10 +162,16 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
   const [lulDuration,    setLulDuration]    = useState(168);
   const [lulQ1,          setLulQ1]          = useState("");
   const [lulQ2,          setLulQ2]          = useState("");
-  const [lulExcPlayers,  setLulExcPlayers]  = useState<Set<string>>(new Set());
-  const [lulExcViewers,  setLulExcViewers]  = useState<Set<string>>(new Set());
-  const [lulSaving,      setLulSaving]      = useState(false);
-  const [lulErrors,      setLulErrors]      = useState<{ id?: string; chan?: string; sched?: string }>({});
+  const [lulExcPlayers,   setLulExcPlayers]   = useState<Set<string>>(new Set());
+  const [lulExcViewers,   setLulExcViewers]   = useState<Set<string>>(new Set());
+  const [lulCustomMode1,  setLulCustomMode1]  = useState(false);
+  const [lulCustomMode2,  setLulCustomMode2]  = useState(false);
+  const [lulCustomAns1,   setLulCustomAns1]   = useState<string[]>([]);
+  const [lulCustomAns2,   setLulCustomAns2]   = useState<string[]>([]);
+  const [lulMultiselect1, setLulMultiselect1] = useState(false);
+  const [lulMultiselect2, setLulMultiselect2] = useState(false);
+  const [lulSaving,       setLulSaving]       = useState(false);
+  const [lulErrors,       setLulErrors]       = useState<{ id?: string; chan?: string; sched?: string }>({});
 
   async function scheduleLulPolls() {
     const errs: typeof lulErrors = {};
@@ -124,9 +185,9 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
       const scheduledAt = new Date(lulSched).toISOString();
       const [r1, r2] = await Promise.all([
         fetch("/api/admin/polls", { method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ type: "lul_trostpreis", refId: lulId, channelId: lulChan, scheduledAt, duration: lulDuration, question: lulQ1.trim() || lulAutoQ1, excludedUserIds: [...lulExcPlayers] }) }),
+          body: JSON.stringify({ type: "lul_trostpreis", refId: lulId, channelId: lulChan, scheduledAt, duration: lulDuration, question: lulQ1.trim() || lulAutoQ1, excludedUserIds: [...lulExcPlayers], customAnswers: lulCustomMode1 ? lulCustomAns1 : [], allowMultiselect: lulMultiselect1 }) }),
         fetch("/api/admin/polls", { method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ type: "lul_community",  refId: lulId, channelId: lulChan, scheduledAt, duration: lulDuration, question: lulQ2.trim() || lulAutoQ2, excludedUserIds: [...lulExcViewers] }) }),
+          body: JSON.stringify({ type: "lul_community",  refId: lulId, channelId: lulChan, scheduledAt, duration: lulDuration, question: lulQ2.trim() || lulAutoQ2, excludedUserIds: [...lulExcViewers], customAnswers: lulCustomMode2 ? lulCustomAns2 : [], allowMultiselect: lulMultiselect2 }) }),
       ]);
       if (!r1.ok || !r2.ok) { toast.error("Fehler beim Erstellen"); return; }
       const [j1, j2] = await Promise.all([r1.json(), r2.json()]);
@@ -215,7 +276,7 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
             {/* Event */}
             <div className="space-y-1.5">
               <label className="flex items-center gap-1.5 text-xs text-gray-400"><CalendarDays className="w-3.5 h-3.5"/>Event wählen</label>
-              <select value={evtId} onChange={e => { setEvtId(e.target.value); setEvtErrors(p => ({ ...p, id: undefined })); setEvtExcluded(new Set()); }}
+              <select value={evtId} onChange={e => { setEvtId(e.target.value); setEvtErrors(p => ({ ...p, id: undefined })); setEvtExcluded(new Set()); setEvtCustomAns([]); }}
                 className={`w-full rounded-xl px-3 py-2.5 text-sm text-white bg-gray-900 border outline-none focus:border-indigo-500/40 ${evtErrors.id ? "border-red-500/50" : "border-white/[0.1]"}`}
                 style={{ colorScheme: "dark" }}>
                 <option value="">— Event wählen —</option>
@@ -294,8 +355,36 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
             </div>
           </div>
 
-          {/* Vorschau Teilnehmer */}
-          {selEvent && (
+          {/* Antwortmodus + Mehrfachauswahl */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Modus-Toggle */}
+            <div className="flex gap-1 p-1 bg-white/[0.03] border border-white/[0.06] rounded-xl">
+              <button type="button" onClick={() => setEvtCustomMode(false)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${!evtCustomMode ? "bg-indigo-600 text-white" : "text-gray-500 hover:text-white"}`}>
+                <Users className="w-3.5 h-3.5" /> Spieler
+              </button>
+              <button type="button" onClick={() => setEvtCustomMode(true)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${evtCustomMode ? "bg-indigo-600 text-white" : "text-gray-500 hover:text-white"}`}>
+                <List className="w-3.5 h-3.5" /> Eigene
+              </button>
+            </div>
+            {/* Mehrfachauswahl */}
+            <button type="button" onClick={() => setEvtMultiselect(v => !v)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-white/[0.06] text-xs font-semibold transition-all hover:border-indigo-500/30 text-gray-400 hover:text-white">
+              {evtMultiselect
+                ? <ToggleRight className="w-4 h-4 text-indigo-400" />
+                : <ToggleLeft  className="w-4 h-4" />}
+              Mehrfachauswahl
+            </button>
+          </div>
+
+          {/* Antwortoptionen */}
+          {evtCustomMode ? (
+            <div className="rounded-xl bg-white/[0.02] border border-white/[0.05] p-3 space-y-2">
+              <p className="text-xs text-gray-500">Eigene Antwortmöglichkeiten (min. 2, max. 10):</p>
+              <CustomAnswersEditor answers={evtCustomAns} onChange={setEvtCustomAns} />
+            </div>
+          ) : selEvent ? (
             <div className="rounded-xl bg-white/[0.02] border border-white/[0.05] p-3">
               <p className="text-xs text-gray-500 mb-2">
                 Optionen ({evtPlayers.length - evtExcluded.size}/{evtPlayers.length} Mitspieler) — klicken zum Ausschließen:
@@ -323,9 +412,10 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
                 <p className="text-[10px] text-red-400/70 mt-2">{evtExcluded.size} ausgeschlossen</p>
               )}
             </div>
-          )}
+          ) : null}
 
-          <button onClick={scheduleEventPoll} disabled={evtSaving || !evtId || !evtChan || !evtSched}
+          <button onClick={scheduleEventPoll}
+            disabled={evtSaving || !evtId || !evtChan || !evtSched || (evtCustomMode && evtCustomAns.length < 2)}
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-colors disabled:opacity-40">
             <Plus className="w-4 h-4" />
             {evtSaving ? "Wird geplant…" : "Umfrage planen"}
@@ -342,7 +432,7 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
             {/* Spieltag */}
             <div className="space-y-1.5">
               <label className="flex items-center gap-1.5 text-xs text-gray-400"><Star className="w-3.5 h-3.5"/>Spieltag wählen</label>
-              <select value={lulId} onChange={e => { setLulId(e.target.value); setLulErrors(p => ({ ...p, id: undefined })); setLulExcPlayers(new Set()); setLulExcViewers(new Set()); }}
+              <select value={lulId} onChange={e => { setLulId(e.target.value); setLulErrors(p => ({ ...p, id: undefined })); setLulExcPlayers(new Set()); setLulExcViewers(new Set()); setLulCustomAns1([]); setLulCustomAns2([]); }}
                 className={`w-full rounded-xl px-3 py-2.5 text-sm text-white bg-gray-900 border outline-none focus:border-indigo-500/40 ${lulErrors.id ? "border-red-500/50" : "border-white/[0.1]"}`}
                 style={{ colorScheme: "dark" }}>
                 <option value="">— Spieltag wählen —</option>
@@ -415,67 +505,103 @@ export function PollsAdminPanel({ events, spieltage, jobs: initJobs }: Props) {
             </div>
           </div>
 
-          {/* Vorschau */}
-          {selSpieltag && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="rounded-xl bg-amber-500/5 border border-amber-500/15 p-3">
-                <p className="flex items-center gap-1.5 text-xs text-amber-400 font-semibold mb-2">
-                  <Gift className="w-3.5 h-3.5" /> Trostpreis-Umfrage ({lulPlayers.length - lulExcPlayers.size}/{lulPlayers.length}) — klicken zum Ausschließen:
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {lulPlayers.length === 0
-                    ? <p className="text-xs text-gray-600 italic">Keine Mitspieler eingetragen</p>
-                    : lulPlayers.map(u => {
-                      const excluded = lulExcPlayers.has(u.id);
-                      return (
-                        <button key={u.id} type="button" onClick={() => toggleLulExcPlayer(u.id)}
-                          title={excluded ? "Wieder einschließen" : "Ausschließen"}
-                          className={`text-xs px-2 py-0.5 rounded-full border transition-all ${
-                            excluded
-                              ? "bg-red-500/10 border-red-500/20 text-red-400 line-through opacity-50"
-                              : "bg-amber-500/10 border-amber-500/15 text-amber-300 hover:border-red-500/30 hover:text-red-400"
-                          }`}>
-                          {u.username ?? u.name}
-                        </button>
-                      );
-                    })
-                  }
+          {/* Antwortoptionen + Mehrfachauswahl je Umfrage */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {/* Trostpreis */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="flex items-center gap-1 text-xs text-amber-400 font-semibold"><Gift className="w-3.5 h-3.5" /> Trostpreis</p>
+                <div className="flex gap-1 p-0.5 bg-white/[0.03] border border-white/[0.06] rounded-lg">
+                  <button type="button" onClick={() => setLulCustomMode1(false)}
+                    className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold transition-all ${!lulCustomMode1 ? "bg-amber-600 text-white" : "text-gray-500 hover:text-white"}`}>
+                    <Users className="w-3 h-3" /> Spieler
+                  </button>
+                  <button type="button" onClick={() => setLulCustomMode1(true)}
+                    className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold transition-all ${lulCustomMode1 ? "bg-amber-600 text-white" : "text-gray-500 hover:text-white"}`}>
+                    <List className="w-3 h-3" /> Eigene
+                  </button>
                 </div>
-                {lulExcPlayers.size > 0 && (
-                  <p className="text-[10px] text-red-400/70 mt-2">{lulExcPlayers.size} ausgeschlossen</p>
-                )}
+                <button type="button" onClick={() => setLulMultiselect1(v => !v)}
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg border border-white/[0.06] text-[10px] font-semibold text-gray-400 hover:text-white transition-all">
+                  {lulMultiselect1 ? <ToggleRight className="w-3.5 h-3.5 text-amber-400" /> : <ToggleLeft className="w-3.5 h-3.5" />}
+                  Mehrfach
+                </button>
               </div>
-              <div className="rounded-xl bg-teal-500/5 border border-teal-500/15 p-3">
-                <p className="flex items-center gap-1.5 text-xs text-teal-400 font-semibold mb-2">
-                  <Heart className="w-3.5 h-3.5" /> Community-Support-Umfrage ({lulViewers.length - lulExcViewers.size}/{lulViewers.length}) — klicken zum Ausschließen:
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {lulViewers.length === 0
-                    ? <p className="text-xs text-gray-600 italic">Keine Zuschauer eingetragen</p>
-                    : lulViewers.map(u => {
-                      const excluded = lulExcViewers.has(u.id);
-                      return (
-                        <button key={u.id} type="button" onClick={() => toggleLulExcViewer(u.id)}
-                          title={excluded ? "Wieder einschließen" : "Ausschließen"}
-                          className={`text-xs px-2 py-0.5 rounded-full border transition-all ${
-                            excluded
-                              ? "bg-red-500/10 border-red-500/20 text-red-400 line-through opacity-50"
-                              : "bg-teal-500/10 border-teal-500/15 text-teal-300 hover:border-red-500/30 hover:text-red-400"
-                          }`}>
-                          {u.username ?? u.name}
-                        </button>
-                      );
-                    })
-                  }
+              {lulCustomMode1 ? (
+                <div className="rounded-xl bg-amber-500/5 border border-amber-500/15 p-3">
+                  <CustomAnswersEditor answers={lulCustomAns1} onChange={setLulCustomAns1} />
                 </div>
-                {lulExcViewers.size > 0 && (
-                  <p className="text-[10px] text-red-400/70 mt-2">{lulExcViewers.size} ausgeschlossen</p>
-                )}
-              </div>
+              ) : selSpieltag ? (
+                <div className="rounded-xl bg-amber-500/5 border border-amber-500/15 p-3">
+                  <p className="text-[10px] text-gray-500 mb-1.5">({lulPlayers.length - lulExcPlayers.size}/{lulPlayers.length}) — klicken zum Ausschließen:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {lulPlayers.length === 0
+                      ? <p className="text-xs text-gray-600 italic">Keine Mitspieler</p>
+                      : lulPlayers.map(u => {
+                        const excluded = lulExcPlayers.has(u.id);
+                        return (
+                          <button key={u.id} type="button" onClick={() => toggleLulExcPlayer(u.id)}
+                            className={`text-xs px-2 py-0.5 rounded-full border transition-all ${excluded ? "bg-red-500/10 border-red-500/20 text-red-400 line-through opacity-50" : "bg-amber-500/10 border-amber-500/15 text-amber-300 hover:border-red-500/30 hover:text-red-400"}`}>
+                            {u.username ?? u.name}
+                          </button>
+                        );
+                      })
+                    }
+                  </div>
+                  {lulExcPlayers.size > 0 && <p className="text-[10px] text-red-400/70 mt-1.5">{lulExcPlayers.size} ausgeschlossen</p>}
+                </div>
+              ) : null}
             </div>
-          )}
 
-          <button onClick={scheduleLulPolls} disabled={lulSaving || !lulId || !lulChan || !lulSched}
+            {/* Community-Support */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="flex items-center gap-1 text-xs text-teal-400 font-semibold"><Heart className="w-3.5 h-3.5" /> Community</p>
+                <div className="flex gap-1 p-0.5 bg-white/[0.03] border border-white/[0.06] rounded-lg">
+                  <button type="button" onClick={() => setLulCustomMode2(false)}
+                    className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold transition-all ${!lulCustomMode2 ? "bg-teal-600 text-white" : "text-gray-500 hover:text-white"}`}>
+                    <Users className="w-3 h-3" /> Spieler
+                  </button>
+                  <button type="button" onClick={() => setLulCustomMode2(true)}
+                    className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold transition-all ${lulCustomMode2 ? "bg-teal-600 text-white" : "text-gray-500 hover:text-white"}`}>
+                    <List className="w-3 h-3" /> Eigene
+                  </button>
+                </div>
+                <button type="button" onClick={() => setLulMultiselect2(v => !v)}
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg border border-white/[0.06] text-[10px] font-semibold text-gray-400 hover:text-white transition-all">
+                  {lulMultiselect2 ? <ToggleRight className="w-3.5 h-3.5 text-teal-400" /> : <ToggleLeft className="w-3.5 h-3.5" />}
+                  Mehrfach
+                </button>
+              </div>
+              {lulCustomMode2 ? (
+                <div className="rounded-xl bg-teal-500/5 border border-teal-500/15 p-3">
+                  <CustomAnswersEditor answers={lulCustomAns2} onChange={setLulCustomAns2} />
+                </div>
+              ) : selSpieltag ? (
+                <div className="rounded-xl bg-teal-500/5 border border-teal-500/15 p-3">
+                  <p className="text-[10px] text-gray-500 mb-1.5">({lulViewers.length - lulExcViewers.size}/{lulViewers.length}) — klicken zum Ausschließen:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {lulViewers.length === 0
+                      ? <p className="text-xs text-gray-600 italic">Keine Zuschauer</p>
+                      : lulViewers.map(u => {
+                        const excluded = lulExcViewers.has(u.id);
+                        return (
+                          <button key={u.id} type="button" onClick={() => toggleLulExcViewer(u.id)}
+                            className={`text-xs px-2 py-0.5 rounded-full border transition-all ${excluded ? "bg-red-500/10 border-red-500/20 text-red-400 line-through opacity-50" : "bg-teal-500/10 border-teal-500/15 text-teal-300 hover:border-red-500/30 hover:text-red-400"}`}>
+                            {u.username ?? u.name}
+                          </button>
+                        );
+                      })
+                    }
+                  </div>
+                  {lulExcViewers.size > 0 && <p className="text-[10px] text-red-400/70 mt-1.5">{lulExcViewers.size} ausgeschlossen</p>}
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <button onClick={scheduleLulPolls}
+            disabled={lulSaving || !lulId || !lulChan || !lulSched || (lulCustomMode1 && lulCustomAns1.length < 2) || (lulCustomMode2 && lulCustomAns2.length < 2)}
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-colors disabled:opacity-40">
             <Plus className="w-4 h-4" />
             {lulSaving ? "Wird geplant…" : "Beide Umfragen planen"}

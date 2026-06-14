@@ -19,8 +19,9 @@ export async function processPendingPolls(client: Client) {
 
   for (const job of jobs) {
     try {
-      const { question: autoQuestion, answers } = await buildPoll(job.type, job.refId, job.excludedUserIds);
+      const { question: autoQuestion, answers: autoAnswers } = await buildPoll(job.type, job.refId, job.excludedUserIds);
       const question = job.question?.trim() || autoQuestion;
+      const answers  = job.customAnswers.length >= 2 ? job.customAnswers : autoAnswers;
 
       if (answers.length < 2) {
         await prisma.pollJob.update({
@@ -47,7 +48,7 @@ export async function processPendingPolls(client: Client) {
           question:        { text: question },
           answers:         limitedAnswers.map(a => ({ text: a })),
           duration:        job.duration,   // in Stunden
-          allowMultiselect: false,
+          allowMultiselect: job.allowMultiselect,
         },
       });
 
