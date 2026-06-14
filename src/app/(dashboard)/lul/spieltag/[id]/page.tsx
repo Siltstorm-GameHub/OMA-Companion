@@ -3,13 +3,14 @@ import { prisma } from "@/lib/prisma";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import {
-  ArrowLeft, Trophy, Gamepad2, Eye, Crown, Gift, Flame, CheckCircle2,
-  AlertTriangle, Star, Vote,
+  ArrowLeft, Trophy, Gamepad2, Eye, Crown,
+  CheckCircle2, AlertTriangle, Star, Vote,
 } from "lucide-react";
 import { LUL_POINTS } from "@/lib/lul";
 import LiveRefresh from "./LiveRefresh";
 import { getGameCoverUrl, getGameFallbackGradient } from "@/lib/game-cover";
 import { getGenreIcon } from "@/lib/genre-icons";
+import LulSpieltagTable, { type PlayerRow } from "./LulSpieltagTable";
 
 const STATUS_LABEL: Record<string, string> = {
   upcoming: "Geplant",
@@ -115,6 +116,59 @@ export default async function LulSpieltagPage({
   function uname(u: { name: string | null; username: string | null }) {
     return u.username ?? u.name ?? "Unbekannt";
   }
+
+  // Pre-compute per-player data for client component
+  const playerRows: PlayerRow[] = players.map((entry, i) => {
+    let rounds: number[] = [];
+    try { rounds = JSON.parse(entry.roundScores ?? "[]"); } catch { /* */ }
+
+    let statRounds: Record<string, number[]> = {};
+    let combinedAvg: number | null = null;
+    const statTotals: Record<string, number> = {};
+
+    if (isStatFmt && entry.statsJson) {
+      try {
+        const s = JSON.parse(entry.statsJson) as Record<string, unknown>;
+        const nR = typeof s._rounds === "number" && s._rounds > 0 ? s._rounds : 1;
+        for (const f of statFieldsList) {
+          const val = s[f];
+          statRounds[f] = Array.isArray(val)
+            ? Array.from({ length: nR }, (_, ri) => Number(val[ri]) || 0)
+            : typeof val === "number" ? [val] : [];
+        }
+        if (fmt === "avg_stats" && statFieldsList.length > 0) {
+          const fieldAvgs = statFieldsList
+            .filter(f => statRounds[f].length > 0)
+            .map(f => statRounds[f].reduce((a, b) => a + b, 0) / statRounds[f].length);
+          combinedAvg = fieldAvgs.length > 0
+            ? fieldAvgs.reduce((a, b) => a + b, 0) / fieldAvgs.length
+            : null;
+        }
+        if (fmt !== "avg_stats") {
+          for (const f of statFieldsList) {
+            statTotals[f] = (statRounds[f] ?? []).reduce((a, b) => a + b, 0);
+          }
+        }
+      } catch { /* */ }
+    }
+
+    return {
+      id:            entry.id,
+      userId:        entry.userId,
+      placement:     entry.placement ?? i + 1,
+      lulPoints:     entry.lulPoints,
+      name:          uname(entry.user),
+      image:         entry.user.image,
+      rounds,
+      statRounds,
+      statTotals,
+      combinedAvg,
+      gameWinner:    entry.gameWinner,
+      dominionBonus: entry.dominionBonus,
+      trostpreis:    entry.trostpreis,
+      voted:         entry.voted,
+    };
+  });
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-5 sm:space-y-6 animate-fade-in">
@@ -289,200 +343,14 @@ export default async function LulSpieltagPage({
               boxShadow: "0 8px 40px rgba(0,0,0,0.4)",
             }}
           >
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse" style={{
-                minWidth: fmt === "avg_stats"
-                  ? `${320 + avgRounds * statFieldsList.length * 56 + 90}px`
-                  : isStatFmt
-                    ? `${320 + statFieldsList.length * 80}px`
-                    : maxRounds > 0 ? `${480 + maxRounds * 56}px` : "480px"
-              }}>
-                <thead>
-                  {/* Gruppen-Kopfzeile nur bei avg_stats */}
-                  {fmt === "avg_stats" && (
-                    <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.04)", background: "rgba(255,255,255,0.015)" }}>
-                      <th colSpan={2} />
-                      {Array.from({ length: avgRounds }, (_, ri) => (
-                        <th key={ri} colSpan={statFieldsList.length}
-                          className="text-center px-2 py-1.5 text-[10px] font-semibold text-gray-500 uppercase tracking-widest whitespace-nowrap"
-                          style={{ borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
-                          R{ri + 1}
-                        </th>
-                      ))}
-                      <th className="text-center px-2 py-1.5 text-[10px] font-semibold uppercase tracking-widest whitespace-nowrap"
-                        style={{ color: "#f59e0b", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
-                        Ø Gesamt
-                      </th>
-                      <th colSpan={2} />
-                    </tr>
-                  )}
-                  <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-                    <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-600 uppercase tracking-widest w-10">#</th>
-                    <th className="text-left px-4 py-3 text-[10px] font-semibold text-gray-600 uppercase tracking-widest">Spieler</th>
-                    {fmt === "avg_stats"
-                      ? <>
-                          {Array.from({ length: avgRounds }, (_, ri) =>
-                            statFieldsList.map(f => (
-                              <th key={`${ri}_${f}`} className="text-center px-2 py-2.5 text-[10px] font-semibold text-gray-600 uppercase tracking-widest whitespace-nowrap"
-                                style={{ borderLeft: ri === 0 && f === statFieldsList[0] ? "1px solid rgba(255,255,255,0.06)" : undefined }}>
-                                {f}
-                              </th>
-                            ))
-                          )}
-                          <th className="text-center px-3 py-2.5 text-[10px] font-semibold uppercase tracking-widest whitespace-nowrap"
-                            style={{ color: "#f59e0b", borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
-                            Ø
-                          </th>
-                        </>
-                      : isStatFmt
-                        ? statFieldsList.map(f => (
-                            <th key={f} className="text-center px-3 py-3 text-[10px] font-semibold text-gray-600 uppercase tracking-widest whitespace-nowrap">
-                              {f}
-                            </th>
-                          ))
-                        : Array.from({ length: maxRounds }, (_, ri) => (
-                            <th key={ri} className="text-center px-2 py-3 text-[10px] font-semibold text-gray-700 uppercase tracking-widest whitespace-nowrap">R{ri + 1}</th>
-                          ))
-                    }
-                    {!isStatFmt && <th className="text-center px-3 py-3 text-[10px] font-semibold text-gray-600 uppercase tracking-widest whitespace-nowrap">Gesamt</th>}
-                    <th className="text-center px-2 py-3 text-[10px] font-semibold text-gray-600 uppercase tracking-widest whitespace-nowrap">Boni</th>
-                    <th className="text-right px-4 py-3 text-[10px] font-semibold uppercase tracking-widest whitespace-nowrap" style={{ color: "#14b8a6" }}>LuL-Pkt</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {players.map((entry, i) => {
-                    let rounds: number[] = [];
-                    try { rounds = JSON.parse(entry.roundScores ?? "[]"); } catch { /* ignore */ }
-
-                    // Parse statsJson into per-round arrays and per-field averages
-                    let statRounds: Record<string, number[]> = {};
-                    let combinedAvg: number | null = null;
-                    if (isStatFmt && entry.statsJson) {
-                      try {
-                        const s = JSON.parse(entry.statsJson) as Record<string, unknown>;
-                        const nR = typeof s._rounds === "number" && s._rounds > 0 ? s._rounds : 1;
-                        for (const f of statFieldsList) {
-                          const val = s[f];
-                          statRounds[f] = Array.isArray(val)
-                            ? Array.from({ length: nR }, (_, ri) => Number(val[ri]) || 0)
-                            : typeof val === "number" ? [val] : [];
-                        }
-                        if (fmt === "avg_stats" && statFieldsList.length > 0) {
-                          const fieldAvgs = statFieldsList
-                            .filter(f => statRounds[f].length > 0)
-                            .map(f => statRounds[f].reduce((a, b) => a + b, 0) / statRounds[f].length);
-                          combinedAvg = fieldAvgs.length > 0
-                            ? fieldAvgs.reduce((a, b) => a + b, 0) / fieldAvgs.length
-                            : null;
-                        }
-                      } catch { /* ignore */ }
-                    }
-                    // For non-avg stat formats: total per field
-                    const statTotals: Record<string, number> = {};
-                    if (isStatFmt && fmt !== "avg_stats") {
-                      for (const f of statFieldsList) {
-                        statTotals[f] = (statRounds[f] ?? []).reduce((a, b) => a + b, 0);
-                      }
-                    }
-
-                    const isMe      = entry.userId === userId;
-                    const placement = entry.placement ?? i + 1;
-                    const isTop3    = placement <= 3 && placement > 0;
-                    const rankColor = i === 0 ? "#fbbf24" : i === 1 ? "#d1d5db" : i === 2 ? "#b45309" : "#6b7280";
-
-                    const badges: { icon: React.ReactNode; label: string; color: string }[] = [];
-                    if (entry.gameWinner)    badges.push({ icon: <Trophy        className="w-3 h-3" />, label: "Sieger",    color: "text-amber-400"   });
-                    if (entry.dominionBonus) badges.push({ icon: <Flame         className="w-3 h-3" />, label: "Dominion",  color: "text-orange-400"  });
-                    if (entry.trostpreis)    badges.push({ icon: <Gift          className="w-3 h-3" />, label: "Trost",     color: "text-rose-400"    });
-                    if (entry.voted)         badges.push({ icon: <CheckCircle2  className="w-3 h-3" />, label: "Gevotet",   color: "text-emerald-400" });
-
-                    return (
-                      <tr
-                        key={entry.id}
-                        style={{ borderBottom: "1px solid rgba(255,255,255,0.035)", background: isMe ? "rgba(20,184,166,0.05)" : undefined }}
-                        className={`transition-colors hover:bg-white/[0.015] ${isMe ? "ring-1 ring-inset ring-teal-400/15" : ""}`}
-                      >
-                        <td className="px-4 py-3 text-center">
-                          {isTop3 ? <span className="text-base">{MEDAL[placement - 1]}</span> : <span className="text-sm font-semibold text-gray-600">{placement}</span>}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2.5">
-                            {entry.user.image ? (
-                              <img src={entry.user.image} alt="" className={`w-8 h-8 rounded-full shrink-0 ring-1 ${isMe ? "ring-teal-400/50" : "ring-white/10"}`} />
-                            ) : (
-                              <div className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-xs font-bold ring-1 ring-white/5 bg-white/[0.06] text-gray-400">
-                                {uname(entry.user)[0]?.toUpperCase()}
-                              </div>
-                            )}
-                            <p className={`font-semibold leading-tight ${isMe ? "text-teal-300" : "text-white"}`}>
-                              {uname(entry.user)}
-                              {isMe && <span className="text-[10px] font-normal text-teal-600 ml-1.5">(du)</span>}
-                            </p>
-                          </div>
-                        </td>
-                        {fmt === "avg_stats"
-                          ? <>
-                              {Array.from({ length: avgRounds }, (_, ri) =>
-                                statFieldsList.map(f => (
-                                  <td key={`${ri}_${f}`} className="px-2 py-3 text-center">
-                                    <span className="text-sm tabular-nums text-gray-400">
-                                      {statRounds[f]?.[ri] !== undefined ? statRounds[f][ri] : "–"}
-                                    </span>
-                                  </td>
-                                ))
-                              )}
-                              <td className="px-3 py-3 text-center" style={{ borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
-                                <span className="text-sm tabular-nums font-bold" style={{ color: rankColor }}>
-                                  {combinedAvg !== null
-                                    ? (Number.isInteger(combinedAvg) ? combinedAvg : combinedAvg.toFixed(2))
-                                    : "–"}
-                                </span>
-                              </td>
-                            </>
-                          : isStatFmt
-                          ? statFieldsList.map(f => (
-                              <td key={f} className="px-3 py-3 text-center">
-                                <span className="text-sm tabular-nums text-gray-300">{statTotals[f] ?? "–"}</span>
-                              </td>
-                            ))
-                          : Array.from({ length: maxRounds }, (_, ri) => (
-                              <td key={ri} className="px-2 py-3 text-center">
-                                <span className="text-sm tabular-nums text-gray-400">{rounds[ri] !== undefined ? rounds[ri] : "–"}</span>
-                              </td>
-                            ))
-                        }
-                        {!isStatFmt && (
-                          <td className="px-3 py-3 text-center">
-                            <span className="text-sm font-semibold tabular-nums text-white">{rounds.reduce((a,b)=>a+b,0) || "–"}</span>
-                          </td>
-                        )}
-                        <td className="px-2 py-3 text-center">
-                          <div className="flex items-center justify-center gap-1 flex-wrap">
-                            {badges.length === 0 ? (
-                              <span className="text-gray-800 text-sm">–</span>
-                            ) : badges.map((b, bi) =>
-                              b.label === "Gevotet" ? (
-                                <span key={bi} className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">
-                                  {b.icon} Gevotet
-                                </span>
-                              ) : (
-                                <span key={bi} className={`inline-flex items-center gap-0.5 ${b.color}`} title={b.label}>{b.icon}</span>
-                              )
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <span className={`text-lg font-bold tabular-nums ${i === 0 ? "text-amber-400" : isMe ? "text-teal-300" : "text-white"}`}>
-                            {entry.lulPoints}
-                          </span>
-                          <p className="text-[9px] text-gray-600">Pkt</p>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <LulSpieltagTable
+              players={playerRows}
+              fmt={fmt}
+              statFieldsList={statFieldsList}
+              maxRounds={maxRounds}
+              avgRounds={avgRounds}
+              userId={userId}
+            />
 
             {/* Punkte-Legende */}
             <div

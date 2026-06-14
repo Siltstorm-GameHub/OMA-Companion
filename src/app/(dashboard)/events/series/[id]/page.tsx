@@ -4,10 +4,11 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft, CalendarDays, Users, Trophy, ChevronRight,
-  Repeat, Swords, Medal, TrendingUp, Check, Gamepad2, BarChart2,
+  Repeat, Swords, TrendingUp, Check, Gamepad2,
 } from "lucide-react";
 import { RelativeTime } from "@/components/RelativeTime";
 import GameCover from "@/components/GameCover";
+import SeriesStandingsTable, { type SeriesStandingRow } from "./SeriesStandingsTable";
 
 const STATUS_CONFIG: Record<string, { label: string; badge: string; dot: string }> = {
   open:     { label: "Offen",   badge: "text-blue-300 bg-blue-500/10 border border-blue-500/20",          dot: "bg-blue-400"              },
@@ -246,7 +247,30 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
     }
   }
 
-  const medalColors = ["text-amber-400", "text-gray-300", "text-amber-600"];
+  // Pre-compute for SeriesStandingsTable
+  const configuredFields = new Set(statCfg.stats.map(s => s.field));
+  const reservedFields   = new Set(["participations", "__legacyPoints"]);
+  const specialFields    = new Set(
+    [statCfg.mvpStatField, statCfg.defaultWinnerTargetField].filter((f): f is string => !!f)
+  );
+  const allExtraCols = [...specialFields].filter(
+    f => !configuredFields.has(f) && !reservedFields.has(f) &&
+         standings.some(row => (row.stats[f] ?? 0) > 0)
+  );
+  const statTableCols = statCfg.stats;
+  const standingRows: SeriesStandingRow[] = standings.map(row => {
+    const u    = userMap.get(row.userId);
+    const name = u?.username ?? u?.name ?? row.userId.slice(0, 8);
+    return {
+      userId:         row.userId,
+      name,
+      image:          u?.image ?? null,
+      totalPoints:    row.totalPoints,
+      participations: row.participations,
+      hasLegacy:      row.hasLegacy,
+      stats:          row.stats,
+    };
+  });
 
   return (
     <div className="p-5 sm:p-6 max-w-3xl mx-auto space-y-8 animate-fade-in">
@@ -309,169 +333,42 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
       </div>
 
       {/* ── Gesamttabelle ─────────────────────────────────────────────────── */}
-      {standings.length > 0 && hasStatConfig && (() => {
-        // Stat-Spalten: konfigurierte + explizit konfigurierte Sonder-Felder (MVP, Siegstat)
-        const configuredFields = new Set(statCfg.stats.map(s => s.field));
-        const reservedFields   = new Set(["participations", "__legacyPoints"]);
-        const specialFields    = new Set(
-          [statCfg.mvpStatField, statCfg.defaultWinnerTargetField].filter((f): f is string => !!f)
-        );
-        // Nur explizit konfigurierte Sonder-Felder anzeigen (keine veralteten Daten aus seriesStandingsJson)
-        const allExtraCols = [...specialFields].filter(
-          f => !configuredFields.has(f) && !reservedFields.has(f) &&
-               standings.some(row => (row.stats[f] ?? 0) > 0)
-        );
-        const statCols = statCfg.stats;
-        const statColWidth = "4.5rem";
-        const gridCols = [
-          "2.5rem",
-          "1fr",
-          "4rem",
-          ...statCols.map(() => statColWidth),
-          ...allExtraCols.map(() => statColWidth),
-          "5.5rem",
-        ].join(" ");
-
-        return (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Trophy className="w-4 h-4 text-amber-400" />
-              <h2 className="text-sm font-semibold text-white">Gesamttabelle</h2>
-              {persistedStandings && (
-                <span className="text-xs text-gray-600">
-                  · {persistedStandings.processedEventIds.length} abgeschlossene Events
-                </span>
-              )}
-            </div>
-
-            {/* Punkte-Legende */}
-            <div className="flex flex-wrap gap-2">
-              {statCfg.participationPoints > 0 && (
-                <span className="text-[10px] px-2 py-1 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400">
-                  Teilnahme +{statCfg.participationPoints} Pkt.
-                </span>
-              )}
-              {statCols.map(s => (
-                <span key={s.field} className="text-[10px] px-2 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] text-gray-400">
-                  {s.field} × {s.pointsPer} Pkt.
-                </span>
-              ))}
-              {allExtraCols.map(f => (
-                <span key={f} className="text-[10px] px-2 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400">
-                  {f}
-                </span>
-              ))}
-            </div>
-
-            <div className="glass card-shine rounded-2xl overflow-x-auto">
-              <div style={{ minWidth: `${300 + (statCols.length + allExtraCols.length) * 72}px` }}>
-                {/* Header */}
-                <div className="grid items-center px-4 py-2.5 border-b border-white/[0.06]"
-                  style={{ gridTemplateColumns: gridCols }}>
-                  {[
-                    { label: "#",      cls: "" },
-                    { label: "Spieler",cls: "" },
-                    { label: "Events", cls: "text-center" },
-                    ...statCols.map(s => ({ label: s.field, cls: "text-center" })),
-                    ...allExtraCols.map(f => ({ label: f, cls: "text-center" })),
-                    { label: "Punkte", cls: "text-right" },
-                  ].map(col => (
-                    <span key={col.label}
-                      className={`text-[10px] font-semibold text-gray-600 uppercase tracking-widest truncate ${col.cls}`}>
-                      {col.label}
-                    </span>
-                  ))}
-                </div>
-
-                {standings.map((row, idx) => {
-                  const u    = userMap.get(row.userId);
-                  const name = u?.username ?? u?.name ?? row.userId.slice(0, 8);
-                  const isMe = userId === row.userId;
-                  const rank = idx + 1;
-
-                  return (
-                    <div key={row.userId}
-                      className="grid items-center px-4 py-3 border-b border-white/[0.04] last:border-0 transition-colors hover:bg-white/[0.02]"
-                      style={{
-                        gridTemplateColumns: gridCols,
-                        background:  isMe ? "rgba(20,184,166,0.05)" : "",
-                        borderLeft:  isMe ? "2px solid rgba(20,184,166,0.40)" : "2px solid transparent",
-                      }}>
-
-                      {/* Rang */}
-                      <div className="flex items-center justify-center">
-                        {rank <= 3
-                          ? <Medal className={`w-4 h-4 ${medalColors[rank - 1]}`} />
-                          : <span className="text-xs text-gray-600 font-mono tabular-nums">{rank}</span>
-                        }
-                      </div>
-
-                      {/* Spieler */}
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        {u?.image
-                          ? <img src={u.image} alt="" className="w-7 h-7 rounded-full shrink-0 object-cover" />
-                          : <div className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center text-xs font-semibold text-gray-400 shrink-0">
-                              {name[0]?.toUpperCase() ?? "?"}
-                            </div>
-                        }
-                        <span className={`text-sm font-medium truncate ${isMe ? "text-teal-300" : "text-white"}`}>
-                          {name}
-                          {isMe && <span className="text-[10px] text-teal-600 ml-1.5">(du)</span>}
-                          {row.hasLegacy && <span className="text-[10px] text-gray-600 ml-1.5" title="Enthält historische Werte">*</span>}
-                        </span>
-                      </div>
-
-                      {/* Events */}
-                      <div className="text-center">
-                        <span className="text-sm text-gray-400 tabular-nums">{row.participations}</span>
-                      </div>
-
-                      {/* Stat-Spalten */}
-                      {statCols.map(s => (
-                        <div key={s.field} className="text-center">
-                          <span className="text-sm text-gray-300 tabular-nums">
-                            {row.stats[s.field] != null && row.stats[s.field] > 0
-                              ? row.stats[s.field].toLocaleString("de-DE")
-                              : <span className="text-gray-700">–</span>
-                            }
-                          </span>
-                        </div>
-                      ))}
-
-                      {/* Extra-Spalten (MVP, Siege, etc.) */}
-                      {allExtraCols.map(f => (
-                        <div key={f} className="text-center">
-                          <span className="text-sm text-purple-300 tabular-nums">
-                            {row.stats[f] != null && row.stats[f] > 0
-                              ? row.stats[f].toLocaleString("de-DE")
-                              : <span className="text-gray-700">–</span>
-                            }
-                          </span>
-                        </div>
-                      ))}
-
-                      {/* Punkte */}
-                      <div className="text-right">
-                        <span className={`text-sm font-bold tabular-nums ${
-                          rank === 1 ? "text-amber-400" :
-                          rank === 2 ? "text-gray-300"  :
-                          rank === 3 ? "text-amber-600"  :
-                          "text-white"
-                        }`}>
-                          {row.totalPoints > 0
-                            ? row.totalPoints.toLocaleString("de-DE")
-                            : <span className="text-gray-700 font-normal text-xs">–</span>
-                          }
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+      {standings.length > 0 && hasStatConfig && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Trophy className="w-4 h-4 text-amber-400" />
+            <h2 className="text-sm font-semibold text-white">Gesamttabelle</h2>
+            {persistedStandings && (
+              <span className="text-xs text-gray-600">
+                · {persistedStandings.processedEventIds.length} abgeschlossene Events
+              </span>
+            )}
           </div>
-        );
-      })()}
+
+          {/* Punkte-Legende */}
+          <div className="flex flex-wrap gap-2">
+            {statCfg.participationPoints > 0 && (
+              <span className="text-[10px] px-2 py-1 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400">
+                Teilnahme +{statCfg.participationPoints} Pkt.
+              </span>
+            )}
+            {statTableCols.map(s => (
+              <span key={s.field} className="text-[10px] px-2 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] text-gray-400">
+                {s.field} × {s.pointsPer} Pkt.
+              </span>
+            ))}
+            {allExtraCols.map(f => (
+              <span key={f} className="text-[10px] px-2 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400">
+                {f}
+              </span>
+            ))}
+          </div>
+
+          <div className="glass card-shine rounded-2xl overflow-hidden">
+            <SeriesStandingsTable rows={standingRows} statCols={statTableCols} extraCols={allExtraCols} userId={userId} />
+          </div>
+        </div>
+      )}
 
       {/* ── Kommende Termine ──────────────────────────────────────────────── */}
       {upcomingEvents.length > 0 && (
