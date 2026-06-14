@@ -73,19 +73,15 @@ export default function MobileTopBar() {
         </button>
 
         {/* Dropdown */}
+        {open && (
         <div
-          className="absolute top-full mt-2 right-0 rounded-xl overflow-hidden"
+          className="absolute top-full mt-2 right-0 rounded-xl overflow-hidden z-[60]"
           style={{
             background: "rgba(4,10,9,0.97)",
             border: "1px solid rgba(20,184,166,0.14)",
             backdropFilter: "blur(24px)",
             boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
             minWidth: 160,
-            transformOrigin: "top right",
-            transform: open ? "scale(1) translateY(0)" : "scale(0.9) translateY(-6px)",
-            opacity: open ? 1 : 0,
-            pointerEvents: open ? "auto" : "none",
-            transition: "transform 200ms cubic-bezier(0.16,1,0.3,1), opacity 150ms ease",
           }}
         >
           <div className="px-3 py-2.5" style={{ borderBottom: "1px solid rgba(20,184,166,0.08)" }}>
@@ -111,6 +107,7 @@ export default function MobileTopBar() {
             </button>
           </div>
         </div>
+        )}
       </div>
     </header>
   );
