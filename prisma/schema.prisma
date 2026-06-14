@@ -28,6 +28,10 @@ model User {
   xpBoostUntil       DateTime?
   streakShield       Boolean   @default(false)
 
+  // Discord-Aktivität: kumulativ über alle Zeiten
+  voiceMinutesTotal Int @default(0)
+  messagesTotal     Int @default(0)
+
   // Collectibles Showcase: JSON-Array mit bis zu 5 CollectibleItem-IDs
   showcaseJson  String?
 

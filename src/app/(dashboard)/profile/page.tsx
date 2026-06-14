@@ -25,11 +25,11 @@ export default async function ProfilePage() {
   const month = now.getMonth() + 1;
   const year  = now.getFullYear();
 
-  const [user, eventRegs, eventCount, tournamentParticipations, tournamentCount, tournamentWins, questsWithProgress, ownedCollectibles, leaderboardRank, voiceHourCount, messageTxCount] =
+  const [user, eventRegs, eventCount, tournamentParticipations, tournamentCount, tournamentWins, questsWithProgress, ownedCollectibles, leaderboardRank] =
     await Promise.all([
       prisma.user.findUnique({
         where:  { id: userId },
-        select: { id: true, name: true, username: true, image: true, points: true, rankPoints: true, createdAt: true, showcaseJson: true, birthday: true, bio: true },
+        select: { id: true, name: true, username: true, image: true, points: true, rankPoints: true, createdAt: true, showcaseJson: true, birthday: true, bio: true, voiceMinutesTotal: true, messagesTotal: true },
       }),
       prisma.eventRegistration.findMany({
         where:   { userId },
@@ -69,8 +69,6 @@ export default async function ProfilePage() {
         const higher = await prisma.user.count({ where: { rankPoints: { gt: u?.rankPoints ?? 0 } } });
         return higher + 1;
       }),
-      prisma.pointTransaction.count({ where: { userId, reason: { contains: "Sprachkanal" } } }),
-      prisma.pointTransaction.count({ where: { userId, reason: { contains: "Nachrichten" } } }),
     ]);
 
   if (!user) redirect("/login");
@@ -83,8 +81,8 @@ export default async function ProfilePage() {
     ? Math.min(100, Math.round(((rankPoints - currentRank.min) / (nextRank.min - currentRank.min)) * 100))
     : 100;
 
-  const voiceHours   = voiceHourCount;
-  const messageCount = messageTxCount * 10;
+  const voiceHours   = Math.floor((user?.voiceMinutesTotal ?? 0) / 60);
+  const messageCount = user?.messagesTotal ?? 0;
   const badges       = computeBadges({ points: totalPoints, voiceHours, messageCount, eventCount, tournamentCount, tournamentWins });
   const earnedBadges = badges.filter(b => b.earned);
   const memberSince  = new Date(user.createdAt).toLocaleDateString("de-DE", { month: "long", year: "numeric" });
