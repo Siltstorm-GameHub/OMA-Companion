@@ -91,7 +91,7 @@
     <rect x="677" y="185" width="3" height="30" rx="1.5" fill="#8b2020" fill-opacity="0.7"/>
 
     <!-- Logo -->
-    <image href="/OMALogoNew.png" x="240" y="62" width="200" height="200" preserveAspectRatio="xMidYMid meet"/>
+    <image href="/OMALogoNew.png" x="240" y="100" width="200" height="200" preserveAspectRatio="xMidYMid meet"/>
 
     <!-- Bottom label -->
     <text x="340" y="358"

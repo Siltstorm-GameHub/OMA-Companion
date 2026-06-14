@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getGameCoverUrl } from "@/lib/game-cover";
+import EventCoverDefault from "@/components/EventCoverDefault";
 
 interface GameCoverProps {
   game: string | null | undefined;
@@ -67,11 +68,7 @@ export default function GameCover({
           onError={() => setImgError(true)}
         />
       ) : (
-        <img
-          src="/event-cover-default.svg"
-          alt=""
-          className="w-full h-full object-cover"
-        />
+        <EventCoverDefault />
       )}
       {/* Subtiler Rand */}
       <div className="absolute inset-0 rounded-[inherit] ring-1 ring-inset ring-white/10 pointer-events-none" />
