@@ -10,6 +10,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { CountUp } from "@/components/CountUp";
 import { getGameCoverUrl } from "@/lib/game-cover";
+import GameCover from "@/components/GameCover";
 
 const MEDAL = ["🥇", "🥈", "🥉"];
 
@@ -290,11 +291,12 @@ export default async function DashboardPage() {
             {/* Cover art area */}
             <div className="relative overflow-hidden" style={{ height: "108px" }}>
               {/* Game cover background */}
-              {getGameCoverUrl(nextSpieltag?.game) ? (
-                <img
-                  src={getGameCoverUrl(nextSpieltag!.game)!}
-                  alt=""
-                  className="absolute inset-0 w-full h-full object-cover object-center scale-105 group-hover:scale-110 transition-transform duration-700"
+              {nextSpieltag?.game ? (
+                <GameCover
+                  game={nextSpieltag.game}
+                  className="absolute inset-0 w-full h-full"
+                  rounded="rounded-none"
+                  imgClassName="w-full h-full object-cover object-center scale-105 group-hover:scale-110 transition-transform duration-700"
                 />
               ) : (
                 <div className="absolute inset-0"
