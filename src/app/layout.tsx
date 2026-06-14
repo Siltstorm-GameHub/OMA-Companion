@@ -18,6 +18,7 @@ export const metadata: Metadata = {
   title: "Old Masters Ally – Companion App",
   description: "Events, Turniere und Punktesystem für Old Masters",
   icons: { icon: "/OMALogoNew.png", apple: "/OMALogoNew.png" },
+  manifest: "/manifest.json",
 };
 
 export const viewport: Viewport = {
