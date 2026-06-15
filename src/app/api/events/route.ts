@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { createDiscordScheduledEvent, announceNewEvent } from "@/lib/discord-events";
+import { sendPushToAll } from "@/lib/push";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -73,6 +74,13 @@ export async function POST(req: NextRequest) {
     });
     event.discordMessageId = discordMessageId;
   }
+
+  // Push-Benachrichtigung an alle Subscriber
+  sendPushToAll({
+    title: `🎮 Neues Event: ${event.title}`,
+    body:  event.game ? `Spiel: ${event.game}` : "Jetzt anmelden!",
+    url:   "/events",
+  }).catch(() => {});
 
   return NextResponse.json(event, { status: 201 });
 }

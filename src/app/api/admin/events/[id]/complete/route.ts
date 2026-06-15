@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
+import { sendPushToUsers } from "@/lib/push";
 
 type SeriesStatConfig = {
   participationPoints: number;
@@ -151,6 +152,14 @@ export async function POST(
       data: { seriesStandingsJson: JSON.stringify(updatedStandings) },
     }),
   ]);
+
+  // Push an alle Teilnehmer
+  const participantIds = event.registrations.map((r) => r.userId);
+  sendPushToUsers(participantIds, {
+    title: `✅ Event abgeschlossen: ${event.title}`,
+    body:  "Schau dir deine Punkte und das Ergebnis an!",
+    url:   "/events",
+  }).catch(() => {});
 
   return NextResponse.json({ ok: true, completionData, eventWinnerId });
 }

@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { sendPushToUsers } from "./push";
 
 export type QuestType = "VOICE_MINUTES" | "MESSAGES" | "EVENT_ATTEND" | "TOURNAMENT";
 
@@ -126,6 +127,12 @@ export async function updateQuestProgress(
       ]);
 
       completed.push({ title: quest.title, reward: quest.reward });
+
+      sendPushToUsers([userId], {
+        title: `⭐ Quest erfüllt: ${quest.title}`,
+        body:  `Du erhältst ${quest.reward} Münzen!`,
+        url:   "/quests",
+      }).catch(() => {});
     }
   }
 
