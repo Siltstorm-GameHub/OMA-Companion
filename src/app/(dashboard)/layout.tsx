@@ -6,6 +6,7 @@ import MobileTopBar from "@/components/MobileTopBar";
 import BottomNav from "@/components/BottomNav";
 import { OnboardingModal } from "@/components/OnboardingModal";
 import { BackToTop } from "@/components/BackToTop";
+import { FloatingLobbyChat } from "@/components/FloatingLobbyChat";
 import AuroraBackground from "@/components/AuroraBackground";
 import { prisma } from "@/lib/prisma";
 
@@ -127,6 +128,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
       {/* Back to top */}
       <BackToTop />
+
+      {/* Community-Lobby-Chat */}
+      <FloatingLobbyChat />
 
       {/* ── Mobile Bottom Nav (immer sichtbar auf Handy) ───────── */}
       <div className="lg:hidden">

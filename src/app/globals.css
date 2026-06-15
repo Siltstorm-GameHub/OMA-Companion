@@ -325,6 +325,21 @@ select.input-glass option { background: #0f1117; }
   .back-to-top-btn { bottom: 1.5rem; }
 }
 
+/* Lobby-Chat: FAB und Panel – safe-area-aware */
+.lobby-chat-fab {
+  bottom: calc(4rem + env(safe-area-inset-bottom, 0px) + 0.75rem);
+}
+@media (min-width: 1024px) {
+  .lobby-chat-fab { bottom: 5rem; }
+}
+
+.lobby-chat-panel {
+  bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+}
+@media (min-width: 1024px) {
+  .lobby-chat-panel { bottom: 0; top: 100px; width: 360px; max-height: none; border-radius: 0; border-top-left-radius: 1rem; }
+}
+
 /* ── Touch device optimizations ─────────────────────────────────── */
 /* Disable card lift animations on touch — hover states don't fire cleanly */
 @media (pointer: coarse) {
