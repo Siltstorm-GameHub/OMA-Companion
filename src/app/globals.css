@@ -325,6 +325,15 @@ select.input-glass option { background: #0f1117; }
   .back-to-top-btn { bottom: 1.5rem; }
 }
 
+/* Lobby-Chat: Unread-Puls-Animation */
+@keyframes lobby-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(20,184,166,0.45); }
+  60%       { box-shadow: 0 0 0 10px rgba(20,184,166,0); }
+}
+.lobby-fab-pulse {
+  animation: lobby-pulse 2s ease-in-out infinite;
+}
+
 /* Lobby-Chat: FAB und Panel – safe-area-aware */
 .lobby-chat-fab {
   bottom: calc(4rem + env(safe-area-inset-bottom, 0px) + 0.75rem);
