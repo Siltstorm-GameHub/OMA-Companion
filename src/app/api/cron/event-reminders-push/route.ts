@@ -9,19 +9,19 @@ function isAuthorized(req: NextRequest) {
   return req.headers.get("authorization") === `Bearer ${process.env.CRON_SECRET}`;
 }
 
-// Läuft stündlich. Sucht Events, die in 50–70 Minuten beginnen,
+// Läuft täglich um 7 Uhr UTC. Sucht alle Events des heutigen Tages
 // und schickt Push-Erinnerungen an angemeldete User.
 export async function GET(req: NextRequest) {
   if (!isAuthorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const now   = new Date();
-  const in50m = new Date(now.getTime() + 50 * 60 * 1000);
-  const in70m = new Date(now.getTime() + 70 * 60 * 1000);
+  const now         = new Date();
+  const endOfDay    = new Date(now);
+  endOfDay.setUTCHours(23, 59, 59, 999);
 
   const events = await prisma.event.findMany({
     where: {
       status:  { in: ["open", "active"] },
-      startAt: { gte: in50m, lte: in70m },
+      startAt: { gte: now, lte: endOfDay },
     },
     include: {
       registrations: { select: { userId: true } },
@@ -41,8 +41,8 @@ export async function GET(req: NextRequest) {
     });
 
     await sendPushToUsers(userIds, {
-      title: `⏰ Startet in ~1 Stunde`,
-      body:  `${event.title} beginnt um ${startStr} Uhr – sei dabei!`,
+      title: `⏰ Event heute: ${event.title}`,
+      body:  `Startet heute um ${startStr} Uhr – sei dabei!`,
       url:   "/events",
     });
 
