@@ -96,7 +96,7 @@ export function FloatingLobbyChat() {
       });
       if (res.ok) {
         setText("");
-        await fetchMessages(false);
+        await fetchMessages("poll");
       }
     } finally {
       setSending(false);
