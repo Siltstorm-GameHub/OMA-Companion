@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { updateQuestProgress } from "@/lib/quests";
+import { sendPushToAll } from "@/lib/push";
 
 // Standard round-robin scheduling algorithm (circle method)
 export function generateRoundRobin(participantIds: string[], eventId: string) {
@@ -145,5 +146,12 @@ export async function POST(req: NextRequest) {
       },
     },
   });
+  // Push an alle Subscriber
+  sendPushToAll({
+    title: `🏆 Neues Turnier gestartet`,
+    body:  full?.title ?? "Ein neues Turnier wurde erstellt!",
+    url:   "/events",
+  }).catch(() => {});
+
   return NextResponse.json(full, { status: 201 });
 }

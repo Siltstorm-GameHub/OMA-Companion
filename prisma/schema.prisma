@@ -51,6 +51,7 @@ model User {
   donations                 Donation[]
   collectibles              UserCollectible[]
   lobbyMessages             LobbyMessage[]
+  pushSubscriptions         PushSubscription[]
 }
 
 // ── Collectibles ─────────────────────────────────────────────────────────────
@@ -532,4 +533,19 @@ model LobbyMessage {
 
   @@index([createdAt])
   @@map("lobbymessage")
+}
+
+// ── Push-Benachrichtigungen ──────────────────────────────────────────────────
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String   @map("userid")
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now()) @map("createdat")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("pushsubscription")
 }
