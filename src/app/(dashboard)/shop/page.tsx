@@ -52,7 +52,7 @@ export default async function ShopPage() {
   const ownedSet  = new Set((ownedRaw as { collectibleItemId: string }[]).map(o => o.collectibleItemId));
 
   return (
-    <div className="px-5 pb-5 pt-3 sm:p-6 max-w-7xl mx-auto space-y-6 animate-fade-in">
+    <div className="px-5 pb-5 pt-0 sm:p-6 max-w-7xl mx-auto space-y-6 animate-fade-in">
 
       {/* Header */}
       <div className="card-cut surface relative overflow-hidden p-5 accent-amber"

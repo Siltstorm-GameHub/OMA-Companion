@@ -45,7 +45,7 @@ export default async function PointsPage() {
     : 100;
 
   return (
-    <div className="px-5 pb-5 pt-3 sm:p-6 max-w-6xl mx-auto space-y-6 animate-fade-in">
+    <div className="px-5 pb-5 pt-0 sm:p-6 max-w-6xl mx-auto space-y-6 animate-fade-in">
 
       {/* ── Header ──────────────────────────────────────────────────── */}
       <div>

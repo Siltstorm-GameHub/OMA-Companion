@@ -122,7 +122,7 @@ export default async function DashboardPage() {
     <div className="animate-fade-in">
 
       {/* ── Hero ──────────────────────────────────────────────────────── */}
-      <div className="relative px-5 pt-4 sm:pt-8 pb-6 max-w-7xl mx-auto">
+      <div className="relative px-5 pt-0 sm:pt-8 pb-6 max-w-7xl mx-auto">
         {/* Dezente Trennlinie unten */}
         <div className="absolute bottom-0 inset-x-5 h-px"
           style={{ background: "linear-gradient(90deg, transparent, rgba(20,184,166,0.18), transparent)" }} />

@@ -56,7 +56,7 @@ export default async function QuestsPage() {
   }
 
   return (
-    <div className="px-5 pb-5 pt-3 sm:p-6 max-w-2xl mx-auto space-y-6 animate-fade-in">
+    <div className="px-5 pb-5 pt-0 sm:p-6 max-w-2xl mx-auto space-y-6 animate-fade-in">
 
       {/* ── Header ─────────────────────────────────────────────────── */}
       <div className="flex items-start justify-between gap-4">
