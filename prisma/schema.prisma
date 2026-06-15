@@ -50,6 +50,7 @@ model User {
   dailySpins                DailySpin[]
   donations                 Donation[]
   collectibles              UserCollectible[]
+  lobbyMessages             LobbyMessage[]
 }
 
 // ── Collectibles ─────────────────────────────────────────────────────────────
@@ -518,4 +519,16 @@ model PollJob {
   errorMsg    String?
   createdAt   DateTime  @default(now())
   sentAt      DateTime?
+}
+
+// ── Lobby-Chat ───────────────────────────────────────────────────────────────
+
+model LobbyMessage {
+  id        String   @id @default(cuid())
+  content   String   @db.VarChar(500)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
 }
