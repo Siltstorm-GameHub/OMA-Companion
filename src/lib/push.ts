@@ -1,11 +1,15 @@
 import webpush from "web-push";
 import { prisma } from "@/lib/prisma";
 
-webpush.setVapidDetails(
-  "mailto:admin@oma-app.de",
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!,
-);
+let vapidInitialized = false;
+function ensureVapid() {
+  if (vapidInitialized) return;
+  const pub  = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  const priv = process.env.VAPID_PRIVATE_KEY;
+  if (!pub || !priv) throw new Error("VAPID keys not configured");
+  webpush.setVapidDetails("mailto:admin@oma-app.de", pub, priv);
+  vapidInitialized = true;
+}
 
 export interface PushPayload {
   title: string;
@@ -17,6 +21,8 @@ async function sendToSubscriptions(
   subscriptions: { id: string; endpoint: string; p256dh: string; auth: string }[],
   payload: PushPayload,
 ) {
+  if (!subscriptions.length) return;
+  ensureVapid();
   const data = JSON.stringify({ ...payload, icon: "/OMALogoNew.png", badge: "/OMALogoNew.png" });
   await Promise.allSettled(
     subscriptions.map(async (sub) => {
