@@ -27,21 +27,27 @@ export function FloatingLobbyChat() {
   const openRef = useRef(false);
   openRef.current = open;
 
-  const fetchMessages = useCallback(async (initial = false) => {
+  const fetchMessages = useCallback(async (mode: "initial" | "poll" | "baseline") => {
     try {
       const url =
-        !initial && lastTimestampRef.current
+        mode !== "initial" && lastTimestampRef.current
           ? `/api/lobby?after=${encodeURIComponent(lastTimestampRef.current)}`
           : "/api/lobby";
       const res = await fetch(url, { cache: "no-store" });
       if (!res.ok) return;
       const data: LobbyMsg[] = await res.json();
-      if (!data.length) return;
 
+      if (mode === "baseline") {
+        // Nur Timestamp setzen – keine Nachrichten anzeigen, kein Unread-Count
+        if (data.length) lastTimestampRef.current = data[data.length - 1].createdAt;
+        return;
+      }
+
+      if (!data.length) return;
       lastTimestampRef.current = data[data.length - 1].createdAt;
 
       setMessages((prev) => {
-        if (initial) return data;
+        if (mode === "initial") return data;
         const ids = new Set(prev.map((m) => m.id));
         const fresh = data.filter((m) => !ids.has(m.id));
         if (!fresh.length) return prev;
@@ -53,18 +59,23 @@ export function FloatingLobbyChat() {
     }
   }, []);
 
-  // Initialer Load beim Öffnen
+  // Baseline beim ersten Mount setzen (ohne Unread zu zählen)
+  useEffect(() => {
+    fetchMessages("baseline");
+  }, [fetchMessages]);
+
+  // Wenn Chat geöffnet: Verlauf laden & Unread zurücksetzen
   useEffect(() => {
     if (open) {
       setUnread(0);
       lastTimestampRef.current = null;
-      fetchMessages(true);
+      fetchMessages("initial");
     }
   }, [open, fetchMessages]);
 
-  // Polling: 3 s wenn offen, 30 s wenn geschlossen
+  // Polling: 3 s wenn offen, 10 s wenn geschlossen
   useEffect(() => {
-    const id = setInterval(() => fetchMessages(false), open ? 3000 : 30000);
+    const id = setInterval(() => fetchMessages("poll"), open ? 3000 : 10000);
     return () => clearInterval(id);
   }, [open, fetchMessages]);
 
@@ -105,23 +116,26 @@ export function FloatingLobbyChat() {
       <button
         onClick={() => setOpen((o) => !o)}
         aria-label={open ? "Chat schließen" : "Community-Chat öffnen"}
-        className="lobby-chat-fab fixed right-4 lg:right-6 z-40 w-12 h-12 rounded-full flex items-center justify-center shadow-xl transition-all duration-200 active:scale-90"
+        className={`lobby-chat-fab fixed right-4 lg:right-6 z-40 w-12 h-12 rounded-full flex items-center justify-center shadow-xl transition-all duration-200 active:scale-90${!open && unread > 0 ? " lobby-fab-pulse" : ""}`}
         style={{
-          background: open ? "rgba(20,184,166,0.22)" : "rgba(20,184,166,0.10)",
-          border: `1px solid ${open ? "rgba(20,184,166,0.5)" : "rgba(20,184,166,0.22)"}`,
+          background: open
+            ? "rgba(20,184,166,0.22)"
+            : unread > 0
+            ? "rgba(20,184,166,0.28)"
+            : "rgba(20,184,166,0.10)",
+          border: `1px solid ${open || unread > 0 ? "rgba(20,184,166,0.6)" : "rgba(20,184,166,0.22)"}`,
           backdropFilter: "blur(14px)",
-          boxShadow: open ? "0 0 18px rgba(20,184,166,0.25)" : undefined,
         }}
       >
         {open ? (
           <X className="w-5 h-5 text-teal-300" />
         ) : (
-          <MessageCircle className="w-5 h-5 text-teal-400" />
+          <MessageCircle className={`w-5 h-5 ${unread > 0 ? "text-teal-300" : "text-teal-400"}`} />
         )}
         {!open && unread > 0 && (
           <span
             className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full text-white text-[10px] font-bold flex items-center justify-center px-1"
-            style={{ background: "#14b8a6", boxShadow: "0 0 8px rgba(20,184,166,0.6)" }}
+            style={{ background: "#14b8a6", boxShadow: "0 0 10px rgba(20,184,166,0.7)" }}
           >
             {unread > 99 ? "99+" : unread}
           </span>
