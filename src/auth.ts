@@ -13,9 +13,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       authorization: { params: { scope: "identify email guilds", prompt: "none" } },
       profile(profile) {
         return {
-          // Kein id: profile.id hier – NextAuth soll selbst eine UUID vergeben.
-          // Die Verknüpfung zum Discord-Account erfolgt über die Account-Tabelle
-          // (provider + providerAccountId), NICHT über die User-ID.
+          // id muss zurückgegeben werden, damit Auth.js providerAccountId = Discord-Snowflake setzt.
+          // PrismaAdapter v2 ignoriert das id-Feld in createUser und lässt Prisma eine CUID vergeben –
+          // die User-DB-ID bleibt also weiterhin eine CUID, nicht die Discord-ID.
+          id:    profile.id,
           name:  profile.username,
           email: profile.email ?? null,
           image: profile.avatar
@@ -54,12 +55,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               data:  { userId: stubUser.id },
             });
 
-            // 3. Stub-User mit frischen Discord-Profildaten aktualisieren
+            // 3. Stub-User mit frischen Discord-Profildaten aktualisieren.
+            // name wird bewusst NICHT überschrieben: der Stub hat bereits den
+            // server-spezifischen Nickname aus dem Sync; profile.username wäre
+            // nur der globale Discord-Username.
             await prisma.user.update({
               where: { id: stubUser.id },
               data: {
                 discordId,
-                ...(user.name  ? { name: user.name }   : {}),
                 ...(user.image ? { image: user.image } : {}),
               },
             });
