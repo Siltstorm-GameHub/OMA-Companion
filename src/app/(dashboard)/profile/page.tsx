@@ -15,6 +15,7 @@ import WinIcon from "@/components/WinIcon";
 import Image from "next/image";
 import CollectiblesShowcase from "./CollectiblesShowcase";
 import ProfileEditor from "./ProfileEditor";
+import { PushSubscribeButton } from "@/components/PushSubscribeButton";
 
 export default async function ProfilePage() {
   const me = await getSessionUser();
@@ -399,6 +400,14 @@ export default async function ProfilePage() {
               </div>
             </section>
           )}
+
+          {/* Benachrichtigungen */}
+          <section>
+            <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">🔔 Benachrichtigungen</h2>
+            <div className="glass card-shine rounded-2xl px-2 py-1">
+              <PushSubscribeButton />
+            </div>
+          </section>
 
         </div>
       </div>
