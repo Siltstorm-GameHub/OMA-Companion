@@ -166,9 +166,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             where: { id: entry.userId },
             data:  { rankPoints: { increment: delta } },
           }),
-          // Delta als Transaktion festhalten (kein Geburtstags-Boost)
           prisma.pointTransaction.create({
-            data: { userId: entry.userId, amount: delta, reason },
+            data: { userId: entry.userId, amount: delta, reason: `[Rang-Punkte] ${reason}` },
           }),
         ]);
       }

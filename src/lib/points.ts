@@ -73,10 +73,15 @@ export async function awardPoints(userId: string, rule: PointRule, customReason?
 
   const givesRankPoints = RANK_POINT_CATEGORIES.has(POINT_RULES[rule].category as PointCategory);
 
-  const [transaction, updated] = await prisma.$transaction([
+  const fullReason = (customReason ?? reason) + (hasBirthdayBoost ? " 🎂×2" : "");
+
+  const results = await prisma.$transaction([
     prisma.pointTransaction.create({
-      data: { userId, amount: finalAmount, reason: (customReason ?? reason) + (hasBirthdayBoost ? " 🎂×2" : "") },
+      data: { userId, amount: finalAmount, reason: `[Münzen] ${fullReason}` },
     }),
+    ...(givesRankPoints ? [prisma.pointTransaction.create({
+      data: { userId, amount: finalAmount, reason: `[Rang-Punkte] ${fullReason}` },
+    })] : []),
     prisma.user.update({
       where:  { id: userId },
       data:   {
@@ -86,6 +91,9 @@ export async function awardPoints(userId: string, rule: PointRule, customReason?
       select: { id: true, points: true, rankPoints: true },
     }),
   ]);
+
+  const transaction = results[0] as { id: string; userId: string; amount: number; reason: string; createdAt: Date };
+  const updated     = results[results.length - 1] as { id: string; points: number; rankPoints: number };
 
   return { transaction, user: updated, pointsBefore };
 }
