@@ -30,15 +30,7 @@ type Tournament = {
 };
 type Event = { id: string };
 
-type RankingEntry = {
-  placement: number;
-  userId: string;
-  user: { id: string; name: string | null; username: string | null; image: string | null } | null;
-  score: number;
-  label: string;
-  coins: number;
-  rankPts: number;
-};
+
 
 const FORMATS = [
   { value: "single_elimination", label: "Einzel-Eliminierung",       desc: "Klassisches K.O.-System" },
@@ -315,11 +307,6 @@ export default function TournamentManager({
   const [showSettings, setShowSettings]     = useState(false);
   const [showParticipants, setShowParticipants] = useState(false);
   const [showAdd, setShowAdd]               = useState(false);
-  const [showFinalize, setShowFinalize]     = useState(false);
-  const [isEditingRanking, setIsEditingRanking] = useState(false);
-  const [rankingPreview, setRankingPreview] = useState<RankingEntry[] | null>(null);
-  const [rankingLoading, setRankingLoading] = useState(false);
-  const [rankingNote, setRankingNote]       = useState("");
 
   // ── Settings edit state ───────────────────────────────────────────────
   const initSettings = () => {
@@ -599,121 +586,6 @@ export default function TournamentManager({
     router.refresh();
   }
 
-  async function openFinalize() {
-    if (!tournament) return;
-    setIsEditingRanking(false);
-    setRankingLoading(true);
-    setShowFinalize(true);
-    setShowSettings(false);
-    setShowParticipants(false);
-    setRankingNote("");
-    const res = await fetch(`/api/tournaments/${tournament.id}/ranking`);
-    if (res.ok) {
-      const data = await res.json();
-      setRankingPreview(data.ranking);
-    } else {
-      toast.error("Rangliste konnte nicht geladen werden");
-    }
-    setRankingLoading(false);
-  }
-
-  async function openEditRanking() {
-    if (!tournament?.finalRankingJson) return;
-    setIsEditingRanking(true);
-    setShowFinalize(true);
-    setShowSettings(false);
-    setShowParticipants(false);
-    setRankingLoading(true);
-    setRankingNote(tournament.finalRankingNote ?? "");
-
-    const cfgRaw: Record<string, number | { coins: number; points: number }> =
-      tournament.pointsConfig ? JSON.parse(tournament.pointsConfig) : {};
-
-    const storedOrder = JSON.parse(tournament.finalRankingJson) as string[];
-
-    // Versuche aktuelle Rangliste (mit Labels/Scores) zu laden und in gespeicherter Reihenfolge zu sortieren
-    const res = await fetch(`/api/tournaments/${tournament.id}/ranking`);
-    if (res.ok) {
-      const data = await res.json();
-      const byId = new Map<string, RankingEntry>(data.ranking.map((r: RankingEntry) => [r.userId, r]));
-
-      const reordered = storedOrder.map((uid, i) => {
-        const calc     = byId.get(uid);
-        const user     = allUsers.find(u => u.id === uid) ?? null;
-        const placement = i + 1;
-        const raw      = cfgRaw[String(placement)];
-        const coins    = raw == null ? 0 : typeof raw === "number" ? raw : (raw.coins   ?? 0);
-        const rankPts  = raw == null ? 0 : typeof raw === "number" ? raw : (raw.points  ?? 0);
-        return calc
-          ? { ...calc, placement, coins, rankPts }
-          : { placement, userId: uid, user: user ? { id: user.id, name: user.name, username: user.username, image: user.image } : null, score: 0, label: "–", coins, rankPts };
-      });
-      setRankingPreview(reordered);
-    } else {
-      // Fallback: nur aus gespeicherter Reihenfolge rekonstruieren
-      const entries = storedOrder.map((uid, i) => {
-        const user    = allUsers.find(u => u.id === uid) ?? null;
-        const placement = i + 1;
-        const raw     = cfgRaw[String(placement)];
-        const coins   = raw == null ? 0 : typeof raw === "number" ? raw : (raw.coins  ?? 0);
-        const rankPts = raw == null ? 0 : typeof raw === "number" ? raw : (raw.points ?? 0);
-        return { placement, userId: uid, user: user ? { id: user.id, name: user.name, username: user.username, image: user.image } : null, score: 0, label: "–", coins, rankPts };
-      });
-      setRankingPreview(entries);
-    }
-    setRankingLoading(false);
-  }
-
-  async function confirmFinalize() {
-    if (!tournament || !rankingPreview) return;
-    setLoading(true);
-    const body: Record<string, unknown> = {
-      finalRanking:     rankingPreview.map(r => r.userId),
-      finalRankingNote: rankingNote.trim() || null,
-    };
-    // Nur beim ersten Abschluss Status auf "finished" setzen
-    if (!isEditingRanking) {
-      body.status = "finished";
-    }
-    const res = await fetch(`/api/tournaments/${tournament.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    setLoading(false);
-    if (res.ok) {
-      toast.success(
-        isEditingRanking
-          ? "Platzierung aktualisiert & Punkte neu verteilt!"
-          : "Turnier abgeschlossen & Punkte vergeben!"
-      );
-      setShowFinalize(false);
-      setIsEditingRanking(false);
-      setRankingPreview(null);
-      setRankingNote("");
-      if (!isEditingRanking) {
-        setTournament(prev => prev ? { ...prev, status: "finished" } : prev);
-      }
-      router.refresh();
-    } else {
-      toast.error(isEditingRanking ? "Fehler beim Aktualisieren" : "Fehler beim Abschließen");
-    }
-  }
-
-  function moveRankingUp(index: number) {
-    if (!rankingPreview || index === 0) return;
-    const updated = [...rankingPreview];
-    [updated[index - 1], updated[index]] = [updated[index], updated[index - 1]];
-    setRankingPreview(updated.map((r, i) => ({ ...r, placement: i + 1 })));
-  }
-
-  function moveRankingDown(index: number) {
-    if (!rankingPreview || index === rankingPreview.length - 1) return;
-    const updated = [...rankingPreview];
-    [updated[index], updated[index + 1]] = [updated[index + 1], updated[index]];
-    setRankingPreview(updated.map((r, i) => ({ ...r, placement: i + 1 })));
-  }
-
   function setFfaField(matchId: string, userId: string, field: string, val: string) {
     setFfaEdits(prev => ({
       ...prev,
@@ -756,147 +628,12 @@ export default function TournamentManager({
             }`}>
             <Settings className="w-3.5 h-3.5" /> Einstellungen
           </button>
-          {tournament.status !== "finished" ? (
-            <button onClick={openFinalize} disabled={loading}
-              className="flex items-center gap-1 text-xs bg-amber-600/20 text-amber-300 hover:bg-amber-600/30 border border-amber-600/30 px-2 py-1 rounded transition-colors disabled:opacity-50">
-              <Trophy className="w-3.5 h-3.5" /> Abschließen
-            </button>
-          ) : (
-            <button onClick={openEditRanking} disabled={loading}
-              className="flex items-center gap-1 text-xs bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 border border-blue-600/30 px-2 py-1 rounded transition-colors disabled:opacity-50">
-              <RefreshCw className="w-3.5 h-3.5" /> Platzierung bearbeiten
-            </button>
-          )}
           <button onClick={deleteTournament} disabled={loading}
             className="flex items-center gap-1 text-xs text-red-500 hover:text-red-400 hover:bg-red-900/20 px-2 py-1 rounded transition-colors disabled:opacity-50">
             <Trash2 className="w-3.5 h-3.5" /> Löschen
           </button>
         </div>
       </div>
-
-      {/* ── Finalize panel ───────────────────────────────────────────── */}
-      {showFinalize && (
-        <div className={`border rounded-xl p-4 space-y-4 ${
-          isEditingRanking
-            ? "border-blue-700/40 bg-blue-950/10"
-            : "border-amber-700/40 bg-amber-950/10"
-        }`}>
-          <div className="flex items-center justify-between">
-            <p className={`text-sm font-semibold flex items-center gap-2 ${isEditingRanking ? "text-blue-300" : "text-amber-300"}`}>
-              {isEditingRanking
-                ? <><RefreshCw className="w-4 h-4" /> Platzierung bearbeiten</>
-                : <><Trophy className="w-4 h-4" /> Endplatzierung bestätigen</>
-              }
-            </p>
-            <button onClick={() => { setShowFinalize(false); setRankingPreview(null); setIsEditingRanking(false); }}
-              className="text-gray-500 hover:text-white transition-colors">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          <p className="text-xs text-gray-400">
-            {isEditingRanking
-              ? "Passe die Platzierung an. Die alten Punkte werden automatisch rückgebucht und neu vergeben."
-              : "Überprüfe die Endplatzierung und passe sie bei Bedarf an. Erst nach Bestätigung werden Punkte vergeben."
-            }
-          </p>
-
-          {rankingLoading && (
-            <p className="text-sm text-gray-500 text-center py-4">Rangliste wird berechnet…</p>
-          )}
-
-          {rankingPreview && !rankingLoading && (
-            <div className="space-y-2">
-              {rankingPreview.map((entry, idx) => {
-                const medals   = ["🥇", "🥈", "🥉"];
-                // Robuster Fallback: name > username > "Unbekannt"
-                const name     = (entry.user?.name || entry.user?.username)
-                  ?? allUsers.find(u => u.id === entry.userId)?.name
-                  ?? allUsers.find(u => u.id === entry.userId)?.username
-                  ?? "Unbekannt";
-                const avatar   = entry.user?.image ?? allUsers.find(u => u.id === entry.userId)?.image;
-                const hasReward = entry.coins > 0 || entry.rankPts > 0;
-                return (
-                  <div key={entry.userId}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg"
-                    style={{ background: idx < 3 ? "rgba(245,158,11,0.07)" : "rgba(255,255,255,0.03)", border: `1px solid ${idx < 3 ? "rgba(245,158,11,0.18)" : "rgba(255,255,255,0.06)"}` }}>
-
-                    {/* Platz */}
-                    <span className="text-base w-6 text-center shrink-0">
-                      {idx < 3 ? medals[idx] : <span className="text-xs text-gray-500">{idx + 1}.</span>}
-                    </span>
-
-                    {/* Avatar + Name */}
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      {avatar
-                        ? <img src={avatar} alt="" className="w-6 h-6 rounded-full shrink-0 object-cover" />
-                        : <div className="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center text-[10px] font-bold text-gray-300 shrink-0">
-                            {name[0]?.toUpperCase() ?? "?"}
-                          </div>
-                      }
-                      <span className="text-sm font-medium text-white truncate">{name}</span>
-                    </div>
-
-                    {/* Score */}
-                    <span className="text-xs text-gray-500 shrink-0">{entry.label}</span>
-
-                    {/* Belohnung */}
-                    {hasReward && (
-                      <span className="text-xs text-amber-400 shrink-0 font-semibold">
-                        {entry.coins > 0 && `+${entry.coins}🪙`}
-                        {entry.rankPts > 0 && ` +${entry.rankPts}⭐`}
-                      </span>
-                    )}
-
-                    {/* Reihenfolge ändern */}
-                    <div className="flex flex-col gap-0.5 shrink-0">
-                      <button onClick={() => moveRankingUp(idx)} disabled={idx === 0}
-                        className="text-gray-600 hover:text-white disabled:opacity-20 transition-colors leading-none px-1">
-                        ▲
-                      </button>
-                      <button onClick={() => moveRankingDown(idx)} disabled={idx === rankingPreview.length - 1}
-                        className="text-gray-600 hover:text-white disabled:opacity-20 transition-colors leading-none px-1">
-                        ▼
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {rankingPreview && !rankingLoading && (
-            <div className="space-y-3">
-              {/* Notizfeld */}
-              <div>
-                <label className="text-xs text-gray-500 block mb-1.5">
-                  Begründung für Änderungen <span className="text-gray-700">(optional)</span>
-                </label>
-                <textarea
-                  value={rankingNote}
-                  onChange={e => setRankingNote(e.target.value)}
-                  rows={2}
-                  placeholder="z.B. Spieler X wurde wegen Regelverstoßes disqualifiziert …"
-                  className="w-full rounded-xl px-3 py-2.5 text-sm text-white outline-none resize-none"
-                  style={{ background: "#0b1a17", border: "1px solid rgba(245,158,11,0.20)" }}
-                />
-              </div>
-              <button onClick={confirmFinalize} disabled={loading}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50"
-                style={{ background: isEditingRanking
-                  ? "linear-gradient(135deg, #1d4ed8, #3b82f6)"
-                  : "linear-gradient(135deg, #b45309, #d97706)"
-                }}>
-                {isEditingRanking ? <RefreshCw className="w-4 h-4" /> : <Trophy className="w-4 h-4" />}
-                {loading
-                  ? (isEditingRanking ? "Wird aktualisiert…" : "Wird abgeschlossen…")
-                  : (isEditingRanking ? "Platzierung aktualisieren & Punkte neu vergeben" : "Bestätigen & Punkte vergeben")
-                }
-              </button>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* ── Settings panel ───────────────────────────────────────────── */}
       {showSettings && (
@@ -966,7 +703,7 @@ export default function TournamentManager({
       )}
 
       {/* Round Robin auto-generate (direkt sichtbar wenn relevant) */}
-      {isRoundRobin && tournament.participants.length >= 2 && !showSettings && !showFinalize && (
+      {isRoundRobin && tournament.participants.length >= 2 && !showSettings && (
         <button onClick={generateRoundRobinMatches} disabled={loading}
           className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 bg-blue-900/20 hover:bg-blue-900/30 border border-blue-900/40 rounded-lg px-3 py-2 transition-colors w-full justify-center">
           <RefreshCw className="w-3.5 h-3.5" />
