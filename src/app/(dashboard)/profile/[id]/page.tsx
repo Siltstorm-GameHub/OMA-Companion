@@ -189,13 +189,16 @@ export default async function PublicProfilePage({
         {/* ── Linke Spalte ───────────────────────────────────────────── */}
         <div className="lg:col-span-2 space-y-5">
 
-          {/* Abzeichen */}
+          {/* Abzeichen — nur verdiente anzeigen */}
           <section>
             <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">
-              🏅 Abzeichen <span className="text-gray-600 normal-case">({earnedBadges.length}/{badges.length})</span>
+              🏅 Abzeichen <span className="text-gray-600 normal-case">({earnedBadges.length})</span>
             </h2>
+            {earnedBadges.length === 0 && (
+              <p className="text-xs text-gray-600 italic">Noch keine Abzeichen verdient.</p>
+            )}
             {Object.entries(BADGE_CATEGORY_LABELS).map(([cat, label]) => {
-              const catBadges = badges.filter(b => b.category === cat);
+              const catBadges = earnedBadges.filter(b => b.category === cat);
               if (!catBadges.length) return null;
               return (
                 <div key={cat} className="mb-4">
@@ -203,14 +206,9 @@ export default async function PublicProfilePage({
                   <div className="flex flex-wrap gap-2">
                     {catBadges.map(badge => (
                       <div key={badge.id} title={badge.desc}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-all ${
-                          badge.earned
-                            ? "glass text-white border-white/10 hover:border-white/20"
-                            : "bg-white/[0.02] border-white/[0.04] text-gray-600 opacity-40 grayscale"
-                        }`}>
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium glass text-white border-white/10 hover:border-white/20 transition-all">
                         <span>{badge.icon}</span>
                         {badge.name}
-                        {!badge.earned && <span className="text-gray-700 ml-0.5">🔒</span>}
                       </div>
                     ))}
                   </div>
