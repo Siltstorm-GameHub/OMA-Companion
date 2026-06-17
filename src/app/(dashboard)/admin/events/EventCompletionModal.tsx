@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { X, Trophy, Star, TrendingUp, CheckCircle2 } from "lucide-react";
+import { X, Trophy, Star, TrendingUp, CheckCircle2, Vote } from "lucide-react";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };
 type MatchEntry = { userId: string | null; statsJson: string | null };
@@ -38,6 +38,10 @@ export default function EventCompletionModal({
   const [mvpUserId, setMvpUserId] = useState<string>("");
   const [winnerStatField, setWinnerStatField] = useState<string>(seriesStatConfig?.defaultWinnerStatField ?? "");
   const [seriesWinnerTargetField, setSeriesWinnerTargetField] = useState<string>(seriesStatConfig?.defaultWinnerTargetField ?? "");
+  const [hasPoll, setHasPoll] = useState(false);
+  const [pollLabel, setPollLabel] = useState("MVP");
+  const [pollBonusPoints, setPollBonusPoints] = useState<number>(10);
+  const [pollWinnerId, setPollWinnerId] = useState<string>("");
   const [loading, setLoading] = useState(false);
 
   // Schließen via Außenklick
@@ -100,6 +104,9 @@ export default function EventCompletionModal({
           mvpUserId:               mvpUserId || undefined,
           winnerStatField:         winnerStatField || undefined,
           seriesWinnerTargetField: seriesWinnerTargetField || undefined,
+          pollWinnerId:            hasPoll && pollWinnerId ? pollWinnerId : undefined,
+          pollLabel:               hasPoll && pollWinnerId ? pollLabel : undefined,
+          pollBonusPoints:         hasPoll && pollWinnerId ? pollBonusPoints : undefined,
         }),
       });
       if (res.ok) {
@@ -231,6 +238,56 @@ export default function EventCompletionModal({
             </div>
           )}
 
+          {/* ── Umfrage-Ergebnis ── */}
+          <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(139,92,246,0.05)", border: "1px solid rgba(139,92,246,0.15)" }}>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={hasPoll}
+                onChange={e => setHasPoll(e.target.checked)}
+                className="accent-violet-500 w-4 h-4"
+              />
+              <Vote className="w-3.5 h-3.5 text-violet-400" />
+              <span className="text-xs font-semibold text-violet-300">Gab es eine Umfrage?</span>
+            </label>
+
+            {hasPoll && (
+              <div className="space-y-3 pt-1">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] text-gray-500 block mb-1">Bezeichnung</label>
+                    <input
+                      type="text"
+                      value={pollLabel}
+                      onChange={e => setPollLabel(e.target.value)}
+                      placeholder="z.B. MVP, Trostpreis…"
+                      className={inputCls}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] text-gray-500 block mb-1">Bonuspunkte</label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={pollBonusPoints}
+                      onChange={e => setPollBonusPoints(Number(e.target.value))}
+                      className={inputCls}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[11px] text-gray-500 block mb-1">Gewinner der Umfrage</label>
+                  <select value={pollWinnerId} onChange={e => setPollWinnerId(e.target.value)} className={inputCls}>
+                    <option value="">– Person auswählen –</option>
+                    {registeredUsers.map(u => (
+                      <option key={u.id} value={u.id}>{userName(u)}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* ── Zusammenfassung ── */}
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-2">
             <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest">Wird übertragen</p>
@@ -257,6 +314,12 @@ export default function EventCompletionModal({
                 <li className="flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-teal-400 shrink-0" />
                   MVP {userName(registeredUsers.find(u => u.id === mvpUserId)!)} → +1 auf „{seriesStatConfig.mvpStatField}"
+                </li>
+              )}
+              {hasPoll && pollWinnerId && pollLabel && (
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-violet-400 shrink-0" />
+                  Umfrage „{pollLabel}": {userName(registeredUsers.find(u => u.id === pollWinnerId)!)} → +{pollBonusPoints} Punkte
                 </li>
               )}
             </ul>

@@ -38,6 +38,9 @@ export async function POST(
     mvpUserId?: string;
     winnerStatField?: string;
     seriesWinnerTargetField?: string;
+    pollWinnerId?: string;
+    pollLabel?: string;
+    pollBonusPoints?: number;
   };
 
   // Event laden
@@ -124,6 +127,11 @@ export async function POST(
     addToUser(body.mvpUserId, statCfg.mvpStatField, 1);
   }
 
+  // Umfrage-Gewinner: Bonuspunkte auf eigenem Feld
+  if (body.pollWinnerId && body.pollLabel && body.pollBonusPoints && body.pollBonusPoints > 0) {
+    addToUser(body.pollWinnerId, body.pollLabel, body.pollBonusPoints);
+  }
+
   const updatedStandings: SeriesStandings = {
     lastUpdated: new Date().toISOString(),
     processedEventIds: [...existingJson.processedEventIds, eventId],
@@ -131,11 +139,14 @@ export async function POST(
   };
 
   const completionData = {
-    mvpUserId:              body.mvpUserId ?? null,
-    winnerStatField:        body.winnerStatField ?? null,
+    mvpUserId:               body.mvpUserId ?? null,
+    winnerStatField:         body.winnerStatField ?? null,
     seriesWinnerTargetField: body.seriesWinnerTargetField ?? null,
-    eventWinnerId:          eventWinnerId ?? null,
-    lockedAt:               new Date().toISOString(),
+    eventWinnerId:           eventWinnerId ?? null,
+    pollWinnerId:            body.pollWinnerId ?? null,
+    pollLabel:               body.pollLabel ?? null,
+    pollBonusPoints:         body.pollBonusPoints ?? null,
+    lockedAt:                new Date().toISOString(),
   };
 
   // Alles in einer Transaktion speichern
