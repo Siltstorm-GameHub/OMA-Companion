@@ -338,14 +338,11 @@ export default async function TournamentDetailPage({
                       <p className={`text-sm truncate font-medium ${isMe ? "text-rose-300" : "text-white"}`}>
                         {userName(user)}{isMe && " (du)"}
                       </p>
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <p className="text-[10px] text-gray-600">{user.points.toLocaleString("de-DE")} Pts</p>
-                        {isPollWinner && pollLabel && (
-                          <span className="flex items-center gap-0.5 text-[10px] font-semibold text-violet-400">
-                            <Vote className="w-2.5 h-2.5" /> {pollLabel}
-                          </span>
-                        )}
-                      </div>
+                      {isPollWinner && pollLabel && (
+                        <span className="flex items-center gap-0.5 text-[10px] font-semibold text-violet-400">
+                          <Vote className="w-2.5 h-2.5" /> {pollLabel}
+                        </span>
+                      )}
                     </div>
                     {wins > 0 && <span className="text-xs text-emerald-400 shrink-0">{wins}W</span>}
                   </div>
