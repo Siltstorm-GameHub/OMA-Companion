@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { X, Trophy, Star, TrendingUp, CheckCircle2, Vote } from "lucide-react";
+import { X, Trophy, Star, TrendingUp, CheckCircle2, Vote, GripVertical, ListOrdered } from "lucide-react";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };
 type MatchEntry = { userId: string | null; statsJson: string | null };
@@ -24,24 +24,39 @@ interface Props {
   registeredUsers: User[];
   tournament: Tournament | null;
   seriesStatConfig: SeriesStatConfig | null;
+  isReEdit?: boolean;
+  initialData?: Record<string, unknown>;
+  initialFinalRanking?: string[];
+  initialFinalRankingNote?: string;
   onClose: () => void;
 }
 
 const inputCls = "w-full rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
+const MEDALS = ["🥇", "🥈", "🥉"];
 
 export default function EventCompletionModal({
-  eventId, eventTitle, registeredUsers, tournament, seriesStatConfig, onClose,
+  eventId, eventTitle, registeredUsers, tournament, seriesStatConfig,
+  isReEdit, initialData, initialFinalRanking, initialFinalRankingNote, onClose,
 }: Props) {
   const router = useRouter();
   const ref = useRef<HTMLDivElement>(null);
 
-  const [mvpUserId, setMvpUserId] = useState<string>("");
+  const [mvpUserId, setMvpUserId] = useState<string>((initialData?.mvpUserId as string) ?? "");
   const [winnerStatField, setWinnerStatField] = useState<string>(seriesStatConfig?.defaultWinnerStatField ?? "");
   const [seriesWinnerTargetField, setSeriesWinnerTargetField] = useState<string>(seriesStatConfig?.defaultWinnerTargetField ?? "");
-  const [hasPoll, setHasPoll] = useState(false);
-  const [pollLabel, setPollLabel] = useState("MVP");
-  const [pollBonusPoints, setPollBonusPoints] = useState<number>(10);
-  const [pollWinnerId, setPollWinnerId] = useState<string>("");
+  const [hasPoll, setHasPoll] = useState(!!(initialData?.pollWinnerId));
+  const [pollLabel, setPollLabel] = useState((initialData?.pollLabel as string) ?? "MVP");
+  const [pollBonusPoints, setPollBonusPoints] = useState<number>((initialData?.pollBonusPoints as number) ?? 10);
+  const [pollWinnerId, setPollWinnerId] = useState<string>((initialData?.pollWinnerId as string) ?? "");
+
+  // Endplatzierung
+  const [rankingOrder, setRankingOrder] = useState<string[]>(() => {
+    if (initialFinalRanking?.length) return initialFinalRanking;
+    return registeredUsers.map(u => u.id);
+  });
+  const [rankingNote, setRankingNote] = useState(initialFinalRankingNote ?? "");
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+
   const [loading, setLoading] = useState(false);
 
   // Schließen via Außenklick
@@ -97,6 +112,7 @@ export default function EventCompletionModal({
   async function handleConfirm() {
     setLoading(true);
     try {
+      // 1. Series-Standings (MVP, Poll, Participations)
       const res = await fetch(`/api/admin/events/${eventId}/complete`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -109,17 +125,55 @@ export default function EventCompletionModal({
           pollBonusPoints:         hasPoll && pollWinnerId ? pollBonusPoints : undefined,
         }),
       });
-      if (res.ok) {
-        toast.success(`"${eventTitle}" abgeschlossen & Gesamttabelle aktualisiert`);
-        router.refresh();
-        onClose();
-      } else {
+      if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         toast.error(err.error ?? "Fehler beim Abschließen");
+        return;
       }
+
+      // 2. Endplatzierung + Punkte (Turnier-System) — nur wenn Tournament vorhanden
+      if (tournament && rankingOrder.length > 0) {
+        const rankRes = await fetch(`/api/tournaments/${eventId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            finalRanking:     rankingOrder,
+            finalRankingNote: rankingNote.trim() || null,
+            ...(!isReEdit && { status: "finished" }),
+          }),
+        });
+        if (!rankRes.ok) {
+          toast.error("Fehler beim Speichern der Endplatzierung");
+          return;
+        }
+      }
+
+      toast.success(isReEdit
+        ? `"${eventTitle}" aktualisiert`
+        : `"${eventTitle}" abgeschlossen & Gesamttabelle aktualisiert`
+      );
+      router.refresh();
+      onClose();
     } finally {
       setLoading(false);
     }
+  }
+
+  function moveUp(idx: number) {
+    if (idx === 0) return;
+    setRankingOrder(prev => {
+      const next = [...prev];
+      [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+      return next;
+    });
+  }
+  function moveDown(idx: number) {
+    setRankingOrder(prev => {
+      if (idx >= prev.length - 1) return prev;
+      const next = [...prev];
+      [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+      return next;
+    });
   }
 
   return (
@@ -129,7 +183,9 @@ export default function EventCompletionModal({
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-teal-400" />
-            <h2 className="text-sm font-semibold text-white">Event abschließen</h2>
+            <h2 className="text-sm font-semibold text-white">
+              {isReEdit ? "Abschluss bearbeiten" : "Event abschließen"}
+            </h2>
           </div>
           <button onClick={onClose} className="text-gray-600 hover:text-gray-400 transition-colors">
             <X className="w-4 h-4" />
@@ -138,8 +194,10 @@ export default function EventCompletionModal({
 
         <div className="overflow-y-auto flex-1 p-5 space-y-5">
           <p className="text-xs text-gray-500">
-            Mit dem Abschließen werden die Teilnahmen und Stats dieses Events in die Gesamttabelle der Reihe übertragen.
-            Status wird auf <span className="text-gray-300 font-medium">finished</span> gesetzt.
+            {isReEdit
+              ? "Nur MVP, Umfrage und Endplatzierung werden aktualisiert. Teilnahmen und Stats werden nicht nochmals gezählt."
+              : <>Mit dem Abschließen werden die Teilnahmen und Stats dieses Events in die Gesamttabelle der Reihe übertragen. Status wird auf <span className="text-gray-300 font-medium">finished</span> gesetzt.</>
+            }
           </p>
 
           {/* ── Gewinner-Stat ── */}
@@ -288,6 +346,64 @@ export default function EventCompletionModal({
             )}
           </div>
 
+          {/* ── Endplatzierung ── */}
+          {tournament && registeredUsers.length > 0 && (
+            <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(59,130,246,0.05)", border: "1px solid rgba(59,130,246,0.15)" }}>
+              <div className="flex items-center gap-2">
+                <ListOrdered className="w-3.5 h-3.5 text-blue-400" />
+                <span className="text-xs font-semibold text-blue-300">Endplatzierung</span>
+                <span className="text-[10px] text-gray-600 ml-1">— ziehen oder Pfeile nutzen</span>
+              </div>
+              <div className="space-y-1 max-h-48 overflow-y-auto">
+                {rankingOrder.map((uid, idx) => {
+                  const u = registeredUsers.find(u => u.id === uid);
+                  if (!u) return null;
+                  const name = u.username ?? u.name ?? "?";
+                  return (
+                    <div key={uid}
+                      draggable
+                      onDragStart={() => setDragIdx(idx)}
+                      onDragOver={e => { e.preventDefault(); }}
+                      onDrop={() => {
+                        if (dragIdx === null || dragIdx === idx) return;
+                        setRankingOrder(prev => {
+                          const next = [...prev];
+                          const [removed] = next.splice(dragIdx, 1);
+                          next.splice(idx, 0, removed);
+                          return next;
+                        });
+                        setDragIdx(null);
+                      }}
+                      className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.05] cursor-grab active:cursor-grabbing select-none">
+                      <GripVertical className="w-3.5 h-3.5 text-gray-600 shrink-0" />
+                      <span className="text-sm w-5 text-center shrink-0">
+                        {idx < 3 ? MEDALS[idx] : <span className="text-xs text-gray-500">{idx + 1}</span>}
+                      </span>
+                      {u.image
+                        ? <img src={u.image} alt="" className="w-5 h-5 rounded-full object-cover shrink-0" />
+                        : <div className="w-5 h-5 rounded-full bg-gray-700 flex items-center justify-center text-[9px] text-gray-400 shrink-0">{name[0].toUpperCase()}</div>}
+                      <span className="text-xs text-white flex-1 truncate">{name}</span>
+                      <div className="flex gap-0.5 shrink-0">
+                        <button onClick={() => moveUp(idx)} disabled={idx === 0} className="p-0.5 text-gray-600 hover:text-white disabled:opacity-20 transition-colors">▲</button>
+                        <button onClick={() => moveDown(idx)} disabled={idx === rankingOrder.length - 1} className="p-0.5 text-gray-600 hover:text-white disabled:opacity-20 transition-colors">▼</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div>
+                <label className="text-[11px] text-gray-500 block mb-1">Notiz (optional, z.B. Disqualifikation)</label>
+                <textarea
+                  value={rankingNote}
+                  onChange={e => setRankingNote(e.target.value)}
+                  placeholder="z.B. Spieler X nachträglich disqualifiziert wegen …"
+                  rows={2}
+                  className={inputCls + " resize-none"}
+                />
+              </div>
+            </div>
+          )}
+
           {/* ── Zusammenfassung ── */}
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-2">
             <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest">Wird übertragen</p>
@@ -334,7 +450,7 @@ export default function EventCompletionModal({
           </button>
           <button onClick={handleConfirm} disabled={loading}
             className="flex-1 text-sm bg-teal-600 hover:bg-teal-500 text-white rounded-lg px-4 py-2 transition-colors disabled:opacity-50 font-medium">
-            {loading ? "Wird abgeschlossen…" : "Abschließen & speichern"}
+            {loading ? "Wird gespeichert…" : isReEdit ? "Änderungen speichern" : "Abschließen & speichern"}
           </button>
         </div>
       </div>

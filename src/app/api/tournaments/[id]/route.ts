@@ -73,6 +73,10 @@ async function awardPoints(
     const deltaCoins = coins   * direction;
     const deltaRank  = rankPts * direction;
 
+    const baseReason = direction === 1
+      ? `Platz ${placement} beim Turnier (${eventLabel})`
+      : `Korrektur Platz ${placement} – Turnier (${eventLabel})`;
+
     await prisma.$transaction([
       prisma.user.update({
         where: { id: userId },
@@ -81,15 +85,12 @@ async function awardPoints(
           ...(deltaRank  !== 0 && { rankPoints: { increment: deltaRank  } }),
         },
       }),
-      prisma.pointTransaction.create({
-        data: {
-          userId,
-          amount: deltaCoins,
-          reason: direction === 1
-            ? `Platz ${placement} beim Turnier (${eventLabel})`
-            : `Korrektur Platz ${placement} – Turnier (${eventLabel})`,
-        },
-      }),
+      ...(deltaCoins !== 0 ? [prisma.pointTransaction.create({
+        data: { userId, amount: deltaCoins, reason: `[Münzen] ${baseReason}` },
+      })] : []),
+      ...(deltaRank !== 0 ? [prisma.pointTransaction.create({
+        data: { userId, amount: deltaRank, reason: `[Rang-Punkte] ${baseReason}` },
+      })] : []),
     ]);
   }
 }

@@ -45,16 +45,41 @@ export async function purchaseCollectible(userId: string, collectibleItemId: str
   });
   if (existing) return { error: "Bereits in deiner Sammlung" };
 
+  // Aktuellen Showcase laden, bevor die Transaktion läuft
+  const userForShowcase = await prisma.user.findUnique({
+    where:  { id: userId },
+    select: { showcaseJson: true },
+  });
+  const currentShowcase: string[] = (() => {
+    try { return userForShowcase?.showcaseJson ? JSON.parse(userForShowcase.showcaseJson) : []; }
+    catch { return []; }
+  })();
+
+  // Neues Item in leeren Slot eintragen, falls noch Platz ist und es noch nicht drin ist
+  const updatedShowcase = currentShowcase.includes(collectibleItemId)
+    ? currentShowcase
+    : currentShowcase.length < MAX_SHOWCASE
+      ? [...currentShowcase, collectibleItemId]
+      : currentShowcase;
+
+  const showcaseChanged = updatedShowcase.length !== currentShowcase.length;
+
   await prisma.$transaction([
     prisma.userCollectible.create({ data: { userId, collectibleItemId } }),
-    prisma.user.update({ where: { id: userId }, data: { points: { decrement: price } } }),
+    prisma.user.update({
+      where: { id: userId },
+      data:  {
+        points: { decrement: price },
+        ...(showcaseChanged && { showcaseJson: JSON.stringify(updatedShowcase) }),
+      },
+    }),
     prisma.pointTransaction.create({ data: { userId, amount: -price, reason: `Sammlung: ${item.name} gekauft` } }),
     ...(item.stock !== null
       ? [prisma.collectibleItem.update({ where: { id: collectibleItemId }, data: { stock: { decrement: 1 } } })]
       : []),
   ]);
 
-  return { ok: true, item };
+  return { ok: true, item, addedToShowcase: showcaseChanged };
 }
 
 /** Setzt die Showcase-Slots des Users (max. 5 Item-IDs, alle müssen dem User gehören). */

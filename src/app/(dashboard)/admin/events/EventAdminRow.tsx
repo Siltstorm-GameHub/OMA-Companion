@@ -29,6 +29,7 @@ type Event = {
   series?: { id: string; name: string } | null;
   _count: { registrations: number };
   registrations: Registration[];
+  completionData?: unknown;
   // Tournament fields (now directly on Event)
   format: string | null;
   tournamentStatus: string | null;
@@ -466,11 +467,16 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
           registeredUsers={allUsers.filter(u => registeredIds.has(u.id))}
           tournament={tournament ?? null}
           seriesStatConfig={(() => {
-            try {
-              const cfg = { participationPoints: statParticipationPts, stats: statRows, mvpStatField: statMvpField || undefined, defaultWinnerStatField: statDefaultWinnerField || undefined, defaultWinnerTargetField: statDefaultTargetField || undefined };
-              return cfg;
-            } catch { return null; }
+            const cfg = { participationPoints: statParticipationPts, stats: statRows, mvpStatField: statMvpField || undefined, defaultWinnerStatField: statDefaultWinnerField || undefined, defaultWinnerTargetField: statDefaultTargetField || undefined };
+            return cfg;
           })()}
+          isReEdit={!!event.completionData}
+          initialData={(() => {
+            try { return event.completionData ? (JSON.parse(event.completionData as string) as Record<string, unknown>) : undefined; }
+            catch { return undefined; }
+          })()}
+          initialFinalRanking={event.finalRankingJson ? JSON.parse(event.finalRankingJson) as string[] : undefined}
+          initialFinalRankingNote={event.finalRankingNote ?? undefined}
           onClose={() => setShowCompletionModal(false)}
         />
       )}
@@ -1012,17 +1018,19 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                     {loading ? "Speichert…" : "Speichern"}
                   </button>
 
-                  {/* ── Event abschließen (nur für Series-Events ohne completionData) ── */}
-                  {event.seriesId && status !== "finished" && (
+                  {/* ── Event abschließen / Abschluss bearbeiten ── */}
+                  {event.seriesId && (
                     <div className="border border-teal-800/40 rounded-lg p-3 bg-teal-950/10">
                       <div className="flex items-center justify-between gap-4 flex-wrap">
                         <div>
                           <p className="text-sm font-medium text-white flex items-center gap-2">
                             <CheckCircle2 className="w-3.5 h-3.5 text-teal-400" />
-                            Event abschließen
+                            {event.completionData ? "Abschluss bearbeiten" : "Event abschließen"}
                           </p>
                           <p className="text-xs text-gray-600 mt-0.5">
-                            Überträgt Teilnahmen und Stats in die Gesamttabelle der Reihe.
+                            {event.completionData
+                              ? "MVP, Umfrage oder Endplatzierung nachträglich anpassen."
+                              : "Überträgt Teilnahmen und Stats in die Gesamttabelle der Reihe."}
                           </p>
                         </div>
                         <button
@@ -1030,7 +1038,8 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                           disabled={loading}
                           className="flex items-center gap-1.5 text-sm text-teal-300 hover:text-white hover:bg-teal-700 border border-teal-600/50 hover:border-teal-700 rounded-lg px-3 py-2 transition-colors disabled:opacity-50 shrink-0"
                         >
-                          <CheckCircle2 className="w-3.5 h-3.5" /> Abschließen
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          {event.completionData ? "Bearbeiten" : "Abschließen"}
                         </button>
                       </div>
                     </div>
