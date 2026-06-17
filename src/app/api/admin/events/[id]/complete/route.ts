@@ -144,7 +144,9 @@ export async function POST(
 
   const updatedStandings: SeriesStandings = {
     lastUpdated: new Date().toISOString(),
-    processedEventIds: [...existingJson.processedEventIds, eventId],
+    processedEventIds: existingJson.processedEventIds.includes(eventId)
+      ? existingJson.processedEventIds
+      : [...existingJson.processedEventIds, eventId],
     raw,
   };
 
