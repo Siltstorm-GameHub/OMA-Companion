@@ -58,8 +58,12 @@ export async function POST(
   });
 
   if (!event) return NextResponse.json({ error: "Event nicht gefunden" }, { status: 404 });
-  if (event.completionData) return NextResponse.json({ error: "Event bereits abgeschlossen" }, { status: 409 });
   if (!event.seriesId || !event.series) return NextResponse.json({ error: "Event ist nicht Teil einer Reihe" }, { status: 400 });
+
+  const isReEdit = !!event.completionData;
+  const oldCompletion = isReEdit
+    ? (JSON.parse(event.completionData as string) as { mvpUserId?: string; pollWinnerId?: string; pollLabel?: string; pollBonusPoints?: number })
+    : null;
 
   // Stat-Config der Reihe
   const statCfg: SeriesStatConfig = (() => {
@@ -106,28 +110,34 @@ export async function POST(
     raw[userId][field] = (raw[userId][field] ?? 0) + value;
   }
 
-  // Teilnahme + passende Stats für jeden Registrierten
-  for (const { userId } of event.registrations) {
-    addToUser(userId, "participations", 1);
-
-    const eStats = userStats[userId] ?? {};
-    for (const { field } of (statCfg.stats ?? [])) {
-      const val = eStats[field] ?? 0;
-      if (val > 0) addToUser(userId, field, val);
+  if (!isReEdit) {
+    // Erst-Abschluss: Teilnahmen + Stats für alle Registrierten
+    for (const { userId } of event.registrations) {
+      addToUser(userId, "participations", 1);
+      const eStats = userStats[userId] ?? {};
+      for (const { field } of (statCfg.stats ?? [])) {
+        const val = eStats[field] ?? 0;
+        if (val > 0) addToUser(userId, field, val);
+      }
+    }
+    // Gewinner +1 auf Ziel-Stat
+    if (eventWinnerId && body.seriesWinnerTargetField) {
+      addToUser(eventWinnerId, body.seriesWinnerTargetField, 1);
     }
   }
 
-  // Gewinner +1 auf Ziel-Stat
-  if (eventWinnerId && body.seriesWinnerTargetField) {
-    addToUser(eventWinnerId, body.seriesWinnerTargetField, 1);
+  // MVP: alten Eintrag rückgängig, neuen setzen
+  if (isReEdit && oldCompletion?.mvpUserId && statCfg.mvpStatField) {
+    addToUser(oldCompletion.mvpUserId, statCfg.mvpStatField, -1);
   }
-
-  // MVP +1 auf MVP-Stat-Feld
   if (body.mvpUserId && statCfg.mvpStatField) {
     addToUser(body.mvpUserId, statCfg.mvpStatField, 1);
   }
 
-  // Umfrage-Gewinner: Bonuspunkte auf eigenem Feld
+  // Poll: alten Eintrag rückgängig, neuen setzen
+  if (isReEdit && oldCompletion?.pollWinnerId && oldCompletion.pollLabel && oldCompletion.pollBonusPoints) {
+    addToUser(oldCompletion.pollWinnerId, oldCompletion.pollLabel, -(oldCompletion.pollBonusPoints));
+  }
   if (body.pollWinnerId && body.pollLabel && body.pollBonusPoints && body.pollBonusPoints > 0) {
     addToUser(body.pollWinnerId, body.pollLabel, body.pollBonusPoints);
   }
@@ -154,7 +164,7 @@ export async function POST(
     prisma.event.update({
       where: { id: eventId },
       data: {
-        status:         "finished",
+        ...(!isReEdit && { status: "finished" }),
         completionData: JSON.stringify(completionData),
       },
     }),

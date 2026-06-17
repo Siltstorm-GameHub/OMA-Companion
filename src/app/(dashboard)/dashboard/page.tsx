@@ -3,7 +3,7 @@ import { getSessionUser } from "@/lib/roles";
 import {
   Trophy, CalendarDays, Users, ChevronRight,
   ShieldAlert, Clock, Scroll, Swords, CheckCircle2,
-  Circle, Zap, Repeat,
+  Circle, Zap, Repeat, Radio,
 } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
 import Link from "next/link";
@@ -112,11 +112,18 @@ export default async function DashboardPage() {
   const avatarUrl   = sessionUser?.image ?? null;
   const isStaff     = userRole === "admin" || userRole === "moderator";
 
-  const nextEvent = await prisma.event.findFirst({
-    where:   { status: { in: ["open", "active"] }, startAt: { gte: now } },
-    orderBy: { startAt: "asc" },
-    include: { _count: { select: { registrations: true } } },
-  });
+  const [nextEvent, liveEvent] = await Promise.all([
+    prisma.event.findFirst({
+      where:   { status: { in: ["open", "active"] }, startAt: { gte: now } },
+      orderBy: { startAt: "asc" },
+      include: { _count: { select: { registrations: true } } },
+    }),
+    prisma.event.findFirst({
+      where:   { status: "active", startAt: { lte: now } },
+      orderBy: { startAt: "desc" },
+      select:  { id: true, title: true, format: true, _count: { select: { registrations: true } } },
+    }),
+  ]);
 
   return (
     <div className="animate-fade-in">
@@ -214,6 +221,43 @@ export default async function DashboardPage() {
           ))}
         </div>
       </div>
+
+      {/* ── Live-Event-Banner ─────────────────────────────────────── */}
+      {liveEvent && (
+        <div className="px-4 sm:px-6 pt-4 max-w-7xl mx-auto">
+          <Link
+            href={liveEvent.format ? `/tournament/${liveEvent.id}` : `/events/${liveEvent.id}`}
+            className="flex items-center gap-4 px-4 py-3.5 rounded-xl group transition-all hover:brightness-110"
+            style={{ background: "linear-gradient(135deg, rgba(239,68,68,0.12) 0%, rgba(239,68,68,0.06) 100%)", border: "1px solid rgba(239,68,68,0.28)", boxShadow: "0 0 24px rgba(239,68,68,0.08)" }}>
+            {/* Pulsierendes Icon */}
+            <div className="relative shrink-0">
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center"
+                style={{ background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)" }}>
+                <Radio className="w-4 h-4 text-red-400" />
+              </div>
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-400" />
+            </div>
+            {/* Text */}
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-red-400/70 mb-0.5">Live jetzt</p>
+              <p className="text-sm font-bold text-white truncate group-hover:text-red-300 transition-colors">
+                {liveEvent.title}
+              </p>
+            </div>
+            {/* Teilnehmer + Arrow */}
+            <div className="flex items-center gap-3 shrink-0">
+              <span className="hidden sm:flex items-center gap-1 text-xs text-gray-500">
+                <Users className="w-3 h-3" />
+                {liveEvent._count.registrations}
+              </span>
+              <span className="text-xs font-semibold text-red-400 flex items-center gap-1">
+                Zum Event <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+              </span>
+            </div>
+          </Link>
+        </div>
+      )}
 
       {/* ── Content ─────────────────────────────────────────────────── */}
       <div className="px-4 sm:px-6 py-5 max-w-7xl mx-auto space-y-5 relative">
