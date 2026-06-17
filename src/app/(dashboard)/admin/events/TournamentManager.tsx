@@ -4,8 +4,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   Trophy, Plus, Trash2, Clock, ChevronDown, ChevronUp,
-  Save, X, Settings, Users, UserPlus, UserMinus, RotateCcw,
-  RefreshCw, Lock, Unlock,
+  Save, X, RotateCcw, RefreshCw,
 } from "lucide-react";
 import StatFieldEditor from "@/components/StatFieldEditor";
 
@@ -304,35 +303,8 @@ export default function TournamentManager({
   const [loading, setLoading] = useState(false);
 
   // ── Panel visibility ──────────────────────────────────────────────────
-  const [showSettings, setShowSettings]     = useState(false);
   const [showParticipants, setShowParticipants] = useState(false);
   const [showAdd, setShowAdd]               = useState(false);
-
-  // ── Settings edit state ───────────────────────────────────────────────
-  const initSettings = () => {
-    if (!tournament) return { status: "active", pts1: 100, pts2: 50, pts3: 25, ptsWin: 3, ptsDraw: 1 };
-    const pc: Record<string, number | { coins?: number; points?: number }> =
-      tournament.pointsConfig ? JSON.parse(tournament.pointsConfig) : {};
-    const extract = (v: number | { coins?: number; points?: number } | undefined, fallback: number): number => {
-      if (v == null) return fallback;
-      return typeof v === "number" ? v : (v.points ?? v.coins ?? fallback);
-    };
-    return {
-      status:  tournament.status,
-      pts1:    extract(pc["1"],   100),
-      pts2:    extract(pc["2"],   50),
-      pts3:    extract(pc["3"],   25),
-      ptsWin:  extract(pc["win"], 3),
-      ptsDraw: extract(pc["draw"],1),
-    };
-  };
-  const [settings, setSettings] = useState(initSettings);
-
-  const initStatFields = (): string[] => {
-    if (!tournament?.statFields) return [];
-    try { return JSON.parse(tournament.statFields) as string[]; } catch { return []; }
-  };
-  const [settingsStatFields, setSettingsStatFields] = useState<string[]>(initStatFields);
 
   // ── Participant management ────────────────────────────────────────────
   const [addParticipantId, setAddParticipantId] = useState("");
@@ -353,15 +325,11 @@ export default function TournamentManager({
 
   if (!tournament) {
     return (
-      <CreationForm
-        event={event}
-        allUsers={allUsers}
-        onCreated={(eventData) => {
-          const ev = eventData as unknown as { id: string; tournamentStatus: string | null; format: string; pointsConfig: string | null; statFields: string | null; finalRankingJson: string | null; finalRankingNote: string | null; participants: Participant[]; matches: Match[] };
-          setTournament({ id: ev.id, status: ev.tournamentStatus ?? "active", format: ev.format, pointsConfig: ev.pointsConfig, statFields: ev.statFields, finalRankingJson: ev.finalRankingJson, finalRankingNote: ev.finalRankingNote, participants: ev.participants, matches: ev.matches });
-          router.refresh();
-        }}
-      />
+      <div className="text-center py-8 text-gray-500 text-sm space-y-2">
+        <Trophy className="w-8 h-8 mx-auto text-gray-700" />
+        <p>Noch kein Turnier erstellt.</p>
+        <p className="text-xs text-gray-600">Format, Punkte und Stat-Felder im Reiter <span className="text-amber-400">Einstellungen</span> konfigurieren.</p>
+      </div>
     );
   }
 
@@ -415,35 +383,6 @@ export default function TournamentManager({
     } else {
       toast.error("Fehler beim Löschen des Turniers");
     }
-  }
-
-  async function saveSettings() {
-    if (!tournament) return;
-    setLoading(true);
-    const isLigaFmt = tournament.format === "liga";
-    const config = isLigaFmt
-      ? { win: settings.ptsWin, draw: settings.ptsDraw }
-      : { "1": settings.pts1, "2": settings.pts2, "3": settings.pts3 };
-    const fields = (tournament.format === "ffa" || tournament.format === "coop_stats" || tournament.format === "avg_stats")
-      ? settingsStatFields
-      : null;
-    const res = await fetch(`/api/tournaments/${tournament.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        status:       settings.status,
-        pointsConfig: config,
-        ...(fields !== null && { statFields: fields }),
-      }),
-    });
-    if (res.ok) {
-      const updated = await res.json();
-      setTournament(prev => prev ? { ...prev, status: updated.tournamentStatus ?? prev.status, pointsConfig: updated.pointsConfig, statFields: updated.statFields } : prev);
-      setSettingsStatFields(updated.statFields ? JSON.parse(updated.statFields) : []);
-      setShowSettings(false);
-    }
-    setLoading(false);
-    router.refresh();
   }
 
   async function generateRoundRobinMatches() {
@@ -622,12 +561,6 @@ export default function TournamentManager({
           )}
         </div>
         <div className="flex items-center gap-1.5">
-          <button onClick={() => { setShowSettings(!showSettings); setShowParticipants(false); }}
-            className={`flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors ${
-              showSettings ? "bg-gray-700 text-white" : "text-gray-500 hover:text-white hover:bg-gray-800"
-            }`}>
-            <Settings className="w-3.5 h-3.5" /> Einstellungen
-          </button>
           <button onClick={deleteTournament} disabled={loading}
             className="flex items-center gap-1 text-xs text-red-500 hover:text-red-400 hover:bg-red-900/20 px-2 py-1 rounded transition-colors disabled:opacity-50">
             <Trash2 className="w-3.5 h-3.5" /> Löschen
@@ -635,75 +568,8 @@ export default function TournamentManager({
         </div>
       </div>
 
-      {/* ── Settings panel ───────────────────────────────────────────── */}
-      {showSettings && (
-        <div className="border border-gray-700 rounded-xl p-4 bg-gray-800/30 space-y-4">
-          <p className="text-sm font-medium text-white flex items-center gap-2">
-            <Settings className="w-4 h-4 text-gray-400" /> Turnier bearbeiten
-          </p>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs text-gray-500 block mb-1">Status</label>
-              <select value={settings.status} onChange={e => setSettings(s => ({ ...s, status: e.target.value }))}
-                className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2">
-                {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="text-xs text-gray-500 block mb-2">
-              {tournament.format === "liga" ? "Ligapunkte" : "Punkte pro Platzierung"}
-            </label>
-            {tournament.format === "liga" ? (
-              <div className="flex gap-3">
-                {([["🏆 Sieg", "ptsWin"], ["🤝 Unentschieden", "ptsDraw"]] as const).map(([label, key]) => (
-                  <div key={key} className="flex-1">
-                    <label className="text-xs text-gray-600 block mb-1">{label}</label>
-                    <input type="number" value={settings[key]} min={0}
-                      onChange={e => setSettings(s => ({ ...s, [key]: Number(e.target.value) }))}
-                      className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-center"
-                    />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex gap-3">
-                {([["🥇 1.", "pts1"], ["🥈 2.", "pts2"], ["🥉 3.", "pts3"]] as const).map(([label, key]) => (
-                  <div key={key} className="flex-1">
-                    <label className="text-xs text-gray-600 block mb-1">{label}</label>
-                    <input type="number" value={settings[key]} min={0}
-                      onChange={e => setSettings(s => ({ ...s, [key]: Number(e.target.value) }))}
-                      className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-center"
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          {(tournament.format === "ffa" || tournament.format === "coop_stats" || tournament.format === "avg_stats") && (
-            <div>
-              <label className="text-xs text-gray-500 block mb-1">Statistik-Felder</label>
-              <StatFieldEditor
-                fields={settingsStatFields}
-                onChange={setSettingsStatFields}
-                isAvg={tournament.format === "avg_stats"}
-              />
-            </div>
-          )}
-          <div className="flex gap-2">
-            <button onClick={saveSettings} disabled={loading}
-              className="flex items-center gap-1.5 text-sm bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white rounded-lg px-3 py-2">
-              <Save className="w-3.5 h-3.5" /> Speichern
-            </button>
-            <button onClick={() => setShowSettings(false)} className="text-sm text-gray-500 hover:text-white px-3 py-2">
-              Abbrechen
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Round Robin auto-generate (direkt sichtbar wenn relevant) */}
-      {isRoundRobin && tournament.participants.length >= 2 && !showSettings && (
+      {isRoundRobin && tournament.participants.length >= 2 && (
         <button onClick={generateRoundRobinMatches} disabled={loading}
           className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 bg-blue-900/20 hover:bg-blue-900/30 border border-blue-900/40 rounded-lg px-3 py-2 transition-colors w-full justify-center">
           <RefreshCw className="w-3.5 h-3.5" />
