@@ -11,6 +11,7 @@ import { describeMonthlyModes } from "@/lib/recurrence";
 import Link from "next/link";
 import TournamentManager from "./TournamentManager";
 import GameNameInput from "@/components/GameNameInput";
+import StatFieldEditor from "@/components/StatFieldEditor";
 import EventCompletionModal from "./EventCompletionModal";
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
@@ -43,6 +44,32 @@ type Event = {
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
 const STATUS_OPTIONS = ["open", "active", "closed", "finished"];
+
+const TMT_FORMATS = [
+  { value: "single_elimination", label: "Einzel-Eliminierung",  desc: "Klassisches K.O.-System" },
+  { value: "round_robin",        label: "Jeder gegen Jeden",    desc: "Alle spielen gegen alle" },
+  { value: "liga",               label: "Liga",                 desc: "Spieltage, Tabelle mit S/U/N" },
+  { value: "ffa",                label: "Free for All",         desc: "Alle gegeneinander" },
+  { value: "coop_stats",         label: "Kooperativ (Stats)",   desc: "Individuelle Stats" },
+  { value: "avg_stats",          label: "Durchschnittswerte",   desc: "Bester Schnitt gewinnt" },
+] as const;
+
+function parseTmtConfig(pointsConfig: string | null) {
+  const defaults = { coins1: 200, coins2: 100, coins3: 50, pts1: 100, pts2: 50, pts3: 25, win: 30, draw: 10 };
+  if (!pointsConfig) return defaults;
+  try {
+    const pc = JSON.parse(pointsConfig) as Record<string, number | { coins?: number; points?: number }>;
+    const c = (v: number | { coins?: number; points?: number } | undefined, fb: number) =>
+      v == null ? fb : typeof v === "number" ? v : (v.coins ?? fb);
+    const p = (v: number | { coins?: number; points?: number } | undefined, fb: number) =>
+      v == null ? fb : typeof v === "number" ? v : (v.points ?? v.coins ?? fb);
+    return {
+      coins1: c(pc["1"], 200), coins2: c(pc["2"], 100), coins3: c(pc["3"], 50),
+      pts1: p(pc["1"], 100), pts2: p(pc["2"], 50), pts3: p(pc["3"], 25),
+      win: c(pc["win"], 30), draw: c(pc["draw"], 10),
+    };
+  } catch { return defaults; }
+}
 const STATUS_STYLES: Record<string, string> = {
   open: "bg-blue-900/50 text-blue-300", active: "bg-green-900/50 text-green-300",
   closed: "bg-amber-900/50 text-amber-300", finished: "bg-gray-800 text-gray-500",
@@ -171,6 +198,17 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
 
   /* ── Completion modal ── */
   const [showCompletionModal, setShowCompletionModal] = useState(false);
+
+  /* ── Tournament settings state ── */
+  const [tmtFormat, setTmtFormat]   = useState(event.format ?? "single_elimination");
+  const [tmtPoints, setTmtPoints]   = useState(() => parseTmtConfig(event.pointsConfig));
+  const [tmtStatFields, setTmtStatFields] = useState<string[]>(() => {
+    if (!event.statFields) return ["Kills", "Assists", "Punkte"];
+    try { return JSON.parse(event.statFields) as string[]; } catch { return []; }
+  });
+  const [tmtAutoGenerate, setTmtAutoGenerate] = useState(false);
+  const [tmtSelected, setTmtSelected]         = useState<string[]>([]);
+  const [tmtLoading, setTmtLoading]           = useState(false);
 
   /* ── Participants state ── */
   const [bulkSelected, setBulkSelected] = useState<string[]>([]);
@@ -342,6 +380,44 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
     setLoading(false);
     toast.success("Turnier gelöscht");
     router.refresh();
+  }
+
+  async function saveTmtSettings() {
+    setTmtLoading(true);
+    const isLiga = (tournament ? tournament.format : tmtFormat) === "liga";
+    const hasStat = ["ffa", "coop_stats", "avg_stats"].includes(tournament ? tournament.format : tmtFormat);
+    const config = isLiga
+      ? { win: tmtPoints.win, draw: tmtPoints.draw }
+      : {
+          "1": { coins: tmtPoints.coins1, points: tmtPoints.pts1 },
+          "2": { coins: tmtPoints.coins2, points: tmtPoints.pts2 },
+          "3": { coins: tmtPoints.coins3, points: tmtPoints.pts3 },
+        };
+    if (!tournament) {
+      const res = await fetch("/api/tournaments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          eventId: event.id, format: tmtFormat, pointsConfig: config,
+          statFields: hasStat ? tmtStatFields : null,
+          ...(tmtAutoGenerate && tmtSelected.length >= 2 && { participantIds: tmtSelected, autoGenerate: true }),
+        }),
+      });
+      if (res.ok) { toast.success("Turnier erstellt"); router.refresh(); }
+      else { const err = await res.json(); toast.error(err.error ?? "Fehler beim Erstellen"); }
+    } else {
+      const res = await fetch(`/api/tournaments/${event.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pointsConfig: config,
+          ...(hasStat && { statFields: tmtStatFields }),
+        }),
+      });
+      if (res.ok) { toast.success("Turnier-Einstellungen gespeichert"); router.refresh(); }
+      else { toast.error("Fehler beim Speichern"); }
+    }
+    setTmtLoading(false);
   }
 
   async function saveSeriesSettings() {
@@ -1017,6 +1093,160 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                     className="text-sm bg-rose-600 hover:bg-rose-500 text-white rounded-lg px-4 py-2 disabled:opacity-50 transition-colors">
                     {loading ? "Speichert…" : "Speichern"}
                   </button>
+
+                  {/* ── Turnier-Einstellungen ── */}
+                  <div className="rounded-xl p-3 space-y-4" style={{ background: "rgba(245,158,11,0.04)", border: "1px solid rgba(245,158,11,0.15)" }}>
+                    <div className="flex items-center gap-2">
+                      <Trophy className="w-3.5 h-3.5 text-amber-400" />
+                      <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Turnier-Einstellungen</span>
+                      {tournament && (
+                        <span className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
+                          {TMT_FORMATS.find(f => f.value === tournament.format)?.label ?? tournament.format}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Format picker – nur beim Erstellen */}
+                    {!tournament && (
+                      <div>
+                        <label className="text-xs text-gray-500 block mb-2">Format</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {TMT_FORMATS.map(f => (
+                            <button key={f.value} type="button" onClick={() => setTmtFormat(f.value)}
+                              className={`text-left p-3 rounded-lg border transition-colors ${
+                                tmtFormat === f.value
+                                  ? "border-amber-500 bg-amber-900/20 text-white"
+                                  : "border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600"
+                              }`}>
+                              <p className="text-sm font-medium">{f.label}</p>
+                              <p className="text-xs text-gray-500 mt-0.5">{f.desc}</p>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Belohnungen */}
+                    {(() => {
+                      const fmt = tournament ? tournament.format : tmtFormat;
+                      const isLiga = fmt === "liga";
+                      return (
+                        <div>
+                          <label className="text-xs text-gray-500 block mb-2">
+                            {isLiga ? "🪙 Münzen pro Match-Ergebnis" : "Belohnungen pro Platzierung"}
+                          </label>
+                          {isLiga ? (
+                            <div className="flex gap-3">
+                              {([["🏆 Sieg", "win"], ["🤝 Unentschieden", "draw"]] as const).map(([label, key]) => (
+                                <div key={key} className="flex-1">
+                                  <label className="text-xs text-gray-600 block mb-1">{label}</label>
+                                  <input type="number" min={0} value={tmtPoints[key]}
+                                    onChange={e => setTmtPoints(p => ({ ...p, [key]: Number(e.target.value) }))}
+                                    className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-center"
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              <div className="grid grid-cols-3 gap-2 text-[10px] text-gray-500 uppercase tracking-wide px-1">
+                                <span>Platz</span>
+                                <span className="text-center">🪙 Münzen</span>
+                                <span className="text-center">⭐ Punkte</span>
+                              </div>
+                              {([
+                                ["🥇 1.", "coins1", "pts1"],
+                                ["🥈 2.", "coins2", "pts2"],
+                                ["🥉 3.", "coins3", "pts3"],
+                              ] as const).map(([label, ck, pk]) => (
+                                <div key={label} className="grid grid-cols-3 gap-2 items-center">
+                                  <span className="text-xs text-gray-300 font-medium">{label}</span>
+                                  <input type="number" min={0} value={tmtPoints[ck]}
+                                    onChange={e => setTmtPoints(p => ({ ...p, [ck]: Number(e.target.value) }))}
+                                    className="text-sm bg-gray-800 border border-gray-700 text-amber-300 rounded-lg px-2 py-1.5 text-center w-full"
+                                  />
+                                  <input type="number" min={0} value={tmtPoints[pk]}
+                                    onChange={e => setTmtPoints(p => ({ ...p, [pk]: Number(e.target.value) }))}
+                                    className="text-sm bg-gray-800 border border-gray-700 text-teal-300 rounded-lg px-2 py-1.5 text-center w-full"
+                                  />
+                                </div>
+                              ))}
+                              <p className="text-[10px] text-gray-600 pt-1">Münzen an alle · Punkte nur an 1./2./3.</p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+
+                    {/* Stat-Felder */}
+                    {(() => {
+                      const fmt = tournament ? tournament.format : tmtFormat;
+                      if (!["ffa", "coop_stats", "avg_stats"].includes(fmt)) return null;
+                      return (
+                        <div>
+                          <label className="text-xs text-gray-500 block mb-2">Statistik-Felder</label>
+                          <StatFieldEditor
+                            fields={tmtStatFields}
+                            onChange={setTmtStatFields}
+                            isAvg={fmt === "avg_stats"}
+                          />
+                        </div>
+                      );
+                    })()}
+
+                    {/* Auto-Generierung (nur beim Erstellen, für passende Formate) */}
+                    {!tournament && ["single_elimination", "round_robin", "liga"].includes(tmtFormat) && (
+                      <div className={`rounded-xl border p-3 transition-colors ${
+                        tmtAutoGenerate ? "border-amber-500/40 bg-amber-950/20" : "border-gray-700 bg-gray-800/30"
+                      }`}>
+                        <label className="flex items-start gap-3 cursor-pointer">
+                          <input type="checkbox" checked={tmtAutoGenerate}
+                            onChange={e => {
+                              setTmtAutoGenerate(e.target.checked);
+                              if (e.target.checked && tmtSelected.length === 0)
+                                setTmtSelected(allUsers.filter(u => registeredIds.has(u.id)).map(u => u.id));
+                            }}
+                            className="rounded mt-0.5 shrink-0" />
+                          <div>
+                            <p className="text-sm font-medium text-white">Bracket automatisch generieren</p>
+                            <p className="text-xs text-gray-500 mt-0.5">Erstellt automatisch alle Matches aus den gewählten Teilnehmern</p>
+                          </div>
+                        </label>
+                        {tmtAutoGenerate && (
+                          <div className="mt-3 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <p className="text-xs text-gray-400">Teilnehmer <span className="text-amber-400 font-semibold ml-1">({tmtSelected.length} von {allUsers.length})</span></p>
+                              <div className="flex gap-2">
+                                <button type="button" onClick={() => setTmtSelected(allUsers.map(u => u.id))} className="text-[11px] text-gray-500 hover:text-white">Alle</button>
+                                <span className="text-gray-700">·</span>
+                                <button type="button" onClick={() => setTmtSelected([])} className="text-[11px] text-gray-500 hover:text-white">Keine</button>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-40 overflow-y-auto pr-1">
+                              {allUsers.map(u => (
+                                <label key={u.id} className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer text-xs transition-colors ${
+                                  tmtSelected.includes(u.id) ? "bg-amber-900/30 border border-amber-800/50" : "bg-gray-800 hover:bg-gray-700 border border-transparent"
+                                }`}>
+                                  <input type="checkbox" checked={tmtSelected.includes(u.id)}
+                                    onChange={e => setTmtSelected(e.target.checked
+                                      ? [...tmtSelected, u.id]
+                                      : tmtSelected.filter(id => id !== u.id)
+                                    )} className="rounded shrink-0" />
+                                  <span className="text-white truncate">{userName(u)}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <button onClick={saveTmtSettings} disabled={tmtLoading}
+                      className="flex items-center gap-1.5 text-sm bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white rounded-lg px-4 py-2 transition-colors">
+                      <Trophy className="w-4 h-4" />
+                      {tmtLoading ? "Speichert…" : tournament ? "Turnier-Einstellungen speichern" : "Turnier erstellen"}
+                    </button>
+                  </div>
 
                   {/* ── Event abschließen / Abschluss bearbeiten ── */}
                   {event.seriesId && (

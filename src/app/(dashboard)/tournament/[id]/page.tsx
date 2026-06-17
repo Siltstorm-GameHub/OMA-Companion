@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Users, Trophy, Clock, Swords, ChevronDown, Medal, StickyNote } from "lucide-react";
+import { ArrowLeft, Users, Trophy, Clock, Swords, ChevronDown, Medal, StickyNote, Star, Vote } from "lucide-react";
 import WinIcon from "@/components/WinIcon";
 import BracketView from "./BracketView";
 import RoundRobinView from "./RoundRobinView";
@@ -113,6 +113,32 @@ export default async function TournamentDetailPage({
     }
   }
 
+  // Completion-Daten (Poll-Gewinner etc.)
+  type CompletionData = { pollWinnerId?: string | null; pollLabel?: string | null; pollBonusPoints?: number | null };
+  const completionData: CompletionData = (() => {
+    try { return event.completionData ? JSON.parse(event.completionData as string) : {}; } catch { return {}; }
+  })();
+  const pollWinnerId    = completionData.pollWinnerId ?? null;
+  const pollLabel       = completionData.pollLabel ?? null;
+  const pollBonusPoints = completionData.pollBonusPoints ?? null;
+
+  // Punkte pro Platzierung aus pointsConfig
+  type PcVal = number | { coins?: number; points?: number };
+  const pcRaw: Record<string, PcVal> = (() => {
+    try { return event.pointsConfig ? JSON.parse(event.pointsConfig) : {}; } catch { return {}; }
+  })();
+  function placementCoins(place: number): number {
+    const v = pcRaw[String(place)];
+    if (!v) return 0;
+    return typeof v === "number" ? v : (v.coins ?? 0);
+  }
+  function placementRankPts(place: number): number {
+    if (place > 3) return 0;
+    const v = pcRaw[String(place)];
+    if (!v) return 0;
+    return typeof v === "number" ? v : (v.points ?? v.coins ?? 0);
+  }
+
   // Stats für Header
   const playedMatches = event.matches.filter(m =>
     isElimination ? !!m.winnerId : !!m.playedAt
@@ -215,6 +241,10 @@ export default async function TournamentDetailPage({
                 const user = participant?.user;
                 const name = user ? (user.name || user.username || "Unbekannt") : "Unbekannt";
                 const isMe = uid === userId;
+                const place = i + 1;
+                const coins = placementCoins(place);
+                const rankPts = placementRankPts(place);
+                const isPollWinner = pollWinnerId === uid;
                 return (
                   <div key={uid}
                     className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${i < 3 ? "bg-amber-500/[0.06] border border-amber-500/15" : "bg-white/[0.02] border border-white/[0.05]"} ${isMe ? "ring-1 ring-teal-500/30" : ""}`}>
@@ -229,10 +259,35 @@ export default async function TournamentDetailPage({
                           {name[0]?.toUpperCase() ?? "?"}
                         </div>
                     }
-                    {/* Name */}
-                    <span className={`flex-1 text-sm font-medium truncate ${isMe ? "text-teal-300" : i === 0 ? "text-amber-200" : "text-white"}`}>
-                      {name}{isMe && <span className="text-xs text-gray-500 ml-1.5">(du)</span>}
-                    </span>
+                    {/* Name + Poll-Badge */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className={`text-sm font-medium truncate ${isMe ? "text-teal-300" : i === 0 ? "text-amber-200" : "text-white"}`}>
+                          {name}{isMe && <span className="text-xs text-gray-500 ml-1.5">(du)</span>}
+                        </span>
+                        {isPollWinner && pollLabel && (
+                          <span className="flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-violet-500/15 border border-violet-500/30 text-violet-300 shrink-0">
+                            <Vote className="w-2.5 h-2.5" /> {pollLabel}
+                          </span>
+                        )}
+                      </div>
+                      {/* Punkte-Zusammenfassung */}
+                      {(coins > 0 || rankPts > 0) && (
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {coins > 0 && (
+                            <span className="text-[10px] text-amber-400/80">+{coins} 🪙</span>
+                          )}
+                          {rankPts > 0 && (
+                            <span className="flex items-center gap-0.5 text-[10px] text-teal-400/80">
+                              +{rankPts} <Star className="w-2.5 h-2.5" />
+                            </span>
+                          )}
+                          {isPollWinner && pollBonusPoints && pollBonusPoints > 0 && (
+                            <span className="text-[10px] text-violet-400/80">+{pollBonusPoints} {pollLabel}</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
                     {i === 0 && <WinIcon size={14} />}
                   </div>
                 );
@@ -268,6 +323,7 @@ export default async function TournamentDetailPage({
               {event.registrations.map(({ user }, i) => {
                 const isMe = user.id === userId;
                 const wins = event.matches.filter(m => m.winnerId === user.id).length;
+                const isPollWinner = pollWinnerId === user.id;
                 return (
                   <div key={user.id} className={`flex items-center gap-2.5 px-3 py-2.5 ${isMe ? "bg-rose-950/30" : ""}`}>
                     <span className="text-xs text-gray-700 w-4 shrink-0 text-center">{i + 1}</span>
@@ -282,7 +338,14 @@ export default async function TournamentDetailPage({
                       <p className={`text-sm truncate font-medium ${isMe ? "text-rose-300" : "text-white"}`}>
                         {userName(user)}{isMe && " (du)"}
                       </p>
-                      <p className="text-[10px] text-gray-600">{user.points.toLocaleString("de-DE")} Pts</p>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="text-[10px] text-gray-600">{user.points.toLocaleString("de-DE")} Pts</p>
+                        {isPollWinner && pollLabel && (
+                          <span className="flex items-center gap-0.5 text-[10px] font-semibold text-violet-400">
+                            <Vote className="w-2.5 h-2.5" /> {pollLabel}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     {wins > 0 && <span className="text-xs text-emerald-400 shrink-0">{wins}W</span>}
                   </div>
