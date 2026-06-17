@@ -58,6 +58,8 @@ export default function EventCompletionModal({
   const [dragIdx, setDragIdx] = useState<number | null>(null);
 
   const [loading, setLoading] = useState(false);
+  // Merken ob der User die Reihenfolge manuell verändert hat
+  const [rankingManuallyEdited, setRankingManuallyEdited] = useState(!!initialFinalRanking?.length);
 
   // Schließen via Außenklick
   useEffect(() => {
@@ -94,6 +96,16 @@ export default function EventCompletionModal({
 
   // Verfügbare Series-Stat-Felder (Ziel für Gewinner)
   const seriesStatFields = (seriesStatConfig?.stats ?? []).map(s => s.field);
+
+  // Auto-Sort wenn winnerStatField sich ändert (nur wenn nicht manuell bearbeitet)
+  useEffect(() => {
+    if (!winnerStatField || rankingManuallyEdited) return;
+    setRankingOrder(prev =>
+      [...prev].sort((a, b) => (userStats[b]?.[winnerStatField] ?? 0) - (userStats[a]?.[winnerStatField] ?? 0))
+    );
+  // userStats ist ein Inline-Objekt und ändert sich nicht — winnerStatField reicht als Dep
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [winnerStatField]);
 
   // Vorschau: wer würde mit dem aktuellen winnerStatField gewinnen?
   const previewWinner = (() => {
@@ -161,6 +173,7 @@ export default function EventCompletionModal({
 
   function moveUp(idx: number) {
     if (idx === 0) return;
+    setRankingManuallyEdited(true);
     setRankingOrder(prev => {
       const next = [...prev];
       [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
@@ -168,6 +181,7 @@ export default function EventCompletionModal({
     });
   }
   function moveDown(idx: number) {
+    setRankingManuallyEdited(true);
     setRankingOrder(prev => {
       if (idx >= prev.length - 1) return prev;
       const next = [...prev];
@@ -353,6 +367,19 @@ export default function EventCompletionModal({
                 <ListOrdered className="w-3.5 h-3.5 text-blue-400" />
                 <span className="text-xs font-semibold text-blue-300">Endplatzierung</span>
                 <span className="text-[10px] text-gray-600 ml-1">— ziehen oder Pfeile nutzen</span>
+                {rankingManuallyEdited && winnerStatField && (
+                  <button
+                    onClick={() => {
+                      setRankingManuallyEdited(false);
+                      setRankingOrder(prev =>
+                        [...prev].sort((a, b) => (userStats[b]?.[winnerStatField] ?? 0) - (userStats[a]?.[winnerStatField] ?? 0))
+                      );
+                    }}
+                    className="ml-auto text-[10px] text-blue-400/60 hover:text-blue-300 transition-colors underline underline-offset-2"
+                  >
+                    Auto-Sortierung wiederherstellen
+                  </button>
+                )}
               </div>
               <div className="space-y-1 max-h-48 overflow-y-auto">
                 {rankingOrder.map((uid, idx) => {
@@ -366,6 +393,7 @@ export default function EventCompletionModal({
                       onDragOver={e => { e.preventDefault(); }}
                       onDrop={() => {
                         if (dragIdx === null || dragIdx === idx) return;
+                        setRankingManuallyEdited(true);
                         setRankingOrder(prev => {
                           const next = [...prev];
                           const [removed] = next.splice(dragIdx, 1);
@@ -383,6 +411,11 @@ export default function EventCompletionModal({
                         ? <img src={u.image} alt="" className="w-5 h-5 rounded-full object-cover shrink-0" />
                         : <div className="w-5 h-5 rounded-full bg-gray-700 flex items-center justify-center text-[9px] text-gray-400 shrink-0">{name[0].toUpperCase()}</div>}
                       <span className="text-xs text-white flex-1 truncate">{name}</span>
+                      {winnerStatField && userStats[uid]?.[winnerStatField] != null && (
+                        <span className="text-[10px] text-gray-500 tabular-nums shrink-0 mr-1">
+                          {userStats[uid][winnerStatField]} {winnerStatField}
+                        </span>
+                      )}
                       <div className="flex gap-0.5 shrink-0">
                         <button onClick={() => moveUp(idx)} disabled={idx === 0} className="p-0.5 text-gray-600 hover:text-white disabled:opacity-20 transition-colors">▲</button>
                         <button onClick={() => moveDown(idx)} disabled={idx === rankingOrder.length - 1} className="p-0.5 text-gray-600 hover:text-white disabled:opacity-20 transition-colors">▼</button>
