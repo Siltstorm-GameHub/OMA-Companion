@@ -216,6 +216,10 @@ model EventSeries {
   legacyStandings String?
   // JSON: { lastUpdated, processedEventIds: string[], raw: { userId: { participations, Kills, MVP, Siege, ... } } }
   seriesStandingsJson String?
+  // JSON: { participationCoins: 10, placements: [{ place: 1, coins: 500, rankPoints: 3 }, ...] }
+  placementRewardsJson String?
+  // JSON: { enabled: bool, question: string, coins: 250, rankPoints: 3 }
+  pollConfigJson       String?
   createdAt   DateTime @default(now())
   events      Event[]
 }
@@ -242,10 +246,14 @@ model Event {
   // Ehem. Tournament-Felder (zusammengeführt)
   format           String?   // single_elimination | double_elimination | round_robin | ffa | coop_stats | avg_stats
   tournamentStatus String?   // pending | active | complete | finalized
-  pointsConfig     String?   // JSON: {"1": 100, "2": 50, "3": 25}
+  pointsConfig     String?   // JSON: {"1": 100, "2": 50, "3": 25} — legacy, nur Münzen
   statFields       String?   // JSON: ["Kills","Assists"]
   finalRankingJson String?   // JSON: ["userId1","userId2"]
   finalRankingNote String?
+  // JSON: { participationCoins: 10, placements: [{ place: 1, coins: 500, rankPoints: 3 }, ...] }
+  placementRewardsJson String?
+  // JSON: { enabled: bool, question: string, coins: 250, rankPoints: 3 }
+  pollConfigJson       String?
 
   series        EventSeries?        @relation(fields: [seriesId], references: [id])
   registrations EventRegistration[]
