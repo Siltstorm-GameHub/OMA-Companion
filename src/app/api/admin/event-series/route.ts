@@ -2,15 +2,43 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 
-/** GET /api/admin/event-series?id=xxx  →  Reihen-Details inkl. fixedGame/fixedFormat */
+/**
+ * GET /api/admin/event-series        → Liste aller Reihen (mit Event-Zähler + nächstes Event)
+ * GET /api/admin/event-series?id=xxx → Einzelne Reihe mit Details
+ */
 export async function GET(req: NextRequest) {
   await requireRole("moderator");
   const id = new URL(req.url).searchParams.get("id");
-  if (!id) return NextResponse.json({ error: "id fehlt" }, { status: 400 });
+
+  if (!id) {
+    const allSeries = await prisma.eventSeries.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        _count: { select: { events: true } },
+        events: {
+          where: { startAt: { gte: new Date() } },
+          orderBy: { startAt: "asc" },
+          take: 1,
+          select: { startAt: true, status: true },
+        },
+      },
+    });
+    return NextResponse.json(allSeries);
+  }
 
   const series = await prisma.eventSeries.findUnique({
     where: { id },
-    include: { _count: { select: { events: true } } },
+    include: {
+      _count: { select: { events: true } },
+      events: {
+        orderBy: { startAt: "desc" },
+        select: {
+          id: true, title: true, startAt: true, status: true,
+          _count: { select: { registrations: true } },
+          maxPlayers: true,
+        },
+      },
+    },
   });
   if (!series) return NextResponse.json({ error: "Nicht gefunden" }, { status: 404 });
   return NextResponse.json(series);
@@ -45,8 +73,10 @@ export async function PATCH(req: NextRequest) {
       ...(fields.discordChannelId     !== undefined && { discordChannelId:     fields.discordChannelId }),
       ...(fields.recurrenceType       !== undefined && { recurrenceType:       fields.recurrenceType || null }),
       ...(fields.recurrenceMonthlyMode !== undefined && { recurrenceMonthlyMode: fields.recurrenceMonthlyMode || null }),
-      ...(fields.seriesStatConfig  !== undefined && { seriesStatConfig:  fields.seriesStatConfig }),
-      ...(fields.legacyStandings   !== undefined && { legacyStandings:   fields.legacyStandings }),
+      ...(fields.seriesStatConfig      !== undefined && { seriesStatConfig:      fields.seriesStatConfig }),
+      ...(fields.legacyStandings       !== undefined && { legacyStandings:       fields.legacyStandings }),
+      ...(fields.placementRewardsJson  !== undefined && { placementRewardsJson:  fields.placementRewardsJson }),
+      ...(fields.pollConfigJson        !== undefined && { pollConfigJson:        fields.pollConfigJson }),
     },
   });
 

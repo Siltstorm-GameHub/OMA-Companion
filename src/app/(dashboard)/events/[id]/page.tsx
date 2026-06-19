@@ -2,15 +2,15 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { CalendarDays, Users, Zap, ArrowLeft, Repeat, Trophy, ChevronRight, Check, Clock } from "lucide-react";
+import { CalendarDays, Users, Zap, ArrowLeft, Repeat, Trophy, ChevronRight, Check, Clock, Vote } from "lucide-react";
 import { RelativeTime } from "@/components/RelativeTime";
 import RegisterButton from "../RegisterButton";
 
 const STATUS_CONFIG: Record<string, { label: string; badge: string; dot: string }> = {
-  open:     { label: "Offen",   badge: "text-blue-300 bg-blue-500/10 border border-blue-500/20",          dot: "bg-blue-400"              },
-  active:   { label: "Läuft",   badge: "text-emerald-300 bg-emerald-500/10 border border-emerald-500/20", dot: "bg-emerald-400 animate-pulse" },
-  closed:   { label: "Voll",    badge: "text-amber-300 bg-amber-500/10 border border-amber-500/20",        dot: "bg-amber-400"             },
-  finished: { label: "Beendet", badge: "text-gray-500 bg-white/[0.04] border border-white/[0.06]",        dot: "bg-gray-600"              },
+  open:     { label: "Offen",       badge: "text-blue-300 bg-blue-500/10 border border-blue-500/20",          dot: "bg-blue-400"                  },
+  active:   { label: "Läuft",       badge: "text-emerald-300 bg-emerald-500/10 border border-emerald-500/20", dot: "bg-emerald-400 animate-pulse"  },
+  umfrage:  { label: "Abstimmung",  badge: "text-amber-300 bg-amber-500/10 border border-amber-500/20",       dot: "bg-amber-400 animate-pulse"   },
+  finished: { label: "Beendet",     badge: "text-gray-500 bg-white/[0.04] border border-white/[0.06]",        dot: "bg-gray-600"                  },
 };
 
 const GUILD_ID = process.env.DISCORD_GUILD_ID ?? "";
@@ -48,6 +48,18 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
   const date         = new Date(event.startAt);
   const discordUrl   = event.discordEventId && GUILD_ID
     ? `https://discord.com/events/${GUILD_ID}/${event.discordEventId}` : null;
+
+  // Discord-Kanal-Link für Abstimmungsphase
+  const channelId = event.discordChannelId ?? event.series?.discordChannelId ?? null;
+  const discordChannelUrl = channelId && GUILD_ID
+    ? `https://discord.com/channels/${GUILD_ID}/${channelId}` : null;
+
+  // Poll config
+  const pollConfig: { enabled: boolean; question: string } | null = (() => {
+    const raw = event.pollConfigJson ?? event.series?.pollConfigJson;
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch { return null; }
+  })();
 
   // Reihen-Events aufteilen: kommende vs. vergangene (ohne dieses Event)
   const allSeriesEvents = event.series?.events ?? [];
@@ -144,6 +156,13 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
               className="flex items-center gap-1.5 text-sm text-purple-400 hover:text-purple-300 transition-colors border border-purple-500/20 hover:border-purple-500/40 px-3 py-1.5 rounded-xl">
               <Trophy className="w-3.5 h-3.5" /> Turnierbaum ansehen
             </Link>
+          )}
+          {event.status === "umfrage" && discordChannelUrl && (
+            <a href={discordChannelUrl} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-sm text-amber-400 hover:text-amber-300 transition-colors border border-amber-500/20 hover:border-amber-500/40 px-3 py-1.5 rounded-xl font-medium">
+              <Vote className="w-3.5 h-3.5" />
+              {pollConfig?.question ? `Jetzt für „${pollConfig.question}" abstimmen` : "Jetzt abstimmen"} ↗
+            </a>
           )}
           {discordUrl && (
             <a href={discordUrl} target="_blank" rel="noopener noreferrer"
