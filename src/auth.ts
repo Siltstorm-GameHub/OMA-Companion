@@ -27,6 +27,32 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
+    async signIn({ account }) {
+      if (account?.provider !== "discord") return true;
+
+      const guildId = process.env.DISCORD_GUILD_ID;
+      if (!guildId) return true; // Kein Guild konfiguriert → offen lassen
+
+      try {
+        const res = await fetch("https://discord.com/api/users/@me/guilds", {
+          headers: { Authorization: `Bearer ${account.access_token}` },
+          next: { revalidate: 0 },
+        });
+        if (!res.ok) {
+          console.error("[AUTH] guilds-Abruf fehlgeschlagen:", res.status);
+          return true; // Fail open
+        }
+        const guilds: { id: string }[] = await res.json();
+        const isMember = guilds.some(g => g.id === guildId);
+        if (!isMember) return "/auth/not-member";
+      } catch (err) {
+        console.error("[AUTH] guilds-Check Fehler:", err);
+        return true; // Fail open
+      }
+
+      return true;
+    },
+
     async jwt({ token, user, account }) {
       // ── Initialer Login (user & account sind nur beim ersten JWT-Aufruf gesetzt) ──
       if (user && account?.provider === "discord") {
