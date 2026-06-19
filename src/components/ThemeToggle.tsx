@@ -2,32 +2,51 @@
 import { useState, useEffect } from "react";
 import { Sun, Moon } from "lucide-react";
 
-export function ThemeToggle({ collapsed }: { collapsed?: boolean }) {
+function useTheme() {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
-
   useEffect(() => {
     const saved = localStorage.getItem("theme") as "dark" | "light" | null;
     if (saved) setTheme(saved);
   }, []);
-
   function toggle() {
     const next = theme === "dark" ? "light" : "dark";
-
     const apply = () => {
       setTheme(next);
       localStorage.setItem("theme", next);
       document.documentElement.setAttribute("data-theme", next);
     };
-
-    // View Transitions API — `this` muss an document gebunden bleiben
     if (typeof (document as Document & { startViewTransition?: unknown }).startViewTransition === "function") {
-      (document as Document & { startViewTransition: (fn: () => void) => void })
-        .startViewTransition(apply);
+      (document as Document & { startViewTransition: (fn: () => void) => void }).startViewTransition(apply);
     } else {
       apply();
     }
   }
+  return { theme, toggle };
+}
 
+/** Passend für Dropdown-Menüs (FloatingPill, MobileTopBar) */
+export function ThemeToggleItem({ style, className, iconSize = 14, fontSize = 13 }: {
+  style?: React.CSSProperties;
+  className?: string;
+  iconSize?: number;
+  fontSize?: number;
+}) {
+  const { theme, toggle } = useTheme();
+  const label = theme === "dark" ? "Light Mode" : "Dark Mode";
+  return (
+    <button onClick={toggle} style={{ display: "flex", alignItems: "center", gap: 9, width: "100%",
+      padding: "9px 10px", borderRadius: 8, background: "none", border: "none", cursor: "pointer", fontSize, ...style }}
+      className={className}>
+      {theme === "dark"
+        ? <Sun  style={{ width: iconSize, height: iconSize }} />
+        : <Moon style={{ width: iconSize, height: iconSize }} />}
+      {label}
+    </button>
+  );
+}
+
+export function ThemeToggle({ collapsed }: { collapsed?: boolean }) {
+  const { theme, toggle } = useTheme();
   const label = theme === "dark" ? "Light Mode" : "Dark Mode";
 
   return (
