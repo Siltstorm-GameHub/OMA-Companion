@@ -254,6 +254,7 @@ model Event {
   placementRewardsJson String?
   // JSON: { enabled: bool, question: string, coins: 250, rankPoints: 3 }
   pollConfigJson       String?
+  summary              String?
 
   series        EventSeries?        @relation(fields: [seriesId], references: [id])
   registrations EventRegistration[]

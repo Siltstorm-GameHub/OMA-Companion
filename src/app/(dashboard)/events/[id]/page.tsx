@@ -5,6 +5,7 @@ import Link from "next/link";
 import { CalendarDays, Users, Zap, ArrowLeft, Repeat, Trophy, ChevronRight, Check, Clock, Vote } from "lucide-react";
 import { RelativeTime } from "@/components/RelativeTime";
 import RegisterButton from "../RegisterButton";
+import EventSummarySection from "@/components/EventSummarySection";
 
 const STATUS_CONFIG: Record<string, { label: string; badge: string; dot: string }> = {
   open:     { label: "Offen",       badge: "text-blue-300 bg-blue-500/10 border border-blue-500/20",          dot: "bg-blue-400"                  },
@@ -172,6 +173,11 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
           )}
         </div>
       </div>
+
+      {/* ── Eventbericht ──────────────────────────────────────────────── */}
+      {event.status === "finished" && event.summary && (
+        <EventSummarySection summary={event.summary} />
+      )}
 
       {/* ── Kommende Termine der Reihe ───────────────────────────────── */}
       {event.series && upcomingInSeries.length > 0 && (
