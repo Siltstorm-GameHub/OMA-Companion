@@ -7,7 +7,7 @@ import Link from "next/link";
 import {
   ChevronLeft, Save, Trophy, CheckCircle2, AlertTriangle, Trash2,
   Search, UserPlus, UserMinus, Repeat, ExternalLink, AlertCircle,
-  Coins, Star, MessageSquare,
+  Coins, Star, MessageSquare, Newspaper, Loader2,
 } from "lucide-react";
 import GameNameInput from "@/components/GameNameInput";
 
@@ -58,6 +58,8 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
   const { data: session } = useSession();
   const isAdmin       = session?.user?.role === "admin";
   const [loading, setLoading] = useState(false);
+  const [generatingSummary, setGeneratingSummary] = useState(false);
+  const [currentSummary, setCurrentSummary] = useState<string>(event.summary ?? "");
 
   /* ── Event settings state ── */
   const [status, setStatus]           = useState<string>(event.status);
@@ -188,6 +190,20 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
     }
   }
 
+  /* ── Generate summary ── */
+  async function generateSummary() {
+    setGeneratingSummary(true);
+    try {
+      const res = await fetch(`/api/admin/events/${event.id}/generate-summary`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? "Generierung fehlgeschlagen"); return; }
+      setCurrentSummary(data.summary);
+      toast.success("Eventbericht generiert");
+    } finally {
+      setGeneratingSummary(false);
+    }
+  }
+
   /* ── Render ── */
   return (
     <div className="space-y-4">
@@ -232,6 +248,35 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
           </Link>
         </div>
       </div>
+
+      {/* ── Eventbericht (nur bei abgeschlossenem Event) ── */}
+      {event.status === "finished" && (
+        <div className="rounded-xl border border-teal-500/15 bg-teal-500/5 p-4 space-y-3">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Newspaper className="w-4 h-4 text-teal-400" />
+              <span className="text-sm font-semibold text-teal-300">Eventbericht</span>
+            </div>
+            <button
+              onClick={generateSummary}
+              disabled={generatingSummary}
+              className="flex items-center gap-1.5 text-xs text-white bg-teal-700 hover:bg-teal-600 disabled:opacity-50 rounded-lg px-3 py-1.5 transition-colors"
+            >
+              {generatingSummary
+                ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Generiert…</>
+                : <><Newspaper className="w-3.5 h-3.5" /> {currentSummary ? "Neu generieren" : "Bericht generieren"}</>
+              }
+            </button>
+          </div>
+          {currentSummary ? (
+            <p className="text-sm text-gray-300 leading-relaxed">{currentSummary}</p>
+          ) : (
+            <p className="text-xs text-gray-600 italic">
+              Noch kein Bericht vorhanden. Klicke auf „Bericht generieren", um automatisch einen Eventbericht zu erstellen.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Two-column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
