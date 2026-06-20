@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export async function POST(
   _req: NextRequest,
@@ -58,10 +57,21 @@ ${event.finalRankingNote ? `Notiz: ${event.finalRankingNote}` : ""}
 
 Schreibe 3–4 Sätze. Kein Markdown, keine Überschriften, nur Fließtext. Erwähne konkrete Namen aus dem Event.`;
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    const result = await model.generateContent(prompt);
-    const summary = result.response.text().trim();
+    const geminiRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+      }
+    );
+    if (!geminiRes.ok) {
+      const errBody = await geminiRes.text();
+      throw new Error(`Gemini ${geminiRes.status}: ${errBody}`);
+    }
+    const geminiData = await geminiRes.json();
+    const summary = (geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? "").trim();
+    if (!summary) throw new Error("Leere Antwort von Gemini");
 
     await prisma.event.update({
       where: { id },
