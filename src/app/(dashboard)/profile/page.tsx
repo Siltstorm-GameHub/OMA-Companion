@@ -8,7 +8,7 @@ import { QUEST_TYPE_META, type QuestType } from "@/lib/quests";
 import { RARITY_CONFIG, type Rarity, MAX_SHOWCASE } from "@/lib/collectibles";
 import {
   Trophy, Star, CalendarDays, Swords, Clock, MessageSquare,
-  CheckCircle2, Crown, Gamepad2,
+  CheckCircle2, Crown, Gamepad2, Medal,
 } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
 import WinIcon from "@/components/WinIcon";
@@ -26,7 +26,7 @@ export default async function ProfilePage() {
   const month = now.getMonth() + 1;
   const year  = now.getFullYear();
 
-  const [user, eventRegs, eventCount, tournamentParticipations, tournamentCount, tournamentWins, questsWithProgress, ownedCollectibles, leaderboardRank] =
+  const [user, eventRegs, eventCount, finishedEvents, tournamentParticipations, tournamentCount, tournamentWins, questsWithProgress, ownedCollectibles, leaderboardRank] =
     await Promise.all([
       prisma.user.findUnique({
         where:  { id: userId },
@@ -38,6 +38,10 @@ export default async function ProfilePage() {
         orderBy: { joinedAt: "desc" }, take: 5,
       }),
       prisma.eventRegistration.count({ where: { userId } }),
+      prisma.event.findMany({
+        where: { status: "finished", registrations: { some: { userId } } },
+        select: { game: true, finalRankingJson: true, completionData: true },
+      }),
       prisma.tournamentParticipant.findMany({
         where:   { userId },
         include: {
@@ -73,6 +77,21 @@ export default async function ProfilePage() {
 
   if (!user) redirect("/login");
 
+  // Derived event stats from finished events
+  const eventWins = finishedEvents.filter(e => {
+    try { const r = JSON.parse(e.finalRankingJson ?? "[]"); return Array.isArray(r) && r[0] === userId; }
+    catch { return false; }
+  }).length;
+  const mvpCount = finishedEvents.filter(e => {
+    try { return (e.completionData ? JSON.parse(e.completionData) : {}).mvpUserId === userId; }
+    catch { return false; }
+  }).length;
+  const gameCounts = finishedEvents.reduce<Record<string, number>>((acc, e) => {
+    if (e.game) acc[e.game] = (acc[e.game] ?? 0) + 1;
+    return acc;
+  }, {});
+  const favoriteGame = Object.entries(gameCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+
   const totalPoints = user.points;
   const rankPoints  = user.rankPoints;
   const currentRank = getRank(rankPoints);
@@ -83,7 +102,7 @@ export default async function ProfilePage() {
 
   const voiceHours   = Math.floor((user?.voiceMinutesTotal ?? 0) / 60);
   const messageCount = user?.messagesTotal ?? 0;
-  const badges       = computeBadges({ points: totalPoints, voiceHours, messageCount, eventCount, tournamentCount, tournamentWins });
+  const badges       = computeBadges({ points: totalPoints, voiceHours, messageCount, eventCount, tournamentCount, tournamentWins, eventWins, mvpCount });
   const earnedBadges = badges.filter(b => b.earned);
   const memberSince  = new Date(user.createdAt).toLocaleDateString("de-DE", { month: "long", year: "numeric" });
   const displayName  = user.username ?? user.name ?? "Unbekannt";
@@ -179,14 +198,17 @@ export default async function ProfilePage() {
       {/* ── Stat-Karten ─────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {[
-          { icon: <Star className="w-4 h-4" />,         label: "Punkte",        value: rankPoints.toLocaleString("de-DE"),   iconCls: "text-teal-400    bg-teal-500/10    border-teal-500/15",    accent: "from-teal-500/8"    },
-          { icon: <CalendarDays className="w-4 h-4" />,  label: "Events",        value: String(eventCount),                   iconCls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/15", accent: "from-emerald-500/8" },
-          { icon: <WinIcon size={16} />,                  label: "Turnier-Siege", value: String(tournamentWins),               iconCls: "text-rose-400    bg-rose-500/10    border-rose-500/15",    accent: "from-rose-500/8"    },
+          { icon: <Star className="w-4 h-4" />,        label: "Punkte",         value: rankPoints.toLocaleString("de-DE"), iconCls: "text-teal-400    bg-teal-500/10    border-teal-500/15",    accent: "from-teal-500/8"    },
+          { icon: <CalendarDays className="w-4 h-4" />, label: "Events",         value: String(eventCount),                 iconCls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/15", accent: "from-emerald-500/8" },
+          { icon: <WinIcon size={16} />,                label: "Turnier-Siege",  value: String(tournamentWins),             iconCls: "text-rose-400    bg-rose-500/10    border-rose-500/15",    accent: "from-rose-500/8"    },
+          { icon: <Medal className="w-4 h-4" />,        label: "Event-Siege",    value: String(eventWins),                  iconCls: "text-amber-400   bg-amber-500/10   border-amber-500/15",   accent: "from-amber-500/8"   },
+          { icon: <Trophy className="w-4 h-4" />,       label: "MVP-Awards",     value: String(mvpCount),                   iconCls: "text-purple-400  bg-purple-500/10  border-purple-500/15",  accent: "from-purple-500/8"  },
+          { icon: <Gamepad2 className="w-4 h-4" />,     label: "Lieblingsspiel", value: favoriteGame ?? "–",                iconCls: "text-blue-400    bg-blue-500/10    border-blue-500/15",    accent: "from-blue-500/8",  small: true },
         ].map((s, i) => (
           <div key={s.label} className={`card-hover card-shine glass relative overflow-hidden rounded-2xl p-4 animate-slide-up stagger-${i + 1}`}>
             <div className={`absolute inset-0 bg-gradient-to-br ${s.accent} to-transparent pointer-events-none`} />
             <div className={`relative w-8 h-8 rounded-xl flex items-center justify-center mb-3 border ${s.iconCls}`}>{s.icon}</div>
-            <p className="relative text-2xl font-black text-white tabular-nums">{s.value}</p>
+            <p className={`relative font-black text-white tabular-nums ${(s as { small?: boolean }).small ? "text-lg leading-tight" : "text-2xl"}`}>{s.value}</p>
             <p className="relative text-xs text-gray-400 mt-1.5">{s.label}</p>
           </div>
         ))}
