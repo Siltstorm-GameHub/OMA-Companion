@@ -1,5 +1,6 @@
 ﻿import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/roles";
+import { unstable_cache } from "next/cache";
 import {
   Trophy, CalendarDays, Users, ChevronRight,
   ShieldAlert, Clock, Scroll, Swords, CheckCircle2,
@@ -29,6 +30,53 @@ const ROLE_LABEL: Record<string, string> = {
   admin: "Admin", moderator: "Moderator", user: "Mitglied",
 };
 
+// Cached queries for non-user-specific data (5 min revalidation)
+const getGlobalDashboardData = unstable_cache(
+  async () => {
+    const [memberCount, activeEvents, activeSeries, topUsers, nextEvent, liveEvent, recentSummaries] = await Promise.all([
+      prisma.user.count(),
+      prisma.event.count({ where: { status: { in: ["open", "active"] } } }),
+      prisma.eventSeries.findMany({
+        where: { events: { some: { status: { in: ["open", "active", "closed"] } } } },
+        include: {
+          _count: { select: { events: true } },
+          events: {
+            where:   { status: { in: ["open", "active", "closed"] } },
+            orderBy: { startAt: "asc" },
+            take: 1,
+            select: { startAt: true, status: true },
+          },
+        },
+        take: 5,
+      }),
+      prisma.user.findMany({
+        orderBy: { rankPoints: "desc" },
+        take: 5,
+        select: { id: true, username: true, name: true, image: true, points: true, rankPoints: true },
+      }),
+      prisma.event.findFirst({
+        where:   { status: { in: ["open", "active"] }, startAt: { gte: new Date() } },
+        orderBy: { startAt: "asc" },
+        include: { _count: { select: { registrations: true } } },
+      }),
+      prisma.event.findFirst({
+        where:   { status: "active", startAt: { lte: new Date() } },
+        orderBy: { startAt: "desc" },
+        select:  { id: true, title: true, format: true, _count: { select: { registrations: true } } },
+      }),
+      prisma.event.findMany({
+        where:   { status: "finished", summary: { not: null } },
+        orderBy: { startAt: "desc" },
+        take:    3,
+        select:  { id: true, title: true, game: true, startAt: true, summary: true },
+      }),
+    ]);
+    return { memberCount, activeEvents, activeSeries, topUsers, nextEvent, liveEvent, recentSummaries };
+  },
+  ["dashboard-global"],
+  { revalidate: 300 }
+);
+
 export default async function DashboardPage() {
   const sessionUser = await getSessionUser();
   const userId      = sessionUser?.id;
@@ -38,36 +86,15 @@ export default async function DashboardPage() {
   const month = now.getMonth() + 1;
   const year  = now.getFullYear();
 
+  const { memberCount, activeEvents, activeSeries, topUsers, nextEvent, liveEvent, recentSummaries } =
+    await getGlobalDashboardData();
+
   const [
-    memberCount,
-    activeEvents,
-    activeSeries,
-    topUsers,
     myQuestsDone,
     totalMonthQuests,
     myMonthQuests,
     activeLulSeason,
   ] = await Promise.all([
-    prisma.user.count(),
-    prisma.event.count({ where: { status: { in: ["open", "active"] } } }),
-    prisma.eventSeries.findMany({
-      where: { events: { some: { status: { in: ["open", "active", "closed"] } } } },
-      include: {
-        _count: { select: { events: true } },
-        events: {
-          where:   { status: { in: ["open", "active", "closed"] } },
-          orderBy: { startAt: "asc" },
-          take: 1,
-          select: { startAt: true, status: true },
-        },
-      },
-      take: 5,
-    }),
-    prisma.user.findMany({
-      orderBy: { rankPoints: "desc" },
-      take: 5,
-      select: { id: true, username: true, name: true, image: true, points: true, rankPoints: true },
-    }),
     userId
       ? prisma.userQuestProgress.count({ where: { userId, completed: true, quest: { month, year } } })
       : 0,
@@ -111,25 +138,6 @@ export default async function DashboardPage() {
   const firstName   = displayName.split(" ")[0];
   const avatarUrl   = sessionUser?.image ?? null;
   const isStaff     = userRole === "admin" || userRole === "moderator";
-
-  const [nextEvent, liveEvent, recentSummaries] = await Promise.all([
-    prisma.event.findFirst({
-      where:   { status: { in: ["open", "active"] }, startAt: { gte: now } },
-      orderBy: { startAt: "asc" },
-      include: { _count: { select: { registrations: true } } },
-    }),
-    prisma.event.findFirst({
-      where:   { status: "active", startAt: { lte: now } },
-      orderBy: { startAt: "desc" },
-      select:  { id: true, title: true, format: true, _count: { select: { registrations: true } } },
-    }),
-    prisma.event.findMany({
-      where:   { status: "finished", summary: { not: null } },
-      orderBy: { startAt: "desc" },
-      take:    3,
-      select:  { id: true, title: true, game: true, startAt: true, summary: true },
-    }),
-  ]);
 
   return (
     <div className="animate-fade-in">
