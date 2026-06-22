@@ -63,6 +63,7 @@ export async function POST(
     pollBonusCoins?: number;
     pollBonusRankPoints?: number;
     finalRanking?: string[];
+    finalRankingGroups?: string[][];  // tied groups – if provided, used for point awards
     finalRankingNote?: string;
     participationCoins?: number;
     placements?: PlacementReward[];
@@ -138,27 +139,55 @@ export async function POST(
       );
     }
 
-    // Platzierungs-Münzen + Rang-Punkte
-    const ranking = (body.finalRanking ?? []).filter(id => registeredSet.has(id));
-    for (let i = 0; i < ranking.length; i++) {
-      const place = i + 1;
-      const reward = rewards.placements.find(p => p.place === place);
-      if (!reward) continue;
-      const userId = ranking[i];
-      const txns: Prisma.PrismaPromise<unknown>[] = [];
-      if (reward.coins > 0) {
-        txns.push(
-          prisma.user.update({ where: { id: userId }, data: { points: { increment: reward.coins } } }),
-          prisma.pointTransaction.create({ data: { userId, amount: reward.coins, reason: `[Münzen] Platz ${place}: ${event.title}` } })
-        );
+    // Platzierungs-Münzen + Rang-Punkte (unterstützt Gleichstand via finalRankingGroups)
+    if (body.finalRankingGroups?.length) {
+      // Groups format: [[uid1, uid2], [uid3], ...] where all in same group share placement
+      let place = 1;
+      for (const group of body.finalRankingGroups) {
+        const reward = rewards.placements.find(p => p.place === place);
+        if (reward) {
+          for (const userId of group.filter(id => registeredSet.has(id))) {
+            const txns: Prisma.PrismaPromise<unknown>[] = [];
+            if (reward.coins > 0) {
+              txns.push(
+                prisma.user.update({ where: { id: userId }, data: { points: { increment: reward.coins } } }),
+                prisma.pointTransaction.create({ data: { userId, amount: reward.coins, reason: `[Münzen] Platz ${place}: ${event.title}` } })
+              );
+            }
+            if (reward.rankPoints > 0) {
+              txns.push(
+                prisma.user.update({ where: { id: userId }, data: { rankPoints: { increment: reward.rankPoints } } }),
+                prisma.pointTransaction.create({ data: { userId, amount: reward.rankPoints, reason: `[Rang-Punkte] Platz ${place}: ${event.title}` } })
+              );
+            }
+            if (txns.length > 0) await prisma.$transaction(txns);
+          }
+        }
+        place += group.length; // standard competition ranking: skip positions for the size of this group
       }
-      if (reward.rankPoints > 0) {
-        txns.push(
-          prisma.user.update({ where: { id: userId }, data: { rankPoints: { increment: reward.rankPoints } } }),
-          prisma.pointTransaction.create({ data: { userId, amount: reward.rankPoints, reason: `[Rang-Punkte] Platz ${place}: ${event.title}` } })
-        );
+    } else {
+      // Legacy flat format
+      const ranking = (body.finalRanking ?? []).filter(id => registeredSet.has(id));
+      for (let i = 0; i < ranking.length; i++) {
+        const place = i + 1;
+        const reward = rewards.placements.find(p => p.place === place);
+        if (!reward) continue;
+        const userId = ranking[i];
+        const txns: Prisma.PrismaPromise<unknown>[] = [];
+        if (reward.coins > 0) {
+          txns.push(
+            prisma.user.update({ where: { id: userId }, data: { points: { increment: reward.coins } } }),
+            prisma.pointTransaction.create({ data: { userId, amount: reward.coins, reason: `[Münzen] Platz ${place}: ${event.title}` } })
+          );
+        }
+        if (reward.rankPoints > 0) {
+          txns.push(
+            prisma.user.update({ where: { id: userId }, data: { rankPoints: { increment: reward.rankPoints } } }),
+            prisma.pointTransaction.create({ data: { userId, amount: reward.rankPoints, reason: `[Rang-Punkte] Platz ${place}: ${event.title}` } })
+          );
+        }
+        if (txns.length > 0) await prisma.$transaction(txns);
       }
-      if (txns.length > 0) await prisma.$transaction(txns);
     }
   }
 
@@ -276,6 +305,9 @@ export async function POST(
     pollBonusCoins:          pollCoins > 0 ? pollCoins : null,
     pollBonusRankPoints:     pollRankPts > 0 ? pollRankPts : null,
     finalRanking:            body.finalRanking ?? null,
+    finalRankingGroups:      body.finalRankingGroups ?? null,
+    gamePhaseComplete:       true,
+    pollPhaseComplete:       newPollWinners.length > 0,
     lockedAt:                new Date().toISOString(),
   };
 
@@ -284,7 +316,12 @@ export async function POST(
       where: { id: eventId },
       data: {
         ...(!isReEdit && { status: "finished" }),
-        ...(body.finalRanking !== undefined && { finalRankingJson: body.finalRanking.length > 0 ? JSON.stringify(body.finalRanking) : null }),
+        ...(body.finalRankingGroups !== undefined && {
+          finalRankingJson: body.finalRankingGroups.length > 0 ? JSON.stringify(body.finalRankingGroups.flat()) : null,
+        }),
+        ...(body.finalRankingGroups === undefined && body.finalRanking !== undefined && {
+          finalRankingJson: body.finalRanking.length > 0 ? JSON.stringify(body.finalRanking) : null,
+        }),
         ...(body.finalRankingNote !== undefined && { finalRankingNote: body.finalRankingNote?.trim() || null }),
         completionData: JSON.stringify(completionData),
       },

@@ -113,10 +113,16 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
     ? (() => { try { return JSON.parse(event.completionData as string); } catch { return null; } })()
     : null;
 
+  const gamePhaseComplete = (initialData?.gamePhaseComplete as boolean) ?? false;
+  const pollPhaseComplete = (initialData?.pollPhaseComplete as boolean) ?? false;
+
   const initialFinalRanking: string[] | null = (() => {
     if (!event.finalRankingJson) return null;
     try { return JSON.parse(event.finalRankingJson); } catch { return null; }
   })();
+
+  const initialRankingGroups: string[][] | null =
+    (initialData?.finalRankingGroups as string[][] | undefined) ?? null;
 
   return (
     <EventCompleteClient
@@ -131,8 +137,11 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
       rewardsConfig={rewardsConfig}
       pollConfig={pollConfig}
       isReEdit={isReEdit}
+      gamePhaseComplete={gamePhaseComplete}
+      pollPhaseComplete={pollPhaseComplete}
       initialData={initialData}
       initialFinalRanking={initialFinalRanking}
+      initialRankingGroups={initialRankingGroups}
       initialFinalRankingNote={event.finalRankingNote ?? null}
     />
   );
