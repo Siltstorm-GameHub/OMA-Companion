@@ -287,6 +287,16 @@ export async function POST(
       addToUser(body.mvpUserId, statCfg.mvpStatField, 1);
     }
 
+    // Event-Gewinner (seriesWinnerTargetField): alten Eintrag rückgängig, neuen setzen
+    if (isReEdit && body.seriesWinnerTargetField) {
+      const oldWinnerIds: string[] = (oldCompletion.eventWinnerIds as string[] | undefined) ??
+        (oldCompletion.eventWinnerId ? [oldCompletion.eventWinnerId as string] : []);
+      for (const uid of oldWinnerIds) addToUser(uid, body.seriesWinnerTargetField, -1);
+    }
+    if (isReEdit && eventWinnerIds.length > 0 && body.seriesWinnerTargetField) {
+      for (const uid of eventWinnerIds) addToUser(uid, body.seriesWinnerTargetField, 1);
+    }
+
     updatedStandings = {
       lastUpdated: new Date().toISOString(),
       processedEventIds: existingJson.processedEventIds.includes(eventId)

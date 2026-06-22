@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Users, Trophy, Clock, Swords, ChevronDown, Medal, StickyNote, Star, Vote, Repeat } from "lucide-react";
+import { ArrowLeft, Users, Trophy, Clock, Swords, ChevronDown, StickyNote, Star, Vote, Repeat } from "lucide-react";
 import WinIcon from "@/components/WinIcon";
 import BracketView from "./BracketView";
 import RoundRobinView from "./RoundRobinView";
@@ -261,126 +261,13 @@ export default async function TournamentDetailPage({
         )}
       </div>
 
-      {/* ── Endplatzierung ─────────────────────────────────────────────── */}
-      {hasTournament && (event.tournamentStatus === "finished" || gamePhaseComplete) && event.finalRankingJson && (() => {
-        const finalIds: string[] = JSON.parse(event.finalRankingJson!);
-        const medals = ["🥇", "🥈", "🥉"];
-
-        // Build placement map (supports ties via finalRankingGroups)
-        const placementMap = new Map<string, number>();
-        if (rankingGroups) {
-          let place = 1;
-          for (const group of rankingGroups) {
-            for (const uid of group) placementMap.set(uid, place);
-            place += group.length;
-          }
-        } else {
-          finalIds.forEach((uid, i) => placementMap.set(uid, i + 1));
-        }
-
-        return (
-          <div className="glass rounded-2xl p-5 mb-5 space-y-3">
-            <div className="flex items-center gap-2">
-              <Medal className="w-4 h-4 text-amber-400" />
-              <h2 className="text-sm font-semibold text-white">Endplatzierung</h2>
-            </div>
-
-            <div className="space-y-1.5">
-              {finalIds.map((uid, i) => {
-                const participant = mergedParticipants.find(p => p.userId === uid);
-                const user = participant?.user;
-                const name = user ? (user.name || user.username || "Unbekannt") : "Unbekannt";
-                const isMe = uid === userId;
-                const place = placementMap.get(uid) ?? (i + 1);
-                const prevPlace = i > 0 ? (placementMap.get(finalIds[i - 1]) ?? i) : null;
-                const isTied = prevPlace !== null && place === prevPlace;
-                const coins = placementCoins(place);
-                const rankPts = placementRankPts(place);
-                const isPollWinner = pollWinnerIds.includes(uid);
-                const totalCoins = coins + participationCoins + (isPollWinner ? (pollBonusCoins ?? 0) : 0);
-                const totalRankPts = rankPts + (isPollWinner ? (pollBonusRankPts ?? 0) : 0);
-                return (
-                  <div key={uid}>
-                    {/* Gleichstand-Trennlinie */}
-                    {isTied && (
-                      <div className="flex items-center gap-1 py-0.5 px-2 text-[10px] text-blue-400/40">
-                        <div className="flex-1 border-t border-blue-500/20 border-dashed" />
-                        <span>Gleichstand</span>
-                        <div className="flex-1 border-t border-blue-500/20 border-dashed" />
-                      </div>
-                    )}
-                    <div
-                      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${place <= 3 ? "bg-amber-500/[0.06] border border-amber-500/15" : "bg-white/[0.02] border border-white/[0.05]"} ${isMe ? "ring-1 ring-teal-500/30" : ""}`}>
-                      {/* Platz */}
-                      <span className="w-7 text-center shrink-0 text-base">
-                        {place <= 3 ? medals[place - 1] : <span className="text-xs text-gray-500 font-mono">{place}.</span>}
-                      </span>
-                      {/* Avatar */}
-                      {user?.image
-                        ? <img src={user.image} alt="" className="w-7 h-7 rounded-full shrink-0 object-cover" />
-                        : <div className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-300 shrink-0">
-                            {name[0]?.toUpperCase() ?? "?"}
-                          </div>
-                      }
-                      {/* Name + Badges */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className={`text-sm font-medium truncate ${isMe ? "text-teal-300" : place === 1 ? "text-amber-200" : "text-white"}`}>
-                            {name}{isMe && <span className="text-xs text-gray-500 ml-1.5">(du)</span>}
-                          </span>
-                          {isPollWinner && pollLabel && (
-                            <span className="flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-violet-500/15 border border-violet-500/30 text-violet-300 shrink-0">
-                              <Vote className="w-2.5 h-2.5" /> {pollLabel}
-                            </span>
-                          )}
-                        </div>
-                        {/* Punkte-Zusammenfassung */}
-                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                          {participationCoins > 0 && (
-                            <span className="text-[10px] text-gray-500">+{participationCoins} 🪙 Teilnahme</span>
-                          )}
-                          {coins > 0 && (
-                            <span className="text-[10px] text-amber-400/80">+{coins} 🪙 Platz {place}</span>
-                          )}
-                          {rankPts > 0 && (
-                            <span className="flex items-center gap-0.5 text-[10px] text-teal-400/80">
-                              +{rankPts} <Star className="w-2.5 h-2.5" /> Platz {place}
-                            </span>
-                          )}
-                          {isPollWinner && (pollBonusCoins ?? 0) > 0 && (
-                            <span className="text-[10px] text-violet-400/80">+{pollBonusCoins} 🪙 {pollLabel}</span>
-                          )}
-                          {isPollWinner && (pollBonusRankPts ?? 0) > 0 && (
-                            <span className="flex items-center gap-0.5 text-[10px] text-violet-400/80">
-                              +{pollBonusRankPts} <Star className="w-2.5 h-2.5" /> {pollLabel}
-                            </span>
-                          )}
-                          {(totalCoins > 0 || totalRankPts > 0) && (coins > 0 || rankPts > 0 || participationCoins > 0 || isPollWinner) && (
-                            <span className="text-[10px] text-gray-600 font-medium">
-                              = {totalCoins > 0 ? `${totalCoins} 🪙` : ""}
-                              {totalCoins > 0 && totalRankPts > 0 ? " + " : ""}
-                              {totalRankPts > 0 ? <>{totalRankPts} <Star className="w-2.5 h-2.5 inline" /></> : ""}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      {place === 1 && !isTied && <WinIcon size={14} />}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Notiz */}
-            {event.finalRankingNote && (
-              <div className="flex items-start gap-2 mt-1 px-1">
-                <StickyNote className="w-3.5 h-3.5 text-gray-600 mt-0.5 shrink-0" />
-                <p className="text-xs text-gray-500 italic leading-relaxed">{event.finalRankingNote}</p>
-              </div>
-            )}
-          </div>
-        );
-      })()}
+      {/* Endplatzierungs-Notiz (falls vorhanden) */}
+      {gamePhaseComplete && event.finalRankingNote && (
+        <div className="glass rounded-2xl px-4 py-3 mb-5 flex items-start gap-2">
+          <StickyNote className="w-3.5 h-3.5 text-gray-600 mt-0.5 shrink-0" />
+          <p className="text-xs text-gray-500 italic leading-relaxed">{event.finalRankingNote}</p>
+        </div>
+      )}
 
       {/* ── Umfrage-Übersicht ──────────────────────────────────────────── */}
       {pollWinnerIds.length > 0 && pollLabel && (() => {
