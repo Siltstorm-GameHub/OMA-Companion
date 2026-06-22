@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import CoinIcon from "@/components/CoinIcon";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -138,7 +139,7 @@ function CreationForm({
       {/* Points */}
       <div>
         <label className="text-xs text-gray-400 uppercase tracking-wide block mb-2">
-          {format === "liga" ? "🪙 Münzen pro Match-Ergebnis" : "Belohnungen pro Platzierung"}
+          {format === "liga" ? <span className="flex items-center gap-1"><CoinIcon size={13} /> Münzen pro Match-Ergebnis</span> : "Belohnungen pro Platzierung"}
         </label>
         {format === "liga" ? (
           <div className="flex gap-3">
@@ -150,7 +151,7 @@ function CreationForm({
                     onChange={e => (set as (v: number) => void)(Number(e.target.value))}
                     className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-center"
                   />
-                  <p className="text-[10px] text-gray-600 mt-1 text-center">nur 🪙 Münzen</p>
+                  <p className="flex items-center justify-center gap-0.5 text-[10px] text-gray-600 mt-1">nur <CoinIcon size={11} /> Münzen</p>
                 </div>
               )
             )}
@@ -160,7 +161,7 @@ function CreationForm({
             {/* Spalten-Header */}
             <div className="grid grid-cols-3 gap-2 text-[10px] text-gray-500 uppercase tracking-wide px-1">
               <span>Platz</span>
-              <span className="text-center">🪙 Münzen</span>
+              <span className="flex items-center justify-center gap-0.5"><CoinIcon size={11} /> Münzen</span>
               <span className="text-center">⭐ Punkte</span>
             </div>
             {([
@@ -557,7 +558,7 @@ export default function TournamentManager({
           }`}>{tournament.status}</span>
           {Object.keys(pointsConfigRaw).length > 0 && (
             tournament.format === "liga"
-              ? <span className="text-xs text-gray-500">🏆{getCoinsVal("win")} 🤝{getCoinsVal("draw")} 🪙</span>
+              ? <span className="flex items-center gap-0.5 text-xs text-gray-500">🏆{getCoinsVal("win")} 🤝{getCoinsVal("draw")} <CoinIcon size={13} /></span>
               : <span className="text-xs text-gray-500">🥇{getConfigVal("1")} 🥈{getConfigVal("2")} 🥉{getConfigVal("3")} Pts</span>
           )}
           {statFields.length > 0 && (

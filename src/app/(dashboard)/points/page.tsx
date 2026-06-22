@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/roles";
 import { getRank, getNextRank } from "@/lib/ranks";
 import { Star, TrendingUp, TrendingDown } from "lucide-react";
+import CoinIcon from "@/components/CoinIcon";
 import { CountUp } from "@/components/CountUp";
 import { RelativeTime } from "@/components/RelativeTime";
 
@@ -70,7 +71,7 @@ export default async function PointsPage() {
               <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest mb-1">Münzen</p>
               <p className="text-2xl font-black text-amber-400 tabular-nums">
                 <CountUp to={myPoints} duration={900} />
-                <span className="text-base font-medium text-amber-500/70 ml-1">🪙</span>
+                <CoinIcon size={20} className="ml-1 opacity-70" />
               </p>
             </div>
 

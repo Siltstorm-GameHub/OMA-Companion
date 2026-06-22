@@ -12,6 +12,7 @@ import Link from "next/link";
 import TournamentManager from "./TournamentManager";
 import GameNameInput from "@/components/GameNameInput";
 import StatFieldEditor from "@/components/StatFieldEditor";
+import CoinIcon from "@/components/CoinIcon";
 import EventCompletionModal from "./EventCompletionModal";
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
@@ -631,7 +632,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                       </select>
                     </div>
                     <div>
-                      <label className="text-xs text-gray-500 block mb-1">🪙 Münzen bei Anmeldung</label>
+                      <label className="flex items-center gap-1 text-xs text-gray-500 mb-1"><CoinIcon size={13} /> Münzen bei Anmeldung</label>
                       <input type="number" value={pointReward} onChange={e => setPointReward(Number(e.target.value))}
                         className="w-28 text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2" />
                     </div>
@@ -1137,7 +1138,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                       return (
                         <div>
                           <label className="text-xs text-gray-500 block mb-2">
-                            {isLiga ? "🪙 Münzen pro Match-Ergebnis" : "Belohnungen pro Platzierung"}
+                            {isLiga ? <span className="flex items-center gap-1"><CoinIcon size={13} /> Münzen pro Match-Ergebnis</span> : "Belohnungen pro Platzierung"}
                           </label>
                           {isLiga ? (
                             <div className="flex gap-3">
@@ -1155,7 +1156,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                             <div className="space-y-2">
                               <div className="grid grid-cols-3 gap-2 text-[10px] text-gray-500 uppercase tracking-wide px-1">
                                 <span>Platz</span>
-                                <span className="text-center">🪙 Münzen</span>
+                                <span className="flex items-center justify-center gap-0.5"><CoinIcon size={11} /> Münzen</span>
                                 <span className="text-center">⭐ Punkte</span>
                               </div>
                               {([

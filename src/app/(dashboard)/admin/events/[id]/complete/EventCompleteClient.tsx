@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
+import CoinIcon from "@/components/CoinIcon";
 import {
   ChevronLeft, Repeat, CheckCircle2, Trophy, Star, Vote,
   ListOrdered, GripVertical, Coins, AlertTriangle, RotateCcw, Equal,
@@ -721,7 +722,7 @@ export default function EventCompleteClient({
                         <span className="flex flex-col items-end shrink-0 ml-1 gap-0">
                           {rewardsConfig.participationCoins > 0 && (
                             <span className="text-[10px] text-amber-400 tabular-nums leading-tight">
-                              +{(reward?.coins ?? 0) + rewardsConfig.participationCoins} 🪙
+                              +{(reward?.coins ?? 0) + rewardsConfig.participationCoins} <CoinIcon size={11} />
                             </span>
                           )}
                           {reward && reward.rankPoints > 0 && (

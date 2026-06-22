@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { ChevronDown, ChevronUp, Trophy, Clock } from "lucide-react";
+import CoinIcon from "@/components/CoinIcon";
 
 type User        = { id: string; name: string | null; username: string | null; image: string | null };
 type Participant = { userId: string; user: User };
@@ -195,7 +196,7 @@ export default function FfaView({
                             <div className="flex flex-col items-center gap-0.5">
                               {totalCoins > 0 && (
                                 <span className="text-[11px] text-amber-400 tabular-nums leading-tight">
-                                  +{totalCoins} 🪙
+                                  +{totalCoins} <CoinIcon size={11} />
                                 </span>
                               )}
                               {reward?.rankPts != null && reward.rankPts > 0 && (
@@ -205,7 +206,7 @@ export default function FfaView({
                               )}
                               {!reward && participationCoins > 0 && (
                                 <span className="text-[11px] text-amber-400/50 tabular-nums leading-tight">
-                                  +{participationCoins} 🪙
+                                  +{participationCoins} <CoinIcon size={11} />
                                 </span>
                               )}
                             </div>

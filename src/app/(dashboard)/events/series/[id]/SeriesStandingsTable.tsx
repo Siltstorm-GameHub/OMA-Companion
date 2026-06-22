@@ -30,8 +30,10 @@ interface Props {
   extraCols: string[];
   currentUserId?: string;
   showPoints: boolean;
-  lastEventDelta?: Map<string, DeltaInfo>;
+  lastEventDelta?: Record<string, DeltaInfo>;
   lastEventTitle?: string;
+  /** "compact" = always compact; "full" = always full; "auto" (default) = compact mobile / full desktop */
+  mode?: "compact" | "full" | "auto";
 }
 
 const MEDALS = ["text-amber-400", "text-gray-300", "text-amber-600"];
@@ -108,6 +110,7 @@ function PointsCell({ value, rank }: { value: number; rank: number }) {
 
 export default function SeriesStandingsTable({
   rows, users, statCols, extraCols, currentUserId, showPoints, lastEventDelta, lastEventTitle,
+  mode = "auto",
 }: Props) {
   const [expanded, setExpanded] = useState(false);
   const userMap = new Map(users.map(u => [u.id, u]));
@@ -165,7 +168,7 @@ export default function SeriesStandingsTable({
           const name = u ? uname(u) : row.userId.slice(0, 8);
           const isMe = currentUserId === row.userId;
           const rank = idx + 1;
-          const delta = lastEventDelta?.get(row.userId);
+          const delta = lastEventDelta?.[row.userId];
           return (
             <div key={row.userId}
               className="grid items-center px-4 py-3 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.02] transition-colors"
@@ -264,7 +267,7 @@ export default function SeriesStandingsTable({
           const name = u ? uname(u) : row.userId.slice(0, 8);
           const isMe = currentUserId === row.userId;
           const rank = idx + 1;
-          const delta = lastEventDelta?.get(row.userId);
+          const delta = lastEventDelta?.[row.userId];
           return (
             <div key={row.userId}
               className="grid items-center px-4 py-3 border-b border-white/[0.04] last:border-0"
@@ -305,9 +308,25 @@ export default function SeriesStandingsTable({
     );
   }
 
+  if (mode === "compact") {
+    return (
+      <div className="glass card-shine rounded-2xl overflow-hidden">
+        <CompactTable />
+      </div>
+    );
+  }
+
+  if (mode === "full") {
+    return (
+      <div className="glass card-shine rounded-2xl overflow-x-auto">
+        <FullTable />
+      </div>
+    );
+  }
+
+  // mode === "auto": compact on mobile with optional expand, full on desktop
   return (
     <div className="glass card-shine rounded-2xl overflow-hidden">
-      {/* Mobile */}
       <div className="lg:hidden">
         {expanded && hasExtraData ? (
           <div className="overflow-x-auto"><FullTable /></div>
@@ -326,8 +345,6 @@ export default function SeriesStandingsTable({
           </button>
         )}
       </div>
-
-      {/* Desktop */}
       <div className="hidden lg:block overflow-x-auto">
         <FullTable />
       </div>

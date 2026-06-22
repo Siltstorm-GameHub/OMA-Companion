@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
+import CoinIcon from "@/components/CoinIcon";
 
 function useMidnightCountdown() {
   const [label, setLabel] = useState("");
@@ -246,7 +247,7 @@ export default function DailySpin({ alreadySpun, lastResult, initialPoints }: Pr
             </div>
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg shrink-0"
               style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.15)" }}>
-              <span className="text-sm">🪙</span>
+              <CoinIcon size={18} />
               <span className="text-sm font-bold text-amber-400 tabular-nums">{points.toLocaleString("de-DE")}</span>
             </div>
           </div>

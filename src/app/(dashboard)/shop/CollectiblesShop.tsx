@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import CoinIcon from "@/components/CoinIcon";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ChevronDown, ChevronUp, ShoppingCart, Check, Loader2, Lock, Star, Package, ImageIcon, Tag } from "lucide-react";
@@ -177,7 +178,7 @@ export default function CollectiblesShop({ collections, ownedIds, myPoints, isLo
                         {/* Preis */}
                         {item.onSale && !owned && (
                           <p className="text-[10px] text-gray-500 line-through tabular-nums">
-                            {item.originalPrice.toLocaleString("de-DE")} 🪙
+                            <span className="flex items-center gap-0.5">{item.originalPrice.toLocaleString("de-DE")} <CoinIcon size={11} /></span>
                           </p>
                         )}
 
