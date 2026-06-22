@@ -6,7 +6,7 @@ import Link from "next/link";
 import {
   ChevronLeft, ChevronRight, CalendarPlus, RefreshCw, Gamepad2,
   Swords, Hash, BarChart2, Plus, X, Trophy, Save, Coins,
-  MessageSquare, ExternalLink,
+  MessageSquare, ExternalLink, Archive, Vote,
 } from "lucide-react";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import GameNameInput from "@/components/GameNameInput";
@@ -186,6 +186,21 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
           >
             <ExternalLink className="w-3.5 h-3.5" /> Öffentlich ansehen
           </Link>
+          {series.status === "archived" ? (
+            <Link
+              href={`/admin/series/${series.id}/complete`}
+              className="flex items-center gap-1.5 text-xs text-violet-400 hover:text-violet-300 border border-violet-500/20 hover:border-violet-500/40 rounded-lg px-3 py-1.5 transition-all"
+            >
+              <Vote className="w-3.5 h-3.5" /> Abschluss bearbeiten
+            </Link>
+          ) : (
+            <Link
+              href={`/admin/series/${series.id}/complete`}
+              className="flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 border border-amber-500/20 hover:border-amber-500/40 rounded-lg px-3 py-1.5 transition-all"
+            >
+              <Archive className="w-3.5 h-3.5" /> Reihe abschließen
+            </Link>
+          )}
           <button
             onClick={saveSettings} disabled={saving}
             className="flex items-center gap-1.5 text-xs bg-teal-700 hover:bg-teal-600 text-white rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50"
