@@ -6,12 +6,68 @@ import Link from "next/link";
 import {
   ArrowLeft, Trophy, Crown, Flame, Users,
   Swords, Gamepad2, Zap, Star, TrendingUp,
+  Archive, ChevronRight, CheckCircle2,
 } from "lucide-react";
 import { CountUp } from "@/components/CountUp";
 import SeriesStandingsTable from "./SeriesStandingsTable";
 import SeriesEventList, { type SeriesEventItem } from "./SeriesEventList";
 import FullStandingsToggle from "./FullStandingsToggle";
 import type { DeltaInfo } from "./SeriesStandingsTable";
+
+type ArchivedSeason = {
+  id: string; name: string; status: string; seasonNumber: number | null;
+  archivedAt: Date | null; seriesCompletionData: string | null; createdAt: Date;
+  events: { startAt: Date }[]; _count: { events: number };
+};
+
+function SaisonArchiv({ currentId, archivedSeasons }: { currentId: string; archivedSeasons: ArchivedSeason[] }) {
+  if (!archivedSeasons.length) return null;
+  return (
+    <div className="space-y-3">
+      <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+        <Archive className="w-3.5 h-3.5 text-gray-600" /> Vergangene Saisons
+      </h2>
+      <div className="glass rounded-2xl overflow-hidden divide-y divide-white/[0.04]">
+        {archivedSeasons.map(s => {
+          const cd: { overallWinnerIds?: string[] | null } = (() => {
+            try { return s.seriesCompletionData ? JSON.parse(s.seriesCompletionData) : {}; } catch { return {}; }
+          })();
+          const firstEventDate = s.events[0]?.startAt;
+          return (
+            <Link key={s.id} href={`/events/series/${s.id}`}
+              className={`flex items-center gap-3.5 px-4 py-3 hover:bg-white/[0.025] transition-colors group ${s.id === currentId ? "bg-white/[0.03]" : ""}`}>
+              <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+                <Archive className="w-3.5 h-3.5 text-amber-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-white truncate group-hover:text-teal-300 transition-colors">
+                  {s.name}
+                  {s.id === currentId && <span className="ml-2 text-[10px] text-gray-600">(diese Saison)</span>}
+                </p>
+                <p className="text-[10px] text-gray-600 mt-0.5">
+                  {firstEventDate
+                    ? new Date(firstEventDate).toLocaleDateString("de-DE", { month: "short", year: "numeric", timeZone: "Europe/Berlin" })
+                    : "–"}
+                  {" · "}
+                  {s._count.events} Events
+                  {s.archivedAt && (
+                    <> · abgeschlossen {new Date(s.archivedAt).toLocaleDateString("de-DE", { day: "2-digit", month: "short", year: "numeric", timeZone: "Europe/Berlin" })}</>
+                  )}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-[10px] px-2 py-0.5 rounded-full border text-amber-400 bg-amber-500/10 border-amber-500/20">
+                  Saison {s.seasonNumber ?? "–"}
+                </span>
+                <ChevronRight className="w-3.5 h-3.5 text-gray-600 group-hover:text-teal-400 transition-colors" />
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 const FORMAT_LABELS: Record<string, string> = {
   single_elimination: "Single Elimination",
@@ -316,14 +372,116 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
 
   const totalParticipantIds = new Set(series.events.flatMap(e => e.registrations.map(r => r.userId)));
 
+  // ── All-Time Leaderboard (alle Saisons der Gruppe) ────────────────────────
+  let allTimeStandings: ReturnType<typeof computeStatStandings> = [];
+  let allTimeUsers: typeof standingUsers = [];
+  if (series.groupId) {
+    const allSeasonEvents = await prisma.event.findMany({
+      where: { series: { groupId: series.groupId } },
+      select: {
+        id: true, status: true, completionData: true, finalRankingJson: true,
+        registrations: { select: { userId: true } },
+        matches: { select: { entries: { select: { userId: true, statsJson: true } } } },
+      },
+    });
+    // Collect legacy standings from all archived seasons in the group
+    const allSiblingData = await prisma.eventSeries.findMany({
+      where: { groupId: series.groupId, id: { not: id }, status: "archived" },
+      select: { legacyStandings: true },
+    });
+    const allLegacy: LegacyRow[] = [
+      ...legacyRows,
+      ...allSiblingData.flatMap(s => {
+        try { return s.legacyStandings ? JSON.parse(s.legacyStandings) : []; } catch { return []; }
+      }),
+    ];
+    allTimeStandings = computeStatStandings(allSeasonEvents, statCfg, allLegacy);
+    const allTimeIds = allTimeStandings.map(r => r.userId);
+    allTimeUsers = allTimeIds.length > 0
+      ? await prisma.user.findMany({
+          where: { id: { in: allTimeIds } },
+          select: { id: true, name: true, username: true, image: true },
+        })
+      : [];
+  }
+  const showAllTime = allTimeStandings.length > 0 && !!series.groupId;
+
+  // ── Saison-Gruppe (verwandte Saisons) ─────────────────────────────────────
+  const siblingSeasons = series.groupId
+    ? await prisma.eventSeries.findMany({
+        where: { groupId: series.groupId, id: { not: id } },
+        select: {
+          id: true, name: true, status: true, seasonNumber: true,
+          archivedAt: true, seriesCompletionData: true, createdAt: true,
+          events: { select: { startAt: true }, orderBy: { startAt: "asc" }, take: 1 },
+          _count: { select: { events: true } },
+        },
+        orderBy: { seasonNumber: "asc" },
+      })
+    : [];
+
+  const isArchived = series.status === "archived";
+  const activeSibling = siblingSeasons.find(s => s.status === "active");
+  const archivedSiblings = siblingSeasons.filter(s => s.status === "archived");
+
+  // Parse overall winner for current archived series
+  type CompletionSummary = {
+    overallWinnerIds?: string[] | null;
+    pollWinnerIds?: string[] | null;
+    pollLabel?: string | null;
+    pollPhaseComplete?: boolean;
+  };
+  const seriesCompletion: CompletionSummary = (() => {
+    try { return series.seriesCompletionData ? JSON.parse(series.seriesCompletionData as string) : {}; } catch { return {}; }
+  })();
+  const overallWinnerIds = seriesCompletion.overallWinnerIds ?? [];
+  const overallWinners = overallWinnerIds.length > 0
+    ? await prisma.user.findMany({
+        where: { id: { in: overallWinnerIds } },
+        select: { id: true, name: true, username: true, image: true },
+      })
+    : [];
+
   return (
     <div className="px-4 pb-6 pt-0 sm:p-6 max-w-7xl mx-auto space-y-5 animate-fade-in">
 
       {/* ── Back ── */}
-      <Link href="/events"
-        className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-teal-400 transition-colors">
-        <ArrowLeft className="w-4 h-4" /> Zurück zu Events
-      </Link>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <Link href="/events"
+          className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-teal-400 transition-colors">
+          <ArrowLeft className="w-4 h-4" /> Zurück zu Events
+        </Link>
+        {/* Aktive Saison-Link (wenn gerade auf archivierter Saison) */}
+        {isArchived && activeSibling && (
+          <Link href={`/events/series/${activeSibling.id}`}
+            className="flex items-center gap-1.5 text-xs text-teal-400 hover:text-teal-300 border border-teal-500/20 hover:border-teal-500/40 rounded-lg px-3 py-1.5 transition-all">
+            <CheckCircle2 className="w-3.5 h-3.5" /> Zur aktuellen Saison →
+          </Link>
+        )}
+      </div>
+
+      {/* ── Archiviert-Banner ────────────────────────────────────────────────── */}
+      {isArchived && (
+        <div className="glass rounded-2xl px-4 py-3 flex items-center gap-3 border border-amber-500/20 bg-amber-500/[0.04]">
+          <Archive className="w-4 h-4 text-amber-400 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-amber-300">
+              Archiviert · Saison {series.seasonNumber ?? 1}
+              {series.archivedAt && (
+                <span className="text-amber-400/60 font-normal ml-2 text-xs">
+                  · abgeschlossen {new Date(series.archivedAt).toLocaleDateString("de-DE", { day: "2-digit", month: "long", year: "numeric", timeZone: "Europe/Berlin" })}
+                </span>
+              )}
+            </p>
+            {overallWinners.length > 0 && (
+              <p className="text-xs text-amber-400/70 mt-0.5 flex items-center gap-1.5">
+                <Trophy className="w-3 h-3" />
+                Gesamtsieger: {overallWinners.map(u => u.username ?? u.name ?? "?").join(", ")}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Hero Banner ──────────────────────────────────────────────────────── */}
       <div className="glass card-shine rounded-2xl p-4 sm:p-6 relative overflow-hidden">
@@ -452,6 +610,36 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
           showPoints={showPoints}
           lastEventDelta={hasDelta ? lastEventDelta : undefined}
           lastEventTitle={gamePhaseCompleteEvents[0]?.title}
+        />
+      )}
+
+      {/* ── All-Time Leaderboard ─────────────────────────────────────────────── */}
+      {showAllTime && (
+        <div className="space-y-3">
+          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+            <Crown className="w-3.5 h-3.5 text-amber-400" /> All-Time Leaderboard
+            <span className="text-[10px] text-gray-600 normal-case tracking-normal font-normal">· alle Saisons zusammengezählt</span>
+          </h2>
+          <FullStandingsToggle
+            rows={allTimeStandings}
+            users={allTimeUsers}
+            statCols={statCfg.stats}
+            extraCols={extraCols}
+            currentUserId={userId}
+            showPoints={showPoints}
+            defaultExpanded
+          />
+        </div>
+      )}
+
+      {/* ── Vergangene Saisons ────────────────────────────────────────────────── */}
+      {(archivedSiblings.length > 0 || (!isArchived && siblingSeasons.some(s => s.status === "archived"))) && (
+        <SaisonArchiv
+          currentId={id}
+          archivedSeasons={[
+            ...archivedSiblings,
+            ...(isArchived ? [] : siblingSeasons.filter(s => s.status === "archived")),
+          ]}
         />
       )}
 

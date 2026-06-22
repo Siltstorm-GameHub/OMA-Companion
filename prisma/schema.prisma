@@ -220,6 +220,13 @@ model EventSeries {
   placementRewardsJson String?
   // JSON: { enabled: bool, question: string, coins: 250, rankPoints: 3 }
   pollConfigJson       String?
+  // Saison-Archiv
+  groupId              String?   // verbindet alle Saisons derselben Reihe
+  status               String    @default("active") // "active" | "archived"
+  seasonNumber         Int?      // 1, 2, 3 …
+  archivedAt           DateTime?
+  // JSON: analog zu event.completionData (overallWinnerIds, finalRanking, poll*, lockedAt)
+  seriesCompletionData String?
   createdAt   DateTime @default(now())
   events      Event[]
 }

@@ -26,10 +26,11 @@ interface Props {
   showPoints: boolean;
   lastEventDelta?: Record<string, DeltaInfo>;
   lastEventTitle?: string;
+  defaultExpanded?: boolean;
 }
 
-export default function FullStandingsToggle(props: Props) {
-  const [open, setOpen] = useState(false);
+export default function FullStandingsToggle({ defaultExpanded, ...props }: Props) {
+  const [open, setOpen] = useState(defaultExpanded ?? false);
 
   return (
     <div className="space-y-3">
