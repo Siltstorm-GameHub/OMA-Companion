@@ -494,7 +494,7 @@ export default function TournamentManager({
     const updated = matchEntries.map(e => {
       const row = ed[e.userId ?? ""] ?? {};
       const stats: Record<string, number> = {};
-      statFields.forEach(f => { if (row[f]) stats[f] = Number(row[f]); });
+      statFields.forEach(f => { if (row[f] !== undefined && row[f] !== "") stats[f] = Number(row[f]); });
       return {
         id: e.id,
         statsJson: Object.keys(stats).length ? stats : null,
@@ -737,6 +737,11 @@ export default function TournamentManager({
                   {isExp && (
                     <div className="p-3">
                       {match.notes && <p className="text-xs text-gray-500 mb-3">{match.notes}</p>}
+                      {statFields.length === 0 ? (
+                        <div className="text-xs text-amber-400/80 bg-amber-900/10 border border-amber-800/30 rounded-lg px-3 py-2">
+                          Keine Statistik-Felder konfiguriert. Bitte zuerst im Reiter <span className="font-semibold">Einstellungen</span> die gewünschten Stat-Felder eintragen und auf „Turnier-Einstellungen speichern" klicken.
+                        </div>
+                      ) : (
                       <div className="overflow-x-auto">
                         <table className="w-full text-xs">
                           <thead>
@@ -772,6 +777,7 @@ export default function TournamentManager({
                           </tbody>
                         </table>
                       </div>
+                      )}
                       <div className="flex gap-2 mt-3">
                         <button onClick={() => submitFfa(match.id, match.entries)} disabled={loading}
                           className="flex items-center gap-1.5 text-xs bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white rounded px-3 py-1.5">
