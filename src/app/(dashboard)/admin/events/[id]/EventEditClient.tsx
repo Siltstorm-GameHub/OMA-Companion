@@ -508,6 +508,96 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
             {loading ? "Speichert…" : "Speichern"}
           </button>
 
+          {/* ── Turnier-Einstellungen ── */}
+          <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-amber-500/10 flex items-center justify-between">
+              <h3 className="text-xs font-semibold text-amber-400/80 uppercase tracking-wider flex items-center gap-1.5">
+                <Trophy className="w-3.5 h-3.5" /> Turnier-Einstellungen
+              </h3>
+              {hasTournament && (
+                <a href={`/admin/events/${event.id}/bracket`}
+                  className="text-[10px] text-amber-400/60 hover:text-amber-300 transition-colors flex items-center gap-1">
+                  <ExternalLink className="w-3 h-3" /> Turnierbaum
+                </a>
+              )}
+            </div>
+            <div className="px-4 py-3 space-y-3">
+              {/* Format */}
+              <div>
+                <label className="text-xs text-gray-500 block mb-1.5">Format</label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {TMT_FORMATS.map(f => (
+                    <button key={f.value} type="button" onClick={() => setTmtFormat(f.value)}
+                      className={`text-left px-2.5 py-2 rounded-lg border transition-colors ${
+                        tmtFormat === f.value
+                          ? "border-amber-500 bg-amber-900/25 text-white"
+                          : "border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600"
+                      }`}>
+                      <p className="text-xs font-medium leading-tight">{f.label}</p>
+                      <p className="text-[10px] text-gray-500 mt-0.5 leading-tight">{f.desc}</p>
+                    </button>
+                  ))}
+                </div>
+                {hasTournament && tmtFormat !== event.format && (
+                  <p className="text-[10px] text-amber-500/70 mt-1.5">
+                    ⚠ Format wird geändert. Bestehende Matches bleiben erhalten.
+                  </p>
+                )}
+              </div>
+
+              {/* Punkte-Konfiguration */}
+              {isLiga ? (
+                <div>
+                  <label className="text-xs text-gray-500 block mb-1.5">🪙 Münzen pro Match-Ergebnis</label>
+                  <div className="flex gap-2">
+                    {([["🏆 Sieg", "win"], ["🤝 Unentschieden", "draw"]] as const).map(([label, key]) => (
+                      <div key={key} className="flex-1">
+                        <label className="text-[10px] text-gray-600 block mb-1">{label}</label>
+                        <input type="number" min={0} value={tmtPoints[key]}
+                          onChange={e => setTmtPoints(p => ({ ...p, [key]: Number(e.target.value) }))}
+                          className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-2 py-1.5 text-center" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="text-xs text-gray-500 block mb-1.5">Belohnungen pro Platzierung</label>
+                  <div className="space-y-1.5">
+                    <div className="grid grid-cols-3 gap-2 text-[10px] text-gray-600 px-1">
+                      <span>Platz</span><span className="text-center">🪙 Münzen</span><span className="text-center">⭐ Punkte</span>
+                    </div>
+                    {([["🥇 1.", "coins1", "pts1"], ["🥈 2.", "coins2", "pts2"], ["🥉 3.", "coins3", "pts3"]] as const).map(([label, ck, pk]) => (
+                      <div key={label} className="grid grid-cols-3 gap-2 items-center">
+                        <span className="text-xs text-gray-300">{label}</span>
+                        <input type="number" min={0} value={tmtPoints[ck]}
+                          onChange={e => setTmtPoints(p => ({ ...p, [ck]: Number(e.target.value) }))}
+                          className="text-xs bg-gray-800 border border-gray-700 text-amber-300 rounded px-2 py-1.5 text-center w-full" />
+                        <input type="number" min={0} value={tmtPoints[pk]}
+                          onChange={e => setTmtPoints(p => ({ ...p, [pk]: Number(e.target.value) }))}
+                          className="text-xs bg-gray-800 border border-gray-700 text-teal-300 rounded px-2 py-1.5 text-center w-full" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Stat-Felder */}
+              {hasStat && (
+                <div>
+                  <label className="text-xs text-gray-500 block mb-1.5">Statistik-Felder</label>
+                  <StatFieldEditor fields={tmtStatFields} onChange={setTmtStatFields} isAvg={tmtFormat === "avg_stats"} />
+                </div>
+              )}
+
+              <button onClick={saveTmtSettings} disabled={tmtLoading}
+                className="w-full flex items-center justify-center gap-2 rounded-lg py-2 text-sm font-medium text-white bg-amber-700 hover:bg-amber-600 transition-colors disabled:opacity-50">
+                <Trophy className="w-3.5 h-3.5" />
+                {tmtLoading ? "Speichert…" : hasTournament ? "Turnier-Einstellungen speichern" : "Turnier erstellen"}
+              </button>
+            </div>
+          </div>
+
           {/* Danger zone */}
           {isAdmin && (
             <div className="rounded-xl border border-red-900/50 bg-red-950/10 p-3">
