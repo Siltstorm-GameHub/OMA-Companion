@@ -123,6 +123,7 @@ export default async function TournamentDetailPage({
     pollBonusCoins?: number | null;
     pollBonusRankPoints?: number | null;
     finalRankingGroups?: string[][] | null;
+    gamePhaseComplete?: boolean;
     pollPhaseComplete?: boolean;
   };
   const completionData: CompletionData = (() => {
