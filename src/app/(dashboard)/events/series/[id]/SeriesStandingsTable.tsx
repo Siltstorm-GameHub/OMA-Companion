@@ -318,8 +318,10 @@ export default function SeriesStandingsTable({
 
   if (mode === "full") {
     return (
-      <div className="glass card-shine rounded-2xl overflow-x-auto">
-        <FullTable />
+      <div className="glass card-shine rounded-2xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <FullTable />
+        </div>
       </div>
     );
   }
