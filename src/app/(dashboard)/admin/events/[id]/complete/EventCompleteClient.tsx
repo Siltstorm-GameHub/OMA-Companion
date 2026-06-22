@@ -143,9 +143,16 @@ export default function EventCompleteClient({
   const [rankingManuallyEdited, setRankingManuallyEdited] = useState(!!initialFinalRanking?.length);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
 
-  // Auto-sort on first render if winnerStatField is preset and no manual ranking exists
+  // Auto-sort on first render if:
+  // - no saved ranking exists yet, OR
+  // - saved ranking was missing users (e.g. merged stub accounts) → re-sort to place them correctly
+  const hasMissingUsers = (() => {
+    if (!initialFinalRanking?.length) return false;
+    const savedIds = new Set(initialFinalRanking);
+    return registeredUsers.some(u => !savedIds.has(u.id));
+  })();
   useEffect(() => {
-    if (winnerStatField && !initialFinalRanking?.length) {
+    if (winnerStatField && (!initialFinalRanking?.length || hasMissingUsers)) {
       autoSort(winnerStatField);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -402,6 +402,7 @@ export default async function TournamentDetailPage({
                   coins: placementCoins(place),
                   rankPts: placementRankPts(place),
                 }))}
+                finalRankingGroups={rankingGroups}
               />
             )}
           </div>

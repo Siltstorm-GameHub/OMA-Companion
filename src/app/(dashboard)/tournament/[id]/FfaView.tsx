@@ -33,6 +33,7 @@ export default function FfaView({
   format = "ffa",
   participationCoins = 0,
   placementRewards = [],
+  finalRankingGroups = null,
 }: {
   matches: Match[];
   participants: Participant[];
@@ -41,6 +42,7 @@ export default function FfaView({
   format?: string;
   participationCoins?: number;
   placementRewards?: { place: number; coins: number; rankPts: number }[];
+  finalRankingGroups?: string[][] | null;
 }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const toggle = (id: string) =>
@@ -141,15 +143,26 @@ export default function FfaView({
                     const combined = isAvg && statFields.length > 0
                       ? fieldAvgs.reduce((s, v) => s + v, 0) / statFields.length
                       : null;
-                    const reward = placementRewards.find(p => p.place === i + 1);
+                    // Use confirmed placement from finalRankingGroups if available, else fall back to stat-rank
+                    const confirmedPlace: number | undefined = (() => {
+                      if (!finalRankingGroups) return undefined;
+                      let place = 1;
+                      for (const group of finalRankingGroups) {
+                        if (group.includes(r.userId)) return place;
+                        place += group.length;
+                      }
+                      return undefined;
+                    })();
+                    const place = confirmedPlace ?? (i + 1);
+                    const reward = placementRewards.find(p => p.place === place);
                     const totalCoins = (reward?.coins ?? 0) + participationCoins;
                     const hasRewards = placementRewards.some(p => p.coins > 0 || p.rankPts > 0);
                     return (
                       <tr key={r.userId} className={`transition-colors ${isMe ? "bg-rose-950/30" : "hover:bg-white/[0.02]"}`}>
                         <td className="px-4 py-3 text-center">
-                          {i < 3
-                            ? <span className="text-base">{MEDAL[i]}</span>
-                            : <span className="text-sm text-gray-600">{i + 1}</span>}
+                          {place <= 3
+                            ? <span className="text-base">{MEDAL[place - 1]}</span>
+                            : <span className="text-sm text-gray-600">{place}</span>}
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
