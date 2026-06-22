@@ -17,6 +17,7 @@ type StandingUser = {
 };
 export type DeltaInfo = {
   rankDelta: number;
+  pointsDelta: number;
   statDeltas: Record<string, number>;
   participated: boolean;
   isNew: boolean;
@@ -216,7 +217,12 @@ export default function SeriesStandingsTable({
                 </div>
               ))}
               {showPoints && (
-                <div className="text-right"><PointsCell value={row.totalPoints} rank={rank} /></div>
+                <div className="text-right flex flex-col items-end gap-0">
+                  <PointsCell value={row.totalPoints} rank={rank} />
+                  {delta?.pointsDelta != null && delta.pointsDelta > 0 && (
+                    <span className="text-[9px] text-emerald-500 tabular-nums leading-none">+{delta.pointsDelta}</span>
+                  )}
+                </div>
               )}
             </div>
           );
@@ -281,7 +287,12 @@ export default function SeriesStandingsTable({
                 </span>
               </div>
               {showPoints ? (
-                <div className="text-right"><PointsCell value={row.totalPoints} rank={rank} /></div>
+                <div className="text-right flex flex-col items-end gap-0">
+                  <PointsCell value={row.totalPoints} rank={rank} />
+                  {delta?.pointsDelta != null && delta.pointsDelta > 0 && (
+                    <span className="text-[9px] text-emerald-500 tabular-nums leading-none">+{delta.pointsDelta}</span>
+                  )}
+                </div>
               ) : (
                 <div className="text-center">
                   <span className="text-sm text-gray-400 tabular-nums">{row.participations}</span>

@@ -194,6 +194,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
   // ── Deltas gegenüber dem letzten abgeschlossenen Event ─────────────────────
   type DeltaInfo = {
     rankDelta: number;
+    pointsDelta: number;
     statDeltas: Record<string, number>;
     participated: boolean;
     isNew: boolean;
@@ -278,8 +279,10 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
           if (val > 0) statDeltas[field] = val;
         }
       }
+      const pointsDelta = row.totalPoints - (prevPointsMap.get(row.userId) ?? row.totalPoints);
       lastEventDelta.set(row.userId, {
         rankDelta: isNew ? 0 : prevRank! - currentRank,
+        pointsDelta,
         statDeltas,
         participated,
         isNew,
