@@ -33,7 +33,9 @@ model User {
   messagesTotal     Int @default(0)
 
   // Collectibles Showcase: JSON-Array mit bis zu 5 CollectibleItem-IDs
-  showcaseJson  String?
+  showcaseJson        String?
+  // Badge Showcase: JSON-Array mit bis zu 3 Badge-Keys (system oder custom-id)
+  showcaseBadgesJson  String?
 
   accounts      Account[]
   sessions      Session[]
@@ -52,6 +54,8 @@ model User {
   collectibles              UserCollectible[]
   lobbyMessages             LobbyMessage[]
   pushSubscriptions         PushSubscription[]
+  systemBadges              UserSystemBadge[]
+  customBadgeAwards         UserCustomBadge[]
 }
 
 // ── Collectibles ─────────────────────────────────────────────────────────────
@@ -549,6 +553,42 @@ model LobbyMessage {
 
   @@index([createdAt])
   @@map("lobbymessage")
+}
+
+// ── Abzeichen ────────────────────────────────────────────────────────────────
+
+// Automatisch vergebene System-Abzeichen (definiert in badges.ts)
+model UserSystemBadge {
+  userId   String
+  badgeKey String
+  earnedAt DateTime @default(now())
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@id([userId, badgeKey])
+}
+
+// Admin-erstellte Custom-Abzeichen
+model CustomBadge {
+  id        String            @id @default(cuid())
+  icon      String            // Emoji
+  name      String
+  desc      String
+  category  String            // "community" | "aktivitaet" | "events" | "turniere" | "punkte" | "special"
+  coins     Int               @default(0)  // optionale Münzen-Belohnung
+  createdAt DateTime          @default(now())
+  createdBy String            // Admin-User-ID
+  awards    UserCustomBadge[]
+}
+
+// Manuell vergebene Custom-Abzeichen
+model UserCustomBadge {
+  userId        String
+  customBadgeId String
+  earnedAt      DateTime    @default(now())
+  awardedBy     String      // Admin-User-ID
+  note          String?     // optionale Notiz vom Admin
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge         CustomBadge @relation(fields: [customBadgeId], references: [id], onDelete: Cascade)
+  @@id([userId, customBadgeId])
 }
 
 // ── Push-Benachrichtigungen ──────────────────────────────────────────────────
