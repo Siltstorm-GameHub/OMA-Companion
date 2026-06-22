@@ -51,7 +51,6 @@ function computeStatStandings(
   events: SeriesEventForStandings[],
   cfg: StatConfig,
   legacy: LegacyRow[],
-  persistedStandings: SeriesStandingsJson | null,
 ) {
   const evPart: Record<string, number> = {};
   const evStats: Record<string, Record<string, number>> = {};
@@ -61,23 +60,22 @@ function computeStatStandings(
     evStats[uid][field] = (evStats[uid][field] ?? 0) + val;
   }
 
-  if (persistedStandings) {
-    for (const [uid, stats] of Object.entries(persistedStandings.raw)) {
-      evPart[uid] = (evPart[uid] ?? 0) + (stats["participations"] ?? 0);
-      for (const [f, v] of Object.entries(stats)) {
-        if (f !== "participations") addEv(uid, f, v);
-      }
-    }
-  }
-
-  const processedIds = new Set(persistedStandings?.processedEventIds ?? []);
+  // Immer live aus DB-Events rerechnen – nur Events mit abgeschlossener Spielphase
   for (const ev of events) {
-    if (processedIds.has(ev.id)) continue;
-    if (ev.status === "open") continue; // Noch nicht gestartete Events nicht mitzählen
+    if (!ev.completionData) continue;
+    let cd: {
+      gamePhaseComplete?: boolean;
+      mvpUserId?: string;
+      eventWinnerId?: string;
+      eventWinnerIds?: string[];
+      seriesWinnerTargetField?: string;
+    } = {};
+    try { cd = JSON.parse(ev.completionData); } catch { continue; }
+    if (!cd.gamePhaseComplete) continue;
+
     for (const { userId: uid } of ev.registrations) {
       evPart[uid] = (evPart[uid] ?? 0) + 1;
     }
-    if (ev.matches.length === 0) continue;
     for (const match of ev.matches) {
       for (const entry of match.entries) {
         if (!entry.userId || !entry.statsJson) continue;
@@ -88,6 +86,13 @@ function computeStatStandings(
           if (v) addEv(entry.userId, field, v);
         }
       }
+    }
+    if (cd.mvpUserId && cfg.mvpStatField) {
+      addEv(cd.mvpUserId, cfg.mvpStatField, 1);
+    }
+    const winnerIds = cd.eventWinnerIds ?? (cd.eventWinnerId ? [cd.eventWinnerId] : []);
+    if (winnerIds.length > 0 && cd.seriesWinnerTargetField) {
+      for (const uid of winnerIds) addEv(uid, cd.seriesWinnerTargetField, 1);
     }
   }
 
@@ -165,7 +170,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
     try { return series.seriesStandingsJson ? JSON.parse(series.seriesStandingsJson) : null; } catch { return null; }
   })();
 
-  const standings = computeStatStandings(series.events, statCfg, legacyRows, persistedStandings);
+  const standings = computeStatStandings(series.events, statCfg, legacyRows);
 
   // Unique participants across all events
   const totalParticipantIds = new Set(series.events.flatMap(e => e.registrations.map(r => r.userId)));
@@ -246,9 +251,13 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
           const c = getContrib(cd.mvpUserId);
           c.stats[statCfg.mvpStatField] = (c.stats[statCfg.mvpStatField] ?? 0) + 1;
         }
-        if (cd.eventWinnerId && cd.seriesWinnerTargetField) {
-          const c = getContrib(cd.eventWinnerId);
-          c.stats[cd.seriesWinnerTargetField] = (c.stats[cd.seriesWinnerTargetField] ?? 0) + 1;
+        const lastWinnerIds = (cd as { eventWinnerIds?: string[]; eventWinnerId?: string }).eventWinnerIds
+          ?? ((cd as { eventWinnerId?: string }).eventWinnerId ? [(cd as { eventWinnerId?: string }).eventWinnerId!] : []);
+        if (lastWinnerIds.length > 0 && cd.seriesWinnerTargetField) {
+          for (const wid of lastWinnerIds) {
+            const c = getContrib(wid);
+            c.stats[cd.seriesWinnerTargetField] = (c.stats[cd.seriesWinnerTargetField] ?? 0) + 1;
+          }
         }
       } catch { /* ignore */ }
     }
