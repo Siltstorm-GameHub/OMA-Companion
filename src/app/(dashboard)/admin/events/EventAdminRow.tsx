@@ -384,8 +384,8 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
 
   async function saveTmtSettings() {
     setTmtLoading(true);
-    const isLiga = (tournament ? tournament.format : tmtFormat) === "liga";
-    const hasStat = ["ffa", "coop_stats", "avg_stats"].includes(tournament ? tournament.format : tmtFormat);
+    const isLiga = tmtFormat === "liga";
+    const hasStat = ["ffa", "coop_stats", "avg_stats"].includes(tmtFormat);
     const config = isLiga
       ? { win: tmtPoints.win, draw: tmtPoints.draw }
       : {
@@ -410,8 +410,10 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          format: tmtFormat,
           pointsConfig: config,
           ...(hasStat && { statFields: tmtStatFields }),
+          ...(!hasStat && { statFields: null }),
         }),
       });
       if (res.ok) { toast.success("Turnier-Einstellungen gespeichert"); router.refresh(); }
@@ -1106,30 +1108,32 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                       )}
                     </div>
 
-                    {/* Format picker – nur beim Erstellen */}
-                    {!tournament && (
-                      <div>
-                        <label className="text-xs text-gray-500 block mb-2">Format</label>
-                        <div className="grid grid-cols-2 gap-2">
-                          {TMT_FORMATS.map(f => (
-                            <button key={f.value} type="button" onClick={() => setTmtFormat(f.value)}
-                              className={`text-left p-3 rounded-lg border transition-colors ${
-                                tmtFormat === f.value
-                                  ? "border-amber-500 bg-amber-900/20 text-white"
-                                  : "border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600"
-                              }`}>
-                              <p className="text-sm font-medium">{f.label}</p>
-                              <p className="text-xs text-gray-500 mt-0.5">{f.desc}</p>
-                            </button>
-                          ))}
-                        </div>
+                    {/* Format picker */}
+                    <div>
+                      <label className="text-xs text-gray-500 block mb-2">Format</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {TMT_FORMATS.map(f => (
+                          <button key={f.value} type="button" onClick={() => setTmtFormat(f.value)}
+                            className={`text-left p-3 rounded-lg border transition-colors ${
+                              tmtFormat === f.value
+                                ? "border-amber-500 bg-amber-900/20 text-white"
+                                : "border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600"
+                            }`}>
+                            <p className="text-sm font-medium">{f.label}</p>
+                            <p className="text-xs text-gray-500 mt-0.5">{f.desc}</p>
+                          </button>
+                        ))}
                       </div>
-                    )}
+                      {tournament && tmtFormat !== tournament.format && (
+                        <p className="text-[11px] text-amber-500/80 mt-2">
+                          ⚠ Format wird geändert von „{TMT_FORMATS.find(f => f.value === tournament.format)?.label ?? tournament.format}" → „{TMT_FORMATS.find(f => f.value === tmtFormat)?.label}". Bestehende Matches bleiben erhalten.
+                        </p>
+                      )}
+                    </div>
 
                     {/* Belohnungen */}
                     {(() => {
-                      const fmt = tournament ? tournament.format : tmtFormat;
-                      const isLiga = fmt === "liga";
+                      const isLiga = tmtFormat === "liga";
                       return (
                         <div>
                           <label className="text-xs text-gray-500 block mb-2">
@@ -1179,20 +1183,16 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                     })()}
 
                     {/* Stat-Felder */}
-                    {(() => {
-                      const fmt = tournament ? tournament.format : tmtFormat;
-                      if (!["ffa", "coop_stats", "avg_stats"].includes(fmt)) return null;
-                      return (
-                        <div>
-                          <label className="text-xs text-gray-500 block mb-2">Statistik-Felder</label>
-                          <StatFieldEditor
-                            fields={tmtStatFields}
-                            onChange={setTmtStatFields}
-                            isAvg={fmt === "avg_stats"}
-                          />
-                        </div>
-                      );
-                    })()}
+                    {["ffa", "coop_stats", "avg_stats"].includes(tmtFormat) && (
+                      <div>
+                        <label className="text-xs text-gray-500 block mb-2">Statistik-Felder</label>
+                        <StatFieldEditor
+                          fields={tmtStatFields}
+                          onChange={setTmtStatFields}
+                          isAvg={tmtFormat === "avg_stats"}
+                        />
+                      </div>
+                    )}
 
                     {/* Auto-Generierung (nur beim Erstellen, für passende Formate) */}
                     {!tournament && ["single_elimination", "round_robin", "liga"].includes(tmtFormat) && (
@@ -1265,11 +1265,12 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                         </div>
                         <button
                           onClick={() => setShowCompletionModal(true)}
-                          disabled={loading}
+                          disabled={loading || !seriesSettingsLoaded}
+                          title={!seriesSettingsLoaded ? "Reihen-Einstellungen werden geladen…" : undefined}
                           className="flex items-center gap-1.5 text-sm text-teal-300 hover:text-white hover:bg-teal-700 border border-teal-600/50 hover:border-teal-700 rounded-lg px-3 py-2 transition-colors disabled:opacity-50 shrink-0"
                         >
                           <CheckCircle2 className="w-3.5 h-3.5" />
-                          {event.completionData ? "Bearbeiten" : "Abschließen"}
+                          {!seriesSettingsLoaded ? "Lädt…" : event.completionData ? "Bearbeiten" : "Abschließen"}
                         </button>
                       </div>
                     </div>

@@ -44,10 +44,15 @@ export default function EventCompletionModal({
   const [mvpUserId, setMvpUserId] = useState<string>((initialData?.mvpUserId as string) ?? "");
   const [winnerStatField, setWinnerStatField] = useState<string>(seriesStatConfig?.defaultWinnerStatField ?? "");
   const [seriesWinnerTargetField, setSeriesWinnerTargetField] = useState<string>(seriesStatConfig?.defaultWinnerTargetField ?? "");
-  const [hasPoll, setHasPoll] = useState(!!(initialData?.pollWinnerId));
+  const [hasPoll, setHasPoll] = useState(!!(initialData?.pollWinnerIds || initialData?.pollWinnerId));
   const [pollLabel, setPollLabel] = useState((initialData?.pollLabel as string) ?? "MVP");
-  const [pollBonusPoints, setPollBonusPoints] = useState<number>((initialData?.pollBonusPoints as number) ?? 10);
-  const [pollWinnerId, setPollWinnerId] = useState<string>((initialData?.pollWinnerId as string) ?? "");
+  const [pollBonusPoints, setPollBonusPoints] = useState<number>(
+    (initialData?.pollBonusCoins as number) ?? (initialData?.pollBonusPoints as number) ?? 10
+  );
+  const [pollWinnerId, setPollWinnerId] = useState<string>(
+    (initialData?.pollWinnerIds as string[] | undefined)?.[0] ??
+    (initialData?.pollWinnerId as string) ?? ""
+  );
 
   // Endplatzierung
   const [rankingOrder, setRankingOrder] = useState<string[]>(() => {
@@ -132,9 +137,9 @@ export default function EventCompletionModal({
           mvpUserId:               mvpUserId || undefined,
           winnerStatField:         winnerStatField || undefined,
           seriesWinnerTargetField: seriesWinnerTargetField || undefined,
-          pollWinnerId:            hasPoll && pollWinnerId ? pollWinnerId : undefined,
+          pollWinnerIds:           hasPoll && pollWinnerId ? [pollWinnerId] : undefined,
           pollLabel:               hasPoll && pollWinnerId ? pollLabel : undefined,
-          pollBonusPoints:         hasPoll && pollWinnerId ? pollBonusPoints : undefined,
+          pollBonusCoins:          hasPoll && pollWinnerId ? pollBonusPoints : undefined,
         }),
       });
       if (!res.ok) {
