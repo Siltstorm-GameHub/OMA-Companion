@@ -103,13 +103,15 @@ export async function POST(
     }
   }
 
-  // Event-Gewinner (höchster Wert im winnerStatField)
-  let eventWinnerId: string | undefined;
+  // Event-Gewinner (höchster Wert im winnerStatField — alle bei Gleichstand)
+  let eventWinnerId: string | undefined;       // compat: erster Gewinner
+  let eventWinnerIds: string[] = [];
   if (body.winnerStatField) {
     let maxVal = -Infinity;
     for (const [uid, stats] of Object.entries(userStats)) {
       const val = stats[body.winnerStatField] ?? 0;
-      if (val > maxVal) { maxVal = val; eventWinnerId = uid; }
+      if (val > maxVal) { maxVal = val; eventWinnerId = uid; eventWinnerIds = [uid]; }
+      else if (val === maxVal && maxVal > -Infinity) { eventWinnerIds.push(uid); }
     }
   }
 
@@ -272,8 +274,8 @@ export async function POST(
           if (val > 0) addToUser(userId, field, val);
         }
       }
-      if (eventWinnerId && body.seriesWinnerTargetField) {
-        addToUser(eventWinnerId, body.seriesWinnerTargetField, 1);
+      if (eventWinnerIds.length > 0 && body.seriesWinnerTargetField) {
+        for (const uid of eventWinnerIds) addToUser(uid, body.seriesWinnerTargetField, 1);
       }
     }
 
@@ -300,6 +302,7 @@ export async function POST(
     winnerStatField:         body.winnerStatField ?? null,
     seriesWinnerTargetField: body.seriesWinnerTargetField ?? null,
     eventWinnerId:           eventWinnerId ?? null,
+    eventWinnerIds:          eventWinnerIds.length > 0 ? eventWinnerIds : null,
     pollWinnerIds:           newPollWinners.length > 0 ? newPollWinners : null,
     pollLabel:               body.pollLabel ?? null,
     pollBonusCoins:          pollCoins > 0 ? pollCoins : null,
