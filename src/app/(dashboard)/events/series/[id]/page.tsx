@@ -40,6 +40,7 @@ type SeriesStandingsJson = {
 };
 type SeriesEventForStandings = {
   id: string;
+  status: string;
   completionData: string | null;
   registrations: { userId: string }[];
   finalRankingJson: string | null;
@@ -72,6 +73,7 @@ function computeStatStandings(
   const processedIds = new Set(persistedStandings?.processedEventIds ?? []);
   for (const ev of events) {
     if (processedIds.has(ev.id)) continue;
+    if (ev.status === "open") continue; // Noch nicht gestartete Events nicht mitzählen
     for (const { userId: uid } of ev.registrations) {
       evPart[uid] = (evPart[uid] ?? 0) + 1;
     }
