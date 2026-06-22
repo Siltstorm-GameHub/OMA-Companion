@@ -149,13 +149,14 @@ export default function EventCompleteClient({
   /* ── Derived ── */
   const seriesStatFields = (seriesStatConfig?.stats ?? []).map(s => s.field);
 
-  const previewWinner = useMemo(() => {
-    if (!winnerStatField) return null;
-    let best: string | null = null;
+  const previewWinners = useMemo(() => {
+    if (!winnerStatField) return [];
     let bestVal = -Infinity;
+    let best: string[] = [];
     for (const [uid, stats] of Object.entries(userStats)) {
       const v = stats[winnerStatField] ?? 0;
-      if (v > bestVal) { bestVal = v; best = uid; }
+      if (v > bestVal) { bestVal = v; best = [uid]; }
+      else if (v === bestVal && bestVal > -Infinity) { best.push(uid); }
     }
     return best;
   }, [winnerStatField, userStats]);
@@ -366,13 +367,20 @@ export default function EventCompleteClient({
                   </select>
                 </div>
               )}
-              {previewWinner && winnerStatField && (
-                <p className="text-xs text-amber-400 flex items-center gap-1.5">
-                  <Trophy className="w-3.5 h-3.5 shrink-0" />
-                  Aktueller Gewinner:{" "}
-                  <strong>{userName(registeredUsers.find(u => u.id === previewWinner) ?? { id: "", name: previewWinner, username: null, image: null })}</strong>
-                  {" "}({userStats[previewWinner]?.[winnerStatField] ?? 0} {winnerStatField})
-                </p>
+              {previewWinners.length > 0 && winnerStatField && (
+                <div className="flex flex-col gap-0.5">
+                  <p className="text-[10px] text-gray-500">{previewWinners.length > 1 ? "Aktuelle Gewinner (Gleichstand):" : "Aktueller Gewinner:"}</p>
+                  {previewWinners.map(uid => {
+                    const u = registeredUsers.find(u => u.id === uid);
+                    return (
+                      <p key={uid} className="text-xs text-amber-400 flex items-center gap-1.5">
+                        <Trophy className="w-3.5 h-3.5 shrink-0" />
+                        <strong>{u ? userName(u) : uid}</strong>
+                        {" "}({userStats[uid]?.[winnerStatField] ?? 0} {winnerStatField})
+                      </p>
+                    );
+                  })}
+                </div>
               )}
             </div>
           )}
