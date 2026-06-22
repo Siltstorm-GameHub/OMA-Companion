@@ -437,7 +437,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
               const isReg = userId ? ev.registrations.some(r => r.userId === userId) : false;
               const date = new Date(ev.startAt);
               return (
-                <Link key={ev.id} href={`/events/${ev.id}`}
+                <Link key={ev.id} href={`/tournament/${ev.id}`}
                   className={`glass card-shine rounded-2xl px-5 py-4 flex items-center gap-4 hover:bg-white/[0.03] transition-all group ${isReg ? "border border-emerald-500/15" : ""}`}
                   style={{ animationDelay: `${idx * 30}ms` }}>
                   <div className="flex flex-col items-center gap-1 shrink-0">
@@ -495,7 +495,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
               const date = new Date(ev.startAt);
               const detail = pastEventDetails.get(ev.id) ?? {};
               return (
-                <Link key={ev.id} href={`/events/${ev.id}`}
+                <Link key={ev.id} href={`/tournament/${ev.id}`}
                   className="flex items-center gap-3.5 px-4 py-3.5 hover:bg-white/[0.025] transition-colors group">
                   <div className="w-10 h-10 rounded-xl bg-gray-800/60 border border-white/[0.06] flex flex-col items-center justify-center shrink-0 text-center">
                     <p className="text-xs font-bold text-white leading-none">{date.getDate()}</p>

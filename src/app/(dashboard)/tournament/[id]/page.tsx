@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Users, Trophy, Clock, Swords, ChevronDown, Medal, StickyNote, Star, Vote } from "lucide-react";
+import { ArrowLeft, Users, Trophy, Clock, Swords, ChevronDown, Medal, StickyNote, Star, Vote, Repeat } from "lucide-react";
 import WinIcon from "@/components/WinIcon";
 import BracketView from "./BracketView";
 import RoundRobinView from "./RoundRobinView";
@@ -38,6 +38,7 @@ export default async function TournamentDetailPage({
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     include: {
+      series: { select: { id: true, name: true } },
       registrations: {
         include: {
           user: { select: { id: true, name: true, username: true, image: true, points: true } },
@@ -170,9 +171,20 @@ export default async function TournamentDetailPage({
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
-      <Link href="/events" className="flex items-center gap-2 text-sm text-gray-500 hover:text-white mb-5 transition-colors w-fit group">
-        <ArrowLeft className="w-4 h-4" /> Zurück
-      </Link>
+      <div className="flex items-center justify-between mb-5">
+        <Link href="/events" className="flex items-center gap-2 text-sm text-gray-500 hover:text-white transition-colors w-fit group">
+          <ArrowLeft className="w-4 h-4" /> Zurück
+        </Link>
+        {event.series && (
+          <Link
+            href={`/events/series/${event.series.id}`}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-300 hover:bg-teal-500/20 transition-colors font-medium"
+          >
+            <Repeat className="w-3.5 h-3.5" />
+            {event.series.name} – Gesamttabelle
+          </Link>
+        )}
+      </div>
 
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <div className="glass rounded-2xl p-5 mb-5">
