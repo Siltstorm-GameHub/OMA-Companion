@@ -4,8 +4,9 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
 import CoinIcon from "@/components/CoinIcon";
+import RankPointsIcon from "@/components/RankPointsIcon";
 import {
-  ChevronLeft, Repeat, CheckCircle2, Trophy, Star, Vote,
+  ChevronLeft, Repeat, CheckCircle2, Trophy, Vote,
   ListOrdered, GripVertical, Coins, AlertTriangle, RotateCcw, Equal,
 } from "lucide-react";
 
@@ -404,7 +405,7 @@ export default function EventCompleteClient({
           {seriesStatConfig?.mvpStatField && (
             <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(20,184,166,0.05)", border: "1px solid rgba(20,184,166,0.15)" }}>
               <div className="flex items-center gap-2">
-                <Star className="w-3.5 h-3.5 text-teal-400" />
+                <RankPointsIcon size={14} />
                 <span className="text-xs font-semibold text-teal-300">
                   MVP{" "}
                   <span className="font-normal text-gray-500">(+1 auf „{seriesStatConfig.mvpStatField}" in Gesamttabelle)</span>
@@ -543,7 +544,7 @@ export default function EventCompleteClient({
               <ul className="space-y-1 text-xs text-gray-400">
                 {mvpUserId && seriesStatConfig?.mvpStatField && (
                   <li className="flex items-center gap-2">
-                    <Star className="w-3 h-3 text-teal-400 shrink-0" />
+                    <RankPointsIcon size={12} />
                     MVP → {userName(registeredUsers.find(u => u.id === mvpUserId) ?? { id: "", name: mvpUserId, username: null, image: null })} (+1 „{seriesStatConfig.mvpStatField}")
                   </li>
                 )}
@@ -727,7 +728,7 @@ export default function EventCompleteClient({
                           )}
                           {reward && reward.rankPoints > 0 && (
                             <span className="text-[10px] text-teal-400 tabular-nums leading-tight">
-                              +{reward.rankPoints} ⭐
+                              +{reward.rankPoints} <RankPointsIcon size={11} />
                             </span>
                           )}
                         </span>

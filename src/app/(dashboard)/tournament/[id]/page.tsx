@@ -2,7 +2,8 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Users, Trophy, Clock, Swords, ChevronDown, StickyNote, Star, Vote, Repeat } from "lucide-react";
+import { ArrowLeft, Users, Trophy, Clock, Swords, ChevronDown, StickyNote, Vote, Repeat } from "lucide-react";
+import RankPointsIcon from "@/components/RankPointsIcon";
 import WinIcon from "@/components/WinIcon";
 import CoinIcon from "@/components/CoinIcon";
 import BracketView from "./BracketView";
@@ -292,7 +293,7 @@ export default async function TournamentDetailPage({
               )}
               {(pollBonusRankPts ?? 0) > 0 && (
                 <span className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-300">
-                  +{pollBonusRankPts} <Star className="w-3 h-3" />
+                  +{pollBonusRankPts} <RankPointsIcon size={13} />
                 </span>
               )}
             </div>
@@ -354,7 +355,7 @@ export default async function TournamentDetailPage({
                         )}
                         {(pollBonusRankPts ?? 0) > 0 && (
                           <span className="flex items-center gap-0.5 text-[10px] text-violet-400/80">
-                            +{pollBonusRankPts} <Star className="w-2.5 h-2.5" />
+                            +{pollBonusRankPts} <RankPointsIcon size={11} />
                           </span>
                         )}
                       </div>

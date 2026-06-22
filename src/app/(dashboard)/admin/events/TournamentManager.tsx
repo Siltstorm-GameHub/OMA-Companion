@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import CoinIcon from "@/components/CoinIcon";
+import RankPointsIcon from "@/components/RankPointsIcon";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -162,7 +163,7 @@ function CreationForm({
             <div className="grid grid-cols-3 gap-2 text-[10px] text-gray-500 uppercase tracking-wide px-1">
               <span>Platz</span>
               <span className="flex items-center justify-center gap-0.5"><CoinIcon size={11} /> Münzen</span>
-              <span className="text-center">⭐ Punkte</span>
+              <span className="flex items-center justify-center gap-0.5"><RankPointsIcon size={11} /> Punkte</span>
             </div>
             {([
               ["🥇 1. Platz", coins1, setCoins1, pts1, setPts1],

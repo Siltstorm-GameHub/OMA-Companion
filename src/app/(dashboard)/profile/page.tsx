@@ -7,9 +7,10 @@ import PointsInfoModal from "./PointsInfoModal";
 import { QUEST_TYPE_META, type QuestType } from "@/lib/quests";
 import { RARITY_CONFIG, type Rarity, MAX_SHOWCASE } from "@/lib/collectibles";
 import {
-  Trophy, Star, CalendarDays, Swords, Clock, MessageSquare,
+  Trophy, CalendarDays, Swords, Clock, MessageSquare,
   CheckCircle2, Crown, Gamepad2, Medal,
 } from "lucide-react";
+import RankPointsIcon from "@/components/RankPointsIcon";
 import CoinIcon from "@/components/CoinIcon";
 import WinIcon from "@/components/WinIcon";
 import Image from "next/image";
@@ -198,7 +199,7 @@ export default async function ProfilePage() {
       {/* ── Stat-Karten ─────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {[
-          { icon: <Star className="w-4 h-4" />,        label: "Punkte",         value: rankPoints.toLocaleString("de-DE"), iconCls: "text-teal-400    bg-teal-500/10    border-teal-500/15",    accent: "from-teal-500/8"    },
+          { icon: <RankPointsIcon size={16} />,         label: "Punkte",         value: rankPoints.toLocaleString("de-DE"), iconCls: "text-teal-400    bg-teal-500/10    border-teal-500/15",    accent: "from-teal-500/8"    },
           { icon: <CalendarDays className="w-4 h-4" />, label: "Events",         value: String(eventCount),                 iconCls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/15", accent: "from-emerald-500/8" },
           { icon: <WinIcon size={16} />,                label: "Turnier-Siege",  value: String(tournamentWins),             iconCls: "text-rose-400    bg-rose-500/10    border-rose-500/15",    accent: "from-rose-500/8"    },
           { icon: <Medal className="w-4 h-4" />,        label: "Event-Siege",    value: String(eventWins),                  iconCls: "text-amber-400   bg-amber-500/10   border-amber-500/15",   accent: "from-amber-500/8"   },
