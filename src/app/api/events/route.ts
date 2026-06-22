@@ -29,6 +29,37 @@ export async function POST(req: NextRequest) {
 
   const startDate = new Date(startAt);
 
+  // Inherit tournament settings from series if linking to one
+  let seriesFormat: string | null = null;
+  let seriesPointsConfig: string | null = null;
+  let seriesStatFields: string | null = null;
+  if (seriesId) {
+    const series = await prisma.eventSeries.findUnique({
+      where: { id: seriesId },
+      select: { fixedFormat: true, placementRewardsJson: true, seriesStatConfig: true },
+    });
+    if (series?.fixedFormat) seriesFormat = series.fixedFormat;
+    if (series?.placementRewardsJson && series.fixedFormat !== "liga") {
+      try {
+        const { placements } = JSON.parse(series.placementRewardsJson) as {
+          placements: { place: number; coins: number; rankPoints: number }[];
+        };
+        if (placements?.length) {
+          const cfg: Record<string, { coins: number; points: number }> = {};
+          for (const p of placements) cfg[String(p.place)] = { coins: p.coins, points: p.rankPoints };
+          seriesPointsConfig = JSON.stringify(cfg);
+        }
+      } catch { /* skip */ }
+    }
+    if (series?.seriesStatConfig) {
+      try {
+        const { stats } = JSON.parse(series.seriesStatConfig) as { stats: { field: string }[] };
+        const fields = stats?.map(s => s.field).filter(Boolean) ?? [];
+        if (fields.length) seriesStatFields = JSON.stringify(fields);
+      } catch { /* skip */ }
+    }
+  }
+
   const event = await prisma.event.create({
     data: {
       title,
@@ -40,6 +71,9 @@ export async function POST(req: NextRequest) {
       type:            type ?? "community",
       seriesId:        seriesId || null,
       discordChannelId: discordChannelId || null,
+      ...(seriesFormat       && { format:       seriesFormat }),
+      ...(seriesPointsConfig && { pointsConfig: seriesPointsConfig }),
+      ...(seriesStatFields   && { statFields:   seriesStatFields }),
     },
   });
 
