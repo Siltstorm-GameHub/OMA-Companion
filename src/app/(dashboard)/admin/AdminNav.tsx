@@ -2,51 +2,137 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Users, LayoutDashboard, Star, ShoppingBag, Bot, BarChart2, CalendarDays, Heart, CalendarRange, Medal } from "lucide-react";
+import {
+  Users, LayoutDashboard, Star, ShoppingBag, Bot,
+  BarChart2, CalendarDays, Heart, CalendarRange, Medal,
+  Wrench, Users2, BarChart3,
+} from "lucide-react";
 
 type Role = "user" | "moderator" | "admin";
-
-const TABS: { href: string; label: string; icon: typeof LayoutDashboard; exact: boolean; minRole: Role }[] = [
-  { href: "/admin",          label: "Übersicht",       icon: LayoutDashboard, exact: true,  minRole: "moderator" },
-  { href: "/admin/events",   label: "Events",          icon: CalendarDays,    exact: false, minRole: "moderator" },
-  { href: "/admin/series",   label: "Eventreihen",     icon: CalendarRange,   exact: false, minRole: "moderator" },
-  { href: "/admin/lul",      label: "Level-Up-League", icon: Star,            exact: false, minRole: "moderator" },
-  { href: "/admin/polls",    label: "Umfragen",        icon: BarChart2,       exact: false, minRole: "moderator" },
-  { href: "/admin/donations",label: "Spendenpool",     icon: Heart,           exact: false, minRole: "moderator" },
-  { href: "/admin/bot",      label: "Bot",             icon: Bot,             exact: false, minRole: "moderator" },
-  { href: "/admin/badges",   label: "Abzeichen",       icon: Medal,           exact: false, minRole: "admin"     },
-  { href: "/admin/users",    label: "Nutzer & Rollen", icon: Users,           exact: false, minRole: "admin"     },
-  { href: "/admin/shop",     label: "Shop",            icon: ShoppingBag,     exact: false, minRole: "admin"     },
-];
-
 const HIERARCHY: Role[] = ["user", "moderator", "admin"];
 function hasRole(userRole: string, minRole: Role) {
   return HIERARCHY.indexOf(userRole as Role) >= HIERARCHY.indexOf(minRole);
 }
+
+type Tab = { href: string; label: string; icon: typeof LayoutDashboard; exact?: boolean; minRole: Role };
+
+const CATEGORIES: {
+  key: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  minRole: Role;
+  direct?: string; // if set, clicking the category goes directly here (no sub-nav)
+  tabs?: Tab[];
+  prefixes?: string[]; // url prefixes that mark this category as active
+}[] = [
+  {
+    key: "dashboard",
+    label: "Dashboard",
+    icon: LayoutDashboard,
+    minRole: "moderator",
+    direct: "/admin",
+    prefixes: ["/admin"],
+  },
+  {
+    key: "events",
+    label: "Events",
+    icon: CalendarDays,
+    minRole: "moderator",
+    prefixes: ["/admin/events", "/admin/series", "/admin/lul"],
+    tabs: [
+      { href: "/admin/events",  label: "Events",          icon: CalendarDays,  minRole: "moderator" },
+      { href: "/admin/series",  label: "Eventreihen",     icon: CalendarRange, minRole: "moderator" },
+      { href: "/admin/lul",     label: "Level-Up-League", icon: Star,          minRole: "moderator" },
+    ],
+  },
+  {
+    key: "community",
+    label: "Community",
+    icon: Users2,
+    minRole: "moderator",
+    prefixes: ["/admin/polls", "/admin/shop"],
+    tabs: [
+      { href: "/admin/polls", label: "Umfragen", icon: BarChart2,   minRole: "moderator" },
+      { href: "/admin/shop",  label: "Shop",     icon: ShoppingBag, minRole: "admin"     },
+    ],
+  },
+  {
+    key: "tools",
+    label: "Tools",
+    icon: Wrench,
+    minRole: "moderator",
+    prefixes: ["/admin/donations", "/admin/bot", "/admin/badges", "/admin/users"],
+    tabs: [
+      { href: "/admin/donations", label: "Spendenpool",     icon: Heart,     minRole: "moderator" },
+      { href: "/admin/bot",       label: "Bot",             icon: Bot,       minRole: "moderator" },
+      { href: "/admin/badges",    label: "Abzeichen",       icon: Medal,     minRole: "admin"     },
+      { href: "/admin/users",     label: "Nutzer & Rollen", icon: Users,     minRole: "admin"     },
+    ],
+  },
+];
 
 export default function AdminNav() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const userRole = (session?.user as { role?: string })?.role ?? "user";
 
-  const visibleTabs = TABS.filter(t => hasRole(userRole, t.minRole));
+  const activeCategory = CATEGORIES.find(cat =>
+    cat.prefixes?.some(p =>
+      cat.key === "dashboard" ? pathname === p : pathname.startsWith(p)
+    )
+  ) ?? CATEGORIES[0];
+
+  const visibleCategories = CATEGORIES.filter(cat => {
+    if (!hasRole(userRole, cat.minRole)) return false;
+    // Hide category if user has no access to any of its tabs
+    if (cat.tabs) return cat.tabs.some(t => hasRole(userRole, t.minRole));
+    return true;
+  });
+
+  const visibleSubTabs = activeCategory.tabs?.filter(t => hasRole(userRole, t.minRole)) ?? [];
 
   return (
-    <div className="flex gap-1 mb-4 sm:mb-6 bg-gray-900 border border-white/5 rounded-xl p-1 w-full sm:w-fit max-w-full overflow-x-auto scrollbar-none">
-      {visibleTabs.map(({ href, label, icon: Icon, exact }) => {
-        const active = exact ? pathname === href : pathname.startsWith(href);
-        return (
-          <Link key={href} href={href}
-            className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-150 whitespace-nowrap flex-1 sm:flex-none justify-center sm:justify-start ${
-              active
-                ? "bg-purple-600/20 text-purple-300 shadow-[inset_0_0_0_1px_rgba(168,85,247,0.2)]"
-                : "text-gray-500 hover:text-gray-200 hover:bg-white/5"
-            }`}>
-            <Icon className={`w-4 h-4 shrink-0 ${active ? "text-purple-400" : "text-gray-600"}`} />
-            <span>{label}</span>
-          </Link>
-        );
-      })}
+    <div className="mb-4 sm:mb-6 space-y-1">
+      {/* ── Kategorie-Leiste ── */}
+      <div className="flex gap-1 bg-gray-900 border border-white/5 rounded-xl p-1 w-full overflow-x-auto scrollbar-none">
+        {visibleCategories.map(cat => {
+          const isActive = cat.key === activeCategory.key;
+          const Icon = cat.icon;
+          const href = cat.direct ?? cat.tabs?.[0]?.href ?? "/admin";
+          return (
+            <Link key={cat.key} href={href}
+              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-150 whitespace-nowrap flex-1 sm:flex-none justify-center sm:justify-start ${
+                isActive
+                  ? "bg-purple-600/20 text-purple-300 shadow-[inset_0_0_0_1px_rgba(168,85,247,0.2)]"
+                  : "text-gray-500 hover:text-gray-200 hover:bg-white/5"
+              }`}>
+              <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-purple-400" : "text-gray-600"}`} />
+              <span>{cat.label}</span>
+            </Link>
+          );
+        })}
+      </div>
+
+      {/* ── Sub-Navigation ── */}
+      {visibleSubTabs.length > 0 && (
+        <div className="flex gap-1 px-1">
+          {visibleSubTabs.map(tab => {
+            const active = pathname.startsWith(tab.href);
+            const Icon = tab.icon;
+            return (
+              <Link key={tab.href} href={tab.href}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 whitespace-nowrap ${
+                  active
+                    ? "text-white bg-white/8 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]"
+                    : "text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]"
+                }`}>
+                <Icon className={`w-3.5 h-3.5 shrink-0 ${active ? "text-purple-400" : "text-gray-600"}`} />
+                <span>{tab.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
