@@ -696,13 +696,18 @@ export default function EventCompleteClient({
                             {userStats[uid][winnerStatField]} {winnerStatField}
                           </span>
                         )}
-                        {reward && (reward.coins > 0 || reward.rankPoints > 0) && (
-                          <span className="text-[10px] text-gray-600 tabular-nums shrink-0 ml-1">
-                            {reward.coins > 0 && <span className="text-amber-600">{reward.coins}M</span>}
-                            {reward.coins > 0 && reward.rankPoints > 0 && " "}
-                            {reward.rankPoints > 0 && <span className="text-purple-600">{reward.rankPoints}P</span>}
-                          </span>
-                        )}
+                        <span className="flex flex-col items-end shrink-0 ml-1 gap-0">
+                          {rewardsConfig.participationCoins > 0 && (
+                            <span className="text-[10px] text-amber-400 tabular-nums leading-tight">
+                              +{(reward?.coins ?? 0) + rewardsConfig.participationCoins} 🪙
+                            </span>
+                          )}
+                          {reward && reward.rankPoints > 0 && (
+                            <span className="text-[10px] text-teal-400 tabular-nums leading-tight">
+                              +{reward.rankPoints} ⭐
+                            </span>
+                          )}
+                        </span>
                         <div className="flex gap-0.5 shrink-0">
                             {/* Tie toggle (only for non-first rows) */}
                             {idx > 0 && (

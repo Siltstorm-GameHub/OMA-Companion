@@ -191,7 +191,18 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
 
   const showPoints = standings.some(r => r.totalPoints > 0);
 
-  // ── Deltas gegenüber dem letzten abgeschlossenen Event ─────────────────────
+  // ── Deltas gegenüber dem letzten Event mit abgeschlossener Spielphase ────────
+  // Auch Events im "umfrage"-Status einschließen, wenn gamePhaseComplete = true
+  const gamePhaseCompleteEvents = series.events
+    .filter(e => {
+      if (!e.completionData) return false;
+      try {
+        const cd = JSON.parse(e.completionData as string);
+        return cd.gamePhaseComplete === true;
+      } catch { return false; }
+    })
+    .sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime());
+
   type DeltaInfo = {
     rankDelta: number;
     pointsDelta: number;
@@ -201,8 +212,8 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
   };
   const lastEventDelta = new Map<string, DeltaInfo>();
 
-  if (pastEvents.length > 0) {
-    const lastEv = pastEvents[0]; // already sorted desc
+  if (gamePhaseCompleteEvents.length > 0) {
+    const lastEv = gamePhaseCompleteEvents[0];
 
     // Per-user contribution FROM the last event
     const contrib = new Map<string, { participations: number; stats: Record<string, number> }>();
@@ -421,7 +432,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
             currentUserId={userId}
             showPoints={showPoints}
             lastEventDelta={lastEventDelta.size > 0 ? lastEventDelta : undefined}
-            lastEventTitle={pastEvents[0]?.title}
+            lastEventTitle={gamePhaseCompleteEvents[0]?.title}
           />
         </div>
       )}
