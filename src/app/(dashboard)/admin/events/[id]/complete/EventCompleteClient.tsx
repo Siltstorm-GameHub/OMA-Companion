@@ -117,9 +117,16 @@ export default function EventCompleteClient({
   });
 
   /* ── Ranking ── */
-  // Flat order (derived from initial groups if provided)
+  // Flat order (derived from initial groups if provided).
+  // IDs in finalRankingJson that no longer exist (e.g. merged stub accounts) are dropped;
+  // registered users missing from the saved ranking are appended at the end.
   const [rankingOrder, setRankingOrder] = useState<string[]>(() => {
-    if (initialFinalRanking?.length) return initialFinalRanking;
+    const registeredIds = new Set(registeredUsers.map(u => u.id));
+    if (initialFinalRanking?.length) {
+      const valid = initialFinalRanking.filter(id => registeredIds.has(id));
+      const missing = registeredUsers.map(u => u.id).filter(id => !valid.includes(id));
+      return [...valid, ...missing];
+    }
     return registeredUsers.map(u => u.id);
   });
   const [tiedAbove, setTiedAbove] = useState<Set<string>>(() => {
