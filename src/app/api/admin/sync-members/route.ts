@@ -138,6 +138,34 @@ export async function POST() {
           });
         } catch { /* Konflikt wenn realUser bereits Teammitglied */ }
 
+        // seriesStandingsJson: Stub-ID in allen Eventreihen durch echte User-ID ersetzen
+        const affectedSeries = await prisma.eventSeries.findMany({
+          where: { seriesStandingsJson: { contains: stub.id } },
+          select: { id: true, seriesStandingsJson: true },
+        });
+        for (const series of affectedSeries) {
+          if (!series.seriesStandingsJson) continue;
+          try {
+            const standings = JSON.parse(series.seriesStandingsJson) as {
+              raw: Record<string, Record<string, number>>;
+              lastUpdated: string;
+              processedEventIds: string[];
+            };
+            if (standings.raw[stub.id]) {
+              // Stub-Einträge auf den echten User addieren
+              if (!standings.raw[realUser.id]) standings.raw[realUser.id] = {};
+              for (const [field, val] of Object.entries(standings.raw[stub.id])) {
+                standings.raw[realUser.id][field] = (standings.raw[realUser.id][field] ?? 0) + val;
+              }
+              delete standings.raw[stub.id];
+              await prisma.eventSeries.update({
+                where: { id: series.id },
+                data: { seriesStandingsJson: JSON.stringify(standings) },
+              });
+            }
+          } catch { /* ungültiges JSON – ignorieren */ }
+        }
+
         // Stub-Account-Eintrag (ohne OAuth-Tokens) löschen, dann Stub-User löschen
         await prisma.account.deleteMany({
           where: { userId: stub.id, provider: "discord" },
