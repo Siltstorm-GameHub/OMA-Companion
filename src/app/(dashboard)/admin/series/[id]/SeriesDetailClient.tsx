@@ -216,7 +216,7 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
                 <option value="ffa">Free-for-All</option>
                 <option value="coop_stats">Coop / Stats</option>
               </select>
-              <Checkbox checked={propagateFormat} onChange={setPropagateFormat} label="Auf bestehende Turniere übertragen" />
+              <Checkbox checked={propagateFormat} onChange={setPropagateFormat} label="Format, Belohnungen & Stat-Felder auf bestehende Events übertragen" />
             </Field>
           </Section>
 

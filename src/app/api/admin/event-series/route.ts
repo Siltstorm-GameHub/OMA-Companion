@@ -88,11 +88,38 @@ export async function PATCH(req: NextRequest) {
     });
   }
 
-  // 3) Optional: Format auf alle Events der Reihe übertragen
+  // 3) Optional: Turnier-Einstellungen auf alle Events übertragen (Format + Punkte + Stat-Felder)
   if (propagateFormat && fields.fixedFormat) {
+    // Convert placementRewardsJson → pointsConfig shape
+    let pointsConfigJson: string | null = null;
+    if (fields.fixedFormat !== "liga" && fields.placementRewardsJson) {
+      try {
+        const { placements } = JSON.parse(fields.placementRewardsJson) as {
+          placements: { place: number; coins: number; rankPoints: number }[];
+        };
+        if (placements?.length) {
+          const cfg: Record<string, { coins: number; points: number }> = {};
+          for (const p of placements) cfg[String(p.place)] = { coins: p.coins, points: p.rankPoints };
+          pointsConfigJson = JSON.stringify(cfg);
+        }
+      } catch { /* skip */ }
+    }
+    // Extract stat field names from seriesStatConfig
+    let statFieldsJson: string | null = null;
+    if (fields.seriesStatConfig) {
+      try {
+        const { stats } = JSON.parse(fields.seriesStatConfig) as { stats: { field: string }[] };
+        const fieldNames = stats?.map((s: { field: string }) => s.field).filter(Boolean) ?? [];
+        if (fieldNames.length) statFieldsJson = JSON.stringify(fieldNames);
+      } catch { /* skip */ }
+    }
     await prisma.event.updateMany({
       where: { seriesId },
-      data:  { format: fields.fixedFormat },
+      data:  {
+        format: fields.fixedFormat,
+        ...(pointsConfigJson !== null && { pointsConfig: pointsConfigJson }),
+        ...(statFieldsJson   !== null && { statFields:   statFieldsJson }),
+      },
     });
   }
 

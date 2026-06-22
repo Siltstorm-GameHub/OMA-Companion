@@ -21,6 +21,31 @@ export async function POST(req: NextRequest) {
     },
   });
 
+  // Convert series placementRewardsJson → event pointsConfig shape
+  function derivedPointsConfig(): string | null {
+    if (series?.fixedFormat === "liga") return null; // liga uses win/draw, not placements
+    if (!series?.placementRewardsJson) return null;
+    try {
+      const { placements } = JSON.parse(series.placementRewardsJson) as {
+        placements: { place: number; coins: number; rankPoints: number }[];
+      };
+      if (!placements?.length) return null;
+      const cfg: Record<string, { coins: number; points: number }> = {};
+      for (const p of placements) cfg[String(p.place)] = { coins: p.coins, points: p.rankPoints };
+      return JSON.stringify(cfg);
+    } catch { return null; }
+  }
+
+  // Extract stat field names from seriesStatConfig
+  function derivedStatFields(): string | null {
+    if (!series?.seriesStatConfig) return null;
+    try {
+      const { stats } = JSON.parse(series.seriesStatConfig) as { stats: { field: string }[] };
+      const fields = stats?.map(s => s.field).filter(Boolean) ?? [];
+      return fields.length ? JSON.stringify(fields) : null;
+    } catch { return null; }
+  }
+
   if (!series) return NextResponse.json({ error: "Eventreihe nicht gefunden" }, { status: 404 });
   if (!series.recurrenceType) return NextResponse.json({ error: "Keine Wiederholung konfiguriert" }, { status: 400 });
   if (series.events.length === 0) return NextResponse.json({ error: "Reihe hat noch keine Events" }, { status: 400 });
@@ -48,6 +73,9 @@ export async function POST(req: NextRequest) {
       type:        lastEvent.type,
       discordChannelId,
       seriesId,
+      ...(series.fixedFormat && { format: series.fixedFormat }),
+      ...(derivedPointsConfig() !== null && { pointsConfig: derivedPointsConfig() }),
+      ...(derivedStatFields()  !== null && { statFields:   derivedStatFields()  }),
     },
   });
 
