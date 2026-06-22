@@ -674,7 +674,7 @@ export default function EventCompleteClient({
                           isTied ? "border-blue-500/20 bg-blue-500/5" : "border-white/[0.05]"
                         } cursor-grab active:cursor-grabbing`}
                       >
-                        <GripVertical className="w-3.5 h-3.5 text-gray-600 shrink-0" />}
+                        <GripVertical className="w-3.5 h-3.5 text-gray-600 shrink-0" />
                         <span className="text-sm w-6 text-center shrink-0">
                           {place <= 3
                             ? <span>{MEDALS[place - 1]}</span>
