@@ -51,6 +51,7 @@ export async function POST() {
 
   let created = 0;
   let updated = 0;
+  let merged  = 0;
 
   for (const member of humans) {
     const discordId = member.user.id;
@@ -71,19 +72,89 @@ export async function POST() {
     });
 
     if (oauthAccount?.user && oauthAccount.user.id !== existing?.id) {
-      // NextAuth hat einen echten OAuth-User angelegt, der Stub ist ein Duplikat.
-      // Stub löschen, sofern möglich (schlägt fehl wenn er bereits Daten hat → ignorieren).
-      if (existing) {
+      // NextAuth hat einen echten OAuth-User angelegt → Stub und OAuth-User zusammenführen.
+      const stub     = existing;   // kann null sein wenn noch kein Sync lief
+      const realUser = oauthAccount.user;
+
+      if (stub) {
+        // Scalar-Werte vom Stub auf den echten User addieren
+        await prisma.user.update({
+          where: { id: realUser.id },
+          data: {
+            points:             { increment: stub.points },
+            rankPoints:         { increment: stub.rankPoints },
+            voiceMinutesTotal:  { increment: stub.voiceMinutesTotal },
+            messagesTotal:      { increment: stub.messagesTotal },
+          },
+        });
+
+        // Alle Relationen vom Stub auf den echten User umhängen
+        // (updateMany, da pro Tabelle mehrere Zeilen existieren können)
+        await prisma.eventRegistration.updateMany({
+          where: { userId: stub.id }, data: { userId: realUser.id },
+        });
+        await prisma.pointTransaction.updateMany({
+          where: { userId: stub.id }, data: { userId: realUser.id },
+        });
+        await prisma.matchEntry.updateMany({
+          where: { userId: stub.id }, data: { userId: realUser.id },
+        });
+        await prisma.userQuestProgress.updateMany({
+          where: { userId: stub.id }, data: { userId: realUser.id },
+        });
+        await prisma.shopPurchase.updateMany({
+          where: { userId: stub.id }, data: { userId: realUser.id },
+        });
+        await prisma.dailySpin.updateMany({
+          where: { userId: stub.id }, data: { userId: realUser.id },
+        });
+        await prisma.donation.updateMany({
+          where: { userId: stub.id }, data: { userId: realUser.id },
+        });
+        await prisma.userCollectible.updateMany({
+          where: { userId: stub.id }, data: { userId: realUser.id },
+        });
+        await prisma.lobbyMessage.updateMany({
+          where: { userId: stub.id }, data: { userId: realUser.id },
+        });
+        await prisma.pushSubscription.updateMany({
+          where: { userId: stub.id }, data: { userId: realUser.id },
+        });
+        await prisma.lulEntry.updateMany({
+          where: { userId: stub.id }, data: { userId: realUser.id },
+        });
+        await prisma.lulLegacyEntry.updateMany({
+          where: { userId: stub.id }, data: { userId: realUser.id },
+        });
+        // TournamentParticipant hat ggf. unique constraint (eventId+userId) – best effort
         try {
-          await prisma.user.delete({ where: { id: existing.id } });
+          await prisma.tournamentParticipant.updateMany({
+            where: { userId: stub.id }, data: { userId: realUser.id },
+          });
+        } catch { /* Konflikt wenn realUser bereits Teilnehmer – Stub-Eintrag bleibt */ }
+        try {
+          await prisma.teamMember.updateMany({
+            where: { userId: stub.id }, data: { userId: realUser.id },
+          });
+        } catch { /* Konflikt wenn realUser bereits Teammitglied */ }
+
+        // Stub-Account-Eintrag (ohne OAuth-Tokens) löschen, dann Stub-User löschen
+        await prisma.account.deleteMany({
+          where: { userId: stub.id, provider: "discord" },
+        });
+        try {
+          await prisma.user.delete({ where: { id: stub.id } });
         } catch {
-          // Stub hat Referenzen – discordId entfernen damit er nicht mehr matcht
-          await prisma.user.update({ where: { id: existing.id }, data: { discordId: null } });
+          // Falls noch andere Referenzen existieren: discordId entfernen
+          await prisma.user.update({ where: { id: stub.id }, data: { discordId: null } });
         }
+
+        merged++;
       }
-      existing = oauthAccount.user;
-      // discordId auf echten User übertragen
-      await prisma.user.update({ where: { id: existing.id }, data: { discordId } });
+
+      existing = realUser;
+      await prisma.user.update({ where: { id: realUser.id }, data: { discordId } });
+
     } else if (!existing && oauthAccount?.user) {
       // Kein Stub, aber OAuth-User ohne discordId gefunden
       existing = oauthAccount.user;
@@ -91,12 +162,10 @@ export async function POST() {
     }
 
     if (existing) {
-      // Vorhandenen User aktualisieren (Name + Avatar)
       await prisma.user.update({
         where: { id: existing.id },
         data: {
           username,
-          // Avatar nur überschreiben wenn kein benutzerdefiniertes Bild vorhanden
           ...(avatar && { image: avatar }),
         },
       });
@@ -112,8 +181,6 @@ export async function POST() {
         },
       });
 
-      // Account-Eintrag nur anlegen wenn noch keiner existiert
-      // (verhindert, dass ein echtes OAuth-Login-Account mit Tokens überschrieben wird)
       const existingAccount = await prisma.account.findUnique({
         where: { provider_providerAccountId: { provider: "discord", providerAccountId: discordId } },
       });
@@ -136,6 +203,7 @@ export async function POST() {
     total:   humans.length,
     created,
     updated,
+    merged,
   });
 }
 
