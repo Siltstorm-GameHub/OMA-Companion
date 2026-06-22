@@ -507,6 +507,12 @@ export default async function TournamentDetailPage({
                 statFields={event.statFields ? JSON.parse(event.statFields) : []}
                 userId={userId}
                 format={format}
+                participationCoins={participationCoins}
+                placementRewards={[1, 2, 3].map(place => ({
+                  place,
+                  coins: placementCoins(place),
+                  rankPts: placementRankPts(place),
+                }))}
               />
             )}
           </div>
