@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { RelativeTime } from "@/components/RelativeTime";
 import CoinIcon from "@/components/CoinIcon";
-import { Star } from "lucide-react";
+import RankPointsIcon from "@/components/RankPointsIcon";
 
 type Tx = {
   id: string;
@@ -50,7 +50,7 @@ export default function ActivityFeed({ transactions }: { transactions: Tx[] }) {
           >
             {f === "all"   && "Alle"}
             {f === "coins" && <><CoinIcon size={10} /> Münzen</>}
-            {f === "rank"  && <><Star className="w-2.5 h-2.5" /> Rang-Punkte</>}
+            {f === "rank"  && <><RankPointsIcon size={10} /> Rang-Punkte</>}
           </button>
         ))}
         <span className="ml-auto text-[10px] text-gray-600">{filtered.length} Einträge</span>
@@ -76,7 +76,7 @@ export default function ActivityFeed({ transactions }: { transactions: Tx[] }) {
                   </span>
                 ) : (
                   <span className="flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded border text-teal-400 bg-teal-500/10 border-teal-500/20">
-                    <Star className="w-2.5 h-2.5" /> Rang-Punkte
+                    <RankPointsIcon size={10} /> Rang-Punkte
                   </span>
                 )}
                 <span className={`text-sm font-bold tabular-nums w-14 text-right ${isPositive ? "text-emerald-400" : "text-red-400"}`}>

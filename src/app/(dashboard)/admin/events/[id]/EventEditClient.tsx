@@ -7,11 +7,12 @@ import Link from "next/link";
 import {
   ChevronLeft, Save, Trophy, CheckCircle2, AlertTriangle, Trash2,
   Search, UserPlus, UserMinus, Repeat, ExternalLink, AlertCircle,
-  Coins, Star, MessageSquare, Newspaper, Loader2,
+  Coins, MessageSquare, Newspaper, Loader2,
 } from "lucide-react";
 import GameNameInput from "@/components/GameNameInput";
 import StatFieldEditor from "@/components/StatFieldEditor";
 import CoinIcon from "@/components/CoinIcon";
+import RankPointsIcon from "@/components/RankPointsIcon";
 
 /* ── Types ── */
 type User = { id: string; name: string | null; username: string | null; image: string | null };
@@ -441,7 +442,7 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
             <div className="px-4 py-3 space-y-3">
               <div className="grid grid-cols-[1fr_auto_auto] gap-2 items-center text-xs text-gray-500 px-1">
                 <span>Platzierung</span>
-                <span className="flex items-center gap-1 justify-center"><Star className="w-3 h-3 text-purple-400" /> Punkte</span>
+                <span className="flex items-center gap-1 justify-center"><RankPointsIcon size={12} /> Punkte</span>
                 <span className="flex items-center gap-1 justify-center"><Coins className="w-3 h-3 text-amber-400" /> Münzen</span>
               </div>
               {placements.map(p => (
@@ -487,7 +488,7 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Star className="w-3 h-3 text-purple-400" /> Punkte</label>
+                      <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><RankPointsIcon size={12} /> Punkte</label>
                       <input type="number" min={0} value={poll.rankPoints}
                         onChange={e => setPoll(p => ({ ...p, rankPoints: Number(e.target.value) }))} className={inputCls} />
                     </div>
@@ -566,7 +567,7 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
                   <label className="text-xs text-gray-500 block mb-1.5">Belohnungen pro Platzierung</label>
                   <div className="space-y-1.5">
                     <div className="grid grid-cols-3 gap-2 text-[10px] text-gray-600 px-1">
-                      <span>Platz</span><span className="flex items-center justify-center gap-0.5"><CoinIcon size={11} /> Münzen</span><span className="text-center">⭐ Punkte</span>
+                      <span>Platz</span><span className="flex items-center justify-center gap-0.5"><CoinIcon size={11} /> Münzen</span><span className="flex items-center justify-center gap-0.5"><RankPointsIcon size={11} /> Punkte</span>
                     </div>
                     {([["🥇 1.", "coins1", "pts1"], ["🥈 2.", "coins2", "pts2"], ["🥉 3.", "coins3", "pts3"]] as const).map(([label, ck, pk]) => (
                       <div key={label} className="grid grid-cols-3 gap-2 items-center">

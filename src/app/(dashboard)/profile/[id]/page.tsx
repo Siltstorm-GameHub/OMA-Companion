@@ -5,10 +5,11 @@ import { QUEST_TYPE_META, type QuestType } from "@/lib/quests";
 import { getRank, getNextRank } from "@/lib/ranks";
 import { computeBadges, BADGE_CATEGORY_LABELS } from "@/lib/badges";
 import {
-  Trophy, Star, CalendarDays, Swords, Clock,
+  Trophy, CalendarDays, Swords, Clock,
   MessageSquare, CheckCircle2, ArrowLeft,
 } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
+import RankPointsIcon from "@/components/RankPointsIcon";
 import WinIcon from "@/components/WinIcon";
 import Link from "next/link";
 import Image from "next/image";
@@ -172,7 +173,7 @@ export default async function PublicProfilePage({
       {/* ── Stats ───────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {[
-          { icon: <Star className="w-4 h-4" />,        label: "Punkte",        value: (user.rankPoints ?? 0).toLocaleString("de-DE"), iconCls: "text-teal-400    bg-teal-500/10    border-teal-500/15",    accent: "from-teal-500/8"    },
+          { icon: <RankPointsIcon size={16} />,         label: "Punkte",        value: (user.rankPoints ?? 0).toLocaleString("de-DE"), iconCls: "text-teal-400    bg-teal-500/10    border-teal-500/15",    accent: "from-teal-500/8"    },
           { icon: <CalendarDays className="w-4 h-4" />, label: "Events",        value: String(eventCount),                  iconCls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/15", accent: "from-emerald-500/8" },
           { icon: <WinIcon size={16} />,                 label: "Turnier-Siege", value: String(matchWins),                   iconCls: "text-rose-400    bg-rose-500/10    border-rose-500/15",    accent: "from-rose-500/8"    },
         ].map((s, i) => (

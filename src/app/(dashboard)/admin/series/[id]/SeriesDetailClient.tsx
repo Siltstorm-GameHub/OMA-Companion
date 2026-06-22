@@ -5,9 +5,10 @@ import { toast } from "sonner";
 import Link from "next/link";
 import {
   ChevronLeft, ChevronRight, CalendarPlus, RefreshCw, Gamepad2,
-  Swords, Hash, BarChart2, Plus, X, Trophy, Save, Coins, Star,
+  Swords, Hash, BarChart2, Plus, X, Trophy, Save, Coins,
   MessageSquare, ExternalLink,
 } from "lucide-react";
+import RankPointsIcon from "@/components/RankPointsIcon";
 import GameNameInput from "@/components/GameNameInput";
 import { describeMonthlyModes } from "@/lib/recurrence";
 
@@ -266,7 +267,7 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
                     {r.place === 1 ? "🥇" : r.place === 2 ? "🥈" : "🥉"} {r.place}. Platz
                   </span>
                   <div className="flex items-center gap-1">
-                    <Star className="w-3 h-3 text-purple-400 shrink-0" />
+                    <RankPointsIcon size={12} />
                     <input type="number" min={0} value={r.rankPoints}
                       onChange={e => updatePlacementReward(r.place, "rankPoints", Number(e.target.value))}
                       className={numCls} />
@@ -306,7 +307,7 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
                 </Field>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Star className="w-3 h-3 text-purple-400" /> Punkte</label>
+                    <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><RankPointsIcon size={12} /> Punkte</label>
                     <input type="number" min={0} value={poll.rankPoints}
                       onChange={e => setPoll(p => ({ ...p, rankPoints: Number(e.target.value) }))}
                       className={inputCls} />

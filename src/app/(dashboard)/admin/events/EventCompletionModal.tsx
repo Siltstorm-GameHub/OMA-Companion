@@ -2,7 +2,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { X, Trophy, Star, TrendingUp, CheckCircle2, Vote, GripVertical, ListOrdered } from "lucide-react";
+import { X, Trophy, TrendingUp, CheckCircle2, Vote, GripVertical, ListOrdered } from "lucide-react";
+import RankPointsIcon from "@/components/RankPointsIcon";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };
 type MatchEntry = { userId: string | null; statsJson: string | null };
@@ -265,7 +266,7 @@ export default function EventCompletionModal({
           {seriesStatConfig?.mvpStatField && (
             <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(20,184,166,0.05)", border: "1px solid rgba(20,184,166,0.15)" }}>
               <div className="flex items-center gap-2">
-                <Star className="w-3.5 h-3.5 text-teal-400" />
+                <RankPointsIcon size={14} />
                 <span className="text-xs font-semibold text-teal-300">
                   MVP des Events
                   <span className="text-gray-500 font-normal ml-1">
