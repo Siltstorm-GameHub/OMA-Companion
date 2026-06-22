@@ -191,6 +191,102 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
 
   const showPoints = standings.some(r => r.totalPoints > 0);
 
+  // ── Deltas gegenüber dem letzten abgeschlossenen Event ─────────────────────
+  type DeltaInfo = {
+    rankDelta: number;
+    statDeltas: Record<string, number>;
+    participated: boolean;
+    isNew: boolean;
+  };
+  const lastEventDelta = new Map<string, DeltaInfo>();
+
+  if (pastEvents.length > 0) {
+    const lastEv = pastEvents[0]; // already sorted desc
+
+    // Per-user contribution FROM the last event
+    const contrib = new Map<string, { participations: number; stats: Record<string, number> }>();
+    function getContrib(uid: string) {
+      if (!contrib.has(uid)) contrib.set(uid, { participations: 0, stats: {} });
+      return contrib.get(uid)!;
+    }
+    for (const { userId: uid } of lastEv.registrations) getContrib(uid).participations += 1;
+    for (const match of lastEv.matches) {
+      for (const entry of match.entries) {
+        if (!entry.userId || !entry.statsJson) continue;
+        let s: Record<string, number> = {};
+        try { s = JSON.parse(entry.statsJson); } catch { continue; }
+        const c = getContrib(entry.userId);
+        for (const { field } of statCfg.stats) {
+          const v = Number(s[field] ?? 0);
+          if (v) c.stats[field] = (c.stats[field] ?? 0) + v;
+        }
+      }
+    }
+    // MVP + Siegtreffer aus completionData
+    if (lastEv.completionData) {
+      try {
+        const cd = JSON.parse(lastEv.completionData as string) as {
+          mvpUserId?: string; eventWinnerId?: string; seriesWinnerTargetField?: string;
+        };
+        if (cd.mvpUserId && statCfg.mvpStatField) {
+          const c = getContrib(cd.mvpUserId);
+          c.stats[statCfg.mvpStatField] = (c.stats[statCfg.mvpStatField] ?? 0) + 1;
+        }
+        if (cd.eventWinnerId && cd.seriesWinnerTargetField) {
+          const c = getContrib(cd.eventWinnerId);
+          c.stats[cd.seriesWinnerTargetField] = (c.stats[cd.seriesWinnerTargetField] ?? 0) + 1;
+        }
+      } catch { /* ignore */ }
+    }
+
+    // Berechne "Punkte vor dem letzten Event" für jeden User
+    const prevPointsMap = new Map<string, number>();
+    const prevPartMap   = new Map<string, number>();
+    for (const row of standings) {
+      const c = contrib.get(row.userId);
+      let prevPts = row.totalPoints;
+      if (c) {
+        prevPts -= c.participations * statCfg.participationPoints;
+        for (const { field, pointsPer } of statCfg.stats) {
+          prevPts -= (c.stats[field] ?? 0) * pointsPer;
+        }
+      }
+      prevPointsMap.set(row.userId, prevPts);
+      prevPartMap.set(row.userId, row.participations - (c?.participations ?? 0));
+    }
+
+    // Sortiere nach vorherigen Punkten um früheres Ranking zu ermitteln
+    const prevRanked = standings
+      .filter(row => (prevPointsMap.get(row.userId) ?? 0) > 0 || (prevPartMap.get(row.userId) ?? 0) > 0)
+      .sort((a, b) => {
+        const ptsDiff = (prevPointsMap.get(b.userId) ?? 0) - (prevPointsMap.get(a.userId) ?? 0);
+        if (ptsDiff !== 0) return ptsDiff;
+        return (prevPartMap.get(b.userId) ?? 0) - (prevPartMap.get(a.userId) ?? 0);
+      });
+    const prevRankMap = new Map(prevRanked.map((r, i) => [r.userId, i + 1]));
+
+    for (let i = 0; i < standings.length; i++) {
+      const row = standings[i];
+      const currentRank = i + 1;
+      const prevRank = prevRankMap.get(row.userId);
+      const c = contrib.get(row.userId);
+      const participated = (c?.participations ?? 0) > 0;
+      const isNew = prevRank === undefined;
+      const statDeltas: Record<string, number> = {};
+      if (c) {
+        for (const [field, val] of Object.entries(c.stats)) {
+          if (val > 0) statDeltas[field] = val;
+        }
+      }
+      lastEventDelta.set(row.userId, {
+        rankDelta: isNew ? 0 : prevRank! - currentRank,
+        statDeltas,
+        participated,
+        isNew,
+      });
+    }
+  }
+
   // Past event details (winner, MVP)
   const pastEventDetails = new Map<string, { winner?: string; statWinner?: string; mvp?: string }>();
   for (const ev of pastEvents) {
@@ -321,6 +417,8 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
             extraCols={extraCols}
             currentUserId={userId}
             showPoints={showPoints}
+            lastEventDelta={lastEventDelta.size > 0 ? lastEventDelta : undefined}
+            lastEventTitle={pastEvents[0]?.title}
           />
         </div>
       )}
