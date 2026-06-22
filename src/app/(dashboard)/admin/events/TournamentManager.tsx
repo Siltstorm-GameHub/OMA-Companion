@@ -426,12 +426,13 @@ export default function TournamentManager({
   async function removeParticipant(userId: string) {
     if (!tournament || !confirm("Teilnehmer aus dem Turnier entfernen?")) return;
     setLoading(true);
-    await fetch(`/api/tournaments/${tournament.id}/participants`, {
+    const res = await fetch(`/api/tournaments/${tournament.id}/participants`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId }),
     });
     setLoading(false);
+    if (!res.ok) { const e = await res.json().catch(() => ({})); toast.error(e.error ?? "Fehler beim Entfernen"); return; }
     setTournament(prev => prev ? { ...prev, participants: prev.participants.filter(p => p.userId !== userId) } : prev);
   }
 
@@ -463,7 +464,7 @@ export default function TournamentManager({
     if (!tournament) return;
     const s = scores1v1[matchId];
     setLoading(true);
-    await fetch(`/api/tournaments/${tournament.id}/matches`, {
+    const res = await fetch(`/api/tournaments/${tournament.id}/matches`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -473,18 +474,20 @@ export default function TournamentManager({
       }),
     });
     setLoading(false);
+    if (!res.ok) { const e = await res.json().catch(() => ({})); toast.error(e.error ?? "Fehler beim Speichern"); return; }
     router.refresh();
   }
 
   async function resetMatch(matchId: string) {
     if (!tournament || !confirm("Ergebnis dieses Matches zurücksetzen?")) return;
     setLoading(true);
-    await fetch(`/api/tournaments/${tournament.id}/matches`, {
+    const res = await fetch(`/api/tournaments/${tournament.id}/matches`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ matchId, action: "reset" }),
     });
     setLoading(false);
+    if (!res.ok) { const e = await res.json().catch(() => ({})); toast.error(e.error ?? "Fehler beim Zurücksetzen"); return; }
     router.refresh();
   }
 
@@ -501,12 +504,13 @@ export default function TournamentManager({
       };
     });
     setLoading(true);
-    await fetch(`/api/tournaments/${tournament.id}/matches`, {
+    const res = await fetch(`/api/tournaments/${tournament.id}/matches`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ matchId, entries: updated }),
     });
     setLoading(false);
+    if (!res.ok) { const e = await res.json().catch(() => ({})); toast.error(e.error ?? "Fehler beim Speichern"); return; }
     router.refresh();
   }
 

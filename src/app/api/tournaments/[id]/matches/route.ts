@@ -115,6 +115,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     select: { format: true, pointsConfig: true },
   });
 
+  // Read existing match state before update (for idempotency / reversal)
+  const existingMatch = await prisma.match.findUnique({
+    where: { id: matchId },
+    select: { playedAt: true, winnerId: true, player1Id: true, player2Id: true },
+  });
+  const wasAlreadyPlayed = !!existingMatch?.playedAt;
+
   const match = await prisma.match.update({
     where: { id: matchId },
     data: {
@@ -152,21 +159,37 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const config  = JSON.parse(event.pointsConfig) as Record<string, number>;
     const drawPts = config["draw"];
     const winPts  = config["win"];
+
+    // Reverse old result if match was already played (re-submission)
+    if (wasAlreadyPlayed && existingMatch) {
+      const oldWinnerId = existingMatch.winnerId;
+      const wasOldDraw  = !oldWinnerId && !!existingMatch.playedAt;
+      if (wasOldDraw && drawPts && existingMatch.player1Id && existingMatch.player2Id) {
+        for (const uid of [existingMatch.player1Id, existingMatch.player2Id]) {
+          await prisma.$transaction([
+            prisma.user.update({ where: { id: uid }, data: { points: { increment: -drawPts } } }),
+            prisma.pointTransaction.create({ data: { userId: uid, amount: -drawPts, reason: `[Korrektur] Unentschieden – ${eventId}` } }),
+          ]);
+        }
+      } else if (oldWinnerId && winPts) {
+        await prisma.$transaction([
+          prisma.user.update({ where: { id: oldWinnerId }, data: { points: { increment: -winPts } } }),
+          prisma.pointTransaction.create({ data: { userId: oldWinnerId, amount: -winPts, reason: `[Korrektur] Sieg – ${eventId}` } }),
+        ]);
+      }
+    }
+
     if (isDraw && drawPts && match.player1Id && match.player2Id) {
       for (const uid of [match.player1Id, match.player2Id]) {
         await prisma.$transaction([
           prisma.user.update({ where: { id: uid }, data: { points: { increment: drawPts } } }),
-          prisma.pointTransaction.create({
-            data: { userId: uid, amount: drawPts, reason: "Unentschieden im Liga-Match" },
-          }),
+          prisma.pointTransaction.create({ data: { userId: uid, amount: drawPts, reason: `Unentschieden im Liga-Match – ${eventId}` } }),
         ]);
       }
     } else if (!isDraw && winPts && winnerId) {
       await prisma.$transaction([
         prisma.user.update({ where: { id: winnerId }, data: { points: { increment: winPts } } }),
-        prisma.pointTransaction.create({
-          data: { userId: winnerId, amount: winPts, reason: "Sieg im Liga-Match" },
-        }),
+        prisma.pointTransaction.create({ data: { userId: winnerId, amount: winPts, reason: `Sieg im Liga-Match – ${eventId}` } }),
       ]);
     }
   }
