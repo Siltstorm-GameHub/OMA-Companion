@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Discord from "next-auth/providers/discord";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
+import { checkAndAwardBadges } from "@/lib/award-badges";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
@@ -132,6 +133,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           console.error("[AUTH] DB-Fehler beim Laden der Rolle:", error);
           if (!token.role) token.role = "user";
         }
+      }
+
+      // Fire-and-forget badge check on every login (only first time per earned badge matters)
+      if (token.id && user) {
+        checkAndAwardBadges(token.id as string).catch(() => {});
       }
 
       return token;

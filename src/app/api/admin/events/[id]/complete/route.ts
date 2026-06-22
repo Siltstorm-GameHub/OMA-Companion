@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { sendPushToUsers } from "@/lib/push";
+import { checkAndAwardBadges } from "@/lib/award-badges";
 
 type PlacementReward = { place: number; coins: number; rankPoints: number };
 type RewardsConfig = { participationCoins: number; placements: PlacementReward[] };
@@ -356,6 +357,11 @@ export async function POST(
     body:  "Schau dir deine Punkte und das Ergebnis an!",
     url:   "/events",
   }).catch(() => {});
+
+  // Badge-Check für alle Teilnehmer (fire-and-forget)
+  for (const userId of participantIds) {
+    checkAndAwardBadges(userId).catch(() => {});
+  }
 
   return NextResponse.json({ ok: true, completionData, eventWinnerId });
 }

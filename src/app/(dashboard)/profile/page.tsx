@@ -2,7 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/roles";
 import { getRank, getNextRank } from "@/lib/ranks";
-import { computeBadges, BADGE_CATEGORY_LABELS } from "@/lib/badges";
+import { computeBadges } from "@/lib/badges";
+import BadgesSection from "./BadgesSection";
 import PointsInfoModal from "./PointsInfoModal";
 import { QUEST_TYPE_META, type QuestType } from "@/lib/quests";
 import { RARITY_CONFIG, type Rarity, MAX_SHOWCASE } from "@/lib/collectibles";
@@ -27,11 +28,11 @@ export default async function ProfilePage() {
   const month = now.getMonth() + 1;
   const year  = now.getFullYear();
 
-  const [user, eventRegs, eventCount, finishedEvents, tournamentParticipations, tournamentCount, tournamentWins, questsWithProgress, ownedCollectibles, leaderboardRank] =
+  const [user, eventRegs, eventCount, finishedEvents, tournamentParticipations, tournamentCount, tournamentWins, questsWithProgress, ownedCollectibles, leaderboardRank, userSystemBadges, userCustomBadges] =
     await Promise.all([
       prisma.user.findUnique({
         where:  { id: userId },
-        select: { id: true, name: true, username: true, image: true, points: true, rankPoints: true, createdAt: true, showcaseJson: true, birthday: true, bio: true, voiceMinutesTotal: true, messagesTotal: true },
+        select: { id: true, name: true, username: true, image: true, points: true, rankPoints: true, createdAt: true, showcaseJson: true, showcaseBadgesJson: true, birthday: true, bio: true, voiceMinutesTotal: true, messagesTotal: true },
       }),
       prisma.eventRegistration.findMany({
         where:   { userId },
@@ -74,6 +75,12 @@ export default async function ProfilePage() {
         const higher = await prisma.user.count({ where: { rankPoints: { gt: u?.rankPoints ?? 0 } } });
         return higher + 1;
       }),
+      prisma.userSystemBadge.findMany({ where: { userId }, select: { badgeKey: true } }),
+      prisma.userCustomBadge.findMany({
+        where: { userId },
+        include: { badge: { select: { id: true, icon: true, name: true, desc: true, category: true } } },
+        orderBy: { earnedAt: "asc" },
+      }),
     ]);
 
   if (!user) redirect("/login");
@@ -103,12 +110,17 @@ export default async function ProfilePage() {
 
   const voiceHours   = Math.floor((user?.voiceMinutesTotal ?? 0) / 60);
   const messageCount = user?.messagesTotal ?? 0;
-  const badges       = computeBadges({ points: totalPoints, voiceHours, messageCount, eventCount, tournamentCount, tournamentWins, eventWins, mvpCount });
+  const earnedSystemKeys = new Set(userSystemBadges.map(b => b.badgeKey));
+  const badges       = computeBadges({ points: totalPoints, voiceHours, messageCount, eventCount, tournamentCount, tournamentWins, eventWins, mvpCount }, earnedSystemKeys);
   const earnedBadges = badges.filter(b => b.earned);
   const memberSince  = new Date(user.createdAt).toLocaleDateString("de-DE", { month: "long", year: "numeric" });
   const displayName  = user.username ?? user.name ?? "Unbekannt";
 
   const totalUsers = await prisma.user.count();
+
+  const showcaseBadgeKeys: string[] = (() => {
+    try { return JSON.parse(user.showcaseBadgesJson ?? "[]"); } catch { return []; }
+  })();
 
   const showcaseIds: string[] = (() => {
     try { return JSON.parse(user.showcaseJson ?? "[]"); } catch { return []; }
@@ -158,7 +170,7 @@ export default async function ProfilePage() {
               </span>
             </div>
             <p className="text-xs text-gray-500 mb-1">
-              Mitglied seit {memberSince} · {earnedBadges.length} Abzeichen
+              Mitglied seit {memberSince} · {earnedBadges.length + userCustomBadges.length} Abzeichen
             </p>
             <div className="flex items-center gap-1 mb-2">
               <CoinIcon size={12} />
@@ -277,33 +289,19 @@ export default async function ProfilePage() {
             </section>
           )}
 
-          {/* Abzeichen — nur verdiente anzeigen */}
-          <section>
-            <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">
-              🏅 Abzeichen <span className="text-gray-600 normal-case">({earnedBadges.length})</span>
-            </h2>
-            {earnedBadges.length === 0 && (
-              <p className="text-xs text-gray-600 italic">Noch keine Abzeichen verdient.</p>
-            )}
-            {Object.entries(BADGE_CATEGORY_LABELS).map(([cat, label]) => {
-              const catBadges = earnedBadges.filter(b => b.category === cat);
-              if (!catBadges.length) return null;
-              return (
-                <div key={cat} className="mb-4">
-                  <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-2">{label}</p>
-                  <div className="flex flex-wrap gap-2">
-                    {catBadges.map(badge => (
-                      <div key={badge.id} title={badge.desc}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium glass text-white border-white/10 hover:border-teal-500/30 transition-all">
-                        <span>{badge.icon}</span>
-                        {badge.name}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </section>
+          {/* Abzeichen */}
+          <BadgesSection
+            systemBadges={badges}
+            customBadges={userCustomBadges.map(uc => ({
+              id:       uc.badge.id,
+              icon:     uc.badge.icon,
+              name:     uc.badge.name,
+              desc:     uc.badge.desc,
+              category: uc.badge.category,
+              earnedAt: uc.earnedAt.toISOString(),
+            }))}
+            showcaseKeys={showcaseBadgeKeys}
+          />
 
           {/* Quest-Fortschritt */}
           {questsWithProgress.length > 0 && (
