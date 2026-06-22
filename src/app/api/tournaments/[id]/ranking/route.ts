@@ -40,8 +40,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         const t = totals.get(entry.userId)!;
         t.rounds += 1;
         if (entry.statsJson) {
-          const s = JSON.parse(entry.statsJson) as Record<string, number>;
-          for (const [k, v] of Object.entries(s)) t.stats[k] = (t.stats[k] ?? 0) + v;
+          try {
+            const s = JSON.parse(entry.statsJson) as Record<string, number>;
+            for (const [k, v] of Object.entries(s)) t.stats[k] = (t.stats[k] ?? 0) + v;
+          } catch { /* skip malformed entry */ }
         }
       }
     }

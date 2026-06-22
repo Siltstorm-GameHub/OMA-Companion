@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Discord from "next-auth/providers/discord";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
+import { checkAndAwardBadges } from "@/lib/award-badges";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
@@ -27,6 +28,32 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
+    async signIn({ account }) {
+      if (account?.provider !== "discord") return true;
+
+      const guildId = process.env.DISCORD_GUILD_ID;
+      if (!guildId) return true; // Kein Guild konfiguriert → offen lassen
+
+      try {
+        const res = await fetch("https://discord.com/api/users/@me/guilds", {
+          headers: { Authorization: `Bearer ${account.access_token}` },
+          next: { revalidate: 0 },
+        });
+        if (!res.ok) {
+          console.error("[AUTH] guilds-Abruf fehlgeschlagen:", res.status);
+          return true; // Fail open
+        }
+        const guilds: { id: string }[] = await res.json();
+        const isMember = guilds.some(g => g.id === guildId);
+        if (!isMember) return "/auth/not-member";
+      } catch (err) {
+        console.error("[AUTH] guilds-Check Fehler:", err);
+        return true; // Fail open
+      }
+
+      return true;
+    },
+
     async jwt({ token, user, account }) {
       // ── Initialer Login (user & account sind nur beim ersten JWT-Aufruf gesetzt) ──
       if (user && account?.provider === "discord") {
@@ -106,6 +133,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           console.error("[AUTH] DB-Fehler beim Laden der Rolle:", error);
           if (!token.role) token.role = "user";
         }
+      }
+
+      // Fire-and-forget badge check on every login (only first time per earned badge matters)
+      if (token.id && user) {
+        checkAndAwardBadges(token.id as string).catch(() => {});
       }
 
       return token;

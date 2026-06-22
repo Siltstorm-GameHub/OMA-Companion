@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
 import { ChevronDown, ChevronUp, Trophy, Clock } from "lucide-react";
+import CoinIcon from "@/components/CoinIcon";
+import RankPointsIcon from "@/components/RankPointsIcon";
 
 type User        = { id: string; name: string | null; username: string | null; image: string | null };
 type Participant = { userId: string; user: User };
@@ -31,12 +33,18 @@ export default function FfaView({
   statFields,
   userId,
   format = "ffa",
+  participationCoins = 0,
+  placementRewards = [],
+  finalRankingGroups = null,
 }: {
   matches: Match[];
   participants: Participant[];
   statFields: string[];
   userId: string;
   format?: string;
+  participationCoins?: number;
+  placementRewards?: { place: number; coins: number; rankPts: number }[];
+  finalRankingGroups?: string[][] | null;
 }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const toggle = (id: string) =>
@@ -122,6 +130,9 @@ export default function FfaView({
                     {isAvg && (
                       <th className="text-center px-3 py-2.5 font-medium text-amber-400">Ø Gesamt</th>
                     )}
+                    {placementRewards.some(r => r.coins > 0 || r.rankPts > 0) && (
+                      <th className="text-center px-3 py-2.5 font-medium text-amber-500/70">Belohnung</th>
+                    )}
                     <th className="text-center px-3 py-2.5 font-medium">Runden</th>
                   </tr>
                 </thead>
@@ -134,12 +145,26 @@ export default function FfaView({
                     const combined = isAvg && statFields.length > 0
                       ? fieldAvgs.reduce((s, v) => s + v, 0) / statFields.length
                       : null;
+                    // Use confirmed placement from finalRankingGroups if available, else fall back to stat-rank
+                    const confirmedPlace: number | undefined = (() => {
+                      if (!finalRankingGroups) return undefined;
+                      let place = 1;
+                      for (const group of finalRankingGroups) {
+                        if (group.includes(r.userId)) return place;
+                        place += group.length;
+                      }
+                      return undefined;
+                    })();
+                    const place = confirmedPlace ?? (i + 1);
+                    const reward = placementRewards.find(p => p.place === place);
+                    const totalCoins = (reward?.coins ?? 0) + participationCoins;
+                    const hasRewards = placementRewards.some(p => p.coins > 0 || p.rankPts > 0);
                     return (
                       <tr key={r.userId} className={`transition-colors ${isMe ? "bg-rose-950/30" : "hover:bg-white/[0.02]"}`}>
                         <td className="px-4 py-3 text-center">
-                          {i < 3
-                            ? <span className="text-base">{MEDAL[i]}</span>
-                            : <span className="text-sm text-gray-600">{i + 1}</span>}
+                          {place <= 3
+                            ? <span className="text-base">{MEDAL[place - 1]}</span>
+                            : <span className="text-sm text-gray-600">{place}</span>}
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
@@ -165,6 +190,27 @@ export default function FfaView({
                             i === 0 ? "text-amber-300" : i === 1 ? "text-gray-300" : i === 2 ? "text-amber-700" : "text-gray-400"
                           }`}>
                             {combined !== null ? combined.toFixed(2) : "–"}
+                          </td>
+                        )}
+                        {hasRewards && (
+                          <td className="px-3 py-3 text-center">
+                            <div className="flex flex-col items-center gap-0.5">
+                              {totalCoins > 0 && (
+                                <span className="text-[11px] text-amber-400 tabular-nums leading-tight">
+                                  +{totalCoins} <CoinIcon size={11} />
+                                </span>
+                              )}
+                              {reward?.rankPts != null && reward.rankPts > 0 && (
+                                <span className="text-[11px] text-teal-400 tabular-nums leading-tight">
+                                  +{reward.rankPts} <RankPointsIcon size={11} />
+                                </span>
+                              )}
+                              {!reward && participationCoins > 0 && (
+                                <span className="text-[11px] text-amber-400/50 tabular-nums leading-tight">
+                                  +{participationCoins} <CoinIcon size={11} />
+                                </span>
+                              )}
+                            </div>
                           </td>
                         )}
                         <td className="px-3 py-3 text-center text-gray-500 text-xs">{r.matchCount}</td>

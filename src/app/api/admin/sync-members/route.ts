@@ -51,6 +51,7 @@ export async function POST() {
 
   let created = 0;
   let updated = 0;
+  let merged  = 0;
 
   for (const member of humans) {
     const discordId = member.user.id;
@@ -62,28 +63,137 @@ export async function POST() {
     // 1. Per discordId suchen (bereits verknüpfte User)
     let existing = await prisma.user.findUnique({ where: { discordId } });
 
-    // 2. Falls nicht gefunden: über Account-Tabelle suchen (OAuth-Login ohne discordId im User)
-    if (!existing) {
-      const account = await prisma.account.findUnique({
-        where: {
-          provider_providerAccountId: { provider: "discord", providerAccountId: discordId },
-        },
-        include: { user: true },
-      });
-      if (account?.user) {
-        existing = account.user;
-        // discordId nachträglich setzen damit zukünftige Syncs direkt greifen
-        await prisma.user.update({ where: { id: existing.id }, data: { discordId } });
+    // 2. OAuth-Account-Eintrag prüfen (kann auf anderen User zeigen als der discordId-Stub)
+    const oauthAccount = await prisma.account.findUnique({
+      where: {
+        provider_providerAccountId: { provider: "discord", providerAccountId: discordId },
+      },
+      include: { user: true },
+    });
+
+    if (oauthAccount?.user && oauthAccount.user.id !== existing?.id) {
+      // NextAuth hat einen echten OAuth-User angelegt → Stub und OAuth-User zusammenführen.
+      const stub     = existing;   // kann null sein wenn noch kein Sync lief
+      const realUser = oauthAccount.user;
+
+      if (stub) {
+        // Scalar-Werte vom Stub auf den echten User addieren
+        await prisma.user.update({
+          where: { id: realUser.id },
+          data: {
+            points:             { increment: stub.points },
+            rankPoints:         { increment: stub.rankPoints },
+            voiceMinutesTotal:  { increment: stub.voiceMinutesTotal },
+            messagesTotal:      { increment: stub.messagesTotal },
+          },
+        });
+
+        // Alle Relationen vom Stub auf den echten User umhängen
+        // (updateMany, da pro Tabelle mehrere Zeilen existieren können)
+        await prisma.eventRegistration.updateMany({
+          where: { userId: stub.id }, data: { userId: realUser.id },
+        });
+        await prisma.pointTransaction.updateMany({
+          where: { userId: stub.id }, data: { userId: realUser.id },
+        });
+        await prisma.matchEntry.updateMany({
+          where: { userId: stub.id }, data: { userId: realUser.id },
+        });
+        await prisma.userQuestProgress.updateMany({
+          where: { userId: stub.id }, data: { userId: realUser.id },
+        });
+        await prisma.shopPurchase.updateMany({
+          where: { userId: stub.id }, data: { userId: realUser.id },
+        });
+        await prisma.dailySpin.updateMany({
+          where: { userId: stub.id }, data: { userId: realUser.id },
+        });
+        await prisma.donation.updateMany({
+          where: { userId: stub.id }, data: { userId: realUser.id },
+        });
+        await prisma.userCollectible.updateMany({
+          where: { userId: stub.id }, data: { userId: realUser.id },
+        });
+        await prisma.lobbyMessage.updateMany({
+          where: { userId: stub.id }, data: { userId: realUser.id },
+        });
+        await prisma.pushSubscription.updateMany({
+          where: { userId: stub.id }, data: { userId: realUser.id },
+        });
+        await prisma.lulEntry.updateMany({
+          where: { userId: stub.id }, data: { userId: realUser.id },
+        });
+        await prisma.lulLegacyEntry.updateMany({
+          where: { userId: stub.id }, data: { userId: realUser.id },
+        });
+        // TournamentParticipant hat ggf. unique constraint (eventId+userId) – best effort
+        try {
+          await prisma.tournamentParticipant.updateMany({
+            where: { userId: stub.id }, data: { userId: realUser.id },
+          });
+        } catch { /* Konflikt wenn realUser bereits Teilnehmer – Stub-Eintrag bleibt */ }
+        try {
+          await prisma.teamMember.updateMany({
+            where: { userId: stub.id }, data: { userId: realUser.id },
+          });
+        } catch { /* Konflikt wenn realUser bereits Teammitglied */ }
+
+        // seriesStandingsJson: Stub-ID in allen Eventreihen durch echte User-ID ersetzen
+        const affectedSeries = await prisma.eventSeries.findMany({
+          where: { seriesStandingsJson: { contains: stub.id } },
+          select: { id: true, seriesStandingsJson: true },
+        });
+        for (const series of affectedSeries) {
+          if (!series.seriesStandingsJson) continue;
+          try {
+            const standings = JSON.parse(series.seriesStandingsJson) as {
+              raw: Record<string, Record<string, number>>;
+              lastUpdated: string;
+              processedEventIds: string[];
+            };
+            if (standings.raw[stub.id]) {
+              // Stub-Einträge auf den echten User addieren
+              if (!standings.raw[realUser.id]) standings.raw[realUser.id] = {};
+              for (const [field, val] of Object.entries(standings.raw[stub.id])) {
+                standings.raw[realUser.id][field] = (standings.raw[realUser.id][field] ?? 0) + val;
+              }
+              delete standings.raw[stub.id];
+              await prisma.eventSeries.update({
+                where: { id: series.id },
+                data: { seriesStandingsJson: JSON.stringify(standings) },
+              });
+            }
+          } catch { /* ungültiges JSON – ignorieren */ }
+        }
+
+        // Stub-Account-Eintrag (ohne OAuth-Tokens) löschen, dann Stub-User löschen
+        await prisma.account.deleteMany({
+          where: { userId: stub.id, provider: "discord" },
+        });
+        try {
+          await prisma.user.delete({ where: { id: stub.id } });
+        } catch {
+          // Falls noch andere Referenzen existieren: discordId entfernen
+          await prisma.user.update({ where: { id: stub.id }, data: { discordId: null } });
+        }
+
+        merged++;
       }
+
+      existing = realUser;
+      await prisma.user.update({ where: { id: realUser.id }, data: { discordId } });
+
+    } else if (!existing && oauthAccount?.user) {
+      // Kein Stub, aber OAuth-User ohne discordId gefunden
+      existing = oauthAccount.user;
+      await prisma.user.update({ where: { id: existing.id }, data: { discordId } });
     }
 
     if (existing) {
-      // Vorhandenen User aktualisieren (Name + Avatar)
       await prisma.user.update({
         where: { id: existing.id },
         data: {
           username,
-          // Avatar nur überschreiben wenn kein benutzerdefiniertes Bild vorhanden
           ...(avatar && { image: avatar }),
         },
       });
@@ -99,8 +209,6 @@ export async function POST() {
         },
       });
 
-      // Account-Eintrag nur anlegen wenn noch keiner existiert
-      // (verhindert, dass ein echtes OAuth-Login-Account mit Tokens überschrieben wird)
       const existingAccount = await prisma.account.findUnique({
         where: { provider_providerAccountId: { provider: "discord", providerAccountId: discordId } },
       });
@@ -123,6 +231,7 @@ export async function POST() {
     total:   humans.length,
     created,
     updated,
+    merged,
   });
 }
 

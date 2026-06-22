@@ -100,7 +100,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   // [id] ist jetzt die Event.id
   const { id: eventId } = await params;
   const body = await req.json();
-  const { status, pointsConfig, statFields, generateMatches, finalRanking, finalRankingNote } = body;
+  const { status, format, pointsConfig, statFields, generateMatches, finalRanking, finalRankingNote } = body;
 
   // Auto-generate round-robin matches
   if (generateMatches === "round_robin") {
@@ -141,6 +141,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     where: { id: eventId },
     data: {
       ...(status           !== undefined && { tournamentStatus: status }),
+      ...(format           !== undefined && { format }),
       ...(pointsConfig     !== undefined && { pointsConfig: pointsConfig ? JSON.stringify(pointsConfig) : null }),
       ...(statFields       !== undefined && { statFields:   statFields   ? JSON.stringify(statFields)   : null }),
       ...(finalRanking     !== undefined && Array.isArray(finalRanking) && { finalRankingJson: JSON.stringify(finalRanking) }),
@@ -152,10 +153,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const newRanking: string[] | null =
     finalRanking && Array.isArray(finalRanking) ? finalRanking : null;
 
-  const isBecomingFinished = status === "finished" && existing.tournamentStatus !== "finished";
-  const isAlreadyFinished  = existing.tournamentStatus === "finished";
+  const isBecomingFinished  = status === "finished" && existing.tournamentStatus !== "finished";
+  const isAlreadyFinished   = existing.tournamentStatus === "finished";
+  // Only award placement points when:
+  // • becoming finished for the first time, OR
+  // • re-editing an already-confirmed ranking (reverse old + award new)
+  // NOT when finalRankingJson is null but tournamentStatus is already finished
+  // (single_elimination auto-awards TOURNAMENT_WIN via the matches handler)
+  const hasExistingRanking  = existing.finalRankingJson !== null;
 
-  if (newRanking && (isBecomingFinished || isAlreadyFinished)) {
+  if (newRanking && (isBecomingFinished || (isAlreadyFinished && hasExistingRanking))) {
     const eventTitle = existing.title ?? eventId;
 
     const cfgRaw: Record<string, number | { coins: number; points: number }> | null =

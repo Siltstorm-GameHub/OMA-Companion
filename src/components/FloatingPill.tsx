@@ -8,6 +8,7 @@ import {
   LayoutDashboard, CalendarDays, Star, Trophy, ShoppingBag,
   Heart, User, ShieldCheck, LogOut, ChevronDown,
 } from "lucide-react";
+import { ThemeToggleItem } from "@/components/ThemeToggle";
 
 const NAV = [
   { label: "Dashboard",      href: "/dashboard",   icon: LayoutDashboard },
@@ -268,6 +269,9 @@ export default function FloatingPill() {
                 className="hover:text-teal-400 hover:bg-teal-500/[0.08] transition-colors">
                 <User style={{ width: 14, height: 14 }} /> Mein Profil
               </Link>
+              <ThemeToggleItem
+                className="text-gray-500 hover:text-amber-400 hover:bg-white/[0.05] transition-colors"
+              />
               <button onClick={() => { setAvatarOpen(false); signOut(); }}
                 style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "9px 10px",
                   borderRadius: 8, background: "none", border: "none", cursor: "pointer", fontSize: 13 }}

@@ -2,8 +2,10 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Users, Trophy, Clock, Swords, ChevronDown, Medal, StickyNote, Star, Vote } from "lucide-react";
+import { ArrowLeft, Users, Trophy, Clock, Swords, ChevronDown, StickyNote, Vote, Repeat } from "lucide-react";
+import RankPointsIcon from "@/components/RankPointsIcon";
 import WinIcon from "@/components/WinIcon";
+import CoinIcon from "@/components/CoinIcon";
 import BracketView from "./BracketView";
 import RoundRobinView from "./RoundRobinView";
 import FfaView from "./FfaView";
@@ -38,6 +40,7 @@ export default async function TournamentDetailPage({
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     include: {
+      series: { select: { id: true, name: true } },
       registrations: {
         include: {
           user: { select: { id: true, name: true, username: true, image: true, points: true } },
@@ -114,13 +117,42 @@ export default async function TournamentDetailPage({
   }
 
   // Completion-Daten (Poll-Gewinner etc.)
-  type CompletionData = { pollWinnerId?: string | null; pollLabel?: string | null; pollBonusPoints?: number | null };
+  type CompletionData = {
+    pollWinnerId?: string | null;
+    pollWinnerIds?: string[] | null;
+    pollLabel?: string | null;
+    pollBonusPoints?: number | null;
+    pollBonusCoins?: number | null;
+    pollBonusRankPoints?: number | null;
+    pollExcludedUserIds?: string[] | null;
+    finalRankingGroups?: string[][] | null;
+    gamePhaseComplete?: boolean;
+    pollPhaseComplete?: boolean;
+  };
   const completionData: CompletionData = (() => {
     try { return event.completionData ? JSON.parse(event.completionData as string) : {}; } catch { return {}; }
   })();
-  const pollWinnerId    = completionData.pollWinnerId ?? null;
-  const pollLabel       = completionData.pollLabel ?? null;
-  const pollBonusPoints = completionData.pollBonusPoints ?? null;
+  const pollWinnerIds: string[] = completionData.pollWinnerIds ??
+    (completionData.pollWinnerId ? [completionData.pollWinnerId] : []);
+  const pollLabel         = completionData.pollLabel ?? null;
+  const pollBonusCoins    = completionData.pollBonusCoins ?? completionData.pollBonusPoints ?? null;
+  const pollBonusRankPts  = completionData.pollBonusRankPoints ?? null;
+  const rankingGroups     = completionData.finalRankingGroups ?? null;
+  const gamePhaseComplete   = completionData.gamePhaseComplete === true;
+  const pollPhaseComplete   = completionData.pollPhaseComplete === true;
+  const hasPendingPoll      = gamePhaseComplete && !pollPhaseComplete && !!pollLabel;
+  const pollExcludedUserIds = new Set(completionData.pollExcludedUserIds ?? []);
+
+  // Teilnahme-Münzen (aus placementRewardsJson oder Fallback auf pointReward)
+  const participationCoins: number = (() => {
+    if (event.placementRewardsJson) {
+      try {
+        const r = JSON.parse(event.placementRewardsJson) as { participationCoins?: number };
+        if (r.participationCoins != null) return r.participationCoins;
+      } catch { /* ignore */ }
+    }
+    return event.pointReward ?? 0;
+  })();
 
   // Punkte pro Platzierung aus pointsConfig
   type PcVal = number | { coins?: number; points?: number };
@@ -147,9 +179,20 @@ export default async function TournamentDetailPage({
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
-      <Link href="/events" className="flex items-center gap-2 text-sm text-gray-500 hover:text-white mb-5 transition-colors w-fit group">
-        <ArrowLeft className="w-4 h-4" /> Zurück
-      </Link>
+      <div className="flex items-center justify-between mb-5">
+        <Link href="/events" className="flex items-center gap-2 text-sm text-gray-500 hover:text-white transition-colors w-fit group">
+          <ArrowLeft className="w-4 h-4" /> Zurück
+        </Link>
+        {event.series && (
+          <Link
+            href={`/events/series/${event.series.id}`}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-300 hover:bg-teal-500/20 transition-colors font-medium"
+          >
+            <Repeat className="w-3.5 h-3.5" />
+            {event.series.name} – Gesamttabelle
+          </Link>
+        )}
+      </div>
 
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <div className="glass rounded-2xl p-5 mb-5">
@@ -224,83 +267,110 @@ export default async function TournamentDetailPage({
         )}
       </div>
 
-      {/* ── Endplatzierung ─────────────────────────────────────────────── */}
-      {hasTournament && event.tournamentStatus === "finished" && event.finalRankingJson && (() => {
-        const finalIds: string[] = JSON.parse(event.finalRankingJson!);
-        const medals = ["🥇", "🥈", "🥉"];
+      {/* Endplatzierungs-Notiz (falls vorhanden) */}
+      {gamePhaseComplete && event.finalRankingNote && (
+        <div className="glass rounded-2xl px-4 py-3 mb-5 flex items-start gap-2">
+          <StickyNote className="w-3.5 h-3.5 text-gray-600 mt-0.5 shrink-0" />
+          <p className="text-xs text-gray-500 italic leading-relaxed">{event.finalRankingNote}</p>
+        </div>
+      )}
+
+      {/* ── Laufende Umfrage ───────────────────────────────────────────── */}
+      {hasPendingPoll && (
+        <div className="glass rounded-2xl p-5 mb-5 space-y-3 border border-violet-500/20">
+          <div className="flex items-center gap-2">
+            <span className="inline-block w-2 h-2 rounded-full bg-violet-400 animate-pulse shrink-0" />
+            <Vote className="w-4 h-4 text-violet-400" />
+            <h2 className="text-sm font-semibold text-white">Abstimmung läuft</h2>
+          </div>
+          <p className="text-xs text-violet-300/80">
+            Thema: <span className="font-medium text-violet-200">{pollLabel}</span>
+          </p>
+          {(pollBonusCoins ?? 0) > 0 || (pollBonusRankPts ?? 0) > 0 ? (
+            <div className="flex items-center gap-3">
+              {(pollBonusCoins ?? 0) > 0 && (
+                <span className="text-xs px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300">
+                  Gewinner erhält +{pollBonusCoins} <CoinIcon size={13} />
+                </span>
+              )}
+              {(pollBonusRankPts ?? 0) > 0 && (
+                <span className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-300">
+                  +{pollBonusRankPts} <RankPointsIcon size={13} />
+                </span>
+              )}
+            </div>
+          ) : null}
+          <div className="space-y-1.5 pt-1">
+            <p className="text-[10px] text-gray-600 uppercase tracking-wide font-medium">Kandidaten</p>
+            {event.registrations.filter(({ user }) => !pollExcludedUserIds.has(user.id)).map(({ user }) => {
+              const isMe = user.id === userId;
+              const name = user.username ?? user.name ?? "Unbekannt";
+              return (
+                <div key={user.id}
+                  className={`flex items-center gap-2.5 px-3 py-2 rounded-xl bg-violet-500/[0.04] border border-violet-500/10 ${isMe ? "ring-1 ring-teal-500/30" : ""}`}>
+                  {user.image
+                    ? <img src={user.image} alt="" className="w-6 h-6 rounded-full shrink-0 object-cover" />
+                    : <div className="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center text-[10px] font-bold text-gray-300 shrink-0">
+                        {name[0]?.toUpperCase() ?? "?"}
+                      </div>
+                  }
+                  <span className={`text-sm ${isMe ? "text-teal-300 font-medium" : "text-gray-200"}`}>
+                    {name}{isMe && <span className="text-xs text-gray-500 ml-1.5">(du)</span>}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Umfrage-Übersicht ──────────────────────────────────────────── */}
+      {pollWinnerIds.length > 0 && pollLabel && (() => {
         return (
           <div className="glass rounded-2xl p-5 mb-5 space-y-3">
             <div className="flex items-center gap-2">
-              <Medal className="w-4 h-4 text-amber-400" />
-              <h2 className="text-sm font-semibold text-white">Endplatzierung</h2>
+              <Vote className="w-4 h-4 text-violet-400" />
+              <h2 className="text-sm font-semibold text-white">{pollLabel}</h2>
             </div>
-
             <div className="space-y-1.5">
-              {finalIds.map((uid, i) => {
+              {pollWinnerIds.map(uid => {
                 const participant = mergedParticipants.find(p => p.userId === uid);
                 const user = participant?.user;
                 const name = user ? (user.name || user.username || "Unbekannt") : "Unbekannt";
                 const isMe = uid === userId;
-                const place = i + 1;
-                const coins = placementCoins(place);
-                const rankPts = placementRankPts(place);
-                const isPollWinner = pollWinnerId === uid;
                 return (
-                  <div key={uid}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${i < 3 ? "bg-amber-500/[0.06] border border-amber-500/15" : "bg-white/[0.02] border border-white/[0.05]"} ${isMe ? "ring-1 ring-teal-500/30" : ""}`}>
-                    {/* Platz */}
-                    <span className="w-7 text-center shrink-0 text-base">
-                      {i < 3 ? medals[i] : <span className="text-xs text-gray-500 font-mono">{i + 1}.</span>}
-                    </span>
-                    {/* Avatar */}
+                  <div key={uid} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl bg-violet-500/[0.06] border border-violet-500/15 ${isMe ? "ring-1 ring-teal-500/30" : ""}`}>
+                    <span className="text-base shrink-0">🏆</span>
                     {user?.image
                       ? <img src={user.image} alt="" className="w-7 h-7 rounded-full shrink-0 object-cover" />
                       : <div className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-300 shrink-0">
                           {name[0]?.toUpperCase() ?? "?"}
                         </div>
                     }
-                    {/* Name + Poll-Badge */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className={`text-sm font-medium truncate ${isMe ? "text-teal-300" : i === 0 ? "text-amber-200" : "text-white"}`}>
-                          {name}{isMe && <span className="text-xs text-gray-500 ml-1.5">(du)</span>}
-                        </span>
-                        {isPollWinner && pollLabel && (
-                          <span className="flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-violet-500/15 border border-violet-500/30 text-violet-300 shrink-0">
-                            <Vote className="w-2.5 h-2.5" /> {pollLabel}
+                      <span className={`text-sm font-medium ${isMe ? "text-teal-300" : "text-violet-200"}`}>
+                        {name}{isMe && <span className="text-xs text-gray-500 ml-1.5">(du)</span>}
+                      </span>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {(pollBonusCoins ?? 0) > 0 && (
+                          <span className="flex items-center gap-0.5 text-[10px] text-violet-400/80">+{pollBonusCoins} <CoinIcon size={11} /></span>
+                        )}
+                        {(pollBonusRankPts ?? 0) > 0 && (
+                          <span className="flex items-center gap-0.5 text-[10px] text-violet-400/80">
+                            +{pollBonusRankPts} <RankPointsIcon size={11} />
                           </span>
                         )}
                       </div>
-                      {/* Punkte-Zusammenfassung */}
-                      {(coins > 0 || rankPts > 0) && (
-                        <div className="flex items-center gap-2 mt-0.5">
-                          {coins > 0 && (
-                            <span className="text-[10px] text-amber-400/80">+{coins} 🪙</span>
-                          )}
-                          {rankPts > 0 && (
-                            <span className="flex items-center gap-0.5 text-[10px] text-teal-400/80">
-                              +{rankPts} <Star className="w-2.5 h-2.5" />
-                            </span>
-                          )}
-                          {isPollWinner && pollBonusPoints && pollBonusPoints > 0 && (
-                            <span className="text-[10px] text-violet-400/80">+{pollBonusPoints} {pollLabel}</span>
-                          )}
-                        </div>
-                      )}
                     </div>
-                    {i === 0 && <WinIcon size={14} />}
                   </div>
                 );
               })}
+              {pollWinnerIds.length > 1 && (
+                <p className="text-[11px] text-gray-600 px-1">
+                  Alle {pollWinnerIds.length} Gewinner erhalten dieselbe Belohnung (Gleichstand).
+                </p>
+              )}
             </div>
-
-            {/* Notiz */}
-            {event.finalRankingNote && (
-              <div className="flex items-start gap-2 mt-1 px-1">
-                <StickyNote className="w-3.5 h-3.5 text-gray-600 mt-0.5 shrink-0" />
-                <p className="text-xs text-gray-500 italic leading-relaxed">{event.finalRankingNote}</p>
-              </div>
-            )}
           </div>
         );
       })()}
@@ -323,7 +393,7 @@ export default async function TournamentDetailPage({
               {event.registrations.map(({ user }, i) => {
                 const isMe = user.id === userId;
                 const wins = event.matches.filter(m => m.winnerId === user.id).length;
-                const isPollWinner = pollWinnerId === user.id;
+                const isPollWinner = pollWinnerIds.includes(user.id);
                 return (
                   <div key={user.id} className={`flex items-center gap-2.5 px-3 py-2.5 ${isMe ? "bg-rose-950/30" : ""}`}>
                     <span className="text-xs text-gray-700 w-4 shrink-0 text-center">{i + 1}</span>
@@ -381,6 +451,13 @@ export default async function TournamentDetailPage({
                 statFields={event.statFields ? JSON.parse(event.statFields) : []}
                 userId={userId}
                 format={format}
+                participationCoins={participationCoins}
+                placementRewards={[1, 2, 3].map(place => ({
+                  place,
+                  coins: placementCoins(place),
+                  rankPts: placementRankPts(place),
+                }))}
+                finalRankingGroups={rankingGroups}
               />
             )}
           </div>

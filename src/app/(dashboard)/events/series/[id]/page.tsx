@@ -1,20 +1,73 @@
+import React from "react";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
-  ArrowLeft, CalendarDays, Users, Trophy, ChevronRight,
-  Repeat, Swords, Medal, TrendingUp, Check, Gamepad2, BarChart2,
+  ArrowLeft, Trophy, Crown, Flame, Users,
+  Swords, Gamepad2, Zap, Star, TrendingUp,
+  Archive, ChevronRight, CheckCircle2,
 } from "lucide-react";
-import { RelativeTime } from "@/components/RelativeTime";
-import GameCover from "@/components/GameCover";
+import { CountUp } from "@/components/CountUp";
+import SeriesStandingsTable from "./SeriesStandingsTable";
+import SeriesEventList, { type SeriesEventItem } from "./SeriesEventList";
+import FullStandingsToggle from "./FullStandingsToggle";
+import type { DeltaInfo } from "./SeriesStandingsTable";
 
-const STATUS_CONFIG: Record<string, { label: string; badge: string; dot: string }> = {
-  open:     { label: "Offen",   badge: "text-blue-300 bg-blue-500/10 border border-blue-500/20",          dot: "bg-blue-400"              },
-  active:   { label: "Läuft",   badge: "text-emerald-300 bg-emerald-500/10 border border-emerald-500/20", dot: "bg-emerald-400 animate-pulse" },
-  closed:   { label: "Voll",    badge: "text-amber-300 bg-amber-500/10 border border-amber-500/20",        dot: "bg-amber-400"             },
-  finished: { label: "Beendet", badge: "text-gray-500 bg-white/[0.04] border border-white/[0.06]",        dot: "bg-gray-600"              },
+type ArchivedSeason = {
+  id: string; name: string; status: string; seasonNumber: number | null;
+  archivedAt: Date | null; seriesCompletionData: string | null; createdAt: Date;
+  events: { startAt: Date }[]; _count: { events: number };
 };
+
+function SaisonArchiv({ currentId, archivedSeasons }: { currentId: string; archivedSeasons: ArchivedSeason[] }) {
+  if (!archivedSeasons.length) return null;
+  return (
+    <div className="space-y-3">
+      <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+        <Archive className="w-3.5 h-3.5 text-gray-600" /> Vergangene Saisons
+      </h2>
+      <div className="glass rounded-2xl overflow-hidden divide-y divide-white/[0.04]">
+        {archivedSeasons.map(s => {
+          const cd: { overallWinnerIds?: string[] | null } = (() => {
+            try { return s.seriesCompletionData ? JSON.parse(s.seriesCompletionData) : {}; } catch { return {}; }
+          })();
+          const firstEventDate = s.events[0]?.startAt;
+          return (
+            <Link key={s.id} href={`/events/series/${s.id}`}
+              className={`flex items-center gap-3.5 px-4 py-3 hover:bg-white/[0.025] transition-colors group ${s.id === currentId ? "bg-white/[0.03]" : ""}`}>
+              <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+                <Archive className="w-3.5 h-3.5 text-amber-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-white truncate group-hover:text-teal-300 transition-colors">
+                  {s.name}
+                  {s.id === currentId && <span className="ml-2 text-[10px] text-gray-600">(diese Saison)</span>}
+                </p>
+                <p className="text-[10px] text-gray-600 mt-0.5">
+                  {firstEventDate
+                    ? new Date(firstEventDate).toLocaleDateString("de-DE", { month: "short", year: "numeric", timeZone: "Europe/Berlin" })
+                    : "–"}
+                  {" · "}
+                  {s._count.events} Events
+                  {s.archivedAt && (
+                    <> · abgeschlossen {new Date(s.archivedAt).toLocaleDateString("de-DE", { day: "2-digit", month: "short", year: "numeric", timeZone: "Europe/Berlin" })}</>
+                  )}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-[10px] px-2 py-0.5 rounded-full border text-amber-400 bg-amber-500/10 border-amber-500/20">
+                  Saison {s.seasonNumber ?? "–"}
+                </span>
+                <ChevronRight className="w-3.5 h-3.5 text-gray-600 group-hover:text-teal-400 transition-colors" />
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 const FORMAT_LABELS: Record<string, string> = {
   single_elimination: "Single Elimination",
@@ -31,39 +84,22 @@ type StatConfig = {
   defaultWinnerStatField?: string;
   defaultWinnerTargetField?: string;
 };
-type LegacyRow  = { userId: string; points: number; participations: number; stats: Record<string, number> };
-
-type SeriesStandingsJson = {
-  lastUpdated: string;
-  processedEventIds: string[];
-  raw: Record<string, Record<string, number>>;
-};
-
+type LegacyRow = { userId: string; points: number; participations: number; stats: Record<string, number> };
 type SeriesEventForStandings = {
   id: string;
+  status: string;
   completionData: string | null;
   registrations: { userId: string }[];
   finalRankingJson: string | null;
-  matches: {
-    entries: { userId: string | null; statsJson: string | null }[];
-  }[];
+  matches: { entries: { userId: string | null; statsJson: string | null }[] }[];
 };
 
-/**
- * Gesamttabelle berechnen.
- *
- * Trennung: Legacy-Punkte kommen vorberechnet aus row.points und werden NICHT
- * neu multipliziert. Nur Event-Stats (persistiert oder on-demand) werden über
- * die seriesStatConfig in Punkte umgerechnet.
- */
 function computeStatStandings(
   events: SeriesEventForStandings[],
   cfg: StatConfig,
   legacy: LegacyRow[],
-  persistedStandings: SeriesStandingsJson | null,
 ) {
-  // Event-Beiträge (werden mit pointsConfig multipliziert)
-  const evPart:  Record<string, number>                 = {};
+  const evPart: Record<string, number> = {};
   const evStats: Record<string, Record<string, number>> = {};
 
   function addEv(uid: string, field: string, val: number) {
@@ -71,24 +107,21 @@ function computeStatStandings(
     evStats[uid][field] = (evStats[uid][field] ?? 0) + val;
   }
 
-  // 1. Persistierte Standings (aus abgeschlossenen Events)
-  if (persistedStandings) {
-    for (const [uid, stats] of Object.entries(persistedStandings.raw)) {
-      evPart[uid] = (evPart[uid] ?? 0) + (stats["participations"] ?? 0);
-      for (const [f, v] of Object.entries(stats)) {
-        if (f !== "participations") addEv(uid, f, v);
-      }
-    }
-  }
-
-  // 2. On-demand für Events OHNE completionData (Rückwärtskompatibilität)
-  const processedIds = new Set(persistedStandings?.processedEventIds ?? []);
   for (const ev of events) {
-    if (processedIds.has(ev.id)) continue;
+    if (!ev.completionData) continue;
+    let cd: {
+      gamePhaseComplete?: boolean;
+      mvpUserId?: string;
+      eventWinnerId?: string;
+      eventWinnerIds?: string[];
+      seriesWinnerTargetField?: string;
+    } = {};
+    try { cd = JSON.parse(ev.completionData); } catch { continue; }
+    if (!cd.gamePhaseComplete) continue;
+
     for (const { userId: uid } of ev.registrations) {
       evPart[uid] = (evPart[uid] ?? 0) + 1;
     }
-    if (ev.matches.length === 0) continue;
     for (const match of ev.matches) {
       for (const entry of match.entries) {
         if (!entry.userId || !entry.statsJson) continue;
@@ -100,14 +133,20 @@ function computeStatStandings(
         }
       }
     }
+    if (cd.mvpUserId && cfg.mvpStatField) {
+      addEv(cd.mvpUserId, cfg.mvpStatField, 1);
+    }
+    const winnerIds = cd.eventWinnerIds ?? (cd.eventWinnerId ? [cd.eventWinnerId] : []);
+    if (winnerIds.length > 0 && cd.seriesWinnerTargetField) {
+      for (const uid of winnerIds) addEv(uid, cd.seriesWinnerTargetField, 1);
+    }
   }
 
-  // Legacy-Werte: Punkte vorberechnet (row.points), Stats + Teilnahmen nur für Anzeige
-  const legPts:  Record<string, number>                 = {};
-  const legPart: Record<string, number>                 = {};
+  const legPts: Record<string, number> = {};
+  const legPart: Record<string, number> = {};
   const legStat: Record<string, Record<string, number>> = {};
   for (const row of legacy) {
-    legPts[row.userId]  = (legPts[row.userId]  ?? 0) + row.points;
+    legPts[row.userId] = (legPts[row.userId] ?? 0) + row.points;
     legPart[row.userId] = (legPart[row.userId] ?? 0) + row.participations;
     if (!legStat[row.userId]) legStat[row.userId] = {};
     for (const [f, v] of Object.entries(row.stats ?? {})) {
@@ -115,45 +154,28 @@ function computeStatStandings(
     }
   }
 
-  const allUids = new Set([
-    ...Object.keys(evPart),
-    ...Object.keys(evStats),
-    ...Object.keys(legPts),
-  ]);
+  const allUids = new Set([...Object.keys(evPart), ...Object.keys(evStats), ...Object.keys(legPts)]);
 
-  return [...allUids]
-    .map(uid => {
-      const ep = evPart[uid]  ?? 0;
-      const es = evStats[uid] ?? {};
-
-      // Punkte: Legacy vorberechnet + neue Event-Punkte
-      let totalPoints = (legPts[uid] ?? 0) + ep * cfg.participationPoints;
-      for (const { field, pointsPer } of cfg.stats) {
-        totalPoints += (es[field] ?? 0) * pointsPer;
-      }
-
-      // Anzeige: Legacy + Event zusammengeführt
-      const displayPart = (legPart[uid] ?? 0) + ep;
-      const displayStats: Record<string, number> = { ...(legStat[uid] ?? {}) };
-      for (const [f, v] of Object.entries(es)) {
-        displayStats[f] = (displayStats[f] ?? 0) + v;
-      }
-
-      return {
-        userId:         uid,
-        totalPoints,
-        participations: displayPart,
-        stats:          displayStats,
-        hasLegacy:      legacy.some(l => l.userId === uid),
-      };
-    })
-    .sort((a, b) => b.totalPoints - a.totalPoints || b.participations - a.participations);
+  return [...allUids].map(uid => {
+    const ep = evPart[uid] ?? 0;
+    const es = evStats[uid] ?? {};
+    let totalPoints = (legPts[uid] ?? 0) + ep * cfg.participationPoints;
+    for (const { field, pointsPer } of cfg.stats) {
+      totalPoints += (es[field] ?? 0) * pointsPer;
+    }
+    const displayPart = (legPart[uid] ?? 0) + ep;
+    const displayStats: Record<string, number> = { ...(legStat[uid] ?? {}) };
+    for (const [f, v] of Object.entries(es)) {
+      displayStats[f] = (displayStats[f] ?? 0) + v;
+    }
+    return { userId: uid, totalPoints, participations: displayPart, stats: displayStats, hasLegacy: legacy.some(l => l.userId === uid) };
+  }).sort((a, b) => b.totalPoints - a.totalPoints || b.participations - a.participations);
 }
 
 export default async function SeriesDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const session = await auth();
-  const userId  = session?.user?.id;
+  const userId = session?.user?.id;
 
   const series = await prisma.eventSeries.findUnique({
     where: { id },
@@ -161,15 +183,14 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
       events: {
         orderBy: { startAt: "asc" },
         include: {
-          _count:        { select: { registrations: true } },
-          registrations: { select: { userId: true } },
-          participants:     { select: { userId: true } },
-          matches: {
+          registrations: {
             select: {
-              entries: {
-                select: { userId: true, statsJson: true },
-              },
+              userId: true,
+              user: { select: { id: true, name: true, username: true, image: true } },
             },
+          },
+          matches: {
+            select: { entries: { select: { userId: true, statsJson: true } } },
           },
         },
       },
@@ -178,12 +199,6 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
 
   if (!series) notFound();
 
-  const upcomingEvents = series.events.filter(e => e.status !== "finished");
-  const pastEvents     = series.events
-    .filter(e => e.status === "finished")
-    .sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime());
-
-  // Stat-Konfiguration der Reihe parsen
   const statCfg: StatConfig = (() => {
     try { return series.seriesStatConfig ? JSON.parse(series.seriesStatConfig) : null; } catch { return null; }
   })() ?? { participationPoints: 0, stats: [] };
@@ -192,397 +207,442 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
     try { return series.legacyStandings ? JSON.parse(series.legacyStandings) : []; } catch { return []; }
   })();
 
-  const hasStatConfig = statCfg.participationPoints > 0 || statCfg.stats.length > 0 || legacyRows.length > 0;
+  const standings = computeStatStandings(series.events, statCfg, legacyRows);
 
-  // Persistierte Standings laden
-  const persistedStandings: SeriesStandingsJson | null = (() => {
-    try { return series.seriesStandingsJson ? JSON.parse(series.seriesStandingsJson) : null; } catch { return null; }
-  })();
+  // ── Hero Stats ─────────────────────────────────────────────────────────────
+  const gamePhaseCompleteCount = series.events.filter(e => {
+    if (!e.completionData) return false;
+    try { return (JSON.parse(e.completionData) as { gamePhaseComplete?: boolean }).gamePhaseComplete === true; }
+    catch { return false; }
+  }).length;
 
-  // Gesamttabelle berechnen
-  const standings = computeStatStandings(series.events, statCfg, legacyRows, persistedStandings);
+  const myRank   = userId ? standings.findIndex(s => s.userId === userId) + 1 : 0;
+  const myPoints = userId ? (standings.find(s => s.userId === userId)?.totalPoints ?? 0) : 0;
 
-  // User-Daten für Tabelle
+  // ── Standings users ────────────────────────────────────────────────────────
   const standingUserIds = standings.map(s => s.userId);
-  const standingUsers   = standingUserIds.length > 0
+  const standingUsers = standingUserIds.length > 0
     ? await prisma.user.findMany({
-        where:  { id: { in: standingUserIds } },
+        where: { id: { in: standingUserIds } },
         select: { id: true, name: true, username: true, image: true },
       })
     : [];
-  const userMap = new Map(standingUsers.map(u => [u.id, u]));
 
-  // Gesamtstatistiken
-  const totalParticipantIds = new Set(
-    series.events.flatMap(e => e.registrations.map(r => r.userId))
+  const configuredFields = new Set(statCfg.stats.map(s => s.field));
+  const reservedFields   = new Set(["participations", "__legacyPoints"]);
+  const specialFields    = new Set(
+    [statCfg.mvpStatField, statCfg.defaultWinnerTargetField].filter((f): f is string => !!f)
   );
-  const eventsWithResults = pastEvents.filter(e => e.finalRankingJson);
+  const extraCols = [...specialFields].filter(
+    f => !configuredFields.has(f) && !reservedFields.has(f) &&
+         standings.some(row => (row.stats[f] ?? 0) > 0)
+  );
+  const showPoints = standings.some(r => r.totalPoints > 0);
 
-  // Sieger + MVP aus pastEvents für die Terminliste
-  const winnerMap = new Map<string, string>();
-  const mvpMap    = new Map<string, string>();
-  const statWinnerMap = new Map<string, string>(); // completionData event winner
+  // ── Delta since last game-phase-complete event ─────────────────────────────
+  const gamePhaseCompleteEvents = series.events
+    .filter(e => {
+      if (!e.completionData) return false;
+      try { return (JSON.parse(e.completionData) as { gamePhaseComplete?: boolean }).gamePhaseComplete === true; }
+      catch { return false; }
+    })
+    .sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime());
 
-  for (const ev of pastEvents) {
-    if (ev.finalRankingJson) {
+  const lastEventDelta: Record<string, DeltaInfo> = {};
+
+  if (gamePhaseCompleteEvents.length > 0) {
+    const lastEv = gamePhaseCompleteEvents[0];
+    const contrib = new Map<string, { participations: number; stats: Record<string, number> }>();
+    function getContrib(uid: string) {
+      if (!contrib.has(uid)) contrib.set(uid, { participations: 0, stats: {} });
+      return contrib.get(uid)!;
+    }
+    for (const { userId: uid } of lastEv.registrations) getContrib(uid).participations += 1;
+    for (const match of lastEv.matches) {
+      for (const entry of match.entries) {
+        if (!entry.userId || !entry.statsJson) continue;
+        let s: Record<string, number> = {};
+        try { s = JSON.parse(entry.statsJson); } catch { continue; }
+        const c = getContrib(entry.userId);
+        for (const { field } of statCfg.stats) {
+          const v = Number(s[field] ?? 0);
+          if (v) c.stats[field] = (c.stats[field] ?? 0) + v;
+        }
+      }
+    }
+    if (lastEv.completionData) {
       try {
-        const ranking = JSON.parse(ev.finalRankingJson) as string[];
-        const wu = userMap.get(ranking[0]);
-        if (wu) winnerMap.set(ev.id, wu.username ?? wu.name ?? "");
+        const cd = JSON.parse(lastEv.completionData) as {
+          mvpUserId?: string; eventWinnerId?: string; eventWinnerIds?: string[]; seriesWinnerTargetField?: string;
+        };
+        if (cd.mvpUserId && statCfg.mvpStatField) {
+          const c = getContrib(cd.mvpUserId);
+          c.stats[statCfg.mvpStatField] = (c.stats[statCfg.mvpStatField] ?? 0) + 1;
+        }
+        const lastWinnerIds = cd.eventWinnerIds ?? (cd.eventWinnerId ? [cd.eventWinnerId] : []);
+        if (lastWinnerIds.length > 0 && cd.seriesWinnerTargetField) {
+          for (const wid of lastWinnerIds) {
+            const c = getContrib(wid);
+            c.stats[cd.seriesWinnerTargetField] = (c.stats[cd.seriesWinnerTargetField] ?? 0) + 1;
+          }
+        }
       } catch { /* ignore */ }
     }
-    if (ev.completionData) {
-      try {
-        const cd = JSON.parse(ev.completionData) as { mvpUserId?: string; eventWinnerId?: string; winnerStatField?: string };
-        if (cd.mvpUserId) {
-          const mu = userMap.get(cd.mvpUserId);
-          if (mu) mvpMap.set(ev.id, mu.username ?? mu.name ?? "");
+
+    const prevPointsMap = new Map<string, number>();
+    const prevPartMap   = new Map<string, number>();
+    for (const row of standings) {
+      const c = contrib.get(row.userId);
+      let prevPts = row.totalPoints;
+      if (c) {
+        prevPts -= c.participations * statCfg.participationPoints;
+        for (const { field, pointsPer } of statCfg.stats) {
+          prevPts -= (c.stats[field] ?? 0) * pointsPer;
         }
-        if (cd.eventWinnerId && cd.winnerStatField) {
-          const wu = userMap.get(cd.eventWinnerId);
-          if (wu) statWinnerMap.set(ev.id, `${wu.username ?? wu.name ?? ""} (${cd.winnerStatField})`);
+      }
+      prevPointsMap.set(row.userId, prevPts);
+      prevPartMap.set(row.userId, row.participations - (c?.participations ?? 0));
+    }
+
+    const prevRanked = standings
+      .filter(row => (prevPointsMap.get(row.userId) ?? 0) > 0 || (prevPartMap.get(row.userId) ?? 0) > 0)
+      .sort((a, b) => {
+        const ptsDiff = (prevPointsMap.get(b.userId) ?? 0) - (prevPointsMap.get(a.userId) ?? 0);
+        if (ptsDiff !== 0) return ptsDiff;
+        return (prevPartMap.get(b.userId) ?? 0) - (prevPartMap.get(a.userId) ?? 0);
+      });
+    const prevRankMap = new Map(prevRanked.map((r, i) => [r.userId, i + 1]));
+
+    for (let i = 0; i < standings.length; i++) {
+      const row = standings[i];
+      const currentRank = i + 1;
+      const prevRank = prevRankMap.get(row.userId);
+      const c = contrib.get(row.userId);
+      const participated = (c?.participations ?? 0) > 0;
+      const isNew = prevRank === undefined;
+      const statDeltas: Record<string, number> = {};
+      if (c) {
+        for (const [field, val] of Object.entries(c.stats)) {
+          if (val > 0) statDeltas[field] = val;
         }
-      } catch { /* ignore */ }
+      }
+      const pointsDelta = row.totalPoints - (prevPointsMap.get(row.userId) ?? row.totalPoints);
+      lastEventDelta[row.userId] = {
+        rankDelta: isNew ? 0 : prevRank! - currentRank,
+        pointsDelta,
+        statDeltas,
+        participated,
+        isNew,
+      };
     }
   }
 
-  const medalColors = ["text-amber-400", "text-gray-300", "text-amber-600"];
+  const hasDelta = Object.keys(lastEventDelta).length > 0;
+
+  // ── Event lists ────────────────────────────────────────────────────────────
+  // Events with user info for AvatarStack (cast to SeriesEventItem)
+  const eventsWithUsers = series.events as (typeof series.events[number] & {
+    registrations: { userId: string; user: { id: string; name: string | null; username: string | null; image: string | null } }[];
+  })[];
+
+  const activeEvents:   SeriesEventItem[] = eventsWithUsers
+    .filter(e => e.status === "active" || e.status === "umfrage")
+    .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+  const openEvents:     SeriesEventItem[] = eventsWithUsers
+    .filter(e => e.status === "open")
+    .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+  const finishedEvents: SeriesEventItem[] = eventsWithUsers
+    .filter(e => e.status === "finished")
+    .sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime());
+
+  // ── Punktesystem ──────────────────────────────────────────────────────────
+  const punkteItems: { emoji: string; label: string; pts: string; who: string }[] = [];
+  if (statCfg.participationPoints > 0) {
+    punkteItems.push({ emoji: "🎮", label: "Teilnahme", pts: `+${statCfg.participationPoints}`, who: "Alle Teilnehmer" });
+  }
+  for (const s of statCfg.stats) {
+    punkteItems.push({ emoji: "📊", label: s.field, pts: `×${s.pointsPer}`, who: "Pro Einheit" });
+  }
+  if (statCfg.mvpStatField) {
+    punkteItems.push({ emoji: "⭐", label: "MVP", pts: "+1", who: `→ ${statCfg.mvpStatField}` });
+  }
+  if (statCfg.defaultWinnerTargetField) {
+    punkteItems.push({ emoji: "🏆", label: "Event-Sieger", pts: "+1", who: `→ ${statCfg.defaultWinnerTargetField}` });
+  }
+
+  const totalParticipantIds = new Set(series.events.flatMap(e => e.registrations.map(r => r.userId)));
+
+  // ── All-Time Leaderboard (alle Saisons der Gruppe) ────────────────────────
+  let allTimeStandings: ReturnType<typeof computeStatStandings> = [];
+  let allTimeUsers: typeof standingUsers = [];
+  if (series.groupId) {
+    const allSeasonEvents = await prisma.event.findMany({
+      where: { series: { groupId: series.groupId } },
+      select: {
+        id: true, status: true, completionData: true, finalRankingJson: true,
+        registrations: { select: { userId: true } },
+        matches: { select: { entries: { select: { userId: true, statsJson: true } } } },
+      },
+    });
+    // Collect legacy standings from all archived seasons in the group
+    const allSiblingData = await prisma.eventSeries.findMany({
+      where: { groupId: series.groupId, id: { not: id }, status: "archived" },
+      select: { legacyStandings: true },
+    });
+    const allLegacy: LegacyRow[] = [
+      ...legacyRows,
+      ...allSiblingData.flatMap(s => {
+        try { return s.legacyStandings ? JSON.parse(s.legacyStandings) : []; } catch { return []; }
+      }),
+    ];
+    allTimeStandings = computeStatStandings(allSeasonEvents, statCfg, allLegacy);
+    const allTimeIds = allTimeStandings.map(r => r.userId);
+    allTimeUsers = allTimeIds.length > 0
+      ? await prisma.user.findMany({
+          where: { id: { in: allTimeIds } },
+          select: { id: true, name: true, username: true, image: true },
+        })
+      : [];
+  }
+  const showAllTime = allTimeStandings.length > 0 && !!series.groupId;
+
+  // ── Saison-Gruppe (verwandte Saisons) ─────────────────────────────────────
+  const siblingSeasons = series.groupId
+    ? await prisma.eventSeries.findMany({
+        where: { groupId: series.groupId, id: { not: id } },
+        select: {
+          id: true, name: true, status: true, seasonNumber: true,
+          archivedAt: true, seriesCompletionData: true, createdAt: true,
+          events: { select: { startAt: true }, orderBy: { startAt: "asc" }, take: 1 },
+          _count: { select: { events: true } },
+        },
+        orderBy: { seasonNumber: "asc" },
+      })
+    : [];
+
+  const isArchived = series.status === "archived";
+  const activeSibling = siblingSeasons.find(s => s.status === "active");
+  const archivedSiblings = siblingSeasons.filter(s => s.status === "archived");
+
+  // Parse overall winner for current archived series
+  type CompletionSummary = {
+    overallWinnerIds?: string[] | null;
+    pollWinnerIds?: string[] | null;
+    pollLabel?: string | null;
+    pollPhaseComplete?: boolean;
+  };
+  const seriesCompletion: CompletionSummary = (() => {
+    try { return series.seriesCompletionData ? JSON.parse(series.seriesCompletionData as string) : {}; } catch { return {}; }
+  })();
+  const overallWinnerIds = seriesCompletion.overallWinnerIds ?? [];
+  const overallWinners = overallWinnerIds.length > 0
+    ? await prisma.user.findMany({
+        where: { id: { in: overallWinnerIds } },
+        select: { id: true, name: true, username: true, image: true },
+      })
+    : [];
 
   return (
-    <div className="p-5 sm:p-6 max-w-3xl mx-auto space-y-8 animate-fade-in">
+    <div className="px-4 pb-6 pt-0 sm:p-6 max-w-7xl mx-auto space-y-5 animate-fade-in">
 
-      {/* ── Back ──────────────────────────────────────────────────────────── */}
-      <Link href="/events"
-        className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-teal-400 transition-colors">
-        <ArrowLeft className="w-4 h-4" /> Zurück zu Events
-      </Link>
+      {/* ── Back ── */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <Link href="/events"
+          className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-teal-400 transition-colors">
+          <ArrowLeft className="w-4 h-4" /> Zurück zu Events
+        </Link>
+        {/* Aktive Saison-Link (wenn gerade auf archivierter Saison) */}
+        {isArchived && activeSibling && (
+          <Link href={`/events/series/${activeSibling.id}`}
+            className="flex items-center gap-1.5 text-xs text-teal-400 hover:text-teal-300 border border-teal-500/20 hover:border-teal-500/40 rounded-lg px-3 py-1.5 transition-all">
+            <CheckCircle2 className="w-3.5 h-3.5" /> Zur aktuellen Saison →
+          </Link>
+        )}
+      </div>
 
-      {/* ── Reihen-Header ─────────────────────────────────────────────────── */}
-      <div className="glass card-shine rounded-2xl p-6 space-y-4">
-        <div className="flex items-start gap-3">
-          {series.fixedGame ? (
-            <GameCover game={series.fixedGame} className="w-16 h-10" rounded="rounded-xl" />
-          ) : (
-            <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center shrink-0">
-              <Repeat className="w-5 h-5 text-teal-400" />
-            </div>
-          )}
+      {/* ── Archiviert-Banner ────────────────────────────────────────────────── */}
+      {isArchived && (
+        <div className="glass rounded-2xl px-4 py-3 flex items-center gap-3 border border-amber-500/20 bg-amber-500/[0.04]">
+          <Archive className="w-4 h-4 text-amber-400 shrink-0" />
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold text-white tracking-tight">{series.name}</h1>
-            {series.description && (
-              <p className="text-sm text-gray-400 mt-1 leading-relaxed">{series.description}</p>
+            <p className="text-sm font-semibold text-amber-300">
+              Archiviert · Saison {series.seasonNumber ?? 1}
+              {series.archivedAt && (
+                <span className="text-amber-400/60 font-normal ml-2 text-xs">
+                  · abgeschlossen {new Date(series.archivedAt).toLocaleDateString("de-DE", { day: "2-digit", month: "long", year: "numeric", timeZone: "Europe/Berlin" })}
+                </span>
+              )}
+            </p>
+            {overallWinners.length > 0 && (
+              <p className="text-xs text-amber-400/70 mt-0.5 flex items-center gap-1.5">
+                <Trophy className="w-3 h-3" />
+                Gesamtsieger: {overallWinners.map(u => u.username ?? u.name ?? "?").join(", ")}
+              </p>
             )}
           </div>
         </div>
+      )}
 
-        {/* Eigenschaften-Badges */}
-        <div className="flex flex-wrap gap-2">
-          {series.fixedGame && (
-            <span className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 font-medium">
-              <Gamepad2 className="w-3 h-3" />
-              {series.fixedGame}
-            </span>
-          )}
-          {series.fixedFormat && (
-            <span className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 font-medium">
-              <Swords className="w-3 h-3" />
-              {FORMAT_LABELS[series.fixedFormat] ?? series.fixedFormat}
-            </span>
-          )}
-        </div>
+      {/* ── Hero Banner ──────────────────────────────────────────────────────── */}
+      <div className="glass card-shine rounded-2xl p-4 sm:p-6 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-teal-500/10 via-transparent to-rose-500/6 pointer-events-none" />
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-teal-500/25 to-transparent pointer-events-none" />
+        <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full bg-teal-500/5 blur-2xl pointer-events-none" />
 
-        {/* Stat-Leiste */}
-        <div className="grid grid-cols-4 gap-3">
-          {[
-            { label: "Events gesamt",  value: series.events.length,     icon: <CalendarDays className="w-4 h-4" /> },
-            { label: "Abgeschlossen",  value: pastEvents.length,         icon: <Check className="w-4 h-4" /> },
-            { label: "Kommend",        value: upcomingEvents.length,     icon: <TrendingUp className="w-4 h-4" /> },
-            { label: "Teilnehmer",     value: totalParticipantIds.size,  icon: <Users className="w-4 h-4" /> },
-          ].map(stat => (
-            <div key={stat.label} className="glass-heavy rounded-xl p-3 text-center">
-              <div className="flex items-center justify-center text-gray-500 mb-1">{stat.icon}</div>
-              <p className="text-lg font-bold text-white tabular-nums">{stat.value}</p>
-              <p className="text-[10px] text-gray-600 uppercase tracking-wide mt-0.5 leading-tight">{stat.label}</p>
+        <div className="relative">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <Trophy className="w-4 h-4 text-teal-400" />
+            <span className="text-xs text-teal-400/70 font-medium uppercase tracking-widest">Eventreihe</span>
+          </div>
+          <h1 className="text-2xl font-bold text-white tracking-tight mb-1">{series.name}</h1>
+
+          {/* Badges */}
+          {(series.fixedGame || series.fixedFormat) && (
+            <div className="flex flex-wrap gap-2 mb-4">
+              {series.fixedGame && (
+                <span className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300">
+                  <Gamepad2 className="w-3 h-3" /> {series.fixedGame}
+                </span>
+              )}
+              {series.fixedFormat && (
+                <span className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300">
+                  <Swords className="w-3 h-3" /> {FORMAT_LABELS[series.fixedFormat] ?? series.fixedFormat}
+                </span>
+              )}
             </div>
-          ))}
+          )}
+
+          {series.description && (
+            <p className="text-sm text-gray-400 mb-4 leading-relaxed">{series.description}</p>
+          )}
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              { icon: Gamepad2, val: `${gamePhaseCompleteCount}/${series.events.length}`, label: "Events",      color: "text-teal-400"   },
+              { icon: Users,    val: totalParticipantIds.size,                            label: "Teilnehmer",  color: "text-blue-400"   },
+              { icon: Flame,    val: <CountUp to={myPoints} duration={900} />,            label: "Meine Punkte", color: "text-rose-400"  },
+              myRank > 0
+                ? { icon: Crown, val: `#${myRank}`, label: "Mein Rang", color: "text-amber-400" }
+                : { icon: Star,  val: "–",           label: "Mein Rang", color: "text-gray-500" },
+            ].map(({ icon: Icon, val, label, color }) => (
+              <div key={label} className="glass-heavy rounded-xl p-3 text-center">
+                <Icon className={`w-4 h-4 mx-auto mb-1.5 ${color}`} />
+                <p className="text-lg font-bold text-white tabular-nums leading-none">{val as React.ReactNode}</p>
+                <p className="text-[10px] text-gray-500 uppercase tracking-wide mt-1">{label}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* ── Gesamttabelle ─────────────────────────────────────────────────── */}
-      {standings.length > 0 && hasStatConfig && (() => {
-        // Stat-Spalten: konfigurierte + explizit konfigurierte Sonder-Felder (MVP, Siegstat)
-        const configuredFields = new Set(statCfg.stats.map(s => s.field));
-        const reservedFields   = new Set(["participations", "__legacyPoints"]);
-        const specialFields    = new Set(
-          [statCfg.mvpStatField, statCfg.defaultWinnerTargetField].filter((f): f is string => !!f)
-        );
-        // Nur explizit konfigurierte Sonder-Felder anzeigen (keine veralteten Daten aus seriesStandingsJson)
-        const allExtraCols = [...specialFields].filter(
-          f => !configuredFields.has(f) && !reservedFields.has(f) &&
-               standings.some(row => (row.stats[f] ?? 0) > 0)
-        );
-        const statCols = statCfg.stats;
-        const statColWidth = "4.5rem";
-        const gridCols = [
-          "2.5rem",
-          "1fr",
-          "4rem",
-          ...statCols.map(() => statColWidth),
-          ...allExtraCols.map(() => statColWidth),
-          "5.5rem",
-        ].join(" ");
-
-        return (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Trophy className="w-4 h-4 text-amber-400" />
-              <h2 className="text-sm font-semibold text-white">Gesamttabelle</h2>
-              {persistedStandings && (
-                <span className="text-xs text-gray-600">
-                  · {persistedStandings.processedEventIds.length} abgeschlossene Events
-                </span>
-              )}
-            </div>
-
-            {/* Punkte-Legende */}
-            <div className="flex flex-wrap gap-2">
-              {statCfg.participationPoints > 0 && (
-                <span className="text-[10px] px-2 py-1 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400">
-                  Teilnahme +{statCfg.participationPoints} Pkt.
-                </span>
-              )}
-              {statCols.map(s => (
-                <span key={s.field} className="text-[10px] px-2 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] text-gray-400">
-                  {s.field} × {s.pointsPer} Pkt.
-                </span>
-              ))}
-              {allExtraCols.map(f => (
-                <span key={f} className="text-[10px] px-2 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400">
-                  {f}
-                </span>
-              ))}
-            </div>
-
-            <div className="glass card-shine rounded-2xl overflow-x-auto">
-              <div style={{ minWidth: `${300 + (statCols.length + allExtraCols.length) * 72}px` }}>
-                {/* Header */}
-                <div className="grid items-center px-4 py-2.5 border-b border-white/[0.06]"
-                  style={{ gridTemplateColumns: gridCols }}>
-                  {[
-                    { label: "#",      cls: "" },
-                    { label: "Spieler",cls: "" },
-                    { label: "Events", cls: "text-center" },
-                    ...statCols.map(s => ({ label: s.field, cls: "text-center" })),
-                    ...allExtraCols.map(f => ({ label: f, cls: "text-center" })),
-                    { label: "Punkte", cls: "text-right" },
-                  ].map(col => (
-                    <span key={col.label}
-                      className={`text-[10px] font-semibold text-gray-600 uppercase tracking-widest truncate ${col.cls}`}>
-                      {col.label}
-                    </span>
-                  ))}
+      {/* ── Punktesystem ─────────────────────────────────────────────────────── */}
+      {punkteItems.length > 0 && (
+        <div className="glass rounded-2xl p-5">
+          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <Zap className="w-3.5 h-3.5 text-teal-400" /> Punktesystem
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+            {punkteItems.map((p, i) => (
+              <div key={i} className="flex items-center gap-3 glass-heavy rounded-xl px-3 py-2.5">
+                <span className="text-xl shrink-0">{p.emoji}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-white leading-tight truncate">{p.label}</p>
+                  <p className="text-[10px] text-gray-500 mt-0.5 truncate">{p.who}</p>
                 </div>
-
-                {standings.map((row, idx) => {
-                  const u    = userMap.get(row.userId);
-                  const name = u?.username ?? u?.name ?? row.userId.slice(0, 8);
-                  const isMe = userId === row.userId;
-                  const rank = idx + 1;
-
-                  return (
-                    <div key={row.userId}
-                      className="grid items-center px-4 py-3 border-b border-white/[0.04] last:border-0 transition-colors hover:bg-white/[0.02]"
-                      style={{
-                        gridTemplateColumns: gridCols,
-                        background:  isMe ? "rgba(20,184,166,0.05)" : "",
-                        borderLeft:  isMe ? "2px solid rgba(20,184,166,0.40)" : "2px solid transparent",
-                      }}>
-
-                      {/* Rang */}
-                      <div className="flex items-center justify-center">
-                        {rank <= 3
-                          ? <Medal className={`w-4 h-4 ${medalColors[rank - 1]}`} />
-                          : <span className="text-xs text-gray-600 font-mono tabular-nums">{rank}</span>
-                        }
-                      </div>
-
-                      {/* Spieler */}
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        {u?.image
-                          ? <img src={u.image} alt="" className="w-7 h-7 rounded-full shrink-0 object-cover" />
-                          : <div className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center text-xs font-semibold text-gray-400 shrink-0">
-                              {name[0]?.toUpperCase() ?? "?"}
-                            </div>
-                        }
-                        <span className={`text-sm font-medium truncate ${isMe ? "text-teal-300" : "text-white"}`}>
-                          {name}
-                          {isMe && <span className="text-[10px] text-teal-600 ml-1.5">(du)</span>}
-                          {row.hasLegacy && <span className="text-[10px] text-gray-600 ml-1.5" title="Enthält historische Werte">*</span>}
-                        </span>
-                      </div>
-
-                      {/* Events */}
-                      <div className="text-center">
-                        <span className="text-sm text-gray-400 tabular-nums">{row.participations}</span>
-                      </div>
-
-                      {/* Stat-Spalten */}
-                      {statCols.map(s => (
-                        <div key={s.field} className="text-center">
-                          <span className="text-sm text-gray-300 tabular-nums">
-                            {row.stats[s.field] != null && row.stats[s.field] > 0
-                              ? row.stats[s.field].toLocaleString("de-DE")
-                              : <span className="text-gray-700">–</span>
-                            }
-                          </span>
-                        </div>
-                      ))}
-
-                      {/* Extra-Spalten (MVP, Siege, etc.) */}
-                      {allExtraCols.map(f => (
-                        <div key={f} className="text-center">
-                          <span className="text-sm text-purple-300 tabular-nums">
-                            {row.stats[f] != null && row.stats[f] > 0
-                              ? row.stats[f].toLocaleString("de-DE")
-                              : <span className="text-gray-700">–</span>
-                            }
-                          </span>
-                        </div>
-                      ))}
-
-                      {/* Punkte */}
-                      <div className="text-right">
-                        <span className={`text-sm font-bold tabular-nums ${
-                          rank === 1 ? "text-amber-400" :
-                          rank === 2 ? "text-gray-300"  :
-                          rank === 3 ? "text-amber-600"  :
-                          "text-white"
-                        }`}>
-                          {row.totalPoints > 0
-                            ? row.totalPoints.toLocaleString("de-DE")
-                            : <span className="text-gray-700 font-normal text-xs">–</span>
-                          }
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
+                <span className="ml-auto text-sm font-bold text-teal-400 shrink-0">{p.pts}</span>
               </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Zweispalten: Events + Kompakte Tabelle ───────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+        {/* Linke Spalte: Events */}
+        <SeriesEventList
+          activeEvents={activeEvents}
+          openEvents={openEvents}
+          finishedEvents={finishedEvents}
+          userId={userId ?? ""}
+          fixedGame={series.fixedGame}
+        />
+
+        {/* Rechte Spalte: Kompakte Tabelle */}
+        <div className="space-y-3">
+          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+            <Trophy className="w-3.5 h-3.5 text-amber-400" /> Aktueller Stand
+            {hasDelta && gamePhaseCompleteEvents[0] && (
+              <span className="flex items-center gap-1 text-[10px] text-emerald-500/70 font-normal normal-case tracking-normal">
+                <TrendingUp className="w-3 h-3" /> nach {gamePhaseCompleteEvents[0].title}
+              </span>
+            )}
+          </h2>
+
+          {standings.length > 0 ? (
+            <SeriesStandingsTable
+              rows={standings}
+              users={standingUsers}
+              statCols={statCfg.stats}
+              extraCols={extraCols}
+              currentUserId={userId}
+              showPoints={showPoints}
+              lastEventDelta={hasDelta ? lastEventDelta : undefined}
+              lastEventTitle={gamePhaseCompleteEvents[0]?.title}
+              mode="compact"
+            />
+          ) : (
+            <div className="glass rounded-2xl px-4 py-8 text-center text-sm text-gray-600">
+              Noch keine Ergebnisse
             </div>
-          </div>
-        );
-      })()}
+          )}
+        </div>
+      </div>
 
-      {/* ── Kommende Termine ──────────────────────────────────────────────── */}
-      {upcomingEvents.length > 0 && (
+      {/* ── Vollständige Tabelle (ausklappbar) ───────────────────────────────── */}
+      {standings.length > 0 && (
+        <FullStandingsToggle
+          rows={standings}
+          users={standingUsers}
+          statCols={statCfg.stats}
+          extraCols={extraCols}
+          currentUserId={userId}
+          showPoints={showPoints}
+          lastEventDelta={hasDelta ? lastEventDelta : undefined}
+          lastEventTitle={gamePhaseCompleteEvents[0]?.title}
+        />
+      )}
+
+      {/* ── All-Time Leaderboard ─────────────────────────────────────────────── */}
+      {showAllTime && (
         <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <CalendarDays className="w-4 h-4 text-teal-400" />
-            <h2 className="text-sm font-semibold text-white">Kommende Termine</h2>
-          </div>
-          <div className="space-y-2">
-            {upcomingEvents.map((ev, idx) => {
-              const s    = STATUS_CONFIG[ev.status] ?? STATUS_CONFIG.finished;
-              const isReg = userId ? ev.registrations.some(r => r.userId === userId) : false;
-              const date = new Date(ev.startAt);
-
-              return (
-                <Link key={ev.id} href={`/events/${ev.id}`}
-                  className={`glass card-shine rounded-2xl px-5 py-4 flex items-center gap-4 hover:bg-white/[0.03] transition-all group ${
-                    isReg ? "border border-emerald-500/15" : ""
-                  }`}
-                  style={{ animationDelay: `${idx * 30}ms` }}>
-
-                  <div className="flex flex-col items-center gap-1 shrink-0">
-                    <GameCover game={ev.game ?? series.fixedGame} className="w-16 h-10" rounded="rounded-lg" />
-                    <div className="text-center">
-                      <p className="text-xs font-bold text-white tabular-nums leading-none">
-                        {date.getDate()}. {date.toLocaleString("de-DE", { month: "short" })}
-                      </p>
-                      <RelativeTime date={date} className="text-[9px] text-gray-600 mt-0.5 block" />
-                    </div>
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-semibold text-white group-hover:text-teal-300 transition-colors truncate">
-                        {ev.title}
-                      </span>
-                      {ev.format && <Trophy className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
-                      {isReg && (
-                        <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-medium shrink-0">
-                          <Check className="w-3 h-3" /> Angemeldet
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2.5 text-xs text-gray-500">
-                      {ev.game && <span>{ev.game}</span>}
-                      <span className="flex items-center gap-1">
-                        <Users className="w-3 h-3" />{ev._count.registrations}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className={`text-[10px] px-2.5 py-1 rounded-full border font-medium ${s.badge}`}>
-                      <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1.5 ${s.dot}`} />
-                      {s.label}
-                    </span>
-                    <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-teal-400 transition-colors" />
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
+          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+            <Crown className="w-3.5 h-3.5 text-amber-400" /> All-Time Leaderboard
+            <span className="text-[10px] text-gray-600 normal-case tracking-normal font-normal">· alle Saisons zusammengezählt</span>
+          </h2>
+          <FullStandingsToggle
+            rows={allTimeStandings}
+            users={allTimeUsers}
+            statCols={statCfg.stats}
+            extraCols={extraCols}
+            currentUserId={userId}
+            showPoints={showPoints}
+            defaultExpanded
+          />
         </div>
       )}
 
-      {/* ── Vergangene Termine ────────────────────────────────────────────── */}
-      {pastEvents.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Repeat className="w-4 h-4 text-gray-600" />
-            <h2 className="text-sm font-semibold text-gray-500">Vergangene Termine</h2>
-          </div>
-          <div className="glass card-shine rounded-2xl overflow-hidden divide-y divide-white/[0.04]">
-            {pastEvents.map(ev => {
-              const date       = new Date(ev.startAt);
-              const winner     = winnerMap.get(ev.id);
-              const mvp        = mvpMap.get(ev.id);
-              const statWinner = statWinnerMap.get(ev.id);
-
-              return (
-                <Link key={ev.id} href={`/events/${ev.id}`}
-                  className="flex items-center gap-3.5 px-4 py-3 opacity-60 hover:opacity-100 transition-opacity group">
-                  <GameCover game={ev.game ?? series.fixedGame} className="w-12 h-8" rounded="rounded-md" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <p className="text-sm font-medium text-gray-400 truncate group-hover:text-white transition-colors">{ev.title}</p>
-                      {ev.format && <Trophy className="w-3 h-3 text-gray-600 shrink-0" />}
-                    </div>
-                    <p className="text-[10px] text-gray-600 mt-0.5">
-                      {date.toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "short", year: "numeric" })}
-                      {ev.game && <span className="ml-1.5">· {ev.game}</span>}
-                      {ev._count.registrations > 0 && <span className="ml-1.5">· {ev._count.registrations} Teilnehmer</span>}
-                      {winner && <span className="ml-1.5 text-amber-700">· 🏆 {winner}</span>}
-                      {statWinner && !winner && <span className="ml-1.5 text-amber-700">· 🏆 {statWinner}</span>}
-                      {mvp && <span className="ml-1.5 text-teal-700">· ⭐ MVP: {mvp}</span>}
-                    </p>
-                  </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-gray-700 group-hover:text-gray-400 transition-colors shrink-0" />
-                </Link>
-              );
-            })}
-          </div>
-        </div>
+      {/* ── Vergangene Saisons ────────────────────────────────────────────────── */}
+      {(archivedSiblings.length > 0 || (!isArchived && siblingSeasons.some(s => s.status === "archived"))) && (
+        <SaisonArchiv
+          currentId={id}
+          archivedSeasons={[
+            ...archivedSiblings,
+            ...(isArchived ? [] : siblingSeasons.filter(s => s.status === "archived")),
+          ]}
+        />
       )}
 
-      {series.events.length === 0 && (
-        <div className="text-center py-12 text-gray-600">
-          <Repeat className="w-8 h-8 mx-auto mb-3 opacity-30" />
-          <p className="text-sm">Noch keine Events in dieser Reihe.</p>
-        </div>
-      )}
     </div>
   );
 }

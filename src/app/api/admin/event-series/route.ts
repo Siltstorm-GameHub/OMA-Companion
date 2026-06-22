@@ -2,15 +2,43 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 
-/** GET /api/admin/event-series?id=xxx  →  Reihen-Details inkl. fixedGame/fixedFormat */
+/**
+ * GET /api/admin/event-series        → Liste aller Reihen (mit Event-Zähler + nächstes Event)
+ * GET /api/admin/event-series?id=xxx → Einzelne Reihe mit Details
+ */
 export async function GET(req: NextRequest) {
   await requireRole("moderator");
   const id = new URL(req.url).searchParams.get("id");
-  if (!id) return NextResponse.json({ error: "id fehlt" }, { status: 400 });
+
+  if (!id) {
+    const allSeries = await prisma.eventSeries.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        _count: { select: { events: true } },
+        events: {
+          where: { startAt: { gte: new Date() } },
+          orderBy: { startAt: "asc" },
+          take: 1,
+          select: { startAt: true, status: true },
+        },
+      },
+    });
+    return NextResponse.json(allSeries);
+  }
 
   const series = await prisma.eventSeries.findUnique({
     where: { id },
-    include: { _count: { select: { events: true } } },
+    include: {
+      _count: { select: { events: true } },
+      events: {
+        orderBy: { startAt: "desc" },
+        select: {
+          id: true, title: true, startAt: true, status: true,
+          _count: { select: { registrations: true } },
+          maxPlayers: true,
+        },
+      },
+    },
   });
   if (!series) return NextResponse.json({ error: "Nicht gefunden" }, { status: 404 });
   return NextResponse.json(series);
@@ -45,8 +73,10 @@ export async function PATCH(req: NextRequest) {
       ...(fields.discordChannelId     !== undefined && { discordChannelId:     fields.discordChannelId }),
       ...(fields.recurrenceType       !== undefined && { recurrenceType:       fields.recurrenceType || null }),
       ...(fields.recurrenceMonthlyMode !== undefined && { recurrenceMonthlyMode: fields.recurrenceMonthlyMode || null }),
-      ...(fields.seriesStatConfig  !== undefined && { seriesStatConfig:  fields.seriesStatConfig }),
-      ...(fields.legacyStandings   !== undefined && { legacyStandings:   fields.legacyStandings }),
+      ...(fields.seriesStatConfig      !== undefined && { seriesStatConfig:      fields.seriesStatConfig }),
+      ...(fields.legacyStandings       !== undefined && { legacyStandings:       fields.legacyStandings }),
+      ...(fields.placementRewardsJson  !== undefined && { placementRewardsJson:  fields.placementRewardsJson }),
+      ...(fields.pollConfigJson        !== undefined && { pollConfigJson:        fields.pollConfigJson }),
     },
   });
 
@@ -58,11 +88,38 @@ export async function PATCH(req: NextRequest) {
     });
   }
 
-  // 3) Optional: Format auf alle Events der Reihe übertragen
+  // 3) Optional: Turnier-Einstellungen auf alle Events übertragen (Format + Punkte + Stat-Felder)
   if (propagateFormat && fields.fixedFormat) {
+    // Convert placementRewardsJson → pointsConfig shape
+    let pointsConfigJson: string | null = null;
+    if (fields.fixedFormat !== "liga" && fields.placementRewardsJson) {
+      try {
+        const { placements } = JSON.parse(fields.placementRewardsJson) as {
+          placements: { place: number; coins: number; rankPoints: number }[];
+        };
+        if (placements?.length) {
+          const cfg: Record<string, { coins: number; points: number }> = {};
+          for (const p of placements) cfg[String(p.place)] = { coins: p.coins, points: p.rankPoints };
+          pointsConfigJson = JSON.stringify(cfg);
+        }
+      } catch { /* skip */ }
+    }
+    // Extract stat field names from seriesStatConfig
+    let statFieldsJson: string | null = null;
+    if (fields.seriesStatConfig) {
+      try {
+        const { stats } = JSON.parse(fields.seriesStatConfig) as { stats: { field: string }[] };
+        const fieldNames = stats?.map((s: { field: string }) => s.field).filter(Boolean) ?? [];
+        if (fieldNames.length) statFieldsJson = JSON.stringify(fieldNames);
+      } catch { /* skip */ }
+    }
     await prisma.event.updateMany({
       where: { seriesId },
-      data:  { format: fields.fixedFormat },
+      data:  {
+        format: fields.fixedFormat,
+        ...(pointsConfigJson !== null && { pointsConfig: pointsConfigJson }),
+        ...(statFieldsJson   !== null && { statFields:   statFieldsJson }),
+      },
     });
   }
 

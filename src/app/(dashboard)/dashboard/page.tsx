@@ -1,9 +1,10 @@
 ﻿import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/roles";
+import { unstable_cache } from "next/cache";
 import {
   Trophy, CalendarDays, Users, ChevronRight,
   ShieldAlert, Clock, Scroll, Swords, CheckCircle2,
-  Circle, Zap, Repeat, Radio,
+  Circle, Zap, Repeat, Radio, Newspaper,
 } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
 import Link from "next/link";
@@ -29,6 +30,53 @@ const ROLE_LABEL: Record<string, string> = {
   admin: "Admin", moderator: "Moderator", user: "Mitglied",
 };
 
+// Cached queries for non-user-specific data (5 min revalidation)
+const getGlobalDashboardData = unstable_cache(
+  async () => {
+    const [memberCount, activeEvents, activeSeries, topUsers, nextEvent, liveEvent, recentSummaries] = await Promise.all([
+      prisma.user.count(),
+      prisma.event.count({ where: { status: { in: ["open", "active"] } } }),
+      prisma.eventSeries.findMany({
+        where: { events: { some: { status: { in: ["open", "active", "closed"] } } } },
+        include: {
+          _count: { select: { events: true } },
+          events: {
+            where:   { status: { in: ["open", "active", "closed"] } },
+            orderBy: { startAt: "asc" },
+            take: 1,
+            select: { startAt: true, status: true },
+          },
+        },
+        take: 5,
+      }),
+      prisma.user.findMany({
+        orderBy: { rankPoints: "desc" },
+        take: 5,
+        select: { id: true, username: true, name: true, image: true, points: true, rankPoints: true },
+      }),
+      prisma.event.findFirst({
+        where:   { status: { in: ["open", "active"] }, startAt: { gte: new Date() } },
+        orderBy: { startAt: "asc" },
+        include: { _count: { select: { registrations: true } } },
+      }),
+      prisma.event.findFirst({
+        where:   { status: "active", startAt: { lte: new Date() } },
+        orderBy: { startAt: "desc" },
+        select:  { id: true, title: true, format: true, _count: { select: { registrations: true } } },
+      }),
+      prisma.event.findMany({
+        where:   { status: "finished", summary: { not: null } },
+        orderBy: { startAt: "desc" },
+        take:    3,
+        select:  { id: true, title: true, game: true, startAt: true, summary: true },
+      }),
+    ]);
+    return { memberCount, activeEvents, activeSeries, topUsers, nextEvent, liveEvent, recentSummaries };
+  },
+  ["dashboard-global"],
+  { revalidate: 300 }
+);
+
 export default async function DashboardPage() {
   const sessionUser = await getSessionUser();
   const userId      = sessionUser?.id;
@@ -38,36 +86,15 @@ export default async function DashboardPage() {
   const month = now.getMonth() + 1;
   const year  = now.getFullYear();
 
+  const { memberCount, activeEvents, activeSeries, topUsers, nextEvent, liveEvent, recentSummaries } =
+    await getGlobalDashboardData();
+
   const [
-    memberCount,
-    activeEvents,
-    activeSeries,
-    topUsers,
     myQuestsDone,
     totalMonthQuests,
     myMonthQuests,
     activeLulSeason,
   ] = await Promise.all([
-    prisma.user.count(),
-    prisma.event.count({ where: { status: { in: ["open", "active"] } } }),
-    prisma.eventSeries.findMany({
-      where: { events: { some: { status: { in: ["open", "active", "closed"] } } } },
-      include: {
-        _count: { select: { events: true } },
-        events: {
-          where:   { status: { in: ["open", "active", "closed"] } },
-          orderBy: { startAt: "asc" },
-          take: 1,
-          select: { startAt: true, status: true },
-        },
-      },
-      take: 5,
-    }),
-    prisma.user.findMany({
-      orderBy: { rankPoints: "desc" },
-      take: 5,
-      select: { id: true, username: true, name: true, image: true, points: true, rankPoints: true },
-    }),
     userId
       ? prisma.userQuestProgress.count({ where: { userId, completed: true, quest: { month, year } } })
       : 0,
@@ -111,19 +138,6 @@ export default async function DashboardPage() {
   const firstName   = displayName.split(" ")[0];
   const avatarUrl   = sessionUser?.image ?? null;
   const isStaff     = userRole === "admin" || userRole === "moderator";
-
-  const [nextEvent, liveEvent] = await Promise.all([
-    prisma.event.findFirst({
-      where:   { status: { in: ["open", "active"] }, startAt: { gte: now } },
-      orderBy: { startAt: "asc" },
-      include: { _count: { select: { registrations: true } } },
-    }),
-    prisma.event.findFirst({
-      where:   { status: "active", startAt: { lte: now } },
-      orderBy: { startAt: "desc" },
-      select:  { id: true, title: true, format: true, _count: { select: { registrations: true } } },
-    }),
-  ]);
 
   return (
     <div className="animate-fade-in">
@@ -575,6 +589,42 @@ export default async function DashboardPage() {
           </div>
 
         </div>
+
+        {/* ── Neueste Berichte ──────────────────────────────────────── */}
+        {recentSummaries.length > 0 && (
+          <div className="animate-slide-up stagger-5">
+            <div className="flex items-center justify-between mb-2.5">
+              <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
+                <Newspaper className="w-3.5 h-3.5 text-teal-500/70" /> Neueste Berichte
+              </h2>
+              <Link href="/events" className="text-[11px] flex items-center gap-0.5 text-teal-500 hover:text-teal-300 transition-colors">
+                Alle Events <ChevronRight className="w-3 h-3" />
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {recentSummaries.map(ev => (
+                <Link key={ev.id} href={`/events/${ev.id}`}
+                  className="surface group block p-4 hover:border-teal-500/20 transition-all"
+                  style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.45)" }}>
+                  <div className="flex items-start gap-2 mb-2">
+                    <Newspaper className="w-3.5 h-3.5 text-teal-400 shrink-0 mt-0.5" />
+                    <p className="text-xs font-semibold text-white group-hover:text-teal-300 transition-colors leading-snug line-clamp-2">
+                      {ev.title}
+                    </p>
+                  </div>
+                  <p className="text-[11px] text-gray-500 line-clamp-3 leading-relaxed">
+                    {ev.summary}
+                  </p>
+                  <p className="text-[10px] text-gray-700 mt-2">
+                    {new Date(ev.startAt).toLocaleDateString("de-DE", { day: "numeric", month: "short", year: "numeric" })}
+                    {ev.game ? ` · ${ev.game}` : ""}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
