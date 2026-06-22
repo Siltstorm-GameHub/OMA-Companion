@@ -114,13 +114,36 @@ export default async function TournamentDetailPage({
   }
 
   // Completion-Daten (Poll-Gewinner etc.)
-  type CompletionData = { pollWinnerId?: string | null; pollLabel?: string | null; pollBonusPoints?: number | null };
+  type CompletionData = {
+    pollWinnerId?: string | null;
+    pollWinnerIds?: string[] | null;
+    pollLabel?: string | null;
+    pollBonusPoints?: number | null;
+    pollBonusCoins?: number | null;
+    pollBonusRankPoints?: number | null;
+    finalRankingGroups?: string[][] | null;
+    pollPhaseComplete?: boolean;
+  };
   const completionData: CompletionData = (() => {
     try { return event.completionData ? JSON.parse(event.completionData as string) : {}; } catch { return {}; }
   })();
-  const pollWinnerId    = completionData.pollWinnerId ?? null;
-  const pollLabel       = completionData.pollLabel ?? null;
-  const pollBonusPoints = completionData.pollBonusPoints ?? null;
+  const pollWinnerIds: string[] = completionData.pollWinnerIds ??
+    (completionData.pollWinnerId ? [completionData.pollWinnerId] : []);
+  const pollLabel         = completionData.pollLabel ?? null;
+  const pollBonusCoins    = completionData.pollBonusCoins ?? completionData.pollBonusPoints ?? null;
+  const pollBonusRankPts  = completionData.pollBonusRankPoints ?? null;
+  const rankingGroups     = completionData.finalRankingGroups ?? null;
+
+  // Teilnahme-Münzen (aus placementRewardsJson oder Fallback auf pointReward)
+  const participationCoins: number = (() => {
+    if (event.placementRewardsJson) {
+      try {
+        const r = JSON.parse(event.placementRewardsJson) as { participationCoins?: number };
+        if (r.participationCoins != null) return r.participationCoins;
+      } catch { /* ignore */ }
+    }
+    return event.pointReward ?? 0;
+  })();
 
   // Punkte pro Platzierung aus pointsConfig
   type PcVal = number | { coins?: number; points?: number };
@@ -228,6 +251,19 @@ export default async function TournamentDetailPage({
       {hasTournament && event.tournamentStatus === "finished" && event.finalRankingJson && (() => {
         const finalIds: string[] = JSON.parse(event.finalRankingJson!);
         const medals = ["🥇", "🥈", "🥉"];
+
+        // Build placement map (supports ties via finalRankingGroups)
+        const placementMap = new Map<string, number>();
+        if (rankingGroups) {
+          let place = 1;
+          for (const group of rankingGroups) {
+            for (const uid of group) placementMap.set(uid, place);
+            place += group.length;
+          }
+        } else {
+          finalIds.forEach((uid, i) => placementMap.set(uid, i + 1));
+        }
+
         return (
           <div className="glass rounded-2xl p-5 mb-5 space-y-3">
             <div className="flex items-center gap-2">
@@ -241,54 +277,81 @@ export default async function TournamentDetailPage({
                 const user = participant?.user;
                 const name = user ? (user.name || user.username || "Unbekannt") : "Unbekannt";
                 const isMe = uid === userId;
-                const place = i + 1;
+                const place = placementMap.get(uid) ?? (i + 1);
+                const prevPlace = i > 0 ? (placementMap.get(finalIds[i - 1]) ?? i) : null;
+                const isTied = prevPlace !== null && place === prevPlace;
                 const coins = placementCoins(place);
                 const rankPts = placementRankPts(place);
-                const isPollWinner = pollWinnerId === uid;
+                const isPollWinner = pollWinnerIds.includes(uid);
+                const totalCoins = coins + participationCoins + (isPollWinner ? (pollBonusCoins ?? 0) : 0);
+                const totalRankPts = rankPts + (isPollWinner ? (pollBonusRankPts ?? 0) : 0);
                 return (
-                  <div key={uid}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${i < 3 ? "bg-amber-500/[0.06] border border-amber-500/15" : "bg-white/[0.02] border border-white/[0.05]"} ${isMe ? "ring-1 ring-teal-500/30" : ""}`}>
-                    {/* Platz */}
-                    <span className="w-7 text-center shrink-0 text-base">
-                      {i < 3 ? medals[i] : <span className="text-xs text-gray-500 font-mono">{i + 1}.</span>}
-                    </span>
-                    {/* Avatar */}
-                    {user?.image
-                      ? <img src={user.image} alt="" className="w-7 h-7 rounded-full shrink-0 object-cover" />
-                      : <div className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-300 shrink-0">
-                          {name[0]?.toUpperCase() ?? "?"}
-                        </div>
-                    }
-                    {/* Name + Poll-Badge */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className={`text-sm font-medium truncate ${isMe ? "text-teal-300" : i === 0 ? "text-amber-200" : "text-white"}`}>
-                          {name}{isMe && <span className="text-xs text-gray-500 ml-1.5">(du)</span>}
-                        </span>
-                        {isPollWinner && pollLabel && (
-                          <span className="flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-violet-500/15 border border-violet-500/30 text-violet-300 shrink-0">
-                            <Vote className="w-2.5 h-2.5" /> {pollLabel}
-                          </span>
-                        )}
+                  <div key={uid}>
+                    {/* Gleichstand-Trennlinie */}
+                    {isTied && (
+                      <div className="flex items-center gap-1 py-0.5 px-2 text-[10px] text-blue-400/40">
+                        <div className="flex-1 border-t border-blue-500/20 border-dashed" />
+                        <span>Gleichstand</span>
+                        <div className="flex-1 border-t border-blue-500/20 border-dashed" />
                       </div>
-                      {/* Punkte-Zusammenfassung */}
-                      {(coins > 0 || rankPts > 0) && (
-                        <div className="flex items-center gap-2 mt-0.5">
+                    )}
+                    <div
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${place <= 3 ? "bg-amber-500/[0.06] border border-amber-500/15" : "bg-white/[0.02] border border-white/[0.05]"} ${isMe ? "ring-1 ring-teal-500/30" : ""}`}>
+                      {/* Platz */}
+                      <span className="w-7 text-center shrink-0 text-base">
+                        {place <= 3 ? medals[place - 1] : <span className="text-xs text-gray-500 font-mono">{place}.</span>}
+                      </span>
+                      {/* Avatar */}
+                      {user?.image
+                        ? <img src={user.image} alt="" className="w-7 h-7 rounded-full shrink-0 object-cover" />
+                        : <div className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-300 shrink-0">
+                            {name[0]?.toUpperCase() ?? "?"}
+                          </div>
+                      }
+                      {/* Name + Badges */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className={`text-sm font-medium truncate ${isMe ? "text-teal-300" : place === 1 ? "text-amber-200" : "text-white"}`}>
+                            {name}{isMe && <span className="text-xs text-gray-500 ml-1.5">(du)</span>}
+                          </span>
+                          {isPollWinner && pollLabel && (
+                            <span className="flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-violet-500/15 border border-violet-500/30 text-violet-300 shrink-0">
+                              <Vote className="w-2.5 h-2.5" /> {pollLabel}
+                            </span>
+                          )}
+                        </div>
+                        {/* Punkte-Zusammenfassung */}
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                          {participationCoins > 0 && (
+                            <span className="text-[10px] text-gray-500">+{participationCoins} 🪙 Teilnahme</span>
+                          )}
                           {coins > 0 && (
-                            <span className="text-[10px] text-amber-400/80">+{coins} 🪙</span>
+                            <span className="text-[10px] text-amber-400/80">+{coins} 🪙 Platz {place}</span>
                           )}
                           {rankPts > 0 && (
                             <span className="flex items-center gap-0.5 text-[10px] text-teal-400/80">
-                              +{rankPts} <Star className="w-2.5 h-2.5" />
+                              +{rankPts} <Star className="w-2.5 h-2.5" /> Platz {place}
                             </span>
                           )}
-                          {isPollWinner && pollBonusPoints && pollBonusPoints > 0 && (
-                            <span className="text-[10px] text-violet-400/80">+{pollBonusPoints} {pollLabel}</span>
+                          {isPollWinner && (pollBonusCoins ?? 0) > 0 && (
+                            <span className="text-[10px] text-violet-400/80">+{pollBonusCoins} 🪙 {pollLabel}</span>
+                          )}
+                          {isPollWinner && (pollBonusRankPts ?? 0) > 0 && (
+                            <span className="flex items-center gap-0.5 text-[10px] text-violet-400/80">
+                              +{pollBonusRankPts} <Star className="w-2.5 h-2.5" /> {pollLabel}
+                            </span>
+                          )}
+                          {(totalCoins > 0 || totalRankPts > 0) && (coins > 0 || rankPts > 0 || participationCoins > 0 || isPollWinner) && (
+                            <span className="text-[10px] text-gray-600 font-medium">
+                              = {totalCoins > 0 ? `${totalCoins} 🪙` : ""}
+                              {totalCoins > 0 && totalRankPts > 0 ? " + " : ""}
+                              {totalRankPts > 0 ? <>{totalRankPts} <Star className="w-2.5 h-2.5 inline" /></> : ""}
+                            </span>
                           )}
                         </div>
-                      )}
+                      </div>
+                      {place === 1 && !isTied && <WinIcon size={14} />}
                     </div>
-                    {i === 0 && <WinIcon size={14} />}
                   </div>
                 );
               })}
@@ -301,6 +364,57 @@ export default async function TournamentDetailPage({
                 <p className="text-xs text-gray-500 italic leading-relaxed">{event.finalRankingNote}</p>
               </div>
             )}
+          </div>
+        );
+      })()}
+
+      {/* ── Umfrage-Übersicht ──────────────────────────────────────────── */}
+      {pollWinnerIds.length > 0 && pollLabel && (() => {
+        return (
+          <div className="glass rounded-2xl p-5 mb-5 space-y-3">
+            <div className="flex items-center gap-2">
+              <Vote className="w-4 h-4 text-violet-400" />
+              <h2 className="text-sm font-semibold text-white">{pollLabel}</h2>
+            </div>
+            <div className="space-y-1.5">
+              {pollWinnerIds.map(uid => {
+                const participant = mergedParticipants.find(p => p.userId === uid);
+                const user = participant?.user;
+                const name = user ? (user.name || user.username || "Unbekannt") : "Unbekannt";
+                const isMe = uid === userId;
+                return (
+                  <div key={uid} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl bg-violet-500/[0.06] border border-violet-500/15 ${isMe ? "ring-1 ring-teal-500/30" : ""}`}>
+                    <span className="text-base shrink-0">🏆</span>
+                    {user?.image
+                      ? <img src={user.image} alt="" className="w-7 h-7 rounded-full shrink-0 object-cover" />
+                      : <div className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-300 shrink-0">
+                          {name[0]?.toUpperCase() ?? "?"}
+                        </div>
+                    }
+                    <div className="flex-1 min-w-0">
+                      <span className={`text-sm font-medium ${isMe ? "text-teal-300" : "text-violet-200"}`}>
+                        {name}{isMe && <span className="text-xs text-gray-500 ml-1.5">(du)</span>}
+                      </span>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {(pollBonusCoins ?? 0) > 0 && (
+                          <span className="text-[10px] text-violet-400/80">+{pollBonusCoins} 🪙</span>
+                        )}
+                        {(pollBonusRankPts ?? 0) > 0 && (
+                          <span className="flex items-center gap-0.5 text-[10px] text-violet-400/80">
+                            +{pollBonusRankPts} <Star className="w-2.5 h-2.5" />
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              {pollWinnerIds.length > 1 && (
+                <p className="text-[11px] text-gray-600 px-1">
+                  Alle {pollWinnerIds.length} Gewinner erhalten dieselbe Belohnung (Gleichstand).
+                </p>
+              )}
+            </div>
           </div>
         );
       })()}
@@ -323,7 +437,7 @@ export default async function TournamentDetailPage({
               {event.registrations.map(({ user }, i) => {
                 const isMe = user.id === userId;
                 const wins = event.matches.filter(m => m.winnerId === user.id).length;
-                const isPollWinner = pollWinnerId === user.id;
+                const isPollWinner = pollWinnerIds.includes(user.id);
                 return (
                   <div key={user.id} className={`flex items-center gap-2.5 px-3 py-2.5 ${isMe ? "bg-rose-950/30" : ""}`}>
                     <span className="text-xs text-gray-700 w-4 shrink-0 text-center">{i + 1}</span>
