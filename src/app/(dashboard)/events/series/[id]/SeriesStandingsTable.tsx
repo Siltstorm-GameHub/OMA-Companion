@@ -115,7 +115,7 @@ export default function SeriesStandingsTable({
   const [expanded, setExpanded] = useState(false);
   const userMap = new Map(users.map(u => [u.id, u]));
   const hasExtraData = statCols.length > 0 || extraCols.length > 0;
-  const hasDelta = !!lastEventDelta && lastEventDelta.size > 0;
+  const hasDelta = !!lastEventDelta && Object.keys(lastEventDelta).length > 0;
 
   const statColW = "4.5rem";
   const fullGridCols = [
