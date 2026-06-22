@@ -134,6 +134,7 @@ export default async function TournamentDetailPage({
   const pollBonusCoins    = completionData.pollBonusCoins ?? completionData.pollBonusPoints ?? null;
   const pollBonusRankPts  = completionData.pollBonusRankPoints ?? null;
   const rankingGroups     = completionData.finalRankingGroups ?? null;
+  const gamePhaseComplete = completionData.gamePhaseComplete === true;
 
   // Teilnahme-Münzen (aus placementRewardsJson oder Fallback auf pointReward)
   const participationCoins: number = (() => {
@@ -260,7 +261,7 @@ export default async function TournamentDetailPage({
       </div>
 
       {/* ── Endplatzierung ─────────────────────────────────────────────── */}
-      {hasTournament && event.tournamentStatus === "finished" && event.finalRankingJson && (() => {
+      {hasTournament && (event.tournamentStatus === "finished" || gamePhaseComplete) && event.finalRankingJson && (() => {
         const finalIds: string[] = JSON.parse(event.finalRankingJson!);
         const medals = ["🥇", "🥈", "🥉"];
 
