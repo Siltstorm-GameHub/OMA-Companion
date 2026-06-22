@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import GameNameInput from "@/components/GameNameInput";
 import StatFieldEditor from "@/components/StatFieldEditor";
+import CoinIcon from "@/components/CoinIcon";
 
 /* ── Types ── */
 type User = { id: string; name: string | null; username: string | null; image: string | null };
@@ -548,7 +549,7 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
               {/* Punkte-Konfiguration */}
               {isLiga ? (
                 <div>
-                  <label className="text-xs text-gray-500 block mb-1.5">🪙 Münzen pro Match-Ergebnis</label>
+                  <label className="flex items-center gap-1 text-xs text-gray-500 mb-1.5"><CoinIcon size={13} /> Münzen pro Match-Ergebnis</label>
                   <div className="flex gap-2">
                     {([["🏆 Sieg", "win"], ["🤝 Unentschieden", "draw"]] as const).map(([label, key]) => (
                       <div key={key} className="flex-1">
@@ -565,7 +566,7 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
                   <label className="text-xs text-gray-500 block mb-1.5">Belohnungen pro Platzierung</label>
                   <div className="space-y-1.5">
                     <div className="grid grid-cols-3 gap-2 text-[10px] text-gray-600 px-1">
-                      <span>Platz</span><span className="text-center">🪙 Münzen</span><span className="text-center">⭐ Punkte</span>
+                      <span>Platz</span><span className="flex items-center justify-center gap-0.5"><CoinIcon size={11} /> Münzen</span><span className="text-center">⭐ Punkte</span>
                     </div>
                     {([["🥇 1.", "coins1", "pts1"], ["🥈 2.", "coins2", "pts2"], ["🥉 3.", "coins3", "pts3"]] as const).map(([label, ck, pk]) => (
                       <div key={label} className="grid grid-cols-3 gap-2 items-center">

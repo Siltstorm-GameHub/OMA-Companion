@@ -4,6 +4,7 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Users, Trophy, Clock, Swords, ChevronDown, StickyNote, Star, Vote, Repeat } from "lucide-react";
 import WinIcon from "@/components/WinIcon";
+import CoinIcon from "@/components/CoinIcon";
 import BracketView from "./BracketView";
 import RoundRobinView from "./RoundRobinView";
 import FfaView from "./FfaView";
@@ -286,7 +287,7 @@ export default async function TournamentDetailPage({
             <div className="flex items-center gap-3">
               {(pollBonusCoins ?? 0) > 0 && (
                 <span className="text-xs px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300">
-                  Gewinner erhält +{pollBonusCoins} 🪙
+                  Gewinner erhält +{pollBonusCoins} <CoinIcon size={13} />
                 </span>
               )}
               {(pollBonusRankPts ?? 0) > 0 && (
@@ -349,7 +350,7 @@ export default async function TournamentDetailPage({
                       </span>
                       <div className="flex items-center gap-2 mt-0.5">
                         {(pollBonusCoins ?? 0) > 0 && (
-                          <span className="text-[10px] text-violet-400/80">+{pollBonusCoins} 🪙</span>
+                          <span className="flex items-center gap-0.5 text-[10px] text-violet-400/80">+{pollBonusCoins} <CoinIcon size={11} /></span>
                         )}
                         {(pollBonusRankPts ?? 0) > 0 && (
                           <span className="flex items-center gap-0.5 text-[10px] text-violet-400/80">

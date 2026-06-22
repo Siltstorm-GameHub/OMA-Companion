@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import CoinIcon from "@/components/CoinIcon";
 import { toast } from "sonner";
 import { Plus, Trash2, ChevronDown, ChevronUp, Eye, EyeOff, Check, X, Loader2, Package, ImageIcon, Pencil, Tag } from "lucide-react";
 import { RARITY_CONFIG, type Rarity, effectivePrice } from "@/lib/collectibles";
@@ -390,10 +391,10 @@ export default function CollectiblesAdminPanel({ collections: initial }: Props) 
                           {/* Preis */}
                           <div className="flex flex-col items-center gap-0.5">
                             {isOnSale && (
-                              <p className="text-[10px] text-gray-500 line-through tabular-nums">{item.price.toLocaleString("de-DE")} 🪙</p>
+                              <p className="flex items-center gap-0.5 text-[10px] text-gray-500 line-through tabular-nums">{item.price.toLocaleString("de-DE")} <CoinIcon size={11} /></p>
                             )}
                             <p className={`text-[11px] font-bold tabular-nums ${isOnSale ? "text-rose-400" : "text-amber-400"}`}>
-                              {dispPrice.toLocaleString("de-DE")} 🪙
+                              <span className="flex items-center gap-0.5">{dispPrice.toLocaleString("de-DE")} <CoinIcon size={11} /></span>
                             </p>
                           </div>
                           {item.stock !== null && <p className="text-[10px] text-gray-500">Lager: {item.stock}</p>}
