@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { CalendarDays, Users, Zap, ArrowLeft, Repeat, Trophy, ChevronRight, Check, Clock, Vote } from "lucide-react";
+import CoinIcon from "@/components/CoinIcon";
 import { RelativeTime } from "@/components/RelativeTime";
 import RegisterButton from "../RegisterButton";
 import EventSummarySection from "@/components/EventSummarySection";
@@ -47,6 +48,9 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
   const isFull       = !!(event.maxPlayers && event._count.registrations >= event.maxPlayers);
   const canRegister  = event.status === "open" || event.status === "active";
   const date         = new Date(event.startAt);
+  const TZ           = "Europe/Berlin";
+  const fmtDate      = (d: Date, opts: Intl.DateTimeFormatOptions) =>
+    d.toLocaleString("de-DE", { timeZone: TZ, ...opts });
   const discordUrl   = event.discordEventId && GUILD_ID
     ? `https://discord.com/events/${GUILD_ID}/${event.discordEventId}` : null;
 
@@ -95,11 +99,11 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
         <div className="flex items-start gap-4">
           {/* Datum-Box */}
           <div className="glass-heavy rounded-xl px-3 py-3 text-center min-w-[56px] shrink-0">
-            <p className="text-2xl font-black text-white leading-none tabular-nums">{date.getDate()}</p>
+            <p className="text-2xl font-black text-white leading-none tabular-nums">{fmtDate(date, { day: "numeric" })}</p>
             <p className="text-[10px] text-gray-500 uppercase tracking-wide mt-0.5 font-medium">
-              {date.toLocaleString("de-DE", { month: "short" })}
+              {fmtDate(date, { month: "short" })}
             </p>
-            <p className="text-[10px] text-gray-600 mt-0.5">{date.getFullYear()}</p>
+            <p className="text-[10px] text-gray-600 mt-0.5">{fmtDate(date, { year: "numeric" })}</p>
           </div>
 
           <div className="flex-1 min-w-0">
@@ -112,9 +116,9 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
               {event.game && <span className="font-medium text-gray-300">{event.game}</span>}
               <span className="flex items-center gap-1">
                 <CalendarDays className="w-3.5 h-3.5" />
-                {date.toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}
+                {fmtDate(date, { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}
                 {" · "}
-                {date.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} Uhr
+                {fmtDate(date, { hour: "2-digit", minute: "2-digit" })} Uhr
               </span>
             </div>
 
@@ -127,9 +131,11 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
                 <Users className="w-3.5 h-3.5" />
                 {event._count.registrations}{event.maxPlayers ? ` / ${event.maxPlayers}` : ""} Teilnehmer
               </span>
-              <span className="flex items-center gap-1 text-xs text-amber-400 font-semibold">
-                <Zap className="w-3.5 h-3.5" />+{event.pointReward} Punkte
-              </span>
+              {(event.pointReward ?? 0) > 0 && (
+                <span className="flex items-center gap-1 text-xs text-amber-400 font-semibold">
+                  <Zap className="w-3.5 h-3.5" />+{event.pointReward} <CoinIcon size={13} />
+                </span>
+              )}
               {isRegistered && (
                 <span className="flex items-center gap-1 text-xs text-emerald-400 font-medium">
                   <Check className="w-3.5 h-3.5" /> Angemeldet
@@ -192,14 +198,15 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
               const evDate      = new Date(ev.startAt);
               const evStatus    = STATUS_CONFIG[ev.status] ?? STATUS_CONFIG.finished;
               const evReg       = userId ? ev.registrations.some(r => r.userId === userId) : false;
+              const fmtEv       = (d: Date, opts: Intl.DateTimeFormatOptions) => d.toLocaleString("de-DE", { timeZone: TZ, ...opts });
 
               return (
                 <Link key={ev.id} href={`/events/${ev.id}`}
                   className="flex items-center gap-3.5 px-4 py-3 hover:bg-white/[0.025] transition-colors group">
                   <div className="w-10 h-10 rounded-xl bg-gray-800/60 border border-white/[0.06] flex flex-col items-center justify-center shrink-0 text-center">
-                    <p className="text-xs font-bold text-white leading-none">{evDate.getDate()}</p>
-                    <p className="text-[8px] text-gray-500 uppercase">{evDate.toLocaleString("de-DE", { month: "short" })}</p>
-                    <p className="text-[7px] text-gray-600">{evDate.getFullYear()}</p>
+                    <p className="text-xs font-bold text-white leading-none">{fmtEv(evDate, { day: "numeric" })}</p>
+                    <p className="text-[8px] text-gray-500 uppercase">{fmtEv(evDate, { month: "short" })}</p>
+                    <p className="text-[7px] text-gray-600">{fmtEv(evDate, { year: "numeric" })}</p>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
@@ -210,7 +217,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
                       {evReg && <Check className="w-3 h-3 text-emerald-400 shrink-0" />}
                     </div>
                     <p className="text-[10px] text-gray-600 mt-0.5">
-                      {evDate.toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "short", year: "numeric" })}
+                      {fmtEv(evDate, { weekday: "short", day: "2-digit", month: "short", year: "numeric" })}
                       {ev._count.registrations > 0 && ` · ${ev._count.registrations} Teilnehmer`}
                     </p>
                   </div>
@@ -239,13 +246,14 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
             {pastInSeries.map(ev => {
               const evDate  = new Date(ev.startAt);
               const evReg   = userId ? ev.registrations.some(r => r.userId === userId) : false;
+              const fmtEv   = (d: Date, opts: Intl.DateTimeFormatOptions) => d.toLocaleString("de-DE", { timeZone: TZ, ...opts });
 
               return (
                 <Link key={ev.id} href={`/events/${ev.id}`}
                   className="flex items-center gap-3.5 px-4 py-3 opacity-50 hover:opacity-100 transition-opacity group">
                   <div className="w-10 h-10 rounded-xl bg-gray-800/60 border border-white/[0.06] flex flex-col items-center justify-center shrink-0 text-center">
-                    <p className="text-xs font-bold text-gray-400 leading-none">{evDate.getDate()}</p>
-                    <p className="text-[8px] text-gray-600 uppercase">{evDate.toLocaleString("de-DE", { month: "short" })}</p>
+                    <p className="text-xs font-bold text-gray-400 leading-none">{fmtEv(evDate, { day: "numeric" })}</p>
+                    <p className="text-[8px] text-gray-600 uppercase">{fmtEv(evDate, { month: "short" })}</p>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
@@ -256,7 +264,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
                       {evReg && <Check className="w-3 h-3 text-emerald-600 shrink-0" />}
                     </div>
                     <p className="text-[10px] text-gray-600 mt-0.5">
-                      {evDate.toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "short", year: "numeric" })}
+                      {fmtEv(evDate, { weekday: "short", day: "2-digit", month: "short", year: "numeric" })}
                       {ev._count.registrations > 0 && ` · ${ev._count.registrations} Teilnehmer`}
                     </p>
                   </div>
