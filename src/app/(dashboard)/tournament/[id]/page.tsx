@@ -124,6 +124,7 @@ export default async function TournamentDetailPage({
     pollBonusPoints?: number | null;
     pollBonusCoins?: number | null;
     pollBonusRankPoints?: number | null;
+    pollExcludedUserIds?: string[] | null;
     finalRankingGroups?: string[][] | null;
     gamePhaseComplete?: boolean;
     pollPhaseComplete?: boolean;
@@ -137,9 +138,10 @@ export default async function TournamentDetailPage({
   const pollBonusCoins    = completionData.pollBonusCoins ?? completionData.pollBonusPoints ?? null;
   const pollBonusRankPts  = completionData.pollBonusRankPoints ?? null;
   const rankingGroups     = completionData.finalRankingGroups ?? null;
-  const gamePhaseComplete = completionData.gamePhaseComplete === true;
-  const pollPhaseComplete = completionData.pollPhaseComplete === true;
-  const hasPendingPoll    = gamePhaseComplete && !pollPhaseComplete && !!pollLabel;
+  const gamePhaseComplete   = completionData.gamePhaseComplete === true;
+  const pollPhaseComplete   = completionData.pollPhaseComplete === true;
+  const hasPendingPoll      = gamePhaseComplete && !pollPhaseComplete && !!pollLabel;
+  const pollExcludedUserIds = new Set(completionData.pollExcludedUserIds ?? []);
 
   // Teilnahme-Münzen (aus placementRewardsJson oder Fallback auf pointReward)
   const participationCoins: number = (() => {
@@ -300,7 +302,7 @@ export default async function TournamentDetailPage({
           ) : null}
           <div className="space-y-1.5 pt-1">
             <p className="text-[10px] text-gray-600 uppercase tracking-wide font-medium">Kandidaten</p>
-            {event.registrations.map(({ user }) => {
+            {event.registrations.filter(({ user }) => !pollExcludedUserIds.has(user.id)).map(({ user }) => {
               const isMe = user.id === userId;
               const name = user.username ?? user.name ?? "Unbekannt";
               return (

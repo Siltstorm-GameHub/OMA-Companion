@@ -62,6 +62,7 @@ export async function POST(
     pollLabel?: string;
     pollBonusCoins?: number;
     pollBonusRankPoints?: number;
+    pollExcludedUserIds?: string[];
     finalRanking?: string[];
     finalRankingGroups?: string[][];  // tied groups – if provided, used for point awards
     finalRankingNote?: string;
@@ -317,6 +318,7 @@ export async function POST(
     pollLabel:               body.pollLabel ?? null,
     pollBonusCoins:          pollCoins > 0 ? pollCoins : null,
     pollBonusRankPoints:     pollRankPts > 0 ? pollRankPts : null,
+    pollExcludedUserIds:     body.pollExcludedUserIds && body.pollExcludedUserIds.length > 0 ? body.pollExcludedUserIds : null,
     finalRanking:            body.finalRanking ?? null,
     finalRankingGroups:      body.finalRankingGroups ?? null,
     gamePhaseComplete:       true,

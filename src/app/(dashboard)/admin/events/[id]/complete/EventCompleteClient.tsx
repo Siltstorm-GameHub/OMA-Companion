@@ -268,6 +268,7 @@ export default function EventCompleteClient({
           pollLabel:               pollConfig.enabled ? pollConfig.question : undefined,
           pollBonusCoins:          pollConfig.enabled ? pollConfig.coins : undefined,
           pollBonusRankPoints:     pollConfig.enabled ? pollConfig.rankPoints : undefined,
+          pollExcludedUserIds:     pollConfig.enabled && pollExcluded.size > 0 ? [...pollExcluded] : undefined,
           finalRanking:            rankingOrder.length > 0 ? rankingOrder : undefined,
           finalRankingGroups:      rankingGroups.length > 0 ? rankingGroups : undefined,
           finalRankingNote:        rankingNote || undefined,
