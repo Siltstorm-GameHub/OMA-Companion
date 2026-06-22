@@ -2,7 +2,8 @@
 import { getSessionUser } from "@/lib/roles";
 import { getRank } from "@/lib/ranks";
 import { calcStreak } from "@/lib/streak";
-import { Trophy, Swords, Flame, Star } from "lucide-react";
+import { Trophy, Swords, Flame } from "lucide-react";
+import RankPointsIcon from "@/components/RankPointsIcon";
 import CoinIcon from "@/components/CoinIcon";
 import { CountUp } from "@/components/CountUp";
 import Link from "next/link";
@@ -210,7 +211,7 @@ export default async function LeaderboardPage() {
           <span className="hidden sm:flex text-center items-center justify-center gap-1"><Swords className="w-3 h-3" />Siege</span>
           <span className="hidden sm:flex text-center items-center justify-center gap-1"><Flame className="w-3 h-3 text-orange-400" />Streak</span>
           <span className="flex items-center justify-center gap-1"><CoinIcon size={12} />Münzen</span>
-          <span className="flex items-center justify-center gap-1 text-amber-400"><Star className="w-3 h-3" />Punkte</span>
+          <span className="flex items-center justify-center gap-1"><RankPointsIcon size={12} />Punkte</span>
         </div>
 
         <div className="divide-y divide-white/[0.04]">

@@ -1,7 +1,8 @@
 "use client";
-import { useState } from "react";
+import React, { useState } from "react";
 import { toast } from "sonner";
 import { History, Save, UserPlus, X } from "lucide-react";
+import RankPointsIcon from "@/components/RankPointsIcon";
 import type { User } from "./lul-types";
 import { uname } from "./lul-types";
 
@@ -17,8 +18,8 @@ type LegacyRow = {
   votes:       number;
 };
 
-const LEGACY_COLS: { key: keyof LegacyRow; label: string; icon: string }[] = [
-  { key: "totalPts",    label: "Punkte",    icon: "⭐" },
+const LEGACY_COLS: { key: keyof LegacyRow; label: string; icon: React.ReactNode }[] = [
+  { key: "totalPts",    label: "Punkte",    icon: <RankPointsIcon size={11} /> },
   { key: "asPlayer",    label: "Spieler",   icon: "🎮" },
   { key: "asSpectator", label: "Zuschauer", icon: "👁️" },
   { key: "wins",        label: "Siege",     icon: "🏆" },

@@ -2,14 +2,16 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/roles";
 import { getRank, getNextRank } from "@/lib/ranks";
-import { computeBadges, BADGE_CATEGORY_LABELS } from "@/lib/badges";
+import { computeBadges } from "@/lib/badges";
+import BadgesSection from "./BadgesSection";
 import PointsInfoModal from "./PointsInfoModal";
 import { QUEST_TYPE_META, type QuestType } from "@/lib/quests";
 import { RARITY_CONFIG, type Rarity, MAX_SHOWCASE } from "@/lib/collectibles";
 import {
-  Trophy, Star, CalendarDays, Swords, Clock, MessageSquare,
-  CheckCircle2, Crown, Gamepad2,
+  Trophy, CalendarDays, Swords, Clock, MessageSquare,
+  CheckCircle2, Crown, Gamepad2, Medal,
 } from "lucide-react";
+import RankPointsIcon from "@/components/RankPointsIcon";
 import CoinIcon from "@/components/CoinIcon";
 import WinIcon from "@/components/WinIcon";
 import Image from "next/image";
@@ -26,11 +28,11 @@ export default async function ProfilePage() {
   const month = now.getMonth() + 1;
   const year  = now.getFullYear();
 
-  const [user, eventRegs, eventCount, tournamentParticipations, tournamentCount, tournamentWins, questsWithProgress, ownedCollectibles, leaderboardRank] =
+  const [user, eventRegs, eventCount, finishedEvents, tournamentParticipations, tournamentCount, tournamentWins, questsWithProgress, ownedCollectibles, leaderboardRank, userSystemBadges, userCustomBadges] =
     await Promise.all([
       prisma.user.findUnique({
         where:  { id: userId },
-        select: { id: true, name: true, username: true, image: true, points: true, rankPoints: true, createdAt: true, showcaseJson: true, birthday: true, bio: true, voiceMinutesTotal: true, messagesTotal: true },
+        select: { id: true, name: true, username: true, image: true, points: true, rankPoints: true, createdAt: true, showcaseJson: true, showcaseBadgesJson: true, birthday: true, bio: true, voiceMinutesTotal: true, messagesTotal: true },
       }),
       prisma.eventRegistration.findMany({
         where:   { userId },
@@ -38,6 +40,10 @@ export default async function ProfilePage() {
         orderBy: { joinedAt: "desc" }, take: 5,
       }),
       prisma.eventRegistration.count({ where: { userId } }),
+      prisma.event.findMany({
+        where: { status: "finished", registrations: { some: { userId } } },
+        select: { game: true, finalRankingJson: true, completionData: true },
+      }),
       prisma.tournamentParticipant.findMany({
         where:   { userId },
         include: {
@@ -69,9 +75,30 @@ export default async function ProfilePage() {
         const higher = await prisma.user.count({ where: { rankPoints: { gt: u?.rankPoints ?? 0 } } });
         return higher + 1;
       }),
+      prisma.userSystemBadge.findMany({ where: { userId }, select: { badgeKey: true } }),
+      prisma.userCustomBadge.findMany({
+        where: { userId },
+        include: { badge: { select: { id: true, icon: true, name: true, desc: true, category: true } } },
+        orderBy: { earnedAt: "asc" },
+      }),
     ]);
 
   if (!user) redirect("/login");
+
+  // Derived event stats from finished events
+  const eventWins = finishedEvents.filter(e => {
+    try { const r = JSON.parse(e.finalRankingJson ?? "[]"); return Array.isArray(r) && r[0] === userId; }
+    catch { return false; }
+  }).length;
+  const mvpCount = finishedEvents.filter(e => {
+    try { return (e.completionData ? JSON.parse(e.completionData) : {}).mvpUserId === userId; }
+    catch { return false; }
+  }).length;
+  const gameCounts = finishedEvents.reduce<Record<string, number>>((acc, e) => {
+    if (e.game) acc[e.game] = (acc[e.game] ?? 0) + 1;
+    return acc;
+  }, {});
+  const favoriteGame = Object.entries(gameCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
 
   const totalPoints = user.points;
   const rankPoints  = user.rankPoints;
@@ -83,12 +110,17 @@ export default async function ProfilePage() {
 
   const voiceHours   = Math.floor((user?.voiceMinutesTotal ?? 0) / 60);
   const messageCount = user?.messagesTotal ?? 0;
-  const badges       = computeBadges({ points: totalPoints, voiceHours, messageCount, eventCount, tournamentCount, tournamentWins });
+  const earnedSystemKeys = new Set(userSystemBadges.map(b => b.badgeKey));
+  const badges       = computeBadges({ points: totalPoints, voiceHours, messageCount, eventCount, tournamentCount, tournamentWins, eventWins, mvpCount }, earnedSystemKeys);
   const earnedBadges = badges.filter(b => b.earned);
   const memberSince  = new Date(user.createdAt).toLocaleDateString("de-DE", { month: "long", year: "numeric" });
   const displayName  = user.username ?? user.name ?? "Unbekannt";
 
   const totalUsers = await prisma.user.count();
+
+  const showcaseBadgeKeys: string[] = (() => {
+    try { return JSON.parse(user.showcaseBadgesJson ?? "[]"); } catch { return []; }
+  })();
 
   const showcaseIds: string[] = (() => {
     try { return JSON.parse(user.showcaseJson ?? "[]"); } catch { return []; }
@@ -138,7 +170,7 @@ export default async function ProfilePage() {
               </span>
             </div>
             <p className="text-xs text-gray-500 mb-1">
-              Mitglied seit {memberSince} · {earnedBadges.length} Abzeichen
+              Mitglied seit {memberSince} · {earnedBadges.length + userCustomBadges.length} Abzeichen
             </p>
             <div className="flex items-center gap-1 mb-2">
               <CoinIcon size={12} />
@@ -179,14 +211,17 @@ export default async function ProfilePage() {
       {/* ── Stat-Karten ─────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {[
-          { icon: <Star className="w-4 h-4" />,         label: "Punkte",        value: rankPoints.toLocaleString("de-DE"),   iconCls: "text-teal-400    bg-teal-500/10    border-teal-500/15",    accent: "from-teal-500/8"    },
-          { icon: <CalendarDays className="w-4 h-4" />,  label: "Events",        value: String(eventCount),                   iconCls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/15", accent: "from-emerald-500/8" },
-          { icon: <WinIcon size={16} />,                  label: "Turnier-Siege", value: String(tournamentWins),               iconCls: "text-rose-400    bg-rose-500/10    border-rose-500/15",    accent: "from-rose-500/8"    },
+          { icon: <RankPointsIcon size={16} />,         label: "Punkte",         value: rankPoints.toLocaleString("de-DE"), iconCls: "text-teal-400    bg-teal-500/10    border-teal-500/15",    accent: "from-teal-500/8"    },
+          { icon: <CalendarDays className="w-4 h-4" />, label: "Events",         value: String(eventCount),                 iconCls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/15", accent: "from-emerald-500/8" },
+          { icon: <WinIcon size={16} />,                label: "Turnier-Siege",  value: String(tournamentWins),             iconCls: "text-rose-400    bg-rose-500/10    border-rose-500/15",    accent: "from-rose-500/8"    },
+          { icon: <Medal className="w-4 h-4" />,        label: "Event-Siege",    value: String(eventWins),                  iconCls: "text-amber-400   bg-amber-500/10   border-amber-500/15",   accent: "from-amber-500/8"   },
+          { icon: <Trophy className="w-4 h-4" />,       label: "MVP-Awards",     value: String(mvpCount),                   iconCls: "text-purple-400  bg-purple-500/10  border-purple-500/15",  accent: "from-purple-500/8"  },
+          { icon: <Gamepad2 className="w-4 h-4" />,     label: "Lieblingsspiel", value: favoriteGame ?? "–",                iconCls: "text-blue-400    bg-blue-500/10    border-blue-500/15",    accent: "from-blue-500/8",  small: true },
         ].map((s, i) => (
           <div key={s.label} className={`card-hover card-shine glass relative overflow-hidden rounded-2xl p-4 animate-slide-up stagger-${i + 1}`}>
             <div className={`absolute inset-0 bg-gradient-to-br ${s.accent} to-transparent pointer-events-none`} />
             <div className={`relative w-8 h-8 rounded-xl flex items-center justify-center mb-3 border ${s.iconCls}`}>{s.icon}</div>
-            <p className="relative text-2xl font-black text-white tabular-nums">{s.value}</p>
+            <p className={`relative font-black text-white tabular-nums ${(s as { small?: boolean }).small ? "text-lg leading-tight" : "text-2xl"}`}>{s.value}</p>
             <p className="relative text-xs text-gray-400 mt-1.5">{s.label}</p>
           </div>
         ))}
@@ -254,33 +289,19 @@ export default async function ProfilePage() {
             </section>
           )}
 
-          {/* Abzeichen — nur verdiente anzeigen */}
-          <section>
-            <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">
-              🏅 Abzeichen <span className="text-gray-600 normal-case">({earnedBadges.length})</span>
-            </h2>
-            {earnedBadges.length === 0 && (
-              <p className="text-xs text-gray-600 italic">Noch keine Abzeichen verdient.</p>
-            )}
-            {Object.entries(BADGE_CATEGORY_LABELS).map(([cat, label]) => {
-              const catBadges = earnedBadges.filter(b => b.category === cat);
-              if (!catBadges.length) return null;
-              return (
-                <div key={cat} className="mb-4">
-                  <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-2">{label}</p>
-                  <div className="flex flex-wrap gap-2">
-                    {catBadges.map(badge => (
-                      <div key={badge.id} title={badge.desc}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium glass text-white border-white/10 hover:border-teal-500/30 transition-all">
-                        <span>{badge.icon}</span>
-                        {badge.name}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </section>
+          {/* Abzeichen */}
+          <BadgesSection
+            systemBadges={badges}
+            customBadges={userCustomBadges.map(uc => ({
+              id:       uc.badge.id,
+              icon:     uc.badge.icon,
+              name:     uc.badge.name,
+              desc:     uc.badge.desc,
+              category: uc.badge.category,
+              earnedAt: uc.earnedAt.toISOString(),
+            }))}
+            showcaseKeys={showcaseBadgeKeys}
+          />
 
           {/* Quest-Fortschritt */}
           {questsWithProgress.length > 0 && (

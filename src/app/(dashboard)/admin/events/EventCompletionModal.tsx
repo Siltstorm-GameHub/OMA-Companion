@@ -2,7 +2,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { X, Trophy, Star, TrendingUp, CheckCircle2, Vote, GripVertical, ListOrdered } from "lucide-react";
+import { X, Trophy, TrendingUp, CheckCircle2, Vote, GripVertical, ListOrdered } from "lucide-react";
+import RankPointsIcon from "@/components/RankPointsIcon";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };
 type MatchEntry = { userId: string | null; statsJson: string | null };
@@ -44,10 +45,15 @@ export default function EventCompletionModal({
   const [mvpUserId, setMvpUserId] = useState<string>((initialData?.mvpUserId as string) ?? "");
   const [winnerStatField, setWinnerStatField] = useState<string>(seriesStatConfig?.defaultWinnerStatField ?? "");
   const [seriesWinnerTargetField, setSeriesWinnerTargetField] = useState<string>(seriesStatConfig?.defaultWinnerTargetField ?? "");
-  const [hasPoll, setHasPoll] = useState(!!(initialData?.pollWinnerId));
+  const [hasPoll, setHasPoll] = useState(!!(initialData?.pollWinnerIds || initialData?.pollWinnerId));
   const [pollLabel, setPollLabel] = useState((initialData?.pollLabel as string) ?? "MVP");
-  const [pollBonusPoints, setPollBonusPoints] = useState<number>((initialData?.pollBonusPoints as number) ?? 10);
-  const [pollWinnerId, setPollWinnerId] = useState<string>((initialData?.pollWinnerId as string) ?? "");
+  const [pollBonusPoints, setPollBonusPoints] = useState<number>(
+    (initialData?.pollBonusCoins as number) ?? (initialData?.pollBonusPoints as number) ?? 10
+  );
+  const [pollWinnerId, setPollWinnerId] = useState<string>(
+    (initialData?.pollWinnerIds as string[] | undefined)?.[0] ??
+    (initialData?.pollWinnerId as string) ?? ""
+  );
 
   // Endplatzierung
   const [rankingOrder, setRankingOrder] = useState<string[]>(() => {
@@ -132,9 +138,9 @@ export default function EventCompletionModal({
           mvpUserId:               mvpUserId || undefined,
           winnerStatField:         winnerStatField || undefined,
           seriesWinnerTargetField: seriesWinnerTargetField || undefined,
-          pollWinnerId:            hasPoll && pollWinnerId ? pollWinnerId : undefined,
+          pollWinnerIds:           hasPoll && pollWinnerId ? [pollWinnerId] : undefined,
           pollLabel:               hasPoll && pollWinnerId ? pollLabel : undefined,
-          pollBonusPoints:         hasPoll && pollWinnerId ? pollBonusPoints : undefined,
+          pollBonusCoins:          hasPoll && pollWinnerId ? pollBonusPoints : undefined,
         }),
       });
       if (!res.ok) {
@@ -260,7 +266,7 @@ export default function EventCompletionModal({
           {seriesStatConfig?.mvpStatField && (
             <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(20,184,166,0.05)", border: "1px solid rgba(20,184,166,0.15)" }}>
               <div className="flex items-center gap-2">
-                <Star className="w-3.5 h-3.5 text-teal-400" />
+                <RankPointsIcon size={14} />
                 <span className="text-xs font-semibold text-teal-300">
                   MVP des Events
                   <span className="text-gray-500 font-normal ml-1">

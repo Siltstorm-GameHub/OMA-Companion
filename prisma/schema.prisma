@@ -33,7 +33,9 @@ model User {
   messagesTotal     Int @default(0)
 
   // Collectibles Showcase: JSON-Array mit bis zu 5 CollectibleItem-IDs
-  showcaseJson  String?
+  showcaseJson        String?
+  // Badge Showcase: JSON-Array mit bis zu 3 Badge-Keys (system oder custom-id)
+  showcaseBadgesJson  String?
 
   accounts      Account[]
   sessions      Session[]
@@ -52,6 +54,8 @@ model User {
   collectibles              UserCollectible[]
   lobbyMessages             LobbyMessage[]
   pushSubscriptions         PushSubscription[]
+  systemBadges              UserSystemBadge[]
+  customBadgeAwards         UserCustomBadge[]
 }
 
 // ── Collectibles ─────────────────────────────────────────────────────────────
@@ -216,6 +220,17 @@ model EventSeries {
   legacyStandings String?
   // JSON: { lastUpdated, processedEventIds: string[], raw: { userId: { participations, Kills, MVP, Siege, ... } } }
   seriesStandingsJson String?
+  // JSON: { participationCoins: 10, placements: [{ place: 1, coins: 500, rankPoints: 3 }, ...] }
+  placementRewardsJson String?
+  // JSON: { enabled: bool, question: string, coins: 250, rankPoints: 3 }
+  pollConfigJson       String?
+  // Saison-Archiv
+  groupId              String?   // verbindet alle Saisons derselben Reihe
+  status               String    @default("active") // "active" | "archived"
+  seasonNumber         Int?      // 1, 2, 3 …
+  archivedAt           DateTime?
+  // JSON: analog zu event.completionData (overallWinnerIds, finalRanking, poll*, lockedAt)
+  seriesCompletionData String?
   createdAt   DateTime @default(now())
   events      Event[]
 }
@@ -242,10 +257,15 @@ model Event {
   // Ehem. Tournament-Felder (zusammengeführt)
   format           String?   // single_elimination | double_elimination | round_robin | ffa | coop_stats | avg_stats
   tournamentStatus String?   // pending | active | complete | finalized
-  pointsConfig     String?   // JSON: {"1": 100, "2": 50, "3": 25}
+  pointsConfig     String?   // JSON: {"1": 100, "2": 50, "3": 25} — legacy, nur Münzen
   statFields       String?   // JSON: ["Kills","Assists"]
   finalRankingJson String?   // JSON: ["userId1","userId2"]
   finalRankingNote String?
+  // JSON: { participationCoins: 10, placements: [{ place: 1, coins: 500, rankPoints: 3 }, ...] }
+  placementRewardsJson String?
+  // JSON: { enabled: bool, question: string, coins: 250, rankPoints: 3 }
+  pollConfigJson       String?
+  summary              String?
 
   series        EventSeries?        @relation(fields: [seriesId], references: [id])
   registrations EventRegistration[]
@@ -533,6 +553,42 @@ model LobbyMessage {
 
   @@index([createdAt])
   @@map("lobbymessage")
+}
+
+// ── Abzeichen ────────────────────────────────────────────────────────────────
+
+// Automatisch vergebene System-Abzeichen (definiert in badges.ts)
+model UserSystemBadge {
+  userId   String
+  badgeKey String
+  earnedAt DateTime @default(now())
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@id([userId, badgeKey])
+}
+
+// Admin-erstellte Custom-Abzeichen
+model CustomBadge {
+  id        String            @id @default(cuid())
+  icon      String            // Emoji
+  name      String
+  desc      String
+  category  String            // "community" | "aktivitaet" | "events" | "turniere" | "punkte" | "special"
+  coins     Int               @default(0)  // optionale Münzen-Belohnung
+  createdAt DateTime          @default(now())
+  createdBy String            // Admin-User-ID
+  awards    UserCustomBadge[]
+}
+
+// Manuell vergebene Custom-Abzeichen
+model UserCustomBadge {
+  userId        String
+  customBadgeId String
+  earnedAt      DateTime    @default(now())
+  awardedBy     String      // Admin-User-ID
+  note          String?     // optionale Notiz vom Admin
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge         CustomBadge @relation(fields: [customBadgeId], references: [id], onDelete: Cascade)
+  @@id([userId, customBadgeId])
 }
 
 // ── Push-Benachrichtigungen ──────────────────────────────────────────────────

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { LogOut, User } from "lucide-react";
 import PwaInstallButton from "@/components/PwaInstallButton";
+import { ThemeToggleItem } from "@/components/ThemeToggle";
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 
@@ -86,6 +87,11 @@ export default function MobileTopBar() {
           <User style={{ width: 13, height: 13 }} />
           Mein Profil
         </Link>
+        <ThemeToggleItem
+          iconSize={13}
+          fontSize={12}
+          className="text-gray-400 hover:text-amber-400 hover:bg-white/[0.04] transition-colors"
+        />
         <button
           onClick={() => signOut()}
           className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-gray-400 hover:text-red-400 hover:bg-red-500/8 transition-colors w-full"

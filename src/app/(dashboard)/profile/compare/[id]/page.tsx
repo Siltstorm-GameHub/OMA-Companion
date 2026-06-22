@@ -1,7 +1,8 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CalendarDays, Swords, Star } from "lucide-react";
+import { ArrowLeft, CalendarDays, Swords } from "lucide-react";
+import RankPointsIcon from "@/components/RankPointsIcon";
 import WinIcon from "@/components/WinIcon";
 import Link from "next/link";
 import Image from "next/image";
@@ -85,7 +86,7 @@ export default async function CompareProfilePage({
   ]);
 
   const STATS = [
-    { icon: <Star className="w-4 h-4" />,        label: "Rangpunkte",     valA: me.rankPoints ?? 0,    valB: opponent.rankPoints ?? 0,    colorA: "bg-amber-500",  colorB: "bg-amber-400/50"  },
+    { icon: <RankPointsIcon size={16} />,         label: "Rangpunkte",     valA: me.rankPoints ?? 0,    valB: opponent.rankPoints ?? 0,    colorA: "bg-amber-500",  colorB: "bg-amber-400/50"  },
     { icon: <WinIcon size={16} />,                 label: "Turnier-Siege",  valA: me.matchWins,    valB: opponent.matchWins,    colorA: "bg-rose-500",   colorB: "bg-rose-400/50"   },
     { icon: <CalendarDays className="w-4 h-4" />, label: "Events",         valA: me.eventCount,   valB: opponent.eventCount,   colorA: "bg-blue-500",   colorB: "bg-blue-400/50"   },
     { icon: <Swords className="w-4 h-4" />,       label: "Voice-Stunden",  valA: me.voiceHours,   valB: opponent.voiceHours,   colorA: "bg-teal-500", colorB: "bg-teal-400/50" },

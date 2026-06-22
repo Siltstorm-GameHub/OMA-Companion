@@ -1,5 +1,7 @@
 "use client";
 import { useState } from "react";
+import CoinIcon from "@/components/CoinIcon";
+import RankPointsIcon from "@/components/RankPointsIcon";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -138,7 +140,7 @@ function CreationForm({
       {/* Points */}
       <div>
         <label className="text-xs text-gray-400 uppercase tracking-wide block mb-2">
-          {format === "liga" ? "🪙 Münzen pro Match-Ergebnis" : "Belohnungen pro Platzierung"}
+          {format === "liga" ? <span className="flex items-center gap-1"><CoinIcon size={13} /> Münzen pro Match-Ergebnis</span> : "Belohnungen pro Platzierung"}
         </label>
         {format === "liga" ? (
           <div className="flex gap-3">
@@ -150,7 +152,7 @@ function CreationForm({
                     onChange={e => (set as (v: number) => void)(Number(e.target.value))}
                     className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-center"
                   />
-                  <p className="text-[10px] text-gray-600 mt-1 text-center">nur 🪙 Münzen</p>
+                  <p className="flex items-center justify-center gap-0.5 text-[10px] text-gray-600 mt-1">nur <CoinIcon size={11} /> Münzen</p>
                 </div>
               )
             )}
@@ -160,8 +162,8 @@ function CreationForm({
             {/* Spalten-Header */}
             <div className="grid grid-cols-3 gap-2 text-[10px] text-gray-500 uppercase tracking-wide px-1">
               <span>Platz</span>
-              <span className="text-center">🪙 Münzen</span>
-              <span className="text-center">⭐ Punkte</span>
+              <span className="flex items-center justify-center gap-0.5"><CoinIcon size={11} /> Münzen</span>
+              <span className="flex items-center justify-center gap-0.5"><RankPointsIcon size={11} /> Punkte</span>
             </div>
             {([
               ["🥇 1. Platz", coins1, setCoins1, pts1, setPts1],
@@ -426,12 +428,13 @@ export default function TournamentManager({
   async function removeParticipant(userId: string) {
     if (!tournament || !confirm("Teilnehmer aus dem Turnier entfernen?")) return;
     setLoading(true);
-    await fetch(`/api/tournaments/${tournament.id}/participants`, {
+    const res = await fetch(`/api/tournaments/${tournament.id}/participants`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId }),
     });
     setLoading(false);
+    if (!res.ok) { const e = await res.json().catch(() => ({})); toast.error(e.error ?? "Fehler beim Entfernen"); return; }
     setTournament(prev => prev ? { ...prev, participants: prev.participants.filter(p => p.userId !== userId) } : prev);
   }
 
@@ -463,7 +466,7 @@ export default function TournamentManager({
     if (!tournament) return;
     const s = scores1v1[matchId];
     setLoading(true);
-    await fetch(`/api/tournaments/${tournament.id}/matches`, {
+    const res = await fetch(`/api/tournaments/${tournament.id}/matches`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -473,18 +476,20 @@ export default function TournamentManager({
       }),
     });
     setLoading(false);
+    if (!res.ok) { const e = await res.json().catch(() => ({})); toast.error(e.error ?? "Fehler beim Speichern"); return; }
     router.refresh();
   }
 
   async function resetMatch(matchId: string) {
     if (!tournament || !confirm("Ergebnis dieses Matches zurücksetzen?")) return;
     setLoading(true);
-    await fetch(`/api/tournaments/${tournament.id}/matches`, {
+    const res = await fetch(`/api/tournaments/${tournament.id}/matches`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ matchId, action: "reset" }),
     });
     setLoading(false);
+    if (!res.ok) { const e = await res.json().catch(() => ({})); toast.error(e.error ?? "Fehler beim Zurücksetzen"); return; }
     router.refresh();
   }
 
@@ -494,19 +499,20 @@ export default function TournamentManager({
     const updated = matchEntries.map(e => {
       const row = ed[e.userId ?? ""] ?? {};
       const stats: Record<string, number> = {};
-      statFields.forEach(f => { if (row[f]) stats[f] = Number(row[f]); });
+      statFields.forEach(f => { if (row[f] !== undefined && row[f] !== "") stats[f] = Number(row[f]); });
       return {
         id: e.id,
         statsJson: Object.keys(stats).length ? stats : null,
       };
     });
     setLoading(true);
-    await fetch(`/api/tournaments/${tournament.id}/matches`, {
+    const res = await fetch(`/api/tournaments/${tournament.id}/matches`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ matchId, entries: updated }),
     });
     setLoading(false);
+    if (!res.ok) { const e = await res.json().catch(() => ({})); toast.error(e.error ?? "Fehler beim Speichern"); return; }
     router.refresh();
   }
 
@@ -553,7 +559,7 @@ export default function TournamentManager({
           }`}>{tournament.status}</span>
           {Object.keys(pointsConfigRaw).length > 0 && (
             tournament.format === "liga"
-              ? <span className="text-xs text-gray-500">🏆{getCoinsVal("win")} 🤝{getCoinsVal("draw")} 🪙</span>
+              ? <span className="flex items-center gap-0.5 text-xs text-gray-500">🏆{getCoinsVal("win")} 🤝{getCoinsVal("draw")} <CoinIcon size={13} /></span>
               : <span className="text-xs text-gray-500">🥇{getConfigVal("1")} 🥈{getConfigVal("2")} 🥉{getConfigVal("3")} Pts</span>
           )}
           {statFields.length > 0 && (
@@ -737,6 +743,11 @@ export default function TournamentManager({
                   {isExp && (
                     <div className="p-3">
                       {match.notes && <p className="text-xs text-gray-500 mb-3">{match.notes}</p>}
+                      {statFields.length === 0 ? (
+                        <div className="text-xs text-amber-400/80 bg-amber-900/10 border border-amber-800/30 rounded-lg px-3 py-2">
+                          Keine Statistik-Felder konfiguriert. Bitte zuerst im Reiter <span className="font-semibold">Einstellungen</span> die gewünschten Stat-Felder eintragen und auf „Turnier-Einstellungen speichern" klicken.
+                        </div>
+                      ) : (
                       <div className="overflow-x-auto">
                         <table className="w-full text-xs">
                           <thead>
@@ -772,6 +783,7 @@ export default function TournamentManager({
                           </tbody>
                         </table>
                       </div>
+                      )}
                       <div className="flex gap-2 mt-3">
                         <button onClick={() => submitFfa(match.id, match.entries)} disabled={loading}
                           className="flex items-center gap-1.5 text-xs bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white rounded px-3 py-1.5">
