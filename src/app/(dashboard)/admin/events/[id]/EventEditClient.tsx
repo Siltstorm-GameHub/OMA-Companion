@@ -10,6 +10,7 @@ import {
   Coins, Star, MessageSquare, Newspaper, Loader2,
 } from "lucide-react";
 import GameNameInput from "@/components/GameNameInput";
+import StatFieldEditor from "@/components/StatFieldEditor";
 
 /* ── Types ── */
 type User = { id: string; name: string | null; username: string | null; image: string | null };
@@ -26,6 +27,30 @@ const DEFAULT_REWARDS: RewardsConfig = {
   ],
 };
 const DEFAULT_POLL: PollConfig = { enabled: false, question: "MVP", coins: 250, rankPoints: 3 };
+
+const TMT_FORMATS = [
+  { value: "single_elimination", label: "Einzel-Eliminierung", desc: "Klassisches K.O.-System" },
+  { value: "round_robin",        label: "Jeder gegen Jeden",   desc: "Alle spielen gegen alle" },
+  { value: "liga",               label: "Liga",                desc: "Spieltage, Tabelle S/U/N" },
+  { value: "ffa",                label: "Free for All",        desc: "Alle gegeneinander" },
+  { value: "coop_stats",         label: "Kooperativ (Stats)",  desc: "Individuelle Stats" },
+  { value: "avg_stats",          label: "Durchschnittswerte",  desc: "Bester Schnitt gewinnt" },
+] as const;
+
+function parseTmtConfig(pc: string | null) {
+  const d = { coins1: 200, coins2: 100, coins3: 50, pts1: 100, pts2: 50, pts3: 25, win: 30, draw: 10 };
+  if (!pc) return d;
+  try {
+    const p = JSON.parse(pc) as Record<string, number | { coins?: number; points?: number }>;
+    const c = (v: number | { coins?: number; points?: number } | undefined, fb: number) =>
+      v == null ? fb : typeof v === "number" ? v : (v.coins ?? fb);
+    const r = (v: number | { coins?: number; points?: number } | undefined, fb: number) =>
+      v == null ? fb : typeof v === "number" ? v : (v.points ?? v.coins ?? fb);
+    return { coins1: c(p["1"],200), coins2: c(p["2"],100), coins3: c(p["3"],50),
+             pts1: r(p["1"],100), pts2: r(p["2"],50), pts3: r(p["3"],25),
+             win: c(p["win"],30), draw: c(p["draw"],10) };
+  } catch { return d; }
+}
 
 const STATUS_OPTIONS = ["open", "active", "umfrage", "finished"];
 const STATUS_STYLES: Record<string, string> = {
@@ -77,6 +102,46 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
   );
   const [placements, setPlacements] = useState<PlacementReward[]>(initialRewards.placements);
   const [poll, setPoll] = useState<PollConfig>(parsePoll(event.pollConfigJson ?? event.series?.pollConfigJson));
+
+  /* ── Tournament settings state ── */
+  const [tmtFormat, setTmtFormat]       = useState<string>(event.format ?? "single_elimination");
+  const [tmtPoints, setTmtPoints]       = useState(() => parseTmtConfig(event.pointsConfig));
+  const [tmtStatFields, setTmtStatFields] = useState<string[]>(() => {
+    if (!event.statFields) return ["Kills", "Assists", "Punkte"];
+    try { return JSON.parse(event.statFields) as string[]; } catch { return []; }
+  });
+  const [tmtLoading, setTmtLoading]     = useState(false);
+
+  const hasTournament = !!event.format;
+  const hasStat       = ["ffa", "coop_stats", "avg_stats"].includes(tmtFormat);
+  const isLiga        = tmtFormat === "liga";
+
+  async function saveTmtSettings() {
+    setTmtLoading(true);
+    const config = isLiga
+      ? { win: tmtPoints.win, draw: tmtPoints.draw }
+      : { "1": { coins: tmtPoints.coins1, points: tmtPoints.pts1 },
+          "2": { coins: tmtPoints.coins2, points: tmtPoints.pts2 },
+          "3": { coins: tmtPoints.coins3, points: tmtPoints.pts3 } };
+    if (!hasTournament) {
+      const res = await fetch("/api/tournaments", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId: event.id, format: tmtFormat, pointsConfig: config,
+          statFields: hasStat ? tmtStatFields : null }),
+      });
+      if (res.ok) { toast.success("Turnier erstellt"); router.refresh(); }
+      else { const e = await res.json(); toast.error(e.error ?? "Fehler beim Erstellen"); }
+    } else {
+      const res = await fetch(`/api/tournaments/${event.id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ format: tmtFormat, pointsConfig: config,
+          statFields: hasStat ? tmtStatFields : null }),
+      });
+      if (res.ok) { toast.success("Turnier-Einstellungen gespeichert"); router.refresh(); }
+      else { toast.error("Fehler beim Speichern"); }
+    }
+    setTmtLoading(false);
+  }
 
   /* ── Series propagation ── */
   const [propagateTitleDesc, setPropagateTitleDesc] = useState(false);
