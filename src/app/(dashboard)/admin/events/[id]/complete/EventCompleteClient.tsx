@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -135,6 +135,14 @@ export default function EventCompleteClient({
   const [rankingNote, setRankingNote] = useState(initialFinalRankingNote ?? "");
   const [rankingManuallyEdited, setRankingManuallyEdited] = useState(!!initialFinalRanking?.length);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
+
+  // Auto-sort on first render if winnerStatField is preset and no manual ranking exists
+  useEffect(() => {
+    if (winnerStatField && !initialFinalRanking?.length) {
+      autoSort(winnerStatField);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [loading, setLoading] = useState(false);
 
