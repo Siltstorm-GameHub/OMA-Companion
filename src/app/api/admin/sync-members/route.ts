@@ -62,19 +62,32 @@ export async function POST() {
     // 1. Per discordId suchen (bereits verknüpfte User)
     let existing = await prisma.user.findUnique({ where: { discordId } });
 
-    // 2. Falls nicht gefunden: über Account-Tabelle suchen (OAuth-Login ohne discordId im User)
-    if (!existing) {
-      const account = await prisma.account.findUnique({
-        where: {
-          provider_providerAccountId: { provider: "discord", providerAccountId: discordId },
-        },
-        include: { user: true },
-      });
-      if (account?.user) {
-        existing = account.user;
-        // discordId nachträglich setzen damit zukünftige Syncs direkt greifen
-        await prisma.user.update({ where: { id: existing.id }, data: { discordId } });
+    // 2. OAuth-Account-Eintrag prüfen (kann auf anderen User zeigen als der discordId-Stub)
+    const oauthAccount = await prisma.account.findUnique({
+      where: {
+        provider_providerAccountId: { provider: "discord", providerAccountId: discordId },
+      },
+      include: { user: true },
+    });
+
+    if (oauthAccount?.user && oauthAccount.user.id !== existing?.id) {
+      // NextAuth hat einen echten OAuth-User angelegt, der Stub ist ein Duplikat.
+      // Stub löschen, sofern möglich (schlägt fehl wenn er bereits Daten hat → ignorieren).
+      if (existing) {
+        try {
+          await prisma.user.delete({ where: { id: existing.id } });
+        } catch {
+          // Stub hat Referenzen – discordId entfernen damit er nicht mehr matcht
+          await prisma.user.update({ where: { id: existing.id }, data: { discordId: null } });
+        }
       }
+      existing = oauthAccount.user;
+      // discordId auf echten User übertragen
+      await prisma.user.update({ where: { id: existing.id }, data: { discordId } });
+    } else if (!existing && oauthAccount?.user) {
+      // Kein Stub, aber OAuth-User ohne discordId gefunden
+      existing = oauthAccount.user;
+      await prisma.user.update({ where: { id: existing.id }, data: { discordId } });
     }
 
     if (existing) {
