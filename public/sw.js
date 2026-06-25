@@ -1,7 +1,12 @@
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", () => self.clients.claim());
 // fetch-Handler ist Pflicht damit Chrome beforeinstallprompt feuert
+// Nur same-origin GET-Requests abfangen — Cross-Origin-Requests (CDN, Fonts, etc.)
+// nicht intercepten, da fehlende CORS-Header den SW in einen Fehlerzustand bringen.
 self.addEventListener("fetch", (event) => {
+  if (event.request.method !== "GET") return;
+  const url = new URL(event.request.url);
+  if (url.origin !== self.location.origin) return;
   event.respondWith(fetch(event.request));
 });
 
