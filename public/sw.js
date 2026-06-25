@@ -19,10 +19,9 @@ self.addEventListener("push", (event) => {
 
   const title   = data.title  ?? "OMA-Companion";
   const options = {
-    body:    data.body  ?? "",
-    icon:    data.icon  ?? "/OMALogoNew.png",
-    badge:   data.badge ?? "/OMALogoNew.png",
-    data:    { url: data.url ?? "/" },
+    body:   data.body ?? "",
+    icon:   data.icon ?? "/OMALogo512.png",
+    data:   { url: data.url ?? "/" },
     vibrate: [200, 100, 200],
   };
 
