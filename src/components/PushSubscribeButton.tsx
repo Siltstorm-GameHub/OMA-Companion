@@ -38,6 +38,11 @@ export function PushSubscribeButton() {
         toast.error("Push-Benachrichtigungen nicht konfiguriert (VAPID-Key fehlt)");
         return;
       }
+      // URL-safe Base64 ohne Padding: nur A-Z a-z 0-9 - _
+      if (!/^[A-Za-z0-9\-_]{80,}$/.test(vapidKey.trim())) {
+        toast.error("VAPID Public Key hat ungültiges Format – bitte mit 'npx web-push generate-vapid-keys' neue Keys generieren");
+        return;
+      }
 
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
