@@ -56,6 +56,7 @@ model User {
   pushSubscriptions         PushSubscription[]
   systemBadges              UserSystemBadge[]
   customBadgeAwards         UserCustomBadge[]
+  dailyMessages             DailyMessage[]
 }
 
 // ── Collectibles ─────────────────────────────────────────────────────────────
@@ -589,6 +590,21 @@ model UserCustomBadge {
   user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   badge         CustomBadge @relation(fields: [customBadgeId], references: [id], onDelete: Cascade)
   @@id([userId, customBadgeId])
+}
+
+// ── Tägliche Mitteilungen ────────────────────────────────────────────────────
+
+model DailyMessage {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  startDate DateTime
+  endDate   DateTime
+  isActive  Boolean  @default(true)
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  creator   User     @relation(fields: [createdBy], references: [id])
 }
 
 // ── Push-Benachrichtigungen ──────────────────────────────────────────────────

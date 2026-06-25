@@ -12,6 +12,7 @@ import Image from "next/image";
 import { CountUp } from "@/components/CountUp";
 import GameCover from "@/components/GameCover";
 import EventCoverDefault from "@/components/EventCoverDefault";
+import { DailyMessageBanner } from "@/components/DailyMessageBanner";
 
 const MEDAL = ["🥇", "🥈", "🥉"];
 
@@ -94,6 +95,7 @@ export default async function DashboardPage() {
     totalMonthQuests,
     myMonthQuests,
     activeLulSeason,
+    activeDailyMessage,
   ] = await Promise.all([
     userId
       ? prisma.userQuestProgress.count({ where: { userId, completed: true, quest: { month, year } } })
@@ -114,6 +116,15 @@ export default async function DashboardPage() {
           take: 1,
         },
       },
+    }),
+    prisma.dailyMessage.findFirst({
+      where: {
+        isActive:  true,
+        startDate: { lte: now },
+        endDate:   { gte: now },
+      },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, title: true, content: true, endDate: true },
     }),
   ]);
 
@@ -235,6 +246,14 @@ export default async function DashboardPage() {
           ))}
         </div>
       </div>
+
+      {/* ── Tägliche Mitteilung ───────────────────────────────────── */}
+      {activeDailyMessage && (
+        <DailyMessageBanner message={{
+          ...activeDailyMessage,
+          endDate: activeDailyMessage.endDate.toISOString(),
+        }} />
+      )}
 
       {/* ── Live-Event-Banner ─────────────────────────────────────── */}
       {liveEvent && (
