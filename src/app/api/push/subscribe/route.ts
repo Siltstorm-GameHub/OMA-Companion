@@ -28,16 +28,24 @@ export async function POST(req: NextRequest) {
 }
 
 // DELETE: Subscription entfernen
+// Body ohne endpoint → alle Subscriptions dieses Users löschen (Reset)
 export async function DELETE(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { endpoint } = await req.json();
-  if (!endpoint) return NextResponse.json({ error: "endpoint fehlt" }, { status: 400 });
+  const body = await req.json().catch(() => ({}));
+  const { endpoint } = body as { endpoint?: string };
 
-  await prisma.pushSubscription.deleteMany({
-    where: { endpoint, userId: session.user.id },
-  });
+  if (endpoint) {
+    await prisma.pushSubscription.deleteMany({
+      where: { endpoint, userId: session.user.id },
+    });
+  } else {
+    // Alle Subscriptions dieses Users löschen
+    await prisma.pushSubscription.deleteMany({
+      where: { userId: session.user.id },
+    });
+  }
 
   return NextResponse.json({ ok: true });
 }

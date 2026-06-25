@@ -109,6 +109,31 @@ export function PushSubscribeButton() {
     }
   }
 
+  // Löscht alle gespeicherten Subscriptions auf dem Server (für Browser-Wechsel / APK-Reset)
+  async function resetAll() {
+    setBusy(true);
+    try {
+      // Browser-seitige Subscription ebenfalls beenden falls vorhanden
+      const reg = await navigator.serviceWorker.ready.catch(() => null);
+      if (reg) {
+        const sub = await reg.pushManager.getSubscription().catch(() => null);
+        if (sub) await sub.unsubscribe().catch(() => {});
+      }
+      // Alle Server-Subscriptions löschen
+      await fetch("/api/push/subscribe", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      setStatus("idle");
+      toast.success("Alle Push-Subscriptions zurückgesetzt – jetzt neu aktivieren");
+    } catch {
+      toast.error("Fehler beim Zurücksetzen");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (status === "loading")     return null;
   if (status === "unsupported") return null;
 
@@ -123,14 +148,23 @@ export function PushSubscribeButton() {
 
   if (status === "subscribed") {
     return (
-      <button
-        onClick={unsubscribe}
-        disabled={busy}
-        className="flex items-center gap-2 text-sm px-3 py-2 rounded-xl transition-colors hover:bg-white/[0.05] text-teal-400"
-      >
-        {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <BellRing className="w-4 h-4" />}
-        <span>Push-Benachrichtigungen aktiv</span>
-      </button>
+      <div className="flex flex-col gap-1">
+        <button
+          onClick={unsubscribe}
+          disabled={busy}
+          className="flex items-center gap-2 text-sm px-3 py-2 rounded-xl transition-colors hover:bg-white/[0.05] text-teal-400"
+        >
+          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <BellRing className="w-4 h-4" />}
+          <span>Push-Benachrichtigungen aktiv</span>
+        </button>
+        <button
+          onClick={resetAll}
+          disabled={busy}
+          className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-xl transition-colors hover:bg-white/[0.05] text-gray-600 hover:text-gray-400"
+        >
+          <span>Falsches Gerät/Browser? Hier zurücksetzen</span>
+        </button>
+      </div>
     );
   }
 
