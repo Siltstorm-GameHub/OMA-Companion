@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import {
   Users, LayoutDashboard, Star, ShoppingBag, Bot,
   BarChart2, CalendarDays, Heart, CalendarRange, Medal,
-  Wrench, Users2, BarChart3,
+  Wrench, Users2, BarChart3, Megaphone,
 } from "lucide-react";
 
 type Role = "user" | "moderator" | "admin";
@@ -50,10 +50,11 @@ const CATEGORIES: {
     label: "Community",
     icon: Users2,
     minRole: "moderator",
-    prefixes: ["/admin/polls", "/admin/shop"],
+    prefixes: ["/admin/polls", "/admin/shop", "/admin/daily-message"],
     tabs: [
-      { href: "/admin/polls", label: "Umfragen", icon: BarChart2,   minRole: "moderator" },
-      { href: "/admin/shop",  label: "Shop",     icon: ShoppingBag, minRole: "admin"     },
+      { href: "/admin/polls",          label: "Umfragen",    icon: BarChart2,   minRole: "moderator" },
+      { href: "/admin/daily-message",  label: "Mitteilungen", icon: Megaphone,  minRole: "moderator" },
+      { href: "/admin/shop",           label: "Shop",        icon: ShoppingBag, minRole: "admin"     },
     ],
   },
   {
