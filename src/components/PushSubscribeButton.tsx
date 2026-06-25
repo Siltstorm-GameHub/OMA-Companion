@@ -46,6 +46,12 @@ export function PushSubscribeButton() {
       }
 
       const reg = await navigator.serviceWorker.ready;
+
+      // Alte Subscription bereinigen (z.B. nach VAPID-Key-Wechsel),
+      // da pushManager.subscribe() sonst mit einem Konfliktfehler abbricht.
+      const existing = await reg.pushManager.getSubscription();
+      if (existing) await existing.unsubscribe();
+
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(vapidKey),
@@ -59,15 +65,17 @@ export function PushSubscribeButton() {
 
       if (!res.ok) {
         await sub.unsubscribe();
-        toast.error("Fehler beim Speichern der Subscription – bitte erneut versuchen");
+        const { error } = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        toast.error(`Fehler beim Speichern: ${error}`);
         return;
       }
 
       setStatus("subscribed");
       toast.success("Push-Benachrichtigungen aktiviert");
     } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
       console.error("[PushSubscribe]", err);
-      toast.error("Push-Benachrichtigungen konnten nicht aktiviert werden");
+      toast.error(`Fehler: ${msg}`);
       setStatus("idle");
     } finally {
       setBusy(false);
