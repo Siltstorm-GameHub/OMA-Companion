@@ -24,7 +24,11 @@ async function sendToSubscriptions(
   if (!subscriptions.length) return;
   ensureVapid();
   const base = process.env.NEXTAUTH_URL ?? "https://oma-app.de";
-  const data = JSON.stringify({ ...payload, icon: `${base}/OMALogo512.png` });
+  const data = JSON.stringify({
+    ...payload,
+    icon:  `${base}/OMALogo512.png`,
+    badge: `${base}/badge.png`,
+  });
   await Promise.allSettled(
     subscriptions.map(async (sub) => {
       try {
