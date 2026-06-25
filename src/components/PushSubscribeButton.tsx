@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { Bell, BellOff, BellRing, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 function urlBase64ToUint8Array(base64: string) {
   const padding = "=".repeat((4 - (base64.length % 4)) % 4);
@@ -32,23 +33,41 @@ export function PushSubscribeButton() {
   async function subscribe() {
     setBusy(true);
     try {
+      const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      if (!vapidKey) {
+        toast.error("Push-Benachrichtigungen nicht konfiguriert (VAPID-Key fehlt)");
+        return;
+      }
+
       const permission = await Notification.requestPermission();
-      if (permission !== "granted") { setStatus("denied"); return; }
+      if (permission !== "granted") {
+        setStatus("denied");
+        return;
+      }
 
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!),
+        applicationServerKey: urlBase64ToUint8Array(vapidKey),
       });
 
-      await fetch("/api/push/subscribe", {
+      const res = await fetch("/api/push/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(sub.toJSON()),
       });
 
+      if (!res.ok) {
+        await sub.unsubscribe();
+        toast.error("Fehler beim Speichern der Subscription – bitte erneut versuchen");
+        return;
+      }
+
       setStatus("subscribed");
-    } catch {
+      toast.success("Push-Benachrichtigungen aktiviert");
+    } catch (err) {
+      console.error("[PushSubscribe]", err);
+      toast.error("Push-Benachrichtigungen konnten nicht aktiviert werden");
       setStatus("idle");
     } finally {
       setBusy(false);
@@ -69,6 +88,9 @@ export function PushSubscribeButton() {
         });
       }
       setStatus("idle");
+      toast.success("Push-Benachrichtigungen deaktiviert");
+    } catch {
+      toast.error("Fehler beim Deaktivieren");
     } finally {
       setBusy(false);
     }
