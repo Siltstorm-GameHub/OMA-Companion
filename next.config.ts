@@ -16,6 +16,8 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "*.googleusercontent.com" },
       // Allgemeiner Fallback für weitere OAuth-Provider
       { protocol: "https", hostname: "*.githubusercontent.com" },
+      // Twitch (Partner-Logos, Stream-Thumbnails)
+      { protocol: "https", hostname: "static-cdn.jtvnw.net" },
     ],
   },
 };
