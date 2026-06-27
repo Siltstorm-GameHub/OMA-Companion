@@ -6,7 +6,7 @@ import Link from "next/link";
 import {
   ChevronLeft, ChevronRight, CalendarPlus, RefreshCw, Gamepad2,
   Swords, Hash, BarChart2, Plus, X, Trophy, Save, Coins,
-  MessageSquare, ExternalLink, Archive, Vote,
+  MessageSquare, ExternalLink, Archive, Vote, Trash2,
 } from "lucide-react";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import GameNameInput from "@/components/GameNameInput";
@@ -56,6 +56,8 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [generatingNext, setGeneratingNext] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Basic
   const [name, setName]               = useState<string>(series.name);
@@ -151,6 +153,22 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
     } else {
       const err = await res.json().catch(() => ({}));
       toast.error(err.error ?? "Fehler beim Erstellen");
+    }
+  }
+
+  async function deleteSeries() {
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/admin/series/${series.id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success("Eventreihe gelöscht – Events bleiben als Standalone erhalten");
+        router.push("/admin/series");
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.error ?? "Fehler beim Löschen");
+      }
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -505,6 +523,44 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
                   </Link>
                 );
               })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Danger Zone */}
+      <div className="rounded-xl border border-red-900/30 bg-red-950/10 p-4 space-y-3">
+        <p className="text-xs font-semibold text-red-400 uppercase tracking-widest">Danger Zone</p>
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm text-gray-300 font-medium">Eventreihe löschen</p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Die Reihe wird gelöscht. Alle zugehörigen Events bleiben als Standalone-Events erhalten.
+            </p>
+          </div>
+          {!deleteConfirm ? (
+            <button
+              onClick={() => setDeleteConfirm(true)}
+              className="flex items-center gap-1.5 text-sm text-red-400 border border-red-800/40 hover:border-red-600/60 hover:bg-red-900/20 px-3 py-1.5 rounded-lg transition-colors shrink-0"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Löschen
+            </button>
+          ) : (
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-xs text-red-300">Sicher?</span>
+              <button
+                onClick={deleteSeries}
+                disabled={deleting}
+                className="text-sm font-semibold text-white bg-red-700 hover:bg-red-600 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {deleting ? "Löschen…" : "Ja, löschen"}
+              </button>
+              <button
+                onClick={() => setDeleteConfirm(false)}
+                className="text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg border border-white/[0.08] hover:border-white/20 transition-colors"
+              >
+                Abbrechen
+              </button>
             </div>
           )}
         </div>
