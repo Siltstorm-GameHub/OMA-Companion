@@ -127,6 +127,9 @@ export default function EventCompleteClient({
   const [multiPollVotes, setMultiPollVotes] = useState<Record<number, Record<string, number>>>(
     () => Object.fromEntries(pollsConfig.map((_, i) => [i, {}]))
   );
+  const [multiPollExcluded, setMultiPollExcluded] = useState<Record<number, Set<string>>>(
+    () => Object.fromEntries(pollsConfig.map((_, i) => [i, new Set<string>()]))
+  );
 
   /* ── Zuschauer-Anwesenheit ── */
   const [spectatorAttended, setSpectatorAttended] = useState<Set<string>>(
@@ -582,12 +585,25 @@ export default function EventCompleteClient({
 
           {/* Multi-Polls */}
           {pollsConfig.map((cfg, i) => {
-            const eligible = cfg.type === "spectator"
+            const allUsers = cfg.type === "spectator"
               ? spectatorUsers.filter(u => spectatorAttended.has(u.id))
               : registeredUsers;
+            const excluded = multiPollExcluded[i] ?? new Set<string>();
+            const eligible = allUsers.filter(u => !excluded.has(u.id));
             const votes = multiPollVotes[i] ?? {};
             const maxVotes = Math.max(...eligible.map(u => votes[u.id] ?? 0));
             const winners = maxVotes > 0 ? eligible.filter(u => (votes[u.id] ?? 0) === maxVotes) : [];
+
+            function toggleExclude(uid: string) {
+              setMultiPollExcluded(prev => {
+                const next = { ...prev };
+                const s = new Set(next[i] ?? []);
+                if (s.has(uid)) s.delete(uid); else s.add(uid);
+                next[i] = s;
+                return next;
+              });
+            }
+
             return (
               <div key={i} className="rounded-xl p-4 space-y-3" style={{ background: "rgba(139,92,246,0.05)", border: "1px solid rgba(139,92,246,0.15)" }}>
                 <p className="text-xs font-semibold text-violet-300">
@@ -595,6 +611,32 @@ export default function EventCompleteClient({
                   {cfg.question && <span className="font-normal text-gray-500 ml-1">„{cfg.question}"</span>}
                   <span className="text-[10px] text-gray-600 ml-1">({cfg.type === "spectator" ? "Zuschauer" : "Spieler"}-Poll)</span>
                 </p>
+
+                {/* Ausschließen */}
+                {allUsers.length > 0 && (
+                  <div>
+                    <p className="text-[11px] text-gray-500 mb-1.5">Aus Abstimmung ausschließen:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {allUsers.map(u => (
+                        <label key={u.id} className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs cursor-pointer transition-colors select-none ${
+                          excluded.has(u.id)
+                            ? "bg-red-900/30 border border-red-700/40 text-red-300"
+                            : "bg-white/[0.03] border border-white/[0.08] text-gray-400 hover:border-white/20"
+                        }`}>
+                          <input
+                            type="checkbox"
+                            checked={excluded.has(u.id)}
+                            onChange={() => toggleExclude(u.id)}
+                            className="accent-red-500 w-3 h-3"
+                          />
+                          {userName(u)}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Stimmen */}
                 <div className="space-y-1.5 max-h-48 overflow-y-auto">
                   {eligible.map(u => (
                     <div key={u.id} className="flex items-center gap-3">
@@ -610,6 +652,7 @@ export default function EventCompleteClient({
                   ))}
                   {eligible.length === 0 && <p className="text-xs text-gray-600 italic">Keine berechtigten Teilnehmer.</p>}
                 </div>
+
                 {winners.length > 0 && (
                   <div className="rounded-lg bg-violet-500/10 border border-violet-500/20 px-3 py-2 space-y-1">
                     <p className="text-[11px] text-violet-400 font-semibold">
