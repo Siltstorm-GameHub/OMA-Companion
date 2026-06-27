@@ -192,6 +192,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
           matches: {
             select: { entries: { select: { userId: true, statsJson: true } } },
           },
+          streamingPartners: { include: { partner: true } },
         },
       },
     },
@@ -343,6 +344,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
   // Events with user info for AvatarStack (cast to SeriesEventItem)
   const eventsWithUsers = series.events as (typeof series.events[number] & {
     registrations: { userId: string; user: { id: string; name: string | null; username: string | null; image: string | null } }[];
+    streamingPartners: { partner: { id: string; name: string; twitchLogin: string; logoUrl: string } }[];
   })[];
 
   const activeEvents:   SeriesEventItem[] = eventsWithUsers
