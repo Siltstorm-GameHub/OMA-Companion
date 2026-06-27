@@ -8,6 +8,9 @@ import RankPointsIcon from "@/components/RankPointsIcon";
 import WinIcon from "@/components/WinIcon";
 import CoinIcon from "@/components/CoinIcon";
 import ClientTime from "@/components/ClientTime";
+import EventCategoryBadge from "@/components/EventCategoryBadge";
+import EventLiveBadge from "@/app/(dashboard)/events/[id]/EventLiveBadge";
+import { EventCategory } from "@prisma/client";
 
 const GENRE_MAP: Record<string, { label: string; icon: string }> = {
   arcade:    { label: "Arcade",     icon: "/Arcade Icon.png" },
@@ -230,6 +233,9 @@ export default async function TournamentDetailPage({
                   {FORMAT_LABELS[format] ?? format}
                 </span>
               )}
+              {event.category && (
+                <EventCategoryBadge category={event.category as EventCategory} />
+              )}
             </div>
             <div className="flex items-center gap-4 flex-wrap">
               {(event.game || genreInfo) && (
@@ -303,14 +309,28 @@ export default async function TournamentDetailPage({
         )}
 
         {streamingPartners.length > 0 && (
-          <div className="mt-4 flex items-center gap-2 flex-wrap">
-            <Tv2 className="w-3.5 h-3.5 text-violet-400 shrink-0" />
-            <span className="text-[10px] text-gray-500 uppercase tracking-widest">Streaming-Partner</span>
-            {streamingPartners.map(sp => (
-              <span key={sp.partner.id} className="text-xs px-2.5 py-1 rounded-full border border-violet-500/20 bg-violet-500/10 text-violet-300 font-medium">
-                {sp.partner.name}
-              </span>
-            ))}
+          <div className="mt-4 space-y-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Tv2 className="w-3.5 h-3.5 text-[#9146ff] shrink-0" />
+              <span className="text-xs text-gray-500 font-medium">Live übertragen von:</span>
+              {streamingPartners.map(({ partner: p }) => (
+                <a
+                  key={p.id}
+                  href={`https://twitch.tv/${p.twitchLogin}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all hover:brightness-110"
+                  style={{ background: "rgba(145,70,255,0.12)", border: "1px solid rgba(145,70,255,0.25)", color: "#c4a3ff" }}
+                >
+                  <Image src={p.logoUrl} alt={p.name} width={16} height={16} className="rounded-full shrink-0" />
+                  {p.name}
+                  <span className="opacity-50 text-[10px]">↗</span>
+                </a>
+              ))}
+            </div>
+            <EventLiveBadge
+              twitchLogins={streamingPartners.map(sp => sp.partner.twitchLogin.toLowerCase())}
+            />
           </div>
         )}
 

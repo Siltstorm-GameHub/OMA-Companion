@@ -77,6 +77,7 @@ export async function PATCH(req: NextRequest) {
       ...(fields.legacyStandings       !== undefined && { legacyStandings:       fields.legacyStandings }),
       ...(fields.placementRewardsJson  !== undefined && { placementRewardsJson:  fields.placementRewardsJson }),
       ...(fields.pollConfigJson        !== undefined && { pollConfigJson:        fields.pollConfigJson }),
+      ...(fields.category              !== undefined && { category:              fields.category || null }),
     },
   });
 

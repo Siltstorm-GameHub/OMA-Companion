@@ -63,6 +63,9 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
   const [name, setName]               = useState<string>(series.name);
   const [description, setDescription] = useState<string>(series.description ?? "");
 
+  // Category
+  const [category, setCategory] = useState<string>(series.category ?? "");
+
   // Settings
   const [fixedGame, setFixedGame]           = useState<string>(series.fixedGame ?? "");
   const [fixedFormat, setFixedFormat]       = useState<string>(series.fixedFormat ?? "");
@@ -110,6 +113,7 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
         seriesId: series.id,
         name:                 name.trim() || series.name,
         description:          description.trim() || null,
+        category:             category || null,
         fixedGame:            fixedGame.trim() || null,
         fixedFormat:          fixedFormat || null,
         discordChannelId:     discordChannelId.trim() || null,
@@ -234,6 +238,21 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
 
         {/* ── Left column: Settings ── */}
         <div className="space-y-4">
+
+          {/* Kategorie */}
+          <Section title="Kategorie">
+            <Field label="Kategorie">
+              <select value={category} onChange={e => setCategory(e.target.value)} className={inputCls}>
+                <option value="">– Keine Kategorie –</option>
+                <option value="competitive">🏆 Kompetitiv</option>
+                <option value="fun">🎉 Fun</option>
+                <option value="casual">🛋️ Casual</option>
+                <option value="training">🎓 Training</option>
+                <option value="community_event">🤝 Community</option>
+                <option value="special">⭐ Special</option>
+              </select>
+            </Field>
+          </Section>
 
           {/* Spiel & Format */}
           <Section title="Spiel & Format">
