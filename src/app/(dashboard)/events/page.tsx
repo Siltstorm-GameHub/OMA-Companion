@@ -12,6 +12,17 @@ import { EmptyState } from "@/components/EmptyState";
 import GameCover from "@/components/GameCover";
 import LulRegisterButton from "@/components/LulRegisterButton";
 import { getGenreIcon } from "@/lib/genre-icons";
+import EventCategoryBadge, { CATEGORY_BG_TINT } from "@/components/EventCategoryBadge";
+import { EventCategory } from "@prisma/client";
+
+const CATEGORY_STRIP: Record<EventCategory, string> = {
+  competitive:     "bg-red-500",
+  fun:             "bg-amber-400",
+  casual:          "bg-emerald-500",
+  training:        "bg-indigo-500",
+  community_event: "bg-violet-500",
+  special:         "bg-yellow-400",
+};
 
 const EVENT_STATUS: Record<string, { label: string; badge: string; bar: string; glow: string; dot: string }> = {
   open:     { label: "Offen",   badge: "text-blue-300 bg-blue-500/10 border border-blue-500/20",             bar: "bg-blue-400",   glow: "from-blue-500/5",    dot: "bg-blue-400"              },
@@ -142,6 +153,8 @@ export default async function EventsPage() {
                   boxShadow: "0 4px 20px rgba(0,0,0,0.45)",
                   animationDelay: `${idx * 30}ms`,
                 }}>
+                <div className={`absolute top-0 left-0 right-0 h-[2px] ${CATEGORY_STRIP[ev.category as EventCategory] ?? "bg-emerald-500"}`} />
+                <div className={`absolute inset-0 ${CATEGORY_BG_TINT[ev.category as EventCategory] ?? ""} opacity-60 pointer-events-none`} />
                 <div className={`absolute left-0 top-4 bottom-4 w-[3px] rounded-r-full ${isRegistered ? "bg-emerald-400" : s.bar}`} />
                 <div className={`absolute inset-0 bg-gradient-to-r ${isRegistered ? "from-emerald-500/4" : s.glow} to-transparent opacity-60 pointer-events-none`} />
                 <div className="relative shrink-0 flex flex-col items-center gap-1.5">
@@ -162,12 +175,13 @@ export default async function EventsPage() {
                       <span className="text-[10px] text-gray-600">· Eventreihe</span>
                     </Link>
                   )}
-                  <div className="flex items-center gap-2 mb-1.5">
+                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                     <Link href={ev.seriesId ? `/events/series/${ev.seriesId}` : `/events/${ev.id}`}
                       className="font-semibold text-white text-base truncate hover:text-teal-300 transition-colors">
                       {ev.title}
                     </Link>
                     {isTournament && <Trophy className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
+                    {ev.category && <EventCategoryBadge category={ev.category as EventCategory} />}
                     {isRegistered && (
                       <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-medium shrink-0">
                         <Check className="w-3 h-3" /> Angemeldet

@@ -7,9 +7,17 @@ import { sendPushToAll } from "@/lib/push";
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const status = searchParams.get("status");
+  const category = searchParams.get("category");
+  const genre = searchParams.get("genre");
+
+  const where: Record<string, unknown> = {};
+  if (status) where.status = status;
+  if (category) where.category = category;
+  if (genre) where.genre = genre;
+
   const events = await prisma.event.findMany({
-    where: status ? { status } : undefined,
-    include: { _count: { select: { registrations: true } } },
+    where: Object.keys(where).length > 0 ? where : undefined,
+    include: { _count: { select: { registrations: { where: { role: "player" } } } } },
     orderBy: { startAt: "asc" },
   });
   return NextResponse.json(events);
@@ -21,7 +29,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
   }
   const body = await req.json();
-  const { title, description, game, startAt, maxPlayers, pointReward, type, seriesId, discordChannelId } = body;
+  const {
+    title, description, game, genre, category, startAt, maxPlayers, type, seriesId,
+    discordChannelId, spectatorMode, spectatorRewardJson, pollsConfigJson,
+    placementRewardsJson,
+  } = body;
 
   if (!title || !startAt) {
     return NextResponse.json({ error: "Titel und Datum sind Pflichtfelder" }, { status: 400 });
@@ -60,17 +72,29 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Derive participation coin default (10) from placementRewardsJson or series config
+  const rewardsData = placementRewardsJson
+    ? JSON.stringify(placementRewardsJson)
+    : seriesId
+      ? (await prisma.eventSeries.findUnique({ where: { id: seriesId }, select: { placementRewardsJson: true } }))?.placementRewardsJson ?? null
+      : JSON.stringify({ participationCoins: 10, placements: [{ place: 1, coins: 500, rankPoints: 3 }, { place: 2, coins: 250, rankPoints: 2 }, { place: 3, coins: 100, rankPoints: 1 }] });
+
   const event = await prisma.event.create({
     data: {
       title,
       description,
       game,
+      genre:           genre || null,
+      category:        category || "casual",
       startAt: startDate,
       maxPlayers: maxPlayers ? Number(maxPlayers) : null,
-      pointReward: pointReward ? Number(pointReward) : 50,
       type:            type ?? "community",
       seriesId:        seriesId || null,
       discordChannelId: discordChannelId || null,
+      spectatorMode:   spectatorMode ? true : false,
+      spectatorRewardJson: spectatorRewardJson ? JSON.stringify(spectatorRewardJson) : null,
+      pollsConfigJson: pollsConfigJson ? JSON.stringify(pollsConfigJson) : null,
+      placementRewardsJson: rewardsData,
       ...(seriesFormat       && { format:       seriesFormat }),
       ...(seriesPointsConfig && { pointsConfig: seriesPointsConfig }),
       ...(seriesStatFields   && { statFields:   seriesStatFields }),
@@ -98,7 +122,7 @@ export async function POST(req: NextRequest) {
     game:             event.game,
     startAt:          event.startAt,
     maxPlayers:       event.maxPlayers,
-    pointReward:      event.pointReward,
+    pointReward:      null,
     discordChannelId: event.discordChannelId,
   });
   if (discordMessageId) {

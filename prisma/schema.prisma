@@ -213,6 +213,8 @@ model EventSeries {
   fixedGame        String?  // Wenn gesetzt: alle Events der Reihe nutzen dieses Spiel
   fixedFormat      String?  // Wenn gesetzt: alle Turniere der Reihe nutzen dieses Format
   discordChannelId String?  // Kanal-ID für Bot-Nachrichten aller Events dieser Reihe
+  category         EventCategory  @default(casual)
+  genre            EventGenre?
   recurrenceType       String?  // "weekly" | "biweekly" | "monthly"
   recurrenceMonthlyMode String? // "dayOfMonth" | "weekdayOfMonth" (nur bei monthly)
   // JSON: { participationPoints: 5, stats: [{ field: "Kills", pointsPer: 2 }], mvpStatField?: "MVP", defaultWinnerStatField?: "Kills", defaultWinnerTargetField?: "Siege" }
@@ -225,6 +227,8 @@ model EventSeries {
   placementRewardsJson String?
   // JSON: { enabled: bool, question: string, coins: 250, rankPoints: 3 }
   pollConfigJson       String?
+  // JSON: [{ label, question, coins, rankPoints, type: "player"|"spectator" }]
+  pollsConfigJson      String?
   // Saison-Archiv
   groupId              String?   // verbindet alle Saisons derselben Reihe
   status               String    @default("active") // "active" | "archived"
@@ -241,9 +245,13 @@ model Event {
   title          String
   description    String?
   game           String?
+  genre          EventGenre?
+  category       EventCategory  @default(casual)
   startAt        DateTime
   maxPlayers     Int?
   pointReward    Int      @default(50)
+  spectatorMode  Boolean  @default(false)
+  spectatorRewardJson String? // JSON: { coins: number, rankPoints: number }
   type           String   @default("community")
   status         String   @default("open")
   discordEventId   String?  @unique
@@ -266,6 +274,8 @@ model Event {
   placementRewardsJson String?
   // JSON: { enabled: bool, question: string, coins: 250, rankPoints: 3 }
   pollConfigJson       String?
+  // JSON: [{ label, question, coins, rankPoints, type: "player"|"spectator" }]
+  pollsConfigJson      String?
   summary              String?
 
   series        EventSeries?        @relation(fields: [seriesId], references: [id])
@@ -281,6 +291,7 @@ model EventRegistration {
   eventId   String
   joinedAt  DateTime @default(now())
   attended  Boolean  @default(false)
+  role      String   @default("player") // "player" | "spectator"
   user      User     @relation(fields: [userId], references: [id])
   event     Event    @relation(fields: [eventId], references: [id])
   @@unique([userId, eventId])
@@ -590,6 +601,26 @@ model UserCustomBadge {
   user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   badge         CustomBadge @relation(fields: [customBadgeId], references: [id], onDelete: Cascade)
   @@id([userId, customBadgeId])
+}
+
+// ── Event-Enums ───────────────────────────────────────────────────────────────
+
+enum EventCategory {
+  competitive
+  fun
+  casual
+  training
+  community_event
+  special
+}
+
+enum EventGenre {
+  arcade
+  beat_em_up
+  sport
+  racing
+  shooter
+  community
 }
 
 // ── Tägliche Mitteilungen ────────────────────────────────────────────────────

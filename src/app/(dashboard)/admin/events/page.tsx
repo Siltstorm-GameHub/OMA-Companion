@@ -1,8 +1,9 @@
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import EventCreateForm from "@/app/(dashboard)/events/EventCreateForm";
-import { Edit2 } from "lucide-react";
+import { Edit2, Plus } from "lucide-react";
+import EventCategoryBadge from "@/components/EventCategoryBadge";
+import { EventCategory } from "@prisma/client";
 
 const STATUS_LABELS: Record<string, string> = {
   open:     "Offen",
@@ -32,6 +33,7 @@ export default async function AdminEventsPage() {
       startAt: true,
       game: true,
       format: true,
+      category: true,
       completionData: true,
       _count: { select: { registrations: true } },
     },
@@ -39,7 +41,14 @@ export default async function AdminEventsPage() {
 
   return (
     <div className="space-y-4">
-      <EventCreateForm />
+      <div className="flex justify-end">
+        <Link
+          href="/admin/events/new"
+          className="flex items-center gap-1.5 text-sm font-medium text-white bg-teal-600 hover:bg-teal-500 transition-colors px-3 py-1.5 rounded-lg"
+        >
+          <Plus className="w-4 h-4" /> Neues Event
+        </Link>
+      </div>
 
       <div className="rounded-xl border border-white/[0.06] overflow-hidden">
         <div className="px-4 py-2.5 border-b border-white/[0.05] flex items-center justify-between">
@@ -69,6 +78,7 @@ export default async function AdminEventsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm font-medium text-white truncate">{ev.title}</span>
+                      {ev.category && <EventCategoryBadge category={ev.category as EventCategory} />}
                       {ev.game && (
                         <span className="text-[10px] text-gray-500 border border-white/[0.06] rounded px-1.5 py-0.5 shrink-0">
                           {ev.game}

@@ -15,6 +15,8 @@ type User = { id: string; name: string | null; username: string | null; image: s
 type PlacementReward = { place: number; coins: number; rankPoints: number };
 type RewardsConfig = { participationCoins: number; placements: PlacementReward[] };
 type PollConfig = { enabled: boolean; question: string; coins: number; rankPoints: number };
+type MultiPollConfig = { label: string; question: string; coins: number; rankPoints: number; type: "player" | "spectator" };
+type PollResult = { label: string; winnerIds: string[]; coins: number; rankPoints: number; type: "player" | "spectator" };
 type SeriesStatConfig = {
   participationPoints: number;
   stats: { field: string; pointsPer: number }[];
@@ -29,11 +31,14 @@ interface Props {
   seriesId: string | null;
   seriesName: string | null;
   registeredUsers: User[];
+  spectatorUsers: User[];
   tournamentStatFields: string[];
   userStats: Record<string, Record<string, number>>;
   seriesStatConfig: SeriesStatConfig | null;
   rewardsConfig: RewardsConfig;
   pollConfig: PollConfig;
+  pollsConfig: MultiPollConfig[];
+  spectatorRewardJson: { coins: number; rankPoints: number } | null;
   isReEdit: boolean;
   gamePhaseComplete: boolean;
   pollPhaseComplete: boolean;
@@ -84,8 +89,8 @@ function computePlacementMap(groups: string[][]): Map<string, number> {
 
 export default function EventCompleteClient({
   eventId, eventTitle, seriesId, seriesName,
-  registeredUsers, tournamentStatFields, userStats,
-  seriesStatConfig, rewardsConfig, pollConfig,
+  registeredUsers, spectatorUsers, tournamentStatFields, userStats,
+  seriesStatConfig, rewardsConfig, pollConfig, pollsConfig, spectatorRewardJson,
   isReEdit, gamePhaseComplete, pollPhaseComplete,
   initialData, initialFinalRanking, initialRankingGroups, initialFinalRankingNote,
 }: Props) {
@@ -107,7 +112,7 @@ export default function EventCompleteClient({
     (initialData?.mvpUserId as string) ?? ""
   );
 
-  /* ── Poll ── */
+  /* ── Poll (legacy single) ── */
   const [pollExcluded, setPollExcluded] = useState<Set<string>>(() => new Set());
   const [pollVotes, setPollVotes] = useState<Record<string, number>>(() => {
     if (!isReEdit || !initialData) return {};
@@ -117,6 +122,16 @@ export default function EventCompleteClient({
     for (const id of winners) old[id] = 1;
     return old;
   });
+
+  /* ── Multi-Polls ── */
+  const [multiPollVotes, setMultiPollVotes] = useState<Record<number, Record<string, number>>>(
+    () => Object.fromEntries(pollsConfig.map((_, i) => [i, {}]))
+  );
+
+  /* ── Zuschauer-Anwesenheit ── */
+  const [spectatorAttended, setSpectatorAttended] = useState<Set<string>>(
+    () => new Set(spectatorUsers.map(u => u.id)) // alle als anwesend vorauswählen
+  );
 
   /* ── Ranking ── */
   // Flat order (derived from initial groups if provided).
@@ -255,6 +270,18 @@ export default function EventCompleteClient({
   /* ── Submit ── */
   async function handleConfirm(pollOnly = false) {
     setLoading(true);
+
+    // Compute multi-poll results
+    const pollResults: PollResult[] = pollsConfig.map((cfg, i) => {
+      const eligible = cfg.type === "spectator"
+        ? spectatorUsers.filter(u => spectatorAttended.has(u.id))
+        : registeredUsers;
+      const votes = multiPollVotes[i] ?? {};
+      const maxVotes = Math.max(...eligible.map(u => votes[u.id] ?? 0));
+      const winnerIds = maxVotes > 0 ? eligible.filter(u => (votes[u.id] ?? 0) === maxVotes).map(u => u.id) : [];
+      return { label: cfg.label, question: cfg.question, coins: cfg.coins, rankPoints: cfg.rankPoints, type: cfg.type, winnerIds };
+    });
+
     try {
       const hasPollVotes = pollWinners.length > 0;
       const res = await fetch(`/api/admin/events/${eventId}/complete`, {
@@ -269,6 +296,8 @@ export default function EventCompleteClient({
           pollBonusCoins:          pollConfig.enabled ? pollConfig.coins : undefined,
           pollBonusRankPoints:     pollConfig.enabled ? pollConfig.rankPoints : undefined,
           pollExcludedUserIds:     pollConfig.enabled && pollExcluded.size > 0 ? [...pollExcluded] : undefined,
+          pollResults:             pollResults.length > 0 ? pollResults : undefined,
+          spectatorAttendedIds:    spectatorUsers.length > 0 ? [...spectatorAttended] : undefined,
           finalRanking:            rankingOrder.length > 0 ? rankingOrder : undefined,
           finalRankingGroups:      rankingGroups.length > 0 ? rankingGroups : undefined,
           finalRankingNote:        rankingNote || undefined,
@@ -523,6 +552,77 @@ export default function EventCompleteClient({
               )}
             </div>
           )}
+
+          {/* Zuschauer-Anwesenheit */}
+          {spectatorUsers.length > 0 && spectatorRewardJson && (
+            <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(20,184,166,0.05)", border: "1px solid rgba(20,184,166,0.15)" }}>
+              <p className="text-xs font-semibold text-teal-300">
+                👁️ Zuschauer-Anwesenheit
+                <span className="font-normal text-gray-500 ml-1">({spectatorRewardJson.coins} Münzen{spectatorRewardJson.rankPoints > 0 ? ` + ${spectatorRewardJson.rankPoints} RP` : ""} für Anwesende)</span>
+              </p>
+              <div className="space-y-1">
+                {spectatorUsers.map(u => (
+                  <label key={u.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+                    spectatorAttended.has(u.id) ? "bg-teal-500/10 border border-teal-500/20" : "bg-white/[0.03] border border-transparent hover:border-white/[0.08]"
+                  }`}>
+                    <input type="checkbox" checked={spectatorAttended.has(u.id)}
+                      onChange={e => setSpectatorAttended(prev => {
+                        const next = new Set(prev);
+                        if (e.target.checked) next.add(u.id); else next.delete(u.id);
+                        return next;
+                      })}
+                      className="accent-teal-500 shrink-0" />
+                    <Avatar u={u} size={5} />
+                    <span className="text-sm text-white flex-1 truncate">{userName(u)}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Multi-Polls */}
+          {pollsConfig.map((cfg, i) => {
+            const eligible = cfg.type === "spectator"
+              ? spectatorUsers.filter(u => spectatorAttended.has(u.id))
+              : registeredUsers;
+            const votes = multiPollVotes[i] ?? {};
+            const maxVotes = Math.max(...eligible.map(u => votes[u.id] ?? 0));
+            const winners = maxVotes > 0 ? eligible.filter(u => (votes[u.id] ?? 0) === maxVotes) : [];
+            return (
+              <div key={i} className="rounded-xl p-4 space-y-3" style={{ background: "rgba(139,92,246,0.05)", border: "1px solid rgba(139,92,246,0.15)" }}>
+                <p className="text-xs font-semibold text-violet-300">
+                  📊 {cfg.label || `Umfrage ${i + 1}`}
+                  {cfg.question && <span className="font-normal text-gray-500 ml-1">„{cfg.question}"</span>}
+                  <span className="text-[10px] text-gray-600 ml-1">({cfg.type === "spectator" ? "Zuschauer" : "Spieler"}-Poll)</span>
+                </p>
+                <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                  {eligible.map(u => (
+                    <div key={u.id} className="flex items-center gap-3">
+                      <Avatar u={u} size={5} />
+                      <span className="flex-1 text-sm text-white truncate">{userName(u)}</span>
+                      <input type="number" min={0} value={votes[u.id] ?? 0}
+                        onChange={e => setMultiPollVotes(prev => ({
+                          ...prev,
+                          [i]: { ...(prev[i] ?? {}), [u.id]: Math.max(0, Number(e.target.value)) }
+                        }))}
+                        className="w-16 rounded-lg px-2 py-1.5 text-sm text-white text-center bg-gray-800 border border-gray-700 focus:border-violet-500/50 outline-none transition-colors" />
+                    </div>
+                  ))}
+                  {eligible.length === 0 && <p className="text-xs text-gray-600 italic">Keine berechtigten Teilnehmer.</p>}
+                </div>
+                {winners.length > 0 && (
+                  <div className="rounded-lg bg-violet-500/10 border border-violet-500/20 px-3 py-2 space-y-1">
+                    <p className="text-[11px] text-violet-400 font-semibold">
+                      {winners.length === 1 ? "Gewinner" : `Gleichstand (${winners.length})`}: {winners.map(u => userName(u)).join(", ")}
+                    </p>
+                    <p className="text-[10px] text-gray-500">
+                      {cfg.coins > 0 ? `${cfg.coins} Münzen` : ""}{cfg.coins > 0 && cfg.rankPoints > 0 ? " + " : ""}{cfg.rankPoints > 0 ? `${cfg.rankPoints} RP` : ""}
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
 
           {/* Summary */}
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-2">

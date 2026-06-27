@@ -6,6 +6,7 @@ import EventCompleteClient from "./EventCompleteClient";
 type PlacementReward = { place: number; coins: number; rankPoints: number };
 type RewardsConfig = { participationCoins: number; placements: PlacementReward[] };
 type PollConfig = { enabled: boolean; question: string; coins: number; rankPoints: number };
+type MultiPollConfig = { label: string; question: string; coins: number; rankPoints: number; type: "player" | "spectator" };
 type SeriesStatConfig = {
   participationPoints: number;
   stats: { field: string; pointsPer: number }[];
@@ -50,7 +51,7 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
             pollConfigJson: true,
           },
         },
-        registrations: { select: { userId: true } },
+        registrations: { select: { userId: true, role: true } },
         matches: {
           include: {
             entries: { select: { userId: true, statsJson: true } },
@@ -66,9 +67,11 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
 
   if (!event) notFound();
 
-  // Registered users only
-  const registeredIds = new Set(event.registrations.map(r => r.userId));
-  const registeredUsers = allUsers.filter(u => registeredIds.has(u.id));
+  // Separate players and spectators
+  const playerIds    = new Set(event.registrations.filter(r => r.role !== "spectator").map(r => r.userId));
+  const spectatorIds = new Set(event.registrations.filter(r => r.role === "spectator").map(r => r.userId));
+  const registeredUsers = allUsers.filter(u => playerIds.has(u.id));
+  const spectatorUsers  = allUsers.filter(u => spectatorIds.has(u.id));
 
   // Pre-compute userStats server-side to avoid sending raw match data to client
   const userStats: Record<string, Record<string, number>> = {};
@@ -104,8 +107,24 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
     rewardsConfig.participationCoins = event.pointReward;
   }
 
-  // Poll config: event-level overrides series
+  // Poll config: event-level overrides series (legacy)
   const pollConfig = parsePoll(event.pollConfigJson ?? event.series?.pollConfigJson);
+
+  // Multi-poll configs
+  const pollsConfig: MultiPollConfig[] = (() => {
+    const src = event.pollsConfigJson;
+    if (!src) return [];
+    try {
+      const parsed = JSON.parse(src);
+      return Array.isArray(parsed) ? parsed as MultiPollConfig[] : [];
+    } catch { return []; }
+  })();
+
+  // Spectator reward config
+  const spectatorRewardJson: { coins: number; rankPoints: number } | null = (() => {
+    if (!event.spectatorRewardJson) return null;
+    try { return JSON.parse(event.spectatorRewardJson as string); } catch { return null; }
+  })();
 
   // Completion data for re-edit
   const isReEdit = !!event.completionData;
@@ -131,11 +150,14 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
       seriesId={event.series?.id ?? null}
       seriesName={event.series?.name ?? null}
       registeredUsers={registeredUsers}
+      spectatorUsers={spectatorUsers}
       tournamentStatFields={tournamentStatFields}
       userStats={userStats}
       seriesStatConfig={seriesStatConfig}
       rewardsConfig={rewardsConfig}
       pollConfig={pollConfig}
+      pollsConfig={pollsConfig}
+      spectatorRewardJson={spectatorRewardJson}
       isReEdit={isReEdit}
       gamePhaseComplete={gamePhaseComplete}
       pollPhaseComplete={pollPhaseComplete}
