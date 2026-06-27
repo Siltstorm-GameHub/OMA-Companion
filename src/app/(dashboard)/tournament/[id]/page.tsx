@@ -24,6 +24,7 @@ import BracketView from "./BracketView";
 import RoundRobinView from "./RoundRobinView";
 import FfaView from "./FfaView";
 import LigaView from "./LigaView";
+import { getWanderpocalHoldersMap } from "@/lib/get-wanderpocal-holders";
 
 const STATUS_STYLES: Record<string, { label: string; style: string; dot: string }> = {
   open:     { label: "Anmeldung offen", style: "bg-blue-900/50 text-blue-300",   dot: "bg-blue-400" },
@@ -74,11 +75,15 @@ export default async function TournamentDetailPage({
 
   if (!event) notFound();
 
-  const sponsors = await prisma.shopPurchase.findMany({
-    where:   { consumed: false, item: { type: "tournament_sponsor" } },
-    include: { user: { select: { username: true, name: true } } },
-    orderBy: { createdAt: "asc" },
-  });
+  const [sponsors, holdersMap] = await Promise.all([
+    prisma.shopPurchase.findMany({
+      where:   { consumed: false, item: { type: "tournament_sponsor" } },
+      include: { user: { select: { username: true, name: true } } },
+      orderBy: { createdAt: "asc" },
+    }),
+    getWanderpocalHoldersMap(),
+  ]);
+  const holdersList = [...holdersMap.values()];
 
   const isRegistered = event.registrations.some((r) => r.userId === userId);
   const s = STATUS_STYLES[event.status] ?? STATUS_STYLES.finished;
@@ -513,6 +518,7 @@ export default async function TournamentDetailPage({
                 matches={event.matches as Parameters<typeof BracketView>[0]["matches"]}
                 participants={mergedParticipants}
                 userId={userId}
+                holders={holdersList}
               />
             )}
             {isRoundRobin && (

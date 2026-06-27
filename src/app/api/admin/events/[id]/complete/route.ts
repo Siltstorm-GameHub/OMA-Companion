@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { sendPushToUsers } from "@/lib/push";
 import { checkAndAwardBadges } from "@/lib/award-badges";
+import { recomputeWanderpocalHolders } from "@/lib/recompute-wanderpocal";
 
 type PlacementReward = { place: number; coins: number; rankPoints: number };
 type RewardsConfig = { participationCoins: number; placements: PlacementReward[] };
@@ -431,6 +432,11 @@ export async function POST(
   for (const userId of participantIds) {
     checkAndAwardBadges(userId).catch(() => {});
   }
+
+  // Wanderpokal: Trophäen-Halter neu berechnen (fire-and-forget)
+  recomputeWanderpocalHolders().catch((err) =>
+    console.error("[Wanderpokal] Recompute failed:", err)
+  );
 
   return NextResponse.json({ ok: true, completionData, eventWinnerId });
 }

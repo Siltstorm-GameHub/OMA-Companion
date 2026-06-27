@@ -17,6 +17,7 @@ import Link from "next/link";
 import Image from "next/image";
 import BadgesSection from "../BadgesSection";
 import CollectiblesShowcase from "../CollectiblesShowcase";
+import WanderpocalSection from "@/components/WanderpocalSection";
 
 export default async function PublicProfilePage({
   params,
@@ -37,7 +38,7 @@ export default async function PublicProfilePage({
   const month = now.getMonth() + 1;
   const year  = now.getFullYear();
 
-  const [user, eventRegs, eventCount, finishedEvents, tournamentParticipations, tournamentCount, matchWins, totalUsers, questsWithProgress, ownedCollectibles, userSystemBadges, userCustomBadges] =
+  const [user, eventRegs, eventCount, finishedEvents, tournamentParticipations, tournamentCount, matchWins, totalUsers, questsWithProgress, ownedCollectibles, userSystemBadges, userCustomBadges, wanderpocalTrophies, wanderpocalStats] =
     await Promise.all([
       prisma.user.findUnique({
         where: { id },
@@ -95,11 +96,28 @@ export default async function PublicProfilePage({
         include: { badge: { select: { id: true, icon: true, name: true, desc: true, category: true } } },
         orderBy: { earnedAt: "asc" },
       }),
+      prisma.wanderpocalHolder.findMany({ where: { userId: id } }),
+      prisma.wanderpocalStat.findMany({ where: { userId: id } }),
     ]);
 
   if (!user) notFound();
 
   const leaderboardRank = await prisma.user.count({ where: { rankPoints: { gt: user.rankPoints ?? 0 } } }) + 1;
+
+  // Wanderpokal: Rang je Scope berechnen
+  const wanderpocalRankMap: Record<string, number> = {};
+  await Promise.all(
+    wanderpocalStats.map(async (stat) => {
+      const above = await prisma.wanderpocalStat.count({
+        where: {
+          scopeType:  stat.scopeType,
+          scopeValue: stat.scopeValue,
+          winCount:   { gt: stat.winCount },
+        },
+      });
+      wanderpocalRankMap[`${stat.scopeType}:${stat.scopeValue}`] = above + 1;
+    })
+  );
 
   // Derived event stats
   const eventWins = finishedEvents.filter(e => {
@@ -319,6 +337,13 @@ export default async function PublicProfilePage({
             }))}
             showcaseKeys={showcaseBadgeKeys}
             readOnly
+          />
+
+          {/* Wanderpokal */}
+          <WanderpocalSection
+            trophies={wanderpocalTrophies}
+            userStats={wanderpocalStats}
+            rankMap={wanderpocalRankMap}
           />
 
           {/* Quest-Fortschritt */}

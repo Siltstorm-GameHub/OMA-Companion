@@ -10,6 +10,8 @@ import { LUL_POINTS } from "@/lib/lul";
 import LiveRefresh from "./LiveRefresh";
 import { getGameCoverUrl, getGameFallbackGradient } from "@/lib/game-cover";
 import { getGenreIcon } from "@/lib/genre-icons";
+import WanderpocalBadgeServer from "@/components/WanderpocalBadgeServer";
+import { getWanderpocalHoldersMap } from "@/lib/get-wanderpocal-holders";
 
 const STATUS_LABEL: Record<string, string> = {
   upcoming: "Geplant",
@@ -49,6 +51,8 @@ export default async function LulSpieltagPage({
   });
 
   if (!spieltag) notFound();
+
+  const holdersMap = await getWanderpocalHoldersMap();
 
   const isFinished  = spieltag.status === "finished";
   const isActive    = spieltag.status === "active";
@@ -416,6 +420,7 @@ export default async function LulSpieltagPage({
                             )}
                             <p className={`font-semibold leading-tight ${isMe ? "text-teal-300" : "text-white"}`}>
                               {uname(entry.user)}
+                              <WanderpocalBadgeServer userId={entry.user.id} holdersMap={holdersMap} />
                               {isMe && <span className="text-[10px] font-normal text-teal-600 ml-1.5">(du)</span>}
                             </p>
                           </div>
@@ -583,6 +588,7 @@ export default async function LulSpieltagPage({
 
                     <p className={`font-semibold text-sm flex-1 leading-tight ${isMe ? "text-teal-300" : "text-white"}`}>
                       {uname(entry.user)}
+                      <WanderpocalBadgeServer userId={entry.user.id} holdersMap={holdersMap} />
                       {isMe && <span className="text-[10px] font-normal text-teal-600 ml-1.5">(du)</span>}
                     </p>
 
@@ -673,6 +679,7 @@ export default async function LulSpieltagPage({
 
                     <p className={`font-semibold text-sm flex-1 leading-tight ${isMe ? "text-teal-300" : "text-white"}`}>
                       {uname(entry.user)}
+                      <WanderpocalBadgeServer userId={entry.user.id} holdersMap={holdersMap} />
                       {isMe && <span className="text-[10px] font-normal text-teal-600 ml-1.5">(du)</span>}
                     </p>
 

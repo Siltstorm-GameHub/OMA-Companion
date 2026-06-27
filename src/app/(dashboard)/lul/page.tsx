@@ -10,6 +10,8 @@ import { AvatarStack } from "@/components/AvatarStack";
 import { buildLulStandings, LUL_POINTS } from "@/lib/lul";
 import GameCover from "@/components/GameCover";
 import { getGenreIcon } from "@/lib/genre-icons";
+import WanderpocalBadgeServer from "@/components/WanderpocalBadgeServer";
+import { getWanderpocalHoldersMap } from "@/lib/get-wanderpocal-holders";
 
 const STATUS_LABEL: Record<string, { label: string; cls: string; dot: string; bar: string }> = {
   upcoming: { label: "Geplant",  cls: "text-blue-300 bg-blue-500/10 border border-blue-500/15",    dot: "bg-blue-400",   bar: "bg-blue-500/20" },
@@ -55,7 +57,10 @@ export default async function LulOverviewPage() {
   const allActiveEntries = activeSeason?.spieltage.flatMap((st) => st.entries) ?? [];
 
   const hasUnfinishedSpieltage = activeSeason?.spieltage.some((st) => st.status !== "finished") ?? false;
-  const standings    = buildLulStandings(allActiveEntries);
+  const [standings, holdersMap] = await Promise.all([
+    Promise.resolve(buildLulStandings(allActiveEntries)),
+    getWanderpocalHoldersMap(),
+  ]);
   const myRank       = standings.findIndex((s) => s.userId === userId) + 1;
   const myPoints     = standings.find((s) => s.userId === userId)?.totalPts ?? 0;
   const nextSpieltag = activeSeason?.spieltage.find((st) => st.status !== "finished") ?? null;
@@ -234,6 +239,7 @@ export default async function LulOverviewPage() {
                         {/* Name */}
                         <span className={`flex-1 min-w-0 text-sm font-medium truncate ${isMe ? "text-amber-300" : "text-white"}`}>
                           {s.name}
+                          <WanderpocalBadgeServer userId={s.userId} holdersMap={holdersMap} />
                           {isMe && <span className="text-gray-500 font-normal text-xs ml-1.5">du</span>}
                         </span>
                         {/* Punkte */}

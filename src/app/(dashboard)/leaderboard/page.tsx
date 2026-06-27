@@ -8,6 +8,8 @@ import CoinIcon from "@/components/CoinIcon";
 import { CountUp } from "@/components/CountUp";
 import Link from "next/link";
 import Image from "next/image";
+import WanderpocalBadgeServer from "@/components/WanderpocalBadgeServer";
+import { getWanderpocalHoldersMap } from "@/lib/get-wanderpocal-holders";
 
 const MEDALS = ["🥇", "🥈", "🥉"];
 
@@ -66,7 +68,7 @@ export default async function LeaderboardPage() {
   const me     = await getSessionUser();
   const userId = me?.id;
 
-  const [users, wins, donationGroups] = await Promise.all([
+  const [users, wins, donationGroups, holdersMap] = await Promise.all([
     prisma.user.findMany({
       orderBy: { rankPoints: "desc" },
       take: 50,
@@ -86,6 +88,7 @@ export default async function LeaderboardPage() {
       by: ["userId", "month", "year"],
       orderBy: [{ userId: "asc" }, { year: "desc" }, { month: "desc" }],
     }),
+    getWanderpocalHoldersMap(),
   ]);
 
   const winMap = new Map(wins.map(w => [w.winnerId!, w._count.winnerId]));
@@ -170,6 +173,7 @@ export default async function LeaderboardPage() {
                 {/* Name */}
                 <p className={`${cfg.fontSize} font-bold truncate max-w-full text-center leading-tight ${isMe ? "text-teal-300" : cfg.nameColor}`}>
                   {displayName}
+                  <WanderpocalBadgeServer userId={u.id} holdersMap={holdersMap} />
                   {isMe && <span className="text-[10px] text-gray-500 ml-1 font-normal">du</span>}
                 </p>
 
@@ -274,6 +278,7 @@ export default async function LeaderboardPage() {
                 <div className="min-w-0">
                   <p className={`text-sm font-semibold truncate leading-tight ${nameColor}`}>
                     {displayName}
+                    <WanderpocalBadgeServer userId={u.id} holdersMap={holdersMap} />
                     {isMe && <span className="text-[10px] text-gray-500 ml-1 font-normal">du</span>}
                   </p>
                   <p className="text-[10px] text-gray-600 mt-0.5 truncate">
