@@ -41,7 +41,6 @@ const CATEGORIES: {
     prefixes: ["/admin/events", "/admin/series", "/admin/lul"],
     tabs: [
       { href: "/admin/events",  label: "Events",          icon: CalendarDays,  minRole: "moderator" },
-      { href: "/admin/series",  label: "Eventreihen",     icon: CalendarRange, minRole: "moderator" },
       { href: "/admin/lul",     label: "Level-Up-League", icon: Star,          minRole: "moderator" },
     ],
   },

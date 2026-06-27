@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import {
   ChevronLeft, Save, Trophy, CheckCircle2, AlertTriangle, Trash2,
-  Search, UserPlus, UserMinus, Repeat, ExternalLink, AlertCircle, Plus, Tv2,
+  Search, UserPlus, UserMinus, Repeat, ExternalLink, AlertCircle, Plus, Tv2, Clapperboard,
 } from "lucide-react";
 import { EventCategory, EventGenre } from "@prisma/client";
 import GameNameInput from "@/components/GameNameInput";
@@ -156,7 +156,10 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
   const hasStat       = ["ffa", "coop_stats", "avg_stats"].includes(tmtFormat);
   const isLiga        = tmtFormat === "liga";
 
-    /* ── Partners state ── */
+    /* ── Clip URL state ── */
+  const [twitchClipUrl, setTwitchClipUrl] = useState<string>(event.twitchClipUrl ?? "");
+
+  /* ── Partners state ── */
   const [allPartners, setAllPartners] = useState<{ id: string; name: string; twitchLogin: string; logoUrl: string }[]>([]);
   const [selectedPartnerIds, setSelectedPartnerIds] = useState<string[]>(
     (event.streamingPartners ?? []).map((ep: { partnerId: string }) => ep.partnerId)
@@ -233,6 +236,7 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
         placementRewardsJson: JSON.stringify({ participationCoins, placements }),
         pollsConfigJson: polls.length > 0 ? polls : null,
         spectatorRewardJson: event.spectatorMode ? { coins: spectatorCoins, rankPoints: spectatorRankPts } : null,
+        twitchClipUrl: twitchClipUrl.trim() || null,
         seriesScope: scope,
       }),
     });
@@ -506,6 +510,21 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
             </label>
             <input type="text" value={discordChannelId} onChange={e => setDiscordChannelId(e.target.value)}
               placeholder="Leer = Standard" className={inputCls} />
+          </div>
+
+          {/* ── Twitch Clip (Event-Highlight) ── */}
+          <div>
+            <label className={`${labelCls} flex items-center gap-1.5`}>
+              <Clapperboard className="w-3.5 h-3.5 text-[#9146ff]" /> Twitch-Clip (Event-Highlight)
+            </label>
+            <input
+              type="url"
+              value={twitchClipUrl}
+              onChange={e => setTwitchClipUrl(e.target.value)}
+              placeholder="https://www.twitch.tv/clips/..."
+              className={inputCls}
+            />
+            <p className="text-[10px] text-gray-600 mt-1">Wird auf der Event-Seite als Highlight-Link angezeigt.</p>
           </div>
 
           {/* ── Streaming-Partner ── */}

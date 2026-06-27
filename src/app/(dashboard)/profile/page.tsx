@@ -32,7 +32,7 @@ export default async function ProfilePage() {
     await Promise.all([
       prisma.user.findUnique({
         where:  { id: userId },
-        select: { id: true, name: true, username: true, image: true, points: true, rankPoints: true, createdAt: true, showcaseJson: true, showcaseBadgesJson: true, birthday: true, bio: true, voiceMinutesTotal: true, messagesTotal: true },
+        select: { id: true, name: true, username: true, image: true, points: true, rankPoints: true, createdAt: true, showcaseJson: true, showcaseBadgesJson: true, birthday: true, bio: true, twitchLogin: true, voiceMinutesTotal: true, messagesTotal: true },
       }),
       prisma.eventRegistration.findMany({
         where:   { userId },
@@ -233,6 +233,7 @@ export default async function ProfilePage() {
           ? `${String(user.birthday.getDate()).padStart(2, "0")}-${String(user.birthday.getMonth() + 1).padStart(2, "0")}`
           : null}
         bio={user.bio ?? null}
+        twitchLogin={user.twitchLogin ?? null}
       />
 
       {/* ── Collectibles Showcase ────────────────────────────────────── */}

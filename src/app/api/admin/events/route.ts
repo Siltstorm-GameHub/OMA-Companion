@@ -6,7 +6,8 @@ import { deleteDiscordMessage, deleteDiscordScheduledEvent } from "@/lib/discord
 export async function PATCH(req: NextRequest) {
   await requireRole("moderator");
   const body = await req.json();
-  const { eventId, removeUserId, seriesScope, discordChannelId, category, genre, spectatorMode, spectatorRewardJson, pollsConfigJson, ...data } = body;
+  const { eventId, removeUserId, seriesScope, discordChannelId, category, genre, spectatorMode, spectatorRewardJson, pollsConfigJson, twitchClipUrl, ...data } = body;
+  if (twitchClipUrl !== undefined) data.twitchClipUrl = twitchClipUrl || null;
   if (discordChannelId !== undefined) data.discordChannelId = discordChannelId;
   if (category !== undefined) data.category = category;
   if (genre !== undefined) data.genre = genre || null;

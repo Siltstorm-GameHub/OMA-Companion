@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Pencil, Check, X, Cake, MessageSquare, Loader2 } from "lucide-react";
+import { Pencil, Check, X, Cake, MessageSquare, Loader2, Tv2 } from "lucide-react";
 
 interface Props {
-  birthday: string | null; // "TT-MM" oder null (wird so an die Komponente übergeben)
-  bio:      string | null;
+  birthday:    string | null;
+  bio:         string | null;
+  twitchLogin: string | null;
 }
 
 const MAX_BIO = 200;
@@ -20,17 +21,18 @@ function formatBirthday(ddmm: string | null) {
   return `${parseInt(d)}. ${months[parseInt(m) - 1]}`;
 }
 
-export default function ProfileEditor({ birthday: initBirthday, bio: initBio }: Props) {
+export default function ProfileEditor({ birthday: initBirthday, bio: initBio, twitchLogin: initTwitch }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
-  const [birthday, setBirthday] = useState(initBirthday ?? "");
-  const [bio,      setBio]      = useState(initBio      ?? "");
-  const [saving,   setSaving]   = useState(false);
+  const [birthday,    setBirthday]    = useState(initBirthday ?? "");
+  const [bio,         setBio]         = useState(initBio ?? "");
+  const [twitchInput, setTwitchInput] = useState(initTwitch ?? "");
+  const [saving,      setSaving]      = useState(false);
 
-  // Zuletzt gespeicherte Werte für Anzeige & Abbrechen
   const [savedBirthday, setSavedBirthday] = useState(initBirthday);
   const [savedBio,      setSavedBio]      = useState(initBio);
+  const [savedTwitch,   setSavedTwitch]   = useState(initTwitch);
 
   async function save() {
     setSaving(true);
@@ -41,7 +43,9 @@ export default function ProfileEditor({ birthday: initBirthday, bio: initBio }: 
         return;
       }
 
-      const [r1, r2] = await Promise.all([
+      const twitchVal = twitchInput.trim().toLowerCase() || null;
+
+      const [r1, r2, r3] = await Promise.all([
         fetch("/api/profile/birthday", {
           method:  "POST",
           headers: { "Content-Type": "application/json" },
@@ -52,12 +56,23 @@ export default function ProfileEditor({ birthday: initBirthday, bio: initBio }: 
           headers: { "Content-Type": "application/json" },
           body:    JSON.stringify({ bio: bio.trim() || null }),
         }),
+        fetch("/api/profile/twitch", {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({ twitchLogin: twitchVal }),
+        }),
       ]);
 
       if (!r1.ok || !r2.ok) { toast.error("Fehler beim Speichern"); return; }
+      if (!r3.ok) {
+        const err = await r3.json();
+        toast.error(err.error ?? "Twitch-Kanal nicht gefunden");
+        return;
+      }
 
       setSavedBirthday(bdVal);
       setSavedBio(bio.trim() || null);
+      setSavedTwitch(twitchVal);
       setOpen(false);
       toast.success("Profil gespeichert");
       router.refresh();
@@ -69,6 +84,7 @@ export default function ProfileEditor({ birthday: initBirthday, bio: initBio }: 
   function cancel() {
     setBirthday(savedBirthday ?? "");
     setBio(savedBio ?? "");
+    setTwitchInput(savedTwitch ?? "");
     setOpen(false);
   }
 
@@ -93,6 +109,18 @@ export default function ProfileEditor({ birthday: initBirthday, bio: initBio }: 
               <span className="flex items-center gap-1.5 text-xs text-gray-600">
                 <Cake className="w-3.5 h-3.5" />
                 Kein Geburtstag eingetragen
+              </span>
+            )}
+            {savedTwitch ? (
+              <a href={`https://twitch.tv/${savedTwitch}`} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-xs text-[#9146ff] hover:text-purple-300 transition-colors">
+                <Tv2 className="w-3.5 h-3.5" />
+                twitch.tv/{savedTwitch}
+              </a>
+            ) : (
+              <span className="flex items-center gap-1.5 text-xs text-gray-600">
+                <Tv2 className="w-3.5 h-3.5" />
+                Kein Twitch verknüpft
               </span>
             )}
             <button
@@ -140,6 +168,23 @@ export default function ProfileEditor({ birthday: initBirthday, bio: initBio }: 
             />
             <p className="text-[10px] text-gray-600">
               Format: Tag-Monat · Jahreszahl wird nicht gespeichert · Du bekommst am Geburtstag einen Münzen-Boost 🎂
+            </p>
+          </div>
+
+          {/* Twitch */}
+          <div className="space-y-1.5">
+            <label className="flex items-center gap-1.5 text-xs text-gray-400">
+              <Tv2 className="w-3.5 h-3.5 text-[#9146ff]" /> Twitch-Kanal verknüpfen
+            </label>
+            <input
+              type="text"
+              value={twitchInput}
+              onChange={e => setTwitchInput(e.target.value)}
+              placeholder="Dein Twitch-Loginname (z.B. ninja)"
+              className="w-full rounded-xl px-3 py-2.5 text-sm text-white outline-none bg-white/[0.05] border border-white/[0.1] focus:border-purple-500/40 placeholder-gray-600"
+            />
+            <p className="text-[10px] text-gray-600">
+              Wenn du live bist, erscheinst du im "Community streamt gerade"-Widget auf dem Dashboard.
             </p>
           </div>
 

@@ -22,6 +22,7 @@ model User {
   rankPoints    Int       @default(0)   // Prestige-Punkte (Events, Turniere, LuL)
   createdAt     DateTime  @default(now())
 
+  twitchLogin        String?   @unique
   birthday           DateTime? // Nur Datum relevant (month/day)
   birthdayBoostUntil DateTime? // 2x Punkte bis zu diesem Zeitpunkt
   bio                String?   // Kurzer Gruß / Beschreibung (max. 200 Zeichen)
@@ -54,6 +55,7 @@ model User {
   collectibles              UserCollectible[]
   lobbyMessages             LobbyMessage[]
   pushSubscriptions         PushSubscription[]
+  clipSubmissions           EventClipSubmission[]
   systemBadges              UserSystemBadge[]
   customBadgeAwards         UserCustomBadge[]
   dailyMessages             DailyMessage[]
@@ -277,6 +279,7 @@ model Event {
   // JSON: [{ label, question, coins, rankPoints, type: "player"|"spectator" }]
   pollsConfigJson      String?
   summary              String?
+  twitchClipUrl        String?
 
   series        EventSeries?        @relation(fields: [seriesId], references: [id])
   registrations EventRegistration[]
@@ -284,6 +287,20 @@ model Event {
   matches       Match[]
   teams         Team[]
   streamingPartners EventPartner[]
+  clipSubmissions   EventClipSubmission[]
+}
+
+// ── Clip-Einreichungen ────────────────────────────────────────────────────────
+
+model EventClipSubmission {
+  id        String   @id @default(cuid())
+  eventId   String
+  userId    String
+  clipUrl   String
+  createdAt DateTime @default(now())
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([eventId, userId])
 }
 
 // ── Partner ──────────────────────────────────────────────────────────────────
