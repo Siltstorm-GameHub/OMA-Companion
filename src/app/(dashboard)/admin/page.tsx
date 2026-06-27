@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { Users, CalendarDays, Trophy, Star, Zap } from "lucide-react";
 import ResetAllBalancesButton from "./ResetAllBalancesButton";
+import WanderpocalRecomputeButton from "./WanderpocalRecomputeButton";
 import ActivityFeed from "./ActivityFeed";
 
 export default async function AdminPage() {
@@ -49,10 +50,13 @@ export default async function AdminPage() {
         <ActivityFeed transactions={recentActivity} />
       </div>
 
-      {/* Reset */}
+      {/* Wartung */}
       <div>
         <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">🔧 Datenbank-Wartung</h2>
-        <ResetAllBalancesButton />
+        <div className="space-y-3">
+          <WanderpocalRecomputeButton />
+          <ResetAllBalancesButton />
+        </div>
       </div>
     </div>
   );
