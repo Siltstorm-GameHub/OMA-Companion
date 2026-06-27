@@ -3,8 +3,10 @@ import { auth } from "@/auth";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { CalendarDays, Users, Zap, ArrowLeft, Repeat, Trophy, ChevronRight, Check, Clock, Vote, Tv2, Clapperboard } from "lucide-react";
+import { CalendarDays, Users, ArrowLeft, Repeat, Trophy, ChevronRight, Check, Clock, Vote, Tv2, Clapperboard } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
+import RankPointsIcon from "@/components/RankPointsIcon";
+import ClientTime from "@/components/ClientTime";
 import { RelativeTime } from "@/components/RelativeTime";
 import RegisterButton from "../RegisterButton";
 import EventSummarySection from "@/components/EventSummarySection";
@@ -13,6 +15,15 @@ import { EventCategory } from "@prisma/client";
 import SpectatorRegisterButton from "./SpectatorRegisterButton";
 import EventLiveBadge from "./EventLiveBadge";
 import ClipSubmitter from "./ClipSubmitter";
+
+const GENRE_MAP: Record<string, { label: string; icon: string }> = {
+  arcade:    { label: "Arcade",     icon: "/Arcade Icon.png" },
+  beat_em_up:{ label: "Beat-em-Up", icon: "/Beat-em-Up Icon.png" },
+  sport:     { label: "Sport",      icon: "/Sport Icon.png" },
+  racing:    { label: "Racing",     icon: "/Racing Icon.png" },
+  shooter:   { label: "Shooter",    icon: "/Shooter Icon.png" },
+  community: { label: "Community",  icon: "/Community Icon.png" },
+};
 
 const STATUS_CONFIG: Record<string, { label: string; badge: string; dot: string }> = {
   open:     { label: "Offen",       badge: "text-blue-300 bg-blue-500/10 border border-blue-500/20",          dot: "bg-blue-400"                  },
@@ -76,6 +87,22 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
     try { return JSON.parse(raw); } catch { return null; }
   })();
 
+  // 1. Platz Belohnung aus placementRewardsJson
+  const rewardsData: { placements?: { place: number; coins: number; rankPoints: number }[] } | null = (() => {
+    const raw = (event as unknown as Record<string, unknown>).placementRewardsJson;
+    if (!raw) return null;
+    try { return (typeof raw === "string" ? JSON.parse(raw) : raw) as { placements?: { place: number; coins: number; rankPoints: number }[] }; } catch { return null; }
+  })();
+  const firstPlace = rewardsData?.placements?.find(p => p.place === 1) ?? null;
+
+  // Genre + Streaming-Partner
+  const genre = (event as unknown as Record<string, unknown>).genre as string | null | undefined;
+  const genreInfo = genre ? (GENRE_MAP[genre] ?? null) : null;
+  const streamingPartners = (event as unknown as { streamingPartners?: { partner: { id: string; name: string; twitchLogin: string; logoUrl: string } }[] }).streamingPartners ?? [];
+
+  // Server-Fallback für Uhrzeit (client-side überschrieben durch ClientTime)
+  const serverTimeFallback = fmtDate(date, { hour: "2-digit", minute: "2-digit" });
+
   // Reihen-Events aufteilen: kommende vs. vergangene (ohne dieses Event)
   const allSeriesEvents = event.series?.events ?? [];
   const now = new Date();
@@ -124,12 +151,27 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
             </div>
 
             <div className="flex items-center gap-3 flex-wrap text-sm text-gray-400 mb-3">
-              {event.game && <span className="font-medium text-gray-300">{event.game}</span>}
-              <span className="flex items-center gap-1">
+              {event.game && (
+                <span className="flex items-center gap-1.5 font-medium text-gray-300">
+                  {genreInfo && (
+                    <Image src={genreInfo.icon} alt={genreInfo.label} width={15} height={15} className="object-contain shrink-0" />
+                  )}
+                  {event.game}
+                  {genreInfo && <span className="text-gray-600 text-xs font-normal">· {genreInfo.label}</span>}
+                </span>
+              )}
+              {!event.game && genreInfo && (
+                <span className="flex items-center gap-1.5 text-xs text-gray-500">
+                  <Image src={genreInfo.icon} alt={genreInfo.label} width={14} height={14} className="object-contain" />
+                  {genreInfo.label}
+                </span>
+              )}
+              <span className="flex items-center gap-1 text-xs">
                 <CalendarDays className="w-3.5 h-3.5" />
                 {fmtDate(date, { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}
                 {" · "}
-                {fmtDate(date, { hour: "2-digit", minute: "2-digit" })} Uhr
+                <ClientTime iso={date.toISOString()} serverDisplay={serverTimeFallback} />
+                {" Uhr"}
               </span>
             </div>
 
@@ -142,9 +184,24 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
                 <Users className="w-3.5 h-3.5" />
                 {event._count.registrations}{event.maxPlayers ? ` / ${event.maxPlayers}` : ""} Teilnehmer
               </span>
-              {(event.pointReward ?? 0) > 0 && (
-                <span className="flex items-center gap-1 text-xs text-amber-400 font-semibold">
-                  <Zap className="w-3.5 h-3.5" />+{event.pointReward} <CoinIcon size={13} />
+              {firstPlace && (firstPlace.coins > 0 || firstPlace.rankPoints > 0) && (
+                <span className="flex items-center gap-1.5 text-xs text-amber-400 font-semibold border border-amber-500/20 bg-amber-500/[0.08] rounded-full px-2.5 py-1">
+                  <span className="text-[11px]">🥇</span>
+                  {firstPlace.coins > 0 && (
+                    <>
+                      <Image src="/Muenze Icon.png" alt="Münzen" width={13} height={13} className="object-contain shrink-0" />
+                      <span>{firstPlace.coins}</span>
+                    </>
+                  )}
+                  {firstPlace.coins > 0 && firstPlace.rankPoints > 0 && (
+                    <span className="text-amber-800 font-normal">·</span>
+                  )}
+                  {firstPlace.rankPoints > 0 && (
+                    <>
+                      <RankPointsIcon size={13} />
+                      <span>{firstPlace.rankPoints}</span>
+                    </>
+                  )}
                 </span>
               )}
               {isRegistered && (
@@ -164,11 +221,29 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
           </p>
         )}
 
-        {/* Live-Badge wenn Streaming-Partner gerade live */}
-        {(event as any).streamingPartners?.length > 0 && (
-          <div className="mt-3">
+        {/* Streaming-Partner + Live-Badge */}
+        {streamingPartners.length > 0 && (
+          <div className="mt-4 space-y-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Tv2 className="w-3.5 h-3.5 text-[#9146ff] shrink-0" />
+              <span className="text-xs text-gray-500 font-medium">Live übertragen von:</span>
+              {streamingPartners.map(({ partner: p }) => (
+                <a
+                  key={p.id}
+                  href={`https://twitch.tv/${p.twitchLogin}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all hover:brightness-110"
+                  style={{ background: "rgba(145,70,255,0.12)", border: "1px solid rgba(145,70,255,0.25)", color: "#c4a3ff" }}
+                >
+                  <Image src={p.logoUrl} alt={p.name} width={16} height={16} className="rounded-full shrink-0" />
+                  {p.name}
+                  <span className="opacity-50 text-[10px]">↗</span>
+                </a>
+              ))}
+            </div>
             <EventLiveBadge
-              twitchLogins={(event as any).streamingPartners.map((ep: any) => ep.partner.twitchLogin.toLowerCase())}
+              twitchLogins={streamingPartners.map(ep => ep.partner.twitchLogin.toLowerCase())}
             />
           </div>
         )}
@@ -203,31 +278,6 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
         </div>
       </div>
 
-      {/* ── Streaming-Partner ─────────────────────────────────────────── */}
-      {(event as { streamingPartners?: { partner: { id: string; name: string; twitchLogin: string; logoUrl: string } }[] }).streamingPartners?.length ? (
-        <div className="glass rounded-2xl p-4" style={{ border: "1px solid rgba(145,70,255,0.15)" }}>
-          <div className="flex items-center gap-2 mb-3">
-            <Tv2 className="w-4 h-4 text-[#9146ff]" />
-            <span className="text-sm font-semibold text-gray-300">Stream ansehen bei</span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {(event as { streamingPartners?: { partner: { id: string; name: string; twitchLogin: string; logoUrl: string } }[] }).streamingPartners!.map(({ partner: p }) => (
-              <a
-                key={p.id}
-                href={`https://twitch.tv/${p.twitchLogin}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-medium transition-all hover:brightness-110"
-                style={{ background: "rgba(145,70,255,0.1)", border: "1px solid rgba(145,70,255,0.2)", color: "#c4a3ff" }}
-              >
-                <Image src={p.logoUrl} alt={p.name} width={20} height={20} className="rounded-full" />
-                {p.name}
-                <span className="text-[10px] opacity-60">↗</span>
-              </a>
-            ))}
-          </div>
-        </div>
-      ) : null}
 
       {/* ── Eventbericht ──────────────────────────────────────────────── */}
       {event.status === "finished" && event.summary && (
