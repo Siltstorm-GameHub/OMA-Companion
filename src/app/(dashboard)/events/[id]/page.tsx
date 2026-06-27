@@ -2,7 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { CalendarDays, Users, Zap, ArrowLeft, Repeat, Trophy, ChevronRight, Check, Clock, Vote } from "lucide-react";
+import Image from "next/image";
+import { CalendarDays, Users, Zap, ArrowLeft, Repeat, Trophy, ChevronRight, Check, Clock, Vote, Tv2 } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
 import { RelativeTime } from "@/components/RelativeTime";
 import RegisterButton from "../RegisterButton";
@@ -30,6 +31,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
     include: {
       _count:        { select: { registrations: true } },
       registrations: userId ? { where: { userId }, select: { userId: true, role: true } } : { select: { userId: true, role: true }, take: 0 },
+      streamingPartners: { include: { partner: true } },
       series: {
         include: {
           events: {
@@ -188,6 +190,32 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
           )}
         </div>
       </div>
+
+      {/* ── Streaming-Partner ─────────────────────────────────────────── */}
+      {(event as { streamingPartners?: { partner: { id: string; name: string; twitchLogin: string; logoUrl: string } }[] }).streamingPartners?.length ? (
+        <div className="glass rounded-2xl p-4" style={{ border: "1px solid rgba(145,70,255,0.15)" }}>
+          <div className="flex items-center gap-2 mb-3">
+            <Tv2 className="w-4 h-4 text-[#9146ff]" />
+            <span className="text-sm font-semibold text-gray-300">Stream ansehen bei</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {(event as { streamingPartners?: { partner: { id: string; name: string; twitchLogin: string; logoUrl: string } }[] }).streamingPartners!.map(({ partner: p }) => (
+              <a
+                key={p.id}
+                href={`https://twitch.tv/${p.twitchLogin}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-medium transition-all hover:brightness-110"
+                style={{ background: "rgba(145,70,255,0.1)", border: "1px solid rgba(145,70,255,0.2)", color: "#c4a3ff" }}
+              >
+                <Image src={p.logoUrl} alt={p.name} width={20} height={20} className="rounded-full" />
+                {p.name}
+                <span className="text-[10px] opacity-60">↗</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {/* ── Eventbericht ──────────────────────────────────────────────── */}
       {event.status === "finished" && event.summary && (

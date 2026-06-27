@@ -8,6 +8,7 @@ import { OnboardingModal } from "@/components/OnboardingModal";
 import { BackToTop } from "@/components/BackToTop";
 import { FloatingLobbyChat } from "@/components/FloatingLobbyChat";
 import AuroraBackground from "@/components/AuroraBackground";
+import PartnerFooter from "@/components/PartnerFooter";
 import { prisma } from "@/lib/prisma";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -121,6 +122,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         style={{ position: "relative", zIndex: 2 }}
       >
         {children}
+        <PartnerFooter />
       </main>
 
       {/* Onboarding für neue User */}

@@ -13,6 +13,7 @@ export default async function AdminEventEditPage({ params }: { params: Promise<{
       include: {
         series: { select: { id: true, name: true, fixedGame: true, discordChannelId: true, placementRewardsJson: true, pollConfigJson: true } },
         registrations: { select: { userId: true } },
+        streamingPartners: { select: { partnerId: true } },
         _count: { select: { registrations: true } },
         participants: {
           include: { user: { select: { id: true, name: true, username: true, image: true } } },

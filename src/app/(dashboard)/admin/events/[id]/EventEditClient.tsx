@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import {
   ChevronLeft, Save, Trophy, CheckCircle2, AlertTriangle, Trash2,
-  Search, UserPlus, UserMinus, Repeat, ExternalLink, AlertCircle, Plus,
+  Search, UserPlus, UserMinus, Repeat, ExternalLink, AlertCircle, Plus, Tv2,
 } from "lucide-react";
 import { EventCategory, EventGenre } from "@prisma/client";
 import GameNameInput from "@/components/GameNameInput";
@@ -156,6 +156,14 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
   const hasStat       = ["ffa", "coop_stats", "avg_stats"].includes(tmtFormat);
   const isLiga        = tmtFormat === "liga";
 
+    /* ── Partners state ── */
+  const [allPartners, setAllPartners] = useState<{ id: string; name: string; twitchLogin: string; logoUrl: string }[]>([]);
+  const [selectedPartnerIds, setSelectedPartnerIds] = useState<string[]>(
+    (event.streamingPartners ?? []).map((ep: { partnerId: string }) => ep.partnerId)
+  );
+  const [partnersLoaded, setPartnersLoaded] = useState(false);
+  const [partnerSaving, setPartnerSaving] = useState(false);
+
   /* ── Participants state ── */
   const [search, setSearch]             = useState("");
   const [bulkSelected, setBulkSelected] = useState<string[]>([]);
@@ -170,6 +178,25 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
 
   const seriesGame    = event.series?.fixedGame;
   const seriesDiscord = event.series?.discordChannelId;
+
+  async function loadPartners() {
+    if (partnersLoaded) return;
+    const res = await fetch("/api/partners");
+    if (res.ok) { setAllPartners(await res.json()); }
+    setPartnersLoaded(true);
+  }
+
+  async function savePartners() {
+    setPartnerSaving(true);
+    const res = await fetch(`/api/admin/events/${event.id}/partners`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ partnerIds: selectedPartnerIds }),
+    });
+    setPartnerSaving(false);
+    if (res.ok) toast.success("Streaming-Partner gespeichert");
+    else toast.error("Fehler beim Speichern");
+  }
 
   function updatePlacement(place: number, key: keyof PlacementReward, value: number) {
     setPlacements(prev => prev.map(p => p.place === place ? { ...p, [key]: value } : p));
@@ -479,6 +506,61 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
             </label>
             <input type="text" value={discordChannelId} onChange={e => setDiscordChannelId(e.target.value)}
               placeholder="Leer = Standard" className={inputCls} />
+          </div>
+
+          {/* ── Streaming-Partner ── */}
+          <div className="rounded-xl border border-white/[0.06] bg-gray-900/50 p-4 space-y-3">
+            <button
+              type="button"
+              onClick={loadPartners}
+              className="flex items-center gap-2 w-full text-left"
+            >
+              <Tv2 className="w-4 h-4 text-[#9146ff]" />
+              <span className="text-sm font-semibold text-gray-300">Streaming-Partner</span>
+              {!partnersLoaded && <span className="text-xs text-gray-600 ml-auto">Klicken zum Laden</span>}
+            </button>
+            {partnersLoaded && (
+              <>
+                {allPartners.length === 0 ? (
+                  <p className="text-xs text-gray-600">Keine Partner eingetragen. Im Admin-Bereich unter Community → Partner anlegen.</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {allPartners.map((p) => (
+                      <label key={p.id} className="flex items-center gap-2.5 cursor-pointer group">
+                        <input
+                          type="checkbox"
+                          checked={selectedPartnerIds.includes(p.id)}
+                          onChange={(e) => {
+                            setSelectedPartnerIds((ids) =>
+                              e.target.checked ? [...ids, p.id] : ids.filter((id) => id !== p.id)
+                            );
+                          }}
+                          className="rounded accent-violet-500"
+                        />
+                        <Image
+                          src={p.logoUrl}
+                          alt={p.name}
+                          width={20}
+                          height={20}
+                          className="rounded-full"
+                        />
+                        <span className="text-sm text-gray-300 group-hover:text-white transition-colors">{p.name}</span>
+                        <span className="text-xs text-gray-600">twitch.tv/{p.twitchLogin}</span>
+                      </label>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={savePartners}
+                      disabled={partnerSaving}
+                      className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-violet-500/15 border border-violet-500/25 text-violet-300 hover:bg-violet-500/25 disabled:opacity-50 transition-colors"
+                    >
+                      <Save className="w-3.5 h-3.5" />
+                      {partnerSaving ? "Speichert…" : "Streaming-Partner speichern"}
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
           </div>
 
           <button onClick={handleSave} disabled={loading}

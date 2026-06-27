@@ -13,6 +13,7 @@ import { CountUp } from "@/components/CountUp";
 import GameCover from "@/components/GameCover";
 import EventCoverDefault from "@/components/EventCoverDefault";
 import { DailyMessageBanner } from "@/components/DailyMessageBanner";
+import PartnerLiveBanner from "@/components/PartnerLiveBanner";
 
 const MEDAL = ["🥇", "🥈", "🥉"];
 
@@ -246,6 +247,9 @@ export default async function DashboardPage() {
           ))}
         </div>
       </div>
+
+      {/* ── Partner Live-Streams ─────────────────────────────────── */}
+      <PartnerLiveBanner />
 
       {/* ── Tägliche Mitteilung ───────────────────────────────────── */}
       {activeDailyMessage && (
