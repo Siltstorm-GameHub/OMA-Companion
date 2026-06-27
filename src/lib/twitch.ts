@@ -43,6 +43,33 @@ export async function getTwitchUser(login: string): Promise<TwitchUser | null> {
   return data.data[0] ?? null;
 }
 
+export type TwitchClip = {
+  id: string;
+  url: string;
+  embed_url: string;
+  broadcaster_name: string;
+  creator_name: string;
+  title: string;
+  thumbnail_url: string;
+  created_at: string;
+};
+
+export async function getPartnerClips(broadcasterId: string, from: Date, to: Date): Promise<TwitchClip[]> {
+  const token = await getAppAccessToken();
+  const params = new URLSearchParams({
+    broadcaster_id: broadcasterId,
+    started_at: from.toISOString(),
+    ended_at: to.toISOString(),
+    first: "20",
+  });
+  const res = await fetch(`https://api.twitch.tv/helix/clips?${params}`, {
+    headers: { "Client-ID": TWITCH_CLIENT_ID, Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) return [];
+  const data = (await res.json()) as { data: TwitchClip[] };
+  return data.data;
+}
+
 export async function getLiveStreams(logins: string[]): Promise<TwitchStream[]> {
   if (logins.length === 0) return [];
   const token = await getAppAccessToken();

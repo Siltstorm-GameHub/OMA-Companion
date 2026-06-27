@@ -15,6 +15,7 @@ import { EventCategory } from "@prisma/client";
 import SpectatorRegisterButton from "./SpectatorRegisterButton";
 import EventLiveBadge from "./EventLiveBadge";
 import ClipSubmitter from "./ClipSubmitter";
+import StreamRegisterButton from "@/components/StreamRegisterButton";
 
 const GENRE_MAP: Record<string, { label: string; icon: string }> = {
   arcade:    { label: "Arcade",     icon: "/Arcade Icon.png" },
@@ -44,7 +45,8 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
     include: {
       _count:        { select: { registrations: true } },
       registrations: userId ? { where: { userId }, select: { userId: true, role: true } } : { select: { userId: true, role: true }, take: 0 },
-      streamingPartners: { include: { partner: true } },
+      streamingPartners: { include: { partner: { include: { user: { select: { id: true } } } } } },
+      communityStreamers: { include: { user: { select: { id: true, name: true, username: true, image: true, twitchLogin: true } } } },
       clipSubmissions: userId ? { where: { userId }, select: { clipUrl: true } } : false,
       series: {
         include: {
@@ -98,7 +100,21 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
   // Genre + Streaming-Partner
   const genre = (event as unknown as Record<string, unknown>).genre as string | null | undefined;
   const genreInfo = genre ? (GENRE_MAP[genre] ?? null) : null;
-  const streamingPartners = (event as unknown as { streamingPartners?: { partner: { id: string; name: string; twitchLogin: string; logoUrl: string } }[] }).streamingPartners ?? [];
+  type PartnerEntry = { partner: { id: string; name: string; twitchLogin: string; logoUrl: string; user?: { id: string } | null } };
+  type CommunityStreamerEntry = { user: { id: string; name: string | null; username: string | null; image: string | null; twitchLogin: string | null } };
+  const streamingPartners = (event as unknown as { streamingPartners?: PartnerEntry[] }).streamingPartners ?? [];
+  const communityStreamers = (event as unknown as { communityStreamers?: CommunityStreamerEntry[] }).communityStreamers ?? [];
+
+  // Check if current user is already a partner streamer (linked via Partner.userId)
+  const isPartnerStreamer = userId ? streamingPartners.some(sp => sp.partner.user?.id === userId) : false;
+  // Check if current user is already a community streamer
+  const isCommunityStreamer = userId ? communityStreamers.some(cs => cs.user.id === userId) : false;
+  // Show stream register button only for logged-in users on open/active events who are not partner streamers
+  const canStreamRegister = !!userId && canRegister && !isPartnerStreamer;
+
+  // Combined streamers for display (community streamers not already in partners)
+  const partnerUserIds = new Set(streamingPartners.map(sp => sp.partner.user?.id).filter(Boolean));
+  const filteredCommunityStreamers = communityStreamers.filter(cs => !partnerUserIds.has(cs.user.id));
 
   // Server-Fallback für Uhrzeit (client-side überschrieben durch ClientTime)
   const serverTimeFallback = fmtDate(date, { hour: "2-digit", minute: "2-digit" });
@@ -221,8 +237,8 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
           </p>
         )}
 
-        {/* Streaming-Partner + Live-Badge */}
-        {streamingPartners.length > 0 && (
+        {/* Streaming-Partner + Community-Streamer + Live-Badge */}
+        {(streamingPartners.length > 0 || filteredCommunityStreamers.length > 0) && (
           <div className="mt-4 space-y-2">
             <div className="flex items-center gap-2 flex-wrap">
               <Tv2 className="w-3.5 h-3.5 text-[#9146ff] shrink-0" />
@@ -241,10 +257,37 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
                   <span className="opacity-50 text-[10px]">↗</span>
                 </a>
               ))}
+              {filteredCommunityStreamers.map(({ user: u }) => (
+                u.twitchLogin ? (
+                  <a
+                    key={u.id}
+                    href={`https://twitch.tv/${u.twitchLogin}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all hover:brightness-110"
+                    style={{ background: "rgba(145,70,255,0.08)", border: "1px solid rgba(145,70,255,0.18)", color: "#c4a3ff" }}
+                  >
+                    {u.image && <Image src={u.image} alt={u.name ?? u.username ?? ""} width={16} height={16} className="rounded-full shrink-0" />}
+                    {u.name ?? u.username}
+                    <span className="opacity-50 text-[10px]">↗</span>
+                  </a>
+                ) : (
+                  <span
+                    key={u.id}
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium"
+                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "#9ca3af" }}
+                  >
+                    {u.image && <Image src={u.image} alt={u.name ?? u.username ?? ""} width={16} height={16} className="rounded-full shrink-0" />}
+                    {u.name ?? u.username}
+                  </span>
+                )
+              ))}
             </div>
-            <EventLiveBadge
-              twitchLogins={streamingPartners.map(ep => ep.partner.twitchLogin.toLowerCase())}
-            />
+            {streamingPartners.length > 0 && (
+              <EventLiveBadge
+                twitchLogins={streamingPartners.map(ep => ep.partner.twitchLogin.toLowerCase())}
+              />
+            )}
           </div>
         )}
 
@@ -255,6 +298,9 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
           )}
           {userId && canRegister && (event as { spectatorMode?: boolean }).spectatorMode && !isRegistered && (
             <SpectatorRegisterButton eventId={event.id} isSpectator={isSpectator} />
+          )}
+          {canStreamRegister && (
+            <StreamRegisterButton eventId={event.id} isStreaming={isCommunityStreamer} />
           )}
           {event.format && (
             <Link href={`/tournament/${event.id}`}

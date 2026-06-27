@@ -5,7 +5,10 @@ import PartnerManager from "./PartnerManager";
 export default async function AdminPartnersPage() {
   await requireRole("moderator");
 
-  const partners = await prisma.partner.findMany({ orderBy: { order: "asc" } });
+  const partners = await prisma.partner.findMany({
+    orderBy: { order: "asc" },
+    include: { user: { select: { id: true, name: true, username: true, image: true, twitchLogin: true } } },
+  });
 
   return (
     <div className="space-y-6">

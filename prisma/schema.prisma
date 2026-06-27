@@ -56,6 +56,8 @@ model User {
   lobbyMessages             LobbyMessage[]
   pushSubscriptions         PushSubscription[]
   clipSubmissions           EventClipSubmission[]
+  clipNominations           ClipNomination[]
+  contestVotes              ClipContestVote[]
   systemBadges              UserSystemBadge[]
   customBadgeAwards         UserCustomBadge[]
   dailyMessages             DailyMessage[]
@@ -331,6 +333,48 @@ model EventPartner {
   event     Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
   partner   Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
   @@unique([eventId, partnerId])
+}
+
+// ── Clip des Monats ───────────────────────────────────────────────────────────
+
+model MonthlyClipContest {
+  id          String           @id @default(cuid())
+  month       Int              // 1-12 (der bewertete Vormonat)
+  year        Int
+  status      String           @default("voting") // voting | finished
+  rewardCoins Int              @default(500)
+  winnerNominationId String?
+  createdAt   DateTime         @default(now())
+  nominations ClipNomination[]
+  votes       ClipContestVote[]
+  @@unique([month, year])
+}
+
+model ClipNomination {
+  id                 String             @id @default(cuid())
+  contestId          String
+  clipUrl            String
+  thumbnailUrl       String?
+  clipTitle          String?
+  submittedByUserId  String?            // Community-Clip: User der eingereicht hat
+  twitchCreatorLogin String?            // Partner-Clip: Twitch-Login des Clip-Erstellers
+  partnerTwitchLogin String?            // Partner-Clip: Twitch-Login des Kanals
+  contest            MonthlyClipContest @relation(fields: [contestId], references: [id], onDelete: Cascade)
+  submittedBy        User?              @relation(fields: [submittedByUserId], references: [id], onDelete: SetNull)
+  votes              ClipContestVote[]
+  createdAt          DateTime           @default(now())
+}
+
+model ClipContestVote {
+  id           String             @id @default(cuid())
+  contestId    String
+  nominationId String
+  userId       String
+  contest      MonthlyClipContest @relation(fields: [contestId], references: [id], onDelete: Cascade)
+  nomination   ClipNomination     @relation(fields: [nominationId], references: [id], onDelete: Cascade)
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime           @default(now())
+  @@unique([contestId, userId])
 }
 
 // Community members who self-register as streamer for an event

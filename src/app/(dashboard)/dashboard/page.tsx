@@ -15,6 +15,7 @@ import EventCoverDefault from "@/components/EventCoverDefault";
 import { DailyMessageBanner } from "@/components/DailyMessageBanner";
 import PartnerLiveBanner from "@/components/PartnerLiveBanner";
 import CommunityLiveBanner from "@/components/CommunityLiveBanner";
+import ClipContestWidget from "@/components/ClipContestWidget";
 
 const MEDAL = ["🥇", "🥈", "🥉"];
 
@@ -254,6 +255,9 @@ export default async function DashboardPage() {
 
       {/* ── Community Live-Streams ───────────────────────────────── */}
       <CommunityLiveBanner />
+
+      {/* ── Clip des Monats ──────────────────────────────────────── */}
+      <ClipContestWidget userId={userId} />
 
       {/* ── Tägliche Mitteilung ───────────────────────────────────── */}
       {activeDailyMessage && (
