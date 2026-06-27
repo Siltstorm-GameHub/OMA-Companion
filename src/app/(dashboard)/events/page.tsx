@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import RegisterButton from "./RegisterButton";
 import SyncButton from "./SyncButton";
+import StreamRegisterButton from "@/components/StreamRegisterButton";
 import CoinIcon from "@/components/CoinIcon";
 import { RelativeTime } from "@/components/RelativeTime";
 import Link from "next/link";
@@ -52,6 +53,8 @@ export default async function EventsPage() {
         _count:        { select: { registrations: true } },
         series:        { select: { id: true, name: true } },
         registrations: { select: { userId: true } },
+        streamingPartners: { include: { partner: { select: { userId: true } } } },
+        communityStreamers: userId ? { where: { userId }, select: { userId: true } } : { select: { userId: true }, take: 0 },
       },
     }),
     prisma.lulSeason.findFirst({
@@ -149,6 +152,12 @@ export default async function EventsPage() {
               : false;
             const isFull       = !!(ev.maxPlayers && ev._count.registrations >= ev.maxPlayers);
             const canRegister  = ev.status === "open" || ev.status === "active";
+            const isPartnerStreamer = userId
+              ? (ev as unknown as { streamingPartners: { partner: { userId: string | null } }[] }).streamingPartners.some(sp => sp.partner.userId === userId)
+              : false;
+            const isCommunityStreamer = userId
+              ? (ev as unknown as { communityStreamers: { userId: string }[] }).communityStreamers.length > 0
+              : false;
             const isTournament = !!ev.format;
             const hasSeries    = !!ev.seriesId;
             const discordUrl   = ev.discordEventId && GUILD_ID
@@ -234,6 +243,9 @@ export default async function EventsPage() {
                       isFull={isFull && !isRegistered}
                       discordEventUrl={discordUrl}
                     />
+                  )}
+                  {userId && canRegister && !isPartnerStreamer && (
+                    <StreamRegisterButton eventId={ev.id} isStreaming={isCommunityStreamer} />
                   )}
                 </div>
               </div>
