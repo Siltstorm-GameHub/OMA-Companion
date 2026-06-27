@@ -283,6 +283,29 @@ model Event {
   participants  TournamentParticipant[]
   matches       Match[]
   teams         Team[]
+  streamingPartners EventPartner[]
+}
+
+// ── Partner ──────────────────────────────────────────────────────────────────
+
+model Partner {
+  id          String   @id @default(cuid())
+  name        String
+  twitchLogin String   @unique
+  logoUrl     String
+  isActive    Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  events      EventPartner[]
+}
+
+model EventPartner {
+  id        String  @id @default(cuid())
+  eventId   String
+  partnerId String
+  event     Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  partner   Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  @@unique([eventId, partnerId])
 }
 
 model EventRegistration {
