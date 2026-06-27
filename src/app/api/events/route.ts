@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
     game:             event.game,
     startAt:          event.startAt,
     maxPlayers:       event.maxPlayers,
-    pointReward:      null,
+    pointReward:      0,
     discordChannelId: event.discordChannelId,
   });
   if (discordMessageId) {
