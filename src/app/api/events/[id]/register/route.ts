@@ -9,15 +9,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const { id: eventId } = await params;
   const userId = session.user.id;
+  const body = await req.json().catch(() => ({}));
+  const role: "player" | "spectator" = body.role === "spectator" ? "spectator" : "player";
 
   const event = await prisma.event.findUnique({
     where: { id: eventId },
-    include: { _count: { select: { registrations: true } } },
+    include: { _count: { select: { registrations: { where: { role: "player" } } } } },
   });
   if (!event) return NextResponse.json({ error: "Event nicht gefunden" }, { status: 404 });
   if (event.status === "finished" || event.status === "closed")
     return NextResponse.json({ error: "Registrierung geschlossen" }, { status: 400 });
-  if (event.maxPlayers && event._count.registrations >= event.maxPlayers)
+  if (role === "spectator" && !event.spectatorMode)
+    return NextResponse.json({ error: "Zuschauer-Registrierung nicht aktiviert" }, { status: 400 });
+  if (role === "player" && event.maxPlayers && event._count.registrations >= event.maxPlayers)
     return NextResponse.json({ error: "Event ist voll" }, { status: 400 });
 
   const existing = await prisma.eventRegistration.findUnique({
@@ -25,15 +29,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   });
   if (existing) return NextResponse.json({ error: "Bereits registriert" }, { status: 400 });
 
-  const registration = await prisma.eventRegistration.create({ data: { userId, eventId } });
-
-  // Award the event's configured coin reward (no rankPoints for event sign-ups)
-  if (event.pointReward > 0) {
-    await prisma.$transaction([
-      prisma.user.update({ where: { id: userId }, data: { points: { increment: event.pointReward } } }),
-      prisma.pointTransaction.create({ data: { userId, amount: event.pointReward, reason: `Event-Anmeldung: ${event.title}` } }),
-    ]);
-  }
+  const registration = await prisma.eventRegistration.create({ data: { userId, eventId, role } });
 
   await updateQuestProgress(userId, "EVENT_ATTEND", 1);
   return NextResponse.json(registration, { status: 201 });

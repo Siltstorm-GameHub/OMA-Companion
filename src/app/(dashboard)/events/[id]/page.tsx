@@ -7,6 +7,9 @@ import CoinIcon from "@/components/CoinIcon";
 import { RelativeTime } from "@/components/RelativeTime";
 import RegisterButton from "../RegisterButton";
 import EventSummarySection from "@/components/EventSummarySection";
+import EventCategoryBadge from "@/components/EventCategoryBadge";
+import { EventCategory } from "@prisma/client";
+import SpectatorRegisterButton from "./SpectatorRegisterButton";
 
 const STATUS_CONFIG: Record<string, { label: string; badge: string; dot: string }> = {
   open:     { label: "Offen",       badge: "text-blue-300 bg-blue-500/10 border border-blue-500/20",          dot: "bg-blue-400"                  },
@@ -26,7 +29,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
     where: { id },
     include: {
       _count:        { select: { registrations: true } },
-      registrations: userId ? { where: { userId }, select: { userId: true } } : { select: { userId: true }, take: 0 },
+      registrations: userId ? { where: { userId }, select: { userId: true, role: true } } : { select: { userId: true, role: true }, take: 0 },
       series: {
         include: {
           events: {
@@ -44,7 +47,9 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
   if (!event) notFound();
 
   const s            = STATUS_CONFIG[event.status] ?? STATUS_CONFIG.finished;
-  const isRegistered = userId ? event.registrations.some(r => r.userId === userId) : false;
+  const myReg        = userId ? event.registrations.find(r => r.userId === userId) : null;
+  const isRegistered = !!myReg && myReg.role !== "spectator";
+  const isSpectator  = !!myReg && myReg.role === "spectator";
   const isFull       = !!(event.maxPlayers && event._count.registrations >= event.maxPlayers);
   const canRegister  = event.status === "open" || event.status === "active";
   const date         = new Date(event.startAt);
@@ -110,6 +115,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
             <div className="flex items-center gap-2 flex-wrap mb-1">
               <h1 className="text-xl font-bold text-white">{event.title}</h1>
               {event.format && <Trophy className="w-4 h-4 text-amber-400 shrink-0" />}
+              {event.category && <EventCategoryBadge category={event.category as EventCategory} />}
             </div>
 
             <div className="flex items-center gap-3 flex-wrap text-sm text-gray-400 mb-3">
@@ -157,6 +163,9 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
         <div className="mt-5 flex items-center gap-3 flex-wrap">
           {userId && canRegister && (
             <RegisterButton eventId={event.id} isRegistered={isRegistered} isFull={isFull && !isRegistered} discordEventUrl={discordUrl} />
+          )}
+          {userId && canRegister && (event as { spectatorMode?: boolean }).spectatorMode && !isRegistered && (
+            <SpectatorRegisterButton eventId={event.id} isSpectator={isSpectator} />
           )}
           {event.format && (
             <Link href={`/tournament/${event.id}`}

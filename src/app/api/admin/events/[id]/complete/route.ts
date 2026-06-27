@@ -55,26 +55,39 @@ export async function POST(
   await requireRole("moderator");
   const { id: eventId } = await params;
 
+  type PollResult = {
+    label: string;
+    winnerIds: string[];
+    coins: number;
+    rankPoints: number;
+    type: "player" | "spectator";
+  };
+
   const body = await req.json() as {
     mvpUserId?: string;
     winnerStatField?: string;
     seriesWinnerTargetField?: string;
+    // Legacy single-poll fields (kept for backward compat)
     pollWinnerIds?: string[];
     pollLabel?: string;
     pollBonusCoins?: number;
     pollBonusRankPoints?: number;
     pollExcludedUserIds?: string[];
+    // Multi-poll results
+    pollResults?: PollResult[];
     finalRanking?: string[];
-    finalRankingGroups?: string[][];  // tied groups – if provided, used for point awards
+    finalRankingGroups?: string[][];
     finalRankingNote?: string;
     participationCoins?: number;
     placements?: PlacementReward[];
+    // Spectator rewards
+    spectatorAttendedIds?: string[];
   };
 
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     include: {
-      registrations: { select: { userId: true } },
+      registrations: { select: { userId: true, role: true } },
       series: true,
       matches: {
         include: {
@@ -118,6 +131,8 @@ export async function POST(
   }
 
   const registeredSet = new Set(event.registrations.map(r => r.userId));
+  const playerIds = event.registrations.filter(r => r.role === "player").map(r => r.userId);
+  const spectatorIds = event.registrations.filter(r => r.role === "spectator").map(r => r.userId);
 
   // ── Coin/RankPoint-Vergabe (nur beim ersten Abschluss) ──────────────────────
   if (!isReEdit) {
@@ -126,12 +141,10 @@ export async function POST(
       placements: body.placements ?? parseRewards(event.placementRewardsJson ?? event.series?.placementRewardsJson).placements,
     };
 
-    const participantIds = event.registrations.map(r => r.userId);
-
-    // Teilnahme-Münzen für alle Registrierten
-    if (rewards.participationCoins > 0 && participantIds.length > 0) {
+    // Teilnahme-Münzen für alle Spieler
+    if (rewards.participationCoins > 0 && playerIds.length > 0) {
       await prisma.$transaction(
-        participantIds.flatMap(userId => [
+        playerIds.flatMap(userId => [
           prisma.user.update({
             where: { id: userId },
             data: { points: { increment: rewards.participationCoins } },
@@ -141,6 +154,33 @@ export async function POST(
           }),
         ])
       );
+    }
+
+    // Zuschauer-Basis-Belohnung für anwesende Zuschauer
+    if (event.spectatorMode && body.spectatorAttendedIds?.length && event.spectatorRewardJson) {
+      const spectatorReward = (() => {
+        try { return JSON.parse(event.spectatorRewardJson) as { coins: number; rankPoints: number }; }
+        catch { return null; }
+      })();
+      const attendedSpectators = (body.spectatorAttendedIds ?? []).filter(id => spectatorIds.includes(id));
+      if (spectatorReward && attendedSpectators.length > 0) {
+        const txns: Prisma.PrismaPromise<unknown>[] = [];
+        for (const userId of attendedSpectators) {
+          if (spectatorReward.coins > 0) {
+            txns.push(
+              prisma.user.update({ where: { id: userId }, data: { points: { increment: spectatorReward.coins } } }),
+              prisma.pointTransaction.create({ data: { userId, amount: spectatorReward.coins, reason: `[Münzen] Zuschauer: ${event.title}` } })
+            );
+          }
+          if (spectatorReward.rankPoints > 0) {
+            txns.push(
+              prisma.user.update({ where: { id: userId }, data: { rankPoints: { increment: spectatorReward.rankPoints } } }),
+              prisma.pointTransaction.create({ data: { userId, amount: spectatorReward.rankPoints, reason: `[Rang-Punkte] Zuschauer: ${event.title}` } })
+            );
+          }
+        }
+        if (txns.length > 0) await prisma.$transaction(txns);
+      }
     }
 
     // Platzierungs-Münzen + Rang-Punkte (unterstützt Gleichstand via finalRankingGroups)
@@ -221,7 +261,7 @@ export async function POST(
     }
   }
 
-  // Neue Poll-Gewinner vergeben
+  // Neue Poll-Gewinner vergeben (legacy single poll)
   const newPollWinners = (body.pollWinnerIds ?? []).filter(id => registeredSet.has(id));
   const pollCoins = body.pollBonusCoins ?? 0;
   const pollRankPts = body.pollBonusRankPoints ?? 0;
@@ -241,6 +281,30 @@ export async function POST(
       );
     }
     if (txns.length > 0) await prisma.$transaction(txns);
+  }
+
+  // Multi-Poll-Belohnungen (pollResults array)
+  if (body.pollResults?.length) {
+    for (const poll of body.pollResults) {
+      const eligibleIds = poll.type === "spectator" ? spectatorIds : playerIds;
+      const winners = (poll.winnerIds ?? []).filter(id => eligibleIds.includes(id));
+      for (const userId of winners) {
+        const txns: Prisma.PrismaPromise<unknown>[] = [];
+        if (poll.coins > 0) {
+          txns.push(
+            prisma.user.update({ where: { id: userId }, data: { points: { increment: poll.coins } } }),
+            prisma.pointTransaction.create({ data: { userId, amount: poll.coins, reason: `[Münzen] ${poll.label}: ${event.title}` } })
+          );
+        }
+        if (poll.rankPoints > 0) {
+          txns.push(
+            prisma.user.update({ where: { id: userId }, data: { rankPoints: { increment: poll.rankPoints } } }),
+            prisma.pointTransaction.create({ data: { userId, amount: poll.rankPoints, reason: `[Rang-Punkte] ${poll.label}: ${event.title}` } })
+          );
+        }
+        if (txns.length > 0) await prisma.$transaction(txns);
+      }
+    }
   }
 
   // ── Series-Standings (optional, nur wenn Event in einer Reihe ist) ──────────
@@ -315,15 +379,20 @@ export async function POST(
     seriesWinnerTargetField: body.seriesWinnerTargetField ?? null,
     eventWinnerId:           eventWinnerId ?? null,
     eventWinnerIds:          eventWinnerIds.length > 0 ? eventWinnerIds : null,
+    // Legacy single poll
     pollWinnerIds:           newPollWinners.length > 0 ? newPollWinners : null,
     pollLabel:               body.pollLabel ?? null,
     pollBonusCoins:          pollCoins > 0 ? pollCoins : null,
     pollBonusRankPoints:     pollRankPts > 0 ? pollRankPts : null,
     pollExcludedUserIds:     body.pollExcludedUserIds && body.pollExcludedUserIds.length > 0 ? body.pollExcludedUserIds : null,
+    // Multi-poll results
+    pollResults:             body.pollResults?.length ? body.pollResults : null,
+    // Spectator
+    spectatorAttendedIds:    body.spectatorAttendedIds?.length ? body.spectatorAttendedIds : null,
     finalRanking:            body.finalRanking ?? null,
     finalRankingGroups:      body.finalRankingGroups ?? null,
     gamePhaseComplete:       true,
-    pollPhaseComplete:       newPollWinners.length > 0,
+    pollPhaseComplete:       newPollWinners.length > 0 || (body.pollResults?.some(p => p.winnerIds.length > 0) ?? false),
     lockedAt:                new Date().toISOString(),
   };
 
