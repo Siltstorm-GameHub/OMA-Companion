@@ -121,18 +121,15 @@ export default async function EventsPage() {
               : "Alle Events"}
           </p>
         </div>
-        {isMod && <SyncButton />}
-      </div>
-
-      {/* ── Clip des Monats Link ──────────────────────────────────── */}
-      <Link href="/clip-des-monats"
-        className="flex items-center gap-3 px-4 py-3 rounded-xl glass border border-[#9146ff]/15 hover:border-[#9146ff]/35 transition-colors group">
-        <div className="w-7 h-7 rounded-lg bg-[#9146ff]/15 flex items-center justify-center shrink-0">
-          <Clapperboard className="w-3.5 h-3.5 text-[#9146ff]" />
+        <div className="flex items-center gap-2">
+          <Link href="/clip-des-monats"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg glass border border-[#9146ff]/20 hover:border-[#9146ff]/40 transition-colors group text-sm">
+            <Clapperboard className="w-3.5 h-3.5 text-[#9146ff]" />
+            <span className="text-gray-300 group-hover:text-white transition-colors">Clip des Monats</span>
+          </Link>
+          {isMod && <SyncButton />}
         </div>
-        <span className="text-sm text-white font-medium">Clip des Monats – Abstimmung & Highlights</span>
-        <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-gray-400 transition-colors ml-auto" />
-      </Link>
+      </div>
 
       <div className="space-y-2">
         {upcomingItems.length === 0 && finishedItems.length === 0 && (
