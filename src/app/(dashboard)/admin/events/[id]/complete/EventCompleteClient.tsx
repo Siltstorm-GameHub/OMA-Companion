@@ -464,8 +464,8 @@ export default function EventCompleteClient({
             </div>
           )}
 
-          {/* Poll */}
-          {pollConfig.enabled && (
+          {/* Poll (legacy – nur wenn kein pollsConfig vorhanden) */}
+          {pollConfig.enabled && pollsConfig.length === 0 && (
             <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(139,92,246,0.05)", border: "1px solid rgba(139,92,246,0.15)" }}>
               <div className="flex items-center gap-2">
                 <Vote className="w-3.5 h-3.5 text-violet-400" />
