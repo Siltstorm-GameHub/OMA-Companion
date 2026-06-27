@@ -99,12 +99,20 @@ function EventCard({ ev, userId, fixedGame }: { ev: SeriesEventItem; userId: str
         {/* Streaming Partners */}
         {partners.length > 0 && (
           <div className="flex items-center gap-1 mt-1 flex-wrap">
-            <Tv2 className="w-3 h-3 text-violet-400 shrink-0" />
+            <Tv2 className="w-3 h-3 text-[#9146ff] shrink-0" />
             {partners.map(sp => (
-              <span key={sp.partner.id}
-                className="text-[10px] px-1.5 py-0.5 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-300">
+              <a
+                key={sp.partner.id}
+                href={`https://twitch.tv/${sp.partner.twitchLogin}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={e => e.stopPropagation()}
+                className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-lg font-medium hover:brightness-110 transition-all"
+                style={{ background: "rgba(145,70,255,0.12)", border: "1px solid rgba(145,70,255,0.25)", color: "#c4a3ff" }}
+              >
+                <Image src={sp.partner.logoUrl} alt={sp.partner.name} width={12} height={12} className="rounded-full shrink-0" />
                 {sp.partner.name}
-              </span>
+              </a>
             ))}
           </div>
         )}
