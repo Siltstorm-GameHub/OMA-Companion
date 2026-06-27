@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { CalendarDays, Users, Zap, ArrowLeft, Repeat, Trophy, ChevronRight, Check, Clock, Vote, Tv2 } from "lucide-react";
+import { CalendarDays, Users, Zap, ArrowLeft, Repeat, Trophy, ChevronRight, Check, Clock, Vote, Tv2, Clapperboard } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
 import { RelativeTime } from "@/components/RelativeTime";
 import RegisterButton from "../RegisterButton";
@@ -11,6 +11,8 @@ import EventSummarySection from "@/components/EventSummarySection";
 import EventCategoryBadge from "@/components/EventCategoryBadge";
 import { EventCategory } from "@prisma/client";
 import SpectatorRegisterButton from "./SpectatorRegisterButton";
+import EventLiveBadge from "./EventLiveBadge";
+import ClipSubmitter from "./ClipSubmitter";
 
 const STATUS_CONFIG: Record<string, { label: string; badge: string; dot: string }> = {
   open:     { label: "Offen",       badge: "text-blue-300 bg-blue-500/10 border border-blue-500/20",          dot: "bg-blue-400"                  },
@@ -32,6 +34,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
       _count:        { select: { registrations: true } },
       registrations: userId ? { where: { userId }, select: { userId: true, role: true } } : { select: { userId: true, role: true }, take: 0 },
       streamingPartners: { include: { partner: true } },
+      clipSubmissions: userId ? { where: { userId }, select: { clipUrl: true } } : false,
       series: {
         include: {
           events: {
@@ -161,6 +164,15 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
           </p>
         )}
 
+        {/* Live-Badge wenn Streaming-Partner gerade live */}
+        {(event as any).streamingPartners?.length > 0 && (
+          <div className="mt-3">
+            <EventLiveBadge
+              twitchLogins={(event as any).streamingPartners.map((ep: any) => ep.partner.twitchLogin.toLowerCase())}
+            />
+          </div>
+        )}
+
         {/* Actions */}
         <div className="mt-5 flex items-center gap-3 flex-wrap">
           {userId && canRegister && (
@@ -220,6 +232,35 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
       {/* ── Eventbericht ──────────────────────────────────────────────── */}
       {event.status === "finished" && event.summary && (
         <EventSummarySection summary={event.summary} />
+      )}
+
+      {/* ── Twitch-Clip (Admin-Highlight) ────────────────────────────── */}
+      {(event as any).twitchClipUrl && (
+        <div className="glass rounded-2xl p-4" style={{ border: "1px solid rgba(145,70,255,0.15)" }}>
+          <div className="flex items-center gap-2 mb-2">
+            <Clapperboard className="w-4 h-4 text-[#9146ff]" />
+            <span className="text-sm font-semibold text-gray-300">Event-Highlight</span>
+          </div>
+          <a href={(event as any).twitchClipUrl} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-sm text-[#9146ff] hover:text-purple-300 transition-colors">
+            Clip auf Twitch ansehen ↗
+          </a>
+        </div>
+      )}
+
+      {/* ── Clip-Einreichungen (für Teilnehmer nach Event) ───────────── */}
+      {event.status === "finished" && userId && isRegistered && (
+        <div className="glass rounded-2xl p-4" style={{ border: "1px solid rgba(255,255,255,0.06)" }}>
+          <div className="flex items-center gap-2 mb-3">
+            <Clapperboard className="w-4 h-4 text-gray-400" />
+            <span className="text-sm font-semibold text-gray-300">Deinen Twitch-Clip einreichen</span>
+          </div>
+          <p className="text-xs text-gray-500 mb-3">Hattest du einen guten Moment im Stream? Reiche deinen Clip ein.</p>
+          <ClipSubmitter
+            eventId={event.id}
+            existingClipUrl={(event as any).clipSubmissions?.[0]?.clipUrl ?? null}
+          />
+        </div>
       )}
 
       {/* ── Kommende Termine der Reihe ───────────────────────────────── */}

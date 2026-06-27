@@ -14,6 +14,7 @@ import GameCover from "@/components/GameCover";
 import EventCoverDefault from "@/components/EventCoverDefault";
 import { DailyMessageBanner } from "@/components/DailyMessageBanner";
 import PartnerLiveBanner from "@/components/PartnerLiveBanner";
+import CommunityLiveBanner from "@/components/CommunityLiveBanner";
 
 const MEDAL = ["🥇", "🥈", "🥉"];
 
@@ -250,6 +251,9 @@ export default async function DashboardPage() {
 
       {/* ── Partner Live-Streams ─────────────────────────────────── */}
       <PartnerLiveBanner />
+
+      {/* ── Community Live-Streams ───────────────────────────────── */}
+      <CommunityLiveBanner />
 
       {/* ── Tägliche Mitteilung ───────────────────────────────────── */}
       {activeDailyMessage && (

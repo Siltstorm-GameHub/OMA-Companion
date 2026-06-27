@@ -1,12 +1,14 @@
 "use client";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { toast } from "sonner";
-import { ChevronLeft, ChevronRight, Check, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, Plus, Trash2, CalendarDays, Repeat } from "lucide-react";
 import { EventCategory, EventGenre } from "@prisma/client";
 import GameNameInput from "@/components/GameNameInput";
 import StatFieldEditor from "@/components/StatFieldEditor";
+import { describeMonthlyModes, calcNextDate } from "@/lib/recurrence";
+import type { RecurrenceType, MonthlyMode } from "@/lib/recurrence";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -28,10 +30,12 @@ type PollConfig = {
 };
 
 type PlacementReward = { place: number; coins: number; rankPoints: number };
+type StatRow = { field: string; pointsPer: number };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const STEP_LABELS = ["Typ & Kategorie", "Grunddaten", "Turnier", "Belohnungen", "Zusammenfassung"];
+const STEP_LABELS_EVENT  = ["Typ & Kategorie", "Grunddaten", "Turnier", "Belohnungen", "Zusammenfassung"];
+const STEP_LABELS_SERIES = ["Typ & Kategorie", "Reihen-Info", "Termine", "Belohnungen", "Zusammenfassung"];
 
 const CATEGORIES: { value: EventCategory; label: string; emoji: string; color: string; border: string; bg: string }[] = [
   { value: "competitive",     label: "Kompetitiv", emoji: "🏆", color: "text-red-400",    border: "border-red-500/40",    bg: "bg-red-500/10" },
@@ -61,42 +65,68 @@ const FORMATS: { value: string; label: string; desc: string; hasStat: boolean }[
   { value: "avg_stats",          label: "Durchschnittswerte", desc: "Individuelle Stats werden gemittelt", hasStat: true },
 ];
 
-const inputCls = "w-full rounded-xl px-3 py-2.5 text-sm text-white outline-none";
+const RECURRENCE_OPTS: { value: string; label: string; desc: string }[] = [
+  { value: "none",      label: "Keine",          desc: "Manuell Termine hinzufügen" },
+  { value: "weekly",    label: "Wöchentlich",    desc: "Jeden Woche am selben Wochentag" },
+  { value: "biweekly",  label: "Zweiwöchentlich",desc: "Alle zwei Wochen" },
+  { value: "monthly",   label: "Monatlich",      desc: "Einmal pro Monat" },
+];
+
+const inputCls   = "w-full rounded-xl px-3 py-2.5 text-sm text-white outline-none";
 const inputStyle = { background: "#0b1a17", border: "1px solid rgba(20,184,166,0.18)" };
-const labelCls = "text-xs text-gray-500 mb-1 block";
+const labelCls   = "text-xs text-gray-500 mb-1 block";
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function EventSetupWizard({ series }: { series: SeriesOption[] }) {
+export default function EventSetupWizard({
+  series,
+  initialMode = "select",
+}: {
+  series: SeriesOption[];
+  initialMode?: "select" | "event" | "series";
+}) {
   const router = useRouter();
+  const [wizardMode, setWizardMode] = useState<"select" | "event" | "series">(initialMode);
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  // Step 1
-  const [category, setCategory] = useState<EventCategory>("casual");
-  const [eventType, setEventType] = useState<"community" | "tournament">("community");
+  // ── Shared (Step 0) ──────────────────────────────────────────────────────────
+  const [category, setCategory]       = useState<EventCategory>("casual");
+  const [eventType, setEventType]     = useState<"community" | "tournament">("community");
   const [spectatorMode, setSpectatorMode] = useState(false);
 
-  // Step 2
-  const [title, setTitle] = useState("");
-  const [startAt, setStartAt] = useState("");
-  const [game, setGame] = useState("");
-  const [genre, setGenre] = useState<EventGenre | null>(null);
-  const [maxPlayers, setMaxPlayers] = useState("");
+  // ── Event mode state ─────────────────────────────────────────────────────────
+  const [title, setTitle]             = useState("");
+  const [startAt, setStartAt]         = useState("");
+  const [game, setGame]               = useState("");
+  const [genre, setGenre]             = useState<EventGenre | null>(null);
+  const [maxPlayers, setMaxPlayers]   = useState("");
   const [description, setDescription] = useState("");
   const [discordChannelId, setDiscordChannelId] = useState("");
-  const [seriesMode, setSeriesMode] = useState<"none" | "existing" | "new">("none");
+  const [seriesMode, setSeriesMode]   = useState<"none" | "existing" | "new">("none");
   const [selectedSeriesId, setSelectedSeriesId] = useState("");
   const [newSeriesName, setNewSeriesName] = useState("");
   const [newSeriesDesc, setNewSeriesDesc] = useState("");
-
-  // Step 3
-  const [format, setFormat] = useState<string>("single_elimination");
-  const [statFields, setStatFields] = useState<string[]>([]);
+  const [format, setFormat]           = useState("single_elimination");
+  const [statFields, setStatFields]   = useState<string[]>([]);
   const [ligaWinCoins, setLigaWinCoins] = useState(50);
   const [ligaDrawCoins, setLigaDrawCoins] = useState(20);
 
-  // Step 4
+  // ── Series mode state ─────────────────────────────────────────────────────────
+  const [seriesName, setSeriesName]     = useState("");
+  const [seriesDesc, setSeriesDesc]     = useState("");
+  const [fixedGame, setFixedGame]       = useState("");
+  const [fixedGenre, setFixedGenre]     = useState<EventGenre | null>(null);
+  const [seriesDiscordId, setSeriesDiscordId] = useState("");
+  const [seriesFormat, setSeriesFormat] = useState("single_elimination");
+  const [seriesStartDate, setSeriesStartDate] = useState("");
+  const [seriesEndDate, setSeriesEndDate]     = useState("");
+  const [recurrenceType, setRecurrenceType]   = useState<"none" | RecurrenceType>("none");
+  const [recurrenceMonthlyMode, setRecurrenceMonthlyMode] = useState<MonthlyMode>("dayOfMonth");
+  const [statParticipationPts, setStatParticipationPts] = useState(5);
+  const [statRows, setStatRows]         = useState<StatRow[]>([]);
+
+  // ── Shared rewards ───────────────────────────────────────────────────────────
   const [participationCoins, setParticipationCoins] = useState(10);
   const [participationRankPts, setParticipationRankPts] = useState(0);
   const [placements, setPlacements] = useState<PlacementReward[]>([
@@ -104,44 +134,80 @@ export default function EventSetupWizard({ series }: { series: SeriesOption[] })
     { place: 2, coins: 250, rankPoints: 2 },
     { place: 3, coins: 100, rankPoints: 1 },
   ]);
-  const [spectatorCoins, setSpectatorCoins] = useState(5);
+  const [spectatorCoins, setSpectatorCoins]     = useState(5);
   const [spectatorRankPts, setSpectatorRankPts] = useState(0);
   const [polls, setPolls] = useState<PollConfig[]>([]);
 
+  // ── Derived ──────────────────────────────────────────────────────────────────
+  const isEventMode  = wizardMode === "event";
+  const isSeriesMode = wizardMode === "series";
   const selectedSeries = series.find(s => s.id === selectedSeriesId);
-  const formatObj = FORMATS.find(f => f.value === format);
-  const hasStat = formatObj?.hasStat ?? false;
-  const totalSteps = eventType === "tournament" ? 5 : 4; // skip step 3 if community
+  const formatObj  = FORMATS.find(f => f.value === format);
+  const hasStat    = formatObj?.hasStat ?? false;
 
-  function effectiveStep(display: number): number {
-    // display step index maps to actual step (0=Typ, 1=Grunddaten, 2=Turnier[tournament only], 3=Belohnungen, 4=Summary)
-    if (eventType !== "tournament" && display >= 2) return display + 1;
-    return display;
-  }
+  const monthlyDescriptions = useMemo(() => {
+    if (!seriesStartDate || recurrenceType !== "monthly") return null;
+    try { return describeMonthlyModes(new Date(seriesStartDate)); } catch { return null; }
+  }, [seriesStartDate, recurrenceType]);
 
-  const actualStep = effectiveStep(step);
+  const previewDates = useMemo(() => {
+    if (!seriesStartDate) return [];
+    const start = new Date(seriesStartDate);
+    if (isNaN(start.getTime())) return [];
+    if (recurrenceType === "none") return [start];
+    const endLimit = seriesEndDate ? new Date(seriesEndDate + "T23:59:59") : null;
+    const dates: Date[] = [start];
+    for (let i = 0; i < 20; i++) {
+      const last = dates[dates.length - 1];
+      const next = calcNextDate(
+        last,
+        recurrenceType as RecurrenceType,
+        recurrenceMonthlyMode,
+        start,
+      );
+      if (endLimit && next > endLimit) break;
+      if (!endLimit && dates.length >= 5) break;
+      dates.push(next);
+    }
+    return dates;
+  }, [seriesStartDate, seriesEndDate, recurrenceType, recurrenceMonthlyMode]);
+
+  // ── Step lists ───────────────────────────────────────────────────────────────
+  // Event mode: skip tournament step if community
+  const eventStepComponents = eventType === "tournament"
+    ? [renderStepCategory, renderStepEventData, renderStepTournament, renderStepRewards, renderStepEventSummary]
+    : [renderStepCategory, renderStepEventData, renderStepRewards, renderStepEventSummary];
+
+  const seriesStepComponents = [renderStepCategory, renderStepSeriesData, renderStepSchedule, renderStepRewards, renderStepSeriesSummary];
+
+  const activeSteps = isEventMode ? eventStepComponents : seriesStepComponents;
 
   function canProceed(): boolean {
-    if (actualStep === 0) return true;
-    if (actualStep === 1) return title.trim().length > 0 && startAt.length > 0;
-    if (actualStep === 2) return eventType === "tournament"; // always passable if shown
+    if (wizardMode === "select") return false;
+    if (isEventMode) {
+      if (step === 0) return true;
+      if (step === 1) return title.trim().length > 0 && startAt.length > 0;
+      return true;
+    }
+    if (step === 0) return true;
+    if (step === 1) return seriesName.trim().length > 0;
     return true;
   }
 
+  // ── Poll helpers ─────────────────────────────────────────────────────────────
   function addPoll() {
     if (polls.length >= 3) return;
     setPolls(p => [...p, { label: "", question: "", coins: 50, rankPoints: 0, type: "player" }]);
   }
-
   function updatePoll(i: number, patch: Partial<PollConfig>) {
     setPolls(p => p.map((poll, idx) => idx === i ? { ...poll, ...patch } : poll));
   }
-
   function removePoll(i: number) {
     setPolls(p => p.filter((_, idx) => idx !== i));
   }
 
-  async function handleSubmit() {
+  // ── Submit handlers ──────────────────────────────────────────────────────────
+  async function handleSubmitEvent() {
     if (!title || !startAt) return;
     setLoading(true);
 
@@ -158,12 +224,6 @@ export default function EventSetupWizard({ series }: { series: SeriesOption[] })
       seriesId = (await sRes.json()).id;
     }
 
-    const rewardsJson = {
-      participationCoins,
-      participationRankPts,
-      placements,
-    };
-
     const body: Record<string, unknown> = {
       title: title.trim(),
       startAt: new Date(startAt).toISOString(),
@@ -177,7 +237,7 @@ export default function EventSetupWizard({ series }: { series: SeriesOption[] })
       discordChannelId: discordChannelId || null,
       spectatorMode,
       spectatorRewardJson: spectatorMode ? { coins: spectatorCoins, rankPoints: spectatorRankPts } : null,
-      placementRewardsJson: rewardsJson,
+      placementRewardsJson: { participationCoins, participationRankPts, placements },
       pollsConfigJson: polls.length > 0 ? polls : null,
     };
 
@@ -191,7 +251,6 @@ export default function EventSetupWizard({ series }: { series: SeriesOption[] })
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-
     setLoading(false);
     if (!res.ok) { toast.error("Fehler beim Erstellen"); return; }
     const event = await res.json();
@@ -199,29 +258,103 @@ export default function EventSetupWizard({ series }: { series: SeriesOption[] })
     router.push(`/admin/events/${event.id}`);
   }
 
-  // ─── Render helpers ──────────────────────────────────────────────────────────
+  async function handleSubmitSeries() {
+    if (!seriesName.trim()) return;
+    setLoading(true);
 
-  function StepIndicator() {
-    const labels = eventType === "tournament"
-      ? STEP_LABELS
-      : STEP_LABELS.filter((_, i) => i !== 2);
+    const seriesStatConfig = (eventType === "tournament" && (statParticipationPts > 0 || statRows.length > 0))
+      ? JSON.stringify({ participationPoints: statParticipationPts, stats: statRows })
+      : null;
+
+    const res = await fetch("/api/events/series", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: seriesName.trim(),
+        description: seriesDesc.trim() || null,
+        category,
+        genre: fixedGenre || null,
+        fixedGame: fixedGame || null,
+        fixedFormat: eventType === "tournament" ? seriesFormat : null,
+        discordChannelId: seriesDiscordId || null,
+        recurrenceType: recurrenceType !== "none" ? recurrenceType : null,
+        recurrenceMonthlyMode: recurrenceType === "monthly" ? recurrenceMonthlyMode : null,
+        placementRewardsJson: { participationCoins, participationRankPts, placements },
+        pollsConfigJson: polls.length > 0 ? polls : null,
+        seriesStatConfig,
+        startDate: seriesStartDate ? new Date(seriesStartDate).toISOString() : null,
+        endDate: seriesEndDate ? new Date(seriesEndDate + "T23:59:59").toISOString() : null,
+        eventType,
+      }),
+    });
+
+    setLoading(false);
+    if (!res.ok) { toast.error("Fehler beim Erstellen der Eventreihe"); return; }
+    const created = await res.json();
+    toast.success(
+      `Eventreihe „${seriesName}" erstellt` +
+      (created.eventsCreated > 0 ? ` – ${created.eventsCreated} Termine angelegt` : "") + "!"
+    );
+    router.push(`/admin/series/${created.id}`);
+  }
+
+  // ── Render: Mode Selection ───────────────────────────────────────────────────
+  if (wizardMode === "select") {
     return (
-      <div className="flex items-center gap-2 mb-8">
+      <div className="max-w-2xl mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-xl font-bold text-white mb-1">Neues Event erstellen</h1>
+          <p className="text-sm text-gray-500">Wähle, was du erstellen möchtest.</p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <button type="button" onClick={() => setWizardMode("event")}
+            className="flex flex-col items-center gap-3 rounded-2xl p-6 border-2 border-teal-500/40 bg-teal-500/10 hover:bg-teal-500/20 transition-all text-center">
+            <span className="text-4xl">📅</span>
+            <div>
+              <p className="text-base font-semibold text-teal-300">Einzelnes Event</p>
+              <p className="text-xs text-gray-500 mt-1">Einmaliger Termin, optional einer bestehenden Reihe zuordnen</p>
+            </div>
+          </button>
+          <button type="button" onClick={() => setWizardMode("series")}
+            className="flex flex-col items-center gap-3 rounded-2xl p-6 border-2 border-violet-500/40 bg-violet-500/10 hover:bg-violet-500/20 transition-all text-center">
+            <span className="text-4xl">🔁</span>
+            <div>
+              <p className="text-base font-semibold text-violet-300">Neue Eventreihe</p>
+              <p className="text-xs text-gray-500 mt-1">Wiederkehrende Reihe mit Gesamttabelle und gemeinsamen Belohnungen</p>
+            </div>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Render: Step Indicator ────────────────────────────────────────────────────
+  function StepIndicator() {
+    const base = isEventMode ? STEP_LABELS_EVENT : STEP_LABELS_SERIES;
+    const labels = isEventMode && eventType !== "tournament"
+      ? base.filter((_, i) => i !== 2)
+      : base;
+    return (
+      <div className="flex items-center gap-1 mb-8 flex-wrap">
         {labels.map((label, i) => {
           const active = i === step;
-          const done = i < step;
+          const done   = i < step;
           return (
-            <div key={i} className="flex items-center gap-2">
-              <div className={`flex items-center gap-2 ${active || done ? "" : "opacity-40"}`}>
+            <div key={i} className="flex items-center gap-1">
+              <div className={`flex items-center gap-1.5 ${active || done ? "" : "opacity-40"}`}>
                 <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                  done ? "bg-teal-500 text-white" : active ? "bg-teal-500/20 border-2 border-teal-500 text-teal-400" : "bg-white/5 border border-white/10 text-gray-500"
+                  done   ? "bg-teal-500 text-white"
+                  : active ? "bg-teal-500/20 border-2 border-teal-500 text-teal-400"
+                  : "bg-white/5 border border-white/10 text-gray-500"
                 }`}>
                   {done ? <Check className="w-3.5 h-3.5" /> : i + 1}
                 </div>
-                <span className={`text-xs font-medium hidden sm:block ${active ? "text-teal-300" : done ? "text-gray-400" : "text-gray-600"}`}>{label}</span>
+                <span className={`text-xs font-medium hidden sm:block ${
+                  active ? "text-teal-300" : done ? "text-gray-400" : "text-gray-600"
+                }`}>{label}</span>
               </div>
               {i < labels.length - 1 && (
-                <div className={`flex-1 h-px mx-1 ${i < step ? "bg-teal-500/50" : "bg-white/8"}`} style={{ width: 20 }} />
+                <div className={`h-px mx-0.5 ${i < step ? "bg-teal-500/50" : "bg-white/8"}`} style={{ width: 14 }} />
               )}
             </div>
           );
@@ -230,9 +363,8 @@ export default function EventSetupWizard({ series }: { series: SeriesOption[] })
     );
   }
 
-  // ─── Steps ───────────────────────────────────────────────────────────────────
-
-  function Step0() {
+  // ── Step 0: Kategorie (shared) ────────────────────────────────────────────────
+  function renderStepCategory() {
     const showSpectatorToggle = category === "competitive" || eventType === "tournament";
     return (
       <div className="space-y-6">
@@ -253,12 +385,16 @@ export default function EventSetupWizard({ series }: { series: SeriesOption[] })
         </div>
 
         <div>
-          <h2 className="text-base font-semibold text-white mb-3">Event-Typ</h2>
+          <h2 className="text-base font-semibold text-white mb-3">
+            {isSeriesMode ? "Typ der Events in der Reihe" : "Event-Typ"}
+          </h2>
           <div className="flex gap-3">
             {(["community", "tournament"] as const).map(t => (
               <button key={t} type="button" onClick={() => setEventType(t)}
                 className={`flex-1 rounded-xl py-3 px-4 text-sm font-medium border-2 transition-all ${
-                  eventType === t ? "border-teal-500/60 bg-teal-500/10 text-teal-300" : "border-white/8 bg-white/3 text-gray-400 hover:border-white/15"
+                  eventType === t
+                    ? "border-teal-500/60 bg-teal-500/10 text-teal-300"
+                    : "border-white/8 bg-white/3 text-gray-400 hover:border-white/15"
                 }`}>
                 {t === "community" ? "🤝 Community-Event" : "⚔️ Turnier"}
               </button>
@@ -269,14 +405,15 @@ export default function EventSetupWizard({ series }: { series: SeriesOption[] })
         {showSpectatorToggle && (
           <div className="rounded-xl p-4 border" style={{ borderColor: "rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.02)" }}>
             <label className="flex items-center gap-3 cursor-pointer select-none">
-              <div
-                onClick={() => setSpectatorMode(v => !v)}
-                className={`relative w-10 h-5 rounded-full transition-colors ${spectatorMode ? "bg-teal-500" : "bg-gray-700"}`}>
+              <div onClick={() => setSpectatorMode(v => !v)}
+                className={`relative w-10 h-5 rounded-full transition-colors shrink-0 cursor-pointer ${spectatorMode ? "bg-teal-500" : "bg-gray-700"}`}>
                 <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${spectatorMode ? "translate-x-5" : ""}`} />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-200">Zuschauer-Registrierung aktivieren</p>
-                <p className="text-xs text-gray-500">Community-Mitglieder können sich als Zuschauer anmelden und Belohnungen erhalten</p>
+                <p className="text-sm font-medium text-gray-200">
+                  {isSeriesMode ? "Zuschauer-Registrierung (Standard für neue Events)" : "Zuschauer-Registrierung aktivieren"}
+                </p>
+                <p className="text-xs text-gray-500">Community-Mitglieder können sich als Zuschauer anmelden</p>
               </div>
             </label>
           </div>
@@ -285,7 +422,8 @@ export default function EventSetupWizard({ series }: { series: SeriesOption[] })
     );
   }
 
-  function Step1() {
+  // ── Step 1 (Event): Grunddaten ────────────────────────────────────────────────
+  function renderStepEventData() {
     return (
       <div className="space-y-4">
         <div>
@@ -341,7 +479,6 @@ export default function EventSetupWizard({ series }: { series: SeriesOption[] })
           <label className={labelCls}>Discord-Textkanal ID (optional)</label>
           <input type="text" value={discordChannelId} onChange={e => setDiscordChannelId(e.target.value)}
             placeholder="Leer = Standardkanal" className={inputCls} style={inputStyle} />
-          <p className="text-[10px] text-gray-600 mt-1">Der Bot postet Ankündigungen und Ergebnisse in diesen Kanal.</p>
         </div>
 
         <div className="rounded-xl p-3 space-y-3" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(20,184,166,0.10)" }}>
@@ -377,7 +514,8 @@ export default function EventSetupWizard({ series }: { series: SeriesOption[] })
     );
   }
 
-  function Step2() {
+  // ── Step 2 (Event): Turnier ───────────────────────────────────────────────────
+  function renderStepTournament() {
     return (
       <div className="space-y-6">
         <div>
@@ -423,7 +561,163 @@ export default function EventSetupWizard({ series }: { series: SeriesOption[] })
     );
   }
 
-  function Step3() {
+  // ── Step 1 (Series): Reihen-Grunddaten ───────────────────────────────────────
+  function renderStepSeriesData() {
+    return (
+      <div className="space-y-4">
+        <div>
+          <label className={labelCls}>Name der Reihe *</label>
+          <input type="text" required value={seriesName} onChange={e => setSeriesName(e.target.value)}
+            placeholder="z.B. Friday Fights" className={inputCls} style={inputStyle} />
+        </div>
+
+        <div>
+          <label className={labelCls}>Beschreibung (optional)</label>
+          <textarea value={seriesDesc} onChange={e => setSeriesDesc(e.target.value)}
+            rows={2} placeholder="Kurze Beschreibung der Reihe"
+            className={`${inputCls} resize-none`} style={inputStyle} />
+        </div>
+
+        <div>
+          <label className={labelCls}>Festes Spiel (optional)</label>
+          <GameNameInput value={fixedGame} onChange={setFixedGame}
+            placeholder="z.B. Rocket League" className={inputCls} style={inputStyle} />
+        </div>
+
+        {fixedGame && (
+          <div>
+            <label className={labelCls}>Genre</label>
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+              {GENRES.map(g => (
+                <button key={g.value} type="button" onClick={() => setFixedGenre(fixedGenre === g.value ? null : g.value)}
+                  className={`flex flex-col items-center gap-1.5 rounded-xl p-2 border transition-all ${
+                    fixedGenre === g.value ? "border-teal-500/60 bg-teal-500/10" : "border-white/8 bg-white/3 hover:border-white/15"
+                  }`}>
+                  <Image src={g.icon} alt={g.label} width={32} height={32} className="object-contain" />
+                  <span className={`text-[10px] font-medium leading-tight text-center ${fixedGenre === g.value ? "text-teal-300" : "text-gray-500"}`}>{g.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div>
+          <label className={labelCls}>Discord-Textkanal ID (optional)</label>
+          <input type="text" value={seriesDiscordId} onChange={e => setSeriesDiscordId(e.target.value)}
+            placeholder="Leer = Standardkanal" className={inputCls} style={inputStyle} />
+        </div>
+      </div>
+    );
+  }
+
+  // ── Step 2 (Series): Termine & Wiederholung ───────────────────────────────────
+  function renderStepSchedule() {
+    return (
+      <div className="space-y-5">
+        {eventType === "tournament" && (
+          <div>
+            <h2 className="text-base font-semibold text-white mb-1">Format</h2>
+            <p className="text-xs text-gray-500 mb-3">Standard-Format für alle Events dieser Reihe</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {FORMATS.map(f => (
+                <button key={f.value} type="button" onClick={() => setSeriesFormat(f.value)}
+                  className={`flex flex-col items-start gap-1 rounded-xl p-3 border-2 transition-all text-left ${
+                    seriesFormat === f.value ? "border-amber-500/60 bg-amber-500/10" : "border-white/8 bg-white/3 hover:border-white/15"
+                  }`}>
+                  <span className={`text-sm font-semibold ${seriesFormat === f.value ? "text-amber-300" : "text-gray-300"}`}>{f.label}</span>
+                  <span className="text-xs text-gray-500">{f.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className={labelCls}>Startdatum (optional)</label>
+            <input type="datetime-local" value={seriesStartDate} onChange={e => setSeriesStartDate(e.target.value)}
+              className={inputCls} style={inputStyle} />
+            <p className="text-[10px] text-gray-600 mt-1">Datum des ersten Events</p>
+          </div>
+          <div>
+            <label className={labelCls}>Enddatum (optional)</label>
+            <input type="date" value={seriesEndDate} onChange={e => setSeriesEndDate(e.target.value)}
+              className={inputCls} style={inputStyle} />
+            <p className="text-[10px] text-gray-600 mt-1">Alle Termine bis hierhin werden direkt erstellt</p>
+          </div>
+        </div>
+
+        <div>
+          <label className={labelCls}>Wiederholung</label>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {RECURRENCE_OPTS.map(r => (
+              <button key={r.value} type="button"
+                onClick={() => setRecurrenceType(r.value as "none" | RecurrenceType)}
+                className={`flex flex-col items-start gap-0.5 rounded-xl p-3 border-2 transition-all text-left ${
+                  recurrenceType === r.value
+                    ? "border-teal-500/60 bg-teal-500/10"
+                    : "border-white/8 bg-white/3 hover:border-white/15"
+                }`}>
+                <span className={`text-sm font-semibold ${recurrenceType === r.value ? "text-teal-300" : "text-gray-300"}`}>{r.label}</span>
+                <span className="text-[10px] text-gray-500">{r.desc}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {recurrenceType === "monthly" && monthlyDescriptions && (
+          <div className="rounded-xl p-4 border border-teal-500/20 bg-teal-500/5 space-y-3">
+            <p className="text-sm font-medium text-teal-300">Monatlicher Rhythmus</p>
+            <p className="text-xs text-gray-500">Aus dem Startdatum erkannte Optionen:</p>
+            <div className="space-y-2">
+              {(["dayOfMonth", "weekdayOfMonth"] as const).map(mode => (
+                <label key={mode} className="flex items-center gap-3 cursor-pointer">
+                  <input type="radio" name="monthlyMode" value={mode}
+                    checked={recurrenceMonthlyMode === mode}
+                    onChange={() => setRecurrenceMonthlyMode(mode)}
+                    className="accent-teal-500" />
+                  <span className="text-sm text-gray-200">{monthlyDescriptions[mode]}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {previewDates.length > 0 && (
+          <div className="rounded-xl p-4 border border-white/8 bg-white/2">
+            <div className="flex items-center gap-2 mb-3">
+              <CalendarDays className="w-4 h-4 text-teal-400" />
+              <p className="text-sm font-medium text-gray-200">
+                {seriesEndDate
+                  ? `${previewDates.length} Termine werden erstellt`
+                  : `Vorschau (nächste ${previewDates.length})`}
+              </p>
+              {!seriesEndDate && recurrenceType !== "none" && (
+                <span className="text-[10px] text-gray-600 ml-auto">ohne Enddatum: nur Reihe, keine Events</span>
+              )}
+            </div>
+            <div className="space-y-1.5 max-h-56 overflow-y-auto">
+              {previewDates.map((d, i) => (
+                <div key={i} className="flex items-center gap-2 text-sm text-gray-400">
+                  <span className="text-teal-500 text-xs w-5 text-right shrink-0">#{i + 1}</span>
+                  <span>{d.toLocaleString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!seriesStartDate && (
+          <p className="text-xs text-gray-600 italic">
+            Ohne Startdatum wird nur die Reihe angelegt. Termine können später einzeln hinzugefügt werden.
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  // ── Step 3: Belohnungen (shared, with stat config for series tournament) ──────
+  function renderStepRewards() {
     return (
       <div className="space-y-6">
         <div className="rounded-xl p-4 border border-white/8 bg-white/2">
@@ -435,12 +729,14 @@ export default function EventSetupWizard({ series }: { series: SeriesOption[] })
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={labelCls}>Münzen</label>
-              <input type="number" min="0" value={participationCoins} onChange={e => setParticipationCoins(Number(e.target.value))}
+              <input type="number" min="0" value={participationCoins}
+                onChange={e => setParticipationCoins(Number(e.target.value))}
                 className={inputCls} style={inputStyle} />
             </div>
             <div>
               <label className={labelCls}>Rang-Punkte</label>
-              <input type="number" min="0" value={participationRankPts} onChange={e => setParticipationRankPts(Number(e.target.value))}
+              <input type="number" min="0" value={participationRankPts}
+                onChange={e => setParticipationRankPts(Number(e.target.value))}
                 className={inputCls} style={inputStyle} />
             </div>
           </div>
@@ -477,14 +773,50 @@ export default function EventSetupWizard({ series }: { series: SeriesOption[] })
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className={labelCls}>Münzen</label>
-                <input type="number" min="0" value={spectatorCoins} onChange={e => setSpectatorCoins(Number(e.target.value))}
+                <input type="number" min="0" value={spectatorCoins}
+                  onChange={e => setSpectatorCoins(Number(e.target.value))}
                   className={inputCls} style={inputStyle} />
               </div>
               <div>
                 <label className={labelCls}>Rang-Punkte</label>
-                <input type="number" min="0" value={spectatorRankPts} onChange={e => setSpectatorRankPts(Number(e.target.value))}
+                <input type="number" min="0" value={spectatorRankPts}
+                  onChange={e => setSpectatorRankPts(Number(e.target.value))}
                   className={inputCls} style={inputStyle} />
               </div>
+            </div>
+          </div>
+        )}
+
+        {isSeriesMode && eventType === "tournament" && (
+          <div className="rounded-xl p-4 border border-indigo-500/20 bg-indigo-500/5 space-y-3">
+            <p className="text-sm font-medium text-indigo-300">📊 Gesamttabelle</p>
+            <div>
+              <label className={labelCls}>Punkte pro Teilnahme</label>
+              <input type="number" min="0" value={statParticipationPts}
+                onChange={e => setStatParticipationPts(Number(e.target.value))}
+                className={inputCls} style={inputStyle} />
+            </div>
+            <div className="space-y-2">
+              <p className="text-[11px] text-gray-500">Stat-Felder — Feldname → Punkte pro Einheit</p>
+              {statRows.map((row, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <input type="text" value={row.field}
+                    onChange={e => setStatRows(prev => prev.map((r, ri) => ri === i ? { ...r, field: e.target.value } : r))}
+                    placeholder="z.B. Kills" className={`${inputCls} flex-1`} style={inputStyle} />
+                  <input type="number" min="0" value={row.pointsPer}
+                    onChange={e => setStatRows(prev => prev.map((r, ri) => ri === i ? { ...r, pointsPer: Number(e.target.value) } : r))}
+                    placeholder="Pkt" className="w-16 rounded-xl px-2.5 py-2.5 text-sm text-white text-center outline-none shrink-0"
+                    style={inputStyle} />
+                  <button type="button" onClick={() => setStatRows(prev => prev.filter((_, ri) => ri !== i))}
+                    className="text-gray-600 hover:text-red-400 transition-colors shrink-0">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+              <button type="button" onClick={() => setStatRows(prev => [...prev, { field: "", pointsPer: 0 }])}
+                className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 transition-colors mt-1">
+                <Plus className="w-3.5 h-3.5" /> Stat hinzufügen
+              </button>
             </div>
           </div>
         )}
@@ -532,12 +864,14 @@ export default function EventSetupWizard({ series }: { series: SeriesOption[] })
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className={labelCls}>Münzen (Sieger)</label>
-                    <input type="number" min="0" value={poll.coins} onChange={e => updatePoll(i, { coins: Number(e.target.value) })}
+                    <input type="number" min="0" value={poll.coins}
+                      onChange={e => updatePoll(i, { coins: Number(e.target.value) })}
                       className={inputCls} style={inputStyle} />
                   </div>
                   <div>
                     <label className={labelCls}>Rang-Punkte</label>
-                    <input type="number" min="0" value={poll.rankPoints} onChange={e => updatePoll(i, { rankPoints: Number(e.target.value) })}
+                    <input type="number" min="0" value={poll.rankPoints}
+                      onChange={e => updatePoll(i, { rankPoints: Number(e.target.value) })}
                       className={inputCls} style={inputStyle} />
                   </div>
                 </div>
@@ -549,8 +883,9 @@ export default function EventSetupWizard({ series }: { series: SeriesOption[] })
     );
   }
 
-  function Step4() {
-    const catCfg = CATEGORIES.find(c => c.value === category);
+  // ── Step 4 (Event): Zusammenfassung ───────────────────────────────────────────
+  function renderStepEventSummary() {
+    const catCfg  = CATEGORIES.find(c => c.value === category);
     const genreCfg = genre ? GENRES.find(g => g.value === genre) : null;
     return (
       <div className="space-y-4">
@@ -564,7 +899,7 @@ export default function EventSetupWizard({ series }: { series: SeriesOption[] })
           </div>
           <div className="space-y-1 text-sm text-gray-300">
             {startAt && <p>📅 {new Date(startAt).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" })}</p>}
-            {game && <p>🎮 {game} {genreCfg ? `· ${genreCfg.label}` : ""}</p>}
+            {game && <p>🎮 {game}{genreCfg ? ` · ${genreCfg.label}` : ""}</p>}
             {maxPlayers && <p>👥 Max. {maxPlayers} Spieler</p>}
             {spectatorMode && <p>👁️ Zuschauer-Modus aktiv</p>}
             {eventType === "tournament" && <p>⚔️ Format: {FORMATS.find(f => f.value === format)?.label}</p>}
@@ -573,7 +908,6 @@ export default function EventSetupWizard({ series }: { series: SeriesOption[] })
             {discordChannelId && <p>📢 Kanal: {discordChannelId}</p>}
           </div>
         </div>
-
         <div className="rounded-xl p-4 border border-white/8 bg-white/2 text-sm space-y-1.5 text-gray-400">
           <p className="text-xs text-gray-600 font-semibold uppercase tracking-wider mb-2">Belohnungen</p>
           <p>✅ Teilnahme: {participationCoins} Münzen{participationRankPts > 0 ? ` + ${participationRankPts} RP` : ""}</p>
@@ -589,22 +923,81 @@ export default function EventSetupWizard({ series }: { series: SeriesOption[] })
     );
   }
 
-  const steps = eventType === "tournament"
-    ? [Step0, Step1, Step2, Step3, Step4]
-    : [Step0, Step1, Step3, Step4];
+  // ── Step 4 (Series): Zusammenfassung ──────────────────────────────────────────
+  function renderStepSeriesSummary() {
+    const catCfg   = CATEGORIES.find(c => c.value === category);
+    const genreCfg = fixedGenre ? GENRES.find(g => g.value === fixedGenre) : null;
+    const recLabel = RECURRENCE_OPTS.find(r => r.value === recurrenceType)?.label ?? "Keine";
+    return (
+      <div className="space-y-4">
+        <div className={`rounded-2xl p-5 border-2 ${catCfg?.border ?? ""} ${catCfg?.bg ?? ""}`}>
+          <div className="flex items-center gap-3 mb-3">
+            <span className="text-2xl">🔁</span>
+            <span className="text-3xl">{catCfg?.emoji}</span>
+            <div>
+              <p className={`text-lg font-bold ${catCfg?.color}`}>{seriesName || "Eventreihe"}</p>
+              <p className="text-xs text-gray-500">{catCfg?.label} · {eventType === "tournament" ? "Turnier-Reihe" : "Community-Reihe"}</p>
+            </div>
+          </div>
+          <div className="space-y-1 text-sm text-gray-300">
+            {fixedGame && <p>🎮 {fixedGame}{genreCfg ? ` · ${genreCfg.label}` : ""}</p>}
+            {eventType === "tournament" && <p>⚔️ Format: {FORMATS.find(f => f.value === seriesFormat)?.label}</p>}
+            <p>🔄 Wiederholung: {recLabel}</p>
+            {seriesStartDate && <p>📅 Start: {new Date(seriesStartDate).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" })}</p>}
+            {seriesEndDate && <p>⏹️ Ende: {new Date(seriesEndDate).toLocaleDateString("de-DE", { dateStyle: "medium" })}</p>}
+            {previewDates.length > 0 && seriesEndDate && (
+              <p>📋 {previewDates.length} Termine werden direkt angelegt</p>
+            )}
+            {seriesDiscordId && <p>📢 Kanal: {seriesDiscordId}</p>}
+            {spectatorMode && <p>👁️ Zuschauer-Standard aktiv</p>}
+          </div>
+        </div>
+        <div className="rounded-xl p-4 border border-white/8 bg-white/2 text-sm space-y-1.5 text-gray-400">
+          <p className="text-xs text-gray-600 font-semibold uppercase tracking-wider mb-2">Standard-Belohnungen</p>
+          <p>✅ Teilnahme: {participationCoins} Münzen{participationRankPts > 0 ? ` + ${participationRankPts} RP` : ""}</p>
+          {placements.map(p => (
+            <p key={p.place}>🏅 {p.place}. Platz: {p.coins} Münzen{p.rankPoints > 0 ? ` + ${p.rankPoints} RP` : ""}</p>
+          ))}
+          {spectatorMode && <p>👁️ Zuschauer: {spectatorCoins} Münzen{spectatorRankPts > 0 ? ` + ${spectatorRankPts} RP` : ""}</p>}
+          {polls.map((poll, i) => (
+            <p key={i}>📊 {poll.label || `Poll ${i + 1}`}: {poll.coins} Münzen ({poll.type === "spectator" ? "Zuschauer" : "Spieler"})</p>
+          ))}
+          {isSeriesMode && eventType === "tournament" && statRows.length > 0 && (
+            <p>📊 Gesamttabelle: {statRows.map(r => `${r.field} (${r.pointsPer} Pkt/Einheit)`).join(", ")}</p>
+          )}
+        </div>
+      </div>
+    );
+  }
 
-  const CurrentStep = steps[step];
+  // ── Main render ───────────────────────────────────────────────────────────────
+  const CurrentStep = activeSteps[step];
+  const isLastStep  = step === activeSteps.length - 1;
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-white">Neues Event erstellen</h1>
-        <p className="text-sm text-gray-500">Schritt {step + 1} von {totalSteps}</p>
+      <div className="mb-6 flex items-center gap-3">
+        <button type="button"
+          onClick={() => { setWizardMode("select"); setStep(0); }}
+          className="text-xs text-gray-500 hover:text-gray-300 flex items-center gap-1 transition-colors">
+          <ChevronLeft className="w-3.5 h-3.5" />
+          Zurück zur Auswahl
+        </button>
+        <div className="h-3 w-px bg-white/10" />
+        <div className="flex items-center gap-2">
+          {isSeriesMode
+            ? <Repeat className="w-4 h-4 text-violet-400" />
+            : <CalendarDays className="w-4 h-4 text-teal-400" />}
+          <h1 className="text-xl font-bold text-white">
+            {isSeriesMode ? "Neue Eventreihe" : "Neues Event"}
+          </h1>
+        </div>
       </div>
 
       <StepIndicator />
 
-      <div className="rounded-2xl p-6 mb-6" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
+      <div className="rounded-2xl p-6 mb-6"
+        style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
         <CurrentStep />
       </div>
 
@@ -619,12 +1012,21 @@ export default function EventSetupWizard({ series }: { series: SeriesOption[] })
           type="button"
           disabled={!canProceed() || loading}
           onClick={() => {
-            if (step < steps.length - 1) setStep(s => s + 1);
-            else handleSubmit();
+            if (!isLastStep) setStep(s => s + 1);
+            else if (isEventMode) handleSubmitEvent();
+            else handleSubmitSeries();
           }}
           className="flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-white transition-all disabled:opacity-40"
-          style={{ background: "linear-gradient(135deg, #0d9488, #14b8a6)" }}>
-          {loading ? "Wird erstellt…" : step < steps.length - 1 ? (<>Weiter <ChevronRight className="w-4 h-4" /></>) : (<><Check className="w-4 h-4" /> Event erstellen</>)}
+          style={{
+            background: isSeriesMode
+              ? "linear-gradient(135deg, #7c3aed, #8b5cf6)"
+              : "linear-gradient(135deg, #0d9488, #14b8a6)",
+          }}>
+          {loading
+            ? "Wird erstellt…"
+            : isLastStep
+            ? (<><Check className="w-4 h-4" /> {isSeriesMode ? "Eventreihe erstellen" : "Event erstellen"}</>)
+            : (<>Weiter <ChevronRight className="w-4 h-4" /></>)}
         </button>
       </div>
     </div>

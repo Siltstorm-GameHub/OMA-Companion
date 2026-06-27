@@ -14,6 +14,7 @@ export default async function AdminEventEditPage({ params }: { params: Promise<{
         series: { select: { id: true, name: true, fixedGame: true, discordChannelId: true, placementRewardsJson: true, pollConfigJson: true } },
         registrations: { select: { userId: true } },
         streamingPartners: { select: { partnerId: true } },
+        clipSubmissions: { include: { user: { select: { id: true, name: true, username: true } } }, orderBy: { createdAt: "desc" } },
         _count: { select: { registrations: true } },
         participants: {
           include: { user: { select: { id: true, name: true, username: true, image: true } } },
