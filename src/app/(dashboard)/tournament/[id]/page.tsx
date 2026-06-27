@@ -2,10 +2,21 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Users, Trophy, Clock, Swords, ChevronDown, StickyNote, Vote, Repeat } from "lucide-react";
+import Image from "next/image";
+import { ArrowLeft, Users, Clock, Swords, StickyNote, Vote, Repeat, Tv2 } from "lucide-react";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import WinIcon from "@/components/WinIcon";
 import CoinIcon from "@/components/CoinIcon";
+import ClientTime from "@/components/ClientTime";
+
+const GENRE_MAP: Record<string, { label: string; icon: string }> = {
+  arcade:    { label: "Arcade",     icon: "/Arcade Icon.png" },
+  beat_em_up:{ label: "Beat-em-Up", icon: "/Beat-em-Up Icon.png" },
+  sport:     { label: "Sport",      icon: "/Sport Icon.png" },
+  racing:    { label: "Racing",     icon: "/Racing Icon.png" },
+  shooter:   { label: "Shooter",    icon: "/Shooter Icon.png" },
+  community: { label: "Community",  icon: "/Community Icon.png" },
+};
 import BracketView from "./BracketView";
 import RoundRobinView from "./RoundRobinView";
 import FfaView from "./FfaView";
@@ -41,6 +52,7 @@ export default async function TournamentDetailPage({
     where: { id: eventId },
     include: {
       series: { select: { id: true, name: true } },
+      streamingPartners: { include: { partner: true } },
       registrations: {
         include: {
           user: { select: { id: true, name: true, username: true, image: true, points: true } },
@@ -171,6 +183,19 @@ export default async function TournamentDetailPage({
     return typeof v === "number" ? v : (v.points ?? v.coins ?? 0);
   }
 
+  // Genre + Streaming-Partner + 1st-place reward
+  const genre = (event as unknown as Record<string, unknown>).genre as string | null | undefined;
+  const genreInfo = genre ? (GENRE_MAP[genre] ?? null) : null;
+  const streamingPartners = (event as unknown as { streamingPartners?: { partner: { id: string; name: string; twitchLogin: string; logoUrl: string } }[] }).streamingPartners ?? [];
+  const rewardsData: { placements?: { place: number; coins: number; rankPoints: number }[] } | null = (() => {
+    const raw = (event as unknown as Record<string, unknown>).placementRewardsJson;
+    if (!raw) return null;
+    try { return (typeof raw === "string" ? JSON.parse(raw) : raw) as { placements?: { place: number; coins: number; rankPoints: number }[] }; } catch { return null; }
+  })();
+  const firstPlace = rewardsData?.placements?.find(p => p.place === 1) ?? null;
+  const date = new Date(event.startAt);
+  const serverTimeFallback = date.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+
   // Stats für Header
   const playedMatches = event.matches.filter(m =>
     isElimination ? !!m.winnerId : !!m.playedAt
@@ -207,12 +232,22 @@ export default async function TournamentDetailPage({
               )}
             </div>
             <div className="flex items-center gap-4 flex-wrap">
-              {event.game && <span className="text-sm text-gray-400">{event.game}</span>}
+              {(event.game || genreInfo) && (
+                <span className="flex items-center gap-1.5 text-sm text-gray-400">
+                  {event.game && <span>{event.game}</span>}
+                  {genreInfo && (
+                    <span className="flex items-center gap-1 text-xs text-gray-500">
+                      <Image src={genreInfo.icon} alt={genreInfo.label} width={12} height={12} className="object-contain" />
+                      {genreInfo.label}
+                    </span>
+                  )}
+                </span>
+              )}
               <span className="flex items-center gap-1.5 text-sm text-gray-400">
                 <Clock className="w-3.5 h-3.5" />
-                {new Date(event.startAt).toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}
+                {date.toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}
                 {" · "}
-                {new Date(event.startAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} Uhr
+                <ClientTime iso={date.toISOString()} serverDisplay={serverTimeFallback} /> Uhr
               </span>
             </div>
           </div>
@@ -228,8 +263,26 @@ export default async function TournamentDetailPage({
             <p className="text-xs text-gray-500 mt-0.5">Teilnehmer</p>
           </div>
           <div className="glass-heavy rounded-xl p-3 text-center">
-            <p className="text-lg font-semibold text-rose-400">+{event.pointReward}</p>
-            <p className="text-xs text-gray-500 mt-0.5">Punkte</p>
+            {firstPlace ? (
+              <div className="flex items-center justify-center gap-1 flex-wrap">
+                <span className="text-sm">🥇</span>
+                {firstPlace.coins > 0 && (
+                  <span className="flex items-center gap-0.5 text-sm font-semibold text-amber-400">
+                    <Image src="/Muenze Icon.png" alt="Münzen" width={14} height={14} className="object-contain" />
+                    {firstPlace.coins}
+                  </span>
+                )}
+                {firstPlace.rankPoints > 0 && (
+                  <span className="flex items-center gap-0.5 text-sm font-semibold text-teal-400">
+                    <RankPointsIcon size={14} />
+                    {firstPlace.rankPoints}
+                  </span>
+                )}
+              </div>
+            ) : (
+              <p className="text-lg font-semibold text-rose-400">+{participationCoins}</p>
+            )}
+            <p className="text-xs text-gray-500 mt-0.5">{firstPlace ? "1. Platz" : "Münzen"}</p>
           </div>
           <div className="glass-heavy rounded-xl p-3 text-center">
             <p className="text-lg font-semibold text-white">
@@ -246,6 +299,18 @@ export default async function TournamentDetailPage({
               <p className="text-xs text-amber-600 uppercase tracking-wide font-medium">Turniersieger</p>
               <p className="text-white font-semibold">{userName(winner)}</p>
             </div>
+          </div>
+        )}
+
+        {streamingPartners.length > 0 && (
+          <div className="mt-4 flex items-center gap-2 flex-wrap">
+            <Tv2 className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+            <span className="text-[10px] text-gray-500 uppercase tracking-widest">Streaming-Partner</span>
+            {streamingPartners.map(sp => (
+              <span key={sp.partner.id} className="text-xs px-2.5 py-1 rounded-full border border-violet-500/20 bg-violet-500/10 text-violet-300 font-medium">
+                {sp.partner.name}
+              </span>
+            ))}
           </div>
         )}
 
