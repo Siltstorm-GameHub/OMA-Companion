@@ -59,6 +59,8 @@ model User {
   systemBadges              UserSystemBadge[]
   customBadgeAwards         UserCustomBadge[]
   dailyMessages             DailyMessage[]
+  wanderpocalHoldings       WanderpocalHolder[]
+  wanderpocalStats          WanderpocalStat[]
 }
 
 // ── Collectibles ─────────────────────────────────────────────────────────────
@@ -641,6 +643,33 @@ model UserCustomBadge {
   user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   badge         CustomBadge @relation(fields: [customBadgeId], references: [id], onDelete: Cascade)
   @@id([userId, customBadgeId])
+}
+
+// ── Wanderpokal ──────────────────────────────────────────────────────────────
+
+model WanderpocalHolder {
+  id         String   @id @default(cuid())
+  userId     String
+  scopeType  String   // "category" | "genre"
+  scopeValue String   // z.B. "competitive", "arcade"
+  winCount   Int
+  heldSince  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([scopeType, scopeValue])
+  @@index([userId])
+}
+
+model WanderpocalStat {
+  id         String @id @default(cuid())
+  userId     String
+  scopeType  String
+  scopeValue String
+  winCount   Int
+  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, scopeType, scopeValue])
+  @@index([scopeType, scopeValue, winCount])
 }
 
 // ── Event-Enums ───────────────────────────────────────────────────────────────

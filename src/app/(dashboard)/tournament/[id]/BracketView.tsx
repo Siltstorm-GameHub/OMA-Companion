@@ -1,6 +1,8 @@
 "use client";
 import { Trophy } from "lucide-react";
 import WinIcon from "@/components/WinIcon";
+import WanderpocalBadge from "@/components/WanderpocalBadge";
+import type { WanderpocalHolder } from "@/lib/wanderpocal";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };
 type Participant = { userId: string; user: User };
@@ -26,10 +28,12 @@ export default function BracketView({
   matches,
   participants,
   userId,
+  holders = [],
 }: {
   matches: Match[];
   participants: Participant[];
   userId: string;
+  holders?: WanderpocalHolder[];
 }) {
   if (!matches.length) {
     return (
@@ -133,7 +137,7 @@ export default function BracketView({
                                   user     ? "text-white" :
                                              "text-gray-600 italic"
                                 }`}>
-                                  {user ? `${uname(user)}${isMe ? " (du)" : ""}` : "TBD"}
+                                  {user ? <>{uname(user)}<WanderpocalBadge userId={user.id} holders={holders} />{isMe ? " (du)" : ""}</> : "TBD"}
                                 </span>
                               </div>
                               <div className="flex items-center gap-1 shrink-0">

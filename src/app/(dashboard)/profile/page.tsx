@@ -5,6 +5,7 @@ import { getRank, getNextRank } from "@/lib/ranks";
 import { computeBadges } from "@/lib/badges";
 import BadgesSection from "./BadgesSection";
 import PointsInfoModal from "./PointsInfoModal";
+import WanderpocalSection from "@/components/WanderpocalSection";
 import { QUEST_TYPE_META, type QuestType } from "@/lib/quests";
 import { RARITY_CONFIG, type Rarity, MAX_SHOWCASE } from "@/lib/collectibles";
 import {
@@ -28,7 +29,7 @@ export default async function ProfilePage() {
   const month = now.getMonth() + 1;
   const year  = now.getFullYear();
 
-  const [user, eventRegs, eventCount, finishedEvents, tournamentParticipations, tournamentCount, tournamentWins, questsWithProgress, ownedCollectibles, leaderboardRank, userSystemBadges, userCustomBadges] =
+  const [user, eventRegs, eventCount, finishedEvents, tournamentParticipations, tournamentCount, tournamentWins, questsWithProgress, ownedCollectibles, leaderboardRank, userSystemBadges, userCustomBadges, wanderpocalTrophies, wanderpocalStats] =
     await Promise.all([
       prisma.user.findUnique({
         where:  { id: userId },
@@ -81,6 +82,8 @@ export default async function ProfilePage() {
         include: { badge: { select: { id: true, icon: true, name: true, desc: true, category: true } } },
         orderBy: { earnedAt: "asc" },
       }),
+      prisma.wanderpocalHolder.findMany({ where: { userId } }),
+      prisma.wanderpocalStat.findMany({ where: { userId } }),
     ]);
 
   if (!user) redirect("/login");
@@ -117,6 +120,21 @@ export default async function ProfilePage() {
   const displayName  = user.username ?? user.name ?? "Unbekannt";
 
   const totalUsers = await prisma.user.count();
+
+  // Wanderpokal: Rang je Scope berechnen
+  const wanderpocalRankMap: Record<string, number> = {};
+  await Promise.all(
+    wanderpocalStats.map(async (stat) => {
+      const above = await prisma.wanderpocalStat.count({
+        where: {
+          scopeType:  stat.scopeType,
+          scopeValue: stat.scopeValue,
+          winCount:   { gt: stat.winCount },
+        },
+      });
+      wanderpocalRankMap[`${stat.scopeType}:${stat.scopeValue}`] = above + 1;
+    })
+  );
 
   const showcaseBadgeKeys: string[] = (() => {
     try { return JSON.parse(user.showcaseBadgesJson ?? "[]"); } catch { return []; }
@@ -302,6 +320,13 @@ export default async function ProfilePage() {
               earnedAt: uc.earnedAt.toISOString(),
             }))}
             showcaseKeys={showcaseBadgeKeys}
+          />
+
+          {/* Wanderpokal */}
+          <WanderpocalSection
+            trophies={wanderpocalTrophies}
+            userStats={wanderpocalStats}
+            rankMap={wanderpocalRankMap}
           />
 
           {/* Quest-Fortschritt */}
