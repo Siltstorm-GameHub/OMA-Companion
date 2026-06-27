@@ -1,11 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/roles";
 import {
-  CalendarDays, ExternalLink, Users, Zap, Swords, Trophy,
+  CalendarDays, ExternalLink, Users, Swords, Trophy,
   ChevronRight, Check, Repeat, Gamepad2,
 } from "lucide-react";
 import RegisterButton from "./RegisterButton";
 import SyncButton from "./SyncButton";
+import CoinIcon from "@/components/CoinIcon";
 import { RelativeTime } from "@/components/RelativeTime";
 import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
@@ -195,7 +196,7 @@ export default async function EventsPage() {
                       {ev._count.registrations}{ev.maxPlayers ? ` / ${ev.maxPlayers}` : ""}
                     </span>
                     <span className="flex items-center gap-1 text-xs text-amber-400 font-semibold">
-                      <Zap className="w-3 h-3" />+{ev.pointReward}
+                      +{ev.pointReward} <CoinIcon size={13} />
                     </span>
                     {discordUrl && (
                       <a href={discordUrl} target="_blank" rel="noopener noreferrer"

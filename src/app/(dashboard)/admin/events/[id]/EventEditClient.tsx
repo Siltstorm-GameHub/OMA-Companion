@@ -344,7 +344,7 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
       </div>
 
       {/* Abschließen-CTA */}
-      {(event.status === "active" || event.status === "finished") && (
+      {(event.status === "active" || event.status === "finished" || event.status === "umfrage") && (
         <Link href={`/admin/events/${event.id}/complete`}
           className="flex items-center justify-between gap-3 rounded-xl px-4 py-3 border border-teal-600/40 bg-teal-700/20 hover:bg-teal-700/30 transition-colors">
           <div>
