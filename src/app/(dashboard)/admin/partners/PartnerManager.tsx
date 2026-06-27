@@ -2,7 +2,9 @@
 import { useState } from "react";
 import Image from "next/image";
 import { toast } from "sonner";
-import { Plus, Trash2, ExternalLink, ToggleLeft, ToggleRight, Loader2, Search } from "lucide-react";
+import { Plus, Trash2, ExternalLink, ToggleLeft, ToggleRight, Loader2, Search, Link2, Unlink } from "lucide-react";
+
+type LinkedUser = { id: string; name: string | null; username: string | null; image: string | null; twitchLogin: string | null } | null;
 
 type Partner = {
   id: string;
@@ -11,6 +13,7 @@ type Partner = {
   logoUrl: string;
   isActive: boolean;
   order: number;
+  user: LinkedUser;
 };
 
 type TwitchPreview = { login: string; display_name: string; profile_image_url: string } | null;
@@ -22,6 +25,13 @@ export default function PartnerManager({ initialPartners }: { initialPartners: P
   const [preview, setPreview] = useState<TwitchPreview>(null);
   const [previewing, setPreviewing] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // User-link state: which partner is being linked, search input, results
+  const [linkingPartnerId, setLinkingPartnerId] = useState<string | null>(null);
+  const [userSearchInput, setUserSearchInput] = useState("");
+  const [userSearchResults, setUserSearchResults] = useState<{ id: string; name: string | null; username: string | null; image: string | null; twitchLogin: string | null }[]>([]);
+  const [userSearching, setUserSearching] = useState(false);
+  const [linkSaving, setLinkSaving] = useState(false);
 
   async function fetchPreview() {
     if (!twitchInput.trim()) return;
@@ -56,7 +66,7 @@ export default function PartnerManager({ initialPartners }: { initialPartners: P
       });
       if (!res.ok) { toast.error("Fehler beim Speichern"); return; }
       const created = await res.json();
-      setPartners((p) => [...p, created]);
+      setPartners((p) => [...p, { ...created, user: null }]);
       setTwitchInput("");
       setNameInput("");
       setPreview(null);
@@ -74,7 +84,7 @@ export default function PartnerManager({ initialPartners }: { initialPartners: P
     });
     if (!res.ok) { toast.error("Fehler"); return; }
     const updated = await res.json();
-    setPartners((p) => p.map((x) => (x.id === partner.id ? updated : x)));
+    setPartners((p) => p.map((x) => (x.id === partner.id ? { ...updated, user: partner.user } : x)));
   }
 
   async function deletePartner(partner: Partner) {
@@ -83,6 +93,61 @@ export default function PartnerManager({ initialPartners }: { initialPartners: P
     if (!res.ok) { toast.error("Fehler beim Löschen"); return; }
     setPartners((p) => p.filter((x) => x.id !== partner.id));
     toast.success("Partner entfernt");
+  }
+
+  async function searchUsers(q: string) {
+    if (!q.trim()) { setUserSearchResults([]); return; }
+    setUserSearching(true);
+    try {
+      const res = await fetch(`/api/admin/users/search?q=${encodeURIComponent(q.trim())}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setUserSearchResults(data.users ?? data ?? []);
+    } catch {
+      toast.error("Fehler bei der Nutzersuche");
+    } finally {
+      setUserSearching(false);
+    }
+  }
+
+  async function linkUser(partner: Partner, userId: string, userTwitchLogin: string | null) {
+    setLinkSaving(true);
+    try {
+      const body: Record<string, unknown> = { userId };
+      // Pre-fill twitchLogin from user's profile if partner doesn't have one
+      if (userTwitchLogin && !partner.twitchLogin) body.twitchLogin = userTwitchLogin;
+      const res = await fetch(`/api/partners/${partner.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) { toast.error("Fehler beim Verknüpfen"); return; }
+      const updated = await res.json();
+      setPartners((p) => p.map((x) => (x.id === partner.id ? updated : x)));
+      setLinkingPartnerId(null);
+      setUserSearchInput("");
+      setUserSearchResults([]);
+      toast.success("Nutzer verknüpft");
+    } finally {
+      setLinkSaving(false);
+    }
+  }
+
+  async function unlinkUser(partner: Partner) {
+    setLinkSaving(true);
+    try {
+      const res = await fetch(`/api/partners/${partner.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: null }),
+      });
+      if (!res.ok) { toast.error("Fehler beim Entverknüpfen"); return; }
+      const updated = await res.json();
+      setPartners((p) => p.map((x) => (x.id === partner.id ? updated : x)));
+      toast.success("Verknüpfung aufgehoben");
+    } finally {
+      setLinkSaving(false);
+    }
   }
 
   return (
@@ -150,48 +215,91 @@ export default function PartnerManager({ initialPartners }: { initialPartners: P
       ) : (
         <div className="space-y-2">
           {partners.map((p) => (
-            <div
-              key={p.id}
-              className="flex items-center gap-3 px-4 py-3 rounded-xl glass"
-              style={{ border: "1px solid rgba(255,255,255,0.06)", opacity: p.isActive ? 1 : 0.5 }}
-            >
-              <Image
-                src={p.logoUrl}
-                alt={p.name}
-                width={36}
-                height={36}
-                className="rounded-full flex-shrink-0"
-              />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-white truncate">{p.name}</p>
-                <p className="text-xs text-gray-500">twitch.tv/{p.twitchLogin}</p>
+            <div key={p.id} className="rounded-xl glass overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.06)", opacity: p.isActive ? 1 : 0.5 }}>
+              <div className="flex items-center gap-3 px-4 py-3">
+                <Image src={p.logoUrl} alt={p.name} width={36} height={36} className="rounded-full flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white truncate">{p.name}</p>
+                  <p className="text-xs text-gray-500">twitch.tv/{p.twitchLogin}</p>
+                  {p.user && (
+                    <p className="text-xs text-violet-400 mt-0.5 flex items-center gap-1">
+                      {p.user.image && <Image src={p.user.image} alt="" width={12} height={12} className="rounded-full" />}
+                      verknüpft mit {p.user.username ?? p.user.name}
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <a href={`https://twitch.tv/${p.twitchLogin}`} target="_blank" rel="noopener noreferrer"
+                    className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/8 transition-colors">
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                  <button
+                    onClick={() => {
+                      if (linkingPartnerId === p.id) { setLinkingPartnerId(null); setUserSearchInput(""); setUserSearchResults([]); }
+                      else { setLinkingPartnerId(p.id); setUserSearchInput(""); setUserSearchResults([]); }
+                    }}
+                    className="p-1.5 rounded-lg text-gray-500 hover:text-violet-400 hover:bg-violet-500/10 transition-colors"
+                    title="Community-Nutzer verknüpfen"
+                  >
+                    <Link2 className="w-3.5 h-3.5" />
+                  </button>
+                  {p.user && (
+                    <button
+                      onClick={() => unlinkUser(p)}
+                      disabled={linkSaving}
+                      className="p-1.5 rounded-lg text-gray-500 hover:text-amber-400 hover:bg-amber-500/10 transition-colors"
+                      title="Verknüpfung aufheben"
+                    >
+                      <Unlink className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  <button onClick={() => toggleActive(p)} className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/8 transition-colors" title={p.isActive ? "Deaktivieren" : "Aktivieren"}>
+                    {p.isActive ? <ToggleRight className="w-4 h-4 text-emerald-400" /> : <ToggleLeft className="w-4 h-4" />}
+                  </button>
+                  <button onClick={() => deletePartner(p)} className="p-1.5 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/8 transition-colors">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <a
-                  href={`https://twitch.tv/${p.twitchLogin}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/8 transition-colors"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
-                <button
-                  onClick={() => toggleActive(p)}
-                  className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/8 transition-colors"
-                  title={p.isActive ? "Deaktivieren" : "Aktivieren"}
-                >
-                  {p.isActive
-                    ? <ToggleRight className="w-4 h-4 text-emerald-400" />
-                    : <ToggleLeft className="w-4 h-4" />
-                  }
-                </button>
-                <button
-                  onClick={() => deletePartner(p)}
-                  className="p-1.5 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/8 transition-colors"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
+
+              {/* User-link panel */}
+              {linkingPartnerId === p.id && (
+                <div className="px-4 pb-4 border-t border-white/[0.05] pt-3 space-y-2">
+                  <p className="text-xs text-gray-400 font-medium">Community-Mitglied verknüpfen</p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Nutzername suchen…"
+                      value={userSearchInput}
+                      onChange={(e) => { setUserSearchInput(e.target.value); searchUsers(e.target.value); }}
+                      className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20"
+                    />
+                    {userSearching && <Loader2 className="w-4 h-4 animate-spin text-gray-400 self-center" />}
+                  </div>
+                  {userSearchResults.length > 0 && (
+                    <div className="space-y-1">
+                      {userSearchResults.slice(0, 5).map(u => (
+                        <button
+                          key={u.id}
+                          onClick={() => linkUser(p, u.id, u.twitchLogin)}
+                          disabled={linkSaving}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-white/8 transition-colors text-left disabled:opacity-50"
+                        >
+                          {u.image
+                            ? <Image src={u.image} alt="" width={28} height={28} className="rounded-full shrink-0" />
+                            : <div className="w-7 h-7 rounded-full bg-gray-700 shrink-0" />
+                          }
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-white truncate">{u.username ?? u.name}</p>
+                            {u.twitchLogin && <p className="text-xs text-violet-400">twitch.tv/{u.twitchLogin}</p>}
+                          </div>
+                          <Plus className="w-3.5 h-3.5 text-gray-500 shrink-0" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>

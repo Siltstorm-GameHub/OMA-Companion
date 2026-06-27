@@ -20,6 +20,7 @@ const GENRE_MAP: Record<string, { label: string; icon: string }> = {
   shooter:   { label: "Shooter",    icon: "/Shooter Icon.png" },
   community: { label: "Community",  icon: "/Community Icon.png" },
 };
+import StreamRegisterButton from "@/components/StreamRegisterButton";
 import BracketView from "./BracketView";
 import RoundRobinView from "./RoundRobinView";
 import FfaView from "./FfaView";
@@ -56,7 +57,8 @@ export default async function TournamentDetailPage({
     where: { id: eventId },
     include: {
       series: { select: { id: true, name: true } },
-      streamingPartners: { include: { partner: true } },
+      streamingPartners: { include: { partner: { include: { user: { select: { id: true } } } } } },
+      communityStreamers: { include: { user: { select: { id: true, name: true, username: true, image: true, twitchLogin: true } } } },
       registrations: {
         include: {
           user: { select: { id: true, name: true, username: true, image: true, points: true } },
@@ -191,10 +193,20 @@ export default async function TournamentDetailPage({
     return typeof v === "number" ? v : (v.points ?? v.coins ?? 0);
   }
 
-  // Genre + Streaming-Partner + 1st-place reward
+  // Genre + Streaming-Partner + Community-Streamer + 1st-place reward
   const genre = (event as unknown as Record<string, unknown>).genre as string | null | undefined;
   const genreInfo = genre ? (GENRE_MAP[genre] ?? null) : null;
-  const streamingPartners = (event as unknown as { streamingPartners?: { partner: { id: string; name: string; twitchLogin: string; logoUrl: string } }[] }).streamingPartners ?? [];
+  type PartnerEntry = { partner: { id: string; name: string; twitchLogin: string; logoUrl: string; user?: { id: string } | null } };
+  type CommunityStreamerEntry = { user: { id: string; name: string | null; username: string | null; image: string | null; twitchLogin: string | null } };
+  const streamingPartners = (event as unknown as { streamingPartners?: PartnerEntry[] }).streamingPartners ?? [];
+  const communityStreamers = (event as unknown as { communityStreamers?: CommunityStreamerEntry[] }).communityStreamers ?? [];
+
+  const canRegister = event.status === "open" || event.status === "active";
+  const isPartnerStreamer = streamingPartners.some(sp => sp.partner.user?.id === userId);
+  const isCommunityStreamer = communityStreamers.some(cs => cs.user.id === userId);
+  const canStreamRegister = canRegister && !isPartnerStreamer;
+  const partnerUserIds = new Set(streamingPartners.map(sp => sp.partner.user?.id).filter(Boolean));
+  const filteredCommunityStreamers = communityStreamers.filter(cs => !partnerUserIds.has(cs.user.id));
   const rewardsData: { placements?: { place: number; coins: number; rankPoints: number }[] } | null = (() => {
     const raw = (event as unknown as Record<string, unknown>).placementRewardsJson;
     if (!raw) return null;
@@ -313,7 +325,7 @@ export default async function TournamentDetailPage({
           </div>
         )}
 
-        {streamingPartners.length > 0 && (
+        {(streamingPartners.length > 0 || filteredCommunityStreamers.length > 0) && (
           <div className="mt-4 space-y-2">
             <div className="flex items-center gap-2 flex-wrap">
               <Tv2 className="w-3.5 h-3.5 text-[#9146ff] shrink-0" />
@@ -332,10 +344,42 @@ export default async function TournamentDetailPage({
                   <span className="opacity-50 text-[10px]">↗</span>
                 </a>
               ))}
+              {filteredCommunityStreamers.map(({ user: u }) => (
+                u.twitchLogin ? (
+                  <a
+                    key={u.id}
+                    href={`https://twitch.tv/${u.twitchLogin}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all hover:brightness-110"
+                    style={{ background: "rgba(145,70,255,0.08)", border: "1px solid rgba(145,70,255,0.18)", color: "#c4a3ff" }}
+                  >
+                    {u.image && <Image src={u.image} alt={u.name ?? u.username ?? ""} width={16} height={16} className="rounded-full shrink-0" />}
+                    {u.name ?? u.username}
+                    <span className="opacity-50 text-[10px]">↗</span>
+                  </a>
+                ) : (
+                  <span
+                    key={u.id}
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium"
+                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "#9ca3af" }}
+                  >
+                    {u.image && <Image src={u.image} alt={u.name ?? u.username ?? ""} width={16} height={16} className="rounded-full shrink-0" />}
+                    {u.name ?? u.username}
+                  </span>
+                )
+              ))}
             </div>
-            <EventLiveBadge
-              twitchLogins={streamingPartners.map(sp => sp.partner.twitchLogin.toLowerCase())}
-            />
+            {streamingPartners.length > 0 && (
+              <EventLiveBadge
+                twitchLogins={streamingPartners.map(sp => sp.partner.twitchLogin.toLowerCase())}
+              />
+            )}
+          </div>
+        )}
+        {canStreamRegister && (
+          <div className="mt-3">
+            <StreamRegisterButton eventId={eventId} isStreaming={isCommunityStreamer} />
           </div>
         )}
 

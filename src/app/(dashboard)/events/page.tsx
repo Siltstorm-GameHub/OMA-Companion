@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/roles";
 import {
   CalendarDays, ExternalLink, Users, Swords, Trophy,
-  ChevronRight, Check, Repeat, Gamepad2,
+  ChevronRight, Check, Repeat, Gamepad2, Clapperboard,
 } from "lucide-react";
 import RegisterButton from "./RegisterButton";
 import SyncButton from "./SyncButton";
@@ -120,6 +120,16 @@ export default async function EventsPage() {
         </div>
         {isMod && <SyncButton />}
       </div>
+
+      {/* ── Clip des Monats Link ──────────────────────────────────── */}
+      <Link href="/clip-des-monats"
+        className="flex items-center gap-3 px-4 py-3 rounded-xl glass border border-[#9146ff]/15 hover:border-[#9146ff]/35 transition-colors group">
+        <div className="w-7 h-7 rounded-lg bg-[#9146ff]/15 flex items-center justify-center shrink-0">
+          <Clapperboard className="w-3.5 h-3.5 text-[#9146ff]" />
+        </div>
+        <span className="text-sm text-white font-medium">Clip des Monats – Abstimmung & Highlights</span>
+        <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-gray-400 transition-colors ml-auto" />
+      </Link>
 
       <div className="space-y-2">
         {upcomingItems.length === 0 && finishedItems.length === 0 && (
