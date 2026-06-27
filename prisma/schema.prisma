@@ -61,6 +61,8 @@ model User {
   dailyMessages             DailyMessage[]
   wanderpocalHoldings       WanderpocalHolder[]
   wanderpocalStats          WanderpocalStat[]
+  communityStreams           EventCommunityStreamer[]
+  linkedPartner             Partner?
 }
 
 // ── Collectibles ─────────────────────────────────────────────────────────────
@@ -288,8 +290,9 @@ model Event {
   participants  TournamentParticipant[]
   matches       Match[]
   teams         Team[]
-  streamingPartners EventPartner[]
-  clipSubmissions   EventClipSubmission[]
+  streamingPartners    EventPartner[]
+  communityStreamers   EventCommunityStreamer[]
+  clipSubmissions      EventClipSubmission[]
 }
 
 // ── Clip-Einreichungen ────────────────────────────────────────────────────────
@@ -315,6 +318,9 @@ model Partner {
   isActive    Boolean  @default(true)
   order       Int      @default(0)
   createdAt   DateTime @default(now())
+  // Optional link to a community member account
+  userId      String?  @unique
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   events      EventPartner[]
 }
 
@@ -325,6 +331,17 @@ model EventPartner {
   event     Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
   partner   Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
   @@unique([eventId, partnerId])
+}
+
+// Community members who self-register as streamer for an event
+model EventCommunityStreamer {
+  id        String   @id @default(cuid())
+  eventId   String
+  userId    String
+  createdAt DateTime @default(now())
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([eventId, userId])
 }
 
 model EventRegistration {
