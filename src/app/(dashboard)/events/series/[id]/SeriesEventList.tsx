@@ -1,9 +1,21 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { CalendarDays, ChevronDown, ChevronUp, ChevronRight, Check } from "lucide-react";
+import Image from "next/image";
+import { CalendarDays, ChevronDown, ChevronUp, ChevronRight, Check, Tv2 } from "lucide-react";
 import GameCover from "@/components/GameCover";
 import { AvatarStack } from "@/components/AvatarStack";
+import ClientTime from "@/components/ClientTime";
+import RankPointsIcon from "@/components/RankPointsIcon";
+
+const GENRE_MAP: Record<string, { label: string; icon: string }> = {
+  arcade:    { label: "Arcade",     icon: "/Arcade Icon.png" },
+  beat_em_up:{ label: "Beat-em-Up", icon: "/Beat-em-Up Icon.png" },
+  sport:     { label: "Sport",      icon: "/Sport Icon.png" },
+  racing:    { label: "Racing",     icon: "/Racing Icon.png" },
+  shooter:   { label: "Shooter",    icon: "/Shooter Icon.png" },
+  community: { label: "Community",  icon: "/Community Icon.png" },
+};
 
 const STATUS_CFG: Record<string, { label: string; badge: string; dot: string; stripe: string }> = {
   open:     { label: "Offen",      badge: "text-blue-300 bg-blue-500/10 border border-blue-500/20",           dot: "bg-blue-400",                  stripe: "bg-blue-500/40"    },
@@ -13,12 +25,16 @@ const STATUS_CFG: Record<string, { label: string; badge: string; dot: string; st
 };
 
 type EventUser = { id: string; name: string | null; username: string | null; image: string | null };
+type StreamingPartner = { partner: { id: string; name: string; twitchLogin: string; logoUrl: string } };
 export type SeriesEventItem = {
   id: string;
   title: string;
   status: string;
   startAt: Date | string;
   game: string | null;
+  genre?: string | null;
+  placementRewardsJson?: unknown;
+  streamingPartners?: StreamingPartner[];
   registrations: { userId: string; user: EventUser }[];
 };
 
@@ -28,6 +44,20 @@ function EventCard({ ev, userId, fixedGame }: { ev: SeriesEventItem; userId: str
   const isLive = ev.status === "active" || ev.status === "umfrage";
   const participants = ev.registrations.map(r => r.user);
   const date = new Date(ev.startAt);
+  const isoStr = date.toISOString();
+  const serverTimeFallback = date.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+
+  const genre = ev.genre as string | null | undefined;
+  const genreInfo = genre ? (GENRE_MAP[genre] ?? null) : null;
+
+  const rewardsData: { placements?: { place: number; coins: number; rankPoints: number }[] } | null = (() => {
+    const raw = ev.placementRewardsJson;
+    if (!raw) return null;
+    try { return (typeof raw === "string" ? JSON.parse(raw) : raw) as { placements?: { place: number; coins: number; rankPoints: number }[] }; } catch { return null; }
+  })();
+  const firstPlace = rewardsData?.placements?.find(p => p.place === 1) ?? null;
+
+  const partners = ev.streamingPartners ?? [];
 
   return (
     <Link href={`/tournament/${ev.id}`}
@@ -41,14 +71,65 @@ function EventCard({ ev, userId, fixedGame }: { ev: SeriesEventItem; userId: str
 
       <div className="relative flex-1 min-w-0">
         <p className="text-sm font-medium text-white truncate">{ev.title}</p>
+
+        {/* Game + Genre */}
+        {(ev.game ?? fixedGame ?? genreInfo) && (
+          <div className="flex items-center gap-1.5 mt-0.5">
+            {(ev.game ?? fixedGame) && (
+              <span className="text-[10px] text-gray-500">{ev.game ?? fixedGame}</span>
+            )}
+            {genreInfo && (
+              <span className="flex items-center gap-1 text-[10px] text-gray-500">
+                <Image src={genreInfo.icon} alt={genreInfo.label} width={10} height={10} className="object-contain" />
+                {genreInfo.label}
+              </span>
+            )}
+          </div>
+        )}
+
         <div className="flex items-center gap-2 mt-1">
           <p className="text-[10px] text-gray-500">
             {date.toLocaleDateString("de-DE", { day: "2-digit", month: "long" })}
             {" · "}
-            {date.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} Uhr
+            <ClientTime iso={isoStr} serverDisplay={serverTimeFallback} /> Uhr
           </p>
           {participants.length > 0 && <AvatarStack users={participants} max={4} size="xs" />}
         </div>
+
+        {/* Streaming Partners */}
+        {partners.length > 0 && (
+          <div className="flex items-center gap-1 mt-1 flex-wrap">
+            <Tv2 className="w-3 h-3 text-violet-400 shrink-0" />
+            {partners.map(sp => (
+              <span key={sp.partner.id}
+                className="text-[10px] px-1.5 py-0.5 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-300">
+                {sp.partner.name}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* 1st place reward */}
+        {firstPlace && (
+          <div className="flex items-center gap-1 mt-1">
+            <span className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300">
+              🥇
+              {firstPlace.coins > 0 && (
+                <>
+                  <Image src="/Muenze Icon.png" alt="Münzen" width={10} height={10} className="object-contain" />
+                  {firstPlace.coins}
+                </>
+              )}
+              {firstPlace.rankPoints > 0 && (
+                <>
+                  <span className="text-amber-500/60">·</span>
+                  <RankPointsIcon size={10} />
+                  {firstPlace.rankPoints}
+                </>
+              )}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="relative flex items-center gap-1.5 shrink-0">

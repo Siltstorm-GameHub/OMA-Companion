@@ -13,9 +13,10 @@ interface Props {
   showcaseItems: ShowcaseItem[];
   allOwned:      OwnedItem[];
   maxSlots:      number;
+  readOnly?:     boolean;
 }
 
-export default function CollectiblesShowcase({ showcaseItems, allOwned, maxSlots }: Props) {
+export default function CollectiblesShowcase({ showcaseItems, allOwned, maxSlots, readOnly = false }: Props) {
   const router = useRouter();
   const [editing,   setEditing]   = useState(false);
   const [selected,  setSelected]  = useState<string[]>(showcaseItems.map(i => i.id));
@@ -67,7 +68,7 @@ export default function CollectiblesShowcase({ showcaseItems, allOwned, maxSlots
         <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">
           🏆 Showcase <span className="text-gray-600 normal-case">({displayItems.length}/{maxSlots})</span>
         </h2>
-        {!editing ? (
+        {!readOnly && !editing ? (
           <button
             onClick={() => setEditing(true)}
             disabled={allOwned.length === 0}
@@ -75,7 +76,7 @@ export default function CollectiblesShowcase({ showcaseItems, allOwned, maxSlots
           >
             <Pencil className="w-3 h-3" /> Bearbeiten
           </button>
-        ) : (
+        ) : !readOnly ? (
           <div className="flex items-center gap-2">
             <button onClick={cancelEdit} className="flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-lg border border-white/[0.08] text-gray-500 hover:text-white transition-colors">
               <X className="w-3 h-3" /> Abbrechen
@@ -89,12 +90,12 @@ export default function CollectiblesShowcase({ showcaseItems, allOwned, maxSlots
               Speichern
             </button>
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* Showcase-Slots */}
       <div className="glass card-shine rounded-2xl p-4">
-        {allOwned.length === 0 ? (
+        {allOwned.length === 0 && !readOnly ? (
           <div className="text-center py-6">
             <p className="text-gray-500 text-sm font-medium">Noch keine Figuren gesammelt</p>
             <p className="text-xs text-gray-600 mt-1">Kaufe Figuren im Shop, um deinen Showcase zu befüllen</p>
@@ -123,7 +124,7 @@ export default function CollectiblesShowcase({ showcaseItems, allOwned, maxSlots
                           : <ImageIcon className="w-7 h-7 text-gray-600" />
                         }
                         <span className={`text-[9px] font-medium px-1 text-center leading-tight ${rarity?.color}`}>{item.name}</span>
-                        {editing && (
+                        {!readOnly && editing && (
                           <button
                             onClick={() => toggleSelect(item.id)}
                             className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-500/80 border border-red-400/40 flex items-center justify-center hover:bg-red-500"

@@ -20,9 +20,10 @@ interface Props {
   systemBadges: Badge[];          // all system badges with earned/progress state
   customBadges: CustomBadgeDisplay[];
   showcaseKeys: string[];         // currently pinned badge keys (system) or "custom:<id>"
+  readOnly?:    boolean;
 }
 
-export default function BadgesSection({ systemBadges, customBadges, showcaseKeys: initialKeys }: Props) {
+export default function BadgesSection({ systemBadges, customBadges, showcaseKeys: initialKeys, readOnly = false }: Props) {
   const router = useRouter();
   const [showUnearned, setShowUnearned] = useState(false);
   const [editingShowcase, setEditingShowcase] = useState(false);
@@ -76,21 +77,23 @@ export default function BadgesSection({ systemBadges, customBadges, showcaseKeys
         <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
           🏅 Abzeichen <span className="text-gray-600 normal-case">({totalEarned})</span>
         </h2>
-        <div className="flex items-center gap-2">
-          {unearnedSystem.length > 0 && (
-            <button onClick={() => setShowUnearned(v => !v)}
-              className="flex items-center gap-1.5 text-[11px] text-gray-500 hover:text-gray-300 transition-colors">
-              {showUnearned ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-              {showUnearned ? "Nicht verdiente ausblenden" : "Nicht verdiente einblenden"}
-            </button>
-          )}
-          {totalEarned > 0 && (
-            <button onClick={() => { setEditingShowcase(v => !v); setSelected(initialKeys); }}
-              className="flex items-center gap-1.5 text-[11px] text-gray-500 hover:text-gray-300 transition-colors">
-              <Pencil className="w-3 h-3" /> Showcase
-            </button>
-          )}
-        </div>
+        {!readOnly && (
+          <div className="flex items-center gap-2">
+            {unearnedSystem.length > 0 && (
+              <button onClick={() => setShowUnearned(v => !v)}
+                className="flex items-center gap-1.5 text-[11px] text-gray-500 hover:text-gray-300 transition-colors">
+                {showUnearned ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                {showUnearned ? "Nicht verdiente ausblenden" : "Nicht verdiente einblenden"}
+              </button>
+            )}
+            {totalEarned > 0 && (
+              <button onClick={() => { setEditingShowcase(v => !v); setSelected(initialKeys); }}
+                className="flex items-center gap-1.5 text-[11px] text-gray-500 hover:text-gray-300 transition-colors">
+                <Pencil className="w-3 h-3" /> Showcase
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ── Showcase slots ────────────────────────────── */}
@@ -106,14 +109,14 @@ export default function BadgesSection({ systemBadges, customBadges, showcaseKeys
                     item
                       ? "border-purple-500/30 bg-purple-500/5"
                       : "border-white/10 bg-white/[0.02]"
-                  } ${editingShowcase && item ? "cursor-pointer hover:border-red-500/40" : ""}`}
-                  onClick={() => editingShowcase && item && togglePin(item.key)}
+                  } ${!readOnly && editingShowcase && item ? "cursor-pointer hover:border-red-500/40" : ""}`}
+                  onClick={() => !readOnly && editingShowcase && item && togglePin(item.key)}
                   title={item?.name}>
                   {item ? (
                     <>
                       <span className="text-2xl">{item.icon}</span>
                       <span className="text-[9px] text-gray-400 text-center px-1 leading-tight line-clamp-2">{item.name}</span>
-                      {editingShowcase && (
+                      {!readOnly && editingShowcase && (
                         <div className="absolute top-1 right-1 w-4 h-4 rounded-full bg-red-500/80 flex items-center justify-center">
                           <X className="w-2.5 h-2.5 text-white" />
                         </div>
@@ -127,7 +130,7 @@ export default function BadgesSection({ systemBadges, customBadges, showcaseKeys
             })}
           </div>
 
-          {editingShowcase && (
+          {!readOnly && editingShowcase && (
             <>
               <p className="text-[10px] text-gray-500">Abzeichen auswählen (max. {MAX_SHOWCASE}):</p>
               <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
