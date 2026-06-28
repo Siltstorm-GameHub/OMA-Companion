@@ -16,6 +16,7 @@ export default async function AdminEventsPage() {
     format: true,
     category: true,
     completionData: true,
+    hidden: true,
     _count: { select: { registrations: true } },
   } as const;
 
@@ -33,6 +34,7 @@ export default async function AdminEventsPage() {
         name: true,
         category: true,
         recurrenceType: true,
+        hidden: true,
         _count: { select: { events: true } },
         events: {
           where: { status: { notIn: ["finished", "closed"] } },

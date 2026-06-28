@@ -243,6 +243,7 @@ model EventSeries {
   // Saison-Archiv
   groupId              String?   // verbindet alle Saisons derselben Reihe
   status               String    @default("active") // "active" | "archived"
+  hidden               Boolean   @default(false)    // true = nur im Admin sichtbar
   seasonNumber         Int?      // 1, 2, 3 …
   archivedAt           DateTime?
   // JSON: analog zu event.completionData (overallWinnerIds, finalRanking, poll*, lockedAt)
@@ -265,6 +266,7 @@ model Event {
   spectatorRewardJson String? // JSON: { coins: number, rankPoints: number }
   type           String   @default("community")
   status         String   @default("open")
+  hidden         Boolean  @default(false)    // true = nur im Admin sichtbar
   discordEventId   String?  @unique
   discordMessageId String?  // Message-ID der Bot-Ankündigung (zum nachträglichen Löschen)
   discordChannelId String?   // Kanal-ID für Bot-Nachrichten (überschreibt DISCORD_EVENTS_CHANNEL_ID)

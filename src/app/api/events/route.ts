@@ -10,13 +10,13 @@ export async function GET(req: NextRequest) {
   const category = searchParams.get("category");
   const genre = searchParams.get("genre");
 
-  const where: Record<string, unknown> = {};
+  const where: Record<string, unknown> = { hidden: false };
   if (status) where.status = status;
   if (category) where.category = category;
   if (genre) where.genre = genre;
 
   const events = await prisma.event.findMany({
-    where: Object.keys(where).length > 0 ? where : undefined,
+    where,
     include: { _count: { select: { registrations: { where: { role: "player" } } } } },
     orderBy: { startAt: "asc" },
   });

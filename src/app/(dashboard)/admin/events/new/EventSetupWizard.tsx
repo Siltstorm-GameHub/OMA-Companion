@@ -998,7 +998,7 @@ export default function EventSetupWizard({
 
       <div className="rounded-2xl p-6 mb-6"
         style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
-        <CurrentStep />
+        {CurrentStep()}
       </div>
 
       <div className="flex gap-3">

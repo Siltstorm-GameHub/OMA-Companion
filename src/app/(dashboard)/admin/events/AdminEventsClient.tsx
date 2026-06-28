@@ -1,9 +1,11 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { Edit2, ChevronDown, ChevronRight, Repeat } from "lucide-react";
+import { Edit2, ChevronDown, ChevronRight, Repeat, Eye, EyeOff } from "lucide-react";
 import EventCategoryBadge from "@/components/EventCategoryBadge";
 import { EventCategory } from "@prisma/client";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 const STATUS_LABELS: Record<string, string> = {
   open:     "Offen",
@@ -29,6 +31,7 @@ type Event = {
   format: string | null;
   category: string | null;
   completionData: boolean | string | number | null | object;
+  hidden: boolean;
   _count: { registrations: number };
 };
 
@@ -37,9 +40,48 @@ type Series = {
   name: string;
   category: string | null;
   recurrenceType: string | null;
+  hidden: boolean;
   _count: { events: number };
   events: Event[];
 };
+
+function HiddenToggle({ id, type, hidden }: { id: string; type: "event" | "series"; hidden: boolean }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+
+  async function toggle(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setBusy(true);
+    const url  = type === "event" ? "/api/admin/events" : "/api/admin/event-series";
+    const body = type === "event"
+      ? { eventId: id, hidden: !hidden }
+      : { seriesId: id, hidden: !hidden };
+    const res = await fetch(url, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    setBusy(false);
+    if (res.ok) {
+      toast.success(hidden ? "Wieder sichtbar" : "Ausgeblendet");
+      router.refresh();
+    } else {
+      toast.error("Fehler");
+    }
+  }
+
+  return (
+    <button
+      onClick={toggle}
+      disabled={busy}
+      title={hidden ? "Einblenden (für alle sichtbar machen)" : "Ausblenden (nur im Admin sichtbar)"}
+      className={`shrink-0 p-1.5 rounded transition-colors disabled:opacity-40 ${
+        hidden
+          ? "text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
+          : "text-gray-600 hover:text-gray-400 hover:bg-white/[0.05]"
+      }`}
+    >
+      {hidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+    </button>
+  );
+}
 
 function EventRow({ ev, indent = false }: { ev: Event; indent?: boolean }) {
   const statusStyle = STATUS_STYLES[ev.status] ?? STATUS_STYLES.finished;
@@ -49,11 +91,16 @@ function EventRow({ ev, indent = false }: { ev: Event; indent?: boolean }) {
   return (
     <Link
       href={`/admin/events/${ev.id}`}
-      className={`flex items-center gap-4 px-4 py-3 hover:bg-white/[0.02] transition-colors group ${indent ? "pl-8 border-l-2 border-teal-900/40 ml-4" : ""}`}
+      className={`flex items-center gap-4 px-4 py-3 hover:bg-white/[0.02] transition-colors group ${indent ? "pl-8 border-l-2 border-teal-900/40 ml-4" : ""} ${ev.hidden ? "opacity-60" : ""}`}
     >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-medium text-white truncate">{ev.title}</span>
+          {ev.hidden && (
+            <span className="text-[10px] text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 shrink-0 flex items-center gap-1">
+              <EyeOff className="w-2.5 h-2.5" /> ausgeblendet
+            </span>
+          )}
           {ev.category && <EventCategoryBadge category={ev.category as EventCategory} />}
           {ev.game && (
             <span className="text-[10px] text-gray-500 border border-white/[0.06] rounded px-1.5 py-0.5 shrink-0">
@@ -76,6 +123,7 @@ function EventRow({ ev, indent = false }: { ev: Event; indent?: boolean }) {
           <span className="text-[11px] text-gray-600">{ev._count.registrations} Teilnehmer</span>
         </div>
       </div>
+      <HiddenToggle id={ev.id} type="event" hidden={ev.hidden} />
       <span className={`text-[11px] px-2 py-0.5 rounded-full border shrink-0 ${statusStyle}`}>
         {statusLabel}
       </span>
@@ -88,7 +136,7 @@ function SeriesRow({ s }: { s: Series }) {
   const [open, setOpen] = useState(false);
   const upcomingCount = s.events.length;
   return (
-    <div>
+    <div className={s.hidden ? "opacity-60" : ""}>
       <div className="flex items-center gap-3 px-4 py-3 border-t border-white/[0.04] first:border-t-0">
         <button
           type="button"
@@ -99,6 +147,11 @@ function SeriesRow({ s }: { s: Series }) {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-sm font-medium text-white truncate">{s.name}</span>
+              {s.hidden && (
+                <span className="text-[10px] text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 shrink-0 flex items-center gap-1">
+                  <EyeOff className="w-2.5 h-2.5" /> ausgeblendet
+                </span>
+              )}
               {s.category && <EventCategoryBadge category={s.category as EventCategory} />}
               {s.recurrenceType && (
                 <span className="text-[10px] text-violet-500 border border-violet-800/40 rounded px-1.5 py-0.5 shrink-0">
@@ -112,6 +165,7 @@ function SeriesRow({ s }: { s: Series }) {
           </div>
         </button>
         <div className="flex items-center gap-2 shrink-0">
+          <HiddenToggle id={s.id} type="series" hidden={s.hidden} />
           <Link href={`/admin/series/${s.id}`}
             className="text-[11px] text-gray-500 hover:text-gray-300 border border-white/[0.08] rounded-lg px-2 py-1 transition-colors">
             Verwalten

@@ -8,6 +8,7 @@ import Link from "next/link";
 import {
   ChevronLeft, Save, Trophy, CheckCircle2, AlertTriangle, Trash2,
   Search, UserPlus, UserMinus, Repeat, ExternalLink, AlertCircle, Plus, Tv2, Clapperboard,
+  Eye, EyeOff,
 } from "lucide-react";
 import { EventCategory, EventGenre } from "@prisma/client";
 import GameNameInput from "@/components/GameNameInput";
@@ -155,6 +156,26 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
   const hasTournament = !!event.format;
   const hasStat       = ["ffa", "coop_stats", "avg_stats"].includes(tmtFormat);
   const isLiga        = tmtFormat === "liga";
+
+  const [hidden, setHidden] = useState<boolean>(event.hidden ?? false);
+  const [hiddenBusy, setHiddenBusy] = useState(false);
+
+  async function toggleHidden() {
+    setHiddenBusy(true);
+    const next = !hidden;
+    const res = await fetch("/api/admin/events", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ eventId: event.id, hidden: next }),
+    });
+    setHiddenBusy(false);
+    if (res.ok) {
+      setHidden(next);
+      toast.success(next ? "Event ausgeblendet" : "Event wieder sichtbar");
+    } else {
+      toast.error("Fehler");
+    }
+  }
 
     /* ── Clip URL state ── */
   const [twitchClipUrl, setTwitchClipUrl] = useState<string>(event.twitchClipUrl ?? "");
@@ -361,6 +382,19 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
         </div>
         <div className="flex items-center gap-2 flex-wrap shrink-0">
           <EventCategoryBadge category={event.category ?? "casual"} />
+          <button
+            onClick={toggleHidden}
+            disabled={hiddenBusy}
+            title={hidden ? "Event einblenden (für alle sichtbar machen)" : "Event ausblenden (nur im Admin sichtbar)"}
+            className={`flex items-center gap-1.5 text-xs border rounded-lg px-3 py-1.5 transition-all disabled:opacity-50 ${
+              hidden
+                ? "text-amber-400 border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20"
+                : "text-gray-500 border-white/[0.08] hover:border-white/20 hover:text-gray-300"
+            }`}
+          >
+            {hidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+            {hidden ? "Ausgeblendet" : "Sichtbar"}
+          </button>
           <Link href={`/events/${event.id}`}
             className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 border border-white/[0.08] hover:border-white/20 rounded-lg px-3 py-1.5 transition-all">
             <ExternalLink className="w-3.5 h-3.5" /> Öffentlich
