@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { sendPushToUsers } from "@/lib/push";
 import { checkAndAwardBadges } from "@/lib/award-badges";
+import { createNotificationForUsers } from "@/lib/notifications";
 import { recomputeWanderpocalHolders } from "@/lib/recompute-wanderpocal";
 
 type PlacementReward = { place: number; coins: number; rankPoints: number };
@@ -420,13 +421,12 @@ export async function POST(
       : []),
   ]);
 
-  // Push an alle Teilnehmer
+  // Push + In-App Notification an alle Teilnehmer
   const participantIds = event.registrations.map(r => r.userId);
-  sendPushToUsers(participantIds, {
-    title: `✅ Event abgeschlossen: ${event.title}`,
-    body:  "Schau dir deine Punkte und das Ergebnis an!",
-    url:   "/events",
-  }).catch(() => {});
+  const eventNotifTitle = `✅ Event abgeschlossen: ${event.title}`;
+  const eventNotifBody  = "Schau dir deine Punkte und das Ergebnis an!";
+  sendPushToUsers(participantIds, { title: eventNotifTitle, body: eventNotifBody, url: "/events" }).catch(() => {});
+  createNotificationForUsers(participantIds, { type: "event_result", title: eventNotifTitle, body: eventNotifBody, url: "/events" }).catch(() => {});
 
   // Badge-Check für alle Teilnehmer (fire-and-forget)
   for (const userId of participantIds) {

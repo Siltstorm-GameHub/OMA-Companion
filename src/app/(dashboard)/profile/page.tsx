@@ -19,6 +19,7 @@ import Image from "next/image";
 import CollectiblesShowcase from "./CollectiblesShowcase";
 import ProfileEditor from "./ProfileEditor";
 import { PushSubscribeButton } from "@/components/PushSubscribeButton";
+import NotificationPreferences from "@/components/NotificationPreferences";
 
 export default async function ProfilePage() {
   const me = await getSessionUser();
@@ -447,10 +448,13 @@ export default async function ProfilePage() {
           )}
 
           {/* Benachrichtigungen */}
-          <section>
+          <section id="notifications">
             <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">🔔 Benachrichtigungen</h2>
-            <div className="glass card-shine rounded-2xl px-2 py-1">
-              <PushSubscribeButton />
+            <div className="flex flex-col gap-3">
+              <div className="glass card-shine rounded-2xl px-2 py-1">
+                <PushSubscribeButton />
+              </div>
+              <NotificationPreferences />
             </div>
           </section>
 

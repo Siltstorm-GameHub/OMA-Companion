@@ -37,6 +37,8 @@ model User {
   showcaseJson        String?
   // Badge Showcase: JSON-Array mit bis zu 3 Badge-Keys (system oder custom-id)
   showcaseBadgesJson  String?
+  // Notification-Präferenzen: JSON-Objekt { badge: bool, quest: bool, event: bool, points: bool, clip: bool, admin: bool }
+  notificationPrefs   String  @default("{}")
 
   accounts      Account[]
   sessions      Session[]
@@ -65,6 +67,7 @@ model User {
   wanderpocalStats          WanderpocalStat[]
   communityStreams           EventCommunityStreamer[]
   linkedPartner             Partner?
+  notifications             InAppNotification[]
 }
 
 // ── Collectibles ─────────────────────────────────────────────────────────────
@@ -766,6 +769,23 @@ model DailyMessage {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   creator   User     @relation(fields: [createdBy], references: [id])
+}
+
+// ── In-App-Benachrichtigungen ────────────────────────────────────────────────
+
+model InAppNotification {
+  id        String   @id @default(cuid())
+  userId    String   @map("userid")
+  type      String   // "badge" | "quest" | "event_result" | "event_start" | "points" | "coins" | "clip" | "admin"
+  title     String
+  body      String
+  url       String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("createdat")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@map("inappnotification")
 }
 
 // ── Push-Benachrichtigungen ──────────────────────────────────────────────────

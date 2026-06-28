@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendPushToUsers } from "@/lib/push";
+import { createNotificationForUsers } from "@/lib/notifications";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,11 +41,10 @@ export async function GET(req: NextRequest) {
       timeZone: "Europe/Berlin",
     });
 
-    await sendPushToUsers(userIds, {
-      title: `⏰ Event heute: ${event.title}`,
-      body:  `Startet heute um ${startStr} Uhr – sei dabei!`,
-      url:   "/events",
-    });
+    const reminderTitle = `⏰ Event heute: ${event.title}`;
+    const reminderBody  = `Startet heute um ${startStr} Uhr – sei dabei!`;
+    await sendPushToUsers(userIds, { title: reminderTitle, body: reminderBody, url: "/events" });
+    createNotificationForUsers(userIds, { type: "event_start", title: reminderTitle, body: reminderBody, url: "/events" }).catch(() => {});
 
     notified += userIds.length;
   }
