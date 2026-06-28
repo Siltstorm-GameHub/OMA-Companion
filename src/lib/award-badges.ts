@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { findNewlyEarnedBadges, getBadgeDef, type BadgeStats } from "@/lib/badges";
 import { sendPushToUsers } from "@/lib/push";
+import { createNotification } from "@/lib/notifications";
 
 async function loadStats(userId: string): Promise<BadgeStats> {
   const [user, eventCount, tournamentWins, eventWins, mvpCount] = await Promise.all([
@@ -62,15 +63,14 @@ export async function checkAndAwardBadges(userId: string): Promise<string[]> {
     skipDuplicates: true,
   });
 
-  // Push notification (fire-and-forget)
+  // Push + In-App Notification (fire-and-forget)
   for (const key of newKeys) {
     const def = getBadgeDef(key);
     if (!def) continue;
-    sendPushToUsers([userId], {
-      title: `${def.icon} Neues Abzeichen freigeschaltet!`,
-      body:  `„${def.name}" — ${def.desc}`,
-      url:   "/profile",
-    }).catch(() => {});
+    const title = `${def.icon} Neues Abzeichen freigeschaltet!`;
+    const body  = `„${def.name}" — ${def.desc}`;
+    sendPushToUsers([userId], { title, body, url: "/profile" }).catch(() => {});
+    createNotification(userId, { type: "badge", title, body, url: "/profile" }).catch(() => {});
   }
 
   return newKeys;

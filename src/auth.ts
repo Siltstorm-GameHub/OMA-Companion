@@ -69,36 +69,57 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           });
 
           if (stubUser) {
-            console.log(`[AUTH] Merge: Stub-User ${stubUser.id} → OAuth-User ${user.id} (Discord: ${discordId})`);
+            console.log(`[AUTH] Merge gestartet: Stub ${stubUser.id} ↔ OAuth-User ${user.id} (Discord: ${discordId})`);
+            let merged = false;
 
-            // 1. Alten Stub-Account löschen (falls vorhanden, hat keine echten Tokens)
-            await prisma.account.deleteMany({
-              where: { userId: stubUser.id, provider: "discord" },
-            });
+            // Versuch 1: Stub behalten, OAuth-User (brandneu, keine Daten) löschen.
+            // Schlägt fehl wenn der OAuth-User doch schon FK-referenzierte Daten hat.
+            try {
+              await prisma.$transaction(async (tx) => {
+                // 1. Stub-Account ohne echte Tokens löschen
+                await tx.account.deleteMany({ where: { userId: stubUser.id, provider: "discord" } });
+                // 2. OAuth-Account (mit Tokens) auf den Stub übertragen
+                await tx.account.updateMany({ where: { userId: user.id }, data: { userId: stubUser.id } });
+                // 3. Stub mit Discord-Profildaten aktualisieren (name nicht überschreiben –
+                //    Stub hat bereits den server-spezifischen Nickname aus dem Sync)
+                await tx.user.update({
+                  where: { id: stubUser.id },
+                  data:  { discordId, ...(user.image ? { image: user.image } : {}) },
+                });
+                // 4. OAuth-User löschen (brandneu, noch keine echten Daten)
+                await tx.user.delete({ where: { id: user.id } });
+              });
+              token.id = stubUser.id;
+              merged   = true;
+              console.log(`[AUTH] Merge Richtung 1 OK: Stub ${stubUser.id} ist nun der aktive User.`);
+            } catch (txErr) {
+              console.warn(`[AUTH] Merge Richtung 1 fehlgeschlagen (OAuth-User hat ggf. Daten), versuche Richtung 2:`, txErr);
+            }
 
-            // 2. Echten OAuth-Account (mit Tokens) auf den Stub-User übertragen
-            await prisma.account.updateMany({
-              where: { userId: user.id },
-              data:  { userId: stubUser.id },
-            });
+            // Fallback Versuch 2: OAuth-User behalten, Stub-discordId freigeben.
+            // Verhindert State-Korruption falls Versuch 1 nach Account-Transfer abgebrochen ist.
+            if (!merged) {
+              try {
+                await prisma.$transaction(async (tx) => {
+                  // Stub-discordId freigeben, damit kein Unique-Konflikt bleibt
+                  await tx.user.update({ where: { id: stubUser.id }, data: { discordId: null } });
+                  // OAuth-User als kanonischen User setzen
+                  await tx.user.update({
+                    where: { id: user.id },
+                    data:  { discordId, ...(user.image ? { image: user.image } : {}) },
+                  });
+                  // Evtl. durch Versuch 1 fehllaufend umgehängte Accounts zurücksetzen
+                  await tx.account.updateMany({ where: { userId: stubUser.id, provider: "discord" }, data: { userId: user.id } });
+                });
+                token.id = user.id;
+                merged   = true;
+                console.warn(`[AUTH] Merge Richtung 2 (Fallback): OAuth-User ${user.id} behält discordId. Stub ${stubUser.id} (discordId gecleart) manuell prüfen oder nächsten Sync abwarten.`);
+              } catch (tx2Err) {
+                console.error(`[AUTH] Beide Merge-Richtungen fehlgeschlagen:`, tx2Err);
+                token.id = user.id;
+              }
+            }
 
-            // 3. Stub-User mit frischen Discord-Profildaten aktualisieren.
-            // name wird bewusst NICHT überschrieben: der Stub hat bereits den
-            // server-spezifischen Nickname aus dem Sync; profile.username wäre
-            // nur der globale Discord-Username.
-            await prisma.user.update({
-              where: { id: stubUser.id },
-              data: {
-                discordId,
-                ...(user.image ? { image: user.image } : {}),
-              },
-            });
-
-            // 4. Duplikat-User löschen (ist brandneu, hat noch keine echten Daten)
-            await prisma.user.delete({ where: { id: user.id } });
-
-            // 5. Session zeigt auf den echten Stub-User
-            token.id        = stubUser.id;
             token.discordId = discordId;
           } else {
             // Kein Stub → normaler Erstlogin, discordId setzen

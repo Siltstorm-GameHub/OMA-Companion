@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
+import { createNotification } from "@/lib/notifications";
 
 /**
  * PATCH /api/admin/users/[id]/adjust
@@ -82,6 +83,28 @@ export async function PATCH(
     where:  { id: userId },
     select: { id: true, points: true, rankPoints: true },
   });
+
+  // Notification bei Münzen-Änderung (nur bei Erhalt, nicht bei Abzug)
+  const coinsDelta = (body.coins ?? user.points) - user.points;
+  if (coinsDelta > 0) {
+    const reason = body.reasonCoins ? body.reasonCoins : "Admin-Korrektur";
+    createNotification(userId, {
+      type:  "coins",
+      title: `💰 +${coinsDelta} Münzen erhalten`,
+      body:  reason,
+      url:   "/profile",
+    }).catch(() => {});
+  }
+  const rankDelta = (body.rankPoints ?? user.rankPoints) - user.rankPoints;
+  if (rankDelta > 0) {
+    const reason = body.reasonRank ? body.reasonRank : "Admin-Korrektur";
+    createNotification(userId, {
+      type:  "points",
+      title: `⭐ +${rankDelta} Rang-Punkte erhalten`,
+      body:  reason,
+      url:   "/leaderboard",
+    }).catch(() => {});
+  }
 
   return NextResponse.json({ ok: true, user: updated });
 }

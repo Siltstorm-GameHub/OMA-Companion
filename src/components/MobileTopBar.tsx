@@ -1,12 +1,11 @@
 "use client";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { LogOut, User } from "lucide-react";
+import { LogOut, Sun, Moon, Bell, Settings } from "lucide-react";
 import PwaInstallButton from "@/components/PwaInstallButton";
-import { ThemeToggleItem } from "@/components/ThemeToggle";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 
 const ROUTE_TITLES: Record<string, string> = {
@@ -22,15 +21,89 @@ const ROUTE_TITLES: Record<string, string> = {
   "/admin":      "Admin",
 };
 
+const NOTIF_ICONS: Record<string, string> = {
+  badge:        "🏅",
+  quest:        "⭐",
+  event_result: "✅",
+  event_start:  "⏰",
+  points:       "⭐",
+  coins:        "💰",
+  clip:         "🎬",
+  admin:        "📢",
+};
+
+type Notification = {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  url?: string | null;
+  read: boolean;
+  createdAt: string;
+};
+
+function useTheme() {
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  useEffect(() => {
+    const saved = localStorage.getItem("theme") as "dark" | "light" | null;
+    if (saved) setTheme(saved);
+  }, []);
+  function toggle() {
+    const next = theme === "dark" ? "light" : "dark";
+    const apply = () => {
+      setTheme(next);
+      localStorage.setItem("theme", next);
+      document.documentElement.setAttribute("data-theme", next);
+    };
+    if (typeof (document as Document & { startViewTransition?: unknown }).startViewTransition === "function") {
+      (document as Document & { startViewTransition: (fn: () => void) => void }).startViewTransition(apply);
+    } else {
+      apply();
+    }
+  }
+  return { theme, toggle };
+}
+
+function timeAgo(dateStr: string) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1)   return "Gerade eben";
+  if (mins < 60)  return `vor ${mins} Min`;
+  const h = Math.floor(mins / 60);
+  if (h < 24)     return `vor ${h} Std`;
+  const d = Math.floor(h / 24);
+  return `vor ${d} Tag${d !== 1 ? "en" : ""}`;
+}
+
 export default function MobileTopBar() {
   const pathname          = usePathname();
+  const router            = useRouter();
   const { data: session } = useSession();
+  const { theme, toggle } = useTheme();
   const [open, setOpen]   = useState(false);
   const [mounted, setMounted] = useState(false);
   const btnRef            = useRef<HTMLButtonElement>(null);
   const dropRef           = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { setMounted(true); }, []);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount]     = useState(0);
+
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const res = await fetch("/api/notifications");
+      if (!res.ok) return;
+      const data = await res.json() as { notifications: Notification[]; unreadCount: number };
+      setNotifications(data.notifications);
+      setUnreadCount(data.unreadCount);
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    setMounted(true);
+    fetchNotifications();
+    const id = setInterval(fetchNotifications, 30_000);
+    return () => clearInterval(id);
+  }, [fetchNotifications]);
 
   // Schließen bei Außenklick
   useEffect(() => {
@@ -48,16 +121,41 @@ export default function MobileTopBar() {
   // Schließen bei Seitenwechsel
   useEffect(() => { setOpen(false); }, [pathname]);
 
+  async function markRead(id: string) {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    setUnreadCount(prev => Math.max(0, prev - 1));
+    await fetch("/api/notifications/read", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    }).catch(() => {});
+  }
+
+  async function markAllRead() {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    setUnreadCount(0);
+    await fetch("/api/notifications/read", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ all: true }),
+    }).catch(() => {});
+  }
+
+  async function handleNotifClick(n: Notification) {
+    if (!n.read) await markRead(n.id);
+    setOpen(false);
+    if (n.url) router.push(n.url);
+  }
+
   const title = Object.entries(ROUTE_TITLES)
     .find(([p]) => pathname === p || pathname.startsWith(p + "/"))?.[1] ?? "OMA";
 
-  // Dropdown als fixed-Portal → komplett außerhalb des Header-Stacking-Contexts
   const dropdown = mounted && open ? createPortal(
     <div
       ref={dropRef}
       style={{
         position: "fixed",
-        top: "calc(2.25rem + 3.5rem + 0.5rem)", // header-top + header-height + gap
+        top: "calc(2.25rem + 3.5rem + 0.5rem)",
         right: "1rem",
         zIndex: 9999,
         background: "rgba(4,10,9,0.97)",
@@ -66,39 +164,116 @@ export default function MobileTopBar() {
         WebkitBackdropFilter: "blur(24px)",
         boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
         borderRadius: "0.75rem",
-        minWidth: 180,
+        width: 280,
         overflow: "hidden",
       }}
     >
-      <div className="px-3 py-2.5" style={{ borderBottom: "1px solid rgba(20,184,166,0.08)" }}>
-        <p className="text-xs font-semibold text-white">{session?.user?.name ?? "Gast"}</p>
-        <p className="text-[10px] mt-0.5 flex items-center gap-1" style={{ color: "rgba(20,184,166,0.7)" }}>
-          <img src="/Muenze Icon.png" alt="" width={11} height={11} style={{ objectFit: "contain" }} />
-          {(session?.user as { points?: number })?.points?.toLocaleString("de-DE") ?? 0} Münzen
-        </p>
-      </div>
-      <div className="p-1">
-        <PwaInstallButton />
-        <Link
-          href="/profile"
-          onClick={() => setOpen(false)}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-gray-400 hover:text-teal-400 hover:bg-teal-500/8 transition-colors"
+      {/* Header: Avatar + Username + Theme + Abmelden */}
+      <div className="px-3 py-2.5 flex items-center gap-2" style={{ borderBottom: "1px solid rgba(20,184,166,0.08)" }}>
+        <div className="w-7 h-7 rounded-full overflow-hidden shrink-0">
+          {session?.user?.image ? (
+            <Image src={session.user.image} alt="avatar" width={28} height={28} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-xs font-bold text-white"
+              style={{ background: "linear-gradient(135deg, #0d9488, #115e59)" }}>
+              {session?.user?.name?.[0] ?? "?"}
+            </div>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-white truncate">{session?.user?.name ?? "Gast"}</p>
+          <p className="text-[10px] flex items-center gap-1" style={{ color: "rgba(20,184,166,0.7)" }}>
+            <img src="/Muenze Icon.png" alt="" width={10} height={10} style={{ objectFit: "contain" }} />
+            {(session?.user as { points?: number })?.points?.toLocaleString("de-DE") ?? 0}
+          </p>
+        </div>
+        <button
+          onClick={toggle}
+          title={theme === "dark" ? "Light Mode" : "Dark Mode"}
+          className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-amber-400 hover:bg-white/[0.04] transition-colors shrink-0"
         >
-          <User style={{ width: 13, height: 13 }} />
-          Mein Profil
-        </Link>
-        <ThemeToggleItem
-          iconSize={13}
-          fontSize={12}
-          className="text-gray-400 hover:text-amber-400 hover:bg-white/[0.04] transition-colors"
-        />
+          {theme === "dark"
+            ? <Sun style={{ width: 13, height: 13 }} />
+            : <Moon style={{ width: 13, height: 13 }} />}
+        </button>
         <button
           onClick={() => signOut()}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-gray-400 hover:text-red-400 hover:bg-red-500/8 transition-colors w-full"
+          title="Abmelden"
+          className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/8 transition-colors shrink-0"
         >
           <LogOut style={{ width: 13, height: 13 }} />
-          Abmelden
         </button>
+      </div>
+
+      {/* PWA Install (klein) */}
+      <div className="px-1 pt-1">
+        <PwaInstallButton />
+      </div>
+
+      {/* Benachrichtigungen */}
+      <div style={{ borderTop: "1px solid rgba(20,184,166,0.08)" }}>
+        <div className="flex items-center justify-between px-3 py-2">
+          <div className="flex items-center gap-1.5">
+            <Bell style={{ width: 12, height: 12, color: "rgba(20,184,166,0.7)" }} />
+            <span className="text-[11px] font-semibold text-gray-300">Benachrichtigungen</span>
+            {unreadCount > 0 && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                style={{ background: "rgba(20,184,166,0.2)", color: "#2dd4bf" }}>
+                {unreadCount}
+              </span>
+            )}
+          </div>
+          {unreadCount > 0 && (
+            <button onClick={markAllRead}
+              className="text-[10px] text-gray-500 hover:text-teal-400 transition-colors">
+              Alle lesen
+            </button>
+          )}
+        </div>
+
+        {notifications.length === 0 ? (
+          <p className="text-[11px] text-gray-600 text-center py-4 px-3">
+            Keine Benachrichtigungen
+          </p>
+        ) : (
+          <div style={{ maxHeight: 240, overflowY: "auto" }}>
+            {notifications.slice(0, 5).map(n => (
+              <button
+                key={n.id}
+                onClick={() => handleNotifClick(n)}
+                className="w-full text-left px-3 py-2 hover:bg-white/[0.03] transition-colors flex gap-2 items-start"
+                style={!n.read ? { background: "rgba(20,184,166,0.04)" } : undefined}
+              >
+                <span className="text-sm mt-0.5 shrink-0">{NOTIF_ICONS[n.type] ?? "🔔"}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] font-semibold truncate"
+                    style={{ color: n.read ? "#9ca3af" : "#e2e8f0" }}>
+                    {n.title}
+                  </p>
+                  <p className="text-[10px] text-gray-500 truncate">{n.body}</p>
+                  <p className="text-[10px] mt-0.5" style={{ color: "rgba(20,184,166,0.5)" }}>
+                    {timeAgo(n.createdAt)}
+                  </p>
+                </div>
+                {!n.read && (
+                  <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0"
+                    style={{ background: "#2dd4bf" }} />
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div style={{ borderTop: "1px solid rgba(20,184,166,0.06)" }} className="p-1">
+          <Link
+            href="/profile?tab=notifications"
+            onClick={() => setOpen(false)}
+            className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[11px] text-gray-500 hover:text-teal-400 hover:bg-teal-500/8 transition-colors"
+          >
+            <Settings style={{ width: 11, height: 11 }} />
+            Einstellungen & alle anzeigen
+          </Link>
+        </div>
       </div>
     </div>,
     document.body
@@ -116,22 +291,33 @@ export default function MobileTopBar() {
           <span className="text-sm font-semibold text-white truncate">{title}</span>
         </Link>
 
+        {/* Avatar Button mit Unread-Dot */}
         <button
           ref={btnRef}
           onPointerDown={(e) => { e.stopPropagation(); setOpen(v => !v); }}
-          className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center transition-all shrink-0"
+          className="w-8 h-8 rounded-full overflow-visible flex items-center justify-center transition-all shrink-0 relative"
           style={open
-            ? { outline: "2px solid rgba(20,184,166,0.5)", outlineOffset: 2, touchAction: "manipulation", position: "relative", zIndex: 200 }
-            : { outline: "1px solid rgba(20,184,166,0.22)", outlineOffset: 1, touchAction: "manipulation", position: "relative", zIndex: 200 }}
+            ? { outline: "2px solid rgba(20,184,166,0.5)", outlineOffset: 2, touchAction: "manipulation", zIndex: 200 }
+            : { outline: "1px solid rgba(20,184,166,0.22)", outlineOffset: 1, touchAction: "manipulation", zIndex: 200 }}
           aria-label="Profil-Menü"
         >
-          {session?.user?.image ? (
-            <Image src={session.user.image} alt="avatar" width={32} height={32} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-xs font-bold text-white"
-              style={{ background: "linear-gradient(135deg, #0d9488, #115e59)" }}>
-              {session?.user?.name?.[0] ?? "?"}
-            </div>
+          <div className="w-full h-full rounded-full overflow-hidden">
+            {session?.user?.image ? (
+              <Image src={session.user.image} alt="avatar" width={32} height={32} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-xs font-bold text-white"
+                style={{ background: "linear-gradient(135deg, #0d9488, #115e59)" }}>
+                {session?.user?.name?.[0] ?? "?"}
+              </div>
+            )}
+          </div>
+          {unreadCount > 0 && (
+            <span
+              className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center"
+              style={{ background: "#ef4444", color: "#fff", zIndex: 201, lineHeight: 1 }}
+            >
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
           )}
         </button>
       </header>
