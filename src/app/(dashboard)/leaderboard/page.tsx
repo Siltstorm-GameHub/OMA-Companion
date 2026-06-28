@@ -2,9 +2,8 @@
 import { getSessionUser } from "@/lib/roles";
 import { getRank } from "@/lib/ranks";
 import { calcStreak } from "@/lib/streak";
-import { Trophy, Swords, Flame } from "lucide-react";
+import { Trophy, Swords, Heart } from "lucide-react";
 import RankPointsIcon from "@/components/RankPointsIcon";
-import CoinIcon from "@/components/CoinIcon";
 import { CountUp } from "@/components/CountUp";
 import Link from "next/link";
 import Image from "next/image";
@@ -68,20 +67,19 @@ export default async function LeaderboardPage() {
   const me     = await getSessionUser();
   const userId = me?.id;
 
-  const [users, wins, donationGroups, holdersMap] = await Promise.all([
+  const [users, eventsWithWinners, donationGroups, holdersMap] = await Promise.all([
     prisma.user.findMany({
       orderBy: { rankPoints: "desc" },
       take: 50,
       select: {
         id: true, name: true, username: true, image: true,
-        points: true, rankPoints: true,
+        rankPoints: true,
         _count: { select: { tournamentParticipants: true } },
       },
     }),
-    prisma.match.groupBy({
-      by: ["winnerId"],
-      _count: { winnerId: true },
-      where: { winnerId: { not: null } },
+    prisma.event.findMany({
+      where: { finalRankingJson: { not: null } },
+      select: { finalRankingJson: true },
     }),
     // Monat/Jahr-Paare pro User aggregieren — günstiger als alle Zeilen laden
     prisma.donation.groupBy({
@@ -91,7 +89,16 @@ export default async function LeaderboardPage() {
     getWanderpocalHoldersMap(),
   ]);
 
-  const winMap = new Map(wins.map(w => [w.winnerId!, w._count.winnerId]));
+  const winMap = new Map<string, number>();
+  for (const ev of eventsWithWinners) {
+    try {
+      const ranking: string[] = JSON.parse(ev.finalRankingJson!);
+      if (ranking.length > 0) {
+        const winner = ranking[0];
+        winMap.set(winner, (winMap.get(winner) ?? 0) + 1);
+      }
+    } catch { /* skip malformed JSON */ }
+  }
 
   const donationsByUser = new Map<string, { month: number; year: number }[]>();
   for (const d of donationGroups) {
@@ -183,10 +190,6 @@ export default async function LeaderboardPage() {
                     <CountUp to={u.rankPoints} duration={700 + cfg.rank * 150} />
                     <span className="text-xs font-semibold ml-1 opacity-70">Pts</span>
                   </p>
-                  <p className="text-[10px] text-gray-500 mt-0.5 flex items-center justify-center gap-1">
-                    <CoinIcon size={12} />
-                    <span className="tabular-nums">{u.points.toLocaleString("de-DE")}</span>
-                  </p>
                 </div>
 
                 {/* Mini-Stats */}
@@ -203,18 +206,17 @@ export default async function LeaderboardPage() {
       <div className="surface overflow-hidden"
         style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.45)" }}>
 
-        {/* Spalten-Header: # | Avatar | Name | [Siege] | [Events] | Münzen | Punkte */}
-        {/* Siege + Events werden auf Mobile ausgeblendet */}
+        {/* Spalten-Header: # | Avatar | Name | [Siege] | [Spendenstreak] | Punkte */}
+        {/* Siege + Spendenstreak werden auf Mobile ausgeblendet */}
         <div className="grid items-center gap-x-3 px-4 py-2.5 text-[10px] font-semibold text-gray-600 uppercase tracking-widest
-          [grid-template-columns:2rem_2.25rem_1fr_5rem_5rem]
-          sm:[grid-template-columns:2rem_2.25rem_1fr_4rem_4rem_5rem_5rem]"
+          [grid-template-columns:2rem_2.25rem_1fr_7rem]
+          sm:[grid-template-columns:2rem_2.25rem_1fr_4rem_7rem_7rem]"
           style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
           <span>#</span>
           <span />
           <span>Spieler</span>
           <span className="hidden sm:flex text-center items-center justify-center gap-1"><Swords className="w-3 h-3" />Siege</span>
-          <span className="hidden sm:flex text-center items-center justify-center gap-1"><Flame className="w-3 h-3 text-orange-400" />Streak</span>
-          <span className="flex items-center justify-center gap-1"><CoinIcon size={12} />Münzen</span>
+          <span className="hidden sm:flex text-center items-center justify-center gap-1"><Heart className="w-3 h-3 text-pink-400" />Spendenstreak</span>
           <span className="flex items-center justify-center gap-1"><RankPointsIcon size={12} />Punkte</span>
         </div>
 
@@ -252,8 +254,8 @@ export default async function LeaderboardPage() {
               <Link key={u.id}
                 href={isMe ? "/profile" : `/profile/${u.id}`}
                 className={`grid items-center gap-x-3 px-4 py-3 transition-colors ${rowAccent} animate-slide-up
-                  [grid-template-columns:2rem_2.25rem_1fr_5rem_5rem]
-                  sm:[grid-template-columns:2rem_2.25rem_1fr_4rem_4rem_5rem_5rem]`}
+                  [grid-template-columns:2rem_2.25rem_1fr_7rem]
+                  sm:[grid-template-columns:2rem_2.25rem_1fr_4rem_7rem_7rem]`}
                 style={{ animationDelay: `${Math.min(i * 15, 300)}ms` }}>
 
                 {/* # Rang */}
@@ -294,18 +296,12 @@ export default async function LeaderboardPage() {
 
                 {/* Spendenstreak — nur ab sm */}
                 <div className="hidden sm:block text-center">
-                  <p className="text-sm font-bold tabular-nums text-orange-400 flex items-center justify-center gap-1">
-                    {donationStreak > 0 ? <><Flame className="w-3.5 h-3.5 text-orange-400" />{donationStreak}</> : <span className="text-gray-600">—</span>}
+                  <p className="text-sm font-bold tabular-nums text-pink-400 flex items-center justify-center gap-1">
+                    {donationStreak > 0
+                      ? <><Heart className="w-3.5 h-3.5 text-pink-400" />{donationStreak} Mon.</>
+                      : <span className="text-gray-600">—</span>}
                   </p>
-                  <p className="text-[9px] text-gray-600">Monate</p>
-                </div>
-
-                {/* Münzen */}
-                <div className="text-center">
-                  <p className="text-sm font-bold tabular-nums text-gray-300">
-                    {u.points.toLocaleString("de-DE")}
-                  </p>
-                  <p className="text-[9px] text-gray-600">Münzen</p>
+                  <p className="text-[9px] text-gray-600">Geldspenden</p>
                 </div>
 
                 {/* Punkte */}
