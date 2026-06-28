@@ -299,10 +299,13 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
         }
       }
     }
+    const lastEventPollBonus: Record<string, number> = {};
     if (lastEv.completionData) {
       try {
         const cd = JSON.parse(lastEv.completionData) as {
           mvpUserId?: string; eventWinnerId?: string; eventWinnerIds?: string[]; seriesWinnerTargetField?: string;
+          pollWinnerIds?: string[]; pollWinnerId?: string; pollBonusRankPoints?: number;
+          pollResults?: { winnerIds?: string[]; rankPoints?: number }[];
         };
         if (cd.mvpUserId && statCfg.mvpStatField) {
           const c = getContrib(cd.mvpUserId);
@@ -313,6 +316,19 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
           for (const wid of lastWinnerIds) {
             const c = getContrib(wid);
             c.stats[cd.seriesWinnerTargetField] = (c.stats[cd.seriesWinnerTargetField] ?? 0) + 1;
+          }
+        }
+        // Poll bonus rank points for delta calculation
+        const singleWinners = cd.pollWinnerIds ?? (cd.pollWinnerId ? [cd.pollWinnerId] : []);
+        const singleRankPts = cd.pollBonusRankPoints ?? 0;
+        for (const uid of singleWinners) {
+          if (singleRankPts > 0) lastEventPollBonus[uid] = (lastEventPollBonus[uid] ?? 0) + singleRankPts;
+        }
+        for (const poll of cd.pollResults ?? []) {
+          const rp = poll.rankPoints ?? 0;
+          if (rp <= 0) continue;
+          for (const uid of poll.winnerIds ?? []) {
+            lastEventPollBonus[uid] = (lastEventPollBonus[uid] ?? 0) + rp;
           }
         }
       } catch { /* ignore */ }
@@ -329,6 +345,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
           prevPts -= (c.stats[field] ?? 0) * pointsPer;
         }
       }
+      prevPts -= lastEventPollBonus[row.userId] ?? 0;
       prevPointsMap.set(row.userId, prevPts);
       prevPartMap.set(row.userId, row.participations - (c?.participations ?? 0));
     }
