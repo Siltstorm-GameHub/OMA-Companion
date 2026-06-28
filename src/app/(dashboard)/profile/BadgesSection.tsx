@@ -163,11 +163,11 @@ export default function BadgesSection({ systemBadges, customBadges, showcaseKeys
       )}
 
       {/* ── Earned system badges by category ─────────── */}
-      {earnedSystem.length === 0 && customBadges.length === 0 && !showUnearned && (
+      {!readOnly && earnedSystem.length === 0 && customBadges.length === 0 && !showUnearned && (
         <p className="text-xs text-gray-600 italic">Noch keine Abzeichen verdient.</p>
       )}
 
-      {Object.entries(BADGE_CATEGORY_LABELS).map(([cat, label]) => {
+      {!readOnly && Object.entries(BADGE_CATEGORY_LABELS).map(([cat, label]) => {
         const catEarned   = earnedSystem.filter(b => b.category === cat);
         const catUnearned = showUnearned ? unearnedSystem.filter(b => b.category === cat) : [];
         if (!catEarned.length && !catUnearned.length) return null;
@@ -203,7 +203,7 @@ export default function BadgesSection({ systemBadges, customBadges, showcaseKeys
       })}
 
       {/* ── Custom badges ─────────────────────────────── */}
-      {customBadges.length > 0 && (
+      {!readOnly && customBadges.length > 0 && (
         <div className="space-y-2">
           <p className="text-[10px] text-gray-600 uppercase tracking-widest">Besondere Leistungen</p>
           <div className="flex flex-wrap gap-2">

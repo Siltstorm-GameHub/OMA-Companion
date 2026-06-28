@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { QUEST_TYPE_META, type QuestType } from "@/lib/quests";
 import { getRank, getNextRank } from "@/lib/ranks";
 import { computeBadges } from "@/lib/badges";
-import { RARITY_CONFIG, type Rarity, MAX_SHOWCASE } from "@/lib/collectibles";
+import { MAX_SHOWCASE } from "@/lib/collectibles";
 import {
   CalendarDays, Swords, Clock,
   MessageSquare, CheckCircle2, ArrowLeft,
@@ -165,15 +165,7 @@ export default async function PublicProfilePage({
     .map(sid => ownedCollectibles.find(o => o.collectibleItemId === sid)?.collectibleItem ?? null)
     .filter(Boolean) as typeof ownedCollectibles[0]["collectibleItem"][];
 
-  const collectiblesByCollection = ownedCollectibles.reduce<Record<string, {
-    collection: { id: string; name: string; coverImageUrl: string | null };
-    items: typeof ownedCollectibles[0]["collectibleItem"][];
-  }>>((acc, uc) => {
-    const col = uc.collectibleItem.collection;
-    if (!acc[col.id]) acc[col.id] = { collection: col, items: [] };
-    acc[col.id].items.push(uc.collectibleItem);
-    return acc;
-  }, {});
+
 
   return (
     <div className="p-5 sm:p-6 max-w-7xl mx-auto space-y-5 animate-fade-in">
@@ -321,42 +313,6 @@ export default async function PublicProfilePage({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* ── Linke Spalte ─────────────────────────────────────────── */}
         <div className="lg:col-span-2 space-y-5">
-
-          {/* Sammlungen */}
-          {Object.keys(collectiblesByCollection).length > 0 && (
-            <section>
-              <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                <Gamepad2 className="w-3.5 h-3.5" /> Sammlungen
-              </h2>
-              <div className="space-y-3">
-                {Object.values(collectiblesByCollection).map(({ collection, items }) => (
-                  <div key={collection.id} className="glass card-shine rounded-2xl p-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      {collection.coverImageUrl
-                        ? <img src={collection.coverImageUrl} alt={collection.name} className="w-7 h-7 object-contain rounded" loading="lazy" />
-                        : <Gamepad2 className="w-7 h-7 text-gray-600" />}
-                      <span className="text-sm font-semibold text-white">{collection.name}</span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.05] border border-white/[0.08] text-gray-500">{items.length} Figuren</span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {items.map(item => {
-                        const rarity = RARITY_CONFIG[item.rarity as Rarity] ?? RARITY_CONFIG.common;
-                        return (
-                          <div key={item.id} title={item.name}
-                            className={`flex flex-col items-center gap-0.5 px-2.5 py-2 rounded-xl border ${rarity.border} ${rarity.glow} bg-white/[0.02]`}>
-                            {item.imageUrl
-                              ? <img src={item.imageUrl} alt={item.name} className="w-9 h-9 object-contain" loading="lazy" />
-                              : <Gamepad2 className="w-9 h-9 text-gray-600" />}
-                            <span className={`text-[9px] font-medium ${rarity.color}`}>{item.name}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
 
           {/* Abzeichen */}
           <BadgesSection
