@@ -26,6 +26,7 @@ function parseRewards(json: string | null | undefined): RewardsConfig {
 
 type SeriesStatConfig = {
   participationPoints: number;
+  transferToGlobalRanking?: boolean;
   stats: { field: string; pointsPer: number }[];
   mvpStatField?: string;
   defaultWinnerStatField?: string;
@@ -344,6 +345,15 @@ export async function POST(
       }
       if (eventWinnerIds.length > 0 && body.seriesWinnerTargetField) {
         for (const uid of eventWinnerIds) addToUser(uid, body.seriesWinnerTargetField, 1);
+      }
+
+      // Tabellenpunkte auf globale Rangliste übertragen
+      if (statCfg.transferToGlobalRanking && statCfg.participationPoints > 0 && event.registrations.length > 0) {
+        const pts = statCfg.participationPoints;
+        await Promise.all(event.registrations.flatMap(({ userId }) => [
+          prisma.user.update({ where: { id: userId }, data: { rankPoints: { increment: pts } } }),
+          prisma.pointTransaction.create({ data: { userId, amount: pts, reason: `[Rang-Punkte] Ligatabelle Teilnahme: ${event.title}` } }),
+        ]));
       }
     }
 

@@ -124,6 +124,7 @@ export default function EventSetupWizard({
   const [recurrenceType, setRecurrenceType]   = useState<"none" | RecurrenceType>("none");
   const [recurrenceMonthlyMode, setRecurrenceMonthlyMode] = useState<MonthlyMode>("dayOfMonth");
   const [statParticipationPts, setStatParticipationPts] = useState(5);
+  const [statPtsToGlobalRanking, setStatPtsToGlobalRanking] = useState(false);
   const [statRows, setStatRows]         = useState<StatRow[]>([]);
 
   // ── Shared rewards ───────────────────────────────────────────────────────────
@@ -263,7 +264,7 @@ export default function EventSetupWizard({
     setLoading(true);
 
     const seriesStatConfig = (eventType === "tournament" && (statParticipationPts > 0 || statRows.length > 0))
-      ? JSON.stringify({ participationPoints: statParticipationPts, stats: statRows })
+      ? JSON.stringify({ participationPoints: statParticipationPts, transferToGlobalRanking: statPtsToGlobalRanking, stats: statRows })
       : null;
 
     const res = await fetch("/api/events/series", {
@@ -734,7 +735,7 @@ export default function EventSetupWizard({
                 className={inputCls} style={inputStyle} />
             </div>
             <div>
-              <label className={labelCls}>Rang-Punkte</label>
+              <label className={labelCls}>Rang-Punkte <span className="text-gray-500 font-normal">(→ Gesamtrangliste)</span></label>
               <input type="number" min="0" value={participationRankPts}
                 onChange={e => setParticipationRankPts(Number(e.target.value))}
                 className={inputCls} style={inputStyle} />
@@ -778,7 +779,7 @@ export default function EventSetupWizard({
                   className={inputCls} style={inputStyle} />
               </div>
               <div>
-                <label className={labelCls}>Rang-Punkte</label>
+                <label className={labelCls}>Rang-Punkte <span className="text-gray-500 font-normal">(→ Gesamtrangliste)</span></label>
                 <input type="number" min="0" value={spectatorRankPts}
                   onChange={e => setSpectatorRankPts(Number(e.target.value))}
                   className={inputCls} style={inputStyle} />
@@ -791,11 +792,17 @@ export default function EventSetupWizard({
           <div className="rounded-xl p-4 border border-indigo-500/20 bg-indigo-500/5 space-y-3">
             <p className="text-sm font-medium text-indigo-300">📊 Gesamttabelle</p>
             <div>
-              <label className={labelCls}>Punkte pro Teilnahme</label>
+              <label className={labelCls}>Punkte pro Teilnahme <span className="text-gray-500 font-normal">(Ligatabelle)</span></label>
               <input type="number" min="0" value={statParticipationPts}
                 onChange={e => setStatParticipationPts(Number(e.target.value))}
                 className={inputCls} style={inputStyle} />
             </div>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input type="checkbox" checked={statPtsToGlobalRanking}
+                onChange={e => setStatPtsToGlobalRanking(e.target.checked)}
+                className="w-4 h-4 rounded accent-indigo-500" />
+              <span className="text-xs text-gray-300">Tabellenpunkte bei Event-Abschluss auf Gesamtrangliste übertragen</span>
+            </label>
             <div className="space-y-2">
               <p className="text-[11px] text-gray-500">Stat-Felder — Feldname → Punkte pro Einheit</p>
               {statRows.map((row, i) => (
