@@ -24,14 +24,6 @@ const COIN_SOURCES = [
     ],
   },
   {
-    group: "📅 Events & Turniere",
-    items: [
-      { label: "Event besucht",          note: "Bei Teilnahme",        value: "80" },
-      { label: "Turnierteilnahme",       note: "Pro Anmeldung",        value: "175" },
-      { label: "Match gewonnen",         note: "Im Turnierverlauf",     value: "60" },
-    ],
-  },
-  {
     group: "🎙️ Discord-Aktivität",
     items: [
       { label: "Sprachkanal",            note: "Pro Stunde (max. 6h/Tag)", value: "15" },
@@ -41,19 +33,6 @@ const COIN_SOURCES = [
       { label: "Reaktion erhalten",      note: "Max. 20 Pts/Tag",        value: "2" },
     ],
   },
-  {
-    group: "👥 Community",
-    items: [
-      { label: "Mitglied eingeladen",    note: "Pro erfolgreichem Invite", value: "150" },
-    ],
-  },
-];
-
-const RANK_SOURCES = [
-  { label: "Turniersieg 🏆",          note: "1. Platz",             value: "1.000" },
-  { label: "Turnierfinale",            note: "2. Platz",             value: "600"   },
-  { label: "Top-3-Platzierung 🥉",    note: "3. Platz",             value: "350"   },
-  { label: "LUL Spieltag",            note: "Je nach Leistung",     value: "variabel" },
 ];
 
 export default function PointsInfoModal() {
@@ -116,25 +95,6 @@ export default function PointsInfoModal() {
                         <span className={`text-sm font-semibold ${r.color}`}>{r.label}</span>
                       </div>
                       <span className="text-xs text-gray-500 tabular-nums">{r.range} Pts</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Rang-Punkte verdienen */}
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Trophy className="w-3.5 h-3.5 text-rose-400" />
-                  <p className="text-xs font-semibold text-rose-400 uppercase tracking-widest">Rang-Punkte verdienen</p>
-                </div>
-                <div className="rounded-xl bg-white/[0.02] border border-white/[0.05] divide-y divide-white/[0.04]">
-                  {RANK_SOURCES.map(s => (
-                    <div key={s.label} className="flex items-center justify-between px-3 py-2.5 gap-3">
-                      <div className="min-w-0">
-                        <p className="text-xs text-gray-200">{s.label}</p>
-                        <p className="text-[10px] text-gray-600">{s.note}</p>
-                      </div>
-                      <span className="text-xs font-bold text-rose-400 shrink-0 tabular-nums">+{s.value}</span>
                     </div>
                   ))}
                 </div>
