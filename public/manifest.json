@@ -5,7 +5,7 @@
   "dir": "ltr",
   "display": "standalone",
   "orientation": "any",
-  "start_url": "https://oma-app.de",
+  "start_url": "/",
   "scope": "/",
   "background_color": "#000000",
   "theme_color": "#000000",
@@ -16,15 +16,22 @@
   ],
   "icons": [
     {
-      "src": "https://oma-app.de/OMALogo512.png",
+      "src": "/OMALogo512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "https://oma-app.de/OMALogoNew.png",
+      "src": "/OMALogo512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/OMALogoNew.png",
       "sizes": "256x256",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }
