@@ -35,7 +35,7 @@ type StatRow = { field: string; pointsPer: number };
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STEP_LABELS_EVENT  = ["Typ & Kategorie", "Grunddaten", "Turnier", "Belohnungen", "Zusammenfassung"];
-const STEP_LABELS_SERIES = ["Typ & Kategorie", "Reihen-Info", "Termine", "Belohnungen", "Zusammenfassung"];
+const STEP_LABELS_SERIES = ["Typ & Kategorie", "Reihen-Info", "Termine", "Reihen-Belohnungen", "Event-Einstellungen", "Zusammenfassung"];
 
 const CATEGORIES: { value: EventCategory; label: string; emoji: string; color: string; border: string; bg: string }[] = [
   { value: "competitive",     label: "Kompetitiv", emoji: "🏆", color: "text-red-400",    border: "border-red-500/40",    bg: "bg-red-500/10" },
@@ -184,6 +184,10 @@ export default function EventSetupWizard({
   const [statParticipationPts, setStatParticipationPts] = useState(5);
   const [statPtsToGlobalRanking, setStatPtsToGlobalRanking] = useState(false);
   const [statRows, setStatRows]         = useState<StatRow[]>([]);
+  const [seriesHidden, setSeriesHidden] = useState(false);
+  const [eventStatFields, setEventStatFields] = useState<string[]>([]);
+  const [winnerStatField, setWinnerStatField] = useState("");
+  const [winnerSeriesStat, setWinnerSeriesStat] = useState("");
 
   // ── Shared rewards ───────────────────────────────────────────────────────────
   const [participationCoins, setParticipationCoins] = useState(10);
@@ -242,7 +246,7 @@ export default function EventSetupWizard({
   const lulSeriesStepComponents = [renderStepCategory, renderLulSeasonInfo, renderLulTemplate, renderLulPoints, renderLulSummary];
   const seriesStepComponents    = isLulMode
     ? lulSeriesStepComponents
-    : [renderStepCategory, renderStepSeriesData, renderStepSchedule, renderStepRewards, renderStepSeriesSummary];
+    : [renderStepCategory, renderStepSeriesData, renderStepSchedule, renderStepRewards, renderStepSeriesEventSettings, renderStepSeriesSummary];
 
   const activeSteps = isEventMode ? eventStepComponents : seriesStepComponents;
 
@@ -335,8 +339,17 @@ export default function EventSetupWizard({
     if (!seriesName.trim()) return;
     setLoading(true);
 
-    const seriesStatConfig = (eventType === "tournament" && (statParticipationPts > 0 || statRows.length > 0))
-      ? JSON.stringify({ participationPoints: statParticipationPts, transferToGlobalRanking: statPtsToGlobalRanking, stats: statRows })
+    const hasStandingsConfig = eventType === "tournament" && (statParticipationPts > 0 || statRows.length > 0);
+    const hasEventConfig = eventStatFields.length > 0;
+    const seriesStatConfig = (hasStandingsConfig || hasEventConfig)
+      ? JSON.stringify({
+          participationPoints: statParticipationPts,
+          transferToGlobalRanking: statPtsToGlobalRanking,
+          stats: statRows,
+          ...(eventStatFields.length > 0 && { eventStatFields }),
+          ...(winnerStatField && { winnerStatField }),
+          ...(winnerSeriesStat && { winnerSeriesStatKey: winnerSeriesStat }),
+        })
       : null;
 
     const res = await fetch("/api/events/series", {
@@ -359,6 +372,7 @@ export default function EventSetupWizard({
         startDate: seriesStartDate ? new Date(seriesStartDate).toISOString() : null,
         endDate: seriesEndDate ? new Date(seriesEndDate + "T23:59:59").toISOString() : null,
         eventType,
+        hidden: seriesHidden,
       }),
     });
 
@@ -821,7 +835,7 @@ export default function EventSetupWizard({
 
   // ── Render: Step Indicator ────────────────────────────────────────────────────
   function StepIndicator() {
-    const base = isEventMode ? STEP_LABELS_EVENT : STEP_LABELS_SERIES;
+    const base = isEventMode ? STEP_LABELS_EVENT : isLulMode ? STEP_LABELS_LUL : STEP_LABELS_SERIES;
     const labels = isEventMode && eventType !== "tournament"
       ? base.filter((_, i) => i !== 2)
       : base;
@@ -1148,6 +1162,19 @@ export default function EventSetupWizard({
           <input type="text" value={seriesDiscordId} onChange={e => setSeriesDiscordId(e.target.value)}
             placeholder="Leer = Standardkanal" className={inputCls} style={inputStyle} />
         </div>
+
+        <div className="rounded-xl p-4 border border-white/8 bg-white/2">
+          <label className="flex items-start gap-3 cursor-pointer select-none">
+            <input type="checkbox" checked={seriesHidden} onChange={e => setSeriesHidden(e.target.checked)}
+              className="w-4 h-4 mt-0.5 rounded accent-violet-500 shrink-0" />
+            <div>
+              <p className="text-sm text-gray-200">Unsichtbar erstellen</p>
+              <p className="text-[11px] text-gray-500 mt-0.5">
+                Die Reihe wird angelegt, aber noch nicht veröffentlicht. Sichtbarkeit kann jederzeit in den Reihen-Einstellungen geändert werden.
+              </p>
+            </div>
+          </label>
+        </div>
       </div>
     );
   }
@@ -1431,6 +1458,71 @@ export default function EventSetupWizard({
     );
   }
 
+  // ── Step 4 (Series): Event-Einstellungen ─────────────────────────────────────
+  function renderStepSeriesEventSettings() {
+    return (
+      <div className="space-y-6">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-lg">📋</span>
+            <h2 className="text-base font-semibold text-white">Event-Einstellungen</h2>
+          </div>
+          <p className="text-xs text-gray-500">
+            Vorlage für die einzelnen Events dieser Reihe. Diese Einstellungen werden beim Anlegen
+            neuer Events und beim Abschluss automatisch vorausgefüllt.
+          </p>
+        </div>
+
+        <div className="rounded-xl p-4 border border-amber-500/20 bg-amber-500/5">
+          <p className="text-sm font-medium text-amber-300 mb-1">Trackte Statistiken je Event</p>
+          <p className="text-[11px] text-gray-500 mb-3">
+            Diese Stats werden nach Event-Abschluss in die Gesamttabelle der Reihe übertragen.
+            „Teilnahme" wird für jeden Mitspieler automatisch +1 getrackt.
+          </p>
+          <StatFieldEditor fields={eventStatFields} onChange={setEventStatFields} />
+        </div>
+
+        {eventStatFields.length > 0 && (
+          <div className="rounded-xl p-4 border border-teal-500/20 bg-teal-500/5 space-y-3">
+            <p className="text-sm font-medium text-teal-300">🏆 Sieger-Ermittlung</p>
+            <p className="text-[11px] text-gray-500">
+              Welcher Stat bestimmt den Sieger eines Events? Der Spieler mit dem höchsten Wert gewinnt.
+            </p>
+            <div>
+              <label className={labelCls}>Sieger-Stat</label>
+              <select value={winnerStatField} onChange={e => setWinnerStatField(e.target.value)}
+                className={inputCls} style={inputStyle}>
+                <option value="">– Kein / manuell festlegen –</option>
+                {eventStatFields.map(f => <option key={f} value={f}>{f}</option>)}
+              </select>
+            </div>
+            {winnerStatField && (
+              <div>
+                <label className={labelCls}>
+                  Reihen-Stat für Event-Sieg <span className="text-gray-600 font-normal">(optional)</span>
+                </label>
+                <input type="text" value={winnerSeriesStat}
+                  onChange={e => setWinnerSeriesStat(e.target.value)}
+                  placeholder={`z.B. Most ${winnerStatField}`}
+                  className={inputCls} style={inputStyle} />
+                <p className="text-[10px] text-gray-600 mt-1">
+                  Dieser Reihen-Stat wird +1 für den Spieler, der das Event gewonnen hat.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {eventStatFields.length === 0 && (
+          <p className="text-xs text-gray-600 italic">
+            Ohne Stat-Felder werden keine Statistiken je Event getrackt. Du kannst dies auch später
+            in den Reihen-Einstellungen konfigurieren.
+          </p>
+        )}
+      </div>
+    );
+  }
+
   // ── Step 4 (Event): Zusammenfassung ───────────────────────────────────────────
   function renderStepEventSummary() {
     const catCfg  = CATEGORIES.find(c => c.value === category);
@@ -1498,6 +1590,7 @@ export default function EventSetupWizard({
             )}
             {seriesDiscordId && <p>📢 Kanal: {seriesDiscordId}</p>}
             {spectatorMode && <p>👁️ Zuschauer-Standard aktiv</p>}
+            {seriesHidden && <p className="text-violet-400">🔒 Unsichtbar – wird nicht veröffentlicht</p>}
           </div>
         </div>
         <div className="rounded-xl p-4 border border-white/8 bg-white/2 text-sm space-y-1.5 text-gray-400">
@@ -1512,6 +1605,12 @@ export default function EventSetupWizard({
           ))}
           {isSeriesMode && eventType === "tournament" && statRows.length > 0 && (
             <p>📊 Gesamttabelle: {statRows.map(r => `${r.field} (${r.pointsPer} Pkt/Einheit)`).join(", ")}</p>
+          )}
+          {eventStatFields.length > 0 && (
+            <p>📋 Event-Stats: {eventStatFields.join(", ")}</p>
+          )}
+          {winnerStatField && (
+            <p>🏆 Sieger via: {winnerStatField}{winnerSeriesStat ? ` → Reihenstat „${winnerSeriesStat}" +1` : ""}</p>
           )}
         </div>
       </div>
