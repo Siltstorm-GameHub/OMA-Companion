@@ -113,7 +113,9 @@ export default function EventCompleteClient({
   );
 
   /* ── Poll (legacy single) ── */
-  const [pollExcluded, setPollExcluded] = useState<Set<string>>(() => new Set());
+  const [pollExcluded, setPollExcluded] = useState<Set<string>>(() =>
+    new Set((initialData?.pollExcludedUserIds as string[] | undefined) ?? [])
+  );
   const [pollVotes, setPollVotes] = useState<Record<string, number>>(() => {
     if (!isReEdit || !initialData) return {};
     const old: Record<string, number> = {};
@@ -124,9 +126,16 @@ export default function EventCompleteClient({
   });
 
   /* ── Multi-Polls ── */
-  const [multiPollVotes, setMultiPollVotes] = useState<Record<number, Record<string, number>>>(
-    () => Object.fromEntries(pollsConfig.map((_, i) => [i, {}]))
-  );
+  const [multiPollVotes, setMultiPollVotes] = useState<Record<number, Record<string, number>>>(() => {
+    // Restore previous winners with 1 vote each from saved pollResults
+    type SavedPollResult = { winnerIds?: string[] };
+    const saved = (initialData?.pollResults as SavedPollResult[] | undefined) ?? [];
+    return Object.fromEntries(pollsConfig.map((_, i) => {
+      const prev: Record<string, number> = {};
+      for (const uid of saved[i]?.winnerIds ?? []) prev[uid] = 1;
+      return [i, prev];
+    }));
+  });
   const [multiPollExcluded, setMultiPollExcluded] = useState<Record<number, Set<string>>>(
     () => Object.fromEntries(pollsConfig.map((_, i) => [i, new Set<string>()]))
   );
