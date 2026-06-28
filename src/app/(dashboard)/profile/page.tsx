@@ -16,6 +16,7 @@ import RankPointsIcon from "@/components/RankPointsIcon";
 import CoinIcon from "@/components/CoinIcon";
 import WinIcon from "@/components/WinIcon";
 import Image from "next/image";
+import Link from "next/link";
 import CollectiblesShowcase from "./CollectiblesShowcase";
 import ProfileEditor from "./ProfileEditor";
 import { PushSubscribeButton } from "@/components/PushSubscribeButton";
@@ -38,7 +39,7 @@ export default async function ProfilePage() {
       }),
       prisma.eventRegistration.findMany({
         where:   { userId },
-        include: { event: { select: { title: true, startAt: true, game: true } } },
+        include: { event: { select: { id: true, title: true, startAt: true, game: true, finalRankingJson: true } } },
         orderBy: { joinedAt: "desc" }, take: 5,
       }),
       prisma.eventRegistration.count({ where: { userId } }),
@@ -253,8 +254,18 @@ export default async function ProfilePage() {
           </div>
         ))}
 
-        {/* Lieblingsspiel – Top 3 */}
+        {/* Collectibles */}
         <div className="card-hover card-shine glass relative overflow-hidden rounded-2xl p-4 animate-slide-up stagger-5">
+          <div className="absolute inset-0 bg-gradient-to-br from-pink-500/8 to-transparent pointer-events-none" />
+          <div className="relative w-8 h-8 rounded-xl flex items-center justify-center mb-3 border text-pink-400 bg-pink-500/10 border-pink-500/15">
+            <Gamepad2 className="w-4 h-4" />
+          </div>
+          <p className="relative text-2xl font-black text-white tabular-nums">{ownedCollectibles.length}</p>
+          <p className="relative text-xs text-gray-400 mt-1.5">Collectibles</p>
+        </div>
+
+        {/* Lieblingsspiel – Top 3 */}
+        <div className="card-hover card-shine glass relative overflow-hidden rounded-2xl p-4 animate-slide-up stagger-6">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-500/8 to-transparent pointer-events-none" />
           <div className="relative w-8 h-8 rounded-xl flex items-center justify-center mb-3 border text-blue-400 bg-blue-500/10 border-blue-500/15">
             <Gamepad2 className="w-4 h-4" />
@@ -443,7 +454,7 @@ export default async function ProfilePage() {
             <div className="glass card-shine rounded-2xl overflow-hidden divide-y divide-white/[0.04]">
               {[
                 { icon: <Clock className="w-3.5 h-3.5" />,         label: "Voice-Stunden",      value: `${voiceHours}h`,                              color: "text-teal-400"   },
-                { icon: <MessageSquare className="w-3.5 h-3.5" />, label: "Nachrichten",        value: `~${messageCount}`,                            color: "text-blue-400"   },
+                { icon: <MessageSquare className="w-3.5 h-3.5" />, label: "Nachrichten",        value: String(messageCount),                          color: "text-blue-400"   },
                 { icon: <CoinIcon size={14} />,                     label: "Münzen gesammelt",   value: coinsEarned.toLocaleString("de-DE"),            color: "text-amber-400"  },
                 { icon: <CoinIcon size={14} />,                     label: "Münzen ausgegeben",  value: coinsSpent.toLocaleString("de-DE"),             color: "text-rose-400"   },
               ].map(s => (
@@ -463,15 +474,34 @@ export default async function ProfilePage() {
             <section>
               <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">📅 Letzte Events</h2>
               <div className="glass card-shine rounded-2xl overflow-hidden divide-y divide-white/[0.04]">
-                {eventRegs.map(reg => (
-                  <div key={reg.id} className="px-4 py-3">
-                    <p className="text-sm font-medium text-white truncate">{reg.event.title}</p>
-                    <p className="text-[10px] text-gray-600 mt-0.5">
-                      {new Date(reg.event.startAt).toLocaleDateString("de-DE", { day: "2-digit", month: "short", year: "numeric" })}
-                      {reg.event.game ? ` · ${reg.event.game}` : ""}
-                    </p>
-                  </div>
-                ))}
+                {eventRegs.map(reg => {
+                  let placement: number | null = null;
+                  try {
+                    const ranking: string[] = JSON.parse(reg.event.finalRankingJson ?? "[]");
+                    const idx = ranking.indexOf(userId);
+                    if (idx !== -1) placement = idx + 1;
+                  } catch { /* ignore */ }
+                  return (
+                    <Link key={reg.id} href={`/events/${reg.event.id}`}
+                      className="flex items-center justify-between px-4 py-3 hover:bg-white/[0.03] transition-colors group">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-white truncate group-hover:text-teal-300 transition-colors">{reg.event.title}</p>
+                        <p className="text-[10px] text-gray-600 mt-0.5">
+                          {new Date(reg.event.startAt).toLocaleDateString("de-DE", { day: "2-digit", month: "short", year: "numeric" })}
+                          {reg.event.game ? ` · ${reg.event.game}` : ""}
+                        </p>
+                      </div>
+                      {placement !== null && (
+                        <span className={`ml-3 shrink-0 text-xs font-bold px-2 py-0.5 rounded-full border tabular-nums ${
+                          placement === 1 ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
+                          placement === 2 ? "bg-gray-400/10 text-gray-300 border-gray-400/20" :
+                          placement === 3 ? "bg-orange-700/10 text-orange-400 border-orange-700/20" :
+                                            "bg-white/[0.04] text-gray-500 border-white/[0.06]"
+                        }`}>#{placement}</span>
+                      )}
+                    </Link>
+                  );
+                })}
               </div>
             </section>
           )}
