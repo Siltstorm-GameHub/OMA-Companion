@@ -150,19 +150,19 @@ function computeStatStandings(
       for (const uid of winnerIds) addEv(uid, cd.seriesWinnerTargetField, 1);
     }
 
-    // Legacy single-poll winner bonus → add coins to series totalPoints
+    // Legacy single-poll winner bonus → add rankPoints to series totalPoints
     const singlePollWinners: string[] = cd.pollWinnerIds ?? (cd.pollWinnerId ? [cd.pollWinnerId] : []);
-    const singlePollCoins = cd.pollBonusCoins ?? 0;
+    const singlePollRankPts = cd.pollBonusRankPoints ?? 0;
     for (const uid of singlePollWinners) {
-      if (singlePollCoins > 0) pollBonusPts[uid] = (pollBonusPts[uid] ?? 0) + singlePollCoins;
+      if (singlePollRankPts > 0) pollBonusPts[uid] = (pollBonusPts[uid] ?? 0) + singlePollRankPts;
     }
 
-    // Multi-poll results
+    // Multi-poll results → rankPoints only
     for (const poll of cd.pollResults ?? []) {
-      const pollCoins = poll.coins ?? 0;
-      if (pollCoins <= 0) continue;
+      const pollRankPts = poll.rankPoints ?? 0;
+      if (pollRankPts <= 0) continue;
       for (const uid of poll.winnerIds ?? []) {
-        pollBonusPts[uid] = (pollBonusPts[uid] ?? 0) + pollCoins;
+        pollBonusPts[uid] = (pollBonusPts[uid] ?? 0) + pollRankPts;
       }
     }
   }
