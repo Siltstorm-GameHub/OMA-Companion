@@ -78,8 +78,8 @@ export default async function LeaderboardPage() {
       },
     }),
     prisma.event.findMany({
-      where: { finalRankingJson: { not: null } },
-      select: { finalRankingJson: true },
+      where: { completionData: { not: null } },
+      select: { completionData: true },
     }),
     // Monat/Jahr-Paare pro User aggregieren — günstiger als alle Zeilen laden
     prisma.donation.groupBy({
@@ -92,10 +92,16 @@ export default async function LeaderboardPage() {
   const winMap = new Map<string, number>();
   for (const ev of eventsWithWinners) {
     try {
-      const ranking: string[] = JSON.parse(ev.finalRankingJson!);
-      if (ranking.length > 0) {
-        const winner = ranking[0];
-        winMap.set(winner, (winMap.get(winner) ?? 0) + 1);
+      const data = JSON.parse(ev.completionData!);
+      // eventWinnerIds = alle Platz-1-User (auch bei Gleichstand mehrere)
+      // Fallback: finalRankingGroups[0] oder finalRanking[0]
+      const winners: string[] =
+        data.eventWinnerIds ??
+        (data.eventWinnerId ? [data.eventWinnerId] : null) ??
+        data.finalRankingGroups?.[0] ??
+        (data.finalRanking?.[0] ? [data.finalRanking[0]] : []);
+      for (const uid of winners) {
+        winMap.set(uid, (winMap.get(uid) ?? 0) + 1);
       }
     } catch { /* skip malformed JSON */ }
   }
