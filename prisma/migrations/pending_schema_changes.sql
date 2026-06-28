@@ -51,6 +51,20 @@ CREATE INDEX IF NOT EXISTS "LulPoll_spieltagId_idx" ON "LulPoll"("spieltagId");
 CREATE INDEX IF NOT EXISTS "LulPollVote_pollId_idx" ON "LulPollVote"("pollId");
 
 -- ═══════════════════════════════════════════════════════════════
+-- LUL-Saisons als normale EventSeries behandeln (neues System)
+-- ═══════════════════════════════════════════════════════════════
+
+-- LulSeason: Link zur EventSeries (wenn gesetzt → neue Saison, sichtbar als normale Eventreihe)
+ALTER TABLE "LulSeason" ADD COLUMN IF NOT EXISTS "seriesId" TEXT UNIQUE;
+ALTER TABLE "LulSeason" ADD CONSTRAINT IF NOT EXISTS "LulSeason_seriesId_fkey"
+  FOREIGN KEY ("seriesId") REFERENCES "EventSeries"("id") ON DELETE SET NULL;
+
+-- LulSpieltag: Link zum regulären Event (wenn gesetzt → Spieltag ist als normales Event sichtbar)
+ALTER TABLE "LulSpieltag" ADD COLUMN IF NOT EXISTS "eventId" TEXT UNIQUE;
+ALTER TABLE "LulSpieltag" ADD CONSTRAINT IF NOT EXISTS "LulSpieltag_eventId_fkey"
+  FOREIGN KEY ("eventId") REFERENCES "Event"("id") ON DELETE SET NULL;
+
+-- ═══════════════════════════════════════════════════════════════
 
 -- 1. User: Gruß / Bio
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "bio" TEXT;

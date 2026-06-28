@@ -252,6 +252,7 @@ model EventSeries {
   seriesCompletionData String?
   createdAt   DateTime @default(now())
   events      Event[]
+  lulSeason   LulSeason?
 }
 
 model Event {
@@ -295,6 +296,7 @@ model Event {
   twitchClipUrl        String?
 
   series        EventSeries?        @relation(fields: [seriesId], references: [id])
+  lulSpieltag   LulSpieltag?
   registrations EventRegistration[]
   participants  TournamentParticipant[]
   matches       Match[]
@@ -568,10 +570,13 @@ model LulSeason {
   isLegacy       Boolean  @default(false)
   // JSON: { game, spectator, gameWinner, vote, dominion, dominionTriggers: string[], polls: [{statKey, label, points}] }
   pointsConfig   String?
+  // Wenn gesetzt: diese Saison wird als normale EventSeries behandelt (neues System)
+  seriesId       String?  @unique
   createdAt      DateTime @default(now())
 
   spieltage     LulSpieltag[]
   legacyEntries LulLegacyEntry[]
+  series        EventSeries? @relation(fields: [seriesId], references: [id])
 }
 
 // Aggregiertes Saison-Endergebnis für vergangene Saisons ohne Spieltag-Details
@@ -614,7 +619,10 @@ model LulSpieltag {
   status         String    @default("upcoming")
   // JSON: {"1": 10, "2": 5, "3": 3} – Punkte pro Spielplatzierung
   pointsConfig String?
+  // Wenn gesetzt: dieser Spieltag ist auch als reguläres Event sichtbar
+  eventId      String?   @unique
   season       LulSeason @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  event        Event?    @relation(fields: [eventId], references: [id])
   entries      LulEntry[]
   polls        LulPoll[]
 }
