@@ -122,11 +122,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
             token.discordId = discordId;
           } else {
-            // Kein Stub → normaler Erstlogin, discordId setzen
+            // Kein anderer Stub → Stub IS der aktive User oder normaler Erstlogin.
+            // discordId + Email setzen (Stub hat oft noch keine Email).
             await prisma.user.update({
               where: { id: user.id },
-              data:  { discordId },
-            }).catch(() => { /* unique constraint – discordId bereits korrekt gesetzt */ });
+              data:  { discordId, ...(user.email ? { email: user.email } : {}) },
+            }).catch(async () => {
+              // Email-Kollision → nur discordId setzen
+              await prisma.user.update({
+                where: { id: user.id },
+                data:  { discordId },
+              }).catch(() => {});
+            });
 
             token.id        = user.id;
             token.discordId = discordId;
