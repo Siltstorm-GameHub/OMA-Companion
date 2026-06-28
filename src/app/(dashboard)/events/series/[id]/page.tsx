@@ -101,6 +101,8 @@ function computeStatStandings(
 ) {
   const evPart: Record<string, number> = {};
   const evStats: Record<string, Record<string, number>> = {};
+  // Extra points from poll wins, added directly to totalPoints
+  const pollBonusPts: Record<string, number> = {};
 
   function addEv(uid: string, field: string, val: number) {
     if (!evStats[uid]) evStats[uid] = {};
@@ -115,6 +117,13 @@ function computeStatStandings(
       eventWinnerId?: string;
       eventWinnerIds?: string[];
       seriesWinnerTargetField?: string;
+      // Legacy single poll
+      pollWinnerIds?: string[];
+      pollWinnerId?: string;
+      pollBonusCoins?: number;
+      pollBonusRankPoints?: number;
+      // Multi-poll results
+      pollResults?: { winnerIds: string[]; coins: number; rankPoints: number }[];
     } = {};
     try { cd = JSON.parse(ev.completionData); } catch { continue; }
     if (!cd.gamePhaseComplete) continue;
@@ -140,6 +149,22 @@ function computeStatStandings(
     if (winnerIds.length > 0 && cd.seriesWinnerTargetField) {
       for (const uid of winnerIds) addEv(uid, cd.seriesWinnerTargetField, 1);
     }
+
+    // Legacy single-poll winner bonus → add coins to series totalPoints
+    const singlePollWinners: string[] = cd.pollWinnerIds ?? (cd.pollWinnerId ? [cd.pollWinnerId] : []);
+    const singlePollCoins = cd.pollBonusCoins ?? 0;
+    for (const uid of singlePollWinners) {
+      if (singlePollCoins > 0) pollBonusPts[uid] = (pollBonusPts[uid] ?? 0) + singlePollCoins;
+    }
+
+    // Multi-poll results
+    for (const poll of cd.pollResults ?? []) {
+      const pollCoins = poll.coins ?? 0;
+      if (pollCoins <= 0) continue;
+      for (const uid of poll.winnerIds ?? []) {
+        pollBonusPts[uid] = (pollBonusPts[uid] ?? 0) + pollCoins;
+      }
+    }
   }
 
   const legPts: Record<string, number> = {};
@@ -154,12 +179,15 @@ function computeStatStandings(
     }
   }
 
-  const allUids = new Set([...Object.keys(evPart), ...Object.keys(evStats), ...Object.keys(legPts)]);
+  const allUids = new Set([
+    ...Object.keys(evPart), ...Object.keys(evStats),
+    ...Object.keys(legPts), ...Object.keys(pollBonusPts),
+  ]);
 
   return [...allUids].map(uid => {
     const ep = evPart[uid] ?? 0;
     const es = evStats[uid] ?? {};
-    let totalPoints = (legPts[uid] ?? 0) + ep * cfg.participationPoints;
+    let totalPoints = (legPts[uid] ?? 0) + ep * cfg.participationPoints + (pollBonusPts[uid] ?? 0);
     for (const { field, pointsPer } of cfg.stats) {
       totalPoints += (es[field] ?? 0) * pointsPer;
     }
