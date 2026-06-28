@@ -1,30 +1,86 @@
 // LUL = Level-Up-League
 
 export const LUL_POINTS = {
-  GAME:            5,   // Teilnahme (Spieler oder Zuschauer)
+  GAME:            5,   // Teilnahme Mitspieler
+  SPECTATOR:       5,   // Teilnahme Zuschauer
   GAME_WINNER:    10,   // Spieltag-Sieg als Mitspieler
-  COMMUNITY_CHAMP: 10, // Umfrage-Sieg als Zuschauer
-  TROSTPREIS:     10,   // Trostpreis-Umfrage (Mitspieler, ohne Sieger)
+  COMMUNITY_CHAMP: 10, // Umfrage-Sieg (Legacy: communityChamp)
+  TROSTPREIS:     10,   // Trostpreis-Umfrage (Legacy: trostpreis)
   VOTE:            2,   // Abstimmungsteilnahme
   DOMINION:       20,   // 3 Siege in Folge
 } as const;
 
-export function calcLulPoints(entry: {
-  role?:          string;
-  gameWinner:     boolean;
-  communityChamp: boolean;
-  trostpreis:     boolean;
-  voted:          boolean;
-  dominionBonus:  boolean;
-}): number {
-  // Reine Wähler (role="voter") bekommen keine Teilnahme-Punkte
-  const isVoterOnly = entry.role === "voter";
-  let pts = isVoterOnly ? 0 : LUL_POINTS.GAME;
-  if (!isVoterOnly && entry.gameWinner)     pts += LUL_POINTS.GAME_WINNER;
-  if (!isVoterOnly && entry.communityChamp) pts += LUL_POINTS.COMMUNITY_CHAMP;
-  if (!isVoterOnly && entry.trostpreis)     pts += LUL_POINTS.TROSTPREIS;
-  if (entry.voted)                          pts += LUL_POINTS.VOTE;
-  if (!isVoterOnly && entry.dominionBonus)  pts += LUL_POINTS.DOMINION;
+export type LulPollConfig = {
+  statKey: string;
+  label:   string;
+  points:  number;
+};
+
+export type LulPointsConfig = {
+  game?:             number;
+  spectator?:        number;
+  gameWinner?:       number;
+  vote?:             number;
+  dominion?:         number;
+  // statKeys die als "Sieg" für den Dominion-Bonus zählen
+  dominionTriggers?: string[];
+  polls?:            LulPollConfig[];
+};
+
+export function calcLulPoints(
+  entry: {
+    role?:          string;
+    gameWinner:     boolean;
+    communityChamp: boolean;
+    trostpreis:     boolean;
+    voted:          boolean;
+    dominionBonus:  boolean;
+    // JSON string[] der gewonnenen Poll-statKeys (neue Saisons)
+    pollWinsJson?:  string | null;
+  },
+  config?: LulPointsConfig | null,
+): number {
+  const isVoterOnly   = entry.role === "voter";
+  const isSpectator   = entry.role === "spectator";
+
+  const gameBase   = config?.game      ?? LUL_POINTS.GAME;
+  const spectBase  = config?.spectator ?? LUL_POINTS.SPECTATOR;
+  const winPts     = config?.gameWinner ?? LUL_POINTS.GAME_WINNER;
+  const votePts    = config?.vote      ?? LUL_POINTS.VOTE;
+  const domPts     = config?.dominion  ?? LUL_POINTS.DOMINION;
+
+  let pts = 0;
+
+  if (!isVoterOnly) {
+    pts += isSpectator ? spectBase : gameBase;
+  }
+
+  if (!isVoterOnly && entry.gameWinner) pts += winPts;
+
+  // Poll-Gewinne — zuerst neues flexibles System prüfen
+  const polls = config?.polls;
+  if (polls && polls.length > 0) {
+    const wins: string[] = entry.pollWinsJson
+      ? (JSON.parse(entry.pollWinsJson) as string[])
+      : [];
+    // Legacy-Flags als Fallback in wins-Array aufnehmen
+    if (entry.communityChamp && !wins.includes("communityChamp")) wins.push("communityChamp");
+    if (entry.trostpreis     && !wins.includes("trostpreis"))     wins.push("trostpreis");
+
+    for (const poll of polls) {
+      if (!isVoterOnly && wins.includes(poll.statKey)) {
+        pts += poll.points;
+      }
+    }
+  } else {
+    // Legacy-Modus: hardcodierte Flags
+    if (!isVoterOnly && entry.communityChamp) pts += LUL_POINTS.COMMUNITY_CHAMP;
+    if (!isVoterOnly && entry.trostpreis)     pts += LUL_POINTS.TROSTPREIS;
+  }
+
+  if (entry.voted)                         pts += votePts;
+  if (!isVoterOnly && entry.dominionBonus) pts += domPts;
+
   return pts;
 }
 
@@ -36,10 +92,12 @@ export type LulStandingRow = {
   asPlayer:    number;  // Einsätze als Mitspieler
   asSpectator: number;  // Einsätze als Zuschauer
   wins:        number;  // gameWinner
-  champs:      number;  // communityChamp
-  trost:       number;  // trostpreis
-  dominion:    number;  // dominionBonus (Anzahl Boni erhalten)
+  champs:      number;  // communityChamp (Legacy)
+  trost:       number;  // trostpreis (Legacy)
+  dominion:    number;  // dominionBonus (Anzahl Boni)
   votes:       number;  // voted
+  // Flexible Poll-Wins: { statKey -> Anzahl }
+  pollWins:    Record<string, number>;
 };
 
 export function buildLulStandings(
@@ -53,12 +111,27 @@ export function buildLulStandings(
     trostpreis:     boolean;
     voted:          boolean;
     dominionBonus:  boolean;
-  }[]
+    pollWinsJson?:  string | null;
+  }[],
+  pollsConfig?: LulPollConfig[],
 ): LulStandingRow[] {
   const map = new Map<string, LulStandingRow>();
 
   for (const e of entries) {
     const display = e.user.username ?? e.user.name ?? "Unbekannt";
+
+    // Flexible Poll-Wins aus JSON lesen
+    const pollWins: Record<string, number> = {};
+    if (e.pollWinsJson) {
+      const wins = JSON.parse(e.pollWinsJson) as string[];
+      for (const key of wins) {
+        pollWins[key] = (pollWins[key] ?? 0) + 1;
+      }
+    }
+    // Legacy-Flags in pollWins spiegeln
+    if (e.communityChamp) pollWins["communityChamp"] = (pollWins["communityChamp"] ?? 0) + 1;
+    if (e.trostpreis)     pollWins["trostpreis"]     = (pollWins["trostpreis"]     ?? 0) + 1;
+
     const existing = map.get(e.userId);
     if (!existing) {
       map.set(e.userId, {
@@ -73,6 +146,7 @@ export function buildLulStandings(
         trost:       e.trostpreis     ? 1 : 0,
         dominion:    e.dominionBonus  ? 1 : 0,
         votes:       e.voted          ? 1 : 0,
+        pollWins,
       });
     } else {
       existing.totalPts    += e.lulPoints;
@@ -83,6 +157,9 @@ export function buildLulStandings(
       existing.trost       += e.trostpreis     ? 1 : 0;
       existing.dominion    += e.dominionBonus  ? 1 : 0;
       existing.votes       += e.voted          ? 1 : 0;
+      for (const [key, val] of Object.entries(pollWins)) {
+        existing.pollWins[key] = (existing.pollWins[key] ?? 0) + val;
+      }
     }
   }
 
@@ -98,12 +175,12 @@ export function mergeStandings(
 ): LulStandingRow[] {
   const map = new Map<string, LulStandingRow>();
 
-  for (const r of regular) map.set(r.userId, { ...r });
+  for (const r of regular) map.set(r.userId, { ...r, pollWins: { ...r.pollWins } });
 
   for (const l of legacy) {
     const existing = map.get(l.userId);
     if (!existing) {
-      map.set(l.userId, { ...l });
+      map.set(l.userId, { ...l, pollWins: { ...l.pollWins } });
     } else {
       existing.totalPts    += l.totalPts;
       existing.asPlayer    += l.asPlayer;
@@ -113,6 +190,9 @@ export function mergeStandings(
       existing.trost       += l.trost;
       existing.dominion    += l.dominion;
       existing.votes       += l.votes;
+      for (const [key, val] of Object.entries(l.pollWins)) {
+        existing.pollWins[key] = (existing.pollWins[key] ?? 0) + val;
+      }
     }
   }
 
@@ -121,7 +201,30 @@ export function mergeStandings(
   );
 }
 
+// Prüft ob der User einen Dominion-Bonus verdient hat.
+// winHistory: Boolean-Array pro Spieltag (true = Sieg in diesem Spieltag).
+// Sieg = gameWinner ODER ein Eintrag in dominionTriggers aus pollWinsJson.
+// Die letzten 3 Einträge müssen alle true sein.
 export function hasDominionBonus(winFlags: boolean[]): boolean {
   if (winFlags.length < 3) return false;
   return winFlags.slice(-3).every(Boolean);
+}
+
+// Berechnet ob ein Spieltag-Eintrag als "Sieg" für den Dominion-Bonus gilt.
+export function isWinForDominion(
+  entry: { gameWinner: boolean; communityChamp: boolean; trostpreis: boolean; pollWinsJson?: string | null },
+  triggers?: string[],
+): boolean {
+  // Wenn keine triggers konfiguriert → nur gameWinner zählt (Legacy)
+  const t = triggers ?? ["gameWinner", "communityChamp", "trostpreis"];
+
+  if (t.includes("gameWinner") && entry.gameWinner) return true;
+
+  const wins: string[] = entry.pollWinsJson
+    ? (JSON.parse(entry.pollWinsJson) as string[])
+    : [];
+  if (entry.communityChamp && !wins.includes("communityChamp")) wins.push("communityChamp");
+  if (entry.trostpreis     && !wins.includes("trostpreis"))     wins.push("trostpreis");
+
+  return wins.some(w => t.includes(w));
 }

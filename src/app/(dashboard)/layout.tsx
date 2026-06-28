@@ -18,7 +18,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const userId = session.user?.id;
 
   // ── News-Feed-Daten ──────────────────────────────────────────────────
-  const [nextEvent, activeLulSeason, openQuestsCount, memberCount, myPoints] = await Promise.all([
+  const [activeOrPollEvent, upcomingEvent, activeLulSeason, openQuestsCount, memberCount, myPoints] = await Promise.all([
+    // Currently running or in poll phase
+    prisma.event.findFirst({
+      where: { status: { in: ["active", "umfrage"] } },
+      orderBy: { startAt: "desc" },
+      select: { id: true, title: true, startAt: true, game: true, status: true },
+    }),
+    // Next upcoming event
     prisma.event.findFirst({
       where: { startAt: { gt: new Date() }, status: { not: "finished" } },
       orderBy: { startAt: "asc" },
@@ -37,20 +44,46 @@ export default async function DashboardLayout({ children }: { children: React.Re
       : null,
   ]);
 
+  const nextEvent = activeOrPollEvent ?? upcomingEvent;
   const newsItems: NewsItem[] = [];
 
-  // Nächstes Event
+  // Aktives / Umfragephase / Nächstes Event
   if (nextEvent) {
-    const d = new Date(nextEvent.startAt);
-    const diff = Math.ceil((d.getTime() - Date.now()) / 86_400_000);
-    const when = diff === 0 ? "Heute" : diff === 1 ? "Morgen" : `in ${diff} Tagen`;
-    newsItems.push({
-      id: "event-next",
-      icon: "event",
-      text: `${when}: ${nextEvent.title}${nextEvent.game ? ` · ${nextEvent.game}` : ""}`,
-      href: "/events",
-      accent: nextEvent.status === "active" ? "amber" : "teal",
-    });
+    if (nextEvent.status === "active") {
+      newsItems.push({
+        id: "event-next",
+        icon: "event",
+        text: `Läuft gerade: ${nextEvent.title}${nextEvent.game ? ` · ${nextEvent.game}` : ""}`,
+        href: "/events",
+        accent: "amber",
+      });
+    } else if (nextEvent.status === "umfrage") {
+      newsItems.push({
+        id: "event-next",
+        icon: "event",
+        text: `Umfragephase: ${nextEvent.title}${nextEvent.game ? ` · ${nextEvent.game}` : ""}`,
+        href: "/events",
+        accent: "amber",
+      });
+    } else {
+      const d = new Date(nextEvent.startAt);
+      // Tage-Differenz anhand Kalender-Tage in Berlin-Zeitzone (verhindert Off-by-One)
+      const nowStr = new Date().toLocaleDateString("de-DE", { timeZone: "Europe/Berlin" });
+      const evStr  = d.toLocaleDateString("de-DE", { timeZone: "Europe/Berlin" });
+      const [nd, nm, ny] = nowStr.split(".").map(Number);
+      const [ed, em, ey] = evStr.split(".").map(Number);
+      const nowDay = new Date(ny, nm - 1, nd);
+      const evDay  = new Date(ey, em - 1, ed);
+      const diffDays = Math.round((evDay.getTime() - nowDay.getTime()) / 86_400_000);
+      const when = diffDays === 0 ? "Heute" : diffDays === 1 ? "Morgen" : `in ${diffDays} Tagen`;
+      newsItems.push({
+        id: "event-next",
+        icon: "event",
+        text: `${when}: ${nextEvent.title}${nextEvent.game ? ` · ${nextEvent.game}` : ""}`,
+        href: "/events",
+        accent: "teal",
+      });
+    }
   }
 
   // LuL-Saison

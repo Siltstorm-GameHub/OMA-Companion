@@ -6,8 +6,9 @@ import {
   ArrowLeft, Trophy, Gamepad2, Eye, Crown, Gift, Flame, CheckCircle2,
   AlertTriangle, Star, Vote,
 } from "lucide-react";
-import { LUL_POINTS } from "@/lib/lul";
+import { LUL_POINTS, type LulPointsConfig } from "@/lib/lul";
 import LiveRefresh from "./LiveRefresh";
+import LulVotingSection from "./LulVotingSection";
 import { getGameCoverUrl, getGameFallbackGradient } from "@/lib/game-cover";
 import { getGenreIcon } from "@/lib/genre-icons";
 import WanderpocalBadgeServer from "@/components/WanderpocalBadgeServer";
@@ -16,11 +17,13 @@ import { getWanderpocalHoldersMap } from "@/lib/get-wanderpocal-holders";
 const STATUS_LABEL: Record<string, string> = {
   upcoming: "Geplant",
   active:   "Läuft",
+  umfrage:  "Umfrage-Phase",
   finished: "Abgeschlossen",
 };
 const STATUS_COLOR: Record<string, string> = {
   upcoming: "text-gray-400 bg-white/5",
   active:   "text-amber-400 bg-amber-500/10",
+  umfrage:  "text-violet-400 bg-violet-500/10",
   finished: "text-teal-400 bg-teal-500/10",
 };
 
@@ -40,7 +43,11 @@ export default async function LulSpieltagPage({
   const spieltag = await prisma.lulSpieltag.findUnique({
     where: { id },
     include: {
-      season: { select: { id: true, number: true, name: true } },
+      season: { select: { id: true, number: true, name: true, pointsConfig: true } },
+      polls: {
+        include: { votes: { select: { voterId: true, targetId: true } } },
+        orderBy: { createdAt: "asc" },
+      },
       entries: {
         include: {
           user: { select: { id: true, name: true, username: true, image: true } },
@@ -56,7 +63,50 @@ export default async function LulSpieltagPage({
 
   const isFinished  = spieltag.status === "finished";
   const isActive    = spieltag.status === "active";
+  const isUmfrage   = spieltag.status === "umfrage";
   const notFinal    = !isFinished;
+
+  // Punkte-Legende aus Season-Config oder Defaults
+  const seasonPointsConfig: LulPointsConfig | null = spieltag.season.pointsConfig
+    ? (JSON.parse(spieltag.season.pointsConfig) as LulPointsConfig)
+    : null;
+  const pts = {
+    game:       seasonPointsConfig?.game       ?? LUL_POINTS.GAME,
+    spectator:  seasonPointsConfig?.spectator  ?? LUL_POINTS.SPECTATOR,
+    gameWinner: seasonPointsConfig?.gameWinner ?? LUL_POINTS.GAME_WINNER,
+    vote:       seasonPointsConfig?.vote       ?? LUL_POINTS.VOTE,
+    dominion:   seasonPointsConfig?.dominion   ?? LUL_POINTS.DOMINION,
+    polls:      seasonPointsConfig?.polls      ?? [],
+  };
+
+  // Polls für Voting-Section aufbereiten
+  const pollsForClient = spieltag.polls.map((poll) => {
+    const excluded: string[] = poll.excludedUserIds
+      ? (JSON.parse(poll.excludedUserIds) as string[])
+      : [];
+    const candidates = spieltag.entries
+      .filter((e) => e.role === poll.type && !excluded.includes(e.userId))
+      .map((e) => ({
+        userId:    e.userId,
+        name:      e.user.username ?? e.user.name ?? "Unbekannt",
+        image:     e.user.image,
+        voteCount: poll.votes.filter((v) => v.targetId === e.userId).length,
+      }));
+    const myVote = poll.votes.find((v) => v.voterId === userId);
+    return {
+      id:             poll.id,
+      statKey:        poll.statKey,
+      label:          poll.label,
+      question:       poll.question,
+      type:           poll.type as "player" | "spectator",
+      endsAt:         poll.endsAt.toISOString(),
+      status:         poll.status as "open" | "closed",
+      winnerIds:      poll.winnerIds ? (JSON.parse(poll.winnerIds) as string[]) : [],
+      candidates,
+      myVoteTargetId: myVote?.targetId ?? null,
+      totalVotes:     poll.votes.length,
+    };
+  });
 
   const coverUrl       = getGameCoverUrl(spieltag.game ?? "");
   const fallbackGrad   = getGameFallbackGradient(spieltag.game ?? "");
@@ -259,6 +309,28 @@ export default async function LulSpieltagPage({
         </div>
         </div>{/* p-4 sm:p-6 */}
       </div>{/* outer rounded-2xl */}
+
+      {/* Umfrage-Phase-Banner */}
+      {isUmfrage && (
+        <div className="flex items-start gap-3 rounded-xl px-4 py-3"
+          style={{ background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.25)" }}>
+          <Crown className="w-4 h-4 text-violet-400 mt-0.5 shrink-0" />
+          <p className="text-sm text-violet-300/90">
+            Die Spielphase ist beendet — jetzt läuft die Umfrage-Phase! Gib unten deine Stimme ab. Alle die abstimmen, erhalten {pts.vote} LUL-Punkte.
+          </p>
+        </div>
+      )}
+
+      {/* Voting-Section (bei umfrage-Status und vorhandenen Polls) */}
+      {(isUmfrage || isFinished) && pollsForClient.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+            <Crown className="w-3.5 h-3.5 text-violet-400" />
+            {isUmfrage ? "Abstimmung" : "Umfrage-Ergebnisse"}
+          </h2>
+          <LulVotingSection spieltagId={id} userId={userId} initialPolls={pollsForClient} />
+        </div>
+      )}
 
       {/* "Nicht final"-Hinweis */}
       {notFinal && spieltag.entries.length > 0 && (
@@ -495,10 +567,10 @@ export default async function LulSpieltagPage({
               className="px-4 py-3 flex flex-wrap gap-x-5 gap-y-1.5"
             >
               {[
-                { icon: "🎮", label: "Mitspieler",    pts: `+${LUL_POINTS.GAME}` },
-                { icon: "🏆", label: "Game Winner",    pts: `+${LUL_POINTS.GAME_WINNER}` },
-                { icon: "🎁", label: "Trostpreis",     pts: `+${LUL_POINTS.TROSTPREIS}` },
-                { icon: "🔥", label: "Dominion Bonus", pts: `+${LUL_POINTS.DOMINION}` },
+                { icon: "🎮", label: "Mitspieler",    pts: `+${pts.game}` },
+                { icon: "🏆", label: "Game Winner",    pts: `+${pts.gameWinner}` },
+                ...pts.polls.map(p => ({ icon: "🎁", label: p.label, pts: `+${p.points}` })),
+                { icon: "🔥", label: "Dominion Bonus", pts: `+${pts.dominion}` },
               ].map((item) => (
                 <span key={item.label} className="text-[10px] text-gray-700">
                   {item.icon} <span className="text-gray-600">{item.label}</span>
@@ -624,9 +696,9 @@ export default async function LulSpieltagPage({
               className="px-4 py-3 flex flex-wrap gap-x-5 gap-y-1.5"
             >
               {[
-                { icon: "👁️", label: "Zuschauer",       pts: `+${LUL_POINTS.GAME}` },
-                { icon: "👑", label: "Community-Champ", pts: `+${LUL_POINTS.COMMUNITY_CHAMP}` },
-                { icon: "✅", label: "Vote",             pts: `+${LUL_POINTS.VOTE}` },
+                { icon: "👁️", label: "Zuschauer",        pts: `+${pts.spectator}` },
+                ...pts.polls.map(p => ({ icon: "👑", label: p.label, pts: `+${p.points}` })),
+                { icon: "✅", label: "Vote",              pts: `+${pts.vote}` },
               ].map((item) => (
                 <span key={item.label} className="text-[10px] text-gray-700">
                   {item.icon} <span className="text-gray-600">{item.label}</span>
@@ -705,7 +777,7 @@ export default async function LulSpieltagPage({
             >
               <span className="text-[10px] text-gray-700">
                 ✅ <span className="text-gray-600">Abstimmung</span>
-                <span className="ml-1">+{LUL_POINTS.VOTE} Pkt</span>
+                <span className="ml-1">+{pts.vote} Pkt</span>
               </span>
             </div>
           </div>

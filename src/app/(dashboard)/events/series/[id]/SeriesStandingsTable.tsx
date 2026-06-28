@@ -64,7 +64,6 @@ function RankDelta({ delta }: { delta: DeltaInfo }) {
       </span>
     );
   }
-  if (!delta.participated) return null;
   if (delta.rankDelta > 0) {
     return (
       <span className="flex items-center gap-0.5 text-[10px] font-semibold text-emerald-400 leading-none">

@@ -37,9 +37,9 @@ const ROLE_LABEL: Record<string, string> = {
 // Cached queries for non-user-specific data (5 min revalidation)
 const getGlobalDashboardData = unstable_cache(
   async () => {
-    const [memberCount, activeEvents, activeSeries, topUsers, nextEvent, liveEvent, recentSummaries] = await Promise.all([
+    const [memberCount, activeEvents, activeSeries, topUsers, activeOrPollEvent, nextUpcomingEvent, liveEvent, recentSummaries] = await Promise.all([
       prisma.user.count(),
-      prisma.event.count({ where: { status: { in: ["open", "active"] } } }),
+      prisma.event.count({ where: { status: { in: ["open", "active", "umfrage"] } } }),
       prisma.eventSeries.findMany({
         where: { events: { some: { status: { in: ["open", "active", "closed"] } } } },
         include: {
@@ -58,15 +58,21 @@ const getGlobalDashboardData = unstable_cache(
         take: 5,
         select: { id: true, username: true, name: true, image: true, points: true, rankPoints: true },
       }),
+      // Active or umfrage event takes priority over upcoming
+      prisma.event.findFirst({
+        where:   { status: { in: ["active", "umfrage"] } },
+        orderBy: { startAt: "desc" },
+        include: { _count: { select: { registrations: true } } },
+      }),
       prisma.event.findFirst({
         where:   { status: { in: ["open", "active"] }, startAt: { gte: new Date() } },
         orderBy: { startAt: "asc" },
         include: { _count: { select: { registrations: true } } },
       }),
       prisma.event.findFirst({
-        where:   { status: "active", startAt: { lte: new Date() } },
+        where:   { status: { in: ["active", "umfrage"] } },
         orderBy: { startAt: "desc" },
-        select:  { id: true, title: true, format: true, _count: { select: { registrations: true } } },
+        select:  { id: true, title: true, format: true, status: true, _count: { select: { registrations: true } } },
       }),
       prisma.event.findMany({
         where:   { status: "finished", summary: { not: null } },
@@ -75,6 +81,7 @@ const getGlobalDashboardData = unstable_cache(
         select:  { id: true, title: true, game: true, startAt: true, summary: true },
       }),
     ]);
+    const nextEvent = activeOrPollEvent ?? nextUpcomingEvent;
     return { memberCount, activeEvents, activeSeries, topUsers, nextEvent, liveEvent, recentSummaries };
   },
   ["dashboard-global"],
@@ -285,7 +292,9 @@ export default async function DashboardPage() {
             </div>
             {/* Text */}
             <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-red-400/70 mb-0.5">Live jetzt</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-red-400/70 mb-0.5">
+                {liveEvent.status === "umfrage" ? "Umfragephase" : "Live jetzt"}
+              </p>
               <p className="text-sm font-bold text-white truncate group-hover:text-red-300 transition-colors">
                 {liveEvent.title}
               </p>
@@ -354,9 +363,9 @@ export default async function DashboardPage() {
                 <div className="flex items-center gap-3 mt-2 text-[11px] text-gray-500">
                   <span className="flex items-center gap-1">
                     <Clock className="w-3 h-3" />
-                    {new Date(nextEvent.startAt).toLocaleDateString("de-DE", { day: "numeric", month: "short" })}
+                    {new Date(nextEvent.startAt).toLocaleDateString("de-DE", { day: "numeric", month: "short", timeZone: "Europe/Berlin" })}
                     {" "}
-                    {new Date(nextEvent.startAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
+                    {new Date(nextEvent.startAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" })}
                   </span>
                   <span className="flex items-center gap-1 ml-auto">
                     <Users className="w-3 h-3" />

@@ -330,21 +330,31 @@ export default function MobileTopBar() {
       >
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-teal-500/40 to-transparent pointer-events-none" />
 
-        <Link href="/dashboard" className="flex items-center min-w-0 flex-1" style={{ pointerEvents: "auto" }}>
-          <span className="text-sm font-semibold text-white truncate">{title}</span>
-        </Link>
+        <div className="flex-1 min-w-0 flex items-center">
+          <Link href="/dashboard" className="flex items-center min-w-0">
+            <span className="text-sm font-semibold text-white truncate">{title}</span>
+          </Link>
+        </div>
 
         {/* Avatar Button mit Unread-Dot */}
         <button
           ref={btnRef}
-          onPointerDown={(e) => { e.stopPropagation(); setOpen(v => !v); }}
-          className="w-8 h-8 rounded-full overflow-visible flex items-center justify-center transition-all shrink-0 relative"
-          style={open
-            ? { outline: "2px solid rgba(20,184,166,0.5)", outlineOffset: 2, touchAction: "manipulation", zIndex: 200 }
-            : { outline: "1px solid rgba(20,184,166,0.22)", outlineOffset: 1, touchAction: "manipulation", zIndex: 200 }}
+          onClick={(e) => { e.stopPropagation(); setOpen(v => !v); }}
+          className="rounded-full overflow-visible flex items-center justify-center transition-all shrink-0 relative"
+          style={{
+            width: 44, height: 44,
+            touchAction: "manipulation",
+            zIndex: 200,
+            marginRight: -6,
+          }}
           aria-label="Profil-Menü"
         >
-          <div className="w-full h-full rounded-full overflow-hidden">
+          <div
+            className="w-8 h-8 rounded-full overflow-hidden"
+            style={open
+              ? { outline: "2px solid rgba(20,184,166,0.5)", outlineOffset: 2 }
+              : { outline: "1px solid rgba(20,184,166,0.22)", outlineOffset: 1 }}
+          >
             {session?.user?.image ? (
               <Image src={session.user.image} alt="avatar" width={32} height={32} className="w-full h-full object-cover" />
             ) : (
