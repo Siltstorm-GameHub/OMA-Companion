@@ -3,7 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { LogOut, Sun, Moon, Bell, Settings } from "lucide-react";
+import { LogOut, Sun, Moon, Bell, Settings, X } from "lucide-react";
 import PwaInstallButton from "@/components/PwaInstallButton";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
@@ -141,6 +141,28 @@ export default function MobileTopBar() {
     }).catch(() => {});
   }
 
+  async function deleteNotification(id: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    const wasUnread = notifications.find(n => n.id === id)?.read === false;
+    setNotifications(prev => prev.filter(n => n.id !== id));
+    if (wasUnread) setUnreadCount(prev => Math.max(0, prev - 1));
+    await fetch("/api/notifications/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    }).catch(() => {});
+  }
+
+  async function deleteAll() {
+    setNotifications([]);
+    setUnreadCount(0);
+    await fetch("/api/notifications/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ all: true }),
+    }).catch(() => {});
+  }
+
   async function handleNotifClick(n: Notification) {
     if (!n.read) await markRead(n.id);
     setOpen(false);
@@ -223,43 +245,64 @@ export default function MobileTopBar() {
               </span>
             )}
           </div>
-          {unreadCount > 0 && (
-            <button onClick={markAllRead}
-              className="text-[10px] text-gray-500 hover:text-teal-400 transition-colors">
-              Alle lesen
-            </button>
+          {notifications.length > 0 && (
+            <div className="flex items-center gap-2">
+              {unreadCount > 0 && (
+                <button onClick={markAllRead}
+                  className="text-[10px] text-gray-500 hover:text-teal-400 transition-colors">
+                  Alle lesen
+                </button>
+              )}
+              <button onClick={deleteAll}
+                className="text-[10px] text-gray-500 hover:text-red-400 transition-colors">
+                Alle löschen
+              </button>
+            </div>
           )}
         </div>
 
         {notifications.length === 0 ? (
-          <p className="text-[11px] text-gray-600 text-center py-4 px-3">
-            Keine Benachrichtigungen
-          </p>
+          <div className="py-5 px-3 flex flex-col items-center gap-1.5">
+            <Bell style={{ width: 20, height: 20, color: "#374151" }} />
+            <p className="text-[11px] text-gray-600">Keine Benachrichtigungen</p>
+          </div>
         ) : (
           <div style={{ maxHeight: 240, overflowY: "auto" }}>
             {notifications.slice(0, 5).map(n => (
-              <button
+              <div
                 key={n.id}
-                onClick={() => handleNotifClick(n)}
-                className="w-full text-left px-3 py-2 hover:bg-white/[0.03] transition-colors flex gap-2 items-start"
+                className="group flex gap-2 items-start px-3 py-2 hover:bg-white/[0.03] transition-colors"
                 style={!n.read ? { background: "rgba(20,184,166,0.04)" } : undefined}
               >
-                <span className="text-sm mt-0.5 shrink-0">{NOTIF_ICONS[n.type] ?? "🔔"}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[11px] font-semibold truncate"
-                    style={{ color: n.read ? "#9ca3af" : "#e2e8f0" }}>
-                    {n.title}
-                  </p>
-                  <p className="text-[10px] text-gray-500 truncate">{n.body}</p>
-                  <p className="text-[10px] mt-0.5" style={{ color: "rgba(20,184,166,0.5)" }}>
-                    {timeAgo(n.createdAt)}
-                  </p>
+                <button
+                  onClick={() => handleNotifClick(n)}
+                  className="flex gap-2 items-start flex-1 min-w-0 text-left"
+                >
+                  <span className="text-sm mt-0.5 shrink-0">{NOTIF_ICONS[n.type] ?? "🔔"}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] font-semibold truncate"
+                      style={{ color: n.read ? "#9ca3af" : "#e2e8f0" }}>
+                      {n.title}
+                    </p>
+                    <p className="text-[10px] text-gray-500 truncate">{n.body}</p>
+                    <p className="text-[10px] mt-0.5" style={{ color: "rgba(20,184,166,0.5)" }}>
+                      {timeAgo(n.createdAt)}
+                    </p>
+                  </div>
+                </button>
+                <div className="flex items-center gap-1 mt-1 shrink-0">
+                  {!n.read && (
+                    <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#2dd4bf" }} />
+                  )}
+                  <button
+                    onClick={(e) => deleteNotification(n.id, e)}
+                    title="Löschen"
+                    className="opacity-0 group-hover:opacity-100 w-4 h-4 flex items-center justify-center rounded text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                  >
+                    <X style={{ width: 10, height: 10 }} />
+                  </button>
                 </div>
-                {!n.read && (
-                  <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0"
-                    style={{ background: "#2dd4bf" }} />
-                )}
-              </button>
+              </div>
             ))}
           </div>
         )}
