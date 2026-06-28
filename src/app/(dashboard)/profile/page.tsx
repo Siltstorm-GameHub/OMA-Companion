@@ -30,7 +30,7 @@ export default async function ProfilePage() {
   const month = now.getMonth() + 1;
   const year  = now.getFullYear();
 
-  const [user, eventRegs, eventCount, finishedEvents, tournamentParticipations, tournamentCount, tournamentWins, questsWithProgress, ownedCollectibles, leaderboardRank, userSystemBadges, userCustomBadges, wanderpocalTrophies, wanderpocalStats] =
+  const [user, eventRegs, eventCount, finishedEvents, tournamentParticipations, tournamentCount, questsWithProgress, ownedCollectibles, leaderboardRank, userSystemBadges, userCustomBadges, wanderpocalTrophies, wanderpocalStats, coinsEarnedAgg, coinsSpentAgg, lulPollWins] =
     await Promise.all([
       prisma.user.findUnique({
         where:  { id: userId },
@@ -58,7 +58,6 @@ export default async function ProfilePage() {
         orderBy: { id: "desc" }, take: 10,
       }),
       prisma.tournamentParticipant.count({ where: { userId } }),
-      prisma.match.count({ where: { winnerId: userId } }),
       prisma.quest.findMany({
         where:   { month, year },
         include: { progress: { where: { userId } } },
@@ -85,6 +84,9 @@ export default async function ProfilePage() {
       }),
       prisma.wanderpocalHolder.findMany({ where: { userId } }),
       prisma.wanderpocalStat.findMany({ where: { userId } }),
+      prisma.pointTransaction.aggregate({ where: { userId, amount: { gt: 0 } }, _sum: { amount: true } }),
+      prisma.pointTransaction.aggregate({ where: { userId, amount: { lt: 0 } }, _sum: { amount: true } }),
+      prisma.lulEntry.count({ where: { userId, communityChamp: true } }),
     ]);
 
   if (!user) redirect("/login");
@@ -94,15 +96,16 @@ export default async function ProfilePage() {
     try { const r = JSON.parse(e.finalRankingJson ?? "[]"); return Array.isArray(r) && r[0] === userId; }
     catch { return false; }
   }).length;
-  const mvpCount = finishedEvents.filter(e => {
-    try { return (e.completionData ? JSON.parse(e.completionData) : {}).mvpUserId === userId; }
+  const pollWinsFromEvents = finishedEvents.filter(e => {
+    try { const ids: string[] = (e.completionData ? JSON.parse(e.completionData) : {}).pollWinnerIds ?? []; return ids.includes(userId); }
     catch { return false; }
   }).length;
+  const pollMasterCount = pollWinsFromEvents + lulPollWins;
   const gameCounts = finishedEvents.reduce<Record<string, number>>((acc, e) => {
     if (e.game) acc[e.game] = (acc[e.game] ?? 0) + 1;
     return acc;
   }, {});
-  const favoriteGame = Object.entries(gameCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+  const topGames = Object.entries(gameCounts).sort((a, b) => b[1] - a[1]).map(([g]) => g);
 
   const totalPoints = user.points;
   const rankPoints  = user.rankPoints;
@@ -114,8 +117,10 @@ export default async function ProfilePage() {
 
   const voiceHours   = Math.floor((user?.voiceMinutesTotal ?? 0) / 60);
   const messageCount = user?.messagesTotal ?? 0;
+  const coinsEarned  = coinsEarnedAgg._sum.amount ?? 0;
+  const coinsSpent   = Math.abs(coinsSpentAgg._sum.amount ?? 0);
   const earnedSystemKeys = new Set(userSystemBadges.map(b => b.badgeKey));
-  const badges       = computeBadges({ points: totalPoints, voiceHours, messageCount, eventCount, tournamentCount, tournamentWins, eventWins, mvpCount }, earnedSystemKeys);
+  const badges       = computeBadges({ points: totalPoints, voiceHours, messageCount, eventCount, tournamentCount, tournamentWins: 0, eventWins, mvpCount: pollMasterCount }, earnedSystemKeys);
   const earnedBadges = badges.filter(b => b.earned);
   const memberSince  = new Date(user.createdAt).toLocaleDateString("de-DE", { month: "long", year: "numeric" });
   const displayName  = user.username ?? user.name ?? "Unbekannt";
@@ -234,21 +239,40 @@ export default async function ProfilePage() {
 
       {/* ── Stat-Karten ─────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {[
-          { icon: <RankPointsIcon size={16} />,         label: "Punkte",         value: rankPoints.toLocaleString("de-DE"), iconCls: "text-teal-400    bg-teal-500/10    border-teal-500/15",    accent: "from-teal-500/8"    },
-          { icon: <CalendarDays className="w-4 h-4" />, label: "Events",         value: String(eventCount),                 iconCls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/15", accent: "from-emerald-500/8" },
-          { icon: <WinIcon size={16} />,                label: "Turnier-Siege",  value: String(tournamentWins),             iconCls: "text-rose-400    bg-rose-500/10    border-rose-500/15",    accent: "from-rose-500/8"    },
-          { icon: <Medal className="w-4 h-4" />,        label: "Event-Siege",    value: String(eventWins),                  iconCls: "text-amber-400   bg-amber-500/10   border-amber-500/15",   accent: "from-amber-500/8"   },
-          { icon: <Trophy className="w-4 h-4" />,       label: "MVP-Awards",     value: String(mvpCount),                   iconCls: "text-purple-400  bg-purple-500/10  border-purple-500/15",  accent: "from-purple-500/8"  },
-          { icon: <Gamepad2 className="w-4 h-4" />,     label: "Lieblingsspiel", value: favoriteGame ?? "–",                iconCls: "text-blue-400    bg-blue-500/10    border-blue-500/15",    accent: "from-blue-500/8",  small: true },
-        ].map((s, i) => (
+        {([
+          { icon: <RankPointsIcon size={16} />,         label: "Punkte",       value: rankPoints.toLocaleString("de-DE"), iconCls: "text-teal-400    bg-teal-500/10    border-teal-500/15",    accent: "from-teal-500/8"    },
+          { icon: <CalendarDays className="w-4 h-4" />, label: "Events",       value: String(eventCount),                 iconCls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/15", accent: "from-emerald-500/8" },
+          { icon: <Medal className="w-4 h-4" />,        label: "Event-Siege",  value: String(eventWins),                  iconCls: "text-amber-400   bg-amber-500/10   border-amber-500/15",   accent: "from-amber-500/8"   },
+          { icon: <Trophy className="w-4 h-4" />,       label: "Poll-Master",  value: String(pollMasterCount),            iconCls: "text-purple-400  bg-purple-500/10  border-purple-500/15",  accent: "from-purple-500/8"  },
+        ]).map((s, i) => (
           <div key={s.label} className={`card-hover card-shine glass relative overflow-hidden rounded-2xl p-4 animate-slide-up stagger-${i + 1}`}>
             <div className={`absolute inset-0 bg-gradient-to-br ${s.accent} to-transparent pointer-events-none`} />
             <div className={`relative w-8 h-8 rounded-xl flex items-center justify-center mb-3 border ${s.iconCls}`}>{s.icon}</div>
-            <p className={`relative font-black text-white tabular-nums ${(s as { small?: boolean }).small ? "text-lg leading-tight" : "text-2xl"}`}>{s.value}</p>
+            <p className="relative text-2xl font-black text-white tabular-nums">{s.value}</p>
             <p className="relative text-xs text-gray-400 mt-1.5">{s.label}</p>
           </div>
         ))}
+
+        {/* Lieblingsspiel – Top 3 */}
+        <div className="card-hover card-shine glass relative overflow-hidden rounded-2xl p-4 animate-slide-up stagger-5">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/8 to-transparent pointer-events-none" />
+          <div className="relative w-8 h-8 rounded-xl flex items-center justify-center mb-3 border text-blue-400 bg-blue-500/10 border-blue-500/15">
+            <Gamepad2 className="w-4 h-4" />
+          </div>
+          {topGames.length > 0 ? (
+            <>
+              <p className="relative text-lg font-black text-white leading-tight">{topGames[0]}</p>
+              {topGames.slice(1, 3).length > 0 && (
+                <p className="relative text-[10px] text-gray-500 mt-1 leading-snug">
+                  {topGames.slice(1, 3).join(" · ")}
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="relative text-lg font-black text-white">–</p>
+          )}
+          <p className="relative text-xs text-gray-400 mt-1.5">Lieblingsspiel</p>
+        </div>
       </div>
 
       {/* ── Profil-Editor (Geburtstag, Bio) ─────────────────────────── */}
@@ -418,10 +442,10 @@ export default async function ProfilePage() {
             <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">📊 Aktivität</h2>
             <div className="glass card-shine rounded-2xl overflow-hidden divide-y divide-white/[0.04]">
               {[
-                { icon: <Clock className="w-3.5 h-3.5" />,         label: "Voice-Stunden",  value: `${voiceHours}h`,           color: "text-teal-400"    },
-                { icon: <MessageSquare className="w-3.5 h-3.5" />, label: "Nachrichten",    value: `~${messageCount}`,         color: "text-blue-400"   },
-                { icon: <CalendarDays className="w-3.5 h-3.5" />,  label: "Events besucht", value: String(eventCount),         color: "text-emerald-400" },
-                { icon: <Swords className="w-3.5 h-3.5" />,        label: "Turniere",       value: String(tournamentCount),    color: "text-amber-400"  },
+                { icon: <Clock className="w-3.5 h-3.5" />,         label: "Voice-Stunden",      value: `${voiceHours}h`,                              color: "text-teal-400"   },
+                { icon: <MessageSquare className="w-3.5 h-3.5" />, label: "Nachrichten",        value: `~${messageCount}`,                            color: "text-blue-400"   },
+                { icon: <CoinIcon size={14} />,                     label: "Münzen gesammelt",   value: coinsEarned.toLocaleString("de-DE"),            color: "text-amber-400"  },
+                { icon: <CoinIcon size={14} />,                     label: "Münzen ausgegeben",  value: coinsSpent.toLocaleString("de-DE"),             color: "text-rose-400"   },
               ].map(s => (
                 <div key={s.label} className="flex items-center justify-between px-4 py-3">
                   <div className={`flex items-center gap-2 text-xs ${s.color}`}>
