@@ -58,8 +58,9 @@ export default async function EventsPage() {
         communityStreamers: userId ? { where: { userId }, select: { userId: true } } : { select: { userId: true }, take: 0 },
       },
     }),
+    // Nur alte Saisons ohne EventSeries-Link (neue erscheinen als normale Events)
     prisma.lulSeason.findFirst({
-      where: { status: "active" },
+      where: { status: "active", seriesId: null },
       include: {
         spieltage: {
           orderBy: { number: "asc" },

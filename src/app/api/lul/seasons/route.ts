@@ -44,7 +44,6 @@ export async function POST(req: NextRequest) {
     period,
     totalSpieltage,
     pointsConfig,
-    // Wizard-spezifische Felder für Spieltag-Autogenerierung
     firstSpieltagDate,
     recurrenceType,
     monthlyMode,
@@ -63,8 +62,11 @@ export async function POST(req: NextRequest) {
 
   if (!number) return NextResponse.json({ error: "number ist Pflicht" }, { status: 400 });
 
-  const count = totalSpieltage ?? 8;
+  const count    = totalSpieltage ?? 8;
+  const template = spieltagTemplate ?? {};
+  const seasonName = name ?? `Saison ${number}`;
 
+  // ── 1. LulSeason erstellen ────────────────────────────────────────────────────
   const season = await prisma.lulSeason.create({
     data: {
       number,
@@ -76,56 +78,86 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  // Spieltage auto-generieren wenn firstSpieltagDate angegeben
-  if (firstSpieltagDate && recurrenceType && recurrenceType !== "none") {
-    const template  = spieltagTemplate ?? {};
-    const refDate   = new Date(firstSpieltagDate);
-    const mode      = monthlyMode ?? "dayOfMonth";
-    const dates: Date[] = [refDate];
-
-    for (let i = 1; i < count; i++) {
-      dates.push(calcNextDate(dates[i - 1], recurrenceType, mode, refDate));
+  // ── 2. Spieltag-Daten sammeln ─────────────────────────────────────────────────
+  let spieltagDates: Date[] = [];
+  if (firstSpieltagDate) {
+    const refDate = new Date(firstSpieltagDate);
+    spieltagDates = [refDate];
+    if (recurrenceType && recurrenceType !== "none") {
+      const mode = monthlyMode ?? "dayOfMonth";
+      for (let i = 1; i < count; i++) {
+        spieltagDates.push(calcNextDate(spieltagDates[i - 1], recurrenceType, mode, refDate));
+      }
     }
+  }
 
-    await prisma.lulSpieltag.createMany({
-      data: dates.map((d, i) => ({
-        seasonId:        season.id,
-        number:          i + 1,
-        scheduledAt:     d,
-        game:            template.game            ?? null,
-        gameType:        template.gameType         ?? null,
-        platform:        template.platform         ?? null,
-        tournamentFormat: template.tournamentFormat ?? null,
-        statFields:      template.statFields?.length
-          ? JSON.stringify(template.statFields)
-          : null,
-        maxPlayers:      template.maxPlayers ?? null,
-        status:          "upcoming",
-      })),
-    });
-  } else if (firstSpieltagDate) {
-    // Nur erster Spieltag ohne Recurrence
-    const template = spieltagTemplate ?? {};
-    await prisma.lulSpieltag.create({
-      data: {
-        seasonId:        season.id,
-        number:          1,
-        scheduledAt:     new Date(firstSpieltagDate),
-        game:            template.game            ?? null,
-        gameType:        template.gameType         ?? null,
-        platform:        template.platform         ?? null,
-        tournamentFormat: template.tournamentFormat ?? null,
-        statFields:      template.statFields?.length
-          ? JSON.stringify(template.statFields)
-          : null,
-        maxPlayers:      template.maxPlayers ?? null,
-        status:          "upcoming",
-      },
-    });
+  // ── 3. EventSeries erstellen (neues System → sichtbar wie normale Eventreihe) ─
+  const series = await prisma.eventSeries.create({
+    data: {
+      name:        `🏆 Level-UP-League – ${seasonName}`,
+      description: period ?? null,
+      fixedGame:   template.game   ?? null,
+      fixedFormat: template.tournamentFormat ?? null,
+      category:    "special",
+      hidden:      false,
+      seasonNumber: number,
+    },
+  });
+
+  // ── 4. LulSeason mit der Series verknüpfen ────────────────────────────────────
+  await prisma.lulSeason.update({
+    where: { id: season.id },
+    data:  { seriesId: series.id },
+  });
+
+  // ── 5. Spieltage + Events erstellen und verknüpfen ───────────────────────────
+  for (let i = 0; i < Math.max(spieltagDates.length, spieltagDates.length === 0 ? 0 : 0); i++) {
+    // no-op guard
+  }
+
+  if (spieltagDates.length > 0) {
+    for (let i = 0; i < spieltagDates.length; i++) {
+      const d = spieltagDates[i];
+      const spieltag = await prisma.lulSpieltag.create({
+        data: {
+          seasonId:         season.id,
+          number:           i + 1,
+          scheduledAt:      d,
+          game:             template.game             ?? null,
+          gameType:         template.gameType          ?? null,
+          platform:         template.platform          ?? null,
+          tournamentFormat: template.tournamentFormat  ?? null,
+          statFields:       template.statFields?.length ? JSON.stringify(template.statFields) : null,
+          maxPlayers:       template.maxPlayers ?? null,
+          status:           "upcoming",
+        },
+      });
+
+      const event = await prisma.event.create({
+        data: {
+          title:    `Level-UP-League – ${seasonName} – Spieltag ${i + 1}`,
+          startAt:  d,
+          game:     template.game ?? null,
+          category: "special",
+          type:     "community",
+          status:   "open",
+          seriesId: series.id,
+          maxPlayers: template.maxPlayers ?? null,
+          format:   template.tournamentFormat ?? null,
+          statFields: template.statFields?.length ? JSON.stringify(template.statFields) : null,
+          spectatorMode: true,
+        },
+      });
+
+      await prisma.lulSpieltag.update({
+        where: { id: spieltag.id },
+        data:  { eventId: event.id },
+      });
+    }
   }
 
   const created = await prisma.lulSeason.findUnique({
-    where: { id: season.id },
+    where:   { id: season.id },
     include: { spieltage: { orderBy: { number: "asc" } } },
   });
 

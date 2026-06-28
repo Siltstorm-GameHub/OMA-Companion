@@ -5,7 +5,9 @@ import LulAdminPanel from "./LulAdminPanel";
 
 async function fetchLulData() {
   return Promise.all([
+    // Nur alte Saisons ohne verknüpfte EventSeries anzeigen (neue laufen als normale Eventreihe)
     prisma.lulSeason.findMany({
+      where:   { seriesId: null },
       orderBy: { number: "desc" },
       include: {
         spieltage: {
