@@ -55,6 +55,13 @@ const GENRES: { value: EventGenre; label: string; icon: string }[] = [
   { value: "community", label: "Community",  icon: "/Community Icon.png" },
 ];
 
+const PLATFORMS: { value: string; label: string; icon: string }[] = [
+  { value: "PC",     label: "PC",     icon: "🖥️" },
+  { value: "Xbox",   label: "Xbox",   icon: "🟢" },
+  { value: "PS",     label: "PS",     icon: "🔵" },
+  { value: "Mobile", label: "Mobile", icon: "📱" },
+];
+
 const FORMATS: { value: string; label: string; desc: string; hasStat: boolean }[] = [
   { value: "single_elimination", label: "Single Elimination", desc: "Jede Niederlage scheidet aus", hasStat: false },
   { value: "double_elimination", label: "Double Elimination", desc: "Zweite Chance nach erster Niederlage", hasStat: false },
@@ -131,9 +138,10 @@ export default function EventSetupWizard({
   const [lulRecurrence, setLulRecurrence]       = useState<"none" | RecurrenceType>("biweekly");
   const [lulMonthlyMode, setLulMonthlyMode]     = useState<MonthlyMode>("dayOfMonth");
   const [lulGame, setLulGame]                   = useState("");
+  const [lulGenre, setLulGenre]                 = useState<EventGenre | null>(null);
   const [lulGameType, setLulGameType]           = useState("");
-  const [lulPlatform, setLulPlatform]           = useState("");
-  const [lulFormat, setLulFormat]               = useState("single_elimination");
+  const [lulPlatforms, setLulPlatforms]         = useState<string[]>([]);
+  const [lulFormat, setLulFormat]               = useState("");
   const [lulStatFields, setLulStatFields]       = useState<string[]>([]);
   const [lulMaxPlayers, setLulMaxPlayers]       = useState("");
   const [lulPoints, setLulPoints]               = useState<LulPointsConfig>({ ...LUL_DEFAULTS, polls: LUL_DEFAULTS.polls.map(p => ({ ...p })) });
@@ -148,6 +156,7 @@ export default function EventSetupWizard({
   const [startAt, setStartAt]         = useState("");
   const [game, setGame]               = useState("");
   const [genre, setGenre]             = useState<EventGenre | null>(null);
+  const [platforms, setPlatforms]     = useState<string[]>([]);
   const [maxPlayers, setMaxPlayers]   = useState("");
   const [description, setDescription] = useState("");
   const [discordChannelId, setDiscordChannelId] = useState("");
@@ -165,6 +174,7 @@ export default function EventSetupWizard({
   const [seriesDesc, setSeriesDesc]     = useState("");
   const [fixedGame, setFixedGame]       = useState("");
   const [fixedGenre, setFixedGenre]     = useState<EventGenre | null>(null);
+  const [fixedPlatforms, setFixedPlatforms] = useState<string[]>([]);
   const [seriesDiscordId, setSeriesDiscordId] = useState("");
   const [seriesFormat, setSeriesFormat] = useState("single_elimination");
   const [seriesStartDate, setSeriesStartDate] = useState("");
@@ -289,6 +299,7 @@ export default function EventSetupWizard({
       startAt: new Date(startAt).toISOString(),
       game: game || null,
       genre: genre || null,
+      platform: platforms.length > 0 ? platforms.join(", ") : null,
       category,
       maxPlayers: maxPlayers ? Number(maxPlayers) : null,
       description: description || null,
@@ -336,6 +347,7 @@ export default function EventSetupWizard({
         description: seriesDesc.trim() || null,
         category,
         genre: fixedGenre || null,
+        platform: fixedPlatforms.length > 0 ? fixedPlatforms.join(", ") : null,
         fixedGame: fixedGame || null,
         fixedFormat: eventType === "tournament" ? seriesFormat : null,
         discordChannelId: seriesDiscordId || null,
@@ -420,8 +432,8 @@ export default function EventSetupWizard({
         spieltagTemplate:  {
           game:             lulGame || null,
           gameType:         lulGameType || null,
-          platform:         lulPlatform || null,
-          tournamentFormat: lulFormat,
+          platform:         lulPlatforms.length > 0 ? lulPlatforms.join(", ") : null,
+          tournamentFormat: lulFormat || null,
           statFields:       lulHasStat ? lulStatFields : undefined,
           maxPlayers:       lulMaxPlayers ? Number(lulMaxPlayers) : undefined,
         },
@@ -521,45 +533,75 @@ export default function EventSetupWizard({
           <span className="text-lg">🎮</span>
           <h2 className="text-base font-semibold text-white">Spieltag-Template</h2>
         </div>
-        <p className="text-xs text-gray-500">Vorlage für alle auto-generierten Spieltage. Später einzeln anpassbar.</p>
+        <p className="text-xs text-gray-500">Vorlage für alle auto-generierten Spieltage. Später einzeln anpassbar. Spiel und Format können auch leer gelassen werden.</p>
         <div>
-          <label className={labelCls}>Spiel</label>
-          <GameNameInput value={lulGame} onChange={setLulGame} placeholder="z.B. Brawlhalla" />
+          <label className={labelCls}>Spiel (optional)</label>
+          <GameNameInput value={lulGame} onChange={v => { setLulGame(v); if (!v) { setLulGenre(null); setLulFormat(""); } }} placeholder="z.B. Brawlhalla" />
+        </div>
+        {lulGame && (
+          <div>
+            <label className={labelCls}>Genre</label>
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+              {GENRES.map(g => (
+                <button key={g.value} type="button" onClick={() => setLulGenre(lulGenre === g.value ? null : g.value)}
+                  className={`flex flex-col items-center gap-1.5 rounded-xl p-2 border transition-all ${
+                    lulGenre === g.value ? "border-teal-500/60 bg-teal-500/10" : "border-white/8 bg-white/3 hover:border-white/15"
+                  }`}>
+                  <Image src={g.icon} alt={g.label} width={28} height={28} className="object-contain" />
+                  <span className={`text-[10px] font-medium leading-tight text-center ${lulGenre === g.value ? "text-teal-300" : "text-gray-500"}`}>{g.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        <div>
+          <label className={labelCls}>Plattform</label>
+          <div className="flex gap-2 flex-wrap">
+            {PLATFORMS.map(p => {
+              const active = lulPlatforms.includes(p.value);
+              return (
+                <button key={p.value} type="button"
+                  onClick={() => setLulPlatforms(prev => active ? prev.filter(x => x !== p.value) : [...prev, p.value])}
+                  className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs border transition-all ${
+                    active ? "border-teal-500/60 bg-teal-500/10 text-teal-300" : "border-white/10 bg-white/5 text-gray-400 hover:border-white/20"
+                  }`}>
+                  <span>{p.icon}</span> {p.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className={labelCls}>Spieltyp</label>
+            <label className={labelCls}>Spieltyp (optional)</label>
             <input className={inputCls} style={inputStyle} placeholder="z.B. Beat-em Up" value={lulGameType}
               onChange={e => setLulGameType(e.target.value)} />
           </div>
           <div>
-            <label className={labelCls}>Plattform</label>
-            <input className={inputCls} style={inputStyle} placeholder="z.B. PC/Konsole" value={lulPlatform}
-              onChange={e => setLulPlatform(e.target.value)} />
+            <label className={labelCls}>Max. Spieler</label>
+            <input type="number" min={2} className={inputCls} style={inputStyle} placeholder="z.B. 8" value={lulMaxPlayers}
+              onChange={e => setLulMaxPlayers(e.target.value)} />
           </div>
         </div>
-        <div>
-          <label className={labelCls}>Maximale Spieleranzahl</label>
-          <input type="number" min={2} className={inputCls} style={inputStyle} placeholder="z.B. 8" value={lulMaxPlayers}
-            onChange={e => setLulMaxPlayers(e.target.value)} />
-        </div>
-        <div>
-          <label className={labelCls}>Turnierformat</label>
-          <div className="space-y-1.5">
-            {FORMATS.map(f => (
-              <button key={f.value} type="button" onClick={() => setLulFormat(f.value)}
-                className={`w-full rounded-xl px-3 py-2.5 text-left flex items-start gap-3 border text-xs transition-all ${
-                  lulFormat === f.value ? "border-teal-500/60 bg-teal-500/15" : "border-white/10 bg-white/5 hover:border-white/20"
-                }`}>
-                <div className={`w-3.5 h-3.5 rounded-full border mt-0.5 flex-shrink-0 ${lulFormat === f.value ? "border-teal-400 bg-teal-400" : "border-gray-600"}`} />
-                <div>
-                  <p className={`font-medium ${lulFormat === f.value ? "text-teal-300" : "text-gray-300"}`}>{f.label}</p>
-                  <p className="text-gray-500 mt-0.5">{f.desc}</p>
-                </div>
-              </button>
-            ))}
+        {lulGame && (
+          <div>
+            <label className={labelCls}>Turnierformat</label>
+            <div className="space-y-1.5">
+              {[{ value: "", label: "Noch nicht festgelegt", desc: "Kann später pro Spieltag eingestellt werden", hasStat: false }, ...FORMATS].map(f => (
+                <button key={f.value} type="button" onClick={() => setLulFormat(f.value)}
+                  className={`w-full rounded-xl px-3 py-2.5 text-left flex items-start gap-3 border text-xs transition-all ${
+                    lulFormat === f.value ? "border-teal-500/60 bg-teal-500/15" : "border-white/10 bg-white/5 hover:border-white/20"
+                  }`}>
+                  <div className={`w-3.5 h-3.5 rounded-full border mt-0.5 flex-shrink-0 ${lulFormat === f.value ? "border-teal-400 bg-teal-400" : "border-gray-600"}`} />
+                  <div>
+                    <p className={`font-medium ${lulFormat === f.value ? "text-teal-300" : "text-gray-300"}`}>{f.label}</p>
+                    <p className="text-gray-500 mt-0.5">{f.desc}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
         {lulHasStat && (
           <div>
             <label className={labelCls}>Stat-Felder</label>
@@ -699,13 +741,21 @@ export default function EventSetupWizard({
           {lulGame && (
             <div className="flex justify-between py-1.5 border-b border-white/5">
               <span className="text-gray-500">Spiel</span>
-              <span className="text-white">{lulGame}</span>
+              <span className="text-white">{lulGame}{lulGenre ? ` · ${GENRES.find(g => g.value === lulGenre)?.label}` : ""}</span>
             </div>
           )}
-          <div className="flex justify-between py-1.5 border-b border-white/5">
-            <span className="text-gray-500">Format</span>
-            <span className="text-white">{FORMATS.find(f => f.value === lulFormat)?.label}</span>
-          </div>
+          {lulPlatforms.length > 0 && (
+            <div className="flex justify-between py-1.5 border-b border-white/5">
+              <span className="text-gray-500">Plattform</span>
+              <span className="text-white">{lulPlatforms.join(", ")}</span>
+            </div>
+          )}
+          {lulFormat && (
+            <div className="flex justify-between py-1.5 border-b border-white/5">
+              <span className="text-gray-500">Format</span>
+              <span className="text-white">{FORMATS.find(f => f.value === lulFormat)?.label}</span>
+            </div>
+          )}
           {[
             { label: "Mitspieler-Teilnahme", pts: lulPoints.game },
             { label: "Zuschauer-Teilnahme",  pts: lulPoints.spectator },
@@ -925,6 +975,24 @@ export default function EventSetupWizard({
         )}
 
         <div>
+          <label className={labelCls}>Plattform</label>
+          <div className="flex gap-2 flex-wrap">
+            {PLATFORMS.map(p => {
+              const active = platforms.includes(p.value);
+              return (
+                <button key={p.value} type="button"
+                  onClick={() => setPlatforms(prev => active ? prev.filter(x => x !== p.value) : [...prev, p.value])}
+                  className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs border transition-all ${
+                    active ? "border-teal-500/60 bg-teal-500/10 text-teal-300" : "border-white/10 bg-white/5 text-gray-400 hover:border-white/20"
+                  }`}>
+                  <span>{p.icon}</span> {p.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div>
           <label className={labelCls}>Beschreibung (optional)</label>
           <textarea value={description} onChange={e => setDescription(e.target.value)}
             rows={2} placeholder="Wird in Discord angezeigt"
@@ -1056,6 +1124,24 @@ export default function EventSetupWizard({
             </div>
           </div>
         )}
+
+        <div>
+          <label className={labelCls}>Plattform</label>
+          <div className="flex gap-2 flex-wrap">
+            {PLATFORMS.map(p => {
+              const active = fixedPlatforms.includes(p.value);
+              return (
+                <button key={p.value} type="button"
+                  onClick={() => setFixedPlatforms(prev => active ? prev.filter(x => x !== p.value) : [...prev, p.value])}
+                  className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs border transition-all ${
+                    active ? "border-teal-500/60 bg-teal-500/10 text-teal-300" : "border-white/10 bg-white/5 text-gray-400 hover:border-white/20"
+                  }`}>
+                  <span>{p.icon}</span> {p.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         <div>
           <label className={labelCls}>Discord-Textkanal ID (optional)</label>
