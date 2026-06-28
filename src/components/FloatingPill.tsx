@@ -6,8 +6,9 @@ import { useSession, signOut } from "next-auth/react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
   LayoutDashboard, CalendarDays, Star, Trophy, ShoppingBag,
-  Heart, User, ShieldCheck, LogOut, ChevronDown, Sun, Moon, Bell, Settings, X,
+  Heart, User, ShieldCheck, LogOut, ChevronDown, Sun, Moon, Bell, Settings, X, MessageCircleMore,
 } from "lucide-react";
+import { WHATSAPP_COMMUNITY_URL } from "@/lib/config";
 
 const NAV = [
   { label: "Dashboard",      href: "/dashboard",   icon: LayoutDashboard },
@@ -425,8 +426,20 @@ export default function FloatingPill() {
               )}
 
               <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)", padding: "4px 6px" }}>
+                <a
+                  href={WHATSAPP_COMMUNITY_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ display: "flex", alignItems: "center", gap: 5,
+                    padding: "7px 12px", borderRadius: 8, fontSize: 11, color: "#4ade80",
+                    textDecoration: "none" }}
+                  className="hover:bg-green-500/[0.08] transition-colors"
+                >
+                  <MessageCircleMore style={{ width: 11, height: 11 }} />
+                  WhatsApp Community beitreten
+                </a>
                 <Link href="/profile?tab=notifications" onClick={() => setAvatarOpen(false)}
-                  style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
+                  style={{ display: "flex", alignItems: "center", gap: 5,
                     padding: "7px 12px", borderRadius: 8, fontSize: 11, color: "#6b7280",
                     textDecoration: "none" }}
                   className="hover:text-teal-400 hover:bg-teal-500/[0.06] transition-colors">

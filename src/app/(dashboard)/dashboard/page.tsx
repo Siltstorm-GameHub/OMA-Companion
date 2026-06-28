@@ -15,6 +15,7 @@ import EventCoverDefault from "@/components/EventCoverDefault";
 import { DailyMessageBanner } from "@/components/DailyMessageBanner";
 import PartnerLiveBanner from "@/components/PartnerLiveBanner";
 import CommunityLiveBanner from "@/components/CommunityLiveBanner";
+import WhatsAppCommunityBanner from "@/components/WhatsAppCommunityBanner";
 import ClipContestWidget from "@/components/ClipContestWidget";
 
 const MEDAL = ["🥇", "🥈", "🥉"];
@@ -255,6 +256,11 @@ export default async function DashboardPage() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* ── WhatsApp Community Banner ────────────────────────────── */}
+      <div className="px-4 sm:px-6 pt-4 max-w-7xl mx-auto w-full">
+        <WhatsAppCommunityBanner />
       </div>
 
       {/* ── Partner Live-Streams ─────────────────────────────────── */}
