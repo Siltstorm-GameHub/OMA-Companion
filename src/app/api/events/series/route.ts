@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     category, genre, fixedGame, fixedFormat, discordChannelId,
     recurrenceType, recurrenceMonthlyMode,
     placementRewardsJson, pollsConfigJson, seriesStatConfig,
-    startDate, endDate,
+    startDate, endDate, hidden,
   } = body;
 
   if (!name?.trim()) return NextResponse.json({ error: "Name fehlt" }, { status: 400 });
@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
       placementRewardsJson: placementRewardsJson ?? null,
       pollsConfigJson: pollsConfigJson ?? null,
       seriesStatConfig: seriesStatConfig ?? null,
+      hidden: hidden ?? false,
     },
   });
 
