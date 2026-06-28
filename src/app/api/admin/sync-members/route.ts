@@ -52,6 +52,7 @@ export async function POST() {
   let created = 0;
   let updated = 0;
   let merged  = 0;
+  let fixed   = 0;
 
   for (const member of humans) {
     const discordId = member.user.id;
@@ -226,12 +227,98 @@ export async function POST() {
     }
   }
 
+  // ── Phase 2: Korrumpierte Discord-Accounts reparieren ────────────────────
+  // Erkennung: discordId ist keine numerische Snowflake (enthält Buchstaben/Bindestriche).
+  // Die echte Discord-ID steckt immer in der Avatar-URL:
+  //   https://cdn.discordapp.com/avatars/{DISCORD_ID}/{HASH}.png
+  const allDiscordUsers = await prisma.user.findMany({
+    where: { discordId: { not: null } },
+    include: { accounts: { where: { provider: "discord" } } },
+  });
+
+  const corruptedUsers = allDiscordUsers.filter(
+    u => !/^\d{17,20}$/.test(u.discordId!)
+  );
+
+  for (const badUser of corruptedUsers) {
+    const avatarMatch = badUser.image?.match(/cdn\.discordapp\.com\/avatars\/(\d+)\//);
+    if (!avatarMatch) {
+      console.warn(`[SYNC] Korrumpierter User ${badUser.id} ohne Avatar-URL – übersprungen`);
+      continue;
+    }
+
+    const realDiscordId = avatarMatch[1];
+    const stub = await prisma.user.findUnique({
+      where:   { discordId: realDiscordId },
+      include: { accounts: { where: { provider: "discord" } } },
+    });
+
+    try {
+      await prisma.$transaction(async (tx) => {
+        // Stub-Account (hat echte providerAccountId) löschen
+        if (stub) {
+          await tx.account.deleteMany({ where: { userId: stub.id, provider: "discord" } });
+        }
+
+        // Korrumpierten Account des echten Users reparieren
+        const badAcct = badUser.accounts[0];
+        if (badAcct) {
+          await tx.account.update({
+            where: { id: badAcct.id },
+            data:  { providerAccountId: realDiscordId },
+          });
+        }
+
+        // discordId-Unique freigeben, dann korrekt setzen
+        if (stub) {
+          await tx.user.update({ where: { id: stub.id }, data: { discordId: null } });
+        }
+        await tx.user.update({ where: { id: badUser.id }, data: { discordId: realDiscordId } });
+
+        // Stub-Daten auf echten User addieren
+        if (stub) {
+          await tx.user.update({
+            where: { id: badUser.id },
+            data: {
+              points:            { increment: stub.points },
+              rankPoints:        { increment: stub.rankPoints },
+              voiceMinutesTotal: { increment: stub.voiceMinutesTotal },
+              messagesTotal:     { increment: stub.messagesTotal },
+            },
+          });
+
+          // Alle Relationen umhängen
+          await tx.eventRegistration.updateMany({ where: { userId: stub.id }, data: { userId: badUser.id } });
+          await tx.pointTransaction.updateMany({ where: { userId: stub.id }, data: { userId: badUser.id } });
+          await tx.lulEntry.updateMany({ where: { userId: stub.id }, data: { userId: badUser.id } });
+          await tx.lulLegacyEntry.updateMany({ where: { userId: stub.id }, data: { userId: badUser.id } });
+          await tx.shopPurchase.updateMany({ where: { userId: stub.id }, data: { userId: badUser.id } });
+          await tx.dailySpin.updateMany({ where: { userId: stub.id }, data: { userId: badUser.id } });
+          await tx.donation.updateMany({ where: { userId: stub.id }, data: { userId: badUser.id } });
+          await tx.userCollectible.updateMany({ where: { userId: stub.id }, data: { userId: badUser.id } });
+          await tx.lobbyMessage.updateMany({ where: { userId: stub.id }, data: { userId: badUser.id } });
+          await tx.pushSubscription.updateMany({ where: { userId: stub.id }, data: { userId: badUser.id } });
+          try { await tx.tournamentParticipant.updateMany({ where: { userId: stub.id }, data: { userId: badUser.id } }); } catch { /* unique constraint */ }
+          try { await tx.teamMember.updateMany({ where: { userId: stub.id }, data: { userId: badUser.id } }); } catch { /* unique constraint */ }
+
+          await tx.user.delete({ where: { id: stub.id } });
+        }
+      });
+
+      fixed++;
+      console.log(`[SYNC] Korrumpierter Account repariert: ${badUser.id} → discordId=${realDiscordId}`);
+    } catch (err) {
+      console.error(`[SYNC] Reparatur fehlgeschlagen für ${badUser.id}:`, err);
+    }
+  }
+
   return NextResponse.json({
     success: true,
     total:   humans.length,
     created,
     updated,
     merged,
+    fixed,
   });
 }
 
