@@ -6,7 +6,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
   LayoutDashboard, CalendarDays, Star, Trophy, ShoppingBag,
-  Heart, User, ShieldCheck, LogOut, ChevronDown, Sun, Moon, Bell, Settings,
+  Heart, User, ShieldCheck, LogOut, ChevronDown, Sun, Moon, Bell, Settings, X,
 } from "lucide-react";
 
 const NAV = [
@@ -183,6 +183,28 @@ export default function FloatingPill() {
     }).catch(() => {});
   }
 
+  async function deleteNotification(id: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    setNotifications(prev => prev.filter(n => n.id !== id));
+    setUnreadCount(prev => {
+      const wasUnread = notifications.find(n => n.id === id)?.read === false;
+      return wasUnread ? Math.max(0, prev - 1) : prev;
+    });
+    await fetch("/api/notifications/delete", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    }).catch(() => {});
+  }
+
+  async function deleteAll() {
+    setNotifications([]);
+    setUnreadCount(0);
+    await fetch("/api/notifications/delete", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ all: true }),
+    }).catch(() => {});
+  }
+
   async function handleNotifClick(n: Notification) {
     if (!n.read) await markRead(n.id);
     setAvatarOpen(false);
@@ -329,13 +351,21 @@ export default function FloatingPill() {
                     </span>
                   )}
                 </div>
-                {unreadCount > 0 && (
-                  <button onClick={markAllRead}
-                    style={{ fontSize: 10, color: "#6b7280", background: "none", border: "none",
-                      cursor: "pointer" }}
-                    className="hover:text-teal-400 transition-colors">
-                    Alle lesen
-                  </button>
+                {notifications.length > 0 && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    {unreadCount > 0 && (
+                      <button onClick={markAllRead}
+                        style={{ fontSize: 10, color: "#6b7280", background: "none", border: "none", cursor: "pointer" }}
+                        className="hover:text-teal-400 transition-colors">
+                        Alle lesen
+                      </button>
+                    )}
+                    <button onClick={deleteAll}
+                      style={{ fontSize: 10, color: "#6b7280", background: "none", border: "none", cursor: "pointer" }}
+                      className="hover:text-red-400 transition-colors">
+                      Alle löschen
+                    </button>
+                  </div>
                 )}
               </div>
 
@@ -347,35 +377,49 @@ export default function FloatingPill() {
               ) : (
                 <div style={{ maxHeight: 260, overflowY: "auto" }}>
                   {notifications.slice(0, 5).map(n => (
-                    <button key={n.id} onClick={() => handleNotifClick(n)}
+                    <div key={n.id}
                       style={{
-                        width: "100%", display: "flex", alignItems: "flex-start", gap: 10,
+                        display: "flex", alignItems: "flex-start", gap: 10,
                         padding: "8px 12px", background: !n.read ? "rgba(20,184,166,0.04)" : "none",
-                        border: "none", cursor: "pointer", textAlign: "left", transition: "background 100ms",
+                        transition: "background 100ms", position: "relative",
                       }}
-                      className="hover:bg-white/[0.03]">
-                      <span style={{ fontSize: 15, marginTop: 1, flexShrink: 0 }}>
-                        {NOTIF_ICONS[n.type] ?? "🔔"}
-                      </span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontSize: 12, fontWeight: 600, margin: 0, overflow: "hidden",
-                          textOverflow: "ellipsis", whiteSpace: "nowrap",
-                          color: n.read ? "#9ca3af" : "#e2e8f0" }}>
-                          {n.title}
-                        </p>
-                        <p style={{ fontSize: 11, color: "#6b7280", margin: "1px 0 0", overflow: "hidden",
-                          textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {n.body}
-                        </p>
-                        <p style={{ fontSize: 10, color: "rgba(20,184,166,0.5)", margin: "2px 0 0" }}>
-                          {timeAgo(n.createdAt)}
-                        </p>
+                      className="group hover:bg-white/[0.03]">
+                      <button onClick={() => handleNotifClick(n)}
+                        style={{ display: "flex", alignItems: "flex-start", gap: 10, flex: 1,
+                          background: "none", border: "none", cursor: "pointer", textAlign: "left",
+                          minWidth: 0, padding: 0 }}>
+                        <span style={{ fontSize: 15, marginTop: 1, flexShrink: 0 }}>
+                          {NOTIF_ICONS[n.type] ?? "🔔"}
+                        </span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ fontSize: 12, fontWeight: 600, margin: 0, overflow: "hidden",
+                            textOverflow: "ellipsis", whiteSpace: "nowrap",
+                            color: n.read ? "#9ca3af" : "#e2e8f0" }}>
+                            {n.title}
+                          </p>
+                          <p style={{ fontSize: 11, color: "#6b7280", margin: "1px 0 0", overflow: "hidden",
+                            textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {n.body}
+                          </p>
+                          <p style={{ fontSize: 10, color: "rgba(20,184,166,0.5)", margin: "2px 0 0" }}>
+                            {timeAgo(n.createdAt)}
+                          </p>
+                        </div>
+                      </button>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0, marginTop: 1 }}>
+                        {!n.read && (
+                          <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#2dd4bf" }} />
+                        )}
+                        <button onClick={(e) => deleteNotification(n.id, e)}
+                          title="Löschen"
+                          style={{ width: 18, height: 18, display: "flex", alignItems: "center",
+                            justifyContent: "center", borderRadius: 4, background: "none", border: "none",
+                            cursor: "pointer", color: "#4b5563", opacity: 0, transition: "opacity 150ms" }}
+                          className="group-hover:opacity-100 hover:!text-red-400 hover:!bg-red-500/10">
+                          <X style={{ width: 11, height: 11 }} />
+                        </button>
                       </div>
-                      {!n.read && (
-                        <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#2dd4bf",
-                          marginTop: 5, flexShrink: 0 }} />
-                      )}
-                    </button>
+                    </div>
                   ))}
                 </div>
               )}

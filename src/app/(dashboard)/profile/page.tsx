@@ -215,6 +215,11 @@ export default async function ProfilePage() {
                 </div>
               )}
             </div>
+
+            {/* Bio */}
+            {user.bio && (
+              <p className="text-xs text-gray-400 mt-2 leading-relaxed max-w-sm">{user.bio}</p>
+            )}
           </div>
 
           {/* Rang-Block */}

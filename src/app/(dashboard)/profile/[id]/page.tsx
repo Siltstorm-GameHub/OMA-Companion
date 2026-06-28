@@ -430,7 +430,7 @@ export default async function PublicProfilePage({
                 { icon: <Clock className="w-3.5 h-3.5" />,         label: "Voice-Stunden",  value: `${voiceHours}h`,                         color: "text-teal-400"    },
                 { icon: <MessageSquare className="w-3.5 h-3.5" />, label: "Nachrichten",    value: `~${messageCount}`,                       color: "text-blue-400"   },
                 { icon: <CalendarDays className="w-3.5 h-3.5" />,  label: "Events besucht", value: String(eventCount),                       color: "text-emerald-400" },
-                { icon: <Swords className="w-3.5 h-3.5" />,        label: "Turniere",       value: String(tournamentParticipations.length),  color: "text-amber-400"  },
+                { icon: <Swords className="w-3.5 h-3.5" />,        label: "Turniere",       value: String(tournamentCount),                  color: "text-amber-400"  },
               ].map(s => (
                 <div key={s.label} className="flex items-center justify-between px-4 py-3">
                   <div className={`flex items-center gap-2 text-xs ${s.color}`}>
