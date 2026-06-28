@@ -4,12 +4,13 @@
   "description": "Events, Turniere und Punktesystem für Old Masters",
   "dir": "ltr",
   "display": "standalone",
+  "display_override": ["standalone"],
   "orientation": "any",
   "start_url": "/",
   "scope": "/",
   "background_color": "#000000",
   "theme_color": "#000000",
-  "id": "OMA",
+  "id": "/",
   "categories": [
     "entertainment",
     "games"
