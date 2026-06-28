@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import {
   Users, LayoutDashboard, Star, ShoppingBag, Bot,
   BarChart2, CalendarDays, Heart, CalendarRange, Medal,
-  Wrench, Users2, BarChart3, Megaphone, Handshake, Clapperboard, Bell,
+  Wrench, Users2, BarChart3, Megaphone, Handshake, Clapperboard,
 } from "lucide-react";
 
 type Role = "user" | "moderator" | "admin";
@@ -49,11 +49,10 @@ const CATEGORIES: {
     label: "Community",
     icon: Users2,
     minRole: "moderator",
-    prefixes: ["/admin/polls", "/admin/shop", "/admin/daily-message", "/admin/partners", "/admin/clip-contest", "/admin/notifications"],
+    prefixes: ["/admin/polls", "/admin/shop", "/admin/daily-message", "/admin/partners", "/admin/clip-contest"],
     tabs: [
       { href: "/admin/polls",          label: "Umfragen",       icon: BarChart2,    minRole: "moderator" },
-      { href: "/admin/daily-message",  label: "Mitteilungen",        icon: Megaphone,    minRole: "moderator" },
-      { href: "/admin/notifications",  label: "Benachrichtigungen",  icon: Bell,         minRole: "admin"     },
+      { href: "/admin/daily-message",  label: "Mitteilungen",   icon: Megaphone,    minRole: "moderator" },
       { href: "/admin/partners",       label: "Partner",             icon: Handshake,    minRole: "moderator" },
       { href: "/admin/clip-contest",   label: "Clip des Monats",     icon: Clapperboard, minRole: "moderator" },
       { href: "/admin/shop",           label: "Shop",                icon: ShoppingBag,  minRole: "admin"     },
