@@ -27,10 +27,11 @@ const CATEGORY_STRIP: Record<EventCategory, string> = {
 };
 
 const EVENT_STATUS: Record<string, { label: string; badge: string; bar: string; glow: string; dot: string }> = {
-  open:     { label: "Offen",   badge: "text-blue-300 bg-blue-500/10 border border-blue-500/20",             bar: "bg-blue-400",   glow: "from-blue-500/5",    dot: "bg-blue-400"              },
-  active:   { label: "Läuft",   badge: "text-emerald-300 bg-emerald-500/10 border border-emerald-500/20",    bar: "bg-emerald-400 shadow-[0_0_8px_#34d399]", glow: "from-emerald-500/5", dot: "bg-emerald-400 animate-pulse" },
-  closed:   { label: "Voll",    badge: "text-amber-300 bg-amber-500/10 border border-amber-500/20",          bar: "bg-amber-400",  glow: "from-amber-500/5",   dot: "bg-amber-400"             },
-  finished: { label: "Beendet", badge: "text-gray-500 bg-white/[0.04] border border-white/[0.06]",          bar: "bg-gray-700",   glow: "from-transparent",   dot: "bg-gray-600"              },
+  open:     { label: "Offen",         badge: "text-blue-300 bg-blue-500/10 border border-blue-500/20",             bar: "bg-blue-400",   glow: "from-blue-500/5",    dot: "bg-blue-400"              },
+  active:   { label: "Läuft",         badge: "text-emerald-300 bg-emerald-500/10 border border-emerald-500/20",    bar: "bg-emerald-400 shadow-[0_0_8px_#34d399]", glow: "from-emerald-500/5", dot: "bg-emerald-400 animate-pulse" },
+  closed:   { label: "Voll",          badge: "text-amber-300 bg-amber-500/10 border border-amber-500/20",          bar: "bg-amber-400",  glow: "from-amber-500/5",   dot: "bg-amber-400"             },
+  umfrage:  { label: "Umfragephase",  badge: "text-violet-300 bg-violet-500/10 border border-violet-500/20",       bar: "bg-violet-400", glow: "from-violet-500/5",  dot: "bg-violet-400 animate-pulse" },
+  finished: { label: "Beendet",       badge: "text-gray-500 bg-white/[0.04] border border-white/[0.06]",          bar: "bg-gray-700",   glow: "from-transparent",   dot: "bg-gray-600"              },
 };
 
 const LUL_STATUS: Record<string, { label: string; badge: string; bar: string; dot: string }> = {

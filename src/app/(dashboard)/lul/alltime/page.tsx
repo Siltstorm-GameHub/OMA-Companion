@@ -57,6 +57,7 @@ export default async function LulAllTimePage() {
     trost:       e.trost,
     dominion:    e.dominion,
     votes:       e.votes,
+    pollWins:    e.pollStatsJson ? (JSON.parse(e.pollStatsJson) as Record<string, number>) : {},
   }));
   const standings = mergeStandings(regularStandings, legacyStandings);
   const myRow     = standings.find(s => s.userId === userId);

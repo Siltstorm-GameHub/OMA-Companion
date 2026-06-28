@@ -593,6 +593,10 @@ export default async function TournamentDetailPage({
                   rankPts: placementRankPts(place),
                 }))}
                 finalRankingGroups={rankingGroups}
+                pollWinnerIds={pollWinnerIds}
+                pollBonusCoins={pollBonusCoins}
+                pollBonusRankPts={pollBonusRankPts}
+                pollLabel={pollLabel}
               />
             )}
           </div>

@@ -497,8 +497,10 @@ export default function TournamentManager({
     if (!tournament) return;
     const ed = ffaEdits[matchId] ?? {};
     const updated = matchEntries.map(e => {
+      // Start with existing persisted stats so we don't overwrite fields that weren't touched
+      const existing: Record<string, number> = e.statsJson ? JSON.parse(e.statsJson as string) : {};
       const row = ed[e.userId ?? ""] ?? {};
-      const stats: Record<string, number> = {};
+      const stats: Record<string, number> = { ...existing };
       statFields.forEach(f => { if (row[f] !== undefined && row[f] !== "") stats[f] = Number(row[f]); });
       return {
         id: e.id,

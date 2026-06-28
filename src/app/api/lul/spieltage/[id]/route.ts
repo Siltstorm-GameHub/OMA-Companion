@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
-import { calcLulPoints, hasDominionBonus } from "@/lib/lul";
+import { calcLulPoints, hasDominionBonus, isWinForDominion, type LulPointsConfig } from "@/lib/lul";
 import { auth } from "@/auth";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -135,10 +135,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     });
     if (!spieltag) return NextResponse.json({ error: "Nicht gefunden" }, { status: 404 });
 
+    const pointsConfig: LulPointsConfig | null = spieltag.season.pointsConfig
+      ? (JSON.parse(spieltag.season.pointsConfig) as LulPointsConfig)
+      : null;
+    const triggers = pointsConfig?.dominionTriggers;
+
     const allSpieltage = spieltag.season.spieltage;
 
     for (const entry of spieltag.entries) {
-      const isWin = entry.gameWinner || entry.communityChamp || entry.trostpreis;
+      const isWin = isWinForDominion(entry, triggers);
 
       // Collect win-history for this user across spieltage up to and including current
       const history = allSpieltage
@@ -146,11 +151,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         .map((st) => {
           if (st.id === spieltagId) return isWin;
           const e = st.entries.find((e) => e.userId === entry.userId);
-          return e ? (e.gameWinner || e.communityChamp || e.trostpreis) : false;
+          return e ? isWinForDominion(e, triggers) : false;
         });
 
       const bonus = hasDominionBonus(history);
-      const pts   = calcLulPoints({ ...entry, dominionBonus: bonus });
+      const pts   = calcLulPoints({ ...entry, dominionBonus: bonus }, pointsConfig);
 
       const oldPts = entry.lulPoints;
       await prisma.lulEntry.update({

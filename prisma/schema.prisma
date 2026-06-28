@@ -68,6 +68,8 @@ model User {
   communityStreams           EventCommunityStreamer[]
   linkedPartner             Partner?
   notifications             InAppNotification[]
+  lulPollVotesGiven         LulPollVote[]       @relation("LulPollVoter")
+  lulPollVotesReceived      LulPollVote[]       @relation("LulPollTarget")
 }
 
 // ── Collectibles ─────────────────────────────────────────────────────────────
@@ -564,6 +566,8 @@ model LulSeason {
   status         String   @default("upcoming")
   // true = Vergangene Saison, Daten nur als Endergebnis importiert
   isLegacy       Boolean  @default(false)
+  // JSON: { game, spectator, gameWinner, vote, dominion, dominionTriggers: string[], polls: [{statKey, label, points}] }
+  pointsConfig   String?
   createdAt      DateTime @default(now())
 
   spieltage     LulSpieltag[]
@@ -572,19 +576,21 @@ model LulSeason {
 
 // Aggregiertes Saison-Endergebnis für vergangene Saisons ohne Spieltag-Details
 model LulLegacyEntry {
-  id          String    @id @default(cuid())
-  seasonId    String
-  userId      String
-  totalPts    Int       @default(0)
-  asPlayer    Int       @default(0)  // Einsätze als Mitspieler
-  asSpectator Int       @default(0)  // Einsätze als Zuschauer
-  wins        Int       @default(0)  // Game Winner
-  champs      Int       @default(0)  // Community-Champ
-  trost       Int       @default(0)  // Trostpreis
-  dominion    Int       @default(0)  // Dominion Bonus
-  votes       Int       @default(0)  // Votes
-  season      LulSeason @relation(fields: [seasonId], references: [id], onDelete: Cascade)
-  user        User      @relation(fields: [userId], references: [id])
+  id           String    @id @default(cuid())
+  seasonId     String
+  userId       String
+  totalPts     Int       @default(0)
+  asPlayer     Int       @default(0)  // Einsätze als Mitspieler
+  asSpectator  Int       @default(0)  // Einsätze als Zuschauer
+  wins         Int       @default(0)  // Game Winner
+  champs       Int       @default(0)  // Community-Champ (Legacy)
+  trost        Int       @default(0)  // Trostpreis (Legacy)
+  dominion     Int       @default(0)  // Dominion Bonus
+  votes        Int       @default(0)  // Votes
+  // JSON: { "communityChamp": 3, "trostpreis": 1, "mvp": 2 } – für neue flexible Saisons
+  pollStatsJson String?
+  season       LulSeason @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  user         User      @relation(fields: [userId], references: [id])
   @@unique([seasonId, userId])
 }
 
@@ -604,12 +610,13 @@ model LulSpieltag {
   platform     String?   // "PC/Konsole"
   scheduledAt    DateTime?
   discordEventId String?   @unique
-  // upcoming | active | finished
+  // upcoming | active | umfrage | finished
   status         String    @default("upcoming")
   // JSON: {"1": 10, "2": 5, "3": 3} – Punkte pro Spielplatzierung
   pointsConfig String?
   season       LulSeason @relation(fields: [seasonId], references: [id], onDelete: Cascade)
   entries      LulEntry[]
+  polls        LulPoll[]
 }
 
 model LulEntry {
@@ -623,15 +630,58 @@ model LulEntry {
   totalGameScore Int         @default(0)
   placement      Int?        // Spieltagsplatzierung (1 = Sieger)
   gameWinner     Boolean     @default(false) // Mitspieler-Sieg
-  communityChamp Boolean     @default(false) // Zuschauer-Umfragesieg
-  trostpreis     Boolean     @default(false) // Trostpreis-Umfrage
+  communityChamp Boolean     @default(false) // Zuschauer-Umfragesieg (Legacy + statKey="communityChamp")
+  trostpreis     Boolean     @default(false) // Trostpreis-Umfrage (Legacy + statKey="trostpreis")
   voted          Boolean     @default(false) // hat an Umfrage teilgenommen
   dominionBonus  Boolean     @default(false) // 3 Siege in Folge
   lulPoints      Int         @default(0)     // LUL-Punkte gesamt für diesen Spieltag
   statsJson      String?                     // JSON: {"Kills":12} — für ffa/coop_stats/avg_stats
+  // JSON: ["communityChamp","trostpreis"] — gewonnene Umfragen via statKey (neue flexible Saisons)
+  pollWinsJson   String?
   spieltag       LulSpieltag @relation(fields: [spieltagId], references: [id], onDelete: Cascade)
   user           User        @relation(fields: [userId], references: [id])
   @@unique([spieltagId, userId])
+}
+
+// ── LUL In-App Voting ────────────────────────────────────────────────────────
+
+// Eine konfigurierbare Umfrage pro Spieltag (mehrere möglich)
+model LulPoll {
+  id          String      @id @default(cuid())
+  spieltagId  String
+  // statKey aus pointsConfig.polls (z.B. "communityChamp", "trostpreis", "mvp")
+  statKey     String
+  label       String      // Anzeigename, z.B. "Community Champ"
+  question    String      // z.B. "Wer war der beste Zuschauer?"
+  // "player" | "spectator" — wer zur Auswahl steht
+  type        String
+  endsAt      DateTime
+  // JSON: string[] — UserIds die ausgeschlossen sind
+  excludedUserIds String?
+  // open | closed
+  status      String      @default("open")
+  // JSON: string[] — UserIds die gewonnen haben (gesetzt beim Schließen)
+  winnerIds   String?
+  createdAt   DateTime    @default(now())
+
+  spieltag    LulSpieltag @relation(fields: [spieltagId], references: [id], onDelete: Cascade)
+  votes       LulPollVote[]
+}
+
+// Eine Stimme pro User pro Umfrage — UPDATE erlaubt, DELETE nicht
+model LulPollVote {
+  id        String   @id @default(cuid())
+  pollId    String
+  voterId   String
+  targetId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  poll      LulPoll  @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  voter     User     @relation("LulPollVoter", fields: [voterId], references: [id])
+  target    User     @relation("LulPollTarget", fields: [targetId], references: [id])
+
+  @@unique([pollId, voterId])
 }
 
 // ── Geplante Discord-Umfragen ─────────────────────────────────────────────
@@ -788,6 +838,15 @@ model InAppNotification {
 
   @@index([userId, read])
   @@map("inappnotification")
+}
+
+// ── Ranglisten-Snapshot ───────────────────────────────────────────────────────
+
+model LeaderboardRankSnapshot {
+  id        String   @id @default(cuid())
+  takenAt   DateTime @default(now())
+  // JSON: { [userId]: rank } – Rang jedes Users zum Snapshot-Zeitpunkt
+  dataJson  String
 }
 
 // ── Push-Benachrichtigungen ──────────────────────────────────────────────────

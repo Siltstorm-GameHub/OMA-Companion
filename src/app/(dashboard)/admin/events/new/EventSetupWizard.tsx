@@ -78,6 +78,39 @@ const labelCls   = "text-xs text-gray-500 mb-1 block";
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
+// ─── LUL-spezifische Types ────────────────────────────────────────────────────
+
+type LulPollDef = {
+  statKey: string;
+  label:   string;
+  points:  number;
+};
+
+type LulPointsConfig = {
+  game:              number;
+  spectator:         number;
+  gameWinner:        number;
+  vote:              number;
+  dominion:          number;
+  dominionTriggers:  string[];
+  polls:             LulPollDef[];
+};
+
+const LUL_DEFAULTS: LulPointsConfig = {
+  game:             5,
+  spectator:        5,
+  gameWinner:       10,
+  vote:             2,
+  dominion:         20,
+  dominionTriggers: ["gameWinner", "communityChamp", "trostpreis"],
+  polls: [
+    { statKey: "communityChamp", label: "Community Champ", points: 10 },
+    { statKey: "trostpreis",     label: "Trostpreis",      points: 10 },
+  ],
+};
+
+const STEP_LABELS_LUL = ["Season-Info", "Spieltag-Template", "Punktesystem", "Zusammenfassung"];
+
 export default function EventSetupWizard({
   series,
   initialMode = "select",
@@ -86,9 +119,24 @@ export default function EventSetupWizard({
   initialMode?: "select" | "event" | "series";
 }) {
   const router = useRouter();
-  const [wizardMode, setWizardMode] = useState<"select" | "event" | "series">(initialMode);
+  const [wizardMode, setWizardMode] = useState<"select" | "event" | "series" | "lul">(initialMode);
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
+
+  // ── LUL mode state ────────────────────────────────────────────────────────────
+  const [lulSeasonName, setLulSeasonName]       = useState("");
+  const [lulPeriod, setLulPeriod]               = useState("");
+  const [lulTotalSpieltage, setLulTotalSpieltage] = useState(8);
+  const [lulFirstDate, setLulFirstDate]         = useState("");
+  const [lulRecurrence, setLulRecurrence]       = useState<"none" | RecurrenceType>("biweekly");
+  const [lulMonthlyMode, setLulMonthlyMode]     = useState<MonthlyMode>("dayOfMonth");
+  const [lulGame, setLulGame]                   = useState("");
+  const [lulGameType, setLulGameType]           = useState("");
+  const [lulPlatform, setLulPlatform]           = useState("");
+  const [lulFormat, setLulFormat]               = useState("single_elimination");
+  const [lulStatFields, setLulStatFields]       = useState<string[]>([]);
+  const [lulMaxPlayers, setLulMaxPlayers]       = useState("");
+  const [lulPoints, setLulPoints]               = useState<LulPointsConfig>({ ...LUL_DEFAULTS, polls: LUL_DEFAULTS.polls.map(p => ({ ...p })) });
 
   // ── Shared (Step 0) ──────────────────────────────────────────────────────────
   const [category, setCategory]       = useState<EventCategory>("casual");
@@ -299,6 +347,467 @@ export default function EventSetupWizard({
     router.push(`/admin/series/${created.id}`);
   }
 
+  // ── LUL helpers ──────────────────────────────────────────────────────────────
+  const lulFormatObj = FORMATS.find(f => f.value === lulFormat);
+  const lulHasStat   = lulFormatObj?.hasStat ?? false;
+
+  const lulPreviewDates = useMemo(() => {
+    if (!lulFirstDate) return [];
+    const start = new Date(lulFirstDate);
+    if (isNaN(start.getTime())) return [];
+    if (lulRecurrence === "none") return [start];
+    const dates: Date[] = [start];
+    for (let i = 1; i < lulTotalSpieltage; i++) {
+      dates.push(calcNextDate(dates[i - 1], lulRecurrence as RecurrenceType, lulMonthlyMode, start));
+    }
+    return dates;
+  }, [lulFirstDate, lulRecurrence, lulMonthlyMode, lulTotalSpieltage]);
+
+  const lulMonthlyDescriptions = useMemo(() => {
+    if (!lulFirstDate || lulRecurrence !== "monthly") return null;
+    try { return describeMonthlyModes(new Date(lulFirstDate)); } catch { return null; }
+  }, [lulFirstDate, lulRecurrence]);
+
+  function addLulPoll() {
+    setLulPoints(p => ({ ...p, polls: [...p.polls, { statKey: "", label: "", points: 10 }] }));
+  }
+  function updateLulPoll(i: number, patch: Partial<LulPollDef>) {
+    setLulPoints(p => ({ ...p, polls: p.polls.map((pl, idx) => idx === i ? { ...pl, ...patch } : pl) }));
+  }
+  function removeLulPoll(i: number) {
+    setLulPoints(p => ({ ...p, polls: p.polls.filter((_, idx) => idx !== i) }));
+  }
+
+  function lulCanProceed(): boolean {
+    if (step === 0) return lulSeasonName.trim().length > 0;
+    return true;
+  }
+
+  async function handleSubmitLul() {
+    if (!lulSeasonName.trim()) return;
+    setLoading(true);
+
+    // Nächste freie Saison-Nummer ermitteln
+    const seasonsRes = await fetch("/api/lul/seasons");
+    const existingSeasons = seasonsRes.ok ? (await seasonsRes.json() as { number: number }[]) : [];
+    const maxNumber = existingSeasons.length > 0 ? Math.max(...existingSeasons.map(s => s.number)) : 0;
+
+    const res = await fetch("/api/lul/seasons", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        number:            maxNumber + 1,
+        name:              lulSeasonName.trim(),
+        period:            lulPeriod.trim() || null,
+        totalSpieltage:    lulTotalSpieltage,
+        pointsConfig:      lulPoints,
+        firstSpieltagDate: lulFirstDate ? new Date(lulFirstDate).toISOString() : undefined,
+        recurrenceType:    lulRecurrence !== "none" ? lulRecurrence : undefined,
+        monthlyMode:       lulRecurrence === "monthly" ? lulMonthlyMode : undefined,
+        spieltagTemplate:  {
+          game:             lulGame || null,
+          gameType:         lulGameType || null,
+          platform:         lulPlatform || null,
+          tournamentFormat: lulFormat,
+          statFields:       lulHasStat ? lulStatFields : undefined,
+          maxPlayers:       lulMaxPlayers ? Number(lulMaxPlayers) : undefined,
+        },
+      }),
+    });
+
+    setLoading(false);
+    if (!res.ok) { toast.error("Fehler beim Erstellen der LUL-Saison"); return; }
+    toast.success(`Level-UP-League Saison „${lulSeasonName}" erstellt!`);
+    router.push("/admin/lul");
+  }
+
+  // ── Render: LUL Mode ─────────────────────────────────────────────────────────
+  if (wizardMode === "lul") {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="mb-6 flex items-center gap-3">
+          <button type="button" onClick={() => { setWizardMode("select"); setStep(0); }}
+            className="text-gray-500 hover:text-white transition-colors">
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <h1 className="text-xl font-bold text-white flex items-center gap-2">
+              <span>🏆</span> Level-UP-League Saison erstellen
+            </h1>
+            <p className="text-xs text-gray-500 mt-0.5">Schritt {step + 1} von {STEP_LABELS_LUL.length}</p>
+          </div>
+        </div>
+
+        {/* Step Indicator */}
+        <div className="flex items-center gap-1 mb-8 flex-wrap">
+          {STEP_LABELS_LUL.map((label, i) => {
+            const active = i === step;
+            const done   = i < step;
+            return (
+              <div key={i} className="flex items-center gap-1">
+                <div className={`flex items-center gap-1.5 ${active || done ? "" : "opacity-40"}`}>
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                    done   ? "bg-teal-500 text-white"
+                    : active ? "bg-teal-500/20 text-teal-300 border border-teal-500/50"
+                    : "bg-white/5 text-gray-500"
+                  }`}>
+                    {done ? <Check className="w-3.5 h-3.5" /> : i + 1}
+                  </div>
+                  <span className={`text-xs hidden sm:block ${active ? "text-white font-medium" : done ? "text-teal-400" : "text-gray-500"}`}>
+                    {label}
+                  </span>
+                </div>
+                {i < STEP_LABELS_LUL.length - 1 && <ChevronRight className="w-3.5 h-3.5 text-gray-700" />}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Step Content */}
+        <div className="rounded-2xl p-6 mb-6" style={{ background: "#0f1f1a", border: "1px solid rgba(20,184,166,0.15)" }}>
+          {step === 0 && (
+            <div className="space-y-4">
+              <h2 className="text-base font-semibold text-white">Season-Info</h2>
+              <div>
+                <label className={labelCls}>Saison-Name *</label>
+                <input className={inputCls} style={inputStyle} placeholder="z.B. Saison 3" value={lulSeasonName}
+                  onChange={e => setLulSeasonName(e.target.value)} />
+              </div>
+              <div>
+                <label className={labelCls}>Zeitraum (optional)</label>
+                <input className={inputCls} style={inputStyle} placeholder="z.B. Juli 2026 – Januar 2027" value={lulPeriod}
+                  onChange={e => setLulPeriod(e.target.value)} />
+              </div>
+              <div>
+                <label className={labelCls}>Anzahl Spieltage</label>
+                <input type="number" min={1} max={24} className={inputCls} style={inputStyle} value={lulTotalSpieltage}
+                  onChange={e => setLulTotalSpieltage(Number(e.target.value))} />
+              </div>
+              <div>
+                <label className={labelCls}>Erster Spieltag</label>
+                <input type="datetime-local" className={inputCls} style={inputStyle} value={lulFirstDate}
+                  onChange={e => setLulFirstDate(e.target.value)} />
+              </div>
+              <div>
+                <label className={labelCls}>Wiederkehrendes Muster</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {RECURRENCE_OPTS.map(opt => (
+                    <button key={opt.value} type="button"
+                      onClick={() => setLulRecurrence(opt.value as "none" | RecurrenceType)}
+                      className={`rounded-xl px-3 py-2.5 text-left transition-all border text-xs ${
+                        lulRecurrence === opt.value
+                          ? "border-teal-500/60 bg-teal-500/15 text-teal-300"
+                          : "border-white/10 bg-white/5 text-gray-400 hover:border-white/20"
+                      }`}>
+                      <p className="font-medium">{opt.label}</p>
+                      <p className="text-gray-500 mt-0.5">{opt.desc}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {lulRecurrence === "monthly" && lulMonthlyDescriptions && (
+                <div>
+                  <label className={labelCls}>Monatliches Muster</label>
+                  <div className="grid grid-cols-1 gap-2">
+                    {(["dayOfMonth", "weekdayOfMonth"] as MonthlyMode[]).map(mode => (
+                      <button key={mode} type="button" onClick={() => setLulMonthlyMode(mode)}
+                        className={`rounded-xl px-3 py-2 text-left text-xs border transition-all ${
+                          lulMonthlyMode === mode
+                            ? "border-teal-500/60 bg-teal-500/15 text-teal-300"
+                            : "border-white/10 bg-white/5 text-gray-400"
+                        }`}>
+                        {lulMonthlyDescriptions[mode]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {lulPreviewDates.length > 0 && (
+                <div className="rounded-xl p-3" style={{ background: "#0b1a17", border: "1px solid rgba(20,184,166,0.12)" }}>
+                  <p className="text-xs text-gray-500 mb-2 flex items-center gap-1.5"><CalendarDays className="w-3.5 h-3.5" /> Vorschau Spieltage</p>
+                  <div className="space-y-1">
+                    {lulPreviewDates.slice(0, 5).map((d, i) => (
+                      <div key={i} className="flex items-center gap-2 text-xs">
+                        <span className="text-teal-400 font-mono w-4">{i + 1}.</span>
+                        <span className="text-gray-300">{d.toLocaleDateString("de-DE", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}</span>
+                      </div>
+                    ))}
+                    {lulPreviewDates.length > 5 && (
+                      <p className="text-xs text-gray-600">… und {lulPreviewDates.length - 5} weitere</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {step === 1 && (
+            <div className="space-y-4">
+              <h2 className="text-base font-semibold text-white">Spieltag-Template</h2>
+              <p className="text-xs text-gray-500">Diese Einstellungen gelten als Vorlage für alle automatisch generierten Spieltage. Du kannst jeden Spieltag später einzeln anpassen.</p>
+              <div>
+                <label className={labelCls}>Spiel</label>
+                <GameNameInput value={lulGame} onChange={setLulGame} placeholder="z.B. Brawlhalla" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={labelCls}>Spieltyp</label>
+                  <input className={inputCls} style={inputStyle} placeholder="z.B. Beat-em Up" value={lulGameType}
+                    onChange={e => setLulGameType(e.target.value)} />
+                </div>
+                <div>
+                  <label className={labelCls}>Plattform</label>
+                  <input className={inputCls} style={inputStyle} placeholder="z.B. PC/Konsole" value={lulPlatform}
+                    onChange={e => setLulPlatform(e.target.value)} />
+                </div>
+              </div>
+              <div>
+                <label className={labelCls}>Maximale Spieleranzahl</label>
+                <input type="number" min={2} className={inputCls} style={inputStyle} placeholder="z.B. 8" value={lulMaxPlayers}
+                  onChange={e => setLulMaxPlayers(e.target.value)} />
+              </div>
+              <div>
+                <label className={labelCls}>Turnierformat</label>
+                <div className="space-y-1.5">
+                  {FORMATS.map(f => (
+                    <button key={f.value} type="button" onClick={() => setLulFormat(f.value)}
+                      className={`w-full rounded-xl px-3 py-2.5 text-left flex items-start gap-3 border text-xs transition-all ${
+                        lulFormat === f.value
+                          ? "border-teal-500/60 bg-teal-500/15"
+                          : "border-white/10 bg-white/5 hover:border-white/20"
+                      }`}>
+                      <div className={`w-3.5 h-3.5 rounded-full border mt-0.5 flex-shrink-0 ${lulFormat === f.value ? "border-teal-400 bg-teal-400" : "border-gray-600"}`} />
+                      <div>
+                        <p className={`font-medium ${lulFormat === f.value ? "text-teal-300" : "text-gray-300"}`}>{f.label}</p>
+                        <p className="text-gray-500 mt-0.5">{f.desc}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {lulHasStat && (
+                <div>
+                  <label className={labelCls}>Stat-Felder</label>
+                  <StatFieldEditor fields={lulStatFields} onChange={setLulStatFields} />
+                </div>
+              )}
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="space-y-6">
+              <h2 className="text-base font-semibold text-white">Punktesystem</h2>
+
+              {/* Basispunkte */}
+              <div>
+                <p className="text-xs text-gray-400 mb-3 font-medium uppercase tracking-wide">Basisteilnahme</p>
+                <div className="space-y-3">
+                  {([
+                    { key: "game",        label: "Teilnahme Mitspieler" },
+                    { key: "spectator",   label: "Teilnahme Zuschauer" },
+                    { key: "gameWinner",  label: "Spieltag-Sieg" },
+                    { key: "vote",        label: "Voting-Teilnahme" },
+                    { key: "dominion",    label: "Dominion-Bonus (3× Siege in Folge)" },
+                  ] as { key: keyof Omit<LulPointsConfig, "dominionTriggers" | "polls">, label: string }[]).map(({ key, label }) => (
+                    <div key={key} className="flex items-center justify-between gap-4">
+                      <span className="text-sm text-gray-300 flex-1">{label}</span>
+                      <div className="flex items-center gap-2">
+                        <input type="number" min={0} max={999}
+                          className="w-20 rounded-lg px-2 py-1.5 text-sm text-white text-center outline-none"
+                          style={{ background: "#0b1a17", border: "1px solid rgba(20,184,166,0.18)" }}
+                          value={lulPoints[key] as number}
+                          onChange={e => setLulPoints(p => ({ ...p, [key]: Number(e.target.value) }))}
+                        />
+                        <span className="text-xs text-gray-500 w-6">Pts</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Dominion Trigger */}
+              <div>
+                <p className="text-xs text-gray-400 mb-2 font-medium uppercase tracking-wide">Dominion-Bonus zählt bei</p>
+                <p className="text-xs text-gray-600 mb-3">Welche Erfolge zählen als "Sieg" für den 3er-Streak?</p>
+                <div className="space-y-1.5">
+                  {[
+                    { key: "gameWinner", label: "Spieltag-Sieg (Mitspieler)" },
+                    ...lulPoints.polls.filter(p => p.statKey).map(p => ({ key: p.statKey, label: p.label || p.statKey })),
+                  ].map(({ key, label }) => {
+                    const checked = lulPoints.dominionTriggers.includes(key);
+                    return (
+                      <button key={key} type="button"
+                        onClick={() => setLulPoints(p => ({
+                          ...p,
+                          dominionTriggers: checked
+                            ? p.dominionTriggers.filter(t => t !== key)
+                            : [...p.dominionTriggers, key],
+                        }))}
+                        className={`w-full flex items-center gap-3 rounded-xl px-3 py-2 border text-xs text-left transition-all ${
+                          checked ? "border-teal-500/60 bg-teal-500/10 text-teal-300" : "border-white/10 bg-white/5 text-gray-400"
+                        }`}>
+                        <div className={`w-3.5 h-3.5 rounded border flex-shrink-0 flex items-center justify-center ${checked ? "border-teal-400 bg-teal-500" : "border-gray-600"}`}>
+                          {checked && <Check className="w-2.5 h-2.5 text-white" />}
+                        </div>
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Umfrage-Preise */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Umfrage-Preise</p>
+                  <button type="button" onClick={addLulPoll}
+                    className="flex items-center gap-1 text-xs text-teal-400 hover:text-teal-300 transition-colors">
+                    <Plus className="w-3.5 h-3.5" /> Hinzufügen
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  {lulPoints.polls.map((poll, i) => (
+                    <div key={i} className="rounded-xl p-3 space-y-2" style={{ background: "#0b1a17", border: "1px solid rgba(20,184,166,0.12)" }}>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex-1 grid grid-cols-2 gap-2">
+                          <div>
+                            <label className={labelCls}>Anzeigename</label>
+                            <input className={inputCls} style={inputStyle} placeholder="Community Champ" value={poll.label}
+                              onChange={e => updateLulPoll(i, { label: e.target.value })} />
+                          </div>
+                          <div>
+                            <label className={labelCls}>Stat-Key (technisch)</label>
+                            <input className={inputCls} style={inputStyle} placeholder="communityChamp" value={poll.statKey}
+                              onChange={e => updateLulPoll(i, { statKey: e.target.value.replace(/\s/g, "") })} />
+                          </div>
+                        </div>
+                        <button type="button" onClick={() => removeLulPoll(i)}
+                          className="text-gray-600 hover:text-red-400 transition-colors mt-4 flex-shrink-0">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1">
+                          <label className={labelCls}>Punkte für Gewinner</label>
+                          <input type="number" min={0} className={inputCls} style={inputStyle} value={poll.points}
+                            onChange={e => updateLulPoll(i, { points: Number(e.target.value) })} />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {lulPoints.polls.length === 0 && (
+                    <p className="text-xs text-gray-600 text-center py-4">Keine Umfrage-Preise konfiguriert</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="space-y-4">
+              <h2 className="text-base font-semibold text-white">Zusammenfassung</h2>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between py-1.5 border-b border-white/5">
+                  <span className="text-gray-500">Saison-Name</span>
+                  <span className="text-white font-medium">{lulSeasonName}</span>
+                </div>
+                {lulPeriod && (
+                  <div className="flex justify-between py-1.5 border-b border-white/5">
+                    <span className="text-gray-500">Zeitraum</span>
+                    <span className="text-white">{lulPeriod}</span>
+                  </div>
+                )}
+                <div className="flex justify-between py-1.5 border-b border-white/5">
+                  <span className="text-gray-500">Spieltage</span>
+                  <span className="text-white">{lulTotalSpieltage}</span>
+                </div>
+                {lulGame && (
+                  <div className="flex justify-between py-1.5 border-b border-white/5">
+                    <span className="text-gray-500">Spiel</span>
+                    <span className="text-white">{lulGame}</span>
+                  </div>
+                )}
+                <div className="flex justify-between py-1.5 border-b border-white/5">
+                  <span className="text-gray-500">Format</span>
+                  <span className="text-white">{FORMATS.find(f => f.value === lulFormat)?.label}</span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-white/5">
+                  <span className="text-gray-500">Mitspieler-Teilnahme</span>
+                  <span className="text-teal-400 font-mono">{lulPoints.game} Pts</span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-white/5">
+                  <span className="text-gray-500">Zuschauer-Teilnahme</span>
+                  <span className="text-teal-400 font-mono">{lulPoints.spectator} Pts</span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-white/5">
+                  <span className="text-gray-500">Spieltag-Sieg</span>
+                  <span className="text-teal-400 font-mono">{lulPoints.gameWinner} Pts</span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-white/5">
+                  <span className="text-gray-500">Voting-Teilnahme</span>
+                  <span className="text-teal-400 font-mono">{lulPoints.vote} Pts</span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-white/5">
+                  <span className="text-gray-500">Dominion-Bonus</span>
+                  <span className="text-teal-400 font-mono">{lulPoints.dominion} Pts</span>
+                </div>
+                {lulPoints.polls.map(poll => (
+                  <div key={poll.statKey} className="flex justify-between py-1.5 border-b border-white/5">
+                    <span className="text-gray-500">{poll.label || poll.statKey}</span>
+                    <span className="text-teal-400 font-mono">{poll.points} Pts</span>
+                  </div>
+                ))}
+                {lulPreviewDates.length > 0 && (
+                  <div className="mt-2 rounded-xl p-3" style={{ background: "#0b1a17", border: "1px solid rgba(20,184,166,0.12)" }}>
+                    <p className="text-xs text-gray-500 mb-2 flex items-center gap-1.5"><CalendarDays className="w-3.5 h-3.5" /> Generierte Spieltage</p>
+                    <div className="space-y-1">
+                      {lulPreviewDates.slice(0, 8).map((d, i) => (
+                        <div key={i} className="flex items-center gap-2 text-xs">
+                          <span className="text-teal-400 font-mono w-4">{i + 1}.</span>
+                          <span className="text-gray-300">{d.toLocaleDateString("de-DE", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}</span>
+                        </div>
+                      ))}
+                      {lulPreviewDates.length > 8 && (
+                        <p className="text-xs text-gray-600">… und {lulPreviewDates.length - 8} weitere</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Navigation */}
+        <div className="flex items-center justify-between">
+          <button type="button"
+            onClick={() => step > 0 ? setStep(s => s - 1) : setWizardMode("select")}
+            className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm text-gray-400 hover:text-white border border-white/10 hover:border-white/20 transition-all">
+            <ChevronLeft className="w-4 h-4" />
+            {step === 0 ? "Zurück" : "Vorheriger Schritt"}
+          </button>
+          {step < STEP_LABELS_LUL.length - 1 ? (
+            <button type="button"
+              disabled={!lulCanProceed()}
+              onClick={() => setStep(s => s + 1)}
+              className="flex items-center gap-2 rounded-xl px-5 py-2 text-sm font-medium bg-teal-600 hover:bg-teal-500 text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+              Weiter <ChevronRight className="w-4 h-4" />
+            </button>
+          ) : (
+            <button type="button"
+              disabled={loading || !lulSeasonName.trim()}
+              onClick={handleSubmitLul}
+              className="flex items-center gap-2 rounded-xl px-5 py-2 text-sm font-medium bg-teal-600 hover:bg-teal-500 text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+              {loading ? "Wird erstellt…" : "Saison erstellen"}
+              <Check className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   // ── Render: Mode Selection ───────────────────────────────────────────────────
   if (wizardMode === "select") {
     return (
@@ -322,6 +831,14 @@ export default function EventSetupWizard({
             <div>
               <p className="text-base font-semibold text-violet-300">Neue Eventreihe</p>
               <p className="text-xs text-gray-500 mt-1">Wiederkehrende Reihe mit Gesamttabelle und gemeinsamen Belohnungen</p>
+            </div>
+          </button>
+          <button type="button" onClick={() => { setWizardMode("lul"); setStep(0); }}
+            className="flex flex-col items-center gap-3 rounded-2xl p-6 border-2 border-yellow-500/40 bg-yellow-500/10 hover:bg-yellow-500/20 transition-all text-center sm:col-span-2">
+            <span className="text-4xl">🏆</span>
+            <div>
+              <p className="text-base font-semibold text-yellow-300">Level-UP-League Saison</p>
+              <p className="text-xs text-gray-500 mt-1">Neue LUL-Saison mit flexiblem Punktesystem, In-App-Voting und Spieltag-Autogenerierung</p>
             </div>
           </button>
         </div>

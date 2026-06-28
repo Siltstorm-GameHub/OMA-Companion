@@ -1,6 +1,57 @@
 -- Ausstehende Schema-Änderungen
 -- Ausführen im Supabase SQL-Editor: https://supabase.com/dashboard → SQL Editor
 
+-- ═══════════════════════════════════════════════════════════════
+-- LUL Flexibles Voting & Punktesystem (neue Saisons via Wizard)
+-- ═══════════════════════════════════════════════════════════════
+
+-- LulSeason: konfigurierbares Punktesystem
+ALTER TABLE "LulSeason" ADD COLUMN IF NOT EXISTS "pointsConfig" TEXT;
+
+-- LulLegacyEntry: flexible Poll-Statistiken für neue Saisons
+ALTER TABLE "LulLegacyEntry" ADD COLUMN IF NOT EXISTS "pollStatsJson" TEXT;
+
+-- LulEntry: gewonnene Umfragen via statKey (neue flexible Saisons)
+ALTER TABLE "LulEntry" ADD COLUMN IF NOT EXISTS "pollWinsJson" TEXT;
+
+-- LulSpieltag: status "umfrage" (zwischen active und finished) — kein ALTER nötig, TEXT-Feld
+
+-- LulPoll: konfigurierbare In-App-Umfrage pro Spieltag
+CREATE TABLE IF NOT EXISTS "LulPoll" (
+  "id"              TEXT         NOT NULL PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  "spieltagId"      TEXT         NOT NULL,
+  "statKey"         TEXT         NOT NULL,
+  "label"           TEXT         NOT NULL,
+  "question"        TEXT         NOT NULL,
+  "type"            TEXT         NOT NULL,
+  "endsAt"          TIMESTAMP(3) NOT NULL,
+  "excludedUserIds" TEXT,
+  "status"          TEXT         NOT NULL DEFAULT 'open',
+  "winnerIds"       TEXT,
+  "createdAt"       TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "LulPoll_spieltagId_fkey" FOREIGN KEY ("spieltagId") REFERENCES "LulSpieltag"("id") ON DELETE CASCADE
+);
+
+-- LulPollVote: eine Stimme pro User pro Umfrage (UPSERT erlaubt, DELETE nicht)
+CREATE TABLE IF NOT EXISTS "LulPollVote" (
+  "id"        TEXT         NOT NULL PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  "pollId"    TEXT         NOT NULL,
+  "voterId"   TEXT         NOT NULL,
+  "targetId"  TEXT         NOT NULL,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "LulPollVote_pollId_fkey"   FOREIGN KEY ("pollId")   REFERENCES "LulPoll"("id") ON DELETE CASCADE,
+  CONSTRAINT "LulPollVote_voterId_fkey"  FOREIGN KEY ("voterId")  REFERENCES "User"("id"),
+  CONSTRAINT "LulPollVote_targetId_fkey" FOREIGN KEY ("targetId") REFERENCES "User"("id"),
+  CONSTRAINT "LulPollVote_pollId_voterId_key" UNIQUE ("pollId", "voterId")
+);
+
+-- Index für schnelle Abfragen
+CREATE INDEX IF NOT EXISTS "LulPoll_spieltagId_idx" ON "LulPoll"("spieltagId");
+CREATE INDEX IF NOT EXISTS "LulPollVote_pollId_idx" ON "LulPollVote"("pollId");
+
+-- ═══════════════════════════════════════════════════════════════
+
 -- 1. User: Gruß / Bio
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "bio" TEXT;
 
