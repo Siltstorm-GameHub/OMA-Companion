@@ -31,7 +31,7 @@ export default async function ProfilePage() {
   const month = now.getMonth() + 1;
   const year  = now.getFullYear();
 
-  const [user, eventRegs, eventCount, finishedEvents, tournamentParticipations, tournamentCount, questsWithProgress, ownedCollectibles, leaderboardRank, userSystemBadges, userCustomBadges, wanderpocalTrophies, wanderpocalStats, coinsEarnedAgg, coinsSpentAgg, lulPollWins] =
+  const [user, eventRegs, eventCount, startedEvents, tournamentParticipations, tournamentCount, questsWithProgress, ownedCollectibles, leaderboardRank, userSystemBadges, userCustomBadges, wanderpocalTrophies, wanderpocalStats, coinsEarnedAgg, coinsSpentAgg, lulPollWins] =
     await Promise.all([
       prisma.user.findUnique({
         where:  { id: userId },
@@ -44,7 +44,7 @@ export default async function ProfilePage() {
       }),
       prisma.eventRegistration.count({ where: { userId } }),
       prisma.event.findMany({
-        where: { status: "finished", registrations: { some: { userId } } },
+        where: { startAt: { lte: now }, registrations: { some: { userId } } },
         select: { game: true, finalRankingJson: true, completionData: true },
       }),
       prisma.tournamentParticipant.findMany({
@@ -93,16 +93,16 @@ export default async function ProfilePage() {
   if (!user) redirect("/login");
 
   // Derived event stats from finished events
-  const eventWins = finishedEvents.filter(e => {
+  const eventWins = startedEvents.filter(e => {
     try { const r = JSON.parse(e.finalRankingJson ?? "[]"); return Array.isArray(r) && r[0] === userId; }
     catch { return false; }
   }).length;
-  const pollWinsFromEvents = finishedEvents.filter(e => {
+  const pollWinsFromEvents = startedEvents.filter(e => {
     try { const ids: string[] = (e.completionData ? JSON.parse(e.completionData) : {}).pollWinnerIds ?? []; return ids.includes(userId); }
     catch { return false; }
   }).length;
   const pollMasterCount = pollWinsFromEvents + lulPollWins;
-  const gameCounts = finishedEvents.reduce<Record<string, number>>((acc, e) => {
+  const gameCounts = startedEvents.reduce<Record<string, number>>((acc, e) => {
     if (e.game) acc[e.game] = (acc[e.game] ?? 0) + 1;
     return acc;
   }, {});

@@ -6,6 +6,7 @@ import type { RecurrenceType, MonthlyMode } from "@/lib/recurrence";
 
 export async function GET() {
   const series = await prisma.eventSeries.findMany({
+    where: { hidden: false },
     orderBy: { name: "asc" },
     include: { _count: { select: { events: true } } },
   });

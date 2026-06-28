@@ -38,7 +38,7 @@ export default async function PublicProfilePage({
   const month = now.getMonth() + 1;
   const year  = now.getFullYear();
 
-  const [user, eventRegs, eventCount, finishedEvents, tournamentParticipations, tournamentCount, totalUsers, questsWithProgress, ownedCollectibles, userSystemBadges, userCustomBadges, wanderpocalTrophies, wanderpocalStats, coinsEarnedAgg, coinsSpentAgg, lulPollWins] =
+  const [user, eventRegs, eventCount, startedEvents, tournamentParticipations, tournamentCount, totalUsers, questsWithProgress, ownedCollectibles, userSystemBadges, userCustomBadges, wanderpocalTrophies, wanderpocalStats, coinsEarnedAgg, coinsSpentAgg, lulPollWins] =
     await Promise.all([
       prisma.user.findUnique({
         where: { id },
@@ -58,7 +58,7 @@ export default async function PublicProfilePage({
       }),
       prisma.eventRegistration.count({ where: { userId: id } }),
       prisma.event.findMany({
-        where: { status: "finished", registrations: { some: { userId: id } } },
+        where: { startAt: { lte: now }, registrations: { some: { userId: id } } },
         select: { game: true, finalRankingJson: true, completionData: true },
       }),
       prisma.tournamentParticipant.findMany({
@@ -122,16 +122,16 @@ export default async function PublicProfilePage({
   );
 
   // Derived event stats
-  const eventWins = finishedEvents.filter(e => {
+  const eventWins = startedEvents.filter(e => {
     try { const r = JSON.parse(e.finalRankingJson ?? "[]"); return Array.isArray(r) && r[0] === id; }
     catch { return false; }
   }).length;
-  const pollWinsFromEvents = finishedEvents.filter(e => {
+  const pollWinsFromEvents = startedEvents.filter(e => {
     try { const ids: string[] = (e.completionData ? JSON.parse(e.completionData) : {}).pollWinnerIds ?? []; return ids.includes(id); }
     catch { return false; }
   }).length;
   const pollMasterCount = pollWinsFromEvents + lulPollWins;
-  const gameCounts = finishedEvents.reduce<Record<string, number>>((acc, e) => {
+  const gameCounts = startedEvents.reduce<Record<string, number>>((acc, e) => {
     if (e.game) acc[e.game] = (acc[e.game] ?? 0) + 1;
     return acc;
   }, {});

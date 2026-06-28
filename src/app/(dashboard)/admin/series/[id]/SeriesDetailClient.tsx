@@ -6,7 +6,7 @@ import Link from "next/link";
 import {
   ChevronLeft, ChevronRight, CalendarPlus, RefreshCw, Gamepad2,
   Swords, Hash, BarChart2, Plus, X, Trophy, Save, Coins,
-  MessageSquare, ExternalLink, Archive, Vote, Trash2,
+  MessageSquare, ExternalLink, Archive, Vote, Trash2, Eye, EyeOff,
 } from "lucide-react";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import GameNameInput from "@/components/GameNameInput";
@@ -74,6 +74,8 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
   const [recurrenceMonthlyMode, setRecurrenceMonthlyMode] = useState<"dayOfMonth" | "weekdayOfMonth">(series.recurrenceMonthlyMode ?? "dayOfMonth");
   const [propagateGame, setPropagateGame]     = useState(false);
   const [propagateFormat, setPropagateFormat] = useState(false);
+  const [hidden, setHidden]                   = useState<boolean>(series.hidden ?? false);
+  const [hiddenBusy, setHiddenBusy]           = useState(false);
 
   // Stat config
   const initialStatCfg = (() => {
@@ -141,6 +143,23 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
     }
   }
 
+  async function toggleHidden() {
+    setHiddenBusy(true);
+    const next = !hidden;
+    const res = await fetch("/api/admin/event-series", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ seriesId: series.id, hidden: next }),
+    });
+    setHiddenBusy(false);
+    if (res.ok) {
+      setHidden(next);
+      toast.success(next ? "Reihe ausgeblendet" : "Reihe wieder sichtbar");
+    } else {
+      toast.error("Fehler");
+    }
+  }
+
   async function generateNextEvent() {
     setGeneratingNext(true);
     const res = await fetch("/api/admin/event-series/generate", {
@@ -202,6 +221,19 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
           />
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={toggleHidden}
+            disabled={hiddenBusy}
+            title={hidden ? "Reihe einblenden (für alle sichtbar machen)" : "Reihe ausblenden (nur im Admin sichtbar)"}
+            className={`flex items-center gap-1.5 text-xs border rounded-lg px-3 py-1.5 transition-all disabled:opacity-50 ${
+              hidden
+                ? "text-amber-400 border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20"
+                : "text-gray-500 border-white/[0.08] hover:border-white/20 hover:text-gray-300"
+            }`}
+          >
+            {hidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+            {hidden ? "Ausgeblendet" : "Sichtbar"}
+          </button>
           <Link
             href={`/events/series/${series.id}`}
             className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 border border-white/[0.08] hover:border-white/20 rounded-lg px-3 py-1.5 transition-all"
