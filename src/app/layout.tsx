@@ -19,9 +19,15 @@ export const metadata: Metadata = {
   description: "Events, Turniere und Punktesystem für Old Masters",
   icons: { icon: "/OMALogoNew.png", apple: "/OMALogoNew.png" },
   manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "OMA",
+  },
 };
 
 export const viewport: Viewport = {
+  themeColor: "#000000",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
