@@ -559,7 +559,7 @@ export async function POST(
     }
 
     // Poll-Siege in Reihen-Tabelle: Label → +1 pro Gewinner
-    // Re-Edit: alte Poll-Siege rückbuchen
+    // Re-Edit: alte Poll-Siege (body.pollResults) rückbuchen
     if (isReEdit) {
       const oldPolls = (oldCompletion.pollResults as typeof body.pollResults | undefined) ?? [];
       for (const poll of (oldPolls ?? [])) {
@@ -572,6 +572,29 @@ export async function POST(
       if (oldLabel) {
         for (const uid of oldPollWinners) addToUser(uid, oldLabel, -1);
       }
+
+      // Re-Edit: DB-basierte EventPoll-Standings rückbuchen
+      const oldEpRewards = (oldCompletion.eventPollRewards as Array<{
+        label: string; winnerIds: string[]; voterIds: string[];
+        participationSeriesPoints: number; winnerRankPoints: number;
+      }> | undefined) ?? [];
+      const oldEventVoterSet = new Set<string>();
+      for (const old of oldEpRewards) {
+        for (const uid of old.voterIds) {
+          addToUser(uid, `${old.label}_Abstimmungen`, -1);
+          oldEventVoterSet.add(uid);
+          if (old.participationSeriesPoints > 0)
+            addToUser(uid, `${old.label}_Teilnahmepunkte`, -old.participationSeriesPoints);
+        }
+        for (const uid of old.winnerIds) {
+          addToUser(uid, old.label, -1);
+          if (old.winnerRankPoints > 0)
+            addToUser(uid, `${old.label}_Siegerpunkte`, -old.winnerRankPoints);
+        }
+      }
+      for (const uid of oldEventVoterSet) {
+        addToUser(uid, "Umfrage-Teilnahmen", -1);
+      }
     }
     // Neue Poll-Siege eintragen (multi-poll)
     for (const poll of (body.pollResults ?? [])) {
@@ -583,12 +606,17 @@ export async function POST(
       for (const uid of newPollWinners) addToUser(uid, body.pollLabel, 1);
     }
 
-    // EventPoll series points: participationSeriesPoints per voter, winnerRankPoints as Liga pts per winner
+    // EventPoll series points: Abstimmungs-Tracking + Punkte pro Voter/Sieger
+    const eventVoterSet = new Set<string>(); // einmal pro Event für Umfrage-Teilnahmen
     for (const ep of eventPollRewards) {
-      if (ep.participationSeriesPoints > 0) {
-        for (const uid of ep.voterIds) {
-          addToUser(uid, `${ep.label}_teilnahme`, ep.participationSeriesPoints);
-          // → globale Rangliste
+      for (const uid of ep.voterIds) {
+        // Abstimmungs-Zähler pro Umfrage
+        addToUser(uid, `${ep.label}_Abstimmungen`, 1);
+        eventVoterSet.add(uid);
+
+        // Ligapunkte für Abstimmung (nur wenn konfiguriert)
+        if (ep.participationSeriesPoints > 0) {
+          addToUser(uid, `${ep.label}_Teilnahmepunkte`, ep.participationSeriesPoints);
           if (statCfg.transferToGlobalRanking) {
             await prisma.user.update({ where: { id: uid }, data: { rankPoints: { increment: ep.participationSeriesPoints } } });
             await prisma.pointTransaction.create({ data: { userId: uid, amount: ep.participationSeriesPoints, reason: `[Rang-Punkte] Umfrage Teilnahme (${ep.label}): ${event.title}` } });
@@ -598,14 +626,17 @@ export async function POST(
       for (const uid of ep.winnerIds) {
         addToUser(uid, ep.label, 1);
         if (ep.winnerRankPoints > 0) {
-          addToUser(uid, `${ep.label}_punkte`, ep.winnerRankPoints);
-          // → globale Rangliste
+          addToUser(uid, `${ep.label}_Siegerpunkte`, ep.winnerRankPoints);
           if (statCfg.transferToGlobalRanking) {
             await prisma.user.update({ where: { id: uid }, data: { rankPoints: { increment: ep.winnerRankPoints } } });
             await prisma.pointTransaction.create({ data: { userId: uid, amount: ep.winnerRankPoints, reason: `[Rang-Punkte] Umfrage Sieger (${ep.label}): ${event.title}` } });
           }
         }
       }
+    }
+    // +1 Umfrage-Teilnahmen pro Event (nicht pro Poll)
+    for (const uid of eventVoterSet) {
+      addToUser(uid, "Umfrage-Teilnahmen", 1);
     }
 
     // ── Dominion Bonus ───────────────────────────────────────────────────────────
