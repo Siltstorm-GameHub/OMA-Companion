@@ -409,6 +409,31 @@ export async function POST(
       for (const uid of eventWinnerIds) addToUser(uid, body.seriesWinnerTargetField, 1);
     }
 
+    // Poll-Siege in Reihen-Tabelle: Label → +1 pro Gewinner
+    // Re-Edit: alte Poll-Siege rückbuchen
+    if (isReEdit) {
+      const oldPolls = (oldCompletion.pollResults as typeof body.pollResults | undefined) ?? [];
+      for (const poll of (oldPolls ?? [])) {
+        if (!poll.label) continue;
+        for (const uid of (poll.winnerIds ?? [])) addToUser(uid, poll.label, -1);
+      }
+      // Legacy single poll
+      const oldLabel = oldCompletion.pollLabel as string | undefined;
+      const oldPollWinners = (oldCompletion.pollWinnerIds as string[] | undefined) ?? [];
+      if (oldLabel) {
+        for (const uid of oldPollWinners) addToUser(uid, oldLabel, -1);
+      }
+    }
+    // Neue Poll-Siege eintragen (multi-poll)
+    for (const poll of (body.pollResults ?? [])) {
+      if (!poll.label || !poll.winnerIds?.length) continue;
+      for (const uid of poll.winnerIds) addToUser(uid, poll.label, 1);
+    }
+    // Legacy single poll
+    if (body.pollLabel && newPollWinners.length > 0) {
+      for (const uid of newPollWinners) addToUser(uid, body.pollLabel, 1);
+    }
+
     updatedStandings = {
       lastUpdated: new Date().toISOString(),
       processedEventIds: existingJson.processedEventIds.includes(eventId)
