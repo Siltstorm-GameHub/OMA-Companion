@@ -1,27 +1,47 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 
-async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user?.id) return null;
-  const u = session.user as { role?: string };
-  if (u.role !== "admin" && u.role !== "moderator") return null;
-  return session;
-}
-
-// DELETE — PollJob stornieren
-export async function DELETE(
-  _req: NextRequest,
+export async function PATCH(
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!await requireAdmin()) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const { id } = await params;
+  await requireRole("moderator");
+  const { id: pollId } = await params;
 
-  const job = await prisma.pollJob.findUnique({ where: { id } });
-  if (!job) return NextResponse.json({ error: "Nicht gefunden" }, { status: 404 });
-  if (job.status === "sent") return NextResponse.json({ error: "Bereits gesendet" }, { status: 400 });
+  const poll = await prisma.eventPoll.findUnique({ where: { id: pollId } });
+  if (!poll) return NextResponse.json({ error: "Umfrage nicht gefunden" }, { status: 404 });
 
-  await prisma.pollJob.update({ where: { id }, data: { status: "cancelled" } });
-  return NextResponse.json({ ok: true });
+  const body = await req.json() as {
+    startAt?: string;
+    endAt?: string;
+    manualVoterId?: string;
+    manualTargetId?: string;
+    winnerIds?: string[];
+  };
+
+  const updateData: Record<string, unknown> = {};
+
+  if (body.startAt !== undefined) updateData.startAt = new Date(body.startAt);
+  if (body.endAt   !== undefined) updateData.endAt   = new Date(body.endAt);
+  if (body.winnerIds !== undefined) updateData.winnerIds = JSON.stringify(body.winnerIds);
+
+  if (Object.keys(updateData).length > 0) {
+    await prisma.eventPoll.update({ where: { id: pollId }, data: updateData });
+  }
+
+  if (body.manualVoterId && body.manualTargetId) {
+    await prisma.eventPollVote.upsert({
+      where:  { pollId_voterId: { pollId, voterId: body.manualVoterId } },
+      create: { pollId, voterId: body.manualVoterId, targetId: body.manualTargetId, isManual: true },
+      update: { targetId: body.manualTargetId, isManual: true },
+    });
+  }
+
+  const updated = await prisma.eventPoll.findUnique({
+    where: { id: pollId },
+    include: { votes: { select: { voterId: true, targetId: true, isManual: true } } },
+  });
+
+  return NextResponse.json(updated);
 }

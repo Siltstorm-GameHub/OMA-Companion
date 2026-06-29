@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, CalendarDays, ShoppingBag, Trophy, User, Swords, Heart } from "lucide-react";
+import PollBadge from "@/components/PollBadge";
 
 const NAV = [
   { label: "Home",    href: "/dashboard",  icon: LayoutDashboard },
@@ -51,7 +52,7 @@ export default function BottomNav() {
 
               {/* Icon chip */}
               <div
-                className="flex items-center justify-center rounded-sm transition-all duration-200"
+                className="flex items-center justify-center rounded-sm transition-all duration-200 relative"
                 style={{
                   width: active ? 36 : 28,
                   height: 26,
@@ -70,6 +71,7 @@ export default function BottomNav() {
                     transition: "all 200ms",
                   }}
                 />
+                {href === "/events" && <PollBadge />}
               </div>
 
               {/* Label */}

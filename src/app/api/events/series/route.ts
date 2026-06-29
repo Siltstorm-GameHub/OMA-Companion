@@ -4,6 +4,44 @@ import { prisma } from "@/lib/prisma";
 import { calcNextDate } from "@/lib/recurrence";
 import type { RecurrenceType, MonthlyMode } from "@/lib/recurrence";
 
+type PollConfig = {
+  label: string;
+  question: string;
+  voterEligibility: "all" | "participants" | "players" | "spectators";
+  answerType: "players" | "spectators" | "custom";
+  customAnswers: string[];
+  startOffsetHours: number;
+  endOffsetHours: number;
+  participationCoins: number;
+  participationSeriesPoints: number;
+  winnerCoins: number;
+  winnerRankPoints: number;
+};
+
+async function createPollsForEvent(eventId: string, eventStartAt: Date, pollsConfigJson: PollConfig[] | null | undefined) {
+  if (!pollsConfigJson || pollsConfigJson.length === 0) return;
+  for (const cfg of pollsConfigJson) {
+    const startAt = new Date(eventStartAt.getTime() + cfg.startOffsetHours * 3600_000);
+    const endAt   = new Date(eventStartAt.getTime() + cfg.endOffsetHours   * 3600_000);
+    await prisma.eventPoll.create({
+      data: {
+        eventId,
+        label:                    cfg.label,
+        question:                 cfg.question,
+        voterEligibility:         cfg.voterEligibility,
+        answerType:               cfg.answerType,
+        customAnswers:            cfg.customAnswers?.length ? JSON.stringify(cfg.customAnswers) : null,
+        startAt,
+        endAt,
+        participationCoins:       cfg.participationCoins,
+        participationSeriesPoints: cfg.participationSeriesPoints,
+        winnerCoins:              cfg.winnerCoins,
+        winnerRankPoints:         cfg.winnerRankPoints,
+      },
+    });
+  }
+}
+
 export async function GET() {
   const series = await prisma.eventSeries.findMany({
     where: { hidden: false },
@@ -73,7 +111,7 @@ export async function POST(req: NextRequest) {
         }
 
         for (let i = 0; i < dates.length; i++) {
-          await prisma.event.create({
+          const createdEvent = await prisma.event.create({
             data: {
               title: `${name.trim()} #${i + 1}`,
               startAt: dates[i],
@@ -91,10 +129,11 @@ export async function POST(req: NextRequest) {
               spectatorRewardJson: spectatorEnabled ? spectatorJson : null,
             },
           });
+          await createPollsForEvent(createdEvent.id, createdEvent.startAt, pollsConfigJson);
           eventsCreated++;
         }
       } else if (!recurrenceType || recurrenceType === "none") {
-        await prisma.event.create({
+        const createdEvent = await prisma.event.create({
           data: {
             title: `${name.trim()} #1`,
             startAt: start,
@@ -112,6 +151,7 @@ export async function POST(req: NextRequest) {
             spectatorRewardJson: spectatorEnabled ? spectatorJson : null,
           },
         });
+        await createPollsForEvent(createdEvent.id, createdEvent.startAt, pollsConfigJson);
         eventsCreated = 1;
       }
     }
