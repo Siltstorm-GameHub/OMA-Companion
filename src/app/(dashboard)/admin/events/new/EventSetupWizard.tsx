@@ -1571,7 +1571,7 @@ export default function EventSetupWizard({
                       className={inputCls} style={inputStyle} />
                   </div>
                   <div>
-                    <label className={labelCls}>Sieger-Belohnung — Rang-Punkte</label>
+                    <label className={labelCls}>Sieger-Belohnung — Ligapunkte</label>
                     <input type="number" min="0" value={poll.winnerRankPoints}
                       onChange={e => updatePoll(i, { winnerRankPoints: Number(e.target.value) })}
                       className={inputCls} style={inputStyle} />
