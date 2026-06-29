@@ -221,7 +221,10 @@ export default function EventSetupWizard({
     if (recurrenceType === "none") return [start];
     const endLimit = seriesEndDate ? new Date(seriesEndDate + "T23:59:59") : null;
     const dates: Date[] = [start];
-    for (let i = 0; i < 20; i++) {
+    // With endDate: generate ALL dates (no cap) to show exact count
+    // Without endDate: preview only next 5
+    const maxIter = endLimit ? 500 : 5;
+    for (let i = 0; i < maxIter; i++) {
       const last = dates[dates.length - 1];
       const next = calcNextDate(
         last,
