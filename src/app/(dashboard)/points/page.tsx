@@ -1,7 +1,7 @@
 ﻿import { POINT_RULES, CATEGORY_LABELS, DAILY_CAPS, type PointCategory } from "@/lib/points";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/roles";
-import { getRank, getNextRank } from "@/lib/ranks";
+import { getRank, getNextRank, getRankFullLabel } from "@/lib/ranks";
 import { Star, TrendingUp, TrendingDown } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
 import { CountUp } from "@/components/CountUp";
@@ -83,7 +83,7 @@ export default async function PointsPage() {
               <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest mb-1">Rang</p>
               <div className="flex items-center gap-2">
                 <span className="text-xl">{rankRow.emoji}</span>
-                <span className={`text-sm font-bold ${rankRow.color}`}>{rankRow.label}</span>
+                <span className={`text-sm font-bold ${rankRow.color}`}>{getRankFullLabel(rankRow)}</span>
               </div>
             </div>
 

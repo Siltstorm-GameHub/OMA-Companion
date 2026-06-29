@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/lib/notifications";
+import { syncDiscordRole } from "@/lib/discord-roles";
 
 /**
  * PATCH /api/admin/users/[id]/adjust
@@ -27,7 +28,7 @@ export async function PATCH(
 
   const user = await prisma.user.findUnique({
     where:  { id: userId },
-    select: { id: true, points: true, rankPoints: true },
+    select: { id: true, points: true, rankPoints: true, discordId: true },
   });
   if (!user) return NextResponse.json({ error: "User nicht gefunden" }, { status: 404 });
 
@@ -104,6 +105,11 @@ export async function PATCH(
       body:  reason,
       url:   "/leaderboard",
     }).catch(() => {});
+  }
+
+  // Discord-Rolle synchronisieren wenn rankPoints sich geändert haben
+  if (body.rankPoints !== undefined && user.discordId) {
+    syncDiscordRole(user.discordId, user.rankPoints, updated?.rankPoints ?? user.rankPoints).catch(() => {});
   }
 
   return NextResponse.json({ ok: true, user: updated });

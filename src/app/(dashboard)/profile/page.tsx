@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/roles";
-import { getRank, getNextRank } from "@/lib/ranks";
+import { getRank, getNextRank, getRankFullLabel } from "@/lib/ranks";
 import { computeBadges } from "@/lib/badges";
 import BadgesSection from "./BadgesSection";
 import PointsInfoModal from "./PointsInfoModal";
@@ -191,7 +191,7 @@ export default async function ProfilePage() {
             <div className="flex items-center gap-2 flex-wrap mb-0.5">
               <h1 className="text-2xl font-bold text-white tracking-tight">{displayName}</h1>
               <span className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded font-semibold border ${currentRank.color} ${currentRank.bg} ${currentRank.border}`}>
-                {currentRank.emoji} {currentRank.label}
+                {currentRank.emoji} {getRankFullLabel(currentRank)}
               </span>
             </div>
             <p className="text-xs text-gray-500 mb-1">
@@ -207,12 +207,12 @@ export default async function ProfilePage() {
             <div className="mt-3 max-w-xs">
               {nextRank ? (
                 <div className="flex items-center gap-2">
-                  <span className="text-[9px] text-gray-600 whitespace-nowrap">{currentRank.emoji} {currentRank.label}</span>
+                  <span className="text-[9px] text-gray-600 whitespace-nowrap">{currentRank.emoji} {getRankFullLabel(currentRank)}</span>
                   <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
                     <div className="h-full rounded-full transition-all duration-1000"
                       style={{ width: `${rankPct}%`, background: "linear-gradient(90deg, #14b8a6, #2dd4bf)", boxShadow: "0 0 6px rgba(20,184,166,0.6)" }} />
                   </div>
-                  <span className="text-[9px] text-gray-600 whitespace-nowrap">{nextRank.emoji} {nextRank.label}</span>
+                  <span className="text-[9px] text-gray-600 whitespace-nowrap">{nextRank.emoji} {getRankFullLabel(nextRank)}</span>
                   <span className="text-[9px] text-teal-400 tabular-nums">{rankPct}%</span>
                 </div>
               ) : (
