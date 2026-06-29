@@ -26,6 +26,7 @@ function parseRewards(json: string | null | undefined): RewardsConfig {
 
 type SeriesStatConfig = {
   participationPoints: number;
+  spectatorParticipationPoints?: number;
   transferToGlobalRanking?: boolean;
   stats: { field: string; pointsPer: number }[];
   mvpStatField?: string;
@@ -337,14 +338,15 @@ export async function POST(
     }
 
     if (!isReEdit) {
-      for (const { userId } of event.registrations) {
+      // Mitspieler-Teilnahmen
+      for (const { userId, role } of event.registrations) {
+        if (role !== "player") continue;
         addToUser(userId, "participations", 1);
         const eStats = userStats[userId] ?? {};
         for (const { field } of (statCfg.stats ?? [])) {
           const val = eStats[field] ?? 0;
           if (val > 0) addToUser(userId, field, val);
         }
-        // Summierte Reihen-Stats: Event-Wert direkt in die Tabelle übernehmen
         for (const field of (statCfg.aggregatedStatFields ?? [])) {
           const val = eStats[field] ?? 0;
           if (val > 0) {
@@ -353,6 +355,18 @@ export async function POST(
             appliedAggregatedStats[userId][field] = (appliedAggregatedStats[userId][field] ?? 0) + val;
           }
         }
+      }
+      // Zuschauer-Teilnahmen (nur bestätigte Zuschauer)
+      for (const userId of (body.spectatorAttendedIds ?? [])) {
+        addToUser(userId, "Zuschauer-Teilnahmen", 1);
+      }
+      // Zuschauer-Teilnahmepunkte auf globale Rangliste übertragen (wenn aktiviert)
+      const spectatorPts = statCfg.spectatorParticipationPoints ?? 0;
+      if (statCfg.transferToGlobalRanking && spectatorPts > 0 && body.spectatorAttendedIds?.length) {
+        await Promise.all((body.spectatorAttendedIds).flatMap(userId => [
+          prisma.user.update({ where: { id: userId }, data: { rankPoints: { increment: spectatorPts } } }),
+          prisma.pointTransaction.create({ data: { userId, amount: spectatorPts, reason: `[Rang-Punkte] Ligatabelle Zuschauer: ${event.title}` } }),
+        ]));
       }
       if (eventWinnerIds.length > 0 && body.seriesWinnerTargetField) {
         for (const uid of eventWinnerIds) addToUser(uid, body.seriesWinnerTargetField, 1);
@@ -374,6 +388,13 @@ export async function POST(
     }
     if (body.mvpUserId && statCfg.mvpStatField) {
       addToUser(body.mvpUserId, statCfg.mvpStatField, 1);
+    }
+
+    // Re-Edit: Zuschauer-Teilnahmen rückbuchen und neu setzen
+    if (isReEdit) {
+      const oldSpectators = (oldCompletion.spectatorAttendedIds as string[] | undefined) ?? [];
+      for (const userId of oldSpectators) addToUser(userId, "Zuschauer-Teilnahmen", -1);
+      for (const userId of (body.spectatorAttendedIds ?? [])) addToUser(userId, "Zuschauer-Teilnahmen", 1);
     }
 
     // Re-Edit: aggregierte Stats rückbuchen und neu berechnen

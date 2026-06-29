@@ -183,6 +183,7 @@ export default function EventSetupWizard({
   const [recurrenceType, setRecurrenceType]   = useState<"none" | RecurrenceType>("none");
   const [recurrenceMonthlyMode, setRecurrenceMonthlyMode] = useState<MonthlyMode>("dayOfMonth");
   const [statParticipationPts, setStatParticipationPts] = useState(5);
+  const [statSpectatorParticipationPts, setStatSpectatorParticipationPts] = useState(3);
   const [statPtsToGlobalRanking, setStatPtsToGlobalRanking] = useState(false);
   const [statRows, setStatRows]         = useState<StatRow[]>([]);
   const [seriesHidden, setSeriesHidden] = useState(false);
@@ -346,9 +347,10 @@ export default function EventSetupWizard({
 
     const hasStandingsConfig = eventType === "tournament" && (statParticipationPts > 0 || statRows.length > 0);
     const hasEventConfig = eventStatFields.length > 0;
-    const seriesStatConfig = (hasStandingsConfig || hasEventConfig)
+    const seriesStatConfig = (hasStandingsConfig || hasEventConfig || (spectatorMode && statSpectatorParticipationPts > 0))
       ? JSON.stringify({
           participationPoints: statParticipationPts,
+          spectatorParticipationPoints: spectatorMode ? statSpectatorParticipationPts : 0,
           transferToGlobalRanking: statPtsToGlobalRanking,
           stats: statRows,
           ...(eventStatFields.length > 0 && { eventStatFields }),
@@ -1389,15 +1391,23 @@ export default function EventSetupWizard({
           </div>
         )}
 
-        {isSeriesMode && eventType === "tournament" && (
+        {isSeriesMode && (eventType === "tournament" || spectatorMode) && (
           <div className="rounded-xl p-4 border border-indigo-500/20 bg-indigo-500/5 space-y-3">
             <p className="text-sm font-medium text-indigo-300">📊 Gesamttabelle</p>
             <div>
-              <label className={labelCls}>Punkte pro Teilnahme <span className="text-gray-500 font-normal">(Ligatabelle)</span></label>
+              <label className={labelCls}>Punkte pro Mitspieler-Teilnahme <span className="text-gray-500 font-normal">(Ligatabelle)</span></label>
               <input type="number" min="0" value={statParticipationPts}
                 onChange={e => setStatParticipationPts(Number(e.target.value))}
                 className={inputCls} style={inputStyle} />
             </div>
+            {spectatorMode && (
+              <div>
+                <label className={labelCls}>Punkte pro Zuschauer-Teilnahme <span className="text-gray-500 font-normal">(Ligatabelle)</span></label>
+                <input type="number" min="0" value={statSpectatorParticipationPts}
+                  onChange={e => setStatSpectatorParticipationPts(Number(e.target.value))}
+                  className={inputCls} style={inputStyle} />
+              </div>
+            )}
             <label className="flex items-center gap-2 cursor-pointer select-none">
               <input type="checkbox" checked={statPtsToGlobalRanking}
                 onChange={e => setStatPtsToGlobalRanking(e.target.checked)}
