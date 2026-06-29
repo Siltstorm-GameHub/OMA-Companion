@@ -14,7 +14,11 @@ export default function SyncDiscordRolesButton() {
       const res  = await fetch("/api/admin/sync-discord-roles", { method: "POST" });
       const data = await res.json();
       if (data.ok) {
-        setResult(`✅ ${data.synced} / ${data.total} User synchronisiert${data.failed > 0 ? ` · ⚠️ ${data.failed} Fehler` : ""}`);
+        let msg = `✅ ${data.synced} / ${data.total} synchronisiert`;
+        if (data.failed > 0) {
+          msg += ` · ⚠️ ${data.failed} Fehler: ${data.errors.slice(0, 2).join(", ")}`;
+        }
+        setResult(msg);
       } else {
         setResult(`❌ Fehler`);
       }

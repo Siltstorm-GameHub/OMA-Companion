@@ -293,6 +293,8 @@ model Event {
   pollConfigJson       String?
   // JSON: [{ label, question, coins, rankPoints, type: "player"|"spectator" }]
   pollsConfigJson      String?
+  // JSON: { winnerMode: "manual"|"bracket"|"stat", winnerStatField?: string }
+  seriesEventConfigJson String?
   summary              String?
   twitchClipUrl        String?
 
