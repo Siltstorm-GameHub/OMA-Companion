@@ -22,12 +22,15 @@ export async function POST(req: NextRequest) {
     recurrenceType, recurrenceMonthlyMode,
     placementRewardsJson, pollsConfigJson, seriesStatConfig,
     startDate, endDate, hidden,
+    spectatorMode, spectatorRewardJson,
   } = body;
 
   if (!name?.trim()) return NextResponse.json({ error: "Name fehlt" }, { status: 400 });
 
-  const placementJson = placementRewardsJson != null ? JSON.stringify(placementRewardsJson) : null;
-  const pollsJson     = pollsConfigJson      != null ? JSON.stringify(pollsConfigJson)      : null;
+  const placementJson     = placementRewardsJson != null ? JSON.stringify(placementRewardsJson) : null;
+  const pollsJson         = pollsConfigJson      != null ? JSON.stringify(pollsConfigJson)      : null;
+  const spectatorJson     = spectatorRewardJson  != null ? JSON.stringify(spectatorRewardJson)  : null;
+  const spectatorEnabled  = spectatorMode === true;
 
   try {
     const series = await prisma.eventSeries.create({
@@ -84,6 +87,8 @@ export async function POST(req: NextRequest) {
               pointReward: 0,
               placementRewardsJson: placementJson,
               pollsConfigJson: pollsJson,
+              spectatorMode: spectatorEnabled,
+              spectatorRewardJson: spectatorEnabled ? spectatorJson : null,
             },
           });
           eventsCreated++;
@@ -103,6 +108,8 @@ export async function POST(req: NextRequest) {
             pointReward: 0,
             placementRewardsJson: placementJson,
             pollsConfigJson: pollsJson,
+            spectatorMode: spectatorEnabled,
+            spectatorRewardJson: spectatorEnabled ? spectatorJson : null,
           },
         });
         eventsCreated = 1;
