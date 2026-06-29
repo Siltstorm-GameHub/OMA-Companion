@@ -17,6 +17,7 @@ import PartnerLiveBanner from "@/components/PartnerLiveBanner";
 import CommunityLiveBanner from "@/components/CommunityLiveBanner";
 import WhatsAppCommunityBanner from "@/components/WhatsAppCommunityBanner";
 import ClipContestWidget from "@/components/ClipContestWidget";
+import RankIcon from "@/components/RankIcon";
 
 const MEDAL = ["🥇", "🥈", "🥉"];
 
@@ -199,6 +200,7 @@ export default async function DashboardPage() {
               <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-sm border ${ROLE_STYLE[userRole] ?? ROLE_STYLE.user}`}>
                 {ROLE_LABEL[userRole] ?? "Mitglied"}
               </span>
+              <RankIcon rankPoints={myRankPoints} size="sm" />
               <span className="text-xs font-bold tabular-nums text-teal-300">
                 <CountUp to={myRankPoints} duration={900} /> Pts
               </span>
@@ -543,7 +545,8 @@ export default async function DashboardPage() {
                             {name[0].toUpperCase()}
                           </div>}
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 flex items-center gap-1.5">
+                      <RankIcon rankPoints={u.rankPoints} compact size="sm" />
                       <p className="text-xs font-semibold truncate" style={{ color: isMe ? "#2dd4bf" : "white" }}>
                         {name}{isMe && <span className="text-[9px] text-gray-600 ml-1 font-normal">du</span>}
                       </p>

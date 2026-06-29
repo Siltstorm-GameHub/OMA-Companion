@@ -4,6 +4,7 @@ import { getRank, getRankFullLabel } from "@/lib/ranks";
 import { calcStreak } from "@/lib/streak";
 import { Trophy, Swords, Heart, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import RankPointsIcon from "@/components/RankPointsIcon";
+import RankIcon from "@/components/RankIcon";
 import { CountUp } from "@/components/CountUp";
 import Link from "next/link";
 import Image from "next/image";
@@ -228,6 +229,9 @@ export default async function LeaderboardPage() {
                       </div>}
                 </div>
 
+                <div className="flex items-center justify-center gap-1.5 mb-1">
+                  <RankIcon rankPoints={u.rankPoints} compact size="sm" />
+                </div>
                 <p className={`${cfg.fontSize} font-bold truncate max-w-full text-center leading-tight ${isMe ? "text-teal-300" : cfg.nameColor}`}>
                   {displayName}
                   <WanderpocalBadgeServer userId={u.id} holdersMap={holdersMap} />
@@ -333,15 +337,18 @@ export default async function LeaderboardPage() {
                 </div>
 
                 {/* Name + Rang */}
-                <div className="min-w-0">
-                  <p className={`text-sm font-semibold truncate leading-tight ${nameColor}`}>
-                    {displayName}
-                    <WanderpocalBadgeServer userId={u.id} holdersMap={holdersMap} />
-                    {isMe && <span className="text-[10px] text-gray-500 ml-1 font-normal">du</span>}
-                  </p>
-                  <p className="text-[10px] text-gray-600 mt-0.5 truncate">
-                    {getRank(u.rankPoints).emoji} {getRankFullLabel(getRank(u.rankPoints))}
-                  </p>
+                <div className="min-w-0 flex items-center gap-2">
+                  <RankIcon rankPoints={u.rankPoints} compact size="sm" />
+                  <div className="min-w-0">
+                    <p className={`text-sm font-semibold truncate leading-tight ${nameColor}`}>
+                      {displayName}
+                      <WanderpocalBadgeServer userId={u.id} holdersMap={holdersMap} />
+                      {isMe && <span className="text-[10px] text-gray-500 ml-1 font-normal">du</span>}
+                    </p>
+                    <p className="text-[10px] text-gray-600 mt-0.5 truncate">
+                      {getRankFullLabel(getRank(u.rankPoints))}
+                    </p>
+                  </div>
                 </div>
 
                 {/* Siege — nur ab sm */}
