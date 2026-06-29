@@ -172,6 +172,7 @@ export default function EventSetupWizard({
   // ── Series mode state ─────────────────────────────────────────────────────────
   const [seriesName, setSeriesName]     = useState("");
   const [seriesDesc, setSeriesDesc]     = useState("");
+  const [variousGames, setVariousGames] = useState(false);
   const [fixedGame, setFixedGame]       = useState("");
   const [fixedGenre, setFixedGenre]     = useState<EventGenre | null>(null);
   const [fixedPlatforms, setFixedPlatforms] = useState<string[]>([]);
@@ -366,8 +367,8 @@ export default function EventSetupWizard({
         category,
         genre: fixedGenre || null,
         platform: fixedPlatforms.length > 0 ? fixedPlatforms.join(", ") : null,
-        fixedGame: fixedGame || null,
-        fixedFormat: eventType === "tournament" ? seriesFormat : null,
+        fixedGame: variousGames ? null : (fixedGame || null),
+        fixedFormat: (eventType === "tournament" && !variousGames) ? seriesFormat : null,
         discordChannelId: seriesDiscordId || null,
         recurrenceType: recurrenceType !== "none" ? recurrenceType : null,
         recurrenceMonthlyMode: recurrenceType === "monthly" ? recurrenceMonthlyMode : null,
@@ -1124,12 +1125,32 @@ export default function EventSetupWizard({
         </div>
 
         <div>
-          <label className={labelCls}>Festes Spiel (optional)</label>
-          <GameNameInput value={fixedGame} onChange={setFixedGame}
-            placeholder="z.B. Rocket League" className={inputCls} style={inputStyle} />
+          <label className={labelCls}>Spiel</label>
+          <div className="flex gap-2 mb-2">
+            {([false, true] as const).map(v => (
+              <button key={String(v)} type="button"
+                onClick={() => { setVariousGames(v); if (v) { setFixedGame(""); setFixedGenre(null); } }}
+                className={`flex-1 rounded-xl px-3 py-2 text-xs font-medium border transition-all ${
+                  variousGames === v
+                    ? "border-teal-500/60 bg-teal-500/10 text-teal-300"
+                    : "border-white/10 bg-white/5 text-gray-400 hover:border-white/20"
+                }`}>
+                {v ? "🎲 Verschiedene Spiele" : "🎮 Festes Spiel"}
+              </button>
+            ))}
+          </div>
+          {!variousGames && (
+            <GameNameInput value={fixedGame} onChange={setFixedGame}
+              placeholder="z.B. Rocket League" className={inputCls} style={inputStyle} />
+          )}
+          {variousGames && (
+            <p className="text-[11px] text-gray-500 px-1">
+              Jedes Event kann ein eigenes Spiel und Format haben. Format-Vorlage für die Reihe entfällt.
+            </p>
+          )}
         </div>
 
-        {fixedGame && (
+        {!variousGames && fixedGame && (
           <div>
             <label className={labelCls}>Genre</label>
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
@@ -1190,7 +1211,7 @@ export default function EventSetupWizard({
   function renderStepSchedule() {
     return (
       <div className="space-y-5">
-        {eventType === "tournament" && (
+        {eventType === "tournament" && !variousGames && (
           <div>
             <h2 className="text-base font-semibold text-white mb-1">Format</h2>
             <p className="text-xs text-gray-500 mb-3">Standard-Format für alle Events dieser Reihe</p>
@@ -1205,6 +1226,11 @@ export default function EventSetupWizard({
                 </button>
               ))}
             </div>
+          </div>
+        )}
+        {eventType === "tournament" && variousGames && (
+          <div className="rounded-xl px-4 py-3 border border-amber-500/20 bg-amber-500/5">
+            <p className="text-xs text-amber-400">⚠️ Format wird pro Event einzeln festgelegt, da verschiedene Spiele ausgewählt sind.</p>
           </div>
         )}
 
