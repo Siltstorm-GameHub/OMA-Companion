@@ -21,10 +21,13 @@ async function discordRequest(
   return { status: res.status, body };
 }
 
-/** Weist einem User seine aktuelle Rang-Rolle zu – gibt Discord-Antwort zurück. */
+/** Weist einem User seine aktuelle Rang-Rolle zu – gibt Discord-Antwort zurück.
+ *  @param removeOthers  false = nur neue Rolle hinzufügen, keine DELETEs (schnell, für initialen Bulk-Sync)
+ */
 export async function assignCurrentRole(
   discordId: string,
   rankPoints: number,
+  removeOthers = true,
 ): Promise<{ ok: boolean; discordStatus?: number; discordBody?: unknown; error?: string }> {
   const guildId = process.env.DISCORD_GUILD_ID;
   if (!guildId || !process.env.DISCORD_BOT_TOKEN) {
@@ -38,19 +41,20 @@ export async function assignCurrentRole(
     return { ok: false, error: `Env-Variable ${rank.discordRoleEnvKey} nicht gesetzt` };
   }
 
-  // Alle anderen Rang-Rollen entfernen
-  const allRoleIds = [...new Set(RANKS.map(r => getRoleId(r.discordRoleEnvKey)).filter(Boolean))] as string[];
-  const removeTargets = allRoleIds.filter(id => id !== newRoleId);
-  await Promise.allSettled(
-    removeTargets.map(roleId =>
-      discordRequest("DELETE", `/guilds/${guildId}/members/${discordId}/roles/${roleId}`)
-    )
-  );
+  // Alte Rang-Rollen entfernen – nur wenn gewünscht (nicht beim initialen Bulk-Sync)
+  if (removeOthers) {
+    const allRoleIds = [...new Set(RANKS.map(r => getRoleId(r.discordRoleEnvKey)).filter(Boolean))] as string[];
+    const removeTargets = allRoleIds.filter(id => id !== newRoleId);
+    await Promise.allSettled(
+      removeTargets.map(roleId =>
+        discordRequest("DELETE", `/guilds/${guildId}/members/${discordId}/roles/${roleId}`)
+      )
+    );
+  }
 
   // Neue Rolle vergeben
   const result = await discordRequest("PUT", `/guilds/${guildId}/members/${discordId}/roles/${newRoleId}`);
 
-  // 204 = Erfolg, 200 = auch OK (bereits vorhanden)
   const ok = result.status === 204 || result.status === 200;
   return { ok, discordStatus: result.status, discordBody: result.body };
 }
