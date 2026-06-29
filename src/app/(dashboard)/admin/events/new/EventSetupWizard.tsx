@@ -198,6 +198,13 @@ export default function EventSetupWizard({
   const [winnerSeriesStat, setWinnerSeriesStat] = useState("");
   const [aggregatedStatFields, setAggregatedStatFields] = useState<string[]>([]);
 
+  // ── Dominion Bonus ───────────────────────────────────────────────────────────
+  const [dominionEnabled, setDominionEnabled]       = useState(false);
+  const [dominionTriggerStat, setDominionTriggerStat] = useState("");
+  const [dominionThreshold, setDominionThreshold]   = useState(3);
+  const [dominionCoins, setDominionCoins]           = useState(0);
+  const [dominionSeriesPoints, setDominionSeriesPoints] = useState(5);
+
   // ── Shared rewards ───────────────────────────────────────────────────────────
   const [participationCoins, setParticipationCoins] = useState(10);
   const [participationRankPts, setParticipationRankPts] = useState(0);
@@ -364,7 +371,7 @@ export default function EventSetupWizard({
 
     const hasStandingsConfig = eventType === "tournament" && (statParticipationPts > 0 || statRows.length > 0);
     const hasEventConfig = eventStatFields.length > 0;
-    const seriesStatConfig = (hasStandingsConfig || hasEventConfig || (spectatorMode && statSpectatorParticipationPts > 0))
+    const seriesStatConfig = (hasStandingsConfig || hasEventConfig || (spectatorMode && statSpectatorParticipationPts > 0) || dominionEnabled)
       ? JSON.stringify({
           participationPoints: statParticipationPts,
           spectatorParticipationPoints: spectatorMode ? statSpectatorParticipationPts : 0,
@@ -374,6 +381,15 @@ export default function EventSetupWizard({
           ...(aggregatedStatFields.length > 0 && { aggregatedStatFields }),
           ...(winnerStatField && { winnerStatField }),
           ...(winnerSeriesStat && { winnerSeriesStatKey: winnerSeriesStat }),
+          ...(dominionEnabled && dominionTriggerStat && {
+            dominionBonus: {
+              enabled: true,
+              triggerStat: dominionTriggerStat,
+              threshold: dominionThreshold,
+              coins: dominionCoins,
+              seriesPoints: dominionSeriesPoints,
+            },
+          }),
         })
       : null;
 
@@ -1667,7 +1683,76 @@ export default function EventSetupWizard({
           </div>
         )}
 
-        {eventStatFields.length === 0 && (
+        {/* Dominion Bonus */}
+        <div className="rounded-xl p-4 border border-yellow-500/20 bg-yellow-500/5 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-yellow-300">⚡ Dominion Bonus</p>
+              <p className="text-[11px] text-gray-500 mt-0.5">
+                Bonus für Spieler, die eine Stat X-mal in Folge erreichen (z.B. 3× MVP hintereinander).
+              </p>
+            </div>
+            <button type="button" onClick={() => setDominionEnabled(p => !p)}
+              className={`relative w-10 h-5 rounded-full transition-colors flex-shrink-0 ${dominionEnabled ? "bg-yellow-500" : "bg-gray-700"}`}>
+              <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${dominionEnabled ? "left-5" : "left-0.5"}`} />
+            </button>
+          </div>
+
+          {dominionEnabled && (
+            <div className="space-y-3 pt-1">
+              <div>
+                <label className={labelCls}>Trigger-Stat <span className="text-gray-600 font-normal">(was muss X-mal in Folge eintreten?)</span></label>
+                {(() => {
+                  const allTracked = [
+                    "Teilnahmen",
+                    ...(spectatorMode ? ["Zuschauer-Teilnahmen"] : []),
+                    ...(winnerSeriesStat ? [winnerSeriesStat] : []),
+                    ...aggregatedStatFields,
+                    ...polls.filter(p => p.label).map(p => p.label),
+                  ].filter((v, i, a) => a.indexOf(v) === i);
+                  return allTracked.length > 0 ? (
+                    <select value={dominionTriggerStat} onChange={e => setDominionTriggerStat(e.target.value)}
+                      className={inputCls} style={inputStyle}>
+                      <option value="">– Bitte wählen –</option>
+                      {allTracked.map(f => <option key={f} value={f}>{f}</option>)}
+                    </select>
+                  ) : (
+                    <p className="text-[11px] text-amber-500/80 rounded-lg px-3 py-2 border border-amber-500/20 bg-amber-500/5">
+                      Noch keine summierten Stats konfiguriert. Füge zuerst Stats (oben) oder Umfragen (Schritt 4) hinzu.
+                    </p>
+                  );
+                })()}
+              </div>
+              <div>
+                <label className={labelCls}>Schwellenwert (wie viele Male in Folge?)</label>
+                <input type="number" min="2" max="20" value={dominionThreshold}
+                  onChange={e => setDominionThreshold(Number(e.target.value))}
+                  className={inputCls} style={inputStyle} />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className={labelCls}>Bonus — Münzen</label>
+                  <input type="number" min="0" value={dominionCoins}
+                    onChange={e => setDominionCoins(Number(e.target.value))}
+                    className={inputCls} style={inputStyle} />
+                </div>
+                <div>
+                  <label className={labelCls}>Bonus — Ligapunkte</label>
+                  <input type="number" min="0" value={dominionSeriesPoints}
+                    onChange={e => setDominionSeriesPoints(Number(e.target.value))}
+                    className={inputCls} style={inputStyle} />
+                </div>
+              </div>
+              {dominionTriggerStat && (
+                <p className="text-[10px] text-yellow-600">
+                  Bei {dominionThreshold}× „{dominionTriggerStat}" in Folge: +{dominionSeriesPoints} Ligapunkte{dominionCoins > 0 ? ` + ${dominionCoins} Münzen` : ""}. Wird in der Ligatabelle als „Dominion Bonus" gezählt.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {eventStatFields.length === 0 && !dominionEnabled && (
           <p className="text-xs text-gray-600 italic">
             Ohne Stat-Felder werden keine Statistiken je Event getrackt. Du kannst dies auch später
             in den Reihen-Einstellungen konfigurieren.

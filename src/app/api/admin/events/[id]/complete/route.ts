@@ -33,6 +33,13 @@ type SeriesStatConfig = {
   defaultWinnerStatField?: string;
   defaultWinnerTargetField?: string;
   aggregatedStatFields?: string[];
+  dominionBonus?: {
+    enabled: boolean;
+    triggerStat: string;
+    threshold: number;
+    coins: number;
+    seriesPoints: number;
+  };
 };
 
 type StandingsRaw = Record<string, Record<string, number>>;
@@ -435,6 +442,8 @@ export async function POST(
   // ── Series-Standings (optional, nur wenn Event in einer Reihe ist) ──────────
   let updatedStandings: SeriesStandings | null = null;
   let appliedAggregatedStats: Record<string, Record<string, number>> = {};
+  type DominionChange = { streakBefore: number; streakAfter: number; bonusAwarded: boolean; coins: number; seriesPoints: number };
+  let dominionChanges: Record<string, DominionChange> = {};
 
   if (event.series) {
     const statCfg: SeriesStatConfig = (() => {
@@ -587,6 +596,85 @@ export async function POST(
       }
     }
 
+    // ── Dominion Bonus ───────────────────────────────────────────────────────────
+    const dominionCfg = statCfg.dominionBonus;
+
+    if (dominionCfg?.enabled && dominionCfg.triggerStat) {
+      const streakKey = `_streak_${dominionCfg.triggerStat}`;
+      const allUserIds = [...new Set([...event.registrations.map(r => r.userId), ...Object.keys(raw)])];
+
+      // Re-Edit: roll back previous dominion changes
+      if (isReEdit) {
+        const oldChanges = (oldCompletion.dominionChanges ?? {}) as Record<string, DominionChange>;
+        for (const [userId, ch] of Object.entries(oldChanges)) {
+          // Undo streak delta
+          const streakDelta = ch.streakAfter - ch.streakBefore;
+          addToUser(userId, streakKey, -streakDelta);
+          // Undo bonus
+          if (ch.bonusAwarded) {
+            addToUser(userId, "Dominion Bonus", -1);
+            if (ch.seriesPoints > 0) addToUser(userId, "Dominion Bonus Punkte", -ch.seriesPoints);
+          }
+        }
+      }
+
+      for (const userId of allUserIds) {
+        const userRow = raw[userId] ?? {};
+        const streakBefore = userRow[streakKey] ?? 0;
+
+        // Did this user get +1 in the trigger stat this event?
+        const gotTrigger = (() => {
+          const t = dominionCfg.triggerStat;
+          if (t === "Teilnahmen") return event.registrations.some(r => r.userId === userId && r.role === "player");
+          if (t === "Zuschauer-Teilnahmen") return (body.spectatorAttendedIds ?? []).includes(userId);
+          // For poll labels: check eventPollRewards
+          const pollMatch = eventPollRewards.find(ep => ep.label === t);
+          if (pollMatch) return pollMatch.winnerIds.includes(userId);
+          // For aggregated stats or winner stat: check if positive value was added this event
+          if (appliedAggregatedStats[userId]?.[t]) return true;
+          if (t === (body.seriesWinnerTargetField ?? "") && eventWinnerIds.includes(userId)) return true;
+          // For multi-poll body results
+          const pollResult = (body.pollResults ?? []).find(p => p.label === t);
+          if (pollResult) return (pollResult.winnerIds ?? []).includes(userId);
+          return false;
+        })();
+
+        let streakAfter: number;
+        let bonusAwarded = false;
+
+        if (gotTrigger) {
+          streakAfter = streakBefore + 1;
+          if (streakAfter >= dominionCfg.threshold) {
+            // Award bonus
+            bonusAwarded = true;
+            streakAfter = 0; // reset after bonus
+            addToUser(userId, "Dominion Bonus", 1);
+            if (dominionCfg.seriesPoints > 0) {
+              addToUser(userId, "Dominion Bonus Punkte", dominionCfg.seriesPoints);
+              if (statCfg.transferToGlobalRanking) {
+                await prisma.user.update({ where: { id: userId }, data: { rankPoints: { increment: dominionCfg.seriesPoints } } });
+                await prisma.pointTransaction.create({ data: { userId, amount: dominionCfg.seriesPoints, reason: `[Rang-Punkte] Dominion Bonus: ${event.series!.name}` } });
+              }
+            }
+            if (dominionCfg.coins > 0) {
+              await prisma.user.update({ where: { id: userId }, data: { points: { increment: dominionCfg.coins } } });
+              await prisma.pointTransaction.create({ data: { userId, amount: dominionCfg.coins, reason: `[Münzen] Dominion Bonus: ${event.series!.name}` } });
+            }
+          }
+        } else {
+          streakAfter = 0; // reset on miss
+        }
+
+        // Update streak in standings
+        const streakDelta = streakAfter - streakBefore;
+        if (streakDelta !== 0) addToUser(userId, streakKey, streakDelta);
+
+        if (streakBefore !== streakAfter || bonusAwarded) {
+          dominionChanges[userId] = { streakBefore, streakAfter, bonusAwarded, coins: dominionCfg.coins, seriesPoints: dominionCfg.seriesPoints };
+        }
+      }
+    }
+
     updatedStandings = {
       lastUpdated: new Date().toISOString(),
       processedEventIds: existingJson.processedEventIds.includes(eventId)
@@ -619,6 +707,7 @@ export async function POST(
     gamePhaseComplete:       true,
     pollPhaseComplete:       newPollWinners.length > 0 || (body.pollResults?.some(p => p.winnerIds.length > 0) ?? false),
     eventPollRewards:        eventPollRewards.length > 0 ? eventPollRewards : null,
+    dominionChanges:         Object.keys(dominionChanges).length > 0 ? dominionChanges : null,
     lockedAt:                new Date().toISOString(),
   };
 
