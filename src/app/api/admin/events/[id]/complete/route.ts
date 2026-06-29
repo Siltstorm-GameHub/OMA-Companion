@@ -31,6 +31,7 @@ type SeriesStatConfig = {
   mvpStatField?: string;
   defaultWinnerStatField?: string;
   defaultWinnerTargetField?: string;
+  aggregatedStatFields?: string[];
 };
 
 type StandingsRaw = Record<string, Record<string, number>>;
@@ -312,6 +313,7 @@ export async function POST(
 
   // ── Series-Standings (optional, nur wenn Event in einer Reihe ist) ──────────
   let updatedStandings: SeriesStandings | null = null;
+  let appliedAggregatedStats: Record<string, Record<string, number>> = {};
 
   if (event.series) {
     const statCfg: SeriesStatConfig = (() => {
@@ -342,6 +344,15 @@ export async function POST(
           const val = eStats[field] ?? 0;
           if (val > 0) addToUser(userId, field, val);
         }
+        // Summierte Reihen-Stats: Event-Wert direkt in die Tabelle übernehmen
+        for (const field of (statCfg.aggregatedStatFields ?? [])) {
+          const val = eStats[field] ?? 0;
+          if (val > 0) {
+            addToUser(userId, field, val);
+            if (!appliedAggregatedStats[userId]) appliedAggregatedStats[userId] = {};
+            appliedAggregatedStats[userId][field] = (appliedAggregatedStats[userId][field] ?? 0) + val;
+          }
+        }
       }
       if (eventWinnerIds.length > 0 && body.seriesWinnerTargetField) {
         for (const uid of eventWinnerIds) addToUser(uid, body.seriesWinnerTargetField, 1);
@@ -363,6 +374,29 @@ export async function POST(
     }
     if (body.mvpUserId && statCfg.mvpStatField) {
       addToUser(body.mvpUserId, statCfg.mvpStatField, 1);
+    }
+
+    // Re-Edit: aggregierte Stats rückbuchen und neu berechnen
+    if (isReEdit && statCfg.aggregatedStatFields?.length) {
+      const oldApplied = (oldCompletion.appliedAggregatedStats ?? {}) as Record<string, Record<string, number>>;
+      // Alte Werte abziehen
+      for (const [userId, fields] of Object.entries(oldApplied)) {
+        for (const [field, val] of Object.entries(fields)) {
+          if (val > 0) addToUser(userId, field, -val);
+        }
+      }
+      // Neue Werte addieren
+      for (const { userId } of event.registrations) {
+        const eStats = userStats[userId] ?? {};
+        for (const field of statCfg.aggregatedStatFields) {
+          const val = eStats[field] ?? 0;
+          if (val > 0) {
+            addToUser(userId, field, val);
+            if (!appliedAggregatedStats[userId]) appliedAggregatedStats[userId] = {};
+            appliedAggregatedStats[userId][field] = (appliedAggregatedStats[userId][field] ?? 0) + val;
+          }
+        }
+      }
     }
 
     // Event-Gewinner (seriesWinnerTargetField): alten Eintrag rückgängig, neuen setzen
@@ -403,6 +437,7 @@ export async function POST(
     spectatorAttendedIds:    body.spectatorAttendedIds?.length ? body.spectatorAttendedIds : null,
     finalRanking:            body.finalRanking ?? null,
     finalRankingGroups:      body.finalRankingGroups ?? null,
+    appliedAggregatedStats:  Object.keys(appliedAggregatedStats).length > 0 ? appliedAggregatedStats : null,
     gamePhaseComplete:       true,
     pollPhaseComplete:       newPollWinners.length > 0 || (body.pollResults?.some(p => p.winnerIds.length > 0) ?? false),
     lockedAt:                new Date().toISOString(),
