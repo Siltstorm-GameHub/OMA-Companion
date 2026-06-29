@@ -29,8 +29,16 @@ export async function POST() {
       const name = user.username ?? user.name ?? user.discordId;
       errors.push(`${name}: ${result.error ?? `Discord HTTP ${result.discordStatus} – ${JSON.stringify(result.discordBody)}`}`);
     }
-    // Rate-Limit: Discord erlaubt ~5 Rollen-Requests/Sekunde pro Bot
-    await new Promise(r => setTimeout(r, 250));
+    // Rate-Limit einhalten
+    if (!result.ok && result.discordStatus === 429) {
+      const retryAfter = (result.discordBody as { retry_after?: number } | null)?.retry_after ?? 5;
+      await new Promise(r => setTimeout(r, (retryAfter + 0.5) * 1000));
+      // Nochmal versuchen
+      const retry = await assignCurrentRole(user.discordId, user.rankPoints);
+      if (retry.ok) { synced++; failed--; errors.pop(); }
+    } else {
+      await new Promise(r => setTimeout(r, 600));
+    }
   }
 
   return NextResponse.json({ ok: true, total: users.length, synced, failed, errors });
