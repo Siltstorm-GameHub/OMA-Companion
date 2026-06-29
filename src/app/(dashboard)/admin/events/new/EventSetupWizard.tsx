@@ -1509,10 +1509,19 @@ export default function EventSetupWizard({
                 <label className={labelCls}>
                   Reihen-Stat für Event-Sieg <span className="text-gray-600 font-normal">(optional)</span>
                 </label>
-                <input type="text" value={winnerSeriesStat}
-                  onChange={e => setWinnerSeriesStat(e.target.value)}
-                  placeholder={`z.B. Most ${winnerStatField}`}
-                  className={inputCls} style={inputStyle} />
+                {statRows.length > 0 ? (
+                  <select value={winnerSeriesStat} onChange={e => setWinnerSeriesStat(e.target.value)}
+                    className={inputCls} style={inputStyle}>
+                    <option value="">– Kein –</option>
+                    {statRows.filter(r => r.field.trim()).map(r => (
+                      <option key={r.field} value={r.field}>{r.field}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="text-[11px] text-amber-500/80 rounded-lg px-3 py-2 border border-amber-500/20 bg-amber-500/5">
+                    Keine Reihen-Stats in Schritt 4 konfiguriert. Füge dort Stat-Felder hinzu, um hier auswählen zu können.
+                  </p>
+                )}
                 <p className="text-[10px] text-gray-600 mt-1">
                   Dieser Reihen-Stat wird +1 für den Spieler, der das Event gewonnen hat.
                 </p>
