@@ -33,7 +33,8 @@ export async function POST(req: NextRequest) {
   for (const user of users) {
     if (!user.discordId) continue;
 
-    const result = await assignCurrentRole(user.discordId, user.rankPoints);
+    // removeOthers=false: nur PUT, keine DELETEs – sicher für initialen Bulk-Sync
+    const result = await assignCurrentRole(user.discordId, user.rankPoints, false);
 
     if (result.ok) {
       synced++;
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
       // Rate-Limited: warten und einmal wiederholen
       const retryAfter = (result.discordBody as { retry_after?: number } | null)?.retry_after ?? 5;
       await new Promise(r => setTimeout(r, (retryAfter + 0.5) * 1000));
-      const retry = await assignCurrentRole(user.discordId, user.rankPoints);
+      const retry = await assignCurrentRole(user.discordId, user.rankPoints, false);
       if (retry.ok) {
         synced++;
       } else {
