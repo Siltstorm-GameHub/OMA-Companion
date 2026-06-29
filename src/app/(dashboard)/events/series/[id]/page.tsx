@@ -117,13 +117,18 @@ function computeStatStandings(
       eventWinnerId?: string;
       eventWinnerIds?: string[];
       seriesWinnerTargetField?: string;
-      // Legacy single poll
       pollWinnerIds?: string[];
       pollWinnerId?: string;
       pollBonusCoins?: number;
       pollBonusRankPoints?: number;
-      // Multi-poll results
       pollResults?: { winnerIds: string[]; coins: number; rankPoints: number }[];
+      eventPollRewards?: {
+        label: string;
+        winnerIds: string[];
+        voterIds: string[];
+        participationSeriesPoints: number;
+        winnerRankPoints: number;
+      }[];
     } = {};
     try { cd = JSON.parse(ev.completionData); } catch { continue; }
     if (!cd.gamePhaseComplete) continue;
@@ -150,20 +155,40 @@ function computeStatStandings(
       for (const uid of winnerIds) addEv(uid, cd.seriesWinnerTargetField, 1);
     }
 
-    // Legacy single-poll winner bonus → add rankPoints to series totalPoints
+    // Legacy single-poll winner bonus
     const singlePollWinners: string[] = cd.pollWinnerIds ?? (cd.pollWinnerId ? [cd.pollWinnerId] : []);
     const singlePollRankPts = cd.pollBonusRankPoints ?? 0;
     for (const uid of singlePollWinners) {
       if (singlePollRankPts > 0) pollBonusPts[uid] = (pollBonusPts[uid] ?? 0) + singlePollRankPts;
     }
 
-    // Multi-poll results → rankPoints only
+    // Multi-poll results (body.pollResults)
     for (const poll of cd.pollResults ?? []) {
       const pollRankPts = poll.rankPoints ?? 0;
       if (pollRankPts <= 0) continue;
       for (const uid of poll.winnerIds ?? []) {
         pollBonusPts[uid] = (pollBonusPts[uid] ?? 0) + pollRankPts;
       }
+    }
+
+    // DB-basierte EventPoll-Belohnungen: Abstimmungs-Tracking + Ligapunkte
+    const eventVoterSet = new Set<string>(); // einmal pro Event zählen für Umfrage-Teilnahmen
+    for (const ep of cd.eventPollRewards ?? []) {
+      for (const uid of ep.voterIds ?? []) {
+        addEv(uid, `${ep.label}_Abstimmungen`, 1);
+        eventVoterSet.add(uid);
+        if (ep.participationSeriesPoints > 0)
+          addEv(uid, `${ep.label}_Teilnahmepunkte`, ep.participationSeriesPoints);
+      }
+      for (const uid of ep.winnerIds ?? []) {
+        addEv(uid, ep.label, 1);
+        if (ep.winnerRankPoints > 0)
+          addEv(uid, `${ep.label}_Siegerpunkte`, ep.winnerRankPoints);
+      }
+    }
+    // +1 Umfrage-Teilnahmen pro Event (nicht pro Poll)
+    for (const uid of eventVoterSet) {
+      addEv(uid, "Umfrage-Teilnahmen", 1);
     }
   }
 
@@ -259,13 +284,24 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
 
   const configuredFields = new Set(statCfg.stats.map(s => s.field));
   const reservedFields   = new Set(["participations", "__legacyPoints"]);
+  // Internal streak keys should never appear as columns
+  const isInternalField  = (f: string) => f.startsWith("_streak_");
   const specialFields    = new Set(
     [statCfg.mvpStatField, statCfg.defaultWinnerTargetField].filter((f): f is string => !!f)
   );
-  const extraCols = [...specialFields].filter(
-    f => !configuredFields.has(f) && !reservedFields.has(f) &&
-         standings.some(row => (row.stats[f] ?? 0) > 0)
-  );
+  // Collect all extra fields present in standings that are not configured stats or reserved
+  const allExtraFields = new Set<string>();
+  for (const row of standings) {
+    for (const f of Object.keys(row.stats)) {
+      if (!configuredFields.has(f) && !reservedFields.has(f) && !isInternalField(f))
+        allExtraFields.add(f);
+    }
+  }
+  // Special fields first, then poll/dominion fields
+  const extraCols = [
+    ...[...specialFields].filter(f => allExtraFields.has(f)),
+    ...[...allExtraFields].filter(f => !specialFields.has(f)).sort(),
+  ].filter(f => standings.some(row => (row.stats[f] ?? 0) > 0));
   const showPoints = standings.some(r => r.totalPoints > 0);
 
   // ── Delta since last game-phase-complete event ─────────────────────────────
