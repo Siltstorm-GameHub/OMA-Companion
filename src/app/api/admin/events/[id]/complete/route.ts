@@ -37,7 +37,8 @@ type SeriesStatConfig = {
   winnerSeriesStatKey?: string;     // old: single field (backward compat)
   dominionBonus?: {
     enabled: boolean;
-    triggerStat: string;
+    triggerStats: string[];   // new: array (any match keeps streak)
+    triggerStat?: string;     // old: single (backward compat)
     threshold: number;
     coins: number;
     seriesPoints: number;
@@ -693,8 +694,10 @@ export async function POST(
     // ── Dominion Bonus ───────────────────────────────────────────────────────────
     const dominionCfg = statCfg.dominionBonus;
 
-    if (dominionCfg?.enabled && dominionCfg.triggerStat) {
-      const streakKey = `_streak_${dominionCfg.triggerStat}`;
+    const dominionTriggerStats = dominionCfg?.triggerStats ?? (dominionCfg?.triggerStat ? [dominionCfg.triggerStat] : []);
+    const streakKey = `_streak_[${dominionTriggerStats.join(",")}]`;
+
+    if (dominionCfg?.enabled && dominionTriggerStats.length > 0) {
       const allUserIds = [...new Set([...event.registrations.map(r => r.userId), ...Object.keys(raw)])];
 
       // Re-Edit: roll back previous dominion changes
@@ -716,22 +719,18 @@ export async function POST(
         const userRow = raw[userId] ?? {};
         const streakBefore = userRow[streakKey] ?? 0;
 
-        // Did this user get +1 in the trigger stat this event?
-        const gotTrigger = (() => {
-          const t = dominionCfg.triggerStat;
+        // Did this user get +1 in ANY of the trigger stats this event?
+        const gotTrigger = dominionTriggerStats.some(t => {
           if (t === "Teilnahmen") return event.registrations.some(r => r.userId === userId && r.role === "player");
           if (t === "Zuschauer-Teilnahmen") return (body.spectatorAttendedIds ?? []).includes(userId);
-          // For poll labels: check eventPollRewards
           const pollMatch = eventPollRewards.find(ep => ep.label === t);
           if (pollMatch) return pollMatch.winnerIds.includes(userId);
-          // For aggregated stats or winner stat: check if positive value was added this event
           if (appliedAggregatedStats[userId]?.[t]) return true;
           if (winnerTargetKeys.includes(t) && eventWinnerIds.includes(userId)) return true;
-          // For multi-poll body results
           const pollResult = (body.pollResults ?? []).find(p => p.label === t);
           if (pollResult) return (pollResult.winnerIds ?? []).includes(userId);
           return false;
-        })();
+        });
 
         let streakAfter: number;
         let bonusAwarded = false;
