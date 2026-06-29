@@ -485,13 +485,28 @@ export async function POST(
         for (const uid of eventWinnerIds) addToUser(uid, body.seriesWinnerTargetField, 1);
       }
 
-      // Tabellenpunkte auf globale Rangliste übertragen
+      // Teilnahme-Ligapunkte → globale Rangliste
       if (statCfg.transferToGlobalRanking && statCfg.participationPoints > 0 && event.registrations.length > 0) {
         const pts = statCfg.participationPoints;
-        await Promise.all(event.registrations.flatMap(({ userId }) => [
+        await Promise.all(playerIds.flatMap(userId => [
           prisma.user.update({ where: { id: userId }, data: { rankPoints: { increment: pts } } }),
           prisma.pointTransaction.create({ data: { userId, amount: pts, reason: `[Rang-Punkte] Ligatabelle Teilnahme: ${event.title}` } }),
         ]));
+      }
+
+      // Stat-Tabellen-Punkte (pointsPer) → globale Rangliste
+      if (statCfg.transferToGlobalRanking && (statCfg.stats ?? []).length > 0) {
+        for (const { userId } of event.registrations.filter(r => r.role === "player")) {
+          const eStats = userStats[userId] ?? {};
+          let total = 0;
+          for (const { field, pointsPer } of statCfg.stats) {
+            total += (eStats[field] ?? 0) * pointsPer;
+          }
+          if (total > 0) {
+            await prisma.user.update({ where: { id: userId }, data: { rankPoints: { increment: total } } });
+            await prisma.pointTransaction.create({ data: { userId, amount: total, reason: `[Rang-Punkte] Ligatabelle Stats: ${event.title}` } });
+          }
+        }
       }
     }
 
@@ -573,12 +588,22 @@ export async function POST(
       if (ep.participationSeriesPoints > 0) {
         for (const uid of ep.voterIds) {
           addToUser(uid, `${ep.label}_teilnahme`, ep.participationSeriesPoints);
+          // → globale Rangliste
+          if (statCfg.transferToGlobalRanking) {
+            await prisma.user.update({ where: { id: uid }, data: { rankPoints: { increment: ep.participationSeriesPoints } } });
+            await prisma.pointTransaction.create({ data: { userId: uid, amount: ep.participationSeriesPoints, reason: `[Rang-Punkte] Umfrage Teilnahme (${ep.label}): ${event.title}` } });
+          }
         }
       }
       for (const uid of ep.winnerIds) {
         addToUser(uid, ep.label, 1);
         if (ep.winnerRankPoints > 0) {
           addToUser(uid, `${ep.label}_punkte`, ep.winnerRankPoints);
+          // → globale Rangliste
+          if (statCfg.transferToGlobalRanking) {
+            await prisma.user.update({ where: { id: uid }, data: { rankPoints: { increment: ep.winnerRankPoints } } });
+            await prisma.pointTransaction.create({ data: { userId: uid, amount: ep.winnerRankPoints, reason: `[Rang-Punkte] Umfrage Sieger (${ep.label}): ${event.title}` } });
+          }
         }
       }
     }
