@@ -378,6 +378,8 @@ export default function EventSetupWizard({
         endDate: seriesEndDate ? new Date(seriesEndDate + "T23:59:59").toISOString() : null,
         eventType,
         hidden: seriesHidden,
+        spectatorMode,
+        spectatorRewardJson: spectatorMode ? { coins: spectatorCoins, rankPoints: spectatorRankPts } : null,
       }),
     });
 
