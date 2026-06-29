@@ -199,7 +199,7 @@ export default function EventSetupWizard({
 
   // ── Dominion Bonus ───────────────────────────────────────────────────────────
   const [dominionEnabled, setDominionEnabled]       = useState(false);
-  const [dominionTriggerStat, setDominionTriggerStat] = useState("");
+  const [dominionTriggerStats, setDominionTriggerStats] = useState<string[]>([]);
   const [dominionThreshold, setDominionThreshold]   = useState(3);
   const [dominionCoins, setDominionCoins]           = useState(0);
   const [dominionSeriesPoints, setDominionSeriesPoints] = useState(5);
@@ -381,10 +381,10 @@ export default function EventSetupWizard({
           ...(aggregatedStatFields.length > 0 && { aggregatedStatFields }),
           ...(winnerStatField && { winnerStatField }),
           ...(winnerStatKeys.length > 0 && { winnerStatKeys }),
-          ...(dominionEnabled && dominionTriggerStat && {
+          ...(dominionEnabled && dominionTriggerStats.length > 0 && {
             dominionBonus: {
               enabled: true,
-              triggerStat: dominionTriggerStat,
+              triggerStats: dominionTriggerStats,
               threshold: dominionThreshold,
               coins: dominionCoins,
               seriesPoints: dominionSeriesPoints,
@@ -1706,7 +1706,7 @@ export default function EventSetupWizard({
           {dominionEnabled && (
             <div className="space-y-3 pt-1">
               <div>
-                <label className={labelCls}>Trigger-Stat <span className="text-gray-600 font-normal">(was muss X-mal in Folge eintreten?)</span></label>
+                <label className={labelCls}>Trigger-Stats <span className="text-gray-600 font-normal">(mind. eine muss X-mal in Folge eintreten)</span></label>
                 {(() => {
                   const allTracked = [
                     "Teilnahmen",
@@ -1716,11 +1716,25 @@ export default function EventSetupWizard({
                     ...polls.filter(p => p.label).map(p => p.label),
                   ].filter((v, i, a) => a.indexOf(v) === i);
                   return allTracked.length > 0 ? (
-                    <select value={dominionTriggerStat} onChange={e => setDominionTriggerStat(e.target.value)}
-                      className={inputCls} style={inputStyle}>
-                      <option value="">– Bitte wählen –</option>
-                      {allTracked.map(f => <option key={f} value={f}>{f}</option>)}
-                    </select>
+                    <div className="space-y-1.5">
+                      {allTracked.map(f => {
+                        const checked = dominionTriggerStats.includes(f);
+                        return (
+                          <button key={f} type="button"
+                            onClick={() => setDominionTriggerStats(prev =>
+                              checked ? prev.filter(s => s !== f) : [...prev, f]
+                            )}
+                            className={`w-full flex items-center gap-3 rounded-xl px-3 py-2 border text-xs text-left transition-all ${
+                              checked ? "border-yellow-500/60 bg-yellow-500/10 text-yellow-300" : "border-white/10 bg-white/5 text-gray-400"
+                            }`}>
+                            <div className={`w-3.5 h-3.5 rounded border flex-shrink-0 flex items-center justify-center ${checked ? "border-yellow-400 bg-yellow-500" : "border-gray-600"}`}>
+                              {checked && <Check className="w-2.5 h-2.5 text-white" />}
+                            </div>
+                            {f}
+                          </button>
+                        );
+                      })}
+                    </div>
                   ) : (
                     <p className="text-[11px] text-amber-500/80 rounded-lg px-3 py-2 border border-amber-500/20 bg-amber-500/5">
                       Noch keine summierten Stats konfiguriert. Füge zuerst Stats (oben) oder Umfragen (Schritt 4) hinzu.
@@ -1748,9 +1762,9 @@ export default function EventSetupWizard({
                     className={inputCls} style={inputStyle} />
                 </div>
               </div>
-              {dominionTriggerStat && (
+              {dominionTriggerStats.length > 0 && (
                 <p className="text-[10px] text-yellow-600">
-                  Bei {dominionThreshold}× „{dominionTriggerStat}" in Folge: +{dominionSeriesPoints} Ligapunkte{dominionCoins > 0 ? ` + ${dominionCoins} Münzen` : ""}. Wird in der Ligatabelle als „Dominion Bonus" gezählt.
+                  Bei {dominionThreshold}× mind. eine von [{dominionTriggerStats.join(", ")}] in Folge: +{dominionSeriesPoints} Ligapunkte{dominionCoins > 0 ? ` + ${dominionCoins} Münzen` : ""}. Wird in der Ligatabelle als „Dominion Bonus" gezählt.
                 </p>
               )}
             </div>
