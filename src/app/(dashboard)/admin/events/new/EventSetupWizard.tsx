@@ -36,7 +36,7 @@ type PollConfig = {
 };
 
 type PlacementReward = { place: number; coins: number; rankPoints: number };
-type StatRow = { field: string; pointsPer: number };
+type StatRow = { field: string; pointsPer: number; isWinnerStat?: boolean };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -195,7 +195,6 @@ export default function EventSetupWizard({
   const [seriesHidden, setSeriesHidden] = useState(false);
   const [eventStatFields, setEventStatFields] = useState<string[]>([]);
   const [winnerStatField, setWinnerStatField] = useState("");
-  const [winnerSeriesStat, setWinnerSeriesStat] = useState("");
   const [aggregatedStatFields, setAggregatedStatFields] = useState<string[]>([]);
 
   // ── Dominion Bonus ───────────────────────────────────────────────────────────
@@ -371,6 +370,7 @@ export default function EventSetupWizard({
 
     const hasStandingsConfig = eventType === "tournament" && (statParticipationPts > 0 || statRows.length > 0);
     const hasEventConfig = eventStatFields.length > 0;
+    const winnerStatKeys = statRows.filter(r => r.isWinnerStat).map(r => r.field);
     const seriesStatConfig = (hasStandingsConfig || hasEventConfig || (spectatorMode && statSpectatorParticipationPts > 0) || dominionEnabled)
       ? JSON.stringify({
           participationPoints: statParticipationPts,
@@ -380,7 +380,7 @@ export default function EventSetupWizard({
           ...(eventStatFields.length > 0 && { eventStatFields }),
           ...(aggregatedStatFields.length > 0 && { aggregatedStatFields }),
           ...(winnerStatField && { winnerStatField }),
-          ...(winnerSeriesStat && { winnerSeriesStatKey: winnerSeriesStat }),
+          ...(winnerStatKeys.length > 0 && { winnerStatKeys }),
           ...(dominionEnabled && dominionTriggerStat && {
             dominionBonus: {
               enabled: true,
@@ -1448,7 +1448,7 @@ export default function EventSetupWizard({
               <span className="text-xs text-gray-300">Tabellenpunkte bei Event-Abschluss auf Gesamtrangliste übertragen</span>
             </label>
             <div className="space-y-2">
-              <p className="text-[11px] text-gray-500">Stat-Felder — Feldname → Punkte pro Einheit</p>
+              <p className="text-[11px] text-gray-500">Stat-Felder — Feldname → Punkte pro Einheit — 🏆 = +1 bei Event-Sieg</p>
               {statRows.map((row, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <input type="text" value={row.field}
@@ -1458,6 +1458,12 @@ export default function EventSetupWizard({
                     onChange={e => setStatRows(prev => prev.map((r, ri) => ri === i ? { ...r, pointsPer: Number(e.target.value) } : r))}
                     placeholder="Pkt" className="w-16 rounded-xl px-2.5 py-2.5 text-sm text-white text-center outline-none shrink-0"
                     style={inputStyle} />
+                  <button type="button"
+                    title="Dieser Stat bekommt +1 wenn ein Spieler ein Event in dieser Reihe gewinnt"
+                    onClick={() => setStatRows(prev => prev.map((r, ri) => ri === i ? { ...r, isWinnerStat: !r.isWinnerStat } : r))}
+                    className={`shrink-0 text-base transition-colors ${row.isWinnerStat ? "opacity-100" : "opacity-30 hover:opacity-60"}`}>
+                    🏆
+                  </button>
                   <button type="button" onClick={() => setStatRows(prev => prev.filter((_, ri) => ri !== i))}
                     className="text-gray-600 hover:text-red-400 transition-colors shrink-0">
                     <Trash2 className="w-3.5 h-3.5" />
@@ -1587,6 +1593,7 @@ export default function EventSetupWizard({
 
   // ── Step 4 (Series): Event-Einstellungen ─────────────────────────────────────
   function renderStepSeriesEventSettings() {
+    const winnerStatKeys = statRows.filter(r => r.isWinnerStat).map(r => r.field);
     return (
       <div className="space-y-6">
         <div>
@@ -1600,19 +1607,30 @@ export default function EventSetupWizard({
           </p>
         </div>
 
-        <div className="rounded-xl p-4 border border-amber-500/20 bg-amber-500/5">
-          <p className="text-sm font-medium text-amber-300 mb-1">Trackte Statistiken je Event</p>
-          <p className="text-[11px] text-gray-500 mb-3">
-            Diese Stats werden pro Event erfasst. „Teilnahme" wird für jeden Mitspieler automatisch +1 getrackt.
-          </p>
-          <StatFieldEditor fields={eventStatFields} onChange={f => {
-            setEventStatFields(f);
-            setAggregatedStatFields(prev => prev.filter(s => f.includes(s)));
-            if (!f.includes(winnerStatField)) setWinnerStatField("");
-          }} />
-        </div>
+        {variousGames && (
+          <div className="rounded-xl px-4 py-3 border border-blue-500/20 bg-blue-500/5">
+            <p className="text-xs text-blue-300">
+              Bei verschiedenen Spielen wird die Sieger-Ermittlung pro Event konfiguriert.
+              Stat-Tracking und Sieger-Ermittlung entfallen als Vorlage.
+            </p>
+          </div>
+        )}
 
-        {eventStatFields.length > 0 && (
+        {!variousGames && (
+          <div className="rounded-xl p-4 border border-amber-500/20 bg-amber-500/5">
+            <p className="text-sm font-medium text-amber-300 mb-1">Trackte Statistiken je Event</p>
+            <p className="text-[11px] text-gray-500 mb-3">
+              Diese Stats werden pro Event erfasst. „Teilnahme" wird für jeden Mitspieler automatisch +1 getrackt.
+            </p>
+            <StatFieldEditor fields={eventStatFields} onChange={f => {
+              setEventStatFields(f);
+              setAggregatedStatFields(prev => prev.filter(s => f.includes(s)));
+              if (!f.includes(winnerStatField)) setWinnerStatField("");
+            }} />
+          </div>
+        )}
+
+        {!variousGames && eventStatFields.length > 0 && (
           <div className="rounded-xl p-4 border border-teal-500/20 bg-teal-500/5 space-y-3">
             <p className="text-sm font-medium text-teal-300">🏆 Sieger-Ermittlung</p>
             <p className="text-[11px] text-gray-500">
@@ -1626,33 +1644,20 @@ export default function EventSetupWizard({
                 {eventStatFields.map(f => <option key={f} value={f}>{f}</option>)}
               </select>
             </div>
-            {winnerStatField && (
-              <div>
-                <label className={labelCls}>
-                  Reihen-Stat für Event-Sieg <span className="text-gray-600 font-normal">(optional)</span>
-                </label>
-                {statRows.length > 0 ? (
-                  <select value={winnerSeriesStat} onChange={e => setWinnerSeriesStat(e.target.value)}
-                    className={inputCls} style={inputStyle}>
-                    <option value="">– Kein –</option>
-                    {statRows.filter(r => r.field.trim()).map(r => (
-                      <option key={r.field} value={r.field}>{r.field}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <p className="text-[11px] text-amber-500/80 rounded-lg px-3 py-2 border border-amber-500/20 bg-amber-500/5">
-                    Keine Reihen-Stats in Schritt 4 konfiguriert. Füge dort Stat-Felder hinzu, um hier auswählen zu können.
-                  </p>
-                )}
-                <p className="text-[10px] text-gray-600 mt-1">
-                  Dieser Reihen-Stat wird +1 für den Spieler, der das Event gewonnen hat.
-                </p>
-              </div>
+            {winnerStatField && winnerStatKeys.length === 0 && (
+              <p className="text-[11px] text-amber-500/80 rounded-lg px-3 py-2 border border-amber-500/20 bg-amber-500/5">
+                Markiere in Schritt 4 einen Reihen-Stat mit 🏆, um +1 für den Event-Sieger zu tracken.
+              </p>
+            )}
+            {winnerStatKeys.length > 0 && (
+              <p className="text-[10px] text-teal-600 mt-1">
+                Reihen-Stats bei Event-Sieg +1: {winnerStatKeys.join(", ")}
+              </p>
             )}
           </div>
         )}
 
-        {eventStatFields.length > 0 && (
+        {!variousGames && eventStatFields.length > 0 && (
           <div className="rounded-xl p-4 border border-indigo-500/20 bg-indigo-500/5 space-y-3">
             <p className="text-sm font-medium text-indigo-300">📈 Summierte Reihen-Stats</p>
             <p className="text-[11px] text-gray-500">
@@ -1706,7 +1711,7 @@ export default function EventSetupWizard({
                   const allTracked = [
                     "Teilnahmen",
                     ...(spectatorMode ? ["Zuschauer-Teilnahmen"] : []),
-                    ...(winnerSeriesStat ? [winnerSeriesStat] : []),
+                    ...winnerStatKeys,
                     ...aggregatedStatFields,
                     ...polls.filter(p => p.label).map(p => p.label),
                   ].filter((v, i, a) => a.indexOf(v) === i);
@@ -1752,7 +1757,7 @@ export default function EventSetupWizard({
           )}
         </div>
 
-        {eventStatFields.length === 0 && !dominionEnabled && (
+        {!variousGames && eventStatFields.length === 0 && !dominionEnabled && (
           <p className="text-xs text-gray-600 italic">
             Ohne Stat-Felder werden keine Statistiken je Event getrackt. Du kannst dies auch später
             in den Reihen-Einstellungen konfigurieren.
@@ -1852,7 +1857,7 @@ export default function EventSetupWizard({
             <p>📈 Summiert in Reihe: {aggregatedStatFields.join(", ")}</p>
           )}
           {winnerStatField && (
-            <p>🏆 Sieger via: {winnerStatField}{winnerSeriesStat ? ` → Reihenstat „${winnerSeriesStat}" +1` : ""}</p>
+            <p>🏆 Sieger via: {winnerStatField}{statRows.filter(r => r.isWinnerStat && r.field).length > 0 ? ` → Reihenstat(s) „${statRows.filter(r => r.isWinnerStat && r.field).map(r => r.field).join(", ")}" +1` : ""}</p>
           )}
         </div>
       </div>

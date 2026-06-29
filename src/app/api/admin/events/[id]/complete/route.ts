@@ -33,6 +33,8 @@ type SeriesStatConfig = {
   defaultWinnerStatField?: string;
   defaultWinnerTargetField?: string;
   aggregatedStatFields?: string[];
+  winnerStatKeys?: string[];        // new: array of series stat fields to +1 on event win
+  winnerSeriesStatKey?: string;     // old: single field (backward compat)
   dominionBonus?: {
     enabled: boolean;
     triggerStat: string;
@@ -113,6 +115,15 @@ export async function POST(
     },
   });
 
+  // Parse per-event series config (winnerMode etc.)
+  const seriesEventCfg = (() => {
+    try {
+      return (event as { seriesEventConfigJson?: string | null } | null)?.seriesEventConfigJson
+        ? JSON.parse((event as { seriesEventConfigJson: string }).seriesEventConfigJson)
+        : null;
+    } catch { return null; }
+  })() as { winnerMode?: string; winnerStatField?: string } | null;
+
   if (!event) return NextResponse.json({ error: "Event nicht gefunden" }, { status: 404 });
 
   const isReEdit = !!event.completionData;
@@ -134,15 +145,38 @@ export async function POST(
     }
   }
 
-  // Event-Gewinner (höchster Wert im winnerStatField — alle bei Gleichstand)
+  // Event-Gewinner — determined by seriesEventCfg.winnerMode, or fallback to body fields
   let eventWinnerId: string | undefined;       // compat: erster Gewinner
   let eventWinnerIds: string[] = [];
-  if (body.winnerStatField) {
-    let maxVal = -Infinity;
-    for (const [uid, stats] of Object.entries(userStats)) {
-      const val = stats[body.winnerStatField] ?? 0;
-      if (val > maxVal) { maxVal = val; eventWinnerId = uid; eventWinnerIds = [uid]; }
-      else if (val === maxVal && maxVal > -Infinity) { eventWinnerIds.push(uid); }
+
+  const effectiveWinnerMode = seriesEventCfg?.winnerMode ?? (body.winnerStatField ? "stat" : "manual");
+
+  if (effectiveWinnerMode === "bracket") {
+    // winner = first entry of finalRankingJson
+    const finalRanking: string[] = (() => {
+      try { return (event as { finalRankingJson?: string | null } | null)?.finalRankingJson ? JSON.parse((event as { finalRankingJson: string }).finalRankingJson) : []; }
+      catch { return []; }
+    })();
+    if (finalRanking.length > 0) {
+      eventWinnerId = finalRanking[0];
+      eventWinnerIds = [finalRanking[0]];
+    }
+  } else if (effectiveWinnerMode === "stat") {
+    const statField = seriesEventCfg?.winnerStatField ?? body.winnerStatField;
+    if (statField) {
+      let maxVal = -Infinity;
+      for (const [uid, stats] of Object.entries(userStats)) {
+        const val = stats[statField] ?? 0;
+        if (val > maxVal) { maxVal = val; eventWinnerId = uid; eventWinnerIds = [uid]; }
+        else if (val === maxVal && maxVal > -Infinity) { eventWinnerIds.push(uid); }
+      }
+    }
+  } else {
+    // manual: use body.finalRanking[0] or body.mvpUserId as winner
+    const manualWinner = body.finalRanking?.[0] ?? body.mvpUserId;
+    if (manualWinner) {
+      eventWinnerId = manualWinner;
+      eventWinnerIds = [manualWinner];
     }
   }
 
@@ -450,6 +484,12 @@ export async function POST(
       raw[userId][field] = (raw[userId][field] ?? 0) + value;
     }
 
+    // Determine which series stat fields get +1 for event winners (hoisted for use in dominion check)
+    const winnerTargetKeys: string[] = statCfg.winnerStatKeys
+      ?? (statCfg.winnerSeriesStatKey
+        ? [statCfg.winnerSeriesStatKey]
+        : (body.seriesWinnerTargetField ? [body.seriesWinnerTargetField] : []));
+
     if (!isReEdit) {
       // Mitspieler-Teilnahmen
       for (const { userId, role } of event.registrations) {
@@ -481,8 +521,10 @@ export async function POST(
           prisma.pointTransaction.create({ data: { userId, amount: spectatorPts, reason: `[Rang-Punkte] Ligatabelle Zuschauer: ${event.title}` } }),
         ]));
       }
-      if (eventWinnerIds.length > 0 && body.seriesWinnerTargetField) {
-        for (const uid of eventWinnerIds) addToUser(uid, body.seriesWinnerTargetField, 1);
+      if (eventWinnerIds.length > 0 && winnerTargetKeys.length > 0) {
+        for (const uid of eventWinnerIds) {
+          for (const key of winnerTargetKeys) addToUser(uid, key, 1);
+        }
       }
 
       // Teilnahme-Ligapunkte → globale Rangliste
@@ -548,14 +590,23 @@ export async function POST(
       }
     }
 
-    // Event-Gewinner (seriesWinnerTargetField): alten Eintrag rückgängig, neuen setzen
-    if (isReEdit && body.seriesWinnerTargetField) {
+    // Event-Gewinner (winnerStatKeys): alten Eintrag rückgängig, neuen setzen
+    // Also handle legacy completionData that stored a single seriesWinnerTargetField
+    const oldWinnerTargetField = (oldCompletion.seriesWinnerTargetField as string | undefined);
+    if (isReEdit) {
       const oldWinnerIds: string[] = (oldCompletion.eventWinnerIds as string[] | undefined) ??
         (oldCompletion.eventWinnerId ? [oldCompletion.eventWinnerId as string] : []);
-      for (const uid of oldWinnerIds) addToUser(uid, body.seriesWinnerTargetField, -1);
+      const keysToRollback = winnerTargetKeys.length > 0
+        ? winnerTargetKeys
+        : (oldWinnerTargetField ? [oldWinnerTargetField] : []);
+      for (const uid of oldWinnerIds) {
+        for (const key of keysToRollback) addToUser(uid, key, -1);
+      }
     }
-    if (isReEdit && eventWinnerIds.length > 0 && body.seriesWinnerTargetField) {
-      for (const uid of eventWinnerIds) addToUser(uid, body.seriesWinnerTargetField, 1);
+    if (isReEdit && eventWinnerIds.length > 0 && winnerTargetKeys.length > 0) {
+      for (const uid of eventWinnerIds) {
+        for (const key of winnerTargetKeys) addToUser(uid, key, 1);
+      }
     }
 
     // Poll-Siege in Reihen-Tabelle: Label → +1 pro Gewinner
@@ -675,7 +726,7 @@ export async function POST(
           if (pollMatch) return pollMatch.winnerIds.includes(userId);
           // For aggregated stats or winner stat: check if positive value was added this event
           if (appliedAggregatedStats[userId]?.[t]) return true;
-          if (t === (body.seriesWinnerTargetField ?? "") && eventWinnerIds.includes(userId)) return true;
+          if (winnerTargetKeys.includes(t) && eventWinnerIds.includes(userId)) return true;
           // For multi-poll body results
           const pollResult = (body.pollResults ?? []).find(p => p.label === t);
           if (pollResult) return (pollResult.winnerIds ?? []).includes(userId);

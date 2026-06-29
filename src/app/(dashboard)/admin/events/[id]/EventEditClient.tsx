@@ -111,7 +111,7 @@ function toDatetimeLocal(d: Date | string) {
   return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
 }
 
-type TabKey = "details" | "rewards" | "tournament" | "participants";
+type TabKey = "details" | "rewards" | "tournament" | "participants" | "series";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export default function EventEditClient({ event, allUsers }: { event: any; allUsers: User[] }) {
@@ -159,6 +159,17 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
 
   const [hidden, setHidden] = useState<boolean>(event.hidden ?? false);
   const [hiddenBusy, setHiddenBusy] = useState(false);
+
+  /* ── Series config state ── */
+  const initialSeriesCfg = (() => {
+    try { return event.seriesEventConfigJson ? JSON.parse(event.seriesEventConfigJson) as { winnerMode?: string; winnerStatField?: string } : null; }
+    catch { return null; }
+  })();
+  const [seriesWinnerMode, setSeriesWinnerMode] = useState<"manual" | "bracket" | "stat">(
+    (initialSeriesCfg?.winnerMode as "manual" | "bracket" | "stat") ?? "manual"
+  );
+  const [seriesWinnerStatField, setSeriesWinnerStatField] = useState<string>(initialSeriesCfg?.winnerStatField ?? "");
+  const [seriesCfgLoading, setSeriesCfgLoading] = useState(false);
 
   async function toggleHidden() {
     setHiddenBusy(true);
@@ -352,12 +363,26 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
     }
   }
 
+  async function saveSeriesConfig() {
+    setSeriesCfgLoading(true);
+    const cfg = { winnerMode: seriesWinnerMode, ...(seriesWinnerMode === "stat" ? { winnerStatField: seriesWinnerStatField } : {}) };
+    const res = await fetch("/api/admin/events", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ eventId: event.id, seriesEventConfigJson: JSON.stringify(cfg) }),
+    });
+    setSeriesCfgLoading(false);
+    if (res.ok) toast.success("Reihen-Einstellungen gespeichert");
+    else toast.error("Fehler beim Speichern");
+  }
+
   /* ── Tab definitions ── */
   const tabs: { key: TabKey; label: string }[] = [
     { key: "details",     label: "Details" },
     { key: "rewards",     label: "Belohnungen" },
     ...(hasTournament || event.type === "tournament" ? [{ key: "tournament" as TabKey, label: "Turnier" }] : []),
     { key: "participants", label: `Teilnehmer (${event._count.registrations})` },
+    ...(event.series ? [{ key: "series" as TabKey, label: "Reihe" }] : []),
   ];
 
   /* ── Render ── */
@@ -936,6 +961,56 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
           {filteredUsers.length === 0 && (
             <p className="text-sm text-gray-600 text-center py-6">Keine Spieler gefunden.</p>
           )}
+        </div>
+      )}
+
+      {/* ── Tab: Reihe ── */}
+      {activeTab === "series" && event.series && (
+        <div className="space-y-4">
+          <div className="rounded-xl border border-white/[0.06] bg-gray-900/50 p-4 space-y-4">
+            <div>
+              <h3 className="text-sm font-semibold text-gray-300 mb-1">Sieger-Ermittlung für die Reihe</h3>
+              <p className="text-xs text-gray-500">Wie wird der Sieger eines einzelnen Events in dieser Reihe ermittelt?</p>
+            </div>
+            <div className="space-y-2">
+              {([
+                { value: "manual",  label: "Manuell",          desc: "Admin wählt Sieger beim Abschluss aus" },
+                { value: "bracket", label: "Turnier-Bracket",  desc: "Finalist des Brackets gewinnt" },
+                { value: "stat",    label: "Höchste Stat",     desc: "Spieler mit höchstem Wert einer Stat gewinnt" },
+              ] as const).map(opt => (
+                <button key={opt.value} type="button" onClick={() => setSeriesWinnerMode(opt.value)}
+                  className={`w-full flex items-start gap-3 rounded-xl px-3 py-2.5 border text-left transition-all ${
+                    seriesWinnerMode === opt.value
+                      ? "border-teal-500/60 bg-teal-500/10"
+                      : "border-gray-700 bg-gray-800 hover:border-gray-600"
+                  }`}>
+                  <div className={`w-3.5 h-3.5 rounded-full border mt-0.5 flex-shrink-0 ${seriesWinnerMode === opt.value ? "border-teal-400 bg-teal-400" : "border-gray-600"}`} />
+                  <div>
+                    <p className={`text-sm font-medium ${seriesWinnerMode === opt.value ? "text-teal-300" : "text-gray-300"}`}>{opt.label}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{opt.desc}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+            {seriesWinnerMode === "stat" && (
+              <div>
+                <label className={labelCls}>Stat-Name (Feldname)</label>
+                <input
+                  type="text"
+                  value={seriesWinnerStatField}
+                  onChange={e => setSeriesWinnerStatField(e.target.value)}
+                  placeholder="z.B. Kills"
+                  className={inputCls}
+                />
+                <p className="text-[10px] text-gray-600 mt-1">Der Spieler mit dem höchsten Wert in diesem Feld gewinnt das Event.</p>
+              </div>
+            )}
+            <button onClick={saveSeriesConfig} disabled={seriesCfgLoading}
+              className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-white bg-teal-700 hover:bg-teal-600 transition-colors disabled:opacity-50">
+              <Save className="w-4 h-4" />
+              {seriesCfgLoading ? "Speichert…" : "Reihen-Einstellungen speichern"}
+            </button>
+          </div>
         </div>
       )}
 
