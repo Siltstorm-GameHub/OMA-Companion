@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { QUEST_TYPE_META, type QuestType } from "@/lib/quests";
-import { getRank, getNextRank } from "@/lib/ranks";
+import { getRank, getNextRank, getRankFullLabel } from "@/lib/ranks";
 import { computeBadges } from "@/lib/badges";
 import { MAX_SHOWCASE } from "@/lib/collectibles";
 import {
@@ -205,7 +205,7 @@ export default async function PublicProfilePage({
             <div className="flex items-center gap-2 flex-wrap mb-0.5">
               <h1 className="text-2xl font-bold text-white tracking-tight">{displayName}</h1>
               <span className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded font-semibold border ${rankRow.color} ${rankRow.bg} ${rankRow.border}`}>
-                {rankRow.emoji} {rankRow.label}
+                {rankRow.emoji} {getRankFullLabel(rankRow)}
               </span>
             </div>
             <p className="text-xs text-gray-500 mb-1">
@@ -221,12 +221,12 @@ export default async function PublicProfilePage({
             <div className="mt-3 max-w-xs">
               {nextRankRow ? (
                 <div className="flex items-center gap-2">
-                  <span className="text-[9px] text-gray-600 whitespace-nowrap">{rankRow.emoji} {rankRow.label}</span>
+                  <span className="text-[9px] text-gray-600 whitespace-nowrap">{rankRow.emoji} {getRankFullLabel(rankRow)}</span>
                   <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
                     <div className="h-full rounded-full transition-all duration-1000"
                       style={{ width: `${rankPct}%`, background: "linear-gradient(90deg, #f43f5e, #fb7185)", boxShadow: "0 0 6px rgba(244,63,94,0.6)" }} />
                   </div>
-                  <span className="text-[9px] text-gray-600 whitespace-nowrap">{nextRankRow.emoji} {nextRankRow.label}</span>
+                  <span className="text-[9px] text-gray-600 whitespace-nowrap">{nextRankRow.emoji} {getRankFullLabel(nextRankRow)}</span>
                   <span className="text-[9px] text-rose-400 tabular-nums">{rankPct}%</span>
                 </div>
               ) : (

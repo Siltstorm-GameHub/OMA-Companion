@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/roles";
-import { getRank } from "@/lib/ranks";
+import { getRank, getRankFullLabel } from "@/lib/ranks";
 import { calcStreak } from "@/lib/streak";
 import { Trophy, Swords, Heart, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import RankPointsIcon from "@/components/RankPointsIcon";
@@ -340,7 +340,7 @@ export default async function LeaderboardPage() {
                     {isMe && <span className="text-[10px] text-gray-500 ml-1 font-normal">du</span>}
                   </p>
                   <p className="text-[10px] text-gray-600 mt-0.5 truncate">
-                    {getRank(u.rankPoints).emoji} {getRank(u.rankPoints).label}
+                    {getRank(u.rankPoints).emoji} {getRankFullLabel(getRank(u.rankPoints))}
                   </p>
                 </div>
 

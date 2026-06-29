@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { syncDiscordRole } from "./discord-roles";
 
 // ─── Punkt-Regeln ──────────────────────────────────────────────────────────
 export const POINT_RULES = {
@@ -63,9 +64,10 @@ export async function awardPoints(userId: string, rule: PointRule, customReason?
   // Punkte VOR der Vergabe lesen (für Rang-Wechsel-Erkennung im Bot)
   const before = await prisma.user.findUnique({
     where:  { id: userId },
-    select: { points: true, birthdayBoostUntil: true },
+    select: { points: true, rankPoints: true, birthdayBoostUntil: true, discordId: true },
   });
-  const pointsBefore = before?.points ?? 0;
+  const pointsBefore   = before?.points     ?? 0;
+  const rankPointsBefore = before?.rankPoints ?? 0;
 
   // Geburtstags-Boost: 2x Punkte wenn aktiv
   const hasBirthdayBoost = before?.birthdayBoostUntil && before.birthdayBoostUntil > new Date();
@@ -94,6 +96,11 @@ export async function awardPoints(userId: string, rule: PointRule, customReason?
 
   const transaction = results[0] as { id: string; userId: string; amount: number; reason: string; createdAt: Date };
   const updated     = results[results.length - 1] as { id: string; points: number; rankPoints: number };
+
+  // Discord-Rolle synchronisieren wenn rankPoints sich geändert haben
+  if (givesRankPoints && before?.discordId) {
+    syncDiscordRole(before.discordId, rankPointsBefore, updated.rankPoints).catch(() => {});
+  }
 
   return { transaction, user: updated, pointsBefore };
 }

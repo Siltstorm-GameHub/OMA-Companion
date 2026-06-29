@@ -4,13 +4,24 @@ import { isBotMessageEnabled, getBotMessageText, fillPlaceholders } from "@/lib/
 
 // ── Rang-Schwellen ───────────────────────────────────────────────────────────
 export const RANK_THRESHOLDS = [
-  { min:    0, label: "Neuling",               emoji: "🔰", color: 0x6b7280 },
-  { min:  100, label: "Zivi-Anwärter",         emoji: "📋", color: 0xa1a1aa },
-  { min:  200, label: "Rollator-Führerschein", emoji: "🛺", color: 0x4ade80 },
-  { min:  300, label: "Kamillenteetrinker",    emoji: "🍵", color: 0x2dd4bf },
-  { min:  400, label: "Heimbeirat",            emoji: "🏛️", color: 0x60a5fa },
-  { min:  500, label: "Pflegestufe 5",         emoji: "🩺", color: 0xa855f7 },
-  { min: 1000, label: "Old Master",            emoji: "👴", color: 0xf59e0b },
+  { min:    0, label: "Zivi-Anwärter I",    emoji: "📋", color: 0x71717a },
+  { min:  100, label: "Zivi-Anwärter II",   emoji: "📋", color: 0x71717a },
+  { min:  200, label: "Zivi-Anwärter III",  emoji: "📋", color: 0x71717a },
+  { min:  350, label: "Rollator-Raser I",   emoji: "🛺", color: 0x4ade80 },
+  { min:  500, label: "Rollator-Raser II",  emoji: "🛺", color: 0x4ade80 },
+  { min:  700, label: "Rollator-Raser III", emoji: "🛺", color: 0x4ade80 },
+  { min:  950, label: "Krawall-Rentner I",   emoji: "😤", color: 0xfb923c },
+  { min: 1250, label: "Krawall-Rentner II",  emoji: "😤", color: 0xfb923c },
+  { min: 1600, label: "Krawall-Rentner III", emoji: "😤", color: 0xfb923c },
+  { min: 2000, label: "Denkmalschutz I",    emoji: "🏛️", color: 0x60a5fa },
+  { min: 2500, label: "Denkmalschutz II",   emoji: "🏛️", color: 0x60a5fa },
+  { min: 3100, label: "Denkmalschutz III",  emoji: "🏛️", color: 0x60a5fa },
+  { min: 3800, label: "Heimleitung I",      emoji: "🏠", color: 0xa855f7 },
+  { min: 4600, label: "Heimleitung II",     emoji: "🏠", color: 0xa855f7 },
+  { min: 5500, label: "Heimleitung III",    emoji: "🏠", color: 0xa855f7 },
+  { min: 6500, label: "Old Master I",       emoji: "👴", color: 0xf59e0b },
+  { min: 8000, label: "Old Master II",      emoji: "👴", color: 0xf59e0b },
+  { min:10000, label: "Old Master III",     emoji: "👴", color: 0xf59e0b },
 ] as const;
 
 export function getRank(points: number) {
