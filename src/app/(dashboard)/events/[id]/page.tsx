@@ -16,6 +16,7 @@ import SpectatorRegisterButton from "./SpectatorRegisterButton";
 import EventLiveBadge from "./EventLiveBadge";
 import ClipSubmitter from "./ClipSubmitter";
 import StreamRegisterButton from "@/components/StreamRegisterButton";
+import PollsSection from "./PollsSection";
 
 const GENRE_MAP: Record<string, { label: string; icon: string }> = {
   arcade:    { label: "Arcade",     icon: "/Arcade Icon.png" },
@@ -40,9 +41,11 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
   const session = await auth();
   const userId  = session?.user?.id;
 
-  const event = await prisma.event.findUnique({
+  const [event, allRegistrations] = await Promise.all([
+   prisma.event.findUnique({
     where: { id },
     include: {
+      polls: { include: { votes: { select: { voterId: true, targetId: true } } }, orderBy: { startAt: "asc" } },
       _count:        { select: { registrations: true } },
       registrations: userId ? { where: { userId }, select: { userId: true, role: true } } : { select: { userId: true, role: true }, take: 0 },
       streamingPartners: { include: { partner: { include: { user: { select: { id: true } } } } } },
@@ -60,7 +63,12 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
         },
       },
     },
-  });
+   }),
+   prisma.eventRegistration.findMany({
+     where: { eventId: id },
+     select: { userId: true, role: true, user: { select: { id: true, name: true, username: true, image: true } } },
+   }),
+  ]);
 
   if (!event) notFound();
 
@@ -118,6 +126,44 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
 
   // Server-Fallback für Uhrzeit (client-side überschrieben durch ClientTime)
   const serverTimeFallback = fmtDate(date, { hour: "2-digit", minute: "2-digit" });
+
+  // Polls: compute vote counts, myVote, answerOptions for initial render
+  type RawPoll = (typeof event.polls)[number];
+  type InitialPoll = {
+    id: string; label: string; question: string; voterEligibility: string; answerType: string;
+    customAnswers: string[]; startAt: string; endAt: string; rewardsPaid: boolean;
+    winnerIds: string[] | null; participationCoins: number; participationSeriesPoints: number;
+    winnerCoins: number; winnerRankPoints: number;
+    voteCounts: Record<string, number>; myVote: string | null;
+    answerOptions: { id: string; name: string | null; username: string | null; image: string | null }[] | null;
+  };
+  const initialPolls: InitialPoll[] = (event as unknown as { polls: RawPoll[] }).polls?.map((poll: RawPoll) => {
+    const voteCounts: Record<string, number> = {};
+    let myVote: string | null = null;
+    for (const v of poll.votes) {
+      voteCounts[v.targetId] = (voteCounts[v.targetId] ?? 0) + 1;
+      if (v.voterId === userId) myVote = v.targetId;
+    }
+    let customAnswers: string[] = [];
+    if (poll.customAnswers) { try { customAnswers = JSON.parse(poll.customAnswers); } catch { /* ignore */ } }
+    let winnerIds: string[] | null = null;
+    if (poll.winnerIds) { try { winnerIds = JSON.parse(poll.winnerIds); } catch { /* ignore */ } }
+    let answerOptions: InitialPoll["answerOptions"] = null;
+    if (poll.answerType === "players") {
+      answerOptions = allRegistrations.filter(r => r.role === "player").map(r => r.user);
+    } else if (poll.answerType === "spectators") {
+      answerOptions = allRegistrations.filter(r => r.role === "spectator").map(r => r.user);
+    }
+    return {
+      id: poll.id, label: poll.label, question: poll.question,
+      voterEligibility: poll.voterEligibility, answerType: poll.answerType,
+      customAnswers, startAt: poll.startAt.toISOString(), endAt: poll.endAt.toISOString(),
+      rewardsPaid: poll.rewardsPaid, winnerIds,
+      participationCoins: poll.participationCoins, participationSeriesPoints: poll.participationSeriesPoints,
+      winnerCoins: poll.winnerCoins, winnerRankPoints: poll.winnerRankPoints,
+      voteCounts, myVote, answerOptions,
+    };
+  }) ?? [];
 
   // Reihen-Events aufteilen: kommende vs. vergangene (ohne dieses Event)
   const allSeriesEvents = event.series?.events ?? [];
@@ -324,6 +370,16 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
         </div>
       </div>
 
+
+      {/* ── Abstimmungen ─────────────────────────────────────────────── */}
+      {initialPolls.length > 0 && (
+        <PollsSection
+          eventId={event.id}
+          userId={userId}
+          initialPolls={initialPolls}
+          eventRegistrations={allRegistrations}
+        />
+      )}
 
       {/* ── Eventbericht ──────────────────────────────────────────────── */}
       {event.status === "finished" && event.summary && (

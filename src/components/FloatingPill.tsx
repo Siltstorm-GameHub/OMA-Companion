@@ -9,6 +9,7 @@ import {
   Heart, User, ShieldCheck, LogOut, ChevronDown, Sun, Moon, Bell, Settings, X, MessageCircleMore,
 } from "lucide-react";
 import { WHATSAPP_COMMUNITY_URL } from "@/lib/config";
+import PollBadge from "@/components/PollBadge";
 
 const NAV = [
   { label: "Dashboard",      href: "/dashboard",   icon: LayoutDashboard },
@@ -237,8 +238,11 @@ export default function FloatingPill() {
       <div style={{ width: 1, height: 22, background: "rgba(255,255,255,0.07)", margin: "0 4px", flexShrink: 0 }} />
 
       {NAV.map(({ label, href, icon }) => (
-        <NavIcon key={href} label={label} href={href} icon={icon}
-          active={pathname === href || (href !== "/dashboard" && pathname.startsWith(href))} />
+        <div key={href} style={{ position: "relative" }}>
+          <NavIcon label={label} href={href} icon={icon}
+            active={pathname === href || (href !== "/dashboard" && pathname.startsWith(href))} />
+          {href === "/events" && <PollBadge />}
+        </div>
       ))}
       {isStaff && (
         <NavIcon label="Admin" href="/admin" icon={ShieldCheck}

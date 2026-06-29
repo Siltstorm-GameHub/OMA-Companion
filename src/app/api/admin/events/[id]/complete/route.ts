@@ -94,6 +94,10 @@ export async function POST(
     include: {
       registrations: { select: { userId: true, role: true } },
       series: true,
+      polls: {
+        where: { rewardsPaid: false },
+        include: { votes: { select: { voterId: true, targetId: true } } },
+      },
       matches: {
         include: {
           entries: { select: { userId: true, statsJson: true } },
@@ -312,6 +316,122 @@ export async function POST(
     }
   }
 
+  // ── EventPoll-Belohnungen (DB-basiert, automatisch beim Abschluss) ───────────
+  // Re-Edit: Rückbuchung bereits bezahlter Poll-Belohnungen
+  if (isReEdit) {
+    const oldPollRewards = (oldCompletion.eventPollRewards as Array<{
+      pollId: string; winnerIds: string[]; voterIds: string[];
+      participationCoins: number; participationSeriesPoints: number;
+      winnerCoins: number; winnerRankPoints: number; label: string;
+    }> | undefined) ?? [];
+
+    for (const old of oldPollRewards) {
+      const txns: Prisma.PrismaPromise<unknown>[] = [];
+      // Reverse participation coins
+      if (old.participationCoins > 0) {
+        for (const uid of old.voterIds) {
+          txns.push(
+            prisma.user.update({ where: { id: uid }, data: { points: { increment: -old.participationCoins } } }),
+            prisma.pointTransaction.create({ data: { userId: uid, amount: -old.participationCoins, reason: `[Korrektur] Poll Teilnahme: ${old.label}` } })
+          );
+        }
+      }
+      // Reverse winner coins/rankPoints
+      if (old.winnerCoins > 0 || old.winnerRankPoints > 0) {
+        for (const uid of old.winnerIds) {
+          if (old.winnerCoins > 0) {
+            txns.push(
+              prisma.user.update({ where: { id: uid }, data: { points: { increment: -old.winnerCoins } } }),
+              prisma.pointTransaction.create({ data: { userId: uid, amount: -old.winnerCoins, reason: `[Korrektur] Poll Gewinner: ${old.label}` } })
+            );
+          }
+          if (old.winnerRankPoints > 0) {
+            txns.push(
+              prisma.user.update({ where: { id: uid }, data: { rankPoints: { increment: -old.winnerRankPoints } } }),
+              prisma.pointTransaction.create({ data: { userId: uid, amount: -old.winnerRankPoints, reason: `[Korrektur] Poll Rang-Punkte: ${old.label}` } })
+            );
+          }
+        }
+      }
+      if (txns.length > 0) await prisma.$transaction(txns);
+      // Reset rewardsPaid on old polls so they get re-processed
+      await prisma.eventPoll.update({ where: { id: old.pollId }, data: { rewardsPaid: false } });
+    }
+  }
+
+  // Fetch polls with rewardsPaid=false (includes re-opened ones from re-edit)
+  const unpaidPolls = event.polls ?? [];
+  const eventPollRewards: Array<{
+    pollId: string; winnerIds: string[]; voterIds: string[];
+    participationCoins: number; participationSeriesPoints: number;
+    winnerCoins: number; winnerRankPoints: number; label: string;
+  }> = [];
+
+  for (const poll of unpaidPolls) {
+    // Determine winner(s): targetId with most votes; ties = all with max
+    const voteCounts: Record<string, number> = {};
+    const voterIds: string[] = [];
+    for (const vote of poll.votes) {
+      voteCounts[vote.targetId] = (voteCounts[vote.targetId] ?? 0) + 1;
+      voterIds.push(vote.voterId);
+    }
+
+    let maxVotes = 0;
+    for (const c of Object.values(voteCounts)) {
+      if (c > maxVotes) maxVotes = c;
+    }
+    const winnerIds = maxVotes > 0
+      ? Object.entries(voteCounts).filter(([, c]) => c === maxVotes).map(([id]) => id)
+      : [];
+
+    const txns: Prisma.PrismaPromise<unknown>[] = [];
+
+    // Participation rewards (once per voter)
+    const uniqueVoterIds = [...new Set(voterIds)];
+    if (poll.participationCoins > 0) {
+      for (const uid of uniqueVoterIds) {
+        txns.push(
+          prisma.user.update({ where: { id: uid }, data: { points: { increment: poll.participationCoins } } }),
+          prisma.pointTransaction.create({ data: { userId: uid, amount: poll.participationCoins, reason: `[Münzen] Poll Teilnahme: ${poll.label}` } })
+        );
+      }
+    }
+    // Winner rewards
+    if (poll.winnerCoins > 0 || poll.winnerRankPoints > 0) {
+      for (const uid of winnerIds) {
+        if (poll.winnerCoins > 0) {
+          txns.push(
+            prisma.user.update({ where: { id: uid }, data: { points: { increment: poll.winnerCoins } } }),
+            prisma.pointTransaction.create({ data: { userId: uid, amount: poll.winnerCoins, reason: `[Münzen] Poll Gewinner: ${poll.label}` } })
+          );
+        }
+        if (poll.winnerRankPoints > 0) {
+          txns.push(
+            prisma.user.update({ where: { id: uid }, data: { rankPoints: { increment: poll.winnerRankPoints } } }),
+            prisma.pointTransaction.create({ data: { userId: uid, amount: poll.winnerRankPoints, reason: `[Rang-Punkte] Poll Gewinner: ${poll.label}` } })
+          );
+        }
+      }
+    }
+
+    if (txns.length > 0) await prisma.$transaction(txns);
+
+    // Mark poll as paid and store winnerIds
+    await prisma.eventPoll.update({
+      where: { id: poll.id },
+      data: { rewardsPaid: true, winnerIds: winnerIds.length > 0 ? JSON.stringify(winnerIds) : null },
+    });
+
+    eventPollRewards.push({
+      pollId: poll.id, winnerIds, voterIds: uniqueVoterIds,
+      participationCoins: poll.participationCoins,
+      participationSeriesPoints: poll.participationSeriesPoints,
+      winnerCoins: poll.winnerCoins,
+      winnerRankPoints: poll.winnerRankPoints,
+      label: poll.label,
+    });
+  }
+
   // ── Series-Standings (optional, nur wenn Event in einer Reihe ist) ──────────
   let updatedStandings: SeriesStandings | null = null;
   let appliedAggregatedStats: Record<string, Record<string, number>> = {};
@@ -455,6 +575,18 @@ export async function POST(
       for (const uid of newPollWinners) addToUser(uid, body.pollLabel, 1);
     }
 
+    // EventPoll series points: participationSeriesPoints per voter, +1 win per winner per poll label
+    for (const ep of eventPollRewards) {
+      if (ep.participationSeriesPoints > 0) {
+        for (const uid of ep.voterIds) {
+          addToUser(uid, `${ep.label}_teilnahme`, ep.participationSeriesPoints);
+        }
+      }
+      for (const uid of ep.winnerIds) {
+        addToUser(uid, ep.label, 1);
+      }
+    }
+
     updatedStandings = {
       lastUpdated: new Date().toISOString(),
       processedEventIds: existingJson.processedEventIds.includes(eventId)
@@ -486,6 +618,7 @@ export async function POST(
     appliedAggregatedStats:  Object.keys(appliedAggregatedStats).length > 0 ? appliedAggregatedStats : null,
     gamePhaseComplete:       true,
     pollPhaseComplete:       newPollWinners.length > 0 || (body.pollResults?.some(p => p.winnerIds.length > 0) ?? false),
+    eventPollRewards:        eventPollRewards.length > 0 ? eventPollRewards : null,
     lockedAt:                new Date().toISOString(),
   };
 

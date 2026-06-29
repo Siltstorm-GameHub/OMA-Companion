@@ -24,9 +24,15 @@ type SeriesOption = {
 type PollConfig = {
   label: string;
   question: string;
-  coins: number;
-  rankPoints: number;
-  type: "player" | "spectator";
+  voterEligibility: "all" | "participants" | "players" | "spectators";
+  answerType: "players" | "spectators" | "custom";
+  customAnswers: string[];
+  startOffsetHours: number;
+  endOffsetHours: number;
+  participationCoins: number;
+  participationSeriesPoints: number;
+  winnerCoins: number;
+  winnerRankPoints: number;
 };
 
 type PlacementReward = { place: number; coins: number; rankPoints: number };
@@ -276,8 +282,19 @@ export default function EventSetupWizard({
 
   // ── Poll helpers ─────────────────────────────────────────────────────────────
   function addPoll() {
-    if (polls.length >= 3) return;
-    setPolls(p => [...p, { label: "", question: "", coins: 50, rankPoints: 0, type: "player" }]);
+    if (polls.length >= 5) return;
+    setPolls(p => [...p, {
+      label: "", question: "",
+      voterEligibility: "all",
+      answerType: "players",
+      customAnswers: [],
+      startOffsetHours: 0,
+      endOffsetHours: 24,
+      participationCoins: 5,
+      participationSeriesPoints: 0,
+      winnerCoins: 50,
+      winnerRankPoints: 0,
+    }]);
   }
   function updatePoll(i: number, patch: Partial<PollConfig>) {
     setPolls(p => p.map((poll, idx) => idx === i ? { ...poll, ...patch } : poll));
@@ -1442,7 +1459,7 @@ export default function EventSetupWizard({
         <div>
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-medium text-gray-200">Umfragen</p>
-            {polls.length < 3 && (
+            {polls.length < 5 && (
               <button type="button" onClick={addPoll}
                 className="flex items-center gap-1 text-xs text-teal-400 hover:text-teal-300 transition-colors">
                 <Plus className="w-3.5 h-3.5" /> Hinzufügen
@@ -1466,30 +1483,81 @@ export default function EventSetupWizard({
                       placeholder="MVP" className={inputCls} style={inputStyle} />
                   </div>
                   <div>
-                    <label className={labelCls}>Typ</label>
-                    <select value={poll.type} onChange={e => updatePoll(i, { type: e.target.value as "player" | "spectator" })}
-                      className={inputCls} style={inputStyle}>
-                      <option value="player">Spieler-Poll</option>
-                      <option value="spectator">Zuschauer-Poll</option>
-                    </select>
+                    <label className={labelCls}>Frage</label>
+                    <input type="text" value={poll.question} onChange={e => updatePoll(i, { question: e.target.value })}
+                      placeholder="Wer war der MVP?" className={inputCls} style={inputStyle} />
                   </div>
-                </div>
-                <div>
-                  <label className={labelCls}>Frage</label>
-                  <input type="text" value={poll.question} onChange={e => updatePoll(i, { question: e.target.value })}
-                    placeholder="Wer war der MVP?" className={inputCls} style={inputStyle} />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className={labelCls}>Münzen (Sieger)</label>
-                    <input type="number" min="0" value={poll.coins}
-                      onChange={e => updatePoll(i, { coins: Number(e.target.value) })}
+                    <label className={labelCls}>Wer darf abstimmen?</label>
+                    <select value={poll.voterEligibility} onChange={e => updatePoll(i, { voterEligibility: e.target.value as PollConfig["voterEligibility"] })}
+                      className={inputCls} style={inputStyle}>
+                      <option value="all">Alle App-Mitglieder</option>
+                      <option value="participants">Mitspieler + Zuschauer</option>
+                      <option value="players">Nur Mitspieler</option>
+                      <option value="spectators">Nur Zuschauer</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelCls}>Antwortoptionen</label>
+                    <select value={poll.answerType} onChange={e => updatePoll(i, { answerType: e.target.value as PollConfig["answerType"], customAnswers: [] })}
+                      className={inputCls} style={inputStyle}>
+                      <option value="players">Mitspieler des Events</option>
+                      <option value="spectators">Zuschauer des Events</option>
+                      <option value="custom">Eigene Antworten</option>
+                    </select>
+                  </div>
+                </div>
+                {poll.answerType === "custom" && (
+                  <div>
+                    <label className={labelCls}>Antworten (eine pro Zeile)</label>
+                    <textarea rows={3}
+                      value={poll.customAnswers.join("\n")}
+                      onChange={e => updatePoll(i, { customAnswers: e.target.value.split("\n").map(s => s.trim()).filter(Boolean) })}
+                      placeholder={"Option A\nOption B\nOption C"}
+                      className={`${inputCls} resize-none`} style={inputStyle} />
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className={labelCls}>Start (Std. nach Event-Start)</label>
+                    <input type="number" min="0" value={poll.startOffsetHours}
+                      onChange={e => updatePoll(i, { startOffsetHours: Number(e.target.value) })}
                       className={inputCls} style={inputStyle} />
                   </div>
                   <div>
-                    <label className={labelCls}>Rang-Punkte</label>
-                    <input type="number" min="0" value={poll.rankPoints}
-                      onChange={e => updatePoll(i, { rankPoints: Number(e.target.value) })}
+                    <label className={labelCls}>Ende (Std. nach Event-Start)</label>
+                    <input type="number" min="1" value={poll.endOffsetHours}
+                      onChange={e => updatePoll(i, { endOffsetHours: Number(e.target.value) })}
+                      className={inputCls} style={inputStyle} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className={labelCls}>Belohnung Abstimmung — Münzen</label>
+                    <input type="number" min="0" value={poll.participationCoins}
+                      onChange={e => updatePoll(i, { participationCoins: Number(e.target.value) })}
+                      className={inputCls} style={inputStyle} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Belohnung Abstimmung — Ligapunkte</label>
+                    <input type="number" min="0" value={poll.participationSeriesPoints}
+                      onChange={e => updatePoll(i, { participationSeriesPoints: Number(e.target.value) })}
+                      className={inputCls} style={inputStyle} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className={labelCls}>Sieger-Belohnung — Münzen</label>
+                    <input type="number" min="0" value={poll.winnerCoins}
+                      onChange={e => updatePoll(i, { winnerCoins: Number(e.target.value) })}
+                      className={inputCls} style={inputStyle} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Sieger-Belohnung — Rang-Punkte</label>
+                    <input type="number" min="0" value={poll.winnerRankPoints}
+                      onChange={e => updatePoll(i, { winnerRankPoints: Number(e.target.value) })}
                       className={inputCls} style={inputStyle} />
                   </div>
                 </div>
@@ -1642,7 +1710,7 @@ export default function EventSetupWizard({
           ))}
           {spectatorMode && <p>👁️ Zuschauer: {spectatorCoins} Münzen{spectatorRankPts > 0 ? ` + ${spectatorRankPts} RP` : ""}</p>}
           {polls.map((poll, i) => (
-            <p key={i}>📊 {poll.label || `Poll ${i + 1}`}: {poll.coins} Münzen ({poll.type === "spectator" ? "Zuschauer" : "Spieler"})</p>
+            <p key={i}>📊 {poll.label || `Poll ${i + 1}`}: Abstimmung ({poll.winnerCoins > 0 ? `Sieger: ${poll.winnerCoins} Münzen` : ""})</p>
           ))}
         </div>
       </div>
@@ -1687,7 +1755,7 @@ export default function EventSetupWizard({
           ))}
           {spectatorMode && <p>👁️ Zuschauer: {spectatorCoins} Münzen{spectatorRankPts > 0 ? ` + ${spectatorRankPts} RP` : ""}</p>}
           {polls.map((poll, i) => (
-            <p key={i}>📊 {poll.label || `Poll ${i + 1}`}: {poll.coins} Münzen ({poll.type === "spectator" ? "Zuschauer" : "Spieler"})</p>
+            <p key={i}>📊 {poll.label || `Poll ${i + 1}`}: Abstimmung ({poll.winnerCoins > 0 ? `Sieger: ${poll.winnerCoins} Münzen` : ""})</p>
           ))}
           {isSeriesMode && eventType === "tournament" && statRows.length > 0 && (
             <p>📊 Gesamttabelle: {statRows.map(r => `${r.field} (${r.pointsPer} Pkt/Einheit)`).join(", ")}</p>

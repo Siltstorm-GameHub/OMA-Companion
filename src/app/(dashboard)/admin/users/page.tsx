@@ -1,6 +1,7 @@
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import SyncMembersButton from "./SyncMembersButton";
+import SyncDiscordRolesButton from "./SyncDiscordRolesButton";
 import AdminUsersClient from "./AdminUsersClient";
 import { LogIn, UserX } from "lucide-react";
 
@@ -58,7 +59,10 @@ export default async function AdminUsersPage() {
             <UserX className="w-3.5 h-3.5" /> {noLoginCount} noch nicht
           </span>
         </div>
-        <SyncMembersButton />
+        <div className="flex items-center gap-2">
+          <SyncDiscordRolesButton />
+          <SyncMembersButton />
+        </div>
       </div>
 
       <AdminUsersClient

@@ -60,6 +60,7 @@ model User {
   clipSubmissions           EventClipSubmission[]
   clipNominations           ClipNomination[]
   contestVotes              ClipContestVote[]
+  eventPollVotes            EventPollVote[]
   systemBadges              UserSystemBadge[]
   customBadgeAwards         UserCustomBadge[]
   dailyMessages             DailyMessage[]
@@ -304,6 +305,50 @@ model Event {
   streamingPartners    EventPartner[]
   communityStreamers   EventCommunityStreamer[]
   clipSubmissions      EventClipSubmission[]
+  polls                EventPoll[]
+}
+
+// ── Event-Umfragen ────────────────────────────────────────────────────────────
+
+model EventPoll {
+  id                        String   @id @default(cuid())
+  eventId                   String
+  event                     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  label                     String   // z.B. "MVP"
+  question                  String   // z.B. "Wer war der MVP?"
+  // "all" | "participants" | "players" | "spectators"
+  voterEligibility          String   @default("all")
+  // "players" | "spectators" | "custom"
+  answerType                String   @default("players")
+  // JSON: [{key: string, label: string}] — nur bei answerType="custom"
+  customAnswers             String?
+  startAt                   DateTime
+  endAt                     DateTime
+  participationCoins        Int      @default(0)
+  participationSeriesPoints Int      @default(0)
+  winnerCoins               Int      @default(0)
+  winnerRankPoints          Int      @default(0)
+  // JSON: ["userId1", "userId2"] — nach Auswertung gesetzt
+  winnerIds                 String?
+  // true wenn Belohnungen bereits vergeben wurden
+  rewardsPaid               Boolean  @default(false)
+  createdAt                 DateTime @default(now())
+  votes                     EventPollVote[]
+}
+
+model EventPollVote {
+  id        String    @id @default(cuid())
+  pollId    String
+  poll      EventPoll @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  voterId   String
+  voter     User      @relation(fields: [voterId], references: [id], onDelete: Cascade)
+  // userId (für players/spectators) oder custom answer key
+  targetId  String
+  isManual  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([pollId, voterId])
 }
 
 // ── Clip-Einreichungen ────────────────────────────────────────────────────────
