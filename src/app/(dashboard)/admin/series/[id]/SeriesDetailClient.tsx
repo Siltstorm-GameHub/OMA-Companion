@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
+import Image from "next/image";
 import {
   ChevronLeft, ChevronRight, CalendarPlus, RefreshCw, Gamepad2,
   Swords, Hash, BarChart2, Plus, X, Trophy, Save, Coins,
@@ -15,6 +16,22 @@ import { describeMonthlyModes } from "@/lib/recurrence";
 
 const inputCls = "w-full rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
 const numCls   = "w-24 rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
+
+const GENRES: { value: string; label: string; icon: string }[] = [
+  { value: "arcade",     label: "Arcade",     icon: "/Arcade Icon.png" },
+  { value: "beat_em_up", label: "Beat-em-Up", icon: "/Beat-em-Up Icon.png" },
+  { value: "sport",      label: "Sport",      icon: "/Sport Icon.png" },
+  { value: "racing",     label: "Racing",     icon: "/Racing Icon.png" },
+  { value: "shooter",    label: "Shooter",    icon: "/Shooter Icon.png" },
+  { value: "community",  label: "Community",  icon: "/Community Icon.png" },
+];
+
+const PLATFORMS: { value: string; label: string; icon: string }[] = [
+  { value: "PC",     label: "PC",     icon: "🖥️" },
+  { value: "Xbox",   label: "Xbox",   icon: "🟢" },
+  { value: "PS",     label: "PS",     icon: "🔵" },
+  { value: "Mobile", label: "Mobile", icon: "📱" },
+];
 
 type SeriesEvent = {
   id: string; title: string; startAt: Date | string; status: string;
@@ -111,7 +128,9 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
   const [fixedGame, setFixedGame]           = useState<string>(series.fixedGame ?? "");
   const [fixedFormat, setFixedFormat]       = useState<string>(series.fixedFormat ?? "");
   const [genre, setGenre]                   = useState<string>(series.genre ?? "");
-  const [platform, setPlatform]             = useState<string>(series.platform ?? "");
+  const [platforms, setPlatforms]           = useState<string[]>(
+    series.platform ? series.platform.split(",").map((p: string) => p.trim()).filter(Boolean) : []
+  );
   const [discordChannelId, setDiscordChannelId] = useState<string>(series.discordChannelId ?? "");
   const [recurrenceType, setRecurrenceType] = useState<"" | "weekly" | "biweekly" | "monthly">(series.recurrenceType ?? "");
   const [recurrenceMonthlyMode, setRecurrenceMonthlyMode] = useState<"dayOfMonth" | "weekdayOfMonth">(series.recurrenceMonthlyMode ?? "dayOfMonth");
@@ -167,7 +186,10 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
       const sieger = p.winnerRankPoints > 0          ? (stats[`${p.label}_Siegerpunkte`]    ?? 0) : 0;
       return sum + teiln + sieger;
     }, 0);
-    return participations * statParticipationPts + statPts + pollPts;
+    const dominionPts = (dominionEnabled && dominionSeriesPoints > 0)
+      ? (stats["Dominion Bonus"] ?? 0) * dominionSeriesPoints
+      : 0;
+    return participations * statParticipationPts + statPts + pollPts + dominionPts;
   }
 
   async function saveSettings() {
@@ -188,7 +210,7 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
         propagateGame,
         propagateFormat,
         genre:    genre.trim() || null,
-        platform: platform.trim() || null,
+        platform: platforms.length > 0 ? platforms.join(", ") : null,
         seriesStatConfig: JSON.stringify({
           participationPoints:          statParticipationPts,
           spectatorParticipationPoints: statSpectatorPts,
@@ -382,25 +404,41 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
                 <option value="single_elimination">Single Elimination</option>
                 <option value="double_elimination">Double Elimination</option>
                 <option value="round_robin">Round Robin</option>
-                <option value="ffa">Free-for-All</option>
-                <option value="coop_stats">Coop / Stats</option>
+                <option value="liga">Liga</option>
+                <option value="ffa">Free for All</option>
+                <option value="coop_stats">Kooperativ</option>
+                <option value="avg_stats">Durchschnittswerte</option>
               </select>
               <Checkbox checked={propagateFormat} onChange={setPropagateFormat} label="Format, Belohnungen & Stat-Felder auf bestehende Events übertragen" />
             </Field>
             <Field label="Genre">
-              <select value={genre} onChange={e => setGenre(e.target.value)} className={inputCls}>
-                <option value="">– Kein Genre –</option>
-                <option value="arcade">Arcade</option>
-                <option value="beat_em_up">Beat-em-Up</option>
-                <option value="sport">Sport</option>
-                <option value="racing">Racing</option>
-                <option value="shooter">Shooter</option>
-                <option value="community">Community</option>
-              </select>
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                {GENRES.map(g => (
+                  <button key={g.value} type="button" onClick={() => setGenre(genre === g.value ? "" : g.value)}
+                    className={`flex flex-col items-center gap-1.5 rounded-xl p-2 border transition-all ${
+                      genre === g.value ? "border-teal-500/60 bg-teal-500/10" : "border-white/8 bg-white/3 hover:border-white/15"
+                    }`}>
+                    <Image src={g.icon} alt={g.label} width={32} height={32} className="object-contain" />
+                    <span className={`text-[10px] font-medium leading-tight text-center ${genre === g.value ? "text-teal-300" : "text-gray-500"}`}>{g.label}</span>
+                  </button>
+                ))}
+              </div>
             </Field>
             <Field label={<><Monitor className="w-3 h-3" /> Plattform</>}>
-              <input type="text" value={platform} onChange={e => setPlatform(e.target.value)}
-                placeholder="z.B. PC, PlayStation, Switch" className={inputCls} />
+              <div className="flex gap-2 flex-wrap">
+                {PLATFORMS.map(p => {
+                  const active = platforms.includes(p.value);
+                  return (
+                    <button key={p.value} type="button"
+                      onClick={() => setPlatforms(prev => active ? prev.filter(x => x !== p.value) : [...prev, p.value])}
+                      className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs border transition-all ${
+                        active ? "border-teal-500/60 bg-teal-500/10 text-teal-300" : "border-white/10 bg-white/5 text-gray-400 hover:border-white/20"
+                      }`}>
+                      <span>{p.icon}</span> {p.label}
+                    </button>
+                  );
+                })}
+              </div>
             </Field>
           </Section>
 
@@ -803,6 +841,21 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
                               </label>
                             )}
                           </>))}
+                        </div>
+                      )}
+                      {/* Dominion Bonus */}
+                      {dominionEnabled && (
+                        <div className="flex flex-wrap gap-2 pt-1.5 border-t border-white/[0.04] mt-1">
+                          <label className="flex items-center gap-1.5 text-[11px] text-amber-400">
+                            <Flame className="w-3 h-3" /> Dominion Bonus (Anzahl)
+                            <input type="number" min={0} value={row.stats["Dominion Bonus"] ?? 0}
+                              onChange={e => setLegacyRows(prev => prev.map((r, j) => {
+                                if (j !== i) return r;
+                                const newStats = { ...r.stats, "Dominion Bonus": Number(e.target.value) };
+                                return { ...r, stats: newStats, points: calcLegacyPoints(r.participations, newStats) };
+                              }))}
+                              className="w-16 rounded px-1.5 py-0.5 text-[11px] text-white bg-gray-800 border border-gray-700" />
+                          </label>
                         </div>
                       )}
                     </div>
