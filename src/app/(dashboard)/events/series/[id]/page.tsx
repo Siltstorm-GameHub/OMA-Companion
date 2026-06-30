@@ -1,12 +1,12 @@
 import React from "react";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/auth";
+import { getSessionUser } from "@/lib/roles";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft, Trophy, Crown, Flame, Users,
   Swords, Gamepad2, Zap, Star, TrendingUp,
-  Archive, ChevronRight, CheckCircle2,
+  Archive, ChevronRight, CheckCircle2, EyeOff,
 } from "lucide-react";
 import { CountUp } from "@/components/CountUp";
 import SeriesStandingsTable from "./SeriesStandingsTable";
@@ -243,8 +243,9 @@ function computeStatStandings(
 
 export default async function SeriesDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const session = await auth();
-  const userId = session?.user?.id;
+  const me     = await getSessionUser();
+  const userId = me?.id;
+  const isMod  = me?.role === "moderator" || me?.role === "admin";
 
   const series = await prisma.eventSeries.findUnique({
     where: { id },
@@ -268,6 +269,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
   });
 
   if (!series) notFound();
+  if (series.hidden && !isMod) notFound();
 
   const statCfg: StatConfig = (() => {
     try { return series.seriesStatConfig ? JSON.parse(series.seriesStatConfig) : null; } catch { return null; }
@@ -556,6 +558,16 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
           </Link>
         )}
       </div>
+
+      {/* ── Ausgeblendet-Banner (nur für Admins/Mods sichtbar) ────────────────── */}
+      {series.hidden && isMod && (
+        <div className="glass rounded-2xl px-4 py-3 flex items-center gap-3 border border-rose-500/20 bg-rose-500/[0.04]">
+          <EyeOff className="w-4 h-4 text-rose-400 shrink-0" />
+          <p className="text-sm text-rose-300">
+            <span className="font-semibold">Ausgeblendet</span> — diese Reihe ist für normale Nutzer nicht sichtbar. Nur Admins/Mods können diese Seite über den Link aufrufen.
+          </p>
+        </div>
+      )}
 
       {/* ── Archiviert-Banner ────────────────────────────────────────────────── */}
       {isArchived && (

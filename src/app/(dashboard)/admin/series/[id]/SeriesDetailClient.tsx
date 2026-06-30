@@ -172,6 +172,13 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
   const [expandedPoll, setExpandedPoll] = useState<number | null>(null);
   const [propagatePolls, setPropagatePolls] = useState(false);
 
+  const sortedSeriesEvents = [...(series.events as SeriesEvent[])].sort((a, b) => {
+    const aDone = a.status === "finished";
+    const bDone = b.status === "finished";
+    if (aDone !== bDone) return aDone ? 1 : -1;
+    return new Date(a.startAt).getTime() - new Date(b.startAt).getTime();
+  });
+
   const latestEvent = series.events[series.events.length - 1];
   const latestStartAt = latestEvent ? new Date(latestEvent.startAt) : new Date();
 
@@ -913,7 +920,7 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
             </div>
           ) : (
             <div className="rounded-xl overflow-hidden border border-white/[0.06]">
-              {(series.events as SeriesEvent[]).map((ev, i) => {
+              {sortedSeriesEvents.map((ev, i) => {
                 const st = STATUS_CONFIG[ev.status] ?? { label: ev.status, cls: "text-gray-500" };
                 const date = new Date(ev.startAt).toLocaleDateString("de-DE", {
                   day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",

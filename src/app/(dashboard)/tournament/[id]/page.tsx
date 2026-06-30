@@ -1,9 +1,10 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { getSessionUser } from "@/lib/roles";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Users, Clock, Swords, StickyNote, Vote, Repeat, Tv2 } from "lucide-react";
+import { ArrowLeft, Users, Clock, Swords, StickyNote, Vote, Repeat, Tv2, EyeOff } from "lucide-react";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import WinIcon from "@/components/WinIcon";
 import CoinIcon from "@/components/CoinIcon";
@@ -52,11 +53,13 @@ export default async function TournamentDetailPage({
   if (!session?.user?.id) redirect("/login");
   const userId = session.user.id;
   const { id: eventId } = await params;
+  const me    = await getSessionUser();
+  const isMod = me?.role === "moderator" || me?.role === "admin";
 
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     include: {
-      series: { select: { id: true, name: true } },
+      series: { select: { id: true, name: true, hidden: true } },
       streamingPartners: { include: { partner: { include: { user: { select: { id: true } } } } } },
       communityStreamers: { include: { user: { select: { id: true, name: true, username: true, image: true, twitchLogin: true } } } },
       registrations: {
@@ -76,6 +79,8 @@ export default async function TournamentDetailPage({
   });
 
   if (!event) notFound();
+  const isHidden = event.hidden || !!event.series?.hidden;
+  if (isHidden && !isMod) notFound();
 
   const [sponsors, holdersMap] = await Promise.all([
     prisma.shopPurchase.findMany({
@@ -238,6 +243,16 @@ export default async function TournamentDetailPage({
           </Link>
         )}
       </div>
+
+      {/* ── Ausgeblendet-Banner (nur für Admins/Mods sichtbar) ────────────── */}
+      {isHidden && isMod && (
+        <div className="glass rounded-2xl px-4 py-3 mb-5 flex items-center gap-3 border border-rose-500/20 bg-rose-500/[0.04]">
+          <EyeOff className="w-4 h-4 text-rose-400 shrink-0" />
+          <p className="text-sm text-rose-300">
+            <span className="font-semibold">Ausgeblendet</span> — {event.series?.hidden ? "die Eventreihe" : "dieses Event"} ist für normale Nutzer nicht sichtbar. Nur Admins/Mods können diese Seite über den Link aufrufen.
+          </p>
+        </div>
+      )}
 
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <div className="glass rounded-2xl p-5 mb-5">
