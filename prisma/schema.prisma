@@ -229,6 +229,7 @@ model EventSeries {
   discordChannelId String?  // Kanal-ID für Bot-Nachrichten aller Events dieser Reihe
   category         EventCategory  @default(casual)
   genre            EventGenre?
+  platform         String?  // Komma-getrennte Plattformen, z.B. "PC, Xbox"
   recurrenceType       String?  // "weekly" | "biweekly" | "monthly"
   recurrenceMonthlyMode String? // "dayOfMonth" | "weekdayOfMonth" (nur bei monthly)
   // JSON: { participationPoints: 5, stats: [{ field: "Kills", pointsPer: 2 }], mvpStatField?: "MVP", defaultWinnerStatField?: "Kills", defaultWinnerTargetField?: "Siege" }

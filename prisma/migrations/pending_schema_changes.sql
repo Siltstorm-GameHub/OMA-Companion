@@ -79,6 +79,9 @@ ALTER TABLE "CollectibleItem" ADD COLUMN IF NOT EXISTS "saleUntil" TIMESTAMP(3);
 -- 4. EventSeries: statFields
 ALTER TABLE "EventSeries" ADD COLUMN IF NOT EXISTS "statFields" TEXT;
 
+-- 4c. EventSeries: platform (mirrors Event.platform, benötigt von Eventreihe-Bearbeiten UI)
+ALTER TABLE "EventSeries" ADD COLUMN IF NOT EXISTS "platform" TEXT;
+
 -- 4b. EventSeries: seriesStatConfig + legacyStandings
 ALTER TABLE "EventSeries" ADD COLUMN IF NOT EXISTS "seriesStatConfig" TEXT;
 ALTER TABLE "EventSeries" ADD COLUMN IF NOT EXISTS "legacyStandings" TEXT;
