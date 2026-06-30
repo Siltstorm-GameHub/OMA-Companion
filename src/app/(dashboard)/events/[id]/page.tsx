@@ -1,9 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { getSessionUser } from "@/lib/roles";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { CalendarDays, Users, ArrowLeft, Repeat, Trophy, ChevronRight, Check, Clock, Vote, Tv2, Clapperboard } from "lucide-react";
+import { CalendarDays, Users, ArrowLeft, Repeat, Trophy, ChevronRight, Check, Clock, Vote, Tv2, Clapperboard, EyeOff } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import ClientTime from "@/components/ClientTime";
@@ -40,6 +41,8 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
   const { id } = await params;
   const session = await auth();
   const userId  = session?.user?.id;
+  const me      = await getSessionUser();
+  const isMod   = me?.role === "moderator" || me?.role === "admin";
 
   const [event, allRegistrations] = await Promise.all([
    prisma.event.findUnique({
@@ -71,6 +74,8 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
   ]);
 
   if (!event) notFound();
+  const isHidden = event.hidden || !!event.series?.hidden;
+  if (isHidden && !isMod) notFound();
 
   const s            = STATUS_CONFIG[event.status] ?? STATUS_CONFIG.finished;
   const myReg        = userId ? event.registrations.find(r => r.userId === userId) : null;
@@ -179,6 +184,16 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
       <Link href="/events" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-teal-400 transition-colors">
         <ArrowLeft className="w-4 h-4" /> Zurück zu Events
       </Link>
+
+      {/* ── Ausgeblendet-Banner (nur für Admins/Mods sichtbar) ──────────── */}
+      {isHidden && isMod && (
+        <div className="glass rounded-2xl px-4 py-3 flex items-center gap-3 border border-rose-500/20 bg-rose-500/[0.04]">
+          <EyeOff className="w-4 h-4 text-rose-400 shrink-0" />
+          <p className="text-sm text-rose-300">
+            <span className="font-semibold">Ausgeblendet</span> — {event.series?.hidden ? "die Eventreihe" : "dieses Event"} ist für normale Nutzer nicht sichtbar. Nur Admins/Mods können diese Seite über den Link aufrufen.
+          </p>
+        </div>
+      )}
 
       {/* ── Event-Karte ──────────────────────────────────────────────── */}
       <div className="glass card-shine rounded-2xl p-6 relative overflow-hidden"

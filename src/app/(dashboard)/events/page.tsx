@@ -16,6 +16,7 @@ import LulRegisterButton from "@/components/LulRegisterButton";
 import { getGenreIcon } from "@/lib/genre-icons";
 import EventCategoryBadge, { CATEGORY_BG_TINT } from "@/components/EventCategoryBadge";
 import { EventCategory } from "@prisma/client";
+import { EyeOff } from "lucide-react";
 
 const CATEGORY_STRIP: Record<EventCategory, string> = {
   competitive:     "bg-red-500",
@@ -47,11 +48,9 @@ export default async function EventsPage() {
   const userId = me?.id;
   const isMod  = me?.role === "moderator" || me?.role === "admin";
 
-  const [events, activeSeason] = await Promise.all([
+  const [events, hiddenEvents, activeSeason] = await Promise.all([
     prisma.event.findMany({
-      where:   isMod
-        ? { OR: [{ seriesId: null }, { series: { hidden: false } }] }
-        : { hidden: false, OR: [{ seriesId: null }, { series: { hidden: false } }] },
+      where:   { hidden: false, OR: [{ seriesId: null }, { series: { hidden: false } }] },
       orderBy: { startAt: "asc" },
       include: {
         _count:        { select: { registrations: true } },
@@ -61,6 +60,16 @@ export default async function EventsPage() {
         communityStreamers: userId ? { where: { userId }, select: { userId: true } } : { select: { userId: true }, take: 0 },
       },
     }),
+    isMod
+      ? prisma.event.findMany({
+          where:   { OR: [{ hidden: true }, { series: { hidden: true } }] },
+          orderBy: { startAt: "desc" },
+          include: {
+            _count: { select: { registrations: true } },
+            series: { select: { id: true, name: true } },
+          },
+        })
+      : Promise.resolve([]),
     // Nur alte Saisons ohne EventSeries-Link (neue erscheinen als normale Events)
     prisma.lulSeason.findFirst({
       where: { status: "active", seriesId: null },
@@ -333,6 +342,43 @@ export default async function EventsPage() {
           );
         })}
       </div>
+
+      {isMod && hiddenEvents.length > 0 && (
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-3 pb-1">
+            <div className="h-px flex-1 bg-rose-500/10" />
+            <span className="flex items-center gap-1.5 text-[10px] font-semibold text-rose-400 uppercase tracking-widest">
+              <EyeOff className="w-3 h-3" /> Ausgeblendet · nur für Admins/Mods sichtbar
+            </span>
+            <div className="h-px flex-1 bg-rose-500/10" />
+          </div>
+
+          {hiddenEvents.map(ev => (
+            <Link key={`hidden-${ev.id}`}
+              href={ev.seriesId ? `/events/series/${ev.seriesId}` : `/events/${ev.id}`}
+              className="flex items-center gap-3 px-4 py-2.5 rounded-lg border border-rose-500/20 bg-rose-500/[0.04] hover:bg-rose-500/[0.07] transition-colors group">
+              <GameCover game={ev.game} className="w-9 h-6 shrink-0" rounded="rounded" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-gray-300 font-medium truncate group-hover:text-white transition-colors">
+                  {ev.title}
+                </p>
+                <p className="text-[10px] text-gray-600">
+                  {new Date(ev.startAt).toLocaleDateString("de-DE", { day: "2-digit", month: "short", year: "numeric" })}
+                  {ev.series && <> · {ev.series.name}</>}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="flex items-center gap-1 text-[10px] text-gray-600">
+                  <Users className="w-3 h-3" />{ev._count.registrations}
+                </span>
+                <span className="flex items-center gap-1 text-[10px] text-rose-400 bg-rose-500/10 border border-rose-500/20 px-1.5 py-0.5 rounded">
+                  <EyeOff className="w-2.5 h-2.5" /> Ausgeblendet
+                </span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
 
       {finishedItems.length > 0 && (
         <div className="space-y-1.5">
