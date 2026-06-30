@@ -70,7 +70,10 @@ function EventCard({ ev, userId, fixedGame }: { ev: SeriesEventItem; userId: str
       </div>
 
       <div className="relative flex-1 min-w-0">
-        <p className="text-sm font-medium text-white truncate">{ev.title}</p>
+        <p className="text-sm font-medium text-white truncate">
+          {ev.title}
+          <span className="text-gray-500 font-normal"> · {date.toLocaleDateString("de-DE", { day: "numeric", month: "numeric", year: "numeric" })}</span>
+        </p>
 
         {/* Game + Genre */}
         {(ev.game ?? fixedGame ?? genreInfo) && (

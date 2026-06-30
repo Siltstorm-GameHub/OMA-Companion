@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   await requireRole("moderator");
   const body = await req.json();
-  const { seriesId, propagateGame, propagateFormat, ...fields } = body;
+  const { seriesId, propagateGame, propagateFormat, propagatePolls, ...fields } = body;
   if (!seriesId) return NextResponse.json({ error: "seriesId fehlt" }, { status: 400 });
 
   // 1) Reihe selbst aktualisieren
@@ -76,7 +76,7 @@ export async function PATCH(req: NextRequest) {
       ...(fields.seriesStatConfig      !== undefined && { seriesStatConfig:      fields.seriesStatConfig }),
       ...(fields.legacyStandings       !== undefined && { legacyStandings:       fields.legacyStandings }),
       ...(fields.placementRewardsJson  !== undefined && { placementRewardsJson:  fields.placementRewardsJson }),
-      ...(fields.pollConfigJson        !== undefined && { pollConfigJson:        fields.pollConfigJson }),
+      ...(fields.pollsConfigJson        !== undefined && { pollsConfigJson:       fields.pollsConfigJson }),
       ...(fields.category              !== undefined && { category:              fields.category || null }),
       ...(fields.hidden                !== undefined && { hidden:                fields.hidden }),
     },
@@ -133,7 +133,15 @@ export async function PATCH(req: NextRequest) {
     });
   }
 
-  // 5) Discord-Kanal auf alle Events der Reihe übertragen (immer automatisch)
+  // 5) Umfragen auf alle kommenden Events übertragen (nur open/active Status)
+  if (propagatePolls && fields.pollsConfigJson !== undefined) {
+    await prisma.event.updateMany({
+      where: { seriesId, status: { in: ["open", "active"] } },
+      data:  { pollsConfigJson: fields.pollsConfigJson },
+    });
+  }
+
+  // 6) Discord-Kanal auf alle Events der Reihe übertragen (immer automatisch)
   if (fields.discordChannelId !== undefined) {
     await prisma.event.updateMany({
       where: { seriesId },

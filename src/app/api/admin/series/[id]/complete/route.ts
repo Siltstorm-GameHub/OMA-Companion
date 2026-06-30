@@ -130,7 +130,7 @@ export async function POST(
         recurrenceMonthlyMode: series.recurrenceMonthlyMode,
         seriesStatConfig:     series.seriesStatConfig,
         placementRewardsJson: series.placementRewardsJson,
-        pollConfigJson:       series.pollConfigJson,
+        pollsConfigJson:      series.pollsConfigJson ?? series.pollConfigJson,
         groupId,
         status:               "active",
         seasonNumber:         (series.seasonNumber ?? 1) + 1,
