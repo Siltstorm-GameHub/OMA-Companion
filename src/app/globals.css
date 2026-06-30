@@ -533,9 +533,9 @@ select.input-glass option { background: #0f1117; }
 }
 
 /* 1 – Zivi-Anwärter: Grau, langsam (10s / 7s / 4s) */
-.rank-ring-1-i   { background: conic-gradient(from var(--rr-angle), #3f3f46, #a1a1aa, #71717a, #3f3f46); animation: rr-spin 10s linear infinite; box-shadow: 0 0  4px rgba(113,113,122,0.30); }
-.rank-ring-1-ii  { background: conic-gradient(from var(--rr-angle), #52525b, #d4d4d8, #a1a1aa, #52525b); animation: rr-spin  7s linear infinite; box-shadow: 0 0  7px rgba(161,161,170,0.45); }
-.rank-ring-1-iii { background: conic-gradient(from var(--rr-angle), #71717a, #f4f4f5, #a1a1aa, #71717a); animation: rr-spin  4s linear infinite; box-shadow: 0 0 12px rgba(212,212,216,0.55); }
+.rank-ring-1-i   { background: conic-gradient(from var(--rr-angle), #52525b, #e4e4e7, #a1a1aa, #52525b); animation: rr-spin 10s linear infinite; box-shadow: 0 0  6px rgba(161,161,170,0.45); }
+.rank-ring-1-ii  { background: conic-gradient(from var(--rr-angle), #71717a, #f4f4f5, #d4d4d8, #71717a); animation: rr-spin  7s linear infinite; box-shadow: 0 0 10px rgba(212,212,216,0.60); }
+.rank-ring-1-iii { background: conic-gradient(from var(--rr-angle), #a1a1aa, #ffffff, #e4e4e7, #a1a1aa); animation: rr-spin  4s linear infinite; box-shadow: 0 0 16px rgba(244,244,245,0.70); }
 
 /* 2 – Rollator-Raser: Grün (10s / 7s / 4s) */
 .rank-ring-2-i   { background: conic-gradient(from var(--rr-angle), #14532d, #4ade80, #16a34a, #14532d); animation: rr-spin 10s linear infinite; box-shadow: 0 0  4px rgba(74,222,128,0.30); }

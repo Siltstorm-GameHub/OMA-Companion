@@ -3,7 +3,7 @@ import { getSessionUser } from "@/lib/roles";
 import { unstable_cache } from "next/cache";
 import {
   Trophy, CalendarDays, Users, ChevronRight,
-  ShieldAlert, Clock, Scroll, Swords, CheckCircle2,
+  Clock, Scroll, Swords, CheckCircle2,
   Circle, Zap, Repeat, Radio, Newspaper,
 } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
@@ -162,8 +162,6 @@ export default async function DashboardPage() {
   const displayName = sessionUser?.username ?? sessionUser?.name ?? "dort";
   const firstName   = displayName.split(" ")[0];
   const avatarUrl   = sessionUser?.image ?? null;
-  const isStaff     = userRole === "admin" || userRole === "moderator";
-
   return (
     <div className="animate-fade-in">
 
@@ -176,7 +174,7 @@ export default async function DashboardPage() {
         <div className="flex items-start gap-5">
           {/* Avatar mit Cut-Corner + Rang-Ring */}
           <div className="relative shrink-0">
-            <div className={`${getRingClass(myRankPoints)} rounded-lg`} style={{ padding: 3 }}>
+            <div className={`${getRingClass(myRankPoints)} rounded-lg p-[3px]`}>
               <div className="card-cut w-16 h-16 sm:w-20 sm:h-20 overflow-hidden bg-[#0d0d0f]">
                 {avatarUrl ? (
                   <Image src={avatarUrl} alt={displayName} width={80} height={80} className="w-full h-full object-cover" />
@@ -226,26 +224,7 @@ export default async function DashboardPage() {
             </div>
           )}
 
-          {isStaff && (
-            <Link href="/admin"
-              className="surface hidden sm:flex items-center gap-2 shrink-0 px-3 py-2.5 card-cut-sm group transition-all hover:border-red-500/30"
-              style={{ boxShadow: "none" }}>
-              <ShieldAlert className="w-4 h-4 text-red-500 group-hover:text-red-400 transition-colors" />
-              <span className="text-xs font-semibold text-gray-500 group-hover:text-white transition-colors">Admin</span>
-            </Link>
-          )}
         </div>
-
-        {/* ── Admin-Schnellzugriff (nur Mobile, nur Staff) ── */}
-        {isStaff && (
-          <Link href="/admin"
-            className="sm:hidden flex items-center gap-3 mt-4 px-4 py-3 rounded-xl group transition-all"
-            style={{ background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.18)" }}>
-            <ShieldAlert className="w-4 h-4 text-red-400 shrink-0" />
-            <span className="text-sm font-semibold text-red-400 flex-1">Admin-Bereich</span>
-            <ChevronRight className="w-4 h-4 text-red-400/50 group-hover:text-red-400 transition-colors" />
-          </Link>
-        )}
 
         {/* ── Stat-Streifen ── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4 sm:mt-6">
