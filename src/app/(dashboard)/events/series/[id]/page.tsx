@@ -209,7 +209,13 @@ function computeStatStandings(
     ...Object.keys(legPts), ...Object.keys(pollBonusPts),
   ]);
 
-  return [...allUids].map(uid => {
+  // Track which stat fields appear in event data (for extraCols filtering)
+  const evStatFieldsSeen = new Set<string>();
+  for (const uid of Object.keys(evStats)) {
+    for (const field of Object.keys(evStats[uid])) evStatFieldsSeen.add(field);
+  }
+
+  const rows = [...allUids].map(uid => {
     const ep = evPart[uid] ?? 0;
     const es = evStats[uid] ?? {};
     let totalPoints = (legPts[uid] ?? 0) + ep * cfg.participationPoints + (pollBonusPts[uid] ?? 0);
@@ -217,12 +223,20 @@ function computeStatStandings(
       totalPoints += (es[field] ?? 0) * pointsPer;
     }
     const displayPart = (legPart[uid] ?? 0) + ep;
-    const displayStats: Record<string, number> = { ...(legStat[uid] ?? {}) };
+    // Start from legacy stats, then add event stats on top (merging same fields)
+    const displayStats: Record<string, number> = {};
+    // Only include legacy fields that are either in configured stats or in evStatFieldsSeen
+    // to avoid legacy-only fields (from old/renamed configs) polluting extra columns
+    for (const [f, v] of Object.entries(legStat[uid] ?? {})) {
+      displayStats[f] = (displayStats[f] ?? 0) + v;
+    }
     for (const [f, v] of Object.entries(es)) {
       displayStats[f] = (displayStats[f] ?? 0) + v;
     }
     return { userId: uid, totalPoints, participations: displayPart, stats: displayStats, hasLegacy: legacy.some(l => l.userId === uid) };
   }).sort((a, b) => b.totalPoints - a.totalPoints || b.participations - a.participations);
+
+  return { rows, evStatFieldsSeen };
 }
 
 export default async function SeriesDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -261,7 +275,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
     try { return series.legacyStandings ? JSON.parse(series.legacyStandings) : []; } catch { return []; }
   })();
 
-  const standings = computeStatStandings(series.events, statCfg, legacyRows);
+  const { rows: standings, evStatFieldsSeen } = computeStatStandings(series.events, statCfg, legacyRows);
 
   // ── Hero Stats ─────────────────────────────────────────────────────────────
   const gamePhaseCompleteCount = series.events.filter(e => {
@@ -289,13 +303,11 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
   const specialFields    = new Set(
     [statCfg.mvpStatField, statCfg.defaultWinnerTargetField].filter((f): f is string => !!f)
   );
-  // Collect all extra fields present in standings that are not configured stats or reserved
+  // Collect extra fields: only from event-derived data (not legacy-only fields from old configs)
   const allExtraFields = new Set<string>();
-  for (const row of standings) {
-    for (const f of Object.keys(row.stats)) {
-      if (!configuredFields.has(f) && !reservedFields.has(f) && !isInternalField(f))
-        allExtraFields.add(f);
-    }
+  for (const f of evStatFieldsSeen) {
+    if (!configuredFields.has(f) && !reservedFields.has(f) && !isInternalField(f))
+      allExtraFields.add(f);
   }
   // Special fields first, then poll/dominion fields
   const extraCols = [
@@ -456,7 +468,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
   const totalParticipantIds = new Set(series.events.flatMap(e => e.registrations.map(r => r.userId)));
 
   // ── All-Time Leaderboard (alle Saisons der Gruppe) ────────────────────────
-  let allTimeStandings: ReturnType<typeof computeStatStandings> = [];
+  let allTimeStandings: (typeof standings) = [];
   let allTimeUsers: typeof standingUsers = [];
   if (series.groupId) {
     const allSeasonEvents = await prisma.event.findMany({
@@ -478,7 +490,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
         try { return s.legacyStandings ? JSON.parse(s.legacyStandings) : []; } catch { return []; }
       }),
     ];
-    allTimeStandings = computeStatStandings(allSeasonEvents, statCfg, allLegacy);
+    ({ rows: allTimeStandings } = computeStatStandings(allSeasonEvents, statCfg, allLegacy));
     const allTimeIds = allTimeStandings.map(r => r.userId);
     allTimeUsers = allTimeIds.length > 0
       ? await prisma.user.findMany({

@@ -7,6 +7,7 @@ import {
   ChevronLeft, ChevronRight, CalendarPlus, RefreshCw, Gamepad2,
   Swords, Hash, BarChart2, Plus, X, Trophy, Save, Coins,
   MessageSquare, ExternalLink, Archive, Vote, Trash2, Eye, EyeOff,
+  Monitor, Flame,
 } from "lucide-react";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import GameNameInput from "@/components/GameNameInput";
@@ -109,6 +110,8 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
   // Settings
   const [fixedGame, setFixedGame]           = useState<string>(series.fixedGame ?? "");
   const [fixedFormat, setFixedFormat]       = useState<string>(series.fixedFormat ?? "");
+  const [genre, setGenre]                   = useState<string>(series.genre ?? "");
+  const [platform, setPlatform]             = useState<string>(series.platform ?? "");
   const [discordChannelId, setDiscordChannelId] = useState<string>(series.discordChannelId ?? "");
   const [recurrenceType, setRecurrenceType] = useState<"" | "weekly" | "biweekly" | "monthly">(series.recurrenceType ?? "");
   const [recurrenceMonthlyMode, setRecurrenceMonthlyMode] = useState<"dayOfMonth" | "weekdayOfMonth">(series.recurrenceMonthlyMode ?? "dayOfMonth");
@@ -121,8 +124,17 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
   const initialStatCfg = (() => {
     try { return series.seriesStatConfig ? JSON.parse(series.seriesStatConfig) : {}; } catch { return {}; }
   })();
-  const [statParticipationPts, setStatParticipationPts] = useState<number>(initialStatCfg.participationPoints ?? 0);
-  const [statRows, setStatRows] = useState<{ field: string; pointsPer: number }[]>(initialStatCfg.stats ?? []);
+  const [statParticipationPts, setStatParticipationPts]   = useState<number>(initialStatCfg.participationPoints ?? 0);
+  const [statSpectatorPts, setStatSpectatorPts]           = useState<number>(initialStatCfg.spectatorParticipationPoints ?? 0);
+  const [statTransferToGlobal, setStatTransferToGlobal]   = useState<boolean>(initialStatCfg.transferToGlobalRanking ?? false);
+  const [statRows, setStatRows] = useState<{ field: string; pointsPer: number; isWinnerStat?: boolean }[]>(initialStatCfg.stats ?? []);
+  // Dominion Bonus
+  const initialDom = initialStatCfg.dominionBonus ?? {};
+  const [dominionEnabled, setDominionEnabled]           = useState<boolean>(initialDom.enabled ?? false);
+  const [dominionTriggerStats, setDominionTriggerStats] = useState<string[]>(initialDom.triggerStats ?? []);
+  const [dominionThreshold, setDominionThreshold]       = useState<number>(initialDom.threshold ?? 3);
+  const [dominionCoins, setDominionCoins]               = useState<number>(initialDom.coins ?? 0);
+  const [dominionSeriesPoints, setDominionSeriesPoints] = useState<number>(initialDom.seriesPoints ?? 0);
 
   // Legacy standings
   type LegacyRow = { userId: string; points: number; participations: number; stats: Record<string, number> };
@@ -148,6 +160,16 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
     setPlacementRewards(prev => prev.map(r => r.place === place ? { ...r, [key]: value } : r));
   }
 
+  function calcLegacyPoints(participations: number, stats: Record<string, number>): number {
+    const statPts  = statRows.filter(sr => sr.field.trim()).reduce((sum, sr) => sum + (stats[sr.field] ?? 0) * sr.pointsPer, 0);
+    const pollPts  = polls.filter(p => p.label.trim()).reduce((sum, p) => {
+      const teiln  = p.participationSeriesPoints > 0 ? (stats[`${p.label}_Teilnahmepunkte`] ?? 0) : 0;
+      const sieger = p.winnerRankPoints > 0          ? (stats[`${p.label}_Siegerpunkte`]    ?? 0) : 0;
+      return sum + teiln + sieger;
+    }, 0);
+    return participations * statParticipationPts + statPts + pollPts;
+  }
+
   async function saveSettings() {
     setSaving(true);
     const res = await fetch("/api/admin/event-series", {
@@ -165,9 +187,27 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
         recurrenceMonthlyMode: recurrenceType === "monthly" ? recurrenceMonthlyMode : null,
         propagateGame,
         propagateFormat,
+        genre:    genre.trim() || null,
+        platform: platform.trim() || null,
         seriesStatConfig: JSON.stringify({
-          participationPoints: statParticipationPts,
+          participationPoints:          statParticipationPts,
+          spectatorParticipationPoints: statSpectatorPts,
+          transferToGlobalRanking:      statTransferToGlobal,
           stats: statRows.filter(r => r.field.trim()),
+          winnerStatKeys: statRows.filter(r => r.field.trim() && r.isWinnerStat).map(r => r.field),
+          // preserve advanced fields from initial config unchanged
+          ...(initialStatCfg.eventStatFields      && { eventStatFields:      initialStatCfg.eventStatFields }),
+          ...(initialStatCfg.aggregatedStatFields && { aggregatedStatFields: initialStatCfg.aggregatedStatFields }),
+          ...(initialStatCfg.winnerStatField      && { winnerStatField:      initialStatCfg.winnerStatField }),
+          ...(dominionEnabled && dominionTriggerStats.length > 0 && {
+            dominionBonus: {
+              enabled:      true,
+              triggerStats: dominionTriggerStats,
+              threshold:    dominionThreshold,
+              coins:        dominionCoins,
+              seriesPoints: dominionSeriesPoints,
+            },
+          }),
         }),
         legacyStandings:     JSON.stringify(legacyRows),
         placementRewardsJson: JSON.stringify({ participationCoins, placements: placementRewards }),
@@ -347,6 +387,21 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
               </select>
               <Checkbox checked={propagateFormat} onChange={setPropagateFormat} label="Format, Belohnungen & Stat-Felder auf bestehende Events übertragen" />
             </Field>
+            <Field label="Genre">
+              <select value={genre} onChange={e => setGenre(e.target.value)} className={inputCls}>
+                <option value="">– Kein Genre –</option>
+                <option value="arcade">Arcade</option>
+                <option value="beat_em_up">Beat-em-Up</option>
+                <option value="sport">Sport</option>
+                <option value="racing">Racing</option>
+                <option value="shooter">Shooter</option>
+                <option value="community">Community</option>
+              </select>
+            </Field>
+            <Field label={<><Monitor className="w-3 h-3" /> Plattform</>}>
+              <input type="text" value={platform} onChange={e => setPlatform(e.target.value)}
+                placeholder="z.B. PC, PlayStation, Switch" className={inputCls} />
+            </Field>
           </Section>
 
           {/* Discord & Wiederholung */}
@@ -417,6 +472,11 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
                     className={numCls} />
                 </div>
               </div>
+              <Checkbox
+                checked={statTransferToGlobal}
+                onChange={setStatTransferToGlobal}
+                label="Ligapunkte bei Abschluss auf Gesamtrangliste übertragen"
+              />
             </div>
           </Section>
 
@@ -560,12 +620,20 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
 
           {/* Gesamttabellen-Konfiguration */}
           <Section title="Gesamttabellen-Konfiguration">
-            <Field label={<><BarChart2 className="w-3 h-3" /> Punkte pro Teilnahme (Leaderboard)</>}>
-              <input type="number" min={0} value={statParticipationPts}
-                onChange={e => setStatParticipationPts(Number(e.target.value))}
-                className={inputCls} />
-            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label={<><BarChart2 className="w-3 h-3" /> Punkte pro Teilnahme</>}>
+                <input type="number" min={0} value={statParticipationPts}
+                  onChange={e => setStatParticipationPts(Number(e.target.value))}
+                  className={inputCls} />
+              </Field>
+              <Field label="Punkte pro Zuschauer-Teilnahme">
+                <input type="number" min={0} value={statSpectatorPts}
+                  onChange={e => setStatSpectatorPts(Number(e.target.value))}
+                  className={inputCls} />
+              </Field>
+            </div>
             <div className="space-y-1.5">
+              <p className="text-xs text-gray-500">Stats</p>
               {statRows.map((row, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <input type="text" defaultValue={row.field}
@@ -577,16 +645,75 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
                     onBlur={e => { const v = Number(e.target.value); setStatRows(prev => prev.map((r, j) => j === i ? { ...r, pointsPer: v } : r)); }}
                     placeholder="Pkt./Einheit" className="w-20 shrink-0 rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors"
                   />
+                  <button
+                    type="button"
+                    title="Gewinner-Stat"
+                    onClick={() => setStatRows(prev => prev.map((r, j) => j === i ? { ...r, isWinnerStat: !r.isWinnerStat } : r))}
+                    className={`shrink-0 transition-colors ${row.isWinnerStat ? "text-amber-400" : "text-gray-600 hover:text-amber-400"}`}
+                  >
+                    <Trophy className="w-3.5 h-3.5" />
+                  </button>
                   <button type="button" onClick={() => setStatRows(prev => prev.filter((_, j) => j !== i))}
                     className="text-gray-600 hover:text-red-400 transition-colors shrink-0">
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
               ))}
-              <button type="button" onClick={() => setStatRows(prev => [...prev, { field: "", pointsPer: 1 }])}
+              <p className="text-[11px] text-gray-600">🏆 = Gewinner-Stat (bestimmt Reihensieger)</p>
+              <button type="button" onClick={() => setStatRows(prev => [...prev, { field: "", pointsPer: 1, isWinnerStat: false }])}
                 className="flex items-center gap-1 text-xs text-teal-500 hover:text-teal-300 transition-colors">
                 <Plus className="w-3 h-3" /> Statistik hinzufügen
               </button>
+            </div>
+
+            {/* Dominion Bonus */}
+            <div className="pt-2 border-t border-white/[0.05] space-y-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={dominionEnabled} onChange={e => setDominionEnabled(e.target.checked)}
+                  className="rounded accent-amber-500" />
+                <span className="text-sm text-gray-300 flex items-center gap-1.5"><Flame className="w-3.5 h-3.5 text-amber-400" /> Dominion Bonus aktivieren</span>
+              </label>
+              {dominionEnabled && (
+                <div className="space-y-3 pl-1">
+                  <div>
+                    <p className="text-xs text-gray-500 mb-1.5">Trigger-Stats (mind. eine muss erfüllt sein)</p>
+                    <div className="flex flex-wrap gap-2">
+                      {statRows.filter(r => r.field.trim()).map(r => (
+                        <button key={r.field} type="button"
+                          onClick={() => setDominionTriggerStats(prev =>
+                            prev.includes(r.field) ? prev.filter(s => s !== r.field) : [...prev, r.field]
+                          )}
+                          className={`text-xs px-2 py-1 rounded-lg border transition-colors ${
+                            dominionTriggerStats.includes(r.field)
+                              ? "text-amber-300 bg-amber-500/10 border-amber-500/30"
+                              : "text-gray-500 border-white/[0.08] hover:border-white/20"
+                          }`}
+                        >{r.field}</button>
+                      ))}
+                      {statRows.filter(r => r.field.trim()).length === 0 && (
+                        <p className="text-xs text-gray-600">Erst Stats hinzufügen</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Streak-Schwelle</label>
+                      <input type="number" min={1} value={dominionThreshold}
+                        onChange={e => setDominionThreshold(Number(e.target.value))} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Coins className="w-3 h-3 text-amber-400" /> Münzen</label>
+                      <input type="number" min={0} value={dominionCoins}
+                        onChange={e => setDominionCoins(Number(e.target.value))} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><RankPointsIcon size={12} /> Liga-Pkt.</label>
+                      <input type="number" min={0} value={dominionSeriesPoints}
+                        onChange={e => setDominionSeriesPoints(Number(e.target.value))} className={inputCls} />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </Section>
 
@@ -614,9 +741,7 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
                             onChange={e => setLegacyRows(prev => prev.map((r, j) => {
                               if (j !== i) return r;
                               const newPart = Number(e.target.value);
-                              const calcPts = newPart * statParticipationPts
-                                + statRows.filter(sr => sr.field.trim()).reduce((sum, sr) => sum + (r.stats[sr.field] ?? 0) * sr.pointsPer, 0);
-                              return { ...r, participations: newPart, points: calcPts };
+                              return { ...r, participations: newPart, points: calcLegacyPoints(newPart, r.stats) };
                             }))}
                             className="w-16 rounded px-1.5 py-0.5 text-[11px] text-white bg-gray-800 border border-gray-700" />
                         </label>
@@ -627,9 +752,7 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
                               onChange={e => setLegacyRows(prev => prev.map((r, j) => {
                                 if (j !== i) return r;
                                 const newStats = { ...r.stats, [s.field]: Number(e.target.value) };
-                                const calcPts = r.participations * statParticipationPts
-                                  + statRows.filter(sr => sr.field.trim()).reduce((sum, sr) => sum + (newStats[sr.field] ?? 0) * sr.pointsPer, 0);
-                                return { ...r, stats: newStats, points: calcPts };
+                                return { ...r, stats: newStats, points: calcLegacyPoints(r.participations, newStats) };
                               }))}
                               className="w-16 rounded px-1.5 py-0.5 text-[11px] text-white bg-gray-800 border border-gray-700" />
                           </label>
@@ -649,7 +772,8 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
                             <input type="number" min={0} value={row.stats["Umfrage-Teilnahmen"] ?? 0}
                               onChange={e => setLegacyRows(prev => prev.map((r, j) => {
                                 if (j !== i) return r;
-                                return { ...r, stats: { ...r.stats, "Umfrage-Teilnahmen": Number(e.target.value) } };
+                                const newStats = { ...r.stats, "Umfrage-Teilnahmen": Number(e.target.value) };
+                                return { ...r, stats: newStats, points: calcLegacyPoints(r.participations, newStats) };
                               }))}
                               className="w-16 rounded px-1.5 py-0.5 text-[11px] text-white bg-gray-800 border border-gray-700" />
                           </label>
@@ -660,7 +784,8 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
                                 <input type="number" min={0} value={row.stats[`${p.label}_Teilnahmepunkte`] ?? 0}
                                   onChange={e => setLegacyRows(prev => prev.map((r, j) => {
                                     if (j !== i) return r;
-                                    return { ...r, stats: { ...r.stats, [`${p.label}_Teilnahmepunkte`]: Number(e.target.value) } };
+                                    const newStats = { ...r.stats, [`${p.label}_Teilnahmepunkte`]: Number(e.target.value) };
+                                    return { ...r, stats: newStats, points: calcLegacyPoints(r.participations, newStats) };
                                   }))}
                                   className="w-16 rounded px-1.5 py-0.5 text-[11px] text-white bg-gray-800 border border-gray-700" />
                               </label>
@@ -671,7 +796,8 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
                                 <input type="number" min={0} value={row.stats[`${p.label}_Siegerpunkte`] ?? 0}
                                   onChange={e => setLegacyRows(prev => prev.map((r, j) => {
                                     if (j !== i) return r;
-                                    return { ...r, stats: { ...r.stats, [`${p.label}_Siegerpunkte`]: Number(e.target.value) } };
+                                    const newStats = { ...r.stats, [`${p.label}_Siegerpunkte`]: Number(e.target.value) };
+                                    return { ...r, stats: newStats, points: calcLegacyPoints(r.participations, newStats) };
                                   }))}
                                   className="w-16 rounded px-1.5 py-0.5 text-[11px] text-white bg-gray-800 border border-gray-700" />
                               </label>
