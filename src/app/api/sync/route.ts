@@ -9,7 +9,7 @@ export async function POST() {
 
   const [events, spieltage] = await Promise.all([
     prisma.event.findMany({
-      where: { status: { in: ["open", "active"] } },
+      where: { status: { in: ["open", "active"] }, hidden: false },
       orderBy: { startAt: "asc" },
     }),
     prisma.lulSpieltag.findMany({

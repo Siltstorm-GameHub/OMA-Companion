@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/roles";
-import { getRank, getNextRank, getRankFullLabel, getTierRing } from "@/lib/ranks";
+import { getRank, getNextRank, getRankFullLabel } from "@/lib/ranks";
+import RankedAvatar from "@/components/RankedAvatar";
 import { computeBadges } from "@/lib/badges";
 import BadgesSection from "./BadgesSection";
 import PointsInfoModal from "./PointsInfoModal";
@@ -176,12 +177,14 @@ export default async function ProfilePage() {
         <div className="relative flex items-center gap-5 flex-wrap">
           {/* Avatar */}
           <div className="relative shrink-0">
-            {user.image
-              ? <Image src={user.image} alt={displayName} width={80} height={80}
-                  className={`w-20 h-20 rounded-2xl object-cover ${getTierRing(rankPoints)}`} />
-              : <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br from-teal-600 to-teal-950 flex items-center justify-center text-2xl font-bold text-white ${getTierRing(rankPoints)}`}>
-                  {displayName[0].toUpperCase()}
-                </div>}
+            <RankedAvatar
+              rankPoints={rankPoints}
+              src={user.image}
+              alt={displayName}
+              size={80}
+              rounded="2xl"
+              className="w-20 h-20"
+            />
             <span className="absolute bottom-1 right-1 w-3 h-3 bg-emerald-400 rounded-full border-2 border-[#0d0d0f]"
               style={{ boxShadow: "0 0 6px rgba(52,211,153,0.8)" }} />
           </div>

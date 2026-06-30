@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/roles";
-import { getRank, getRankFullLabel, getTierRing } from "@/lib/ranks";
+import { getRank, getRankFullLabel } from "@/lib/ranks";
+import RankedAvatar from "@/components/RankedAvatar";
 import { calcStreak } from "@/lib/streak";
 import { Trophy, Swords, Heart, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import RankPointsIcon from "@/components/RankPointsIcon";
@@ -219,15 +220,14 @@ export default async function LeaderboardPage() {
                   {MEDALS[cfg.rank]}
                 </span>
 
-                <div className={`${cfg.avatarSize} rounded-full overflow-hidden ring-2 ${getTierRing(u.rankPoints)} mb-3 shrink-0`}
-                  style={{ boxShadow: cfg.rank === 0 ? "0 0 24px rgba(245,158,11,0.30)" : undefined }}>
-                  {u.image
-                    ? <Image src={u.image} alt={displayName} width={80} height={80} className="w-full h-full object-cover" />
-                    : <div className="w-full h-full flex items-center justify-center text-base font-black text-white"
-                        style={{ background: "linear-gradient(135deg, #14b8a6, #8b2020)" }}>
-                        {displayName[0].toUpperCase()}
-                      </div>}
-                </div>
+                <RankedAvatar
+                  rankPoints={u.rankPoints}
+                  src={u.image}
+                  alt={displayName}
+                  size={cfg.rank === 0 ? 80 : 56}
+                  rounded="full"
+                  className={`${cfg.avatarSize} mb-3`}
+                />
 
                 <div className="flex items-center justify-center gap-1.5 mb-1">
                   <RankIcon rankPoints={u.rankPoints} size="sm" />
@@ -326,13 +326,14 @@ export default async function LeaderboardPage() {
                 </div>
 
                 {/* Avatar */}
-                <div className={`w-9 h-9 rounded-full overflow-hidden ${getTierRing(u.rankPoints)}`}>
-                  {u.image
-                    ? <Image src={u.image} alt={displayName} width={36} height={36} className="w-full h-full object-cover" />
-                    : <div className={`w-full h-full flex items-center justify-center text-xs font-bold ${isMe ? "bg-teal-500/20 text-teal-300" : "bg-white/[0.05] text-gray-400"}`}>
-                        {displayName[0].toUpperCase()}
-                      </div>}
-                </div>
+                <RankedAvatar
+                  rankPoints={u.rankPoints}
+                  src={u.image}
+                  alt={displayName}
+                  size={36}
+                  rounded="full"
+                  className="w-9 h-9"
+                />
 
                 {/* Name + Rang */}
                 <div className="min-w-0 flex items-center gap-2">

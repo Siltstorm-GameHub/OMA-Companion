@@ -1,9 +1,14 @@
-// Stufen-Rahmen (gleich für alle Ränge)
-export const TIER_RINGS: Record<"I" | "II" | "III", string> = {
-  I:   "ring-2 ring-zinc-500",
-  II:  "ring-2 ring-slate-300 ring-offset-1 ring-offset-black",
-  III: "ring-2 ring-amber-400 ring-offset-2 ring-offset-black shadow-[0_0_8px_rgba(251,191,36,0.5)]",
-};
+/** CSS-Klasse für den animierten Gradient-Ring (tier = 1–6, tierLabel = I/II/III) */
+export function getRingClass(rankPoints: number): string {
+  const rank = getRank(rankPoints);
+  const label = rank.tierLabel.toLowerCase(); // "i" | "ii" | "iii"
+  return `rank-ring-${rank.tier}-${label}`;
+}
+
+/** @deprecated Bitte getRingClass() verwenden */
+export function getTierRing(rankPoints: number): string {
+  return getRingClass(rankPoints);
+}
 
 export const RANKS = [
   // 1 – Zivi-Anwärter
@@ -47,10 +52,6 @@ export function getNextRank(rankPoints: number): RankEntry | null {
   return RANKS.find(r => r.min > rankPoints) ?? null;
 }
 
-/** Gibt die Tailwind-Ring-Klassen für den Avatar basierend auf dem Tier zurück. */
-export function getTierRing(rankPoints: number): string {
-  return TIER_RINGS[getRank(rankPoints).tierLabel];
-}
 
 export function getRankProgress(rankPoints: number): { rank: RankEntry; next: RankEntry | null; pct: number } {
   const rank = getRank(rankPoints);
