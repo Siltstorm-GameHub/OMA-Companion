@@ -75,6 +75,7 @@ export default async function TournamentDetailPage({
         orderBy: [{ round: "asc" }, { position: "asc" }],
         include: { entries: true },
       },
+      polls: { select: { id: true, label: true, winnerIds: true, rewardsPaid: true } },
     },
   });
 
@@ -169,6 +170,18 @@ export default async function TournamentDetailPage({
   const pollPhaseComplete   = completionData.pollPhaseComplete === true;
   const hasPendingPoll      = gamePhaseComplete && !pollPhaseComplete && !!pollLabel;
   const pollExcludedUserIds = new Set(completionData.pollExcludedUserIds ?? []);
+
+  // Neue DB-basierte Umfragen (EventPoll): pro Gewinner alle gewonnenen Umfrage-Labels sammeln
+  const pollWinsByUser: Record<string, string[]> = {};
+  for (const poll of event.polls ?? []) {
+    if (!poll.rewardsPaid || !poll.winnerIds) continue;
+    let ids: string[] = [];
+    try { ids = JSON.parse(poll.winnerIds); } catch { continue; }
+    for (const uid of ids) {
+      (pollWinsByUser[uid] ??= []).push(poll.label);
+    }
+  }
+  const completedPolls = (event.polls ?? []).filter(p => p.rewardsPaid && p.winnerIds);
 
   // Teilnahme-Münzen (aus placementRewardsJson oder Fallback auf pointReward)
   const participationCoins: number = (() => {
@@ -524,6 +537,52 @@ export default async function TournamentDetailPage({
         );
       })()}
 
+      {/* ── Umfrage-Übersicht (neue DB-basierte Umfragen) ─────────────────── */}
+      {completedPolls.length > 0 && (
+        <div className="space-y-3 mb-5">
+          {completedPolls.map(poll => {
+            let winnerIds: string[] = [];
+            try { winnerIds = poll.winnerIds ? JSON.parse(poll.winnerIds) : []; } catch { /* ignore */ }
+            if (winnerIds.length === 0) return null;
+            return (
+              <div key={poll.id} className="glass rounded-2xl p-5 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Vote className="w-4 h-4 text-violet-400" />
+                  <h2 className="text-sm font-semibold text-white">{poll.label}</h2>
+                </div>
+                <div className="space-y-1.5">
+                  {winnerIds.map(uid => {
+                    const participant = mergedParticipants.find(p => p.userId === uid);
+                    const user = participant?.user;
+                    const name = user ? (user.name || user.username || "Unbekannt") : "Unbekannt";
+                    const isMe = uid === userId;
+                    return (
+                      <div key={uid} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl bg-violet-500/[0.06] border border-violet-500/15 ${isMe ? "ring-1 ring-teal-500/30" : ""}`}>
+                        <span className="text-base shrink-0">🏆</span>
+                        {user?.image
+                          ? <img src={user.image} alt="" className="w-7 h-7 rounded-full shrink-0 object-cover" />
+                          : <div className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-300 shrink-0">
+                              {name[0]?.toUpperCase() ?? "?"}
+                            </div>
+                        }
+                        <span className={`text-sm font-medium ${isMe ? "text-teal-300" : "text-violet-200"}`}>
+                          {name}{isMe && <span className="text-xs text-gray-500 ml-1.5">(du)</span>}
+                        </span>
+                      </div>
+                    );
+                  })}
+                  {winnerIds.length > 1 && (
+                    <p className="text-[11px] text-gray-600 px-1">
+                      Alle {winnerIds.length} Gewinner erhalten dieselbe Belohnung (Gleichstand).
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* ── Content ────────────────────────────────────────────────────── */}
       {!hasTournament ? (
         <div className="glass rounded-2xl p-10 text-center">
@@ -542,7 +601,10 @@ export default async function TournamentDetailPage({
               {event.registrations.map(({ user }, i) => {
                 const isMe = user.id === userId;
                 const wins = event.matches.filter(m => m.winnerId === user.id).length;
-                const isPollWinner = pollWinnerIds.includes(user.id);
+                const wonLabels = [
+                  ...(pollWinnerIds.includes(user.id) && pollLabel ? [pollLabel] : []),
+                  ...(pollWinsByUser[user.id] ?? []),
+                ];
                 return (
                   <div key={user.id} className={`flex items-center gap-2.5 px-3 py-2.5 ${isMe ? "bg-rose-950/30" : ""}`}>
                     <span className="text-xs text-gray-700 w-4 shrink-0 text-center">{i + 1}</span>
@@ -557,10 +619,14 @@ export default async function TournamentDetailPage({
                       <p className={`text-sm truncate font-medium ${isMe ? "text-rose-300" : "text-white"}`}>
                         {userName(user)}{isMe && " (du)"}
                       </p>
-                      {isPollWinner && pollLabel && (
-                        <span className="flex items-center gap-0.5 text-[10px] font-semibold text-violet-400">
-                          <Vote className="w-2.5 h-2.5" /> {pollLabel}
-                        </span>
+                      {wonLabels.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-0.5">
+                          {wonLabels.map(label => (
+                            <span key={label} className="flex items-center gap-0.5 text-[10px] font-semibold text-violet-400">
+                              <Vote className="w-2.5 h-2.5" /> {label}
+                            </span>
+                          ))}
+                        </div>
                       )}
                     </div>
                     {wins > 0 && <span className="text-xs text-emerald-400 shrink-0">{wins}W</span>}
