@@ -307,11 +307,27 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
   const specialFields    = new Set(
     [statCfg.mvpStatField, statCfg.defaultWinnerTargetField].filter((f): f is string => !!f)
   );
-  // Collect extra fields: only from event-derived data (not legacy-only fields from old configs)
+  // Collect extra fields: from event-derived data + poll-label fields present in legacy data
   const allExtraFields = new Set<string>();
   for (const f of evStatFieldsSeen) {
     if (!configuredFields.has(f) && !reservedFields.has(f) && !isInternalField(f))
       allExtraFields.add(f);
+  }
+  // Poll labels from series config: include their stat columns even if only present in legacy data
+  const pollLabels: string[] = (() => {
+    try {
+      const raw = series.pollsConfigJson ?? series.pollConfigJson;
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      const arr: { label?: string }[] = Array.isArray(parsed) ? parsed : (parsed.enabled ? [parsed] : []);
+      return arr.map(p => p.label ?? "").filter(Boolean);
+    } catch { return []; }
+  })();
+  for (const label of pollLabels) {
+    for (const f of [label, `${label}_Abstimmungen`, `${label}_Teilnahmepunkte`, `${label}_Siegerpunkte`]) {
+      if (!configuredFields.has(f) && !reservedFields.has(f))
+        allExtraFields.add(f);
+    }
   }
   // Special fields first, then poll/dominion fields
   const extraCols = [

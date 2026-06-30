@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import GameNameInput from "@/components/GameNameInput";
+import StatFieldEditor from "@/components/StatFieldEditor";
 import { describeMonthlyModes } from "@/lib/recurrence";
 
 const inputCls = "w-full rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
@@ -147,6 +148,10 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
   const [statSpectatorPts, setStatSpectatorPts]           = useState<number>(initialStatCfg.spectatorParticipationPoints ?? 0);
   const [statTransferToGlobal, setStatTransferToGlobal]   = useState<boolean>(initialStatCfg.transferToGlobalRanking ?? false);
   const [statRows, setStatRows] = useState<{ field: string; pointsPer: number; isWinnerStat?: boolean }[]>(initialStatCfg.stats ?? []);
+  // Event-level stat settings (Step 4 im Wizard)
+  const [eventStatFields, setEventStatFields]         = useState<string[]>(initialStatCfg.eventStatFields ?? []);
+  const [aggregatedStatFields, setAggregatedStatFields] = useState<string[]>(initialStatCfg.aggregatedStatFields ?? []);
+  const [winnerStatField, setWinnerStatField]         = useState<string>(initialStatCfg.winnerStatField ?? "");
   // Dominion Bonus
   const initialDom = initialStatCfg.dominionBonus ?? {};
   const [dominionEnabled, setDominionEnabled]           = useState<boolean>(initialDom.enabled ?? false);
@@ -224,10 +229,9 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
           transferToGlobalRanking:      statTransferToGlobal,
           stats: statRows.filter(r => r.field.trim()),
           winnerStatKeys: statRows.filter(r => r.field.trim() && r.isWinnerStat).map(r => r.field),
-          // preserve advanced fields from initial config unchanged
-          ...(initialStatCfg.eventStatFields      && { eventStatFields:      initialStatCfg.eventStatFields }),
-          ...(initialStatCfg.aggregatedStatFields && { aggregatedStatFields: initialStatCfg.aggregatedStatFields }),
-          ...(initialStatCfg.winnerStatField      && { winnerStatField:      initialStatCfg.winnerStatField }),
+          ...(eventStatFields.length > 0      && { eventStatFields }),
+          ...(aggregatedStatFields.length > 0 && { aggregatedStatFields }),
+          ...(winnerStatField                 && { winnerStatField }),
           ...(dominionEnabled && dominionTriggerStats.length > 0 && {
             dominionBonus: {
               enabled:      true,
@@ -762,6 +766,83 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
             </div>
           </Section>
 
+          {/* Event-Format-Einstellungen (für Stats/Durchschnittswerte-Modi) */}
+          {(fixedFormat === "ffa" || fixedFormat === "coop_stats" || fixedFormat === "avg_stats" || eventStatFields.length > 0) && (
+            <Section title="Event-Einstellungen (Stat-Tracking)">
+              <p className="text-xs text-gray-500 mb-1">
+                Welche Stats werden pro Event erfasst? Gilt als Vorlage für neue Events und den Abschluss-Assistenten.
+              </p>
+
+              <div className="rounded-xl p-4 border border-amber-500/20 bg-amber-500/5">
+                <p className="text-sm font-medium text-amber-300 mb-2">Trackte Statistiken je Event</p>
+                <StatFieldEditor
+                  fields={eventStatFields}
+                  onChange={f => {
+                    setEventStatFields(f);
+                    setAggregatedStatFields(prev => prev.filter(s => f.includes(s)));
+                    if (!f.includes(winnerStatField)) setWinnerStatField("");
+                  }}
+                  isAvg={fixedFormat === "avg_stats"}
+                />
+              </div>
+
+              {eventStatFields.length > 0 && (
+                <div className="rounded-xl p-4 border border-teal-500/20 bg-teal-500/5 space-y-3">
+                  <p className="text-sm font-medium text-teal-300">🏆 Sieger-Ermittlung</p>
+                  <p className="text-[11px] text-gray-500">
+                    Welcher Stat bestimmt den Sieger eines Events? Der Spieler mit dem höchsten Wert gewinnt.
+                  </p>
+                  <select
+                    value={winnerStatField}
+                    onChange={e => setWinnerStatField(e.target.value)}
+                    className={inputCls}
+                  >
+                    <option value="">– Kein / manuell festlegen –</option>
+                    {eventStatFields.map(f => <option key={f} value={f}>{f}</option>)}
+                  </select>
+                  {winnerStatField && statRows.filter(r => r.isWinnerStat).length === 0 && (
+                    <p className="text-[11px] text-amber-500/80 rounded-lg px-3 py-2 border border-amber-500/20 bg-amber-500/5">
+                      Markiere oben unter &quot;Stats&quot; einen Reihen-Stat mit 🏆, damit der Event-Sieger dort +1 bekommt.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {eventStatFields.length > 0 && (
+                <div className="rounded-xl p-4 border border-indigo-500/20 bg-indigo-500/5 space-y-3">
+                  <p className="text-sm font-medium text-indigo-300">📈 Summierte Reihen-Stats</p>
+                  <p className="text-[11px] text-gray-500">
+                    Diese Stats werden über alle Events hinweg aufsummiert in die Ligatabelle eingetragen (z.B. Tore, Kills).
+                  </p>
+                  <div className="space-y-1.5">
+                    {eventStatFields.map(f => {
+                      const checked = aggregatedStatFields.includes(f);
+                      return (
+                        <button key={f} type="button"
+                          onClick={() => setAggregatedStatFields(prev =>
+                            checked ? prev.filter(s => s !== f) : [...prev, f]
+                          )}
+                          className={`w-full flex items-center gap-3 rounded-xl px-3 py-2 border text-xs text-left transition-all ${
+                            checked
+                              ? "border-indigo-500/60 bg-indigo-500/10 text-indigo-300"
+                              : "border-white/10 bg-white/5 text-gray-400"
+                          }`}>
+                          <div className={`w-3.5 h-3.5 rounded border flex-shrink-0 flex items-center justify-center ${checked ? "border-indigo-400 bg-indigo-500" : "border-gray-600"}`}>
+                            {checked && <span className="text-white text-[10px] font-bold">✓</span>}
+                          </div>
+                          {f}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {aggregatedStatFields.length === 0 && (
+                    <p className="text-[10px] text-gray-600">Keine Stats ausgewählt – nur Teilnahme und Siege werden in der Ligatabelle getrackt.</p>
+                  )}
+                </div>
+              )}
+            </Section>
+          )}
+
           {/* Legacy-Stand */}
           <Section title="Legacy-Stand" overflowVisible>
             <p className="text-xs text-gray-600">Historische Werte vor App-Einführung</p>
@@ -823,6 +904,16 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
                               className="w-16 rounded px-1.5 py-0.5 text-[11px] text-white bg-gray-800 border border-gray-700" />
                           </label>
                           {polls.filter(p => p.label.trim()).map(p => (<>
+                            <label key={`${p.label}_W`} className="flex items-center gap-1.5 text-[11px] text-violet-400">
+                              {p.label} Siege
+                              <input type="number" min={0} value={row.stats[p.label] ?? 0}
+                                onChange={e => setLegacyRows(prev => prev.map((r, j) => {
+                                  if (j !== i) return r;
+                                  const newStats = { ...r.stats, [p.label]: Number(e.target.value) };
+                                  return { ...r, stats: newStats, points: calcLegacyPoints(r.participations, newStats) };
+                                }))}
+                                className="w-16 rounded px-1.5 py-0.5 text-[11px] text-white bg-gray-800 border border-gray-700" />
+                            </label>
                             {p.participationSeriesPoints > 0 && (
                               <label key={`${p.label}_T`} className="flex items-center gap-1.5 text-[11px] text-violet-400">
                                 {p.label} Teiln.-LP
