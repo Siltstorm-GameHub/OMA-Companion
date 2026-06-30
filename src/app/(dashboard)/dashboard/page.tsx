@@ -19,6 +19,7 @@ import WhatsAppCommunityBanner from "@/components/WhatsAppCommunityBanner";
 import ClipContestWidget from "@/components/ClipContestWidget";
 import RankIcon from "@/components/RankIcon";
 import RankedAvatar from "@/components/RankedAvatar";
+import { getRingClass } from "@/lib/ranks";
 
 const MEDAL = ["🥇", "🥈", "🥉"];
 
@@ -173,18 +174,19 @@ export default async function DashboardPage() {
           style={{ background: "linear-gradient(90deg, transparent, rgba(20,184,166,0.18), transparent)" }} />
 
         <div className="flex items-start gap-5">
-          {/* Avatar mit Cut-Corner */}
+          {/* Avatar mit Cut-Corner + Rang-Ring */}
           <div className="relative shrink-0">
-            <div className="card-cut w-16 h-16 sm:w-20 sm:h-20 overflow-hidden"
-              style={{ boxShadow: "0 0 0 1px rgba(20,184,166,0.35), 0 0 32px rgba(20,184,166,0.12), 0 8px 24px rgba(0,0,0,0.6)" }}>
-              {avatarUrl ? (
-                <Image src={avatarUrl} alt={displayName} width={80} height={80} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-2xl font-black text-white"
-                  style={{ background: "linear-gradient(135deg, #14b8a6, #0d9488, #8b2020)" }}>
-                  {firstName[0]?.toUpperCase()}
-                </div>
-              )}
+            <div className={`${getRingClass(myRankPoints)} rounded-lg`} style={{ padding: 3 }}>
+              <div className="card-cut w-16 h-16 sm:w-20 sm:h-20 overflow-hidden bg-[#0d0d0f]">
+                {avatarUrl ? (
+                  <Image src={avatarUrl} alt={displayName} width={80} height={80} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-2xl font-black text-white"
+                    style={{ background: "linear-gradient(135deg, #14b8a6, #0d9488, #8b2020)" }}>
+                    {firstName[0]?.toUpperCase()}
+                  </div>
+                )}
+              </div>
             </div>
             {/* Online-Dot */}
             <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-sm bg-emerald-400 border-2"
