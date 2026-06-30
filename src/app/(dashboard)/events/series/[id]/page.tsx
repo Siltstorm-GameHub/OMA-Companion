@@ -73,8 +73,10 @@ const FORMAT_LABELS: Record<string, string> = {
   single_elimination: "Single Elimination",
   double_elimination: "Double Elimination",
   round_robin:        "Round Robin",
-  ffa:                "Free-for-All",
-  coop_stats:         "Coop / Stats",
+  liga:               "Liga",
+  ffa:                "Free for All",
+  coop_stats:         "Kooperativ",
+  avg_stats:          "Durchschnittswerte",
 };
 
 type StatConfig = {
