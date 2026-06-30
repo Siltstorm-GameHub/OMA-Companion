@@ -136,9 +136,10 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
   const [participationCoins, setParticipationCoins] = useState<number>(initialRewards.participationCoins);
   const [placementRewards, setPlacementRewards] = useState<PlacementReward[]>(initialRewards.placements);
 
-  // Poll config
-  const [polls, setPolls] = useState<PollConfig[]>(() => parsePollConfigs(series.pollConfigJson));
+  // Poll config — read from pollsConfigJson (wizard/create), fall back to pollConfigJson (legacy edit)
+  const [polls, setPolls] = useState<PollConfig[]>(() => parsePollConfigs(series.pollsConfigJson ?? series.pollConfigJson));
   const [expandedPoll, setExpandedPoll] = useState<number | null>(null);
+  const [propagatePolls, setPropagatePolls] = useState(false);
 
   const latestEvent = series.events[series.events.length - 1];
   const latestStartAt = latestEvent ? new Date(latestEvent.startAt) : new Date();
@@ -170,7 +171,8 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
         }),
         legacyStandings:     JSON.stringify(legacyRows),
         placementRewardsJson: JSON.stringify({ participationCoins, placements: placementRewards }),
-        pollConfigJson:       JSON.stringify(polls),
+        pollsConfigJson:      JSON.stringify(polls),
+        propagatePolls,
       }),
     });
     setSaving(false);
@@ -178,6 +180,7 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
       toast.success("Reihe gespeichert");
       setPropagateGame(false);
       setPropagateFormat(false);
+      setPropagatePolls(false);
       router.refresh();
     } else {
       toast.error("Fehler beim Speichern");
@@ -547,6 +550,11 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
                   <Plus className="w-3 h-3" /> Umfrage hinzufügen
                 </button>
               )}
+              <Checkbox
+                checked={propagatePolls}
+                onChange={setPropagatePolls}
+                label="Umfragen auf alle kommenden Events übertragen (aktualisiert pollsConfigJson der Events)"
+              />
             </div>
           </Section>
 
@@ -583,7 +591,7 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
           </Section>
 
           {/* Legacy-Stand */}
-          <Section title="Legacy-Stand">
+          <Section title="Legacy-Stand" overflowVisible>
             <p className="text-xs text-gray-600">Historische Werte vor App-Einführung</p>
             {legacyRows.length > 0 && (
               <div className="space-y-1.5 max-h-64 overflow-y-auto">
@@ -740,7 +748,10 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
                     }`}
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-white truncate">{ev.title}</p>
+                      <p className="text-sm text-white truncate">
+                        {ev.title}
+                        <span className="text-gray-500 font-normal"> · {new Date(ev.startAt).toLocaleDateString("de-DE", { day: "numeric", month: "numeric", year: "numeric" })}</span>
+                      </p>
                       <p className="text-xs text-gray-600">{date}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
@@ -802,9 +813,9 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
 }
 
 /* ── Small helper components ── */
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children, overflowVisible }: { title: string; children: React.ReactNode; overflowVisible?: boolean }) {
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-gray-900/50 overflow-hidden">
+    <div className={`rounded-xl border border-white/[0.06] bg-gray-900/50 ${overflowVisible ? "overflow-visible" : "overflow-hidden"}`}>
       <div className="px-4 py-2.5 border-b border-white/[0.05]">
         <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{title}</h3>
       </div>
