@@ -68,6 +68,8 @@ export async function PATCH(req: NextRequest) {
     data: {
       ...(fields.name                 !== undefined && { name:                 fields.name }),
       ...(fields.description          !== undefined && { description:          fields.description }),
+      ...(fields.genre                !== undefined && { genre:                fields.genre }),
+      ...(fields.platform             !== undefined && { platform:             fields.platform }),
       ...(fields.fixedGame            !== undefined && { fixedGame:            fields.fixedGame }),
       ...(fields.fixedFormat          !== undefined && { fixedFormat:          fields.fixedFormat }),
       ...(fields.discordChannelId     !== undefined && { discordChannelId:     fields.discordChannelId }),
