@@ -74,6 +74,31 @@ function parseTmtConfig(pc: string | null) {
   } catch { return d; }
 }
 
+/** Leitet pointsConfig (im selben Shape wie parseTmtConfig erwartet) aus den
+ * Eventreihen-Wizard-Einstellungen (placementRewardsJson) ab. */
+function derivePointsConfigFromSeries(series: { placementRewardsJson?: string | null } | null | undefined): string | null {
+  if (!series?.placementRewardsJson) return null;
+  try {
+    const { placements } = JSON.parse(series.placementRewardsJson) as {
+      placements: { place: number; coins: number; rankPoints: number }[];
+    };
+    if (!placements?.length) return null;
+    const cfg: Record<string, { coins: number; points: number }> = {};
+    for (const p of placements) cfg[String(p.place)] = { coins: p.coins, points: p.rankPoints };
+    return JSON.stringify(cfg);
+  } catch { return null; }
+}
+
+/** Leitet die Statistik-Felder aus den Eventreihen-Wizard-Einstellungen (seriesStatConfig) ab. */
+function deriveStatFieldsFromSeries(series: { seriesStatConfig?: string | null } | null | undefined): string[] | null {
+  if (!series?.seriesStatConfig) return null;
+  try {
+    const { stats } = JSON.parse(series.seriesStatConfig) as { stats: { field: string }[] };
+    const fields = stats?.map(s => s.field).filter(Boolean) ?? [];
+    return fields.length ? fields : null;
+  } catch { return null; }
+}
+
 const STATUS_OPTIONS = ["open", "active", "umfrage", "finished"];
 const STATUS_STYLES: Record<string, string> = {
   open:     "text-blue-400 bg-blue-500/10 border-blue-500/20",
@@ -145,12 +170,16 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
   const [spectatorCoins, setSpectatorCoins] = useState(initialSpectatorReward.coins);
   const [spectatorRankPts, setSpectatorRankPts] = useState(initialSpectatorReward.rankPoints);
 
-  /* ── Tournament state ── */
-  const [tmtFormat, setTmtFormat]       = useState<string>(event.format ?? "single_elimination");
-  const [tmtPoints, setTmtPoints]       = useState(() => parseTmtConfig(event.pointsConfig));
+  /* ── Tournament state (übernimmt Format/Punkte/Stats der Eventreihe, falls am Event selbst noch nichts gesetzt ist) ── */
+  const [tmtFormat, setTmtFormat]       = useState<string>(event.format ?? event.series?.fixedFormat ?? "single_elimination");
+  const [tmtPoints, setTmtPoints]       = useState(() =>
+    parseTmtConfig(event.pointsConfig ?? derivePointsConfigFromSeries(event.series))
+  );
   const [tmtStatFields, setTmtStatFields] = useState<string[]>(() => {
-    if (!event.statFields) return ["Kills", "Assists", "Punkte"];
-    try { return JSON.parse(event.statFields) as string[]; } catch { return []; }
+    if (event.statFields) {
+      try { return JSON.parse(event.statFields) as string[]; } catch { /* fällt durch */ }
+    }
+    return deriveStatFieldsFromSeries(event.series) ?? ["Kills", "Assists", "Punkte"];
   });
   const [tmtLoading, setTmtLoading] = useState(false);
   const hasTournament = !!event.format;
