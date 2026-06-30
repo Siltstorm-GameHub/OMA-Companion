@@ -125,7 +125,15 @@ export async function PATCH(req: NextRequest) {
     });
   }
 
-  // 4) Discord-Kanal auf alle Events der Reihe übertragen (immer automatisch)
+  // 4) hidden auf alle Events der Reihe übertragen
+  if (fields.hidden !== undefined) {
+    await prisma.event.updateMany({
+      where: { seriesId },
+      data:  { hidden: fields.hidden },
+    });
+  }
+
+  // 5) Discord-Kanal auf alle Events der Reihe übertragen (immer automatisch)
   if (fields.discordChannelId !== undefined) {
     await prisma.event.updateMany({
       where: { seriesId },
