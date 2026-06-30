@@ -688,20 +688,19 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
             )}
           </h2>
 
-          {standings.length > 0 ? (
-            <SeriesStandingsTable
-              rows={standings}
-              users={standingUsers}
-              statCols={statCfg.stats}
-              extraCols={extraCols}
-              currentUserId={userId}
-              showPoints={showPoints}
-              lastEventDelta={hasDelta ? lastEventDelta : undefined}
-              lastEventTitle={gamePhaseCompleteEvents[0]?.title}
-              mode="compact"
-            />
-          ) : (
-            <div className="glass rounded-2xl px-4 py-8 text-center text-sm text-gray-600">
+          <SeriesStandingsTable
+            rows={standings}
+            users={standingUsers}
+            statCols={statCfg.stats}
+            extraCols={extraCols}
+            currentUserId={userId}
+            showPoints={showPoints}
+            lastEventDelta={hasDelta ? lastEventDelta : undefined}
+            lastEventTitle={gamePhaseCompleteEvents[0]?.title}
+            mode="compact"
+          />
+          {standings.length === 0 && (
+            <div className="glass rounded-2xl px-4 py-6 text-center text-sm text-gray-600">
               Noch keine Ergebnisse
             </div>
           )}
