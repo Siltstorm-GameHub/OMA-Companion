@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/roles";
-import { getRank, getRankFullLabel } from "@/lib/ranks";
+import { getRank, getRankFullLabel, getTierRing } from "@/lib/ranks";
 import { calcStreak } from "@/lib/streak";
 import { Trophy, Swords, Heart, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import RankPointsIcon from "@/components/RankPointsIcon";
@@ -219,7 +219,7 @@ export default async function LeaderboardPage() {
                   {MEDALS[cfg.rank]}
                 </span>
 
-                <div className={`${cfg.avatarSize} rounded-full overflow-hidden ring-2 ${cfg.avatarRing} mb-3 shrink-0`}
+                <div className={`${cfg.avatarSize} rounded-full overflow-hidden ring-2 ${getTierRing(u.rankPoints)} mb-3 shrink-0`}
                   style={{ boxShadow: cfg.rank === 0 ? "0 0 24px rgba(245,158,11,0.30)" : undefined }}>
                   {u.image
                     ? <Image src={u.image} alt={displayName} width={80} height={80} className="w-full h-full object-cover" />
@@ -230,7 +230,7 @@ export default async function LeaderboardPage() {
                 </div>
 
                 <div className="flex items-center justify-center gap-1.5 mb-1">
-                  <RankIcon rankPoints={u.rankPoints} compact size="sm" />
+                  <RankIcon rankPoints={u.rankPoints} size="sm" />
                 </div>
                 <p className={`${cfg.fontSize} font-bold truncate max-w-full text-center leading-tight ${isMe ? "text-teal-300" : cfg.nameColor}`}>
                   {displayName}
@@ -326,9 +326,7 @@ export default async function LeaderboardPage() {
                 </div>
 
                 {/* Avatar */}
-                <div className={`w-9 h-9 rounded-full overflow-hidden
-                  ${isTop3 ? "ring-2" : "ring-1"}
-                  ${i === 0 ? "ring-amber-400/50" : i === 1 ? "ring-slate-400/40" : i === 2 ? "ring-orange-500/40" : isMe ? "ring-teal-400/40" : "ring-white/[0.08]"}`}>
+                <div className={`w-9 h-9 rounded-full overflow-hidden ${getTierRing(u.rankPoints)}`}>
                   {u.image
                     ? <Image src={u.image} alt={displayName} width={36} height={36} className="w-full h-full object-cover" />
                     : <div className={`w-full h-full flex items-center justify-center text-xs font-bold ${isMe ? "bg-teal-500/20 text-teal-300" : "bg-white/[0.05] text-gray-400"}`}>
@@ -338,7 +336,7 @@ export default async function LeaderboardPage() {
 
                 {/* Name + Rang */}
                 <div className="min-w-0 flex items-center gap-2">
-                  <RankIcon rankPoints={u.rankPoints} compact size="sm" />
+                  <RankIcon rankPoints={u.rankPoints} size="sm" />
                   <div className="min-w-0">
                     <p className={`text-sm font-semibold truncate leading-tight ${nameColor}`}>
                       {displayName}

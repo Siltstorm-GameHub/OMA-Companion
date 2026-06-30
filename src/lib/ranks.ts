@@ -47,6 +47,11 @@ export function getNextRank(rankPoints: number): RankEntry | null {
   return RANKS.find(r => r.min > rankPoints) ?? null;
 }
 
+/** Gibt die Tailwind-Ring-Klassen für den Avatar basierend auf dem Tier zurück. */
+export function getTierRing(rankPoints: number): string {
+  return TIER_RINGS[getRank(rankPoints).tierLabel];
+}
+
 export function getRankProgress(rankPoints: number): { rank: RankEntry; next: RankEntry | null; pct: number } {
   const rank = getRank(rankPoints);
   const next = getNextRank(rankPoints);

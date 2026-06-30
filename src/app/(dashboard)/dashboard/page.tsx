@@ -18,6 +18,7 @@ import CommunityLiveBanner from "@/components/CommunityLiveBanner";
 import WhatsAppCommunityBanner from "@/components/WhatsAppCommunityBanner";
 import ClipContestWidget from "@/components/ClipContestWidget";
 import RankIcon from "@/components/RankIcon";
+import { getTierRing } from "@/lib/ranks";
 
 const MEDAL = ["🥇", "🥈", "🥉"];
 
@@ -536,8 +537,7 @@ export default async function DashboardPage() {
                         ? <span className="text-sm leading-none">{MEDAL[i]}</span>
                         : <span className="text-[10px] font-bold text-gray-600">{i + 1}</span>}
                     </div>
-                    <div className="w-7 h-7 rounded-sm shrink-0 overflow-hidden"
-                      style={{ boxShadow: isMe ? "0 0 0 1px rgba(20,184,166,0.5)" : "0 0 0 1px rgba(255,255,255,0.08)" }}>
+                    <div className={`w-7 h-7 rounded-sm shrink-0 overflow-hidden ${getTierRing(u.rankPoints)}`}>
                       {u.image
                         ? <Image src={u.image} alt={name} width={28} height={28} className="w-full h-full object-cover" />
                         : <div className="w-full h-full flex items-center justify-center text-[10px] font-bold"
@@ -546,7 +546,7 @@ export default async function DashboardPage() {
                           </div>}
                     </div>
                     <div className="flex-1 min-w-0 flex items-center gap-1.5">
-                      <RankIcon rankPoints={u.rankPoints} compact size="sm" />
+                      <RankIcon rankPoints={u.rankPoints} size="sm" />
                       <p className="text-xs font-semibold truncate" style={{ color: isMe ? "#2dd4bf" : "white" }}>
                         {name}{isMe && <span className="text-[9px] text-gray-600 ml-1 font-normal">du</span>}
                       </p>
