@@ -23,7 +23,7 @@ const ROUNDED = {
 };
 
 /** Ring padding in px per tier suffix (i/ii/iii) */
-const TIER_PAD_PX: Record<string, number> = { i: 3, ii: 4, iii: 5 };
+const TIER_PAD_PX: Record<string, number> = { i: 2, ii: 3, iii: 4 };
 
 function getTierPad(ringClass: string): number {
   const suffix = ringClass.split("-").at(-1) ?? "i";
