@@ -405,14 +405,23 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
     else toast.error("Fehler beim Speichern");
   }
 
+  /* Wenn die Eventreihe ein festes Spiel hat, werden Belohnungen/Turnier/Reihe zentral in der
+     Reihe verwaltet — das Einzelevent zeigt nur noch Details + Teilnehmer. */
+  const isSeriesEvent = !!event.series?.fixedGame;
+
   /* ── Tab definitions ── */
-  const tabs: { key: TabKey; label: string }[] = [
-    { key: "details",     label: "Details" },
-    { key: "rewards",     label: "Belohnungen" },
-    ...(hasTournament || event.type === "tournament" ? [{ key: "tournament" as TabKey, label: "Turnier" }] : []),
-    { key: "participants", label: `Teilnehmer (${event._count.registrations})` },
-    ...(event.series ? [{ key: "series" as TabKey, label: "Reihe" }] : []),
-  ];
+  const tabs: { key: TabKey; label: string }[] = isSeriesEvent
+    ? [
+        { key: "details",      label: "Details" },
+        { key: "participants", label: `Teilnehmer (${event._count.registrations})` },
+      ]
+    : [
+        { key: "details",     label: "Details" },
+        { key: "rewards",     label: "Belohnungen" },
+        ...(hasTournament || event.type === "tournament" ? [{ key: "tournament" as TabKey, label: "Turnier" }] : []),
+        { key: "participants", label: `Teilnehmer (${event._count.registrations})` },
+        ...(event.series ? [{ key: "series" as TabKey, label: "Reihe" }] : []),
+      ];
 
   /* ── Render ── */
   return (
@@ -491,8 +500,86 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
         ))}
       </div>
 
-      {/* ── Tab: Details ── */}
-      {activeTab === "details" && (
+      {/* ── Streaming-Partner (geteilt zwischen beiden Details-Varianten) ── */}
+      {/* Wird weiter unten inline gerendert — definiert als Fragment-Helfer */}
+
+      {/* ── Tab: Details (Reihen-Event: reduzierte Ansicht) ── */}
+      {activeTab === "details" && isSeriesEvent && (
+        <div className="space-y-4">
+          {/* Status */}
+          <div className="flex items-center gap-3">
+            <label className="text-xs text-gray-500 shrink-0">Status</label>
+            <div className="flex gap-2 flex-wrap">
+              {STATUS_OPTIONS.map(s => (
+                <button key={s} type="button" onClick={() => setStatus(s)}
+                  className={`text-xs px-3 py-1 rounded-full border transition-all ${
+                    status === s ? STATUS_STYLES[s] : "text-gray-600 border-white/[0.08] hover:text-gray-400"
+                  }`}>
+                  {s === "open" ? "Offen" : s === "active" ? "Aktiv" : s === "umfrage" ? "Umfrage" : "Beendet"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className={labelCls}>Datum & Uhrzeit</label>
+            <input type="datetime-local" value={startAt} onChange={e => setStartAt(e.target.value)} className={inputCls} />
+          </div>
+
+          {/* ── Twitch Clip ── */}
+          <div>
+            <label className={`${labelCls} flex items-center gap-1.5`}>
+              <Clapperboard className="w-3.5 h-3.5 text-[#9146ff]" /> Twitch-Clip (Event-Highlight)
+            </label>
+            <input type="url" value={twitchClipUrl} onChange={e => setTwitchClipUrl(e.target.value)}
+              placeholder="https://www.twitch.tv/clips/..." className={inputCls} />
+            <p className="text-[10px] text-gray-600 mt-1">Wird auf der Event-Seite als Highlight-Link angezeigt.</p>
+          </div>
+
+          {/* ── Streaming-Partner ── */}
+          <div className="rounded-xl border border-white/[0.06] bg-gray-900/50 p-4 space-y-3">
+            <button type="button" onClick={loadPartners} className="flex items-center gap-2 w-full text-left">
+              <Tv2 className="w-4 h-4 text-[#9146ff]" />
+              <span className="text-sm font-semibold text-gray-300">Streaming-Partner</span>
+              {!partnersLoaded && <span className="text-xs text-gray-600 ml-auto">Klicken zum Laden</span>}
+            </button>
+            {partnersLoaded && (
+              <>
+                {allPartners.length === 0 ? (
+                  <p className="text-xs text-gray-600">Keine Partner eingetragen.</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {allPartners.map(p => (
+                      <label key={p.id} className="flex items-center gap-2.5 cursor-pointer group">
+                        <input type="checkbox" checked={selectedPartnerIds.includes(p.id)}
+                          onChange={e => setSelectedPartnerIds(ids => e.target.checked ? [...ids, p.id] : ids.filter(id => id !== p.id))}
+                          className="rounded accent-violet-500" />
+                        <Image src={p.logoUrl} alt={p.name} width={20} height={20} className="rounded-full" />
+                        <span className="text-sm text-gray-300 group-hover:text-white transition-colors">{p.name}</span>
+                        <span className="text-xs text-gray-600">twitch.tv/{p.twitchLogin}</span>
+                      </label>
+                    ))}
+                    <button type="button" onClick={savePartners} disabled={partnerSaving}
+                      className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-violet-500/15 border border-violet-500/25 text-violet-300 hover:bg-violet-500/25 disabled:opacity-50 transition-colors">
+                      <Save className="w-3.5 h-3.5" />
+                      {partnerSaving ? "Speichert…" : "Streaming-Partner speichern"}
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          <button onClick={handleSave} disabled={loading}
+            className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-white bg-teal-700 hover:bg-teal-600 transition-colors disabled:opacity-50">
+            <Save className="w-4 h-4" />
+            {loading ? "Speichert…" : "Speichern"}
+          </button>
+        </div>
+      )}
+
+      {/* ── Tab: Details (Vollansicht für Einzelevents / Reihen ohne festes Spiel) ── */}
+      {activeTab === "details" && !isSeriesEvent && (
         <div className="space-y-4">
           {/* Status */}
           <div className="flex items-center gap-3">
@@ -550,7 +637,7 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
               <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                 {GENRES.map(g => (
                   <button key={g.value} type="button" onClick={() => setGenre(genre === g.value ? null : g.value)}
-                    className={`flex flex-col items-center gap-1.5 rounded-xl p-2 border transition-all ${
+                    className={`flex flex-col items-center gap-1.5 rounded-xl p2 border transition-all ${
                       genre === g.value ? "border-teal-500/60 bg-teal-500/10" : "border-white/8 bg-white/3 hover:border-white/15"
                     }`}>
                     <Image src={g.icon} alt={g.label} width={28} height={28} className="object-contain" />
@@ -600,28 +687,19 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
               placeholder="Leer = Standard" className={inputCls} />
           </div>
 
-          {/* ── Twitch Clip (Event-Highlight) ── */}
+          {/* ── Twitch Clip ── */}
           <div>
             <label className={`${labelCls} flex items-center gap-1.5`}>
               <Clapperboard className="w-3.5 h-3.5 text-[#9146ff]" /> Twitch-Clip (Event-Highlight)
             </label>
-            <input
-              type="url"
-              value={twitchClipUrl}
-              onChange={e => setTwitchClipUrl(e.target.value)}
-              placeholder="https://www.twitch.tv/clips/..."
-              className={inputCls}
-            />
+            <input type="url" value={twitchClipUrl} onChange={e => setTwitchClipUrl(e.target.value)}
+              placeholder="https://www.twitch.tv/clips/..." className={inputCls} />
             <p className="text-[10px] text-gray-600 mt-1">Wird auf der Event-Seite als Highlight-Link angezeigt.</p>
           </div>
 
           {/* ── Streaming-Partner ── */}
           <div className="rounded-xl border border-white/[0.06] bg-gray-900/50 p-4 space-y-3">
-            <button
-              type="button"
-              onClick={loadPartners}
-              className="flex items-center gap-2 w-full text-left"
-            >
+            <button type="button" onClick={loadPartners} className="flex items-center gap-2 w-full text-left">
               <Tv2 className="w-4 h-4 text-[#9146ff]" />
               <span className="text-sm font-semibold text-gray-300">Streaming-Partner</span>
               {!partnersLoaded && <span className="text-xs text-gray-600 ml-auto">Klicken zum Laden</span>}
@@ -632,35 +710,18 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
                   <p className="text-xs text-gray-600">Keine Partner eingetragen. Im Admin-Bereich unter Community → Partner anlegen.</p>
                 ) : (
                   <div className="space-y-1.5">
-                    {allPartners.map((p) => (
+                    {allPartners.map(p => (
                       <label key={p.id} className="flex items-center gap-2.5 cursor-pointer group">
-                        <input
-                          type="checkbox"
-                          checked={selectedPartnerIds.includes(p.id)}
-                          onChange={(e) => {
-                            setSelectedPartnerIds((ids) =>
-                              e.target.checked ? [...ids, p.id] : ids.filter((id) => id !== p.id)
-                            );
-                          }}
-                          className="rounded accent-violet-500"
-                        />
-                        <Image
-                          src={p.logoUrl}
-                          alt={p.name}
-                          width={20}
-                          height={20}
-                          className="rounded-full"
-                        />
+                        <input type="checkbox" checked={selectedPartnerIds.includes(p.id)}
+                          onChange={e => setSelectedPartnerIds(ids => e.target.checked ? [...ids, p.id] : ids.filter(id => id !== p.id))}
+                          className="rounded accent-violet-500" />
+                        <Image src={p.logoUrl} alt={p.name} width={20} height={20} className="rounded-full" />
                         <span className="text-sm text-gray-300 group-hover:text-white transition-colors">{p.name}</span>
                         <span className="text-xs text-gray-600">twitch.tv/{p.twitchLogin}</span>
                       </label>
                     ))}
-                    <button
-                      type="button"
-                      onClick={savePartners}
-                      disabled={partnerSaving}
-                      className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-violet-500/15 border border-violet-500/25 text-violet-300 hover:bg-violet-500/25 disabled:opacity-50 transition-colors"
-                    >
+                    <button type="button" onClick={savePartners} disabled={partnerSaving}
+                      className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-violet-500/15 border border-violet-500/25 text-violet-300 hover:bg-violet-500/25 disabled:opacity-50 transition-colors">
                       <Save className="w-3.5 h-3.5" />
                       {partnerSaving ? "Speichert…" : "Streaming-Partner speichern"}
                     </button>
