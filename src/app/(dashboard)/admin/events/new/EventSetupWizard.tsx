@@ -195,7 +195,6 @@ export default function EventSetupWizard({
   const [seriesHidden, setSeriesHidden] = useState(false);
   const [eventStatFields, setEventStatFields] = useState<string[]>([]);
   const [winnerStatField, setWinnerStatField] = useState("");
-  const [aggregatedStatFields, setAggregatedStatFields] = useState<string[]>([]);
 
   // ── Dominion Bonus ───────────────────────────────────────────────────────────
   const [dominionEnabled, setDominionEnabled]       = useState(false);
@@ -378,7 +377,6 @@ export default function EventSetupWizard({
           transferToGlobalRanking: statPtsToGlobalRanking,
           stats: statRows,
           ...(eventStatFields.length > 0 && { eventStatFields }),
-          ...(aggregatedStatFields.length > 0 && { aggregatedStatFields }),
           ...(winnerStatField && { winnerStatField }),
           ...(winnerStatKeys.length > 0 && { winnerStatKeys }),
           ...(dominionEnabled && dominionTriggerStats.length > 0 && {
@@ -1624,7 +1622,6 @@ export default function EventSetupWizard({
             </p>
             <StatFieldEditor fields={eventStatFields} onChange={f => {
               setEventStatFields(f);
-              setAggregatedStatFields(prev => prev.filter(s => f.includes(s)));
               if (!f.includes(winnerStatField)) setWinnerStatField("");
             }} />
           </div>
@@ -1657,37 +1654,6 @@ export default function EventSetupWizard({
           </div>
         )}
 
-        {!variousGames && eventStatFields.length > 0 && (
-          <div className="rounded-xl p-4 border border-indigo-500/20 bg-indigo-500/5 space-y-3">
-            <p className="text-sm font-medium text-indigo-300">📈 Summierte Reihen-Stats</p>
-            <p className="text-[11px] text-gray-500">
-              Diese Stats werden über alle Events hinweg aufsummiert und in die Gesamttabelle der Reihe eingetragen (z.B. Tore, Kills).
-            </p>
-            <div className="space-y-1.5">
-              {eventStatFields.map(f => {
-                const checked = aggregatedStatFields.includes(f);
-                return (
-                  <button key={f} type="button"
-                    onClick={() => setAggregatedStatFields(prev =>
-                      checked ? prev.filter(s => s !== f) : [...prev, f]
-                    )}
-                    className={`w-full flex items-center gap-3 rounded-xl px-3 py-2 border text-xs text-left transition-all ${
-                      checked ? "border-indigo-500/60 bg-indigo-500/10 text-indigo-300" : "border-white/10 bg-white/5 text-gray-400"
-                    }`}>
-                    <div className={`w-3.5 h-3.5 rounded border flex-shrink-0 flex items-center justify-center ${checked ? "border-indigo-400 bg-indigo-500" : "border-gray-600"}`}>
-                      {checked && <Check className="w-2.5 h-2.5 text-white" />}
-                    </div>
-                    {f}
-                  </button>
-                );
-              })}
-            </div>
-            {aggregatedStatFields.length === 0 && (
-              <p className="text-[10px] text-gray-600">Keine Stats ausgewählt – nur Teilnahme und Siege werden getrackt.</p>
-            )}
-          </div>
-        )}
-
         {/* Dominion Bonus */}
         <div className="rounded-xl p-4 border border-yellow-500/20 bg-yellow-500/5 space-y-3">
           <div className="flex items-center justify-between">
@@ -1712,7 +1678,7 @@ export default function EventSetupWizard({
                     "Teilnahmen",
                     ...(spectatorMode ? ["Zuschauer-Teilnahmen"] : []),
                     ...winnerStatKeys,
-                    ...aggregatedStatFields,
+                    ...eventStatFields,
                     ...polls.filter(p => p.label).map(p => p.label),
                   ].filter((v, i, a) => a.indexOf(v) === i);
                   return allTracked.length > 0 ? (
@@ -1867,10 +1833,7 @@ export default function EventSetupWizard({
           {eventStatFields.length > 0 && (
             <p>📋 Event-Stats: {eventStatFields.join(", ")}</p>
           )}
-          {aggregatedStatFields.length > 0 && (
-            <p>📈 Summiert in Reihe: {aggregatedStatFields.join(", ")}</p>
-          )}
-          {winnerStatField && (
+{winnerStatField && (
             <p>🏆 Sieger via: {winnerStatField}{statRows.filter(r => r.isWinnerStat && r.field).length > 0 ? ` → Reihenstat(s) „${statRows.filter(r => r.isWinnerStat && r.field).map(r => r.field).join(", ")}" +1` : ""}</p>
           )}
         </div>
