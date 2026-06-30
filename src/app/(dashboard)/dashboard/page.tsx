@@ -42,9 +42,9 @@ const getGlobalDashboardData = unstable_cache(
   async () => {
     const [memberCount, activeEvents, activeSeries, topUsers, activeOrPollEvent, nextUpcomingEvent, liveEvent, recentSummaries] = await Promise.all([
       prisma.user.count(),
-      prisma.event.count({ where: { status: { in: ["open", "active", "umfrage"] } } }),
+      prisma.event.count({ where: { hidden: false, status: { in: ["open", "active", "umfrage"] } } }),
       prisma.eventSeries.findMany({
-        where: { events: { some: { status: { in: ["open", "active", "closed"] } } } },
+        where: { hidden: false, events: { some: { status: { in: ["open", "active", "closed"] } } } },
         include: {
           _count: { select: { events: true } },
           events: {
@@ -63,22 +63,22 @@ const getGlobalDashboardData = unstable_cache(
       }),
       // Active or umfrage event takes priority over upcoming
       prisma.event.findFirst({
-        where:   { status: { in: ["active", "umfrage"] } },
+        where:   { hidden: false, status: { in: ["active", "umfrage"] } },
         orderBy: { startAt: "desc" },
         include: { _count: { select: { registrations: true } } },
       }),
       prisma.event.findFirst({
-        where:   { status: { in: ["open", "active"] }, startAt: { gte: new Date() } },
+        where:   { hidden: false, status: { in: ["open", "active"] }, startAt: { gte: new Date() } },
         orderBy: { startAt: "asc" },
         include: { _count: { select: { registrations: true } } },
       }),
       prisma.event.findFirst({
-        where:   { status: { in: ["active", "umfrage"] } },
+        where:   { hidden: false, status: { in: ["active", "umfrage"] } },
         orderBy: { startAt: "desc" },
         select:  { id: true, title: true, format: true, status: true, _count: { select: { registrations: true } } },
       }),
       prisma.event.findMany({
-        where:   { status: "finished", summary: { not: null } },
+        where:   { hidden: false, status: "finished", summary: { not: null } },
         orderBy: { startAt: "desc" },
         take:    3,
         select:  { id: true, title: true, game: true, startAt: true, summary: true },

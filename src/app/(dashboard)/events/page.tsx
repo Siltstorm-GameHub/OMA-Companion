@@ -49,6 +49,7 @@ export default async function EventsPage() {
 
   const [events, activeSeason] = await Promise.all([
     prisma.event.findMany({
+      where:   isMod ? undefined : { hidden: false },
       orderBy: { startAt: "asc" },
       include: {
         _count:        { select: { registrations: true } },
