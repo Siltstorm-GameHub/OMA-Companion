@@ -85,6 +85,7 @@ type StatConfig = {
   mvpStatField?: string;
   defaultWinnerStatField?: string;
   defaultWinnerTargetField?: string;
+  aggregatedStatFields?: string[];
 };
 type LegacyRow = { userId: string; points: number; participations: number; stats: Record<string, number> };
 type SeriesEventForStandings = {
@@ -138,12 +139,17 @@ function computeStatStandings(
     for (const { userId: uid } of ev.registrations) {
       evPart[uid] = (evPart[uid] ?? 0) + 1;
     }
+    // Felder die aus Match-Einträgen summiert werden: cfg.stats + aggregatedStatFields
+    const fieldsToAggregate = new Set([
+      ...cfg.stats.map(s => s.field),
+      ...(cfg.aggregatedStatFields ?? []),
+    ]);
     for (const match of ev.matches) {
       for (const entry of match.entries) {
         if (!entry.userId || !entry.statsJson) continue;
         let s: Record<string, number> = {};
         try { s = JSON.parse(entry.statsJson); } catch { continue; }
-        for (const { field } of cfg.stats) {
+        for (const field of fieldsToAggregate) {
           const v = Number(s[field] ?? 0);
           if (v) addEv(entry.userId, field, v);
         }
