@@ -2,7 +2,8 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { QUEST_TYPE_META, type QuestType } from "@/lib/quests";
-import { getRank, getNextRank, getRankFullLabel, getTierRing } from "@/lib/ranks";
+import { getRank, getNextRank, getRankFullLabel } from "@/lib/ranks";
+import RankedAvatar from "@/components/RankedAvatar";
 import { computeBadges } from "@/lib/badges";
 import { MAX_SHOWCASE } from "@/lib/collectibles";
 import {
@@ -192,12 +193,14 @@ export default async function PublicProfilePage({
         <div className="relative flex items-center gap-5 flex-wrap">
           {/* Avatar */}
           <div className="relative shrink-0">
-            {user.image
-              ? <Image src={user.image} alt={displayName} width={80} height={80}
-                  className={`w-20 h-20 rounded-2xl object-cover ${getTierRing(rankPoints)}`} />
-              : <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br from-rose-600 to-rose-950 flex items-center justify-center text-2xl font-bold text-white ${getTierRing(rankPoints)}`}>
-                  {displayName[0].toUpperCase()}
-                </div>}
+            <RankedAvatar
+              rankPoints={rankPoints}
+              src={user.image}
+              alt={displayName}
+              size={80}
+              rounded="2xl"
+              className="w-20 h-20"
+            />
           </div>
 
           {/* Info */}
