@@ -4,7 +4,6 @@ import FloatingPill from "@/components/FloatingPill";
 import TopNewsFeed, { type NewsItem } from "@/components/TopNewsFeed";
 import MobileTopBar from "@/components/MobileTopBar";
 import BottomNav from "@/components/BottomNav";
-import { OnboardingModal } from "@/components/OnboardingModal";
 import { BackToTop } from "@/components/BackToTop";
 import { FloatingLobbyChat } from "@/components/FloatingLobbyChat";
 import AuroraBackground from "@/components/AuroraBackground";
@@ -157,9 +156,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
         {children}
         <PartnerFooter />
       </main>
-
-      {/* Onboarding für neue User */}
-      <OnboardingModal />
 
       {/* Back to top */}
       <BackToTop />
