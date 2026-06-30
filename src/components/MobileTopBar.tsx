@@ -3,7 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { LogOut, Sun, Moon, Bell, Settings, X } from "lucide-react";
+import { LogOut, Sun, Moon, Bell, Settings, X, ShieldAlert } from "lucide-react";
 import PwaInstallButton from "@/components/PwaInstallButton";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
@@ -335,6 +335,18 @@ export default function MobileTopBar() {
             <span className="text-sm font-semibold text-white truncate">{title}</span>
           </Link>
         </div>
+
+        {/* Admin-Button (nur Staff, nur Mobile) */}
+        {(session?.user as { role?: string })?.role === "admin" || (session?.user as { role?: string })?.role === "moderator" ? (
+          <Link
+            href="/admin"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-colors shrink-0"
+            style={{ background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.22)" }}
+          >
+            <ShieldAlert className="w-3.5 h-3.5 text-red-400" />
+            <span className="text-xs font-semibold text-red-400">Admin</span>
+          </Link>
+        ) : null}
 
         {/* Avatar Button mit Unread-Dot */}
         <button
