@@ -1039,7 +1039,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                               ).slice(0, 6);
                               if (!filtered.length) return null;
                               return (
-                                <div className="absolute top-full mt-1 left-0 right-0 z-20 bg-gray-900 border border-gray-700 rounded-lg overflow-hidden shadow-xl">
+                                <div className="absolute top-full mt-1 left-0 right-0 z-50 bg-gray-900 border border-gray-700 rounded-lg overflow-hidden shadow-xl">
                                   {filtered.map(u => (
                                     <button
                                       key={u.id}

@@ -23,7 +23,19 @@ type User = { id: string; name: string | null; username: string | null; image: s
 
 type PlacementReward = { place: number; coins: number; rankPoints: number };
 type RewardsConfig = { participationCoins: number; placements: PlacementReward[] };
-type PollConfig = { enabled: boolean; question: string; coins: number; rankPoints: number };
+type PollConfig = {
+  label: string;
+  question: string;
+  voterEligibility: "registered" | "all";
+  answerType: "players" | "custom";
+  customAnswers: string[];
+  startOffsetHours: number;
+  endOffsetHours: number;
+  participationCoins: number;
+  participationSeriesPoints: number;
+  winnerCoins: number;
+  winnerRankPoints: number;
+};
 
 const DEFAULT_REWARDS: RewardsConfig = {
   participationCoins: 10,
@@ -33,7 +45,19 @@ const DEFAULT_REWARDS: RewardsConfig = {
     { place: 3, coins: 100, rankPoints: 1 },
   ],
 };
-const DEFAULT_POLL: PollConfig = { enabled: false, question: "MVP", coins: 250, rankPoints: 3 };
+const DEFAULT_POLL_ITEM: PollConfig = {
+  label: "MVP",
+  question: "Wer war der MVP?",
+  voterEligibility: "registered",
+  answerType: "players",
+  customAnswers: [],
+  startOffsetHours: 0,
+  endOffsetHours: 24,
+  participationCoins: 10,
+  participationSeriesPoints: 0,
+  winnerCoins: 100,
+  winnerRankPoints: 0,
+};
 
 const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
   open:     { label: "Offen",    cls: "text-blue-400 bg-blue-500/10 border-blue-500/20" },
@@ -46,9 +70,25 @@ function parseRewards(json: string | null | undefined): RewardsConfig {
   if (!json) return DEFAULT_REWARDS;
   try { return { ...DEFAULT_REWARDS, ...JSON.parse(json) }; } catch { return DEFAULT_REWARDS; }
 }
-function parsePollConfig(json: string | null | undefined): PollConfig {
-  if (!json) return DEFAULT_POLL;
-  try { return { ...DEFAULT_POLL, ...JSON.parse(json) }; } catch { return DEFAULT_POLL; }
+function parsePollConfigs(json: string | null | undefined): PollConfig[] {
+  if (!json) return [];
+  try {
+    const parsed = JSON.parse(json);
+    if (!Array.isArray(parsed)) {
+      // Migrate old format: { enabled, question, coins, rankPoints }
+      if (parsed.enabled) {
+        return [{
+          ...DEFAULT_POLL_ITEM,
+          label: parsed.question ?? "MVP",
+          question: `Wer war der ${parsed.question ?? "MVP"}?`,
+          winnerCoins: parsed.coins ?? 100,
+          winnerRankPoints: parsed.rankPoints ?? 0,
+        }];
+      }
+      return [];
+    }
+    return parsed as PollConfig[];
+  } catch { return []; }
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -97,7 +137,8 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
   const [placementRewards, setPlacementRewards] = useState<PlacementReward[]>(initialRewards.placements);
 
   // Poll config
-  const [poll, setPoll] = useState<PollConfig>(parsePollConfig(series.pollConfigJson));
+  const [polls, setPolls] = useState<PollConfig[]>(() => parsePollConfigs(series.pollConfigJson));
+  const [expandedPoll, setExpandedPoll] = useState<number | null>(null);
 
   const latestEvent = series.events[series.events.length - 1];
   const latestStartAt = latestEvent ? new Date(latestEvent.startAt) : new Date();
@@ -129,7 +170,7 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
         }),
         legacyStandings:     JSON.stringify(legacyRows),
         placementRewardsJson: JSON.stringify({ participationCoins, placements: placementRewards }),
-        pollConfigJson:       JSON.stringify(poll),
+        pollConfigJson:       JSON.stringify(polls),
       }),
     });
     setSaving(false);
@@ -377,34 +418,136 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
           </Section>
 
           {/* Poll-Konfiguration */}
-          <Section title="Poll-Konfiguration">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={poll.enabled} onChange={e => setPoll(p => ({ ...p, enabled: e.target.checked }))}
-                className="rounded accent-teal-500" />
-              <span className="text-sm text-gray-300">Poll nach Event aktivieren</span>
-            </label>
-            {poll.enabled && (
-              <div className="space-y-3 mt-2">
-                <Field label={<><MessageSquare className="w-3 h-3" /> Was wird gewählt</>}>
-                  <input type="text" value={poll.question} onChange={e => setPoll(p => ({ ...p, question: e.target.value }))}
-                    placeholder="z.B. MVP, Trostpreis, …" className={inputCls} />
-                </Field>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><RankPointsIcon size={12} /> Punkte</label>
-                    <input type="number" min={0} value={poll.rankPoints}
-                      onChange={e => setPoll(p => ({ ...p, rankPoints: Number(e.target.value) }))}
-                      className={inputCls} />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Coins className="w-3 h-3 text-amber-400" /> Münzen</label>
-                    <input type="number" min={0} value={poll.coins}
-                      onChange={e => setPoll(p => ({ ...p, coins: Number(e.target.value) }))}
-                      className={inputCls} />
-                  </div>
+          <Section title="Umfragen">
+            <div className="space-y-2">
+              {polls.map((p, i) => (
+                <div key={i} className="rounded-lg border border-white/[0.08] bg-white/[0.02] overflow-hidden">
+                  {/* Header */}
+                  <button
+                    type="button"
+                    onClick={() => setExpandedPoll(expandedPoll === i ? null : i)}
+                    className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-white/[0.03] transition-colors"
+                  >
+                    <span className="text-sm font-medium text-white">{p.label || `Umfrage ${i + 1}`}</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={e => { e.stopPropagation(); setPolls(prev => prev.filter((_, j) => j !== i)); if (expandedPoll === i) setExpandedPoll(null); }}
+                        className="text-gray-600 hover:text-red-400 transition-colors"
+                      ><X className="w-3.5 h-3.5" /></button>
+                      <ChevronRight className={`w-3.5 h-3.5 text-gray-500 transition-transform ${expandedPoll === i ? "rotate-90" : ""}`} />
+                    </div>
+                  </button>
+                  {expandedPoll === i && (
+                    <div className="px-3 pb-3 space-y-3 border-t border-white/[0.06] pt-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block">Label (interner Name)</label>
+                          <input type="text" value={p.label}
+                            onChange={e => setPolls(prev => prev.map((x, j) => j === i ? { ...x, label: e.target.value } : x))}
+                            placeholder="z.B. MVP" className={inputCls} />
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block">Wer darf abstimmen</label>
+                          <select value={p.voterEligibility}
+                            onChange={e => setPolls(prev => prev.map((x, j) => j === i ? { ...x, voterEligibility: e.target.value as "registered" | "all" } : x))}
+                            className={inputCls}>
+                            <option value="registered">Nur Teilnehmer</option>
+                            <option value="all">Alle</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><MessageSquare className="w-3 h-3" /> Frage</label>
+                        <input type="text" value={p.question}
+                          onChange={e => setPolls(prev => prev.map((x, j) => j === i ? { ...x, question: e.target.value } : x))}
+                          placeholder="z.B. Wer war der MVP?" className={inputCls} />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 mb-1 block">Antwort-Typ</label>
+                        <select value={p.answerType}
+                          onChange={e => setPolls(prev => prev.map((x, j) => j === i ? { ...x, answerType: e.target.value as "players" | "custom" } : x))}
+                          className={inputCls}>
+                          <option value="players">Spieler auswählen</option>
+                          <option value="custom">Eigene Antworten</option>
+                        </select>
+                      </div>
+                      {p.answerType === "custom" && (
+                        <div className="space-y-1.5">
+                          {p.customAnswers.map((ans, ai) => (
+                            <div key={ai} className="flex gap-2">
+                              <input type="text" value={ans}
+                                onChange={e => setPolls(prev => prev.map((x, j) => {
+                                  if (j !== i) return x;
+                                  const ca = [...x.customAnswers]; ca[ai] = e.target.value; return { ...x, customAnswers: ca };
+                                }))}
+                                placeholder={`Antwort ${ai + 1}`} className={inputCls} />
+                              <button type="button"
+                                onClick={() => setPolls(prev => prev.map((x, j) => j !== i ? x : { ...x, customAnswers: x.customAnswers.filter((_, k) => k !== ai) }))}
+                                className="text-gray-600 hover:text-red-400 transition-colors"><X className="w-3.5 h-3.5" /></button>
+                            </div>
+                          ))}
+                          <button type="button"
+                            onClick={() => setPolls(prev => prev.map((x, j) => j !== i ? x : { ...x, customAnswers: [...x.customAnswers, ""] }))}
+                            className="flex items-center gap-1 text-xs text-teal-500 hover:text-teal-300">
+                            <Plus className="w-3 h-3" /> Antwort hinzufügen
+                          </button>
+                        </div>
+                      )}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block">Start (Stunden nach Event)</label>
+                          <input type="number" min={0} value={p.startOffsetHours}
+                            onChange={e => setPolls(prev => prev.map((x, j) => j === i ? { ...x, startOffsetHours: Number(e.target.value) } : x))}
+                            className={inputCls} />
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block">Ende (Stunden nach Event)</label>
+                          <input type="number" min={0} value={p.endOffsetHours}
+                            onChange={e => setPolls(prev => prev.map((x, j) => j === i ? { ...x, endOffsetHours: Number(e.target.value) } : x))}
+                            className={inputCls} />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Coins className="w-3 h-3 text-amber-400" /> Teilnahme-Münzen</label>
+                          <input type="number" min={0} value={p.participationCoins}
+                            onChange={e => setPolls(prev => prev.map((x, j) => j === i ? { ...x, participationCoins: Number(e.target.value) } : x))}
+                            className={inputCls} />
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><RankPointsIcon size={12} /> Teilnahme-Ligapunkte</label>
+                          <input type="number" min={0} value={p.participationSeriesPoints}
+                            onChange={e => setPolls(prev => prev.map((x, j) => j === i ? { ...x, participationSeriesPoints: Number(e.target.value) } : x))}
+                            className={inputCls} />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Coins className="w-3 h-3 text-amber-400" /> Sieger-Münzen</label>
+                          <input type="number" min={0} value={p.winnerCoins}
+                            onChange={e => setPolls(prev => prev.map((x, j) => j === i ? { ...x, winnerCoins: Number(e.target.value) } : x))}
+                            className={inputCls} />
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><RankPointsIcon size={12} /> Sieger-Ligapunkte</label>
+                          <input type="number" min={0} value={p.winnerRankPoints}
+                            onChange={e => setPolls(prev => prev.map((x, j) => j === i ? { ...x, winnerRankPoints: Number(e.target.value) } : x))}
+                            className={inputCls} />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-            )}
+              ))}
+              {polls.length < 5 && (
+                <button type="button"
+                  onClick={() => { setPolls(prev => [...prev, { ...DEFAULT_POLL_ITEM }]); setExpandedPoll(polls.length); }}
+                  className="flex items-center gap-1 text-xs text-teal-500 hover:text-teal-300 transition-colors">
+                  <Plus className="w-3 h-3" /> Umfrage hinzufügen
+                </button>
+              )}
+            </div>
           </Section>
 
           {/* Gesamttabellen-Konfiguration */}
@@ -490,6 +633,44 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
                           </span>
                         </span>
                       </div>
+                      {/* Poll-Felder */}
+                      {polls.length > 0 && (
+                        <div className="flex flex-wrap gap-2 pt-1.5 border-t border-white/[0.04] mt-1">
+                          <label className="flex items-center gap-1.5 text-[11px] text-violet-400">
+                            Umfrage-Teilnahmen
+                            <input type="number" min={0} value={row.stats["Umfrage-Teilnahmen"] ?? 0}
+                              onChange={e => setLegacyRows(prev => prev.map((r, j) => {
+                                if (j !== i) return r;
+                                return { ...r, stats: { ...r.stats, "Umfrage-Teilnahmen": Number(e.target.value) } };
+                              }))}
+                              className="w-16 rounded px-1.5 py-0.5 text-[11px] text-white bg-gray-800 border border-gray-700" />
+                          </label>
+                          {polls.filter(p => p.label.trim()).map(p => (<>
+                            {p.participationSeriesPoints > 0 && (
+                              <label key={`${p.label}_T`} className="flex items-center gap-1.5 text-[11px] text-violet-400">
+                                {p.label} Teiln.-LP
+                                <input type="number" min={0} value={row.stats[`${p.label}_Teilnahmepunkte`] ?? 0}
+                                  onChange={e => setLegacyRows(prev => prev.map((r, j) => {
+                                    if (j !== i) return r;
+                                    return { ...r, stats: { ...r.stats, [`${p.label}_Teilnahmepunkte`]: Number(e.target.value) } };
+                                  }))}
+                                  className="w-16 rounded px-1.5 py-0.5 text-[11px] text-white bg-gray-800 border border-gray-700" />
+                              </label>
+                            )}
+                            {p.winnerRankPoints > 0 && (
+                              <label key={`${p.label}_S`} className="flex items-center gap-1.5 text-[11px] text-violet-400">
+                                {p.label} Sieger-LP
+                                <input type="number" min={0} value={row.stats[`${p.label}_Siegerpunkte`] ?? 0}
+                                  onChange={e => setLegacyRows(prev => prev.map((r, j) => {
+                                    if (j !== i) return r;
+                                    return { ...r, stats: { ...r.stats, [`${p.label}_Siegerpunkte`]: Number(e.target.value) } };
+                                  }))}
+                                  className="w-16 rounded px-1.5 py-0.5 text-[11px] text-white bg-gray-800 border border-gray-700" />
+                              </label>
+                            )}
+                          </>))}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -506,7 +687,7 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
                 ).slice(0, 6);
                 if (!filtered.length) return null;
                 return (
-                  <div className="absolute top-full mt-1 left-0 right-0 z-20 bg-gray-900 border border-gray-700 rounded-lg overflow-hidden shadow-xl">
+                  <div className="absolute top-full mt-1 left-0 right-0 z-50 bg-gray-900 border border-gray-700 rounded-lg overflow-hidden shadow-xl">
                     {filtered.map(u => (
                       <button key={u.id} type="button"
                         onClick={() => { setLegacyRows(prev => [...prev, { userId: u.id, points: 0, participations: 0, stats: {} }]); setLegacySearch(""); }}
