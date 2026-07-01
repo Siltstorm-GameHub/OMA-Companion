@@ -2,9 +2,9 @@
 import { getSessionUser } from "@/lib/roles";
 import { unstable_cache } from "next/cache";
 import {
-  Trophy, CalendarDays, Users, ChevronRight,
+  CalendarDays, Users, ChevronRight,
   Clock, Scroll, Swords, CheckCircle2,
-  Circle, Zap, Repeat, Radio, Newspaper, Server,
+  Circle, Zap, Repeat, Radio, Newspaper, Server, Gamepad2,
 } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
 import Link from "next/link";
@@ -18,15 +18,19 @@ import CommunityLiveBanner from "@/components/CommunityLiveBanner";
 import WhatsAppCommunityBanner from "@/components/WhatsAppCommunityBanner";
 import ClipContestWidget from "@/components/ClipContestWidget";
 import RankIcon from "@/components/RankIcon";
-import RankedAvatar from "@/components/RankedAvatar";
 import { getRingClass } from "@/lib/ranks";
-
-const MEDAL = ["🥇", "🥈", "🥉"];
+import { getVisibleServers } from "@/lib/gameservers";
 
 const STATUS_CONFIG: Record<string, { label: string; cls: string; dot: string }> = {
   open:   { label: "Offen", cls: "text-teal-400 bg-teal-500/10 border border-teal-500/15",          dot: "bg-teal-400" },
   active: { label: "Läuft", cls: "text-emerald-400 bg-emerald-500/10 border border-emerald-500/15", dot: "bg-emerald-400 animate-pulse" },
   closed: { label: "Voll",  cls: "text-amber-400 bg-amber-500/10 border border-amber-500/15",       dot: "bg-amber-400" },
+};
+
+const LIGHT_CONFIG: Record<"green" | "yellow" | "red", { cls: string; dot: string }> = {
+  green:  { cls: "text-emerald-400 bg-emerald-500/10 border border-emerald-500/15", dot: "bg-emerald-400" },
+  yellow: { cls: "text-amber-400 bg-amber-500/10 border border-amber-500/15",       dot: "bg-amber-400" },
+  red:    { cls: "text-red-400 bg-red-500/10 border border-red-500/15",             dot: "bg-red-400" },
 };
 
 const ROLE_STYLE: Record<string, string> = {
@@ -41,7 +45,7 @@ const ROLE_LABEL: Record<string, string> = {
 // Cached queries for non-user-specific data (5 min revalidation)
 const getGlobalDashboardData = unstable_cache(
   async () => {
-    const [memberCount, activeEvents, activeSeries, topUsers, activeOrPollEvent, nextUpcomingEvent, liveEvent, recentSummaries] = await Promise.all([
+    const [memberCount, activeEvents, activeSeries, activeOrPollEvent, nextUpcomingEvent, liveEvent, recentSummaries] = await Promise.all([
       prisma.user.count(),
       prisma.event.count({ where: { hidden: false, status: { in: ["open", "active", "umfrage"] }, OR: [{ seriesId: null }, { series: { hidden: false } }] } }),
       prisma.eventSeries.findMany({
@@ -56,11 +60,6 @@ const getGlobalDashboardData = unstable_cache(
           },
         },
         take: 5,
-      }),
-      prisma.user.findMany({
-        orderBy: { rankPoints: "desc" },
-        take: 5,
-        select: { id: true, username: true, name: true, image: true, points: true, rankPoints: true },
       }),
       // Active or umfrage event takes priority over upcoming
       prisma.event.findFirst({
@@ -86,7 +85,7 @@ const getGlobalDashboardData = unstable_cache(
       }),
     ]);
     const nextEvent = activeOrPollEvent ?? nextUpcomingEvent;
-    return { memberCount, activeEvents, activeSeries, topUsers, nextEvent, liveEvent, recentSummaries };
+    return { memberCount, activeEvents, activeSeries, nextEvent, liveEvent, recentSummaries };
   },
   ["dashboard-global"],
   { revalidate: 300 }
@@ -101,7 +100,7 @@ export default async function DashboardPage() {
   const month = now.getMonth() + 1;
   const year  = now.getFullYear();
 
-  const { memberCount, activeEvents, activeSeries, topUsers, nextEvent, liveEvent, recentSummaries } =
+  const { memberCount, activeEvents, activeSeries, nextEvent, liveEvent, recentSummaries } =
     await getGlobalDashboardData();
 
   const [
@@ -110,6 +109,7 @@ export default async function DashboardPage() {
     myMonthQuests,
     activeLulSeason,
     activeDailyMessage,
+    servers,
   ] = await Promise.all([
     userId
       ? prisma.userQuestProgress.count({ where: { userId, completed: true, quest: { month, year } } })
@@ -140,6 +140,7 @@ export default async function DashboardPage() {
       orderBy: { createdAt: "desc" },
       select: { id: true, title: true, content: true, endDate: true },
     }),
+    getVisibleServers(userId),
   ]);
 
   const nextSpieltag = activeLulSeason?.spieltage[0] ?? null;
@@ -240,21 +241,6 @@ export default async function DashboardPage() {
             </div>
           ))}
         </div>
-      </div>
-
-      {/* ── Gameserver-Zugang ─────────────────────────────────────── */}
-      <div className="px-4 sm:px-6 pt-4 max-w-7xl mx-auto w-full">
-        <Link href="/servers"
-          className="flex items-center gap-3 px-4 py-3 rounded-xl group transition-all hover:brightness-110 card-cut-sm surface-elevated">
-          <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-teal-500/10 border border-teal-500/20 shrink-0">
-            <Server className="w-4 h-4 text-teal-400" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-white">Community-Gameserver</p>
-            <p className="text-xs text-gray-500">Zugang beantragen &amp; freie Plätze einsehen</p>
-          </div>
-          <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-teal-400 transition-colors shrink-0" />
-        </Link>
       </div>
 
       {/* ── WhatsApp Community Banner ────────────────────────────── */}
@@ -506,53 +492,42 @@ export default async function DashboardPage() {
             </div>
           </div>
 
-          {/* Top Spieler */}
+          {/* Community-Gameserver */}
           <div className="animate-slide-up stagger-4">
             <div className="flex items-center justify-between mb-2.5">
               <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-                <Trophy className="w-3.5 h-3.5 text-amber-500/70" /> Rangliste
+                <Server className="w-3.5 h-3.5 text-teal-500/70" /> Gameserver
               </h2>
-              <Link href="/leaderboard" className="text-[11px] flex items-center gap-0.5 text-teal-500 hover:text-teal-300 transition-colors">
+              <Link href="/servers" className="text-[11px] flex items-center gap-0.5 text-teal-500 hover:text-teal-300 transition-colors">
                 Alle <ChevronRight className="w-3 h-3" />
               </Link>
             </div>
             <div className="surface overflow-hidden"
               style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.45)" }}>
-              {topUsers.map((u, i) => {
-                const name = u.username ?? u.name ?? "Unbekannt";
-                const isMe = u.id === userId;
-                return (
-                  <Link key={u.id} href={isMe ? "/profile" : `/profile/${u.id}`}
-                    className={`flex items-center gap-2.5 px-3.5 py-2.5 transition-colors ${!isMe ? "hover:bg-white/[0.025]" : ""}`}
-                    style={{
-                      background: isMe ? "rgba(20,184,166,0.07)" : "",
-                      borderBottom: i < topUsers.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "",
-                    }}>
-                    <div className="w-5 text-center shrink-0">
-                      {i < 3
-                        ? <span className="text-sm leading-none">{MEDAL[i]}</span>
-                        : <span className="text-[10px] font-bold text-gray-600">{i + 1}</span>}
-                    </div>
-                    <RankedAvatar
-                      rankPoints={u.rankPoints}
-                      src={u.image}
-                      alt={name}
-                      size={28}
-                      rounded="lg"
-                      className="w-7 h-7"
-                    />
-                    <div className="flex-1 min-w-0 flex items-center gap-1.5">
-                      <RankIcon rankPoints={u.rankPoints} size="sm" />
-                      <p className="text-xs font-semibold truncate" style={{ color: isMe ? "#2dd4bf" : "white" }}>
-                        {name}{isMe && <span className="text-[9px] text-gray-600 ml-1 font-normal">du</span>}
-                      </p>
-                    </div>
-                    <p className={`text-xs font-bold tabular-nums shrink-0 ${i === 0 ? "text-gradient-gaming" : "text-gray-500"}`}>
-                      {u.rankPoints.toLocaleString("de-DE")}
+              {servers.length === 0 ? (
+                <div className="flex flex-col items-center gap-2 p-6 text-center">
+                  <Gamepad2 className="w-6 h-6 text-gray-700" />
+                  <p className="text-xs text-gray-600">Keine Gameserver verfügbar</p>
+                </div>
+              ) : servers.slice(0, 5).map((server, i) => (
+                <Link key={server.id} href="/servers"
+                  className="flex items-center gap-3 px-3.5 py-3 transition-colors group hover:bg-white/[0.025]"
+                  style={{ borderBottom: i < Math.min(servers.length, 5) - 1 ? "1px solid rgba(255,255,255,0.05)" : "" }}>
+                  <div className="w-8 h-8 rounded-sm bg-teal-500/10 border border-teal-500/15 flex items-center justify-center shrink-0 text-sm">
+                    {server.icon ?? <Gamepad2 className="w-3.5 h-3.5 text-teal-400" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-white truncate group-hover:text-teal-300 transition-colors">
+                      {server.name}
                     </p>
-                  </Link>
-                );
-              })}
+                    <p className="text-[10px] text-gray-600 mt-0.5">{server.game}</p>
+                  </div>
+                  <span className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full font-medium border shrink-0 ${LIGHT_CONFIG[server.light].cls}`}>
+                    <span className={`w-1 h-1 rounded-full ${LIGHT_CONFIG[server.light].dot}`} />
+                    {server.occupied}/{server.maxSlots}
+                  </span>
+                </Link>
+              ))}
             </div>
           </div>
 

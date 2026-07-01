@@ -156,7 +156,7 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
             className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
           <input placeholder="Beschreibung (optional)" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
             className="col-span-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
-          <input placeholder="Zusatzinfo (Mods, Connect-String, ...)" value={form.connectInfo} onChange={(e) => setForm({ ...form, connectInfo: e.target.value })}
+          <input placeholder="Connect-Link (z.B. steam://connect/host:port) oder Zusatzinfo" value={form.connectInfo} onChange={(e) => setForm({ ...form, connectInfo: e.target.value })}
             className="col-span-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
         </div>
         <button onClick={createServer} disabled={saving || !form.name.trim() || !form.game.trim() || !form.host.trim()}
@@ -214,7 +214,7 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
                       className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
                     <input placeholder="Beschreibung" value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                       className="col-span-2 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
-                    <input placeholder="Zusatzinfo" value={editForm.connectInfo} onChange={(e) => setEditForm({ ...editForm, connectInfo: e.target.value })}
+                    <input placeholder="Connect-Link (steam://connect/host:port) oder Zusatzinfo" value={editForm.connectInfo} onChange={(e) => setEditForm({ ...editForm, connectInfo: e.target.value })}
                       className="col-span-2 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
                   </div>
                   <button onClick={() => saveEdit(server.id)} disabled={saving}
