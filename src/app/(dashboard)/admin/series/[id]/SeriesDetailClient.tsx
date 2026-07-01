@@ -183,7 +183,9 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
     return new Date(a.startAt).getTime() - new Date(b.startAt).getTime();
   });
 
-  const latestEvent = series.events[series.events.length - 1];
+  const latestEvent = (series.events as SeriesEvent[]).reduce<SeriesEvent | null>((latest, ev) =>
+    !latest || new Date(ev.startAt).getTime() > new Date(latest.startAt).getTime() ? ev : latest
+  , null);
   const latestStartAt = latestEvent ? new Date(latestEvent.startAt) : new Date();
 
   function updatePlacementReward(place: number, key: keyof PlacementReward, value: number) {

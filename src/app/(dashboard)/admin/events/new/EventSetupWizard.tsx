@@ -1643,7 +1643,7 @@ export default function EventSetupWizard({
             </div>
             {winnerStatField && winnerStatKeys.length === 0 && (
               <p className="text-[11px] text-amber-500/80 rounded-lg px-3 py-2 border border-amber-500/20 bg-amber-500/5">
-                Markiere in Schritt 4 einen Reihen-Stat mit 🏆, um +1 für den Event-Sieger zu tracken.
+                Markiere in Schritt 3 einen Reihen-Stat mit 🏆, um +1 für den Event-Sieger zu tracken.
               </p>
             )}
             {winnerStatKeys.length > 0 && (
@@ -1703,7 +1703,7 @@ export default function EventSetupWizard({
                     </div>
                   ) : (
                     <p className="text-[11px] text-amber-500/80 rounded-lg px-3 py-2 border border-amber-500/20 bg-amber-500/5">
-                      Noch keine summierten Stats konfiguriert. Füge zuerst Stats (oben) oder Umfragen (Schritt 4) hinzu.
+                      Noch keine summierten Stats konfiguriert. Füge zuerst Stats oder Umfragen in Schritt 3 hinzu.
                     </p>
                   );
                 })()}
