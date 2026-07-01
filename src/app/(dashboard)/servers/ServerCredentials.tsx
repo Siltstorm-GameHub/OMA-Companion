@@ -78,8 +78,9 @@ export default function ServerCredentials({
             Jetzt verbinden
           </a>
           <p className="text-[11px] text-gray-500">
-            Öffnet Steam. Falls sich nichts tut: Steam muss laufen und das Spiel installiert sein — sonst unten Host/Passwort manuell im Spiel eintragen.
+            Öffnet Steam. Falls sich nichts tut (z.B. in der installierten App-Ansicht blockiert): Link unten kopieren und manuell einfügen (Windows: Win+R).
           </p>
+          <CopyField label="Verbindungslink" value={connectLink} onCopy={markConnected} />
         </>
       )}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
