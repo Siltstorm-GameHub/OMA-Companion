@@ -182,6 +182,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
   const [statMvpField, setStatMvpField]                       = useState("");
   const [statDefaultWinnerField, setStatDefaultWinnerField]   = useState("");
   const [statDefaultTargetField, setStatDefaultTargetField]   = useState("");
+  const [winnerStatKeys, setWinnerStatKeys]                   = useState<string[]>([]);
   const statConfigInitialized = useRef(false);
 
   /* ── Legacy standings state ── */
@@ -247,6 +248,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                 setStatMvpField(cfg.mvpStatField ?? "");
                 setStatDefaultWinnerField(cfg.defaultWinnerStatField ?? "");
                 setStatDefaultTargetField(cfg.defaultWinnerTargetField ?? "");
+                setWinnerStatKeys(cfg.winnerStatKeys ?? []);
               } catch { /* ignore */ }
             }
             if (d.legacyStandings) {
@@ -1437,6 +1439,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                   event={{ id: event.id }}
                   tournament={tournament ?? null}
                   allUsers={allUsers.filter(u => registeredIds.has(u.id))}
+                  winnerStatKeys={winnerStatKeys}
                 />
               )}
             </div>
