@@ -71,6 +71,7 @@ model User {
   notifications             InAppNotification[]
   lulPollVotesGiven         LulPollVote[]       @relation("LulPollVoter")
   lulPollVotesReceived      LulPollVote[]       @relation("LulPollTarget")
+  serverApplications        ServerApplication[]
 }
 
 // ── Collectibles ─────────────────────────────────────────────────────────────
@@ -884,7 +885,7 @@ model DailyMessage {
 model InAppNotification {
   id        String   @id @default(cuid())
   userId    String   @map("userid")
-  type      String   // "badge" | "quest" | "event_result" | "event_start" | "points" | "coins" | "clip" | "admin"
+  type      String   // "badge" | "quest" | "event_result" | "event_start" | "points" | "coins" | "clip" | "admin" | "server"
   title     String
   body      String
   url       String?
@@ -918,4 +919,48 @@ model PushSubscription {
 
   @@index([userId])
   @@map("pushsubscription")
+}
+
+// ── Community-Gameserver ─────────────────────────────────────────────────────
+
+model GameServer {
+  id          String   @id @default(cuid())
+  name        String
+  game        String                 // Freitext, z.B. "Minecraft", "ARK: Survival Ascended"
+  description String?
+  icon        String?                // optionale Emoji/Bild-URL für die Karte
+  host        String                 // IP/Domain – nur für genehmigte User sichtbar
+  port        String?
+  password    String?                // Server-Passwort – nur für genehmigte User sichtbar
+  connectInfo String?                // Freitext, z.B. Mod-Liste, Connect-String
+  maxSlots    Int
+  isActive    Boolean  @default(true)
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  applications ServerApplication[]
+
+  @@map("gameserver")
+}
+
+model ServerApplication {
+  id               String     @id @default(cuid())
+  serverId         String
+  userId           String
+  status           String     @default("pending") // pending | approved | denied | revoked | expired
+  message          String?
+  adminNote        String?
+  appliedAt        DateTime   @default(now())
+  decidedAt        DateTime?
+  decidedBy        String?
+  expiresAt        DateTime?
+  expiryNotifiedAt DateTime?
+
+  server GameServer @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([serverId, userId])
+  @@index([serverId, status])
+  @@map("serverapplication")
 }

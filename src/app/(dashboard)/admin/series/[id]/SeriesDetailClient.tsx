@@ -117,6 +117,8 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
   const [generatingNext, setGeneratingNext] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deleteRevertCoins, setDeleteRevertCoins] = useState(false);
+  const [deleteRevertRankPoints, setDeleteRevertRankPoints] = useState(false);
 
   // Basic
   const [name, setName]               = useState<string>(series.name);
@@ -298,9 +300,14 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
   async function deleteSeries() {
     setDeleting(true);
     try {
-      const res = await fetch(`/api/admin/series/${series.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/admin/series/${series.id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ revertCoins: deleteRevertCoins, revertRankPoints: deleteRevertRankPoints }),
+      });
       if (res.ok) {
-        toast.success("Eventreihe gelöscht – Events bleiben als Standalone erhalten");
+        const data = await res.json().catch(() => ({ deletedEvents: 0 }));
+        toast.success(`Eventreihe gelöscht – ${data.deletedEvents ?? 0} Event(s) mit entfernt`);
         router.push("/admin/series");
       } else {
         const err = await res.json().catch(() => ({}));
@@ -983,39 +990,74 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
       {/* Danger Zone */}
       <div className="rounded-xl border border-red-900/30 bg-red-950/10 p-4 space-y-3">
         <p className="text-xs font-semibold text-red-400 uppercase tracking-widest">Danger Zone</p>
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-sm text-gray-300 font-medium">Eventreihe löschen</p>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Die Reihe wird gelöscht. Alle zugehörigen Events bleiben als Standalone-Events erhalten.
-            </p>
-          </div>
-          {!deleteConfirm ? (
+
+        {!deleteConfirm ? (
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm text-gray-300 font-medium">Eventreihe löschen</p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Löscht die Reihe und alle {series.events.length} zugehörigen Event(s) unwiderruflich.
+              </p>
+            </div>
             <button
               onClick={() => setDeleteConfirm(true)}
               className="flex items-center gap-1.5 text-sm text-red-400 border border-red-800/40 hover:border-red-600/60 hover:bg-red-900/20 px-3 py-1.5 rounded-lg transition-colors shrink-0"
             >
               <Trash2 className="w-3.5 h-3.5" /> Löschen
             </button>
-          ) : (
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-xs text-red-300">Sicher?</span>
-              <button
-                onClick={deleteSeries}
-                disabled={deleting}
-                className="text-sm font-semibold text-white bg-red-700 hover:bg-red-600 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
-              >
-                {deleting ? "Löschen…" : "Ja, löschen"}
-              </button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-sm text-red-300">
+              Bist du sicher? Die Reihe <span className="font-semibold text-white">„{series.name}“</span> und
+              alle <span className="font-semibold text-white">{series.events.length} zugehörigen Events</span> (inkl.
+              Anmeldungen, Turniere &amp; Matches) werden unwiderruflich gelöscht.
+            </p>
+            <div className="space-y-2 rounded-lg border border-white/[0.06] bg-black/20 p-3">
+              <p className="text-[11px] text-gray-500">
+                Bereits vergebene Belohnungen aus abgeschlossenen Events dieser Reihe:
+              </p>
+              <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={deleteRevertCoins}
+                  onChange={(e) => setDeleteRevertCoins(e.target.checked)}
+                  className="rounded border-gray-600 bg-gray-800 text-red-600 focus:ring-red-600/50"
+                />
+                <Coins className="w-3.5 h-3.5 text-amber-400" />
+                Vergebene Münzen den Usern wieder abziehen
+              </label>
+              <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={deleteRevertRankPoints}
+                  onChange={(e) => setDeleteRevertRankPoints(e.target.checked)}
+                  className="rounded border-gray-600 bg-gray-800 text-red-600 focus:ring-red-600/50"
+                />
+                <RankPointsIcon size={12} />
+                Vergebene Rang-Punkte den Usern wieder abziehen
+              </label>
+              <p className="text-[11px] text-gray-600">
+                Unangeklickt behalten User ihre bisher erhaltenen Münzen/Rang-Punkte aus dieser Reihe.
+              </p>
+            </div>
+            <div className="flex items-center justify-end gap-2">
               <button
                 onClick={() => setDeleteConfirm(false)}
                 className="text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg border border-white/[0.08] hover:border-white/20 transition-colors"
               >
                 Abbrechen
               </button>
+              <button
+                onClick={deleteSeries}
+                disabled={deleting}
+                className="text-sm font-semibold text-white bg-red-700 hover:bg-red-600 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {deleting ? "Löschen…" : "Ja, endgültig löschen"}
+              </button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

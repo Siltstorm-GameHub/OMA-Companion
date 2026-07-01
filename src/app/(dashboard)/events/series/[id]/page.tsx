@@ -87,7 +87,15 @@ type StatConfig = {
   defaultWinnerTargetField?: string;
   eventStatFields?: string[];
   winnerStatKeys?: string[];
+  winnerSeriesStatKey?: string;
 };
+
+function resolveWinnerTargetKeys(cfg: StatConfig, seriesWinnerTargetField?: string): string[] {
+  if (cfg.winnerStatKeys?.length) return cfg.winnerStatKeys;
+  if (cfg.winnerSeriesStatKey) return [cfg.winnerSeriesStatKey];
+  if (seriesWinnerTargetField) return [seriesWinnerTargetField];
+  return [];
+}
 type LegacyRow = { userId: string; points: number; participations: number; stats: Record<string, number> };
 type SeriesEventForStandings = {
   id: string;
@@ -161,8 +169,11 @@ function computeStatStandings(
       addEv(cd.mvpUserId, cfg.mvpStatField, 1);
     }
     const winnerIds = cd.eventWinnerIds ?? (cd.eventWinnerId ? [cd.eventWinnerId] : []);
-    if (winnerIds.length > 0 && cd.seriesWinnerTargetField) {
-      for (const uid of winnerIds) addEv(uid, cd.seriesWinnerTargetField, 1);
+    const winnerTargetKeys = resolveWinnerTargetKeys(cfg, cd.seriesWinnerTargetField);
+    if (winnerIds.length > 0 && winnerTargetKeys.length > 0) {
+      for (const uid of winnerIds) {
+        for (const key of winnerTargetKeys) addEv(uid, key, 1);
+      }
     }
 
     // Legacy single-poll winner bonus
@@ -391,10 +402,11 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
           c.stats[statCfg.mvpStatField] = (c.stats[statCfg.mvpStatField] ?? 0) + 1;
         }
         const lastWinnerIds = cd.eventWinnerIds ?? (cd.eventWinnerId ? [cd.eventWinnerId] : []);
-        if (lastWinnerIds.length > 0 && cd.seriesWinnerTargetField) {
+        const lastWinnerTargetKeys = resolveWinnerTargetKeys(statCfg, cd.seriesWinnerTargetField);
+        if (lastWinnerIds.length > 0 && lastWinnerTargetKeys.length > 0) {
           for (const wid of lastWinnerIds) {
             const c = getContrib(wid);
-            c.stats[cd.seriesWinnerTargetField] = (c.stats[cd.seriesWinnerTargetField] ?? 0) + 1;
+            for (const key of lastWinnerTargetKeys) c.stats[key] = (c.stats[key] ?? 0) + 1;
           }
         }
         // Poll bonus rank points for delta calculation

@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import {
   Users, LayoutDashboard, Star, ShoppingBag, Bot,
   BarChart2, CalendarDays, Heart, CalendarRange, Medal,
-  Wrench, Users2, BarChart3, Megaphone, Handshake, Clapperboard,
+  Wrench, Users2, BarChart3, Megaphone, Handshake, Clapperboard, Server,
 } from "lucide-react";
 
 type Role = "user" | "moderator" | "admin";
@@ -63,9 +63,10 @@ const CATEGORIES: {
     label: "Tools",
     icon: Wrench,
     minRole: "moderator",
-    prefixes: ["/admin/donations", "/admin/bot", "/admin/badges", "/admin/users"],
+    prefixes: ["/admin/donations", "/admin/bot", "/admin/badges", "/admin/users", "/admin/servers"],
     tabs: [
       { href: "/admin/donations", label: "Spendenpool",     icon: Heart,     minRole: "moderator" },
+      { href: "/admin/servers",   label: "Gameserver",      icon: Server,    minRole: "moderator" },
       { href: "/admin/bot",       label: "Bot",             icon: Bot,       minRole: "moderator" },
       { href: "/admin/badges",    label: "Abzeichen",       icon: Medal,     minRole: "admin"     },
       { href: "/admin/users",     label: "Nutzer & Rollen", icon: Users,     minRole: "admin"     },

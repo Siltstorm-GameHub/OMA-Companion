@@ -7,7 +7,16 @@ type StatConfig = {
   participationPoints: number;
   stats: { field: string; pointsPer: number }[];
   mvpStatField?: string;
+  winnerStatKeys?: string[];
+  winnerSeriesStatKey?: string;
 };
+
+function resolveWinnerTargetKeys(cfg: StatConfig, seriesWinnerTargetField?: string): string[] {
+  if (cfg.winnerStatKeys?.length) return cfg.winnerStatKeys;
+  if (cfg.winnerSeriesStatKey) return [cfg.winnerSeriesStatKey];
+  if (seriesWinnerTargetField) return [seriesWinnerTargetField];
+  return [];
+}
 type LegacyRow = { userId: string; points: number; participations: number; stats: Record<string, number> };
 
 function computeStandings(
@@ -49,10 +58,11 @@ function computeStandings(
       evStats[uid][cfg.mvpStatField] = (evStats[uid][cfg.mvpStatField] ?? 0) + 1;
     }
     const winnerIds = cd.eventWinnerIds ?? (cd.eventWinnerId ? [cd.eventWinnerId] : []);
-    if (winnerIds.length > 0 && cd.seriesWinnerTargetField) {
+    const winnerTargetKeys = resolveWinnerTargetKeys(cfg, cd.seriesWinnerTargetField);
+    if (winnerIds.length > 0 && winnerTargetKeys.length > 0) {
       for (const uid of winnerIds) {
         if (!evStats[uid]) evStats[uid] = {};
-        evStats[uid][cd.seriesWinnerTargetField] = (evStats[uid][cd.seriesWinnerTargetField] ?? 0) + 1;
+        for (const key of winnerTargetKeys) evStats[uid][key] = (evStats[uid][key] ?? 0) + 1;
       }
     }
   }

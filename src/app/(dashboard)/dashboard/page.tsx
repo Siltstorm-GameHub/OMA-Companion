@@ -4,7 +4,7 @@ import { unstable_cache } from "next/cache";
 import {
   Trophy, CalendarDays, Users, ChevronRight,
   Clock, Scroll, Swords, CheckCircle2,
-  Circle, Zap, Repeat, Radio, Newspaper,
+  Circle, Zap, Repeat, Radio, Newspaper, Server,
 } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
 import Link from "next/link";
@@ -240,6 +240,21 @@ export default async function DashboardPage() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* ── Gameserver-Zugang ─────────────────────────────────────── */}
+      <div className="px-4 sm:px-6 pt-4 max-w-7xl mx-auto w-full">
+        <Link href="/servers"
+          className="flex items-center gap-3 px-4 py-3 rounded-xl group transition-all hover:brightness-110 card-cut-sm surface-elevated">
+          <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-teal-500/10 border border-teal-500/20 shrink-0">
+            <Server className="w-4 h-4 text-teal-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-white">Community-Gameserver</p>
+            <p className="text-xs text-gray-500">Zugang beantragen &amp; freie Plätze einsehen</p>
+          </div>
+          <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-teal-400 transition-colors shrink-0" />
+        </Link>
       </div>
 
       {/* ── WhatsApp Community Banner ────────────────────────────── */}
