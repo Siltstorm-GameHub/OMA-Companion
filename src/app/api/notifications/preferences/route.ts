@@ -9,6 +9,7 @@ const DEFAULT_PREFS = {
   points: true,
   clip:   true,
   admin:  true,
+  server: true,
 };
 
 export async function GET() {

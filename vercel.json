@@ -28,5 +28,9 @@
       "path": "/api/cron/discord-activity-summary",
       "schedule": "0 17 * * *"
     }
+    ,{
+      "path": "/api/cron/server-access-expiry",
+      "schedule": "0 4 * * *"
+    }
   ]
 }

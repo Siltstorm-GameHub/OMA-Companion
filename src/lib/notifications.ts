@@ -8,7 +8,8 @@ export type NotificationType =
   | "points"
   | "coins"
   | "clip"
-  | "admin";
+  | "admin"
+  | "server";
 
 // Mapping von NotificationType auf den Präferenz-Key
 const PREF_KEY: Record<NotificationType, string> = {
@@ -20,6 +21,7 @@ const PREF_KEY: Record<NotificationType, string> = {
   coins:        "points",
   clip:         "clip",
   admin:        "admin",
+  server:       "server",
 };
 
 function isTypeEnabled(prefs: Record<string, boolean>, type: NotificationType): boolean {

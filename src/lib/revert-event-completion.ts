@@ -37,6 +37,33 @@ type CompletionData = {
   appliedAggregatedStats?: Record<string, Record<string, number>> | null;
   eventPollRewards?: EventPollReward[] | null;
   dominionChanges?: Record<string, DominionChange> | null;
+  finalRanking?: string[] | null;
+  finalRankingGroups?: string[][] | null;
+};
+
+type PlacementReward = { place: number; coins: number; rankPoints: number };
+type RewardsConfig = { participationCoins: number; placements: PlacementReward[] };
+const DEFAULT_REWARDS: RewardsConfig = {
+  participationCoins: 10,
+  placements: [
+    { place: 1, coins: 500, rankPoints: 3 },
+    { place: 2, coins: 250, rankPoints: 2 },
+    { place: 3, coins: 100, rankPoints: 1 },
+  ],
+};
+function parseRewards(json: string | null | undefined): RewardsConfig {
+  if (!json) return DEFAULT_REWARDS;
+  try { return { ...DEFAULT_REWARDS, ...JSON.parse(json) }; } catch { return DEFAULT_REWARDS; }
+}
+
+type RevertOptions = {
+  // Welche Währungen tatsächlich zurückgebucht werden sollen
+  revertCoins?: boolean;
+  revertRankPoints?: boolean;
+  // Auch Teilnahme-/Platzierungs-/Zuschauer-Basis-Belohnungen zurückbuchen (siehe Hinweis unten)
+  includeBaseRewards?: boolean;
+  // Label für die PointTransaction-Begründung, z.B. "Status zurückgesetzt" oder "Reihe gelöscht"
+  reasonLabel?: string;
 };
 
 /**
@@ -47,18 +74,34 @@ type CompletionData = {
  * zurück auf "active" gesetzt wird, damit die Liga-Tabelle das Event nicht
  * mehr zählt (computeStatStandings prüft nur completionData.gamePhaseComplete).
  *
- * Nicht rückgängig gemacht werden Teilnahme-/Platzierungs-/Zuschauer-Basis-
- * Münzen und -Rangpunkte sowie "→ globale Rangliste"-Transfers, da deren
- * konkret vergebene Beträge/Empfänger nicht in completionData gespeichert sind.
+ * Die Reihen-Standings-Bereinigung läuft immer, unabhängig von den revert-Flags,
+ * da das Event so oder so nicht mehr in der Liga-Tabelle auftauchen soll.
+ *
+ * Mit `includeBaseRewards: true` werden zusätzlich Teilnahme-/Platzierungs-/
+ * Zuschauer-Basis-Münzen und -Rangpunkte zurückgebucht. Das ist ein Best-Effort:
+ * die dafür genutzte Rewards-Konfiguration wird aus dem aktuellen
+ * event.placementRewardsJson / event.series.placementRewardsJson gelesen, nicht
+ * aus einem zum Vergabezeitpunkt gespeicherten Snapshot — wurde die Konfiguration
+ * seitdem geändert, kann der zurückgebuchte Betrag vom ursprünglich vergebenen
+ * abweichen. Für den regulären Status-Revert (kein includeBaseRewards) bleibt das
+ * Verhalten unverändert, da dort bewusst auf diese Rückbuchung verzichtet wird.
  */
-export async function revertEventCompletion(eventId: string) {
+export async function revertEventCompletion(eventId: string, opts: RevertOptions = {}) {
+  const {
+    revertCoins = true,
+    revertRankPoints = true,
+    includeBaseRewards = false,
+    reasonLabel = "Status zurückgesetzt",
+  } = opts;
+
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     select: {
       id: true, title: true, seriesId: true, completionData: true,
+      placementRewardsJson: true, spectatorRewardJson: true,
       registrations: { select: { userId: true, role: true } },
       matches: { select: { entries: { select: { userId: true, statsJson: true } } } },
-      series: { select: { seriesStandingsJson: true, seriesStatConfig: true } },
+      series: { select: { seriesStandingsJson: true, seriesStatConfig: true, placementRewardsJson: true } },
     },
   });
   if (!event?.completionData) return;
@@ -66,17 +109,17 @@ export async function revertEventCompletion(eventId: string) {
   let cd: CompletionData;
   try { cd = JSON.parse(event.completionData); } catch { return; }
 
-  const reason = `[Korrektur] Status zurückgesetzt: ${event.title}`;
+  const reason = `[Korrektur] ${reasonLabel}: ${event.title}`;
   const txns: Prisma.PrismaPromise<unknown>[] = [];
 
   function reverse(userId: string, coins: number, rankPoints: number) {
-    if (coins > 0) {
+    if (revertCoins && coins > 0) {
       txns.push(
         prisma.user.update({ where: { id: userId }, data: { points: { increment: -coins } } }),
         prisma.pointTransaction.create({ data: { userId, amount: -coins, reason } })
       );
     }
-    if (rankPoints > 0) {
+    if (revertRankPoints && rankPoints > 0) {
       txns.push(
         prisma.user.update({ where: { id: userId }, data: { rankPoints: { increment: -rankPoints } } }),
         prisma.pointTransaction.create({ data: { userId, amount: -rankPoints, reason } })
@@ -104,6 +147,45 @@ export async function revertEventCompletion(eventId: string) {
     }
     for (const userId of ep.winnerIds ?? []) {
       reverse(userId, ep.winnerCoins ?? 0, ep.winnerRankPoints ?? 0);
+    }
+  }
+
+  // Teilnahme-/Platzierungs-/Zuschauer-Basis-Belohnungen (nur wenn explizit angefordert, siehe Docstring)
+  if (includeBaseRewards) {
+    const rewards = parseRewards(event.placementRewardsJson ?? event.series?.placementRewardsJson);
+    const registeredSet = new Set(event.registrations.map(r => r.userId));
+
+    if (rewards.participationCoins > 0) {
+      for (const { userId, role } of event.registrations) {
+        if (role !== "player") continue;
+        reverse(userId, rewards.participationCoins, 0);
+      }
+    }
+
+    if (cd.finalRankingGroups?.length) {
+      let place = 1;
+      for (const group of cd.finalRankingGroups) {
+        const reward = rewards.placements.find(p => p.place === place);
+        if (reward) {
+          for (const userId of group.filter(id => registeredSet.has(id))) {
+            reverse(userId, reward.coins, reward.rankPoints);
+          }
+        }
+        place += group.length;
+      }
+    } else if (cd.finalRanking?.length) {
+      const ranking = cd.finalRanking.filter(id => registeredSet.has(id));
+      ranking.forEach((userId, i) => {
+        const reward = rewards.placements.find(p => p.place === i + 1);
+        if (reward) reverse(userId, reward.coins, reward.rankPoints);
+      });
+    }
+
+    if (cd.spectatorAttendedIds?.length && event.spectatorRewardJson) {
+      try {
+        const sr = JSON.parse(event.spectatorRewardJson) as { coins: number; rankPoints: number };
+        for (const userId of cd.spectatorAttendedIds) reverse(userId, sr.coins ?? 0, sr.rankPoints ?? 0);
+      } catch { /* ungültige JSON-Daten - ignorieren */ }
     }
   }
 
