@@ -1,11 +1,15 @@
 "use client";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Copy, Check, Clock } from "lucide-react";
+import { Copy, Check, Clock, ExternalLink } from "lucide-react";
 
 function daysUntil(iso: string) {
   return Math.ceil((new Date(iso).getTime() - Date.now()) / (24 * 60 * 60 * 1000));
 }
+
+// Erkennt Protokoll-Links wie steam://connect/... oder minecraft://..., die per Klick
+// direkt das Spiel/Steam öffnen (im Gegensatz zu einer reinen IP:Port-Adresse).
+const PROTOCOL_LINK = /^[a-z][a-z0-9+.-]*:\/\//i;
 
 function CopyField({ label, value }: { label: string; value: string }) {
   const [copied, setCopied] = useState(false);
@@ -46,14 +50,25 @@ export default function ServerCredentials({
 }) {
   if (!host) return null;
   const remaining = expiresAt ? daysUntil(expiresAt) : null;
+  const connectLink = connectInfo && PROTOCOL_LINK.test(connectInfo.trim()) ? connectInfo.trim() : null;
+  const connectNote = connectInfo && !connectLink ? connectInfo : null;
 
   return (
     <div className="space-y-2">
+      {connectLink && (
+        <a
+          href={connectLink}
+          className="flex items-center justify-center gap-2 w-full px-3 py-2.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-sm font-semibold transition-colors"
+        >
+          <ExternalLink className="w-4 h-4" />
+          Jetzt verbinden
+        </a>
+      )}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <CopyField label="Host" value={port ? `${host}:${port}` : host} />
         {password && <CopyField label="Passwort" value={password} />}
       </div>
-      {connectInfo && <p className="text-xs text-gray-400">{connectInfo}</p>}
+      {connectNote && <p className="text-xs text-gray-400">{connectNote}</p>}
       {remaining !== null && (
         <p className={`flex items-center gap-1.5 text-xs ${remaining <= 3 ? "text-amber-400" : "text-gray-500"}`}>
           <Clock className="w-3 h-3" />
