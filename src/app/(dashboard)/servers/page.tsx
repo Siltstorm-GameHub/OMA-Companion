@@ -12,7 +12,7 @@ export default async function ServersPage() {
         <h1 className="text-xl font-black text-white">Community-Gameserver</h1>
         <p className="text-sm text-gray-400 mt-1">
           Bewirb dich für Zugang zu unseren Gameservern. Nach Genehmigung durch ein Team-Mitglied siehst du die
-          Zugangsdaten für 30 Tage.
+          Zugangsdaten für 30 Tage — solange du dich regelmäßig verbindest, verlängert sich der Zugang automatisch.
         </p>
       </div>
 
