@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { deleteDiscordMessage, deleteDiscordScheduledEvent } from "@/lib/discord-events";
+import { revertEventCompletion } from "@/lib/revert-event-completion";
 
 export async function PATCH(req: NextRequest) {
   await requireRole("moderator");
@@ -21,6 +22,16 @@ export async function PATCH(req: NextRequest) {
   if (removeUserId) {
     await prisma.eventRegistration.deleteMany({ where: { eventId, userId: removeUserId } });
     return NextResponse.json({ ok: true });
+  }
+
+  // Status wird aus einem bereits abgeschlossenen Zustand herausgesetzt (z.B. "finished" → "active"):
+  // vorher vergebene Punkte/Belohnungen dieses Abschlusses rückgängig machen, damit die Liga-Tabelle
+  // und Nutzer-Guthaben nicht die Ergebnisse eines nicht mehr gültigen Abschlusses zeigen.
+  if (data.status !== undefined) {
+    const current = await prisma.event.findUnique({ where: { id: eventId }, select: { status: true, completionData: true } });
+    if (current?.completionData && current.status !== data.status) {
+      await revertEventCompletion(eventId);
+    }
   }
 
   // Wenn seriesScope === "all", Titel + Beschreibung für alle Events der Reihe übernehmen
