@@ -4,13 +4,13 @@ import { prisma } from "@/lib/prisma";
 import { invalidateBotConfigCache } from "@/lib/bot-config";
 
 export async function GET() {
-  await requireRole("moderator");
+  await requireRole("admin");
   const rows = await prisma.botConfig.findMany();
   return NextResponse.json(Object.fromEntries(rows.map(r => [r.key, r.value])));
 }
 
 export async function PATCH(req: NextRequest) {
-  await requireRole("moderator");
+  await requireRole("admin");
   const body = await req.json() as Record<string, string>;
 
   // Upsert alle übergebenen Key-Value-Paare

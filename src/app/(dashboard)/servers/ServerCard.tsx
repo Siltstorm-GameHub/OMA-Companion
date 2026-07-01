@@ -1,4 +1,5 @@
-import { Circle, Gamepad2 } from "lucide-react";
+import { Circle } from "lucide-react";
+import GameCover from "@/components/GameCover";
 import ApplyButton from "./ApplyButton";
 import ServerCredentials from "./ServerCredentials";
 
@@ -21,7 +22,6 @@ type Server = {
   name: string;
   game: string;
   description: string | null;
-  icon: string | null;
   maxSlots: number;
   occupied: number;
   available: number;
@@ -40,9 +40,7 @@ export default function ServerCard({ server }: { server: Server }) {
   return (
     <div className="rounded-xl glass p-4 space-y-3" style={{ border: "1px solid rgba(255,255,255,0.06)" }}>
       <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center shrink-0 text-lg">
-          {server.icon ?? <Gamepad2 className="w-4 h-4 text-gray-400" />}
-        </div>
+        <GameCover game={server.game} className="w-10 h-10" rounded="rounded-lg" />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-white truncate">{server.name}</p>
           <p className="text-xs text-gray-500">{server.game}</p>

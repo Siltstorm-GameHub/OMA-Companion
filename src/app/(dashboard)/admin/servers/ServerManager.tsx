@@ -3,6 +3,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Plus, Trash2, ToggleLeft, ToggleRight, Loader2, Pencil, Users, Circle } from "lucide-react";
+import GameNameInput from "@/components/GameNameInput";
+import GameCover from "@/components/GameCover";
+import { parseConnectLink } from "@/lib/connect-link";
 
 type Light = "green" | "yellow" | "red";
 
@@ -11,7 +14,6 @@ type Server = {
   name: string;
   game: string;
   description: string | null;
-  icon: string | null;
   host: string;
   port: string | null;
   password: string | null;
@@ -40,6 +42,12 @@ type FormState = {
 };
 
 const EMPTY_FORM: FormState = { name: "", game: "", description: "", host: "", port: "", password: "", connectInfo: "", maxSlots: "10" };
+
+// Übernimmt Host/Port automatisch aus einem eingefügten Connect-Link (z.B. steam://connect/host:port).
+function withConnectLinkAutoFill(prev: FormState, connectInfo: string): FormState {
+  const parsed = parseConnectLink(connectInfo);
+  return parsed ? { ...prev, connectInfo, host: parsed.host, port: parsed.port } : { ...prev, connectInfo };
+}
 
 export default function ServerManager({ initialServers }: { initialServers: Server[] }) {
   const [servers, setServers] = useState<Server[]>(initialServers);
@@ -144,8 +152,9 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
         <div className="grid grid-cols-2 gap-2">
           <input placeholder="Name (z.B. Survival #1)" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
             className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
-          <input placeholder="Spiel (z.B. Minecraft)" value={form.game} onChange={(e) => setForm({ ...form, game: e.target.value })}
-            className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
+          <GameNameInput value={form.game} onChange={(game) => setForm({ ...form, game })}
+            placeholder="Spiel (z.B. Minecraft)"
+            className="bg-white/5 border border-white/10 rounded-xl py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
           <input placeholder="Host / IP" value={form.host} onChange={(e) => setForm({ ...form, host: e.target.value })}
             className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
           <input placeholder="Port (optional)" value={form.port} onChange={(e) => setForm({ ...form, port: e.target.value })}
@@ -156,7 +165,7 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
             className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
           <input placeholder="Beschreibung (optional)" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
             className="col-span-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
-          <input placeholder="Connect-Link (z.B. steam://connect/host:port) oder Zusatzinfo" value={form.connectInfo} onChange={(e) => setForm({ ...form, connectInfo: e.target.value })}
+          <input placeholder="Connect-Link (z.B. steam://connect/host:port) oder Zusatzinfo" value={form.connectInfo} onChange={(e) => setForm((f) => withConnectLinkAutoFill(f, e.target.value))}
             className="col-span-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
         </div>
         <button onClick={createServer} disabled={saving || !form.name.trim() || !form.game.trim() || !form.host.trim()}
@@ -174,9 +183,12 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
           {servers.map((server) => (
             <div key={server.id} className="rounded-xl glass overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.06)", opacity: server.isActive ? 1 : 0.5 }}>
               <div className="flex items-center gap-3 px-4 py-3">
-                <Circle className="w-2.5 h-2.5 shrink-0" style={{ color: LIGHT_COLOR[server.light], fill: LIGHT_COLOR[server.light] }} />
+                <GameCover game={server.game} className="w-9 h-9" rounded="rounded-lg" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-white truncate">{server.name}</p>
+                  <p className="text-sm font-semibold text-white truncate flex items-center gap-1.5">
+                    <Circle className="w-2 h-2 shrink-0" style={{ color: LIGHT_COLOR[server.light], fill: LIGHT_COLOR[server.light] }} />
+                    {server.name}
+                  </p>
                   <p className="text-xs text-gray-500">{server.game} · {server.occupied}/{server.maxSlots} Plätze belegt</p>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
@@ -202,8 +214,9 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
                   <div className="grid grid-cols-2 gap-2">
                     <input placeholder="Name" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                       className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
-                    <input placeholder="Spiel" value={editForm.game} onChange={(e) => setEditForm({ ...editForm, game: e.target.value })}
-                      className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
+                    <GameNameInput value={editForm.game} onChange={(game) => setEditForm({ ...editForm, game })}
+                      placeholder="Spiel"
+                      className="bg-white/5 border border-white/10 rounded-lg py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
                     <input placeholder="Host / IP" value={editForm.host} onChange={(e) => setEditForm({ ...editForm, host: e.target.value })}
                       className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
                     <input placeholder="Port" value={editForm.port} onChange={(e) => setEditForm({ ...editForm, port: e.target.value })}
@@ -214,7 +227,7 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
                       className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
                     <input placeholder="Beschreibung" value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                       className="col-span-2 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
-                    <input placeholder="Connect-Link (steam://connect/host:port) oder Zusatzinfo" value={editForm.connectInfo} onChange={(e) => setEditForm({ ...editForm, connectInfo: e.target.value })}
+                    <input placeholder="Connect-Link (steam://connect/host:port) oder Zusatzinfo" value={editForm.connectInfo} onChange={(e) => setEditForm((f) => withConnectLinkAutoFill(f, e.target.value))}
                       className="col-span-2 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
                   </div>
                   <button onClick={() => saveEdit(server.id)} disabled={saving}

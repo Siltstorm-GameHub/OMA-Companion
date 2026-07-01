@@ -16,14 +16,6 @@ export const ROLE_STYLES: Record<Role, string> = {
   admin:     "bg-purple-900/50 text-purple-300",
 };
 
-export function canAwardPoints(role: Role) {
-  return role === "admin";
-}
-
-export function canManageRoles(role: Role) {
-  return role === "admin";
-}
-
 // Server-side helper: holt Session + User mit Rolle
 export async function getSessionUser() {
   const session = await auth();

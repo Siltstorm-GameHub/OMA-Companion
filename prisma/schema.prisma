@@ -928,7 +928,6 @@ model GameServer {
   name        String
   game        String                 // Freitext, z.B. "Minecraft", "ARK: Survival Ascended"
   description String?
-  icon        String?                // optionale Emoji/Bild-URL für die Karte
   host        String                 // IP/Domain – nur für genehmigte User sichtbar
   port        String?
   password    String?                // Server-Passwort – nur für genehmigte User sichtbar

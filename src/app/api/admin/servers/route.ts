@@ -23,7 +23,6 @@ export async function POST(req: NextRequest) {
     name?: string;
     game?: string;
     description?: string;
-    icon?: string;
     host?: string;
     port?: string;
     password?: string;
@@ -40,7 +39,6 @@ export async function POST(req: NextRequest) {
       name: body.name.trim(),
       game: body.game.trim(),
       description: body.description?.trim() || null,
-      icon: body.icon?.trim() || null,
       host: body.host.trim(),
       port: body.port?.trim() || null,
       password: body.password?.trim() || null,
