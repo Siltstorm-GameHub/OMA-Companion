@@ -13,7 +13,7 @@ export default async function AdminEventBracketPage({ params }: { params: Promis
     prisma.event.findUnique({
       where: { id },
       include: {
-        series: { select: { id: true, name: true } },
+        series: { select: { id: true, name: true, seriesStatConfig: true } },
         registrations: { select: { userId: true } },
         participants: {
           include: { user: { select: { id: true, name: true, username: true, image: true } } },
@@ -35,6 +35,14 @@ export default async function AdminEventBracketPage({ params }: { params: Promis
 
   const registeredIds = new Set(event.registrations.map(r => r.userId));
   const registeredUsers = allUsers.filter(u => registeredIds.has(u.id));
+
+  const winnerStatKeys: string[] = (() => {
+    if (!event.series?.seriesStatConfig) return [];
+    try {
+      const cfg = JSON.parse(event.series.seriesStatConfig) as { winnerStatKeys?: string[] };
+      return cfg.winnerStatKeys ?? [];
+    } catch { return []; }
+  })();
 
   const tournament = event.format ? {
     id: event.id,
@@ -75,6 +83,7 @@ export default async function AdminEventBracketPage({ params }: { params: Promis
         event={{ id: event.id }}
         tournament={tournament}
         allUsers={registeredUsers}
+        winnerStatKeys={winnerStatKeys}
       />
     </div>
   );

@@ -294,11 +294,12 @@ function CreationForm({
 
 // ─── Main Manager (tournament exists) ────────────────────────────────────────
 export default function TournamentManager({
-  event, tournament: initial, allUsers,
+  event, tournament: initial, allUsers, winnerStatKeys = [],
 }: {
   event: Event;
   tournament: Tournament | null;
   allUsers: User[];
+  winnerStatKeys?: string[];
 }) {
   const router = useRouter();
   const [tournament, setTournament] = useState<Tournament | null>(initial);
@@ -324,6 +325,20 @@ export default function TournamentManager({
   const [scores1v1, setScores1v1] = useState<Record<string, { s1: string; s2: string }>>({});
   const [ffaEdits, setFfaEdits]   = useState<Record<string, Record<string, Record<string, string>>>>({});
   const [expanded, setExpanded]   = useState<Set<string>>(new Set());
+  // Match Win checkbox state (only for coop_stats format)
+  const [matchWin, setMatchWin]   = useState<Record<string, boolean>>(() => {
+    const init: Record<string, boolean> = {};
+    for (const m of initial?.matches ?? []) {
+      const entryWithStats = m.entries.find(e => e.statsJson);
+      if (entryWithStats?.statsJson) {
+        try {
+          const s = JSON.parse(entryWithStats.statsJson as string) as Record<string, number>;
+          if ("Match Win" in s) init[m.id] = s["Match Win"] > 0;
+        } catch { /* ignore */ }
+      }
+    }
+    return init;
+  });
 
   if (!tournament) {
     return (
@@ -337,10 +352,13 @@ export default function TournamentManager({
 
   // ── Derived ──────────────────────────────────────────────────────────
   const isFfa  = tournament.format === "ffa" || tournament.format === "coop_stats" || tournament.format === "avg_stats";
+  const isCoop = tournament.format === "coop_stats";
   const isLiga = tournament.format === "liga";
   const is1v1  = !isFfa;
   const isRoundRobin = tournament.format === "round_robin";
   const statFields: string[] = tournament.statFields ? JSON.parse(tournament.statFields) : [];
+  // Filter out winner stat keys — they're auto-set by event completion, not entered per round
+  const visibleStatFields = statFields.filter(f => !winnerStatKeys.includes(f));
   // pointsConfig kann zwei Formate haben:
   //   Erstellung: {"1": {coins: 200, points: 100}, ...} oder {"win": 30, "draw": 10}
   //   Einstellungen: {"1": 100, ...} (nur Punkte)
@@ -496,12 +514,15 @@ export default function TournamentManager({
   async function submitFfa(matchId: string, matchEntries: MatchEntry[]) {
     if (!tournament) return;
     const ed = ffaEdits[matchId] ?? {};
+    const coopMatchWin = isCoop ? (matchWin[matchId] ? 1 : 0) : undefined;
     const updated = matchEntries.map(e => {
       // Start with existing persisted stats so we don't overwrite fields that weren't touched
       const existing: Record<string, number> = e.statsJson ? JSON.parse(e.statsJson as string) : {};
       const row = ed[e.userId ?? ""] ?? {};
       const stats: Record<string, number> = { ...existing };
-      statFields.forEach(f => { if (row[f] !== undefined && row[f] !== "") stats[f] = Number(row[f]); });
+      visibleStatFields.forEach(f => { if (row[f] !== undefined && row[f] !== "") stats[f] = Number(row[f]); });
+      // For coop_stats: apply match-level "Match Win" to all players
+      if (coopMatchWin !== undefined) stats["Match Win"] = coopMatchWin;
       return {
         id: e.id,
         statsJson: Object.keys(stats).length ? stats : null,
@@ -564,8 +585,8 @@ export default function TournamentManager({
               ? <span className="flex items-center gap-0.5 text-xs text-gray-500">🏆{getCoinsVal("win")} 🤝{getCoinsVal("draw")} <CoinIcon size={13} /></span>
               : <span className="text-xs text-gray-500">🥇{getConfigVal("1")} 🥈{getConfigVal("2")} 🥉{getConfigVal("3")} Pts</span>
           )}
-          {statFields.length > 0 && (
-            <span className="text-xs text-gray-600">Stats: {statFields.join(", ")}</span>
+          {visibleStatFields.length > 0 && (
+            <span className="text-xs text-gray-600">Stats: {visibleStatFields.join(", ")}</span>
           )}
         </div>
         <div className="flex items-center gap-1.5">
@@ -745,46 +766,62 @@ export default function TournamentManager({
                   {isExp && (
                     <div className="p-3">
                       {match.notes && <p className="text-xs text-gray-500 mb-3">{match.notes}</p>}
-                      {statFields.length === 0 ? (
+                      {visibleStatFields.length === 0 && !isCoop ? (
                         <div className="text-xs text-amber-400/80 bg-amber-900/10 border border-amber-800/30 rounded-lg px-3 py-2">
                           Keine Statistik-Felder konfiguriert. Bitte zuerst im Reiter <span className="font-semibold">Einstellungen</span> die gewünschten Stat-Felder eintragen und auf „Turnier-Einstellungen speichern" klicken.
                         </div>
                       ) : (
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-xs">
-                          <thead>
-                            <tr className="text-gray-500 border-b border-gray-700">
-                              <th className="text-left py-1.5 pr-3 font-medium">Spieler</th>
-                              {statFields.map(f => (
-                                <th key={f} className="text-center py-1.5 px-2 font-medium">{f}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {match.entries.map(entry => {
-                              const user    = allUsers.find(u => u.id === entry.userId);
-                              const existing: Record<string, number> = entry.statsJson ? JSON.parse(entry.statsJson) : {};
-                              const row     = ed[entry.userId ?? ""] ?? {};
-                              return (
-                                <tr key={entry.id} className="border-b border-gray-800 last:border-0">
-                                  <td className="py-1.5 pr-3 text-white whitespace-nowrap">
-                                    {user ? userName(user) : "?"}
-                                  </td>
-                                  {statFields.map(f => (
-                                    <td key={f} className="py-1 px-2 text-center">
-                                      <input type="number" placeholder="–"
-                                        value={row[f] ?? (existing[f] !== undefined ? String(existing[f]) : "")}
-                                        onChange={e => setFfaField(match.id, entry.userId ?? "", f, e.target.value)}
-                                        className="w-16 bg-gray-700 border border-gray-600 text-white rounded px-1.5 py-1 text-center text-xs"
-                                      />
+                      <>
+                        {/* Match Win checkbox for coop_stats */}
+                        {isCoop && (
+                          <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer mb-3 select-none">
+                            <input
+                              type="checkbox"
+                              checked={matchWin[match.id] ?? false}
+                              onChange={e => setMatchWin(prev => ({ ...prev, [match.id]: e.target.checked }))}
+                              className="rounded"
+                            />
+                            <span>Match Win <span className="text-gray-500">(alle Spieler erhalten +1)</span></span>
+                          </label>
+                        )}
+                        {visibleStatFields.length > 0 && (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr className="text-gray-500 border-b border-gray-700">
+                                <th className="text-left py-1.5 pr-3 font-medium">Spieler</th>
+                                {visibleStatFields.map(f => (
+                                  <th key={f} className="text-center py-1.5 px-2 font-medium">{f}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {match.entries.map(entry => {
+                                const user    = allUsers.find(u => u.id === entry.userId);
+                                const existing: Record<string, number> = entry.statsJson ? JSON.parse(entry.statsJson) : {};
+                                const row     = ed[entry.userId ?? ""] ?? {};
+                                return (
+                                  <tr key={entry.id} className="border-b border-gray-800 last:border-0">
+                                    <td className="py-1.5 pr-3 text-white whitespace-nowrap">
+                                      {user ? userName(user) : "?"}
                                     </td>
-                                  ))}
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
+                                    {visibleStatFields.map(f => (
+                                      <td key={f} className="py-1 px-2 text-center">
+                                        <input type="number" placeholder="–"
+                                          value={row[f] ?? (existing[f] !== undefined ? String(existing[f]) : "")}
+                                          onChange={e => setFfaField(match.id, entry.userId ?? "", f, e.target.value)}
+                                          className="w-16 bg-gray-700 border border-gray-600 text-white rounded px-1.5 py-1 text-center text-xs"
+                                        />
+                                      </td>
+                                    ))}
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                        )}
+                      </>
                       )}
                       <div className="flex gap-2 mt-3">
                         <button onClick={() => submitFfa(match.id, match.entries)} disabled={loading}
