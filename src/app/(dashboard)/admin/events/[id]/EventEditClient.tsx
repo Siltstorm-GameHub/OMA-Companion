@@ -93,8 +93,18 @@ function derivePointsConfigFromSeries(series: { placementRewardsJson?: string | 
 function deriveStatFieldsFromSeries(series: { seriesStatConfig?: string | null } | null | undefined): string[] | null {
   if (!series?.seriesStatConfig) return null;
   try {
-    const { stats } = JSON.parse(series.seriesStatConfig) as { stats: { field: string }[] };
-    const fields = stats?.map(s => s.field).filter(Boolean) ?? [];
+    const parsed = JSON.parse(series.seriesStatConfig) as {
+      stats?: { field: string; isWinnerStat?: boolean }[];
+      eventStatFields?: string[];
+    };
+    // Prefer explicit eventStatFields if configured
+    if (parsed.eventStatFields?.length) {
+      return parsed.eventStatFields.filter(Boolean);
+    }
+    // Fall back to stats but exclude winner stats (they're set automatically)
+    const fields = parsed.stats
+      ?.filter(s => !s.isWinnerStat && s.field)
+      .map(s => s.field) ?? [];
     return fields.length ? fields : null;
   } catch { return null; }
 }

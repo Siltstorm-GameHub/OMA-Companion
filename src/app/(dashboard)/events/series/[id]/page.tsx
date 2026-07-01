@@ -86,6 +86,7 @@ type StatConfig = {
   defaultWinnerStatField?: string;
   defaultWinnerTargetField?: string;
   eventStatFields?: string[];
+  winnerStatKeys?: string[];
 };
 type LegacyRow = { userId: string; points: number; participations: number; stats: Record<string, number> };
 type SeriesEventForStandings = {
@@ -139,9 +140,10 @@ function computeStatStandings(
     for (const { userId: uid } of ev.registrations) {
       evPart[uid] = (evPart[uid] ?? 0) + 1;
     }
-    // Felder aus Match-Einträgen summieren: cfg.stats + eventStatFields (superset)
+    // Felder aus Match-Einträgen summieren: cfg.stats + eventStatFields, aber keine Winner-Stat-Keys
+    const winnerStatSet = new Set(cfg.winnerStatKeys ?? []);
     const fieldsToAggregate = new Set([
-      ...cfg.stats.map(s => s.field),
+      ...cfg.stats.map(s => s.field).filter(f => !winnerStatSet.has(f)),
       ...(cfg.eventStatFields ?? []),
     ]);
     for (const match of ev.matches) {
@@ -313,13 +315,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
   const specialFields    = new Set(
     [statCfg.mvpStatField, statCfg.defaultWinnerTargetField].filter((f): f is string => !!f)
   );
-  // Collect extra fields: from event-derived data + poll-label fields present in legacy data
-  const allExtraFields = new Set<string>();
-  for (const f of evStatFieldsSeen) {
-    if (!configuredFields.has(f) && !reservedFields.has(f) && !isInternalField(f))
-      allExtraFields.add(f);
-  }
-  // Poll labels from series config: include their stat columns even if only present in legacy data
+  // Poll labels from series config
   const pollLabels: string[] = (() => {
     try {
       const raw = series.pollsConfigJson ?? series.pollConfigJson;
@@ -329,11 +325,20 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
       return arr.map(p => p.label ?? "").filter(Boolean);
     } catch { return []; }
   })();
+  // Poll-related fields and winner stat keys should never appear as extra columns
+  const pollRelatedFields = new Set<string>(["Umfrage-Teilnahmen"]);
   for (const label of pollLabels) {
-    for (const f of [label, `${label}_Abstimmungen`, `${label}_Teilnahmepunkte`, `${label}_Siegerpunkte`]) {
-      if (!configuredFields.has(f) && !reservedFields.has(f))
-        allExtraFields.add(f);
+    for (const suffix of ["", "_Abstimmungen", "_Teilnahmepunkte", "_Siegerpunkte"]) {
+      pollRelatedFields.add(`${label}${suffix}`);
     }
+  }
+  const winnerStatKeySet = new Set(statCfg.winnerStatKeys ?? []);
+  // Collect extra fields: from event-derived data only (excluding poll-related, winner stats, internal)
+  const allExtraFields = new Set<string>();
+  for (const f of evStatFieldsSeen) {
+    if (!configuredFields.has(f) && !reservedFields.has(f) && !isInternalField(f)
+        && !pollRelatedFields.has(f) && !winnerStatKeySet.has(f))
+      allExtraFields.add(f);
   }
   // Special fields first, then poll/dominion fields
   const extraCols = [
