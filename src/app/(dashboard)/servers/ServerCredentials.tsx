@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Copy, Check, Clock, ExternalLink } from "lucide-react";
 
@@ -11,7 +12,7 @@ function daysUntil(iso: string) {
 // direkt das Spiel/Steam öffnen (im Gegensatz zu einer reinen IP:Port-Adresse).
 const PROTOCOL_LINK = /^[a-z][a-z0-9+.-]*:\/\//i;
 
-function CopyField({ label, value }: { label: string; value: string }) {
+function CopyField({ label, value, onCopy }: { label: string; value: string; onCopy?: () => void }) {
   const [copied, setCopied] = useState(false);
 
   async function copy() {
@@ -19,6 +20,7 @@ function CopyField({ label, value }: { label: string; value: string }) {
     setCopied(true);
     toast.success(`${label} kopiert`);
     setTimeout(() => setCopied(false), 1500);
+    onCopy?.();
   }
 
   return (
@@ -36,36 +38,52 @@ function CopyField({ label, value }: { label: string; value: string }) {
 }
 
 export default function ServerCredentials({
+  serverId,
   host,
   port,
   password,
   connectInfo,
   expiresAt,
 }: {
+  serverId: string;
   host?: string;
   port?: string | null;
   password?: string | null;
   connectInfo?: string | null;
   expiresAt: string | null;
 }) {
+  const router = useRouter();
   if (!host) return null;
   const remaining = expiresAt ? daysUntil(expiresAt) : null;
   const connectLink = connectInfo && PROTOCOL_LINK.test(connectInfo.trim()) ? connectInfo.trim() : null;
   const connectNote = connectInfo && !connectLink ? connectInfo : null;
 
+  // Verlängert den 30-Tage-Zugriff ab jetzt, da der User gerade tatsächlich verbindet.
+  function markConnected() {
+    fetch(`/api/servers/${serverId}/connect`, { method: "POST" })
+      .then(() => router.refresh())
+      .catch(() => {});
+  }
+
   return (
     <div className="space-y-2">
       {connectLink && (
-        <a
-          href={connectLink}
-          className="flex items-center justify-center gap-2 w-full px-3 py-2.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-sm font-semibold transition-colors"
-        >
-          <ExternalLink className="w-4 h-4" />
-          Jetzt verbinden
-        </a>
+        <>
+          <a
+            href={connectLink}
+            onClick={markConnected}
+            className="flex items-center justify-center gap-2 w-full px-3 py-2.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-sm font-semibold transition-colors"
+          >
+            <ExternalLink className="w-4 h-4" />
+            Jetzt verbinden
+          </a>
+          <p className="text-[11px] text-gray-500">
+            Öffnet Steam. Falls sich nichts tut: Steam muss laufen und das Spiel installiert sein — sonst unten Host/Passwort manuell im Spiel eintragen.
+          </p>
+        </>
       )}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        <CopyField label="Host" value={port ? `${host}:${port}` : host} />
+        <CopyField label="Host" value={port ? `${host}:${port}` : host} onCopy={markConnected} />
         {password && <CopyField label="Passwort" value={password} />}
       </div>
       {connectNote && <p className="text-xs text-gray-400">{connectNote}</p>}

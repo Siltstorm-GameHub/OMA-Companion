@@ -955,6 +955,7 @@ model ServerApplication {
   decidedBy        String?
   expiresAt        DateTime?
   expiryNotifiedAt DateTime?
+  lastConnectedAt  DateTime?  // Zeitpunkt des letzten Klicks auf "Jetzt verbinden" — verlängert expiresAt um weitere 30 Tage
 
   server GameServer @relation(fields: [serverId], references: [id], onDelete: Cascade)
   user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)

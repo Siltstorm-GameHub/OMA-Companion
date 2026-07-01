@@ -41,7 +41,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     await createNotification(application.userId, {
       type: "server",
       title: "Bewerbung angenommen",
-      body: `Du hast Zugang zu „${application.server.name}" erhalten (gültig 30 Tage).`,
+      body: `Du hast Zugang zu „${application.server.name}" erhalten (gültig 30 Tage, verlängert sich bei regelmäßiger Nutzung).`,
       url: "/servers",
     });
 

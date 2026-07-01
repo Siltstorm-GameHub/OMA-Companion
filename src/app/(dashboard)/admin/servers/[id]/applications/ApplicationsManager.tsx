@@ -12,6 +12,7 @@ type Application = {
   message: string | null;
   appliedAt: string;
   expiresAt: string | null;
+  lastConnectedAt: string | null;
   user: User;
 };
 
@@ -97,6 +98,9 @@ export default function ApplicationsManager({ initialApplications }: { initialAp
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-white truncate">{app.user.username ?? app.user.name}</p>
                 {app.expiresAt && <p className="text-xs text-gray-500">Zugang gültig bis {formatDate(app.expiresAt)}</p>}
+                <p className="text-[11px] text-gray-600">
+                  {app.lastConnectedAt ? `Zuletzt verbunden am ${formatDate(app.lastConnectedAt)}` : "Noch nicht verbunden"}
+                </p>
               </div>
               <button onClick={() => act(app.id, "revoke")} disabled={actingId === app.id}
                 className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-red-500/10 border border-red-500/20 text-red-300 hover:bg-red-500/20 disabled:opacity-40 transition-colors shrink-0">
