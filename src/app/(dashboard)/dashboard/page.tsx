@@ -513,9 +513,7 @@ export default async function DashboardPage() {
                 <Link key={server.id} href="/servers"
                   className="flex items-center gap-3 px-3.5 py-3 transition-colors group hover:bg-white/[0.025]"
                   style={{ borderBottom: i < Math.min(servers.length, 5) - 1 ? "1px solid rgba(255,255,255,0.05)" : "" }}>
-                  <div className="w-8 h-8 rounded-sm bg-teal-500/10 border border-teal-500/15 flex items-center justify-center shrink-0 text-sm">
-                    {server.icon ?? <Gamepad2 className="w-3.5 h-3.5 text-teal-400" />}
-                  </div>
+                  <GameCover game={server.game} className="w-8 h-8" rounded="rounded-sm" />
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-semibold text-white truncate group-hover:text-teal-300 transition-colors">
                       {server.name}
