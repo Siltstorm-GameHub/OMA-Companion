@@ -7,6 +7,7 @@ import {
   BarChart2, CalendarDays, Heart, CalendarRange, Medal,
   Wrench, Users2, BarChart3, Megaphone, Handshake, Clapperboard, Server,
 } from "lucide-react";
+import ServerApplicationBadge from "@/components/ServerApplicationBadge";
 
 type Role = "user" | "moderator" | "admin";
 const HIERARCHY: Role[] = ["user", "moderator", "admin"];
@@ -109,7 +110,10 @@ export default function AdminNav() {
                   ? "bg-purple-600/20 text-purple-300 shadow-[inset_0_0_0_1px_rgba(168,85,247,0.2)]"
                   : "text-gray-500 hover:text-gray-200 hover:bg-white/5"
               }`}>
-              <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-purple-400" : "text-gray-600"}`} />
+              <span className="relative shrink-0">
+                <Icon className={`w-4 h-4 ${isActive ? "text-purple-400" : "text-gray-600"}`} />
+                {cat.key === "tools" && <ServerApplicationBadge />}
+              </span>
               <span>{cat.label}</span>
             </Link>
           );
@@ -129,7 +133,10 @@ export default function AdminNav() {
                     ? "text-white bg-white/8 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]"
                     : "text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]"
                 }`}>
-                <Icon className={`w-3.5 h-3.5 shrink-0 ${active ? "text-purple-400" : "text-gray-600"}`} />
+                <span className="relative shrink-0">
+                  <Icon className={`w-3.5 h-3.5 ${active ? "text-purple-400" : "text-gray-600"}`} />
+                  {tab.href === "/admin/servers" && <ServerApplicationBadge />}
+                </span>
                 <span>{tab.label}</span>
               </Link>
             );
