@@ -27,7 +27,6 @@ type Server = {
   available: number;
   light: Light;
   myStatus: string;
-  myExpiresAt: string | null;
   host?: string;
   port?: string | null;
   password?: string | null;
@@ -68,7 +67,6 @@ export default function ServerCard({ server }: { server: Server }) {
           port={server.port}
           password={server.password}
           connectInfo={server.connectInfo}
-          expiresAt={server.myExpiresAt}
         />
       )}
     </div>

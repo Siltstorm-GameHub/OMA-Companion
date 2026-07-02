@@ -18,10 +18,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     where: { serverId_userId: { serverId, userId } },
   });
 
-  const hasActive =
-    existing &&
-    (existing.status === "pending" ||
-      (existing.status === "approved" && (!existing.expiresAt || existing.expiresAt > new Date())));
+  const hasActive = existing && (existing.status === "pending" || existing.status === "approved");
   if (hasActive) return NextResponse.json({ error: "Bereits beworben oder freigeschaltet" }, { status: 400 });
 
   const occupied = await countOccupiedSlots(serverId);
@@ -36,8 +33,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       adminNote: null,
       decidedAt: null,
       decidedBy: null,
-      expiresAt: null,
-      expiryNotifiedAt: null,
       appliedAt: new Date(),
     },
   });

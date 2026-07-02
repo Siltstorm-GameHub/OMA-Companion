@@ -944,18 +944,16 @@ model GameServer {
 }
 
 model ServerApplication {
-  id               String     @id @default(cuid())
-  serverId         String
-  userId           String
-  status           String     @default("pending") // pending | approved | denied | revoked | expired
-  message          String?
-  adminNote        String?
-  appliedAt        DateTime   @default(now())
-  decidedAt        DateTime?
-  decidedBy        String?
-  expiresAt        DateTime?
-  expiryNotifiedAt DateTime?
-  lastConnectedAt  DateTime?  // Zeitpunkt des letzten Klicks auf "Jetzt verbinden" — verlängert expiresAt um weitere 30 Tage
+  id              String     @id @default(cuid())
+  serverId        String
+  userId          String
+  status          String     @default("pending") // pending | approved | denied | revoked
+  message         String?
+  adminNote       String?
+  appliedAt       DateTime   @default(now())
+  decidedAt       DateTime?
+  decidedBy       String?
+  lastConnectedAt DateTime?  // Zeitpunkt des letzten Klicks auf "Jetzt verbinden" (Info für Admins)
 
   server GameServer @relation(fields: [serverId], references: [id], onDelete: Cascade)
   user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
