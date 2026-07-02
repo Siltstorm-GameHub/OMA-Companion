@@ -25,6 +25,25 @@ export async function countOccupiedSlots(serverId: string): Promise<number> {
   return prisma.serverApplication.count({ where: occupiedWhere(serverId) });
 }
 
+export async function countPendingApplications(serverId?: string): Promise<number> {
+  return prisma.serverApplication.count({ where: { status: "pending", ...(serverId ? { serverId } : {}) } });
+}
+
+// Server-Liste für die Admin-Verwaltung inkl. Ampel und Anzahl offener Bewerbungen.
+// Wird sowohl von /api/admin/servers als auch von der /admin/servers-Seite (SSR) verwendet.
+export async function getServersWithAdminCounts() {
+  const servers = await prisma.gameServer.findMany({ orderBy: { createdAt: "desc" } });
+  return Promise.all(
+    servers.map(async (server) => {
+      const [occupied, pendingCount] = await Promise.all([
+        countOccupiedSlots(server.id),
+        countPendingApplications(server.id),
+      ]);
+      return { ...server, occupied, pendingCount, light: trafficLight(server.maxSlots - occupied, server.maxSlots) };
+    })
+  );
+}
+
 export type VisibleServer = {
   id: string;
   name: string;

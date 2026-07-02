@@ -21,6 +21,7 @@ type Server = {
   maxSlots: number;
   isActive: boolean;
   occupied: number;
+  pendingCount: number;
   light: Light;
 };
 
@@ -189,12 +190,22 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
                     <Circle className="w-2 h-2 shrink-0" style={{ color: LIGHT_COLOR[server.light], fill: LIGHT_COLOR[server.light] }} />
                     {server.name}
                   </p>
-                  <p className="text-xs text-gray-500">{server.game} · {server.occupied}/{server.maxSlots} Plätze belegt</p>
+                  <p className="text-xs text-gray-500">
+                    {server.game} · {server.occupied}/{server.maxSlots} Plätze belegt
+                    {server.pendingCount > 0 && (
+                      <span className="text-amber-400"> · {server.pendingCount} offene Bewerbung{server.pendingCount === 1 ? "" : "en"}</span>
+                    )}
+                  </p>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
                   <Link href={`/admin/servers/${server.id}/applications`}
-                    className="p-1.5 rounded-lg text-gray-500 hover:text-violet-400 hover:bg-violet-500/10 transition-colors" title="Bewerbungen">
+                    className="relative p-1.5 rounded-lg text-gray-500 hover:text-violet-400 hover:bg-violet-500/10 transition-colors" title="Bewerbungen">
                     <Users className="w-3.5 h-3.5" />
+                    {server.pendingCount > 0 && (
+                      <span className="absolute -top-1 -right-1 min-w-[14px] h-3.5 rounded-full bg-amber-500 text-[9px] font-bold text-black flex items-center justify-center px-1">
+                        {server.pendingCount > 9 ? "9+" : server.pendingCount}
+                      </span>
+                    )}
                   </Link>
                   <button onClick={() => (editingId === server.id ? setEditingId(null) : startEdit(server))}
                     className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/8 transition-colors" title="Bearbeiten">
