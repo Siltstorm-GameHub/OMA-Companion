@@ -15,9 +15,9 @@ export default function ServerApplicationBadge() {
   }, []);
 
   useEffect(() => {
-    fetch_();
+    const initial = setTimeout(fetch_, 0);
     const id = setInterval(fetch_, 60_000);
-    return () => clearInterval(id);
+    return () => { clearTimeout(initial); clearInterval(id); };
   }, [fetch_]);
 
   if (count === 0) return null;
