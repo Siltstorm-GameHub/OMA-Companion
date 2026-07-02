@@ -1,18 +1,11 @@
 import { requireRole } from "@/lib/roles";
-import { prisma } from "@/lib/prisma";
-import { countOccupiedSlots, trafficLight } from "@/lib/gameservers";
+import { getServersWithAdminCounts } from "@/lib/gameservers";
 import ServerManager from "./ServerManager";
 
 export default async function AdminServersPage() {
   await requireRole("moderator");
 
-  const servers = await prisma.gameServer.findMany({ orderBy: { createdAt: "desc" } });
-  const withCounts = await Promise.all(
-    servers.map(async (server) => {
-      const occupied = await countOccupiedSlots(server.id);
-      return { ...server, occupied, light: trafficLight(server.maxSlots - occupied, server.maxSlots) };
-    })
-  );
+  const withCounts = await getServersWithAdminCounts();
 
   return (
     <div className="space-y-6">

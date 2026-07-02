@@ -1,20 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/roles";
-import { countOccupiedSlots, trafficLight } from "@/lib/gameservers";
+import { getServersWithAdminCounts, trafficLight } from "@/lib/gameservers";
 
 export async function GET() {
   await requireRole("moderator");
-
-  const servers = await prisma.gameServer.findMany({ orderBy: { createdAt: "desc" } });
-  const withCounts = await Promise.all(
-    servers.map(async (server) => {
-      const occupied = await countOccupiedSlots(server.id);
-      return { ...server, occupied, light: trafficLight(server.maxSlots - occupied, server.maxSlots) };
-    })
-  );
-
-  return NextResponse.json(withCounts);
+  return NextResponse.json(await getServersWithAdminCounts());
 }
 
 export async function POST(req: NextRequest) {
@@ -48,5 +39,5 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  return NextResponse.json({ ...server, occupied: 0, light: trafficLight(server.maxSlots, server.maxSlots) }, { status: 201 });
+  return NextResponse.json({ ...server, occupied: 0, pendingCount: 0, light: trafficLight(server.maxSlots, server.maxSlots) }, { status: 201 });
 }
