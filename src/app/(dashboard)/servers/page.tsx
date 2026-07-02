@@ -12,7 +12,7 @@ export default async function ServersPage() {
         <h1 className="text-xl font-black text-white">Community-Gameserver</h1>
         <p className="text-sm text-gray-400 mt-1">
           Bewirb dich für Zugang zu unseren Gameservern. Nach Genehmigung durch ein Team-Mitglied siehst du die
-          Zugangsdaten für 30 Tage — solange du dich regelmäßig verbindest, verlängert sich der Zugang automatisch.
+          Zugangsdaten dauerhaft, bis der Zugang von einem Admin entzogen wird.
         </p>
       </div>
 
@@ -21,13 +21,7 @@ export default async function ServersPage() {
       ) : (
         <div className="space-y-3">
           {servers.map((server) => (
-            <ServerCard
-              key={server.id}
-              server={{
-                ...server,
-                myExpiresAt: server.myExpiresAt ? server.myExpiresAt.toISOString() : null,
-              }}
-            />
+            <ServerCard key={server.id} server={server} />
           ))}
         </div>
       )}

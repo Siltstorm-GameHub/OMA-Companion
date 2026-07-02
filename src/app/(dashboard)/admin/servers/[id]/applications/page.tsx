@@ -26,7 +26,6 @@ export default async function ServerApplicationsPage({ params }: { params: Promi
         initialApplications={applications.map((a) => ({
           ...a,
           appliedAt: a.appliedAt.toISOString(),
-          expiresAt: a.expiresAt ? a.expiresAt.toISOString() : null,
           lastConnectedAt: a.lastConnectedAt ? a.lastConnectedAt.toISOString() : null,
         }))}
       />

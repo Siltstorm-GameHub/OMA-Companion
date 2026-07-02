@@ -1,12 +1,7 @@
 "use client";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Copy, Check, Clock } from "lucide-react";
-
-function daysUntil(iso: string) {
-  return Math.ceil((new Date(iso).getTime() - Date.now()) / (24 * 60 * 60 * 1000));
-}
+import { Copy, Check } from "lucide-react";
 
 function CopyField({ label, value, onCopy }: { label: string; value: string; onCopy?: () => void }) {
   const [copied, setCopied] = useState(false);
@@ -39,24 +34,18 @@ export default function ServerCredentials({
   port,
   password,
   connectInfo,
-  expiresAt,
 }: {
   serverId: string;
   host?: string;
   port?: string | null;
   password?: string | null;
   connectInfo?: string | null;
-  expiresAt: string | null;
 }) {
-  const router = useRouter();
   if (!host) return null;
-  const remaining = expiresAt ? daysUntil(expiresAt) : null;
 
-  // Verlängert den 30-Tage-Zugriff ab jetzt, da der User gerade tatsächlich verbindet.
+  // Merkt den Zeitpunkt der letzten Nutzung (nur Info für Admins, kein Einfluss auf den Zugriff).
   function markConnected() {
-    fetch(`/api/servers/${serverId}/connect`, { method: "POST" })
-      .then(() => router.refresh())
-      .catch(() => {});
+    fetch(`/api/servers/${serverId}/connect`, { method: "POST" }).catch(() => {});
   }
 
   return (
@@ -66,12 +55,6 @@ export default function ServerCredentials({
         {password && <CopyField label="Passwort" value={password} onCopy={markConnected} />}
       </div>
       {connectInfo && <CopyField label="Zusatzinfo" value={connectInfo} onCopy={markConnected} />}
-      {remaining !== null && (
-        <p className={`flex items-center gap-1.5 text-xs ${remaining <= 3 ? "text-amber-400" : "text-gray-500"}`}>
-          <Clock className="w-3 h-3" />
-          {remaining <= 0 ? "Zugang läuft heute ab" : `Zugang läuft in ${remaining} Tag${remaining === 1 ? "" : "en"} ab`}
-        </p>
-      )}
     </div>
   );
 }

@@ -2,23 +2,14 @@ import { prisma } from "@/lib/prisma";
 
 export type TrafficLight = "green" | "yellow" | "red";
 
-export const SERVER_ACCESS_DAYS = 30;
-
 export function trafficLight(available: number, max: number): TrafficLight {
   if (available <= 0) return "red";
   if (available <= Math.max(1, Math.ceil(max * 0.2))) return "yellow";
   return "green";
 }
 
-// Belegte Slots = genehmigte Bewerbungen, deren Zugriff noch nicht abgelaufen ist.
-// Die expiresAt-Prüfung läuft hier zusätzlich zum status-Feld, damit die Zahl auch
-// stimmt, falls der tägliche Expiry-Cron noch nicht gelaufen ist.
 export function occupiedWhere(serverId: string) {
-  return {
-    serverId,
-    status: "approved",
-    OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
-  };
+  return { serverId, status: "approved" };
 }
 
 export async function countOccupiedSlots(serverId: string): Promise<number> {
@@ -53,8 +44,7 @@ export type VisibleServer = {
   occupied: number;
   available: number;
   light: TrafficLight;
-  myStatus: "none" | "pending" | "approved" | "denied" | "revoked" | "expired";
-  myExpiresAt: Date | null;
+  myStatus: "none" | "pending" | "approved" | "denied" | "revoked";
   host?: string;
   port?: string | null;
   password?: string | null;
@@ -79,10 +69,7 @@ export async function getVisibleServers(userId: string | undefined): Promise<Vis
       const occupied = await countOccupiedSlots(server.id);
       const available = server.maxSlots - occupied;
       const application = myApplicationByServer.get(server.id);
-      const hasApproved =
-        !!application &&
-        application.status === "approved" &&
-        (!application.expiresAt || application.expiresAt > new Date());
+      const hasApproved = application?.status === "approved";
 
       return {
         id: server.id,
@@ -94,7 +81,6 @@ export async function getVisibleServers(userId: string | undefined): Promise<Vis
         available,
         light: trafficLight(available, server.maxSlots),
         myStatus: (application?.status as VisibleServer["myStatus"]) ?? "none",
-        myExpiresAt: application?.expiresAt ?? null,
         ...(hasApproved
           ? { host: server.host, port: server.port, password: server.password, connectInfo: server.connectInfo }
           : {}),

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/roles";
-import { countOccupiedSlots, SERVER_ACCESS_DAYS } from "@/lib/gameservers";
+import { countOccupiedSlots } from "@/lib/gameservers";
 import { createNotification } from "@/lib/notifications";
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -25,15 +25,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: "Server ist bereits voll" }, { status: 400 });
     }
 
-    const expiresAt = new Date(Date.now() + SERVER_ACCESS_DAYS * 24 * 60 * 60 * 1000);
     const updated = await prisma.serverApplication.update({
       where: { id },
       data: {
         status: "approved",
         decidedAt: new Date(),
         decidedBy: admin.id,
-        expiresAt,
-        expiryNotifiedAt: null,
         adminNote: body.adminNote?.trim() || null,
       },
     });
@@ -41,7 +38,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     await createNotification(application.userId, {
       type: "server",
       title: "Bewerbung angenommen",
-      body: `Du hast Zugang zu „${application.server.name}" erhalten (gültig 30 Tage, verlängert sich bei regelmäßiger Nutzung).`,
+      body: `Du hast Zugang zu „${application.server.name}" erhalten.`,
       url: "/servers",
     });
 
