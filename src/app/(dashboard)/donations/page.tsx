@@ -99,7 +99,7 @@ export default async function DonationsPage() {
         {/* PayPal Spenden-Button */}
         <div className="pt-2">
           <a
-            href="https://www.paypal.com/donate/?business=communitykstv%40googlemail.com&currency_code=EUR"
+            href="https://www.paypal.com/myaccount/transfer/homepage/pay?recipient=communitykstv%40googlemail.com&country.x=DE&locale.x=de_DE"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all hover:scale-105 active:scale-95"
@@ -114,7 +114,9 @@ export default async function DonationsPage() {
             </svg>
             Jetzt Spenden
           </a>
-          <p className="text-[11px] text-gray-600 mt-1.5">Bis zu 5 € / Monat · PayPal</p>
+          <p className="text-[11px] text-gray-600 mt-1.5">
+            Bis zu 5 € / Monat · Bitte bei PayPal &quot;An Freunde &amp; Familie&quot; auswählen, damit keine Gebühren anfallen
+          </p>
         </div>
       </div>
 
