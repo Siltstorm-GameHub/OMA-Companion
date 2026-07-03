@@ -397,15 +397,19 @@ model EventPartner {
 
 model MonthlyClipContest {
   id          String           @id @default(cuid())
-  month       Int              // 1-12 (der bewertete Vormonat)
+  month       Int              // Anzeige-Monat (Monat von periodStart)
   year        Int
+  periodStart DateTime         @default(now()) // Beginn des bewerteten Clip-Zeitraums
+  periodEnd   DateTime         @default(now()) // Ende des bewerteten Clip-Zeitraums
+  votingEndsAt DateTime        @default(now()) // Wann die Abstimmung automatisch endet/ausgewertet wird
+  channelsJson String?         // JSON: string[] — abgefragte Twitch-Kanäle
   status      String           @default("voting") // voting | finished
   rewardCoins Int              @default(500)
   winnerNominationId String?
   createdAt   DateTime         @default(now())
   nominations ClipNomination[]
   votes       ClipContestVote[]
-  @@unique([month, year])
+  @@index([month, year])
 }
 
 model ClipNomination {

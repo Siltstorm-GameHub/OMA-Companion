@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getTwitchUser, getPartnerClips } from "@/lib/twitch";
+import { collectNominations } from "@/lib/clip-contest";
+
+const AUTO_VOTING_DAYS = 14;
 
 export async function GET(req: NextRequest) {
   const auth = req.headers.get("authorization");
@@ -9,26 +11,18 @@ export async function GET(req: NextRequest) {
   }
 
   const now = new Date();
-  // The month that just ended (= last month)
-  const prevMonth = now.getMonth() === 0 ? 12 : now.getMonth();
-  const prevYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
-
-  // The month before that (= the contest to finalize)
-  const finalizeMonth = prevMonth === 1 ? 12 : prevMonth - 1;
-  const finalizeYear = prevMonth === 1 ? prevYear - 1 : prevYear;
-
   const results: string[] = [];
 
-  // ── 1. Finalize previous contest ─────────────────────────────────────────────
-  const toFinalize = await prisma.monthlyClipContest.findUnique({
-    where: { month_year: { month: finalizeMonth, year: finalizeYear } },
+  // ── 1. Finalize any contest whose voting window has ended ────────────────────
+  const toFinalize = await prisma.monthlyClipContest.findMany({
+    where: { status: "voting", votingEndsAt: { lte: now } },
     include: {
       nominations: { include: { _count: { select: { votes: true } } } },
     },
   });
 
-  if (toFinalize && toFinalize.status === "voting") {
-    const sorted = [...toFinalize.nominations].sort((a, b) => b._count.votes - a._count.votes);
+  for (const contest of toFinalize) {
+    const sorted = [...contest.nominations].sort((a, b) => b._count.votes - a._count.votes);
     const winner = sorted[0] ?? null;
 
     let winnerUserId: string | null = null;
@@ -42,104 +36,82 @@ export async function GET(req: NextRequest) {
 
       if (winnerUserId) {
         await prisma.$transaction([
-          prisma.user.update({ where: { id: winnerUserId }, data: { points: { increment: toFinalize.rewardCoins } } }),
+          prisma.user.update({ where: { id: winnerUserId }, data: { points: { increment: contest.rewardCoins } } }),
           prisma.pointTransaction.create({
             data: {
               userId: winnerUserId,
-              amount: toFinalize.rewardCoins,
-              reason: `[Münzen] Clip des Monats – ${finalizeMonth}/${finalizeYear}`,
+              amount: contest.rewardCoins,
+              reason: `[Münzen] Clip des Monats – ${contest.month}/${contest.year}`,
             },
           }),
         ]);
-        results.push(`Rewarded ${toFinalize.rewardCoins} coins to user ${winnerUserId}`);
+        results.push(`Rewarded ${contest.rewardCoins} coins to user ${winnerUserId}`);
       } else if (winner.twitchCreatorLogin) {
         results.push(`Winner has no community account (Twitch: ${winner.twitchCreatorLogin}) — no coins awarded`);
       }
     }
 
     await prisma.monthlyClipContest.update({
-      where: { id: toFinalize.id },
+      where: { id: contest.id },
       data: { status: "finished", winnerNominationId: winner?.id ?? null },
     });
-    results.push(`Finalized contest ${finalizeMonth}/${finalizeYear}`);
+    results.push(`Finalized contest ${contest.month}/${contest.year}`);
   }
 
-  // ── 2. Create new contest for last month ──────────────────────────────────────
-  const existing = await prisma.monthlyClipContest.findUnique({
-    where: { month_year: { month: prevMonth, year: prevYear } },
-  });
-  if (existing) {
-    results.push(`Contest ${prevMonth}/${prevYear} already exists`);
+  // ── 2. Auto-create a contest for last month if nothing is running/scheduled ──
+  // Only attempted on the 1st, to avoid needless Twitch API calls every day.
+  if (now.getDate() !== 1) {
     return NextResponse.json({ ok: true, results });
   }
 
-  // Collect community clips from events in the previous month
+  const stillActive = await prisma.monthlyClipContest.findFirst({ where: { status: "voting" } });
+  if (stillActive) {
+    results.push(`Skip auto-create: contest ${stillActive.month}/${stillActive.year} is still voting`);
+    return NextResponse.json({ ok: true, results });
+  }
+
+  const prevMonth = now.getMonth() === 0 ? 12 : now.getMonth();
+  const prevYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
   const monthStart = new Date(prevYear, prevMonth - 1, 1);
   const monthEnd = new Date(prevYear, prevMonth, 1);
 
-  const eventClips = await prisma.eventClipSubmission.findMany({
-    where: { event: { startAt: { gte: monthStart, lt: monthEnd } } },
-    include: { user: { select: { id: true } } },
+  const existing = await prisma.monthlyClipContest.findFirst({
+    where: { periodStart: { gte: monthStart, lt: monthEnd } },
   });
-
-  // Collect partner clips from Twitch API
-  const partners = await prisma.partner.findMany({ where: { isActive: true } });
-  const partnerClipData: {
-    clipUrl: string;
-    thumbnailUrl: string;
-    clipTitle: string;
-    twitchCreatorLogin: string;
-    partnerTwitchLogin: string;
-  }[] = [];
-
-  for (const partner of partners) {
-    try {
-      const twitchUser = await getTwitchUser(partner.twitchLogin);
-      if (!twitchUser) continue;
-      const clips = await getPartnerClips(twitchUser.id, monthStart, monthEnd);
-      for (const clip of clips) {
-        partnerClipData.push({
-          clipUrl: clip.url,
-          thumbnailUrl: clip.thumbnail_url,
-          clipTitle: clip.title,
-          twitchCreatorLogin: clip.creator_name.toLowerCase(),
-          partnerTwitchLogin: partner.twitchLogin,
-        });
-      }
-    } catch {
-      results.push(`Failed to fetch clips for partner ${partner.twitchLogin}`);
-    }
+  if (existing) {
+    results.push(`Contest for ${prevMonth}/${prevYear} already exists — skip auto-create`);
+    return NextResponse.json({ ok: true, results });
   }
 
-  const totalNominations = eventClips.length + partnerClipData.length;
-  if (totalNominations === 0) {
+  const partners = await prisma.partner.findMany({ where: { isActive: true } });
+  const { nominations, failedChannels } = await collectNominations(monthStart, monthEnd, partners.map((p) => p.twitchLogin));
+  failedChannels.forEach((login) => results.push(`Failed to fetch clips for partner ${login}`));
+
+  if (nominations.length === 0) {
     results.push(`No clips found for ${prevMonth}/${prevYear} — skipping contest creation`);
     return NextResponse.json({ ok: true, results });
   }
 
-  // Use previous contest's rewardCoins as default, or 500
   const lastContest = await prisma.monthlyClipContest.findFirst({
-    orderBy: [{ year: "desc" }, { month: "desc" }],
+    orderBy: { createdAt: "desc" },
     select: { rewardCoins: true },
   });
 
-  const contest = await prisma.monthlyClipContest.create({
+  const votingEndsAt = new Date(monthEnd.getTime() + AUTO_VOTING_DAYS * 24 * 60 * 60 * 1000);
+
+  await prisma.monthlyClipContest.create({
     data: {
       month: prevMonth,
       year: prevYear,
+      periodStart: monthStart,
+      periodEnd: monthEnd,
+      votingEndsAt,
       rewardCoins: lastContest?.rewardCoins ?? 500,
-      nominations: {
-        create: [
-          ...eventClips.map((c) => ({
-            clipUrl: c.clipUrl,
-            submittedByUserId: c.userId,
-          })),
-          ...partnerClipData,
-        ],
-      },
+      channelsJson: JSON.stringify(partners.map((p) => p.twitchLogin)),
+      nominations: { create: nominations },
     },
   });
 
-  results.push(`Created contest ${prevMonth}/${prevYear} with ${totalNominations} nominations`);
+  results.push(`Created contest ${prevMonth}/${prevYear} with ${nominations.length} nominations`);
   return NextResponse.json({ ok: true, results });
 }
