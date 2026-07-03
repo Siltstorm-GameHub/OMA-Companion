@@ -23,6 +23,7 @@ type Contest = {
   status: string;
   rewardCoins: number;
   winnerNominationId: string | null;
+  votingEndsAt: Date;
   nominations: Nomination[];
   _count: { votes: number };
 };
@@ -54,22 +55,18 @@ export default function ContestManager({ contests }: { contests: Contest[] }) {
 
   if (items.length === 0) {
     return (
-      <div className="p-6 max-w-3xl mx-auto">
-        <h1 className="text-xl font-bold text-white mb-6">Clip des Monats – Contests</h1>
-        <div className="glass rounded-2xl p-8 text-center text-gray-500">
-          <Clapperboard className="w-10 h-10 mx-auto mb-3 opacity-30" />
-          <p>Noch keine Contests vorhanden.</p>
-          <p className="text-sm mt-1">Der Cron-Job erstellt am 1. jeden Monats automatisch einen neuen Contest.</p>
-        </div>
+      <div className="glass rounded-2xl p-8 text-center text-gray-500">
+        <Clapperboard className="w-10 h-10 mx-auto mb-3 opacity-30" />
+        <p>Noch keine Contests vorhanden.</p>
+        <p className="text-sm mt-1">Starte oben manuell eine Abstimmung, oder warte auf den automatischen Contest am 1. des Monats.</p>
       </div>
     );
   }
 
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-6">
-      <h1 className="text-xl font-bold text-white">Clip des Monats – Contests</h1>
+    <div className="space-y-6">
       <p className="text-sm text-gray-500">
-        Contests werden automatisch am 1. jeden Monats erstellt und abgeschlossen. Hier kannst du die Münzen-Belohnung anpassen.
+        Bestehende Contests. Hier kannst du die Münzen-Belohnung anpassen.
       </p>
 
       {items.map((contest) => {
@@ -99,6 +96,12 @@ export default function ContestManager({ contests }: { contests: Contest[] }) {
                 <span>{contest._count.votes} Stimmen</span>
                 <span>·</span>
                 <span>{contest.nominations.length} Clips</span>
+                {contest.status === "voting" && (
+                  <>
+                    <span>·</span>
+                    <span>endet {new Date(contest.votingEndsAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                  </>
+                )}
               </div>
             </div>
 
