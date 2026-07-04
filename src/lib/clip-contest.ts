@@ -70,6 +70,16 @@ export async function notifyNewContest(month: number, year: number, nominationCo
   await sendPushToAll({ title, body, url }).catch(() => {});
 }
 
+export async function notifyContestFinished(month: number, year: number, clipTitle: string | null) {
+  const title = `🏆 Clip des Monats ${MONTH_NAMES[month - 1]} ${year} – Gewinner steht fest!`;
+  const body = clipTitle ? `„${clipTitle}" hat gewonnen. Schau vorbei!` : "Der Gewinner-Clip steht fest. Schau vorbei!";
+  const url = "/clip-des-monats";
+
+  const users = await prisma.user.findMany({ select: { id: true } });
+  await createNotificationForUsers(users.map((u) => u.id), { type: "clip", title, body, url }).catch(() => {});
+  await sendPushToAll({ title, body, url }).catch(() => {});
+}
+
 export async function finalizeContest(contestId: string): Promise<string> {
   const contest = await prisma.monthlyClipContest.findUnique({
     where: { id: contestId },
@@ -112,5 +122,10 @@ export async function finalizeContest(contestId: string): Promise<string> {
     where: { id: contest.id },
     data: { status: "finished", winnerNominationId: winner?.id ?? null },
   });
+
+  if (winner) {
+    await notifyContestFinished(contest.month, contest.year, winner.clipTitle);
+  }
+
   return message;
 }
