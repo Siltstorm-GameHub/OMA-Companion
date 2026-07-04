@@ -151,6 +151,7 @@ export async function POST(req: NextRequest) {
   dispatchNotification("tournament_started", {
     users: allUsers.map((u) => u.id),
     placeholders: { "{eventName}": full?.title ?? "Ein neues Turnier wurde erstellt!" },
+    urlOverride: `/events/${eventId}`,
   }).catch(() => {});
 
   return NextResponse.json(full, { status: 201 });
