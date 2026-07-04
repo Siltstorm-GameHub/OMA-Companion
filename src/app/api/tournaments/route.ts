@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { updateQuestProgress } from "@/lib/quests";
-import { dispatchNotification } from "@/lib/notify-dispatch";
+import { dispatchEventNotification } from "@/lib/notify-dispatch";
 
 // Standard round-robin scheduling algorithm (circle method)
 export function generateRoundRobin(participantIds: string[], eventId: string) {
@@ -146,12 +146,9 @@ export async function POST(req: NextRequest) {
       },
     },
   });
-  // Push + In-App + Discord-DM an alle User
-  const allUsers = await prisma.user.findMany({ select: { id: true } });
-  dispatchNotification("tournament_started", {
-    users: allUsers.map((u) => u.id),
+  // Push + In-App + Discord-DM
+  dispatchEventNotification("tournament_started", { id: eventId }, {
     placeholders: { "{eventName}": full?.title ?? "Ein neues Turnier wurde erstellt!" },
-    urlOverride: `/events/${eventId}`,
   }).catch(() => {});
 
   return NextResponse.json(full, { status: 201 });

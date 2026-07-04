@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getNotificationRule, dispatchNotification } from "@/lib/notify-dispatch";
+import { getNotificationRule, dispatchEventNotification } from "@/lib/notify-dispatch";
 import { fmtDateDE } from "@/lib/discord-rest";
 
 export const runtime = "nodejs";
@@ -40,8 +40,7 @@ export async function GET(req: NextRequest) {
       ? `${event.registrations.length} / ${event.maxPlayers}`
       : String(event.registrations.length);
 
-    await dispatchNotification("event_reminder", {
-      users: event.registrations.map((r) => r.userId),
+    await dispatchEventNotification("event_reminder", { id: event.id }, {
       placeholders: {
         "{eventName}":     event.title,
         "{game}":          event.game ?? "–",
@@ -51,7 +50,6 @@ export async function GET(req: NextRequest) {
         "{points}":        String(event.pointReward),
         "{reminderHours}": String(hours),
       },
-      urlOverride: `/events/${event.id}`,
       discordChannelIdOverride: event.discordChannelId,
       discordContent: process.env.DISCORD_EVENTS_PING ?? "@here",
       discordFields: [

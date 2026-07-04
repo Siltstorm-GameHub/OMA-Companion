@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { dispatchNotification } from "@/lib/notify-dispatch";
+import { dispatchEventNotification } from "@/lib/notify-dispatch";
 import { sendDiscordMessage, resolveChannelId } from "@/lib/discord-rest";
 
 const FORMAT_LABELS: Record<string, string> = {
@@ -53,10 +53,8 @@ export async function updateEventStatus(discordEventId: string, status: string) 
     await prisma.event.update({ where: { id: event.id }, data: { status } });
 
     if (status === "active") {
-      await dispatchNotification("event_started", {
-        users: [],
+      await dispatchEventNotification("event_started", { id: event.id }, {
         placeholders: { "{eventName}": event.title, "{game}": event.game ?? "–" },
-        urlOverride: `/events/${event.id}`,
         discordChannelIdOverride: event.discordChannelId,
         discordContent: process.env.DISCORD_EVENTS_PING ?? "@here",
       }).catch(() => {});
@@ -81,10 +79,8 @@ export async function updateEventStatus(discordEventId: string, status: string) 
 
     if (status === "finished") {
       const attendeeCount = await prisma.eventRegistration.count({ where: { eventId: event.id } });
-      await dispatchNotification("event_ended", {
-        users: [],
+      await dispatchEventNotification("event_ended", { id: event.id }, {
         placeholders: { "{eventName}": event.title, "{attendeeCount}": String(attendeeCount) },
-        urlOverride: `/events/${event.id}`,
         discordChannelIdOverride: event.discordChannelId,
         discordFields: [{ name: "👥 Teilnehmer", value: String(attendeeCount), inline: true }],
       }).catch(() => {});

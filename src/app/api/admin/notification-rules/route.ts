@@ -23,6 +23,8 @@ type RuleUpdate = {
   bodyTemplate?: string;
   urlTemplate?: string | null;
   reminderHoursBefore?: number | null;
+  isEventNotification?: boolean;
+  eventAudience?: string;
 };
 
 export async function PATCH(req: NextRequest) {

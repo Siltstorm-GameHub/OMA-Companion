@@ -630,6 +630,11 @@ model NotificationRule {
 
   reminderHoursBefore Int? // nur für "event_reminder" relevant
 
+  // Event-Bezug: wenn true, verlinkt die Benachrichtigung automatisch zum konkreten
+  // Event statt zum Ziel-Link oben, und eventAudience steuert den Empfängerkreis.
+  isEventNotification Boolean @default(false)
+  eventAudience       String  @default("all") // "all" | "participants" (Mitspieler + Zuschauer + Streamer des Events)
+
   // Soft-Delete: Zeile bleibt bestehen, damit der Seed-Lauf sie beim nächsten
   // Deploy nicht automatisch wieder anlegt (upsert fasst existierende Zeilen nicht an).
   deleted Boolean @default(false)

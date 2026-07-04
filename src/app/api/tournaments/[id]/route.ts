@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { generateRoundRobin } from "@/app/api/tournaments/route";
-import { dispatchNotification } from "@/lib/notify-dispatch";
+import { dispatchEventNotification } from "@/lib/notify-dispatch";
 
 const FORMAT_LABELS: Record<string, string> = {
   single_elimination: "K.O.-System",
@@ -46,10 +46,8 @@ async function announceTournamentResult(args: {
   const winner    = userMap.get(args.finalRanking[0]);
   const winnerRef = winner?.discordId ? `<@${winner.discordId}>` : (winner?.username ?? "Unbekannt");
 
-  await dispatchNotification("tournament_result", {
-    users: args.finalRanking,
+  await dispatchEventNotification("tournament_result", { id: args.eventId }, {
     placeholders: { "{eventName}": args.eventTitle, "{game}": args.game ?? "–", "{winner}": winnerRef },
-    urlOverride: `/events/${args.eventId}`,
     discordChannelIdOverride: args.discordChannelId,
     discordContent: `🎉 Herzlichen Glückwunsch ${winnerRef}!`,
     discordFields: [

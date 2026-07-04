@@ -160,3 +160,54 @@ export async function dispatchNotification(ruleKey: string, opts: DispatchOption
 
   await Promise.allSettled(tasks);
 }
+
+// ── Event-gebundene Benachrichtigungen ────────────────────────────────────────
+
+export interface EventDispatchOptions {
+  placeholders?: Record<string, string>;
+  discordChannelIdOverride?: string | null;
+  discordContent?: string;
+  discordFields?: { name: string; value: string; inline?: boolean }[];
+  discordColor?: number;
+  skipDiscordChannel?: boolean;
+}
+
+async function resolveAllUserIds(): Promise<string[]> {
+  const users = await prisma.user.findMany({ select: { id: true } });
+  return users.map((u) => u.id);
+}
+
+/** Mitspieler + Zuschauer (EventRegistration) + Streamer (EventCommunityStreamer) eines Events, ohne Duplikate. */
+async function resolveEventParticipantIds(eventId: string): Promise<string[]> {
+  const [regs, streamers] = await Promise.all([
+    prisma.eventRegistration.findMany({ where: { eventId }, select: { userId: true } }),
+    prisma.eventCommunityStreamer.findMany({ where: { eventId }, select: { userId: true } }),
+  ]);
+  return [...new Set([...regs.map((r) => r.userId), ...streamers.map((s) => s.userId)])];
+}
+
+/**
+ * Wie dispatchNotification, aber für Benachrichtigungen mit Event-Bezug:
+ * Ist rule.isEventNotification aktiv, wird automatisch zur Event-Detailseite verlinkt und
+ * der Empfängerkreis anhand von rule.eventAudience ("all" | "participants") aufgelöst.
+ * Ist die Regel nicht als Event-Benachrichtigung markiert, gehen die Nachrichten an alle User
+ * (kein Event-Link-Override) — entspricht dem Standardverhalten aller anderen Regeln.
+ */
+export async function dispatchEventNotification(
+  ruleKey: string,
+  event: { id: string },
+  opts: EventDispatchOptions = {},
+): Promise<void> {
+  const rule = await getNotificationRule(ruleKey);
+  if (!rule) return;
+
+  const users = rule.isEventNotification && rule.eventAudience === "participants"
+    ? await resolveEventParticipantIds(event.id)
+    : await resolveAllUserIds();
+
+  await dispatchNotification(ruleKey, {
+    users,
+    urlOverride: rule.isEventNotification ? `/events/${event.id}` : undefined,
+    ...opts,
+  });
+}

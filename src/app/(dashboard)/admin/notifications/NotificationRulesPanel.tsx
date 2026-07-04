@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
-import { Bell, Save, Smartphone, MessageSquare, Send, Hash, Trash2, ChevronDown, Check, Smile, X, Link2 } from "lucide-react";
+import { Bell, Save, Smartphone, MessageSquare, Send, Hash, Trash2, ChevronDown, Check, Smile, X, Link2, Calendar, Users, UserCheck } from "lucide-react";
 import { PAGE_LINKS } from "@/lib/page-links";
 
 export type NotificationRuleRow = {
@@ -20,6 +20,8 @@ export type NotificationRuleRow = {
   bodyTemplate: string;
   urlTemplate: string | null;
   reminderHoursBefore: number | null;
+  isEventNotification: boolean;
+  eventAudience: string;
 };
 
 interface DiscordEmoji { id: string; name: string; animated: boolean }
@@ -35,14 +37,6 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 const CATEGORY_ORDER = ["events", "tournaments", "quests", "badges", "clips", "rank", "system"];
-
-// Diese Regeln verlinken beim Versand immer direkt zum jeweiligen Event/Turnier
-// (urlOverride in den Aufrufer-Dateien, siehe src/lib/notify-dispatch.ts) — der hier
-// eingestellte Ziel-Link wird für sie nur als Fallback genutzt, falls keine Event-ID vorliegt.
-const DYNAMIC_EVENT_LINK_RULES = new Set([
-  "event_new", "event_reminder", "event_started", "event_ended",
-  "tournament_started", "tournament_result",
-]);
 
 // Welche Platzhalter pro Regel beim Versand ersetzt werden (siehe src/lib/notify-dispatch.ts Aufrufer)
 const PLACEHOLDERS: Record<string, { key: string; description: string }[]> = {
@@ -252,6 +246,8 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
           bodyTemplate: r.bodyTemplate,
           urlTemplate: r.urlTemplate?.trim() || null,
           reminderHoursBefore: r.reminderHoursBefore,
+          isEventNotification: r.isEventNotification,
+          eventAudience: r.eventAudience,
         }));
       const res = await fetch("/api/admin/notification-rules", {
         method: "PATCH",
@@ -334,6 +330,47 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                     <Toggle on={r.inAppEnabled} onClick={() => update(r.key, { inAppEnabled: !r.inAppEnabled })} label="In-App" icon={Bell} />
                     <Toggle on={r.discordDmEnabled} onClick={() => update(r.key, { discordDmEnabled: !r.discordDmEnabled })} label="Discord-DM" icon={Send} />
                     <Toggle on={r.discordChanEnabled} onClick={() => update(r.key, { discordChanEnabled: !r.discordChanEnabled })} label="Discord-Kanal" icon={MessageSquare} />
+                  </div>
+
+                  {/* Event-Benachrichtigung + Empfängerkreis */}
+                  <div className="space-y-2">
+                    <Toggle
+                      on={r.isEventNotification}
+                      onClick={() => update(r.key, { isEventNotification: !r.isEventNotification })}
+                      label="Event-Benachrichtigung"
+                      icon={Calendar}
+                    />
+                    {r.isEventNotification && (
+                      <div className="flex flex-wrap gap-1.5 pl-1">
+                        <button
+                          onClick={() => update(r.key, { eventAudience: "all" })}
+                          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-medium transition-colors ${
+                            r.eventAudience === "all"
+                              ? "bg-indigo-500/15 text-indigo-300 border-indigo-500/30"
+                              : "bg-white/[0.02] text-gray-600 border-white/[0.06] hover:border-white/[0.12]"
+                          }`}
+                        >
+                          <Users className="w-3.5 h-3.5" />
+                          Alle User
+                        </button>
+                        <button
+                          onClick={() => update(r.key, { eventAudience: "participants" })}
+                          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-medium transition-colors ${
+                            r.eventAudience === "participants"
+                              ? "bg-indigo-500/15 text-indigo-300 border-indigo-500/30"
+                              : "bg-white/[0.02] text-gray-600 border-white/[0.06] hover:border-white/[0.12]"
+                          }`}
+                        >
+                          <UserCheck className="w-3.5 h-3.5" />
+                          Nur angemeldete Teilnehmer
+                        </button>
+                        <p className="w-full text-[10px] text-gray-600 pl-0.5">
+                          {r.eventAudience === "participants"
+                            ? "Nur Mitspieler, Zuschauer und Streamer, die für das jeweilige Event angemeldet sind."
+                            : "Geht an alle User, unabhängig von einer Event-Anmeldung."}
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Kanal-ID (nur wenn Discord-Kanal aktiv) */}
@@ -473,7 +510,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                       </span>
                       <ChevronDown className="w-3.5 h-3.5 text-gray-600 shrink-0" />
                     </button>
-                    {DYNAMIC_EVENT_LINK_RULES.has(r.key) && (
+                    {r.isEventNotification && (
                       <p className="flex items-center gap-1 text-[10px] text-teal-400/80">
                         <Link2 className="w-3 h-3 shrink-0" />
                         Führt automatisch zum jeweiligen Event/Turnier — dieser Link ist nur ein Fallback, falls ausnahmsweise keine Zuordnung vorliegt.
