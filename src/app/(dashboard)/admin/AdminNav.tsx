@@ -102,7 +102,9 @@ export default function AdminNav() {
         {visibleCategories.map(cat => {
           const isActive = cat.key === activeCategory.key;
           const Icon = cat.icon;
-          const href = cat.direct ?? cat.tabs?.[0]?.href ?? "/admin";
+          const href = cat.direct
+            ?? cat.tabs?.find(t => hasRole(userRole, t.minRole))?.href
+            ?? "/admin";
           return (
             <Link key={cat.key} href={href}
               className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-150 whitespace-nowrap flex-1 sm:flex-none justify-center sm:justify-start ${
