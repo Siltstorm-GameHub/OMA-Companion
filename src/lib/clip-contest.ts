@@ -55,3 +55,48 @@ export async function collectNominations(periodStart: Date, periodEnd: Date, twi
     failedChannels,
   };
 }
+
+export async function finalizeContest(contestId: string): Promise<string> {
+  const contest = await prisma.monthlyClipContest.findUnique({
+    where: { id: contestId },
+    include: { nominations: { include: { _count: { select: { votes: true } } } } },
+  });
+  if (!contest) return `Contest ${contestId} nicht gefunden`;
+  if (contest.status !== "voting") return `Contest ${contest.month}/${contest.year} war bereits abgeschlossen`;
+
+  const sorted = [...contest.nominations].sort((a, b) => b._count.votes - a._count.votes);
+  const winner = sorted[0] ?? null;
+
+  let winnerUserId: string | null = null;
+  let message = `Finalized contest ${contest.month}/${contest.year}`;
+  if (winner) {
+    if (winner.submittedByUserId) {
+      winnerUserId = winner.submittedByUserId;
+    } else if (winner.twitchCreatorLogin) {
+      const user = await prisma.user.findUnique({ where: { twitchLogin: winner.twitchCreatorLogin } });
+      winnerUserId = user?.id ?? null;
+    }
+
+    if (winnerUserId) {
+      await prisma.$transaction([
+        prisma.user.update({ where: { id: winnerUserId }, data: { points: { increment: contest.rewardCoins } } }),
+        prisma.pointTransaction.create({
+          data: {
+            userId: winnerUserId,
+            amount: contest.rewardCoins,
+            reason: `[Münzen] Clip des Monats – ${contest.month}/${contest.year}`,
+          },
+        }),
+      ]);
+      message += ` — ${contest.rewardCoins} Münzen an ${winnerUserId} vergeben`;
+    } else if (winner.twitchCreatorLogin) {
+      message += ` — Gewinner (Twitch: ${winner.twitchCreatorLogin}) hat kein Community-Konto, keine Münzen vergeben`;
+    }
+  }
+
+  await prisma.monthlyClipContest.update({
+    where: { id: contest.id },
+    data: { status: "finished", winnerNominationId: winner?.id ?? null },
+  });
+  return message;
+}
