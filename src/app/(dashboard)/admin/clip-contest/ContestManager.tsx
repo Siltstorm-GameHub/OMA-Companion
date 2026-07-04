@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Trophy, Clapperboard, ExternalLink, Loader2 } from "lucide-react";
+import { Trophy, Clapperboard, ExternalLink, Loader2, Square } from "lucide-react";
 
 const MONTH_NAMES = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
 
@@ -29,8 +30,10 @@ type Contest = {
 };
 
 export default function ContestManager({ contests }: { contests: Contest[] }) {
+  const router = useRouter();
   const [items, setItems] = useState(contests);
   const [saving, setSaving] = useState<string | null>(null);
+  const [finishing, setFinishing] = useState<string | null>(null);
   const [rewardInputs, setRewardInputs] = useState<Record<string, string>>(
     Object.fromEntries(contests.map((c) => [c.id, String(c.rewardCoins)]))
   );
@@ -50,6 +53,20 @@ export default function ContestManager({ contests }: { contests: Contest[] }) {
       toast.success("Belohnung gespeichert");
     } else {
       toast.error("Fehler beim Speichern");
+    }
+  }
+
+  async function finishNow(contestId: string) {
+    if (!confirm("Abstimmung jetzt beenden und Gewinner auswerten? Münzen werden sofort vergeben.")) return;
+    setFinishing(contestId);
+    const res = await fetch(`/api/admin/clip-contest/${contestId}/finish`, { method: "POST" });
+    const data = await res.json();
+    setFinishing(null);
+    if (res.ok) {
+      toast.success(data.message ?? "Abstimmung beendet");
+      router.refresh();
+    } else {
+      toast.error(data.error ?? "Fehler beim Beenden");
     }
   }
 
@@ -100,6 +117,14 @@ export default function ContestManager({ contests }: { contests: Contest[] }) {
                   <>
                     <span>·</span>
                     <span>endet {new Date(contest.votingEndsAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                    <button
+                      onClick={() => finishNow(contest.id)}
+                      disabled={finishing === contest.id}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-red-500/10 border border-red-500/20 text-red-300 hover:bg-red-500/20 disabled:opacity-50 transition-colors"
+                    >
+                      {finishing === contest.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Square className="w-3 h-3" />}
+                      Jetzt beenden
+                    </button>
                   </>
                 )}
               </div>

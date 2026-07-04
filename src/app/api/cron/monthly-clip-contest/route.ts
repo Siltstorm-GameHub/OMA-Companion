@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { collectNominations } from "@/lib/clip-contest";
+import { collectNominations, finalizeContest } from "@/lib/clip-contest";
 
 const AUTO_VOTING_DAYS = 14;
 
@@ -16,46 +16,11 @@ export async function GET(req: NextRequest) {
   // ── 1. Finalize any contest whose voting window has ended ────────────────────
   const toFinalize = await prisma.monthlyClipContest.findMany({
     where: { status: "voting", votingEndsAt: { lte: now } },
-    include: {
-      nominations: { include: { _count: { select: { votes: true } } } },
-    },
+    select: { id: true },
   });
 
-  for (const contest of toFinalize) {
-    const sorted = [...contest.nominations].sort((a, b) => b._count.votes - a._count.votes);
-    const winner = sorted[0] ?? null;
-
-    let winnerUserId: string | null = null;
-    if (winner) {
-      if (winner.submittedByUserId) {
-        winnerUserId = winner.submittedByUserId;
-      } else if (winner.twitchCreatorLogin) {
-        const user = await prisma.user.findUnique({ where: { twitchLogin: winner.twitchCreatorLogin } });
-        winnerUserId = user?.id ?? null;
-      }
-
-      if (winnerUserId) {
-        await prisma.$transaction([
-          prisma.user.update({ where: { id: winnerUserId }, data: { points: { increment: contest.rewardCoins } } }),
-          prisma.pointTransaction.create({
-            data: {
-              userId: winnerUserId,
-              amount: contest.rewardCoins,
-              reason: `[Münzen] Clip des Monats – ${contest.month}/${contest.year}`,
-            },
-          }),
-        ]);
-        results.push(`Rewarded ${contest.rewardCoins} coins to user ${winnerUserId}`);
-      } else if (winner.twitchCreatorLogin) {
-        results.push(`Winner has no community account (Twitch: ${winner.twitchCreatorLogin}) — no coins awarded`);
-      }
-    }
-
-    await prisma.monthlyClipContest.update({
-      where: { id: contest.id },
-      data: { status: "finished", winnerNominationId: winner?.id ?? null },
-    });
-    results.push(`Finalized contest ${contest.month}/${contest.year}`);
+  for (const { id } of toFinalize) {
+    results.push(await finalizeContest(id));
   }
 
   // ── 2. Auto-create a contest for last month if nothing is running/scheduled ──
