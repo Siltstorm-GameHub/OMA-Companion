@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Bell, Save, Smartphone, MessageSquare, Send, Hash } from "lucide-react";
+import { Bell, Save, Smartphone, MessageSquare, Send, Hash, Trash2 } from "lucide-react";
 
 export type NotificationRuleRow = {
   key: string;
@@ -58,10 +58,28 @@ export default function NotificationRulesPanel({ initial, newsChannelId }: Props
   const [rules, setRules] = useState<NotificationRuleRow[]>(initial);
   const [dirtyKeys, setDirtyKeys] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
+  const [deletingKey, setDeletingKey] = useState<string | null>(null);
 
   function update(key: string, patch: Partial<NotificationRuleRow>) {
     setRules((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
     setDirtyKeys((s) => new Set(s).add(key));
+  }
+
+  async function deleteRule(r: NotificationRuleRow) {
+    if (!confirm(`„${r.label}" wirklich löschen? Diese Benachrichtigung wird dann auf keinem Kanal mehr gesendet.`)) return;
+    setDeletingKey(r.key);
+    try {
+      const res = await fetch(`/api/admin/notification-rules/${encodeURIComponent(r.key)}`, { method: "DELETE" });
+      if (res.ok) {
+        setRules((rs) => rs.filter((x) => x.key !== r.key));
+        setDirtyKeys((s) => { const next = new Set(s); next.delete(r.key); return next; });
+        toast.success(`„${r.label}" gelöscht`);
+      } else {
+        toast.error("Fehler beim Löschen");
+      }
+    } finally {
+      setDeletingKey(null);
+    }
   }
 
   async function save() {
@@ -131,9 +149,19 @@ export default function NotificationRulesPanel({ initial, newsChannelId }: Props
           </h3>
           {rows.map((r) => (
             <div key={r.key} className="glass card-shine rounded-2xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-white/[0.05]">
-                <p className="text-sm font-semibold text-white">{r.label}</p>
-                <p className="text-[11px] text-gray-500 mt-0.5">{r.description}</p>
+              <div className="flex items-start justify-between gap-3 px-4 py-3 border-b border-white/[0.05]">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-white">{r.label}</p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">{r.description}</p>
+                </div>
+                <button
+                  onClick={() => deleteRule(r)}
+                  disabled={deletingKey === r.key}
+                  title="Regel löschen"
+                  className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg text-gray-600 hover:text-red-400 border border-white/[0.06] hover:border-red-500/20 transition-colors shrink-0 disabled:opacity-40"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
               </div>
 
               <div className="px-4 py-3 space-y-3">
