@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { updateQuestProgress } from "@/lib/quests";
 import { sendPushToAll } from "@/lib/push";
+import { sendDiscordDMToAll } from "@/lib/discord-dm";
 
 // Standard round-robin scheduling algorithm (circle method)
 export function generateRoundRobin(participantIds: string[], eventId: string) {
@@ -147,11 +148,13 @@ export async function POST(req: NextRequest) {
     },
   });
   // Push an alle Subscriber
-  sendPushToAll({
+  const tournamentPushPayload = {
     title: `🏆 Neues Turnier gestartet`,
     body:  full?.title ?? "Ein neues Turnier wurde erstellt!",
     url:   "/events",
-  }).catch(() => {});
+  };
+  sendPushToAll(tournamentPushPayload).catch(() => {});
+  sendDiscordDMToAll(tournamentPushPayload).catch(() => {});
 
   return NextResponse.json(full, { status: 201 });
 }

@@ -42,8 +42,8 @@ export async function GET() {
     },
   });
 
-  const winner = finishedContest?.winnerNominationId
-    ? finishedContest.nominations.find((n) => n.id === finishedContest.winnerNominationId) ?? null
+  const winner = finishedContest?.winnerNominationIds.length
+    ? finishedContest.nominations.find((n) => n.id === finishedContest.winnerNominationIds[0]) ?? null
     : null;
 
   let userVoteNominationId: string | null = null;

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { sendDiscordDM } from "@/lib/discord-dm";
 
 export type NotificationType =
   | "badge"
@@ -38,11 +39,14 @@ export async function createNotification(
   try {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { notificationPrefs: true },
+      select: { notificationPrefs: true, discordId: true },
     });
     if (user) {
       const prefs: Record<string, boolean> = JSON.parse(user.notificationPrefs || "{}");
       if (!isTypeEnabled(prefs, data.type)) return;
+      if (user.discordId && prefs.discordDm !== false) {
+        sendDiscordDM(user.discordId, { title: data.title, body: data.body, url: data.url }).catch(() => {});
+      }
     }
   } catch {
     // Bei Fehler trotzdem erstellen
@@ -61,16 +65,19 @@ export async function createNotificationForUsers(
   // Präferenzen aller User laden und filtern
   const users = await prisma.user.findMany({
     where: { id: { in: userIds } },
-    select: { id: true, notificationPrefs: true },
+    select: { id: true, notificationPrefs: true, discordId: true },
   });
 
   const key = PREF_KEY[data.type];
-  const eligibleIds = users
-    .filter((u) => {
-      const prefs: Record<string, boolean> = JSON.parse(u.notificationPrefs || "{}");
-      return prefs[key] !== false;
-    })
-    .map((u) => u.id);
+  const eligibleIds: string[] = [];
+  for (const u of users) {
+    const prefs: Record<string, boolean> = JSON.parse(u.notificationPrefs || "{}");
+    if (prefs[key] === false) continue;
+    eligibleIds.push(u.id);
+    if (u.discordId && prefs.discordDm !== false) {
+      sendDiscordDM(u.discordId, { title: data.title, body: data.body, url: data.url }).catch(() => {});
+    }
+  }
 
   if (!eligibleIds.length) return;
 

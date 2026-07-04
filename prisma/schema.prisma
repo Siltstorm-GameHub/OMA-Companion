@@ -406,7 +406,7 @@ model MonthlyClipContest {
   status      String           @default("voting") // voting | finished
   participationCoins Int       @default(10)  // Münzen für jeden, der abstimmt
   rewardCoins Int              @default(500) // Münzen für den Gewinner-Clip
-  winnerNominationId String?
+  winnerNominationIds String[] @default([]) // Bei Gleichstand: mehrere Gewinner möglich
   createdAt   DateTime         @default(now())
   nominations ClipNomination[]
   votes       ClipContestVote[]

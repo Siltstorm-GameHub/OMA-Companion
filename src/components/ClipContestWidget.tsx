@@ -14,13 +14,14 @@ export default async function ClipContestWidget({ userId }: { userId?: string })
     prisma.monthlyClipContest.findFirst({
       where: { status: "finished" },
       orderBy: [{ year: "desc" }, { month: "desc" }],
-      select: { id: true, month: true, year: true, winnerNominationId: true },
+      select: { id: true, month: true, year: true, winnerNominationIds: true },
     }),
   ]);
 
-  const winner = finishedContest?.winnerNominationId
+  const winnerCount = finishedContest?.winnerNominationIds.length ?? 0;
+  const winner = finishedContest && winnerCount > 0
     ? await prisma.clipNomination.findUnique({
-        where: { id: finishedContest.winnerNominationId },
+        where: { id: finishedContest.winnerNominationIds[0] },
         select: { clipUrl: true, thumbnailUrl: true, clipTitle: true, twitchCreatorLogin: true, submittedBy: { select: { name: true, username: true } } },
       })
     : null;
@@ -60,9 +61,10 @@ export default async function ClipContestWidget({ userId }: { userId?: string })
           <div className="flex-1 min-w-0">
             <p className="text-[10px] text-amber-400 uppercase tracking-wider font-semibold mb-0.5">
               🏆 Clip des Monats – {MONTH_NAMES[finishedContest.month - 1]}
+              {winnerCount > 1 && ` · Gleichstand (${winnerCount})`}
             </p>
             <p className="text-sm text-white font-medium truncate">{winner.clipTitle ?? "Clip ansehen"}</p>
-            {winnerName && <p className="text-xs text-gray-500 truncate">von {winnerName}</p>}
+            {winnerName && <p className="text-xs text-gray-500 truncate">von {winnerName}{winnerCount > 1 && ` + ${winnerCount - 1} weitere`}</p>}
           </div>
           <span className="text-xs text-gray-600 group-hover:text-gray-400 transition-colors shrink-0">ansehen →</span>
         </Link>
