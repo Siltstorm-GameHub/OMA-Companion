@@ -6,7 +6,7 @@ async function requireAdmin() {
   const session = await auth();
   if (!session?.user?.id) return null;
   const u = session.user as { role?: string };
-  if (u.role !== "admin" && u.role !== "moderator") return null;
+  if (u.role !== "admin") return null;
   return session;
 }
 

@@ -1,7 +1,10 @@
 import { prisma } from "@/lib/prisma";
+import { requireRole } from "@/lib/roles";
 import { PollsAdminPanel } from "./PollsAdminPanel";
 
 export default async function PollsAdminPage() {
+  await requireRole("admin");
+
   const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
 
   const [events, recentClosedEvents, spieltage] = await Promise.all([

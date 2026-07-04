@@ -4,8 +4,8 @@ import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
   Users, LayoutDashboard, Star, ShoppingBag, Bot,
-  BarChart2, CalendarDays, Heart, CalendarRange, Medal,
-  Wrench, Users2, BarChart3, Megaphone, Handshake, Clapperboard, Server,
+  BarChart2, CalendarDays, Heart, Medal,
+  Wrench, Users2, Megaphone, Handshake, Clapperboard, Server,
 } from "lucide-react";
 import ServerApplicationBadge from "@/components/ServerApplicationBadge";
 
@@ -39,10 +39,12 @@ const CATEGORIES: {
     label: "Events",
     icon: CalendarDays,
     minRole: "moderator",
-    prefixes: ["/admin/events", "/admin/series", "/admin/lul"],
+    prefixes: ["/admin/events", "/admin/series", "/admin/lul", "/admin/clip-contest", "/admin/polls"],
     tabs: [
-      { href: "/admin/events",  label: "Events",          icon: CalendarDays,  minRole: "moderator" },
-      { href: "/admin/lul",     label: "Level-Up-League", icon: Star,          minRole: "moderator" },
+      { href: "/admin/events",       label: "Events",          icon: CalendarDays,  minRole: "moderator" },
+      { href: "/admin/lul",          label: "Level-Up-League", icon: Star,          minRole: "moderator" },
+      { href: "/admin/clip-contest", label: "Clip des Monats", icon: Clapperboard,  minRole: "moderator" },
+      { href: "/admin/polls",        label: "Umfragen",        icon: BarChart2,     minRole: "admin"     },
     ],
   },
   {
@@ -50,27 +52,25 @@ const CATEGORIES: {
     label: "Community",
     icon: Users2,
     minRole: "moderator",
-    prefixes: ["/admin/polls", "/admin/shop", "/admin/daily-message", "/admin/partners", "/admin/clip-contest"],
+    prefixes: ["/admin/daily-message", "/admin/partners", "/admin/servers", "/admin/donations"],
     tabs: [
-      { href: "/admin/polls",          label: "Umfragen",       icon: BarChart2,    minRole: "moderator" },
-      { href: "/admin/daily-message",  label: "Mitteilungen",   icon: Megaphone,    minRole: "moderator" },
-      { href: "/admin/partners",       label: "Partner",             icon: Handshake,    minRole: "moderator" },
-      { href: "/admin/clip-contest",   label: "Clip des Monats",     icon: Clapperboard, minRole: "moderator" },
-      { href: "/admin/shop",           label: "Shop",                icon: ShoppingBag,  minRole: "admin"     },
+      { href: "/admin/daily-message", label: "Mitteilungen", icon: Megaphone, minRole: "admin"     },
+      { href: "/admin/partners",      label: "Partner",      icon: Handshake, minRole: "moderator" },
+      { href: "/admin/servers",       label: "Gameserver",   icon: Server,    minRole: "moderator" },
+      { href: "/admin/donations",     label: "Spendenpool",  icon: Heart,     minRole: "moderator" },
     ],
   },
   {
     key: "tools",
     label: "Tools",
     icon: Wrench,
-    minRole: "moderator",
-    prefixes: ["/admin/donations", "/admin/bot", "/admin/badges", "/admin/users", "/admin/servers"],
+    minRole: "admin",
+    prefixes: ["/admin/shop", "/admin/bot", "/admin/badges", "/admin/users"],
     tabs: [
-      { href: "/admin/donations", label: "Spendenpool",     icon: Heart,     minRole: "moderator" },
-      { href: "/admin/servers",   label: "Gameserver",      icon: Server,    minRole: "moderator" },
-      { href: "/admin/bot",       label: "Bot",             icon: Bot,       minRole: "moderator" },
-      { href: "/admin/badges",    label: "Abzeichen",       icon: Medal,     minRole: "admin"     },
-      { href: "/admin/users",     label: "Nutzer & Rollen", icon: Users,     minRole: "admin"     },
+      { href: "/admin/shop",   label: "Shop",            icon: ShoppingBag, minRole: "admin" },
+      { href: "/admin/bot",    label: "Bot",             icon: Bot,         minRole: "admin" },
+      { href: "/admin/badges", label: "Abzeichen",       icon: Medal,       minRole: "admin" },
+      { href: "/admin/users",  label: "Nutzer & Rollen", icon: Users,       minRole: "admin" },
     ],
   },
 ];
@@ -112,7 +112,7 @@ export default function AdminNav() {
               }`}>
               <span className="relative shrink-0">
                 <Icon className={`w-4 h-4 ${isActive ? "text-purple-400" : "text-gray-600"}`} />
-                {cat.key === "tools" && <ServerApplicationBadge />}
+                {cat.key === "community" && <ServerApplicationBadge />}
               </span>
               <span>{cat.label}</span>
             </Link>
