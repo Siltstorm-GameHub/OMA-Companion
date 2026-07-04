@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import AdminDonationsClient from "./AdminDonationsClient";
 
 export default async function AdminDonationsPage() {
-  await requireRole("admin");
+  await requireRole("moderator");
 
   const [donations, users, expenses, ideas] = await Promise.all([
     prisma.donation.findMany({
