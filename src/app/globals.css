@@ -146,7 +146,12 @@ body::after {
 }
 
 /* Content above blobs */
-#__next, main, aside, header, nav, footer { position: relative; z-index: 2; }
+/* In @layer base, damit Tailwind-Utilities (fixed, sticky, z-*, …) in @layer
+   utilities weiterhin Vorrang haben — unlayered CSS würde sie sonst trotz
+   geringerer Spezifität überstimmen (z.B. position:fixed am Mobile-Header). */
+@layer base {
+  #__next, main, aside, header, nav, footer { position: relative; z-index: 2; }
+}
 
 
 /* ── 3D Card System ─────────────────────────────────────────────── */
