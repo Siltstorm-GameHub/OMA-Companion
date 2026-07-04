@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getTwitchUser, getPartnerClips } from "@/lib/twitch";
+import { getTwitchUsers, getPartnerClips } from "@/lib/twitch";
 import { createNotificationForUsers } from "@/lib/notifications";
 import { sendPushToAll } from "@/lib/push";
 
@@ -19,35 +19,40 @@ type CommunityNomination = {
 };
 
 export async function collectNominations(periodStart: Date, periodEnd: Date, twitchLogins: string[]) {
-  const eventClips = await prisma.eventClipSubmission.findMany({
-    where: { event: { startAt: { gte: periodStart, lt: periodEnd } } },
-    select: { clipUrl: true, userId: true },
-  });
+  const uniqueLogins = [...new Set(twitchLogins.map((l) => l.trim().toLowerCase()).filter(Boolean))];
+
+  const [eventClips, twitchUsers] = await Promise.all([
+    prisma.eventClipSubmission.findMany({
+      where: { event: { startAt: { gte: periodStart, lt: periodEnd } } },
+      select: { clipUrl: true, userId: true },
+    }),
+    getTwitchUsers(uniqueLogins),
+  ]);
+
+  const resolvedLogins = new Set(twitchUsers.map((u) => u.login.toLowerCase()));
+  const failedChannels = uniqueLogins.filter((l) => !resolvedLogins.has(l));
+
+  const clipResults = await Promise.allSettled(
+    twitchUsers.map((user) => getPartnerClips(user.id, periodStart, periodEnd))
+  );
 
   const partnerNominations: PartnerNomination[] = [];
-  const failedChannels: string[] = [];
-
-  for (const login of twitchLogins) {
-    try {
-      const twitchUser = await getTwitchUser(login);
-      if (!twitchUser) {
-        failedChannels.push(login);
-        continue;
-      }
-      const clips = await getPartnerClips(twitchUser.id, periodStart, periodEnd);
-      for (const clip of clips) {
-        partnerNominations.push({
-          clipUrl: clip.url,
-          thumbnailUrl: clip.thumbnail_url,
-          clipTitle: clip.title,
-          twitchCreatorLogin: clip.creator_name.toLowerCase(),
-          partnerTwitchLogin: login,
-        });
-      }
-    } catch {
+  clipResults.forEach((result, i) => {
+    const login = twitchUsers[i].login.toLowerCase();
+    if (result.status === "rejected") {
       failedChannels.push(login);
+      return;
     }
-  }
+    for (const clip of result.value) {
+      partnerNominations.push({
+        clipUrl: clip.url,
+        thumbnailUrl: clip.thumbnail_url,
+        clipTitle: clip.title,
+        twitchCreatorLogin: clip.creator_name.toLowerCase(),
+        partnerTwitchLogin: login,
+      });
+    }
+  });
 
   const communityNominations: CommunityNomination[] = eventClips.map((c) => ({
     clipUrl: c.clipUrl,

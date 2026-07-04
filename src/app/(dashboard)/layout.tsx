@@ -17,7 +17,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const userId = session.user?.id;
 
   // ── News-Feed-Daten ──────────────────────────────────────────────────
-  const [activeOrPollEvent, upcomingEvent, activeLulSeason, openQuestsCount, memberCount, myPoints] = await Promise.all([
+  const [activeOrPollEvent, upcomingEvent, activeLulSeason, openQuestsCount, memberCount, myPoints, activeClipContest] = await Promise.all([
     // Currently running or in poll phase
     prisma.event.findFirst({
       where: { status: { in: ["active", "umfrage"] } },
@@ -41,6 +41,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
     userId
       ? prisma.user.findUnique({ where: { id: userId }, select: { points: true, rankPoints: true } })
       : null,
+    prisma.monthlyClipContest.findFirst({
+      where: { status: "voting" },
+      orderBy: [{ year: "desc" }, { month: "desc" }],
+      select: { month: true, year: true },
+    }),
   ]);
 
   const nextEvent = activeOrPollEvent ?? upcomingEvent;
@@ -83,6 +88,18 @@ export default async function DashboardLayout({ children }: { children: React.Re
         accent: "teal",
       });
     }
+  }
+
+  // Clip des Monats – aktive Abstimmung
+  if (activeClipContest) {
+    const monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+    newsItems.push({
+      id: "clip-contest",
+      icon: "clip",
+      text: `Clip des Monats ${monthNames[activeClipContest.month - 1]} – Abstimmung läuft`,
+      href: "/clip-des-monats",
+      accent: "amber",
+    });
   }
 
   // LuL-Saison
