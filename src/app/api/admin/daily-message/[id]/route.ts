@@ -6,7 +6,7 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  await requireRole("moderator");
+  await requireRole("admin");
   const { id } = await params;
 
   const body = await req.json() as {
@@ -41,7 +41,7 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  await requireRole("moderator");
+  await requireRole("admin");
   const { id } = await params;
   await prisma.dailyMessage.delete({ where: { id } });
   return NextResponse.json({ ok: true });

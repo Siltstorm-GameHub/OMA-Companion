@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { sendPushToAll } from "@/lib/push";
 
 export async function GET() {
-  await requireRole("moderator");
+  await requireRole("admin");
   const messages = await prisma.dailyMessage.findMany({
     orderBy: { createdAt: "desc" },
     include: { creator: { select: { username: true, name: true } } },
@@ -13,7 +13,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const user = await requireRole("moderator");
+  const user = await requireRole("admin");
 
   const body = await req.json() as {
     title?: string;

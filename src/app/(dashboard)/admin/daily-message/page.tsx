@@ -4,7 +4,7 @@ import { DailyMessagePanel } from "./DailyMessagePanel";
 import AdminNotificationsPanel from "../notifications/AdminNotificationsPanel";
 
 export default async function DailyMessageAdminPage() {
-  await requireRole("moderator");
+  await requireRole("admin");
 
   const messages = await prisma.dailyMessage.findMany({
     orderBy: { createdAt: "desc" },

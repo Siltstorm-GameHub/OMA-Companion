@@ -6,7 +6,7 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  await requireRole("moderator");
+  await requireRole("admin");
   const { id: pollId } = await params;
 
   const poll = await prisma.eventPoll.findUnique({ where: { id: pollId } });
