@@ -7,7 +7,9 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ key:
   await requireRole("admin");
   const { key } = await params;
 
-  await prisma.notificationRule.delete({ where: { key } }).catch(() => {});
+  // Soft-Delete: Zeile bleibt in der DB, damit der Seed-Lauf sie bei künftigen
+  // Deploys nicht automatisch wieder anlegt.
+  await prisma.notificationRule.update({ where: { key }, data: { deleted: true } }).catch(() => {});
 
   invalidateNotificationRuleCache();
   return NextResponse.json({ ok: true });

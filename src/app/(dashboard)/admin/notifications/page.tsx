@@ -7,6 +7,7 @@ export default async function AdminNotificationsPage() {
   await requireRole("admin");
 
   const rows = await prisma.notificationRule.findMany({
+    where: { deleted: false },
     orderBy: [{ category: "asc" }, { key: "asc" }],
   });
   const rules = rows.map((r) => ({

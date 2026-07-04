@@ -60,7 +60,7 @@ const CACHE_TTL = 60_000;
 
 async function loadRules(): Promise<Record<string, NotificationRule>> {
   if (_cache && Date.now() - _cacheTs < CACHE_TTL) return _cache;
-  const rows = await prisma.notificationRule.findMany();
+  const rows = await prisma.notificationRule.findMany({ where: { deleted: false } });
   _cache = Object.fromEntries(rows.map((r) => [r.key, r]));
   _cacheTs = Date.now();
   return _cache;
