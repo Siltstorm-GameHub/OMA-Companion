@@ -326,7 +326,7 @@ export default function MobileTopBar() {
     <>
       <header
         style={{ background: "rgba(4,10,9,0.95)", borderBottom: "1px solid rgba(20,184,166,0.09)", top: "2.25rem" }}
-        className="fixed left-0 right-0 z-50 lg:hidden h-14 backdrop-blur-2xl flex items-center px-4 gap-3"
+        className="fixed left-0 right-0 z-50 lg:hidden h-14 backdrop-blur-2xl flex items-stretch px-4 gap-3"
       >
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-teal-500/40 to-transparent pointer-events-none" />
 
@@ -340,8 +340,8 @@ export default function MobileTopBar() {
         {(session?.user as { role?: string })?.role === "admin" || (session?.user as { role?: string })?.role === "moderator" ? (
           <Link
             href="/admin"
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-colors shrink-0"
-            style={{ background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.22)" }}
+            className="flex items-center justify-center gap-1.5 px-2.5 rounded-lg transition-colors shrink-0 h-full"
+            style={{ background: "rgba(239,68,68,0.10)", border: "1px solid rgba(239,68,68,0.22)", touchAction: "manipulation" }}
           >
             <ShieldAlert className="w-3.5 h-3.5 text-red-400" />
             <span className="text-xs font-semibold text-red-400">Admin</span>
@@ -352,9 +352,9 @@ export default function MobileTopBar() {
         <button
           ref={btnRef}
           onClick={(e) => { e.stopPropagation(); setOpen(v => !v); }}
-          className="rounded-full overflow-visible flex items-center justify-center transition-all shrink-0 relative"
+          className="overflow-visible flex items-center justify-center transition-all shrink-0 relative h-full"
           style={{
-            width: 44, height: 44,
+            width: 44,
             touchAction: "manipulation",
             zIndex: 200,
             marginRight: -6,
