@@ -73,6 +73,7 @@ export default function CreateContestForm({
 
     if (!res.ok) {
       toast.error(data.error ?? "Fehler beim Erstellen");
+      router.refresh(); // z.B. bei "läuft bereits" Fehler: Liste neu laden, damit die aktive Abstimmung sichtbar wird
       return;
     }
 
