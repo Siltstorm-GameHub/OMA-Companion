@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
-import { Bell, Save, Smartphone, MessageSquare, Send, Hash, Trash2, ChevronDown, Check, Smile, X } from "lucide-react";
+import { Bell, Save, Smartphone, MessageSquare, Send, Hash, Trash2, ChevronDown, Check, Smile, X, Link2 } from "lucide-react";
 import { PAGE_LINKS } from "@/lib/page-links";
 
 export type NotificationRuleRow = {
@@ -35,6 +35,14 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 const CATEGORY_ORDER = ["events", "tournaments", "quests", "badges", "clips", "rank", "system"];
+
+// Diese Regeln verlinken beim Versand immer direkt zum jeweiligen Event/Turnier
+// (urlOverride in den Aufrufer-Dateien, siehe src/lib/notify-dispatch.ts) — der hier
+// eingestellte Ziel-Link wird für sie nur als Fallback genutzt, falls keine Event-ID vorliegt.
+const DYNAMIC_EVENT_LINK_RULES = new Set([
+  "event_new", "event_reminder", "event_started", "event_ended",
+  "tournament_started", "tournament_result",
+]);
 
 // Welche Platzhalter pro Regel beim Versand ersetzt werden (siehe src/lib/notify-dispatch.ts Aufrufer)
 const PLACEHOLDERS: Record<string, { key: string; description: string }[]> = {
@@ -162,7 +170,12 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
       if (btn?.contains(e.target as Node)) return;
       setLinkDropFor(null);
     }
-    function closeOnScroll() { setLinkDropFor(null); }
+    // Scroll INNERHALB der Dropdown-Liste selbst soll sie nicht schließen — nur Scrollen
+    // außerhalb (z.B. die Seite dahinter), da sonst die Portal-Position nicht mehr stimmt.
+    function closeOnScroll(e: Event) {
+      if (linkDropRef.current && e.target instanceof Node && linkDropRef.current.contains(e.target)) return;
+      setLinkDropFor(null);
+    }
     document.addEventListener("mousedown", close);
     window.addEventListener("scroll", closeOnScroll, true);
     return () => {
@@ -460,6 +473,12 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                       </span>
                       <ChevronDown className="w-3.5 h-3.5 text-gray-600 shrink-0" />
                     </button>
+                    {DYNAMIC_EVENT_LINK_RULES.has(r.key) && (
+                      <p className="flex items-center gap-1 text-[10px] text-teal-400/80">
+                        <Link2 className="w-3 h-3 shrink-0" />
+                        Führt automatisch zum jeweiligen Event/Turnier — dieser Link ist nur ein Fallback, falls ausnahmsweise keine Zuordnung vorliegt.
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
