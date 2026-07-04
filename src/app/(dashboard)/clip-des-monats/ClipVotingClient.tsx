@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Check, ExternalLink } from "lucide-react";
+import { Check } from "lucide-react";
 import Image from "next/image";
 import TwitchClipEmbed from "@/components/TwitchClipEmbed";
 import { clipCredit } from "@/lib/clip-display";
@@ -126,27 +126,17 @@ export default function ClipVotingClient({ contestId, nominations, initialVoteId
                 {hasVoted && <span className="text-xs text-gray-500 shrink-0">{pct}%</span>}
               </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => vote(nom.id)}
-                  disabled={voting}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-all ${
-                    isMyVote
-                      ? "bg-[#9146ff]/20 border border-[#9146ff]/40 text-purple-300"
-                      : "bg-white/[0.05] border border-white/[0.08] text-gray-400 hover:bg-white/[0.08] hover:text-white"
-                  } disabled:opacity-50`}
-                >
-                  {isMyVote ? <><Check className="w-3 h-3" /> Meine Stimme</> : "Abstimmen"}
-                </button>
-                <a
-                  href={nom.clipUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-2 rounded-xl bg-white/[0.05] border border-white/[0.08] text-gray-500 hover:text-white transition-colors"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
-              </div>
+              <button
+                onClick={() => vote(nom.id)}
+                disabled={voting}
+                className={`w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-all ${
+                  isMyVote
+                    ? "bg-[#9146ff]/20 border border-[#9146ff]/40 text-purple-300"
+                    : "bg-white/[0.05] border border-white/[0.08] text-gray-400 hover:bg-white/[0.08] hover:text-white"
+                } disabled:opacity-50`}
+              >
+                {isMyVote ? <><Check className="w-3 h-3" /> Meine Stimme</> : "Abstimmen"}
+              </button>
             </div>
           </div>
         );
