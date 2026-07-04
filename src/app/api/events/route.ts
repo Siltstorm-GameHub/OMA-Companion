@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { createDiscordScheduledEvent, announceNewEvent } from "@/lib/discord-events";
-import { dispatchNotification } from "@/lib/notify-dispatch";
+import { dispatchEventNotification } from "@/lib/notify-dispatch";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -133,16 +133,13 @@ export async function POST(req: NextRequest) {
     event.discordMessageId = discordMessageId;
   }
 
-  // Push + In-App + Discord-DM an alle User (Discord-Kanal-Post übernimmt bereits announceNewEvent oben, inkl. Coverbild)
-  const allUsers = await prisma.user.findMany({ select: { id: true } });
-  dispatchNotification("event_new", {
-    users: allUsers.map((u) => u.id),
+  // Push + In-App + Discord-DM (Discord-Kanal-Post übernimmt bereits announceNewEvent oben, inkl. Coverbild)
+  dispatchEventNotification("event_new", { id: event.id }, {
     placeholders: {
       "{eventName}": event.title,
       "{game}":      event.game ?? "–",
       "{date}":      event.startAt.toLocaleString("de-DE", { weekday: "long", day: "2-digit", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" }),
     },
-    urlOverride: `/events/${event.id}`,
     skipDiscordChannel: true,
   }).catch(() => {});
 

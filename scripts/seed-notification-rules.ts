@@ -22,6 +22,8 @@ interface RuleSeed {
   bodyTemplate: string;
   urlTemplate?: string;
   reminderHoursBefore?: number;
+  isEventNotification?: boolean;
+  eventAudience?: "all" | "participants";
   /** Schlüssel des alten BotConfig-Eintrags, dessen "{key}_text" übernommen werden soll */
   legacyBotConfigKey?: string;
 }
@@ -36,6 +38,7 @@ const RULES: RuleSeed[] = [
     titleTemplate: "🎮 Neues Event: {eventName}",
     bodyTemplate: "Ein neues Community-Event wurde angekündigt! Meldet euch jetzt an.\n📅 **{eventName}** startet am {date}.",
     urlTemplate: "/events",
+    isEventNotification: true, eventAudience: "all",
     legacyBotConfigKey: "event_new",
   },
   {
@@ -48,6 +51,7 @@ const RULES: RuleSeed[] = [
     bodyTemplate: "⏰ Nur noch **weniger als {reminderHours} Stunden** bis **{eventName}** beginnt!\nStart: {date} · Jetzt noch anmelden!",
     urlTemplate: "/events",
     reminderHoursBefore: 24,
+    isEventNotification: true, eventAudience: "participants",
     legacyBotConfigKey: "event_reminder",
   },
   {
@@ -58,6 +62,7 @@ const RULES: RuleSeed[] = [
     pushEnabled: false, inAppEnabled: false, discordDmEnabled: false, discordChanEnabled: true,
     titleTemplate: "🚀 Event läuft jetzt!",
     bodyTemplate: "🚀 **{eventName}** hat soeben begonnen! Viel Spaß und viel Erfolg! 🎮",
+    isEventNotification: true, eventAudience: "participants",
     legacyBotConfigKey: "event_started",
   },
   {
@@ -68,6 +73,7 @@ const RULES: RuleSeed[] = [
     pushEnabled: false, inAppEnabled: false, discordDmEnabled: false, discordChanEnabled: true,
     titleTemplate: "✅ Event beendet: {eventName}",
     bodyTemplate: "✅ **{eventName}** ist beendet. Danke an alle {attendeeCount} Teilnehmer!",
+    isEventNotification: true, eventAudience: "participants",
     legacyBotConfigKey: "event_ended",
   },
   {
@@ -79,6 +85,7 @@ const RULES: RuleSeed[] = [
     titleTemplate: "🏆 Neues Turnier gestartet",
     bodyTemplate: "{eventName}",
     urlTemplate: "/events",
+    isEventNotification: true, eventAudience: "all",
   },
   {
     key: "tournament_result",
@@ -89,6 +96,7 @@ const RULES: RuleSeed[] = [
     titleTemplate: "🏆 Turnierergebnis: {eventName}",
     bodyTemplate: "🏆 Das Turnier **{eventName}** ist beendet!\nHerzlichen Glückwunsch an {winner} für den 1. Platz! 🎉",
     urlTemplate: "/events",
+    isEventNotification: true, eventAudience: "participants",
     legacyBotConfigKey: "tournament_result",
   },
   {
@@ -247,6 +255,8 @@ async function main() {
         bodyTemplate,
         urlTemplate: rule.urlTemplate ?? null,
         reminderHoursBefore: rule.reminderHoursBefore ?? null,
+        isEventNotification: rule.isEventNotification ?? false,
+        eventAudience: rule.eventAudience ?? "all",
       },
       update: {}, // Bereits vorhandene Regeln nicht überschreiben (idempotent bei erneutem Lauf)
     });
