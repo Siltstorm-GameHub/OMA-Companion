@@ -11,7 +11,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Discord({
       allowDangerousEmailAccountLinking: true,
-      authorization: { params: { scope: "identify email guilds", prompt: "none" } },
+      authorization: { params: { scope: "identify email guilds" } },
       profile(profile) {
         return {
           // id muss zurückgegeben werden, damit Auth.js providerAccountId = Discord-Snowflake setzt.
