@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Clapperboard, Check } from "lucide-react";
+import CountdownBadge from "@/components/CountdownBadge";
 
 const MONTH_NAMES = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
 
@@ -9,7 +10,7 @@ export default async function ClipContestWidget({ userId }: { userId?: string })
     prisma.monthlyClipContest.findFirst({
       where: { status: "voting" },
       orderBy: [{ year: "desc" }, { month: "desc" }],
-      select: { id: true, month: true, year: true, rewardCoins: true, _count: { select: { nominations: true } } },
+      select: { id: true, month: true, year: true, rewardCoins: true, votingEndsAt: true, _count: { select: { nominations: true } } },
     }),
     prisma.monthlyClipContest.findFirst({
       where: { status: "finished" },
@@ -89,9 +90,12 @@ export default async function ClipContestWidget({ userId }: { userId?: string })
               {activeContest._count.nominations} Clips · Clip des Monats {MONTH_NAMES[activeContest.month - 1]}
             </p>
           </div>
-          <span className="text-xs text-[#9146ff] group-hover:text-purple-300 transition-colors shrink-0 font-medium">
-            {hasVoted ? "Ansehen →" : "Abstimmen →"}
-          </span>
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            <CountdownBadge endsAt={activeContest.votingEndsAt} />
+            <span className="text-xs text-[#9146ff] group-hover:text-purple-300 transition-colors font-medium">
+              {hasVoted ? "Ansehen →" : "Abstimmen →"}
+            </span>
+          </div>
         </Link>
       )}
     </div>
