@@ -113,30 +113,39 @@ export async function finalizeContest(contestId: string): Promise<string> {
     message += ` — Gleichstand zwischen ${winners.length} Clips (je ${maxVotes} Stimmen)`;
   }
 
+  // Bei Gleichstand kann derselbe User mehrere Gewinner-Clips haben (z.B. zwei Event-Einreichungen,
+  // oder mehrere geclippte Momente desselben Streamers) — Münzen trotzdem nur einmal pro User vergeben.
+  const winnerUserIds = new Set<string>();
+  const noAccountLogins = new Set<string>();
+
   for (const winner of winners) {
-    let winnerUserId: string | null = null;
     if (winner.submittedByUserId) {
-      winnerUserId = winner.submittedByUserId;
+      winnerUserIds.add(winner.submittedByUserId);
     } else if (winner.twitchCreatorLogin) {
       const user = await prisma.user.findUnique({ where: { twitchLogin: winner.twitchCreatorLogin } });
-      winnerUserId = user?.id ?? null;
+      if (user) {
+        winnerUserIds.add(user.id);
+      } else {
+        noAccountLogins.add(winner.twitchCreatorLogin);
+      }
     }
+  }
 
-    if (winnerUserId) {
-      await prisma.$transaction([
-        prisma.user.update({ where: { id: winnerUserId }, data: { points: { increment: contest.rewardCoins } } }),
-        prisma.pointTransaction.create({
-          data: {
-            userId: winnerUserId,
-            amount: contest.rewardCoins,
-            reason: `[Münzen] Clip des Monats – ${contest.month}/${contest.year}`,
-          },
-        }),
-      ]);
-      message += ` — ${contest.rewardCoins} Münzen an ${winnerUserId} vergeben`;
-    } else if (winner.twitchCreatorLogin) {
-      message += ` — Gewinner (Twitch: ${winner.twitchCreatorLogin}) hat kein Community-Konto, keine Münzen vergeben`;
-    }
+  for (const winnerUserId of winnerUserIds) {
+    await prisma.$transaction([
+      prisma.user.update({ where: { id: winnerUserId }, data: { points: { increment: contest.rewardCoins } } }),
+      prisma.pointTransaction.create({
+        data: {
+          userId: winnerUserId,
+          amount: contest.rewardCoins,
+          reason: `[Münzen] Clip des Monats – ${contest.month}/${contest.year}`,
+        },
+      }),
+    ]);
+    message += ` — ${contest.rewardCoins} Münzen an ${winnerUserId} vergeben`;
+  }
+  for (const login of noAccountLogins) {
+    message += ` — Gewinner (Twitch: ${login}) hat kein Community-Konto, keine Münzen vergeben`;
   }
 
   if (contest.participationCoins > 0 && contest.votes.length > 0) {
