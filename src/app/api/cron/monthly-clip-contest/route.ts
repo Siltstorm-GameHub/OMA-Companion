@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { collectNominations, finalizeContest } from "@/lib/clip-contest";
+import { collectNominations, finalizeContest, notifyNewContest } from "@/lib/clip-contest";
 
 const AUTO_VOTING_DAYS = 14;
 
@@ -76,6 +76,8 @@ export async function GET(req: NextRequest) {
       nominations: { create: nominations },
     },
   });
+
+  await notifyNewContest(prevMonth, prevYear, nominations.length);
 
   results.push(`Created contest ${prevMonth}/${prevYear} with ${nominations.length} nominations`);
   return NextResponse.json({ ok: true, results });

@@ -1,5 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { getTwitchUser, getPartnerClips } from "@/lib/twitch";
+import { createNotificationForUsers } from "@/lib/notifications";
+import { sendPushToAll } from "@/lib/push";
+
+const MONTH_NAMES = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
 
 type PartnerNomination = {
   clipUrl: string;
@@ -54,6 +58,16 @@ export async function collectNominations(periodStart: Date, periodEnd: Date, twi
     nominations: [...communityNominations, ...partnerNominations],
     failedChannels,
   };
+}
+
+export async function notifyNewContest(month: number, year: number, nominationCount: number) {
+  const title = `🎬 Clip des Monats – ${MONTH_NAMES[month - 1]} ${year}`;
+  const body = `Die Abstimmung läuft! ${nominationCount} Clips stehen zur Wahl.`;
+  const url = "/clip-des-monats";
+
+  const users = await prisma.user.findMany({ select: { id: true } });
+  await createNotificationForUsers(users.map((u) => u.id), { type: "clip", title, body, url }).catch(() => {});
+  await sendPushToAll({ title, body, url }).catch(() => {});
 }
 
 export async function finalizeContest(contestId: string): Promise<string> {

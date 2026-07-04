@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
-import { collectNominations } from "@/lib/clip-contest";
+import { collectNominations, notifyNewContest } from "@/lib/clip-contest";
 
 export async function GET() {
   await requireRole("moderator");
@@ -71,6 +71,8 @@ export async function POST(req: NextRequest) {
       nominations: { create: nominations },
     },
   });
+
+  await notifyNewContest(contest.month, contest.year, nominations.length);
 
   return NextResponse.json({ ok: true, contest, nominationCount: nominations.length, failedChannels });
 }

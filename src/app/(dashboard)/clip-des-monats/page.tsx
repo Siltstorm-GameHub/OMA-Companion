@@ -1,13 +1,17 @@
+import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { Trophy, Clapperboard } from "lucide-react";
 import ClipVotingClient from "./ClipVotingClient";
+import TwitchClipEmbed from "@/components/TwitchClipEmbed";
+import { clipCredit } from "@/lib/clip-display";
 
 const MONTH_NAMES = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
 
 export default async function ClipDesMonatsPage() {
   const session = await auth();
   const userId = session?.user?.id ?? null;
+  const embedParent = ((await headers()).get("host") ?? "localhost").split(":")[0];
 
   const activeContest = await prisma.monthlyClipContest.findFirst({
     where: { status: "voting" },
@@ -48,10 +52,7 @@ export default async function ClipDesMonatsPage() {
     userVoteNominationId = vote?.nominationId ?? null;
   }
 
-  const winnerName = winner?.submittedBy?.name
-    ?? winner?.submittedBy?.username
-    ?? winner?.twitchCreatorLogin
-    ?? "Unbekannt";
+  const winnerCredit = winner ? clipCredit(winner) : null;
 
   return (
     <div className="p-5 sm:p-6 max-w-3xl mx-auto space-y-8 animate-fade-in">
@@ -65,46 +66,31 @@ export default async function ClipDesMonatsPage() {
               Clip des Monats – {MONTH_NAMES[finishedContest.month - 1]} {finishedContest.year}
             </h2>
           </div>
-          <a
-            href={winner.clipUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block group rounded-2xl overflow-hidden border border-amber-500/20 bg-amber-500/5 hover:border-amber-500/40 transition-colors"
-          >
-            {winner.thumbnailUrl ? (
-              <div className="relative aspect-video w-full">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={winner.thumbnailUrl.replace("%{width}", "640").replace("%{height}", "360")}
-                  alt={winner.clipTitle ?? "Gewinner-Clip"}
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <span className="text-white font-semibold text-sm">Auf Twitch ansehen ↗</span>
-                </div>
+          <div className="rounded-2xl overflow-hidden border border-amber-500/20 bg-amber-500/5">
+            <TwitchClipEmbed
+              clipUrl={winner.clipUrl}
+              thumbnailUrl={winner.thumbnailUrl}
+              title={winner.clipTitle ?? "Gewinner-Clip"}
+              parent={embedParent}
+              overlay={
                 <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-amber-500 text-black text-xs font-bold px-2 py-1 rounded-full">
                   <Trophy className="w-3 h-3" /> Gewinner
                 </div>
-              </div>
-            ) : (
-              <div className="flex items-center gap-3 p-4">
-                <Clapperboard className="w-8 h-8 text-amber-400 shrink-0" />
-                <span className="text-white font-medium">{winner.clipTitle ?? winner.clipUrl}</span>
-              </div>
-            )}
+              }
+            />
             <div className="px-4 py-3 border-t border-amber-500/10">
               <p className="text-white font-semibold">{winner.clipTitle ?? "Unbekannter Clip"}</p>
               <p className="text-sm text-gray-400 mt-0.5">
-                von <span className="text-amber-300">{winnerName}</span>
-                {winner.partnerTwitchLogin && (
-                  <> · geclippt bei <span className="text-[#9146ff]">{winner.partnerTwitchLogin}</span></>
+                Kanal: <span className="text-[#9146ff]">{winnerCredit!.channel}</span>
+                {winnerCredit!.creator && (
+                  <> · Clip von <span className="text-amber-300">{winnerCredit!.creator}</span></>
                 )}
                 {finishedContest.rewardCoins > 0 && (
                   <> · <span className="text-amber-400">{finishedContest.rewardCoins} Münzen</span> gewonnen</>
                 )}
               </p>
             </div>
-          </a>
+          </div>
         </section>
       )}
 
@@ -135,6 +121,7 @@ export default async function ClipDesMonatsPage() {
             }))}
             initialVoteId={userVoteNominationId}
             isLoggedIn={!!userId}
+            embedParent={embedParent}
           />
         </section>
       ) : (
