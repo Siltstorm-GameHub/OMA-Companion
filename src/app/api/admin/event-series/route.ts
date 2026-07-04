@@ -92,7 +92,7 @@ export async function PATCH(req: NextRequest) {
     });
   }
 
-  // 3) Optional: Turnier-Einstellungen auf alle Events übertragen (Format + Punkte + Stat-Felder)
+  // 3) Optional: Turnier-Einstellungen auf alle Events übertragen (Format + Punkte)
   if (propagateFormat && fields.fixedFormat) {
     // Convert placementRewardsJson → pointsConfig shape
     let pointsConfigJson: string | null = null;
@@ -108,22 +108,35 @@ export async function PATCH(req: NextRequest) {
         }
       } catch { /* skip */ }
     }
-    // Extract stat field names from seriesStatConfig
-    let statFieldsJson: string | null = null;
-    if (fields.seriesStatConfig) {
-      try {
-        const { stats } = JSON.parse(fields.seriesStatConfig) as { stats: { field: string }[] };
-        const fieldNames = stats?.map((s: { field: string }) => s.field).filter(Boolean) ?? [];
-        if (fieldNames.length) statFieldsJson = JSON.stringify(fieldNames);
-      } catch { /* skip */ }
-    }
     await prisma.event.updateMany({
       where: { seriesId },
       data:  {
         format: fields.fixedFormat,
         ...(pointsConfigJson !== null && { pointsConfig: pointsConfigJson }),
-        ...(statFieldsJson   !== null && { statFields:   statFieldsJson }),
       },
+    });
+  }
+
+  // 3b) Getrackte Stats je Event (seriesStatConfig.eventStatFields / stats) automatisch auf alle
+  //     noch nicht abgeschlossenen Events der Reihe übertragen — abgeschlossene ("finished") Events bleiben unverändert.
+  if (fields.seriesStatConfig !== undefined) {
+    let statFieldsJson: string | null = null;
+    if (fields.seriesStatConfig) {
+      try {
+        const { stats, eventStatFields } = JSON.parse(fields.seriesStatConfig) as {
+          stats?: { field: string; isWinnerStat?: boolean }[];
+          eventStatFields?: string[];
+        };
+        // Bevorzugt die explizit gepflegten Event-Stat-Felder, sonst Fallback auf die Reihen-Stats (ohne Sieger-Stats)
+        const fieldNames = eventStatFields?.length
+          ? eventStatFields.filter(Boolean)
+          : (stats?.filter(s => !s.isWinnerStat && s.field).map(s => s.field) ?? []);
+        statFieldsJson = fieldNames.length ? JSON.stringify(fieldNames) : null;
+      } catch { /* skip */ }
+    }
+    await prisma.event.updateMany({
+      where: { seriesId, status: { not: "finished" } },
+      data:  { statFields: statFieldsJson },
     });
   }
 
