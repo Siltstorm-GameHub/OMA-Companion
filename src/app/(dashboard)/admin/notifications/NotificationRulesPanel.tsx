@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { Bell, Save, Smartphone, MessageSquare, Send, Hash, Trash2, ChevronDown, Check, Smile, X } from "lucide-react";
 import { PAGE_LINKS } from "@/lib/page-links";
@@ -143,10 +144,39 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
   const [saving, setSaving] = useState(false);
   const [deletingKey, setDeletingKey] = useState<string | null>(null);
   const [linkDropFor, setLinkDropFor] = useState<string | null>(null);
+  const [linkDropRect, setLinkDropRect] = useState<{ top: number; left: number; width: number } | null>(null);
   const [pickerFor, setPickerFor] = useState<{ key: string; field: "title" | "body" } | null>(null);
   const [lastField, setLastField] = useState<Record<string, "title" | "body">>({});
 
   const fieldRefs = useRef<Record<string, HTMLInputElement | HTMLTextAreaElement | null>>({});
+  const linkBtnRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const linkDropRef = useRef<HTMLDivElement | null>(null);
+
+  // Dropdown wird als Portal in <body> gerendert (siehe render unten), damit er nicht vom
+  // "overflow-hidden" der Karte (nötig für den card-shine-Effekt) abgeschnitten wird.
+  useEffect(() => {
+    if (!linkDropFor) return;
+    function close(e: MouseEvent) {
+      const btn = linkBtnRefs.current[linkDropFor!];
+      if (linkDropRef.current?.contains(e.target as Node)) return;
+      if (btn?.contains(e.target as Node)) return;
+      setLinkDropFor(null);
+    }
+    function closeOnScroll() { setLinkDropFor(null); }
+    document.addEventListener("mousedown", close);
+    window.addEventListener("scroll", closeOnScroll, true);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      window.removeEventListener("scroll", closeOnScroll, true);
+    };
+  }, [linkDropFor]);
+
+  function toggleLinkDrop(key: string) {
+    if (linkDropFor === key) { setLinkDropFor(null); return; }
+    const rect = linkBtnRefs.current[key]?.getBoundingClientRect();
+    if (rect) setLinkDropRect({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+    setLinkDropFor(key);
+  }
 
   function update(key: string, patch: Partial<NotificationRuleRow>) {
     setRules((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
@@ -416,47 +446,20 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                     )}
                   </div>
 
-                  {/* Ziel-Link Dropdown */}
+                  {/* Ziel-Link Dropdown (als Portal gerendert, s.u. — sonst schneidet card-shine's overflow-hidden die Liste ab) */}
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest">Ziel-Link (optional)</label>
-                    <div className="relative">
-                      <button
-                        type="button"
-                        onClick={() => setLinkDropFor(linkDropFor === r.key ? null : r.key)}
-                        className="w-full flex items-center justify-between rounded-xl px-3 py-2 text-sm bg-gray-800/80 border border-white/[0.06] hover:border-white/[0.12] transition-colors"
-                      >
-                        <span className={selectedLink ? "text-white" : "text-gray-600"}>
-                          {selectedLink ? `${selectedLink.label} (${selectedLink.url})` : "Keine Verlinkung"}
-                        </span>
-                        <ChevronDown className="w-3.5 h-3.5 text-gray-600 shrink-0" />
-                      </button>
-                      {linkDropFor === r.key && (
-                        <div className="absolute z-50 left-0 right-0 mt-1 rounded-xl overflow-hidden shadow-xl bg-gray-900/98 border border-white/[0.08] max-h-56 overflow-y-auto">
-                          <button
-                            type="button"
-                            onClick={() => { update(r.key, { urlTemplate: null }); setLinkDropFor(null); }}
-                            className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-500 hover:bg-white/5 transition-colors"
-                          >
-                            <span>Keine Verlinkung</span>
-                            {!r.urlTemplate && <Check className="w-3.5 h-3.5 text-indigo-400" />}
-                          </button>
-                          {PAGE_LINKS.map((p) => (
-                            <button
-                              key={p.url}
-                              type="button"
-                              onClick={() => { update(r.key, { urlTemplate: p.url }); setLinkDropFor(null); }}
-                              className={`w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-white/5 transition-colors ${r.urlTemplate === p.url ? "text-indigo-300" : "text-gray-300"}`}
-                            >
-                              <span>{p.label}</span>
-                              <span className="flex items-center gap-2">
-                                <span className="text-xs text-gray-600">{p.url}</span>
-                                {r.urlTemplate === p.url && <Check className="w-3.5 h-3.5 text-indigo-400" />}
-                              </span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                    <button
+                      type="button"
+                      ref={(el) => { linkBtnRefs.current[r.key] = el; }}
+                      onClick={() => toggleLinkDrop(r.key)}
+                      className="w-full flex items-center justify-between rounded-xl px-3 py-2 text-sm bg-gray-800/80 border border-white/[0.06] hover:border-white/[0.12] transition-colors"
+                    >
+                      <span className={selectedLink ? "text-white" : "text-gray-600"}>
+                        {selectedLink ? `${selectedLink.label} (${selectedLink.url})` : "Keine Verlinkung"}
+                      </span>
+                      <ChevronDown className="w-3.5 h-3.5 text-gray-600 shrink-0" />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -464,6 +467,44 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
           })}
         </div>
       ))}
+
+      {linkDropFor && linkDropRect && typeof document !== "undefined" && createPortal(
+        (() => {
+          const activeRule = rules.find((x) => x.key === linkDropFor);
+          if (!activeRule) return null;
+          return (
+            <div
+              ref={linkDropRef}
+              style={{ position: "fixed", top: linkDropRect.top, left: linkDropRect.left, width: linkDropRect.width }}
+              className="z-[100] rounded-xl overflow-hidden shadow-xl bg-gray-900/98 border border-white/[0.08] max-h-56 overflow-y-auto"
+            >
+              <button
+                type="button"
+                onClick={() => { update(activeRule.key, { urlTemplate: null }); setLinkDropFor(null); }}
+                className="w-full flex items-center justify-between px-3 py-2 text-sm text-gray-500 hover:bg-white/5 transition-colors"
+              >
+                <span>Keine Verlinkung</span>
+                {!activeRule.urlTemplate && <Check className="w-3.5 h-3.5 text-indigo-400" />}
+              </button>
+              {PAGE_LINKS.map((p) => (
+                <button
+                  key={p.url}
+                  type="button"
+                  onClick={() => { update(activeRule.key, { urlTemplate: p.url }); setLinkDropFor(null); }}
+                  className={`w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-white/5 transition-colors ${activeRule.urlTemplate === p.url ? "text-indigo-300" : "text-gray-300"}`}
+                >
+                  <span>{p.label}</span>
+                  <span className="flex items-center gap-2">
+                    <span className="text-xs text-gray-600">{p.url}</span>
+                    {activeRule.urlTemplate === p.url && <Check className="w-3.5 h-3.5 text-indigo-400" />}
+                  </span>
+                </button>
+              ))}
+            </div>
+          );
+        })(),
+        document.body,
+      )}
     </div>
   );
 }
