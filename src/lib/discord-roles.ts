@@ -1,4 +1,5 @@
-import { RANKS, getRank } from "./ranks";
+import { RANKS, getRank, getRankFullLabel } from "./ranks";
+import { dispatchNotification } from "./notify-dispatch";
 
 function getRoleId(envKey: string): string | undefined {
   return process.env[envKey] || undefined;
@@ -59,22 +60,33 @@ export async function assignCurrentRole(
   return { ok, discordStatus: result.status, discordBody: result.body };
 }
 
-/** Synchronisiert die Discord-Rolle eines Users wenn sich sein Rang geändert hat. */
+/** Synchronisiert die Discord-Rolle eines Users und benachrichtigt ihn, wenn sich sein Rang geändert hat. */
 export async function syncDiscordRole(
+  userId: string,
   discordId: string | null | undefined,
   oldPoints: number,
   newPoints: number,
 ): Promise<void> {
-  if (!discordId || !process.env.DISCORD_GUILD_ID || !process.env.DISCORD_BOT_TOKEN) return;
-
   const oldRank = getRank(oldPoints);
   const newRank = getRank(newPoints);
-
   if (oldRank.discordRoleEnvKey === newRank.discordRoleEnvKey) return;
 
-  try {
-    await assignCurrentRole(discordId, newPoints);
-  } catch {
-    // Niemals die App-Logik durch Discord-Fehler blockieren
+  if (discordId && process.env.DISCORD_GUILD_ID && process.env.DISCORD_BOT_TOKEN) {
+    try {
+      await assignCurrentRole(discordId, newPoints);
+    } catch {
+      // Niemals die App-Logik durch Discord-Fehler blockieren
+    }
+  }
+
+  if (newRank.min > oldRank.min) {
+    dispatchNotification("rank_up", {
+      users: [userId],
+      placeholders: {
+        "{username}": discordId ? `<@${discordId}>` : "Du",
+        "{rank}":     getRankFullLabel(newRank),
+        "{rankEmoji}": newRank.emoji,
+      },
+    }).catch(() => {});
   }
 }

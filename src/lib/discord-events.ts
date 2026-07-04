@@ -79,18 +79,7 @@ export async function announceNewEvent(event: {
   }
 }
 
-/** Löscht eine Discord-Nachricht (z.B. Event-Ankündigung beim Löschen des Events). */
-export async function deleteDiscordMessage(channelId: string, messageId: string): Promise<void> {
-  const botToken = process.env.DISCORD_BOT_TOKEN;
-  if (!botToken) return;
-  const res = await fetch(
-    `https://discord.com/api/v10/channels/${channelId}/messages/${messageId}`,
-    { method: "DELETE", headers: { Authorization: `Bot ${botToken}` } }
-  );
-  if (!res.ok && res.status !== 404) {
-    console.error("[Discord] Nachricht löschen fehlgeschlagen:", res.status);
-  }
-}
+export { deleteDiscordMessage } from "@/lib/discord-rest";
 
 /** Löscht ein Discord Scheduled Event. */
 export async function deleteDiscordScheduledEvent(discordEventId: string): Promise<void> {

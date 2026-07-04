@@ -1,29 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { awardPoints } from "@/lib/points";
 import { updateQuestProgress } from "@/lib/quests";
-import { notifyQuestCompleted, notifyRankUp, getRank } from "./notify";
 
 /** User per Discord-ID finden. Nur discordId — kein unzuverlässiger Name-Fallback. */
 async function findUser(discordId: string) {
   return prisma.user.findUnique({ where: { discordId } });
-}
-
-async function checkRankUp(
-  user: { discordId: string | null; username: string | null; name: string | null },
-  rankPointsBefore: number,
-  rankPointsAfter: number,
-) {
-  if (!user.discordId) return;
-  const rankBefore = getRank(rankPointsBefore);
-  const rankAfter  = getRank(rankPointsAfter);
-  if (rankAfter.min > rankBefore.min) {
-    await notifyRankUp(
-      user.discordId,
-      user.username ?? user.name ?? "Unbekannt",
-      rankAfter,
-    );
-    console.log(`🎖 Rang-Aufstieg: ${user.username ?? user.name} → ${rankAfter.label}`);
-  }
 }
 
 // Nachrichtenzähler pro User (im Speicher; zurückgesetzt nach je 10)
@@ -54,10 +35,7 @@ export async function trackMessage(discordId: string) {
   }
 
   // Quest-Fortschritt: 1 Nachricht
-  const completedQuests = await updateQuestProgress(user.id, "MESSAGES", 1);
-  if (user.discordId) {
-    for (const q of completedQuests) await notifyQuestCompleted(user.discordId, q.title, q.reward);
-  }
+  await updateQuestProgress(user.id, "MESSAGES", 1);
 
   // Täglicher Chat-Bonus (einmal pro Tag)
   const today = new Date().toDateString();
@@ -85,10 +63,7 @@ export async function checkpointVoice(discordId: string, minutes: number) {
     data:  { voiceMinutesTotal: { increment: floored } },
   });
 
-  const completed = await updateQuestProgress(user.id, "VOICE_MINUTES", floored);
-  if (user.discordId) {
-    for (const q of completed) await notifyQuestCompleted(user.discordId, q.title, q.reward);
-  }
+  await updateQuestProgress(user.id, "VOICE_MINUTES", floored);
   console.log(`  ⏱ Checkpoint ${user.name ?? user.username}: +${floored}min Voice`);
 }
 
@@ -121,10 +96,7 @@ export async function trackVoice(
       where: { id: user.id },
       data:  { voiceMinutesTotal: { increment: remainingFloored } },
     });
-    const voiceQuests = await updateQuestProgress(user.id, "VOICE_MINUTES", remainingFloored);
-    if (user.discordId) {
-      for (const q of voiceQuests) await notifyQuestCompleted(user.discordId, q.title, q.reward);
-    }
+    await updateQuestProgress(user.id, "VOICE_MINUTES", remainingFloored);
   }
 
   // Punkte basieren auf GESAMTER Session (volle Stunden)

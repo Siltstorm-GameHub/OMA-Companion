@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/roles";
 import { countOccupiedSlots } from "@/lib/gameservers";
-import { createNotification } from "@/lib/notifications";
+import { dispatchNotification } from "@/lib/notify-dispatch";
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const admin = await requireRole("moderator");
@@ -35,12 +35,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       },
     });
 
-    await createNotification(application.userId, {
-      type: "server",
-      title: "Bewerbung angenommen",
-      body: `Du hast Zugang zu „${application.server.name}" erhalten.`,
-      url: "/servers",
-    });
+    await dispatchNotification("server_approved", {
+      users: [application.userId],
+      placeholders: { "{serverName}": application.server.name },
+    }).catch(() => {});
 
     return NextResponse.json(updated);
   }
@@ -51,12 +49,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       data: { status: "denied", decidedAt: new Date(), decidedBy: admin.id, adminNote: body.adminNote?.trim() || null },
     });
 
-    await createNotification(application.userId, {
-      type: "server",
-      title: "Bewerbung abgelehnt",
-      body: `Deine Bewerbung für „${application.server.name}" wurde abgelehnt.`,
-      url: "/servers",
-    });
+    await dispatchNotification("server_denied", {
+      users: [application.userId],
+      placeholders: { "{serverName}": application.server.name },
+    }).catch(() => {});
 
     return NextResponse.json(updated);
   }
@@ -67,12 +63,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     data: { status: "revoked", decidedAt: new Date(), decidedBy: admin.id, adminNote: body.adminNote?.trim() || null },
   });
 
-  await createNotification(application.userId, {
-    type: "server",
-    title: "Zugriff entzogen",
-    body: `Dein Zugang zu „${application.server.name}" wurde entzogen.`,
-    url: "/servers",
-  });
+  await dispatchNotification("server_revoked", {
+    users: [application.userId],
+    placeholders: { "{serverName}": application.server.name },
+  }).catch(() => {});
 
   return NextResponse.json(updated);
 }

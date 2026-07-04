@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { calcNextDate, type RecurrenceType, type MonthlyMode } from "@/lib/recurrence";
 import { createDiscordScheduledEvent, announceNewEvent } from "@/lib/discord-events";
+import { dispatchNotification } from "@/lib/notify-dispatch";
 
 /**
  * POST /api/admin/event-series/generate
@@ -107,6 +108,18 @@ export async function POST(req: NextRequest) {
       },
     });
   }
+
+  // Push + In-App + Discord-DM an alle User (Discord-Kanal-Post übernimmt bereits announceNewEvent oben)
+  const allUsers = await prisma.user.findMany({ select: { id: true } });
+  dispatchNotification("event_new", {
+    users: allUsers.map((u) => u.id),
+    placeholders: {
+      "{eventName}": newEvent.title,
+      "{game}":      game ?? "–",
+      "{date}":      newEvent.startAt.toLocaleString("de-DE", { weekday: "long", day: "2-digit", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" }),
+    },
+    skipDiscordChannel: true,
+  }).catch(() => {});
 
   return NextResponse.json({ ok: true, event: newEvent });
 }

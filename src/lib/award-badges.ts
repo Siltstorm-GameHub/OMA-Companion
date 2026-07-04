@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { findNewlyEarnedBadges, getBadgeDef, type BadgeStats } from "@/lib/badges";
-import { sendPushToUsers } from "@/lib/push";
-import { createNotification } from "@/lib/notifications";
+import { dispatchNotification } from "@/lib/notify-dispatch";
 
 async function loadStats(userId: string): Promise<BadgeStats> {
   const [user, eventCount, tournamentWins, eventWins, mvpCount] = await Promise.all([
@@ -67,10 +66,10 @@ export async function checkAndAwardBadges(userId: string): Promise<string[]> {
   for (const key of newKeys) {
     const def = getBadgeDef(key);
     if (!def) continue;
-    const title = `${def.icon} Neues Abzeichen freigeschaltet!`;
-    const body  = `„${def.name}" — ${def.desc}`;
-    sendPushToUsers([userId], { title, body, url: "/profile" }).catch(() => {});
-    createNotification(userId, { type: "badge", title, body, url: "/profile" }).catch(() => {});
+    dispatchNotification("badge_earned", {
+      users: [userId],
+      placeholders: { "{badgeIcon}": def.icon, "{badgeName}": def.name, "{badgeDesc}": def.desc },
+    }).catch(() => {});
   }
 
   return newKeys;

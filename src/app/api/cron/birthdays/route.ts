@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { awardPoints } from "@/lib/points";
-import { isBotMessageEnabled, getBotMessageText, fillPlaceholders } from "@/lib/bot-config";
-import { sendDiscordMessage } from "@/lib/discord-rest";
+import { dispatchNotification } from "@/lib/notify-dispatch";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,11 +16,6 @@ function isAuthorized(req: NextRequest): boolean {
 export async function GET(req: NextRequest) {
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const channelId = process.env.DISCORD_NEWS_CHANNEL_ID;
-  if (!channelId) {
-    return NextResponse.json({ error: "DISCORD_NEWS_CHANNEL_ID nicht gesetzt" }, { status: 500 });
   }
 
   const now   = new Date();
@@ -53,20 +47,12 @@ export async function GET(req: NextRequest) {
     await awardPoints(user.id, "BIRTHDAY");
 
     // Discord-Nachricht nur wenn discordId bekannt
-    if (user.discordId && await isBotMessageEnabled("birthday")) {
-      const rawText = await getBotMessageText("birthday");
-      const text    = fillPlaceholders(rawText, { "{username}": `<@${user.discordId}>` });
-
-      await sendDiscordMessage(
-        channelId,
-        {
-          color:       0xf59e0b,
-          title:       "🎂 Alles Gute zum Geburtstag!",
-          description: text,
-          footer:      { text: "OMA Companion · Geburtstag" },
-        },
-        `🎂 <@${user.discordId}>`,
-      );
+    if (user.discordId) {
+      await dispatchNotification("birthday", {
+        users: [user.id],
+        placeholders: { "{username}": `<@${user.discordId}>` },
+        discordContent: `🎂 <@${user.discordId}>`,
+      }).catch(() => {});
     }
 
     notified.push(user.username ?? user.name ?? user.id);

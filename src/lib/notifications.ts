@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import { sendDiscordDM } from "@/lib/discord-dm";
 
 export type NotificationType =
   | "badge"
@@ -12,8 +11,8 @@ export type NotificationType =
   | "admin"
   | "server";
 
-// Mapping von NotificationType auf den Präferenz-Key
-const PREF_KEY: Record<NotificationType, string> = {
+// Mapping von NotificationType auf den Präferenz-Key (auch von notify-dispatch.ts genutzt)
+export const PREF_KEY: Record<NotificationType, string> = {
   badge:        "badge",
   quest:        "quest",
   event_result: "event",
@@ -31,22 +30,21 @@ function isTypeEnabled(prefs: Record<string, boolean>, type: NotificationType): 
   return prefs[key] !== false;
 }
 
+// Reine In-App-Schreiber — Discord-DM-Versand übernimmt notify-dispatch.ts zentral,
+// um Doppel-Versand zu vermeiden.
+
 export async function createNotification(
   userId: string,
   data: { type: NotificationType; title: string; body: string; url?: string },
 ) {
-  // Präferenzen prüfen
   try {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { notificationPrefs: true, discordId: true },
+      select: { notificationPrefs: true },
     });
     if (user) {
       const prefs: Record<string, boolean> = JSON.parse(user.notificationPrefs || "{}");
       if (!isTypeEnabled(prefs, data.type)) return;
-      if (user.discordId && prefs.discordDm !== false) {
-        sendDiscordDM(user.discordId, { title: data.title, body: data.body, url: data.url }).catch(() => {});
-      }
     }
   } catch {
     // Bei Fehler trotzdem erstellen
@@ -65,19 +63,13 @@ export async function createNotificationForUsers(
   // Präferenzen aller User laden und filtern
   const users = await prisma.user.findMany({
     where: { id: { in: userIds } },
-    select: { id: true, notificationPrefs: true, discordId: true },
+    select: { id: true, notificationPrefs: true },
   });
 
   const key = PREF_KEY[data.type];
-  const eligibleIds: string[] = [];
-  for (const u of users) {
-    const prefs: Record<string, boolean> = JSON.parse(u.notificationPrefs || "{}");
-    if (prefs[key] === false) continue;
-    eligibleIds.push(u.id);
-    if (u.discordId && prefs.discordDm !== false) {
-      sendDiscordDM(u.discordId, { title: data.title, body: data.body, url: data.url }).catch(() => {});
-    }
-  }
+  const eligibleIds = users
+    .filter((u) => JSON.parse(u.notificationPrefs || "{}")[key] !== false)
+    .map((u) => u.id);
 
   if (!eligibleIds.length) return;
 

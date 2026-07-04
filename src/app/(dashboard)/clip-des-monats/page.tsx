@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { Trophy, Clapperboard } from "lucide-react";
 import ClipVotingClient from "./ClipVotingClient";
 import TwitchClipEmbed from "@/components/TwitchClipEmbed";
+import CountdownBadge from "@/components/CountdownBadge";
 import { clipCredit } from "@/lib/clip-display";
 
 const MONTH_NAMES = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
@@ -107,7 +108,7 @@ export default async function ClipDesMonatsPage() {
       {/* ── Laufende Abstimmung ────────────────────────────────────────── */}
       {activeContest ? (
         <section className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <div>
               <h2 className="text-lg font-bold text-white">
                 Abstimmung – {MONTH_NAMES[activeContest.month - 1]} {activeContest.year}
@@ -116,6 +117,7 @@ export default async function ClipDesMonatsPage() {
                 {activeContest.nominations.length} Clips zur Auswahl
               </p>
             </div>
+            <CountdownBadge endsAt={activeContest.votingEndsAt} />
           </div>
 
           {/* Belohnungs-Kachel */}

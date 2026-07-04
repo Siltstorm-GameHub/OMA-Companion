@@ -2,7 +2,61 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { generateRoundRobin } from "@/app/api/tournaments/route";
-import { announceTournamentResult } from "@/lib/discord-notify";
+import { dispatchNotification } from "@/lib/notify-dispatch";
+
+const FORMAT_LABELS: Record<string, string> = {
+  single_elimination: "K.O.-System",
+  double_elimination: "Double Elimination",
+  round_robin:        "Jeder gegen Jeden",
+  liga:               "Liga",
+  ffa:                "Free for All",
+  coop_stats:         "Kooperativ",
+};
+
+async function announceTournamentResult(args: {
+  eventTitle: string;
+  finalRanking: string[];
+  cfgRaw: Record<string, number | { coins: number; points: number }> | null;
+  format: string;
+  game: string | null;
+  discordChannelId?: string | null;
+}) {
+  const users = await prisma.user.findMany({
+    where:  { id: { in: args.finalRanking } },
+    select: { id: true, username: true, name: true, discordId: true },
+  });
+  const userMap = new Map(users.map(u => [u.id, u]));
+
+  function getPts(placement: number): number {
+    const raw = args.cfgRaw?.[String(placement)];
+    if (!raw) return 0;
+    return typeof raw === "number" ? raw : (raw.coins ?? 0);
+  }
+
+  const medals = ["🥇", "🥈", "🥉"];
+  const lines  = args.finalRanking.slice(0, 8).map((uid, i) => {
+    const u     = userMap.get(uid);
+    const name  = u?.discordId ? `<@${u.discordId}>` : (u?.username ?? u?.name ?? "Unbekannt");
+    const medal = medals[i] ?? `**${i + 1}.**`;
+    const pts   = getPts(i + 1);
+    return `${medal} ${name}${pts > 0 ? ` · +${pts.toLocaleString("de-DE")} Pts` : ""}`;
+  });
+
+  const winner    = userMap.get(args.finalRanking[0]);
+  const winnerRef = winner?.discordId ? `<@${winner.discordId}>` : (winner?.username ?? "Unbekannt");
+
+  await dispatchNotification("tournament_result", {
+    users: args.finalRanking,
+    placeholders: { "{eventName}": args.eventTitle, "{game}": args.game ?? "–", "{winner}": winnerRef },
+    discordChannelIdOverride: args.discordChannelId,
+    discordContent: `🎉 Herzlichen Glückwunsch ${winnerRef}!`,
+    discordFields: [
+      { name: "🏅 Platzierungen", value: lines.join("\n") || "Keine Platzierungen.", inline: false },
+      { name: "🎮 Spiel",         value: args.game ?? "–",                          inline: true },
+      { name: "📋 Format",        value: FORMAT_LABELS[args.format] ?? args.format, inline: true },
+    ],
+  }).catch(() => {});
+}
 
 // Gesamtranking für FFA/coop_stats/avg_stats berechnen
 async function calcFfaRanking(eventId: string, statFields: string[], format: string) {
@@ -181,7 +235,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     if (isBecomingFinished) {
       announceTournamentResult({
-        tournamentId:     eventId,
         eventTitle,
         finalRanking:     newRanking,
         cfgRaw,
