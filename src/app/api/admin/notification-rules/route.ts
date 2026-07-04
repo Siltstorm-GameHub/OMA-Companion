@@ -5,7 +5,10 @@ import { invalidateNotificationRuleCache } from "@/lib/notify-dispatch";
 
 export async function GET() {
   await requireRole("admin");
-  const rules = await prisma.notificationRule.findMany({ orderBy: [{ category: "asc" }, { key: "asc" }] });
+  const rules = await prisma.notificationRule.findMany({
+    where: { deleted: false },
+    orderBy: [{ category: "asc" }, { key: "asc" }],
+  });
   return NextResponse.json(rules);
 }
 

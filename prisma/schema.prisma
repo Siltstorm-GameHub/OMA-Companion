@@ -630,6 +630,10 @@ model NotificationRule {
 
   reminderHoursBefore Int? // nur für "event_reminder" relevant
 
+  // Soft-Delete: Zeile bleibt bestehen, damit der Seed-Lauf sie beim nächsten
+  // Deploy nicht automatisch wieder anlegt (upsert fasst existierende Zeilen nicht an).
+  deleted Boolean @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
