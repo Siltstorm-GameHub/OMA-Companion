@@ -43,6 +43,24 @@ export async function getTwitchUser(login: string): Promise<TwitchUser | null> {
   return data.data[0] ?? null;
 }
 
+// Löst viele Logins in gebündelten Requests auf (Helix erlaubt bis zu 100 login-Parameter pro Aufruf)
+export async function getTwitchUsers(logins: string[]): Promise<TwitchUser[]> {
+  if (logins.length === 0) return [];
+  const token = await getAppAccessToken();
+  const results: TwitchUser[] = [];
+  for (let i = 0; i < logins.length; i += 100) {
+    const chunk = logins.slice(i, i + 100);
+    const params = chunk.map((l) => `login=${encodeURIComponent(l)}`).join("&");
+    const res = await fetch(`https://api.twitch.tv/helix/users?${params}`, {
+      headers: { "Client-ID": TWITCH_CLIENT_ID, Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) continue;
+    const data = (await res.json()) as { data: TwitchUser[] };
+    results.push(...data.data);
+  }
+  return results;
+}
+
 export type TwitchClip = {
   id: string;
   url: string;

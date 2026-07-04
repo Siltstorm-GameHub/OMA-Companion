@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { Trophy, Clapperboard } from "lucide-react";
+import { Clapperboard, Check } from "lucide-react";
 
 const MONTH_NAMES = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
 
@@ -68,22 +68,28 @@ export default async function ClipContestWidget({ userId }: { userId?: string })
         </Link>
       )}
 
-      {/* Vote reminder */}
-      {activeContest && !hasVoted && (
+      {/* Aktive Abstimmung — immer sichtbar, unabhängig vom eigenen Vote-Status */}
+      {activeContest && (
         <Link
           href="/clip-des-monats"
           className="flex items-center gap-3 px-4 py-3 rounded-xl glass border border-[#9146ff]/20 hover:border-[#9146ff]/40 transition-colors group"
         >
           <div className="w-8 h-8 rounded-lg bg-[#9146ff]/15 flex items-center justify-center shrink-0">
-            <Clapperboard className="w-4 h-4 text-[#9146ff]" />
+            {hasVoted
+              ? <Check className="w-4 h-4 text-[#9146ff]" />
+              : <Clapperboard className="w-4 h-4 text-[#9146ff]" />}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm text-white font-medium">Du hast noch nicht abgestimmt!</p>
+            <p className="text-sm text-white font-medium">
+              {hasVoted ? "Du hast abgestimmt" : "Du hast noch nicht abgestimmt!"}
+            </p>
             <p className="text-xs text-gray-500">
               {activeContest._count.nominations} Clips · Clip des Monats {MONTH_NAMES[activeContest.month - 1]}
             </p>
           </div>
-          <span className="text-xs text-[#9146ff] group-hover:text-purple-300 transition-colors shrink-0 font-medium">Abstimmen →</span>
+          <span className="text-xs text-[#9146ff] group-hover:text-purple-300 transition-colors shrink-0 font-medium">
+            {hasVoted ? "Ansehen →" : "Abstimmen →"}
+          </span>
         </Link>
       )}
     </div>

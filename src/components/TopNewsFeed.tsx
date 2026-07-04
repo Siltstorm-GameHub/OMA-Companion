@@ -2,11 +2,11 @@
 import { useRef, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { CalendarDays, Swords, Scroll, Zap, Users, Trophy } from "lucide-react";
+import { CalendarDays, Swords, Scroll, Zap, Users, Trophy, Clapperboard } from "lucide-react";
 
 export type NewsItem = {
   id:    string;
-  icon:  "event" | "lul" | "quest" | "points" | "leaderboard" | "members";
+  icon:  "event" | "lul" | "quest" | "points" | "leaderboard" | "members" | "clip";
   text:  string;
   href?: string;
   accent?: "teal" | "red" | "amber" | "white";
@@ -19,6 +19,7 @@ const ICON_MAP = {
   points:      Zap,
   leaderboard: Trophy,
   members:     Users,
+  clip:        Clapperboard,
 };
 
 const ACCENT_COLOR: Record<string, string> = {

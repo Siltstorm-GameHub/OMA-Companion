@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { collectNominations, finalizeContest, notifyNewContest } from "@/lib/clip-contest";
 
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
 const AUTO_VOTING_DAYS = 14;
 
 export async function GET(req: NextRequest) {
@@ -48,9 +51,17 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: true, results });
   }
 
-  const partners = await prisma.partner.findMany({ where: { isActive: true } });
-  const { nominations, failedChannels } = await collectNominations(monthStart, monthEnd, partners.map((p) => p.twitchLogin));
-  failedChannels.forEach((login) => results.push(`Failed to fetch clips for partner ${login}`));
+  const [partners, linkedUsers] = await Promise.all([
+    prisma.partner.findMany({ where: { isActive: true } }),
+    prisma.user.findMany({ where: { twitchLogin: { not: null } }, select: { twitchLogin: true } }),
+  ]);
+  const channelLogins = [...new Set([
+    ...partners.map((p) => p.twitchLogin),
+    ...linkedUsers.map((u) => u.twitchLogin!),
+  ])];
+
+  const { nominations, failedChannels } = await collectNominations(monthStart, monthEnd, channelLogins);
+  failedChannels.forEach((login) => results.push(`Failed to fetch clips for channel ${login}`));
 
   if (nominations.length === 0) {
     results.push(`No clips found for ${prevMonth}/${prevYear} — skipping contest creation`);
@@ -72,7 +83,7 @@ export async function GET(req: NextRequest) {
       periodEnd: monthEnd,
       votingEndsAt,
       rewardCoins: lastContest?.rewardCoins ?? 500,
-      channelsJson: JSON.stringify(partners.map((p) => p.twitchLogin)),
+      channelsJson: JSON.stringify(channelLogins),
       nominations: { create: nominations },
     },
   });
