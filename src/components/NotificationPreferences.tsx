@@ -3,12 +3,13 @@ import { useState, useEffect } from "react";
 import { Bell, BellOff } from "lucide-react";
 
 type Prefs = {
-  badge:  boolean;
-  quest:  boolean;
-  event:  boolean;
-  points: boolean;
-  clip:   boolean;
-  admin:  boolean;
+  badge:     boolean;
+  quest:     boolean;
+  event:     boolean;
+  points:    boolean;
+  clip:      boolean;
+  admin:     boolean;
+  discordDm: boolean;
 };
 
 const CATEGORIES: { key: keyof Prefs; label: string; desc: string; icon: string }[] = [
@@ -19,6 +20,9 @@ const CATEGORIES: { key: keyof Prefs; label: string; desc: string; icon: string 
   { key: "clip",   label: "Clip des Monats",  desc: "Abstimmung & Ergebnisse",                       icon: "🎬" },
   { key: "admin",  label: "Admin-Nachrichten",desc: "Direkte Nachrichten vom Admin-Team",            icon: "📢" },
 ];
+
+const DISCORD_DM_CATEGORY: { key: keyof Prefs; label: string; desc: string; icon: string } =
+  { key: "discordDm", label: "Discord-Direktnachrichten", desc: "Benachrichtigungen zusätzlich per Discord-DM erhalten", icon: "💬" };
 
 export default function NotificationPreferences() {
   const [prefs, setPrefs]       = useState<Prefs | null>(null);
@@ -60,6 +64,33 @@ export default function NotificationPreferences() {
     );
   }
 
+  const renderToggle = (cat: { key: keyof Prefs; label: string; desc: string; icon: string }) => (
+    <button
+      key={cat.key}
+      onClick={() => toggle(cat.key)}
+      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors text-left"
+    >
+      <span className="text-base shrink-0">{cat.icon}</span>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-white">{cat.label}</p>
+        <p className="text-[11px] text-gray-500 mt-0.5">{cat.desc}</p>
+      </div>
+      <div
+        className="w-9 h-5 rounded-full flex items-center transition-all shrink-0"
+        style={{
+          background: prefs![cat.key] ? "rgba(20,184,166,0.3)" : "rgba(255,255,255,0.08)",
+          justifyContent: prefs![cat.key] ? "flex-end" : "flex-start",
+          padding: "2px",
+        }}
+      >
+        <div
+          className="w-4 h-4 rounded-full transition-all"
+          style={{ background: prefs![cat.key] ? "#2dd4bf" : "#4b5563" }}
+        />
+      </div>
+    </button>
+  );
+
   return (
     <div className="rounded-xl overflow-hidden"
       style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(20,184,166,0.1)" }}>
@@ -73,32 +104,10 @@ export default function NotificationPreferences() {
         {saved  && <span className="text-[11px]" style={{ color: "#2dd4bf" }}>Gespeichert ✓</span>}
       </div>
       <div className="divide-y" style={{ borderColor: "rgba(20,184,166,0.05)" }}>
-        {CATEGORIES.map(cat => (
-          <button
-            key={cat.key}
-            onClick={() => toggle(cat.key)}
-            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors text-left"
-          >
-            <span className="text-base shrink-0">{cat.icon}</span>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white">{cat.label}</p>
-              <p className="text-[11px] text-gray-500 mt-0.5">{cat.desc}</p>
-            </div>
-            <div
-              className="w-9 h-5 rounded-full flex items-center transition-all shrink-0"
-              style={{
-                background: prefs[cat.key] ? "rgba(20,184,166,0.3)" : "rgba(255,255,255,0.08)",
-                justifyContent: prefs[cat.key] ? "flex-end" : "flex-start",
-                padding: "2px",
-              }}
-            >
-              <div
-                className="w-4 h-4 rounded-full transition-all"
-                style={{ background: prefs[cat.key] ? "#2dd4bf" : "#4b5563" }}
-              />
-            </div>
-          </button>
-        ))}
+        {CATEGORIES.map(renderToggle)}
+      </div>
+      <div className="divide-y" style={{ borderColor: "rgba(20,184,166,0.05)", borderTop: "1px solid rgba(20,184,166,0.08)" }}>
+        {renderToggle(DISCORD_DM_CATEGORY)}
       </div>
       <div className="px-4 py-2.5 flex items-center gap-1.5"
         style={{ borderTop: "1px solid rgba(20,184,166,0.08)" }}>

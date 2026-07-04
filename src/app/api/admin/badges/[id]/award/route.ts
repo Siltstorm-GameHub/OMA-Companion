@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { sendPushToUsers } from "@/lib/push";
+import { sendDiscordDMToUsers } from "@/lib/discord-dm";
 
 export async function POST(
   req: NextRequest,
@@ -55,11 +56,13 @@ export async function POST(
 
   const userName = user.name ?? user.username ?? user.id;
 
-  sendPushToUsers([user.id], {
+  const badgePushPayload = {
     title: `${badge.icon} Neues Abzeichen erhalten!`,
     body:  `„${badge.name}" — ${badge.desc}`,
     url:   "/profile",
-  }).catch(() => {});
+  };
+  sendPushToUsers([user.id], badgePushPayload).catch(() => {});
+  sendDiscordDMToUsers([user.id], badgePushPayload).catch(() => {});
 
   return NextResponse.json({ ok: true, userName });
 }

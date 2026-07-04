@@ -75,9 +75,11 @@ export async function notifyNewContest(month: number, year: number, nominationCo
   await sendPushToAll({ title, body, url }).catch(() => {});
 }
 
-export async function notifyContestFinished(month: number, year: number, clipTitle: string | null) {
-  const title = `🏆 Clip des Monats ${MONTH_NAMES[month - 1]} ${year} – Gewinner steht fest!`;
-  const body = clipTitle ? `„${clipTitle}" hat gewonnen. Schau vorbei!` : "Der Gewinner-Clip steht fest. Schau vorbei!";
+export async function notifyContestFinished(month: number, year: number, clipTitle: string | null, winnerCount: number) {
+  const title = `🏆 Clip des Monats ${MONTH_NAMES[month - 1]} ${year} – ${winnerCount > 1 ? "Gewinner stehen fest!" : "Gewinner steht fest!"}`;
+  const body = winnerCount > 1
+    ? `Gleichstand! ${winnerCount} Clips haben gewonnen. Schau vorbei!`
+    : clipTitle ? `„${clipTitle}" hat gewonnen. Schau vorbei!` : "Der Gewinner-Clip steht fest. Schau vorbei!";
   const url = "/clip-des-monats";
 
   const users = await prisma.user.findMany({ select: { id: true } });
@@ -96,12 +98,16 @@ export async function finalizeContest(contestId: string): Promise<string> {
   if (!contest) return `Contest ${contestId} nicht gefunden`;
   if (contest.status !== "voting") return `Contest ${contest.month}/${contest.year} war bereits abgeschlossen`;
 
-  const sorted = [...contest.nominations].sort((a, b) => b._count.votes - a._count.votes);
-  const winner = sorted[0] ?? null;
+  const maxVotes = contest.nominations.reduce((max, n) => Math.max(max, n._count.votes), 0);
+  const winners = contest.nominations.filter((n) => n._count.votes === maxVotes);
 
-  let winnerUserId: string | null = null;
   let message = `Finalized contest ${contest.month}/${contest.year}`;
-  if (winner) {
+  if (winners.length > 1) {
+    message += ` — Gleichstand zwischen ${winners.length} Clips (je ${maxVotes} Stimmen)`;
+  }
+
+  for (const winner of winners) {
+    let winnerUserId: string | null = null;
     if (winner.submittedByUserId) {
       winnerUserId = winner.submittedByUserId;
     } else if (winner.twitchCreatorLogin) {
@@ -143,11 +149,11 @@ export async function finalizeContest(contestId: string): Promise<string> {
 
   await prisma.monthlyClipContest.update({
     where: { id: contest.id },
-    data: { status: "finished", winnerNominationId: winner?.id ?? null },
+    data: { status: "finished", winnerNominationIds: winners.map((w) => w.id) },
   });
 
-  if (winner) {
-    await notifyContestFinished(contest.month, contest.year, winner.clipTitle);
+  if (winners.length > 0) {
+    await notifyContestFinished(contest.month, contest.year, winners[0].clipTitle, winners.length);
   }
 
   return message;

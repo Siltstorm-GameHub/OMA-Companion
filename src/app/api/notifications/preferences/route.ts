@@ -3,13 +3,14 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
 const DEFAULT_PREFS = {
-  badge:  true,
-  quest:  true,
-  event:  true,
-  points: true,
-  clip:   true,
-  admin:  true,
-  server: true,
+  badge:     true,
+  quest:     true,
+  event:     true,
+  points:    true,
+  clip:      true,
+  admin:     true,
+  server:    true,
+  discordDm: true,
 };
 
 export async function GET() {

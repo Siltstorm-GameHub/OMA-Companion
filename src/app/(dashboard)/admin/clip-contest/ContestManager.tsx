@@ -24,7 +24,7 @@ type Contest = {
   status: string;
   rewardCoins: number;
   participationCoins: number;
-  winnerNominationId: string | null;
+  winnerNominationIds: string[];
   votingEndsAt: Date;
   nominations: Nomination[];
   _count: { votes: number };
@@ -95,10 +95,7 @@ export default function ContestManager({ contests }: { contests: Contest[] }) {
       </p>
 
       {items.map((contest) => {
-        const winner = contest.winnerNominationId
-          ? contest.nominations.find((n) => n.id === contest.winnerNominationId)
-          : null;
-        const noAccountWinner = winner && !winner.submittedBy && winner.twitchCreatorLogin;
+        const winners = contest.nominations.filter((n) => contest.winnerNominationIds.includes(n.id));
         const sorted = [...contest.nominations].sort((a, b) => b._count.votes - a._count.votes);
 
         return (
@@ -172,29 +169,39 @@ export default function ContestManager({ contests }: { contests: Contest[] }) {
             </div>
 
             {/* Winner info */}
-            {winner && (
-              <div className={`rounded-xl p-3 flex items-start gap-3 ${
-                noAccountWinner ? "bg-amber-500/10 border border-amber-500/20" : "bg-emerald-500/10 border border-emerald-500/20"
-              }`}>
-                <Trophy className={`w-4 h-4 shrink-0 mt-0.5 ${noAccountWinner ? "text-amber-400" : "text-emerald-400"}`} />
-                <div className="text-sm">
-                  <p className="font-medium text-white">
-                    Gewinner: {winner.clipTitle ?? "Unbekannter Clip"}
-                  </p>
-                  <p className="text-gray-400 text-xs mt-0.5">
-                    {winner.submittedBy?.name ?? winner.submittedBy?.username ?? winner.twitchCreatorLogin ?? "Unbekannt"}
-                    {winner.partnerTwitchLogin && <> · von {winner.partnerTwitchLogin}</>}
-                    {" · "}{winner._count.votes} Stimmen
-                  </p>
-                  {noAccountWinner && (
-                    <p className="text-amber-300 text-xs mt-1">
-                      Twitch-User „{winner.twitchCreatorLogin}" hat kein Community-Konto — keine Münzen vergeben.
-                    </p>
-                  )}
-                </div>
-                <a href={winner.clipUrl} target="_blank" rel="noopener noreferrer" className="ml-auto text-gray-600 hover:text-gray-400">
-                  <ExternalLink className="w-4 h-4" />
-                </a>
+            {winners.length > 0 && (
+              <div className="space-y-2">
+                {winners.length > 1 && (
+                  <p className="text-xs text-amber-300 font-medium">Gleichstand · {winners.length} Gewinner</p>
+                )}
+                {winners.map((winner) => {
+                  const noAccountWinner = !winner.submittedBy && winner.twitchCreatorLogin;
+                  return (
+                    <div key={winner.id} className={`rounded-xl p-3 flex items-start gap-3 ${
+                      noAccountWinner ? "bg-amber-500/10 border border-amber-500/20" : "bg-emerald-500/10 border border-emerald-500/20"
+                    }`}>
+                      <Trophy className={`w-4 h-4 shrink-0 mt-0.5 ${noAccountWinner ? "text-amber-400" : "text-emerald-400"}`} />
+                      <div className="text-sm">
+                        <p className="font-medium text-white">
+                          Gewinner: {winner.clipTitle ?? "Unbekannter Clip"}
+                        </p>
+                        <p className="text-gray-400 text-xs mt-0.5">
+                          {winner.submittedBy?.name ?? winner.submittedBy?.username ?? winner.twitchCreatorLogin ?? "Unbekannt"}
+                          {winner.partnerTwitchLogin && <> · von {winner.partnerTwitchLogin}</>}
+                          {" · "}{winner._count.votes} Stimmen
+                        </p>
+                        {noAccountWinner && (
+                          <p className="text-amber-300 text-xs mt-1">
+                            Twitch-User „{winner.twitchCreatorLogin}" hat kein Community-Konto — keine Münzen vergeben.
+                          </p>
+                        )}
+                      </div>
+                      <a href={winner.clipUrl} target="_blank" rel="noopener noreferrer" className="ml-auto text-gray-600 hover:text-gray-400">
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
+                    </div>
+                  );
+                })}
               </div>
             )}
 
@@ -202,7 +209,7 @@ export default function ContestManager({ contests }: { contests: Contest[] }) {
             <div className="space-y-1">
               {sorted.map((nom, i) => {
                 const name = nom.submittedBy?.name ?? nom.submittedBy?.username ?? nom.twitchCreatorLogin ?? "Unbekannt";
-                const isWinner = nom.id === contest.winnerNominationId;
+                const isWinner = contest.winnerNominationIds.includes(nom.id);
                 return (
                   <div key={nom.id} className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm ${isWinner ? "bg-amber-500/5" : "bg-white/[0.02]"}`}>
                     <span className="text-gray-600 w-4 text-right">{i + 1}.</span>

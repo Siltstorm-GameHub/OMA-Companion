@@ -40,9 +40,9 @@ export default async function ClipDesMonatsPage() {
     },
   });
 
-  const winner = finishedContest?.winnerNominationId
-    ? finishedContest.nominations.find((n) => n.id === finishedContest.winnerNominationId) ?? null
-    : null;
+  const winners = finishedContest
+    ? finishedContest.nominations.filter((n) => finishedContest.winnerNominationIds.includes(n.id))
+    : [];
 
   let userVoteNominationId: string | null = null;
   if (userId && activeContest) {
@@ -52,44 +52,54 @@ export default async function ClipDesMonatsPage() {
     userVoteNominationId = vote?.nominationId ?? null;
   }
 
-  const winnerCredit = winner ? clipCredit(winner) : null;
-
   return (
     <div className="p-5 sm:p-6 max-w-3xl mx-auto space-y-8 animate-fade-in">
 
       {/* ── Gewinner des Vormonats ─────────────────────────────────────── */}
-      {winner && finishedContest && (
+      {winners.length > 0 && finishedContest && (
         <section className="space-y-3">
           <div className="flex items-center gap-2">
             <Trophy className="w-5 h-5 text-amber-400" />
             <h2 className="text-lg font-bold text-white">
               Clip des Monats – {MONTH_NAMES[finishedContest.month - 1]} {finishedContest.year}
             </h2>
+            {winners.length > 1 && (
+              <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-500/15 text-amber-300 border border-amber-500/20">
+                Gleichstand · {winners.length} Gewinner
+              </span>
+            )}
           </div>
-          <div className="rounded-2xl overflow-hidden border border-amber-500/20 bg-amber-500/5">
-            <TwitchClipEmbed
-              clipUrl={winner.clipUrl}
-              thumbnailUrl={winner.thumbnailUrl}
-              title={winner.clipTitle ?? "Gewinner-Clip"}
-              parent={embedParent}
-              overlay={
-                <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-amber-500 text-black text-xs font-bold px-2 py-1 rounded-full">
-                  <Trophy className="w-3 h-3" /> Gewinner
+          <div className={`grid gap-4 ${winners.length > 1 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
+            {winners.map((winner) => {
+              const credit = clipCredit(winner);
+              return (
+                <div key={winner.id} className="rounded-2xl overflow-hidden border border-amber-500/20 bg-amber-500/5">
+                  <TwitchClipEmbed
+                    clipUrl={winner.clipUrl}
+                    thumbnailUrl={winner.thumbnailUrl}
+                    title={winner.clipTitle ?? "Gewinner-Clip"}
+                    parent={embedParent}
+                    overlay={
+                      <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-amber-500 text-black text-xs font-bold px-2 py-1 rounded-full">
+                        <Trophy className="w-3 h-3" /> Gewinner
+                      </div>
+                    }
+                  />
+                  <div className="px-4 py-3 border-t border-amber-500/10">
+                    <p className="text-white font-semibold">{winner.clipTitle ?? "Unbekannter Clip"}</p>
+                    <p className="text-sm text-gray-400 mt-0.5">
+                      Kanal: <span className="text-[#9146ff]">{credit.channel}</span>
+                      {credit.creator && (
+                        <> · Clip von <span className="text-amber-300">{credit.creator}</span></>
+                      )}
+                      {finishedContest.rewardCoins > 0 && (
+                        <> · <span className="text-amber-400">{finishedContest.rewardCoins} Münzen</span> gewonnen</>
+                      )}
+                    </p>
+                  </div>
                 </div>
-              }
-            />
-            <div className="px-4 py-3 border-t border-amber-500/10">
-              <p className="text-white font-semibold">{winner.clipTitle ?? "Unbekannter Clip"}</p>
-              <p className="text-sm text-gray-400 mt-0.5">
-                Kanal: <span className="text-[#9146ff]">{winnerCredit!.channel}</span>
-                {winnerCredit!.creator && (
-                  <> · Clip von <span className="text-amber-300">{winnerCredit!.creator}</span></>
-                )}
-                {finishedContest.rewardCoins > 0 && (
-                  <> · <span className="text-amber-400">{finishedContest.rewardCoins} Münzen</span> gewonnen</>
-                )}
-              </p>
-            </div>
+              );
+            })}
           </div>
         </section>
       )}
