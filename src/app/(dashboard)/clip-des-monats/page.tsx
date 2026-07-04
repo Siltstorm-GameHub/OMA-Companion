@@ -103,10 +103,31 @@ export default async function ClipDesMonatsPage() {
                 Abstimmung – {MONTH_NAMES[activeContest.month - 1]} {activeContest.year}
               </h2>
               <p className="text-sm text-gray-500 mt-0.5">
-                {activeContest.nominations.length} Clips · {activeContest.rewardCoins} Münzen für den Gewinner
+                {activeContest.nominations.length} Clips zur Auswahl
               </p>
             </div>
           </div>
+
+          {/* Belohnungs-Kachel */}
+          {(activeContest.participationCoins > 0 || activeContest.rewardCoins > 0) && (
+            <div className={`glass rounded-2xl p-4 grid ${
+              activeContest.participationCoins > 0 && activeContest.rewardCoins > 0 ? "grid-cols-2 divide-x divide-white/[0.06]" : "grid-cols-1"
+            }`}>
+              {activeContest.participationCoins > 0 && (
+                <div className="text-center px-2">
+                  <p className="text-2xl font-black text-[#9146ff] tabular-nums">{activeContest.participationCoins}</p>
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wider mt-1">Münzen fürs Abstimmen</p>
+                </div>
+              )}
+              {activeContest.rewardCoins > 0 && (
+                <div className="text-center px-2">
+                  <p className="text-2xl font-black text-amber-400 tabular-nums">{activeContest.rewardCoins}</p>
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wider mt-1">Münzen für den Gewinner</p>
+                </div>
+              )}
+            </div>
+          )}
+
           <ClipVotingClient
             contestId={activeContest.id}
             nominations={activeContest.nominations.map((n) => ({

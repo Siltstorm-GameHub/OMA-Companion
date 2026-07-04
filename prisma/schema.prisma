@@ -404,7 +404,8 @@ model MonthlyClipContest {
   votingEndsAt DateTime        @default(now()) // Wann die Abstimmung automatisch endet/ausgewertet wird
   channelsJson String?         // JSON: string[] — abgefragte Twitch-Kanäle
   status      String           @default("voting") // voting | finished
-  rewardCoins Int              @default(500)
+  participationCoins Int       @default(10)  // Münzen für jeden, der abstimmt
+  rewardCoins Int              @default(500) // Münzen für den Gewinner-Clip
   winnerNominationId String?
   createdAt   DateTime         @default(now())
   nominations ClipNomination[]
