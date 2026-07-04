@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
 
   const lastContest = await prisma.monthlyClipContest.findFirst({
     orderBy: { createdAt: "desc" },
-    select: { rewardCoins: true },
+    select: { rewardCoins: true, participationCoins: true },
   });
 
   const votingEndsAt = new Date(monthEnd.getTime() + AUTO_VOTING_DAYS * 24 * 60 * 60 * 1000);
@@ -83,6 +83,7 @@ export async function GET(req: NextRequest) {
       periodEnd: monthEnd,
       votingEndsAt,
       rewardCoins: lastContest?.rewardCoins ?? 500,
+      participationCoins: lastContest?.participationCoins ?? 10,
       channelsJson: JSON.stringify(channelLogins),
       nominations: { create: nominations },
     },

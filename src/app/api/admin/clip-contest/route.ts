@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
 
   const lastContest = await prisma.monthlyClipContest.findFirst({
     orderBy: { createdAt: "desc" },
-    select: { rewardCoins: true },
+    select: { rewardCoins: true, participationCoins: true },
   });
 
   const votingEndsAt = new Date(Date.now() + duration * 24 * 60 * 60 * 1000);
@@ -67,6 +67,7 @@ export async function POST(req: NextRequest) {
       periodEnd: end,
       votingEndsAt,
       rewardCoins: lastContest?.rewardCoins ?? 500,
+      participationCoins: lastContest?.participationCoins ?? 10,
       channelsJson: JSON.stringify(twitchLogins),
       nominations: { create: nominations },
     },
@@ -79,12 +80,15 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   await requireRole("moderator");
-  const { contestId, rewardCoins } = await req.json();
+  const { contestId, rewardCoins, participationCoins } = await req.json();
   if (!contestId) return NextResponse.json({ error: "contestId fehlt" }, { status: 400 });
 
   const updated = await prisma.monthlyClipContest.update({
     where: { id: contestId },
-    data: { rewardCoins },
+    data: {
+      ...(rewardCoins !== undefined && { rewardCoins }),
+      ...(participationCoins !== undefined && { participationCoins }),
+    },
   });
   return NextResponse.json(updated);
 }

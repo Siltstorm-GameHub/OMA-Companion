@@ -23,6 +23,7 @@ type Contest = {
   year: number;
   status: string;
   rewardCoins: number;
+  participationCoins: number;
   winnerNominationId: string | null;
   votingEndsAt: Date;
   nominations: Nomination[];
@@ -37,20 +38,27 @@ export default function ContestManager({ contests }: { contests: Contest[] }) {
   const [rewardInputs, setRewardInputs] = useState<Record<string, string>>(
     Object.fromEntries(contests.map((c) => [c.id, String(c.rewardCoins)]))
   );
+  const [participationInputs, setParticipationInputs] = useState<Record<string, string>>(
+    Object.fromEntries(contests.map((c) => [c.id, String(c.participationCoins)]))
+  );
 
-  async function saveReward(contestId: string) {
-    const val = parseInt(rewardInputs[contestId] ?? "500");
-    if (isNaN(val) || val < 0) { toast.error("Ungültiger Wert"); return; }
+  async function saveRewards(contestId: string) {
+    const rewardCoins = parseInt(rewardInputs[contestId] ?? "500");
+    const participationCoins = parseInt(participationInputs[contestId] ?? "10");
+    if (isNaN(rewardCoins) || rewardCoins < 0 || isNaN(participationCoins) || participationCoins < 0) {
+      toast.error("Ungültiger Wert");
+      return;
+    }
     setSaving(contestId);
     const res = await fetch("/api/admin/clip-contest", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contestId, rewardCoins: val }),
+      body: JSON.stringify({ contestId, rewardCoins, participationCoins }),
     });
     setSaving(null);
     if (res.ok) {
-      setItems((prev) => prev.map((c) => c.id === contestId ? { ...c, rewardCoins: val } : c));
-      toast.success("Belohnung gespeichert");
+      setItems((prev) => prev.map((c) => c.id === contestId ? { ...c, rewardCoins, participationCoins } : c));
+      toast.success("Belohnungen gespeichert");
     } else {
       toast.error("Fehler beim Speichern");
     }
@@ -130,20 +138,33 @@ export default function ContestManager({ contests }: { contests: Contest[] }) {
               </div>
             </div>
 
-            {/* Reward input */}
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-gray-500 w-28 shrink-0">Münzen für Sieger</label>
-              <input
-                type="number"
-                min={0}
-                value={rewardInputs[contest.id] ?? contest.rewardCoins}
-                onChange={(e) => setRewardInputs((p) => ({ ...p, [contest.id]: e.target.value }))}
-                className="w-24 rounded-lg px-2 py-1 text-sm text-white bg-white/[0.05] border border-white/[0.1] outline-none focus:border-purple-500/40"
-              />
+            {/* Reward-Kachel: Teilnahme + Sieger */}
+            <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3 flex items-center gap-4 flex-wrap">
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-gray-500">Münzen fürs Abstimmen</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={participationInputs[contest.id] ?? contest.participationCoins}
+                  onChange={(e) => setParticipationInputs((p) => ({ ...p, [contest.id]: e.target.value }))}
+                  className="w-20 rounded-lg px-2 py-1 text-sm text-white bg-white/[0.05] border border-white/[0.1] outline-none focus:border-purple-500/40"
+                />
+              </div>
+              <div className="w-px h-6 bg-white/[0.08]" />
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-gray-500">Münzen für Sieger</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={rewardInputs[contest.id] ?? contest.rewardCoins}
+                  onChange={(e) => setRewardInputs((p) => ({ ...p, [contest.id]: e.target.value }))}
+                  className="w-24 rounded-lg px-2 py-1 text-sm text-white bg-white/[0.05] border border-white/[0.1] outline-none focus:border-purple-500/40"
+                />
+              </div>
               <button
-                onClick={() => saveReward(contest.id)}
+                onClick={() => saveRewards(contest.id)}
                 disabled={saving === contest.id}
-                className="flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium bg-purple-500/15 border border-purple-500/20 text-purple-300 hover:bg-purple-500/25 disabled:opacity-50 transition-colors"
+                className="flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-medium bg-purple-500/15 border border-purple-500/20 text-purple-300 hover:bg-purple-500/25 disabled:opacity-50 transition-colors ml-auto"
               >
                 {saving === contest.id ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
                 Speichern
