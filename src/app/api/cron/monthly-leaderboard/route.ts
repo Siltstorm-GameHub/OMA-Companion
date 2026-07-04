@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { isBotMessageEnabled, getBotMessageText, fillPlaceholders } from "@/lib/bot-config";
-import { sendDiscordMessage } from "@/lib/discord-rest";
+import { dispatchNotification } from "@/lib/notify-dispatch";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,15 +13,6 @@ function isAuthorized(req: NextRequest): boolean {
 export async function GET(req: NextRequest) {
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  if (!await isBotMessageEnabled("leaderboard")) {
-    return NextResponse.json({ ok: true, skipped: "disabled" });
-  }
-
-  const channelId = process.env.DISCORD_NEWS_CHANNEL_ID;
-  if (!channelId) {
-    return NextResponse.json({ error: "DISCORD_NEWS_CHANNEL_ID nicht gesetzt" }, { status: 500 });
   }
 
   const now              = new Date();
@@ -41,16 +31,11 @@ export async function GET(req: NextRequest) {
     take:     10,
   });
 
-  const rawText   = await getBotMessageText("leaderboard");
-  const introText = fillPlaceholders(rawText, { "{month}": monthName });
-
   if (!raw.length) {
-    await sendDiscordMessage(channelId, {
-      color:       0x6b7280,
-      title:       `🏆 Monats-Rangliste · ${monthName}`,
-      description: `${introText}\n\n_Im vergangenen Monat wurden keine Punkte vergeben._`,
-      footer:      { text: "OMA Companion · Leaderboard" },
-    });
+    await dispatchNotification("leaderboard", {
+      users: [],
+      placeholders: { "{month}": monthName, "{lines}": "_Im vergangenen Monat wurden keine Punkte vergeben._" },
+    }).catch(() => {});
     return NextResponse.json({ ok: true, entries: 0 });
   }
 
@@ -72,13 +57,11 @@ export async function GET(req: NextRequest) {
 
   const totalPts = raw.reduce((s, r) => s + (r._sum.amount ?? 0), 0);
 
-  await sendDiscordMessage(channelId, {
-    color:       0xf59e0b,
-    title:       `🏆 Monats-Rangliste · ${monthName}`,
-    description: `${introText}\n\n${lines.join("\n")}`,
-    fields:      [{ name: "Community gesamt", value: `${totalPts.toLocaleString("de-DE")} Pts verdient`, inline: true }],
-    footer:      { text: "OMA Companion · Leaderboard" },
-  });
+  await dispatchNotification("leaderboard", {
+    users: [],
+    placeholders: { "{month}": monthName, "{lines}": lines.join("\n") },
+    discordFields: [{ name: "Community gesamt", value: `${totalPts.toLocaleString("de-DE")} Pts verdient`, inline: true }],
+  }).catch(() => {});
 
   return NextResponse.json({ ok: true, entries: raw.length });
 }

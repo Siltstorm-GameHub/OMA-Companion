@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { sendPushToAll } from "@/lib/push";
-import { sendDiscordDMToAll } from "@/lib/discord-dm";
+import { sendDiscordDMToAll } from "@/lib/notify-dispatch";
 
 export async function GET() {
   await requireRole("admin");
@@ -46,13 +46,10 @@ export async function POST(req: NextRequest) {
   });
 
   if (sendPush && isActive) {
-    const payload = {
-      title: `📢 ${title.trim()}`,
-      body:  content.trim().slice(0, 120),
-      url:   "/dashboard",
-    };
-    sendPushToAll(payload).catch(() => {});
-    sendDiscordDMToAll(payload).catch(() => {});
+    const pushTitle = `📢 ${title.trim()}`;
+    const pushBody  = content.trim().slice(0, 120);
+    sendPushToAll({ title: pushTitle, body: pushBody, url: "/dashboard" }).catch(() => {});
+    sendDiscordDMToAll({ title: pushTitle, description: pushBody, url: "/dashboard", color: 0x2dd4bf }).catch(() => {});
   }
 
   return NextResponse.json(message, { status: 201 });

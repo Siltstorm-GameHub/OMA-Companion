@@ -108,8 +108,8 @@ export async function PATCH(
   }
 
   // Discord-Rolle synchronisieren wenn rankPoints sich geändert haben
-  if (body.rankPoints !== undefined && user.discordId) {
-    syncDiscordRole(user.discordId, user.rankPoints, updated?.rankPoints ?? user.rankPoints).catch(() => {});
+  if (body.rankPoints !== undefined) {
+    syncDiscordRole(userId, user.discordId, user.rankPoints, updated?.rankPoints ?? user.rankPoints).catch(() => {});
   }
 
   return NextResponse.json({ ok: true, user: updated });

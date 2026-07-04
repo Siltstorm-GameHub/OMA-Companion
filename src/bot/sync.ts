@@ -1,5 +1,39 @@
 import { prisma } from "@/lib/prisma";
-import { notifyEventStarted, notifyEventEnded, notifyTournamentStarted } from "./notify";
+import { dispatchNotification } from "@/lib/notify-dispatch";
+import { sendDiscordMessage, resolveChannelId } from "@/lib/discord-rest";
+
+const FORMAT_LABELS: Record<string, string> = {
+  single_elimination: "K.O.-System",
+  double_elimination: "Double Elimination",
+  round_robin:        "Jeder gegen Jeden",
+  liga:               "Liga",
+  ffa:                "Free for All",
+  coop_stats:         "Kooperativ",
+};
+
+async function notifyTournamentStarted(tournament: {
+  format: string;
+  event: { title: string; game: string | null };
+  participants: { user: { username: string | null; name: string | null; discordId: string | null } }[];
+}) {
+  const channelId = resolveChannelId();
+  if (!channelId) return;
+
+  const mentions = tournament.participants
+    .map(p => p.user.discordId ? `<@${p.user.discordId}>` : (p.user.username ?? p.user.name ?? "?"))
+    .join(" ");
+
+  await sendDiscordMessage(channelId, {
+    color: 0xf43f5e,
+    title: `⚔️ Turnier gestartet: ${tournament.event.title}`,
+    fields: [
+      { name: "🎮 Spiel",      value: tournament.event.game ?? "–",                         inline: true },
+      { name: "📋 Format",     value: FORMAT_LABELS[tournament.format] ?? tournament.format, inline: true },
+      { name: "👥 Teilnehmer", value: String(tournament.participants.length),                inline: true },
+    ],
+    footer: { text: "OMA Companion · Turniere" },
+  }, mentions || undefined).catch(() => {});
+}
 
 // Hilfsfunktion: Event anhand discordEventId finden (nur WebApp-Events haben eine discordEventId)
 async function findEventByDiscordId(discordEventId: string) {
@@ -19,7 +53,12 @@ export async function updateEventStatus(discordEventId: string, status: string) 
     await prisma.event.update({ where: { id: event.id }, data: { status } });
 
     if (status === "active") {
-      await notifyEventStarted({ title: event.title, game: event.game, discordChannelId: event.discordChannelId });
+      await dispatchNotification("event_started", {
+        users: [],
+        placeholders: { "{eventName}": event.title, "{game}": event.game ?? "–" },
+        discordChannelIdOverride: event.discordChannelId,
+        discordContent: process.env.DISCORD_EVENTS_PING ?? "@here",
+      }).catch(() => {});
 
       const eventWithTournament = await prisma.event.findUnique({
         where:  { id: event.id },
@@ -41,7 +80,12 @@ export async function updateEventStatus(discordEventId: string, status: string) 
 
     if (status === "finished") {
       const attendeeCount = await prisma.eventRegistration.count({ where: { eventId: event.id } });
-      await notifyEventEnded({ title: event.title, discordChannelId: event.discordChannelId }, attendeeCount);
+      await dispatchNotification("event_ended", {
+        users: [],
+        placeholders: { "{eventName}": event.title, "{attendeeCount}": String(attendeeCount) },
+        discordChannelIdOverride: event.discordChannelId,
+        discordFields: [{ name: "👥 Teilnehmer", value: String(attendeeCount), inline: true }],
+      }).catch(() => {});
     }
   } catch (err) {
     console.error("Fehler beim Status-Update:", err);

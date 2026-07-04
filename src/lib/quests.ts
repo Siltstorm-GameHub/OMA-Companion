@@ -1,6 +1,5 @@
 import { prisma } from "./prisma";
-import { sendPushToUsers } from "./push";
-import { createNotification } from "./notifications";
+import { dispatchNotification } from "./notify-dispatch";
 
 export type QuestType = "VOICE_MINUTES" | "MESSAGES" | "EVENT_ATTEND" | "TOURNAMENT";
 
@@ -129,10 +128,10 @@ export async function updateQuestProgress(
 
       completed.push({ title: quest.title, reward: quest.reward });
 
-      const questTitle = `⭐ Quest erfüllt: ${quest.title}`;
-      const questBody  = `Du erhältst ${quest.reward} Münzen!`;
-      sendPushToUsers([userId], { title: questTitle, body: questBody, url: "/quests" }).catch(() => {});
-      createNotification(userId, { type: "quest", title: questTitle, body: questBody, url: "/quests" }).catch(() => {});
+      dispatchNotification("quest_completed", {
+        users: [userId],
+        placeholders: { "{questTitle}": quest.title, "{reward}": String(quest.reward) },
+      }).catch(() => {});
     }
   }
 

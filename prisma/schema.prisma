@@ -610,6 +610,30 @@ model BotConfig {
   updatedAt DateTime @updatedAt
 }
 
+// ── Vereinheitlichte Notification-Registry ──────────────────────────────────
+
+model NotificationRule {
+  key         String @id // z.B. "event_new", "quest_completed"
+  label       String
+  description String
+  category    String // events | tournaments | quests | badges | clips | rank | system
+
+  pushEnabled        Boolean @default(true)
+  inAppEnabled       Boolean @default(true)
+  discordDmEnabled   Boolean @default(false)
+  discordChanEnabled Boolean @default(true)
+  discordChannelId   String? // leer = DISCORD_NEWS_CHANNEL_ID
+
+  titleTemplate String
+  bodyTemplate  String
+  urlTemplate   String?
+
+  reminderHoursBefore Int? // nur für "event_reminder" relevant
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 // ── Level-Up-League ─────────────────────────────────────────────────────────
 
 model LulSeason {

@@ -98,8 +98,8 @@ export async function awardPoints(userId: string, rule: PointRule, customReason?
   const updated     = results[results.length - 1] as { id: string; points: number; rankPoints: number };
 
   // Discord-Rolle synchronisieren wenn rankPoints sich geändert haben
-  if (givesRankPoints && before?.discordId) {
-    syncDiscordRole(before.discordId, rankPointsBefore, updated.rankPoints).catch(() => {});
+  if (givesRankPoints) {
+    syncDiscordRole(userId, before?.discordId, rankPointsBefore, updated.rankPoints).catch(() => {});
   }
 
   return { transaction, user: updated, pointsBefore };

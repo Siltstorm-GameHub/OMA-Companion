@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getTwitchUsers, getPartnerClips } from "@/lib/twitch";
-import { createNotificationForUsers } from "@/lib/notifications";
-import { sendPushToAll } from "@/lib/push";
+import { dispatchNotification } from "@/lib/notify-dispatch";
 
 const MONTH_NAMES = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
 
@@ -66,25 +65,33 @@ export async function collectNominations(periodStart: Date, periodEnd: Date, twi
 }
 
 export async function notifyNewContest(month: number, year: number, nominationCount: number) {
-  const title = `🎬 Clip des Monats – ${MONTH_NAMES[month - 1]} ${year}`;
-  const body = `Die Abstimmung läuft! ${nominationCount} Clips stehen zur Wahl.`;
-  const url = "/clip-des-monats";
-
   const users = await prisma.user.findMany({ select: { id: true } });
-  await createNotificationForUsers(users.map((u) => u.id), { type: "clip", title, body, url }).catch(() => {});
-  await sendPushToAll({ title, body, url }).catch(() => {});
+  await dispatchNotification("clip_started", {
+    users: users.map((u) => u.id),
+    placeholders: {
+      "{month}": MONTH_NAMES[month - 1],
+      "{year}": String(year),
+      "{nominationCount}": String(nominationCount),
+    },
+  }).catch(() => {});
 }
 
 export async function notifyContestFinished(month: number, year: number, clipTitle: string | null, winnerCount: number) {
-  const title = `🏆 Clip des Monats ${MONTH_NAMES[month - 1]} ${year} – ${winnerCount > 1 ? "Gewinner stehen fest!" : "Gewinner steht fest!"}`;
-  const body = winnerCount > 1
+  const resultHeadline = winnerCount > 1 ? "Gewinner stehen fest!" : "Gewinner steht fest!";
+  const resultText = winnerCount > 1
     ? `Gleichstand! ${winnerCount} Clips haben gewonnen. Schau vorbei!`
     : clipTitle ? `„${clipTitle}" hat gewonnen. Schau vorbei!` : "Der Gewinner-Clip steht fest. Schau vorbei!";
-  const url = "/clip-des-monats";
 
   const users = await prisma.user.findMany({ select: { id: true } });
-  await createNotificationForUsers(users.map((u) => u.id), { type: "clip", title, body, url }).catch(() => {});
-  await sendPushToAll({ title, body, url }).catch(() => {});
+  await dispatchNotification("clip_finished", {
+    users: users.map((u) => u.id),
+    placeholders: {
+      "{month}": MONTH_NAMES[month - 1],
+      "{year}": String(year),
+      "{resultHeadline}": resultHeadline,
+      "{resultText}": resultText,
+    },
+  }).catch(() => {});
 }
 
 export async function finalizeContest(contestId: string): Promise<string> {

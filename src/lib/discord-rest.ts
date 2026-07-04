@@ -13,6 +13,7 @@ function authHeader() {
 export interface DiscordEmbed {
   title?:       string;
   description?: string;
+  url?:         string;
   color?:       number;
   fields?:      { name: string; value: string; inline?: boolean }[];
   footer?:      { text: string };
@@ -39,6 +40,43 @@ export async function sendDiscordMessage(
     const text = await res.text();
     throw new Error(`Discord API ${res.status}: ${text}`);
   }
+}
+
+/** Direktnachricht an einen einzelnen Discord-User senden (ohne Präferenz-Prüfung). */
+export async function sendDiscordDM(
+  discordId: string,
+  embed: DiscordEmbed,
+  content?: string,
+): Promise<void> {
+  try {
+    const dmRes = await fetch(`${BASE}/users/@me/channels`, {
+      method:  "POST",
+      headers: { ...authHeader(), "Content-Type": "application/json" },
+      body:    JSON.stringify({ recipient_id: discordId }),
+    });
+    if (!dmRes.ok) return;
+    const channel = (await dmRes.json()) as { id?: string };
+    if (!channel.id) return;
+    await sendDiscordMessage(channel.id, embed, content);
+  } catch {
+    // DMs geschlossen, kein Bot-Token o.ä. — ignorieren
+  }
+}
+
+/** Löscht eine Discord-Nachricht (z.B. Event-Ankündigung beim Löschen des Events). */
+export async function deleteDiscordMessage(channelId: string, messageId: string): Promise<void> {
+  const res = await fetch(`${BASE}/channels/${channelId}/messages/${messageId}`, {
+    method:  "DELETE",
+    headers: authHeader(),
+  });
+  if (!res.ok && res.status !== 404) {
+    console.error("[Discord] Nachricht löschen fehlgeschlagen:", res.status);
+  }
+}
+
+/** Kanal-ID auflösen: Override (z.B. event-/regel-spezifisch) → globaler News-Kanal. */
+export function resolveChannelId(override?: string | null): string | undefined {
+  return override ?? process.env.DISCORD_NEWS_CHANNEL_ID;
 }
 
 /** Datum auf Deutsch formatieren (Europe/Berlin) */

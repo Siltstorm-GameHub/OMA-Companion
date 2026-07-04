@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { isBotMessageEnabled, getBotMessageText, fillPlaceholders } from "@/lib/bot-config";
+import { dispatchNotification } from "@/lib/notify-dispatch";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -31,24 +31,13 @@ export async function POST(req: NextRequest) {
     prisma.lulSuggestion.create({ data: { purchaseId, userId, game: game.trim(), note: note?.trim() || null } }),
   ]);
 
-  // Discord-Nachricht wenn Channel konfiguriert und aktiviert
-  const channelId = process.env.DISCORD_LUL_CHANNEL_ID;
-  const token     = process.env.DISCORD_BOT_TOKEN;
-  if (channelId && token && await isBotMessageEnabled("lul_suggest")) {
-    const rawText = await getBotMessageText("lul_suggest");
-    const noteStr = note?.trim() ? `\n**Notiz:** ${note.trim()}` : "";
-    const content = fillPlaceholders(rawText, {
-      "{username}": displayName,
-      "{game}":     game.trim(),
-      "{note}":     noteStr,
-    });
-
-    await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
-      method:  "POST",
-      headers: { Authorization: `Bot ${token}`, "Content-Type": "application/json" },
-      body:    JSON.stringify({ content }),
-    });
-  }
+  // Discord-Nachricht im konfigurierten LUL-Kanal (fällt sonst auf den News-Kanal zurück)
+  const noteStr = note?.trim() ? `\n**Notiz:** ${note.trim()}` : "";
+  await dispatchNotification("lul_suggest", {
+    users: [],
+    placeholders: { "{username}": displayName, "{game}": game.trim(), "{note}": noteStr },
+    discordChannelIdOverride: process.env.DISCORD_LUL_CHANNEL_ID,
+  }).catch(() => {});
 
   return NextResponse.json({ ok: true });
 }

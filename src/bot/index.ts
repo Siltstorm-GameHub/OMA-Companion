@@ -5,7 +5,6 @@ import {
 } from "discord.js";
 import { updateEventStatus, syncAttendee } from "./sync";
 import { trackVoice, checkpointVoice, trackMessage, handleMemberJoin, trackReaction, trackInvite } from "./activity";
-import { setClient } from "./notify";
 import { processPendingPolls } from "./polls";
 import { prisma } from "@/lib/prisma";
 
@@ -40,7 +39,6 @@ client.once(Events.ClientReady, async (c) => {
   });
   // ─────────────────────────────────────────────────────────────────────────
 
-  setClient(client);
   schedulePollChecker(client);
   // Geburtstage, Event-Erinnerungen und Monats-Rangliste laufen jetzt
   // zuverlässig als Vercel Cron Jobs — nicht mehr im Bot nötig.

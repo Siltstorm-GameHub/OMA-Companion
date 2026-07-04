@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/roles";
 import { DailyMessagePanel } from "./DailyMessagePanel";
-import AdminNotificationsPanel from "../notifications/AdminNotificationsPanel";
 
 export default async function DailyMessageAdminPage() {
   await requireRole("admin");
@@ -26,13 +25,6 @@ export default async function DailyMessageAdminPage() {
           📢 Mitteilungen (Banner)
         </h2>
         <DailyMessagePanel messages={serialized} />
-      </section>
-
-      <section>
-        <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-4">
-          🔔 In-App-Benachrichtigungen
-        </h2>
-        <AdminNotificationsPanel />
       </section>
     </div>
   );

@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { sendPushToUsers } from "@/lib/push";
-import { sendDiscordDMToUsers } from "@/lib/discord-dm";
+import { dispatchNotification } from "@/lib/notify-dispatch";
 
 export async function POST(
   req: NextRequest,
@@ -56,13 +55,10 @@ export async function POST(
 
   const userName = user.name ?? user.username ?? user.id;
 
-  const badgePushPayload = {
-    title: `${badge.icon} Neues Abzeichen erhalten!`,
-    body:  `„${badge.name}" — ${badge.desc}`,
-    url:   "/profile",
-  };
-  sendPushToUsers([user.id], badgePushPayload).catch(() => {});
-  sendDiscordDMToUsers([user.id], badgePushPayload).catch(() => {});
+  dispatchNotification("badge_awarded", {
+    users: [user.id],
+    placeholders: { "{badgeIcon}": badge.icon, "{badgeName}": badge.name, "{badgeDesc}": badge.desc },
+  }).catch(() => {});
 
   return NextResponse.json({ ok: true, userName });
 }

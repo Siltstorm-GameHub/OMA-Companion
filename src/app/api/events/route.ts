@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { createDiscordScheduledEvent, announceNewEvent } from "@/lib/discord-events";
-import { sendPushToAll } from "@/lib/push";
-import { sendDiscordDMToAll } from "@/lib/discord-dm";
+import { dispatchNotification } from "@/lib/notify-dispatch";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -134,14 +133,17 @@ export async function POST(req: NextRequest) {
     event.discordMessageId = discordMessageId;
   }
 
-  // Push-Benachrichtigung an alle Subscriber
-  const eventPushPayload = {
-    title: `🎮 Neues Event: ${event.title}`,
-    body:  event.game ? `Spiel: ${event.game}` : "Jetzt anmelden!",
-    url:   "/events",
-  };
-  sendPushToAll(eventPushPayload).catch(() => {});
-  sendDiscordDMToAll(eventPushPayload).catch(() => {});
+  // Push + In-App + Discord-DM an alle User (Discord-Kanal-Post übernimmt bereits announceNewEvent oben, inkl. Coverbild)
+  const allUsers = await prisma.user.findMany({ select: { id: true } });
+  dispatchNotification("event_new", {
+    users: allUsers.map((u) => u.id),
+    placeholders: {
+      "{eventName}": event.title,
+      "{game}":      event.game ?? "–",
+      "{date}":      event.startAt.toLocaleString("de-DE", { weekday: "long", day: "2-digit", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" }),
+    },
+    skipDiscordChannel: true,
+  }).catch(() => {});
 
   return NextResponse.json(event, { status: 201 });
 }
