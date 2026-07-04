@@ -5,10 +5,19 @@ import { getLiveStreams } from "@/lib/twitch";
 export const revalidate = 60;
 
 export async function GET() {
-  const users = await prisma.user.findMany({
-    where: { twitchLogin: { not: null } },
-    select: { id: true, name: true, username: true, image: true, twitchLogin: true },
-  });
+  const [allUsers, partners] = await Promise.all([
+    prisma.user.findMany({
+      where: { twitchLogin: { not: null } },
+      select: { id: true, name: true, username: true, image: true, twitchLogin: true },
+    }),
+    prisma.partner.findMany({
+      where: { isActive: true },
+      select: { twitchLogin: true },
+    }),
+  ]);
+
+  const partnerLogins = new Set(partners.map((p) => p.twitchLogin.toLowerCase()));
+  const users = allUsers.filter((u) => !partnerLogins.has(u.twitchLogin!.toLowerCase()));
 
   if (users.length === 0) return NextResponse.json([]);
 
