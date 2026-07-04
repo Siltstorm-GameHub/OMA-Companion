@@ -2,23 +2,10 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Send, Users, X, ChevronDown, Check, Smartphone, Bell, MessageSquare, Hash } from "lucide-react";
 import Image from "next/image";
+import { PAGE_LINKS } from "@/lib/page-links";
 
 type UserResult = { id: string; name: string | null; username: string | null; image: string | null };
 type SendResult  = { ok: boolean; sent?: Record<string, number>; error?: string };
-
-const PAGE_LINKS: { label: string; url: string }[] = [
-  { label: "Dashboard",        url: "/dashboard" },
-  { label: "Events",           url: "/events" },
-  { label: "Leaderboard",      url: "/leaderboard" },
-  { label: "Shop",             url: "/shop" },
-  { label: "Profil",           url: "/profile" },
-  { label: "Level-Up-League",  url: "/lul" },
-  { label: "Punkte-System",    url: "/points" },
-  { label: "Quests",           url: "/quests" },
-  { label: "Clip des Monats",  url: "/clip-des-monats" },
-  { label: "Spendenpool",      url: "/donations" },
-  { label: "Feed",             url: "/feed" },
-];
 
 export default function BroadcastPanel() {
   const [mode, setMode]             = useState<"all" | "user">("all");
