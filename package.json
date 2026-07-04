@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma db push --accept-data-loss && prisma generate && npx tsx scripts/seed-notification-rules.ts && npx tsx scripts/backfill-event-notification-flags.ts && next build",
+    "build": "prisma db push --accept-data-loss && prisma generate && npx tsx scripts/seed-notification-rules.ts && next build",
     "postinstall": "prisma generate",
     "start": "next start",
     "lint": "eslint",
