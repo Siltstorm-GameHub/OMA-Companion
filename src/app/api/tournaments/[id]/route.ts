@@ -14,6 +14,7 @@ const FORMAT_LABELS: Record<string, string> = {
 };
 
 async function announceTournamentResult(args: {
+  eventId: string;
   eventTitle: string;
   finalRanking: string[];
   cfgRaw: Record<string, number | { coins: number; points: number }> | null;
@@ -48,6 +49,7 @@ async function announceTournamentResult(args: {
   await dispatchNotification("tournament_result", {
     users: args.finalRanking,
     placeholders: { "{eventName}": args.eventTitle, "{game}": args.game ?? "–", "{winner}": winnerRef },
+    urlOverride: `/events/${args.eventId}`,
     discordChannelIdOverride: args.discordChannelId,
     discordContent: `🎉 Herzlichen Glückwunsch ${winnerRef}!`,
     discordFields: [
@@ -235,6 +237,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     if (isBecomingFinished) {
       announceTournamentResult({
+        eventId,
         eventTitle,
         finalRanking:     newRanking,
         cfgRaw,

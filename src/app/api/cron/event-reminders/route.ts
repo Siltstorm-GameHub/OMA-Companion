@@ -51,6 +51,7 @@ export async function GET(req: NextRequest) {
         "{points}":        String(event.pointReward),
         "{reminderHours}": String(hours),
       },
+      urlOverride: `/events/${event.id}`,
       discordChannelIdOverride: event.discordChannelId,
       discordContent: process.env.DISCORD_EVENTS_PING ?? "@here",
       discordFields: [

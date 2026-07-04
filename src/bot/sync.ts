@@ -56,6 +56,7 @@ export async function updateEventStatus(discordEventId: string, status: string) 
       await dispatchNotification("event_started", {
         users: [],
         placeholders: { "{eventName}": event.title, "{game}": event.game ?? "–" },
+        urlOverride: `/events/${event.id}`,
         discordChannelIdOverride: event.discordChannelId,
         discordContent: process.env.DISCORD_EVENTS_PING ?? "@here",
       }).catch(() => {});
@@ -83,6 +84,7 @@ export async function updateEventStatus(discordEventId: string, status: string) 
       await dispatchNotification("event_ended", {
         users: [],
         placeholders: { "{eventName}": event.title, "{attendeeCount}": String(attendeeCount) },
+        urlOverride: `/events/${event.id}`,
         discordChannelIdOverride: event.discordChannelId,
         discordFields: [{ name: "👥 Teilnehmer", value: String(attendeeCount), inline: true }],
       }).catch(() => {});

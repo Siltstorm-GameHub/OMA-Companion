@@ -142,6 +142,7 @@ export async function POST(req: NextRequest) {
       "{game}":      event.game ?? "–",
       "{date}":      event.startAt.toLocaleString("de-DE", { weekday: "long", day: "2-digit", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" }),
     },
+    urlOverride: `/events/${event.id}`,
     skipDiscordChannel: true,
   }).catch(() => {});
 
