@@ -46,8 +46,10 @@ export async function deleteEventRecord(eventId: string, opts: DeleteEventOption
           ? JSON.parse(event.series.seriesStatConfig) as {
               stats: { field: string; pointsPer: number }[];
               mvpStatField?: string;
+              matchWinStatKeys?: string[];
             }
           : { stats: [] };
+        const deleteMatchWinStatSet = new Set(statCfg.matchWinStatKeys ?? []);
 
         function sub(uid: string, field: string, val: number) {
           if (!standings.raw[uid]) return;
@@ -66,7 +68,7 @@ export async function deleteEventRecord(eventId: string, opts: DeleteEventOption
             let s: Record<string, number> = {};
             try { s = JSON.parse(entry.statsJson); } catch { continue; }
             for (const { field } of statCfg.stats) {
-              const v = Number(s[field] ?? 0);
+              const v = deleteMatchWinStatSet.has(field) ? Number(s["Match Win"] ?? 0) : Number(s[field] ?? 0);
               if (v) sub(entry.userId, field, v);
             }
           }
