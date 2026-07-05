@@ -148,6 +148,8 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
   })();
   const [statParticipationPts, setStatParticipationPts]   = useState<number>(initialStatCfg.participationPoints ?? 0);
   const [statSpectatorPts, setStatSpectatorPts]           = useState<number>(initialStatCfg.spectatorParticipationPoints ?? 0);
+  const [statParticipationCoins, setStatParticipationCoins] = useState<number>(initialStatCfg.participationCoins ?? 0);
+  const [statSpectatorCoins, setStatSpectatorCoins]         = useState<number>(initialStatCfg.spectatorParticipationCoins ?? 0);
   const [statTransferToGlobal, setStatTransferToGlobal]   = useState<boolean>(initialStatCfg.transferToGlobalRanking ?? false);
   const [statRows, setStatRows] = useState<{ field: string; pointsPer: number; isWinnerStat?: boolean; isMatchWinStat?: boolean }[]>(initialStatCfg.stats ?? []);
   // Event-level stat settings (Step 4 im Wizard)
@@ -170,7 +172,6 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
 
   // Placement rewards
   const initialRewards = parseRewards(series.placementRewardsJson);
-  const [participationCoins, setParticipationCoins] = useState<number>(initialRewards.participationCoins);
   const [placementRewards, setPlacementRewards] = useState<PlacementReward[]>(initialRewards.placements);
 
   // Poll config — read from pollsConfigJson (wizard/create), fall back to pollConfigJson (legacy edit)
@@ -228,6 +229,8 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
         seriesStatConfig: JSON.stringify({
           participationPoints:          statParticipationPts,
           spectatorParticipationPoints: statSpectatorPts,
+          participationCoins:           statParticipationCoins,
+          spectatorParticipationCoins:  statSpectatorCoins,
           transferToGlobalRanking:      statTransferToGlobal,
           stats: statRows.filter(r => r.field.trim()),
           winnerStatKeys: statRows.filter(r => r.field.trim() && r.isWinnerStat).map(r => r.field),
@@ -245,7 +248,7 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
           }),
         }),
         legacyStandings:     JSON.stringify(legacyRows),
-        placementRewardsJson: JSON.stringify({ participationCoins, placements: placementRewards }),
+        placementRewardsJson: JSON.stringify({ placements: placementRewards }),
         pollsConfigJson:      JSON.stringify(polls),
         propagatePolls,
       }),
@@ -519,15 +522,9 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
                   </div>
                 </div>
               ))}
-              <div className="flex items-center gap-2 pt-1 border-t border-white/[0.05]">
-                <span className="text-sm text-gray-400 flex-1">Teilnahme</span>
-                <div className="flex items-center gap-1 col-span-1" style={{ gridColumn: "3" }}>
-                  <Coins className="w-3 h-3 text-amber-400 shrink-0" />
-                  <input type="number" min={0} value={participationCoins}
-                    onChange={e => setParticipationCoins(Number(e.target.value))}
-                    className={numCls} />
-                </div>
-              </div>
+              <p className="text-[11px] text-gray-500 pt-1 border-t border-white/[0.05]">
+                Münzen pro Teilnahme (Mitspieler &amp; Zuschauer): siehe „Gesamttabellen-Konfiguration" weiter unten.
+              </p>
               <Checkbox
                 checked={statTransferToGlobal}
                 onChange={setStatTransferToGlobal}
@@ -687,7 +684,20 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
                   onChange={e => setStatSpectatorPts(Number(e.target.value))}
                   className={inputCls} />
               </Field>
+              <Field label={<><Coins className="w-3 h-3 text-amber-400" /> Münzen pro Teilnahme</>}>
+                <input type="number" min={0} value={statParticipationCoins}
+                  onChange={e => setStatParticipationCoins(Number(e.target.value))}
+                  className={inputCls} />
+              </Field>
+              <Field label="Münzen pro Zuschauer-Teilnahme">
+                <input type="number" min={0} value={statSpectatorCoins}
+                  onChange={e => setStatSpectatorCoins(Number(e.target.value))}
+                  className={inputCls} />
+              </Field>
             </div>
+            <p className="text-[11px] text-gray-500">
+              Wird jeweils direkt bei Abschluss des einzelnen Events vergeben, nicht erst am Ende der Reihe.
+            </p>
             <div className="space-y-1.5">
               <p className="text-xs text-gray-500">Stats</p>
               {statRows.map((row, i) => (

@@ -1,9 +1,10 @@
 import { prisma } from "./prisma";
 import { dispatchNotification } from "./notify-dispatch";
 
-const BASE_REWARD = 50;
+/** Mindest-Einsatz (nicht admin-editierbar, Höchsteinsatz kommt aus getMinigamesConfig()) */
+export const PREDICTION_MIN_WAGER = 10;
 
-/** Multiplikator basierend auf dem (nach diesem Treffer aktuellen) Streak-Stand */
+/** Multiplikator auf den Gewinn (nicht den Einsatz selbst) basierend auf dem aktuellen Streak-Stand */
 function streakMultiplier(streak: number): number {
   if (streak >= 10) return 2;
   if (streak >= 6) return 1.5;
@@ -20,6 +21,11 @@ function todayStr(): string {
  * Sieger feststeht. winnerUserId = null bedeutet "kein eindeutiger Sieger"
  * (z.B. kooperatives Event ohne Platzierung) — alle offenen Tipps werden dann
  * als falsch aufgelöst.
+ *
+ * Der Einsatz (wager) wurde bereits bei Abgabe des Tipps abgebucht (Escrow).
+ * Bei richtigem Tipp wird der Einsatz zurückerstattet plus ein Gewinn
+ * (Einsatz × Streak-Multiplikator) ausgezahlt. Bei falschem Tipp bleibt der
+ * Einsatz verloren — hier passiert keine weitere Buchung.
  */
 export async function resolveEventPredictions(eventId: string, winnerUserId: string | null) {
   const predictions = await prisma.eventWinnerPrediction.findMany({
@@ -44,7 +50,7 @@ export async function resolveEventPredictions(eventId: string, winnerUserId: str
       ]);
       dispatchNotification("prediction_result", {
         users: [prediction.userId],
-        placeholders: { "{result}": "falsch", "{reward}": "0" },
+        placeholders: { "{result}": `falsch — dein Einsatz von ${prediction.wager} Münzen ist verloren`, "{reward}": "0" },
       }).catch(() => {});
       continue;
     }
@@ -54,19 +60,20 @@ export async function resolveEventPredictions(eventId: string, winnerUserId: str
     const alreadyCountedToday = streak?.lastPlayedDay === today;
     const newCurrent = alreadyCountedToday ? (streak?.current ?? 1) : (streak?.current ?? 0) + 1;
     const newBest = Math.max(newCurrent, streak?.best ?? 0);
-    const coinsAwarded = Math.round(BASE_REWARD * streakMultiplier(newCurrent));
+    const profit = Math.round(prediction.wager * streakMultiplier(newCurrent));
+    const payout = prediction.wager + profit;
 
     await prisma.$transaction([
       prisma.eventWinnerPrediction.update({
         where: { id: prediction.id },
-        data: { resolved: true, correct: true, coinsAwarded },
+        data: { resolved: true, correct: true, coinsAwarded: payout },
       }),
       prisma.pointTransaction.create({
-        data: { userId: prediction.userId, amount: coinsAwarded, reason: "🎯 Event-Sieger-Vorhersage richtig" },
+        data: { userId: prediction.userId, amount: payout, reason: "🎯 Event-Sieger-Vorhersage richtig" },
       }),
       prisma.user.update({
         where: { id: prediction.userId },
-        data: { points: { increment: coinsAwarded } },
+        data: { points: { increment: payout } },
       }),
       prisma.predictionStreak.upsert({
         where: { userId: prediction.userId },
@@ -77,7 +84,7 @@ export async function resolveEventPredictions(eventId: string, winnerUserId: str
 
     dispatchNotification("prediction_result", {
       users: [prediction.userId],
-      placeholders: { "{result}": "richtig", "{reward}": String(coinsAwarded) },
+      placeholders: { "{result}": "richtig", "{reward}": String(payout) },
     }).catch(() => {});
   }
 }

@@ -218,6 +218,9 @@ export default function EventSetupWizard({
   // ── Derived ──────────────────────────────────────────────────────────────────
   const isEventMode  = wizardMode === "event";
   const isSeriesMode = wizardMode === "series";
+  // Wird dieses Event Teil einer Reihe? Dann kommen Teilnahme-/Zuschauer-Münzen seriesweit
+  // fest aus der Gesamttabellen-Konfiguration der Reihe, nicht aus den Event-Belohnungen hier.
+  const belongsToSeries = isSeriesMode || (isEventMode && seriesMode !== "none");
   const selectedSeries = series.find(s => s.id === selectedSeriesId);
   const formatObj  = FORMATS.find(f => f.value === format);
   const hasStat    = formatObj?.hasStat ?? false;
@@ -369,12 +372,16 @@ export default function EventSetupWizard({
 
     const hasStandingsConfig = eventType === "tournament" && (statParticipationPts > 0 || statRows.length > 0);
     const hasEventConfig = eventStatFields.length > 0;
+    const hasParticipationConfig = statParticipationPts > 0 || participationCoins > 0;
+    const hasSpectatorConfig = spectatorMode && (statSpectatorParticipationPts > 0 || spectatorCoins > 0);
     const winnerStatKeys = statRows.filter(r => r.isWinnerStat).map(r => r.field);
     const matchWinStatKeys = statRows.filter(r => r.isMatchWinStat).map(r => r.field);
-    const seriesStatConfig = (hasStandingsConfig || hasEventConfig || (spectatorMode && statSpectatorParticipationPts > 0) || dominionEnabled)
+    const seriesStatConfig = (hasStandingsConfig || hasEventConfig || hasParticipationConfig || hasSpectatorConfig || dominionEnabled)
       ? JSON.stringify({
           participationPoints: statParticipationPts,
+          participationCoins,
           spectatorParticipationPoints: spectatorMode ? statSpectatorParticipationPts : 0,
+          spectatorParticipationCoins: spectatorMode ? spectatorCoins : 0,
           transferToGlobalRanking: statPtsToGlobalRanking,
           stats: statRows,
           ...(eventStatFields.length > 0 && { eventStatFields }),
@@ -407,7 +414,7 @@ export default function EventSetupWizard({
         discordChannelId: seriesDiscordId || null,
         recurrenceType: recurrenceType !== "none" ? recurrenceType : null,
         recurrenceMonthlyMode: recurrenceType === "monthly" ? recurrenceMonthlyMode : null,
-        placementRewardsJson: { participationCoins, participationRankPts, placements },
+        placementRewardsJson: { placements },
         pollsConfigJson: polls.length > 0 ? polls : null,
         seriesStatConfig,
         startDate: seriesStartDate ? new Date(seriesStartDate).toISOString() : null,
@@ -1363,13 +1370,15 @@ export default function EventSetupWizard({
             <p className="text-sm font-medium text-gray-200">Teilnahme-Belohnung</p>
           </div>
           <p className="text-[11px] text-gray-500 mb-3">Wird erst nach Event-Abschluss vergeben</p>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={labelCls}>Münzen</label>
-              <input type="number" min="0" value={participationCoins}
-                onChange={e => setParticipationCoins(Number(e.target.value))}
-                className={inputCls} style={inputStyle} />
-            </div>
+          <div className={belongsToSeries ? "grid grid-cols-1 gap-3" : "grid grid-cols-2 gap-3"}>
+            {!belongsToSeries && (
+              <div>
+                <label className={labelCls}>Münzen</label>
+                <input type="number" min="0" value={participationCoins}
+                  onChange={e => setParticipationCoins(Number(e.target.value))}
+                  className={inputCls} style={inputStyle} />
+              </div>
+            )}
             <div>
               <label className={labelCls}>Rang-Punkte <span className="text-gray-500 font-normal">(→ Gesamtrangliste)</span></label>
               <input type="number" min="0" value={participationRankPts}
@@ -1377,6 +1386,12 @@ export default function EventSetupWizard({
                 className={inputCls} style={inputStyle} />
             </div>
           </div>
+          {isSeriesMode && (
+            <p className="text-[11px] text-gray-500 mt-2">Münzen pro Teilnahme: siehe „📊 Gesamttabelle" weiter unten.</p>
+          )}
+          {isEventMode && seriesMode !== "none" && (
+            <p className="text-[11px] text-gray-500 mt-2">Münzen pro Teilnahme sind seriesweit in der Gesamttabellen-Konfiguration der Eventreihe eingestellt.</p>
+          )}
         </div>
 
         <div className="rounded-xl p-4 border border-white/8 bg-white/2">
@@ -1407,13 +1422,15 @@ export default function EventSetupWizard({
         {spectatorMode && (
           <div className="rounded-xl p-4 border border-teal-500/20 bg-teal-500/5">
             <p className="text-sm font-medium text-teal-300 mb-3">👁️ Zuschauer-Basis-Belohnung</p>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className={labelCls}>Münzen</label>
-                <input type="number" min="0" value={spectatorCoins}
-                  onChange={e => setSpectatorCoins(Number(e.target.value))}
-                  className={inputCls} style={inputStyle} />
-              </div>
+            <div className={belongsToSeries ? "grid grid-cols-1 gap-3" : "grid grid-cols-2 gap-3"}>
+              {!belongsToSeries && (
+                <div>
+                  <label className={labelCls}>Münzen</label>
+                  <input type="number" min="0" value={spectatorCoins}
+                    onChange={e => setSpectatorCoins(Number(e.target.value))}
+                    className={inputCls} style={inputStyle} />
+                </div>
+              )}
               <div>
                 <label className={labelCls}>Rang-Punkte <span className="text-gray-500 font-normal">(→ Gesamtrangliste)</span></label>
                 <input type="number" min="0" value={spectatorRankPts}
@@ -1421,24 +1438,46 @@ export default function EventSetupWizard({
                   className={inputCls} style={inputStyle} />
               </div>
             </div>
+            {isSeriesMode && (
+              <p className="text-[11px] text-gray-500 mt-2">Münzen pro Zuschauer-Teilnahme: siehe „📊 Gesamttabelle" weiter unten.</p>
+            )}
+            {isEventMode && seriesMode !== "none" && (
+              <p className="text-[11px] text-gray-500 mt-2">Münzen pro Zuschauer-Teilnahme sind seriesweit in der Gesamttabellen-Konfiguration der Eventreihe eingestellt.</p>
+            )}
           </div>
         )}
 
-        {isSeriesMode && (eventType === "tournament" || spectatorMode) && (
+        {isSeriesMode && (
           <div className="rounded-xl p-4 border border-indigo-500/20 bg-indigo-500/5 space-y-3">
             <p className="text-sm font-medium text-indigo-300">📊 Gesamttabelle</p>
-            <div>
-              <label className={labelCls}>Punkte pro Mitspieler-Teilnahme <span className="text-gray-500 font-normal">(Ligatabelle)</span></label>
-              <input type="number" min="0" value={statParticipationPts}
-                onChange={e => setStatParticipationPts(Number(e.target.value))}
-                className={inputCls} style={inputStyle} />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelCls}>Punkte pro Mitspieler-Teilnahme <span className="text-gray-500 font-normal">(Ligatabelle)</span></label>
+                <input type="number" min="0" value={statParticipationPts}
+                  onChange={e => setStatParticipationPts(Number(e.target.value))}
+                  className={inputCls} style={inputStyle} />
+              </div>
+              <div>
+                <label className={labelCls}>Münzen pro Mitspieler-Teilnahme</label>
+                <input type="number" min="0" value={participationCoins}
+                  onChange={e => setParticipationCoins(Number(e.target.value))}
+                  className={inputCls} style={inputStyle} />
+              </div>
             </div>
             {spectatorMode && (
-              <div>
-                <label className={labelCls}>Punkte pro Zuschauer-Teilnahme <span className="text-gray-500 font-normal">(Ligatabelle)</span></label>
-                <input type="number" min="0" value={statSpectatorParticipationPts}
-                  onChange={e => setStatSpectatorParticipationPts(Number(e.target.value))}
-                  className={inputCls} style={inputStyle} />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={labelCls}>Punkte pro Zuschauer-Teilnahme <span className="text-gray-500 font-normal">(Ligatabelle)</span></label>
+                  <input type="number" min="0" value={statSpectatorParticipationPts}
+                    onChange={e => setStatSpectatorParticipationPts(Number(e.target.value))}
+                    className={inputCls} style={inputStyle} />
+                </div>
+                <div>
+                  <label className={labelCls}>Münzen pro Zuschauer-Teilnahme</label>
+                  <input type="number" min="0" value={spectatorCoins}
+                    onChange={e => setSpectatorCoins(Number(e.target.value))}
+                    className={inputCls} style={inputStyle} />
+                </div>
               </div>
             )}
             <label className="flex items-center gap-2 cursor-pointer select-none">
@@ -1447,6 +1486,7 @@ export default function EventSetupWizard({
                 className="w-4 h-4 rounded accent-indigo-500" />
               <span className="text-xs text-gray-300">Tabellenpunkte bei Event-Abschluss auf Gesamtrangliste übertragen</span>
             </label>
+            {eventType === "tournament" && (
             <div className="space-y-2">
               <p className="text-[11px] text-gray-500">Stat-Felder — Feldname → Punkte pro Einheit — 🏆 = +1 bei Event-Sieg — ⚔️ = +1 pro Match Win aus einzelnen Runden</p>
               {statRows.map((row, i) => (
@@ -1481,6 +1521,7 @@ export default function EventSetupWizard({
                 <Plus className="w-3.5 h-3.5" /> Stat hinzufügen
               </button>
             </div>
+            )}
           </div>
         )}
 
@@ -1791,11 +1832,11 @@ export default function EventSetupWizard({
         </div>
         <div className="rounded-xl p-4 border border-white/8 bg-white/2 text-sm space-y-1.5 text-gray-400">
           <p className="text-xs text-gray-600 font-semibold uppercase tracking-wider mb-2">Belohnungen</p>
-          <p>✅ Teilnahme: {participationCoins} Münzen{participationRankPts > 0 ? ` + ${participationRankPts} RP` : ""}</p>
+          <p>✅ Teilnahme: {belongsToSeries ? "Münzen laut Eventreihe" : `${participationCoins} Münzen`}{participationRankPts > 0 ? ` + ${participationRankPts} RP` : ""}</p>
           {placements.map(p => (
             <p key={p.place}>🏅 {p.place}. Platz: {p.coins} Münzen{p.rankPoints > 0 ? ` + ${p.rankPoints} RP` : ""}</p>
           ))}
-          {spectatorMode && <p>👁️ Zuschauer: {spectatorCoins} Münzen{spectatorRankPts > 0 ? ` + ${spectatorRankPts} RP` : ""}</p>}
+          {spectatorMode && <p>👁️ Zuschauer: {belongsToSeries ? "Münzen laut Eventreihe" : `${spectatorCoins} Münzen`}{spectatorRankPts > 0 ? ` + ${spectatorRankPts} RP` : ""}</p>}
           {polls.map((poll, i) => (
             <p key={i}>📊 {poll.label || `Poll ${i + 1}`}: Abstimmung ({poll.winnerCoins > 0 ? `Sieger: ${poll.winnerCoins} Münzen` : ""})</p>
           ))}

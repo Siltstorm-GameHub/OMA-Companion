@@ -12,6 +12,7 @@ export type MyPrediction = {
   eventTitle: string;
   eventStartAt: string;
   predictedUser: UserLite;
+  wager: number;
   resolved: boolean;
   correct: boolean | null;
   coinsAwarded: number;
@@ -25,6 +26,7 @@ export default function MyPredictionsList({ initialPredictions }: { initialPredi
 
   async function handleDelete(eventId: string) {
     if (deletingId) return;
+    const target = predictions.find(x => x.eventId === eventId);
     setDeletingId(eventId);
     const prev = predictions;
     setPredictions(p => p.filter(x => x.eventId !== eventId));
@@ -35,11 +37,12 @@ export default function MyPredictionsList({ initialPredictions }: { initialPredi
         body: JSON.stringify({ eventId }),
       });
       if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
         setPredictions(prev);
-        toast.error("Löschen fehlgeschlagen");
+        toast.error(data.error ?? "Löschen fehlgeschlagen");
         return;
       }
-      toast.success("Vorhersage gelöscht");
+      toast.success(target && !target.resolved ? "Vorhersage gelöscht — Einsatz zurückerstattet" : "Vorhersage gelöscht");
     } catch {
       setPredictions(prev);
       toast.error("Netzwerkfehler");
@@ -68,14 +71,17 @@ export default function MyPredictionsList({ initialPredictions }: { initialPredi
               <p className="text-sm text-white truncate group-hover:text-violet-300 transition-colors">{p.eventTitle}</p>
               <p className="text-xs text-gray-500 truncate">
                 Tipp: <span className="text-gray-400">{uname(p.predictedUser)}</span>
+                <span className="text-gray-700"> · Einsatz {p.wager}</span>
                 <span className="text-gray-700"> · {new Date(p.eventStartAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" })}</span>
               </p>
             </div>
             {p.resolved ? (
               <span className={`text-xs font-semibold shrink-0 flex items-center gap-1 ${p.correct ? "text-emerald-400" : "text-gray-500"}`}>
                 {p.correct ? "✅ Richtig" : "❌ Falsch"}
-                {p.correct && p.coinsAwarded > 0 && (
+                {p.correct ? (
                   <span className="flex items-center gap-0.5 text-amber-400">+{p.coinsAwarded} <CoinIcon size={11} /></span>
+                ) : (
+                  <span className="flex items-center gap-0.5 text-gray-600">-{p.wager} <CoinIcon size={11} /></span>
                 )}
               </span>
             ) : (

@@ -32,6 +32,7 @@ export default async function MinigamesHubPage() {
     eventTitle: p.event.title,
     eventStartAt: p.event.startAt.toISOString(),
     predictedUser: p.predictedUser,
+    wager: p.wager,
     resolved: p.resolved,
     correct: p.correct,
     coinsAwarded: p.coinsAwarded,

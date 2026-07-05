@@ -33,6 +33,8 @@ import RoundRobinView from "./RoundRobinView";
 import FfaView from "./FfaView";
 import LigaView from "./LigaView";
 import { getWanderpocalHoldersMap } from "@/lib/get-wanderpocal-holders";
+import { getMinigamesConfig } from "@/lib/minigames-config";
+import { PREDICTION_MIN_WAGER } from "@/lib/predictions";
 
 const GUILD_ID = process.env.DISCORD_GUILD_ID ?? "";
 
@@ -96,7 +98,7 @@ export default async function TournamentDetailPage({
   const allRegistrations = event.registrations.map(r => ({ userId: r.userId, role: r.role, user: r.user }));
   const myClipSubmission = event.clipSubmissions.find(c => c.userId === userId) ?? null;
 
-  const [sponsors, holdersMap, myEventPrediction] = await Promise.all([
+  const [sponsors, holdersMap, myEventPrediction, minigamesConfig] = await Promise.all([
     prisma.shopPurchase.findMany({
       where:   { consumed: false, item: { type: "tournament_sponsor" } },
       include: { user: { select: { username: true, name: true } } },
@@ -107,6 +109,7 @@ export default async function TournamentDetailPage({
       where: { userId_eventId: { userId, eventId } },
       include: { predictedUser: { select: { id: true, username: true, name: true, image: true } } },
     }),
+    getMinigamesConfig(),
   ]);
   const holdersList = [...holdersMap.values()];
   const isPredictionLocked = event.status === "finished" || event.startAt < new Date();
@@ -561,6 +564,8 @@ export default async function TournamentDetailPage({
         <EventWinnerPredictionWidget
           eventId={event.id}
           locked={isPredictionLocked}
+          minWager={PREDICTION_MIN_WAGER}
+          maxWager={minigamesConfig.predictionMaxWager}
           initialPrediction={myEventPrediction}
         />
       </div>
