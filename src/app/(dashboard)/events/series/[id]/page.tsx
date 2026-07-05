@@ -9,6 +9,7 @@ import {
   Archive, ChevronRight, CheckCircle2, EyeOff, Vote, Clock,
 } from "lucide-react";
 import { CountUp } from "@/components/CountUp";
+import PollCountdown from "@/components/PollCountdown";
 import SeriesStandingsTable from "./SeriesStandingsTable";
 import SeriesEventList, { type SeriesEventItem } from "./SeriesEventList";
 import FullStandingsToggle from "./FullStandingsToggle";
@@ -773,7 +774,10 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
                   </p>
                 </div>
                 {p.isActive
-                  ? <span className="text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full shrink-0 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />Läuft</span>
+                  ? <span className="text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full shrink-0 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                      Endet in <PollCountdown targetDate={p.endAt} />
+                    </span>
                   : <span className="text-[10px] text-gray-500 bg-white/[0.04] border border-white/[0.06] px-2 py-0.5 rounded-full shrink-0 flex items-center gap-1"><Clock className="w-3 h-3" />Beendet</span>}
               </Link>
             ))}

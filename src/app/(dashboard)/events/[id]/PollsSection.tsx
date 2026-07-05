@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { Vote, Clock, Trophy, ChevronDown, ChevronUp, Check } from "lucide-react";
+import { usePollCountdown } from "@/components/PollCountdown";
 
 type PollAnswer = {
   id: string;
@@ -43,31 +44,18 @@ type Props = {
   eventRegistrations: Registration[];
 };
 
-function useCountdown(targetDate: string) {
-  const [timeLeft, setTimeLeft] = useState("");
-  useEffect(() => {
-    function update() {
-      const diff = new Date(targetDate).getTime() - Date.now();
-      if (diff <= 0) { setTimeLeft("Jetzt"); return; }
-      const h = Math.floor(diff / 3_600_000);
-      const m = Math.floor((diff % 3_600_000) / 60_000);
-      const s = Math.floor((diff % 60_000) / 1_000);
-      setTimeLeft(h > 0 ? `${h}h ${m}m` : m > 0 ? `${m}m ${s}s` : `${s}s`);
-    }
-    update();
-    const id = setInterval(update, 1_000);
-    return () => clearInterval(id);
-  }, [targetDate]);
-  return timeLeft;
-}
-
 function CountdownBadge({ startAt }: { startAt: string }) {
-  const t = useCountdown(startAt);
+  const t = usePollCountdown(startAt);
   return (
     <span className="text-xs text-gray-500 flex items-center gap-1">
       <Clock className="w-3.5 h-3.5" /> Startet in {t}
     </span>
   );
+}
+
+function EndsCountdown({ endAt }: { endAt: string }) {
+  const t = usePollCountdown(endAt);
+  return <>endet in {t}</>;
 }
 
 function PollCard({
@@ -127,7 +115,9 @@ function PollCard({
   }
 
   const statusBadge = isActive
-    ? <span className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full font-medium flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />Läuft</span>
+    ? <span className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />Läuft · <EndsCountdown endAt={poll.endAt} />
+      </span>
     : isPast
     ? <span className="text-xs text-gray-500 bg-white/[0.04] border border-white/[0.06] px-2 py-0.5 rounded-full">Beendet</span>
     : <span className="text-xs text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-full flex items-center gap-1"><Clock className="w-3 h-3" />Bald</span>;
