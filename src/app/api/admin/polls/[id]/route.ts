@@ -18,6 +18,7 @@ export async function PATCH(
     manualVoterId?: string;
     manualTargetId?: string;
     winnerIds?: string[];
+    excludedUserIds?: string[];
   };
 
   const updateData: Record<string, unknown> = {};
@@ -25,6 +26,20 @@ export async function PATCH(
   if (body.startAt !== undefined) updateData.startAt = new Date(body.startAt);
   if (body.endAt   !== undefined) updateData.endAt   = new Date(body.endAt);
   if (body.winnerIds !== undefined) updateData.winnerIds = JSON.stringify(body.winnerIds);
+
+  if (body.excludedUserIds !== undefined) {
+    updateData.excludedUserIds = body.excludedUserIds.length > 0 ? JSON.stringify(body.excludedUserIds) : null;
+
+    // Neu ausgeschlossene Kandidaten: bereits abgegebene Stimmen für sie entfernen, damit die
+    // Stimmenzählung stimmt und die Wähler erneut abstimmen können.
+    const previouslyExcluded: string[] = (() => {
+      try { return poll.excludedUserIds ? JSON.parse(poll.excludedUserIds) : []; } catch { return []; }
+    })();
+    const newlyExcluded = body.excludedUserIds.filter(id => !previouslyExcluded.includes(id));
+    if (newlyExcluded.length > 0) {
+      await prisma.eventPollVote.deleteMany({ where: { pollId, targetId: { in: newlyExcluded } } });
+    }
+  }
 
   if (Object.keys(updateData).length > 0) {
     await prisma.eventPoll.update({ where: { id: pollId }, data: updateData });

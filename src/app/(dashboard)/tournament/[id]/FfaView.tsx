@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp, Trophy, Clock, Vote } from "lucide-react";
 import RankPointsIcon from "@/components/RankPointsIcon";
+import PredictionWidget from "./PredictionWidget";
 
 type User        = { id: string; name: string | null; username: string | null; image: string | null };
 type Participant = { userId: string; user: User };
@@ -38,6 +39,7 @@ export default function FfaView({
   pollWinnerIds = [],
   pollBonusRankPts = null,
   pollLabel = null,
+  myPredictions = {},
 }: {
   matches: Match[];
   participants: Participant[];
@@ -51,6 +53,7 @@ export default function FfaView({
   pollWinnerIds?: string[];
   pollBonusRankPts?: number | null;
   pollLabel?: string | null;
+  myPredictions?: Record<string, { predictedUserId: string; resolved: boolean; correct: boolean | null; coinsAwarded: number }>;
 }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const toggle = (id: string) =>
@@ -261,8 +264,15 @@ export default function FfaView({
             Ausstehende Matches
           </h2>
           <div className="space-y-2">
-            {upcomingMatches.map(match => (
-              <div key={match.id} className="glass rounded-xl px-4 py-3 flex items-center gap-3">
+            {upcomingMatches.map(match => {
+              const candidates = match.entries
+                .map(e => ({ id: e.userId, user: findUser(e.userId) }))
+                .filter((c): c is { id: string; user: User } => !!c.id && !!c.user)
+                .map(c => ({ id: c.id, name: uname(c.user), image: c.user.image }));
+              const locked = !!match.scheduledAt && new Date(match.scheduledAt) < new Date();
+              return (
+              <div key={match.id} className="glass rounded-xl px-4 py-3 flex flex-col gap-2.5">
+                <div className="flex items-center gap-3">
                 {match.scheduledAt && (
                   <div className="shrink-0 text-center w-12">
                     <p className="text-sm font-bold text-white">{new Date(match.scheduledAt).getDate()}</p>
@@ -297,8 +307,18 @@ export default function FfaView({
                     </span>
                   )}
                 </div>
+                </div>
+                {candidates.length >= 2 && (
+                  <PredictionWidget
+                    matchId={match.id}
+                    candidates={candidates}
+                    myPrediction={myPredictions[match.id] ?? null}
+                    locked={locked}
+                  />
+                )}
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import {
   Users, LayoutDashboard, Star, ShoppingBag, Bell,
   BarChart2, CalendarDays, Heart, Medal,
-  Wrench, Users2, Megaphone, Handshake, Clapperboard, Server,
+  Wrench, Users2, Megaphone, Handshake, Clapperboard, Server, Gamepad2,
 } from "lucide-react";
 import ServerApplicationBadge from "@/components/ServerApplicationBadge";
 
@@ -65,11 +65,12 @@ const CATEGORIES: {
     label: "Tools",
     icon: Wrench,
     minRole: "admin",
-    prefixes: ["/admin/shop", "/admin/notifications", "/admin/badges", "/admin/users"],
+    prefixes: ["/admin/shop", "/admin/notifications", "/admin/badges", "/admin/users", "/admin/minigames"],
     tabs: [
       { href: "/admin/shop",          label: "Shop",             icon: ShoppingBag, minRole: "admin" },
       { href: "/admin/notifications", label: "Benachrichtigungen", icon: Bell,      minRole: "admin" },
       { href: "/admin/badges",        label: "Abzeichen",        icon: Medal,       minRole: "admin" },
+      { href: "/admin/minigames",     label: "Minigames",        icon: Gamepad2,    minRole: "admin" },
       { href: "/admin/users",         label: "Nutzer & Rollen",  icon: Users,       minRole: "admin" },
     ],
   },

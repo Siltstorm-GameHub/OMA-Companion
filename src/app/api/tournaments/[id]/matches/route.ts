@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { awardPoints } from "@/lib/points";
+import { resolveMatchPredictions } from "@/lib/predictions";
+import { getFfaMatchWinner } from "@/lib/tournament-ranking";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   await requireRole("moderator");
@@ -106,6 +108,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       include: { entries: true },
     });
 
+    // Match-Vorhersagen auswerten: Platz-1-Teilnehmer aus den frisch gespeicherten Stats ableiten
+    const eventForPredictions = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: { format: true, statFields: true },
+    });
+    const ffaWinnerId = getFfaMatchWinner(
+      match.entries,
+      eventForPredictions?.statFields ? JSON.parse(eventForPredictions.statFields) : [],
+      eventForPredictions?.format ?? "ffa"
+    );
+    await resolveMatchPredictions(matchId, ffaWinnerId);
+
     return NextResponse.json(match);
   }
 
@@ -131,6 +145,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       playedAt: new Date(),
     },
   });
+
+  // Match-Vorhersagen auswerten (null = kein eindeutiger Sieger, z.B. Unentschieden)
+  await resolveMatchPredictions(matchId, isDraw ? null : (winnerId ?? null));
 
   const isBracket = event?.format === "single_elimination";
 

@@ -29,9 +29,14 @@ export async function GET(
   ]);
 
   const result = polls.map(poll => {
+    let excludedUserIds: string[] = [];
+    try { excludedUserIds = poll.excludedUserIds ? JSON.parse(poll.excludedUserIds) : []; } catch { /* ignore */ }
+    const excludedSet = new Set(excludedUserIds);
+
     const voteCounts: Record<string, number> = {};
     let myVote: string | null = null;
     for (const vote of poll.votes) {
+      if (excludedSet.has(vote.targetId)) continue;
       voteCounts[vote.targetId] = (voteCounts[vote.targetId] ?? 0) + 1;
       if (vote.voterId === userId) myVote = vote.targetId;
     }
@@ -39,11 +44,11 @@ export async function GET(
     let answerOptions: { id: string; name: string | null; username: string | null; image: string | null }[] | null = null;
     if (poll.answerType === "players") {
       answerOptions = registrations
-        .filter(r => r.role === "player")
+        .filter(r => r.role === "player" && !excludedSet.has(r.user.id))
         .map(r => ({ id: r.user.id, name: r.user.name, username: r.user.username, image: r.user.image }));
     } else if (poll.answerType === "spectators") {
       answerOptions = registrations
-        .filter(r => r.role === "spectator")
+        .filter(r => r.role === "spectator" && !excludedSet.has(r.user.id))
         .map(r => ({ id: r.user.id, name: r.user.name, username: r.user.username, image: r.user.image }));
     }
 
@@ -75,6 +80,7 @@ export async function GET(
       voteCounts,
       myVote,
       answerOptions,
+      excludedUserIds,
     };
   });
 
