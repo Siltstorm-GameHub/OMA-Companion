@@ -90,18 +90,17 @@ export async function PATCH(req: NextRequest) {
     },
   });
 
-  // 1b) Event-Titel anpassen, wenn sich der Reihen-Name geändert hat. Titel folgen der Konvention
-  // "<Reihenname> #<N>" (siehe Event-Erstellung) — nur Events, deren Titel exakt auf den alten
-  // Namen (+ optionalem "#N"-Suffix) passen, werden umbenannt; individuell angepasste Titel bleiben unberührt.
+  // 1b) Event-Titel anpassen, wenn sich der Reihen-Name geändert hat: ALLE Events der Reihe werden
+  // umbenannt (auch bereits bestehende) — nur die Nummerierung "#<N>" am Ende des Titels bleibt erhalten,
+  // der Rest des Titels wird durch den neuen Reihennamen ersetzt.
   if (oldSeries && oldSeries.name !== fields.name) {
-    const escapedOldName = oldSeries.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const titlePattern = new RegExp(`^${escapedOldName}(\\s*#\\d+.*)?$`);
     const seriesEvents = await prisma.event.findMany({ where: { seriesId }, select: { id: true, title: true } });
     for (const ev of seriesEvents) {
-      const match = ev.title.match(titlePattern);
-      if (!match) continue;
-      const suffix = match[1] ?? "";
-      await prisma.event.update({ where: { id: ev.id }, data: { title: `${fields.name}${suffix}` } });
+      const numberSuffix = ev.title.match(/\s*#\d+\s*$/)?.[0] ?? "";
+      const newTitle = `${fields.name}${numberSuffix}`;
+      if (newTitle !== ev.title) {
+        await prisma.event.update({ where: { id: ev.id }, data: { title: newTitle } });
+      }
     }
   }
 
