@@ -265,7 +265,7 @@ function computeStatStandings(
     return { userId: uid, totalPoints, participations: displayPart, stats: displayStats, hasLegacy: legacy.some(l => l.userId === uid) };
   }).sort((a, b) => b.totalPoints - a.totalPoints || b.participations - a.participations);
 
-  return { rows, evStatFieldsSeen };
+  return { rows, evStatFieldsSeen, evStatsOnly: evStats };
 }
 
 export default async function SeriesDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -321,7 +321,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
     try { return series.legacyStandings ? JSON.parse(series.legacyStandings) : []; } catch { return []; }
   })();
 
-  const { rows: standings, evStatFieldsSeen } = computeStatStandings(series.events, statCfg, legacyRows);
+  const { rows: standings, evStatFieldsSeen, evStatsOnly } = computeStatStandings(series.events, statCfg, legacyRows);
 
   // ── Hero Stats ─────────────────────────────────────────────────────────────
   const gamePhaseCompleteCount = series.events.filter(e => {
@@ -758,6 +758,28 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
             ))}
           </div>
         </div>
+      )}
+
+      {/* ── TEMPORÄR: Debug-Ausgabe zur Fehlersuche Match-Win-Stats (nur Moderatoren) ── */}
+      {isMod && (
+        <details className="glass rounded-2xl p-4 text-xs text-gray-400">
+          <summary className="cursor-pointer text-amber-400 font-semibold">🔧 Debug: Stat-Konfiguration (temporär)</summary>
+          <div className="mt-3 space-y-3">
+            <div>
+              <p className="text-gray-500 mb-1">Server-seitig geladene seriesStatConfig.stats:</p>
+              <pre className="whitespace-pre-wrap break-all bg-black/30 rounded-lg p-2">{JSON.stringify(statCfg.stats, null, 2)}</pre>
+            </div>
+            <div>
+              <p className="text-gray-500 mb-1">matchWinStatKeys: <span className="text-white">{JSON.stringify(statCfg.matchWinStatKeys ?? [])}</span></p>
+              <p className="text-gray-500 mb-1">winnerStatKeys: <span className="text-white">{JSON.stringify(statCfg.winnerStatKeys ?? [])}</span></p>
+              <p className="text-gray-500 mb-1">transferToGlobalRanking: <span className="text-white">{String((statCfg as { transferToGlobalRanking?: boolean }).transferToGlobalRanking ?? false)}</span></p>
+            </div>
+            <div>
+              <p className="text-gray-500 mb-1">Nur aus Events berechnete Werte (ohne Legacy-Anteil):</p>
+              <pre className="whitespace-pre-wrap break-all bg-black/30 rounded-lg p-2">{JSON.stringify(evStatsOnly, null, 2)}</pre>
+            </div>
+          </div>
+        </details>
       )}
 
       {/* ── Zweispalten: Events + Kompakte Tabelle ───────────────────────────── */}
