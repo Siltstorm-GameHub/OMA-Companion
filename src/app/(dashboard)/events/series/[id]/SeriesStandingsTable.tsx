@@ -83,14 +83,17 @@ function RankDelta({ delta }: { delta: DeltaInfo }) {
   return <Minus className="w-2.5 h-2.5 text-gray-700" />;
 }
 
-function StatDelta({ value, delta }: { value: number; delta: number | undefined }) {
+function StatDelta({ value, delta, pointsPer }: { value: number; delta: number | undefined; pointsPer?: number }) {
+  const pts = delta != null && delta > 0 && pointsPer ? delta * pointsPer : 0;
   return (
     <div className="flex flex-col items-center gap-0">
       <span className="text-sm text-gray-300 tabular-nums leading-tight">
         {value > 0 ? value.toLocaleString("de-DE") : <span className="text-gray-700">–</span>}
       </span>
       {delta != null && delta > 0 && (
-        <span className="text-[9px] text-emerald-500 tabular-nums leading-none">+{delta}</span>
+        <span className="text-[9px] text-emerald-500 tabular-nums leading-none">
+          +{delta}{pts > 0 && <span className="text-emerald-600/70"> · +{pts} Pkt.</span>}
+        </span>
       )}
     </div>
   );
@@ -201,6 +204,7 @@ export default function SeriesStandingsTable({
                   <StatDelta
                     value={row.stats[s.field] ?? 0}
                     delta={delta?.statDeltas[s.field]}
+                    pointsPer={s.pointsPer}
                   />
                 </div>
               ))}
@@ -219,11 +223,8 @@ export default function SeriesStandingsTable({
                 </div>
               ))}
               {showPoints && (
-                <div className="text-right flex flex-col items-end gap-0">
+                <div className="text-right">
                   <PointsCell value={row.totalPoints} rank={rank} />
-                  {delta?.pointsDelta != null && delta.pointsDelta > 0 && (
-                    <span className="text-[9px] text-emerald-500 tabular-nums leading-none">+{delta.pointsDelta}</span>
-                  )}
                 </div>
               )}
             </div>
@@ -289,11 +290,8 @@ export default function SeriesStandingsTable({
                 </span>
               </div>
               {showPoints ? (
-                <div className="text-right flex flex-col items-end gap-0">
+                <div className="text-right">
                   <PointsCell value={row.totalPoints} rank={rank} />
-                  {delta?.pointsDelta != null && delta.pointsDelta > 0 && (
-                    <span className="text-[9px] text-emerald-500 tabular-nums leading-none">+{delta.pointsDelta}</span>
-                  )}
                 </div>
               ) : (
                 <div className="text-center">

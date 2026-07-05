@@ -51,7 +51,12 @@ export default function SeriesAdminRow({
   /* ── Stat config ── */
   const statConfigInitialized = useRef(false);
   const [statParticipationPts, setStatParticipationPts] = useState(0);
-  const [statRows, setStatRows] = useState<{ field: string; pointsPer: number }[]>([]);
+  const [statRows, setStatRows] = useState<{ field: string; pointsPer: number; isWinnerStat?: boolean; isMatchWinStat?: boolean }[]>([]);
+  // Felder aus der Reihen-Konfiguration, die dieses Panel nicht editiert (mvpStatField,
+  // winnerStatKeys, eventStatFields, transferToGlobalRanking, matchWinStatKeys, dominionBonus, ...)
+  // — beim Speichern unverändert zurückschreiben, statt sie durch eine unvollständige
+  // Rekonstruktion zu verlieren.
+  const [statCfgRest, setStatCfgRest] = useState<Record<string, unknown>>({});
 
   /* ── Legacy standings ── */
   const [legacyRows, setLegacyRows] = useState<LegacyRow[]>([]);
@@ -75,6 +80,10 @@ export default function SeriesAdminRow({
               const cfg = JSON.parse(d.seriesStatConfig);
               setStatParticipationPts(cfg.participationPoints ?? 0);
               setStatRows(cfg.stats ?? []);
+              const rest = { ...cfg };
+              delete rest.participationPoints;
+              delete rest.stats;
+              setStatCfgRest(rest);
             } catch { /* ignore */ }
           }
           if (d.legacyStandings) {
@@ -101,8 +110,11 @@ export default function SeriesAdminRow({
         propagateGame,
         propagateFormat,
         seriesStatConfig: JSON.stringify({
+          ...statCfgRest,
           participationPoints: statParticipationPts,
           stats: statRows.filter(r => r.field.trim()),
+          winnerStatKeys: statRows.filter(r => r.field.trim() && r.isWinnerStat).map(r => r.field),
+          matchWinStatKeys: statRows.filter(r => r.field.trim() && r.isMatchWinStat).map(r => r.field),
         }),
         legacyStandings: JSON.stringify(legacyRows),
       }),

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { calcNextDate, type RecurrenceType, type MonthlyMode } from "@/lib/recurrence";
 import { createDiscordScheduledEvent, announceNewEvent } from "@/lib/discord-events";
 import { dispatchEventNotification } from "@/lib/notify-dispatch";
+import { createPollsForEvent, parsePollsConfigJson } from "@/lib/event-polls";
 
 /**
  * POST /api/admin/event-series/generate
@@ -18,7 +19,7 @@ export async function POST(req: NextRequest) {
   const series = await prisma.eventSeries.findUnique({
     where: { id: seriesId },
     include: {
-      events: { orderBy: { startAt: "asc" }, select: { startAt: true, title: true, maxPlayers: true, pointReward: true, type: true, discordChannelId: true, game: true } },
+      events: { orderBy: { startAt: "asc" }, select: { startAt: true, title: true, maxPlayers: true, pointReward: true, type: true, discordChannelId: true, game: true, pollsConfigJson: true } },
     },
   });
 
@@ -63,6 +64,8 @@ export async function POST(req: NextRequest) {
 
   const game            = series.fixedGame ?? lastEvent.game ?? null;
   const discordChannelId = series.discordChannelId ?? lastEvent.discordChannelId ?? null;
+  // Umfragen-Konfiguration erben: Reihe hat Vorrang, sonst vom letzten Event übernehmen
+  const pollsConfigJson = series.pollsConfigJson ?? lastEvent.pollsConfigJson ?? null;
 
   const newEvent = await prisma.event.create({
     data: {
@@ -77,8 +80,13 @@ export async function POST(req: NextRequest) {
       ...(series.fixedFormat && { format: series.fixedFormat }),
       ...(derivedPointsConfig() !== null && { pointsConfig: derivedPointsConfig() }),
       ...(derivedStatFields()  !== null && { statFields:   derivedStatFields()  }),
+      ...(pollsConfigJson && { pollsConfigJson }),
     },
   });
+
+  // Legt die echten, abstimmbaren EventPoll-Datensätze an — ohne diesen Schritt gäbe es nur
+  // die Konfiguration, aber keine Umfrage, auf die tatsächlich abgestimmt werden könnte.
+  await createPollsForEvent(newEvent.id, newEvent.startAt, parsePollsConfigJson(pollsConfigJson));
 
   // Discord Scheduled Event + Kanal-Ankündigung (mit Coverbild)
   const [discordEventId, discordMessageId] = await Promise.all([
