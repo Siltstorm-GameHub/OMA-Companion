@@ -9,6 +9,7 @@ type StatConfig = {
   mvpStatField?: string;
   winnerStatKeys?: string[];
   winnerSeriesStatKey?: string;
+  matchWinStatKeys?: string[];
 };
 
 function resolveWinnerTargetKeys(cfg: StatConfig, seriesWinnerTargetField?: string): string[] {
@@ -41,13 +42,14 @@ function computeStandings(
     for (const { userId: uid } of ev.registrations) {
       evPart[uid] = (evPart[uid] ?? 0) + 1;
     }
+    const matchWinStatSet = new Set(cfg.matchWinStatKeys ?? []);
     for (const match of ev.matches) {
       for (const entry of match.entries) {
         if (!entry.userId || !entry.statsJson) continue;
         let s: Record<string, number> = {};
         try { s = JSON.parse(entry.statsJson); } catch { continue; }
         for (const { field } of cfg.stats) {
-          const v = Number(s[field] ?? 0);
+          const v = matchWinStatSet.has(field) ? Number(s["Match Win"] ?? 0) : Number(s[field] ?? 0);
           if (v) { if (!evStats[entry.userId]) evStats[entry.userId] = {}; evStats[entry.userId][field] = (evStats[entry.userId][field] ?? 0) + v; }
         }
       }

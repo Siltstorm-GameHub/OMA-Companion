@@ -89,6 +89,7 @@ type StatConfig = {
   eventStatFields?: string[];
   winnerStatKeys?: string[];
   winnerSeriesStatKey?: string;
+  matchWinStatKeys?: string[];
 };
 
 function resolveWinnerTargetKeys(cfg: StatConfig, seriesWinnerTargetField?: string): string[] {
@@ -151,8 +152,9 @@ function computeStatStandings(
     }
     // Felder aus Match-Einträgen summieren: cfg.stats + eventStatFields, aber keine Winner-Stat-Keys
     const winnerStatSet = new Set(cfg.winnerStatKeys ?? []);
+    const matchWinStatSet = new Set(cfg.matchWinStatKeys ?? []);
     const fieldsToAggregate = new Set([
-      ...cfg.stats.map(s => s.field).filter(f => !winnerStatSet.has(f)),
+      ...cfg.stats.map(s => s.field).filter(f => !winnerStatSet.has(f) && !matchWinStatSet.has(f)),
       ...(cfg.eventStatFields ?? []),
     ]);
     for (const match of ev.matches) {
@@ -163,6 +165,11 @@ function computeStatStandings(
         for (const field of fieldsToAggregate) {
           const v = Number(s[field] ?? 0);
           if (v) addEv(entry.userId, field, v);
+        }
+        // Match-Win-Stats: gespeist aus dem "Match Win"-Haken pro Runde, nicht aus einem gleichnamigen Feld
+        if (matchWinStatSet.size > 0) {
+          const mw = Number(s["Match Win"] ?? 0);
+          if (mw) for (const key of matchWinStatSet) addEv(entry.userId, key, mw);
         }
       }
     }

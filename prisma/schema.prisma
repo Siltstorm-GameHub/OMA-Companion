@@ -233,7 +233,7 @@ model EventSeries {
   platform         String?  // Komma-getrennte Plattformen, z.B. "PC, Xbox"
   recurrenceType       String?  // "weekly" | "biweekly" | "monthly"
   recurrenceMonthlyMode String? // "dayOfMonth" | "weekdayOfMonth" (nur bei monthly)
-  // JSON: { participationPoints: 5, stats: [{ field: "Kills", pointsPer: 2 }], mvpStatField?: "MVP", defaultWinnerStatField?: "Kills", defaultWinnerTargetField?: "Siege" }
+  // JSON: { participationPoints: 5, stats: [{ field: "Kills", pointsPer: 2, isWinnerStat?, isMatchWinStat? }], mvpStatField?: "MVP", defaultWinnerStatField?: "Kills", defaultWinnerTargetField?: "Siege", winnerStatKeys?: string[], matchWinStatKeys?: string[] }
   seriesStatConfig String?
   // JSON: [{ userId, points, participations, stats: { Kills: 45 } }]
   legacyStandings String?

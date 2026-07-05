@@ -35,6 +35,7 @@ type SeriesStatConfig = {
   aggregatedStatFields?: string[];
   winnerStatKeys?: string[];        // new: array of series stat fields to +1 on event win
   winnerSeriesStatKey?: string;     // old: single field (backward compat)
+  matchWinStatKeys?: string[];      // array of series stat fields fed by the per-round "Match Win" flag
   dominionBonus?: {
     enabled: boolean;
     triggerStats: string[];   // new: array (any match keeps streak)
@@ -521,7 +522,7 @@ export async function POST(
         addToUser(userId, "participations", 1);
         const eStats = userStats[userId] ?? {};
         for (const { field } of (statCfg.stats ?? [])) {
-          const val = eStats[field] ?? 0;
+          const val = statCfg.matchWinStatKeys?.includes(field) ? (eStats["Match Win"] ?? 0) : (eStats[field] ?? 0);
           if (val > 0) addToUser(userId, field, val);
         }
         for (const field of (statCfg.aggregatedStatFields ?? [])) {
@@ -566,7 +567,8 @@ export async function POST(
           const eStats = userStats[userId] ?? {};
           let total = 0;
           for (const { field, pointsPer } of statCfg.stats) {
-            total += (eStats[field] ?? 0) * pointsPer;
+            const val = statCfg.matchWinStatKeys?.includes(field) ? (eStats["Match Win"] ?? 0) : (eStats[field] ?? 0);
+            total += val * pointsPer;
           }
           if (total > 0) {
             await prisma.user.update({ where: { id: userId }, data: { rankPoints: { increment: total } } });
