@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { createDiscordScheduledEvent, announceNewEvent } from "@/lib/discord-events";
 import { dispatchEventNotification } from "@/lib/notify-dispatch";
+import { createPollsForEvent } from "@/lib/event-polls";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -100,6 +101,8 @@ export async function POST(req: NextRequest) {
       ...(seriesStatFields   && { statFields:   seriesStatFields }),
     },
   });
+
+  await createPollsForEvent(event.id, event.startAt, pollsConfigJson);
 
   // Discord Scheduled Event automatisch anlegen
   const discordEventId = await createDiscordScheduledEvent({

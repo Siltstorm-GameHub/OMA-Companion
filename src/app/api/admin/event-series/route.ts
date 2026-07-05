@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
+import { createPollsForEvent, parsePollsConfigJson } from "@/lib/event-polls";
 
 /**
  * GET /api/admin/event-series        → Liste aller Reihen (mit Event-Zähler + nächstes Event)
@@ -124,13 +125,14 @@ export async function PATCH(req: NextRequest) {
     if (fields.seriesStatConfig) {
       try {
         const { stats, eventStatFields } = JSON.parse(fields.seriesStatConfig) as {
-          stats?: { field: string; isWinnerStat?: boolean }[];
+          stats?: { field: string; isWinnerStat?: boolean; isMatchWinStat?: boolean }[];
           eventStatFields?: string[];
         };
-        // Bevorzugt die explizit gepflegten Event-Stat-Felder, sonst Fallback auf die Reihen-Stats (ohne Sieger-Stats)
+        // Bevorzugt die explizit gepflegten Event-Stat-Felder, sonst Fallback auf die Reihen-Stats
+        // (ohne Sieger-Stats und Match-Win-Stats, die automatisch/aus dem Match-Win-Haken gesetzt werden)
         const fieldNames = eventStatFields?.length
           ? eventStatFields.filter(Boolean)
-          : (stats?.filter(s => !s.isWinnerStat && s.field).map(s => s.field) ?? []);
+          : (stats?.filter(s => !s.isWinnerStat && !s.isMatchWinStat && s.field).map(s => s.field) ?? []);
         statFieldsJson = fieldNames.length ? JSON.stringify(fieldNames) : null;
       } catch { /* skip */ }
     }
@@ -154,6 +156,18 @@ export async function PATCH(req: NextRequest) {
       where: { seriesId, status: { in: ["open", "active"] } },
       data:  { pollsConfigJson: fields.pollsConfigJson },
     });
+    // Echte EventPoll-Datensätze nachziehen — nur für Events, die noch keine haben, damit
+    // bereits laufende Abstimmungen nicht dupliziert/überschrieben werden.
+    const pollsConfig = parsePollsConfigJson(fields.pollsConfigJson);
+    if (pollsConfig.length > 0) {
+      const eventsMissingPolls = await prisma.event.findMany({
+        where: { seriesId, status: { in: ["open", "active"] }, polls: { none: {} } },
+        select: { id: true, startAt: true },
+      });
+      for (const ev of eventsMissingPolls) {
+        await createPollsForEvent(ev.id, ev.startAt, pollsConfig);
+      }
+    }
   }
 
   // 6) Discord-Kanal auf alle Events der Reihe übertragen (immer automatisch)
