@@ -5,17 +5,37 @@ import { MousePointerClick, Swords, ChevronRight, Lock } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getMinigamesConfig } from "@/lib/minigames-config";
 import PredictionStreakCard from "@/components/PredictionStreakCard";
+import MyPredictionsList, { type MyPrediction } from "./MyPredictionsList";
 
 export default async function MinigamesHubPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
   const userId = session.user.id;
 
-  const [config, predictionStreak, pendingPredictions] = await Promise.all([
+  const [config, predictionStreak, pendingPredictions, myPredictionRows] = await Promise.all([
     getMinigamesConfig(),
     prisma.predictionStreak.findUnique({ where: { userId } }),
     prisma.eventWinnerPrediction.count({ where: { userId, resolved: false } }),
+    prisma.eventWinnerPrediction.findMany({
+      where: { userId },
+      include: {
+        event: { select: { id: true, title: true, startAt: true } },
+        predictedUser: { select: { id: true, username: true, name: true, image: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+    }),
   ]);
+
+  const myPredictions: MyPrediction[] = myPredictionRows.map(p => ({
+    eventId: p.event.id,
+    eventTitle: p.event.title,
+    eventStartAt: p.event.startAt.toISOString(),
+    predictedUser: p.predictedUser,
+    resolved: p.resolved,
+    correct: p.correct,
+    coinsAwarded: p.coinsAwarded,
+  }));
 
   const cards = [
     {
@@ -79,6 +99,11 @@ export default async function MinigamesHubPage() {
           best={predictionStreak?.best ?? 0}
           pendingCount={pendingPredictions}
         />
+      </div>
+
+      <div>
+        <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold mb-2.5">Meine Vorhersagen</p>
+        <MyPredictionsList initialPredictions={myPredictions} />
       </div>
     </div>
   );

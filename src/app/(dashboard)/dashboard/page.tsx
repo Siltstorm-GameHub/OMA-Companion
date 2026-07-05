@@ -17,7 +17,6 @@ import PartnerLiveBanner from "@/components/PartnerLiveBanner";
 import CommunityLiveBanner from "@/components/CommunityLiveBanner";
 import WhatsAppCommunityBanner from "@/components/WhatsAppCommunityBanner";
 import ClipContestWidget from "@/components/ClipContestWidget";
-import PredictionStreakCard from "@/components/PredictionStreakCard";
 import RankIcon from "@/components/RankIcon";
 import { getRingClass } from "@/lib/ranks";
 import { getVisibleServers } from "@/lib/gameservers";
@@ -149,7 +148,7 @@ export default async function DashboardPage() {
   const myRankPoints = sessionUser?.rankPoints ?? 0;
 
   // Unabhängige Follow-up-Queries parallelisieren
-  const [myLulPoints, leaderboardRank, predictionStreak, pendingPredictions] = await Promise.all([
+  const [myLulPoints, leaderboardRank] = await Promise.all([
     activeLulSeason && userId
       ? prisma.lulEntry.aggregate({
           where: { userId, spieltag: { seasonId: activeLulSeason.id } },
@@ -159,12 +158,6 @@ export default async function DashboardPage() {
     userId
       ? prisma.user.count({ where: { rankPoints: { gt: myRankPoints } } }).then(n => n + 1)
       : Promise.resolve(null),
-    userId
-      ? prisma.predictionStreak.findUnique({ where: { userId } })
-      : Promise.resolve(null),
-    userId
-      ? prisma.eventWinnerPrediction.count({ where: { userId, resolved: false } })
-      : Promise.resolve(0),
   ]);
 
   const displayName = sessionUser?.username ?? sessionUser?.name ?? "dort";
@@ -442,7 +435,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* ── 3-Spalten: Events | Rangliste | Quests ──────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
           {/* Aktive Eventreihen */}
           <div className="animate-slide-up stagger-3">
@@ -612,14 +605,6 @@ export default async function DashboardPage() {
               })}
             </div>
           </div>
-
-          {userId && (
-            <PredictionStreakCard
-              current={predictionStreak?.current ?? 0}
-              best={predictionStreak?.best ?? 0}
-              pendingCount={pendingPredictions}
-            />
-          )}
 
         </div>
 
