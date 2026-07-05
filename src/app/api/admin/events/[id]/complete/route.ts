@@ -56,10 +56,14 @@ type SeriesStandings = {
  * POST /api/admin/events/[id]/complete
  *
  * Schließt ein Event ab:
- * - Setzt status → "finished" (nur beim ersten Abschluss)
+ * - Setzt status → "umfrage", solange eine Umfrage (EventPoll mit offenem Zeitfenster, oder eine
+ *   konfigurierte Legacy-/Multi-Umfrage ohne Sieger) noch offen ist, sonst → "finished"
  * - Speichert completionData am Event
- * - Vergabe von Teilnahme-Münzen + Platzierungs-Münzen/-Punkte (nur beim ersten Abschluss)
- * - Poll-Gewinner-Belohnung (auch beim Re-Edit, mit Rückbuchung)
+ * - Vergabe von Teilnahme-Münzen + Platzierungs-Münzen/-Punkte (nur beim ersten Abschluss) — diese
+ *   Ligapunkte landen sofort in der Ligatabelle der Eventreihe, auch wenn die Umfrage noch läuft
+ * - Poll-Gewinner-Belohnung (auch beim Re-Edit, mit Rückbuchung); EventPoll-Umfragen werden erst
+ *   ausgewertet, sobald ihr Abstimmungsfenster (endAt) vorbei ist — die zusätzlichen Ligapunkte des
+ *   Umfrage-Gewinners kommen erst dann (mit Abschluss der Umfrage) in die Ligatabelle
  * - Aktualisiert seriesStandingsJson (falls Event in einer Reihe ist)
  * - Speichert finalRankingJson + finalRankingNote
  */
@@ -131,6 +135,19 @@ export async function POST(
   const oldCompletion: Record<string, unknown> = isReEdit
     ? (() => { try { return JSON.parse(event.completionData as string); } catch { return {}; } })()
     : {};
+
+  // Ob überhaupt eine Umfragephase konfiguriert ist (legacy Single-Poll oder Multi-Poll-JSON).
+  // Nötig, um zu wissen, ob ein fehlender Poll-Sieger "noch offen" oder schlicht "nicht vorhanden" bedeutet.
+  const legacyPollConfigured = (() => {
+    const raw = event.pollConfigJson ?? event.series?.pollConfigJson;
+    if (!raw) return false;
+    try { return !!(JSON.parse(raw) as { enabled?: boolean } | null)?.enabled; } catch { return false; }
+  })();
+  const multiPollsConfigured = (() => {
+    const raw = event.pollsConfigJson ?? event.series?.pollsConfigJson;
+    if (!raw) return false;
+    try { const p = JSON.parse(raw); return Array.isArray(p) && p.length > 0; } catch { return false; }
+  })();
 
   // Per-User-Stats aus Match-Einträgen
   const userStats: Record<string, Record<string, number>> = {};
@@ -393,8 +410,14 @@ export async function POST(
     }
   }
 
-  // Fetch polls with rewardsPaid=false (includes re-opened ones from re-edit)
-  const unpaidPolls = event.polls ?? [];
+  // Fetch polls with rewardsPaid=false (includes re-opened ones from re-edit).
+  // Nur Umfragen, deren Abstimmungsfenster (endAt) bereits vorbei ist, werden jetzt final ausgewertet —
+  // noch laufende Umfragen bleiben unbezahlt, bis das Event erneut abgeschlossen wird (Ligapunkte des
+  // Umfrage-Gewinners kommen dann erst mit Abschluss der Umfrage dazu, nicht vorher).
+  const now = new Date();
+  const allUnpaidPolls = event.polls ?? [];
+  const unpaidPolls = allUnpaidPolls.filter(p => new Date(p.endAt) <= now);
+  const hasOpenEventPoll = allUnpaidPolls.some(p => new Date(p.endAt) > now);
   const eventPollRewards: Array<{
     pollId: string; winnerIds: string[]; voterIds: string[];
     participationCoins: number; participationSeriesPoints: number;
@@ -778,6 +801,14 @@ export async function POST(
   }
 
   // ── Completion-Daten speichern ───────────────────────────────────────────────
+  const pollPhaseComplete = newPollWinners.length > 0 || (body.pollResults?.some(p => p.winnerIds.length > 0) ?? false);
+  // Solange eine Umfrage noch läuft (EventPoll mit offenem Abstimmungsfenster) oder eine konfigurierte
+  // Legacy-/Multi-Umfrage noch keinen Sieger hat, bleibt das Event in der Umfragephase — auch wenn die
+  // Spielergebnisse (und damit die Ligapunkte daraus) bereits final sind. Erst wenn die Umfrage
+  // abgeschlossen ist, wechselt der Status auf "finished" (zusammen mit den Umfrage-Ligapunkten).
+  const legacyPollPending = (legacyPollConfigured || multiPollsConfigured) && !pollPhaseComplete;
+  const hasPendingPollPhase = hasOpenEventPoll || legacyPollPending;
+
   const completionData = {
     mvpUserId:               body.mvpUserId ?? null,
     winnerStatField:         body.winnerStatField ?? null,
@@ -798,7 +829,7 @@ export async function POST(
     finalRankingGroups:      body.finalRankingGroups ?? null,
     appliedAggregatedStats:  Object.keys(appliedAggregatedStats).length > 0 ? appliedAggregatedStats : null,
     gamePhaseComplete:       true,
-    pollPhaseComplete:       newPollWinners.length > 0 || (body.pollResults?.some(p => p.winnerIds.length > 0) ?? false),
+    pollPhaseComplete,
     eventPollRewards:        eventPollRewards.length > 0 ? eventPollRewards : null,
     dominionChanges:         Object.keys(dominionChanges).length > 0 ? dominionChanges : null,
     lockedAt:                new Date().toISOString(),
@@ -808,7 +839,7 @@ export async function POST(
     prisma.event.update({
       where: { id: eventId },
       data: {
-        ...(!isReEdit && { status: "finished" }),
+        status: hasPendingPollPhase ? "umfrage" : "finished",
         ...(body.finalRankingGroups !== undefined && {
           finalRankingJson: body.finalRankingGroups.length > 0 ? JSON.stringify(body.finalRankingGroups.flat()) : null,
         }),

@@ -38,6 +38,7 @@ interface Props {
   rewardsConfig: RewardsConfig;
   pollConfig: PollConfig;
   pollsConfig: MultiPollConfig[];
+  pendingEventPolls: { label: string; endAt: string }[];
   spectatorRewardJson: { coins: number; rankPoints: number } | null;
   isReEdit: boolean;
   gamePhaseComplete: boolean;
@@ -90,7 +91,7 @@ function computePlacementMap(groups: string[][]): Map<string, number> {
 export default function EventCompleteClient({
   eventId, eventTitle, seriesId, seriesName,
   registeredUsers, spectatorUsers, tournamentStatFields, userStats,
-  seriesStatConfig, rewardsConfig, pollConfig, pollsConfig, spectatorRewardJson,
+  seriesStatConfig, rewardsConfig, pollConfig, pollsConfig, pendingEventPolls, spectatorRewardJson,
   isReEdit, gamePhaseComplete, pollPhaseComplete,
   initialData, initialFinalRanking, initialRankingGroups, initialFinalRankingNote,
 }: Props) {
@@ -98,6 +99,9 @@ export default function EventCompleteClient({
 
   // Mode: poll-only when game phase is confirmed but poll is still open
   const isPollOnly = isReEdit && gamePhaseComplete && !pollPhaseComplete;
+
+  // Läuft noch eine in-App-Umfrage (EventPoll), deren Abstimmungsfenster noch nicht vorbei ist?
+  const openEventPolls = pendingEventPolls.filter(p => new Date(p.endAt) > new Date());
 
   /* ── Gewinner-Stat ── */
   const [winnerStatField, setWinnerStatField] = useState<string>(
@@ -216,6 +220,18 @@ export default function EventCompleteClient({
     return pollEligible.filter(u => (pollVotes[u.id] ?? 0) === maxVotes).map(u => u.id);
   }, [pollEligible, pollVotes]);
 
+  // Wurden für irgendeine Multi-Umfrage schon Stimmen eingetragen?
+  const hasAnyMultiPollVotes = pollsConfig.some((_, i) =>
+    Object.values(multiPollVotes[i] ?? {}).some(v => v > 0)
+  );
+  // Muss der Sieger einer (manuell einzutragenden) Umfrage jetzt noch nicht feststehen?
+  const canDeferPoll = !isReEdit && (
+    (pollConfig.enabled && pollWinners.length === 0) ||
+    (pollsConfig.length > 0 && !hasAnyMultiPollVotes)
+  );
+  // Bleibt das Event nach diesem Speichern in der Umfragephase (Status "umfrage")?
+  const pollPhasePending = canDeferPoll || (!isReEdit && openEventPolls.length > 0);
+
   const rankingGroups = useMemo(() => computeGroups(rankingOrder, tiedAbove), [rankingOrder, tiedAbove]);
   const placementMap  = useMemo(() => computePlacementMap(rankingGroups), [rankingGroups]);
 
@@ -308,7 +324,7 @@ export default function EventCompleteClient({
           pollBonusCoins:          pollConfig.enabled ? pollConfig.coins : undefined,
           pollBonusRankPoints:     pollConfig.enabled ? pollConfig.rankPoints : undefined,
           pollExcludedUserIds:     pollConfig.enabled && pollExcluded.size > 0 ? [...pollExcluded] : undefined,
-          pollResults:             pollResults.length > 0 ? pollResults : undefined,
+          pollResults:             !pollOnly && pollResults.length > 0 ? pollResults : undefined,
           spectatorAttendedIds:    spectatorUsers.length > 0 ? [...spectatorAttended] : undefined,
           finalRanking:            rankingOrder.length > 0 ? rankingOrder : undefined,
           finalRankingGroups:      rankingGroups.length > 0 ? rankingGroups : undefined,
@@ -322,8 +338,8 @@ export default function EventCompleteClient({
         toast.error((err as { error?: string }).error ?? "Fehler beim Abschließen");
         return;
       }
-      if (pollOnly) {
-        toast.success(`Spielphase abgeschlossen – Umfrage kann später nachgetragen werden`);
+      if (pollOnly || (!isReEdit && pollPhasePending)) {
+        toast.success(`Spielphase abgeschlossen – Umfrage läuft, Punkte kommen nach deren Abschluss dazu`);
       } else if (isPollOnly) {
         toast.success(`Umfrage für "${eventTitle}" abgeschlossen`);
       } else {
@@ -385,6 +401,16 @@ export default function EventCompleteClient({
           <span>
             Nur MVP und Poll-Sieger werden aktualisiert (inkl. Rückbuchung der alten Belohnungen).
             Teilnahmen, Platzierungen und Stat-Einträge in der Gesamttabelle bleiben unverändert.
+          </span>
+        </div>
+      )}
+      {openEventPolls.length > 0 && (
+        <div className="flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-xs text-amber-300">
+          <Vote className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>
+            {openEventPolls.length === 1 ? "Es läuft noch eine Umfrage" : "Es laufen noch Umfragen"} auf der Event-Seite: {" "}
+            {openEventPolls.map(p => `„${p.label}" bis ${new Date(p.endAt).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" })}`).join(", ")}.
+            {" "}Der Status bleibt auf <strong>„Umfrage"</strong>, die zusätzlichen Ligapunkte des Umfrage-Siegers werden erst nach Ablauf vergeben — einfach nach Fristende hier erneut speichern.
           </span>
         </div>
       )}
@@ -763,17 +789,19 @@ export default function EventCompleteClient({
                 ? "Änderungen & Umfrage speichern"
                 : isReEdit
                 ? "Änderungen speichern"
+                : pollPhasePending
+                ? "Spielphase abschließen – Umfrage startet"
                 : "Abschließen & Belohnungen vergeben"}
             </button>
-            {/* Secondary: confirm game phase without poll */}
-            {!isReEdit && pollConfig.enabled && pollWinners.length === 0 && (
+            {/* Secondary: confirm game phase now, decide poll winner later */}
+            {canDeferPoll && (
               <button
                 onClick={() => handleConfirm(true)}
                 disabled={loading}
                 className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-medium text-gray-400 border border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12] hover:text-gray-200 transition-colors disabled:opacity-50"
               >
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                Spielphase abschließen – Umfrage später nachtragen
+                Nur Spielphase abschließen, Umfrage-Sieger später eintragen
               </button>
             )}
           </div>

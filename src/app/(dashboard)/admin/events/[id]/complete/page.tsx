@@ -57,6 +57,7 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
             entries: { select: { userId: true, statsJson: true } },
           },
         },
+        polls: { where: { rewardsPaid: false }, select: { label: true, endAt: true } },
       },
     }),
     prisma.user.findMany({
@@ -143,6 +144,8 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
   const initialRankingGroups: string[][] | null =
     (initialData?.finalRankingGroups as string[][] | undefined) ?? null;
 
+  const pendingEventPolls = event.polls.map(p => ({ label: p.label, endAt: p.endAt.toISOString() }));
+
   return (
     <EventCompleteClient
       eventId={event.id}
@@ -157,6 +160,7 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
       rewardsConfig={rewardsConfig}
       pollConfig={pollConfig}
       pollsConfig={pollsConfig}
+      pendingEventPolls={pendingEventPolls}
       spectatorRewardJson={spectatorRewardJson}
       isReEdit={isReEdit}
       gamePhaseComplete={gamePhaseComplete}
