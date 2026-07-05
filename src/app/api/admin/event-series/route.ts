@@ -63,6 +63,11 @@ export async function PATCH(req: NextRequest) {
   const { seriesId, propagateGame, propagateFormat, propagatePolls, ...fields } = body;
   if (!seriesId) return NextResponse.json({ error: "seriesId fehlt" }, { status: 400 });
 
+  // Alten Namen merken, um die Event-Titel unten ggf. anzupassen
+  const oldSeries = fields.name !== undefined
+    ? await prisma.eventSeries.findUnique({ where: { id: seriesId }, select: { name: true } })
+    : null;
+
   // 1) Reihe selbst aktualisieren
   const series = await prisma.eventSeries.update({
     where: { id: seriesId },
@@ -84,6 +89,21 @@ export async function PATCH(req: NextRequest) {
       ...(fields.hidden                !== undefined && { hidden:                fields.hidden }),
     },
   });
+
+  // 1b) Event-Titel anpassen, wenn sich der Reihen-Name geändert hat. Titel folgen der Konvention
+  // "<Reihenname> #<N>" (siehe Event-Erstellung) — nur Events, deren Titel exakt auf den alten
+  // Namen (+ optionalem "#N"-Suffix) passen, werden umbenannt; individuell angepasste Titel bleiben unberührt.
+  if (oldSeries && oldSeries.name !== fields.name) {
+    const escapedOldName = oldSeries.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const titlePattern = new RegExp(`^${escapedOldName}(\\s*#\\d+.*)?$`);
+    const seriesEvents = await prisma.event.findMany({ where: { seriesId }, select: { id: true, title: true } });
+    for (const ev of seriesEvents) {
+      const match = ev.title.match(titlePattern);
+      if (!match) continue;
+      const suffix = match[1] ?? "";
+      await prisma.event.update({ where: { id: ev.id }, data: { title: `${fields.name}${suffix}` } });
+    }
+  }
 
   // 2) Optional: Spiel auf alle Events der Reihe übertragen
   if (propagateGame && fields.fixedGame !== undefined) {

@@ -4,13 +4,18 @@ import { getSessionUser } from "@/lib/roles";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Users, Clock, Swords, StickyNote, Vote, Repeat, Tv2, EyeOff } from "lucide-react";
+import { ArrowLeft, Users, Clock, Swords, StickyNote, Vote, Repeat, Tv2, EyeOff, Clapperboard } from "lucide-react";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import WinIcon from "@/components/WinIcon";
 import CoinIcon from "@/components/CoinIcon";
 import ClientTime from "@/components/ClientTime";
 import EventCategoryBadge from "@/components/EventCategoryBadge";
-import EventLiveBadge from "@/app/(dashboard)/events/[id]/EventLiveBadge";
+import EventLiveBadge from "./EventLiveBadge";
+import EventSummarySection from "@/components/EventSummarySection";
+import RegisterButton from "@/app/(dashboard)/events/RegisterButton";
+import SpectatorRegisterButton from "./SpectatorRegisterButton";
+import ClipSubmitter from "./ClipSubmitter";
+import PollsSection from "./PollsSection";
 import { EventCategory } from "@prisma/client";
 
 const GENRE_MAP: Record<string, { label: string; icon: string }> = {
@@ -27,6 +32,8 @@ import RoundRobinView from "./RoundRobinView";
 import FfaView from "./FfaView";
 import LigaView from "./LigaView";
 import { getWanderpocalHoldersMap } from "@/lib/get-wanderpocal-holders";
+
+const GUILD_ID = process.env.DISCORD_GUILD_ID ?? "";
 
 const STATUS_STYLES: Record<string, { label: string; style: string; dot: string }> = {
   open:     { label: "Anmeldung offen", style: "bg-blue-900/50 text-blue-300",   dot: "bg-blue-400" },
@@ -59,7 +66,7 @@ export default async function TournamentDetailPage({
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     include: {
-      series: { select: { id: true, name: true, hidden: true, seriesStatConfig: true } },
+      series: { select: { id: true, name: true, hidden: true, seriesStatConfig: true, discordChannelId: true, pollConfigJson: true } },
       streamingPartners: { include: { partner: { include: { user: { select: { id: true } } } } } },
       communityStreamers: { include: { user: { select: { id: true, name: true, username: true, image: true, twitchLogin: true } } } },
       registrations: {
@@ -75,13 +82,17 @@ export default async function TournamentDetailPage({
         orderBy: [{ round: "asc" }, { position: "asc" }],
         include: { entries: true },
       },
-      polls: { select: { id: true, label: true, winnerIds: true, rewardsPaid: true } },
+      polls: { include: { votes: { select: { voterId: true, targetId: true } } }, orderBy: { startAt: "asc" } },
+      clipSubmissions: true,
     },
   });
 
   if (!event) notFound();
   const isHidden = event.hidden || !!event.series?.hidden;
   if (isHidden && !isMod) notFound();
+
+  const allRegistrations = event.registrations.map(r => ({ userId: r.userId, role: r.role, user: r.user }));
+  const myClipSubmission = event.clipSubmissions.find(c => c.userId === userId) ?? null;
 
   const [sponsors, holdersMap] = await Promise.all([
     prisma.shopPurchase.findMany({
@@ -93,7 +104,23 @@ export default async function TournamentDetailPage({
   ]);
   const holdersList = [...holdersMap.values()];
 
-  const isRegistered = event.registrations.some((r) => r.userId === userId);
+  const myReg         = event.registrations.find((r) => r.userId === userId);
+  const isRegistered  = !!myReg && myReg.role !== "spectator";
+  const isSpectator    = !!myReg && myReg.role === "spectator";
+  const isFullEvent    = !!(event.maxPlayers && event.registrations.filter(r => r.role !== "spectator").length >= event.maxPlayers);
+  const canRegister    = event.status === "open" || event.status === "active";
+  const discordEventUrl = event.discordEventId && GUILD_ID
+    ? `https://discord.com/events/${GUILD_ID}/${event.discordEventId}` : null;
+  const discordChannelId = event.discordChannelId ?? event.series?.discordChannelId ?? null;
+  const discordChannelUrl = discordChannelId && GUILD_ID
+    ? `https://discord.com/channels/${GUILD_ID}/${discordChannelId}` : null;
+  // Legacy Single-Poll-Konfiguration (nur für den "auf Discord abstimmen"-Link, falls keine
+  // In-App-Umfrage (EventPoll) existiert)
+  const legacyPollConfig: { enabled: boolean; question: string } | null = (() => {
+    const raw = event.pollConfigJson ?? event.series?.pollConfigJson;
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch { return null; }
+  })();
   const s = STATUS_STYLES[event.status] ?? STATUS_STYLES.finished;
   const hasTournament = !!event.format;
 
@@ -233,7 +260,6 @@ export default async function TournamentDetailPage({
   const streamingPartners = (event as unknown as { streamingPartners?: PartnerEntry[] }).streamingPartners ?? [];
   const communityStreamers = (event as unknown as { communityStreamers?: CommunityStreamerEntry[] }).communityStreamers ?? [];
 
-  const canRegister = event.status === "open" || event.status === "active";
   const isPartnerStreamer = streamingPartners.some(sp => sp.partner.user?.id === userId);
   const isCommunityStreamer = communityStreamers.some(cs => cs.user.id === userId);
   const canStreamRegister = canRegister && !isPartnerStreamer;
@@ -245,6 +271,12 @@ export default async function TournamentDetailPage({
     try { return (typeof raw === "string" ? JSON.parse(raw) : raw) as { placements?: { place: number; coins: number; rankPoints: number }[] }; } catch { return null; }
   })();
   const firstPlace = rewardsData?.placements?.find(p => p.place === 1) ?? null;
+  // Turnier-Formate (ffa/coop_stats/avg_stats/…) speichern ihre Platzierungsbelohnungen in
+  // pointsConfig statt placementRewardsJson — hier beide Quellen zusammenführen, damit die
+  // Hero-Section für jedes Turnierformat den echten 1.-Platz-Preis zeigt.
+  const heroFirstPlaceCoins    = firstPlace?.coins      ?? placementCoins(1);
+  const heroFirstPlaceRankPts  = firstPlace?.rankPoints ?? placementRankPts(1);
+  const hasHeroFirstPlace      = heroFirstPlaceCoins > 0 || heroFirstPlaceRankPts > 0;
   const date = new Date(event.startAt);
   const serverTimeFallback = date.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
 
@@ -253,6 +285,44 @@ export default async function TournamentDetailPage({
     isElimination ? !!m.winnerId : !!m.playedAt
   ).length;
   const totalMatches = event.matches.length;
+
+  // Umfragen (EventPoll): Stimmenzahl, eigene Stimme und Kandidatenliste fürs Erst-Rendern aufbereiten
+  type RawPoll = (typeof event.polls)[number];
+  type InitialPoll = {
+    id: string; label: string; question: string; voterEligibility: string; answerType: string;
+    customAnswers: string[]; startAt: string; endAt: string; rewardsPaid: boolean;
+    winnerIds: string[] | null; participationCoins: number; participationSeriesPoints: number;
+    winnerCoins: number; winnerRankPoints: number;
+    voteCounts: Record<string, number>; myVote: string | null;
+    answerOptions: { id: string; name: string | null; username: string | null; image: string | null }[] | null;
+  };
+  const initialPolls: InitialPoll[] = event.polls.map((poll: RawPoll) => {
+    const voteCounts: Record<string, number> = {};
+    let myVote: string | null = null;
+    for (const v of poll.votes) {
+      voteCounts[v.targetId] = (voteCounts[v.targetId] ?? 0) + 1;
+      if (v.voterId === userId) myVote = v.targetId;
+    }
+    let customAnswers: string[] = [];
+    if (poll.customAnswers) { try { customAnswers = JSON.parse(poll.customAnswers); } catch { /* ignore */ } }
+    let winnerIds: string[] | null = null;
+    if (poll.winnerIds) { try { winnerIds = JSON.parse(poll.winnerIds); } catch { /* ignore */ } }
+    let answerOptions: InitialPoll["answerOptions"] = null;
+    if (poll.answerType === "players") {
+      answerOptions = allRegistrations.filter(r => r.role === "player").map(r => r.user);
+    } else if (poll.answerType === "spectators") {
+      answerOptions = allRegistrations.filter(r => r.role === "spectator").map(r => r.user);
+    }
+    return {
+      id: poll.id, label: poll.label, question: poll.question,
+      voterEligibility: poll.voterEligibility, answerType: poll.answerType,
+      customAnswers, startAt: poll.startAt.toISOString(), endAt: poll.endAt.toISOString(),
+      rewardsPaid: poll.rewardsPaid, winnerIds,
+      participationCoins: poll.participationCoins, participationSeriesPoints: poll.participationSeriesPoints,
+      winnerCoins: poll.winnerCoins, winnerRankPoints: poll.winnerRankPoints,
+      voteCounts, myVote, answerOptions,
+    };
+  });
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
@@ -328,26 +398,26 @@ export default async function TournamentDetailPage({
             <p className="text-xs text-gray-500 mt-0.5">Teilnehmer</p>
           </div>
           <div className="glass-heavy rounded-xl p-3 text-center">
-            {firstPlace ? (
+            {hasHeroFirstPlace ? (
               <div className="flex items-center justify-center gap-1 flex-wrap">
                 <span className="text-sm">🥇</span>
-                {firstPlace.coins > 0 && (
+                {heroFirstPlaceCoins > 0 && (
                   <span className="flex items-center gap-0.5 text-sm font-semibold text-amber-400">
                     <Image src="/Muenze Icon.png" alt="Münzen" width={14} height={14} className="object-contain" />
-                    {firstPlace.coins}
+                    {heroFirstPlaceCoins}
                   </span>
                 )}
-                {firstPlace.rankPoints > 0 && (
+                {heroFirstPlaceRankPts > 0 && (
                   <span className="flex items-center gap-0.5 text-sm font-semibold text-teal-400">
                     <RankPointsIcon size={14} />
-                    {firstPlace.rankPoints}
+                    {heroFirstPlaceRankPts}
                   </span>
                 )}
               </div>
             ) : (
               <p className="text-lg font-semibold text-rose-400">+{participationCoins}</p>
             )}
-            <p className="text-xs text-gray-500 mt-0.5">{firstPlace ? "1. Platz" : "Münzen"}</p>
+            <p className="text-xs text-gray-500 mt-0.5">{hasHeroFirstPlace ? "1. Platz" : "Münzen"}</p>
           </div>
           <div className="glass-heavy rounded-xl p-3 text-center">
             <p className="text-lg font-semibold text-white">
@@ -356,6 +426,12 @@ export default async function TournamentDetailPage({
             <p className="text-xs text-gray-500 mt-0.5">Matches gespielt</p>
           </div>
         </div>
+
+        {event.description && (
+          <p className="mt-4 text-sm text-gray-400 leading-relaxed whitespace-pre-line">
+            {event.description}
+          </p>
+        )}
 
         {winner && (
           <div className="mt-4 flex items-center gap-3 bg-amber-900/20 border border-amber-800/30 rounded-xl p-3">
@@ -433,6 +509,30 @@ export default async function TournamentDetailPage({
                 🏅 {s.user.username ?? s.user.name ?? "Unbekannt"}
               </span>
             ))}
+          </div>
+        )}
+
+        {userId && (
+          <div className="mt-4 flex items-center gap-3 flex-wrap">
+            {canRegister && (
+              <RegisterButton eventId={event.id} isRegistered={isRegistered} isFull={isFullEvent && !isRegistered} discordEventUrl={discordEventUrl} />
+            )}
+            {canRegister && event.spectatorMode && !isRegistered && (
+              <SpectatorRegisterButton eventId={event.id} isSpectator={isSpectator} />
+            )}
+            {event.status === "umfrage" && discordChannelUrl && initialPolls.length === 0 && (
+              <a href={discordChannelUrl} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-sm text-amber-400 hover:text-amber-300 transition-colors border border-amber-500/20 hover:border-amber-500/40 px-3 py-1.5 rounded-xl font-medium">
+                <Vote className="w-3.5 h-3.5" />
+                {legacyPollConfig?.question ? `Jetzt für „${legacyPollConfig.question}" abstimmen` : "Jetzt abstimmen"} ↗
+              </a>
+            )}
+            {discordEventUrl && (
+              <a href={discordEventUrl} target="_blank" rel="noopener noreferrer"
+                className="text-xs text-gray-500 hover:text-teal-400 transition-colors">
+                In Discord ansehen ↗
+              </a>
+            )}
           </div>
         )}
 
@@ -597,15 +697,53 @@ export default async function TournamentDetailPage({
         </div>
       )}
 
-      {/* ── Content ────────────────────────────────────────────────────── */}
-      {!hasTournament ? (
-        <div className="glass rounded-2xl p-10 text-center">
-          <Swords className="w-10 h-10 mx-auto mb-3 text-gray-700" />
-          <p className="text-gray-400 font-medium">Noch kein Spielplan erstellt.</p>
-          <p className="text-gray-600 text-sm mt-1">Ein Admin erstellt den Spielplan im Admin-Bereich.</p>
+      {/* ── Abstimmungen ─────────────────────────────────────────────────── */}
+      {initialPolls.length > 0 && (
+        <div className="mb-5">
+          <PollsSection
+            eventId={event.id}
+            userId={userId}
+            initialPolls={initialPolls}
+            eventRegistrations={allRegistrations}
+          />
         </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
+      )}
+
+      {/* ── Eventbericht ──────────────────────────────────────────────── */}
+      {event.status === "finished" && event.summary && (
+        <div className="mb-5">
+          <EventSummarySection summary={event.summary} />
+        </div>
+      )}
+
+      {/* ── Twitch-Clip (Admin-Highlight) ────────────────────────────── */}
+      {event.twitchClipUrl && (
+        <div className="glass rounded-2xl p-4 mb-5" style={{ border: "1px solid rgba(145,70,255,0.15)" }}>
+          <div className="flex items-center gap-2 mb-2">
+            <Clapperboard className="w-4 h-4 text-[#9146ff]" />
+            <span className="text-sm font-semibold text-gray-300">Event-Highlight</span>
+          </div>
+          <a href={event.twitchClipUrl} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-sm text-[#9146ff] hover:text-purple-300 transition-colors">
+            Clip auf Twitch ansehen ↗
+          </a>
+        </div>
+      )}
+
+      {/* ── Clip-Einreichung (für Teilnehmer nach Event) ─────────────── */}
+      {event.status === "finished" && userId && isRegistered && (
+        <div className="glass rounded-2xl p-4 mb-5" style={{ border: "1px solid rgba(255,255,255,0.06)" }}>
+          <div className="flex items-center gap-2 mb-3">
+            <Clapperboard className="w-4 h-4 text-gray-400" />
+            <span className="text-sm font-semibold text-gray-300">Deinen Twitch-Clip einreichen</span>
+          </div>
+          <p className="text-xs text-gray-500 mb-3">Hattest du einen guten Moment im Stream? Reiche deinen Clip ein.</p>
+          <ClipSubmitter eventId={event.id} existingClipUrl={myClipSubmission?.clipUrl ?? null} />
+        </div>
+      )}
+
+      {/* ── Content ────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
           {/* Teilnehmerliste */}
           <div className="lg:col-span-1">
             <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
@@ -652,6 +790,13 @@ export default async function TournamentDetailPage({
 
           {/* Format-spezifische Ansicht */}
           <div className="lg:col-span-3">
+            {!hasTournament && (
+              <div className="glass rounded-2xl p-10 text-center">
+                <Swords className="w-10 h-10 mx-auto mb-3 text-gray-700" />
+                <p className="text-gray-400 font-medium">Kein Turnier-Spielplan für dieses Event.</p>
+                <p className="text-gray-600 text-sm mt-1">Dieses Event läuft ohne Turnierbaum.</p>
+              </div>
+            )}
             {isElimination && (
               <BracketView
                 matches={event.matches as Parameters<typeof BracketView>[0]["matches"]}
@@ -682,7 +827,6 @@ export default async function TournamentDetailPage({
                 statPointsPer={statPointsPer}
                 userId={userId}
                 format={format}
-                participationCoins={participationCoins}
                 placementRewards={[1, 2, 3].map(place => ({
                   place,
                   coins: placementCoins(place),
@@ -690,14 +834,12 @@ export default async function TournamentDetailPage({
                 }))}
                 finalRankingGroups={rankingGroups}
                 pollWinnerIds={pollWinnerIds}
-                pollBonusCoins={pollBonusCoins}
                 pollBonusRankPts={pollBonusRankPts}
                 pollLabel={pollLabel}
               />
             )}
           </div>
         </div>
-      )}
     </div>
   );
 }

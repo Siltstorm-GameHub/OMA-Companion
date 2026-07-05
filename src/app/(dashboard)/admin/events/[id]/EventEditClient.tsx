@@ -496,7 +496,7 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
             {hidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
             {hidden ? "Ausgeblendet" : "Sichtbar"}
           </button>
-          <Link href={`/events/${event.id}`}
+          <Link href={`/tournament/${event.id}`}
             className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 border border-white/[0.08] hover:border-white/20 rounded-lg px-3 py-1.5 transition-all">
             <ExternalLink className="w-3.5 h-3.5" /> Öffentlich
           </Link>

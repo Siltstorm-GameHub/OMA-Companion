@@ -269,7 +269,7 @@ export default async function DashboardPage() {
       {liveEvent && (
         <div className="px-4 sm:px-6 pt-4 max-w-7xl mx-auto">
           <Link
-            href={liveEvent.format ? `/tournament/${liveEvent.id}` : `/events/${liveEvent.id}`}
+            href={`/tournament/${liveEvent.id}`}
             className="flex items-center gap-4 px-4 py-3.5 rounded-xl group transition-all hover:brightness-110"
             style={{ background: "linear-gradient(135deg, rgba(239,68,68,0.12) 0%, rgba(239,68,68,0.06) 100%)", border: "1px solid rgba(239,68,68,0.28)", boxShadow: "0 0 24px rgba(239,68,68,0.08)" }}>
             {/* Pulsierendes Icon */}
@@ -621,7 +621,7 @@ export default async function DashboardPage() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {recentSummaries.map(ev => (
-                <Link key={ev.id} href={`/events/${ev.id}`}
+                <Link key={ev.id} href={`/tournament/${ev.id}`}
                   className="surface group block p-4 hover:border-teal-500/20 transition-all"
                   style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.45)" }}>
                   <div className="flex items-start gap-2 mb-2">

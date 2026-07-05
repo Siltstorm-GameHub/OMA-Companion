@@ -1,7 +1,6 @@
 "use client";
 import { useState } from "react";
 import { ChevronDown, ChevronUp, Trophy, Clock, Vote } from "lucide-react";
-import CoinIcon from "@/components/CoinIcon";
 import RankPointsIcon from "@/components/RankPointsIcon";
 
 type User        = { id: string; name: string | null; username: string | null; image: string | null };
@@ -34,11 +33,9 @@ export default function FfaView({
   statPointsPer = {},
   userId,
   format = "ffa",
-  participationCoins = 0,
   placementRewards = [],
   finalRankingGroups = null,
   pollWinnerIds = [],
-  pollBonusCoins = null,
   pollBonusRankPts = null,
   pollLabel = null,
 }: {
@@ -49,11 +46,9 @@ export default function FfaView({
   statPointsPer?: Record<string, number>;
   userId: string;
   format?: string;
-  participationCoins?: number;
   placementRewards?: { place: number; coins: number; rankPts: number }[];
   finalRankingGroups?: string[][] | null;
   pollWinnerIds?: string[];
-  pollBonusCoins?: number | null;
   pollBonusRankPts?: number | null;
   pollLabel?: string | null;
 }) {
@@ -120,6 +115,9 @@ export default function FfaView({
   const playedMatches   = matches.filter(m => m.playedAt);
   const upcomingMatches = matches.filter(m => !m.playedAt);
 
+  // Belohnungs-Spalte zeigt nur Rangpunkte (keine Münzen)
+  const hasRewards = placementRewards.some(p => p.rankPts > 0) || (pollWinnerIds.length > 0 && (pollBonusRankPts ?? 0) > 0);
+
   return (
     <div className="space-y-5">
 
@@ -145,7 +143,7 @@ export default function FfaView({
                     {isCoop && (
                       <th className="text-center px-3 py-2.5 font-medium text-emerald-400">Match Wins</th>
                     )}
-                    {placementRewards.some(r => r.coins > 0 || r.rankPts > 0) && (
+                    {hasRewards && (
                       <th className="text-center px-3 py-2.5 font-medium text-amber-500/70">Belohnung</th>
                     )}
                     <th className="text-center px-3 py-2.5 font-medium">Runden</th>
@@ -173,9 +171,7 @@ export default function FfaView({
                     const place = confirmedPlace ?? (i + 1);
                     const reward = placementRewards.find(p => p.place === place);
                     const isPollWinner = pollWinnerIds.includes(r.userId);
-                    const totalCoins = (reward?.coins ?? 0) + participationCoins + (isPollWinner && pollBonusCoins ? pollBonusCoins : 0);
                     const totalRankPts = (reward?.rankPts ?? 0) + (isPollWinner && pollBonusRankPts ? pollBonusRankPts : 0);
-                    const hasRewards = placementRewards.some(p => p.coins > 0 || p.rankPts > 0) || (pollWinnerIds.length > 0 && ((pollBonusCoins ?? 0) > 0 || (pollBonusRankPts ?? 0) > 0));
                     return (
                       <tr key={r.userId} className={`transition-colors ${isMe ? "bg-rose-950/30" : "hover:bg-white/[0.02]"}`}>
                         <td className="px-4 py-3 text-center">
@@ -228,11 +224,6 @@ export default function FfaView({
                         {hasRewards && (
                           <td className="px-3 py-3 text-center">
                             <div className="flex flex-col items-center gap-0.5">
-                              {totalCoins > 0 && (
-                                <span className={`text-[11px] tabular-nums leading-tight ${reward || isPollWinner ? "text-amber-400" : "text-amber-400/50"}`}>
-                                  +{totalCoins} <CoinIcon size={11} />
-                                </span>
-                              )}
                               {totalRankPts > 0 && (
                                 <span className="text-[11px] text-teal-400 tabular-nums leading-tight">
                                   +{totalRankPts} <RankPointsIcon size={11} />

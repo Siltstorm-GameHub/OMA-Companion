@@ -449,7 +449,7 @@ export default async function PublicProfilePage({
                     if (idx !== -1) placement = idx + 1;
                   } catch { /* ignore */ }
                   return (
-                    <Link key={reg.id} href={`/events/${reg.event.id}`}
+                    <Link key={reg.id} href={`/tournament/${reg.event.id}`}
                       className="flex items-center justify-between px-4 py-3 hover:bg-white/[0.03] transition-colors group">
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-white truncate group-hover:text-rose-300 transition-colors">{reg.event.title}</p>
