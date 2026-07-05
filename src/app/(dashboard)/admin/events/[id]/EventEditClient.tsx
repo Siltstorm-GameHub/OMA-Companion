@@ -146,7 +146,7 @@ function toDatetimeLocal(d: Date | string) {
   return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
 }
 
-type TabKey = "details" | "rewards" | "tournament" | "participants" | "series";
+type TabKey = "details" | "rewards" | "tournament" | "bracket" | "participants" | "series";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export default function EventEditClient({ event, allUsers }: { event: any; allUsers: User[] }) {
@@ -420,15 +420,20 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
   const isSeriesEvent = !!event.series?.fixedGame;
 
   /* ── Tab definitions ── */
-  const tabs: { key: TabKey; label: string }[] = isSeriesEvent
+  const bracketTab = event.format
+    ? [{ key: "bracket" as TabKey, label: "Turnierbaum", href: `/admin/events/${event.id}/bracket` }]
+    : [];
+  const tabs: { key: TabKey; label: string; href?: string }[] = isSeriesEvent
     ? [
         { key: "details",      label: "Details" },
+        ...bracketTab,
         { key: "participants", label: `Teilnehmer (${event._count.registrations})` },
       ]
     : [
         { key: "details",     label: "Details" },
         { key: "rewards",     label: "Belohnungen" },
         ...(hasTournament || event.type === "tournament" ? [{ key: "tournament" as TabKey, label: "Turnier" }] : []),
+        ...bracketTab,
         { key: "participants", label: `Teilnehmer (${event._count.registrations})` },
         ...(event.series ? [{ key: "series" as TabKey, label: "Reihe" }] : []),
       ];
@@ -472,12 +477,6 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
             className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 border border-white/[0.08] hover:border-white/20 rounded-lg px-3 py-1.5 transition-all">
             <ExternalLink className="w-3.5 h-3.5" /> Öffentlich
           </Link>
-          {event.format && (
-            <Link href={`/admin/events/${event.id}/bracket`}
-              className="flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 border border-amber-500/30 hover:border-amber-500/50 rounded-lg px-3 py-1.5 transition-all">
-              <Trophy className="w-3.5 h-3.5" /> Turnierbaum
-            </Link>
-          )}
         </div>
       </div>
 
@@ -499,14 +498,21 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
       {/* Tabs */}
       <div className="flex gap-1 border-b border-white/[0.06] overflow-x-auto">
         {tabs.map(tab => (
-          <button key={tab.key} type="button" onClick={() => setActiveTab(tab.key)}
-            className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors ${
-              activeTab === tab.key
-                ? "text-teal-300 border-b-2 border-teal-500 -mb-px"
-                : "text-gray-500 hover:text-gray-300"
-            }`}>
-            {tab.label}
-          </button>
+          tab.href ? (
+            <Link key={tab.key} href={tab.href}
+              className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors text-amber-400 hover:text-amber-300">
+              <Trophy className="w-3.5 h-3.5" /> {tab.label}
+            </Link>
+          ) : (
+            <button key={tab.key} type="button" onClick={() => setActiveTab(tab.key)}
+              className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors ${
+                activeTab === tab.key
+                  ? "text-teal-300 border-b-2 border-teal-500 -mb-px"
+                  : "text-gray-500 hover:text-gray-300"
+              }`}>
+              {tab.label}
+            </button>
+          )
         ))}
       </div>
 
