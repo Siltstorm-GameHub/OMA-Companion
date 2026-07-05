@@ -36,7 +36,7 @@ export function MinigamesConfigPanel({ initial }: { initial: MinigamesConfig }) 
       {/* ── Aktivieren/Deaktivieren ── */}
       <div className="glass rounded-2xl divide-y divide-white/5">
         {([
-          { key: "predictionEnabled" as const, label: "Live Match Prediction", desc: "Tipps auf Turnier-/FFA-Matches" },
+          { key: "predictionEnabled" as const, label: "Event-Sieger-Vorhersage", desc: "Tipp auf den Gesamtsieger eines Events" },
           { key: "clickerEnabled" as const, label: "Idle-Clicker", desc: "Tap-Minigame mit Bonus-Icons" },
           { key: "duelEnabled" as const, label: "1v1 Münzen-Duell", desc: "User-vs-User-Wette per Münzwurf" },
         ]).map(item => (

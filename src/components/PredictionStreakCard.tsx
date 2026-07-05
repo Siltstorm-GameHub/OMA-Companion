@@ -14,7 +14,7 @@ export default function PredictionStreakCard({
     <div className="animate-slide-up">
       <div className="flex items-center justify-between mb-2.5">
         <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-          <Target className="w-3.5 h-3.5 text-violet-500/70" /> Match-Vorhersagen
+          <Target className="w-3.5 h-3.5 text-violet-500/70" /> Event-Sieger-Vorhersagen
         </h2>
         <Link href="/events" className="text-[11px] flex items-center gap-0.5 text-teal-500 hover:text-teal-300 transition-colors">
           Turniere <ChevronRight className="w-3 h-3" />

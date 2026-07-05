@@ -16,6 +16,7 @@ import RegisterButton from "@/app/(dashboard)/events/RegisterButton";
 import SpectatorRegisterButton from "./SpectatorRegisterButton";
 import ClipSubmitter from "./ClipSubmitter";
 import PollsSection from "./PollsSection";
+import EventWinnerPredictionWidget from "./EventWinnerPredictionWidget";
 import { EventCategory } from "@prisma/client";
 
 const GENRE_MAP: Record<string, { label: string; icon: string }> = {
@@ -95,21 +96,20 @@ export default async function TournamentDetailPage({
   const allRegistrations = event.registrations.map(r => ({ userId: r.userId, role: r.role, user: r.user }));
   const myClipSubmission = event.clipSubmissions.find(c => c.userId === userId) ?? null;
 
-  const matchIds = event.matches.map(m => m.id);
-  const [sponsors, holdersMap, myPredictionRows] = await Promise.all([
+  const [sponsors, holdersMap, myEventPrediction] = await Promise.all([
     prisma.shopPurchase.findMany({
       where:   { consumed: false, item: { type: "tournament_sponsor" } },
       include: { user: { select: { username: true, name: true } } },
       orderBy: { createdAt: "asc" },
     }),
     getWanderpocalHoldersMap(),
-    matchIds.length
-      ? prisma.matchPrediction.findMany({ where: { userId, matchId: { in: matchIds } } })
-      : Promise.resolve([]),
+    prisma.eventWinnerPrediction.findUnique({
+      where: { userId_eventId: { userId, eventId } },
+      include: { predictedUser: { select: { id: true, username: true, name: true, image: true } } },
+    }),
   ]);
   const holdersList = [...holdersMap.values()];
-  const myPredictions: Record<string, { predictedUserId: string; resolved: boolean; correct: boolean | null; coinsAwarded: number }> =
-    Object.fromEntries(myPredictionRows.map(p => [p.matchId, p]));
+  const isPredictionLocked = event.status === "finished" || event.startAt < new Date();
 
   const myReg         = event.registrations.find((r) => r.userId === userId);
   const isRegistered  = !!myReg && myReg.role !== "spectator";
@@ -556,6 +556,15 @@ export default async function TournamentDetailPage({
         )}
       </div>
 
+      {/* ── Event-Gesamtsieger-Vorhersage ─────────────────────────────── */}
+      <div className="mb-5">
+        <EventWinnerPredictionWidget
+          eventId={event.id}
+          locked={isPredictionLocked}
+          initialPrediction={myEventPrediction}
+        />
+      </div>
+
       {/* Endplatzierungs-Notiz (falls vorhanden) */}
       {gamePhaseComplete && event.finalRankingNote && (
         <div className="glass rounded-2xl px-4 py-3 mb-5 flex items-start gap-2">
@@ -817,7 +826,6 @@ export default async function TournamentDetailPage({
                 participants={mergedParticipants}
                 userId={userId}
                 holders={holdersList}
-                myPredictions={myPredictions}
               />
             )}
             {isRoundRobin && (
@@ -851,7 +859,6 @@ export default async function TournamentDetailPage({
                 pollWinnerIds={pollWinnerIds}
                 pollBonusRankPts={pollBonusRankPts}
                 pollLabel={pollLabel}
-                myPredictions={myPredictions}
               />
             )}
           </div>

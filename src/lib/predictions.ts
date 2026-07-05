@@ -1,7 +1,7 @@
 import { prisma } from "./prisma";
 import { dispatchNotification } from "./notify-dispatch";
 
-const BASE_REWARD = 20;
+const BASE_REWARD = 50;
 
 /** Multiplikator basierend auf dem (nach diesem Treffer aktuellen) Streak-Stand */
 function streakMultiplier(streak: number): number {
@@ -16,13 +16,14 @@ function todayStr(): string {
 }
 
 /**
- * Wertet alle offenen Vorhersagen zu einem Match aus, sobald dessen Ergebnis feststeht.
- * winnerUserId = null bedeutet "kein eindeutiger Sieger" (z.B. Unentschieden) — alle
- * offenen Tipps werden dann als falsch aufgelöst.
+ * Wertet alle offenen Gesamtsieger-Vorhersagen zu einem Event aus, sobald der
+ * Sieger feststeht. winnerUserId = null bedeutet "kein eindeutiger Sieger"
+ * (z.B. kooperatives Event ohne Platzierung) — alle offenen Tipps werden dann
+ * als falsch aufgelöst.
  */
-export async function resolveMatchPredictions(matchId: string, winnerUserId: string | null) {
-  const predictions = await prisma.matchPrediction.findMany({
-    where: { matchId, resolved: false },
+export async function resolveEventPredictions(eventId: string, winnerUserId: string | null) {
+  const predictions = await prisma.eventWinnerPrediction.findMany({
+    where: { eventId, resolved: false },
   });
   if (predictions.length === 0) return;
 
@@ -31,7 +32,7 @@ export async function resolveMatchPredictions(matchId: string, winnerUserId: str
 
     if (!correct) {
       await prisma.$transaction([
-        prisma.matchPrediction.update({
+        prisma.eventWinnerPrediction.update({
           where: { id: prediction.id },
           data: { resolved: true, correct: false, coinsAwarded: 0 },
         }),
@@ -56,12 +57,12 @@ export async function resolveMatchPredictions(matchId: string, winnerUserId: str
     const coinsAwarded = Math.round(BASE_REWARD * streakMultiplier(newCurrent));
 
     await prisma.$transaction([
-      prisma.matchPrediction.update({
+      prisma.eventWinnerPrediction.update({
         where: { id: prediction.id },
         data: { resolved: true, correct: true, coinsAwarded },
       }),
       prisma.pointTransaction.create({
-        data: { userId: prediction.userId, amount: coinsAwarded, reason: "🎯 Match-Vorhersage richtig" },
+        data: { userId: prediction.userId, amount: coinsAwarded, reason: "🎯 Event-Sieger-Vorhersage richtig" },
       }),
       prisma.user.update({
         where: { id: prediction.userId },

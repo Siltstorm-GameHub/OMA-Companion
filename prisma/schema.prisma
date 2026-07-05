@@ -40,44 +40,45 @@ model User {
   // Notification-Präferenzen: JSON-Objekt { badge: bool, quest: bool, event: bool, points: bool, clip: bool, admin: bool }
   notificationPrefs  String  @default("{}")
 
-  accounts               Account[]
-  sessions               Session[]
-  eventRegistrations     EventRegistration[]
-  pointTransactions      PointTransaction[]
-  tournamentParticipants TournamentParticipant[]
-  teamMemberships        TeamMember[]
-  matchEntries           MatchEntry[]
-  questProgress          UserQuestProgress[]
-  lulEntries             LulEntry[]
-  lulLegacyEntries       LulLegacyEntry[]
-  shopPurchases          ShopPurchase[]
-  lulSuggestions         LulSuggestion[]
-  dailySpins             DailySpin[]
-  donations              Donation[]
-  collectibles           UserCollectible[]
-  lobbyMessages          LobbyMessage[]
-  pushSubscriptions      PushSubscription[]
-  clipSubmissions        EventClipSubmission[]
-  clipNominations        ClipNomination[]
-  contestVotes           ClipContestVote[]
-  eventPollVotes         EventPollVote[]
-  systemBadges           UserSystemBadge[]
-  customBadgeAwards      UserCustomBadge[]
-  dailyMessages          DailyMessage[]
-  predictions            MatchPrediction[]
-  predictionStreak       PredictionStreak?
-  dailyClickerProgress   DailyClickerProgress[]
-  clickerProfile         ClickerProfile?
-  duelChallengesSent     DuelChallenge[]          @relation("DuelChallenger")
-  duelChallengesReceived DuelChallenge[]          @relation("DuelOpponent")
-  wanderpocalHoldings    WanderpocalHolder[]
-  wanderpocalStats       WanderpocalStat[]
-  communityStreams       EventCommunityStreamer[]
-  linkedPartner          Partner?
-  notifications          InAppNotification[]
-  lulPollVotesGiven      LulPollVote[]            @relation("LulPollVoter")
-  lulPollVotesReceived   LulPollVote[]            @relation("LulPollTarget")
-  serverApplications     ServerApplication[]
+  accounts                 Account[]
+  sessions                 Session[]
+  eventRegistrations       EventRegistration[]
+  pointTransactions        PointTransaction[]
+  tournamentParticipants   TournamentParticipant[]
+  teamMemberships          TeamMember[]
+  matchEntries             MatchEntry[]
+  questProgress            UserQuestProgress[]
+  lulEntries               LulEntry[]
+  lulLegacyEntries         LulLegacyEntry[]
+  shopPurchases            ShopPurchase[]
+  lulSuggestions           LulSuggestion[]
+  dailySpins               DailySpin[]
+  donations                Donation[]
+  collectibles             UserCollectible[]
+  lobbyMessages            LobbyMessage[]
+  pushSubscriptions        PushSubscription[]
+  clipSubmissions          EventClipSubmission[]
+  clipNominations          ClipNomination[]
+  contestVotes             ClipContestVote[]
+  eventPollVotes           EventPollVote[]
+  systemBadges             UserSystemBadge[]
+  customBadgeAwards        UserCustomBadge[]
+  dailyMessages            DailyMessage[]
+  eventPredictionsMade     EventWinnerPrediction[]  @relation("EventPredictionAuthor")
+  eventPredictionsReceived EventWinnerPrediction[]  @relation("EventPredictionTarget")
+  predictionStreak         PredictionStreak?
+  dailyClickerProgress     DailyClickerProgress[]
+  clickerProfile           ClickerProfile?
+  duelChallengesSent       DuelChallenge[]          @relation("DuelChallenger")
+  duelChallengesReceived   DuelChallenge[]          @relation("DuelOpponent")
+  wanderpocalHoldings      WanderpocalHolder[]
+  wanderpocalStats         WanderpocalStat[]
+  communityStreams         EventCommunityStreamer[]
+  linkedPartner            Partner?
+  notifications            InAppNotification[]
+  lulPollVotesGiven        LulPollVote[]            @relation("LulPollVoter")
+  lulPollVotesReceived     LulPollVote[]            @relation("LulPollTarget")
+  serverApplications       ServerApplication[]
 }
 
 // ── Collectibles ─────────────────────────────────────────────────────────────
@@ -318,6 +319,7 @@ model Event {
   communityStreamers EventCommunityStreamer[]
   clipSubmissions    EventClipSubmission[]
   polls              EventPoll[]
+  winnerPredictions  EventWinnerPrediction[]
 }
 
 // ── Event-Umfragen ────────────────────────────────────────────────────────────
@@ -514,7 +516,7 @@ model TeamMember {
 }
 
 model Match {
-  id          String            @id @default(cuid())
+  id          String       @id @default(cuid())
   eventId     String
   round       Int
   position    Int
@@ -528,10 +530,9 @@ model Match {
   score1      Int?
   score2      Int?
   playedAt    DateTime?
-  event       Event             @relation(fields: [eventId], references: [id])
+  event       Event        @relation(fields: [eventId], references: [id])
   // ffa / coop_stats / team_vs_team: eine Zeile pro Teilnehmer
   entries     MatchEntry[]
-  predictions MatchPrediction[]
 }
 
 // Flexible Teilnehmer-Zeile für FFA, Coop und Team-Matches
@@ -580,23 +581,24 @@ model UserQuestProgress {
   @@unique([userId, questId])
 }
 
-// ── Minigames: Match-Vorhersage ─────────────────────────────────────────────
+// ── Minigames: Event-Gesamtsieger-Vorhersage ────────────────────────────────
 
-model MatchPrediction {
+model EventWinnerPrediction {
   id              String   @id @default(cuid())
-  userId          String
-  matchId         String
-  // Vorhergesagter Sieger: userId (1v1/Bracket) oder userId des FFA-Teilnehmers (placement===1)
+  userId          String // wer tippt
+  eventId         String
+  // Vorhergesagter Gesamtsieger — beliebiger User, muss nicht am Event angemeldet sein
   predictedUserId String
   createdAt       DateTime @default(now())
   resolved        Boolean  @default(false)
   correct         Boolean? // null = noch nicht ausgewertet
   coinsAwarded    Int      @default(0)
 
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  user          User  @relation("EventPredictionAuthor", fields: [userId], references: [id], onDelete: Cascade)
+  event         Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  predictedUser User  @relation("EventPredictionTarget", fields: [predictedUserId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, matchId]) // ein Tipp pro User pro Match
+  @@unique([userId, eventId]) // ein Tipp pro User pro Event
 }
 
 // Persistierter Tages-Streak für Vorhersagen (erhöht Auszahlung bei Serie richtiger Tipps)

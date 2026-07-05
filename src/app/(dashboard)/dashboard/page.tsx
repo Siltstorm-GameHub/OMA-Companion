@@ -163,7 +163,7 @@ export default async function DashboardPage() {
       ? prisma.predictionStreak.findUnique({ where: { userId } })
       : Promise.resolve(null),
     userId
-      ? prisma.matchPrediction.count({ where: { userId, resolved: false } })
+      ? prisma.eventWinnerPrediction.count({ where: { userId, resolved: false } })
       : Promise.resolve(0),
   ]);
 

@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { generateRoundRobin } from "@/app/api/tournaments/route";
 import { dispatchEventNotification } from "@/lib/notify-dispatch";
+import { resolveEventPredictions } from "@/lib/predictions";
 
 const FORMAT_LABELS: Record<string, string> = {
   single_elimination: "K.O.-System",
@@ -234,6 +235,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     await awardPoints(newRanking, cfgRaw, eventTitle, 1);
 
     if (isBecomingFinished) {
+      try {
+        await resolveEventPredictions(eventId, newRanking[0] ?? null);
+      } catch (err) {
+        console.error("[Predictions] Auswertung fehlgeschlagen:", err);
+      }
+
       announceTournamentResult({
         eventId,
         eventTitle,
