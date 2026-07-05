@@ -2,6 +2,7 @@
 import { Trophy } from "lucide-react";
 import WinIcon from "@/components/WinIcon";
 import WanderpocalBadge from "@/components/WanderpocalBadge";
+import PredictionWidget from "./PredictionWidget";
 import type { WanderpocalHolder } from "@/lib/wanderpocal";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };
@@ -29,11 +30,13 @@ export default function BracketView({
   participants,
   userId,
   holders = [],
+  myPredictions = {},
 }: {
   matches: Match[];
   participants: Participant[];
   userId: string;
   holders?: WanderpocalHolder[];
+  myPredictions?: Record<string, { predictedUserId: string; resolved: boolean; correct: boolean | null; coinsAwarded: number }>;
 }) {
   if (!matches.length) {
     return (
@@ -51,8 +54,12 @@ export default function BracketView({
   const findUser = (id: string | null) =>
     id ? participants.find(p => p.userId === id)?.user : undefined;
 
+  // Gibt es mind. ein noch offenes Match mit zwei bekannten Teilnehmern? Dann brauchen
+  // die Slots zusätzlichen Platz für das eingebettete PredictionWidget.
+  const hasPredictableMatch = matches.some(m => !m.winnerId && findUser(m.player1Id) && findUser(m.player2Id));
+
   // Slot-Höhe in px (match card + gap)
-  const CARD_H = 84;
+  const CARD_H = hasPredictableMatch ? 124 : 84;
   const CARD_GAP = 8;
   const SLOT = CARD_H + CARD_GAP;
 
@@ -153,6 +160,19 @@ export default function BracketView({
                             </div>
                           );
                         })}
+
+                        {pending && p1 && p2 && (
+                          <PredictionWidget
+                            matchId={match.id}
+                            candidates={[
+                              { id: match.player1Id!, name: uname(p1), image: p1.image },
+                              { id: match.player2Id!, name: uname(p2), image: p2.image },
+                            ]}
+                            myPrediction={myPredictions[match.id] ?? null}
+                            locked={!!match.scheduledAt && new Date(match.scheduledAt) < new Date()}
+                            compact
+                          />
+                        )}
                       </div>
                     </div>
                   );

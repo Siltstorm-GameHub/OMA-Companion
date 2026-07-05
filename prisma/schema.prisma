@@ -3,9 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-url      = env("DATABASE_URL")
-directUrl = env("DIRECT_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -15,17 +15,17 @@ model User {
   emailVerified DateTime?
   image         String?
 
-  discordId     String?   @unique
-  username      String?
-  role          String    @default("user") // user | moderator | admin
-  points        Int       @default(0)   // Münzen (Shop-Währung)
-  rankPoints    Int       @default(0)   // Prestige-Punkte (Events, Turniere, LuL)
-  createdAt     DateTime  @default(now())
+  discordId  String?  @unique
+  username   String?
+  role       String   @default("user") // user | moderator | admin
+  points     Int      @default(0) // Münzen (Shop-Währung)
+  rankPoints Int      @default(0) // Prestige-Punkte (Events, Turniere, LuL)
+  createdAt  DateTime @default(now())
 
   twitchLogin        String?   @unique
   birthday           DateTime? // Nur Datum relevant (month/day)
   birthdayBoostUntil DateTime? // 2x Punkte bis zu diesem Zeitpunkt
-  bio                String?   // Kurzer Gruß / Beschreibung (max. 200 Zeichen)
+  bio                String? // Kurzer Gruß / Beschreibung (max. 200 Zeichen)
   xpBoostUntil       DateTime?
   streakShield       Boolean   @default(false)
 
@@ -34,78 +34,84 @@ model User {
   messagesTotal     Int @default(0)
 
   // Collectibles Showcase: JSON-Array mit bis zu 5 CollectibleItem-IDs
-  showcaseJson        String?
+  showcaseJson       String?
   // Badge Showcase: JSON-Array mit bis zu 3 Badge-Keys (system oder custom-id)
-  showcaseBadgesJson  String?
+  showcaseBadgesJson String?
   // Notification-Präferenzen: JSON-Objekt { badge: bool, quest: bool, event: bool, points: bool, clip: bool, admin: bool }
-  notificationPrefs   String  @default("{}")
+  notificationPrefs  String  @default("{}")
 
-  accounts      Account[]
-  sessions      Session[]
-  eventRegistrations        EventRegistration[]
-  pointTransactions         PointTransaction[]
-  tournamentParticipants    TournamentParticipant[]
-  teamMemberships           TeamMember[]
-  matchEntries              MatchEntry[]
-  questProgress             UserQuestProgress[]
-  lulEntries                LulEntry[]
-  lulLegacyEntries          LulLegacyEntry[]
-  shopPurchases             ShopPurchase[]
-  lulSuggestions            LulSuggestion[]
-  dailySpins                DailySpin[]
-  donations                 Donation[]
-  collectibles              UserCollectible[]
-  lobbyMessages             LobbyMessage[]
-  pushSubscriptions         PushSubscription[]
-  clipSubmissions           EventClipSubmission[]
-  clipNominations           ClipNomination[]
-  contestVotes              ClipContestVote[]
-  eventPollVotes            EventPollVote[]
-  systemBadges              UserSystemBadge[]
-  customBadgeAwards         UserCustomBadge[]
-  dailyMessages             DailyMessage[]
-  wanderpocalHoldings       WanderpocalHolder[]
-  wanderpocalStats          WanderpocalStat[]
-  communityStreams           EventCommunityStreamer[]
-  linkedPartner             Partner?
-  notifications             InAppNotification[]
-  lulPollVotesGiven         LulPollVote[]       @relation("LulPollVoter")
-  lulPollVotesReceived      LulPollVote[]       @relation("LulPollTarget")
-  serverApplications        ServerApplication[]
+  accounts               Account[]
+  sessions               Session[]
+  eventRegistrations     EventRegistration[]
+  pointTransactions      PointTransaction[]
+  tournamentParticipants TournamentParticipant[]
+  teamMemberships        TeamMember[]
+  matchEntries           MatchEntry[]
+  questProgress          UserQuestProgress[]
+  lulEntries             LulEntry[]
+  lulLegacyEntries       LulLegacyEntry[]
+  shopPurchases          ShopPurchase[]
+  lulSuggestions         LulSuggestion[]
+  dailySpins             DailySpin[]
+  donations              Donation[]
+  collectibles           UserCollectible[]
+  lobbyMessages          LobbyMessage[]
+  pushSubscriptions      PushSubscription[]
+  clipSubmissions        EventClipSubmission[]
+  clipNominations        ClipNomination[]
+  contestVotes           ClipContestVote[]
+  eventPollVotes         EventPollVote[]
+  systemBadges           UserSystemBadge[]
+  customBadgeAwards      UserCustomBadge[]
+  dailyMessages          DailyMessage[]
+  predictions            MatchPrediction[]
+  predictionStreak       PredictionStreak?
+  dailyClickerProgress   DailyClickerProgress[]
+  clickerProfile         ClickerProfile?
+  duelChallengesSent     DuelChallenge[]          @relation("DuelChallenger")
+  duelChallengesReceived DuelChallenge[]          @relation("DuelOpponent")
+  wanderpocalHoldings    WanderpocalHolder[]
+  wanderpocalStats       WanderpocalStat[]
+  communityStreams       EventCommunityStreamer[]
+  linkedPartner          Partner?
+  notifications          InAppNotification[]
+  lulPollVotesGiven      LulPollVote[]            @relation("LulPollVoter")
+  lulPollVotesReceived   LulPollVote[]            @relation("LulPollTarget")
+  serverApplications     ServerApplication[]
 }
 
 // ── Collectibles ─────────────────────────────────────────────────────────────
 
 model CollectibleCollection {
-  id             String   @id @default(cuid())
-  name           String
-  description    String?
-  game           String?              // z.B. "Rocket League"
-  coverImageUrl  String?              // URL zum Cover-Bild (Supabase Storage)
-  active         Boolean  @default(true)  // im Shop anzeigen?
-  sortOrder      Int      @default(0)
-  createdAt      DateTime @default(now())
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  game          String? // z.B. "Rocket League"
+  coverImageUrl String? // URL zum Cover-Bild (Supabase Storage)
+  active        Boolean  @default(true) // im Shop anzeigen?
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
 
-  items       CollectibleItem[]
+  items CollectibleItem[]
 }
 
 model CollectibleItem {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   collectionId String
   name         String
   description  String?
-  imageUrl     String?              // URL zum Figuren-Bild (Supabase Storage)
-  rarity       String   @default("common") // common | rare | epic | legendary
+  imageUrl     String? // URL zum Figuren-Bild (Supabase Storage)
+  rarity       String    @default("common") // common | rare | epic | legendary
   price        Int
-  salePrice    Int?                 // Rabattpreis (null = kein Rabatt)
-  saleUntil    DateTime?            // Rabatt läuft bis (null = unbegrenzt)
-  active       Boolean  @default(true)     // im Shop anzeigen?
-  stock        Int?     // null = unbegrenzt
-  sortOrder    Int      @default(0)
-  createdAt    DateTime @default(now())
+  salePrice    Int? // Rabattpreis (null = kein Rabatt)
+  saleUntil    DateTime? // Rabatt läuft bis (null = unbegrenzt)
+  active       Boolean   @default(true) // im Shop anzeigen?
+  stock        Int? // null = unbegrenzt
+  sortOrder    Int       @default(0)
+  createdAt    DateTime  @default(now())
 
-  collection   CollectibleCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  owners       UserCollectible[]
+  collection CollectibleCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  owners     UserCollectible[]
 }
 
 model UserCollectible {
@@ -114,8 +120,8 @@ model UserCollectible {
   collectibleItemId String
   createdAt         DateTime @default(now())
 
-  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  collectibleItem   CollectibleItem @relation(fields: [collectibleItemId], references: [id], onDelete: Cascade)
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  collectibleItem CollectibleItem @relation(fields: [collectibleItemId], references: [id], onDelete: Cascade)
 
   @@unique([userId, collectibleItemId])
 }
@@ -123,26 +129,26 @@ model UserCollectible {
 // ── Shop (nur noch lul_suggest) ──────────────────────────────────────────────
 
 model ShopItem {
-  id          String   @id @default(cuid())
-  name        String
-  description String
-  icon        String
-  price       Int
+  id            String    @id @default(cuid())
+  name          String
+  description   String
+  icon          String
+  price         Int
   // title | badge | streak_shield | xp_boost | profile_theme | event_slot
-  type        String
-  value       String   // Titel-Text | Badge-ID | Theme-Name | "1" für Einmalitems
+  type          String
+  value         String // Titel-Text | Badge-ID | Theme-Name | "1" für Einmalitems
   // cosmetic | boost | privilege
-  category    String
+  category      String
   // common | rare | epic | legendary
-  rarity      String   @default("common")
-  stock         Int?      // null = unbegrenzt
+  rarity        String    @default("common")
+  stock         Int? // null = unbegrenzt
   active        Boolean   @default(true)
   sortOrder     Int       @default(0)
   availableFrom DateTime? // null = sofort verfügbar
   availableTo   DateTime? // null = kein Ablaufdatum
   createdAt     DateTime  @default(now())
 
-  purchases     ShopPurchase[]
+  purchases ShopPurchase[]
 }
 
 model ShopPurchase {
@@ -154,38 +160,38 @@ model ShopPurchase {
   expiresAt DateTime?
   consumed  Boolean   @default(false) // für Einmalitems (Streak-Schutz, Event-Slot)
 
-  user        User           @relation(fields: [userId], references: [id])
-  item        ShopItem       @relation(fields: [itemId], references: [id])
+  user          User           @relation(fields: [userId], references: [id])
+  item          ShopItem       @relation(fields: [itemId], references: [id])
   lulSuggestion LulSuggestion?
 }
 
 model LulSuggestion {
-  id         String      @id @default(cuid())
-  purchaseId String      @unique
+  id         String   @id @default(cuid())
+  purchaseId String   @unique
   userId     String
   game       String
   note       String?
-  status     String      @default("pending") // pending | accepted | rejected
-  createdAt  DateTime    @default(now())
+  status     String   @default("pending") // pending | accepted | rejected
+  createdAt  DateTime @default(now())
 
-  purchase   ShopPurchase @relation(fields: [purchaseId], references: [id])
-  user       User         @relation(fields: [userId], references: [id])
+  purchase ShopPurchase @relation(fields: [purchaseId], references: [id])
+  user     User         @relation(fields: [userId], references: [id])
 }
 
 // ── Täglicher Gratis-Spin ──────────────────────────────────────────────────
 model DailySpin {
   id         String   @id @default(cuid())
   userId     String
-  date       String   // "YYYY-MM-DD" — ein Spin pro Tag
-  prizeType  String   // "points" | "nothing"
-  prizeValue String   // Punkte als String oder "0"
-  prizeLabel String   // Anzeigetext
+  date       String // "YYYY-MM-DD" — ein Spin pro Tag
+  prizeType  String // "points" | "nothing"
+  prizeValue String // Punkte als String oder "0"
+  prizeLabel String // Anzeigetext
   createdAt  DateTime @default(now())
 
-  user       User     @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
   @@unique([userId, date])
 }
-
 
 // ── Auktionen ──────────────────────────────────────────────────────────────
 
@@ -203,6 +209,7 @@ model Account {
   id_token          String?
   session_state     String?
   user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([provider, providerAccountId])
 }
 
@@ -218,125 +225,128 @@ model VerificationToken {
   identifier String
   token      String   @unique
   expires    DateTime
+
   @@unique([identifier, token])
 }
 
 model EventSeries {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  fixedGame        String?  // Wenn gesetzt: alle Events der Reihe nutzen dieses Spiel
-  fixedFormat      String?  // Wenn gesetzt: alle Turniere der Reihe nutzen dieses Format
-  discordChannelId String?  // Kanal-ID für Bot-Nachrichten aller Events dieser Reihe
-  category         EventCategory  @default(casual)
-  genre            EventGenre?
-  platform         String?  // Komma-getrennte Plattformen, z.B. "PC, Xbox"
-  recurrenceType       String?  // "weekly" | "biweekly" | "monthly"
+  id                    String        @id @default(cuid())
+  name                  String
+  description           String?
+  fixedGame             String? // Wenn gesetzt: alle Events der Reihe nutzen dieses Spiel
+  fixedFormat           String? // Wenn gesetzt: alle Turniere der Reihe nutzen dieses Format
+  discordChannelId      String? // Kanal-ID für Bot-Nachrichten aller Events dieser Reihe
+  category              EventCategory @default(casual)
+  genre                 EventGenre?
+  platform              String? // Komma-getrennte Plattformen, z.B. "PC, Xbox"
+  recurrenceType        String? // "weekly" | "biweekly" | "monthly"
   recurrenceMonthlyMode String? // "dayOfMonth" | "weekdayOfMonth" (nur bei monthly)
   // JSON: { participationPoints: 5, stats: [{ field: "Kills", pointsPer: 2, isWinnerStat?, isMatchWinStat? }], mvpStatField?: "MVP", defaultWinnerStatField?: "Kills", defaultWinnerTargetField?: "Siege", winnerStatKeys?: string[], matchWinStatKeys?: string[] }
-  seriesStatConfig String?
+  seriesStatConfig      String?
   // JSON: [{ userId, points, participations, stats: { Kills: 45 } }]
-  legacyStandings String?
+  legacyStandings       String?
   // JSON: { lastUpdated, processedEventIds: string[], raw: { userId: { participations, Kills, MVP, Siege, ... } } }
-  seriesStandingsJson String?
+  seriesStandingsJson   String?
   // JSON: { participationCoins: 10, placements: [{ place: 1, coins: 500, rankPoints: 3 }, ...] }
-  placementRewardsJson String?
+  placementRewardsJson  String?
   // JSON: { enabled: bool, question: string, coins: 250, rankPoints: 3 }
-  pollConfigJson       String?
+  pollConfigJson        String?
   // JSON: [{ label, question, coins, rankPoints, type: "player"|"spectator" }]
-  pollsConfigJson      String?
+  pollsConfigJson       String?
   // Saison-Archiv
-  groupId              String?   // verbindet alle Saisons derselben Reihe
-  status               String    @default("active") // "active" | "archived"
-  hidden               Boolean   @default(false)    // true = nur im Admin sichtbar
-  seasonNumber         Int?      // 1, 2, 3 …
-  archivedAt           DateTime?
+  groupId               String? // verbindet alle Saisons derselben Reihe
+  status                String        @default("active") // "active" | "archived"
+  hidden                Boolean       @default(false) // true = nur im Admin sichtbar
+  seasonNumber          Int? // 1, 2, 3 …
+  archivedAt            DateTime?
   // JSON: analog zu event.completionData (overallWinnerIds, finalRanking, poll*, lockedAt)
-  seriesCompletionData String?
-  createdAt   DateTime @default(now())
-  events      Event[]
-  lulSeason   LulSeason?
+  seriesCompletionData  String?
+  createdAt             DateTime      @default(now())
+  events                Event[]
+  lulSeason             LulSeason?
 }
 
 model Event {
-  id             String   @id @default(cuid())
-  title          String
-  description    String?
-  game           String?
-  genre          EventGenre?
-  category       EventCategory  @default(casual)
-  startAt        DateTime
-  maxPlayers     Int?
-  pointReward    Int      @default(50)
-  spectatorMode  Boolean  @default(false)
+  id                  String        @id @default(cuid())
+  title               String
+  description         String?
+  game                String?
+  genre               EventGenre?
+  category            EventCategory @default(casual)
+  startAt             DateTime
+  maxPlayers          Int?
+  pointReward         Int           @default(50)
+  spectatorMode       Boolean       @default(false)
   spectatorRewardJson String? // JSON: { coins: number, rankPoints: number }
-  type           String   @default("community")
-  status         String   @default("open")
-  hidden         Boolean  @default(false)    // true = nur im Admin sichtbar
-  discordEventId   String?  @unique
-  discordMessageId String?  // Message-ID der Bot-Ankündigung (zum nachträglichen Löschen)
-  discordChannelId String?   // Kanal-ID für Bot-Nachrichten (überschreibt DISCORD_EVENTS_CHANNEL_ID)
-  seriesId         String?
-  reminderSentAt   DateTime? // Gesetzt wenn 24h-Erinnerung verschickt (verhindert Doppel-Sendung)
+  type                String        @default("community")
+  status              String        @default("open")
+  hidden              Boolean       @default(false) // true = nur im Admin sichtbar
+  discordEventId      String?       @unique
+  discordMessageId    String? // Message-ID der Bot-Ankündigung (zum nachträglichen Löschen)
+  discordChannelId    String? // Kanal-ID für Bot-Nachrichten (überschreibt DISCORD_EVENTS_CHANNEL_ID)
+  seriesId            String?
+  reminderSentAt      DateTime? // Gesetzt wenn 24h-Erinnerung verschickt (verhindert Doppel-Sendung)
   // JSON: { mvpUserId?, winnerStatField?, seriesWinnerTargetField?, lockedAt }
-  completionData   String?
-  createdAt      DateTime @default(now())
+  completionData      String?
+  createdAt           DateTime      @default(now())
 
   // Ehem. Tournament-Felder (zusammengeführt)
-  format           String?   // single_elimination | double_elimination | round_robin | ffa | coop_stats | avg_stats
-  tournamentStatus String?   // pending | active | complete | finalized
-  pointsConfig     String?   // JSON: {"1": 100, "2": 50, "3": 25} — legacy, nur Münzen
-  statFields       String?   // JSON: ["Kills","Assists"]
-  finalRankingJson String?   // JSON: ["userId1","userId2"]
-  finalRankingNote String?
+  format                String? // single_elimination | double_elimination | round_robin | ffa | coop_stats | avg_stats
+  tournamentStatus      String? // pending | active | complete | finalized
+  pointsConfig          String? // JSON: {"1": 100, "2": 50, "3": 25} — legacy, nur Münzen
+  statFields            String? // JSON: ["Kills","Assists"]
+  finalRankingJson      String? // JSON: ["userId1","userId2"]
+  finalRankingNote      String?
   // JSON: { participationCoins: 10, placements: [{ place: 1, coins: 500, rankPoints: 3 }, ...] }
-  placementRewardsJson String?
+  placementRewardsJson  String?
   // JSON: { enabled: bool, question: string, coins: 250, rankPoints: 3 }
-  pollConfigJson       String?
+  pollConfigJson        String?
   // JSON: [{ label, question, coins, rankPoints, type: "player"|"spectator" }]
-  pollsConfigJson      String?
+  pollsConfigJson       String?
   // JSON: { winnerMode: "manual"|"bracket"|"stat", winnerStatField?: string }
   seriesEventConfigJson String?
-  summary              String?
-  twitchClipUrl        String?
+  summary               String?
+  twitchClipUrl         String?
 
-  series        EventSeries?        @relation(fields: [seriesId], references: [id])
-  lulSpieltag   LulSpieltag?
-  registrations EventRegistration[]
-  participants  TournamentParticipant[]
-  matches       Match[]
-  teams         Team[]
-  streamingPartners    EventPartner[]
-  communityStreamers   EventCommunityStreamer[]
-  clipSubmissions      EventClipSubmission[]
-  polls                EventPoll[]
+  series             EventSeries?             @relation(fields: [seriesId], references: [id])
+  lulSpieltag        LulSpieltag?
+  registrations      EventRegistration[]
+  participants       TournamentParticipant[]
+  matches            Match[]
+  teams              Team[]
+  streamingPartners  EventPartner[]
+  communityStreamers EventCommunityStreamer[]
+  clipSubmissions    EventClipSubmission[]
+  polls              EventPoll[]
 }
 
 // ── Event-Umfragen ────────────────────────────────────────────────────────────
 
 model EventPoll {
-  id                        String   @id @default(cuid())
+  id                        String          @id @default(cuid())
   eventId                   String
-  event                     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  label                     String   // z.B. "MVP"
-  question                  String   // z.B. "Wer war der MVP?"
+  event                     Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  label                     String // z.B. "MVP"
+  question                  String // z.B. "Wer war der MVP?"
   // "all" | "participants" | "players" | "spectators"
-  voterEligibility          String   @default("all")
+  voterEligibility          String          @default("all")
   // "players" | "spectators" | "custom"
-  answerType                String   @default("players")
+  answerType                String          @default("players")
   // JSON: [{key: string, label: string}] — nur bei answerType="custom"
   customAnswers             String?
   startAt                   DateTime
   endAt                     DateTime
-  participationCoins        Int      @default(0)
-  participationSeriesPoints Int      @default(0)
-  winnerCoins               Int      @default(0)
-  winnerRankPoints          Int      @default(0)
+  participationCoins        Int             @default(0)
+  participationSeriesPoints Int             @default(0)
+  winnerCoins               Int             @default(0)
+  winnerRankPoints          Int             @default(0)
   // JSON: ["userId1", "userId2"] — nach Auswertung gesetzt
   winnerIds                 String?
+  // JSON: ["userId1", "userId2"] — von der Wahl ausgeschlossene Kandidaten (auch nachträglich, während die Umfrage läuft)
+  excludedUserIds           String?
   // true wenn Belohnungen bereits vergeben wurden
-  rewardsPaid               Boolean  @default(false)
-  createdAt                 DateTime @default(now())
+  rewardsPaid               Boolean         @default(false)
+  createdAt                 DateTime        @default(now())
   votes                     EventPollVote[]
 }
 
@@ -348,9 +358,9 @@ model EventPollVote {
   voter     User      @relation(fields: [voterId], references: [id], onDelete: Cascade)
   // userId (für players/spectators) oder custom answer key
   targetId  String
-  isManual  Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  isManual  Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   @@unique([pollId, voterId])
 }
@@ -365,22 +375,23 @@ model EventClipSubmission {
   createdAt DateTime @default(now())
   event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([eventId, userId])
 }
 
 // ── Partner ──────────────────────────────────────────────────────────────────
 
 model Partner {
-  id          String   @id @default(cuid())
+  id          String         @id @default(cuid())
   name        String
-  twitchLogin String   @unique
+  twitchLogin String         @unique
   logoUrl     String
-  isActive    Boolean  @default(true)
-  order       Int      @default(0)
-  createdAt   DateTime @default(now())
+  isActive    Boolean        @default(true)
+  order       Int            @default(0)
+  createdAt   DateTime       @default(now())
   // Optional link to a community member account
-  userId      String?  @unique
-  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId      String?        @unique
+  user        User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
   events      EventPartner[]
 }
 
@@ -390,26 +401,28 @@ model EventPartner {
   partnerId String
   event     Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
   partner   Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
   @@unique([eventId, partnerId])
 }
 
 // ── Clip des Monats ───────────────────────────────────────────────────────────
 
 model MonthlyClipContest {
-  id          String           @id @default(cuid())
-  month       Int              // Anzeige-Monat (Monat von periodStart)
-  year        Int
-  periodStart DateTime         @default(now()) // Beginn des bewerteten Clip-Zeitraums
-  periodEnd   DateTime         @default(now()) // Ende des bewerteten Clip-Zeitraums
-  votingEndsAt DateTime        @default(now()) // Wann die Abstimmung automatisch endet/ausgewertet wird
-  channelsJson String?         // JSON: string[] — abgefragte Twitch-Kanäle
-  status      String           @default("voting") // voting | finished
-  participationCoins Int       @default(10)  // Münzen für jeden, der abstimmt
-  rewardCoins Int              @default(500) // Münzen für den Gewinner-Clip
-  winnerNominationIds String[] @default([]) // Bei Gleichstand: mehrere Gewinner möglich
-  createdAt   DateTime         @default(now())
-  nominations ClipNomination[]
-  votes       ClipContestVote[]
+  id                  String            @id @default(cuid())
+  month               Int // Anzeige-Monat (Monat von periodStart)
+  year                Int
+  periodStart         DateTime          @default(now()) // Beginn des bewerteten Clip-Zeitraums
+  periodEnd           DateTime          @default(now()) // Ende des bewerteten Clip-Zeitraums
+  votingEndsAt        DateTime          @default(now()) // Wann die Abstimmung automatisch endet/ausgewertet wird
+  channelsJson        String? // JSON: string[] — abgefragte Twitch-Kanäle
+  status              String            @default("voting") // voting | finished
+  participationCoins  Int               @default(10) // Münzen für jeden, der abstimmt
+  rewardCoins         Int               @default(500) // Münzen für den Gewinner-Clip
+  winnerNominationIds String[]          @default([]) // Bei Gleichstand: mehrere Gewinner möglich
+  createdAt           DateTime          @default(now())
+  nominations         ClipNomination[]
+  votes               ClipContestVote[]
+
   @@index([month, year])
 }
 
@@ -419,9 +432,9 @@ model ClipNomination {
   clipUrl            String
   thumbnailUrl       String?
   clipTitle          String?
-  submittedByUserId  String?            // Community-Clip: User der eingereicht hat
-  twitchCreatorLogin String?            // Partner-Clip: Twitch-Login des Clip-Erstellers
-  partnerTwitchLogin String?            // Partner-Clip: Twitch-Login des Kanals
+  submittedByUserId  String? // Community-Clip: User der eingereicht hat
+  twitchCreatorLogin String? // Partner-Clip: Twitch-Login des Clip-Erstellers
+  partnerTwitchLogin String? // Partner-Clip: Twitch-Login des Kanals
   contest            MonthlyClipContest @relation(fields: [contestId], references: [id], onDelete: Cascade)
   submittedBy        User?              @relation(fields: [submittedByUserId], references: [id], onDelete: SetNull)
   votes              ClipContestVote[]
@@ -437,6 +450,7 @@ model ClipContestVote {
   nomination   ClipNomination     @relation(fields: [nominationId], references: [id], onDelete: Cascade)
   user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt    DateTime           @default(now())
+
   @@unique([contestId, userId])
 }
 
@@ -448,41 +462,44 @@ model EventCommunityStreamer {
   createdAt DateTime @default(now())
   event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([eventId, userId])
 }
 
 model EventRegistration {
-  id        String   @id @default(cuid())
-  userId    String
-  eventId   String
-  joinedAt  DateTime @default(now())
-  attended  Boolean  @default(false)
-  role      String   @default("player") // "player" | "spectator"
-  user      User     @relation(fields: [userId], references: [id])
-  event     Event    @relation(fields: [eventId], references: [id])
+  id       String   @id @default(cuid())
+  userId   String
+  eventId  String
+  joinedAt DateTime @default(now())
+  attended Boolean  @default(false)
+  role     String   @default("player") // "player" | "spectator"
+  user     User     @relation(fields: [userId], references: [id])
+  event    Event    @relation(fields: [eventId], references: [id])
+
   @@unique([userId, eventId])
 }
 
 model TournamentParticipant {
-  id       String  @id @default(cuid())
-  eventId  String
-  userId   String
-  seed     Int?
+  id         String  @id @default(cuid())
+  eventId    String
+  userId     String
+  seed       Int?
   eliminated Boolean @default(false)
   finalRank  Int?
-  event    Event   @relation(fields: [eventId], references: [id])
-  user     User    @relation(fields: [userId], references: [id])
+  event      Event   @relation(fields: [eventId], references: [id])
+  user       User    @relation(fields: [userId], references: [id])
+
   @@unique([eventId, userId])
 }
 
 // Nur für team_vs_team-Formate
 model Team {
-  id       String     @id @default(cuid())
-  eventId  String
-  name     String
-  color    String?
-  event    Event      @relation(fields: [eventId], references: [id])
-  members  TeamMember[]
+  id           String       @id @default(cuid())
+  eventId      String
+  name         String
+  color        String?
+  event        Event        @relation(fields: [eventId], references: [id])
+  members      TeamMember[]
   matchEntries MatchEntry[]
 }
 
@@ -492,27 +509,29 @@ model TeamMember {
   userId String
   team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
   user   User   @relation(fields: [userId], references: [id])
+
   @@unique([teamId, userId])
 }
 
 model Match {
-  id        String     @id @default(cuid())
-  eventId   String
-  round     Int
-  position  Int
-  title     String?
+  id          String            @id @default(cuid())
+  eventId     String
+  round       Int
+  position    Int
+  title       String?
   scheduledAt DateTime?
-  notes     String?
+  notes       String?
   // 1v1 / single_elimination: player1Id/player2Id/score1/score2/winnerId
-  player1Id String?
-  player2Id String?
-  winnerId  String?
-  score1    Int?
-  score2    Int?
-  playedAt  DateTime?
-  event     Event      @relation(fields: [eventId], references: [id])
+  player1Id   String?
+  player2Id   String?
+  winnerId    String?
+  score1      Int?
+  score2      Int?
+  playedAt    DateTime?
+  event       Event             @relation(fields: [eventId], references: [id])
   // ffa / coop_stats / team_vs_team: eine Zeile pro Teilnehmer
-  entries   MatchEntry[]
+  entries     MatchEntry[]
+  predictions MatchPrediction[]
 }
 
 // Flexible Teilnehmer-Zeile für FFA, Coop und Team-Matches
@@ -522,8 +541,8 @@ model MatchEntry {
   // Entweder userId (Einzelspieler) oder teamId (Team)
   userId    String?
   teamId    String?
-  placement Int?    // Platzierung (1 = Erster)
-  score     Int?    // Numerischer Score/Punkte im Match
+  placement Int? // Platzierung (1 = Erster)
+  score     Int? // Numerischer Score/Punkte im Match
   // JSON: {"Kills": 12, "Assists": 3} — passend zu Tournament.statFields
   statsJson String?
   match     Match   @relation(fields: [matchId], references: [id], onDelete: Cascade)
@@ -543,7 +562,7 @@ model Quest {
   year        Int
   createdAt   DateTime @default(now())
 
-  progress    UserQuestProgress[]
+  progress UserQuestProgress[]
 }
 
 model UserQuestProgress {
@@ -555,41 +574,118 @@ model UserQuestProgress {
   completedAt DateTime?
   rewarded    Boolean   @default(false)
 
-  user        User      @relation(fields: [userId], references: [id])
-  quest       Quest     @relation(fields: [questId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id])
+  quest Quest @relation(fields: [questId], references: [id], onDelete: Cascade)
 
   @@unique([userId, questId])
+}
+
+// ── Minigames: Match-Vorhersage ─────────────────────────────────────────────
+
+model MatchPrediction {
+  id              String   @id @default(cuid())
+  userId          String
+  matchId         String
+  // Vorhergesagter Sieger: userId (1v1/Bracket) oder userId des FFA-Teilnehmers (placement===1)
+  predictedUserId String
+  createdAt       DateTime @default(now())
+  resolved        Boolean  @default(false)
+  correct         Boolean? // null = noch nicht ausgewertet
+  coinsAwarded    Int      @default(0)
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, matchId]) // ein Tipp pro User pro Match
+}
+
+// Persistierter Tages-Streak für Vorhersagen (erhöht Auszahlung bei Serie richtiger Tipps)
+model PredictionStreak {
+  userId        String  @id
+  current       Int     @default(0)
+  best          Int     @default(0)
+  lastPlayedDay String? // "YYYY-MM-DD" — letzter Tag mit korrekt aufgelöstem Tipp
+  user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ── Minigames: Idle-Clicker ──────────────────────────────────────────────────
+
+model DailyClickerProgress {
+  id                 String    @id @default(cuid())
+  userId             String
+  date               String // "YYYY-MM-DD"
+  clicksToday        Int       @default(0)
+  coinsToday         Int       @default(0) // Cap konfigurierbar über BotConfig, Default 250/Tag
+  // Bereits als PointTransaction verbuchter Anteil von coinsToday (gebündelte Auszahlung alle N Klicks)
+  flushedCoins       Int       @default(0)
+  // Bonus-Icon: aktuell schwebendes Genre-Icon (falls vorhanden)
+  bonusIconGenre     String? // Schlüssel aus GENRE_MAP, z.B. "arcade" | "shooter"
+  bonusIconExpiresAt DateTime?
+  bonusIconClaimed   Boolean   @default(false)
+  updatedAt          DateTime  @updatedAt
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+}
+
+// Persistenter Tap-Fortschritt (levelt über Tage hinweg auf, nicht tagesgebunden)
+model ClickerProfile {
+  userId      String @id
+  level       Int    @default(1)
+  totalClicks Int    @default(0) // Lifetime-Klicks, treibt Level-Aufstieg
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ── Minigames: 1v1 Münzen-Duell ──────────────────────────────────────────────
+
+model DuelChallenge {
+  id           String    @id @default(cuid())
+  challengerId String
+  opponentId   String
+  wager        Int
+  status       String    @default("pending") // pending | accepted | declined | expired | resolved
+  // "coinflip" — v1 nur Server-RNG, Skill-Modi später denkbar
+  mode         String    @default("coinflip")
+  winnerId     String?
+  createdAt    DateTime  @default(now())
+  respondedAt  DateTime?
+  resolvedAt   DateTime?
+
+  challenger User @relation("DuelChallenger", fields: [challengerId], references: [id], onDelete: Cascade)
+  opponent   User @relation("DuelOpponent", fields: [opponentId], references: [id], onDelete: Cascade)
+
+  @@index([challengerId, opponentId, createdAt])
 }
 
 // ── Spendenpool ─────────────────────────────────────────────────────────────
 
 model PoolExpense {
   id          String   @id @default(cuid())
-  title       String   // z.B. "Minecraft Server Oktober"
-  description String?  // optionale Details
-  amount      Float    // in Euro
+  title       String // z.B. "Minecraft Server Oktober"
+  description String? // optionale Details
+  amount      Float // in Euro
   date        DateTime // Datum der Ausgabe
   createdAt   DateTime @default(now())
 }
 
 model PoolIdea {
   id            String   @id @default(cuid())
-  title         String   // z.B. "Neuer Gameserver"
-  description   String?  // optionale Details
-  estimatedCost Float?   // Schätzpreis in Euro
+  title         String // z.B. "Neuer Gameserver"
+  description   String? // optionale Details
+  estimatedCost Float? // Schätzpreis in Euro
   createdAt     DateTime @default(now())
 }
 
 model Donation {
   id        String   @id @default(cuid())
   userId    String
-  amount    Float    // in Euro, nur für Admin sichtbar
-  month     Int      // 1–12
+  amount    Float // in Euro, nur für Admin sichtbar
+  month     Int // 1–12
   year      Int
-  note      String?  // optionale Admin-Notiz
+  note      String? // optionale Admin-Notiz
   createdAt DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
   // Kein Unique-Constraint → mehrere Einträge pro User pro Monat möglich
 }
 
@@ -605,8 +701,8 @@ model PointTransaction {
 // ── Bot-Konfiguration ────────────────────────────────────────────────────────
 
 model BotConfig {
-  key       String   @id  // z.B. "event_new_enabled", "event_new_text"
-  value     String        // "true" / "false" / Freitext
+  key       String   @id // z.B. "event_new_enabled", "event_new_text"
+  value     String // "true" / "false" / Freitext
   updatedAt DateTime @updatedAt
 }
 
@@ -647,9 +743,9 @@ model NotificationRule {
 
 model LulSeason {
   id             String   @id @default(cuid())
-  number         Int      // Saison-Nummer (1, 2, ...)
-  name           String?  // optionaler Anzeigename
-  period         String?  // "Mai 2026 - Dezember 2026"
+  number         Int // Saison-Nummer (1, 2, ...)
+  name           String? // optionaler Anzeigename
+  period         String? // "Mai 2026 - Dezember 2026"
   totalSpieltage Int      @default(8)
   // upcoming | active | finished | archived
   status         String   @default("upcoming")
@@ -663,55 +759,56 @@ model LulSeason {
 
   spieltage     LulSpieltag[]
   legacyEntries LulLegacyEntry[]
-  series        EventSeries? @relation(fields: [seriesId], references: [id])
+  series        EventSeries?     @relation(fields: [seriesId], references: [id])
 }
 
 // Aggregiertes Saison-Endergebnis für vergangene Saisons ohne Spieltag-Details
 model LulLegacyEntry {
-  id           String    @id @default(cuid())
-  seasonId     String
-  userId       String
-  totalPts     Int       @default(0)
-  asPlayer     Int       @default(0)  // Einsätze als Mitspieler
-  asSpectator  Int       @default(0)  // Einsätze als Zuschauer
-  wins         Int       @default(0)  // Game Winner
-  champs       Int       @default(0)  // Community-Champ (Legacy)
-  trost        Int       @default(0)  // Trostpreis (Legacy)
-  dominion     Int       @default(0)  // Dominion Bonus
-  votes        Int       @default(0)  // Votes
+  id            String    @id @default(cuid())
+  seasonId      String
+  userId        String
+  totalPts      Int       @default(0)
+  asPlayer      Int       @default(0) // Einsätze als Mitspieler
+  asSpectator   Int       @default(0) // Einsätze als Zuschauer
+  wins          Int       @default(0) // Game Winner
+  champs        Int       @default(0) // Community-Champ (Legacy)
+  trost         Int       @default(0) // Trostpreis (Legacy)
+  dominion      Int       @default(0) // Dominion Bonus
+  votes         Int       @default(0) // Votes
   // JSON: { "communityChamp": 3, "trostpreis": 1, "mvp": 2 } – für neue flexible Saisons
   pollStatsJson String?
-  season       LulSeason @relation(fields: [seasonId], references: [id], onDelete: Cascade)
-  user         User      @relation(fields: [userId], references: [id])
+  season        LulSeason @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  user          User      @relation(fields: [userId], references: [id])
+
   @@unique([seasonId, userId])
 }
 
 model LulSpieltag {
-  id           String    @id @default(cuid())
-  seasonId     String
-  number       Int       // 1-8
-  isSpecial        Boolean   @default(false)
-  title            String?   // Titel für Special Events
-  description      String?   // Beschreibung für Special Events
-  maxPlayers       Int?      // Maximale Spieleranzahl
-  tournamentFormat String?   // single_elimination | double_elimination | round_robin | liga | ffa | coop_stats
-  statFields       String?   // JSON: ["Kills","Assists"] — für ffa/coop_stats/avg_stats
-  matchesJson      String?   // JSON: [{id,p1,p2,s1,s2,winner}] — für 1v1-Formate
-  game             String?   // "Brawlhalla" (optional bei Special Events)
-  gameType     String?   // "Beat-em Up"
-  platform     String?   // "PC/Konsole"
-  scheduledAt    DateTime?
-  discordEventId String?   @unique
+  id               String     @id @default(cuid())
+  seasonId         String
+  number           Int // 1-8
+  isSpecial        Boolean    @default(false)
+  title            String? // Titel für Special Events
+  description      String? // Beschreibung für Special Events
+  maxPlayers       Int? // Maximale Spieleranzahl
+  tournamentFormat String? // single_elimination | double_elimination | round_robin | liga | ffa | coop_stats
+  statFields       String? // JSON: ["Kills","Assists"] — für ffa/coop_stats/avg_stats
+  matchesJson      String? // JSON: [{id,p1,p2,s1,s2,winner}] — für 1v1-Formate
+  game             String? // "Brawlhalla" (optional bei Special Events)
+  gameType         String? // "Beat-em Up"
+  platform         String? // "PC/Konsole"
+  scheduledAt      DateTime?
+  discordEventId   String?    @unique
   // upcoming | active | umfrage | finished
-  status         String    @default("upcoming")
+  status           String     @default("upcoming")
   // JSON: {"1": 10, "2": 5, "3": 3} – Punkte pro Spielplatzierung
-  pointsConfig String?
+  pointsConfig     String?
   // Wenn gesetzt: dieser Spieltag ist auch als reguläres Event sichtbar
-  eventId      String?   @unique
-  season       LulSeason @relation(fields: [seasonId], references: [id], onDelete: Cascade)
-  event        Event?    @relation(fields: [eventId], references: [id])
-  entries      LulEntry[]
-  polls        LulPoll[]
+  eventId          String?    @unique
+  season           LulSeason  @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  event            Event?     @relation(fields: [eventId], references: [id])
+  entries          LulEntry[]
+  polls            LulPoll[]
 }
 
 model LulEntry {
@@ -723,18 +820,19 @@ model LulEntry {
   // JSON number[]: Punkte pro Runde (max 10), nur für Mitspieler
   roundScores    String?
   totalGameScore Int         @default(0)
-  placement      Int?        // Spieltagsplatzierung (1 = Sieger)
+  placement      Int? // Spieltagsplatzierung (1 = Sieger)
   gameWinner     Boolean     @default(false) // Mitspieler-Sieg
   communityChamp Boolean     @default(false) // Zuschauer-Umfragesieg (Legacy + statKey="communityChamp")
   trostpreis     Boolean     @default(false) // Trostpreis-Umfrage (Legacy + statKey="trostpreis")
   voted          Boolean     @default(false) // hat an Umfrage teilgenommen
   dominionBonus  Boolean     @default(false) // 3 Siege in Folge
-  lulPoints      Int         @default(0)     // LUL-Punkte gesamt für diesen Spieltag
-  statsJson      String?                     // JSON: {"Kills":12} — für ffa/coop_stats/avg_stats
+  lulPoints      Int         @default(0) // LUL-Punkte gesamt für diesen Spieltag
+  statsJson      String? // JSON: {"Kills":12} — für ffa/coop_stats/avg_stats
   // JSON: ["communityChamp","trostpreis"] — gewonnene Umfragen via statKey (neue flexible Saisons)
   pollWinsJson   String?
   spieltag       LulSpieltag @relation(fields: [spieltagId], references: [id], onDelete: Cascade)
   user           User        @relation(fields: [userId], references: [id])
+
   @@unique([spieltagId, userId])
 }
 
@@ -742,25 +840,25 @@ model LulEntry {
 
 // Eine konfigurierbare Umfrage pro Spieltag (mehrere möglich)
 model LulPoll {
-  id          String      @id @default(cuid())
-  spieltagId  String
+  id              String   @id @default(cuid())
+  spieltagId      String
   // statKey aus pointsConfig.polls (z.B. "communityChamp", "trostpreis", "mvp")
-  statKey     String
-  label       String      // Anzeigename, z.B. "Community Champ"
-  question    String      // z.B. "Wer war der beste Zuschauer?"
+  statKey         String
+  label           String // Anzeigename, z.B. "Community Champ"
+  question        String // z.B. "Wer war der beste Zuschauer?"
   // "player" | "spectator" — wer zur Auswahl steht
-  type        String
-  endsAt      DateTime
+  type            String
+  endsAt          DateTime
   // JSON: string[] — UserIds die ausgeschlossen sind
   excludedUserIds String?
   // open | closed
-  status      String      @default("open")
+  status          String   @default("open")
   // JSON: string[] — UserIds die gewonnen haben (gesetzt beim Schließen)
-  winnerIds   String?
-  createdAt   DateTime    @default(now())
+  winnerIds       String?
+  createdAt       DateTime @default(now())
 
-  spieltag    LulSpieltag @relation(fields: [spieltagId], references: [id], onDelete: Cascade)
-  votes       LulPollVote[]
+  spieltag LulSpieltag   @relation(fields: [spieltagId], references: [id], onDelete: Cascade)
+  votes    LulPollVote[]
 }
 
 // Eine Stimme pro User pro Umfrage — UPDATE erlaubt, DELETE nicht
@@ -772,39 +870,39 @@ model LulPollVote {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  poll      LulPoll  @relation(fields: [pollId], references: [id], onDelete: Cascade)
-  voter     User     @relation("LulPollVoter", fields: [voterId], references: [id])
-  target    User     @relation("LulPollTarget", fields: [targetId], references: [id])
+  poll   LulPoll @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  voter  User    @relation("LulPollVoter", fields: [voterId], references: [id])
+  target User    @relation("LulPollTarget", fields: [targetId], references: [id])
 
   @@unique([pollId, voterId])
 }
 
 // ── Geplante Discord-Umfragen ─────────────────────────────────────────────
 model PollJob {
-  id          String    @id @default(cuid())
+  id               String    @id @default(cuid())
   // "event_winner" | "lul_trostpreis" | "lul_community"
-  type        String
+  type             String
   // eventId oder spieltagId (je nach type)
-  refId       String
+  refId            String
   // Discord Channel-ID, in dem die Umfrage gepostet wird
-  channelId   String
+  channelId        String
   // Wann soll die Umfrage gesendet werden?
-  scheduledAt DateTime
+  scheduledAt      DateTime
   // Laufzeit in Stunden (Standard: 168 = 1 Woche)
-  duration    Int       @default(168)
+  duration         Int       @default(168)
   // Frage-Text (editierbar im Admin, wird 1:1 an Discord gesendet)
   question         String?
   excludedUserIds  String[]  @default([])
   customAnswers    String[]  @default([])
   allowMultiselect Boolean   @default(false)
   // "pending" | "sent" | "cancelled" | "failed"
-  status      String    @default("pending")
+  status           String    @default("pending")
   // Discord Message-ID nach dem Senden (zum Nachverfolgen)
-  messageId   String?
+  messageId        String?
   // Fehlermeldung falls status = "failed"
-  errorMsg    String?
-  createdAt   DateTime  @default(now())
-  sentAt      DateTime?
+  errorMsg         String?
+  createdAt        DateTime  @default(now())
+  sentAt           DateTime?
 }
 
 // ── Lobby-Chat ───────────────────────────────────────────────────────────────
@@ -828,19 +926,20 @@ model UserSystemBadge {
   badgeKey String
   earnedAt DateTime @default(now())
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@id([userId, badgeKey])
 }
 
 // Admin-erstellte Custom-Abzeichen
 model CustomBadge {
   id        String            @id @default(cuid())
-  icon      String            // Emoji
+  icon      String // Emoji
   name      String
   desc      String
-  category  String            // "community" | "aktivitaet" | "events" | "turniere" | "punkte" | "special"
-  coins     Int               @default(0)  // optionale Münzen-Belohnung
+  category  String // "community" | "aktivitaet" | "events" | "turniere" | "punkte" | "special"
+  coins     Int               @default(0) // optionale Münzen-Belohnung
   createdAt DateTime          @default(now())
-  createdBy String            // Admin-User-ID
+  createdBy String // Admin-User-ID
   awards    UserCustomBadge[]
 }
 
@@ -849,10 +948,11 @@ model UserCustomBadge {
   userId        String
   customBadgeId String
   earnedAt      DateTime    @default(now())
-  awardedBy     String      // Admin-User-ID
-  note          String?     // optionale Notiz vom Admin
+  awardedBy     String // Admin-User-ID
+  note          String? // optionale Notiz vom Admin
   user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   badge         CustomBadge @relation(fields: [customBadgeId], references: [id], onDelete: Cascade)
+
   @@id([userId, customBadgeId])
 }
 
@@ -861,8 +961,8 @@ model UserCustomBadge {
 model WanderpocalHolder {
   id         String   @id @default(cuid())
   userId     String
-  scopeType  String   // "category" | "genre"
-  scopeValue String   // z.B. "competitive", "arcade"
+  scopeType  String // "category" | "genre"
+  scopeValue String // z.B. "competitive", "arcade"
   winCount   Int
   heldSince  DateTime @default(now())
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -923,7 +1023,7 @@ model DailyMessage {
 model InAppNotification {
   id        String   @id @default(cuid())
   userId    String   @map("userid")
-  type      String   // "badge" | "quest" | "event_result" | "event_start" | "points" | "coins" | "clip" | "admin" | "server"
+  type      String // "badge" | "quest" | "event_result" | "event_start" | "points" | "coins" | "clip" | "admin" | "server"
   title     String
   body      String
   url       String?
@@ -938,10 +1038,10 @@ model InAppNotification {
 // ── Ranglisten-Snapshot ───────────────────────────────────────────────────────
 
 model LeaderboardRankSnapshot {
-  id        String   @id @default(cuid())
-  takenAt   DateTime @default(now())
+  id       String   @id @default(cuid())
+  takenAt  DateTime @default(now())
   // JSON: { [userId]: rank } – Rang jedes Users zum Snapshot-Zeitpunkt
-  dataJson  String
+  dataJson String
 }
 
 // ── Push-Benachrichtigungen ──────────────────────────────────────────────────
@@ -964,12 +1064,12 @@ model PushSubscription {
 model GameServer {
   id          String   @id @default(cuid())
   name        String
-  game        String                 // Freitext, z.B. "Minecraft", "ARK: Survival Ascended"
+  game        String // Freitext, z.B. "Minecraft", "ARK: Survival Ascended"
   description String?
-  host        String                 // IP/Domain – nur für genehmigte User sichtbar
+  host        String // IP/Domain – nur für genehmigte User sichtbar
   port        String?
-  password    String?                // Server-Passwort – nur für genehmigte User sichtbar
-  connectInfo String?                // Freitext, z.B. Mod-Liste, Connect-String
+  password    String? // Server-Passwort – nur für genehmigte User sichtbar
+  connectInfo String? // Freitext, z.B. Mod-Liste, Connect-String
   maxSlots    Int
   isActive    Boolean  @default(true)
   createdBy   String
@@ -982,16 +1082,16 @@ model GameServer {
 }
 
 model ServerApplication {
-  id              String     @id @default(cuid())
+  id              String    @id @default(cuid())
   serverId        String
   userId          String
-  status          String     @default("pending") // pending | approved | denied | revoked
+  status          String    @default("pending") // pending | approved | denied | revoked
   message         String?
   adminNote       String?
-  appliedAt       DateTime   @default(now())
+  appliedAt       DateTime  @default(now())
   decidedAt       DateTime?
   decidedBy       String?
-  lastConnectedAt DateTime?  // Zeitpunkt des letzten Klicks auf "Jetzt verbinden" (Info für Admins)
+  lastConnectedAt DateTime? // Zeitpunkt des letzten Klicks auf "Jetzt verbinden" (Info für Admins)
 
   server GameServer @relation(fields: [serverId], references: [id], onDelete: Cascade)
   user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)

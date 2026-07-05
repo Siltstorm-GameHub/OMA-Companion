@@ -273,6 +273,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
   const me     = await getSessionUser();
   const userId = me?.id;
   const isMod  = me?.role === "moderator" || me?.role === "admin";
+  const isAdmin = me?.role === "admin";
 
   const series = await prisma.eventSeries.findUnique({
     where: { id },
@@ -318,6 +319,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
     winnerCoins: number; winnerRankPoints: number;
     voteCounts: Record<string, number>; myVote: string | null;
     answerOptions: ActivePollAnswerOption[] | null;
+    excludedUserIds: string[];
   };
   type ActivePollGroup = {
     eventId: string; eventTitle: string; polls: ActivePoll[];
@@ -326,9 +328,14 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
   const activePollGroupsMap = new Map<string, ActivePollGroup>();
   for (const p of activeEventPolls) {
     const eventRegs = eventRegsMap.get(p.eventId) ?? [];
+    let excludedUserIds: string[] = [];
+    if (p.excludedUserIds) { try { excludedUserIds = JSON.parse(p.excludedUserIds); } catch { /* ignore */ } }
+    const excludedSet = new Set(excludedUserIds);
+
     const voteCounts: Record<string, number> = {};
     let myVote: string | null = null;
     for (const v of p.votes) {
+      if (excludedSet.has(v.targetId)) continue;
       voteCounts[v.targetId] = (voteCounts[v.targetId] ?? 0) + 1;
       if (v.voterId === userId) myVote = v.targetId;
     }
@@ -337,8 +344,8 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
     let winnerIds: string[] | null = null;
     if (p.winnerIds) { try { winnerIds = JSON.parse(p.winnerIds); } catch { /* ignore */ } }
     let answerOptions: ActivePollAnswerOption[] | null = null;
-    if (p.answerType === "players") answerOptions = eventRegs.filter(r => r.role === "player").map(r => r.user);
-    else if (p.answerType === "spectators") answerOptions = eventRegs.filter(r => r.role === "spectator").map(r => r.user);
+    if (p.answerType === "players") answerOptions = eventRegs.filter(r => r.role === "player" && !excludedSet.has(r.user.id)).map(r => r.user);
+    else if (p.answerType === "spectators") answerOptions = eventRegs.filter(r => r.role === "spectator" && !excludedSet.has(r.user.id)).map(r => r.user);
 
     const group = activePollGroupsMap.get(p.eventId) ?? {
       eventId: p.eventId, eventTitle: eventTitleMap.get(p.eventId) ?? "", polls: [], registrations: eventRegs,
@@ -347,7 +354,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
       id: p.id, label: p.label, question: p.question, voterEligibility: p.voterEligibility, answerType: p.answerType,
       customAnswers, startAt: p.startAt.toISOString(), endAt: p.endAt.toISOString(), rewardsPaid: p.rewardsPaid, winnerIds,
       participationCoins: p.participationCoins, participationSeriesPoints: p.participationSeriesPoints,
-      winnerCoins: p.winnerCoins, winnerRankPoints: p.winnerRankPoints, voteCounts, myVote, answerOptions,
+      winnerCoins: p.winnerCoins, winnerRankPoints: p.winnerRankPoints, voteCounts, myVote, answerOptions, excludedUserIds,
     });
     activePollGroupsMap.set(p.eventId, group);
   }
@@ -785,6 +792,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
                 userId={userId}
                 initialPolls={group.polls}
                 eventRegistrations={group.registrations}
+                isAdmin={isAdmin}
               />
             </div>
           ))}

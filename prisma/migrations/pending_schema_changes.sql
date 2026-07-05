@@ -2,6 +2,12 @@
 -- Ausführen im Supabase SQL-Editor: https://supabase.com/dashboard → SQL Editor
 
 -- ═══════════════════════════════════════════════════════════════
+-- EventPoll: nachträglicher Ausschluss von Kandidaten
+-- ═══════════════════════════════════════════════════════════════
+
+ALTER TABLE "EventPoll" ADD COLUMN IF NOT EXISTS "excludedUserIds" TEXT;
+
+-- ═══════════════════════════════════════════════════════════════
 -- LUL Flexibles Voting & Punktesystem (neue Saisons via Wizard)
 -- ═══════════════════════════════════════════════════════════════
 

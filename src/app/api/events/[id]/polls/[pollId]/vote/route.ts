@@ -44,6 +44,13 @@ export async function POST(
     }
   }
 
+  // Ausgeschlossene Kandidaten sind auch dann keine gültige Wahl, wenn sie noch registriert sind
+  let excludedUserIds: string[] = [];
+  try { excludedUserIds = poll.excludedUserIds ? JSON.parse(poll.excludedUserIds) : []; } catch { /* ignore */ }
+  if (excludedUserIds.includes(targetId)) {
+    return NextResponse.json({ error: "Dieser Kandidat wurde von der Wahl ausgeschlossen" }, { status: 400 });
+  }
+
   // Validate targetId is a valid option
   if (poll.answerType === "players" || poll.answerType === "spectators") {
     const targetRole = poll.answerType === "players" ? "player" : "spectator";

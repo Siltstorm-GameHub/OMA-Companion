@@ -62,6 +62,7 @@ export default async function TournamentDetailPage({
   const { id: eventId } = await params;
   const me    = await getSessionUser();
   const isMod = me?.role === "moderator" || me?.role === "admin";
+  const isAdmin = me?.role === "admin";
 
   const event = await prisma.event.findUnique({
     where: { id: eventId },
@@ -94,15 +95,21 @@ export default async function TournamentDetailPage({
   const allRegistrations = event.registrations.map(r => ({ userId: r.userId, role: r.role, user: r.user }));
   const myClipSubmission = event.clipSubmissions.find(c => c.userId === userId) ?? null;
 
-  const [sponsors, holdersMap] = await Promise.all([
+  const matchIds = event.matches.map(m => m.id);
+  const [sponsors, holdersMap, myPredictionRows] = await Promise.all([
     prisma.shopPurchase.findMany({
       where:   { consumed: false, item: { type: "tournament_sponsor" } },
       include: { user: { select: { username: true, name: true } } },
       orderBy: { createdAt: "asc" },
     }),
     getWanderpocalHoldersMap(),
+    matchIds.length
+      ? prisma.matchPrediction.findMany({ where: { userId, matchId: { in: matchIds } } })
+      : Promise.resolve([]),
   ]);
   const holdersList = [...holdersMap.values()];
+  const myPredictions: Record<string, { predictedUserId: string; resolved: boolean; correct: boolean | null; coinsAwarded: number }> =
+    Object.fromEntries(myPredictionRows.map(p => [p.matchId, p]));
 
   const myReg         = event.registrations.find((r) => r.userId === userId);
   const isRegistered  = !!myReg && myReg.role !== "spectator";
@@ -295,11 +302,17 @@ export default async function TournamentDetailPage({
     winnerCoins: number; winnerRankPoints: number;
     voteCounts: Record<string, number>; myVote: string | null;
     answerOptions: { id: string; name: string | null; username: string | null; image: string | null }[] | null;
+    excludedUserIds: string[];
   };
   const initialPolls: InitialPoll[] = event.polls.map((poll: RawPoll) => {
+    let excludedUserIds: string[] = [];
+    if (poll.excludedUserIds) { try { excludedUserIds = JSON.parse(poll.excludedUserIds); } catch { /* ignore */ } }
+    const excludedSet = new Set(excludedUserIds);
+
     const voteCounts: Record<string, number> = {};
     let myVote: string | null = null;
     for (const v of poll.votes) {
+      if (excludedSet.has(v.targetId)) continue;
       voteCounts[v.targetId] = (voteCounts[v.targetId] ?? 0) + 1;
       if (v.voterId === userId) myVote = v.targetId;
     }
@@ -309,9 +322,9 @@ export default async function TournamentDetailPage({
     if (poll.winnerIds) { try { winnerIds = JSON.parse(poll.winnerIds); } catch { /* ignore */ } }
     let answerOptions: InitialPoll["answerOptions"] = null;
     if (poll.answerType === "players") {
-      answerOptions = allRegistrations.filter(r => r.role === "player").map(r => r.user);
+      answerOptions = allRegistrations.filter(r => r.role === "player" && !excludedSet.has(r.user.id)).map(r => r.user);
     } else if (poll.answerType === "spectators") {
-      answerOptions = allRegistrations.filter(r => r.role === "spectator").map(r => r.user);
+      answerOptions = allRegistrations.filter(r => r.role === "spectator" && !excludedSet.has(r.user.id)).map(r => r.user);
     }
     return {
       id: poll.id, label: poll.label, question: poll.question,
@@ -320,7 +333,7 @@ export default async function TournamentDetailPage({
       rewardsPaid: poll.rewardsPaid, winnerIds,
       participationCoins: poll.participationCoins, participationSeriesPoints: poll.participationSeriesPoints,
       winnerCoins: poll.winnerCoins, winnerRankPoints: poll.winnerRankPoints,
-      voteCounts, myVote, answerOptions,
+      voteCounts, myVote, answerOptions, excludedUserIds,
     };
   });
 
@@ -705,6 +718,7 @@ export default async function TournamentDetailPage({
             userId={userId}
             initialPolls={initialPolls}
             eventRegistrations={allRegistrations}
+            isAdmin={isAdmin}
           />
         </div>
       )}
@@ -803,6 +817,7 @@ export default async function TournamentDetailPage({
                 participants={mergedParticipants}
                 userId={userId}
                 holders={holdersList}
+                myPredictions={myPredictions}
               />
             )}
             {isRoundRobin && (
@@ -836,6 +851,7 @@ export default async function TournamentDetailPage({
                 pollWinnerIds={pollWinnerIds}
                 pollBonusRankPts={pollBonusRankPts}
                 pollLabel={pollLabel}
+                myPredictions={myPredictions}
               />
             )}
           </div>
