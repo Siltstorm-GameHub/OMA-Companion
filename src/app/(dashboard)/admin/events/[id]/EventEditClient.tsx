@@ -16,6 +16,7 @@ import StatFieldEditor from "@/components/StatFieldEditor";
 import CoinIcon from "@/components/CoinIcon";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import EventCategoryBadge from "@/components/EventCategoryBadge";
+import TournamentManager from "../TournamentManager";
 
 /* ── Types ── */
 type User = { id: string; name: string | null; username: string | null; image: string | null };
@@ -421,9 +422,9 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
 
   /* ── Tab definitions ── */
   const bracketTab = event.format
-    ? [{ key: "bracket" as TabKey, label: "Turnierbaum", href: `/admin/events/${event.id}/bracket` }]
+    ? [{ key: "bracket" as TabKey, label: "Turnierbaum" }]
     : [];
-  const tabs: { key: TabKey; label: string; href?: string }[] = isSeriesEvent
+  const tabs: { key: TabKey; label: string }[] = isSeriesEvent
     ? [
         { key: "details",      label: "Details" },
         ...bracketTab,
@@ -437,6 +438,27 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
         { key: "participants", label: `Teilnehmer (${event._count.registrations})` },
         ...(event.series ? [{ key: "series" as TabKey, label: "Reihe" }] : []),
       ];
+
+  /* ── Turnierbaum-Daten (für Inline-Tab, analog zur admin/events/[id]/bracket-Seite) ── */
+  const bracketWinnerStatKeys: string[] = (() => {
+    if (!event.series?.seriesStatConfig) return [];
+    try {
+      const cfg = JSON.parse(event.series.seriesStatConfig) as { winnerStatKeys?: string[] };
+      return cfg.winnerStatKeys ?? [];
+    } catch { return []; }
+  })();
+  const bracketTournament = event.format ? {
+    id: event.id,
+    status: event.tournamentStatus ?? "active",
+    format: event.format,
+    pointsConfig: event.pointsConfig,
+    statFields: event.statFields,
+    finalRankingJson: event.finalRankingJson,
+    finalRankingNote: event.finalRankingNote,
+    participants: event.participants,
+    matches: event.matches,
+  } : null;
+  const bracketRegisteredUsers = allUsers.filter(u => registeredIds.has(u.id));
 
   /* ── Render ── */
   return (
@@ -498,21 +520,14 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
       {/* Tabs */}
       <div className="flex gap-1 border-b border-white/[0.06] overflow-x-auto">
         {tabs.map(tab => (
-          tab.href ? (
-            <Link key={tab.key} href={tab.href}
-              className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors text-amber-400 hover:text-amber-300">
-              <Trophy className="w-3.5 h-3.5" /> {tab.label}
-            </Link>
-          ) : (
-            <button key={tab.key} type="button" onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors ${
-                activeTab === tab.key
-                  ? "text-teal-300 border-b-2 border-teal-500 -mb-px"
-                  : "text-gray-500 hover:text-gray-300"
-              }`}>
-              {tab.label}
-            </button>
-          )
+          <button key={tab.key} type="button" onClick={() => setActiveTab(tab.key)}
+            className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors ${
+              activeTab === tab.key
+                ? "text-teal-300 border-b-2 border-teal-500 -mb-px"
+                : "text-gray-500 hover:text-gray-300"
+            }`}>
+            {tab.label}
+          </button>
         ))}
       </div>
 
@@ -940,6 +955,16 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
             {tmtLoading ? "Speichert…" : hasTournament ? "Turnier-Einstellungen speichern" : "Turnier erstellen"}
           </button>
         </div>
+      )}
+
+      {/* ── Tab: Turnierbaum ── */}
+      {activeTab === "bracket" && bracketTournament && (
+        <TournamentManager
+          event={{ id: event.id }}
+          tournament={bracketTournament}
+          allUsers={bracketRegisteredUsers}
+          winnerStatKeys={bracketWinnerStatKeys}
+        />
       )}
 
       {/* ── Tab: Teilnehmer ── */}
