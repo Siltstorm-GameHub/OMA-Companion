@@ -59,7 +59,7 @@ export default async function TournamentDetailPage({
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     include: {
-      series: { select: { id: true, name: true, hidden: true } },
+      series: { select: { id: true, name: true, hidden: true, seriesStatConfig: true } },
       streamingPartners: { include: { partner: { include: { user: { select: { id: true } } } } } },
       communityStreamers: { include: { user: { select: { id: true, name: true, username: true, image: true, twitchLogin: true } } } },
       registrations: {
@@ -192,6 +192,20 @@ export default async function TournamentDetailPage({
       } catch { /* ignore */ }
     }
     return event.pointReward ?? 0;
+  })();
+
+  // Ligapunkte pro Stat-Einheit aus der Reihen-Tabellenkonfiguration (für die Punkte-Anzeige je Stat)
+  const statPointsPer: Record<string, number> = (() => {
+    if (!event.series?.seriesStatConfig) return {};
+    try {
+      const cfg = JSON.parse(event.series.seriesStatConfig) as {
+        stats?: { field: string; pointsPer: number }[];
+        participationPoints?: number;
+      };
+      const map: Record<string, number> = {};
+      for (const s of cfg.stats ?? []) if (s.field) map[s.field] = s.pointsPer;
+      return map;
+    } catch { return {}; }
   })();
 
   // Punkte pro Platzierung aus pointsConfig
@@ -665,6 +679,7 @@ export default async function TournamentDetailPage({
                 matches={event.matches as Parameters<typeof FfaView>[0]["matches"]}
                 participants={mergedParticipants}
                 statFields={event.statFields ? JSON.parse(event.statFields) : []}
+                statPointsPer={statPointsPer}
                 userId={userId}
                 format={format}
                 participationCoins={participationCoins}

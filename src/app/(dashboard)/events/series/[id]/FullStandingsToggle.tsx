@@ -26,6 +26,7 @@ interface Props {
   showPoints: boolean;
   lastEventDelta?: Record<string, DeltaInfo>;
   lastEventTitle?: string;
+  participationPoints?: number;
   defaultExpanded?: boolean;
 }
 

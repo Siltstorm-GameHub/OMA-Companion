@@ -25,12 +25,13 @@ export async function PATCH(req: NextRequest) {
   }
 
   // Status wird aus einem bereits abgeschlossenen Zustand herausgesetzt (z.B. "finished" → "active"):
-  // vorher vergebene Punkte/Belohnungen dieses Abschlusses rückgängig machen, damit die Liga-Tabelle
-  // und Nutzer-Guthaben nicht die Ergebnisse eines nicht mehr gültigen Abschlusses zeigen.
+  // ALLE vorher vergebenen Punkte/Belohnungen dieses Abschlusses rückgängig machen (inkl. Teilnahme-/
+  // Platzierungs-/Zuschauer-Basis-Belohnungen), damit sie nicht doppelt vergeben werden, wenn das
+  // Event beim nächsten Mal erneut abgeschlossen wird.
   if (data.status !== undefined) {
     const current = await prisma.event.findUnique({ where: { id: eventId }, select: { status: true, completionData: true } });
     if (current?.completionData && current.status !== data.status) {
-      await revertEventCompletion(eventId);
+      await revertEventCompletion(eventId, { includeBaseRewards: true });
     }
   }
 

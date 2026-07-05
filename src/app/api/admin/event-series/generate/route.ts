@@ -19,9 +19,23 @@ export async function POST(req: NextRequest) {
   const series = await prisma.eventSeries.findUnique({
     where: { id: seriesId },
     include: {
-      events: { orderBy: { startAt: "asc" }, select: { startAt: true, title: true, maxPlayers: true, pointReward: true, type: true, discordChannelId: true, game: true, pollsConfigJson: true } },
+      events: {
+        orderBy: { startAt: "asc" },
+        select: {
+          startAt: true, title: true, maxPlayers: true, pointReward: true, type: true,
+          discordChannelId: true, game: true, pollsConfigJson: true, category: true, genre: true,
+          spectatorMode: true, spectatorRewardJson: true, seriesEventConfigJson: true,
+        },
+      },
     },
   });
+
+  // Fortlaufende Nummerierung ("Turnier #5" → "Turnier #6") — bleibt unverändert, falls kein
+  // "#<Zahl>"-Suffix erkannt wird, damit Reihen ohne diese Konvention nicht verändert werden.
+  function nextTitle(lastTitle: string): string {
+    const m = lastTitle.match(/^(.*#)(\d+)(\s*)$/);
+    return m ? `${m[1]}${Number(m[2]) + 1}${m[3]}` : lastTitle;
+  }
 
   // Convert series placementRewardsJson → event pointsConfig shape
   function derivedPointsConfig(): string | null {
@@ -42,8 +56,15 @@ export async function POST(req: NextRequest) {
   function derivedStatFields(): string | null {
     if (!series?.seriesStatConfig) return null;
     try {
-      const { stats } = JSON.parse(series.seriesStatConfig) as { stats: { field: string }[] };
-      const fields = stats?.map(s => s.field).filter(Boolean) ?? [];
+      const { stats, eventStatFields } = JSON.parse(series.seriesStatConfig) as {
+        stats?: { field: string; isWinnerStat?: boolean; isMatchWinStat?: boolean }[];
+        eventStatFields?: string[];
+      };
+      // Bevorzugt die explizit gepflegten Event-Stat-Felder, sonst Fallback auf die Reihen-Stats
+      // (ohne Sieger-Stats und Match-Win-Stats, die automatisch/aus dem Match-Win-Haken gesetzt werden)
+      const fields = eventStatFields?.length
+        ? eventStatFields.filter(Boolean)
+        : (stats?.filter(s => !s.isWinnerStat && !s.isMatchWinStat && s.field).map(s => s.field) ?? []);
       return fields.length ? JSON.stringify(fields) : null;
     } catch { return null; }
   }
@@ -66,17 +87,28 @@ export async function POST(req: NextRequest) {
   const discordChannelId = series.discordChannelId ?? lastEvent.discordChannelId ?? null;
   // Umfragen-Konfiguration erben: Reihe hat Vorrang, sonst vom letzten Event übernehmen
   const pollsConfigJson = series.pollsConfigJson ?? lastEvent.pollsConfigJson ?? null;
+  // Kategorie/Genre sind Reihen-weite Einstellungen (kein "fixed*"-Override-Konzept wie bei Spiel/Format) —
+  // die Reihe ist hier die führende Quelle, mit dem letzten Event nur als Fallback.
+  const category = series.category ?? lastEvent.category;
+  const genre    = series.genre    ?? lastEvent.genre    ?? null;
 
   const newEvent = await prisma.event.create({
     data: {
-      title:  lastEvent.title,
+      title: nextTitle(lastEvent.title),
       game,
+      genre,
+      category,
       startAt: nextDate,
       maxPlayers:  lastEvent.maxPlayers,
       pointReward: lastEvent.pointReward,
       type:        lastEvent.type,
       discordChannelId,
       seriesId,
+      // Zuschauer-Modus und Sieger-Ermittlung sind reine Event-Einstellungen (keine Reihen-Felder) —
+      // vom letzten Event übernehmen, damit sie nicht bei jeder Generierung verloren gehen.
+      spectatorMode:         lastEvent.spectatorMode,
+      spectatorRewardJson:   lastEvent.spectatorRewardJson,
+      ...(lastEvent.seriesEventConfigJson && { seriesEventConfigJson: lastEvent.seriesEventConfigJson }),
       ...(series.fixedFormat && { format: series.fixedFormat }),
       ...(derivedPointsConfig() !== null && { pointsConfig: derivedPointsConfig() }),
       ...(derivedStatFields()  !== null && { statFields:   derivedStatFields()  }),

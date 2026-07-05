@@ -66,8 +66,15 @@ export async function POST(req: NextRequest) {
     }
     if (series?.seriesStatConfig) {
       try {
-        const { stats } = JSON.parse(series.seriesStatConfig) as { stats: { field: string }[] };
-        const fields = stats?.map(s => s.field).filter(Boolean) ?? [];
+        const { stats, eventStatFields } = JSON.parse(series.seriesStatConfig) as {
+          stats?: { field: string; isWinnerStat?: boolean; isMatchWinStat?: boolean }[];
+          eventStatFields?: string[];
+        };
+        // Bevorzugt die explizit gepflegten Event-Stat-Felder, sonst Fallback auf die Reihen-Stats
+        // (ohne Sieger-Stats und Match-Win-Stats, die automatisch/aus dem Match-Win-Haken gesetzt werden)
+        const fields = eventStatFields?.length
+          ? eventStatFields.filter(Boolean)
+          : (stats?.filter(s => !s.isWinnerStat && !s.isMatchWinStat && s.field).map(s => s.field) ?? []);
         if (fields.length) seriesStatFields = JSON.stringify(fields);
       } catch { /* skip */ }
     }
