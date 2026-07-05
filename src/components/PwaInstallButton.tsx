@@ -19,6 +19,8 @@ function isMobileBrowser() {
 
 type Mode = "none" | "native" | "ios" | "manual";
 
+const HINT_HEIGHT_ESTIMATE = 220; // ungefähre Höhe des Popups inkl. Steps
+
 function HintPortal({
   btnRef,
   onClose,
@@ -28,14 +30,26 @@ function HintPortal({
   onClose: () => void;
   children: React.ReactNode;
 }) {
-  const [pos, setPos] = useState({ top: 0, right: 0 });
+  const [pos, setPos] = useState<{ top?: number; bottom?: number; right: number; placement: "above" | "below" }>({
+    right: 0,
+    placement: "above",
+  });
 
   useEffect(() => {
     if (btnRef.current) {
       const r = btnRef.current.getBoundingClientRect();
+      const spaceAbove = r.top;
+      const spaceBelow = window.innerHeight - r.bottom;
+      // Nur nach unten öffnen, wenn oben nicht genug Platz ist, aber unten mehr
+      const placement: "above" | "below" =
+        spaceAbove < HINT_HEIGHT_ESTIMATE && spaceBelow > spaceAbove ? "below" : "above";
+
       setPos({
-        top:   r.top + window.scrollY - 8, // 8px gap boven knopf
         right: window.innerWidth - r.right,
+        placement,
+        ...(placement === "above"
+          ? { bottom: window.innerHeight - r.top + 8 }
+          : { top: r.bottom + 8 }),
       });
     }
 
@@ -48,12 +62,17 @@ function HintPortal({
     return () => document.removeEventListener("pointerdown", handler);
   }, [btnRef, onClose]);
 
+  const isAbove = pos.placement === "above";
+
   return createPortal(
     <div
       style={{
         position: "fixed",
-        bottom: `calc(100vh - ${pos.top}px)`,
+        top: pos.top,
+        bottom: pos.bottom,
         right: pos.right,
+        maxHeight: "calc(100vh - 16px)",
+        overflowY: "auto",
         zIndex: 99999,
         width: 272,
         background: "rgba(4,10,9,0.97)",
@@ -66,18 +85,19 @@ function HintPortal({
       }}
     >
       {children}
-      {/* Pfeil nach unten */}
+      {/* Pfeil zeigt Richtung Knopf */}
       <div
         style={{
           position: "absolute",
-          bottom: -6,
+          ...(isAbove ? { bottom: -6 } : { top: -6 }),
           right: 16,
           width: 12,
           height: 12,
           transform: "rotate(45deg)",
           background: "rgba(4,10,9,0.97)",
-          borderRight: "1px solid rgba(20,184,166,0.2)",
-          borderBottom: "1px solid rgba(20,184,166,0.2)",
+          ...(isAbove
+            ? { borderRight: "1px solid rgba(20,184,166,0.2)", borderBottom: "1px solid rgba(20,184,166,0.2)" }
+            : { borderLeft: "1px solid rgba(20,184,166,0.2)", borderTop: "1px solid rgba(20,184,166,0.2)" }),
         }}
       />
     </div>,
