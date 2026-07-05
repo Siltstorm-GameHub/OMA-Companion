@@ -139,6 +139,9 @@ export default function FfaView({
                     {isAvg && (
                       <th className="text-center px-3 py-2.5 font-medium text-amber-400">Ø Gesamt</th>
                     )}
+                    {isCoop && (
+                      <th className="text-center px-3 py-2.5 font-medium text-emerald-400">Match Wins</th>
+                    )}
                     {placementRewards.some(r => r.coins > 0 || r.rankPts > 0) && (
                       <th className="text-center px-3 py-2.5 font-medium text-amber-500/70">Belohnung</th>
                     )}
@@ -201,6 +204,11 @@ export default function FfaView({
                             i === 0 ? "text-amber-300" : i === 1 ? "text-gray-300" : i === 2 ? "text-amber-700" : "text-gray-400"
                           }`}>
                             {combined !== null ? combined.toFixed(2) : "–"}
+                          </td>
+                        )}
+                        {isCoop && (
+                          <td className="px-3 py-3 text-center tabular-nums font-semibold text-emerald-400">
+                            {r.stats["Match Win"] ?? 0}
                           </td>
                         )}
                         {hasRewards && (

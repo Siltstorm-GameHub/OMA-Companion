@@ -95,16 +95,17 @@ function deriveStatFieldsFromSeries(series: { seriesStatConfig?: string | null }
   if (!series?.seriesStatConfig) return null;
   try {
     const parsed = JSON.parse(series.seriesStatConfig) as {
-      stats?: { field: string; isWinnerStat?: boolean }[];
+      stats?: { field: string; isWinnerStat?: boolean; isMatchWinStat?: boolean }[];
       eventStatFields?: string[];
     };
     // Prefer explicit eventStatFields if configured
     if (parsed.eventStatFields?.length) {
       return parsed.eventStatFields.filter(Boolean);
     }
-    // Fall back to stats but exclude winner stats (they're set automatically)
+    // Fall back to stats but exclude winner stats (set automatically) and match-win stats
+    // (fed from the per-round "Match Win" checkbox, not manually entered)
     const fields = parsed.stats
-      ?.filter(s => !s.isWinnerStat && s.field)
+      ?.filter(s => !s.isWinnerStat && !s.isMatchWinStat && s.field)
       .map(s => s.field) ?? [];
     return fields.length ? fields : null;
   } catch { return null; }
