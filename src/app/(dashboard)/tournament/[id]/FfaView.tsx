@@ -31,6 +31,7 @@ export default function FfaView({
   matches,
   participants,
   statFields,
+  statPointsPer = {},
   userId,
   format = "ffa",
   participationCoins = 0,
@@ -44,6 +45,8 @@ export default function FfaView({
   matches: Match[];
   participants: Participant[];
   statFields: string[];
+  /** Ligapunkte pro Einheit je Stat-Feld (aus der Reihen-Tabellenkonfiguration) */
+  statPointsPer?: Record<string, number>;
   userId: string;
   format?: string;
   participationCoins?: number;
@@ -192,13 +195,24 @@ export default function FfaView({
                             </span>
                           </div>
                         </td>
-                        {!isAvg && statFields.map(f => (
-                          <td key={f} className={`px-3 py-3 text-center tabular-nums font-semibold ${
-                            i === 0 ? "text-amber-300" : i === 1 ? "text-gray-300" : i === 2 ? "text-amber-700" : "text-gray-400"
-                          }`}>
-                            {r.stats[f] ?? "–"}
-                          </td>
-                        ))}
+                        {!isAvg && statFields.map(f => {
+                          const val = r.stats[f] ?? 0;
+                          const pts = statPointsPer[f] ? val * statPointsPer[f] : 0;
+                          return (
+                            <td key={f} className="px-3 py-3 text-center">
+                              <div className="flex flex-col items-center gap-0">
+                                <span className={`tabular-nums font-semibold ${
+                                  i === 0 ? "text-amber-300" : i === 1 ? "text-gray-300" : i === 2 ? "text-amber-700" : "text-gray-400"
+                                }`}>
+                                  {val > 0 ? val : "–"}
+                                </span>
+                                {pts > 0 && (
+                                  <span className="text-[9px] text-emerald-500 tabular-nums leading-none">+{pts} Pkt.</span>
+                                )}
+                              </div>
+                            </td>
+                          );
+                        })}
                         {isAvg && (
                           <td className={`px-3 py-3 text-center tabular-nums font-bold ${
                             i === 0 ? "text-amber-300" : i === 1 ? "text-gray-300" : i === 2 ? "text-amber-700" : "text-gray-400"

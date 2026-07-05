@@ -32,6 +32,8 @@ interface Props {
   showPoints: boolean;
   lastEventDelta?: Record<string, DeltaInfo>;
   lastEventTitle?: string;
+  /** Punkte pro Teilnahme — für die Punkte-Anzeige neben der Teilnahme-Veränderung */
+  participationPoints?: number;
   /** "compact" = always compact; "full" = always full; "auto" (default) = compact mobile / full desktop */
   mode?: "compact" | "full" | "auto";
 }
@@ -112,7 +114,7 @@ function PointsCell({ value, rank }: { value: number; rank: number }) {
 
 export default function SeriesStandingsTable({
   rows, users, statCols, extraCols, currentUserId, showPoints, lastEventDelta, lastEventTitle,
-  mode = "auto",
+  participationPoints, mode = "auto",
 }: Props) {
   const [expanded, setExpanded] = useState(false);
   const userMap = new Map(users.map(u => [u.id, u]));
@@ -197,6 +199,7 @@ export default function SeriesStandingsTable({
                 <StatDelta
                   value={row.participations}
                   delta={delta?.participated ? 1 : undefined}
+                  pointsPer={participationPoints}
                 />
               </div>
               {statCols.map(s => (
