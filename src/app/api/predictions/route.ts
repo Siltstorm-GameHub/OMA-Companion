@@ -56,3 +56,17 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ ok: true, prediction: { ...prediction, predictedUser } });
 }
+
+export async function DELETE(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) return NextResponse.json({ error: "Nicht eingeloggt" }, { status: 401 });
+
+  const { eventId } = await req.json();
+  if (!eventId) return NextResponse.json({ error: "eventId fehlt" }, { status: 400 });
+
+  await prisma.eventWinnerPrediction.deleteMany({
+    where: { userId: session.user.id, eventId },
+  });
+
+  return NextResponse.json({ ok: true });
+}
