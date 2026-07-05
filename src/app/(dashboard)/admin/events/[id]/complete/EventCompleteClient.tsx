@@ -39,6 +39,8 @@ interface Props {
   pollConfig: PollConfig;
   pollsConfig: MultiPollConfig[];
   pendingEventPolls: { label: string; endAt: string }[];
+  /** Echte, bereits in der App abgegebene Stimmen je Poll-Label — für die Nachtrage-Eingabe */
+  realPollVotes: Record<string, { voteCounts: Record<string, number>; excludedUserIds: string[] }>;
   spectatorRewardJson: { coins: number; rankPoints: number } | null;
   isReEdit: boolean;
   gamePhaseComplete: boolean;
@@ -91,7 +93,7 @@ function computePlacementMap(groups: string[][]): Map<string, number> {
 export default function EventCompleteClient({
   eventId, eventTitle, seriesId, seriesName,
   registeredUsers, spectatorUsers, tournamentStatFields, userStats,
-  seriesStatConfig, rewardsConfig, pollConfig, pollsConfig, pendingEventPolls, spectatorRewardJson,
+  seriesStatConfig, rewardsConfig, pollConfig, pollsConfig, pendingEventPolls, realPollVotes, spectatorRewardJson,
   isReEdit, gamePhaseComplete, pollPhaseComplete,
   initialData, initialFinalRanking, initialRankingGroups, initialFinalRankingNote,
 }: Props) {
@@ -130,18 +132,11 @@ export default function EventCompleteClient({
   });
 
   /* ── Multi-Polls ── */
-  const [multiPollVotes, setMultiPollVotes] = useState<Record<number, Record<string, number>>>(() => {
-    // Restore previous winners with 1 vote each from saved pollResults
-    type SavedPollResult = { winnerIds?: string[] };
-    const saved = (initialData?.pollResults as SavedPollResult[] | undefined) ?? [];
-    return Object.fromEntries(pollsConfig.map((_, i) => {
-      const prev: Record<string, number> = {};
-      for (const uid of saved[i]?.winnerIds ?? []) prev[uid] = 1;
-      return [i, prev];
-    }));
-  });
-  const [multiPollExcluded, setMultiPollExcluded] = useState<Record<number, Set<string>>>(
-    () => Object.fromEntries(pollsConfig.map((_, i) => [i, new Set<string>()]))
+  // Vorausgefüllt mit den echten, bereits in der App abgegebenen Stimmen — Admin kann für
+  // Personen ohne App-Zugang zusätzliche Stimmen nachtragen (auch nachdem die Umfrage
+  // per Timer oder manuell beendet wurde).
+  const [multiPollVotes, setMultiPollVotes] = useState<Record<number, Record<string, number>>>(
+    () => Object.fromEntries(pollsConfig.map((cfg, i) => [i, { ...(realPollVotes[cfg.label]?.voteCounts ?? {}) }]))
   );
 
   /* ── Zuschauer-Anwesenheit ── */
@@ -623,21 +618,13 @@ export default function EventCompleteClient({
             const allUsers = cfg.type === "spectator"
               ? spectatorUsers.filter(u => spectatorAttended.has(u.id))
               : registeredUsers;
-            const excluded = multiPollExcluded[i] ?? new Set<string>();
+            // Ausschluss kommt jetzt aus der Live-Umfrage selbst (dort direkt einstellbar) —
+            // hier nur noch respektiert, nicht mehr separat editierbar.
+            const excluded = new Set(realPollVotes[cfg.label]?.excludedUserIds ?? []);
             const eligible = allUsers.filter(u => !excluded.has(u.id));
             const votes = multiPollVotes[i] ?? {};
             const maxVotes = Math.max(...eligible.map(u => votes[u.id] ?? 0));
             const winners = maxVotes > 0 ? eligible.filter(u => (votes[u.id] ?? 0) === maxVotes) : [];
-
-            function toggleExclude(uid: string) {
-              setMultiPollExcluded(prev => {
-                const next = { ...prev };
-                const s = new Set(next[i] ?? []);
-                if (s.has(uid)) s.delete(uid); else s.add(uid);
-                next[i] = s;
-                return next;
-              });
-            }
 
             return (
               <div key={i} className="rounded-xl p-4 space-y-3" style={{ background: "rgba(139,92,246,0.05)", border: "1px solid rgba(139,92,246,0.15)" }}>
@@ -647,31 +634,7 @@ export default function EventCompleteClient({
                   <span className="text-[10px] text-gray-600 ml-1">({cfg.type === "spectator" ? "Zuschauer" : "Spieler"}-Poll)</span>
                 </p>
 
-                {/* Ausschließen */}
-                {allUsers.length > 0 && (
-                  <div>
-                    <p className="text-[11px] text-gray-500 mb-1.5">Aus Abstimmung ausschließen:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {allUsers.map(u => (
-                        <label key={u.id} className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs cursor-pointer transition-colors select-none ${
-                          excluded.has(u.id)
-                            ? "bg-red-900/30 border border-red-700/40 text-red-300"
-                            : "bg-white/[0.03] border border-white/[0.08] text-gray-400 hover:border-white/20"
-                        }`}>
-                          <input
-                            type="checkbox"
-                            checked={excluded.has(u.id)}
-                            onChange={() => toggleExclude(u.id)}
-                            className="accent-red-500 w-3 h-3"
-                          />
-                          {userName(u)}
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Stimmen */}
+                {/* Stimmen — vorausgefüllt mit den echten In-App-Stimmen, für Personen ohne App manuell nachtragbar */}
                 <div className="space-y-1.5 max-h-48 overflow-y-auto">
                   {eligible.map(u => (
                     <div key={u.id} className="flex items-center gap-3">
