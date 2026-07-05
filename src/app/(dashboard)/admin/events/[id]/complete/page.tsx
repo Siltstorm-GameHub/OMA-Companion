@@ -9,6 +9,8 @@ type PollConfig = { enabled: boolean; question: string; coins: number; rankPoint
 type MultiPollConfig = { label: string; question: string; coins: number; rankPoints: number; type: "player" | "spectator" };
 type SeriesStatConfig = {
   participationPoints: number;
+  participationCoins?: number;
+  spectatorParticipationCoins?: number;
   stats: { field: string; pointsPer: number }[];
   mvpStatField?: string;
   defaultWinnerStatField?: string;

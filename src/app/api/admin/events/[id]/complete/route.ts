@@ -28,6 +28,8 @@ function parseRewards(json: string | null | undefined): RewardsConfig {
 type SeriesStatConfig = {
   participationPoints: number;
   spectatorParticipationPoints?: number;
+  participationCoins?: number;
+  spectatorParticipationCoins?: number;
   transferToGlobalRanking?: boolean;
   stats: { field: string; pointsPer: number }[];
   mvpStatField?: string;
@@ -133,6 +135,12 @@ export async function POST(
 
   if (!event) return NextResponse.json({ error: "Event nicht gefunden" }, { status: 404 });
 
+  // Gesamttabellen-Konfiguration der Reihe (Ligapunkte + Teilnahme-Münzen, seriesweit fix)
+  const statCfg: SeriesStatConfig = (() => {
+    try { return event.series?.seriesStatConfig ? JSON.parse(event.series.seriesStatConfig) : {}; }
+    catch { return {} as SeriesStatConfig; }
+  })();
+
   const isReEdit = !!event.completionData;
   const oldCompletion: Record<string, unknown> = isReEdit
     ? (() => { try { return JSON.parse(event.completionData as string); } catch { return {}; } })()
@@ -211,41 +219,53 @@ export async function POST(
       placements: body.placements ?? parseRewards(event.placementRewardsJson ?? event.series?.placementRewardsJson).placements,
     };
 
-    // Teilnahme-Münzen für alle Spieler
-    if (rewards.participationCoins > 0 && playerIds.length > 0) {
+    // Teilnahme-Münzen für alle Spieler — bei Events innerhalb einer Reihe kommt der Betrag
+    // seriesweit fix aus der Gesamttabellen-Konfiguration, sonst aus den Event-Belohnungen
+    const effectiveParticipationCoins = event.seriesId ? (statCfg.participationCoins ?? 0) : rewards.participationCoins;
+    if (effectiveParticipationCoins > 0 && playerIds.length > 0) {
       await prisma.$transaction(
         playerIds.flatMap(userId => [
           prisma.user.update({
             where: { id: userId },
-            data: { points: { increment: rewards.participationCoins } },
+            data: { points: { increment: effectiveParticipationCoins } },
           }),
           prisma.pointTransaction.create({
-            data: { userId, amount: rewards.participationCoins, reason: `[Münzen] Teilnahme: ${event.title}` },
+            data: { userId, amount: effectiveParticipationCoins, reason: `[Münzen] Teilnahme: ${event.title}` },
           }),
         ])
       );
     }
 
     // Zuschauer-Basis-Belohnung für anwesende Zuschauer
-    if (event.spectatorMode && body.spectatorAttendedIds?.length && event.spectatorRewardJson) {
-      const spectatorReward = (() => {
-        try { return JSON.parse(event.spectatorRewardJson) as { coins: number; rankPoints: number }; }
-        catch { return null; }
+    if (event.spectatorMode && body.spectatorAttendedIds?.length) {
+      const spectatorRankPoints = (() => {
+        if (!event.spectatorRewardJson) return 0;
+        try { return (JSON.parse(event.spectatorRewardJson) as { rankPoints: number }).rankPoints ?? 0; }
+        catch { return 0; }
       })();
+      // Zuschauer-Münzen: bei Events innerhalb einer Reihe seriesweit fix aus der
+      // Gesamttabellen-Konfiguration, sonst aus der Event-eigenen Zuschauer-Belohnung
+      const spectatorCoins = event.seriesId
+        ? (statCfg.spectatorParticipationCoins ?? 0)
+        : (() => {
+            if (!event.spectatorRewardJson) return 0;
+            try { return (JSON.parse(event.spectatorRewardJson) as { coins: number }).coins ?? 0; }
+            catch { return 0; }
+          })();
       const attendedSpectators = (body.spectatorAttendedIds ?? []).filter(id => spectatorIds.includes(id));
-      if (spectatorReward && attendedSpectators.length > 0) {
+      if (attendedSpectators.length > 0) {
         const txns: Prisma.PrismaPromise<unknown>[] = [];
         for (const userId of attendedSpectators) {
-          if (spectatorReward.coins > 0) {
+          if (spectatorCoins > 0) {
             txns.push(
-              prisma.user.update({ where: { id: userId }, data: { points: { increment: spectatorReward.coins } } }),
-              prisma.pointTransaction.create({ data: { userId, amount: spectatorReward.coins, reason: `[Münzen] Zuschauer: ${event.title}` } })
+              prisma.user.update({ where: { id: userId }, data: { points: { increment: spectatorCoins } } }),
+              prisma.pointTransaction.create({ data: { userId, amount: spectatorCoins, reason: `[Münzen] Zuschauer: ${event.title}` } })
             );
           }
-          if (spectatorReward.rankPoints > 0) {
+          if (spectatorRankPoints > 0) {
             txns.push(
-              prisma.user.update({ where: { id: userId }, data: { rankPoints: { increment: spectatorReward.rankPoints } } }),
-              prisma.pointTransaction.create({ data: { userId, amount: spectatorReward.rankPoints, reason: `[Rang-Punkte] Zuschauer: ${event.title}` } })
+              prisma.user.update({ where: { id: userId }, data: { rankPoints: { increment: spectatorRankPoints } } }),
+              prisma.pointTransaction.create({ data: { userId, amount: spectatorRankPoints, reason: `[Rang-Punkte] Zuschauer: ${event.title}` } })
             );
           }
         }
@@ -490,11 +510,6 @@ export async function POST(
   let dominionChanges: Record<string, DominionChange> = {};
 
   if (event.series) {
-    const statCfg: SeriesStatConfig = (() => {
-      try { return event.series!.seriesStatConfig ? JSON.parse(event.series!.seriesStatConfig) : {}; }
-      catch { return {} as SeriesStatConfig; }
-    })();
-
     const existingJson: SeriesStandings = (() => {
       try {
         return event.series!.seriesStandingsJson

@@ -589,6 +589,9 @@ model EventWinnerPrediction {
   eventId         String
   // Vorhergesagter Gesamtsieger — beliebiger User, muss nicht am Event angemeldet sein
   predictedUserId String
+  // Eingesetzte Münzen — wird bei Abgabe/Änderung sofort abgebucht (Escrow), bei Löschung vor
+  // Sperre zurückerstattet. Bei richtigem Tipp: wager + Gewinn; bei falschem: Einsatz verloren.
+  wager           Int      @default(0)
   createdAt       DateTime @default(now())
   resolved        Boolean  @default(false)
   correct         Boolean? // null = noch nicht ausgewertet

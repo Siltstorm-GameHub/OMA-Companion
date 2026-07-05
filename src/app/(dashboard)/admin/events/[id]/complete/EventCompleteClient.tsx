@@ -19,6 +19,8 @@ type MultiPollConfig = { label: string; question: string; coins: number; rankPoi
 type PollResult = { label: string; winnerIds: string[]; coins: number; rankPoints: number; type: "player" | "spectator" };
 type SeriesStatConfig = {
   participationPoints: number;
+  participationCoins?: number;
+  spectatorParticipationCoins?: number;
   stats: { field: string; pointsPer: number }[];
   mvpStatField?: string;
   defaultWinnerStatField?: string;
@@ -230,6 +232,11 @@ export default function EventCompleteClient({
   const rankingGroups = useMemo(() => computeGroups(rankingOrder, tiedAbove), [rankingOrder, tiedAbove]);
   const placementMap  = useMemo(() => computePlacementMap(rankingGroups), [rankingGroups]);
 
+  // Teilnahme-/Zuschauer-Münzen: bei Events innerhalb einer Reihe seriesweit fix aus der
+  // Gesamttabellen-Konfiguration, sonst aus den Event-eigenen Belohnungen
+  const effectiveParticipationCoins = seriesId ? (seriesStatConfig?.participationCoins ?? 0) : rewardsConfig.participationCoins;
+  const effectiveSpectatorCoins = seriesId ? (seriesStatConfig?.spectatorParticipationCoins ?? 0) : (spectatorRewardJson?.coins ?? 0);
+
   /* ── Ranking auto-sort with tie detection ── */
   function autoSort(field = winnerStatField) {
     if (!field) return;
@@ -324,7 +331,7 @@ export default function EventCompleteClient({
           finalRanking:            rankingOrder.length > 0 ? rankingOrder : undefined,
           finalRankingGroups:      rankingGroups.length > 0 ? rankingGroups : undefined,
           finalRankingNote:        rankingNote || undefined,
-          participationCoins:      rewardsConfig.participationCoins,
+          participationCoins:      seriesId ? undefined : rewardsConfig.participationCoins,
           placements:              rewardsConfig.placements,
         }),
       });
@@ -591,7 +598,7 @@ export default function EventCompleteClient({
             <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(20,184,166,0.05)", border: "1px solid rgba(20,184,166,0.15)" }}>
               <p className="text-xs font-semibold text-teal-300">
                 👁️ Zuschauer-Anwesenheit
-                <span className="font-normal text-gray-500 ml-1">({spectatorRewardJson.coins} Münzen{spectatorRewardJson.rankPoints > 0 ? ` + ${spectatorRewardJson.rankPoints} RP` : ""} für Anwesende)</span>
+                <span className="font-normal text-gray-500 ml-1">({effectiveSpectatorCoins} Münzen{spectatorRewardJson.rankPoints > 0 ? ` + ${spectatorRewardJson.rankPoints} RP` : ""} für Anwesende)</span>
               </p>
               <div className="space-y-1">
                 {spectatorUsers.map(u => (
@@ -703,10 +710,10 @@ export default function EventCompleteClient({
               </ul>
             ) : (
               <ul className="space-y-1 text-xs text-gray-400">
-                {rewardsConfig.participationCoins > 0 && (
+                {effectiveParticipationCoins > 0 && (
                   <li className="flex items-center gap-2">
                     <Coins className="w-3 h-3 text-amber-400 shrink-0" />
-                    Alle {registeredUsers.length} Teilnehmer: {rewardsConfig.participationCoins} Münzen
+                    Alle {registeredUsers.length} Teilnehmer: {effectiveParticipationCoins} Münzen
                   </li>
                 )}
                 {rankingGroups.map((group, gi) => {
@@ -865,9 +872,9 @@ export default function EventCompleteClient({
                           </span>
                         )}
                         <span className="flex flex-col items-end shrink-0 ml-1 gap-0">
-                          {rewardsConfig.participationCoins > 0 && (
+                          {effectiveParticipationCoins > 0 && (
                             <span className="text-[10px] text-amber-400 tabular-nums leading-tight">
-                              +{(reward?.coins ?? 0) + rewardsConfig.participationCoins} <CoinIcon size={11} />
+                              +{(reward?.coins ?? 0) + effectiveParticipationCoins} <CoinIcon size={11} />
                             </span>
                           )}
                           {reward && reward.rankPoints > 0 && (

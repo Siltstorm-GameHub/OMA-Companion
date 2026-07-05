@@ -781,12 +781,22 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
               <h3 className="text-sm font-semibold text-gray-300">Teilnahme-Belohnung</h3>
             </div>
             <p className="text-[11px] text-gray-600">Wird erst nach Event-Abschluss vergeben</p>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className={labelCls}>Münzen</label>
-                <input type="number" min={0} value={participationCoins} onChange={e => setParticipationCoins(Number(e.target.value))} className={inputCls} />
+            {event.series ? (
+              <p className="text-[11px] text-gray-500">
+                Münzen pro Teilnahme sind für Events dieser Reihe seriesweit fest in der{" "}
+                <Link href={`/admin/series/${event.series.id}`} className="text-teal-400 hover:text-teal-300 transition-colors">
+                  Gesamttabellen-Konfiguration der Reihe
+                </Link>{" "}
+                eingestellt.
+              </p>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={labelCls}>Münzen</label>
+                  <input type="number" min={0} value={participationCoins} onChange={e => setParticipationCoins(Number(e.target.value))} className={inputCls} />
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Platzierungen */}
@@ -816,16 +826,27 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
           {event.spectatorMode && (
             <div className="rounded-xl border border-teal-500/20 bg-teal-500/5 p-4 space-y-3">
               <h3 className="text-sm font-semibold text-teal-300">👁️ Zuschauer-Basis-Belohnung</h3>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={labelCls}>Münzen</label>
-                  <input type="number" min={0} value={spectatorCoins} onChange={e => setSpectatorCoins(Number(e.target.value))} className={inputCls} />
-                </div>
+              <div className={event.series ? "grid grid-cols-1 gap-3" : "grid grid-cols-2 gap-3"}>
+                {!event.series && (
+                  <div>
+                    <label className={labelCls}>Münzen</label>
+                    <input type="number" min={0} value={spectatorCoins} onChange={e => setSpectatorCoins(Number(e.target.value))} className={inputCls} />
+                  </div>
+                )}
                 <div>
                   <label className={labelCls}>Rang-Punkte</label>
                   <input type="number" min={0} value={spectatorRankPts} onChange={e => setSpectatorRankPts(Number(e.target.value))} className={inputCls} />
                 </div>
               </div>
+              {event.series && (
+                <p className="text-[11px] text-gray-500">
+                  Münzen pro Zuschauer-Teilnahme sind für Events dieser Reihe seriesweit fest in der{" "}
+                  <Link href={`/admin/series/${event.series.id}`} className="text-teal-400 hover:text-teal-300 transition-colors">
+                    Gesamttabellen-Konfiguration der Reihe
+                  </Link>{" "}
+                  eingestellt.
+                </p>
+              )}
             </div>
           )}
 

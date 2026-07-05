@@ -3,6 +3,8 @@ import { Prisma } from "@prisma/client";
 
 type SeriesStatConfig = {
   participationPoints?: number;
+  participationCoins?: number;
+  spectatorParticipationCoins?: number;
   stats?: { field: string; pointsPer: number }[];
   mvpStatField?: string;
   aggregatedStatFields?: string[];
@@ -155,11 +157,18 @@ export async function revertEventCompletion(eventId: string, opts: RevertOptions
   if (includeBaseRewards) {
     const rewards = parseRewards(event.placementRewardsJson ?? event.series?.placementRewardsJson);
     const registeredSet = new Set(event.registrations.map(r => r.userId));
+    const statCfg: SeriesStatConfig = (() => {
+      try { return event.series?.seriesStatConfig ? JSON.parse(event.series.seriesStatConfig) : {}; }
+      catch { return {} as SeriesStatConfig; }
+    })();
 
-    if (rewards.participationCoins > 0) {
+    // Teilnahme-Münzen: bei Events innerhalb einer Reihe seriesweit fix aus der
+    // Gesamttabellen-Konfiguration, sonst aus den Event-Belohnungen
+    const effectiveParticipationCoins = event.seriesId ? (statCfg.participationCoins ?? 0) : rewards.participationCoins;
+    if (effectiveParticipationCoins > 0) {
       for (const { userId, role } of event.registrations) {
         if (role !== "player") continue;
-        reverse(userId, rewards.participationCoins, 0);
+        reverse(userId, effectiveParticipationCoins, 0);
       }
     }
 
@@ -182,11 +191,20 @@ export async function revertEventCompletion(eventId: string, opts: RevertOptions
       });
     }
 
-    if (cd.spectatorAttendedIds?.length && event.spectatorRewardJson) {
-      try {
-        const sr = JSON.parse(event.spectatorRewardJson) as { coins: number; rankPoints: number };
-        for (const userId of cd.spectatorAttendedIds) reverse(userId, sr.coins ?? 0, sr.rankPoints ?? 0);
-      } catch { /* ungültige JSON-Daten - ignorieren */ }
+    if (cd.spectatorAttendedIds?.length) {
+      const spectatorRankPoints = (() => {
+        if (!event.spectatorRewardJson) return 0;
+        try { return (JSON.parse(event.spectatorRewardJson) as { rankPoints: number }).rankPoints ?? 0; }
+        catch { return 0; }
+      })();
+      const spectatorCoins = event.seriesId
+        ? (statCfg.spectatorParticipationCoins ?? 0)
+        : (() => {
+            if (!event.spectatorRewardJson) return 0;
+            try { return (JSON.parse(event.spectatorRewardJson) as { coins: number }).coins ?? 0; }
+            catch { return 0; }
+          })();
+      for (const userId of cd.spectatorAttendedIds) reverse(userId, spectatorCoins, spectatorRankPoints);
     }
   }
 

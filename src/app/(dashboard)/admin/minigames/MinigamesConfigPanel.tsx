@@ -66,6 +66,7 @@ export function MinigamesConfigPanel({ initial }: { initial: MinigamesConfig }) 
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Clicker Tages-Cap (Münzen)" value={config.clickerDailyCap} onChange={v => set("clickerDailyCap", v)} />
+          <Field label="Vorhersage Höchst-Einsatz" value={config.predictionMaxWager} onChange={v => set("predictionMaxWager", v)} />
           <Field label="Duell Tages-Wettlimit (Münzen)" value={config.duelDailyWagerCap} onChange={v => set("duelDailyWagerCap", v)} />
           <Field label="Duell Mindest-Einsatz" value={config.duelMinWager} onChange={v => set("duelMinWager", v)} />
           <Field label="Duell Höchst-Einsatz" value={config.duelMaxWager} onChange={v => set("duelMaxWager", v)} />

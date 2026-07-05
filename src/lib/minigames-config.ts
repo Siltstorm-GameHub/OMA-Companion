@@ -10,6 +10,7 @@ export interface MinigamesConfig {
   duelDailyWagerCap: number;
   duelMinWager: number;
   duelMaxWager: number;
+  predictionMaxWager: number;
 }
 
 const DEFAULTS: MinigamesConfig = {
@@ -20,6 +21,7 @@ const DEFAULTS: MinigamesConfig = {
   duelDailyWagerCap: 1000,
   duelMinWager: 10,
   duelMaxWager: 500,
+  predictionMaxWager: 500,
 };
 
 // BotConfig-Keys (Key-Value-Tabelle) — erste echte Nutzung dieses Modells in /src
@@ -31,6 +33,7 @@ const KEYS = {
   duelDailyWagerCap: "minigames_duel_daily_wager_cap",
   duelMinWager: "minigames_duel_min_wager",
   duelMaxWager: "minigames_duel_max_wager",
+  predictionMaxWager: "minigames_prediction_max_wager",
 } as const;
 
 export async function getMinigamesConfig(): Promise<MinigamesConfig> {
@@ -56,6 +59,7 @@ export async function getMinigamesConfig(): Promise<MinigamesConfig> {
     duelDailyWagerCap: num(KEYS.duelDailyWagerCap, DEFAULTS.duelDailyWagerCap),
     duelMinWager: num(KEYS.duelMinWager, DEFAULTS.duelMinWager),
     duelMaxWager: num(KEYS.duelMaxWager, DEFAULTS.duelMaxWager),
+    predictionMaxWager: num(KEYS.predictionMaxWager, DEFAULTS.predictionMaxWager),
   };
 }
 
@@ -76,6 +80,7 @@ export async function updateMinigamesConfig(patch: Partial<MinigamesConfig>): Pr
   if (patch.duelDailyWagerCap !== undefined) entries.push([KEYS.duelDailyWagerCap, String(patch.duelDailyWagerCap)]);
   if (patch.duelMinWager !== undefined) entries.push([KEYS.duelMinWager, String(patch.duelMinWager)]);
   if (patch.duelMaxWager !== undefined) entries.push([KEYS.duelMaxWager, String(patch.duelMaxWager)]);
+  if (patch.predictionMaxWager !== undefined) entries.push([KEYS.predictionMaxWager, String(patch.predictionMaxWager)]);
 
   await Promise.all(entries.map(([key, value]) =>
     prisma.botConfig.upsert({

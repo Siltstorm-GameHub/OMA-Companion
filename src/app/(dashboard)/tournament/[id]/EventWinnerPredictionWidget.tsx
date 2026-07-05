@@ -8,6 +8,7 @@ import CoinIcon from "@/components/CoinIcon";
 type UserLite = { id: string; username: string | null; name: string | null; image: string | null };
 type Prediction = {
   predictedUserId: string;
+  wager: number;
   resolved: boolean;
   correct: boolean | null;
   coinsAwarded: number;
@@ -20,15 +21,21 @@ export default function EventWinnerPredictionWidget({
   eventId,
   locked,
   initialPrediction,
+  minWager,
+  maxWager,
 }: {
   eventId: string;
   locked: boolean;
   initialPrediction: Prediction;
+  minWager: number;
+  maxWager: number;
 }) {
   const [prediction, setPrediction] = useState<Prediction>(initialPrediction);
   const [editing, setEditing] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<UserLite[]>([]);
+  const [selected, setSelected] = useState<UserLite | null>(null);
+  const [wager, setWager] = useState(initialPrediction?.wager ?? minWager);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -42,22 +49,29 @@ export default function EventWinnerPredictionWidget({
     return () => clearTimeout(t);
   }, [query]);
 
-  async function pick(u: UserLite) {
-    if (submitting) return;
+  function startEditing() {
+    setSelected(prediction?.predictedUser ?? null);
+    setWager(prediction?.wager ?? minWager);
+    setEditing(true);
+  }
+
+  async function submit() {
+    if (submitting || !selected) return;
     setSubmitting(true);
     try {
       const res = await fetch("/api/predictions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ eventId, predictedUserId: u.id }),
+        body: JSON.stringify({ eventId, predictedUserId: selected.id, wager }),
       });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error ?? "Tipp konnte nicht gespeichert werden"); return; }
-      setPrediction({ predictedUserId: u.id, resolved: false, correct: null, coinsAwarded: 0, predictedUser: u });
+      setPrediction({ predictedUserId: selected.id, wager, resolved: false, correct: null, coinsAwarded: 0, predictedUser: selected });
       setEditing(false);
       setQuery("");
       setResults([]);
-      toast.success(`Tipp gespeichert: ${uname(u)} gewinnt 🎯`);
+      setSelected(null);
+      toast.success(`Tipp gespeichert: ${uname(selected)} gewinnt — Einsatz ${wager} 🎯`);
     } catch {
       toast.error("Netzwerkfehler");
     } finally {
@@ -83,11 +97,17 @@ export default function EventWinnerPredictionWidget({
           <p className="text-sm text-white">
             {prediction.correct ? "✅ Richtig getippt!" : "❌ Leider daneben"}
           </p>
-          <p className="text-xs text-gray-500">Du hast auf {uname(prediction.predictedUser)} getippt</p>
+          <p className="text-xs text-gray-500">
+            Du hast auf {uname(prediction.predictedUser)} getippt · Einsatz {prediction.wager} <CoinIcon size={10} className="inline" />
+          </p>
         </div>
-        {prediction.correct && prediction.coinsAwarded > 0 && (
+        {prediction.correct ? (
           <span className="flex items-center gap-1 text-sm font-semibold text-amber-400 shrink-0">
             +{prediction.coinsAwarded} <CoinIcon size={14} />
+          </span>
+        ) : (
+          <span className="flex items-center gap-1 text-sm font-semibold text-gray-500 shrink-0">
+            -{prediction.wager} <CoinIcon size={14} />
           </span>
         )}
       </div>
@@ -103,10 +123,12 @@ export default function EventWinnerPredictionWidget({
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm text-white">Du tippst auf <span className="font-semibold">{uname(prediction.predictedUser)}</span></p>
-          <p className="text-xs text-gray-500">Gesamtsieger-Vorhersage</p>
+          <p className="text-xs text-gray-500 flex items-center gap-1">
+            Einsatz: {prediction.wager} <CoinIcon size={10} />
+          </p>
         </div>
         {!locked && (
-          <button onClick={() => setEditing(true)} className="text-xs text-gray-500 hover:text-white transition-colors shrink-0">
+          <button onClick={startEditing} className="text-xs text-gray-500 hover:text-white transition-colors shrink-0">
             Ändern
           </button>
         )}
@@ -128,37 +150,76 @@ export default function EventWinnerPredictionWidget({
         <Target className="w-4 h-4 text-violet-400 shrink-0" />
         <p className="text-sm font-semibold text-white">Wer gewinnt dieses Event?</p>
         {editing && (
-          <button onClick={() => setEditing(false)} className="ml-auto text-gray-500 hover:text-white">
+          <button onClick={() => { setEditing(false); setSelected(null); }} className="ml-auto text-gray-500 hover:text-white">
             <X className="w-4 h-4" />
           </button>
         )}
       </div>
-      <div className="relative">
-        <Search className="w-3.5 h-3.5 text-gray-600 absolute left-3 top-1/2 -translate-y-1/2" />
-        <input
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          placeholder="Nutzer suchen — auch nicht angemeldete Mitglieder…"
-          className="w-full pl-9 pr-3 py-2 rounded-lg bg-white/[0.04] border border-white/10 text-white text-sm focus:outline-none focus:border-violet-500/50"
-        />
-        {results.length > 0 && (
-          <div className="absolute z-10 mt-1 w-full glass-heavy rounded-xl overflow-hidden border border-white/10">
-            {results.map(u => (
-              <button key={u.id} disabled={submitting} onClick={() => pick(u)}
-                className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-white/[0.06] text-left disabled:opacity-50">
-                {u.image ? (
-                  <img src={u.image} alt="" className="w-6 h-6 rounded-full shrink-0" />
-                ) : (
-                  <div className="w-6 h-6 rounded-full bg-white/[0.06] flex items-center justify-center text-[10px] font-bold text-gray-400 shrink-0">
-                    {uname(u)[0]?.toUpperCase() ?? "?"}
-                  </div>
-                )}
-                <span className="text-sm text-white">{uname(u)}</span>
-              </button>
-            ))}
+
+      {selected ? (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-violet-500/[0.06] border border-violet-500/15">
+            {selected.image ? (
+              <img src={selected.image} alt="" className="w-6 h-6 rounded-full shrink-0" />
+            ) : (
+              <div className="w-6 h-6 rounded-full bg-white/[0.06] flex items-center justify-center text-[10px] font-bold text-gray-400 shrink-0">
+                {uname(selected)[0]?.toUpperCase() ?? "?"}
+              </div>
+            )}
+            <span className="flex-1 text-sm text-white">{uname(selected)}</span>
+            <button onClick={() => setSelected(null)} className="text-gray-500 hover:text-white">
+              <X className="w-3.5 h-3.5" />
+            </button>
           </div>
-        )}
-      </div>
+
+          <label className="block">
+            <span className="text-xs text-gray-500">Einsatz ({minWager}–{maxWager} Münzen)</span>
+            <input
+              type="number"
+              min={minWager}
+              max={maxWager}
+              value={wager}
+              onChange={e => setWager(Math.max(minWager, Math.min(maxWager, parseInt(e.target.value, 10) || minWager)))}
+              className="mt-1 w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/10 text-white text-sm focus:outline-none focus:border-violet-500/50"
+            />
+          </label>
+
+          <button
+            onClick={submit}
+            disabled={submitting}
+            className="w-full py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-sm font-semibold transition-colors"
+          >
+            {submitting ? "Speichert…" : "Tipp abgeben"}
+          </button>
+        </div>
+      ) : (
+        <div className="relative">
+          <Search className="w-3.5 h-3.5 text-gray-600 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="Nutzer suchen — auch nicht angemeldete Mitglieder…"
+            className="w-full pl-9 pr-3 py-2 rounded-lg bg-white/[0.04] border border-white/10 text-white text-sm focus:outline-none focus:border-violet-500/50"
+          />
+          {results.length > 0 && (
+            <div className="absolute z-10 mt-1 w-full glass-heavy rounded-xl overflow-hidden border border-white/10">
+              {results.map(u => (
+                <button key={u.id} onClick={() => { setSelected(u); setResults([]); setQuery(""); }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-white/[0.06] text-left">
+                  {u.image ? (
+                    <img src={u.image} alt="" className="w-6 h-6 rounded-full shrink-0" />
+                  ) : (
+                    <div className="w-6 h-6 rounded-full bg-white/[0.06] flex items-center justify-center text-[10px] font-bold text-gray-400 shrink-0">
+                      {uname(u)[0]?.toUpperCase() ?? "?"}
+                    </div>
+                  )}
+                  <span className="text-sm text-white">{uname(u)}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
