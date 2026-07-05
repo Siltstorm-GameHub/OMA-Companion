@@ -207,7 +207,7 @@ export async function dispatchEventNotification(
 
   await dispatchNotification(ruleKey, {
     users,
-    urlOverride: rule.isEventNotification ? `/events/${event.id}` : undefined,
+    urlOverride: rule.isEventNotification ? `/tournament/${event.id}` : undefined,
     ...opts,
   });
 }

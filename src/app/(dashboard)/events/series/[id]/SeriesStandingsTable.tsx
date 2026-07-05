@@ -101,14 +101,21 @@ function StatDelta({ value, delta, pointsPer }: { value: number; delta: number |
   );
 }
 
-function PointsCell({ value, rank }: { value: number; rank: number }) {
+function PointsCell({ value, rank, delta }: { value: number; rank: number; delta?: number }) {
   if (value <= 0) return <span className="text-gray-700 font-normal text-xs">–</span>;
   return (
-    <span className={`text-sm font-bold tabular-nums ${
-      rank === 1 ? "text-amber-400" : rank === 2 ? "text-gray-300" : rank === 3 ? "text-amber-600" : "text-white"
-    }`}>
-      {value.toLocaleString("de-DE")}
-    </span>
+    <div className="flex flex-col items-end gap-0">
+      <span className={`text-sm font-bold tabular-nums leading-tight ${
+        rank === 1 ? "text-amber-400" : rank === 2 ? "text-gray-300" : rank === 3 ? "text-amber-600" : "text-white"
+      }`}>
+        {value.toLocaleString("de-DE")}
+      </span>
+      {!!delta && (
+        <span className={`text-[9px] tabular-nums leading-none ${delta > 0 ? "text-emerald-500" : "text-red-500"}`}>
+          {delta > 0 ? "+" : ""}{delta.toLocaleString("de-DE")}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -227,7 +234,7 @@ export default function SeriesStandingsTable({
               ))}
               {showPoints && (
                 <div className="text-right">
-                  <PointsCell value={row.totalPoints} rank={rank} />
+                  <PointsCell value={row.totalPoints} rank={rank} delta={delta?.pointsDelta} />
                 </div>
               )}
             </div>
@@ -294,7 +301,7 @@ export default function SeriesStandingsTable({
               </div>
               {showPoints ? (
                 <div className="text-right">
-                  <PointsCell value={row.totalPoints} rank={rank} />
+                  <PointsCell value={row.totalPoints} rank={rank} delta={delta?.pointsDelta} />
                 </div>
               ) : (
                 <div className="text-center">

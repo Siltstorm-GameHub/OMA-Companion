@@ -207,7 +207,7 @@ export default async function EventsPage() {
                     </Link>
                   )}
                   <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                    <Link href={ev.seriesId ? `/events/series/${ev.seriesId}` : `/events/${ev.id}`}
+                    <Link href={ev.seriesId ? `/events/series/${ev.seriesId}` : `/tournament/${ev.id}`}
                       className="font-semibold text-white text-base truncate hover:text-teal-300 transition-colors">
                       {ev.title}
                     </Link>
@@ -355,7 +355,7 @@ export default async function EventsPage() {
 
           {hiddenEvents.map(ev => (
             <Link key={`hidden-${ev.id}`}
-              href={ev.seriesId ? `/events/series/${ev.seriesId}` : `/events/${ev.id}`}
+              href={ev.seriesId ? `/events/series/${ev.seriesId}` : `/tournament/${ev.id}`}
               className="flex items-center gap-3 px-4 py-2.5 rounded-lg border border-rose-500/20 bg-rose-500/[0.04] hover:bg-rose-500/[0.07] transition-colors group">
               <GameCover game={ev.game} className="w-9 h-6 shrink-0" rounded="rounded" />
               <div className="flex-1 min-w-0">
@@ -398,7 +398,7 @@ export default async function EventsPage() {
                   className="flex items-center gap-3 px-4 py-2.5 rounded-lg border border-white/[0.04] bg-white/[0.015] opacity-50 hover:opacity-75 transition-opacity group">
                   <GameCover game={ev.game} className="w-9 h-6 shrink-0" rounded="rounded" />
                   <div className="flex-1 min-w-0">
-                    <Link href={ev.seriesId ? `/events/series/${ev.seriesId}` : `/events/${ev.id}`}
+                    <Link href={ev.seriesId ? `/events/series/${ev.seriesId}` : `/tournament/${ev.id}`}
                       className="text-sm text-gray-400 font-medium truncate block group-hover:text-gray-300 transition-colors">
                       {ev.title}
                     </Link>
