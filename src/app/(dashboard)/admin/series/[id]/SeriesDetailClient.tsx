@@ -149,7 +149,7 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
   const [statParticipationPts, setStatParticipationPts]   = useState<number>(initialStatCfg.participationPoints ?? 0);
   const [statSpectatorPts, setStatSpectatorPts]           = useState<number>(initialStatCfg.spectatorParticipationPoints ?? 0);
   const [statTransferToGlobal, setStatTransferToGlobal]   = useState<boolean>(initialStatCfg.transferToGlobalRanking ?? false);
-  const [statRows, setStatRows] = useState<{ field: string; pointsPer: number; isWinnerStat?: boolean }[]>(initialStatCfg.stats ?? []);
+  const [statRows, setStatRows] = useState<{ field: string; pointsPer: number; isWinnerStat?: boolean; isMatchWinStat?: boolean }[]>(initialStatCfg.stats ?? []);
   // Event-level stat settings (Step 4 im Wizard)
   const [eventStatFields, setEventStatFields] = useState<string[]>(initialStatCfg.eventStatFields ?? []);
   const [winnerStatField, setWinnerStatField] = useState<string>(initialStatCfg.winnerStatField ?? "");
@@ -231,6 +231,7 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
           transferToGlobalRanking:      statTransferToGlobal,
           stats: statRows.filter(r => r.field.trim()),
           winnerStatKeys: statRows.filter(r => r.field.trim() && r.isWinnerStat).map(r => r.field),
+          matchWinStatKeys: statRows.filter(r => r.field.trim() && r.isMatchWinStat).map(r => r.field),
           ...(eventStatFields.length > 0 && { eventStatFields }),
           ...(winnerStatField            && { winnerStatField }),
           ...(dominionEnabled && dominionTriggerStats.length > 0 && {
@@ -708,14 +709,22 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
                   >
                     <Trophy className="w-3.5 h-3.5" />
                   </button>
+                  <button
+                    type="button"
+                    title="Match-Win-Stat"
+                    onClick={() => setStatRows(prev => prev.map((r, j) => j === i ? { ...r, isMatchWinStat: !r.isMatchWinStat } : r))}
+                    className={`shrink-0 transition-colors ${row.isMatchWinStat ? "text-teal-400" : "text-gray-600 hover:text-teal-400"}`}
+                  >
+                    <Swords className="w-3.5 h-3.5" />
+                  </button>
                   <button type="button" onClick={() => setStatRows(prev => prev.filter((_, j) => j !== i))}
                     className="text-gray-600 hover:text-red-400 transition-colors shrink-0">
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
               ))}
-              <p className="text-[11px] text-gray-600">🏆 = Gewinner-Stat (bestimmt Reihensieger)</p>
-              <button type="button" onClick={() => setStatRows(prev => [...prev, { field: "", pointsPer: 1, isWinnerStat: false }])}
+              <p className="text-[11px] text-gray-600">🏆 = Gewinner-Stat (bestimmt Reihensieger) · ⚔️ = Match-Win-Stat (+1 pro Match Win aus einzelnen Runden)</p>
+              <button type="button" onClick={() => setStatRows(prev => [...prev, { field: "", pointsPer: 1, isWinnerStat: false, isMatchWinStat: false }])}
                 className="flex items-center gap-1 text-xs text-teal-500 hover:text-teal-300 transition-colors">
                 <Plus className="w-3 h-3" /> Statistik hinzufügen
               </button>

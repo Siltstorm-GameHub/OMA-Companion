@@ -63,6 +63,7 @@ export default function FfaView({
     });
 
   const isAvg    = format === "avg_stats";
+  const isCoop   = format === "coop_stats";
   const findUser = (uid: string | null) =>
     uid ? participants.find(p => p.userId === uid)?.user : null;
 
@@ -310,6 +311,18 @@ export default function FfaView({
                 }
               }
 
+              // Für coop_stats: "Match Win"-Haken dieser Runde auslesen (gilt für alle Spieler der Runde)
+              let matchWin: boolean | null = null;
+              if (isCoop) {
+                const entryWithFlag = match.entries.find(e => {
+                  if (!e.statsJson) return false;
+                  try { return "Match Win" in (JSON.parse(e.statsJson) as Record<string, number>); } catch { return false; }
+                });
+                if (entryWithFlag?.statsJson) {
+                  matchWin = Number((JSON.parse(entryWithFlag.statsJson) as Record<string, number>)["Match Win"]) > 0;
+                }
+              }
+
               return (
                 <div key={match.id} className={`glass border rounded-xl overflow-hidden ${myEntry ? "border-rose-800/40" : "border-white/5"}`}>
                   <button
@@ -330,6 +343,12 @@ export default function FfaView({
                         <span className="text-xs text-amber-400 flex items-center gap-1 shrink-0">
                           <Trophy className="w-3 h-3" />
                           {uname(findUser(matchWinnerId))}
+                        </span>
+                      )}
+                      {isCoop && matchWin !== null && (
+                        <span className={`text-xs flex items-center gap-1 shrink-0 ${matchWin ? "text-emerald-400" : "text-gray-500"}`}>
+                          <Trophy className="w-3 h-3" />
+                          {matchWin ? "Sieg" : "Niederlage"}
                         </span>
                       )}
                     </div>

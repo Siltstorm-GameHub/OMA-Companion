@@ -36,7 +36,7 @@ type PollConfig = {
 };
 
 type PlacementReward = { place: number; coins: number; rankPoints: number };
-type StatRow = { field: string; pointsPer: number; isWinnerStat?: boolean };
+type StatRow = { field: string; pointsPer: number; isWinnerStat?: boolean; isMatchWinStat?: boolean };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -370,6 +370,7 @@ export default function EventSetupWizard({
     const hasStandingsConfig = eventType === "tournament" && (statParticipationPts > 0 || statRows.length > 0);
     const hasEventConfig = eventStatFields.length > 0;
     const winnerStatKeys = statRows.filter(r => r.isWinnerStat).map(r => r.field);
+    const matchWinStatKeys = statRows.filter(r => r.isMatchWinStat).map(r => r.field);
     const seriesStatConfig = (hasStandingsConfig || hasEventConfig || (spectatorMode && statSpectatorParticipationPts > 0) || dominionEnabled)
       ? JSON.stringify({
           participationPoints: statParticipationPts,
@@ -379,6 +380,7 @@ export default function EventSetupWizard({
           ...(eventStatFields.length > 0 && { eventStatFields }),
           ...(winnerStatField && { winnerStatField }),
           ...(winnerStatKeys.length > 0 && { winnerStatKeys }),
+          ...(matchWinStatKeys.length > 0 && { matchWinStatKeys }),
           ...(dominionEnabled && dominionTriggerStats.length > 0 && {
             dominionBonus: {
               enabled: true,
@@ -1446,7 +1448,7 @@ export default function EventSetupWizard({
               <span className="text-xs text-gray-300">Tabellenpunkte bei Event-Abschluss auf Gesamtrangliste übertragen</span>
             </label>
             <div className="space-y-2">
-              <p className="text-[11px] text-gray-500">Stat-Felder — Feldname → Punkte pro Einheit — 🏆 = +1 bei Event-Sieg</p>
+              <p className="text-[11px] text-gray-500">Stat-Felder — Feldname → Punkte pro Einheit — 🏆 = +1 bei Event-Sieg — ⚔️ = +1 pro Match Win aus einzelnen Runden</p>
               {statRows.map((row, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <input type="text" value={row.field}
@@ -1461,6 +1463,12 @@ export default function EventSetupWizard({
                     onClick={() => setStatRows(prev => prev.map((r, ri) => ri === i ? { ...r, isWinnerStat: !r.isWinnerStat } : r))}
                     className={`shrink-0 text-base transition-colors ${row.isWinnerStat ? "opacity-100" : "opacity-30 hover:opacity-60"}`}>
                     🏆
+                  </button>
+                  <button type="button"
+                    title="Dieser Stat bekommt +1 pro Match Win, das pro Runde eines Events markiert wird"
+                    onClick={() => setStatRows(prev => prev.map((r, ri) => ri === i ? { ...r, isMatchWinStat: !r.isMatchWinStat } : r))}
+                    className={`shrink-0 text-base transition-colors ${row.isMatchWinStat ? "opacity-100" : "opacity-30 hover:opacity-60"}`}>
+                    ⚔️
                   </button>
                   <button type="button" onClick={() => setStatRows(prev => prev.filter((_, ri) => ri !== i))}
                     className="text-gray-600 hover:text-red-400 transition-colors shrink-0">
@@ -1592,6 +1600,7 @@ export default function EventSetupWizard({
   // ── Step 4 (Series): Event-Einstellungen ─────────────────────────────────────
   function renderStepSeriesEventSettings() {
     const winnerStatKeys = statRows.filter(r => r.isWinnerStat).map(r => r.field);
+    const matchWinStatKeys = statRows.filter(r => r.isMatchWinStat).map(r => r.field);
     return (
       <div className="space-y-6">
         <div>
@@ -1651,6 +1660,14 @@ export default function EventSetupWizard({
                 Reihen-Stats bei Event-Sieg +1: {winnerStatKeys.join(", ")}
               </p>
             )}
+          </div>
+        )}
+
+        {matchWinStatKeys.length > 0 && (
+          <div className="rounded-xl p-4 border border-teal-500/20 bg-teal-500/5">
+            <p className="text-[10px] text-teal-600">
+              ⚔️ Reihen-Stats +1 pro Match Win (aus einzelnen Runden): {matchWinStatKeys.join(", ")}
+            </p>
           </div>
         )}
 

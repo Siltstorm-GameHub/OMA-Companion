@@ -8,6 +8,7 @@ type SeriesStatConfig = {
   aggregatedStatFields?: string[];
   winnerStatKeys?: string[];
   winnerSeriesStatKey?: string;
+  matchWinStatKeys?: string[];
   dominionBonus?: {
     triggerStats?: string[];
     triggerStat?: string;
@@ -234,7 +235,9 @@ export async function revertEventCompletion(eventId: string, opts: RevertOptions
           if (role !== "player") continue;
           sub(userId, "participations", 1);
           for (const { field } of statCfg.stats ?? []) {
-            const val = userStats[userId]?.[field] ?? 0;
+            const val = statCfg.matchWinStatKeys?.includes(field)
+              ? (userStats[userId]?.["Match Win"] ?? 0)
+              : (userStats[userId]?.[field] ?? 0);
             if (val > 0) sub(userId, field, val);
           }
         }
