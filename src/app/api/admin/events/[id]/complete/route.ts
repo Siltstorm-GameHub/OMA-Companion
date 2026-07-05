@@ -6,6 +6,7 @@ import { sendPushToUsers } from "@/lib/push";
 import { checkAndAwardBadges } from "@/lib/award-badges";
 import { createNotificationForUsers } from "@/lib/notifications";
 import { recomputeWanderpocalHolders } from "@/lib/recompute-wanderpocal";
+import { resolveEventPredictions } from "@/lib/predictions";
 
 type PlacementReward = { place: number; coins: number; rankPoints: number };
 type RewardsConfig = { participationCoins: number; placements: PlacementReward[] };
@@ -859,6 +860,15 @@ export async function POST(
         })]
       : []),
   ]);
+
+  // Event-Gesamtsieger-Vorhersagen auswerten (nur beim ersten Abschluss, kein Clawback bei Re-Edit)
+  if (!isReEdit) {
+    try {
+      await resolveEventPredictions(eventId, eventWinnerId ?? null);
+    } catch (err) {
+      console.error("[Predictions] Auswertung fehlgeschlagen:", err);
+    }
+  }
 
   // Push + In-App Notification an alle Teilnehmer
   const participantIds = event.registrations.map(r => r.userId);

@@ -3,32 +3,21 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { isMinigameEnabled } from "@/lib/minigames-config";
 
+const userSelect = { id: true, username: true, name: true, image: true } as const;
+
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Nicht eingeloggt" }, { status: 401 });
 
-  const matchId = req.nextUrl.searchParams.get("matchId");
-  if (!matchId) return NextResponse.json({ error: "matchId fehlt" }, { status: 400 });
+  const eventId = req.nextUrl.searchParams.get("eventId");
+  if (!eventId) return NextResponse.json({ error: "eventId fehlt" }, { status: 400 });
 
-  const [myPrediction, allPredictions] = await Promise.all([
-    prisma.matchPrediction.findUnique({
-      where: { userId_matchId: { userId: session.user.id, matchId } },
-    }),
-    prisma.matchPrediction.groupBy({
-      by: ["predictedUserId"],
-      where: { matchId },
-      _count: { predictedUserId: true },
-    }),
-  ]);
+  const myPrediction = await prisma.eventWinnerPrediction.findUnique({
+    where: { userId_eventId: { userId: session.user.id, eventId } },
+    include: { predictedUser: { select: userSelect } },
+  });
 
-  const total = allPredictions.reduce((sum, p) => sum + p._count.predictedUserId, 0);
-  const distribution = allPredictions.map(p => ({
-    userId: p.predictedUserId,
-    count: p._count.predictedUserId,
-    percent: total > 0 ? Math.round((p._count.predictedUserId / total) * 100) : 0,
-  }));
-
-  return NextResponse.json({ myPrediction, distribution, total });
+  return NextResponse.json({ myPrediction });
 }
 
 export async function POST(req: NextRequest) {
@@ -37,30 +26,33 @@ export async function POST(req: NextRequest) {
   const userId = session.user.id;
 
   if (!(await isMinigameEnabled("prediction"))) {
-    return NextResponse.json({ error: "Match-Vorhersagen sind zurzeit deaktiviert" }, { status: 403 });
+    return NextResponse.json({ error: "Event-Vorhersagen sind zurzeit deaktiviert" }, { status: 403 });
   }
 
-  const { matchId, predictedUserId } = await req.json();
-  if (!matchId || !predictedUserId) {
-    return NextResponse.json({ error: "matchId/predictedUserId fehlt" }, { status: 400 });
+  const { eventId, predictedUserId } = await req.json();
+  if (!eventId || !predictedUserId) {
+    return NextResponse.json({ error: "eventId/predictedUserId fehlt" }, { status: 400 });
   }
 
-  const match = await prisma.match.findUnique({
-    where: { id: matchId },
-    select: { playedAt: true, scheduledAt: true, winnerId: true },
+  const event = await prisma.event.findUnique({
+    where: { id: eventId },
+    select: { startAt: true, status: true },
   });
-  if (!match) return NextResponse.json({ error: "Match nicht gefunden" }, { status: 404 });
+  if (!event) return NextResponse.json({ error: "Event nicht gefunden" }, { status: 404 });
 
-  const isLocked = !!match.playedAt || (match.scheduledAt !== null && match.scheduledAt < new Date());
+  const isLocked = event.status === "finished" || event.startAt < new Date();
   if (isLocked) {
-    return NextResponse.json({ error: "Tipp-Abgabe für dieses Match ist gesperrt" }, { status: 409 });
+    return NextResponse.json({ error: "Tipp-Abgabe für dieses Event ist gesperrt" }, { status: 409 });
   }
 
-  const prediction = await prisma.matchPrediction.upsert({
-    where: { userId_matchId: { userId, matchId } },
-    create: { userId, matchId, predictedUserId },
+  const predictedUser = await prisma.user.findUnique({ where: { id: predictedUserId }, select: userSelect });
+  if (!predictedUser) return NextResponse.json({ error: "Nutzer nicht gefunden" }, { status: 404 });
+
+  const prediction = await prisma.eventWinnerPrediction.upsert({
+    where: { userId_eventId: { userId, eventId } },
+    create: { userId, eventId, predictedUserId },
     update: { predictedUserId },
   });
 
-  return NextResponse.json({ ok: true, prediction });
+  return NextResponse.json({ ok: true, prediction: { ...prediction, predictedUser } });
 }

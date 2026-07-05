@@ -112,11 +112,11 @@ const RULES: RuleSeed[] = [
   {
     key: "prediction_result",
     label: "Vorhersage-Ergebnis",
-    description: "Wenn eine Match-Vorhersage ausgewertet wurde (richtig oder falsch).",
+    description: "Wenn eine Event-Sieger-Vorhersage ausgewertet wurde (richtig oder falsch).",
     category: "tournaments",
     pushEnabled: true, inAppEnabled: true, discordDmEnabled: false, discordChanEnabled: false,
     titleTemplate: "🎯 Dein Tipp war {result}",
-    bodyTemplate: "Du erhältst {reward} Münzen für deine Match-Vorhersage.",
+    bodyTemplate: "Du erhältst {reward} Münzen für deine Event-Sieger-Vorhersage.",
     urlTemplate: "/",
   },
   {

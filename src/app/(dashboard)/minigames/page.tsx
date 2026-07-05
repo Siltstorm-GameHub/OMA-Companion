@@ -14,7 +14,7 @@ export default async function MinigamesHubPage() {
   const [config, predictionStreak, pendingPredictions] = await Promise.all([
     getMinigamesConfig(),
     prisma.predictionStreak.findUnique({ where: { userId } }),
-    prisma.matchPrediction.count({ where: { userId, resolved: false } }),
+    prisma.eventWinnerPrediction.count({ where: { userId, resolved: false } }),
   ]);
 
   const cards = [
@@ -71,7 +71,7 @@ export default async function MinigamesHubPage() {
 
       <div>
         <p className="text-xs text-gray-500 mb-2.5">
-          Match-Vorhersagen gibst du direkt auf den Turnierseiten ab — hier siehst du deinen Fortschritt.
+          Tippe auf einer Eventseite, wer das Event insgesamt gewinnt — hier siehst du deinen Fortschritt.
           {!config.predictionEnabled && <span className="text-amber-500"> Zurzeit deaktiviert.</span>}
         </p>
         <PredictionStreakCard
