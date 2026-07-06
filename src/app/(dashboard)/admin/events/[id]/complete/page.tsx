@@ -99,6 +99,26 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
     try { return JSON.parse(event.statFields) as string[]; } catch { return []; }
   })();
 
+  // Für "Durchschnittswerte" (avg_stats): kombinierter Durchschnitt pro Runde über alle Stat-Felder
+  // (nicht die Summe) je Spieler — Grundlage für die Gewinner-Ermittlung "höchster/niedrigster Ø".
+  const userAvgScore: Record<string, number> = {};
+  if (event.format === "avg_stats") {
+    const userRounds: Record<string, number> = {};
+    for (const match of event.matches) {
+      if (!match.playedAt) continue;
+      for (const entry of match.entries) {
+        if (!entry.userId) continue;
+        userRounds[entry.userId] = (userRounds[entry.userId] ?? 0) + 1;
+      }
+    }
+    for (const uid of Object.keys(userStats)) {
+      const rounds = userRounds[uid] ?? 0;
+      if (rounds === 0) continue;
+      const fieldAvgs = tournamentStatFields.map(f => (userStats[uid][f] ?? 0) / rounds);
+      userAvgScore[uid] = fieldAvgs.length > 0 ? fieldAvgs.reduce((s, v) => s + v, 0) / fieldAvgs.length : 0;
+    }
+  }
+
   // Series stat config
   const seriesStatConfig: SeriesStatConfig | null = (() => {
     if (!event.series?.seriesStatConfig) return null;
@@ -171,6 +191,8 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
       spectatorUsers={spectatorUsers}
       tournamentStatFields={tournamentStatFields}
       userStats={userStats}
+      format={event.format}
+      userAvgScore={userAvgScore}
       seriesStatConfig={seriesStatConfig}
       rewardsConfig={rewardsConfig}
       pollConfig={pollConfig}
