@@ -4,8 +4,9 @@ import { getSessionUser } from "@/lib/roles";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Users, Clock, Swords, StickyNote, Vote, Repeat, Tv2, EyeOff, Clapperboard } from "lucide-react";
+import { ArrowLeft, Users, Clock, Swords, StickyNote, Vote, Tv2, EyeOff, Clapperboard } from "lucide-react";
 import RankPointsIcon from "@/components/RankPointsIcon";
+import SeriesIcon from "@/components/SeriesIcon";
 import WinIcon from "@/components/WinIcon";
 import CoinIcon from "@/components/CoinIcon";
 import ClientTime from "@/components/ClientTime";
@@ -17,6 +18,7 @@ import SpectatorRegisterButton from "./SpectatorRegisterButton";
 import ClipSubmitter from "./ClipSubmitter";
 import PollsSection from "./PollsSection";
 import EventWinnerPredictionWidget from "./EventWinnerPredictionWidget";
+import EventTippsList from "./EventTippsList";
 import { EventCategory } from "@prisma/client";
 
 const GENRE_MAP: Record<string, { label: string; icon: string }> = {
@@ -70,7 +72,7 @@ export default async function TournamentDetailPage({
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     include: {
-      series: { select: { id: true, name: true, hidden: true, seriesStatConfig: true, discordChannelId: true, pollConfigJson: true } },
+      series: { select: { id: true, name: true, icon: true, hidden: true, seriesStatConfig: true, discordChannelId: true, pollConfigJson: true } },
       streamingPartners: { include: { partner: { include: { user: { select: { id: true } } } } } },
       communityStreamers: { include: { user: { select: { id: true, name: true, username: true, image: true, twitchLogin: true } } } },
       registrations: {
@@ -98,7 +100,7 @@ export default async function TournamentDetailPage({
   const allRegistrations = event.registrations.map(r => ({ userId: r.userId, role: r.role, user: r.user }));
   const myClipSubmission = event.clipSubmissions.find(c => c.userId === userId) ?? null;
 
-  const [sponsors, holdersMap, myEventPrediction, minigamesConfig] = await Promise.all([
+  const [sponsors, holdersMap, myEventPrediction, minigamesConfig, allEventPredictions] = await Promise.all([
     prisma.shopPurchase.findMany({
       where:   { consumed: false, item: { type: "tournament_sponsor" } },
       include: { user: { select: { username: true, name: true } } },
@@ -110,9 +112,28 @@ export default async function TournamentDetailPage({
       include: { predictedUser: { select: { id: true, username: true, name: true, image: true } } },
     }),
     getMinigamesConfig(),
+    // Tipps aller User (ohne Einsatz/Auszahlung — nur wer auf wen tippt, plus Pott-Gesamtsumme)
+    prisma.eventWinnerPrediction.findMany({
+      where: { eventId },
+      select: {
+        wager: true,
+        correct: true,
+        resolved: true,
+        user: { select: { id: true, username: true, name: true, image: true } },
+        predictedUser: { select: { id: true, username: true, name: true, image: true } },
+      },
+      orderBy: { createdAt: "asc" },
+    }),
   ]);
   const holdersList = [...holdersMap.values()];
   const isPredictionLocked = event.status === "finished" || event.startAt < new Date();
+  const predictionPot = allEventPredictions.reduce((sum, p) => sum + p.wager, 0);
+  const eventTipps = allEventPredictions.map(p => ({
+    user: p.user,
+    predictedUser: p.predictedUser,
+    resolved: p.resolved,
+    correct: p.correct,
+  }));
 
   const myReg         = event.registrations.find((r) => r.userId === userId);
   const isRegistered  = !!myReg && myReg.role !== "spectator";
@@ -351,7 +372,7 @@ export default async function TournamentDetailPage({
             href={`/events/series/${event.series.id}`}
             className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-300 hover:bg-teal-500/20 transition-colors font-medium"
           >
-            <Repeat className="w-3.5 h-3.5" />
+            <SeriesIcon name={event.series.icon} className="w-3.5 h-3.5" />
             {event.series.name} – Gesamttabelle
           </Link>
         )}
@@ -560,7 +581,7 @@ export default async function TournamentDetailPage({
       </div>
 
       {/* ── Event-Gesamtsieger-Vorhersage ─────────────────────────────── */}
-      <div className="mb-5">
+      <div className="mb-5 space-y-3">
         <EventWinnerPredictionWidget
           eventId={event.id}
           locked={isPredictionLocked}
@@ -568,6 +589,7 @@ export default async function TournamentDetailPage({
           maxWager={minigamesConfig.predictionMaxWager}
           initialPrediction={myEventPrediction}
         />
+        <EventTippsList pot={predictionPot} tipps={eventTipps} />
       </div>
 
       {/* Endplatzierungs-Notiz (falls vorhanden) */}

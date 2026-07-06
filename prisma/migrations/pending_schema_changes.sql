@@ -98,6 +98,9 @@ ALTER TABLE "EventSeries" ADD COLUMN IF NOT EXISTS "platform" TEXT;
 ALTER TABLE "EventSeries" ADD COLUMN IF NOT EXISTS "seriesStatConfig" TEXT;
 ALTER TABLE "EventSeries" ADD COLUMN IF NOT EXISTS "legacyStandings" TEXT;
 
+-- 4d. EventSeries: eigenes Icon (Wiedererkennungswert statt generischem Repeat-Icon)
+ALTER TABLE "EventSeries" ADD COLUMN IF NOT EXISTS "icon" TEXT;
+
 -- 5. Geplante Discord-Umfragen
 CREATE TABLE IF NOT EXISTS "PollJob" (
   "id"          TEXT      NOT NULL PRIMARY KEY,

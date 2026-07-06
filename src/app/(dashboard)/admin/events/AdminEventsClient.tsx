@@ -1,8 +1,9 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { Edit2, ChevronDown, ChevronRight, Repeat, Eye, EyeOff } from "lucide-react";
+import { Edit2, ChevronDown, ChevronRight, Eye, EyeOff } from "lucide-react";
 import EventCategoryBadge from "@/components/EventCategoryBadge";
+import SeriesIcon from "@/components/SeriesIcon";
 import { EventCategory } from "@prisma/client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -38,6 +39,7 @@ type Event = {
 type Series = {
   id: string;
   name: string;
+  icon: string | null;
   category: string | null;
   recurrenceType: string | null;
   hidden: boolean;
@@ -143,7 +145,7 @@ function SeriesRow({ s }: { s: Series }) {
           onClick={() => setOpen(o => !o)}
           className="flex items-center gap-3 flex-1 min-w-0 text-left hover:opacity-80 transition-opacity"
         >
-          <Repeat className="w-4 h-4 text-violet-400 shrink-0" />
+          <SeriesIcon name={s.icon} className="w-4 h-4 text-violet-400 shrink-0" />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-sm font-medium text-white truncate">{s.name}</span>

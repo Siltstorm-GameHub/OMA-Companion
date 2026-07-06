@@ -5,8 +5,9 @@ import { toast } from "sonner";
 import Link from "next/link";
 import CoinIcon from "@/components/CoinIcon";
 import RankPointsIcon from "@/components/RankPointsIcon";
+import SeriesIcon from "@/components/SeriesIcon";
 import {
-  ChevronLeft, Repeat, CheckCircle2, Trophy, Vote,
+  ChevronLeft, CheckCircle2, Trophy, Vote,
   ListOrdered, GripVertical, Coins, AlertTriangle, RotateCcw, Equal,
 } from "lucide-react";
 
@@ -32,6 +33,7 @@ interface Props {
   eventTitle: string;
   seriesId: string | null;
   seriesName: string | null;
+  seriesIcon?: string | null;
   registeredUsers: User[];
   spectatorUsers: User[];
   tournamentStatFields: string[];
@@ -96,7 +98,7 @@ function computePlacementMap(groups: string[][]): Map<string, number> {
 }
 
 export default function EventCompleteClient({
-  eventId, eventTitle, seriesId, seriesName,
+  eventId, eventTitle, seriesId, seriesName, seriesIcon,
   registeredUsers, spectatorUsers, tournamentStatFields, userStats, format, userAvgScore,
   seriesStatConfig, rewardsConfig, pollConfig, pollsConfig, pendingEventPolls, realPollVotes, spectatorRewardJson,
   isReEdit, gamePhaseComplete, pollPhaseComplete,
@@ -383,7 +385,7 @@ export default function EventCompleteClient({
         {seriesId ? (
           <Link href={`/admin/series/${seriesId}`} className="flex items-center gap-1 hover:text-gray-300 transition-colors">
             <ChevronLeft className="w-4 h-4" />
-            <Repeat className="w-3.5 h-3.5 text-teal-500" />
+            <SeriesIcon name={seriesIcon} className="w-3.5 h-3.5 text-teal-500" />
             {seriesName}
           </Link>
         ) : (

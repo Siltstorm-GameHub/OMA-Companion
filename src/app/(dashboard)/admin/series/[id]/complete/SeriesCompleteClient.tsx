@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import CoinIcon from "@/components/CoinIcon";
 import RankPointsIcon from "@/components/RankPointsIcon";
+import SeriesIcon from "@/components/SeriesIcon";
 import {
   ChevronLeft, CheckCircle2, Trophy, Vote, ListOrdered,
   GripVertical, AlertTriangle, RotateCcw, Equal, Repeat, Plus,
@@ -15,6 +16,7 @@ type User = { id: string; name: string | null; username: string | null; image: s
 interface Props {
   seriesId: string;
   seriesName: string;
+  seriesIcon?: string | null;
   statFields: string[];
   participants: User[];
   userStats: Record<string, Record<string, number>>;
@@ -60,7 +62,7 @@ function computePlacementMap(groups: string[][]): Map<string, number> {
 }
 
 export default function SeriesCompleteClient({
-  seriesId, seriesName, statFields, participants, userStats,
+  seriesId, seriesName, seriesIcon, statFields, participants, userStats,
   suggestedNewSeasonName, isReEdit, pollPhaseComplete, initialData,
 }: Props) {
   const router = useRouter();
@@ -229,7 +231,7 @@ export default function SeriesCompleteClient({
       <div className="flex items-center gap-2 text-sm text-gray-500">
         <Link href={`/admin/series/${seriesId}`} className="flex items-center gap-1 hover:text-gray-300 transition-colors">
           <ChevronLeft className="w-4 h-4" />
-          <Repeat className="w-3.5 h-3.5 text-teal-500" />
+          <SeriesIcon name={seriesIcon} className="w-3.5 h-3.5 text-teal-500" />
           {seriesName}
         </Link>
         <span>/</span>

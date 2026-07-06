@@ -234,6 +234,7 @@ model EventSeries {
   id                    String        @id @default(cuid())
   name                  String
   description           String?
+  icon                  String? // Lucide-Icon-Name (aus src/lib/series-icons.ts), Fallback: Repeat
   fixedGame             String? // Wenn gesetzt: alle Events der Reihe nutzen dieses Spiel
   fixedFormat           String? // Wenn gesetzt: alle Turniere der Reihe nutzen dieses Format
   discordChannelId      String? // Kanal-ID für Bot-Nachrichten aller Events dieser Reihe
@@ -596,6 +597,10 @@ model EventWinnerPrediction {
   resolved        Boolean  @default(false)
   correct         Boolean? // null = noch nicht ausgewertet
   coinsAwarded    Int      @default(0)
+  // Snapshot des PredictionStreak-Zustands (userId, current, best, lastPlayedDay) direkt vor dieser
+  // Auflösung — ermöglicht sauberes Rückgängigmachen, falls der Event-Sieger nachträglich korrigiert
+  // wird. Nur zu Anzeigezwecken relevant, hat keinen Einfluss auf die Pott-Auszahlung.
+  streakSnapshotJson String?
 
   user          User  @relation("EventPredictionAuthor", fields: [userId], references: [id], onDelete: Cascade)
   event         Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
@@ -604,7 +609,7 @@ model EventWinnerPrediction {
   @@unique([userId, eventId]) // ein Tipp pro User pro Event
 }
 
-// Persistierter Tages-Streak für Vorhersagen (erhöht Auszahlung bei Serie richtiger Tipps)
+// Persistierter Tages-Streak für Vorhersagen (rein kosmetisch, keine Auswirkung auf die Pott-Auszahlung)
 model PredictionStreak {
   userId        String  @id
   current       Int     @default(0)

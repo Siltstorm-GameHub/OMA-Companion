@@ -227,20 +227,28 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           ? JSON.parse(existing.pointsConfig)
           : null;
 
+    let oldWinnerId: string | null = null;
     if (isAlreadyFinished && existing.finalRankingJson) {
       const oldRanking = JSON.parse(existing.finalRankingJson) as string[];
+      oldWinnerId = oldRanking[0] ?? null;
       await awardPoints(oldRanking, cfgRaw, eventTitle, -1);
     }
 
     await awardPoints(newRanking, cfgRaw, eventTitle, 1);
 
-    if (isBecomingFinished) {
+    const newWinnerId = newRanking[0] ?? null;
+
+    // Vorhersagen auswerten — beim ersten Abschluss, oder erneut beim Re-Edit, falls sich der
+    // Sieger nachträglich geändert hat (Pott wird automatisch zurückgebucht und neu verteilt).
+    if (isBecomingFinished || (isAlreadyFinished && hasExistingRanking && oldWinnerId !== newWinnerId)) {
       try {
-        await resolveEventPredictions(eventId, newRanking[0] ?? null);
+        await resolveEventPredictions(eventId, newWinnerId);
       } catch (err) {
         console.error("[Predictions] Auswertung fehlgeschlagen:", err);
       }
+    }
 
+    if (isBecomingFinished) {
       announceTournamentResult({
         eventId,
         eventTitle,

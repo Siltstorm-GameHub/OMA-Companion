@@ -74,6 +74,7 @@ export async function PATCH(req: NextRequest) {
     data: {
       ...(fields.name                 !== undefined && { name:                 fields.name }),
       ...(fields.description          !== undefined && { description:          fields.description }),
+      ...(fields.icon                 !== undefined && { icon:                 fields.icon || null }),
       ...(fields.genre                !== undefined && { genre:                fields.genre }),
       ...(fields.platform             !== undefined && { platform:             fields.platform }),
       ...(fields.fixedGame            !== undefined && { fixedGame:            fields.fixedGame }),

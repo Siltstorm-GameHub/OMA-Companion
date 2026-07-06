@@ -11,6 +11,7 @@ import {
   Eye, EyeOff,
 } from "lucide-react";
 import { EventCategory, EventGenre } from "@prisma/client";
+import SeriesIcon from "@/components/SeriesIcon";
 import GameNameInput from "@/components/GameNameInput";
 import StatFieldEditor from "@/components/StatFieldEditor";
 import CoinIcon from "@/components/CoinIcon";
@@ -474,7 +475,7 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
           {event.series ? (
             <Link href={`/admin/series/${event.series.id}`} className="flex items-center gap-1 hover:text-gray-300 transition-colors">
               <ChevronLeft className="w-4 h-4" />
-              <Repeat className="w-3.5 h-3.5 text-teal-500" />
+              <SeriesIcon name={event.series.icon} className="w-3.5 h-3.5 text-teal-500" />
               {event.series.name}
             </Link>
           ) : (
