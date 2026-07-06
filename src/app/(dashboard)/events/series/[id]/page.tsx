@@ -9,6 +9,7 @@ import {
   Archive, ChevronRight, CheckCircle2, EyeOff,
 } from "lucide-react";
 import { CountUp } from "@/components/CountUp";
+import SeriesIcon from "@/components/SeriesIcon";
 import PollsSection from "@/app/(dashboard)/tournament/[id]/PollsSection";
 import SeriesStandingsTable from "./SeriesStandingsTable";
 import SeriesEventList, { type SeriesEventItem } from "./SeriesEventList";
@@ -742,7 +743,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
 
         <div className="relative">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <Trophy className="w-4 h-4 text-teal-400" />
+            <SeriesIcon name={series.icon} className="w-4 h-4 text-teal-400" />
             <span className="text-xs text-teal-400/70 font-medium uppercase tracking-widest">Eventreihe</span>
           </div>
           <h1 className="text-2xl font-bold text-white tracking-tight mb-1">{series.name}</h1>

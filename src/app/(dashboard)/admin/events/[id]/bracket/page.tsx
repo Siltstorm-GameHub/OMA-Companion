@@ -2,7 +2,8 @@ import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, Repeat } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
+import SeriesIcon from "@/components/SeriesIcon";
 import TournamentManager from "../../TournamentManager";
 
 export default async function AdminEventBracketPage({ params }: { params: Promise<{ id: string }> }) {
@@ -13,7 +14,7 @@ export default async function AdminEventBracketPage({ params }: { params: Promis
     prisma.event.findUnique({
       where: { id },
       include: {
-        series: { select: { id: true, name: true, seriesStatConfig: true } },
+        series: { select: { id: true, name: true, icon: true, seriesStatConfig: true } },
         registrations: { select: { userId: true } },
         participants: {
           include: { user: { select: { id: true, name: true, username: true, image: true } } },
@@ -63,7 +64,7 @@ export default async function AdminEventBracketPage({ params }: { params: Promis
         {event.series ? (
           <Link href={`/admin/series/${event.series.id}`} className="flex items-center gap-1 hover:text-gray-300 transition-colors">
             <ChevronLeft className="w-4 h-4" />
-            <Repeat className="w-3.5 h-3.5 text-teal-500" />
+            <SeriesIcon name={event.series.icon} className="w-3.5 h-3.5 text-teal-500" />
             {event.series.name}
           </Link>
         ) : (

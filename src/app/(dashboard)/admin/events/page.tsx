@@ -32,6 +32,7 @@ export default async function AdminEventsPage() {
       select: {
         id: true,
         name: true,
+        icon: true,
         category: true,
         recurrenceType: true,
         hidden: true,

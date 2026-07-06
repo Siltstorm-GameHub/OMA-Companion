@@ -157,6 +157,7 @@ export default async function SeriesCompletePage({ params }: { params: Promise<{
     <SeriesCompleteClient
       seriesId={id}
       seriesName={series.name}
+      seriesIcon={series.icon}
       statFields={statCfg.stats.map(s => s.field)}
       participants={orderedUsers}
       userStats={userStats}

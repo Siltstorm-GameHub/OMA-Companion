@@ -13,12 +13,29 @@ export async function GET(req: NextRequest) {
   const eventId = req.nextUrl.searchParams.get("eventId");
   if (!eventId) return NextResponse.json({ error: "eventId fehlt" }, { status: 400 });
 
-  const myPrediction = await prisma.eventWinnerPrediction.findUnique({
-    where: { userId_eventId: { userId: session.user.id, eventId } },
-    include: { predictedUser: { select: userSelect } },
-  });
+  const [myPrediction, allPredictions] = await Promise.all([
+    prisma.eventWinnerPrediction.findUnique({
+      where: { userId_eventId: { userId: session.user.id, eventId } },
+      include: { predictedUser: { select: userSelect } },
+    }),
+    prisma.eventWinnerPrediction.findMany({
+      where: { eventId },
+      select: {
+        wager: true,
+        correct: true,
+        resolved: true,
+        user: { select: userSelect },
+        predictedUser: { select: userSelect },
+      },
+      orderBy: { createdAt: "asc" },
+    }),
+  ]);
 
-  return NextResponse.json({ myPrediction });
+  // Einsätze anderer User bleiben geheim — nur wer auf wen tippt ist sichtbar, plus die Pott-Gesamtsumme
+  const pot = allPredictions.reduce((sum, p) => sum + p.wager, 0);
+  const tipps = allPredictions.map(({ user, predictedUser, resolved, correct }) => ({ user, predictedUser, resolved, correct }));
+
+  return NextResponse.json({ myPrediction, pot, tipps });
 }
 
 export async function POST(req: NextRequest) {

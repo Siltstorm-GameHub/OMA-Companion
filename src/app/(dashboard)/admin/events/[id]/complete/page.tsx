@@ -48,6 +48,7 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
           select: {
             id: true,
             name: true,
+            icon: true,
             seriesStatConfig: true,
             placementRewardsJson: true,
             pollConfigJson: true,
@@ -187,6 +188,7 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
       eventTitle={event.title}
       seriesId={event.series?.id ?? null}
       seriesName={event.series?.name ?? null}
+      seriesIcon={event.series?.icon ?? null}
       registeredUsers={registeredUsers}
       spectatorUsers={spectatorUsers}
       tournamentStatFields={tournamentStatFields}

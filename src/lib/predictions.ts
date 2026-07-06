@@ -4,43 +4,155 @@ import { dispatchNotification } from "./notify-dispatch";
 /** Mindest-Einsatz (nicht admin-editierbar, Höchsteinsatz kommt aus getMinigamesConfig()) */
 export const PREDICTION_MIN_WAGER = 10;
 
-/** Multiplikator auf den Gewinn (nicht den Einsatz selbst) basierend auf dem aktuellen Streak-Stand */
-function streakMultiplier(streak: number): number {
-  if (streak >= 10) return 2;
-  if (streak >= 6) return 1.5;
-  if (streak >= 3) return 1.25;
-  return 1;
-}
-
 function todayStr(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+type StreakSnapshot = { current: number; best: number; lastPlayedDay: string | null };
+
+async function snapshotStreak(userId: string): Promise<StreakSnapshot> {
+  const streak = await prisma.predictionStreak.findUnique({ where: { userId } });
+  return { current: streak?.current ?? 0, best: streak?.best ?? 0, lastPlayedDay: streak?.lastPlayedDay ?? null };
+}
+
 /**
- * Wertet alle offenen Gesamtsieger-Vorhersagen zu einem Event aus, sobald der
- * Sieger feststeht. winnerUserId = null bedeutet "kein eindeutiger Sieger"
- * (z.B. kooperatives Event ohne Platzierung) — alle offenen Tipps werden dann
- * als falsch aufgelöst.
+ * Side-Pot-Aufteilung (wie beim Poker): jeder richtige Tipper kann von jedem anderen Teilnehmer
+ * maximal seinen eigenen Einsatz gewinnen. Setzt ein Gewinner z.B. nur 1 Münze, kann er auch nur
+ * 1 Münze je Mitspieler gewinnen — der Rest darüber (von höher einsetzenden Verlierern) verfällt,
+ * sofern kein Gewinner mit entsprechend hohem Einsatz existiert.
+ */
+function computeSidePotPayouts(
+  allPredictions: { id: string; wager: number }[],
+  winnerIds: Set<string>
+): Map<string, number> {
+  const payouts = new Map<string, number>();
+  const winners = allPredictions.filter(p => winnerIds.has(p.id));
+  if (winners.length === 0) return payouts;
+
+  const thresholds = [...new Set(allPredictions.map(p => p.wager))].sort((a, b) => a - b);
+  // Deterministische Reihenfolge für die Verteilung von Rundungsresten
+  const sortedWinnerIds = [...winners].sort((a, b) => a.id.localeCompare(b.id)).map(w => w.id);
+
+  let prevThreshold = 0;
+  for (const t of thresholds) {
+    const layerHeight = t - prevThreshold;
+    if (layerHeight <= 0) { prevThreshold = t; continue; }
+
+    const contributorCount = allPredictions.filter(p => p.wager >= t).length;
+    const layerSize = layerHeight * contributorCount;
+    const eligibleWinnerIds = sortedWinnerIds.filter(id => {
+      const w = winners.find(x => x.id === id)!;
+      return w.wager >= t;
+    });
+
+    if (eligibleWinnerIds.length > 0 && layerSize > 0) {
+      const share = Math.floor(layerSize / eligibleWinnerIds.length);
+      const remainder = layerSize - share * eligibleWinnerIds.length;
+      for (const id of eligibleWinnerIds) {
+        payouts.set(id, (payouts.get(id) ?? 0) + share);
+      }
+      for (let i = 0; i < remainder; i++) {
+        const id = eligibleWinnerIds[i % eligibleWinnerIds.length];
+        payouts.set(id, (payouts.get(id) ?? 0) + 1);
+      }
+    }
+    // Kein Gewinner deckt diese Schicht ab → das Geld darin verfällt (bleibt unausgezahlt)
+    prevThreshold = t;
+  }
+
+  return payouts;
+}
+
+/**
+ * Wertet alle Gesamtsieger-Vorhersagen zu einem Event aus, sobald der Sieger feststeht (oder sich
+ * nachträglich ändert). winnerUserId = null bedeutet "kein eindeutiger Sieger" — der gesamte Pott
+ * verfällt, alle Tipps gelten als falsch.
  *
- * Der Einsatz (wager) wurde bereits bei Abgabe des Tipps abgebucht (Escrow).
- * Bei richtigem Tipp wird der Einsatz zurückerstattet plus ein Gewinn
- * (Einsatz × Streak-Multiplikator) ausgezahlt. Bei falschem Tipp bleibt der
- * Einsatz verloren — hier passiert keine weitere Buchung.
+ * Pott-Prinzip (wie beim Poker): alle Einsätze (bereits bei Abgabe als Escrow abgebucht) bilden
+ * gemeinsam den Pott. Die richtigen Tipper teilen sich den Pott per Side-Pot-Logik nach Einsatzhöhe
+ * gestaffelt. Hat insgesamt nur ein einziger User getippt und lag richtig, wird seine Auszahlung
+ * verdoppelt (da niemand da ist, mit dem er den Pott teilen könnte).
+ *
+ * Idempotent: wird die Funktion erneut mit einem anderen winnerUserId aufgerufen (z.B. weil der
+ * Sieger nachträglich korrigiert wurde), macht sie zunächst eine evtl. vorherige Auflösung
+ * vollständig rückgängig (Auszahlung zurückbuchen, Streak-Zustand wiederherstellen) und wertet dann
+ * mit dem neuen Sieger neu aus.
  */
 export async function resolveEventPredictions(eventId: string, winnerUserId: string | null) {
-  const predictions = await prisma.eventWinnerPrediction.findMany({
-    where: { eventId, resolved: false },
-  });
-  if (predictions.length === 0) return;
+  const allPredictions = await prisma.eventWinnerPrediction.findMany({ where: { eventId } });
+  if (allPredictions.length === 0) return;
+
+  // ── Schritt 1: eine evtl. vorherige Auflösung rückgängig machen ─────────────
+  const alreadyResolved = allPredictions.filter(p => p.resolved);
+  for (const prediction of alreadyResolved) {
+    const txns = [];
+
+    if (prediction.correct && prediction.coinsAwarded > 0) {
+      txns.push(
+        prisma.user.update({
+          where: { id: prediction.userId },
+          data: { points: { decrement: prediction.coinsAwarded } },
+        }),
+        prisma.pointTransaction.create({
+          data: {
+            userId: prediction.userId,
+            amount: -prediction.coinsAwarded,
+            reason: "🎯 Korrektur: Sieger wurde neu ermittelt — Auszahlung zurückgebucht",
+          },
+        })
+      );
+    }
+
+    if (prediction.streakSnapshotJson) {
+      try {
+        const snap = JSON.parse(prediction.streakSnapshotJson) as StreakSnapshot;
+        txns.push(
+          prisma.predictionStreak.upsert({
+            where: { userId: prediction.userId },
+            create: { userId: prediction.userId, current: snap.current, best: snap.best, lastPlayedDay: snap.lastPlayedDay },
+            update: { current: snap.current, best: snap.best, lastPlayedDay: snap.lastPlayedDay },
+          })
+        );
+      } catch { /* korruptes Snapshot ignorieren */ }
+    }
+
+    txns.push(
+      prisma.eventWinnerPrediction.update({
+        where: { id: prediction.id },
+        data: { resolved: false, correct: null, coinsAwarded: 0, streakSnapshotJson: null },
+      })
+    );
+
+    await prisma.$transaction(txns);
+  }
+
+  // ── Schritt 2: frische Auflösung mit dem (neuen) Sieger ─────────────────────
+  const predictions = await prisma.eventWinnerPrediction.findMany({ where: { eventId } });
+  const winnerIds = new Set(
+    predictions.filter(p => !!winnerUserId && p.predictedUserId === winnerUserId).map(p => p.id)
+  );
+
+  // Sonderfall: nur ein einziger Tipp insgesamt, und er ist richtig → Auszahlung verdoppelt,
+  // da kein Pott mit anderen Teilnehmern existiert.
+  const soloCorrect = predictions.length === 1 && winnerIds.has(predictions[0].id);
+  const payouts = soloCorrect
+    ? new Map([[predictions[0].id, predictions[0].wager * 2]])
+    : computeSidePotPayouts(predictions, winnerIds);
 
   for (const prediction of predictions) {
-    const correct = !!winnerUserId && prediction.predictedUserId === winnerUserId;
+    const correct = winnerIds.has(prediction.id);
+    const streakSnapshot = await snapshotStreak(prediction.userId);
 
     if (!correct) {
       await prisma.$transaction([
         prisma.eventWinnerPrediction.update({
           where: { id: prediction.id },
-          data: { resolved: true, correct: false, coinsAwarded: 0 },
+          data: {
+            resolved: true,
+            correct: false,
+            coinsAwarded: 0,
+            streakSnapshotJson: JSON.stringify(streakSnapshot),
+          },
         }),
         prisma.predictionStreak.upsert({
           where: { userId: prediction.userId },
@@ -55,26 +167,33 @@ export async function resolveEventPredictions(eventId: string, winnerUserId: str
       continue;
     }
 
-    const streak = await prisma.predictionStreak.findUnique({ where: { userId: prediction.userId } });
+    const payout = payouts.get(prediction.id) ?? 0;
     const today = todayStr();
-    const alreadyCountedToday = streak?.lastPlayedDay === today;
-    const newCurrent = alreadyCountedToday ? (streak?.current ?? 1) : (streak?.current ?? 0) + 1;
-    const newBest = Math.max(newCurrent, streak?.best ?? 0);
-    const profit = Math.round(prediction.wager * streakMultiplier(newCurrent));
-    const payout = prediction.wager + profit;
+    const alreadyCountedToday = streakSnapshot.lastPlayedDay === today;
+    const newCurrent = alreadyCountedToday ? streakSnapshot.current : streakSnapshot.current + 1;
+    const newBest = Math.max(newCurrent, streakSnapshot.best);
 
     await prisma.$transaction([
       prisma.eventWinnerPrediction.update({
         where: { id: prediction.id },
-        data: { resolved: true, correct: true, coinsAwarded: payout },
+        data: {
+          resolved: true,
+          correct: true,
+          coinsAwarded: payout,
+          streakSnapshotJson: JSON.stringify(streakSnapshot),
+        },
       }),
-      prisma.pointTransaction.create({
-        data: { userId: prediction.userId, amount: payout, reason: "🎯 Event-Sieger-Vorhersage richtig" },
-      }),
-      prisma.user.update({
-        where: { id: prediction.userId },
-        data: { points: { increment: payout } },
-      }),
+      ...(payout > 0
+        ? [
+            prisma.pointTransaction.create({
+              data: { userId: prediction.userId, amount: payout, reason: "🎯 Event-Sieger-Vorhersage richtig — Pott-Auszahlung" },
+            }),
+            prisma.user.update({
+              where: { id: prediction.userId },
+              data: { points: { increment: payout } },
+            }),
+          ]
+        : []),
       prisma.predictionStreak.upsert({
         where: { userId: prediction.userId },
         create: { userId: prediction.userId, current: newCurrent, best: newBest, lastPlayedDay: today },

@@ -900,10 +900,14 @@ export async function POST(
       : []),
   ]);
 
-  // Event-Gesamtsieger-Vorhersagen auswerten (nur beim ersten Abschluss, kein Clawback bei Re-Edit)
-  if (!isReEdit) {
+  // Event-Gesamtsieger-Vorhersagen auswerten — beim ersten Abschluss, oder erneut beim Re-Edit,
+  // falls sich der Sieger nachträglich geändert hat (Pott wird dann automatisch zurückgebucht
+  // und mit dem neuen Sieger neu verteilt, siehe resolveEventPredictions()).
+  const oldEventWinnerId = (oldCompletion.eventWinnerId as string | undefined) ?? null;
+  const newEventWinnerId = eventWinnerId ?? null;
+  if (!isReEdit || oldEventWinnerId !== newEventWinnerId) {
     try {
-      await resolveEventPredictions(eventId, eventWinnerId ?? null);
+      await resolveEventPredictions(eventId, newEventWinnerId);
     } catch (err) {
       console.error("[Predictions] Auswertung fehlgeschlagen:", err);
     }

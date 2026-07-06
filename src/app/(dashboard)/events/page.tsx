@@ -2,8 +2,9 @@ import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/roles";
 import {
   CalendarDays, ExternalLink, Users, Swords, Trophy,
-  ChevronRight, Check, Repeat, Gamepad2, Clapperboard,
+  ChevronRight, Check, Gamepad2, Clapperboard,
 } from "lucide-react";
+import SeriesIcon from "@/components/SeriesIcon";
 import RegisterButton from "./RegisterButton";
 import SyncButton from "./SyncButton";
 import StreamRegisterButton from "@/components/StreamRegisterButton";
@@ -12,6 +13,7 @@ import { RelativeTime } from "@/components/RelativeTime";
 import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
 import GameCover from "@/components/GameCover";
+import EventCardLink from "./EventCardLink";
 import LulRegisterButton from "@/components/LulRegisterButton";
 import { getGenreIcon } from "@/lib/genre-icons";
 import EventCategoryBadge, { CATEGORY_BG_TINT } from "@/components/EventCategoryBadge";
@@ -54,7 +56,7 @@ export default async function EventsPage() {
       orderBy: { startAt: "asc" },
       include: {
         _count:        { select: { registrations: true } },
-        series:        { select: { id: true, name: true } },
+        series:        { select: { id: true, name: true, icon: true } },
         registrations: { select: { userId: true } },
         streamingPartners: { include: { partner: { select: { userId: true } } } },
         communityStreamers: userId ? { where: { userId }, select: { userId: true } } : { select: { userId: true }, take: 0 },
@@ -66,7 +68,7 @@ export default async function EventsPage() {
           orderBy: { startAt: "desc" },
           include: {
             _count: { select: { registrations: true } },
-            series: { select: { id: true, name: true } },
+            series: { select: { id: true, name: true, icon: true } },
           },
         })
       : Promise.resolve([]),
@@ -171,13 +173,15 @@ export default async function EventsPage() {
               : false;
             const isTournament = !!ev.format;
             const hasSeries    = !!ev.seriesId;
+            const cardHref     = hasSeries ? `/events/series/${ev.seriesId}` : `/tournament/${ev.id}`;
             const discordUrl   = ev.discordEventId && GUILD_ID
               ? `https://discord.com/events/${GUILD_ID}/${ev.discordEventId}` : null;
             const date = item.date;
 
             return (
-              <div key={`ev-${ev.id}`}
-                className="surface animate-slide-up relative overflow-hidden flex items-start gap-4 p-5"
+              <EventCardLink key={`ev-${ev.id}`}
+                href={cardHref}
+                className="surface animate-slide-up relative overflow-hidden flex items-start gap-4 p-5 transition-colors hover:bg-white/[0.03] hover:border-white/[0.1]"
                 style={{
                   borderRadius: 6,
                   border: isRegistered ? "1px solid rgba(52,211,153,0.18)" : "1px solid rgba(255,255,255,0.06)",
@@ -201,13 +205,13 @@ export default async function EventsPage() {
                   {hasSeries && (
                     <Link href={`/events/series/${ev.seriesId}`}
                       className="flex items-center gap-1 mb-1 hover:text-teal-300 transition-colors group/series">
-                      <Repeat className="w-3 h-3 text-teal-400 shrink-0" />
+                      <SeriesIcon name={ev.series?.icon} className="w-3 h-3 text-teal-400 shrink-0" />
                       <span className="text-[10px] text-teal-400 font-medium group-hover/series:text-teal-300">{ev.series?.name}</span>
                       <span className="text-[10px] text-gray-600">· Eventreihe</span>
                     </Link>
                   )}
                   <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                    <Link href={ev.seriesId ? `/events/series/${ev.seriesId}` : `/tournament/${ev.id}`}
+                    <Link href={`/tournament/${ev.id}`}
                       className="font-semibold text-white text-base truncate hover:text-teal-300 transition-colors">
                       {ev.title}
                     </Link>
@@ -259,7 +263,7 @@ export default async function EventsPage() {
                     <StreamRegisterButton eventId={ev.id} isStreaming={isCommunityStreamer} />
                   )}
                 </div>
-              </div>
+              </EventCardLink>
             );
           }
 
@@ -393,12 +397,14 @@ export default async function EventsPage() {
               const { ev } = item;
               const discordUrl = ev.discordEventId && GUILD_ID
                 ? `https://discord.com/events/${GUILD_ID}/${ev.discordEventId}` : null;
+              const cardHref = ev.seriesId ? `/events/series/${ev.seriesId}` : `/tournament/${ev.id}`;
               return (
-                <div key={`ev-fin-${ev.id}`}
+                <EventCardLink key={`ev-fin-${ev.id}`}
+                  href={cardHref}
                   className="flex items-center gap-3 px-4 py-2.5 rounded-lg border border-white/[0.04] bg-white/[0.015] opacity-50 hover:opacity-75 transition-opacity group">
                   <GameCover game={ev.game} className="w-9 h-6 shrink-0" rounded="rounded" />
                   <div className="flex-1 min-w-0">
-                    <Link href={ev.seriesId ? `/events/series/${ev.seriesId}` : `/tournament/${ev.id}`}
+                    <Link href={`/tournament/${ev.id}`}
                       className="text-sm text-gray-400 font-medium truncate block group-hover:text-gray-300 transition-colors">
                       {ev.title}
                     </Link>
@@ -421,7 +427,7 @@ export default async function EventsPage() {
                       Beendet
                     </span>
                   </div>
-                </div>
+                </EventCardLink>
               );
             }
 
