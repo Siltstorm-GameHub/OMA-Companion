@@ -41,14 +41,6 @@ export default function LulAdminPanel({
   const [editTournamentFormat, setEditTournamentFormat] = useState("");
   const [editStatFields, setEditStatFields] = useState<string[]>([]);
 
-  // Create season form
-  const [showSeasonForm, setShowSeasonForm] = useState(false);
-  const [sNumber, setSNumber] = useState(initialSeasons.length + 1);
-  const [sName, setSName] = useState("");
-  const [sPeriod, setSPeriod] = useState("");
-  const [sTotalSpieltage, setSTotalSpieltage] = useState(8);
-  const [sIsLegacy, setSIsLegacy] = useState(false);
-
   // Create spieltag form
   const [showSpieltagForm, setShowSpieltagForm] = useState<string | null>(null);
   const [stIsSpecial, setStIsSpecial] = useState(false);
@@ -70,33 +62,6 @@ export default function LulAdminPanel({
     if (!res.ok) return;
     const data: LulAdminSeasons = await res.json();
     setSeasons(data);
-  }
-
-  async function createSeason() {
-    setLoading(true);
-    const res = await fetch("/api/lul/seasons", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ number: sNumber, name: sName || null, period: sPeriod || null, totalSpieltage: sTotalSpieltage }),
-    });
-    if (sIsLegacy && res.ok) {
-      const created = await res.json();
-      await fetch(`/api/lul/seasons/${created.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "archived" }),
-      });
-      await fetch(`/api/lul/seasons/${created.id}/legacy`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ entries: [] }),
-      });
-    }
-    setLoading(false);
-    setShowSeasonForm(false);
-    setSIsLegacy(false);
-    toast.success(sIsLegacy ? "Legacy-Saison erstellt – Ergebnisse eintragen" : "Saison erstellt");
-    await loadSeasons();
   }
 
   async function deleteSeason(id: string) {
@@ -183,62 +148,10 @@ export default function LulAdminPanel({
 
   return (
     <div className="space-y-4">
-      {/* Header + create season */}
+      {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-gray-300">Saisons</h2>
-        <button onClick={() => setShowSeasonForm(!showSeasonForm)}
-          className="flex items-center gap-1.5 text-xs bg-amber-700 hover:bg-amber-600 text-white rounded-lg px-3 py-2">
-          <Plus className="w-3.5 h-3.5" /> Neue Saison
-        </button>
       </div>
-
-      {showSeasonForm && (
-        <div className="border border-amber-800/40 bg-amber-950/20 rounded-xl p-4 space-y-3">
-          <p className="text-sm font-medium text-white">Neue Saison anlegen</p>
-          <label className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer border transition-colors ${
-            sIsLegacy ? "bg-purple-900/20 border-purple-800/40" : "bg-gray-800/40 border-gray-700/40"
-          }`}>
-            <input type="checkbox" checked={sIsLegacy} onChange={e => setSIsLegacy(e.target.checked)} className="rounded" />
-            <div>
-              <p className="text-sm font-medium text-white flex items-center gap-1.5">
-                <History className="w-3.5 h-3.5 text-purple-400" /> Vergangene Saison (Legacy-Import)
-              </p>
-              <p className="text-xs text-gray-500 mt-0.5">Nur Endergebnis bekannt — Statistiken werden direkt als Gesamtwerte eingetragen.</p>
-            </div>
-          </label>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs text-gray-500 block mb-1">Saison-Nummer</label>
-              <input type="number" min={1} value={sNumber} onChange={e => setSNumber(Number(e.target.value))}
-                className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2" />
-            </div>
-            {!sIsLegacy && (
-              <div>
-                <label className="text-xs text-gray-500 block mb-1">Anzahl Spieltage</label>
-                <input type="number" min={1} value={sTotalSpieltage} onChange={e => setSTotalSpieltage(Number(e.target.value))}
-                  className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2" />
-              </div>
-            )}
-            <div>
-              <label className="text-xs text-gray-500 block mb-1">Name (optional)</label>
-              <input type="text" value={sName} onChange={e => setSName(e.target.value)} placeholder="Level-Up-League"
-                className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2" />
-            </div>
-            <div>
-              <label className="text-xs text-gray-500 block mb-1">Zeitraum (optional)</label>
-              <input type="text" value={sPeriod} onChange={e => setSPeriod(e.target.value)} placeholder="Mai 2026 – Dez 2026"
-                className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2" />
-            </div>
-          </div>
-          <button onClick={createSeason} disabled={loading}
-            className={`flex items-center gap-2 text-sm disabled:opacity-50 text-white rounded-lg px-4 py-2 ${
-              sIsLegacy ? "bg-purple-700 hover:bg-purple-600" : "bg-amber-600 hover:bg-amber-500"
-            }`}>
-            {sIsLegacy ? <History className="w-4 h-4" /> : <Trophy className="w-4 h-4" />}
-            {sIsLegacy ? "Legacy-Saison erstellen" : "Saison erstellen"}
-          </button>
-        </div>
-      )}
 
       {/* Season list */}
       {seasons.map(season => {

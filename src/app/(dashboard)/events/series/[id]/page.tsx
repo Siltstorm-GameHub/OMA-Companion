@@ -90,6 +90,13 @@ type StatConfig = {
   winnerStatKeys?: string[];
   winnerSeriesStatKey?: string;
   matchWinStatKeys?: string[];
+  dominionBonus?: {
+    enabled: boolean;
+    triggerStats: string[];
+    threshold: number;
+    coins: number;
+    seriesPoints: number;
+  };
 };
 
 function resolveWinnerTargetKeys(cfg: StatConfig, seriesWinnerTargetField?: string): string[] {
@@ -396,16 +403,24 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
   const specialFields    = new Set(
     [statCfg.mvpStatField, statCfg.defaultWinnerTargetField].filter((f): f is string => !!f)
   );
-  // Poll labels from series config
-  const pollLabels: string[] = (() => {
+  // Poll config from series (label + Punkte für Teilnahme/Sieg)
+  const pollConfigs: { label: string; participationSeriesPoints: number; winnerRankPoints: number }[] = (() => {
     try {
       const raw = series.pollsConfigJson ?? series.pollConfigJson;
       if (!raw) return [];
       const parsed = JSON.parse(raw);
-      const arr: { label?: string }[] = Array.isArray(parsed) ? parsed : (parsed.enabled ? [parsed] : []);
-      return arr.map(p => p.label ?? "").filter(Boolean);
+      const arr: { label?: string; question?: string; participationSeriesPoints?: number; winnerRankPoints?: number; rankPoints?: number }[] =
+        Array.isArray(parsed) ? parsed : (parsed.enabled ? [parsed] : []);
+      return arr
+        .map(p => ({
+          label: p.label ?? p.question ?? "",
+          participationSeriesPoints: p.participationSeriesPoints ?? 0,
+          winnerRankPoints: p.winnerRankPoints ?? p.rankPoints ?? 0,
+        }))
+        .filter(p => p.label);
     } catch { return []; }
   })();
+  const pollLabels: string[] = pollConfigs.map(p => p.label);
   // Poll-related fields and winner stat keys should never appear as extra columns
   const pollRelatedFields = new Set<string>(["Umfrage-Teilnahmen"]);
   for (const label of pollLabels) {
@@ -578,6 +593,22 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
   }
   if (statCfg.defaultWinnerTargetField) {
     punkteItems.push({ emoji: "🏆", label: "Event-Sieger", pts: "+1", who: `→ ${statCfg.defaultWinnerTargetField}` });
+  }
+  for (const p of pollConfigs) {
+    if (p.participationSeriesPoints > 0) {
+      punkteItems.push({ emoji: "🗳️", label: `${p.label} — Teilnahme`, pts: `+${p.participationSeriesPoints}`, who: "Bei Abstimmung" });
+    }
+    if (p.winnerRankPoints > 0) {
+      punkteItems.push({ emoji: "👑", label: `${p.label} — Sieg`, pts: `+${p.winnerRankPoints}`, who: "Gewinner der Umfrage" });
+    }
+  }
+  if (statCfg.dominionBonus?.enabled && statCfg.dominionBonus.seriesPoints > 0) {
+    punkteItems.push({
+      emoji: "⚡",
+      label: "Dominion Bonus",
+      pts: `+${statCfg.dominionBonus.seriesPoints}`,
+      who: `${statCfg.dominionBonus.threshold}× in Folge`,
+    });
   }
 
   const totalParticipantIds = new Set(series.events.flatMap(e => e.registrations.map(r => r.userId)));
