@@ -231,7 +231,7 @@ export default function SeriesCompleteClient({
       <div className="flex items-center gap-2 text-sm text-gray-500">
         <Link href={`/admin/series/${seriesId}`} className="flex items-center gap-1 hover:text-gray-300 transition-colors">
           <ChevronLeft className="w-4 h-4" />
-          <SeriesIcon name={seriesIcon} className="w-3.5 h-3.5 text-teal-500" />
+          <SeriesIcon name={seriesIcon} className="w-3.5 h-3.5" />
           {seriesName}
         </Link>
         <span>/</span>

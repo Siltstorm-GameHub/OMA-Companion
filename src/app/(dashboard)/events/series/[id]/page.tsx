@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { CountUp } from "@/components/CountUp";
 import SeriesIcon from "@/components/SeriesIcon";
+import { resolveSeriesColor } from "@/lib/series-icons";
 import PollsSection from "@/app/(dashboard)/tournament/[id]/PollsSection";
 import SeriesStandingsTable from "./SeriesStandingsTable";
 import SeriesEventList, { type SeriesEventItem } from "./SeriesEventList";
@@ -307,6 +308,8 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
 
   if (!series) notFound();
   if (series.hidden && !isMod) notFound();
+
+  const seriesColor = resolveSeriesColor(series.icon);
 
   // ── Nur die aktuell aktive Umfrage (falls vorhanden) aller Events dieser Reihe ──
   // Weder kommende noch beendete Umfragen werden hier angezeigt — nur was gerade läuft.
@@ -740,13 +743,14 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
         <div className="absolute inset-0 bg-gradient-to-br from-teal-500/10 via-transparent to-rose-500/6 pointer-events-none" />
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-teal-500/25 to-transparent pointer-events-none" />
         <div className="absolute -top-12 -right-12 w-40 h-40 rounded-full bg-teal-500/5 blur-2xl pointer-events-none" />
+        <div className="absolute left-0 top-3 bottom-3 w-1 rounded-r-full" style={{ background: seriesColor }} />
 
-        <div className="relative">
+        <div className="relative pl-3">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <SeriesIcon name={series.icon} className="w-4 h-4 text-teal-400" />
-            <span className="text-xs text-teal-400/70 font-medium uppercase tracking-widest">Eventreihe</span>
+            <SeriesIcon name={series.icon} className="w-4 h-4" />
+            <span className="text-xs font-medium uppercase tracking-widest" style={{ color: `${seriesColor}b3` }}>Eventreihe</span>
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight mb-1">{series.name}</h1>
+          <h1 className="text-2xl font-bold tracking-tight mb-1" style={{ color: seriesColor }}>{series.name}</h1>
 
           {/* Badges */}
           {(series.fixedGame || series.fixedFormat) && (

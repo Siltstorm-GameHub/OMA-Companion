@@ -64,7 +64,7 @@ export default async function AdminEventBracketPage({ params }: { params: Promis
         {event.series ? (
           <Link href={`/admin/series/${event.series.id}`} className="flex items-center gap-1 hover:text-gray-300 transition-colors">
             <ChevronLeft className="w-4 h-4" />
-            <SeriesIcon name={event.series.icon} className="w-3.5 h-3.5 text-teal-500" />
+            <SeriesIcon name={event.series.icon} className="w-3.5 h-3.5" />
             {event.series.name}
           </Link>
         ) : (
