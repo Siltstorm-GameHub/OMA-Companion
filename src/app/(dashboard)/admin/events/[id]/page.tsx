@@ -12,7 +12,7 @@ export default async function AdminEventEditPage({ params }: { params: Promise<{
       where: { id },
       include: {
         series: { select: { id: true, name: true, icon: true, fixedGame: true, discordChannelId: true, placementRewardsJson: true, pollConfigJson: true, fixedFormat: true, seriesStatConfig: true } },
-        registrations: { select: { userId: true } },
+        registrations: { select: { userId: true, role: true } },
         streamingPartners: { select: { partnerId: true } },
         clipSubmissions: { include: { user: { select: { id: true, name: true, username: true } } }, orderBy: { createdAt: "desc" } },
         _count: { select: { registrations: true } },

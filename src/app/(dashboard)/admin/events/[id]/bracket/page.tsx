@@ -15,7 +15,7 @@ export default async function AdminEventBracketPage({ params }: { params: Promis
       where: { id },
       include: {
         series: { select: { id: true, name: true, icon: true, seriesStatConfig: true } },
-        registrations: { select: { userId: true } },
+        registrations: { select: { userId: true, role: true } },
         participants: {
           include: { user: { select: { id: true, name: true, username: true, image: true } } },
         },
@@ -34,7 +34,7 @@ export default async function AdminEventBracketPage({ params }: { params: Promis
 
   if (!event) notFound();
 
-  const registeredIds = new Set(event.registrations.map(r => r.userId));
+  const registeredIds = new Set(event.registrations.filter(r => r.role !== "spectator").map(r => r.userId));
   const registeredUsers = allUsers.filter(u => registeredIds.has(u.id));
 
   const winnerStatKeys: string[] = (() => {

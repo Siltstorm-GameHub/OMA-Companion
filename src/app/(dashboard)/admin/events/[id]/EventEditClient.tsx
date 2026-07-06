@@ -23,7 +23,19 @@ import TournamentManager from "../TournamentManager";
 type User = { id: string; name: string | null; username: string | null; image: string | null };
 type PlacementReward = { place: number; coins: number; rankPoints: number };
 type RewardsConfig   = { participationCoins: number; placements: PlacementReward[] };
-type PollConfig      = { label: string; question: string; coins: number; rankPoints: number; type: "player" | "spectator" };
+type PollConfig = {
+  label: string;
+  question: string;
+  voterEligibility: "all" | "participants" | "players" | "spectators";
+  answerType: "players" | "spectators" | "custom";
+  customAnswers: string[];
+  startOffsetHours: number;
+  endOffsetHours: number;
+  participationCoins: number;
+  participationSeriesPoints: number;
+  winnerCoins: number;
+  winnerRankPoints: number;
+};
 
 const DEFAULT_REWARDS: RewardsConfig = {
   participationCoins: 10,
@@ -128,13 +140,31 @@ function parseRewards(json: string | null | undefined): RewardsConfig {
   if (!json) return DEFAULT_REWARDS;
   try { return { ...DEFAULT_REWARDS, ...JSON.parse(json) }; } catch { return DEFAULT_REWARDS; }
 }
+/** Normalisiert einen Poll-Eintrag auf das moderne Format (voterEligibility/answerType/...),
+ * da ältere gespeicherte Konfigurationen noch das Legacy-Format (coins/rankPoints/type) nutzen. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function normalizePoll(raw: any): PollConfig {
+  return {
+    label: raw.label ?? "",
+    question: raw.question ?? "",
+    voterEligibility: raw.voterEligibility ?? "participants",
+    answerType: raw.answerType ?? (raw.type === "spectator" ? "spectators" : "players"),
+    customAnswers: raw.customAnswers ?? [],
+    startOffsetHours: raw.startOffsetHours ?? 0,
+    endOffsetHours: raw.endOffsetHours ?? 24,
+    participationCoins: raw.participationCoins ?? 0,
+    participationSeriesPoints: raw.participationSeriesPoints ?? 0,
+    winnerCoins: raw.winnerCoins ?? raw.coins ?? 100,
+    winnerRankPoints: raw.winnerRankPoints ?? raw.rankPoints ?? 0,
+  };
+}
 function parsePolls(json: string | null | undefined): PollConfig[] {
   if (!json) return [];
   try {
     const parsed = JSON.parse(json);
-    if (Array.isArray(parsed)) return parsed as PollConfig[];
+    if (Array.isArray(parsed)) return parsed.map(normalizePoll);
     // legacy single-poll format
-    if (parsed.enabled) return [{ label: parsed.question ?? "MVP", question: parsed.question ?? "", coins: parsed.coins ?? 250, rankPoints: parsed.rankPoints ?? 3, type: "player" }];
+    if (parsed.enabled) return [normalizePoll({ label: parsed.question ?? "MVP", question: parsed.question ?? "", coins: parsed.coins ?? 250, rankPoints: parsed.rankPoints ?? 3 })];
     return [];
   } catch { return []; }
 }
@@ -280,7 +310,18 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
   }
   function addPoll() {
     if (polls.length >= 3) return;
-    setPolls(p => [...p, { label: "", question: "", coins: 50, rankPoints: 0, type: "player" }]);
+    setPolls(p => [...p, {
+      label: "", question: "",
+      voterEligibility: "participants",
+      answerType: "players",
+      customAnswers: [],
+      startOffsetHours: 0,
+      endOffsetHours: 24,
+      participationCoins: 0,
+      participationSeriesPoints: 0,
+      winnerCoins: 50,
+      winnerRankPoints: 0,
+    }]);
   }
   function updatePoll(i: number, patch: Partial<PollConfig>) {
     setPolls(p => p.map((poll, idx) => idx === i ? { ...poll, ...patch } : poll));
@@ -882,26 +923,90 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
                       placeholder="MVP" className={inputCls} />
                   </div>
                   <div>
-                    <label className={labelCls}>Typ</label>
-                    <select value={poll.type} onChange={e => updatePoll(i, { type: e.target.value as "player" | "spectator" })} className={inputCls}>
-                      <option value="player">Spieler-Poll</option>
-                      <option value="spectator">Zuschauer-Poll</option>
-                    </select>
+                    <label className={labelCls}>Frage</label>
+                    <input type="text" value={poll.question} onChange={e => updatePoll(i, { question: e.target.value })}
+                      placeholder="Wer war der MVP?" className={inputCls} />
                   </div>
-                </div>
-                <div>
-                  <label className={labelCls}>Frage</label>
-                  <input type="text" value={poll.question} onChange={e => updatePoll(i, { question: e.target.value })}
-                    placeholder="Wer war der MVP?" className={inputCls} />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className={labelCls}>Münzen (Sieger)</label>
-                    <input type="number" min={0} value={poll.coins} onChange={e => updatePoll(i, { coins: Number(e.target.value) })} className={inputCls} />
+                    <label className={labelCls}>Wer darf abstimmen?</label>
+                    <select value={poll.voterEligibility}
+                      onChange={e => updatePoll(i, { voterEligibility: e.target.value as PollConfig["voterEligibility"] })}
+                      className={inputCls}>
+                      <option value="all">Alle App-Mitglieder</option>
+                      <option value="participants">Mitspieler + Zuschauer</option>
+                      <option value="players">Nur Mitspieler</option>
+                      <option value="spectators">Nur Zuschauer</option>
+                    </select>
                   </div>
                   <div>
-                    <label className={labelCls}>Rang-Punkte</label>
-                    <input type="number" min={0} value={poll.rankPoints} onChange={e => updatePoll(i, { rankPoints: Number(e.target.value) })} className={inputCls} />
+                    <label className={labelCls}>Antwortoptionen</label>
+                    <select value={poll.answerType}
+                      onChange={e => updatePoll(i, { answerType: e.target.value as PollConfig["answerType"], customAnswers: [] })}
+                      className={inputCls}>
+                      <option value="players">Mitspieler des Events</option>
+                      <option value="spectators">Zuschauer des Events</option>
+                      <option value="custom">Eigene Antworten</option>
+                    </select>
+                  </div>
+                </div>
+                {poll.answerType === "custom" && (
+                  <div className="space-y-1.5">
+                    {poll.customAnswers.map((ans, ai) => (
+                      <div key={ai} className="flex gap-2">
+                        <input type="text" value={ans}
+                          onChange={e => {
+                            const ca = [...poll.customAnswers]; ca[ai] = e.target.value;
+                            updatePoll(i, { customAnswers: ca });
+                          }}
+                          placeholder={`Antwort ${ai + 1}`} className={inputCls} />
+                        <button type="button"
+                          onClick={() => updatePoll(i, { customAnswers: poll.customAnswers.filter((_, k) => k !== ai) })}
+                          className="text-gray-600 hover:text-red-400 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
+                      </div>
+                    ))}
+                    <button type="button"
+                      onClick={() => updatePoll(i, { customAnswers: [...poll.customAnswers, ""] })}
+                      className="flex items-center gap-1 text-xs text-teal-500 hover:text-teal-300">
+                      <Plus className="w-3 h-3" /> Antwort hinzufügen
+                    </button>
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className={labelCls}>Start (Std. nach Event-Start)</label>
+                    <input type="number" min={0} value={poll.startOffsetHours}
+                      onChange={e => updatePoll(i, { startOffsetHours: Number(e.target.value) })} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Ende (Std. nach Event-Start)</label>
+                    <input type="number" min={1} value={poll.endOffsetHours}
+                      onChange={e => updatePoll(i, { endOffsetHours: Number(e.target.value) })} className={inputCls} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className={labelCls}>Belohnung Abstimmung — Münzen</label>
+                    <input type="number" min={0} value={poll.participationCoins}
+                      onChange={e => updatePoll(i, { participationCoins: Number(e.target.value) })} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Belohnung Abstimmung — Ligapunkte</label>
+                    <input type="number" min={0} value={poll.participationSeriesPoints}
+                      onChange={e => updatePoll(i, { participationSeriesPoints: Number(e.target.value) })} className={inputCls} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className={labelCls}>Sieger-Belohnung — Münzen</label>
+                    <input type="number" min={0} value={poll.winnerCoins}
+                      onChange={e => updatePoll(i, { winnerCoins: Number(e.target.value) })} className={inputCls} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Sieger-Belohnung — Ligapunkte</label>
+                    <input type="number" min={0} value={poll.winnerRankPoints}
+                      onChange={e => updatePoll(i, { winnerRankPoints: Number(e.target.value) })} className={inputCls} />
                   </div>
                 </div>
               </div>
