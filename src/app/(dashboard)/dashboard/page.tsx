@@ -4,9 +4,10 @@ import { unstable_cache } from "next/cache";
 import {
   CalendarDays, Users, ChevronRight,
   Clock, Scroll, Swords, CheckCircle2,
-  Circle, Zap, Repeat, Radio, Newspaper, Server, Gamepad2,
+  Circle, Zap, Repeat, Newspaper, Server, Gamepad2,
 } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
+import EventCategoryBadge from "@/components/EventCategoryBadge";
 import Link from "next/link";
 import Image from "next/image";
 import { CountUp } from "@/components/CountUp";
@@ -47,7 +48,7 @@ const ROLE_LABEL: Record<string, string> = {
 // Cached queries for non-user-specific data (5 min revalidation)
 const getGlobalDashboardData = unstable_cache(
   async () => {
-    const [memberCount, activeEvents, activeSeries, activeOrPollEvent, nextUpcomingEvent, liveEvent, recentSummaries] = await Promise.all([
+    const [memberCount, activeEvents, activeSeries, activeOrPollEvent, nextUpcomingEvent, recentSummaries] = await Promise.all([
       prisma.user.count(),
       prisma.event.count({ where: { hidden: false, status: { in: ["open", "active", "umfrage"] }, OR: [{ seriesId: null }, { series: { hidden: false } }] } }),
       prisma.eventSeries.findMany({
@@ -74,11 +75,6 @@ const getGlobalDashboardData = unstable_cache(
         orderBy: { startAt: "asc" },
         include: { _count: { select: { registrations: true } } },
       }),
-      prisma.event.findFirst({
-        where:   { hidden: false, status: { in: ["active", "umfrage"] }, OR: [{ seriesId: null }, { series: { hidden: false } }] },
-        orderBy: { startAt: "desc" },
-        select:  { id: true, title: true, format: true, status: true, _count: { select: { registrations: true } } },
-      }),
       prisma.event.findMany({
         where:   { hidden: false, status: "finished", summary: { not: null }, OR: [{ seriesId: null }, { series: { hidden: false } }] },
         orderBy: { startAt: "desc" },
@@ -87,7 +83,7 @@ const getGlobalDashboardData = unstable_cache(
       }),
     ]);
     const nextEvent = activeOrPollEvent ?? nextUpcomingEvent;
-    return { memberCount, activeEvents, activeSeries, nextEvent, liveEvent, recentSummaries };
+    return { memberCount, activeEvents, activeSeries, nextEvent, recentSummaries };
   },
   ["dashboard-global"],
   { revalidate: 300 }
@@ -102,7 +98,7 @@ export default async function DashboardPage() {
   const month = now.getMonth() + 1;
   const year  = now.getFullYear();
 
-  const { memberCount, activeEvents, activeSeries, nextEvent, liveEvent, recentSummaries } =
+  const { memberCount, activeEvents, activeSeries, nextEvent, recentSummaries } =
     await getGlobalDashboardData();
 
   const [
@@ -267,45 +263,6 @@ export default async function DashboardPage() {
         }} />
       )}
 
-      {/* ── Live-Event-Banner ─────────────────────────────────────── */}
-      {liveEvent && (
-        <div className="px-4 sm:px-6 pt-4 max-w-7xl mx-auto">
-          <Link
-            href={`/tournament/${liveEvent.id}`}
-            className="flex items-center gap-4 px-4 py-3.5 rounded-xl group transition-all hover:brightness-110"
-            style={{ background: "linear-gradient(135deg, rgba(239,68,68,0.12) 0%, rgba(239,68,68,0.06) 100%)", border: "1px solid rgba(239,68,68,0.28)", boxShadow: "0 0 24px rgba(239,68,68,0.08)" }}>
-            {/* Pulsierendes Icon */}
-            <div className="relative shrink-0">
-              <div className="w-9 h-9 rounded-lg flex items-center justify-center"
-                style={{ background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)" }}>
-                <Radio className="w-4 h-4 text-red-400" />
-              </div>
-              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
-              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-400" />
-            </div>
-            {/* Text */}
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-red-400/70 mb-0.5">
-                {liveEvent.status === "umfrage" ? "Umfragephase" : "Live jetzt"}
-              </p>
-              <p className="text-sm font-bold text-white truncate group-hover:text-red-300 transition-colors">
-                {liveEvent.title}
-              </p>
-            </div>
-            {/* Teilnehmer + Arrow */}
-            <div className="flex items-center gap-3 shrink-0">
-              <span className="hidden sm:flex items-center gap-1 text-xs text-gray-500">
-                <Users className="w-3 h-3" />
-                {liveEvent._count.registrations}
-              </span>
-              <span className="text-xs font-semibold text-red-400 flex items-center gap-1">
-                Zum Event <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-              </span>
-            </div>
-          </Link>
-        </div>
-      )}
-
       {/* ── Content ─────────────────────────────────────────────────── */}
       <div className="px-4 sm:px-6 py-5 max-w-7xl mx-auto space-y-5 relative">
 
@@ -336,11 +293,31 @@ export default async function DashboardPage() {
               <div className="absolute inset-0"
                 style={{ backgroundImage: "radial-gradient(ellipse at 25% 60%, rgba(20,184,166,0.18) 0%, transparent 55%)" }} />
               {/* Status badge */}
-              <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider"
-                style={{ background: "rgba(20,184,166,0.14)", border: "1px solid rgba(20,184,166,0.22)", color: "#2dd4bf" }}>
-                <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" />
-                <CountUp to={activeEvents} duration={700} /> aktiv
-              </div>
+              {nextEvent && nextEvent.status === "active" ? (
+                <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider"
+                  style={{ background: "rgba(239,68,68,0.16)", border: "1px solid rgba(239,68,68,0.3)", color: "#f87171" }}>
+                  <span className="relative flex w-1.5 h-1.5">
+                    <span className="absolute inline-flex w-full h-full rounded-full bg-red-400 animate-ping" />
+                    <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-red-400" />
+                  </span>
+                  Live
+                </div>
+              ) : nextEvent && nextEvent.status === "umfrage" ? (
+                <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider"
+                  style={{ background: "rgba(245,158,11,0.16)", border: "1px solid rgba(245,158,11,0.3)", color: "#fbbf24" }}>
+                  <span className="relative flex w-1.5 h-1.5">
+                    <span className="absolute inline-flex w-full h-full rounded-full bg-amber-400 animate-ping" />
+                    <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-amber-400" />
+                  </span>
+                  Umfragephase
+                </div>
+              ) : (
+                <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider"
+                  style={{ background: "rgba(20,184,166,0.14)", border: "1px solid rgba(20,184,166,0.22)", color: "#2dd4bf" }}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" />
+                  <CountUp to={activeEvents} duration={700} /> aktiv
+                </div>
+              )}
               <ChevronRight className="absolute top-3 right-3 w-4 h-4 text-gray-700 group-hover:text-teal-400 group-hover:translate-x-0.5 transition-all" />
               <div className="absolute bottom-0 inset-x-0 h-14"
                 style={{ background: "linear-gradient(to bottom, transparent, var(--bg-surface))" }} />
@@ -349,9 +326,12 @@ export default async function DashboardPage() {
             {/* Info area */}
             <div className="px-4 pb-4 pt-2">
               <p className="text-[9px] text-teal-400/50 uppercase tracking-[0.18em] font-semibold mb-0.5">Events</p>
-              <p className="font-display text-base font-black text-white leading-tight truncate">
-                {nextEvent ? nextEvent.title : "Keine anstehenden Events"}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="font-display text-base font-black text-white leading-tight truncate flex-1 min-w-0">
+                  {nextEvent ? nextEvent.title : "Keine anstehenden Events"}
+                </p>
+                {nextEvent && <EventCategoryBadge category={nextEvent.category} className="shrink-0" />}
+              </div>
               {nextEvent ? (
                 <div className="flex items-center gap-3 mt-2 text-[11px] text-gray-500">
                   <span className="flex items-center gap-1">
