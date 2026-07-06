@@ -15,7 +15,7 @@ import SeriesIcon from "@/components/SeriesIcon";
 import GameNameInput from "@/components/GameNameInput";
 import StatFieldEditor from "@/components/StatFieldEditor";
 import { describeMonthlyModes } from "@/lib/recurrence";
-import { SERIES_ICONS } from "@/lib/series-icons";
+import { SERIES_ICONS, resolveSeriesColor } from "@/lib/series-icons";
 
 const inputCls = "w-full rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
 const numCls   = "w-24 rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
@@ -126,6 +126,7 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
   const [name, setName]               = useState<string>(series.name);
   const [description, setDescription] = useState<string>(series.description ?? "");
   const [icon, setIcon]               = useState<string>(series.icon ?? "");
+  const seriesColor = resolveSeriesColor(icon);
 
   // Category
   const [category, setCategory] = useState<string>(series.category ?? "");
@@ -338,15 +339,18 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
       </div>
 
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+      <div className="relative flex items-start justify-between gap-4 flex-wrap pl-4">
+        <div className="absolute left-0 top-0.5 bottom-0.5 w-1 rounded-r-full" style={{ background: seriesColor }} />
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-lg bg-teal-500/10 border border-teal-500/20 flex items-center justify-center shrink-0 mt-0.5">
-            <SeriesIcon name={icon} className="w-5 h-5 text-teal-400" />
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
+            style={{ background: `${seriesColor}1a`, border: `1px solid ${seriesColor}40` }}>
+            <SeriesIcon name={icon} className="w-5 h-5" />
           </div>
           <div className="space-y-1">
           <input
             value={name} onChange={e => setName(e.target.value)}
-            className="text-2xl font-bold text-white bg-transparent border-b border-transparent hover:border-white/20 focus:border-teal-500/50 outline-none transition-colors w-full max-w-lg"
+            className="text-2xl font-bold bg-transparent border-b border-transparent hover:border-white/20 focus:border-teal-500/50 outline-none transition-colors w-full max-w-lg"
+            style={{ color: seriesColor }}
             placeholder="Reihen-Name"
           />
           <input
@@ -424,13 +428,15 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
               <div className="grid grid-cols-6 sm:grid-cols-8 gap-2">
                 {SERIES_ICONS.map(i => {
                   const Icon = i.icon;
+                  const selected = icon === i.value;
                   return (
                     <button key={i.value} type="button" title={i.label}
-                      onClick={() => setIcon(icon === i.value ? "" : i.value)}
-                      className={`flex items-center justify-center rounded-xl p-2 border transition-all ${
-                        icon === i.value ? "border-teal-500/60 bg-teal-500/10" : "border-white/8 bg-white/3 hover:border-white/15"
-                      }`}>
-                      <Icon className={`w-4 h-4 ${icon === i.value ? "text-teal-300" : "text-gray-400"}`} />
+                      onClick={() => setIcon(selected ? "" : i.value)}
+                      className="flex items-center justify-center rounded-xl p-2 border transition-all"
+                      style={selected
+                        ? { borderColor: `${i.color}99`, background: `${i.color}1a` }
+                        : { borderColor: "rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)" }}>
+                      <Icon className="w-4 h-4" style={{ color: selected ? i.color : "#9ca3af" }} />
                     </button>
                   );
                 })}

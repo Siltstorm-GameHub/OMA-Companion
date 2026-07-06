@@ -5,6 +5,7 @@ import {
   ChevronRight, Check, Gamepad2, Clapperboard,
 } from "lucide-react";
 import SeriesIcon from "@/components/SeriesIcon";
+import { resolveSeriesColor } from "@/lib/series-icons";
 import RegisterButton from "./RegisterButton";
 import SyncButton from "./SyncButton";
 import StreamRegisterButton from "@/components/StreamRegisterButton";
@@ -173,6 +174,7 @@ export default async function EventsPage() {
               : false;
             const isTournament = !!ev.format;
             const hasSeries    = !!ev.seriesId;
+            const seriesColor  = resolveSeriesColor(ev.series?.icon);
             const cardHref     = hasSeries ? `/events/series/${ev.seriesId}` : `/tournament/${ev.id}`;
             const discordUrl   = ev.discordEventId && GUILD_ID
               ? `https://discord.com/events/${GUILD_ID}/${ev.discordEventId}` : null;
@@ -204,9 +206,9 @@ export default async function EventsPage() {
                 <div className="relative flex-1 min-w-0">
                   {hasSeries && (
                     <Link href={`/events/series/${ev.seriesId}`}
-                      className="flex items-center gap-1 mb-1 hover:text-teal-300 transition-colors group/series">
-                      <SeriesIcon name={ev.series?.icon} className="w-3 h-3 text-teal-400 shrink-0" />
-                      <span className="text-[10px] text-teal-400 font-medium group-hover/series:text-teal-300">{ev.series?.name}</span>
+                      className="flex items-center gap-1 mb-1 transition-opacity hover:opacity-80 group/series">
+                      <SeriesIcon name={ev.series?.icon} className="w-3 h-3 shrink-0" />
+                      <span className="text-[10px] font-medium" style={{ color: seriesColor }}>{ev.series?.name}</span>
                       <span className="text-[10px] text-gray-600">· Eventreihe</span>
                     </Link>
                   )}

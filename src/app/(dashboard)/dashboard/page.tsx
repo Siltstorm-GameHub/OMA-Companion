@@ -19,6 +19,7 @@ import WhatsAppCommunityBanner from "@/components/WhatsAppCommunityBanner";
 import ClipContestWidget from "@/components/ClipContestWidget";
 import RankIcon from "@/components/RankIcon";
 import SeriesIcon from "@/components/SeriesIcon";
+import { resolveSeriesColor } from "@/lib/series-icons";
 import { getRingClass } from "@/lib/ranks";
 import { getVisibleServers } from "@/lib/gameservers";
 
@@ -459,15 +460,18 @@ export default async function DashboardPage() {
                 const nextEv  = series.events[0];
                 const nextDate = nextEv ? new Date(nextEv.startAt) : null;
                 const s = nextEv ? STATUS_CONFIG[nextEv.status] : null;
+                const seriesColor = resolveSeriesColor(series.icon);
                 return (
                   <Link key={series.id} href={`/events/series/${series.id}`}
-                    className="flex items-center gap-3 px-3.5 py-3 transition-colors group hover:bg-white/[0.025]"
+                    className="relative flex items-center gap-3 pl-4 pr-3.5 py-3 transition-colors group hover:bg-white/[0.025]"
                     style={{ borderColor: "rgba(255,255,255,0.05)" }}>
-                    <div className="w-8 h-8 rounded-sm bg-teal-500/10 border border-teal-500/15 flex items-center justify-center shrink-0">
-                      <SeriesIcon name={series.icon} className="w-3.5 h-3.5 text-teal-400" />
+                    <div className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full" style={{ background: seriesColor }} />
+                    <div className="w-8 h-8 rounded-sm flex items-center justify-center shrink-0"
+                      style={{ background: `${seriesColor}1a`, border: `1px solid ${seriesColor}40` }}>
+                      <SeriesIcon name={series.icon} className="w-3.5 h-3.5" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-white truncate group-hover:text-teal-300 transition-colors">
+                      <p className="text-xs font-semibold truncate transition-colors" style={{ color: seriesColor }}>
                         {series.name}
                       </p>
                       <p className="text-[10px] text-gray-600 mt-0.5 flex items-center gap-1">

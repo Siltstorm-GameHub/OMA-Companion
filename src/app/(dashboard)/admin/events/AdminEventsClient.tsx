@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Edit2, ChevronDown, ChevronRight, Eye, EyeOff } from "lucide-react";
 import EventCategoryBadge from "@/components/EventCategoryBadge";
 import SeriesIcon from "@/components/SeriesIcon";
+import { resolveSeriesColor } from "@/lib/series-icons";
 import { EventCategory } from "@prisma/client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -137,18 +138,20 @@ function EventRow({ ev, indent = false }: { ev: Event; indent?: boolean }) {
 function SeriesRow({ s }: { s: Series }) {
   const [open, setOpen] = useState(false);
   const upcomingCount = s.events.length;
+  const seriesColor = resolveSeriesColor(s.icon);
   return (
     <div className={s.hidden ? "opacity-60" : ""}>
-      <div className="flex items-center gap-3 px-4 py-3 border-t border-white/[0.04] first:border-t-0">
+      <div className="relative flex items-center gap-3 pl-5 pr-4 py-3 border-t border-white/[0.04] first:border-t-0">
+        <div className="absolute left-2 top-2 bottom-2 w-[3px] rounded-r-full" style={{ background: seriesColor }} />
         <button
           type="button"
           onClick={() => setOpen(o => !o)}
           className="flex items-center gap-3 flex-1 min-w-0 text-left hover:opacity-80 transition-opacity"
         >
-          <SeriesIcon name={s.icon} className="w-4 h-4 text-violet-400 shrink-0" />
+          <SeriesIcon name={s.icon} className="w-4 h-4 shrink-0" />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-medium text-white truncate">{s.name}</span>
+              <span className="text-sm font-medium truncate" style={{ color: seriesColor }}>{s.name}</span>
               {s.hidden && (
                 <span className="text-[10px] text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 shrink-0 flex items-center gap-1">
                   <EyeOff className="w-2.5 h-2.5" /> ausgeblendet
