@@ -56,37 +56,39 @@ export default function ActivityFeed({ transactions }: { transactions: Tx[] }) {
         <span className="ml-auto text-[10px] text-gray-600">{filtered.length} Einträge</span>
       </div>
 
-      <div className="glass card-shine rounded-2xl overflow-y-auto divide-y divide-white/[0.04]" style={{ maxHeight: "480px" }}>
-        {filtered.length === 0 && (
-          <p className="text-sm text-gray-600 px-4 py-6 text-center">Keine Aktivitäten</p>
-        )}
-        {filtered.map((tx) => {
-          const type = txType(tx.reason);
-          const isPositive = tx.amount > 0;
-          return (
-            <div key={tx.id} className="flex items-center justify-between px-4 py-3 hover:bg-white/[0.02] transition-colors gap-3">
-              <div className="min-w-0 flex-1">
-                <span className="text-sm text-white font-medium">{tx.user.username ?? tx.user.name ?? "?"}</span>
-                <span className="text-gray-500 text-sm ml-2">{cleanReason(tx.reason)}</span>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                {type === "coins" ? (
-                  <span className="flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded border text-amber-400 bg-amber-500/10 border-amber-500/20">
-                    <CoinIcon size={10} /> Münzen
+      <div className="glass card-shine rounded-2xl">
+        <div className="overflow-y-auto divide-y divide-white/[0.04]" style={{ maxHeight: "480px" }}>
+          {filtered.length === 0 && (
+            <p className="text-sm text-gray-600 px-4 py-6 text-center">Keine Aktivitäten</p>
+          )}
+          {filtered.map((tx) => {
+            const type = txType(tx.reason);
+            const isPositive = tx.amount > 0;
+            return (
+              <div key={tx.id} className="flex items-center justify-between px-4 py-3 hover:bg-white/[0.02] transition-colors gap-3">
+                <div className="min-w-0 flex-1">
+                  <span className="text-sm text-white font-medium">{tx.user.username ?? tx.user.name ?? "?"}</span>
+                  <span className="text-gray-500 text-sm ml-2">{cleanReason(tx.reason)}</span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {type === "coins" ? (
+                    <span className="flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded border text-amber-400 bg-amber-500/10 border-amber-500/20">
+                      <CoinIcon size={10} /> Münzen
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded border text-teal-400 bg-teal-500/10 border-teal-500/20">
+                      <RankPointsIcon size={10} /> Rang-Punkte
+                    </span>
+                  )}
+                  <span className={`text-sm font-bold tabular-nums w-14 text-right ${isPositive ? "text-emerald-400" : "text-red-400"}`}>
+                    {isPositive ? "+" : ""}{tx.amount}
                   </span>
-                ) : (
-                  <span className="flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded border text-teal-400 bg-teal-500/10 border-teal-500/20">
-                    <RankPointsIcon size={10} /> Rang-Punkte
-                  </span>
-                )}
-                <span className={`text-sm font-bold tabular-nums w-14 text-right ${isPositive ? "text-emerald-400" : "text-red-400"}`}>
-                  {isPositive ? "+" : ""}{tx.amount}
-                </span>
-                <RelativeTime date={tx.createdAt} className="text-[10px] text-gray-600 w-16 text-right" />
+                  <RelativeTime date={tx.createdAt} className="text-[10px] text-gray-600 w-16 text-right" />
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
