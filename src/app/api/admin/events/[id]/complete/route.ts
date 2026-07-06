@@ -89,6 +89,8 @@ export async function POST(
   const body = await req.json() as {
     mvpUserId?: string;
     winnerStatField?: string;
+    /** Nur bei Format "avg_stats": höchster oder niedrigster kombinierter Ø pro Runde gewinnt */
+    avgWinnerDirection?: "high" | "low";
     seriesWinnerTargetField?: string;
     // Legacy single-poll fields (kept for backward compat)
     pollWinnerIds?: string[];
@@ -177,7 +179,7 @@ export async function POST(
   let eventWinnerId: string | undefined;       // compat: erster Gewinner
   let eventWinnerIds: string[] = [];
 
-  const effectiveWinnerMode = seriesEventCfg?.winnerMode ?? (body.winnerStatField ? "stat" : "manual");
+  const effectiveWinnerMode = seriesEventCfg?.winnerMode ?? ((body.winnerStatField || body.avgWinnerDirection) ? "stat" : "manual");
 
   if (effectiveWinnerMode === "bracket") {
     // winner = first entry of finalRankingJson
@@ -188,6 +190,27 @@ export async function POST(
     if (finalRanking.length > 0) {
       eventWinnerId = finalRanking[0];
       eventWinnerIds = [finalRanking[0]];
+    }
+  } else if (effectiveWinnerMode === "stat" && event.format === "avg_stats") {
+    // Durchschnittswerte: kombinierter Ø pro Runde über alle Stat-Felder entscheidet (nicht die Summe)
+    const fields: string[] = event.statFields ? JSON.parse(event.statFields) : [];
+    const direction = body.avgWinnerDirection ?? "high";
+    const rounds: Record<string, number> = {};
+    for (const match of event.matches) {
+      for (const entry of match.entries) {
+        if (!entry.userId) continue;
+        rounds[entry.userId] = (rounds[entry.userId] ?? 0) + 1;
+      }
+    }
+    let bestVal: number | null = null;
+    for (const [uid, stats] of Object.entries(userStats)) {
+      const r = rounds[uid] ?? 0;
+      if (r === 0) continue;
+      const fieldAvgs = fields.map(f => (stats[f] ?? 0) / r);
+      const combined = fieldAvgs.length > 0 ? fieldAvgs.reduce((s, v) => s + v, 0) / fieldAvgs.length : 0;
+      const better = bestVal === null || (direction === "high" ? combined > bestVal : combined < bestVal);
+      if (better) { bestVal = combined; eventWinnerId = uid; eventWinnerIds = [uid]; }
+      else if (combined === bestVal) { eventWinnerIds.push(uid); }
     }
   } else if (effectiveWinnerMode === "stat") {
     const statField = seriesEventCfg?.winnerStatField ?? body.winnerStatField;
@@ -830,6 +853,7 @@ export async function POST(
   const completionData = {
     mvpUserId:               body.mvpUserId ?? null,
     winnerStatField:         body.winnerStatField ?? null,
+    avgWinnerDirection:      body.avgWinnerDirection ?? null,
     seriesWinnerTargetField: body.seriesWinnerTargetField ?? null,
     eventWinnerId:           eventWinnerId ?? null,
     eventWinnerIds:          eventWinnerIds.length > 0 ? eventWinnerIds : null,

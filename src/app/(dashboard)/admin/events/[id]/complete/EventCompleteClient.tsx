@@ -36,6 +36,9 @@ interface Props {
   spectatorUsers: User[];
   tournamentStatFields: string[];
   userStats: Record<string, Record<string, number>>;
+  format: string | null;
+  /** Kombinierter Ø-Wert pro Runde (über alle Stat-Felder) je Spieler — nur bei format "avg_stats" */
+  userAvgScore: Record<string, number>;
   seriesStatConfig: SeriesStatConfig | null;
   rewardsConfig: RewardsConfig;
   pollConfig: PollConfig;
@@ -94,12 +97,13 @@ function computePlacementMap(groups: string[][]): Map<string, number> {
 
 export default function EventCompleteClient({
   eventId, eventTitle, seriesId, seriesName,
-  registeredUsers, spectatorUsers, tournamentStatFields, userStats,
+  registeredUsers, spectatorUsers, tournamentStatFields, userStats, format, userAvgScore,
   seriesStatConfig, rewardsConfig, pollConfig, pollsConfig, pendingEventPolls, realPollVotes, spectatorRewardJson,
   isReEdit, gamePhaseComplete, pollPhaseComplete,
   initialData, initialFinalRanking, initialRankingGroups, initialFinalRankingNote,
 }: Props) {
   const router = useRouter();
+  const isAvgFormat = format === "avg_stats";
 
   // Mode: poll-only when game phase is confirmed but poll is still open
   const isPollOnly = isReEdit && gamePhaseComplete && !pollPhaseComplete;
@@ -110,6 +114,9 @@ export default function EventCompleteClient({
   /* ── Gewinner-Stat ── */
   const [winnerStatField, setWinnerStatField] = useState<string>(
     (initialData?.winnerStatField as string) ?? seriesStatConfig?.defaultWinnerStatField ?? ""
+  );
+  const [avgDirection, setAvgDirection] = useState<"high" | "low">(
+    (initialData?.avgWinnerDirection as "high" | "low") ?? "high"
   );
   const [seriesWinnerTargetField, setSeriesWinnerTargetField] = useState<string>(
     (initialData?.seriesWinnerTargetField as string) ?? seriesStatConfig?.defaultWinnerTargetField ?? ""
@@ -182,7 +189,7 @@ export default function EventCompleteClient({
     return registeredUsers.some(u => !savedIds.has(u.id));
   })();
   useEffect(() => {
-    if (winnerStatField && (!initialFinalRanking?.length || hasMissingUsers)) {
+    if ((isAvgFormat || winnerStatField) && (!initialFinalRanking?.length || hasMissingUsers)) {
       autoSort(winnerStatField);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -194,6 +201,16 @@ export default function EventCompleteClient({
   const seriesStatFields = (seriesStatConfig?.stats ?? []).map(s => s.field);
 
   const previewWinners = useMemo(() => {
+    if (isAvgFormat) {
+      let bestVal: number | null = null;
+      let best: string[] = [];
+      for (const [uid, v] of Object.entries(userAvgScore)) {
+        const better = bestVal === null || (avgDirection === "high" ? v > bestVal : v < bestVal);
+        if (better) { bestVal = v; best = [uid]; }
+        else if (v === bestVal) { best.push(uid); }
+      }
+      return best;
+    }
     if (!winnerStatField) return [];
     let bestVal = -Infinity;
     let best: string[] = [];
@@ -203,7 +220,7 @@ export default function EventCompleteClient({
       else if (v === bestVal && bestVal > -Infinity) { best.push(uid); }
     }
     return best;
-  }, [winnerStatField, userStats]);
+  }, [isAvgFormat, avgDirection, userAvgScore, winnerStatField, userStats]);
 
   const pollEligible = useMemo(
     () => registeredUsers.filter(u => !pollExcluded.has(u.id)),
@@ -238,14 +255,18 @@ export default function EventCompleteClient({
   const effectiveSpectatorCoins = seriesId ? (seriesStatConfig?.spectatorParticipationCoins ?? 0) : (spectatorRewardJson?.coins ?? 0);
 
   /* ── Ranking auto-sort with tie detection ── */
+  function scoreOf(uid: string, field: string): number {
+    return isAvgFormat ? (userAvgScore[uid] ?? 0) : (userStats[uid]?.[field] ?? 0);
+  }
   function autoSort(field = winnerStatField) {
-    if (!field) return;
+    if (!isAvgFormat && !field) return;
+    const dirMul = isAvgFormat && avgDirection === "low" ? 1 : -1;
     const sorted = [...rankingOrder].sort(
-      (a, b) => (userStats[b]?.[field] ?? 0) - (userStats[a]?.[field] ?? 0)
+      (a, b) => dirMul * (scoreOf(a, field) - scoreOf(b, field))
     );
     const newTied = new Set<string>();
     for (let i = 1; i < sorted.length; i++) {
-      if ((userStats[sorted[i]]?.[field] ?? 0) === (userStats[sorted[i - 1]]?.[field] ?? 0)) {
+      if (scoreOf(sorted[i], field) === scoreOf(sorted[i - 1], field)) {
         newTied.add(sorted[i]);
       }
     }
@@ -319,7 +340,8 @@ export default function EventCompleteClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           mvpUserId:               mvpUserId || undefined,
-          winnerStatField:         winnerStatField || undefined,
+          winnerStatField:         isAvgFormat ? undefined : (winnerStatField || undefined),
+          avgWinnerDirection:      isAvgFormat ? avgDirection : undefined,
           seriesWinnerTargetField: seriesWinnerTargetField || undefined,
           pollWinnerIds:           !pollOnly && pollConfig.enabled && hasPollVotes ? pollWinners : undefined,
           pollLabel:               pollConfig.enabled ? pollConfig.question : undefined,
@@ -424,26 +446,57 @@ export default function EventCompleteClient({
         <div className="space-y-4">
 
           {/* Gewinner-Stat */}
-          {tournamentStatFields.length > 0 && (
+          {(tournamentStatFields.length > 0 || isAvgFormat) && (
             <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(245,158,11,0.05)", border: "1px solid rgba(245,158,11,0.15)" }}>
               <div className="flex items-center gap-2">
                 <Trophy className="w-3.5 h-3.5 text-amber-400" />
                 <span className="text-xs font-semibold text-amber-300">Event-Gewinner</span>
               </div>
-              <div>
-                <label className="text-[11px] text-gray-500 block mb-1">Welches Stat-Feld bestimmt den Gewinner?</label>
-                <select
-                  value={winnerStatField}
-                  onChange={e => {
-                    setWinnerStatField(e.target.value);
-                    if (!rankingManuallyEdited && e.target.value) autoSort(e.target.value);
-                  }}
-                  className={inputCls}
-                >
-                  <option value="">– kein Gewinner-Stat –</option>
-                  {tournamentStatFields.map(f => <option key={f} value={f}>{f}</option>)}
-                </select>
-              </div>
+              {isAvgFormat ? (
+                <div>
+                  <label className="text-[11px] text-gray-500 block mb-1">Wer gewinnt beim Durchschnittswert?</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {([
+                      { value: "high", label: "Höchster Ø gewinnt" },
+                      { value: "low",  label: "Niedrigster Ø gewinnt" },
+                    ] as const).map(opt => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => {
+                          setAvgDirection(opt.value);
+                          if (!rankingManuallyEdited) autoSort();
+                        }}
+                        className={`rounded-lg px-3 py-2 text-xs font-medium border transition-colors ${
+                          avgDirection === opt.value
+                            ? "border-amber-500/60 bg-amber-500/10 text-amber-300"
+                            : "border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600"
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-gray-600 mt-1">
+                    Bewertet wird der kombinierte Durchschnitt pro Runde über alle Stat-Felder (nicht die Summe).
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <label className="text-[11px] text-gray-500 block mb-1">Welches Stat-Feld bestimmt den Gewinner?</label>
+                  <select
+                    value={winnerStatField}
+                    onChange={e => {
+                      setWinnerStatField(e.target.value);
+                      if (!rankingManuallyEdited && e.target.value) autoSort(e.target.value);
+                    }}
+                    className={inputCls}
+                  >
+                    <option value="">– kein Gewinner-Stat –</option>
+                    {tournamentStatFields.map(f => <option key={f} value={f}>{f}</option>)}
+                  </select>
+                </div>
+              )}
               {seriesStatFields.length > 0 && (
                 <div>
                   <label className="text-[11px] text-gray-500 block mb-1">…Sieg in Gesamttabelle tracken als</label>
@@ -453,7 +506,7 @@ export default function EventCompleteClient({
                   </select>
                 </div>
               )}
-              {previewWinners.length > 0 && winnerStatField && (
+              {previewWinners.length > 0 && (isAvgFormat || winnerStatField) && (
                 <div className="flex flex-col gap-0.5">
                   <p className="text-[10px] text-gray-500">{previewWinners.length > 1 ? "Aktuelle Gewinner (Gleichstand):" : "Aktueller Gewinner:"}</p>
                   {previewWinners.map(uid => {
@@ -462,7 +515,7 @@ export default function EventCompleteClient({
                       <p key={uid} className="text-xs text-amber-400 flex items-center gap-1.5">
                         <Trophy className="w-3.5 h-3.5 shrink-0" />
                         <strong>{u ? userName(u) : uid}</strong>
-                        {" "}({userStats[uid]?.[winnerStatField] ?? 0} {winnerStatField})
+                        {" "}({isAvgFormat ? `Ø ${(userAvgScore[uid] ?? 0).toFixed(2)}` : `${userStats[uid]?.[winnerStatField] ?? 0} ${winnerStatField}`})
                       </p>
                     );
                   })}
@@ -783,15 +836,17 @@ export default function EventCompleteClient({
             <div className="flex items-center gap-2 flex-wrap">
               <ListOrdered className="w-3.5 h-3.5 text-blue-400 shrink-0" />
               <span className="text-xs font-semibold text-blue-300">Finale Platzierung</span>
-              {!rankingManuallyEdited && winnerStatField && (
-                <span className="text-[10px] text-gray-600">— auto-sortiert nach „{winnerStatField}"</span>
+              {!rankingManuallyEdited && (isAvgFormat || winnerStatField) && (
+                <span className="text-[10px] text-gray-600">
+                  — auto-sortiert nach „{isAvgFormat ? `Ø (${avgDirection === "high" ? "höchster" : "niedrigster"} gewinnt)` : winnerStatField}"
+                </span>
               )}
               {rankingManuallyEdited && (
                 <span className="flex items-center gap-1 text-[10px] text-amber-400">
                   <AlertTriangle className="w-3 h-3" /> manuell geändert
                 </span>
               )}
-              {rankingManuallyEdited && winnerStatField && (
+              {rankingManuallyEdited && (isAvgFormat || winnerStatField) && (
                 <button
                   onClick={() => autoSort()}
                   className="ml-auto flex items-center gap-1 text-[10px] text-blue-400/60 hover:text-blue-300 transition-colors"
@@ -866,7 +921,12 @@ export default function EventCompleteClient({
                         </span>
                         <Avatar u={u} size={5} />
                         <span className="text-xs text-white flex-1 truncate">{userName(u)}</span>
-                        {winnerStatField && userStats[uid]?.[winnerStatField] != null && (
+                        {isAvgFormat && userAvgScore[uid] != null && (
+                          <span className="text-[10px] text-gray-500 tabular-nums shrink-0">
+                            Ø {userAvgScore[uid].toFixed(2)}
+                          </span>
+                        )}
+                        {!isAvgFormat && winnerStatField && userStats[uid]?.[winnerStatField] != null && (
                           <span className="text-[10px] text-gray-500 tabular-nums shrink-0">
                             {userStats[uid][winnerStatField]} {winnerStatField}
                           </span>
