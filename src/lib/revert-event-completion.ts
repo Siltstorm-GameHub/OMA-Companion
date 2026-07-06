@@ -39,6 +39,7 @@ type CompletionData = {
   spectatorAttendedIds?: string[] | null;
   appliedAggregatedStats?: Record<string, Record<string, number>> | null;
   eventPollRewards?: EventPollReward[] | null;
+  pollParticipationReward?: { userId: string; coins: number }[] | null;
   dominionChanges?: Record<string, DominionChange> | null;
   finalRanking?: string[] | null;
   finalRankingGroups?: string[][] | null;
@@ -143,14 +144,19 @@ export async function revertEventCompletion(eventId: string, opts: RevertOptions
     }
   }
 
-  // DB-basierte EventPoll-Belohnungen (Teilnahme + Sieger, Münzen + Rang-Punkte)
+  // DB-basierte EventPoll-Belohnungen (Sieger-Münzen + Ligapunkte pro Umfrage, Rang-Punkte für Teilnahme)
   for (const ep of cd.eventPollRewards ?? []) {
     for (const userId of ep.voterIds ?? []) {
-      reverse(userId, ep.participationCoins ?? 0, ep.participationSeriesPoints ?? 0);
+      reverse(userId, 0, ep.participationSeriesPoints ?? 0);
     }
     for (const userId of ep.winnerIds ?? []) {
       reverse(userId, ep.winnerCoins ?? 0, ep.winnerRankPoints ?? 0);
     }
+  }
+
+  // Einmalige, event-weite Umfrage-Teilnahme-Belohnung (Münzen, nicht pro Umfrage)
+  for (const pr of cd.pollParticipationReward ?? []) {
+    reverse(pr.userId, pr.coins ?? 0, 0);
   }
 
   // Teilnahme-/Platzierungs-/Zuschauer-Basis-Belohnungen (nur wenn explizit angefordert, siehe Docstring)

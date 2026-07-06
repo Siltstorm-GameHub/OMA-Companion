@@ -431,15 +431,6 @@ export async function POST(
 
     for (const old of oldPollRewards) {
       const txns: Prisma.PrismaPromise<unknown>[] = [];
-      // Reverse participation coins
-      if (old.participationCoins > 0) {
-        for (const uid of old.voterIds) {
-          txns.push(
-            prisma.user.update({ where: { id: uid }, data: { points: { increment: -old.participationCoins } } }),
-            prisma.pointTransaction.create({ data: { userId: uid, amount: -old.participationCoins, reason: `[Korrektur] Poll Teilnahme: ${old.label}` } })
-          );
-        }
-      }
       // Reverse winner coins (Ligapunkte-Rollback läuft über series standings)
       if (old.winnerCoins > 0) {
         for (const uid of old.winnerIds) {
@@ -452,6 +443,19 @@ export async function POST(
       if (txns.length > 0) await prisma.$transaction(txns);
       // Reset rewardsPaid on old polls so they get re-processed
       await prisma.eventPoll.update({ where: { id: old.pollId }, data: { rewardsPaid: false } });
+    }
+
+    // Reverse the one-time, event-wide Umfrage-Teilnahme-Belohnung (nicht pro Poll)
+    const oldParticipationReward = (oldCompletion.pollParticipationReward as Array<{ userId: string; coins: number }> | undefined) ?? [];
+    if (oldParticipationReward.length > 0) {
+      const txns: Prisma.PrismaPromise<unknown>[] = [];
+      for (const { userId: uid, coins } of oldParticipationReward) {
+        txns.push(
+          prisma.user.update({ where: { id: uid }, data: { points: { increment: -coins } } }),
+          prisma.pointTransaction.create({ data: { userId: uid, amount: -coins, reason: `[Korrektur] Umfrage Teilnahme: ${event.title}` } })
+        );
+      }
+      await prisma.$transaction(txns);
     }
   }
 
@@ -468,6 +472,11 @@ export async function POST(
     participationCoins: number; participationSeriesPoints: number;
     winnerCoins: number; winnerRankPoints: number; label: string;
   }> = [];
+
+  // Teilnahme-Münzen werden einmalig pro Event vergeben, nicht je Umfrage: über alle in diesem
+  // Lauf verarbeiteten Umfragen hinweg bekommt jeder Voter die Belohnung nur einmal, in Höhe des
+  // höchsten konfigurierten Betrags unter den Umfragen, an denen er teilgenommen hat.
+  const participationCoinsByVoter: Record<string, number> = {};
 
   for (const poll of unpaidPolls) {
     // Determine winner(s): targetId with most votes; ties = all with max
@@ -488,15 +497,11 @@ export async function POST(
 
     const txns: Prisma.PrismaPromise<unknown>[] = [];
 
-    // Participation rewards (once per voter)
+    // Teilnahme (einmal pro Voter über alle Umfragen des Events hinweg, siehe unten)
     const uniqueVoterIds = [...new Set(voterIds)];
-    if (poll.participationCoins > 0) {
-      for (const uid of uniqueVoterIds) {
-        txns.push(
-          prisma.user.update({ where: { id: uid }, data: { points: { increment: poll.participationCoins } } }),
-          prisma.pointTransaction.create({ data: { userId: uid, amount: poll.participationCoins, reason: `[Münzen] Poll Teilnahme: ${poll.label}` } })
-        );
-      }
+    for (const uid of uniqueVoterIds) {
+      if (poll.participationCoins > (participationCoinsByVoter[uid] ?? 0))
+        participationCoinsByVoter[uid] = poll.participationCoins;
     }
     // Winner rewards
     if (poll.winnerCoins > 0) {
@@ -525,6 +530,20 @@ export async function POST(
       label: poll.label,
     });
   }
+
+  // Einmalige Teilnahme-Belohnung pro Event auszahlen (Betrag = höchster konfigurierter Wert
+  // unter den Umfragen, an denen der jeweilige User teilgenommen hat)
+  const pollParticipationReward: { userId: string; coins: number }[] = [];
+  const participationTxns: Prisma.PrismaPromise<unknown>[] = [];
+  for (const [uid, coins] of Object.entries(participationCoinsByVoter)) {
+    if (coins <= 0) continue;
+    pollParticipationReward.push({ userId: uid, coins });
+    participationTxns.push(
+      prisma.user.update({ where: { id: uid }, data: { points: { increment: coins } } }),
+      prisma.pointTransaction.create({ data: { userId: uid, amount: coins, reason: `[Münzen] Umfrage Teilnahme: ${event.title}` } })
+    );
+  }
+  if (participationTxns.length > 0) await prisma.$transaction(participationTxns);
 
   // ── Series-Standings (optional, nur wenn Event in einer Reihe ist) ──────────
   let updatedStandings: SeriesStandings | null = null;
@@ -873,6 +892,7 @@ export async function POST(
     gamePhaseComplete:       true,
     pollPhaseComplete,
     eventPollRewards:        eventPollRewards.length > 0 ? eventPollRewards : null,
+    pollParticipationReward: pollParticipationReward.length > 0 ? pollParticipationReward : null,
     dominionChanges:         Object.keys(dominionChanges).length > 0 ? dominionChanges : null,
     lockedAt:                new Date().toISOString(),
   };
