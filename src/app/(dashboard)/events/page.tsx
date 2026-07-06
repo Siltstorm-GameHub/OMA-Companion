@@ -192,7 +192,8 @@ export default async function EventsPage() {
                 }}>
                 <div className={`absolute top-0 left-0 right-0 h-[2px] ${CATEGORY_STRIP[ev.category as EventCategory] ?? "bg-emerald-500"}`} />
                 <div className={`absolute inset-0 ${CATEGORY_BG_TINT[ev.category as EventCategory] ?? ""} opacity-60 pointer-events-none`} />
-                <div className={`absolute left-0 top-4 bottom-4 w-[3px] rounded-r-full ${isRegistered ? "bg-emerald-400" : s.bar}`} />
+                <div className={`absolute left-0 top-4 bottom-4 w-[3px] rounded-r-full ${hasSeries ? "" : isRegistered ? "bg-emerald-400" : s.bar}`}
+                  style={hasSeries ? { background: seriesColor } : undefined} />
                 <div className={`absolute inset-0 bg-gradient-to-r ${isRegistered ? "from-emerald-500/4" : s.glow} to-transparent opacity-60 pointer-events-none`} />
                 <div className="relative shrink-0 flex flex-col items-center gap-1.5">
                   <GameCover game={ev.game} className="w-20 h-[52px]" rounded="rounded-lg" />
