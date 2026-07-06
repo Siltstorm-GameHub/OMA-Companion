@@ -47,8 +47,8 @@ type RewardsConfig = { participationCoins: number; placements: PlacementReward[]
 type PollConfig = {
   label: string;
   question: string;
-  voterEligibility: "registered" | "all";
-  answerType: "players" | "custom";
+  voterEligibility: "all" | "participants" | "players" | "spectators";
+  answerType: "players" | "spectators" | "custom";
   customAnswers: string[];
   startOffsetHours: number;
   endOffsetHours: number;
@@ -69,7 +69,7 @@ const DEFAULT_REWARDS: RewardsConfig = {
 const DEFAULT_POLL_ITEM: PollConfig = {
   label: "MVP",
   question: "Wer war der MVP?",
-  voterEligibility: "registered",
+  voterEligibility: "participants",
   answerType: "players",
   customAnswers: [],
   startOffsetHours: 0,
@@ -597,10 +597,12 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
                         <div>
                           <label className="text-xs text-gray-500 mb-1 block">Wer darf abstimmen</label>
                           <select value={p.voterEligibility}
-                            onChange={e => setPolls(prev => prev.map((x, j) => j === i ? { ...x, voterEligibility: e.target.value as "registered" | "all" } : x))}
+                            onChange={e => setPolls(prev => prev.map((x, j) => j === i ? { ...x, voterEligibility: e.target.value as PollConfig["voterEligibility"] } : x))}
                             className={inputCls}>
-                            <option value="registered">Nur Teilnehmer</option>
-                            <option value="all">Alle</option>
+                            <option value="all">Alle App-Mitglieder</option>
+                            <option value="participants">Mitspieler + Zuschauer</option>
+                            <option value="players">Nur Mitspieler</option>
+                            <option value="spectators">Nur Zuschauer</option>
                           </select>
                         </div>
                       </div>
@@ -613,9 +615,10 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
                       <div>
                         <label className="text-xs text-gray-500 mb-1 block">Antwort-Typ</label>
                         <select value={p.answerType}
-                          onChange={e => setPolls(prev => prev.map((x, j) => j === i ? { ...x, answerType: e.target.value as "players" | "custom" } : x))}
+                          onChange={e => setPolls(prev => prev.map((x, j) => j === i ? { ...x, answerType: e.target.value as PollConfig["answerType"], customAnswers: [] } : x))}
                           className={inputCls}>
-                          <option value="players">Spieler auswählen</option>
+                          <option value="players">Mitspieler des Events</option>
+                          <option value="spectators">Zuschauer des Events</option>
                           <option value="custom">Eigene Antworten</option>
                         </select>
                       </div>
