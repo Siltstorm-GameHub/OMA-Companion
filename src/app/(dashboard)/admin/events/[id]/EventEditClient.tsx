@@ -437,7 +437,11 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
         ...(hasTournament || event.type === "tournament" ? [{ key: "tournament" as TabKey, label: "Turnier" }] : []),
         ...bracketTab,
         { key: "participants", label: `Teilnehmer (${event._count.registrations})` },
-        ...(event.series ? [{ key: "series" as TabKey, label: "Reihe" }] : []),
+        // Sieger-Ermittlung ist nur bei Bracket-Formaten relevant — bei allen anderen Reihen
+        // gewinnt am Ende schlicht, wer die meisten Rangpunkte gesammelt hat.
+        ...(event.series && (event.format === "single_elimination" || event.format === "double_elimination")
+          ? [{ key: "series" as TabKey, label: "Reihe" }]
+          : []),
       ];
 
   /* ── Turnierbaum-Daten (für Inline-Tab, analog zur admin/events/[id]/bracket-Seite) ── */
@@ -1118,7 +1122,8 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
       )}
 
       {/* ── Tab: Reihe ── */}
-      {activeTab === "series" && event.series && (
+      {activeTab === "series" && event.series &&
+        (event.format === "single_elimination" || event.format === "double_elimination") && (
         <div className="space-y-4">
           <div className="rounded-xl border border-white/[0.06] bg-gray-900/50 p-4 space-y-4">
             <div>
