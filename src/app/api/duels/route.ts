@@ -61,10 +61,11 @@ export async function POST(req: NextRequest) {
 
   const [me, opponent] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId }, select: { points: true, username: true, name: true } }),
-    prisma.user.findUnique({ where: { id: opponentId }, select: { id: true } }),
+    prisma.user.findUnique({ where: { id: opponentId }, select: { id: true, points: true } }),
   ]);
   if (!opponent) return NextResponse.json({ error: "Gegner nicht gefunden" }, { status: 404 });
   if (!me || me.points < wager) return NextResponse.json({ error: "Nicht genug Münzen für diesen Einsatz" }, { status: 400 });
+  if (opponent.points < wager) return NextResponse.json({ error: "Dieser Nutzer hat nicht genug Münzen für diesen Einsatz" }, { status: 400 });
 
   if (await isPairOnCooldown(userId, opponentId)) {
     return NextResponse.json({ error: "Ihr habt kürzlich schon gegeneinander geduellt — versuch es später erneut" }, { status: 409 });
@@ -81,9 +82,31 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `Maximal ${MAX_DUELS_PER_DAY} Duelle pro Tag` }, { status: 409 });
   }
 
-  const challenge = await prisma.duelChallenge.create({
-    data: { challengerId: userId, opponentId, wager },
-  });
+  // Einsatz des Herausforderers sofort escrowen, damit er bei Annahme garantiert zahlungsfähig ist
+  // (ohne Escrow könnte er das Guthaben zwischenzeitlich anderweitig ausgeben)
+  let challenge;
+  try {
+    challenge = await prisma.$transaction(async tx => {
+      const debit = await tx.user.updateMany({
+        where: { id: userId, points: { gte: wager } },
+        data: { points: { decrement: wager } },
+      });
+      if (debit.count === 0) throw new Error("INSUFFICIENT_FUNDS");
+
+      const created = await tx.duelChallenge.create({
+        data: { challengerId: userId, opponentId, wager },
+      });
+      await tx.pointTransaction.create({
+        data: { userId, amount: -wager, reason: "🔒 Duell-Einsatz reserviert" },
+      });
+      return created;
+    });
+  } catch (err) {
+    if (err instanceof Error && err.message === "INSUFFICIENT_FUNDS") {
+      return NextResponse.json({ error: "Nicht genug Münzen für diesen Einsatz" }, { status: 400 });
+    }
+    throw err;
+  }
 
   dispatchNotification("duel_challenge", {
     users: [opponentId],

@@ -60,6 +60,7 @@ model User {
   clipSubmissions          EventClipSubmission[]
   clipNominations          ClipNomination[]
   contestVotes             ClipContestVote[]
+  yearlyClipVotes          YearlyClipContestVote[]
   eventPollVotes           EventPollVote[]
   systemBadges             UserSystemBadge[]
   customBadgeAwards        UserCustomBadge[]
@@ -453,6 +454,36 @@ model ClipContestVote {
   nomination   ClipNomination     @relation(fields: [nominationId], references: [id], onDelete: Cascade)
   user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt    DateTime           @default(now())
+
+  @@unique([contestId, userId])
+}
+
+// ── Clip des Jahres ──────────────────────────────────────────────────────────
+// Jährliche Umfrage über alle Clip-des-Monats-Gewinner. Referenziert bestehende
+// ClipNomination-Zeilen lose per ID (keine FK-Relation möglich, da eine
+// ClipNomination bereits fest an ihren MonthlyClipContest gebunden ist).
+
+model YearlyClipContest {
+  id                  String                  @id @default(cuid())
+  year                Int                     @unique // Jahr, in dem die Umfrage läuft; deckt Dez(year-1) bis Nov(year) ab
+  votingEndsAt        DateTime                @default(now())
+  status              String                  @default("voting") // voting | finished
+  participationCoins  Int                     @default(10)
+  rewardCoins         Int                     @default(1000)
+  nominationIds       String[]                @default([]) // ClipNomination-IDs der Monatssieger dieses Zeitraums
+  winnerNominationIds String[]                @default([])
+  createdAt           DateTime                @default(now())
+  votes               YearlyClipContestVote[]
+}
+
+model YearlyClipContestVote {
+  id           String            @id @default(cuid())
+  contestId    String
+  nominationId String // ClipNomination.id — lose Referenz, keine FK-Relation
+  userId       String
+  contest      YearlyClipContest @relation(fields: [contestId], references: [id], onDelete: Cascade)
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime          @default(now())
 
   @@unique([contestId, userId])
 }
