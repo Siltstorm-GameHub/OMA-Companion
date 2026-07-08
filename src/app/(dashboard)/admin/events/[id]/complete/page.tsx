@@ -62,7 +62,7 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
         },
         polls: {
           where: { rewardsPaid: false },
-          select: { label: true, endAt: true, excludedUserIds: true, votes: { select: { targetId: true } } },
+          select: { label: true, endAt: true },
         },
       },
     }),
@@ -172,16 +172,6 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
 
   const pendingEventPolls = event.polls.map(p => ({ label: p.label, endAt: p.endAt.toISOString() }));
 
-  // Echte In-App-Stimmen je Poll-Label — zum Vorausfüllen/Synchronisieren der Nachtrage-Eingabe
-  const realPollVotes: Record<string, { voteCounts: Record<string, number>; excludedUserIds: string[] }> = {};
-  for (const p of event.polls) {
-    const voteCounts: Record<string, number> = {};
-    for (const v of p.votes) voteCounts[v.targetId] = (voteCounts[v.targetId] ?? 0) + 1;
-    let excludedUserIds: string[] = [];
-    try { excludedUserIds = p.excludedUserIds ? JSON.parse(p.excludedUserIds) : []; } catch { /* ignore */ }
-    realPollVotes[p.label] = { voteCounts, excludedUserIds };
-  }
-
   return (
     <EventCompleteClient
       eventId={event.id}
@@ -201,7 +191,6 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
       pollConfig={pollConfig}
       pollsConfig={pollsConfig}
       pendingEventPolls={pendingEventPolls}
-      realPollVotes={realPollVotes}
       spectatorRewardJson={spectatorRewardJson}
       isAdmin={currentUser.role === "admin"}
       isReEdit={isReEdit}

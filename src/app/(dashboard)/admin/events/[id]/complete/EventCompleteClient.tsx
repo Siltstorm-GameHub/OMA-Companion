@@ -18,7 +18,6 @@ type PlacementReward = { place: number; coins: number; rankPoints: number };
 type RewardsConfig = { participationCoins: number; placements: PlacementReward[] };
 type PollConfig = { enabled: boolean; question: string; coins: number; rankPoints: number };
 type MultiPollConfig = { label: string; question: string; coins: number; rankPoints: number; type: "player" | "spectator" };
-type PollResult = { label: string; winnerIds: string[]; coins: number; rankPoints: number; type: "player" | "spectator" };
 type SeriesStatConfig = {
   participationPoints: number;
   participationCoins?: number;
@@ -49,8 +48,6 @@ interface Props {
   pollConfig: PollConfig;
   pollsConfig: MultiPollConfig[];
   pendingEventPolls: { label: string; endAt: string }[];
-  /** Echte, bereits in der App abgegebene Stimmen je Poll-Label — für die Nachtrage-Eingabe */
-  realPollVotes: Record<string, { voteCounts: Record<string, number>; excludedUserIds: string[] }>;
   spectatorRewardJson: { coins: number; rankPoints: number } | null;
   isAdmin: boolean;
   isReEdit: boolean;
@@ -104,7 +101,7 @@ function computePlacementMap(groups: string[][]): Map<string, number> {
 export default function EventCompleteClient({
   eventId, eventTitle, seriesId, seriesName, seriesIcon,
   registeredUsers, spectatorUsers, allUsers, tournamentStatFields, userStats, format, userAvgScore,
-  seriesStatConfig, rewardsConfig, pollConfig, pollsConfig, pendingEventPolls, realPollVotes, spectatorRewardJson,
+  seriesStatConfig, rewardsConfig, pollConfig, pollsConfig, pendingEventPolls, spectatorRewardJson,
   isAdmin, isReEdit, gamePhaseComplete, pollPhaseComplete,
   initialData, initialFinalRanking, initialRankingGroups, initialFinalRankingNote,
 }: Props) {
@@ -151,14 +148,6 @@ export default function EventCompleteClient({
     for (const id of winners) old[id] = 1;
     return old;
   });
-
-  /* ── Multi-Polls ── */
-  // Vorausgefüllt mit den echten, bereits in der App abgegebenen Stimmen — Admin kann für
-  // Personen ohne App-Zugang zusätzliche Stimmen nachtragen (auch nachdem die Umfrage
-  // per Timer oder manuell beendet wurde).
-  const [multiPollVotes, setMultiPollVotes] = useState<Record<number, Record<string, number>>>(
-    () => Object.fromEntries(pollsConfig.map((cfg, i) => [i, { ...(realPollVotes[cfg.label]?.voteCounts ?? {}) }]))
-  );
 
   /* ── Zuschauer-Anwesenheit ── */
   const [spectatorAttended, setSpectatorAttended] = useState<Set<string>>(
@@ -246,15 +235,8 @@ export default function EventCompleteClient({
     return pollEligible.filter(u => (pollVotes[u.id] ?? 0) === maxVotes).map(u => u.id);
   }, [pollEligible, pollVotes]);
 
-  // Wurden für irgendeine Multi-Umfrage schon Stimmen eingetragen?
-  const hasAnyMultiPollVotes = pollsConfig.some((_, i) =>
-    Object.values(multiPollVotes[i] ?? {}).some(v => v > 0)
-  );
   // Muss der Sieger einer (manuell einzutragenden) Umfrage jetzt noch nicht feststehen?
-  const canDeferPoll = !isReEdit && (
-    (pollConfig.enabled && pollWinners.length === 0) ||
-    (pollsConfig.length > 0 && !hasAnyMultiPollVotes)
-  );
+  const canDeferPoll = !isReEdit && pollConfig.enabled && pollWinners.length === 0;
   // Bleibt das Event nach diesem Speichern in der Umfragephase (Status "umfrage")?
   const pollPhasePending = canDeferPoll || (!isReEdit && openEventPolls.length > 0);
 
@@ -334,17 +316,6 @@ export default function EventCompleteClient({
   async function handleConfirm(pollOnly = false) {
     setLoading(true);
 
-    // Compute multi-poll results
-    const pollResults: PollResult[] = pollsConfig.map((cfg, i) => {
-      const eligible = cfg.type === "spectator"
-        ? spectatorUsers.filter(u => spectatorAttended.has(u.id))
-        : registeredUsers;
-      const votes = multiPollVotes[i] ?? {};
-      const maxVotes = Math.max(...eligible.map(u => votes[u.id] ?? 0));
-      const winnerIds = maxVotes > 0 ? eligible.filter(u => (votes[u.id] ?? 0) === maxVotes).map(u => u.id) : [];
-      return { label: cfg.label, question: cfg.question, coins: cfg.coins, rankPoints: cfg.rankPoints, type: cfg.type, winnerIds };
-    });
-
     try {
       const hasPollVotes = pollWinners.length > 0;
       const res = await fetch(`/api/admin/events/${eventId}/complete`, {
@@ -360,7 +331,6 @@ export default function EventCompleteClient({
           pollBonusCoins:          pollConfig.enabled ? pollConfig.coins : undefined,
           pollBonusRankPoints:     pollConfig.enabled ? pollConfig.rankPoints : undefined,
           pollExcludedUserIds:     pollConfig.enabled && pollExcluded.size > 0 ? [...pollExcluded] : undefined,
-          pollResults:             !pollOnly && pollResults.length > 0 ? pollResults : undefined,
           spectatorAttendedIds:    spectatorUsers.length > 0 ? [...spectatorAttended] : undefined,
           finalRanking:            rankingOrder.length > 0 ? rankingOrder : undefined,
           finalRankingGroups:      rankingGroups.length > 0 ? rankingGroups : undefined,
@@ -712,58 +682,6 @@ export default function EventCompleteClient({
               </div>
             </div>
           )}
-
-          {/* Multi-Polls */}
-          {pollsConfig.map((cfg, i) => {
-            const allUsers = cfg.type === "spectator"
-              ? spectatorUsers.filter(u => spectatorAttended.has(u.id))
-              : registeredUsers;
-            // Ausschluss kommt jetzt aus der Live-Umfrage selbst (dort direkt einstellbar) —
-            // hier nur noch respektiert, nicht mehr separat editierbar.
-            const excluded = new Set(realPollVotes[cfg.label]?.excludedUserIds ?? []);
-            const eligible = allUsers.filter(u => !excluded.has(u.id));
-            const votes = multiPollVotes[i] ?? {};
-            const maxVotes = Math.max(...eligible.map(u => votes[u.id] ?? 0));
-            const winners = maxVotes > 0 ? eligible.filter(u => (votes[u.id] ?? 0) === maxVotes) : [];
-
-            return (
-              <div key={i} className="rounded-xl p-4 space-y-3" style={{ background: "rgba(139,92,246,0.05)", border: "1px solid rgba(139,92,246,0.15)" }}>
-                <p className="text-xs font-semibold text-violet-300">
-                  📊 {cfg.label || `Umfrage ${i + 1}`}
-                  {cfg.question && <span className="font-normal text-gray-500 ml-1">„{cfg.question}"</span>}
-                  <span className="text-[10px] text-gray-600 ml-1">({cfg.type === "spectator" ? "Zuschauer" : "Spieler"}-Poll)</span>
-                </p>
-
-                {/* Stimmen — vorausgefüllt mit den echten In-App-Stimmen, für Personen ohne App manuell nachtragbar */}
-                <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                  {eligible.map(u => (
-                    <div key={u.id} className="flex items-center gap-3">
-                      <Avatar u={u} size={5} />
-                      <span className="flex-1 text-sm text-white truncate">{userName(u)}</span>
-                      <input type="number" min={0} value={votes[u.id] ?? 0}
-                        onChange={e => setMultiPollVotes(prev => ({
-                          ...prev,
-                          [i]: { ...(prev[i] ?? {}), [u.id]: Math.max(0, Number(e.target.value)) }
-                        }))}
-                        className="w-16 rounded-lg px-2 py-1.5 text-sm text-white text-center bg-gray-800 border border-gray-700 focus:border-violet-500/50 outline-none transition-colors" />
-                    </div>
-                  ))}
-                  {eligible.length === 0 && <p className="text-xs text-gray-600 italic">Keine berechtigten Teilnehmer.</p>}
-                </div>
-
-                {winners.length > 0 && (
-                  <div className="rounded-lg bg-violet-500/10 border border-violet-500/20 px-3 py-2 space-y-1">
-                    <p className="text-[11px] text-violet-400 font-semibold">
-                      {winners.length === 1 ? "Gewinner" : `Gleichstand (${winners.length})`}: {winners.map(u => userName(u)).join(", ")}
-                    </p>
-                    <p className="text-[10px] text-gray-500">
-                      {cfg.coins > 0 ? `${cfg.coins} Münzen` : ""}{cfg.coins > 0 && cfg.rankPoints > 0 ? " + " : ""}{cfg.rankPoints > 0 ? `${cfg.rankPoints} RP` : ""}
-                    </p>
-                  </div>
-                )}
-              </div>
-            );
-          })}
 
           {/* Summary */}
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-2">

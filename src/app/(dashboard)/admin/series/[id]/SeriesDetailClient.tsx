@@ -182,6 +182,7 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
   const [polls, setPolls] = useState<PollConfig[]>(() => parsePollConfigs(series.pollsConfigJson ?? series.pollConfigJson));
   const [expandedPoll, setExpandedPoll] = useState<number | null>(null);
   const [propagatePolls, setPropagatePolls] = useState(false);
+  const [propagateStatFields, setPropagateStatFields] = useState(false);
 
   const sortedSeriesEvents = [...(series.events as SeriesEvent[])].sort((a, b) => {
     const aDone = a.status === "finished";
@@ -256,6 +257,7 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
         placementRewardsJson: JSON.stringify({ placements: placementRewards }),
         pollsConfigJson:      JSON.stringify(polls),
         propagatePolls,
+        propagateStatFields,
       }),
     });
     setSaving(false);
@@ -264,6 +266,7 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
       setPropagateGame(false);
       setPropagateFormat(false);
       setPropagatePolls(false);
+      setPropagateStatFields(false);
       router.refresh();
     } else {
       toast.error("Fehler beim Speichern");
@@ -869,6 +872,11 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
                 </div>
               )}
 
+              <Checkbox
+                checked={propagateStatFields}
+                onChange={setPropagateStatFields}
+                label="Stat-Felder auf alle offenen Events übertragen (überschreibt individuell abweichende Event-Einstellungen)"
+              />
             </Section>
           )}
 

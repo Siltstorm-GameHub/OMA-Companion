@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   await requireRole("moderator");
   const body = await req.json();
-  const { seriesId, propagateGame, propagateFormat, propagatePolls, ...fields } = body;
+  const { seriesId, propagateGame, propagateFormat, propagatePolls, propagateStatFields, ...fields } = body;
   if (!seriesId) return NextResponse.json({ error: "seriesId fehlt" }, { status: 400 });
 
   // Alten Namen merken, um die Event-Titel unten ggf. anzupassen
@@ -138,9 +138,11 @@ export async function PATCH(req: NextRequest) {
     });
   }
 
-  // 3b) Getrackte Stats je Event (seriesStatConfig.eventStatFields / stats) automatisch auf alle
+  // 3b) Optional: Getrackte Stats je Event (seriesStatConfig.eventStatFields / stats) auf alle
   //     noch nicht abgeschlossenen Events der Reihe übertragen — abgeschlossene ("finished") Events bleiben unverändert.
-  if (fields.seriesStatConfig !== undefined) {
+  //     Nur bei explizitem Opt-in, sonst würde jedes Speichern der Reihe (z.B. nur Name geändert) die
+  //     individuell pro Event gepflegten Stat-Felder überschreiben/zurücksetzen.
+  if (propagateStatFields && fields.seriesStatConfig !== undefined) {
     let statFieldsJson: string | null = null;
     if (fields.seriesStatConfig) {
       try {
