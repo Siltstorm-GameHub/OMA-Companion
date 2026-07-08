@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { toast } from "sonner";
-import { Vote, Trophy, Clock, CheckCircle2 } from "lucide-react";
+import { Vote, Trophy, Clock, CheckCircle2, Trash2 } from "lucide-react";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };
 
@@ -141,6 +141,27 @@ export default function LivePollsPanel({ eventId, isAdmin, registeredUsers, spec
     }
   }
 
+  async function removeVote(pollId: string, voterId: string) {
+    setSavingFor(`${pollId}:${voterId}`);
+    try {
+      const res = await fetch(`/api/admin/polls/${pollId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ removeVoterId: voterId }),
+      });
+      if (res.ok) {
+        await refresh();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast.error((err as { error?: string }).error ?? "Fehler beim Entfernen der Stimme");
+      }
+    } catch {
+      toast.error("Netzwerkfehler beim Entfernen der Stimme");
+    } finally {
+      setSavingFor(null);
+    }
+  }
+
   if (polls === null) return null;
   if (polls.length === 0) return null;
 
@@ -241,6 +262,15 @@ export default function LivePollsPanel({ eventId, isAdmin, registeredUsers, spec
                             <option value="">Ändern…</option>
                             {answers.map(a => <option key={a.id} value={a.id}>{a.label}</option>)}
                           </select>
+                          <button
+                            type="button"
+                            title="Stimme entfernen"
+                            disabled={isSaving}
+                            onClick={() => removeVote(poll.id, vote.voterId)}
+                            className="p-1 rounded-md text-gray-600 hover:text-red-400 hover:bg-black/20 transition-colors disabled:opacity-40 shrink-0"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       );
                     })}

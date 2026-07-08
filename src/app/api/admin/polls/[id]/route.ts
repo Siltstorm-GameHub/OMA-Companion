@@ -17,6 +17,8 @@ export async function PATCH(
     endAt?: string;
     manualVoterId?: string;
     manualTargetId?: string;
+    /** Stimme dieses Users für diese Umfrage komplett entfernen (nicht nur ändern) */
+    removeVoterId?: string;
     winnerIds?: string[];
     excludedUserIds?: string[];
   };
@@ -51,6 +53,10 @@ export async function PATCH(
       create: { pollId, voterId: body.manualVoterId, targetId: body.manualTargetId, isManual: true },
       update: { targetId: body.manualTargetId, isManual: true },
     });
+  }
+
+  if (body.removeVoterId) {
+    await prisma.eventPollVote.deleteMany({ where: { pollId, voterId: body.removeVoterId } });
   }
 
   const updated = await prisma.eventPoll.findUnique({
