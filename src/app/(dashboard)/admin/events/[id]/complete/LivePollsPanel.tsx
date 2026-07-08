@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
+import { toast } from "sonner";
 import { Vote, Trophy, Clock, CheckCircle2 } from "lucide-react";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };
@@ -75,7 +76,14 @@ export default function LivePollsPanel({ eventId, isAdmin, registeredUsers, spec
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ manualVoterId: voterId, manualTargetId: targetId }),
       });
-      if (res.ok) await refresh();
+      if (res.ok) {
+        await refresh();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast.error((err as { error?: string }).error ?? "Fehler beim Eintragen der Stimme");
+      }
+    } catch {
+      toast.error("Netzwerkfehler beim Eintragen der Stimme");
     } finally {
       setSavingFor(null);
     }
