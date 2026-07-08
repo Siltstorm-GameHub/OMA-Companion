@@ -1,11 +1,11 @@
 import { headers } from "next/headers";
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import { Trophy, Clapperboard } from "lucide-react";
+import { Trophy, Clapperboard, Images } from "lucide-react";
 import ClipVotingClient from "./ClipVotingClient";
-import TwitchClipEmbed from "@/components/TwitchClipEmbed";
+import ClipWinnerCard from "@/components/ClipWinnerCard";
 import CountdownBadge from "@/components/CountdownBadge";
-import { clipCredit } from "@/lib/clip-display";
 
 const MONTH_NAMES = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
 
@@ -41,7 +41,19 @@ export default async function ClipDesMonatsPage() {
     },
   });
 
-  const winners = finishedContest
+  // Sobald die Clip-des-Jahres-Wahl für den Zeitraum dieses Monatssiegers abgeschlossen ist,
+  // verschwindet er hier (er lebt dann nur noch in der Galerie als Teil des Jahres-Gewinners).
+  let supersededByYearlyContest = false;
+  if (finishedContest) {
+    const coveringYear = finishedContest.month === 12 ? finishedContest.year + 1 : finishedContest.year;
+    const coveringYearlyContest = await prisma.yearlyClipContest.findUnique({
+      where: { year: coveringYear },
+      select: { status: true },
+    });
+    supersededByYearlyContest = coveringYearlyContest?.status === "finished";
+  }
+
+  const winners = finishedContest && !supersededByYearlyContest
     ? finishedContest.nominations.filter((n) => finishedContest.winnerNominationIds.includes(n.id))
     : [];
 
@@ -71,39 +83,19 @@ export default async function ClipDesMonatsPage() {
             )}
           </div>
           <div className={`grid gap-4 ${winners.length > 1 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
-            {winners.map((winner) => {
-              const credit = clipCredit(winner);
-              return (
-                <div key={winner.id} className="rounded-2xl overflow-hidden border border-amber-500/20 bg-amber-500/5">
-                  <TwitchClipEmbed
-                    clipUrl={winner.clipUrl}
-                    thumbnailUrl={winner.thumbnailUrl}
-                    title={winner.clipTitle ?? "Gewinner-Clip"}
-                    parent={embedParent}
-                    overlay={
-                      <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-amber-500 text-black text-xs font-bold px-2 py-1 rounded-full">
-                        <Trophy className="w-3 h-3" /> Gewinner
-                      </div>
-                    }
-                  />
-                  <div className="px-4 py-3 border-t border-amber-500/10">
-                    <p className="text-white font-semibold">{winner.clipTitle ?? "Unbekannter Clip"}</p>
-                    <p className="text-sm text-gray-400 mt-0.5">
-                      Kanal: <span className="text-[#9146ff]">{credit.channel}</span>
-                      {credit.creator && (
-                        <> · Clip von <span className="text-amber-300">{credit.creator}</span></>
-                      )}
-                      {finishedContest.rewardCoins > 0 && (
-                        <> · <span className="text-amber-400">{finishedContest.rewardCoins} Münzen</span> gewonnen</>
-                      )}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
+            {winners.map((winner) => (
+              <ClipWinnerCard key={winner.id} winner={winner} embedParent={embedParent} rewardCoins={finishedContest.rewardCoins} />
+            ))}
           </div>
         </section>
       )}
+
+      <Link
+        href="/clip-galerie"
+        className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-300 transition-colors"
+      >
+        <Images className="w-4 h-4" /> Zur Clip-Galerie →
+      </Link>
 
       {/* ── Laufende Abstimmung ────────────────────────────────────────── */}
       {activeContest ? (

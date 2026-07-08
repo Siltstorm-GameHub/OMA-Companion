@@ -95,6 +95,15 @@ const PLACEHOLDERS: Record<string, { key: string; description: string }[]> = {
     { key: "{resultHeadline}", description: "Kurzer Ergebnis-Titel (z.B. \"Gewinner steht fest!\")" },
     { key: "{resultText}", description: "Ausführlicher Ergebnistext" },
   ],
+  clip_of_year_started: [
+    { key: "{year}", description: "Jahr" },
+    { key: "{nominationCount}", description: "Anzahl nominierter Clips" },
+  ],
+  clip_of_year_finished: [
+    { key: "{year}", description: "Jahr" },
+    { key: "{resultHeadline}", description: "Kurzer Ergebnis-Titel (z.B. \"Gewinner steht fest!\")" },
+    { key: "{resultText}", description: "Ausführlicher Ergebnistext" },
+  ],
   rank_up: [
     { key: "{username}", description: "Discord-Erwähnung des Users" },
     { key: "{rank}", description: "Name des neuen Rangs" },

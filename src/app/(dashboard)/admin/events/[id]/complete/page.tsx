@@ -37,7 +37,7 @@ function parsePoll(json: string | null | undefined): PollConfig {
 }
 
 export default async function AdminEventCompletePage({ params }: { params: Promise<{ id: string }> }) {
-  await requireRole("moderator");
+  const currentUser = await requireRole("moderator");
   const { id } = await params;
 
   const [event, allUsers] = await Promise.all([
@@ -202,6 +202,7 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
       pendingEventPolls={pendingEventPolls}
       realPollVotes={realPollVotes}
       spectatorRewardJson={spectatorRewardJson}
+      isAdmin={currentUser.role === "admin"}
       isReEdit={isReEdit}
       gamePhaseComplete={gamePhaseComplete}
       pollPhaseComplete={pollPhaseComplete}

@@ -6,9 +6,10 @@ import Link from "next/link";
 import CoinIcon from "@/components/CoinIcon";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import SeriesIcon from "@/components/SeriesIcon";
+import LivePollsPanel from "./LivePollsPanel";
 import {
   ChevronLeft, CheckCircle2, Trophy, Vote,
-  ListOrdered, GripVertical, Coins, AlertTriangle, RotateCcw, Equal,
+  ListOrdered, GripVertical, Coins, AlertTriangle, RotateCcw, Equal, Lock,
 } from "lucide-react";
 
 /* ── Types ── */
@@ -49,6 +50,7 @@ interface Props {
   /** Echte, bereits in der App abgegebene Stimmen je Poll-Label — für die Nachtrage-Eingabe */
   realPollVotes: Record<string, { voteCounts: Record<string, number>; excludedUserIds: string[] }>;
   spectatorRewardJson: { coins: number; rankPoints: number } | null;
+  isAdmin: boolean;
   isReEdit: boolean;
   gamePhaseComplete: boolean;
   pollPhaseComplete: boolean;
@@ -101,7 +103,7 @@ export default function EventCompleteClient({
   eventId, eventTitle, seriesId, seriesName, seriesIcon,
   registeredUsers, spectatorUsers, tournamentStatFields, userStats, format, userAvgScore,
   seriesStatConfig, rewardsConfig, pollConfig, pollsConfig, pendingEventPolls, realPollVotes, spectatorRewardJson,
-  isReEdit, gamePhaseComplete, pollPhaseComplete,
+  isAdmin, isReEdit, gamePhaseComplete, pollPhaseComplete,
   initialData, initialFinalRanking, initialRankingGroups, initialFinalRankingNote,
 }: Props) {
   const router = useRouter();
@@ -109,9 +111,15 @@ export default function EventCompleteClient({
 
   // Mode: poll-only when game phase is confirmed but poll is still open
   const isPollOnly = isReEdit && gamePhaseComplete && !pollPhaseComplete;
+  // Event-Gewinner steht ab Abschluss der Spielphase fest und ist danach nicht mehr änderbar
+  // (weder im Poll-Only- noch im vollen Re-Edit-Modus) — nur die Finale Platzierung bleibt es.
+  const winnerLocked = isReEdit && gamePhaseComplete;
 
   // Läuft noch eine in-App-Umfrage (EventPoll), deren Abstimmungsfenster noch nicht vorbei ist?
   const openEventPolls = pendingEventPolls.filter(p => new Date(p.endAt) > new Date());
+  // Im Poll-Only-Modus: schließt das Speichern hier die Umfragephase endgültig ab (Admin kann noch
+  // offene Umfragen zwangsweise beenden; ohne offene Umfragen passiert das ohnehin automatisch)?
+  const willFinalizePolls = isPollOnly && (isAdmin || openEventPolls.length === 0);
 
   /* ── Gewinner-Stat ── */
   const [winnerStatField, setWinnerStatField] = useState<string>(
@@ -357,6 +365,7 @@ export default function EventCompleteClient({
           finalRankingNote:        rankingNote || undefined,
           participationCoins:      seriesId ? undefined : rewardsConfig.participationCoins,
           placements:              rewardsConfig.placements,
+          closeOpenPolls:          isPollOnly ? isAdmin : undefined,
         }),
       });
       if (!res.ok) {
@@ -366,8 +375,10 @@ export default function EventCompleteClient({
       }
       if (pollOnly || (!isReEdit && pollPhasePending)) {
         toast.success(`Spielphase abgeschlossen – Umfrage läuft, Punkte kommen nach deren Abschluss dazu`);
+      } else if (willFinalizePolls) {
+        toast.success(`"${eventTitle}" vollständig abgeschlossen – Umfrage-Belohnungen vergeben`);
       } else if (isPollOnly) {
-        toast.success(`Umfrage für "${eventTitle}" abgeschlossen`);
+        toast.success(`Änderungen für "${eventTitle}" gespeichert – Umfrage läuft noch weiter`);
       } else {
         toast.success(isReEdit ? `"${eventTitle}" aktualisiert` : `"${eventTitle}" abgeschlossen`);
       }
@@ -416,8 +427,10 @@ export default function EventCompleteClient({
         <div className="flex items-start gap-2 rounded-xl border border-violet-500/20 bg-violet-500/5 px-4 py-3 text-xs text-violet-300">
           <Vote className="w-4 h-4 shrink-0 mt-0.5" />
           <span>
-            Die <strong>Spielphase ist bereits abgeschlossen</strong> – Teilnahmen und die Gesamttabelle wurden bereits aktualisiert.
-            Alle Felder können weiterhin bearbeitet werden. Umfrageergebnisse hier nachtragen.
+            Die <strong>Spielphase ist bereits abgeschlossen</strong> – Teilnahmen, Gesamttabelle und der Event-Gewinner
+            wurden bereits festgelegt und sind nicht mehr änderbar. Umfrageergebnisse unten einsehen bzw. Stimmen
+            nachtragen und Finale Platzierung bei Bedarf anpassen (z.B. Disqualifikation). Beim Speichern wird
+            {isAdmin ? " die Umfragephase beendet und das Event komplett abgeschlossen." : " die Umfragephase abgeschlossen, sobald alle Umfragen abgelaufen sind."}
           </span>
         </div>
       )}
@@ -425,8 +438,8 @@ export default function EventCompleteClient({
         <div className="flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-xs text-amber-300">
           <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
           <span>
-            Nur MVP und Poll-Sieger werden aktualisiert (inkl. Rückbuchung der alten Belohnungen).
-            Teilnahmen, Platzierungen und Stat-Einträge in der Gesamttabelle bleiben unverändert.
+            Event-Gewinner ist gesperrt. Nur MVP, Poll-Sieger (inkl. Rückbuchung der alten Belohnungen) und die
+            Finale Platzierung werden aktualisiert. Teilnahmen und Stat-Einträge in der Gesamttabelle bleiben unverändert.
           </span>
         </div>
       )}
@@ -436,9 +449,15 @@ export default function EventCompleteClient({
           <span>
             {openEventPolls.length === 1 ? "Es läuft noch eine Umfrage" : "Es laufen noch Umfragen"} auf der Event-Seite: {" "}
             {openEventPolls.map(p => `„${p.label}" bis ${new Date(p.endAt).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" })}`).join(", ")}.
-            {" "}Der Status bleibt auf <strong>„Umfrage"</strong>, die zusätzlichen Ligapunkte des Umfrage-Siegers werden erst nach Ablauf vergeben — einfach nach Fristende hier erneut speichern.
+            {" "}{isPollOnly && isAdmin
+              ? "Als Admin wird sie beim Speichern hier trotzdem sofort zwangsweise beendet und mit abgeschlossen."
+              : <>Der Status bleibt auf <strong>„Umfrage"</strong>, die zusätzlichen Ligapunkte des Umfrage-Siegers werden erst nach Ablauf vergeben — einfach nach Fristende hier erneut speichern.</>}
           </span>
         </div>
+      )}
+
+      {gamePhaseComplete && (
+        <LivePollsPanel eventId={eventId} isAdmin={isAdmin} registeredUsers={registeredUsers} spectatorUsers={spectatorUsers} />
       )}
 
       {/* Two-column layout */}
@@ -449,11 +468,21 @@ export default function EventCompleteClient({
 
           {/* Gewinner-Stat */}
           {(tournamentStatFields.length > 0 || isAvgFormat) && (
-            <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(245,158,11,0.05)", border: "1px solid rgba(245,158,11,0.15)" }}>
+            <div className={`rounded-xl p-4 space-y-3 ${winnerLocked ? "opacity-70" : ""}`} style={{ background: "rgba(245,158,11,0.05)", border: "1px solid rgba(245,158,11,0.15)" }}>
               <div className="flex items-center gap-2">
                 <Trophy className="w-3.5 h-3.5 text-amber-400" />
                 <span className="text-xs font-semibold text-amber-300">Event-Gewinner</span>
+                {winnerLocked && (
+                  <span className="flex items-center gap-1 text-[10px] text-gray-500 ml-auto">
+                    <Lock className="w-3 h-3" /> gesperrt
+                  </span>
+                )}
               </div>
+              {winnerLocked && (
+                <p className="text-[10px] text-gray-600 -mt-1">
+                  Wurde beim Abschluss der Spielphase festgelegt und ist nicht mehr änderbar.
+                </p>
+              )}
               {isAvgFormat ? (
                 <div>
                   <label className="text-[11px] text-gray-500 block mb-1">Wer gewinnt beim Durchschnittswert?</label>
@@ -465,11 +494,12 @@ export default function EventCompleteClient({
                       <button
                         key={opt.value}
                         type="button"
+                        disabled={winnerLocked}
                         onClick={() => {
                           setAvgDirection(opt.value);
                           if (!rankingManuallyEdited) autoSort();
                         }}
-                        className={`rounded-lg px-3 py-2 text-xs font-medium border transition-colors ${
+                        className={`rounded-lg px-3 py-2 text-xs font-medium border transition-colors disabled:cursor-not-allowed ${
                           avgDirection === opt.value
                             ? "border-amber-500/60 bg-amber-500/10 text-amber-300"
                             : "border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600"
@@ -488,11 +518,12 @@ export default function EventCompleteClient({
                   <label className="text-[11px] text-gray-500 block mb-1">Welches Stat-Feld bestimmt den Gewinner?</label>
                   <select
                     value={winnerStatField}
+                    disabled={winnerLocked}
                     onChange={e => {
                       setWinnerStatField(e.target.value);
                       if (!rankingManuallyEdited && e.target.value) autoSort(e.target.value);
                     }}
-                    className={inputCls}
+                    className={`${inputCls} disabled:cursor-not-allowed disabled:opacity-60`}
                   >
                     <option value="">– kein Gewinner-Stat –</option>
                     {tournamentStatFields.map(f => <option key={f} value={f}>{f}</option>)}
@@ -502,7 +533,12 @@ export default function EventCompleteClient({
               {seriesStatFields.length > 0 && (
                 <div>
                   <label className="text-[11px] text-gray-500 block mb-1">…Sieg in Gesamttabelle tracken als</label>
-                  <select value={seriesWinnerTargetField} onChange={e => setSeriesWinnerTargetField(e.target.value)} className={inputCls}>
+                  <select
+                    value={seriesWinnerTargetField}
+                    disabled={winnerLocked}
+                    onChange={e => setSeriesWinnerTargetField(e.target.value)}
+                    className={`${inputCls} disabled:cursor-not-allowed disabled:opacity-60`}
+                  >
                     <option value="">– nicht tracken –</option>
                     {seriesStatFields.map(f => <option key={f} value={f}>{f}</option>)}
                   </select>
@@ -810,8 +846,10 @@ export default function EventCompleteClient({
               <CheckCircle2 className="w-4 h-4" />
               {loading
                 ? "Wird gespeichert…"
+                : willFinalizePolls
+                ? "Umfragephase abschließen & Event beenden"
                 : isPollOnly
-                ? "Änderungen & Umfrage speichern"
+                ? "Änderungen speichern"
                 : isReEdit
                 ? "Änderungen speichern"
                 : pollPhasePending
