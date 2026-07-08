@@ -529,7 +529,7 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
           </Section>
 
           {/* Belohnungen */}
-          <Section title="Belohnungen (Standard für neue Events)">
+          <Section title="Belohnungen (Endplatzierung der Eventreihe)">
             <div className="space-y-3">
               <div className="grid grid-cols-[1fr_auto_auto] gap-2 items-center text-xs text-gray-500 px-1">
                 <span>Platzierung</span><span className="text-center">Punkte</span><span className="text-center">Münzen</span>
@@ -553,13 +553,16 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
                   </div>
                 </div>
               ))}
+              <p className="text-[11px] text-gray-500">
+                Wird bei Abschluss der gesamten Eventreihe anhand der finalen Gesamtplatzierung vergeben — nicht mehr pro einzelnem Event.
+              </p>
               <p className="text-[11px] text-gray-500 pt-1 border-t border-white/[0.05]">
                 Münzen pro Teilnahme (Mitspieler &amp; Zuschauer): siehe „Gesamttabellen-Konfiguration" weiter unten.
               </p>
               <Checkbox
                 checked={statTransferToGlobal}
                 onChange={setStatTransferToGlobal}
-                label="Ligapunkte bei Abschluss auf Gesamtrangliste übertragen"
+                label="Ligapunkte bei Event-Abschluss auf Gesamtrangliste übertragen"
               />
             </div>
           </Section>

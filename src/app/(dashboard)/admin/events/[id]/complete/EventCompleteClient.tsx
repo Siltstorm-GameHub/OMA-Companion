@@ -37,6 +37,8 @@ interface Props {
   seriesIcon?: string | null;
   registeredUsers: User[];
   spectatorUsers: User[];
+  /** Alle User der Plattform — für Umfragen mit voterEligibility "all" im Live-Umfragen-Panel */
+  allUsers: User[];
   tournamentStatFields: string[];
   userStats: Record<string, Record<string, number>>;
   format: string | null;
@@ -101,7 +103,7 @@ function computePlacementMap(groups: string[][]): Map<string, number> {
 
 export default function EventCompleteClient({
   eventId, eventTitle, seriesId, seriesName, seriesIcon,
-  registeredUsers, spectatorUsers, tournamentStatFields, userStats, format, userAvgScore,
+  registeredUsers, spectatorUsers, allUsers, tournamentStatFields, userStats, format, userAvgScore,
   seriesStatConfig, rewardsConfig, pollConfig, pollsConfig, pendingEventPolls, realPollVotes, spectatorRewardJson,
   isAdmin, isReEdit, gamePhaseComplete, pollPhaseComplete,
   initialData, initialFinalRanking, initialRankingGroups, initialFinalRankingNote,
@@ -457,7 +459,7 @@ export default function EventCompleteClient({
       )}
 
       {gamePhaseComplete && (
-        <LivePollsPanel eventId={eventId} isAdmin={isAdmin} registeredUsers={registeredUsers} spectatorUsers={spectatorUsers} />
+        <LivePollsPanel eventId={eventId} isAdmin={isAdmin} registeredUsers={registeredUsers} spectatorUsers={spectatorUsers} allUsers={allUsers} />
       )}
 
       {/* Two-column layout */}
@@ -807,7 +809,7 @@ export default function EventCompleteClient({
                     Alle {registeredUsers.length} Teilnehmer: {effectiveParticipationCoins} Münzen
                   </li>
                 )}
-                {rankingGroups.map((group, gi) => {
+                {!seriesId && rankingGroups.map((group, gi) => {
                   const place = placementMap.get(group[0]) ?? gi + 1;
                   const reward = rewardsConfig.placements.find(p => p.place === place);
                   if (!reward || (reward.coins === 0 && reward.rankPoints === 0)) return null;
@@ -822,6 +824,12 @@ export default function EventCompleteClient({
                     </li>
                   );
                 })}
+                {seriesId && (
+                  <li className="flex items-center gap-2 text-gray-500 italic">
+                    <ListOrdered className="w-3 h-3 shrink-0" />
+                    Platzierungs-Belohnung: erst bei Abschluss der Eventreihe (Endplatzierung)
+                  </li>
+                )}
                 {pollConfig.enabled && (
                   <li className="flex items-center gap-2">
                     <Vote className="w-3 h-3 text-violet-400 shrink-0" />
@@ -899,7 +907,13 @@ export default function EventCompleteClient({
             {tiedAbove.size > 0 && (
               <p className="text-[10px] text-blue-400/60 flex items-center gap-1">
                 <Equal className="w-3 h-3" />
-                {tiedAbove.size} Gleichstand{tiedAbove.size > 1 ? "s" : ""} – beide erhalten dieselbe Platzierungsbelohnung
+                {tiedAbove.size} Gleichstand{tiedAbove.size > 1 ? "s" : ""} – beide erhalten dieselbe Platzierung
+              </p>
+            )}
+
+            {seriesId && (
+              <p className="text-[10px] text-gray-600">
+                Fließt in die Gesamttabelle der Reihe ein. Die Platzierungs-Belohnung („Belohnungen (Endplatzierung der Eventreihe)") wird erst bei Abschluss der gesamten Eventreihe anhand der finalen Gesamtplatzierung vergeben.
               </p>
             )}
 
@@ -913,7 +927,7 @@ export default function EventCompleteClient({
                   const u = registeredUsers.find(u => u.id === uid);
                   if (!u) return null;
                   const place = placementMap.get(uid) ?? idx + 1;
-                  const reward = rewardsConfig.placements.find(p => p.place === place);
+                  const reward = seriesId ? undefined : rewardsConfig.placements.find(p => p.place === place);
                   const isTied = tiedAbove.has(uid);
 
                   return (

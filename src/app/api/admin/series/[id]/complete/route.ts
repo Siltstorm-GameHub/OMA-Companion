@@ -4,6 +4,23 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { randomUUID } from "crypto";
 
+type PlacementReward = { place: number; coins: number; rankPoints: number };
+type RewardsConfig = { participationCoins: number; placements: PlacementReward[] };
+
+const DEFAULT_REWARDS: RewardsConfig = {
+  participationCoins: 10,
+  placements: [
+    { place: 1, coins: 500, rankPoints: 3 },
+    { place: 2, coins: 250, rankPoints: 2 },
+    { place: 3, coins: 100, rankPoints: 1 },
+  ],
+};
+
+function parseRewards(json: string | null | undefined): RewardsConfig {
+  if (!json) return DEFAULT_REWARDS;
+  try { return { ...DEFAULT_REWARDS, ...JSON.parse(json) }; } catch { return DEFAULT_REWARDS; }
+}
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -64,6 +81,83 @@ export async function POST(
     }
   }
 
+  // ── Endplatzierung: Rückbuchung alter Belohnungen (bei Re-Edit) ─────────────
+  if (isReEdit) {
+    const oldPlacementRewards = (oldCompletion.placementRewards as Array<{ userId: string; coins: number; rankPoints: number }> | undefined) ?? [];
+    for (const { userId, coins, rankPoints } of oldPlacementRewards) {
+      const txns: Prisma.PrismaPromise<unknown>[] = [];
+      if (coins > 0) {
+        txns.push(
+          prisma.user.update({ where: { id: userId }, data: { points: { increment: -coins } } }),
+          prisma.pointTransaction.create({ data: { userId, amount: -coins, reason: `[Korrektur] Endplatzierung: ${series.name}` } })
+        );
+      }
+      if (rankPoints > 0) {
+        txns.push(
+          prisma.user.update({ where: { id: userId }, data: { rankPoints: { increment: -rankPoints } } }),
+          prisma.pointTransaction.create({ data: { userId, amount: -rankPoints, reason: `[Korrektur] Endplatzierung Rang-Punkte: ${series.name}` } })
+        );
+      }
+      if (txns.length > 0) await prisma.$transaction(txns);
+    }
+  }
+
+  // ── Endplatzierung: Belohnungen vergeben ("Belohnungen (Endplatzierung der Eventreihe)") ──────
+  // Ersetzt die frühere Vergabe pro Einzel-Event: die konfigurierten Platz-Belohnungen gelten jetzt
+  // für die finale Gesamtplatzierung der kompletten Eventreihe, vergeben bei deren Abschluss.
+  const rewards = parseRewards(series.placementRewardsJson);
+  const newPlacementRewards: Array<{ userId: string; place: number; coins: number; rankPoints: number }> = [];
+
+  if (body.finalRankingGroups?.length) {
+    let place = 1;
+    for (const group of body.finalRankingGroups) {
+      const reward = rewards.placements.find(p => p.place === place);
+      if (reward) {
+        for (const userId of group.filter(id => participantSet.has(id))) {
+          const txns: Prisma.PrismaPromise<unknown>[] = [];
+          if (reward.coins > 0) {
+            txns.push(
+              prisma.user.update({ where: { id: userId }, data: { points: { increment: reward.coins } } }),
+              prisma.pointTransaction.create({ data: { userId, amount: reward.coins, reason: `[Münzen] Endplatzierung ${place}: ${series.name}` } })
+            );
+          }
+          if (reward.rankPoints > 0) {
+            txns.push(
+              prisma.user.update({ where: { id: userId }, data: { rankPoints: { increment: reward.rankPoints } } }),
+              prisma.pointTransaction.create({ data: { userId, amount: reward.rankPoints, reason: `[Rang-Punkte] Endplatzierung ${place}: ${series.name}` } })
+            );
+          }
+          if (txns.length > 0) await prisma.$transaction(txns);
+          newPlacementRewards.push({ userId, place, coins: reward.coins, rankPoints: reward.rankPoints });
+        }
+      }
+      place += group.length;
+    }
+  } else {
+    const ranking = (body.finalRanking ?? []).filter(id => participantSet.has(id));
+    for (let i = 0; i < ranking.length; i++) {
+      const place = i + 1;
+      const reward = rewards.placements.find(p => p.place === place);
+      if (!reward) continue;
+      const userId = ranking[i];
+      const txns: Prisma.PrismaPromise<unknown>[] = [];
+      if (reward.coins > 0) {
+        txns.push(
+          prisma.user.update({ where: { id: userId }, data: { points: { increment: reward.coins } } }),
+          prisma.pointTransaction.create({ data: { userId, amount: reward.coins, reason: `[Münzen] Endplatzierung ${place}: ${series.name}` } })
+        );
+      }
+      if (reward.rankPoints > 0) {
+        txns.push(
+          prisma.user.update({ where: { id: userId }, data: { rankPoints: { increment: reward.rankPoints } } }),
+          prisma.pointTransaction.create({ data: { userId, amount: reward.rankPoints, reason: `[Rang-Punkte] Endplatzierung ${place}: ${series.name}` } })
+        );
+      }
+      if (txns.length > 0) await prisma.$transaction(txns);
+      newPlacementRewards.push({ userId, place, coins: reward.coins, rankPoints: reward.rankPoints });
+    }
+  }
+
   // ── Poll: Neue Gewinner vergeben ─────────────────────────────────────────────
   const newPollWinners = (body.pollWinnerIds ?? []).filter(id => participantSet.has(id));
   const pollCoins   = body.pollBonusCoins ?? 0;
@@ -99,6 +193,7 @@ export async function POST(
     pollBonusRankPoints: pollRankPts > 0 ? pollRankPts : null,
     pollExcludedUserIds: body.pollExcludedUserIds?.length ? body.pollExcludedUserIds : null,
     pollPhaseComplete:   newPollWinners.length > 0,
+    placementRewards:    newPlacementRewards.length > 0 ? newPlacementRewards : null,
     lockedAt:            new Date().toISOString(),
   };
 

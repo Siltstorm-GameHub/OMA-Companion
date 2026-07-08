@@ -191,6 +191,7 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
       seriesIcon={event.series?.icon ?? null}
       registeredUsers={registeredUsers}
       spectatorUsers={spectatorUsers}
+      allUsers={allUsers}
       tournamentStatFields={tournamentStatFields}
       userStats={userStats}
       format={event.format}
