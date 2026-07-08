@@ -5,8 +5,9 @@ import { prisma } from "@/lib/prisma";
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   await requireRole("moderator");
   const { id: eventId } = await params;
-  const { userIds } = await req.json();
+  const { userIds, role } = await req.json();
   if (!userIds?.length) return NextResponse.json({ error: "Keine User angegeben" }, { status: 400 });
+  const registrationRole = role === "spectator" ? "spectator" : "player";
 
   const event = await prisma.event.findUnique({ where: { id: eventId } });
   if (!event) return NextResponse.json({ error: "Event nicht gefunden" }, { status: 404 });
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       where: { userId_eventId: { userId, eventId } },
     });
     if (exists) { skipped++; continue; }
-    await prisma.eventRegistration.create({ data: { userId, eventId } });
+    await prisma.eventRegistration.create({ data: { userId, eventId, role: registrationRole } });
     added++;
   }
   return NextResponse.json({ success: true, added, skipped });
