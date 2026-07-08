@@ -32,12 +32,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (challenge.status !== "pending") return NextResponse.json({ error: "Diese Herausforderung ist nicht mehr offen" }, { status: 409 });
 
   if (isExpired(challenge)) {
-    await prisma.duelChallenge.update({ where: { id }, data: { status: "expired" } });
+    await prisma.$transaction([
+      prisma.user.update({ where: { id: challenge.challengerId }, data: { points: { increment: challenge.wager } } }),
+      prisma.pointTransaction.create({ data: { userId: challenge.challengerId, amount: challenge.wager, reason: "↩️ Duell-Einsatz erstattet (abgelaufen)" } }),
+      prisma.duelChallenge.update({ where: { id }, data: { status: "expired" } }),
+    ]);
     return NextResponse.json({ error: "Diese Herausforderung ist abgelaufen" }, { status: 409 });
   }
 
   if (action === "decline") {
-    await prisma.duelChallenge.update({ where: { id }, data: { status: "declined", respondedAt: new Date() } });
+    await prisma.$transaction([
+      prisma.user.update({ where: { id: challenge.challengerId }, data: { points: { increment: challenge.wager } } }),
+      prisma.pointTransaction.create({ data: { userId: challenge.challengerId, amount: challenge.wager, reason: "↩️ Duell-Einsatz erstattet" } }),
+      prisma.duelChallenge.update({ where: { id }, data: { status: "declined", respondedAt: new Date() } }),
+    ]);
     dispatchNotification("duel_result", {
       users: [challenge.challengerId],
       placeholders: { "{result}": `${challenge.opponent.username ?? challenge.opponent.name ?? "Der Gegner"} hat dein Duell abgelehnt.` },
@@ -68,18 +76,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   try {
     await prisma.$transaction(async tx => {
-      // Escrow: beide Einsätze atomar abbuchen, nur wenn genug Guthaben vorhanden ist
-      const debits = await Promise.all([challenge.challengerId, challenge.opponentId].map(uid =>
-        tx.user.updateMany({ where: { id: uid, points: { gte: wager } }, data: { points: { decrement: wager } } })
-      ));
-      if (debits.some(d => d.count === 0)) {
+      // Herausforderer-Einsatz ist bereits bei Erstellung escrowed; hier nur den Gegner atomar abbuchen
+      const debit = await tx.user.updateMany({
+        where: { id: challenge.opponentId, points: { gte: wager } },
+        data: { points: { decrement: wager } },
+      });
+      if (debit.count === 0) {
         throw new Error("INSUFFICIENT_FUNDS");
       }
 
       await tx.user.update({ where: { id: winnerId }, data: { points: { increment: wager * 2 } } });
       await tx.pointTransaction.createMany({
         data: [
-          { userId: challenge.challengerId, amount: -wager, reason: "⚔️ Duell-Einsatz" },
           { userId: challenge.opponentId, amount: -wager, reason: "⚔️ Duell-Einsatz" },
           { userId: winnerId, amount: wager * 2, reason: "⚔️ Duell gewonnen" },
         ],
@@ -91,7 +99,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     });
   } catch (err) {
     if (err instanceof Error && err.message === "INSUFFICIENT_FUNDS") {
-      return NextResponse.json({ error: "Nicht genug Münzen bei einem der Teilnehmer" }, { status: 409 });
+      return NextResponse.json({ error: "Du hast nicht genug Münzen für diesen Einsatz" }, { status: 409 });
     }
     throw err;
   }
