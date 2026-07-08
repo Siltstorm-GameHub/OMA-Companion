@@ -178,23 +178,28 @@ export async function revertEventCompletion(eventId: string, opts: RevertOptions
       }
     }
 
-    if (cd.finalRankingGroups?.length) {
-      let place = 1;
-      for (const group of cd.finalRankingGroups) {
-        const reward = rewards.placements.find(p => p.place === place);
-        if (reward) {
-          for (const userId of group.filter(id => registeredSet.has(id))) {
-            reverse(userId, reward.coins, reward.rankPoints);
+    // Platzierungs-Belohnungen werden bei Events innerhalb einer Reihe nicht mehr beim
+    // Einzel-Event vergeben (sondern erst bei Abschluss der Reihe, siehe
+    // /api/admin/events/[id]/complete), daher hier auch nichts zurückzubuchen.
+    if (!event.seriesId) {
+      if (cd.finalRankingGroups?.length) {
+        let place = 1;
+        for (const group of cd.finalRankingGroups) {
+          const reward = rewards.placements.find(p => p.place === place);
+          if (reward) {
+            for (const userId of group.filter(id => registeredSet.has(id))) {
+              reverse(userId, reward.coins, reward.rankPoints);
+            }
           }
+          place += group.length;
         }
-        place += group.length;
+      } else if (cd.finalRanking?.length) {
+        const ranking = cd.finalRanking.filter(id => registeredSet.has(id));
+        ranking.forEach((userId, i) => {
+          const reward = rewards.placements.find(p => p.place === i + 1);
+          if (reward) reverse(userId, reward.coins, reward.rankPoints);
+        });
       }
-    } else if (cd.finalRanking?.length) {
-      const ranking = cd.finalRanking.filter(id => registeredSet.has(id));
-      ranking.forEach((userId, i) => {
-        const reward = rewards.placements.find(p => p.place === i + 1);
-        if (reward) reverse(userId, reward.coins, reward.rankPoints);
-      });
     }
 
     if (cd.spectatorAttendedIds?.length) {

@@ -63,8 +63,12 @@ type SeriesStandings = {
  * - Setzt status → "umfrage", solange eine Umfrage (EventPoll mit offenem Zeitfenster, oder eine
  *   konfigurierte Legacy-/Multi-Umfrage ohne Sieger) noch offen ist, sonst → "finished"
  * - Speichert completionData am Event
- * - Vergabe von Teilnahme-Münzen + Platzierungs-Münzen/-Punkte (nur beim ersten Abschluss) — diese
- *   Ligapunkte landen sofort in der Ligatabelle der Eventreihe, auch wenn die Umfrage noch läuft
+ * - Vergabe von Teilnahme-Münzen (nur beim ersten Abschluss) — bei Events innerhalb einer Reihe
+ *   landen die daraus resultierenden Ligapunkte sofort in der Ligatabelle der Eventreihe, auch wenn
+ *   die Umfrage noch läuft. Platzierungs-Münzen/-Rang-Punkte ("Belohnungen (Endplatzierung der
+ *   Eventreihe)") werden bei Events innerhalb einer Reihe NICHT hier vergeben, sondern erst bei
+ *   Abschluss der gesamten Eventreihe anhand von deren Endplatzierung (siehe
+ *   /api/admin/series/[id]/complete) — nur eigenständige Events ohne Reihe erhalten sie direkt hier.
  * - Poll-Gewinner-Belohnung (auch beim Re-Edit, mit Rückbuchung); EventPoll-Umfragen werden erst
  *   ausgewertet, sobald ihr Abstimmungsfenster (endAt) vorbei ist — die zusätzlichen Ligapunkte des
  *   Umfrage-Gewinners kommen erst dann (mit Abschluss der Umfrage) in die Ligatabelle
@@ -298,54 +302,58 @@ export async function POST(
       }
     }
 
-    // Platzierungs-Münzen + Rang-Punkte (unterstützt Gleichstand via finalRankingGroups)
-    if (body.finalRankingGroups?.length) {
-      // Groups format: [[uid1, uid2], [uid3], ...] where all in same group share placement
-      let place = 1;
-      for (const group of body.finalRankingGroups) {
-        const reward = rewards.placements.find(p => p.place === place);
-        if (reward) {
-          for (const userId of group.filter(id => registeredSet.has(id))) {
-            const txns: Prisma.PrismaPromise<unknown>[] = [];
-            if (reward.coins > 0) {
-              txns.push(
-                prisma.user.update({ where: { id: userId }, data: { points: { increment: reward.coins } } }),
-                prisma.pointTransaction.create({ data: { userId, amount: reward.coins, reason: `[Münzen] Platz ${place}: ${event.title}` } })
-              );
+    // Platzierungs-Münzen + Rang-Punkte (unterstützt Gleichstand via finalRankingGroups) — nur für
+    // eigenständige Events ohne Reihe. Events innerhalb einer Eventreihe erhalten ihre
+    // Platzierungs-Belohnung erst bei Abschluss der gesamten Reihe (Endplatzierung).
+    if (!event.seriesId) {
+      if (body.finalRankingGroups?.length) {
+        // Groups format: [[uid1, uid2], [uid3], ...] where all in same group share placement
+        let place = 1;
+        for (const group of body.finalRankingGroups) {
+          const reward = rewards.placements.find(p => p.place === place);
+          if (reward) {
+            for (const userId of group.filter(id => registeredSet.has(id))) {
+              const txns: Prisma.PrismaPromise<unknown>[] = [];
+              if (reward.coins > 0) {
+                txns.push(
+                  prisma.user.update({ where: { id: userId }, data: { points: { increment: reward.coins } } }),
+                  prisma.pointTransaction.create({ data: { userId, amount: reward.coins, reason: `[Münzen] Platz ${place}: ${event.title}` } })
+                );
+              }
+              if (reward.rankPoints > 0) {
+                txns.push(
+                  prisma.user.update({ where: { id: userId }, data: { rankPoints: { increment: reward.rankPoints } } }),
+                  prisma.pointTransaction.create({ data: { userId, amount: reward.rankPoints, reason: `[Rang-Punkte] Platz ${place}: ${event.title}` } })
+                );
+              }
+              if (txns.length > 0) await prisma.$transaction(txns);
             }
-            if (reward.rankPoints > 0) {
-              txns.push(
-                prisma.user.update({ where: { id: userId }, data: { rankPoints: { increment: reward.rankPoints } } }),
-                prisma.pointTransaction.create({ data: { userId, amount: reward.rankPoints, reason: `[Rang-Punkte] Platz ${place}: ${event.title}` } })
-              );
-            }
-            if (txns.length > 0) await prisma.$transaction(txns);
           }
+          place += group.length; // standard competition ranking: skip positions for the size of this group
         }
-        place += group.length; // standard competition ranking: skip positions for the size of this group
-      }
-    } else {
-      // Legacy flat format
-      const ranking = (body.finalRanking ?? []).filter(id => registeredSet.has(id));
-      for (let i = 0; i < ranking.length; i++) {
-        const place = i + 1;
-        const reward = rewards.placements.find(p => p.place === place);
-        if (!reward) continue;
-        const userId = ranking[i];
-        const txns: Prisma.PrismaPromise<unknown>[] = [];
-        if (reward.coins > 0) {
-          txns.push(
-            prisma.user.update({ where: { id: userId }, data: { points: { increment: reward.coins } } }),
-            prisma.pointTransaction.create({ data: { userId, amount: reward.coins, reason: `[Münzen] Platz ${place}: ${event.title}` } })
-          );
+      } else {
+        // Legacy flat format
+        const ranking = (body.finalRanking ?? []).filter(id => registeredSet.has(id));
+        for (let i = 0; i < ranking.length; i++) {
+          const place = i + 1;
+          const reward = rewards.placements.find(p => p.place === place);
+          if (!reward) continue;
+          const userId = ranking[i];
+          const txns: Prisma.PrismaPromise<unknown>[] = [];
+          if (reward.coins > 0) {
+            txns.push(
+              prisma.user.update({ where: { id: userId }, data: { points: { increment: reward.coins } } }),
+              prisma.pointTransaction.create({ data: { userId, amount: reward.coins, reason: `[Münzen] Platz ${place}: ${event.title}` } })
+            );
+          }
+          if (reward.rankPoints > 0) {
+            txns.push(
+              prisma.user.update({ where: { id: userId }, data: { rankPoints: { increment: reward.rankPoints } } }),
+              prisma.pointTransaction.create({ data: { userId, amount: reward.rankPoints, reason: `[Rang-Punkte] Platz ${place}: ${event.title}` } })
+            );
+          }
+          if (txns.length > 0) await prisma.$transaction(txns);
         }
-        if (reward.rankPoints > 0) {
-          txns.push(
-            prisma.user.update({ where: { id: userId }, data: { rankPoints: { increment: reward.rankPoints } } }),
-            prisma.pointTransaction.create({ data: { userId, amount: reward.rankPoints, reason: `[Rang-Punkte] Platz ${place}: ${event.title}` } })
-          );
-        }
-        if (txns.length > 0) await prisma.$transaction(txns);
       }
     }
   }

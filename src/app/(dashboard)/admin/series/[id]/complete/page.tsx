@@ -20,6 +20,21 @@ function resolveWinnerTargetKeys(cfg: StatConfig, seriesWinnerTargetField?: stri
 }
 type LegacyRow = { userId: string; points: number; participations: number; stats: Record<string, number> };
 
+type PlacementReward = { place: number; coins: number; rankPoints: number };
+type RewardsConfig = { participationCoins: number; placements: PlacementReward[] };
+const DEFAULT_REWARDS: RewardsConfig = {
+  participationCoins: 10,
+  placements: [
+    { place: 1, coins: 500, rankPoints: 3 },
+    { place: 2, coins: 250, rankPoints: 2 },
+    { place: 3, coins: 100, rankPoints: 1 },
+  ],
+};
+function parseRewards(json: string | null | undefined): RewardsConfig {
+  if (!json) return DEFAULT_REWARDS;
+  try { return { ...DEFAULT_REWARDS, ...JSON.parse(json) }; } catch { return DEFAULT_REWARDS; }
+}
+
 function computeStandings(
   events: {
     id: string; status: string; completionData: string | null;
@@ -152,6 +167,7 @@ export default async function SeriesCompletePage({ params }: { params: Promise<{
     try { return series.seriesCompletionData ? JSON.parse(series.seriesCompletionData) : {}; } catch { return {}; }
   })();
   const pollPhaseComplete = existingCompletion.pollPhaseComplete === true;
+  const rewardsConfig = parseRewards(series.placementRewardsJson);
 
   return (
     <SeriesCompleteClient
@@ -161,6 +177,7 @@ export default async function SeriesCompletePage({ params }: { params: Promise<{
       statFields={statCfg.stats.map(s => s.field)}
       participants={orderedUsers}
       userStats={userStats}
+      rewardsConfig={rewardsConfig}
       suggestedNewSeasonName={suggestedNewName}
       isReEdit={isReEdit}
       pollPhaseComplete={pollPhaseComplete}

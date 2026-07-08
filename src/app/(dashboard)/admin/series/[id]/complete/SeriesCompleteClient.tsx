@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };
+type PlacementReward = { place: number; coins: number; rankPoints: number };
+type RewardsConfig = { participationCoins: number; placements: PlacementReward[] };
 
 interface Props {
   seriesId: string;
@@ -20,6 +22,7 @@ interface Props {
   statFields: string[];
   participants: User[];
   userStats: Record<string, Record<string, number>>;
+  rewardsConfig: RewardsConfig;
   suggestedNewSeasonName: string;
   isReEdit: boolean;
   pollPhaseComplete: boolean;
@@ -62,7 +65,7 @@ function computePlacementMap(groups: string[][]): Map<string, number> {
 }
 
 export default function SeriesCompleteClient({
-  seriesId, seriesName, seriesIcon, statFields, participants, userStats,
+  seriesId, seriesName, seriesIcon, statFields, participants, userStats, rewardsConfig,
   suggestedNewSeasonName, isReEdit, pollPhaseComplete, initialData,
 }: Props) {
   const router = useRouter();
@@ -278,9 +281,13 @@ export default function SeriesCompleteClient({
               {tiedAbove.size > 0 && (
                 <p className="text-[10px] text-blue-400/60 flex items-center gap-1">
                   <Equal className="w-3 h-3" />
-                  {tiedAbove.size} Gleichstand – beide erhalten dieselbe Platzierungsbelohnung
+                  {tiedAbove.size} Gleichstand – beide erhalten dieselbe Platzierung
                 </p>
               )}
+
+              <p className="text-[10px] text-gray-600">
+                Anhand dieser Endplatzierung werden die unter „Belohnungen (Endplatzierung der Eventreihe)" konfigurierten Münzen &amp; Rang-Punkte vergeben.
+              </p>
 
               <div className="space-y-1">
                 {rankingOrder.map((uid, idx) => {
@@ -290,6 +297,7 @@ export default function SeriesCompleteClient({
                   const isTied   = tiedAbove.has(uid);
                   const pts      = userStats[uid]?.totalPoints ?? 0;
                   const medal    = MEDALS[place - 1] ?? null;
+                  const reward   = rewardsConfig.placements.find(p => p.place === place);
 
                   return (
                     <div
@@ -317,6 +325,21 @@ export default function SeriesCompleteClient({
                         if (!v) return null;
                         return <span key={f} className="text-[10px] text-gray-500 tabular-nums">{f}: {v}</span>;
                       })}
+                      {/* Endplatzierungs-Belohnung */}
+                      {reward && (reward.coins > 0 || reward.rankPoints > 0) && (
+                        <span className="flex items-center gap-1.5 shrink-0">
+                          {reward.coins > 0 && (
+                            <span className="flex items-center gap-0.5 text-[10px] text-amber-400 tabular-nums">
+                              +{reward.coins} <CoinIcon size={11} />
+                            </span>
+                          )}
+                          {reward.rankPoints > 0 && (
+                            <span className="flex items-center gap-0.5 text-[10px] text-teal-400 tabular-nums">
+                              +{reward.rankPoints} <RankPointsIcon size={11} />
+                            </span>
+                          )}
+                        </span>
+                      )}
                       {/* Tied toggle */}
                       {idx > 0 && (
                         <button
