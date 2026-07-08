@@ -23,9 +23,10 @@ interface Props {
   initialVoteId: string | null;
   isLoggedIn: boolean;
   embedParent: string;
+  voteEndpoint?: string;
 }
 
-export default function ClipVotingClient({ contestId, nominations, initialVoteId, isLoggedIn, embedParent }: Props) {
+export default function ClipVotingClient({ contestId, nominations, initialVoteId, isLoggedIn, embedParent, voteEndpoint = "/api/clip-contest/vote" }: Props) {
   const [votedId, setVotedId] = useState<string | null>(initialVoteId);
   const [counts, setCounts] = useState<Record<string, number>>(
     Object.fromEntries(nominations.map((n) => [n.id, n.voteCount]))
@@ -45,10 +46,10 @@ export default function ClipVotingClient({ contestId, nominations, initialVoteId
       next[nominationId] = (next[nominationId] ?? 0) + 1;
       return next;
     });
-    const res = await fetch("/api/clip-contest/vote", {
+    const res = await fetch(voteEndpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nominationId }),
+      body: JSON.stringify({ contestId, nominationId }),
     });
     setVoting(false);
     if (!res.ok) {

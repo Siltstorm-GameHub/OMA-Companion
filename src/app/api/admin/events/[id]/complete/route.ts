@@ -75,7 +75,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  await requireRole("moderator");
+  const currentUser = await requireRole("moderator");
   const { id: eventId } = await params;
 
   type PollResult = {
@@ -107,6 +107,8 @@ export async function POST(
     placements?: PlacementReward[];
     // Spectator rewards
     spectatorAttendedIds?: string[];
+    /** Admin-only: noch offene EventPolls sofort schließen (endAt -> jetzt) und mit abschließen */
+    closeOpenPolls?: boolean;
   };
 
   const event = await prisma.event.findUnique({
@@ -465,6 +467,19 @@ export async function POST(
   // Umfrage-Gewinners kommen dann erst mit Abschluss der Umfrage dazu, nicht vorher).
   const now = new Date();
   const allUnpaidPolls = event.polls ?? [];
+
+  // Admin-only: noch offene Umfragen sofort schließen (Umfragephase manuell beenden,
+  // statt auf das natürliche Ablaufen von endAt zu warten).
+  if (body.closeOpenPolls && currentUser.role === "admin") {
+    const stillOpenIds = allUnpaidPolls.filter(p => new Date(p.endAt) > now).map(p => p.id);
+    if (stillOpenIds.length > 0) {
+      await prisma.eventPoll.updateMany({ where: { id: { in: stillOpenIds } }, data: { endAt: now } });
+      for (const p of allUnpaidPolls) {
+        if (stillOpenIds.includes(p.id)) p.endAt = now;
+      }
+    }
+  }
+
   const unpaidPolls = allUnpaidPolls.filter(p => new Date(p.endAt) <= now);
   const hasOpenEventPoll = allUnpaidPolls.some(p => new Date(p.endAt) > now);
   const eventPollRewards: Array<{

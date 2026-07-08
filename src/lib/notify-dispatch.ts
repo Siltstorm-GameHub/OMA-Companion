@@ -42,6 +42,8 @@ const RULE_TYPE: Record<string, NotificationType> = {
   badge_awarded:      "badge",
   clip_started:       "clip",
   clip_finished:      "clip",
+  clip_of_year_started:  "clip",
+  clip_of_year_finished: "clip",
   rank_up:            "points",
   server_approved:    "server",
   server_denied:      "server",

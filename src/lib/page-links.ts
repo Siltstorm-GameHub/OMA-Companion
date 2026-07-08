@@ -8,6 +8,8 @@ export const PAGE_LINKS: { label: string; url: string }[] = [
   { label: "Punkte-System",    url: "/points" },
   { label: "Quests",           url: "/quests" },
   { label: "Clip des Monats",  url: "/clip-des-monats" },
+  { label: "Clip des Jahres",  url: "/clip-des-jahres" },
+  { label: "Clip-Galerie",     url: "/clip-galerie" },
   { label: "Gameserver",       url: "/servers" },
   { label: "Spendenpool",      url: "/donations" },
   { label: "Feed",             url: "/feed" },
