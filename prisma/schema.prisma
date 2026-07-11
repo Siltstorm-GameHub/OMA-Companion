@@ -587,7 +587,8 @@ model Quest {
   id          String   @id @default(cuid())
   title       String
   description String
-  // VOICE_MINUTES | MESSAGES | EVENT_ATTEND | TOURNAMENT
+  // VOICE_MINUTES | MESSAGES | EVENT_ATTEND | POLL_VOTE | DAILY_SPIN | DUEL_PLAYED | CLICKER_CLICKS | PREDICTION_MADE
+  // (TOURNAMENT ist aus der aktiven Rotation entfernt, existiert aber noch in historischen Quest-Zeilen)
   type        String
   target      Int
   reward      Int

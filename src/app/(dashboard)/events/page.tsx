@@ -20,6 +20,7 @@ import { getGenreIcon } from "@/lib/genre-icons";
 import EventCategoryBadge, { CATEGORY_BG_TINT } from "@/components/EventCategoryBadge";
 import { EventCategory } from "@prisma/client";
 import { EyeOff } from "lucide-react";
+import { getEventEndedAt, RECENTLY_FINISHED_MS } from "@/lib/event-completion";
 
 const CATEGORY_STRIP: Record<EventCategory, string> = {
   competitive:     "bg-red-500",
@@ -85,8 +86,8 @@ export default async function EventsPage() {
     }),
   ]);
 
-  type EventItem = { kind: "event"; date: Date; finished: boolean; ev: typeof events[number] };
-  type LulItem   = { kind: "lul";   date: Date | null; finished: boolean; st: NonNullable<typeof activeSeason>["spieltage"][number]; seasonLabel: string };
+  type EventItem = { kind: "event"; date: Date; finished: boolean; endedAt: number; ev: typeof events[number] };
+  type LulItem   = { kind: "lul";   date: Date | null; finished: boolean; endedAt: number; st: NonNullable<typeof activeSeason>["spieltage"][number]; seasonLabel: string };
   type AnyItem   = EventItem | LulItem;
 
   const seasonLabel = activeSeason?.name ?? (activeSeason ? `Saison ${activeSeason.number}` : "");
@@ -96,30 +97,44 @@ export default async function EventsPage() {
       kind:     "event" as const,
       date:     new Date(ev.startAt),
       finished: ev.status === "finished",
+      endedAt:  getEventEndedAt(ev).getTime(),
       ev,
     })),
     ...(activeSeason?.spieltage ?? []).map(st => ({
       kind:     "lul" as const,
       date:     st.scheduledAt ? new Date(st.scheduledAt) : null,
       finished: st.status === "finished",
+      endedAt:  st.scheduledAt ? new Date(st.scheduledAt).getTime() : 0,
       st,
       seasonLabel,
     })),
   ];
+
+  const now = Date.now();
+  const isRecentlyFinished = (i: AnyItem) => i.finished && (now - i.endedAt) <= RECENTLY_FINISHED_MS;
+
+  // Kürzlich (≤3 Tage) beendete Events bleiben ganz oben sichtbar, damit Nutzer die Ergebnisse
+  // nicht verpassen — erst danach wandern sie in den eingeklappten "Abgeschlossen"-Bereich.
+  const recentFinishedItems = allItems
+    .filter(isRecentlyFinished)
+    .sort((a, b) => b.endedAt - a.endedAt);
 
   const upcomingItems = allItems
     .filter(i => !i.finished)
     .sort((a, b) => (a.date?.getTime() ?? Infinity) - (b.date?.getTime() ?? Infinity));
 
   const finishedItems = allItems
-    .filter(i => i.finished)
-    .sort((a, b) => (b.date?.getTime() ?? 0) - (a.date?.getTime() ?? 0));
+    .filter(i => i.finished && !isRecentlyFinished(i))
+    .sort((a, b) => b.endedAt - a.endedAt);
 
   const openCount = upcomingItems.filter(i =>
     i.kind === "event"
       ? (i.ev.status === "open" || i.ev.status === "active")
       : i.st.status === "active"
   ).length;
+
+  // Kürzlich beendete Events zuerst, danach die anstehenden Events chronologisch.
+  const topItems = [...recentFinishedItems, ...upcomingItems];
 
   return (
     <div className="px-5 pb-5 pt-0 sm:p-6 max-w-6xl mx-auto space-y-6 animate-fade-in">
@@ -149,7 +164,7 @@ export default async function EventsPage() {
       </div>
 
       <div className="space-y-2">
-        {upcomingItems.length === 0 && finishedItems.length === 0 && (
+        {topItems.length === 0 && finishedItems.length === 0 && (
           <EmptyState
             type="events"
             title="Noch keine Events"
@@ -157,7 +172,7 @@ export default async function EventsPage() {
           />
         )}
 
-        {upcomingItems.map((item, idx) => {
+        {topItems.map((item, idx) => {
           if (item.kind === "event") {
             const { ev } = item;
             const s            = EVENT_STATUS[ev.status] ?? EVENT_STATUS.finished;

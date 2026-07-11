@@ -110,6 +110,16 @@ const RULES: RuleSeed[] = [
     urlTemplate: "/quests",
   },
   {
+    key: "quest_new",
+    label: "Neue Quests verfügbar",
+    description: "Am 1. des Monats, wenn die neuen monatlichen Quests generiert werden.",
+    category: "quests",
+    pushEnabled: true, inAppEnabled: true, discordDmEnabled: false, discordChanEnabled: true,
+    titleTemplate: "🎯 Neue Quests für {month}!",
+    bodyTemplate: "Die Quests für **{month} {year}** sind da:\n{questTitles}",
+    urlTemplate: "/quests",
+  },
+  {
     key: "prediction_result",
     label: "Vorhersage-Ergebnis",
     description: "Wenn eine Event-Sieger-Vorhersage ausgewertet wurde (richtig oder falsch).",

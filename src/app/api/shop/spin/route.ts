@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { updateQuestProgress } from "@/lib/quests";
 
 // Gewichtete Preistabelle
 const PRIZES = [
@@ -65,6 +66,8 @@ export async function POST() {
       await tx.pointTransaction.create({ data: { userId, amount, reason: `Tages-Spin 🎰: ${prize.label}` } });
     }
   });
+
+  updateQuestProgress(userId, "DAILY_SPIN", 1).catch(() => {});
 
   return NextResponse.json({ ok: true, prize: { type: prize.type, value: prize.value, label: prize.label } });
 }

@@ -1051,6 +1051,8 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
             <div className="rounded-xl overflow-hidden border border-white/[0.06]">
               {sortedSeriesEvents.map((ev, i) => {
                 const st = STATUS_CONFIG[ev.status] ?? { label: ev.status, cls: "text-gray-500" };
+                const isFinished = ev.status === "finished";
+                const isFirstFinished = isFinished && sortedSeriesEvents[i - 1]?.status !== "finished";
                 const date = new Date(ev.startAt).toLocaleDateString("de-DE", {
                   day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
                 });
@@ -1060,6 +1062,8 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
                     href={`/admin/events/${ev.id}`}
                     className={`flex items-center gap-3 px-4 py-3 hover:bg-white/[0.03] transition-colors ${
                       i > 0 ? "border-t border-white/[0.05]" : ""
+                    } ${isFirstFinished ? "border-t-2 border-t-white/[0.08]" : ""} ${
+                      isFinished ? "opacity-60 hover:opacity-90" : ""
                     }`}
                   >
                     <div className="flex-1 min-w-0">

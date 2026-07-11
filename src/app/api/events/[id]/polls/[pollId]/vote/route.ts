@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { updateQuestProgress } from "@/lib/quests";
 
 export async function POST(
   req: NextRequest,
@@ -78,6 +79,10 @@ export async function POST(
     create: { pollId, voterId: userId, targetId },
     update: { targetId },
   });
+
+  if (!existingVote) {
+    updateQuestProgress(userId, "POLL_VOTE", 1).catch(() => {});
+  }
 
   return NextResponse.json({ ok: true, targetId, changed });
 }

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getMinigamesConfig, isMinigameEnabled } from "@/lib/minigames-config";
 import { dispatchNotification } from "@/lib/notify-dispatch";
 import { isExpired, isPairOnCooldown, getDailyWageredTotal, getDailyDuelCount, MAX_DUELS_PER_DAY } from "@/lib/duel";
+import { updateQuestProgress } from "@/lib/quests";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -103,6 +104,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
     throw err;
   }
+
+  updateQuestProgress(challenge.challengerId, "DUEL_PLAYED", 1).catch(() => {});
+  updateQuestProgress(challenge.opponentId, "DUEL_PLAYED", 1).catch(() => {});
 
   const challengerName = challenge.challenger.username ?? challenge.challenger.name ?? "Herausforderer";
   const opponentName = challenge.opponent.username ?? challenge.opponent.name ?? "Gegner";

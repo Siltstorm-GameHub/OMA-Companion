@@ -208,7 +208,11 @@ export default async function QuestsPage() {
             { icon: "🎙️", label: "Sprachkanal", desc: "Minuten werden beim Verlassen des Voice automatisch gezählt" },
             { icon: "💬", label: "Nachrichten",  desc: "Jede Nachricht im Discord-Server zählt" },
             { icon: "📅", label: "Events",       desc: "Zählt bei der Anmeldung" },
-            { icon: "⚔️", label: "Turniere",     desc: "Zählt bei der Teilnahme" },
+            { icon: "🗳️", label: "Umfragen",     desc: "Zählt bei der ersten Abstimmung in einer Event-Umfrage" },
+            { icon: "🎰", label: "Glücksrad",    desc: "Zählt bei jedem täglichen Dreh im Shop" },
+            { icon: "⚔️", label: "Duelle",       desc: "Zählt bei jedem aufgelösten Münzen-Duell" },
+            { icon: "🖱️", label: "Idle-Clicker", desc: "Zählt bei Klicks im Idle-Clicker" },
+            { icon: "🎯", label: "Vorhersagen",  desc: "Zählt bei der ersten Sieger-Vorhersage zu einem Event" },
           ].map(item => (
             <li key={item.label} className="flex items-start gap-2">
               <span className="shrink-0">{item.icon}</span>

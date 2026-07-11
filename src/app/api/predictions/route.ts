@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { isMinigameEnabled, getMinigamesConfig } from "@/lib/minigames-config";
 import { PREDICTION_MIN_WAGER } from "@/lib/predictions";
+import { updateQuestProgress } from "@/lib/quests";
 
 const userSelect = { id: true, username: true, name: true, image: true } as const;
 
@@ -72,10 +73,12 @@ export async function POST(req: NextRequest) {
   if (!predictedUser) return NextResponse.json({ error: "Nutzer nicht gefunden" }, { status: 404 });
 
   try {
+    let isFirstPrediction = false;
     const prediction = await prisma.$transaction(async tx => {
       const existing = await tx.eventWinnerPrediction.findUnique({
         where: { userId_eventId: { userId, eventId } },
       });
+      isFirstPrediction = !existing;
 
       if (existing) {
         await tx.user.update({ where: { id: userId }, data: { points: { increment: existing.wager } } });
@@ -100,6 +103,10 @@ export async function POST(req: NextRequest) {
         update: { predictedUserId, wager, resolved: false, correct: null, coinsAwarded: 0 },
       });
     });
+
+    if (isFirstPrediction) {
+      updateQuestProgress(userId, "PREDICTION_MADE", 1).catch(() => {});
+    }
 
     return NextResponse.json({ ok: true, prediction: { ...prediction, predictedUser } });
   } catch (err) {
