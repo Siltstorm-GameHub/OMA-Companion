@@ -1,10 +1,10 @@
 "use client";
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Trophy, Clock, Vote } from "lucide-react";
+import { ChevronDown, ChevronUp, Trophy, Clock, Vote, Eye } from "lucide-react";
 import RankPointsIcon from "@/components/RankPointsIcon";
 
 type User        = { id: string; name: string | null; username: string | null; image: string | null };
-type Participant = { userId: string; user: User };
+type Participant = { userId: string; user: User; role?: string };
 type Entry       = {
   id: string; userId: string | null; teamId: string | null;
   placement: number | null; score: number | null; statsJson: string | null;
@@ -66,11 +66,11 @@ export default function FfaView({
     uid ? participants.find(p => p.userId === uid)?.user : null;
 
   // ── Gesamtranking ─────────────────────────────────────────────────────────
-  type PlayerTotal = { userId: string; user: User; stats: Record<string, number>; matchCount: number };
+  type PlayerTotal = { userId: string; user: User; role?: string; stats: Record<string, number>; matchCount: number };
   const totals = new Map<string, PlayerTotal>();
 
   for (const p of participants) {
-    totals.set(p.userId, { userId: p.userId, user: p.user, stats: {}, matchCount: 0 });
+    totals.set(p.userId, { userId: p.userId, user: p.user, role: p.role, stats: {}, matchCount: 0 });
   }
   for (const match of matches) {
     if (!match.playedAt) continue;
@@ -80,7 +80,7 @@ export default function FfaView({
       if (!t) {
         const u = findUser(e.userId);
         if (!u) continue;
-        t = { userId: e.userId, user: u, stats: {}, matchCount: 0 };
+        t = { userId: e.userId, user: u, role: "player", stats: {}, matchCount: 0 };
         totals.set(e.userId, t);
       }
       t.matchCount += 1;
@@ -116,6 +116,25 @@ export default function FfaView({
       }
       return 0;
     });
+
+  // Sobald der Admin eine Endplatzierung bestätigt hat (finalRankingGroups), hat diese
+  // Vorrang vor der statistischen Sortierung — die Zeilenreihenfolge folgt dann 1. bis
+  // letztem Platz, unabhängig davon, wer den höchsten Durchschnitt/Stat-Wert hat.
+  const confirmedPlaceOf = new Map<string, number>();
+  if (finalRankingGroups) {
+    let place = 1;
+    for (const group of finalRankingGroups) {
+      for (const uid of group) confirmedPlaceOf.set(uid, place);
+      place += group.length;
+    }
+  }
+  if (confirmedPlaceOf.size > 0) {
+    ranked.sort((a, b) => {
+      const pa = confirmedPlaceOf.get(a.userId) ?? Infinity;
+      const pb = confirmedPlaceOf.get(b.userId) ?? Infinity;
+      return pa - pb;
+    });
+  }
 
   const playedMatches   = matches.filter(m => m.playedAt);
   const upcomingMatches = matches.filter(m => !m.playedAt);
@@ -164,16 +183,7 @@ export default function FfaView({
                       ? fieldAvgs.reduce((s, v) => s + v, 0) / statFields.length
                       : null;
                     // Use confirmed placement from finalRankingGroups if available, else fall back to stat-rank
-                    const confirmedPlace: number | undefined = (() => {
-                      if (!finalRankingGroups) return undefined;
-                      let place = 1;
-                      for (const group of finalRankingGroups) {
-                        if (group.includes(r.userId)) return place;
-                        place += group.length;
-                      }
-                      return undefined;
-                    })();
-                    const place = confirmedPlace ?? (i + 1);
+                    const place = confirmedPlaceOf.get(r.userId) ?? (i + 1);
                     const reward = placementRewards.find(p => p.place === place);
                     const isPollWinner = pollWinnerIds.includes(r.userId);
                     const totalRankPts = (reward?.rankPts ?? 0) + (isPollWinner && pollBonusRankPts ? pollBonusRankPts : 0);
@@ -194,6 +204,9 @@ export default function FfaView({
                             <span className={`font-medium ${isMe ? "text-rose-300" : "text-white"}`}>
                               {uname(r.user)}{isMe && " (du)"}
                             </span>
+                            {r.role === "spectator" && (
+                              <Eye className="w-3 h-3 text-gray-500 shrink-0" />
+                            )}
                           </div>
                         </td>
                         {!isAvg && statFields.map(f => {

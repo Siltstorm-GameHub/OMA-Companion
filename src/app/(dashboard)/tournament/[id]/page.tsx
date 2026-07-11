@@ -4,7 +4,7 @@ import { getSessionUser } from "@/lib/roles";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Users, Clock, Swords, StickyNote, Vote, Tv2, EyeOff, Clapperboard } from "lucide-react";
+import { ArrowLeft, Users, Clock, Swords, StickyNote, Vote, Tv2, Eye, EyeOff, Clapperboard } from "lucide-react";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import SeriesIcon from "@/components/SeriesIcon";
 import WinIcon from "@/components/WinIcon";
@@ -158,15 +158,23 @@ export default async function TournamentDetailPage({
   // Alle bekannten Spieler: Turnier-Teilnehmer + Event-Registrierungen zusammenführen,
   // damit Match-Spieler auch dann aufgelöst werden wenn sie nicht als TournamentParticipant eingetragen sind
   type KnownUser = { id: string; name: string | null; username: string | null; image: string | null };
-  type KnownParticipant = { userId: string; user: KnownUser };
+  type KnownParticipant = { userId: string; user: KnownUser; role?: string };
+  const roleByUserId = new Map(event.registrations.map(r => [r.userId, r.role]));
   const mergedParticipants: KnownParticipant[] = hasTournament
     ? [
-        ...event.participants.map(p => ({ userId: p.userId, user: p.user as KnownUser })),
+        ...event.participants.map(p => ({ userId: p.userId, user: p.user as KnownUser, role: roleByUserId.get(p.userId) ?? "player" })),
         ...event.registrations
           .filter(r => !event.participants.some(p => p.userId === r.userId))
-          .map(r => ({ userId: r.user.id, user: r.user as KnownUser })),
+          .map(r => ({ userId: r.user.id, user: r.user as KnownUser, role: r.role })),
       ]
     : [];
+
+  // Teilnehmerliste: Mitspieler zuerst, dann Zuschauer, jeweils getrennt voneinander
+  const sortedRegistrations = [...event.registrations].sort((a, b) => {
+    const ra = a.role === "spectator" ? 1 : 0;
+    const rb = b.role === "spectator" ? 1 : 0;
+    return ra - rb;
+  });
   const format = event.format ?? "single_elimination";
   const isFfa         = format === "ffa" || format === "coop_stats" || format === "avg_stats";
   const isElimination = format === "single_elimination" || format === "double_elimination";
@@ -800,38 +808,49 @@ export default async function TournamentDetailPage({
               <Users className="w-3.5 h-3.5" /> Teilnehmer
             </h2>
             <div className="glass rounded-2xl divide-y divide-white/5">
-              {event.registrations.map(({ user }, i) => {
+              {sortedRegistrations.map(({ user, role }, i) => {
                 const isMe = user.id === userId;
                 const wins = event.matches.filter(m => m.winnerId === user.id).length;
                 const wonLabels = [
                   ...(pollWinnerIds.includes(user.id) && pollLabel ? [pollLabel] : []),
                   ...(pollWinsByUser[user.id] ?? []),
                 ];
+                const isSpectatorRow = role === "spectator";
+                const showDivider = isSpectatorRow && (i === 0 || sortedRegistrations[i - 1].role !== "spectator");
                 return (
-                  <div key={user.id} className={`flex items-center gap-2.5 px-3 py-2.5 ${isMe ? "bg-rose-950/30" : ""}`}>
-                    <span className="text-xs text-gray-700 w-4 shrink-0 text-center">{i + 1}</span>
-                    {user.image ? (
-                      <img src={user.image} alt="" className="w-7 h-7 rounded-full shrink-0" />
-                    ) : (
-                      <div className="w-7 h-7 rounded-full bg-rose-900/30 flex items-center justify-center text-xs font-bold text-rose-400 shrink-0">
-                        {userName(user)[0].toUpperCase()}
+                  <div key={user.id}>
+                    {showDivider && (
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.02]">
+                        <Eye className="w-3 h-3 text-gray-500" />
+                        <span className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Zuschauer</span>
                       </div>
                     )}
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm truncate font-medium ${isMe ? "text-rose-300" : "text-white"}`}>
-                        {userName(user)}{isMe && " (du)"}
-                      </p>
-                      {wonLabels.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-0.5">
-                          {wonLabels.map(label => (
-                            <span key={label} className="flex items-center gap-0.5 text-[10px] font-semibold text-violet-400">
-                              <Vote className="w-2.5 h-2.5" /> {label}
-                            </span>
-                          ))}
+                    <div className={`flex items-center gap-2.5 px-3 py-2.5 ${isMe ? "bg-rose-950/30" : ""}`}>
+                      <span className="text-xs text-gray-700 w-4 shrink-0 text-center">{i + 1}</span>
+                      {user.image ? (
+                        <img src={user.image} alt="" className="w-7 h-7 rounded-full shrink-0" />
+                      ) : (
+                        <div className="w-7 h-7 rounded-full bg-rose-900/30 flex items-center justify-center text-xs font-bold text-rose-400 shrink-0">
+                          {userName(user)[0].toUpperCase()}
                         </div>
                       )}
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm truncate font-medium flex items-center gap-1.5 ${isMe ? "text-rose-300" : "text-white"}`}>
+                          <span className="truncate">{userName(user)}{isMe && " (du)"}</span>
+                          {isSpectatorRow && <Eye className="w-3 h-3 text-gray-500 shrink-0" />}
+                        </p>
+                        {wonLabels.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-0.5">
+                            {wonLabels.map(label => (
+                              <span key={label} className="flex items-center gap-0.5 text-[10px] font-semibold text-violet-400">
+                                <Vote className="w-2.5 h-2.5" /> {label}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      {wins > 0 && <span className="text-xs text-emerald-400 shrink-0">{wins}W</span>}
                     </div>
-                    {wins > 0 && <span className="text-xs text-emerald-400 shrink-0">{wins}W</span>}
                   </div>
                 );
               })}
