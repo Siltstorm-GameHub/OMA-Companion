@@ -15,6 +15,7 @@ type SeriesStatConfig = {
   mvpStatField?: string;
   defaultWinnerStatField?: string;
   defaultWinnerTargetField?: string;
+  eventPlacementCoins?: { place: number; coins: number }[];
 };
 
 const DEFAULT_REWARDS: RewardsConfig = {

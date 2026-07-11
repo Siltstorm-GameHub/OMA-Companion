@@ -40,6 +40,7 @@ type SeriesStatConfig = {
   winnerStatKeys?: string[];        // new: array of series stat fields to +1 on event win
   winnerSeriesStatKey?: string;     // old: single field (backward compat)
   matchWinStatKeys?: string[];      // array of series stat fields fed by the per-round "Match Win" flag
+  eventPlacementCoins?: { place: number; coins: number }[]; // Bonus-Münzen für Platz 1-3 je Einzel-Event der Reihe
   dominionBonus?: {
     enabled: boolean;
     triggerStats: string[];   // new: array (any match keeps streak)
@@ -70,6 +71,10 @@ type SeriesStandings = {
  *   Eventreihe)") werden bei Events innerhalb einer Reihe NICHT hier vergeben, sondern erst bei
  *   Abschluss der gesamten Eventreihe anhand von deren Endplatzierung (siehe
  *   /api/admin/series/[id]/complete) — nur eigenständige Events ohne Reihe erhalten sie direkt hier.
+ *   Events innerhalb einer Reihe erhalten hier stattdessen ggf. die seriesweit fix konfigurierten
+ *   zusätzlichen Platzierungs-Münzen je Einzel-Event (statCfg.eventPlacementCoins, siehe
+ *   "Gesamttabellen-Konfiguration" der Reihe) — nur Münzen, keine Rang-Punkte, unabhängig von der
+ *   Endplatzierung der gesamten Reihe.
  * - Poll-Gewinner-Belohnung (auch beim Re-Edit, mit Rückbuchung); EventPoll-Umfragen werden erst
  *   ausgewertet, sobald ihr Abstimmungsfenster (endAt) vorbei ist — die zusätzlichen Ligapunkte des
  *   Umfrage-Gewinners kommen erst dann (mit Abschluss der Umfrage) in die Ligatabelle
@@ -317,7 +322,9 @@ export async function POST(
 
     // Platzierungs-Münzen + Rang-Punkte (unterstützt Gleichstand via finalRankingGroups) — nur für
     // eigenständige Events ohne Reihe. Events innerhalb einer Eventreihe erhalten ihre
-    // Platzierungs-Belohnung erst bei Abschluss der gesamten Reihe (Endplatzierung).
+    // Platzierungs-Belohnung erst bei Abschluss der gesamten Reihe (Endplatzierung); direkt hier
+    // gibt es für sie höchstens die seriesweit konfigurierten zusätzlichen Platzierungs-Münzen
+    // (statCfg.eventPlacementCoins) für die Platzierung innerhalb dieses einzelnen Events.
     if (!event.seriesId) {
       if (body.finalRankingGroups?.length) {
         // Groups format: [[uid1, uid2], [uid3], ...] where all in same group share placement
@@ -366,6 +373,37 @@ export async function POST(
             );
           }
           if (txns.length > 0) await prisma.$transaction(txns);
+        }
+      }
+    } else {
+      const eventPlacementCoins = statCfg.eventPlacementCoins ?? [];
+      if (eventPlacementCoins.some(p => p.coins > 0)) {
+        if (body.finalRankingGroups?.length) {
+          let place = 1;
+          for (const group of body.finalRankingGroups) {
+            const reward = eventPlacementCoins.find(p => p.place === place);
+            if (reward && reward.coins > 0) {
+              for (const userId of group.filter(id => registeredSet.has(id))) {
+                await prisma.$transaction([
+                  prisma.user.update({ where: { id: userId }, data: { points: { increment: reward.coins } } }),
+                  prisma.pointTransaction.create({ data: { userId, amount: reward.coins, reason: `[Münzen] Platz ${place}: ${event.title}` } }),
+                ]);
+              }
+            }
+            place += group.length;
+          }
+        } else {
+          const ranking = (body.finalRanking ?? []).filter(id => registeredSet.has(id));
+          for (let i = 0; i < ranking.length; i++) {
+            const place = i + 1;
+            const reward = eventPlacementCoins.find(p => p.place === place);
+            if (!reward || reward.coins <= 0) continue;
+            const userId = ranking[i];
+            await prisma.$transaction([
+              prisma.user.update({ where: { id: userId }, data: { points: { increment: reward.coins } } }),
+              prisma.pointTransaction.create({ data: { userId, amount: reward.coins, reason: `[Münzen] Platz ${place}: ${event.title}` } }),
+            ]);
+          }
         }
       }
     }

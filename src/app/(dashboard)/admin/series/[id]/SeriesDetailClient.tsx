@@ -156,6 +156,10 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
   const [statSpectatorCoins, setStatSpectatorCoins]         = useState<number>(initialStatCfg.spectatorParticipationCoins ?? 0);
   const [statTransferToGlobal, setStatTransferToGlobal]   = useState<boolean>(initialStatCfg.transferToGlobalRanking ?? false);
   const [statRows, setStatRows] = useState<{ field: string; pointsPer: number; isWinnerStat?: boolean; isMatchWinStat?: boolean }[]>(initialStatCfg.stats ?? []);
+  // Zusätzliche Münzen für die Platzierung (1./2./3.) innerhalb eines einzelnen Events der Reihe
+  const [eventPlacementCoins, setEventPlacementCoins] = useState<{ place: number; coins: number }[]>(
+    initialStatCfg.eventPlacementCoins ?? [{ place: 1, coins: 0 }, { place: 2, coins: 0 }, { place: 3, coins: 0 }]
+  );
   // Event-level stat settings (Step 4 im Wizard)
   const [eventStatFields, setEventStatFields] = useState<string[]>(initialStatCfg.eventStatFields ?? []);
   const [winnerStatField, setWinnerStatField] = useState<string>(initialStatCfg.winnerStatField ?? "");
@@ -198,6 +202,10 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
 
   function updatePlacementReward(place: number, key: keyof PlacementReward, value: number) {
     setPlacementRewards(prev => prev.map(r => r.place === place ? { ...r, [key]: value } : r));
+  }
+
+  function updateEventPlacementCoins(place: number, value: number) {
+    setEventPlacementCoins(prev => prev.map(r => r.place === place ? { ...r, coins: value } : r));
   }
 
   function calcLegacyPoints(participations: number, stats: Record<string, number>): number {
@@ -252,6 +260,7 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
               seriesPoints: dominionSeriesPoints,
             },
           }),
+          eventPlacementCoins,
         }),
         legacyStandings:     JSON.stringify(legacyRows),
         placementRewardsJson: JSON.stringify({ placements: placementRewards }),
@@ -738,6 +747,32 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
             <p className="text-[11px] text-gray-500">
               Wird jeweils direkt bei Abschluss des einzelnen Events vergeben, nicht erst am Ende der Reihe.
             </p>
+
+            <div className="pt-2 border-t border-white/[0.05] space-y-2">
+              <p className="text-xs text-gray-500 flex items-center gap-1.5">
+                <Coins className="w-3 h-3 text-amber-400" /> Zusätzliche Münzen für Platzierung je Event
+              </p>
+              <div className="space-y-1.5">
+                {eventPlacementCoins.map(r => (
+                  <div key={r.place} className="flex items-center gap-2">
+                    <span className="text-sm text-gray-300 flex items-center gap-1.5 w-24 shrink-0">
+                      {r.place === 1 ? "🥇" : r.place === 2 ? "🥈" : "🥉"} {r.place}. Platz
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <Coins className="w-3 h-3 text-amber-400 shrink-0" />
+                      <input type="number" min={0} value={r.coins}
+                        onChange={e => updateEventPlacementCoins(r.place, Number(e.target.value))}
+                        className={numCls} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[11px] text-gray-500">
+                Zusätzlich zu den Münzen pro Teilnahme oben — wird direkt bei Abschluss des jeweiligen Events für
+                dessen eigene Platzierung vergeben, unabhängig von der Endplatzierung der gesamten Reihe.
+              </p>
+            </div>
+
             <div className="space-y-1.5">
               <p className="text-xs text-gray-500">Stats</p>
               {statRows.map((row, i) => (

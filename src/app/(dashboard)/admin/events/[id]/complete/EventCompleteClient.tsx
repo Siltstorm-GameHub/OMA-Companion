@@ -26,6 +26,7 @@ type SeriesStatConfig = {
   mvpStatField?: string;
   defaultWinnerStatField?: string;
   defaultWinnerTargetField?: string;
+  eventPlacementCoins?: { place: number; coins: number }[];
 };
 
 interface Props {
@@ -256,6 +257,17 @@ export default function EventCompleteClient({
   // Gesamttabellen-Konfiguration, sonst aus den Event-eigenen Belohnungen
   const effectiveParticipationCoins = seriesId ? (seriesStatConfig?.participationCoins ?? 0) : rewardsConfig.participationCoins;
   const effectiveSpectatorCoins = seriesId ? (seriesStatConfig?.spectatorParticipationCoins ?? 0) : (spectatorRewardJson?.coins ?? 0);
+
+  // Platzierungs-Belohnung für dieses einzelne Event: bei Events innerhalb einer Reihe gibt es hier
+  // höchstens die seriesweit konfigurierten Bonus-Münzen (keine Rang-Punkte) — die volle Belohnung
+  // (Münzen + Rang-Punkte) kommt erst bei Abschluss der gesamten Reihe anhand der Endplatzierung.
+  function getPlacementReward(place: number): PlacementReward | undefined {
+    if (seriesId) {
+      const r = seriesStatConfig?.eventPlacementCoins?.find(p => p.place === place);
+      return r && r.coins > 0 ? { place, coins: r.coins, rankPoints: 0 } : undefined;
+    }
+    return rewardsConfig.placements.find(p => p.place === place);
+  }
 
   /* ── Ranking auto-sort with tie detection ── */
   function scoreOf(uid: string, field: string): number {
@@ -759,9 +771,9 @@ export default function EventCompleteClient({
                       Alle {registeredUsers.length} Teilnehmer: {effectiveParticipationCoins} Münzen
                     </li>
                   )}
-                  {!seriesId && rankingGroups.map((group, gi) => {
+                  {rankingGroups.map((group, gi) => {
                     const place = placementMap.get(group[0]) ?? gi + 1;
-                    const reward = rewardsConfig.placements.find(p => p.place === place);
+                    const reward = getPlacementReward(place);
                     if (!reward || (reward.coins === 0 && reward.rankPoints === 0)) return null;
                     const names = group.map(id => userName(registeredUsers.find(u => u.id === id) ?? { id: "", name: id, username: null, image: null }));
                     return (
@@ -777,7 +789,7 @@ export default function EventCompleteClient({
                   {seriesId && (
                     <li className="flex items-center gap-2 text-gray-500 italic">
                       <ListOrdered className="w-3 h-3 shrink-0" />
-                      Platzierungs-Belohnung: erst bei Abschluss der Eventreihe (Endplatzierung)
+                      Endplatzierung der Eventreihe (Punkte + weitere Münzen): erst bei Abschluss der gesamten Eventreihe
                     </li>
                   )}
                   {pollConfig.enabled && (
@@ -864,7 +876,10 @@ export default function EventCompleteClient({
 
             {seriesId && (
               <p className="text-[10px] text-gray-600">
-                Fließt in die Gesamttabelle der Reihe ein. Die Platzierungs-Belohnung („Belohnungen (Endplatzierung der Eventreihe)") wird erst bei Abschluss der gesamten Eventreihe anhand der finalen Gesamtplatzierung vergeben.
+                Fließt in die Gesamttabelle der Reihe ein. Die volle Platzierungs-Belohnung („Belohnungen
+                (Endplatzierung der Eventreihe)") wird erst bei Abschluss der gesamten Eventreihe anhand der
+                finalen Gesamtplatzierung vergeben — zusätzliche, seriesweit konfigurierte Platzierungs-Münzen
+                für dieses einzelne Event (falls eingestellt) werden direkt hier vergeben.
               </p>
             )}
 
@@ -878,7 +893,7 @@ export default function EventCompleteClient({
                   const u = registeredUsers.find(u => u.id === uid);
                   if (!u) return null;
                   const place = placementMap.get(uid) ?? idx + 1;
-                  const reward = seriesId ? undefined : rewardsConfig.placements.find(p => p.place === place);
+                  const reward = getPlacementReward(place);
                   const isTied = tiedAbove.has(uid);
 
                   return (
