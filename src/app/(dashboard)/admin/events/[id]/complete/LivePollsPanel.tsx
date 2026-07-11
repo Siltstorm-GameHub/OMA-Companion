@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { toast } from "sonner";
-import { Vote, Trophy, Clock, CheckCircle2, Trash2 } from "lucide-react";
+import { Vote, Trophy, Clock, CheckCircle2, Trash2, UserX } from "lucide-react";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };
 
@@ -55,6 +55,14 @@ function answerOptionsFor(poll: PublicPoll, registeredUsers: User[], spectatorUs
   if (poll.answerType === "custom") return poll.customAnswers.map(a => ({ id: a, label: a }));
   if (poll.answerType === "players") return registeredUsers.filter(u => !excluded.has(u.id)).map(u => ({ id: u.id, label: userName(u) }));
   if (poll.answerType === "spectators") return spectatorUsers.filter(u => !excluded.has(u.id)).map(u => ({ id: u.id, label: userName(u) }));
+  return [];
+}
+
+/** Voller Kandidatenpool (auch bereits ausgeschlossene) — Basis für die Ausschluss-Verwaltung.
+ * Bei "custom" gibt es keine User-Kandidaten, die man ausschließen könnte. */
+function candidatePoolFor(poll: PublicPoll, registeredUsers: User[], spectatorUsers: User[]): User[] {
+  if (poll.answerType === "players") return registeredUsers;
+  if (poll.answerType === "spectators") return spectatorUsers;
   return [];
 }
 
@@ -185,6 +193,30 @@ export default function LivePollsPanel({ eventId, isAdmin, registeredUsers, spec
     }
   }
 
+  async function toggleExcluded(poll: PublicPoll, userId: string) {
+    const next = poll.excludedUserIds.includes(userId)
+      ? poll.excludedUserIds.filter(id => id !== userId)
+      : [...poll.excludedUserIds, userId];
+    setSavingFor(`${poll.id}:exclude:${userId}`);
+    try {
+      const res = await fetch(`/api/admin/polls/${poll.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ excludedUserIds: next }),
+      });
+      if (res.ok) {
+        await refresh();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast.error((err as { error?: string }).error ?? "Fehler beim Ausschließen");
+      }
+    } catch {
+      toast.error("Netzwerkfehler beim Ausschließen");
+    } finally {
+      setSavingFor(null);
+    }
+  }
+
   async function removeVote(pollId: string, voterId: string) {
     setSavingFor(`${pollId}:${voterId}`);
     try {
@@ -225,6 +257,8 @@ export default function LivePollsPanel({ eventId, isAdmin, registeredUsers, spec
         {polls.map(poll => {
           const isOpen = now <= new Date(poll.endAt).getTime();
           const answers = answerOptionsFor(poll, registeredUsers, spectatorUsers);
+          const candidatePool = candidatePoolFor(poll, registeredUsers, spectatorUsers);
+          const excludedSet = new Set(poll.excludedUserIds);
           const totalVotes = Object.values(poll.voteCounts).reduce((a, b) => a + b, 0);
           const admin = adminPolls[poll.id];
 
@@ -280,6 +314,37 @@ export default function LivePollsPanel({ eventId, isAdmin, registeredUsers, spec
                       {poll.winnerRankPoints > 0 && <span className="text-purple-400 font-medium">{poll.winnerRankPoints} Rangpunkte</span>}
                     </span>
                   )}
+                </div>
+              )}
+
+              {/* Admin: Kandidaten von der Umfrage ausschließen */}
+              {isAdmin && candidatePool.length > 0 && (
+                <div className="pt-1 space-y-1.5">
+                  <p className="text-[10px] text-gray-600 uppercase tracking-widest flex items-center gap-1">
+                    <UserX className="w-3 h-3" /> Kandidaten
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {candidatePool.map(u => {
+                      const isExcluded = excludedSet.has(u.id);
+                      const isSaving = savingFor === `${poll.id}:exclude:${u.id}`;
+                      return (
+                        <button
+                          key={u.id}
+                          type="button"
+                          disabled={isSaving}
+                          onClick={() => toggleExcluded(poll, u.id)}
+                          title={isExcluded ? "Wieder zur Wahl zulassen" : "Von der Umfrage ausschließen"}
+                          className={`text-[11px] px-2 py-1 rounded-full border transition-colors disabled:opacity-50 ${
+                            isExcluded
+                              ? "border-red-800/50 bg-red-950/20 text-red-400/70 line-through"
+                              : "border-white/[0.08] bg-white/[0.03] text-gray-300 hover:border-red-700/50 hover:text-red-300"
+                          }`}
+                        >
+                          {userName(u)}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
 

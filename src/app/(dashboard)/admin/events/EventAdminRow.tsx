@@ -14,7 +14,6 @@ import GameNameInput from "@/components/GameNameInput";
 import StatFieldEditor from "@/components/StatFieldEditor";
 import CoinIcon from "@/components/CoinIcon";
 import RankPointsIcon from "@/components/RankPointsIcon";
-import EventCompletionModal from "./EventCompletionModal";
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
 type User = { id: string; name: string | null; username: string | null; image: string | null };
@@ -203,9 +202,6 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
   /* ── Scope modal ── */
   const [showScopeModal, setShowScopeModal] = useState(false);
   const [pendingSave, setPendingSave]       = useState<"single" | null>(null);
-
-  /* ── Completion modal ── */
-  const [showCompletionModal, setShowCompletionModal] = useState(false);
 
   /* ── Tournament settings state ── */
   const [tmtFormat, setTmtFormat]   = useState(event.format ?? "single_elimination");
@@ -556,27 +552,6 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
         />
       )}
 
-      {showCompletionModal && event.seriesId && (
-        <EventCompletionModal
-          eventId={event.id}
-          eventTitle={event.title}
-          seriesId={event.seriesId}
-          registeredUsers={allUsers.filter(u => registeredIds.has(u.id))}
-          tournament={tournament ?? null}
-          seriesStatConfig={(() => {
-            const cfg = { participationPoints: statParticipationPts, stats: statRows, mvpStatField: statMvpField || undefined, defaultWinnerStatField: statDefaultWinnerField || undefined, defaultWinnerTargetField: statDefaultTargetField || undefined };
-            return cfg;
-          })()}
-          isReEdit={!!event.completionData}
-          initialData={(() => {
-            try { return event.completionData ? (JSON.parse(event.completionData as string) as Record<string, unknown>) : undefined; }
-            catch { return undefined; }
-          })()}
-          initialFinalRanking={event.finalRankingJson ? JSON.parse(event.finalRankingJson) as string[] : undefined}
-          initialFinalRankingNote={event.finalRankingNote ?? undefined}
-          onClose={() => setShowCompletionModal(false)}
-        />
-      )}
 
       <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
         {/* ── Row header ── */}
@@ -1282,15 +1257,13 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                               : "Überträgt Teilnahmen und Stats in die Gesamttabelle der Reihe."}
                           </p>
                         </div>
-                        <button
-                          onClick={() => setShowCompletionModal(true)}
-                          disabled={loading || !seriesSettingsLoaded}
-                          title={!seriesSettingsLoaded ? "Reihen-Einstellungen werden geladen…" : undefined}
-                          className="flex items-center gap-1.5 text-sm text-teal-300 hover:text-white hover:bg-teal-700 border border-teal-600/50 hover:border-teal-700 rounded-lg px-3 py-2 transition-colors disabled:opacity-50 shrink-0"
+                        <Link
+                          href={`/admin/events/${event.id}/complete`}
+                          className="flex items-center gap-1.5 text-sm text-teal-300 hover:text-white hover:bg-teal-700 border border-teal-600/50 hover:border-teal-700 rounded-lg px-3 py-2 transition-colors shrink-0"
                         >
                           <CheckCircle2 className="w-3.5 h-3.5" />
-                          {!seriesSettingsLoaded ? "Lädt…" : event.completionData ? "Bearbeiten" : "Abschließen"}
-                        </button>
+                          {event.completionData ? "Bearbeiten" : "Abschließen"}
+                        </Link>
                       </div>
                     </div>
                   )}
