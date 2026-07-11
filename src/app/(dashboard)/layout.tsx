@@ -16,8 +16,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const userId = session.user?.id;
 
+  const now = new Date();
+  const currentQuestMonth = now.getMonth() + 1;
+  const currentQuestYear = now.getFullYear();
+
   // ── News-Feed-Daten ──────────────────────────────────────────────────
-  const [activeOrPollEvent, upcomingEvent, activeLulSeason, openQuestsCount, memberCount, myPoints, activeClipContest] = await Promise.all([
+  const [activeOrPollEvent, upcomingEvent, activeLulSeason, totalMonthQuests, completedMonthQuests, memberCount, myPoints, activeClipContest] = await Promise.all([
     // Currently running or in poll phase
     prisma.event.findFirst({
       where: { status: { in: ["active", "umfrage"] } },
@@ -34,8 +38,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
       where: { status: "active" },
       include: { spieltage: { where: { status: { not: "finished" } }, orderBy: { number: "asc" }, take: 1, select: { game: true, scheduledAt: true } } },
     }),
+    prisma.quest.count({ where: { month: currentQuestMonth, year: currentQuestYear } }),
     userId
-      ? prisma.userQuestProgress.count({ where: { userId, completed: false } })
+      ? prisma.userQuestProgress.count({
+          where: { userId, completed: true, quest: { month: currentQuestMonth, year: currentQuestYear } },
+        })
       : 0,
     prisma.user.count(),
     userId
@@ -49,6 +56,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   ]);
 
   const nextEvent = activeOrPollEvent ?? upcomingEvent;
+  const openQuestsCount = userId ? Math.max(totalMonthQuests - completedMonthQuests, 0) : 0;
   const newsItems: NewsItem[] = [];
 
   // Aktives / Umfragephase / Nächstes Event

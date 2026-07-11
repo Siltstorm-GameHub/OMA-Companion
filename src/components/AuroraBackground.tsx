@@ -7,8 +7,8 @@ export default function AuroraBackground() {
       className="fixed inset-0 pointer-events-none select-none overflow-hidden"
       style={{ zIndex: 1 }}
     >
-      {/* Basis — reines Dunkel */}
-      <div className="absolute inset-0" style={{ background: "#0d0d0f" }} />
+      {/* Basis — folgt Theme (dunkel/hell) */}
+      <div className="absolute inset-0" style={{ background: "var(--bg-base)" }} />
 
       {/* ── Blob 1 — Logo-Teal (oben links) ── */}
       <div
@@ -52,13 +52,10 @@ export default function AuroraBackground() {
         }}
       />
 
-      {/* Vignette — Ränder abdunkeln */}
+      {/* Vignette — Ränder abdunkeln/abhellen, folgt Theme */}
       <div
         className="absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(ellipse 80% 80% at 50% 50%, transparent 30%, rgba(5,5,8,0.80) 100%)",
-        }}
+        style={{ background: "var(--aurora-vignette)" }}
       />
 
       {/* Feine Teal-Linie oben */}
