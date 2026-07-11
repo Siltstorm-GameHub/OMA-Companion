@@ -32,6 +32,9 @@ type AdminPoll = {
 type Props = {
   eventId: string;
   isAdmin: boolean;
+  /** Event ist bereits vollständig abgeschlossen ("finished") — nur noch Ergebnis-Übersicht,
+   * keine Stimmen-/Kandidaten-Verwaltung mehr (die ist nur während der Umfragephase sinnvoll). */
+  readOnly?: boolean;
   registeredUsers: User[];
   spectatorUsers: User[];
   /** Alle User der Plattform — nötig für Umfragen mit voterEligibility "all", bei denen auch
@@ -150,24 +153,25 @@ function AddVoteForm({
   );
 }
 
-export default function LivePollsPanel({ eventId, isAdmin, registeredUsers, spectatorUsers, allUsers }: Props) {
+export default function LivePollsPanel({ eventId, isAdmin, readOnly = false, registeredUsers, spectatorUsers, allUsers }: Props) {
   const [polls, setPolls] = useState<PublicPoll[] | null>(null);
   const [adminPolls, setAdminPolls] = useState<Record<string, AdminPoll>>({});
   const [savingFor, setSavingFor] = useState<string | null>(null);
+  const canManage = isAdmin && !readOnly;
 
   const userById = useMemo(() => new Map(allUsers.map(u => [u.id, u])), [allUsers]);
 
   const refresh = useCallback(async () => {
     const publicRes = await fetch(`/api/events/${eventId}/polls`);
     if (publicRes.ok) setPolls(await publicRes.json() as PublicPoll[]);
-    if (isAdmin) {
+    if (canManage) {
       const adminRes = await fetch(`/api/admin/events/${eventId}/polls`);
       if (adminRes.ok) {
         const data = await adminRes.json() as AdminPoll[];
         setAdminPolls(Object.fromEntries(data.map(p => [p.id, p])));
       }
     }
-  }, [eventId, isAdmin]);
+  }, [eventId, canManage]);
 
   useEffect(() => { void refresh(); }, [refresh]);
 
@@ -248,8 +252,10 @@ export default function LivePollsPanel({ eventId, isAdmin, registeredUsers, spec
       <div className="flex items-center gap-2">
         <Vote className="w-3.5 h-3.5 text-violet-400" />
         <span className="text-xs font-semibold text-violet-300">Live-Umfragen</span>
-        {!isAdmin && (
-          <span className="text-[10px] text-gray-600 ml-auto">Nur lesend – Stimmen nachtragen erfordert Admin-Rechte</span>
+        {!canManage && (
+          <span className="text-[10px] text-gray-600 ml-auto">
+            {readOnly ? "Nur lesend – Event ist bereits abgeschlossen" : "Nur lesend – Stimmen nachtragen erfordert Admin-Rechte"}
+          </span>
         )}
       </div>
 
@@ -318,7 +324,7 @@ export default function LivePollsPanel({ eventId, isAdmin, registeredUsers, spec
               )}
 
               {/* Admin: Kandidaten von der Umfrage ausschließen */}
-              {isAdmin && candidatePool.length > 0 && (
+              {canManage && candidatePool.length > 0 && (
                 <div className="pt-1 space-y-1.5">
                   <p className="text-[10px] text-gray-600 uppercase tracking-widest flex items-center gap-1">
                     <UserX className="w-3 h-3" /> Kandidaten
@@ -371,7 +377,7 @@ export default function LivePollsPanel({ eventId, isAdmin, registeredUsers, spec
               </div>
 
               {/* Admin: Stimmen einsehen/ändern + neue Stimmen (auch für Nicht-Teilnehmer bei "all") nachtragen */}
-              {isAdmin && admin && (
+              {canManage && admin && (
                 <div className="pt-2 border-t border-white/[0.06] space-y-2.5">
                   <div className="space-y-1">
                     <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-1">Bereits abgestimmt ({votedRows.length})</p>

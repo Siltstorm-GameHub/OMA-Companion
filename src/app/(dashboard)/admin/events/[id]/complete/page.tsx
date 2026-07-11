@@ -159,9 +159,6 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
     ? (() => { try { return JSON.parse(event.completionData as string); } catch { return null; } })()
     : null;
 
-  const gamePhaseComplete = (initialData?.gamePhaseComplete as boolean) ?? false;
-  const pollPhaseComplete = (initialData?.pollPhaseComplete as boolean) ?? false;
-
   const initialFinalRanking: string[] | null = (() => {
     if (!event.finalRankingJson) return null;
     try { return JSON.parse(event.finalRankingJson); } catch { return null; }
@@ -194,8 +191,7 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
       spectatorRewardJson={spectatorRewardJson}
       isAdmin={currentUser.role === "admin"}
       isReEdit={isReEdit}
-      gamePhaseComplete={gamePhaseComplete}
-      pollPhaseComplete={pollPhaseComplete}
+      status={event.status}
       initialData={initialData}
       initialFinalRanking={initialFinalRanking}
       initialRankingGroups={initialRankingGroups}
