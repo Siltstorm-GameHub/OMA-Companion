@@ -93,14 +93,19 @@ export default function FfaView({
     }
   }
 
-  // Für avg_stats: Durchschnitt pro Feld über alle Runden, dann Ø aller Felder
+  // Für avg_stats: Durchschnitt pro Feld über alle Runden, dann Ø aller Felder. Teilnehmer, die noch
+  // keine einzige Runde gespielt haben, bleiben in der Tabelle sichtbar (matchCount 0), landen aber
+  // immer ganz unten und bekommen keinen (fiktiven) Durchschnittswert — sonst könnte eine ungespielte
+  // "0" bei niedrigstem-Ø-gewinnt fälschlich als bester Wert durchgehen.
   const ranked = [...totals.values()]
-    .filter(t => t.matchCount > 0)
     .sort((a, b) => {
+      if (a.matchCount === 0 && b.matchCount === 0) return 0;
+      if (a.matchCount === 0) return 1;
+      if (b.matchCount === 0) return -1;
       if (isAvg) {
         const avgOf = (t: PlayerTotal) =>
           statFields.length > 0
-            ? statFields.map(f => (t.matchCount > 0 ? (t.stats[f] ?? 0) / t.matchCount : 0))
+            ? statFields.map(f => (t.stats[f] ?? 0) / t.matchCount)
                 .reduce((s, v) => s + v, 0) / statFields.length
             : 0;
         return avgOf(b) - avgOf(a);
@@ -155,7 +160,7 @@ export default function FfaView({
                     const fieldAvgs = statFields.map(f =>
                       r.matchCount > 0 ? (r.stats[f] ?? 0) / r.matchCount : 0
                     );
-                    const combined = isAvg && statFields.length > 0
+                    const combined = isAvg && statFields.length > 0 && r.matchCount > 0
                       ? fieldAvgs.reduce((s, v) => s + v, 0) / statFields.length
                       : null;
                     // Use confirmed placement from finalRankingGroups if available, else fall back to stat-rank
