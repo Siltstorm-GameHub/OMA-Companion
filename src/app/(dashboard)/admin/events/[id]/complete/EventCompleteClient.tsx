@@ -51,8 +51,9 @@ interface Props {
   spectatorRewardJson: { coins: number; rankPoints: number } | null;
   isAdmin: boolean;
   isReEdit: boolean;
-  gamePhaseComplete: boolean;
-  pollPhaseComplete: boolean;
+  /** Event-Status aus der DB — bestimmt maßgeblich den Anzeigemodus (aktiv/umfrage/finished),
+   * unabhängig davon ob completionData konsistent gepflegt wurde (z.B. nach manueller Statusänderung). */
+  status: string;
   initialData: Record<string, unknown> | null;
   initialFinalRanking: string[] | null;
   initialRankingGroups: string[][] | null;
@@ -102,20 +103,21 @@ export default function EventCompleteClient({
   eventId, eventTitle, seriesId, seriesName, seriesIcon,
   registeredUsers, spectatorUsers, allUsers, tournamentStatFields, userStats, format, userAvgScore,
   seriesStatConfig, rewardsConfig, pollConfig, pollsConfig, pendingEventPolls, spectatorRewardJson,
-  isAdmin, isReEdit, gamePhaseComplete, pollPhaseComplete,
+  isAdmin, isReEdit, status,
   initialData, initialFinalRanking, initialRankingGroups, initialFinalRankingNote,
 }: Props) {
   const router = useRouter();
   const isAvgFormat = format === "avg_stats";
 
-  // Mode: poll-only when game phase is confirmed but poll is still open
-  const isPollOnly = isReEdit && gamePhaseComplete && !pollPhaseComplete;
-  // Event-Gewinner steht ab Abschluss der Spielphase fest und ist danach nicht mehr änderbar
-  // (weder im Poll-Only- noch im vollen Re-Edit-Modus) — nur die Finale Platzierung bleibt es.
-  const winnerLocked = isReEdit && gamePhaseComplete;
-  // Event bereits vollständig abgeschlossen (Status "finished") — reine Ergebnis-Übersicht statt
-  // erneut bearbeitbarem Formular. Nur die Finale Platzierung bleibt hier noch änderbar.
-  const isFinishedSummary = isReEdit && !isPollOnly;
+  // Mode wird direkt vom Event-Status abgeleitet (nicht von completionData) — so zeigt die Seite
+  // immer den richtigen Modus, auch wenn completionData z.B. durch eine manuelle Statusänderung
+  // nicht mehr exakt zum Status passt.
+  // Spielphase abgeschlossen, Umfragephase läuft noch: nur noch Umfrage + Endplatzierung editierbar.
+  const isPollOnly = status === "umfrage";
+  // Event komplett abgeschlossen: reine Ergebnis-Übersicht, nur die Finale Platzierung bleibt änderbar.
+  const isFinishedSummary = status === "finished";
+  // Event-Gewinner steht ab Abschluss der Spielphase fest und ist danach nicht mehr änderbar.
+  const winnerLocked = isPollOnly || isFinishedSummary;
 
   // Läuft noch eine in-App-Umfrage (EventPoll), deren Abstimmungsfenster noch nicht vorbei ist?
   const openEventPolls = pendingEventPolls.filter(p => new Date(p.endAt) > new Date());
@@ -437,8 +439,15 @@ export default function EventCompleteClient({
         </div>
       )}
 
-      {gamePhaseComplete && (
-        <LivePollsPanel eventId={eventId} isAdmin={isAdmin} registeredUsers={registeredUsers} spectatorUsers={spectatorUsers} allUsers={allUsers} />
+      {(isPollOnly || isFinishedSummary) && (
+        <LivePollsPanel
+          eventId={eventId}
+          isAdmin={isAdmin}
+          readOnly={isFinishedSummary}
+          registeredUsers={registeredUsers}
+          spectatorUsers={spectatorUsers}
+          allUsers={allUsers}
+        />
       )}
 
       {/* Two-column layout */}
