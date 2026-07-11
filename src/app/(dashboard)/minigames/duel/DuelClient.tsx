@@ -87,6 +87,15 @@ export default function DuelClient({
     return () => clearTimeout(t);
   }, [query, userId]);
 
+  // Solange offene Herausforderungen bestehen, regelmäßig aktualisieren —
+  // damit z.B. der Herausforderer mitbekommt, sobald der Gegner antwortet.
+  const hasOpenChallenges = incoming.length > 0 || outgoing.length > 0;
+  useEffect(() => {
+    if (!hasOpenChallenges) return;
+    const interval = setInterval(refreshLists, 8_000);
+    return () => clearInterval(interval);
+  }, [hasOpenChallenges, refreshLists]);
+
   async function challenge() {
     if (!selected || submitting) return;
     setSubmitting(true);
@@ -218,9 +227,15 @@ export default function DuelClient({
       </div>
 
       {/* ── Offene Herausforderungen ── */}
-      {(incoming.length > 0 || outgoing.length > 0) && (
+      {hasOpenChallenges && (
         <div className="space-y-2">
-          <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold">Offene Herausforderungen</p>
+          <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold flex items-center gap-1.5">
+            Offene Herausforderungen
+            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-400/80 normal-case tracking-normal">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+              Live
+            </span>
+          </p>
           {incoming.map(d => (
             <div key={d.id} className="glass rounded-xl px-4 py-3 flex items-center gap-3">
               <Avatar u={d.challenger} />
