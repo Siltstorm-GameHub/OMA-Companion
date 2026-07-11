@@ -817,16 +817,8 @@ export default function LulSpieltagEditor({
                   if (!u || !e) return null;
                   return (
                     <label key={uid} className="flex items-center gap-2 p-2 rounded bg-gray-800 hover:bg-gray-750 cursor-pointer text-xs">
-                      <input type="radio" name="communityChamp" checked={!!e.communityChamp}
-                        onChange={() => {
-                          setEntries(prev => {
-                            const next = { ...prev };
-                            for (const id of spectatorIds) {
-                              if (next[id]) next[id] = { ...next[id], communityChamp: id === uid };
-                            }
-                            return next;
-                          });
-                        }} />
+                      <input type="checkbox" checked={!!e.communityChamp}
+                        onChange={ev => setField(uid, "communityChamp", ev.target.checked)} />
                       <span className="text-white">{uname(u)}</span>
                     </label>
                   );
@@ -843,16 +835,8 @@ export default function LulSpieltagEditor({
                   if (!u || !e) return null;
                   return (
                     <label key={uid} className="flex items-center gap-2 p-2 rounded bg-gray-800 hover:bg-gray-750 cursor-pointer text-xs">
-                      <input type="radio" name="trostpreis" checked={!!e.trostpreis}
-                        onChange={() => {
-                          setEntries(prev => {
-                            const next = { ...prev };
-                            for (const id of playerIds) {
-                              if (next[id]) next[id] = { ...next[id], trostpreis: id === uid };
-                            }
-                            return next;
-                          });
-                        }} />
+                      <input type="checkbox" checked={!!e.trostpreis}
+                        onChange={ev => setField(uid, "trostpreis", ev.target.checked)} />
                       <span className="text-white">{uname(u)}</span>
                     </label>
                   );

@@ -17,6 +17,10 @@ type PublicPoll = {
   voteCounts: Record<string, number>;
   answerOptions: { id: string; name: string | null; username: string | null; image: string | null }[] | null;
   excludedUserIds: string[];
+  participationCoins: number;
+  participationSeriesPoints: number;
+  winnerCoins: number;
+  winnerRankPoints: number;
 };
 
 type AdminPoll = {
@@ -215,6 +219,29 @@ export default function LivePollsPanel({ eventId, isAdmin, registeredUsers, spec
                   <span className="text-[10px] text-gray-500 bg-white/[0.04] border border-white/[0.06] px-2 py-0.5 rounded-full shrink-0">Beendet</span>
                 )}
               </div>
+
+              {/* Belohnungs-Hinweis */}
+              {(poll.participationCoins > 0 || poll.participationSeriesPoints > 0 || poll.winnerCoins > 0 || poll.winnerRankPoints > 0) && (
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-gray-500">
+                  {(poll.participationCoins > 0 || poll.participationSeriesPoints > 0) && (
+                    <span>
+                      Teilnahme:{" "}
+                      {poll.participationCoins > 0 && <span className="text-amber-400 font-medium">{poll.participationCoins} Münzen</span>}
+                      {poll.participationCoins > 0 && poll.participationSeriesPoints > 0 && " + "}
+                      {poll.participationSeriesPoints > 0 && <span className="text-teal-400 font-medium">{poll.participationSeriesPoints} Reihenpunkte</span>}
+                    </span>
+                  )}
+                  {(poll.winnerCoins > 0 || poll.winnerRankPoints > 0) && (
+                    <span className="flex items-center gap-1">
+                      <Trophy className="w-3 h-3 text-amber-400" />
+                      Gewinner:{" "}
+                      {poll.winnerCoins > 0 && <span className="text-amber-400 font-medium">{poll.winnerCoins} Münzen</span>}
+                      {poll.winnerCoins > 0 && poll.winnerRankPoints > 0 && " + "}
+                      {poll.winnerRankPoints > 0 && <span className="text-purple-400 font-medium">{poll.winnerRankPoints} Rangpunkte</span>}
+                    </span>
+                  )}
+                </div>
+              )}
 
               {/* Aggregierte Ergebnisse (für alle sichtbar) */}
               <div className="space-y-1.5">

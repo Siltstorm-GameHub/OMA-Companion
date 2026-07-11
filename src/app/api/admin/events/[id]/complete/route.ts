@@ -154,17 +154,12 @@ export async function POST(
     ? (() => { try { return JSON.parse(event.completionData as string); } catch { return {}; } })()
     : {};
 
-  // Ob überhaupt eine Umfragephase konfiguriert ist (legacy Single-Poll oder Multi-Poll-JSON).
-  // Nötig, um zu wissen, ob ein fehlender Poll-Sieger "noch offen" oder schlicht "nicht vorhanden" bedeutet.
+  // Ob überhaupt eine Legacy-Einzel-Umfrage konfiguriert ist. Nötig, um zu wissen, ob ein fehlender
+  // Poll-Sieger "noch offen" oder schlicht "nicht vorhanden" bedeutet.
   const legacyPollConfigured = (() => {
     const raw = event.pollConfigJson ?? event.series?.pollConfigJson;
     if (!raw) return false;
     try { return !!(JSON.parse(raw) as { enabled?: boolean } | null)?.enabled; } catch { return false; }
-  })();
-  const multiPollsConfigured = (() => {
-    const raw = event.pollsConfigJson ?? event.series?.pollsConfigJson;
-    if (!raw) return false;
-    try { const p = JSON.parse(raw); return Array.isArray(p) && p.length > 0; } catch { return false; }
   })();
 
   // Per-User-Stats aus Match-Einträgen
@@ -884,13 +879,16 @@ export async function POST(
   }
 
   // ── Completion-Daten speichern ───────────────────────────────────────────────
-  const pollPhaseComplete = newPollWinners.length > 0 || (body.pollResults?.some(p => p.winnerIds.length > 0) ?? false);
-  // Solange eine Umfrage noch läuft (EventPoll mit offenem Abstimmungsfenster) oder eine konfigurierte
-  // Legacy-/Multi-Umfrage noch keinen Sieger hat, bleibt das Event in der Umfragephase — auch wenn die
+  // Solange eine Umfrage noch läuft (EventPoll mit offenem Abstimmungsfenster, oder die konfigurierte
+  // Legacy-Einzel-Umfrage noch keinen Sieger hat) bleibt das Event in der Umfragephase — auch wenn die
   // Spielergebnisse (und damit die Ligapunkte daraus) bereits final sind. Erst wenn die Umfrage
   // abgeschlossen ist, wechselt der Status auf "finished" (zusammen mit den Umfrage-Ligapunkten).
-  const legacyPollPending = (legacyPollConfigured || multiPollsConfigured) && !pollPhaseComplete;
-  const hasPendingPollPhase = hasOpenEventPoll || legacyPollPending;
+  // Echte DB-Umfragen (EventPoll) werden ausschließlich über hasOpenEventPoll erkannt.
+  const legacyPollResolved = !legacyPollConfigured || newPollWinners.length > 0;
+  const hasPendingPollPhase = hasOpenEventPoll || !legacyPollResolved;
+  // Wird im Client gespeichert/gelesen, um zwischen "nur noch Umfrage ausstehend" (isPollOnly) und
+  // "alles abgeschlossen" zu unterscheiden — muss daher exakt hasPendingPollPhase widerspiegeln.
+  const pollPhaseComplete = !hasPendingPollPhase;
 
   const completionData = {
     mvpUserId:               body.mvpUserId ?? null,

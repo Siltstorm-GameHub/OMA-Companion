@@ -113,6 +113,9 @@ export default function EventCompleteClient({
   // Event-Gewinner steht ab Abschluss der Spielphase fest und ist danach nicht mehr änderbar
   // (weder im Poll-Only- noch im vollen Re-Edit-Modus) — nur die Finale Platzierung bleibt es.
   const winnerLocked = isReEdit && gamePhaseComplete;
+  // Event bereits vollständig abgeschlossen (Status "finished") — reine Ergebnis-Übersicht statt
+  // erneut bearbeitbarem Formular. Nur die Finale Platzierung bleibt hier noch änderbar.
+  const isFinishedSummary = isReEdit && !isPollOnly;
 
   // Läuft noch eine in-App-Umfrage (EventPoll), deren Abstimmungsfenster noch nicht vorbei ist?
   const openEventPolls = pendingEventPolls.filter(p => new Date(p.endAt) > new Date());
@@ -150,9 +153,13 @@ export default function EventCompleteClient({
   });
 
   /* ── Zuschauer-Anwesenheit ── */
-  const [spectatorAttended, setSpectatorAttended] = useState<Set<string>>(
-    () => new Set(spectatorUsers.map(u => u.id)) // alle als anwesend vorauswählen
-  );
+  const [spectatorAttended, setSpectatorAttended] = useState<Set<string>>(() => {
+    // Re-Edit: die tatsächlich erfasste Anwesenheit übernehmen, nicht wieder alle vorauswählen
+    if (isReEdit && initialData?.spectatorAttendedIds) {
+      return new Set(initialData.spectatorAttendedIds as string[]);
+    }
+    return new Set(spectatorUsers.map(u => u.id)); // Erstabschluss: alle als anwesend vorauswählen
+  });
 
   /* ── Ranking ── */
   // Flat order (derived from initial groups if provided).
@@ -351,6 +358,8 @@ export default function EventCompleteClient({
         toast.success(`"${eventTitle}" vollständig abgeschlossen – Umfrage-Belohnungen vergeben`);
       } else if (isPollOnly) {
         toast.success(`Änderungen für "${eventTitle}" gespeichert – Umfrage läuft noch weiter`);
+      } else if (isFinishedSummary) {
+        toast.success(`"${eventTitle}" bestätigt`);
       } else {
         toast.success(isReEdit ? `"${eventTitle}" aktualisiert` : `"${eventTitle}" abgeschlossen`);
       }
@@ -382,7 +391,7 @@ export default function EventCompleteClient({
         </Link>
         <span>/</span>
         <span className="text-gray-300">
-          {isPollOnly ? "Umfrage nachtragen" : isReEdit ? "Abschluss bearbeiten" : "Event abschließen"}
+          {isPollOnly ? "Umfrage nachtragen" : isFinishedSummary ? "Ergebnisse" : "Event abschließen"}
         </span>
       </div>
 
@@ -390,7 +399,7 @@ export default function EventCompleteClient({
       <div className="flex items-center gap-2">
         <CheckCircle2 className="w-5 h-5 text-teal-400" />
         <h1 className="text-lg font-bold text-white">
-          {isPollOnly ? "Umfrage nachtragen" : isReEdit ? "Abschluss bearbeiten" : "Event abschließen"}
+          {isPollOnly ? "Umfrage nachtragen" : isFinishedSummary ? "Ergebnisse" : "Event abschließen"}
         </h1>
       </div>
 
@@ -406,12 +415,12 @@ export default function EventCompleteClient({
           </span>
         </div>
       )}
-      {isReEdit && !isPollOnly && (
+      {isFinishedSummary && (
         <div className="flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-xs text-amber-300">
           <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
           <span>
-            Event-Gewinner ist gesperrt. Nur MVP, Poll-Sieger (inkl. Rückbuchung der alten Belohnungen) und die
-            Finale Platzierung werden aktualisiert. Teilnahmen und Stat-Einträge in der Gesamttabelle bleiben unverändert.
+            Dieses Event ist abgeschlossen. Unten eine Übersicht der vergebenen Belohnungen — nur die Finale
+            Platzierung kann bei Bedarf noch angepasst werden (z.B. bei nachträglicher Disqualifikation).
           </span>
         </div>
       )}
@@ -544,26 +553,37 @@ export default function EventCompleteClient({
                   <span className="font-normal text-gray-500">(+1 auf „{seriesStatConfig.mvpStatField}" in Gesamttabelle)</span>
                 </span>
               </div>
-              <div className="space-y-1 max-h-48 overflow-y-auto">
-                <label className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/[0.03] cursor-pointer transition-colors">
-                  <input type="radio" name="mvp" value="" checked={mvpUserId === ""} onChange={() => setMvpUserId("")} className="accent-teal-500" />
-                  <span className="text-sm text-gray-500 italic">Kein MVP</span>
-                </label>
-                {registeredUsers.map(u => (
-                  <label key={u.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-                    mvpUserId === u.id ? "bg-teal-500/10 border border-teal-500/20" : "hover:bg-white/[0.03]"
-                  }`}>
-                    <input type="radio" name="mvp" value={u.id} checked={mvpUserId === u.id} onChange={() => setMvpUserId(u.id)} className="accent-teal-500 shrink-0" />
-                    <Avatar u={u} size={6} />
-                    <span className="text-sm text-white flex-1 truncate">{userName(u)}</span>
-                    {winnerStatField && userStats[u.id]?.[winnerStatField] != null && (
-                      <span className="text-xs text-gray-500 tabular-nums shrink-0">
-                        {userStats[u.id][winnerStatField]} {winnerStatField}
-                      </span>
-                    )}
+              {isFinishedSummary ? (
+                mvpUserId ? (
+                  <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-teal-500/10 border border-teal-500/20">
+                    <Avatar u={registeredUsers.find(u => u.id === mvpUserId) ?? { id: mvpUserId, name: mvpUserId, username: null, image: null }} size={6} />
+                    <span className="text-sm text-white flex-1 truncate">{userName(registeredUsers.find(u => u.id === mvpUserId) ?? { id: mvpUserId, name: mvpUserId, username: null, image: null })}</span>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500 italic">Kein MVP</p>
+                )
+              ) : (
+                <div className="space-y-1 max-h-48 overflow-y-auto">
+                  <label className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/[0.03] cursor-pointer transition-colors">
+                    <input type="radio" name="mvp" value="" checked={mvpUserId === ""} onChange={() => setMvpUserId("")} className="accent-teal-500" />
+                    <span className="text-sm text-gray-500 italic">Kein MVP</span>
                   </label>
-                ))}
-              </div>
+                  {registeredUsers.map(u => (
+                    <label key={u.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+                      mvpUserId === u.id ? "bg-teal-500/10 border border-teal-500/20" : "hover:bg-white/[0.03]"
+                    }`}>
+                      <input type="radio" name="mvp" value={u.id} checked={mvpUserId === u.id} onChange={() => setMvpUserId(u.id)} className="accent-teal-500 shrink-0" />
+                      <Avatar u={u} size={6} />
+                      <span className="text-sm text-white flex-1 truncate">{userName(u)}</span>
+                      {winnerStatField && userStats[u.id]?.[winnerStatField] != null && (
+                        <span className="text-xs text-gray-500 tabular-nums shrink-0">
+                          {userStats[u.id][winnerStatField]} {winnerStatField}
+                        </span>
+                      )}
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -578,55 +598,63 @@ export default function EventCompleteClient({
                 {isPollOnly && <span className="text-[10px] text-violet-400/60 ml-auto">ausstehend</span>}
               </div>
 
-              <div>
-                <p className="text-[11px] text-gray-500 mb-1.5">Aus Abstimmung ausschließen:</p>
-                <div className="flex flex-wrap gap-2">
-                  {registeredUsers.map(u => (
-                    <label key={u.id} className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs cursor-pointer transition-colors select-none ${
-                      pollExcluded.has(u.id)
-                        ? "bg-red-900/30 border border-red-700/40 text-red-300"
-                        : "bg-white/[0.03] border border-white/[0.08] text-gray-400 hover:border-white/20"
-                    }`}>
-                      <input
-                        type="checkbox"
-                        checked={pollExcluded.has(u.id)}
-                        onChange={e => {
-                          setPollExcluded(prev => {
-                            const next = new Set(prev);
-                            if (e.target.checked) next.add(u.id); else next.delete(u.id);
-                            return next;
-                          });
-                        }}
-                        className="accent-red-500 w-3 h-3"
-                      />
-                      {userName(u)}
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {pollEligible.length > 0 && (
-                <div>
-                  <p className="text-[11px] text-gray-500 mb-1.5">Stimmen eintragen:</p>
-                  <div className="space-y-1.5">
-                    {pollEligible.map(u => (
-                      <div key={u.id} className="flex items-center gap-3">
-                        <Avatar u={u} size={5} />
-                        <span className="flex-1 text-sm text-white truncate">{userName(u)}</span>
-                        <input
-                          type="number"
-                          min={0}
-                          value={pollVotes[u.id] ?? 0}
-                          onChange={e => setPollVotes(prev => ({ ...prev, [u.id]: Math.max(0, Number(e.target.value)) }))}
-                          className="w-16 rounded-lg px-2 py-1.5 text-sm text-white text-center bg-gray-800 border border-gray-700 focus:border-violet-500/50 outline-none transition-colors"
-                        />
-                      </div>
-                    ))}
+              {!isFinishedSummary && (
+                <>
+                  <div>
+                    <p className="text-[11px] text-gray-500 mb-1.5">Aus Abstimmung ausschließen:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {registeredUsers.map(u => (
+                        <label key={u.id} className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs cursor-pointer transition-colors select-none ${
+                          pollExcluded.has(u.id)
+                            ? "bg-red-900/30 border border-red-700/40 text-red-300"
+                            : "bg-white/[0.03] border border-white/[0.08] text-gray-400 hover:border-white/20"
+                        }`}>
+                          <input
+                            type="checkbox"
+                            checked={pollExcluded.has(u.id)}
+                            onChange={e => {
+                              setPollExcluded(prev => {
+                                const next = new Set(prev);
+                                if (e.target.checked) next.add(u.id); else next.delete(u.id);
+                                return next;
+                              });
+                            }}
+                            className="accent-red-500 w-3 h-3"
+                          />
+                          {userName(u)}
+                        </label>
+                      ))}
+                    </div>
                   </div>
-                </div>
+
+                  {pollEligible.length > 0 && (
+                    <div>
+                      <p className="text-[11px] text-gray-500 mb-1.5">Stimmen eintragen:</p>
+                      <div className="space-y-1.5">
+                        {pollEligible.map(u => (
+                          <div key={u.id} className="flex items-center gap-3">
+                            <Avatar u={u} size={5} />
+                            <span className="flex-1 text-sm text-white truncate">{userName(u)}</span>
+                            <input
+                              type="number"
+                              min={0}
+                              value={pollVotes[u.id] ?? 0}
+                              onChange={e => setPollVotes(prev => ({ ...prev, [u.id]: Math.max(0, Number(e.target.value)) }))}
+                              className="w-16 rounded-lg px-2 py-1.5 text-sm text-white text-center bg-gray-800 border border-gray-700 focus:border-violet-500/50 outline-none transition-colors"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {pollEligible.length === 0 && (
+                    <p className="text-xs text-gray-600 italic">Alle Teilnehmer ausgeschlossen.</p>
+                  )}
+                </>
               )}
 
-              {pollWinners.length > 0 && (
+              {pollWinners.length > 0 ? (
                 <div className="rounded-lg bg-violet-500/10 border border-violet-500/20 px-3 py-2 space-y-1">
                   <p className="text-[11px] text-violet-400 font-semibold">
                     {pollWinners.length === 1 ? "Gewinner" : `Unentschieden – alle ${pollWinners.length} gewinnen`}
@@ -638,7 +666,7 @@ export default function EventCompleteClient({
                       <div key={id} className="flex items-center gap-2 text-sm text-white">
                         <Avatar u={u} size={5} />
                         {userName(u)}
-                        <span className="text-xs text-gray-500">({pollVotes[id] ?? 0} Stimmen)</span>
+                        {!isFinishedSummary && <span className="text-xs text-gray-500">({pollVotes[id] ?? 0} Stimmen)</span>}
                       </div>
                     );
                   })}
@@ -648,11 +676,9 @@ export default function EventCompleteClient({
                     {pollConfig.rankPoints > 0 ? `${pollConfig.rankPoints} Punkte` : ""}
                   </p>
                 </div>
-              )}
-
-              {pollEligible.length === 0 && (
-                <p className="text-xs text-gray-600 italic">Alle Teilnehmer ausgeschlossen.</p>
-              )}
+              ) : isFinishedSummary ? (
+                <p className="text-xs text-gray-600 italic">Kein Sieger.</p>
+              ) : null}
             </div>
           )}
 
@@ -663,104 +689,102 @@ export default function EventCompleteClient({
                 👁️ Zuschauer-Anwesenheit
                 <span className="font-normal text-gray-500 ml-1">({effectiveSpectatorCoins} Münzen{spectatorRewardJson.rankPoints > 0 ? ` + ${spectatorRewardJson.rankPoints} RP` : ""} für Anwesende)</span>
               </p>
-              <div className="space-y-1">
-                {spectatorUsers.map(u => (
-                  <label key={u.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-                    spectatorAttended.has(u.id) ? "bg-teal-500/10 border border-teal-500/20" : "bg-white/[0.03] border border-transparent hover:border-white/[0.08]"
-                  }`}>
-                    <input type="checkbox" checked={spectatorAttended.has(u.id)}
-                      onChange={e => setSpectatorAttended(prev => {
-                        const next = new Set(prev);
-                        if (e.target.checked) next.add(u.id); else next.delete(u.id);
-                        return next;
-                      })}
-                      className="accent-teal-500 shrink-0" />
-                    <Avatar u={u} size={5} />
-                    <span className="text-sm text-white flex-1 truncate">{userName(u)}</span>
-                  </label>
-                ))}
-              </div>
+              {isFinishedSummary ? (
+                <div className="space-y-1">
+                  {spectatorUsers.filter(u => spectatorAttended.has(u.id)).map(u => (
+                    <div key={u.id} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-teal-500/10 border border-teal-500/20">
+                      <Avatar u={u} size={5} />
+                      <span className="text-sm text-white flex-1 truncate">{userName(u)}</span>
+                    </div>
+                  ))}
+                  {spectatorUsers.every(u => !spectatorAttended.has(u.id)) && (
+                    <p className="text-sm text-gray-500 italic">Niemand anwesend.</p>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {spectatorUsers.map(u => (
+                    <label key={u.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+                      spectatorAttended.has(u.id) ? "bg-teal-500/10 border border-teal-500/20" : "bg-white/[0.03] border border-transparent hover:border-white/[0.08]"
+                    }`}>
+                      <input type="checkbox" checked={spectatorAttended.has(u.id)}
+                        onChange={e => setSpectatorAttended(prev => {
+                          const next = new Set(prev);
+                          if (e.target.checked) next.add(u.id); else next.delete(u.id);
+                          return next;
+                        })}
+                        className="accent-teal-500 shrink-0" />
+                      <Avatar u={u} size={5} />
+                      <span className="text-sm text-white flex-1 truncate">{userName(u)}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
-          {/* Summary */}
-          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-2">
-            <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest">
-              {isPollOnly ? "Wird vergeben (Umfrage)" : isReEdit ? "Wird aktualisiert" : "Wird vergeben"}
-            </p>
-            {isPollOnly ? (
-              <ul className="space-y-1 text-xs text-gray-400">
-                {pollWinners.length > 0 ? (
-                  <li className="flex items-center gap-2">
-                    <Vote className="w-3 h-3 text-violet-400 shrink-0" />
-                    Poll-Sieger: {pollWinners.map(id => userName(registeredUsers.find(u => u.id === id) ?? { id: "", name: id, username: null, image: null })).join(", ")}
-                    {" "}({pollConfig.coins > 0 ? `${pollConfig.coins} Münzen` : ""}{pollConfig.coins > 0 && pollConfig.rankPoints > 0 ? " + " : ""}{pollConfig.rankPoints > 0 ? `${pollConfig.rankPoints} Punkte` : ""})
-                  </li>
-                ) : (
-                  <li className="text-gray-600 italic">Stimmen eingeben um Gewinner zu bestimmen.</li>
-                )}
-              </ul>
-            ) : isReEdit ? (
-              <ul className="space-y-1 text-xs text-gray-400">
-                {mvpUserId && seriesStatConfig?.mvpStatField && (
-                  <li className="flex items-center gap-2">
-                    <RankPointsIcon size={12} />
-                    MVP → {userName(registeredUsers.find(u => u.id === mvpUserId) ?? { id: "", name: mvpUserId, username: null, image: null })} (+1 „{seriesStatConfig.mvpStatField}")
-                  </li>
-                )}
-                {pollConfig.enabled && pollWinners.length > 0 && (
-                  <li className="flex items-center gap-2">
-                    <Vote className="w-3 h-3 text-violet-400 shrink-0" />
-                    Poll-Sieger neu: {pollWinners.map(id => userName(registeredUsers.find(u => u.id === id) ?? { id: "", name: id, username: null, image: null })).join(", ")}
-                    {" "}({pollConfig.coins > 0 ? `${pollConfig.coins} Münzen` : ""}{pollConfig.coins > 0 && pollConfig.rankPoints > 0 ? " + " : ""}{pollConfig.rankPoints > 0 ? `${pollConfig.rankPoints} Punkte` : ""})
-                  </li>
-                )}
-                {!mvpUserId && !(pollConfig.enabled && pollWinners.length > 0) && (
-                  <li className="text-gray-600 italic">Keine Änderungen zu übernehmen.</li>
-                )}
-              </ul>
-            ) : (
-              <ul className="space-y-1 text-xs text-gray-400">
-                {effectiveParticipationCoins > 0 && (
-                  <li className="flex items-center gap-2">
-                    <Coins className="w-3 h-3 text-amber-400 shrink-0" />
-                    Alle {registeredUsers.length} Teilnehmer: {effectiveParticipationCoins} Münzen
-                  </li>
-                )}
-                {!seriesId && rankingGroups.map((group, gi) => {
-                  const place = placementMap.get(group[0]) ?? gi + 1;
-                  const reward = rewardsConfig.placements.find(p => p.place === place);
-                  if (!reward || (reward.coins === 0 && reward.rankPoints === 0)) return null;
-                  const names = group.map(id => userName(registeredUsers.find(u => u.id === id) ?? { id: "", name: id, username: null, image: null }));
-                  return (
-                    <li key={gi} className="flex items-center gap-2">
-                      <span className="shrink-0">{MEDALS[place - 1] ?? `${place}.`}</span>
-                      {names.join(" & ")}:{" "}
-                      {reward.coins > 0 ? `${reward.coins} Münzen` : ""}
-                      {reward.coins > 0 && reward.rankPoints > 0 ? " + " : ""}
-                      {reward.rankPoints > 0 ? `${reward.rankPoints} Punkte` : ""}
+          {/* Summary (bei isFinishedSummary ausgeblendet — Info steht direkt in den Karten oben
+              sowie in der Finale-Platzierung-Spalte) */}
+          {!isFinishedSummary && (
+            <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 space-y-2">
+              <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest">
+                {isPollOnly ? "Wird vergeben (Umfrage)" : "Wird vergeben"}
+              </p>
+              {isPollOnly ? (
+                <ul className="space-y-1 text-xs text-gray-400">
+                  {pollWinners.length > 0 ? (
+                    <li className="flex items-center gap-2">
+                      <Vote className="w-3 h-3 text-violet-400 shrink-0" />
+                      Poll-Sieger: {pollWinners.map(id => userName(registeredUsers.find(u => u.id === id) ?? { id: "", name: id, username: null, image: null })).join(", ")}
+                      {" "}({pollConfig.coins > 0 ? `${pollConfig.coins} Münzen` : ""}{pollConfig.coins > 0 && pollConfig.rankPoints > 0 ? " + " : ""}{pollConfig.rankPoints > 0 ? `${pollConfig.rankPoints} Punkte` : ""})
                     </li>
-                  );
-                })}
-                {seriesId && (
-                  <li className="flex items-center gap-2 text-gray-500 italic">
-                    <ListOrdered className="w-3 h-3 shrink-0" />
-                    Platzierungs-Belohnung: erst bei Abschluss der Eventreihe (Endplatzierung)
-                  </li>
-                )}
-                {pollConfig.enabled && (
-                  <li className="flex items-center gap-2">
-                    <Vote className="w-3 h-3 text-violet-400 shrink-0" />
-                    Poll-Sieger:{" "}
-                    {pollConfig.coins > 0 ? `${pollConfig.coins} Münzen` : ""}
-                    {pollConfig.coins > 0 && pollConfig.rankPoints > 0 ? " + " : ""}
-                    {pollConfig.rankPoints > 0 ? `${pollConfig.rankPoints} Punkte` : ""}
-                    {pollConfig.coins === 0 && pollConfig.rankPoints === 0 ? "keine Belohnung" : ""}
-                  </li>
-                )}
-              </ul>
-            )}
-          </div>
+                  ) : (
+                    <li className="text-gray-600 italic">Stimmen eingeben um Gewinner zu bestimmen.</li>
+                  )}
+                </ul>
+              ) : (
+                <ul className="space-y-1 text-xs text-gray-400">
+                  {effectiveParticipationCoins > 0 && (
+                    <li className="flex items-center gap-2">
+                      <Coins className="w-3 h-3 text-amber-400 shrink-0" />
+                      Alle {registeredUsers.length} Teilnehmer: {effectiveParticipationCoins} Münzen
+                    </li>
+                  )}
+                  {!seriesId && rankingGroups.map((group, gi) => {
+                    const place = placementMap.get(group[0]) ?? gi + 1;
+                    const reward = rewardsConfig.placements.find(p => p.place === place);
+                    if (!reward || (reward.coins === 0 && reward.rankPoints === 0)) return null;
+                    const names = group.map(id => userName(registeredUsers.find(u => u.id === id) ?? { id: "", name: id, username: null, image: null }));
+                    return (
+                      <li key={gi} className="flex items-center gap-2">
+                        <span className="shrink-0">{MEDALS[place - 1] ?? `${place}.`}</span>
+                        {names.join(" & ")}:{" "}
+                        {reward.coins > 0 ? `${reward.coins} Münzen` : ""}
+                        {reward.coins > 0 && reward.rankPoints > 0 ? " + " : ""}
+                        {reward.rankPoints > 0 ? `${reward.rankPoints} Punkte` : ""}
+                      </li>
+                    );
+                  })}
+                  {seriesId && (
+                    <li className="flex items-center gap-2 text-gray-500 italic">
+                      <ListOrdered className="w-3 h-3 shrink-0" />
+                      Platzierungs-Belohnung: erst bei Abschluss der Eventreihe (Endplatzierung)
+                    </li>
+                  )}
+                  {pollConfig.enabled && (
+                    <li className="flex items-center gap-2">
+                      <Vote className="w-3 h-3 text-violet-400 shrink-0" />
+                      Poll-Sieger:{" "}
+                      {pollConfig.coins > 0 ? `${pollConfig.coins} Münzen` : ""}
+                      {pollConfig.coins > 0 && pollConfig.rankPoints > 0 ? " + " : ""}
+                      {pollConfig.rankPoints > 0 ? `${pollConfig.rankPoints} Punkte` : ""}
+                      {pollConfig.coins === 0 && pollConfig.rankPoints === 0 ? "keine Belohnung" : ""}
+                    </li>
+                  )}
+                </ul>
+              )}
+            </div>
+          )}
 
           {/* Confirm buttons */}
           <div className="space-y-2">
@@ -774,9 +798,9 @@ export default function EventCompleteClient({
                 ? "Wird gespeichert…"
                 : willFinalizePolls
                 ? "Umfragephase abschließen & Event beenden"
+                : isFinishedSummary
+                ? "Ergebnisse bestätigen"
                 : isPollOnly
-                ? "Änderungen speichern"
-                : isReEdit
                 ? "Änderungen speichern"
                 : pollPhasePending
                 ? "Spielphase abschließen – Umfrage startet"
