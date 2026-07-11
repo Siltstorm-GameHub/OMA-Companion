@@ -147,7 +147,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   });
 
   return (
-    <div className="min-h-screen text-white" style={{ background: "#0d0d0f" }}>
+    <div className="min-h-screen text-white" style={{ background: "var(--bg-base)" }}>
 
       {/* ── Aurora Hintergrund ───────────────────────────────────── */}
       <AuroraBackground />
