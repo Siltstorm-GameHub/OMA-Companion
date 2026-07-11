@@ -168,23 +168,42 @@ export async function POST(
     try { return !!(JSON.parse(raw) as { enabled?: boolean } | null)?.enabled; } catch { return false; }
   })();
 
-  // Falls für dieses Event noch nie eine Umfrage angelegt wurde (z.B. weil die Multi-Umfragen erst
-  // nachträglich in den Reihen-Einstellungen konfiguriert wurden, nachdem dieses Event schon
-  // existierte — createPollsForEvent läuft normalerweise nur bei Event-Erstellung), beim ersten
-  // Abschluss der Spielphase jetzt aus der (Event- oder Reihen-)Konfiguration anlegen. Startzeitpunkt
-  // ist bewusst "jetzt" (Abschluss der Spielphase) statt des ursprünglichen Event-Starts, damit die
-  // konfigurierte Umfragedauer ab dem tatsächlichen Start der Umfragephase läuft.
-  if (!isReEdit && event.polls.length === 0) {
-    // Bewusst nicht nur `??` (das greift nicht, falls event.pollsConfigJson ein leeres "[]" statt
-    // null ist): Event-eigene Konfiguration hat Vorrang, aber sobald sie leer ist, zählt die der Reihe.
-    let pollsCfg = parsePollsConfigJson(event.pollsConfigJson);
-    if (pollsCfg.length === 0) pollsCfg = parsePollsConfigJson(event.series?.pollsConfigJson);
-    if (pollsCfg.length > 0) {
-      await createPollsForEvent(eventId, new Date(), pollsCfg);
-      event.polls = await prisma.eventPoll.findMany({
-        where: { eventId, rewardsPaid: false },
-        include: { votes: { select: { voterId: true, targetId: true } } },
-      });
+  // Falls für dieses Event noch nie eine (nutzbare) Umfrage angelegt wurde, beim ersten Abschluss der
+  // Spielphase jetzt aus der (Event- oder Reihen-)Konfiguration anlegen. Startzeitpunkt ist bewusst
+  // "jetzt" (Abschluss der Spielphase) statt des ursprünglichen Event-Starts, damit die konfigurierte
+  // Umfragedauer ab dem tatsächlichen Start der Umfragephase läuft.
+  //
+  // Zwei Fälle, in denen das nötig ist:
+  // 1) Es existiert noch gar keine EventPoll (z.B. weil die Multi-Umfragen erst nachträglich in den
+  //    Reihen-Einstellungen konfiguriert wurden, nachdem dieses Event schon existierte —
+  //    createPollsForEvent läuft normalerweise nur bei Event-Erstellung).
+  // 2) Es existieren bereits verwaiste, nie genutzte EventPolls (0 Stimmen) deren Abstimmungsfenster
+  //    schon vorbei ist — das passiert, wenn beim Speichern der Reihen-Umfragen "auf alle kommenden
+  //    Events übertragen" aktiv war: dort werden EventPolls sofort relativ zum *ursprünglich geplanten*
+  //    Event-Start angelegt (siehe event-series/route.ts). Läuft die Spielphase länger als geplant, ist
+  //    dieses Fenster beim tatsächlichen Abschluss schon abgelaufen, ohne dass je jemand abstimmen
+  //    konnte. Diese toten Umfragen werden verworfen und mit korrektem Zeitfenster neu angelegt.
+  if (!isReEdit) {
+    const now0 = new Date();
+    const existingPolls = event.polls;
+    const staleUnusedPolls = existingPolls.length > 0 &&
+      existingPolls.every(p => new Date(p.endAt) <= now0 && p.votes.length === 0);
+
+    if (existingPolls.length === 0 || staleUnusedPolls) {
+      // Bewusst nicht nur `??` (das greift nicht, falls event.pollsConfigJson ein leeres "[]" statt
+      // null ist): Event-eigene Konfiguration hat Vorrang, aber sobald sie leer ist, zählt die der Reihe.
+      let pollsCfg = parsePollsConfigJson(event.pollsConfigJson);
+      if (pollsCfg.length === 0) pollsCfg = parsePollsConfigJson(event.series?.pollsConfigJson);
+      if (pollsCfg.length > 0) {
+        if (staleUnusedPolls) {
+          await prisma.eventPoll.deleteMany({ where: { id: { in: existingPolls.map(p => p.id) } } });
+        }
+        await createPollsForEvent(eventId, now0, pollsCfg);
+        event.polls = await prisma.eventPoll.findMany({
+          where: { eventId, rewardsPaid: false },
+          include: { votes: { select: { voterId: true, targetId: true } } },
+        });
+      }
     }
   }
 
