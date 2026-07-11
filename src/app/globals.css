@@ -32,6 +32,7 @@ html {
   --violet-glow:      rgba(139,92,246,0.15);
   --teal-glow:        rgba(20,184,166,0.12);
   --crimson-glow:     rgba(153,27,27,0.10);
+  --aurora-vignette:  radial-gradient(ellipse 80% 80% at 50% 50%, transparent 30%, rgba(5,5,8,0.80) 100%);
   --shadow-card:
     0 1px 0 rgba(255,255,255,0.04) inset,
     0 2px 4px  rgba(0,0,0,0.70),
@@ -623,6 +624,7 @@ select.input-glass option { background: #0f1117; }
   --border-glow:    rgba(20,184,166,0.3);
   --teal-glow:      rgba(20,184,166,0.08);
   --crimson-glow:   rgba(153,27,27,0.06);
+  --aurora-vignette: radial-gradient(ellipse 80% 80% at 50% 50%, transparent 40%, rgba(200,220,216,0.55) 100%);
   --shadow-card:    0 1px 3px rgba(0,0,0,0.07), 0 8px 24px rgba(0,0,0,0.05);
   --shadow-card-hover: 0 4px 12px rgba(0,0,0,0.10), 0 16px 40px rgba(0,0,0,0.08), 0 0 0 1px rgba(20,184,166,0.15);
 }
