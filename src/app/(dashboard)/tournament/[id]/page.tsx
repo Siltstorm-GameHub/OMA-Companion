@@ -183,11 +183,47 @@ export default async function TournamentDetailPage({
     return ra - rb;
   });
 
+  // ── Umfragen (EventPoll) deduplizieren ──────────────────────────────────────
+  // Ohne DB-Constraint auf (eventId, label) können durch doppelte Anlage-Aufrufe versehentlich
+  // mehrere EventPoll-Zeilen mit demselben Label für ein Event entstehen. Für die Anzeige werden
+  // solche Duplikate zu einer Umfrage zusammengeführt (Stimmen vereint), statt sie mehrfach zu zeigen.
+  type RawPoll = (typeof event.polls)[number];
+  function mergePollDuplicates(polls: RawPoll[]): RawPoll[] {
+    const groups = new Map<string, RawPoll[]>();
+    for (const p of polls) {
+      const key = p.label.trim();
+      const g = groups.get(key);
+      if (g) g.push(p); else groups.set(key, [p]);
+    }
+    return [...groups.values()].map(group => {
+      if (group.length === 1) return group[0];
+      const base = [...group].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())[0];
+      const rewardsPaid = group.some(g => g.rewardsPaid);
+      const winnerSource = group.find(g => g.rewardsPaid && g.winnerIds);
+      const votesByVoter = new Map<string, RawPoll["votes"][number]>();
+      for (const g of group) {
+        for (const v of g.votes) {
+          const existing = votesByVoter.get(v.voterId);
+          if (!existing || v.updatedAt.getTime() > existing.updatedAt.getTime()) votesByVoter.set(v.voterId, v);
+        }
+      }
+      return {
+        ...base,
+        startAt: new Date(Math.min(...group.map(g => g.startAt.getTime()))),
+        endAt: new Date(Math.max(...group.map(g => g.endAt.getTime()))),
+        rewardsPaid,
+        winnerIds: winnerSource?.winnerIds ?? null,
+        votes: [...votesByVoter.values()],
+      };
+    });
+  }
+  const mergedPolls = mergePollDuplicates(event.polls);
+
   // Wer hat in mindestens einer Umfrage abgestimmt? Auch Nicht-Teilnehmende können abstimmen
   // (bei voterEligibility "all"), daher separat als "Externe Wähler" auflisten.
   const registeredUserIds = new Set(event.registrations.map(r => r.userId));
   const voterUserMap = new Map<string, KnownUser>();
-  for (const poll of event.polls) {
+  for (const poll of mergedPolls) {
     for (const v of poll.votes) {
       if (v.voter && !voterUserMap.has(v.voterId)) voterUserMap.set(v.voterId, v.voter as KnownUser);
     }
@@ -196,7 +232,7 @@ export default async function TournamentDetailPage({
   const externalVoters = [...voterUserMap.values()].filter(u => !registeredUserIds.has(u.id));
   // Ligapunkte (Reihenpunkte) für die reine Stimmabgabe — wenn vorhanden, sollen externe Wähter
   // auch im Gesamtranking auftauchen, da sie dafür Punkte für die Reihen-Tabelle erhalten
-  const hasVoteSeriesPoints = event.polls.some(p => p.participationSeriesPoints > 0);
+  const hasVoteSeriesPoints = mergedPolls.some(p => p.participationSeriesPoints > 0);
   const format = event.format ?? "single_elimination";
   const isFfa         = format === "ffa" || format === "coop_stats" || format === "avg_stats";
   const isElimination = format === "single_elimination" || format === "double_elimination";
@@ -259,21 +295,75 @@ export default async function TournamentDetailPage({
   const hasPendingPoll      = gamePhaseComplete && !pollPhaseComplete && !!pollLabel;
   const pollExcludedUserIds = new Set(completionData.pollExcludedUserIds ?? []);
 
+  // Umfragen fürs Rendern aufbereiten: Stimmenzahl, eigene Stimme, Kandidatenliste sowie das
+  // Ergebnis — offiziell vom Admin bestätigt (rewardsPaid + winnerIds), sonst sobald die Umfrage
+  // beendet ist aus den Stimmen ermittelt (auch bei Gleichstand mit mehreren Siegern), damit der/die
+  // Sieger auch angezeigt werden wenn die Belohnung noch nicht manuell ausgezahlt wurde.
+  type PollDisplay = {
+    id: string; label: string; question: string; voterEligibility: string; answerType: string;
+    customAnswers: string[]; startAt: Date; endAt: Date; rewardsPaid: boolean;
+    participationCoins: number; participationSeriesPoints: number;
+    winnerCoins: number; winnerRankPoints: number;
+    voteCounts: Record<string, number>; myVote: string | null;
+    answerOptions: { id: string; name: string | null; username: string | null; image: string | null }[] | null;
+    excludedUserIds: string[];
+    effectiveWinnerIds: string[];
+  };
+  const pollDisplays: PollDisplay[] = mergedPolls.map(poll => {
+    let excludedUserIds: string[] = [];
+    if (poll.excludedUserIds) { try { excludedUserIds = JSON.parse(poll.excludedUserIds); } catch { /* ignore */ } }
+    const excludedSet = new Set(excludedUserIds);
+
+    const voteCounts: Record<string, number> = {};
+    let myVote: string | null = null;
+    for (const v of poll.votes) {
+      if (excludedSet.has(v.targetId)) continue;
+      voteCounts[v.targetId] = (voteCounts[v.targetId] ?? 0) + 1;
+      if (v.voterId === userId) myVote = v.targetId;
+    }
+    let customAnswers: string[] = [];
+    if (poll.customAnswers) { try { customAnswers = JSON.parse(poll.customAnswers); } catch { /* ignore */ } }
+
+    let effectiveWinnerIds: string[] = [];
+    if (poll.rewardsPaid && poll.winnerIds) {
+      try { effectiveWinnerIds = JSON.parse(poll.winnerIds); } catch { /* ignore */ }
+    }
+    if (effectiveWinnerIds.length === 0 && poll.endAt <= new Date()) {
+      const entries = Object.entries(voteCounts).filter(([, c]) => c > 0);
+      if (entries.length > 0) {
+        const max = Math.max(...entries.map(([, c]) => c));
+        effectiveWinnerIds = entries.filter(([, c]) => c === max).map(([uid]) => uid);
+      }
+    }
+
+    let answerOptions: PollDisplay["answerOptions"] = null;
+    if (poll.answerType === "players") {
+      answerOptions = allRegistrations.filter(r => r.role === "player" && !excludedSet.has(r.user.id)).map(r => r.user);
+    } else if (poll.answerType === "spectators") {
+      answerOptions = allRegistrations.filter(r => r.role === "spectator" && !excludedSet.has(r.user.id)).map(r => r.user);
+    }
+
+    return {
+      id: poll.id, label: poll.label, question: poll.question,
+      voterEligibility: poll.voterEligibility, answerType: poll.answerType,
+      customAnswers, startAt: poll.startAt, endAt: poll.endAt,
+      rewardsPaid: poll.rewardsPaid,
+      participationCoins: poll.participationCoins, participationSeriesPoints: poll.participationSeriesPoints,
+      winnerCoins: poll.winnerCoins, winnerRankPoints: poll.winnerRankPoints,
+      voteCounts, myVote, answerOptions, excludedUserIds, effectiveWinnerIds,
+    };
+  });
+
   // Neue DB-basierte Umfragen (EventPoll): pro Gewinner alle gewonnenen Umfrage-Labels sammeln,
-  // und je Umfrage die bestätigten Gewinner-IDs fürs Ergebnis-Badge auflösen
+  // und je Umfrage die (ggf. aus den Stimmen abgeleiteten) Gewinner-IDs fürs Ergebnis-Badge auflösen
   const pollWinsByUser: Record<string, string[]> = {};
   const completedPolls: { id: string; label: string; winnerIds: string[] }[] = [];
-  for (const poll of event.polls ?? []) {
-    if (!poll.rewardsPaid || !poll.winnerIds) continue;
-    let ids: string[] = [];
-    try { ids = JSON.parse(poll.winnerIds); } catch { continue; }
-    if (ids.length === 0) continue;
-    for (const uid of ids) {
-      (pollWinsByUser[uid] ??= []).push(poll.label);
-    }
-    completedPolls.push({ id: poll.id, label: poll.label, winnerIds: ids });
+  for (const p of pollDisplays) {
+    if (p.effectiveWinnerIds.length === 0) continue;
+    for (const uid of p.effectiveWinnerIds) (pollWinsByUser[uid] ??= []).push(p.label);
+    completedPolls.push({ id: p.id, label: p.label, winnerIds: p.effectiveWinnerIds });
   }
-  // Umfragen mit bestätigtem Ergebnis werden bereits oben als Gewinner-Karte angezeigt —
+  // Umfragen mit Ergebnis werden bereits oben als Gewinner-Karte angezeigt —
   // daher aus der Abstimmungs-Übersicht (PollsSection) ausschließen, um Doppelanzeige zu vermeiden
   const completedPollIds = new Set(completedPolls.map(p => p.id));
 
@@ -353,8 +443,8 @@ export default async function TournamentDetailPage({
   ).length;
   const totalMatches = event.matches.length;
 
-  // Umfragen (EventPoll): Stimmenzahl, eigene Stimme und Kandidatenliste fürs Erst-Rendern aufbereiten
-  type RawPoll = (typeof event.polls)[number];
+  // Umfragen ohne (bestätigtes oder abgeleitetes) Ergebnis fürs Voting-Widget aufbereiten —
+  // Umfragen mit Ergebnis laufen bereits oben in die Gewinner-Karte (completedPolls)
   type InitialPoll = {
     id: string; label: string; question: string; voterEligibility: string; answerType: string;
     customAnswers: string[]; startAt: string; endAt: string; rewardsPaid: boolean;
@@ -364,40 +454,17 @@ export default async function TournamentDetailPage({
     answerOptions: { id: string; name: string | null; username: string | null; image: string | null }[] | null;
     excludedUserIds: string[];
   };
-  const initialPolls: InitialPoll[] = event.polls
-    .filter((poll: RawPoll) => !completedPollIds.has(poll.id))
-    .map((poll: RawPoll) => {
-    let excludedUserIds: string[] = [];
-    if (poll.excludedUserIds) { try { excludedUserIds = JSON.parse(poll.excludedUserIds); } catch { /* ignore */ } }
-    const excludedSet = new Set(excludedUserIds);
-
-    const voteCounts: Record<string, number> = {};
-    let myVote: string | null = null;
-    for (const v of poll.votes) {
-      if (excludedSet.has(v.targetId)) continue;
-      voteCounts[v.targetId] = (voteCounts[v.targetId] ?? 0) + 1;
-      if (v.voterId === userId) myVote = v.targetId;
-    }
-    let customAnswers: string[] = [];
-    if (poll.customAnswers) { try { customAnswers = JSON.parse(poll.customAnswers); } catch { /* ignore */ } }
-    let winnerIds: string[] | null = null;
-    if (poll.winnerIds) { try { winnerIds = JSON.parse(poll.winnerIds); } catch { /* ignore */ } }
-    let answerOptions: InitialPoll["answerOptions"] = null;
-    if (poll.answerType === "players") {
-      answerOptions = allRegistrations.filter(r => r.role === "player" && !excludedSet.has(r.user.id)).map(r => r.user);
-    } else if (poll.answerType === "spectators") {
-      answerOptions = allRegistrations.filter(r => r.role === "spectator" && !excludedSet.has(r.user.id)).map(r => r.user);
-    }
-    return {
-      id: poll.id, label: poll.label, question: poll.question,
-      voterEligibility: poll.voterEligibility, answerType: poll.answerType,
-      customAnswers, startAt: poll.startAt.toISOString(), endAt: poll.endAt.toISOString(),
-      rewardsPaid: poll.rewardsPaid, winnerIds,
-      participationCoins: poll.participationCoins, participationSeriesPoints: poll.participationSeriesPoints,
-      winnerCoins: poll.winnerCoins, winnerRankPoints: poll.winnerRankPoints,
-      voteCounts, myVote, answerOptions, excludedUserIds,
-    };
-  });
+  const initialPolls: InitialPoll[] = pollDisplays
+    .filter(p => !completedPollIds.has(p.id))
+    .map((p): InitialPoll => ({
+      id: p.id, label: p.label, question: p.question,
+      voterEligibility: p.voterEligibility, answerType: p.answerType,
+      customAnswers: p.customAnswers, startAt: p.startAt.toISOString(), endAt: p.endAt.toISOString(),
+      rewardsPaid: p.rewardsPaid, winnerIds: null,
+      participationCoins: p.participationCoins, participationSeriesPoints: p.participationSeriesPoints,
+      winnerCoins: p.winnerCoins, winnerRankPoints: p.winnerRankPoints,
+      voteCounts: p.voteCounts, myVote: p.myVote, answerOptions: p.answerOptions, excludedUserIds: p.excludedUserIds,
+    }));
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">

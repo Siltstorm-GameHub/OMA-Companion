@@ -23,7 +23,14 @@ export async function createPollsForEvent(
   pollsConfigJson: PollConfig[] | null | undefined,
 ) {
   if (!pollsConfigJson || pollsConfigJson.length === 0) return;
+  // Es gibt keinen DB-Constraint auf (eventId, label) — verschiedene Aufrufer (Event-Erstellung,
+  // "Umfragen propagieren", Event-Abschluss-Neubearbeitung) könnten sonst dieselbe Umfrage doppelt
+  // anlegen. Daher hier defensiv gegen bereits vorhandene Labels für dieses Event prüfen.
+  const existingLabels = new Set(
+    (await prisma.eventPoll.findMany({ where: { eventId }, select: { label: true } })).map(p => p.label)
+  );
   for (const cfg of pollsConfigJson) {
+    if (existingLabels.has(cfg.label)) continue;
     const startAt = new Date(eventStartAt.getTime() + cfg.startOffsetHours * 3600_000);
     const endAt   = new Date(eventStartAt.getTime() + cfg.endOffsetHours   * 3600_000);
     await prisma.eventPoll.create({
@@ -42,6 +49,7 @@ export async function createPollsForEvent(
         winnerRankPoints:         cfg.winnerRankPoints,
       },
     });
+    existingLabels.add(cfg.label);
   }
 }
 
