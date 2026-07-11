@@ -122,7 +122,9 @@ export default async function DashboardPage() {
       id:    ev.id,
       title: ev.title,
       game:  ev.game,
-      href:  ev.seriesId ? `/events/series/${ev.seriesId}` : `/tournament/${ev.id}`,
+      // Bewusst immer die Einzel-Event-Seite, auch bei Eventreihen — die Reihen-Übersicht zeigt
+      // keine Einzel-Ergebnisse, sondern nur die Gesamtstandings.
+      href:  `/tournament/${ev.id}`,
     }));
 
   const [
