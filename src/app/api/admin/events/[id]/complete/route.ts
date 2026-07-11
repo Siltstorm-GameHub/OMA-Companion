@@ -7,6 +7,7 @@ import { checkAndAwardBadges } from "@/lib/award-badges";
 import { createNotificationForUsers } from "@/lib/notifications";
 import { recomputeWanderpocalHolders } from "@/lib/recompute-wanderpocal";
 import { resolveEventPredictions } from "@/lib/predictions";
+import { createPollsForEvent, parsePollsConfigJson } from "@/lib/event-polls";
 
 type PlacementReward = { place: number; coins: number; rankPoints: number };
 type RewardsConfig = { participationCoins: number; placements: PlacementReward[] };
@@ -161,6 +162,23 @@ export async function POST(
     if (!raw) return false;
     try { return !!(JSON.parse(raw) as { enabled?: boolean } | null)?.enabled; } catch { return false; }
   })();
+
+  // Falls für dieses Event noch nie eine Umfrage angelegt wurde (z.B. weil die Multi-Umfragen erst
+  // nachträglich in den Reihen-Einstellungen konfiguriert wurden, nachdem dieses Event schon
+  // existierte — createPollsForEvent läuft normalerweise nur bei Event-Erstellung), beim ersten
+  // Abschluss der Spielphase jetzt aus der (Event- oder Reihen-)Konfiguration anlegen. Startzeitpunkt
+  // ist bewusst "jetzt" (Abschluss der Spielphase) statt des ursprünglichen Event-Starts, damit die
+  // konfigurierte Umfragedauer ab dem tatsächlichen Start der Umfragephase läuft.
+  if (!isReEdit && event.polls.length === 0) {
+    const pollsCfg = parsePollsConfigJson(event.pollsConfigJson ?? event.series?.pollsConfigJson);
+    if (pollsCfg.length > 0) {
+      await createPollsForEvent(eventId, new Date(), pollsCfg);
+      event.polls = await prisma.eventPoll.findMany({
+        where: { eventId, rewardsPaid: false },
+        include: { votes: { select: { voterId: true, targetId: true } } },
+      });
+    }
+  }
 
   // Per-User-Stats aus Match-Einträgen
   const userStats: Record<string, Record<string, number>> = {};
