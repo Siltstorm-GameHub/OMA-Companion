@@ -58,6 +58,62 @@ function answerOptionsFor(poll: PublicPoll, registeredUsers: User[], spectatorUs
   return [];
 }
 
+/** Textfeld mit Tipp-Vorschlägen statt langer nativer Dropdown-Liste — tippt man, werden die
+ * Optionen live nach Übereinstimmung im Namen gefiltert; Klick auf einen Vorschlag wählt ihn aus. */
+function SearchableSelect({
+  options, value, onChange, disabled, placeholder,
+}: {
+  options: { id: string; label: string }[];
+  value: string;
+  onChange: (id: string) => void;
+  disabled: boolean;
+  placeholder: string;
+}) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const selected = options.find(o => o.id === value);
+
+  const filtered = useMemo(() => {
+    const sorted = [...options].sort((a, b) => a.label.localeCompare(b.label));
+    const q = query.trim().toLowerCase();
+    return q ? sorted.filter(o => o.label.toLowerCase().includes(q)) : sorted;
+  }, [options, query]);
+
+  return (
+    <div className="relative flex-1 min-w-[120px]">
+      <input
+        type="text"
+        disabled={disabled}
+        value={selected ? selected.label : query}
+        onChange={e => {
+          setQuery(e.target.value);
+          if (value) onChange("");
+          setOpen(true);
+        }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        placeholder={placeholder}
+        className="w-full rounded-lg px-2 py-1 text-[11px] text-white bg-gray-800 border border-gray-700 focus:border-violet-500/50 outline-none transition-colors disabled:opacity-50"
+      />
+      {open && !disabled && filtered.length > 0 && (
+        <div className="absolute z-10 mt-1 left-0 right-0 max-h-40 overflow-y-auto rounded-lg border border-gray-700 bg-gray-800 shadow-lg">
+          {filtered.map(o => (
+            <button
+              key={o.id}
+              type="button"
+              onMouseDown={e => e.preventDefault()}
+              onClick={() => { onChange(o.id); setQuery(""); setOpen(false); }}
+              className="w-full text-left px-2 py-1.5 text-[11px] text-white truncate block hover:bg-violet-600/30 transition-colors"
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AddVoteForm({
   candidates, answers, saving, onSubmit,
 }: {
@@ -68,28 +124,12 @@ function AddVoteForm({
 }) {
   const [voterId, setVoterId] = useState("");
   const [targetId, setTargetId] = useState("");
-  const sorted = [...candidates].sort((a, b) => userName(a).localeCompare(userName(b)));
+  const voterOptions = candidates.map(u => ({ id: u.id, label: userName(u) }));
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      <select
-        value={voterId}
-        disabled={saving}
-        onChange={e => setVoterId(e.target.value)}
-        className="flex-1 min-w-[140px] rounded-lg px-2 py-1 text-[11px] text-white bg-gray-800 border border-gray-700 focus:border-violet-500/50 outline-none transition-colors disabled:opacity-50"
-      >
-        <option value="">Person wählen…</option>
-        {sorted.map(u => <option key={u.id} value={u.id}>{userName(u)}</option>)}
-      </select>
-      <select
-        value={targetId}
-        disabled={saving}
-        onChange={e => setTargetId(e.target.value)}
-        className="flex-1 min-w-[120px] rounded-lg px-2 py-1 text-[11px] text-white bg-gray-800 border border-gray-700 focus:border-violet-500/50 outline-none transition-colors disabled:opacity-50"
-      >
-        <option value="">Stimme für…</option>
-        {answers.map(a => <option key={a.id} value={a.id}>{a.label}</option>)}
-      </select>
+      <SearchableSelect options={voterOptions} value={voterId} onChange={setVoterId} disabled={saving} placeholder="Person suchen…" />
+      <SearchableSelect options={answers} value={targetId} onChange={setTargetId} disabled={saving} placeholder="Stimme für…" />
       <button
         type="button"
         disabled={!voterId || !targetId || saving}
