@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Trophy, Clock, Vote, Eye } from "lucide-react";
+import { ChevronDown, ChevronUp, Trophy, Clock, Vote, Eye, CheckCircle2 } from "lucide-react";
 import RankPointsIcon from "@/components/RankPointsIcon";
 
 type User        = { id: string; name: string | null; username: string | null; image: string | null };
@@ -38,6 +38,8 @@ export default function FfaView({
   pollWinnerIds = [],
   pollBonusRankPts = null,
   pollLabel = null,
+  votedUserIds = [],
+  externalVoters = [],
 }: {
   matches: Match[];
   participants: Participant[];
@@ -51,6 +53,10 @@ export default function FfaView({
   pollWinnerIds?: string[];
   pollBonusRankPts?: number | null;
   pollLabel?: string | null;
+  /** Alle User-IDs, die in mindestens einer Umfrage des Events abgestimmt haben */
+  votedUserIds?: string[];
+  /** Wähler ohne Event-Registrierung — nur übergeben wenn es Ligapunkte für Stimmabgabe gibt */
+  externalVoters?: Participant[];
 }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const toggle = (id: string) =>
@@ -64,6 +70,7 @@ export default function FfaView({
   const isCoop   = format === "coop_stats";
   const findUser = (uid: string | null) =>
     uid ? participants.find(p => p.userId === uid)?.user : null;
+  const votedSet = new Set(votedUserIds);
 
   // ── Gesamtranking ─────────────────────────────────────────────────────────
   type PlayerTotal = { userId: string; user: User; role?: string; stats: Record<string, number>; matchCount: number };
@@ -71,6 +78,13 @@ export default function FfaView({
 
   for (const p of participants) {
     totals.set(p.userId, { userId: p.userId, user: p.user, role: p.role, stats: {}, matchCount: 0 });
+  }
+  // Externe Wähler (ohne Event-Teilnahme) werden nur übergeben, wenn es Ligapunkte für die
+  // Stimmabgabe gibt — dann tauchen sie unten im Gesamtranking als reine "Abgestimmt"-Zeile auf
+  for (const v of externalVoters) {
+    if (!totals.has(v.userId)) {
+      totals.set(v.userId, { userId: v.userId, user: v.user, role: "voter", stats: {}, matchCount: 0 });
+    }
   }
   for (const match of matches) {
     if (!match.playedAt) continue;
@@ -206,6 +220,11 @@ export default function FfaView({
                             </span>
                             {r.role === "spectator" && (
                               <Eye className="w-3 h-3 text-gray-500 shrink-0" />
+                            )}
+                            {votedSet.has(r.userId) && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full shrink-0">
+                                <CheckCircle2 className="w-2.5 h-2.5" /> Abgestimmt
+                              </span>
                             )}
                           </div>
                         </td>

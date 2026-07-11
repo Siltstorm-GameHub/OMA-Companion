@@ -4,7 +4,7 @@ import { getSessionUser } from "@/lib/roles";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Users, Clock, Swords, StickyNote, Vote, Tv2, Eye, EyeOff, Clapperboard } from "lucide-react";
+import { ArrowLeft, Users, Clock, Swords, StickyNote, Vote, Tv2, Eye, EyeOff, Clapperboard, CheckCircle2 } from "lucide-react";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import SeriesIcon from "@/components/SeriesIcon";
 import WinIcon from "@/components/WinIcon";
@@ -88,7 +88,14 @@ export default async function TournamentDetailPage({
         orderBy: [{ round: "asc" }, { position: "asc" }],
         include: { entries: true },
       },
-      polls: { include: { votes: { select: { voterId: true, targetId: true } } }, orderBy: { startAt: "asc" } },
+      polls: {
+        include: {
+          votes: {
+            include: { voter: { select: { id: true, name: true, username: true, image: true } } },
+          },
+        },
+        orderBy: { startAt: "asc" },
+      },
       clipSubmissions: true,
     },
   });
@@ -175,6 +182,21 @@ export default async function TournamentDetailPage({
     const rb = b.role === "spectator" ? 1 : 0;
     return ra - rb;
   });
+
+  // Wer hat in mindestens einer Umfrage abgestimmt? Auch Nicht-Teilnehmende können abstimmen
+  // (bei voterEligibility "all"), daher separat als "Externe Wähler" auflisten.
+  const registeredUserIds = new Set(event.registrations.map(r => r.userId));
+  const voterUserMap = new Map<string, KnownUser>();
+  for (const poll of event.polls) {
+    for (const v of poll.votes) {
+      if (v.voter && !voterUserMap.has(v.voterId)) voterUserMap.set(v.voterId, v.voter as KnownUser);
+    }
+  }
+  const votedUserIds = new Set(voterUserMap.keys());
+  const externalVoters = [...voterUserMap.values()].filter(u => !registeredUserIds.has(u.id));
+  // Ligapunkte (Reihenpunkte) für die reine Stimmabgabe — wenn vorhanden, sollen externe Wähter
+  // auch im Gesamtranking auftauchen, da sie dafür Punkte für die Reihen-Tabelle erhalten
+  const hasVoteSeriesPoints = event.polls.some(p => p.participationSeriesPoints > 0);
   const format = event.format ?? "single_elimination";
   const isFfa         = format === "ffa" || format === "coop_stats" || format === "avg_stats";
   const isElimination = format === "single_elimination" || format === "double_elimination";
@@ -844,6 +866,11 @@ export default async function TournamentDetailPage({
                         <p className={`text-sm truncate font-medium flex items-center gap-1.5 ${isMe ? "text-rose-300" : "text-white"}`}>
                           <span className="truncate">{userName(user)}{isMe && " (du)"}</span>
                           {isSpectatorRow && <Eye className="w-3 h-3 text-gray-500 shrink-0" />}
+                          {votedUserIds.has(user.id) && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full shrink-0">
+                              <CheckCircle2 className="w-2.5 h-2.5" /> Abgestimmt
+                            </span>
+                          )}
                         </p>
                         {wonLabels.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-0.5">
@@ -860,6 +887,37 @@ export default async function TournamentDetailPage({
                   </div>
                 );
               })}
+              {externalVoters.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.02]">
+                    <Vote className="w-3 h-3" style={{ color: "#14b8a6" }} />
+                    <span className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Externe Wähler</span>
+                  </div>
+                  {externalVoters.map((user, i) => {
+                    const isMe = user.id === userId;
+                    return (
+                      <div key={user.id} className={`flex items-center gap-2.5 px-3 py-2.5 ${isMe ? "bg-rose-950/30" : ""}`}>
+                        <span className="text-xs text-gray-700 w-4 shrink-0 text-center">{i + 1}</span>
+                        {user.image ? (
+                          <img src={user.image} alt="" className="w-7 h-7 rounded-full shrink-0" />
+                        ) : (
+                          <div className="w-7 h-7 rounded-full bg-rose-900/30 flex items-center justify-center text-xs font-bold text-rose-400 shrink-0">
+                            {userName(user)[0].toUpperCase()}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm truncate font-medium flex items-center gap-1.5 ${isMe ? "text-rose-300" : "text-white"}`}>
+                            <span className="truncate">{userName(user)}{isMe && " (du)"}</span>
+                            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full shrink-0">
+                              <CheckCircle2 className="w-2.5 h-2.5" /> Abgestimmt
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
@@ -911,6 +969,8 @@ export default async function TournamentDetailPage({
                 pollWinnerIds={pollWinnerIds}
                 pollBonusRankPts={pollBonusRankPts}
                 pollLabel={pollLabel}
+                votedUserIds={[...votedUserIds]}
+                externalVoters={hasVoteSeriesPoints ? externalVoters.map(u => ({ userId: u.id, user: u })) : []}
               />
             )}
           </div>
