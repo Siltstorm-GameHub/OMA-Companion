@@ -175,7 +175,10 @@ export async function POST(
   // ist bewusst "jetzt" (Abschluss der Spielphase) statt des ursprünglichen Event-Starts, damit die
   // konfigurierte Umfragedauer ab dem tatsächlichen Start der Umfragephase läuft.
   if (!isReEdit && event.polls.length === 0) {
-    const pollsCfg = parsePollsConfigJson(event.pollsConfigJson ?? event.series?.pollsConfigJson);
+    // Bewusst nicht nur `??` (das greift nicht, falls event.pollsConfigJson ein leeres "[]" statt
+    // null ist): Event-eigene Konfiguration hat Vorrang, aber sobald sie leer ist, zählt die der Reihe.
+    let pollsCfg = parsePollsConfigJson(event.pollsConfigJson);
+    if (pollsCfg.length === 0) pollsCfg = parsePollsConfigJson(event.series?.pollsConfigJson);
     if (pollsCfg.length > 0) {
       await createPollsForEvent(eventId, new Date(), pollsCfg);
       event.polls = await prisma.eventPoll.findMany({
