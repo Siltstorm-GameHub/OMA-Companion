@@ -237,17 +237,23 @@ export default async function TournamentDetailPage({
   const hasPendingPoll      = gamePhaseComplete && !pollPhaseComplete && !!pollLabel;
   const pollExcludedUserIds = new Set(completionData.pollExcludedUserIds ?? []);
 
-  // Neue DB-basierte Umfragen (EventPoll): pro Gewinner alle gewonnenen Umfrage-Labels sammeln
+  // Neue DB-basierte Umfragen (EventPoll): pro Gewinner alle gewonnenen Umfrage-Labels sammeln,
+  // und je Umfrage die bestätigten Gewinner-IDs fürs Ergebnis-Badge auflösen
   const pollWinsByUser: Record<string, string[]> = {};
+  const completedPolls: { id: string; label: string; winnerIds: string[] }[] = [];
   for (const poll of event.polls ?? []) {
     if (!poll.rewardsPaid || !poll.winnerIds) continue;
     let ids: string[] = [];
     try { ids = JSON.parse(poll.winnerIds); } catch { continue; }
+    if (ids.length === 0) continue;
     for (const uid of ids) {
       (pollWinsByUser[uid] ??= []).push(poll.label);
     }
+    completedPolls.push({ id: poll.id, label: poll.label, winnerIds: ids });
   }
-  const completedPolls = (event.polls ?? []).filter(p => p.rewardsPaid && p.winnerIds);
+  // Umfragen mit bestätigtem Ergebnis werden bereits oben als Gewinner-Karte angezeigt —
+  // daher aus der Abstimmungs-Übersicht (PollsSection) ausschließen, um Doppelanzeige zu vermeiden
+  const completedPollIds = new Set(completedPolls.map(p => p.id));
 
   // Teilnahme-Münzen (aus placementRewardsJson oder Fallback auf pointReward)
   const participationCoins: number = (() => {
@@ -336,7 +342,9 @@ export default async function TournamentDetailPage({
     answerOptions: { id: string; name: string | null; username: string | null; image: string | null }[] | null;
     excludedUserIds: string[];
   };
-  const initialPolls: InitialPoll[] = event.polls.map((poll: RawPoll) => {
+  const initialPolls: InitialPoll[] = event.polls
+    .filter((poll: RawPoll) => !completedPollIds.has(poll.id))
+    .map((poll: RawPoll) => {
     let excludedUserIds: string[] = [];
     if (poll.excludedUserIds) { try { excludedUserIds = JSON.parse(poll.excludedUserIds); } catch { /* ignore */ } }
     const excludedSet = new Set(excludedUserIds);
@@ -712,9 +720,7 @@ export default async function TournamentDetailPage({
       {completedPolls.length > 0 && (
         <div className="space-y-3 mb-5">
           {completedPolls.map(poll => {
-            let winnerIds: string[] = [];
-            try { winnerIds = poll.winnerIds ? JSON.parse(poll.winnerIds) : []; } catch { /* ignore */ }
-            if (winnerIds.length === 0) return null;
+            const winnerIds = poll.winnerIds;
             return (
               <div key={poll.id} className="glass rounded-2xl p-5 space-y-3">
                 <div className="flex items-center gap-2">
