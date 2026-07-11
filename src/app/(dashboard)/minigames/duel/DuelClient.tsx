@@ -1,7 +1,7 @@
 "use client";
 import { useState, useCallback, useEffect } from "react";
 import { toast } from "sonner";
-import { Swords, Search, Check, X, Trophy, Clock } from "lucide-react";
+import { Swords, Search, Check, X, Trophy, Clock, Eye } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
 import CoinFlipModal from "./CoinFlipModal";
 
@@ -259,19 +259,26 @@ export default function DuelClient({
             {history.map(d => {
               const opponent = d.challengerId === userId ? d.opponent : d.challenger;
               const won = d.winnerId === userId;
+              const resolved = d.status === "resolved" && d.winnerId;
+              const Row: "button" | "div" = resolved ? "button" : "div";
               return (
-                <div key={d.id} className="flex items-center gap-3 px-4 py-2.5">
+                <Row
+                  key={d.id}
+                  {...(resolved ? { onClick: () => setDuelResult({ challenger: d.challenger, opponent: d.opponent, winnerId: d.winnerId!, wager: d.wager }) } : {})}
+                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-left ${resolved ? "hover:bg-white/[0.04] transition-colors cursor-pointer" : ""}`}
+                >
                   <Avatar u={opponent} size={20} />
                   <span className="flex-1 text-sm text-gray-300 truncate">vs. {uname(opponent)}</span>
                   <span className="text-xs text-gray-600">{d.wager} <CoinIcon size={10} /></span>
-                  {d.status === "resolved" ? (
+                  {resolved ? (
                     <span className={`text-xs font-semibold flex items-center gap-1 ${won ? "text-emerald-400" : "text-gray-500"}`}>
                       {won && <Trophy className="w-3 h-3" />}{won ? "Gewonnen" : "Verloren"}
+                      <Eye className="w-3 h-3 text-gray-600 ml-0.5" />
                     </span>
                   ) : (
                     <span className="text-xs text-gray-600 capitalize">{d.status === "declined" ? "Abgelehnt" : "Abgelaufen"}</span>
                   )}
-                </div>
+                </Row>
               );
             })}
           </div>
