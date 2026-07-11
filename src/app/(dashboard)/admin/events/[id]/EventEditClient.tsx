@@ -274,6 +274,7 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
   /* ── Participants state ── */
   const [search, setSearch]             = useState("");
   const [bulkSelected, setBulkSelected] = useState<string[]>([]);
+  const [bulkSelectedSpectators, setBulkSelectedSpectators] = useState<string[]>([]);
   const registeredIds  = new Set(event.registrations.filter((r: { role: string }) => r.role !== "spectator").map((r: { userId: string }) => r.userId));
   const spectatorIds   = new Set(event.registrations.filter((r: { role: string }) => r.role === "spectator").map((r: { userId: string }) => r.userId));
   const userName = (u: User) => u.username ?? u.name ?? "?";
@@ -429,6 +430,21 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
     const data = await res.json();
     toast.success(`${data.added} hinzugefügt${data.skipped ? `, ${data.skipped} bereits dabei` : ""}`);
     setBulkSelected([]);
+    setLoading(false);
+    router.refresh();
+  }
+
+  async function bulkAddSpectators() {
+    if (!bulkSelectedSpectators.length) return;
+    setLoading(true);
+    const res = await fetch(`/api/events/${event.id}/bulk-register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userIds: bulkSelectedSpectators, role: "spectator" }),
+    });
+    const data = await res.json();
+    toast.success(`${data.added} Zuschauer hinzugefügt${data.skipped ? `, ${data.skipped} bereits dabei` : ""}`);
+    setBulkSelectedSpectators([]);
     setLoading(false);
     router.refresh();
   }
@@ -1183,9 +1199,17 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
           {/* Spectators section */}
           {event.spectatorMode && (
             <div className="pt-2 border-t border-white/[0.05]">
-              <p className="text-[10px] font-semibold text-teal-600/80 uppercase tracking-widest mb-2">
-                👁️ Zuschauer ({[...spectatorIds].length})
-              </p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[10px] font-semibold text-teal-600/80 uppercase tracking-widest">
+                  👁️ Zuschauer ({[...spectatorIds].length})
+                </p>
+                {bulkSelectedSpectators.length > 0 && (
+                  <button onClick={bulkAddSpectators} disabled={loading}
+                    className="flex items-center gap-1.5 text-xs bg-teal-700 hover:bg-teal-600 text-white rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50">
+                    <UserPlus className="w-3.5 h-3.5" /> {bulkSelectedSpectators.length} hinzufügen
+                  </button>
+                )}
+              </div>
               <div className="space-y-1 mb-2">
                 {filteredUsers.filter(u => spectatorIds.has(u.id)).map(u => (
                   <div key={u.id} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-teal-900/10 border border-teal-900/20">
@@ -1202,20 +1226,37 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
                 ))}
               </div>
               {filteredUsers.filter(u => !registeredIds.has(u.id) && !spectatorIds.has(u.id)).length > 0 && (
-                <div className="space-y-1 max-h-40 overflow-y-auto">
-                  {filteredUsers.filter(u => !registeredIds.has(u.id) && !spectatorIds.has(u.id)).map(u => (
-                    <div key={u.id} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-800 border border-transparent hover:border-teal-900/30">
-                      {u.image
-                        ? <img src={u.image} alt="" className="w-6 h-6 rounded-full shrink-0 object-cover" />
-                        : <div className="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center text-[10px] font-semibold text-gray-300 shrink-0">{userName(u)[0].toUpperCase()}</div>
-                      }
-                      <span className="flex-1 text-sm text-gray-400 truncate">{userName(u)}</span>
-                      <button onClick={() => addSingleUser(u.id, "spectator")} disabled={loading}
-                        className="shrink-0 text-gray-500 hover:text-teal-400 text-xs flex items-center gap-1 transition-colors disabled:opacity-50">
-                        <UserPlus className="w-3 h-3" /> Zuschauer
-                      </button>
-                    </div>
-                  ))}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest">Nicht angemeldet</p>
+                    <button onClick={() => setBulkSelectedSpectators(filteredUsers.filter(u => !registeredIds.has(u.id) && !spectatorIds.has(u.id)).map(u => u.id))}
+                      className="text-[10px] text-gray-500 hover:text-white transition-colors">
+                      Alle auswählen
+                    </button>
+                  </div>
+                  <div className="space-y-1 max-h-40 overflow-y-auto">
+                    {filteredUsers.filter(u => !registeredIds.has(u.id) && !spectatorIds.has(u.id)).map(u => {
+                      const isSel = bulkSelectedSpectators.includes(u.id);
+                      return (
+                        <div key={u.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                          isSel ? "bg-teal-900/20 border border-teal-800/30" : "bg-gray-800 hover:bg-gray-700/50 border border-transparent"
+                        }`}>
+                          <input type="checkbox" checked={isSel}
+                            onChange={e => setBulkSelectedSpectators(e.target.checked ? [...bulkSelectedSpectators, u.id] : bulkSelectedSpectators.filter(id => id !== u.id))}
+                            className="rounded accent-teal-500 shrink-0" />
+                          {u.image
+                            ? <img src={u.image} alt="" className="w-6 h-6 rounded-full shrink-0 object-cover" />
+                            : <div className="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center text-[10px] font-semibold text-gray-300 shrink-0">{userName(u)[0].toUpperCase()}</div>
+                          }
+                          <span className="flex-1 text-sm text-gray-400 truncate">{userName(u)}</span>
+                          <button onClick={() => addSingleUser(u.id, "spectator")} disabled={loading}
+                            className="shrink-0 text-gray-500 hover:text-teal-400 p-1.5 rounded transition-colors disabled:opacity-50">
+                            <UserPlus className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>
