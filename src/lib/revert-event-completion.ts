@@ -11,6 +11,7 @@ type SeriesStatConfig = {
   winnerStatKeys?: string[];
   winnerSeriesStatKey?: string;
   matchWinStatKeys?: string[];
+  eventPlacementCoins?: { place: number; coins: number }[];
   dominionBonus?: {
     triggerStats?: string[];
     triggerStat?: string;
@@ -178,9 +179,10 @@ export async function revertEventCompletion(eventId: string, opts: RevertOptions
       }
     }
 
-    // Platzierungs-Belohnungen werden bei Events innerhalb einer Reihe nicht mehr beim
-    // Einzel-Event vergeben (sondern erst bei Abschluss der Reihe, siehe
-    // /api/admin/events/[id]/complete), daher hier auch nichts zurückzubuchen.
+    // Platzierungs-Belohnungen (Münzen + Rang-Punkte) werden bei Events innerhalb einer Reihe nicht
+    // mehr beim Einzel-Event vergeben (sondern erst bei Abschluss der Reihe, siehe
+    // /api/admin/series/[id]/complete) — dort gibt es höchstens die seriesweit konfigurierten
+    // zusätzlichen Platzierungs-Münzen (statCfg.eventPlacementCoins), die hier zurückgebucht werden.
     if (!event.seriesId) {
       if (cd.finalRankingGroups?.length) {
         let place = 1;
@@ -199,6 +201,28 @@ export async function revertEventCompletion(eventId: string, opts: RevertOptions
           const reward = rewards.placements.find(p => p.place === i + 1);
           if (reward) reverse(userId, reward.coins, reward.rankPoints);
         });
+      }
+    } else {
+      const eventPlacementCoins = statCfg.eventPlacementCoins ?? [];
+      if (eventPlacementCoins.some(p => p.coins > 0)) {
+        if (cd.finalRankingGroups?.length) {
+          let place = 1;
+          for (const group of cd.finalRankingGroups) {
+            const reward = eventPlacementCoins.find(p => p.place === place);
+            if (reward) {
+              for (const userId of group.filter(id => registeredSet.has(id))) {
+                reverse(userId, reward.coins, 0);
+              }
+            }
+            place += group.length;
+          }
+        } else if (cd.finalRanking?.length) {
+          const ranking = cd.finalRanking.filter(id => registeredSet.has(id));
+          ranking.forEach((userId, i) => {
+            const reward = eventPlacementCoins.find(p => p.place === i + 1);
+            if (reward) reverse(userId, reward.coins, 0);
+          });
+        }
       }
     }
 

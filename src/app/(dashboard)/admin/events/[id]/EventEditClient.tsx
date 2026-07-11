@@ -510,6 +510,16 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
       return cfg.winnerStatKeys ?? [];
     } catch { return []; }
   })();
+
+  // Seriesweit konfigurierte zusätzliche Münzen für die Platzierung (1./2./3.) innerhalb dieses
+  // Events — eingestellt in der "Gesamttabellen-Konfiguration" der Reihe.
+  const seriesEventPlacementCoins: PlacementReward[] = (() => {
+    if (!event.series?.seriesStatConfig) return [];
+    try {
+      const cfg = JSON.parse(event.series.seriesStatConfig) as { eventPlacementCoins?: { place: number; coins: number }[] };
+      return (cfg.eventPlacementCoins ?? []).map(p => ({ place: p.place, coins: p.coins, rankPoints: 0 }));
+    } catch { return []; }
+  })();
   const bracketTournament = event.format ? {
     id: event.id,
     status: event.tournamentStatus ?? "active",
@@ -864,24 +874,58 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
           {/* Platzierungen */}
           <div className="rounded-xl border border-white/[0.06] bg-gray-900/50 p-4 space-y-3">
             <h3 className="text-sm font-semibold text-gray-300">Platzierungs-Belohnungen</h3>
-            <div className="grid grid-cols-[auto_1fr_auto_auto] gap-2 items-center text-xs text-gray-500 px-1">
-              <span />
-              <span>Platz</span>
-              <span className="flex items-center gap-1 justify-center"><RankPointsIcon size={12} /> RP</span>
-              <span className="flex items-center gap-1 justify-center"><CoinIcon size={12} /> Münzen</span>
-            </div>
-            {placements.map(p => (
-              <div key={p.place} className="grid grid-cols-[auto_1fr_auto_auto] gap-2 items-center">
-                <span className="text-base">{p.place === 1 ? "🥇" : p.place === 2 ? "🥈" : "🥉"}</span>
-                <span className="text-sm text-gray-300">{p.place}. Platz</span>
-                <input type="number" min={0} value={p.rankPoints}
-                  onChange={e => updatePlacement(p.place, "rankPoints", Number(e.target.value))}
-                  className={numCls} />
-                <input type="number" min={0} value={p.coins}
-                  onChange={e => updatePlacement(p.place, "coins", Number(e.target.value))}
-                  className={numCls} />
-              </div>
-            ))}
+            {event.series ? (
+              <>
+                <p className="text-[11px] text-gray-500">
+                  Die volle Platzierungs-Belohnung (Münzen + Rang-Punkte) wird erst bei Abschluss der{" "}
+                  <Link href={`/admin/series/${event.series.id}`} className="text-teal-400 hover:text-teal-300 transition-colors">
+                    gesamten Eventreihe
+                  </Link>{" "}
+                  anhand der finalen Endplatzierung vergeben. Zusätzlich gibt es für die Platzierung
+                  in diesem einzelnen Event ggf. seriesweit fest konfigurierte Bonus-Münzen (siehe{" "}
+                  <Link href={`/admin/series/${event.series.id}`} className="text-teal-400 hover:text-teal-300 transition-colors">
+                    Gesamttabellen-Konfiguration der Reihe
+                  </Link>
+                  ), die direkt bei Abschluss dieses Events vergeben werden:
+                </p>
+                {seriesEventPlacementCoins.some(p => p.coins > 0) ? (
+                  <div className="grid grid-cols-[auto_1fr_auto] gap-2 items-center">
+                    {seriesEventPlacementCoins.filter(p => p.coins > 0).map(p => (
+                      <div key={p.place} className="contents">
+                        <span className="text-base">{p.place === 1 ? "🥇" : p.place === 2 ? "🥈" : "🥉"}</span>
+                        <span className="text-sm text-gray-300">{p.place}. Platz</span>
+                        <span className="flex items-center gap-1 text-amber-300 text-sm justify-self-end">
+                          <CoinIcon size={12} /> {p.coins}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-600">Keine zusätzlichen Platzierungs-Münzen konfiguriert.</p>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="grid grid-cols-[auto_1fr_auto_auto] gap-2 items-center text-xs text-gray-500 px-1">
+                  <span />
+                  <span>Platz</span>
+                  <span className="flex items-center gap-1 justify-center"><RankPointsIcon size={12} /> RP</span>
+                  <span className="flex items-center gap-1 justify-center"><CoinIcon size={12} /> Münzen</span>
+                </div>
+                {placements.map(p => (
+                  <div key={p.place} className="grid grid-cols-[auto_1fr_auto_auto] gap-2 items-center">
+                    <span className="text-base">{p.place === 1 ? "🥇" : p.place === 2 ? "🥈" : "🥉"}</span>
+                    <span className="text-sm text-gray-300">{p.place}. Platz</span>
+                    <input type="number" min={0} value={p.rankPoints}
+                      onChange={e => updatePlacement(p.place, "rankPoints", Number(e.target.value))}
+                      className={numCls} />
+                    <input type="number" min={0} value={p.coins}
+                      onChange={e => updatePlacement(p.place, "coins", Number(e.target.value))}
+                      className={numCls} />
+                  </div>
+                ))}
+              </>
+            )}
           </div>
 
           {/* Zuschauer-Belohnung */}

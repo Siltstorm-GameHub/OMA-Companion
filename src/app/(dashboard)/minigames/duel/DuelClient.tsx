@@ -1,9 +1,9 @@
 "use client";
 import { useState, useCallback, useEffect } from "react";
 import { toast } from "sonner";
-import confetti from "canvas-confetti";
 import { Swords, Search, Check, X, Trophy, Clock } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
+import CoinFlipModal from "./CoinFlipModal";
 
 type UserLite = { id: string; username: string | null; name: string | null; image: string | null };
 
@@ -63,6 +63,7 @@ export default function DuelClient({
   const [wager, setWager] = useState(config.min);
   const [submitting, setSubmitting] = useState(false);
   const [respondingId, setRespondingId] = useState<string | null>(null);
+  const [duelResult, setDuelResult] = useState<{ challenger?: UserLite; opponent?: UserLite; winnerId: string; wager: number } | null>(null);
 
   const refreshLists = useCallback(async () => {
     try {
@@ -108,11 +109,11 @@ export default function DuelClient({
     }
   }
 
-  async function respond(id: string, action: "accept" | "decline") {
+  async function respond(duel: DuelEntry, action: "accept" | "decline") {
     if (respondingId) return;
-    setRespondingId(id);
+    setRespondingId(duel.id);
     try {
-      const res = await fetch(`/api/duels/${id}/respond`, {
+      const res = await fetch(`/api/duels/${duel.id}/respond`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action }),
@@ -120,13 +121,7 @@ export default function DuelClient({
       const data = await res.json();
       if (!res.ok) { toast.error(data.error ?? "Fehler"); return; }
       if (action === "accept") {
-        const won = data.winnerId === userId;
-        if (won) {
-          toast.success("🎉 Gewonnen!");
-          confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ["#f43f5e", "#f59e0b", "#ffffff"] });
-        } else {
-          toast.message("Verloren — nächstes Mal mehr Glück.");
-        }
+        setDuelResult({ challenger: duel.challenger, opponent: duel.opponent, winnerId: data.winnerId, wager: duel.wager });
       } else {
         toast("Herausforderung abgelehnt");
       }
@@ -150,6 +145,7 @@ export default function DuelClient({
   }
 
   return (
+    <>
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center shrink-0">
@@ -232,11 +228,11 @@ export default function DuelClient({
                 <p className="text-sm text-white truncate">{uname(d.challenger)} fordert dich heraus</p>
                 <p className="text-xs text-amber-400 flex items-center gap-1">{d.wager} <CoinIcon size={11} /> Einsatz</p>
               </div>
-              <button onClick={() => respond(d.id, "accept")} disabled={respondingId === d.id}
+              <button onClick={() => respond(d, "accept")} disabled={respondingId === d.id}
                 className="p-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 disabled:opacity-40">
                 <Check className="w-4 h-4" />
               </button>
-              <button onClick={() => respond(d.id, "decline")} disabled={respondingId === d.id}
+              <button onClick={() => respond(d, "decline")} disabled={respondingId === d.id}
                 className="p-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-gray-400 disabled:opacity-40">
                 <X className="w-4 h-4" />
               </button>
@@ -308,5 +304,17 @@ export default function DuelClient({
         )}
       </div>
     </div>
+
+    {duelResult && (
+      <CoinFlipModal
+        challenger={duelResult.challenger}
+        opponent={duelResult.opponent}
+        winnerId={duelResult.winnerId}
+        wager={duelResult.wager}
+        currentUserId={userId}
+        onClose={() => setDuelResult(null)}
+      />
+    )}
+    </>
   );
 }
