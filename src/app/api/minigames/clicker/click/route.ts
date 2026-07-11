@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getMinigamesConfig } from "@/lib/minigames-config";
+import { updateQuestProgress } from "@/lib/quests";
 import {
   clicksRequiredForLevel, coinsPerClickForLevel, levelForTotalClicks,
   rollBonusIconGenre, todayStr,
@@ -117,6 +118,12 @@ export async function POST() {
       data: { userId, amount: unflushed, reason: "🖱️ Idle-Clicker" },
     })] : []),
   ]);
+
+  // Quest-Fortschritt im selben Rhythmus wie der PointTransaction-Flush batchen,
+  // statt bei 150ms Klick-Intervall auf jedem einzelnen Klick die DB zu treffen.
+  if (shouldFlush) {
+    updateQuestProgress(userId, "CLICKER_CLICKS", FLUSH_EVERY_N_CLICKS).catch(() => {});
+  }
 
   return NextResponse.json({
     ...serialize(

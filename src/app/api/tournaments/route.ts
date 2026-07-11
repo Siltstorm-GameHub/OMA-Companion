@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
-import { updateQuestProgress } from "@/lib/quests";
 import { dispatchEventNotification } from "@/lib/notify-dispatch";
 
 // Standard round-robin scheduling algorithm (circle method)
@@ -119,13 +118,6 @@ export async function POST(req: NextRequest) {
       }));
       await prisma.match.createMany({ data: [...hinrunde, ...rueckrunde] });
     }
-  }
-
-  // Quest progress für alle Teilnehmer
-  if (participantIds?.length) {
-    await Promise.all(
-      participantIds.map((uid: string) => updateQuestProgress(uid, "TOURNAMENT", 1))
-    );
   }
 
   // Matches nachladen falls gerade erstellt

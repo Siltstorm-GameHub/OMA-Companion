@@ -35,6 +35,7 @@ const RULE_TYPE: Record<string, NotificationType> = {
   tournament_started: "event_start",
   tournament_result:  "event_result",
   quest_completed:    "quest",
+  quest_new:          "quest",
   prediction_result:  "coins",
   duel_challenge:     "coins",
   duel_result:        "coins",

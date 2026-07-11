@@ -8,6 +8,7 @@ import { createNotificationForUsers } from "@/lib/notifications";
 import { recomputeWanderpocalHolders } from "@/lib/recompute-wanderpocal";
 import { resolveEventPredictions } from "@/lib/predictions";
 import { createPollsForEvent, parsePollsConfigJson } from "@/lib/event-polls";
+import { announceEventResults } from "@/lib/discord-events";
 
 type PlacementReward = { place: number; coins: number; rankPoints: number };
 type RewardsConfig = { participationCoins: number; placements: PlacementReward[] };
@@ -1032,12 +1033,36 @@ export async function POST(
     }
   }
 
-  // Push + In-App Notification an alle Teilnehmer
+  // Push + In-App Notification an alle Teilnehmer — Deep-Link direkt zu den Ergebnissen
+  // (Eventreihen-Events zeigen auf die Reihen-Standings, sonst auf die Event-Detailseite).
+  const resultUrl = event.seriesId ? `/events/series/${event.seriesId}` : `/tournament/${eventId}`;
   const participantIds = event.registrations.map(r => r.userId);
   const eventNotifTitle = `✅ Event abgeschlossen: ${event.title}`;
   const eventNotifBody  = "Schau dir deine Punkte und das Ergebnis an!";
-  sendPushToUsers(participantIds, { title: eventNotifTitle, body: eventNotifBody, url: "/events" }).catch(() => {});
-  createNotificationForUsers(participantIds, { type: "event_result", title: eventNotifTitle, body: eventNotifBody, url: "/events" }).catch(() => {});
+  sendPushToUsers(participantIds, { title: eventNotifTitle, body: eventNotifBody, url: resultUrl }).catch(() => {});
+  createNotificationForUsers(participantIds, { type: "event_result", title: eventNotifTitle, body: eventNotifBody, url: resultUrl }).catch(() => {});
+
+  // Automatischer Discord-Ergebnis-Post — nur beim tatsächlichen (ersten) Übergang in "finished",
+  // nicht während der Umfragephase und nicht bei erneutem Abschließen eines bereits fertigen Events
+  // (sonst würde der Kanal bei jeder nachträglichen Korrektur erneut zugespammt).
+  if (!hasPendingPollPhase && event.status !== "finished") {
+    (async () => {
+      const winners = eventWinnerIds.length > 0
+        ? await prisma.user.findMany({
+            where:  { id: { in: eventWinnerIds } },
+            select: { username: true, name: true },
+          })
+        : [];
+      await announceEventResults({
+        title:            event.title,
+        game:             event.game,
+        discordChannelId: event.discordChannelId,
+        resultsPath:      resultUrl,
+        winnerNames:      winners.map(w => w.username ?? w.name ?? "?"),
+        note:             body.finalRankingNote?.trim() || null,
+      });
+    })().catch(err => console.error("[Discord] Ergebnis-Post fehlgeschlagen:", err));
+  }
 
   // Badge-Check für alle Teilnehmer (fire-and-forget)
   for (const userId of participantIds) {

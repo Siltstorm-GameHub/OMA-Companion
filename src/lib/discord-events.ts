@@ -79,6 +79,53 @@ export async function announceNewEvent(event: {
   }
 }
 
+/** Postet die Ergebnisse eines abgeschlossenen Events in den konfigurierten Events-Channel. */
+export async function announceEventResults(event: {
+  title: string;
+  game: string | null;
+  discordChannelId?: string | null;
+  resultsPath: string; // z.B. /tournament/{id} oder /events/series/{id}
+  winnerNames?: string[];
+  note?: string | null;
+}): Promise<void> {
+  const channelId = event.discordChannelId ?? process.env.DISCORD_NEWS_CHANNEL_ID;
+  const botToken  = process.env.DISCORD_BOT_TOKEN;
+  if (!channelId || !botToken) return;
+
+  const base     = process.env.NEXTAUTH_URL ?? "https://oma-app.de";
+  const coverUrl = await getGameCoverUrlAsync(event.game);
+
+  const embed = {
+    color:       0xfbbf24,
+    title:       `🏆 Ergebnisse: ${event.title}`,
+    url:         `${base}${event.resultsPath}`,
+    description: "Das Event ist abgeschlossen — die Ergebnisse stehen fest!",
+    fields: [
+      ...(event.game ? [{ name: "🎮 Spiel", value: event.game, inline: true }] : []),
+      ...(event.winnerNames && event.winnerNames.length > 0
+        ? [{ name: "🥇 Sieger", value: event.winnerNames.join(", "), inline: true }]
+        : []),
+      ...(event.note ? [{ name: "📋 Notiz", value: event.note, inline: false }] : []),
+    ],
+    ...(coverUrl && { image: { url: coverUrl } }),
+    footer:    { text: "OMA Companion · Events" },
+    timestamp: new Date().toISOString(),
+  };
+
+  try {
+    const res = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+      method:  "POST",
+      headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
+      body:    JSON.stringify({ embeds: [embed] }),
+    });
+    if (!res.ok) {
+      console.error("[Discord] Ergebnis-Post fehlgeschlagen:", res.status, await res.text());
+    }
+  } catch (err) {
+    console.error("[Discord] Ergebnis-Post fehlgeschlagen:", err);
+  }
+}
+
 export { deleteDiscordMessage } from "@/lib/discord-rest";
 
 /** Löscht ein Discord Scheduled Event. */

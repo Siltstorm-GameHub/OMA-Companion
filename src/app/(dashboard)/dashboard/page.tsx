@@ -18,6 +18,8 @@ import PartnerLiveBanner from "@/components/PartnerLiveBanner";
 import CommunityLiveBanner from "@/components/CommunityLiveBanner";
 import WhatsAppCommunityBanner from "@/components/WhatsAppCommunityBanner";
 import ClipContestWidget from "@/components/ClipContestWidget";
+import { RecentResultsBanner, type RecentResultEvent } from "@/components/RecentResultsBanner";
+import { getEventEndedAt, isRecentlyFinished } from "@/lib/event-completion";
 import RankIcon from "@/components/RankIcon";
 import SeriesIcon from "@/components/SeriesIcon";
 import { resolveSeriesColor } from "@/lib/series-icons";
@@ -48,7 +50,7 @@ const ROLE_LABEL: Record<string, string> = {
 // Cached queries for non-user-specific data (5 min revalidation)
 const getGlobalDashboardData = unstable_cache(
   async () => {
-    const [memberCount, activeEvents, activeSeries, activeOrPollEvent, nextUpcomingEvent, recentSummaries] = await Promise.all([
+    const [memberCount, activeEvents, activeSeries, activeOrPollEvent, nextUpcomingEvent, recentSummaries, recentlyFinishedCandidates] = await Promise.all([
       prisma.user.count(),
       prisma.event.count({ where: { hidden: false, status: { in: ["open", "active", "umfrage"] }, OR: [{ seriesId: null }, { series: { hidden: false } }] } }),
       prisma.eventSeries.findMany({
@@ -81,9 +83,21 @@ const getGlobalDashboardData = unstable_cache(
         take:    3,
         select:  { id: true, title: true, game: true, startAt: true, summary: true },
       }),
+      // Kandidaten für den "Ergebnisse sind da"-Banner — die exakte 3-Tage-Grenze (basierend auf
+      // completionData.lockedAt) wird pro Request außerhalb des Caches geprüft (isRecentlyFinished).
+      prisma.event.findMany({
+        where: {
+          hidden: false, status: "finished",
+          startAt: { gte: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000) },
+          OR: [{ seriesId: null }, { series: { hidden: false } }],
+        },
+        orderBy: { startAt: "desc" },
+        take:    10,
+        select:  { id: true, title: true, game: true, startAt: true, completionData: true, seriesId: true },
+      }),
     ]);
     const nextEvent = activeOrPollEvent ?? nextUpcomingEvent;
-    return { memberCount, activeEvents, activeSeries, nextEvent, recentSummaries };
+    return { memberCount, activeEvents, activeSeries, nextEvent, recentSummaries, recentlyFinishedCandidates };
   },
   ["dashboard-global"],
   { revalidate: 300 }
@@ -98,8 +112,18 @@ export default async function DashboardPage() {
   const month = now.getMonth() + 1;
   const year  = now.getFullYear();
 
-  const { memberCount, activeEvents, activeSeries, nextEvent, recentSummaries } =
+  const { memberCount, activeEvents, activeSeries, nextEvent, recentSummaries, recentlyFinishedCandidates } =
     await getGlobalDashboardData();
+
+  const recentResultEvents: RecentResultEvent[] = recentlyFinishedCandidates
+    .filter(ev => isRecentlyFinished(ev, now))
+    .sort((a, b) => getEventEndedAt(b).getTime() - getEventEndedAt(a).getTime())
+    .map(ev => ({
+      id:    ev.id,
+      title: ev.title,
+      game:  ev.game,
+      href:  ev.seriesId ? `/events/series/${ev.seriesId}` : `/tournament/${ev.id}`,
+    }));
 
   const [
     myQuestsDone,
@@ -240,6 +264,9 @@ export default async function DashboardPage() {
           ))}
         </div>
       </div>
+
+      {/* ── Kürzlich beendete Events: Ergebnisse ─────────────────── */}
+      <RecentResultsBanner events={recentResultEvents} />
 
       {/* ── WhatsApp Community Banner ────────────────────────────── */}
       <div className="px-4 sm:px-6 pt-4 max-w-7xl mx-auto w-full">
