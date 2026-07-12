@@ -103,9 +103,6 @@ export async function POST() {
         await prisma.userQuestProgress.updateMany({
           where: { userId: stub.id }, data: { userId: realUser.id },
         });
-        await prisma.shopPurchase.updateMany({
-          where: { userId: stub.id }, data: { userId: realUser.id },
-        });
         await prisma.dailySpin.updateMany({
           where: { userId: stub.id }, data: { userId: realUser.id },
         });
@@ -292,7 +289,6 @@ export async function POST() {
           await tx.pointTransaction.updateMany({ where: { userId: stub.id }, data: { userId: badUser.id } });
           await tx.lulEntry.updateMany({ where: { userId: stub.id }, data: { userId: badUser.id } });
           await tx.lulLegacyEntry.updateMany({ where: { userId: stub.id }, data: { userId: badUser.id } });
-          await tx.shopPurchase.updateMany({ where: { userId: stub.id }, data: { userId: badUser.id } });
           await tx.dailySpin.updateMany({ where: { userId: stub.id }, data: { userId: badUser.id } });
           await tx.donation.updateMany({ where: { userId: stub.id }, data: { userId: badUser.id } });
           await tx.userCollectible.updateMany({ where: { userId: stub.id }, data: { userId: badUser.id } });
