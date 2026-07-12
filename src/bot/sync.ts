@@ -76,15 +76,6 @@ export async function updateEventStatus(discordEventId: string, status: string) 
         });
       }
     }
-
-    if (status === "finished") {
-      const attendeeCount = await prisma.eventRegistration.count({ where: { eventId: event.id } });
-      await dispatchEventNotification("event_ended", { id: event.id }, {
-        placeholders: { "{eventName}": event.title, "{attendeeCount}": String(attendeeCount) },
-        discordChannelIdOverride: event.discordChannelId,
-        discordFields: [{ name: "👥 Teilnehmer", value: String(attendeeCount), inline: true }],
-      }).catch(() => {});
-    }
   } catch (err) {
     console.error("Fehler beim Status-Update:", err);
   }
