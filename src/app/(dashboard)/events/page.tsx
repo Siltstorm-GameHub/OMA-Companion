@@ -186,8 +186,10 @@ export default async function EventsPage() {
             animationDelay: `${idx * 30}ms`,
             minHeight: 240,
           }}>
-          <GameCover game={ev.game} className="absolute inset-0 w-full h-full" rounded="rounded-none"
-            imgClassName="w-full h-full object-cover object-center scale-105 group-hover:scale-110 transition-transform duration-700" />
+          <div className="absolute inset-0">
+            <GameCover game={ev.game} className="w-full h-full" rounded="rounded-none"
+              imgClassName="w-full h-full object-cover object-center scale-105 group-hover:scale-110 transition-transform duration-700" />
+          </div>
           <div className="absolute inset-0 pointer-events-none"
             style={{ background: "linear-gradient(to bottom, transparent 0%, transparent 40%, rgba(11,13,18,0.1) 55%, rgba(11,13,18,0.4) 70%, rgba(11,13,18,0.75) 85%, rgba(11,13,18,0.92) 100%)" }} />
           <div className={`absolute top-0 left-0 right-0 h-[2px] ${CATEGORY_STRIP[ev.category as EventCategory] ?? "bg-emerald-500"}`} />
@@ -272,8 +274,10 @@ export default async function EventsPage() {
           animationDelay: `${idx * 30}ms`,
           minHeight: 240,
         }}>
-        <GameCover game={st.game} className="absolute inset-0 w-full h-full" rounded="rounded-none"
-          imgClassName="w-full h-full object-cover object-center scale-105 group-hover:scale-110 transition-transform duration-700" />
+        <div className="absolute inset-0">
+          <GameCover game={st.game} className="w-full h-full" rounded="rounded-none"
+            imgClassName="w-full h-full object-cover object-center scale-105 group-hover:scale-110 transition-transform duration-700" />
+        </div>
         <div className="absolute inset-0 pointer-events-none"
           style={{ background: "linear-gradient(to bottom, transparent 0%, transparent 40%, rgba(11,13,18,0.1) 55%, rgba(11,13,18,0.4) 70%, rgba(11,13,18,0.75) 85%, rgba(11,13,18,0.92) 100%)" }} />
         <span className={`absolute top-2.5 left-2.5 flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium ${s.badge}`}>
