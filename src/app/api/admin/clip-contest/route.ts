@@ -82,14 +82,23 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   await requireRole("moderator");
-  const { contestId, rewardCoins, participationCoins } = await req.json();
+  const { contestId, rewardCoins, participationCoins, month, year } = await req.json();
   if (!contestId) return NextResponse.json({ error: "contestId fehlt" }, { status: 400 });
+
+  if (month !== undefined && (!Number.isInteger(month) || month < 1 || month > 12)) {
+    return NextResponse.json({ error: "Ungültiger Monat" }, { status: 400 });
+  }
+  if (year !== undefined && (!Number.isInteger(year) || year < 2000 || year > 2100)) {
+    return NextResponse.json({ error: "Ungültiges Jahr" }, { status: 400 });
+  }
 
   const updated = await prisma.monthlyClipContest.update({
     where: { id: contestId },
     data: {
       ...(rewardCoins !== undefined && { rewardCoins }),
       ...(participationCoins !== undefined && { participationCoins }),
+      ...(month !== undefined && { month }),
+      ...(year !== undefined && { year }),
     },
   });
   return NextResponse.json(updated);
