@@ -3,7 +3,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Trophy, Clapperboard, ExternalLink, Loader2, Square, Link2, Plus } from "lucide-react";
+import { Trophy, Clapperboard, ExternalLink, Loader2, Square, Link2, Plus, Pencil, Check, X } from "lucide-react";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 
 const MONTH_NAMES = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
@@ -46,6 +46,46 @@ export default function ContestManager({ contests }: { contests: Contest[] }) {
     Object.fromEntries(contests.map((c) => [c.id, String(c.participationCoins)]))
   );
   const { confirm, ConfirmDialogElement } = useConfirm();
+
+  // Nachträgliches Bearbeiten von Monat/Jahr (z.B. falsch erkannter Zeitraum bei Erstellung)
+  const [editingPeriodId, setEditingPeriodId] = useState<string | null>(null);
+  const [periodMonthInput, setPeriodMonthInput] = useState("");
+  const [periodYearInput, setPeriodYearInput] = useState("");
+  const [periodSaving, setPeriodSaving] = useState<string | null>(null);
+
+  function startEditingPeriod(contest: Contest) {
+    setEditingPeriodId(contest.id);
+    setPeriodMonthInput(String(contest.month));
+    setPeriodYearInput(String(contest.year));
+  }
+
+  function cancelEditingPeriod() {
+    setEditingPeriodId(null);
+  }
+
+  async function savePeriod(contestId: string) {
+    const month = parseInt(periodMonthInput);
+    const year = parseInt(periodYearInput);
+    if (isNaN(month) || month < 1 || month > 12 || isNaN(year) || year < 2000 || year > 2100) {
+      toast.error("Ungültiger Monat/Jahr");
+      return;
+    }
+    setPeriodSaving(contestId);
+    const res = await fetch("/api/admin/clip-contest", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contestId, month, year }),
+    });
+    setPeriodSaving(null);
+    if (res.ok) {
+      setItems((prev) => prev.map((c) => (c.id === contestId ? { ...c, month, year } : c)));
+      setEditingPeriodId(null);
+      toast.success("Zeitraum aktualisiert");
+    } else {
+      const data = await res.json().catch(() => ({}));
+      toast.error(data.error ?? "Fehler beim Speichern");
+    }
+  }
 
   // Manuelles Verknüpfen eines Gewinners ohne erkanntes Community-Konto
   const [linkingNominationId, setLinkingNominationId] = useState<string | null>(null);
@@ -170,9 +210,54 @@ export default function ContestManager({ contests }: { contests: Contest[] }) {
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div className="flex items-center gap-2">
                 <Trophy className="w-4 h-4 text-amber-400" />
-                <h2 className="font-bold text-white">
-                  {MONTH_NAMES[contest.month - 1]} {contest.year}
-                </h2>
+                {editingPeriodId === contest.id ? (
+                  <div className="flex items-center gap-1.5">
+                    <select
+                      value={periodMonthInput}
+                      onChange={(e) => setPeriodMonthInput(e.target.value)}
+                      className="rounded-lg px-2 py-1 text-sm text-white bg-white/[0.05] border border-white/[0.1] outline-none focus:border-purple-500/40"
+                    >
+                      {MONTH_NAMES.map((name, i) => (
+                        <option key={name} value={i + 1} className="bg-gray-900">{name}</option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      value={periodYearInput}
+                      onChange={(e) => setPeriodYearInput(e.target.value)}
+                      className="w-20 rounded-lg px-2 py-1 text-sm text-white bg-white/[0.05] border border-white/[0.1] outline-none focus:border-purple-500/40"
+                    />
+                    <button
+                      onClick={() => savePeriod(contest.id)}
+                      disabled={periodSaving === contest.id}
+                      className="p-1.5 rounded-lg text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 disabled:opacity-50 transition-colors"
+                      title="Speichern"
+                    >
+                      {periodSaving === contest.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                    </button>
+                    <button
+                      onClick={cancelEditingPeriod}
+                      disabled={periodSaving === contest.id}
+                      className="p-1.5 rounded-lg text-gray-400 bg-white/[0.05] border border-white/[0.1] hover:bg-white/[0.1] transition-colors"
+                      title="Abbrechen"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <h2 className="font-bold text-white">
+                      {MONTH_NAMES[contest.month - 1]} {contest.year}
+                    </h2>
+                    <button
+                      onClick={() => startEditingPeriod(contest)}
+                      className="p-1 rounded-lg text-gray-500 hover:text-white hover:bg-white/[0.08] transition-colors"
+                      title="Monat/Jahr korrigieren"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                  </>
+                )}
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                   contest.status === "voting"
                     ? "bg-blue-500/15 text-blue-300 border border-blue-500/20"
