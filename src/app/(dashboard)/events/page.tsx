@@ -170,7 +170,7 @@ export default async function EventsPage() {
       const isTournament = !!ev.format;
       const hasSeries    = !!ev.seriesId;
       const seriesColor  = resolveSeriesColor(ev.series?.icon);
-      const cardHref     = hasSeries ? `/events/series/${ev.seriesId}` : `/tournament/${ev.id}`;
+      const cardHref     = `/tournament/${ev.id}`;
       const discordUrl   = ev.discordEventId && GUILD_ID
         ? `https://discord.com/events/${GUILD_ID}/${ev.discordEventId}` : null;
       const date = item.date;
