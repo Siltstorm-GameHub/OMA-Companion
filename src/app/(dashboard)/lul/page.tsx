@@ -54,7 +54,9 @@ export default async function LulOverviewPage() {
     .filter((st) => st.status === "finished")
     .flatMap((st) => st.entries) ?? [];
 
-  const allActiveEntries = activeSeason?.spieltage.flatMap((st) => st.entries) ?? [];
+  const allActiveEntries = activeSeason?.spieltage
+    .filter((st) => st.status !== "upcoming")
+    .flatMap((st) => st.entries) ?? [];
 
   const hasUnfinishedSpieltage = activeSeason?.spieltage.some((st) => st.status !== "finished") ?? false;
   const [standings, holdersMap] = await Promise.all([
