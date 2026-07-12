@@ -202,15 +202,15 @@ export default async function EventsPage() {
               <Check className="w-3 h-3" /> Angemeldet
             </span>
           )}
+          {hasSeries && (
+            <Link href={`/events/series/${ev.seriesId}`}
+              className="absolute top-10 left-2.5 right-2.5 z-10 flex items-center gap-1.5 transition-opacity hover:opacity-80 group/series"
+              style={{ textShadow: "0 1px 4px rgba(0,0,0,0.8)" }}>
+              <SeriesIcon name={ev.series?.icon} className="w-4 h-4 shrink-0" />
+              <span className="text-sm font-semibold truncate" style={{ color: seriesColor }}>{ev.series?.name}</span>
+            </Link>
+          )}
           <div className="relative z-10 px-4 pb-4 pt-3" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.8)" }}>
-            {hasSeries && (
-              <Link href={`/events/series/${ev.seriesId}`}
-                className="flex items-center gap-1 mb-1 transition-opacity hover:opacity-80 group/series">
-                <SeriesIcon name={ev.series?.icon} className="w-3 h-3 shrink-0" />
-                <span className="text-xs font-medium" style={{ color: seriesColor }}>{ev.series?.name}</span>
-                <span className="text-xs text-gray-400">· Eventreihe</span>
-              </Link>
-            )}
             <div className="flex items-center gap-2 mb-1.5">
               <p className="font-semibold text-white text-base truncate flex-1 min-w-0">{ev.title}</p>
               {isTournament && <Trophy className="w-4 h-4 text-amber-400 shrink-0" />}
