@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { Edit2, ChevronDown, ChevronRight, Eye, EyeOff } from "lucide-react";
+import { Edit2, ChevronDown, ChevronRight, Eye, EyeOff, Clock } from "lucide-react";
 import EventCategoryBadge from "@/components/EventCategoryBadge";
 import SeriesIcon from "@/components/SeriesIcon";
 import { resolveSeriesColor } from "@/lib/series-icons";
@@ -32,11 +32,34 @@ type Event = {
   startAt: Date;
   game: string | null;
   format: string | null;
+  tournamentStatus: string | null;
   category: string | null;
   completionData: boolean | string | number | null | object;
   hidden: boolean;
   _count: { registrations: number };
 };
+
+const NOT_ACTIVE_STATUSES = ["finished", "closed", "archived"];
+
+// Spiegelt die Logik der "Braucht Aufmerksamkeit"-Kacheln im Admin-Dashboard, damit man
+// auch direkt in der Eventliste sieht, welches Event/Turnier gerade Handlung braucht.
+function needsAttention(ev: Event): { label: string; href: string } | null {
+  if (NOT_ACTIVE_STATUSES.includes(ev.status)) return null;
+
+  if (ev.tournamentStatus === "active" || ev.tournamentStatus === "pending") {
+    return {
+      label: ev.tournamentStatus === "active" ? "Turnier läuft — Ergebnisse eintragen" : "Turnier bereit zum Start",
+      href: `/admin/events/${ev.id}/bracket`,
+    };
+  }
+  if (ev.status === "umfrage") {
+    return { label: "Umfragephase läuft", href: `/admin/events/${ev.id}/complete` };
+  }
+  if (!ev.tournamentStatus && new Date(ev.startAt) < new Date()) {
+    return { label: "Vorbei, noch nicht abgeschlossen", href: `/admin/events/${ev.id}` };
+  }
+  return null;
+}
 
 type Series = {
   id: string;
@@ -92,13 +115,22 @@ function EventRow({ ev }: { ev: Event }) {
   const statusLabel = STATUS_LABELS[ev.status] ?? ev.status;
   const date = new Date(ev.startAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
   const time = new Date(ev.startAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+  const attention = needsAttention(ev);
   return (
     <Link
-      href={`/admin/events/${ev.id}`}
+      href={attention?.href ?? `/admin/events/${ev.id}`}
       className={`flex items-center gap-2 sm:gap-4 flex-wrap px-4 py-3 hover:bg-white/[0.02] transition-colors group ${ev.hidden ? "opacity-60" : ""}`}
     >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
+          {attention && (
+            <span
+              title={attention.label}
+              className="flex items-center gap-1 text-[10px] font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 shrink-0"
+            >
+              <Clock className="w-2.5 h-2.5" /> Aufmerksamkeit
+            </span>
+          )}
           <span className="text-sm font-medium text-white truncate">{ev.title}</span>
           {ev.hidden && (
             <span className="text-[10px] text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 shrink-0 flex items-center gap-1">

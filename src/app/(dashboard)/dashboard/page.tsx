@@ -368,11 +368,11 @@ export default async function DashboardPage() {
 
           {/* Quests + Countdown bis Monatsende → Quests */}
           <Link href="/quests"
-            className="group relative overflow-hidden card-cut-sm surface-elevated px-4 py-3 block transition-all duration-200 hover:-translate-y-0.5 hover:border-teal-500/25 active:scale-[0.98]">
+            className="group relative overflow-hidden card-cut-sm surface-elevated px-4 py-3 block transition-all duration-200 hover:-translate-y-0.5 hover:border-violet-500/25 active:scale-[0.98]">
             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-              style={{ background: "radial-gradient(circle at 30% 15%, rgba(20,184,166,0.22), transparent 70%)" }} />
+              style={{ background: "radial-gradient(circle at 30% 15%, rgba(167,139,250,0.22), transparent 70%)" }} />
             <div className="relative">
-              <p className="font-display text-2xl font-black tabular-nums leading-tight animate-number-pop text-teal-400">
+              <p className="font-display text-2xl font-black tabular-nums leading-tight animate-number-pop text-violet-400">
                 {myQuestsDone}<span className="text-gray-600 text-base">/{totalMonthQuests}</span>
               </p>
               <p className="text-[10px] text-gray-600 uppercase tracking-widest mt-0.5 group-hover:text-gray-400 transition-colors">
@@ -383,11 +383,11 @@ export default async function DashboardPage() {
 
           {/* Aktive Events (Community) → Events */}
           <Link href="/events"
-            className="group relative overflow-hidden card-cut-sm surface-elevated px-4 py-3 block transition-all duration-200 hover:-translate-y-0.5 hover:border-teal-500/25 active:scale-[0.98]">
+            className="group relative overflow-hidden card-cut-sm surface-elevated px-4 py-3 block transition-all duration-200 hover:-translate-y-0.5 hover:border-rose-500/25 active:scale-[0.98]">
             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-              style={{ background: "radial-gradient(circle at 30% 15%, rgba(20,184,166,0.22), transparent 70%)" }} />
+              style={{ background: "radial-gradient(circle at 30% 15%, rgba(244,63,94,0.22), transparent 70%)" }} />
             <div className="relative">
-              <p className="font-display text-2xl font-black tabular-nums leading-tight animate-number-pop text-teal-400">
+              <p className="font-display text-2xl font-black tabular-nums leading-tight animate-number-pop text-rose-400">
                 {activeEvents}
               </p>
               <p className="text-[10px] text-gray-600 uppercase tracking-widest mt-0.5 group-hover:text-gray-400 transition-colors">
