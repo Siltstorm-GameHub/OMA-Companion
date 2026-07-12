@@ -31,17 +31,17 @@ const CATEGORY_STRIP: Record<EventCategory, string> = {
 };
 
 const EVENT_STATUS: Record<string, { label: string; badge: string; bar: string; glow: string; dot: string }> = {
-  open:     { label: "Offen",         badge: "text-blue-300 bg-blue-500/10 border border-blue-500/20",             bar: "bg-blue-400",   glow: "from-blue-500/5",    dot: "bg-blue-400"              },
-  active:   { label: "Läuft",         badge: "text-emerald-300 bg-emerald-500/10 border border-emerald-500/20",    bar: "bg-emerald-400 shadow-[0_0_8px_#34d399]", glow: "from-emerald-500/5", dot: "bg-emerald-400 animate-pulse" },
-  closed:   { label: "Voll",          badge: "text-amber-300 bg-amber-500/10 border border-amber-500/20",          bar: "bg-amber-400",  glow: "from-amber-500/5",   dot: "bg-amber-400"             },
-  umfrage:  { label: "Umfragephase",  badge: "text-violet-300 bg-violet-500/10 border border-violet-500/20",       bar: "bg-violet-400", glow: "from-violet-500/5",  dot: "bg-violet-400 animate-pulse" },
-  finished: { label: "Beendet",       badge: "text-gray-500 bg-white/[0.04] border border-white/[0.06]",          bar: "bg-gray-700",   glow: "from-transparent",   dot: "bg-gray-600"              },
+  open:     { label: "Offen",         badge: "text-white bg-blue-500 shadow-[0_1px_6px_rgba(0,0,0,0.4)]",             bar: "bg-blue-400",   glow: "from-blue-500/5",    dot: "bg-white"              },
+  active:   { label: "Läuft",         badge: "text-white bg-emerald-500 shadow-[0_1px_6px_rgba(0,0,0,0.4)]",    bar: "bg-emerald-400 shadow-[0_0_8px_#34d399]", glow: "from-emerald-500/5", dot: "bg-white animate-pulse" },
+  closed:   { label: "Voll",          badge: "text-white bg-amber-500 shadow-[0_1px_6px_rgba(0,0,0,0.4)]",          bar: "bg-amber-400",  glow: "from-amber-500/5",   dot: "bg-white"             },
+  umfrage:  { label: "Umfragephase",  badge: "text-white bg-violet-500 shadow-[0_1px_6px_rgba(0,0,0,0.4)]",       bar: "bg-violet-400", glow: "from-violet-500/5",  dot: "bg-white animate-pulse" },
+  finished: { label: "Beendet",       badge: "text-gray-300 bg-gray-700 shadow-[0_1px_6px_rgba(0,0,0,0.4)]",          bar: "bg-gray-700",   glow: "from-transparent",   dot: "bg-gray-400"              },
 };
 
 const LUL_STATUS: Record<string, { label: string; badge: string; bar: string; dot: string }> = {
-  upcoming: { label: "Geplant", badge: "text-blue-300 bg-blue-500/10 border border-blue-500/20",          bar: "bg-blue-400",   dot: "bg-blue-400"              },
-  active:   { label: "Läuft",   badge: "text-emerald-300 bg-emerald-500/10 border border-emerald-500/20", bar: "bg-emerald-400 shadow-[0_0_8px_#34d399]", dot: "bg-emerald-400 animate-pulse" },
-  finished: { label: "Beendet", badge: "text-gray-500 bg-white/[0.04] border border-white/[0.06]",       bar: "bg-gray-700",   dot: "bg-gray-600"              },
+  upcoming: { label: "Geplant", badge: "text-white bg-blue-500 shadow-[0_1px_6px_rgba(0,0,0,0.4)]",          bar: "bg-blue-400",   dot: "bg-white"              },
+  active:   { label: "Läuft",   badge: "text-white bg-emerald-500 shadow-[0_1px_6px_rgba(0,0,0,0.4)]", bar: "bg-emerald-400 shadow-[0_0_8px_#34d399]", dot: "bg-white animate-pulse" },
+  finished: { label: "Beendet", badge: "text-gray-300 bg-gray-700 shadow-[0_1px_6px_rgba(0,0,0,0.4)]",       bar: "bg-gray-700",   dot: "bg-gray-400"              },
 };
 
 const GUILD_ID = process.env.DISCORD_GUILD_ID ?? "";
@@ -196,7 +196,7 @@ export default async function EventsPage() {
             {isFull && !isRegistered ? "Voll" : s.label}
           </span>
           {isRegistered && (
-            <span className="absolute top-2.5 right-2.5 flex items-center gap-1 text-xs text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-1 rounded-full font-medium">
+            <span className="absolute top-2.5 right-2.5 flex items-center gap-1 text-xs text-white bg-emerald-500 px-2.5 py-1 rounded-full font-medium shadow-[0_1px_6px_rgba(0,0,0,0.4)]">
               <Check className="w-3 h-3" /> Angemeldet
             </span>
           )}
@@ -281,7 +281,7 @@ export default async function EventsPage() {
           {s.label}
         </span>
         {myRole && (
-          <span className="absolute top-2.5 right-2.5 flex items-center gap-1 text-xs text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2.5 py-1 rounded-full font-medium">
+          <span className="absolute top-2.5 right-2.5 flex items-center gap-1 text-xs text-white bg-amber-500 px-2.5 py-1 rounded-full font-medium shadow-[0_1px_6px_rgba(0,0,0,0.4)]">
             <Check className="w-3 h-3" /> Angemeldet
           </span>
         )}
@@ -324,6 +324,48 @@ export default async function EventsPage() {
           )}
         </div>
       </div>
+    );
+  };
+
+  const renderRecentFinished = (item: AnyItem) => {
+    if (item.kind === "event") {
+      const { ev } = item;
+      const cardHref = ev.seriesId ? `/events/series/${ev.seriesId}` : `/tournament/${ev.id}`;
+      return (
+        <Link key={`ev-recent-${ev.id}`} href={cardHref}
+          className="flex items-center gap-3 px-3 py-2 rounded-lg border border-white/[0.05] bg-white/[0.02] opacity-70 grayscale-[0.5] hover:opacity-100 hover:grayscale-0 transition-all group">
+          <GameCover game={ev.game} className="w-10 h-7 shrink-0" rounded="rounded" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm text-gray-300 font-medium truncate group-hover:text-white transition-colors">{ev.title}</p>
+            <p className="text-[11px] text-gray-500">
+              {new Date(ev.startAt).toLocaleDateString("de-DE", { day: "2-digit", month: "short" })}
+              {ev.series && <> · {ev.series.name}</>}
+            </p>
+          </div>
+          <span className="flex items-center gap-1 text-xs text-emerald-400 font-medium shrink-0 group-hover:text-emerald-300">
+            Ergebnisse ansehen <ChevronRight className="w-3.5 h-3.5" />
+          </span>
+        </Link>
+      );
+    }
+
+    const { st } = item;
+    return (
+      <Link key={`lul-recent-${st.id}`} href={`/lul/spieltag/${st.id}`}
+        className="flex items-center gap-3 px-3 py-2 rounded-lg border border-white/[0.05] bg-white/[0.02] opacity-70 grayscale-[0.5] hover:opacity-100 hover:grayscale-0 transition-all group">
+        <div className="w-10 h-7 shrink-0 flex items-center justify-center rounded bg-amber-900/20">
+          <Swords className="w-4 h-4 text-amber-500/70" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm text-gray-300 font-medium truncate group-hover:text-white transition-colors">
+            Spieltag {st.number}: {st.game}
+          </p>
+          <p className="text-[11px] text-gray-500">Level-Up-League · {item.seasonLabel}</p>
+        </div>
+        <span className="flex items-center gap-1 text-xs text-emerald-400 font-medium shrink-0 group-hover:text-emerald-300">
+          Ergebnisse ansehen <ChevronRight className="w-3.5 h-3.5" />
+        </span>
+      </Link>
     );
   };
 
@@ -370,8 +412,8 @@ export default async function EventsPage() {
               <span className="text-[10px] font-semibold text-emerald-400 uppercase tracking-widest">Kürzlich beendet</span>
               <div className="h-px flex-1 bg-emerald-500/10" />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {recentFinishedItems.map((item, idx) => renderItem(item, idx))}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+              {recentFinishedItems.map(item => renderRecentFinished(item))}
             </div>
           </div>
         )}
