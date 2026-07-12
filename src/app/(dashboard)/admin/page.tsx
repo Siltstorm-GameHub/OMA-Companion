@@ -1,30 +1,77 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { Trophy, Clock, CalendarClock, ArrowRight } from "lucide-react";
+import { Trophy, Clock, CalendarClock, Vote, Clapperboard, ArrowRight, Zap } from "lucide-react";
 import ResetAllBalancesButton from "./ResetAllBalancesButton";
 import WanderpocalRecomputeButton from "./WanderpocalRecomputeButton";
+import ActivityFeed from "./ActivityFeed";
+
+const NOT_ACTIVE_STATUSES = ["finished", "closed", "archived"];
+
+function formatCountdown(target: Date, now: Date): string {
+  const diffMs = target.getTime() - now.getTime();
+  if (diffMs <= 0) return "endet in Kürze";
+  const minutes = Math.floor(diffMs / 60000);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+  if (days > 0) return `endet in ${days} Tg ${hours % 24} Std`;
+  if (hours > 0) return `endet in ${hours} Std ${minutes % 60} Min`;
+  return `endet in ${minutes} Min`;
+}
 
 export default async function AdminPage() {
   const now = new Date();
 
-  const [activeTournaments, overdueEvents] = await Promise.all([
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+  const [activeTournaments, pollPhaseEvents, overdueEvents, votingClipContests, votingYearlyContests, recentActivity] = await Promise.all([
     prisma.event.findMany({
-      where: { tournamentStatus: { in: ["pending", "active"] } },
+      where: {
+        tournamentStatus: { in: ["pending", "active"] },
+        status: { notIn: NOT_ACTIVE_STATUSES },
+      },
       orderBy: { startAt: "asc" },
       select: { id: true, title: true, game: true, startAt: true, tournamentStatus: true },
     }),
     prisma.event.findMany({
+      where: { status: "umfrage" },
+      orderBy: { startAt: "asc" },
+      select: {
+        id: true, title: true, game: true, startAt: true,
+        polls: { where: { endAt: { gt: now } }, orderBy: { endAt: "desc" }, select: { endAt: true }, take: 1 },
+      },
+    }),
+    prisma.event.findMany({
       where: {
         tournamentStatus: null,
-        status: { notIn: ["finished", "closed", "archived"] },
+        status: { notIn: [...NOT_ACTIVE_STATUSES, "umfrage"] },
         startAt: { lt: now },
       },
       orderBy: { startAt: "asc" },
       select: { id: true, title: true, game: true, startAt: true },
     }),
+    prisma.monthlyClipContest.findMany({
+      where: { status: "voting" },
+      orderBy: { votingEndsAt: "asc" },
+      select: { id: true, month: true, year: true, votingEndsAt: true },
+    }),
+    prisma.yearlyClipContest.findMany({
+      where: { status: "voting" },
+      orderBy: { votingEndsAt: "asc" },
+      select: { id: true, year: true, votingEndsAt: true },
+    }),
+    prisma.pointTransaction.findMany({
+      where: { createdAt: { gte: sevenDaysAgo } },
+      orderBy: { createdAt: "desc" },
+      include: { user: { select: { name: true, username: true } } },
+    }),
   ]);
 
-  const hasActionItems = activeTournaments.length > 0 || overdueEvents.length > 0;
+  const hasActionItems =
+    activeTournaments.length > 0 ||
+    pollPhaseEvents.length > 0 ||
+    overdueEvents.length > 0 ||
+    votingClipContests.length > 0 ||
+    votingYearlyContests.length > 0;
 
   return (
     <div className="space-y-6">
@@ -66,8 +113,37 @@ export default async function AdminPage() {
           </div>
         )}
 
+        {pollPhaseEvents.length > 0 && (
+          <div className="space-y-2 mb-3">
+            {pollPhaseEvents.map(event => {
+              const pollEndAt = event.polls[0]?.endAt;
+              return (
+                <Link
+                  key={event.id}
+                  href={`/admin/events/${event.id}/complete`}
+                  className="card-shine glass relative overflow-hidden rounded-2xl p-4 flex items-center justify-between gap-3 hover:bg-white/[0.03] transition-colors"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-teal-500/8 to-transparent pointer-events-none" />
+                  <div className="relative flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-xl flex items-center justify-center border text-teal-400 bg-teal-500/10 border-teal-500/15 shrink-0">
+                      <Vote className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-white truncate">{event.title}</p>
+                      <p className="text-xs text-gray-400">
+                        Umfragephase läuft{pollEndAt ? ` — ${formatCountdown(pollEndAt, now)}` : ""}
+                      </p>
+                    </div>
+                  </div>
+                  <ArrowRight className="relative w-4 h-4 text-gray-500 shrink-0" />
+                </Link>
+              );
+            })}
+          </div>
+        )}
+
         {overdueEvents.length > 0 && (
-          <div className="space-y-2">
+          <div className="space-y-2 mb-3">
             {overdueEvents.map(event => (
               <Link
                 key={event.id}
@@ -89,6 +165,57 @@ export default async function AdminPage() {
             ))}
           </div>
         )}
+
+        {(votingClipContests.length > 0 || votingYearlyContests.length > 0) && (
+          <div className="space-y-2">
+            {votingClipContests.map(contest => (
+              <Link
+                key={contest.id}
+                href="/admin/highlight-clips"
+                className="card-shine glass relative overflow-hidden rounded-2xl p-4 flex items-center justify-between gap-3 hover:bg-white/[0.03] transition-colors"
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/8 to-transparent pointer-events-none" />
+                <div className="relative flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-xl flex items-center justify-center border text-purple-400 bg-purple-500/10 border-purple-500/15 shrink-0">
+                    <Clapperboard className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">Clip des Monats — {contest.month}/{contest.year}</p>
+                    <p className="text-xs text-gray-400">Umfrage läuft — {formatCountdown(contest.votingEndsAt, now)}</p>
+                  </div>
+                </div>
+                <ArrowRight className="relative w-4 h-4 text-gray-500 shrink-0" />
+              </Link>
+            ))}
+            {votingYearlyContests.map(contest => (
+              <Link
+                key={contest.id}
+                href="/admin/highlight-clips"
+                className="card-shine glass relative overflow-hidden rounded-2xl p-4 flex items-center justify-between gap-3 hover:bg-white/[0.03] transition-colors"
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/8 to-transparent pointer-events-none" />
+                <div className="relative flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-xl flex items-center justify-center border text-purple-400 bg-purple-500/10 border-purple-500/15 shrink-0">
+                    <Clapperboard className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">Clip des Jahres — {contest.year}</p>
+                    <p className="text-xs text-gray-400">Umfrage läuft — {formatCountdown(contest.votingEndsAt, now)}</p>
+                  </div>
+                </div>
+                <ArrowRight className="relative w-4 h-4 text-gray-500 shrink-0" />
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Münzen & Punkte Historie */}
+      <div>
+        <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+          <Zap className="w-3.5 h-3.5 text-amber-400" /> Münzen & Punkte — letzte 7 Tage
+        </h2>
+        <ActivityFeed transactions={recentActivity} />
       </div>
 
       {/* Wartung */}

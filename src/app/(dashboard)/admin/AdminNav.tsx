@@ -53,10 +53,10 @@ const CATEGORIES: {
     minRole: "moderator",
     prefixes: ["/admin/daily-message", "/admin/partners", "/admin/servers", "/admin/donations"],
     tabs: [
-      { href: "/admin/daily-message", label: "Mitteilungen", icon: Megaphone, minRole: "admin"     },
-      { href: "/admin/partners",      label: "Partner",      icon: Handshake, minRole: "moderator" },
       { href: "/admin/servers",       label: "Gameserver",   icon: Server,    minRole: "moderator" },
+      { href: "/admin/partners",      label: "Partner",      icon: Handshake, minRole: "moderator" },
       { href: "/admin/donations",     label: "Spendenpool",  icon: Heart,     minRole: "moderator" },
+      { href: "/admin/daily-message", label: "Mitteilungen", icon: Megaphone, minRole: "admin"     },
     ],
   },
   {
@@ -66,11 +66,11 @@ const CATEGORIES: {
     minRole: "admin",
     prefixes: ["/admin/shop", "/admin/notifications", "/admin/badges", "/admin/users", "/admin/minigames"],
     tabs: [
-      { href: "/admin/shop",          label: "Shop",             icon: ShoppingBag, minRole: "admin" },
+      { href: "/admin/users",         label: "Nutzer & Rollen",  icon: Users,       minRole: "admin" },
       { href: "/admin/notifications", label: "Benachrichtigungen", icon: Bell,      minRole: "admin" },
       { href: "/admin/badges",        label: "Abzeichen",        icon: Medal,       minRole: "admin" },
+      { href: "/admin/shop",          label: "Shop",             icon: ShoppingBag, minRole: "admin" },
       { href: "/admin/minigames",     label: "Minigames",        icon: Gamepad2,    minRole: "admin" },
-      { href: "/admin/users",         label: "Nutzer & Rollen",  icon: Users,       minRole: "admin" },
     ],
   },
 ];

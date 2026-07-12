@@ -9,6 +9,7 @@ import GameNameInput from "@/components/GameNameInput";
 import StatFieldEditor from "@/components/StatFieldEditor";
 import { describeMonthlyModes, calcNextDate } from "@/lib/recurrence";
 import type { RecurrenceType, MonthlyMode } from "@/lib/recurrence";
+import InfoTooltip from "@/components/InfoTooltip";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -949,7 +950,10 @@ export default function EventSetupWizard({
         </div>
 
         <div className="rounded-xl p-4 border border-white/8 bg-white/2">
-          <p className="text-sm font-medium text-gray-200 mb-3">Platzierungs-Belohnungen</p>
+          <p className="text-sm font-medium text-gray-200 mb-3 flex items-center gap-1.5">
+            Platzierungs-Belohnungen
+            <InfoTooltip text="Münzen und Rang-Punkte, die je nach Endplatzierung im Turnier vergeben werden (🥇 1. Platz, 🥈 2. Platz, 🥉 3. Platz). Wird erst vergeben, wenn das Event/Turnier abgeschlossen und die finale Platzierung eingetragen ist." />
+          </p>
           <div className="space-y-2">
             {placements.map((p, i) => (
               <div key={p.place} className="flex items-center gap-3">
