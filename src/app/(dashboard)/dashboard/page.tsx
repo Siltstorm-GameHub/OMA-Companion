@@ -361,29 +361,33 @@ export default async function DashboardPage() {
             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
               style={{ background: "radial-gradient(circle at 30% 15%, rgba(245,158,11,0.22), transparent 70%)" }} />
             <div className="relative">
-              {nextRegisteredEvent ? (
+              {nextRegisteredEvent ? (() => {
+                const phase = nextRegisteredEvent.status === "active"
+                  ? { label: "Live", color: "text-red-400", extra: null as string | null }
+                  : nextRegisteredEvent.status === "umfrage"
+                    ? {
+                        label: "Umfrage", color: "text-amber-400",
+                        extra: nextRegisteredEvent.polls[0] ? formatCountdown(new Date(nextRegisteredEvent.polls[0].endAt), now) : null,
+                      }
+                    : { label: "Start", color: "text-teal-400", extra: formatCountdown(new Date(nextRegisteredEvent.startAt), now) };
+                return (
+                  <>
+                    <p className={`font-display text-sm font-black uppercase tracking-wide leading-tight flex items-center gap-1.5 ${phase.color}`}>
+                      <Timer className="w-4 h-4 shrink-0" />
+                      {phase.label}{phase.extra ? ` · ${phase.extra}` : ""}
+                    </p>
+                    <p className="text-xs font-semibold text-white mt-1.5 truncate group-hover:text-amber-200 transition-colors">
+                      {nextRegisteredEvent.title}
+                    </p>
+                  </>
+                );
+              })() : (
                 <>
-                  <p className="font-display text-sm font-black leading-tight text-amber-400 flex items-center gap-1 truncate">
-                    <Timer className="w-3.5 h-3.5 shrink-0" />
-                    {nextRegisteredEvent.status === "active"
-                      ? "Läuft jetzt"
-                      : nextRegisteredEvent.status === "umfrage"
-                        ? (nextRegisteredEvent.polls[0]
-                            ? formatCountdown(new Date(nextRegisteredEvent.polls[0].endAt), now)
-                            : "Umfrage läuft")
-                        : formatCountdown(new Date(nextRegisteredEvent.startAt), now)}
-                  </p>
-                  <p className="text-[10px] text-gray-600 mt-0.5 truncate group-hover:text-gray-400 transition-colors">
-                    {nextRegisteredEvent.status === "umfrage" ? "Umfragephase · " : ""}{nextRegisteredEvent.title}
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p className="font-display text-sm font-black leading-tight text-amber-400 flex items-center gap-1">
-                    <UserPlus className="w-3.5 h-3.5 shrink-0" />
+                  <p className="font-display text-sm font-black uppercase tracking-wide leading-tight text-amber-400 flex items-center gap-1.5">
+                    <UserPlus className="w-4 h-4 shrink-0" />
                     Kein Event
                   </p>
-                  <p className="text-[10px] text-gray-600 mt-0.5 group-hover:text-gray-400 transition-colors">
+                  <p className="text-xs font-semibold text-gray-500 mt-1.5 group-hover:text-gray-400 transition-colors">
                     Jetzt anmelden →
                   </p>
                 </>
