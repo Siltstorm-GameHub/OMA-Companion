@@ -37,7 +37,6 @@ export async function POST(
     pollBonusRankPoints?: number;
     pollExcludedUserIds?: string[];
     startNewSeason?: boolean;
-    newSeasonName?: string;
   };
 
   const series = await prisma.eventSeries.findUnique({
@@ -211,28 +210,14 @@ export async function POST(
     },
   });
 
-  // ── Neue Saison erstellen (optional) ─────────────────────────────────────────
-  let newSeriesId: string | null = null;
-  if (!isReEdit && body.startNewSeason && body.newSeasonName?.trim()) {
-    const newSeason = await prisma.eventSeries.create({
-      data: {
-        name:                 body.newSeasonName.trim(),
-        description:          series.description,
-        fixedGame:            series.fixedGame,
-        fixedFormat:          series.fixedFormat,
-        discordChannelId:     series.discordChannelId,
-        recurrenceType:       series.recurrenceType,
-        recurrenceMonthlyMode: series.recurrenceMonthlyMode,
-        seriesStatConfig:     series.seriesStatConfig,
-        placementRewardsJson: series.placementRewardsJson,
-        pollsConfigJson:      series.pollsConfigJson ?? series.pollConfigJson,
-        groupId,
-        status:               "active",
-        seasonNumber:         (series.seasonNumber ?? 1) + 1,
-      },
-    });
-    newSeriesId = newSeason.id;
-  }
+  // Die neue Saison wird nicht mehr hier direkt angelegt, sondern über den
+  // Saison-Setup-Assistenten unter /admin/series/[id]/new-season, wo der Admin
+  // alle Einstellungen (inkl. Start-/Enddatum) vor dem Erstellen noch anpassen kann.
 
-  return NextResponse.json({ ok: true, newSeriesId });
+  return NextResponse.json({
+    ok: true,
+    startNewSeason: !isReEdit && !!body.startNewSeason,
+    groupId,
+    seasonNumber: (series.seasonNumber ?? 1) + 1,
+  });
 }

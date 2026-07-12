@@ -154,14 +154,6 @@ export default async function SeriesCompletePage({ params }: { params: Promise<{
     userStats[row.userId] = { totalPoints: row.totalPoints, participations: row.participations, ...row.stats };
   }
 
-  // New season name suggestion
-  const currentSeason = series.seasonNumber ?? 1;
-  const suggestedNewName = (() => {
-    // Remove trailing "– Saison N" or "Season N" and append next number
-    const base = series.name.replace(/\s*[-–]\s*Saison\s+\d+$/i, "").replace(/\s*Season\s+\d+$/i, "").trim();
-    return `${base} – Saison ${currentSeason + 1}`;
-  })();
-
   const isReEdit = series.status === "archived";
   const existingCompletion: Record<string, unknown> = (() => {
     try { return series.seriesCompletionData ? JSON.parse(series.seriesCompletionData) : {}; } catch { return {}; }
@@ -178,7 +170,6 @@ export default async function SeriesCompletePage({ params }: { params: Promise<{
       participants={orderedUsers}
       userStats={userStats}
       rewardsConfig={rewardsConfig}
-      suggestedNewSeasonName={suggestedNewName}
       isReEdit={isReEdit}
       pollPhaseComplete={pollPhaseComplete}
       initialData={isReEdit ? existingCompletion : null}

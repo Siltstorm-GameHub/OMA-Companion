@@ -8,7 +8,7 @@ import {
   ChevronLeft, ChevronRight, CalendarPlus, RefreshCw, Gamepad2,
   Swords, Hash, BarChart2, Plus, X, Trophy, Save, Coins,
   MessageSquare, ExternalLink, Archive, Vote, Trash2, Eye, EyeOff,
-  Monitor, Flame,
+  Monitor, Flame, Repeat,
 } from "lucide-react";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import SeriesIcon from "@/components/SeriesIcon";
@@ -151,7 +151,7 @@ function EventHiddenToggle({ id, hidden }: { id: string; hidden: boolean }) {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export default function SeriesDetailClient({ series, allUsers }: { series: any; allUsers: User[] }) {
+export default function SeriesDetailClient({ series, allUsers, hasActiveSibling = true }: { series: any; allUsers: User[]; hasActiveSibling?: boolean }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [generatingNext, setGeneratingNext] = useState(false);
@@ -387,6 +387,22 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
         <span>/</span>
         <span className="text-gray-300">{series.name}</span>
       </div>
+
+      {/* Neue-Saison-Hinweis (archiviert, aber noch keine aktive Folgesaison) */}
+      {series.status === "archived" && !hasActiveSibling && (
+        <div className="flex items-center gap-3 rounded-xl px-4 py-3 border border-teal-500/20 bg-teal-500/[0.06]">
+          <Repeat className="w-4 h-4 text-teal-400 shrink-0" />
+          <p className="flex-1 text-sm text-teal-200">
+            Diese Saison ist archiviert, es wurde aber noch keine neue Saison gestartet.
+          </p>
+          <Link
+            href={`/admin/series/${series.id}/new-season`}
+            className="shrink-0 flex items-center gap-1.5 text-xs font-medium text-teal-300 hover:text-teal-200 border border-teal-500/30 hover:border-teal-500/50 rounded-lg px-3 py-1.5 transition-all"
+          >
+            Neue Saison einrichten <ChevronRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      )}
 
       {/* Header */}
       <div className="relative flex items-start justify-between gap-4 flex-wrap pl-4">
