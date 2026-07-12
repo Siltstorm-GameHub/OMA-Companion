@@ -1,4 +1,5 @@
 "use client";
+import type { CSSProperties } from "react";
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { Radio, Eye, ExternalLink } from "lucide-react";
@@ -38,8 +39,9 @@ export default function PartnerLiveBanner() {
         <div className="flex items-center gap-2 px-4 pt-3.5 pb-2.5">
           <div className="relative flex-shrink-0">
             <Radio className="w-3.5 h-3.5 text-[#9146ff]" />
-            <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-[#9146ff] animate-ping" />
-            <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-[#9146ff]" />
+            <span className="live-ring absolute -top-0.5 -right-0.5 w-1.5 h-1.5" style={{ "--live-ring-color": "rgba(145,70,255,0.5)" } as CSSProperties}>
+              <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-[#9146ff]" />
+            </span>
           </div>
           <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#9146ff]/70">
             Partner streamen gerade

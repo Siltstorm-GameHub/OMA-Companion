@@ -35,7 +35,12 @@ export default function CommunityLiveBanner() {
     <div className="px-4 sm:px-6 pt-4 max-w-7xl mx-auto">
       <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(20,211,150,0.15)", background: "rgba(20,211,150,0.03)" }}>
         <div className="flex items-center gap-2 px-4 pt-3.5 pb-2.5">
-          <Tv2 className="w-3.5 h-3.5 text-emerald-400" />
+          <div className="relative flex-shrink-0">
+            <Tv2 className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="live-ring absolute -top-0.5 -right-0.5 w-1.5 h-1.5">
+              <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-emerald-400" />
+            </span>
+          </div>
           <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-400/70">
             Community streamt gerade
           </span>

@@ -12,6 +12,7 @@ import EventCategoryBadge from "@/components/EventCategoryBadge";
 import Link from "next/link";
 import Image from "next/image";
 import { CountUp } from "@/components/CountUp";
+import { AnimatedBar } from "@/components/AnimatedBar";
 import GameCover from "@/components/GameCover";
 import EventCoverDefault from "@/components/EventCoverDefault";
 import { DailyMessageBanner } from "@/components/DailyMessageBanner";
@@ -250,7 +251,7 @@ export default async function DashboardPage() {
         <div className="flex items-start gap-5">
           {/* Avatar mit Cut-Corner + Rang-Ring */}
           <div className="relative shrink-0">
-            <div className={`${getRingClass(myRankPoints)} rounded-lg p-[3px]`}>
+            <div className={`${getRingClass(myRankPoints)} rounded-lg p-[3px] animate-glow-pulse`}>
               <div className="card-cut w-16 h-16 sm:w-20 sm:h-20 overflow-hidden bg-[#0d0d0f]">
                 {avatarUrl ? (
                   <Image src={avatarUrl} alt={displayName} width={80} height={80} className="w-full h-full object-cover" />
@@ -436,7 +437,7 @@ export default async function DashboardPage() {
 
           {/* Events Hub */}
           <Link href="/events"
-            className="surface animate-slide-up stagger-1 group block overflow-hidden relative transition-transform duration-200 hover:-translate-y-1 active:scale-[0.99]"
+            className="surface animate-slide-up stagger-1 scan-on-load group block overflow-hidden relative transition-transform duration-200 hover:-translate-y-1 active:scale-[0.99]"
             style={{ borderRadius: "6px", border: "1px solid rgba(20,184,166,0.12)", boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
 
             {/* Cover art area */}
@@ -518,7 +519,7 @@ export default async function DashboardPage() {
 
           {/* Level-Up-League Hub */}
           <Link href="/lul"
-            className="surface animate-slide-up stagger-2 group block overflow-hidden relative transition-transform duration-200 hover:-translate-y-1 active:scale-[0.99]"
+            className="surface animate-slide-up stagger-2 scan-on-load group block overflow-hidden relative transition-transform duration-200 hover:-translate-y-1 active:scale-[0.99]"
             style={{ borderRadius: "6px", border: "1px solid rgba(139,32,32,0.18)", boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
 
             {/* Cover art area */}
@@ -714,8 +715,10 @@ export default async function DashboardPage() {
                     <span className="text-white font-semibold">{myQuestsDone} / {totalMonthQuests}</span>
                   </div>
                   <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
-                    <div className="h-full rounded-full progress-shimmer transition-all"
-                      style={{ width: totalMonthQuests > 0 ? `${Math.round((myQuestsDone / totalMonthQuests) * 100)}%` : "0%" }} />
+                    <AnimatedBar
+                      pct={totalMonthQuests > 0 ? Math.round((myQuestsDone / totalMonthQuests) * 100) : 0}
+                      className="h-full rounded-full progress-shimmer"
+                    />
                   </div>
                 </div>
                 <div className="text-right shrink-0">
@@ -761,7 +764,7 @@ export default async function DashboardPage() {
                       </p>
                       {!completed && (
                         <div className="mt-1 h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.05)" }}>
-                          <div className="h-full rounded-full bg-teal-500/60 transition-all" style={{ width: `${pct}%` }} />
+                          <AnimatedBar pct={pct} className="h-full rounded-full bg-teal-500/60" />
                         </div>
                       )}
                     </div>
