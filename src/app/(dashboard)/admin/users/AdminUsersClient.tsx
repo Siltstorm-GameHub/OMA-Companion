@@ -55,6 +55,7 @@ export default function AdminUsersClient({ users, loginCount, noLoginCount, firs
   return (
     <>
       <div className="glass card-shine rounded-2xl overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-white/[0.05] text-xs text-gray-500 uppercase tracking-wide">
@@ -166,6 +167,7 @@ export default function AdminUsersClient({ users, loginCount, noLoginCount, firs
             })}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Single modal instance — only rendered once */}

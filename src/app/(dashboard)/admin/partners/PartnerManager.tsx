@@ -3,6 +3,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { toast } from "sonner";
 import { Plus, Trash2, ExternalLink, ToggleLeft, ToggleRight, Loader2, Search, Link2, Unlink } from "lucide-react";
+import { useConfirm } from "@/components/admin/ConfirmDialog";
 
 type LinkedUser = { id: string; name: string | null; username: string | null; image: string | null; twitchLogin: string | null } | null;
 
@@ -32,6 +33,7 @@ export default function PartnerManager({ initialPartners }: { initialPartners: P
   const [userSearchResults, setUserSearchResults] = useState<{ id: string; name: string | null; username: string | null; image: string | null; twitchLogin: string | null }[]>([]);
   const [userSearching, setUserSearching] = useState(false);
   const [linkSaving, setLinkSaving] = useState(false);
+  const { confirm, ConfirmDialogElement } = useConfirm();
 
   async function fetchPreview() {
     if (!twitchInput.trim()) return;
@@ -88,7 +90,7 @@ export default function PartnerManager({ initialPartners }: { initialPartners: P
   }
 
   async function deletePartner(partner: Partner) {
-    if (!confirm(`${partner.name} wirklich entfernen?`)) return;
+    if (!(await confirm({ title: "Partner entfernen", description: `${partner.name} wirklich entfernen?`, variant: "danger" }))) return;
     const res = await fetch(`/api/partners/${partner.id}`, { method: "DELETE" });
     if (!res.ok) { toast.error("Fehler beim Löschen"); return; }
     setPartners((p) => p.filter((x) => x.id !== partner.id));
@@ -304,6 +306,7 @@ export default function PartnerManager({ initialPartners }: { initialPartners: P
           ))}
         </div>
       )}
+      {ConfirmDialogElement}
     </div>
   );
 }

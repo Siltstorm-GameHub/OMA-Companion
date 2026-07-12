@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Plus, Trash2, ToggleLeft, ToggleRight, Loader2, Pencil, Users, Circle } from "lucide-react";
+import { Plus, Trash2, ToggleLeft, ToggleRight, Loader2, Pencil, Users, Circle, Eye, EyeOff } from "lucide-react";
 import GameNameInput from "@/components/GameNameInput";
 import GameCover from "@/components/GameCover";
 import { parseConnectLink } from "@/lib/connect-link";
@@ -56,6 +56,8 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<FormState>(EMPTY_FORM);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showEditPassword, setShowEditPassword] = useState(false);
 
   async function createServer() {
     if (!form.name.trim() || !form.game.trim() || !form.host.trim() || !form.maxSlots) return;
@@ -87,6 +89,7 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
 
   function startEdit(server: Server) {
     setEditingId(server.id);
+    setShowEditPassword(false);
     setEditForm({
       name: server.name,
       game: server.game,
@@ -160,8 +163,15 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
             className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
           <input placeholder="Port (optional)" value={form.port} onChange={(e) => setForm({ ...form, port: e.target.value })}
             className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
-          <input placeholder="Passwort (optional)" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })}
-            className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
+          <div className="relative">
+            <input type={showPassword ? "text" : "password"} placeholder="Passwort (optional)" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })}
+              className="w-full bg-white/5 border border-white/10 rounded-xl pl-3 pr-9 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
+            <button type="button" onClick={() => setShowPassword((v) => !v)} tabIndex={-1}
+              aria-label={showPassword ? "Passwort verbergen" : "Passwort anzeigen"}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
+              {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+            </button>
+          </div>
           <input type="number" min={1} placeholder="Max. Spieler" value={form.maxSlots} onChange={(e) => setForm({ ...form, maxSlots: e.target.value })}
             className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
           <input placeholder="Beschreibung (optional)" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
@@ -232,8 +242,15 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
                       className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
                     <input placeholder="Port" value={editForm.port} onChange={(e) => setEditForm({ ...editForm, port: e.target.value })}
                       className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
-                    <input placeholder="Passwort" value={editForm.password} onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
-                      className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
+                    <div className="relative">
+                      <input type={showEditPassword ? "text" : "password"} placeholder="Passwort" value={editForm.password} onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+                        className="w-full bg-white/5 border border-white/10 rounded-lg pl-3 pr-9 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
+                      <button type="button" onClick={() => setShowEditPassword((v) => !v)} tabIndex={-1}
+                        aria-label={showEditPassword ? "Passwort verbergen" : "Passwort anzeigen"}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
+                        {showEditPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
                     <input type="number" min={1} placeholder="Max. Spieler" value={editForm.maxSlots} onChange={(e) => setEditForm({ ...editForm, maxSlots: e.target.value })}
                       className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
                     <input placeholder="Beschreibung" value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}

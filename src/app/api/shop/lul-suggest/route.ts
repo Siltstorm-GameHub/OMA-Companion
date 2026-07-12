@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { dispatchNotification } from "@/lib/notify-dispatch";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -20,24 +19,10 @@ export async function POST(req: NextRequest) {
   if (purchase.item.type !== "lul_suggest")     return NextResponse.json({ error: "Falscher Item-Typ" }, { status: 400 });
   if (purchase.consumed)                        return NextResponse.json({ error: "Bereits eingelöst" }, { status: 400 });
 
-  const user = await prisma.user.findUnique({
-    where:  { id: userId },
-    select: { username: true, name: true },
-  });
-  const displayName = user?.username ?? user?.name ?? "Unbekannt";
-
   await prisma.$transaction([
     prisma.shopPurchase.update({ where: { id: purchaseId }, data: { consumed: true } }),
     prisma.lulSuggestion.create({ data: { purchaseId, userId, game: game.trim(), note: note?.trim() || null } }),
   ]);
-
-  // Discord-Nachricht im konfigurierten LUL-Kanal (fällt sonst auf den News-Kanal zurück)
-  const noteStr = note?.trim() ? `\n**Notiz:** ${note.trim()}` : "";
-  await dispatchNotification("lul_suggest", {
-    users: [],
-    placeholders: { "{username}": displayName, "{game}": game.trim(), "{note}": noteStr },
-    discordChannelIdOverride: process.env.DISCORD_LUL_CHANNEL_ID,
-  }).catch(() => {});
 
   return NextResponse.json({ ok: true });
 }

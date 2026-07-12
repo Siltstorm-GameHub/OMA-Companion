@@ -5,7 +5,6 @@ import {
 } from "discord.js";
 import { updateEventStatus, syncAttendee } from "./sync";
 import { trackVoice, checkpointVoice, trackMessage, handleMemberJoin, trackReaction, trackInvite } from "./activity";
-import { processPendingPolls } from "./polls";
 import { prisma } from "@/lib/prisma";
 
 const client = new Client({
@@ -39,7 +38,6 @@ client.once(Events.ClientReady, async (c) => {
   });
   // ─────────────────────────────────────────────────────────────────────────
 
-  schedulePollChecker(client);
   // Geburtstage, Event-Erinnerungen und Monats-Rangliste laufen jetzt
   // zuverlässig als Vercel Cron Jobs — nicht mehr im Bot nötig.
   // Bug-Fix: Geburtstage nicht beim Start prüfen (würde Nachrichten zu beliebigen Uhrzeiten senden)
@@ -209,12 +207,6 @@ client.on(Events.GuildScheduledEventUserRemove, async (event, user) => {
 // Geburtstage, Event-Erinnerungen und Monats-Rangliste wurden nach
 // Vercel Cron Jobs ausgelagert (src/app/api/cron/*).
 // Der Bot behandelt nur noch Echtzeit-WebSocket-Events.
-
-// ── Poll-Checker: läuft jede Minute ─────────────────────────────────────────
-function schedulePollChecker(client: Client) {
-  setInterval(() => processPendingPolls(client), 60 * 1000);
-}
-
 
 // ── Fehler-Handling: verhindert Crash bei unbehandelten Promises ────────────
 process.on("unhandledRejection", (err) => {

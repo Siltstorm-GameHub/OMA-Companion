@@ -66,7 +66,8 @@ src/
 │   ├── login/               # Login-Seite
 │   └── layout.tsx
 ├── components/
-│   ├── Sidebar.tsx          # Navigation
+│   ├── FloatingPill.tsx     # Desktop-Navigation
+│   ├── BottomNav.tsx        # Mobile-Navigation
 │   └── SessionProvider.tsx  # NextAuth Provider
 └── lib/
     ├── prisma.ts            # DB Client (Singleton)

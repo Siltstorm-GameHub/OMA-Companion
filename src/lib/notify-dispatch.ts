@@ -33,8 +33,6 @@ const RULE_TYPE: Record<string, NotificationType> = {
   event_reminder:     "event_start",
   event_started:      "event_start",
   event_ended:        "event_result",
-  tournament_started: "event_start",
-  tournament_result:  "event_result",
   quest_completed:    "quest",
   quest_new:          "quest",
   prediction_result:  "coins",
@@ -52,7 +50,6 @@ const RULE_TYPE: Record<string, NotificationType> = {
   server_revoked:     "server",
   leaderboard:        "admin",
   birthday:           "admin",
-  lul_suggest:        "admin",
 };
 
 function fillPlaceholders(text: string, values: Record<string, string>): string {
