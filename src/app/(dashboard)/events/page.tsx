@@ -10,7 +10,6 @@ import RegisterButton from "./RegisterButton";
 import SyncButton from "./SyncButton";
 import StreamRegisterButton from "@/components/StreamRegisterButton";
 import CoinIcon from "@/components/CoinIcon";
-import { RelativeTime } from "@/components/RelativeTime";
 import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
 import GameCover from "@/components/GameCover";
@@ -179,70 +178,66 @@ export default async function EventsPage() {
       return (
         <EventCardLink key={`ev-${ev.id}`}
           href={cardHref}
-          className="surface animate-slide-up group block overflow-hidden relative transition-transform duration-200 hover:-translate-y-1 active:scale-[0.99]"
+          className="surface animate-slide-up group flex flex-col justify-end overflow-hidden relative transition-transform duration-200 hover:-translate-y-1 active:scale-[0.99]"
           style={{
             borderRadius: 6,
             border: isRegistered ? "1px solid rgba(52,211,153,0.18)" : "1px solid rgba(255,255,255,0.06)",
             boxShadow: "0 4px 20px rgba(0,0,0,0.45)",
             animationDelay: `${idx * 30}ms`,
+            minHeight: 240,
           }}>
-          <div className="relative overflow-hidden" style={{ height: 108 }}>
-            <GameCover game={ev.game} className="absolute inset-0 w-full h-full" rounded="rounded-none"
-              imgClassName="w-full h-full object-cover object-center scale-105 group-hover:scale-110 transition-transform duration-700" />
-            <div className={`absolute inset-0 ${CATEGORY_BG_TINT[ev.category as EventCategory] ?? ""} opacity-70 pointer-events-none`} />
-            <div className="absolute inset-0 pointer-events-none"
-              style={{ background: "linear-gradient(to bottom, transparent 35%, rgba(11,13,18,0.9) 100%)" }} />
-            <div className={`absolute top-0 left-0 right-0 h-[2px] ${CATEGORY_STRIP[ev.category as EventCategory] ?? "bg-emerald-500"}`} />
-            <span className={`absolute top-2.5 left-2.5 flex items-center gap-1.5 text-[10px] px-2 py-1 rounded-full font-medium ${s.badge}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
-              {isFull && !isRegistered ? "Voll" : s.label}
+          <GameCover game={ev.game} className="absolute inset-0 w-full h-full" rounded="rounded-none"
+            imgClassName="w-full h-full object-cover object-center scale-105 group-hover:scale-110 transition-transform duration-700" />
+          <div className={`absolute inset-0 ${CATEGORY_BG_TINT[ev.category as EventCategory] ?? ""} opacity-40 pointer-events-none`} />
+          <div className="absolute inset-0 pointer-events-none"
+            style={{ background: "linear-gradient(to bottom, transparent 0%, transparent 32%, rgba(11,13,18,0.55) 55%, rgba(11,13,18,0.94) 78%, rgba(11,13,18,0.98) 100%)" }} />
+          <div className={`absolute top-0 left-0 right-0 h-[2px] ${CATEGORY_STRIP[ev.category as EventCategory] ?? "bg-emerald-500"}`} />
+          <span className={`absolute top-2.5 left-2.5 flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium ${s.badge}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+            {isFull && !isRegistered ? "Voll" : s.label}
+          </span>
+          {isRegistered && (
+            <span className="absolute top-2.5 right-2.5 flex items-center gap-1 text-xs text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-1 rounded-full font-medium">
+              <Check className="w-3 h-3" /> Angemeldet
             </span>
-            {isRegistered && (
-              <span className="absolute top-2.5 right-2.5 flex items-center gap-1 text-[10px] text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-2 py-1 rounded-full font-medium">
-                <Check className="w-3 h-3" /> Angemeldet
-              </span>
-            )}
-            <div className="absolute bottom-2 left-3 right-3 flex items-end justify-between gap-2">
-              <p className="text-xs font-bold text-white leading-none tabular-nums">
-                {date.getDate()}. {date.toLocaleString("de-DE", { month: "short" })}
-              </p>
-              <RelativeTime date={date} className="text-[9px] text-gray-300 tabular-nums" />
-            </div>
-          </div>
-          <div className="px-4 pb-4 pt-3">
+          )}
+          <div className="relative z-10 px-4 pb-4 pt-3">
             {hasSeries && (
               <Link href={`/events/series/${ev.seriesId}`}
-                className="relative z-10 flex items-center gap-1 mb-1 transition-opacity hover:opacity-80 group/series">
+                className="flex items-center gap-1 mb-1 transition-opacity hover:opacity-80 group/series">
                 <SeriesIcon name={ev.series?.icon} className="w-3 h-3 shrink-0" />
-                <span className="text-[10px] font-medium" style={{ color: seriesColor }}>{ev.series?.name}</span>
-                <span className="text-[10px] text-gray-600">· Eventreihe</span>
+                <span className="text-xs font-medium" style={{ color: seriesColor }}>{ev.series?.name}</span>
+                <span className="text-xs text-gray-400">· Eventreihe</span>
               </Link>
             )}
             <div className="flex items-center gap-2 mb-1.5">
-              <p className="font-semibold text-white text-sm truncate flex-1 min-w-0">{ev.title}</p>
-              {isTournament && <Trophy className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
+              <p className="font-semibold text-white text-base truncate flex-1 min-w-0">{ev.title}</p>
+              {isTournament && <Trophy className="w-4 h-4 text-amber-400 shrink-0" />}
             </div>
-            <div className="flex items-center gap-2 flex-wrap mb-3">
+            <div className="flex items-center gap-2 flex-wrap mb-2">
               {ev.category && <EventCategoryBadge category={ev.category as EventCategory} />}
-              {ev.game && <span className="text-[11px] text-gray-400 font-medium truncate">{ev.game}</span>}
+              {ev.game && <span className="text-xs text-gray-300 font-medium truncate">{ev.game}</span>}
             </div>
-            <div className="flex items-center gap-3 flex-wrap text-[11px] text-gray-500 mb-3">
+            <div className="flex items-center gap-3 flex-wrap text-xs text-gray-300 mb-1">
+              <span className="flex items-center gap-1 font-medium tabular-nums">
+                {date.getDate()}. {date.toLocaleString("de-DE", { month: "short" })}
+              </span>
               <span className="flex items-center gap-1">
-                <Users className="w-3 h-3" />
+                <Users className="w-3.5 h-3.5" />
                 {ev._count.registrations}{ev.maxPlayers ? ` / ${ev.maxPlayers}` : ""}
               </span>
               <span className="flex items-center gap-1 text-amber-400 font-semibold">
-                +{ev.pointReward} <CoinIcon size={12} />
+                +{ev.pointReward} <CoinIcon size={13} />
               </span>
               {discordUrl && (
                 <a href={discordUrl} target="_blank" rel="noopener noreferrer"
-                  className="relative z-10 flex items-center gap-1 text-gray-600 hover:text-teal-400 transition-colors ml-auto">
-                  <ExternalLink className="w-3 h-3" /> Discord
+                  className="flex items-center gap-1 text-gray-400 hover:text-teal-300 transition-colors ml-auto">
+                  <ExternalLink className="w-3.5 h-3.5" /> Discord
                 </a>
               )}
             </div>
             {userId && canRegister && (
-              <div className="relative z-10 flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap mt-2.5">
                 <RegisterButton
                   eventId={ev.id}
                   isRegistered={isRegistered}
@@ -270,69 +265,61 @@ export default async function EventsPage() {
 
     return (
       <div key={`lul-${st.id}`}
-        className="surface animate-slide-up group block overflow-hidden relative transition-transform duration-200 hover:-translate-y-1"
+        className="surface animate-slide-up group flex flex-col justify-end overflow-hidden relative transition-transform duration-200 hover:-translate-y-1"
         style={{
           borderRadius: 6,
           border: myRole ? "1px solid rgba(251,191,36,0.18)" : "1px solid rgba(255,255,255,0.06)",
           boxShadow: "0 4px 20px rgba(0,0,0,0.45)",
           animationDelay: `${idx * 30}ms`,
+          minHeight: 240,
         }}>
-        <div className="relative overflow-hidden" style={{ height: 108 }}>
-          <GameCover game={st.game} className="absolute inset-0 w-full h-full" rounded="rounded-none"
-            imgClassName="w-full h-full object-cover object-center scale-105 group-hover:scale-110 transition-transform duration-700" />
-          <div className="absolute inset-0 pointer-events-none"
-            style={{ background: "linear-gradient(to bottom, transparent 35%, rgba(11,13,18,0.9) 100%)" }} />
-          <span className={`absolute top-2.5 left-2.5 flex items-center gap-1.5 text-[10px] px-2 py-1 rounded-full font-medium ${s.badge}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
-            {s.label}
+        <GameCover game={st.game} className="absolute inset-0 w-full h-full" rounded="rounded-none"
+          imgClassName="w-full h-full object-cover object-center scale-105 group-hover:scale-110 transition-transform duration-700" />
+        <div className="absolute inset-0 pointer-events-none"
+          style={{ background: "linear-gradient(to bottom, transparent 0%, transparent 32%, rgba(11,13,18,0.55) 55%, rgba(11,13,18,0.94) 78%, rgba(11,13,18,0.98) 100%)" }} />
+        <span className={`absolute top-2.5 left-2.5 flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium ${s.badge}`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+          {s.label}
+        </span>
+        {myRole && (
+          <span className="absolute top-2.5 right-2.5 flex items-center gap-1 text-xs text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2.5 py-1 rounded-full font-medium">
+            <Check className="w-3 h-3" /> Angemeldet
           </span>
-          {myRole && (
-            <span className="absolute top-2.5 right-2.5 flex items-center gap-1 text-[10px] text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2 py-1 rounded-full font-medium">
-              <Check className="w-3 h-3" /> Angemeldet
-            </span>
-          )}
-          <div className="absolute bottom-2 left-3 right-3 flex items-end justify-between gap-2">
-            {date ? (
-              <>
-                <p className="text-xs font-bold text-white leading-none tabular-nums">
-                  {date.getDate()}. {date.toLocaleString("de-DE", { month: "short" })}
-                </p>
-                <RelativeTime date={date} className="text-[9px] text-gray-300 tabular-nums" />
-              </>
-            ) : (
-              <p className="text-[10px] text-gray-300">Datum TBD</p>
-            )}
-          </div>
-        </div>
-        <div className="px-4 pb-4 pt-3">
+        )}
+        <div className="relative z-10 px-4 pb-4 pt-3">
           <Link href="/lul"
-            className="relative z-10 flex items-center gap-1 mb-1 hover:text-amber-300 transition-colors group/lul">
+            className="flex items-center gap-1 mb-1 hover:text-amber-300 transition-colors group/lul">
             <Swords className="w-3 h-3 text-amber-400 shrink-0" />
-            <span className="text-[10px] text-amber-400 font-medium group-hover/lul:text-amber-300">
+            <span className="text-xs text-amber-300 font-medium group-hover/lul:text-amber-200">
               Level-Up-League · {item.seasonLabel}
             </span>
           </Link>
           <Link href={`/lul/spieltag/${st.id}`}
-            className="relative z-10 font-semibold text-white text-sm truncate hover:text-amber-300 transition-colors block mb-1.5">
+            className="font-semibold text-white text-base truncate hover:text-amber-300 transition-colors block mb-1.5">
             Spieltag {st.number}: {st.game}
-            {(st as { gameType?: string | null }).gameType && <span className="text-xs text-gray-500 font-normal ml-2">{(st as { gameType?: string | null }).gameType}</span>}
+            {(st as { gameType?: string | null }).gameType && <span className="text-sm text-gray-300 font-normal ml-2">{(st as { gameType?: string | null }).gameType}</span>}
           </Link>
-          <div className="flex items-center gap-2 flex-wrap mb-3">
+          <div className="flex items-center gap-2 flex-wrap mb-2">
             {genreIcon && <img src={genreIcon.src} alt={genreIcon.alt} className="w-4 h-4 object-contain" />}
-            {(st as { platform?: string | null }).platform && <span className="text-[11px] text-gray-500">{(st as { platform?: string | null }).platform}</span>}
+            {(st as { platform?: string | null }).platform && <span className="text-xs text-gray-300">{(st as { platform?: string | null }).platform}</span>}
           </div>
-          <div className="flex items-center gap-3 flex-wrap text-[11px] text-gray-500 mb-3">
+          <div className="flex items-center gap-3 flex-wrap text-xs text-gray-300 mb-1">
+            {date && (
+              <span className="flex items-center gap-1 font-medium tabular-nums">
+                {date.getDate()}. {date.toLocaleString("de-DE", { month: "short" })}
+              </span>
+            )}
             <span className="flex items-center gap-1">
-              <Gamepad2 className="w-3 h-3" />{playerCount} Mitspieler
+              <Gamepad2 className="w-3.5 h-3.5" />{playerCount} Mitspieler
             </span>
             {spectCount > 0 && <span>{spectCount} Zuschauer</span>}
             <Link href={`/lul/spieltag/${st.id}`}
-              className="relative z-10 flex items-center gap-1 text-amber-600 hover:text-amber-400 transition-colors ml-auto">
-              <ChevronRight className="w-3 h-3" /> Details
+              className="flex items-center gap-1 text-amber-300 hover:text-amber-200 transition-colors ml-auto">
+              <ChevronRight className="w-3.5 h-3.5" /> Details
             </Link>
           </div>
           {userId && st.status !== "finished" && (
-            <div className="relative z-10">
+            <div className="mt-2.5">
               <LulRegisterButton spieltagId={st.id} currentRole={myRole} />
             </div>
           )}
