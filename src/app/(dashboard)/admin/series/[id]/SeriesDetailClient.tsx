@@ -8,7 +8,7 @@ import {
   ChevronLeft, ChevronRight, CalendarPlus, RefreshCw, Gamepad2,
   Swords, Hash, BarChart2, Plus, X, Trophy, Save, Coins,
   MessageSquare, ExternalLink, Archive, Vote, Trash2, Eye, EyeOff,
-  Monitor, Flame, Repeat,
+  Monitor, Flame, Repeat, Clock,
 } from "lucide-react";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import SeriesIcon from "@/components/SeriesIcon";
@@ -38,8 +38,31 @@ const PLATFORMS: { value: string; label: string; icon: string }[] = [
 
 type SeriesEvent = {
   id: string; title: string; startAt: Date | string; status: string;
-  maxPlayers: number | null; hidden: boolean; _count: { registrations: number };
+  maxPlayers: number | null; hidden: boolean; tournamentStatus: string | null;
+  _count: { registrations: number };
 };
+
+const NOT_ACTIVE_STATUSES = ["finished", "closed", "archived"];
+
+// Spiegelt die Logik der "Braucht Aufmerksamkeit"-Kacheln im Admin-Dashboard, damit man
+// auch direkt in der Eventreihe sieht, welches Event gerade Handlung braucht.
+function needsAttention(ev: SeriesEvent): { label: string; href: string } | null {
+  if (NOT_ACTIVE_STATUSES.includes(ev.status)) return null;
+
+  if (ev.tournamentStatus === "active" || ev.tournamentStatus === "pending") {
+    return {
+      label: ev.tournamentStatus === "active" ? "Turnier läuft — Ergebnisse eintragen" : "Turnier bereit zum Start",
+      href: `/admin/events/${ev.id}/bracket`,
+    };
+  }
+  if (ev.status === "umfrage") {
+    return { label: "Umfragephase läuft", href: `/admin/events/${ev.id}/complete` };
+  }
+  if (!ev.tournamentStatus && new Date(ev.startAt) < new Date()) {
+    return { label: "Vorbei, noch nicht abgeschlossen", href: `/admin/events/${ev.id}` };
+  }
+  return null;
+}
 type User = { id: string; name: string | null; username: string | null; image: string | null };
 
 type PlacementReward = { place: number; coins: number; rankPoints: number };
@@ -1110,10 +1133,11 @@ export default function SeriesDetailClient({ series, allUsers, hasActiveSibling 
                 const date = new Date(ev.startAt).toLocaleDateString("de-DE", {
                   day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
                 });
+                const attention = needsAttention(ev);
                 return (
                   <Link
                     key={ev.id}
-                    href={`/admin/events/${ev.id}`}
+                    href={attention?.href ?? `/admin/events/${ev.id}`}
                     className={`flex items-center gap-3 px-4 py-3 hover:bg-white/[0.03] transition-colors ${
                       i > 0 ? "border-t border-white/[0.05]" : ""
                     } ${isFirstFinished ? "border-t-2 border-t-white/[0.08]" : ""} ${
@@ -1122,6 +1146,14 @@ export default function SeriesDetailClient({ series, allUsers, hasActiveSibling 
                   >
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-white truncate flex items-center gap-2 flex-wrap">
+                        {attention && (
+                          <span
+                            title={attention.label}
+                            className="flex items-center gap-1 text-[10px] font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 shrink-0"
+                          >
+                            <Clock className="w-2.5 h-2.5" /> Aufmerksamkeit
+                          </span>
+                        )}
                         {ev.title}
                         <span className="text-gray-500 font-normal"> · {new Date(ev.startAt).toLocaleDateString("de-DE", { day: "numeric", month: "numeric", year: "numeric" })}</span>
                         {ev.hidden && (

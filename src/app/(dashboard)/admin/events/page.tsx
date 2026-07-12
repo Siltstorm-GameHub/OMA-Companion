@@ -14,6 +14,7 @@ export default async function AdminEventsPage() {
     startAt: true,
     game: true,
     format: true,
+    tournamentStatus: true,
     category: true,
     completionData: true,
     hidden: true,
