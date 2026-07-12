@@ -5,6 +5,7 @@ import {
   CalendarDays, Users, ChevronRight,
   Clock, Scroll, Swords, CheckCircle2,
   Circle, Zap, Repeat, Newspaper, Server, Gamepad2,
+  ArrowUp, ArrowDown, Minus, Timer, UserPlus,
 } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
 import EventCategoryBadge from "@/components/EventCategoryBadge";
@@ -110,6 +111,17 @@ function formatFreshness(fetchedAt: number): string {
   return `vor ${minutes} Min.`;
 }
 
+function formatCountdown(target: Date, now: Date): string {
+  const diffMs = target.getTime() - now.getTime();
+  if (diffMs <= 0) return "Läuft jetzt";
+  const days  = Math.floor(diffMs / 86_400_000);
+  const hours = Math.floor((diffMs % 86_400_000) / 3_600_000);
+  if (days >= 1) return `in ${days}d ${hours}h`;
+  const minutes = Math.floor((diffMs % 3_600_000) / 60_000);
+  if (hours >= 1) return `in ${hours}h ${minutes}m`;
+  return `in ${minutes}m`;
+}
+
 export default async function DashboardPage() {
   const sessionUser = await getSessionUser();
   const userId      = sessionUser?.id;
@@ -141,6 +153,8 @@ export default async function DashboardPage() {
     activeLulSeason,
     activeDailyMessage,
     servers,
+    myEventCount,
+    nextRegisteredEvent,
   ] = await Promise.all([
     userId
       ? prisma.userQuestProgress.count({ where: { userId, completed: true, quest: { month, year } } })
@@ -172,14 +186,32 @@ export default async function DashboardPage() {
       select: { id: true, title: true, content: true, endDate: true },
     }),
     getVisibleServers(userId),
+    userId
+      ? prisma.eventRegistration.count({ where: { userId } })
+      : 0,
+    userId
+      ? prisma.event.findFirst({
+          where: {
+            hidden: false,
+            status: { in: ["open", "active", "umfrage"] },
+            registrations: { some: { userId } },
+          },
+          orderBy: { startAt: "asc" },
+          select: { id: true, title: true, startAt: true, status: true },
+        })
+      : null,
   ]);
 
   const nextSpieltag = activeLulSeason?.spieltage[0] ?? null;
   const myPoints     = sessionUser?.points ?? 0;
   const myRankPoints = sessionUser?.rankPoints ?? 0;
 
+  const startOfThisMonth = new Date(year, month - 1, 1);
+  const startOfLastMonth = new Date(year, month - 2, 1);
+  const startOfNextMonth = new Date(year, month, 1);
+
   // Unabhängige Follow-up-Queries parallelisieren
-  const [myLulPoints, leaderboardRank] = await Promise.all([
+  const [myLulPoints, leaderboardRank, rankGainThisMonth, rankGainLastMonth] = await Promise.all([
     activeLulSeason && userId
       ? prisma.lulEntry.aggregate({
           where: { userId, spieltag: { seasonId: activeLulSeason.id } },
@@ -189,6 +221,18 @@ export default async function DashboardPage() {
     userId
       ? prisma.user.count({ where: { rankPoints: { gt: myRankPoints } } }).then(n => n + 1)
       : Promise.resolve(null),
+    userId
+      ? prisma.pointTransaction.aggregate({
+          where: { userId, reason: { startsWith: "[Rang-Punkte]" }, createdAt: { gte: startOfThisMonth } },
+          _sum: { amount: true },
+        }).then(r => r._sum.amount ?? 0)
+      : 0,
+    userId
+      ? prisma.pointTransaction.aggregate({
+          where: { userId, reason: { startsWith: "[Rang-Punkte]" }, createdAt: { gte: startOfLastMonth, lt: startOfThisMonth } },
+          _sum: { amount: true },
+        }).then(r => r._sum.amount ?? 0)
+      : 0,
   ]);
 
   const displayName = sessionUser?.username ?? sessionUser?.name ?? "dort";
@@ -252,7 +296,22 @@ export default async function DashboardPage() {
               <p className="font-display text-3xl font-black tabular-nums leading-none text-gradient-gaming">
                 #{leaderboardRank}
               </p>
-              <p className="text-[9px] text-gray-700 mt-1">von {memberCount}</p>
+              <div className="flex items-center justify-center gap-1 mt-1">
+                <p className="text-[9px] text-gray-700">von {memberCount}</p>
+                {rankGainThisMonth > rankGainLastMonth ? (
+                  <span className="flex items-center text-emerald-400" title={`+${rankGainThisMonth} Rang-Punkte diesen Monat (Vormonat: ${rankGainLastMonth})`}>
+                    <ArrowUp className="w-2.5 h-2.5" />
+                  </span>
+                ) : rankGainThisMonth < rankGainLastMonth ? (
+                  <span className="flex items-center text-red-400" title={`+${rankGainThisMonth} Rang-Punkte diesen Monat (Vormonat: ${rankGainLastMonth})`}>
+                    <ArrowDown className="w-2.5 h-2.5" />
+                  </span>
+                ) : (
+                  <span className="flex items-center text-gray-700" title="Kein Unterschied zum Vormonat">
+                    <Minus className="w-2.5 h-2.5" />
+                  </span>
+                )}
+              </div>
             </div>
           )}
 
@@ -260,18 +319,81 @@ export default async function DashboardPage() {
 
         {/* ── Stat-Streifen ── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4 sm:mt-6">
-          {[
-            { value: activeEvents,      label: "Aktive Events",  color: "text-teal-400"   },
-            { value: myQuestsDone,      label: `/ ${totalMonthQuests} Quests`, color: "text-teal-400" },
-            { value: memberCount,       label: "Mitglieder",     color: "text-gray-300"   },
-            { value: myPoints.toLocaleString("de-DE"),              label: "Münzen",       color: "text-amber-400" },
-          ].map((s, i) => (
-            <div key={i}
-              className="card-cut-sm surface-elevated px-4 py-3 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(20,184,166,0.12)] hover:border-teal-500/20">
-              <p className={`font-display text-2xl font-black tabular-nums leading-tight animate-number-pop ${s.color}`}>{s.value}</p>
-              <p className="text-[10px] text-gray-600 uppercase tracking-widest mt-0.5">{s.label}</p>
+
+          {/* Teilgenommene Events → Profil */}
+          <Link href="/profile"
+            className="group relative overflow-hidden card-cut-sm surface-elevated px-4 py-3 block transition-all duration-200 hover:-translate-y-0.5 hover:border-teal-500/25 active:scale-[0.98]">
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+              style={{ background: "radial-gradient(circle at 30% 15%, rgba(20,184,166,0.22), transparent 70%)" }} />
+            <div className="relative">
+              <p className="font-display text-2xl font-black tabular-nums leading-tight animate-number-pop text-teal-400">
+                {myEventCount}
+              </p>
+              <p className="text-[10px] text-gray-600 uppercase tracking-widest mt-0.5 group-hover:text-gray-400 transition-colors">
+                Events dabei
+              </p>
             </div>
-          ))}
+          </Link>
+
+          {/* Nächstes angemeldetes Event → Event-Übersicht / Event-Liste */}
+          <Link href={nextRegisteredEvent ? `/tournament/${nextRegisteredEvent.id}` : "/events"}
+            className="group relative overflow-hidden card-cut-sm surface-elevated px-4 py-3 block transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-500/25 active:scale-[0.98]">
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+              style={{ background: "radial-gradient(circle at 30% 15%, rgba(245,158,11,0.22), transparent 70%)" }} />
+            <div className="relative">
+              {nextRegisteredEvent ? (
+                <>
+                  <p className="font-display text-sm font-black leading-tight text-amber-400 flex items-center gap-1 truncate">
+                    <Timer className="w-3.5 h-3.5 shrink-0" />
+                    {formatCountdown(new Date(nextRegisteredEvent.startAt), now)}
+                  </p>
+                  <p className="text-[10px] text-gray-600 mt-0.5 truncate group-hover:text-gray-400 transition-colors">
+                    {nextRegisteredEvent.title}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="font-display text-sm font-black leading-tight text-amber-400 flex items-center gap-1">
+                    <UserPlus className="w-3.5 h-3.5 shrink-0" />
+                    Kein Event
+                  </p>
+                  <p className="text-[10px] text-gray-600 mt-0.5 group-hover:text-gray-400 transition-colors">
+                    Jetzt anmelden →
+                  </p>
+                </>
+              )}
+            </div>
+          </Link>
+
+          {/* Quests + Countdown bis Monatsende → Quests */}
+          <Link href="/quests"
+            className="group relative overflow-hidden card-cut-sm surface-elevated px-4 py-3 block transition-all duration-200 hover:-translate-y-0.5 hover:border-teal-500/25 active:scale-[0.98]">
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+              style={{ background: "radial-gradient(circle at 30% 15%, rgba(20,184,166,0.22), transparent 70%)" }} />
+            <div className="relative">
+              <p className="font-display text-2xl font-black tabular-nums leading-tight animate-number-pop text-teal-400">
+                {myQuestsDone}<span className="text-gray-600 text-base">/{totalMonthQuests}</span>
+              </p>
+              <p className="text-[10px] text-gray-600 uppercase tracking-widest mt-0.5 group-hover:text-gray-400 transition-colors">
+                Quests · {formatCountdown(startOfNextMonth, now)}
+              </p>
+            </div>
+          </Link>
+
+          {/* Aktive Events (Community) → Events */}
+          <Link href="/events"
+            className="group relative overflow-hidden card-cut-sm surface-elevated px-4 py-3 block transition-all duration-200 hover:-translate-y-0.5 hover:border-teal-500/25 active:scale-[0.98]">
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+              style={{ background: "radial-gradient(circle at 30% 15%, rgba(20,184,166,0.22), transparent 70%)" }} />
+            <div className="relative">
+              <p className="font-display text-2xl font-black tabular-nums leading-tight animate-number-pop text-teal-400">
+                {activeEvents}
+              </p>
+              <p className="text-[10px] text-gray-600 uppercase tracking-widest mt-0.5 group-hover:text-gray-400 transition-colors">
+                Aktive Events
+              </p>
+            </div>
+          </Link>
         </div>
 
         {/* Freshness-Hinweis statt starrem Cache */}
