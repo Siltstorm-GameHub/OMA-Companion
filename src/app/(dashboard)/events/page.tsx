@@ -184,14 +184,14 @@ export default async function EventsPage() {
             border: isRegistered ? "1px solid rgba(52,211,153,0.18)" : "1px solid rgba(255,255,255,0.06)",
             boxShadow: "0 4px 20px rgba(0,0,0,0.45)",
             animationDelay: `${idx * 30}ms`,
-            minHeight: 240,
+            aspectRatio: "1 / 1",
           }}>
           <div className="absolute inset-0">
             <GameCover game={ev.game} className="w-full h-full" rounded="rounded-none"
               imgClassName="w-full h-full object-cover object-center scale-105 group-hover:scale-110 transition-transform duration-700" />
           </div>
           <div className="absolute inset-0 pointer-events-none"
-            style={{ background: "linear-gradient(to bottom, transparent 0%, transparent 40%, rgba(11,13,18,0.1) 55%, rgba(11,13,18,0.4) 70%, rgba(11,13,18,0.75) 85%, rgba(11,13,18,0.92) 100%)" }} />
+            style={{ background: "linear-gradient(to bottom, transparent 0%, transparent 15%, rgba(11,13,18,0.15) 30%, rgba(11,13,18,0.55) 50%, rgba(11,13,18,0.85) 68%, rgba(11,13,18,0.96) 85%, rgba(11,13,18,0.98) 100%)" }} />
           <div className={`absolute top-0 left-0 right-0 h-[2px] ${CATEGORY_STRIP[ev.category as EventCategory] ?? "bg-emerald-500"}`} />
           <span className={`absolute top-2.5 left-2.5 flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium ${s.badge}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
@@ -272,14 +272,14 @@ export default async function EventsPage() {
           border: myRole ? "1px solid rgba(251,191,36,0.18)" : "1px solid rgba(255,255,255,0.06)",
           boxShadow: "0 4px 20px rgba(0,0,0,0.45)",
           animationDelay: `${idx * 30}ms`,
-          minHeight: 240,
+          aspectRatio: "1 / 1",
         }}>
         <div className="absolute inset-0">
           <GameCover game={st.game} className="w-full h-full" rounded="rounded-none"
             imgClassName="w-full h-full object-cover object-center scale-105 group-hover:scale-110 transition-transform duration-700" />
         </div>
         <div className="absolute inset-0 pointer-events-none"
-          style={{ background: "linear-gradient(to bottom, transparent 0%, transparent 40%, rgba(11,13,18,0.1) 55%, rgba(11,13,18,0.4) 70%, rgba(11,13,18,0.75) 85%, rgba(11,13,18,0.92) 100%)" }} />
+          style={{ background: "linear-gradient(to bottom, transparent 0%, transparent 15%, rgba(11,13,18,0.15) 30%, rgba(11,13,18,0.55) 50%, rgba(11,13,18,0.85) 68%, rgba(11,13,18,0.96) 85%, rgba(11,13,18,0.98) 100%)" }} />
         <span className={`absolute top-2.5 left-2.5 flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium ${s.badge}`}>
           <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
           {s.label}
