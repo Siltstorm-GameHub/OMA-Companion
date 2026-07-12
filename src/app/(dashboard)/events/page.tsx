@@ -16,7 +16,7 @@ import GameCover from "@/components/GameCover";
 import EventCardLink from "./EventCardLink";
 import LulRegisterButton from "@/components/LulRegisterButton";
 import { getGenreIcon } from "@/lib/genre-icons";
-import EventCategoryBadge, { CATEGORY_BG_TINT } from "@/components/EventCategoryBadge";
+import EventCategoryBadge from "@/components/EventCategoryBadge";
 import { EventCategory } from "@prisma/client";
 import { EyeOff } from "lucide-react";
 import { getEventEndedAt, RECENTLY_FINISHED_MS } from "@/lib/event-completion";
@@ -188,9 +188,8 @@ export default async function EventsPage() {
           }}>
           <GameCover game={ev.game} className="absolute inset-0 w-full h-full" rounded="rounded-none"
             imgClassName="w-full h-full object-cover object-center scale-105 group-hover:scale-110 transition-transform duration-700" />
-          <div className={`absolute inset-0 ${CATEGORY_BG_TINT[ev.category as EventCategory] ?? ""} opacity-40 pointer-events-none`} />
           <div className="absolute inset-0 pointer-events-none"
-            style={{ background: "linear-gradient(to bottom, transparent 0%, transparent 30%, rgba(11,13,18,0.25) 50%, rgba(11,13,18,0.62) 70%, rgba(11,13,18,0.88) 88%, rgba(11,13,18,0.94) 100%)" }} />
+            style={{ background: "linear-gradient(to bottom, transparent 0%, transparent 40%, rgba(11,13,18,0.1) 55%, rgba(11,13,18,0.4) 70%, rgba(11,13,18,0.75) 85%, rgba(11,13,18,0.92) 100%)" }} />
           <div className={`absolute top-0 left-0 right-0 h-[2px] ${CATEGORY_STRIP[ev.category as EventCategory] ?? "bg-emerald-500"}`} />
           <span className={`absolute top-2.5 left-2.5 flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium ${s.badge}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
@@ -276,7 +275,7 @@ export default async function EventsPage() {
         <GameCover game={st.game} className="absolute inset-0 w-full h-full" rounded="rounded-none"
           imgClassName="w-full h-full object-cover object-center scale-105 group-hover:scale-110 transition-transform duration-700" />
         <div className="absolute inset-0 pointer-events-none"
-          style={{ background: "linear-gradient(to bottom, transparent 0%, transparent 32%, rgba(11,13,18,0.55) 55%, rgba(11,13,18,0.94) 78%, rgba(11,13,18,0.98) 100%)" }} />
+          style={{ background: "linear-gradient(to bottom, transparent 0%, transparent 40%, rgba(11,13,18,0.1) 55%, rgba(11,13,18,0.4) 70%, rgba(11,13,18,0.75) 85%, rgba(11,13,18,0.92) 100%)" }} />
         <span className={`absolute top-2.5 left-2.5 flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium ${s.badge}`}>
           <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
           {s.label}
