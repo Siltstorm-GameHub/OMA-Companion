@@ -194,7 +194,10 @@ export default async function DashboardPage() {
             registrations: { some: { userId } },
           },
           orderBy: { startAt: "asc" },
-          select: { id: true, title: true, startAt: true, status: true },
+          select: {
+            id: true, title: true, startAt: true, status: true,
+            polls: { where: { endAt: { gt: now } }, orderBy: { endAt: "desc" }, take: 1, select: { endAt: true } },
+          },
         })
       : null,
     prisma.monthlyClipContest.findFirst({
@@ -362,10 +365,16 @@ export default async function DashboardPage() {
                 <>
                   <p className="font-display text-sm font-black leading-tight text-amber-400 flex items-center gap-1 truncate">
                     <Timer className="w-3.5 h-3.5 shrink-0" />
-                    {formatCountdown(new Date(nextRegisteredEvent.startAt), now)}
+                    {nextRegisteredEvent.status === "active"
+                      ? "Läuft jetzt"
+                      : nextRegisteredEvent.status === "umfrage"
+                        ? (nextRegisteredEvent.polls[0]
+                            ? formatCountdown(new Date(nextRegisteredEvent.polls[0].endAt), now)
+                            : "Umfrage läuft")
+                        : formatCountdown(new Date(nextRegisteredEvent.startAt), now)}
                   </p>
                   <p className="text-[10px] text-gray-600 mt-0.5 truncate group-hover:text-gray-400 transition-colors">
-                    {nextRegisteredEvent.title}
+                    {nextRegisteredEvent.status === "umfrage" ? "Umfragephase · " : ""}{nextRegisteredEvent.title}
                   </p>
                 </>
               ) : (
