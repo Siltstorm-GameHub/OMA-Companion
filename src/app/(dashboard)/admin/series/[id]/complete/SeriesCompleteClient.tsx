@@ -23,7 +23,6 @@ interface Props {
   participants: User[];
   userStats: Record<string, Record<string, number>>;
   rewardsConfig: RewardsConfig;
-  suggestedNewSeasonName: string;
   isReEdit: boolean;
   pollPhaseComplete: boolean;
   initialData: Record<string, unknown> | null;
@@ -66,7 +65,7 @@ function computePlacementMap(groups: string[][]): Map<string, number> {
 
 export default function SeriesCompleteClient({
   seriesId, seriesName, seriesIcon, statFields, participants, userStats, rewardsConfig,
-  suggestedNewSeasonName, isReEdit, pollPhaseComplete, initialData,
+  isReEdit, pollPhaseComplete, initialData,
 }: Props) {
   const router = useRouter();
 
@@ -116,7 +115,6 @@ export default function SeriesCompleteClient({
 
   /* ── Neue Saison ── */
   const [startNewSeason, setStartNewSeason] = useState(!isReEdit);
-  const [newSeasonName, setNewSeasonName]   = useState(suggestedNewSeasonName);
 
   const [loading, setLoading] = useState(false);
 
@@ -205,7 +203,6 @@ export default function SeriesCompleteClient({
           pollBonusRankPoints: pollEnabled ? pollRankPts : undefined,
           pollExcludedUserIds: pollEnabled && pollExcluded.size > 0 ? [...pollExcluded] : undefined,
           startNewSeason:      !isReEdit && startNewSeason ? true : undefined,
-          newSeasonName:       !isReEdit && startNewSeason ? newSeasonName.trim() || undefined : undefined,
         }),
       });
       if (!res.ok) {
@@ -213,7 +210,7 @@ export default function SeriesCompleteClient({
         toast.error((err as { error?: string }).error ?? "Fehler beim Abschließen");
         return;
       }
-      const data = await res.json() as { newSeriesId?: string };
+      const data = await res.json() as { startNewSeason?: boolean };
       if (pollOnly) {
         toast.success("Saison abgeschlossen – Abstimmung kann später nachgetragen werden");
       } else if (isPollOnly) {
@@ -221,7 +218,11 @@ export default function SeriesCompleteClient({
       } else {
         toast.success(isReEdit ? `„${seriesName}" aktualisiert` : `„${seriesName}" erfolgreich abgeschlossen`);
       }
-      router.push(data.newSeriesId ? `/admin/series/${data.newSeriesId}` : `/admin/series/${seriesId}`);
+      router.push(
+        !pollOnly && data.startNewSeason
+          ? `/admin/series/${seriesId}/new-season`
+          : `/admin/series/${seriesId}`
+      );
     } finally {
       setLoading(false);
     }
@@ -492,14 +493,11 @@ export default function SeriesCompleteClient({
                 <span className="text-xs font-semibold text-teal-300">Neue Saison starten</span>
               </label>
               {startNewSeason && (
-                <div>
-                  <label className="text-[10px] text-gray-500 mb-1 block">Name der neuen Saison</label>
-                  <input type="text" value={newSeasonName} onChange={e => setNewSeasonName(e.target.value)}
-                    className={inputCls} />
-                  <p className="text-[10px] text-gray-600 mt-1.5">
-                    Gleiche Konfiguration (Spiel, Format, Punktesystem) wird übernommen.
-                  </p>
-                </div>
+                <p className="text-[10px] text-gray-600">
+                  Nach dem Abschluss öffnet sich der Saison-Assistent: dort kannst du Name, Spiel, Format,
+                  Punktesystem, Belohnungen sowie Start- und Enddatum der neuen Saison prüfen und anpassen,
+                  bevor sie angelegt wird.
+                </p>
               )}
             </div>
           )}
@@ -565,7 +563,7 @@ export default function SeriesCompleteClient({
             <div className="rounded-lg px-3 py-2 bg-white/[0.02] border border-white/[0.05]">
               <p className="text-[10px] text-gray-500 flex items-start gap-1.5">
                 <Plus className="w-3 h-3 shrink-0 mt-0.5 text-teal-500" />
-                Nach dem Abschluss wird automatisch „{newSeasonName}" erstellt und du wirst dorthin weitergeleitet.
+                Nach dem Abschluss wirst du zum Saison-Assistenten weitergeleitet, um die neue Saison einzurichten.
               </p>
             </div>
           )}

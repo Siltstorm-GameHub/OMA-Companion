@@ -835,29 +835,12 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
         </div>
       )}
 
-      {/* ── Zweispalten: Events + Kompakte Tabelle ───────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-
-        {/* Linke Spalte: Events — max. 5 kommende Termine */}
-        <SeriesEventList
-          activeEvents={activeEvents.slice(0, 5)}
-          openEvents={openEvents.slice(0, Math.max(0, 5 - activeEvents.length))}
-          finishedEvents={finishedEvents}
-          userId={userId ?? ""}
-          fixedGame={series.fixedGame}
-        />
-
-        {/* Rechte Spalte: Kompakte Tabelle */}
+      {/* ── Archivierte Saison: nur Gesamttabelle, keine Einzel-Events ────────── */}
+      {isArchived ? (
         <div className="space-y-3">
           <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-            <Trophy className="w-3.5 h-3.5 text-amber-400" /> Aktueller Stand
-            {hasDelta && gamePhaseCompleteEvents[0] && (
-              <span className="flex items-center gap-1 text-[10px] text-emerald-500/70 font-normal normal-case tracking-normal">
-                <TrendingUp className="w-3 h-3" /> nach {gamePhaseCompleteEvents[0].title}
-              </span>
-            )}
+            <Trophy className="w-3.5 h-3.5 text-amber-400" /> Endstand der Saison
           </h2>
-
           <SeriesStandingsTable
             rows={standings}
             users={standingUsers}
@@ -865,18 +848,59 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
             extraCols={extraCols}
             currentUserId={userId}
             showPoints={showPoints}
-            lastEventDelta={hasDelta ? lastEventDelta : undefined}
-            lastEventTitle={gamePhaseCompleteEvents[0]?.title}
             participationPoints={statCfg.participationPoints}
             mode="compact"
           />
           {standings.length === 0 && (
             <div className="glass rounded-2xl px-4 py-6 text-center text-sm text-gray-600">
-              Noch keine Ergebnisse
+              Keine Ergebnisse
             </div>
           )}
         </div>
-      </div>
+      ) : (
+        /* ── Zweispalten: Events + Kompakte Tabelle ─────────────────────────── */
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+          {/* Linke Spalte: Events — max. 5 kommende Termine */}
+          <SeriesEventList
+            activeEvents={activeEvents.slice(0, 5)}
+            openEvents={openEvents.slice(0, Math.max(0, 5 - activeEvents.length))}
+            finishedEvents={finishedEvents}
+            userId={userId ?? ""}
+            fixedGame={series.fixedGame}
+          />
+
+          {/* Rechte Spalte: Kompakte Tabelle */}
+          <div className="space-y-3">
+            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+              <Trophy className="w-3.5 h-3.5 text-amber-400" /> Aktueller Stand
+              {hasDelta && gamePhaseCompleteEvents[0] && (
+                <span className="flex items-center gap-1 text-[10px] text-emerald-500/70 font-normal normal-case tracking-normal">
+                  <TrendingUp className="w-3 h-3" /> nach {gamePhaseCompleteEvents[0].title}
+                </span>
+              )}
+            </h2>
+
+            <SeriesStandingsTable
+              rows={standings}
+              users={standingUsers}
+              statCols={statCfg.stats}
+              extraCols={extraCols}
+              currentUserId={userId}
+              showPoints={showPoints}
+              lastEventDelta={hasDelta ? lastEventDelta : undefined}
+              lastEventTitle={gamePhaseCompleteEvents[0]?.title}
+              participationPoints={statCfg.participationPoints}
+              mode="compact"
+            />
+            {standings.length === 0 && (
+              <div className="glass rounded-2xl px-4 py-6 text-center text-sm text-gray-600">
+                Noch keine Ergebnisse
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Vollständige Tabelle (ausklappbar) ───────────────────────────────── */}
       {standings.length > 0 && (

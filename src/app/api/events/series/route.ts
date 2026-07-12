@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
     placementRewardsJson, pollsConfigJson, seriesStatConfig,
     startDate, endDate, hidden,
     spectatorMode, spectatorRewardJson,
+    groupId, seasonNumber,
   } = body;
 
   if (!name?.trim()) return NextResponse.json({ error: "Name fehlt" }, { status: 400 });
@@ -49,6 +50,8 @@ export async function POST(req: NextRequest) {
         pollsConfigJson: pollsJson,
         seriesStatConfig: seriesStatConfig ?? null,
         hidden: hidden ?? false,
+        groupId: groupId ?? null,
+        seasonNumber: seasonNumber ?? null,
       },
     });
 

@@ -28,5 +28,9 @@ export default async function AdminSeriesDetailPage({ params }: { params: Promis
 
   if (!series) notFound();
 
-  return <SeriesDetailClient series={series} allUsers={allUsers} />;
+  const hasActiveSibling = series.status === "archived" && series.groupId
+    ? (await prisma.eventSeries.count({ where: { groupId: series.groupId, status: "active" } })) > 0
+    : true;
+
+  return <SeriesDetailClient series={series} allUsers={allUsers} hasActiveSibling={hasActiveSibling} />;
 }

@@ -38,6 +38,47 @@ type PollConfig = {
 type PlacementReward = { place: number; coins: number; rankPoints: number };
 type StatRow = { field: string; pointsPer: number; isWinnerStat?: boolean; isMatchWinStat?: boolean };
 
+// Vorausgefüllte Werte, wenn eine neue Saison im Anschluss an den Abschluss einer alten Reihe angelegt wird
+type SeasonPrefill = {
+  oldSeriesId: string;
+  oldSeriesName: string;
+  groupId: string;
+  seasonNumber: number;
+  name: string;
+  description: string;
+  category: EventCategory;
+  eventType: "community" | "tournament";
+  fixedGenre: EventGenre | null;
+  platforms: string[];
+  variousGames: boolean;
+  fixedGame: string;
+  seriesFormat: string;
+  seriesDiscordId: string;
+  recurrenceType: "none" | RecurrenceType;
+  recurrenceMonthlyMode: MonthlyMode;
+  seriesHidden: boolean;
+  spectatorMode: boolean;
+  spectatorCoins: number;
+  spectatorRankPts: number;
+  statParticipationPts: number;
+  statSpectatorParticipationPts: number;
+  statPtsToGlobalRanking: boolean;
+  statRows: StatRow[];
+  eventStatFields: string[];
+  winnerStatField: string;
+  participationCoins: number;
+  participationRankPts: number;
+  placements: PlacementReward[];
+  polls: PollConfig[];
+  dominion: {
+    enabled: boolean;
+    triggerStats: string[];
+    threshold: number;
+    coins: number;
+    seriesPoints: number;
+  };
+};
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STEP_LABELS_EVENT  = ["Typ & Kategorie", "Grunddaten", "Turnier", "Belohnungen", "Zusammenfassung"];
@@ -94,9 +135,11 @@ const labelCls   = "text-xs text-gray-500 mb-1 block";
 export default function EventSetupWizard({
   series,
   initialMode = "select",
+  seasonPrefill,
 }: {
   series: SeriesOption[];
   initialMode?: "select" | "event" | "series";
+  seasonPrefill?: SeasonPrefill;
 }) {
   const router = useRouter();
   const [wizardMode, setWizardMode] = useState<"select" | "event" | "series">(initialMode as "select" | "event" | "series");
@@ -104,9 +147,9 @@ export default function EventSetupWizard({
   const [loading, setLoading] = useState(false);
 
   // ── Shared (Step 0) ──────────────────────────────────────────────────────────
-  const [category, setCategory]       = useState<EventCategory>("casual");
-  const [eventType, setEventType]     = useState<"community" | "tournament">("community");
-  const [spectatorMode, setSpectatorMode] = useState(false);
+  const [category, setCategory]       = useState<EventCategory>(seasonPrefill?.category ?? "casual");
+  const [eventType, setEventType]     = useState<"community" | "tournament">(seasonPrefill?.eventType ?? "community");
+  const [spectatorMode, setSpectatorMode] = useState(seasonPrefill?.spectatorMode ?? false);
 
   // ── Event mode state ─────────────────────────────────────────────────────────
   const [title, setTitle]             = useState("");
@@ -127,44 +170,46 @@ export default function EventSetupWizard({
   const [ligaDrawCoins, setLigaDrawCoins] = useState(20);
 
   // ── Series mode state ─────────────────────────────────────────────────────────
-  const [seriesName, setSeriesName]     = useState("");
-  const [seriesDesc, setSeriesDesc]     = useState("");
-  const [variousGames, setVariousGames] = useState(false);
-  const [fixedGame, setFixedGame]       = useState("");
-  const [fixedGenre, setFixedGenre]     = useState<EventGenre | null>(null);
-  const [fixedPlatforms, setFixedPlatforms] = useState<string[]>([]);
-  const [seriesDiscordId, setSeriesDiscordId] = useState("");
-  const [seriesFormat, setSeriesFormat] = useState("single_elimination");
+  const [seriesName, setSeriesName]     = useState(seasonPrefill?.name ?? "");
+  const [seriesDesc, setSeriesDesc]     = useState(seasonPrefill?.description ?? "");
+  const [variousGames, setVariousGames] = useState(seasonPrefill?.variousGames ?? false);
+  const [fixedGame, setFixedGame]       = useState(seasonPrefill?.fixedGame ?? "");
+  const [fixedGenre, setFixedGenre]     = useState<EventGenre | null>(seasonPrefill?.fixedGenre ?? null);
+  const [fixedPlatforms, setFixedPlatforms] = useState<string[]>(seasonPrefill?.platforms ?? []);
+  const [seriesDiscordId, setSeriesDiscordId] = useState(seasonPrefill?.seriesDiscordId ?? "");
+  const [seriesFormat, setSeriesFormat] = useState(seasonPrefill?.seriesFormat ?? "single_elimination");
+  // Start-/Enddatum werden nie vorausgefüllt — die alte Saison speichert kein eigenes Datum, das
+  // muss der Admin für die neue Saison bewusst neu festlegen.
   const [seriesStartDate, setSeriesStartDate] = useState("");
   const [seriesEndDate, setSeriesEndDate]     = useState("");
-  const [recurrenceType, setRecurrenceType]   = useState<"none" | RecurrenceType>("none");
-  const [recurrenceMonthlyMode, setRecurrenceMonthlyMode] = useState<MonthlyMode>("dayOfMonth");
-  const [statParticipationPts, setStatParticipationPts] = useState(5);
-  const [statSpectatorParticipationPts, setStatSpectatorParticipationPts] = useState(3);
-  const [statPtsToGlobalRanking, setStatPtsToGlobalRanking] = useState(false);
-  const [statRows, setStatRows]         = useState<StatRow[]>([]);
-  const [seriesHidden, setSeriesHidden] = useState(false);
-  const [eventStatFields, setEventStatFields] = useState<string[]>([]);
-  const [winnerStatField, setWinnerStatField] = useState("");
+  const [recurrenceType, setRecurrenceType]   = useState<"none" | RecurrenceType>(seasonPrefill?.recurrenceType ?? "none");
+  const [recurrenceMonthlyMode, setRecurrenceMonthlyMode] = useState<MonthlyMode>(seasonPrefill?.recurrenceMonthlyMode ?? "dayOfMonth");
+  const [statParticipationPts, setStatParticipationPts] = useState(seasonPrefill?.statParticipationPts ?? 5);
+  const [statSpectatorParticipationPts, setStatSpectatorParticipationPts] = useState(seasonPrefill?.statSpectatorParticipationPts ?? 3);
+  const [statPtsToGlobalRanking, setStatPtsToGlobalRanking] = useState(seasonPrefill?.statPtsToGlobalRanking ?? false);
+  const [statRows, setStatRows]         = useState<StatRow[]>(seasonPrefill?.statRows ?? []);
+  const [seriesHidden, setSeriesHidden] = useState(seasonPrefill?.seriesHidden ?? false);
+  const [eventStatFields, setEventStatFields] = useState<string[]>(seasonPrefill?.eventStatFields ?? []);
+  const [winnerStatField, setWinnerStatField] = useState(seasonPrefill?.winnerStatField ?? "");
 
   // ── Dominion Bonus ───────────────────────────────────────────────────────────
-  const [dominionEnabled, setDominionEnabled]       = useState(false);
-  const [dominionTriggerStats, setDominionTriggerStats] = useState<string[]>([]);
-  const [dominionThreshold, setDominionThreshold]   = useState(3);
-  const [dominionCoins, setDominionCoins]           = useState(0);
-  const [dominionSeriesPoints, setDominionSeriesPoints] = useState(5);
+  const [dominionEnabled, setDominionEnabled]       = useState(seasonPrefill?.dominion.enabled ?? false);
+  const [dominionTriggerStats, setDominionTriggerStats] = useState<string[]>(seasonPrefill?.dominion.triggerStats ?? []);
+  const [dominionThreshold, setDominionThreshold]   = useState(seasonPrefill?.dominion.threshold ?? 3);
+  const [dominionCoins, setDominionCoins]           = useState(seasonPrefill?.dominion.coins ?? 0);
+  const [dominionSeriesPoints, setDominionSeriesPoints] = useState(seasonPrefill?.dominion.seriesPoints ?? 5);
 
   // ── Shared rewards ───────────────────────────────────────────────────────────
-  const [participationCoins, setParticipationCoins] = useState(10);
-  const [participationRankPts, setParticipationRankPts] = useState(0);
-  const [placements, setPlacements] = useState<PlacementReward[]>([
+  const [participationCoins, setParticipationCoins] = useState(seasonPrefill?.participationCoins ?? 10);
+  const [participationRankPts, setParticipationRankPts] = useState(seasonPrefill?.participationRankPts ?? 0);
+  const [placements, setPlacements] = useState<PlacementReward[]>(seasonPrefill?.placements ?? [
     { place: 1, coins: 500, rankPoints: 3 },
     { place: 2, coins: 250, rankPoints: 2 },
     { place: 3, coins: 100, rankPoints: 1 },
   ]);
-  const [spectatorCoins, setSpectatorCoins]     = useState(5);
-  const [spectatorRankPts, setSpectatorRankPts] = useState(0);
-  const [polls, setPolls] = useState<PollConfig[]>([]);
+  const [spectatorCoins, setSpectatorCoins]     = useState(seasonPrefill?.spectatorCoins ?? 5);
+  const [spectatorRankPts, setSpectatorRankPts] = useState(seasonPrefill?.spectatorRankPts ?? 0);
+  const [polls, setPolls] = useState<PollConfig[]>(seasonPrefill?.polls ?? []);
 
   // ── Derived ──────────────────────────────────────────────────────────────────
   const isEventMode  = wizardMode === "event";
@@ -361,6 +406,8 @@ export default function EventSetupWizard({
         hidden: seriesHidden,
         spectatorMode,
         spectatorRewardJson: spectatorMode ? { coins: spectatorCoins, rankPoints: spectatorRankPts } : null,
+        groupId: seasonPrefill?.groupId,
+        seasonNumber: seasonPrefill?.seasonNumber,
       }),
     });
 
@@ -368,7 +415,7 @@ export default function EventSetupWizard({
     if (!res.ok) { toast.error("Fehler beim Erstellen der Eventreihe"); return; }
     const created = await res.json();
     toast.success(
-      `Eventreihe „${seriesName}" erstellt` +
+      (seasonPrefill ? `Saison „${seriesName}" gestartet` : `Eventreihe „${seriesName}" erstellt`) +
       (created.eventsCreated > 0 ? ` – ${created.eventsCreated} Termine angelegt` : "") + "!"
     );
     router.push(`/admin/series/${created.id}`);
@@ -1413,22 +1460,39 @@ export default function EventSetupWizard({
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
       <div className="mb-6 flex items-center gap-3">
-        <button type="button"
-          onClick={() => { setWizardMode("select"); setStep(0); }}
-          className="text-xs text-gray-500 hover:text-gray-300 flex items-center gap-1 transition-colors">
-          <ChevronLeft className="w-3.5 h-3.5" />
-          Zurück zur Auswahl
-        </button>
+        {seasonPrefill ? (
+          <button type="button"
+            onClick={() => router.push(`/admin/series/${seasonPrefill.oldSeriesId}`)}
+            className="text-xs text-gray-500 hover:text-gray-300 flex items-center gap-1 transition-colors">
+            <ChevronLeft className="w-3.5 h-3.5" />
+            Zurück zur Reihe
+          </button>
+        ) : (
+          <button type="button"
+            onClick={() => { setWizardMode("select"); setStep(0); }}
+            className="text-xs text-gray-500 hover:text-gray-300 flex items-center gap-1 transition-colors">
+            <ChevronLeft className="w-3.5 h-3.5" />
+            Zurück zur Auswahl
+          </button>
+        )}
         <div className="h-3 w-px bg-white/10" />
         <div className="flex items-center gap-2">
           {isSeriesMode
             ? <Repeat className="w-4 h-4 text-violet-400" />
             : <CalendarDays className="w-4 h-4 text-teal-400" />}
           <h1 className="text-xl font-bold text-white">
-            {isSeriesMode ? "Neue Eventreihe" : "Neues Event"}
+            {seasonPrefill
+              ? `Saison ${seasonPrefill.seasonNumber} einrichten`
+              : isSeriesMode ? "Neue Eventreihe" : "Neues Event"}
           </h1>
         </div>
       </div>
+
+      {seasonPrefill && (
+        <p className="text-xs text-gray-500 -mt-3 mb-6">
+          Vorausgefüllt aus „{seasonPrefill.oldSeriesName}". Alles ist editierbar — Start- und Enddatum bitte prüfen.
+        </p>
+      )}
 
       <StepIndicator />
 
@@ -1461,7 +1525,7 @@ export default function EventSetupWizard({
           {loading
             ? "Wird erstellt…"
             : isLastStep
-            ? (<><Check className="w-4 h-4" /> {isSeriesMode ? "Eventreihe erstellen" : "Event erstellen"}</>)
+            ? (<><Check className="w-4 h-4" /> {seasonPrefill ? "Saison erstellen" : isSeriesMode ? "Eventreihe erstellen" : "Event erstellen"}</>)
             : (<>Weiter <ChevronRight className="w-4 h-4" /></>)}
         </button>
       </div>
