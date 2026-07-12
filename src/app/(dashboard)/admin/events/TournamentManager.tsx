@@ -659,12 +659,12 @@ export default function TournamentManager({
                               {isPlayed && (
                                 <button onClick={() => resetMatch(match.id)} disabled={loading}
                                   title="Ergebnis zurücksetzen"
-                                  className="text-gray-600 hover:text-amber-500 transition-colors">
+                                  className="p-2.5 -m-1 text-gray-600 hover:text-amber-500 transition-colors">
                                   <RotateCcw className="w-3.5 h-3.5" />
                                 </button>
                               )}
                               <button onClick={() => deleteMatch(match.id)} disabled={loading}
-                                className="text-gray-600 hover:text-red-500 transition-colors">
+                                className="p-2.5 -m-1 text-gray-600 hover:text-red-500 transition-colors">
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
@@ -864,7 +864,7 @@ export default function TournamentManager({
               <X className="w-4 h-4" />
             </button>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-xs text-gray-500 block mb-1">Titel (optional)</label>
               <input type="text" value={mTitle} onChange={e => setMTitle(e.target.value)}
@@ -910,7 +910,7 @@ export default function TournamentManager({
           {isFfa && (
             <div>
               <label className="text-xs text-gray-500 block mb-1">Teilnehmer ({mFfaIds.length} gewählt)</label>
-              <div className="grid grid-cols-3 gap-1.5 max-h-32 overflow-y-auto">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-32 overflow-y-auto">
                 {allUsers.map(u => (
                   <label key={u.id} className="flex items-center gap-1.5 p-1.5 rounded bg-gray-800 hover:bg-gray-700 cursor-pointer text-xs">
                     <input type="checkbox"

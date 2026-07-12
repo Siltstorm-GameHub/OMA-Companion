@@ -969,13 +969,13 @@ export default function EventCompleteClient({
                               <button
                                 onClick={() => toggleTied(uid)}
                                 title={isTied ? "Gleichstand aufheben" : "Gleichstand mit Platz darüber"}
-                                className={`p-0.5 transition-colors ${isTied ? "text-blue-400" : "text-gray-600 hover:text-blue-400"}`}
+                                className={`p-2.5 -m-1 transition-colors ${isTied ? "text-blue-400" : "text-gray-600 hover:text-blue-400"}`}
                               >
                                 <Equal className="w-3 h-3" />
                               </button>
                             )}
-                            <button onClick={() => moveUp(idx)} disabled={idx === 0} className="p-0.5 text-gray-600 hover:text-white disabled:opacity-20 transition-colors">▲</button>
-                            <button onClick={() => moveDown(idx)} disabled={idx === rankingOrder.length - 1} className="p-0.5 text-gray-600 hover:text-white disabled:opacity-20 transition-colors">▼</button>
+                            <button onClick={() => moveUp(idx)} disabled={idx === 0} className="p-2.5 -m-1 text-gray-600 hover:text-white disabled:opacity-20 transition-colors">▲</button>
+                            <button onClick={() => moveDown(idx)} disabled={idx === rankingOrder.length - 1} className="p-2.5 -m-1 text-gray-600 hover:text-white disabled:opacity-20 transition-colors">▼</button>
                           </div>
                       </div>
                     </div>
