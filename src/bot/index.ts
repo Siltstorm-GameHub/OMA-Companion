@@ -191,11 +191,12 @@ client.on(Events.GuildMemberAdd, async (member) => {
 
 // Discord Events → nur Status-Updates für Events, die aus der WebApp stammen
 // Kein Import von Discord-Events in die WebApp (Richtung: WebApp → Discord, nicht umgekehrt)
+// Hinweis: "finished" wird NICHT automatisch über Discord gesetzt (auch nicht bei
+// Completed/Delete des Discord-Events) — ein Event gilt erst als beendet, wenn die
+// Ergebnisse final bestätigt wurden oder ein Admin den Status manuell umstellt.
 client.on(Events.GuildScheduledEventUpdate, async (_, e) => {
-  if (e.status === GuildScheduledEventStatus.Active)    await updateEventStatus(e.id, "active");
-  if (e.status === GuildScheduledEventStatus.Completed) await updateEventStatus(e.id, "finished");
+  if (e.status === GuildScheduledEventStatus.Active) await updateEventStatus(e.id, "active");
 });
-client.on(Events.GuildScheduledEventDelete, async (e) => { await updateEventStatus(e.id, "finished"); });
 
 // Discord-Teilnahme → WebApp-Registrierung
 client.on(Events.GuildScheduledEventUserAdd, async (event, user) => {

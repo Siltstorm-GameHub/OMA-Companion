@@ -1242,8 +1242,10 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                     </button>
                   </div>
 
-                  {/* ── Event abschließen / Abschluss bearbeiten ── */}
-                  {event.seriesId && (
+                  {/* ── Event abschließen / Abschluss bearbeiten ──
+                      nicht mehr editierbar, wenn das Event bereits beendet ist; dafür muss der
+                      Status erst wieder auf aktiv gesetzt werden (Status-Dropdown oben) */}
+                  {event.seriesId && status !== "finished" && (
                     <div className="border border-teal-800/40 rounded-lg p-3 bg-teal-950/10">
                       <div className="flex items-center justify-between gap-4 flex-wrap">
                         <div>
