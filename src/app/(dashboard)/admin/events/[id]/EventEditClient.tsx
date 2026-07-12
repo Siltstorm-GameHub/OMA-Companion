@@ -493,8 +493,8 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
         { key: "details",     label: "Details" },
         { key: "rewards",     label: "Belohnungen" },
         { key: "participants", label: `Teilnehmer (${event._count.registrations})` },
+        // Turnier-Einstellungen und Turnierbaum sind ein gemeinsamer Reiter
         ...(hasTournament || event.type === "tournament" ? [{ key: "tournament" as TabKey, label: "Turnier" }] : []),
-        ...bracketTab,
         // Sieger-Ermittlung ist nur bei Bracket-Formaten relevant — bei allen anderen Reihen
         // gewinnt am Ende schlicht, wer die meisten Rangpunkte gesammelt hat.
         ...(event.series && (event.format === "single_elimination" || event.format === "double_elimination")
@@ -1099,7 +1099,8 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
             </div>
           </div>
 
-          {isLiga ? (
+          {/* Belohnungen pro Platzierung werden zentral im Reiter "Belohnungen" gepflegt */}
+          {isLiga && (
             <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
               <label className="text-xs text-gray-500 block mb-3">Münzen pro Match-Ergebnis</label>
               <div className="grid grid-cols-2 gap-3">
@@ -1112,26 +1113,6 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
                   </div>
                 ))}
               </div>
-            </div>
-          ) : (
-            <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-2">
-              <label className={labelCls}>Belohnungen pro Platzierung</label>
-              <div className="grid grid-cols-3 gap-2 text-[10px] text-gray-600 px-1">
-                <span>Platz</span>
-                <span className="flex items-center justify-center gap-0.5"><CoinIcon size={11} /> Münzen</span>
-                <span className="flex items-center justify-center gap-0.5"><RankPointsIcon size={11} /> Punkte</span>
-              </div>
-              {([["🥇 1.", "coins1", "pts1"], ["🥈 2.", "coins2", "pts2"], ["🥉 3.", "coins3", "pts3"]] as const).map(([label, ck, pk]) => (
-                <div key={label} className="grid grid-cols-3 gap-2 items-center">
-                  <span className="text-xs text-gray-300">{label}</span>
-                  <input type="number" min={0} value={tmtPoints[ck]}
-                    onChange={e => setTmtPoints(p => ({ ...p, [ck]: Number(e.target.value) }))}
-                    className="text-xs bg-gray-800 border border-gray-700 text-amber-300 rounded px-2 py-1.5 text-center w-full" />
-                  <input type="number" min={0} value={tmtPoints[pk]}
-                    onChange={e => setTmtPoints(p => ({ ...p, [pk]: Number(e.target.value) }))}
-                    className="text-xs bg-gray-800 border border-gray-700 text-teal-300 rounded px-2 py-1.5 text-center w-full" />
-                </div>
-              ))}
             </div>
           )}
 
@@ -1147,10 +1128,22 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
             <Trophy className="w-4 h-4" />
             {tmtLoading ? "Speichert…" : hasTournament ? "Turnier-Einstellungen speichern" : "Turnier erstellen"}
           </button>
+
+          {/* Turnierbaum — im selben Reiter wie die Turnier-Einstellungen */}
+          {bracketTournament && (
+            <div className="pt-4 border-t border-white/[0.06]">
+              <TournamentManager
+                event={{ id: event.id }}
+                tournament={bracketTournament}
+                allUsers={bracketRegisteredUsers}
+                winnerStatKeys={bracketWinnerStatKeys}
+              />
+            </div>
+          )}
         </div>
       )}
 
-      {/* ── Tab: Turnierbaum ── */}
+      {/* ── Tab: Turnierbaum (Reihen-Event: reduzierte Ansicht ohne Turnier-Einstellungen) ── */}
       {activeTab === "bracket" && bracketTournament && (
         <TournamentManager
           event={{ id: event.id }}
