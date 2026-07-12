@@ -190,7 +190,7 @@ export default async function EventsPage() {
             imgClassName="w-full h-full object-cover object-center scale-105 group-hover:scale-110 transition-transform duration-700" />
           <div className={`absolute inset-0 ${CATEGORY_BG_TINT[ev.category as EventCategory] ?? ""} opacity-40 pointer-events-none`} />
           <div className="absolute inset-0 pointer-events-none"
-            style={{ background: "linear-gradient(to bottom, transparent 0%, transparent 32%, rgba(11,13,18,0.55) 55%, rgba(11,13,18,0.94) 78%, rgba(11,13,18,0.98) 100%)" }} />
+            style={{ background: "linear-gradient(to bottom, transparent 0%, transparent 30%, rgba(11,13,18,0.25) 50%, rgba(11,13,18,0.62) 70%, rgba(11,13,18,0.88) 88%, rgba(11,13,18,0.94) 100%)" }} />
           <div className={`absolute top-0 left-0 right-0 h-[2px] ${CATEGORY_STRIP[ev.category as EventCategory] ?? "bg-emerald-500"}`} />
           <span className={`absolute top-2.5 left-2.5 flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium ${s.badge}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
@@ -201,7 +201,7 @@ export default async function EventsPage() {
               <Check className="w-3 h-3" /> Angemeldet
             </span>
           )}
-          <div className="relative z-10 px-4 pb-4 pt-3">
+          <div className="relative z-10 px-4 pb-4 pt-3" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.8)" }}>
             {hasSeries && (
               <Link href={`/events/series/${ev.seriesId}`}
                 className="flex items-center gap-1 mb-1 transition-opacity hover:opacity-80 group/series">
@@ -286,7 +286,7 @@ export default async function EventsPage() {
             <Check className="w-3 h-3" /> Angemeldet
           </span>
         )}
-        <div className="relative z-10 px-4 pb-4 pt-3">
+        <div className="relative z-10 px-4 pb-4 pt-3" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.8)" }}>
           <Link href="/lul"
             className="flex items-center gap-1 mb-1 hover:text-amber-300 transition-colors group/lul">
             <Swords className="w-3 h-3 text-amber-400 shrink-0" />
