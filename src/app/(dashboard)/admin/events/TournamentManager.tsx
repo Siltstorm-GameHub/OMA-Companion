@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import StatFieldEditor from "@/components/StatFieldEditor";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
+import InfoTooltip from "@/components/InfoTooltip";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };
 type MatchEntry = {
@@ -576,6 +577,7 @@ export default function TournamentManager({
       {/* ── Header bar ───────────────────────────────────────────────── */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2 flex-wrap">
+          <InfoTooltip text='Status "pending" = Turnier hat noch nicht begonnen. "active" = läuft, Ergebnisse können eingetragen werden. "finished" = abgeschlossen. Klicke bei einem Match auf die Spieler/Platzierung, um ein Ergebnis einzutragen, dann auf "Ergebnisse speichern".' />
           <span className="text-xs bg-rose-900/40 text-rose-300 px-2 py-1 rounded-full">{formatLabel}</span>
           <span className={`text-xs px-2 py-1 rounded-full ${
             tournament.status === "active"   ? "bg-green-900/40 text-green-300" :
