@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Trophy, Clapperboard, ExternalLink, Loader2, Square } from "lucide-react";
+import { useConfirm } from "@/components/admin/ConfirmDialog";
 
 type Nomination = {
   id: string;
@@ -37,6 +38,7 @@ export default function YearlyContestManager({ contests }: { contests: Contest[]
   const [participationInputs, setParticipationInputs] = useState<Record<string, string>>(
     Object.fromEntries(contests.map((c) => [c.id, String(c.participationCoins)]))
   );
+  const { confirm, ConfirmDialogElement } = useConfirm();
 
   async function saveRewards(contestId: string) {
     const rewardCoins = parseInt(rewardInputs[contestId] ?? "1000");
@@ -61,7 +63,7 @@ export default function YearlyContestManager({ contests }: { contests: Contest[]
   }
 
   async function finishNow(contestId: string) {
-    if (!confirm("Abstimmung jetzt beenden und Gewinner auswerten? Münzen werden sofort vergeben.")) return;
+    if (!(await confirm({ title: "Abstimmung beenden", description: "Abstimmung jetzt beenden und Gewinner auswerten? Münzen werden sofort vergeben.", variant: "danger" }))) return;
     setFinishing(contestId);
     const res = await fetch(`/api/admin/clip-of-year/${contestId}/finish`, { method: "POST" });
     const data = await res.json();
@@ -223,6 +225,7 @@ export default function YearlyContestManager({ contests }: { contests: Contest[]
           </div>
         );
       })}
+      {ConfirmDialogElement}
     </div>
   );
 }

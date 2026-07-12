@@ -14,6 +14,7 @@ import GameNameInput from "@/components/GameNameInput";
 import StatFieldEditor from "@/components/StatFieldEditor";
 import CoinIcon from "@/components/CoinIcon";
 import RankPointsIcon from "@/components/RankPointsIcon";
+import { useConfirm } from "@/components/admin/ConfirmDialog";
 
 /* ── Types ───────────────────────────────────────────────────────────────── */
 type User = { id: string; name: string | null; username: string | null; image: string | null };
@@ -157,6 +158,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
   const [description, setDescription]           = useState(event.description ?? "");
   const [discordChannelId, setDiscordChannelId] = useState(event.discordChannelId ?? "");
   const [loading, setLoading]                   = useState(false);
+  const { confirm, ConfirmDialogElement }       = useConfirm();
 
   /* ── Series state ── */
   const [seriesMode, setSeriesMode]         = useState<"keep" | "none" | "existing" | "new">("keep");
@@ -368,14 +370,18 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
   }
 
   async function deleteEvent() {
-    if (!confirm(
-      `Event "${event.title}" KOMPLETT löschen?\n\n` +
-      `Dies entfernt unwiderruflich:\n` +
-      `• ${event._count.registrations} Anmeldung(en)\n` +
-      `${tournament ? `• Das Turnier mit allen Matches und Teilnehmern\n` : ""}` +
-      `• Das Event selbst\n\n` +
-      `Diese Aktion kann nicht rückgängig gemacht werden.`
-    )) return;
+    if (!(await confirm({
+      title: "Event löschen",
+      description:
+        `Event "${event.title}" KOMPLETT löschen?\n\n` +
+        `Dies entfernt unwiderruflich:\n` +
+        `• ${event._count.registrations} Anmeldung(en)\n` +
+        `${tournament ? `• Das Turnier mit allen Matches und Teilnehmern\n` : ""}` +
+        `• Das Event selbst\n\n` +
+        `Diese Aktion kann nicht rückgängig gemacht werden.`,
+      variant: "danger",
+      typedConfirmText: "LÖSCHEN",
+    }))) return;
     setLoading(true);
     const res = await fetch(`/api/admin/events?eventId=${event.id}`, { method: "DELETE" });
     setLoading(false);
@@ -386,7 +392,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
 
   async function deleteTournament() {
     if (!tournament) return;
-    if (!confirm(`Turnier für "${event.title}" wirklich löschen?\n\nAlle Matches und Teilnehmer-Daten werden entfernt. Das Event selbst bleibt bestehen.`)) return;
+    if (!(await confirm({ title: "Turnier löschen", description: `Turnier für "${event.title}" wirklich löschen?\n\nAlle Matches und Teilnehmer-Daten werden entfernt. Das Event selbst bleibt bestehen.`, variant: "danger" }))) return;
     setLoading(true);
     await fetch(`/api/tournaments/${event.id}`, { method: "DELETE" });
     setLoading(false);
@@ -494,7 +500,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
   }
 
   async function removeUser(userId: string, name: string) {
-    if (!confirm(`"${name}" wirklich aus dem Event entfernen?`)) return;
+    if (!(await confirm({ title: "Teilnehmer entfernen", description: `"${name}" wirklich aus dem Event entfernen?`, variant: "danger" }))) return;
     setLoading(true);
     await fetch("/api/admin/events", {
       method: "PATCH",
@@ -1436,6 +1442,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
           </div>
         )}
       </div>
+      {ConfirmDialogElement}
     </>
   );
 }

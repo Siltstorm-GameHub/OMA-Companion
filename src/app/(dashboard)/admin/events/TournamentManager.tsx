@@ -9,6 +9,7 @@ import {
   Save, X, RotateCcw, RefreshCw,
 } from "lucide-react";
 import StatFieldEditor from "@/components/StatFieldEditor";
+import { useConfirm } from "@/components/admin/ConfirmDialog";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };
 type MatchEntry = {
@@ -304,6 +305,7 @@ export default function TournamentManager({
   const router = useRouter();
   const [tournament, setTournament] = useState<Tournament | null>(initial);
   const [loading, setLoading] = useState(false);
+  const { confirm, ConfirmDialogElement } = useConfirm();
 
   // ── Panel visibility ──────────────────────────────────────────────────
   const [showParticipants, setShowParticipants] = useState(false);
@@ -392,7 +394,7 @@ export default function TournamentManager({
   }
 
   async function deleteTournament() {
-    if (!tournament || !confirm("Turnier wirklich löschen? Alle Matches werden entfernt.")) return;
+    if (!tournament || !(await confirm({ title: "Turnier löschen", description: "Turnier wirklich löschen? Alle Matches werden entfernt.", variant: "danger" }))) return;
     setLoading(true);
     const res = await fetch(`/api/tournaments/${tournament.id}`, { method: "DELETE" });
     setLoading(false);
@@ -406,7 +408,7 @@ export default function TournamentManager({
   }
 
   async function generateRoundRobinMatches() {
-    if (!tournament || !confirm("Alle Paarungen automatisch aus den aktuellen Teilnehmern generieren?")) return;
+    if (!tournament || !(await confirm({ title: "Paarungen generieren", description: "Alle Paarungen automatisch aus den aktuellen Teilnehmern generieren?" }))) return;
     setLoading(true);
     const res = await fetch(`/api/tournaments/${tournament.id}`, {
       method: "PATCH",
@@ -444,7 +446,7 @@ export default function TournamentManager({
   }
 
   async function removeParticipant(userId: string) {
-    if (!tournament || !confirm("Teilnehmer aus dem Turnier entfernen?")) return;
+    if (!tournament || !(await confirm({ title: "Teilnehmer entfernen", description: "Teilnehmer aus dem Turnier entfernen?", variant: "danger" }))) return;
     setLoading(true);
     const res = await fetch(`/api/tournaments/${tournament.id}/participants`, {
       method: "DELETE",
@@ -499,7 +501,7 @@ export default function TournamentManager({
   }
 
   async function resetMatch(matchId: string) {
-    if (!tournament || !confirm("Ergebnis dieses Matches zurücksetzen?")) return;
+    if (!tournament || !(await confirm({ title: "Ergebnis zurücksetzen", description: "Ergebnis dieses Matches zurücksetzen?", variant: "danger" }))) return;
     setLoading(true);
     const res = await fetch(`/api/tournaments/${tournament.id}/matches`, {
       method: "PATCH",
@@ -540,7 +542,7 @@ export default function TournamentManager({
   }
 
   async function deleteMatch(matchId: string) {
-    if (!tournament || !confirm("Match löschen?")) return;
+    if (!tournament || !(await confirm({ title: "Match löschen", description: "Match löschen?", variant: "danger" }))) return;
     setLoading(true);
     await fetch(`/api/tournaments/${tournament.id}/matches`, {
       method: "DELETE",
@@ -935,6 +937,7 @@ export default function TournamentManager({
           </button>
         </div>
       )}
+      {ConfirmDialogElement}
     </div>
   );
 }

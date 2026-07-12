@@ -61,8 +61,10 @@ export async function POST(req: NextRequest) {
 
   const contest = await prisma.monthlyClipContest.create({
     data: {
-      month: start.getMonth() + 1,
-      year: start.getFullYear(),
+      // UTC-Getter verwenden: periodStart kommt als ISO-String eines Datums-Inputs (UTC-Mitternacht)
+      // vom Client. Lokale Getter würden je nach Server-Zeitzone einen abweichenden Monat liefern.
+      month: start.getUTCMonth() + 1,
+      year: start.getUTCFullYear(),
       periodStart: start,
       periodEnd: end,
       votingEndsAt,

@@ -2,8 +2,8 @@
 
 import { useCallback, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { Loader2 } from "lucide-react";
-import { Modal } from "@/components/Modal";
+import { Modal } from "@/components/ui/Modal";
+import { Button } from "@/components/ui/Button";
 
 export interface ConfirmOptions {
   title: string;
@@ -34,9 +34,9 @@ export function ConfirmDialog({
   onConfirm,
 }: ConfirmDialogProps) {
   const [typedValue, setTypedValue] = useState("");
-  const wasOpenRef = useRef(open);
-  if (open !== wasOpenRef.current) {
-    wasOpenRef.current = open;
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
     if (open && typedValue) setTypedValue("");
   }
 
@@ -65,25 +65,18 @@ export function ConfirmDialog({
           </div>
         )}
         <div className="flex justify-end gap-2 pt-1">
-          <button
-            type="button"
-            onClick={close}
-            disabled={loading}
-            className="px-3.5 py-2 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-white/[0.06] transition-colors disabled:opacity-40"
-          >
+          <Button type="button" variant="ghost" onClick={close} disabled={loading}>
             {cancelLabel}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant={variant === "danger" ? "danger" : "primary"}
             onClick={() => onConfirm()}
             disabled={confirmDisabled}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-40 ${
-              variant === "danger" ? "bg-red-600 hover:bg-red-500 text-white" : "bg-teal-600 hover:bg-teal-500 text-white"
-            }`}
+            loading={loading}
           >
-            {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             {confirmLabel}
-          </button>
+          </Button>
         </div>
       </div>
     </Modal>

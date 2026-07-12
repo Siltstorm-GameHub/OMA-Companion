@@ -18,6 +18,7 @@ import CoinIcon from "@/components/CoinIcon";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import EventCategoryBadge from "@/components/EventCategoryBadge";
 import TournamentManager from "../TournamentManager";
+import { useConfirm } from "@/components/admin/ConfirmDialog";
 
 /* ── Types ── */
 type User = { id: string; name: string | null; username: string | null; image: string | null };
@@ -188,6 +189,7 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
   const isAdmin       = session?.user?.role === "admin";
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>("details");
+  const { confirm, ConfirmDialogElement } = useConfirm();
 
   /* ── Details state ── */
   const [status, setStatus]           = useState<string>(event.status);
@@ -394,7 +396,7 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
   }
 
   async function removeUser(userId: string, name: string, role: "player" | "spectator" = "player") {
-    if (!confirm(`"${name}" wirklich entfernen?`)) return;
+    if (!(await confirm({ title: "Teilnehmer entfernen", description: `"${name}" wirklich entfernen?`, variant: "danger" }))) return;
     setLoading(true);
     await fetch("/api/admin/events", {
       method: "PATCH",
@@ -450,7 +452,12 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
   }
 
   async function deleteEvent() {
-    if (!confirm(`Event "${event.title}" unwiderruflich löschen?\n\nDies entfernt ${event._count.registrations} Anmeldung(en)${event.format ? " und das Turnier" : ""}.`)) return;
+    if (!(await confirm({
+      title: "Event löschen",
+      description: `Event "${event.title}" unwiderruflich löschen?\n\nDies entfernt ${event._count.registrations} Anmeldung(en)${event.format ? " und das Turnier" : ""}.`,
+      variant: "danger",
+      typedConfirmText: "LÖSCHEN",
+    }))) return;
     setLoading(true);
     const res = await fetch(`/api/admin/events?eventId=${event.id}`, { method: "DELETE" });
     setLoading(false);
@@ -1376,6 +1383,7 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
           </div>
         </div>
       )}
+      {ConfirmDialogElement}
     </div>
   );
 }

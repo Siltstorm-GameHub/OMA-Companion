@@ -13,6 +13,7 @@ import LulSpieltagEditor from "./LulSpieltagEditor";
 import LulLegacyImport from "./LulLegacyImport";
 import type { User } from "./lul-types";
 import { TOURNAMENT_FORMATS, STATUS_LABEL } from "./lul-types";
+import { useConfirm } from "@/components/admin/ConfirmDialog";
 
 const STATUS_OPTS = ["upcoming", "active", "finished", "archived"];
 
@@ -25,6 +26,7 @@ export default function LulAdminPanel({
 }) {
   const [seasons, setSeasons] = useState(initialSeasons);
   const [loading, setLoading] = useState(false);
+  const { confirm, ConfirmDialogElement } = useConfirm();
   const [expandedSeason, setExpandedSeason] = useState<string | null>(
     initialSeasons.find(s => s.status === "active")?.id ?? initialSeasons[0]?.id ?? null
   );
@@ -65,7 +67,7 @@ export default function LulAdminPanel({
   }
 
   async function deleteSeason(id: string) {
-    if (!confirm("Saison und alle Spieltage löschen?")) return;
+    if (!(await confirm({ title: "Saison löschen", description: "Saison und alle Spieltage löschen?", variant: "danger" }))) return;
     await fetch(`/api/lul/seasons/${id}`, { method: "DELETE" });
     toast.success("Saison gelöscht");
     await loadSeasons();
@@ -140,7 +142,7 @@ export default function LulAdminPanel({
   }
 
   async function deleteSpieltag(id: string) {
-    if (!confirm("Spieltag löschen?")) return;
+    if (!(await confirm({ title: "Spieltag löschen", description: "Spieltag löschen?", variant: "danger" }))) return;
     await fetch(`/api/lul/spieltage/${id}`, { method: "DELETE" });
     toast.success("Spieltag gelöscht");
     await loadSeasons();
@@ -191,8 +193,8 @@ export default function LulAdminPanel({
                   {STATUS_OPTS.map(s => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
                 </select>
                 {season.status === "finished" && (
-                  <button onClick={() => {
-                    if (confirm(`Saison ${season.number} archivieren?\n\nDie Saison wird gesperrt und in das All-Time Leaderboard übertragen. Keine weiteren Änderungen möglich.`)) {
+                  <button onClick={async () => {
+                    if (await confirm({ title: "Saison archivieren", description: `Saison ${season.number} archivieren?\n\nDie Saison wird gesperrt und in das All-Time Leaderboard übertragen. Keine weiteren Änderungen möglich.`, variant: "danger" })) {
                       updateSeasonStatus(season.id, "archived");
                     }
                   }}
@@ -493,6 +495,7 @@ export default function LulAdminPanel({
           </div>
         );
       })}
+      {ConfirmDialogElement}
     </div>
   );
 }

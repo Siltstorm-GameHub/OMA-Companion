@@ -61,11 +61,31 @@ export async function getTwitchUsers(logins: string[]): Promise<TwitchUser[]> {
   return results;
 }
 
+// Löst Twitch-User-IDs zu vollständigen Profilen (inkl. login) auf — nötig, weil die Clips-API
+// nur die Anzeige-Namen (creator_name/broadcaster_name) liefert, nicht den echten Login.
+export async function getTwitchUsersByIds(ids: string[]): Promise<TwitchUser[]> {
+  if (ids.length === 0) return [];
+  const token = await getAppAccessToken();
+  const results: TwitchUser[] = [];
+  for (let i = 0; i < ids.length; i += 100) {
+    const chunk = ids.slice(i, i + 100);
+    const params = chunk.map((id) => `id=${encodeURIComponent(id)}`).join("&");
+    const res = await fetch(`https://api.twitch.tv/helix/users?${params}`, {
+      headers: { "Client-ID": TWITCH_CLIENT_ID, Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) continue;
+    const data = (await res.json()) as { data: TwitchUser[] };
+    results.push(...data.data);
+  }
+  return results;
+}
+
 export type TwitchClip = {
   id: string;
   url: string;
   embed_url: string;
   broadcaster_name: string;
+  creator_id: string;
   creator_name: string;
   title: string;
   thumbnail_url: string;

@@ -5,6 +5,7 @@ import CoinIcon from "@/components/CoinIcon";
 import { toast } from "sonner";
 import { Plus, Trash2, ChevronDown, ChevronUp, Eye, EyeOff, Check, X, Loader2, Package, ImageIcon, Pencil, Tag } from "lucide-react";
 import { RARITY_CONFIG, type Rarity, effectivePrice } from "@/lib/collectibles";
+import { useConfirm } from "@/components/admin/ConfirmDialog";
 
 const RARITIES: Rarity[] = ["common", "rare", "epic", "legendary"];
 
@@ -43,6 +44,7 @@ export default function CollectiblesAdminPanel({ collections: initial }: Props) 
   const [cols, setCols] = useState<Collection[]>(initial);
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(false);
+  const { confirm, ConfirmDialogElement } = useConfirm();
 
   // ── Neue Sammlung ─────────────────────────────────────────────────────────
   const [newCol,     setNewCol]     = useState({ name: "", description: "", game: "", coverImageUrl: "" });
@@ -79,7 +81,7 @@ export default function CollectiblesAdminPanel({ collections: initial }: Props) 
   }
 
   async function deleteCollection(col: Collection) {
-    if (!confirm(`Sammlung „${col.name}" und alle ${col.items.length} Items löschen?`)) return;
+    if (!(await confirm({ title: "Sammlung löschen", description: `Sammlung „${col.name}" und alle ${col.items.length} Items löschen?`, variant: "danger" }))) return;
     setBusy(true);
     try {
       const res = await fetch("/api/admin/collectibles", {
@@ -162,7 +164,7 @@ export default function CollectiblesAdminPanel({ collections: initial }: Props) 
   }
 
   async function deleteItem(collectionId: string, item: CollectibleItem) {
-    if (!confirm(`„${item.name}" löschen?`)) return;
+    if (!(await confirm({ title: "Item löschen", description: `„${item.name}" löschen?`, variant: "danger" }))) return;
     setBusy(true);
     try {
       const res = await fetch("/api/admin/collectibles", {
@@ -511,6 +513,7 @@ export default function CollectiblesAdminPanel({ collections: initial }: Props) 
           </div>
         );
       })}
+      {ConfirmDialogElement}
     </div>
   );
 }

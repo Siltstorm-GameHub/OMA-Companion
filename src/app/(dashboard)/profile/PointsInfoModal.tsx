@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
-import { Info, X, Trophy } from "lucide-react";
+import { Info, Trophy } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
+import { Modal } from "@/components/ui/Modal";
 
 const RANKS = [
   { label: "Neuling",               emoji: "🔰", range: "0 – 99",    color: "text-gray-400"   },
@@ -49,19 +50,8 @@ export default function PointsInfoModal() {
         Info
       </button>
 
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={() => setOpen(false)}>
-          <div className="relative bg-gray-900 border border-white/10 rounded-2xl w-full max-w-md max-h-[88vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
-
-            {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06] shrink-0">
-              <h2 className="font-semibold text-white">Punktesystem</h2>
-              <button onClick={() => setOpen(false)} className="text-gray-500 hover:text-white p-1 rounded-lg hover:bg-white/[0.06] transition-colors">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="overflow-y-auto flex-1 px-5 py-4 space-y-5">
+      <Modal open={open} onClose={() => setOpen(false)} title="Punktesystem" size="sm">
+            <div className="space-y-5">
 
               {/* Zwei Währungen */}
               <div className="grid grid-cols-2 gap-3">
@@ -127,9 +117,7 @@ export default function PointsInfoModal() {
               </div>
 
             </div>
-          </div>
-        </div>
-      )}
+      </Modal>
     </>
   );
 }
