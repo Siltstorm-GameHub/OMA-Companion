@@ -86,7 +86,7 @@ function HiddenToggle({ id, type, hidden }: { id: string; type: "event" | "serie
   );
 }
 
-function EventRow({ ev, indent = false }: { ev: Event; indent?: boolean }) {
+function EventRow({ ev }: { ev: Event }) {
   const statusStyle = STATUS_STYLES[ev.status] ?? STATUS_STYLES.finished;
   const statusLabel = STATUS_LABELS[ev.status] ?? ev.status;
   const date = new Date(ev.startAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
@@ -94,7 +94,7 @@ function EventRow({ ev, indent = false }: { ev: Event; indent?: boolean }) {
   return (
     <Link
       href={`/admin/events/${ev.id}`}
-      className={`flex items-center gap-4 px-4 py-3 hover:bg-white/[0.02] transition-colors group ${indent ? "pl-8 border-l-2 border-teal-900/40 ml-4" : ""} ${ev.hidden ? "opacity-60" : ""}`}
+      className={`flex items-center gap-4 px-4 py-3 hover:bg-white/[0.02] transition-colors group ${ev.hidden ? "opacity-60" : ""}`}
     >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
@@ -136,62 +136,36 @@ function EventRow({ ev, indent = false }: { ev: Event; indent?: boolean }) {
 }
 
 function SeriesRow({ s }: { s: Series }) {
-  const [open, setOpen] = useState(false);
   const upcomingCount = s.events.length;
   const seriesColor = resolveSeriesColor(s.icon);
   return (
-    <div className={s.hidden ? "opacity-60" : ""}>
-      <div className="relative flex items-center gap-3 pl-5 pr-4 py-3 border-t border-white/[0.04] first:border-t-0">
-        <div className="absolute left-2 top-2 bottom-2 w-[3px] rounded-r-full" style={{ background: seriesColor }} />
-        <button
-          type="button"
-          onClick={() => setOpen(o => !o)}
-          className="flex items-center gap-3 flex-1 min-w-0 text-left hover:opacity-80 transition-opacity"
-        >
-          <SeriesIcon name={s.icon} className="w-4 h-4 shrink-0" />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-medium truncate" style={{ color: seriesColor }}>{s.name}</span>
-              {s.hidden && (
-                <span className="text-[10px] text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 shrink-0 flex items-center gap-1">
-                  <EyeOff className="w-2.5 h-2.5" /> ausgeblendet
-                </span>
-              )}
-              {s.category && <EventCategoryBadge category={s.category as EventCategory} />}
-              {s.recurrenceType && (
-                <span className="text-[10px] text-violet-500 border border-violet-800/40 rounded px-1.5 py-0.5 shrink-0">
-                  {s.recurrenceType === "weekly" ? "wöchentlich" : s.recurrenceType === "biweekly" ? "2-wöchentl." : s.recurrenceType === "monthly" ? "monatlich" : s.recurrenceType}
-                </span>
-              )}
-            </div>
-            <p className="text-[11px] text-gray-600 mt-0.5">
-              {s._count.events} Events gesamt · {upcomingCount} kommend{upcomingCount !== 1 ? "e" : ""}
-            </p>
-          </div>
-        </button>
-        <div className="flex items-center gap-2 shrink-0">
-          <HiddenToggle id={s.id} type="series" hidden={s.hidden} />
-          <Link href={`/admin/series/${s.id}`}
-            className="text-[11px] text-gray-500 hover:text-gray-300 border border-white/[0.08] rounded-lg px-2 py-1 transition-colors">
-            Verwalten
-          </Link>
-          <button type="button" onClick={() => setOpen(o => !o)}
-            className="text-gray-600 hover:text-gray-400 transition-colors p-1">
-            {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-          </button>
-        </div>
-      </div>
-
-      {open && (
-        <div className="bg-white/[0.01] divide-y divide-white/[0.03]">
-          {s.events.length === 0 ? (
-            <p className="text-xs text-gray-600 px-8 py-3">Keine kommenden Events.</p>
-          ) : (
-            s.events.map(ev => <EventRow key={ev.id} ev={ev} indent />)
+    <Link
+      href={`/admin/series/${s.id}`}
+      className={`relative flex items-center gap-3 pl-5 pr-4 py-3 border-t border-white/[0.04] first:border-t-0 hover:bg-white/[0.02] transition-colors ${s.hidden ? "opacity-60" : ""}`}
+    >
+      <div className="absolute left-2 top-2 bottom-2 w-[3px] rounded-r-full" style={{ background: seriesColor }} />
+      <SeriesIcon name={s.icon} className="w-4 h-4 shrink-0" />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm font-medium truncate" style={{ color: seriesColor }}>{s.name}</span>
+          {s.hidden && (
+            <span className="text-[10px] text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 shrink-0 flex items-center gap-1">
+              <EyeOff className="w-2.5 h-2.5" /> ausgeblendet
+            </span>
+          )}
+          {s.category && <EventCategoryBadge category={s.category as EventCategory} />}
+          {s.recurrenceType && (
+            <span className="text-[10px] text-violet-500 border border-violet-800/40 rounded px-1.5 py-0.5 shrink-0">
+              {s.recurrenceType === "weekly" ? "wöchentlich" : s.recurrenceType === "biweekly" ? "2-wöchentl." : s.recurrenceType === "monthly" ? "monatlich" : s.recurrenceType}
+            </span>
           )}
         </div>
-      )}
-    </div>
+        <p className="text-[11px] text-gray-600 mt-0.5">
+          {s._count.events} Events gesamt · {upcomingCount} kommend{upcomingCount !== 1 ? "e" : ""}
+        </p>
+      </div>
+      <ChevronRight className="w-4 h-4 text-gray-600 shrink-0" />
+    </Link>
   );
 }
 
