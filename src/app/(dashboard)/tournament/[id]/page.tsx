@@ -107,12 +107,7 @@ export default async function TournamentDetailPage({
   const allRegistrations = event.registrations.map(r => ({ userId: r.userId, role: r.role, user: r.user }));
   const myClipSubmission = event.clipSubmissions.find(c => c.userId === userId) ?? null;
 
-  const [sponsors, holdersMap, myEventPrediction, minigamesConfig, allEventPredictions] = await Promise.all([
-    prisma.shopPurchase.findMany({
-      where:   { consumed: false, item: { type: "tournament_sponsor" } },
-      include: { user: { select: { username: true, name: true } } },
-      orderBy: { createdAt: "asc" },
-    }),
+  const [holdersMap, myEventPrediction, minigamesConfig, allEventPredictions] = await Promise.all([
     getWanderpocalHoldersMap(),
     prisma.eventWinnerPrediction.findUnique({
       where: { userId_eventId: { userId, eventId } },
@@ -640,17 +635,6 @@ export default async function TournamentDetailPage({
         {canStreamRegister && (
           <div className="mt-3">
             <StreamRegisterButton eventId={eventId} isStreaming={isCommunityStreamer} />
-          </div>
-        )}
-
-        {sponsors.length > 0 && (
-          <div className="mt-4 flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] text-gray-600 uppercase tracking-widest">Community-Sponsoren</span>
-            {sponsors.map(s => (
-              <span key={s.id} className="text-xs px-2.5 py-1 rounded-full border border-amber-500/20 bg-amber-500/[0.06] text-amber-300 font-medium">
-                🏅 {s.user.username ?? s.user.name ?? "Unbekannt"}
-              </span>
-            ))}
           </div>
         )}
 

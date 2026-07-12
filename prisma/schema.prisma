@@ -26,8 +26,6 @@ model User {
   birthday           DateTime? // Nur Datum relevant (month/day)
   birthdayBoostUntil DateTime? // 2x Punkte bis zu diesem Zeitpunkt
   bio                String? // Kurzer Gruß / Beschreibung (max. 200 Zeichen)
-  xpBoostUntil       DateTime?
-  streakShield       Boolean   @default(false)
 
   // Discord-Aktivität: kumulativ über alle Zeiten
   voiceMinutesTotal Int @default(0)
@@ -50,8 +48,6 @@ model User {
   questProgress            UserQuestProgress[]
   lulEntries               LulEntry[]
   lulLegacyEntries         LulLegacyEntry[]
-  shopPurchases            ShopPurchase[]
-  lulSuggestions           LulSuggestion[]
   dailySpins               DailySpin[]
   donations                Donation[]
   collectibles             UserCollectible[]
@@ -128,58 +124,6 @@ model UserCollectible {
   @@unique([userId, collectibleItemId])
 }
 
-// ── Shop (nur noch lul_suggest) ──────────────────────────────────────────────
-
-model ShopItem {
-  id            String    @id @default(cuid())
-  name          String
-  description   String
-  icon          String
-  price         Int
-  // title | badge | streak_shield | xp_boost | profile_theme | event_slot
-  type          String
-  value         String // Titel-Text | Badge-ID | Theme-Name | "1" für Einmalitems
-  // cosmetic | boost | privilege
-  category      String
-  // common | rare | epic | legendary
-  rarity        String    @default("common")
-  stock         Int? // null = unbegrenzt
-  active        Boolean   @default(true)
-  sortOrder     Int       @default(0)
-  availableFrom DateTime? // null = sofort verfügbar
-  availableTo   DateTime? // null = kein Ablaufdatum
-  createdAt     DateTime  @default(now())
-
-  purchases ShopPurchase[]
-}
-
-model ShopPurchase {
-  id        String    @id @default(cuid())
-  userId    String
-  itemId    String
-  price     Int
-  createdAt DateTime  @default(now())
-  expiresAt DateTime?
-  consumed  Boolean   @default(false) // für Einmalitems (Streak-Schutz, Event-Slot)
-
-  user          User           @relation(fields: [userId], references: [id])
-  item          ShopItem       @relation(fields: [itemId], references: [id])
-  lulSuggestion LulSuggestion?
-}
-
-model LulSuggestion {
-  id         String   @id @default(cuid())
-  purchaseId String   @unique
-  userId     String
-  game       String
-  note       String?
-  status     String   @default("pending") // pending | accepted | rejected
-  createdAt  DateTime @default(now())
-
-  purchase ShopPurchase @relation(fields: [purchaseId], references: [id])
-  user     User         @relation(fields: [userId], references: [id])
-}
-
 // ── Täglicher Gratis-Spin ──────────────────────────────────────────────────
 model DailySpin {
   id         String   @id @default(cuid())
@@ -194,8 +138,6 @@ model DailySpin {
 
   @@unique([userId, date])
 }
-
-// ── Auktionen ──────────────────────────────────────────────────────────────
 
 model Account {
   id                String  @id @default(cuid())

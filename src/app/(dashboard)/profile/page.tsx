@@ -9,9 +9,10 @@ import PointsInfoModal from "./PointsInfoModal";
 import WanderpocalSection from "@/components/WanderpocalSection";
 import { QUEST_TYPE_META, type QuestType } from "@/lib/quests";
 import { RARITY_CONFIG, type Rarity, MAX_SHOWCASE } from "@/lib/collectibles";
+import { getAvailableReviewYears } from "@/lib/year-review";
 import {
   Trophy, CalendarDays, Swords, Clock, MessageSquare,
-  CheckCircle2, Crown, Gamepad2, Medal,
+  CheckCircle2, Crown, Gamepad2, Medal, Gift, ChevronRight,
 } from "lucide-react";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import CoinIcon from "@/components/CoinIcon";
@@ -128,6 +129,7 @@ export default async function ProfilePage() {
   const displayName  = user.username ?? user.name ?? "Unbekannt";
 
   const totalUsers = await prisma.user.count();
+  const reviewYears = getAvailableReviewYears(user.createdAt);
 
   // Wanderpokal: Rang je Scope berechnen
   const wanderpocalRankMap: Record<string, number> = {};
@@ -288,6 +290,24 @@ export default async function ProfilePage() {
           <p className="relative text-xs text-gray-400 mt-1.5">Lieblingsspiel</p>
         </div>
       </div>
+
+      {/* ── Jahresrückblick-Banner ───────────────────────────────────── */}
+      {reviewYears.length > 0 && (
+        <Link href="/profile/rueckblick"
+          className="card-hover card-shine glass relative overflow-hidden rounded-2xl p-5 flex items-center justify-between gap-4 group">
+          <div className="absolute inset-0 bg-gradient-to-br from-violet-500/10 via-transparent to-rose-500/8 pointer-events-none" />
+          <div className="relative flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
+              <Gift className="w-5 h-5 text-violet-400" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-white">Dein Jahresrückblick {reviewYears[0]}</p>
+              <p className="text-xs text-gray-500">Punkte, Events, Siege und mehr — dein Jahr im Überblick</p>
+            </div>
+          </div>
+          <ChevronRight className="relative w-4 h-4 text-gray-600 group-hover:text-violet-400 group-hover:translate-x-0.5 transition-all shrink-0" />
+        </Link>
+      )}
 
       {/* ── Profil-Editor (Geburtstag, Bio) ─────────────────────────── */}
       <ProfileEditor
