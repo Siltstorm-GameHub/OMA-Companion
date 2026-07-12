@@ -117,15 +117,15 @@ function pickRandom<T>(items: T[]): T {
   return items[Math.floor(Math.random() * items.length)];
 }
 
-function formatCountdown(target: Date, now: Date): string {
+function formatCountdown(target: Date, now: Date, prefix: string = "in"): string {
   const diffMs = target.getTime() - now.getTime();
   if (diffMs <= 0) return "Läuft jetzt";
   const days  = Math.floor(diffMs / 86_400_000);
   const hours = Math.floor((diffMs % 86_400_000) / 3_600_000);
-  if (days >= 1) return `in ${days}d ${hours}h`;
+  if (days >= 1) return `${prefix} ${days}d ${hours}h`;
   const minutes = Math.floor((diffMs % 3_600_000) / 60_000);
-  if (hours >= 1) return `in ${hours}h ${minutes}m`;
-  return `in ${minutes}m`;
+  if (hours >= 1) return `${prefix} ${hours}h ${minutes}m`;
+  return `${prefix} ${minutes}m`;
 }
 
 export default async function DashboardPage() {
@@ -367,7 +367,7 @@ export default async function DashboardPage() {
                   : nextRegisteredEvent.status === "umfrage"
                     ? {
                         label: "Umfrage", color: "text-amber-400",
-                        extra: nextRegisteredEvent.polls[0] ? formatCountdown(new Date(nextRegisteredEvent.polls[0].endAt), now) : null,
+                        extra: nextRegisteredEvent.polls[0] ? formatCountdown(new Date(nextRegisteredEvent.polls[0].endAt), now, "noch") : null,
                       }
                     : { label: "Start", color: "text-teal-400", extra: formatCountdown(new Date(nextRegisteredEvent.startAt), now) };
                 return (
