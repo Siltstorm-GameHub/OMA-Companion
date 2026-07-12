@@ -8,6 +8,7 @@ import { resolveSeriesColor } from "@/lib/series-icons";
 import { EventCategory } from "@prisma/client";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { EmptyState } from "@/components/EmptyState";
 
 const STATUS_LABELS: Record<string, string> = {
   open:     "Offen",
@@ -190,7 +191,12 @@ export default function AdminEventsClient({
           </h2>
         </div>
         {standaloneEvents.length === 0 ? (
-          <div className="text-center py-10 text-gray-600 text-sm">Keine aktiven Standalone-Events.</div>
+          <EmptyState
+            type="events"
+            title="Keine aktiven Standalone-Events"
+            description="Erstelle ein neues Event, das nicht Teil einer Reihe ist."
+            action={{ label: "Neues Event erstellen", href: "/admin/events/new" }}
+          />
         ) : (
           <div className="divide-y divide-white/[0.04]">
             {standaloneEvents.map(ev => <EventRow key={ev.id} ev={ev} />)}
@@ -210,7 +216,12 @@ export default function AdminEventsClient({
           </Link>
         </div>
         {allSeries.length === 0 ? (
-          <div className="text-center py-10 text-gray-600 text-sm">Keine Eventreihen vorhanden.</div>
+          <EmptyState
+            type="generic"
+            title="Keine Eventreihen vorhanden"
+            description="Erstelle eine wiederkehrende Reihe, z.B. für wöchentliche Turniere."
+            action={{ label: "Neue Reihe erstellen", href: "/admin/events/new?mode=series" }}
+          />
         ) : (
           <div>
             {allSeries.map(s => <SeriesRow key={s.id} s={s} />)}

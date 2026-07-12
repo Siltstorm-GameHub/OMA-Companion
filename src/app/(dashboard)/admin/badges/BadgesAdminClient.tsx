@@ -2,6 +2,7 @@
 import { useState, useMemo } from "react";
 import Image from "next/image";
 import { Plus, Award, Search, X, ChevronDown } from "lucide-react";
+import { EmptyState } from "@/components/EmptyState";
 
 type Badge = {
   id: string;
@@ -170,9 +171,11 @@ export default function BadgesAdminClient({ badges: initialBadges, users }: {
 
       {/* Badge list */}
       {badges.length === 0 ? (
-        <div className="glass rounded-2xl p-8 text-center text-gray-500 text-sm">
-          Noch keine Custom-Abzeichen erstellt.
-        </div>
+        <EmptyState
+          type="generic"
+          title="Noch keine Custom-Abzeichen erstellt"
+          description="Erstelle oben ein neues Abzeichen für besondere Leistungen."
+        />
       ) : (
         <div className="space-y-2">
           {badges.map(badge => (

@@ -4,6 +4,7 @@ import Image from "next/image";
 import { toast } from "sonner";
 import { Plus, Trash2, ExternalLink, ToggleLeft, ToggleRight, Loader2, Search, Link2, Unlink } from "lucide-react";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
+import { EmptyState } from "@/components/EmptyState";
 
 type LinkedUser = { id: string; name: string | null; username: string | null; image: string | null; twitchLogin: string | null } | null;
 
@@ -213,7 +214,11 @@ export default function PartnerManager({ initialPartners }: { initialPartners: P
 
       {/* ── Partner-Liste ────────────────────────────────────────── */}
       {partners.length === 0 ? (
-        <p className="text-sm text-gray-500 text-center py-8">Noch keine Partner eingetragen.</p>
+        <EmptyState
+          type="generic"
+          title="Noch keine Partner eingetragen"
+          description="Füge oben einen Twitch-Partner über den Loginnamen hinzu."
+        />
       ) : (
         <div className="space-y-2">
           {partners.map((p) => (

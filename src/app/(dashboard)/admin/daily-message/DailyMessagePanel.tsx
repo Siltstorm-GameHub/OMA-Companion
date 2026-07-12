@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Plus, Trash2, Pencil, X, Send, Bell, BellOff, CheckCircle, Clock } from "lucide-react";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
+import { EmptyState } from "@/components/EmptyState";
 
 type Message = {
   id:        string;
@@ -253,9 +254,11 @@ export function DailyMessagePanel({ messages: initial }: { messages: Message[] }
         </h2>
 
         {messages.length === 0 ? (
-          <div className="surface p-8 text-center text-gray-600 text-sm">
-            Noch keine Mitteilungen erstellt.
-          </div>
+          <EmptyState
+            type="generic"
+            title="Noch keine Mitteilungen erstellt"
+            description="Erstelle oben eine neue Mitteilung für alle Mitglieder."
+          />
         ) : messages.map(m => {
           const active = isCurrentlyActive(m);
           return (

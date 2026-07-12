@@ -1,8 +1,11 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { X, TrendingUp, TrendingDown, Star, Loader2, Settings2, Trash2, Save, RotateCcw } from "lucide-react";
+import { X, TrendingUp, Star, Loader2, Settings2, Trash2, Save, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
+import { Modal } from "@/components/ui/Modal";
+import { Tabs } from "@/components/admin/Tabs";
+import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 
 interface Transaction {
   id: string;
@@ -60,7 +63,7 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
   const [reasonCoins,    setReasonCoins]    = useState("");
   const [reasonRank,     setReasonRank]     = useState("");
   const [clearHistory,   setClearHistory]   = useState(false);
-  const [confirmClear,   setConfirmClear]   = useState(false);
+  const [confirmClearOpen, setConfirmClearOpen] = useState(false);
 
   const load = useCallback(async (force = false) => {
     if (loading) return;
@@ -97,13 +100,6 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") handleClose(); };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [open]);
-
   const filtered = transactions.filter(tx =>
     filter === "all" ? true :
     filter === "pos" ? tx.amount > 0 :
@@ -114,25 +110,15 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
   const displayName = user?.username ?? user?.name ?? userName;
   const avatarSrc   = user?.image ?? userImage;
 
-  async function handleSave() {
-    const coinsNum = parseInt(editCoins);
-    const rankNum  = parseInt(editRank);
-    if (isNaN(coinsNum) || isNaN(rankNum) || coinsNum < 0 || rankNum < 0) {
-      toast.error("Ungültige Werte – nur ganze Zahlen ≥ 0 erlaubt");
-      return;
-    }
-    if (clearHistory && !confirmClear) {
-      setConfirmClear(true);
-      return;
-    }
+  async function saveValues() {
     setSaving(true);
     try {
       const res = await fetch(`/api/admin/users/${userId}/adjust`, {
         method:  "PATCH",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({
-          coins:        coinsNum,
-          rankPoints:   rankNum,
+          coins:        parseInt(editCoins),
+          rankPoints:   parseInt(editRank),
           clearHistory,
           reasonCoins:  reasonCoins.trim() || undefined,
           reasonRank:   reasonRank.trim()  || undefined,
@@ -140,7 +126,7 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
       });
       if (!res.ok) { toast.error("Fehler beim Speichern"); return; }
       toast.success(`✅ Werte für ${displayName} gespeichert`);
-      setConfirmClear(false);
+      setConfirmClearOpen(false);
       setClearHistory(false);
       setReasonCoins("");
       setReasonRank("");
@@ -150,6 +136,20 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
     } finally {
       setSaving(false);
     }
+  }
+
+  function handleSaveClick() {
+    const coinsNum = parseInt(editCoins);
+    const rankNum  = parseInt(editRank);
+    if (isNaN(coinsNum) || isNaN(rankNum) || coinsNum < 0 || rankNum < 0) {
+      toast.error("Ungültige Werte – nur ganze Zahlen ≥ 0 erlaubt");
+      return;
+    }
+    if (clearHistory) {
+      setConfirmClearOpen(true);
+      return;
+    }
+    saveValues();
   }
 
   return (
@@ -166,14 +166,7 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
         </button>
       )}
 
-      {/* Backdrop */}
-      {open && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={handleClose} />
-      )}
-
-      {/* Drawer */}
-      <div className={`fixed inset-y-0 right-0 z-50 w-full sm:w-[500px] bg-gray-950 border-l border-white/[0.06] shadow-2xl flex flex-col transition-transform duration-300 ease-out ${open ? "translate-x-0" : "translate-x-full"}`}>
-
+      <Modal open={open} onClose={handleClose} size="drawer">
         {/* Header */}
         <div className="flex items-center gap-3 px-5 py-4 border-b border-white/[0.06] shrink-0">
           {avatarSrc ? (
@@ -187,7 +180,7 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
             <p className="font-semibold text-white truncate">{displayName}</p>
             <p className="text-xs text-gray-500">Admin · Verlauf & Anpassung</p>
           </div>
-          <button onClick={handleClose} className="p-2 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors">
+          <button onClick={handleClose} aria-label="Schließen" className="p-2 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -211,29 +204,16 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
         )}
 
         {/* Tabs */}
-        <div className="flex gap-1 px-4 py-2.5 border-b border-white/[0.06] shrink-0">
-          <button
-            onClick={() => setTab("history")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              tab === "history"
-                ? "bg-purple-600/20 text-purple-300 ring-1 ring-purple-500/20"
-                : "text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]"
-            }`}
-          >
-            <TrendingUp className="w-3.5 h-3.5" />
-            Verlauf ({transactions.length})
-          </button>
-          <button
-            onClick={() => setTab("edit")}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              tab === "edit"
-                ? "bg-rose-600/20 text-rose-300 ring-1 ring-rose-500/20"
-                : "text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]"
-            }`}
-          >
-            <Settings2 className="w-3.5 h-3.5" />
-            Anpassen
-          </button>
+        <div className="px-4 py-2.5 border-b border-white/[0.06] shrink-0">
+          <Tabs
+            variant="pill"
+            active={tab}
+            onChange={(k) => setTab(k as "history" | "edit")}
+            tabs={[
+              { key: "history", label: `Verlauf (${transactions.length})`, icon: TrendingUp, activeClassName: "bg-purple-600/20 text-purple-300 ring-1 ring-purple-500/20" },
+              { key: "edit", label: "Anpassen", icon: Settings2, activeClassName: "bg-rose-600/20 text-rose-300 ring-1 ring-rose-500/20" },
+            ]}
+          />
         </div>
 
         {/* ── HISTORY TAB ─────────────────────────────────────────── */}
@@ -406,7 +386,7 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
                   <input
                     type="checkbox"
                     checked={clearHistory}
-                    onChange={e => { setClearHistory(e.target.checked); setConfirmClear(false); }}
+                    onChange={e => setClearHistory(e.target.checked)}
                     className="sr-only"
                   />
                   <div className={`w-4 h-4 rounded border transition-colors ${clearHistory ? "bg-red-500 border-red-500" : "bg-white/[0.05] border-white/[0.15]"} flex items-center justify-center`}>
@@ -423,31 +403,14 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
               </label>
             </div>
 
-            {/* Confirmation warning */}
-            {confirmClear && (
-              <div className="flex items-start gap-2.5 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20">
-                <span className="text-red-400 text-sm mt-0.5">⚠️</span>
-                <p className="text-xs text-red-300">
-                  <strong>Nicht rückgängig machbar.</strong> Der komplette Verlauf wird gelöscht.
-                  Nochmal auf „Speichern" klicken um zu bestätigen.
-                </p>
-              </div>
-            )}
-
             {/* Save */}
             <button
-              onClick={handleSave}
+              onClick={handleSaveClick}
               disabled={saving}
-              className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 ${
-                confirmClear
-                  ? "bg-red-600 hover:bg-red-500 text-white"
-                  : "bg-rose-600 hover:bg-rose-500 text-white"
-              }`}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 bg-rose-600 hover:bg-rose-500 text-white"
             >
               {saving ? (
                 <><Loader2 className="w-4 h-4 animate-spin" /> Speichere…</>
-              ) : confirmClear ? (
-                <><Trash2 className="w-4 h-4" /> Ja, jetzt löschen & speichern</>
               ) : (
                 <><Save className="w-4 h-4" /> Werte speichern</>
               )}
@@ -456,7 +419,7 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
             {/* Reset to current */}
             {user && (
               <button
-                onClick={() => { setEditCoins(String(user.points)); setEditRank(String(user.rankPoints)); setClearHistory(false); setConfirmClear(false); }}
+                onClick={() => { setEditCoins(String(user.points)); setEditRank(String(user.rankPoints)); setClearHistory(false); }}
                 className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs text-gray-500 hover:text-gray-300 hover:bg-white/[0.04] transition-colors"
               >
                 <RotateCcw className="w-3.5 h-3.5" /> Auf aktuelle Werte zurücksetzen
@@ -464,7 +427,18 @@ export default function UserPointsHistoryModal({ userId, userName, userImage, de
             )}
           </div>
         )}
-      </div>
+      </Modal>
+
+      <ConfirmDialog
+        open={confirmClearOpen}
+        onOpenChange={setConfirmClearOpen}
+        title="Verlauf löschen"
+        description={`Nicht rückgängig machbar. Der komplette Transaktionsverlauf von ${displayName} wird gelöscht und die neuen Werte oben als Startbuchung angelegt.`}
+        confirmLabel="Ja, jetzt löschen & speichern"
+        variant="danger"
+        loading={saving}
+        onConfirm={saveValues}
+      />
     </>
   );
 }
