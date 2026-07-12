@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
   Users, LayoutDashboard, Star, ShoppingBag, Bell,
-  BarChart2, CalendarDays, Heart, Medal,
+  CalendarDays, Heart, Medal,
   Wrench, Users2, Megaphone, Handshake, Clapperboard, Server, Gamepad2, Trophy,
 } from "lucide-react";
 import ServerApplicationBadge from "@/components/ServerApplicationBadge";
@@ -39,13 +39,12 @@ const CATEGORIES: {
     label: "Events",
     icon: CalendarDays,
     minRole: "moderator",
-    prefixes: ["/admin/events", "/admin/series", "/admin/lul", "/admin/clip-contest", "/admin/clip-of-year", "/admin/polls"],
+    prefixes: ["/admin/events", "/admin/series", "/admin/lul", "/admin/clip-contest", "/admin/clip-of-year"],
     tabs: [
       { href: "/admin/events",       label: "Events",          icon: CalendarDays,  minRole: "moderator" },
       { href: "/admin/lul",          label: "Level-Up-League", icon: Star,          minRole: "moderator" },
       { href: "/admin/clip-contest", label: "Clip des Monats", icon: Clapperboard,  minRole: "moderator" },
       { href: "/admin/clip-of-year", label: "Clip des Jahres", icon: Trophy,        minRole: "moderator" },
-      { href: "/admin/polls",        label: "Umfragen",        icon: BarChart2,     minRole: "admin"     },
     ],
   },
   {

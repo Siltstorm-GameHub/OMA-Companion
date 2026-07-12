@@ -1,28 +1,6 @@
 "use client";
-import { useState, useEffect } from "react";
 import { Sun, Moon } from "lucide-react";
-
-function useTheme() {
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
-  useEffect(() => {
-    const saved = localStorage.getItem("theme") as "dark" | "light" | null;
-    if (saved) setTheme(saved);
-  }, []);
-  function toggle() {
-    const next = theme === "dark" ? "light" : "dark";
-    const apply = () => {
-      setTheme(next);
-      localStorage.setItem("theme", next);
-      document.documentElement.setAttribute("data-theme", next);
-    };
-    if (typeof (document as Document & { startViewTransition?: unknown }).startViewTransition === "function") {
-      (document as Document & { startViewTransition: (fn: () => void) => void }).startViewTransition(apply);
-    } else {
-      apply();
-    }
-  }
-  return { theme, toggle };
-}
+import { useTheme } from "@/components/ThemeProvider";
 
 /** Passend für Dropdown-Menüs (FloatingPill, MobileTopBar) */
 export function ThemeToggleItem({ style, className, iconSize = 14, fontSize = 13 }: {

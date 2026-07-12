@@ -62,14 +62,6 @@ const PLACEHOLDERS: Record<string, { key: string; description: string }[]> = {
     { key: "{eventName}", description: "Name des Events" },
     { key: "{attendeeCount}", description: "Anzahl der Teilnehmer" },
   ],
-  tournament_started: [
-    { key: "{eventName}", description: "Name des Turniers" },
-  ],
-  tournament_result: [
-    { key: "{eventName}", description: "Name des Events/Turniers" },
-    { key: "{game}", description: "Spielname" },
-    { key: "{winner}", description: "Discord-Erwähnung des Erstplatzierten" },
-  ],
   quest_completed: [
     { key: "{questTitle}", description: "Titel der Quest" },
     { key: "{reward}", description: "Münzen-Belohnung" },
@@ -115,11 +107,6 @@ const PLACEHOLDERS: Record<string, { key: string; description: string }[]> = {
   ],
   birthday: [
     { key: "{username}", description: "Discord-Erwähnung des Users" },
-  ],
-  lul_suggest: [
-    { key: "{username}", description: "Name des Vorschlagenden" },
-    { key: "{game}", description: "Vorgeschlagenes Spiel" },
-    { key: "{note}", description: "Optionale Notiz (leer wenn keine)" },
   ],
   server_approved: [{ key: "{serverName}", description: "Name des Servers" }],
   server_denied:   [{ key: "{serverName}", description: "Name des Servers" }],

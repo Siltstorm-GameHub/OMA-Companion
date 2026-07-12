@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
-import { dispatchEventNotification } from "@/lib/notify-dispatch";
 
 // Standard round-robin scheduling algorithm (circle method)
 export function generateRoundRobin(participantIds: string[], eventId: string) {
@@ -138,10 +137,6 @@ export async function POST(req: NextRequest) {
       },
     },
   });
-  // Push + In-App + Discord-DM
-  dispatchEventNotification("tournament_started", { id: eventId }, {
-    placeholders: { "{eventName}": full?.title ?? "Ein neues Turnier wurde erstellt!" },
-  }).catch(() => {});
 
   return NextResponse.json(full, { status: 201 });
 }

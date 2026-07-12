@@ -1040,7 +1040,10 @@ export async function POST(
   const participantIds = event.registrations.map(r => r.userId);
   const eventNotifTitle = `✅ Event abgeschlossen: ${event.title}`;
   const eventNotifBody  = "Schau dir deine Punkte und das Ergebnis an!";
-  if (!isEventHidden(event)) {
+  // Nur beim tatsächlichen Übergang von "aktiv" in die Umfrage-/Ergebnisphase benachrichtigen —
+  // damit ist die Spielphase abgeschlossen und erste Ergebnisse stehen fest. Bei erneutem
+  // Abschließen/Korrigieren eines Events, das schon "umfrage" oder "finished" war, keine erneute Meldung.
+  if (event.status === "active" && !isEventHidden(event)) {
     sendPushToUsers(participantIds, { title: eventNotifTitle, body: eventNotifBody, url: resultUrl }).catch(() => {});
     createNotificationForUsers(participantIds, { type: "event_result", title: eventNotifTitle, body: eventNotifBody, url: resultUrl }).catch(() => {});
   }

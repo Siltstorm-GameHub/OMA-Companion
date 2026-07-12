@@ -44,6 +44,14 @@ html {
     0 20px 48px rgba(0,0,0,0.60),
     0 0 0 1px  rgba(139,92,246,0.25),
     0 0 40px   rgba(139,92,246,0.08);
+
+  /* ── Semantic status colors (destructive/success/warning actions) ── */
+  --color-danger:         #ef4444;
+  --color-danger-subtle:  rgba(239,68,68,0.1);
+  --color-success:        #10b981;
+  --color-success-subtle: rgba(16,185,129,0.1);
+  --color-warning:        #f59e0b;
+  --color-warning-subtle: rgba(245,158,11,0.1);
 }
 
 /* ── Dynamic Notch animations ──────────────────────────────────── */
