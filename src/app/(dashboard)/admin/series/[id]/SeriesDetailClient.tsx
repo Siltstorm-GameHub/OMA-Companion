@@ -38,7 +38,7 @@ const PLATFORMS: { value: string; label: string; icon: string }[] = [
 
 type SeriesEvent = {
   id: string; title: string; startAt: Date | string; status: string;
-  maxPlayers: number | null; _count: { registrations: number };
+  maxPlayers: number | null; hidden: boolean; _count: { registrations: number };
 };
 type User = { id: string; name: string | null; username: string | null; image: string | null };
 
@@ -110,6 +110,44 @@ function parsePollConfigs(json: string | null | undefined): PollConfig[] {
     }
     return parsed as PollConfig[];
   } catch { return []; }
+}
+
+function EventHiddenToggle({ id, hidden }: { id: string; hidden: boolean }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+
+  async function toggle(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setBusy(true);
+    const res = await fetch("/api/admin/events", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ eventId: id, hidden: !hidden }),
+    });
+    setBusy(false);
+    if (res.ok) {
+      toast.success(hidden ? "Event wieder sichtbar" : "Event ausgeblendet");
+      router.refresh();
+    } else {
+      toast.error("Fehler");
+    }
+  }
+
+  return (
+    <button
+      onClick={toggle}
+      disabled={busy}
+      title={hidden ? "Einblenden (für alle sichtbar machen)" : "Ausblenden (nur im Admin sichtbar)"}
+      className={`shrink-0 p-1.5 rounded transition-colors disabled:opacity-40 ${
+        hidden
+          ? "text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
+          : "text-gray-600 hover:text-gray-400 hover:bg-white/[0.05]"
+      }`}
+    >
+      {hidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+    </button>
+  );
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1064,12 +1102,17 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
                       i > 0 ? "border-t border-white/[0.05]" : ""
                     } ${isFirstFinished ? "border-t-2 border-t-white/[0.08]" : ""} ${
                       isFinished ? "opacity-60 hover:opacity-90" : ""
-                    }`}
+                    } ${ev.hidden ? "opacity-60" : ""}`}
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-white truncate">
+                      <p className="text-sm text-white truncate flex items-center gap-2 flex-wrap">
                         {ev.title}
                         <span className="text-gray-500 font-normal"> · {new Date(ev.startAt).toLocaleDateString("de-DE", { day: "numeric", month: "numeric", year: "numeric" })}</span>
+                        {ev.hidden && (
+                          <span className="text-[10px] text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 shrink-0 flex items-center gap-1">
+                            <EyeOff className="w-2.5 h-2.5" /> ausgeblendet
+                          </span>
+                        )}
                       </p>
                       <p className="text-xs text-gray-600">{date}</p>
                     </div>
@@ -1080,6 +1123,7 @@ export default function SeriesDetailClient({ series, allUsers }: { series: any; 
                       <span className={`text-[10px] px-2 py-0.5 rounded-full border ${st.cls}`}>
                         {st.label}
                       </span>
+                      <EventHiddenToggle id={ev.id} hidden={ev.hidden} />
                       <ChevronRight className="w-3.5 h-3.5 text-gray-600" />
                     </div>
                   </Link>
