@@ -7,6 +7,7 @@ import {
   Gamepad2, Eye, Vote, Search,
 } from "lucide-react";
 import { UserPickerSheet } from "@/components/UserPickerSheet";
+import { useConfirm } from "@/components/admin/ConfirmDialog";
 import type { LulSpieltag, User } from "./lul-types";
 import { uname, MEDAL } from "./lul-types";
 
@@ -23,6 +24,7 @@ export default function LulSpieltagEditor({
 }) {
   const [tab, setTab] = useState<"players" | "spectators" | "awards">("players");
   const [loading, setLoading] = useState(false);
+  const { confirm, ConfirmDialogElement } = useConfirm();
   const TAB_ORDER: ("players" | "spectators" | "awards")[] = ["players", "spectators", "awards"];
   const touchStartX = useRef<number | null>(null);
   const onTouchStart = useCallback((e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; }, []);
@@ -380,7 +382,7 @@ export default function LulSpieltagEditor({
   }
 
   async function finalize() {
-    if (!confirm(`Spieltag ${spieltag.number} (${spieltag.title ?? spieltag.game ?? "Special Event"}) wirklich finalisieren? LUL-Punkte werden berechnet und können nicht mehr geändert werden.`)) return;
+    if (!(await confirm({ title: "Spieltag finalisieren", description: `Spieltag ${spieltag.number} (${spieltag.title ?? spieltag.game ?? "Special Event"}) wirklich finalisieren? LUL-Punkte werden berechnet und können nicht mehr geändert werden.`, variant: "danger" }))) return;
     setLoading(true);
     await saveDraft();
     const res = await fetch(`/api/lul/spieltage/${spieltag.id}`, {
@@ -397,7 +399,7 @@ export default function LulSpieltagEditor({
   const isFinished = spieltag.status === "finished";
 
   async function reopen() {
-    if (!confirm(`Spieltag ${spieltag.number} (${spieltag.title ?? spieltag.game ?? "Special Event"}) wirklich wiedereröffnen?\n\nDie LUL-Punkte werden zurückgesetzt und neu berechnet sobald du erneut finalisierst.`)) return;
+    if (!(await confirm({ title: "Spieltag wiedereröffnen", description: `Spieltag ${spieltag.number} (${spieltag.title ?? spieltag.game ?? "Special Event"}) wirklich wiedereröffnen?\n\nDie LUL-Punkte werden zurückgesetzt und neu berechnet sobald du erneut finalisierst.`, variant: "danger" }))) return;
     setLoading(true);
     await fetch(`/api/lul/spieltage/${spieltag.id}`, {
       method: "PATCH",
@@ -458,6 +460,7 @@ export default function LulSpieltagEditor({
             </tbody>
           </table>
         </div>
+        {ConfirmDialogElement}
       </div>
     );
   }
@@ -907,6 +910,7 @@ export default function LulSpieltagEditor({
           <Lock className="w-3.5 h-3.5" /> Spieltag finalisieren
         </button>
       </div>
+      {ConfirmDialogElement}
     </div>
   );
 }

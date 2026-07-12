@@ -3,6 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Plus, Trash2, ToggleLeft, ToggleRight, Loader2, Pencil, Users, Circle, Eye, EyeOff } from "lucide-react";
+import { useConfirm } from "@/components/admin/ConfirmDialog";
 import GameNameInput from "@/components/GameNameInput";
 import GameCover from "@/components/GameCover";
 import { parseConnectLink } from "@/lib/connect-link";
@@ -58,6 +59,7 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
   const [editForm, setEditForm] = useState<FormState>(EMPTY_FORM);
   const [showPassword, setShowPassword] = useState(false);
   const [showEditPassword, setShowEditPassword] = useState(false);
+  const { confirm, ConfirmDialogElement } = useConfirm();
 
   async function createServer() {
     if (!form.name.trim() || !form.game.trim() || !form.host.trim() || !form.maxSlots) return;
@@ -141,7 +143,7 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
   }
 
   async function deleteServer(server: Server) {
-    if (!confirm(`${server.name} wirklich löschen? Alle Bewerbungen werden mitgelöscht.`)) return;
+    if (!(await confirm({ title: "Server löschen", description: `${server.name} wirklich löschen? Alle Bewerbungen werden mitgelöscht.`, variant: "danger" }))) return;
     const res = await fetch(`/api/admin/servers/${server.id}`, { method: "DELETE" });
     if (!res.ok) { toast.error("Fehler beim Löschen"); return; }
     setServers((s) => s.filter((x) => x.id !== server.id));
@@ -269,6 +271,7 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
           ))}
         </div>
       )}
+      {ConfirmDialogElement}
     </div>
   );
 }

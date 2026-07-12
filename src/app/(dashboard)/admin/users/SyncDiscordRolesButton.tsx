@@ -1,14 +1,16 @@
 "use client";
 import { useState } from "react";
 import { Shield } from "lucide-react";
+import { useConfirm } from "@/components/admin/ConfirmDialog";
 
 export default function SyncDiscordRolesButton() {
   const [loading, setLoading]   = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
   const [result, setResult]     = useState<string | null>(null);
+  const { confirm, ConfirmDialogElement } = useConfirm();
 
   async function handleSync() {
-    if (!confirm("Rang-Rollen für alle User auf Discord synchronisieren?")) return;
+    if (!(await confirm({ title: "Discord-Rollen synchronisieren", description: "Rang-Rollen für alle User auf Discord synchronisieren?" }))) return;
     setLoading(true);
     setResult(null);
 
@@ -63,6 +65,7 @@ export default function SyncDiscordRolesButton() {
         <Shield className={`w-4 h-4 ${loading ? "animate-pulse" : ""}`} />
         {loading ? "Sync läuft…" : "Discord-Rollen sync"}
       </button>
+      {ConfirmDialogElement}
     </div>
   );
 }

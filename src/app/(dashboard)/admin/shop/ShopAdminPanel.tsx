@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Pencil, X, Check, ChevronDown, ChevronUp, Eye, EyeOff, Loader2, Trash2 } from "lucide-react";
+import { useConfirm } from "@/components/admin/ConfirmDialog";
 
 type ShopItem = {
   id: string; name: string; description: string; icon: string;
@@ -34,6 +35,7 @@ export default function ShopAdminPanel({ items, rarityConfig, typeConfig }: Prop
   const [filter,  setFilter]    = useState<"all" | "active" | "inactive">("all");
   const [search,  setSearch]    = useState("");
   const [form, setForm]         = useState<Partial<ShopItem>>({});
+  const { confirm, ConfirmDialogElement } = useConfirm();
 
   const filtered = items.filter(i => {
     if (filter === "active"   && !i.active) return false;
@@ -83,7 +85,7 @@ export default function ShopAdminPanel({ items, rarityConfig, typeConfig }: Prop
   }
 
   async function deleteItem(item: ShopItem) {
-    if (!confirm(`"${item.name}" wirklich dauerhaft löschen? Alle Käufe werden ebenfalls gelöscht.`)) return;
+    if (!(await confirm({ title: "Item löschen", description: `"${item.name}" wirklich dauerhaft löschen? Alle Käufe werden ebenfalls gelöscht.`, variant: "danger" }))) return;
     setSaving(true);
     try {
       await fetch("/api/admin/shop", {
@@ -283,6 +285,7 @@ export default function ShopAdminPanel({ items, rarityConfig, typeConfig }: Prop
           </div>
         </div>
       ))}
+      {ConfirmDialogElement}
     </div>
   );
 }

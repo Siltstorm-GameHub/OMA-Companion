@@ -7,6 +7,8 @@ export interface TabItem {
   key: string;
   label: string;
   icon?: LucideIcon;
+  /** Overrides the default active-state classes for "pill" variant (e.g. a per-tab accent color). */
+  activeClassName?: string;
 }
 
 interface TabsProps {
@@ -39,7 +41,7 @@ export function Tabs({ tabs, active, onChange, variant = "underline", className 
                   }`
                 : `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                     isActive
-                      ? "bg-purple-600/20 text-purple-300 ring-1 ring-purple-500/20"
+                      ? tab.activeClassName ?? "bg-purple-600/20 text-purple-300 ring-1 ring-purple-500/20"
                       : "text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]"
                   }`
             }

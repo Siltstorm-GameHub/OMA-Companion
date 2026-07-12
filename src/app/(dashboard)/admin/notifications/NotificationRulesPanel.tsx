@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { Bell, Save, Smartphone, MessageSquare, Send, Hash, Trash2, ChevronDown, Check, Smile, X, Link2, Calendar, Users, UserCheck } from "lucide-react";
 import { PAGE_LINKS } from "@/lib/page-links";
+import { useConfirm } from "@/components/admin/ConfirmDialog";
 
 export type NotificationRuleRow = {
   key: string;
@@ -145,6 +146,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
   const [linkDropRect, setLinkDropRect] = useState<{ top: number; left: number; width: number } | null>(null);
   const [pickerFor, setPickerFor] = useState<{ key: string; field: "title" | "body" } | null>(null);
   const [lastField, setLastField] = useState<Record<string, "title" | "body">>({});
+  const { confirm, ConfirmDialogElement } = useConfirm();
 
   const fieldRefs = useRef<Record<string, HTMLInputElement | HTMLTextAreaElement | null>>({});
   const linkBtnRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -209,7 +211,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
   }
 
   async function deleteRule(r: NotificationRuleRow) {
-    if (!confirm(`„${r.label}" wirklich löschen? Diese Benachrichtigung wird dann auf keinem Kanal mehr gesendet.`)) return;
+    if (!(await confirm({ title: "Benachrichtigung löschen", description: `„${r.label}" wirklich löschen? Diese Benachrichtigung wird dann auf keinem Kanal mehr gesendet.`, variant: "danger" }))) return;
     setDeletingKey(r.key);
     try {
       const res = await fetch(`/api/admin/notification-rules/${encodeURIComponent(r.key)}`, { method: "DELETE" });
@@ -557,6 +559,7 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
         })(),
         document.body,
       )}
+      {ConfirmDialogElement}
     </div>
   );
 }

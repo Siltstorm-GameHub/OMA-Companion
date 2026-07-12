@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Trash2, Loader2, AlertTriangle } from "lucide-react";
+import { Trash2, AlertTriangle } from "lucide-react";
+import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 
 export default function ResetAllBalancesButton() {
   const router = useRouter();
-  const [confirm, setConfirm] = useState(false);
+  const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [done,    setDone]    = useState(false);
 
@@ -19,7 +20,7 @@ export default function ResetAllBalancesButton() {
       if (!res.ok) { toast.error(data.error ?? "Fehler"); return; }
       toast.success(`✅ Alle Münzen & Punkte zurückgesetzt — ${data.deletedTransactions} Transaktionen gelöscht`);
       setDone(true);
-      setConfirm(false);
+      setOpen(false);
       router.refresh();
     } catch {
       toast.error("Netzwerkfehler");
@@ -49,34 +50,26 @@ export default function ResetAllBalancesButton() {
             und löscht alle Transaktionen. Danach können einzelne User manuell über „Verlauf" angepasst werden.
           </p>
 
-          {!confirm ? (
-            <button
-              onClick={() => setConfirm(true)}
-              className="mt-3 flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/15 text-red-400 border border-red-500/20 hover:border-red-500/30 transition-colors font-medium"
-            >
-              <Trash2 className="w-3.5 h-3.5" /> Alle auf 0 zurücksetzen
-            </button>
-          ) : (
-            <div className="mt-3 flex items-center gap-2 flex-wrap">
-              <p className="text-xs text-red-300 font-medium w-full">⚠️ Nicht rückgängig zu machen — wirklich fortfahren?</p>
-              <button
-                onClick={handleReset}
-                disabled={loading}
-                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-medium transition-colors disabled:opacity-50"
-              >
-                {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
-                Ja, jetzt zurücksetzen
-              </button>
-              <button
-                onClick={() => setConfirm(false)}
-                className="text-xs px-3 py-1.5 rounded-lg border border-white/[0.08] text-gray-500 hover:text-white transition-colors"
-              >
-                Abbrechen
-              </button>
-            </div>
-          )}
+          <button
+            onClick={() => setOpen(true)}
+            className="mt-3 flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/15 text-red-400 border border-red-500/20 hover:border-red-500/30 transition-colors font-medium"
+          >
+            <Trash2 className="w-3.5 h-3.5" /> Alle auf 0 zurücksetzen
+          </button>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={open}
+        onOpenChange={setOpen}
+        title="Alle Balances zurücksetzen"
+        description={"Setzt Münzen und Rang-Punkte aller User auf 0 und löscht alle Transaktionen.\n\nNicht rückgängig zu machen."}
+        confirmLabel="Ja, jetzt zurücksetzen"
+        variant="danger"
+        typedConfirmText="ZURÜCKSETZEN"
+        loading={loading}
+        onConfirm={handleReset}
+      />
     </div>
   );
 }

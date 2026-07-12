@@ -3,8 +3,8 @@
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { LogIn, UserX, History } from "lucide-react";
-import { ROLE_LABELS, ROLE_STYLES } from "@/lib/roles";
 import UserPointsHistoryModal from "@/components/UserPointsHistoryModal";
+import { Badge, Select, Button } from "@/components/ui";
 
 type Role = "user" | "moderator" | "admin";
 
@@ -117,28 +117,23 @@ export default function AdminUsersClient({ users, loginCount, noLoginCount, firs
                     {/* Status */}
                     <td className="px-4 py-3 text-center">
                       {user.hasLogin ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                          <LogIn className="w-3 h-3" /> Aktiv
-                        </span>
+                        <Badge tone="success" icon={<LogIn className="w-3 h-3" />}>Aktiv</Badge>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-white/[0.04] text-gray-600 border border-white/[0.06]">
-                          <UserX className="w-3 h-3" /> Ausstehend
-                        </span>
+                        <Badge tone="neutral" icon={<UserX className="w-3 h-3" />}>Ausstehend</Badge>
                       )}
                     </td>
 
                     {/* Rolle */}
                     <td className="px-4 py-3">
-                      <select
+                      <Select
                         value={currentRole}
                         onChange={e => handleRoleChange(user.id, e.target.value as Role)}
                         disabled={roleLoading === user.id}
-                        className="text-xs bg-gray-800 border border-gray-700 text-white rounded-lg px-2 py-1.5 disabled:opacity-50 cursor-pointer"
                       >
                         <option value="user">Mitglied</option>
                         <option value="moderator">Moderator</option>
                         <option value="admin">Admin</option>
-                      </select>
+                      </Select>
                     </td>
 
                     {/* Münzen */}
@@ -153,13 +148,14 @@ export default function AdminUsersClient({ users, loginCount, noLoginCount, firs
 
                     {/* Aktionen */}
                     <td className="px-4 py-3">
-                      <button
+                      <Button
+                        variant="accent"
+                        size="sm"
+                        icon={<History className="w-3.5 h-3.5" />}
                         onClick={() => setModalUser({ id: user.id, name: user.username ?? user.name ?? "?", image: user.image })}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/15 transition-colors"
                       >
-                        <History className="w-3.5 h-3.5" />
                         Verlauf
-                      </button>
+                      </Button>
                     </td>
                   </tr>
                 </>

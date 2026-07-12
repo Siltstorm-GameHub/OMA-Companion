@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Plus, Trash2, Pencil, X, Send, Bell, BellOff, CheckCircle, Clock } from "lucide-react";
+import { useConfirm } from "@/components/admin/ConfirmDialog";
 
 type Message = {
   id:        string;
@@ -59,6 +60,7 @@ export function DailyMessagePanel({ messages: initial }: { messages: Message[] }
   const [editId,   setEditId]   = useState<string | null>(null);
   const [saving,   setSaving]   = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const { confirm, ConfirmDialogElement } = useConfirm();
 
   function resetForm() {
     setForm(defaultForm());
@@ -118,7 +120,7 @@ export function DailyMessagePanel({ messages: initial }: { messages: Message[] }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Mitteilung wirklich löschen?")) return;
+    if (!(await confirm({ title: "Mitteilung löschen", description: "Mitteilung wirklich löschen?", variant: "danger" }))) return;
     setDeleting(id);
     try {
       const res = await fetch(`/api/admin/daily-message/${id}`, { method: "DELETE" });
@@ -307,6 +309,7 @@ export function DailyMessagePanel({ messages: initial }: { messages: Message[] }
           );
         })}
       </div>
+      {ConfirmDialogElement}
     </div>
   );
 }

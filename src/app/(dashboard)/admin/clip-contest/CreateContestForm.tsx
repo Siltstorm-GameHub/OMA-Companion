@@ -5,7 +5,12 @@ import { toast } from "sonner";
 import { Loader2, Plus, X, Sparkles } from "lucide-react";
 
 function toDateInputValue(d: Date) {
-  return d.toISOString().slice(0, 10);
+  // Lokale Kalender-Bestandteile verwenden statt toISOString() (das nach UTC
+  // konvertiert und dadurch in Zeitzonen östlich von UTC einen Tag/Monat zurückspringt).
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function defaultPeriodStart() {

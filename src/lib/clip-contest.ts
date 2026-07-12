@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getTwitchUsers, getPartnerClips } from "@/lib/twitch";
+import { getTwitchUsers, getTwitchUsersByIds, getPartnerClips, type TwitchClip } from "@/lib/twitch";
 import { dispatchNotification } from "@/lib/notify-dispatch";
 
 const MONTH_NAMES = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
@@ -35,7 +35,7 @@ export async function collectNominations(periodStart: Date, periodEnd: Date, twi
     twitchUsers.map((user) => getPartnerClips(user.id, periodStart, periodEnd))
   );
 
-  const partnerNominations: PartnerNomination[] = [];
+  const rawClips: { clip: TwitchClip; partnerLogin: string }[] = [];
   clipResults.forEach((result, i) => {
     const login = twitchUsers[i].login.toLowerCase();
     if (result.status === "rejected") {
@@ -43,15 +43,24 @@ export async function collectNominations(periodStart: Date, periodEnd: Date, twi
       return;
     }
     for (const clip of result.value) {
-      partnerNominations.push({
-        clipUrl: clip.url,
-        thumbnailUrl: clip.thumbnail_url,
-        clipTitle: clip.title,
-        twitchCreatorLogin: clip.creator_name.toLowerCase(),
-        partnerTwitchLogin: login,
-      });
+      rawClips.push({ clip, partnerLogin: login });
     }
   });
+
+  // Die Clips-API liefert nur Anzeige-Namen (creator_name), nicht den echten Login —
+  // per creator_id auf den kanonischen Login auflösen, sonst schlägt der Abgleich mit
+  // User.twitchLogin fehl, sobald Anzeigename und Login voneinander abweichen.
+  const creatorIds = [...new Set(rawClips.map((c) => c.clip.creator_id).filter(Boolean))];
+  const creatorUsers = await getTwitchUsersByIds(creatorIds);
+  const loginByCreatorId = new Map(creatorUsers.map((u) => [u.id, u.login.toLowerCase()]));
+
+  const partnerNominations: PartnerNomination[] = rawClips.map(({ clip, partnerLogin }) => ({
+    clipUrl: clip.url,
+    thumbnailUrl: clip.thumbnail_url,
+    clipTitle: clip.title,
+    twitchCreatorLogin: loginByCreatorId.get(clip.creator_id) ?? clip.creator_name.toLowerCase(),
+    partnerTwitchLogin: partnerLogin,
+  }));
 
   const communityNominations: CommunityNomination[] = eventClips.map((c) => ({
     clipUrl: c.clipUrl,
@@ -173,4 +182,43 @@ export async function finalizeContest(contestId: string): Promise<string> {
   }
 
   return message;
+}
+
+// Verknüpft nachträglich einen Twitch-Gewinner ohne erkanntes Community-Konto mit einem
+// User und vergibt die Sieger-Münzen, die bei finalizeContest() mangels Zuordnung ausblieben.
+export async function linkWinnerToUser(contestId: string, nominationId: string, userId: string) {
+  const contest = await prisma.monthlyClipContest.findUnique({ where: { id: contestId } });
+  if (!contest) return { ok: false as const, error: "Abstimmung nicht gefunden" };
+  if (contest.status !== "finished") return { ok: false as const, error: "Abstimmung ist noch nicht beendet" };
+  if (!contest.winnerNominationIds.includes(nominationId)) {
+    return { ok: false as const, error: "Diese Einreichung ist kein Gewinner dieser Abstimmung" };
+  }
+
+  const nomination = await prisma.clipNomination.findUnique({ where: { id: nominationId } });
+  if (!nomination || nomination.contestId !== contestId) {
+    return { ok: false as const, error: "Einreichung nicht gefunden" };
+  }
+  if (nomination.submittedByUserId) {
+    return { ok: false as const, error: "Einreichung ist bereits mit einem Konto verknüpft" };
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) return { ok: false as const, error: "Nutzer nicht gefunden" };
+
+  // Vor erneuter Vergabe prüfen: falls für diesen Contest bereits Münzen an den User
+  // gebucht wurden (z.B. weil er über eine andere Gewinner-Einreichung schon erkannt wurde).
+  const reason = `[Münzen] Clip des Monats – ${contest.month}/${contest.year}`;
+  const alreadyAwarded = await prisma.pointTransaction.findFirst({ where: { userId, reason } });
+
+  if (alreadyAwarded) {
+    await prisma.clipNomination.update({ where: { id: nominationId }, data: { submittedByUserId: userId } });
+  } else {
+    await prisma.$transaction([
+      prisma.clipNomination.update({ where: { id: nominationId }, data: { submittedByUserId: userId } }),
+      prisma.user.update({ where: { id: userId }, data: { points: { increment: contest.rewardCoins } } }),
+      prisma.pointTransaction.create({ data: { userId, amount: contest.rewardCoins, reason } }),
+    ]);
+  }
+
+  return { ok: true as const, awarded: !alreadyAwarded };
 }
