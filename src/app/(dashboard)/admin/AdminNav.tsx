@@ -2,12 +2,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { useEffect } from "react";
 import {
   Users, LayoutDashboard, Star, ShoppingBag, Bell,
   CalendarDays, Heart, Medal,
   Wrench, Users2, Megaphone, Handshake, Clapperboard, Server, Gamepad2,
 } from "lucide-react";
 import ServerApplicationBadge from "@/components/ServerApplicationBadge";
+import EventsActionBadge from "@/components/EventsActionBadge";
 
 type Role = "user" | "moderator" | "admin";
 const HIERARCHY: Role[] = ["user", "moderator", "admin"];
@@ -86,6 +88,13 @@ export default function AdminNav() {
     )
   ) ?? CATEGORIES[0];
 
+  // Dynamischer Tab-Titel, damit man mehrere offene Admin-Tabs unterscheiden kann.
+  useEffect(() => {
+    const activeTab = activeCategory.tabs?.find(t => pathname.startsWith(t.href));
+    const label = activeTab?.label ?? activeCategory.label;
+    document.title = `${label} · Admin`;
+  }, [pathname, activeCategory]);
+
   const visibleCategories = CATEGORIES.filter(cat => {
     if (!hasRole(userRole, cat.minRole)) return false;
     // Hide category if user has no access to any of its tabs
@@ -115,6 +124,7 @@ export default function AdminNav() {
               <span className="relative shrink-0">
                 <Icon className={`w-4 h-4 ${isActive ? "text-purple-400" : "text-gray-600"}`} />
                 {cat.key === "community" && <ServerApplicationBadge />}
+                {cat.key === "events" && <EventsActionBadge />}
               </span>
               <span>{cat.label}</span>
             </Link>
@@ -124,13 +134,13 @@ export default function AdminNav() {
 
       {/* ── Sub-Navigation ── */}
       {visibleSubTabs.length > 0 && (
-        <div className="flex gap-1 px-1">
+        <div className="flex gap-1 px-1 overflow-x-auto scrollbar-none">
           {visibleSubTabs.map(tab => {
             const active = pathname.startsWith(tab.href);
             const Icon = tab.icon;
             return (
               <Link key={tab.href} href={tab.href}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 whitespace-nowrap ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 whitespace-nowrap shrink-0 ${
                   active
                     ? "text-white bg-white/8 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]"
                     : "text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]"
@@ -138,6 +148,7 @@ export default function AdminNav() {
                 <span className="relative shrink-0">
                   <Icon className={`w-3.5 h-3.5 ${active ? "text-purple-400" : "text-gray-600"}`} />
                   {tab.href === "/admin/servers" && <ServerApplicationBadge />}
+                  {tab.href === "/admin/events" && <EventsActionBadge />}
                 </span>
                 <span>{tab.label}</span>
               </Link>

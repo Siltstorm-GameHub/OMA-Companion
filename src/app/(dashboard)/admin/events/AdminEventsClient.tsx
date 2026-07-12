@@ -95,7 +95,7 @@ function EventRow({ ev }: { ev: Event }) {
   return (
     <Link
       href={`/admin/events/${ev.id}`}
-      className={`flex items-center gap-4 px-4 py-3 hover:bg-white/[0.02] transition-colors group ${ev.hidden ? "opacity-60" : ""}`}
+      className={`flex items-center gap-2 sm:gap-4 flex-wrap px-4 py-3 hover:bg-white/[0.02] transition-colors group ${ev.hidden ? "opacity-60" : ""}`}
     >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
@@ -142,7 +142,7 @@ function SeriesRow({ s }: { s: Series }) {
   return (
     <Link
       href={`/admin/series/${s.id}`}
-      className={`relative flex items-center gap-3 pl-5 pr-4 py-3 border-t border-white/[0.04] first:border-t-0 hover:bg-white/[0.02] transition-colors ${s.hidden ? "opacity-60" : ""}`}
+      className={`relative flex items-center gap-3 flex-wrap pl-5 pr-4 py-3 border-t border-white/[0.04] first:border-t-0 hover:bg-white/[0.02] transition-colors ${s.hidden ? "opacity-60" : ""}`}
     >
       <div className="absolute left-2 top-2 bottom-2 w-[3px] rounded-r-full" style={{ background: seriesColor }} />
       <SeriesIcon name={s.icon} className="w-4 h-4 shrink-0" />
