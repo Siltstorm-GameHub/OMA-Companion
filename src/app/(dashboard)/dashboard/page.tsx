@@ -97,11 +97,18 @@ const getGlobalDashboardData = unstable_cache(
       }),
     ]);
     const nextEvent = activeOrPollEvent ?? nextUpcomingEvent;
-    return { memberCount, activeEvents, activeSeries, nextEvent, recentSummaries, recentlyFinishedCandidates };
+    return { memberCount, activeEvents, activeSeries, nextEvent, recentSummaries, recentlyFinishedCandidates, fetchedAt: Date.now() };
   },
   ["dashboard-global"],
   { revalidate: 300 }
 );
+
+function formatFreshness(fetchedAt: number): string {
+  const minutes = Math.max(0, Math.round((Date.now() - fetchedAt) / 60000));
+  if (minutes < 1) return "gerade eben";
+  if (minutes === 1) return "vor 1 Min.";
+  return `vor ${minutes} Min.`;
+}
 
 export default async function DashboardPage() {
   const sessionUser = await getSessionUser();
@@ -112,7 +119,7 @@ export default async function DashboardPage() {
   const month = now.getMonth() + 1;
   const year  = now.getFullYear();
 
-  const { memberCount, activeEvents, activeSeries, nextEvent, recentSummaries, recentlyFinishedCandidates } =
+  const { memberCount, activeEvents, activeSeries, nextEvent, recentSummaries, recentlyFinishedCandidates, fetchedAt } =
     await getGlobalDashboardData();
 
   const recentResultEvents: RecentResultEvent[] = recentlyFinishedCandidates
@@ -259,11 +266,18 @@ export default async function DashboardPage() {
             { value: memberCount,       label: "Mitglieder",     color: "text-gray-300"   },
             { value: myPoints.toLocaleString("de-DE"),              label: "Münzen",       color: "text-amber-400" },
           ].map((s, i) => (
-            <div key={i} className="card-cut-sm surface-elevated px-4 py-3">
-              <p className={`font-display text-2xl font-black tabular-nums leading-tight ${s.color}`}>{s.value}</p>
+            <div key={i}
+              className="card-cut-sm surface-elevated px-4 py-3 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(20,184,166,0.12)] hover:border-teal-500/20">
+              <p className={`font-display text-2xl font-black tabular-nums leading-tight animate-number-pop ${s.color}`}>{s.value}</p>
               <p className="text-[10px] text-gray-600 uppercase tracking-widest mt-0.5">{s.label}</p>
             </div>
           ))}
+        </div>
+
+        {/* Freshness-Hinweis statt starrem Cache */}
+        <div className="flex items-center gap-1.5 mt-2.5 text-[10px] text-gray-700">
+          <span className="w-1 h-1 rounded-full bg-teal-500/50 animate-pulse" />
+          Daten aktualisiert {formatFreshness(fetchedAt)}
         </div>
       </div>
 
@@ -300,7 +314,7 @@ export default async function DashboardPage() {
 
           {/* Events Hub */}
           <Link href="/events"
-            className="surface animate-slide-up stagger-1 group block overflow-hidden relative"
+            className="surface animate-slide-up stagger-1 group block overflow-hidden relative transition-transform duration-200 hover:-translate-y-1 active:scale-[0.99]"
             style={{ borderRadius: "6px", border: "1px solid rgba(20,184,166,0.12)", boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
 
             {/* Cover art area */}
@@ -382,7 +396,7 @@ export default async function DashboardPage() {
 
           {/* Level-Up-League Hub */}
           <Link href="/lul"
-            className="surface animate-slide-up stagger-2 group block overflow-hidden relative"
+            className="surface animate-slide-up stagger-2 group block overflow-hidden relative transition-transform duration-200 hover:-translate-y-1 active:scale-[0.99]"
             style={{ borderRadius: "6px", border: "1px solid rgba(139,32,32,0.18)", boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
 
             {/* Cover art area */}
@@ -461,9 +475,14 @@ export default async function DashboardPage() {
             <div className="surface overflow-hidden divide-y"
               style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.45)", borderColor: "rgba(255,255,255,0.06)" }}>
               {activeSeries.length === 0 ? (
-                <div className="flex flex-col items-center gap-2 p-6 text-center">
-                  <Repeat className="w-6 h-6 text-gray-700" />
+                <div className="flex flex-col items-center gap-2.5 p-6 text-center">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: "rgba(20,184,166,0.06)" }}>
+                    <Repeat className="w-5 h-5 text-gray-700" style={{ animation: "float 3.5s ease-in-out infinite" }} />
+                  </div>
                   <p className="text-xs text-gray-600">Keine aktiven Eventreihen</p>
+                  <Link href="/events" className="text-[11px] text-teal-500 hover:text-teal-300 transition-colors">
+                    Events entdecken →
+                  </Link>
                 </div>
               ) : activeSeries.map(series => {
                 const nextEv  = series.events[0];
@@ -472,10 +491,10 @@ export default async function DashboardPage() {
                 const seriesColor = resolveSeriesColor(series.icon);
                 return (
                   <Link key={series.id} href={`/events/series/${series.id}`}
-                    className="relative flex items-center gap-3 pl-4 pr-3.5 py-3 transition-colors group hover:bg-white/[0.025]"
+                    className="relative flex items-center gap-3 pl-4 pr-3.5 py-3 transition-all duration-200 group hover:bg-white/[0.035] active:scale-[0.99]"
                     style={{ borderColor: "rgba(255,255,255,0.05)" }}>
-                    <div className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full" style={{ background: seriesColor }} />
-                    <div className="w-8 h-8 rounded-sm flex items-center justify-center shrink-0"
+                    <div className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full transition-all duration-200 group-hover:w-1" style={{ background: seriesColor }} />
+                    <div className="w-8 h-8 rounded-sm flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-110"
                       style={{ background: `${seriesColor}1a`, border: `1px solid ${seriesColor}40` }}>
                       <SeriesIcon name={series.icon} className="w-3.5 h-3.5" />
                     </div>
@@ -500,6 +519,7 @@ export default async function DashboardPage() {
                         {s.label}
                       </span>
                     )}
+                    <ChevronRight className="w-3.5 h-3.5 text-gray-700 shrink-0 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" />
                   </Link>
                 );
               })}
@@ -519,15 +539,22 @@ export default async function DashboardPage() {
             <div className="surface overflow-hidden"
               style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.45)" }}>
               {servers.length === 0 ? (
-                <div className="flex flex-col items-center gap-2 p-6 text-center">
-                  <Gamepad2 className="w-6 h-6 text-gray-700" />
+                <div className="flex flex-col items-center gap-2.5 p-6 text-center">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: "rgba(20,184,166,0.06)" }}>
+                    <Gamepad2 className="w-5 h-5 text-gray-700" style={{ animation: "float 3.5s ease-in-out infinite 0.3s" }} />
+                  </div>
                   <p className="text-xs text-gray-600">Keine Gameserver verfügbar</p>
+                  <Link href="/servers" className="text-[11px] text-teal-500 hover:text-teal-300 transition-colors">
+                    Server ansehen →
+                  </Link>
                 </div>
               ) : servers.slice(0, 5).map((server, i) => (
                 <Link key={server.id} href="/servers"
-                  className="flex items-center gap-3 px-3.5 py-3 transition-colors group hover:bg-white/[0.025]"
+                  className="flex items-center gap-3 px-3.5 py-3 transition-all duration-200 group hover:bg-white/[0.035] active:scale-[0.99]"
                   style={{ borderBottom: i < Math.min(servers.length, 5) - 1 ? "1px solid rgba(255,255,255,0.05)" : "" }}>
-                  <GameCover game={server.game} className="w-8 h-8" rounded="rounded-sm" />
+                  <div className="transition-transform duration-200 group-hover:scale-110">
+                    <GameCover game={server.game} className="w-8 h-8" rounded="rounded-sm" />
+                  </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-semibold text-white truncate group-hover:text-teal-300 transition-colors">
                       {server.name}
@@ -583,9 +610,14 @@ export default async function DashboardPage() {
 
               {/* Quest-Liste */}
               {myMonthQuests.length === 0 ? (
-                <div className="flex flex-col items-center gap-2 p-6 text-center">
-                  <Scroll className="w-6 h-6 text-gray-700" />
+                <div className="flex flex-col items-center gap-2.5 p-6 text-center">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: "rgba(239,68,68,0.06)" }}>
+                    <Scroll className="w-5 h-5 text-gray-700" style={{ animation: "float 3.5s ease-in-out infinite 0.6s" }} />
+                  </div>
                   <p className="text-xs text-gray-600">Keine Quests diesen Monat</p>
+                  <Link href="/quests" className="text-[11px] text-teal-500 hover:text-teal-300 transition-colors">
+                    Alle Quests →
+                  </Link>
                 </div>
               ) : myMonthQuests.map((quest, i) => {
                 const prog      = (quest as { progress?: { completed: boolean; current: number }[] }).progress?.[0];
@@ -594,7 +626,7 @@ export default async function DashboardPage() {
                 const pct       = Math.min(Math.round((current / quest.target) * 100), 100);
                 return (
                   <div key={quest.id}
-                    className="flex items-center gap-2.5 px-3.5 py-2.5"
+                    className="flex items-center gap-2.5 px-3.5 py-2.5 transition-colors duration-200 hover:bg-white/[0.025]"
                     style={{ borderBottom: i < myMonthQuests.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "" }}>
                     <div className="shrink-0">
                       {completed
@@ -636,10 +668,10 @@ export default async function DashboardPage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {recentSummaries.map(ev => (
                 <Link key={ev.id} href={`/tournament/${ev.id}`}
-                  className="surface group block p-4 hover:border-teal-500/20 transition-all"
+                  className="surface group block p-4 hover:border-teal-500/20 hover:-translate-y-0.5 active:scale-[0.99] transition-all duration-200"
                   style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.45)" }}>
                   <div className="flex items-start gap-2 mb-2">
-                    <Newspaper className="w-3.5 h-3.5 text-teal-400 shrink-0 mt-0.5" />
+                    <Newspaper className="w-3.5 h-3.5 text-teal-400 shrink-0 mt-0.5 transition-transform duration-200 group-hover:scale-110" />
                     <p className="text-xs font-semibold text-white group-hover:text-teal-300 transition-colors leading-snug line-clamp-2">
                       {ev.title}
                     </p>
