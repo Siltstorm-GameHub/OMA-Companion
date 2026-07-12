@@ -74,7 +74,7 @@ export function Modal({ open, onClose, title, size = "md", children }: ModalProp
               </button>
             </div>
           )}
-          <div className={isDrawer ? "flex-1 overflow-y-auto flex flex-col min-h-0" : "p-5 overflow-y-auto"}>
+          <div className={isDrawer ? "flex-1 flex flex-col min-h-0" : "p-5 overflow-y-auto"}>
             {children}
           </div>
         </div>

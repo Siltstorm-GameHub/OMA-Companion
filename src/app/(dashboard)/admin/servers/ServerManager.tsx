@@ -7,6 +7,7 @@ import { useConfirm } from "@/components/admin/ConfirmDialog";
 import GameNameInput from "@/components/GameNameInput";
 import GameCover from "@/components/GameCover";
 import { parseConnectLink } from "@/lib/connect-link";
+import { EmptyState } from "@/components/EmptyState";
 
 type Light = "green" | "yellow" | "red";
 
@@ -190,7 +191,11 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
 
       {/* ── Server-Liste ────────────────────────────────────────── */}
       {servers.length === 0 ? (
-        <p className="text-sm text-gray-500 text-center py-8">Noch keine Server eingetragen.</p>
+        <EmptyState
+          type="generic"
+          title="Noch keine Server eingetragen"
+          description="Lege oben den ersten Community-Server an."
+        />
       ) : (
         <div className="space-y-2">
           {servers.map((server) => (
