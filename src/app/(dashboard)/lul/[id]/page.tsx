@@ -65,8 +65,11 @@ export default async function LulSeasonPage({
 
   if (!season) notFound();
 
-  // Standings aus ALLEN Einträgen (auch nicht abgeschlossene Spieltage)
-  const allEntries = season.spieltage.flatMap((st) => st.entries);
+  // Standings aus abgeschlossenen und laufenden Spieltagen — zukünftige (upcoming)
+  // Anmeldungen zählen noch nicht als Teilnahme.
+  const allEntries = season.spieltage
+    .filter((st) => st.status !== "upcoming")
+    .flatMap((st) => st.entries);
   const standings  = buildLulStandings(allEntries);
 
   const hasUnfinished = season.spieltage.some((st) => st.status !== "finished");
