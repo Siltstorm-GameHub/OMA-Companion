@@ -289,31 +289,36 @@ export default async function DashboardPage() {
             </div>
           </div>
 
-          {/* Rang-Badge mit Cut-Corner */}
+          {/* Rang-Badge mit Cut-Corner → Gesamtrangliste */}
           {leaderboardRank && (
-            <div className="card-cut surface px-5 py-3 text-center shrink-0 hidden sm:block"
+            <Link href="/leaderboard"
+              className="group card-cut surface px-5 py-3 text-center shrink-0 hidden sm:block relative overflow-hidden transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.98]"
               style={{ boxShadow: "0 0 0 1px rgba(20,184,166,0.15), 0 0 24px rgba(20,184,166,0.05)" }}>
-              <p className="text-[9px] text-gray-600 uppercase tracking-[0.15em] mb-1">Rang</p>
-              <p className="font-display text-3xl font-black tabular-nums leading-none text-gradient-gaming">
-                #{leaderboardRank}
-              </p>
-              <div className="flex items-center justify-center gap-1 mt-1">
-                <p className="text-[9px] text-gray-700">von {memberCount}</p>
-                {rankGainThisMonth > rankGainLastMonth ? (
-                  <span className="flex items-center text-emerald-400" title={`+${rankGainThisMonth} Rang-Punkte diesen Monat (Vormonat: ${rankGainLastMonth})`}>
-                    <ArrowUp className="w-2.5 h-2.5" />
-                  </span>
-                ) : rankGainThisMonth < rankGainLastMonth ? (
-                  <span className="flex items-center text-red-400" title={`+${rankGainThisMonth} Rang-Punkte diesen Monat (Vormonat: ${rankGainLastMonth})`}>
-                    <ArrowDown className="w-2.5 h-2.5" />
-                  </span>
-                ) : (
-                  <span className="flex items-center text-gray-700" title="Kein Unterschied zum Vormonat">
-                    <Minus className="w-2.5 h-2.5" />
-                  </span>
-                )}
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                style={{ background: "radial-gradient(circle at 50% 20%, rgba(20,184,166,0.22), transparent 70%)" }} />
+              <div className="relative">
+                <p className="text-[9px] text-gray-600 uppercase tracking-[0.15em] mb-1">Rang</p>
+                <p className="font-display text-3xl font-black tabular-nums leading-none text-gradient-gaming">
+                  #{leaderboardRank}
+                </p>
+                <div className="flex items-center justify-center gap-1 mt-1">
+                  <p className="text-[9px] text-gray-700 group-hover:text-gray-500 transition-colors">von {memberCount}</p>
+                  {rankGainThisMonth > rankGainLastMonth ? (
+                    <span className="flex items-center text-emerald-400" title={`+${rankGainThisMonth} Rang-Punkte diesen Monat (Vormonat: ${rankGainLastMonth})`}>
+                      <ArrowUp className="w-2.5 h-2.5" />
+                    </span>
+                  ) : rankGainThisMonth < rankGainLastMonth ? (
+                    <span className="flex items-center text-red-400" title={`+${rankGainThisMonth} Rang-Punkte diesen Monat (Vormonat: ${rankGainLastMonth})`}>
+                      <ArrowDown className="w-2.5 h-2.5" />
+                    </span>
+                  ) : (
+                    <span className="flex items-center text-gray-700" title="Kein Unterschied zum Vormonat">
+                      <Minus className="w-2.5 h-2.5" />
+                    </span>
+                  )}
+                </div>
               </div>
-            </div>
+            </Link>
           )}
 
         </div>

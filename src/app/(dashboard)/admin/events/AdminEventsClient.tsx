@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { Edit2, ChevronDown, ChevronRight, Eye, EyeOff, Clock } from "lucide-react";
+import { Edit2, ChevronDown, ChevronRight, Eye, EyeOff } from "lucide-react";
+import ActionCountBadge from "@/components/ActionCountBadge";
 import EventCategoryBadge from "@/components/EventCategoryBadge";
 import SeriesIcon from "@/components/SeriesIcon";
 import { resolveSeriesColor } from "@/lib/series-icons";
@@ -123,14 +124,7 @@ function EventRow({ ev }: { ev: Event }) {
     >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          {attention && (
-            <span
-              title={attention.label}
-              className="flex items-center gap-1 text-[10px] font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 shrink-0"
-            >
-              <Clock className="w-2.5 h-2.5" /> Aufmerksamkeit
-            </span>
-          )}
+          {attention && <ActionCountBadge count={1} title={attention.label} />}
           <span className="text-sm font-medium text-white truncate">{ev.title}</span>
           {ev.hidden && (
             <span className="text-[10px] text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 shrink-0 flex items-center gap-1">
@@ -171,6 +165,7 @@ function EventRow({ ev }: { ev: Event }) {
 function SeriesRow({ s }: { s: Series }) {
   const upcomingCount = s.events.length;
   const seriesColor = resolveSeriesColor(s.icon);
+  const attentionCount = s.events.filter(ev => needsAttention(ev) !== null).length;
   return (
     <Link
       href={`/admin/series/${s.id}`}
@@ -180,6 +175,9 @@ function SeriesRow({ s }: { s: Series }) {
       <SeriesIcon name={s.icon} className="w-4 h-4 shrink-0" />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
+          {attentionCount > 0 && (
+            <ActionCountBadge count={attentionCount} title={`${attentionCount} Event(s) in dieser Reihe brauchen Aufmerksamkeit`} />
+          )}
           <span className="text-sm font-medium truncate" style={{ color: seriesColor }}>{s.name}</span>
           {s.hidden && (
             <span className="text-[10px] text-amber-500 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 shrink-0 flex items-center gap-1">
