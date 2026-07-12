@@ -9,6 +9,7 @@ import { recomputeWanderpocalHolders } from "@/lib/recompute-wanderpocal";
 import { resolveEventPredictions } from "@/lib/predictions";
 import { createPollsForEvent, parsePollsConfigJson } from "@/lib/event-polls";
 import { announceEventResults } from "@/lib/discord-events";
+import { isEventHidden } from "@/lib/event-visibility";
 
 type PlacementReward = { place: number; coins: number; rankPoints: number };
 type RewardsConfig = { participationCoins: number; placements: PlacementReward[] };
@@ -1039,8 +1040,10 @@ export async function POST(
   const participantIds = event.registrations.map(r => r.userId);
   const eventNotifTitle = `✅ Event abgeschlossen: ${event.title}`;
   const eventNotifBody  = "Schau dir deine Punkte und das Ergebnis an!";
-  sendPushToUsers(participantIds, { title: eventNotifTitle, body: eventNotifBody, url: resultUrl }).catch(() => {});
-  createNotificationForUsers(participantIds, { type: "event_result", title: eventNotifTitle, body: eventNotifBody, url: resultUrl }).catch(() => {});
+  if (!isEventHidden(event)) {
+    sendPushToUsers(participantIds, { title: eventNotifTitle, body: eventNotifBody, url: resultUrl }).catch(() => {});
+    createNotificationForUsers(participantIds, { type: "event_result", title: eventNotifTitle, body: eventNotifBody, url: resultUrl }).catch(() => {});
+  }
 
   // Automatischer Discord-Ergebnis-Post — nur beim tatsächlichen (ersten) Übergang in "finished",
   // nicht während der Umfragephase und nicht bei erneutem Abschließen eines bereits fertigen Events

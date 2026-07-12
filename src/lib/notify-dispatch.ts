@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { sendPushToUsers, type PushPayload } from "@/lib/push";
 import { createNotificationForUsers, PREF_KEY, type NotificationType } from "@/lib/notifications";
 import { sendDiscordMessage, sendDiscordDM, resolveChannelId, type DiscordEmbed } from "@/lib/discord-rest";
+import { isEventHidden } from "@/lib/event-visibility";
 
 export interface DispatchOptions {
   /** Betroffene User (Empfänger für Push/In-App/Discord-DM). Leer = reine Kanal-Broadcast-Nachricht. */
@@ -206,6 +207,13 @@ export async function dispatchEventNotification(
 ): Promise<void> {
   const rule = await getNotificationRule(ruleKey);
   if (!rule) return;
+
+  // Unsichtbare Events (oder Events in unsichtbaren Eventreihen) sollen keine Benachrichtigungen auslösen.
+  const eventRow = await prisma.event.findUnique({
+    where:  { id: event.id },
+    select: { hidden: true, series: { select: { hidden: true } } },
+  });
+  if (!eventRow || isEventHidden(eventRow)) return;
 
   const users = rule.isEventNotification && rule.eventAudience === "participants"
     ? await resolveEventParticipantIds(event.id)

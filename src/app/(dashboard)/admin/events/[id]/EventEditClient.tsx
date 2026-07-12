@@ -486,15 +486,15 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
   const tabs: { key: TabKey; label: string }[] = isSeriesEvent
     ? [
         { key: "details",      label: "Details" },
-        ...bracketTab,
         { key: "participants", label: `Teilnehmer (${event._count.registrations})` },
+        ...bracketTab,
       ]
     : [
         { key: "details",     label: "Details" },
         { key: "rewards",     label: "Belohnungen" },
+        { key: "participants", label: `Teilnehmer (${event._count.registrations})` },
         ...(hasTournament || event.type === "tournament" ? [{ key: "tournament" as TabKey, label: "Turnier" }] : []),
         ...bracketTab,
-        { key: "participants", label: `Teilnehmer (${event._count.registrations})` },
         // Sieger-Ermittlung ist nur bei Bracket-Formaten relevant — bei allen anderen Reihen
         // gewinnt am Ende schlicht, wer die meisten Rangpunkte gesammelt hat.
         ...(event.series && (event.format === "single_elimination" || event.format === "double_elimination")

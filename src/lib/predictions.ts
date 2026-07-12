@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 import { dispatchNotification } from "./notify-dispatch";
+import { isEventHidden } from "./event-visibility";
 
 /** Mindest-Einsatz (nicht admin-editierbar, Höchsteinsatz kommt aus getMinigamesConfig()) */
 export const PREDICTION_MIN_WAGER = 10;
@@ -82,6 +83,12 @@ export async function resolveEventPredictions(eventId: string, winnerUserId: str
   const allPredictions = await prisma.eventWinnerPrediction.findMany({ where: { eventId } });
   if (allPredictions.length === 0) return;
 
+  const event = await prisma.event.findUnique({
+    where:  { id: eventId },
+    select: { hidden: true, series: { select: { hidden: true } } },
+  });
+  const notifyParticipants = !!event && !isEventHidden(event);
+
   // ── Schritt 1: eine evtl. vorherige Auflösung rückgängig machen ─────────────
   const alreadyResolved = allPredictions.filter(p => p.resolved);
   for (const prediction of alreadyResolved) {
@@ -160,10 +167,12 @@ export async function resolveEventPredictions(eventId: string, winnerUserId: str
           update: { current: 0 },
         }),
       ]);
-      dispatchNotification("prediction_result", {
-        users: [prediction.userId],
-        placeholders: { "{result}": `falsch — dein Einsatz von ${prediction.wager} Münzen ist verloren`, "{reward}": "0" },
-      }).catch(() => {});
+      if (notifyParticipants) {
+        dispatchNotification("prediction_result", {
+          users: [prediction.userId],
+          placeholders: { "{result}": `falsch — dein Einsatz von ${prediction.wager} Münzen ist verloren`, "{reward}": "0" },
+        }).catch(() => {});
+      }
       continue;
     }
 
@@ -201,9 +210,11 @@ export async function resolveEventPredictions(eventId: string, winnerUserId: str
       }),
     ]);
 
-    dispatchNotification("prediction_result", {
-      users: [prediction.userId],
-      placeholders: { "{result}": "richtig", "{reward}": String(payout) },
-    }).catch(() => {});
+    if (notifyParticipants) {
+      dispatchNotification("prediction_result", {
+        users: [prediction.userId],
+        placeholders: { "{result}": "richtig", "{reward}": String(payout) },
+      }).catch(() => {});
+    }
   }
 }
