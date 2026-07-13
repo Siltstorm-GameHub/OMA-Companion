@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import ServerApplicationBadge from "@/components/ServerApplicationBadge";
 import EventsActionBadge from "@/components/EventsActionBadge";
+import DailyPollActionBadge from "@/components/DailyPollActionBadge";
 
 type Role = "user" | "moderator" | "admin";
 const HIERARCHY: Role[] = ["user", "moderator", "admin"];
@@ -149,6 +150,7 @@ export default function AdminNav() {
                   <Icon className={`w-3.5 h-3.5 ${active ? "text-purple-400" : "text-gray-600"}`} />
                   {tab.href === "/admin/servers" && <ServerApplicationBadge />}
                   {tab.href === "/admin/events" && <EventsActionBadge />}
+                  {tab.href === "/admin/daily-message" && <DailyPollActionBadge />}
                 </span>
                 <span>{tab.label}</span>
               </Link>

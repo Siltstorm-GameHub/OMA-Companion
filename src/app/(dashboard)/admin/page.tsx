@@ -23,7 +23,7 @@ export default async function AdminPage() {
 
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-  const [activeTournaments, pollPhaseEvents, overdueEvents, votingClipContests, votingYearlyContests, recentActivity] = await Promise.all([
+  const [activeTournaments, pollPhaseEvents, overdueEvents, votingClipContests, votingYearlyContests, activeDailyPolls, recentActivity] = await Promise.all([
     prisma.event.findMany({
       where: {
         tournamentStatus: { in: ["pending", "active"] },
@@ -59,6 +59,11 @@ export default async function AdminPage() {
       orderBy: { votingEndsAt: "asc" },
       select: { id: true, year: true, votingEndsAt: true },
     }),
+    prisma.dailyPoll.findMany({
+      where: { isActive: true, startDate: { lte: now }, endDate: { gt: now } },
+      orderBy: { endDate: "asc" },
+      select: { id: true, title: true, endDate: true },
+    }),
     prisma.pointTransaction.findMany({
       where: { createdAt: { gte: sevenDaysAgo } },
       orderBy: { createdAt: "desc" },
@@ -71,7 +76,8 @@ export default async function AdminPage() {
     pollPhaseEvents.length > 0 ||
     overdueEvents.length > 0 ||
     votingClipContests.length > 0 ||
-    votingYearlyContests.length > 0;
+    votingYearlyContests.length > 0 ||
+    activeDailyPolls.length > 0;
 
   return (
     <div className="space-y-6">
@@ -201,6 +207,32 @@ export default async function AdminPage() {
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-white truncate">Clip des Jahres — {contest.year}</p>
                     <p className="text-xs text-gray-400">Umfrage läuft — {formatCountdown(contest.votingEndsAt, now)}</p>
+                  </div>
+                </div>
+                <ArrowRight className="relative w-4 h-4 text-gray-500 shrink-0" />
+              </Link>
+            ))}
+          </div>
+        )}
+
+        {activeDailyPolls.length > 0 && (
+          <div className="space-y-2 mt-3">
+            {activeDailyPolls.map(poll => (
+              <Link
+                key={poll.id}
+                href="/admin/daily-message"
+                className="card-shine glass relative overflow-hidden rounded-2xl p-4 flex items-center justify-between gap-3 hover:bg-white/[0.03] transition-colors"
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-fuchsia-500/8 to-transparent pointer-events-none" />
+                <div className="relative flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-xl flex items-center justify-center border text-fuchsia-400 bg-fuchsia-500/10 border-fuchsia-500/15 shrink-0">
+                    <Vote className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">{poll.title}</p>
+                    <p className="text-xs text-gray-400">
+                      Umfrage läuft — {formatCountdown(poll.endDate, now)}
+                    </p>
                   </div>
                 </div>
                 <ArrowRight className="relative w-4 h-4 text-gray-500 shrink-0" />
