@@ -21,6 +21,7 @@ model User {
   points     Int      @default(0) // Münzen (Shop-Währung)
   rankPoints Int      @default(0) // Prestige-Punkte (Events, Turniere, LuL)
   createdAt  DateTime @default(now())
+  lastActiveAt DateTime? // Zeitpunkt der letzten App-Aktivität (Presence/Online-Status)
 
   twitchLogin        String?   @unique
   birthday           DateTime? // Nur Datum relevant (month/day)

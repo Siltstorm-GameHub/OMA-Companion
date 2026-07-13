@@ -11,7 +11,14 @@ interface LobbyMsg {
   user: { id: string; name: string | null; username: string | null; image: string | null };
 }
 
-function displayName(u: LobbyMsg["user"]) {
+interface PresenceUser {
+  id: string;
+  name: string | null;
+  username: string | null;
+  image: string | null;
+}
+
+function displayName(u: { name: string | null; username: string | null }) {
   return u.username ?? u.name ?? "User";
 }
 
@@ -22,10 +29,33 @@ export function FloatingLobbyChat() {
   const [text, setText] = useState("");
   const [unread, setUnread] = useState(0);
   const [sending, setSending] = useState(false);
+  const [onlineCount, setOnlineCount] = useState(0);
+  const [onlineUsers, setOnlineUsers] = useState<PresenceUser[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
   const lastTimestampRef = useRef<string | null>(null);
   const openRef = useRef(false);
   openRef.current = open;
+
+  const fetchPresence = useCallback(async () => {
+    try {
+      const res = await fetch("/api/presence", { cache: "no-store" });
+      if (!res.ok) return;
+      const data: { count: number; users: PresenceUser[] } = await res.json();
+      setOnlineCount(data.count);
+      setOnlineUsers(data.users);
+    } catch {
+      // Netzwerkfehler ignorieren
+    }
+  }, []);
+
+  const sendHeartbeat = useCallback(async () => {
+    if (!session) return;
+    try {
+      await fetch("/api/presence", { method: "POST" });
+    } catch {
+      // Netzwerkfehler ignorieren
+    }
+  }, [session]);
 
   const fetchMessages = useCallback(async (mode: "initial" | "poll" | "baseline") => {
     try {
@@ -78,6 +108,24 @@ export function FloatingLobbyChat() {
     const id = setInterval(() => fetchMessages("poll"), open ? 3000 : 10000);
     return () => clearInterval(id);
   }, [open, fetchMessages]);
+
+  // Heartbeat: signalisiert eigene Aktivität, solange die App offen ist (alle 60 s)
+  useEffect(() => {
+    sendHeartbeat();
+    const id = setInterval(sendHeartbeat, 60000);
+    return () => clearInterval(id);
+  }, [sendHeartbeat]);
+
+  // Presence: Online-Zähler/Liste laden (alle 15 s, sofort beim Öffnen)
+  useEffect(() => {
+    fetchPresence();
+    const id = setInterval(fetchPresence, 15000);
+    return () => clearInterval(id);
+  }, [fetchPresence]);
+
+  useEffect(() => {
+    if (open) fetchPresence();
+  }, [open, fetchPresence]);
 
   // Auto-Scroll ans Ende
   useEffect(() => {
@@ -140,6 +188,15 @@ export function FloatingLobbyChat() {
             {unread > 99 ? "99+" : unread}
           </span>
         )}
+        {onlineCount > 0 && (
+          <span
+            className="absolute -bottom-1 -left-1 min-w-[18px] h-[18px] rounded-full text-white text-[10px] font-bold flex items-center justify-center px-1"
+            style={{ background: "rgba(30,30,32,0.95)", border: "1px solid rgba(20,184,166,0.5)" }}
+            title={`${onlineCount} Spieler online`}
+          >
+            {onlineCount > 99 ? "99+" : onlineCount}
+          </span>
+        )}
       </button>
 
       {/* ── Mobile-Backdrop ─────────────────────────────────────────── */}
@@ -188,6 +245,39 @@ export function FloatingLobbyChat() {
             <X className="w-4 h-4" />
           </button>
         </div>
+
+        {/* Online-Spieler */}
+        {onlineUsers.length > 0 && (
+          <div
+            className="flex items-center gap-2 px-4 py-2 flex-shrink-0 overflow-x-auto"
+            style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+          >
+            <span className="text-[10px] text-gray-500 flex-shrink-0">
+              {onlineCount} online
+            </span>
+            <div className="flex items-center gap-1.5 min-w-0">
+              {onlineUsers.map((u) => (
+                <div
+                  key={u.id}
+                  className="flex-shrink-0 w-6 h-6 rounded-full overflow-hidden bg-gray-800 relative"
+                  title={displayName(u)}
+                >
+                  {u.image ? (
+                    <Image src={u.image} alt="" width={24} height={24} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-[9px] font-bold text-gray-400">
+                      {displayName(u)[0]?.toUpperCase()}
+                    </div>
+                  )}
+                  <span
+                    className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full"
+                    style={{ background: "#14b8a6", boxShadow: "0 0 4px #14b8a6", border: "1px solid rgba(13,13,15,0.97)" }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Nachrichten-Liste */}
         <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3 min-h-0">
