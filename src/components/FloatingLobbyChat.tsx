@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { MessageCircle, X, Send } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 
 interface LobbyMsg {
   id: string;
@@ -31,6 +32,7 @@ export function FloatingLobbyChat() {
   const [sending, setSending] = useState(false);
   const [onlineCount, setOnlineCount] = useState(0);
   const [onlineUsers, setOnlineUsers] = useState<PresenceUser[]>([]);
+  const [isDesktop, setIsDesktop] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const lastTimestampRef = useRef<string | null>(null);
   const openRef = useRef(false);
@@ -127,6 +129,15 @@ export function FloatingLobbyChat() {
     if (open) fetchPresence();
   }, [open, fetchPresence]);
 
+  // Desktop-Breakpoint überwachen (Slide-Richtung: rechts vs. unten)
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    setIsDesktop(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
   // Auto-Scroll ans Ende
   useEffect(() => {
     if (open) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -221,7 +232,11 @@ export function FloatingLobbyChat() {
           boxShadow: open ? "-4px 0 48px rgba(0,0,0,0.6)" : "none",
           opacity: open ? 1 : 0,
           pointerEvents: open ? "auto" : "none",
-          transform: open ? "translateY(0)" : "translateY(100%)",
+          transform: open
+            ? "translate(0,0)"
+            : isDesktop
+            ? "translateX(100%)"
+            : "translateY(100%)",
           transition: "transform 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.25s ease",
         }}
       >
@@ -257,9 +272,11 @@ export function FloatingLobbyChat() {
             </span>
             <div className="flex items-center gap-1.5 min-w-0">
               {onlineUsers.map((u) => (
-                <div
+                <Link
                   key={u.id}
-                  className="flex-shrink-0 w-6 h-6 rounded-full overflow-hidden bg-gray-800 relative"
+                  href={`/profile/${u.id}`}
+                  onClick={() => setOpen(false)}
+                  className="flex-shrink-0 w-6 h-6 rounded-full overflow-hidden bg-gray-800 relative hover:ring-2 hover:ring-teal-400/60 transition-shadow"
                   title={displayName(u)}
                 >
                   {u.image ? (
@@ -273,7 +290,7 @@ export function FloatingLobbyChat() {
                     className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full"
                     style={{ background: "#14b8a6", boxShadow: "0 0 4px #14b8a6", border: "1px solid rgba(13,13,15,0.97)" }}
                   />
-                </div>
+                </Link>
               ))}
             </div>
           </div>
@@ -290,7 +307,12 @@ export function FloatingLobbyChat() {
             const isOwn = msg.user.id === session?.user?.id;
             return (
               <div key={msg.id} className={`flex gap-2 ${isOwn ? "flex-row-reverse" : ""}`}>
-                <div className="flex-shrink-0 w-7 h-7 rounded-full overflow-hidden bg-gray-800 self-end">
+                <Link
+                  href={`/profile/${msg.user.id}`}
+                  onClick={() => setOpen(false)}
+                  className="flex-shrink-0 w-7 h-7 rounded-full overflow-hidden bg-gray-800 self-end hover:ring-2 hover:ring-teal-400/60 transition-shadow"
+                  title={displayName(msg.user)}
+                >
                   {msg.user.image ? (
                     <Image
                       src={msg.user.image}
@@ -304,7 +326,7 @@ export function FloatingLobbyChat() {
                       {displayName(msg.user)[0]?.toUpperCase()}
                     </div>
                   )}
-                </div>
+                </Link>
                 <div className={`flex flex-col gap-0.5 max-w-[75%] ${isOwn ? "items-end" : "items-start"}`}>
                   <span className="text-[10px] text-gray-500">{displayName(msg.user)}</span>
                   <div

@@ -41,6 +41,9 @@ function PollCard({ poll, onVoted, onDismiss }: { poll: Poll; onVoted: (p: Poll)
   const [selected, setSelected]         = useState<string[]>(poll.myOptionIds);
   const [freeText, setFreeText]         = useState(poll.myFreeText ?? "");
   const [freeTextGames, setFreeTextGames] = useState<GameSuggestion[]>(poll.myFreeTextGames);
+  // Noch nicht per Klick/Enter hinzugefügter Spielsuche-Text — wird beim Abstimmen automatisch übernommen,
+  // damit auch unbekannte Titel ohne Steam-Treffer nicht verloren gehen.
+  const [gameDraft, setGameDraft]       = useState("");
   const [submitting, setSubmitting]     = useState(false);
   const [resetting, setResetting]       = useState(false);
   const dismissed = poll.ended; // nur nach Ablauf wegklickbar
@@ -56,7 +59,14 @@ function PollCard({ poll, onVoted, onDismiss }: { poll: Poll; onVoted: (p: Poll)
   }
 
   async function submit() {
-    const hasAnswer = selected.length > 0 || freeText.trim() || freeTextGames.length > 0;
+    // Nicht explizit hinzugefügter Spielsuche-Text zählt auch als gültige Antwort — z.B. wenn
+    // zum eingetippten Namen kein Steam-Treffer gefunden wurde.
+    const draft = gameDraft.trim();
+    const finalGames = poll.freeTextGameMode && draft && !freeTextGames.some(g => g.name.toLowerCase() === draft.toLowerCase())
+      ? [...freeTextGames, { name: draft, appId: null }]
+      : freeTextGames;
+
+    const hasAnswer = selected.length > 0 || freeText.trim() || finalGames.length > 0;
     if (!hasAnswer) {
       toast.error("Bitte wähle eine Antwort oder gib etwas ein");
       return;
@@ -69,7 +79,7 @@ function PollCard({ poll, onVoted, onDismiss }: { poll: Poll; onVoted: (p: Poll)
         body: JSON.stringify({
           optionIds: selected,
           freeText: poll.freeTextGameMode ? undefined : (freeText.trim() || undefined),
-          freeTextGames: poll.freeTextGameMode ? freeTextGames : undefined,
+          freeTextGames: poll.freeTextGameMode ? finalGames : undefined,
         }),
       });
       if (!res.ok) throw new Error((await res.json()).error ?? "Fehler beim Abstimmen");
@@ -96,6 +106,7 @@ function PollCard({ poll, onVoted, onDismiss }: { poll: Poll; onVoted: (p: Poll)
         setSelected(updated.myOptionIds);
         setFreeText(updated.myFreeText ?? "");
         setFreeTextGames(updated.myFreeTextGames);
+        setGameDraft("");
         onVoted(updated);
       }
     } catch (err) {
@@ -222,7 +233,10 @@ function PollCard({ poll, onVoted, onDismiss }: { poll: Poll; onVoted: (p: Poll)
           {/* Freitext als Spielsuche (mehrere Vorschläge) */}
           {poll.allowFreeText && poll.freeTextGameMode && !poll.hasVoted && !poll.ended && (
             <div className="mt-2">
-              <PollGameSuggestInput value={freeTextGames} onChange={setFreeTextGames} />
+              <PollGameSuggestInput value={freeTextGames} onChange={setFreeTextGames} onDraftChange={setGameDraft} />
+              <p className="text-[10px] text-gray-600 mt-1">
+                Kein Treffer? Kein Problem — dein eingetippter Titel wird beim Abstimmen trotzdem übernommen.
+              </p>
             </div>
           )}
 

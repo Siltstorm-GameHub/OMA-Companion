@@ -10,10 +10,13 @@ interface PollGameSuggestInputProps {
   value: GameSuggestion[];
   onChange: (games: GameSuggestion[]) => void;
   max?: number;
+  /** Meldet den aktuell getippten (noch nicht hinzugefügten) Text an die Eltern-Komponente —
+   * so kann beim Abstimmen auch ohne aktiven "+"-Klick eine unbekannte Freitext-Eingabe übernommen werden. */
+  onDraftChange?: (text: string) => void;
 }
 
 /** Mehrfach-Spielvorschlag-Eingabe für Umfragen: Steam-Suche + Chip-Liste. */
-export default function PollGameSuggestInput({ value, onChange, max = 10 }: PollGameSuggestInputProps) {
+export default function PollGameSuggestInput({ value, onChange, max = 10, onDraftChange }: PollGameSuggestInputProps) {
   const [query, setQuery]     = useState("");
   const [open, setOpen]       = useState(false);
   const [loading, setLoading] = useState(false);
@@ -52,6 +55,7 @@ export default function PollGameSuggestInput({ value, onChange, max = 10 }: Poll
     if (value.some(g => (g.appId && g.appId === game.appId) || g.name.toLowerCase() === game.name.toLowerCase())) return;
     onChange([...value, game]);
     setQuery("");
+    onDraftChange?.("");
     setResults([]);
     setOpen(false);
   }
@@ -95,7 +99,7 @@ export default function PollGameSuggestInput({ value, onChange, max = 10 }: Poll
             placeholder="Spieltitel suchen und hinzufügen …"
             autoComplete="off"
             className="w-full bg-white/5 border border-white/10 rounded-lg pl-8 pr-8 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition-colors"
-            onChange={e => { setQuery(e.target.value); setOpen(true); }}
+            onChange={e => { setQuery(e.target.value); onDraftChange?.(e.target.value); setOpen(true); }}
             onFocus={() => setOpen(true)}
             onKeyDown={e => {
               if (e.key === "Enter") {
