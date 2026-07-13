@@ -988,6 +988,8 @@ model DailyPoll {
   isActive       Boolean           @default(true)
   allowMultiple  Boolean           @default(false)
   allowFreeText  Boolean           @default(false)
+  // true: Freitext wird durch eine Steam-Spielsuche ersetzt, Nutzer können mehrere Spiele vorschlagen
+  freeTextGameMode Boolean         @default(false)
   rewardCoins    Int               @default(0)
   createdBy      String
   createdAt      DateTime          @default(now())
@@ -1016,6 +1018,8 @@ model DailyPollVote {
   // JSON: ["optionId1", "optionId2"] — bei allowMultiple ggf. mehrere
   optionIds String?
   freeText  String?
+  // JSON: [{name: string, appId: number|null}] — bei freeTextGameMode, mehrere Spielevorschläge
+  freeTextGames String?
   createdAt DateTime  @default(now())
 
   @@unique([pollId, userId])

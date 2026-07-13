@@ -20,6 +20,7 @@ type Poll = {
   isActive:      boolean;
   allowMultiple: boolean;
   allowFreeText: boolean;
+  freeTextGameMode: boolean;
   rewardCoins:   number;
   createdAt:     string;
   creator:       { username: string | null; name: string | null };
@@ -37,6 +38,7 @@ type FormState = {
   isActive: boolean;
   allowMultiple: boolean;
   allowFreeText: boolean;
+  freeTextGameMode: boolean;
   rewardCoins: number;
   sendPush: boolean;
   options: FormOption[];
@@ -58,7 +60,7 @@ function defaultForm(): FormState {
     title: "", question: "",
     startDate: toLocalInputValue(now.toISOString()),
     endDate:   toLocalInputValue(end.toISOString()),
-    isActive: true, allowMultiple: false, allowFreeText: false,
+    isActive: true, allowMultiple: false, allowFreeText: false, freeTextGameMode: false,
     rewardCoins: 0, sendPush: false,
     options: [{ label: "", gameName: null, steamAppId: null }, { label: "", gameName: null, steamAppId: null }],
   };
@@ -88,6 +90,7 @@ export function DailyPollPanel({ polls: initial }: { polls: Poll[] }) {
       title: p.title, question: p.question,
       startDate: toLocalInputValue(p.startDate), endDate: toLocalInputValue(p.endDate),
       isActive: p.isActive, allowMultiple: p.allowMultiple, allowFreeText: p.allowFreeText,
+      freeTextGameMode: p.freeTextGameMode,
       rewardCoins: p.rewardCoins, sendPush: false,
       options: p.options.length > 0
         ? p.options.map(o => ({ label: o.label, gameName: o.gameName, steamAppId: o.steamAppId }))
@@ -289,10 +292,18 @@ export function DailyPollPanel({ polls: initial }: { polls: Poll[] }) {
           </label>
           <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-300">
             <input type="checkbox" checked={form.allowFreeText}
-              onChange={e => setForm(f => ({ ...f, allowFreeText: e.target.checked }))}
+              onChange={e => setForm(f => ({ ...f, allowFreeText: e.target.checked, freeTextGameMode: e.target.checked ? f.freeTextGameMode : false }))}
               className="accent-purple-500 w-4 h-4" />
             Freitext erlauben
           </label>
+          {form.allowFreeText && (
+            <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-300">
+              <input type="checkbox" checked={form.freeTextGameMode}
+                onChange={e => setForm(f => ({ ...f, freeTextGameMode: e.target.checked }))}
+                className="accent-purple-500 w-4 h-4" />
+              Freitext als Spielsuche (mehrere Vorschläge)
+            </label>
+          )}
           {!editId && (
             <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-300">
               <input type="checkbox" checked={form.sendPush}
