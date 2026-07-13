@@ -30,6 +30,7 @@ export async function POST(req: NextRequest) {
     isActive?: boolean;
     allowMultiple?: boolean;
     allowFreeText?: boolean;
+    freeTextGameMode?: boolean;
     rewardCoins?: number;
     sendPush?: boolean;
     options?: OptionInput[];
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
 
   const {
     title, question, startDate, endDate,
-    isActive = true, allowMultiple = false, allowFreeText = false,
+    isActive = true, allowMultiple = false, allowFreeText = false, freeTextGameMode = false,
     rewardCoins = 0, sendPush = false, options = [],
   } = body;
 
@@ -61,6 +62,7 @@ export async function POST(req: NextRequest) {
       isActive,
       allowMultiple,
       allowFreeText,
+      freeTextGameMode: allowFreeText && freeTextGameMode,
       rewardCoins:   Math.max(0, Math.trunc(rewardCoins)),
       createdBy:     user.id,
       options: {

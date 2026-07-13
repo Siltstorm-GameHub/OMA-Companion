@@ -58,7 +58,7 @@ const CATEGORIES: {
       { href: "/admin/servers",       label: "Gameserver",   icon: Server,    minRole: "moderator" },
       { href: "/admin/partners",      label: "Partner",      icon: Handshake, minRole: "moderator" },
       { href: "/admin/donations",     label: "Spendenpool",  icon: Heart,     minRole: "moderator" },
-      { href: "/admin/daily-message", label: "Mitteilungen", icon: Megaphone, minRole: "admin"     },
+      { href: "/admin/daily-message", label: "Mitteilungen & Umfragen", icon: Megaphone, minRole: "admin"     },
     ],
   },
   {

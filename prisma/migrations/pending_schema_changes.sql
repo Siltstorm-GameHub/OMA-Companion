@@ -158,3 +158,10 @@ CREATE TABLE IF NOT EXISTS "DailyPollVote" (
   CONSTRAINT "DailyPollVote_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE,
   CONSTRAINT "DailyPollVote_pollId_userId_key" UNIQUE ("pollId", "userId")
 );
+
+-- ═══════════════════════════════════════════════════════════════
+-- DailyPoll: Freitext-Spielsuche mit Mehrfachvorschlägen
+-- ═══════════════════════════════════════════════════════════════
+
+ALTER TABLE "DailyPoll" ADD COLUMN IF NOT EXISTS "freeTextGameMode" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "DailyPollVote" ADD COLUMN IF NOT EXISTS "freeTextGames" TEXT;
