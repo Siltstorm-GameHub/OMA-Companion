@@ -116,3 +116,45 @@ CREATE TABLE IF NOT EXISTS "PollJob" (
   "createdAt"   TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "sentAt"      TIMESTAMP(3)
 );
+
+-- ═══════════════════════════════════════════════════════════════
+-- Umfragen im Admin-Bereich "Mitteilungen" (DailyPoll)
+-- ═══════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS "DailyPoll" (
+  "id"            TEXT         NOT NULL PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  "title"         TEXT         NOT NULL,
+  "question"      TEXT         NOT NULL,
+  "startDate"     TIMESTAMP(3) NOT NULL,
+  "endDate"       TIMESTAMP(3) NOT NULL,
+  "isActive"      BOOLEAN      NOT NULL DEFAULT true,
+  "allowMultiple" BOOLEAN      NOT NULL DEFAULT false,
+  "allowFreeText" BOOLEAN      NOT NULL DEFAULT false,
+  "rewardCoins"   INTEGER      NOT NULL DEFAULT 0,
+  "createdBy"     TEXT         NOT NULL,
+  "createdAt"     TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt"     TIMESTAMP(3) NOT NULL,
+  CONSTRAINT "DailyPoll_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "User"("id")
+);
+
+CREATE TABLE IF NOT EXISTS "DailyPollOption" (
+  "id"         TEXT    NOT NULL PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  "pollId"     TEXT    NOT NULL,
+  "label"      TEXT    NOT NULL,
+  "gameName"   TEXT,
+  "steamAppId" INTEGER,
+  "order"      INTEGER NOT NULL DEFAULT 0,
+  CONSTRAINT "DailyPollOption_pollId_fkey" FOREIGN KEY ("pollId") REFERENCES "DailyPoll"("id") ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS "DailyPollVote" (
+  "id"        TEXT         NOT NULL PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  "pollId"    TEXT         NOT NULL,
+  "userId"    TEXT         NOT NULL,
+  "optionIds" TEXT,
+  "freeText"  TEXT,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "DailyPollVote_pollId_fkey" FOREIGN KEY ("pollId") REFERENCES "DailyPoll"("id") ON DELETE CASCADE,
+  CONSTRAINT "DailyPollVote_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE,
+  CONSTRAINT "DailyPollVote_pollId_userId_key" UNIQUE ("pollId", "userId")
+);
