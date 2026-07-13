@@ -9,11 +9,13 @@ import { createPollsForEvent, parsePollsConfigJson } from "@/lib/event-polls";
 /**
  * POST /api/admin/event-series/generate
  * Calculates the next date and creates a new event in the series.
- * Body: { seriesId: string }
+ * Body: { seriesId: string, overrideDate?: string }
+ * overrideDate: optionaler, manuell gewählter Termin (ISO-String) — überschreibt den aus der
+ * Wiederholungsregel berechneten Vorschlag, ohne die Regel selbst zu verändern.
  */
 export async function POST(req: NextRequest) {
   await requireRole("moderator");
-  const { seriesId } = await req.json();
+  const { seriesId, overrideDate } = await req.json();
   if (!seriesId) return NextResponse.json({ error: "seriesId fehlt" }, { status: 400 });
 
   const series = await prisma.eventSeries.findUnique({
@@ -76,12 +78,15 @@ export async function POST(req: NextRequest) {
   const referenceEvent = series.events[0];  // ältestes Event = Referenz für Monthly-Modus
   const lastEvent      = series.events[series.events.length - 1];
 
-  const nextDate = calcNextDate(
-    new Date(lastEvent.startAt),
-    series.recurrenceType as RecurrenceType,
-    (series.recurrenceMonthlyMode ?? "dayOfMonth") as MonthlyMode,
-    new Date(referenceEvent.startAt),
-  );
+  const nextDate = overrideDate
+    ? new Date(overrideDate)
+    : calcNextDate(
+        new Date(lastEvent.startAt),
+        series.recurrenceType as RecurrenceType,
+        (series.recurrenceMonthlyMode ?? "dayOfMonth") as MonthlyMode,
+        new Date(referenceEvent.startAt),
+      );
+  if (isNaN(nextDate.getTime())) return NextResponse.json({ error: "Ungültiges Datum" }, { status: 400 });
 
   const game            = series.fixedGame ?? lastEvent.game ?? null;
   const discordChannelId = series.discordChannelId ?? lastEvent.discordChannelId ?? null;

@@ -14,7 +14,7 @@ import RankPointsIcon from "@/components/RankPointsIcon";
 import SeriesIcon from "@/components/SeriesIcon";
 import GameNameInput from "@/components/GameNameInput";
 import StatFieldEditor from "@/components/StatFieldEditor";
-import { describeMonthlyModes } from "@/lib/recurrence";
+import { describeMonthlyModes, calcNextDate, type RecurrenceType, type MonthlyMode } from "@/lib/recurrence";
 import { SERIES_ICONS, resolveSeriesColor } from "@/lib/series-icons";
 
 const inputCls = "w-full rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
@@ -43,6 +43,11 @@ type SeriesEvent = {
 };
 
 const NOT_ACTIVE_STATUSES = ["finished", "closed", "archived"];
+
+function toDatetimeLocal(d: Date) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 // Spiegelt die Logik der "Braucht Aufmerksamkeit"-Kacheln im Admin-Dashboard, damit man
 // auch direkt in der Eventreihe sieht, welches Event gerade Handlung braucht.
@@ -178,6 +183,8 @@ export default function SeriesDetailClient({ series, allUsers, hasActiveSibling 
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [generatingNext, setGeneratingNext] = useState(false);
+  const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [generateDateStr, setGenerateDateStr] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteRevertCoins, setDeleteRevertCoins] = useState(false);
@@ -260,6 +267,22 @@ export default function SeriesDetailClient({ series, allUsers, hasActiveSibling 
     !latest || new Date(ev.startAt).getTime() > new Date(latest.startAt).getTime() ? ev : latest
   , null);
   const latestStartAt = latestEvent ? new Date(latestEvent.startAt) : new Date();
+
+  // Ältestes Event dient als Referenz für den Monatsmodus (Tag-des-Monats / n-ter Wochentag),
+  // muss mit der Berechnung in der API-Route übereinstimmen.
+  const oldestEvent = (series.events as SeriesEvent[]).reduce<SeriesEvent | null>((oldest, ev) =>
+    !oldest || new Date(ev.startAt).getTime() < new Date(oldest.startAt).getTime() ? ev : oldest
+  , null);
+
+  function suggestedNextDate(): Date | null {
+    if (!recurrenceType || !latestEvent || !oldestEvent) return null;
+    return calcNextDate(
+      new Date(latestEvent.startAt),
+      recurrenceType as RecurrenceType,
+      recurrenceMonthlyMode as MonthlyMode,
+      new Date(oldestEvent.startAt),
+    );
+  }
 
   function updatePlacementReward(place: number, key: keyof PlacementReward, value: number) {
     setPlacementRewards(prev => prev.map(r => r.place === place ? { ...r, [key]: value } : r));
@@ -360,18 +383,29 @@ export default function SeriesDetailClient({ series, allUsers, hasActiveSibling 
     }
   }
 
+  function openGenerateModal() {
+    const suggested = suggestedNextDate();
+    setGenerateDateStr(toDatetimeLocal(suggested ?? new Date()));
+    setShowGenerateModal(true);
+  }
+
   async function generateNextEvent() {
+    if (!generateDateStr) return;
+    const overrideDate = new Date(generateDateStr);
+    if (isNaN(overrideDate.getTime())) { toast.error("Ungültiges Datum"); return; }
+
     setGeneratingNext(true);
     const res = await fetch("/api/admin/event-series/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ seriesId: series.id }),
+      body: JSON.stringify({ seriesId: series.id, overrideDate: overrideDate.toISOString() }),
     });
     setGeneratingNext(false);
     if (res.ok) {
       const { event: newEv } = await res.json();
       const dateStr = new Date(newEv.startAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
       toast.success(`Neuer Termin erstellt: ${newEv.title} am ${dateStr}`);
+      setShowGenerateModal(false);
       router.refresh();
     } else {
       const err = await res.json().catch(() => ({}));
@@ -1111,7 +1145,7 @@ export default function SeriesDetailClient({ series, allUsers, hasActiveSibling 
             </h2>
             {recurrenceType && (
               <button
-                onClick={generateNextEvent} disabled={generatingNext}
+                onClick={openGenerateModal} disabled={generatingNext}
                 className="flex items-center gap-1.5 text-xs text-teal-300 hover:text-white border border-teal-600/40 hover:bg-teal-600 rounded-lg px-3 py-1.5 transition-all disabled:opacity-50"
               >
                 <CalendarPlus className="w-3.5 h-3.5" />
@@ -1254,6 +1288,42 @@ export default function SeriesDetailClient({ series, allUsers, hasActiveSibling 
           </div>
         )}
       </div>
+
+      {showGenerateModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <div className="w-full max-w-sm rounded-xl border border-white/[0.08] bg-gray-900 p-4 space-y-3">
+            <p className="text-sm font-semibold text-white flex items-center gap-1.5">
+              <CalendarPlus className="w-4 h-4 text-teal-300" /> Nächsten Termin generieren
+            </p>
+            <p className="text-xs text-gray-500">
+              Vorgeschlagen anhand der Wiederholungsregel — du kannst das Datum bei Bedarf anpassen,
+              ohne die feste Wiederholung der Reihe zu verändern.
+            </p>
+            <input
+              type="datetime-local"
+              value={generateDateStr}
+              onChange={(e) => setGenerateDateStr(e.target.value)}
+              className={inputCls}
+            />
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                onClick={() => setShowGenerateModal(false)}
+                disabled={generatingNext}
+                className="text-sm text-gray-400 hover:text-white px-3 py-1.5 rounded-lg border border-white/[0.08] hover:border-white/20 transition-colors disabled:opacity-50"
+              >
+                Abbrechen
+              </button>
+              <button
+                onClick={generateNextEvent}
+                disabled={generatingNext || !generateDateStr}
+                className="text-sm font-semibold text-white bg-teal-600 hover:bg-teal-500 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {generatingNext ? "Erstellt…" : "Termin erstellen"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
