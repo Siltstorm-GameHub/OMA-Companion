@@ -2,14 +2,22 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil, X, Send, Bell, BellOff, CheckCircle, Clock, GripVertical } from "lucide-react";
+import { Plus, Trash2, Pencil, X, Send, Bell, BellOff, CheckCircle, Clock, GripVertical, ChevronDown, Users } from "lucide-react";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import { EmptyState } from "@/components/EmptyState";
 import PollOptionGameInput from "@/components/admin/PollOptionGameInput";
 import CoinIcon from "@/components/CoinIcon";
 
 type Option = { id: string; label: string; gameName: string | null; steamAppId: number | null; order: number };
-type Vote   = { id: string; userId: string };
+type Vote   = {
+  id: string;
+  userId: string;
+  optionIds: string | null;
+  freeText: string | null;
+  freeTextGames: string | null;
+  createdAt: string;
+  user: { id: string; username: string | null; name: string | null; image: string | null };
+};
 
 type Poll = {
   id:            string;
@@ -71,12 +79,36 @@ function isCurrentlyActive(p: Poll) {
   return p.isActive && new Date(p.startDate).getTime() <= now && new Date(p.endDate).getTime() >= now;
 }
 
+function formatDateTime(iso: string) {
+  return new Date(iso).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+function voteAnswerText(v: Vote, options: Option[]): string {
+  const parts: string[] = [];
+  if (v.optionIds) {
+    try {
+      const ids: string[] = JSON.parse(v.optionIds);
+      const labels = ids.map(id => options.find(o => o.id === id)?.label).filter(Boolean);
+      if (labels.length) parts.push(labels.join(", "));
+    } catch { /* ignore */ }
+  }
+  if (v.freeText?.trim()) parts.push(`„${v.freeText.trim()}"`);
+  if (v.freeTextGames) {
+    try {
+      const games: { name: string }[] = JSON.parse(v.freeTextGames);
+      if (games.length) parts.push(games.map(g => g.name).join(", "));
+    } catch { /* ignore */ }
+  }
+  return parts.length > 0 ? parts.join(" · ") : "—";
+}
+
 export function DailyPollPanel({ polls: initial }: { polls: Poll[] }) {
   const [polls, setPolls]     = useState(initial);
   const [form, setForm]       = useState<FormState>(defaultForm());
   const [editId, setEditId]   = useState<string | null>(null);
   const [saving, setSaving]   = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const { confirm, ConfirmDialogElement } = useConfirm();
 
   function resetForm() {
@@ -374,13 +406,40 @@ export function DailyPollPanel({ polls: initial }: { polls: Poll[] }) {
 
                 <div className="flex flex-wrap items-center gap-3 mt-2 text-[11px] text-gray-700">
                   <span>{formatDate(p.startDate)} – {formatDate(p.endDate)}</span>
-                  <span>{p.votes.length} Stimme{p.votes.length === 1 ? "" : "n"}</span>
+                  <button
+                    onClick={() => setExpandedId(id => id === p.id ? null : p.id)}
+                    disabled={p.votes.length === 0}
+                    className="flex items-center gap-1 text-gray-500 hover:text-purple-300 transition-colors disabled:hover:text-gray-500 disabled:cursor-default"
+                  >
+                    <Users className="w-3 h-3" />
+                    {p.votes.length} Stimme{p.votes.length === 1 ? "" : "n"}
+                    {p.votes.length > 0 && (
+                      <ChevronDown className={`w-3 h-3 transition-transform ${expandedId === p.id ? "rotate-180" : ""}`} />
+                    )}
+                  </button>
                   {p.rewardCoins > 0 && (
                     <span className="text-amber-500 flex items-center gap-1"><CoinIcon size={10} /> {p.rewardCoins}</span>
                   )}
                   {!p.isActive && <span className="text-amber-600">Inaktiv</span>}
                   {active && <span className="text-purple-400 font-medium">Wird gerade angezeigt</span>}
                 </div>
+
+                {expandedId === p.id && p.votes.length > 0 && (
+                  <div className="mt-2.5 space-y-1.5 border-t border-white/5 pt-2.5">
+                    {p.votes.map(v => (
+                      <div key={v.id} className="flex items-center gap-2 text-[11px]">
+                        {v.user.image ? (
+                          <img src={v.user.image} alt="" className="w-5 h-5 rounded-full object-cover shrink-0" />
+                        ) : (
+                          <div className="w-5 h-5 rounded-full bg-white/10 shrink-0" />
+                        )}
+                        <span className="text-gray-300 font-medium shrink-0">{v.user.username ?? v.user.name ?? "Unbekannt"}</span>
+                        <span className="text-gray-600 truncate flex-1 min-w-0">{voteAnswerText(v, p.options)}</span>
+                        <span className="text-gray-700 shrink-0">{formatDateTime(v.createdAt)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           );

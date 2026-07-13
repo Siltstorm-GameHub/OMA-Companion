@@ -13,7 +13,10 @@ export async function GET() {
     include: {
       creator: { select: { username: true, name: true } },
       options: { orderBy: { order: "asc" } },
-      votes:   true,
+      votes:   {
+        orderBy: { createdAt: "asc" },
+        include: { user: { select: { id: true, username: true, name: true, image: true } } },
+      },
     },
   });
   return NextResponse.json(polls);

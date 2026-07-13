@@ -16,7 +16,10 @@ export default async function DailyMessageAdminPage() {
       include: {
         creator: { select: { username: true, name: true } },
         options: { orderBy: { order: "asc" } },
-        votes:   { select: { id: true, userId: true } },
+        votes:   {
+          orderBy: { createdAt: "asc" },
+          include: { user: { select: { id: true, username: true, name: true, image: true } } },
+        },
       },
     }),
   ]);
@@ -35,6 +38,7 @@ export default async function DailyMessageAdminPage() {
     endDate:   p.endDate.toISOString(),
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
+    votes: p.votes.map(v => ({ ...v, createdAt: v.createdAt.toISOString() })),
   }));
 
   return (
