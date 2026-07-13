@@ -16,6 +16,7 @@ import { AnimatedBar } from "@/components/AnimatedBar";
 import GameCover from "@/components/GameCover";
 import EventCoverDefault from "@/components/EventCoverDefault";
 import { DailyMessageBanner } from "@/components/DailyMessageBanner";
+import { DailyPollBanner } from "@/components/DailyPollBanner";
 import PartnerLiveBanner from "@/components/PartnerLiveBanner";
 import CommunityLiveBanner from "@/components/CommunityLiveBanner";
 import WhatsAppCommunityBanner from "@/components/WhatsAppCommunityBanner";
@@ -454,6 +455,9 @@ export default async function DashboardPage() {
           endDate: activeDailyMessage.endDate.toISOString(),
         }} />
       )}
+
+      {/* ── Umfragen ──────────────────────────────────────────────── */}
+      <DailyPollBanner />
 
       {/* ── Content ─────────────────────────────────────────────────── */}
       <div className="px-4 sm:px-6 py-5 max-w-7xl mx-auto space-y-5 relative">

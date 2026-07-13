@@ -61,6 +61,8 @@ model User {
   systemBadges             UserSystemBadge[]
   customBadgeAwards        UserCustomBadge[]
   dailyMessages            DailyMessage[]
+  dailyPolls               DailyPoll[]
+  dailyPollVotes           DailyPollVote[]
   eventPredictionsMade     EventWinnerPrediction[]  @relation("EventPredictionAuthor")
   eventPredictionsReceived EventWinnerPrediction[]  @relation("EventPredictionTarget")
   predictionStreak         PredictionStreak?
@@ -973,6 +975,50 @@ model DailyMessage {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   creator   User     @relation(fields: [createdBy], references: [id])
+}
+
+// ── Umfragen (Dashboard-Banner) ──────────────────────────────────────────────
+
+model DailyPoll {
+  id             String            @id @default(cuid())
+  title          String
+  question       String
+  startDate      DateTime
+  endDate        DateTime
+  isActive       Boolean           @default(true)
+  allowMultiple  Boolean           @default(false)
+  allowFreeText  Boolean           @default(false)
+  rewardCoins    Int               @default(0)
+  createdBy      String
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  creator        User              @relation(fields: [createdBy], references: [id])
+  options        DailyPollOption[]
+  votes          DailyPollVote[]
+}
+
+model DailyPollOption {
+  id         String    @id @default(cuid())
+  pollId     String
+  poll       DailyPoll @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  label      String
+  gameName   String?
+  steamAppId Int?
+  order      Int       @default(0)
+}
+
+model DailyPollVote {
+  id        String    @id @default(cuid())
+  pollId    String
+  poll      DailyPoll @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // JSON: ["optionId1", "optionId2"] — bei allowMultiple ggf. mehrere
+  optionIds String?
+  freeText  String?
+  createdAt DateTime  @default(now())
+
+  @@unique([pollId, userId])
 }
 
 // ── In-App-Benachrichtigungen ────────────────────────────────────────────────
