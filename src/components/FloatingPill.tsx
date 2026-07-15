@@ -6,7 +6,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
   LayoutDashboard, CalendarDays, Star, Trophy, ShoppingBag,
-  Heart, User, ShieldCheck, LogOut, ChevronDown, Sun, Moon, Bell, Settings, X, MessageCircleMore, Gamepad2,
+  Heart, User, ShieldCheck, LogOut, ChevronDown, Sun, Moon, Bell, Settings, X, MessageCircleMore,
 } from "lucide-react";
 import { WHATSAPP_COMMUNITY_URL } from "@/lib/config";
 import PollBadge from "@/components/PollBadge";
@@ -15,7 +15,6 @@ const NAV = [
   { label: "Dashboard",      href: "/dashboard",   icon: LayoutDashboard },
   { label: "Events",         href: "/events",       icon: CalendarDays    },
   { label: "Level-Up-League",href: "/lul",          icon: Star            },
-  { label: "Minigames",      href: "/minigames",    icon: Gamepad2        },
   { label: "Rangliste",      href: "/leaderboard",  icon: Trophy          },
   { label: "Shop",           href: "/shop",         icon: ShoppingBag     },
   { label: "Spendenpool",    href: "/donations",    icon: Heart           },
