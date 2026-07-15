@@ -1,12 +1,10 @@
 import { prisma } from "./prisma";
 
-export type MinigameKey = "prediction" | "clicker" | "duel";
+export type MinigameKey = "prediction" | "duel";
 
 export interface MinigamesConfig {
   predictionEnabled: boolean;
-  clickerEnabled: boolean;
   duelEnabled: boolean;
-  clickerDailyCap: number;
   duelDailyWagerCap: number;
   duelMinWager: number;
   duelMaxWager: number;
@@ -15,9 +13,7 @@ export interface MinigamesConfig {
 
 const DEFAULTS: MinigamesConfig = {
   predictionEnabled: true,
-  clickerEnabled: true,
   duelEnabled: true,
-  clickerDailyCap: 250,
   duelDailyWagerCap: 1000,
   duelMinWager: 10,
   duelMaxWager: 500,
@@ -27,9 +23,7 @@ const DEFAULTS: MinigamesConfig = {
 // BotConfig-Keys (Key-Value-Tabelle) — erste echte Nutzung dieses Modells in /src
 const KEYS = {
   predictionEnabled: "minigames_prediction_enabled",
-  clickerEnabled: "minigames_clicker_enabled",
   duelEnabled: "minigames_duel_enabled",
-  clickerDailyCap: "minigames_clicker_daily_cap",
   duelDailyWagerCap: "minigames_duel_daily_wager_cap",
   duelMinWager: "minigames_duel_min_wager",
   duelMaxWager: "minigames_duel_max_wager",
@@ -53,9 +47,7 @@ export async function getMinigamesConfig(): Promise<MinigamesConfig> {
 
   return {
     predictionEnabled: bool(KEYS.predictionEnabled, DEFAULTS.predictionEnabled),
-    clickerEnabled: bool(KEYS.clickerEnabled, DEFAULTS.clickerEnabled),
     duelEnabled: bool(KEYS.duelEnabled, DEFAULTS.duelEnabled),
-    clickerDailyCap: num(KEYS.clickerDailyCap, DEFAULTS.clickerDailyCap),
     duelDailyWagerCap: num(KEYS.duelDailyWagerCap, DEFAULTS.duelDailyWagerCap),
     duelMinWager: num(KEYS.duelMinWager, DEFAULTS.duelMinWager),
     duelMaxWager: num(KEYS.duelMaxWager, DEFAULTS.duelMaxWager),
@@ -66,7 +58,6 @@ export async function getMinigamesConfig(): Promise<MinigamesConfig> {
 export async function isMinigameEnabled(game: MinigameKey): Promise<boolean> {
   const config = await getMinigamesConfig();
   if (game === "prediction") return config.predictionEnabled;
-  if (game === "clicker") return config.clickerEnabled;
   return config.duelEnabled;
 }
 
@@ -74,9 +65,7 @@ export async function isMinigameEnabled(game: MinigameKey): Promise<boolean> {
 export async function updateMinigamesConfig(patch: Partial<MinigamesConfig>): Promise<void> {
   const entries: [string, string][] = [];
   if (patch.predictionEnabled !== undefined) entries.push([KEYS.predictionEnabled, String(patch.predictionEnabled)]);
-  if (patch.clickerEnabled !== undefined) entries.push([KEYS.clickerEnabled, String(patch.clickerEnabled)]);
   if (patch.duelEnabled !== undefined) entries.push([KEYS.duelEnabled, String(patch.duelEnabled)]);
-  if (patch.clickerDailyCap !== undefined) entries.push([KEYS.clickerDailyCap, String(patch.clickerDailyCap)]);
   if (patch.duelDailyWagerCap !== undefined) entries.push([KEYS.duelDailyWagerCap, String(patch.duelDailyWagerCap)]);
   if (patch.duelMinWager !== undefined) entries.push([KEYS.duelMinWager, String(patch.duelMinWager)]);
   if (patch.duelMaxWager !== undefined) entries.push([KEYS.duelMaxWager, String(patch.duelMaxWager)]);

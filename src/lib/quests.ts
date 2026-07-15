@@ -5,7 +5,7 @@ import { dispatchNotification } from "./notify-dispatch";
 // über Events → EVENT_ATTEND), bleibt aber im Union-Typ für die History-Anzeige alter Quests.
 export type QuestType =
   | "VOICE_MINUTES" | "MESSAGES" | "EVENT_ATTEND" | "TOURNAMENT"
-  | "POLL_VOTE" | "DAILY_SPIN" | "DUEL_PLAYED" | "CLICKER_CLICKS" | "PREDICTION_MADE";
+  | "POLL_VOTE" | "DAILY_SPIN" | "DUEL_PLAYED" | "PREDICTION_MADE";
 
 interface QuestTemplate {
   type: QuestType;
@@ -57,13 +57,6 @@ const TEMPLATES: QuestTemplate[] = [
     descriptions: ["Spiele {target} Münzen-Duell(e)"],
     targets: [3, 5, 8],
     rewards: [150, 250, 400],
-  },
-  {
-    type: "CLICKER_CLICKS",
-    titles: ["Fingerfertig", "Klick-Maschine", "Tap-Talent", "Dauerklicker"],
-    descriptions: ["Klicke {target} Mal im Idle-Clicker"],
-    targets: [200, 400, 700],
-    rewards: [100, 175, 250],
   },
   {
     type: "PREDICTION_MADE",
@@ -222,10 +215,6 @@ export const QUEST_TYPE_META: Record<
   DUEL_PLAYED: {
     label: "Duelle",      unit: "Duelle",      icon: "⚔️",
     color: "text-rose-300",   bar: "from-rose-600 to-rose-400",     bg: "from-rose-500/10",
-  },
-  CLICKER_CLICKS: {
-    label: "Idle-Clicker", unit: "Klicks",     icon: "🖱️",
-    color: "text-fuchsia-300", bar: "from-fuchsia-600 to-fuchsia-400", bg: "from-fuchsia-500/10",
   },
   PREDICTION_MADE: {
     label: "Vorhersagen", unit: "Tipps",       icon: "🎯",

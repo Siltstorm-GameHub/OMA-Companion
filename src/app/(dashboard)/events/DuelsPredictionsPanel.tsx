@@ -1,9 +1,10 @@
 "use client";
 import { useState, useCallback, useEffect } from "react";
 import { toast } from "sonner";
-import { Swords, Search, Check, X, Trophy, Clock, Eye } from "lucide-react";
+import { Check, X, Trophy, Clock, Eye, Target } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
-import CoinFlipModal from "./CoinFlipModal";
+import CoinFlipModal from "@/components/CoinFlipModal";
+import MyPredictionsList, { type MyPrediction } from "../minigames/MyPredictionsList";
 
 type UserLite = { id: string; username: string | null; name: string | null; image: string | null };
 
@@ -33,22 +34,22 @@ function Avatar({ u, size = 24 }: { u?: UserLite; size?: number }) {
   );
 }
 
-export default function DuelClient({
+export default function DuelsPredictionsPanel({
   userId,
-  config,
   initialIncoming,
   initialOutgoing,
   initialHistory,
   initialMonthHistory,
   monthTotal,
+  myPredictions,
 }: {
   userId: string;
-  config: { min: number; max: number; dailyCap: number };
   initialIncoming: DuelEntry[];
   initialOutgoing: DuelEntry[];
   initialHistory: DuelEntry[];
   initialMonthHistory: DuelEntry[];
   monthTotal: number;
+  myPredictions: MyPrediction[];
 }) {
   const [incoming, setIncoming] = useState(initialIncoming);
   const [outgoing, setOutgoing] = useState(initialOutgoing);
@@ -57,11 +58,6 @@ export default function DuelClient({
   const [monthSkip, setMonthSkip] = useState(initialMonthHistory.length);
   const [monthHasMore, setMonthHasMore] = useState(initialMonthHistory.length < monthTotal);
 
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<UserLite[]>([]);
-  const [selected, setSelected] = useState<UserLite | null>(null);
-  const [wager, setWager] = useState(config.min);
-  const [submitting, setSubmitting] = useState(false);
   const [respondingId, setRespondingId] = useState<string | null>(null);
   const [duelResult, setDuelResult] = useState<{ challenger?: UserLite; opponent?: UserLite; winnerId: string; wager: number } | null>(null);
 
@@ -76,47 +72,12 @@ export default function DuelClient({
     } catch { /* ignore */ }
   }, []);
 
-  useEffect(() => {
-    const t = setTimeout(async () => {
-      if (query.trim().length < 2) { setResults([]); return; }
-      try {
-        const res = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`);
-        if (res.ok) setResults((await res.json()).filter((u: UserLite) => u.id !== userId));
-      } catch { /* ignore */ }
-    }, 300);
-    return () => clearTimeout(t);
-  }, [query, userId]);
-
-  // Solange offene Herausforderungen bestehen, regelmäßig aktualisieren —
-  // damit z.B. der Herausforderer mitbekommt, sobald der Gegner antwortet.
   const hasOpenChallenges = incoming.length > 0 || outgoing.length > 0;
   useEffect(() => {
     if (!hasOpenChallenges) return;
     const interval = setInterval(refreshLists, 8_000);
     return () => clearInterval(interval);
   }, [hasOpenChallenges, refreshLists]);
-
-  async function challenge() {
-    if (!selected || submitting) return;
-    setSubmitting(true);
-    try {
-      const res = await fetch("/api/duels", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ opponentId: selected.id, wager }),
-      });
-      const data = await res.json();
-      if (!res.ok) { toast.error(data.error ?? "Fehler"); return; }
-      toast.success(`Herausforderung an ${uname(selected)} gesendet!`);
-      setSelected(null);
-      setQuery("");
-      await refreshLists();
-    } catch {
-      toast.error("Netzwerkfehler");
-    } finally {
-      setSubmitting(false);
-    }
-  }
 
   async function respond(duel: DuelEntry, action: "accept" | "decline") {
     if (respondingId) return;
@@ -156,76 +117,6 @@ export default function DuelClient({
   return (
     <>
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center shrink-0">
-          <Swords className="w-5 h-5 text-rose-400" />
-        </div>
-        <div>
-          <h1 className="text-lg font-semibold text-white">1v1 Münzen-Duell</h1>
-          <p className="text-xs text-gray-500">Einsatz {config.min}–{config.max} Münzen · Tageslimit {config.dailyCap} Münzen</p>
-        </div>
-      </div>
-
-      {/* ── Neues Duell ── */}
-      <div className="glass rounded-2xl p-4 space-y-3">
-        <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold">Neues Duell</p>
-        {selected ? (
-          <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-rose-500/[0.06] border border-rose-500/15">
-            <Avatar u={selected} />
-            <span className="flex-1 text-sm text-white">{uname(selected)}</span>
-            <button onClick={() => setSelected(null)} className="text-gray-500 hover:text-white">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        ) : (
-          <div className="relative">
-            <Search className="w-3.5 h-3.5 text-gray-600 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              placeholder="Nutzer suchen…"
-              className="w-full pl-9 pr-3 py-2 rounded-lg bg-white/[0.04] border border-white/10 text-white text-sm focus:outline-none focus:border-rose-500/50"
-            />
-            {results.length > 0 && (
-              <div className="absolute z-10 mt-1 w-full glass-heavy rounded-xl overflow-hidden border border-white/10">
-                {results.map(u => (
-                  <button key={u.id} onClick={() => { setSelected(u); setResults([]); }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-white/[0.06] text-left">
-                    <Avatar u={u} />
-                    <span className="text-sm text-white">{uname(u)}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="flex items-center gap-3">
-          <label className="flex-1">
-            <span className="text-xs text-gray-500">Einsatz</span>
-            <input
-              type="number"
-              min={config.min}
-              max={config.max}
-              value={wager}
-              onChange={e => setWager(Math.max(config.min, Math.min(config.max, parseInt(e.target.value, 10) || config.min)))}
-              className="mt-1 w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/10 text-white text-sm focus:outline-none focus:border-rose-500/50"
-            />
-          </label>
-          <div className="text-xs text-gray-500 pt-4 flex items-center gap-1">
-            Gewinn: <span className="text-amber-400 font-semibold flex items-center gap-0.5">{wager * 2} <CoinIcon size={12} /></span>
-          </div>
-        </div>
-
-        <button
-          onClick={challenge}
-          disabled={!selected || submitting}
-          className="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-40 text-white text-sm font-semibold transition-colors"
-        >
-          {submitting ? "Sendet…" : "Herausfordern"}
-        </button>
-      </div>
-
       {/* ── Offene Herausforderungen ── */}
       {hasOpenChallenges && (
         <div className="space-y-2">
@@ -300,7 +191,7 @@ export default function DuelClient({
         </div>
       )}
 
-      {/* ── Öffentliche Historie diesen Monat ── */}
+      {/* ── Öffentliche Historie diesen Monat (inkl. Replay) ── */}
       <div className="space-y-2">
         <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold">Historie diesen Monat (alle Mitglieder)</p>
         {monthHistory.length === 0 ? (
@@ -308,14 +199,19 @@ export default function DuelClient({
         ) : (
           <div className="glass rounded-2xl divide-y divide-white/5">
             {monthHistory.map(d => (
-              <div key={d.id} className="flex items-center gap-3 px-4 py-2.5">
+              <button
+                key={d.id}
+                onClick={() => setDuelResult({ challenger: d.challenger, opponent: d.opponent, winnerId: d.winnerId!, wager: d.wager })}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-white/[0.04] transition-colors"
+              >
                 <Avatar u={d.challenger} size={20} />
                 <span className={`text-xs ${d.winnerId === d.challengerId ? "text-emerald-300 font-semibold" : "text-gray-400"}`}>{uname(d.challenger)}</span>
                 <span className="text-[10px] text-gray-600">vs.</span>
                 <Avatar u={d.opponent} size={20} />
                 <span className={`text-xs flex-1 ${d.winnerId === d.opponentId ? "text-emerald-300 font-semibold" : "text-gray-400"}`}>{uname(d.opponent)}</span>
                 <span className="text-xs text-amber-500/80 flex items-center gap-0.5">{d.wager} <CoinIcon size={10} /></span>
-              </div>
+                <Eye className="w-3.5 h-3.5 text-gray-600" />
+              </button>
             ))}
           </div>
         )}
@@ -324,6 +220,14 @@ export default function DuelClient({
             Mehr laden
           </button>
         )}
+      </div>
+
+      {/* ── Meine Event-Sieger-Vorhersagen ── */}
+      <div className="space-y-2">
+        <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold flex items-center gap-1.5">
+          <Target className="w-3.5 h-3.5" /> Meine Event-Sieger-Vorhersagen
+        </p>
+        <MyPredictionsList initialPredictions={myPredictions} />
       </div>
     </div>
 

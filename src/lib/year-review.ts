@@ -39,7 +39,6 @@ export type YearReview = {
 
   lul: { spieltage: number; points: number; wins: number } | null;
   duels: { played: number; won: number } | null;
-  clickerClicks: number;
   predictions: { total: number; correct: number } | null;
   donationsTotal: number;
 
@@ -58,7 +57,7 @@ export async function buildYearReview(userId: string, year: number): Promise<Yea
     rankPointsBeforeAgg, rankPointsThroughAgg,
     biggestWin, txInYear,
     eventRegs, tournamentParts,
-    lulEntries, duelsRaw, clickerRows, predictionRows,
+    lulEntries, duelsRaw, predictionRows,
     donationsAgg, systemBadges, customBadges, collectiblesAcquired,
   ] = await Promise.all([
     prisma.pointTransaction.aggregate({
@@ -100,10 +99,6 @@ export async function buildYearReview(userId: string, year: number): Promise<Yea
     prisma.duelChallenge.findMany({
       where:  { OR: [{ challengerId: userId }, { opponentId: userId }], status: "resolved", resolvedAt: { gte: yearStart, lt: yearEnd } },
       select: { winnerId: true },
-    }),
-    prisma.dailyClickerProgress.findMany({
-      where:  { userId, date: { gte: `${year}-01-01`, lt: `${year + 1}-01-01` } },
-      select: { clicksToday: true },
     }),
     prisma.eventWinnerPrediction.findMany({
       where:  { userId, resolved: true, createdAt: { gte: yearStart, lt: yearEnd } },
@@ -185,8 +180,6 @@ export async function buildYearReview(userId: string, year: number): Promise<Yea
     won:    duelsRaw.filter(d => d.winnerId === userId).length,
   } : null;
 
-  const clickerClicks = clickerRows.reduce((s, r) => s + r.clicksToday, 0);
-
   const predictions = predictionRows.length > 0 ? {
     total:   predictionRows.length,
     correct: predictionRows.filter(p => p.correct).length,
@@ -212,7 +205,6 @@ export async function buildYearReview(userId: string, year: number): Promise<Yea
     rarestCollectible,
     lul,
     duels,
-    clickerClicks,
     predictions,
     donationsTotal: donationsAgg._sum.amount ?? 0,
     biggestWin: biggestWin
