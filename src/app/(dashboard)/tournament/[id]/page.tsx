@@ -37,6 +37,7 @@ import LigaView from "./LigaView";
 import { getWanderpocalHoldersMap } from "@/lib/get-wanderpocal-holders";
 import { getMinigamesConfig } from "@/lib/minigames-config";
 import { PREDICTION_MIN_WAGER } from "@/lib/predictions";
+import { computeEventPoints, type StatConfig } from "@/lib/series-event-points";
 
 const GUILD_ID = process.env.DISCORD_GUILD_ID ?? "";
 
@@ -352,14 +353,10 @@ export default async function TournamentDetailPage({
   // Neue DB-basierte Umfragen (EventPoll): pro Gewinner alle gewonnenen Umfrage-Labels sammeln,
   // und je Umfrage die (ggf. aus den Stimmen abgeleiteten) Gewinner-IDs fürs Ergebnis-Badge auflösen
   const pollWinsByUser: Record<string, string[]> = {};
-  const pollRankPtsByUser: Record<string, number> = {};
   const completedPolls: { id: string; label: string; winnerIds: string[] }[] = [];
   for (const p of pollDisplays) {
     if (p.effectiveWinnerIds.length === 0) continue;
-    for (const uid of p.effectiveWinnerIds) {
-      (pollWinsByUser[uid] ??= []).push(p.label);
-      if (p.winnerRankPoints > 0) pollRankPtsByUser[uid] = (pollRankPtsByUser[uid] ?? 0) + p.winnerRankPoints;
-    }
+    for (const uid of p.effectiveWinnerIds) (pollWinsByUser[uid] ??= []).push(p.label);
     completedPolls.push({ id: p.id, label: p.label, winnerIds: p.effectiveWinnerIds });
   }
   // Umfragen mit Ergebnis werden bereits oben als Gewinner-Karte angezeigt —
@@ -378,18 +375,24 @@ export default async function TournamentDetailPage({
   })();
 
   // Ligapunkte pro Stat-Einheit aus der Reihen-Tabellenkonfiguration (für die Punkte-Anzeige je Stat)
-  const statPointsPer: Record<string, number> = (() => {
-    if (!event.series?.seriesStatConfig) return {};
-    try {
-      const cfg = JSON.parse(event.series.seriesStatConfig) as {
-        stats?: { field: string; pointsPer: number }[];
-        participationPoints?: number;
-      };
-      const map: Record<string, number> = {};
-      for (const s of cfg.stats ?? []) if (s.field) map[s.field] = s.pointsPer;
-      return map;
-    } catch { return {}; }
+  const seriesStatCfg: StatConfig = (() => {
+    if (!event.series?.seriesStatConfig) return { participationPoints: 0, stats: [] };
+    try { return JSON.parse(event.series.seriesStatConfig) as StatConfig; }
+    catch { return { participationPoints: 0, stats: [] }; }
   })();
+  const statPointsPer: Record<string, number> = (() => {
+    const map: Record<string, number> = {};
+    for (const s of seriesStatCfg.stats ?? []) if (s.field) map[s.field] = s.pointsPer;
+    return map;
+  })();
+  // Ligapunkte, die dieses Event je Spieler beigesteuert hat — identische Berechnung wie in der
+  // Gesamttabelle der Eventreihe (Teilnahme + Stats + Umfrage-Belohnungen alt & neu)
+  const ligaPunkteByUser: Record<string, number> = event.series
+    ? computeEventPoints(
+        { completionData: event.completionData, registrations: event.registrations, matches: event.matches },
+        seriesStatCfg,
+      ).pointsByUser
+    : {};
 
   // Punkte pro Platzierung aus pointsConfig
   type PcVal = number | { coins?: number; points?: number };
@@ -1013,19 +1016,13 @@ export default async function TournamentDetailPage({
                 participants={mergedParticipants}
                 statFields={event.statFields ? JSON.parse(event.statFields) : []}
                 statPointsPer={statPointsPer}
+                ligaPunkteByUser={ligaPunkteByUser}
                 userId={userId}
                 format={format}
-                placementRewards={[1, 2, 3].map(place => ({
-                  place,
-                  coins: placementCoins(place),
-                  rankPts: placementRankPts(place),
-                }))}
                 finalRankingGroups={rankingGroups}
                 pollWinnerIds={pollWinnerIds}
-                pollBonusRankPts={pollBonusRankPts}
                 pollLabel={pollLabel}
                 pollWinsByUser={pollWinsByUser}
-                pollRankPtsByUser={pollRankPtsByUser}
                 votedUserIds={[...votedUserIds]}
                 externalVoters={hasVoteSeriesPoints ? externalVoters.map(u => ({ userId: u.id, user: u })) : []}
               />

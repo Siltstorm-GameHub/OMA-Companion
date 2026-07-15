@@ -16,6 +16,7 @@ import SeriesStandingsTable from "./SeriesStandingsTable";
 import SeriesEventList, { type SeriesEventItem } from "./SeriesEventList";
 import FullStandingsToggle from "./FullStandingsToggle";
 import type { DeltaInfo } from "./SeriesStandingsTable";
+import { computeEventPoints, type StatConfig } from "@/lib/series-event-points";
 
 type ArchivedSeason = {
   id: string; name: string; status: string; seasonNumber: number | null;
@@ -82,31 +83,6 @@ const FORMAT_LABELS: Record<string, string> = {
   avg_stats:          "Durchschnittswerte",
 };
 
-type StatConfig = {
-  participationPoints: number;
-  stats: { field: string; pointsPer: number }[];
-  mvpStatField?: string;
-  defaultWinnerStatField?: string;
-  defaultWinnerTargetField?: string;
-  eventStatFields?: string[];
-  winnerStatKeys?: string[];
-  winnerSeriesStatKey?: string;
-  matchWinStatKeys?: string[];
-  dominionBonus?: {
-    enabled: boolean;
-    triggerStats: string[];
-    threshold: number;
-    coins: number;
-    seriesPoints: number;
-  };
-};
-
-function resolveWinnerTargetKeys(cfg: StatConfig, seriesWinnerTargetField?: string): string[] {
-  if (cfg.winnerStatKeys?.length) return cfg.winnerStatKeys;
-  if (cfg.winnerSeriesStatKey) return [cfg.winnerSeriesStatKey];
-  if (seriesWinnerTargetField) return [seriesWinnerTargetField];
-  return [];
-}
 type LegacyRow = { userId: string; points: number; participations: number; stats: Record<string, number> };
 type SeriesEventForStandings = {
   id: string;
@@ -124,109 +100,21 @@ function computeStatStandings(
 ) {
   const evPart: Record<string, number> = {};
   const evStats: Record<string, Record<string, number>> = {};
-  // Extra points from poll wins, added directly to totalPoints
-  const pollBonusPts: Record<string, number> = {};
-
-  function addEv(uid: string, field: string, val: number) {
-    if (!evStats[uid]) evStats[uid] = {};
-    evStats[uid][field] = (evStats[uid][field] ?? 0) + val;
-  }
+  const evTotalPoints: Record<string, number> = {};
 
   for (const ev of events) {
-    if (!ev.completionData) continue;
-    let cd: {
-      gamePhaseComplete?: boolean;
-      mvpUserId?: string;
-      eventWinnerId?: string;
-      eventWinnerIds?: string[];
-      seriesWinnerTargetField?: string;
-      pollWinnerIds?: string[];
-      pollWinnerId?: string;
-      pollBonusCoins?: number;
-      pollBonusRankPoints?: number;
-      pollResults?: { winnerIds: string[]; coins: number; rankPoints: number }[];
-      eventPollRewards?: {
-        label: string;
-        winnerIds: string[];
-        voterIds: string[];
-        participationSeriesPoints: number;
-        winnerRankPoints: number;
-      }[];
-    } = {};
-    try { cd = JSON.parse(ev.completionData); } catch { continue; }
-    if (!cd.gamePhaseComplete) continue;
-
-    for (const { userId: uid } of ev.registrations) {
-      evPart[uid] = (evPart[uid] ?? 0) + 1;
+    const { pointsByUser, participationsByUser, statsByUser } = computeEventPoints(ev, cfg);
+    for (const [uid, pts] of Object.entries(pointsByUser)) {
+      evTotalPoints[uid] = (evTotalPoints[uid] ?? 0) + pts;
     }
-    // Felder aus Match-Einträgen summieren: cfg.stats + eventStatFields, aber keine Winner-Stat-Keys
-    const winnerStatSet = new Set(cfg.winnerStatKeys ?? []);
-    const matchWinStatSet = new Set(cfg.matchWinStatKeys ?? []);
-    const fieldsToAggregate = new Set([
-      ...cfg.stats.map(s => s.field).filter(f => !winnerStatSet.has(f) && !matchWinStatSet.has(f)),
-      ...(cfg.eventStatFields ?? []),
-    ]);
-    for (const match of ev.matches) {
-      for (const entry of match.entries) {
-        if (!entry.userId || !entry.statsJson) continue;
-        let s: Record<string, number> = {};
-        try { s = JSON.parse(entry.statsJson); } catch { continue; }
-        for (const field of fieldsToAggregate) {
-          const v = Number(s[field] ?? 0);
-          if (v) addEv(entry.userId, field, v);
-        }
-        // Match-Win-Stats: gespeist aus dem "Match Win"-Haken pro Runde, nicht aus einem gleichnamigen Feld
-        if (matchWinStatSet.size > 0) {
-          const mw = Number(s["Match Win"] ?? 0);
-          if (mw) for (const key of matchWinStatSet) addEv(entry.userId, key, mw);
-        }
+    for (const [uid, part] of Object.entries(participationsByUser)) {
+      evPart[uid] = (evPart[uid] ?? 0) + part;
+    }
+    for (const [uid, stats] of Object.entries(statsByUser)) {
+      if (!evStats[uid]) evStats[uid] = {};
+      for (const [field, val] of Object.entries(stats)) {
+        evStats[uid][field] = (evStats[uid][field] ?? 0) + val;
       }
-    }
-    if (cd.mvpUserId && cfg.mvpStatField) {
-      addEv(cd.mvpUserId, cfg.mvpStatField, 1);
-    }
-    const winnerIds = cd.eventWinnerIds ?? (cd.eventWinnerId ? [cd.eventWinnerId] : []);
-    const winnerTargetKeys = resolveWinnerTargetKeys(cfg, cd.seriesWinnerTargetField);
-    if (winnerIds.length > 0 && winnerTargetKeys.length > 0) {
-      for (const uid of winnerIds) {
-        for (const key of winnerTargetKeys) addEv(uid, key, 1);
-      }
-    }
-
-    // Legacy single-poll winner bonus
-    const singlePollWinners: string[] = cd.pollWinnerIds ?? (cd.pollWinnerId ? [cd.pollWinnerId] : []);
-    const singlePollRankPts = cd.pollBonusRankPoints ?? 0;
-    for (const uid of singlePollWinners) {
-      if (singlePollRankPts > 0) pollBonusPts[uid] = (pollBonusPts[uid] ?? 0) + singlePollRankPts;
-    }
-
-    // Multi-poll results (body.pollResults)
-    for (const poll of cd.pollResults ?? []) {
-      const pollRankPts = poll.rankPoints ?? 0;
-      if (pollRankPts <= 0) continue;
-      for (const uid of poll.winnerIds ?? []) {
-        pollBonusPts[uid] = (pollBonusPts[uid] ?? 0) + pollRankPts;
-      }
-    }
-
-    // DB-basierte EventPoll-Belohnungen: Abstimmungs-Tracking + Ligapunkte
-    const eventVoterSet = new Set<string>(); // einmal pro Event zählen für Umfrage-Teilnahmen
-    for (const ep of cd.eventPollRewards ?? []) {
-      for (const uid of ep.voterIds ?? []) {
-        addEv(uid, `${ep.label}_Abstimmungen`, 1);
-        eventVoterSet.add(uid);
-        if (ep.participationSeriesPoints > 0)
-          addEv(uid, `${ep.label}_Teilnahmepunkte`, ep.participationSeriesPoints);
-      }
-      for (const uid of ep.winnerIds ?? []) {
-        addEv(uid, ep.label, 1);
-        if (ep.winnerRankPoints > 0)
-          addEv(uid, `${ep.label}_Siegerpunkte`, ep.winnerRankPoints);
-      }
-    }
-    // +1 Umfrage-Teilnahmen pro Event (nicht pro Poll)
-    for (const uid of eventVoterSet) {
-      addEv(uid, "Umfrage-Teilnahmen", 1);
     }
   }
 
@@ -244,7 +132,7 @@ function computeStatStandings(
 
   const allUids = new Set([
     ...Object.keys(evPart), ...Object.keys(evStats),
-    ...Object.keys(legPts), ...Object.keys(pollBonusPts),
+    ...Object.keys(legPts), ...Object.keys(evTotalPoints),
   ]);
 
   // Track which stat fields appear in event data (for extraCols filtering)
@@ -256,10 +144,7 @@ function computeStatStandings(
   const rows = [...allUids].map(uid => {
     const ep = evPart[uid] ?? 0;
     const es = evStats[uid] ?? {};
-    let totalPoints = (legPts[uid] ?? 0) + ep * cfg.participationPoints + (pollBonusPts[uid] ?? 0);
-    for (const { field, pointsPer } of cfg.stats) {
-      totalPoints += (es[field] ?? 0) * pointsPer;
-    }
+    const totalPoints = (legPts[uid] ?? 0) + (evTotalPoints[uid] ?? 0);
     const displayPart = (legPart[uid] ?? 0) + ep;
     // Start from legacy stats, then add event stats on top (merging same fields)
     const displayStats: Record<string, number> = {};
@@ -460,84 +345,15 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
 
   if (gamePhaseCompleteEvents.length > 0) {
     const lastEv = gamePhaseCompleteEvents[0];
-    const contrib = new Map<string, { participations: number; stats: Record<string, number> }>();
-    function getContrib(uid: string) {
-      if (!contrib.has(uid)) contrib.set(uid, { participations: 0, stats: {} });
-      return contrib.get(uid)!;
-    }
-    const lastEvMatchWinStatSet = new Set(statCfg.matchWinStatKeys ?? []);
-    for (const { userId: uid } of lastEv.registrations) getContrib(uid).participations += 1;
-    for (const match of lastEv.matches) {
-      for (const entry of match.entries) {
-        if (!entry.userId || !entry.statsJson) continue;
-        let s: Record<string, number> = {};
-        try { s = JSON.parse(entry.statsJson); } catch { continue; }
-        const c = getContrib(entry.userId);
-        for (const { field } of statCfg.stats) {
-          // Match-Win-Stats: gespeist aus dem "Match Win"-Haken pro Runde, nicht aus einem gleichnamigen Feld
-          const v = lastEvMatchWinStatSet.has(field) ? Number(s["Match Win"] ?? 0) : Number(s[field] ?? 0);
-          if (v) c.stats[field] = (c.stats[field] ?? 0) + v;
-        }
-      }
-    }
-    const lastEventPollBonus: Record<string, number> = {};
-    if (lastEv.completionData) {
-      try {
-        const cd = JSON.parse(lastEv.completionData) as {
-          mvpUserId?: string; eventWinnerId?: string; eventWinnerIds?: string[]; seriesWinnerTargetField?: string;
-          pollWinnerIds?: string[]; pollWinnerId?: string; pollBonusRankPoints?: number;
-          pollResults?: { winnerIds?: string[]; rankPoints?: number }[];
-          eventPollRewards?: { winnerIds?: string[]; winnerRankPoints?: number }[];
-        };
-        if (cd.mvpUserId && statCfg.mvpStatField) {
-          const c = getContrib(cd.mvpUserId);
-          c.stats[statCfg.mvpStatField] = (c.stats[statCfg.mvpStatField] ?? 0) + 1;
-        }
-        const lastWinnerIds = cd.eventWinnerIds ?? (cd.eventWinnerId ? [cd.eventWinnerId] : []);
-        const lastWinnerTargetKeys = resolveWinnerTargetKeys(statCfg, cd.seriesWinnerTargetField);
-        if (lastWinnerIds.length > 0 && lastWinnerTargetKeys.length > 0) {
-          for (const wid of lastWinnerIds) {
-            const c = getContrib(wid);
-            for (const key of lastWinnerTargetKeys) c.stats[key] = (c.stats[key] ?? 0) + 1;
-          }
-        }
-        // Poll bonus rank points for delta calculation
-        const singleWinners = cd.pollWinnerIds ?? (cd.pollWinnerId ? [cd.pollWinnerId] : []);
-        const singleRankPts = cd.pollBonusRankPoints ?? 0;
-        for (const uid of singleWinners) {
-          if (singleRankPts > 0) lastEventPollBonus[uid] = (lastEventPollBonus[uid] ?? 0) + singleRankPts;
-        }
-        for (const poll of cd.pollResults ?? []) {
-          const rp = poll.rankPoints ?? 0;
-          if (rp <= 0) continue;
-          for (const uid of poll.winnerIds ?? []) {
-            lastEventPollBonus[uid] = (lastEventPollBonus[uid] ?? 0) + rp;
-          }
-        }
-        for (const ep of cd.eventPollRewards ?? []) {
-          const rp = ep.winnerRankPoints ?? 0;
-          if (rp <= 0) continue;
-          for (const uid of ep.winnerIds ?? []) {
-            lastEventPollBonus[uid] = (lastEventPollBonus[uid] ?? 0) + rp;
-          }
-        }
-      } catch { /* ignore */ }
-    }
+    const { pointsByUser: lastEvPoints, participationsByUser: lastEvPart, statsByUser: lastEvStats } =
+      computeEventPoints(lastEv, statCfg);
 
     const prevPointsMap = new Map<string, number>();
     const prevPartMap   = new Map<string, number>();
     for (const row of standings) {
-      const c = contrib.get(row.userId);
-      let prevPts = row.totalPoints;
-      if (c) {
-        prevPts -= c.participations * statCfg.participationPoints;
-        for (const { field, pointsPer } of statCfg.stats) {
-          prevPts -= (c.stats[field] ?? 0) * pointsPer;
-        }
-      }
-      prevPts -= lastEventPollBonus[row.userId] ?? 0;
+      const prevPts = row.totalPoints - (lastEvPoints[row.userId] ?? 0);
       prevPointsMap.set(row.userId, prevPts);
-      prevPartMap.set(row.userId, row.participations - (c?.participations ?? 0));
+      prevPartMap.set(row.userId, row.participations - (lastEvPart[row.userId] ?? 0));
     }
 
     const prevRanked = standings
@@ -553,14 +369,11 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
       const row = standings[i];
       const currentRank = i + 1;
       const prevRank = prevRankMap.get(row.userId);
-      const c = contrib.get(row.userId);
-      const participated = (c?.participations ?? 0) > 0;
+      const participated = (lastEvPart[row.userId] ?? 0) > 0;
       const isNew = prevRank === undefined;
       const statDeltas: Record<string, number> = {};
-      if (c) {
-        for (const [field, val] of Object.entries(c.stats)) {
-          if (val > 0) statDeltas[field] = val;
-        }
+      for (const [field, val] of Object.entries(lastEvStats[row.userId] ?? {})) {
+        if (val > 0) statDeltas[field] = val;
       }
       const pointsDelta = row.totalPoints - (prevPointsMap.get(row.userId) ?? row.totalPoints);
       lastEventDelta[row.userId] = {
