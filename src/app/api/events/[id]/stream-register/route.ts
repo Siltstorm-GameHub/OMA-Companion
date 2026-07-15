@@ -10,6 +10,11 @@ export async function POST(_req: NextRequest, { params }: Params) {
   const { id: eventId } = await params;
   const userId = session.user.id;
 
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { twitchLogin: true } });
+  if (!user?.twitchLogin) {
+    return NextResponse.json({ error: "Kein Twitch-Konto hinterlegt", code: "NO_TWITCH" }, { status: 400 });
+  }
+
   const event = await prisma.event.findUnique({ where: { id: eventId }, select: { id: true, status: true } });
   if (!event) return NextResponse.json({ error: "Event nicht gefunden" }, { status: 404 });
   if (event.status === "finished" || event.status === "closed") {

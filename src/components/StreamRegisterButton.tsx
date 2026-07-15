@@ -23,6 +23,11 @@ export default function StreamRegisterButton({
       });
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
+        if (d.code === "NO_TWITCH") {
+          toast.error("Bitte zuerst dein Twitch-Konto in deinem Profil hinterlegen.");
+          router.push("/profile");
+          return;
+        }
         toast.error(d.error ?? "Fehler");
         return;
       }
