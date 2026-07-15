@@ -38,6 +38,8 @@ export default function FfaView({
   pollWinnerIds = [],
   pollBonusRankPts = null,
   pollLabel = null,
+  pollWinsByUser = {},
+  pollRankPtsByUser = {},
   votedUserIds = [],
   externalVoters = [],
 }: {
@@ -53,6 +55,10 @@ export default function FfaView({
   pollWinnerIds?: string[];
   pollBonusRankPts?: number | null;
   pollLabel?: string | null;
+  /** Gewonnene Umfrage-Labels je User (neues DB-basiertes Multi-Umfrage-System) */
+  pollWinsByUser?: Record<string, string[]>;
+  /** Ligapunkte aus gewonnenen Umfragen je User (neues DB-basiertes Multi-Umfrage-System) */
+  pollRankPtsByUser?: Record<string, number>;
   /** Alle User-IDs, die in mindestens einer Umfrage des Events abgestimmt haben */
   votedUserIds?: string[];
   /** Wähler ohne Event-Registrierung — nur übergeben wenn es Ligapunkte für Stimmabgabe gibt */
@@ -154,7 +160,10 @@ export default function FfaView({
   const upcomingMatches = matches.filter(m => !m.playedAt);
 
   // Belohnungs-Spalte zeigt nur Rangpunkte (keine Münzen)
-  const hasRewards = placementRewards.some(p => p.rankPts > 0) || (pollWinnerIds.length > 0 && (pollBonusRankPts ?? 0) > 0);
+  const hasRewards = placementRewards.some(p => p.rankPts > 0)
+    || (pollWinnerIds.length > 0 && (pollBonusRankPts ?? 0) > 0)
+    || Object.keys(pollWinsByUser).length > 0;
+  const hasEventLigapunkte = hasRewards || Object.values(statPointsPer).some(v => v > 0);
 
   return (
     <div className="space-y-5">
@@ -184,6 +193,9 @@ export default function FfaView({
                     {hasRewards && (
                       <th className="text-center px-3 py-2.5 font-medium text-amber-500/70">Belohnung</th>
                     )}
+                    {hasEventLigapunkte && (
+                      <th className="text-center px-3 py-2.5 font-medium text-teal-500/70">Ligapunkte</th>
+                    )}
                     <th className="text-center px-3 py-2.5 font-medium">Runden</th>
                   </tr>
                 </thead>
@@ -200,7 +212,15 @@ export default function FfaView({
                     const place = confirmedPlaceOf.get(r.userId) ?? (i + 1);
                     const reward = placementRewards.find(p => p.place === place);
                     const isPollWinner = pollWinnerIds.includes(r.userId);
-                    const totalRankPts = (reward?.rankPts ?? 0) + (isPollWinner && pollBonusRankPts ? pollBonusRankPts : 0);
+                    const wonPollLabels = pollWinsByUser[r.userId] ?? [];
+                    const wonPollRankPts = pollRankPtsByUser[r.userId] ?? 0;
+                    const totalRankPts = (reward?.rankPts ?? 0)
+                      + (isPollWinner && pollBonusRankPts ? pollBonusRankPts : 0)
+                      + wonPollRankPts;
+                    const statPtsTotal = statFields.reduce(
+                      (sum, f) => sum + (statPointsPer[f] ? (r.stats[f] ?? 0) * statPointsPer[f] : 0), 0
+                    );
+                    const eventLigapunkte = totalRankPts + statPtsTotal;
                     return (
                       <tr key={r.userId} className={`transition-colors ${isMe ? "bg-rose-950/30" : "hover:bg-white/[0.02]"}`}>
                         <td className="px-4 py-3 text-center">
@@ -271,7 +291,21 @@ export default function FfaView({
                                   <Vote className="w-2.5 h-2.5" />{pollLabel ?? "Poll"}
                                 </span>
                               )}
+                              {wonPollLabels.map(label => (
+                                <span key={label} className="text-[10px] text-violet-400 flex items-center gap-0.5 leading-tight">
+                                  <Vote className="w-2.5 h-2.5" />{label}
+                                </span>
+                              ))}
                             </div>
+                          </td>
+                        )}
+                        {hasEventLigapunkte && (
+                          <td className="px-3 py-3 text-center">
+                            {eventLigapunkte > 0 && (
+                              <span className="text-[11px] text-teal-400 tabular-nums leading-tight inline-flex items-center gap-0.5">
+                                +{eventLigapunkte} <RankPointsIcon size={11} />
+                              </span>
+                            )}
                           </td>
                         )}
                         <td className="px-3 py-3 text-center text-gray-500 text-xs">{r.matchCount}</td>

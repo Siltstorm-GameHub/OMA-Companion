@@ -487,6 +487,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
           mvpUserId?: string; eventWinnerId?: string; eventWinnerIds?: string[]; seriesWinnerTargetField?: string;
           pollWinnerIds?: string[]; pollWinnerId?: string; pollBonusRankPoints?: number;
           pollResults?: { winnerIds?: string[]; rankPoints?: number }[];
+          eventPollRewards?: { winnerIds?: string[]; winnerRankPoints?: number }[];
         };
         if (cd.mvpUserId && statCfg.mvpStatField) {
           const c = getContrib(cd.mvpUserId);
@@ -510,6 +511,13 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
           const rp = poll.rankPoints ?? 0;
           if (rp <= 0) continue;
           for (const uid of poll.winnerIds ?? []) {
+            lastEventPollBonus[uid] = (lastEventPollBonus[uid] ?? 0) + rp;
+          }
+        }
+        for (const ep of cd.eventPollRewards ?? []) {
+          const rp = ep.winnerRankPoints ?? 0;
+          if (rp <= 0) continue;
+          for (const uid of ep.winnerIds ?? []) {
             lastEventPollBonus[uid] = (lastEventPollBonus[uid] ?? 0) + rp;
           }
         }
