@@ -159,11 +159,6 @@ export default function FfaView({
   const playedMatches   = matches.filter(m => m.playedAt);
   const upcomingMatches = matches.filter(m => !m.playedAt);
 
-  // Belohnungs-Spalte zeigt nur Rangpunkte (keine Münzen)
-  const hasRewards = placementRewards.some(p => p.rankPts > 0)
-    || (pollWinnerIds.length > 0 && (pollBonusRankPts ?? 0) > 0)
-    || Object.keys(pollWinsByUser).length > 0;
-  const hasEventLigapunkte = hasRewards || Object.values(statPointsPer).some(v => v > 0);
 
   return (
     <div className="space-y-5">
@@ -190,12 +185,7 @@ export default function FfaView({
                     {isCoop && (
                       <th className="text-center px-3 py-2.5 font-medium text-emerald-400">Match Wins</th>
                     )}
-                    {hasRewards && (
-                      <th className="text-center px-3 py-2.5 font-medium text-amber-500/70">Belohnung</th>
-                    )}
-                    {hasEventLigapunkte && (
-                      <th className="text-center px-3 py-2.5 font-medium text-teal-500/70">Ligapunkte</th>
-                    )}
+                    <th className="text-center px-3 py-2.5 font-medium text-teal-500/70">Ligapunkte</th>
                     <th className="text-center px-3 py-2.5 font-medium">Runden</th>
                   </tr>
                 </thead>
@@ -246,6 +236,16 @@ export default function FfaView({
                                 <CheckCircle2 className="w-2.5 h-2.5" /> Abgestimmt
                               </span>
                             )}
+                            {isPollWinner && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-violet-400 bg-violet-500/10 px-1.5 py-0.5 rounded-full shrink-0">
+                                <Vote className="w-2.5 h-2.5" />{pollLabel ?? "Poll"}
+                              </span>
+                            )}
+                            {wonPollLabels.map(label => (
+                              <span key={label} className="inline-flex items-center gap-1 text-[10px] font-medium text-violet-400 bg-violet-500/10 px-1.5 py-0.5 rounded-full shrink-0">
+                                <Vote className="w-2.5 h-2.5" />{label}
+                              </span>
+                            ))}
                           </div>
                         </td>
                         {!isAvg && statFields.map(f => {
@@ -278,36 +278,13 @@ export default function FfaView({
                             {r.stats["Match Win"] ?? 0}
                           </td>
                         )}
-                        {hasRewards && (
-                          <td className="px-3 py-3 text-center">
-                            <div className="flex flex-col items-center gap-0.5">
-                              {totalRankPts > 0 && (
-                                <span className="text-[11px] text-teal-400 tabular-nums leading-tight">
-                                  +{totalRankPts} <RankPointsIcon size={11} />
-                                </span>
-                              )}
-                              {isPollWinner && (
-                                <span className="text-[10px] text-violet-400 flex items-center gap-0.5 leading-tight">
-                                  <Vote className="w-2.5 h-2.5" />{pollLabel ?? "Poll"}
-                                </span>
-                              )}
-                              {wonPollLabels.map(label => (
-                                <span key={label} className="text-[10px] text-violet-400 flex items-center gap-0.5 leading-tight">
-                                  <Vote className="w-2.5 h-2.5" />{label}
-                                </span>
-                              ))}
-                            </div>
-                          </td>
-                        )}
-                        {hasEventLigapunkte && (
-                          <td className="px-3 py-3 text-center">
-                            {eventLigapunkte > 0 && (
-                              <span className="text-[11px] text-teal-400 tabular-nums leading-tight inline-flex items-center gap-0.5">
+                        <td className="px-3 py-3 text-center">
+                          {eventLigapunkte > 0
+                            ? <span className="text-[11px] text-teal-400 tabular-nums leading-tight inline-flex items-center gap-0.5">
                                 +{eventLigapunkte} <RankPointsIcon size={11} />
                               </span>
-                            )}
-                          </td>
-                        )}
+                            : <span className="text-sm text-gray-600">–</span>}
+                        </td>
                         <td className="px-3 py-3 text-center text-gray-500 text-xs">{r.matchCount}</td>
                       </tr>
                     );
