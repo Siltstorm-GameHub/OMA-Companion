@@ -352,10 +352,14 @@ export default async function TournamentDetailPage({
   // Neue DB-basierte Umfragen (EventPoll): pro Gewinner alle gewonnenen Umfrage-Labels sammeln,
   // und je Umfrage die (ggf. aus den Stimmen abgeleiteten) Gewinner-IDs fürs Ergebnis-Badge auflösen
   const pollWinsByUser: Record<string, string[]> = {};
+  const pollRankPtsByUser: Record<string, number> = {};
   const completedPolls: { id: string; label: string; winnerIds: string[] }[] = [];
   for (const p of pollDisplays) {
     if (p.effectiveWinnerIds.length === 0) continue;
-    for (const uid of p.effectiveWinnerIds) (pollWinsByUser[uid] ??= []).push(p.label);
+    for (const uid of p.effectiveWinnerIds) {
+      (pollWinsByUser[uid] ??= []).push(p.label);
+      if (p.winnerRankPoints > 0) pollRankPtsByUser[uid] = (pollRankPtsByUser[uid] ?? 0) + p.winnerRankPoints;
+    }
     completedPolls.push({ id: p.id, label: p.label, winnerIds: p.effectiveWinnerIds });
   }
   // Umfragen mit Ergebnis werden bereits oben als Gewinner-Karte angezeigt —
@@ -1020,6 +1024,8 @@ export default async function TournamentDetailPage({
                 pollWinnerIds={pollWinnerIds}
                 pollBonusRankPts={pollBonusRankPts}
                 pollLabel={pollLabel}
+                pollWinsByUser={pollWinsByUser}
+                pollRankPtsByUser={pollRankPtsByUser}
                 votedUserIds={[...votedUserIds]}
                 externalVoters={hasVoteSeriesPoints ? externalVoters.map(u => ({ userId: u.id, user: u })) : []}
               />
