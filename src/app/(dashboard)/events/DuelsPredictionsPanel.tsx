@@ -1,7 +1,8 @@
 "use client";
 import { useState, useCallback, useEffect } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
-import { Check, X, Trophy, Clock, Eye, Target } from "lucide-react";
+import { Check, X, Trophy, Clock, Eye, Target, HelpCircle, ChevronDown, Swords } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
 import CoinFlipModal from "@/components/CoinFlipModal";
 import PredictionStreakCard from "@/components/PredictionStreakCard";
@@ -65,6 +66,7 @@ export default function DuelsPredictionsPanel({
 
   const [respondingId, setRespondingId] = useState<string | null>(null);
   const [duelResult, setDuelResult] = useState<{ challenger?: UserLite; opponent?: UserLite; winnerId: string; wager: number } | null>(null);
+  const [predictionHelpOpen, setPredictionHelpOpen] = useState(false);
 
   const refreshLists = useCallback(async () => {
     try {
@@ -122,6 +124,49 @@ export default function DuelsPredictionsPanel({
   return (
     <>
     <div className="space-y-6">
+      {/* ── Kurzanleitung ── */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-end">
+          <button
+            onClick={() => setPredictionHelpOpen(v => !v)}
+            className="flex items-center gap-1 text-xs text-violet-400 hover:text-violet-300 transition-colors"
+          >
+            <HelpCircle className="w-3.5 h-3.5" /> Wie geht das?
+            <ChevronDown className={`w-3 h-3 transition-transform ${predictionHelpOpen ? "rotate-180" : ""}`} />
+          </button>
+        </div>
+
+        {predictionHelpOpen && (
+          <div className="glass rounded-2xl p-4 text-xs text-gray-400 leading-relaxed space-y-4">
+            <div className="space-y-1.5">
+              <p className="text-gray-300 font-medium flex items-center gap-1.5">
+                <Target className="w-3.5 h-3.5 text-violet-400" /> Event-Sieger-Vorhersage
+              </p>
+              <ol className="list-decimal list-inside space-y-1.5">
+                <li>Öffne die Seite eines bevorstehenden Events (Tab "Events" oder <Link href="/events" className="text-violet-400 hover:text-violet-300">Eventliste</Link>).</li>
+                <li>Scrolle zum Bereich "Event-Gesamtsieger-Vorhersage" und wähle per Suche den Nutzer, der deiner Meinung nach das gesamte Event gewinnt.</li>
+                <li>Lege einen Münzen-Einsatz fest und bestätige deinen Tipp.</li>
+                <li>Bis der Event-Start erreicht ist, kannst du deine Vorhersage jederzeit ändern oder löschen — danach ist sie gesperrt.</li>
+                <li>Liegst du nach Event-Ende richtig, bekommst du Münzen ausgezahlt und deine Serie wächst.</li>
+              </ol>
+            </div>
+
+            <div className="space-y-1.5 border-t border-white/[0.06] pt-3">
+              <p className="text-gray-300 font-medium flex items-center gap-1.5">
+                <Swords className="w-3.5 h-3.5 text-rose-400" /> 1v1 Münzenduell
+              </p>
+              <ol className="list-decimal list-inside space-y-1.5">
+                <li>Öffne das Profil des Mitglieds, das du herausfordern möchtest (z.B. über die <Link href="/leaderboard" className="text-rose-400 hover:text-rose-300">Rangliste</Link>).</li>
+                <li>Klicke dort auf "Zum Münzenduell herausfordern" und lege deinen Einsatz fest.</li>
+                <li>Sende die Herausforderung ab — dein Einsatz wird sofort reserviert, bis der Gegner reagiert oder die Herausforderung abläuft.</li>
+                <li>Nimmt der Gegner an, entscheidet ein Münzwurf über Sieg oder Niederlage — offene Herausforderungen und die Antwort dazu findest du hier in diesem Tab.</li>
+                <li>Der Gewinner erhält beide Einsätze; Verlauf und Replay aller Duelle siehst du weiter unten.</li>
+              </ol>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* ── Offene Herausforderungen ── */}
       {hasOpenChallenges && (
         <div className="space-y-2">
