@@ -31,34 +31,30 @@ export default function FfaView({
   participants,
   statFields,
   statPointsPer = {},
+  ligaPunkteByUser = {},
   userId,
   format = "ffa",
-  placementRewards = [],
   finalRankingGroups = null,
   pollWinnerIds = [],
-  pollBonusRankPts = null,
   pollLabel = null,
   pollWinsByUser = {},
-  pollRankPtsByUser = {},
   votedUserIds = [],
   externalVoters = [],
 }: {
   matches: Match[];
   participants: Participant[];
   statFields: string[];
-  /** Ligapunkte pro Einheit je Stat-Feld (aus der Reihen-Tabellenkonfiguration) */
+  /** Ligapunkte pro Einheit je Stat-Feld (aus der Reihen-Tabellenkonfiguration) — nur für die Punkte-Anzeige je Stat-Spalte */
   statPointsPer?: Record<string, number>;
+  /** Ligapunkte, die dieses Event je Spieler insgesamt beigesteuert hat (identisch zur Berechnung in der Gesamttabelle der Eventreihe) */
+  ligaPunkteByUser?: Record<string, number>;
   userId: string;
   format?: string;
-  placementRewards?: { place: number; coins: number; rankPts: number }[];
   finalRankingGroups?: string[][] | null;
   pollWinnerIds?: string[];
-  pollBonusRankPts?: number | null;
   pollLabel?: string | null;
   /** Gewonnene Umfrage-Labels je User (neues DB-basiertes Multi-Umfrage-System) */
   pollWinsByUser?: Record<string, string[]>;
-  /** Ligapunkte aus gewonnenen Umfragen je User (neues DB-basiertes Multi-Umfrage-System) */
-  pollRankPtsByUser?: Record<string, number>;
   /** Alle User-IDs, die in mindestens einer Umfrage des Events abgestimmt haben */
   votedUserIds?: string[];
   /** Wähler ohne Event-Registrierung — nur übergeben wenn es Ligapunkte für Stimmabgabe gibt */
@@ -200,17 +196,9 @@ export default function FfaView({
                       : null;
                     // Use confirmed placement from finalRankingGroups if available, else fall back to stat-rank
                     const place = confirmedPlaceOf.get(r.userId) ?? (i + 1);
-                    const reward = placementRewards.find(p => p.place === place);
                     const isPollWinner = pollWinnerIds.includes(r.userId);
                     const wonPollLabels = pollWinsByUser[r.userId] ?? [];
-                    const wonPollRankPts = pollRankPtsByUser[r.userId] ?? 0;
-                    const totalRankPts = (reward?.rankPts ?? 0)
-                      + (isPollWinner && pollBonusRankPts ? pollBonusRankPts : 0)
-                      + wonPollRankPts;
-                    const statPtsTotal = statFields.reduce(
-                      (sum, f) => sum + (statPointsPer[f] ? (r.stats[f] ?? 0) * statPointsPer[f] : 0), 0
-                    );
-                    const eventLigapunkte = totalRankPts + statPtsTotal;
+                    const eventLigapunkte = ligaPunkteByUser[r.userId] ?? 0;
                     return (
                       <tr key={r.userId} className={`transition-colors ${isMe ? "bg-rose-950/30" : "hover:bg-white/[0.02]"}`}>
                         <td className="px-4 py-3 text-center">
