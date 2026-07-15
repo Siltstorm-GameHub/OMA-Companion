@@ -19,6 +19,8 @@ import Image from "next/image";
 import BadgesSection from "../BadgesSection";
 import CollectiblesShowcase from "../CollectiblesShowcase";
 import WanderpocalSection from "@/components/WanderpocalSection";
+import DuelChallengeWidget from "@/components/DuelChallengeWidget";
+import { getMinigamesConfig } from "@/lib/minigames-config";
 
 export default async function PublicProfilePage({
   params,
@@ -34,6 +36,8 @@ export default async function PublicProfilePage({
     const { redirect } = await import("next/navigation");
     redirect("/profile");
   }
+
+  const minigamesConfig = await getMinigamesConfig();
 
   const now   = new Date();
   const month = now.getMonth() + 1;
@@ -178,10 +182,19 @@ export default async function PublicProfilePage({
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
           Rangliste
         </Link>
-        <Link href={`/profile/compare/${id}`}
-          className="inline-flex items-center gap-2 text-xs glass border border-white/[0.08] hover:border-rose-500/30 text-gray-400 hover:text-white px-3 py-2 rounded-xl transition-all">
-          ⚔️ Mit mir vergleichen
-        </Link>
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          <Link href={`/profile/compare/${id}`}
+            className="inline-flex items-center gap-2 text-xs glass border border-white/[0.08] hover:border-rose-500/30 text-gray-400 hover:text-white px-3 py-2 rounded-xl transition-all">
+            ⚔️ Mit mir vergleichen
+          </Link>
+          {viewerId && minigamesConfig.duelEnabled && (
+            <DuelChallengeWidget
+              opponentId={id}
+              opponentName={displayName}
+              config={{ min: minigamesConfig.duelMinWager, max: minigamesConfig.duelMaxWager }}
+            />
+          )}
+        </div>
       </div>
 
       {/* ── Hero ────────────────────────────────────────────────────── */}

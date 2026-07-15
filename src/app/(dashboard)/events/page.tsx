@@ -20,6 +20,9 @@ import EventCategoryBadge from "@/components/EventCategoryBadge";
 import { EventCategory } from "@prisma/client";
 import { EyeOff } from "lucide-react";
 import { getEventEndedAt, RECENTLY_FINISHED_MS } from "@/lib/event-completion";
+import EventsTabs from "./EventsTabs";
+import DuelsPredictionsPanel, { type DuelEntry } from "./DuelsPredictionsPanel";
+import type { MyPrediction } from "../minigames/MyPredictionsList";
 
 const CATEGORY_STRIP: Record<EventCategory, string> = {
   competitive:     "bg-red-500",
@@ -84,6 +87,69 @@ export default async function EventsPage() {
       },
     }),
   ]);
+
+  const userSelect = { id: true, username: true, name: true, image: true } as const;
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+
+  const emptyPredictionRows: { event: { id: string; title: string; startAt: Date }; predictedUser: { id: string; username: string | null; name: string | null; image: string | null }; wager: number; resolved: boolean; correct: boolean | null; coinsAwarded: number }[] = [];
+
+  const [incomingDuels, outgoingDuels, myDuelHistory, monthDuelHistory, monthDuelTotal, myPredictionRows] = userId
+    ? await Promise.all([
+        prisma.duelChallenge.findMany({
+          where: { opponentId: userId, status: "pending" },
+          include: { challenger: { select: userSelect } },
+          orderBy: { createdAt: "desc" },
+        }),
+        prisma.duelChallenge.findMany({
+          where: { challengerId: userId, status: "pending" },
+          include: { opponent: { select: userSelect } },
+          orderBy: { createdAt: "desc" },
+        }),
+        prisma.duelChallenge.findMany({
+          where: { OR: [{ challengerId: userId }, { opponentId: userId }], status: { in: ["resolved", "declined", "expired"] } },
+          include: { challenger: { select: userSelect }, opponent: { select: userSelect } },
+          orderBy: { createdAt: "desc" },
+          take: 20,
+        }),
+        prisma.duelChallenge.findMany({
+          where: { status: "resolved", resolvedAt: { gte: startOfMonth } },
+          include: { challenger: { select: userSelect }, opponent: { select: userSelect } },
+          orderBy: { resolvedAt: "desc" },
+          take: 20,
+        }),
+        prisma.duelChallenge.count({ where: { status: "resolved", resolvedAt: { gte: startOfMonth } } }),
+        prisma.eventWinnerPrediction.findMany({
+          where: { userId },
+          include: {
+            event: { select: { id: true, title: true, startAt: true } },
+            predictedUser: { select: { id: true, username: true, name: true, image: true } },
+          },
+          orderBy: { createdAt: "desc" },
+          take: 20,
+        }),
+      ])
+    : [[], [], [], [], 0, emptyPredictionRows];
+
+  const serializeDuels = (duels: Array<Record<string, unknown>>): DuelEntry[] =>
+    duels.map(d => ({
+      ...d,
+      createdAt: (d.createdAt as Date).toISOString(),
+      respondedAt: d.respondedAt ? (d.respondedAt as Date).toISOString() : null,
+      resolvedAt: d.resolvedAt ? (d.resolvedAt as Date).toISOString() : null,
+    })) as unknown as DuelEntry[];
+
+  const myPredictions: MyPrediction[] = myPredictionRows.map(p => ({
+    eventId: p.event.id,
+    eventTitle: p.event.title,
+    eventStartAt: p.event.startAt.toISOString(),
+    predictedUser: p.predictedUser,
+    wager: p.wager,
+    resolved: p.resolved,
+    correct: p.correct,
+    coinsAwarded: p.coinsAwarded,
+  }));
 
   type EventItem = { kind: "event"; date: Date; finished: boolean; endedAt: number; ev: typeof events[number] };
   type LulItem   = { kind: "lul";   date: Date | null; finished: boolean; endedAt: number; st: NonNullable<typeof activeSeason>["spieltage"][number]; seasonLabel: string };
@@ -402,6 +468,8 @@ export default async function EventsPage() {
         </div>
       </div>
 
+      <EventsTabs
+        eventsPanel={<>
       <div className="space-y-2">
         {recentFinishedItems.length === 0 && upcomingItems.length === 0 && finishedItems.length === 0 && (
           <EmptyState
@@ -552,6 +620,25 @@ export default async function EventsPage() {
           })}
         </div>
       )}
+        </>}
+        duelsPanel={
+          userId ? (
+            <DuelsPredictionsPanel
+              userId={userId}
+              initialIncoming={serializeDuels(incomingDuels)}
+              initialOutgoing={serializeDuels(outgoingDuels)}
+              initialHistory={serializeDuels(myDuelHistory)}
+              initialMonthHistory={serializeDuels(monthDuelHistory)}
+              monthTotal={monthDuelTotal}
+              myPredictions={myPredictions}
+            />
+          ) : (
+            <div className="glass rounded-2xl p-6 text-center text-gray-500 text-sm">
+              Melde dich an, um Duell-Historie und Vorhersagen zu sehen.
+            </div>
+          )
+        }
+      />
     </div>
   );
 }
