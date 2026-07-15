@@ -22,7 +22,7 @@ import { EyeOff } from "lucide-react";
 import { getEventEndedAt, RECENTLY_FINISHED_MS } from "@/lib/event-completion";
 import EventsTabs from "./EventsTabs";
 import DuelsPredictionsPanel, { type DuelEntry } from "./DuelsPredictionsPanel";
-import type { MyPrediction } from "../minigames/MyPredictionsList";
+import type { MyPrediction } from "@/components/MyPredictionsList";
 
 const CATEGORY_STRIP: Record<EventCategory, string> = {
   competitive:     "bg-red-500",
@@ -95,7 +95,7 @@ export default async function EventsPage() {
 
   const emptyPredictionRows: { event: { id: string; title: string; startAt: Date }; predictedUser: { id: string; username: string | null; name: string | null; image: string | null }; wager: number; resolved: boolean; correct: boolean | null; coinsAwarded: number }[] = [];
 
-  const [incomingDuels, outgoingDuels, myDuelHistory, monthDuelHistory, monthDuelTotal, myPredictionRows] = userId
+  const [incomingDuels, outgoingDuels, myDuelHistory, monthDuelHistory, monthDuelTotal, myPredictionRows, predictionStreakRow, pendingPredictions] = userId
     ? await Promise.all([
         prisma.duelChallenge.findMany({
           where: { opponentId: userId, status: "pending" },
@@ -129,8 +129,10 @@ export default async function EventsPage() {
           orderBy: { createdAt: "desc" },
           take: 20,
         }),
+        prisma.predictionStreak.findUnique({ where: { userId } }),
+        prisma.eventWinnerPrediction.count({ where: { userId, resolved: false } }),
       ])
-    : [[], [], [], [], 0, emptyPredictionRows];
+    : [[], [], [], [], 0, emptyPredictionRows, null, 0];
 
   const serializeDuels = (duels: Array<Record<string, unknown>>): DuelEntry[] =>
     duels.map(d => ({
@@ -631,6 +633,8 @@ export default async function EventsPage() {
               initialMonthHistory={serializeDuels(monthDuelHistory)}
               monthTotal={monthDuelTotal}
               myPredictions={myPredictions}
+              predictionStreak={{ current: predictionStreakRow?.current ?? 0, best: predictionStreakRow?.best ?? 0 }}
+              pendingPredictions={pendingPredictions}
             />
           ) : (
             <div className="glass rounded-2xl p-6 text-center text-gray-500 text-sm">

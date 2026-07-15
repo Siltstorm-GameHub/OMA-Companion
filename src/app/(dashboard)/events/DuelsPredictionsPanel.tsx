@@ -4,7 +4,8 @@ import { toast } from "sonner";
 import { Check, X, Trophy, Clock, Eye, Target } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
 import CoinFlipModal from "@/components/CoinFlipModal";
-import MyPredictionsList, { type MyPrediction } from "../minigames/MyPredictionsList";
+import PredictionStreakCard from "@/components/PredictionStreakCard";
+import MyPredictionsList, { type MyPrediction } from "@/components/MyPredictionsList";
 
 type UserLite = { id: string; username: string | null; name: string | null; image: string | null };
 
@@ -42,6 +43,8 @@ export default function DuelsPredictionsPanel({
   initialMonthHistory,
   monthTotal,
   myPredictions,
+  predictionStreak,
+  pendingPredictions,
 }: {
   userId: string;
   initialIncoming: DuelEntry[];
@@ -50,6 +53,8 @@ export default function DuelsPredictionsPanel({
   initialMonthHistory: DuelEntry[];
   monthTotal: number;
   myPredictions: MyPrediction[];
+  predictionStreak: { current: number; best: number };
+  pendingPredictions: number;
 }) {
   const [incoming, setIncoming] = useState(initialIncoming);
   const [outgoing, setOutgoing] = useState(initialOutgoing);
@@ -222,7 +227,12 @@ export default function DuelsPredictionsPanel({
         )}
       </div>
 
-      {/* ── Meine Event-Sieger-Vorhersagen ── */}
+      {/* ── Event-Sieger-Vorhersagen ── */}
+      <PredictionStreakCard
+        current={predictionStreak.current}
+        best={predictionStreak.best}
+        pendingCount={pendingPredictions}
+      />
       <div className="space-y-2">
         <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold flex items-center gap-1.5">
           <Target className="w-3.5 h-3.5" /> Meine Event-Sieger-Vorhersagen
