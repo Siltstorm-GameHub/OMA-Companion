@@ -269,6 +269,20 @@ function normalizeGameName(name: string): string {
 }
 
 /**
+ * Session-weiter Cache: normierter Spielname → exaktes Steam-Cover, das der
+ * Nutzer im Autocomplete-Dropdown (GameNameInput) tatsächlich ausgewählt hat.
+ * Eine erneute Steam-Suche über den fertigen Namen (z.B. in GameCover nach
+ * dem Speichern) kann für mehrdeutige Titel ein anderes App-Ergebnis liefern
+ * als das ursprünglich angeklickte — dieser Cache verhindert, dass danach
+ * ein abweichendes Cover angezeigt wird.
+ */
+export const pickedCoverCache = new Map<string, string>();
+
+export function normalizeForCoverCache(name: string): string {
+  return name.toLowerCase().trim();
+}
+
+/**
  * Gibt die beste verfügbare Cover-URL für ein Spiel zurück.
  * @returns URL-String oder `null` wenn kein Treffer
  */
