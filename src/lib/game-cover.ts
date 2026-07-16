@@ -286,14 +286,22 @@ export function normalizeForCoverCache(name: string): string {
  * Gibt die beste verfügbare Cover-URL für ein Spiel zurück.
  * @returns URL-String oder `null` wenn kein Treffer
  */
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 export function getGameCoverUrl(gameName: string | null | undefined): string | null {
   if (!gameName) return null;
   const key = normalizeGameName(gameName);
   // Exakter Treffer
   if (GAME_MAP[key]) return GAME_MAP[key];
-  // Teilstring-Treffer (z.B. "Brawlhalla OMA Cup" → "brawlhalla")
+  // Wort-Grenzen-Treffer (z.B. "Brawlhalla OMA Cup" → "brawlhalla").
+  // Wichtig: KEIN roher Teilstring-Vergleich — kurze Abkürzungen wie "rl" (Rocket League)
+  // stecken sonst versehentlich in ganz anderen Wörtern (z.B. "palwo-RL-d" → Palworld).
   for (const [mapKey, url] of Object.entries(GAME_MAP)) {
-    if (key.includes(mapKey) || mapKey.includes(key)) return url;
+    const mapKeyInKey = new RegExp(`\\b${escapeRegExp(mapKey)}\\b`).test(key);
+    const keyInMapKey = new RegExp(`\\b${escapeRegExp(key)}\\b`).test(mapKey);
+    if (mapKeyInKey || keyInMapKey) return url;
   }
   return null;
 }
