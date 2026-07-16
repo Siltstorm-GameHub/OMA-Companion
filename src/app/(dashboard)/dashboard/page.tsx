@@ -28,17 +28,12 @@ import { getVisibleServers } from "@/lib/gameservers";
 import { PromoBannerCarousel } from "@/components/PromoBannerCarousel";
 import { NewContentPing } from "@/components/NewContentPing";
 import { HeroStatValue } from "@/components/HeroStatValue";
+import GameserverWidget from "./GameserverWidget";
 
 const STATUS_CONFIG: Record<string, { label: string; cls: string; dot: string }> = {
   open:   { label: "Offen", cls: "text-teal-400 bg-teal-500/10 border border-teal-500/15",          dot: "bg-teal-400" },
   active: { label: "Läuft", cls: "text-emerald-400 bg-emerald-500/10 border border-emerald-500/15", dot: "bg-emerald-400 animate-pulse" },
   closed: { label: "Voll",  cls: "text-amber-400 bg-amber-500/10 border border-amber-500/15",       dot: "bg-amber-400" },
-};
-
-const LIGHT_CONFIG: Record<"green" | "yellow" | "red", { cls: string; dot: string }> = {
-  green:  { cls: "text-emerald-400 bg-emerald-500/10 border border-emerald-500/15", dot: "bg-emerald-400" },
-  yellow: { cls: "text-amber-400 bg-amber-500/10 border border-amber-500/15",       dot: "bg-amber-400" },
-  red:    { cls: "text-red-400 bg-red-500/10 border border-red-500/15",             dot: "bg-red-400" },
 };
 
 const MONTH_NAMES = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
@@ -714,25 +709,9 @@ export default async function DashboardPage() {
                     Server ansehen →
                   </Link>
                 </div>
-              ) : servers.slice(0, 5).map((server, i) => (
-                <Link key={server.id} href="/servers"
-                  className="flex items-center gap-3 px-3.5 py-3 transition-all duration-200 group hover:bg-white/[0.035] active:scale-[0.99]"
-                  style={{ borderBottom: i < Math.min(servers.length, 5) - 1 ? "1px solid rgba(255,255,255,0.05)" : "" }}>
-                  <div className="transition-transform duration-200 group-hover:scale-110">
-                    <GameCover game={server.game} className="w-8 h-8" rounded="rounded-sm" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-white truncate group-hover:text-teal-300 transition-colors">
-                      {server.name}
-                    </p>
-                    <p className="text-[10px] text-gray-600 mt-0.5">{server.game}</p>
-                  </div>
-                  <span className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full font-medium border shrink-0 ${LIGHT_CONFIG[server.light].cls}`}>
-                    <span className={`w-1 h-1 rounded-full ${LIGHT_CONFIG[server.light].dot}`} />
-                    {server.occupied}/{server.maxSlots}
-                  </span>
-                </Link>
-              ))}
+              ) : (
+                <GameserverWidget servers={servers} />
+              )}
             </div>
           </div>
 

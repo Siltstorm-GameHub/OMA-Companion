@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { getVisibleServers } from "@/lib/gameservers";
-import ServerCard from "./ServerCard";
+import ServerList from "./ServerList";
 
 export default async function ServersPage() {
   const session = await auth();
@@ -19,11 +19,7 @@ export default async function ServersPage() {
       {servers.length === 0 ? (
         <p className="text-sm text-gray-500 text-center py-12">Aktuell sind keine Gameserver verfügbar.</p>
       ) : (
-        <div className="space-y-3">
-          {servers.map((server) => (
-            <ServerCard key={server.id} server={server} />
-          ))}
-        </div>
+        <ServerList servers={servers} />
       )}
     </div>
   );
