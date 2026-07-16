@@ -20,6 +20,7 @@ type Server = {
   port: string | null;
   password: string | null;
   connectInfo: string | null;
+  ampInstanceId: string | null;
   maxSlots: number;
   isActive: boolean;
   occupied: number;
@@ -41,10 +42,11 @@ type FormState = {
   port: string;
   password: string;
   connectInfo: string;
+  ampInstanceId: string;
   maxSlots: string;
 };
 
-const EMPTY_FORM: FormState = { name: "", game: "", description: "", host: "", port: "", password: "", connectInfo: "", maxSlots: "10" };
+const EMPTY_FORM: FormState = { name: "", game: "", description: "", host: "", port: "", password: "", connectInfo: "", ampInstanceId: "", maxSlots: "10" };
 
 // Übernimmt Host/Port automatisch aus einem eingefügten Connect-Link (z.B. steam://connect/host:port).
 function withConnectLinkAutoFill(prev: FormState, connectInfo: string): FormState {
@@ -77,6 +79,7 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
           port: form.port.trim() || undefined,
           password: form.password.trim() || undefined,
           connectInfo: form.connectInfo.trim() || undefined,
+          ampInstanceId: form.ampInstanceId.trim() || undefined,
           maxSlots: Number(form.maxSlots),
         }),
       });
@@ -101,6 +104,7 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
       port: server.port ?? "",
       password: server.password ?? "",
       connectInfo: server.connectInfo ?? "",
+      ampInstanceId: server.ampInstanceId ?? "",
       maxSlots: String(server.maxSlots),
     });
   }
@@ -119,6 +123,7 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
           port: editForm.port.trim() || null,
           password: editForm.password.trim() || null,
           connectInfo: editForm.connectInfo.trim() || null,
+          ampInstanceId: editForm.ampInstanceId.trim() || null,
           maxSlots: Number(editForm.maxSlots),
         }),
       });
@@ -180,6 +185,8 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
           <input placeholder="Beschreibung (optional)" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
             className="col-span-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
           <input placeholder="Connect-Link (z.B. steam://connect/host:port) oder Zusatzinfo" value={form.connectInfo} onChange={(e) => setForm((f) => withConnectLinkAutoFill(f, e.target.value))}
+            className="col-span-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
+          <input placeholder="AMP Instance-ID (optional, für Live-Status)" value={form.ampInstanceId} onChange={(e) => setForm({ ...form, ampInstanceId: e.target.value })}
             className="col-span-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
         </div>
         <button onClick={createServer} disabled={saving || !form.name.trim() || !form.game.trim() || !form.host.trim()}
@@ -263,6 +270,8 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
                     <input placeholder="Beschreibung" value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                       className="col-span-2 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
                     <input placeholder="Connect-Link (steam://connect/host:port) oder Zusatzinfo" value={editForm.connectInfo} onChange={(e) => setEditForm((f) => withConnectLinkAutoFill(f, e.target.value))}
+                      className="col-span-2 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
+                    <input placeholder="AMP Instance-ID (optional, für Live-Status)" value={editForm.ampInstanceId} onChange={(e) => setEditForm({ ...editForm, ampInstanceId: e.target.value })}
                       className="col-span-2 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
                   </div>
                   <button onClick={() => saveEdit(server.id)} disabled={saving}

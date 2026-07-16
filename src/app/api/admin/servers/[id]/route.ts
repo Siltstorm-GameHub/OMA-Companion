@@ -14,6 +14,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     port: string | null;
     password: string | null;
     connectInfo: string | null;
+    ampInstanceId: string | null;
     maxSlots: number;
     isActive: boolean;
   }>;
