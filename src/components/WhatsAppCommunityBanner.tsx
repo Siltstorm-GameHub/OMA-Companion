@@ -22,7 +22,7 @@ export default function WhatsAppCommunityBanner() {
   return (
     <div style={{
       position: "relative", display: "flex", alignItems: "center", gap: 12,
-      padding: "12px 16px", marginBottom: 16, borderRadius: 12,
+      padding: "12px 16px", borderRadius: 12,
       background: "linear-gradient(135deg, rgba(37,211,102,0.12) 0%, rgba(18,140,67,0.08) 100%)",
       border: "1px solid rgba(37,211,102,0.25)",
       boxShadow: "0 4px 16px rgba(0,0,0,0.25)",

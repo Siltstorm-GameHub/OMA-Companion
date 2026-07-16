@@ -27,7 +27,7 @@ export function DailyMessageBanner({ message }: { message: Message }) {
 
   return (
     <div
-      className="mx-4 sm:mx-6 mt-4 flex gap-3 px-4 py-3.5 rounded-xl max-w-7xl lg:mx-auto"
+      className="flex gap-3 px-4 py-3.5 rounded-xl"
       style={{
         background: "linear-gradient(135deg, rgba(168,85,247,0.12) 0%, rgba(139,92,246,0.06) 100%)",
         border: "1px solid rgba(168,85,247,0.25)",

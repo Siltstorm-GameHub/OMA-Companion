@@ -23,6 +23,7 @@ import { getEventEndedAt, RECENTLY_FINISHED_MS } from "@/lib/event-completion";
 import EventsTabs from "./EventsTabs";
 import DuelsPredictionsPanel, { type DuelEntry } from "./DuelsPredictionsPanel";
 import type { MyPrediction } from "@/components/MyPredictionsList";
+import { ScrollReveal } from "@/components/ScrollReveal";
 
 const CATEGORY_STRIP: Record<EventCategory, string> = {
   competitive:     "bg-red-500",
@@ -246,12 +247,11 @@ export default async function EventsPage() {
       return (
         <EventCardLink key={`ev-${ev.id}`}
           href={cardHref}
-          className="surface animate-slide-up group flex flex-col justify-end overflow-hidden relative transition-transform duration-200 hover:-translate-y-1 active:scale-[0.99]"
+          className="surface group flex flex-col justify-end overflow-hidden relative transition-transform duration-200 hover:-translate-y-1 active:scale-[0.99]"
           style={{
             borderRadius: 6,
             border: isRegistered ? "1px solid rgba(52,211,153,0.18)" : "1px solid rgba(255,255,255,0.06)",
             boxShadow: "0 4px 20px rgba(0,0,0,0.45)",
-            animationDelay: `${idx * 30}ms`,
             aspectRatio: "1 / 1",
           }}>
           <div className="absolute inset-0">
@@ -336,12 +336,11 @@ export default async function EventsPage() {
 
     return (
       <div key={`lul-${st.id}`}
-        className="surface animate-slide-up group flex flex-col justify-end overflow-hidden relative transition-transform duration-200 hover:-translate-y-1"
+        className="surface group flex flex-col justify-end overflow-hidden relative transition-transform duration-200 hover:-translate-y-1"
         style={{
           borderRadius: 6,
           border: myRole ? "1px solid rgba(251,191,36,0.18)" : "1px solid rgba(255,255,255,0.06)",
           boxShadow: "0 4px 20px rgba(0,0,0,0.45)",
-          animationDelay: `${idx * 30}ms`,
           aspectRatio: "1 / 1",
         }}>
         <div className="absolute inset-0">
@@ -501,7 +500,11 @@ export default async function EventsPage() {
               <div className="h-px flex-1 bg-white/[0.06]" />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
-              {group.items.map((item, idx) => renderItem(item, idx))}
+              {group.items.map((item, idx) => (
+                <ScrollReveal key={item.kind === "event" ? `reveal-ev-${item.ev.id}` : `reveal-lul-${item.st.id}`} delay={(idx % 3) * 80}>
+                  {renderItem(item, idx)}
+                </ScrollReveal>
+              ))}
             </div>
           </div>
         ))}
