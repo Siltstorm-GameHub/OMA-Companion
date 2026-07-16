@@ -1,10 +1,10 @@
 "use client";
-import { useState, type ReactNode } from "react";
+import { Suspense, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { Tabs, TabPanel } from "@/components/admin/Tabs";
 import { CalendarDays, Swords } from "lucide-react";
 
-export default function EventsTabs({
+function EventsTabsInner({
   eventsPanel,
   duelsPanel,
 }: {
@@ -28,5 +28,13 @@ export default function EventsTabs({
       <TabPanel tabKey="events" active={active}>{eventsPanel}</TabPanel>
       <TabPanel tabKey="duels" active={active}>{duelsPanel}</TabPanel>
     </div>
+  );
+}
+
+export default function EventsTabs(props: { eventsPanel: ReactNode; duelsPanel: ReactNode }) {
+  return (
+    <Suspense fallback={null}>
+      <EventsTabsInner {...props} />
+    </Suspense>
   );
 }

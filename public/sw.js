@@ -38,7 +38,13 @@ self.addEventListener("notificationclick", (event) => {
       .matchAll({ type: "window", includeUncontrolled: true })
       .then((clientList) => {
         for (const client of clientList) {
-          if ("focus" in client) return client.focus();
+          if ("focus" in client) {
+            // Bereits offenes Fenster muss zur Ziel-URL navigieren, sonst
+            // bleibt es auf der zuletzt angezeigten Seite und der Deep-Link
+            // aus der Push-Benachrichtigung geht verloren.
+            if ("navigate" in client) client.navigate(url);
+            return client.focus();
+          }
         }
         return clients.openWindow(url);
       }),
