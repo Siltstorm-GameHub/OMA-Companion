@@ -501,7 +501,7 @@ export default async function EventsPage() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
               {group.items.map((item, idx) => (
-                <ScrollReveal key={item.kind === "event" ? `reveal-ev-${item.ev.id}` : `reveal-lul-${item.st.id}`} delay={(idx % 3) * 80}>
+                <ScrollReveal key={item.kind === "event" ? `reveal-ev-${item.ev.id}` : `reveal-lul-${item.st.id}`}>
                   {renderItem(item, idx)}
                 </ScrollReveal>
               ))}

@@ -56,20 +56,31 @@ export function PromoBannerCarousel({
 
   const activeId = visibleIds[activeIndex];
 
+  // Alle Slides liegen in derselben Grid-Zelle übereinander — die Zelle wird dadurch
+  // immer so hoch wie das größte Banner, unabhängig davon welches gerade aktiv ist.
+  // So springt der Inhalt darunter nicht mehr, wenn zwischen unterschiedlich hohen
+  // Bannern gewechselt wird.
+  const slideClass = (id: SlideId) =>
+    `col-start-1 row-start-1 transition-opacity duration-300 ${
+      activeId === id ? "opacity-100" : "opacity-0 pointer-events-none"
+    }`;
+
   return (
     <div onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
-      {candidateIds.includes("results") && (
-        <div className={activeId === "results" ? "animate-fade-in" : "hidden"}>
-          <RecentResultsBanner events={recentResultEvents} onVisibilityChange={makeHandler("results")} />
+      <div className="grid">
+        {candidateIds.includes("results") && (
+          <div className={slideClass("results")} aria-hidden={activeId !== "results"}>
+            <RecentResultsBanner events={recentResultEvents} onVisibilityChange={makeHandler("results")} />
+          </div>
+        )}
+        {candidateIds.includes("message") && dailyMessage && (
+          <div className={slideClass("message")} aria-hidden={activeId !== "message"}>
+            <DailyMessageBanner message={dailyMessage} onVisibilityChange={makeHandler("message")} />
+          </div>
+        )}
+        <div className={slideClass("whatsapp")} aria-hidden={activeId !== "whatsapp"}>
+          <WhatsAppCommunityBanner onVisibilityChange={makeHandler("whatsapp")} />
         </div>
-      )}
-      {candidateIds.includes("message") && dailyMessage && (
-        <div className={activeId === "message" ? "animate-fade-in" : "hidden"}>
-          <DailyMessageBanner message={dailyMessage} onVisibilityChange={makeHandler("message")} />
-        </div>
-      )}
-      <div className={activeId === "whatsapp" ? "animate-fade-in" : "hidden"}>
-        <WhatsAppCommunityBanner onVisibilityChange={makeHandler("whatsapp")} />
       </div>
 
       {visibleIds.length > 1 && (
