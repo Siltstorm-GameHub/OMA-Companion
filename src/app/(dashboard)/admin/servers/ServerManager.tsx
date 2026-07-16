@@ -6,7 +6,6 @@ import { Plus, Trash2, ToggleLeft, ToggleRight, Loader2, Pencil, Users, Circle, 
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import GameNameInput from "@/components/GameNameInput";
 import GameCover from "@/components/GameCover";
-import { parseConnectLink } from "@/lib/connect-link";
 import { EmptyState } from "@/components/EmptyState";
 
 type Light = "green" | "yellow" | "red";
@@ -19,7 +18,6 @@ type Server = {
   host: string;
   port: string | null;
   password: string | null;
-  connectInfo: string | null;
   ampInstanceId: string | null;
   maxSlots: number;
   isActive: boolean;
@@ -41,18 +39,11 @@ type FormState = {
   host: string;
   port: string;
   password: string;
-  connectInfo: string;
   ampInstanceId: string;
   maxSlots: string;
 };
 
-const EMPTY_FORM: FormState = { name: "", game: "", description: "", host: "", port: "", password: "", connectInfo: "", ampInstanceId: "", maxSlots: "10" };
-
-// Übernimmt Host/Port automatisch aus einem eingefügten Connect-Link (z.B. steam://connect/host:port).
-function withConnectLinkAutoFill(prev: FormState, connectInfo: string): FormState {
-  const parsed = parseConnectLink(connectInfo);
-  return parsed ? { ...prev, connectInfo, host: parsed.host, port: parsed.port } : { ...prev, connectInfo };
-}
+const EMPTY_FORM: FormState = { name: "", game: "", description: "", host: "", port: "", password: "", ampInstanceId: "", maxSlots: "10" };
 
 export default function ServerManager({ initialServers }: { initialServers: Server[] }) {
   const [servers, setServers] = useState<Server[]>(initialServers);
@@ -78,7 +69,6 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
           host: form.host.trim(),
           port: form.port.trim() || undefined,
           password: form.password.trim() || undefined,
-          connectInfo: form.connectInfo.trim() || undefined,
           ampInstanceId: form.ampInstanceId.trim() || undefined,
           maxSlots: Number(form.maxSlots),
         }),
@@ -103,7 +93,6 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
       host: server.host,
       port: server.port ?? "",
       password: server.password ?? "",
-      connectInfo: server.connectInfo ?? "",
       ampInstanceId: server.ampInstanceId ?? "",
       maxSlots: String(server.maxSlots),
     });
@@ -122,7 +111,6 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
           host: editForm.host.trim(),
           port: editForm.port.trim() || null,
           password: editForm.password.trim() || null,
-          connectInfo: editForm.connectInfo.trim() || null,
           ampInstanceId: editForm.ampInstanceId.trim() || null,
           maxSlots: Number(editForm.maxSlots),
         }),
@@ -183,8 +171,6 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
           <input type="number" min={1} placeholder="Max. Spieler" value={form.maxSlots} onChange={(e) => setForm({ ...form, maxSlots: e.target.value })}
             className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
           <input placeholder="Beschreibung (optional)" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
-            className="col-span-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
-          <input placeholder="Connect-Link (z.B. steam://connect/host:port) oder Zusatzinfo" value={form.connectInfo} onChange={(e) => setForm((f) => withConnectLinkAutoFill(f, e.target.value))}
             className="col-span-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
           <input placeholder="AMP Instance-ID (optional, für Live-Status)" value={form.ampInstanceId} onChange={(e) => setForm({ ...form, ampInstanceId: e.target.value })}
             className="col-span-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
@@ -268,8 +254,6 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
                     <input type="number" min={1} placeholder="Max. Spieler" value={editForm.maxSlots} onChange={(e) => setEditForm({ ...editForm, maxSlots: e.target.value })}
                       className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
                     <input placeholder="Beschreibung" value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                      className="col-span-2 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
-                    <input placeholder="Connect-Link (steam://connect/host:port) oder Zusatzinfo" value={editForm.connectInfo} onChange={(e) => setEditForm((f) => withConnectLinkAutoFill(f, e.target.value))}
                       className="col-span-2 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
                     <input placeholder="AMP Instance-ID (optional, für Live-Status)" value={editForm.ampInstanceId} onChange={(e) => setEditForm({ ...editForm, ampInstanceId: e.target.value })}
                       className="col-span-2 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />

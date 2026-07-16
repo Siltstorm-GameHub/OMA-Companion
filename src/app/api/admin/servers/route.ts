@@ -17,7 +17,6 @@ export async function POST(req: NextRequest) {
     host?: string;
     port?: string;
     password?: string;
-    connectInfo?: string;
     ampInstanceId?: string;
     maxSlots?: number;
   };
@@ -34,7 +33,6 @@ export async function POST(req: NextRequest) {
       host: body.host.trim(),
       port: body.port?.trim() || null,
       password: body.password?.trim() || null,
-      connectInfo: body.connectInfo?.trim() || null,
       ampInstanceId: body.ampInstanceId?.trim() || null,
       maxSlots: body.maxSlots,
       createdBy: admin.id,

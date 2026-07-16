@@ -33,13 +33,11 @@ export default function ServerCredentials({
   host,
   port,
   password,
-  connectInfo,
 }: {
   serverId: string;
   host?: string;
   port?: string | null;
   password?: string | null;
-  connectInfo?: string | null;
 }) {
   if (!host) return null;
 
@@ -54,7 +52,6 @@ export default function ServerCredentials({
         <CopyField label="Host" value={port ? `${host}:${port}` : host} onCopy={markConnected} />
         {password && <CopyField label="Passwort" value={password} onCopy={markConnected} />}
       </div>
-      {connectInfo && <CopyField label="Zusatzinfo" value={connectInfo} onCopy={markConnected} />}
     </div>
   );
 }

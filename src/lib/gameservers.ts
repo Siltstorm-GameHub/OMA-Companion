@@ -48,7 +48,6 @@ export type VisibleServer = {
   host?: string;
   port?: string | null;
   password?: string | null;
-  connectInfo?: string | null;
 };
 
 // Liste aller aktiven Server inkl. Ampel und (falls genehmigt) Zugangsdaten für den jeweiligen User.
@@ -82,7 +81,7 @@ export async function getVisibleServers(userId: string | undefined): Promise<Vis
         light: trafficLight(available, server.maxSlots),
         myStatus: (application?.status as VisibleServer["myStatus"]) ?? "none",
         ...(hasApproved
-          ? { host: server.host, port: server.port, password: server.password, connectInfo: server.connectInfo }
+          ? { host: server.host, port: server.port, password: server.password }
           : {}),
       };
     })
