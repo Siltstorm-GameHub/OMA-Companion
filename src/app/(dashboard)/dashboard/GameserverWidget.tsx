@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import GameCover from "@/components/GameCover";
-import { useLiveStatus } from "@/lib/useServerLiveStatus";
+import { useLiveStatus, useAllLiveStatus } from "@/lib/useServerLiveStatus";
 
 type Server = { id: string; name: string; game: string };
 
@@ -54,10 +54,20 @@ function ServerRow({ server, isLast }: { server: Server; isLast: boolean }) {
 }
 
 export default function GameserverWidget({ servers }: { servers: Server[] }) {
+  const liveStatus = useAllLiveStatus();
+  // Online-Server zuerst, wie auf der /servers-Übersicht (Reihenfolge innerhalb
+  // einer Gruppe bleibt wie geliefert; ohne bekannten Live-Status gilt "online").
+  const sorted = [...servers].sort((a, b) => {
+    const aOffline = liveStatus[a.id]?.online === false ? 1 : 0;
+    const bOffline = liveStatus[b.id]?.online === false ? 1 : 0;
+    return aOffline - bOffline;
+  });
+  const visible = sorted.slice(0, 5);
+
   return (
     <>
-      {servers.slice(0, 5).map((server, i) => (
-        <ServerRow key={server.id} server={server} isLast={i === Math.min(servers.length, 5) - 1} />
+      {visible.map((server, i) => (
+        <ServerRow key={server.id} server={server} isLast={i === visible.length - 1} />
       ))}
     </>
   );
