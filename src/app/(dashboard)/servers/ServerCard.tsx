@@ -1,46 +1,8 @@
 "use client";
-import { useEffect, useState } from "react";
 import GameCover from "@/components/GameCover";
 import ApplyButton from "./ApplyButton";
 import ServerCredentials from "./ServerCredentials";
-
-type LiveStatus = { online: boolean; currentPlayers: number | null; maxPlayers: number | null };
-
-// Live-Status aller Server wird gemeinsam gepollt und pro Card per Context-losem Hook gelesen,
-// um nicht pro Karte einen eigenen Request zu feuern.
-const statusListeners = new Set<(status: Record<string, LiveStatus>) => void>();
-let latestStatus: Record<string, LiveStatus> = {};
-let pollStarted = false;
-
-function startPolling() {
-  if (pollStarted) return;
-  pollStarted = true;
-  const fetchStatus = async () => {
-    try {
-      const res = await fetch("/api/servers/status");
-      if (!res.ok) return;
-      latestStatus = await res.json();
-      statusListeners.forEach((listener) => listener(latestStatus));
-    } catch {
-      // Netzwerkfehler ignorieren, nächster Poll versucht es erneut
-    }
-  };
-  fetchStatus();
-  setInterval(fetchStatus, 20_000);
-}
-
-function useLiveStatus(serverId: string): LiveStatus | undefined {
-  const [status, setStatus] = useState<LiveStatus | undefined>(latestStatus[serverId]);
-  useEffect(() => {
-    startPolling();
-    const listener = (all: Record<string, LiveStatus>) => setStatus(all[serverId]);
-    statusListeners.add(listener);
-    return () => {
-      statusListeners.delete(listener);
-    };
-  }, [serverId]);
-  return status;
-}
+import { useLiveStatus } from "@/lib/useServerLiveStatus";
 
 type Light = "green" | "yellow" | "red";
 
@@ -121,11 +83,16 @@ function CapacityBar({ occupied, maxSlots, light }: { occupied: number; maxSlots
 export default function ServerCard({ server }: { server: Server }) {
   const showCredentials = server.myStatus === "approved" && !!server.host;
   const liveStatus = useLiveStatus(server.id);
+  const isOffline = liveStatus?.online === false;
 
   return (
     <div
-      className="rounded-xl glass p-4 space-y-3 transition-shadow duration-300 hover:shadow-[var(--shadow-card-hover)]"
-      style={{ border: "1px solid rgba(255,255,255,0.06)" }}
+      className="rounded-xl glass p-4 space-y-3 transition-[opacity,filter,box-shadow] duration-300 hover:shadow-[var(--shadow-card-hover)]"
+      style={{
+        border: "1px solid rgba(255,255,255,0.06)",
+        opacity: isOffline ? 0.55 : 1,
+        filter: isOffline ? "grayscale(0.6)" : "none",
+      }}
     >
       <div className="flex items-start gap-3">
         <div className="relative shrink-0">
