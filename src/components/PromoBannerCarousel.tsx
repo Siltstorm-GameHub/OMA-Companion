@@ -61,7 +61,7 @@ export function PromoBannerCarousel({
   // So springt der Inhalt darunter nicht mehr, wenn zwischen unterschiedlich hohen
   // Bannern gewechselt wird.
   const slideClass = (id: SlideId) =>
-    `col-start-1 row-start-1 transition-opacity duration-300 ${
+    `col-start-1 row-start-1 h-full transition-opacity duration-300 ${
       activeId === id ? "opacity-100" : "opacity-0 pointer-events-none"
     }`;
 
@@ -70,16 +70,16 @@ export function PromoBannerCarousel({
       <div className="grid">
         {candidateIds.includes("results") && (
           <div className={slideClass("results")} aria-hidden={activeId !== "results"}>
-            <RecentResultsBanner events={recentResultEvents} onVisibilityChange={makeHandler("results")} />
+            <RecentResultsBanner events={recentResultEvents} onVisibilityChange={makeHandler("results")} fill />
           </div>
         )}
         {candidateIds.includes("message") && dailyMessage && (
           <div className={slideClass("message")} aria-hidden={activeId !== "message"}>
-            <DailyMessageBanner message={dailyMessage} onVisibilityChange={makeHandler("message")} />
+            <DailyMessageBanner message={dailyMessage} onVisibilityChange={makeHandler("message")} fill />
           </div>
         )}
         <div className={slideClass("whatsapp")} aria-hidden={activeId !== "whatsapp"}>
-          <WhatsAppCommunityBanner onVisibilityChange={makeHandler("whatsapp")} />
+          <WhatsAppCommunityBanner onVisibilityChange={makeHandler("whatsapp")} fill />
         </div>
       </div>
 

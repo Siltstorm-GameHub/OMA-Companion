@@ -13,9 +13,12 @@ type Message = {
 export function DailyMessageBanner({
   message,
   onVisibilityChange,
+  fill = false,
 }: {
   message: Message;
   onVisibilityChange?: (visible: boolean) => void;
+  /** Streckt die Box auf 100% der Höhe des Elternelements und zentriert den Inhalt vertikal (z.B. im Banner-Slider). */
+  fill?: boolean;
 }) {
   const [visible, setVisible] = useState(false);
 
@@ -43,6 +46,7 @@ export function DailyMessageBanner({
         background: "linear-gradient(135deg, rgba(168,85,247,0.12) 0%, rgba(139,92,246,0.06) 100%)",
         border: "1px solid rgba(168,85,247,0.25)",
         boxShadow: "0 0 20px rgba(168,85,247,0.06)",
+        ...(fill ? { height: "100%", boxSizing: "border-box" as const, alignItems: "center" } : {}),
       }}
     >
       {/* Icon */}
