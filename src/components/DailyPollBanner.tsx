@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Vote as VoteIcon, X, ExternalLink, Loader2, Undo2 } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
 import PollGameSuggestInput from "@/components/PollGameSuggestInput";
+import { NewContentPing } from "@/components/NewContentPing";
 
 type PollOption = { id: string; label: string; gameName: string | null; steamAppId: number | null };
 type GameSuggestion = { name: string; appId: number | null };
@@ -128,10 +129,12 @@ function PollCard({ poll, onVoted, onDismiss }: { poll: Poll; onVoted: (p: Poll)
       }}>
       <div className="flex gap-3">
         <div className="shrink-0 mt-0.5">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-            style={{ background: "rgba(168,85,247,0.15)", border: "1px solid rgba(168,85,247,0.25)" }}>
-            <VoteIcon className="w-4 h-4 text-purple-400" />
-          </div>
+          <NewContentPing id={poll.hasVoted || poll.ended ? null : poll.id} storageKey="daily-poll-ping-seen">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ background: "rgba(168,85,247,0.15)", border: "1px solid rgba(168,85,247,0.25)" }}>
+              <VoteIcon className="w-4 h-4 text-purple-400" />
+            </div>
+          </NewContentPing>
         </div>
 
         <div className="flex-1 min-w-0">

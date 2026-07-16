@@ -27,6 +27,9 @@ import SeriesIcon from "@/components/SeriesIcon";
 import { resolveSeriesColor } from "@/lib/series-icons";
 import { getRingClass } from "@/lib/ranks";
 import { getVisibleServers } from "@/lib/gameservers";
+import { BannerCarousel } from "@/components/BannerCarousel";
+import { NewContentPing } from "@/components/NewContentPing";
+import { HeroStatValue } from "@/components/HeroStatValue";
 
 const STATUS_CONFIG: Record<string, { label: string; cls: string; dot: string }> = {
   open:   { label: "Offen", cls: "text-teal-400 bg-teal-500/10 border border-teal-500/15",          dot: "bg-teal-400" },
@@ -295,11 +298,11 @@ export default async function DashboardPage() {
               </span>
               <RankIcon rankPoints={myRankPoints} size="sm" />
               <span className="text-xs font-bold tabular-nums text-teal-300">
-                <CountUp to={myRankPoints} duration={900} /> Pts
+                <HeroStatValue value={myRankPoints} storageKey={`hero-rp-${userId ?? "anon"}`}> Pts</HeroStatValue>
               </span>
               <span className="text-xs text-amber-400 font-bold tabular-nums flex items-center gap-1">
                 <CoinIcon size={12} />
-                <CountUp to={myPoints} duration={900} />
+                <HeroStatValue value={myPoints} storageKey={`hero-coins-${userId ?? "anon"}`} />
               </span>
             </div>
           </div>
@@ -374,7 +377,14 @@ export default async function DashboardPage() {
                 return (
                   <>
                     <p className={`font-display text-sm font-black uppercase tracking-wide leading-tight flex items-center gap-1.5 ${phase.color}`}>
-                      <Timer className="w-4 h-4 shrink-0" />
+                      {phase.label === "Live" ? (
+                        <span className="relative flex w-4 h-4 shrink-0 items-center justify-center">
+                          <span className="absolute inline-flex w-2 h-2 rounded-full bg-red-400 animate-ping" />
+                          <span className="relative inline-flex w-2 h-2 rounded-full bg-red-400" />
+                        </span>
+                      ) : (
+                        <Timer className="w-4 h-4 shrink-0" />
+                      )}
                       {phase.label}{phase.extra ? ` · ${phase.extra}` : ""}
                     </p>
                     <p className="text-xs font-semibold text-white mt-1.5 truncate group-hover:text-amber-200 transition-colors">
@@ -434,12 +444,18 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* ── Kürzlich beendete Events: Ergebnisse ─────────────────── */}
-      <RecentResultsBanner events={recentResultEvents} />
-
-      {/* ── WhatsApp Community Banner ────────────────────────────── */}
+      {/* ── Rotierender Banner-Slider: Ergebnisse / Mitteilung / WhatsApp ── */}
       <div className="px-4 sm:px-6 pt-4 max-w-7xl mx-auto w-full">
-        <WhatsAppCommunityBanner />
+        <BannerCarousel>
+          {recentResultEvents.length > 0 && <RecentResultsBanner events={recentResultEvents} />}
+          {activeDailyMessage && (
+            <DailyMessageBanner message={{
+              ...activeDailyMessage,
+              endDate: activeDailyMessage.endDate.toISOString(),
+            }} />
+          )}
+          <WhatsAppCommunityBanner />
+        </BannerCarousel>
       </div>
 
       {/* ── Partner Live-Streams ─────────────────────────────────── */}
@@ -447,14 +463,6 @@ export default async function DashboardPage() {
 
       {/* ── Community Live-Streams ───────────────────────────────── */}
       <CommunityLiveBanner />
-
-      {/* ── Tägliche Mitteilung ───────────────────────────────────── */}
-      {activeDailyMessage && (
-        <DailyMessageBanner message={{
-          ...activeDailyMessage,
-          endDate: activeDailyMessage.endDate.toISOString(),
-        }} />
-      )}
 
       {/* ── Umfragen ──────────────────────────────────────────────── */}
       <DailyPollBanner />
@@ -584,7 +592,12 @@ export default async function DashboardPage() {
               {/* Badge */}
               <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider"
                 style={{ background: "rgba(145,70,255,0.18)", border: "1px solid rgba(145,70,255,0.35)", color: "#c4b5fd" }}>
-                {winnerClip ? "🏆 Clip des Monats" : activeClipContest ? "Abstimmung läuft" : "Clips"}
+                <NewContentPing
+                  id={winnerClip ? `winner-${finishedClipContest?.id}` : activeClipContest ? `voting-${activeClipContest.id}` : null}
+                  storageKey="clip-hub-ping-seen"
+                >
+                  {winnerClip ? "🏆 Clip des Monats" : activeClipContest ? "Abstimmung läuft" : "Clips"}
+                </NewContentPing>
               </div>
               <ChevronRight className="absolute top-3 right-3 w-4 h-4 text-gray-700 group-hover:text-[#9146ff] group-hover:translate-x-0.5 transition-all" />
               <div className="absolute bottom-0 inset-x-0 h-14"

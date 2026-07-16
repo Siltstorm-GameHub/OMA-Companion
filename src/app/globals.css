@@ -388,6 +388,25 @@ select.input-glass option { background: #0f1117; }
 .stagger-5 { animation-delay: 200ms; }
 .stagger-6 { animation-delay: 240ms; }
 
+/* ── Wert-Änderung (Coins / Rang-Punkte) ──────────────────────────── */
+@keyframes value-delta-pop {
+  0%   { opacity: 0; transform: translate(-50%, 4px) scale(0.9); }
+  15%  { opacity: 1; transform: translate(-50%, -6px) scale(1); }
+  75%  { opacity: 1; transform: translate(-50%, -14px) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -22px) scale(0.95); }
+}
+.value-delta-pop { animation: value-delta-pop 2.4s cubic-bezier(0.16,1,0.3,1) both; }
+
+/* ── Icon-Bounce für neuen Content seit letztem Besuch ────────────── */
+@keyframes icon-bounce-new {
+  0%, 100% { transform: translateY(0) scale(1); }
+  20%      { transform: translateY(-3px) scale(1.15); }
+  40%      { transform: translateY(0) scale(0.96); }
+  60%      { transform: translateY(-1.5px) scale(1.06); }
+  80%      { transform: translateY(0) scale(1); }
+}
+.icon-bounce-new { display: inline-flex; animation: icon-bounce-new 0.7s ease-in-out 2; }
+
 /* ── Progress shimmer — Teal ────────────────────────────────────── */
 @keyframes shimmer {
   0%   { background-position: -200% center; }
