@@ -114,7 +114,7 @@ const RULES: RuleSeed[] = [
     pushEnabled: true, inAppEnabled: true, discordDmEnabled: false, discordChanEnabled: false,
     titleTemplate: "⚔️ Duell-Herausforderung",
     bodyTemplate: "{challenger} fordert dich zu einem Münzen-Duell heraus — Einsatz: {wager} Münzen.",
-    urlTemplate: "/minigames/duel",
+    urlTemplate: "/events?tab=duels",
   },
   {
     key: "duel_result",
@@ -124,7 +124,7 @@ const RULES: RuleSeed[] = [
     pushEnabled: true, inAppEnabled: true, discordDmEnabled: false, discordChanEnabled: false,
     titleTemplate: "⚔️ Duell-Ergebnis",
     bodyTemplate: "{result}",
-    urlTemplate: "/minigames/duel",
+    urlTemplate: "/events?tab=duels",
   },
   {
     key: "badge_earned",

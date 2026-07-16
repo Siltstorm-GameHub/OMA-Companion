@@ -112,7 +112,10 @@ export default function GameNameInput({
   // Cover für den aktuellen Wert
   const staticCover  = getGameCoverUrl(value);
   const cachedCover  = coverCache.get(norm(value));
-  const coverUrl     = staticCover ?? cachedCover ?? null;
+  // Steam-Treffer (exakt, wie im Dropdown gezeigt) hat Vorrang vor dem
+  // unscharfen lokalen GAME_MAP-Teilstring-Match, sonst kann nach der
+  // Auswahl ein falsches Cover erscheinen.
+  const coverUrl     = cachedCover ?? staticCover ?? null;
   const fallbackGrad = getGameFallbackGradient(value);
   const hasMatch     = !!coverUrl;
 
