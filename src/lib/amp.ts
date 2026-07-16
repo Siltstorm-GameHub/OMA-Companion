@@ -88,18 +88,23 @@ export type AmpInstance = {
   };
 };
 
+type AdsTarget = {
+  AvailableInstances?: AmpInstance[];
+};
+
 // Liefert alle vom Controller verwalteten Instanzen (Instance-ID, Name, Status, Spielerzahl).
+// AMP gruppiert Instanzen pro Target-Node; jede Node hat eine "AvailableInstances"-Liste.
 export async function getInstances(): Promise<AmpInstance[]> {
-  const data = await callWithSession<{ result?: { instances?: unknown[] } } | { instances?: unknown[] }>(
-    "ADSModule/GetInstances"
-  );
-  const raw =
-    "result" in data && data.result?.instances
-      ? data.result.instances
-      : "instances" in data && data.instances
-        ? data.instances
-        : [];
-  return raw as AmpInstance[];
+  const data = await callWithSession<unknown>("ADSModule/GetInstances");
+  const result = (data as { result?: unknown })?.result ?? data;
+  const targets: AdsTarget[] = Array.isArray(result) ? (result as AdsTarget[]) : [result as AdsTarget];
+
+  return targets.flatMap((target) => target?.AvailableInstances ?? []);
+}
+
+// Nur für Fehlersuche: gibt die ungefilterte AMP-Antwort zurück.
+export async function getInstancesRaw(): Promise<unknown> {
+  return callWithSession<unknown>("ADSModule/GetInstances");
 }
 
 export type InstanceStatus = {
