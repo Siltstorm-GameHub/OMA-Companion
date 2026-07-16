@@ -1,4 +1,5 @@
 "use client";
+import { motion } from "motion/react";
 import GameCover from "@/components/GameCover";
 import ApplyButton from "./ApplyButton";
 import ServerCredentials from "./ServerCredentials";
@@ -31,7 +32,6 @@ type Server = {
   host?: string;
   port?: string | null;
   password?: string | null;
-  connectInfo?: string | null;
 };
 
 const PRESENCE_ONLINE = "#14b8a6"; // Marken-Teal, konsistent mit dem Presence-Dot-Konzept
@@ -40,7 +40,8 @@ const PRESENCE_OFFLINE = "#52525b"; // neutrales Grau — "offline" ist kein Feh
 // Presence-Dot auf dem Server-Cover (Discord/Slack-Muster): zeigt live an, ob das Spiel
 // selbst bereit ist. Bewusst getrennt vom Kapazitätsbalken rechts, der die Plätze zeigt —
 // unterschiedliche Form (Dot auf Avatar vs. Balken im Textblock) und Bedeutung.
-function PresenceDot({ online }: { online: boolean }) {
+function PresenceDot({ online }: { online: boolean | undefined }) {
+  // undefined = Status noch nicht geladen → neutraler Puls-Platzhalter statt hartem Pop-in
   return (
     <span className="absolute -bottom-0.5 -right-0.5 flex h-3 w-3" aria-hidden="true">
       {online && (
@@ -50,8 +51,11 @@ function PresenceDot({ online }: { online: boolean }) {
         />
       )}
       <span
-        className="relative inline-flex h-3 w-3 rounded-full border-2"
-        style={{ background: online ? PRESENCE_ONLINE : PRESENCE_OFFLINE, borderColor: "var(--bg-surface)" }}
+        className={`relative inline-flex h-3 w-3 rounded-full border-2 ${online === undefined ? "motion-safe:animate-pulse" : ""}`}
+        style={{
+          background: online === undefined ? "rgba(255,255,255,0.15)" : online ? PRESENCE_ONLINE : PRESENCE_OFFLINE,
+          borderColor: "var(--bg-surface)",
+        }}
       />
     </span>
   );
@@ -59,10 +63,12 @@ function PresenceDot({ online }: { online: boolean }) {
 
 // Kapazitätsbalken für freie Plätze — bewusst ein Balken statt eines Punkts,
 // damit er nicht mit dem Online/Offline-Presence-Dot verwechselt wird.
-function CapacityBar({ occupied, maxSlots, light }: { occupied: number; maxSlots: number; light: Light }) {
+// Ist der Server offline, ist die Belegungszahl nur noch ein historischer Wert
+// (niemand ist wirklich mehr drauf) — das wird optisch (grau) und per Text klargestellt.
+function CapacityBar({ occupied, maxSlots, light, isOffline }: { occupied: number; maxSlots: number; light: Light; isOffline: boolean }) {
   const percent = maxSlots > 0 ? Math.min(100, (occupied / maxSlots) * 100) : 0;
   return (
-    <div className="flex flex-col items-end gap-1 shrink-0 w-24">
+    <div className="flex flex-col items-end gap-1 shrink-0 w-24" style={{ opacity: isOffline ? 0.5 : 1 }}>
       <div className="flex items-baseline gap-1">
         <span className="text-xs font-semibold text-white tabular-nums">{occupied}</span>
         <span className="text-[10px] text-gray-500 tabular-nums">/ {maxSlots} Plätze</span>
@@ -70,11 +76,11 @@ function CapacityBar({ occupied, maxSlots, light }: { occupied: number; maxSlots
       <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
         <div
           className="h-full rounded-full transition-[width] duration-500 ease-out"
-          style={{ width: `${percent}%`, background: LIGHT_COLOR[light] }}
+          style={{ width: `${percent}%`, background: isOffline ? "#71717a" : LIGHT_COLOR[light] }}
         />
       </div>
-      <span className="text-[10px] font-medium" style={{ color: LIGHT_COLOR[light] }}>
-        {LIGHT_LABEL[light]}
+      <span className="text-[10px] font-medium" style={{ color: isOffline ? "#71717a" : LIGHT_COLOR[light] }}>
+        {isOffline ? "Zuletzt bekannt" : LIGHT_LABEL[light]}
       </span>
     </div>
   );
@@ -84,9 +90,12 @@ export default function ServerCard({ server }: { server: Server }) {
   const showCredentials = server.myStatus === "approved" && !!server.host;
   const liveStatus = useLiveStatus(server.id);
   const isOffline = liveStatus?.online === false;
+  const isLoading = liveStatus === undefined;
 
   return (
-    <div
+    <motion.div
+      layout
+      transition={{ type: "spring", stiffness: 380, damping: 32 }}
       className="rounded-xl glass p-4 space-y-3 transition-[opacity,filter,box-shadow] duration-300 hover:shadow-[var(--shadow-card-hover)]"
       style={{
         border: "1px solid rgba(255,255,255,0.06)",
@@ -97,22 +106,24 @@ export default function ServerCard({ server }: { server: Server }) {
       <div className="flex items-start gap-3">
         <div className="relative shrink-0">
           <GameCover game={server.game} className="w-10 h-10" rounded="rounded-lg" />
-          {liveStatus && <PresenceDot online={liveStatus.online} />}
+          <PresenceDot online={liveStatus?.online} />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-white truncate">{server.name}</p>
           <p className="text-xs text-gray-500">{server.game}</p>
-          {liveStatus?.online && liveStatus.currentPlayers !== null ? (
+          {isLoading ? (
+            <span className="motion-safe:animate-pulse inline-block h-3 w-24 rounded bg-white/10 mt-1" />
+          ) : liveStatus.online && liveStatus.currentPlayers !== null ? (
             <p className="text-xs mt-1 tabular-nums" style={{ color: PRESENCE_ONLINE }}>
               {liveStatus.currentPlayers}
               {liveStatus.maxPlayers !== null ? `/${liveStatus.maxPlayers}` : ""} Spieler online
             </p>
-          ) : liveStatus && !liveStatus.online ? (
+          ) : (
             <p className="text-xs text-gray-500 mt-1">Server offline</p>
-          ) : null}
+          )}
           {server.description && <p className="text-xs text-gray-400 mt-1">{server.description}</p>}
         </div>
-        <CapacityBar occupied={server.occupied} maxSlots={server.maxSlots} light={server.light} />
+        <CapacityBar occupied={server.occupied} maxSlots={server.maxSlots} light={server.light} isOffline={isOffline} />
       </div>
 
       <div className="flex items-center justify-end pt-1 border-t border-white/[0.05]">
@@ -127,9 +138,8 @@ export default function ServerCard({ server }: { server: Server }) {
           host={server.host}
           port={server.port}
           password={server.password}
-          connectInfo={server.connectInfo}
         />
       )}
-    </div>
+    </motion.div>
   );
 }

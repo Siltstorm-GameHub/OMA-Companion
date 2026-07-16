@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { getVisibleServers } from "@/lib/gameservers";
 import ServerList from "./ServerList";
+import { EmptyState } from "@/components/EmptyState";
 
 export default async function ServersPage() {
   const session = await auth();
@@ -17,7 +18,11 @@ export default async function ServersPage() {
       </div>
 
       {servers.length === 0 ? (
-        <p className="text-sm text-gray-500 text-center py-12">Aktuell sind keine Gameserver verfügbar.</p>
+        <EmptyState
+          type="gameserver"
+          title="Noch keine Gameserver verfügbar"
+          description="Sobald das Team einen Community-Server einrichtet, taucht er hier auf."
+        />
       ) : (
         <ServerList servers={servers} />
       )}

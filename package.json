@@ -19,6 +19,7 @@
     "canvas-confetti": "^1.9.4",
     "discord.js": "^14.26.4",
     "lucide-react": "^1.17.0",
+    "motion": "^12.42.2",
     "next": "16.2.6",
     "next-auth": "^5.0.0-beta.31",
     "prisma": "6.4.1",

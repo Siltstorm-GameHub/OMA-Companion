@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 interface EmptyStateProps {
-  type: "events" | "quests" | "feed" | "tournaments" | "leaderboard" | "generic";
+  type: "events" | "quests" | "feed" | "tournaments" | "leaderboard" | "gameserver" | "generic";
   title: string;
   description: string;
   action?: { label: string; href: string };
@@ -106,6 +106,27 @@ function IllustrationTrophy() {
   );
 }
 
+function IllustrationGameserver() {
+  return (
+    <svg viewBox="0 0 120 100" className="w-28 h-24" fill="none">
+      {/* Server-Rack Body */}
+      <rect x="30" y="15" width="60" height="70" rx="8" fill="rgba(20,184,166,0.1)" stroke="rgba(20,184,166,0.3)" strokeWidth="1.5"/>
+      {/* Rack-Einheiten */}
+      <rect x="38" y="24" width="44" height="12" rx="3" fill="rgba(20,184,166,0.15)" stroke="rgba(20,184,166,0.2)" strokeWidth="1"/>
+      <rect x="38" y="42" width="44" height="12" rx="3" fill="rgba(20,184,166,0.15)" stroke="rgba(20,184,166,0.2)" strokeWidth="1"/>
+      <rect x="38" y="60" width="44" height="12" rx="3" fill="rgba(20,184,166,0.15)" stroke="rgba(20,184,166,0.2)" strokeWidth="1"/>
+      {/* Status-LEDs */}
+      <circle cx="45" cy="30" r="2.5" fill="rgba(255,255,255,0.15)"/>
+      <circle cx="45" cy="48" r="2.5" fill="rgba(255,255,255,0.15)"/>
+      <circle cx="45" cy="66" r="2.5" fill="rgba(20,184,166,0.6)"/>
+      {/* Sparkles */}
+      <circle cx="18" cy="20" r="3" fill="rgba(20,184,166,0.4)"/>
+      <circle cx="102" cy="25" r="2" fill="rgba(59,130,246,0.4)"/>
+      <circle cx="100" cy="80" r="3" fill="rgba(244,63,94,0.3)"/>
+    </svg>
+  );
+}
+
 function IllustrationGeneric() {
   return (
     <svg viewBox="0 0 120 100" className="w-28 h-24" fill="none">
@@ -125,6 +146,7 @@ const ILLUSTRATIONS = {
   feed:        <IllustrationFeed />,
   tournaments: <IllustrationTrophy />,
   leaderboard: <IllustrationTrophy />,
+  gameserver:  <IllustrationGameserver />,
   generic:     <IllustrationGeneric />,
 };
 
