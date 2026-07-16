@@ -24,7 +24,7 @@ export function ScrollReveal({
           io.disconnect();
         }
       },
-      { threshold: 0.15, rootMargin: "0px 0px -40px 0px" }
+      { threshold: 0.1, rootMargin: "0px 0px -10% 0px" }
     );
     io.observe(el);
     return () => io.disconnect();
@@ -33,7 +33,7 @@ export function ScrollReveal({
   return (
     <div
       ref={ref}
-      className={`${className} ${visible ? "animate-slide-up" : "opacity-0"}`}
+      className={`${className} ${visible ? "animate-card-reveal" : "opacity-0"}`}
       style={visible ? { animationDelay: `${delay}ms` } : undefined}
     >
       {children}
