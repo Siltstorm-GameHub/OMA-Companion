@@ -17,9 +17,12 @@ const DISMISS_KEY = "recent-results-dismissed";
 export function RecentResultsBanner({
   events,
   onVisibilityChange,
+  fill = false,
 }: {
   events: RecentResultEvent[];
   onVisibilityChange?: (visible: boolean) => void;
+  /** Streckt die Box auf 100% der Höhe des Elternelements und zentriert den Inhalt vertikal (z.B. im Banner-Slider). */
+  fill?: boolean;
 }) {
   const [dismissedIds, setDismissedIds] = useState<string[] | null>(null);
 
@@ -53,6 +56,7 @@ export function RecentResultsBanner({
         background: "linear-gradient(135deg, rgba(245,158,11,0.12) 0%, rgba(245,158,11,0.04) 100%)",
         border: "1px solid rgba(245,158,11,0.25)",
         boxShadow: "0 0 20px rgba(245,158,11,0.06)",
+        ...(fill ? { height: "100%", boxSizing: "border-box" as const, alignItems: "center" } : {}),
       }}>
       <div className="shrink-0 mt-0.5">
         <NewContentPing id={visible[0]?.id ?? null} storageKey="recent-results-ping-seen">
