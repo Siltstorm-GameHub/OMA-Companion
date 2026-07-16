@@ -1,5 +1,6 @@
 "use client";
 import { useState, type ReactNode } from "react";
+import { useSearchParams } from "next/navigation";
 import { Tabs, TabPanel } from "@/components/admin/Tabs";
 import { CalendarDays, Swords } from "lucide-react";
 
@@ -10,7 +11,9 @@ export default function EventsTabs({
   eventsPanel: ReactNode;
   duelsPanel: ReactNode;
 }) {
-  const [active, setActive] = useState("events");
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get("tab") === "duels" ? "duels" : "events";
+  const [active, setActive] = useState(initialTab);
 
   return (
     <div className="space-y-5">

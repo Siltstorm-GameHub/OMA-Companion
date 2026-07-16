@@ -1,6 +1,7 @@
 export const PAGE_LINKS: { label: string; url: string }[] = [
   { label: "Dashboard",        url: "/dashboard" },
   { label: "Events",           url: "/events" },
+  { label: "Events – Duelle",  url: "/events?tab=duels" },
   { label: "Leaderboard",      url: "/leaderboard" },
   { label: "Shop",             url: "/shop" },
   { label: "Profil",           url: "/profile" },
