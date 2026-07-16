@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { getGameCoverUrl, getGameFallbackGradient, KNOWN_GAMES } from "@/lib/game-cover";
+import { getGameCoverUrl, getGameFallbackGradient, KNOWN_GAMES, pickedCoverCache, normalizeForCoverCache } from "@/lib/game-cover";
 import type { SteamGameResult } from "@/app/api/game-search/route";
 import { Gamepad2, X, Loader2 } from "lucide-react";
 
@@ -16,7 +16,7 @@ interface GameNameInputProps {
 }
 
 /** Normalisiert für den Cover-Cache-Key */
-function norm(s: string) { return s.toLowerCase().trim(); }
+const norm = normalizeForCoverCache;
 
 /** Session-Cache: normierter Name → CDN-URL (von Steam-Suche) */
 const coverCache = new Map<string, string>();
@@ -77,6 +77,11 @@ export default function GameNameInput({
       : staticSuggestions.map(g => ({ name: g, coverUrl: getGameCoverUrl(g) ?? undefined }));
 
   const select = useCallback((name: string) => {
+    // Exaktes Cover des angeklickten Treffers dauerhaft (über die reine
+    // Namens-Suche hinaus) merken, damit GameCover nach dem Speichern
+    // nicht per Name-Suche auf einen anderen Treffer landet.
+    const url = coverCache.get(norm(name));
+    if (url) pickedCoverCache.set(norm(name), url);
     onChange(name);
     setOpen(false);
     setActive(-1);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getGameCoverUrl } from "@/lib/game-cover";
+import { getGameCoverUrl, pickedCoverCache, normalizeForCoverCache } from "@/lib/game-cover";
 import EventCoverDefault from "@/components/EventCoverDefault";
 
 interface GameCoverProps {
@@ -23,7 +23,11 @@ export default function GameCover({
   rounded = "rounded-lg",
   imgClassName = "w-full h-full object-cover",
 }: GameCoverProps) {
-  const staticUrl = getGameCoverUrl(game);
+  // Vom Nutzer im Dropdown exakt ausgewähltes Cover hat Vorrang vor dem
+  // unscharfen statischen Map-Match und der eigenen Steam-Suche, sonst
+  // kann nach dem Speichern ein anderes Bild als das ausgewählte erscheinen.
+  const pickedUrl = game ? pickedCoverCache.get(normalizeForCoverCache(game)) : undefined;
+  const staticUrl = pickedUrl ?? getGameCoverUrl(game);
 
   const [dynamicUrl, setDynamicUrl] = useState<string | null | undefined>(
     // Sofort aus Cache bedienen falls vorhanden
