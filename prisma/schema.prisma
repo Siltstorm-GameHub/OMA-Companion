@@ -1048,6 +1048,7 @@ model GameServer {
   port        String?
   password    String? // Server-Passwort – nur für genehmigte User sichtbar
   connectInfo String? // Freitext, z.B. Mod-Liste, Connect-String
+  ampInstanceId String? // AMP-Controller Instance-ID für Live-Status/Spielerzahl
   maxSlots    Int
   isActive    Boolean  @default(true)
   createdBy   String
