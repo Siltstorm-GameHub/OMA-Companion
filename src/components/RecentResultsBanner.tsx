@@ -14,7 +14,13 @@ export type RecentResultEvent = {
 
 const DISMISS_KEY = "recent-results-dismissed";
 
-export function RecentResultsBanner({ events }: { events: RecentResultEvent[] }) {
+export function RecentResultsBanner({
+  events,
+  onVisibilityChange,
+}: {
+  events: RecentResultEvent[];
+  onVisibilityChange?: (visible: boolean) => void;
+}) {
   const [dismissedIds, setDismissedIds] = useState<string[] | null>(null);
 
   useEffect(() => {
@@ -26,9 +32,14 @@ export function RecentResultsBanner({ events }: { events: RecentResultEvent[] })
     }
   }, []);
 
-  if (!dismissedIds) return null;
-  const visible = events.filter(ev => !dismissedIds.includes(ev.id));
-  if (visible.length === 0) return null;
+  const visible = dismissedIds ? events.filter(ev => !dismissedIds.includes(ev.id)) : [];
+
+  useEffect(() => {
+    if (dismissedIds !== null) onVisibilityChange?.(visible.length > 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dismissedIds, visible.length]);
+
+  if (!dismissedIds || visible.length === 0) return null;
 
   function dismiss() {
     const next = Array.from(new Set([...(dismissedIds ?? []), ...events.map(ev => ev.id)]));

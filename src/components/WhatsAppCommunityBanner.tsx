@@ -5,12 +5,21 @@ import { WHATSAPP_COMMUNITY_URL } from "@/lib/config";
 
 const STORAGE_KEY = "wa_banner_dismissed";
 
-export default function WhatsAppCommunityBanner() {
+export default function WhatsAppCommunityBanner({
+  onVisibilityChange,
+}: {
+  onVisibilityChange?: (visible: boolean) => void;
+} = {}) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     if (!localStorage.getItem(STORAGE_KEY)) setVisible(true);
   }, []);
+
+  useEffect(() => {
+    onVisibilityChange?.(visible);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
 
   function dismiss() {
     localStorage.setItem(STORAGE_KEY, "1");

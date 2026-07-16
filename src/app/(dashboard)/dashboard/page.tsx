@@ -15,19 +15,17 @@ import { CountUp } from "@/components/CountUp";
 import { AnimatedBar } from "@/components/AnimatedBar";
 import GameCover from "@/components/GameCover";
 import EventCoverDefault from "@/components/EventCoverDefault";
-import { DailyMessageBanner } from "@/components/DailyMessageBanner";
 import { DailyPollBanner } from "@/components/DailyPollBanner";
 import PartnerLiveBanner from "@/components/PartnerLiveBanner";
 import CommunityLiveBanner from "@/components/CommunityLiveBanner";
-import WhatsAppCommunityBanner from "@/components/WhatsAppCommunityBanner";
-import { RecentResultsBanner, type RecentResultEvent } from "@/components/RecentResultsBanner";
+import { type RecentResultEvent } from "@/components/RecentResultsBanner";
 import { getEventEndedAt, isRecentlyFinished } from "@/lib/event-completion";
 import RankIcon from "@/components/RankIcon";
 import SeriesIcon from "@/components/SeriesIcon";
 import { resolveSeriesColor } from "@/lib/series-icons";
 import { getRingClass } from "@/lib/ranks";
 import { getVisibleServers } from "@/lib/gameservers";
-import { BannerCarousel } from "@/components/BannerCarousel";
+import { PromoBannerCarousel } from "@/components/PromoBannerCarousel";
 import { NewContentPing } from "@/components/NewContentPing";
 import { HeroStatValue } from "@/components/HeroStatValue";
 
@@ -446,16 +444,13 @@ export default async function DashboardPage() {
 
       {/* ── Rotierender Banner-Slider: Ergebnisse / Mitteilung / WhatsApp ── */}
       <div className="px-4 sm:px-6 pt-4 max-w-7xl mx-auto w-full">
-        <BannerCarousel>
-          {recentResultEvents.length > 0 && <RecentResultsBanner events={recentResultEvents} />}
-          {activeDailyMessage && (
-            <DailyMessageBanner message={{
-              ...activeDailyMessage,
-              endDate: activeDailyMessage.endDate.toISOString(),
-            }} />
-          )}
-          <WhatsAppCommunityBanner />
-        </BannerCarousel>
+        <PromoBannerCarousel
+          recentResultEvents={recentResultEvents}
+          dailyMessage={activeDailyMessage ? {
+            ...activeDailyMessage,
+            endDate: activeDailyMessage.endDate.toISOString(),
+          } : null}
+        />
       </div>
 
       {/* ── Partner Live-Streams ─────────────────────────────────── */}

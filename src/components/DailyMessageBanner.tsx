@@ -10,13 +10,24 @@ type Message = {
   endDate: string;
 };
 
-export function DailyMessageBanner({ message }: { message: Message }) {
+export function DailyMessageBanner({
+  message,
+  onVisibilityChange,
+}: {
+  message: Message;
+  onVisibilityChange?: (visible: boolean) => void;
+}) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     const dismissed = localStorage.getItem(`daily-msg-dismissed-${message.id}`);
     if (!dismissed) setVisible(true);
   }, [message.id]);
+
+  useEffect(() => {
+    onVisibilityChange?.(visible);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
 
   function dismiss() {
     localStorage.setItem(`daily-msg-dismissed-${message.id}`, "1");
