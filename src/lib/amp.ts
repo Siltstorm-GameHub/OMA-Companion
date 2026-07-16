@@ -81,6 +81,9 @@ export type AmpInstance = {
   FriendlyName: string;
   ModuleDisplayName: string;
   Running: boolean;
+  // AppState-Werte laut AMP: 0=Stopped, 5=PreStart, 10=Starting, 20=Ready, 30=Stopping, -1=n/a (z.B. ADS-Controller selbst).
+  // "Running" zeigt nur, dass der von AMP verwaltete Prozess/Container läuft, nicht dass das Spiel selbst bereit ist.
+  AppState: number;
   Metrics?: {
     "Active Users"?: { RawValue: number; MaxValue: number };
     "CPU Usage"?: { RawValue: number };
@@ -114,12 +117,15 @@ export type InstanceStatus = {
   maxPlayers: number | null;
 };
 
+const APP_STATE_READY = 20;
+
 export function toInstanceStatus(instance: AmpInstance): InstanceStatus {
   const activeUsers = instance.Metrics?.["Active Users"];
+  const online = instance.Running && instance.AppState === APP_STATE_READY;
   return {
     instanceId: instance.InstanceID,
-    online: instance.Running,
-    currentPlayers: activeUsers?.RawValue ?? null,
+    online,
+    currentPlayers: online ? (activeUsers?.RawValue ?? null) : null,
     maxPlayers: activeUsers?.MaxValue ?? null,
   };
 }
