@@ -89,6 +89,9 @@ export type AmpInstance = {
     "CPU Usage"?: { RawValue: number };
     "Memory Usage"?: { RawValue: number; MaxValue: number };
   };
+  // Enthält u.a. den tatsächlichen Spiel-Port (Endpoint "0.0.0.0:7777") — nicht zu verwechseln
+  // mit dem "Port"-Feld der Instanz selbst, das nur der AMP-Panel-Port ist.
+  ApplicationEndpoints?: { DisplayName: string; Endpoint: string }[];
 };
 
 type AdsTarget = {
@@ -108,6 +111,33 @@ export async function getInstances(): Promise<AmpInstance[]> {
 // Nur für Fehlersuche: gibt die ungefilterte AMP-Antwort zurück.
 export async function getInstancesRaw(): Promise<unknown> {
   return callWithSession<unknown>("ADSModule/GetInstances");
+}
+
+export type InstanceDetails = {
+  name: string;
+  game: string;
+  port: string | null;
+};
+
+// Für den "Von AMP übernehmen"-Button im Admin-Formular: liefert die Felder, die AMP
+// zuverlässig kennt (Servername, Spiel, Spiel-Port). Host/IP und Passwort liefert AMP
+// NICHT verlässlich (nur interne Bind-Adresse 0.0.0.0/127.0.0.1, kein generisches
+// Passwort-Feld) — die bleiben bewusst außen vor und müssen manuell gepflegt werden.
+export async function getInstanceDetails(instanceId: string): Promise<InstanceDetails | null> {
+  const instances = await getInstances();
+  const instance = instances.find((i) => i.InstanceID === instanceId);
+  if (!instance) return null;
+
+  const primaryEndpoint =
+    instance.ApplicationEndpoints?.find((e) => e.DisplayName === "Application Address") ??
+    instance.ApplicationEndpoints?.[0];
+  const port = primaryEndpoint?.Endpoint.split(":")[1] ?? null;
+
+  return {
+    name: instance.FriendlyName || instance.InstanceName,
+    game: instance.ModuleDisplayName || "",
+    port,
+  };
 }
 
 export type InstanceStatus = {
