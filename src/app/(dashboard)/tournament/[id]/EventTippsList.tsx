@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Coins, Target, Check, X } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
 
@@ -41,11 +42,15 @@ export default function EventTippsList({ pot, tipps }: { pot: number; tipps: Tip
       <div className="divide-y divide-white/[0.05]">
         {tipps.map((t, i) => (
           <div key={i} className="flex items-center gap-2.5 py-2 first:pt-0 last:pb-0">
-            <Avatar u={t.user} />
-            <span className="text-xs text-gray-300 truncate">{uname(t.user)}</span>
+            <Link href={`/profile/${t.user.id}`} className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">
+              <Avatar u={t.user} />
+              <span className="text-xs text-gray-300 truncate">{uname(t.user)}</span>
+            </Link>
             <span className="text-xs text-gray-600">tippt auf</span>
-            <Avatar u={t.predictedUser} />
-            <span className="text-xs text-white font-medium truncate flex-1">{uname(t.predictedUser)}</span>
+            <Link href={`/profile/${t.predictedUser.id}`} className="flex items-center gap-1.5 flex-1 min-w-0 hover:opacity-80 transition-opacity">
+              <Avatar u={t.predictedUser} />
+              <span className="text-xs text-white font-medium truncate">{uname(t.predictedUser)}</span>
+            </Link>
             {t.resolved && (
               t.correct ? (
                 <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />

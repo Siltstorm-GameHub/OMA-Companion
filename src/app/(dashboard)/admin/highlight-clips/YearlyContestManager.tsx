@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Trophy, Clapperboard, ExternalLink, Loader2, Square } from "lucide-react";
@@ -182,7 +183,13 @@ export default function YearlyContestManager({ contests }: { contests: Contest[]
                           Gewinner: {winner.clipTitle ?? "Unbekannter Clip"}
                         </p>
                         <p className="text-gray-400 text-xs mt-0.5">
-                          {winner.submittedBy?.name ?? winner.submittedBy?.username ?? winner.twitchCreatorLogin ?? "Unbekannt"}
+                          {winner.submittedBy ? (
+                            <Link href={`/profile/${winner.submittedBy.id}`} className="hover:text-white transition-colors">
+                              {winner.submittedBy.name ?? winner.submittedBy.username}
+                            </Link>
+                          ) : (
+                            winner.twitchCreatorLogin ?? "Unbekannt"
+                          )}
                           {winner.partnerTwitchLogin && <> · von {winner.partnerTwitchLogin}</>}
                           {" · "}{winner._count.votes} Stimmen
                         </p>
@@ -211,7 +218,12 @@ export default function YearlyContestManager({ contests }: { contests: Contest[]
                     <span className="text-gray-600 w-4 text-right">{i + 1}.</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-white truncate">{nom.clipTitle ?? nom.clipUrl}</p>
-                      <p className="text-xs text-gray-500">{name}{nom.partnerTwitchLogin && <> · {nom.partnerTwitchLogin}</>}</p>
+                      <p className="text-xs text-gray-500">
+                        {nom.submittedBy ? (
+                          <Link href={`/profile/${nom.submittedBy.id}`} className="hover:text-gray-300 transition-colors">{name}</Link>
+                        ) : name}
+                        {nom.partnerTwitchLogin && <> · {nom.partnerTwitchLogin}</>}
+                      </p>
                     </div>
                     <span className="text-gray-400 shrink-0">{nom._count.votes} ×</span>
                     <a href={nom.clipUrl} target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-gray-400">
