@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 type AvatarUser = {
   id: string;
   name: string | null;
@@ -36,10 +38,11 @@ export function AvatarStack({
   return (
     <div className="flex items-center">
       {visible.map((u, i) => (
-        <div
+        <Link
           key={u.id}
+          href={`/profile/${u.id}`}
           title={u.username ?? u.name ?? ""}
-          className={`${sz} rounded-full ring-2 ring-black/60 shrink-0 flex items-center justify-center font-bold overflow-hidden ${
+          className={`${sz} rounded-full ring-2 ring-black/60 shrink-0 flex items-center justify-center font-bold overflow-hidden hover:opacity-80 transition-opacity ${
             u.image ? "" : BG_COLORS[i % BG_COLORS.length]
           }`}
           style={{ marginLeft: i > 0 ? "-6px" : undefined }}
@@ -49,7 +52,7 @@ export function AvatarStack({
           ) : (
             initials(u)
           )}
-        </div>
+        </Link>
       ))}
       {overflow > 0 && (
         <div

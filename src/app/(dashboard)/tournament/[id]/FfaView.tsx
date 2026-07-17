@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { ChevronDown, ChevronUp, Trophy, Clock, Vote, Eye, CheckCircle2 } from "lucide-react";
 import RankPointsIcon from "@/components/RankPointsIcon";
 
@@ -208,14 +209,16 @@ export default function FfaView({
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
-                            {r.user.image
-                              ? <img src={r.user.image} alt="" className="w-6 h-6 rounded-full shrink-0" />
-                              : <div className="w-6 h-6 rounded-full bg-rose-900/30 flex items-center justify-center text-[10px] font-bold text-rose-400 shrink-0">
-                                  {uname(r.user)[0].toUpperCase()}
-                                </div>}
-                            <span className={`font-medium ${isMe ? "text-rose-300" : "text-white"}`}>
-                              {uname(r.user)}{isMe && " (du)"}
-                            </span>
+                            <Link href={isMe ? "/profile" : `/profile/${r.userId}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                              {r.user.image
+                                ? <img src={r.user.image} alt="" className="w-6 h-6 rounded-full shrink-0" />
+                                : <div className="w-6 h-6 rounded-full bg-rose-900/30 flex items-center justify-center text-[10px] font-bold text-rose-400 shrink-0">
+                                    {uname(r.user)[0].toUpperCase()}
+                                  </div>}
+                              <span className={`font-medium ${isMe ? "text-rose-300" : "text-white"}`}>
+                                {uname(r.user)}{isMe && " (du)"}
+                              </span>
+                            </Link>
                             {r.role === "spectator" && (
                               <Eye className="w-3 h-3 text-gray-500 shrink-0" />
                             )}

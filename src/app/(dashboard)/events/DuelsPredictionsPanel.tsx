@@ -179,11 +179,13 @@ export default function DuelsPredictionsPanel({
           </p>
           {incoming.map(d => (
             <div key={d.id} className="glass rounded-xl px-4 py-3 flex items-center gap-3">
-              <Avatar u={d.challenger} />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-white truncate">{uname(d.challenger)} fordert dich heraus</p>
-                <p className="text-xs text-amber-400 flex items-center gap-1">{d.wager} <CoinIcon size={11} /> Einsatz</p>
-              </div>
+              <Link href={d.challenger?.id ? `/profile/${d.challenger.id}` : "#"} className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity">
+                <Avatar u={d.challenger} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-white truncate">{uname(d.challenger)} fordert dich heraus</p>
+                  <p className="text-xs text-amber-400 flex items-center gap-1">{d.wager} <CoinIcon size={11} /> Einsatz</p>
+                </div>
+              </Link>
               <button onClick={() => respond(d, "accept")} disabled={respondingId === d.id}
                 className="p-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 disabled:opacity-40">
                 <Check className="w-4 h-4" />
@@ -196,11 +198,13 @@ export default function DuelsPredictionsPanel({
           ))}
           {outgoing.map(d => (
             <div key={d.id} className="glass rounded-xl px-4 py-3 flex items-center gap-3 opacity-70">
-              <Avatar u={d.opponent} />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-white truncate">Wartet auf Antwort von {uname(d.opponent)}</p>
-                <p className="text-xs text-amber-400 flex items-center gap-1">{d.wager} <CoinIcon size={11} /> Einsatz</p>
-              </div>
+              <Link href={d.opponent?.id ? `/profile/${d.opponent.id}` : "#"} className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity">
+                <Avatar u={d.opponent} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-white truncate">Wartet auf Antwort von {uname(d.opponent)}</p>
+                  <p className="text-xs text-amber-400 flex items-center gap-1">{d.wager} <CoinIcon size={11} /> Einsatz</p>
+                </div>
+              </Link>
               <Clock className="w-4 h-4 text-gray-600" />
             </div>
           ))}

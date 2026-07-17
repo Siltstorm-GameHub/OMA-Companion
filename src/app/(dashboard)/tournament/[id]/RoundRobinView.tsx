@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { Clock, Trophy } from "lucide-react";
 import WinIcon from "@/components/WinIcon";
 
@@ -98,7 +99,7 @@ export default function RoundRobinView({
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
+                      <Link href={isMe ? "/profile" : `/profile/${s.userId}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                         {s.user.image ? (
                           <img src={s.user.image} alt="" className="w-6 h-6 rounded-full shrink-0" />
                         ) : (
@@ -109,7 +110,7 @@ export default function RoundRobinView({
                         <span className={`font-medium ${isMe ? "text-rose-300" : "text-white"}`}>
                           {uname(s.user)}{isMe && " (du)"}
                         </span>
-                      </div>
+                      </Link>
                     </td>
                     <td className="px-3 py-3 text-center text-emerald-400 font-semibold">{s.w}</td>
                     <td className="px-3 py-3 text-center text-gray-500">{s.l}</td>
