@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Plus, Trash2, ToggleLeft, ToggleRight, Loader2, Pencil, Users, Circle, Eye, EyeOff } from "lucide-react";
+import { Plus, Trash2, ToggleLeft, ToggleRight, Loader2, Pencil, Users, Circle, Eye, EyeOff, Download } from "lucide-react";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import GameNameInput from "@/components/GameNameInput";
 import GameCover from "@/components/GameCover";
@@ -53,7 +53,29 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
   const [editForm, setEditForm] = useState<FormState>(EMPTY_FORM);
   const [showPassword, setShowPassword] = useState(false);
   const [showEditPassword, setShowEditPassword] = useState(false);
+  const [fetchingAmp, setFetchingAmp] = useState<"create" | "edit" | null>(null);
   const { confirm, ConfirmDialogElement } = useConfirm();
+
+  // Übernimmt Servername, Spiel und Spiel-Port von AMP für die angegebene Instance-ID.
+  // Host/IP und Passwort liefert AMP nicht zuverlässig (nur interne Bind-Adresse,
+  // kein generisches Passwort-Feld) — die bleiben bewusst unverändert.
+  async function fetchFromAmp(target: "create" | "edit") {
+    const ampInstanceId = (target === "create" ? form : editForm).ampInstanceId.trim();
+    if (!ampInstanceId) { toast.error("Bitte zuerst eine AMP Instance-ID eintragen"); return; }
+    setFetchingAmp(target);
+    try {
+      const res = await fetch(`/api/admin/amp/instances/${encodeURIComponent(ampInstanceId)}`);
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? "AMP-Abfrage fehlgeschlagen"); return; }
+      const setter = target === "create" ? setForm : setEditForm;
+      setter((f) => ({ ...f, name: data.name || f.name, game: data.game || f.game, port: data.port ?? f.port }));
+      toast.success("Von AMP übernommen — Host/IP und Passwort bitte manuell prüfen");
+    } catch {
+      toast.error("AMP-Abfrage fehlgeschlagen");
+    } finally {
+      setFetchingAmp(null);
+    }
+  }
 
   async function createServer() {
     if (!form.name.trim() || !form.game.trim() || !form.host.trim() || !form.maxSlots) return;
@@ -172,8 +194,16 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
             className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
           <input placeholder="Beschreibung (optional)" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
             className="col-span-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
-          <input placeholder="AMP Instance-ID (optional, für Live-Status)" value={form.ampInstanceId} onChange={(e) => setForm({ ...form, ampInstanceId: e.target.value })}
-            className="col-span-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
+          <div className="col-span-2 flex gap-2">
+            <input placeholder="AMP Instance-ID (optional, für Live-Status)" value={form.ampInstanceId} onChange={(e) => setForm({ ...form, ampInstanceId: e.target.value })}
+              className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-white/20" />
+            <button type="button" onClick={() => fetchFromAmp("create")} disabled={fetchingAmp === "create" || !form.ampInstanceId.trim()}
+              title="Servername, Spiel und Port von AMP übernehmen (Host/IP und Passwort bitte manuell prüfen)"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-teal-500/15 border border-teal-500/25 text-teal-300 hover:bg-teal-500/25 disabled:opacity-40 transition-colors shrink-0">
+              {fetchingAmp === "create" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+              Von AMP übernehmen
+            </button>
+          </div>
         </div>
         <button onClick={createServer} disabled={saving || !form.name.trim() || !form.game.trim() || !form.host.trim()}
           className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold bg-violet-500/20 border border-violet-500/30 text-violet-300 hover:bg-violet-500/30 disabled:opacity-40 transition-colors">
@@ -255,8 +285,16 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
                       className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
                     <input placeholder="Beschreibung" value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                       className="col-span-2 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
-                    <input placeholder="AMP Instance-ID (optional, für Live-Status)" value={editForm.ampInstanceId} onChange={(e) => setEditForm({ ...editForm, ampInstanceId: e.target.value })}
-                      className="col-span-2 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
+                    <div className="col-span-2 flex gap-2">
+                      <input placeholder="AMP Instance-ID (optional, für Live-Status)" value={editForm.ampInstanceId} onChange={(e) => setEditForm({ ...editForm, ampInstanceId: e.target.value })}
+                        className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-white/20" />
+                      <button type="button" onClick={() => fetchFromAmp("edit")} disabled={fetchingAmp === "edit" || !editForm.ampInstanceId.trim()}
+                        title="Servername, Spiel und Port von AMP übernehmen (Host/IP und Passwort bitte manuell prüfen)"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-teal-500/15 border border-teal-500/25 text-teal-300 hover:bg-teal-500/25 disabled:opacity-40 transition-colors shrink-0">
+                        {fetchingAmp === "edit" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                        Von AMP übernehmen
+                      </button>
+                    </div>
                   </div>
                   <button onClick={() => saveEdit(server.id)} disabled={saving}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-violet-500/20 border border-violet-500/30 text-violet-300 hover:bg-violet-500/30 disabled:opacity-40 transition-colors">
