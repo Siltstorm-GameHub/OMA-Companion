@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { RelativeTime } from "@/components/RelativeTime";
 import CoinIcon from "@/components/CoinIcon";
 import RankPointsIcon from "@/components/RankPointsIcon";
@@ -9,7 +10,7 @@ type Tx = {
   amount: number;
   reason: string;
   createdAt: Date;
-  user: { name: string | null; username: string | null };
+  user: { id: string; name: string | null; username: string | null };
 };
 
 function txType(reason: string): "coins" | "rank" {
@@ -67,7 +68,9 @@ export default function ActivityFeed({ transactions }: { transactions: Tx[] }) {
             return (
               <div key={tx.id} className="flex items-center justify-between px-4 py-3 hover:bg-white/[0.02] transition-colors gap-3">
                 <div className="min-w-0 flex-1">
-                  <span className="text-sm text-white font-medium">{tx.user.username ?? tx.user.name ?? "?"}</span>
+                  <Link href={`/profile/${tx.user.id}`} className="text-sm text-white font-medium hover:underline">
+                    {tx.user.username ?? tx.user.name ?? "?"}
+                  </Link>
                   <span className="text-gray-500 text-sm ml-2">{cleanReason(tx.reason)}</span>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">

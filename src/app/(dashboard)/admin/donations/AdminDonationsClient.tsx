@@ -1,6 +1,7 @@
 "use client";
 import { useState, useTransition } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { toast } from "sonner";
 import { Trash2, Plus, Euro, Heart, ShoppingCart, TrendingDown, Wallet, Lightbulb, Pencil, Check, X } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -447,21 +448,23 @@ export default function AdminDonationsClient({
             {donations.map(d => (
               <div key={d.id} className="flex items-center gap-3 px-4 py-3 rounded-xl"
                 style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                {d.user.image ? (
-                  <Image src={d.user.image} alt={d.user.name ?? ""} width={32} height={32} className="w-8 h-8 rounded-full shrink-0" />
-                ) : (
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
-                    style={{ background: "linear-gradient(135deg,#0d9488,#115e59)" }}>
-                    {d.user.name?.[0] ?? "?"}
+                <Link href={`/profile/${d.user.id}`} className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity">
+                  {d.user.image ? (
+                    <Image src={d.user.image} alt={d.user.name ?? ""} width={32} height={32} className="w-8 h-8 rounded-full shrink-0" />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
+                      style={{ background: "linear-gradient(135deg,#0d9488,#115e59)" }}>
+                      {d.user.name?.[0] ?? "?"}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">{d.user.name ?? "Unbekannt"}</p>
+                    <p className="text-xs text-gray-500">
+                      {MONTH_NAMES[d.month - 1]} {d.year}
+                      {d.note && <span className="ml-1 text-gray-600">· {d.note}</span>}
+                    </p>
                   </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-white truncate">{d.user.name ?? "Unbekannt"}</p>
-                  <p className="text-xs text-gray-500">
-                    {MONTH_NAMES[d.month - 1]} {d.year}
-                    {d.note && <span className="ml-1 text-gray-600">· {d.note}</span>}
-                  </p>
-                </div>
+                </Link>
                 <span className="text-sm font-bold text-teal-400 shrink-0">{fmt(d.amount)} €</span>
                 <button onClick={() => handleDeleteDonation(d.id)} disabled={isPending}
                   className="text-gray-600 hover:text-red-400 transition-colors p-1.5 rounded-lg hover:bg-red-500/10 shrink-0">

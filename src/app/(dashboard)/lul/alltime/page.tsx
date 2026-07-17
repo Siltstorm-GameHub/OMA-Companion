@@ -174,7 +174,8 @@ export default async function LulAllTimePage() {
                       </td>
 
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-2.5">
+                        <Link href={isMe ? "/profile" : `/profile/${s.userId}`}
+                          className="flex items-center gap-2.5 hover:opacity-80 transition-opacity w-fit">
                           {s.image ? (
                             <img src={s.image} alt=""
                               className={`w-8 h-8 rounded-full shrink-0 ring-1 ${isMe ? "ring-purple-400/50" : "ring-white/10"}`} />
@@ -197,7 +198,7 @@ export default async function LulAllTimePage() {
                               </p>
                             )}
                           </div>
-                        </div>
+                        </Link>
                       </td>
 
                       <td className="px-4 py-3 text-right">

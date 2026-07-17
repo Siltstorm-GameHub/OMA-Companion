@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { toast } from "sonner";
 import { Check, X, Ban, Loader2 } from "lucide-react";
 
@@ -65,12 +66,14 @@ export default function ApplicationsManager({ initialApplications }: { initialAp
         ) : (
           pending.map((app) => (
             <div key={app.id} className="flex items-center gap-3 rounded-xl glass px-4 py-3" style={{ border: "1px solid rgba(255,255,255,0.06)" }}>
-              {app.user.image ? <Image src={app.user.image} alt="" width={32} height={32} className="rounded-full shrink-0" /> : <div className="w-8 h-8 rounded-full bg-gray-700 shrink-0" />}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-white truncate">{app.user.username ?? app.user.name}</p>
-                <p className="text-xs text-gray-500">beworben am {formatDate(app.appliedAt)}</p>
-                {app.message && <p className="text-xs text-gray-400 mt-0.5 italic">„{app.message}&quot;</p>}
-              </div>
+              <Link href={`/profile/${app.user.id}`} className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity">
+                {app.user.image ? <Image src={app.user.image} alt="" width={32} height={32} className="rounded-full shrink-0" /> : <div className="w-8 h-8 rounded-full bg-gray-700 shrink-0" />}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white truncate">{app.user.username ?? app.user.name}</p>
+                  <p className="text-xs text-gray-500">beworben am {formatDate(app.appliedAt)}</p>
+                  {app.message && <p className="text-xs text-gray-400 mt-0.5 italic">„{app.message}&quot;</p>}
+                </div>
+              </Link>
               <div className="flex items-center gap-1 shrink-0">
                 <button onClick={() => act(app.id, "approve")} disabled={actingId === app.id}
                   className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/30 disabled:opacity-40 transition-colors">
@@ -93,13 +96,15 @@ export default function ApplicationsManager({ initialApplications }: { initialAp
         ) : (
           approved.map((app) => (
             <div key={app.id} className="flex items-center gap-3 rounded-xl glass px-4 py-3" style={{ border: "1px solid rgba(255,255,255,0.06)" }}>
-              {app.user.image ? <Image src={app.user.image} alt="" width={32} height={32} className="rounded-full shrink-0" /> : <div className="w-8 h-8 rounded-full bg-gray-700 shrink-0" />}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-white truncate">{app.user.username ?? app.user.name}</p>
-                <p className="text-[11px] text-gray-600">
-                  {app.lastConnectedAt ? `Zuletzt verbunden am ${formatDate(app.lastConnectedAt)}` : "Noch nicht verbunden"}
-                </p>
-              </div>
+              <Link href={`/profile/${app.user.id}`} className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity">
+                {app.user.image ? <Image src={app.user.image} alt="" width={32} height={32} className="rounded-full shrink-0" /> : <div className="w-8 h-8 rounded-full bg-gray-700 shrink-0" />}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white truncate">{app.user.username ?? app.user.name}</p>
+                  <p className="text-[11px] text-gray-600">
+                    {app.lastConnectedAt ? `Zuletzt verbunden am ${formatDate(app.lastConnectedAt)}` : "Noch nicht verbunden"}
+                  </p>
+                </div>
+              </Link>
               <button onClick={() => act(app.id, "revoke")} disabled={actingId === app.id}
                 className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-red-500/10 border border-red-500/20 text-red-300 hover:bg-red-500/20 disabled:opacity-40 transition-colors shrink-0">
                 {actingId === app.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Ban className="w-3.5 h-3.5" />} Entziehen
@@ -114,10 +119,12 @@ export default function ApplicationsManager({ initialApplications }: { initialAp
           <h2 className="text-sm font-semibold text-white">Verlauf</h2>
           {others.map((app) => (
             <div key={app.id} className="flex items-center gap-3 rounded-xl glass px-4 py-3 opacity-60" style={{ border: "1px solid rgba(255,255,255,0.06)" }}>
-              {app.user.image ? <Image src={app.user.image} alt="" width={28} height={28} className="rounded-full shrink-0" /> : <div className="w-7 h-7 rounded-full bg-gray-700 shrink-0" />}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-white truncate">{app.user.username ?? app.user.name}</p>
-              </div>
+              <Link href={`/profile/${app.user.id}`} className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity">
+                {app.user.image ? <Image src={app.user.image} alt="" width={28} height={28} className="rounded-full shrink-0" /> : <div className="w-7 h-7 rounded-full bg-gray-700 shrink-0" />}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-white truncate">{app.user.username ?? app.user.name}</p>
+                </div>
+              </Link>
               <span className="text-xs text-gray-500 shrink-0">{STATUS_LABEL[app.status] ?? app.status}</span>
             </div>
           ))}

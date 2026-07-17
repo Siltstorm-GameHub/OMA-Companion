@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { LogIn, UserX, History } from "lucide-react";
 import UserPointsHistoryModal from "@/components/UserPointsHistoryModal";
 import { Badge, Select, Button } from "@/components/ui";
@@ -70,17 +71,19 @@ export default function AdminUsersClient({ users, loginCount, noLoginCount, firs
                 )}
                 <div className={`px-4 py-3 space-y-3 ${!user.hasLogin ? "opacity-60" : ""}`}>
                   <div className="flex items-center gap-3">
-                    {user.image ? (
-                      <img src={user.image} alt="" loading="lazy" width={32} height={32} className="w-8 h-8 rounded-full ring-1 ring-white/10 shrink-0" />
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-rose-600/40 flex items-center justify-center text-xs font-semibold text-rose-300 shrink-0">
-                        {(user.username ?? user.name ?? "?")[0].toUpperCase()}
+                    <Link href={`/profile/${user.id}`} className="flex items-center gap-3 min-w-0 flex-1 hover:opacity-80 transition-opacity">
+                      {user.image ? (
+                        <img src={user.image} alt="" loading="lazy" width={32} height={32} className="w-8 h-8 rounded-full ring-1 ring-white/10 shrink-0" />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-rose-600/40 flex items-center justify-center text-xs font-semibold text-rose-300 shrink-0">
+                          {(user.username ?? user.name ?? "?")[0].toUpperCase()}
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-white truncate">{user.username ?? user.name ?? "–"}</p>
+                        <p className="text-xs text-gray-500 truncate">{user.email ?? <span className="text-gray-700 italic">Kein Login</span>}</p>
                       </div>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-white truncate">{user.username ?? user.name ?? "–"}</p>
-                      <p className="text-xs text-gray-500 truncate">{user.email ?? <span className="text-gray-700 italic">Kein Login</span>}</p>
-                    </div>
+                    </Link>
                     {user.hasLogin ? (
                       <Badge tone="success" icon={<LogIn className="w-3 h-3" />}>Aktiv</Badge>
                     ) : (
@@ -152,7 +155,7 @@ export default function AdminUsersClient({ users, loginCount, noLoginCount, firs
                   <tr key={user.id} className={`hover:bg-white/[0.02] transition-colors ${!user.hasLogin ? "opacity-60" : ""}`}>
                     {/* Avatar + Name */}
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
+                      <Link href={`/profile/${user.id}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity w-fit">
                         {user.image ? (
                           <img
                             src={user.image}
@@ -171,7 +174,7 @@ export default function AdminUsersClient({ users, loginCount, noLoginCount, firs
                           <p className="font-medium text-white truncate">{user.username ?? user.name ?? "–"}</p>
                           <p className="text-xs text-gray-500 truncate">{user.email ?? <span className="text-gray-700 italic">Kein Login</span>}</p>
                         </div>
-                      </div>
+                      </Link>
                     </td>
 
                     {/* Discord ID */}

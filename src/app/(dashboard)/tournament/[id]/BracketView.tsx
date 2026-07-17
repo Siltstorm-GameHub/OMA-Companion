@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { Trophy } from "lucide-react";
 import WinIcon from "@/components/WinIcon";
 import WanderpocalBadge from "@/components/WanderpocalBadge";
@@ -113,13 +114,8 @@ export default function BracketView({
                           const isWinner = match.winnerId && match.winnerId === id;
                           const isLoser  = match.winnerId && match.winnerId !== id;
                           const isMe     = id === userId;
-                          return (
-                            <div
-                              key={idx}
-                              className={`flex items-center justify-between px-2.5 py-2 ${
-                                idx === 0 ? "border-b border-white/5" : ""
-                              } ${isWinner ? "bg-emerald-900/20" : "glass"}`}
-                            >
+                          const rowInner = (
+                            <>
                               <div className="flex items-center gap-1.5 min-w-0">
                                 {user?.image ? (
                                   <img src={user.image} alt="" className="w-5 h-5 rounded-full shrink-0" />
@@ -150,6 +146,19 @@ export default function BracketView({
                                   {score !== null ? score : pending ? "–" : "?"}
                                 </span>
                               </div>
+                            </>
+                          );
+                          const rowCls = `flex items-center justify-between px-2.5 py-2 ${
+                            idx === 0 ? "border-b border-white/5" : ""
+                          } ${isWinner ? "bg-emerald-900/20" : "glass"}`;
+                          return user ? (
+                            <Link key={idx} href={isMe ? "/profile" : `/profile/${user.id}`}
+                              className={`${rowCls} hover:brightness-125 transition-[filter]`}>
+                              {rowInner}
+                            </Link>
+                          ) : (
+                            <div key={idx} className={rowCls}>
+                              {rowInner}
                             </div>
                           );
                         })}

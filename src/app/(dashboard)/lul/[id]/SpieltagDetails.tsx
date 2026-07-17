@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
 type User  = { id: string; name: string | null; username: string | null; image: string | null };
@@ -184,7 +185,7 @@ export default function SpieltagDetails({
                         : <span className="text-gray-600 font-semibold">{placement}</span>}
                     </td>
                     <td className="py-1 pr-2">
-                      <div className="flex items-center gap-1.5">
+                      <Link href={`/profile/${entry.user.id}`} className="flex items-center gap-1.5 hover:opacity-80 transition-opacity w-fit">
                         {entry.user.image
                           ? <img src={entry.user.image} alt="" className="w-5 h-5 rounded-full shrink-0 ring-1 ring-white/10" />
                           : <div className="w-5 h-5 rounded-full shrink-0 bg-white/[0.06] flex items-center justify-center text-[9px] font-bold text-gray-500">
@@ -192,7 +193,7 @@ export default function SpieltagDetails({
                             </div>}
                         <span className="font-medium text-white whitespace-nowrap">{uname(entry.user)}</span>
                         {entry.gameWinner && <span className="text-amber-400">🏆</span>}
-                      </div>
+                      </Link>
                     </td>
                     {isAvg
                       ? <>
