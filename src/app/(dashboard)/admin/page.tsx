@@ -67,7 +67,7 @@ export default async function AdminPage() {
     prisma.pointTransaction.findMany({
       where: { createdAt: { gte: sevenDaysAgo } },
       orderBy: { createdAt: "desc" },
-      include: { user: { select: { name: true, username: true } } },
+      include: { user: { select: { id: true, name: true, username: true } } },
     }),
   ]);
 

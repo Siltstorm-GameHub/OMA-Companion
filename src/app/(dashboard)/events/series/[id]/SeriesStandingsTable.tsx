@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { Medal, ChevronDown, ChevronUp, TrendingUp, TrendingDown, Minus } from "lucide-react";
 
 type StandingRow = {
@@ -181,7 +182,8 @@ export default function SeriesStandingsTable({
           const rank = idx + 1;
           const delta = lastEventDelta?.[row.userId];
           return (
-            <div key={row.userId}
+            <Link key={row.userId}
+              href={isMe ? "/profile" : `/profile/${row.userId}`}
               className="grid items-center px-4 py-3 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.02] transition-colors"
               style={{
                 gridTemplateColumns: fullGridCols,
@@ -237,7 +239,7 @@ export default function SeriesStandingsTable({
                   <PointsCell value={row.totalPoints} rank={rank} delta={delta?.pointsDelta} />
                 </div>
               )}
-            </div>
+            </Link>
           );
         })}
       </div>
@@ -279,7 +281,8 @@ export default function SeriesStandingsTable({
           const rank = idx + 1;
           const delta = lastEventDelta?.[row.userId];
           return (
-            <div key={row.userId}
+            <Link key={row.userId}
+              href={isMe ? "/profile" : `/profile/${row.userId}`}
               className="grid items-center px-4 py-3 border-b border-white/[0.04] last:border-0"
               style={{
                 gridTemplateColumns: compactCols,
@@ -308,7 +311,7 @@ export default function SeriesStandingsTable({
                   <span className="text-sm text-gray-400 tabular-nums">{row.participations}</span>
                 </div>
               )}
-            </div>
+            </Link>
           );
         })}
       </div>
