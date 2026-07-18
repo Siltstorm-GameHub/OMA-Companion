@@ -1,6 +1,8 @@
 // Hilfsfunktionen für Discord Scheduled Events
 import { getGameCoverUrlAsync } from "@/lib/game-cover";
 import { generateDefaultCoverDataUri } from "@/lib/default-cover";
+import { getNotificationRule, fillPlaceholders } from "@/lib/notify-dispatch";
+import { formatLabel, genreLabel } from "@/lib/event-placeholders";
 
 /** Lädt ein Bild von einer URL und gibt es als Base64-Data-URI zurück. */
 async function fetchImageAsDataUri(url: string): Promise<string | null> {
@@ -30,9 +32,12 @@ async function fetchImageAsDataUri(url: string): Promise<string | null> {
 export async function announceNewEvent(event: {
   title: string;
   game: string | null;
+  format?: string | null;
+  genre?: string | null;
   startAt: Date;
   maxPlayers: number | null;
   pointReward: number;
+  teilnehmer?: number;
   discordChannelId?: string | null;
 }): Promise<string | null> {
   const channelId = event.discordChannelId ?? process.env.DISCORD_NEWS_CHANNEL_ID;
@@ -46,10 +51,22 @@ export async function announceNewEvent(event: {
 
   const coverUrl = await getGameCoverUrlAsync(event.game);
 
+  const placeholders = {
+    "{eventName}":  event.title,
+    "{game}":       event.game ?? "–",
+    "{date}":       startFormatted,
+    "{format}":     formatLabel(event.format),
+    "{genre}":      genreLabel(event.genre),
+    "{teilnehmer}": String(event.teilnehmer ?? 0),
+  };
+  const rule  = await getNotificationRule("event_new");
+  const title = rule ? fillPlaceholders(rule.titleTemplate, placeholders) : `📅 Neues Event: ${event.title}`;
+  const desc  = rule ? fillPlaceholders(rule.bodyTemplate, placeholders) : "Ein neues Community-Event wurde angekündigt! Meldet euch jetzt an.";
+
   const embed = {
     color:       0x4ade80,
-    title:       `📅 Neues Event: ${event.title}`,
-    description: "Ein neues Community-Event wurde angekündigt! Meldet euch jetzt an.",
+    title,
+    description: desc,
     fields: [
       { name: "🎮 Spiel",        value: event.game ?? "–",                                          inline: true },
       { name: "📆 Start",        value: startFormatted,                                             inline: true },
@@ -83,6 +100,9 @@ export async function announceNewEvent(event: {
 export async function announceEventResults(event: {
   title: string;
   game: string | null;
+  format?: string | null;
+  genre?: string | null;
+  teilnehmer?: number;
   discordChannelId?: string | null;
   resultsPath: string; // z.B. /tournament/{id} oder /events/series/{id}
   winnerNames?: string[];
@@ -95,11 +115,22 @@ export async function announceEventResults(event: {
   const base     = process.env.NEXTAUTH_URL ?? "https://oma-app.de";
   const coverUrl = await getGameCoverUrlAsync(event.game);
 
+  const placeholders = {
+    "{eventName}":  event.title,
+    "{game}":       event.game ?? "–",
+    "{format}":     formatLabel(event.format),
+    "{genre}":      genreLabel(event.genre),
+    "{teilnehmer}": String(event.teilnehmer ?? 0),
+  };
+  const rule  = await getNotificationRule("event_ended");
+  const title = rule ? fillPlaceholders(rule.titleTemplate, placeholders) : `🏆 Ergebnisse: ${event.title}`;
+  const desc  = rule ? fillPlaceholders(rule.bodyTemplate, placeholders) : "Das Event ist abgeschlossen — die Ergebnisse stehen fest!";
+
   const embed = {
     color:       0xfbbf24,
-    title:       `🏆 Ergebnisse: ${event.title}`,
+    title,
     url:         `${base}${event.resultsPath}`,
-    description: "Das Event ist abgeschlossen — die Ergebnisse stehen fest!",
+    description: desc,
     fields: [
       ...(event.game ? [{ name: "🎮 Spiel", value: event.game, inline: true }] : []),
       ...(event.winnerNames && event.winnerNames.length > 0

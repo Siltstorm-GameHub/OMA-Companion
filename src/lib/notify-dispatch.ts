@@ -9,6 +9,7 @@ import { sendPushToUsers, type PushPayload } from "@/lib/push";
 import { createNotificationForUsers, PREF_KEY, type NotificationType } from "@/lib/notifications";
 import { sendDiscordMessage, sendDiscordDM, resolveChannelId, type DiscordEmbed } from "@/lib/discord-rest";
 import { isEventHidden } from "@/lib/event-visibility";
+import { formatLabel, genreLabel } from "@/lib/event-placeholders";
 
 export interface DispatchOptions {
   /** Betroffene User (Empfänger für Push/In-App/Discord-DM). Leer = reine Kanal-Broadcast-Nachricht. */
@@ -52,7 +53,7 @@ const RULE_TYPE: Record<string, NotificationType> = {
   birthday:           "admin",
 };
 
-function fillPlaceholders(text: string, values: Record<string, string>): string {
+export function fillPlaceholders(text: string, values: Record<string, string>): string {
   return Object.entries(values).reduce((t, [k, v]) => t.replaceAll(k, v), text);
 }
 
@@ -208,7 +209,11 @@ export async function dispatchEventNotification(
   // Unsichtbare Events (oder Events in unsichtbaren Eventreihen) sollen keine Benachrichtigungen auslösen.
   const eventRow = await prisma.event.findUnique({
     where:  { id: event.id },
-    select: { hidden: true, series: { select: { hidden: true } } },
+    select: {
+      title: true, game: true, format: true, genre: true, startAt: true,
+      hidden: true, series: { select: { hidden: true } },
+      _count: { select: { registrations: { where: { role: "player" } } } },
+    },
   });
   if (!eventRow || isEventHidden(eventRow)) return;
 
@@ -216,9 +221,23 @@ export async function dispatchEventNotification(
     ? await resolveEventParticipantIds(event.id)
     : await resolveAllUserIds();
 
+  // Für alle Event-Benachrichtigungen einheitlich verfügbare Platzhalter — Aufrufer können
+  // in opts.placeholders zusätzliche, regel-spezifische Werte ergänzen (z.B. {reminderHours}).
+  const autoPlaceholders: Record<string, string> = {
+    "{eventName}": eventRow.title,
+    "{game}":      eventRow.game ?? "–",
+    "{date}":      eventRow.startAt.toLocaleString("de-DE", {
+      weekday: "long", day: "2-digit", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin",
+    }),
+    "{format}":      formatLabel(eventRow.format),
+    "{genre}":       genreLabel(eventRow.genre),
+    "{teilnehmer}":  String(eventRow._count.registrations),
+  };
+
   await dispatchNotification(ruleKey, {
     users,
     urlOverride: rule.isEventNotification ? `/tournament/${event.id}` : undefined,
     ...opts,
+    placeholders: { ...autoPlaceholders, ...opts.placeholders },
   });
 }

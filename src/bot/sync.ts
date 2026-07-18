@@ -1,15 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { dispatchEventNotification } from "@/lib/notify-dispatch";
 import { sendDiscordMessage, resolveChannelId } from "@/lib/discord-rest";
-
-const FORMAT_LABELS: Record<string, string> = {
-  single_elimination: "K.O.-System",
-  double_elimination: "Double Elimination",
-  round_robin:        "Jeder gegen Jeden",
-  liga:               "Liga",
-  ffa:                "Free for All",
-  coop_stats:         "Kooperativ",
-};
+import { FORMAT_LABELS } from "@/lib/event-placeholders";
 
 async function notifyTournamentStarted(tournament: {
   format: string;
