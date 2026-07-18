@@ -74,7 +74,6 @@ const PLACEHOLDERS: Record<string, { key: string; description: string }[]> = {
     { key: "{format}", description: "Turnier-Format (z.B. K.O.-System)" },
     { key: "{genre}", description: "Genre des Events" },
     { key: "{teilnehmer}", description: "Anzahl in-app angemeldeter Mitspieler" },
-    { key: "{attendeeCount}", description: "Anzahl der Teilnehmer" },
   ],
   quest_completed: [
     { key: "{questTitle}", description: "Titel der Quest" },
@@ -132,7 +131,7 @@ const SAMPLE_VALUES: Record<string, Record<string, string>> = {
   event_new:       { "{eventName}": "CS2 Community Cup", "{game}": "Counter-Strike 2", "{date}": "Freitag, 20. Dezember um 20:00", "{format}": "K.O.-System", "{genre}": "Shooter", "{teilnehmer}": "8" },
   event_reminder:  { "{eventName}": "CS2 Community Cup", "{game}": "Counter-Strike 2", "{date}": "Freitag, 20. Dezember um 20:00", "{format}": "K.O.-System", "{genre}": "Shooter", "{teilnehmer}": "8", "{registrations}": "8", "{maxPlayers}": "16", "{points}": "50", "{reminderHours}": "24" },
   event_started:   { "{eventName}": "CS2 Community Cup", "{game}": "Counter-Strike 2", "{format}": "K.O.-System", "{genre}": "Shooter", "{teilnehmer}": "8" },
-  event_ended:     { "{eventName}": "CS2 Community Cup", "{game}": "Counter-Strike 2", "{format}": "K.O.-System", "{genre}": "Shooter", "{teilnehmer}": "8", "{attendeeCount}": "8" },
+  event_ended:     { "{eventName}": "CS2 Community Cup", "{game}": "Counter-Strike 2", "{format}": "K.O.-System", "{genre}": "Shooter", "{teilnehmer}": "8" },
   quest_completed: { "{questTitle}": "5 Matches gewinnen", "{reward}": "50" },
   quest_new:       { "{month}": "Dezember" },
   prediction_result: { "{result}": "richtig" },
