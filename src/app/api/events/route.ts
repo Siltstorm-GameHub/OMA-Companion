@@ -130,9 +130,12 @@ export async function POST(req: NextRequest) {
   const discordMessageId = await announceNewEvent({
     title:            event.title,
     game:             event.game,
+    format:           event.format,
+    genre:            event.genre,
     startAt:          event.startAt,
     maxPlayers:       event.maxPlayers,
     pointReward:      0,
+    teilnehmer:       0,
     discordChannelId: event.discordChannelId,
   });
   if (discordMessageId) {

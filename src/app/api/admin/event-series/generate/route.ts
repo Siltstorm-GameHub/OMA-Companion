@@ -136,9 +136,12 @@ export async function POST(req: NextRequest) {
     announceNewEvent({
       title:            newEvent.title,
       game,
+      format:           newEvent.format,
+      genre,
       startAt:          newEvent.startAt,
       maxPlayers:       newEvent.maxPlayers,
       pointReward:      newEvent.pointReward,
+      teilnehmer:       0,
       discordChannelId,
     }),
   ]);

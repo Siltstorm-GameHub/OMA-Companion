@@ -1062,6 +1062,9 @@ export async function POST(
       await announceEventResults({
         title:            event.title,
         game:             event.game,
+        format:           event.format,
+        genre:            event.genre,
+        teilnehmer:       event.registrations.filter(r => r.role === "player").length,
         discordChannelId: event.discordChannelId,
         resultsPath:      resultUrl,
         winnerNames:      winners.map(w => w.username ?? w.name ?? "?"),

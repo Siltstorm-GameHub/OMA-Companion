@@ -45,11 +45,17 @@ const PLACEHOLDERS: Record<string, { key: string; description: string }[]> = {
     { key: "{eventName}", description: "Name des Events" },
     { key: "{game}", description: "Spielname" },
     { key: "{date}", description: "Startdatum & Uhrzeit" },
+    { key: "{format}", description: "Turnier-Format (z.B. K.O.-System)" },
+    { key: "{genre}", description: "Genre des Events" },
+    { key: "{teilnehmer}", description: "Anzahl in-app angemeldeter Mitspieler" },
   ],
   event_reminder: [
     { key: "{eventName}", description: "Name des Events" },
     { key: "{game}", description: "Spielname" },
     { key: "{date}", description: "Startdatum & Uhrzeit" },
+    { key: "{format}", description: "Turnier-Format (z.B. K.O.-System)" },
+    { key: "{genre}", description: "Genre des Events" },
+    { key: "{teilnehmer}", description: "Anzahl in-app angemeldeter Mitspieler" },
     { key: "{registrations}", description: "Aktuelle Anmeldezahl" },
     { key: "{maxPlayers}", description: "Maximale Spielerzahl" },
     { key: "{points}", description: "Punktebelohnung bei Teilnahme" },
@@ -58,9 +64,16 @@ const PLACEHOLDERS: Record<string, { key: string; description: string }[]> = {
   event_started: [
     { key: "{eventName}", description: "Name des Events" },
     { key: "{game}", description: "Spielname" },
+    { key: "{format}", description: "Turnier-Format (z.B. K.O.-System)" },
+    { key: "{genre}", description: "Genre des Events" },
+    { key: "{teilnehmer}", description: "Anzahl in-app angemeldeter Mitspieler" },
   ],
   event_ended: [
     { key: "{eventName}", description: "Name des Events" },
+    { key: "{game}", description: "Spielname" },
+    { key: "{format}", description: "Turnier-Format (z.B. K.O.-System)" },
+    { key: "{genre}", description: "Genre des Events" },
+    { key: "{teilnehmer}", description: "Anzahl in-app angemeldeter Mitspieler" },
     { key: "{attendeeCount}", description: "Anzahl der Teilnehmer" },
   ],
   quest_completed: [
@@ -113,6 +126,37 @@ const PLACEHOLDERS: Record<string, { key: string; description: string }[]> = {
   server_denied:   [{ key: "{serverName}", description: "Name des Servers" }],
   server_revoked:  [{ key: "{serverName}", description: "Name des Servers" }],
 };
+
+/** Realistische Beispielwerte pro Regel, nur für die Live-Vorschau im Admin-Panel. */
+const SAMPLE_VALUES: Record<string, Record<string, string>> = {
+  event_new:       { "{eventName}": "CS2 Community Cup", "{game}": "Counter-Strike 2", "{date}": "Freitag, 20. Dezember um 20:00", "{format}": "K.O.-System", "{genre}": "Shooter", "{teilnehmer}": "8" },
+  event_reminder:  { "{eventName}": "CS2 Community Cup", "{game}": "Counter-Strike 2", "{date}": "Freitag, 20. Dezember um 20:00", "{format}": "K.O.-System", "{genre}": "Shooter", "{teilnehmer}": "8", "{registrations}": "8", "{maxPlayers}": "16", "{points}": "50", "{reminderHours}": "24" },
+  event_started:   { "{eventName}": "CS2 Community Cup", "{game}": "Counter-Strike 2", "{format}": "K.O.-System", "{genre}": "Shooter", "{teilnehmer}": "8" },
+  event_ended:     { "{eventName}": "CS2 Community Cup", "{game}": "Counter-Strike 2", "{format}": "K.O.-System", "{genre}": "Shooter", "{teilnehmer}": "8", "{attendeeCount}": "8" },
+  quest_completed: { "{questTitle}": "5 Matches gewinnen", "{reward}": "50" },
+  quest_new:       { "{month}": "Dezember" },
+  prediction_result: { "{result}": "richtig" },
+  duel_challenge:  { "{challenger}": "MaxMustermann", "{wager}": "100" },
+  duel_result:     { "{result}": "Du hast gegen MaxMustermann gewonnen und 100 Münzen erhalten!" },
+  badge_earned:    { "{badgeIcon}": "🏅", "{badgeName}": "Serien-Sieger", "{badgeDesc}": "3 Events in Folge gewonnen" },
+  badge_awarded:   { "{badgeIcon}": "🏅", "{badgeName}": "Serien-Sieger", "{badgeDesc}": "3 Events in Folge gewonnen" },
+  clip_started:    { "{month}": "Dezember", "{year}": "2026", "{nominationCount}": "12" },
+  clip_finished:   { "{month}": "Dezember", "{year}": "2026", "{resultHeadline}": "Gewinner steht fest!", "{resultText}": "MaxMustermann gewinnt mit seinem Clip \"Ace Clutch\"." },
+  clip_of_year_started:  { "{year}": "2026", "{nominationCount}": "12" },
+  clip_of_year_finished: { "{year}": "2026", "{resultHeadline}": "Gewinner steht fest!", "{resultText}": "MaxMustermann gewinnt mit seinem Clip \"Ace Clutch\"." },
+  rank_up:         { "{username}": "@MaxMustermann", "{rank}": "Gold", "{rankEmoji}": "🥇" },
+  leaderboard:     { "{month}": "November", "{lines}": "🥇 MaxMustermann – 1.240 Punkte\n🥈 ErikaBeispiel – 980 Punkte\n🥉 JohnDoe – 750 Punkte" },
+  birthday:        { "{username}": "@MaxMustermann" },
+  server_approved: { "{serverName}": "Survival #1" },
+  server_denied:   { "{serverName}": "Survival #1" },
+  server_revoked:  { "{serverName}": "Survival #1" },
+};
+
+/** Ersetzt alle Platzhalter durch ihre Beispielwerte — identisch zur Server-Logik in notify-dispatch.ts. */
+function fillSample(text: string, ruleKey: string): string {
+  const values = SAMPLE_VALUES[ruleKey] ?? {};
+  return Object.entries(values).reduce((t, [k, v]) => t.split(k).join(v), text);
+}
 
 type Props = {
   initial: NotificationRuleRow[];
@@ -421,6 +465,15 @@ export default function NotificationRulesPanel({ initial, newsChannelId, emojis 
                       rows={r.bodyTemplate.includes("\n") ? 3 : 2}
                       className="w-full rounded-xl px-3 py-2.5 text-sm text-white bg-gray-800/80 border border-white/[0.06] focus:border-indigo-500/40 outline-none resize-none transition-colors"
                     />
+                  </div>
+
+                  {/* Vorschau: Titel + Text mit Beispielwerten statt Platzhaltern */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest">Vorschau</label>
+                    <div className="rounded-xl px-3 py-2.5 bg-black/20 border border-white/[0.06]">
+                      <p className="text-sm font-semibold text-white break-words">{fillSample(r.titleTemplate, r.key) || "–"}</p>
+                      <p className="text-xs text-gray-400 whitespace-pre-line break-words mt-1">{fillSample(r.bodyTemplate, r.key) || "–"}</p>
+                    </div>
                   </div>
 
                   {/* Toolbar: Emoji-Picker + Platzhalter-Legende */}
