@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronUp, Trophy, Clock, Vote, Eye, CheckCircle2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Trophy, Clock, Vote, Eye, CheckCircle2, StickyNote } from "lucide-react";
 import RankPointsIcon from "@/components/RankPointsIcon";
 
 type User        = { id: string; name: string | null; username: string | null; image: string | null };
@@ -41,6 +41,7 @@ export default function FfaView({
   pollWinsByUser = {},
   votedUserIds = [],
   externalVoters = [],
+  finalRankingNote = null,
 }: {
   matches: Match[];
   participants: Participant[];
@@ -60,6 +61,8 @@ export default function FfaView({
   votedUserIds?: string[];
   /** Wähler ohne Event-Registrierung — nur übergeben wenn es Ligapunkte für Stimmabgabe gibt */
   externalVoters?: Participant[];
+  /** Begründung für manuelle Änderungen der Endtabelle / Disqualifikation, falls vorhanden */
+  finalRankingNote?: string | null;
 }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const toggle = (id: string) =>
@@ -290,6 +293,14 @@ export default function FfaView({
               : <>Sortiert nach: <span className="text-gray-500">{statFields[0]}</span>
                   {statFields.length > 1 && <> · Tiebreaker: {statFields.slice(1).join(", ")}</>}</>}
           </p>
+        </div>
+      )}
+
+      {/* Endtabellen-Notiz (Begründung für manuelle Änderungen/Disqualifikation, falls vorhanden) */}
+      {finalRankingNote && (
+        <div className="glass rounded-2xl px-4 py-3 flex items-start gap-2">
+          <StickyNote className="w-3.5 h-3.5 text-gray-600 mt-0.5 shrink-0" />
+          <p className="text-xs text-gray-500 italic leading-relaxed">{finalRankingNote}</p>
         </div>
       )}
 
