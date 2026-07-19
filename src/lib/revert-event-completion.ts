@@ -45,6 +45,17 @@ type CompletionData = {
   dominionChanges?: Record<string, DominionChange> | null;
   finalRanking?: string[] | null;
   finalRankingGroups?: string[][] | null;
+  /** Ausgeschlossene (disqualifizierte) User — haben nie Basis-Belohnungen erhalten, dürfen beim
+   *  Zurückbuchen also nicht mit angefasst werden (sonst rutscht ihr Guthaben unberechtigt ins Minus). */
+  excludedUserIds?: string[] | null;
+  /** Ledger der Beträge, die direkt auf die globale Rangliste übertragen wurden (siehe
+   *  /api/admin/events/[id]/complete) — für exaktes Zurückbuchen ohne die aktuelle Konfiguration
+   *  neu interpretieren zu müssen. */
+  seriesContrib?: {
+    transferredParticipationPoints?: Record<string, number>;
+    transferredStatPoints?: Record<string, number>;
+    transferredSpectatorPoints?: Record<string, number>;
+  } | null;
 };
 
 type PlacementReward = { place: number; coins: number; rankPoints: number };
@@ -161,6 +172,11 @@ export async function revertEventCompletion(eventId: string, opts: RevertOptions
     reverse(pr.userId, pr.coins ?? 0, 0);
   }
 
+  // Ausgeschlossene (disqualifizierte) User haben nie Basis-Belohnungen erhalten (siehe
+  // /api/admin/events/[id]/complete) — beim Zurückbuchen dürfen sie daher nicht angefasst werden,
+  // sonst würde ihnen fälschlich etwas abgezogen, das sie nie bekommen haben.
+  const excludedSet = new Set(cd.excludedUserIds ?? []);
+
   // Teilnahme-/Platzierungs-/Zuschauer-Basis-Belohnungen (nur wenn explizit angefordert, siehe Docstring)
   if (includeBaseRewards) {
     const rewards = parseRewards(event.placementRewardsJson ?? event.series?.placementRewardsJson);
@@ -175,7 +191,7 @@ export async function revertEventCompletion(eventId: string, opts: RevertOptions
     const effectiveParticipationCoins = event.seriesId ? (statCfg.participationCoins ?? 0) : rewards.participationCoins;
     if (effectiveParticipationCoins > 0) {
       for (const { userId, role } of event.registrations) {
-        if (role !== "player") continue;
+        if (role !== "player" || excludedSet.has(userId)) continue;
         reverse(userId, effectiveParticipationCoins, 0);
       }
     }
@@ -190,7 +206,7 @@ export async function revertEventCompletion(eventId: string, opts: RevertOptions
         for (const group of cd.finalRankingGroups) {
           const reward = rewards.placements.find(p => p.place === place);
           if (reward) {
-            for (const userId of group.filter(id => registeredSet.has(id))) {
+            for (const userId of group.filter(id => registeredSet.has(id) && !excludedSet.has(id))) {
               reverse(userId, reward.coins, reward.rankPoints);
             }
           }
@@ -199,6 +215,7 @@ export async function revertEventCompletion(eventId: string, opts: RevertOptions
       } else if (cd.finalRanking?.length) {
         const ranking = cd.finalRanking.filter(id => registeredSet.has(id));
         ranking.forEach((userId, i) => {
+          if (excludedSet.has(userId)) return;
           const reward = rewards.placements.find(p => p.place === i + 1);
           if (reward) reverse(userId, reward.coins, reward.rankPoints);
         });
@@ -211,7 +228,7 @@ export async function revertEventCompletion(eventId: string, opts: RevertOptions
           for (const group of cd.finalRankingGroups) {
             const reward = eventPlacementCoins.find(p => p.place === place);
             if (reward) {
-              for (const userId of group.filter(id => registeredSet.has(id))) {
+              for (const userId of group.filter(id => registeredSet.has(id) && !excludedSet.has(id))) {
                 reverse(userId, reward.coins, 0);
               }
             }
@@ -220,6 +237,7 @@ export async function revertEventCompletion(eventId: string, opts: RevertOptions
         } else if (cd.finalRanking?.length) {
           const ranking = cd.finalRanking.filter(id => registeredSet.has(id));
           ranking.forEach((userId, i) => {
+            if (excludedSet.has(userId)) return;
             const reward = eventPlacementCoins.find(p => p.place === i + 1);
             if (reward) reverse(userId, reward.coins, 0);
           });
@@ -240,8 +258,29 @@ export async function revertEventCompletion(eventId: string, opts: RevertOptions
             try { return (JSON.parse(event.spectatorRewardJson) as { coins: number }).coins ?? 0; }
             catch { return 0; }
           })();
-      for (const userId of cd.spectatorAttendedIds) reverse(userId, spectatorCoins, spectatorRankPoints);
+      for (const userId of cd.spectatorAttendedIds) {
+        if (excludedSet.has(userId)) continue;
+        reverse(userId, spectatorCoins, spectatorRankPoints);
+      }
     }
+  }
+
+  // Ligapunkte, die direkt auf die globale Rangliste übertragen wurden (Teilnahme + Stats + Zuschauer,
+  // siehe statCfg.transferToGlobalRanking in /api/admin/events/[id]/complete): exakt anhand des dort
+  // gespeicherten Ledgers zurückbuchen — der enthält bereits keine ausgeschlossenen User, da für sie
+  // beim Abschluss nie etwas übertragen wurde.
+  const transferredParticipationPoints = cd.seriesContrib?.transferredParticipationPoints ?? {};
+  const transferredStatPoints          = cd.seriesContrib?.transferredStatPoints ?? {};
+  const transferredSpectatorPoints     = cd.seriesContrib?.transferredSpectatorPoints ?? {};
+  for (const userId of new Set([
+    ...Object.keys(transferredParticipationPoints),
+    ...Object.keys(transferredStatPoints),
+    ...Object.keys(transferredSpectatorPoints),
+  ])) {
+    const total = (transferredParticipationPoints[userId] ?? 0)
+      + (transferredStatPoints[userId] ?? 0)
+      + (transferredSpectatorPoints[userId] ?? 0);
+    reverse(userId, 0, total);
   }
 
   // Dominion-Bonus
