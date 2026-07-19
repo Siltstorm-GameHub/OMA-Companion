@@ -279,6 +279,10 @@ export async function POST(
     }
   }
 
+  const registeredSet = new Set(event.registrations.map(r => r.userId));
+  const playerIds = event.registrations.filter(r => r.role === "player").map(r => r.userId);
+  const spectatorIds = event.registrations.filter(r => r.role === "spectator").map(r => r.userId);
+
   // Die Finale Platzierung ist im Normalfall stat-auto-sortiert (siehe Client-autoSort), kann aber vom
   // Admin manuell überschrieben werden (z.B. nachträgliche Disqualifikation eines Spielers, der laut
   // reiner Stat-Auswertung gewonnen hätte). In den Stat-Modi ("stat"/"avg_stats") überschreibt eine
@@ -293,10 +297,6 @@ export async function POST(
       if (top) { eventWinnerId = top; eventWinnerIds = [top]; }
     }
   }
-
-  const registeredSet = new Set(event.registrations.map(r => r.userId));
-  const playerIds = event.registrations.filter(r => r.role === "player").map(r => r.userId);
-  const spectatorIds = event.registrations.filter(r => r.role === "spectator").map(r => r.userId);
 
   // ── Coin/RankPoint-Vergabe (nur beim ersten Abschluss) ──────────────────────
   if (!isReEdit) {
