@@ -211,7 +211,15 @@ export default function EventCompleteClient({
   /* ── Derived ── */
   const seriesStatFields = (seriesStatConfig?.stats ?? []).map(s => s.field);
 
+  const rankingGroups = useMemo(() => computeGroups(rankingOrder, tiedAbove), [rankingOrder, tiedAbove]);
+  const placementMap  = useMemo(() => computePlacementMap(rankingGroups), [rankingGroups]);
+
+  // Sobald eine Finale Platzierung existiert (Standardfall: stat-auto-sortiert, kann aber manuell
+  // überschrieben werden — z.B. Disqualifikation), gilt Platz 1 (bzw. bei Gleichstand alle Platz-1-
+  // Spieler) als tatsächlicher Gewinner. Damit spiegelt die Anzeige eine manuelle Korrektur der
+  // Platzierung sofort wider, statt weiterhin den rein stat-basierten (theoretischen) Sieger zu zeigen.
   const previewWinners = useMemo(() => {
+    if (rankingGroups.length > 0) return rankingGroups[0];
     if (isAvgFormat) {
       let bestVal: number | null = null;
       let best: string[] = [];
@@ -231,7 +239,7 @@ export default function EventCompleteClient({
       else if (v === bestVal && bestVal > -Infinity) { best.push(uid); }
     }
     return best;
-  }, [isAvgFormat, avgDirection, userAvgScore, winnerStatField, userStats]);
+  }, [rankingGroups, isAvgFormat, avgDirection, userAvgScore, winnerStatField, userStats]);
 
   const pollEligible = useMemo(
     () => registeredUsers.filter(u => !pollExcluded.has(u.id)),
@@ -249,9 +257,6 @@ export default function EventCompleteClient({
   const canDeferPoll = !isReEdit && pollConfig.enabled && pollWinners.length === 0;
   // Bleibt das Event nach diesem Speichern in der Umfragephase (Status "umfrage")?
   const pollPhasePending = canDeferPoll || (!isReEdit && openEventPolls.length > 0);
-
-  const rankingGroups = useMemo(() => computeGroups(rankingOrder, tiedAbove), [rankingOrder, tiedAbove]);
-  const placementMap  = useMemo(() => computePlacementMap(rankingGroups), [rankingGroups]);
 
   // Teilnahme-/Zuschauer-Münzen: bei Events innerhalb einer Reihe seriesweit fix aus der
   // Gesamttabellen-Konfiguration, sonst aus den Event-eigenen Belohnungen

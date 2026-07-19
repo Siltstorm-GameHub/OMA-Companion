@@ -279,6 +279,21 @@ export async function POST(
     }
   }
 
+  // Die Finale Platzierung ist im Normalfall stat-auto-sortiert (siehe Client-autoSort), kann aber vom
+  // Admin manuell überschrieben werden (z.B. nachträgliche Disqualifikation eines Spielers, der laut
+  // reiner Stat-Auswertung gewonnen hätte). In den Stat-Modi ("stat"/"avg_stats") überschreibt eine
+  // übermittelte Rangliste daher den rein stat-basierten Gewinner — Platz 1 (bzw. bei Gleichstand alle
+  // Platz-1-Spieler) gilt als tatsächlicher Event-Gewinner für Serien-Punkte, Vorhersagen und Discord-Post.
+  if (effectiveWinnerMode === "stat") {
+    if (body.finalRankingGroups?.length) {
+      const topGroup = body.finalRankingGroups[0].filter(id => registeredSet.has(id));
+      if (topGroup.length > 0) { eventWinnerIds = topGroup; eventWinnerId = topGroup[0]; }
+    } else if (body.finalRanking?.length) {
+      const top = body.finalRanking.filter(id => registeredSet.has(id))[0];
+      if (top) { eventWinnerId = top; eventWinnerIds = [top]; }
+    }
+  }
+
   const registeredSet = new Set(event.registrations.map(r => r.userId));
   const playerIds = event.registrations.filter(r => r.role === "player").map(r => r.userId);
   const spectatorIds = event.registrations.filter(r => r.role === "spectator").map(r => r.userId);
