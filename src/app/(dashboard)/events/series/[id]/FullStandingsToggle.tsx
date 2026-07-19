@@ -9,6 +9,7 @@ type StandingRow = {
   participations: number;
   stats: Record<string, number>;
   hasLegacy: boolean;
+  disqualifiedEventCount: number;
 };
 type StandingUser = {
   id: string;

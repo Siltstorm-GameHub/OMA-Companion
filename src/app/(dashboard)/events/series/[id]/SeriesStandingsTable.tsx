@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { Medal, ChevronDown, ChevronUp, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { Medal, ChevronDown, ChevronUp, TrendingUp, TrendingDown, Minus, Ban } from "lucide-react";
 
 type StandingRow = {
   userId: string;
@@ -9,6 +9,9 @@ type StandingRow = {
   participations: number;
   stats: Record<string, number>;
   hasLegacy: boolean;
+  /** Anzahl Events, in denen der User ausgeschlossen (disqualifiziert) war — seine Teilnahme/Stats
+   *  fließen trotzdem in die Tabelle ein, nur ohne die dafür sonst üblichen Ligapunkte. */
+  disqualifiedEventCount: number;
 };
 type StandingUser = {
   id: string;
@@ -198,10 +201,18 @@ export default function SeriesStandingsTable({
               )}
               <div className="flex items-center gap-2.5 min-w-0">
                 <Avatar u={u} size={7} />
-                <span className={`text-sm font-medium truncate ${isMe ? "text-teal-300" : "text-white"}`}>
+                <span className={`text-sm font-medium truncate flex items-center ${isMe ? "text-teal-300" : "text-white"}`}>
                   {name}
-                  {isMe && <span className="text-[10px] text-teal-600 ml-1.5">(du)</span>}
-                  {row.hasLegacy && <span className="text-[10px] text-gray-600 ml-1.5" title="Enthält historische Werte">*</span>}
+                  {isMe && <span className="text-[10px] text-teal-600 ml-1.5 shrink-0">(du)</span>}
+                  {row.hasLegacy && <span className="text-[10px] text-gray-600 ml-1.5 shrink-0" title="Enthält historische Werte">*</span>}
+                  {row.disqualifiedEventCount > 0 && (
+                    <span
+                      className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-400 bg-white/5 px-1.5 py-0.5 rounded-full shrink-0 ml-1.5"
+                      title={`Bei ${row.disqualifiedEventCount} Event${row.disqualifiedEventCount > 1 ? "s" : ""} disqualifiziert — Stats zählen, aber ohne Ligapunkte`}
+                    >
+                      <Ban className="w-2.5 h-2.5" /> {row.disqualifiedEventCount}
+                    </span>
+                  )}
                 </span>
               </div>
               <div className="text-center">
@@ -297,9 +308,14 @@ export default function SeriesStandingsTable({
               )}
               <div className="flex items-center gap-2 min-w-0">
                 <Avatar u={u} size={6} />
-                <span className={`text-sm font-medium truncate ${isMe ? "text-teal-300" : "text-white"}`}>
+                <span className={`text-sm font-medium truncate flex items-center ${isMe ? "text-teal-300" : "text-white"}`}>
                   {name}
-                  {isMe && <span className="text-[10px] text-teal-600 ml-1.5">(du)</span>}
+                  {isMe && <span className="text-[10px] text-teal-600 ml-1.5 shrink-0">(du)</span>}
+                  {row.disqualifiedEventCount > 0 && (
+                    <span className="ml-1.5 shrink-0" title={`Bei ${row.disqualifiedEventCount} Event${row.disqualifiedEventCount > 1 ? "s" : ""} disqualifiziert`}>
+                      <Ban className="w-3 h-3 text-gray-500" />
+                    </span>
+                  )}
                 </span>
               </div>
               {showPoints ? (

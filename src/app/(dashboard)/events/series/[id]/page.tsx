@@ -101,9 +101,12 @@ function computeStatStandings(
   const evPart: Record<string, number> = {};
   const evStats: Record<string, Record<string, number>> = {};
   const evTotalPoints: Record<string, number> = {};
+  // Zählt, in wie vielen Events ein User ausgeschlossen (disqualifiziert) war — seine Teilnahme/Stats
+  // fließen zwar oben ganz normal ein, aber ohne die dafür sonst üblichen Ligapunkte.
+  const evExcludedCount: Record<string, number> = {};
 
   for (const ev of events) {
-    const { pointsByUser, participationsByUser, statsByUser } = computeEventPoints(ev, cfg);
+    const { pointsByUser, participationsByUser, statsByUser, excludedFromPointsUserIds } = computeEventPoints(ev, cfg);
     for (const [uid, pts] of Object.entries(pointsByUser)) {
       evTotalPoints[uid] = (evTotalPoints[uid] ?? 0) + pts;
     }
@@ -115,6 +118,9 @@ function computeStatStandings(
       for (const [field, val] of Object.entries(stats)) {
         evStats[uid][field] = (evStats[uid][field] ?? 0) + val;
       }
+    }
+    for (const uid of excludedFromPointsUserIds) {
+      evExcludedCount[uid] = (evExcludedCount[uid] ?? 0) + 1;
     }
   }
 
@@ -156,7 +162,11 @@ function computeStatStandings(
     for (const [f, v] of Object.entries(es)) {
       displayStats[f] = (displayStats[f] ?? 0) + v;
     }
-    return { userId: uid, totalPoints, participations: displayPart, stats: displayStats, hasLegacy: legacy.some(l => l.userId === uid) };
+    return {
+      userId: uid, totalPoints, participations: displayPart, stats: displayStats,
+      hasLegacy: legacy.some(l => l.userId === uid),
+      disqualifiedEventCount: evExcludedCount[uid] ?? 0,
+    };
   }).sort((a, b) => b.totalPoints - a.totalPoints || b.participations - a.participations);
 
   return { rows, evStatFieldsSeen };
