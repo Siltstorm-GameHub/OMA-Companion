@@ -832,8 +832,10 @@ export default async function TournamentDetailPage({
         </div>
       )}
 
-      {/* ── Abstimmungen ─────────────────────────────────────────────────── */}
-      {initialPolls.length > 0 && (
+      {/* ── Abstimmungen: erst sichtbar/abstimmbar, sobald die Spielphase abgeschlossen ist (auch wenn
+           die zugrunde liegenden EventPoll-Datensätze technisch schon vorher existieren) — vorher nur
+           ein Hinweis, welche Umfragen danach starten. ────────────────────────────────────────────── */}
+      {gamePhaseComplete && initialPolls.length > 0 && (
         <div className="mb-5">
           <PollsSection
             eventId={event.id}
@@ -842,6 +844,23 @@ export default async function TournamentDetailPage({
             eventRegistrations={allRegistrations}
             isAdmin={isAdmin}
           />
+        </div>
+      )}
+      {!gamePhaseComplete && initialPolls.length > 0 && (
+        <div className="glass rounded-2xl px-4 py-3 mb-5 flex items-start gap-2">
+          <Vote className="w-3.5 h-3.5 text-gray-600 mt-0.5 shrink-0" />
+          <div className="text-xs text-gray-500 leading-relaxed">
+            <p>
+              Nach Abschluss der Spielphase {initialPolls.length === 1 ? "startet folgende Umfrage" : "starten folgende Umfragen"}:
+            </p>
+            <ul className="mt-1 space-y-0.5">
+              {initialPolls.map(p => (
+                <li key={p.id} className="text-gray-400">
+                  „{p.label}"{p.question ? <span className="text-gray-600"> – {p.question}</span> : null}
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       )}
 
