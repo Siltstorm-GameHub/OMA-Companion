@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
+import { rollbackResolvedPredictions } from "@/lib/predictions";
 
 type SeriesStatConfig = {
   participationPoints?: number;
@@ -360,6 +361,18 @@ export async function revertEventCompletion(eventId: string, opts: RevertOptions
   const pollIds = (cd.eventPollRewards ?? []).map(ep => ep.pollId).filter(Boolean);
   if (pollIds.length > 0) {
     await prisma.eventPoll.updateMany({ where: { id: { in: pollIds } }, data: { rewardsPaid: false, winnerIds: null } });
+  }
+
+  // Event-Gesamtsieger-Vorhersagen zurücksetzen: eine bereits vergebene Pott-Auszahlung wird
+  // vollständig rückgebucht (inkl. Streak-Wiederherstellung) und die Tipps bleiben unaufgelöst
+  // (resolved: false) stehen — der Sieger ist mit Rücksetzen der Spielphase wieder offen, nicht
+  // "falsch", daher keine volle Neu-Auflösung mit winnerUserId=null (das würde alle Tipps dauerhaft
+  // als falsch markieren). Wird das Event später erneut abgeschlossen, wertet resolveEventPredictions()
+  // die Tipps ganz normal mit dem dann feststehenden Sieger neu aus.
+  try {
+    await rollbackResolvedPredictions(eventId);
+  } catch (err) {
+    console.error("[Predictions] Rücksetzen fehlgeschlagen:", err);
   }
 
   // completionData löschen, damit die Liga-Tabelle (computeStatStandings) das Event
