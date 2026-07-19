@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { Trophy, Clock } from "lucide-react";
+import { Trophy, Clock, StickyNote } from "lucide-react";
 import WinIcon from "@/components/WinIcon";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };
@@ -83,10 +83,13 @@ export default function LigaView({
   matches,
   participants,
   userId,
+  finalRankingNote = null,
 }: {
   matches: Match[];
   participants: Participant[];
   userId: string;
+  /** Begründung für manuelle Änderungen der Tabelle / Disqualifikation, falls vorhanden */
+  finalRankingNote?: string | null;
 }) {
   const standings = buildStandings(participants, matches);
   const findUser  = (id: string | null) => id ? participants.find(p => p.userId === id)?.user : null;
@@ -178,6 +181,14 @@ export default function LigaView({
           Sieg = 3 Pkt · Unentschieden = 1 Pkt · Niederlage = 0 Pkt
         </p>
       </div>
+
+      {/* Tabellen-Notiz (Begründung für manuelle Änderungen/Disqualifikation, falls vorhanden) */}
+      {finalRankingNote && (
+        <div className="glass rounded-2xl px-4 py-3 flex items-start gap-2">
+          <StickyNote className="w-3.5 h-3.5 text-gray-600 mt-0.5 shrink-0" />
+          <p className="text-xs text-gray-500 italic leading-relaxed">{finalRankingNote}</p>
+        </div>
+      )}
 
       {/* ── Spieltage ───────────────────────────────────────────────── */}
       {spieltage > 0 && (

@@ -993,6 +993,7 @@ export default async function TournamentDetailPage({
                 matches={event.matches as Parameters<typeof RoundRobinView>[0]["matches"]}
                 participants={mergedParticipants}
                 userId={userId}
+                finalRankingNote={gamePhaseComplete ? event.finalRankingNote : null}
               />
             )}
             {isLiga && (
@@ -1000,6 +1001,7 @@ export default async function TournamentDetailPage({
                 matches={event.matches as Parameters<typeof LigaView>[0]["matches"]}
                 participants={mergedParticipants}
                 userId={userId}
+                finalRankingNote={gamePhaseComplete ? event.finalRankingNote : null}
               />
             )}
             {isFfa && (
@@ -1017,15 +1019,8 @@ export default async function TournamentDetailPage({
                 pollWinsByUser={pollWinsByUser}
                 votedUserIds={[...votedUserIds]}
                 externalVoters={hasVoteSeriesPoints ? externalVoters.map(u => ({ userId: u.id, user: u })) : []}
+                finalRankingNote={gamePhaseComplete ? event.finalRankingNote : null}
               />
-            )}
-
-            {/* Endplatzierungs-Notiz (Begründung für manuelle Änderungen/Disqualifikation, falls vorhanden) */}
-            {gamePhaseComplete && event.finalRankingNote && (
-              <div className="glass rounded-2xl px-4 py-3 mt-4 flex items-start gap-2">
-                <StickyNote className="w-3.5 h-3.5 text-gray-600 mt-0.5 shrink-0" />
-                <p className="text-xs text-gray-500 italic leading-relaxed">{event.finalRankingNote}</p>
-              </div>
             )}
           </div>
         </div>

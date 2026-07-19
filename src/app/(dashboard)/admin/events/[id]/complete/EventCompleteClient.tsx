@@ -191,6 +191,11 @@ export default function EventCompleteClient({
   const [rankingManuallyEdited, setRankingManuallyEdited] = useState(!!initialFinalRanking?.length);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
 
+  // Verfolgt, ob in dieser Sitzung (nicht historisch) an Finaler Platzierung/Begründung/Disqualifikation
+  // etwas geändert wurde — steuert den zusätzlichen "Nur Änderungen speichern"-Button während der
+  // Umfragephase, mit dem Admins diese Änderungen sichern können, ohne die Umfragephase zu beenden.
+  const [rankingDirty, setRankingDirty] = useState(false);
+
   /* ── Ausschluss (Disqualifikation) ── */
   // Ausgeschlossene User bleiben in Stats/Tabellen sichtbar, erhalten aber keine Münzen/Ligapunkte/
   // Rang-Punkte aus diesem Event und können nicht Event-Gewinner sein. Auch nachträglich (Re-Edit)
@@ -199,6 +204,7 @@ export default function EventCompleteClient({
     new Set((initialData?.excludedUserIds as string[] | undefined) ?? [])
   );
   function toggleExcluded(uid: string) {
+    setRankingDirty(true);
     setExcludedUsers(prev => {
       const next = new Set(prev);
       if (next.has(uid)) next.delete(uid); else next.add(uid);
@@ -314,6 +320,7 @@ export default function EventCompleteClient({
 
   function toggleTied(uid: string) {
     setRankingManuallyEdited(true);
+    setRankingDirty(true);
     setTiedAbove(prev => {
       const next = new Set(prev);
       if (next.has(uid)) next.delete(uid); else next.add(uid);
@@ -324,6 +331,7 @@ export default function EventCompleteClient({
   function moveUp(idx: number) {
     if (idx === 0) return;
     setRankingManuallyEdited(true);
+    setRankingDirty(true);
     setRankingOrder(prev => {
       const next = [...prev];
       [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
@@ -340,6 +348,7 @@ export default function EventCompleteClient({
   }
   function moveDown(idx: number) {
     setRankingManuallyEdited(true);
+    setRankingDirty(true);
     setRankingOrder(prev => {
       if (idx >= prev.length - 1) return prev;
       const next = [...prev];
@@ -356,7 +365,11 @@ export default function EventCompleteClient({
   }
 
   /* ── Submit ── */
-  async function handleConfirm(pollOnly = false) {
+  // keepPollOpen: erzwingt, dass eine noch laufende Umfragephase NICHT beendet wird — auch nicht für
+  // Admins (die sie sonst beim Speichern automatisch mit abschließen). Damit können Änderungen an der
+  // Finalen Platzierung/Begründung während der Umfragephase gesichert werden, ohne das Event dadurch
+  // schon komplett abzuschließen.
+  async function handleConfirm(pollOnly = false, keepPollOpen = false) {
     setLoading(true);
 
     try {
@@ -381,12 +394,18 @@ export default function EventCompleteClient({
           excludedUserIds:         excludedUsers.size > 0 ? [...excludedUsers] : undefined,
           participationCoins:      seriesId ? undefined : rewardsConfig.participationCoins,
           placements:              rewardsConfig.placements,
-          closeOpenPolls:          isPollOnly ? isAdmin : undefined,
+          closeOpenPolls:          keepPollOpen ? false : (isPollOnly ? isAdmin : undefined),
         }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         toast.error((err as { error?: string }).error ?? "Fehler beim Abschließen");
+        return;
+      }
+      setRankingDirty(false);
+      if (keepPollOpen) {
+        toast.success(`Änderungen für "${eventTitle}" gespeichert – Umfrage läuft weiter`);
+        router.refresh();
         return;
       }
       if (pollOnly || (!isReEdit && pollPhasePending)) {
@@ -832,6 +851,19 @@ export default function EventCompleteClient({
 
           {/* Confirm buttons */}
           <div className="space-y-2">
+            {/* Admins schließen mit dem Haupt-Button während der Umfragephase sonst automatisch die
+                Umfrage mit ab — dieser Button erlaubt es, Änderungen an Finaler Platzierung/Begründung
+                zwischendurch zu sichern, ohne die Umfragephase zu beenden. */}
+            {isPollOnly && isAdmin && rankingDirty && (
+              <button
+                onClick={() => handleConfirm(false, true)}
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-medium text-blue-300 border border-blue-500/30 bg-blue-500/5 hover:border-blue-500/50 hover:bg-blue-500/10 transition-colors disabled:opacity-50"
+              >
+                <ListOrdered className="w-3.5 h-3.5" />
+                Nur Änderungen speichern (Umfrage läuft weiter)
+              </button>
+            )}
             <button
               onClick={() => handleConfirm(false)}
               disabled={loading}
@@ -882,7 +914,7 @@ export default function EventCompleteClient({
               )}
               {rankingManuallyEdited && (isAvgFormat || winnerStatField) && (
                 <button
-                  onClick={() => autoSort()}
+                  onClick={() => { autoSort(); setRankingDirty(true); }}
                   className="ml-auto flex items-center gap-1 text-[10px] text-blue-400/60 hover:text-blue-300 transition-colors"
                 >
                   <RotateCcw className="w-3 h-3" /> Auto-Sortierung zurücksetzen
@@ -937,6 +969,7 @@ export default function EventCompleteClient({
                         onDrop={() => {
                           if (dragIdx === null || dragIdx === idx) return;
                           setRankingManuallyEdited(true);
+                          setRankingDirty(true);
                           setRankingOrder(prev => {
                             const next = [...prev];
                             const [removed] = next.splice(dragIdx, 1);
@@ -1027,7 +1060,7 @@ export default function EventCompleteClient({
                 </label>
                 <textarea
                   value={rankingNote}
-                  onChange={e => setRankingNote(e.target.value)}
+                  onChange={e => { setRankingNote(e.target.value); setRankingDirty(true); }}
                   placeholder="z.B. Spieler X nachträglich disqualifiziert wegen …"
                   rows={2}
                   className={`${inputCls} resize-none ${rankingManuallyEdited && rankingNote ? "border-amber-600/50" : ""}`}
