@@ -688,14 +688,6 @@ export default async function TournamentDetailPage({
         <EventTippsList pot={predictionPot} tipps={eventTipps} />
       </div>
 
-      {/* Endplatzierungs-Notiz (falls vorhanden) */}
-      {gamePhaseComplete && event.finalRankingNote && (
-        <div className="glass rounded-2xl px-4 py-3 mb-5 flex items-start gap-2">
-          <StickyNote className="w-3.5 h-3.5 text-gray-600 mt-0.5 shrink-0" />
-          <p className="text-xs text-gray-500 italic leading-relaxed">{event.finalRankingNote}</p>
-        </div>
-      )}
-
       {/* ── Laufende Umfrage ───────────────────────────────────────────── */}
       {hasPendingPoll && (
         <div className="glass rounded-2xl p-5 mb-5 space-y-3 border border-violet-500/20">
@@ -1026,6 +1018,14 @@ export default async function TournamentDetailPage({
                 votedUserIds={[...votedUserIds]}
                 externalVoters={hasVoteSeriesPoints ? externalVoters.map(u => ({ userId: u.id, user: u })) : []}
               />
+            )}
+
+            {/* Endplatzierungs-Notiz (Begründung für manuelle Änderungen/Disqualifikation, falls vorhanden) */}
+            {gamePhaseComplete && event.finalRankingNote && (
+              <div className="glass rounded-2xl px-4 py-3 mt-4 flex items-start gap-2">
+                <StickyNote className="w-3.5 h-3.5 text-gray-600 mt-0.5 shrink-0" />
+                <p className="text-xs text-gray-500 italic leading-relaxed">{event.finalRankingNote}</p>
+              </div>
             )}
           </div>
         </div>

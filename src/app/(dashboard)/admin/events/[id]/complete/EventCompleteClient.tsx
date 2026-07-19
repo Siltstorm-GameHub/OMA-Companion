@@ -9,7 +9,7 @@ import SeriesIcon from "@/components/SeriesIcon";
 import LivePollsPanel from "./LivePollsPanel";
 import {
   ChevronLeft, CheckCircle2, Trophy, Vote,
-  ListOrdered, GripVertical, Coins, AlertTriangle, RotateCcw, Equal, Lock,
+  ListOrdered, GripVertical, Coins, AlertTriangle, RotateCcw, Equal, Lock, Ban,
 } from "lucide-react";
 
 /* ── Types ── */
@@ -191,6 +191,21 @@ export default function EventCompleteClient({
   const [rankingManuallyEdited, setRankingManuallyEdited] = useState(!!initialFinalRanking?.length);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
 
+  /* ── Ausschluss (Disqualifikation) ── */
+  // Ausgeschlossene User bleiben in Stats/Tabellen sichtbar, erhalten aber keine Münzen/Ligapunkte/
+  // Rang-Punkte aus diesem Event und können nicht Event-Gewinner sein. Auch nachträglich (Re-Edit)
+  // änderbar. Die Begründung trägt der Admin im bereits vorhandenen Notiz-Feld ein.
+  const [excludedUsers, setExcludedUsers] = useState<Set<string>>(() =>
+    new Set((initialData?.excludedUserIds as string[] | undefined) ?? [])
+  );
+  function toggleExcluded(uid: string) {
+    setExcludedUsers(prev => {
+      const next = new Set(prev);
+      if (next.has(uid)) next.delete(uid); else next.add(uid);
+      return next;
+    });
+  }
+
   // Auto-sort on first render if:
   // - no saved ranking exists yet, OR
   // - saved ranking was missing users (e.g. merged stub accounts) → re-sort to place them correctly
@@ -218,8 +233,10 @@ export default function EventCompleteClient({
   // überschrieben werden — z.B. Disqualifikation), gilt Platz 1 (bzw. bei Gleichstand alle Platz-1-
   // Spieler) als tatsächlicher Gewinner. Damit spiegelt die Anzeige eine manuelle Korrektur der
   // Platzierung sofort wider, statt weiterhin den rein stat-basierten (theoretischen) Sieger zu zeigen.
+  // Ausgeschlossene (disqualifizierte) User zählen nie als Gewinner, auch wenn sie Platz 1 belegen —
+  // ohne automatische Beförderung des nächsten Platzes (analog zum Server).
   const previewWinners = useMemo(() => {
-    if (rankingGroups.length > 0) return rankingGroups[0];
+    if (rankingGroups.length > 0) return rankingGroups[0].filter(id => !excludedUsers.has(id));
     if (isAvgFormat) {
       let bestVal: number | null = null;
       let best: string[] = [];
@@ -239,7 +256,7 @@ export default function EventCompleteClient({
       else if (v === bestVal && bestVal > -Infinity) { best.push(uid); }
     }
     return best;
-  }, [rankingGroups, isAvgFormat, avgDirection, userAvgScore, winnerStatField, userStats]);
+  }, [rankingGroups, excludedUsers, isAvgFormat, avgDirection, userAvgScore, winnerStatField, userStats]);
 
   const pollEligible = useMemo(
     () => registeredUsers.filter(u => !pollExcluded.has(u.id)),
@@ -361,6 +378,7 @@ export default function EventCompleteClient({
           finalRanking:            rankingOrder.length > 0 ? rankingOrder : undefined,
           finalRankingGroups:      rankingGroups.length > 0 ? rankingGroups : undefined,
           finalRankingNote:        rankingNote || undefined,
+          excludedUserIds:         excludedUsers.size > 0 ? [...excludedUsers] : undefined,
           participationCoins:      seriesId ? undefined : rewardsConfig.participationCoins,
           placements:              rewardsConfig.placements,
           closeOpenPolls:          isPollOnly ? isAdmin : undefined,
@@ -898,7 +916,8 @@ export default function EventCompleteClient({
                   const u = registeredUsers.find(u => u.id === uid);
                   if (!u) return null;
                   const place = placementMap.get(uid) ?? idx + 1;
-                  const reward = getPlacementReward(place);
+                  const isExcluded = excludedUsers.has(uid);
+                  const reward = isExcluded ? undefined : getPlacementReward(place);
                   const isTied = tiedAbove.has(uid);
 
                   return (
@@ -933,8 +952,10 @@ export default function EventCompleteClient({
                           });
                           setDragIdx(null);
                         }}
-                        className={`flex items-center gap-2 px-2 py-2 rounded-lg bg-white/[0.03] border transition-colors select-none ${
-                          isTied ? "border-blue-500/20 bg-blue-500/5" : "border-white/[0.05]"
+                        className={`flex items-center gap-2 px-2 py-2 rounded-lg border transition-colors select-none ${
+                          isExcluded
+                            ? "border-red-900/40 bg-red-950/20"
+                            : isTied ? "border-blue-500/20 bg-blue-500/5" : "border-white/[0.05] bg-white/[0.03]"
                         } cursor-grab active:cursor-grabbing`}
                       >
                         <GripVertical className="w-3.5 h-3.5 text-gray-600 shrink-0" />
@@ -945,7 +966,10 @@ export default function EventCompleteClient({
                           }
                         </span>
                         <Avatar u={u} size={5} />
-                        <span className="text-xs text-white flex-1 truncate">{userName(u)}</span>
+                        <span className={`text-xs flex-1 truncate ${isExcluded ? "text-red-300/70 line-through" : "text-white"}`}>{userName(u)}</span>
+                        {isExcluded && (
+                          <span className="text-[10px] text-red-400 shrink-0">Disqualifiziert</span>
+                        )}
                         {isAvgFormat && userAvgScore[uid] != null && (
                           <span className="text-[10px] text-gray-500 tabular-nums shrink-0">
                             Ø {userAvgScore[uid].toFixed(2)}
@@ -957,18 +981,25 @@ export default function EventCompleteClient({
                           </span>
                         )}
                         <span className="flex flex-col items-end shrink-0 ml-1 gap-0">
-                          {effectiveParticipationCoins > 0 && (
+                          {!isExcluded && effectiveParticipationCoins > 0 && (
                             <span className="text-[10px] text-amber-400 tabular-nums leading-tight">
                               +{(reward?.coins ?? 0) + effectiveParticipationCoins} <CoinIcon size={11} />
                             </span>
                           )}
-                          {reward && reward.rankPoints > 0 && (
+                          {!isExcluded && reward && reward.rankPoints > 0 && (
                             <span className="text-[10px] text-teal-400 tabular-nums leading-tight">
                               +{reward.rankPoints} <RankPointsIcon size={11} />
                             </span>
                           )}
                         </span>
                         <div className="flex gap-0.5 shrink-0">
+                            <button
+                              onClick={() => toggleExcluded(uid)}
+                              title={isExcluded ? "Disqualifikation aufheben" : "Disqualifizieren (keine Münzen/Punkte)"}
+                              className={`p-2.5 -m-1 transition-colors ${isExcluded ? "text-red-400" : "text-gray-600 hover:text-red-400"}`}
+                            >
+                              <Ban className="w-3 h-3" />
+                            </button>
                             {/* Tie toggle (only for non-first rows) */}
                             {idx > 0 && (
                               <button
@@ -1001,9 +1032,9 @@ export default function EventCompleteClient({
                   rows={2}
                   className={`${inputCls} resize-none ${rankingManuallyEdited && rankingNote ? "border-amber-600/50" : ""}`}
                 />
-                {rankingManuallyEdited && !rankingNote && (
+                {(rankingManuallyEdited || excludedUsers.size > 0) && !rankingNote && (
                   <p className="text-[10px] text-amber-500/70 mt-1">
-                    Empfohlen: Begründung für manuelle Änderung eintragen.
+                    Empfohlen: Begründung für manuelle Änderung{excludedUsers.size > 0 ? " / Disqualifikation" : ""} eintragen.
                   </p>
                 )}
               </div>

@@ -90,6 +90,26 @@ export async function POST(
   const currentUser = await requireRole("moderator");
   const { id: eventId } = await params;
 
+  // Kleine Helfer für die Diff-basierte Vergabe unten: statt Münzen/Rang-Punkte nur einmalig beim
+  // ersten Abschluss zu vergeben, wird bei jedem Speichern ein Delta gegen die zuletzt vergebenen
+  // Beträge (aus completionData) gebucht — Voraussetzung dafür, einen User nachträglich (auch nach
+  // dem ersten Abschluss) auszuschließen (Disqualifikation) und bereits vergebene Beträge dadurch
+  // sauber zurückzunehmen.
+  async function applyCoinDelta(userId: string, delta: number, reason: string) {
+    if (delta === 0) return;
+    await prisma.$transaction([
+      prisma.user.update({ where: { id: userId }, data: { points: { increment: delta } } }),
+      prisma.pointTransaction.create({ data: { userId, amount: delta, reason } }),
+    ]);
+  }
+  async function applyRankDelta(userId: string, delta: number, reason: string) {
+    if (delta === 0) return;
+    await prisma.$transaction([
+      prisma.user.update({ where: { id: userId }, data: { rankPoints: { increment: delta } } }),
+      prisma.pointTransaction.create({ data: { userId, amount: delta, reason } }),
+    ]);
+  }
+
   type PollResult = {
     label: string;
     winnerIds: string[];
@@ -121,6 +141,9 @@ export async function POST(
     spectatorAttendedIds?: string[];
     /** Admin-only: noch offene EventPolls sofort schließen (endAt -> jetzt) und mit abschließen */
     closeOpenPolls?: boolean;
+    /** Nachträglich/beim Abschluss ausgeschlossene User (z.B. Disqualifikation): bleiben in den Stats
+     *  und Tabellen sichtbar, erhalten aber keine Münzen, Ligapunkte oder Rang-Punkte aus diesem Event. */
+    excludedUserIds?: string[];
   };
 
   const event = await prisma.event.findUnique({
@@ -283,6 +306,11 @@ export async function POST(
   const playerIds = event.registrations.filter(r => r.role === "player").map(r => r.userId);
   const spectatorIds = event.registrations.filter(r => r.role === "spectator").map(r => r.userId);
 
+  // Ausgeschlossene User (z.B. Disqualifikation): bleiben in Stats/Tabellen sichtbar, erhalten aber
+  // keinerlei Münzen/Ligapunkte/Rang-Punkte aus diesem Event und können nicht Event-Gewinner sein.
+  // Die Begründung dafür trägt der Admin im bereits vorhandenen Feld "Finale-Platzierung-Notiz" ein.
+  const excludedSet = new Set((body.excludedUserIds ?? []).filter(id => registeredSet.has(id)));
+
   // Die Finale Platzierung ist im Normalfall stat-auto-sortiert (siehe Client-autoSort), kann aber vom
   // Admin manuell überschrieben werden (z.B. nachträgliche Disqualifikation eines Spielers, der laut
   // reiner Stat-Auswertung gewonnen hätte). In den Stat-Modi ("stat"/"avg_stats") überschreibt eine
@@ -298,153 +326,143 @@ export async function POST(
     }
   }
 
-  // ── Coin/RankPoint-Vergabe (nur beim ersten Abschluss) ──────────────────────
-  if (!isReEdit) {
-    const rewards: RewardsConfig = {
-      participationCoins: body.participationCoins ?? parseRewards(event.placementRewardsJson ?? event.series?.placementRewardsJson).participationCoins,
-      placements: body.placements ?? parseRewards(event.placementRewardsJson ?? event.series?.placementRewardsJson).placements,
-    };
+  // Ausgeschlossene User können nie Event-Gewinner sein (unabhängig vom Winner-Modus) — keine
+  // automatische Beförderung des nächsten Platzes, der Admin kann die Platzierung bei Bedarf zusätzlich
+  // manuell anpassen.
+  eventWinnerIds = eventWinnerIds.filter(id => !excludedSet.has(id));
+  eventWinnerId = eventWinnerIds[0];
 
-    // Teilnahme-Münzen für alle Spieler — bei Events innerhalb einer Reihe kommt der Betrag
-    // seriesweit fix aus der Gesamttabellen-Konfiguration, sonst aus den Event-Belohnungen
-    const effectiveParticipationCoins = event.seriesId ? (statCfg.participationCoins ?? 0) : rewards.participationCoins;
-    if (effectiveParticipationCoins > 0 && playerIds.length > 0) {
-      await prisma.$transaction(
-        playerIds.flatMap(userId => [
-          prisma.user.update({
-            where: { id: userId },
-            data: { points: { increment: effectiveParticipationCoins } },
-          }),
-          prisma.pointTransaction.create({
-            data: { userId, amount: effectiveParticipationCoins, reason: `[Münzen] Teilnahme: ${event.title}` },
-          }),
-        ])
-      );
+  // ── Coin/RankPoint-Vergabe ───────────────────────────────────────────────────
+  // Läuft bei jedem Speichern (nicht mehr nur beim ersten Abschluss): über einen Diff gegen die beim
+  // letzten Speichern vergebenen Beträge (completionData.rewardLedger) werden Änderungen sauber
+  // nachgebucht bzw. zurückgebucht — u.a. Voraussetzung dafür, einen User nachträglich auszuschließen
+  // (Disqualifikation) und bereits vergebene Belohnungen dadurch zurückzunehmen.
+  const oldRewardLedger = (oldCompletion.rewardLedger ?? {}) as {
+    participationCoins?: Record<string, number>;
+    spectatorRewards?: Record<string, { coins: number; rankPoints: number }>;
+    placementRewards?: Record<string, { coins: number; rankPoints: number }>;
+  };
+
+  const rewards: RewardsConfig = {
+    participationCoins: body.participationCoins ?? parseRewards(event.placementRewardsJson ?? event.series?.placementRewardsJson).participationCoins,
+    placements: body.placements ?? parseRewards(event.placementRewardsJson ?? event.series?.placementRewardsJson).placements,
+  };
+
+  // Teilnahme-Münzen für alle (nicht ausgeschlossenen) Spieler — bei Events innerhalb einer Reihe kommt
+  // der Betrag seriesweit fix aus der Gesamttabellen-Konfiguration, sonst aus den Event-Belohnungen
+  const effectiveParticipationCoins = event.seriesId ? (statCfg.participationCoins ?? 0) : rewards.participationCoins;
+  const newParticipationCoins: Record<string, number> = {};
+  if (effectiveParticipationCoins > 0) {
+    for (const userId of playerIds) {
+      if (excludedSet.has(userId)) continue;
+      newParticipationCoins[userId] = effectiveParticipationCoins;
     }
+  }
+  {
+    const oldMap = oldRewardLedger.participationCoins ?? {};
+    for (const userId of new Set([...Object.keys(oldMap), ...Object.keys(newParticipationCoins)])) {
+      await applyCoinDelta(userId, (newParticipationCoins[userId] ?? 0) - (oldMap[userId] ?? 0), `[Münzen] Teilnahme: ${event.title}`);
+    }
+  }
 
-    // Zuschauer-Basis-Belohnung für anwesende Zuschauer
-    if (event.spectatorMode && body.spectatorAttendedIds?.length) {
-      const spectatorRankPoints = (() => {
-        if (!event.spectatorRewardJson) return 0;
-        try { return (JSON.parse(event.spectatorRewardJson) as { rankPoints: number }).rankPoints ?? 0; }
-        catch { return 0; }
-      })();
-      // Zuschauer-Münzen: bei Events innerhalb einer Reihe seriesweit fix aus der
-      // Gesamttabellen-Konfiguration, sonst aus der Event-eigenen Zuschauer-Belohnung
-      const spectatorCoins = event.seriesId
-        ? (statCfg.spectatorParticipationCoins ?? 0)
-        : (() => {
-            if (!event.spectatorRewardJson) return 0;
-            try { return (JSON.parse(event.spectatorRewardJson) as { coins: number }).coins ?? 0; }
-            catch { return 0; }
-          })();
-      const attendedSpectators = (body.spectatorAttendedIds ?? []).filter(id => spectatorIds.includes(id));
-      if (attendedSpectators.length > 0) {
-        const txns: Prisma.PrismaPromise<unknown>[] = [];
-        for (const userId of attendedSpectators) {
-          if (spectatorCoins > 0) {
-            txns.push(
-              prisma.user.update({ where: { id: userId }, data: { points: { increment: spectatorCoins } } }),
-              prisma.pointTransaction.create({ data: { userId, amount: spectatorCoins, reason: `[Münzen] Zuschauer: ${event.title}` } })
-            );
-          }
-          if (spectatorRankPoints > 0) {
-            txns.push(
-              prisma.user.update({ where: { id: userId }, data: { rankPoints: { increment: spectatorRankPoints } } }),
-              prisma.pointTransaction.create({ data: { userId, amount: spectatorRankPoints, reason: `[Rang-Punkte] Zuschauer: ${event.title}` } })
-            );
+  // Zuschauer-Basis-Belohnung für anwesende (nicht ausgeschlossene) Zuschauer
+  const newSpectatorRewards: Record<string, { coins: number; rankPoints: number }> = {};
+  if (event.spectatorMode) {
+    const spectatorRankPoints = (() => {
+      if (!event.spectatorRewardJson) return 0;
+      try { return (JSON.parse(event.spectatorRewardJson) as { rankPoints: number }).rankPoints ?? 0; }
+      catch { return 0; }
+    })();
+    // Zuschauer-Münzen: bei Events innerhalb einer Reihe seriesweit fix aus der
+    // Gesamttabellen-Konfiguration, sonst aus der Event-eigenen Zuschauer-Belohnung
+    const spectatorCoins = event.seriesId
+      ? (statCfg.spectatorParticipationCoins ?? 0)
+      : (() => {
+          if (!event.spectatorRewardJson) return 0;
+          try { return (JSON.parse(event.spectatorRewardJson) as { coins: number }).coins ?? 0; }
+          catch { return 0; }
+        })();
+    const attendedSpectators = (body.spectatorAttendedIds ?? []).filter(id => spectatorIds.includes(id) && !excludedSet.has(id));
+    for (const userId of attendedSpectators) {
+      newSpectatorRewards[userId] = { coins: spectatorCoins, rankPoints: spectatorRankPoints };
+    }
+  }
+  {
+    const oldMap = oldRewardLedger.spectatorRewards ?? {};
+    for (const userId of new Set([...Object.keys(oldMap), ...Object.keys(newSpectatorRewards)])) {
+      const o = oldMap[userId] ?? { coins: 0, rankPoints: 0 };
+      const n = newSpectatorRewards[userId] ?? { coins: 0, rankPoints: 0 };
+      await applyCoinDelta(userId, n.coins - o.coins, `[Münzen] Zuschauer: ${event.title}`);
+      await applyRankDelta(userId, n.rankPoints - o.rankPoints, `[Rang-Punkte] Zuschauer: ${event.title}`);
+    }
+  }
+
+  // Platzierungs-Münzen + Rang-Punkte (unterstützt Gleichstand via finalRankingGroups) — nur für
+  // eigenständige Events ohne Reihe die volle Belohnung. Events innerhalb einer Eventreihe erhalten ihre
+  // Platzierungs-Belohnung erst bei Abschluss der gesamten Reihe (Endplatzierung); direkt hier gibt es
+  // für sie höchstens die seriesweit konfigurierten zusätzlichen Platzierungs-Münzen
+  // (statCfg.eventPlacementCoins) für die Platzierung innerhalb dieses einzelnen Events. Ausgeschlossene
+  // User erhalten unabhängig von ihrer (weiterhin angezeigten) Platzierung keine Belohnung.
+  const newPlacementRewards: Record<string, { coins: number; rankPoints: number }> = {};
+  if (!event.seriesId) {
+    if (body.finalRankingGroups?.length) {
+      // Groups format: [[uid1, uid2], [uid3], ...] where all in same group share placement
+      let place = 1;
+      for (const group of body.finalRankingGroups) {
+        const reward = rewards.placements.find(p => p.place === place);
+        if (reward) {
+          for (const userId of group.filter(id => registeredSet.has(id) && !excludedSet.has(id))) {
+            newPlacementRewards[userId] = { coins: reward.coins, rankPoints: reward.rankPoints };
           }
         }
-        if (txns.length > 0) await prisma.$transaction(txns);
+        place += group.length; // standard competition ranking: skip positions for the size of this group
+      }
+    } else {
+      // Legacy flat format
+      const ranking = (body.finalRanking ?? []).filter(id => registeredSet.has(id));
+      for (let i = 0; i < ranking.length; i++) {
+        const place = i + 1;
+        const reward = rewards.placements.find(p => p.place === place);
+        if (!reward) continue;
+        const userId = ranking[i];
+        if (excludedSet.has(userId)) continue;
+        newPlacementRewards[userId] = { coins: reward.coins, rankPoints: reward.rankPoints };
       }
     }
-
-    // Platzierungs-Münzen + Rang-Punkte (unterstützt Gleichstand via finalRankingGroups) — nur für
-    // eigenständige Events ohne Reihe. Events innerhalb einer Eventreihe erhalten ihre
-    // Platzierungs-Belohnung erst bei Abschluss der gesamten Reihe (Endplatzierung); direkt hier
-    // gibt es für sie höchstens die seriesweit konfigurierten zusätzlichen Platzierungs-Münzen
-    // (statCfg.eventPlacementCoins) für die Platzierung innerhalb dieses einzelnen Events.
-    if (!event.seriesId) {
+  } else {
+    const eventPlacementCoins = statCfg.eventPlacementCoins ?? [];
+    if (eventPlacementCoins.some(p => p.coins > 0)) {
       if (body.finalRankingGroups?.length) {
-        // Groups format: [[uid1, uid2], [uid3], ...] where all in same group share placement
         let place = 1;
         for (const group of body.finalRankingGroups) {
-          const reward = rewards.placements.find(p => p.place === place);
-          if (reward) {
-            for (const userId of group.filter(id => registeredSet.has(id))) {
-              const txns: Prisma.PrismaPromise<unknown>[] = [];
-              if (reward.coins > 0) {
-                txns.push(
-                  prisma.user.update({ where: { id: userId }, data: { points: { increment: reward.coins } } }),
-                  prisma.pointTransaction.create({ data: { userId, amount: reward.coins, reason: `[Münzen] Platz ${place}: ${event.title}` } })
-                );
-              }
-              if (reward.rankPoints > 0) {
-                txns.push(
-                  prisma.user.update({ where: { id: userId }, data: { rankPoints: { increment: reward.rankPoints } } }),
-                  prisma.pointTransaction.create({ data: { userId, amount: reward.rankPoints, reason: `[Rang-Punkte] Platz ${place}: ${event.title}` } })
-                );
-              }
-              if (txns.length > 0) await prisma.$transaction(txns);
+          const reward = eventPlacementCoins.find(p => p.place === place);
+          if (reward && reward.coins > 0) {
+            for (const userId of group.filter(id => registeredSet.has(id) && !excludedSet.has(id))) {
+              newPlacementRewards[userId] = { coins: reward.coins, rankPoints: 0 };
             }
           }
-          place += group.length; // standard competition ranking: skip positions for the size of this group
+          place += group.length;
         }
       } else {
-        // Legacy flat format
         const ranking = (body.finalRanking ?? []).filter(id => registeredSet.has(id));
         for (let i = 0; i < ranking.length; i++) {
           const place = i + 1;
-          const reward = rewards.placements.find(p => p.place === place);
-          if (!reward) continue;
+          const reward = eventPlacementCoins.find(p => p.place === place);
+          if (!reward || reward.coins <= 0) continue;
           const userId = ranking[i];
-          const txns: Prisma.PrismaPromise<unknown>[] = [];
-          if (reward.coins > 0) {
-            txns.push(
-              prisma.user.update({ where: { id: userId }, data: { points: { increment: reward.coins } } }),
-              prisma.pointTransaction.create({ data: { userId, amount: reward.coins, reason: `[Münzen] Platz ${place}: ${event.title}` } })
-            );
-          }
-          if (reward.rankPoints > 0) {
-            txns.push(
-              prisma.user.update({ where: { id: userId }, data: { rankPoints: { increment: reward.rankPoints } } }),
-              prisma.pointTransaction.create({ data: { userId, amount: reward.rankPoints, reason: `[Rang-Punkte] Platz ${place}: ${event.title}` } })
-            );
-          }
-          if (txns.length > 0) await prisma.$transaction(txns);
+          if (excludedSet.has(userId)) continue;
+          newPlacementRewards[userId] = { coins: reward.coins, rankPoints: 0 };
         }
       }
-    } else {
-      const eventPlacementCoins = statCfg.eventPlacementCoins ?? [];
-      if (eventPlacementCoins.some(p => p.coins > 0)) {
-        if (body.finalRankingGroups?.length) {
-          let place = 1;
-          for (const group of body.finalRankingGroups) {
-            const reward = eventPlacementCoins.find(p => p.place === place);
-            if (reward && reward.coins > 0) {
-              for (const userId of group.filter(id => registeredSet.has(id))) {
-                await prisma.$transaction([
-                  prisma.user.update({ where: { id: userId }, data: { points: { increment: reward.coins } } }),
-                  prisma.pointTransaction.create({ data: { userId, amount: reward.coins, reason: `[Münzen] Platz ${place}: ${event.title}` } }),
-                ]);
-              }
-            }
-            place += group.length;
-          }
-        } else {
-          const ranking = (body.finalRanking ?? []).filter(id => registeredSet.has(id));
-          for (let i = 0; i < ranking.length; i++) {
-            const place = i + 1;
-            const reward = eventPlacementCoins.find(p => p.place === place);
-            if (!reward || reward.coins <= 0) continue;
-            const userId = ranking[i];
-            await prisma.$transaction([
-              prisma.user.update({ where: { id: userId }, data: { points: { increment: reward.coins } } }),
-              prisma.pointTransaction.create({ data: { userId, amount: reward.coins, reason: `[Münzen] Platz ${place}: ${event.title}` } }),
-            ]);
-          }
-        }
-      }
+    }
+  }
+  {
+    const oldMap = oldRewardLedger.placementRewards ?? {};
+    for (const userId of new Set([...Object.keys(oldMap), ...Object.keys(newPlacementRewards)])) {
+      const o = oldMap[userId] ?? { coins: 0, rankPoints: 0 };
+      const n = newPlacementRewards[userId] ?? { coins: 0, rankPoints: 0 };
+      await applyCoinDelta(userId, n.coins - o.coins, `[Münzen] Platzierung: ${event.title}`);
+      await applyRankDelta(userId, n.rankPoints - o.rankPoints, `[Rang-Punkte] Platzierung: ${event.title}`);
     }
   }
 
@@ -475,7 +493,7 @@ export async function POST(
   }
 
   // Neue Poll-Gewinner vergeben (legacy single poll)
-  const newPollWinners = (body.pollWinnerIds ?? []).filter(id => registeredSet.has(id));
+  const newPollWinners = (body.pollWinnerIds ?? []).filter(id => registeredSet.has(id) && !excludedSet.has(id));
   const pollCoins = body.pollBonusCoins ?? 0;
   const pollRankPts = body.pollBonusRankPoints ?? 0;
 
@@ -500,7 +518,7 @@ export async function POST(
   if (body.pollResults?.length) {
     for (const poll of body.pollResults) {
       const eligibleIds = poll.type === "spectator" ? spectatorIds : playerIds;
-      const winners = (poll.winnerIds ?? []).filter(id => eligibleIds.includes(id));
+      const winners = (poll.winnerIds ?? []).filter(id => eligibleIds.includes(id) && !excludedSet.has(id));
       for (const userId of winners) {
         const txns: Prisma.PrismaPromise<unknown>[] = [];
         if (poll.coins > 0) {
@@ -613,12 +631,14 @@ export async function POST(
     // Teilnahme (einmal pro Voter über alle Umfragen des Events hinweg, siehe unten)
     const uniqueVoterIds = [...new Set(voterIds)];
     for (const uid of uniqueVoterIds) {
+      if (excludedSet.has(uid)) continue;
       if (poll.participationCoins > (participationCoinsByVoter[uid] ?? 0))
         participationCoinsByVoter[uid] = poll.participationCoins;
     }
     // Winner rewards
     if (poll.winnerCoins > 0) {
       for (const uid of winnerIds) {
+        if (excludedSet.has(uid)) continue;
         txns.push(
           prisma.user.update({ where: { id: uid }, data: { points: { increment: poll.winnerCoins } } }),
           prisma.pointTransaction.create({ data: { userId: uid, amount: poll.winnerCoins, reason: `[Münzen] Poll Gewinner: ${poll.label}` } })
@@ -663,6 +683,13 @@ export async function POST(
   let appliedAggregatedStats: Record<string, Record<string, number>> = {};
   type DominionChange = { streakBefore: number; streakAfter: number; bonusAwarded: boolean; coins: number; seriesPoints: number };
   let dominionChanges: Record<string, DominionChange> = {};
+  let seriesContrib: {
+    participations: string[];
+    statFieldsByUser: Record<string, Record<string, number>>;
+    transferredParticipationPoints: Record<string, number>;
+    transferredStatPoints: Record<string, number>;
+    transferredSpectatorPoints: Record<string, number>;
+  } | null = null;
 
   if (event.series) {
     const existingJson: SeriesStandings = (() => {
@@ -686,86 +713,115 @@ export async function POST(
         ? [statCfg.winnerSeriesStatKey]
         : (body.seriesWinnerTargetField ? [body.seriesWinnerTargetField] : []));
 
-    if (!isReEdit) {
-      // Mitspieler-Teilnahmen
-      for (const { userId, role } of event.registrations) {
-        if (role !== "player") continue;
-        addToUser(userId, "participations", 1);
-        const eStats = userStats[userId] ?? {};
-        for (const { field } of (statCfg.stats ?? [])) {
-          const val = statCfg.matchWinStatKeys?.includes(field) ? (eStats["Match Win"] ?? 0) : (eStats[field] ?? 0);
-          if (val > 0) addToUser(userId, field, val);
-        }
-        for (const field of (statCfg.aggregatedStatFields ?? [])) {
-          const val = eStats[field] ?? 0;
-          if (val > 0) {
-            addToUser(userId, field, val);
-            if (!appliedAggregatedStats[userId]) appliedAggregatedStats[userId] = {};
-            appliedAggregatedStats[userId][field] = (appliedAggregatedStats[userId][field] ?? 0) + val;
-          }
-        }
-      }
-      // Zuschauer-Teilnahmen (nur bestätigte Zuschauer)
-      for (const userId of (body.spectatorAttendedIds ?? [])) {
-        addToUser(userId, "Zuschauer-Teilnahmen", 1);
-      }
-      // Zuschauer-Teilnahmepunkte auf globale Rangliste übertragen (wenn aktiviert)
-      const spectatorPts = statCfg.spectatorParticipationPoints ?? 0;
-      if (statCfg.transferToGlobalRanking && spectatorPts > 0 && body.spectatorAttendedIds?.length) {
-        await Promise.all((body.spectatorAttendedIds).flatMap(userId => [
-          prisma.user.update({ where: { id: userId }, data: { rankPoints: { increment: spectatorPts } } }),
-          prisma.pointTransaction.create({ data: { userId, amount: spectatorPts, reason: `[Rang-Punkte] Ligatabelle Zuschauer: ${event.title}` } }),
-        ]));
-      }
-      if (eventWinnerIds.length > 0 && winnerTargetKeys.length > 0) {
-        for (const uid of eventWinnerIds) {
-          for (const key of winnerTargetKeys) addToUser(uid, key, 1);
-        }
-      }
+    // Mitspieler-Teilnahmen (participations) + reguläre Stat-Felder → Serien-Rohtabelle. Läuft bei
+    // jedem Speichern (Diff gegen completionData.seriesContrib), damit z.B. ein nachträglicher
+    // Ausschluss (Disqualifikation) bereits gutgeschriebene Ligapunkte/Rang-Punkte sauber zurückbucht.
+    const oldSeriesContrib = (oldCompletion.seriesContrib ?? {}) as {
+      participations?: string[];
+      statFieldsByUser?: Record<string, Record<string, number>>;
+      transferredParticipationPoints?: Record<string, number>;
+      transferredStatPoints?: Record<string, number>;
+      transferredSpectatorPoints?: Record<string, number>;
+    };
 
-      // Teilnahme-Ligapunkte → globale Rangliste
-      if (statCfg.transferToGlobalRanking && statCfg.participationPoints > 0 && event.registrations.length > 0) {
-        const pts = statCfg.participationPoints;
-        await Promise.all(playerIds.flatMap(userId => [
-          prisma.user.update({ where: { id: userId }, data: { rankPoints: { increment: pts } } }),
-          prisma.pointTransaction.create({ data: { userId, amount: pts, reason: `[Rang-Punkte] Ligatabelle Teilnahme: ${event.title}` } }),
-        ]));
-      }
-
-      // Stat-Tabellen-Punkte (pointsPer) → globale Rangliste
-      if (statCfg.transferToGlobalRanking && (statCfg.stats ?? []).length > 0) {
-        for (const { userId } of event.registrations.filter(r => r.role === "player")) {
-          const eStats = userStats[userId] ?? {};
-          let total = 0;
-          for (const { field, pointsPer } of statCfg.stats) {
-            const val = statCfg.matchWinStatKeys?.includes(field) ? (eStats["Match Win"] ?? 0) : (eStats[field] ?? 0);
-            total += val * pointsPer;
-          }
-          if (total > 0) {
-            await prisma.user.update({ where: { id: userId }, data: { rankPoints: { increment: total } } });
-            await prisma.pointTransaction.create({ data: { userId, amount: total, reason: `[Rang-Punkte] Ligatabelle Stats: ${event.title}` } });
-          }
-        }
+    // Alte Beiträge zurückbuchen
+    for (const userId of (oldSeriesContrib.participations ?? [])) {
+      addToUser(userId, "participations", -1);
+    }
+    for (const [userId, fields] of Object.entries(oldSeriesContrib.statFieldsByUser ?? {})) {
+      for (const [field, val] of Object.entries(fields)) {
+        if (val) addToUser(userId, field, -val);
       }
     }
 
-    // MVP: alten Eintrag rückgängig, neuen setzen
-    if (isReEdit && oldCompletion.mvpUserId && statCfg.mvpStatField) {
-      addToUser(oldCompletion.mvpUserId as string, statCfg.mvpStatField, -1);
+    // Neue Beiträge (ohne ausgeschlossene User)
+    const newParticipations: string[] = [];
+    const newStatFieldsByUser: Record<string, Record<string, number>> = {};
+    for (const { userId, role } of event.registrations) {
+      if (role !== "player" || excludedSet.has(userId)) continue;
+      addToUser(userId, "participations", 1);
+      newParticipations.push(userId);
+      const eStats = userStats[userId] ?? {};
+      for (const { field } of (statCfg.stats ?? [])) {
+        const val = statCfg.matchWinStatKeys?.includes(field) ? (eStats["Match Win"] ?? 0) : (eStats[field] ?? 0);
+        if (val > 0) {
+          addToUser(userId, field, val);
+          if (!newStatFieldsByUser[userId]) newStatFieldsByUser[userId] = {};
+          newStatFieldsByUser[userId][field] = (newStatFieldsByUser[userId][field] ?? 0) + val;
+        }
+      }
     }
-    if (body.mvpUserId && statCfg.mvpStatField) {
-      addToUser(body.mvpUserId, statCfg.mvpStatField, 1);
+    // Ausgeschlossene (und sonst punktelose) registrierte Spieler trotzdem als Zeile in der
+    // Serien-Rohtabelle anlegen, damit sie dort weiterhin sichtbar bleiben.
+    for (const { userId, role } of event.registrations) {
+      if (role === "player" && !raw[userId]) raw[userId] = {};
     }
 
-    // Re-Edit: Zuschauer-Teilnahmen rückbuchen und neu setzen
+    // Zuschauer-Teilnahmen (raw counter, nur bestätigte + nicht ausgeschlossene Zuschauer) — rückbuchen
+    // + neu setzen läuft bei jedem Speichern, damit auch ein nachträglicher Ausschluss greift.
     if (isReEdit) {
       const oldSpectators = (oldCompletion.spectatorAttendedIds as string[] | undefined) ?? [];
       for (const userId of oldSpectators) addToUser(userId, "Zuschauer-Teilnahmen", -1);
-      for (const userId of (body.spectatorAttendedIds ?? [])) addToUser(userId, "Zuschauer-Teilnahmen", 1);
+    }
+    const attendedForRaw = (body.spectatorAttendedIds ?? []).filter(id => !excludedSet.has(id));
+    for (const userId of attendedForRaw) addToUser(userId, "Zuschauer-Teilnahmen", 1);
+
+    // Zuschauer-Teilnahmepunkte auf globale Rangliste übertragen (wenn aktiviert)
+    const spectatorPts = statCfg.spectatorParticipationPoints ?? 0;
+    const newTransferredSpectatorPoints: Record<string, number> = {};
+    if (statCfg.transferToGlobalRanking && spectatorPts > 0) {
+      for (const userId of attendedForRaw) newTransferredSpectatorPoints[userId] = spectatorPts;
+    }
+    {
+      const oldMap = oldSeriesContrib.transferredSpectatorPoints ?? {};
+      for (const userId of new Set([...Object.keys(oldMap), ...Object.keys(newTransferredSpectatorPoints)])) {
+        await applyRankDelta(userId, (newTransferredSpectatorPoints[userId] ?? 0) - (oldMap[userId] ?? 0), `[Rang-Punkte] Ligatabelle Zuschauer: ${event.title}`);
+      }
     }
 
-    // Re-Edit: aggregierte Stats rückbuchen und neu berechnen
-    if (isReEdit && statCfg.aggregatedStatFields?.length) {
+    // Teilnahme-Ligapunkte → globale Rangliste
+    const newTransferredParticipationPoints: Record<string, number> = {};
+    if (statCfg.transferToGlobalRanking && statCfg.participationPoints > 0) {
+      for (const userId of newParticipations) newTransferredParticipationPoints[userId] = statCfg.participationPoints;
+    }
+    {
+      const oldMap = oldSeriesContrib.transferredParticipationPoints ?? {};
+      for (const userId of new Set([...Object.keys(oldMap), ...Object.keys(newTransferredParticipationPoints)])) {
+        await applyRankDelta(userId, (newTransferredParticipationPoints[userId] ?? 0) - (oldMap[userId] ?? 0), `[Rang-Punkte] Ligatabelle Teilnahme: ${event.title}`);
+      }
+    }
+
+    // Stat-Tabellen-Punkte (pointsPer) → globale Rangliste
+    const newTransferredStatPoints: Record<string, number> = {};
+    if (statCfg.transferToGlobalRanking && (statCfg.stats ?? []).length > 0) {
+      for (const userId of newParticipations) {
+        const eStats = userStats[userId] ?? {};
+        let total = 0;
+        for (const { field, pointsPer } of statCfg.stats) {
+          const val = statCfg.matchWinStatKeys?.includes(field) ? (eStats["Match Win"] ?? 0) : (eStats[field] ?? 0);
+          total += val * pointsPer;
+        }
+        if (total > 0) newTransferredStatPoints[userId] = total;
+      }
+    }
+    {
+      const oldMap = oldSeriesContrib.transferredStatPoints ?? {};
+      for (const userId of new Set([...Object.keys(oldMap), ...Object.keys(newTransferredStatPoints)])) {
+        await applyRankDelta(userId, (newTransferredStatPoints[userId] ?? 0) - (oldMap[userId] ?? 0), `[Rang-Punkte] Ligatabelle Stats: ${event.title}`);
+      }
+    }
+
+    // MVP: alten Eintrag rückgängig, neuen setzen (ausgeschlossene User können nicht MVP werden)
+    if (isReEdit && oldCompletion.mvpUserId && statCfg.mvpStatField) {
+      addToUser(oldCompletion.mvpUserId as string, statCfg.mvpStatField, -1);
+    }
+    if (body.mvpUserId && statCfg.mvpStatField && !excludedSet.has(body.mvpUserId)) {
+      addToUser(body.mvpUserId, statCfg.mvpStatField, 1);
+    }
+
+    // Re-Edit: aggregierte Stats rückbuchen und neu berechnen (läuft immer — auf erste Vergabe hat das
+    // Rückbuchen keinen Effekt, da oldApplied dann leer ist)
+    if (statCfg.aggregatedStatFields?.length) {
       const oldApplied = (oldCompletion.appliedAggregatedStats ?? {}) as Record<string, Record<string, number>>;
       // Alte Werte abziehen
       for (const [userId, fields] of Object.entries(oldApplied)) {
@@ -773,8 +829,9 @@ export async function POST(
           if (val > 0) addToUser(userId, field, -val);
         }
       }
-      // Neue Werte addieren
+      // Neue Werte addieren (ohne ausgeschlossene User)
       for (const { userId } of event.registrations) {
+        if (excludedSet.has(userId)) continue;
         const eStats = userStats[userId] ?? {};
         for (const field of statCfg.aggregatedStatFields) {
           const val = eStats[field] ?? 0;
@@ -787,10 +844,12 @@ export async function POST(
       }
     }
 
-    // Event-Gewinner (winnerStatKeys): alten Eintrag rückgängig, neuen setzen
+    // Event-Gewinner (winnerStatKeys): alten Eintrag rückgängig, neuen setzen (läuft immer — auf erste
+    // Vergabe hat das Rückbuchen keinen Effekt, da oldWinnerIds dann leer ist; eventWinnerIds enthält
+    // bereits keine ausgeschlossenen User, siehe oben)
     // Also handle legacy completionData that stored a single seriesWinnerTargetField
     const oldWinnerTargetField = (oldCompletion.seriesWinnerTargetField as string | undefined);
-    if (isReEdit) {
+    {
       const oldWinnerIds: string[] = (oldCompletion.eventWinnerIds as string[] | undefined) ??
         (oldCompletion.eventWinnerId ? [oldCompletion.eventWinnerId as string] : []);
       const keysToRollback = winnerTargetKeys.length > 0
@@ -800,7 +859,7 @@ export async function POST(
         for (const key of keysToRollback) addToUser(uid, key, -1);
       }
     }
-    if (isReEdit && eventWinnerIds.length > 0 && winnerTargetKeys.length > 0) {
+    if (eventWinnerIds.length > 0 && winnerTargetKeys.length > 0) {
       for (const uid of eventWinnerIds) {
         for (const key of winnerTargetKeys) addToUser(uid, key, 1);
       }
@@ -844,20 +903,22 @@ export async function POST(
         addToUser(uid, "Umfrage-Teilnahmen", -1);
       }
     }
-    // Neue Poll-Siege eintragen (multi-poll)
+    // Neue Poll-Siege eintragen (multi-poll) — ausgeschlossene User erhalten keine Ligapunkte
     for (const poll of (body.pollResults ?? [])) {
       if (!poll.label || !poll.winnerIds?.length) continue;
-      for (const uid of poll.winnerIds) addToUser(uid, poll.label, 1);
+      for (const uid of poll.winnerIds) { if (!excludedSet.has(uid)) addToUser(uid, poll.label, 1); }
     }
-    // Legacy single poll
+    // Legacy single poll (newPollWinners schließt ausgeschlossene User bereits aus)
     if (body.pollLabel && newPollWinners.length > 0) {
       for (const uid of newPollWinners) addToUser(uid, body.pollLabel, 1);
     }
 
-    // EventPoll series points: Abstimmungs-Tracking + Punkte pro Voter/Sieger
+    // EventPoll series points: Abstimmungs-Tracking + Punkte pro Voter/Sieger (ausgeschlossene User
+    // erhalten keine Ligapunkte/Rang-Punkte, bleiben aber als Abstimmende unangetastet)
     const eventVoterSet = new Set<string>(); // einmal pro Event für Umfrage-Teilnahmen
     for (const ep of eventPollRewards) {
       for (const uid of ep.voterIds) {
+        if (excludedSet.has(uid)) continue;
         // Abstimmungs-Zähler pro Umfrage
         addToUser(uid, `${ep.label}_Abstimmungen`, 1);
         eventVoterSet.add(uid);
@@ -872,6 +933,7 @@ export async function POST(
         }
       }
       for (const uid of ep.winnerIds) {
+        if (excludedSet.has(uid)) continue;
         addToUser(uid, ep.label, 1);
         if (ep.winnerRankPoints > 0) {
           addToUser(uid, `${ep.label}_Siegerpunkte`, ep.winnerRankPoints);
@@ -912,6 +974,7 @@ export async function POST(
       }
 
       for (const userId of allUserIds) {
+        if (excludedSet.has(userId)) continue; // ausgeschlossene User: Streak bleibt unangetastet, kein Bonus
         const userRow = raw[userId] ?? {};
         const streakBefore = userRow[streakKey] ?? 0;
 
@@ -964,6 +1027,14 @@ export async function POST(
       }
     }
 
+    seriesContrib = {
+      participations: newParticipations,
+      statFieldsByUser: newStatFieldsByUser,
+      transferredParticipationPoints: newTransferredParticipationPoints,
+      transferredStatPoints: newTransferredStatPoints,
+      transferredSpectatorPoints: newTransferredSpectatorPoints,
+    };
+
     updatedStandings = {
       lastUpdated: new Date().toISOString(),
       processedEventIds: existingJson.processedEventIds.includes(eventId)
@@ -1004,6 +1075,15 @@ export async function POST(
     spectatorAttendedIds:    body.spectatorAttendedIds?.length ? body.spectatorAttendedIds : null,
     finalRanking:            body.finalRanking ?? null,
     finalRankingGroups:      body.finalRankingGroups ?? null,
+    // Ausgeschlossene User (Disqualifikation) — Begründung steht in finalRankingNote
+    excludedUserIds:         excludedSet.size > 0 ? [...excludedSet] : null,
+    // Ledger der zuletzt vergebenen Beträge, für Diff-basiertes Nachbuchen/Rückbuchen bei jedem Speichern
+    rewardLedger: {
+      participationCoins: newParticipationCoins,
+      spectatorRewards:   newSpectatorRewards,
+      placementRewards:   newPlacementRewards,
+    },
+    seriesContrib:           seriesContrib,
     appliedAggregatedStats:  Object.keys(appliedAggregatedStats).length > 0 ? appliedAggregatedStats : null,
     gamePhaseComplete:       true,
     pollPhaseComplete,
