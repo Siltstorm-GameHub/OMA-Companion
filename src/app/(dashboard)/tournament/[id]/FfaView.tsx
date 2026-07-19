@@ -42,6 +42,7 @@ export default function FfaView({
   votedUserIds = [],
   externalVoters = [],
   finalRankingNote = null,
+  excludedUserIds = [],
 }: {
   matches: Match[];
   participants: Participant[];
@@ -63,7 +64,11 @@ export default function FfaView({
   externalVoters?: Participant[];
   /** Begründung für manuelle Änderungen der Endtabelle / Disqualifikation, falls vorhanden */
   finalRankingNote?: string | null;
+  /** Ausgeschlossene (disqualifizierte) User — werden mit „Ungewertet"-Badge markiert, zählen aber
+   *  weiterhin mit ihren Stats in der Tabelle */
+  excludedUserIds?: string[];
 }) {
+  const excludedSet = new Set(excludedUserIds);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const toggle = (id: string) =>
     setExpanded(prev => {
@@ -224,6 +229,11 @@ export default function FfaView({
                             </Link>
                             {r.role === "spectator" && (
                               <Eye className="w-3 h-3 text-gray-500 shrink-0" />
+                            )}
+                            {excludedSet.has(r.userId) && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-400 bg-white/5 px-1.5 py-0.5 rounded-full shrink-0">
+                                Ungewertet
+                              </span>
                             )}
                             {votedSet.has(r.userId) && (
                               <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full shrink-0">

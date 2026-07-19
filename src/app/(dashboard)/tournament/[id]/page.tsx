@@ -276,6 +276,8 @@ export default async function TournamentDetailPage({
     finalRankingGroups?: string[][] | null;
     gamePhaseComplete?: boolean;
     pollPhaseComplete?: boolean;
+    /** Aus dem Event ausgeschlossene (disqualifizierte) User — öffentlich als „Ungewertet"-Badge sichtbar */
+    excludedUserIds?: string[] | null;
   };
   const completionData: CompletionData = (() => {
     try { return event.completionData ? JSON.parse(event.completionData as string) : {}; } catch { return {}; }
@@ -290,6 +292,7 @@ export default async function TournamentDetailPage({
   const pollPhaseComplete   = completionData.pollPhaseComplete === true;
   const hasPendingPoll      = gamePhaseComplete && !pollPhaseComplete && !!pollLabel;
   const pollExcludedUserIds = new Set(completionData.pollExcludedUserIds ?? []);
+  const excludedUserIds     = new Set(completionData.excludedUserIds ?? []);
 
   // Umfragen fürs Rendern aufbereiten: Stimmenzahl, eigene Stimme, Kandidatenliste sowie das
   // Ergebnis — offiziell vom Admin bestätigt (rewardsPaid + winnerIds), sonst sobald die Umfrage
@@ -935,6 +938,11 @@ export default async function TournamentDetailPage({
                         <p className={`text-sm truncate font-medium flex items-center gap-1.5 ${isMe ? "text-rose-300" : "text-white"}`}>
                           <span className="truncate">{userName(user)}{isMe && " (du)"}</span>
                           {isSpectatorRow && <Eye className="w-3 h-3 text-gray-500 shrink-0" />}
+                          {excludedUserIds.has(user.id) && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-400 bg-white/5 px-1.5 py-0.5 rounded-full shrink-0">
+                              Ungewertet
+                            </span>
+                          )}
                           {votedUserIds.has(user.id) && (
                             <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full shrink-0">
                               <CheckCircle2 className="w-2.5 h-2.5" /> Abgestimmt
@@ -1013,6 +1021,7 @@ export default async function TournamentDetailPage({
                 participants={mergedParticipants}
                 userId={userId}
                 finalRankingNote={gamePhaseComplete ? event.finalRankingNote : null}
+                excludedUserIds={[...excludedUserIds]}
               />
             )}
             {isLiga && (
@@ -1021,6 +1030,7 @@ export default async function TournamentDetailPage({
                 participants={mergedParticipants}
                 userId={userId}
                 finalRankingNote={gamePhaseComplete ? event.finalRankingNote : null}
+                excludedUserIds={[...excludedUserIds]}
               />
             )}
             {isFfa && (
@@ -1033,6 +1043,7 @@ export default async function TournamentDetailPage({
                 userId={userId}
                 format={format}
                 finalRankingGroups={rankingGroups}
+                excludedUserIds={[...excludedUserIds]}
                 pollWinnerIds={pollWinnerIds}
                 pollLabel={pollLabel}
                 pollWinsByUser={pollWinsByUser}

@@ -52,6 +52,8 @@ export type EventCompletionData = {
     participationSeriesPoints: number;
     winnerRankPoints: number;
   }[];
+  /** Ausgeschlossene User (Disqualifikation): tragen nichts zu den Ligapunkten dieses Events bei */
+  excludedUserIds?: string[] | null;
 };
 
 export type EventPointsResult = {
@@ -71,16 +73,23 @@ export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPo
   try { cd = JSON.parse(ev.completionData); } catch { return EMPTY_RESULT; }
   if (!cd.gamePhaseComplete) return EMPTY_RESULT;
 
+  // Ausgeschlossene User (Disqualifikation, siehe EventCompleteClient) tragen nichts zu den
+  // Ligapunkten dieses Events bei — analog zur tatsächlichen Punktevergabe in
+  // /api/admin/events/[id]/complete, die für sie ebenfalls nichts gutschreibt.
+  const excludedSet = new Set(cd.excludedUserIds ?? []);
+
   const evPart: Record<string, number> = {};
   const evStats: Record<string, Record<string, number>> = {};
   const pollBonusPts: Record<string, number> = {};
 
   function addEv(uid: string, field: string, val: number) {
+    if (excludedSet.has(uid)) return;
     if (!evStats[uid]) evStats[uid] = {};
     evStats[uid][field] = (evStats[uid][field] ?? 0) + val;
   }
 
   for (const { userId: uid } of ev.registrations) {
+    if (excludedSet.has(uid)) continue;
     evPart[uid] = (evPart[uid] ?? 0) + 1;
   }
 
@@ -122,6 +131,7 @@ export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPo
   const singlePollWinners: string[] = cd.pollWinnerIds ?? (cd.pollWinnerId ? [cd.pollWinnerId] : []);
   const singlePollRankPts = cd.pollBonusRankPoints ?? 0;
   for (const uid of singlePollWinners) {
+    if (excludedSet.has(uid)) continue;
     if (singlePollRankPts > 0) pollBonusPts[uid] = (pollBonusPts[uid] ?? 0) + singlePollRankPts;
   }
 
@@ -130,6 +140,7 @@ export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPo
     const pollRankPts = poll.rankPoints ?? 0;
     if (pollRankPts <= 0) continue;
     for (const uid of poll.winnerIds ?? []) {
+      if (excludedSet.has(uid)) continue;
       pollBonusPts[uid] = (pollBonusPts[uid] ?? 0) + pollRankPts;
     }
   }
@@ -138,6 +149,7 @@ export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPo
   const eventVoterSet = new Set<string>(); // einmal pro Event zählen für Umfrage-Teilnahmen
   for (const ep of cd.eventPollRewards ?? []) {
     for (const uid of ep.voterIds ?? []) {
+      if (excludedSet.has(uid)) continue;
       addEv(uid, `${ep.label}_Abstimmungen`, 1);
       eventVoterSet.add(uid);
       if (ep.participationSeriesPoints > 0) {
@@ -146,6 +158,7 @@ export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPo
       }
     }
     for (const uid of ep.winnerIds ?? []) {
+      if (excludedSet.has(uid)) continue;
       addEv(uid, ep.label, 1);
       if (ep.winnerRankPoints > 0) {
         addEv(uid, `${ep.label}_Siegerpunkte`, ep.winnerRankPoints);

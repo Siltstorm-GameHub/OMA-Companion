@@ -144,6 +144,11 @@ export async function POST(
     /** Nachträglich/beim Abschluss ausgeschlossene User (z.B. Disqualifikation): bleiben in den Stats
      *  und Tabellen sichtbar, erhalten aber keine Münzen, Ligapunkte oder Rang-Punkte aus diesem Event. */
     excludedUserIds?: string[];
+    /** Erzwingt, dass die Umfragephase nach diesem Speichern (Status "umfrage") aktiv bleibt — auch wenn
+     *  alle zugrunde liegenden Umfragen ihr Abstimmungsfenster technisch schon überschritten haben.
+     *  Umfragen werden in diesem Durchlauf bewusst NICHT ausgewertet/ausgezahlt, damit sich an ihrem
+     *  Zustand nichts ändert; es werden nur Finale Platzierung/Begründung/Ausschluss gespeichert. */
+    keepPollOpen?: boolean;
   };
 
   const event = await prisma.event.findUnique({
@@ -596,8 +601,11 @@ export async function POST(
     }
   }
 
-  const unpaidPolls = allUnpaidPolls.filter(p => new Date(p.endAt) <= now);
-  const hasOpenEventPoll = allUnpaidPolls.some(p => new Date(p.endAt) > now);
+  // keepPollOpen: Umfragen in diesem Durchlauf bewusst nicht auswerten (auch nicht bereits technisch
+  // abgelaufene) und die Umfragephase so behandeln, als wäre noch etwas offen — nur so bleibt der
+  // Event-Status trotz "Nur Änderungen speichern"-Button zuverlässig auf "umfrage".
+  const unpaidPolls = body.keepPollOpen ? [] : allUnpaidPolls.filter(p => new Date(p.endAt) <= now);
+  const hasOpenEventPoll = body.keepPollOpen ? true : allUnpaidPolls.some(p => new Date(p.endAt) > now);
   const eventPollRewards: Array<{
     pollId: string; winnerIds: string[]; voterIds: string[];
     participationCoins: number; participationSeriesPoints: number;
