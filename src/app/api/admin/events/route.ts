@@ -24,13 +24,18 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  // Status wird aus einem bereits abgeschlossenen Zustand herausgesetzt (z.B. "finished" → "active"):
-  // ALLE vorher vergebenen Punkte/Belohnungen dieses Abschlusses rückgängig machen (inkl. Teilnahme-/
-  // Platzierungs-/Zuschauer-Basis-Belohnungen), damit sie nicht doppelt vergeben werden, wenn das
-  // Event beim nächsten Mal erneut abgeschlossen wird.
+  // Status wird aus einem bereits abgeschlossenen Zustand VOR die Spielphase zurückgesetzt (z.B.
+  // "finished"/"umfrage" → "active"/"open"): ALLE vorher vergebenen Punkte/Belohnungen dieses
+  // Abschlusses rückgängig machen (inkl. Teilnahme-/Platzierungs-/Zuschauer-Basis-Belohnungen) und
+  // completionData löschen, damit sie nicht doppelt vergeben werden, wenn das Event beim nächsten Mal
+  // erneut abgeschlossen wird.
+  // Ein Wechsel INNERHALB der bereits abgeschlossenen Zustände ("finished" <-> "umfrage") ist davon
+  // bewusst ausgenommen — die Spielphase gilt in beiden Fällen weiterhin als abgeschlossen, daher bleibt
+  // completionData (inkl. Finaler Platzierung, Begründung und Disqualifikationen) unangetastet erhalten.
   if (data.status !== undefined) {
     const current = await prisma.event.findUnique({ where: { id: eventId }, select: { status: true, completionData: true } });
-    if (current?.completionData && current.status !== data.status) {
+    const revertsPastGamePhase = data.status === "active" || data.status === "open";
+    if (current?.completionData && current.status !== data.status && revertsPastGamePhase) {
       await revertEventCompletion(eventId, { includeBaseRewards: true });
     }
   }

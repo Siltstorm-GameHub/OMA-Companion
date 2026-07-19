@@ -398,6 +398,7 @@ export default function EventCompleteClient({
           participationCoins:      seriesId ? undefined : rewardsConfig.participationCoins,
           placements:              rewardsConfig.placements,
           closeOpenPolls:          keepPollOpen ? false : (isPollOnly ? isAdmin : undefined),
+          keepPollOpen:            keepPollOpen || undefined,
         }),
       });
       if (!res.ok) {

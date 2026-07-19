@@ -20,13 +20,17 @@ export default function RoundRobinView({
   participants,
   userId,
   finalRankingNote = null,
+  excludedUserIds = [],
 }: {
   matches: Match[];
   participants: Participant[];
   userId: string;
   /** Begründung für manuelle Änderungen der Tabelle / Disqualifikation, falls vorhanden */
   finalRankingNote?: string | null;
+  /** Ausgeschlossene (disqualifizierte) User — werden mit „Ungewertet"-Badge markiert */
+  excludedUserIds?: string[];
 }) {
+  const excludedSet = new Set(excludedUserIds);
   // ── Standings berechnen ──────────────────────────────────────────────
   type Standing = { userId: string; user: User; w: number; l: number; pts: number; scored: number; conceded: number };
   const standings = new Map<string, Standing>();
@@ -114,6 +118,11 @@ export default function RoundRobinView({
                           {uname(s.user)}{isMe && " (du)"}
                         </span>
                       </Link>
+                      {excludedSet.has(s.userId) && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-400 bg-white/5 px-1.5 py-0.5 rounded-full shrink-0 ml-2">
+                          Ungewertet
+                        </span>
+                      )}
                     </td>
                     <td className="px-3 py-3 text-center text-emerald-400 font-semibold">{s.w}</td>
                     <td className="px-3 py-3 text-center text-gray-500">{s.l}</td>

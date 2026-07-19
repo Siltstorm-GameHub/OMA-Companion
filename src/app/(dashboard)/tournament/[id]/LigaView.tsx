@@ -84,13 +84,17 @@ export default function LigaView({
   participants,
   userId,
   finalRankingNote = null,
+  excludedUserIds = [],
 }: {
   matches: Match[];
   participants: Participant[];
   userId: string;
   /** Begründung für manuelle Änderungen der Tabelle / Disqualifikation, falls vorhanden */
   finalRankingNote?: string | null;
+  /** Ausgeschlossene (disqualifizierte) User — werden mit „Ungewertet"-Badge markiert */
+  excludedUserIds?: string[];
 }) {
+  const excludedSet = new Set(excludedUserIds);
   const standings = buildStandings(participants, matches);
   const findUser  = (id: string | null) => id ? participants.find(p => p.userId === id)?.user : null;
 
@@ -149,6 +153,11 @@ export default function LigaView({
                           {uname(s.user)}{isMe && " (du)"}
                         </span>
                       </Link>
+                      {excludedSet.has(s.userId) && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-400 bg-white/5 px-1.5 py-0.5 rounded-full shrink-0 ml-2">
+                          Ungewertet
+                        </span>
+                      )}
                     </td>
                     <td className="px-2 py-3 text-center text-gray-500 tabular-nums">{s.played}</td>
                     <td className="px-2 py-3 text-center text-emerald-400 font-semibold tabular-nums">{s.w}</td>
