@@ -382,7 +382,10 @@ export default function EventCompleteClient({
           winnerStatField:         isAvgFormat ? undefined : (winnerStatField || undefined),
           avgWinnerDirection:      isAvgFormat ? avgDirection : undefined,
           seriesWinnerTargetField: seriesWinnerTargetField || undefined,
-          pollWinnerIds:           !pollOnly && pollConfig.enabled && hasPollVotes ? pollWinners : undefined,
+          // keepPollOpen: Legacy-Umfrage-Sieger bewusst nicht mitschicken — sonst würde das Übermitteln
+          // von pollWinnerIds die Umfrage server-seitig sofort auflösen und das Event unabhängig vom
+          // closeOpenPolls-Flag doch abschließen (siehe route.ts: legacyPollResolved).
+          pollWinnerIds:           !pollOnly && !keepPollOpen && pollConfig.enabled && hasPollVotes ? pollWinners : undefined,
           pollLabel:               pollConfig.enabled ? pollConfig.question : undefined,
           pollBonusCoins:          pollConfig.enabled ? pollConfig.coins : undefined,
           pollBonusRankPoints:     pollConfig.enabled ? pollConfig.rankPoints : undefined,
