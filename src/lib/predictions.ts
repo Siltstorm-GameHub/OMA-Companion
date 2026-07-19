@@ -79,18 +79,17 @@ function computeSidePotPayouts(
  * vollständig rückgängig (Auszahlung zurückbuchen, Streak-Zustand wiederherstellen) und wertet dann
  * mit dem neuen Sieger neu aus.
  */
-export async function resolveEventPredictions(eventId: string, winnerUserId: string | null) {
-  const allPredictions = await prisma.eventWinnerPrediction.findMany({ where: { eventId } });
-  if (allPredictions.length === 0) return;
+/**
+ * Macht eine evtl. vorherige Auflösung der Gesamtsieger-Vorhersagen eines Events rückgängig: bereits
+ * ausgezahlte Pott-Gewinne werden zurückgebucht, der Streak-Zustand auf den Snapshot vor der Auflösung
+ * zurückgesetzt, und die Tipps wieder als unaufgelöst (resolved: false) markiert. Wird sowohl von
+ * resolveEventPredictions() (vor einer Neu-Auflösung) als auch beim Zurücksetzen des Event-Status vor
+ * die Spielphase genutzt (siehe revertEventCompletion) — dort bleiben die Tipps danach bewusst
+ * unaufgelöst stehen (kein `correct: false`), da der Sieger schlicht wieder offen ist, nicht falsch.
+ */
+export async function rollbackResolvedPredictions(eventId: string) {
+  const alreadyResolved = await prisma.eventWinnerPrediction.findMany({ where: { eventId, resolved: true } });
 
-  const event = await prisma.event.findUnique({
-    where:  { id: eventId },
-    select: { hidden: true, series: { select: { hidden: true } } },
-  });
-  const notifyParticipants = !!event && !isEventHidden(event);
-
-  // ── Schritt 1: eine evtl. vorherige Auflösung rückgängig machen ─────────────
-  const alreadyResolved = allPredictions.filter(p => p.resolved);
   for (const prediction of alreadyResolved) {
     const txns = [];
 
@@ -132,6 +131,20 @@ export async function resolveEventPredictions(eventId: string, winnerUserId: str
 
     await prisma.$transaction(txns);
   }
+}
+
+export async function resolveEventPredictions(eventId: string, winnerUserId: string | null) {
+  const allPredictions = await prisma.eventWinnerPrediction.findMany({ where: { eventId } });
+  if (allPredictions.length === 0) return;
+
+  const event = await prisma.event.findUnique({
+    where:  { id: eventId },
+    select: { hidden: true, series: { select: { hidden: true } } },
+  });
+  const notifyParticipants = !!event && !isEventHidden(event);
+
+  // ── Schritt 1: eine evtl. vorherige Auflösung rückgängig machen ─────────────
+  await rollbackResolvedPredictions(eventId);
 
   // ── Schritt 2: frische Auflösung mit dem (neuen) Sieger ─────────────────────
   const predictions = await prisma.eventWinnerPrediction.findMany({ where: { eventId } });
