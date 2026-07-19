@@ -57,13 +57,19 @@ export type EventCompletionData = {
 };
 
 export type EventPointsResult = {
-  /** Gesamte Ligapunkte, die dieses Event je User beigesteuert hat (Teilnahme + Stats + Umfragen) */
+  /** Gesamte Ligapunkte, die dieses Event je User beigesteuert hat (Teilnahme + Stats + Umfragen) —
+   *  für ausgeschlossene User immer 0, siehe excludedFromPointsUserIds */
   pointsByUser: Record<string, number>;
   participationsByUser: Record<string, number>;
   statsByUser: Record<string, Record<string, number>>;
+  /** User, die für dieses Event ausgeschlossen (disqualifiziert) wurden: ihre Teilnahme/Stats werden
+   *  weiterhin oben getrackt (participationsByUser/statsByUser), tragen aber keine Ligapunkte bei. */
+  excludedFromPointsUserIds: string[];
 };
 
-const EMPTY_RESULT: EventPointsResult = { pointsByUser: {}, participationsByUser: {}, statsByUser: {} };
+const EMPTY_RESULT: EventPointsResult = {
+  pointsByUser: {}, participationsByUser: {}, statsByUser: {}, excludedFromPointsUserIds: [],
+};
 
 /** Berechnet die Ligapunkte-Beiträge eines einzelnen Events. Liefert leere Maps, solange die
  *  Spielphase des Events noch nicht abgeschlossen ist (gamePhaseComplete). */
@@ -73,9 +79,11 @@ export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPo
   try { cd = JSON.parse(ev.completionData); } catch { return EMPTY_RESULT; }
   if (!cd.gamePhaseComplete) return EMPTY_RESULT;
 
-  // Ausgeschlossene User (Disqualifikation, siehe EventCompleteClient) tragen nichts zu den
-  // Ligapunkten dieses Events bei — analog zur tatsächlichen Punktevergabe in
-  // /api/admin/events/[id]/complete, die für sie ebenfalls nichts gutschreibt.
+  // Ausgeschlossene User (Disqualifikation, siehe EventCompleteClient): ihre Teilnahme und Stats
+  // werden weiterhin normal getrackt (sichtbar in der Gesamttabelle der Reihe), sie erhalten aus
+  // diesem Event aber keine Ligapunkte (weder aus Teilnahme/Stats noch aus Umfrage-/MVP-/Sieger-
+  // Boni) — analog zur tatsächlichen Münzen-/Rang-Punkte-Vergabe in /api/admin/events/[id]/complete,
+  // die für sie ebenfalls nichts gutschreibt.
   const excludedSet = new Set(cd.excludedUserIds ?? []);
 
   const evPart: Record<string, number> = {};
@@ -83,13 +91,11 @@ export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPo
   const pollBonusPts: Record<string, number> = {};
 
   function addEv(uid: string, field: string, val: number) {
-    if (excludedSet.has(uid)) return;
     if (!evStats[uid]) evStats[uid] = {};
     evStats[uid][field] = (evStats[uid][field] ?? 0) + val;
   }
 
   for (const { userId: uid } of ev.registrations) {
-    if (excludedSet.has(uid)) continue;
     evPart[uid] = (evPart[uid] ?? 0) + 1;
   }
 
@@ -116,10 +122,13 @@ export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPo
     }
   }
 
-  if (cd.mvpUserId && cfg.mvpStatField) {
+  // MVP-/Sieger-/Umfrage-Boni sind Auszeichnungen (keine rohen Stats) — ausgeschlossene User erhalten
+  // sie nicht. Für MVP/Sieger ist das i.d.R. ohnehin ausgeschlossen (Admin kann keinen ausgeschlossenen
+  // User als Sieger/MVP wählen), hier als Absicherung nochmals geprüft.
+  if (cd.mvpUserId && cfg.mvpStatField && !excludedSet.has(cd.mvpUserId)) {
     addEv(cd.mvpUserId, cfg.mvpStatField, 1);
   }
-  const winnerIds = cd.eventWinnerIds ?? (cd.eventWinnerId ? [cd.eventWinnerId] : []);
+  const winnerIds = (cd.eventWinnerIds ?? (cd.eventWinnerId ? [cd.eventWinnerId] : [])).filter(uid => !excludedSet.has(uid));
   const winnerTargetKeys = resolveWinnerTargetKeys(cfg, cd.seriesWinnerTargetField);
   if (winnerIds.length > 0 && winnerTargetKeys.length > 0) {
     for (const uid of winnerIds) {
@@ -145,22 +154,21 @@ export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPo
     }
   }
 
-  // DB-basierte EventPoll-Belohnungen: Abstimmungs-Tracking + Ligapunkte
-  const eventVoterSet = new Set<string>(); // einmal pro Event zählen für Umfrage-Teilnahmen
+  // DB-basierte EventPoll-Belohnungen: Abstimmungs-Tracking + Ligapunkte (Abstimmungs-Zähler selbst
+  // bleiben auch für ausgeschlossene User als Stat sichtbar, nur die Punkte-Boni werden ausgelassen)
+  const eventVoterSet = new Set<string>(); // einmal pro Event für Umfrage-Teilnahmen
   for (const ep of cd.eventPollRewards ?? []) {
     for (const uid of ep.voterIds ?? []) {
-      if (excludedSet.has(uid)) continue;
       addEv(uid, `${ep.label}_Abstimmungen`, 1);
       eventVoterSet.add(uid);
-      if (ep.participationSeriesPoints > 0) {
+      if (ep.participationSeriesPoints > 0 && !excludedSet.has(uid)) {
         addEv(uid, `${ep.label}_Teilnahmepunkte`, ep.participationSeriesPoints);
         pollBonusPts[uid] = (pollBonusPts[uid] ?? 0) + ep.participationSeriesPoints;
       }
     }
     for (const uid of ep.winnerIds ?? []) {
-      if (excludedSet.has(uid)) continue;
       addEv(uid, ep.label, 1);
-      if (ep.winnerRankPoints > 0) {
+      if (ep.winnerRankPoints > 0 && !excludedSet.has(uid)) {
         addEv(uid, `${ep.label}_Siegerpunkte`, ep.winnerRankPoints);
         pollBonusPts[uid] = (pollBonusPts[uid] ?? 0) + ep.winnerRankPoints;
       }
@@ -174,6 +182,7 @@ export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPo
   const allUids = new Set([...Object.keys(evPart), ...Object.keys(evStats), ...Object.keys(pollBonusPts)]);
   const pointsByUser: Record<string, number> = {};
   for (const uid of allUids) {
+    if (excludedSet.has(uid)) { pointsByUser[uid] = 0; continue; }
     const part = evPart[uid] ?? 0;
     const es = evStats[uid] ?? {};
     let pts = part * cfg.participationPoints + (pollBonusPts[uid] ?? 0);
@@ -183,5 +192,8 @@ export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPo
     pointsByUser[uid] = pts;
   }
 
-  return { pointsByUser, participationsByUser: evPart, statsByUser: evStats };
+  return {
+    pointsByUser, participationsByUser: evPart, statsByUser: evStats,
+    excludedFromPointsUserIds: [...excludedSet].filter(uid => allUids.has(uid)),
+  };
 }
