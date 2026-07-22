@@ -17,6 +17,7 @@ import SeriesEventList, { type SeriesEventItem } from "./SeriesEventList";
 import FullStandingsToggle from "./FullStandingsToggle";
 import type { DeltaInfo } from "./SeriesStandingsTable";
 import { computeEventPoints, type StatConfig } from "@/lib/series-event-points";
+import { getEventEndedAt, isRecentlyFinished } from "@/lib/event-completion";
 
 type ArchivedSeason = {
   id: string; name: string; status: string; seasonNumber: number | null;
@@ -411,9 +412,13 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
   const openEvents:     SeriesEventItem[] = eventsWithUsers
     .filter(e => e.status === "open")
     .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
-  const finishedEvents: SeriesEventItem[] = eventsWithUsers
+  const finishedEventsAll = eventsWithUsers
     .filter(e => e.status === "finished")
-    .sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime());
+    .sort((a, b) => getEventEndedAt(b).getTime() - getEventEndedAt(a).getTime());
+  // Kürzlich beendete Events bleiben eine Zeit lang oben bei den anstehenden Events sichtbar,
+  // bevor sie in die eingeklappten "Vergangenen Events" wandern.
+  const recentlyFinishedEvents: SeriesEventItem[] = finishedEventsAll.filter(e => isRecentlyFinished(e));
+  const finishedEvents: SeriesEventItem[] = finishedEventsAll.filter(e => !isRecentlyFinished(e));
 
   // ── Punktesystem ──────────────────────────────────────────────────────────
   const punkteItems: { emoji: string; label: string; pts: string; who: string }[] = [];
@@ -696,6 +701,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
           <SeriesEventList
             activeEvents={activeEvents.slice(0, 5)}
             openEvents={openEvents.slice(0, Math.max(0, 5 - activeEvents.length))}
+            recentlyFinishedEvents={recentlyFinishedEvents}
             finishedEvents={finishedEvents}
             userId={userId ?? ""}
             fixedGame={series.fixedGame}

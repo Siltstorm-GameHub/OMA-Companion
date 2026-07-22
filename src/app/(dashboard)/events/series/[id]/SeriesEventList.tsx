@@ -156,14 +156,18 @@ function EventCard({ ev, userId, fixedGame }: { ev: SeriesEventItem; userId: str
 interface Props {
   activeEvents: SeriesEventItem[];
   openEvents: SeriesEventItem[];
+  recentlyFinishedEvents?: SeriesEventItem[];
   finishedEvents: SeriesEventItem[];
   userId: string;
   fixedGame?: string | null;
 }
 
-export default function SeriesEventList({ activeEvents, openEvents, finishedEvents, userId, fixedGame }: Props) {
+export default function SeriesEventList({ activeEvents, openEvents, recentlyFinishedEvents = [], finishedEvents, userId, fixedGame }: Props) {
   const [pastOpen, setPastOpen] = useState(false);
-  const upcoming = [...activeEvents, ...openEvents];
+  // Kürzlich beendete Events bleiben eine Zeit lang oben bei den anstehenden sichtbar
+  // (siehe RECENTLY_FINISHED_MS in @/lib/event-completion), bevor sie in den
+  // eingeklappten "Vergangene Events"-Bereich wandern.
+  const upcoming = [...activeEvents, ...openEvents, ...recentlyFinishedEvents];
   const hasAny = upcoming.length > 0 || finishedEvents.length > 0;
 
   return (
