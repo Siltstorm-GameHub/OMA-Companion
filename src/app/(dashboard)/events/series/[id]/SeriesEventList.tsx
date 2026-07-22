@@ -167,7 +167,7 @@ export default function SeriesEventList({ activeEvents, openEvents, recentlyFini
   // Kürzlich beendete Events bleiben eine Zeit lang oben bei den anstehenden sichtbar
   // (siehe RECENTLY_FINISHED_MS in @/lib/event-completion), bevor sie in den
   // eingeklappten "Vergangene Events"-Bereich wandern.
-  const upcoming = [...activeEvents, ...openEvents, ...recentlyFinishedEvents];
+  const upcoming = [...recentlyFinishedEvents, ...activeEvents, ...openEvents];
   const hasAny = upcoming.length > 0 || finishedEvents.length > 0;
 
   return (
