@@ -143,6 +143,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.id        = user.id;
           token.discordId = discordId;
         }
+
+        // ── Login-Zeitstempel setzen (jeder echte Login, nicht jeder Token-Refresh) ──
+        if (token.id) {
+          await prisma.user.update({
+            where: { id: token.id as string },
+            data:  { lastLoginAt: new Date() },
+          }).catch(() => {});
+        }
       } else if (user) {
         // Anderer Provider (falls je hinzugefügt)
         token.id = user.id;

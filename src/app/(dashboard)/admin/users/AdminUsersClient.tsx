@@ -19,7 +19,16 @@ interface UserRow {
   points: number;
   discordId: string | null;
   hasLogin: boolean;
+  lastLoginAt: string | null;
   eventCount: number;
+}
+
+function formatLastLogin(iso: string | null): string {
+  if (!iso) return "–";
+  return new Date(iso).toLocaleString("de-DE", {
+    day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
 }
 
 interface Props {
@@ -95,6 +104,9 @@ export default function AdminUsersClient({ users, loginCount, noLoginCount, firs
                     <span>Münzen: <span className="text-white font-medium tabular-nums">{user.points.toLocaleString("de-DE")}</span></span>
                     <span>Events: <span className="text-gray-400 tabular-nums">{user.eventCount}</span></span>
                   </div>
+                  <div className="text-xs text-gray-500">
+                    Letzter Login: <span className="text-gray-400">{formatLastLogin(user.lastLoginAt)}</span>
+                  </div>
 
                   <div className="flex items-center gap-2">
                     <Select
@@ -130,6 +142,7 @@ export default function AdminUsersClient({ users, loginCount, noLoginCount, firs
               <th className="text-left px-4 py-3 font-medium">Nutzer</th>
               <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Discord ID</th>
               <th className="text-center px-4 py-3 font-medium">Status</th>
+              <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">Letzter Login</th>
               <th className="text-left px-4 py-3 font-medium">Rolle</th>
               <th className="text-center px-4 py-3 font-medium">Münzen</th>
               <th className="text-center px-4 py-3 font-medium hidden sm:table-cell">Events</th>
@@ -144,7 +157,7 @@ export default function AdminUsersClient({ users, loginCount, noLoginCount, firs
                 <>
                   {isFirstNoLogin && (
                     <tr key="divider">
-                      <td colSpan={7} className="px-4 py-2 bg-white/[0.02]">
+                      <td colSpan={8} className="px-4 py-2 bg-white/[0.02]">
                         <div className="flex items-center gap-2 text-[10px] text-gray-600 uppercase tracking-widest">
                           <UserX className="w-3 h-3" />
                           Noch nicht eingeloggt — {noLoginCount} Mitglieder
@@ -189,6 +202,11 @@ export default function AdminUsersClient({ users, loginCount, noLoginCount, firs
                       ) : (
                         <Badge tone="neutral" icon={<UserX className="w-3 h-3" />}>Ausstehend</Badge>
                       )}
+                    </td>
+
+                    {/* Letzter Login */}
+                    <td className="px-4 py-3 hidden lg:table-cell">
+                      <span className="text-xs text-gray-500">{formatLastLogin(user.lastLoginAt)}</span>
                     </td>
 
                     {/* Rolle */}

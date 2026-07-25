@@ -12,7 +12,7 @@ export default async function AdminUsersPage() {
     select: {
       id: true, name: true, username: true, email: true,
       image: true, role: true, points: true,
-      discordId: true, createdAt: true,
+      discordId: true, createdAt: true, lastLoginAt: true,
       _count: { select: { eventRegistrations: true } },
       // Nur prüfen ob irgendein Account existiert (kein access_token laden)
       accounts: { select: { id: true }, take: 1 },
@@ -44,6 +44,7 @@ export default async function AdminUsersPage() {
     points:     u.points,
     discordId:  u.discordId,
     hasLogin:   hasLogin(u),
+    lastLoginAt: u.lastLoginAt ? u.lastLoginAt.toISOString() : null,
     eventCount: u._count.eventRegistrations,
   }));
 
