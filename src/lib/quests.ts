@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 import { dispatchNotification } from "./notify-dispatch";
+import { sendDiscordDM } from "./discord-rest";
 
 // TOURNAMENT ist aus dem aktiven Rotationspool entfernt (Turniere laufen inzwischen vollständig
 // über Events → EVENT_ATTEND), bleibt aber im Union-Typ für die History-Anzeige alter Quests.
@@ -88,6 +89,23 @@ async function notifyNewQuests(month: number, year: number, quests: { title: str
   });
 }
 
+/** Warnt Admins per Discord-DM, wenn Quests nicht durch den Monatsanfangs-Cron, sondern
+ * verspätet durch den Lazy-Fallback erzeugt wurden (Hinweis auf einen ausgefallenen Cron-Lauf). */
+async function warnLateGeneration(month: number, year: number, day: number) {
+  const admins = await prisma.user.findMany({
+    where:  { role: "admin", discordId: { not: null } },
+    select: { discordId: true },
+  });
+  const embed = {
+    title: "⚠️ Quests verspätet generiert",
+    description:
+      `Die Quests für ${MONTH_NAMES[month - 1]} ${year} wurden erst am ${day}. des Monats erzeugt, ` +
+      `nicht am 1. Das deutet darauf hin, dass der monatliche Cron-Job (\`/api/cron/monthly-quests\`) nicht gelaufen ist.`,
+    color: 0xf59e0b,
+  };
+  await Promise.allSettled(admins.map((a) => sendDiscordDM(a.discordId!, embed)));
+}
+
 /** Generates exactly 3 quests for the month. Returns null if already generated. */
 export async function generateMonthlyQuests(month: number, year: number) {
   const existing = await prisma.quest.findFirst({ where: { month, year } });
@@ -116,6 +134,11 @@ export async function generateMonthlyQuests(month: number, year: number) {
   );
 
   notifyNewQuests(month, year, created).catch(() => {});
+
+  const today = new Date();
+  if (today.getFullYear() === year && today.getMonth() + 1 === month && today.getDate() > 2) {
+    warnLateGeneration(month, year, today.getDate()).catch(() => {});
+  }
 
   return created;
 }
