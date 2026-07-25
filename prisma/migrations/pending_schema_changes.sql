@@ -165,3 +165,9 @@ CREATE TABLE IF NOT EXISTS "DailyPollVote" (
 
 ALTER TABLE "DailyPoll" ADD COLUMN IF NOT EXISTS "freeTextGameMode" BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE "DailyPollVote" ADD COLUMN IF NOT EXISTS "freeTextGames" TEXT;
+
+-- ═══════════════════════════════════════════════════════════════
+-- Admin "Nutzer & Rollen": letzter Login-Zeitpunkt
+-- ═══════════════════════════════════════════════════════════════
+
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "lastLoginAt" TIMESTAMP(3);
