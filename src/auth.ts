@@ -144,13 +144,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.discordId = discordId;
         }
 
-        // ── Login-Zeitstempel setzen (jeder echte Login, nicht jeder Token-Refresh) ──
-        if (token.id) {
-          await prisma.user.update({
-            where: { id: token.id as string },
-            data:  { lastLoginAt: new Date() },
-          }).catch(() => {});
-        }
       } else if (user) {
         // Anderer Provider (falls je hinzugefügt)
         token.id = user.id;
@@ -174,6 +167,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // Fire-and-forget badge check on every login (only first time per earned badge matters)
       if (token.id && user) {
         checkAndAwardBadges(token.id as string).catch(() => {});
+      }
+
+      // ── Aktivitäts-Zeitstempel (unabhängig von Login) ─────────────────────
+      // jwt-Callback läuft bei jedem Session-Zugriff, nicht nur beim Login.
+      // Throttle auf alle 30min pro Token, um nicht bei jedem Request zu schreiben.
+      if (token.id) {
+        const lastSync = token.lastActivitySync as number | undefined;
+        const now = Date.now();
+        if (!lastSync || now - lastSync > 30 * 60 * 1000) {
+          await prisma.user.update({
+            where: { id: token.id as string },
+            data:  { lastLoginAt: new Date() },
+          }).catch(() => {});
+          token.lastActivitySync = now;
+        }
       }
 
       return token;
