@@ -105,7 +105,7 @@ export default function AdminUsersClient({ users, loginCount, noLoginCount, firs
                     <span>Events: <span className="text-gray-400 tabular-nums">{user.eventCount}</span></span>
                   </div>
                   <div className="text-xs text-gray-500">
-                    Letzter Login: <span className="text-gray-400">{formatLastLogin(user.lastLoginAt)}</span>
+                    Zuletzt aktiv: <span className="text-gray-400">{formatLastLogin(user.lastLoginAt)}</span>
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -142,7 +142,7 @@ export default function AdminUsersClient({ users, loginCount, noLoginCount, firs
               <th className="text-left px-4 py-3 font-medium">Nutzer</th>
               <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Discord ID</th>
               <th className="text-center px-4 py-3 font-medium">Status</th>
-              <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">Letzter Login</th>
+              <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">Zuletzt aktiv</th>
               <th className="text-left px-4 py-3 font-medium">Rolle</th>
               <th className="text-center px-4 py-3 font-medium">Münzen</th>
               <th className="text-center px-4 py-3 font-medium hidden sm:table-cell">Events</th>
@@ -204,7 +204,7 @@ export default function AdminUsersClient({ users, loginCount, noLoginCount, firs
                       )}
                     </td>
 
-                    {/* Letzter Login */}
+                    {/* Zuletzt aktiv */}
                     <td className="px-4 py-3 hidden lg:table-cell">
                       <span className="text-xs text-gray-500">{formatLastLogin(user.lastLoginAt)}</span>
                     </td>
