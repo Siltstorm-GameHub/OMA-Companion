@@ -195,6 +195,7 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
   const [status, setStatus]           = useState<string>(event.status);
   const [title, setTitle]             = useState<string>(event.title);
   const [description, setDescription] = useState<string>(event.description ?? "");
+  const [rules, setRules]             = useState<string>(event.rules ?? "");
   const [game, setGame]               = useState<string>(event.game ?? "");
   const [genre, setGenre]             = useState<EventGenre | null>(event.genre ?? null);
   const [category, setCategory]       = useState<EventCategory>(event.category ?? "casual");
@@ -345,6 +346,7 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
         status,
         title,
         description: description || null,
+        rules: rules || null,
         game: game.trim() || null,
         genre: genre || null,
         category,
@@ -717,6 +719,13 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
             <label className={labelCls}>Beschreibung</label>
             <textarea value={description} onChange={e => setDescription(e.target.value)}
               rows={3} placeholder="Wird auch in Discord angezeigt"
+              className={`${inputCls} resize-none`} />
+          </div>
+
+          <div>
+            <label className={labelCls}>Regelwerk</label>
+            <textarea value={rules} onChange={e => setRules(e.target.value)}
+              rows={4} placeholder="Wird Usern über dem Punktesystem angezeigt"
               className={`${inputCls} resize-none`} />
           </div>
 

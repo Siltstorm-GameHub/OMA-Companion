@@ -193,6 +193,7 @@ export default function SeriesDetailClient({ series, allUsers, hasActiveSibling 
   // Basic
   const [name, setName]               = useState<string>(series.name);
   const [description, setDescription] = useState<string>(series.description ?? "");
+  const [rules, setRules]             = useState<string>(series.rules ?? "");
   const [icon, setIcon]               = useState<string>(series.icon ?? "");
   const seriesColor = resolveSeriesColor(icon);
 
@@ -313,6 +314,7 @@ export default function SeriesDetailClient({ series, allUsers, hasActiveSibling 
         seriesId: series.id,
         name:                 name.trim() || series.name,
         description:          description.trim() || null,
+        rules:                rules.trim() || null,
         icon:                 icon || null,
         category:             category || null,
         fixedGame:            fixedGame.trim() || null,
@@ -480,6 +482,12 @@ export default function SeriesDetailClient({ series, allUsers, hasActiveSibling 
             value={description} onChange={e => setDescription(e.target.value)}
             className="text-sm text-gray-500 bg-transparent border-b border-transparent hover:border-white/10 focus:border-teal-500/30 outline-none transition-colors w-full max-w-lg"
             placeholder="Beschreibung hinzufügen…"
+          />
+          <textarea
+            value={rules} onChange={e => setRules(e.target.value)}
+            rows={3}
+            className="mt-2 w-full max-w-lg text-sm text-gray-400 bg-transparent border rounded-lg px-2.5 py-2 outline-none transition-colors resize-none border-white/[0.08] hover:border-white/20 focus:border-teal-500/40"
+            placeholder="Regelwerk (wird Usern über dem Punktesystem angezeigt)…"
           />
           </div>
         </div>

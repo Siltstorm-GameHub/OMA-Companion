@@ -4,7 +4,7 @@ import { getSessionUser } from "@/lib/roles";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Users, Clock, Swords, StickyNote, Vote, Tv2, Eye, EyeOff, Clapperboard, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Users, Clock, Swords, StickyNote, Vote, Tv2, Eye, EyeOff, Clapperboard, CheckCircle2, ScrollText } from "lucide-react";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import SeriesIcon from "@/components/SeriesIcon";
 import WinIcon from "@/components/WinIcon";
@@ -495,6 +495,16 @@ export default async function TournamentDetailPage({
           <p className="text-sm text-rose-300">
             <span className="font-semibold">Ausgeblendet</span> — {event.series?.hidden ? "die Eventreihe" : "dieses Event"} ist für normale Nutzer nicht sichtbar. Nur Admins/Mods können diese Seite über den Link aufrufen.
           </p>
+        </div>
+      )}
+
+      {/* ── Regelwerk (über dem Punktesystem) ─────────────────────────────── */}
+      {event.rules && (
+        <div className="glass rounded-2xl p-5 mb-5">
+          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+            <ScrollText className="w-3.5 h-3.5 text-teal-400" /> Regelwerk
+          </h2>
+          <p className="text-sm text-gray-400 leading-relaxed whitespace-pre-line">{event.rules}</p>
         </div>
       )}
 

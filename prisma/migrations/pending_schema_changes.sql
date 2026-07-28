@@ -171,3 +171,10 @@ ALTER TABLE "DailyPollVote" ADD COLUMN IF NOT EXISTS "freeTextGames" TEXT;
 -- ═══════════════════════════════════════════════════════════════
 
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "lastLoginAt" TIMESTAMP(3);
+
+-- ═══════════════════════════════════════════════════════════════
+-- Event / EventSeries: Regelwerk (wird Usern über dem Punktesystem angezeigt)
+-- ═══════════════════════════════════════════════════════════════
+
+ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "rules" TEXT;
+ALTER TABLE "EventSeries" ADD COLUMN IF NOT EXISTS "rules" TEXT;
