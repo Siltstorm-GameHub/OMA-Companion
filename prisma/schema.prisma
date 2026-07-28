@@ -179,6 +179,7 @@ model EventSeries {
   id                    String        @id @default(cuid())
   name                  String
   description           String?
+  rules                 String? // Regelwerk, wird Usern über dem Punktesystem angezeigt
   icon                  String? // Lucide-Icon-Name (aus src/lib/series-icons.ts), Fallback: Repeat
   fixedGame             String? // Wenn gesetzt: alle Events der Reihe nutzen dieses Spiel
   fixedFormat           String? // Wenn gesetzt: alle Turniere der Reihe nutzen dieses Format
@@ -217,6 +218,7 @@ model Event {
   id                  String        @id @default(cuid())
   title               String
   description         String?
+  rules               String? // Regelwerk, wird Usern über dem Punktesystem angezeigt
   game                String?
   genre               EventGenre?
   category            EventCategory @default(casual)
