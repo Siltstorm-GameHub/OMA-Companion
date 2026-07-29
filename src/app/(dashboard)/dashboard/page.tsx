@@ -31,12 +31,6 @@ import { HeroStatValue } from "@/components/HeroStatValue";
 import { computeStatStandings, type StatConfig, type LegacyStandingRow } from "@/lib/series-event-points";
 import GameserverWidget from "./GameserverWidget";
 
-const STATUS_CONFIG: Record<string, { label: string; cls: string; dot: string }> = {
-  open:   { label: "Offen", cls: "text-teal-400 bg-teal-500/10 border border-teal-500/15",          dot: "bg-teal-400" },
-  active: { label: "Läuft", cls: "text-emerald-400 bg-emerald-500/10 border border-emerald-500/15", dot: "bg-emerald-400 animate-pulse" },
-  closed: { label: "Voll",  cls: "text-amber-400 bg-amber-500/10 border border-amber-500/15",       dot: "bg-amber-400" },
-};
-
 const MONTH_NAMES = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
 
 const ROLE_STYLE: Record<string, string> = {
@@ -57,7 +51,7 @@ const getGlobalDashboardData = unstable_cache(
       prisma.eventSeries.findMany({
         where: { hidden: false, events: { some: { status: { in: ["open", "active", "closed"] } } } },
         select: {
-          id: true, name: true, icon: true, fixedGame: true,
+          id: true, name: true, icon: true, fixedGame: true, category: true,
           seriesStatConfig: true, legacyStandings: true,
           events: {
             orderBy: { startAt: "asc" },
@@ -127,7 +121,7 @@ const getGlobalDashboardData = unstable_cache(
       }
 
       return {
-        id: series.id, name: series.name, icon: series.icon, fixedGame: series.fixedGame,
+        id: series.id, name: series.name, icon: series.icon, fixedGame: series.fixedGame, category: series.category,
         finishedCount, totalCount, leaderUserId, leaderPoints,
         nextEvent: nextEv ? {
           startAt: nextEv.startAt, status: nextEv.status, game: nextEv.game,
@@ -695,7 +689,6 @@ export default async function DashboardPage() {
               ) : activeSeries.map(series => {
                 const nextEv   = series.nextEvent;
                 const nextDate = nextEv ? new Date(nextEv.startAt) : null;
-                const s = nextEv ? STATUS_CONFIG[nextEv.status] : null;
                 const seriesColor = resolveSeriesColor(series.icon);
                 const game = nextEv?.game ?? series.fixedGame;
                 const isRegistered = !!(userId && nextEv?.registeredUserIds.includes(userId));
@@ -741,12 +734,7 @@ export default async function DashboardPage() {
                         )}
                       </p>
                     </div>
-                    {s && (
-                      <span className={`flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full font-medium border shrink-0 ${s.cls}`}>
-                        <span className={`w-1 h-1 rounded-full ${s.dot}`} />
-                        {s.label}
-                      </span>
-                    )}
+                    <EventCategoryBadge category={series.category} className="shrink-0" />
                     <ChevronRight className="w-3.5 h-3.5 text-gray-700 shrink-0 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" />
                   </Link>
                 );
