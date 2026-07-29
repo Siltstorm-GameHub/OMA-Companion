@@ -111,6 +111,12 @@ export async function POST(req: NextRequest) {
 
   await createPollsForEvent(event.id, event.startAt, pollsConfigJson);
 
+  let participationCoins = 10;
+  try {
+    const parsedRewards = rewardsData ? JSON.parse(rewardsData) as { participationCoins?: number } : null;
+    if (parsedRewards?.participationCoins != null) participationCoins = parsedRewards.participationCoins;
+  } catch { /* skip */ }
+
   // Discord Scheduled Event automatisch anlegen
   const discordEventId = await createDiscordScheduledEvent({
     title,
@@ -134,7 +140,7 @@ export async function POST(req: NextRequest) {
     genre:            event.genre,
     startAt:          event.startAt,
     maxPlayers:       event.maxPlayers,
-    pointReward:      0,
+    pointReward:      participationCoins,
     teilnehmer:       0,
     discordChannelId: event.discordChannelId,
   });

@@ -54,6 +54,15 @@ export async function POST(req: NextRequest) {
     } catch { return null; }
   }
 
+  // Participation-Münzen für die Discord-Ankündigung (aus der Reihen-Konfiguration, sonst Fallback 10)
+  function derivedParticipationCoins(): number {
+    if (!series?.placementRewardsJson) return 10;
+    try {
+      const { participationCoins } = JSON.parse(series.placementRewardsJson) as { participationCoins?: number };
+      return participationCoins ?? 10;
+    } catch { return 10; }
+  }
+
   // Extract stat field names from seriesStatConfig
   function derivedStatFields(): string | null {
     if (!series?.seriesStatConfig) return null;
@@ -140,7 +149,7 @@ export async function POST(req: NextRequest) {
       genre,
       startAt:          newEvent.startAt,
       maxPlayers:       newEvent.maxPlayers,
-      pointReward:      newEvent.pointReward,
+      pointReward:      derivedParticipationCoins(),
       teilnehmer:       0,
       discordChannelId,
     }),
