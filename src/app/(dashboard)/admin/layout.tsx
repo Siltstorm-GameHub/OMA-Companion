@@ -1,7 +1,6 @@
 import { requireRole } from "@/lib/roles";
 import { Shield } from "lucide-react";
 import AdminNav from "./AdminNav";
-import Breadcrumbs from "./Breadcrumbs";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   await requireRole("moderator");
@@ -19,7 +18,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       </div>
 
       <AdminNav />
-      <Breadcrumbs />
       {children}
     </div>
   );
