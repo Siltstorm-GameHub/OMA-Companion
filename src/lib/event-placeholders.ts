@@ -29,3 +29,15 @@ export function genreLabel(genre: string | null | undefined): string {
   if (!genre) return "–";
   return GENRE_LABELS[genre] ?? genre;
 }
+
+/** Teilnahme-Münzen eines Events: primär aus placementRewardsJson, sonst Fallback auf das
+ *  veraltete pointReward-Feld (für Events, die vor der Umstellung erstellt wurden). */
+export function eventParticipationCoins(event: { placementRewardsJson?: string | null; pointReward?: number | null }): number {
+  if (event.placementRewardsJson) {
+    try {
+      const r = JSON.parse(event.placementRewardsJson) as { participationCoins?: number };
+      if (r.participationCoins != null) return r.participationCoins;
+    } catch { /* ignore */ }
+  }
+  return event.pointReward ?? 0;
+}

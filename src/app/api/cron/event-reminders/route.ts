@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getNotificationRule, dispatchEventNotification } from "@/lib/notify-dispatch";
 import { fmtDateDE } from "@/lib/discord-rest";
+import { eventParticipationCoins } from "@/lib/event-placeholders";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,6 +40,7 @@ export async function GET(req: NextRequest) {
     const registrationsStr = event.maxPlayers
       ? `${event.registrations.length} / ${event.maxPlayers}`
       : String(event.registrations.length);
+    const coins = eventParticipationCoins(event);
 
     await dispatchEventNotification("event_reminder", { id: event.id }, {
       placeholders: {
@@ -47,7 +49,7 @@ export async function GET(req: NextRequest) {
         "{date}":          fmtDateDE(event.startAt),
         "{registrations}": registrationsStr,
         "{maxPlayers}":    event.maxPlayers ? String(event.maxPlayers) : "Unbegrenzt",
-        "{points}":        String(event.pointReward),
+        "{points}":        String(coins),
         "{reminderHours}": String(hours),
       },
       discordChannelIdOverride: event.discordChannelId,
@@ -56,7 +58,7 @@ export async function GET(req: NextRequest) {
         { name: "🎮 Spiel",       value: event.game ?? "–",                             inline: true },
         { name: "📆 Start",       value: fmtDateDE(event.startAt),                      inline: true },
         { name: "👥 Anmeldungen", value: registrationsStr,                              inline: true },
-        { name: "⭐ Punkte",      value: `+${event.pointReward} Pts bei Teilnahme`,     inline: true },
+        { name: "⭐ Münzen",      value: `+${coins} Münzen bei Teilnahme`,               inline: true },
       ],
     }).catch(() => {});
 

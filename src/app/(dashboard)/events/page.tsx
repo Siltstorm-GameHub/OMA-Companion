@@ -20,6 +20,7 @@ import EventCategoryBadge from "@/components/EventCategoryBadge";
 import { EventCategory } from "@prisma/client";
 import { EyeOff } from "lucide-react";
 import { getEventEndedAt, RECENTLY_FINISHED_MS } from "@/lib/event-completion";
+import { eventParticipationCoins } from "@/lib/event-placeholders";
 import EventsTabs from "./EventsTabs";
 import DuelsPredictionsPanel, { type DuelEntry } from "./DuelsPredictionsPanel";
 import type { MyPrediction } from "@/components/MyPredictionsList";
@@ -298,7 +299,7 @@ export default async function EventsPage() {
                 {ev._count.registrations}{ev.maxPlayers ? ` / ${ev.maxPlayers}` : ""}
               </span>
               <span className="flex items-center gap-1 text-amber-400 font-semibold">
-                +{ev.pointReward} <CoinIcon size={13} />
+                +{eventParticipationCoins(ev)} <CoinIcon size={13} />
               </span>
               {discordUrl && (
                 <a href={discordUrl} target="_blank" rel="noopener noreferrer"
