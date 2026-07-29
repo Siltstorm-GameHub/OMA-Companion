@@ -500,7 +500,7 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
       ]
     : [
         { key: "details",     label: "Details" },
-        { key: "rewards",     label: "Belohnungen" },
+        { key: "rewards",     label: event.series ? "Umfragen" : "Belohnungen" },
         { key: "participants", label: `Teilnehmer (${event._count.registrations})` },
         // Turnier-Einstellungen und Turnierbaum sind ein gemeinsamer Reiter
         ...(hasTournament || event.type === "tournament" ? [{ key: "tournament" as TabKey, label: "Turnier" }] : []),
@@ -520,15 +520,6 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
     } catch { return []; }
   })();
 
-  // Seriesweit konfigurierte zusätzliche Münzen für die Platzierung (1./2./3.) innerhalb dieses
-  // Events — eingestellt in der "Gesamttabellen-Konfiguration" der Reihe.
-  const seriesEventPlacementCoins: PlacementReward[] = (() => {
-    if (!event.series?.seriesStatConfig) return [];
-    try {
-      const cfg = JSON.parse(event.series.seriesStatConfig) as { eventPlacementCoins?: { place: number; coins: number }[] };
-      return (cfg.eventPlacementCoins ?? []).map(p => ({ place: p.place, coins: p.coins, rankPoints: 0 }));
-    } catch { return []; }
-  })();
   const bracketTournament = event.format ? {
     id: event.id,
     status: event.tournamentStatus ?? "active",
@@ -863,66 +854,26 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
       {/* ── Tab: Belohnungen ── */}
       {activeTab === "rewards" && (
         <div className="space-y-4">
-          {/* Teilnahme */}
-          <div className="rounded-xl border border-white/[0.06] bg-gray-900/50 p-4 space-y-3">
-            <div className="flex items-center gap-2">
-              <CoinIcon size={16} />
-              <h3 className="text-sm font-semibold text-gray-300">Teilnahme-Belohnung</h3>
-            </div>
-            <p className="text-[11px] text-gray-600">Wird erst nach Event-Abschluss vergeben</p>
-            {event.series ? (
-              <p className="text-[11px] text-gray-500">
-                Münzen pro Teilnahme sind für Events dieser Reihe seriesweit fest in der{" "}
-                <Link href={`/admin/series/${event.series.id}`} className="text-teal-400 hover:text-teal-300 transition-colors">
-                  Gesamttabellen-Konfiguration der Reihe
-                </Link>{" "}
-                eingestellt.
-              </p>
-            ) : (
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={labelCls}>Münzen</label>
-                  <input type="number" min={0} value={participationCoins} onChange={e => setParticipationCoins(Number(e.target.value))} className={inputCls} />
+          {!event.series && (
+            <>
+              {/* Teilnahme */}
+              <div className="rounded-xl border border-white/[0.06] bg-gray-900/50 p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <CoinIcon size={16} />
+                  <h3 className="text-sm font-semibold text-gray-300">Teilnahme-Belohnung</h3>
+                </div>
+                <p className="text-[11px] text-gray-600">Wird erst nach Event-Abschluss vergeben</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={labelCls}>Münzen</label>
+                    <input type="number" min={0} value={participationCoins} onChange={e => setParticipationCoins(Number(e.target.value))} className={inputCls} />
+                  </div>
                 </div>
               </div>
-            )}
-          </div>
 
-          {/* Platzierungen */}
-          <div className="rounded-xl border border-white/[0.06] bg-gray-900/50 p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-300">Platzierungs-Belohnungen</h3>
-            {event.series ? (
-              <>
-                <p className="text-[11px] text-gray-500">
-                  Die volle Platzierungs-Belohnung (Münzen + Rang-Punkte) wird erst bei Abschluss der{" "}
-                  <Link href={`/admin/series/${event.series.id}`} className="text-teal-400 hover:text-teal-300 transition-colors">
-                    gesamten Eventreihe
-                  </Link>{" "}
-                  anhand der finalen Endplatzierung vergeben. Zusätzlich gibt es für die Platzierung
-                  in diesem einzelnen Event ggf. seriesweit fest konfigurierte Bonus-Münzen (siehe{" "}
-                  <Link href={`/admin/series/${event.series.id}`} className="text-teal-400 hover:text-teal-300 transition-colors">
-                    Gesamttabellen-Konfiguration der Reihe
-                  </Link>
-                  ), die direkt bei Abschluss dieses Events vergeben werden:
-                </p>
-                {seriesEventPlacementCoins.some(p => p.coins > 0) ? (
-                  <div className="grid grid-cols-[auto_1fr_auto] gap-2 items-center">
-                    {seriesEventPlacementCoins.filter(p => p.coins > 0).map(p => (
-                      <div key={p.place} className="contents">
-                        <span className="text-base">{p.place === 1 ? "🥇" : p.place === 2 ? "🥈" : "🥉"}</span>
-                        <span className="text-sm text-gray-300">{p.place}. Platz</span>
-                        <span className="flex items-center gap-1 text-amber-300 text-sm justify-self-end">
-                          <CoinIcon size={12} /> {p.coins}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-gray-600">Keine zusätzlichen Platzierungs-Münzen konfiguriert.</p>
-                )}
-              </>
-            ) : (
-              <>
+              {/* Platzierungen */}
+              <div className="rounded-xl border border-white/[0.06] bg-gray-900/50 p-4 space-y-3">
+                <h3 className="text-sm font-semibold text-gray-300">Platzierungs-Belohnungen</h3>
                 <div className="grid grid-cols-[auto_1fr_auto_auto] gap-2 items-center text-xs text-gray-500 px-1">
                   <span />
                   <span>Platz</span>
@@ -941,36 +892,25 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
                       className={numCls} />
                   </div>
                 ))}
-              </>
-            )}
-          </div>
-
-          {/* Zuschauer-Belohnung */}
-          {event.spectatorMode && (
-            <div className="rounded-xl border border-teal-500/20 bg-teal-500/5 p-4 space-y-3">
-              <h3 className="text-sm font-semibold text-teal-300">👁️ Zuschauer-Basis-Belohnung</h3>
-              <div className={event.series ? "grid grid-cols-1 gap-3" : "grid grid-cols-2 gap-3"}>
-                {!event.series && (
-                  <div>
-                    <label className={labelCls}>Münzen</label>
-                    <input type="number" min={0} value={spectatorCoins} onChange={e => setSpectatorCoins(Number(e.target.value))} className={inputCls} />
-                  </div>
-                )}
-                <div>
-                  <label className={labelCls}>Rang-Punkte</label>
-                  <input type="number" min={0} value={spectatorRankPts} onChange={e => setSpectatorRankPts(Number(e.target.value))} className={inputCls} />
-                </div>
               </div>
-              {event.series && (
-                <p className="text-[11px] text-gray-500">
-                  Münzen pro Zuschauer-Teilnahme sind für Events dieser Reihe seriesweit fest in der{" "}
-                  <Link href={`/admin/series/${event.series.id}`} className="text-teal-400 hover:text-teal-300 transition-colors">
-                    Gesamttabellen-Konfiguration der Reihe
-                  </Link>{" "}
-                  eingestellt.
-                </p>
+
+              {/* Zuschauer-Belohnung */}
+              {event.spectatorMode && (
+                <div className="rounded-xl border border-teal-500/20 bg-teal-500/5 p-4 space-y-3">
+                  <h3 className="text-sm font-semibold text-teal-300">👁️ Zuschauer-Basis-Belohnung</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className={labelCls}>Münzen</label>
+                      <input type="number" min={0} value={spectatorCoins} onChange={e => setSpectatorCoins(Number(e.target.value))} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Rang-Punkte</label>
+                      <input type="number" min={0} value={spectatorRankPts} onChange={e => setSpectatorRankPts(Number(e.target.value))} className={inputCls} />
+                    </div>
+                  </div>
+                </div>
               )}
-            </div>
+            </>
           )}
 
           {/* Polls */}
