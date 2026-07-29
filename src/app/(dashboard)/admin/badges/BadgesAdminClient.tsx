@@ -3,6 +3,7 @@ import { useState, useMemo } from "react";
 import Image from "next/image";
 import { Plus, Award, Search, X, ChevronDown } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
+import WanderpocalRecomputeButton from "../WanderpocalRecomputeButton";
 
 type Badge = {
   id: string;
@@ -112,6 +113,8 @@ export default function BadgesAdminClient({ badges: initialBadges, users }: {
           <Plus className="w-4 h-4" /> Neues Abzeichen
         </button>
       </div>
+
+      <WanderpocalRecomputeButton />
 
       {/* Create form */}
       {creating && (

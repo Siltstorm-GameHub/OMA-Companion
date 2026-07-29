@@ -5,7 +5,7 @@ import {
   CalendarDays, Users, ChevronRight,
   Clock, Scroll, CheckCircle2,
   Circle, Repeat, Newspaper, Server, Gamepad2,
-  ArrowUp, ArrowDown, Minus, Timer, UserPlus, Clapperboard, Play,
+  ArrowUp, ArrowDown, Minus, Timer, UserPlus, Clapperboard, Play, Trophy,
 } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
 import EventCategoryBadge from "@/components/EventCategoryBadge";
@@ -28,6 +28,7 @@ import { getVisibleServers } from "@/lib/gameservers";
 import { PromoBannerCarousel } from "@/components/PromoBannerCarousel";
 import { NewContentPing } from "@/components/NewContentPing";
 import { HeroStatValue } from "@/components/HeroStatValue";
+import { computeStatStandings, type StatConfig, type LegacyStandingRow } from "@/lib/series-event-points";
 import GameserverWidget from "./GameserverWidget";
 
 const STATUS_CONFIG: Record<string, { label: string; cls: string; dot: string }> = {
@@ -55,13 +56,17 @@ const getGlobalDashboardData = unstable_cache(
       prisma.event.count({ where: { hidden: false, status: { in: ["open", "active", "umfrage"] }, OR: [{ seriesId: null }, { series: { hidden: false } }] } }),
       prisma.eventSeries.findMany({
         where: { hidden: false, events: { some: { status: { in: ["open", "active", "closed"] } } } },
-        include: {
-          _count: { select: { events: true } },
+        select: {
+          id: true, name: true, icon: true, fixedGame: true,
+          seriesStatConfig: true, legacyStandings: true,
           events: {
-            where:   { status: { in: ["open", "active", "closed"] } },
             orderBy: { startAt: "asc" },
-            take: 1,
-            select: { startAt: true, status: true },
+            select: {
+              id: true, startAt: true, status: true, game: true,
+              completionData: true, finalRankingJson: true,
+              registrations: { select: { userId: true } },
+              matches: { select: { entries: { select: { userId: true, statsJson: true } } } },
+            },
           },
         },
         take: 5,
@@ -97,10 +102,44 @@ const getGlobalDashboardData = unstable_cache(
       }),
     ]);
     const nextEvent = activeOrPollEvent ?? nextUpcomingEvent;
-    return { memberCount, activeEvents, activeSeries, nextEvent, recentSummaries, recentlyFinishedCandidates, fetchedAt: Date.now() };
+
+    // Pro Reihe: nächstes offenes/laufendes/volles Event, Season-Fortschritt (fertige/gesamte Events)
+    // und aktueller Spitzenreiter (via computeStatStandings, dieselbe Logik wie die Reihen-Gesamttabelle).
+    const enrichedSeries = activeSeries.map(series => {
+      const nextEv = series.events
+        .filter(ev => ["open", "active", "closed"].includes(ev.status))
+        .sort((a, b) => a.startAt.getTime() - b.startAt.getTime())[0] ?? null;
+      const finishedCount = series.events.filter(ev => ev.status === "finished").length;
+      const totalCount = series.events.length;
+
+      let leaderUserId: string | null = null;
+      let leaderPoints = 0;
+      if (series.seriesStatConfig) {
+        try {
+          const statCfg = JSON.parse(series.seriesStatConfig) as StatConfig;
+          const legacyRows: LegacyStandingRow[] = series.legacyStandings ? JSON.parse(series.legacyStandings) : [];
+          const { rows } = computeStatStandings(series.events, statCfg, legacyRows);
+          if (rows[0] && rows[0].totalPoints > 0) {
+            leaderUserId = rows[0].userId;
+            leaderPoints = rows[0].totalPoints;
+          }
+        } catch { /* seriesStatConfig/legacyStandings kaputt — kein Spitzenreiter anzeigen */ }
+      }
+
+      return {
+        id: series.id, name: series.name, icon: series.icon, fixedGame: series.fixedGame,
+        finishedCount, totalCount, leaderUserId, leaderPoints,
+        nextEvent: nextEv ? {
+          startAt: nextEv.startAt, status: nextEv.status, game: nextEv.game,
+          registeredUserIds: nextEv.registrations.map(r => r.userId),
+        } : null,
+      };
+    });
+
+    return { memberCount, activeEvents, activeSeries: enrichedSeries, nextEvent, recentSummaries, recentlyFinishedCandidates, fetchedAt: Date.now() };
   },
   ["dashboard-global"],
-  { revalidate: 300 }
+  { revalidate: 300, tags: ["dashboard-global"] }
 );
 
 function formatFreshness(fetchedAt: number): string {
@@ -136,6 +175,14 @@ export default async function DashboardPage() {
 
   const { memberCount, activeEvents, activeSeries, nextEvent, recentSummaries, recentlyFinishedCandidates, fetchedAt } =
     await getGlobalDashboardData();
+
+  // Namen der Spitzenreiter außerhalb des globalen Caches auflösen, damit Namensänderungen sofort
+  // sichtbar sind, ohne den 5-Minuten-Cache der (teuren) Standings-Berechnung zu invalidieren.
+  const leaderUserIds = [...new Set(activeSeries.map(s => s.leaderUserId).filter((id): id is string => !!id))];
+  const leaderUsers = leaderUserIds.length
+    ? await prisma.user.findMany({ where: { id: { in: leaderUserIds } }, select: { id: true, name: true, username: true, image: true } })
+    : [];
+  const leaderMap = new Map(leaderUsers.map(u => [u.id, u]));
 
   const recentResultEvents: RecentResultEvent[] = recentlyFinishedCandidates
     .filter(ev => isRecentlyFinished(ev, now))
@@ -646,10 +693,13 @@ export default async function DashboardPage() {
                   </Link>
                 </div>
               ) : activeSeries.map(series => {
-                const nextEv  = series.events[0];
+                const nextEv   = series.nextEvent;
                 const nextDate = nextEv ? new Date(nextEv.startAt) : null;
                 const s = nextEv ? STATUS_CONFIG[nextEv.status] : null;
                 const seriesColor = resolveSeriesColor(series.icon);
+                const game = nextEv?.game ?? series.fixedGame;
+                const isRegistered = !!(userId && nextEv?.registeredUserIds.includes(userId));
+                const leader = series.leaderUserId ? leaderMap.get(series.leaderUserId) : null;
                 return (
                   <Link key={series.id} href={`/events/series/${series.id}`}
                     className="relative flex items-center gap-3 pl-4 pr-3.5 py-3 transition-all duration-200 group hover:bg-white/[0.035] active:scale-[0.99]"
@@ -660,17 +710,36 @@ export default async function DashboardPage() {
                       <SeriesIcon name={series.icon} className="w-3.5 h-3.5" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold truncate transition-colors" style={{ color: seriesColor }}>
-                        {series.name}
+                      <p className="text-xs font-semibold truncate transition-colors flex items-center gap-1.5" style={{ color: seriesColor }}>
+                        <span className="truncate">{series.name}</span>
+                        {game && (
+                          <span className="text-[9px] font-medium text-gray-500 bg-white/[0.05] border border-white/[0.06] rounded px-1 py-px shrink-0">
+                            {game}
+                          </span>
+                        )}
                       </p>
-                      <p className="text-[10px] text-gray-600 mt-0.5 flex items-center gap-1">
+                      <p className="text-[10px] text-gray-600 mt-0.5 flex items-center gap-2 flex-wrap">
                         {nextDate ? (
-                          <>
+                          <span className="flex items-center gap-1 shrink-0">
                             <Clock className="w-2.5 h-2.5" />
-                            Nächstes: {nextDate.toLocaleDateString("de-DE", { day: "numeric", month: "short" })}
-                          </>
+                            {formatCountdown(nextDate, now)}
+                          </span>
                         ) : (
-                          <><CalendarDays className="w-2.5 h-2.5" />{series._count.events} Events</>
+                          <span className="flex items-center gap-1 shrink-0"><CalendarDays className="w-2.5 h-2.5" />Keine Termine</span>
+                        )}
+                        {series.totalCount > 0 && (
+                          <span className="shrink-0">{series.finishedCount}/{series.totalCount} Events</span>
+                        )}
+                        {leader && (
+                          <span className="flex items-center gap-1 text-amber-500/80 shrink-0">
+                            <Trophy className="w-2.5 h-2.5" />
+                            {leader.name ?? leader.username ?? "Unbekannt"}
+                          </span>
+                        )}
+                        {isRegistered && (
+                          <span className="flex items-center gap-1 text-teal-500/80 shrink-0">
+                            <CheckCircle2 className="w-2.5 h-2.5" />Angemeldet
+                          </span>
                         )}
                       </p>
                     </div>

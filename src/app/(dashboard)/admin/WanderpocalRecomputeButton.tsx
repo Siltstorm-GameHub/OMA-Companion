@@ -32,7 +32,9 @@ export default function WanderpocalRecomputeButton() {
           <p className="text-sm font-semibold text-white">Wanderpokal neu berechnen</p>
           <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
             Wertet alle abgeschlossenen Events aus und aktualisiert die Pokal-Halter für alle Kategorien und Genres.
-            Einmalig nötig für historische Events — danach läuft die Berechnung automatisch.
+            Läuft automatisch bei jedem Event-Abschluss — hier manuell anstoßen, wenn Kategorie/Genre eines bereits
+            abgeschlossenen Events nachträglich geändert wurde oder ein Abschluss zurückgesetzt (revert) wurde,
+            ohne das Event erneut abzuschließen.
           </p>
           {done ? (
             <p className="mt-3 text-xs text-emerald-400 font-medium">✅ Erfolgreich neuberechnet</p>

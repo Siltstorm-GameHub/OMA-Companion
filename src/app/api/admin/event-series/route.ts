@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { createPollsForEvent, parsePollsConfigJson } from "@/lib/event-polls";
@@ -200,6 +201,8 @@ export async function PATCH(req: NextRequest) {
       data:  { discordChannelId: fields.discordChannelId || null },
     });
   }
+
+  revalidateTag("dashboard-global", { expire: 0 });
 
   return NextResponse.json({ ok: true, series });
 }

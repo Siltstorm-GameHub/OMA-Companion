@@ -73,6 +73,94 @@ const EMPTY_RESULT: EventPointsResult = {
 
 /** Berechnet die Ligapunkte-Beiträge eines einzelnen Events. Liefert leere Maps, solange die
  *  Spielphase des Events noch nicht abgeschlossen ist (gamePhaseComplete). */
+export type LegacyStandingRow = { userId: string; points: number; participations: number; stats: Record<string, number> };
+export type SeriesEventForStandings = EventForPoints & { id: string; status: string; finalRankingJson: string | null };
+export type SeriesStandingRow = {
+  userId: string;
+  totalPoints: number;
+  participations: number;
+  stats: Record<string, number>;
+  hasLegacy: boolean;
+  disqualifiedEventCount: number;
+};
+
+/** Aggregiert die Ligapunkte aller Events einer Reihe (+ Legacy-Stand) zu einer Gesamttabelle
+ *  pro User. Enthält Teilnahme, Stats und Umfragen — NICHT den Dominion Bonus (separat getrackt
+ *  im seriesStandingsJson-Cache) und NICHT die Endplatzierungs-Belohnung der Gesamtreihe (separat
+ *  in seriesCompletionData.placementRewards, erst bei Reihen-Abschluss vergeben). */
+export function computeStatStandings(
+  events: SeriesEventForStandings[],
+  cfg: StatConfig,
+  legacy: LegacyStandingRow[],
+): { rows: SeriesStandingRow[]; evStatFieldsSeen: Set<string> } {
+  const evPart: Record<string, number> = {};
+  const evStats: Record<string, Record<string, number>> = {};
+  const evTotalPoints: Record<string, number> = {};
+  const evExcludedCount: Record<string, number> = {};
+
+  for (const ev of events) {
+    const { pointsByUser, participationsByUser, statsByUser, excludedFromPointsUserIds } = computeEventPoints(ev, cfg);
+    for (const [uid, pts] of Object.entries(pointsByUser)) {
+      evTotalPoints[uid] = (evTotalPoints[uid] ?? 0) + pts;
+    }
+    for (const [uid, part] of Object.entries(participationsByUser)) {
+      evPart[uid] = (evPart[uid] ?? 0) + part;
+    }
+    for (const [uid, stats] of Object.entries(statsByUser)) {
+      if (!evStats[uid]) evStats[uid] = {};
+      for (const [field, val] of Object.entries(stats)) {
+        evStats[uid][field] = (evStats[uid][field] ?? 0) + val;
+      }
+    }
+    for (const uid of excludedFromPointsUserIds) {
+      evExcludedCount[uid] = (evExcludedCount[uid] ?? 0) + 1;
+    }
+  }
+
+  const legPts: Record<string, number> = {};
+  const legPart: Record<string, number> = {};
+  const legStat: Record<string, Record<string, number>> = {};
+  for (const row of legacy) {
+    legPts[row.userId] = (legPts[row.userId] ?? 0) + row.points;
+    legPart[row.userId] = (legPart[row.userId] ?? 0) + row.participations;
+    if (!legStat[row.userId]) legStat[row.userId] = {};
+    for (const [f, v] of Object.entries(row.stats ?? {})) {
+      legStat[row.userId][f] = (legStat[row.userId][f] ?? 0) + v;
+    }
+  }
+
+  const allUids = new Set([
+    ...Object.keys(evPart), ...Object.keys(evStats),
+    ...Object.keys(legPts), ...Object.keys(evTotalPoints),
+  ]);
+
+  const evStatFieldsSeen = new Set<string>();
+  for (const uid of Object.keys(evStats)) {
+    for (const field of Object.keys(evStats[uid])) evStatFieldsSeen.add(field);
+  }
+
+  const rows = [...allUids].map(uid => {
+    const ep = evPart[uid] ?? 0;
+    const es = evStats[uid] ?? {};
+    const totalPoints = (legPts[uid] ?? 0) + (evTotalPoints[uid] ?? 0);
+    const displayPart = (legPart[uid] ?? 0) + ep;
+    const displayStats: Record<string, number> = {};
+    for (const [f, v] of Object.entries(legStat[uid] ?? {})) {
+      displayStats[f] = (displayStats[f] ?? 0) + v;
+    }
+    for (const [f, v] of Object.entries(es)) {
+      displayStats[f] = (displayStats[f] ?? 0) + v;
+    }
+    return {
+      userId: uid, totalPoints, participations: displayPart, stats: displayStats,
+      hasLegacy: legacy.some(l => l.userId === uid),
+      disqualifiedEventCount: evExcludedCount[uid] ?? 0,
+    };
+  }).sort((a, b) => b.totalPoints - a.totalPoints || b.participations - a.participations);
+
+  return { rows, evStatFieldsSeen };
+}
+
 export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPointsResult {
   if (!ev.completionData) return EMPTY_RESULT;
   let cd: EventCompletionData;

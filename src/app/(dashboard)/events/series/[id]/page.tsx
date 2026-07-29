@@ -17,7 +17,7 @@ import SeriesStandingsTable from "./SeriesStandingsTable";
 import SeriesEventList, { type SeriesEventItem } from "./SeriesEventList";
 import FullStandingsToggle from "./FullStandingsToggle";
 import type { DeltaInfo } from "./SeriesStandingsTable";
-import { computeEventPoints, type StatConfig } from "@/lib/series-event-points";
+import { computeEventPoints, computeStatStandings, type StatConfig } from "@/lib/series-event-points";
 import { getEventEndedAt, isRecentlyFinished } from "@/lib/event-completion";
 
 type ArchivedSeason = {
@@ -86,93 +86,6 @@ const FORMAT_LABELS: Record<string, string> = {
 };
 
 type LegacyRow = { userId: string; points: number; participations: number; stats: Record<string, number> };
-type SeriesEventForStandings = {
-  id: string;
-  status: string;
-  completionData: string | null;
-  registrations: { userId: string }[];
-  finalRankingJson: string | null;
-  matches: { entries: { userId: string | null; statsJson: string | null }[] }[];
-};
-
-function computeStatStandings(
-  events: SeriesEventForStandings[],
-  cfg: StatConfig,
-  legacy: LegacyRow[],
-) {
-  const evPart: Record<string, number> = {};
-  const evStats: Record<string, Record<string, number>> = {};
-  const evTotalPoints: Record<string, number> = {};
-  // Zählt, in wie vielen Events ein User ausgeschlossen (disqualifiziert) war — seine Teilnahme/Stats
-  // fließen zwar oben ganz normal ein, aber ohne die dafür sonst üblichen Ligapunkte.
-  const evExcludedCount: Record<string, number> = {};
-
-  for (const ev of events) {
-    const { pointsByUser, participationsByUser, statsByUser, excludedFromPointsUserIds } = computeEventPoints(ev, cfg);
-    for (const [uid, pts] of Object.entries(pointsByUser)) {
-      evTotalPoints[uid] = (evTotalPoints[uid] ?? 0) + pts;
-    }
-    for (const [uid, part] of Object.entries(participationsByUser)) {
-      evPart[uid] = (evPart[uid] ?? 0) + part;
-    }
-    for (const [uid, stats] of Object.entries(statsByUser)) {
-      if (!evStats[uid]) evStats[uid] = {};
-      for (const [field, val] of Object.entries(stats)) {
-        evStats[uid][field] = (evStats[uid][field] ?? 0) + val;
-      }
-    }
-    for (const uid of excludedFromPointsUserIds) {
-      evExcludedCount[uid] = (evExcludedCount[uid] ?? 0) + 1;
-    }
-  }
-
-  const legPts: Record<string, number> = {};
-  const legPart: Record<string, number> = {};
-  const legStat: Record<string, Record<string, number>> = {};
-  for (const row of legacy) {
-    legPts[row.userId] = (legPts[row.userId] ?? 0) + row.points;
-    legPart[row.userId] = (legPart[row.userId] ?? 0) + row.participations;
-    if (!legStat[row.userId]) legStat[row.userId] = {};
-    for (const [f, v] of Object.entries(row.stats ?? {})) {
-      legStat[row.userId][f] = (legStat[row.userId][f] ?? 0) + v;
-    }
-  }
-
-  const allUids = new Set([
-    ...Object.keys(evPart), ...Object.keys(evStats),
-    ...Object.keys(legPts), ...Object.keys(evTotalPoints),
-  ]);
-
-  // Track which stat fields appear in event data (for extraCols filtering)
-  const evStatFieldsSeen = new Set<string>();
-  for (const uid of Object.keys(evStats)) {
-    for (const field of Object.keys(evStats[uid])) evStatFieldsSeen.add(field);
-  }
-
-  const rows = [...allUids].map(uid => {
-    const ep = evPart[uid] ?? 0;
-    const es = evStats[uid] ?? {};
-    const totalPoints = (legPts[uid] ?? 0) + (evTotalPoints[uid] ?? 0);
-    const displayPart = (legPart[uid] ?? 0) + ep;
-    // Start from legacy stats, then add event stats on top (merging same fields)
-    const displayStats: Record<string, number> = {};
-    // Only include legacy fields that are either in configured stats or in evStatFieldsSeen
-    // to avoid legacy-only fields (from old/renamed configs) polluting extra columns
-    for (const [f, v] of Object.entries(legStat[uid] ?? {})) {
-      displayStats[f] = (displayStats[f] ?? 0) + v;
-    }
-    for (const [f, v] of Object.entries(es)) {
-      displayStats[f] = (displayStats[f] ?? 0) + v;
-    }
-    return {
-      userId: uid, totalPoints, participations: displayPart, stats: displayStats,
-      hasLegacy: legacy.some(l => l.userId === uid),
-      disqualifiedEventCount: evExcludedCount[uid] ?? 0,
-    };
-  }).sort((a, b) => b.totalPoints - a.totalPoints || b.participations - a.participations);
-
-  return { rows, evStatFieldsSeen };
-}
 
 export default async function SeriesDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
