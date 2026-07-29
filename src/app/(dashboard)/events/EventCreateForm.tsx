@@ -69,7 +69,7 @@ export default function EventCreateForm() {
         startAt: new Date(startAt).toISOString(),
         game: game || null,
         maxPlayers: maxPlayers ? Number(maxPlayers) : null,
-        pointReward: Number(pointReward) || 50,
+        placementRewardsJson: { participationCoins: Number(pointReward) || 50 },
         description: description || null,
         type: "community",
         seriesId,
@@ -131,7 +131,7 @@ export default function EventCreateForm() {
             </div>
 
             <div>
-              <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Euro className="w-3 h-3" /> Punkte-Belohnung</label>
+              <label className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Euro className="w-3 h-3" /> Münzen-Belohnung (Teilnahme)</label>
               <input type="number" min="0" value={pointReward} onChange={e => setPointReward(e.target.value)}
                 className={inputCls} style={inputStyle} />
             </div>
