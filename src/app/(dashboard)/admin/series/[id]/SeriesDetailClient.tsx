@@ -44,6 +44,15 @@ type SeriesEvent = {
 
 const NOT_ACTIVE_STATUSES = ["finished", "closed", "archived"];
 
+type SettingsTabKey = "general" | "rewards" | "polls" | "stats" | "legacy";
+const SETTINGS_TABS: { key: SettingsTabKey; label: string }[] = [
+  { key: "general", label: "Allgemein" },
+  { key: "rewards", label: "Belohnungen" },
+  { key: "polls",   label: "Umfragen" },
+  { key: "stats",   label: "Stats & Bonus" },
+  { key: "legacy",  label: "Legacy" },
+];
+
 function toDatetimeLocal(d: Date) {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -182,6 +191,7 @@ function EventHiddenToggle({ id, hidden }: { id: string; hidden: boolean }) {
 export default function SeriesDetailClient({ series, allUsers, hasActiveSibling = true }: { series: any; allUsers: User[]; hasActiveSibling?: boolean }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const [activeSettingsTab, setActiveSettingsTab] = useState<SettingsTabKey>("general");
   const [generatingNext, setGeneratingNext] = useState(false);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [generateDateStr, setGenerateDateStr] = useState("");
@@ -542,6 +552,23 @@ export default function SeriesDetailClient({ series, allUsers, hasActiveSibling 
         {/* ── Left column: Settings ── */}
         <div className="space-y-4">
 
+          {/* Settings-Tabs */}
+          <div className="flex gap-1 border-b border-white/[0.06] overflow-x-auto">
+            {SETTINGS_TABS.map(tab => (
+              <button key={tab.key} type="button" onClick={() => setActiveSettingsTab(tab.key)}
+                className={`px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-colors ${
+                  activeSettingsTab === tab.key
+                    ? "text-teal-300 border-b-2 border-teal-500 -mb-px"
+                    : "text-gray-500 hover:text-gray-300"
+                }`}>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* ── Tab: Allgemein ── */}
+          {activeSettingsTab === "general" && (
+          <>
           {/* Kategorie */}
           <Section title="Kategorie">
             <Field label="Kategorie">
@@ -658,7 +685,12 @@ export default function SeriesDetailClient({ series, allUsers, hasActiveSibling 
               })()}
             </Field>
           </Section>
+          </>
+          )}
 
+          {/* ── Tab: Belohnungen ── */}
+          {activeSettingsTab === "rewards" && (
+          <>
           {/* Belohnungen */}
           <Section title="Belohnungen (Endplatzierung der Eventreihe)">
             <div className="space-y-3">
@@ -698,6 +730,66 @@ export default function SeriesDetailClient({ series, allUsers, hasActiveSibling 
             </div>
           </Section>
 
+          {/* Punkte & Münzen pro Teilnahme */}
+          <Section title="Punkte & Münzen pro Teilnahme">
+            <div className="grid grid-cols-2 gap-3">
+              <Field label={<><BarChart2 className="w-3 h-3" /> Punkte pro Teilnahme</>}>
+                <input type="number" min={0} value={statParticipationPts}
+                  onChange={e => setStatParticipationPts(Number(e.target.value))}
+                  className={inputCls} />
+              </Field>
+              <Field label="Punkte pro Zuschauer-Teilnahme">
+                <input type="number" min={0} value={statSpectatorPts}
+                  onChange={e => setStatSpectatorPts(Number(e.target.value))}
+                  className={inputCls} />
+              </Field>
+              <Field label={<><Coins className="w-3 h-3 text-amber-400" /> Münzen pro Teilnahme</>}>
+                <input type="number" min={0} value={statParticipationCoins}
+                  onChange={e => setStatParticipationCoins(Number(e.target.value))}
+                  className={inputCls} />
+              </Field>
+              <Field label="Münzen pro Zuschauer-Teilnahme">
+                <input type="number" min={0} value={statSpectatorCoins}
+                  onChange={e => setStatSpectatorCoins(Number(e.target.value))}
+                  className={inputCls} />
+              </Field>
+            </div>
+            <p className="text-[11px] text-gray-500">
+              Wird jeweils direkt bei Abschluss des einzelnen Events vergeben, nicht erst am Ende der Reihe.
+            </p>
+          </Section>
+
+          {/* Platzierungs-Bonus je Event */}
+          <Section title="Platzierungs-Bonus je Event">
+            <p className="text-xs text-gray-500 flex items-center gap-1.5">
+              <Coins className="w-3 h-3 text-amber-400" /> Zusätzliche Münzen für Platzierung je Event
+            </p>
+            <div className="space-y-1.5">
+              {eventPlacementCoins.map(r => (
+                <div key={r.place} className="flex items-center gap-2">
+                  <span className="text-sm text-gray-300 flex items-center gap-1.5 w-24 shrink-0">
+                    {r.place === 1 ? "🥇" : r.place === 2 ? "🥈" : "🥉"} {r.place}. Platz
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <Coins className="w-3 h-3 text-amber-400 shrink-0" />
+                    <input type="number" min={0} value={r.coins}
+                      onChange={e => updateEventPlacementCoins(r.place, Number(e.target.value))}
+                      className={numCls} />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="text-[11px] text-gray-500">
+              Zusätzlich zu den Münzen pro Teilnahme oben — wird direkt bei Abschluss des jeweiligen Events für
+              dessen eigene Platzierung vergeben, unabhängig von der Endplatzierung der gesamten Reihe.
+            </p>
+          </Section>
+          </>
+          )}
+
+          {/* ── Tab: Umfragen ── */}
+          {activeSettingsTab === "polls" && (
+          <>
           {/* Poll-Konfiguration */}
           <Section title="Umfragen">
             <div className="space-y-2">
@@ -838,62 +930,15 @@ export default function SeriesDetailClient({ series, allUsers, hasActiveSibling 
               />
             </div>
           </Section>
+          </>
+          )}
 
-          {/* Gesamttabellen-Konfiguration */}
-          <Section title="Gesamttabellen-Konfiguration">
-            <div className="grid grid-cols-2 gap-3">
-              <Field label={<><BarChart2 className="w-3 h-3" /> Punkte pro Teilnahme</>}>
-                <input type="number" min={0} value={statParticipationPts}
-                  onChange={e => setStatParticipationPts(Number(e.target.value))}
-                  className={inputCls} />
-              </Field>
-              <Field label="Punkte pro Zuschauer-Teilnahme">
-                <input type="number" min={0} value={statSpectatorPts}
-                  onChange={e => setStatSpectatorPts(Number(e.target.value))}
-                  className={inputCls} />
-              </Field>
-              <Field label={<><Coins className="w-3 h-3 text-amber-400" /> Münzen pro Teilnahme</>}>
-                <input type="number" min={0} value={statParticipationCoins}
-                  onChange={e => setStatParticipationCoins(Number(e.target.value))}
-                  className={inputCls} />
-              </Field>
-              <Field label="Münzen pro Zuschauer-Teilnahme">
-                <input type="number" min={0} value={statSpectatorCoins}
-                  onChange={e => setStatSpectatorCoins(Number(e.target.value))}
-                  className={inputCls} />
-              </Field>
-            </div>
-            <p className="text-[11px] text-gray-500">
-              Wird jeweils direkt bei Abschluss des einzelnen Events vergeben, nicht erst am Ende der Reihe.
-            </p>
-
-            <div className="pt-2 border-t border-white/[0.05] space-y-2">
-              <p className="text-xs text-gray-500 flex items-center gap-1.5">
-                <Coins className="w-3 h-3 text-amber-400" /> Zusätzliche Münzen für Platzierung je Event
-              </p>
-              <div className="space-y-1.5">
-                {eventPlacementCoins.map(r => (
-                  <div key={r.place} className="flex items-center gap-2">
-                    <span className="text-sm text-gray-300 flex items-center gap-1.5 w-24 shrink-0">
-                      {r.place === 1 ? "🥇" : r.place === 2 ? "🥈" : "🥉"} {r.place}. Platz
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <Coins className="w-3 h-3 text-amber-400 shrink-0" />
-                      <input type="number" min={0} value={r.coins}
-                        onChange={e => updateEventPlacementCoins(r.place, Number(e.target.value))}
-                        className={numCls} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <p className="text-[11px] text-gray-500">
-                Zusätzlich zu den Münzen pro Teilnahme oben — wird direkt bei Abschluss des jeweiligen Events für
-                dessen eigene Platzierung vergeben, unabhängig von der Endplatzierung der gesamten Reihe.
-              </p>
-            </div>
-
+          {/* ── Tab: Stats & Bonus ── */}
+          {activeSettingsTab === "stats" && (
+          <>
+          {/* Stats */}
+          <Section title="Stats">
             <div className="space-y-1.5">
-              <p className="text-xs text-gray-500">Stats</p>
               {statRows.map((row, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <input type="text" defaultValue={row.field}
@@ -933,9 +978,11 @@ export default function SeriesDetailClient({ series, allUsers, hasActiveSibling 
                 <Plus className="w-3 h-3" /> Statistik hinzufügen
               </button>
             </div>
+          </Section>
 
-            {/* Dominion Bonus */}
-            <div className="pt-2 border-t border-white/[0.05] space-y-3">
+          {/* Dominion Bonus */}
+          <Section title="Dominion Bonus">
+            <div className="space-y-3">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={dominionEnabled} onChange={e => setDominionEnabled(e.target.checked)}
                   className="rounded accent-amber-500" />
@@ -1033,7 +1080,12 @@ export default function SeriesDetailClient({ series, allUsers, hasActiveSibling 
               />
             </Section>
           )}
+          </>
+          )}
 
+          {/* ── Tab: Legacy ── */}
+          {activeSettingsTab === "legacy" && (
+          <>
           {/* Legacy-Stand */}
           <Section title="Legacy-Stand" overflowVisible>
             <p className="text-xs text-gray-600">Historische Werte vor App-Einführung</p>
@@ -1143,6 +1195,8 @@ export default function SeriesDetailClient({ series, allUsers, hasActiveSibling 
               })()}
             </div>
           </Section>
+          </>
+          )}
         </div>
 
         {/* ── Right column: Events ── */}
