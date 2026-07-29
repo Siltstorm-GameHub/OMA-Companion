@@ -705,20 +705,18 @@ export default async function DashboardPage() {
                     className="relative flex items-center gap-3 pl-4 pr-3.5 py-3 transition-all duration-200 group hover:bg-white/[0.035] active:scale-[0.99]"
                     style={{ borderColor: "rgba(255,255,255,0.05)" }}>
                     <div className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full transition-all duration-200 group-hover:w-1" style={{ background: seriesColor }} />
-                    <div className="w-8 h-8 rounded-sm flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-110"
-                      style={{ background: `${seriesColor}1a`, border: `1px solid ${seriesColor}40` }}>
-                      <SeriesIcon name={series.icon} className="w-3.5 h-3.5" />
+                    <div className="relative w-10 h-10 shrink-0 transition-transform duration-200 group-hover:scale-105">
+                      <GameCover game={game} className="w-10 h-10" rounded="rounded-md" />
+                      <div className="absolute -bottom-1 -right-1 w-[18px] h-[18px] rounded-full flex items-center justify-center"
+                        style={{ background: "#111318", border: `1.5px solid ${seriesColor}` }}>
+                        <SeriesIcon name={series.icon} className="w-2.5 h-2.5" />
+                      </div>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold truncate transition-colors flex items-center gap-1.5" style={{ color: seriesColor }}>
-                        <span className="truncate">{series.name}</span>
-                        {game && (
-                          <span className="text-[9px] font-medium text-gray-500 bg-white/[0.05] border border-white/[0.06] rounded px-1 py-px shrink-0">
-                            {game}
-                          </span>
-                        )}
+                      <p className="text-xs font-semibold truncate transition-colors" style={{ color: seriesColor }} title={series.name}>
+                        {series.name}
                       </p>
-                      <p className="text-[10px] text-gray-600 mt-0.5 flex items-center gap-2 flex-wrap">
+                      <p className="text-[10px] text-gray-600 mt-1 flex items-center gap-2 flex-wrap">
                         {nextDate ? (
                           <span className="flex items-center gap-1 shrink-0">
                             <Clock className="w-2.5 h-2.5" />
