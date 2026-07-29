@@ -1,9 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Trophy, Clock, CalendarClock, Vote, Clapperboard, ArrowRight, Zap } from "lucide-react";
-import ResetAllBalancesButton from "./ResetAllBalancesButton";
-import WanderpocalRecomputeButton from "./WanderpocalRecomputeButton";
 import ActivityFeed from "./ActivityFeed";
+import ResetSelectiveButton from "./ResetSelectiveButton";
 
 const NOT_ACTIVE_STATUSES = ["finished", "closed", "archived"];
 
@@ -70,6 +69,11 @@ export default async function AdminPage() {
       include: { user: { select: { id: true, name: true, username: true } } },
     }),
   ]);
+
+  const allSeries = await prisma.eventSeries.findMany({
+    orderBy: [{ status: "asc" }, { name: "asc" }],
+    select: { id: true, name: true, status: true, seasonNumber: true, _count: { select: { events: true } } },
+  });
 
   const hasActionItems =
     activeTournaments.length > 0 ||
@@ -254,8 +258,9 @@ export default async function AdminPage() {
       <div>
         <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">🔧 Datenbank-Wartung</h2>
         <div className="space-y-3">
-          <WanderpocalRecomputeButton />
-          <ResetAllBalancesButton />
+          <ResetSelectiveButton series={allSeries.map(s => ({
+            id: s.id, name: s.name, status: s.status, seasonNumber: s.seasonNumber, eventCount: s._count.events,
+          }))} />
         </div>
       </div>
     </div>
