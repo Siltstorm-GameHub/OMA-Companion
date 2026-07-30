@@ -69,12 +69,18 @@ const getGlobalDashboardData = unstable_cache(
       prisma.event.findFirst({
         where:   { hidden: false, status: { in: ["active", "umfrage"] }, OR: [{ seriesId: null }, { series: { hidden: false } }] },
         orderBy: { startAt: "desc" },
-        include: { _count: { select: { registrations: true } } },
+        include: {
+          _count: { select: { registrations: true } },
+          polls: { orderBy: { endAt: "desc" }, take: 1, select: { endAt: true } },
+        },
       }),
       prisma.event.findFirst({
         where:   { hidden: false, status: { in: ["open", "active"] }, startAt: { gte: new Date() }, OR: [{ seriesId: null }, { series: { hidden: false } }] },
         orderBy: { startAt: "asc" },
-        include: { _count: { select: { registrations: true } } },
+        include: {
+          _count: { select: { registrations: true } },
+          polls: { orderBy: { endAt: "desc" }, take: 1, select: { endAt: true } },
+        },
       }),
       prisma.event.findMany({
         where:   { hidden: false, status: "finished", summary: { not: null }, OR: [{ seriesId: null }, { series: { hidden: false } }] },
@@ -200,6 +206,7 @@ export default async function DashboardPage() {
     nextRegisteredEvent,
     finishedClipContest,
     activeClipContest,
+    isRegisteredForNextEvent,
   ] = await Promise.all([
     userId
       ? prisma.userQuestProgress.count({ where: { userId, completed: true, quest: { month, year } } })
@@ -248,6 +255,9 @@ export default async function DashboardPage() {
       orderBy: [{ year: "desc" }, { month: "desc" }],
       select:  { id: true, month: true, year: true },
     }),
+    userId && nextEvent
+      ? prisma.eventRegistration.findFirst({ where: { userId, eventId: nextEvent.id }, select: { id: true } }).then(r => !!r)
+      : false,
   ]);
 
   const myPoints     = sessionUser?.points ?? 0;
@@ -551,6 +561,12 @@ export default async function DashboardPage() {
                   <CountUp to={activeEvents} duration={700} /> aktiv
                 </div>
               )}
+              {nextEvent && isRegisteredForNextEvent && (
+                <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-1 px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider"
+                  style={{ background: "rgba(20,184,166,0.14)", border: "1px solid rgba(20,184,166,0.22)", color: "#2dd4bf" }}>
+                  <CheckCircle2 className="w-3 h-3" /> Angemeldet
+                </div>
+              )}
               <ChevronRight className="absolute top-3 right-3 w-4 h-4 text-gray-700 group-hover:text-teal-400 group-hover:translate-x-0.5 transition-all" />
               <div className="absolute bottom-0 inset-x-0 h-14"
                 style={{ background: "linear-gradient(to bottom, transparent, var(--bg-surface))" }} />
@@ -558,7 +574,9 @@ export default async function DashboardPage() {
 
             {/* Info area */}
             <div className="px-4 pb-4 pt-2">
-              <p className="text-[9px] text-teal-400/50 uppercase tracking-[0.18em] font-semibold mb-0.5">Events</p>
+              <p className="text-[9px] text-teal-400/50 uppercase tracking-[0.18em] font-semibold mb-0.5">
+                {nextEvent?.game ?? "Events"}
+              </p>
               <div className="flex items-center gap-2">
                 <p className="font-display text-base font-black text-white leading-tight truncate flex-1 min-w-0">
                   {nextEvent ? nextEvent.title : "Keine anstehenden Events"}
@@ -568,10 +586,10 @@ export default async function DashboardPage() {
               {nextEvent ? (
                 <div className="flex items-center gap-3 mt-2 text-[11px] text-gray-500">
                   <span className="flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    {new Date(nextEvent.startAt).toLocaleDateString("de-DE", { day: "numeric", month: "short", timeZone: "Europe/Berlin" })}
-                    {" "}
-                    {new Date(nextEvent.startAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" })}
+                    {nextEvent.status === "umfrage" ? <Scroll className="w-3 h-3" /> : <Timer className="w-3 h-3" />}
+                    {nextEvent.status === "umfrage" && nextEvent.polls[0]
+                      ? formatCountdown(new Date(nextEvent.polls[0].endAt), now, "Umfrage endet in")
+                      : formatCountdown(new Date(nextEvent.startAt), now)}
                   </span>
                   <span className="flex items-center gap-1 ml-auto">
                     <Users className="w-3 h-3" />
@@ -629,6 +647,16 @@ export default async function DashboardPage() {
               <ChevronRight className="absolute top-3 right-3 w-4 h-4 text-gray-700 group-hover:text-[#9146ff] group-hover:translate-x-0.5 transition-all" />
               <div className="absolute bottom-0 inset-x-0 h-14"
                 style={{ background: "linear-gradient(to bottom, transparent, var(--bg-surface))" }} />
+              {winnerClip?.twitchCreatorLogin && (
+                <div className="absolute bottom-2.5 left-3 flex items-center gap-1 px-1.5 py-1 rounded-sm text-[10px] font-bold"
+                  style={{ background: "rgba(13,13,15,0.75)", border: "1px solid rgba(145,70,255,0.3)", color: "#c4b5fd" }}>
+                  <svg viewBox="0 0 24 24" className="w-3 h-3 shrink-0" fill="#9146ff" aria-hidden="true">
+                    <path d="M4.32 1.5 1.5 6.87v13.63h5.14V24h2.9l2.9-2.9h4.35L22.5 15.4V1.5H4.32Zm16.24 13.09-3.19 3.19h-5.14l-2.9 2.9v-2.9H4.98V3.35h15.58v11.24Z" />
+                    <path d="M17.15 6.87h-1.93v5.79h1.93zM11.83 6.87h-1.93v5.79h1.93z" />
+                  </svg>
+                  {winnerClip.twitchCreatorLogin}
+                </div>
+              )}
             </div>
 
             {/* Info area */}
