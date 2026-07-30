@@ -5,7 +5,7 @@ import {
   CalendarDays, Users, ChevronRight,
   Clock, Scroll, CheckCircle2,
   Circle, Repeat, Newspaper, Server, Gamepad2,
-  ArrowUp, ArrowDown, Minus, Timer, UserPlus, Clapperboard, Play, Trophy,
+  ArrowUp, ArrowDown, Minus, Timer, UserPlus, Trophy,
 } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
 import EventCategoryBadge from "@/components/EventCategoryBadge";
@@ -26,7 +26,7 @@ import { resolveSeriesColor } from "@/lib/series-icons";
 import { getRingClass } from "@/lib/ranks";
 import { getVisibleServers } from "@/lib/gameservers";
 import { PromoBannerCarousel } from "@/components/PromoBannerCarousel";
-import { NewContentPing } from "@/components/NewContentPing";
+import ClipOfMonthTile from "@/components/ClipOfMonthTile";
 import { HeroStatValue } from "@/components/HeroStatValue";
 import { computeStatStandings, type StatConfig, type LegacyStandingRow } from "@/lib/series-event-points";
 import GameserverWidget from "./GameserverWidget";
@@ -149,10 +149,6 @@ function formatFreshness(fetchedAt: number): string {
   return `vor ${minutes} Min.`;
 }
 
-function pickRandom<T>(items: T[]): T {
-  return items[Math.floor(Math.random() * items.length)];
-}
-
 function formatCountdown(target: Date, now: Date, prefix: string = "in"): string {
   const diffMs = target.getTime() - now.getTime();
   if (diffMs <= 0) return "Läuft jetzt";
@@ -267,14 +263,11 @@ export default async function DashboardPage() {
   const startOfLastMonth = new Date(year, month - 2, 1);
   const startOfNextMonth = new Date(year, month, 1);
 
-  // Bei mehreren gleichauf liegenden Gewinner-Clips wird pro Seitenaufruf zufällig einer ausgewählt
+  // Bei mehreren gleichauf liegenden Gewinner-Clips rotiert die Dashboard-Kachel client-seitig durch alle
   const winnerNominationIds = finishedClipContest?.winnerNominationIds ?? [];
-  const randomWinnerId = winnerNominationIds.length > 0
-    ? pickRandom(winnerNominationIds)
-    : null;
 
   // Unabhängige Follow-up-Queries parallelisieren
-  const [leaderboardRank, rankGainThisMonth, rankGainLastMonth, winnerClip] = await Promise.all([
+  const [leaderboardRank, rankGainThisMonth, rankGainLastMonth, winnerClipsUnordered] = await Promise.all([
     userId
       ? prisma.user.count({ where: { rankPoints: { gt: myRankPoints } } }).then(n => n + 1)
       : Promise.resolve(null),
@@ -290,13 +283,18 @@ export default async function DashboardPage() {
           _sum: { amount: true },
         }).then(r => r._sum.amount ?? 0)
       : 0,
-    randomWinnerId
-      ? prisma.clipNomination.findUnique({
-          where:  { id: randomWinnerId },
-          select: { clipUrl: true, thumbnailUrl: true, clipTitle: true, twitchCreatorLogin: true, submittedBy: { select: { name: true, username: true } } },
+    winnerNominationIds.length > 0
+      ? prisma.clipNomination.findMany({
+          where:  { id: { in: winnerNominationIds } },
+          select: { id: true, clipUrl: true, thumbnailUrl: true, clipTitle: true, twitchCreatorLogin: true, submittedBy: { select: { name: true, username: true } } },
         })
-      : Promise.resolve(null),
+      : Promise.resolve([]),
   ]);
+
+  // Reihenfolge der Gewinner-Nominierungen beibehalten (findMany garantiert das nicht)
+  const winnerClips = winnerNominationIds
+    .map(id => winnerClipsUnordered.find(c => c.id === id))
+    .filter((c): c is NonNullable<typeof c> => !!c);
 
   const displayName = sessionUser?.username ?? sessionUser?.name ?? "dort";
   const firstName   = displayName.split(" ")[0];
@@ -584,14 +582,15 @@ export default async function DashboardPage() {
                 {nextEvent && <EventCategoryBadge category={nextEvent.category} className="shrink-0" />}
               </div>
               {nextEvent ? (
-                <div className="flex items-center gap-3 mt-2 text-[11px] text-gray-500">
-                  <span className="flex items-center gap-1">
-                    {nextEvent.status === "umfrage" ? <Scroll className="w-3 h-3" /> : <Timer className="w-3 h-3" />}
+                <div className="flex items-center gap-3 mt-2">
+                  <span className="flex items-center gap-1 text-[12px] font-bold"
+                    style={{ color: nextEvent.status === "umfrage" ? "#fbbf24" : "#2dd4bf" }}>
+                    {nextEvent.status === "umfrage" ? <Scroll className="w-3.5 h-3.5" /> : <Timer className="w-3.5 h-3.5" />}
                     {nextEvent.status === "umfrage" && nextEvent.polls[0]
                       ? formatCountdown(new Date(nextEvent.polls[0].endAt), now, "Umfrage endet in")
                       : formatCountdown(new Date(nextEvent.startAt), now)}
                   </span>
-                  <span className="flex items-center gap-1 ml-auto">
+                  <span className="flex items-center gap-1 ml-auto text-[11px] text-gray-500">
                     <Users className="w-3 h-3" />
                     {nextEvent._count.registrations}{nextEvent.maxPlayers ? `/${nextEvent.maxPlayers}` : ""}
                   </span>
@@ -603,86 +602,12 @@ export default async function DashboardPage() {
           </Link>
 
           {/* Clip des Monats Hub */}
-          <Link href="/clip-des-monats"
-            className="surface animate-slide-up stagger-2 scan-on-load group block overflow-hidden relative transition-transform duration-200 hover:-translate-y-1 active:scale-[0.99]"
-            style={{ borderRadius: "6px", border: "1px solid rgba(145,70,255,0.18)", boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
-
-            {/* Cover art area */}
-            <div className="relative overflow-hidden" style={{ height: "108px" }}>
-              {/* Clip-Thumbnail */}
-              {winnerClip?.thumbnailUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={winnerClip.thumbnailUrl.replace("%{width}", "400").replace("%{height}", "225")}
-                  alt=""
-                  className="absolute inset-0 w-full h-full object-cover scale-105 group-hover:scale-110 transition-transform duration-700"
-                />
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center"
-                  style={{ background: "linear-gradient(135deg, #2e1065 0%, #1a0b3d 50%, #0d0d0f 100%)" }}>
-                  <Clapperboard className="w-8 h-8 text-gray-700" />
-                </div>
-              )}
-              {/* Overlay */}
-              <div className="absolute inset-0"
-                style={{ background: "rgba(13,13,15,0.6)" }} />
-              {/* Play-Overlay (rein visuell — Kachel navigiert zur Clip-Seite) */}
-              {winnerClip && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-9 h-9 rounded-full bg-white/90 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                    <Play className="w-3.5 h-3.5 text-black ml-0.5" fill="black" />
-                  </div>
-                </div>
-              )}
-              {/* Badge */}
-              <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider"
-                style={{ background: "rgba(145,70,255,0.18)", border: "1px solid rgba(145,70,255,0.35)", color: "#c4b5fd" }}>
-                <NewContentPing
-                  id={winnerClip ? `winner-${finishedClipContest?.id}` : activeClipContest ? `voting-${activeClipContest.id}` : null}
-                  storageKey="clip-hub-ping-seen"
-                >
-                  {winnerClip ? "🏆 Clip des Monats" : activeClipContest ? "Abstimmung läuft" : "Clips"}
-                </NewContentPing>
-              </div>
-              <ChevronRight className="absolute top-3 right-3 w-4 h-4 text-gray-700 group-hover:text-[#9146ff] group-hover:translate-x-0.5 transition-all" />
-              <div className="absolute bottom-0 inset-x-0 h-14"
-                style={{ background: "linear-gradient(to bottom, transparent, var(--bg-surface))" }} />
-              {winnerClip?.twitchCreatorLogin && (
-                <div className="absolute bottom-2.5 left-3 flex items-center gap-1 px-1.5 py-1 rounded-sm text-[10px] font-bold"
-                  style={{ background: "rgba(13,13,15,0.75)", border: "1px solid rgba(145,70,255,0.3)", color: "#c4b5fd" }}>
-                  <svg viewBox="0 0 24 24" className="w-3 h-3 shrink-0" fill="#9146ff" aria-hidden="true">
-                    <path d="M4.32 1.5 1.5 6.87v13.63h5.14V24h2.9l2.9-2.9h4.35L22.5 15.4V1.5H4.32Zm16.24 13.09-3.19 3.19h-5.14l-2.9 2.9v-2.9H4.98V3.35h15.58v11.24Z" />
-                    <path d="M17.15 6.87h-1.93v5.79h1.93zM11.83 6.87h-1.93v5.79h1.93z" />
-                  </svg>
-                  {winnerClip.twitchCreatorLogin}
-                </div>
-              )}
-            </div>
-
-            {/* Info area */}
-            <div className="px-4 pb-4 pt-2">
-              <p className="text-[9px] text-[#9146ff]/60 uppercase tracking-[0.18em] font-semibold mb-0.5">
-                {finishedClipContest ? MONTH_NAMES[finishedClipContest.month - 1] : "Clip des Monats"}
-              </p>
-              <p className="font-display text-base font-black text-white leading-tight truncate">
-                {winnerClip
-                  ? (winnerClip.clipTitle ?? "Clip ansehen")
-                  : activeClipContest
-                    ? "Abstimmung läuft"
-                    : "Noch keine Clips"}
-              </p>
-              {winnerClip ? (
-                <p className="text-[11px] text-gray-500 mt-2 truncate">
-                  von {winnerClip.submittedBy?.name ?? winnerClip.submittedBy?.username ?? winnerClip.twitchCreatorLogin ?? "Unbekannt"}
-                  {winnerNominationIds.length > 1 && ` · +${winnerNominationIds.length - 1} weitere`}
-                </p>
-              ) : activeClipContest ? (
-                <p className="text-[11px] text-gray-600 mt-1">Jetzt abstimmen →</p>
-              ) : (
-                <p className="text-[11px] text-gray-600 mt-1">Clips ansehen →</p>
-              )}
-            </div>
-          </Link>
+          <ClipOfMonthTile
+            winners={winnerClips}
+            monthLabel={finishedClipContest ? MONTH_NAMES[finishedClipContest.month - 1] : "Clip des Monats"}
+            finishedContestId={finishedClipContest?.id ?? null}
+            activeContestId={activeClipContest?.id ?? null}
+          />
         </div>
 
         {/* ── 3-Spalten: Events | Rangliste | Quests ──────────────── */}
