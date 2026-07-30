@@ -524,7 +524,7 @@ export default async function DashboardPage() {
               )}
               {/* Overlay */}
               <div className="absolute inset-0"
-                style={{ background: "linear-gradient(135deg, rgba(5,46,38,0.75) 0%, rgba(13,13,15,0.55) 100%)" }} />
+                style={{ background: "rgba(13,13,15,0.6)" }} />
               <div className="absolute inset-0"
                 style={{ backgroundImage: "radial-gradient(ellipse at 25% 60%, rgba(20,184,166,0.18) 0%, transparent 55%)" }} />
               {/* Status badge */}
@@ -609,7 +609,7 @@ export default async function DashboardPage() {
               )}
               {/* Overlay */}
               <div className="absolute inset-0"
-                style={{ background: "linear-gradient(135deg, rgba(46,16,101,0.72) 0%, rgba(13,13,15,0.55) 100%)" }} />
+                style={{ background: "rgba(13,13,15,0.6)" }} />
               <div className="absolute inset-0"
                 style={{ backgroundImage: "radial-gradient(ellipse at 25% 60%, rgba(145,70,255,0.22) 0%, transparent 55%)" }} />
               {/* Play-Overlay (rein visuell — Kachel navigiert zur Clip-Seite) */}
