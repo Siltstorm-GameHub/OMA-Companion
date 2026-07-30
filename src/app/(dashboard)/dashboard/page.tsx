@@ -525,8 +525,6 @@ export default async function DashboardPage() {
               {/* Overlay */}
               <div className="absolute inset-0"
                 style={{ background: "rgba(13,13,15,0.6)" }} />
-              <div className="absolute inset-0"
-                style={{ backgroundImage: "radial-gradient(ellipse at 25% 60%, rgba(20,184,166,0.18) 0%, transparent 55%)" }} />
               {/* Status badge */}
               {nextEvent && nextEvent.status === "active" ? (
                 <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider"
@@ -610,8 +608,6 @@ export default async function DashboardPage() {
               {/* Overlay */}
               <div className="absolute inset-0"
                 style={{ background: "rgba(13,13,15,0.6)" }} />
-              <div className="absolute inset-0"
-                style={{ backgroundImage: "radial-gradient(ellipse at 25% 60%, rgba(145,70,255,0.22) 0%, transparent 55%)" }} />
               {/* Play-Overlay (rein visuell — Kachel navigiert zur Clip-Seite) */}
               {winnerClip && (
                 <div className="absolute inset-0 flex items-center justify-center">
