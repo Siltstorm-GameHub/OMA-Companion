@@ -5,7 +5,7 @@ import { collectNominations, finalizeContest, notifyNewContest } from "@/lib/cli
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const AUTO_VOTING_DAYS = 14;
+const AUTO_VOTING_DAYS = 10;
 
 export async function GET(req: NextRequest) {
   const auth = req.headers.get("authorization");
