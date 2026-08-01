@@ -344,7 +344,7 @@ export default function TournamentManager({
     }
     return init;
   });
-  // Match Win: welches Team hat gewonnen (nur coop_stats)
+  // Match Win: welches Team hat gewonnen (nur wenn Spieler Teams zugeordnet sind)
   const [matchWin, setMatchWin]   = useState<Record<string, "A" | "B" | null>>(() => {
     const init: Record<string, "A" | "B" | null> = {};
     for (const m of initial?.matches ?? []) {
@@ -356,6 +356,28 @@ export default function TournamentManager({
             init[m.id] = s["_team"] as "A" | "B";
             break;
           }
+        } catch { /* ignore */ }
+      }
+    }
+    return init;
+  });
+  // Match Win ohne Team-Zuordnung: alle Spieler haben zusammen gespielt, alle erhalten +1
+  const [matchWinAll, setMatchWinAll] = useState<Record<string, boolean>>(() => {
+    const init: Record<string, boolean> = {};
+    for (const m of initial?.matches ?? []) {
+      const usesTeams = m.entries.some(e => {
+        if (!e.statsJson) return false;
+        try {
+          const s = JSON.parse(e.statsJson) as Record<string, unknown>;
+          return s["_team"] === "A" || s["_team"] === "B";
+        } catch { return false; }
+      });
+      if (usesTeams) continue;
+      const entryWithStats = m.entries.find(e => e.statsJson);
+      if (entryWithStats?.statsJson) {
+        try {
+          const s = JSON.parse(entryWithStats.statsJson) as Record<string, number>;
+          if ("Match Win" in s) init[m.id] = s["Match Win"] > 0;
         } catch { /* ignore */ }
       }
     }
@@ -536,19 +558,36 @@ export default function TournamentManager({
   async function submitFfa(matchId: string, matchEntries: MatchEntry[]) {
     if (!tournament) return;
     const ed = ffaEdits[matchId] ?? {};
-    const winningTeam = isCoop ? (matchWin[matchId] ?? null) : undefined;
     const teams = teamAssign[matchId] ?? {};
+    // Kein Spieler zugeordnet → alle haben zusammen gespielt (kein Team-Modus).
+    // Sobald mindestens einer zugeordnet ist, müssen alle Spieler ein Team haben.
+    const usesTeams = isCoop && matchEntries.some(e => e.userId && teams[e.userId]);
+    if (usesTeams) {
+      const missing = matchEntries.some(e => e.userId && !teams[e.userId]);
+      if (missing) {
+        toast.error("Bitte alle Spieler einem Team zuweisen, bevor du speicherst — oder keinem Spieler ein Team zuweisen, wenn alle zusammen gespielt haben.");
+        return;
+      }
+    }
+    const winningTeam = usesTeams ? (matchWin[matchId] ?? null) : undefined;
+    const allWin = isCoop && !usesTeams ? (matchWinAll[matchId] ?? false) : undefined;
     const updated = matchEntries.map(e => {
       // Start with existing persisted stats so we don't overwrite fields that weren't touched
       const existing: Record<string, number | string> = e.statsJson ? JSON.parse(e.statsJson as string) : {};
       const row = ed[e.userId ?? ""] ?? {};
       const stats: Record<string, number | string> = { ...existing };
       visibleStatFields.forEach(f => { if (row[f] !== undefined && row[f] !== "") stats[f] = Number(row[f]); });
-      // For coop_stats: Spieler wird Team A oder B zugeordnet, Match Win geht nur an das gewinnende Team
-      if (winningTeam !== undefined) {
-        const team = e.userId ? teams[e.userId] : undefined;
-        if (team) stats["_team"] = team; else delete stats["_team"];
-        stats["Match Win"] = team && winningTeam && team === winningTeam ? 1 : 0;
+      if (isCoop) {
+        if (usesTeams) {
+          // Spieler wird Team A oder B zugeordnet, Match Win geht nur an das gewinnende Team
+          const team = e.userId ? teams[e.userId] : undefined;
+          if (team) stats["_team"] = team; else delete stats["_team"];
+          stats["Match Win"] = team && winningTeam && team === winningTeam ? 1 : 0;
+        } else {
+          // Alle zusammen gespielt: kein Team, alle erhalten gleichermaßen +1 oder 0
+          delete stats["_team"];
+          stats["Match Win"] = allWin ? 1 : 0;
+        }
       }
       return {
         id: e.id,
@@ -800,34 +839,51 @@ export default function TournamentManager({
                         </div>
                       ) : (
                       <>
-                        {/* Match Win für coop_stats: Spieler werden Team A/B zugeordnet, das Sieger-Team erhält +1 */}
-                        {isCoop && (
-                          <div className="mb-3 space-y-2">
-                            <p className="text-xs text-gray-400">
-                              Match Win <span className="text-gray-500">(Spieler des Sieger-Teams erhalten +1)</span>
-                            </p>
-                            <div className="flex gap-2">
-                              <button type="button"
-                                onClick={() => setMatchWin(prev => ({ ...prev, [match.id]: prev[match.id] === "A" ? null : "A" }))}
-                                className={`flex-1 text-xs rounded px-2 py-1.5 border transition-colors ${
-                                  matchWin[match.id] === "A"
-                                    ? "bg-blue-600 border-blue-500 text-white"
-                                    : "bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600"
-                                }`}>
-                                Team A gewinnt
-                              </button>
-                              <button type="button"
-                                onClick={() => setMatchWin(prev => ({ ...prev, [match.id]: prev[match.id] === "B" ? null : "B" }))}
-                                className={`flex-1 text-xs rounded px-2 py-1.5 border transition-colors ${
-                                  matchWin[match.id] === "B"
-                                    ? "bg-rose-600 border-rose-500 text-white"
-                                    : "bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600"
-                                }`}>
-                                Team B gewinnt
-                              </button>
+                        {/* Match Win für coop_stats: entweder alle zusammen (keine Team-Zuordnung) oder Team A vs. Team B */}
+                        {isCoop && (() => {
+                          const teams = teamAssign[match.id] ?? {};
+                          const usesTeams = match.entries.some(e => e.userId && teams[e.userId]);
+                          return usesTeams ? (
+                            <div className="mb-3 space-y-2">
+                              <p className="text-xs text-gray-400">
+                                Match Win <span className="text-gray-500">(Spieler des Sieger-Teams erhalten +1)</span>
+                              </p>
+                              <div className="flex gap-2">
+                                <button type="button"
+                                  onClick={() => setMatchWin(prev => ({ ...prev, [match.id]: prev[match.id] === "A" ? null : "A" }))}
+                                  className={`flex-1 text-xs rounded px-2 py-1.5 border transition-colors ${
+                                    matchWin[match.id] === "A"
+                                      ? "bg-blue-600 border-blue-500 text-white"
+                                      : "bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600"
+                                  }`}>
+                                  Team A gewinnt
+                                </button>
+                                <button type="button"
+                                  onClick={() => setMatchWin(prev => ({ ...prev, [match.id]: prev[match.id] === "B" ? null : "B" }))}
+                                  className={`flex-1 text-xs rounded px-2 py-1.5 border transition-colors ${
+                                    matchWin[match.id] === "B"
+                                      ? "bg-rose-600 border-rose-500 text-white"
+                                      : "bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600"
+                                  }`}>
+                                  Team B gewinnt
+                                </button>
+                              </div>
+                              <p className="text-[11px] text-amber-500/80">
+                                Team-Modus aktiv — jeder Spieler muss unten einem Team zugewiesen sein, bevor du speicherst.
+                              </p>
                             </div>
-                          </div>
-                        )}
+                          ) : (
+                            <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer mb-3 select-none">
+                              <input
+                                type="checkbox"
+                                checked={matchWinAll[match.id] ?? false}
+                                onChange={e => setMatchWinAll(prev => ({ ...prev, [match.id]: e.target.checked }))}
+                                className="rounded"
+                              />
+                              <span>Match Win <span className="text-gray-500">(alle haben zusammen gespielt, alle erhalten +1)</span></span>
+                            </label>
+                          );
+                        })()}
                         {(isCoop || visibleStatFields.length > 0) && (
                         <div className="overflow-x-auto">
                           <table className="w-full text-xs">
