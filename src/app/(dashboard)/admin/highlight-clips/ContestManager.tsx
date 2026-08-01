@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Trophy, Clapperboard, ExternalLink, Loader2, Square, Link2, Plus, Pencil, Check, X } from "lucide-react";
+import { Trophy, Clapperboard, ExternalLink, Loader2, Square, Link2, Plus, Pencil, Check, X, Ban } from "lucide-react";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 
 const MONTH_NAMES = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
@@ -169,6 +169,26 @@ export default function ContestManager({ contests }: { contests: Contest[] }) {
       toast.success("Belohnungen gespeichert");
     } else {
       toast.error("Fehler beim Speichern");
+    }
+  }
+
+  const [excluding, setExcluding] = useState<string | null>(null);
+
+  async function excludeNomination(contestId: string, nominationId: string) {
+    if (!(await confirm({ title: "Clip ausschließen", description: "Diesen Clip aus der Abstimmung ausschließen? Bereits abgegebene Stimmen für diesen Clip gehen dabei verloren.", variant: "danger" }))) return;
+    setExcluding(nominationId);
+    const res = await fetch(`/api/admin/clip-contest/nomination/${nominationId}`, { method: "DELETE" });
+    setExcluding(null);
+    if (res.ok) {
+      setItems((prev) =>
+        prev.map((c) =>
+          c.id !== contestId ? c : { ...c, nominations: c.nominations.filter((n) => n.id !== nominationId) }
+        )
+      );
+      toast.success("Clip ausgeschlossen");
+    } else {
+      const data = await res.json().catch(() => ({}));
+      toast.error(data.error ?? "Fehler beim Ausschließen");
     }
   }
 
@@ -436,6 +456,16 @@ export default function ContestManager({ contests }: { contests: Contest[] }) {
                       <ExternalLink className="w-3.5 h-3.5" />
                     </a>
                     {isWinner && <Trophy className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
+                    {contest.status === "voting" && (
+                      <button
+                        onClick={() => excludeNomination(contest.id, nom.id)}
+                        disabled={excluding === nom.id}
+                        title="Clip aus Abstimmung ausschließen"
+                        className="text-gray-600 hover:text-red-400 disabled:opacity-50 shrink-0"
+                      >
+                        {excluding === nom.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Ban className="w-3.5 h-3.5" />}
+                      </button>
+                    )}
                   </div>
                 );
               })}
