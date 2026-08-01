@@ -35,13 +35,17 @@ function TwitchIcon({ className }: { className?: string }) {
 export default function ClipOfMonthTile({ winners, monthLabel, finishedContestId, activeContestId }: Props) {
   const [index, setIndex] = useState(0);
 
+  // Solange eine Abstimmung läuft, soll die Kachel darauf verweisen — nicht auf den
+  // Gewinner-Clip des Vormonats.
+  const showWinner = !activeContestId && winners.length > 0;
+
   useEffect(() => {
-    if (winners.length <= 1) return;
+    if (!showWinner || winners.length <= 1) return;
     const t = setInterval(() => setIndex(i => (i + 1) % winners.length), ROTATE_INTERVAL_MS);
     return () => clearInterval(t);
-  }, [winners.length]);
+  }, [showWinner, winners.length]);
 
-  const winner = winners[index] ?? null;
+  const winner = showWinner ? winners[index] ?? null : null;
 
   return (
     <Link href="/clip-des-monats"
@@ -86,7 +90,7 @@ export default function ClipOfMonthTile({ winners, monthLabel, finishedContestId
             {winner ? "🏆 Clip des Monats" : activeContestId ? "Abstimmung läuft" : "Clips"}
           </NewContentPing>
         </div>
-        {winners.length > 1 && (
+        {showWinner && winners.length > 1 && (
           <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-1">
             {winners.map((w, i) => (
               <span key={w.id} className="w-1 h-1 rounded-full transition-colors"
@@ -102,7 +106,7 @@ export default function ClipOfMonthTile({ winners, monthLabel, finishedContestId
       {/* Info area */}
       <div className="px-4 pb-4 pt-2">
         <p className="text-[9px] text-[#9146ff]/60 uppercase tracking-[0.18em] font-semibold mb-0.5">
-          {finishedContestId ? monthLabel : "Clip des Monats"}
+          {showWinner && finishedContestId ? monthLabel : "Clip des Monats"}
         </p>
         <p className="font-display text-base font-black text-white leading-tight truncate">
           {winner
