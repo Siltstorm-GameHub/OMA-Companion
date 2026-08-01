@@ -27,6 +27,7 @@ import { getRingClass } from "@/lib/ranks";
 import { getVisibleServers } from "@/lib/gameservers";
 import { PromoBannerCarousel } from "@/components/PromoBannerCarousel";
 import ClipOfMonthTile from "@/components/ClipOfMonthTile";
+import ClipContestWidget from "@/components/ClipContestWidget";
 import { HeroStatValue } from "@/components/HeroStatValue";
 import { computeStatStandings, type StatConfig, type LegacyStandingRow } from "@/lib/series-event-points";
 import GameserverWidget from "./GameserverWidget";
@@ -505,6 +506,13 @@ export default async function DashboardPage() {
 
       {/* ── Umfragen ──────────────────────────────────────────────── */}
       <DailyPollBanner />
+
+      {/* ── Clip des Monats: Abstimmung läuft ────────────────────── */}
+      {activeClipContest && (
+        <div className="pt-4">
+          <ClipContestWidget userId={userId} />
+        </div>
+      )}
 
       {/* ── Content ─────────────────────────────────────────────────── */}
       <div className="px-4 sm:px-6 py-5 max-w-7xl mx-auto space-y-5 relative">

@@ -75,15 +75,30 @@ export default async function ClipContestWidget({ userId }: { userId?: string })
       {activeContest && (
         <Link
           href="/clip-des-monats"
-          className="flex items-center gap-3 px-4 py-3 rounded-xl glass border border-[#9146ff]/20 hover:border-[#9146ff]/40 transition-colors group"
+          className={`flex items-center gap-3 px-4 py-3 rounded-xl glass border transition-colors group ${
+            hasVoted
+              ? "border-[#9146ff]/20 hover:border-[#9146ff]/40"
+              : "border-[#9146ff]/40 hover:border-[#9146ff]/60 shadow-[0_0_20px_rgba(145,70,255,0.15)]"
+          }`}
         >
-          <div className="w-8 h-8 rounded-lg bg-[#9146ff]/15 flex items-center justify-center shrink-0">
+          <div className="relative w-8 h-8 rounded-lg bg-[#9146ff]/15 flex items-center justify-center shrink-0">
+            {!hasVoted && (
+              <span className="absolute -top-1 -right-1 flex w-2.5 h-2.5">
+                <span className="absolute inline-flex w-full h-full rounded-full bg-[#9146ff] animate-ping" />
+                <span className="relative inline-flex w-2.5 h-2.5 rounded-full bg-[#9146ff]" />
+              </span>
+            )}
             {hasVoted
               ? <Check className="w-4 h-4 text-[#9146ff]" />
               : <Clapperboard className="w-4 h-4 text-[#9146ff]" />}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm text-white font-medium">
+            <p className="text-sm text-white font-medium flex items-center gap-1.5">
+              {!hasVoted && (
+                <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider bg-[#9146ff]/20 text-purple-300 border border-[#9146ff]/30">
+                  Live
+                </span>
+              )}
               {hasVoted ? "Du hast abgestimmt" : "Du hast noch nicht abgestimmt!"}
             </p>
             <p className="text-xs text-gray-500">
