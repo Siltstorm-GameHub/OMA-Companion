@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { getSessionUser } from "@/lib/roles";
 import { Trophy, Clapperboard, Images } from "lucide-react";
 import ClipVotingClient from "./ClipVotingClient";
 import ClipWinnerCard from "@/components/ClipWinnerCard";
@@ -13,6 +14,9 @@ export default async function ClipDesMonatsPage() {
   const session = await auth();
   const userId = session?.user?.id ?? null;
   const embedParent = ((await headers()).get("host") ?? "localhost").split(":")[0];
+
+  const sessionUser = userId ? await getSessionUser() : null;
+  const isModerator = sessionUser?.role === "moderator" || sessionUser?.role === "admin";
 
   const activeContest = await prisma.monthlyClipContest.findFirst({
     where: { status: "voting" },
@@ -147,6 +151,7 @@ export default async function ClipDesMonatsPage() {
             initialVoteId={userVoteNominationId}
             isLoggedIn={!!userId}
             embedParent={embedParent}
+            isModerator={isModerator}
           />
         </section>
       ) : (

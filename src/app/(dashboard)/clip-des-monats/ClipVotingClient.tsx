@@ -1,10 +1,11 @@
 "use client";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Check } from "lucide-react";
+import { Check, Ban, Loader2 } from "lucide-react";
 import Image from "next/image";
 import TwitchClipEmbed from "@/components/TwitchClipEmbed";
 import { clipCredit } from "@/lib/clip-display";
+import { useConfirm } from "@/components/admin/ConfirmDialog";
 
 type Nomination = {
   id: string;
@@ -24,14 +25,32 @@ interface Props {
   isLoggedIn: boolean;
   embedParent: string;
   voteEndpoint?: string;
+  isModerator?: boolean;
 }
 
-export default function ClipVotingClient({ contestId, nominations, initialVoteId, isLoggedIn, embedParent, voteEndpoint = "/api/clip-contest/vote" }: Props) {
+export default function ClipVotingClient({ contestId, nominations, initialVoteId, isLoggedIn, embedParent, voteEndpoint = "/api/clip-contest/vote", isModerator = false }: Props) {
   const [votedId, setVotedId] = useState<string | null>(initialVoteId);
   const [counts, setCounts] = useState<Record<string, number>>(
     Object.fromEntries(nominations.map((n) => [n.id, n.voteCount]))
   );
   const [voting, setVoting] = useState(false);
+  const [excludedIds, setExcludedIds] = useState<Set<string>>(new Set());
+  const [excluding, setExcluding] = useState<string | null>(null);
+  const { confirm, ConfirmDialogElement } = useConfirm();
+
+  async function excludeNomination(nominationId: string) {
+    if (!(await confirm({ title: "Clip ausschließen", description: "Diesen Clip aus der Abstimmung ausschließen? Bereits abgegebene Stimmen für diesen Clip gehen dabei verloren.", variant: "danger" }))) return;
+    setExcluding(nominationId);
+    const res = await fetch(`/api/admin/clip-contest/nomination/${nominationId}`, { method: "DELETE" });
+    setExcluding(null);
+    if (res.ok) {
+      setExcludedIds((prev) => new Set(prev).add(nominationId));
+      toast.success("Clip ausgeschlossen");
+    } else {
+      const data = await res.json().catch(() => ({}));
+      toast.error(data.error ?? "Fehler beim Ausschließen");
+    }
+  }
 
   async function vote(nominationId: string) {
     if (!isLoggedIn) { toast.error("Bitte einloggen um abzustimmen"); return; }
@@ -68,10 +87,11 @@ export default function ClipVotingClient({ contestId, nominations, initialVoteId
 
   const hasVoted = !!votedId;
   const totalVotes = Object.values(counts).reduce((a, b) => a + b, 0);
+  const visibleNominations = nominations.filter((n) => !excludedIds.has(n.id));
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      {nominations.map((nom) => {
+      {visibleNominations.map((nom) => {
         const isMyVote = votedId === nom.id;
         const credit = clipCredit(nom);
         const pct = hasVoted && totalVotes > 0 ? Math.round((counts[nom.id] ?? 0) / totalVotes * 100) : null;
@@ -96,6 +116,16 @@ export default function ClipVotingClient({ contestId, nominations, initialVoteId
                     <div className="absolute top-2 right-2 w-7 h-7 rounded-full bg-[#9146ff] flex items-center justify-center">
                       <Check className="w-4 h-4 text-white" />
                     </div>
+                  )}
+                  {isModerator && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); excludeNomination(nom.id); }}
+                      disabled={excluding === nom.id}
+                      title="Clip aus Abstimmung ausschließen"
+                      className={`absolute top-2 ${isMyVote ? "right-11" : "right-2"} w-7 h-7 rounded-full bg-black/60 hover:bg-red-500/80 flex items-center justify-center text-white disabled:opacity-50 transition-colors`}
+                    >
+                      {excluding === nom.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Ban className="w-3.5 h-3.5" />}
+                    </button>
                   )}
                   {/* Vote bar overlay (only after voting) */}
                   {hasVoted && pct !== null && (
@@ -142,6 +172,7 @@ export default function ClipVotingClient({ contestId, nominations, initialVoteId
           </div>
         );
       })}
+      {ConfirmDialogElement}
     </div>
   );
 }
