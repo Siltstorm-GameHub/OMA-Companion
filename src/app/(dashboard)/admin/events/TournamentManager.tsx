@@ -328,15 +328,34 @@ export default function TournamentManager({
   const [scores1v1, setScores1v1] = useState<Record<string, { s1: string; s2: string }>>({});
   const [ffaEdits, setFfaEdits]   = useState<Record<string, Record<string, Record<string, string>>>>({});
   const [expanded, setExpanded]   = useState<Set<string>>(new Set());
-  // Match Win checkbox state (only for coop_stats format)
-  const [matchWin, setMatchWin]   = useState<Record<string, boolean>>(() => {
-    const init: Record<string, boolean> = {};
+  // Team-Zuordnung pro Spieler (nur coop_stats): Match Win wird pro Team, nicht pro Match vergeben
+  const [teamAssign, setTeamAssign] = useState<Record<string, Record<string, "A" | "B" | undefined>>>(() => {
+    const init: Record<string, Record<string, "A" | "B" | undefined>> = {};
     for (const m of initial?.matches ?? []) {
-      const entryWithStats = m.entries.find(e => e.statsJson);
-      if (entryWithStats?.statsJson) {
+      const row: Record<string, "A" | "B" | undefined> = {};
+      for (const e of m.entries) {
+        if (!e.userId || !e.statsJson) continue;
         try {
-          const s = JSON.parse(entryWithStats.statsJson as string) as Record<string, number>;
-          if ("Match Win" in s) init[m.id] = s["Match Win"] > 0;
+          const s = JSON.parse(e.statsJson) as Record<string, unknown>;
+          if (s["_team"] === "A" || s["_team"] === "B") row[e.userId] = s["_team"] as "A" | "B";
+        } catch { /* ignore */ }
+      }
+      if (Object.keys(row).length) init[m.id] = row;
+    }
+    return init;
+  });
+  // Match Win: welches Team hat gewonnen (nur coop_stats)
+  const [matchWin, setMatchWin]   = useState<Record<string, "A" | "B" | null>>(() => {
+    const init: Record<string, "A" | "B" | null> = {};
+    for (const m of initial?.matches ?? []) {
+      for (const e of m.entries) {
+        if (!e.statsJson) continue;
+        try {
+          const s = JSON.parse(e.statsJson) as Record<string, unknown>;
+          if ((s["_team"] === "A" || s["_team"] === "B") && Number(s["Match Win"]) > 0) {
+            init[m.id] = s["_team"] as "A" | "B";
+            break;
+          }
         } catch { /* ignore */ }
       }
     }
@@ -517,15 +536,20 @@ export default function TournamentManager({
   async function submitFfa(matchId: string, matchEntries: MatchEntry[]) {
     if (!tournament) return;
     const ed = ffaEdits[matchId] ?? {};
-    const coopMatchWin = isCoop ? (matchWin[matchId] ? 1 : 0) : undefined;
+    const winningTeam = isCoop ? (matchWin[matchId] ?? null) : undefined;
+    const teams = teamAssign[matchId] ?? {};
     const updated = matchEntries.map(e => {
       // Start with existing persisted stats so we don't overwrite fields that weren't touched
-      const existing: Record<string, number> = e.statsJson ? JSON.parse(e.statsJson as string) : {};
+      const existing: Record<string, number | string> = e.statsJson ? JSON.parse(e.statsJson as string) : {};
       const row = ed[e.userId ?? ""] ?? {};
-      const stats: Record<string, number> = { ...existing };
+      const stats: Record<string, number | string> = { ...existing };
       visibleStatFields.forEach(f => { if (row[f] !== undefined && row[f] !== "") stats[f] = Number(row[f]); });
-      // For coop_stats: apply match-level "Match Win" to all players
-      if (coopMatchWin !== undefined) stats["Match Win"] = coopMatchWin;
+      // For coop_stats: Spieler wird Team A oder B zugeordnet, Match Win geht nur an das gewinnende Team
+      if (winningTeam !== undefined) {
+        const team = e.userId ? teams[e.userId] : undefined;
+        if (team) stats["_team"] = team; else delete stats["_team"];
+        stats["Match Win"] = team && winningTeam && team === winningTeam ? 1 : 0;
+      }
       return {
         id: e.id,
         statsJson: Object.keys(stats).length ? stats : null,
@@ -776,24 +800,41 @@ export default function TournamentManager({
                         </div>
                       ) : (
                       <>
-                        {/* Match Win checkbox for coop_stats */}
+                        {/* Match Win für coop_stats: Spieler werden Team A/B zugeordnet, das Sieger-Team erhält +1 */}
                         {isCoop && (
-                          <label className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer mb-3 select-none">
-                            <input
-                              type="checkbox"
-                              checked={matchWin[match.id] ?? false}
-                              onChange={e => setMatchWin(prev => ({ ...prev, [match.id]: e.target.checked }))}
-                              className="rounded"
-                            />
-                            <span>Match Win <span className="text-gray-500">(alle Spieler erhalten +1)</span></span>
-                          </label>
+                          <div className="mb-3 space-y-2">
+                            <p className="text-xs text-gray-400">
+                              Match Win <span className="text-gray-500">(Spieler des Sieger-Teams erhalten +1)</span>
+                            </p>
+                            <div className="flex gap-2">
+                              <button type="button"
+                                onClick={() => setMatchWin(prev => ({ ...prev, [match.id]: prev[match.id] === "A" ? null : "A" }))}
+                                className={`flex-1 text-xs rounded px-2 py-1.5 border transition-colors ${
+                                  matchWin[match.id] === "A"
+                                    ? "bg-blue-600 border-blue-500 text-white"
+                                    : "bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600"
+                                }`}>
+                                Team A gewinnt
+                              </button>
+                              <button type="button"
+                                onClick={() => setMatchWin(prev => ({ ...prev, [match.id]: prev[match.id] === "B" ? null : "B" }))}
+                                className={`flex-1 text-xs rounded px-2 py-1.5 border transition-colors ${
+                                  matchWin[match.id] === "B"
+                                    ? "bg-rose-600 border-rose-500 text-white"
+                                    : "bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600"
+                                }`}>
+                                Team B gewinnt
+                              </button>
+                            </div>
+                          </div>
                         )}
-                        {visibleStatFields.length > 0 && (
+                        {(isCoop || visibleStatFields.length > 0) && (
                         <div className="overflow-x-auto">
                           <table className="w-full text-xs">
                             <thead>
                               <tr className="text-gray-500 border-b border-gray-700">
                                 <th className="text-left py-1.5 pr-3 font-medium">Spieler</th>
+                                {isCoop && <th className="text-center py-1.5 px-2 font-medium">Team</th>}
                                 {visibleStatFields.map(f => (
                                   <th key={f} className="text-center py-1.5 px-2 font-medium">{f}</th>
                                 ))}
@@ -804,11 +845,37 @@ export default function TournamentManager({
                                 const user    = allUsers.find(u => u.id === entry.userId);
                                 const existing: Record<string, number> = entry.statsJson ? JSON.parse(entry.statsJson) : {};
                                 const row     = ed[entry.userId ?? ""] ?? {};
+                                const entryTeam = entry.userId ? teamAssign[match.id]?.[entry.userId] : undefined;
                                 return (
                                   <tr key={entry.id} className="border-b border-gray-800 last:border-0">
                                     <td className="py-1.5 pr-3 text-white whitespace-nowrap">
                                       {user ? userName(user) : "?"}
                                     </td>
+                                    {isCoop && (
+                                      <td className="py-1 px-2">
+                                        <div className="flex gap-1 justify-center">
+                                          {(["A", "B"] as const).map(team => (
+                                            <button key={team} type="button"
+                                              onClick={() => {
+                                                if (!entry.userId) return;
+                                                const uid = entry.userId;
+                                                setTeamAssign(prev => ({
+                                                  ...prev,
+                                                  [match.id]: { ...prev[match.id], [uid]: prev[match.id]?.[uid] === team ? undefined : team },
+                                                }));
+                                              }}
+                                              disabled={!entry.userId}
+                                              className={`w-6 h-6 rounded text-[10px] font-bold border transition-colors disabled:opacity-30 ${
+                                                entryTeam === team
+                                                  ? team === "A" ? "bg-blue-600 border-blue-500 text-white" : "bg-rose-600 border-rose-500 text-white"
+                                                  : "bg-gray-700 border-gray-600 text-gray-400 hover:border-gray-500"
+                                              }`}>
+                                              {team}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </td>
+                                    )}
                                     {visibleStatFields.map(f => (
                                       <td key={f} className="py-1 px-2 text-center">
                                         <input type="number" placeholder="–"
