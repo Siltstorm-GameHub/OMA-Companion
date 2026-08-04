@@ -306,7 +306,11 @@ export default function DailySpin({ alreadySpun, lastResult, initialPoints }: Pr
                   width="272" height="272"
                   viewBox="0 0 300 300"
                   style={{
-                    transform: `rotate(${degRef.current}deg)`,
+                    // Nur der Startwinkel. Ab dem Mount gehört die Rotation applyRotation(),
+                    // das direkt svgRef.style.transform setzt — würde hier degRef.current
+                    // gelesen, überschriebe ein zwischenzeitliches Re-Render die laufende
+                    // Animation mit einem veralteten Winkel.
+                    transform: `rotate(${initialDeg}deg)`,
                     transformOrigin: "center",
                     willChange: "transform",
                     display: "block",

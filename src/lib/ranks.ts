@@ -1,8 +1,42 @@
-/** CSS-Klasse für den animierten Gradient-Ring (tier = 1–6, tierLabel = I/II/III) */
+import type { CSSProperties } from "react";
+
+/**
+ * Ring-Tokens pro Rang. Der Rang bestimmt Farbe, Grundtempo und Glow-Stärke,
+ * die Stufe (I/II/III) bestimmt Form und Tempo-Faktor — siehe .rr-t1/2/3 in globals.css.
+ * Die Palette ist bewusst weit gespreizt: Grau → Grün → Orange → Blau → Magenta → Gold.
+ * Teal bleibt frei, das ist die Markenfarbe der App.
+ */
+export const RANK_RING: Record<number, { c1: string; c2: string; c3: string; speed: string; glow: string; glowColor: string }> = {
+  1: { c1: "#3f3f46", c2: "#a1a1aa", c3: "#52525b", speed: "26s", glow:  "0px", glowColor: "transparent"        },
+  2: { c1: "#14532d", c2: "#4ade80", c3: "#22c55e", speed: "22s", glow: "10px", glowColor: "rgba(74,222,128,0.45)"  },
+  3: { c1: "#7c2d12", c2: "#fb923c", c3: "#ea580c", speed: "19s", glow: "12px", glowColor: "rgba(249,115,22,0.45)"  },
+  4: { c1: "#1e3a8a", c2: "#93c5fd", c3: "#3b82f6", speed: "16s", glow: "14px", glowColor: "rgba(96,165,250,0.45)"  },
+  5: { c1: "#701a75", c2: "#f0abfc", c3: "#c026d3", speed: "13s", glow: "16px", glowColor: "rgba(232,121,249,0.50)" },
+  6: { c1: "#78350f", c2: "#fef08a", c3: "#f59e0b", speed: "10s", glow: "22px", glowColor: "rgba(252,211,77,0.60)"  },
+};
+
+/**
+ * CSS-Klassen für den Rang-Ring. Trägt nur noch die Form (Stufe) —
+ * die Farbe kommt über getRingStyle() als Custom Properties dazu.
+ */
 export function getRingClass(rankPoints: number): string {
   const rank = getRank(rankPoints);
-  const label = rank.tierLabel.toLowerCase(); // "i" | "ii" | "iii"
-  return `rank-ring-${rank.tier}-${label}`;
+  const tierIdx = rank.tierLabel.length; // "I" → 1, "II" → 2, "III" → 3
+  const apex = rank.tier === 6 && tierIdx === 3 ? " rr-apex" : "";
+  return `rank-ring rr-t${tierIdx}${apex}`;
+}
+
+/** Farb-/Tempo-Tokens des Rangs als Inline-Style. Gehört auf dasselbe Element wie getRingClass(). */
+export function getRingStyle(rankPoints: number): CSSProperties {
+  const ring = RANK_RING[getRank(rankPoints).tier] ?? RANK_RING[1];
+  return {
+    "--rr-c1": ring.c1,
+    "--rr-c2": ring.c2,
+    "--rr-c3": ring.c3,
+    "--rr-speed": ring.speed,
+    "--rr-glow": ring.glow,
+    "--rr-glow-color": ring.glowColor,
+  } as CSSProperties;
 }
 
 /** @deprecated Bitte getRingClass() verwenden */

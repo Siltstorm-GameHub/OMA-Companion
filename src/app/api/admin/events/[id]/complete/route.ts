@@ -83,31 +83,77 @@ type SeriesStandings = {
  * - Aktualisiert seriesStandingsJson (falls Event in einer Reihe ist)
  * - Speichert finalRankingJson + finalRankingNote
  */
+/**
+ * Nach dieser Zeit gilt eine Abschluss-Sperre als verwaist (Prozess abgestürzt, bevor er
+ * freigeben konnte) und darf übernommen werden. Großzügig bemessen: der Abschluss selbst
+ * dauert Sekunden, ein hängengebliebener Lock blockiert das Event solange komplett.
+ */
+const COMPLETION_LOCK_TIMEOUT_MS = 5 * 60 * 1000;
+
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  ctx: { params: Promise<{ id: string }> }
 ) {
+  await requireRole("moderator");
+  const { id: eventId } = await ctx.params;
+
+  // Abschluss gegen Parallelaufrufe sperren. Ohne das lesen zwei gleichzeitig speichernde
+  // Moderatoren beide denselben Ausgangsstand (isReEdit === false) und zahlen beide die
+  // vollen Belohnungen aus. Der bedingte updateMany ist die atomare Übernahme: nur genau
+  // ein Aufruf bekommt count === 1.
+  const staleBefore = new Date(Date.now() - COMPLETION_LOCK_TIMEOUT_MS);
+  const claimed = await prisma.event.updateMany({
+    where: {
+      id: eventId,
+      OR: [{ completionLockAt: null }, { completionLockAt: { lt: staleBefore } }],
+    },
+    data: { completionLockAt: new Date() },
+  });
+
+  if (claimed.count === 0) {
+    const exists = await prisma.event.findUnique({ where: { id: eventId }, select: { id: true } });
+    if (!exists) return NextResponse.json({ error: "Event nicht gefunden" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Dieses Event wird gerade abgeschlossen. Bitte einen Moment warten und erneut speichern." },
+      { status: 409 },
+    );
+  }
+
+  try {
+    return await completeEvent(req, eventId);
+  } finally {
+    await prisma.event.updateMany({ where: { id: eventId }, data: { completionLockAt: null } });
+  }
+}
+
+async function completeEvent(req: NextRequest, eventId: string) {
   const currentUser = await requireRole("moderator");
-  const { id: eventId } = await params;
 
   // Kleine Helfer für die Diff-basierte Vergabe unten: statt Münzen/Rang-Punkte nur einmalig beim
   // ersten Abschluss zu vergeben, wird bei jedem Speichern ein Delta gegen die zuletzt vergebenen
   // Beträge (aus completionData) gebucht — Voraussetzung dafür, einen User nachträglich (auch nach
   // dem ersten Abschluss) auszuschließen (Disqualifikation) und bereits vergebene Beträge dadurch
   // sauber zurückzunehmen.
-  async function applyCoinDelta(userId: string, delta: number, reason: string) {
+  // Alle Punkte-Buchungen dieses Abschlusses werden hier gesammelt und erst ganz am Ende
+  // gemeinsam mit completionData (dem Ledger, gegen den die Deltas gerechnet werden) in EINER
+  // Transaktion geschrieben. Würden sie unterwegs einzeln committet, wären nach einem Abbruch
+  // mittendrin Punkte gebucht, die im Ledger fehlen — der nächste Abschluss würde sie erneut
+  // auszahlen, weil er sein Delta gegen den alten Ledger-Stand bildet.
+  const pointOps: Prisma.PrismaPromise<unknown>[] = [];
+
+  function applyCoinDelta(userId: string, delta: number, reason: string) {
     if (delta === 0) return;
-    await prisma.$transaction([
+    pointOps.push(
       prisma.user.update({ where: { id: userId }, data: { points: { increment: delta } } }),
       prisma.pointTransaction.create({ data: { userId, amount: delta, reason } }),
-    ]);
+    );
   }
-  async function applyRankDelta(userId: string, delta: number, reason: string) {
+  function applyRankDelta(userId: string, delta: number, reason: string) {
     if (delta === 0) return;
-    await prisma.$transaction([
+    pointOps.push(
       prisma.user.update({ where: { id: userId }, data: { rankPoints: { increment: delta } } }),
       prisma.pointTransaction.create({ data: { userId, amount: delta, reason } }),
-    ]);
+    );
   }
 
   type PollResult = {
@@ -493,7 +539,7 @@ export async function POST(
           prisma.pointTransaction.create({ data: { userId, amount: -oldRankPts, reason: `[Korrektur] Poll-Rang-Punkte: ${event.title}` } })
         );
       }
-      if (txns.length > 0) await prisma.$transaction(txns);
+      pointOps.push(...txns);
     }
   }
 
@@ -516,7 +562,7 @@ export async function POST(
         prisma.pointTransaction.create({ data: { userId, amount: pollRankPts, reason: `[Rang-Punkte] Poll-Sieger: ${event.title}` } })
       );
     }
-    if (txns.length > 0) await prisma.$transaction(txns);
+    pointOps.push(...txns);
   }
 
   // Multi-Poll-Belohnungen (pollResults array)
@@ -538,7 +584,7 @@ export async function POST(
             prisma.pointTransaction.create({ data: { userId, amount: poll.rankPoints, reason: `[Rang-Punkte] ${poll.label}: ${event.title}` } })
           );
         }
-        if (txns.length > 0) await prisma.$transaction(txns);
+        pointOps.push(...txns);
       }
     }
   }
@@ -563,9 +609,11 @@ export async function POST(
           );
         }
       }
-      if (txns.length > 0) await prisma.$transaction(txns);
-      // Reset rewardsPaid on old polls so they get re-processed
-      await prisma.eventPoll.update({ where: { id: old.pollId }, data: { rewardsPaid: false } });
+      pointOps.push(...txns);
+      // Reset rewardsPaid on old polls so they get re-processed. Geht gemeinsam mit der
+      // Rückbuchung raus: sonst könnte das Flag zurückgesetzt sein, ohne dass die alte
+      // Auszahlung storniert wurde — die Umfrage würde dann ein zweites Mal auszahlen.
+      pointOps.push(prisma.eventPoll.update({ where: { id: old.pollId }, data: { rewardsPaid: false } }));
     }
 
     // Reverse the one-time, event-wide Umfrage-Teilnahme-Belohnung (nicht pro Poll)
@@ -578,7 +626,7 @@ export async function POST(
           prisma.pointTransaction.create({ data: { userId: uid, amount: -coins, reason: `[Korrektur] Umfrage Teilnahme: ${event.title}` } })
         );
       }
-      await prisma.$transaction(txns);
+      pointOps.push(...txns);
     }
   }
 
@@ -594,7 +642,7 @@ export async function POST(
   if (body.closeOpenPolls && currentUser.role === "admin") {
     const stillOpenIds = allUnpaidPolls.filter(p => new Date(p.endAt) > now).map(p => p.id);
     if (stillOpenIds.length > 0) {
-      await prisma.eventPoll.updateMany({ where: { id: { in: stillOpenIds } }, data: { endAt: now } });
+      pointOps.push(prisma.eventPoll.updateMany({ where: { id: { in: stillOpenIds } }, data: { endAt: now } }));
       for (const p of allUnpaidPolls) {
         if (stillOpenIds.includes(p.id)) p.endAt = now;
       }
@@ -654,13 +702,14 @@ export async function POST(
       }
     }
 
-    if (txns.length > 0) await prisma.$transaction(txns);
+    pointOps.push(...txns);
 
-    // Mark poll as paid and store winnerIds
-    await prisma.eventPoll.update({
+    // Mark poll as paid and store winnerIds — zusammen mit den Auszahlungen oben, damit
+    // "bezahlt" und die tatsächliche Buchung nicht auseinanderlaufen können.
+    pointOps.push(prisma.eventPoll.update({
       where: { id: poll.id },
       data: { rewardsPaid: true, winnerIds: winnerIds.length > 0 ? JSON.stringify(winnerIds) : null },
-    });
+    }));
 
     eventPollRewards.push({
       pollId: poll.id, winnerIds, voterIds: uniqueVoterIds,
@@ -684,7 +733,7 @@ export async function POST(
       prisma.pointTransaction.create({ data: { userId: uid, amount: coins, reason: `[Münzen] Umfrage Teilnahme: ${event.title}` } })
     );
   }
-  if (participationTxns.length > 0) await prisma.$transaction(participationTxns);
+  pointOps.push(...participationTxns);
 
   // ── Series-Standings (optional, nur wenn Event in einer Reihe ist) ──────────
   let updatedStandings: SeriesStandings | null = null;
@@ -935,8 +984,7 @@ export async function POST(
         if (ep.participationSeriesPoints > 0) {
           addToUser(uid, `${ep.label}_Teilnahmepunkte`, ep.participationSeriesPoints);
           if (statCfg.transferToGlobalRanking) {
-            await prisma.user.update({ where: { id: uid }, data: { rankPoints: { increment: ep.participationSeriesPoints } } });
-            await prisma.pointTransaction.create({ data: { userId: uid, amount: ep.participationSeriesPoints, reason: `[Rang-Punkte] Umfrage Teilnahme (${ep.label}): ${event.title}` } });
+            applyRankDelta(uid, ep.participationSeriesPoints, `[Rang-Punkte] Umfrage Teilnahme (${ep.label}): ${event.title}`);
           }
         }
       }
@@ -946,8 +994,7 @@ export async function POST(
         if (ep.winnerRankPoints > 0) {
           addToUser(uid, `${ep.label}_Siegerpunkte`, ep.winnerRankPoints);
           if (statCfg.transferToGlobalRanking) {
-            await prisma.user.update({ where: { id: uid }, data: { rankPoints: { increment: ep.winnerRankPoints } } });
-            await prisma.pointTransaction.create({ data: { userId: uid, amount: ep.winnerRankPoints, reason: `[Rang-Punkte] Umfrage Sieger (${ep.label}): ${event.title}` } });
+            applyRankDelta(uid, ep.winnerRankPoints, `[Rang-Punkte] Umfrage Sieger (${ep.label}): ${event.title}`);
           }
         }
       }
@@ -1012,13 +1059,11 @@ export async function POST(
             if (dominionCfg.seriesPoints > 0) {
               addToUser(userId, "Dominion Bonus Punkte", dominionCfg.seriesPoints);
               if (statCfg.transferToGlobalRanking) {
-                await prisma.user.update({ where: { id: userId }, data: { rankPoints: { increment: dominionCfg.seriesPoints } } });
-                await prisma.pointTransaction.create({ data: { userId, amount: dominionCfg.seriesPoints, reason: `[Rang-Punkte] Dominion Bonus: ${event.series!.name}` } });
+                applyRankDelta(userId, dominionCfg.seriesPoints, `[Rang-Punkte] Dominion Bonus: ${event.series!.name}`);
               }
             }
             if (dominionCfg.coins > 0) {
-              await prisma.user.update({ where: { id: userId }, data: { points: { increment: dominionCfg.coins } } });
-              await prisma.pointTransaction.create({ data: { userId, amount: dominionCfg.coins, reason: `[Münzen] Dominion Bonus: ${event.series!.name}` } });
+              applyCoinDelta(userId, dominionCfg.coins, `[Münzen] Dominion Bonus: ${event.series!.name}`);
             }
           }
         } else {
@@ -1101,7 +1146,9 @@ export async function POST(
     lockedAt:                new Date().toISOString(),
   };
 
+  // Punkte-Buchungen und Ledger gehen gemeinsam raus — entweder beides oder nichts.
   await prisma.$transaction([
+    ...pointOps,
     prisma.event.update({
       where: { id: eventId },
       data: {

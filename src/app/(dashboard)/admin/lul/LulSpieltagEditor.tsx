@@ -14,6 +14,11 @@ import { uname, MEDAL } from "./lul-types";
 type LulEntry = LulSpieltag["entries"][number];
 type LulMatch = { id: string; p1: string; p2: string; s1: string; s2: string; winner: string };
 
+type LulTab = "players" | "spectators" | "awards";
+// Auf Modulebene, damit die Referenz stabil ist: innerhalb der Komponente entstünde bei jedem
+// Render ein neues Array, das der Swipe-Callback dann als Dependency führen müsste.
+const TAB_ORDER: LulTab[] = ["players", "spectators", "awards"];
+
 export default function LulSpieltagEditor({
   spieltag, allUsers, onRefresh,
 }: {
@@ -22,10 +27,9 @@ export default function LulSpieltagEditor({
   seasonId: string;
   onRefresh: () => void;
 }) {
-  const [tab, setTab] = useState<"players" | "spectators" | "awards">("players");
+  const [tab, setTab] = useState<LulTab>("players");
   const [loading, setLoading] = useState(false);
   const { confirm, ConfirmDialogElement } = useConfirm();
-  const TAB_ORDER: ("players" | "spectators" | "awards")[] = ["players", "spectators", "awards"];
   const touchStartX = useRef<number | null>(null);
   const onTouchStart = useCallback((e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; }, []);
   const onTouchEnd   = useCallback((e: React.TouchEvent) => {

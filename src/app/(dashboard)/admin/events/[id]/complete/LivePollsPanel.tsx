@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback, useMemo } from "react";
+import { useNow } from "@/lib/useNow";
 import { toast } from "sonner";
 import { Vote, Trophy, Clock, CheckCircle2, Trash2, UserX } from "lucide-react";
 
@@ -160,6 +161,8 @@ export default function LivePollsPanel({ eventId, isAdmin, readOnly = false, reg
   const canManage = isAdmin && !readOnly;
 
   const userById = useMemo(() => new Map(allUsers.map(u => [u.id, u])), [allUsers]);
+  // Muss oberhalb der frühen Returns stehen: nach einem bedingten return darf kein Hook folgen.
+  const now = useNow();
 
   const refresh = useCallback(async () => {
     const publicRes = await fetch(`/api/events/${eventId}/polls`);
@@ -244,8 +247,6 @@ export default function LivePollsPanel({ eventId, isAdmin, readOnly = false, reg
 
   if (polls === null) return null;
   if (polls.length === 0) return null;
-
-  const now = Date.now();
 
   return (
     <div className="rounded-xl p-4 space-y-4" style={{ background: "rgba(139,92,246,0.05)", border: "1px solid rgba(139,92,246,0.15)" }}>

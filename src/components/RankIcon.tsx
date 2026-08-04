@@ -2,7 +2,7 @@
 
 import { FileText, Zap, Flame, Landmark, Crown, Trophy } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { getRank, getRankFullLabel } from "@/lib/ranks";
+import { getRank, getRankFullLabel, RANK_RING } from "@/lib/ranks";
 
 interface RankIconProps {
   rankPoints: number;
@@ -11,20 +11,26 @@ interface RankIconProps {
 
 const SIZE_PX = { sm: 20, md: 26, lg: 36 } as const;
 
-const TIER_CONFIG: Record<number, {
-  icon:   LucideIcon;
-  dark:   string;
-  light:  string;
-  stroke: string;
-  glow:   string;
-}> = {
-  1: { icon: FileText, dark: "#3f3f46", light: "#a1a1aa", stroke: "#71717a", glow: "rgba(161,161,170,0.55)" },
-  2: { icon: Zap,      dark: "#14532d", light: "#4ade80", stroke: "#16a34a", glow: "rgba(74,222,128,0.55)"  },
-  3: { icon: Flame,    dark: "#7c2d12", light: "#f97316", stroke: "#dc2626", glow: "rgba(249,115,22,0.55)"  },
-  4: { icon: Landmark, dark: "#1e3a8a", light: "#60a5fa", stroke: "#6366f1", glow: "rgba(96,165,250,0.55)"  },
-  5: { icon: Crown,    dark: "#581c87", light: "#a855f7", stroke: "#db2777", glow: "rgba(168,85,247,0.55)"  },
-  6: { icon: Trophy,   dark: "#78350f", light: "#fcd34d", stroke: "#d97706", glow: "rgba(252,211,77,0.65)"  },
+/** Nur noch das Icon pro Rang — die Farben kommen aus RANK_RING, damit Hexagon und Ring nie auseinanderlaufen. */
+const TIER_ICON: Record<number, LucideIcon> = {
+  1: FileText,
+  2: Zap,
+  3: Flame,
+  4: Landmark,
+  5: Crown,
+  6: Trophy,
 };
+
+function getTierConfig(tier: number) {
+  const ring = RANK_RING[tier] ?? RANK_RING[1];
+  return {
+    icon:   TIER_ICON[tier] ?? TIER_ICON[1],
+    dark:   ring.c1,
+    light:  ring.c2,
+    stroke: ring.c3,
+    glow:   `${ring.c3}8c`, // ~55% Alpha
+  };
+}
 
 const PIP_COUNT = { I: 1, II: 2, III: 3 } as const;
 
@@ -32,7 +38,7 @@ export default function RankIcon({ rankPoints, size = "md" }: RankIconProps) {
   const rank     = getRank(rankPoints);
   const label    = getRankFullLabel(rank);
   const px       = SIZE_PX[size];
-  const cfg      = TIER_CONFIG[rank.tier] ?? TIER_CONFIG[1];
+  const cfg      = getTierConfig(rank.tier);
   const Icon     = cfg.icon;
   const activePips = PIP_COUNT[rank.tierLabel] ?? 1;
 

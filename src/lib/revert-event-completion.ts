@@ -48,6 +48,14 @@ type CompletionData = {
   /** Ausgeschlossene (disqualifizierte) User — haben nie Basis-Belohnungen erhalten, dürfen beim
    *  Zurückbuchen also nicht mit angefasst werden (sonst rutscht ihr Guthaben unberechtigt ins Minus). */
   excludedUserIds?: string[] | null;
+  /** Ledger der beim letzten Abschluss tatsächlich vergebenen Basis-Belohnungen (siehe
+   *  /api/admin/events/[id]/complete) — pro User exakt die gebuchten Beträge. Ausgeschlossene
+   *  User stehen gar nicht erst drin. */
+  rewardLedger?: {
+    participationCoins?: Record<string, number>;
+    spectatorRewards?:   Record<string, { coins: number; rankPoints: number }>;
+    placementRewards?:   Record<string, { coins: number; rankPoints: number }>;
+  } | null;
   /** Ledger der Beträge, die direkt auf die globale Rangliste übertragen wurden (siehe
    *  /api/admin/events/[id]/complete) — für exaktes Zurückbuchen ohne die aktuelle Konfiguration
    *  neu interpretieren zu müssen. */
@@ -95,13 +103,18 @@ type RevertOptions = {
  * da das Event so oder so nicht mehr in der Liga-Tabelle auftauchen soll.
  *
  * Mit `includeBaseRewards: true` werden zusätzlich Teilnahme-/Platzierungs-/
- * Zuschauer-Basis-Münzen und -Rangpunkte zurückgebucht. Das ist ein Best-Effort:
- * die dafür genutzte Rewards-Konfiguration wird aus dem aktuellen
- * event.placementRewardsJson / event.series.placementRewardsJson gelesen, nicht
- * aus einem zum Vergabezeitpunkt gespeicherten Snapshot — wurde die Konfiguration
- * seitdem geändert, kann der zurückgebuchte Betrag vom ursprünglich vergebenen
- * abweichen. Für den regulären Status-Revert (kein includeBaseRewards) bleibt das
- * Verhalten unverändert, da dort bewusst auf diese Rückbuchung verzichtet wird.
+ * Zuschauer-Basis-Münzen und -Rangpunkte zurückgebucht. Grundlage dafür ist der beim
+ * Abschluss geschriebene `completionData.rewardLedger` mit den tatsächlich gebuchten
+ * Beträgen pro User — eine zwischenzeitliche Änderung der Belohnungs-Konfiguration
+ * verfälscht die Rückbuchung dadurch nicht.
+ *
+ * Nur für Events, die vor Einführung des Ledgers abgeschlossen wurden, greift der
+ * Fallback: dort werden die Beträge aus dem aktuellen event.placementRewardsJson /
+ * event.series.placementRewardsJson rekonstruiert und können vom ursprünglich
+ * vergebenen Betrag abweichen, wenn die Konfiguration seitdem geändert wurde.
+ *
+ * Für den regulären Status-Revert (kein includeBaseRewards) bleibt das Verhalten
+ * unverändert, da dort bewusst auf diese Rückbuchung verzichtet wird.
  */
 export async function revertEventCompletion(eventId: string, opts: RevertOptions = {}) {
   const {
@@ -178,7 +191,22 @@ export async function revertEventCompletion(eventId: string, opts: RevertOptions
   const excludedSet = new Set(cd.excludedUserIds ?? []);
 
   // Teilnahme-/Platzierungs-/Zuschauer-Basis-Belohnungen (nur wenn explizit angefordert, siehe Docstring)
-  if (includeBaseRewards) {
+  //
+  // Bevorzugt wird der beim Abschluss geschriebene rewardLedger: er enthält die tatsächlich
+  // gebuchten Beträge pro User. Nur für Events, die vor Einführung des Ledgers abgeschlossen
+  // wurden, wird auf die Rekonstruktion aus der aktuellen Konfiguration zurückgefallen.
+  const ledger = cd.rewardLedger;
+  if (includeBaseRewards && ledger) {
+    for (const [userId, coins] of Object.entries(ledger.participationCoins ?? {})) {
+      reverse(userId, coins, 0);
+    }
+    for (const [userId, r] of Object.entries(ledger.placementRewards ?? {})) {
+      reverse(userId, r.coins ?? 0, r.rankPoints ?? 0);
+    }
+    for (const [userId, r] of Object.entries(ledger.spectatorRewards ?? {})) {
+      reverse(userId, r.coins ?? 0, r.rankPoints ?? 0);
+    }
+  } else if (includeBaseRewards) {
     const rewards = parseRewards(event.placementRewardsJson ?? event.series?.placementRewardsJson);
     const registeredSet = new Set(event.registrations.map(r => r.userId));
     const statCfg: SeriesStatConfig = (() => {

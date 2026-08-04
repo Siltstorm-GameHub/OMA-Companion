@@ -566,40 +566,70 @@ select.input-glass option { background: #0f1117; }
 
 @keyframes rr-spin { to { --rr-angle: 360deg; } }
 
+/* Pulsiert nur den Glow, nicht das Element — sonst blinkt das Avatarbild mit. */
 @keyframes rr-pulse-glow {
-  0%, 100% { opacity: 0.85; }
-  50%       { opacity: 1;    }
+  0%, 100% { box-shadow: 0 0 var(--rr-glow) var(--rr-glow-color); }
+  50%      { box-shadow: 0 0 calc(var(--rr-glow) * 1.7) var(--rr-glow-color); }
 }
 
-/* 1 – Zivi-Anwärter: Grau, langsam (10s / 7s / 4s) */
-.rank-ring-1-i   { background: conic-gradient(from var(--rr-angle), #52525b, #e4e4e7, #a1a1aa, #52525b); animation: rr-spin 10s linear infinite; box-shadow: 0 0  6px rgba(161,161,170,0.45); }
-.rank-ring-1-ii  { background: conic-gradient(from var(--rr-angle), #71717a, #f4f4f5, #d4d4d8, #71717a); animation: rr-spin  7s linear infinite; box-shadow: 0 0 10px rgba(212,212,216,0.60); }
-.rank-ring-1-iii { background: conic-gradient(from var(--rr-angle), #a1a1aa, #ffffff, #e4e4e7, #a1a1aa); animation: rr-spin  4s linear infinite; box-shadow: 0 0 16px rgba(244,244,245,0.70); }
+/* Basis — Farbe, Grundtempo und Glow kommen als Custom Properties aus getRingStyle().
+   Die Werte hier sind nur der Fallback (Rang 1). */
+.rank-ring {
+  --rr-c1: #3f3f46;
+  --rr-c2: #a1a1aa;
+  --rr-c3: #52525b;
+  --rr-speed: 26s;
+  --rr-glow: 0px;
+  --rr-glow-color: transparent;
+  position: relative;
+  animation: rr-spin var(--rr-speed) linear infinite;
+}
 
-/* 2 – Rollator-Raser: Grün (10s / 7s / 4s) */
-.rank-ring-2-i   { background: conic-gradient(from var(--rr-angle), #14532d, #4ade80, #16a34a, #14532d); animation: rr-spin 10s linear infinite; box-shadow: 0 0  4px rgba(74,222,128,0.30); }
-.rank-ring-2-ii  { background: conic-gradient(from var(--rr-angle), #15803d, #86efac, #4ade80, #15803d); animation: rr-spin  7s linear infinite; box-shadow: 0 0  8px rgba(74,222,128,0.50); }
-.rank-ring-2-iii { background: conic-gradient(from var(--rr-angle), #16a34a, #bbf7d0, #4ade80, #16a34a); animation: rr-spin  4s linear infinite; box-shadow: 0 0 14px rgba(74,222,128,0.65); }
+/* Stufe I — eine einzelne Lichtsichel wandert langsam über den Grundton. Kein Glow. */
+.rr-t1 {
+  background: conic-gradient(from var(--rr-angle),
+    var(--rr-c3) 0deg, var(--rr-c3) 30deg, var(--rr-c2) 70deg, var(--rr-c3) 110deg, var(--rr-c3) 360deg);
+}
 
-/* 3 – Krawall-Rentner: Orange-Rot (10s / 7s / 4s) */
-.rank-ring-3-i   { background: conic-gradient(from var(--rr-angle), #7c2d12, #f97316, #dc2626, #7c2d12); animation: rr-spin 10s linear infinite; box-shadow: 0 0  4px rgba(249,115,22,0.30); }
-.rank-ring-3-ii  { background: conic-gradient(from var(--rr-angle), #9a3412, #fb923c, #ef4444, #9a3412); animation: rr-spin  7s linear infinite; box-shadow: 0 0  8px rgba(249,115,22,0.50); }
-.rank-ring-3-iii { background: conic-gradient(from var(--rr-angle), #c2410c, #fdba74, #f97316, #c2410c); animation: rr-spin  4s linear infinite; box-shadow: 0 0 15px rgba(249,115,22,0.65); }
+/* Stufe II — zweilobig: die Drehung wird eindeutig sichtbar, halber Glow. */
+.rr-t2 {
+  background: conic-gradient(from var(--rr-angle),
+    var(--rr-c1), var(--rr-c2) 25%, var(--rr-c1) 50%, var(--rr-c2) 75%, var(--rr-c1));
+  animation-duration: calc(var(--rr-speed) * 0.75);
+  box-shadow: 0 0 calc(var(--rr-glow) * 0.5) var(--rr-glow-color);
+}
 
-/* 4 – Denkmalschutz: Blau-Lila (10s / 7s / 4s) */
-.rank-ring-4-i   { background: conic-gradient(from var(--rr-angle), #1e3a8a, #60a5fa, #6366f1, #1e3a8a); animation: rr-spin 10s linear infinite; box-shadow: 0 0  4px rgba(96,165,250,0.30); }
-.rank-ring-4-ii  { background: conic-gradient(from var(--rr-angle), #1d4ed8, #93c5fd, #818cf8, #1d4ed8); animation: rr-spin  7s linear infinite; box-shadow: 0 0  9px rgba(96,165,250,0.50); }
-.rank-ring-4-iii { background: conic-gradient(from var(--rr-angle), #2563eb, #bfdbfe, #a5b4fc, #2563eb); animation: rr-spin  4s linear infinite; box-shadow: 0 0 15px rgba(96,165,250,0.65); }
+/* Stufe III — voller Verlauf, doppeltes Tempo, voller Glow. */
+.rr-t3 {
+  background: conic-gradient(from var(--rr-angle),
+    var(--rr-c1), var(--rr-c3) 15%, var(--rr-c2) 30%, var(--rr-c3) 45%,
+    var(--rr-c1) 60%, var(--rr-c3) 80%, var(--rr-c2) 90%, var(--rr-c1));
+  animation-duration: calc(var(--rr-speed) * 0.5);
+  box-shadow: 0 0 var(--rr-glow) var(--rr-glow-color);
+}
 
-/* 5 – Heimleitung: Lila-Pink (10s / 7s / 4s) */
-.rank-ring-5-i   { background: conic-gradient(from var(--rr-angle), #581c87, #a855f7, #db2777, #581c87); animation: rr-spin 10s linear infinite; box-shadow: 0 0  5px rgba(168,85,247,0.30); }
-.rank-ring-5-ii  { background: conic-gradient(from var(--rr-angle), #7e22ce, #c084fc, #f472b6, #7e22ce); animation: rr-spin  7s linear infinite; box-shadow: 0 0 10px rgba(168,85,247,0.50); }
-.rank-ring-5-iii { background: conic-gradient(from var(--rr-angle), #9333ea, #e879f9, #fb7185, #9333ea); animation: rr-spin  4s linear infinite; box-shadow: 0 0 16px rgba(232,121,249,0.65); }
+/* Old Master III — einziger Rang mit zusätzlichem Puls. Muss nach .rr-t3 stehen. */
+.rr-apex {
+  animation: rr-spin calc(var(--rr-speed) * 0.5) linear infinite,
+             rr-pulse-glow 2.4s ease-in-out infinite;
+}
 
-/* 6 – Old Master: Gold (8s / 5s / 3s — generell schneller) */
-.rank-ring-6-i   { background: conic-gradient(from var(--rr-angle), #78350f, #f59e0b, #d97706, #78350f); animation: rr-spin 8s linear infinite; box-shadow: 0 0  6px rgba(245,158,11,0.40); }
-.rank-ring-6-ii  { background: conic-gradient(from var(--rr-angle), #92400e, #fcd34d, #f59e0b, #92400e); animation: rr-spin 5s linear infinite; box-shadow: 0 0 12px rgba(252,211,77,0.55); }
-.rank-ring-6-iii { background: conic-gradient(from var(--rr-angle), #b45309, #fef08a, #fcd34d, #f59e0b, #b45309); animation: rr-spin 3s linear infinite, rr-pulse-glow 2s ease-in-out infinite; box-shadow: 0 0 20px rgba(252,211,77,0.75), 0 0 40px rgba(245,158,11,0.35); }
+/* Stufen-Marker am unteren Ringrand (I/II/III) */
+.rr-pip {
+  position: absolute;
+  left: 50%;
+  bottom: -4px;
+  transform: translateX(-50%);
+  background: var(--bg-base, #0d0d0f);
+  color: var(--rr-c2);
+  border: 1px solid var(--rr-c3);
+  border-radius: 999px;
+  padding: 0 5px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.5;
+}
 
 /* ── Depth background — Light ───────────────────────────────────── */
 [data-theme="light"] .depth-bg__blob {

@@ -172,11 +172,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           ? JSON.parse(existing.pointsConfig)
           : null;
 
+    // Zurückgebucht wird immer mit der Konfiguration, die bei der ursprünglichen Vergabe galt.
+    // Wird im selben Speichervorgang sowohl die Punkte-Konfiguration als auch das Ranking
+    // geändert, würde cfgRaw (= die neue Konfiguration) sonst falsche Beträge abziehen.
+    const oldCfgRaw: Record<string, number | { coins: number; points: number }> | null =
+      existing.pointsConfig ? JSON.parse(existing.pointsConfig) : null;
+
     let oldWinnerId: string | null = null;
     if (isAlreadyFinished && existing.finalRankingJson) {
       const oldRanking = JSON.parse(existing.finalRankingJson) as string[];
       oldWinnerId = oldRanking[0] ?? null;
-      await awardPoints(oldRanking, cfgRaw, eventTitle, -1);
+      await awardPoints(oldRanking, oldCfgRaw, eventTitle, -1);
     }
 
     await awardPoints(newRanking, cfgRaw, eventTitle, 1);

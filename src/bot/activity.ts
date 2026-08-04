@@ -1,16 +1,11 @@
 import { prisma } from "@/lib/prisma";
-import { awardPoints } from "@/lib/points";
+import { awardPoints, awardedToday, everAwarded } from "@/lib/points";
 import { updateQuestProgress } from "@/lib/quests";
 
 /** User per Discord-ID finden. Nur discordId — kein unzuverlässiger Name-Fallback. */
 async function findUser(discordId: string) {
   return prisma.user.findUnique({ where: { discordId } });
 }
-
-// Nachrichtenzähler pro User (im Speicher; zurückgesetzt nach je 10)
-const messageCounters   = new Map<string, number>();
-// Täglicher Message-Bonus: userId → Datum-String
-const dailyMessageBonus = new Map<string, string>();
 
 export async function trackMessage(discordId: string) {
   const user = await findUser(discordId);
@@ -19,28 +14,26 @@ export async function trackMessage(discordId: string) {
     return;
   }
 
-  // Kumulierten Nachrichtenzähler erhöhen
-  await prisma.user.update({
-    where: { id: user.id },
-    data:  { messagesTotal: { increment: 1 } },
+  // Kumulierten Nachrichtenzähler erhöhen. Der zurückgelesene Gesamtstand ist zugleich der
+  // Zähler für die 10er-Belohnung — ein In-Memory-Zähler würde bei jedem Bot-Neustart
+  // angefangene Blöcke verlieren.
+  const updated = await prisma.user.update({
+    where:  { id: user.id },
+    data:   { messagesTotal: { increment: 1 } },
+    select: { messagesTotal: true },
   });
 
-  const count = (messageCounters.get(user.id) ?? 0) + 1;
-  messageCounters.set(user.id, count);
-
   // Alle 10 Nachrichten → Münzen
-  if (count >= 10) {
-    messageCounters.set(user.id, 0);
+  if (updated.messagesTotal % 10 === 0) {
     await awardPoints(user.id, "MESSAGE_10");
   }
 
   // Quest-Fortschritt: 1 Nachricht
   await updateQuestProgress(user.id, "MESSAGES", 1);
 
-  // Täglicher Chat-Bonus (einmal pro Tag)
-  const today = new Date().toDateString();
-  if (dailyMessageBonus.get(user.id) !== today) {
-    dailyMessageBonus.set(user.id, today);
+  // Täglicher Chat-Bonus (einmal pro Tag) — gegen die Transaktionen geprüft, nicht gegen
+  // einen In-Memory-Merker, der einen Bot-Neustart nicht überlebt.
+  if (!(await awardedToday(user.id, "MESSAGE_DAILY_BONUS"))) {
     await awardPoints(user.id, "MESSAGE_DAILY_BONUS");
   }
 }
@@ -106,17 +99,8 @@ export async function trackVoice(
   }
 
   // Täglicher Voice-Bonus ab 30 Minuten (einmal pro Tag)
-  if (totalMinutes >= 30) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const existing = await prisma.pointTransaction.findFirst({
-      where: {
-        userId:    user.id,
-        reason:    "Täglich im Voice aktiv",
-        createdAt: { gte: today },
-      },
-    });
-    if (!existing) await awardPoints(user.id, "VOICE_DAILY_BONUS");
+  if (totalMinutes >= 30 && !(await awardedToday(user.id, "VOICE_DAILY_BONUS"))) {
+    await awardPoints(user.id, "VOICE_DAILY_BONUS");
   }
 
   console.log(`  🎙 ${discordId} (${user.name ?? user.username}): ${Math.round(totalMinutes)}min Voice (${checkpointedMinutes}min bereits gespeichert)`);
@@ -125,10 +109,12 @@ export async function trackVoice(
 export async function handleMemberJoin(discordId: string, username: string) {
   await new Promise((r) => setTimeout(r, 5000));
   const user = await findUser(discordId);
-  if (user && user.points === 0) {
-    await awardPoints(user.id, "FIRST_LOGIN");
-    console.log(`🎉 Willkommens-Punkte für ${username}`);
-  }
+  if (!user) return;
+  // Nicht am Punktestand festmachen: wer sein Guthaben im Shop leer kauft und den Server
+  // neu betritt, hätte sonst erneut Willkommens-Punkte bekommen.
+  if (await everAwarded(user.id, "FIRST_LOGIN")) return;
+  await awardPoints(user.id, "FIRST_LOGIN");
+  console.log(`🎉 Willkommens-Punkte für ${username}`);
 }
 
 export async function trackReaction(authorDiscordId: string) {
