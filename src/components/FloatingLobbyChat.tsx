@@ -35,8 +35,11 @@ export function FloatingLobbyChat() {
   const [isDesktop, setIsDesktop] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const lastTimestampRef = useRef<string | null>(null);
+  // Spiegelt `open` für den Polling-Callback, der sonst über seine Closure einen veralteten
+  // Wert sähe. Die Zuweisung gehört in einen Effekt: eine Ref-Mutation während des Renders
+  // ist bei abgebrochenen oder doppelten Renderdurchläufen nicht verlässlich.
   const openRef = useRef(false);
-  openRef.current = open;
+  useEffect(() => { openRef.current = open; }, [open]);
 
   const fetchPresence = useCallback(async () => {
     try {

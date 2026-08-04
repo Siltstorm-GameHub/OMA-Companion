@@ -37,6 +37,8 @@ model User {
   showcaseJson       String?
   // Badge Showcase: JSON-Array mit bis zu 3 Badge-Keys (system oder custom-id)
   showcaseBadgesJson String?
+  // Aktuelle Lieblingsspiele: JSON-Array mit bis zu 5 { name, appId } (Steam App-ID für das Cover)
+  favoriteGamesJson  String?
   // Notification-Präferenzen: JSON-Objekt { badge: bool, quest: bool, event: bool, points: bool, clip: bool, admin: bool }
   notificationPrefs  String  @default("{}")
 
@@ -237,6 +239,9 @@ model Event {
   reminderSentAt      DateTime? // Gesetzt wenn 24h-Erinnerung verschickt (verhindert Doppel-Sendung)
   // JSON: { mvpUserId?, winnerStatField?, seriesWinnerTargetField?, lockedAt }
   completionData      String?
+  // Gesetzt, solange ein Abschluss läuft. Verhindert, dass zwei parallele Abschlüsse
+  // beide gegen denselben Ausgangsstand rechnen und Belohnungen doppelt auszahlen.
+  completionLockAt    DateTime?
   createdAt           DateTime      @default(now())
 
   // Ehem. Tournament-Felder (zusammengeführt)

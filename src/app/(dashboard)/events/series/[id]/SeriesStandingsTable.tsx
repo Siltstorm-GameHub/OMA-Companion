@@ -146,6 +146,10 @@ export default function SeriesStandingsTable({
   const deltaColPresent = hasDelta;
 
   /* ── Full table ── */
+  // Als Funktion aufgerufen ({FullTable()}), nicht als Element (<FullTable />): eine im
+  // Elternteil definierte Komponente bekommt bei jedem Elternrender eine neue Identität,
+  // React würde den Teilbaum dadurch jedes Mal aus- und wieder einhängen (Flackern,
+  // verlorene Scrollposition).
   function FullTable() {
     const headers = [
       { label: "#", cls: "text-center" },
@@ -337,7 +341,7 @@ export default function SeriesStandingsTable({
   if (mode === "compact") {
     return (
       <div className="glass card-shine rounded-2xl overflow-hidden">
-        <CompactTable />
+        {CompactTable()}
       </div>
     );
   }
@@ -346,7 +350,7 @@ export default function SeriesStandingsTable({
     return (
       <div className="glass card-shine rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
-          <FullTable />
+          {FullTable()}
         </div>
       </div>
     );
@@ -357,9 +361,9 @@ export default function SeriesStandingsTable({
     <div className="glass card-shine rounded-2xl overflow-hidden">
       <div className="lg:hidden">
         {expanded && hasExtraData ? (
-          <div className="overflow-x-auto"><FullTable /></div>
+          <div className="overflow-x-auto">{FullTable()}</div>
         ) : (
-          <CompactTable />
+          CompactTable()
         )}
         {hasExtraData && (
           <button
@@ -374,7 +378,7 @@ export default function SeriesStandingsTable({
         )}
       </div>
       <div className="hidden lg:block overflow-x-auto">
-        <FullTable />
+        {FullTable()}
       </div>
     </div>
   );

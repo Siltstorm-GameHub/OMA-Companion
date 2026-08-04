@@ -27,39 +27,72 @@ export function generateRoundRobin(participantIds: string[], eventId: string) {
   return matches;
 }
 
-function generateBracket(participantIds: string[], eventId: string) {
-  const n = participantIds.length;
-  const slots = Math.pow(2, Math.ceil(Math.log2(n)));
+type BracketMatch = {
+  eventId:   string;
+  round:     number;
+  position:  number;
+  player1Id: string | null;
+  player2Id: string | null;
+  winnerId:  string | null;
+};
+
+/** Unverzerrtes Mischen (Fisher-Yates). */
+function shuffle<T>(items: T[]): T[] {
+  const a = [...items];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function generateBracket(participantIds: string[], eventId: string): BracketMatch[] {
+  const n      = participantIds.length;
+  const slots  = Math.pow(2, Math.ceil(Math.log2(n)));
   const rounds = Math.ceil(Math.log2(slots));
-  const matches = [];
+  const firstRoundMatches = slots / 2;
 
-  const shuffled = [...participantIds].sort(() => Math.random() - 0.5);
-  while (shuffled.length < slots) shuffled.push("BYE");
+  const players = shuffle(participantIds);
 
-  for (let pos = 0; pos < slots / 2; pos++) {
-    matches.push({
-      eventId,
-      round: 1,
-      position: pos + 1,
-      player1Id: shuffled[pos * 2] === "BYE" ? null : shuffled[pos * 2],
-      player2Id: shuffled[pos * 2 + 1] === "BYE" ? null : shuffled[pos * 2 + 1],
-      winnerId:
-        shuffled[pos * 2 + 1] === "BYE"
-          ? shuffled[pos * 2]
-          : shuffled[pos * 2] === "BYE"
-          ? shuffled[pos * 2 + 1]
-          : null,
+  // Freilose auf verschiedene Matches verteilen (je höchstens eines pro Match). Würden sie
+  // stattdessen hinten angehängt, könnten zwei Freilose im selben Match landen — dieses Match
+  // hätte dann gar keine Spieler und einen Sieger, den es nicht gibt.
+  // Das geht immer auf: slots ist die nächste Zweierpotenz ≥ n, damit ist slots − n < slots/2.
+  const byeCount = slots - n;
+
+  const round1: BracketMatch[] = [];
+  let next = 0;
+  for (let position = 1; position <= firstRoundMatches; position++) {
+    const isBye     = position <= byeCount;
+    const player1Id = players[next++] ?? null;
+    const player2Id = isBye ? null : (players[next++] ?? null);
+    round1.push({
+      eventId, round: 1, position, player1Id, player2Id,
+      winnerId: isBye ? player1Id : null,
     });
   }
 
+  // Leere Matches der Folgerunden
+  const laterRounds: BracketMatch[] = [];
   for (let round = 2; round <= rounds; round++) {
     const matchesInRound = slots / Math.pow(2, round);
-    for (let pos = 1; pos <= matchesInRound; pos++) {
-      matches.push({ eventId, round, position: pos, player1Id: null, player2Id: null, winnerId: null });
+    for (let position = 1; position <= matchesInRound; position++) {
+      laterRounds.push({ eventId, round, position, player1Id: null, player2Id: null, winnerId: null });
     }
   }
 
-  return matches;
+  // Freilos-Sieger sofort aufrücken lassen. Sonst bliebe ihr Platz in Runde 2 leer: das
+  // Nachrücken passiert sonst nur beim Eintragen eines Match-Ergebnisses, und ein Freilos
+  // trägt niemand ein.
+  for (const m of round1) {
+    if (!m.winnerId) continue;
+    const target = laterRounds.find(x => x.round === 2 && x.position === Math.ceil(m.position / 2));
+    if (!target) continue;
+    if (m.position % 2 === 1) target.player1Id = m.winnerId;
+    else                      target.player2Id = m.winnerId;
+  }
+
+  return [...round1, ...laterRounds];
 }
 
 export async function POST(req: NextRequest) {

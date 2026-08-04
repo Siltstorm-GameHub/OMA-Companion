@@ -13,10 +13,12 @@ interface PollGameSuggestInputProps {
   /** Meldet den aktuell getippten (noch nicht hinzugefügten) Text an die Eltern-Komponente —
    * so kann beim Abstimmen auch ohne aktiven "+"-Klick eine unbekannte Freitext-Eingabe übernommen werden. */
   onDraftChange?: (text: string) => void;
+  /** Chip-Liste ausblenden, wenn die Auswahl bereits anders dargestellt wird (z.B. als Cover-Grid) */
+  hideChips?: boolean;
 }
 
 /** Mehrfach-Spielvorschlag-Eingabe für Umfragen: Steam-Suche + Chip-Liste. */
-export default function PollGameSuggestInput({ value, onChange, max = 10, onDraftChange }: PollGameSuggestInputProps) {
+export default function PollGameSuggestInput({ value, onChange, max = 10, onDraftChange, hideChips = false }: PollGameSuggestInputProps) {
   const [query, setQuery]     = useState("");
   const [open, setOpen]       = useState(false);
   const [loading, setLoading] = useState(false);
@@ -73,7 +75,7 @@ export default function PollGameSuggestInput({ value, onChange, max = 10, onDraf
   return (
     <div ref={containerRef} className="relative w-full">
       {/* Chips */}
-      {value.length > 0 && (
+      {!hideChips && value.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-2">
           {value.map((g, i) => (
             <span key={i} className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] bg-purple-500/10 border border-purple-500/25 text-purple-200">

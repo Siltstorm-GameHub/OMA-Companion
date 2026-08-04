@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { getRingClass } from "@/lib/ranks";
+import { getRank, getRingClass, getRingStyle } from "@/lib/ranks";
 
 interface RankedAvatarProps {
   rankPoints: number;
@@ -12,6 +12,8 @@ interface RankedAvatarProps {
    */
   size?: number;
   rounded?: "full" | "2xl" | "xl" | "lg";
+  /** Stufen-Marker (I/II/III) am Ringrand. Default: ab 48px, darunter zu klein zum Lesen. */
+  showTier?: boolean;
   className?: string;
 }
 
@@ -22,12 +24,13 @@ const ROUNDED = {
   lg:   "rounded-lg",
 };
 
-/** Ring padding in px per tier suffix (i/ii/iii) */
-const TIER_PAD_PX: Record<string, number> = { i: 2, ii: 3, iii: 4 };
-
-function getTierPad(ringClass: string): number {
-  const suffix = ringClass.split("-").at(-1) ?? "i";
-  return TIER_PAD_PX[suffix] ?? 2;
+/**
+ * Ringbreite proportional zur Avatargröße — fixe px sehen bei 24px wie ein Reifen
+ * und bei 80px wie ein Haar aus. Über alle Stufen gleich, damit das Bild in einer
+ * Reihe überall gleich groß bleibt; die Stufe steckt in der Ringform, nicht im Padding.
+ */
+function getRingWidth(size: number): number {
+  return Math.max(2, Math.round(size * 0.055));
 }
 
 export default function RankedAvatar({
@@ -36,19 +39,21 @@ export default function RankedAvatar({
   alt,
   size = 40,
   rounded = "full",
+  showTier,
   className = "",
 }: RankedAvatarProps) {
-  const ringClass = getRingClass(rankPoints);
-  const pad       = getTierPad(ringClass);
-  const r         = ROUNDED[rounded];
+  const r    = ROUNDED[rounded];
+  const pad  = getRingWidth(size);
+  const rank = getRank(rankPoints);
+  const pip  = showTier ?? size >= 48;
 
   const fallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(alt)}&background=3f3f46&color=e4e4e7&size=${size * 2}`;
   const imgSrc   = src ?? fallback;
 
   return (
     <div
-      className={`${ringClass} ${r} shrink-0 ${className}`}
-      style={{ padding: pad }}
+      className={`${getRingClass(rankPoints)} ${r} shrink-0 ${className}`}
+      style={{ ...getRingStyle(rankPoints), padding: pad }}
     >
       <div className={`${r} overflow-hidden bg-[#0d0d0f] w-full h-full`}>
         <Image
@@ -60,6 +65,7 @@ export default function RankedAvatar({
           unoptimized
         />
       </div>
+      {pip && <span className="rr-pip select-none">{rank.tierLabel}</span>}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { useNow } from "@/lib/useNow";
 import Image from "next/image";
 import { Vote, Clock, Trophy, ChevronDown, ChevronUp, Check, UserX, RotateCcw } from "lucide-react";
 import { usePollCountdown } from "@/components/PollCountdown";
@@ -77,7 +78,7 @@ function PollCard({
   eventRegistrations: Registration[];
   onExclusionChanged: () => void;
 }) {
-  const now = Date.now();
+  const now = useNow();
   const startAt = new Date(poll.startAt).getTime();
   const endAt   = new Date(poll.endAt).getTime();
   const isActive = now >= startAt && now <= endAt;
@@ -359,7 +360,7 @@ export default function PollsSection({ eventId, userId, initialPolls, eventRegis
     );
   }
 
-  const now = Date.now();
+  const now = useNow();
   const activePolls   = polls.filter(p => now >= new Date(p.startAt).getTime() && now <= new Date(p.endAt).getTime());
   const upcomingPolls = polls.filter(p => now < new Date(p.startAt).getTime());
   const pastPolls     = polls.filter(p => now > new Date(p.endAt).getTime());

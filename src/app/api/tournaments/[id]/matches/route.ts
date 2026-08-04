@@ -1,7 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
-import { awardPoints } from "@/lib/points";
+import { awardPoints, revokePointsByReason } from "@/lib/points";
+
+// Begründungen der Finale-Belohnungen — enthalten die eventId, damit eine Korrektur genau
+// die Vergabe dieses einen Turniers zurückbucht und nicht die eines gleichnamigen anderen.
+const finalWinReason      = (eventId: string) => `Turniersieg 🏆 – Turnier ${eventId}`;
+const finalFinalistReason = (eventId: string) => `Turnierfinale erreicht – Turnier ${eventId}`;
+
+/** Den Verlierer eines entschiedenen Matches bestimmen (null bei Freilos/Unentschieden). */
+function loserOf(
+  m: { player1Id: string | null; player2Id: string | null },
+  winnerId: string | null,
+): string | null {
+  if (!winnerId) return null;
+  return (m.player1Id === winnerId ? m.player2Id : m.player1Id) ?? null;
+}
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   await requireRole("moderator");
@@ -74,6 +88,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             data: { player2Id: null, winnerId: null, score1: null, score2: null, playedAt: null },
           });
         }
+      } else {
+        // Kein Folgematch = das zurückgesetzte Match war das Finale. Die dort vergebenen
+        // Turnier-Belohnungen müssen mit zurück, sonst bleiben sie nach dem Zurücksetzen
+        // stehen und werden beim erneuten Eintragen ein zweites Mal ausgezahlt.
+        await revokePointsByReason(match.winnerId, finalWinReason(eventId));
+        const loserId = loserOf(match, match.winnerId);
+        if (loserId) await revokePointsByReason(loserId, finalFinalistReason(eventId));
       }
       await prisma.event.update({ where: { id: eventId }, data: { tournamentStatus: "active" } });
     }
@@ -143,15 +164,31 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     if (nextMatch) {
       const isFirstSlot = match.position % 2 === 1;
+      // Explizit auf null statt undefined: bei einem Unentschieden würde undefined von Prisma
+      // als "nicht ändern" gewertet und der zuvor aufgerückte Spieler bliebe stehen.
       await prisma.match.update({
         where: { id: nextMatch.id },
-        data: isFirstSlot ? { player1Id: winnerId } : { player2Id: winnerId },
+        data: isFirstSlot ? { player1Id: winnerId ?? null } : { player2Id: winnerId ?? null },
       });
     } else {
-      if (winnerId) {
-        await awardPoints(winnerId, "TOURNAMENT_WIN");
-        const loserId = match.player1Id === winnerId ? match.player2Id : match.player1Id;
-        if (loserId) await awardPoints(loserId, "TOURNAMENT_TOP3");
+      // Finale. Die Belohnung hängt am Sieger, nicht am Speichervorgang: bei unverändertem
+      // Sieger passiert nichts (sonst zahlt jede Korrektur erneut aus), bei geändertem Sieger
+      // wird die alte Vergabe exakt zurückgebucht und danach neu ausgezahlt.
+      const oldWinnerId = existingMatch?.winnerId ?? null;
+      const newWinnerId = winnerId ?? null;
+
+      if (oldWinnerId !== newWinnerId) {
+        if (oldWinnerId && existingMatch) {
+          await revokePointsByReason(oldWinnerId, finalWinReason(eventId));
+          const oldLoserId = loserOf(existingMatch, oldWinnerId);
+          if (oldLoserId) await revokePointsByReason(oldLoserId, finalFinalistReason(eventId));
+        }
+        if (newWinnerId) {
+          await awardPoints(newWinnerId, "TOURNAMENT_WIN", finalWinReason(eventId));
+          // Der Verlierer des Finales ist der Finalist (2. Platz) — nicht Top-3.
+          const loserId = loserOf(match, newWinnerId);
+          if (loserId) await awardPoints(loserId, "TOURNAMENT_FINALIST", finalFinalistReason(eventId));
+        }
       }
       await prisma.event.update({ where: { id: eventId }, data: { tournamentStatus: "finished" } });
     }

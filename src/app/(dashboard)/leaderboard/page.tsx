@@ -226,6 +226,7 @@ export default async function LeaderboardPage() {
                   alt={displayName}
                   size={cfg.rank === 0 ? 80 : 56}
                   rounded="full"
+                  showTier={false}
                   className={`${cfg.avatarSize} mb-3`}
                 />
 

@@ -18,6 +18,8 @@ import Link from "next/link";
 import Image from "next/image";
 import BadgesSection from "../BadgesSection";
 import CollectiblesShowcase from "../CollectiblesShowcase";
+import FavoriteGamesSection from "../FavoriteGamesSection";
+import { parseFavoriteGames } from "@/lib/favorite-games";
 import WanderpocalSection from "@/components/WanderpocalSection";
 import DuelChallengeWidget from "@/components/DuelChallengeWidget";
 import { getMinigamesConfig } from "@/lib/minigames-config";
@@ -50,7 +52,7 @@ export default async function PublicProfilePage({
         select: {
           id: true, name: true, username: true, image: true,
           points: true, rankPoints: true, createdAt: true,
-          showcaseJson: true, showcaseBadgesJson: true,
+          showcaseJson: true, showcaseBadgesJson: true, favoriteGamesJson: true,
           bio: true, birthday: true, twitchLogin: true,
           voiceMinutesTotal: true, messagesTotal: true,
         },
@@ -163,6 +165,8 @@ export default async function PublicProfilePage({
   const showcaseBadgeKeys: string[] = (() => {
     try { return JSON.parse(user.showcaseBadgesJson ?? "[]"); } catch { return []; }
   })();
+  const favoriteGames = parseFavoriteGames(user.favoriteGamesJson);
+
   const showcaseIds: string[] = (() => {
     try { return JSON.parse(user.showcaseJson ?? "[]"); } catch { return []; }
   })();
@@ -314,6 +318,11 @@ export default async function PublicProfilePage({
           <p className="relative text-xs text-gray-400 mt-1.5">Lieblingsspiel</p>
         </div>
       </div>
+
+      {/* ── Aktuelle Lieblingsspiele (read-only) ────────────────────── */}
+      {favoriteGames.length > 0 && (
+        <FavoriteGamesSection games={favoriteGames} readOnly displayName={displayName} />
+      )}
 
       {/* ── Collectibles Showcase (read-only) ───────────────────────── */}
       {showcaseItems.length > 0 && (

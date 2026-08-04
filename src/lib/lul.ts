@@ -27,6 +27,37 @@ export type LulPointsConfig = {
   polls?:            LulPollConfig[];
 };
 
+/**
+ * pollWinsJson robust lesen. Ein defekter Datensatz darf nicht die komplette
+ * Tabellen-/Standings-Seite mit einem Parse-Fehler abreißen lassen.
+ */
+function parsePollWins(json: string | null | undefined): string[] {
+  if (!json) return [];
+  try {
+    const parsed = JSON.parse(json);
+    return Array.isArray(parsed) ? parsed.filter((k): k is string => typeof k === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Die gewonnenen Poll-statKeys eines Eintrags — inklusive der beiden Legacy-Boolean-Felder,
+ * die ältere Saisons statt pollWinsJson benutzt haben. Doppelte Schlüssel werden entfernt:
+ * seit close/route.ts beide Formate parallel schreibt, steht z.B. "communityChamp" sonst
+ * zweimal drin (einmal aus dem JSON, einmal aus dem Boolean).
+ */
+function collectPollWins(entry: {
+  communityChamp: boolean;
+  trostpreis:     boolean;
+  pollWinsJson?:  string | null;
+}): string[] {
+  const wins = parsePollWins(entry.pollWinsJson);
+  if (entry.communityChamp && !wins.includes("communityChamp")) wins.push("communityChamp");
+  if (entry.trostpreis     && !wins.includes("trostpreis"))     wins.push("trostpreis");
+  return wins;
+}
+
 export function calcLulPoints(
   entry: {
     role?:          string;
@@ -60,12 +91,7 @@ export function calcLulPoints(
   // Poll-Gewinne — zuerst neues flexibles System prüfen
   const polls = config?.polls;
   if (polls && polls.length > 0) {
-    const wins: string[] = entry.pollWinsJson
-      ? (JSON.parse(entry.pollWinsJson) as string[])
-      : [];
-    // Legacy-Flags als Fallback in wins-Array aufnehmen
-    if (entry.communityChamp && !wins.includes("communityChamp")) wins.push("communityChamp");
-    if (entry.trostpreis     && !wins.includes("trostpreis"))     wins.push("trostpreis");
+    const wins = collectPollWins(entry);
 
     for (const poll of polls) {
       if (!isVoterOnly && wins.includes(poll.statKey)) {
@@ -113,24 +139,19 @@ export function buildLulStandings(
     dominionBonus:  boolean;
     pollWinsJson?:  string | null;
   }[],
-  pollsConfig?: LulPollConfig[],
 ): LulStandingRow[] {
   const map = new Map<string, LulStandingRow>();
 
   for (const e of entries) {
     const display = e.user.username ?? e.user.name ?? "Unbekannt";
 
-    // Flexible Poll-Wins aus JSON lesen
+    // Flexible Poll-Wins + Legacy-Flags, dedupliziert: close/route.ts schreibt bei
+    // "communityChamp"/"trostpreis" sowohl in pollWinsJson als auch ins Boolean-Feld —
+    // beides zu addieren hätte jeden solchen Sieg doppelt gezählt.
     const pollWins: Record<string, number> = {};
-    if (e.pollWinsJson) {
-      const wins = JSON.parse(e.pollWinsJson) as string[];
-      for (const key of wins) {
-        pollWins[key] = (pollWins[key] ?? 0) + 1;
-      }
+    for (const key of collectPollWins(e)) {
+      pollWins[key] = (pollWins[key] ?? 0) + 1;
     }
-    // Legacy-Flags in pollWins spiegeln
-    if (e.communityChamp) pollWins["communityChamp"] = (pollWins["communityChamp"] ?? 0) + 1;
-    if (e.trostpreis)     pollWins["trostpreis"]     = (pollWins["trostpreis"]     ?? 0) + 1;
 
     const existing = map.get(e.userId);
     if (!existing) {
@@ -215,16 +236,12 @@ export function isWinForDominion(
   entry: { gameWinner: boolean; communityChamp: boolean; trostpreis: boolean; pollWinsJson?: string | null },
   triggers?: string[],
 ): boolean {
-  // Wenn keine triggers konfiguriert → nur gameWinner zählt (Legacy)
+  // Ohne konfigurierte Trigger zählen Spieltag-Sieg und die beiden Legacy-Umfragen (Verhalten
+  // älterer Saisons). Ein explizit leeres Array bedeutet dagegen "kein Trigger" und wird
+  // bewusst nicht auf den Standard zurückgesetzt.
   const t = triggers ?? ["gameWinner", "communityChamp", "trostpreis"];
 
   if (t.includes("gameWinner") && entry.gameWinner) return true;
 
-  const wins: string[] = entry.pollWinsJson
-    ? (JSON.parse(entry.pollWinsJson) as string[])
-    : [];
-  if (entry.communityChamp && !wins.includes("communityChamp")) wins.push("communityChamp");
-  if (entry.trostpreis     && !wins.includes("trostpreis"))     wins.push("trostpreis");
-
-  return wins.some(w => t.includes(w));
+  return collectPollWins(entry).some(w => t.includes(w));
 }

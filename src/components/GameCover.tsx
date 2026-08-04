@@ -6,6 +6,12 @@ import EventCoverDefault from "@/components/EventCoverDefault";
 
 interface GameCoverProps {
   game: string | null | undefined;
+  /**
+   * Bereits bekannte Cover-URL (z.B. aus einer gespeicherten Steam App-ID).
+   * Hat Vorrang vor allen Namens-Lookups; schlägt das Laden fehl, greift
+   * wieder die normale Auflösung über den Spielnamen.
+   */
+  coverUrl?: string | null;
   /** Breite × Höhe des Containers – Standard: "w-16 h-10" */
   className?: string;
   /** Runde Ecken – Standard: "rounded-lg" */
@@ -19,15 +25,20 @@ const dynamicCache = new Map<string, string | null>();
 
 export default function GameCover({
   game,
+  coverUrl: explicitUrl,
   className = "w-16 h-10",
   rounded = "rounded-lg",
   imgClassName = "w-full h-full object-cover",
 }: GameCoverProps) {
+  // Explizit übergebenes Cover schlägt fehl → auf Namens-Auflösung zurückfallen
+  const [explicitFailed, setExplicitFailed] = useState(false);
+  const usableExplicitUrl = explicitUrl && !explicitFailed ? explicitUrl : null;
+
   // Vom Nutzer im Dropdown exakt ausgewähltes Cover hat Vorrang vor dem
   // unscharfen statischen Map-Match und der eigenen Steam-Suche, sonst
   // kann nach dem Speichern ein anderes Bild als das ausgewählte erscheinen.
   const pickedUrl = game ? pickedCoverCache.get(normalizeForCoverCache(game)) : undefined;
-  const staticUrl = pickedUrl ?? getGameCoverUrl(game);
+  const staticUrl = usableExplicitUrl ?? pickedUrl ?? getGameCoverUrl(game);
 
   const [dynamicUrl, setDynamicUrl] = useState<string | null | undefined>(
     // Sofort aus Cache bedienen falls vorhanden
@@ -57,8 +68,8 @@ export default function GameCover({
     return () => { cancelled = true; };
   }, [game, staticUrl]);
 
-  const coverUrl  = staticUrl ?? (dynamicUrl ?? null);
-  const showImage = coverUrl && !imgError;
+  const resolvedUrl = staticUrl ?? (dynamicUrl ?? null);
+  const showImage   = resolvedUrl && !imgError;
 
   return (
     <div
@@ -66,10 +77,14 @@ export default function GameCover({
     >
       {showImage ? (
         <img
-          src={coverUrl}
+          src={resolvedUrl}
           alt={game ?? ""}
           className={imgClassName}
-          onError={() => setImgError(true)}
+          onError={() => {
+            // Nur das explizite Cover war kaputt → Namens-Auflösung bekommt noch eine Chance
+            if (resolvedUrl === usableExplicitUrl) setExplicitFailed(true);
+            else setImgError(true);
+          }}
         />
       ) : (
         <EventCoverDefault />

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 
 function formatRelative(date: Date): string {
   const now   = new Date();
@@ -26,7 +26,12 @@ interface RelativeTimeProps {
 }
 
 export function RelativeTime({ date, showTooltip = true, className }: RelativeTimeProps) {
-  const d = typeof date === "string" ? new Date(date) : date;
+  // Über den Zeitstempel identifizieren, nicht über das Date-Objekt: bei einem String-Prop
+  // entsteht bei jedem Render ein neues Objekt. Als Effekt-Dependency hätte das den
+  // Intervall bei jedem Render neu aufgesetzt — er wäre nie bis zur ersten Minute gekommen
+  // und die Anzeige hätte sich nie aktualisiert.
+  const timestamp = typeof date === "string" ? new Date(date).getTime() : date.getTime();
+  const d = useMemo(() => new Date(timestamp), [timestamp]);
   const [label, setLabel] = useState(() => formatRelative(d));
 
   useEffect(() => {

@@ -28,6 +28,22 @@ export const POINT_RULES = {
 export type PointRule     = keyof typeof POINT_RULES;
 export type PointCategory = "turnier" | "aktivitaet" | "community";
 
+// ─── Begründungs-Format ────────────────────────────────────────────────────
+// Jede Vergabe schreibt eine PointTransaction, deren `reason` sich aus Währungs-Präfix,
+// der eigentlichen Begründung und optional dem Geburtstags-Suffix zusammensetzt:
+//   "[Münzen] Stunde im Sprachkanal 🎙"        (normal)
+//   "[Münzen] Stunde im Sprachkanal 🎙 🎂×2"   (mit Geburtstags-Boost)
+// Wer später auf diese Transaktionen zurückgreift (Tages-Caps, Dedupe, Rückbuchung),
+// MUSS über reasonVariants() gehen — ein Vergleich mit der nackten Begründung trifft nie.
+export const COIN_PREFIX     = "[Münzen]";
+export const RANK_PREFIX     = "[Rang-Punkte]";
+const BIRTHDAY_SUFFIX        = "🎂×2";
+
+/** Beide möglichen gespeicherten Begründungen einer Vergabe (ohne/mit Geburtstags-Boost). */
+export function reasonVariants(prefix: string, baseReason: string): string[] {
+  return [`${prefix} ${baseReason}`, `${prefix} ${baseReason} ${BIRTHDAY_SUFFIX}`];
+}
+
 // Nur Turnierplatzierungen (1./2./3. Platz) geben rankPoints
 // Alles andere (Teilnahme, Events, Discord-Aktivität, Spin, Quests) gibt nur Münzen
 const RANK_POINT_CATEGORIES = new Set<PointCategory>(["turnier"]);
@@ -55,7 +71,7 @@ export async function awardPoints(userId: string, rule: PointRule, customReason?
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todaySum = await prisma.pointTransaction.aggregate({
-      where: { userId, reason, createdAt: { gte: today } },
+      where: { userId, reason: { in: reasonVariants(COIN_PREFIX, reason) }, createdAt: { gte: today } },
       _sum: { amount: true },
     });
     if ((todaySum._sum.amount ?? 0) >= cap) return null;
@@ -75,14 +91,14 @@ export async function awardPoints(userId: string, rule: PointRule, customReason?
 
   const givesRankPoints = RANK_POINT_CATEGORIES.has(POINT_RULES[rule].category as PointCategory);
 
-  const fullReason = (customReason ?? reason) + (hasBirthdayBoost ? " 🎂×2" : "");
+  const fullReason = (customReason ?? reason) + (hasBirthdayBoost ? ` ${BIRTHDAY_SUFFIX}` : "");
 
   const results = await prisma.$transaction([
     prisma.pointTransaction.create({
-      data: { userId, amount: finalAmount, reason: `[Münzen] ${fullReason}` },
+      data: { userId, amount: finalAmount, reason: `${COIN_PREFIX} ${fullReason}` },
     }),
     ...(givesRankPoints ? [prisma.pointTransaction.create({
-      data: { userId, amount: finalAmount, reason: `[Rang-Punkte] ${fullReason}` },
+      data: { userId, amount: finalAmount, reason: `${RANK_PREFIX} ${fullReason}` },
     })] : []),
     prisma.user.update({
       where:  { id: userId },
@@ -103,5 +119,83 @@ export async function awardPoints(userId: string, rule: PointRule, customReason?
   }
 
   return { transaction, user: updated, pointsBefore };
+}
+
+/**
+ * Wurde diese Regel heute für den User bereits vergeben?
+ * Für Boni, die pro Kalendertag nur einmal fällig sind (Tages-Boni). Prüft gegen die
+ * PointTransactions statt gegen In-Memory-Zähler, damit ein Bot-Neustart keine
+ * Doppelvergabe auslöst.
+ */
+export async function awardedToday(userId: string, rule: PointRule): Promise<boolean> {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const existing = await prisma.pointTransaction.findFirst({
+    where: {
+      userId,
+      reason:    { in: reasonVariants(COIN_PREFIX, POINT_RULES[rule].reason) },
+      createdAt: { gte: today },
+    },
+    select: { id: true },
+  });
+  return existing !== null;
+}
+
+/** Wurde diese Regel für den User jemals vergeben? Für einmalige Boni (z.B. FIRST_LOGIN). */
+export async function everAwarded(userId: string, rule: PointRule): Promise<boolean> {
+  const existing = await prisma.pointTransaction.findFirst({
+    where: { userId, reason: { in: reasonVariants(COIN_PREFIX, POINT_RULES[rule].reason) } },
+    select: { id: true },
+  });
+  return existing !== null;
+}
+
+/**
+ * Bucht eine frühere Vergabe exakt zurück — anhand der tatsächlich geschriebenen
+ * Transaktionen, nicht anhand der heutigen Regel-Konfiguration. Dadurch stimmt die
+ * Rückbuchung auch dann, wenn Beträge zwischenzeitlich geändert wurden oder beim
+ * Vergeben ein Geburtstags-Boost (×2) aktiv war.
+ *
+ * `baseReason` ist die Begründung OHNE Währungs-Präfix und ohne Boost-Suffix, also
+ * genau das, was als `customReason` an awardPoints() übergeben wurde.
+ *
+ * Gibt zurück, wie viel tatsächlich zurückgebucht wurde.
+ */
+export async function revokePointsByReason(userId: string, baseReason: string) {
+  const txns = await prisma.pointTransaction.findMany({
+    where: {
+      userId,
+      amount: { gt: 0 },
+      reason: { in: [...reasonVariants(COIN_PREFIX, baseReason), ...reasonVariants(RANK_PREFIX, baseReason)] },
+    },
+    select: { amount: true, reason: true },
+  });
+  if (txns.length === 0) return { coins: 0, rankPoints: 0 };
+
+  let coins = 0;
+  let rankPoints = 0;
+  for (const t of txns) {
+    if (t.reason.startsWith(COIN_PREFIX)) coins += t.amount;
+    else rankPoints += t.amount;
+  }
+
+  const correctionReason = `[Korrektur] ${baseReason}`;
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(coins      !== 0 && { points:     { increment: -coins      } }),
+        ...(rankPoints !== 0 && { rankPoints: { increment: -rankPoints } }),
+      },
+    }),
+    ...(coins !== 0 ? [prisma.pointTransaction.create({
+      data: { userId, amount: -coins, reason: `${COIN_PREFIX} ${correctionReason}` },
+    })] : []),
+    ...(rankPoints !== 0 ? [prisma.pointTransaction.create({
+      data: { userId, amount: -rankPoints, reason: `${RANK_PREFIX} ${correctionReason}` },
+    })] : []),
+  ]);
+
+  return { coins, rankPoints };
 }
 

@@ -20,7 +20,9 @@ import WinIcon from "@/components/WinIcon";
 import Image from "next/image";
 import Link from "next/link";
 import CollectiblesShowcase from "./CollectiblesShowcase";
+import FavoriteGamesSection from "./FavoriteGamesSection";
 import ProfileEditor from "./ProfileEditor";
+import { parseFavoriteGames } from "@/lib/favorite-games";
 import { PushSubscribeButton } from "@/components/PushSubscribeButton";
 import NotificationPreferences from "@/components/NotificationPreferences";
 
@@ -37,7 +39,7 @@ export default async function ProfilePage() {
     await Promise.all([
       prisma.user.findUnique({
         where:  { id: userId },
-        select: { id: true, name: true, username: true, image: true, points: true, rankPoints: true, createdAt: true, showcaseJson: true, showcaseBadgesJson: true, birthday: true, bio: true, twitchLogin: true, voiceMinutesTotal: true, messagesTotal: true },
+        select: { id: true, name: true, username: true, image: true, points: true, rankPoints: true, createdAt: true, showcaseJson: true, showcaseBadgesJson: true, favoriteGamesJson: true, birthday: true, bio: true, twitchLogin: true, voiceMinutesTotal: true, messagesTotal: true },
       }),
       prisma.eventRegistration.findMany({
         where:   { userId },
@@ -149,6 +151,8 @@ export default async function ProfilePage() {
   const showcaseBadgeKeys: string[] = (() => {
     try { return JSON.parse(user.showcaseBadgesJson ?? "[]"); } catch { return []; }
   })();
+
+  const favoriteGames = parseFavoriteGames(user.favoriteGamesJson);
 
   const showcaseIds: string[] = (() => {
     try { return JSON.parse(user.showcaseJson ?? "[]"); } catch { return []; }
@@ -317,6 +321,9 @@ export default async function ProfilePage() {
         bio={user.bio ?? null}
         twitchLogin={user.twitchLogin ?? null}
       />
+
+      {/* ── Aktuelle Lieblingsspiele ─────────────────────────────────── */}
+      <FavoriteGamesSection games={favoriteGames} />
 
       {/* ── Collectibles Showcase ────────────────────────────────────── */}
       <CollectiblesShowcase
