@@ -683,17 +683,19 @@ export default async function TournamentDetailPage({
         )}
       </div>
 
-      {/* ── Event-Gesamtsieger-Vorhersage ─────────────────────────────── */}
-      <div className="mb-5 space-y-3">
-        <EventWinnerPredictionWidget
-          eventId={event.id}
-          locked={isPredictionLocked}
-          minWager={PREDICTION_MIN_WAGER}
-          maxWager={minigamesConfig.predictionMaxWager}
-          initialPrediction={myEventPrediction}
-        />
-        <EventTippsList pot={predictionPot} tipps={eventTipps} />
-      </div>
+      {/* ── Event-Gesamtsieger-Vorhersage (nur bei Turnieren, Community-Events haben keinen Gewinner) ── */}
+      {event.type === "tournament" && (
+        <div className="mb-5 space-y-3">
+          <EventWinnerPredictionWidget
+            eventId={event.id}
+            locked={isPredictionLocked}
+            minWager={PREDICTION_MIN_WAGER}
+            maxWager={minigamesConfig.predictionMaxWager}
+            initialPrediction={myEventPrediction}
+          />
+          <EventTippsList pot={predictionPot} tipps={eventTipps} />
+        </div>
+      )}
 
       {/* ── Laufende Umfrage ───────────────────────────────────────────── */}
       {hasPendingPoll && (

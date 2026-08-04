@@ -60,9 +60,12 @@ export async function POST(req: NextRequest) {
 
   const event = await prisma.event.findUnique({
     where: { id: eventId },
-    select: { startAt: true, status: true },
+    select: { startAt: true, status: true, type: true },
   });
   if (!event) return NextResponse.json({ error: "Event nicht gefunden" }, { status: 404 });
+  if (event.type !== "tournament") {
+    return NextResponse.json({ error: "Sieger-Vorhersagen gibt es nur bei Turnieren" }, { status: 400 });
+  }
 
   const isLocked = event.status === "finished" || event.startAt < new Date();
   if (isLocked) {
