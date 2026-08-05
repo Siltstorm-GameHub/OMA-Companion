@@ -3,8 +3,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { ChevronDown, ChevronUp, Trophy, Clock, Vote, Eye, CheckCircle2, StickyNote } from "lucide-react";
 import RankPointsIcon from "@/components/RankPointsIcon";
+import RankedAvatar from "@/components/RankedAvatar";
 
-type User        = { id: string; name: string | null; username: string | null; image: string | null };
+type User        = { id: string; name: string | null; username: string | null; image: string | null; rankPoints: number };
 type Participant = { userId: string; user: User; role?: string };
 type Entry       = {
   id: string; userId: string | null; teamId: string | null;
@@ -218,11 +219,7 @@ export default function FfaView({
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
                             <Link href={isMe ? "/profile" : `/profile/${r.userId}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                              {r.user.image
-                                ? <img src={r.user.image} alt="" className="w-6 h-6 rounded-full shrink-0" />
-                                : <div className="w-6 h-6 rounded-full bg-rose-900/30 flex items-center justify-center text-[10px] font-bold text-rose-400 shrink-0">
-                                    {uname(r.user)[0].toUpperCase()}
-                                  </div>}
+                              <RankedAvatar rankPoints={r.user.rankPoints} src={r.user.image} alt={uname(r.user)} size={24} className="w-6 h-6" />
                               <span className={`font-medium ${isMe ? "text-rose-300" : "text-white"}`}>
                                 {uname(r.user)}{isMe && " (du)"}
                               </span>
@@ -464,7 +461,7 @@ export default function FfaView({
                                   <td className="px-4 py-2.5">
                                     <div className="flex items-center gap-1.5">
                                       {isWinner && <Trophy className="w-3 h-3 text-amber-400 shrink-0" />}
-                                      {u?.image && <img src={u.image} alt="" className="w-5 h-5 rounded-full" />}
+                                      {u && <RankedAvatar rankPoints={u.rankPoints} src={u.image} alt={uname(u)} size={20} className="w-5 h-5" />}
                                       <span className={`font-medium ${isWinner ? "text-amber-300" : isMe ? "text-rose-300" : "text-white"}`}>
                                         {u ? uname(u) : "?"}{isMe && " (du)"}
                                       </span>

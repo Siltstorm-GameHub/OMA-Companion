@@ -98,7 +98,7 @@ export default function TopNewsFeed({ items }: Props) {
         }}
       >
         <div style={{ width: 20, height: 20, borderRadius: 5, overflow: "hidden", flexShrink: 0 }}>
-          <Image src="/OMALogoNew.png" alt="OMA" width={20} height={20}
+          <Image src="/brand/logo-256.png" alt="OMA" width={20} height={20}
             style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         </div>
         <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.55)", letterSpacing: "0.06em", textTransform: "uppercase" }}>

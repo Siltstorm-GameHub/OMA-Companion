@@ -1,15 +1,16 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { useNow } from "@/lib/useNow";
-import Image from "next/image";
 import { Vote, Clock, Trophy, ChevronDown, ChevronUp, Check, UserX, RotateCcw } from "lucide-react";
 import { usePollCountdown } from "@/components/PollCountdown";
+import RankedAvatar from "@/components/RankedAvatar";
 
 type PollAnswer = {
   id: string;
   name: string | null;
   username: string | null;
   image: string | null;
+  rankPoints: number;
 };
 
 type Poll = {
@@ -36,7 +37,7 @@ type Poll = {
 type Registration = {
   userId: string;
   role: string;
-  user: { id: string; name: string | null; username: string | null; image: string | null };
+  user: { id: string; name: string | null; username: string | null; image: string | null; rankPoints: number };
 };
 
 type Props = {
@@ -122,13 +123,15 @@ function PollCard({
 
   const totalVotes = Object.values(poll.voteCounts).reduce((a, b) => a + b, 0);
 
-  const answers: { id: string; label: string; image?: string | null }[] =
+  // rankPoints bleibt undefined bei freien Textantworten — daran hängt, ob ein Avatar gezeichnet wird.
+  const answers: { id: string; label: string; image?: string | null; rankPoints?: number }[] =
     poll.answerType === "custom"
       ? poll.customAnswers.map(a => ({ id: a, label: a }))
       : (poll.answerOptions ?? []).map(u => ({
           id: u.id,
           label: u.name ?? u.username ?? u.id,
           image: u.image,
+          rankPoints: u.rankPoints,
         }));
 
   async function castVote(targetId: string) {
@@ -264,13 +267,13 @@ function PollCard({
                     }`}
                   >
                     <div className="flex items-center gap-2 min-w-0">
-                      {answer.image && (
-                        <Image
+                      {answer.rankPoints !== undefined && (
+                        <RankedAvatar
+                          rankPoints={answer.rankPoints}
                           src={answer.image}
                           alt={answer.label}
-                          width={20}
-                          height={20}
-                          className="rounded-full shrink-0"
+                          size={20}
+                          className="w-5 h-5"
                         />
                       )}
                       <span className={`text-sm font-medium truncate ${isMine ? "text-emerald-300" : isWon ? "text-amber-300" : "text-gray-300"}`}>

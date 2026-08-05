@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
         { name:     { contains: q, mode: "insensitive" } },
       ],
     },
-    select: { id: true, username: true, name: true, image: true, points: true },
+    select: { id: true, username: true, name: true, image: true, points: true, rankPoints: true },
     take: 8,
   });
 

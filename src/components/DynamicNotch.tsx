@@ -3,6 +3,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import RankedAvatar from "@/components/RankedAvatar";
 import { useSession, signOut } from "next-auth/react";
 import {
   LayoutDashboard, CalendarDays, Trophy, User,
@@ -184,6 +185,7 @@ export default function DynamicNotch() {
   const isStaff  = role === "admin" || role === "moderator";
   const userName = session?.user?.name ?? "Gast";
   const coins    = (session?.user as { points?: number } | undefined)?.points?.toLocaleString("de-DE") ?? "0";
+  const myRankPoints = (session?.user as { rankPoints?: number } | undefined)?.rankPoints ?? 0;
 
   /*
    * Which side does the active route live on?
@@ -218,23 +220,10 @@ export default function DynamicNotch() {
           : "1.5px solid rgba(20,184,166,0.28)",
         outlineOffset: 2,
         transition: "outline 150ms",
-        overflow: "hidden",
         cursor: "pointer",
       }}
     >
-      {session?.user?.image ? (
-        <Image src={session.user.image} alt="avatar" width={36} height={36}
-          style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-      ) : (
-        <div style={{
-          width: "100%", height: "100%",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          background: "linear-gradient(135deg, #14b8a6, #8b2020)",
-          fontSize: 14, fontWeight: 700, color: "#fff",
-        }}>
-          {userName[0]?.toUpperCase() ?? "?"}
-        </div>
-      )}
+      <RankedAvatar rankPoints={myRankPoints} src={session?.user?.image} alt={userName} size={36} />
     </button>
   );
 
@@ -314,7 +303,7 @@ export default function DynamicNotch() {
 
           <Link href="/dashboard" style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
             <div style={{ width: 30, height: 30, borderRadius: 9, overflow: "hidden", boxShadow: "0 0 12px rgba(20,184,166,0.32)", outline: "1px solid rgba(20,184,166,0.24)" }}>
-              <Image src="/OMALogoNew.png" alt="OMA" width={30} height={30} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              <Image src="/brand/logo-256.png" alt="OMA" width={30} height={30} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             </div>
           </Link>
 
@@ -467,7 +456,7 @@ export default function DynamicNotch() {
             boxShadow: "0 0 10px rgba(20,184,166,0.28), 0 0 18px rgba(139,32,32,0.18)",
             outline: "1px solid rgba(20,184,166,0.24)",
           }}>
-            <Image src="/OMALogoNew.png" alt="OMA" width={32} height={32}
+            <Image src="/brand/logo-256.png" alt="OMA" width={32} height={32}
               style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           </div>
         </Link>

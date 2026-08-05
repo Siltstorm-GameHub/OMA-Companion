@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/roles";
 import { getRank, getRankFullLabel } from "@/lib/ranks";
@@ -8,7 +9,6 @@ import RankPointsIcon from "@/components/RankPointsIcon";
 import RankIcon from "@/components/RankIcon";
 import { CountUp } from "@/components/CountUp";
 import Link from "next/link";
-import Image from "next/image";
 import WanderpocalBadgeServer from "@/components/WanderpocalBadgeServer";
 import { getWanderpocalHoldersMap } from "@/lib/get-wanderpocal-holders";
 import LeaderboardSnapshotButton from "./LeaderboardSnapshotButton";
@@ -83,6 +83,13 @@ function RankDeltaBadge({ delta }: { delta: number | null }) {
   }
   return <Minus className="w-2.5 h-2.5 text-gray-700" />;
 }
+
+export const metadata: Metadata = {
+  title: "Rangliste – Old Masters Ally",
+  description: "Tritt gegen die Community an und kämpfe um die Spitze.",
+  openGraph: { images: ["/api/og/leaderboard"] },
+  twitter: { card: "summary_large_image", images: ["/api/og/leaderboard"] },
+};
 
 export default async function LeaderboardPage() {
   const me     = await getSessionUser();

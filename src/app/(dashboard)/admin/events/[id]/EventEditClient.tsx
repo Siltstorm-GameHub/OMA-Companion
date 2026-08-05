@@ -16,6 +16,7 @@ import GameNameInput from "@/components/GameNameInput";
 import StatFieldEditor from "@/components/StatFieldEditor";
 import CoinIcon from "@/components/CoinIcon";
 import RankPointsIcon from "@/components/RankPointsIcon";
+import ImageUploadField from "@/components/ImageUploadField";
 import EventCategoryBadge from "@/components/EventCategoryBadge";
 import TournamentManager from "../TournamentManager";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
@@ -266,6 +267,9 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
     /* ── Clip URL state ── */
   const [twitchClipUrl, setTwitchClipUrl] = useState<string>(event.twitchClipUrl ?? "");
 
+  /* ── Eigenes Event-Cover ── */
+  const [coverImageUrl, setCoverImageUrl] = useState<string>(event.coverImageUrl ?? "");
+
   /* ── Partners state ── */
   const [allPartners, setAllPartners] = useState<{ id: string; name: string; twitchLogin: string; logoUrl: string }[]>([]);
   const [selectedPartnerIds, setSelectedPartnerIds] = useState<string[]>(
@@ -357,6 +361,7 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
         pollsConfigJson: polls.length > 0 ? polls : null,
         spectatorRewardJson: event.spectatorMode ? { coins: spectatorCoins, rankPoints: spectatorRankPts } : null,
         twitchClipUrl: twitchClipUrl.trim() || null,
+        coverImageUrl: coverImageUrl.trim() || null,
         seriesScope: scope,
       }),
     });
@@ -641,6 +646,16 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
             <p className="text-[10px] text-gray-600 mt-1">Wird auf der Event-Seite als Highlight-Link angezeigt.</p>
           </div>
 
+          {/* ── Eigenes Event-Cover ── */}
+          <ImageUploadField
+            value={coverImageUrl}
+            onChange={setCoverImageUrl}
+            kind="event-cover"
+            label="Eigenes Event-Bild"
+            hint="Optional. Ohne eigenes Bild greift das Spiel-Cover, sonst das Standard-Motiv. Empfohlen: 1200×630."
+            previewAspect="1200/630"
+          />
+
           {/* ── Streaming-Partner ── */}
           <div className="rounded-xl border border-white/[0.06] bg-gray-900/50 p-4 space-y-3">
             <button type="button" onClick={loadPartners} className="flex items-center gap-2 w-full text-left">
@@ -808,6 +823,16 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
               placeholder="https://www.twitch.tv/clips/..." className={inputCls} />
             <p className="text-[10px] text-gray-600 mt-1">Wird auf der Event-Seite als Highlight-Link angezeigt.</p>
           </div>
+
+          {/* ── Eigenes Event-Cover ── */}
+          <ImageUploadField
+            value={coverImageUrl}
+            onChange={setCoverImageUrl}
+            kind="event-cover"
+            label="Eigenes Event-Bild"
+            hint="Optional. Ohne eigenes Bild greift das Spiel-Cover, sonst das Standard-Motiv. Empfohlen: 1200×630."
+            previewAspect="1200/630"
+          />
 
           {/* ── Streaming-Partner ── */}
           <div className="rounded-xl border border-white/[0.06] bg-gray-900/50 p-4 space-y-3">

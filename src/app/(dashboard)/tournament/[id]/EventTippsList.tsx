@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { Coins, Target, Check, X } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
+import RankedAvatar from "@/components/RankedAvatar";
 
-type UserLite = { id: string; username: string | null; name: string | null; image: string | null };
+type UserLite = { id: string; username: string | null; name: string | null; image: string | null; rankPoints: number };
 type Tipp = {
   user: UserLite;
   predictedUser: UserLite;
@@ -13,13 +14,7 @@ type Tipp = {
 const uname = (u: UserLite) => u.username ?? u.name ?? "?";
 
 function Avatar({ u }: { u: UserLite }) {
-  return u.image ? (
-    <img src={u.image} alt="" className="w-6 h-6 rounded-full shrink-0" />
-  ) : (
-    <div className="w-6 h-6 rounded-full bg-white/[0.06] flex items-center justify-center text-[10px] font-bold text-gray-400 shrink-0">
-      {uname(u)[0]?.toUpperCase() ?? "?"}
-    </div>
-  );
+  return <RankedAvatar rankPoints={u.rankPoints} src={u.image} alt={uname(u)} size={24} className="w-6 h-6" />;
 }
 
 export default function EventTippsList({ pot, tipps }: { pot: number; tipps: Tipp[] }) {

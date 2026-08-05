@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Search, X, ChevronDown, Users } from "lucide-react";
 
+// Reines Admin-Werkzeug — bewusst ohne Rang-Ring, siehe RankedAvatar.
 type User = { id: string; name: string | null; username: string | null; image: string | null };
 
 function uname(u: User) { return u.username ?? u.name ?? "?"; }

@@ -26,7 +26,7 @@ export default async function ClipDesJahresPage() {
     activeContest
       ? prisma.clipNomination.findMany({
           where: { id: { in: activeContest.nominationIds } },
-          include: { submittedBy: { select: { id: true, name: true, username: true, image: true } } },
+          include: { submittedBy: { select: { id: true, name: true, username: true, image: true, rankPoints: true } } },
         })
       : Promise.resolve([]),
     finishedContest

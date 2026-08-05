@@ -2,8 +2,9 @@
 import Link from "next/link";
 import { Clock, Trophy, StickyNote } from "lucide-react";
 import WinIcon from "@/components/WinIcon";
+import RankedAvatar from "@/components/RankedAvatar";
 
-type User = { id: string; name: string | null; username: string | null; image: string | null };
+type User = { id: string; name: string | null; username: string | null; image: string | null; rankPoints: number };
 type Participant = { userId: string; user: User };
 type Match = {
   id: string; round: number; position: number;
@@ -107,13 +108,7 @@ export default function RoundRobinView({
                     </td>
                     <td className="px-4 py-3">
                       <Link href={isMe ? "/profile" : `/profile/${s.userId}`} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                        {s.user.image ? (
-                          <img src={s.user.image} alt="" className="w-6 h-6 rounded-full shrink-0" />
-                        ) : (
-                          <div className="w-6 h-6 rounded-full bg-rose-900/30 flex items-center justify-center text-[10px] font-bold text-rose-400 shrink-0">
-                            {uname(s.user)[0].toUpperCase()}
-                          </div>
-                        )}
+                        <RankedAvatar rankPoints={s.user.rankPoints} src={s.user.image} alt={uname(s.user)} size={24} className="w-6 h-6" />
                         <span className={`font-medium ${isMe ? "text-rose-300" : "text-white"}`}>
                           {uname(s.user)}{isMe && " (du)"}
                         </span>
@@ -182,7 +177,7 @@ export default function RoundRobinView({
                     {/* Player 1 */}
                     <div className={`flex items-center gap-2 flex-1 justify-end min-w-0 ${match.winnerId === match.player1Id ? "text-emerald-300" : match.winnerId ? "text-gray-600" : p1?.id === userId ? "text-rose-300" : "text-white"}`}>
                       <span className="text-sm font-medium truncate">{p1 ? uname(p1) : "TBD"}</span>
-                      {p1?.image ? <img src={p1.image} alt="" className="w-6 h-6 rounded-full shrink-0" /> : null}
+                      {p1 && <RankedAvatar rankPoints={p1.rankPoints} src={p1.image} alt={uname(p1)} size={24} className="w-6 h-6" />}
                     </div>
 
                     {/* Score */}
@@ -198,7 +193,7 @@ export default function RoundRobinView({
 
                     {/* Player 2 */}
                     <div className={`flex items-center gap-2 flex-1 min-w-0 ${match.winnerId === match.player2Id ? "text-emerald-300" : match.winnerId ? "text-gray-600" : p2?.id === userId ? "text-rose-300" : "text-white"}`}>
-                      {p2?.image ? <img src={p2.image} alt="" className="w-6 h-6 rounded-full shrink-0" /> : null}
+                      {p2 && <RankedAvatar rankPoints={p2.rankPoints} src={p2.image} alt={uname(p2)} size={24} className="w-6 h-6" />}
                       <span className="text-sm font-medium truncate">{p2 ? uname(p2) : "TBD"}</span>
                     </div>
                   </div>

@@ -2,8 +2,8 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Check, Ban, Loader2 } from "lucide-react";
-import Image from "next/image";
 import TwitchClipEmbed from "@/components/TwitchClipEmbed";
+import RankedAvatar from "@/components/RankedAvatar";
 import { clipCredit } from "@/lib/clip-display";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 
@@ -12,7 +12,7 @@ type Nomination = {
   clipUrl: string;
   thumbnailUrl: string | null;
   clipTitle: string | null;
-  submittedBy: { id: string; name: string | null; username: string | null; image: string | null } | null;
+  submittedBy: { id: string; name: string | null; username: string | null; image: string | null; rankPoints: number } | null;
   twitchCreatorLogin: string | null;
   partnerTwitchLogin: string | null;
   voteCount: number;
@@ -146,8 +146,13 @@ export default function ClipVotingClient({ contestId, nominations, initialVoteId
               </p>
               <div className="flex items-center justify-between gap-2">
                 <div className="text-xs text-gray-500 flex items-center gap-1.5 min-w-0 flex-wrap">
-                  {nom.submittedBy?.image && (
-                    <Image src={nom.submittedBy.image} alt="" width={16} height={16} className="rounded-full shrink-0" />
+                  {nom.submittedBy && (
+                    <RankedAvatar
+                      rankPoints={nom.submittedBy.rankPoints}
+                      src={nom.submittedBy.image}
+                      alt={nom.submittedBy.username ?? nom.submittedBy.name ?? "?"}
+                      size={16}
+                    />
                   )}
                   <span className="truncate">Kanal: <span className="text-[#9146ff]">{credit.channel}</span></span>
                   {credit.creator && (

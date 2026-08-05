@@ -178,3 +178,44 @@ ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "lastLoginAt" TIMESTAMP(3);
 
 ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "rules" TEXT;
 ALTER TABLE "EventSeries" ADD COLUMN IF NOT EXISTS "rules" TEXT;
+
+-- ═══════════════════════════════════════════════════════════════
+-- Gaming-Zimmer + Idle-Jobs
+-- ═══════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS "Room" (
+  "userId"       TEXT         NOT NULL PRIMARY KEY,
+  "wallpaperKey" TEXT         NOT NULL DEFAULT 'tapete_raufaser',
+  "floorKey"     TEXT         NOT NULL DEFAULT 'boden_linoleum',
+  "doorSign"     TEXT,
+  "createdAt"    TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt"    TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "Room_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS "RoomItem" (
+  "id"        TEXT         NOT NULL PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  "userId"    TEXT         NOT NULL,
+  "itemKey"   TEXT         NOT NULL,
+  "zone"      TEXT         NOT NULL,
+  "x"         INTEGER      NOT NULL,
+  "y"         INTEGER      NOT NULL,
+  "flipped"   BOOLEAN      NOT NULL DEFAULT false,
+  "placed"    BOOLEAN      NOT NULL DEFAULT true,
+  "starter"   BOOLEAN      NOT NULL DEFAULT false,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "RoomItem_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS "RoomItem_userId_placed_idx" ON "RoomItem"("userId", "placed");
+
+CREATE TABLE IF NOT EXISTS "UserJob" (
+  "userId"          TEXT         NOT NULL PRIMARY KEY,
+  "jobKey"          TEXT,
+  "hiredAt"         TIMESTAMP(3),
+  "accrualFrom"     TIMESTAMP(3),
+  "lastClaimAt"     TIMESTAMP(3),
+  "totalEarned"     INTEGER      NOT NULL DEFAULT 0,
+  "hireLockedUntil" TIMESTAMP(3),
+  "updatedAt"       TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "UserJob_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE
+);

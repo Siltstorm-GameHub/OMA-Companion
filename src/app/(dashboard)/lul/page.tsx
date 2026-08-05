@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { CountUp } from "@/components/CountUp";
 import { AvatarStack } from "@/components/AvatarStack";
 import { buildLulStandings, LUL_POINTS } from "@/lib/lul";
+import RankedAvatar from "@/components/RankedAvatar";
 import GameCover from "@/components/GameCover";
 import { getGenreIcon } from "@/lib/genre-icons";
 import WanderpocalBadgeServer from "@/components/WanderpocalBadgeServer";
@@ -29,7 +30,7 @@ async function fetchSeasons() {
         orderBy: { number: "asc" },
         include: {
           entries: {
-            include: { user: { select: { id: true, name: true, username: true, image: true } } },
+            include: { user: { select: { id: true, name: true, username: true, image: true, rankPoints: true } } },
           },
         },
       },
@@ -231,13 +232,13 @@ export default async function LulOverviewPage() {
                             : <span className="text-xs text-gray-600 tabular-nums">{i + 1}</span>}
                         </span>
                         {/* Avatar */}
-                        {s.image ? (
-                          <img src={s.image} alt="" className="w-7 h-7 rounded-full ring-1 ring-white/[0.08] shrink-0 object-cover" />
-                        ) : (
-                          <div className="w-7 h-7 rounded-full bg-amber-900/30 flex items-center justify-center text-[10px] font-bold text-amber-400 shrink-0">
-                            {s.name[0]?.toUpperCase()}
-                          </div>
-                        )}
+                        <RankedAvatar
+                          rankPoints={s.rankPoints}
+                          src={s.image}
+                          alt={s.name}
+                          size={28}
+                          className="w-7 h-7"
+                        />
                         {/* Name */}
                         <span className={`flex-1 min-w-0 text-sm font-medium truncate ${isMe ? "text-amber-300" : "text-white"}`}>
                           {s.name}

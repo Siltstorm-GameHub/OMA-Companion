@@ -2,6 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Medal, ChevronDown, ChevronUp, TrendingUp, TrendingDown, Minus, Ban } from "lucide-react";
+import RankedAvatar from "@/components/RankedAvatar";
 
 type StandingRow = {
   userId: string;
@@ -18,6 +19,7 @@ type StandingUser = {
   name: string | null;
   username: string | null;
   image: string | null;
+  rankPoints: number;
 };
 export type DeltaInfo = {
   rankDelta: number;
@@ -46,14 +48,15 @@ const MEDALS = ["text-amber-400", "text-gray-300", "text-amber-600"];
 
 function uname(u: StandingUser) { return u.username ?? u.name ?? "?"; }
 
+/** `size` ist die Tailwind-Skala (7 = w-7 = 28px) — hier in px umgerechnet. */
 function Avatar({ u, size = 7 }: { u: StandingUser | undefined; size?: number }) {
-  const name = u ? uname(u) : "?";
-  const cls = `w-${size} h-${size} rounded-full shrink-0`;
-  if (u?.image) return <img src={u.image} alt="" className={`${cls} object-cover`} />;
   return (
-    <div className={`${cls} bg-gray-700 flex items-center justify-center text-xs font-semibold text-gray-400`}>
-      {name[0]?.toUpperCase() ?? "?"}
-    </div>
+    <RankedAvatar
+      rankPoints={u?.rankPoints ?? 0}
+      src={u?.image}
+      alt={u ? uname(u) : "?"}
+      size={size * 4}
+    />
   );
 }
 

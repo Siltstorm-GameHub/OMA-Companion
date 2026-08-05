@@ -14,7 +14,7 @@ export async function GET() {
   const users = await prisma.user.findMany({
     where: { lastActiveAt: { gt: since } },
     orderBy: { lastActiveAt: "desc" },
-    select: { id: true, name: true, username: true, image: true },
+    select: { id: true, name: true, username: true, image: true, rankPoints: true },
   });
 
   return NextResponse.json({ count: users.length, users });

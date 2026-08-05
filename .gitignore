@@ -14,11 +14,12 @@ dist/
 build/
 
 # Environment variables — NEVER commit these
+# Glob statt Einzelnamen: Varianten wie .env.local.backup (entsteht z.B. vor
+# `vercel env pull`) waren von der alten Liste nicht abgedeckt und lagen
+# ungeschützt als untracked file im Repo.
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env*
+!.env.example
 
 # Prisma generated
 prisma/generated/

@@ -1,0 +1,61 @@
+import { redirect } from "next/navigation";
+import { getSessionUser } from "@/lib/roles";
+import { getRoomConfig, roomVisibleFor } from "@/lib/room-config";
+import { loadRoom } from "@/lib/room";
+import { loadRoomProfileCore, loadRoomProfileDetails } from "@/lib/room-profile-data";
+import WanderpocalSection from "@/components/WanderpocalSection";
+import FavoriteGamesSection from "@/app/(dashboard)/profile/FavoriteGamesSection";
+import NotificationPreferences from "@/components/NotificationPreferences";
+import { PushSubscribeButton } from "@/components/PushSubscribeButton";
+import RoomHeroPanel from "./RoomHeroPanel";
+import RoomStatTiles from "./RoomStatTiles";
+import RoomView from "./RoomView";
+
+export const metadata = { title: "Gaming-Zimmer" };
+
+export default async function ZimmerPage() {
+  const me = await getSessionUser();
+  if (!me) redirect("/login");
+
+  // Solange room_enabled aus ist, bleibt das Feature auf Admins beschränkt.
+  const cfg = await getRoomConfig();
+  if (!roomVisibleFor(cfg, me.role)) redirect("/profile");
+
+  const [state, core, details] = await Promise.all([
+    loadRoom(me.id),
+    loadRoomProfileCore(me.id),
+    loadRoomProfileDetails(me.id),
+  ]);
+  if (!core) redirect("/login");
+
+  return (
+    <div className="px-5 pb-5 pt-0 sm:p-6 max-w-7xl mx-auto space-y-5 animate-fade-in">
+      <RoomHeroPanel core={core} />
+      <RoomStatTiles core={core} />
+
+      <RoomView
+        state={state}
+        core={core}
+        details={details}
+        readOnly={false}
+        trophySection={
+          <WanderpocalSection
+            trophies={details.trophies}
+            userStats={details.trophyStats}
+            rankMap={details.trophyRanks}
+          />
+        }
+        settingsSection={
+          <div className="flex flex-col gap-3">
+            <div className="glass card-shine rounded-2xl px-2 py-1">
+              <PushSubscribeButton />
+            </div>
+            <NotificationPreferences />
+          </div>
+        }
+      />
+
+      <FavoriteGamesSection games={core.favoriteGames} viewerId={me.id} />
+    </div>
+  );
+}

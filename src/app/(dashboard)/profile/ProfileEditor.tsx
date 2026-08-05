@@ -4,11 +4,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Pencil, Check, X, Cake, MessageSquare, Loader2, Tv2 } from "lucide-react";
+import ImageUploadField from "@/components/ImageUploadField";
 
 interface Props {
   birthday:    string | null;
   bio:         string | null;
   twitchLogin: string | null;
+  bannerUrl:   string | null;
 }
 
 const MAX_BIO = 200;
@@ -21,13 +23,14 @@ function formatBirthday(ddmm: string | null) {
   return `${parseInt(d)}. ${months[parseInt(m) - 1]}`;
 }
 
-export default function ProfileEditor({ birthday: initBirthday, bio: initBio, twitchLogin: initTwitch }: Props) {
+export default function ProfileEditor({ birthday: initBirthday, bio: initBio, twitchLogin: initTwitch, bannerUrl: initBanner }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
   const [birthday,    setBirthday]    = useState(initBirthday ?? "");
   const [bio,         setBio]         = useState(initBio ?? "");
   const [twitchInput, setTwitchInput] = useState(initTwitch ?? "");
+  const [bannerUrl,   setBannerUrl]   = useState(initBanner ?? "");
   const [saving,      setSaving]      = useState(false);
 
   const [savedBirthday, setSavedBirthday] = useState(initBirthday);
@@ -45,7 +48,7 @@ export default function ProfileEditor({ birthday: initBirthday, bio: initBio, tw
 
       const twitchVal = twitchInput.trim().toLowerCase() || null;
 
-      const [r1, r2, r3] = await Promise.all([
+      const [r1, r2, r3, r4] = await Promise.all([
         fetch("/api/profile/birthday", {
           method:  "POST",
           headers: { "Content-Type": "application/json" },
@@ -61,9 +64,19 @@ export default function ProfileEditor({ birthday: initBirthday, bio: initBio, tw
           headers: { "Content-Type": "application/json" },
           body:    JSON.stringify({ twitchLogin: twitchVal }),
         }),
+        fetch("/api/profile/banner", {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({ bannerUrl: bannerUrl.trim() || null }),
+        }),
       ]);
 
       if (!r1.ok || !r2.ok) { toast.error("Fehler beim Speichern"); return; }
+      if (!r4.ok) {
+        const err = await r4.json() as { error?: string };
+        toast.error(err.error ?? "Banner konnte nicht gespeichert werden");
+        return;
+      }
       if (!r3.ok) {
         const err = await r3.json();
         toast.error(err.error ?? "Twitch-Kanal nicht gefunden");
@@ -187,6 +200,16 @@ export default function ProfileEditor({ birthday: initBirthday, bio: initBio, tw
               Wenn du live bist, erscheinst du im "Community streamt gerade"-Widget auf dem Dashboard.
             </p>
           </div>
+
+          {/* Profil-Banner */}
+          <ImageUploadField
+            value={bannerUrl}
+            onChange={setBannerUrl}
+            kind="profile-banner"
+            label="Profil-Banner"
+            hint="Optional. Erscheint als Kopfbild auf deinem Profil. Empfohlen: 1200×300."
+            previewAspect="4/1"
+          />
 
           <div className="flex justify-end gap-2 pt-1">
             <button onClick={cancel}

@@ -2,11 +2,12 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
+import RankedAvatar from "@/components/RankedAvatar";
 import { useSession, signOut } from "next-auth/react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
   LayoutDashboard, CalendarDays, Star, Trophy, ShoppingBag,
-  Heart, User, ShieldCheck, LogOut, ChevronDown, Sun, Moon, Bell, Settings, X, MessageCircleMore,
+  Heart, User, ShieldCheck, LogOut, ChevronDown, Sun, Moon, Bell, Settings, X, MessageCircleMore, Sofa,
 } from "lucide-react";
 import { WHATSAPP_COMMUNITY_URL } from "@/lib/config";
 import PollBadge from "@/components/PollBadge";
@@ -127,7 +128,12 @@ function NavIcon({ label, href, icon: Icon, active, danger = false }: {
 }
 
 /* ── FloatingPill ─────────────────────────────────────────────────────── */
-export default function FloatingPill() {
+/**
+ * `roomVisible` kommt aus dem Layout, weil die Zimmer-Freischaltung in der
+ * BotConfig liegt und damit nur serverseitig lesbar ist. Solange room_enabled
+ * aus ist, ist der Eintrag nur für Admins sichtbar.
+ */
+export default function FloatingPill({ roomVisible = false }: { roomVisible?: boolean }) {
   const pathname          = usePathname();
   const router            = useRouter();
   const { data: session } = useSession();
@@ -140,6 +146,7 @@ export default function FloatingPill() {
   const isStaff = (session?.user as { role?: string } | undefined)?.role === "moderator"
     || (session?.user as { role?: string } | undefined)?.role === "admin";
   const userName = session?.user?.name ?? session?.user?.email ?? "?";
+  const myRankPoints = (session?.user as { rankPoints?: number } | undefined)?.rankPoints ?? 0;
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -230,7 +237,7 @@ export default function FloatingPill() {
           boxShadow: "0 0 10px rgba(20,184,166,0.28), 0 0 18px rgba(139,32,32,0.18)",
           outline: "1px solid rgba(20,184,166,0.22)",
         }}>
-          <Image src="/OMALogoNew.png" alt="OMA" width={28} height={28}
+          <Image src="/brand/logo-256.png" alt="OMA" width={28} height={28}
             style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         </div>
       </Link>
@@ -244,6 +251,10 @@ export default function FloatingPill() {
           {href === "/events" && <PollBadge />}
         </div>
       ))}
+      {roomVisible && (
+        <NavIcon label="Gaming-Zimmer" href="/zimmer" icon={Sofa}
+          active={pathname.startsWith("/zimmer")} />
+      )}
       {isStaff && (
         <NavIcon label="Admin" href="/admin" icon={ShieldCheck}
           active={pathname.startsWith("/admin")} danger />
@@ -264,19 +275,11 @@ export default function FloatingPill() {
           className={!avatarOpen ? "hover:bg-white/[0.05]" : ""}
         >
           <div style={{
-            width: 26, height: 26, borderRadius: 6, overflow: "hidden",
             outline: avatarOpen ? "1.5px solid rgba(20,184,166,0.55)" : "1.5px solid rgba(255,255,255,0.10)",
+            borderRadius: 8,
             transition: "outline 150ms",
           }}>
-            {session?.user?.image
-              ? <Image src={session.user.image} alt="avatar" width={26} height={26}
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center",
-                  justifyContent: "center", background: "linear-gradient(135deg, #14b8a6, #8b2020)",
-                  fontSize: 11, fontWeight: 700, color: "#fff" }}>
-                  {userName[0]?.toUpperCase() ?? "?"}
-                </div>
-            }
+            <RankedAvatar rankPoints={myRankPoints} src={session?.user?.image} alt={userName} size={26} rounded="lg" />
           </div>
           {/* Unread dot */}
           {unreadCount > 0 && (
@@ -306,17 +309,7 @@ export default function FloatingPill() {
               display: "flex", alignItems: "center", gap: 8,
               padding: "10px 12px", borderBottom: "1px solid rgba(255,255,255,0.06)",
             }}>
-              <div style={{ width: 28, height: 28, borderRadius: 6, overflow: "hidden", flexShrink: 0 }}>
-                {session?.user?.image
-                  ? <Image src={session.user.image} alt="avatar" width={28} height={28}
-                      style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center",
-                      justifyContent: "center", background: "linear-gradient(135deg,#0d9488,#115e59)",
-                      fontSize: 11, fontWeight: 700, color: "#fff" }}>
-                      {userName[0]?.toUpperCase() ?? "?"}
-                    </div>
-                }
-              </div>
+              <RankedAvatar rankPoints={myRankPoints} src={session?.user?.image} alt={userName} size={28} rounded="lg" />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ fontSize: 12, fontWeight: 600, color: "#fff", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{userName}</p>
                 <p style={{ fontSize: 10, color: "rgba(20,184,166,0.6)", margin: "1px 0 0" }}>OMA-Mitglied</p>

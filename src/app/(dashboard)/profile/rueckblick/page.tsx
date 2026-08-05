@@ -6,6 +6,7 @@ import { getAvailableReviewYears, buildYearReview } from "@/lib/year-review";
 import { RARITY_CONFIG, type Rarity } from "@/lib/collectibles";
 import { EmptyState } from "@/components/EmptyState";
 import { CountUp } from "@/components/CountUp";
+import BadgeIcon from "@/components/BadgeIcon";
 import CoinIcon from "@/components/CoinIcon";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import Link from "next/link";
@@ -193,7 +194,7 @@ export default async function YearReviewPage({
           <div className="glass card-shine rounded-2xl p-4 flex flex-wrap gap-2">
             {review.newBadges.map((b, i) => (
               <span key={`${b.name}-${i}`} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] text-gray-300">
-                <span>{b.icon}</span> {b.name}
+                <BadgeIcon icon={b.icon} size={16} alt={b.name} /> {b.name}
               </span>
             ))}
           </div>

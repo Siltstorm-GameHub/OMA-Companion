@@ -93,7 +93,9 @@ export async function generateDefaultCoverDataUri(): Promise<string> {
     .png()
     .toBuffer();
 
-  const logoPath = path.join(process.cwd(), "public", "OMALogoNew.png");
+  // 256er-Ableitung statt des 2,24-MB-Originals: das Logo wird hier auf ~204 px
+  // skaliert, das Original brächte nur Ladezeit (scripts/generate-brand-assets.ts).
+  const logoPath = path.join(process.cwd(), "public", "brand", "logo-256.png");
   const logoWidth = Math.round(SVG_W * 0.30);
 
   const logoResized = await sharp(fs.readFileSync(logoPath))

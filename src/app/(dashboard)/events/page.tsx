@@ -90,7 +90,7 @@ export default async function EventsPage() {
     }),
   ]);
 
-  const userSelect = { id: true, username: true, name: true, image: true } as const;
+  const userSelect = { id: true, username: true, name: true, image: true, rankPoints: true } as const;
   const startOfMonth = new Date();
   startOfMonth.setDate(1);
   startOfMonth.setHours(0, 0, 0, 0);
@@ -256,7 +256,7 @@ export default async function EventsPage() {
             aspectRatio: "1 / 1",
           }}>
           <div className="absolute inset-0">
-            <GameCover game={ev.game} className="w-full h-full" rounded="rounded-none"
+            <GameCover game={ev.game} coverUrl={ev.coverImageUrl} className="w-full h-full" rounded="rounded-none"
               imgClassName="w-full h-full object-cover object-center scale-105 group-hover:scale-110 transition-transform duration-700" />
           </div>
           <div className="absolute inset-0 pointer-events-none"
@@ -408,7 +408,7 @@ export default async function EventsPage() {
       return (
         <Link key={`ev-recent-${ev.id}`} href={cardHref}
           className="flex items-center gap-3 px-3 py-2 rounded-lg border border-white/[0.05] bg-white/[0.02] opacity-70 grayscale-[0.5] hover:opacity-100 hover:grayscale-0 transition-all group">
-          <GameCover game={ev.game} className="w-10 h-7 shrink-0" rounded="rounded" />
+          <GameCover game={ev.game} coverUrl={ev.coverImageUrl} className="w-10 h-7 shrink-0" rounded="rounded" />
           <div className="flex-1 min-w-0">
             <p className="text-sm text-gray-300 font-medium truncate group-hover:text-white transition-colors">{ev.title}</p>
             <p className="text-[11px] text-gray-500">
@@ -526,7 +526,7 @@ export default async function EventsPage() {
             <Link key={`hidden-${ev.id}`}
               href={ev.seriesId ? `/events/series/${ev.seriesId}` : `/tournament/${ev.id}`}
               className="flex items-center gap-3 px-4 py-2.5 rounded-lg border border-rose-500/20 bg-rose-500/[0.04] hover:bg-rose-500/[0.07] transition-colors group">
-              <GameCover game={ev.game} className="w-9 h-6 shrink-0" rounded="rounded" />
+              <GameCover game={ev.game} coverUrl={ev.coverImageUrl} className="w-9 h-6 shrink-0" rounded="rounded" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-gray-300 font-medium truncate group-hover:text-white transition-colors">
                   {ev.title}
@@ -567,7 +567,7 @@ export default async function EventsPage() {
                 <EventCardLink key={`ev-fin-${ev.id}`}
                   href={cardHref}
                   className="flex items-center gap-3 px-4 py-2.5 rounded-lg border border-white/[0.04] bg-white/[0.015] opacity-50 hover:opacity-75 transition-opacity group">
-                  <GameCover game={ev.game} className="w-9 h-6 shrink-0" rounded="rounded" />
+                  <GameCover game={ev.game} coverUrl={ev.coverImageUrl} className="w-9 h-6 shrink-0" rounded="rounded" />
                   <div className="flex-1 min-w-0">
                     <Link href={`/tournament/${ev.id}`}
                       className="text-sm text-gray-400 font-medium truncate block group-hover:text-gray-300 transition-colors">
