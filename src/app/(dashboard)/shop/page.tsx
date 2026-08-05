@@ -5,7 +5,11 @@ import CoinIcon from "@/components/CoinIcon";
 import { CountUp } from "@/components/CountUp";
 import CollectiblesShop from "./CollectiblesShop";
 import DailySpin from "./DailySpin";
+import RoomItemsShop from "./RoomItemsShop";
 import { effectivePrice } from "@/lib/collectibles";
+import { getRoomConfig, roomVisibleFor } from "@/lib/room-config";
+import { ownedItemCounts } from "@/lib/room";
+import { getRank } from "@/lib/ranks";
 
 export default async function ShopPage() {
   const me     = await getSessionUser();
@@ -50,6 +54,13 @@ export default async function ShopPage() {
 
   const myPoints  = me?.points ?? 0;
   const ownedSet  = new Set((ownedRaw as { collectibleItemId: string }[]).map(o => o.collectibleItemId));
+
+  // ── Gaming-Zimmer ──────────────────────────────────────────────────
+  // Solange room_enabled aus ist, sehen nur Admins den Möbel-Bereich.
+  const roomCfg     = await getRoomConfig();
+  const roomVisible = roomVisibleFor(roomCfg, me?.role);
+  const roomOwned   = roomVisible && userId ? await ownedItemCounts(userId) : {};
+  const roomTier    = getRank(me?.rankPoints ?? 0).tier;
 
   return (
     <div className="px-5 pb-5 pt-0 sm:p-6 max-w-7xl mx-auto space-y-6 animate-fade-in">
@@ -98,6 +109,16 @@ export default async function ShopPage() {
         myPoints={myPoints}
         isLoggedIn={!!userId}
       />
+
+      {/* Gaming-Zimmer: Möbel & Deko */}
+      {roomVisible && (
+        <RoomItemsShop
+          owned={roomOwned}
+          myPoints={myPoints}
+          rankTier={roomTier}
+          isLoggedIn={!!userId}
+        />
+      )}
     </div>
   );
 }

@@ -115,7 +115,7 @@ export default function BadgesSection({ systemBadges, customBadges, showcaseKeys
                   title={item?.name}>
                   {item ? (
                     <>
-                      <BadgeIcon icon={item.icon} badgeKey={item.key} size={26} alt={item.name} />
+                      <BadgeIcon icon={item.icon} badgeKey={item.key} size={32} alt={item.name} />
                       <span className="text-[9px] text-gray-400 text-center px-1 leading-tight line-clamp-2">{item.name}</span>
                       {!readOnly && editingShowcase && (
                         <div className="absolute top-1 right-1 w-4 h-4 rounded-full bg-red-500/80 flex items-center justify-center">
@@ -144,7 +144,7 @@ export default function BadgesSection({ systemBadges, customBadges, showcaseKeys
                           ? "border-purple-500/50 bg-purple-500/10 text-purple-300"
                           : "border-white/10 bg-white/[0.02] text-gray-400 hover:border-white/20"
                       }`}>
-                      <BadgeIcon icon={b.icon} badgeKey={b.key} size={16} alt={b.name} /> {b.name}
+                      <BadgeIcon icon={b.icon} badgeKey={b.key} size={24} alt={b.name} /> {b.name}
                       {pinned && <Check className="w-3 h-3" />}
                     </button>
                   );
@@ -179,7 +179,7 @@ export default function BadgesSection({ systemBadges, customBadges, showcaseKeys
               {catEarned.map(badge => (
                 <div key={badge.id} title={badge.desc}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium glass text-white border-white/10 hover:border-teal-500/30 transition-all">
-                  <BadgeIcon icon={badge.icon} badgeKey={badge.id} size={16} alt={badge.name} /> {badge.name}
+                  <BadgeIcon icon={badge.icon} badgeKey={badge.id} size={24} alt={badge.name} /> {badge.name}
                 </div>
               ))}
               {catUnearned.map(badge => (
@@ -191,7 +191,7 @@ export default function BadgesSection({ systemBadges, customBadges, showcaseKeys
                         style={{ width: `${Math.round((badge.progress.current / badge.progress.target) * 100)}%` }} />
                     </div>
                   )}
-                  <BadgeIcon icon={badge.icon} badgeKey={badge.id} size={16} alt={badge.name} className="relative opacity-50" />
+                  <BadgeIcon icon={badge.icon} badgeKey={badge.id} size={24} alt={badge.name} className="relative opacity-50" />
                   <span className="relative">{badge.name}</span>
                   {badge.progress && (
                     <span className="relative text-[9px] text-gray-700 tabular-nums">{badge.progress.current}/{badge.progress.target}</span>
@@ -211,7 +211,7 @@ export default function BadgesSection({ systemBadges, customBadges, showcaseKeys
             {customBadges.map(badge => (
               <div key={badge.id} title={badge.desc}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium border-amber-500/30 bg-amber-500/5 text-amber-300 hover:border-amber-500/50 transition-all">
-                <BadgeIcon icon={badge.icon} badgeKey={`custom:${badge.id}`} size={16} alt={badge.name} /> {badge.name}
+                <BadgeIcon icon={badge.icon} badgeKey={`custom:${badge.id}`} size={24} alt={badge.name} /> {badge.name}
               </div>
             ))}
           </div>

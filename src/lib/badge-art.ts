@@ -17,11 +17,17 @@
  *  bringt nichts, die grösste Darstellung im UI ist ~40 px (2x = 80 px).
  */
 
-/** System-Abzeichen: Schlüssel ist die `id` aus BADGE_DEFS in lib/badges.ts. */
+/** System-Abzeichen: Schlüssel ist die `id` aus BADGE_DEFS in lib/badges.ts.
+ *
+ *  Erster Satz — je ein Motiv pro Kategorie, erzeugt in Canva und mit
+ *  scripts/process-badge-art.ts kreisrund freigestellt. Die übrigen 16
+ *  Abzeichen laufen weiter über ihr Emoji, bis eigene Motive vorliegen. */
 const SYSTEM_BADGE_ART: Record<string, string> = {
-  // Beispiel — auskommentiert lassen, bis die Datei wirklich existiert,
-  // sonst rendert ein kaputtes Bild statt des Emoji-Fallbacks:
-  // welcome: "/badges/welcome.png",
+  welcome:     "/badges/welcome.png",      // Community  — Konfetti
+  voice_50h:   "/badges/voice_50h.png",    // Aktivität  — Mikrofon
+  event_win_1: "/badges/event_win_1.png",  // Events     — Medaille
+  t_win:       "/badges/t_win.png",        // Turniere   — Pokal
+  pts_10k:     "/badges/pts_10k.png",      // Punkte     — Sparkle
 };
 
 /** Admin-erstellte Abzeichen: Schlüssel ist die CustomBadge-ID aus der DB.

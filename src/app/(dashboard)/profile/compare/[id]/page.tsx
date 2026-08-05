@@ -57,7 +57,7 @@ function Avatar({ user, accent }: { user: UserData; accent: string }) {
         size={80}
         rounded="2xl"
         showTier
-        className={`w-16 h-16 sm:w-20 sm:h-20 ring-2 ring-offset-2 ring-offset-[#0d0d0f] ${accent}`}
+        className={`ring-2 ring-offset-2 ring-offset-[#0d0d0f] ${accent}`}
       />
       <div className="text-center">
         <p className="font-bold text-white text-sm">{user.username ?? user.name ?? "?"}</p>

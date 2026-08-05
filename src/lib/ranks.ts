@@ -6,13 +6,40 @@ import type { CSSProperties } from "react";
  * Die Palette ist bewusst weit gespreizt: Grau → Grün → Orange → Blau → Magenta → Gold.
  * Teal bleibt frei, das ist die Markenfarbe der App.
  */
-export const RANK_RING: Record<number, { c1: string; c2: string; c3: string; speed: string; glow: string; glowColor: string }> = {
-  1: { c1: "#3f3f46", c2: "#a1a1aa", c3: "#52525b", speed: "26s", glow:  "0px", glowColor: "transparent"        },
-  2: { c1: "#14532d", c2: "#4ade80", c3: "#22c55e", speed: "22s", glow: "10px", glowColor: "rgba(74,222,128,0.45)"  },
-  3: { c1: "#7c2d12", c2: "#fb923c", c3: "#ea580c", speed: "19s", glow: "12px", glowColor: "rgba(249,115,22,0.45)"  },
-  4: { c1: "#1e3a8a", c2: "#93c5fd", c3: "#3b82f6", speed: "16s", glow: "14px", glowColor: "rgba(96,165,250,0.45)"  },
-  5: { c1: "#701a75", c2: "#f0abfc", c3: "#c026d3", speed: "13s", glow: "16px", glowColor: "rgba(232,121,249,0.50)" },
-  6: { c1: "#78350f", c2: "#fef08a", c3: "#f59e0b", speed: "10s", glow: "22px", glowColor: "rgba(252,211,77,0.60)"  },
+type RingColors = { c1: string; c2: string; c3: string; glow: string; glowColor: string };
+type RingTokens = RingColors & { speed: string; light: RingColors };
+
+/**
+ * Pro Rang zwei Paletten. `light` ist kein Helligkeits-Tweak, sondern eine Umkehrung
+ * der Logik: Auf dem fast schwarzen Grund trägt der helle Pastellton (c2) den Ring,
+ * auf hellem Grund verschwindet genau der — dort muss der gesättigte Mittelton tragen.
+ * Der Glow wird hell zusätzlich zurückgenommen, sonst wirkt er wie ein Schmutzrand.
+ */
+export const RANK_RING: Record<number, RingTokens> = {
+  1: {
+    c1: "#3f3f46", c2: "#a1a1aa", c3: "#52525b", speed: "12s", glow:  "0px", glowColor: "transparent",
+    light: { c1: "#a1a1aa", c2: "#3f3f46", c3: "#71717a", glow: "0px", glowColor: "transparent" },
+  },
+  2: {
+    c1: "#14532d", c2: "#4ade80", c3: "#22c55e", speed: "11s", glow: "10px", glowColor: "rgba(74,222,128,0.45)",
+    light: { c1: "#4ade80", c2: "#166534", c3: "#16a34a", glow: "6px", glowColor: "rgba(22,101,52,0.28)" },
+  },
+  3: {
+    c1: "#7c2d12", c2: "#fb923c", c3: "#ea580c", speed: "10s", glow: "12px", glowColor: "rgba(249,115,22,0.45)",
+    light: { c1: "#fb923c", c2: "#7c2d12", c3: "#c2410c", glow: "7px", glowColor: "rgba(124,45,18,0.28)" },
+  },
+  4: {
+    c1: "#1e3a8a", c2: "#93c5fd", c3: "#3b82f6", speed:  "9s", glow: "14px", glowColor: "rgba(96,165,250,0.45)",
+    light: { c1: "#93c5fd", c2: "#1e3a8a", c3: "#2563eb", glow: "8px", glowColor: "rgba(30,58,138,0.28)" },
+  },
+  5: {
+    c1: "#701a75", c2: "#f0abfc", c3: "#c026d3", speed:  "8s", glow: "16px", glowColor: "rgba(232,121,249,0.50)",
+    light: { c1: "#f0abfc", c2: "#701a75", c3: "#a21caf", glow: "9px", glowColor: "rgba(112,26,117,0.30)" },
+  },
+  6: {
+    c1: "#78350f", c2: "#fef08a", c3: "#f59e0b", speed:  "6s", glow: "22px", glowColor: "rgba(252,211,77,0.60)",
+    light: { c1: "#fcd34d", c2: "#78350f", c3: "#b45309", glow: "12px", glowColor: "rgba(120,53,15,0.32)" },
+  },
 };
 
 /**
@@ -26,16 +53,27 @@ export function getRingClass(rankPoints: number): string {
   return `rank-ring rr-t${tierIdx}${apex}`;
 }
 
-/** Farb-/Tempo-Tokens des Rangs als Inline-Style. Gehört auf dasselbe Element wie getRingClass(). */
+/**
+ * Farb-/Tempo-Tokens des Rangs als Inline-Style. Gehört auf dasselbe Element wie getRingClass().
+ *
+ * Beide Paletten werden als rohe `d`- und `l`-Variablen ausgegeben; welche gilt, entscheidet das CSS
+ * über `[data-theme="light"]`. Direkt `--rr-c1` zu setzen würde nicht funktionieren — Inline-Styles
+ * schlagen Stylesheet-Regeln, der Theme-Override käme nie an.
+ */
 export function getRingStyle(rankPoints: number): CSSProperties {
   const ring = RANK_RING[getRank(rankPoints).tier] ?? RANK_RING[1];
   return {
-    "--rr-c1": ring.c1,
-    "--rr-c2": ring.c2,
-    "--rr-c3": ring.c3,
+    "--rr-dc1": ring.c1,
+    "--rr-dc2": ring.c2,
+    "--rr-dc3": ring.c3,
+    "--rr-dglow": ring.glow,
+    "--rr-dglowc": ring.glowColor,
+    "--rr-lc1": ring.light.c1,
+    "--rr-lc2": ring.light.c2,
+    "--rr-lc3": ring.light.c3,
+    "--rr-lglow": ring.light.glow,
+    "--rr-lglowc": ring.light.glowColor,
     "--rr-speed": ring.speed,
-    "--rr-glow": ring.glow,
-    "--rr-glow-color": ring.glowColor,
   } as CSSProperties;
 }
 
