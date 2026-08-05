@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
       content: true,
       createdAt: true,
       user: {
-        select: { id: true, name: true, username: true, image: true },
+        select: { id: true, name: true, username: true, image: true, rankPoints: true },
       },
     },
   });
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
       content: true,
       createdAt: true,
       user: {
-        select: { id: true, name: true, username: true, image: true },
+        select: { id: true, name: true, username: true, image: true, rankPoints: true },
       },
     },
   });

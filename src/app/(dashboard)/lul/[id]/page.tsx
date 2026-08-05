@@ -7,6 +7,7 @@ import {
   CalendarDays, AlertTriangle, Users, Swords,
 } from "lucide-react";
 import { buildLulStandings, LUL_POINTS } from "@/lib/lul";
+import RankedAvatar from "@/components/RankedAvatar";
 import GameCover from "@/components/GameCover";
 import SpieltagDetails from "./SpieltagDetails";
 
@@ -54,7 +55,7 @@ export default async function LulSeasonPage({
         include: {
           entries: {
             include: {
-              user: { select: { id: true, name: true, username: true, image: true } },
+              user: { select: { id: true, name: true, username: true, image: true, rankPoints: true } },
             },
             orderBy: { placement: "asc" },
           },
@@ -326,26 +327,13 @@ export default async function LulSeasonPage({
 
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2.5">
-                              {s.image ? (
-                                <img
-                                  src={s.image}
-                                  alt=""
-                                  className={`w-8 h-8 rounded-full shrink-0 ring-1 ${
-                                    isMe ? "ring-teal-400/50" : "ring-white/10"
-                                  }`}
-                                />
-                              ) : (
-                                <div
-                                  className={`w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-xs font-bold ring-1 ${
-                                    isMe
-                                      ? "ring-teal-400/30"
-                                      : "bg-white/[0.06] text-gray-400 ring-white/5"
-                                  }`}
-                                  style={isMe ? { background: "rgba(20,184,166,0.15)", color: "#2dd4bf" } : {}}
-                                >
-                                  {s.name[0]?.toUpperCase()}
-                                </div>
-                              )}
+                              <RankedAvatar
+                                rankPoints={s.rankPoints}
+                                src={s.image}
+                                alt={s.name}
+                                size={32}
+                                className="w-8 h-8"
+                              />
                               <p
                                 className={`font-semibold leading-tight ${
                                   isMe ? "text-teal-300" : "text-white"

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Trophy, History, Gamepad2, Eye, Crown, Gift, Flame, CheckCircle2 } from "lucide-react";
 import { buildLulStandings, mergeStandings, LUL_POINTS } from "@/lib/lul";
+import RankedAvatar from "@/components/RankedAvatar";
 
 const MEDAL      = ["🥇", "🥈", "🥉"];
 const MEDAL_BG   = ["rgba(251,191,36,0.12)", "rgba(156,163,175,0.1)", "rgba(180,83,9,0.12)"];
@@ -19,10 +20,6 @@ const COLS = [
   { key: "votes",       label: "Votes",     Icon: CheckCircle2,cls: "text-emerald-400", bg: "bg-emerald-500/10" },
 ] as const;
 
-function uname(u: { name: string | null; username: string | null }) {
-  return u.username ?? u.name ?? "Unbekannt";
-}
-
 export default async function LulAllTimePage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
@@ -32,11 +29,11 @@ export default async function LulAllTimePage() {
     // Regular entries from finished spieltage
     prisma.lulEntry.findMany({
       where: { spieltag: { status: "finished" } },
-      include: { user: { select: { id: true, name: true, username: true, image: true } } },
+      include: { user: { select: { id: true, name: true, username: true, image: true, rankPoints: true } } },
     }),
     // Legacy entries (whole-season aggregates)
     prisma.lulLegacyEntry.findMany({
-      include: { user: { select: { id: true, name: true, username: true, image: true } } },
+      include: { user: { select: { id: true, name: true, username: true, image: true, rankPoints: true } } },
     }),
     prisma.lulSeason.findMany({
       orderBy: { number: "asc" },
@@ -49,6 +46,7 @@ export default async function LulAllTimePage() {
     userId:      e.userId,
     name:        e.user.username ?? e.user.name ?? "Unbekannt",
     image:       e.user.image,
+    rankPoints:  e.user.rankPoints,
     totalPts:    e.totalPts,
     asPlayer:    e.asPlayer,
     asSpectator: e.asSpectator,
@@ -176,17 +174,13 @@ export default async function LulAllTimePage() {
                       <td className="px-4 py-3">
                         <Link href={isMe ? "/profile" : `/profile/${s.userId}`}
                           className="flex items-center gap-2.5 hover:opacity-80 transition-opacity w-fit">
-                          {s.image ? (
-                            <img src={s.image} alt=""
-                              className={`w-8 h-8 rounded-full shrink-0 ring-1 ${isMe ? "ring-purple-400/50" : "ring-white/10"}`} />
-                          ) : (
-                            <div className={`w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-xs font-bold ring-1 ${
-                              isMe ? "bg-purple-900/30 text-purple-300 ring-purple-400/30"
-                                   : "bg-white/[0.06] text-gray-400 ring-white/5"
-                            }`}>
-                              {s.name[0]?.toUpperCase()}
-                            </div>
-                          )}
+                          <RankedAvatar
+                            rankPoints={s.rankPoints}
+                            src={s.image}
+                            alt={s.name}
+                            size={32}
+                            className="w-8 h-8"
+                          />
                           <div>
                             <p className={`font-semibold leading-tight ${isMe ? "text-purple-300" : "text-white"}`}>
                               {s.name}

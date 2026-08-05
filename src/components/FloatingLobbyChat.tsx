@@ -2,14 +2,14 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { MessageCircle, X, Send } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
+import RankedAvatar from "@/components/RankedAvatar";
 
 interface LobbyMsg {
   id: string;
   content: string;
   createdAt: string;
-  user: { id: string; name: string | null; username: string | null; image: string | null };
+  user: { id: string; name: string | null; username: string | null; image: string | null; rankPoints: number };
 }
 
 interface PresenceUser {
@@ -17,6 +17,7 @@ interface PresenceUser {
   name: string | null;
   username: string | null;
   image: string | null;
+  rankPoints: number;
 }
 
 function displayName(u: { name: string | null; username: string | null }) {
@@ -279,16 +280,10 @@ export function FloatingLobbyChat() {
                   key={u.id}
                   href={`/profile/${u.id}`}
                   onClick={() => setOpen(false)}
-                  className="flex-shrink-0 w-6 h-6 rounded-full overflow-hidden bg-gray-800 relative hover:ring-2 hover:ring-teal-400/60 transition-shadow"
+                  className="flex-shrink-0 relative rounded-full hover:ring-2 hover:ring-teal-400/60 transition-shadow"
                   title={displayName(u)}
                 >
-                  {u.image ? (
-                    <Image src={u.image} alt="" width={24} height={24} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-[9px] font-bold text-gray-400">
-                      {displayName(u)[0]?.toUpperCase()}
-                    </div>
-                  )}
+                  <RankedAvatar rankPoints={u.rankPoints} src={u.image} alt={displayName(u)} size={24} />
                   <span
                     className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full"
                     style={{ background: "#14b8a6", boxShadow: "0 0 4px #14b8a6", border: "1px solid rgba(13,13,15,0.97)" }}
@@ -313,22 +308,10 @@ export function FloatingLobbyChat() {
                 <Link
                   href={`/profile/${msg.user.id}`}
                   onClick={() => setOpen(false)}
-                  className="flex-shrink-0 w-7 h-7 rounded-full overflow-hidden bg-gray-800 self-end hover:ring-2 hover:ring-teal-400/60 transition-shadow"
+                  className="flex-shrink-0 self-end rounded-full hover:ring-2 hover:ring-teal-400/60 transition-shadow"
                   title={displayName(msg.user)}
                 >
-                  {msg.user.image ? (
-                    <Image
-                      src={msg.user.image}
-                      alt=""
-                      width={28}
-                      height={28}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-gray-400">
-                      {displayName(msg.user)[0]?.toUpperCase()}
-                    </div>
-                  )}
+                  <RankedAvatar rankPoints={msg.user.rankPoints} src={msg.user.image} alt={displayName(msg.user)} size={28} />
                 </Link>
                 <div className={`flex flex-col gap-0.5 max-w-[75%] ${isOwn ? "items-end" : "items-start"}`}>
                   <span className="text-[10px] text-gray-500">{displayName(msg.user)}</span>

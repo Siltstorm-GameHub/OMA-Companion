@@ -1,10 +1,10 @@
 "use client";
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { LogOut, Sun, Moon, Bell, Settings, X, ShieldAlert } from "lucide-react";
 import PwaInstallButton from "@/components/PwaInstallButton";
+import RankedAvatar from "@/components/RankedAvatar";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 
@@ -79,6 +79,7 @@ export default function MobileTopBar() {
   const pathname          = usePathname();
   const router            = useRouter();
   const { data: session } = useSession();
+  const myRankPoints      = (session?.user as { rankPoints?: number } | undefined)?.rankPoints ?? 0;
   const { theme, toggle } = useTheme();
   const [open, setOpen]   = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -192,16 +193,12 @@ export default function MobileTopBar() {
     >
       {/* Header: Avatar + Username + Theme + Abmelden */}
       <div className="px-3 py-2.5 flex items-center gap-2" style={{ borderBottom: "1px solid rgba(20,184,166,0.08)" }}>
-        <div className="w-7 h-7 rounded-full overflow-hidden shrink-0">
-          {session?.user?.image ? (
-            <Image src={session.user.image} alt="avatar" width={28} height={28} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-xs font-bold text-white"
-              style={{ background: "linear-gradient(135deg, #0d9488, #115e59)" }}>
-              {session?.user?.name?.[0] ?? "?"}
-            </div>
-          )}
-        </div>
+        <RankedAvatar
+          rankPoints={myRankPoints}
+          src={session?.user?.image}
+          alt={session?.user?.name ?? "Gast"}
+          size={28}
+        />
         <div className="flex-1 min-w-0">
           <p className="text-xs font-semibold text-white truncate">{session?.user?.name ?? "Gast"}</p>
           <p className="text-[10px] flex items-center gap-1" style={{ color: "rgba(20,184,166,0.7)" }}>
@@ -361,21 +358,15 @@ export default function MobileTopBar() {
           }}
           aria-label="Profil-Menü"
         >
-          <div
-            className="w-8 h-8 rounded-full overflow-hidden"
-            style={open
-              ? { outline: "2px solid rgba(20,184,166,0.5)", outlineOffset: 2 }
-              : { outline: "1px solid rgba(20,184,166,0.22)", outlineOffset: 1 }}
-          >
-            {session?.user?.image ? (
-              <Image src={session.user.image} alt="avatar" width={32} height={32} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-xs font-bold text-white"
-                style={{ background: "linear-gradient(135deg, #0d9488, #115e59)" }}>
-                {session?.user?.name?.[0] ?? "?"}
-              </div>
-            )}
-          </div>
+          {/* Die Teal-Outline signalisiert weiterhin "Menü offen" und sitzt per Offset
+              außerhalb des Rang-Rings, damit sich beide nicht überlagern. */}
+          <RankedAvatar
+            rankPoints={myRankPoints}
+            src={session?.user?.image}
+            alt={session?.user?.name ?? "Gast"}
+            size={32}
+            className={open ? "outline-2 outline-teal-500/50 outline-offset-2" : "outline-1 outline-teal-500/[0.22] outline-offset-1"}
+          />
           {unreadCount > 0 && (
             <span
               className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center"

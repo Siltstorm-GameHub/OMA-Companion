@@ -3,6 +3,7 @@ import { useState, useMemo } from "react";
 import Image from "next/image";
 import { Plus, Award, Search, X, ChevronDown } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
+import BadgeIcon from "@/components/BadgeIcon";
 import WanderpocalRecomputeButton from "../WanderpocalRecomputeButton";
 
 type Badge = {
@@ -183,7 +184,7 @@ export default function BadgesAdminClient({ badges: initialBadges, users }: {
         <div className="space-y-2">
           {badges.map(badge => (
             <div key={badge.id} className="glass rounded-2xl px-5 py-4 flex items-center gap-4">
-              <span className="text-3xl shrink-0">{badge.icon}</span>
+              <BadgeIcon icon={badge.icon} badgeKey={`custom:${badge.id}`} size={36} alt={badge.name} />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <p className="text-sm font-semibold text-white">{badge.name}</p>

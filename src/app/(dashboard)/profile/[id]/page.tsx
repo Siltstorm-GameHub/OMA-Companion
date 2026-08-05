@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
@@ -15,7 +16,6 @@ import CoinIcon from "@/components/CoinIcon";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import WinIcon from "@/components/WinIcon";
 import Link from "next/link";
-import Image from "next/image";
 import BadgesSection from "../BadgesSection";
 import CollectiblesShowcase from "../CollectiblesShowcase";
 import FavoriteGamesSection from "../FavoriteGamesSection";
@@ -23,6 +23,34 @@ import { parseFavoriteGames } from "@/lib/favorite-games";
 import WanderpocalSection from "@/components/WanderpocalSection";
 import DuelChallengeWidget from "@/components/DuelChallengeWidget";
 import { getMinigamesConfig } from "@/lib/minigames-config";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const user = await prisma.user
+    .findUnique({ where: { id }, select: { name: true, username: true, rankPoints: true } })
+    .catch(() => null);
+
+  const name = user?.name ?? user?.username ?? "Mitglied";
+  const title = `${name} – Old Masters Ally`;
+  const description = user
+    ? `${getRankFullLabel(getRank(user.rankPoints))} · ${user.rankPoints.toLocaleString("de-DE")} Rangpunkte`
+    : "Profil bei Old Masters Ally";
+
+  return {
+    title,
+    description,
+    // Die Share-Karte zeigt Name und Avatar und ist ohne Login abrufbar — das
+    // ist für Discord-Vorschauen gewollt. noindex verhindert, dass Profile
+    // zusätzlich in Suchmaschinen landen. Zum Aufheben diese Zeile entfernen.
+    robots: { index: false, follow: false },
+    openGraph: { title, description, images: [`/api/og/profile/${id}`] },
+    twitter: { card: "summary_large_image", title, description, images: [`/api/og/profile/${id}`] },
+  };
+}
 
 export default async function PublicProfilePage({
   params,
@@ -321,7 +349,7 @@ export default async function PublicProfilePage({
 
       {/* ── Aktuelle Lieblingsspiele (read-only) ────────────────────── */}
       {favoriteGames.length > 0 && (
-        <FavoriteGamesSection games={favoriteGames} readOnly displayName={displayName} />
+        <FavoriteGamesSection games={favoriteGames} readOnly displayName={displayName} viewerId={viewerId} />
       )}
 
       {/* ── Collectibles Showcase (read-only) ───────────────────────── */}

@@ -24,7 +24,7 @@ const STATUS_CFG: Record<string, { label: string; badge: string; dot: string; st
   finished: { label: "Beendet",    badge: "text-gray-500 bg-white/[0.04] border border-white/[0.06]",         dot: "bg-gray-600",                  stripe: "bg-white/10"       },
 };
 
-type EventUser = { id: string; name: string | null; username: string | null; image: string | null };
+type EventUser = { id: string; name: string | null; username: string | null; image: string | null; rankPoints: number };
 type StreamingPartner = { partner: { id: string; name: string; twitchLogin: string; logoUrl: string } };
 export type SeriesEventItem = {
   id: string;

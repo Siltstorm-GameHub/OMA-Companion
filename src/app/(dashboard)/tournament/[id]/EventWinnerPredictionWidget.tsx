@@ -4,8 +4,9 @@ import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import { Target, Search, X } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
+import RankedAvatar from "@/components/RankedAvatar";
 
-type UserLite = { id: string; username: string | null; name: string | null; image: string | null };
+type UserLite = { id: string; username: string | null; name: string | null; image: string | null; rankPoints: number };
 type Prediction = {
   predictedUserId: string;
   wager: number;
@@ -159,13 +160,7 @@ export default function EventWinnerPredictionWidget({
       {selected ? (
         <div className="space-y-3">
           <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-violet-500/[0.06] border border-violet-500/15">
-            {selected.image ? (
-              <img src={selected.image} alt="" className="w-6 h-6 rounded-full shrink-0" />
-            ) : (
-              <div className="w-6 h-6 rounded-full bg-white/[0.06] flex items-center justify-center text-[10px] font-bold text-gray-400 shrink-0">
-                {uname(selected)[0]?.toUpperCase() ?? "?"}
-              </div>
-            )}
+            <RankedAvatar rankPoints={selected.rankPoints} src={selected.image} alt={uname(selected)} size={24} className="w-6 h-6" />
             <span className="flex-1 text-sm text-white">{uname(selected)}</span>
             <button onClick={() => setSelected(null)} className="text-gray-500 hover:text-white">
               <X className="w-3.5 h-3.5" />
@@ -206,13 +201,7 @@ export default function EventWinnerPredictionWidget({
               {results.map(u => (
                 <button key={u.id} onClick={() => { setSelected(u); setResults([]); setQuery(""); }}
                   className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-white/[0.06] text-left">
-                  {u.image ? (
-                    <img src={u.image} alt="" className="w-6 h-6 rounded-full shrink-0" />
-                  ) : (
-                    <div className="w-6 h-6 rounded-full bg-white/[0.06] flex items-center justify-center text-[10px] font-bold text-gray-400 shrink-0">
-                      {uname(u)[0]?.toUpperCase() ?? "?"}
-                    </div>
-                  )}
+                  <RankedAvatar rankPoints={u.rankPoints} src={u.image} alt={uname(u)} size={24} className="w-6 h-6" />
                   <span className="text-sm text-white">{uname(u)}</span>
                 </button>
               ))}

@@ -4,8 +4,9 @@ import { Trophy } from "lucide-react";
 import WinIcon from "@/components/WinIcon";
 import WanderpocalBadge from "@/components/WanderpocalBadge";
 import type { WanderpocalHolder } from "@/lib/wanderpocal";
+import RankedAvatar from "@/components/RankedAvatar";
 
-type User = { id: string; name: string | null; username: string | null; image: string | null };
+type User = { id: string; name: string | null; username: string | null; image: string | null; rankPoints: number };
 type Participant = { userId: string; user: User };
 type Match = {
   id: string; round: number; position: number;
@@ -117,15 +118,13 @@ export default function BracketView({
                           const rowInner = (
                             <>
                               <div className="flex items-center gap-1.5 min-w-0">
-                                {user?.image ? (
-                                  <img src={user.image} alt="" className="w-5 h-5 rounded-full shrink-0" />
-                                ) : (
-                                  <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 ${
-                                    isMe ? "bg-rose-900/50 text-rose-300" : "bg-white/[0.06] text-gray-400"
-                                  }`}>
-                                    {user ? uname(user)[0].toUpperCase() : "?"}
-                                  </div>
-                                )}
+                                <RankedAvatar
+                                  rankPoints={user?.rankPoints ?? 0}
+                                  src={user?.image}
+                                  alt={user ? uname(user) : "?"}
+                                  size={20}
+                                  className="w-5 h-5"
+                                />
                                 <span className={`text-xs truncate max-w-[90px] ${
                                   isWinner ? "text-emerald-300 font-semibold" :
                                   isLoser  ? "text-gray-600" :

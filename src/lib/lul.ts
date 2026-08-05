@@ -114,6 +114,7 @@ export type LulStandingRow = {
   userId:      string;
   name:        string;
   image:       string | null;
+  rankPoints:  number;  // für den Rang-Ring am Avatar
   totalPts:    number;
   asPlayer:    number;  // Einsätze als Mitspieler
   asSpectator: number;  // Einsätze als Zuschauer
@@ -130,7 +131,7 @@ export function buildLulStandings(
   entries: {
     userId:         string;
     role:           string;
-    user:           { name: string | null; username: string | null; image: string | null };
+    user:           { name: string | null; username: string | null; image: string | null; rankPoints: number };
     lulPoints:      number;
     gameWinner:     boolean;
     communityChamp: boolean;
@@ -159,6 +160,7 @@ export function buildLulStandings(
         userId:      e.userId,
         name:        display,
         image:       e.user.image,
+        rankPoints:  e.user.rankPoints,
         totalPts:    e.lulPoints,
         asPlayer:    e.role === "player"    ? 1 : 0,
         asSpectator: e.role === "spectator" ? 1 : 0,

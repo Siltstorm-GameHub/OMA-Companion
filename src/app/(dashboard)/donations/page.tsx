@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
-import Image from "next/image";
 import { calcStreak } from "@/lib/streak";
+import RankedAvatar from "@/components/RankedAvatar";
 import { Heart, Flame, CalendarDays, Users, Euro, ShoppingCart, TrendingDown, Wallet, Lightbulb } from "lucide-react";
 
 const MONTH_NAMES = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
@@ -59,7 +59,7 @@ export default async function DonationsPage() {
   const donorUsers = donorIds.length
     ? await prisma.user.findMany({
         where:  { id: { in: donorIds } },
-        select: { id: true, name: true, image: true },
+        select: { id: true, name: true, image: true, rankPoints: true },
       })
     : [];
   const userById = new Map(donorUsers.map(u => [u.id, u]));
@@ -73,7 +73,7 @@ export default async function DonationsPage() {
     })
     .filter(Boolean)
     .sort((a, b) => b!.streak - a!.streak || b!.totalMonths - a!.totalMonths) as {
-      user: { id: string; name: string | null; image: string | null };
+      user: { id: string; name: string | null; image: string | null; rankPoints: number };
       streak: number;
       totalMonths: number;
     }[];
@@ -309,15 +309,13 @@ export default async function DonationsPage() {
                     border: `1px solid ${isMe ? "rgba(20,184,166,0.18)" : "rgba(255,255,255,0.06)"}`,
                   }}
                 >
-                  {user.image ? (
-                    <Image src={user.image} alt={user.name ?? ""} width={36} height={36}
-                      className="w-9 h-9 rounded-full shrink-0" style={{ outline: "1px solid rgba(20,184,166,0.2)" }} />
-                  ) : (
-                    <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0"
-                      style={{ background: "linear-gradient(135deg,#0d9488,#115e59)" }}>
-                      {user.name?.[0] ?? "?"}
-                    </div>
-                  )}
+                  <RankedAvatar
+                    rankPoints={user.rankPoints}
+                    src={user.image}
+                    alt={user.name ?? "Unbekannt"}
+                    size={36}
+                    className="w-9 h-9"
+                  />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-white truncate">
                       {user.name ?? "Unbekannt"}

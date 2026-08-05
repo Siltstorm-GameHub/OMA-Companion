@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Pencil, X, Check, Plus, Loader2, Gamepad2 } from "lucide-react";
+import { Pencil, X, Check, Plus, Loader2, Gamepad2, Users } from "lucide-react";
 import GameCover from "@/components/GameCover";
 import PollGameSuggestInput from "@/components/PollGameSuggestInput";
+import GamePlayersModal from "./GamePlayersModal";
 import { MAX_FAVORITE_GAMES, steamCoverUrl, type FavoriteGame } from "@/lib/favorite-games";
 
 interface Props {
@@ -14,13 +15,16 @@ interface Props {
   readOnly?: boolean;
   /** Anzeigename für die Leer-Meldung auf fremden Profilen */
   displayName?: string;
+  /** Eigene User-ID — markiert einen selbst in der Mitspieler-Liste */
+  viewerId?: string;
 }
 
-export default function FavoriteGamesSection({ games, readOnly = false, displayName }: Props) {
+export default function FavoriteGamesSection({ games, readOnly = false, displayName, viewerId }: Props) {
   const router = useRouter();
-  const [editing, setEditing] = useState(false);
-  const [draft,   setDraft]   = useState<FavoriteGame[]>(games);
-  const [saving,  setSaving]  = useState(false);
+  const [editing,  setEditing]  = useState(false);
+  const [draft,    setDraft]    = useState<FavoriteGame[]>(games);
+  const [saving,   setSaving]   = useState(false);
+  const [openGame, setOpenGame] = useState<FavoriteGame | null>(null);
 
   const displayGames = editing ? draft : games;
 
@@ -106,18 +110,36 @@ export default function FavoriteGamesSection({ games, readOnly = false, displayN
                   rounded="rounded-none"
                   imgClassName="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
-                <div className="absolute inset-x-0 bottom-0 px-2 pt-6 pb-1.5 pointer-events-none"
+                <div className="absolute inset-x-0 bottom-0 px-2 pt-6 pb-1.5 pointer-events-none z-10"
                   style={{ background: "linear-gradient(to top, rgba(0,0,0,0.88), transparent)" }}>
                   <p className="text-[11px] font-medium text-white truncate">{g.name}</p>
                 </div>
-                {editing && (
+
+                {editing ? (
                   <button
                     onClick={() => setDraft(prev => prev.filter((_, idx) => idx !== i))}
-                    className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-red-500/85 border border-red-400/40 flex items-center justify-center hover:bg-red-500 transition-colors"
+                    className="absolute top-1.5 right-1.5 z-20 w-5 h-5 rounded-full bg-red-500/85 border border-red-400/40 flex items-center justify-center hover:bg-red-500 transition-colors"
                     title={`${g.name} entfernen`}
                   >
                     <X className="w-3 h-3 text-white" />
                   </button>
+                ) : (
+                  <>
+                    {/* Dauerhaft sichtbarer Hinweis, dass die Karte klickbar ist (auch ohne Hover, z.B. auf Touch) */}
+                    <span className="absolute top-1.5 right-1.5 z-20 w-5 h-5 rounded-full bg-black/55 border border-white/15 flex items-center justify-center pointer-events-none">
+                      <Users className="w-2.5 h-2.5 text-white/70" />
+                    </span>
+                    <button
+                      onClick={() => setOpenGame(g)}
+                      title={`Wer zockt ${g.name}?`}
+                      className="absolute inset-0 z-20 flex items-end justify-center pb-7 opacity-0 hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none transition-opacity"
+                      style={{ background: "rgba(0,0,0,0.45)" }}
+                    >
+                      <span className="flex items-center gap-1 text-[10px] font-medium text-white px-2 py-1 rounded-md bg-black/70 border border-white/15">
+                        <Users className="w-3 h-3" /> Wer zockt das?
+                      </span>
+                    </button>
+                  </>
                 )}
               </div>
             ))}
@@ -151,6 +173,8 @@ export default function FavoriteGamesSection({ games, readOnly = false, displayN
           </div>
         )}
       </div>
+
+      <GamePlayersModal game={openGame} onClose={() => setOpenGame(null)} viewerId={viewerId} />
     </section>
   );
 }

@@ -9,6 +9,7 @@ import { FloatingLobbyChat } from "@/components/FloatingLobbyChat";
 import AuroraBackground from "@/components/AuroraBackground";
 import PartnerFooter from "@/components/PartnerFooter";
 import { prisma } from "@/lib/prisma";
+import { getRoomConfig, roomVisibleFor } from "@/lib/room-config";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -57,6 +58,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const nextEvent = activeOrPollEvent ?? upcomingEvent;
   const openQuestsCount = userId ? Math.max(totalMonthQuests - completedMonthQuests, 0) : 0;
+
+  // Gaming-Zimmer: solange room_enabled aus ist, sehen nur Admins den Nav-Eintrag.
+  const roomVisible = roomVisibleFor(
+    await getRoomConfig(),
+    (session.user as { role?: string } | undefined)?.role,
+  );
   const newsItems: NewsItem[] = [];
 
   // Aktives / Umfragephase / Nächstes Event
@@ -168,7 +175,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
       {/* ── Floating Pill Nav (nur Desktop) ─────────────────────── */}
       <div className="hidden lg:block">
-        <FloatingPill />
+        <FloatingPill roomVisible={roomVisible} />
       </div>
 
       {/* ── Main Content ────────────────────────────────────────── */}

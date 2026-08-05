@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/roles";
@@ -6,6 +7,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, Users, Clock, Swords, StickyNote, Vote, Tv2, Eye, EyeOff, Clapperboard, CheckCircle2 } from "lucide-react";
 import RulesSection from "@/components/RulesSection";
+import RankedAvatar from "@/components/RankedAvatar";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import SeriesIcon from "@/components/SeriesIcon";
 import WinIcon from "@/components/WinIcon";
@@ -58,6 +60,36 @@ const FORMAT_LABELS: Record<string, string> = {
   coop_stats:         "Kooperativ (Stats)",
 };
 
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const event = await prisma.event
+    .findUnique({ where: { id }, select: { title: true, game: true, hidden: true } })
+    .catch(() => null);
+
+  // Versteckte Events bekommen bewusst keinen aussagekräftigen Titel — die
+  // Metadata ist ohne Login abrufbar.
+  if (!event || event.hidden) {
+    return { title: "Event – Old Masters Ally" };
+  }
+
+  const title = `${event.title} – Old Masters Ally`;
+  const description = event.game
+    ? `${event.game} · Event bei Old Masters Ally`
+    : "Event bei Old Masters Ally";
+  const image = `/api/og/event/${id}`;
+
+  return {
+    title,
+    description,
+    openGraph: { title, description, images: [image] },
+    twitter: { card: "summary_large_image", title, description, images: [image] },
+  };
+}
+
 export default async function TournamentDetailPage({
   params,
 }: {
@@ -76,15 +108,15 @@ export default async function TournamentDetailPage({
     include: {
       series: { select: { id: true, name: true, icon: true, hidden: true, seriesStatConfig: true, discordChannelId: true, pollConfigJson: true } },
       streamingPartners: { include: { partner: { include: { user: { select: { id: true } } } } } },
-      communityStreamers: { include: { user: { select: { id: true, name: true, username: true, image: true, twitchLogin: true } } } },
+      communityStreamers: { include: { user: { select: { id: true, name: true, username: true, image: true, twitchLogin: true, rankPoints: true } } } },
       registrations: {
         include: {
-          user: { select: { id: true, name: true, username: true, image: true, points: true } },
+          user: { select: { id: true, name: true, username: true, image: true, points: true, rankPoints: true } },
         },
         orderBy: { joinedAt: "asc" },
       },
       participants: {
-        include: { user: { select: { id: true, name: true, username: true, image: true } } },
+        include: { user: { select: { id: true, name: true, username: true, image: true, rankPoints: true } } },
       },
       matches: {
         orderBy: [{ round: "asc" }, { position: "asc" }],
@@ -93,7 +125,7 @@ export default async function TournamentDetailPage({
       polls: {
         include: {
           votes: {
-            include: { voter: { select: { id: true, name: true, username: true, image: true } } },
+            include: { voter: { select: { id: true, name: true, username: true, image: true, rankPoints: true } } },
           },
         },
         orderBy: { startAt: "asc" },
@@ -113,7 +145,7 @@ export default async function TournamentDetailPage({
     getWanderpocalHoldersMap(),
     prisma.eventWinnerPrediction.findUnique({
       where: { userId_eventId: { userId, eventId } },
-      include: { predictedUser: { select: { id: true, username: true, name: true, image: true } } },
+      include: { predictedUser: { select: { id: true, username: true, name: true, image: true, rankPoints: true } } },
     }),
     getMinigamesConfig(),
     // Tipps aller User (ohne Einsatz/Auszahlung — nur wer auf wen tippt, plus Pott-Gesamtsumme)
@@ -123,8 +155,8 @@ export default async function TournamentDetailPage({
         wager: true,
         correct: true,
         resolved: true,
-        user: { select: { id: true, username: true, name: true, image: true } },
-        predictedUser: { select: { id: true, username: true, name: true, image: true } },
+        user: { select: { id: true, username: true, name: true, image: true, rankPoints: true } },
+        predictedUser: { select: { id: true, username: true, name: true, image: true, rankPoints: true } },
       },
       orderBy: { createdAt: "asc" },
     }),
@@ -161,7 +193,7 @@ export default async function TournamentDetailPage({
 
   // Alle bekannten Spieler: Turnier-Teilnehmer + Event-Registrierungen zusammenführen,
   // damit Match-Spieler auch dann aufgelöst werden wenn sie nicht als TournamentParticipant eingetragen sind
-  type KnownUser = { id: string; name: string | null; username: string | null; image: string | null };
+  type KnownUser = { id: string; name: string | null; username: string | null; image: string | null; rankPoints: number };
   type KnownParticipant = { userId: string; user: KnownUser; role?: string };
   const roleByUserId = new Map(event.registrations.map(r => [r.userId, r.role]));
   const mergedParticipants: KnownParticipant[] = hasTournament
@@ -305,7 +337,7 @@ export default async function TournamentDetailPage({
     participationCoins: number; participationSeriesPoints: number;
     winnerCoins: number; winnerRankPoints: number;
     voteCounts: Record<string, number>; myVote: string | null;
-    answerOptions: { id: string; name: string | null; username: string | null; image: string | null }[] | null;
+    answerOptions: { id: string; name: string | null; username: string | null; image: string | null; rankPoints: number }[] | null;
     excludedUserIds: string[];
     effectiveWinnerIds: string[];
   };
@@ -419,7 +451,7 @@ export default async function TournamentDetailPage({
   const genre = (event as unknown as Record<string, unknown>).genre as string | null | undefined;
   const genreInfo = genre ? (GENRE_MAP[genre] ?? null) : null;
   type PartnerEntry = { partner: { id: string; name: string; twitchLogin: string; logoUrl: string; user?: { id: string } | null } };
-  type CommunityStreamerEntry = { user: { id: string; name: string | null; username: string | null; image: string | null; twitchLogin: string | null } };
+  type CommunityStreamerEntry = { user: { id: string; name: string | null; username: string | null; image: string | null; twitchLogin: string | null; rankPoints: number } };
   const streamingPartners = (event as unknown as { streamingPartners?: PartnerEntry[] }).streamingPartners ?? [];
   const communityStreamers = (event as unknown as { communityStreamers?: CommunityStreamerEntry[] }).communityStreamers ?? [];
 
@@ -457,7 +489,7 @@ export default async function TournamentDetailPage({
     winnerIds: string[] | null; participationCoins: number; participationSeriesPoints: number;
     winnerCoins: number; winnerRankPoints: number;
     voteCounts: Record<string, number>; myVote: string | null;
-    answerOptions: { id: string; name: string | null; username: string | null; image: string | null }[] | null;
+    answerOptions: { id: string; name: string | null; username: string | null; image: string | null; rankPoints: number }[] | null;
     excludedUserIds: string[];
   };
   const initialPolls: InitialPoll[] = pollDisplays
@@ -623,7 +655,7 @@ export default async function TournamentDetailPage({
                     className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all hover:brightness-110"
                     style={{ background: "rgba(145,70,255,0.08)", border: "1px solid rgba(145,70,255,0.18)", color: "#c4a3ff" }}
                   >
-                    {u.image && <Image src={u.image} alt={u.name ?? u.username ?? ""} width={16} height={16} className="rounded-full shrink-0" />}
+                    <RankedAvatar rankPoints={u.rankPoints} src={u.image} alt={u.name ?? u.username ?? ""} size={16} className="w-4 h-4" />
                     {u.name ?? u.username}
                     <span className="opacity-50 text-[10px]">↗</span>
                   </a>
@@ -633,7 +665,7 @@ export default async function TournamentDetailPage({
                     className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium"
                     style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "#9ca3af" }}
                   >
-                    {u.image && <Image src={u.image} alt={u.name ?? u.username ?? ""} width={16} height={16} className="rounded-full shrink-0" />}
+                    <RankedAvatar rankPoints={u.rankPoints} src={u.image} alt={u.name ?? u.username ?? ""} size={16} className="w-4 h-4" />
                     {u.name ?? u.username}
                   </span>
                 )
@@ -730,12 +762,7 @@ export default async function TournamentDetailPage({
               return (
                 <div key={user.id}
                   className={`flex items-center gap-2.5 px-3 py-2 rounded-xl bg-violet-500/[0.04] border border-violet-500/10 ${isMe ? "ring-1 ring-teal-500/30" : ""}`}>
-                  {user.image
-                    ? <img src={user.image} alt="" className="w-6 h-6 rounded-full shrink-0 object-cover" />
-                    : <div className="w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center text-[10px] font-bold text-gray-300 shrink-0">
-                        {name[0]?.toUpperCase() ?? "?"}
-                      </div>
-                  }
+                  <RankedAvatar rankPoints={user.rankPoints} src={user.image} alt={name} size={24} className="w-6 h-6" />
                   <span className={`text-sm ${isMe ? "text-teal-300 font-medium" : "text-gray-200"}`}>
                     {name}{isMe && <span className="text-xs text-gray-500 ml-1.5">(du)</span>}
                   </span>
@@ -763,12 +790,7 @@ export default async function TournamentDetailPage({
                 return (
                   <div key={uid} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl bg-violet-500/[0.06] border border-violet-500/15 ${isMe ? "ring-1 ring-teal-500/30" : ""}`}>
                     <span className="text-base shrink-0">🏆</span>
-                    {user?.image
-                      ? <img src={user.image} alt="" className="w-7 h-7 rounded-full shrink-0 object-cover" />
-                      : <div className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-300 shrink-0">
-                          {name[0]?.toUpperCase() ?? "?"}
-                        </div>
-                    }
+                    <RankedAvatar rankPoints={user?.rankPoints ?? 0} src={user?.image} alt={name} size={28} className="w-7 h-7" />
                     <div className="flex-1 min-w-0">
                       <span className={`text-sm font-medium ${isMe ? "text-teal-300" : "text-violet-200"}`}>
                         {name}{isMe && <span className="text-xs text-gray-500 ml-1.5">(du)</span>}
@@ -817,12 +839,7 @@ export default async function TournamentDetailPage({
                     return (
                       <div key={uid} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl bg-violet-500/[0.06] border border-violet-500/15 ${isMe ? "ring-1 ring-teal-500/30" : ""}`}>
                         <span className="text-base shrink-0">🏆</span>
-                        {user?.image
-                          ? <img src={user.image} alt="" className="w-7 h-7 rounded-full shrink-0 object-cover" />
-                          : <div className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-300 shrink-0">
-                              {name[0]?.toUpperCase() ?? "?"}
-                            </div>
-                        }
+                        <RankedAvatar rankPoints={user?.rankPoints ?? 0} src={user?.image} alt={name} size={28} className="w-7 h-7" />
                         <span className={`text-sm font-medium ${isMe ? "text-teal-300" : "text-violet-200"}`}>
                           {name}{isMe && <span className="text-xs text-gray-500 ml-1.5">(du)</span>}
                         </span>
@@ -933,13 +950,7 @@ export default async function TournamentDetailPage({
                     )}
                     <div className={`flex items-center gap-2.5 px-3 py-2.5 ${isMe ? "bg-rose-950/30" : ""}`}>
                       <span className="text-xs text-gray-700 w-4 shrink-0 text-center">{i + 1}</span>
-                      {user.image ? (
-                        <img src={user.image} alt="" className="w-7 h-7 rounded-full shrink-0" />
-                      ) : (
-                        <div className="w-7 h-7 rounded-full bg-rose-900/30 flex items-center justify-center text-xs font-bold text-rose-400 shrink-0">
-                          {userName(user)[0].toUpperCase()}
-                        </div>
-                      )}
+                      <RankedAvatar rankPoints={user.rankPoints} src={user.image} alt={userName(user)} size={28} className="w-7 h-7" />
                       <div className="flex-1 min-w-0">
                         <p className={`text-sm truncate font-medium flex items-center gap-1.5 ${isMe ? "text-rose-300" : "text-white"}`}>
                           <span className="truncate">{userName(user)}{isMe && " (du)"}</span>
@@ -981,13 +992,7 @@ export default async function TournamentDetailPage({
                     return (
                       <div key={user.id} className={`flex items-center gap-2.5 px-3 py-2.5 ${isMe ? "bg-rose-950/30" : ""}`}>
                         <span className="text-xs text-gray-700 w-4 shrink-0 text-center">{i + 1}</span>
-                        {user.image ? (
-                          <img src={user.image} alt="" className="w-7 h-7 rounded-full shrink-0" />
-                        ) : (
-                          <div className="w-7 h-7 rounded-full bg-rose-900/30 flex items-center justify-center text-xs font-bold text-rose-400 shrink-0">
-                            {userName(user)[0].toUpperCase()}
-                          </div>
-                        )}
+                        <RankedAvatar rankPoints={user.rankPoints} src={user.image} alt={userName(user)} size={28} className="w-7 h-7" />
                         <div className="flex-1 min-w-0">
                           <p className={`text-sm truncate font-medium flex items-center gap-1.5 ${isMe ? "text-rose-300" : "text-white"}`}>
                             <span className="truncate">{userName(user)}{isMe && " (du)"}</span>

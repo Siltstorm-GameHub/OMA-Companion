@@ -86,7 +86,7 @@ export default function EventCoverDefault({ className = "w-full h-full" }: { cla
 
       {/* Logo als normales img — lädt unabhängig vom SVG */}
       <img
-        src="/OMALogoNew.png"
+        src="/brand/logo-256.png"
         alt="OMA Companion"
         className="absolute w-[30%] h-auto"
         style={{ top: "50%", left: "50%", transform: "translate(-50%, -54%)" }}

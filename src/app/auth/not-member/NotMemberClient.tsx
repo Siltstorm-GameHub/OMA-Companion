@@ -56,7 +56,7 @@ export default function NotMemberClient({ inviteUrl }: { inviteUrl: string | nul
         {/* Header */}
         <div className="flex flex-col items-center mb-6 text-center">
           <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-[0_0_28px_rgba(244,63,94,0.25)] ring-1 ring-rose-500/30 mb-4">
-            <Image src="/OMALogoNew.png" alt="OMA" width={56} height={56} className="w-full h-full object-cover" />
+            <Image src="/brand/logo-256.png" alt="OMA" width={56} height={56} className="w-full h-full object-cover" />
           </div>
           <div className="flex items-center gap-2 mb-2">
             <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0" />

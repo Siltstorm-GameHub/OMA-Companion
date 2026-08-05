@@ -4,8 +4,8 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, CalendarDays, Swords } from "lucide-react";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import WinIcon from "@/components/WinIcon";
+import RankedAvatar from "@/components/RankedAvatar";
 import Link from "next/link";
-import Image from "next/image";
 
 async function fetchUserData(id: string) {
   const [user, eventCount, matchWins, transactions] = await Promise.all([
@@ -48,13 +48,17 @@ function StatBar({ labelA, labelB, valA, valB, colorA = "bg-rose-500", colorB = 
 function Avatar({ user, accent }: { user: UserData; accent: string }) {
   return (
     <div className="flex flex-col items-center gap-3">
-      <div className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden ring-2 ${accent}`}>
-        {user.image
-          ? <Image src={user.image} alt={user.username ?? user.name ?? ""} width={80} height={80} className="w-full h-full object-cover" />
-          : <div className="w-full h-full bg-gradient-to-br from-rose-600 to-rose-950 flex items-center justify-center text-2xl font-bold text-white">
-              {(user.username ?? user.name ?? "?")[0].toUpperCase()}
-            </div>}
-      </div>
+      {/* Der Akzent-Ring trennt weiterhin "ich" von "Gegner" und sitzt nach außen versetzt,
+          damit er nicht mit dem Rang-Ring verschmilzt. */}
+      <RankedAvatar
+        rankPoints={user.rankPoints ?? 0}
+        src={user.image}
+        alt={user.username ?? user.name ?? "?"}
+        size={80}
+        rounded="2xl"
+        showTier
+        className={`w-16 h-16 sm:w-20 sm:h-20 ring-2 ring-offset-2 ring-offset-[#0d0d0f] ${accent}`}
+      />
       <div className="text-center">
         <p className="font-bold text-white text-sm">{user.username ?? user.name ?? "?"}</p>
         <p className="text-xs font-medium text-amber-400">{(user.rankPoints ?? 0).toLocaleString("de-DE")} Pts</p>

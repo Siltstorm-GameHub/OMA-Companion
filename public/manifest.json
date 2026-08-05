@@ -17,20 +17,26 @@
   ],
   "icons": [
     {
-      "src": "/OMALogo512.png",
+      "src": "/brand/logo-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/OMALogo512.png",
+      "src": "/brand/logo-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/OMALogoNew.png",
+      "src": "/brand/logo-256.png",
       "sizes": "256x256",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/brand/logo-128.png",
+      "sizes": "128x128",
       "type": "image/png",
       "purpose": "any"
     }

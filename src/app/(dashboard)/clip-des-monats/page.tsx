@@ -24,7 +24,7 @@ export default async function ClipDesMonatsPage() {
     include: {
       nominations: {
         include: {
-          submittedBy: { select: { id: true, name: true, username: true, image: true } },
+          submittedBy: { select: { id: true, name: true, username: true, image: true, rankPoints: true } },
           _count: { select: { votes: true } },
         },
         orderBy: { createdAt: "asc" },

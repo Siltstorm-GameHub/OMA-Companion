@@ -13,6 +13,7 @@ import { getGameCoverUrl, getGameFallbackGradient } from "@/lib/game-cover";
 import { getGenreIcon } from "@/lib/genre-icons";
 import WanderpocalBadgeServer from "@/components/WanderpocalBadgeServer";
 import { getWanderpocalHoldersMap } from "@/lib/get-wanderpocal-holders";
+import RankedAvatar from "@/components/RankedAvatar";
 
 const STATUS_LABEL: Record<string, string> = {
   upcoming: "Geplant",
@@ -50,7 +51,7 @@ export default async function LulSpieltagPage({
       },
       entries: {
         include: {
-          user: { select: { id: true, name: true, username: true, image: true } },
+          user: { select: { id: true, name: true, username: true, image: true, rankPoints: true } },
         },
         orderBy: { lulPoints: "desc" },
       },
@@ -483,13 +484,13 @@ export default async function LulSpieltagPage({
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2.5">
-                            {entry.user.image ? (
-                              <img src={entry.user.image} alt="" className={`w-8 h-8 rounded-full shrink-0 ring-1 ${isMe ? "ring-teal-400/50" : "ring-white/10"}`} />
-                            ) : (
-                              <div className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-xs font-bold ring-1 ring-white/5 bg-white/[0.06] text-gray-400">
-                                {uname(entry.user)[0]?.toUpperCase()}
-                              </div>
-                            )}
+                            <RankedAvatar
+                              rankPoints={entry.user.rankPoints}
+                              src={entry.user.image}
+                              alt={uname(entry.user)}
+                              size={32}
+                              className="w-8 h-8"
+                            />
                             <p className={`font-semibold leading-tight ${isMe ? "text-teal-300" : "text-white"}`}>
                               {uname(entry.user)}
                               <WanderpocalBadgeServer userId={entry.user.id} holdersMap={holdersMap} />
@@ -644,19 +645,13 @@ export default async function LulSpieltagPage({
                       isMe ? "bg-teal-500/[0.04]" : ""
                     }`}
                   >
-                    {entry.user.image ? (
-                      <img
-                        src={entry.user.image}
-                        alt=""
-                        className={`w-8 h-8 rounded-full shrink-0 ring-1 ${
-                          isMe ? "ring-teal-400/40" : "ring-white/10"
-                        }`}
-                      />
-                    ) : (
-                      <div className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-xs font-bold bg-white/[0.06] text-gray-400 ring-1 ring-white/5">
-                        {uname(entry.user)[0]?.toUpperCase()}
-                      </div>
-                    )}
+                    <RankedAvatar
+                      rankPoints={entry.user.rankPoints}
+                      src={entry.user.image}
+                      alt={uname(entry.user)}
+                      size={32}
+                      className="w-8 h-8"
+                    />
 
                     <p className={`font-semibold text-sm flex-1 leading-tight ${isMe ? "text-teal-300" : "text-white"}`}>
                       {uname(entry.user)}
@@ -735,19 +730,13 @@ export default async function LulSpieltagPage({
                       isMe ? "bg-teal-500/[0.04]" : ""
                     }`}
                   >
-                    {entry.user.image ? (
-                      <img
-                        src={entry.user.image}
-                        alt=""
-                        className={`w-8 h-8 rounded-full shrink-0 ring-1 ${
-                          isMe ? "ring-teal-400/40" : "ring-white/10"
-                        }`}
-                      />
-                    ) : (
-                      <div className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-xs font-bold bg-white/[0.06] text-gray-400 ring-1 ring-white/5">
-                        {uname(entry.user)[0]?.toUpperCase()}
-                      </div>
-                    )}
+                    <RankedAvatar
+                      rankPoints={entry.user.rankPoints}
+                      src={entry.user.image}
+                      alt={uname(entry.user)}
+                      size={32}
+                      className="w-8 h-8"
+                    />
 
                     <p className={`font-semibold text-sm flex-1 leading-tight ${isMe ? "text-teal-300" : "text-white"}`}>
                       {uname(entry.user)}

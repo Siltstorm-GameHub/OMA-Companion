@@ -104,7 +104,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
             select: {
               userId: true,
               role: true,
-              user: { select: { id: true, name: true, username: true, image: true } },
+              user: { select: { id: true, name: true, username: true, image: true, rankPoints: true } },
             },
           },
           matches: {
@@ -132,7 +132,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
   });
   const eventTitleMap = new Map(series.events.map(e => [e.id, e.title]));
   const eventRegsMap  = new Map(series.events.map(e => [e.id, e.registrations]));
-  type ActivePollAnswerOption = { id: string; name: string | null; username: string | null; image: string | null };
+  type ActivePollAnswerOption = { id: string; name: string | null; username: string | null; image: string | null; rankPoints: number };
   type ActivePoll = {
     id: string; label: string; question: string; voterEligibility: string; answerType: string;
     customAnswers: string[]; startAt: string; endAt: string; rewardsPaid: boolean;
@@ -206,7 +206,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
   const standingUsers = standingUserIds.length > 0
     ? await prisma.user.findMany({
         where: { id: { in: standingUserIds } },
-        select: { id: true, name: true, username: true, image: true },
+        select: { id: true, name: true, username: true, image: true, rankPoints: true },
       })
     : [];
 
@@ -316,7 +316,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
   // ── Event lists ────────────────────────────────────────────────────────────
   // Events with user info for AvatarStack (cast to SeriesEventItem)
   const eventsWithUsers = series.events as (typeof series.events[number] & {
-    registrations: { userId: string; user: { id: string; name: string | null; username: string | null; image: string | null } }[];
+    registrations: { userId: string; user: { id: string; name: string | null; username: string | null; image: string | null; rankPoints: number } }[];
     streamingPartners: { partner: { id: string; name: string; twitchLogin: string; logoUrl: string } }[];
   })[];
 
@@ -395,7 +395,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
     allTimeUsers = allTimeIds.length > 0
       ? await prisma.user.findMany({
           where: { id: { in: allTimeIds } },
-          select: { id: true, name: true, username: true, image: true },
+          select: { id: true, name: true, username: true, image: true, rankPoints: true },
         })
       : [];
   }
@@ -433,7 +433,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
   const overallWinners = overallWinnerIds.length > 0
     ? await prisma.user.findMany({
         where: { id: { in: overallWinnerIds } },
-        select: { id: true, name: true, username: true, image: true },
+        select: { id: true, name: true, username: true, image: true, rankPoints: true },
       })
     : [];
 

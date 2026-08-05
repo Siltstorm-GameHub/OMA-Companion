@@ -16,6 +16,7 @@ type StandingUser = {
   name: string | null;
   username: string | null;
   image: string | null;
+  rankPoints: number;
 };
 
 interface Props {

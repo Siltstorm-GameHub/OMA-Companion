@@ -7,8 +7,9 @@ import CoinIcon from "@/components/CoinIcon";
 import CoinFlipModal from "@/components/CoinFlipModal";
 import PredictionStreakCard from "@/components/PredictionStreakCard";
 import MyPredictionsList, { type MyPrediction } from "@/components/MyPredictionsList";
+import RankedAvatar from "@/components/RankedAvatar";
 
-type UserLite = { id: string; username: string | null; name: string | null; image: string | null };
+type UserLite = { id: string; username: string | null; name: string | null; image: string | null; rankPoints: number };
 
 export type DuelEntry = {
   id: string;
@@ -27,12 +28,14 @@ export type DuelEntry = {
 const uname = (u?: UserLite) => u?.username ?? u?.name ?? "?";
 
 function Avatar({ u, size = 24 }: { u?: UserLite; size?: number }) {
-  if (u?.image) return <img src={u.image} alt="" className="rounded-full shrink-0" style={{ width: size, height: size }} />;
   return (
-    <div className="rounded-full bg-white/[0.06] flex items-center justify-center text-gray-400 font-bold shrink-0"
-      style={{ width: size, height: size, fontSize: size * 0.4 }}>
-      {uname(u)[0]?.toUpperCase() ?? "?"}
-    </div>
+    <RankedAvatar
+      rankPoints={u?.rankPoints ?? 0}
+      src={u?.image}
+      alt={uname(u)}
+      size={size}
+      className="shrink-0"
+    />
   );
 }
 

@@ -48,6 +48,16 @@ export function sanitizeFavoriteGames(input: unknown): FavoriteGame[] {
   return out;
 }
 
+/**
+ * Prüft, ob zwei Einträge dasselbe Spiel meinen.
+ * Haben beide eine Steam App-ID, entscheidet die — sonst der Name (case-insensitiv).
+ * So zählen Freitext-Einträge wie "minecraft" und "Minecraft" zusammen.
+ */
+export function isSameGame(a: FavoriteGame, b: FavoriteGame): boolean {
+  if (a.appId !== null && b.appId !== null) return a.appId === b.appId;
+  return a.name.toLowerCase() === b.name.toLowerCase();
+}
+
 /** Liest das gespeicherte JSON-Feld defensiv aus */
 export function parseFavoriteGames(json: string | null | undefined): FavoriteGame[] {
   if (!json) return [];

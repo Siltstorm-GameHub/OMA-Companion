@@ -28,6 +28,7 @@ model User {
   birthday           DateTime? // Nur Datum relevant (month/day)
   birthdayBoostUntil DateTime? // 2x Punkte bis zu diesem Zeitpunkt
   bio                String? // Kurzer Gruß / Beschreibung (max. 200 Zeichen)
+  bannerUrl          String? // Eigenes Profil-Banner (Vercel Blob), 1200×300 empfohlen
 
   // Discord-Aktivität: kumulativ über alle Zeiten
   voiceMinutesTotal Int @default(0)
@@ -80,6 +81,9 @@ model User {
   lulPollVotesGiven        LulPollVote[]            @relation("LulPollVoter")
   lulPollVotesReceived     LulPollVote[]            @relation("LulPollTarget")
   serverApplications       ServerApplication[]
+  room                     Room?
+  roomItems                RoomItem[]
+  job                      UserJob?
 }
 
 // ── Collectibles ─────────────────────────────────────────────────────────────
@@ -183,6 +187,7 @@ model EventSeries {
   description           String?
   rules                 String? // Regelwerk, wird Usern über dem Punktesystem angezeigt
   icon                  String? // Lucide-Icon-Name (aus src/lib/series-icons.ts), Fallback: Repeat
+  coverImageUrl         String? // Eigenes Reihen-Bild (Vercel Blob); Events der Reihe erben es, wenn sie keins haben
   fixedGame             String? // Wenn gesetzt: alle Events der Reihe nutzen dieses Spiel
   fixedFormat           String? // Wenn gesetzt: alle Turniere der Reihe nutzen dieses Format
   discordChannelId      String? // Kanal-ID für Bot-Nachrichten aller Events dieser Reihe
@@ -232,6 +237,7 @@ model Event {
   type                String        @default("community")
   status              String        @default("open")
   hidden              Boolean       @default(false) // true = nur im Admin sichtbar
+  coverImageUrl       String? // Eigenes Event-Bild (Vercel Blob). Leer = Spiel-Cover, sonst EventCoverDefault
   discordEventId      String?       @unique
   discordMessageId    String? // Message-ID der Bot-Ankündigung (zum nachträglichen Löschen)
   discordChannelId    String? // Kanal-ID für Bot-Nachrichten (überschreibt DISCORD_EVENTS_CHANNEL_ID)
@@ -871,7 +877,8 @@ model UserSystemBadge {
 // Admin-erstellte Custom-Abzeichen
 model CustomBadge {
   id        String            @id @default(cuid())
-  icon      String // Emoji
+  icon      String // Emoji — Fallback, wenn imageUrl leer ist
+  imageUrl  String? // Eigene Abzeichen-Grafik (Vercel Blob); hat Vorrang vor icon
   name      String
   desc      String
   category  String // "community" | "aktivitaet" | "events" | "turniere" | "punkte" | "special"
@@ -1085,4 +1092,61 @@ model ServerApplication {
   @@unique([serverId, userId])
   @@index([serverId, status])
   @@map("serverapplication")
+}
+
+// ── Gaming-Zimmer ────────────────────────────────────────────────────────────
+
+/// Zustand des Gaming-Zimmers (Flächen + Metadaten).
+/// Die Zeile wird ERST beim ersten Eingriff angelegt ("faule Materialisierung"):
+/// Wer die Seite nur anschaut, sieht DEFAULT_ROOM aus src/lib/room-layout.ts —
+/// ohne einen einzigen Schreibzugriff. Existiert die Zeile, sind die
+/// RoomItem-Zeilen die alleinige Wahrheit.
+model Room {
+  userId       String   @id
+  wallpaperKey String   @default("tapete_raufaser") // Schlüssel aus ROOM_ITEMS, Kategorie "tapete"
+  floorKey     String   @default("boden_linoleum") // Schlüssel aus ROOM_ITEMS, Kategorie "bodenbelag"
+  doorSign     String? // Türschild-Freitext, max. 24 Zeichen (serverseitig gekürzt)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// Ein besessenes Möbelstück. Eine Zeile = ein Exemplar.
+/// Größe, Preis, Zone und Freischalt-Tags stehen NICHT hier, sondern im
+/// Code-Katalog (src/lib/room-items.ts) — so lassen sich Balancing-Werte
+/// ändern, ohne Daten zu migrieren. Hier steht nur, WEM es gehört und WO es steht.
+model RoomItem {
+  id        String   @id @default(cuid())
+  userId    String
+  itemKey   String // Schlüssel aus ROOM_ITEMS
+  zone      String // "wall" | "floor"
+  x         Int // Rasterspalte der linken oberen Ecke (0-basiert)
+  y         Int // Rasterzeile der linken oberen Ecke (0-basiert)
+  flipped   Boolean  @default(false) // horizontal gespiegelt
+  placed    Boolean  @default(true) // false = im Lager (besessen, aber nicht aufgestellt)
+  starter   Boolean  @default(false) // Grundausstattung: gratis, nicht einlagerbar
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, placed])
+}
+
+// ── Idle-Jobs ────────────────────────────────────────────────────────────────
+
+/// Der (höchstens eine) Idle-Job eines Users. Der Lohn läuft in Echtzeit auf und
+/// wird beim Abholen FAUL berechnet — es gibt bewusst KEINEN Cron dafür
+/// (gleiche Philosophie wie DailySpin: gerechnet wird nur, wenn jemand hinschaut).
+model UserJob {
+  userId          String    @id
+  jobKey          String? // null = arbeitslos (gekündigt oder gefeuert)
+  hiredAt         DateTime? // Einstellungszeitpunkt (Anzeige "Betriebszugehörigkeit")
+  accrualFrom     DateTime? // Ab hier läuft unabgeholter Lohn auf; bei jedem Claim neu gesetzt
+  lastClaimAt     DateTime?
+  totalEarned     Int       @default(0) // Lebenszeit-Verdienst über alle Jobs (für Abzeichen)
+  hireLockedUntil DateTime? // Wechselsperre: vorher kein neuer Job
+  updatedAt       DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

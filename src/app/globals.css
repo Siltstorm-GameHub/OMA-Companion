@@ -52,6 +52,31 @@ html {
   --color-success-subtle: rgba(16,185,129,0.1);
   --color-warning:        #f59e0b;
   --color-warning-subtle: rgba(245,158,11,0.1);
+
+  /* ── Gaming-Zimmer: Materialfarben der Bühne ──────────────────────
+     Alle Möbel-SVGs zeichnen ausschließlich mit diesen Tokens, nie mit
+     festen Hex-Werten — nur so funktioniert der Theme-Wechsel.
+     Leuchtende Teile (Bildschirme, Neon, LEDs) behalten ihre Farbe in
+     beiden Themes, weil sie selbst die Lichtquelle sind.               */
+  --room-wall:        #1b1b26;
+  --room-wall-line:   rgba(255,255,255,0.05);
+  --room-floor:       #16161f;
+  --room-skirting:    #23232f;
+  --room-wood:        #4a3728;
+  --room-wood-hi:     #6b4f38;
+  --room-metal:       #3f3f4a;
+  --room-metal-hi:    #6b6b7a;
+  --room-plastic:     #2a2a35;
+  --room-plastic-hi:  #3a3a48;
+  --room-fabric:      #33333f;
+  --room-screen:      #0a0a12;
+  --room-screen-on:   #14b8a6;
+  --room-neon-violet: #8b5cf6;
+  --room-neon-teal:   #14b8a6;
+  --room-neon-amber:  #f59e0b;
+  --room-neon-rose:   #f43f5e;
+  --room-outline:     rgba(255,255,255,0.14);
+  --room-shade:       rgba(0,0,0,0.35);
 }
 
 /* ── Dynamic Notch animations ──────────────────────────────────── */
@@ -614,6 +639,15 @@ select.input-glass option { background: #0f1117; }
              rr-pulse-glow 2.4s ease-in-out infinite;
 }
 
+/* Kompakt (< 24px) — nur die Rangfarbe. Muss nach .rr-t1/2/3 und .rr-apex stehen.
+   Bei 16–20px ist der Verlauf nicht mehr auflösbar, die Stufenform ohnehin nicht lesbar,
+   und in dichten Listen würden Dutzende rotierende Ringe gleichzeitig flimmern. */
+.rr-flat {
+  background: var(--rr-c3);
+  animation: none;
+  box-shadow: none;
+}
+
 /* Stufen-Marker am unteren Ringrand (I/II/III) */
 .rr-pip {
   position: absolute;
@@ -690,6 +724,23 @@ select.input-glass option { background: #0f1117; }
   --aurora-vignette: radial-gradient(ellipse 80% 80% at 50% 50%, transparent 40%, rgba(200,220,216,0.55) 100%);
   --shadow-card:    0 1px 3px rgba(0,0,0,0.07), 0 8px 24px rgba(0,0,0,0.05);
   --shadow-card-hover: 0 4px 12px rgba(0,0,0,0.10), 0 16px 40px rgba(0,0,0,0.08), 0 0 0 1px rgba(20,184,166,0.15);
+
+  /* Gaming-Zimmer im hellen Theme: Oberflächen hellen auf, Bildschirme
+     bleiben dunkel — ein ausgeschalteter Monitor ist auch tagsüber schwarz. */
+  --room-wall:       #e9efee;
+  --room-wall-line:  rgba(13,31,28,0.06);
+  --room-floor:      #dfe7e5;
+  --room-skirting:   #cfdad8;
+  --room-wood:       #a97b4f;
+  --room-wood-hi:    #c79a68;
+  --room-metal:      #b8bec6;
+  --room-metal-hi:   #d8dde2;
+  --room-plastic:    #cfd5da;
+  --room-plastic-hi: #e2e7ea;
+  --room-fabric:     #c3cbd1;
+  --room-screen:     #21242c;
+  --room-outline:    rgba(13,31,28,0.18);
+  --room-shade:      rgba(13,31,28,0.12);
 }
 [data-theme="light"] body { background-color: var(--bg-base); color: #0d1f1c; }
 [data-theme="light"] .text-white { color: #0d1f1c !important; }
@@ -868,6 +919,60 @@ a.card-hover:active { transform: scale(0.985); }
 }
 .value-flash { animation: value-flash 0.7s ease-out both; }
 
+/* ── Gaming-Zimmer — Bühne ──────────────────────────────────────── */
+.room-stage {
+  display: block;
+  width: 100%;
+  height: auto;
+  /* Pixelige Kanten bleiben scharf statt zu verwaschen */
+  shape-rendering: crispEdges;
+}
+/* Interaktive Möbel: Cursor + sanftes Anheben beim Hover */
+.room-hit {
+  cursor: pointer;
+  transition: filter 0.18s ease, transform 0.18s ease;
+  transform-box: fill-box;
+  transform-origin: center bottom;
+}
+.room-hit:hover { filter: brightness(1.18); transform: translateY(-2px); }
+.room-hit:focus-visible {
+  outline: 2px solid var(--room-screen-on);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+/* Im Bearbeiten-Modus abgedunkelte, nicht ausgewählte Möbel */
+.room-dimmed { opacity: 0.35; }
+/* Freie Zielzelle beim Platzieren */
+.room-cell-ok {
+  fill: var(--room-screen-on);
+  opacity: 0.14;
+  cursor: pointer;
+  transition: opacity 0.12s ease;
+}
+.room-cell-ok:hover { opacity: 0.34; }
+
+/* Blinkende Betriebs-LED am Rechner */
+@keyframes room-led-blink {
+  0%, 92%  { opacity: 1;    }
+  96%      { opacity: 0.25; }
+  100%     { opacity: 1;    }
+}
+.room-led { animation: room-led-blink 4.5s ease-in-out infinite; }
+
+/* Scanline über dem Röhrenmonitor — der macht ihn erst zum Röhrenmonitor */
+@keyframes room-scanline {
+  from { transform: translateY(0);    }
+  to   { transform: translateY(100%); }
+}
+.room-scanline { animation: room-scanline 2.6s linear infinite; }
+
+/* Sanftes Pulsieren für Neon und LED-Flächen */
+@keyframes room-neon-pulse {
+  0%, 100% { opacity: 1;    }
+  50%      { opacity: 0.72; }
+}
+.room-neon { animation: room-neon-pulse 3.4s ease-in-out infinite; }
+
 /* ── prefers-reduced-motion ─────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -880,4 +985,8 @@ a.card-hover:active { transform: scale(0.985); }
   .animate-float, .animate-float-slow, .animate-float-delay,
   .animate-glow-pulse, .aurora-text, .animate-blur-reveal,
   .animate-number-pop, .scan-on-load::before { animation: none !important; }
+  /* Gaming-Zimmer: Blinken, Scanline und Neon-Puls stehen still */
+  .room-led, .room-scanline, .room-neon { animation: none !important; }
+  .room-scanline { opacity: 0 !important; }
+  .room-hit:hover { transform: none !important; }
 }

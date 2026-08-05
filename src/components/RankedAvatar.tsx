@@ -12,9 +12,15 @@ interface RankedAvatarProps {
    */
   size?: number;
   rounded?: "full" | "2xl" | "xl" | "lg";
+  /**
+   * "full" = animierter Ring mit Stufenform, "flat" = einfarbiger Rangring ohne Animation.
+   * "auto" (Default) wählt anhand der Größe: unter 24px ist der Verlauf nicht mehr auflösbar.
+   */
+  variant?: "auto" | "full" | "flat";
   /** Stufen-Marker (I/II/III) am Ringrand. Default: ab 48px, darunter zu klein zum Lesen. */
   showTier?: boolean;
   className?: string;
+  title?: string;
 }
 
 const ROUNDED = {
@@ -24,13 +30,26 @@ const ROUNDED = {
   lg:   "rounded-lg",
 };
 
+/** Ab dieser Größe lohnt sich der volle Ring mit Verlauf und Stufenform. */
+const FLAT_BELOW = 24;
+
 /**
  * Ringbreite proportional zur Avatargröße — fixe px sehen bei 24px wie ein Reifen
  * und bei 80px wie ein Haar aus. Über alle Stufen gleich, damit das Bild in einer
  * Reihe überall gleich groß bleibt; die Stufe steckt in der Ringform, nicht im Padding.
  */
-function getRingWidth(size: number): number {
-  return Math.max(2, Math.round(size * 0.055));
+function getRingWidth(size: number, flat: boolean): number {
+  return flat
+    ? Math.max(1, Math.round(size * 0.075))
+    : Math.max(2, Math.round(size * 0.06));
+}
+
+/** Lokaler Fallback statt eines externen Avatar-Dienstes — dichte Listen sollen keine Fremdrequests auslösen. */
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 export default function RankedAvatar({
@@ -39,31 +58,48 @@ export default function RankedAvatar({
   alt,
   size = 40,
   rounded = "full",
+  variant = "auto",
   showTier,
   className = "",
+  title,
 }: RankedAvatarProps) {
+  const flat = variant === "flat" || (variant === "auto" && size < FLAT_BELOW);
   const r    = ROUNDED[rounded];
-  const pad  = getRingWidth(size);
+  const pad  = getRingWidth(size, flat);
   const rank = getRank(rankPoints);
-  const pip  = showTier ?? size >= 48;
-
-  const fallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(alt)}&background=3f3f46&color=e4e4e7&size=${size * 2}`;
-  const imgSrc   = src ?? fallback;
+  const pip  = (showTier ?? size >= 48) && !flat;
 
   return (
     <div
-      className={`${getRingClass(rankPoints)} ${r} shrink-0 ${className}`}
+      className={`${getRingClass(rankPoints)}${flat ? " rr-flat" : ""} ${r} shrink-0 ${className}`}
       style={{ ...getRingStyle(rankPoints), padding: pad }}
+      title={title}
     >
       <div className={`${r} overflow-hidden bg-[#0d0d0f] w-full h-full`}>
-        <Image
-          src={imgSrc}
-          alt={alt}
-          width={size}
-          height={size}
-          className={`${r} object-cover w-full h-full`}
-          unoptimized
-        />
+        {src ? (
+          <Image
+            src={src}
+            alt={alt}
+            width={size}
+            height={size}
+            className={`${r} object-cover w-full h-full`}
+            unoptimized
+          />
+        ) : (
+          <div
+            className={`${r} w-full h-full flex items-center justify-center font-bold bg-zinc-800 text-zinc-400 select-none`}
+            // Explizite Mindestgröße: ohne Tailwind-Größenklasse am Wrapper hätte w-full/h-full
+            // keinen Bezug und der Fallback würde auf 0 zusammenfallen.
+            style={{
+              fontSize: Math.max(8, Math.round(size * 0.38)),
+              minWidth: size - 2 * pad,
+              minHeight: size - 2 * pad,
+            }}
+            aria-label={alt}
+          >
+            {getInitials(alt)}
+          </div>
+        )}
       </div>
       {pip && <span className="rr-pip select-none">{rank.tierLabel}</span>}
     </div>

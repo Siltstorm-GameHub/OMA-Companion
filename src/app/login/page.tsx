@@ -51,7 +51,7 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="relative flex items-center gap-3 z-10">
           <div className="w-10 h-10 rounded-xl overflow-hidden shadow-[0_0_20px_rgba(244,63,94,0.3)] ring-1 ring-rose-500/30 shrink-0">
-            <Image src="/OMALogoNew.png" alt="OMA" width={40} height={40} className="w-full h-full object-cover" />
+            <Image src="/brand/logo-128.png" alt="OMA" width={40} height={40} className="w-full h-full object-cover" />
           </div>
           <div>
             <p className="text-sm font-black text-white tracking-widest uppercase">Old Masters Ally</p>
@@ -102,7 +102,7 @@ export default function LoginPage() {
           {/* Mobile Logo */}
           <div className="flex flex-col items-center mb-8 lg:hidden">
             <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-[0_0_32px_rgba(244,63,94,0.3)] ring-2 ring-rose-500/30 mb-4">
-              <Image src="/OMALogoNew.png" alt="OMA" width={64} height={64} className="w-full h-full object-cover" />
+              <Image src="/brand/logo-256.png" alt="OMA" width={64} height={64} className="w-full h-full object-cover" />
             </div>
             <h1 className="text-2xl font-black text-white tracking-tight">Old Masters Ally</h1>
             <p className="text-sm text-gray-500 mt-1">Companion App</p>
