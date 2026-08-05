@@ -26,7 +26,10 @@ async function sendToSubscriptions(
   const base = process.env.NEXTAUTH_URL ?? "https://oma-app.de";
   const data = JSON.stringify({
     ...payload,
-    icon:  `${base}/OMALogo512.png`,
+    // 256er-Ableitung statt OMALogo512.png (253 KB): Push-Icons werden je nach
+    // Plattform mit 48–96 px dargestellt, das Original wäre reine Ladezeit auf
+    // teils mobilen Verbindungen. Erzeugt von scripts/generate-brand-assets.ts.
+    icon:  `${base}/brand/logo-256.png`,
     badge: `${base}/badge.png`,
   });
   await Promise.allSettled(

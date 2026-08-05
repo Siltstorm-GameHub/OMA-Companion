@@ -67,13 +67,17 @@ const BADGES: Record<string, [motif: string, tier: Tier]> = {
   event_10:    ["calendar", 3],
   event_25:    ["calendar", 4],
 
-  event_win_1: ["laurel", 2],
-  event_win_5: ["laurel", 3],
+  // Podest statt Lorbeerkranz: der Kranz umschloss einen Stern und verschmolz
+  // bei 24 px zu einem gerundeten Klumpen. Die gestufte Blockform bleibt lesbar.
+  event_win_1: ["podium", 2],
+  event_win_5: ["podium", 3],
 
   mvp_1:       ["star", 2],
   mvp_3:       ["star", 3],
 
-  t_1:         ["swords", 1],
+  // Einzelnes Schild statt Schwert-und-Schild: die überlagerten Formen wurden
+  // bei 24 px zu einem senkrechten Balken.
+  t_1:         ["shield", 1],
   t_win:       ["trophy", 3],
   t_win_5:     ["trophy", 4],
 
