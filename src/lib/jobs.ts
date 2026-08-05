@@ -246,22 +246,27 @@ export function computeAccrual(
   const fromMs = accrualFrom instanceof Date ? accrualFrom.getTime() : accrualFrom;
   const nowMs  = now instanceof Date ? now.getTime() : now;
 
-  const elapsedMin = Math.max(0, (nowMs - fromMs) / 60_000);
-  const capMin     = Math.max(0, cfg.wageCapHours * 60);
-  const countedMin = Math.min(elapsedMin, capMin);
-  const perMinute  = (job.coinsPerHour * cfg.multiplierPct) / 100 / 60;
+  const elapsedSec = Math.max(0, Math.floor((nowMs - fromMs) / 1000));
+  const capSec     = Math.max(0, Math.round(cfg.wageCapHours * 3600));
+  const countedSec = Math.min(elapsedSec, capSec);
 
-  const coins  = Math.floor(countedMin * perMinute);
-  const capped = elapsedMin >= capMin;
+  // Bewusst ganzzahlig: erst multiplizieren, dann EINMAL teilen. Rechnet man
+  // stattdessen einen Münzen-pro-Minute-Faktor aus, frisst die Fließkomma-Drift
+  // die letzte Münze (1440 × 0,7 ergibt 1007,999… statt 1008).
+  const SEC_PER_HOUR_x100 = 360_000; // 3600 s × 100 (Prozent-Nenner)
+  const rate  = job.coinsPerHour * cfg.multiplierPct;
+  const coins = rate > 0 ? Math.floor((countedSec * rate) / SEC_PER_HOUR_x100) : 0;
 
-  const nextCoinInSec = capped || perMinute <= 0
+  const capped = elapsedSec >= capSec;
+
+  const nextCoinInSec = capped || rate <= 0
     ? 0
-    : Math.max(0, Math.ceil(((coins + 1) / perMinute - countedMin) * 60));
+    : Math.max(0, Math.ceil(((coins + 1) * SEC_PER_HOUR_x100) / rate) - countedSec);
 
   return {
     coins,
-    workedMinutes:  Math.floor(elapsedMin),
-    countedMinutes: Math.floor(countedMin),
+    workedMinutes:  Math.floor(elapsedSec / 60),
+    countedMinutes: Math.floor(countedSec / 60),
     capped,
     nextCoinInSec,
   };

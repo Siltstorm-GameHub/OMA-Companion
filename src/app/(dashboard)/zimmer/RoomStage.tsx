@@ -150,7 +150,7 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract, edit 
         ))}
       </div>
 
-      <div className="glass card-shine rounded-2xl overflow-hidden p-2 sm:p-3">
+      <div className="glass card-shine rounded-2xl p-2 sm:p-3 room-stage-scroll scrollbar-none">
         <svg
           className="room-stage rounded-xl"
           viewBox={VIEWBOX[view]}

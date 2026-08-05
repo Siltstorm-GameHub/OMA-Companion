@@ -238,8 +238,8 @@ export const ROOM_ITEMS: RoomItemDef[] = [
   {
     key: "stuhl_buero", label: "Bürostuhl (quietscht)",
     description: "Die Gasfeder gibt nach zwanzig Minuten auf. Jedes Mal.",
-    zone: "floor", category: "sitzen", w: 1, h: 2, price: 0, minTier: 1, maxOwned: 1,
-    tags: ["chair"], mustStandOn: "floor", accent: "slate", starter: true,
+    zone: "floor", category: "sitzen", w: 1, h: 2, price: 150, minTier: 1, maxOwned: 1,
+    tags: ["chair"], mustStandOn: "floor", accent: "slate",
   },
   {
     key: "stuhl_gaming", label: "Gaming-Thron",
@@ -356,7 +356,7 @@ export const ROOM_ITEMS: RoomItemDef[] = [
   {
     key: "bett", label: "Durchgelegenes Bett",
     description: "Die Matratze hat die Form deines Rückens angenommen. Rückwärts.",
-    zone: "floor", category: "moebel", w: 3, h: 2, price: 0, minTier: 1, maxOwned: 1,
+    zone: "floor", category: "moebel", w: 2, h: 2, price: 0, minTier: 1, maxOwned: 1,
     tags: ["bed"], mustStandOn: "floor", accent: "slate", starter: true,
   },
   {
@@ -374,7 +374,7 @@ export const ROOM_ITEMS: RoomItemDef[] = [
   {
     key: "teppich", label: "Fleckenteppich",
     description: "Jeder Fleck erzählt eine Geschichte. Die meisten handeln von Energydrinks.",
-    zone: "floor", category: "deko", w: 4, h: 1, price: 300, minTier: 1, maxOwned: 2,
+    zone: "floor", category: "deko", w: 3, h: 1, price: 300, minTier: 1, maxOwned: 2,
     tags: [], mustStandOn: "floor", accent: "rose",
   },
   {
