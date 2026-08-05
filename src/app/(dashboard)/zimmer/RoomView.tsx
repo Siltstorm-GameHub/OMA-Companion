@@ -6,6 +6,7 @@ import { ShoppingBag, Pencil, Briefcase } from "lucide-react";
 import type { RoomState } from "@/lib/room-layout";
 import type { RoomProfileCore, RoomProfileDetails } from "@/lib/room-profile-data";
 import RoomStage, { type InteractTarget } from "./RoomStage";
+import RoomEditor from "./RoomEditor";
 import CrtProfileModal from "./CrtProfileModal";
 import VitrineModal from "./VitrineModal";
 
@@ -14,6 +15,8 @@ interface Props {
   core:        RoomProfileCore;
   details:     RoomProfileDetails;
   readOnly:    boolean;
+  /** Besitzstand je itemKey — der Editor braucht ihn für Tapeten und Böden. */
+  owned?:      Record<string, number>;
   trophySection:    ReactNode;
   settingsSection?: ReactNode;
 }
@@ -23,9 +26,22 @@ interface Props {
  * Bewusst dünn — die Server-Seite liefert alle Daten, hier wird nur geschaltet.
  */
 export default function RoomView({
-  state, core, details, readOnly, trophySection, settingsSection,
+  state, core, details, readOnly, owned, trophySection, settingsSection,
 }: Props) {
   const [openTarget, setOpenTarget] = useState<InteractTarget | null>(null);
+  const [editing, setEditing]       = useState(false);
+
+  // Im Bearbeiten-Modus übernimmt der Editor die Bühne samt eigener Leiste.
+  if (editing && !readOnly) {
+    return (
+      <RoomEditor
+        state={state}
+        core={core}
+        owned={owned ?? {}}
+        onDone={() => setEditing(false)}
+      />
+    );
+  }
 
   return (
     <>
@@ -44,10 +60,9 @@ export default function RoomView({
           <div className="glass-heavy rounded-2xl p-2 flex items-center gap-2">
             <button
               type="button"
-              disabled
-              title="Kommt in der nächsten Ausbaustufe"
+              onClick={() => setEditing(true)}
               className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold
-                         bg-white/[0.04] border border-white/[0.06] text-gray-600 cursor-not-allowed"
+                         bg-violet-500/15 border border-violet-500/25 text-violet-300 hover:bg-violet-500/25 transition-colors"
             >
               <Pencil className="w-3.5 h-3.5" /> Einrichten
             </button>

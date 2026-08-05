@@ -590,10 +590,10 @@ select.input-glass option { background: #0f1117; }
    gratis — und der Ring wirkt sauberer, weil der Gradient nicht pro Frame neu
    gerastert wird (das erzeugte bei 2–3px Ringbreite sichtbares Banding).
 
-   Farben kommen als rohe --rr-d*/--rr-l*-Variablen aus getRingStyle(); welche
-   Palette gilt, entscheidet der [data-theme]-Block am Ende. Die Zuweisung MUSS
-   hier im CSS passieren: Inline-Styles schlagen Stylesheet-Regeln, ein direkt
-   gesetztes --rr-c1 wäre im Light Mode nicht mehr überschreibbar.
+   Farben kommen als rohe Variablen aus getRingStyle() — Dark als --rr-dc1 usw.,
+   Light als --rr-lc1 usw. Welche Palette gilt, entscheidet der [data-theme]-Block
+   am Ende. Die Zuweisung MUSS hier im CSS passieren: Inline-Styles schlagen
+   Stylesheet-Regeln, ein direkt gesetztes --rr-c1 wäre hell nicht überschreibbar.
 ────────────────────────────────────────────────────────────────────── */
 
 @keyframes rr-rotate {
@@ -659,7 +659,7 @@ select.input-glass option { background: #0f1117; }
 }
 
 /* Bild-Container. Der outset-Schatten legt die 1px-Haarlinie ÜBER den Ring,
-   statt sie vom Bild abzuziehen — so bleibt das Foto in voller Größe. */
+   statt sie vom Bild abzuziehen — so bleibt das Foto in voller Größe.
    Größe kommt bewusst per Klasse vom Aufrufer — der Dashboard-Avatar nutzt eine
    eigene Cut-Corner-Form, der Listen-Avatar schlicht w-full/h-full. */
 .rr-face {
