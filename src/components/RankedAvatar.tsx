@@ -72,7 +72,12 @@ export default function RankedAvatar({
   return (
     <div
       className={`${getRingClass(rankPoints)}${flat ? " rr-flat" : ""} ${r} shrink-0 ${className}`}
-      style={{ ...getRingStyle(rankPoints), padding: pad }}
+      // `size` ist die Außenkante inkl. Ring und wird inline gesetzt, damit die Komponente
+      // auch ohne Tailwind-Größenklasse misst. Ohne das hat das innere w-full/h-full keinen
+      // Bezug und der Avatar zieht sich auf die Containerbreite auf.
+      // Achtung: Inline schlägt Klassen — responsive Größen per className funktionieren nicht,
+      // stattdessen `size` setzen.
+      style={{ ...getRingStyle(rankPoints), padding: pad, width: size, height: size, boxSizing: "border-box" }}
       title={title}
     >
       <div className={`${r} overflow-hidden bg-[#0d0d0f] w-full h-full`}>
