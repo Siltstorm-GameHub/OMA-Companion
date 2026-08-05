@@ -1,9 +1,12 @@
 import { prisma } from "./prisma";
-import { getRoomItem, isSurface, STARTER_ITEM_KEYS } from "./room-items";
+import { COIN_PREFIX } from "./points";
+import { getRank } from "./ranks";
+import { getRoomItem, isFixed, isSurface, STARTER_ITEM_KEYS, type RoomZone } from "./room-items";
 import {
-  DEFAULT_ROOM, DEFAULT_PLACEMENTS,
+  DEFAULT_ROOM, DEFAULT_PLACEMENTS, MAX_PLACED_ITEMS, countTags, validateLayout,
   type PlacedItem, type RoomState, type StoredItem,
 } from "./room-layout";
+import { checkRequirements, formatMissing, getJob } from "./jobs";
 
 /**
  * Datenbank-Zugriff auf das Gaming-Zimmer.
@@ -113,4 +116,205 @@ export async function ownsSurface(userId: string, key: string): Promise<boolean>
   if (def.price === 0) return true;
   const row = await prisma.roomItem.findFirst({ where: { userId, itemKey: key }, select: { id: true } });
   return !!row;
+}
+
+// ── Kauf ─────────────────────────────────────────────────────────────────────
+
+export type PurchaseResult =
+  | { ok: true; roomItemId: string; points: number; label: string }
+  | { error: string };
+
+/**
+ * Kauft ein Möbelstück. Aufbau bewusst identisch zu purchaseCollectible()
+ * in src/lib/collectibles.ts: erst lesen und validieren, dann genau eine
+ * Transaktion, die Münzen abbucht, das Ledger schreibt und das Möbelstück anlegt.
+ *
+ * Gekaufte Möbel landen im LAGER (placed: false) — aufgestellt wird im Zimmer.
+ */
+export async function purchaseRoomItem(userId: string, itemKey: string): Promise<PurchaseResult> {
+  const def = getRoomItem(itemKey);
+  if (!def)            return { error: "Unbekanntes Möbelstück" };
+  if (def.price <= 0)  return { error: "Das gibt es nicht zu kaufen" };
+
+  const [user, owned] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId }, select: { points: true, rankPoints: true } }),
+    prisma.roomItem.count({ where: { userId, itemKey } }),
+  ]);
+  if (!user) return { error: "Nicht eingeloggt" };
+
+  const tier = getRank(user.rankPoints).tier;
+  if (tier < def.minTier)      return { error: "Dafür reicht dein Rang noch nicht" };
+  if (owned >= def.maxOwned) {
+    return { error: def.maxOwned === 1 ? "Das besitzt du schon" : "Davon hast du schon genug" };
+  }
+  if (user.points < def.price)  return { error: "Nicht genug Münzen" };
+
+  const created = await prisma.$transaction(async tx => {
+    // Wer noch nie etwas verändert hat, bekommt hier sein Zimmer als echte Zeilen.
+    await materializeRoom(userId, tx);
+
+    const row = await tx.roomItem.create({
+      data: {
+        userId, itemKey, zone: def.zone, x: 0, y: 0,
+        flipped: false, placed: false, starter: false,
+      },
+      select: { id: true },
+    });
+    const updated = await tx.user.update({
+      where: { id: userId },
+      data:  { points: { decrement: def.price } },
+      select: { points: true },
+    });
+    await tx.pointTransaction.create({
+      data: { userId, amount: -def.price, reason: `${COIN_PREFIX} Zimmer: ${def.label} gekauft` },
+    });
+    return { id: row.id, points: updated.points };
+  });
+
+  return { ok: true, roomItemId: created.id, points: created.points, label: def.label };
+}
+
+// ── Einrichten ───────────────────────────────────────────────────────────────
+
+export interface LayoutInput {
+  id: string; zone: RoomZone; x: number; y: number; flipped: boolean;
+}
+
+/**
+ * Speichert ein komplettes Layout. Der Client schickt, was wo steht und was ins
+ * Lager soll — der Server prüft alles noch einmal, denn der Editor ist nur die
+ * Vorschau, nicht die Instanz, die entscheidet.
+ */
+export async function saveLayout(
+  userId: string,
+  placedInput: LayoutInput[],
+  storedIds: string[],
+): Promise<{ ok: true } | { error: string }> {
+  if (!Array.isArray(placedInput) || !Array.isArray(storedIds)) {
+    return { error: "Ungültige Daten" };
+  }
+  if (placedInput.length > MAX_PLACED_ITEMS) {
+    return { error: "Zu viele Möbelstücke im Raum" };
+  }
+
+  await materializeRoom(userId);
+
+  const rows = await prisma.roomItem.findMany({ where: { userId } });
+  const byId = new Map(rows.map(r => [r.id, r]));
+
+  // Nur Möbel, die der Katalog kennt und die überhaupt aufstellbar sind,
+  // müssen im Payload auftauchen. Flächen liegen auf der Room-Zeile.
+  const relevant = rows.filter(r => {
+    const def = getRoomItem(r.itemKey);
+    return !!def && !isSurface(def);
+  });
+
+  const mentioned = new Set<string>();
+  for (const id of [...placedInput.map(p => p.id), ...storedIds]) {
+    if (mentioned.has(id))  return { error: "Ein Möbelstück wurde doppelt geschickt" };
+    if (!byId.has(id))      return { error: "Gehört dir nicht" };
+    mentioned.add(id);
+  }
+  if (relevant.some(r => !mentioned.has(r.id))) {
+    return { error: "Es fehlen Möbelstücke — bitte Seite neu laden" };
+  }
+
+  // Fest eingebaute Möbel (Röhrenmonitor, Vitrine, Jobbrett) sind der Zugang zu
+  // Profil, Sammlung und Jobbörse — sie dürfen nie im Lager verschwinden.
+  for (const id of storedIds) {
+    const def = getRoomItem(byId.get(id)!.itemKey);
+    if (def && isFixed(def)) {
+      return { error: `${def.label} kann nicht eingelagert werden` };
+    }
+  }
+
+  const placed: PlacedItem[] = placedInput.map(p => {
+    const row = byId.get(p.id)!;
+    const def = getRoomItem(row.itemKey)!;
+    return {
+      id: p.id, key: row.itemKey, zone: def.zone,
+      x: Math.trunc(p.x), y: Math.trunc(p.y),
+      flipped: !!p.flipped, starter: row.starter,
+    };
+  });
+
+  const geometry = validateLayout(placed);
+  if (!geometry.ok) return { error: geometry.error };
+
+  // ── Einlagerungs-Sperre ──────────────────────────────────────────────
+  // Wer einen Job hat, darf die Möbel nicht wegräumen, die dieser Job
+  // voraussetzt. Verhindern statt bestrafen: so kann niemand ein Setup
+  // kaufen, sich anstellen lassen und es danach wieder abbauen.
+  const job = await prisma.userJob
+    .findUnique({ where: { userId }, select: { jobKey: true } })
+    .catch(() => null);
+  const activeJob = getJob(job?.jobKey);
+  if (activeJob) {
+    const { met, missing } = checkRequirements(activeJob, countTags(placed));
+    if (!met) {
+      return {
+        error: `Das braucht dein Job "${activeJob.label}" gerade: ${formatMissing(missing)} — erst kündigen oder einen anderen Job wählen`,
+      };
+    }
+  }
+
+  const storedSet = new Set(storedIds);
+  await prisma.$transaction([
+    ...placed.map(p =>
+      prisma.roomItem.update({
+        where: { id: p.id },
+        data:  { placed: true, zone: p.zone, x: p.x, y: p.y, flipped: p.flipped },
+      })
+    ),
+    ...[...storedSet].map(id =>
+      prisma.roomItem.update({ where: { id }, data: { placed: false } })
+    ),
+    prisma.room.update({ where: { userId }, data: { updatedAt: new Date() } }),
+  ]);
+
+  return { ok: true };
+}
+
+// ── Flächen ──────────────────────────────────────────────────────────────────
+
+const MAX_DOOR_SIGN = 24;
+
+export async function setRoomSurfaces(
+  userId: string,
+  patch: { wallpaperKey?: string; floorKey?: string; doorSign?: string | null },
+): Promise<{ ok: true } | { error: string }> {
+  const data: { wallpaperKey?: string; floorKey?: string; doorSign?: string | null } = {};
+
+  if (patch.wallpaperKey !== undefined) {
+    const def = getRoomItem(patch.wallpaperKey);
+    if (!def || def.category !== "tapete")               return { error: "Das ist keine Tapete" };
+    if (!(await ownsSurface(userId, patch.wallpaperKey))) return { error: "Diese Tapete besitzt du nicht" };
+    data.wallpaperKey = patch.wallpaperKey;
+  }
+
+  if (patch.floorKey !== undefined) {
+    const def = getRoomItem(patch.floorKey);
+    if (!def || def.category !== "bodenbelag")        return { error: "Das ist kein Bodenbelag" };
+    if (!(await ownsSurface(userId, patch.floorKey))) return { error: "Diesen Bodenbelag besitzt du nicht" };
+    data.floorKey = patch.floorKey;
+  }
+
+  if (patch.doorSign !== undefined) {
+    if (patch.doorSign === null) {
+      data.doorSign = null;
+    } else {
+      if (typeof patch.doorSign !== "string") return { error: "Ungültiges Türschild" };
+      const clean = patch.doorSign.trim();
+      if (clean.length > MAX_DOOR_SIGN) {
+        return { error: `Türschild darf höchstens ${MAX_DOOR_SIGN} Zeichen haben` };
+      }
+      data.doorSign = clean || null;
+    }
+  }
+
+  if (Object.keys(data).length === 0) return { error: "Nichts zu ändern" };
+
+  await materializeRoom(userId);
+  await prisma.room.update({ where: { userId }, data });
+  return { ok: true };
 }

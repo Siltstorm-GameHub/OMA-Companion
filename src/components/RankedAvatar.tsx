@@ -1,14 +1,14 @@
 import Image from "next/image";
-import { getRank, getRingClass, getRingStyle } from "@/lib/ranks";
+import RankRing from "@/components/RankRing";
 
 interface RankedAvatarProps {
   rankPoints: number;
   src: string | null | undefined;
   alt: string;
   /**
-   * Inner image pixel size — used for the Next.js Image width/height.
-   * If you control outer size via `className` (e.g. Tailwind w-16 h-16),
-   * set this to the same value in px.
+   * Außenkante des Avatars in px, inklusive Ring. Wird inline gesetzt, damit die
+   * Komponente auch ohne Tailwind-Größenklasse misst.
+   * Achtung: Inline schlägt Klassen — für andere Größen `size` setzen, nicht `className`.
    */
   size?: number;
   rounded?: "full" | "2xl" | "xl" | "lg";
@@ -17,7 +17,7 @@ interface RankedAvatarProps {
    * "auto" (Default) wählt anhand der Größe: unter 24px ist der Verlauf nicht mehr auflösbar.
    */
   variant?: "auto" | "full" | "flat";
-  /** Stufen-Marker (I/II/III) am Ringrand. Default: ab 48px, darunter zu klein zum Lesen. */
+  /** Stufenanzeige (1–3 Punkte). Default: ab 48px, darunter zu klein zum Ablesen. */
   showTier?: boolean;
   className?: string;
   title?: string;
@@ -37,11 +37,12 @@ const FLAT_BELOW = 24;
  * Ringbreite proportional zur Avatargröße — fixe px sehen bei 24px wie ein Reifen
  * und bei 80px wie ein Haar aus. Über alle Stufen gleich, damit das Bild in einer
  * Reihe überall gleich groß bleibt; die Stufe steckt in der Ringform, nicht im Padding.
+ * Das +1 beim vollen Ring ist Platz für die Haarlinie zwischen Ring und Bild.
  */
 function getRingWidth(size: number, flat: boolean): number {
   return flat
     ? Math.max(1, Math.round(size * 0.075))
-    : Math.max(2, Math.round(size * 0.06));
+    : Math.max(2, Math.round(size * 0.06)) + 1;
 }
 
 /** Lokaler Fallback statt eines externen Avatar-Dienstes — dichte Listen sollen keine Fremdrequests auslösen. */
@@ -66,47 +67,41 @@ export default function RankedAvatar({
   const flat = variant === "flat" || (variant === "auto" && size < FLAT_BELOW);
   const r    = ROUNDED[rounded];
   const pad  = getRingWidth(size, flat);
-  const rank = getRank(rankPoints);
-  const pip  = (showTier ?? size >= 48) && !flat;
 
   return (
-    <div
-      className={`${getRingClass(rankPoints)}${flat ? " rr-flat" : ""} ${r} shrink-0 ${className}`}
-      // `size` ist die Außenkante inkl. Ring und wird inline gesetzt, damit die Komponente
-      // auch ohne Tailwind-Größenklasse misst. Ohne das hat das innere w-full/h-full keinen
-      // Bezug und der Avatar zieht sich auf die Containerbreite auf.
-      // Achtung: Inline schlägt Klassen — responsive Größen per className funktionieren nicht,
-      // stattdessen `size` setzen.
-      style={{ ...getRingStyle(rankPoints), padding: pad, width: size, height: size, boxSizing: "border-box" }}
+    <RankRing
+      rankPoints={rankPoints}
+      width={pad}
+      rounded={r}
+      flat={flat}
+      showTier={showTier ?? size >= 48}
+      faceClassName="w-full h-full"
+      className={`shrink-0 ${className}`}
+      style={{ width: size, height: size, boxSizing: "border-box" }}
       title={title}
     >
-      <div className={`${r} overflow-hidden bg-[#0d0d0f] w-full h-full`}>
-        {src ? (
-          <Image
-            src={src}
-            alt={alt}
-            width={size}
-            height={size}
-            className={`${r} object-cover w-full h-full`}
-            unoptimized
-          />
-        ) : (
-          <div
-            className={`${r} w-full h-full flex items-center justify-center font-bold bg-zinc-800 text-zinc-400 select-none`}
-            // Explizite Mindestgröße: ohne Tailwind-Größenklasse am Wrapper hätte w-full/h-full
-            // keinen Bezug und der Fallback würde auf 0 zusammenfallen.
-            style={{
-              fontSize: Math.max(8, Math.round(size * 0.38)),
-              minWidth: size - 2 * pad,
-              minHeight: size - 2 * pad,
-            }}
-            aria-label={alt}
-          >
-            {getInitials(alt)}
-          </div>
-        )}
-      </div>
-      {pip && <span className="rr-pip select-none">{rank.tierLabel}</span>}
-    </div>
+      {src ? (
+        <Image
+          src={src}
+          alt={alt}
+          width={size}
+          height={size}
+          className={`${r} object-cover w-full h-full`}
+          unoptimized
+        />
+      ) : (
+        <div
+          className={`${r} w-full h-full flex items-center justify-center font-bold bg-zinc-800 text-zinc-400 select-none`}
+          style={{
+            fontSize: Math.max(8, Math.round(size * 0.38)),
+            minWidth: size - 2 * pad,
+            minHeight: size - 2 * pad,
+          }}
+          aria-label={alt}
+        >
+          {getInitials(alt)}
+        </div>
+      )}
+    </RankRing>
   );
 }

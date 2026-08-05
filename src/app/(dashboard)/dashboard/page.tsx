@@ -23,7 +23,8 @@ import { getEventEndedAt, isRecentlyFinished } from "@/lib/event-completion";
 import RankIcon from "@/components/RankIcon";
 import SeriesIcon from "@/components/SeriesIcon";
 import { resolveSeriesColor } from "@/lib/series-icons";
-import { getRingClass, getRingStyle } from "@/lib/ranks";
+import RankRing from "@/components/RankRing";
+import RankUpFlare from "@/components/RankUpFlare";
 import { getVisibleServers } from "@/lib/gameservers";
 import { PromoBannerCarousel } from "@/components/PromoBannerCarousel";
 import ClipOfMonthTile from "@/components/ClipOfMonthTile";
@@ -312,11 +313,14 @@ export default async function DashboardPage() {
         <div className="flex items-start gap-5">
           {/* Avatar mit Cut-Corner + Rang-Ring */}
           <div className="relative shrink-0">
-            <div
-              className={`${getRingClass(myRankPoints)} rounded-lg p-[3px]`}
-              style={getRingStyle(myRankPoints)}
-            >
-              <div className="card-cut w-16 h-16 sm:w-20 sm:h-20 overflow-hidden bg-[#0d0d0f]">
+            <RankUpFlare userId={userId ?? ""} rankPoints={myRankPoints}>
+              <RankRing
+                rankPoints={myRankPoints}
+                width={4}
+                rounded="rounded-lg"
+                showTier
+                faceClassName="card-cut w-16 h-16 sm:w-20 sm:h-20"
+              >
                 {avatarUrl ? (
                   <Image src={avatarUrl} alt={displayName} width={80} height={80} className="w-full h-full object-cover" />
                 ) : (
@@ -325,8 +329,8 @@ export default async function DashboardPage() {
                     {firstName[0]?.toUpperCase()}
                   </div>
                 )}
-              </div>
-            </div>
+              </RankRing>
+            </RankUpFlare>
             {/* Online-Dot */}
             <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-sm bg-emerald-400 border-2"
               style={{ borderColor: "var(--bg-base)", boxShadow: "0 0 8px rgba(52,211,153,0.8)" }} />

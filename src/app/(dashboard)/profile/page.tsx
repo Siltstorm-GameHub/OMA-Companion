@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/roles";
 import { getRank, getNextRank, getRankFullLabel } from "@/lib/ranks";
 import RankedAvatar from "@/components/RankedAvatar";
+import RankUpFlare from "@/components/RankUpFlare";
 import { computeBadges } from "@/lib/badges";
 import BadgesSection from "./BadgesSection";
 import PointsInfoModal from "./PointsInfoModal";
@@ -12,8 +13,9 @@ import { RARITY_CONFIG, type Rarity, MAX_SHOWCASE } from "@/lib/collectibles";
 import { getAvailableReviewYears } from "@/lib/year-review";
 import {
   Trophy, CalendarDays, Swords, Clock, MessageSquare,
-  CheckCircle2, Crown, Gamepad2, Medal, Gift, ChevronRight,
+  CheckCircle2, Crown, Gamepad2, Medal, Gift, ChevronRight, Sofa,
 } from "lucide-react";
+import { getRoomConfig, roomVisibleFor } from "@/lib/room-config";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import CoinIcon from "@/components/CoinIcon";
 import WinIcon from "@/components/WinIcon";
@@ -170,8 +172,30 @@ export default async function ProfilePage() {
     return acc;
   }, {});
 
+  const roomVisible = roomVisibleFor(await getRoomConfig(), me.role);
+
   return (
     <div className="p-5 sm:p-6 max-w-7xl mx-auto space-y-5 animate-fade-in">
+
+      {/* ── Gaming-Zimmer ────────────────────────────────────────────
+          Einziger Eingriff dieser Datei für das neue Feature. Er
+          verschwindet mit der Seite, sobald das Zimmer sie ablöst. */}
+      {roomVisible && (
+        <Link href="/zimmer"
+          className="card-hover card-shine glass relative overflow-hidden rounded-2xl p-5 flex items-center justify-between gap-4 group">
+          <div className="absolute inset-0 bg-gradient-to-br from-teal-500/10 via-transparent to-violet-500/8 pointer-events-none" />
+          <div className="relative flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center shrink-0">
+              <Sofa className="w-5 h-5 text-teal-400" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-white">Dein Gaming-Zimmer</p>
+              <p className="text-xs text-gray-500">Einrichten, Sammlung ausstellen und angeben</p>
+            </div>
+          </div>
+          <ChevronRight className="relative w-4 h-4 text-gray-600 group-hover:text-teal-400 group-hover:translate-x-0.5 transition-all shrink-0" />
+        </Link>
+      )}
 
       {/* ── Hero ────────────────────────────────────────────────────── */}
       <div className="glass card-shine relative overflow-hidden rounded-2xl p-6">
@@ -196,14 +220,15 @@ export default async function ProfilePage() {
         <div className="relative flex items-center gap-5 flex-wrap">
           {/* Avatar */}
           <div className="relative shrink-0">
-            <RankedAvatar
-              rankPoints={rankPoints}
-              src={user.image}
-              alt={displayName}
-              size={80}
-              rounded="2xl"
-              className="w-20 h-20"
-            />
+            <RankUpFlare userId={user.id} rankPoints={rankPoints}>
+              <RankedAvatar
+                rankPoints={rankPoints}
+                src={user.image}
+                alt={displayName}
+                size={80}
+                rounded="2xl"
+              />
+            </RankUpFlare>
             <span className="absolute bottom-1 right-1 w-3 h-3 bg-emerald-400 rounded-full border-2 border-[#0d0d0f]"
               style={{ boxShadow: "0 0 6px rgba(52,211,153,0.8)" }} />
           </div>
