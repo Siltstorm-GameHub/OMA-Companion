@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { getRoomItem } from "@/lib/room-items";
+import { getRoomItem, type RoomZone } from "@/lib/room-items";
 import { CELL, GRID, STAGE, cellToSvg, type PlacedItem, type RoomState } from "@/lib/room-layout";
 import { CATEGORY_CONFIG, GENRE_CONFIG } from "@/lib/wanderpocal";
 import type { VitrineBadge, VitrineCollectible, VitrineTrophy } from "@/lib/room-profile-data";
@@ -12,6 +12,17 @@ import { cn } from "@/lib/utils";
 export type InteractTarget = "crt" | "vitrine" | "jobboard";
 type ZoneView = "all" | "wall" | "floor";
 
+export interface EditHooks {
+  /** Aktuell angehobenes Möbelstück (aus dem Raum oder aus dem Lager). */
+  selectedId: string | null;
+  /** Erlaubte Ankerzellen für das angehobene Möbelstück. */
+  legal: { zone: RoomZone; x: number; y: number }[];
+  /** Vorschau-Größe des angehobenen Stücks in Zellen. */
+  ghost: { w: number; h: number; key: string } | null;
+  onSelect: (id: string) => void;
+  onDrop:   (zone: RoomZone, x: number, y: number) => void;
+}
+
 interface Props {
   state:     RoomState;
   ownerName: string;
@@ -21,6 +32,8 @@ interface Props {
     trophies:     VitrineTrophy[];
   };
   onInteract: (target: InteractTarget) => void;
+  /** Gesetzt = Bearbeiten-Modus: jedes Möbelstück ist anwählbar statt interaktiv. */
+  edit?: EditHooks;
 }
 
 const VIEWBOX: Record<ZoneView, string> = {
@@ -43,8 +56,9 @@ const RARITY_GLOW: Record<string, string> = {
   legendary: "rgba(251,191,36,0.60)",
 };
 
-export default function RoomStage({ state, ownerName, vitrine, onInteract }: Props) {
+export default function RoomStage({ state, ownerName, vitrine, onInteract, edit }: Props) {
   const [view, setView] = useState<ZoneView>("all");
+  const [hover, setHover] = useState<{ zone: RoomZone; x: number; y: number } | null>(null);
 
   const wallItems  = state.placed.filter(p => p.zone === "wall");
   // Von hinten nach vorn zeichnen, damit tiefer stehende Möbel oben liegen.
@@ -55,6 +69,34 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract }: Pro
     const def = getRoomItem(item.key);
     if (!def) return null;
     const { x, y } = cellToSvg(item.zone, item.x, item.y);
+
+    // ── Bearbeiten: jedes Möbelstück ist anwählbar ──────────────────
+    if (edit) {
+      const isSelected = edit.selectedId === item.id;
+      return (
+        <g
+          key={item.id}
+          className={cn("room-hit", edit.selectedId && !isSelected && "room-dimmed")}
+          role="button"
+          tabIndex={0}
+          aria-label={`${def.label} auswählen`}
+          aria-pressed={isSelected}
+          onClick={() => edit.onSelect(item.id)}
+          onKeyDown={e => {
+            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); edit.onSelect(item.id); }
+          }}
+        >
+          <title>{def.label}</title>
+          <RoomItemSprite itemKey={item.key} x={x} y={y} flipped={item.flipped} />
+          {isSelected && (
+            <rect
+              x={x - 2} y={y - 2} width={def.w * CELL + 4} height={def.h * CELL + 4}
+              rx={4} fill="none" stroke="var(--room-screen-on)" strokeWidth={3} strokeDasharray="7 5"
+            />
+          )}
+        </g>
+      );
+    }
 
     if (!def.interactive) {
       return <RoomItemSprite key={item.id} itemKey={item.key} x={x} y={y} flipped={item.flipped} />;
@@ -131,9 +173,39 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract }: Pro
           {wallItems.map(renderItem)}
           {floorItems.map(renderItem)}
 
-          {vitrineItem && (
+          {vitrineItem && !edit && (
             <VitrineContent item={vitrineItem} vitrine={vitrine} />
           )}
+
+          {/* ── Erlaubte Zielplätze ──────────────────────────────────
+              Liegen über den Möbeln, damit sie immer treffbar sind.
+              Berechnet mit derselben validatePlacement() wie der Server. */}
+          {edit && edit.legal.map(cell => {
+            const { x, y } = cellToSvg(cell.zone, cell.x, cell.y);
+            const isHover = hover?.zone === cell.zone && hover.x === cell.x && hover.y === cell.y;
+            return (
+              <g key={`${cell.zone}-${cell.x}-${cell.y}`}>
+                {isHover && edit.ghost && (
+                  <rect
+                    x={x} y={y} width={edit.ghost.w * CELL} height={edit.ghost.h * CELL}
+                    rx={4} fill="var(--room-screen-on)" opacity={0.22} pointerEvents="none"
+                  />
+                )}
+                <rect
+                  className="room-cell-ok"
+                  x={x + 6} y={y + 6} width={CELL - 12} height={CELL - 12} rx={5}
+                  role="button" tabIndex={0}
+                  aria-label={`Hier absetzen (${cell.zone === "wall" ? "Wand" : "Boden"}, Spalte ${cell.x + 1}, Reihe ${cell.y + 1})`}
+                  onMouseEnter={() => setHover(cell)}
+                  onMouseLeave={() => setHover(null)}
+                  onClick={() => { setHover(null); edit.onDrop(cell.zone, cell.x, cell.y); }}
+                  onKeyDown={e => {
+                    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); edit.onDrop(cell.zone, cell.x, cell.y); }
+                  }}
+                />
+              </g>
+            );
+          })}
         </svg>
       </div>
     </div>

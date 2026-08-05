@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/roles";
 import { getRoomConfig, roomVisibleFor } from "@/lib/room-config";
-import { loadRoom } from "@/lib/room";
+import { loadRoom, ownedItemCounts } from "@/lib/room";
 import { loadRoomProfileCore, loadRoomProfileDetails } from "@/lib/room-profile-data";
 import WanderpocalSection from "@/components/WanderpocalSection";
 import FavoriteGamesSection from "@/app/(dashboard)/profile/FavoriteGamesSection";
@@ -21,10 +21,11 @@ export default async function ZimmerPage() {
   const cfg = await getRoomConfig();
   if (!roomVisibleFor(cfg, me.role)) redirect("/profile");
 
-  const [state, core, details] = await Promise.all([
+  const [state, core, details, owned] = await Promise.all([
     loadRoom(me.id),
     loadRoomProfileCore(me.id),
     loadRoomProfileDetails(me.id),
+    ownedItemCounts(me.id),
   ]);
   if (!core) redirect("/login");
 
@@ -38,6 +39,7 @@ export default async function ZimmerPage() {
         core={core}
         details={details}
         readOnly={false}
+        owned={owned}
         trophySection={
           <WanderpocalSection
             trophies={details.trophies}
