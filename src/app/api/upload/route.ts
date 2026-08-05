@@ -46,41 +46,36 @@ function resolveStoreId(): string | undefined {
 }
 
 /**
- * Prüft, ob ein gangbarer Weg zum Store konfiguriert ist, und benennt sonst den
- * konkreten Fehler.
+ * Prüft nur das, was sich vorab zuverlässig prüfen lässt: ob ein gesetztes
+ * BLOB_READ_WRITE_TOKEN überhaupt wie ein Blob-Token aussieht.
  *
- * Die Format-Prüfung auf `vercel_blob_` ist kein Selbstzweck: Vercel legt neben
- * dem Store mehrere Variablen mit ähnlichem Namen an, darunter einen
- * WEBHOOK_PUBLIC_KEY. Trägt man den versehentlich als Schreib-Token ein, würde
- * der SDK ihn anstandslos annehmen und erst beim Upload mit einer nichtssagenden
- * Meldung scheitern.
+ * Das ist kein Selbstzweck — Vercel legt neben dem Store mehrere Variablen mit
+ * ähnlichem Namen an, darunter einen WEBHOOK_PUBLIC_KEY und eine STORE_ID.
+ * Trägt man eine davon versehentlich als Schreib-Token ein, nähme der SDK sie
+ * anstandslos an und scheiterte erst beim Upload mit einer nichtssagenden
+ * Meldung.
+ *
+ * Bewusst NICHT geprüft wird der OIDC-Weg: `getVercelOidcToken` aus @vercel/oidc
+ * beschafft bzw. erneuert den Token dynamisch und liest nicht bloss
+ * process.env.VERCEL_OIDC_TOKEN. Eine Vorab-Prüfung auf diese Variable war zu
+ * streng und blockierte in der Produktion einen Weg, der funktioniert hätte —
+ * die Route antwortete dort mit 503, obwohl der Store erreichbar war. Ob die
+ * Zugangsdaten tragen, entscheidet jetzt der SDK; sein Fehler wird unten
+ * übersetzt.
  */
-function checkBlobCredentials(): { ok: true } | { ok: false; reason: string } {
+function checkBlobToken(): { ok: true } | { ok: false; reason: string } {
   const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
 
-  if (token) {
-    if (!token.startsWith("vercel_blob_")) {
-      return {
-        ok: false,
-        reason:
-          "BLOB_READ_WRITE_TOKEN ist gesetzt, hat aber nicht das Format eines Blob-Tokens " +
-          "(erwartet: beginnt mit 'vercel_blob_'). Vermutlich wurde der WEBHOOK_PUBLIC_KEY " +
-          "oder die STORE_ID eingetragen — beide taugen nicht zur Authentifizierung.",
-      };
-    }
-    return { ok: true };
+  if (token && !token.startsWith("vercel_blob_")) {
+    return {
+      ok: false,
+      reason:
+        "BLOB_READ_WRITE_TOKEN ist gesetzt, hat aber nicht das Format eines Blob-Tokens " +
+        "(erwartet: beginnt mit 'vercel_blob_'). Vermutlich wurde der WEBHOOK_PUBLIC_KEY " +
+        "oder die STORE_ID eingetragen — beide taugen nicht zur Authentifizierung.",
+    };
   }
-
-  // Kein statisches Token → OIDC-Weg. Vercel injiziert VERCEL_OIDC_TOKEN auf
-  // Deployments selbst; lokal kommt es über `vercel env pull`.
-  if (process.env.VERCEL_OIDC_TOKEN?.trim() && resolveStoreId()) return { ok: true };
-
-  return {
-    ok: false,
-    reason:
-      "Keine Blob-Zugangsdaten gefunden. Erwartet wird entweder BLOB_READ_WRITE_TOKEN " +
-      "oder VERCEL_OIDC_TOKEN zusammen mit der Store-ID.",
-  };
+  return { ok: true };
 }
 
 /** Was hochgeladen werden darf, und wer. Bewusst eine Whitelist: `kind` landet
@@ -99,7 +94,7 @@ const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
 const ROLE_ORDER = ["user", "moderator", "admin"];
 
 export async function POST(req: NextRequest) {
-  const credentials = checkBlobCredentials();
+  const credentials = checkBlobToken();
   if (!credentials.ok) {
     return NextResponse.json({ error: credentials.reason }, { status: 503 });
   }
@@ -160,6 +155,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ url: blob.url });
   } catch (err) {
     console.error("[upload] Vercel Blob fehlgeschlagen:", err);
+
+    // Fehlende Zugangsdaten sind ein Konfigurationsproblem, kein Upload-Fehler —
+    // 503 mit der Meldung des SDK ist für den Betreiber deutlich brauchbarer als
+    // ein generisches "Upload fehlgeschlagen".
+    const message = err instanceof Error ? err.message : "";
+    if (/no blob credentials/i.test(message)) {
+      return NextResponse.json(
+        {
+          error:
+            "Uploads sind nicht konfiguriert: der Blob-Store ist nicht erreichbar. " +
+            "Erwartet wird BLOB_READ_WRITE_TOKEN oder aktiviertes OIDC zusammen mit der Store-ID.",
+        },
+        { status: 503 }
+      );
+    }
     return NextResponse.json({ error: "Upload fehlgeschlagen" }, { status: 502 });
   }
 }
