@@ -19,15 +19,40 @@
 
 /** System-Abzeichen: Schlüssel ist die `id` aus BADGE_DEFS in lib/badges.ts.
  *
- *  Erster Satz — je ein Motiv pro Kategorie, erzeugt in Canva und mit
- *  scripts/process-badge-art.ts kreisrund freigestellt. Die übrigen 16
- *  Abzeichen laufen weiter über ihr Emoji, bis eigene Motive vorliegen. */
+ *  Vollständig — alle 21 Abzeichen haben eine eigene Grafik. Erzeugt aus neun
+ *  Rohmotiven, die sich die Stufen einer Familie teilen; unterschieden wird über
+ *  die Ringfarbe (Bronze → Silber → Gold → Crimson). Erzeugt und gepflegt von
+ *  scripts/process-badge-art.ts — die Zuordnung Abzeichen → Motiv/Stufe steht
+ *  dort in der BADGES-Tabelle und ist die Quelle der Wahrheit. */
 const SYSTEM_BADGE_ART: Record<string, string> = {
-  welcome:     "/badges/welcome.png",      // Community  — Konfetti
-  voice_50h:   "/badges/voice_50h.png",    // Aktivität  — Mikrofon
-  event_win_1: "/badges/event_win_1.png",  // Events     — Medaille
-  t_win:       "/badges/t_win.png",        // Turniere   — Pokal
-  pts_10k:     "/badges/pts_10k.png",      // Punkte     — Sparkle
+  welcome:     "/badges/welcome.png",
+
+  voice_1h:    "/badges/voice_1h.png",
+  voice_10h:   "/badges/voice_10h.png",
+  voice_50h:   "/badges/voice_50h.png",
+
+  msg_50:      "/badges/msg_50.png",
+  msg_500:     "/badges/msg_500.png",
+
+  event_1:     "/badges/event_1.png",
+  event_5:     "/badges/event_5.png",
+  event_10:    "/badges/event_10.png",
+  event_25:    "/badges/event_25.png",
+
+  event_win_1: "/badges/event_win_1.png",
+  event_win_5: "/badges/event_win_5.png",
+
+  mvp_1:       "/badges/mvp_1.png",
+  mvp_3:       "/badges/mvp_3.png",
+
+  t_1:         "/badges/t_1.png",
+  t_win:       "/badges/t_win.png",
+  t_win_5:     "/badges/t_win_5.png",
+
+  pts_500:     "/badges/pts_500.png",
+  pts_2k:      "/badges/pts_2k.png",
+  pts_5k:      "/badges/pts_5k.png",
+  pts_10k:     "/badges/pts_10k.png",
 };
 
 /** Admin-erstellte Abzeichen: Schlüssel ist die CustomBadge-ID aus der DB.

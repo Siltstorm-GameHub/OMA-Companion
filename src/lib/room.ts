@@ -3,7 +3,8 @@ import { COIN_PREFIX } from "./points";
 import { getRank } from "./ranks";
 import { getRoomItem, isFixed, isSurface, STARTER_ITEM_KEYS, type RoomZone } from "./room-items";
 import {
-  DEFAULT_ROOM, DEFAULT_PLACEMENTS, MAX_PLACED_ITEMS, countTags, validateLayout,
+  DEFAULT_ROOM, DEFAULT_PLACEMENTS, DEFAULT_ID_PREFIX, MAX_PLACED_ITEMS,
+  countTags, validateLayout,
   type PlacedItem, type RoomState, type StoredItem,
 } from "./room-layout";
 import { checkRequirements, formatMissing, getJob } from "./jobs";
@@ -201,6 +202,19 @@ export async function saveLayout(
 
   const rows = await prisma.roomItem.findMany({ where: { userId } });
   const byId = new Map(rows.map(r => [r.id, r]));
+
+  // Wer sein Zimmer noch nie verändert hat, hat DEFAULT_ROOM gesehen — mit
+  // synthetischen IDs ("default:bett"), weil es dafür keine Zeilen gab. Genau
+  // dieser Aufruf hat sie eben angelegt, also werden die Platzhalter jetzt auf
+  // die echten Zeilen abgebildet. Ohne das schlüge der allererste Speichervorgang
+  // jedes neuen Users mit "Gehört dir nicht" fehl.
+  const starterByKey = new Map(rows.filter(r => r.starter).map(r => [r.itemKey, r.id]));
+  const resolveId = (id: string): string => {
+    if (!id.startsWith(DEFAULT_ID_PREFIX)) return id;
+    return starterByKey.get(id.slice(DEFAULT_ID_PREFIX.length)) ?? id;
+  };
+  placedInput = placedInput.map(p => ({ ...p, id: resolveId(p.id) }));
+  storedIds   = storedIds.map(resolveId);
 
   // Nur Möbel, die der Katalog kennt und die überhaupt aufstellbar sind,
   // müssen im Payload auftauchen. Flächen liegen auf der Room-Zeile.

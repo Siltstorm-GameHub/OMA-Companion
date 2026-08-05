@@ -4,7 +4,7 @@ import { getRank } from "./ranks";
 import { getRoomConfig, type RoomConfig } from "./room-config";
 import { loadRoom } from "./room";
 import { countTags } from "./room-layout";
-import type { RoomTag } from "./room-items";
+import { ROOM_TAG_LABELS, type RoomTag } from "./room-items";
 import {
   JOBS, MIN_CLAIM_MINUTES, checkRequirements, computeAccrual, formatDuration,
   formatMissing, getJob, jobUnlockState, type JobDef,
@@ -128,12 +128,6 @@ export async function getJobOverview(userId: string): Promise<JobOverview> {
     current,
     jobs,
   };
-}
-
-// Kleiner Umweg, damit die Label-Auflösung an einer Stelle bleibt.
-import { ROOM_TAG_LABELS } from "./room-items";
-function ROOM_TAG_LABEL(tag: RoomTag): string {
-  return ROOM_TAG_LABELS[tag];
 }
 
 // ── Abrechnung ───────────────────────────────────────────────────────────────

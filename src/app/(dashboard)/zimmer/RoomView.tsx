@@ -5,10 +5,13 @@ import Link from "next/link";
 import { ShoppingBag, Pencil, Briefcase } from "lucide-react";
 import type { RoomState } from "@/lib/room-layout";
 import type { RoomProfileCore, RoomProfileDetails } from "@/lib/room-profile-data";
+import type { JobOverview } from "@/lib/job-service";
 import RoomStage, { type InteractTarget } from "./RoomStage";
 import RoomEditor from "./RoomEditor";
 import CrtProfileModal from "./CrtProfileModal";
 import VitrineModal from "./VitrineModal";
+import JobBoardSheet from "./JobBoardSheet";
+import WageWidget from "./WageWidget";
 
 interface Props {
   state:       RoomState;
@@ -17,6 +20,8 @@ interface Props {
   readOnly:    boolean;
   /** Besitzstand je itemKey — der Editor braucht ihn für Tapeten und Böden. */
   owned?:      Record<string, number>;
+  /** Nur im eigenen Zimmer: aktueller Job für den Lohn-Ticker. */
+  job?:        JobOverview | null;
   trophySection:    ReactNode;
   settingsSection?: ReactNode;
 }
@@ -26,7 +31,7 @@ interface Props {
  * Bewusst dünn — die Server-Seite liefert alle Daten, hier wird nur geschaltet.
  */
 export default function RoomView({
-  state, core, details, readOnly, owned, trophySection, settingsSection,
+  state, core, details, readOnly, owned, job, trophySection, settingsSection,
 }: Props) {
   const [openTarget, setOpenTarget] = useState<InteractTarget | null>(null);
   const [editing, setEditing]       = useState(false);
@@ -51,6 +56,19 @@ export default function RoomView({
         vitrine={core.vitrine}
         onInteract={setOpenTarget}
       />
+
+      {/* ── Lohn ─────────────────────────────────────────────────────
+          Direkt unter der Bühne, damit "Lohn abholen" der erste Griff
+          nach dem Reinschauen ist. */}
+      {!readOnly && job?.enabled && (
+        <WageWidget
+          current={job.current}
+          wageCapHours={job.wageCapHours}
+          multiplierPct={job.wageMultiplierPct}
+          onOpenBoard={() => setOpenTarget("jobboard")}
+          onClaimed={() => { /* router.refresh() passiert im Widget */ }}
+        />
+      )}
 
       {/* ── Aktionsleiste ────────────────────────────────────────────
           Klebt auf dem Handy über der BottomNav, damit sie in
@@ -104,34 +122,12 @@ export default function RoomView({
         trophySection={trophySection}
       />
 
-      {/* Die Jobbörse kommt in Phase 3 — bis dahin ein ehrlicher Hinweis
-          statt eines toten Klicks auf dem schwarzen Brett. */}
-      {openTarget === "jobboard" && (
-        <JobBoardPlaceholder onClose={() => setOpenTarget(null)} />
-      )}
-    </>
-  );
-}
-
-function JobBoardPlaceholder({ onClose }: { onClose: () => void }) {
-  return (
-    <>
-      <div className="sheet-backdrop fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
-        <div className="glass-heavy rounded-2xl p-6 max-w-sm text-center pointer-events-auto">
-          <div className="text-3xl mb-3">📋</div>
-          <p className="text-sm font-semibold text-white mb-1">Die Stellen sind noch nicht ausgeschrieben</p>
-          <p className="text-xs text-gray-500 mb-4">
-            Die Jobbörse öffnet, sobald die Idle-Jobs fertig sind. Bis dahin: Zimmer einrichten.
-          </p>
-          <button
-            type="button" onClick={onClose}
-            className="px-4 py-2 rounded-xl text-xs font-semibold bg-teal-500/15 border border-teal-500/25 text-teal-300"
-          >
-            Alles klar
-          </button>
-        </div>
-      </div>
+      <JobBoardSheet
+        open={openTarget === "jobboard"}
+        onClose={() => setOpenTarget(null)}
+        readOnly={readOnly}
+        onChanged={() => { /* die Sheet aktualisiert sich selbst und ruft router.refresh() */ }}
+      />
     </>
   );
 }

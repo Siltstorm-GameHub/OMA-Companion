@@ -66,22 +66,34 @@ export const MAX_PLACED_ITEMS = 200;
  * gerendert ohne einen einzigen Datenbankzugriff. Sobald er etwas kauft oder
  * umstellt, legt materializeRoom() genau diese Möbel als echte Zeilen an.
  */
+/**
+ * Die Grundausstattung sitzt bewusst kompakt links: die drei rechten
+ * Bodenspalten bleiben frei, damit sich die ersten gekauften Möbel sofort
+ * aufstellen lassen. Ohne diese Lücke wäre schon die 120-Münzen-Steckdosenleiste
+ * eine Sackgasse — man müsste erst etwas einlagern, um überhaupt Platz zu haben.
+ */
 export const DEFAULT_PLACEMENTS: { key: string; zone: RoomZone; x: number; y: number }[] = [
-  { key: "jobbrett",         zone: "wall",  x:  1, y: 1 },
-  { key: "bett",             zone: "floor", x:  0, y: 3 },
-  { key: "stuhl_buero",      zone: "floor", x:  4, y: 3 },
-  { key: "schreibtisch_alt", zone: "floor", x:  5, y: 3 },
-  { key: "roehrenmonitor",   zone: "floor", x:  6, y: 2 },
-  { key: "pc_billig",        zone: "floor", x:  8, y: 3 },
-  { key: "vitrine",          zone: "floor", x: 10, y: 2 },
+  { key: "jobbrett",         zone: "wall",  x: 1, y: 1 },
+  { key: "bett",             zone: "floor", x: 0, y: 3 },
+  { key: "schreibtisch_alt", zone: "floor", x: 2, y: 3 },
+  { key: "roehrenmonitor",   zone: "floor", x: 3, y: 2 },
+  { key: "pc_billig",        zone: "floor", x: 5, y: 3 },
+  { key: "vitrine",          zone: "floor", x: 6, y: 2 },
 ];
+
+/**
+ * Präfix der synthetischen IDs im Standard-Zimmer. Für diese Möbel gibt es noch
+ * keine Datenbankzeilen — beim ersten Speichern bildet saveLayout() sie auf die
+ * dann angelegten echten Zeilen ab.
+ */
+export const DEFAULT_ID_PREFIX = "default:";
 
 export const DEFAULT_ROOM: RoomState = {
   wallpaperKey: "tapete_raufaser",
   floorKey:     "boden_linoleum",
   doorSign:     null,
   placed: DEFAULT_PLACEMENTS.map(p => ({
-    id: `default:${p.key}`, key: p.key, zone: p.zone, x: p.x, y: p.y,
+    id: `${DEFAULT_ID_PREFIX}${p.key}`, key: p.key, zone: p.zone, x: p.x, y: p.y,
     flipped: false, starter: true,
   })),
   stored:       [],
