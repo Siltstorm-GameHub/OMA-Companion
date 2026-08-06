@@ -80,6 +80,11 @@ export default function RoomEditor({ state, core, owned, onDone }: Props) {
     setSelection(prev => (prev?.id === id ? null : { id, from: "placed" }));
   }
 
+  /** Ziehen mit der Maus: wählt an, ohne je abzuwählen — anders als Antippen. */
+  function handleGrab(id: string) {
+    setSelection({ id, from: "placed" });
+  }
+
   function handleDrop(zone: RoomZone, x: number, y: number) {
     if (!candidate) return;
     if (selection?.from === "stored") {
@@ -158,7 +163,10 @@ export default function RoomEditor({ state, core, owned, onDone }: Props) {
         ownerName={core.displayName}
         vitrine={core.vitrine}
         onInteract={() => { /* im Bearbeiten-Modus öffnet nichts */ }}
-        edit={{ selectedId: candidate?.id ?? null, legal, ghost, onSelect: handleSelect, onDrop: handleDrop }}
+        edit={{
+          selectedId: candidate?.id ?? null, legal, ghost,
+          onSelect: handleSelect, onGrab: handleGrab, onDrop: handleDrop,
+        }}
       />
 
       {/* ── Hinweiszeile / Aktionen zum angehobenen Stück ───────────── */}

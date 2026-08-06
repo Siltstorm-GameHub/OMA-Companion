@@ -4,6 +4,7 @@ import { getSessionUser } from "@/lib/roles";
 import { getRank, getNextRank, getRankFullLabel } from "@/lib/ranks";
 import RankedAvatar from "@/components/RankedAvatar";
 import RankUpFlare from "@/components/RankUpFlare";
+import RankIcon from "@/components/RankIcon";
 import { computeBadges } from "@/lib/badges";
 import BadgesSection from "./BadgesSection";
 import PointsInfoModal from "./PointsInfoModal";
@@ -13,7 +14,7 @@ import { RARITY_CONFIG, type Rarity, MAX_SHOWCASE } from "@/lib/collectibles";
 import { getAvailableReviewYears } from "@/lib/year-review";
 import {
   Trophy, CalendarDays, Swords, Clock, MessageSquare,
-  CheckCircle2, Crown, Gamepad2, Medal, Gift, ChevronRight, Sofa,
+  CheckCircle2, Crown, Gamepad2, Medal, Gift, ChevronRight,
 } from "lucide-react";
 import { getRoomConfig, roomVisibleFor } from "@/lib/room-config";
 import RankPointsIcon from "@/components/RankPointsIcon";
@@ -30,6 +31,15 @@ import NotificationPreferences from "@/components/NotificationPreferences";
 export default async function ProfilePage() {
   const me = await getSessionUser();
   if (!me) redirect("/login");
+
+  // Ablösung: sobald das Gaming-Zimmer für diesen User sichtbar ist, ist es die
+  // Profilseite. Der Umzug hängt am selben Feature-Flag wie alles andere am
+  // Zimmer — für Admins also immer, für alle anderen erst mit room_enabled=true.
+  // Diese klassische Seite bleibt bewusst bestehen (kein Löschen): sie ist der
+  // Rückfall, falls das Zimmer live ein Problem zeigt, das die Vorschau nicht
+  // aufgedeckt hat, und geht mit einer Flag-Änderung sofort wieder online.
+  if (roomVisibleFor(await getRoomConfig(), me.role)) redirect("/zimmer");
+
   const userId = me.id;
 
   const now   = new Date();
@@ -172,30 +182,8 @@ export default async function ProfilePage() {
     return acc;
   }, {});
 
-  const roomVisible = roomVisibleFor(await getRoomConfig(), me.role);
-
   return (
     <div className="p-5 sm:p-6 max-w-7xl mx-auto space-y-5 animate-fade-in">
-
-      {/* ── Gaming-Zimmer ────────────────────────────────────────────
-          Einziger Eingriff dieser Datei für das neue Feature. Er
-          verschwindet mit der Seite, sobald das Zimmer sie ablöst. */}
-      {roomVisible && (
-        <Link href="/zimmer"
-          className="card-hover card-shine glass relative overflow-hidden rounded-2xl p-5 flex items-center justify-between gap-4 group">
-          <div className="absolute inset-0 bg-gradient-to-br from-teal-500/10 via-transparent to-violet-500/8 pointer-events-none" />
-          <div className="relative flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center shrink-0">
-              <Sofa className="w-5 h-5 text-teal-400" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-white">Dein Gaming-Zimmer</p>
-              <p className="text-xs text-gray-500">Einrichten, Sammlung ausstellen und angeben</p>
-            </div>
-          </div>
-          <ChevronRight className="relative w-4 h-4 text-gray-600 group-hover:text-teal-400 group-hover:translate-x-0.5 transition-all shrink-0" />
-        </Link>
-      )}
 
       {/* ── Hero ────────────────────────────────────────────────────── */}
       <div className="glass card-shine relative overflow-hidden rounded-2xl p-6">
@@ -238,7 +226,7 @@ export default async function ProfilePage() {
             <div className="flex items-center gap-2 flex-wrap mb-0.5">
               <h1 className="text-2xl font-bold text-white tracking-tight">{displayName}</h1>
               <span className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded font-semibold border ${currentRank.color} ${currentRank.bg} ${currentRank.border}`}>
-                {currentRank.emoji} {getRankFullLabel(currentRank)}
+                <RankIcon rankPoints={rankPoints} size="xs" showPips={false} /> {getRankFullLabel(currentRank)}
               </span>
             </div>
             <p className="text-xs text-gray-500 mb-1">
@@ -254,12 +242,16 @@ export default async function ProfilePage() {
             <div className="mt-3 max-w-xs">
               {nextRank ? (
                 <div className="flex items-center gap-2">
-                  <span className="text-[9px] text-gray-600 whitespace-nowrap">{currentRank.emoji} {getRankFullLabel(currentRank)}</span>
+                  <span className="flex items-center gap-1 text-[9px] text-gray-600 whitespace-nowrap">
+                    <RankIcon rankPoints={rankPoints} size="xs" showPips={false} /> {getRankFullLabel(currentRank)}
+                  </span>
                   <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
                     <div className="h-full rounded-full transition-all duration-1000"
                       style={{ width: `${rankPct}%`, background: "linear-gradient(90deg, #14b8a6, #2dd4bf)", boxShadow: "0 0 6px rgba(20,184,166,0.6)" }} />
                   </div>
-                  <span className="text-[9px] text-gray-600 whitespace-nowrap">{nextRank.emoji} {getRankFullLabel(nextRank)}</span>
+                  <span className="flex items-center gap-1 text-[9px] text-gray-600 whitespace-nowrap">
+                    <RankIcon rankPoints={nextRank.min} size="xs" showPips={false} /> {getRankFullLabel(nextRank)}
+                  </span>
                   <span className="text-[9px] text-teal-400 tabular-nums">{rankPct}%</span>
                 </div>
               ) : (

@@ -3,14 +3,15 @@
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
-  Clock, MessageSquare, CheckCircle2, Swords, Gamepad2, Trophy,
+  Clock, MessageSquare, CheckCircle2, Swords, Gamepad2, Trophy, Gift, ChevronRight,
 } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
 import WinIcon from "@/components/WinIcon";
 import { Modal } from "@/components/ui";
 import BadgesSection from "@/app/(dashboard)/profile/BadgesSection";
+import ProfileEditor from "@/app/(dashboard)/profile/ProfileEditor";
 import { RARITY_CONFIG, type Rarity } from "@/lib/collectibles";
-import type { RoomProfileDetails } from "@/lib/room-profile-data";
+import type { RoomProfileCore, RoomProfileDetails } from "@/lib/room-profile-data";
 import { cn } from "@/lib/utils";
 
 type TabKey = "aktivitaet" | "events" | "turniere" | "quests" | "abzeichen" | "sammlung" | "pokale" | "einstellungen";
@@ -21,6 +22,8 @@ interface Props {
   displayName: string;
   readOnly:    boolean;
   details:     RoomProfileDetails;
+  /** Nur im eigenen Zimmer: für den Profil-Editor (Bio, Geburtstag, Twitch, Banner). */
+  core?:       RoomProfileCore;
   /** Serverseitig gerendert, weil WanderpocalSection eine Server-Komponente ist. */
   trophySection: ReactNode;
   /** Nur im eigenen Zimmer: Push-Button und Benachrichtigungs-Einstellungen. */
@@ -33,7 +36,7 @@ interface Props {
  * Lieblingsspiele.
  */
 export default function CrtProfileModal({
-  open, onClose, displayName, readOnly, details, trophySection, settingsSection,
+  open, onClose, displayName, readOnly, details, core, trophySection, settingsSection,
 }: Props) {
   const [tab, setTab] = useState<TabKey>("aktivitaet");
 
@@ -237,7 +240,36 @@ export default function CrtProfileModal({
           : <>{trophySection}</>
       )}
 
-      {tab === "einstellungen" && settingsSection}
+      {tab === "einstellungen" && (
+        <div className="space-y-5">
+          {!readOnly && core && (
+            <>
+              <ProfileEditor
+                birthday={core.birthday}
+                bio={core.bio}
+                twitchLogin={core.twitchLogin}
+                bannerUrl={core.bannerUrl}
+              />
+              {core.reviewYears.length > 0 && (
+                <Link href="/profile/rueckblick"
+                  className="rounded-2xl p-4 flex items-center justify-between gap-4 border border-white/[0.06] hover:bg-white/[0.03] transition-colors group">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
+                      <Gift className="w-4 h-4 text-violet-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-white">Dein Jahresrückblick {core.reviewYears[0]}</p>
+                      <p className="text-xs text-gray-500">Punkte, Events, Siege und mehr</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-violet-400 transition-colors shrink-0" />
+                </Link>
+              )}
+            </>
+          )}
+          {settingsSection}
+        </div>
+      )}
     </Modal>
   );
 }

@@ -6,7 +6,8 @@ import { sendDiscordDM } from "./discord-rest";
 // über Events → EVENT_ATTEND), bleibt aber im Union-Typ für die History-Anzeige alter Quests.
 export type QuestType =
   | "VOICE_MINUTES" | "MESSAGES" | "EVENT_ATTEND" | "TOURNAMENT"
-  | "POLL_VOTE" | "DAILY_SPIN" | "DUEL_PLAYED" | "PREDICTION_MADE";
+  | "POLL_VOTE" | "DAILY_SPIN" | "DUEL_PLAYED" | "PREDICTION_MADE"
+  | "JOB_CLAIM";
 
 interface QuestTemplate {
   type: QuestType;
@@ -65,6 +66,13 @@ const TEMPLATES: QuestTemplate[] = [
     descriptions: ["Tippe bei {target} Event(s) auf den Sieger"],
     targets: [1, 2, 3],
     rewards: [100, 175, 250],
+  },
+  {
+    type: "JOB_CLAIM",
+    titles: ["Fleißige Biene", "Schichtarbeiter", "Lohn-Abholer", "Pflichtbewusst"],
+    descriptions: ["Hole {target} Mal deinen Lohn aus dem Gaming-Zimmer ab"],
+    targets: [5, 10, 15, 20],
+    rewards: [100, 175, 250, 350],
   },
 ];
 
@@ -242,5 +250,9 @@ export const QUEST_TYPE_META: Record<
   PREDICTION_MADE: {
     label: "Vorhersagen", unit: "Tipps",       icon: "🎯",
     color: "text-cyan-300",   bar: "from-cyan-600 to-cyan-400",     bg: "from-cyan-500/10",
+  },
+  JOB_CLAIM: {
+    label: "Idle-Job",    unit: "Abholungen",  icon: "💼",
+    color: "text-violet-300", bar: "from-violet-600 to-violet-400", bg: "from-violet-500/10",
   },
 };

@@ -1,5 +1,6 @@
 import { Crown } from "lucide-react";
 import RankedAvatar from "@/components/RankedAvatar";
+import RankIcon from "@/components/RankIcon";
 import CoinIcon from "@/components/CoinIcon";
 import { getRankFullLabel } from "@/lib/ranks";
 import type { RoomProfileCore } from "@/lib/room-profile-data";
@@ -39,7 +40,7 @@ export default function RoomHeroPanel({ core }: { core: RoomProfileCore }) {
           <div className="flex items-center gap-2 flex-wrap mb-0.5">
             <h1 className="text-2xl font-bold text-white tracking-tight">{core.displayName}</h1>
             <span className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded font-semibold border ${core.rank.color} ${core.rank.bg} ${core.rank.border}`}>
-              {core.rank.emoji} {getRankFullLabel(core.rank)}
+              <RankIcon rankPoints={core.rankPoints} size="xs" showPips={false} /> {getRankFullLabel(core.rank)}
             </span>
           </div>
           <p className="text-xs text-gray-500 mb-1">
@@ -58,12 +59,16 @@ export default function RoomHeroPanel({ core }: { core: RoomProfileCore }) {
           <div className="mt-3 max-w-xs">
             {core.nextRank ? (
               <div className="flex items-center gap-2">
-                <span className="text-[9px] text-gray-600 whitespace-nowrap">{core.rank.emoji} {getRankFullLabel(core.rank)}</span>
+                <span className="flex items-center gap-1 text-[9px] text-gray-600 whitespace-nowrap">
+                  <RankIcon rankPoints={core.rankPoints} size="xs" showPips={false} /> {getRankFullLabel(core.rank)}
+                </span>
                 <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
                   <div className="h-full rounded-full transition-all duration-1000"
                     style={{ width: `${core.rankPct}%`, background: "linear-gradient(90deg, #14b8a6, #2dd4bf)", boxShadow: "0 0 6px rgba(20,184,166,0.6)" }} />
                 </div>
-                <span className="text-[9px] text-gray-600 whitespace-nowrap">{core.nextRank.emoji} {getRankFullLabel(core.nextRank)}</span>
+                <span className="flex items-center gap-1 text-[9px] text-gray-600 whitespace-nowrap">
+                  <RankIcon rankPoints={core.nextRank.min} size="xs" showPips={false} /> {getRankFullLabel(core.nextRank)}
+                </span>
                 <span className="text-[9px] text-teal-400 tabular-nums">{core.rankPct}%</span>
               </div>
             ) : (

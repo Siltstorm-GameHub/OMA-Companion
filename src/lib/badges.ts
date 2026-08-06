@@ -25,6 +25,8 @@ export type BadgeStats = {
   tournamentWins: number;
   eventWins?: number;
   mvpCount?: number;
+  /** Lebenszeit-Verdienst aus Idle-Jobs (UserJob.totalEarned). */
+  jobCoinsEarned?: number;
 };
 
 type BadgeDef = {
@@ -141,6 +143,21 @@ const BADGE_DEFS: BadgeDef[] = [
     id: "pts_10k", icon: "✨", name: "Grandmaster", desc: "10.000 Punkte erreicht", category: "punkte",
     check: d => d.points >= 10000,
     progress: d => ({ current: Math.min(d.points, 10000), target: 10000 }),
+  },
+  // ── Idle-Jobs im Gaming-Zimmer ──────────────────────────────────────
+  {
+    id: "job_first", icon: "💼", name: "Erster Lohn", desc: "Zum ersten Mal Lohn abgeholt", category: "punkte",
+    check: d => (d.jobCoinsEarned ?? 0) >= 1,
+  },
+  {
+    id: "job_10k", icon: "🧾", name: "Feierabend", desc: "10.000 Münzen erarbeitet", category: "punkte",
+    check: d => (d.jobCoinsEarned ?? 0) >= 10000,
+    progress: d => ({ current: Math.min(d.jobCoinsEarned ?? 0, 10000), target: 10000 }),
+  },
+  {
+    id: "job_100k", icon: "🏭", name: "Lebenswerk", desc: "100.000 Münzen erarbeitet", category: "punkte",
+    check: d => (d.jobCoinsEarned ?? 0) >= 100000,
+    progress: d => ({ current: Math.min(d.jobCoinsEarned ?? 0, 100000), target: 100000 }),
   },
 ];
 

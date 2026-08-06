@@ -315,6 +315,11 @@ export default function EventSetupWizard({
       seriesId = (await sRes.json()).id;
     }
 
+    const effectiveParticipationRankPts = eventType === "community" ? 0 : participationRankPts;
+    const effectivePlacements = eventType === "community"
+      ? placements.map(p => ({ ...p, rankPoints: 0 }))
+      : placements;
+
     const body: Record<string, unknown> = {
       title: title.trim(),
       startAt: new Date(startAt).toISOString(),
@@ -329,7 +334,7 @@ export default function EventSetupWizard({
       discordChannelId: discordChannelId || null,
       spectatorMode,
       spectatorRewardJson: spectatorMode ? { coins: spectatorCoins, rankPoints: spectatorRankPts } : null,
-      placementRewardsJson: { participationCoins, participationRankPts, placements },
+      placementRewardsJson: { participationCoins, participationRankPts: effectiveParticipationRankPts, placements: effectivePlacements },
       pollsConfigJson: polls.length > 0 ? polls : null,
     };
 
@@ -398,7 +403,7 @@ export default function EventSetupWizard({
         discordChannelId: seriesDiscordId || null,
         recurrenceType: recurrenceType !== "none" ? recurrenceType : null,
         recurrenceMonthlyMode: recurrenceType === "monthly" ? recurrenceMonthlyMode : null,
-        placementRewardsJson: { placements },
+        placementRewardsJson: { placements: eventType === "community" ? placements.map(p => ({ ...p, rankPoints: 0 })) : placements },
         pollsConfigJson: polls.length > 0 ? polls : null,
         seriesStatConfig,
         startDate: seriesStartDate ? new Date(seriesStartDate).toISOString() : null,
@@ -925,7 +930,7 @@ export default function EventSetupWizard({
             <p className="text-sm font-medium text-gray-200">Teilnahme-Belohnung</p>
           </div>
           <p className="text-[11px] text-gray-500 mb-3">Wird erst nach Event-Abschluss vergeben</p>
-          <div className={belongsToSeries ? "grid grid-cols-1 gap-3" : "grid grid-cols-2 gap-3"}>
+          <div className={(belongsToSeries || eventType === "community") ? "grid grid-cols-1 gap-3" : "grid grid-cols-2 gap-3"}>
             {!belongsToSeries && (
               <div>
                 <label className={labelCls}>Münzen</label>
@@ -934,12 +939,14 @@ export default function EventSetupWizard({
                   className={inputCls} style={inputStyle} />
               </div>
             )}
-            <div>
-              <label className={labelCls}>Rang-Punkte <span className="text-gray-500 font-normal">(→ Gesamtrangliste)</span></label>
-              <input type="number" min="0" value={participationRankPts}
-                onChange={e => setParticipationRankPts(Number(e.target.value))}
-                className={inputCls} style={inputStyle} />
-            </div>
+            {eventType !== "community" && (
+              <div>
+                <label className={labelCls}>Rang-Punkte <span className="text-gray-500 font-normal">(→ Gesamtrangliste)</span></label>
+                <input type="number" min="0" value={participationRankPts}
+                  onChange={e => setParticipationRankPts(Number(e.target.value))}
+                  className={inputCls} style={inputStyle} />
+              </div>
+            )}
           </div>
           {isSeriesMode && (
             <p className="text-[11px] text-gray-500 mt-2">Münzen pro Teilnahme: siehe „📊 Gesamttabelle" weiter unten.</p>
@@ -958,19 +965,21 @@ export default function EventSetupWizard({
             {placements.map((p, i) => (
               <div key={p.place} className="flex items-center gap-3">
                 <span className="text-sm w-5 shrink-0">{["🥇","🥈","🥉"][i]}</span>
-                <div className="flex-1 grid grid-cols-2 gap-2">
+                <div className={eventType === "community" ? "flex-1 grid grid-cols-1 gap-2" : "flex-1 grid grid-cols-2 gap-2"}>
                   <div>
                     <label className={labelCls}>Münzen</label>
                     <input type="number" min="0" value={p.coins}
                       onChange={e => setPlacements(prev => prev.map((pp, ii) => ii === i ? { ...pp, coins: Number(e.target.value) } : pp))}
                       className={inputCls} style={inputStyle} />
                   </div>
-                  <div>
-                    <label className={labelCls}>Rang-Punkte</label>
-                    <input type="number" min="0" value={p.rankPoints}
-                      onChange={e => setPlacements(prev => prev.map((pp, ii) => ii === i ? { ...pp, rankPoints: Number(e.target.value) } : pp))}
-                      className={inputCls} style={inputStyle} />
-                  </div>
+                  {eventType !== "community" && (
+                    <div>
+                      <label className={labelCls}>Rang-Punkte</label>
+                      <input type="number" min="0" value={p.rankPoints}
+                        onChange={e => setPlacements(prev => prev.map((pp, ii) => ii === i ? { ...pp, rankPoints: Number(e.target.value) } : pp))}
+                        className={inputCls} style={inputStyle} />
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
