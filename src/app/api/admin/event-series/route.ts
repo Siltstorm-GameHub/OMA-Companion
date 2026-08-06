@@ -77,6 +77,7 @@ export async function PATCH(req: NextRequest) {
       ...(fields.description          !== undefined && { description:          fields.description }),
       ...(fields.rules                !== undefined && { rules:                fields.rules }),
       ...(fields.icon                 !== undefined && { icon:                 fields.icon || null }),
+      ...(fields.coverImageUrl        !== undefined && { coverImageUrl:        fields.coverImageUrl || null }),
       ...(fields.genre                !== undefined && { genre:                fields.genre }),
       ...(fields.platform             !== undefined && { platform:             fields.platform }),
       ...(fields.fixedGame            !== undefined && { fixedGame:            fields.fixedGame }),

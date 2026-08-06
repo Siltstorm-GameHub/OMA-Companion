@@ -28,17 +28,22 @@ const SCREEN = "var(--room-screen)";
 const ON = "var(--room-screen-on)";
 const SHADE = "var(--room-shade)";
 
-/** Positionen der Vitrinen-Fächer, damit RoomStage die Sammlung einsetzen kann. */
+/**
+ * Positionen der Vitrinen-Fächer, damit RoomStage die Sammlung einsetzen kann.
+ * Koordinaten liegen im lokalen 128×192-Koordinatenraum des Vitrinen-Sprites
+ * (2×3 Rasterzellen à CELL=64) und sind auf die drei Glasböden im Canva-Bild
+ * public/room-items/vitrine.png abgestimmt — bei einem Bildwechsel neu vermessen.
+ */
 export const VITRINE_SLOTS = {
   trophies: [
-    { x: 16, y: 22, s: 30 }, { x: 49, y: 22, s: 30 }, { x: 82, y: 22, s: 30 },
+    { x: 14, y: 30, s: 28 }, { x: 50, y: 30, s: 28 }, { x: 86, y: 30, s: 28 },
   ],
   collectibles: [
-    { x: 14, y: 74, s: 32 }, { x: 48, y: 74, s: 32 }, { x: 82, y: 74, s: 32 },
-    { x: 31, y: 124, s: 32 }, { x: 65, y: 124, s: 32 },
+    { x: 14, y: 71, s: 32 }, { x: 50, y: 71, s: 32 }, { x: 86, y: 71, s: 32 },
+    { x: 32, y: 119, s: 32 }, { x: 66, y: 119, s: 32 },
   ],
   badges: [
-    { x: 30, y: 166, s: 16 }, { x: 56, y: 166, s: 16 }, { x: 82, y: 166, s: 16 },
+    { x: 30, y: 165, s: 16 }, { x: 56, y: 165, s: 16 }, { x: 82, y: 165, s: 16 },
   ],
 } as const;
 
