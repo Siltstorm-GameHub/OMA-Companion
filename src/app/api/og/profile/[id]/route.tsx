@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import { prisma } from "@/lib/prisma";
 import { BRAND, OG_SIZE } from "@/lib/brand";
-import { OgFrame, OgBrandRow, OgPill, loadLogoDataUri } from "@/lib/og";
+import { OgFrame, OgBrandRow, OgPill, loadLogoDataUri, loadRemoteImageDataUri } from "@/lib/og";
 import { getRank, getRankFullLabel, getNextRank } from "@/lib/ranks";
 
 /**
@@ -15,26 +15,6 @@ import { getRank, getRankFullLabel, getNextRank } from "@/lib/ranks";
  *
  * Zum Route Handler statt opengraph-image.tsx: siehe app/api/og/event/[id]/route.tsx.
  */
-
-/** Avatar als data-URI einbetten. Satori könnte die Discord-CDN-URL zwar selbst
- *  laden, aber jeder Fehlschlag dort reisst die ganze Karte mit — lieber selbst
- *  holen und im Zweifel ohne Bild weiterrendern. */
-async function loadAvatar(url: string | null): Promise<string | null> {
-  if (!url) return null;
-  try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(3000) });
-    if (!res.ok) return null;
-    const type = res.headers.get("content-type") ?? "image/png";
-    if (!type.startsWith("image/")) return null;
-    const buf = Buffer.from(await res.arrayBuffer());
-    // Deckel gegen aufgeblähte Avatare: das 500-KB-Bundle-Limit gilt für die
-    // gesamte Karte, Logo und Schrift eingerechnet.
-    if (buf.byteLength > 300_000) return null;
-    return `data:${type};base64,${buf.toString("base64")}`;
-  } catch {
-    return null;
-  }
-}
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -62,7 +42,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     );
   }
 
-  const avatar = await loadAvatar(user.image);
+  const avatar = await loadRemoteImageDataUri(user.image);
   const rank = getRank(user.rankPoints);
   const next = getNextRank(user.rankPoints);
   const displayName = user.name ?? user.username ?? "Mitglied";

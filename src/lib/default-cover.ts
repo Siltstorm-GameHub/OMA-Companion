@@ -2,7 +2,8 @@ import sharp from "sharp";
 import fs from "fs";
 import path from "path";
 
-let cached: string | null = null;
+let cachedBuffer: Buffer | null = null;
+let cachedDataUri: string | null = null;
 
 const SVG_W = 680;
 const SVG_H = 400;
@@ -85,8 +86,17 @@ function buildSvg(): Buffer {
   return Buffer.from(svg);
 }
 
-export async function generateDefaultCoverDataUri(): Promise<string> {
-  if (cached) return cached;
+/** Rendert das Standard-Cover als JPEG-Buffer (im Prozess gecacht — die Grafik
+ *  ändert sich nie zur Laufzeit, nur bei einem neuen Deploy).
+ *
+ *  Zwei Verwender mit unterschiedlichen Anforderungen teilen sich diese
+ *  Funktion: generateDefaultCoverDataUri() für Discords Scheduled-Events-API
+ *  (verlangt eine Data-URI direkt im JSON-Body), und die Route
+ *  api/discord/default-cover für normale Nachrichten-Embeds (verlangt dort
+ *  eine echte HTTP-URL — Discord löst image.url in Embeds nicht als
+ *  data:-URI auf). */
+export async function generateDefaultCoverBuffer(): Promise<Buffer> {
+  if (cachedBuffer) return cachedBuffer;
 
   const bgBuffer = await sharp(buildSvg(), { density: 150 })
     .resize(SVG_W, SVG_H)
@@ -110,11 +120,17 @@ export async function generateDefaultCoverDataUri(): Promise<string> {
   const left = Math.round((SVG_W - logoWidth) / 2);
   const top  = Math.round(SVG_H / 2 - logoHeight * 0.54);
 
-  const finalBuffer = await sharp(bgBuffer)
+  cachedBuffer = await sharp(bgBuffer)
     .composite([{ input: logoResized, left, top }])
     .jpeg({ quality: 90 })
     .toBuffer();
 
-  cached = `data:image/jpeg;base64,${finalBuffer.toString("base64")}`;
-  return cached;
+  return cachedBuffer;
+}
+
+export async function generateDefaultCoverDataUri(): Promise<string> {
+  if (cachedDataUri) return cachedDataUri;
+  const buffer = await generateDefaultCoverBuffer();
+  cachedDataUri = `data:image/jpeg;base64,${buffer.toString("base64")}`;
+  return cachedDataUri;
 }

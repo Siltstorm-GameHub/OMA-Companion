@@ -1,4 +1,6 @@
 import { RANKS, getRank, getRankFullLabel } from "./ranks";
+import { rankMedal } from "./rank-art";
+import { rankUpColor } from "./discord-colors";
 import { dispatchNotification } from "./notify-dispatch";
 
 function getRoleId(envKey: string): string | undefined {
@@ -80,6 +82,12 @@ export async function syncDiscordRole(
   }
 
   if (newRank.min > oldRank.min) {
+    // Discord-Embeds brauchen eine öffentlich erreichbare Bild-URL (kein
+    // data:-URI wie beim Scheduled-Event-Cover) — /ranks/rank-N.png ist unter
+    // der App-Domain bereits genau das.
+    const base  = process.env.NEXTAUTH_URL ?? "https://oma-app.de";
+    const medal = rankMedal(newRank.tier);
+
     dispatchNotification("rank_up", {
       users: [userId],
       placeholders: {
@@ -87,6 +95,8 @@ export async function syncDiscordRole(
         "{rank}":     getRankFullLabel(newRank),
         "{rankEmoji}": newRank.emoji,
       },
+      discordColor: rankUpColor(newRank.tier),
+      ...(medal && { discordThumbnail: `${base}${medal}` }),
     }).catch(() => {});
   }
 }

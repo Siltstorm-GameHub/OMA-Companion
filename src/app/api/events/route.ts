@@ -46,11 +46,13 @@ export async function POST(req: NextRequest) {
   let seriesFormat: string | null = null;
   let seriesPointsConfig: string | null = null;
   let seriesStatFields: string | null = null;
+  let seriesCoverImageUrl: string | null = null;
   if (seriesId) {
     const series = await prisma.eventSeries.findUnique({
       where: { id: seriesId },
-      select: { fixedFormat: true, placementRewardsJson: true, seriesStatConfig: true },
+      select: { fixedFormat: true, placementRewardsJson: true, seriesStatConfig: true, coverImageUrl: true },
     });
+    seriesCoverImageUrl = series?.coverImageUrl ?? null;
     if (series?.fixedFormat) seriesFormat = series.fixedFormat;
     if (series?.placementRewardsJson && series.fixedFormat !== "liga") {
       try {
@@ -123,6 +125,8 @@ export async function POST(req: NextRequest) {
     startAt:     startDate,
     description: description ?? null,
     game:        game ?? null,
+    coverImageUrl:       event.coverImageUrl,
+    seriesCoverImageUrl,
   });
   if (discordEventId) {
     await prisma.event.update({
@@ -143,6 +147,8 @@ export async function POST(req: NextRequest) {
     pointReward:      participationCoins,
     teilnehmer:       0,
     discordChannelId: event.discordChannelId,
+    coverImageUrl:       event.coverImageUrl,
+    seriesCoverImageUrl,
   });
   if (discordMessageId) {
     await prisma.event.update({

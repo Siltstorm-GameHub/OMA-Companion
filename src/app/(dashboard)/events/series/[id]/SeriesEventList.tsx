@@ -36,9 +36,10 @@ export type SeriesEventItem = {
   placementRewardsJson?: unknown;
   streamingPartners?: StreamingPartner[];
   registrations: { userId: string; user: EventUser }[];
+  coverImageUrl?: string | null;
 };
 
-function EventCard({ ev, userId, fixedGame }: { ev: SeriesEventItem; userId: string; fixedGame?: string | null }) {
+function EventCard({ ev, userId, fixedGame, seriesCoverImageUrl }: { ev: SeriesEventItem; userId: string; fixedGame?: string | null; seriesCoverImageUrl?: string | null }) {
   const s = STATUS_CFG[ev.status] ?? STATUS_CFG.finished;
   const isRegistered = ev.registrations.some(r => r.userId === userId);
   const isLive = ev.status === "active" || ev.status === "umfrage";
@@ -66,7 +67,12 @@ function EventCard({ ev, userId, fixedGame }: { ev: SeriesEventItem; userId: str
       {isLive && <div className="absolute inset-0 bg-gradient-to-r from-teal-500/[0.04] to-transparent pointer-events-none" />}
 
       <div className="relative shrink-0 ml-1">
-        <GameCover game={ev.game ?? fixedGame ?? ""} className="w-14 h-9" rounded="rounded-lg" />
+        <GameCover
+          game={ev.game ?? fixedGame ?? ""}
+          coverUrl={ev.coverImageUrl ?? seriesCoverImageUrl ?? null}
+          className="w-14 h-9"
+          rounded="rounded-lg"
+        />
       </div>
 
       <div className="relative flex-1 min-w-0">
@@ -160,9 +166,10 @@ interface Props {
   finishedEvents: SeriesEventItem[];
   userId: string;
   fixedGame?: string | null;
+  seriesCoverImageUrl?: string | null;
 }
 
-export default function SeriesEventList({ activeEvents, openEvents, recentlyFinishedEvents = [], finishedEvents, userId, fixedGame }: Props) {
+export default function SeriesEventList({ activeEvents, openEvents, recentlyFinishedEvents = [], finishedEvents, userId, fixedGame, seriesCoverImageUrl }: Props) {
   const [pastOpen, setPastOpen] = useState(false);
   // Kürzlich beendete Events bleiben eine Zeit lang oben bei den anstehenden sichtbar
   // (siehe RECENTLY_FINISHED_MS in @/lib/event-completion), bevor sie in den
@@ -184,7 +191,7 @@ export default function SeriesEventList({ activeEvents, openEvents, recentlyFini
 
       <div className="space-y-2">
         {upcoming.map(ev => (
-          <EventCard key={ev.id} ev={ev} userId={userId} fixedGame={fixedGame} />
+          <EventCard key={ev.id} ev={ev} userId={userId} fixedGame={fixedGame} seriesCoverImageUrl={seriesCoverImageUrl} />
         ))}
 
         {upcoming.length === 0 && finishedEvents.length > 0 && (
@@ -209,7 +216,7 @@ export default function SeriesEventList({ activeEvents, openEvents, recentlyFini
             </button>
 
             {pastOpen && finishedEvents.map(ev => (
-              <EventCard key={ev.id} ev={ev} userId={userId} fixedGame={fixedGame} />
+              <EventCard key={ev.id} ev={ev} userId={userId} fixedGame={fixedGame} seriesCoverImageUrl={seriesCoverImageUrl} />
             ))}
           </>
         )}
