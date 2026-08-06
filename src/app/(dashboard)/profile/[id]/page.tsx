@@ -7,6 +7,7 @@ import { QUEST_TYPE_META, type QuestType } from "@/lib/quests";
 import { getRank, getNextRank, getRankFullLabel } from "@/lib/ranks";
 import RankedAvatar from "@/components/RankedAvatar";
 import RankIcon from "@/components/RankIcon";
+import BotPreviewShell from "@/components/BotPreviewShell";
 import { computeBadges } from "@/lib/badges";
 import { MAX_SHOWCASE } from "@/lib/collectibles";
 import {
@@ -62,6 +63,14 @@ export default async function PublicProfilePage({
   const { id } = await params;
   const session  = await auth();
   const viewerId = session?.user?.id;
+
+  if (!session) {
+    // Ohne Session kommt nur ein von (dashboard)/layout.tsx bereits geprüfter
+    // Link-Vorschau-Bot hierher — die teure Zusammenstellung unten (Events,
+    // Turniere, Abzeichen, Wanderpokal, …) braucht der nicht, nur die
+    // Meta-Tags oben (Name, Rang, Avatar für die Discord-Linkvorschau).
+    return <BotPreviewShell />;
+  }
 
   // Eigenes Profil → weiterleiten
   if (viewerId === id) redirect("/profile");

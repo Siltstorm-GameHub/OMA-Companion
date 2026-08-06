@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { auth } from "@/auth";
+import { isLinkPreviewBot } from "@/lib/link-preview-bots";
 import FloatingPill from "@/components/FloatingPill";
 import TopNewsFeed, { type NewsItem } from "@/components/TopNewsFeed";
 import MobileTopBar from "@/components/MobileTopBar";
@@ -13,7 +15,25 @@ import { getRoomConfig, roomVisibleFor } from "@/lib/room-config";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
-  if (!session) redirect("/login");
+  if (!session) {
+    // redirect() macht aus der gesamten Antwort eine reine HTTP-Weiterleitung
+    // ohne Body — die dynamischen Meta-Tags der jeweiligen Seite
+    // (generateMetadata, z.B. Event-Titel/-Bild für Discord-Linkvorschauen)
+    // kommen dann nie an.
+    //
+    // Für bekannte Link-Vorschau-Bots lassen wir den Redirect deshalb weg und
+    // rendern direkt {children} — ohne die Chrome und Datenabfragen unten, die
+    // eine echte Session voraussetzen. Wichtig: {children} wird von Next.js
+    // unabhängig davon ausgeführt, ob dieses Layout es einbaut (kein Weg, das
+    // hier zu unterbinden) — die betroffenen Seiten (tournament/[id],
+    // leaderboard, profile/[id]) prüfen deshalb selbst auf eine fehlende
+    // Session und zeigen dann BotPreviewShell statt echter Daten. Da nur
+    // verifizierte Bots ohne redirect() bis hierher kommen, reicht dort ein
+    // einfaches "keine Session? → Platzhalter" ohne erneute UA-Prüfung.
+    const ua = (await headers()).get("user-agent");
+    if (!isLinkPreviewBot(ua)) redirect("/login");
+    return <>{children}</>;
+  }
 
   const userId = session.user?.id;
 
