@@ -1220,8 +1220,6 @@ async function completeEvent(req: NextRequest, eventId: string) {
         resultsPath:      resultUrl,
         winnerNames:      winners.map(w => w.username ?? w.name ?? "?"),
         note:             body.finalRankingNote?.trim() || null,
-        coverImageUrl:       event.coverImageUrl,
-        seriesCoverImageUrl: event.series?.coverImageUrl ?? null,
       });
     })().catch(err => console.error("[Discord] Ergebnis-Post fehlgeschlagen:", err));
   }

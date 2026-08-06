@@ -9,17 +9,35 @@
 
 import { getRoomItem, isSurface, type RoomItemDef, type RoomTag, type RoomZone } from "./room-items";
 
-/** Zwei getrennte Raster: oben die Wand, unten der Boden. */
+/**
+ * Zwei getrennte Raster: oben die Wand, unten der Boden. Beide teilen sich
+ * dieselbe Spaltenzahl, weil STAGE.width als eine gemeinsame Bühnenbreite für
+ * beide Zonen übereinander gilt.
+ *
+ * 28 Spalten statt der ursprünglichen 12 — und die reine Flächenrechnung
+ * (51 Wand- / 59 Bodenzellen für je ein Exemplar jedes Katalog-Objekts) war
+ * dabei gar nicht die bindende Grenze. Der eigentliche Engpass: JEDES Objekt
+ * mit mustStandOn:"floor" (Betten, Schreibtische, Stühle, PCs, Teppich, …—
+ * 14 Objekte) muss mit der Unterkante exakt in der LETZTEN Bodenzeile stehen,
+ * weil es in dieser Seitenansicht nur einen Boden gibt. Diese 14 Objekte sind
+ * zusammen 25 Spalten breit — bei 18 Spalten Rasterbreite hätte also die
+ * unterste Zeile allein schon nicht für ein Exemplar jedes Bodenobjekts
+ * gereicht, selbst wenn im Rest des Rasters reichlich Fläche frei gewesen wäre.
+ * 28 Spalten lassen dafür 3 Spalten Luft. Breiter statt höher, weil ein Raum
+ * von Natur aus breiter als hoch wirkt und der bestehende Zonen-Tab/
+ * Scroll-Mechanismus (.room-stage-scroll) genau für seitliches Scrollen auf
+ * schmalen Bildschirmen gebaut ist.
+ */
 export const GRID = {
-  wall:  { cols: 12, rows: 4 },
-  floor: { cols: 12, rows: 5 },
+  wall:  { cols: 28, rows: 4 },
+  floor: { cols: 28, rows: 5 },
 } as const;
 
-/** SVG-Einheiten pro Rasterzelle. Die Bühne ist 768 × 576 groß. */
+/** SVG-Einheiten pro Rasterzelle. Die Bühne ist 1792 × 576 groß. */
 export const CELL = 64;
 
 export const STAGE = {
-  width:      GRID.wall.cols * CELL,                       // 768
+  width:      GRID.wall.cols * CELL,                       // 1792
   wallHeight: GRID.wall.rows * CELL,                       // 256
   floorTop:   GRID.wall.rows * CELL,                       // 256
   height:     (GRID.wall.rows + GRID.floor.rows) * CELL,   // 576
@@ -67,18 +85,18 @@ export const MAX_PLACED_ITEMS = 200;
  * umstellt, legt materializeRoom() genau diese Möbel als echte Zeilen an.
  */
 /**
- * Die Grundausstattung sitzt bewusst kompakt links: die drei rechten
- * Bodenspalten bleiben frei, damit sich die ersten gekauften Möbel sofort
- * aufstellen lassen. Ohne diese Lücke wäre schon die 120-Münzen-Steckdosenleiste
- * eine Sackgasse — man müsste erst etwas einlagern, um überhaupt Platz zu haben.
+ * Die Grundausstattung sitzt bewusst mit deutlichem Rand nach links UND rechts:
+ * bei 18 Spalten bleiben so über zehn Bodenspalten frei, damit sich gekaufte
+ * Möbel sofort aufstellen lassen, ohne vorher etwas einlagern zu müssen. Schon
+ * die 120-Münzen-Steckdosenleiste wäre sonst eine Sackgasse.
  */
 export const DEFAULT_PLACEMENTS: { key: string; zone: RoomZone; x: number; y: number }[] = [
-  { key: "jobbrett",         zone: "wall",  x: 1, y: 1 },
-  { key: "bett",             zone: "floor", x: 0, y: 3 },
-  { key: "schreibtisch_alt", zone: "floor", x: 2, y: 3 },
-  { key: "roehrenmonitor",   zone: "floor", x: 3, y: 2 },
-  { key: "pc_billig",        zone: "floor", x: 5, y: 3 },
-  { key: "vitrine",          zone: "floor", x: 6, y: 2 },
+  { key: "jobbrett",         zone: "wall",  x: 6, y: 1 },
+  { key: "bett",             zone: "floor", x: 5, y: 3 },
+  { key: "schreibtisch_alt", zone: "floor", x: 7, y: 3 },
+  { key: "roehrenmonitor",   zone: "floor", x: 8, y: 2 },
+  { key: "pc_billig",        zone: "floor", x: 10, y: 3 },
+  { key: "vitrine",          zone: "floor", x: 11, y: 2 },
 ];
 
 /**

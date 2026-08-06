@@ -57,6 +57,7 @@ export default function GamePlayersModal({ game, onClose, viewerId }: Props) {
             coverUrl={game.appId ? steamCoverUrl(game.appId) : null}
             className="w-full aspect-[16/9]"
             rounded="rounded-xl"
+            brandBadge
           />
 
           <div className="flex items-center gap-1.5 text-[10px] text-gray-500 uppercase tracking-widest">

@@ -248,11 +248,16 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract, edit 
 
           {/* Wand */}
           <rect x={0} y={0} width={STAGE.width} height={STAGE.wallHeight} fill="url(#room-wallpaper)" />
+          <rect x={0} y={0} width={STAGE.width} height={STAGE.wallHeight} fill="url(#room-wall-vignette)" />
           {/* Boden */}
           <rect x={0} y={STAGE.floorTop} width={STAGE.width} height={GRID.floor.rows * CELL} fill="url(#room-floor)" />
-          {/* Sockelleiste als Trennkante zwischen Wand und Boden */}
-          <rect x={0} y={STAGE.floorTop - 6} width={STAGE.width} height={10} fill="var(--room-skirting)" />
-          <rect x={0} y={STAGE.floorTop - 6} width={STAGE.width} height={2} fill="var(--room-outline)" />
+          <rect x={0} y={STAGE.floorTop} width={STAGE.width} height={GRID.floor.rows * CELL} fill="url(#room-floor-vignette)" />
+
+          {/* Sockelleiste: beleuchtete Kante statt flacher Linie, damit sie neben
+              den jetzt fotorealistischen Möbel-Fotos nicht papierdünn wirkt. */}
+          <rect x={0} y={STAGE.floorTop - 8} width={STAGE.width} height={12} fill="url(#room-skirting-bevel)" />
+          <rect x={0} y={STAGE.floorTop - 8} width={STAGE.width} height={1.5} fill="var(--room-outline)" opacity={0.6} />
+          <rect x={0} y={STAGE.floorTop + 3.5} width={STAGE.width} height={2} fill="var(--room-shade)" opacity={0.7} />
 
           {wallItems.map(renderItem)}
           {floorItems.map(renderItem)}

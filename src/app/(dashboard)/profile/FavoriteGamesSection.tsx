@@ -109,6 +109,7 @@ export default function FavoriteGamesSection({ games, readOnly = false, displayN
                   className="w-full aspect-[16/9]"
                   rounded="rounded-none"
                   imgClassName="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  brandBadge
                 />
                 <div className="absolute inset-x-0 bottom-0 px-2 pt-6 pb-1.5 pointer-events-none z-10"
                   style={{ background: "linear-gradient(to top, rgba(0,0,0,0.88), transparent)" }}>

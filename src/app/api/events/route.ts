@@ -138,6 +138,7 @@ export async function POST(req: NextRequest) {
 
   // Discord-Ankündigung — Message-ID speichern für späteres Löschen
   const discordMessageId = await announceNewEvent({
+    eventId:          event.id,
     title:            event.title,
     game:             event.game,
     format:           event.format,
@@ -147,8 +148,6 @@ export async function POST(req: NextRequest) {
     pointReward:      participationCoins,
     teilnehmer:       0,
     discordChannelId: event.discordChannelId,
-    coverImageUrl:       event.coverImageUrl,
-    seriesCoverImageUrl,
   });
   if (discordMessageId) {
     await prisma.event.update({
