@@ -500,6 +500,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
           className="w-full h-full"
           rounded="rounded-none"
           imgClassName="w-full h-full object-cover"
+          brandBadge
         />
         <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-2xl pointer-events-none" />
       </div>

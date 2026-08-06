@@ -144,6 +144,7 @@ export async function POST(req: NextRequest) {
       seriesCoverImageUrl: series.coverImageUrl,
     }),
     announceNewEvent({
+      eventId:          newEvent.id,
       title:            newEvent.title,
       game,
       format:           newEvent.format,
@@ -153,7 +154,6 @@ export async function POST(req: NextRequest) {
       pointReward:      derivedParticipationCoins(),
       teilnehmer:       0,
       discordChannelId,
-      seriesCoverImageUrl: series.coverImageUrl,
     }),
   ]);
 

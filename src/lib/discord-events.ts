@@ -1,62 +1,41 @@
 // Hilfsfunktionen für Discord Scheduled Events
 import { getGameCoverUrlAsync } from "@/lib/game-cover";
-import { generateDefaultCoverDataUri } from "@/lib/default-cover";
+import { generateBrandedCoverDataUri } from "@/lib/branded-cover";
 import { getNotificationRule, fillPlaceholders } from "@/lib/notify-dispatch";
 import { formatLabel, genreLabel } from "@/lib/event-placeholders";
 import { DISCORD_COLORS } from "@/lib/discord-colors";
 
-/** Felder, die die Cover-Priorität für ein Event bestimmen — von allen
- *  vier Funktionen unten geteilt, damit die Reihenfolge überall gleich ist. */
+/** Felder, die die Cover-Priorität für ein Event bestimmen — von den
+ *  Scheduled-Event-Funktionen unten geteilt, damit die Reihenfolge überall
+ *  gleich ist. Nachrichten-Embeds brauchen das nicht: die bekommen ihr Cover
+ *  über api/discord/cover/[id], das dieselbe Priorität selbst aus der DB
+ *  auflöst. */
 interface CoverSource {
   /** Eigenes, hochgeladenes Cover des Events (Vercel Blob). */
   coverImageUrl?: string | null;
   /** Cover der Eventreihe — greift nur, wenn das Event selbst keins hat. */
   seriesCoverImageUrl?: string | null;
-  game: string | null;
+  game?: string | null;
 }
 
-/** Cover-Priorität für Nachrichten-Embeds (echte HTTP-URL nötig):
- *  eigenes Cover → Reihen-Cover → Steam-Cover → Standard-Grafik. */
-async function resolveCoverUrl(source: CoverSource): Promise<string> {
+/** Beste verfügbare Bild-Quelle vor dem Marken-Rendering: eigenes Cover →
+ *  Reihen-Cover → Steam-Cover. `null` = nichts gefunden, dann rendert
+ *  generateBrandedCoverDataUri den reinen Marken-Gradient. */
+async function resolveCoverSource(source: CoverSource): Promise<string | null> {
   const own = source.coverImageUrl?.trim();
   if (own) return own;
 
   const series = source.seriesCoverImageUrl?.trim();
   if (series) return series;
 
-  const steam = await getGameCoverUrlAsync(source.game);
-  if (steam) return steam;
-
-  const base = process.env.NEXTAUTH_URL ?? "https://oma-app.de";
-  return `${base}/api/discord/default-cover`;
-}
-
-/** Lädt ein Bild von einer URL und gibt es als Base64-Data-URI zurück. */
-async function fetchImageAsDataUri(url: string): Promise<string | null> {
-  try {
-    const res = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; OMACompanion/1.0)" },
-    });
-    if (!res.ok) {
-      console.error(`[Discord] Bild-Fetch fehlgeschlagen: ${res.status} ${url}`);
-      return null;
-    }
-    // Nur MIME-Typ, ohne Parameter (z.B. "image/jpeg; charset=…" → "image/jpeg")
-    const rawType   = res.headers.get("content-type") ?? "image/jpeg";
-    const mimeType  = rawType.split(";")[0].trim();
-    const buffer    = await res.arrayBuffer();
-    const base64    = Buffer.from(buffer).toString("base64");
-    return `data:${mimeType};base64,${base64}`;
-  } catch (err) {
-    console.error(`[Discord] Bild-Fetch Exception: ${err} ${url}`);
-    return null;
-  }
+  return await getGameCoverUrlAsync(source.game);
 }
 
 /** Sendet eine Event-Ankündigung in den konfigurierten Events-Channel via REST API.
  *  Funktioniert direkt aus der WebApp heraus (kein discord.js-Client nötig). */
 /** Postet eine Event-Ankündigung und gibt die Discord Message-ID zurück (zum späteren Löschen). */
 export async function announceNewEvent(event: {
+  eventId: string;
   title: string;
   game: string | null;
   format?: string | null;
@@ -66,8 +45,6 @@ export async function announceNewEvent(event: {
   pointReward: number;
   teilnehmer?: number;
   discordChannelId?: string | null;
-  coverImageUrl?: string | null;
-  seriesCoverImageUrl?: string | null;
 }): Promise<string | null> {
   const channelId = event.discordChannelId ?? process.env.DISCORD_NEWS_CHANNEL_ID;
   const botToken  = process.env.DISCORD_BOT_TOKEN;
@@ -78,7 +55,8 @@ export async function announceNewEvent(event: {
     hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin",
   });
 
-  const coverUrl = await resolveCoverUrl(event);
+  const base     = process.env.NEXTAUTH_URL ?? "https://oma-app.de";
+  const coverUrl = `${base}/api/discord/cover/${event.eventId}`;
 
   const placeholders = {
     "{eventName}":  event.title,
@@ -127,7 +105,7 @@ export async function announceNewEvent(event: {
 
 /** Postet die Ergebnisse eines abgeschlossenen Events in den konfigurierten Events-Channel. */
 export async function announceEventResults(event: {
-  eventId?: string;
+  eventId: string;
   title: string;
   game: string | null;
   format?: string | null;
@@ -137,21 +115,16 @@ export async function announceEventResults(event: {
   resultsPath: string; // z.B. /tournament/{id} oder /events/series/{id}
   winnerNames?: string[];
   note?: string | null;
-  coverImageUrl?: string | null;
-  seriesCoverImageUrl?: string | null;
 }): Promise<void> {
   const channelId = event.discordChannelId ?? process.env.DISCORD_NEWS_CHANNEL_ID;
   const botToken  = process.env.DISCORD_BOT_TOKEN;
   if (!channelId || !botToken) return;
 
   const base = process.env.NEXTAUTH_URL ?? "https://oma-app.de";
-  // Animiertes Sieger-Podium statt Spiel-/Standard-Cover, sofern die Event-ID
-  // bekannt ist — die Route bestimmt Platzierung 1–3 selbst über
-  // finalRankingJson und fällt intern auf eine statische Karte zurück, falls
-  // keine Platzierung vorliegt (siehe api/discord/podium/[id]/route.tsx).
-  const coverUrl = event.eventId
-    ? `${base}/api/discord/podium/${event.eventId}`
-    : await resolveCoverUrl(event);
+  // Animiertes Sieger-Podium statt Cover — die Route bestimmt Platzierung 1–3
+  // selbst über finalRankingJson und fällt intern auf eine statische Karte
+  // zurück, falls keine Platzierung vorliegt (api/discord/podium/[id]/route.tsx).
+  const coverUrl = `${base}/api/discord/podium/${event.eventId}`;
 
   const placeholders = {
     "{eventName}":  event.title,
@@ -228,20 +201,10 @@ export async function createDiscordScheduledEvent(event: {
   const endAt = new Date(event.startAt.getTime() + 2 * 60 * 60 * 1000);
 
   // Cover-Bild als Base64-Data-URI (Discord akzeptiert für die Scheduled-
-  // Events-API keine externen URLs, nur data:-URIs) — eigenes Cover und
-  // Reihen-Cover müssen deshalb genauso wie das Steam-Cover erst geholt und
-  // konvertiert werden, nicht einfach direkt als URL übergeben werden.
-  const own    = event.coverImageUrl?.trim() || event.seriesCoverImageUrl?.trim() || null;
-  const coverUrl = own || (await getGameCoverUrlAsync(event.game ?? null));
-  if (event.game && !own && !coverUrl) console.warn(`[Discord] Kein Cover für Spiel: "${event.game}"`);
-  let imageDataUri: string | null = null;
-  if (coverUrl) {
-    imageDataUri = await fetchImageAsDataUri(coverUrl);
-    if (!imageDataUri) console.warn(`[Discord] Cover-Fetch fehlgeschlagen: ${coverUrl}`);
-  }
-  if (!imageDataUri) {
-    imageDataUri = await generateDefaultCoverDataUri();
-  }
+  // Events-API keine externen URLs, nur data:-URIs) — deshalb hier direkt im
+  // Prozess gerendert statt wie bei Nachrichten-Embeds über eine HTTP-Route.
+  const source       = await resolveCoverSource(event);
+  const imageDataUri = await generateBrandedCoverDataUri(source);
 
   const payload = {
     name: event.title,
@@ -251,7 +214,7 @@ export async function createDiscordScheduledEvent(event: {
     entity_metadata: { location: "Online" },
     privacy_level:  2, // GUILD_ONLY
     description: event.description ?? undefined,
-    ...(imageDataUri && { image: imageDataUri }),
+    image: imageDataUri,
   };
 
   const res = await fetch(
@@ -292,15 +255,8 @@ export async function updateDiscordScheduledEvent(
 
   const endAt = new Date(event.startAt.getTime() + 2 * 60 * 60 * 1000);
 
-  const own      = event.coverImageUrl?.trim() || event.seriesCoverImageUrl?.trim() || null;
-  const coverUrl = own || (await getGameCoverUrlAsync(event.game ?? null));
-  let imageDataUri: string | null = null;
-  if (coverUrl) {
-    imageDataUri = await fetchImageAsDataUri(coverUrl);
-  }
-  if (!imageDataUri) {
-    imageDataUri = await generateDefaultCoverDataUri();
-  }
+  const source       = await resolveCoverSource(event);
+  const imageDataUri = await generateBrandedCoverDataUri(source);
 
   const res = await fetch(
     `https://discord.com/api/v10/guilds/${guildId}/scheduled-events/${discordEventId}`,
@@ -315,7 +271,7 @@ export async function updateDiscordScheduledEvent(
         scheduled_start_time: event.startAt.toISOString(),
         scheduled_end_time:   endAt.toISOString(),
         description: event.description ?? undefined,
-        ...(imageDataUri && { image: imageDataUri }),
+        image: imageDataUri,
       }),
     }
   );

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { getGameCoverUrl, pickedCoverCache, normalizeForCoverCache } from "@/lib/game-cover";
 import EventCoverDefault from "@/components/EventCoverDefault";
+import CoverBrandBadge from "@/components/CoverBrandBadge";
 
 interface GameCoverProps {
   game: string | null | undefined;
@@ -18,6 +19,13 @@ interface GameCoverProps {
   rounded?: string;
   /** Zusätzliche Klassen für das <img>-Tag (z.B. für Hover-Animationen) */
   imgClassName?: string;
+  /**
+   * Vignette + Logo-Badge unten rechts, für einheitliches Branding egal ob
+   * Steam-Cover, eigener Upload oder Gradient-Fallback. Nur an großformatigen
+   * Stellen (Hero-Banner, große Karten) aktivieren — bei kleinen Thumbnails
+   * (Listen, Icons) wirkt der Chip nur unruhig. Standard: aus.
+   */
+  brandBadge?: boolean;
 }
 
 /** Client-seitiger Cache: normalisierter Name → CDN-URL */
@@ -29,6 +37,7 @@ export default function GameCover({
   className = "w-16 h-10",
   rounded = "rounded-lg",
   imgClassName = "w-full h-full object-cover",
+  brandBadge = false,
 }: GameCoverProps) {
   // Explizit übergebenes Cover schlägt fehl → auf Namens-Auflösung zurückfallen
   const [explicitFailed, setExplicitFailed] = useState(false);
@@ -76,18 +85,21 @@ export default function GameCover({
       className={`${className} ${rounded} overflow-hidden shrink-0 relative`}
     >
       {showImage ? (
-        <img
-          src={resolvedUrl}
-          alt={game ?? ""}
-          className={imgClassName}
-          onError={() => {
-            // Nur das explizite Cover war kaputt → Namens-Auflösung bekommt noch eine Chance
-            if (resolvedUrl === usableExplicitUrl) setExplicitFailed(true);
-            else setImgError(true);
-          }}
-        />
+        <>
+          <img
+            src={resolvedUrl}
+            alt={game ?? ""}
+            className={imgClassName}
+            onError={() => {
+              // Nur das explizite Cover war kaputt → Namens-Auflösung bekommt noch eine Chance
+              if (resolvedUrl === usableExplicitUrl) setExplicitFailed(true);
+              else setImgError(true);
+            }}
+          />
+          {brandBadge && <CoverBrandBadge />}
+        </>
       ) : (
-        <EventCoverDefault />
+        <EventCoverDefault brandBadge={brandBadge} />
       )}
       {/* Subtiler Rand */}
       <div className="absolute inset-0 rounded-[inherit] ring-1 ring-inset ring-white/10 pointer-events-none" />

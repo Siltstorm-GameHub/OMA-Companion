@@ -1,4 +1,13 @@
-export default function EventCoverDefault({ className = "w-full h-full" }: { className?: string }) {
+import CoverBrandBadge from "@/components/CoverBrandBadge";
+
+export default function EventCoverDefault({
+  className = "w-full h-full",
+  brandBadge = false,
+}: {
+  className?: string;
+  /** Vignette + Logo-Badge unten rechts — nur für großformatige Cover, siehe CoverBrandBadge. */
+  brandBadge?: boolean;
+}) {
   return (
     <div className={`${className} relative overflow-hidden`}
       style={{ background: "linear-gradient(135deg, #06080f 0%, #0c0a16 100%)" }}>
@@ -84,13 +93,7 @@ export default function EventCoverDefault({ className = "w-full h-full" }: { cla
         <circle cx="516" cy="354" r="2" fill="#8b2020" fillOpacity="0.5"/>
       </svg>
 
-      {/* Logo als normales img — lädt unabhängig vom SVG */}
-      <img
-        src="/brand/logo-256.png"
-        alt="OMA Companion"
-        className="absolute w-[30%] h-auto"
-        style={{ top: "50%", left: "50%", transform: "translate(-50%, -54%)" }}
-      />
+      {brandBadge && <CoverBrandBadge />}
     </div>
   );
 }

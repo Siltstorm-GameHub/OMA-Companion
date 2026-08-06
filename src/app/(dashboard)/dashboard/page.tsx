@@ -541,9 +541,10 @@ export default async function DashboardPage() {
                   className="absolute inset-0 w-full h-full"
                   rounded="rounded-none"
                   imgClassName="w-full h-full object-cover object-center scale-105 group-hover:scale-110 transition-transform duration-700"
+                  brandBadge
                 />
               ) : (
-                <EventCoverDefault className="absolute inset-0 w-full h-full" />
+                <EventCoverDefault className="absolute inset-0 w-full h-full" brandBadge />
               )}
               {/* Overlay */}
               <div className="absolute inset-0"

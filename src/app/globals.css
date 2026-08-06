@@ -1006,12 +1006,12 @@ a.card-hover:active { transform: scale(0.985); }
   display: block;
   width: 100%;
   height: auto;
-  /* 12 Spalten × 48px. Die Bühne ist breitenbegrenzt — ein Zonenwechsel
+  /* 28 Spalten × 48px. Die Bühne ist breitenbegrenzt — ein Zonenwechsel
      ändert nur die Höhe, nicht die Zellbreite. Ohne Mindestbreite blieben
-     Zellen auf einem 375px-Handy bei 31px und damit unter der 44px-Schwelle
-     für Touch-Ziele. Der Container drumherum scrollt dafür waagerecht;
-     die Seite selbst bleibt frei von horizontalem Scroll. */
-  min-width: 576px;
+     Zellen auf einem 375px-Handy weit unter der 44px-Schwelle für Touch-Ziele.
+     Der Container drumherum scrollt dafür waagerecht; die Seite selbst bleibt
+     frei von horizontalem Scroll. */
+  min-width: 1344px;
   /* Pixelige Kanten bleiben scharf statt zu verwaschen */
   shape-rendering: crispEdges;
 }
