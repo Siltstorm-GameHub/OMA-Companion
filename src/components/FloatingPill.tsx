@@ -244,17 +244,22 @@ export default function FloatingPill({ roomVisible = false }: { roomVisible?: bo
 
       <div style={{ width: 1, height: 22, background: "rgba(255,255,255,0.07)", margin: "0 4px", flexShrink: 0 }} />
 
-      {NAV.map(({ label, href, icon }) => (
-        <div key={href} style={{ position: "relative" }}>
-          <NavIcon label={label} href={href} icon={icon}
-            active={pathname === href || (href !== "/dashboard" && pathname.startsWith(href))} />
-          {href === "/events" && <PollBadge />}
-        </div>
-      ))}
-      {roomVisible && (
-        <NavIcon label="Gaming-Zimmer" href="/zimmer" icon={Sofa}
-          active={pathname.startsWith("/zimmer")} />
-      )}
+      {NAV.map(({ label, href, icon }) => {
+        // Der Profil-Slot wird zum Zimmer-Slot, sobald das Zimmer für diesen
+        // User sichtbar ist — /profile leitet dann ohnehin sofort auf /zimmer
+        // um, ein zweiter Eintrag für dasselbe Ziel wäre nur Redundanz.
+        const isProfile  = href === "/profile";
+        const effHref    = isProfile && roomVisible ? "/zimmer" : href;
+        const effLabel   = isProfile && roomVisible ? "Gaming-Zimmer" : label;
+        const effIcon    = isProfile && roomVisible ? Sofa : icon;
+        return (
+          <div key={href} style={{ position: "relative" }}>
+            <NavIcon label={effLabel} href={effHref} icon={effIcon}
+              active={pathname === effHref || (effHref !== "/dashboard" && pathname.startsWith(effHref))} />
+            {href === "/events" && <PollBadge />}
+          </div>
+        );
+      })}
       {isStaff && (
         <NavIcon label="Admin" href="/admin" icon={ShieldCheck}
           active={pathname.startsWith("/admin")} danger />

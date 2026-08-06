@@ -7,6 +7,7 @@ import { RARITY_CONFIG, type Rarity } from "@/lib/collectibles";
 import { EmptyState } from "@/components/EmptyState";
 import { CountUp } from "@/components/CountUp";
 import BadgeIcon from "@/components/BadgeIcon";
+import RankIcon from "@/components/RankIcon";
 import CoinIcon from "@/components/CoinIcon";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import Link from "next/link";
@@ -111,12 +112,12 @@ export default async function YearReviewPage({
             <TrendingUp className="w-3.5 h-3.5" /> Rang-Reise
           </p>
           <div className="relative flex items-center gap-2 flex-wrap">
-            <span className={`text-sm font-bold px-2.5 py-1 rounded-lg border ${review.rankStart.color} ${review.rankStart.bg} ${review.rankStart.border}`}>
-              {review.rankStart.emoji} {getRankFullLabel(review.rankStart)}
+            <span className={`flex items-center gap-1.5 text-sm font-bold px-2.5 py-1 rounded-lg border ${review.rankStart.color} ${review.rankStart.bg} ${review.rankStart.border}`}>
+              <RankIcon rankPoints={review.rankStart.min} size="xs" showPips={false} /> {getRankFullLabel(review.rankStart)}
             </span>
             <ArrowRight className="w-4 h-4 text-gray-600 shrink-0" />
-            <span className={`text-sm font-bold px-2.5 py-1 rounded-lg border ${review.rankEnd.color} ${review.rankEnd.bg} ${review.rankEnd.border}`}>
-              {review.rankEnd.emoji} {getRankFullLabel(review.rankEnd)}
+            <span className={`flex items-center gap-1.5 text-sm font-bold px-2.5 py-1 rounded-lg border ${review.rankEnd.color} ${review.rankEnd.bg} ${review.rankEnd.border}`}>
+              <RankIcon rankPoints={review.rankEnd.min} size="xs" showPips={false} /> {getRankFullLabel(review.rankEnd)}
             </span>
             {review.rankedUp && (
               <span className="text-[10px] font-semibold text-amber-400 flex items-center gap-1">

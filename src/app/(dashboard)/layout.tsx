@@ -197,7 +197,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
       {/* ── Mobile Bottom Nav (immer sichtbar auf Handy) ───────── */}
       <div className="lg:hidden">
-        <BottomNav />
+        <BottomNav roomVisible={roomVisible} />
       </div>
     </div>
   );

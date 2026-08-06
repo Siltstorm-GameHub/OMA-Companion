@@ -109,6 +109,7 @@ export default function RoomView({
         displayName={core.displayName}
         readOnly={readOnly}
         details={details}
+        core={readOnly ? undefined : core}
         trophySection={trophySection}
         settingsSection={readOnly ? undefined : settingsSection}
       />

@@ -4,6 +4,7 @@ import { getSessionUser } from "@/lib/roles";
 import { getRank, getNextRank, getRankFullLabel } from "@/lib/ranks";
 import { Star, TrendingUp, TrendingDown } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
+import RankIcon from "@/components/RankIcon";
 import { CountUp } from "@/components/CountUp";
 import { RelativeTime } from "@/components/RelativeTime";
 
@@ -82,7 +83,7 @@ export default async function PointsPage() {
             <div className="flex-1 min-w-[140px]">
               <p className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest mb-1">Rang</p>
               <div className="flex items-center gap-2">
-                <span className="text-xl">{rankRow.emoji}</span>
+                <RankIcon rankPoints={myRankPts} size="sm" showPips={false} />
                 <span className={`text-sm font-bold ${rankRow.color}`}>{getRankFullLabel(rankRow)}</span>
               </div>
             </div>

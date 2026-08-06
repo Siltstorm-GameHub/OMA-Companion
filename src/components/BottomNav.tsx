@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, CalendarDays, ShoppingBag, Trophy, User, Swords, Heart } from "lucide-react";
+import { LayoutDashboard, CalendarDays, ShoppingBag, Trophy, User, Swords, Heart, Sofa } from "lucide-react";
 import PollBadge from "@/components/PollBadge";
 
 const NAV = [
@@ -14,7 +14,14 @@ const NAV = [
   { label: "Profil",  href: "/profile",     icon: User },
 ];
 
-export default function BottomNav() {
+/**
+ * `roomVisible` kommt aus dem Dashboard-Layout, weil die Zimmer-Freischaltung
+ * in der BotConfig liegt und nur serverseitig lesbar ist. Der Profil-Slot wird
+ * zum Zimmer-Slot, sobald das Zimmer sichtbar ist — /profile leitet dann ohnehin
+ * sofort auf /zimmer um, ein achter Slot für dasselbe Ziel wäre nur Redundanz
+ * auf einer Leiste, die auf schmalen Geräten schon jetzt eng ist.
+ */
+export default function BottomNav({ roomVisible = false }: { roomVisible?: boolean }) {
   const pathname = usePathname();
 
   return (
@@ -31,12 +38,16 @@ export default function BottomNav() {
       className="backdrop-blur-2xl safe-area-pb"
     >
       <div className="flex items-stretch h-16">
-        {NAV.map(({ label, href, icon: Icon }) => {
-          const active = pathname === href || pathname.startsWith(href + "/");
+        {NAV.map(({ label, href, icon }) => {
+          const isProfile = href === "/profile";
+          const effHref   = isProfile && roomVisible ? "/zimmer" : href;
+          const effLabel  = isProfile && roomVisible ? "Zimmer" : label;
+          const Icon      = isProfile && roomVisible ? Sofa : icon;
+          const active = pathname === effHref || pathname.startsWith(effHref + "/");
           return (
             <Link
               key={href}
-              href={href}
+              href={effHref}
               className="flex-1 flex flex-col items-center justify-center relative"
             >
               {/* Teal top indicator */}
@@ -87,7 +98,7 @@ export default function BottomNav() {
                   userSelect: "none",
                 }}
               >
-                {label}
+                {effLabel}
               </span>
             </Link>
           );

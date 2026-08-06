@@ -2,17 +2,34 @@
 import { useState } from "react";
 import { Info, Trophy } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
+import RankIcon from "@/components/RankIcon";
 import { Modal } from "@/components/ui/Modal";
+import { RANKS as REAL_RANKS } from "@/lib/ranks";
 
-const RANKS = [
-  { label: "Neuling",               emoji: "🔰", range: "0 – 99",    color: "text-gray-400"   },
-  { label: "Zivi-Anwärter",         emoji: "📋", range: "100 – 199", color: "text-zinc-300"   },
-  { label: "Rollator-Führerschein", emoji: "🛺", range: "200 – 299", color: "text-green-400"  },
-  { label: "Kamillenteetrinker",    emoji: "🍵", range: "300 – 399", color: "text-teal-400"   },
-  { label: "Heimbeirat",            emoji: "🏛️", range: "400 – 499", color: "text-blue-400"   },
-  { label: "Pflegestufe 5",         emoji: "🩺", range: "500 – 999", color: "text-purple-400" },
-  { label: "Old Master",            emoji: "👴", range: "1.000+",    color: "text-amber-400"  },
-];
+/**
+ * Eine Zeile je Rang-Familie (nicht je Tier I/II/III), aus RANKS in lib/ranks.ts
+ * abgeleitet statt hier ein weiteres Mal von Hand gepflegt zu werden.
+ *
+ * Diese Liste stand vorher mit eigenen Namen, Emojis und Punktegrenzen fest im
+ * Code — abweichend von den echten Rängen (z.B. "Kamillenteetrinker" statt
+ * "Krawall-Rentner", "0–99" statt "0–349"). Eine dritte, nie synchronisierte
+ * Quelle für dieselbe Information. Jetzt gibt es nur noch eine.
+ */
+const RANK_LADDER = (() => {
+  const seenLabels = new Set<string>();
+  const families = REAL_RANKS.filter((r) => {
+    if (seenLabels.has(r.label)) return false;
+    seenLabels.add(r.label);
+    return true;
+  });
+  return families.map((r, i) => {
+    const next = families[i + 1];
+    const range = next
+      ? `${r.min.toLocaleString("de-DE")} – ${(next.min - 1).toLocaleString("de-DE")}`
+      : `${r.min.toLocaleString("de-DE")}+`;
+    return { label: r.label, color: r.color, min: r.min, range };
+  });
+})();
 
 const COIN_SOURCES = [
   {
@@ -78,10 +95,10 @@ export default function PointsInfoModal() {
                   <p className="text-xs font-semibold text-rose-400 uppercase tracking-widest">Ränge (Rang-Punkte)</p>
                 </div>
                 <div className="rounded-xl bg-white/[0.02] border border-white/[0.05] divide-y divide-white/[0.04]">
-                  {RANKS.map(r => (
+                  {RANK_LADDER.map(r => (
                     <div key={r.label} className="flex items-center justify-between px-3 py-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-base leading-none">{r.emoji}</span>
+                        <RankIcon rankPoints={r.min} size="xs" showPips={false} />
                         <span className={`text-sm font-semibold ${r.color}`}>{r.label}</span>
                       </div>
                       <span className="text-xs text-gray-500 tabular-nums">{r.range} Pts</span>

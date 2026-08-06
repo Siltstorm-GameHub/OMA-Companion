@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Loader2, Users } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import RankedAvatar from "@/components/RankedAvatar";
+import RankIcon from "@/components/RankIcon";
 import GameCover from "@/components/GameCover";
 import { getRank, getRankFullLabel } from "@/lib/ranks";
 import { steamCoverUrl, type FavoriteGame } from "@/lib/favorite-games";
@@ -99,8 +100,8 @@ export default function GamePlayersModal({ game, onClose, viewerId }: Props) {
                         {p.name}
                         {isSelf && <span className="ml-1.5 text-[10px] text-teal-500">(du)</span>}
                       </p>
-                      <p className={`text-[10px] ${rank.color}`}>
-                        {rank.emoji} {getRankFullLabel(rank)}
+                      <p className={`text-[10px] ${rank.color} flex items-center gap-1`}>
+                        <RankIcon rankPoints={p.rankPoints} size="xs" showPips={false} /> {getRankFullLabel(rank)}
                       </p>
                     </div>
                     <span className="text-xs text-gray-500 tabular-nums shrink-0">

@@ -5,6 +5,7 @@ import { computeBadges, type Badge } from "./badges";
 import { parseFavoriteGames, type FavoriteGame } from "./favorite-games";
 import { MAX_SHOWCASE } from "./collectibles";
 import { QUEST_TYPE_META, type QuestType } from "./quests";
+import { getAvailableReviewYears } from "./year-review";
 
 /** Präfix, mit dem BadgesSection Custom-Badges im Showcase markiert. */
 const CUSTOM_BADGE_PREFIX = "custom:";
@@ -42,6 +43,12 @@ export interface RoomProfileCore {
   createdAt:       Date;
   points:          number;
   rankPoints:      number;
+  /** "TT-MM" fürs ProfileEditor-Formular, oder null. Nur für den eigenen User relevant. */
+  birthday:        string | null;
+  twitchLogin:     string | null;
+  bannerUrl:       string | null;
+  /** Jahre, für die ein Jahresrückblick existiert (leer = noch kein voller Monat dabei). */
+  reviewYears:     number[];
   rank:            RankEntry;
   nextRank:        RankEntry | null;
   rankPct:         number;
@@ -96,7 +103,7 @@ export async function loadRoomProfileCore(userId: string): Promise<RoomProfileCo
     where:  { id: userId },
     select: {
       id: true, name: true, username: true, image: true, bio: true, createdAt: true,
-      points: true, rankPoints: true,
+      points: true, rankPoints: true, birthday: true, twitchLogin: true, bannerUrl: true,
       showcaseJson: true, showcaseBadgesJson: true, favoriteGamesJson: true,
     },
   });
@@ -189,6 +196,12 @@ export async function loadRoomProfileCore(userId: string): Promise<RoomProfileCo
     createdAt:       user.createdAt,
     points:          user.points,
     rankPoints:      user.rankPoints,
+    birthday: user.birthday
+      ? `${String(user.birthday.getDate()).padStart(2, "0")}-${String(user.birthday.getMonth() + 1).padStart(2, "0")}`
+      : null,
+    twitchLogin: user.twitchLogin,
+    bannerUrl:   user.bannerUrl,
+    reviewYears: getAvailableReviewYears(user.createdAt),
     rank,
     nextRank:        next,
     rankPct:         pct,
@@ -250,7 +263,7 @@ export async function loadRoomProfileDetails(userId: string): Promise<RoomProfil
   const [
     user, eventRegs, startedEvents, tournaments, quests, owned,
     systemBadgeKeys, customBadges, trophies, trophyStats,
-    coinsEarnedAgg, coinsSpentAgg, eventCount, tournamentCount, lulPollWins,
+    coinsEarnedAgg, coinsSpentAgg, eventCount, tournamentCount, lulPollWins, jobRow,
   ] = await Promise.all([
     prisma.user.findUnique({
       where:  { id: userId },
@@ -296,6 +309,7 @@ export async function loadRoomProfileDetails(userId: string): Promise<RoomProfil
     prisma.eventRegistration.count({ where: { userId } }),
     prisma.tournamentParticipant.count({ where: { userId } }),
     prisma.lulEntry.count({ where: { userId, communityChamp: true } }).catch(() => 0),
+    prisma.userJob.findUnique({ where: { userId }, select: { totalEarned: true } }).catch(() => null),
   ]);
 
   const voiceHours   = Math.floor((user?.voiceMinutesTotal ?? 0) / 60);
@@ -305,7 +319,8 @@ export async function loadRoomProfileDetails(userId: string): Promise<RoomProfil
 
   const badges = computeBadges(
     { points: user?.points ?? 0, voiceHours, messageCount, eventCount, tournamentCount,
-      tournamentWins: 0, eventWins, mvpCount: pollMaster },
+      tournamentWins: 0, eventWins, mvpCount: pollMaster,
+      jobCoinsEarned: jobRow?.totalEarned ?? 0 },
     new Set(systemBadgeKeys.map(b => b.badgeKey)),
   );
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { getRoomItem, type RoomZone } from "@/lib/room-items";
 import { CELL, GRID, STAGE, cellToSvg, type PlacedItem, type RoomState } from "@/lib/room-layout";
 import { CATEGORY_CONFIG, GENRE_CONFIG } from "@/lib/wanderpocal";
@@ -19,8 +19,23 @@ export interface EditHooks {
   legal: { zone: RoomZone; x: number; y: number }[];
   /** Vorschau-Größe des angehobenen Stücks in Zellen. */
   ghost: { w: number; h: number; key: string } | null;
+  /** Antippen: wählt an, ein zweites Antippen wählt wieder ab. */
   onSelect: (id: string) => void;
+  /** Ziehen mit der Maus: wählt an, ohne je abzuwählen. */
+  onGrab:   (id: string) => void;
   onDrop:   (zone: RoomZone, x: number, y: number) => void;
+}
+
+/** Laufende Maus-Ziehbewegung. Auf Touch bewusst nicht aktiv. */
+interface DragState {
+  id: string;
+  /** Greifpunkt innerhalb des Möbelstücks, in SVG-Einheiten. */
+  dx: number;
+  dy: number;
+  /** Aktuell angepeilte Ankerzelle. */
+  x: number;
+  y: number;
+  valid: boolean;
 }
 
 interface Props {
@@ -60,6 +75,22 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract, edit 
   const [view, setView] = useState<ZoneView>("all");
   const [hover, setHover] = useState<{ zone: RoomZone; x: number; y: number } | null>(null);
 
+  // ── Maus-Ziehen (Desktop-Zusatz zum Antippen) ─────────────────────────
+  // Touch bleibt bewusst außen vor: Antippen funktioniert dort schon und
+  // Ziehen auf einer vollbreiten Fläche kollidiert mit dem Seiten-Scroll.
+  const [drag, setDrag] = useState<DragState | null>(null);
+  const dragMovedRef    = useRef(false);
+  const suppressClickRef = useRef(false);
+
+  function svgPoint(svg: SVGSVGElement, clientX: number, clientY: number): { x: number; y: number } {
+    const pt = svg.createSVGPoint();
+    pt.x = clientX; pt.y = clientY;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return { x: 0, y: 0 };
+    const p = pt.matrixTransform(ctm.inverse());
+    return { x: p.x, y: p.y };
+  }
+
   const wallItems  = state.placed.filter(p => p.zone === "wall");
   // Von hinten nach vorn zeichnen, damit tiefer stehende Möbel oben liegen.
   const floorItems = [...state.placed.filter(p => p.zone === "floor")].sort((a, b) => a.y - b.y);
@@ -68,35 +99,88 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract, edit 
   function renderItem(item: PlacedItem) {
     const def = getRoomItem(item.key);
     if (!def) return null;
-    const { x, y } = cellToSvg(item.zone, item.x, item.y);
 
-    // ── Bearbeiten: jedes Möbelstück ist anwählbar ──────────────────
+    // ── Bearbeiten: jedes Möbelstück ist anwählbar (Tap) oder ziehbar (Maus) ──
     if (edit) {
-      const isSelected = edit.selectedId === item.id;
+      const isSelected  = edit.selectedId === item.id;
+      const isDragging  = drag?.id === item.id;
+      const { x, y } = cellToSvg(item.zone, isDragging ? drag!.x : item.x, isDragging ? drag!.y : item.y);
+
       return (
         <g
           key={item.id}
-          className={cn("room-hit", edit.selectedId && !isSelected && "room-dimmed")}
+          className={cn(
+            "room-hit",
+            edit.selectedId && !isSelected && !isDragging && "room-dimmed",
+            isDragging && !drag!.valid && "opacity-60",
+          )}
           role="button"
           tabIndex={0}
-          aria-label={`${def.label} auswählen`}
+          aria-label={`${def.label} auswählen oder ziehen`}
           aria-pressed={isSelected}
-          onClick={() => edit.onSelect(item.id)}
+          onClick={() => {
+            if (suppressClickRef.current) { suppressClickRef.current = false; return; }
+            edit.onSelect(item.id);
+          }}
           onKeyDown={e => {
             if (e.key === "Enter" || e.key === " ") { e.preventDefault(); edit.onSelect(item.id); }
+          }}
+          onPointerDown={e => {
+            if (e.pointerType !== "mouse") return;
+            const svg = e.currentTarget.ownerSVGElement;
+            if (!svg) return;
+            e.currentTarget.setPointerCapture(e.pointerId);
+            const origin = cellToSvg(item.zone, item.x, item.y);
+            const p = svgPoint(svg, e.clientX, e.clientY);
+            dragMovedRef.current = false;
+            edit.onGrab(item.id);
+            setDrag({ id: item.id, dx: p.x - origin.x, dy: p.y - origin.y, x: item.x, y: item.y, valid: true });
+          }}
+          onPointerMove={e => {
+            if (e.pointerType !== "mouse") return;
+            const svg = e.currentTarget.ownerSVGElement;
+            if (!svg) return;
+            setDrag(current => {
+              if (!current || current.id !== item.id) return current;
+              const p = svgPoint(svg, e.clientX, e.clientY);
+              const wallOffsetY = item.zone === "floor" ? STAGE.floorTop : 0;
+              const grid = GRID[item.zone];
+              let cellX = Math.round((p.x - current.dx) / CELL);
+              let cellY = Math.round((p.y - current.dy - wallOffsetY) / CELL);
+              cellX = Math.max(0, Math.min(grid.cols - def.w, cellX));
+              cellY = Math.max(0, Math.min(grid.rows - def.h, cellY));
+              if (cellX !== current.x || cellY !== current.y) dragMovedRef.current = true;
+              const isOriginal = cellX === item.x && cellY === item.y;
+              const valid = isOriginal || edit.legal.some(c => c.zone === item.zone && c.x === cellX && c.y === cellY);
+              return { ...current, x: cellX, y: cellY, valid };
+            });
+          }}
+          onPointerUp={e => {
+            if (e.pointerType !== "mouse") return;
+            setDrag(current => {
+              if (current?.id === item.id && dragMovedRef.current && current.valid) {
+                edit.onDrop(item.zone, current.x, current.y);
+              }
+              return null;
+            });
+            suppressClickRef.current = dragMovedRef.current;
           }}
         >
           <title>{def.label}</title>
           <RoomItemSprite itemKey={item.key} x={x} y={y} flipped={item.flipped} />
-          {isSelected && (
+          {(isSelected || isDragging) && (
             <rect
               x={x - 2} y={y - 2} width={def.w * CELL + 4} height={def.h * CELL + 4}
-              rx={4} fill="none" stroke="var(--room-screen-on)" strokeWidth={3} strokeDasharray="7 5"
+              rx={4} fill="none"
+              stroke={isDragging && !drag!.valid ? "#ef4444" : "var(--room-screen-on)"}
+              strokeWidth={3} strokeDasharray="7 5"
             />
           )}
         </g>
       );
     }
+
+    const { x, y } = cellToSvg(item.zone, item.x, item.y);
 
     if (!def.interactive) {
       return <RoomItemSprite key={item.id} itemKey={item.key} x={x} y={y} flipped={item.flipped} />;

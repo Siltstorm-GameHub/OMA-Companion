@@ -3,7 +3,7 @@ import { findNewlyEarnedBadges, getBadgeDef, type BadgeStats } from "@/lib/badge
 import { dispatchNotification } from "@/lib/notify-dispatch";
 
 async function loadStats(userId: string): Promise<BadgeStats> {
-  const [user, eventCount, tournamentWins, eventWins, mvpCount] = await Promise.all([
+  const [user, eventCount, tournamentWins, eventWins, mvpCount, job] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
       select: { points: true, voiceMinutesTotal: true, messagesTotal: true },
@@ -24,6 +24,11 @@ async function loadStats(userId: string): Promise<BadgeStats> {
         completionData: { contains: `"mvpUserId":"${userId}"` },
       },
     }),
+    // Idle-Job-Verdienst. `.catch` weil die Tabelle auf älteren Datenbanken
+    // noch nicht existiert — ein fehlendes Zimmer darf nie die Abzeichen kippen.
+    prisma.userJob
+      .findUnique({ where: { userId }, select: { totalEarned: true } })
+      .catch(() => null),
   ]);
 
   // Tournament count = any tournament participation
@@ -38,6 +43,7 @@ async function loadStats(userId: string): Promise<BadgeStats> {
     tournamentWins,
     eventWins,
     mvpCount,
+    jobCoinsEarned: job?.totalEarned ?? 0,
   };
 }
 
