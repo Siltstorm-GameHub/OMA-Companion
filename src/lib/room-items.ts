@@ -170,6 +170,7 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     description: "Hier hängen die Stellenanzeigen. Draufklicken und bewerben.",
     zone: "wall", category: "deko", w: 2, h: 2, price: 0, minTier: 1, maxOwned: 1,
     tags: [], mustStandOn: null, accent: "amber", starter: true, interactive: "jobboard",
+    imageUrl: "/room-items/jobbrett.png",
   },
   {
     key: "poster_retro", label: "Retro-Gaming-Poster",
@@ -182,42 +183,49 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     description: "Platz für Krimskrams, den du nie wieder anfasst.",
     zone: "wall", category: "moebel", w: 3, h: 1, price: 400, minTier: 1, maxOwned: 3,
     tags: ["shelf"], mustStandOn: null, accent: "amber",
+    imageUrl: "/room-items/regal_holz.png",
   },
   {
     key: "led_stripe", label: "LED-Stripe",
     description: "Regenbogen an der Wand. Verbessert deine Reaktionszeit um exakt 0 %.",
     zone: "wall", category: "licht", w: 4, h: 1, price: 600, minTier: 1, maxOwned: 3,
     tags: ["light"], mustStandOn: null, accent: "violet",
+    imageUrl: "/room-items/led_stripe.png",
   },
   {
     key: "pokalregal", label: "Pokalregal",
     description: "Endlich ein Ort für die Trophäen, statt sie im Flur zu stapeln.",
     zone: "wall", category: "moebel", w: 3, h: 1, price: 1800, minTier: 3, maxOwned: 1,
     tags: ["shelf", "trophy_shelf"], mustStandOn: null, accent: "amber",
+    imageUrl: "/room-items/pokalregal.png",
   },
   {
     key: "whiteboard", label: "Taktik-Whiteboard",
     description: "Pfeile, Kreise, Kaffeeflecken. Der Plan ergibt nur für dich Sinn.",
     zone: "wall", category: "deko", w: 3, h: 2, price: 2000, minTier: 4, maxOwned: 1,
     tags: ["whiteboard"], mustStandOn: null, accent: "teal",
+    imageUrl: "/room-items/whiteboard.png",
   },
   {
     key: "nanoleaf", label: "Wabenpaneele",
     description: "Leuchtende Sechsecke. Der halbe Stromverbrauch, der ganze Effekt.",
     zone: "wall", category: "licht", w: 3, h: 2, price: 2400, minTier: 3, maxOwned: 2,
     tags: ["light", "neon"], mustStandOn: null, accent: "violet",
+    imageUrl: "/room-items/nanoleaf.png",
   },
   {
     key: "neon_schild", label: 'Neon-Schild "ZOCKEN"',
     description: "Damit auch der Postbote weiß, was hier läuft.",
     zone: "wall", category: "licht", w: 3, h: 1, price: 3200, minTier: 4, maxOwned: 1,
     tags: ["neon", "light"], mustStandOn: null, accent: "rose",
+    imageUrl: "/room-items/neon_schild.png",
   },
   {
     key: "led_wand", label: "LED-Videowand",
     description: "Sechs Felder pure Angeberei. Der Nachbar sieht das Flackern durchs Fenster.",
     zone: "wall", category: "licht", w: 6, h: 3, price: 14000, minTier: 6, maxOwned: 1,
     tags: ["led_wall", "light"], mustStandOn: null, accent: "violet",
+    imageUrl: "/room-items/led_wand.png",
   },
 
   // ── Boden: Schreibtische ──────────────────────────────────────────────────
@@ -226,12 +234,14 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     description: "Ein Bierdeckel unter dem linken Bein hält ihn seit Jahren im Gleichgewicht.",
     zone: "floor", category: "schreibtisch", w: 3, h: 2, price: 0, minTier: 1, maxOwned: 1,
     tags: ["desk"], mustStandOn: "floor", accent: "slate", starter: true,
+    imageUrl: "/room-items/schreibtisch_alt.png",
   },
   {
     key: "schreibtisch_eck", label: "Eck-Gamingtisch",
     description: "Kabelkanal, Getränkehalter, Kopfhörerhaken. Endlich erwachsen.",
     zone: "floor", category: "schreibtisch", w: 4, h: 2, price: 2600, minTier: 2, maxOwned: 1,
     tags: ["desk"], mustStandOn: "floor", accent: "teal",
+    imageUrl: "/room-items/schreibtisch_eck.png",
   },
 
   // ── Boden: Sitzmöbel ──────────────────────────────────────────────────────
@@ -240,12 +250,14 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     description: "Die Gasfeder gibt nach zwanzig Minuten auf. Jedes Mal.",
     zone: "floor", category: "sitzen", w: 1, h: 2, price: 150, minTier: 1, maxOwned: 1,
     tags: ["chair"], mustStandOn: "floor", accent: "slate",
+    imageUrl: "/room-items/stuhl_buero.png",
   },
   {
     key: "stuhl_gaming", label: "Gaming-Thron",
     description: "RGB im Sitzkissen. Ergonomisch fragwürdig, optisch unverhandelbar.",
     zone: "floor", category: "sitzen", w: 1, h: 2, price: 2200, minTier: 3, maxOwned: 1,
     tags: ["chair", "chair_gaming"], mustStandOn: "floor", accent: "rose",
+    imageUrl: "/room-items/stuhl_gaming.png",
   },
 
   // ── Boden: Rechner ────────────────────────────────────────────────────────
@@ -254,18 +266,21 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     description: "Startet in vier Minuten. Der Lüfter klingt wie ein Föhn aus den 90ern.",
     zone: "floor", category: "rechner", w: 1, h: 2, price: 0, minTier: 1, maxOwned: 1,
     tags: ["pc"], mustStandOn: "floor", accent: "slate", starter: true,
+    imageUrl: "/room-items/pc_billig.png",
   },
   {
     key: "pc_gaming", label: "Gaming-PC",
     description: "Glasseitenteil, damit alle sehen, wie ordentlich du verkabelt hast.",
     zone: "floor", category: "rechner", w: 1, h: 2, price: 3500, minTier: 2, maxOwned: 1,
     tags: ["pc", "pc_gaming"], mustStandOn: "floor", accent: "violet",
+    imageUrl: "/room-items/pc_gaming.png",
   },
   {
     key: "pc_highend", label: "High-End-Rig",
     description: "Wasserkühlung, zu viele Lüfter, eigener Sicherungskasten.",
     zone: "floor", category: "rechner", w: 1, h: 2, price: 11000, minTier: 5, maxOwned: 1,
     tags: ["pc", "pc_gaming", "pc_highend"], mustStandOn: "floor", accent: "teal",
+    imageUrl: "/room-items/pc_highend.png",
   },
 
   // ── Boden: Bildschirme (auf dem Tisch) ────────────────────────────────────
@@ -274,18 +289,21 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     description: "17 Zoll, 40 Kilo, flimmert. Zeigt dir alles, was du wissen willst — draufklicken!",
     zone: "floor", category: "bildschirm", w: 1, h: 1, price: 0, minTier: 1, maxOwned: 1,
     tags: ["crt", "monitor"], mustStandOn: "desk", accent: "teal", starter: true, interactive: "crt",
+    imageUrl: "/room-items/roehrenmonitor.png",
   },
   {
     key: "monitor_flach", label: "Flachbildschirm",
     description: "Flach, hell, unspektakulär. Ein echter Fortschritt.",
     zone: "floor", category: "bildschirm", w: 1, h: 1, price: 700, minTier: 1, maxOwned: 3,
     tags: ["monitor"], mustStandOn: "desk", accent: "slate",
+    imageUrl: "/room-items/monitor_flach.png",
   },
   {
     key: "monitor_144", label: "144Hz-Monitor",
     description: "Ab jetzt sind alle Niederlagen wieder deine eigene Schuld.",
     zone: "floor", category: "bildschirm", w: 1, h: 1, price: 1900, minTier: 3, maxOwned: 3,
     tags: ["monitor", "monitor_144"], mustStandOn: "desk", accent: "violet",
+    imageUrl: "/room-items/monitor_144.png",
   },
 
   // ── Boden: Peripherie ─────────────────────────────────────────────────────
@@ -294,6 +312,7 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     description: "Sechsfach, mit Schalter. Die Grundlage jeder ernsthaften Karriere.",
     zone: "floor", category: "peripherie", w: 2, h: 1, price: 120, minTier: 1, maxOwned: 2,
     tags: ["powerstrip"], mustStandOn: "floor", accent: "slate",
+    imageUrl: "/room-items/steckdosenleiste.png",
   },
   {
     key: "webcam", label: "Webcam",

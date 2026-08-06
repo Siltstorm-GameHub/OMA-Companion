@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/roles";
-import { redirect, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, Users, Clock, Swords, StickyNote, Vote, Tv2, Eye, EyeOff, Clapperboard, CheckCircle2 } from "lucide-react";
 import RulesSection from "@/components/RulesSection";
 import RankedAvatar from "@/components/RankedAvatar";
+import BotPreviewShell from "@/components/BotPreviewShell";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import SeriesIcon from "@/components/SeriesIcon";
 import WinIcon from "@/components/WinIcon";
@@ -96,7 +97,13 @@ export default async function TournamentDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const session = await auth();
-  if (!session?.user?.id) redirect("/login");
+  if (!session?.user?.id) {
+    // Ohne Session kommt nur ein von (dashboard)/layout.tsx bereits geprüfter
+    // Link-Vorschau-Bot hierher (echte Besucher ohne Session wurden dort schon
+    // zu /login geschickt) — für den reicht die Meta-Tag-Auflösung oben,
+    // die echten Turnierdaten unten braucht er nicht.
+    return <BotPreviewShell />;
+  }
   const userId = session.user.id;
   const { id: eventId } = await params;
   const me    = await getSessionUser();

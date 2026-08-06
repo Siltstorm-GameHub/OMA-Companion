@@ -7,6 +7,7 @@ import { calcStreak } from "@/lib/streak";
 import { Trophy, Swords, Heart, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import RankIcon from "@/components/RankIcon";
+import BotPreviewShell from "@/components/BotPreviewShell";
 import { CountUp } from "@/components/CountUp";
 import Link from "next/link";
 import WanderpocalBadgeServer from "@/components/WanderpocalBadgeServer";
@@ -92,9 +93,15 @@ export const metadata: Metadata = {
 };
 
 export default async function LeaderboardPage() {
-  const me     = await getSessionUser();
-  const userId = me?.id;
-  const isAdmin = me?.role === "admin" || me?.role === "moderator";
+  const me = await getSessionUser();
+  if (!me) {
+    // Ohne Session kommt nur ein von (dashboard)/layout.tsx bereits geprüfter
+    // Link-Vorschau-Bot hierher — die teure Zusammenstellung unten (Nutzer,
+    // Wanderpokal-Ränge, Spenden, …) braucht der nicht, nur die Meta-Tags oben.
+    return <BotPreviewShell />;
+  }
+  const userId = me.id;
+  const isAdmin = me.role === "admin" || me.role === "moderator";
 
   const [users, eventsWithWinners, donationGroups, holdersMap, latestSnapshot] = await Promise.all([
     prisma.user.findMany({
