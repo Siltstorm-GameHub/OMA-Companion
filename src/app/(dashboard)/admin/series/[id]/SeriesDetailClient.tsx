@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import SeriesIcon from "@/components/SeriesIcon";
+import ImageUploadField from "@/components/ImageUploadField";
 import GameNameInput from "@/components/GameNameInput";
 import StatFieldEditor from "@/components/StatFieldEditor";
 import { describeMonthlyModes, calcNextDate, type RecurrenceType, type MonthlyMode } from "@/lib/recurrence";
@@ -205,6 +206,7 @@ export default function SeriesDetailClient({ series, allUsers, hasActiveSibling 
   const [description, setDescription] = useState<string>(series.description ?? "");
   const [rules, setRules]             = useState<string>(series.rules ?? "");
   const [icon, setIcon]               = useState<string>(series.icon ?? "");
+  const [coverImageUrl, setCoverImageUrl] = useState<string>(series.coverImageUrl ?? "");
   const seriesColor = resolveSeriesColor(icon);
 
   // Category
@@ -326,6 +328,7 @@ export default function SeriesDetailClient({ series, allUsers, hasActiveSibling 
         description:          description.trim() || null,
         rules:                rules.trim() || null,
         icon:                 icon || null,
+        coverImageUrl:        coverImageUrl.trim() || null,
         category:             category || null,
         fixedGame:            fixedGame.trim() || null,
         fixedFormat:          fixedFormat || null,
@@ -600,6 +603,18 @@ export default function SeriesDetailClient({ series, allUsers, hasActiveSibling 
                 })}
               </div>
             </Field>
+          </Section>
+
+          {/* Eigenes Reihen-Cover */}
+          <Section title="Reihen-Cover">
+            <ImageUploadField
+              value={coverImageUrl}
+              onChange={setCoverImageUrl}
+              kind="event-cover"
+              label="Eigenes Reihen-Bild"
+              hint="Optional. Events der Reihe ohne eigenes Bild erben dieses. Ohne Reihen-Bild greift das Spiel-Cover, sonst das Standard-Motiv. Empfohlen: 1200×630."
+              previewAspect="1200/630"
+            />
           </Section>
 
           {/* Spiel & Format */}

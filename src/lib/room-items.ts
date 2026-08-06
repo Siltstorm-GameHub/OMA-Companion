@@ -319,42 +319,49 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     description: "Zeigt dein Gesicht und im Hintergrund deinen Wäscheberg.",
     zone: "floor", category: "peripherie", w: 1, h: 1, price: 550, minTier: 1, maxOwned: 1,
     tags: ["cam"], mustStandOn: "desk", accent: "slate",
+    imageUrl: "/room-items/webcam.png",
   },
   {
     key: "headset", label: "Headset",
     description: "Das Ohrpolster löst sich langsam auf, aber der Sound sitzt.",
     zone: "floor", category: "peripherie", w: 1, h: 1, price: 600, minTier: 1, maxOwned: 1,
     tags: ["headset"], mustStandOn: "desk", accent: "teal",
+    imageUrl: "/room-items/headset.png",
   },
   {
     key: "tastatur_mech", label: "Mechanische Tastatur",
     description: "Blaue Switches. Deine Mitbewohner hassen dich jetzt offiziell.",
     zone: "floor", category: "peripherie", w: 1, h: 1, price: 650, minTier: 2, maxOwned: 1,
     tags: ["keyboard_mech"], mustStandOn: "desk", accent: "violet",
+    imageUrl: "/room-items/tastatur_mech.png",
   },
   {
     key: "mikrofon", label: "Podcast-Mikrofon",
     description: "Nimmt jedes Wort auf — auch das Kühlschrankbrummen aus der Küche.",
     zone: "floor", category: "peripherie", w: 1, h: 1, price: 800, minTier: 2, maxOwned: 1,
     tags: ["mic"], mustStandOn: "desk", accent: "amber",
+    imageUrl: "/room-items/mikrofon.png",
   },
   {
     key: "ringlicht", label: "Ringlicht",
     description: "Lässt dich zehn Jahre jünger aussehen. Nicht genug, aber immerhin.",
     zone: "floor", category: "peripherie", w: 1, h: 2, price: 1100, minTier: 3, maxOwned: 1,
     tags: ["ringlight", "light"], mustStandOn: "floor", accent: "amber",
+    imageUrl: "/room-items/ringlicht.png",
   },
   {
     key: "capture", label: "Capture-Karte",
     description: "Nimmt alles auf, auch die Runden, die niemand sehen sollte.",
     zone: "floor", category: "peripherie", w: 1, h: 1, price: 1400, minTier: 4, maxOwned: 1,
     tags: ["capture"], mustStandOn: "desk", accent: "rose",
+    imageUrl: "/room-items/capture.png",
   },
   {
     key: "streamdeck", label: "Stream-Deck",
     description: "Fünfzehn Tasten, von denen du drei benutzt. Sieht trotzdem professionell aus.",
     zone: "floor", category: "peripherie", w: 1, h: 1, price: 1600, minTier: 4, maxOwned: 1,
     tags: ["streamdeck"], mustStandOn: "desk", accent: "violet",
+    imageUrl: "/room-items/streamdeck.png",
   },
 
   // ── Boden: Konsolen ───────────────────────────────────────────────────────
@@ -363,12 +370,14 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     description: "Modul reinstecken, kurz reinpusten, läuft. Alte Schule eben.",
     zone: "floor", category: "konsole", w: 1, h: 1, price: 900, minTier: 2, maxOwned: 2,
     tags: ["console", "console_retro"], mustStandOn: "desk", accent: "amber",
+    imageUrl: "/room-items/konsole_retro.png",
   },
   {
     key: "konsole_neu", label: "Aktuelle Konsole",
     description: "Größer als der Fernseher, auf dem sie laufen sollte.",
     zone: "floor", category: "konsole", w: 1, h: 1, price: 2800, minTier: 3, maxOwned: 2,
     tags: ["console"], mustStandOn: "desk", accent: "teal",
+    imageUrl: "/room-items/konsole_neu.png",
   },
 
   // ── Boden: Möbel & Deko ───────────────────────────────────────────────────
@@ -377,36 +386,42 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     description: "Die Matratze hat die Form deines Rückens angenommen. Rückwärts.",
     zone: "floor", category: "moebel", w: 2, h: 2, price: 0, minTier: 1, maxOwned: 1,
     tags: ["bed"], mustStandOn: "floor", accent: "slate", starter: true,
+    imageUrl: "/room-items/bett.png",
   },
   {
     key: "vitrine", label: "Vitrine",
     description: "Deine Sammlung hinter Glas. Draufklicken und angeben.",
     zone: "floor", category: "vitrine", w: 2, h: 3, price: 0, minTier: 1, maxOwned: 1,
     tags: ["vitrine"], mustStandOn: "floor", accent: "amber", starter: true, interactive: "vitrine",
+    imageUrl: "/room-items/vitrine.png",
   },
   {
     key: "pflanze", label: "Zimmerpflanze (halbtot)",
     description: "Gießen war letzten Monat. Sie hält durch, aus Trotz.",
     zone: "floor", category: "deko", w: 1, h: 2, price: 180, minTier: 1, maxOwned: 3,
     tags: ["plant"], mustStandOn: "floor", accent: "teal",
+    imageUrl: "/room-items/pflanze.png",
   },
   {
     key: "teppich", label: "Fleckenteppich",
     description: "Jeder Fleck erzählt eine Geschichte. Die meisten handeln von Energydrinks.",
     zone: "floor", category: "deko", w: 3, h: 1, price: 300, minTier: 1, maxOwned: 2,
     tags: [], mustStandOn: "floor", accent: "rose",
+    imageUrl: "/room-items/teppich.png",
   },
   {
     key: "kaffeemaschine", label: "Kaffeemaschine",
     description: "Der eigentliche Motor deiner Karriere.",
     zone: "floor", category: "deko", w: 1, h: 1, price: 450, minTier: 1, maxOwned: 1,
     tags: [], mustStandOn: "desk", accent: "amber",
+    imageUrl: "/room-items/kaffeemaschine.png",
   },
   {
     key: "rollator", label: "Getunter Rollator",
     description: "Unterbodenbeleuchtung, Getränkehalter, Spoiler. Fraktion Rollator grüßt.",
     zone: "floor", category: "deko", w: 2, h: 2, price: 4000, minTier: 5, maxOwned: 1,
     tags: [], mustStandOn: "floor", accent: "violet",
+    imageUrl: "/room-items/rollator.png",
   },
 ];
 
