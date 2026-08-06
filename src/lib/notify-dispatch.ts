@@ -10,6 +10,7 @@ import { createNotificationForUsers, PREF_KEY, type NotificationType } from "@/l
 import { sendDiscordMessage, sendDiscordDM, resolveChannelId, type DiscordEmbed } from "@/lib/discord-rest";
 import { isEventHidden } from "@/lib/event-visibility";
 import { formatLabel, genreLabel } from "@/lib/event-placeholders";
+import { DISCORD_COLORS } from "@/lib/discord-colors";
 
 export interface DispatchOptions {
   /** Betroffene User (Empfänger für Push/In-App/Discord-DM). Leer = reine Kanal-Broadcast-Nachricht. */
@@ -23,6 +24,10 @@ export interface DispatchOptions {
   discordContent?: string;
   discordFields?: { name: string; value: string; inline?: boolean }[];
   discordColor?: number;
+  /** Kleines Vorschaubild oben rechts im Embed (z.B. Rang-Medaille) — für
+   *  Icon-artige Bilder. Für großformatige Banner (Event-Cover) stattdessen
+   *  discord-events.ts direkt verwenden, das nutzt embed.image. */
+  discordThumbnail?: string;
   /** Discord-Kanal-Post überspringen, z.B. wenn der Aufrufer bereits selbst eine (reichhaltigere) Ankündigung gepostet hat. */
   skipDiscordChannel?: boolean;
 }
@@ -141,7 +146,8 @@ export async function dispatchNotification(ruleKey: string, opts: DispatchOption
     }
     if (rule.discordDmEnabled) {
       tasks.push(dispatchDiscordDm(opts.users, {
-        title, description: body, url, color: opts.discordColor ?? 0x2dd4bf,
+        title, description: body, url, color: opts.discordColor ?? DISCORD_COLORS.default,
+        ...(opts.discordThumbnail && { thumbnail: { url: opts.discordThumbnail } }),
       }));
     }
   }
@@ -154,9 +160,10 @@ export async function dispatchNotification(ruleKey: string, opts: DispatchOption
         {
           title,
           description: body,
-          color:  opts.discordColor ?? 0x6366f1,
+          color:  opts.discordColor ?? DISCORD_COLORS.default,
           fields: opts.discordFields,
           footer: { text: "OMA Companion" },
+          ...(opts.discordThumbnail && { thumbnail: { url: opts.discordThumbnail } }),
         },
         opts.discordContent,
       ));

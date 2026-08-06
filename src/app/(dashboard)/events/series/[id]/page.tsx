@@ -11,6 +11,7 @@ import {
 import RulesSection from "@/components/RulesSection";
 import { CountUp } from "@/components/CountUp";
 import SeriesIcon from "@/components/SeriesIcon";
+import GameCover from "@/components/GameCover";
 import { resolveSeriesColor } from "@/lib/series-icons";
 import PollsSection from "@/app/(dashboard)/tournament/[id]/PollsSection";
 import SeriesStandingsTable from "./SeriesStandingsTable";
@@ -488,6 +489,21 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
         </div>
       )}
 
+      {/* ── Cover ──────────────────────────────────────────────────────── */}
+      {/* Priorität: eigenes Reihen-Cover → Steam-Cover des fixen Spiels (falls
+          gesetzt) → Default. Events der Reihe ohne eigenes Cover erben dieses
+          hier auf ihrer eigenen Detailseite (tournament/[id]/page.tsx). */}
+      <div className="relative w-full aspect-[16/5] rounded-2xl overflow-hidden">
+        <GameCover
+          game={series.fixedGame}
+          coverUrl={series.coverImageUrl}
+          className="w-full h-full"
+          rounded="rounded-none"
+          imgClassName="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-2xl pointer-events-none" />
+      </div>
+
       {/* ── Hero Banner ──────────────────────────────────────────────────────── */}
       <div className="glass card-shine rounded-2xl p-4 sm:p-6 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-teal-500/10 via-transparent to-rose-500/6 pointer-events-none" />
@@ -622,6 +638,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
             finishedEvents={finishedEvents}
             userId={userId ?? ""}
             fixedGame={series.fixedGame}
+            seriesCoverImageUrl={series.coverImageUrl}
           />
 
           {/* Rechte Spalte: Kompakte Tabelle */}

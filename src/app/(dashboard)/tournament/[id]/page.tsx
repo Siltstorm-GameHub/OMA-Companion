@@ -8,6 +8,7 @@ import Image from "next/image";
 import { ArrowLeft, Users, Clock, Swords, StickyNote, Vote, Tv2, Eye, EyeOff, Clapperboard, CheckCircle2 } from "lucide-react";
 import RulesSection from "@/components/RulesSection";
 import RankedAvatar from "@/components/RankedAvatar";
+import GameCover from "@/components/GameCover";
 import BotPreviewShell from "@/components/BotPreviewShell";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import SeriesIcon from "@/components/SeriesIcon";
@@ -113,7 +114,7 @@ export default async function TournamentDetailPage({
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     include: {
-      series: { select: { id: true, name: true, icon: true, hidden: true, seriesStatConfig: true, discordChannelId: true, pollConfigJson: true } },
+      series: { select: { id: true, name: true, icon: true, hidden: true, seriesStatConfig: true, discordChannelId: true, pollConfigJson: true, coverImageUrl: true } },
       streamingPartners: { include: { partner: { include: { user: { select: { id: true } } } } } },
       communityStreamers: { include: { user: { select: { id: true, name: true, username: true, image: true, twitchLogin: true, rankPoints: true } } } },
       registrations: {
@@ -537,6 +538,20 @@ export default async function TournamentDetailPage({
           </p>
         </div>
       )}
+
+      {/* ── Cover ──────────────────────────────────────────────────────── */}
+      {/* Priorität wie in der Discord-Ankündigung: eigenes Cover → Reihen-Cover
+          → Steam-Cover (übernimmt GameCover selbst anhand von `game`) → Default. */}
+      <div className="relative w-full aspect-[16/5] rounded-2xl overflow-hidden mb-5">
+        <GameCover
+          game={event.game}
+          coverUrl={event.coverImageUrl ?? event.series?.coverImageUrl ?? null}
+          className="w-full h-full"
+          rounded="rounded-none"
+          imgClassName="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-2xl pointer-events-none" />
+      </div>
 
       {/* ── Regelwerk (über dem Punktesystem) ─────────────────────────────── */}
       <RulesSection rules={event.rules} className="mb-5" />

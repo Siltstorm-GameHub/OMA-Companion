@@ -1205,15 +1205,13 @@ export default function SeriesDetailClient({ series, allUsers, hasActiveSibling 
             <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
               Events dieser Reihe
             </h2>
-            {recurrenceType && (
-              <button
-                onClick={openGenerateModal} disabled={generatingNext}
-                className="flex items-center gap-1.5 text-xs text-teal-300 hover:text-white border border-teal-600/40 hover:bg-teal-600 rounded-lg px-3 py-1.5 transition-all disabled:opacity-50"
-              >
-                <CalendarPlus className="w-3.5 h-3.5" />
-                {generatingNext ? "Erstellt…" : "Nächsten Termin generieren"}
-              </button>
-            )}
+            <button
+              onClick={openGenerateModal} disabled={generatingNext}
+              className="flex items-center gap-1.5 text-xs text-teal-300 hover:text-white border border-teal-600/40 hover:bg-teal-600 rounded-lg px-3 py-1.5 transition-all disabled:opacity-50"
+            >
+              <CalendarPlus className="w-3.5 h-3.5" />
+              {generatingNext ? "Erstellt…" : recurrenceType ? "Nächsten Termin generieren" : "Termin hinzufügen"}
+            </button>
           </div>
 
           {series.events.length === 0 ? (
@@ -1355,11 +1353,12 @@ export default function SeriesDetailClient({ series, allUsers, hasActiveSibling 
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
           <div className="w-full max-w-sm rounded-xl border border-white/[0.08] bg-gray-900 p-4 space-y-3">
             <p className="text-sm font-semibold text-white flex items-center gap-1.5">
-              <CalendarPlus className="w-4 h-4 text-teal-300" /> Nächsten Termin generieren
+              <CalendarPlus className="w-4 h-4 text-teal-300" /> {recurrenceType ? "Nächsten Termin generieren" : "Termin hinzufügen"}
             </p>
             <p className="text-xs text-gray-500">
-              Vorgeschlagen anhand der Wiederholungsregel — du kannst das Datum bei Bedarf anpassen,
-              ohne die feste Wiederholung der Reihe zu verändern.
+              {recurrenceType
+                ? "Vorgeschlagen anhand der Wiederholungsregel — du kannst das Datum bei Bedarf anpassen, ohne die feste Wiederholung der Reihe zu verändern."
+                : "Diese Reihe hat keine automatische Wiederholung — wähle das Datum für den neuen Termin manuell."}
             </p>
             <input
               type="datetime-local"

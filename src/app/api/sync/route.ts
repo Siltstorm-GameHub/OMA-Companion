@@ -11,6 +11,7 @@ export async function POST() {
     prisma.event.findMany({
       where: { status: { in: ["open", "active"] }, hidden: false, OR: [{ seriesId: null }, { series: { hidden: false } }] },
       orderBy: { startAt: "asc" },
+      include: { series: { select: { coverImageUrl: true } } },
     }),
     prisma.lulSpieltag.findMany({
       where: {
@@ -34,6 +35,8 @@ export async function POST() {
         startAt:     ev.startAt,
         description: ev.description,
         game:        ev.game,
+        coverImageUrl:       ev.coverImageUrl,
+        seriesCoverImageUrl: ev.series?.coverImageUrl ?? null,
       });
       if (ok) updated++;
       else failed++;
@@ -43,6 +46,8 @@ export async function POST() {
         startAt:     ev.startAt,
         description: ev.description,
         game:        ev.game,
+        coverImageUrl:       ev.coverImageUrl,
+        seriesCoverImageUrl: ev.series?.coverImageUrl ?? null,
       });
       if (discordEventId) {
         await prisma.event.update({ where: { id: ev.id }, data: { discordEventId } });

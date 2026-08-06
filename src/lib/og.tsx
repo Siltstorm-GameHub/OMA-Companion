@@ -25,6 +25,31 @@ export async function loadLogoDataUri(): Promise<string> {
   return `data:image/png;base64,${buf.toString("base64")}`;
 }
 
+/** Lädt ein beliebiges Bild (z.B. Discord-Avatar) als data-URI, mit Deckel
+ *  gegen aufgeblähte Quellen. Satori könnte externe URLs zwar selbst laden,
+ *  aber jeder Fehlschlag dort reisst die ganze Karte mit — lieber selbst holen
+ *  und im Zweifel ohne Bild weiterrendern. Von mehreren OG-/Discord-Bildrouten
+ *  geteilt (Profilkarte, Sieger-Podium). */
+export async function loadRemoteImageDataUri(
+  url: string | null | undefined,
+  maxBytes = 300_000
+): Promise<string | null> {
+  if (!url) return null;
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(3000) });
+    if (!res.ok) return null;
+    const type = res.headers.get("content-type") ?? "image/png";
+    if (!type.startsWith("image/")) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    // Deckel gegen aufgeblähte Bilder: das 500-KB-Bundle-Limit von next/og gilt
+    // für die gesamte Karte, Logo und Schrift eingerechnet.
+    if (buf.byteLength > maxBytes) return null;
+    return `data:${type};base64,${buf.toString("base64")}`;
+  } catch {
+    return null;
+  }
+}
+
 /** Der Marken-Rahmen: Verlauf, diagonale Farbbänder, Akzentlinien, Fusszeile.
  *  Bewusst dieselbe Bildsprache wie EventCoverDefault, damit Share-Karten und
  *  In-App-Cover als eine Familie lesbar sind. */

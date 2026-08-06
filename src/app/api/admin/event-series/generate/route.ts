@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (!series) return NextResponse.json({ error: "Eventreihe nicht gefunden" }, { status: 404 });
-  if (!series.recurrenceType) return NextResponse.json({ error: "Keine Wiederholung konfiguriert" }, { status: 400 });
+  if (!series.recurrenceType && !overrideDate) return NextResponse.json({ error: "Keine Wiederholung konfiguriert — bitte Datum angeben" }, { status: 400 });
   if (series.events.length === 0) return NextResponse.json({ error: "Reihe hat noch keine Events" }, { status: 400 });
 
   const referenceEvent = series.events[0];  // ältestes Event = Referenz für Monthly-Modus
@@ -141,6 +141,7 @@ export async function POST(req: NextRequest) {
       startAt:     newEvent.startAt,
       description: null,
       game,
+      seriesCoverImageUrl: series.coverImageUrl,
     }),
     announceNewEvent({
       title:            newEvent.title,
@@ -152,6 +153,7 @@ export async function POST(req: NextRequest) {
       pointReward:      derivedParticipationCoins(),
       teilnehmer:       0,
       discordChannelId,
+      seriesCoverImageUrl: series.coverImageUrl,
     }),
   ]);
 
