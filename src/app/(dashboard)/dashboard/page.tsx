@@ -533,7 +533,7 @@ export default async function DashboardPage() {
             style={{ borderRadius: "6px", border: "1px solid rgba(20,184,166,0.12)", boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
 
             {/* Cover art area */}
-            <div className="relative overflow-hidden" style={{ height: "108px" }}>
+            <div className="relative overflow-hidden" style={{ height: "160px" }}>
               {/* Game cover background */}
               {nextEvent?.game ? (
                 <GameCover

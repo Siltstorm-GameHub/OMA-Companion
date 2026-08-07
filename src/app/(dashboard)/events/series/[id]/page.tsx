@@ -493,7 +493,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
       {/* Priorität: eigenes Reihen-Cover → Steam-Cover des fixen Spiels (falls
           gesetzt) → Default. Events der Reihe ohne eigenes Cover erben dieses
           hier auf ihrer eigenen Detailseite (tournament/[id]/page.tsx). */}
-      <div className="relative w-full aspect-[16/5] rounded-2xl overflow-hidden">
+      <div className="relative w-full aspect-[16/7] rounded-2xl overflow-hidden">
         <GameCover
           game={series.fixedGame}
           coverUrl={series.coverImageUrl}
