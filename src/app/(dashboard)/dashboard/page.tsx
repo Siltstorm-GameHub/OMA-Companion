@@ -183,7 +183,9 @@ export default async function DashboardPage() {
   const leaderMap = new Map(leaderUsers.map(u => [u.id, u]));
 
   const recentResultEvents: RecentResultEvent[] = recentlyFinishedCandidates
-    .filter(ev => isRecentlyFinished(ev, now))
+    // completionData wird nur beim Abschluss-Flow (Turnierbaum/Ergebnisse eintragen) gesetzt —
+    // ein Event, das nur manuell auf "finished" gesetzt wurde, hat hier keine Ergebnisse zu zeigen.
+    .filter(ev => ev.completionData && isRecentlyFinished(ev, now))
     .sort((a, b) => getEventEndedAt(b).getTime() - getEventEndedAt(a).getTime())
     .map(ev => ({
       id:    ev.id,

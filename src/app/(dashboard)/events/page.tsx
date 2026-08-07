@@ -404,10 +404,13 @@ export default async function EventsPage() {
   const renderRecentFinished = (item: AnyItem) => {
     if (item.kind === "event") {
       const { ev } = item;
+      // completionData wird nur beim Abschluss-Flow (Turnierbaum/Ergebnisse eintragen) gesetzt —
+      // ohne ihn gibt es keine Ergebnisse zu zeigen, also auch keinen "Ergebnisse ansehen"-Button.
+      const hasResults = !!ev.completionData;
       const cardHref = ev.seriesId ? `/events/series/${ev.seriesId}` : `/tournament/${ev.id}`;
-      return (
-        <Link key={`ev-recent-${ev.id}`} href={cardHref}
-          className="flex items-center gap-3 px-3 py-2 rounded-lg border border-white/[0.05] bg-white/[0.02] opacity-70 grayscale-[0.5] hover:opacity-100 hover:grayscale-0 transition-all group">
+      const cardCls = "flex items-center gap-3 px-3 py-2 rounded-lg border border-white/[0.05] bg-white/[0.02] opacity-70 grayscale-[0.5] transition-all group";
+      const content = (
+        <>
           <GameCover game={ev.game} coverUrl={ev.coverImageUrl} className="w-10 h-7 shrink-0" rounded="rounded" />
           <div className="flex-1 min-w-0">
             <p className="text-sm text-gray-300 font-medium truncate group-hover:text-white transition-colors">{ev.title}</p>
@@ -416,9 +419,22 @@ export default async function EventsPage() {
               {ev.series && <> · {ev.series.name}</>}
             </p>
           </div>
-          <span className="flex items-center gap-1 text-xs text-emerald-400 font-medium shrink-0 group-hover:text-emerald-300">
-            Ergebnisse ansehen <ChevronRight className="w-3.5 h-3.5" />
-          </span>
+          {hasResults && (
+            <span className="flex items-center gap-1 text-xs text-emerald-400 font-medium shrink-0 group-hover:text-emerald-300">
+              Ergebnisse ansehen <ChevronRight className="w-3.5 h-3.5" />
+            </span>
+          )}
+        </>
+      );
+      if (!hasResults) {
+        return (
+          <div key={`ev-recent-${ev.id}`} className={cardCls}>{content}</div>
+        );
+      }
+      return (
+        <Link key={`ev-recent-${ev.id}`} href={cardHref}
+          className={`${cardCls} hover:opacity-100 hover:grayscale-0`}>
+          {content}
         </Link>
       );
     }
