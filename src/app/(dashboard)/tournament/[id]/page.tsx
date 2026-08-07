@@ -542,7 +542,7 @@ export default async function TournamentDetailPage({
       {/* ── Cover ──────────────────────────────────────────────────────── */}
       {/* Priorität wie in der Discord-Ankündigung: eigenes Cover → Reihen-Cover
           → Steam-Cover (übernimmt GameCover selbst anhand von `game`) → Default. */}
-      <div className="relative w-full aspect-[16/5] rounded-2xl overflow-hidden mb-5">
+      <div className="relative w-full aspect-[16/7] rounded-2xl overflow-hidden mb-5">
         <GameCover
           game={event.game}
           coverUrl={event.coverImageUrl ?? event.series?.coverImageUrl ?? null}
