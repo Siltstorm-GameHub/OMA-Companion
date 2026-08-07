@@ -113,16 +113,16 @@ async function getLogoBadge(): Promise<{ buffer: Buffer; width: number; height: 
   if (cachedBadge) return cachedBadge;
 
   const logoPath  = path.join(process.cwd(), "public", "brand", "logo-256.png");
-  const logoWidth = Math.round(W * 0.13);
+  const logoWidth = Math.round(W * 0.19);
   const logo = await sharp(fs.readFileSync(logoPath)).resize(logoWidth).png().toBuffer();
   const logoHeight = (await sharp(logo).metadata()).height ?? logoWidth;
 
-  const pad   = 10;
+  const pad   = 12;
   const chipW = logoWidth + pad * 2;
   const chipH = logoHeight + pad * 2;
   const chipSvg = Buffer.from(
     `<svg width="${chipW}" height="${chipH}" xmlns="http://www.w3.org/2000/svg">
-      <rect width="${chipW}" height="${chipH}" rx="10" fill="#06080f" fill-opacity="0.65" stroke="#ffffff" stroke-opacity="0.12"/>
+      <rect width="${chipW}" height="${chipH}" rx="12" fill="#06080f" fill-opacity="0.8" stroke="#14b8a6" stroke-opacity="0.55" stroke-width="1.5"/>
     </svg>`
   );
 
