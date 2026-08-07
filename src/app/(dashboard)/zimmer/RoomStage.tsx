@@ -369,12 +369,42 @@ function TrophySlot({ trophy, x, y, s }: { trophy: VitrineTrophy; x: number; y: 
 // ── Wand- und Bodenmuster ────────────────────────────────────────────────────
 
 /**
- * Tapeten und Böden als SVG-Muster. Beide zeichnen auf den --room-* Tokens,
- * damit der Theme-Wechsel auch die Flächen mitnimmt.
+ * Tapeten, Böden und die Raum-Beleuchtung als SVG-Muster/-Gradienten. Alles
+ * zeichnet auf den --room-* Tokens, damit der Theme-Wechsel die Flächen
+ * mitnimmt.
+ *
+ * Die Vignetten existieren, weil die Möbel seit dem Umstieg auf Canva-Fotos
+ * jedes für sich in seinem eigenen Studio-Licht aufgenommen wurden — ohne
+ * eine gemeinsame Lichtstimmung im Hintergrund würden 30 unabhängig
+ * beleuchtete Fotos nebeneinander nie wie ein einziger Raum wirken. Die
+ * Gradienten sind bewusst objectBoundingBox-relativ (SVG-Standard) statt an
+ * absoluten Bühnen-Koordinaten verankert, damit sie in der Wand- und der
+ * Boden-Einzelansicht (Zonen-Tabs) jeweils sauber zentriert bleiben, nicht
+ * nur in der "Ganzer Raum"-Ansicht.
  */
 function SurfacePatterns({ wallpaperKey, floorKey }: { wallpaperKey: string; floorKey: string }) {
   return (
     <>
+      {/* ── Umgebungslicht: dunklere Ecken, dezenter warmer Lichtkegel oben ── */}
+      <radialGradient id="room-wall-vignette" cx="50%" cy="8%" r="85%">
+        <stop offset="0%"  stopColor="var(--room-neon-amber)" stopOpacity={0.05} />
+        <stop offset="35%" stopColor="#000000" stopOpacity={0} />
+        <stop offset="100%" stopColor="#000000" stopOpacity={0.32} />
+      </radialGradient>
+      <radialGradient id="room-floor-vignette" cx="50%" cy="0%" r="95%">
+        <stop offset="0%"  stopColor="#000000" stopOpacity={0} />
+        <stop offset="55%" stopColor="#000000" stopOpacity={0} />
+        <stop offset="100%" stopColor="#000000" stopOpacity={0.38} />
+      </radialGradient>
+
+      {/* ── Sockelleiste: kleine Fase statt einer flachen Linie ── */}
+      <linearGradient id="room-skirting-bevel" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stopColor="var(--room-outline)" stopOpacity={0.5} />
+        <stop offset="18%"  stopColor="var(--room-skirting)" />
+        <stop offset="60%"  stopColor="var(--room-skirting)" />
+        <stop offset="100%" stopColor="var(--room-shade)" stopOpacity={0.8} />
+      </linearGradient>
+
       <pattern id="room-wallpaper" width={64} height={64} patternUnits="userSpaceOnUse">
         <rect width={64} height={64} fill="var(--room-wall)" />
         {wallpaperKey === "tapete_pixel" && (
@@ -398,6 +428,8 @@ function SurfacePatterns({ wallpaperKey, floorKey }: { wallpaperKey: string; flo
             ))}
           </g>
         )}
+        {/* Sanfter vertikaler Verlauf auf JEDER Tapete — Licht fällt von oben ein */}
+        <rect width={64} height={64} fill="var(--room-shade)" opacity={0.08} />
       </pattern>
 
       <pattern id="room-floor" width={64} height={64} patternUnits="userSpaceOnUse">
@@ -406,6 +438,8 @@ function SurfacePatterns({ wallpaperKey, floorKey }: { wallpaperKey: string; flo
           <g>
             <rect y={0}  width={64} height={31} fill="var(--room-wood)" opacity={0.55} />
             <rect y={33} width={64} height={31} fill="var(--room-wood)" opacity={0.42} />
+            <rect y={0} width={64} height={6} fill="var(--room-wood-hi)" opacity={0.3} />
+            <rect y={33} width={64} height={6} fill="var(--room-wood-hi)" opacity={0.22} />
             <line x1={0} y1={32} x2={64} y2={32} stroke="var(--room-outline)" strokeWidth={1} />
             <line x1={22} y1={0} x2={22} y2={31} stroke="var(--room-outline)" strokeWidth={1} />
             <line x1={44} y1={33} x2={44} y2={64} stroke="var(--room-outline)" strokeWidth={1} />

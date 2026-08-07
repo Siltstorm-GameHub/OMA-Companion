@@ -253,7 +253,7 @@ export default async function EventsPage() {
             borderRadius: 6,
             border: isRegistered ? "1px solid rgba(52,211,153,0.18)" : "1px solid rgba(255,255,255,0.06)",
             boxShadow: "0 4px 20px rgba(0,0,0,0.45)",
-            aspectRatio: "1 / 1",
+            aspectRatio: "4 / 5",
           }}>
           <div className="absolute inset-0">
             <GameCover game={ev.game} coverUrl={ev.coverImageUrl} className="w-full h-full" rounded="rounded-none"
@@ -342,7 +342,7 @@ export default async function EventsPage() {
           borderRadius: 6,
           border: myRole ? "1px solid rgba(251,191,36,0.18)" : "1px solid rgba(255,255,255,0.06)",
           boxShadow: "0 4px 20px rgba(0,0,0,0.45)",
-          aspectRatio: "1 / 1",
+          aspectRatio: "4 / 5",
         }}>
         <div className="absolute inset-0">
           <GameCover game={st.game} className="w-full h-full" rounded="rounded-none"
