@@ -12,34 +12,42 @@
  */
 const sharp = require("sharp");
 
-async function chromaKey(inputPath, outputPath, keyColor = [255, 0, 255], innerThreshold = 55, outerThreshold = 140) {
+async function chromaKey(inputPath, outputPath, innerThreshold = 65, outerThreshold = 150) {
   const { data, info } = await sharp(inputPath).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const { width, height, channels } = info;
-  const [kr, kg, kb] = keyColor; // Magenta: kr=255, kg=0, kb=255 — der "Spill"-Kanal ist Grün.
+  const KR = 255, KG = 0, KB = 255; // reines Magenta
 
+  // EINE Kennzahl für Alpha UND Entfärben: der Euclidische Farbabstand zum
+  // exakten Magenta-Ton, nicht nur "wie grün-arm ist der Pixel". Eine frühere
+  // Fassung nutzte min(r,b)-g als Kennzahl ("Spill") — das erkennt zuverlässig
+  // Magenta-Nähe, klassifiziert aber JEDE grün-arme Farbe mit, auch warme
+  // Brauntöne (Kork, Holz) und Violett-Töne (Neon-Rückplatten, RGB-Akzente),
+  // die im Katalog ständig vorkommen. Ergebnis: ein Kork-Brett wurde komplett
+  // durchsichtig, eine violette Neon-Rückplatte verschwand. Der tatsächliche
+  // 3D-Abstand zu (255,0,255) ist deutlich strenger — Braun und Violett liegen
+  // weit genug von reinem Magenta entfernt, um nicht mitgenommen zu werden.
   for (let i = 0; i < data.length; i += channels) {
     let r = data[i], g = data[i + 1], b = data[i + 2];
-    const dist = Math.sqrt((r - kr) ** 2 + (g - kg) ** 2 + (b - kb) ** 2);
-    let alpha;
-    if (dist <= innerThreshold) alpha = 0;
-    else if (dist >= outerThreshold) alpha = 255;
-    else alpha = Math.round(((dist - innerThreshold) / (outerThreshold - innerThreshold)) * 255);
+    const dist = Math.sqrt((r - KR) ** 2 + (g - KG) ** 2 + (b - KB) ** 2);
+
+    let t; // 0 = Motiv, 1 = reiner Hintergrund
+    if (dist >= outerThreshold) t = 0;
+    else if (dist <= innerThreshold) t = 1;
+    else t = (outerThreshold - dist) / (outerThreshold - innerThreshold);
+
+    const alpha = Math.round((1 - t) * 255);
     data[i + 3] = Math.min(data[i + 3], alpha);
 
-    // Entfärben (Despill): Halbtransparente Randpixel sind eine Mischung aus
-    // Motiv- und Magenta-Farbe. Ohne Korrektur bleibt ein magentafarbener
-    // Saum sichtbar, egal wie transparent der Pixel ist — Alpha allein
-    // schneidet nur, färbt aber nicht um. Magenta = Rot+Blau ohne Grün, also
-    // werden Rot/Blau so weit auf das Grün-Niveau gekappt, wie sie es
-    // überschreiten (der klassische Grün-Spill-Fix, gespiegelt auf Magenta).
-    if (alpha < 255) {
+    // Entfärben mit DERSELBEN Zahl t — nicht mit einer zweiten, unabhängigen
+    // Formel. Frühere Versuche berechneten Alpha und Entfärbung getrennt;
+    // genau an der Halbtransparenz-Grenze liefen sie leicht auseinander, das
+    // ergab einen sichtbaren magentafarbenen Saum an Kanten.
+    if (t > 0) {
       const excess = Math.min(r, b) - g;
       if (excess > 0) {
-        const pull = excess * (1 - alpha / 255);
-        r = Math.max(0, r - pull);
-        b = Math.max(0, b - pull);
-        data[i] = Math.round(r);
-        data[i + 2] = Math.round(b);
+        const pull = excess * t * 1.6;
+        data[i]     = Math.max(0, Math.round(r - pull));
+        data[i + 2] = Math.max(0, Math.round(b - pull));
       }
     }
   }
@@ -51,7 +59,7 @@ async function chromaKey(inputPath, outputPath, keyColor = [255, 0, 255], innerT
 }
 
 const [, , input, output, inner, outer] = process.argv;
-chromaKey(input, output, [255, 0, 255], inner ? Number(inner) : undefined, outer ? Number(outer) : undefined)
+chromaKey(input, output, inner ? Number(inner) : undefined, outer ? Number(outer) : undefined)
   .then(async () => {
     const meta = await sharp(output).metadata();
     console.log(`OK: ${output} -> ${meta.width}x${meta.height}, alpha: ${meta.hasAlpha}`);

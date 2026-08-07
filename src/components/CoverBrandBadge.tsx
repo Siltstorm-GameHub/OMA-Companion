@@ -1,7 +1,7 @@
 /**
  * Marken-Rahmen für Cover: Diagonalstreifen in den oberen Ecken, farbige
- * Eckakzente, obere Trennlinie, "OMA COMPANION"-Wasserzeichen, Vignette und
- * Logo-Badge unten rechts — auf jedes Cover ohne eigenes Branding komponiert
+ * Eckakzente, obere Trennlinie, "OLD MASTERS ALLIES"-Wasserzeichen, Vignette
+ * und Logo-Badge unten rechts — auf jedes Cover ohne eigenes Branding komponiert
  * (Steam-Cover, eigener Upload, Reihen-Cover oder Gradient-Fallback), damit
  * jedes große Cover dieselbe erkennbare Optik trägt. Spiegelt 1:1 den
  * Server-Renderer in lib/branded-cover.ts (Discord/OG-Bilder).
@@ -52,26 +52,25 @@ export default function CoverBrandBadge() {
         <line x1="680" y1="26" x2="654" y2="0" stroke="#8b2020" strokeOpacity="0.5" strokeWidth="1.2" />
 
         <line x1="0" y1="1" x2="680" y2="1" stroke="url(#cbb-top)" strokeWidth="2.5" />
-        <line x1="140" y1="330" x2="540" y2="330" stroke="url(#cbb-div)" strokeWidth="1.2" />
+        <line x1="26" y1="330" x2="290" y2="330" stroke="url(#cbb-div)" strokeWidth="1.2" />
 
         <rect x="0" y="180" width="4" height="36" rx="2" fill="#14b8a6" fillOpacity="0.9" />
         <rect x="676" y="180" width="4" height="36" rx="2" fill="#8b2020" fillOpacity="0.9" />
 
+        <circle cx="18" cy="354" r="2.5" fill="#14b8a6" fillOpacity="0.8" />
         <text
-          x="340" y="358" textAnchor="middle"
+          x="30" y="358" textAnchor="start"
           fontFamily="system-ui,ui-sans-serif,sans-serif"
-          fontSize="12" fontWeight="800" letterSpacing="6"
+          fontSize="12" fontWeight="800" letterSpacing="5"
           fill="#ffffff" fillOpacity="0.55"
         >
-          OMA COMPANION
+          OLD MASTERS ALLIES
         </text>
-        <circle cx="164" cy="354" r="2.5" fill="#14b8a6" fillOpacity="0.8" />
-        <circle cx="516" cy="354" r="2.5" fill="#8b2020" fillOpacity="0.8" />
       </svg>
 
-      <div className="absolute bottom-2 right-2 flex items-center justify-center rounded-lg bg-black/70 border border-teal-400/55 shadow-lg shadow-black/40 px-2 py-2">
+      <div className="absolute bottom-2 right-2 flex items-center justify-center rounded-xl bg-black/85 border-2 border-teal-400/75 shadow-lg shadow-black/50 px-3 py-3">
         {/* eslint-disable-next-line @next/next/no-img-element -- statisches Asset, next/image lohnt sich für ein kleines Icon nicht */}
-        <img src="/brand/logo-256.png" alt="" className="h-5 w-auto object-contain" />
+        <img src="/brand/logo-256.png" alt="" className="h-9 w-auto object-contain" />
       </div>
     </div>
   );

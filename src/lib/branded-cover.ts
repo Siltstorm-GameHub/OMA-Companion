@@ -80,17 +80,16 @@ function frameOverlaySvg(): Buffer {
   <line x1="${W}" y1="26" x2="${W - 26}" y2="0" stroke="#8b2020" stroke-opacity="0.5"  stroke-width="1.2"/>
 
   <line x1="0" y1="1" x2="${W}" y2="1" stroke="url(#fo-top)" stroke-width="2.5"/>
-  <line x1="140" y1="330" x2="540" y2="330" stroke="url(#fo-div)" stroke-width="1.2"/>
+  <line x1="26" y1="330" x2="290" y2="330" stroke="url(#fo-div)" stroke-width="1.2"/>
 
   <rect x="0"       y="180" width="4" height="36" rx="2" fill="#14b8a6" fill-opacity="0.9"/>
   <rect x="${W - 4}" y="180" width="4" height="36" rx="2" fill="#8b2020" fill-opacity="0.9"/>
 
-  <text x="${W / 2}" y="358" text-anchor="middle"
+  <circle cx="18" cy="354" r="2.5" fill="#14b8a6" fill-opacity="0.8"/>
+  <text x="30" y="358" text-anchor="start"
     font-family="system-ui,ui-sans-serif,sans-serif"
-    font-size="12" font-weight="800" letter-spacing="6"
-    fill="#ffffff" fill-opacity="0.55">OMA COMPANION</text>
-  <circle cx="${W / 2 - 176}" cy="354" r="2.5" fill="#14b8a6" fill-opacity="0.8"/>
-  <circle cx="${W / 2 + 176}" cy="354" r="2.5" fill="#8b2020" fill-opacity="0.8"/>
+    font-size="12" font-weight="800" letter-spacing="5"
+    fill="#ffffff" fill-opacity="0.55">OLD MASTERS ALLIES</text>
 </svg>`
   );
 }
@@ -123,16 +122,16 @@ async function getLogoBadge(): Promise<{ buffer: Buffer; width: number; height: 
   if (cachedBadge) return cachedBadge;
 
   const logoPath  = path.join(process.cwd(), "public", "brand", "logo-256.png");
-  const logoWidth = Math.round(W * 0.19);
+  const logoWidth = Math.round(W * 0.3);
   const logo = await sharp(fs.readFileSync(logoPath)).resize(logoWidth).png().toBuffer();
   const logoHeight = (await sharp(logo).metadata()).height ?? logoWidth;
 
-  const pad   = 12;
+  const pad   = 14;
   const chipW = logoWidth + pad * 2;
   const chipH = logoHeight + pad * 2;
   const chipSvg = Buffer.from(
     `<svg width="${chipW}" height="${chipH}" xmlns="http://www.w3.org/2000/svg">
-      <rect width="${chipW}" height="${chipH}" rx="12" fill="#06080f" fill-opacity="0.8" stroke="#14b8a6" stroke-opacity="0.55" stroke-width="1.5"/>
+      <rect width="${chipW}" height="${chipH}" rx="14" fill="#06080f" fill-opacity="0.85" stroke="#14b8a6" stroke-opacity="0.75" stroke-width="2.5"/>
     </svg>`
   );
 
