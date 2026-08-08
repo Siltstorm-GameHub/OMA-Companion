@@ -53,7 +53,9 @@ type PanelKey = "bracket" | "table" | "participants";
 export type Corner = "top-left" | "top-right" | "bottom-left" | "bottom-right" | "middle-left" | "middle-right";
 
 const PANEL_FADE_MS = 900;
-const TICKER_CLEARANCE = 210; // Höhe des Lower-Third-Tickers + Abstand — Panels in unteren Ecken schieben sich darüber
+const EDGE_MARGIN = 28;    // Abstand aller Kacheln zum Bildschirmrand
+const TICKER_BOTTOM = 48;  // Abstand des Lower-Thirds zum unteren Rand
+const TICKER_CLEARANCE = 166; // Höhe des Lower-Thirds + Abstand — Panels in unteren Ecken schieben sich darüber
 
 /** Absolute Positionierung für eine Ecke — Panels in den unteren Ecken rücken über den
  *  Ticker, damit sie ihn nicht überlappen. Welche Ecke beim jeweiligen Spiel HUD-frei ist,
@@ -62,12 +64,12 @@ const TICKER_CLEARANCE = 210; // Höhe des Lower-Third-Tickers + Abstand — Pan
 function cornerStyle(corner: Corner): React.CSSProperties {
   const base: React.CSSProperties = { position: "absolute" };
   switch (corner) {
-    case "top-left":     return { ...base, top: 56, left: 56 };
-    case "top-right":    return { ...base, top: 56, right: 56 };
-    case "bottom-left":  return { ...base, bottom: TICKER_CLEARANCE, left: 56 };
-    case "bottom-right": return { ...base, bottom: TICKER_CLEARANCE, right: 56 };
-    case "middle-left":  return { ...base, top: "50%", left: 56 };
-    case "middle-right": return { ...base, top: "50%", right: 56 };
+    case "top-left":     return { ...base, top: EDGE_MARGIN, left: EDGE_MARGIN };
+    case "top-right":    return { ...base, top: EDGE_MARGIN, right: EDGE_MARGIN };
+    case "bottom-left":  return { ...base, bottom: TICKER_CLEARANCE, left: EDGE_MARGIN };
+    case "bottom-right": return { ...base, bottom: TICKER_CLEARANCE, right: EDGE_MARGIN };
+    case "middle-left":  return { ...base, top: "50%", left: EDGE_MARGIN };
+    case "middle-right": return { ...base, top: "50%", right: EDGE_MARGIN };
   }
 }
 
@@ -185,7 +187,7 @@ export default function OverlayClient({
       <MotionStyles />
 
       {state && (
-        <div style={{ position: "absolute", left: 56, bottom: 96, display: "flex", alignItems: "center", gap: 16 }}>
+        <div style={{ position: "absolute", left: EDGE_MARGIN, bottom: TICKER_BOTTOM, display: "flex", alignItems: "center", gap: 16 }}>
           <BrandFlipTile
             eventTitle={state.title ?? eventTitle}
             game={state.game}
@@ -334,19 +336,21 @@ function BrandFlipTile({ eventTitle, game, isLive }: { eventTitle: string; game:
   }, []);
 
   return (
-    <div style={{ perspective: 1200 }}>
-      <TickerTile breathe={isLive} bodyStyle={{ padding: 0, width: 300, height: 78 }}>
-        <div
-          className="oma-flip-inner"
-          style={{
-            position: "relative",
-            width: "100%",
-            height: "100%",
-            transformStyle: "preserve-3d",
-            transition: `transform ${FLIP_DURATION_MS}ms cubic-bezier(0.6,0.04,0.32,0.96)`,
-            transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
-          }}
-        >
+    <TickerTile breathe={isLive} bodyStyle={{ padding: 0, width: 300, height: 78, perspective: 1200 }}>
+      {/* `perspective` muss auf dem direkten Elternelement der rotierenden Fläche sitzen, sonst
+         rendert der Browser die rotateY-Drehung flach statt räumlich — deshalb hier direkt auf
+         der Tile-Chrome selbst (bodyStyle) statt auf einem zusätzlichen Wrapper darüber. */}
+      <div
+        className="oma-flip-inner"
+        style={{
+          position: "relative",
+          width: "100%",
+          height: "100%",
+          transformStyle: "preserve-3d",
+          transition: `transform ${FLIP_DURATION_MS}ms cubic-bezier(0.6,0.04,0.32,0.96)`,
+          transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
+        }}
+      >
           <div style={{ position: "absolute", inset: 0, backfaceVisibility: "hidden", display: "flex", alignItems: "center", gap: 14, padding: "0 26px" }}>
             <LiveBadge live={isLive} />
             <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
@@ -374,8 +378,7 @@ function BrandFlipTile({ eventTitle, game, isLive }: { eventTitle: string; game:
             </span>
           </div>
         </div>
-      </TickerTile>
-    </div>
+    </TickerTile>
   );
 }
 
@@ -550,7 +553,7 @@ function PanelShell({ title, children }: { title: string; children: React.ReactN
       }}
     >
       <TopEdge radius={16} />
-      <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#5eead4", margin: "0 0 16px" }}>
+      <p style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#5eead4", margin: "0 0 16px" }}>
         {title}
       </p>
       {children}
@@ -566,7 +569,7 @@ function BracketPanel({ matches, userOf }: { matches: OverlayMatch[]; userOf: (i
       <div style={{ display: "flex", flexDirection: "column", gap: 14, maxHeight: 620, overflow: "hidden" }}>
         {rounds.map(round => (
           <div key={round}>
-            <p style={{ fontSize: 10, opacity: 0.45, textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 6px" }}>
+            <p style={{ fontSize: 11, opacity: 0.5, textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 6px" }}>
               Runde {round}
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -594,8 +597,8 @@ function BracketRow({ match, userOf }: { match: OverlayMatch; userOf: (id: strin
 
 function Row({ user, score, winner }: { user: OverlayUser | undefined; score: number | null; winner: boolean }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: winner ? 700 : 400, color: winner ? "#5eead4" : "rgba(255,255,255,0.85)" }}>
-      <RankedAvatar rankPoints={user?.rankPoints ?? 0} src={user?.image} alt={displayName(user)} size={22} />
+    <div style={{ display: "flex", alignItems: "center", gap: 9, fontSize: 17, fontWeight: winner ? 700 : 400, color: winner ? "#5eead4" : "rgba(255,255,255,0.85)" }}>
+      <RankedAvatar rankPoints={user?.rankPoints ?? 0} src={user?.image} alt={displayName(user)} size={26} />
       <span style={{ flex: 1 }}>{displayName(user)}</span>
       {score != null && <span>{score}</span>}
     </div>
@@ -625,19 +628,19 @@ function TablePanel({
           <div
             key={p.userId}
             style={{
-              display: "flex", alignItems: "center", gap: 12,
-              padding: "7px 8px", borderRadius: 7,
+              display: "flex", alignItems: "center", gap: 13,
+              padding: "9px 8px", borderRadius: 7,
               background: i < 3 ? "rgba(20,184,166,0.06)" : "transparent",
             }}
           >
-            <span style={{ width: 20, fontSize: 13, opacity: 0.4, textAlign: "right" }}>{i + 1}</span>
-            <RankedAvatar rankPoints={p.user.rankPoints} src={p.user.image} alt={displayName(p.user)} size={26} />
-            <span style={{ flex: 1, fontSize: 15, fontWeight: i < 3 ? 700 : 400, color: i < 3 ? "#5eead4" : "#fff" }}>
+            <span style={{ width: 22, fontSize: 15, opacity: 0.4, textAlign: "right" }}>{i + 1}</span>
+            <RankedAvatar rankPoints={p.user.rankPoints} src={p.user.image} alt={displayName(p.user)} size={30} />
+            <span style={{ flex: 1, fontSize: 18, fontWeight: i < 3 ? 700 : 400, color: i < 3 ? "#5eead4" : "#fff" }}>
               {displayName(p.user)}
             </span>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", minWidth: 76 }}>
-              <span style={{ fontSize: 14, fontWeight: 700, color: i < 3 ? "#5eead4" : "#fff" }}>{p.primary}</span>
-              {p.secondary && <span style={{ fontSize: 11, opacity: 0.5 }}>{p.secondary}</span>}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", minWidth: 84 }}>
+              <span style={{ fontSize: 16, fontWeight: 700, color: i < 3 ? "#5eead4" : "#fff" }}>{p.primary}</span>
+              {p.secondary && <span style={{ fontSize: 13, opacity: 0.5 }}>{p.secondary}</span>}
             </div>
           </div>
         ))}
@@ -759,11 +762,11 @@ function buildFfaRanking(
 function ParticipantsPanel({ participants }: { participants: OverlayParticipant[] }) {
   return (
     <PanelShell title="Teilnehmer">
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 16px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 16px" }}>
         {participants.slice(0, 24).map(p => (
-          <div key={p.userId} style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-            <RankedAvatar rankPoints={p.user.rankPoints} src={p.user.image} alt={displayName(p.user)} size={24} />
-            <span style={{ fontSize: 14, color: "rgba(255,255,255,0.85)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <div key={p.userId} style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
+            <RankedAvatar rankPoints={p.user.rankPoints} src={p.user.image} alt={displayName(p.user)} size={28} />
+            <span style={{ fontSize: 17, color: "rgba(255,255,255,0.85)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {displayName(p.user)}
             </span>
           </div>
