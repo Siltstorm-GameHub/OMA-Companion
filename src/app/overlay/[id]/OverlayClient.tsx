@@ -119,6 +119,8 @@ export default function OverlayClient({
   requestedPanels,
   rotateSeconds,
   corner,
+  showTicker,
+  showBrand,
 }: {
   eventId: string;
   token: string;
@@ -127,6 +129,8 @@ export default function OverlayClient({
   requestedPanels: PanelKey[] | null;
   rotateSeconds: number;
   corner: Corner;
+  showTicker: boolean;
+  showBrand: boolean;
 }) {
   const [state, setState] = useState<OverlayState | null>(null);
   const esRef = useRef<EventSource | null>(null);
@@ -186,14 +190,16 @@ export default function OverlayClient({
     >
       <MotionStyles />
 
-      {state && (
+      {state && (showBrand || (showTicker && ticker)) && (
         <div style={{ position: "absolute", left: EDGE_MARGIN, bottom: TICKER_BOTTOM, display: "flex", alignItems: "center", gap: 16 }}>
-          <BrandFlipTile
-            eventTitle={state.title ?? eventTitle}
-            game={state.game}
-            isLive={ticker ? !ticker.winnerId && !ticker.playedAt : state.status === "active"}
-          />
-          {ticker && <MatchTicker match={ticker} userOf={userOf} />}
+          {showBrand && (
+            <BrandFlipTile
+              eventTitle={state.title ?? eventTitle}
+              game={state.game}
+              isLive={ticker ? !ticker.winnerId && !ticker.playedAt : state.status === "active"}
+            />
+          )}
+          {showTicker && ticker && <MatchTicker match={ticker} userOf={userOf} />}
         </div>
       )}
 
@@ -322,7 +328,7 @@ function pickTickerMatch(matches: OverlayMatch[]): OverlayMatch | null {
 }
 
 const FLIP_INTERVAL_MS = 6000;
-const FLIP_DURATION_MS = 850;
+const FLIP_DURATION_MS = 1000;
 
 /** Flip-Card statt zweier separater Elemente: Vorderseite zeigt Live-Status/Spiel/Event,
  *  Rückseite Logo + Wortmarke — beide Infos bleiben so "immer sichtbar" (abwechselnd), ohne
@@ -336,10 +342,12 @@ function BrandFlipTile({ eventTitle, game, isLive }: { eventTitle: string; game:
   }, []);
 
   return (
-    <TickerTile breathe={isLive} bodyStyle={{ padding: 0, width: 300, height: 78, perspective: 1200 }}>
+    <TickerTile breathe={isLive} bodyStyle={{ padding: 0, width: 300, height: 78, perspective: 500, overflow: "visible" }}>
       {/* `perspective` muss auf dem direkten Elternelement der rotierenden Fläche sitzen, sonst
          rendert der Browser die rotateY-Drehung flach statt räumlich — deshalb hier direkt auf
-         der Tile-Chrome selbst (bodyStyle) statt auf einem zusätzlichen Wrapper darüber. */}
+         der Tile-Chrome selbst (bodyStyle) statt auf einem zusätzlichen Wrapper darüber. Ein
+         niedriger Perspektive-Wert (500 statt vorher 1200) macht die Drehung außerdem deutlich
+         kräftiger sichtbar — größere Werte wirken bei einer so kleinen Kachel kaum merklich 3D. */}
       <div
         className="oma-flip-inner"
         style={{
@@ -548,12 +556,12 @@ function PanelShell({ title, children }: { title: string; children: React.ReactN
         border: "1px solid rgba(255,255,255,0.08)",
         borderRadius: 16,
         boxShadow: "0 24px 60px rgba(0,0,0,0.55)",
-        padding: "22px 24px",
+        padding: "15px 18px",
         overflow: "hidden",
       }}
     >
       <TopEdge radius={16} />
-      <p style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#5eead4", margin: "0 0 16px" }}>
+      <p style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#5eead4", margin: "0 0 9px" }}>
         {title}
       </p>
       {children}
@@ -566,13 +574,13 @@ function BracketPanel({ matches, userOf }: { matches: OverlayMatch[]; userOf: (i
   const rounds = [...new Set(matches.map(m => m.round))].sort((a, b) => a - b);
   return (
     <PanelShell title="Turnierbaum">
-      <div style={{ display: "flex", flexDirection: "column", gap: 14, maxHeight: 620, overflow: "hidden" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 620, overflow: "hidden" }}>
         {rounds.map(round => (
           <div key={round}>
-            <p style={{ fontSize: 11, opacity: 0.5, textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 6px" }}>
+            <p style={{ fontSize: 11, opacity: 0.5, textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 3px" }}>
               Runde {round}
             </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               {matches.filter(m => m.round === round).map(m => (
                 <BracketRow key={m.id} match={m} userOf={userOf} />
               ))}
@@ -623,13 +631,13 @@ function TablePanel({
 
   return (
     <PanelShell title={title}>
-      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
         {ranked.slice(0, 12).map((p, i) => (
           <div
             key={p.userId}
             style={{
               display: "flex", alignItems: "center", gap: 13,
-              padding: "9px 8px", borderRadius: 7,
+              padding: "5px 8px", borderRadius: 7,
               background: i < 3 ? "rgba(20,184,166,0.06)" : "transparent",
             }}
           >
@@ -762,7 +770,7 @@ function buildFfaRanking(
 function ParticipantsPanel({ participants }: { participants: OverlayParticipant[] }) {
   return (
     <PanelShell title="Teilnehmer">
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 16px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "5px 14px" }}>
         {participants.slice(0, 24).map(p => (
           <div key={p.userId} style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
             <RankedAvatar rankPoints={p.user.rankPoints} src={p.user.image} alt={displayName(p.user)} size={28} />

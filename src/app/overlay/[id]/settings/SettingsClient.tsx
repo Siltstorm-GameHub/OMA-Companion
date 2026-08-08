@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Copy, ExternalLink, Tv2, Check, LayoutGrid, Table2, Users, Repeat } from "lucide-react";
+import { Copy, ExternalLink, Tv2, Check, LayoutGrid, Table2, Users, Repeat, Swords, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 type PanelKey = "bracket" | "table" | "participants";
@@ -30,6 +30,8 @@ export default function SettingsClient({
   const [enabled, setEnabled] = useState<Set<PanelKey>>(new Set(relevantPanels.map(p => p.key)));
   const [rotateSeconds, setRotateSeconds] = useState(14);
   const [corner, setCorner] = useState<Corner>("top-right");
+  const [showTicker, setShowTicker] = useState(true);
+  const [showBrand, setShowBrand] = useState(true);
   const [copied, setCopied] = useState(false);
 
   const overlayUrl = useMemo(() => {
@@ -40,8 +42,10 @@ export default function SettingsClient({
     }
     if (rotateSeconds !== 14) params.set("rotate", String(rotateSeconds));
     if (corner !== "top-right") params.set("pos", corner);
+    if (!showTicker) params.set("ticker", "0");
+    if (!showBrand) params.set("brand", "0");
     return `${origin}/overlay/${eventId}?${params.toString()}`;
-  }, [eventId, token, enabled, relevantPanels.length, rotateSeconds, corner]);
+  }, [eventId, token, enabled, relevantPanels.length, rotateSeconds, corner, showTicker, showBrand]);
 
   function toggle(key: PanelKey) {
     setEnabled(prev => {
@@ -78,11 +82,44 @@ export default function SettingsClient({
 
         <div className="glass rounded-2xl p-5 mb-4">
           <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+            Sichtbare Elemente
+          </h2>
+          <p className="text-xs text-gray-500 mb-3">
+            Jedes Element lässt sich einzeln aus- und wieder einblenden.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setShowTicker(v => !v)}
+              className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl border font-medium transition-all ${
+                showTicker
+                  ? "bg-teal-500/15 border-teal-500/40 text-teal-300"
+                  : "border-white/[0.08] text-gray-500 hover:text-gray-300 hover:border-white/20"
+              }`}
+            >
+              <Swords className="w-3.5 h-3.5" />
+              Aktuelles Match
+            </button>
+            <button
+              onClick={() => setShowBrand(v => !v)}
+              className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl border font-medium transition-all ${
+                showBrand
+                  ? "bg-teal-500/15 border-teal-500/40 text-teal-300"
+                  : "border-white/[0.08] text-gray-500 hover:text-gray-300 hover:border-white/20"
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              Live/Event/Spiel &amp; Logo
+            </button>
+          </div>
+        </div>
+
+        <div className="glass rounded-2xl p-5 mb-4">
+          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
             Angezeigte Bereiche
           </h2>
           <p className="text-xs text-gray-500 mb-3">
-            Das laufende Match wird immer unten eingeblendet. Wähl zusätzlich, welche Bereiche im Overlay
-            erscheinen sollen — bei mehreren rotieren sie automatisch durch, damit dein Gameplay sichtbar bleibt.
+            Wähl, welche Bereiche im Overlay erscheinen sollen — bei mehreren rotieren sie
+            automatisch durch, damit dein Gameplay sichtbar bleibt.
           </p>
           <div className="flex flex-wrap gap-2">
             {relevantPanels.map(({ key, label, icon: Icon }) => {

@@ -11,10 +11,13 @@ export default async function OverlayPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ token?: string; panels?: string; rotate?: string; pos?: string }>;
+  searchParams: Promise<{ token?: string; panels?: string; rotate?: string; pos?: string; ticker?: string; brand?: string }>;
 }) {
   const { id: eventId } = await params;
-  const { token, panels: panelsParam, rotate: rotateParam, pos: posParam } = await searchParams;
+  const {
+    token, panels: panelsParam, rotate: rotateParam, pos: posParam,
+    ticker: tickerParam, brand: brandParam,
+  } = await searchParams;
 
   const event = await prisma.event.findUnique({
     where: { id: eventId },
@@ -30,6 +33,8 @@ export default async function OverlayPage({
     : null;
   const rotateSeconds = rotateParam ? Math.max(4, parseInt(rotateParam, 10) || 14) : 14;
   const corner: Corner = (posParam && (CORNERS as string[]).includes(posParam)) ? (posParam as Corner) : "top-right";
+  const showTicker = tickerParam !== "0";
+  const showBrand = brandParam !== "0";
 
   return (
     <>
@@ -47,6 +52,8 @@ export default async function OverlayPage({
         requestedPanels={requestedPanels?.length ? requestedPanels : null}
         rotateSeconds={rotateSeconds}
         corner={corner}
+        showTicker={showTicker}
+        showBrand={showBrand}
       />
     </>
   );
