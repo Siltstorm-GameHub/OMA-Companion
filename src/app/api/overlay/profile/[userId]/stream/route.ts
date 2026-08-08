@@ -1,8 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { parseFavoriteGames } from "@/lib/favorite-games";
-import { getBadgeDef } from "@/lib/badges";
-import { badgeArt } from "@/lib/badge-art";
+import { resolveShowcaseEntries } from "@/lib/overlay-badges";
 import { getRankProgress, getRankFullLabel } from "@/lib/ranks";
 
 export const dynamic = "force-dynamic";
@@ -13,17 +12,6 @@ export const dynamic = "force-dynamic";
 const MAX_STREAM_MS = 4 * 60 * 1000;
 const POLL_MS       = 2000; // Profildaten ändern sich seltener als Turnier-Matches, 2s reicht
 const HEARTBEAT_MS  = 15000;
-const MAX_SHOWCASE_BADGES = 3;
-
-function resolveShowcaseBadges(json: string | null): { icon: string; name: string; image: string | null }[] {
-  let keys: string[] = [];
-  try { keys = json ? JSON.parse(json) : []; } catch { /* ignore */ }
-  return keys.slice(0, MAX_SHOWCASE_BADGES).map(key => {
-    if (key.startsWith("custom:")) return { icon: "🏅", name: "Sonderabzeichen", image: badgeArt(key) };
-    const def = getBadgeDef(key);
-    return { icon: def?.icon ?? "🏅", name: def?.name ?? key, image: badgeArt(key) };
-  });
-}
 
 async function loadProfileOverlayState(userId: string) {
   const user = await prisma.user.findUnique({
@@ -49,7 +37,7 @@ async function loadProfileOverlayState(userId: string) {
     rankLabel: getRankFullLabel(rank),
     rankPct: pct,
     favoriteGames: parseFavoriteGames(user.favoriteGamesJson),
-    badges: resolveShowcaseBadges(user.showcaseBadgesJson),
+    badges: await resolveShowcaseEntries(user.id, user.showcaseBadgesJson),
     nextEvent: nextRegistration?.event
       ? { id: nextRegistration.event.id, title: nextRegistration.event.title, startAt: nextRegistration.event.startAt, game: nextRegistration.event.game }
       : null,
