@@ -1193,7 +1193,13 @@ function Row({ user, score, winner }: { user: OverlayUser | undefined; score: nu
   );
 }
 
-type RankedRow = { userId: string; user: OverlayUser; primary: string; secondary: string };
+type RankedRow = {
+  userId: string; user: OverlayUser; primary: string; secondary: string;
+  /** Vollständige Stat-Aufschlüsselung (ffa/coop_stats) — eine Zeile je konfiguriertem Feld,
+   *  statt alles in `secondary` zusammenzuquetschen und dabei Felder faktisch unsichtbar
+   *  werden zu lassen. */
+  statLines?: string[];
+};
 
 /** Tabellen-Panel — die Berechnung unterscheidet sich bewusst je Turnierformat, weil die
  *  zugrunde liegenden Datenfelder unterschiedlich sind: Liga/Round-Robin tragen Sieger in
@@ -1226,9 +1232,16 @@ function TablePanel({
             <span style={{ flex: 1, fontSize: 18, fontWeight: i < 3 ? 700 : 400, color: i < 3 ? "#5eead4" : "#fff" }}>
               {displayName(p.user)}
             </span>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", minWidth: 84 }}>
-              <span style={{ fontSize: 16, fontWeight: 700, color: i < 3 ? "#5eead4" : "#fff" }}>{p.primary}</span>
-              {p.secondary && <span style={{ fontSize: 13, opacity: 0.5 }}>{p.secondary}</span>}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 1, minWidth: 84, flexShrink: 0 }}>
+              {p.primary && (
+                <span style={{ fontSize: 16, fontWeight: 700, color: i < 3 ? "#5eead4" : "#fff", whiteSpace: "nowrap" }}>{p.primary}</span>
+              )}
+              {p.secondary && <span style={{ fontSize: 13, opacity: 0.5, whiteSpace: "nowrap" }}>{p.secondary}</span>}
+              {p.statLines?.map((line, idx) => (
+                <span key={idx} style={{ fontSize: 14, fontWeight: i < 3 ? 700 : 500, color: i < 3 ? "#5eead4" : "#fff", whiteSpace: "nowrap" }}>
+                  {line}
+                </span>
+              ))}
             </div>
           </div>
         ))}
@@ -1319,18 +1332,22 @@ function buildFfaRanking(
     .map(p => {
       const t = totals.get(p.userId) ?? { stats: {}, matchCount: 0 };
       let primary: string;
-      let secondary = "";
+      let statLines: string[] | undefined;
       if (isAvg) {
         const avg = nonCoopStatFields.length > 0 && t.matchCount > 0
           ? nonCoopStatFields.map(f => (t.stats[f] ?? 0) / t.matchCount).reduce((a, b) => a + b, 0) / nonCoopStatFields.length
           : 0;
         primary = t.matchCount > 0 ? `Ø ${avg.toFixed(1)}` : "–";
+      } else if (nonCoopStatFields.length > 0) {
+        // Jedes konfigurierte Feld bekommt seine eigene Zeile, statt alles in einen einzigen
+        // String zu quetschen — sonst wirkten weitere Felder im schmalen Panel abgeschnitten
+        // oder verschwanden optisch ganz.
+        primary = "";
+        statLines = nonCoopStatFields.map(f => `${t.stats[f] ?? 0} ${f}`);
       } else {
-        const [firstField, ...restFields] = nonCoopStatFields;
-        primary = firstField ? `${t.stats[firstField] ?? 0} ${firstField}` : `${t.matchCount} Runden`;
-        secondary = restFields.filter(f => t.stats[f] != null).map(f => `${t.stats[f]} ${f}`).join(" · ");
+        primary = `${t.matchCount} Runden`;
       }
-      return { userId: p.userId, user: p.user, t, primary, secondary };
+      return { userId: p.userId, user: p.user, t, primary, secondary: "", statLines };
     })
     .sort((a, b) => {
       if (a.t.matchCount === 0 && b.t.matchCount === 0) return 0;
