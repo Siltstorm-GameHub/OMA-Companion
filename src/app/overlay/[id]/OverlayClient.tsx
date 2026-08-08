@@ -64,6 +64,9 @@ type OverlayState = {
   /** Profildaten des Streamers, der diesen Link erzeugt hat (siehe stream-register) — null bei
    *  älteren Links ohne `streamer`-Parameter oder wenn der User seither gelöscht wurde. */
   streamer: OverlayStreamer | null;
+  /** Ligapunkte je User, die dieses Event zu seiner Eventreihe beiträgt — leer, wenn das Event
+   *  zu keiner Reihe gehört oder die Spielphase noch nicht abgeschlossen ist. */
+  ligaPunkteByUser: Record<string, number>;
 };
 
 type PanelKey = "bracket" | "table" | "participants";
@@ -441,7 +444,7 @@ export default function OverlayClient({
                 ...panelMotionStyle(corner, legacyRotator.previous.phase),
               }}
             >
-              <PanelContent panelKey={legacyRotator.previous.key} matches={matches} userOf={userOf} format={fmt} statFields={state.statFields} participants={state.participants} />
+              <PanelContent panelKey={legacyRotator.previous.key} matches={matches} userOf={userOf} format={fmt} statFields={state.statFields} participants={state.participants} ligaPunkteByUser={state.ligaPunkteByUser} />
             </div>
           )}
           {legacyRotator.active && (
@@ -453,7 +456,7 @@ export default function OverlayClient({
                 ...panelMotionStyle(corner, legacyRotator.active.phase),
               }}
             >
-              <PanelContent panelKey={legacyRotator.active.key} matches={matches} userOf={userOf} format={fmt} statFields={state.statFields} participants={state.participants} />
+              <PanelContent panelKey={legacyRotator.active.key} matches={matches} userOf={userOf} format={fmt} statFields={state.statFields} participants={state.participants} ligaPunkteByUser={state.ligaPunkteByUser} />
             </div>
           )}
         </div>
@@ -483,7 +486,7 @@ export default function OverlayClient({
                   ...panelMotionStyle(corner, prevSlot.phase),
                 }}
               >
-                <ElementContent elementKey={prevSlot.key} matches={matches} userOf={userOf} format={fmt} statFields={state.statFields} participants={state.participants} streamer={state.streamer} eventTitle={state.title ?? eventTitle} game={state.game} isLive={ticker ? !ticker.winnerId && !ticker.playedAt : state.status === "active"} />
+                <ElementContent elementKey={prevSlot.key} matches={matches} userOf={userOf} format={fmt} statFields={state.statFields} participants={state.participants} streamer={state.streamer} eventTitle={state.title ?? eventTitle} game={state.game} isLive={ticker ? !ticker.winnerId && !ticker.playedAt : state.status === "active"} ligaPunkteByUser={state.ligaPunkteByUser} />
               </div>
             )}
             {slot && (
@@ -495,7 +498,7 @@ export default function OverlayClient({
                   ...panelMotionStyle(corner, slot.phase),
                 }}
               >
-                <ElementContent elementKey={slot.key} matches={matches} userOf={userOf} format={fmt} statFields={state.statFields} participants={state.participants} streamer={state.streamer} eventTitle={state.title ?? eventTitle} game={state.game} isLive={ticker ? !ticker.winnerId && !ticker.playedAt : state.status === "active"} />
+                <ElementContent elementKey={slot.key} matches={matches} userOf={userOf} format={fmt} statFields={state.statFields} participants={state.participants} streamer={state.streamer} eventTitle={state.title ?? eventTitle} game={state.game} isLive={ticker ? !ticker.winnerId && !ticker.playedAt : state.status === "active"} ligaPunkteByUser={state.ligaPunkteByUser} />
               </div>
             )}
           </div>
@@ -512,7 +515,7 @@ function panelWidthFor(key: PanelKey): number {
 /** Dispatcher fürs neue, vollständig generalisierte Stapel-System — analog zu PanelContent,
  *  nur über den kompletten stapelbaren Elementsatz statt nur Bracket/Table/Participants. */
 function ElementContent({
-  elementKey, matches, userOf, format, statFields, participants, streamer, eventTitle, game, isLive,
+  elementKey, matches, userOf, format, statFields, participants, streamer, eventTitle, game, isLive, ligaPunkteByUser,
 }: {
   elementKey: ElementKey;
   matches: OverlayMatch[];
@@ -524,6 +527,7 @@ function ElementContent({
   eventTitle: string;
   game: string | null;
   isLive: boolean;
+  ligaPunkteByUser: Record<string, number>;
 }) {
   switch (elementKey) {
     case "liveinfo":     return <LiveInfoTile eventTitle={eventTitle} game={game} isLive={isLive} />;
@@ -532,7 +536,7 @@ function ElementContent({
       return match ? <MatchTicker match={match} userOf={userOf} format={format} statFields={statFields} /> : null;
     }
     case "bracket":      return <BracketPanel matches={matches} userOf={userOf} />;
-    case "table":        return <TablePanel matches={matches} participants={participants} format={format} statFields={statFields} />;
+    case "table":        return <TablePanel matches={matches} participants={participants} format={format} statFields={statFields} ligaPunkteByUser={ligaPunkteByUser} />;
     case "participants": return <ParticipantsPanel participants={participants} />;
     case "favorites":    return <FavoritesPanel games={streamer?.favoriteGames ?? []} />;
     case "badges":       return <BadgesPanel badges={streamer?.badges ?? []} />;
@@ -541,7 +545,7 @@ function ElementContent({
 }
 
 function PanelContent({
-  panelKey, matches, userOf, format, statFields, participants,
+  panelKey, matches, userOf, format, statFields, participants, ligaPunkteByUser,
 }: {
   panelKey: PanelKey;
   matches: OverlayMatch[];
@@ -549,9 +553,10 @@ function PanelContent({
   format: string | null;
   statFields: string | null;
   participants: OverlayParticipant[];
+  ligaPunkteByUser: Record<string, number>;
 }) {
   if (panelKey === "bracket") return <BracketPanel matches={matches} userOf={userOf} />;
-  if (panelKey === "table") return <TablePanel matches={matches} participants={participants} format={format} statFields={statFields} />;
+  if (panelKey === "table") return <TablePanel matches={matches} participants={participants} format={format} statFields={statFields} ligaPunkteByUser={ligaPunkteByUser} />;
   return <ParticipantsPanel participants={participants} />;
 }
 
@@ -1199,6 +1204,9 @@ type RankedRow = {
    *  statt alles in `secondary` zusammenzuquetschen und dabei Felder faktisch unsichtbar
    *  werden zu lassen. */
   statLines?: string[];
+  /** Ligapunkte, die dieses Event dem User zur Eventreihe beigesteuert hat — unabhängig vom
+   *  Turnierformat, sichtbar sobald das Event zu einer Reihe gehört. */
+  ligaPunkte?: number;
 };
 
 /** Tabellen-Panel — die Berechnung unterscheidet sich bewusst je Turnierformat, weil die
@@ -1207,13 +1215,16 @@ type RankedRow = {
  *  reiner winnerId-Sieg-Zähler zeigt bei FFA-Formaten für jeden Teilnehmer 0 an. Spiegelt
  *  die Logik aus LigaView/RoundRobinView/FfaView, nur kompakter fürs Overlay. */
 function TablePanel({
-  matches, participants, format, statFields,
-}: { matches: OverlayMatch[]; participants: OverlayParticipant[]; format: string | null; statFields: string | null }) {
+  matches, participants, format, statFields, ligaPunkteByUser,
+}: {
+  matches: OverlayMatch[]; participants: OverlayParticipant[]; format: string | null; statFields: string | null;
+  ligaPunkteByUser: Record<string, number>;
+}) {
   const isFfaFamily = format === "ffa" || format === "coop_stats" || format === "avg_stats";
   const title = format === "liga" ? "Liga-Tabelle" : isFfaFamily ? "Gesamtranking" : "Tabelle";
   const ranked = isFfaFamily
-    ? buildFfaRanking(matches, participants, format, statFields)
-    : buildMatchRanking(matches, participants, format);
+    ? buildFfaRanking(matches, participants, format, statFields, ligaPunkteByUser)
+    : buildMatchRanking(matches, participants, format, ligaPunkteByUser);
 
   return (
     <PanelShell title={title}>
@@ -1242,6 +1253,11 @@ function TablePanel({
                   {line}
                 </span>
               ))}
+              {p.ligaPunkte != null && (
+                <span style={{ fontSize: 13, color: "#5eead4", opacity: 0.85, whiteSpace: "nowrap" }}>
+                  +{p.ligaPunkte} Ligapunkte
+                </span>
+              )}
             </div>
           </div>
         ))}
@@ -1252,7 +1268,9 @@ function TablePanel({
 
 /** Liga (mit Unentschieden) / Round-Robin (ohne) — Sieg=3, Unentschieden=1, sortiert nach
  *  Punkten, dann Siegen, dann Tordifferenz. Identische Punktelogik wie LigaView/RoundRobinView. */
-function buildMatchRanking(matches: OverlayMatch[], participants: OverlayParticipant[], format: string | null): RankedRow[] {
+function buildMatchRanking(
+  matches: OverlayMatch[], participants: OverlayParticipant[], format: string | null, ligaPunkteByUser: Record<string, number>,
+): RankedRow[] {
   const supportsDraw = format === "liga";
   type Acc = { w: number; d: number; l: number; pts: number; scored: number; conceded: number };
   const map = new Map<string, Acc>(participants.map(p => [p.userId, { w: 0, d: 0, l: 0, pts: 0, scored: 0, conceded: 0 }]));
@@ -1288,7 +1306,8 @@ function buildMatchRanking(matches: OverlayMatch[], participants: OverlayPartici
     .map(p => {
       const s = map.get(p.userId)!;
       const secondary = supportsDraw ? `${s.w}S · ${s.d}U · ${s.l}N` : `${s.w}S · ${s.l}N`;
-      return { userId: p.userId, user: p.user, s, secondary, primary: `${s.pts} Pkt.` };
+      const ligaPunkte = ligaPunkteByUser[p.userId];
+      return { userId: p.userId, user: p.user, s, secondary, primary: `${s.pts} Pkt.`, ligaPunkte: ligaPunkte ? Math.round(ligaPunkte) : undefined };
     })
     .sort((a, b) => b.s.pts - a.s.pts || b.s.w - a.s.w || (b.s.scored - b.s.conceded) - (a.s.scored - a.s.conceded));
 }
@@ -1298,10 +1317,12 @@ function buildMatchRanking(matches: OverlayMatch[], participants: OverlayPartici
  *  ffa die Summe des ersten (primären) Stat-Felds — identische Sortierlogik wie FfaView. */
 function buildFfaRanking(
   matches: OverlayMatch[], participants: OverlayParticipant[], format: string, statFieldsJson: string | null,
+  ligaPunkteByUser: Record<string, number>,
 ): RankedRow[] {
   let statFields: string[] = [];
   try { statFields = statFieldsJson ? JSON.parse(statFieldsJson) : []; } catch { /* ignore */ }
-  const isAvg = format === "avg_stats";
+  const isAvg  = format === "avg_stats";
+  const isCoop = format === "coop_stats";
 
   const totals = new Map<string, { stats: Record<string, number>; matchCount: number }>(
     participants.map(p => [p.userId, { stats: {}, matchCount: 0 }])
@@ -1332,7 +1353,12 @@ function buildFfaRanking(
     .map(p => {
       const t = totals.get(p.userId) ?? { stats: {}, matchCount: 0 };
       let primary: string;
-      let statLines: string[] | undefined;
+      const statLines: string[] = [];
+      // coop_stats trägt sein Sieg/Niederlage-Flag als "Match Win" in statsJson, getrennt von den
+      // eigentlich konfigurierten Stat-Feldern (siehe FfaView: eigene Spalte, nicht Teil von
+      // statFields) — ohne diese Zeile fehlte genau der Wert, den der Admin pro Runde einträgt.
+      if (isCoop) statLines.push(`${t.stats["Match Win"] ?? 0} Siege`);
+
       if (isAvg) {
         const avg = nonCoopStatFields.length > 0 && t.matchCount > 0
           ? nonCoopStatFields.map(f => (t.stats[f] ?? 0) / t.matchCount).reduce((a, b) => a + b, 0) / nonCoopStatFields.length
@@ -1343,11 +1369,16 @@ function buildFfaRanking(
         // String zu quetschen — sonst wirkten weitere Felder im schmalen Panel abgeschnitten
         // oder verschwanden optisch ganz.
         primary = "";
-        statLines = nonCoopStatFields.map(f => `${t.stats[f] ?? 0} ${f}`);
+        statLines.push(...nonCoopStatFields.map(f => `${t.stats[f] ?? 0} ${f}`));
       } else {
-        primary = `${t.matchCount} Runden`;
+        primary = isCoop ? "" : `${t.matchCount} Runden`;
       }
-      return { userId: p.userId, user: p.user, t, primary, secondary: "", statLines };
+      const ligaPunkte = ligaPunkteByUser[p.userId];
+      return {
+        userId: p.userId, user: p.user, t, primary, secondary: "",
+        statLines: statLines.length > 0 ? statLines : undefined,
+        ligaPunkte: ligaPunkte ? Math.round(ligaPunkte) : undefined,
+      };
     })
     .sort((a, b) => {
       if (a.t.matchCount === 0 && b.t.matchCount === 0) return 0;
