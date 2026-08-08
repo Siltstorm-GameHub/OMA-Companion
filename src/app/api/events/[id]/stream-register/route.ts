@@ -17,7 +17,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
   if (!streamer) return NextResponse.json({ error: "Nicht als Streamer angemeldet" }, { status: 403 });
 
   const token = await ensureOverlayToken(eventId);
-  return NextResponse.json({ overlayUrl: buildOverlaySettingsUrl(eventId, token) });
+  return NextResponse.json({ overlayUrl: buildOverlaySettingsUrl(eventId, token, userId) });
 }
 
 export async function POST(_req: NextRequest, { params }: Params) {
@@ -45,7 +45,7 @@ export async function POST(_req: NextRequest, { params }: Params) {
   });
 
   const token = await ensureOverlayToken(eventId);
-  return NextResponse.json({ ...record, overlayUrl: buildOverlaySettingsUrl(eventId, token) });
+  return NextResponse.json({ ...record, overlayUrl: buildOverlaySettingsUrl(eventId, token, userId) });
 }
 
 export async function DELETE(_req: NextRequest, { params }: Params) {

@@ -1,32 +1,38 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { Copy, ExternalLink, Tv2, Check, LayoutGrid, Table2, Users, Repeat, Swords, Sparkles, Move } from "lucide-react";
+import {
+  Copy, ExternalLink, Tv2, Check, LayoutGrid, Table2, Users, Repeat, Swords, Sparkles, Move, Gamepad2, Award,
+} from "lucide-react";
 import { toast } from "sonner";
-import { ELEMENT_SIZE, type ElementKey } from "../OverlayClient";
+import { ELEMENT_SIZE, STACKABLE_ELEMENTS, type ElementKey } from "../OverlayClient";
 
-type PanelKey = "bracket" | "table" | "participants";
-type PanelOption = { key: PanelKey; label: string; icon: typeof LayoutGrid; forFormats: string[] | null };
 type Pos = { x: number; y: number }; // Prozent von 1920×1080, oben links des Elements
+type ElementOption = { key: ElementKey; label: string; icon: typeof Swords; forFormats: string[] | null };
 
-const PANEL_OPTIONS: PanelOption[] = [
-  { key: "bracket",      label: "Turnierbaum",  icon: LayoutGrid, forFormats: ["single_elimination", "double_elimination"] },
-  { key: "table",        label: "Tabelle",       icon: Table2,     forFormats: ["liga", "round_robin", "ffa", "coop_stats", "avg_stats"] },
-  { key: "participants", label: "Teilnehmer",    icon: Users,      forFormats: null },
+const ELEMENT_OPTIONS: ElementOption[] = [
+  { key: "brand",        label: "OMA-Logo & Streamer",         icon: Sparkles,   forFormats: null },
+  { key: "liveinfo",     label: "Live / Event / Spiel",         icon: Tv2,        forFormats: null },
+  { key: "ticker",       label: "Aktuelles Match",              icon: Swords,     forFormats: null },
+  { key: "bracket",      label: "Turnierbaum",                  icon: LayoutGrid, forFormats: ["single_elimination", "double_elimination"] },
+  { key: "table",        label: "Tabelle",                      icon: Table2,     forFormats: ["liga", "round_robin", "ffa", "coop_stats", "avg_stats"] },
+  { key: "participants", label: "Teilnehmer",                   icon: Users,      forFormats: null },
+  { key: "favorites",    label: "Lieblingsspiele",               icon: Gamepad2,   forFormats: null },
+  { key: "badges",       label: "Abzeichen",                     icon: Award,      forFormats: null },
 ];
 
-const ELEMENT_LABELS: Record<ElementKey, { label: string; icon: typeof Swords }> = {
-  ticker: { label: "Aktuelles Match", icon: Swords },
-  brand:  { label: "Live/Event/Spiel & Logo", icon: Sparkles },
-  panel:  { label: "Turnierbaum/Tabelle/Teilnehmer", icon: LayoutGrid },
-};
-
-/** Ausgangspositionen, angelehnt an die alte Standardplatzierung (Brand+Ticker unten links
- *  nebeneinander, Panel oben rechts) — Prozent von 1920×1080. */
+/** Ausgangspositionen (Prozent von 1920×1080). Turnierbaum/Tabelle/Teilnehmer teilen sich
+ *  bewusst dieselbe Standardposition — sie stapeln sich dadurch von Anfang an genau wie im
+ *  alten System, ohne dass der Streamer das erst manuell zusammenziehen muss. */
 const DEFAULT_POSITIONS: Record<ElementKey, Pos> = {
-  brand:  { x: 1.5,  y: 90.6 },
-  ticker: { x: 18.4, y: 90.6 },
-  panel:  { x: 68.4, y: 2.6 },
+  brand:        { x: 1.5,  y: 90.6 },
+  liveinfo:     { x: 19,   y: 90.6 },
+  ticker:       { x: 40,   y: 90.6 },
+  bracket:      { x: 66,   y: 2.6 },
+  table:        { x: 66,   y: 2.6 },
+  participants: { x: 66,   y: 2.6 },
+  favorites:    { x: 5,    y: 40 },
+  badges:       { x: 5,    y: 63 },
 };
 
 function pctSize(key: ElementKey): { w: number; h: number } {
@@ -40,43 +46,54 @@ function overlaps(a: Pos, aKey: ElementKey, b: Pos, bKey: ElementKey): boolean {
 }
 
 export default function SettingsClient({
-  eventId, eventTitle, format, token,
-}: { eventId: string; eventTitle: string; format: string | null; token: string }) {
-  const relevantPanels = PANEL_OPTIONS.filter(p => !p.forFormats || (format && p.forFormats.includes(format)));
-  const [enabled, setEnabled] = useState<Set<PanelKey>>(new Set(relevantPanels.map(p => p.key)));
+  eventId, eventTitle, format, token, streamerId, hasFavorites, hasBadges,
+}: {
+  eventId: string; eventTitle: string; format: string | null; token: string;
+  streamerId: string | null; hasFavorites: boolean; hasBadges: boolean;
+}) {
+  const relevantElements = ELEMENT_OPTIONS.filter(o => {
+    if (o.key === "favorites") return hasFavorites;
+    if (o.key === "badges") return hasBadges;
+    return !o.forFormats || (format && o.forFormats.includes(format));
+  });
+  const [enabled, setEnabled] = useState<Set<ElementKey>>(
+    new Set(relevantElements.filter(o => o.key !== "favorites" && o.key !== "badges").map(o => o.key))
+  );
   const [rotateSeconds, setRotateSeconds] = useState(14);
-  const [showTicker, setShowTicker] = useState(true);
-  const [showBrand, setShowBrand] = useState(true);
   const [positions, setPositions] = useState<Record<ElementKey, Pos>>(DEFAULT_POSITIONS);
   const [copied, setCopied] = useState(false);
 
-  const activeElements = useMemo<ElementKey[]>(() => {
-    const list: ElementKey[] = [];
-    if (showBrand) list.push("brand");
-    if (showTicker) list.push("ticker");
-    if (enabled.size > 0) list.push("panel");
-    return list;
-  }, [showBrand, showTicker, enabled.size]);
+  const activeElements = useMemo(() => relevantElements.filter(o => enabled.has(o.key)).map(o => o.key), [relevantElements, enabled]);
+
+  // Stapel-Vorschau: welche aktiven, stapelbaren Elemente teilen sich (auf 0.1% gerundet)
+  // dieselbe Position — genau die Gruppierung, die das Overlay zur Laufzeit auch bildet.
+  const stackSizes = useMemo(() => {
+    const buckets = new Map<string, number>();
+    for (const key of activeElements) {
+      if (!STACKABLE_ELEMENTS.includes(key)) continue;
+      const p = positions[key];
+      const posKey = `${p.x.toFixed(1)},${p.y.toFixed(1)}`;
+      buckets.set(posKey, (buckets.get(posKey) ?? 0) + 1);
+    }
+    return buckets;
+  }, [activeElements, positions]);
+  const hasAnyStack = [...stackSizes.values()].some(n => n > 1);
 
   const overlayUrl = useMemo(() => {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
     const params = new URLSearchParams({ token });
-    if (enabled.size > 0 && enabled.size < relevantPanels.length) {
-      params.set("panels", [...enabled].join(","));
-    }
+    if (streamerId) params.set("streamer", streamerId);
     if (rotateSeconds !== 14) params.set("rotate", String(rotateSeconds));
-    if (!showTicker) params.set("ticker", "0");
-    if (!showBrand) params.set("brand", "0");
     const layout = activeElements.map(key => `${key}:${positions[key].x.toFixed(1)},${positions[key].y.toFixed(1)}`).join(";");
     if (layout) params.set("layout", layout);
     return `${origin}/overlay/${eventId}?${params.toString()}`;
-  }, [eventId, token, enabled, relevantPanels.length, rotateSeconds, showTicker, showBrand, activeElements, positions]);
+  }, [eventId, token, streamerId, rotateSeconds, activeElements, positions]);
 
-  function toggle(key: PanelKey) {
+  function toggle(key: ElementKey) {
     setEnabled(prev => {
       const next = new Set(prev);
       if (next.has(key)) {
-        if (next.size === 1) return prev; // mindestens ein Panel muss aktiv bleiben
+        if (next.size === 1) return prev; // mindestens ein Element muss aktiv bleiben
         next.delete(key);
       } else {
         next.add(key);
@@ -110,34 +127,12 @@ export default function SettingsClient({
             Elemente
           </h2>
           <p className="text-xs text-gray-500 mb-3">
-            Jedes Element lässt sich einzeln aus- und wieder einblenden. Turnierbaum/Tabelle und
-            Teilnehmer rotieren automatisch durch, wenn mehr als eins aktiv ist, damit dein
-            Gameplay sichtbar bleibt.
+            Jedes Element lässt sich einzeln aus- und wieder einblenden und unten frei
+            positionieren. Zieh mehrere aufeinander, damit sie sich zu einer Stelle stapeln und
+            automatisch durchrotieren — &quot;OMA-Logo &amp; Streamer&quot; bleibt immer allein und fix.
           </p>
           <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setShowTicker(v => !v)}
-              className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl border font-medium transition-all ${
-                showTicker
-                  ? "bg-teal-500/15 border-teal-500/40 text-teal-300"
-                  : "border-white/[0.08] text-gray-500 hover:text-gray-300 hover:border-white/20"
-              }`}
-            >
-              <Swords className="w-3.5 h-3.5" />
-              Aktuelles Match
-            </button>
-            <button
-              onClick={() => setShowBrand(v => !v)}
-              className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl border font-medium transition-all ${
-                showBrand
-                  ? "bg-teal-500/15 border-teal-500/40 text-teal-300"
-                  : "border-white/[0.08] text-gray-500 hover:text-gray-300 hover:border-white/20"
-              }`}
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              Live/Event/Spiel &amp; Logo
-            </button>
-            {relevantPanels.map(({ key, label, icon: Icon }) => {
+            {relevantElements.map(({ key, label, icon: Icon }) => {
               const active = enabled.has(key);
               return (
                 <button
@@ -155,31 +150,13 @@ export default function SettingsClient({
               );
             })}
           </div>
-        </div>
 
-        <div className="glass rounded-2xl p-5 mb-4">
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3 flex items-center gap-1.5">
-            <Move className="w-3.5 h-3.5" /> Position
-          </h2>
-          <p className="text-xs text-gray-500 mb-3">
-            Zieh jedes aktive Element dahin, wo es auf deinem Bildschirm frei ist — die
-            Vorschau entspricht 1920×1080. Elemente lassen sich nicht übereinander ziehen,
-            sie stoppen automatisch an der Kante des jeweils anderen.
-          </p>
-          <PositionCanvas
-            activeElements={activeElements}
-            positions={positions}
-            onChange={(key, pos) => setPositions(prev => ({ ...prev, [key]: pos }))}
-          />
-        </div>
-
-        {enabled.size > 1 && (
-          <div className="glass rounded-2xl p-5 mb-4">
-            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3 flex items-center gap-1.5">
-              <Repeat className="w-3.5 h-3.5" /> Rotation
-            </h2>
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-gray-400">Jeder Bereich sichtbar für</span>
+          {hasAnyStack && (
+            <div className="flex items-center gap-3 mt-4 pt-4 border-t border-white/[0.06]">
+              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1.5 shrink-0">
+                <Repeat className="w-3.5 h-3.5" /> Rotation
+              </span>
+              <span className="text-sm text-gray-400">Jedes gestapelte Element sichtbar für</span>
               <input
                 type="number"
                 min={4}
@@ -190,8 +167,24 @@ export default function SettingsClient({
               />
               <span className="text-sm text-gray-400">Sekunden</span>
             </div>
-          </div>
-        )}
+          )}
+        </div>
+
+        <div className="glass rounded-2xl p-5 mb-4">
+          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+            <Move className="w-3.5 h-3.5" /> Position
+          </h2>
+          <p className="text-xs text-gray-500 mb-3">
+            Zieh jedes aktive Element dahin, wo es auf deinem Bildschirm frei ist — die
+            Vorschau entspricht 1920×1080. Zwei Elemente übereinander bilden automatisch einen
+            Stapel; &quot;OMA-Logo &amp; Streamer&quot; lässt sich nicht mit anderen überlappen.
+          </p>
+          <PositionCanvas
+            activeElements={activeElements}
+            positions={positions}
+            onChange={(key, pos) => setPositions(prev => ({ ...prev, [key]: pos }))}
+          />
+        </div>
 
         <div className="glass rounded-2xl p-5">
           <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
@@ -227,10 +220,11 @@ export default function SettingsClient({
   );
 }
 
-/** 16:9-Vorschau des OBS-Canvas mit ziehbaren Boxen je aktivem Element. Kollisionsvermeidung:
- *  eine Bewegung, die zu einer Überlappung mit einem anderen aktiven Element führen würde,
- *  wird verworfen — die Box bleibt an der Kante des anderen Elements stehen, statt darüber
- *  hinweg zu rutschen. */
+/** 16:9-Vorschau des OBS-Canvas mit ziehbaren Boxen je aktivem Element.
+ *  - "brand" (fix, nie Teil eines Stapels) blockt jede Überlappung — die Box bleibt an der
+ *    Kante des anderen Elements stehen.
+ *  - Stapelbare Elemente rasten beim Überlappen eines anderen stapelbaren Elements exakt auf
+ *    dessen Position ein (das IST die Stapelbildung), bleiben aber ebenfalls von "brand" fern. */
 function PositionCanvas({
   activeElements, positions, onChange,
 }: { activeElements: ElementKey[]; positions: Record<ElementKey, Pos>; onChange: (key: ElementKey, pos: Pos) => void }) {
@@ -260,9 +254,23 @@ function PositionCanvas({
         x: Math.min(100 - size.w, Math.max(0, rawX)),
         y: Math.min(100 - size.h, Math.max(0, rawY)),
       };
+      const isStackable = STACKABLE_ELEMENTS.includes(drag.key);
       const others = activeElements.filter(k => k !== drag.key);
-      const collides = others.some(k => overlaps(candidate, drag.key, positions[k], k));
-      if (!collides) onChange(drag.key, candidate);
+
+      const hitsBrand = drag.key !== "brand" && others.includes("brand") && overlaps(candidate, drag.key, positions.brand, "brand");
+      if (hitsBrand) return; // "brand" blockt immer — Bewegung verwerfen
+
+      if (drag.key === "brand") {
+        const collides = others.some(k => overlaps(candidate, "brand", positions[k], k));
+        if (collides) return;
+        onChange("brand", candidate);
+        return;
+      }
+
+      if (isStackable) {
+        const stackPartner = others.find(k => k !== "brand" && STACKABLE_ELEMENTS.includes(k) && overlaps(candidate, drag.key, positions[k], k));
+        onChange(drag.key, stackPartner ? positions[stackPartner] : candidate);
+      }
     };
     const handleUp = () => {
       dragState.current = null;
@@ -273,6 +281,11 @@ function PositionCanvas({
     window.addEventListener("pointermove", handleMove);
     window.addEventListener("pointerup", handleUp);
   }
+
+  // Stapel-Mitglieder an derselben Position bekommen einen kleinen Versatz in der Vorschau,
+  // sonst läge nur die zuletzt gerenderte Box sichtbar da — im echten Overlay rotieren sie
+  // stattdessen durch, hier reicht ein Fächer-Effekt zur Anzeige "hier stapelt sich was".
+  const stackOffset = new Map<string, number>();
 
   return (
     <div
@@ -290,24 +303,32 @@ function PositionCanvas({
       {activeElements.map(key => {
         const pos = positions[key];
         const size = pctSize(key);
-        const { label, icon: Icon } = ELEMENT_LABELS[key];
+        const option = ELEMENT_OPTIONS.find(o => o.key === key)!;
+        const Icon = option.icon;
+        const posKey = `${pos.x.toFixed(1)},${pos.y.toFixed(1)}`;
+        const fanIndex = stackOffset.get(posKey) ?? 0;
+        stackOffset.set(posKey, fanIndex + 1);
+        const isBrand = key === "brand";
         return (
           <div
             key={key}
             onPointerDown={e => startDrag(key, e)}
             className={`absolute flex items-center gap-1.5 rounded-lg border px-2 text-[11px] font-medium cursor-grab active:cursor-grabbing transition-shadow ${
               dragging === key
-                ? "bg-teal-500/25 border-teal-400/60 text-teal-100 shadow-lg shadow-teal-500/20 z-10"
-                : "bg-teal-500/10 border-teal-500/30 text-teal-300"
+                ? "bg-teal-500/25 border-teal-400/60 text-teal-100 shadow-lg shadow-teal-500/20 z-20"
+                : isBrand
+                  ? "bg-violet-500/10 border-violet-500/30 text-violet-300 z-10"
+                  : "bg-teal-500/10 border-teal-500/30 text-teal-300"
             }`}
             style={{
-              left: `${pos.x}%`, top: `${pos.y}%`,
+              left: `calc(${pos.x}% + ${fanIndex * 4}px)`, top: `calc(${pos.y}% + ${fanIndex * 4}px)`,
               width: `${size.w}%`, height: `${size.h}%`,
+              zIndex: dragging === key ? 20 : 10 + fanIndex,
               touchAction: "none",
             }}
           >
             <Icon className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">{label}</span>
+            <span className="truncate">{option.label}</span>
           </div>
         );
       })}
