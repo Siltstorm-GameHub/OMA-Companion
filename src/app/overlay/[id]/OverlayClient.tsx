@@ -91,17 +91,19 @@ function panelMotionStyle(corner: Corner, phase: PanelPhase): React.CSSPropertie
 function MotionStyles() {
   return (
     <style>{`
-      @keyframes oma-pulse   { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
-      @keyframes oma-pop     { 0% { transform: scale(0.6); opacity: 0; } 65% { transform: scale(1.18); } 100% { transform: scale(1); opacity: 1; } }
-      @keyframes oma-flare   { 0% { box-shadow: 0 0 0 0 rgba(45,212,191,0); } 25% { box-shadow: 0 0 28px 6px rgba(45,212,191,0.55); } 100% { box-shadow: 0 0 0 0 rgba(45,212,191,0); } }
-      @keyframes oma-slidein { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
-      @keyframes oma-breathe { 0%,100% { border-top-color: rgba(20,184,166,0.4); } 50% { border-top-color: rgba(20,184,166,0.85); } }
+      @keyframes oma-pulse    { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+      @keyframes oma-pop      { 0% { transform: scale(0.6); opacity: 0; } 65% { transform: scale(1.18); } 100% { transform: scale(1); opacity: 1; } }
+      @keyframes oma-flare    { 0% { box-shadow: 0 0 0 0 rgba(45,212,191,0); } 25% { box-shadow: 0 0 28px 6px rgba(45,212,191,0.55); } 100% { box-shadow: 0 0 0 0 rgba(45,212,191,0); } }
+      @keyframes oma-slidein  { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+      @keyframes oma-breathe  { 0%,100% { opacity: 0.55; } 50% { opacity: 1; } }
+      @keyframes oma-live-ring { 0% { transform: scale(1); opacity: 0.75; } 100% { transform: scale(2.8); opacity: 0; } }
       .oma-anim-pop     { animation: oma-pop 420ms cubic-bezier(0.16,1,0.3,1) both; }
       .oma-anim-flare   { animation: oma-flare 1100ms ease-out; }
       .oma-anim-slidein { animation: oma-slidein 480ms cubic-bezier(0.16,1,0.3,1) both; }
       .oma-anim-breathe { animation: oma-breathe 3.2s ease-in-out infinite; }
+      .oma-live-ring    { animation: oma-live-ring 1.3s cubic-bezier(0,0,0.2,1) infinite; }
       @media (prefers-reduced-motion: reduce) {
-        .oma-anim-pop, .oma-anim-flare, .oma-anim-slidein, .oma-anim-breathe { animation: none !important; }
+        .oma-anim-pop, .oma-anim-flare, .oma-anim-slidein, .oma-anim-breathe, .oma-live-ring { animation: none !important; }
       }
     `}</style>
   );
@@ -181,10 +183,16 @@ export default function OverlayClient({
       }}
     >
       <MotionStyles />
-      <BrandMark />
 
-      {ticker && (
-        <MatchTicker match={ticker} userOf={userOf} eventTitle={state?.title ?? eventTitle} game={state?.game ?? null} />
+      {state && (
+        <div style={{ position: "absolute", left: 56, bottom: 96, display: "flex", alignItems: "center", gap: 16 }}>
+          <BrandFlipTile
+            eventTitle={state.title ?? eventTitle}
+            game={state.game}
+            isLive={ticker ? !ticker.winnerId && !ticker.playedAt : state.status === "active"}
+          />
+          {ticker && <MatchTicker match={ticker} userOf={userOf} />}
+        </div>
       )}
 
       {state && (rotator.active || rotator.previous) && (
@@ -245,7 +253,6 @@ type PanelSlot = { key: PanelKey; phase: PanelPhase };
  *  React braucht einen Paint dazwischen, sonst überspringt der Browser die CSS-Transition)
  *  gleichzeitig in ihre Endposition. */
 function usePanelRotator(panels: PanelKey[], rotateSeconds: number) {
-  const indexRef = useRef(0);
   const [active, setActive] = useState<PanelSlot | null>(panels.length ? { key: panels[0], phase: "settled" } : null);
   const [previous, setPrevious] = useState<PanelSlot | null>(null);
 
@@ -255,7 +262,6 @@ function usePanelRotator(panels: PanelKey[], rotateSeconds: number) {
   const [prevPanelsKey, setPrevPanelsKey] = useState(panelsKey);
   if (panelsKey !== prevPanelsKey) {
     setPrevPanelsKey(panelsKey);
-    indexRef.current = 0;
     setActive(panels.length ? { key: panels[0], phase: "settled" } : null);
     setPrevious(null);
   }
@@ -269,8 +275,12 @@ function usePanelRotator(panels: PanelKey[], rotateSeconds: number) {
     const cycle = setInterval(() => {
       setActive(curr => {
         if (curr) setPrevious({ key: curr.key, phase: "settled" });
-        indexRef.current = (indexRef.current + 1) % panels.length;
-        return { key: panels[indexRef.current], phase: "enter" };
+        // Nächsten Panel-Key aus der aktuellen Position in `panels` ableiten statt aus einem
+        // separaten Ref-Zähler — Refs dürfen während des Renders nicht gelesen/geschrieben
+        // werden, und dieser Callback läuft ohnehin außerhalb jedes Renders.
+        const currIdx = curr ? panels.indexOf(curr.key) : -1;
+        const nextIdx = (currIdx + 1) % panels.length;
+        return { key: panels[nextIdx], phase: "enter" };
       });
 
       flipTimer = setTimeout(() => {
@@ -286,6 +296,10 @@ function usePanelRotator(panels: PanelKey[], rotateSeconds: number) {
       clearTimeout(flipTimer);
       clearTimeout(clearTimer);
     };
+    // `panels` bewusst nicht in den Deps: ein neuer Array-Verweis bei gleichem Inhalt (jeder
+    // Render erzeugt availablePanels neu) würde die Rotation ständig neu starten. panelsKey
+    // oben fängt echte Änderungen ab.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [panels.length, rotateSeconds]);
 
   return { active, previous };
@@ -305,57 +319,100 @@ function pickTickerMatch(matches: OverlayMatch[]): OverlayMatch | null {
   return played[0] ?? null;
 }
 
-/* ── Broadcast-Branding: Logo + Wortmarke unten links, dauerhaft sichtbar ── */
-function BrandMark() {
+const FLIP_INTERVAL_MS = 6000;
+const FLIP_DURATION_MS = 850;
+
+/** Flip-Card statt zweier separater Elemente: Vorderseite zeigt Live-Status/Spiel/Event,
+ *  Rückseite Logo + Wortmarke — beide Infos bleiben so "immer sichtbar" (abwechselnd), ohne
+ *  permanent eigenen Platz neben dem Match zu beanspruchen. */
+function BrandFlipTile({ eventTitle, game, isLive }: { eventTitle: string; game: string | null; isLive: boolean }) {
+  const [flipped, setFlipped] = useState(false);
+
+  useEffect(() => {
+    const t = setInterval(() => setFlipped(f => !f), FLIP_INTERVAL_MS);
+    return () => clearInterval(t);
+  }, []);
+
   return (
-    <div
-      style={{
-        position: "absolute",
-        left: 56,
-        bottom: 34,
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        opacity: 0.65,
-      }}
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element -- OBS-Browser-Source, kein Next-Image-Optimierungspfad nötig */}
-      <img src={BRAND_LOGO} alt="" width={26} height={26} style={{ display: "block", filter: "drop-shadow(0 0 6px rgba(20,184,166,0.35))" }} />
-      <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#e8e8f0" }}>
-        Old Masters Ally
-      </span>
+    <div style={{ perspective: 1200 }}>
+      <TickerTile breathe={isLive} bodyStyle={{ padding: 0, width: 300, height: 78 }}>
+        <div
+          className="oma-flip-inner"
+          style={{
+            position: "relative",
+            width: "100%",
+            height: "100%",
+            transformStyle: "preserve-3d",
+            transition: `transform ${FLIP_DURATION_MS}ms cubic-bezier(0.6,0.04,0.32,0.96)`,
+            transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
+          }}
+        >
+          <div style={{ position: "absolute", inset: 0, backfaceVisibility: "hidden", display: "flex", alignItems: "center", gap: 14, padding: "0 26px" }}>
+            <LiveBadge live={isLive} />
+            <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+              <span style={{ fontSize: 15, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {eventTitle}
+              </span>
+              {game && (
+                <span style={{ fontSize: 12, color: "rgba(94,234,212,0.75)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {game}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div
+            style={{
+              position: "absolute", inset: 0, backfaceVisibility: "hidden", transform: "rotateY(180deg)",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 12,
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element -- OBS-Browser-Source, kein Next-Image-Optimierungspfad nötig */}
+            <img src={BRAND_LOGO} alt="" width={32} height={32} style={{ display: "block", filter: "drop-shadow(0 0 8px rgba(20,184,166,0.4))" }} />
+            <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "#fff" }}>
+              Old Masters Ally
+            </span>
+          </div>
+        </div>
+      </TickerTile>
     </div>
   );
 }
 
-/* ── Lower-Third: zwei getrennte Kacheln statt einer durchgehenden Leiste —
-   links Status/Event/Spiel, rechts das eigentliche Match. Bewusst getrennt, damit
-   dazwischen wieder Gameplay durchscheint statt einer über die volle Breite reichenden
-   Fläche. ── */
+/** Deutlich kräftigerer Live-Indikator als der vorherige einfache Opacity-Puls: ein
+ *  auslaufender Leuchtring hinter einem hellen Kernpunkt. Im "Zuletzt"-Zustand ruhig. */
+function LiveBadge({ live }: { live: boolean }) {
+  return (
+    <span style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", width: 14, height: 14, flexShrink: 0 }}>
+      {live && (
+        <span
+          className="oma-live-ring"
+          style={{ position: "absolute", inset: 0, borderRadius: 999, background: "#f87171" }}
+        />
+      )}
+      <span
+        style={{
+          position: "relative", width: 10, height: 10, borderRadius: 999,
+          background: live ? "#f87171" : "#2dd4bf",
+          boxShadow: live ? "0 0 10px 2px rgba(248,113,113,0.8)" : "0 0 8px 1px rgba(45,212,191,0.6)",
+        }}
+      />
+    </span>
+  );
+}
+
+/* ── Match-Kachel des Lower-Thirds. Steht neben der BrandFlipTile (Live/Event/Spiel ↔ Logo) —
+   bewusst als eigene Kachel statt einer über die volle Breite reichenden Leiste, damit
+   dazwischen wieder Gameplay durchscheint. ── */
 function MatchTicker({
-  match, userOf, eventTitle, game,
-}: { match: OverlayMatch; userOf: (id: string | null) => OverlayUser | undefined; eventTitle: string; game: string | null }) {
-  const isLive = !match.winnerId && !match.playedAt;
+  match, userOf,
+}: { match: OverlayMatch; userOf: (id: string | null) => OverlayUser | undefined }) {
   const p1Winner = !!match.winnerId && match.winnerId === match.player1Id;
   const p2Winner = !!match.winnerId && match.winnerId === match.player2Id;
   const hasDuel = !!(match.player1Id || match.player2Id);
 
   return (
-    <div style={{ position: "absolute", left: 56, bottom: 96, display: "flex", alignItems: "center", gap: 16 }}>
-      <TickerTile breathe={isLive}>
-        <StatusPill live={isLive} />
-        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <span style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>
-            {eventTitle}
-          </span>
-          {game && (
-            <span style={{ fontSize: 12, color: "rgba(94,234,212,0.75)", fontWeight: 500 }}>
-              {game}
-            </span>
-          )}
-        </div>
-      </TickerTile>
-
+    <div>
       {/* key=match.id lässt die Kachel bei jedem neuen laufenden/nächsten Match einmal
          einschweben, statt kommentarlos den Inhalt zu tauschen. */}
       <TickerTile key={match.id}>
@@ -389,51 +446,46 @@ function MatchTicker({
   );
 }
 
-function TickerTile({ children, breathe }: { children: React.ReactNode; breathe?: boolean }) {
+function TickerTile({
+  children, breathe, bodyStyle,
+}: { children: React.ReactNode; breathe?: boolean; bodyStyle?: React.CSSProperties }) {
   return (
     <div
-      className={`oma-anim-slidein${breathe ? " oma-anim-breathe" : ""}`}
+      className="oma-anim-slidein"
       style={{
+        position: "relative",
         background: "rgba(9,9,14,0.82)",
         backdropFilter: "blur(18px) saturate(1.4)",
         WebkitBackdropFilter: "blur(18px) saturate(1.4)",
         border: "1px solid rgba(255,255,255,0.08)",
-        borderTop: "2px solid rgba(20,184,166,0.65)",
         borderRadius: 14,
         boxShadow: "0 24px 60px rgba(0,0,0,0.55)",
         padding: "18px 26px",
         display: "flex",
         alignItems: "center",
         gap: 16,
+        overflow: "hidden",
+        ...bodyStyle,
       }}
     >
+      <TopEdge radius={14} breathe={breathe} />
       {children}
     </div>
   );
 }
 
-function StatusPill({ live }: { live: boolean }) {
+/** Farbverlauf-Kante Teal → Weinrot oben an jeder Kachel — als eigenes Element statt
+ *  `border-top`, weil ein CSS-Border keinen Verlauf einzeln je Seite unterstützt. */
+function TopEdge({ radius, breathe }: { radius: number; breathe?: boolean }) {
   return (
-    <span
+    <div
+      className={breathe ? "oma-anim-breathe" : undefined}
       style={{
-        display: "flex", alignItems: "center", gap: 7,
-        fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase",
-        padding: "6px 12px", borderRadius: 999,
-        color: live ? "#fca5a5" : "#5eead4",
-        background: live ? "rgba(239,68,68,0.12)" : "rgba(20,184,166,0.12)",
-        border: `1px solid ${live ? "rgba(239,68,68,0.35)" : "rgba(20,184,166,0.3)"}`,
-        flexShrink: 0,
+        position: "absolute", top: 0, left: 0, right: 0, height: 2,
+        background: "linear-gradient(90deg, #14b8a6 0%, #5eead4 20%, #14b8a6 45%, #7a1f3d 75%, #9f2b52 100%)",
+        borderTopLeftRadius: radius, borderTopRightRadius: radius,
       }}
-    >
-      <span
-        style={{
-          width: 6, height: 6, borderRadius: 999,
-          background: live ? "#f87171" : "#2dd4bf",
-          animation: live ? "oma-pulse 1.4s ease-in-out infinite" : undefined,
-        }}
-      />
-      {live ? "Live" : "Zuletzt"}
-    </span>
+    />
   );
 }
 
@@ -486,16 +538,18 @@ function PanelShell({ title, children }: { title: string; children: React.ReactN
   return (
     <div
       style={{
+        position: "relative",
         background: "rgba(9,9,14,0.86)",
         backdropFilter: "blur(20px) saturate(1.4)",
         WebkitBackdropFilter: "blur(20px) saturate(1.4)",
         border: "1px solid rgba(255,255,255,0.08)",
-        borderTop: "2px solid rgba(20,184,166,0.5)",
         borderRadius: 16,
         boxShadow: "0 24px 60px rgba(0,0,0,0.55)",
         padding: "22px 24px",
+        overflow: "hidden",
       }}
     >
+      <TopEdge radius={16} />
       <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#5eead4", margin: "0 0 16px" }}>
         {title}
       </p>
