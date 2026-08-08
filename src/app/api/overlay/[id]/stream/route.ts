@@ -14,7 +14,7 @@ async function loadOverlayState(eventId: string) {
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     select: {
-      id: true, title: true, status: true, format: true, tournamentStatus: true, game: true,
+      id: true, title: true, status: true, format: true, tournamentStatus: true, game: true, statFields: true,
       matches: {
         orderBy: [{ round: "asc" }, { position: "asc" }],
         select: {
@@ -45,7 +45,7 @@ async function loadOverlayState(eventId: string) {
 
   return {
     id: event.id, title: event.title, status: event.status, format: event.format,
-    tournamentStatus: event.tournamentStatus, game: event.game,
+    tournamentStatus: event.tournamentStatus, game: event.game, statFields: event.statFields,
     matches: event.matches, participants: mergedParticipants,
   };
 }
