@@ -82,47 +82,49 @@ export async function POST(req: NextRequest) {
 
   if (!series) return NextResponse.json({ error: "Eventreihe nicht gefunden" }, { status: 404 });
   if (!series.recurrenceType && !overrideDate) return NextResponse.json({ error: "Keine Wiederholung konfiguriert — bitte Datum angeben" }, { status: 400 });
-  if (series.events.length === 0) return NextResponse.json({ error: "Reihe hat noch keine Events" }, { status: 400 });
 
-  const referenceEvent = series.events[0];  // ältestes Event = Referenz für Monthly-Modus
-  const lastEvent      = series.events[series.events.length - 1];
+  const hasEvents      = series.events.length > 0;
+  const referenceEvent = hasEvents ? series.events[0] : null;                       // ältestes Event = Referenz für Monthly-Modus
+  const lastEvent       = hasEvents ? series.events[series.events.length - 1] : null;
 
   const nextDate = overrideDate
     ? new Date(overrideDate)
     : calcNextDate(
-        new Date(lastEvent.startAt),
+        new Date(lastEvent!.startAt),
         series.recurrenceType as RecurrenceType,
         (series.recurrenceMonthlyMode ?? "dayOfMonth") as MonthlyMode,
-        new Date(referenceEvent.startAt),
+        new Date(referenceEvent!.startAt),
       );
   if (isNaN(nextDate.getTime())) return NextResponse.json({ error: "Ungültiges Datum" }, { status: 400 });
 
-  const game            = series.fixedGame ?? lastEvent.game ?? null;
-  const discordChannelId = series.discordChannelId ?? lastEvent.discordChannelId ?? null;
+  const game            = series.fixedGame ?? lastEvent?.game ?? null;
+  const discordChannelId = series.discordChannelId ?? lastEvent?.discordChannelId ?? null;
   // Umfragen-Konfiguration erben: Reihe hat Vorrang, sonst vom letzten Event übernehmen
-  const pollsConfigJson = series.pollsConfigJson ?? lastEvent.pollsConfigJson ?? null;
+  const pollsConfigJson = series.pollsConfigJson ?? lastEvent?.pollsConfigJson ?? null;
   // Kategorie/Genre sind Reihen-weite Einstellungen (kein "fixed*"-Override-Konzept wie bei Spiel/Format) —
   // die Reihe ist hier die führende Quelle, mit dem letzten Event nur als Fallback.
-  const category = series.category ?? lastEvent.category;
-  const genre    = series.genre    ?? lastEvent.genre    ?? null;
+  const category = series.category ?? lastEvent?.category ?? undefined;
+  const genre    = series.genre    ?? lastEvent?.genre    ?? null;
 
+  // Erstes Event der Reihe: kein Vorlagen-Event vorhanden, aus dem Standardwerte übernommen
+  // werden könnten — Titel/Kapazität etc. fallen daher auf sinnvolle Defaults zurück.
   const newEvent = await prisma.event.create({
     data: {
-      title: nextTitle(lastEvent.title),
+      title: lastEvent ? nextTitle(lastEvent.title) : series.name,
       game,
       genre,
       category,
       startAt: nextDate,
-      maxPlayers:  lastEvent.maxPlayers,
-      pointReward: lastEvent.pointReward,
-      type:        lastEvent.type,
+      maxPlayers:  lastEvent?.maxPlayers  ?? null,
+      pointReward: lastEvent?.pointReward ?? 50,
+      type:        lastEvent?.type        ?? "community",
       discordChannelId,
       seriesId,
       // Zuschauer-Modus und Sieger-Ermittlung sind reine Event-Einstellungen (keine Reihen-Felder) —
       // vom letzten Event übernehmen, damit sie nicht bei jeder Generierung verloren gehen.
-      spectatorMode:         lastEvent.spectatorMode,
-      spectatorRewardJson:   lastEvent.spectatorRewardJson,
-      ...(lastEvent.seriesEventConfigJson && { seriesEventConfigJson: lastEvent.seriesEventConfigJson }),
+      spectatorMode:         lastEvent?.spectatorMode       ?? false,
+      spectatorRewardJson:   lastEvent?.spectatorRewardJson ?? null,
+      ...(lastEvent?.seriesEventConfigJson && { seriesEventConfigJson: lastEvent.seriesEventConfigJson }),
       ...(series.fixedFormat && { format: series.fixedFormat }),
       ...(derivedPointsConfig() !== null && { pointsConfig: derivedPointsConfig() }),
       ...(derivedStatFields()  !== null && { statFields:   derivedStatFields()  }),

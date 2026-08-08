@@ -24,11 +24,11 @@ async function loadOverlayState(eventId: string) {
         },
       },
       participants: {
-        select: { userId: true, user: { select: { id: true, name: true, username: true, image: true } } },
+        select: { userId: true, user: { select: { id: true, name: true, username: true, image: true, rankPoints: true } } },
       },
       registrations: {
         where: { role: { not: "spectator" } },
-        select: { userId: true, user: { select: { id: true, name: true, username: true, image: true } } },
+        select: { userId: true, user: { select: { id: true, name: true, username: true, image: true, rankPoints: true } } },
       },
     },
   });
