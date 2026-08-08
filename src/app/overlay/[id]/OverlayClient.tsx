@@ -36,6 +36,7 @@ type OverlayState = {
   status: string;
   format: string | null;
   tournamentStatus: string | null;
+  game: string | null;
   matches: OverlayMatch[];
   participants: OverlayParticipant[];
 };
@@ -137,7 +138,7 @@ export default function OverlayClient({
       <BrandMark />
 
       {ticker && (
-        <MatchTicker match={ticker} nameOf={nameOf} eventTitle={state?.title ?? eventTitle} />
+        <MatchTicker match={ticker} nameOf={nameOf} eventTitle={state?.title ?? eventTitle} game={state?.game ?? null} />
       )}
 
       {rotator.activeKey && state && (
@@ -236,8 +237,8 @@ function BrandMark() {
 
 /* ── Lower-Third: laufendes/nächstes Match, immer sichtbar ── */
 function MatchTicker({
-  match, nameOf, eventTitle,
-}: { match: OverlayMatch; nameOf: (id: string | null) => string; eventTitle: string }) {
+  match, nameOf, eventTitle, game,
+}: { match: OverlayMatch; nameOf: (id: string | null) => string; eventTitle: string; game: string | null }) {
   const isLive = !match.winnerId && !match.playedAt;
   const p1Winner = !!match.winnerId && match.winnerId === match.player1Id;
   const p2Winner = !!match.winnerId && match.winnerId === match.player2Id;
@@ -264,9 +265,16 @@ function MatchTicker({
       }}
     >
       <StatusPill live={isLive} />
-      <span style={{ fontSize: 15, color: "rgba(255,255,255,0.45)", minWidth: 140 }}>
-        {eventTitle}
-      </span>
+      <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 160 }}>
+        {game && (
+          <span style={{ fontSize: 13, fontWeight: 700, color: "#5eead4", letterSpacing: "0.01em" }}>
+            {game}
+          </span>
+        )}
+        <span style={{ fontSize: 13, color: "rgba(255,255,255,0.45)" }}>
+          {eventTitle}
+        </span>
+      </div>
 
       {hasDuel ? (
         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 24 }}>

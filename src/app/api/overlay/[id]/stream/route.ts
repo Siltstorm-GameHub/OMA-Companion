@@ -14,7 +14,7 @@ async function loadOverlayState(eventId: string) {
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     select: {
-      id: true, title: true, status: true, format: true, tournamentStatus: true,
+      id: true, title: true, status: true, format: true, tournamentStatus: true, game: true,
       matches: {
         orderBy: [{ round: "asc" }, { position: "asc" }],
         select: {
@@ -26,9 +26,28 @@ async function loadOverlayState(eventId: string) {
       participants: {
         select: { userId: true, user: { select: { id: true, name: true, username: true, image: true } } },
       },
+      registrations: {
+        where: { role: { not: "spectator" } },
+        select: { userId: true, user: { select: { id: true, name: true, username: true, image: true } } },
+      },
     },
   });
-  return event;
+  if (!event) return null;
+
+  // Nicht jedes Event legt TournamentParticipant-Zeilen an — Matches können auch auf User
+  // verweisen, die nur über EventRegistration angemeldet sind (siehe tournament/[id]/page.tsx,
+  // mergedParticipants). Ohne diesen Merge blieben deren Namen im Overlay ein "?".
+  const seen = new Set(event.participants.map(p => p.userId));
+  const mergedParticipants = [
+    ...event.participants,
+    ...event.registrations.filter(r => !seen.has(r.userId)),
+  ];
+
+  return {
+    id: event.id, title: event.title, status: event.status, format: event.format,
+    tournamentStatus: event.tournamentStatus, game: event.game,
+    matches: event.matches, participants: mergedParticipants,
+  };
 }
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
