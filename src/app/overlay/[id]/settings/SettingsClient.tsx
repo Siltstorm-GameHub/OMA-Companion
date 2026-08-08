@@ -6,11 +6,19 @@ import { toast } from "sonner";
 
 type PanelKey = "bracket" | "table" | "participants";
 type PanelOption = { key: PanelKey; label: string; icon: typeof LayoutGrid; forFormats: string[] | null };
+type Corner = "top-left" | "top-right" | "bottom-left" | "bottom-right";
 
 const PANEL_OPTIONS: PanelOption[] = [
   { key: "bracket",      label: "Turnierbaum",  icon: LayoutGrid, forFormats: ["single_elimination", "double_elimination"] },
   { key: "table",        label: "Tabelle",       icon: Table2,     forFormats: ["liga", "round_robin", "ffa", "coop_stats", "avg_stats"] },
   { key: "participants", label: "Teilnehmer",    icon: Users,      forFormats: null },
+];
+
+const CORNERS: { key: Corner; label: string }[] = [
+  { key: "top-left",     label: "Oben links" },
+  { key: "top-right",    label: "Oben rechts" },
+  { key: "bottom-left",  label: "Unten links" },
+  { key: "bottom-right", label: "Unten rechts" },
 ];
 
 export default function SettingsClient({
@@ -19,6 +27,7 @@ export default function SettingsClient({
   const relevantPanels = PANEL_OPTIONS.filter(p => !p.forFormats || (format && p.forFormats.includes(format)));
   const [enabled, setEnabled] = useState<Set<PanelKey>>(new Set(relevantPanels.map(p => p.key)));
   const [rotateSeconds, setRotateSeconds] = useState(14);
+  const [corner, setCorner] = useState<Corner>("top-right");
   const [copied, setCopied] = useState(false);
 
   const overlayUrl = useMemo(() => {
@@ -28,8 +37,9 @@ export default function SettingsClient({
       params.set("panels", [...enabled].join(","));
     }
     if (rotateSeconds !== 14) params.set("rotate", String(rotateSeconds));
+    if (corner !== "top-right") params.set("pos", corner);
     return `${origin}/overlay/${eventId}?${params.toString()}`;
-  }, [eventId, token, enabled, relevantPanels.length, rotateSeconds]);
+  }, [eventId, token, enabled, relevantPanels.length, rotateSeconds, corner]);
 
   function toggle(key: PanelKey) {
     setEnabled(prev => {
@@ -86,6 +96,35 @@ export default function SettingsClient({
                   }`}
                 >
                   <Icon className="w-3.5 h-3.5" />
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="glass rounded-2xl p-5 mb-4">
+          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+            Bildschirmecke
+          </h2>
+          <p className="text-xs text-gray-500 mb-3">
+            Der Browser bekommt euer Gameplay-Bild nicht zu sehen und kann das HUD deines Spiels nicht
+            automatisch umgehen. Wähl die Ecke, die bei deinem Spiel frei ist — Turnierbaum/Tabelle
+            erscheinen dort.
+          </p>
+          <div className="grid grid-cols-2 gap-2 max-w-xs">
+            {CORNERS.map(({ key, label }) => {
+              const active = corner === key;
+              return (
+                <button
+                  key={key}
+                  onClick={() => setCorner(key)}
+                  className={`text-sm px-3 py-2.5 rounded-xl border font-medium transition-all ${
+                    active
+                      ? "bg-teal-500/15 border-teal-500/40 text-teal-300"
+                      : "border-white/[0.08] text-gray-500 hover:text-gray-300 hover:border-white/20"
+                  }`}
+                >
                   {label}
                 </button>
               );
