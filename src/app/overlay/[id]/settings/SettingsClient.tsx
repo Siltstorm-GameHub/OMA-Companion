@@ -73,91 +73,93 @@ export default function SettingsClient({
 
   return (
     <div className="min-h-dvh flex items-start justify-center p-4 sm:p-8">
-      <div className="w-full max-w-xl">
+      <div className="w-full max-w-3xl">
         <div className="flex items-center gap-2.5 mb-1">
           <Tv2 className="w-5 h-5 text-teal-400" />
           <h1 className="text-lg font-semibold text-white">Overlay-Einstellungen</h1>
         </div>
         <p className="text-sm text-gray-500 mb-6">{eventTitle}</p>
 
-        <div className="glass rounded-2xl p-5 mb-4">
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
-            Elemente
-          </h2>
-          <p className="text-xs text-gray-500 mb-3">
-            Jedes Element lässt sich einzeln aus- und wieder einblenden. Turnierbaum/Tabelle und
-            Teilnehmer rotieren automatisch durch, wenn mehr als eins aktiv ist, damit dein
-            Gameplay sichtbar bleibt.
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setShowTicker(v => !v)}
-              className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl border font-medium transition-all ${
-                showTicker
-                  ? "bg-teal-500/15 border-teal-500/40 text-teal-300"
-                  : "border-white/[0.08] text-gray-500 hover:text-gray-300 hover:border-white/20"
-              }`}
-            >
-              <Swords className="w-3.5 h-3.5" />
-              Aktuelles Match
-            </button>
-            <button
-              onClick={() => setShowBrand(v => !v)}
-              className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl border font-medium transition-all ${
-                showBrand
-                  ? "bg-teal-500/15 border-teal-500/40 text-teal-300"
-                  : "border-white/[0.08] text-gray-500 hover:text-gray-300 hover:border-white/20"
-              }`}
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              Live/Event/Spiel &amp; Logo
-            </button>
-            {relevantPanels.map(({ key, label, icon: Icon }) => {
-              const active = enabled.has(key);
-              return (
-                <button
-                  key={key}
-                  onClick={() => toggle(key)}
-                  className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl border font-medium transition-all ${
-                    active
-                      ? "bg-teal-500/15 border-teal-500/40 text-teal-300"
-                      : "border-white/[0.08] text-gray-500 hover:text-gray-300 hover:border-white/20"
-                  }`}
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  {label}
-                </button>
-              );
-            })}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div className="glass rounded-2xl p-5">
+            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+              Elemente
+            </h2>
+            <p className="text-xs text-gray-500 mb-3">
+              Jedes Element lässt sich einzeln aus- und wieder einblenden. Turnierbaum/Tabelle und
+              Teilnehmer rotieren automatisch durch, wenn mehr als eins aktiv ist, damit dein
+              Gameplay sichtbar bleibt.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setShowTicker(v => !v)}
+                className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl border font-medium transition-all ${
+                  showTicker
+                    ? "bg-teal-500/15 border-teal-500/40 text-teal-300"
+                    : "border-white/[0.08] text-gray-500 hover:text-gray-300 hover:border-white/20"
+                }`}
+              >
+                <Swords className="w-3.5 h-3.5" />
+                Aktuelles Match
+              </button>
+              <button
+                onClick={() => setShowBrand(v => !v)}
+                className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl border font-medium transition-all ${
+                  showBrand
+                    ? "bg-teal-500/15 border-teal-500/40 text-teal-300"
+                    : "border-white/[0.08] text-gray-500 hover:text-gray-300 hover:border-white/20"
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                Live/Event/Spiel &amp; Logo
+              </button>
+              {relevantPanels.map(({ key, label, icon: Icon }) => {
+                const active = enabled.has(key);
+                return (
+                  <button
+                    key={key}
+                    onClick={() => toggle(key)}
+                    className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl border font-medium transition-all ${
+                      active
+                        ? "bg-teal-500/15 border-teal-500/40 text-teal-300"
+                        : "border-white/[0.08] text-gray-500 hover:text-gray-300 hover:border-white/20"
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
 
-        <div className="glass rounded-2xl p-5 mb-4">
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
-            Bildschirmecke
-          </h2>
-          <p className="text-xs text-gray-500 mb-3">
-            Der Browser bekommt euer Gameplay-Bild nicht zu sehen und kann das HUD deines Spiels nicht
-            automatisch umgehen. Wähl die Ecke, die bei deinem Spiel frei ist — Turnierbaum/Tabelle
-            erscheinen dort.
-          </p>
-          <div className="grid grid-cols-2 gap-2 max-w-xs">
-            {CORNERS.map(({ key, label }) => {
-              const active = corner === key;
-              return (
-                <button
-                  key={key}
-                  onClick={() => setCorner(key)}
-                  className={`text-sm px-3 py-2.5 rounded-xl border font-medium transition-all ${
-                    active
-                      ? "bg-teal-500/15 border-teal-500/40 text-teal-300"
-                      : "border-white/[0.08] text-gray-500 hover:text-gray-300 hover:border-white/20"
-                  }`}
-                >
-                  {label}
-                </button>
-              );
-            })}
+          <div className="glass rounded-2xl p-5">
+            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+              Bildschirmecke
+            </h2>
+            <p className="text-xs text-gray-500 mb-3">
+              Der Browser bekommt euer Gameplay-Bild nicht zu sehen und kann das HUD deines Spiels nicht
+              automatisch umgehen. Wähl die Ecke, die bei deinem Spiel frei ist — Turnierbaum/Tabelle
+              erscheinen dort.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {CORNERS.map(({ key, label }) => {
+                const active = corner === key;
+                return (
+                  <button
+                    key={key}
+                    onClick={() => setCorner(key)}
+                    className={`text-sm px-3 py-2.5 rounded-xl border font-medium transition-all ${
+                      active
+                        ? "bg-teal-500/15 border-teal-500/40 text-teal-300"
+                        : "border-white/[0.08] text-gray-500 hover:text-gray-300 hover:border-white/20"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 

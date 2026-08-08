@@ -56,6 +56,9 @@ const PANEL_FADE_MS = 900;
 const EDGE_MARGIN = 28;    // Abstand aller Kacheln zum Bildschirmrand
 const TICKER_BOTTOM = 48;  // Abstand des Lower-Thirds zum unteren Rand
 const TICKER_CLEARANCE = 166; // Höhe des Lower-Thirds + Abstand — Panels in unteren Ecken schieben sich darüber
+const PANEL_WIDTH = 620;
+const PANEL_LIST_HEIGHT = 300; // Feste Höhe für Listen in Panels — lange Listen scrollen intern statt die Kachel wachsen zu lassen
+const TICKER_ENTRIES_WIDTH = 620; // Feste Breite für die FFA-Mitspielerliste im Match-Ticker
 
 /** Absolute Positionierung für eine Ecke — Panels in den unteren Ecken rücken über den
  *  Ticker, damit sie ihn nicht überlappen. Welche Ecke beim jeweiligen Spiel HUD-frei ist,
@@ -81,11 +84,11 @@ function cornerStyle(corner: Corner): React.CSSProperties {
 function panelMotionStyle(corner: Corner, phase: PanelPhase): React.CSSProperties {
   const centerY = corner.startsWith("middle") ? "translateY(-50%)" : "";
   if (phase === "settled") {
-    return { opacity: 1, filter: "blur(0px)", transform: `${centerY} translateY(0)`.trim() };
+    return { opacity: 1, filter: "blur(0px)", transform: `${centerY} translateY(0) scale(1)`.trim() };
   }
-  const towardEdge = corner.startsWith("bottom") ? 14 : -14;
+  const towardEdge = corner.startsWith("bottom") ? 40 : -40;
   const offset = phase === "enter" ? -towardEdge : towardEdge;
-  return { opacity: 0, filter: "blur(6px)", transform: `${centerY} translateY(${offset}px)`.trim() };
+  return { opacity: 0, filter: "blur(16px)", transform: `${centerY} translateY(${offset}px) scale(0.9)`.trim() };
 }
 
 /** Einmal eingebettete Keyframes für alle Bewegungs-Akzente im Overlay: Live-Puls, Score-Pop
@@ -108,6 +111,76 @@ function MotionStyles() {
         .oma-anim-pop, .oma-anim-flare, .oma-anim-slidein, .oma-anim-breathe, .oma-live-ring { animation: none !important; }
       }
     `}</style>
+  );
+}
+
+const SCROLL_PAUSE_MS = 3400;
+const SCROLL_TRANSITION_MS = 750;
+
+/** Auto-Scroll für Inhalte, die nicht in eine feste Kachelgröße passen (lange Teilnehmer-
+ *  /Ranking-Listen, viele FFA-Mitspieler im Ticker) — statt die Kachel selbst wachsen zu
+ *  lassen: zeigt einen Ausschnitt, pausiert, scrollt eine "Seite" weiter, pausiert wieder;
+ *  am Ende springt (scrollt) es in einer Bewegung zurück an den Anfang und der Zyklus beginnt
+ *  von vorn. Die Content-Größe wird per ResizeObserver gemessen, da Turnierdaten sich laufend
+ *  ändern (neue Matches, mehr Teilnehmer). */
+function AutoScrollViewport({
+  axis, size, gap = 0, children,
+}: { axis: "x" | "y"; size: number; gap?: number; children: React.ReactNode }) {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [steps, setSteps] = useState<number[]>([0]);
+  const [stepIndex, setStepIndex] = useState(0);
+
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+
+    const measure = () => {
+      const contentSize = axis === "x" ? track.scrollWidth : track.scrollHeight;
+      const max = Math.max(0, contentSize - size);
+      if (max <= 0) {
+        setSteps([0]);
+        setStepIndex(0);
+        return;
+      }
+      const list: number[] = [];
+      for (let o = 0; o < max; o += size) list.push(o);
+      list.push(max);
+      setSteps(list);
+      setStepIndex(0);
+    };
+
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(track);
+    return () => ro.disconnect();
+  }, [axis, size]);
+
+  useEffect(() => {
+    if (steps.length <= 1) return;
+    const t = setInterval(() => setStepIndex(i => (i + 1) % steps.length), SCROLL_PAUSE_MS);
+    return () => clearInterval(t);
+  }, [steps.length]);
+
+  const offset = steps[stepIndex] ?? 0;
+  const translate = axis === "x" ? `translateX(-${offset}px)` : `translateY(-${offset}px)`;
+
+  const viewportStyle: React.CSSProperties = axis === "x" ? { overflow: "hidden", width: size } : { overflow: "hidden", height: size };
+
+  return (
+    <div style={viewportStyle}>
+      <div
+        ref={trackRef}
+        style={{
+          display: axis === "x" ? "inline-flex" : "flex",
+          flexDirection: axis === "x" ? "row" : "column",
+          gap,
+          transform: translate,
+          transition: `transform ${SCROLL_TRANSITION_MS}ms cubic-bezier(0.16,1,0.3,1)`,
+        }}
+      >
+        {children}
+      </div>
+    </div>
   );
 }
 
@@ -204,7 +277,7 @@ export default function OverlayClient({
       )}
 
       {state && (rotator.active || rotator.previous) && (
-        <div style={{ ...cornerStyle(corner), width: 620 }}>
+        <div style={{ ...cornerStyle(corner), width: PANEL_WIDTH }}>
           {/* Alte und neue Kachel überlappen sich für PANEL_FADE_MS — die alte blendet aus/verschwimmt,
              während die neue schon einblendet, statt einer sichtbaren Lücke dazwischen. */}
           {rotator.previous && (
@@ -328,11 +401,17 @@ function pickTickerMatch(matches: OverlayMatch[]): OverlayMatch | null {
 }
 
 const FLIP_INTERVAL_MS = 6000;
-const FLIP_DURATION_MS = 1000;
+const FLIP_DURATION_MS = 1100;
+const FLIP_WIDTH = 300;
+const FLIP_HEIGHT = 78;
 
 /** Flip-Card statt zweier separater Elemente: Vorderseite zeigt Live-Status/Spiel/Event,
  *  Rückseite Logo + Wortmarke — beide Infos bleiben so "immer sichtbar" (abwechselnd), ohne
- *  permanent eigenen Platz neben dem Match zu beanspruchen. */
+ *  permanent eigenen Platz neben dem Match zu beanspruchen.
+ *
+ *  Wichtig: Hintergrund/Rahmen/Schatten/TopEdge sitzen jetzt auf JEDER der beiden Flächen
+ *  einzeln (siehe FlipFace), nicht mehr auf einem gemeinsamen, unbeweglichen Rahmen darum —
+ *  sonst dreht sich nur der Text, während die Kachel selbst optisch stillsteht. */
 function BrandFlipTile({ eventTitle, game, isLive }: { eventTitle: string; game: string | null; isLive: boolean }) {
   const [flipped, setFlipped] = useState(false);
 
@@ -342,15 +421,7 @@ function BrandFlipTile({ eventTitle, game, isLive }: { eventTitle: string; game:
   }, []);
 
   return (
-    <TickerTile breathe={isLive} bodyStyle={{ padding: 0, width: 300, height: 78, perspective: 500 }}>
-      {/* `perspective` muss auf dem direkten Elternelement der rotierenden Fläche sitzen, sonst
-         rendert der Browser die rotateY-Drehung flach statt räumlich — deshalb hier direkt auf
-         der Tile-Chrome selbst (bodyStyle) statt auf einem zusätzlichen Wrapper darüber. Ein
-         niedriger Perspektive-Wert (500 statt vorher 1200) macht die Drehung außerdem deutlich
-         kräftiger sichtbar — größere Werte wirken bei einer so kleinen Kachel kaum merklich 3D.
-         `overflow: hidden` bleibt Standard (nicht "visible") — beide Flip-Flächen sind exakt
-         kachelgroß, es gibt also nichts zum Clippen, aber ohne "hidden" lief der Farbverlauf
-         (TopEdge) über die abgerundeten Ecken hinaus. */}
+    <div style={{ position: "relative", width: FLIP_WIDTH, height: FLIP_HEIGHT, perspective: 500 }}>
       <div
         className="oma-flip-inner"
         style={{
@@ -362,34 +433,61 @@ function BrandFlipTile({ eventTitle, game, isLive }: { eventTitle: string; game:
           transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
         }}
       >
-          <div style={{ position: "absolute", inset: 0, backfaceVisibility: "hidden", display: "flex", alignItems: "center", gap: 14, padding: "0 26px" }}>
-            <LiveBadge live={isLive} />
-            <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
-              <span style={{ fontSize: 15, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {eventTitle}
-              </span>
-              {game && (
-                <span style={{ fontSize: 12, color: "rgba(94,234,212,0.75)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {game}
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div
-            style={{
-              position: "absolute", inset: 0, backfaceVisibility: "hidden", transform: "rotateY(180deg)",
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 12,
-            }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element -- OBS-Browser-Source, kein Next-Image-Optimierungspfad nötig */}
-            <img src={BRAND_LOGO} alt="" width={32} height={32} style={{ display: "block", filter: "drop-shadow(0 0 8px rgba(20,184,166,0.4))" }} />
-            <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "#fff" }}>
-              Old Masters Ally
+        <FlipFace breathe={isLive}>
+          <LiveBadge live={isLive} />
+          <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {eventTitle}
             </span>
+            {game && (
+              <span style={{ fontSize: 12, color: "rgba(94,234,212,0.75)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {game}
+              </span>
+            )}
           </div>
-        </div>
-    </TickerTile>
+        </FlipFace>
+
+        <FlipFace back justify="center">
+          {/* eslint-disable-next-line @next/next/no-img-element -- OBS-Browser-Source, kein Next-Image-Optimierungspfad nötig */}
+          <img src={BRAND_LOGO} alt="" width={32} height={32} style={{ display: "block", filter: "drop-shadow(0 0 8px rgba(20,184,166,0.4))" }} />
+          <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "#fff" }}>
+            Old Masters Ally
+          </span>
+        </FlipFace>
+      </div>
+    </div>
+  );
+}
+
+/** Eine vollständige "Kachel" als Flip-Fläche — trägt ihr eigenes Chrome (Glas-Hintergrund,
+ *  Rahmen, Schatten, Farbverlauf-Kante), damit beim Drehen wirklich die ganze Karte kippt und
+ *  nicht nur ihr Inhalt. */
+function FlipFace({
+  children, back, breathe, justify = "flex-start",
+}: { children: React.ReactNode; back?: boolean; breathe?: boolean; justify?: React.CSSProperties["justifyContent"] }) {
+  return (
+    <div
+      style={{
+        position: "absolute", inset: 0,
+        backfaceVisibility: "hidden",
+        transform: back ? "rotateY(180deg)" : undefined,
+        background: "rgba(9,9,14,0.82)",
+        backdropFilter: "blur(18px) saturate(1.4)",
+        WebkitBackdropFilter: "blur(18px) saturate(1.4)",
+        border: "1px solid rgba(255,255,255,0.08)",
+        borderRadius: 14,
+        boxShadow: "0 24px 60px rgba(0,0,0,0.55)",
+        padding: "0 26px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: justify,
+        gap: 14,
+        overflow: "hidden",
+      }}
+    >
+      <TopEdge radius={14} breathe={breathe} />
+      {children}
+    </div>
   );
 }
 
@@ -437,23 +535,28 @@ function MatchTicker({
             <PlayerName user={userOf(match.player2Id)} winner={p2Winner} winnerKey={match.winnerId} align="left" />
           </div>
         ) : (
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          // Alle Mitspieler dieser Runde, nicht nur die ersten paar — bei vielen Teilnehmern
+          // (z.B. Coop-Runden mit 8+ Leuten) übernimmt AutoScrollViewport das Durchblättern,
+          // statt Namen stillschweigend abzuschneiden.
+          <AutoScrollViewport axis="x" size={TICKER_ENTRIES_WIDTH}>
             {[...match.entries]
               .sort((a, b) => (a.placement ?? 99) - (b.placement ?? 99))
-              .slice(0, 6)
-              .map(e => {
+              .map((e, i) => {
                 const u = userOf(e.userId);
                 const first = e.placement === 1;
                 return (
-                  <div key={e.id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div
+                    key={e.id}
+                    style={{ display: "flex", alignItems: "center", gap: 8, paddingLeft: i === 0 ? 0 : 16, flexShrink: 0 }}
+                  >
                     <RankedAvatar rankPoints={u?.rankPoints ?? 0} src={u?.image} alt={displayName(u)} size={30} />
-                    <span style={{ fontSize: 16, fontWeight: first ? 700 : 500, color: first ? "#5eead4" : "#fff" }}>
+                    <span style={{ fontSize: 16, fontWeight: first ? 700 : 500, color: first ? "#5eead4" : "#fff", whiteSpace: "nowrap" }}>
                       {displayName(u)}{e.score != null ? ` · ${e.score}` : ""}
                     </span>
                   </div>
                 );
               })}
-          </div>
+          </AutoScrollViewport>
         )}
       </TickerTile>
     </div>
@@ -592,9 +695,9 @@ function BracketPanel({ matches, userOf }: { matches: OverlayMatch[]; userOf: (i
   const rounds = [...new Set(matches.map(m => m.round))].sort((a, b) => a - b);
   return (
     <PanelShell title="Turnierbaum">
-      <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 620, overflow: "hidden" }}>
+      <AutoScrollViewport axis="y" size={PANEL_LIST_HEIGHT} gap={8}>
         {rounds.map(round => (
-          <div key={round}>
+          <div key={round} style={{ width: "100%" }}>
             <p style={{ fontSize: 11, opacity: 0.5, textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 3px" }}>
               Runde {round}
             </p>
@@ -605,7 +708,7 @@ function BracketPanel({ matches, userOf }: { matches: OverlayMatch[]; userOf: (i
             </div>
           </div>
         ))}
-      </div>
+      </AutoScrollViewport>
     </PanelShell>
   );
 }
@@ -649,12 +752,12 @@ function TablePanel({
 
   return (
     <PanelShell title={title}>
-      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-        {ranked.slice(0, 12).map((p, i) => (
+      <AutoScrollViewport axis="y" size={PANEL_LIST_HEIGHT} gap={2}>
+        {ranked.map((p, i) => (
           <div
             key={p.userId}
             style={{
-              display: "flex", alignItems: "center", gap: 13,
+              display: "flex", alignItems: "center", gap: 13, width: "100%",
               padding: "5px 8px", borderRadius: 7,
               background: i < 3 ? "rgba(20,184,166,0.06)" : "transparent",
             }}
@@ -670,7 +773,7 @@ function TablePanel({
             </div>
           </div>
         ))}
-      </div>
+      </AutoScrollViewport>
     </PanelShell>
   );
 }
@@ -788,16 +891,18 @@ function buildFfaRanking(
 function ParticipantsPanel({ participants }: { participants: OverlayParticipant[] }) {
   return (
     <PanelShell title="Teilnehmer">
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "5px 14px" }}>
-        {participants.slice(0, 24).map(p => (
-          <div key={p.userId} style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
-            <RankedAvatar rankPoints={p.user.rankPoints} src={p.user.image} alt={displayName(p.user)} size={28} />
-            <span style={{ fontSize: 17, color: "rgba(255,255,255,0.85)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {displayName(p.user)}
-            </span>
-          </div>
-        ))}
-      </div>
+      <AutoScrollViewport axis="y" size={PANEL_LIST_HEIGHT}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "5px 14px", width: "100%" }}>
+          {participants.map(p => (
+            <div key={p.userId} style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
+              <RankedAvatar rankPoints={p.user.rankPoints} src={p.user.image} alt={displayName(p.user)} size={28} />
+              <span style={{ fontSize: 17, color: "rgba(255,255,255,0.85)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {displayName(p.user)}
+              </span>
+            </div>
+          ))}
+        </div>
+      </AutoScrollViewport>
     </PanelShell>
   );
 }
