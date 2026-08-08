@@ -32,7 +32,11 @@ export default async function OverlaySettingsPage({
     try { return json ? (JSON.parse(json) as unknown[]).length > 0 : false; } catch { return false; }
   };
   const hasFavorites = jsonArrayHasEntries(streamer?.favoriteGamesJson);
-  const hasBadges = jsonArrayHasEntries(streamer?.showcaseBadgesJson);
+  // Das Abzeichen-Element zeigt neben den selbst gewählten Showcase-Abzeichen auch aktuell
+  // gehaltene Wanderpokale (siehe lib/overlay-badges.ts) — ohne diesen zweiten Check verschwand
+  // die Option komplett für User, die zwar Pokale halten, aber keine Showcase-Abzeichen gewählt haben.
+  const trophyCount = streamer ? await prisma.wanderpocalHolder.count({ where: { userId: streamer.id } }).catch(() => 0) : 0;
+  const hasBadges = jsonArrayHasEntries(streamer?.showcaseBadgesJson) || trophyCount > 0;
 
   return (
     <SettingsClient
