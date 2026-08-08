@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { BRAND_LOGO } from "@/lib/brand";
 
 type OverlayEntry = {
   id: string;
@@ -40,9 +41,25 @@ type OverlayState = {
 };
 
 type PanelKey = "bracket" | "table" | "participants";
+export type Corner = "top-left" | "top-right" | "bottom-left" | "bottom-right";
 
 const PANEL_FADE_MS = 700;
 const PANEL_GAP_MS = 900; // vollständig transparente Pause zwischen zwei Panels — Spiel bleibt kurz frei sichtbar
+const TICKER_CLEARANCE = 210; // Höhe des Lower-Third-Tickers + Abstand — Panels in unteren Ecken schieben sich darüber
+
+/** Absolute Positionierung für eine Ecke — Panels in den unteren Ecken rücken über den
+ *  Ticker, damit sie ihn nicht überlappen. Welche Ecke beim jeweiligen Spiel HUD-frei ist,
+ *  kann die Browser-Source nicht selbst erkennen (sie sieht das Gameplay-Bild nicht) —
+ *  das legt der Streamer in den Overlay-Einstellungen einmalig fest.               */
+function cornerStyle(corner: Corner): React.CSSProperties {
+  const base: React.CSSProperties = { position: "absolute" };
+  switch (corner) {
+    case "top-left":     return { ...base, top: 56, left: 56 };
+    case "top-right":    return { ...base, top: 56, right: 56 };
+    case "bottom-left":  return { ...base, bottom: TICKER_CLEARANCE, left: 56 };
+    case "bottom-right": return { ...base, bottom: TICKER_CLEARANCE, right: 56 };
+  }
+}
 
 export default function OverlayClient({
   eventId,
@@ -51,6 +68,7 @@ export default function OverlayClient({
   format,
   requestedPanels,
   rotateSeconds,
+  corner,
 }: {
   eventId: string;
   token: string;
@@ -58,6 +76,7 @@ export default function OverlayClient({
   format: string | null;
   requestedPanels: PanelKey[] | null;
   rotateSeconds: number;
+  corner: Corner;
 }) {
   const [state, setState] = useState<OverlayState | null>(null);
   const esRef = useRef<EventSource | null>(null);
@@ -125,12 +144,10 @@ export default function OverlayClient({
         <div
           key={rotator.activeKey}
           style={{
-            position: "absolute",
-            top: 56,
-            right: 56,
+            ...cornerStyle(corner),
             width: 620,
             opacity: rotator.visible ? 1 : 0,
-            transform: rotator.visible ? "translateY(0)" : "translateY(-12px)",
+            transform: rotator.visible ? "translateY(0)" : `translateY(${corner.startsWith("bottom") ? "12px" : "-12px"})`,
             transition: `opacity ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1), transform ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1)`,
           }}
         >
@@ -194,21 +211,22 @@ function pickTickerMatch(matches: OverlayMatch[]): OverlayMatch | null {
   return played[0] ?? null;
 }
 
-/* ── Broadcast-Branding: dezente Wortmarke unten links, dauerhaft sichtbar ── */
+/* ── Broadcast-Branding: Logo + Wortmarke unten links, dauerhaft sichtbar ── */
 function BrandMark() {
   return (
     <div
       style={{
         position: "absolute",
         left: 56,
-        bottom: 40,
+        bottom: 34,
         display: "flex",
         alignItems: "center",
-        gap: 9,
-        opacity: 0.55,
+        gap: 10,
+        opacity: 0.65,
       }}
     >
-      <span style={{ width: 7, height: 7, borderRadius: 999, background: "#14b8a6", boxShadow: "0 0 8px #14b8a6" }} />
+      {/* eslint-disable-next-line @next/next/no-img-element -- OBS-Browser-Source, kein Next-Image-Optimierungspfad nötig */}
+      <img src={BRAND_LOGO} alt="" width={26} height={26} style={{ display: "block", filter: "drop-shadow(0 0 6px rgba(20,184,166,0.35))" }} />
       <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#e8e8f0" }}>
         Old Masters Ally
       </span>

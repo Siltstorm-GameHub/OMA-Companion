@@ -1,19 +1,20 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import OverlayClient from "./OverlayClient";
+import OverlayClient, { type Corner } from "./OverlayClient";
 
 const PANEL_KEYS = ["bracket", "table", "participants"] as const;
 type PanelKey = (typeof PANEL_KEYS)[number];
+const CORNERS: Corner[] = ["top-left", "top-right", "bottom-left", "bottom-right"];
 
 export default async function OverlayPage({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ token?: string; panels?: string; rotate?: string }>;
+  searchParams: Promise<{ token?: string; panels?: string; rotate?: string; pos?: string }>;
 }) {
   const { id: eventId } = await params;
-  const { token, panels: panelsParam, rotate: rotateParam } = await searchParams;
+  const { token, panels: panelsParam, rotate: rotateParam, pos: posParam } = await searchParams;
 
   const event = await prisma.event.findUnique({
     where: { id: eventId },
@@ -28,6 +29,7 @@ export default async function OverlayPage({
     ? panelsParam.split(",").filter((p): p is PanelKey => (PANEL_KEYS as readonly string[]).includes(p))
     : null;
   const rotateSeconds = rotateParam ? Math.max(4, parseInt(rotateParam, 10) || 14) : 14;
+  const corner: Corner = (posParam && (CORNERS as string[]).includes(posParam)) ? (posParam as Corner) : "top-right";
 
   return (
     <>
@@ -44,6 +46,7 @@ export default async function OverlayPage({
         format={event.format}
         requestedPanels={requestedPanels?.length ? requestedPanels : null}
         rotateSeconds={rotateSeconds}
+        corner={corner}
       />
     </>
   );
