@@ -27,6 +27,7 @@ import ProfileEditor from "./ProfileEditor";
 import { parseFavoriteGames } from "@/lib/favorite-games";
 import { PushSubscribeButton } from "@/components/PushSubscribeButton";
 import NotificationPreferences from "@/components/NotificationPreferences";
+import ProfileOverlayButton from "@/components/ProfileOverlayButton";
 
 export default async function ProfilePage() {
   const me = await getSessionUser();
@@ -576,6 +577,12 @@ export default async function ProfilePage() {
               </div>
               <NotificationPreferences />
             </div>
+          </section>
+
+          {/* Persönliches OBS-Overlay */}
+          <section id="overlay">
+            <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">📺 Stream-Overlay</h2>
+            <ProfileOverlayButton hasTwitch={!!user.twitchLogin} />
           </section>
 
         </div>
