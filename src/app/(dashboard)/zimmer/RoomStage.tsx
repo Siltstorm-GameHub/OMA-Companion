@@ -205,6 +205,14 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract, edit 
         }}
       >
         <title>{label}</title>
+        {/* Atmender Rahmen: einziger Hinweis, dass dieses Möbelstück anklickbar
+            ist und nicht nur Deko — ohne ihn sehen Jobbrett, Vitrine und
+            Röhrenmonitor identisch zu jedem anderen Möbelstück aus. */}
+        <rect
+          x={x - 4} y={y - 4} width={def.w * CELL + 8} height={def.h * CELL + 8} rx={6}
+          className="room-interactive-glow" fill="none" stroke="var(--room-screen-on)" strokeWidth={2}
+          pointerEvents="none"
+        />
         <RoomItemSprite itemKey={item.key} x={x} y={y} flipped={item.flipped} className="room-item-photo" />
       </g>
     );
