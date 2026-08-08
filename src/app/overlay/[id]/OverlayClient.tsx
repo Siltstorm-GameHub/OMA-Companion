@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { BRAND_LOGO } from "@/lib/brand";
+import RankedAvatar from "@/components/RankedAvatar";
 
 type OverlayEntry = {
   id: string;
@@ -25,10 +26,15 @@ type OverlayMatch = {
   entries: OverlayEntry[];
 };
 
-type OverlayParticipant = {
-  userId: string;
-  user: { id: string; name: string | null; username: string | null; image: string | null };
-};
+type OverlayUser = { id: string; name: string | null; username: string | null; image: string | null; rankPoints: number };
+type OverlayParticipant = { userId: string; user: OverlayUser };
+
+/** In diesem Projekt hält `name` die rohe (meist kleingeschriebene) Discord-Login-Kennung,
+ *  `username` den vom User selbst gepflegten Anzeigenamen mit korrekter Groß-/Kleinschreibung —
+ *  daher hier wie im Rest der App `username` zuerst. */
+function displayName(u: OverlayUser | undefined | null): string {
+  return u?.username ?? u?.name ?? "Unbekannt";
+}
 
 type OverlayState = {
   id: string;
@@ -105,8 +111,8 @@ export default function OverlayClient({
     };
   }, [eventId, token]);
 
-  const nameByUserId = new Map((state?.participants ?? []).map(p => [p.userId, p.user.name ?? p.user.username ?? "Unbekannt"]));
-  const nameOf = (userId: string | null) => (userId ? nameByUserId.get(userId) ?? "?" : "–");
+  const userByUserId = new Map((state?.participants ?? []).map(p => [p.userId, p.user]));
+  const userOf = (userId: string | null): OverlayUser | undefined => (userId ? userByUserId.get(userId) : undefined);
 
   const fmt = state?.format ?? format;
   const matches = state?.matches ?? [];
@@ -138,7 +144,7 @@ export default function OverlayClient({
       <BrandMark />
 
       {ticker && (
-        <MatchTicker match={ticker} nameOf={nameOf} eventTitle={state?.title ?? eventTitle} game={state?.game ?? null} />
+        <MatchTicker match={ticker} userOf={userOf} eventTitle={state?.title ?? eventTitle} game={state?.game ?? null} />
       )}
 
       {rotator.activeKey && state && (
@@ -152,7 +158,7 @@ export default function OverlayClient({
             transition: `opacity ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1), transform ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1)`,
           }}
         >
-          {rotator.activeKey === "bracket" && <BracketPanel matches={matches} nameOf={nameOf} />}
+          {rotator.activeKey === "bracket" && <BracketPanel matches={matches} userOf={userOf} />}
           {rotator.activeKey === "table" && <TablePanel matches={matches} participants={state.participants} format={fmt} />}
           {rotator.activeKey === "participants" && <ParticipantsPanel participants={state.participants} />}
         </div>
@@ -235,22 +241,69 @@ function BrandMark() {
   );
 }
 
-/* ── Lower-Third: laufendes/nächstes Match, immer sichtbar ── */
+/* ── Lower-Third: zwei getrennte Kacheln statt einer durchgehenden Leiste —
+   links Status/Event/Spiel, rechts das eigentliche Match. Bewusst getrennt, damit
+   dazwischen wieder Gameplay durchscheint statt einer über die volle Breite reichenden
+   Fläche. ── */
 function MatchTicker({
-  match, nameOf, eventTitle, game,
-}: { match: OverlayMatch; nameOf: (id: string | null) => string; eventTitle: string; game: string | null }) {
+  match, userOf, eventTitle, game,
+}: { match: OverlayMatch; userOf: (id: string | null) => OverlayUser | undefined; eventTitle: string; game: string | null }) {
   const isLive = !match.winnerId && !match.playedAt;
   const p1Winner = !!match.winnerId && match.winnerId === match.player1Id;
   const p2Winner = !!match.winnerId && match.winnerId === match.player2Id;
   const hasDuel = !!(match.player1Id || match.player2Id);
 
   return (
+    <div style={{ position: "absolute", left: 56, bottom: 96, display: "flex", alignItems: "center", gap: 16 }}>
+      <TickerTile>
+        <StatusPill live={isLive} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>
+            {eventTitle}
+          </span>
+          {game && (
+            <span style={{ fontSize: 12, color: "rgba(94,234,212,0.75)", fontWeight: 500 }}>
+              {game}
+            </span>
+          )}
+        </div>
+      </TickerTile>
+
+      <TickerTile>
+        {hasDuel ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <PlayerName user={userOf(match.player1Id)} winner={p1Winner} align="right" />
+            <Score score1={match.score1} score2={match.score2} />
+            <PlayerName user={userOf(match.player2Id)} winner={p2Winner} align="left" />
+          </div>
+        ) : (
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            {[...match.entries]
+              .sort((a, b) => (a.placement ?? 99) - (b.placement ?? 99))
+              .slice(0, 6)
+              .map(e => {
+                const u = userOf(e.userId);
+                const first = e.placement === 1;
+                return (
+                  <div key={e.id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <RankedAvatar rankPoints={u?.rankPoints ?? 0} src={u?.image} alt={displayName(u)} size={30} />
+                    <span style={{ fontSize: 16, fontWeight: first ? 700 : 500, color: first ? "#5eead4" : "#fff" }}>
+                      {displayName(u)}{e.score != null ? ` · ${e.score}` : ""}
+                    </span>
+                  </div>
+                );
+              })}
+          </div>
+        )}
+      </TickerTile>
+    </div>
+  );
+}
+
+function TickerTile({ children }: { children: React.ReactNode }) {
+  return (
     <div
       style={{
-        position: "absolute",
-        left: 56,
-        right: 56,
-        bottom: 96,
         background: "rgba(9,9,14,0.82)",
         backdropFilter: "blur(18px) saturate(1.4)",
         WebkitBackdropFilter: "blur(18px) saturate(1.4)",
@@ -258,49 +311,13 @@ function MatchTicker({
         borderTop: "2px solid rgba(20,184,166,0.65)",
         borderRadius: 14,
         boxShadow: "0 24px 60px rgba(0,0,0,0.55)",
-        padding: "20px 32px",
+        padding: "18px 26px",
         display: "flex",
         alignItems: "center",
-        gap: 28,
+        gap: 16,
       }}
     >
-      <StatusPill live={isLive} />
-      <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 160 }}>
-        {game && (
-          <span style={{ fontSize: 13, fontWeight: 700, color: "#5eead4", letterSpacing: "0.01em" }}>
-            {game}
-          </span>
-        )}
-        <span style={{ fontSize: 13, color: "rgba(255,255,255,0.45)" }}>
-          {eventTitle}
-        </span>
-      </div>
-
-      {hasDuel ? (
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 24 }}>
-          <PlayerName name={nameOf(match.player1Id)} winner={p1Winner} align="right" />
-          <Score score1={match.score1} score2={match.score2} />
-          <PlayerName name={nameOf(match.player2Id)} winner={p2Winner} align="left" />
-        </div>
-      ) : (
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 20 }}>
-          {[...match.entries]
-            .sort((a, b) => (a.placement ?? 99) - (b.placement ?? 99))
-            .slice(0, 6)
-            .map(e => (
-              <span
-                key={e.id}
-                style={{
-                  fontSize: 20,
-                  fontWeight: e.placement === 1 ? 700 : 500,
-                  color: e.placement === 1 ? "#5eead4" : "#fff",
-                }}
-              >
-                {nameOf(e.userId)}{e.score != null ? ` · ${e.score}` : ""}
-              </span>
-            ))}
-        </div>
-      )}
+      {children}
     </div>
   );
 }
@@ -331,18 +348,26 @@ function StatusPill({ live }: { live: boolean }) {
   );
 }
 
-function PlayerName({ name, winner, align }: { name: string; winner: boolean; align: "left" | "right" }) {
+function PlayerName({ user, winner, align }: { user: OverlayUser | undefined; winner: boolean; align: "left" | "right" }) {
+  const name = displayName(user);
+  const row = (
+    <>
+      <RankedAvatar rankPoints={user?.rankPoints ?? 0} src={user?.image} alt={name} size={40} />
+      <span
+        style={{
+          fontSize: 24, fontWeight: winner ? 700 : 500,
+          color: winner ? "#5eead4" : "#fff",
+          textShadow: winner ? "0 0 18px rgba(45,212,191,0.5)" : "none",
+        }}
+      >
+        {name}
+      </span>
+    </>
+  );
   return (
-    <span
-      style={{
-        fontSize: 26, fontWeight: winner ? 700 : 500,
-        color: winner ? "#5eead4" : "#fff",
-        textShadow: winner ? "0 0 18px rgba(45,212,191,0.5)" : "none",
-        textAlign: align, minWidth: 220,
-      }}
-    >
-      {name}
-    </span>
+    <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 200, flexDirection: align === "right" ? "row-reverse" : "row" }}>
+      {row}
+    </div>
   );
 }
 
@@ -383,7 +408,7 @@ function PanelShell({ title, children }: { title: string; children: React.ReactN
 }
 
 /* ── Bracket-Panel: Runden nebeneinander, kompakt für Elimination-Formate ── */
-function BracketPanel({ matches, nameOf }: { matches: OverlayMatch[]; nameOf: (id: string | null) => string }) {
+function BracketPanel({ matches, userOf }: { matches: OverlayMatch[]; userOf: (id: string | null) => OverlayUser | undefined }) {
   const rounds = [...new Set(matches.map(m => m.round))].sort((a, b) => a - b);
   return (
     <PanelShell title="Turnierbaum">
@@ -395,7 +420,7 @@ function BracketPanel({ matches, nameOf }: { matches: OverlayMatch[]; nameOf: (i
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {matches.filter(m => m.round === round).map(m => (
-                <BracketRow key={m.id} match={m} nameOf={nameOf} />
+                <BracketRow key={m.id} match={m} userOf={userOf} />
               ))}
             </div>
           </div>
@@ -405,21 +430,22 @@ function BracketPanel({ matches, nameOf }: { matches: OverlayMatch[]; nameOf: (i
   );
 }
 
-function BracketRow({ match, nameOf }: { match: OverlayMatch; nameOf: (id: string | null) => string }) {
+function BracketRow({ match, userOf }: { match: OverlayMatch; userOf: (id: string | null) => OverlayUser | undefined }) {
   const p1Winner = !!match.winnerId && match.winnerId === match.player1Id;
   const p2Winner = !!match.winnerId && match.winnerId === match.player2Id;
   return (
-    <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 8, padding: "7px 10px" }}>
-      <Row name={nameOf(match.player1Id)} score={match.score1} winner={p1Winner} />
-      <Row name={nameOf(match.player2Id)} score={match.score2} winner={p2Winner} />
+    <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 8, padding: "7px 10px", display: "flex", flexDirection: "column", gap: 4 }}>
+      <Row user={userOf(match.player1Id)} score={match.score1} winner={p1Winner} />
+      <Row user={userOf(match.player2Id)} score={match.score2} winner={p2Winner} />
     </div>
   );
 }
 
-function Row({ name, score, winner }: { name: string; score: number | null; winner: boolean }) {
+function Row({ user, score, winner }: { user: OverlayUser | undefined; score: number | null; winner: boolean }) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, fontWeight: winner ? 700 : 400, color: winner ? "#5eead4" : "rgba(255,255,255,0.85)" }}>
-      <span>{name}</span>
+    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: winner ? 700 : 400, color: winner ? "#5eead4" : "rgba(255,255,255,0.85)" }}>
+      <RankedAvatar rankPoints={user?.rankPoints ?? 0} src={user?.image} alt={displayName(user)} size={22} />
+      <span style={{ flex: 1 }}>{displayName(user)}</span>
       {score != null && <span>{score}</span>}
     </div>
   );
@@ -454,8 +480,9 @@ function TablePanel({
             }}
           >
             <span style={{ width: 20, fontSize: 13, opacity: 0.4, textAlign: "right" }}>{i + 1}</span>
+            <RankedAvatar rankPoints={p.user.rankPoints} src={p.user.image} alt={displayName(p.user)} size={26} />
             <span style={{ flex: 1, fontSize: 15, fontWeight: i < 3 ? 700 : 400, color: i < 3 ? "#5eead4" : "#fff" }}>
-              {p.user.name ?? p.user.username ?? "Unbekannt"}
+              {displayName(p.user)}
             </span>
             <span style={{ fontSize: 13, opacity: 0.6 }}>{p.w}S · {p.l}N</span>
           </div>
@@ -469,11 +496,14 @@ function TablePanel({
 function ParticipantsPanel({ participants }: { participants: OverlayParticipant[] }) {
   return (
     <PanelShell title="Teilnehmer">
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 16px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 16px" }}>
         {participants.slice(0, 24).map(p => (
-          <span key={p.userId} style={{ fontSize: 14, color: "rgba(255,255,255,0.85)" }}>
-            {p.user.name ?? p.user.username ?? "Unbekannt"}
-          </span>
+          <div key={p.userId} style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+            <RankedAvatar rankPoints={p.user.rankPoints} src={p.user.image} alt={displayName(p.user)} size={24} />
+            <span style={{ fontSize: 14, color: "rgba(255,255,255,0.85)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {displayName(p.user)}
+            </span>
+          </div>
         ))}
       </div>
     </PanelShell>
