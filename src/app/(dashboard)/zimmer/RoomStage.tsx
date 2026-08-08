@@ -255,16 +255,14 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract, edit 
           </defs>
 
           {/* Wand */}
-          <rect x={0} y={0} width={STAGE.width} height={STAGE.wallHeight}
-            fill={state.wallpaperKey === "tapete_raufaser" ? "url(#room-wallpaper-photo)" : "url(#room-wallpaper)"} />
+          <rect x={0} y={0} width={STAGE.width} height={STAGE.wallHeight} fill="url(#room-wallpaper-photo)" />
 
           <RoomWindow />
           <CeilingLamp />
 
           <rect x={0} y={0} width={STAGE.width} height={STAGE.wallHeight} fill="url(#room-wall-vignette)" />
           {/* Boden */}
-          <rect x={0} y={STAGE.floorTop} width={STAGE.width} height={GRID.floor.rows * CELL}
-            fill={state.floorKey === "boden_linoleum" ? "url(#room-floor-photo)" : "url(#room-floor)"} />
+          <rect x={0} y={STAGE.floorTop} width={STAGE.width} height={GRID.floor.rows * CELL} fill="url(#room-floor-photo)" />
           <rect x={0} y={STAGE.floorTop} width={STAGE.width} height={GRID.floor.rows * CELL} fill="url(#room-floor-vignette)" />
 
           {/* Sockelleiste: beleuchtete Kante statt flacher Linie, damit sie neben
@@ -530,86 +528,37 @@ function SurfacePatterns({ wallpaperKey, floorKey }: { wallpaperKey: string; flo
         <stop offset="100%" stopColor="var(--room-shade)" stopOpacity={0.8} />
       </linearGradient>
 
-      {/* Fotografische Tapetentextur (Standard-Tapete) — dieselbe Bildhaftigkeit
-          wie die Canva-Möbelfotos, statt einer flach gezeichneten Fläche.
-          Kachel deckt die volle Wandhöhe ab und wiederholt sich nur seitlich;
-          die Datei selbst enthält bereits Bild + gespiegeltes Bild
-          nebeneinander, damit keine Kante beim Wiederholen sichtbar wird. */}
+      {/* Fotografische Wand-/Bodentextur — dieselbe Bildhaftigkeit wie die
+          Canva-Möbelfotos, statt einer flach gezeichneten Fläche. Alle drei
+          Tapeten- und alle drei Bodenoptionen haben inzwischen ein eigenes
+          Texturfoto (WALL_PHOTOS/FLOOR_PHOTOS), darum genügt je EIN Pattern
+          mit dynamischem href statt einem Pattern pro Fläche. Die Kachel
+          deckt die volle Wand-/Bodenhöhe ab und wiederholt sich nur seitlich;
+          jede Datei enthält bereits Bild + gespiegeltes Bild nebeneinander,
+          damit beim Wiederholen keine Kante sichtbar wird. */}
       <pattern id="room-wallpaper-photo" width={512} height={STAGE.wallHeight} patternUnits="userSpaceOnUse">
-        <image href="/room-surfaces/wall-raufaser.png" x={0} y={0} width={512} height={STAGE.wallHeight} preserveAspectRatio="none" />
+        <image href={WALL_PHOTOS[wallpaperKey] ?? WALL_PHOTOS.tapete_raufaser}
+          x={0} y={0} width={512} height={STAGE.wallHeight} preserveAspectRatio="none" />
         <rect width={512} height={STAGE.wallHeight} fill="var(--room-shade)" opacity={0.1} />
       </pattern>
 
-      <pattern id="room-wallpaper" width={64} height={64} patternUnits="userSpaceOnUse">
-        <rect width={64} height={64} fill={wallpaperKey === "tapete_raufaser" ? "var(--room-wall-warm)" : "var(--room-wall)"} />
-        {wallpaperKey === "tapete_pixel" && (
-          <g fill="var(--room-neon-violet)" opacity={0.16}>
-            {[0, 16, 32, 48].map(a => [0, 16, 32, 48].map(b => (
-              <rect key={`${a}-${b}`} x={a + ((b / 16) % 2) * 8} y={b} width={8} height={8} />
-            )))}
-          </g>
-        )}
-        {wallpaperKey === "tapete_scifi" && (
-          <g stroke="var(--room-neon-teal)" strokeWidth={1.5} opacity={0.22} fill="none">
-            <rect x={4} y={4} width={56} height={26} rx={3} />
-            <rect x={4} y={34} width={56} height={26} rx={3} />
-            <line x1={32} y1={4} x2={32} y2={30} />
-          </g>
-        )}
-        {wallpaperKey === "tapete_raufaser" && (
-          <>
-            <g fill="var(--room-wall-warm-hi)" opacity={0.5}>
-              {[[9, 14], [27, 8], [46, 22], [17, 39], [38, 47], [55, 33], [6, 55], [50, 58]].map(([cx, cy], i) => (
-                <circle key={i} cx={cx} cy={cy} r={1.6} />
-              ))}
-            </g>
-            {/* Bahnennaht der Tapetenrolle — jeder Zellenrand ein dezenter Stoß */}
-            <line x1={0} y1={0} x2={0} y2={64} stroke="var(--room-shade)" strokeWidth={1} opacity={0.4} />
-          </>
-        )}
-        {/* Sanfter vertikaler Verlauf auf JEDER Tapete — Licht fällt von oben ein */}
-        <rect width={64} height={64} fill="var(--room-shade)" opacity={0.08} />
-      </pattern>
-
-      {/* Fotografische Bodentextur (Standard-Boden) — analog zur Tapete. */}
       <pattern id="room-floor-photo" width={640} height={GRID.floor.rows * CELL} patternUnits="userSpaceOnUse">
-        <image href="/room-surfaces/floor-linoleum.png" x={0} y={0} width={640} height={GRID.floor.rows * CELL} preserveAspectRatio="none" />
+        <image href={FLOOR_PHOTOS[floorKey] ?? FLOOR_PHOTOS.boden_linoleum}
+          x={0} y={0} width={640} height={GRID.floor.rows * CELL} preserveAspectRatio="none" />
         <rect width={640} height={GRID.floor.rows * CELL} fill="var(--room-shade)" opacity={0.1} />
-      </pattern>
-
-      <pattern id="room-floor" width={64} height={64} patternUnits="userSpaceOnUse">
-        <rect width={64} height={64} fill={floorKey === "boden_linoleum" ? "var(--room-floor-warm)" : "var(--room-floor)"} />
-        {floorKey === "boden_holz" && (
-          <g>
-            <rect y={0}  width={64} height={31} fill="var(--room-wood)" opacity={0.55} />
-            <rect y={33} width={64} height={31} fill="var(--room-wood)" opacity={0.42} />
-            <rect y={0} width={64} height={6} fill="var(--room-wood-hi)" opacity={0.3} />
-            <rect y={33} width={64} height={6} fill="var(--room-wood-hi)" opacity={0.22} />
-            <line x1={0} y1={32} x2={64} y2={32} stroke="var(--room-outline)" strokeWidth={1} />
-            <line x1={22} y1={0} x2={22} y2={31} stroke="var(--room-outline)" strokeWidth={1} />
-            <line x1={44} y1={33} x2={44} y2={64} stroke="var(--room-outline)" strokeWidth={1} />
-          </g>
-        )}
-        {floorKey === "boden_scifi" && (
-          <g stroke="var(--room-neon-teal)" strokeWidth={1} opacity={0.25} fill="none">
-            <rect x={2} y={2} width={60} height={60} />
-            <line x1={2} y1={32} x2={62} y2={32} />
-            <line x1={32} y1={2} x2={32} y2={62} />
-          </g>
-        )}
-        {floorKey === "boden_linoleum" && (
-          <>
-            <g fill="var(--room-floor-warm-hi)" opacity={0.35}>
-              <ellipse cx={14} cy={10} rx={16} ry={9} />
-              <ellipse cx={46} cy={42} rx={14} ry={8} />
-            </g>
-            <g fill="var(--room-shade)" opacity={0.5}>
-              <ellipse cx={20} cy={24} rx={7} ry={4} />
-              <ellipse cx={48} cy={46} rx={5} ry={3} />
-            </g>
-          </>
-        )}
       </pattern>
     </>
   );
 }
+
+const WALL_PHOTOS: Record<string, string> = {
+  tapete_raufaser: "/room-surfaces/wall-raufaser.png",
+  tapete_pixel:    "/room-surfaces/wall-pixel.png",
+  tapete_scifi:    "/room-surfaces/wall-scifi.png",
+};
+
+const FLOOR_PHOTOS: Record<string, string> = {
+  boden_linoleum: "/room-surfaces/floor-linoleum.png",
+  boden_holz:     "/room-surfaces/floor-holz.png",
+  boden_scifi:    "/room-surfaces/floor-scifi.png",
+};
