@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Copy, ExternalLink, Tv2, Check, LayoutGrid, Table2, Users, Repeat, Swords, Sparkles } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { Copy, ExternalLink, Tv2, Check, LayoutGrid, Table2, Users, Repeat, Swords, Sparkles, Move } from "lucide-react";
 import { toast } from "sonner";
+import { ELEMENT_SIZE, type ElementKey } from "../OverlayClient";
 
 type PanelKey = "bracket" | "table" | "participants";
 type PanelOption = { key: PanelKey; label: string; icon: typeof LayoutGrid; forFormats: string[] | null };
-type Corner = "top-left" | "top-right" | "middle-left" | "middle-right" | "bottom-left" | "bottom-right";
+type Pos = { x: number; y: number }; // Prozent von 1920×1080, oben links des Elements
 
 const PANEL_OPTIONS: PanelOption[] = [
   { key: "bracket",      label: "Turnierbaum",  icon: LayoutGrid, forFormats: ["single_elimination", "double_elimination"] },
@@ -14,14 +15,29 @@ const PANEL_OPTIONS: PanelOption[] = [
   { key: "participants", label: "Teilnehmer",    icon: Users,      forFormats: null },
 ];
 
-const CORNERS: { key: Corner; label: string }[] = [
-  { key: "top-left",     label: "Oben links" },
-  { key: "top-right",    label: "Oben rechts" },
-  { key: "middle-left",  label: "Mitte links" },
-  { key: "middle-right", label: "Mitte rechts" },
-  { key: "bottom-left",  label: "Unten links" },
-  { key: "bottom-right", label: "Unten rechts" },
-];
+const ELEMENT_LABELS: Record<ElementKey, { label: string; icon: typeof Swords }> = {
+  ticker: { label: "Aktuelles Match", icon: Swords },
+  brand:  { label: "Live/Event/Spiel & Logo", icon: Sparkles },
+  panel:  { label: "Turnierbaum/Tabelle/Teilnehmer", icon: LayoutGrid },
+};
+
+/** Ausgangspositionen, angelehnt an die alte Standardplatzierung (Brand+Ticker unten links
+ *  nebeneinander, Panel oben rechts) — Prozent von 1920×1080. */
+const DEFAULT_POSITIONS: Record<ElementKey, Pos> = {
+  brand:  { x: 1.5,  y: 90.6 },
+  ticker: { x: 18.4, y: 90.6 },
+  panel:  { x: 68.4, y: 2.6 },
+};
+
+function pctSize(key: ElementKey): { w: number; h: number } {
+  return { w: (ELEMENT_SIZE[key].width / 1920) * 100, h: (ELEMENT_SIZE[key].height / 1080) * 100 };
+}
+
+function overlaps(a: Pos, aKey: ElementKey, b: Pos, bKey: ElementKey): boolean {
+  const sa = pctSize(aKey);
+  const sb = pctSize(bKey);
+  return a.x < b.x + sb.w && a.x + sa.w > b.x && a.y < b.y + sb.h && a.y + sa.h > b.y;
+}
 
 export default function SettingsClient({
   eventId, eventTitle, format, token,
@@ -29,10 +45,18 @@ export default function SettingsClient({
   const relevantPanels = PANEL_OPTIONS.filter(p => !p.forFormats || (format && p.forFormats.includes(format)));
   const [enabled, setEnabled] = useState<Set<PanelKey>>(new Set(relevantPanels.map(p => p.key)));
   const [rotateSeconds, setRotateSeconds] = useState(14);
-  const [corner, setCorner] = useState<Corner>("top-right");
   const [showTicker, setShowTicker] = useState(true);
   const [showBrand, setShowBrand] = useState(true);
+  const [positions, setPositions] = useState<Record<ElementKey, Pos>>(DEFAULT_POSITIONS);
   const [copied, setCopied] = useState(false);
+
+  const activeElements = useMemo<ElementKey[]>(() => {
+    const list: ElementKey[] = [];
+    if (showBrand) list.push("brand");
+    if (showTicker) list.push("ticker");
+    if (enabled.size > 0) list.push("panel");
+    return list;
+  }, [showBrand, showTicker, enabled.size]);
 
   const overlayUrl = useMemo(() => {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
@@ -41,11 +65,12 @@ export default function SettingsClient({
       params.set("panels", [...enabled].join(","));
     }
     if (rotateSeconds !== 14) params.set("rotate", String(rotateSeconds));
-    if (corner !== "top-right") params.set("pos", corner);
     if (!showTicker) params.set("ticker", "0");
     if (!showBrand) params.set("brand", "0");
+    const layout = activeElements.map(key => `${key}:${positions[key].x.toFixed(1)},${positions[key].y.toFixed(1)}`).join(";");
+    if (layout) params.set("layout", layout);
     return `${origin}/overlay/${eventId}?${params.toString()}`;
-  }, [eventId, token, enabled, relevantPanels.length, rotateSeconds, corner, showTicker, showBrand]);
+  }, [eventId, token, enabled, relevantPanels.length, rotateSeconds, showTicker, showBrand, activeElements, positions]);
 
   function toggle(key: PanelKey) {
     setEnabled(prev => {
@@ -80,87 +105,72 @@ export default function SettingsClient({
         </div>
         <p className="text-sm text-gray-500 mb-6">{eventTitle}</p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div className="glass rounded-2xl p-5">
-            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
-              Elemente
-            </h2>
-            <p className="text-xs text-gray-500 mb-3">
-              Jedes Element lässt sich einzeln aus- und wieder einblenden. Turnierbaum/Tabelle und
-              Teilnehmer rotieren automatisch durch, wenn mehr als eins aktiv ist, damit dein
-              Gameplay sichtbar bleibt.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => setShowTicker(v => !v)}
-                className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl border font-medium transition-all ${
-                  showTicker
-                    ? "bg-teal-500/15 border-teal-500/40 text-teal-300"
-                    : "border-white/[0.08] text-gray-500 hover:text-gray-300 hover:border-white/20"
-                }`}
-              >
-                <Swords className="w-3.5 h-3.5" />
-                Aktuelles Match
-              </button>
-              <button
-                onClick={() => setShowBrand(v => !v)}
-                className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl border font-medium transition-all ${
-                  showBrand
-                    ? "bg-teal-500/15 border-teal-500/40 text-teal-300"
-                    : "border-white/[0.08] text-gray-500 hover:text-gray-300 hover:border-white/20"
-                }`}
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                Live/Event/Spiel &amp; Logo
-              </button>
-              {relevantPanels.map(({ key, label, icon: Icon }) => {
-                const active = enabled.has(key);
-                return (
-                  <button
-                    key={key}
-                    onClick={() => toggle(key)}
-                    className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl border font-medium transition-all ${
-                      active
-                        ? "bg-teal-500/15 border-teal-500/40 text-teal-300"
-                        : "border-white/[0.08] text-gray-500 hover:text-gray-300 hover:border-white/20"
-                    }`}
-                  >
-                    <Icon className="w-3.5 h-3.5" />
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
+        <div className="glass rounded-2xl p-5 mb-4">
+          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+            Elemente
+          </h2>
+          <p className="text-xs text-gray-500 mb-3">
+            Jedes Element lässt sich einzeln aus- und wieder einblenden. Turnierbaum/Tabelle und
+            Teilnehmer rotieren automatisch durch, wenn mehr als eins aktiv ist, damit dein
+            Gameplay sichtbar bleibt.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setShowTicker(v => !v)}
+              className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl border font-medium transition-all ${
+                showTicker
+                  ? "bg-teal-500/15 border-teal-500/40 text-teal-300"
+                  : "border-white/[0.08] text-gray-500 hover:text-gray-300 hover:border-white/20"
+              }`}
+            >
+              <Swords className="w-3.5 h-3.5" />
+              Aktuelles Match
+            </button>
+            <button
+              onClick={() => setShowBrand(v => !v)}
+              className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl border font-medium transition-all ${
+                showBrand
+                  ? "bg-teal-500/15 border-teal-500/40 text-teal-300"
+                  : "border-white/[0.08] text-gray-500 hover:text-gray-300 hover:border-white/20"
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              Live/Event/Spiel &amp; Logo
+            </button>
+            {relevantPanels.map(({ key, label, icon: Icon }) => {
+              const active = enabled.has(key);
+              return (
+                <button
+                  key={key}
+                  onClick={() => toggle(key)}
+                  className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl border font-medium transition-all ${
+                    active
+                      ? "bg-teal-500/15 border-teal-500/40 text-teal-300"
+                      : "border-white/[0.08] text-gray-500 hover:text-gray-300 hover:border-white/20"
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  {label}
+                </button>
+              );
+            })}
           </div>
+        </div>
 
-          <div className="glass rounded-2xl p-5">
-            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
-              Bildschirmecke
-            </h2>
-            <p className="text-xs text-gray-500 mb-3">
-              Der Browser bekommt euer Gameplay-Bild nicht zu sehen und kann das HUD deines Spiels nicht
-              automatisch umgehen. Wähl die Ecke, die bei deinem Spiel frei ist — Turnierbaum/Tabelle
-              erscheinen dort.
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              {CORNERS.map(({ key, label }) => {
-                const active = corner === key;
-                return (
-                  <button
-                    key={key}
-                    onClick={() => setCorner(key)}
-                    className={`text-sm px-3 py-2.5 rounded-xl border font-medium transition-all ${
-                      active
-                        ? "bg-teal-500/15 border-teal-500/40 text-teal-300"
-                        : "border-white/[0.08] text-gray-500 hover:text-gray-300 hover:border-white/20"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+        <div className="glass rounded-2xl p-5 mb-4">
+          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+            <Move className="w-3.5 h-3.5" /> Position
+          </h2>
+          <p className="text-xs text-gray-500 mb-3">
+            Zieh jedes aktive Element dahin, wo es auf deinem Bildschirm frei ist — die
+            Vorschau entspricht 1920×1080. Elemente lassen sich nicht übereinander ziehen,
+            sie stoppen automatisch an der Kante des jeweils anderen.
+          </p>
+          <PositionCanvas
+            activeElements={activeElements}
+            positions={positions}
+            onChange={(key, pos) => setPositions(prev => ({ ...prev, [key]: pos }))}
+          />
         </div>
 
         {enabled.size > 1 && (
@@ -213,6 +223,94 @@ export default function SettingsClient({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** 16:9-Vorschau des OBS-Canvas mit ziehbaren Boxen je aktivem Element. Kollisionsvermeidung:
+ *  eine Bewegung, die zu einer Überlappung mit einem anderen aktiven Element führen würde,
+ *  wird verworfen — die Box bleibt an der Kante des anderen Elements stehen, statt darüber
+ *  hinweg zu rutschen. */
+function PositionCanvas({
+  activeElements, positions, onChange,
+}: { activeElements: ElementKey[]; positions: Record<ElementKey, Pos>; onChange: (key: ElementKey, pos: Pos) => void }) {
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const dragState = useRef<{ key: ElementKey; grabDx: number; grabDy: number } | null>(null);
+  const [dragging, setDragging] = useState<ElementKey | null>(null);
+
+  function startDrag(key: ElementKey, e: React.PointerEvent) {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const pos = positions[key];
+    const pointerXPct = ((e.clientX - rect.left) / rect.width) * 100;
+    const pointerYPct = ((e.clientY - rect.top) / rect.height) * 100;
+    dragState.current = { key, grabDx: pointerXPct - pos.x, grabDy: pointerYPct - pos.y };
+    setDragging(key);
+
+    const handleMove = (ev: PointerEvent) => {
+      const drag = dragState.current;
+      const canvasEl = canvasRef.current;
+      if (!drag || !canvasEl) return;
+      const r = canvasEl.getBoundingClientRect();
+      const size = pctSize(drag.key);
+      const rawX = ((ev.clientX - r.left) / r.width) * 100 - drag.grabDx;
+      const rawY = ((ev.clientY - r.top) / r.height) * 100 - drag.grabDy;
+      const candidate: Pos = {
+        x: Math.min(100 - size.w, Math.max(0, rawX)),
+        y: Math.min(100 - size.h, Math.max(0, rawY)),
+      };
+      const others = activeElements.filter(k => k !== drag.key);
+      const collides = others.some(k => overlaps(candidate, drag.key, positions[k], k));
+      if (!collides) onChange(drag.key, candidate);
+    };
+    const handleUp = () => {
+      dragState.current = null;
+      setDragging(null);
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+    };
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
+  }
+
+  return (
+    <div
+      ref={canvasRef}
+      className="relative w-full rounded-xl overflow-hidden select-none"
+      style={{
+        aspectRatio: "16 / 9",
+        background: "linear-gradient(135deg, #0d1420 0%, #131a26 100%)",
+        border: "1px solid rgba(255,255,255,0.08)",
+        backgroundImage:
+          "linear-gradient(rgba(20,184,166,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(20,184,166,0.06) 1px, transparent 1px)",
+        backgroundSize: "5% 5%",
+      }}
+    >
+      {activeElements.map(key => {
+        const pos = positions[key];
+        const size = pctSize(key);
+        const { label, icon: Icon } = ELEMENT_LABELS[key];
+        return (
+          <div
+            key={key}
+            onPointerDown={e => startDrag(key, e)}
+            className={`absolute flex items-center gap-1.5 rounded-lg border px-2 text-[11px] font-medium cursor-grab active:cursor-grabbing transition-shadow ${
+              dragging === key
+                ? "bg-teal-500/25 border-teal-400/60 text-teal-100 shadow-lg shadow-teal-500/20 z-10"
+                : "bg-teal-500/10 border-teal-500/30 text-teal-300"
+            }`}
+            style={{
+              left: `${pos.x}%`, top: `${pos.y}%`,
+              width: `${size.w}%`, height: `${size.h}%`,
+              touchAction: "none",
+            }}
+          >
+            <Icon className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">{label}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }

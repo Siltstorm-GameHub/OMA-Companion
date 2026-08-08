@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { BRAND_LOGO } from "@/lib/brand";
 import RankedAvatar from "@/components/RankedAvatar";
+import { ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from "lucide-react";
 
 type OverlayEntry = {
   id: string;
@@ -52,12 +53,28 @@ type OverlayState = {
 type PanelKey = "bracket" | "table" | "participants";
 export type Corner = "top-left" | "top-right" | "bottom-left" | "bottom-right" | "middle-left" | "middle-right";
 
+/** Frei platzierbare Overlay-Elemente — jedes lässt sich in den Overlay-Einstellungen einzeln
+ *  per Drag & Drop positionieren. */
+export type ElementKey = "brand" | "ticker" | "panel";
+export type LayoutPositions = Partial<Record<ElementKey, { x: number; y: number }>>; // Prozent von 1920×1080, oben links des Elements
+
+/** Nominelle Kachelgrößen (px bei 1920×1080) — für die Kollisionsvermeidung beim Ziehen in
+ *  den Einstellungen. Etwas großzügiger als die tatsächliche Mindestgröße bemessen (Ticker/
+ *  Panel-Breite variiert mit Inhalt), damit sich Elemente auch bei mehr Inhalt nie berühren. */
+export const ELEMENT_SIZE: Record<ElementKey, { width: number; height: number }> = {
+  brand: { width: 300, height: 78 },
+  ticker: { width: 620, height: 78 },
+  panel: { width: 620, height: 360 },
+};
+
 const PANEL_FADE_MS = 900;
 const EDGE_MARGIN = 28;    // Abstand aller Kacheln zum Bildschirmrand
 const TICKER_BOTTOM = 48;  // Abstand des Lower-Thirds zum unteren Rand
 const TICKER_CLEARANCE = 166; // Höhe des Lower-Thirds + Abstand — Panels in unteren Ecken schieben sich darüber
 const PANEL_WIDTH = 620;
+const PANEL_WIDTH_COMPACT = 460; // Tabelle/Teilnehmer wirken bei voller Panel-Breite unnötig groß
 const PANEL_LIST_HEIGHT = 300; // Feste Höhe für Listen in Panels — lange Listen scrollen intern statt die Kachel wachsen zu lassen
+const PANEL_LIST_HEIGHT_COMPACT = 250;
 const TICKER_ENTRIES_WIDTH = 620; // Feste Breite für die FFA-Mitspielerliste im Match-Ticker
 
 /** Absolute Positionierung für eine Ecke — Panels in den unteren Ecken rücken über den
@@ -74,6 +91,14 @@ function cornerStyle(corner: Corner): React.CSSProperties {
     case "middle-left":  return { ...base, top: "50%", left: EDGE_MARGIN };
     case "middle-right": return { ...base, top: "50%", right: EDGE_MARGIN };
   }
+}
+
+/** Absolute Positionierung aus einer frei gezogenen Layout-Koordinate (Prozent von 1920×1080).
+ *  Fehlt die Koordinate (Element aktiviert, aber noch nie positioniert), fällt es auf die
+ *  Standard-Ecke oben rechts zurück statt unsichtbar zu bleiben. */
+function elementPositionStyle(pos: { x: number; y: number } | undefined): React.CSSProperties {
+  if (!pos) return { position: "absolute", top: EDGE_MARGIN, right: EDGE_MARGIN };
+  return { position: "absolute", left: `${pos.x}%`, top: `${pos.y}%` };
 }
 
 /** Opacity/Blur/Versatz für eine Rotations-Phase, kombiniert mit der Basis-Zentrierung der
@@ -114,8 +139,9 @@ function MotionStyles() {
   );
 }
 
-const SCROLL_PAUSE_MS = 3400;
-const SCROLL_TRANSITION_MS = 750;
+const SCROLL_PAUSE_MS = 5200;
+const SCROLL_TRANSITION_MS = 1600;
+const SCROLL_ARROW_MS = SCROLL_TRANSITION_MS + 250; // Pfeil bleibt etwas über die Bewegung hinaus sichtbar
 
 /** Auto-Scroll für Inhalte, die nicht in eine feste Kachelgröße passen (lange Teilnehmer-
  *  /Ranking-Listen, viele FFA-Mitspieler im Ticker) — statt die Kachel selbst wachsen zu
@@ -127,8 +153,10 @@ function AutoScrollViewport({
   axis, size, gap = 0, children,
 }: { axis: "x" | "y"; size: number; gap?: number; children: React.ReactNode }) {
   const trackRef = useRef<HTMLDivElement>(null);
+  const mounted = useRef(false);
   const [steps, setSteps] = useState<number[]>([0]);
   const [stepIndex, setStepIndex] = useState(0);
+  const [arrow, setArrow] = useState<"forward" | "backward" | null>(null);
 
   useEffect(() => {
     const track = trackRef.current;
@@ -161,10 +189,24 @@ function AutoScrollViewport({
     return () => clearInterval(t);
   }, [steps.length]);
 
+  // Pfeil-Indikator: blitzt kurz während der Bewegung auf, damit sichtbar wird, dass gerade
+  // gescrollt wird (und in welche Richtung) — nicht beim allerersten Render (kein Sprung).
+  useEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
+    setArrow(stepIndex === 0 ? "backward" : "forward");
+    const t = setTimeout(() => setArrow(null), SCROLL_ARROW_MS);
+    return () => clearTimeout(t);
+  }, [stepIndex]);
+
   const offset = steps[stepIndex] ?? 0;
   const translate = axis === "x" ? `translateX(-${offset}px)` : `translateY(-${offset}px)`;
 
-  const viewportStyle: React.CSSProperties = axis === "x" ? { overflow: "hidden", width: size } : { overflow: "hidden", height: size };
+  const viewportStyle: React.CSSProperties = axis === "x"
+    ? { position: "relative", overflow: "hidden", width: size }
+    : { position: "relative", overflow: "hidden", height: size };
 
   return (
     <div style={viewportStyle}>
@@ -180,6 +222,35 @@ function AutoScrollViewport({
       >
         {children}
       </div>
+      {arrow && <ScrollArrow axis={axis} direction={arrow} />}
+    </div>
+  );
+}
+
+/** Richtungspfeil am Rand, in den gerade gescrollt wird — pulsiert kurz auf statt dauerhaft
+ *  zu stehen, damit er nicht wie ein normales UI-Steuerelement wirkt. */
+function ScrollArrow({ axis, direction }: { axis: "x" | "y"; direction: "forward" | "backward" }) {
+  const Icon = axis === "x"
+    ? (direction === "forward" ? ChevronRight : ChevronLeft)
+    : (direction === "forward" ? ChevronDown : ChevronUp);
+
+  const edgeStyle: React.CSSProperties = axis === "x"
+    ? { top: 0, bottom: 0, [direction === "forward" ? "right" : "left"]: 0, width: 28 }
+    : { left: 0, right: 0, [direction === "forward" ? "bottom" : "top"]: 0, height: 22 };
+
+  const gradientDir = axis === "x" ? (direction === "forward" ? "to right" : "to left") : (direction === "forward" ? "to bottom" : "to top");
+
+  return (
+    <div
+      className="oma-anim-slidein"
+      style={{
+        position: "absolute", ...edgeStyle,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        background: `linear-gradient(${gradientDir}, transparent, rgba(9,9,14,0.85) 65%)`,
+        pointerEvents: "none",
+      }}
+    >
+      <Icon size={16} color="#5eead4" style={{ filter: "drop-shadow(0 0 4px rgba(45,212,191,0.6))" }} />
     </div>
   );
 }
@@ -194,6 +265,7 @@ export default function OverlayClient({
   corner,
   showTicker,
   showBrand,
+  layout,
 }: {
   eventId: string;
   token: string;
@@ -204,6 +276,11 @@ export default function OverlayClient({
   corner: Corner;
   showTicker: boolean;
   showBrand: boolean;
+  /** Frei per Drag & Drop platzierte Positionen aus den Overlay-Einstellungen (Prozent von
+   *  1920×1080, oben links des Elements). Fehlt ein Eintrag oder ist `layout` ganz null,
+   *  greift die alte gruppierte/Ecken-basierte Standardplatzierung — bestehende Links bleiben
+   *  dadurch gültig. */
+  layout: LayoutPositions | null;
 }) {
   const [state, setState] = useState<OverlayState | null>(null);
   const esRef = useRef<EventSource | null>(null);
@@ -263,7 +340,11 @@ export default function OverlayClient({
     >
       <MotionStyles />
 
-      {state && (showBrand || (showTicker && ticker)) && (
+      {/* Ohne eigenes `layout` bleiben Brand- und Match-Kachel wie bisher als gemeinsame Reihe
+         unten links gruppiert (alte Links funktionieren unverändert). Mit `layout` bekommt
+         jedes Element seine frei gezogene Position — beide Zweige rendern dieselben
+         Unterkomponenten, nur der Positionierungs-Wrapper unterscheidet sich. */}
+      {!layout && state && (showBrand || (showTicker && ticker)) && (
         <div style={{ position: "absolute", left: EDGE_MARGIN, bottom: TICKER_BOTTOM, display: "flex", alignItems: "center", gap: 16 }}>
           {showBrand && (
             <BrandFlipTile
@@ -276,8 +357,29 @@ export default function OverlayClient({
         </div>
       )}
 
+      {layout && state && showBrand && (
+        <div style={elementPositionStyle(layout.brand)}>
+          <BrandFlipTile
+            eventTitle={state.title ?? eventTitle}
+            game={state.game}
+            isLive={ticker ? !ticker.winnerId && !ticker.playedAt : state.status === "active"}
+          />
+        </div>
+      )}
+      {layout && showTicker && ticker && (
+        <div style={elementPositionStyle(layout.ticker)}>
+          <MatchTicker match={ticker} userOf={userOf} />
+        </div>
+      )}
+
       {state && (rotator.active || rotator.previous) && (
-        <div style={{ ...cornerStyle(corner), width: PANEL_WIDTH }}>
+        <div
+          style={
+            layout?.panel
+              ? { ...elementPositionStyle(layout.panel), width: panelWidthFor((rotator.active ?? rotator.previous)!.key) }
+              : { ...cornerStyle(corner), width: panelWidthFor((rotator.active ?? rotator.previous)!.key) }
+          }
+        >
           {/* Alte und neue Kachel überlappen sich für PANEL_FADE_MS — die alte blendet aus/verschwimmt,
              während die neue schon einblendet, statt einer sichtbaren Lücke dazwischen. */}
           {rotator.previous && (
@@ -308,6 +410,10 @@ export default function OverlayClient({
       )}
     </div>
   );
+}
+
+function panelWidthFor(key: PanelKey): number {
+  return key === "bracket" ? PANEL_WIDTH : PANEL_WIDTH_COMPACT;
 }
 
 function PanelContent({
@@ -752,7 +858,7 @@ function TablePanel({
 
   return (
     <PanelShell title={title}>
-      <AutoScrollViewport axis="y" size={PANEL_LIST_HEIGHT} gap={2}>
+      <AutoScrollViewport axis="y" size={PANEL_LIST_HEIGHT_COMPACT} gap={2}>
         {ranked.map((p, i) => (
           <div
             key={p.userId}
@@ -891,7 +997,7 @@ function buildFfaRanking(
 function ParticipantsPanel({ participants }: { participants: OverlayParticipant[] }) {
   return (
     <PanelShell title="Teilnehmer">
-      <AutoScrollViewport axis="y" size={PANEL_LIST_HEIGHT}>
+      <AutoScrollViewport axis="y" size={PANEL_LIST_HEIGHT_COMPACT}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "5px 14px", width: "100%" }}>
           {participants.map(p => (
             <div key={p.userId} style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
