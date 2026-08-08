@@ -30,3 +30,24 @@ export function buildOverlayUrl(eventId: string, token: string): string {
 export function buildOverlaySettingsUrl(eventId: string, token: string, streamerId: string): string {
   return `${appBaseUrl()}/overlay/${eventId}/settings?token=${token}&streamer=${streamerId}`;
 }
+
+/** Liest den persönlichen Overlay-Token eines Users, legt bei Bedarf einen neuen an.
+ *  Unabhängig von jedem Event — die Grundlage für das Profil-Overlay (Logo/Identität,
+ *  Lieblingsspiele, Abzeichen, Rang, nächstes Event). Nur User mit gesetztem twitchLogin
+ *  bekommen den Link angeboten (siehe Aufrufstelle in api/profile/overlay). */
+export async function ensureUserOverlayToken(userId: string): Promise<string> {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { overlayToken: true } });
+  if (user?.overlayToken) return user.overlayToken;
+
+  const token = randomBytes(24).toString("base64url");
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: { overlayToken: token },
+    select: { overlayToken: true },
+  });
+  return updated.overlayToken!;
+}
+
+export function buildProfileOverlaySettingsUrl(userId: string, token: string): string {
+  return `${appBaseUrl()}/overlay/profile/${userId}/settings?token=${token}`;
+}

@@ -1,89 +1,68 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import {
-  Copy, ExternalLink, Tv2, Check, LayoutGrid, Table2, Users, Repeat, Swords, Sparkles, Move, Gamepad2, Award,
-} from "lucide-react";
+import { Copy, ExternalLink, Tv2, Check, Repeat, Move, Sparkles, TrendingUp, CalendarClock, Gamepad2, Award } from "lucide-react";
 import { toast } from "sonner";
-import { ELEMENT_SIZE, STACKABLE_ELEMENTS, type ElementKey } from "../OverlayClient";
-import PositionCanvas, { type CanvasElementOption, type Pos } from "../../PositionCanvas";
+import PositionCanvas, { type CanvasElementOption, type Pos } from "@/app/overlay/PositionCanvas";
+import {
+  PROFILE_ELEMENT_SIZE, PROFILE_STACKABLE, type ProfileElementKey,
+} from "../ProfileOverlayClient";
 
-type ElementOption = CanvasElementOption<ElementKey> & { forFormats: string[] | null };
+type ElementOption = CanvasElementOption<ProfileElementKey>;
 
-const ELEMENT_OPTIONS: ElementOption[] = [
-  { key: "brand",        label: "OMA-Logo & Streamer",         icon: Sparkles,   forFormats: null, fixed: true },
-  { key: "liveinfo",     label: "Live / Event / Spiel",         icon: Tv2,        forFormats: null },
-  { key: "ticker",       label: "Aktuelles Match",              icon: Swords,     forFormats: null },
-  { key: "bracket",      label: "Turnierbaum",                  icon: LayoutGrid, forFormats: ["single_elimination", "double_elimination"] },
-  { key: "table",        label: "Tabelle",                      icon: Table2,     forFormats: ["liga", "round_robin", "ffa", "coop_stats", "avg_stats"] },
-  { key: "participants", label: "Teilnehmer",                   icon: Users,      forFormats: null },
-  { key: "favorites",    label: "Lieblingsspiele",               icon: Gamepad2,   forFormats: null },
-  { key: "badges",       label: "Abzeichen",                     icon: Award,      forFormats: null },
-];
-
-/** Ausgangspositionen (Prozent von 1920×1080). Turnierbaum/Tabelle/Teilnehmer teilen sich
- *  bewusst dieselbe Standardposition — sie stapeln sich dadurch von Anfang an genau wie im
- *  alten System, ohne dass der Streamer das erst manuell zusammenziehen muss. */
-const DEFAULT_POSITIONS: Record<ElementKey, Pos> = {
-  brand:        { x: 1.5,  y: 90.6 },
-  liveinfo:     { x: 19,   y: 90.6 },
-  ticker:       { x: 40,   y: 90.6 },
-  bracket:      { x: 66,   y: 2.6 },
-  table:        { x: 66,   y: 2.6 },
-  participants: { x: 66,   y: 2.6 },
-  favorites:    { x: 5,    y: 40 },
-  badges:       { x: 5,    y: 63 },
+/** Ausgangspositionen (Prozent von 1920×1080). Deutlich weniger Elemente als beim
+ *  Event-Overlay, entsprechend großzügiger verteilt. */
+const DEFAULT_POSITIONS: Record<ProfileElementKey, Pos> = {
+  brand:     { x: 1.5, y: 90.6 },
+  rank:      { x: 66,  y: 2.6 },
+  nextEvent: { x: 66,  y: 2.6 },
+  favorites: { x: 5,   y: 40 },
+  badges:    { x: 5,   y: 63 },
 };
 
 export default function SettingsClient({
-  eventId, eventTitle, format, token, streamerId, hasFavorites, hasBadges,
-}: {
-  eventId: string; eventTitle: string; format: string | null; token: string;
-  streamerId: string | null; hasFavorites: boolean; hasBadges: boolean;
-}) {
-  const relevantElements = ELEMENT_OPTIONS.filter(o => {
-    if (o.key === "favorites") return hasFavorites;
-    if (o.key === "badges") return hasBadges;
-    return !o.forFormats || (format && o.forFormats.includes(format));
-  });
-  const [enabled, setEnabled] = useState<Set<ElementKey>>(
-    new Set(relevantElements.filter(o => o.key !== "favorites" && o.key !== "badges").map(o => o.key))
-  );
+  userId, displayName, token, hasFavorites, hasBadges,
+}: { userId: string; displayName: string; token: string; hasFavorites: boolean; hasBadges: boolean }) {
+  const elementOptions = useMemo<ElementOption[]>(() => [
+    { key: "brand",     label: "OMA-Logo & Ich",         icon: Sparkles,      fixed: true },
+    { key: "rank",      label: "Rang",                    icon: TrendingUp },
+    { key: "nextEvent", label: "Nächstes Event",           icon: CalendarClock },
+    ...(hasFavorites ? [{ key: "favorites" as const, label: "Lieblingsspiele", icon: Gamepad2 }] : []),
+    ...(hasBadges ? [{ key: "badges" as const, label: "Abzeichen", icon: Award }] : []),
+  ], [hasFavorites, hasBadges]);
+
+  const [enabled, setEnabled] = useState<Set<ProfileElementKey>>(new Set(elementOptions.map(o => o.key)));
   const [rotateSeconds, setRotateSeconds] = useState(14);
-  const [positions, setPositions] = useState<Record<ElementKey, Pos>>(DEFAULT_POSITIONS);
+  const [positions, setPositions] = useState<Record<ProfileElementKey, Pos>>(DEFAULT_POSITIONS);
   const [copied, setCopied] = useState(false);
 
-  const activeElements = useMemo(() => relevantElements.filter(o => enabled.has(o.key)).map(o => o.key), [relevantElements, enabled]);
+  const activeElements = useMemo(() => elementOptions.filter(o => enabled.has(o.key)).map(o => o.key), [elementOptions, enabled]);
 
-  // Stapel-Vorschau: welche aktiven, stapelbaren Elemente teilen sich (auf 0.1% gerundet)
-  // dieselbe Position — genau die Gruppierung, die das Overlay zur Laufzeit auch bildet.
-  const stackSizes = useMemo(() => {
+  const hasAnyStack = useMemo(() => {
     const buckets = new Map<string, number>();
     for (const key of activeElements) {
-      if (!STACKABLE_ELEMENTS.includes(key)) continue;
+      if (!PROFILE_STACKABLE.includes(key)) continue;
       const p = positions[key];
       const posKey = `${p.x.toFixed(1)},${p.y.toFixed(1)}`;
       buckets.set(posKey, (buckets.get(posKey) ?? 0) + 1);
     }
-    return buckets;
+    return [...buckets.values()].some(n => n > 1);
   }, [activeElements, positions]);
-  const hasAnyStack = [...stackSizes.values()].some(n => n > 1);
 
   const overlayUrl = useMemo(() => {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
     const params = new URLSearchParams({ token });
-    if (streamerId) params.set("streamer", streamerId);
     if (rotateSeconds !== 14) params.set("rotate", String(rotateSeconds));
     const layout = activeElements.map(key => `${key}:${positions[key].x.toFixed(1)},${positions[key].y.toFixed(1)}`).join(";");
     if (layout) params.set("layout", layout);
-    return `${origin}/overlay/${eventId}?${params.toString()}`;
-  }, [eventId, token, streamerId, rotateSeconds, activeElements, positions]);
+    return `${origin}/overlay/profile/${userId}?${params.toString()}`;
+  }, [userId, token, rotateSeconds, activeElements, positions]);
 
-  function toggle(key: ElementKey) {
+  function toggle(key: ProfileElementKey) {
     setEnabled(prev => {
       const next = new Set(prev);
       if (next.has(key)) {
-        if (next.size === 1) return prev; // mindestens ein Element muss aktiv bleiben
+        if (next.size === 1) return prev;
         next.delete(key);
       } else {
         next.add(key);
@@ -108,9 +87,9 @@ export default function SettingsClient({
       <div className="w-full max-w-3xl">
         <div className="flex items-center gap-2.5 mb-1">
           <Tv2 className="w-5 h-5 text-teal-400" />
-          <h1 className="text-lg font-semibold text-white">Overlay-Einstellungen</h1>
+          <h1 className="text-lg font-semibold text-white">Persönliches Overlay</h1>
         </div>
-        <p className="text-sm text-gray-500 mb-6">{eventTitle}</p>
+        <p className="text-sm text-gray-500 mb-6">{displayName}</p>
 
         <div className="glass rounded-2xl p-5 mb-4">
           <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
@@ -119,10 +98,10 @@ export default function SettingsClient({
           <p className="text-xs text-gray-500 mb-3">
             Jedes Element lässt sich einzeln aus- und wieder einblenden und unten frei
             positionieren. Zieh mehrere aufeinander, damit sie sich zu einer Stelle stapeln und
-            automatisch durchrotieren — &quot;OMA-Logo &amp; Streamer&quot; bleibt immer allein und fix.
+            automatisch durchrotieren — &quot;OMA-Logo &amp; Ich&quot; bleibt immer allein und fix.
           </p>
           <div className="flex flex-wrap gap-2">
-            {relevantElements.map(({ key, label, icon: Icon }) => {
+            {elementOptions.map(({ key, label, icon: Icon }) => {
               const active = enabled.has(key);
               return (
                 <button
@@ -166,12 +145,11 @@ export default function SettingsClient({
           </h2>
           <p className="text-xs text-gray-500 mb-3">
             Zieh jedes aktive Element dahin, wo es auf deinem Bildschirm frei ist — die
-            Vorschau entspricht 1920×1080. Zwei Elemente übereinander bilden automatisch einen
-            Stapel; &quot;OMA-Logo &amp; Streamer&quot; lässt sich nicht mit anderen überlappen.
+            Vorschau entspricht 1920×1080.
           </p>
           <PositionCanvas
-            options={relevantElements}
-            elementSize={ELEMENT_SIZE}
+            options={elementOptions}
+            elementSize={PROFILE_ELEMENT_SIZE}
             activeElements={activeElements}
             positions={positions}
             onChange={(key, pos) => setPositions(prev => ({ ...prev, [key]: pos }))}
@@ -211,4 +189,3 @@ export default function SettingsClient({
     </div>
   );
 }
-

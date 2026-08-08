@@ -28,19 +28,19 @@ type OverlayMatch = {
   entries: OverlayEntry[];
 };
 
-type OverlayUser = { id: string; name: string | null; username: string | null; image: string | null; rankPoints: number };
+export type OverlayUser = { id: string; name: string | null; username: string | null; image: string | null; rankPoints: number };
 type OverlayParticipant = { userId: string; user: OverlayUser };
 
 /** In diesem Projekt hält `name` die rohe (meist kleingeschriebene) Discord-Login-Kennung,
  *  `username` den vom User selbst gepflegten Anzeigenamen mit korrekter Groß-/Kleinschreibung —
  *  daher hier wie im Rest der App `username` zuerst. */
-function displayName(u: OverlayUser | undefined | null): string {
+export function displayName(u: OverlayUser | undefined | null): string {
   return u?.username ?? u?.name ?? "Unbekannt";
 }
 
-type FavoriteGame = { name: string; appId: number | null };
-type ShowcaseBadge = { icon: string; name: string; image: string | null };
-type OverlayStreamer = {
+export type FavoriteGame = { name: string; appId: number | null };
+export type ShowcaseBadge = { icon: string; name: string; image: string | null };
+export type OverlayStreamer = {
   id: string;
   name: string | null;
   username: string | null;
@@ -92,8 +92,8 @@ export const ELEMENT_SIZE: Record<ElementKey, { width: number; height: number }>
   badges:       { width: 460, height: 140 },
 };
 
-const PANEL_FADE_MS = 900;
-const EDGE_MARGIN = 28;    // Abstand aller Kacheln zum Bildschirmrand
+export const PANEL_FADE_MS = 900;
+export const EDGE_MARGIN = 28;    // Abstand aller Kacheln zum Bildschirmrand
 const TICKER_BOTTOM = 48;  // Abstand des Lower-Thirds zum unteren Rand
 const TICKER_CLEARANCE = 166; // Höhe des Lower-Thirds + Abstand — Panels in unteren Ecken schieben sich darüber
 const PANEL_WIDTH = 620;
@@ -121,7 +121,7 @@ function cornerStyle(corner: Corner): React.CSSProperties {
 /** Absolute Positionierung aus einer frei gezogenen Layout-Koordinate (Prozent von 1920×1080).
  *  Fehlt die Koordinate (Element aktiviert, aber noch nie positioniert), fällt es auf die
  *  Standard-Ecke oben rechts zurück statt unsichtbar zu bleiben. */
-function elementPositionStyle(pos: { x: number; y: number } | undefined): React.CSSProperties {
+export function elementPositionStyle(pos: { x: number; y: number } | undefined): React.CSSProperties {
   if (!pos) return { position: "absolute", top: EDGE_MARGIN, right: EDGE_MARGIN };
   return { position: "absolute", left: `${pos.x}%`, top: `${pos.y}%` };
 }
@@ -131,7 +131,7 @@ function elementPositionStyle(pos: { x: number; y: number } | undefined): React.
  *  cornerStyle). "enter" kommt leicht aus Richtung Bildschirmmitte verschwommen herein,
  *  "leave" wandert in dieselbe Richtung weiter und verschwimmt wieder — zusammen eine klare
  *  Bewegungsrichtung statt eines reinen Stand-Fades. */
-function panelMotionStyle(corner: Corner, phase: PanelPhase): React.CSSProperties {
+export function panelMotionStyle(corner: Corner, phase: PanelPhase): React.CSSProperties {
   const centerY = corner.startsWith("middle") ? "translateY(-50%)" : "";
   if (phase === "settled") {
     return { opacity: 1, filter: "blur(0px)", transform: `${centerY} translateY(0) scale(1)`.trim() };
@@ -143,7 +143,7 @@ function panelMotionStyle(corner: Corner, phase: PanelPhase): React.CSSPropertie
 
 /** Einmal eingebettete Keyframes für alle Bewegungs-Akzente im Overlay: Live-Puls, Score-Pop
  *  bei Änderung, Sieger-Glow, Kachel-Entrance bei neuem Match, sanftes Atmen der Ränder. */
-function MotionStyles() {
+export function MotionStyles() {
   return (
     <style>{`
       @keyframes oma-pulse    { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
@@ -177,7 +177,7 @@ const ARROW_STRIP = 22; // reservierter Streifen je Kante — Pfeile liegen hier
  *  ändern (neue Matches, mehr Teilnehmer). Ein schmaler Streifen an beiden Kanten (außerhalb
  *  des eigentlichen Inhalts) trägt zwei dauerhaft sichtbare Pfeile — die aktive Richtung leuchtet
  *  beim Scrollen kurz auf, überlappt dabei aber nie die Liste selbst. */
-function AutoScrollViewport({
+export function AutoScrollViewport({
   axis, size, gap = 0, children,
 }: { axis: "x" | "y"; size: number; gap?: number; children: React.ReactNode }) {
   const trackRef = useRef<HTMLDivElement>(null);
@@ -552,7 +552,7 @@ function PanelContent({
   return <ParticipantsPanel participants={participants} />;
 }
 
-type PanelPhase = "enter" | "settled" | "leave";
+export type PanelPhase = "enter" | "settled" | "leave";
 type PanelSlot = { key: PanelKey; phase: PanelPhase };
 
 /** Rotation als Crossfade: die neue Kachel beginnt einzublenden, während die alte noch
@@ -690,8 +690,8 @@ function pickTickerMatch(matches: OverlayMatch[]): OverlayMatch | null {
 
 const FLIP_INTERVAL_MS = 6000;
 const FLIP_DURATION_MS = 1100;
-const FLIP_WIDTH = 300;
-const FLIP_HEIGHT = 78;
+export const FLIP_WIDTH = 300;
+export const FLIP_HEIGHT = 78;
 
 /** Legacy-Variante für Links ohne `layout` (vor der Einzelelement-Positionierung): Vorderseite
  *  zeigt Live-Status/Spiel/Event, Rückseite Logo + Wortmarke. Neue, per Einstellungsseite
@@ -748,7 +748,7 @@ function LegacyBrandFlipTile({ eventTitle, game, isLive }: { eventTitle: string;
  *  des Streamers, der diesen Link erzeugt hat. Ohne bekannten Streamer (sehr alte Links, oder
  *  wenn der User seither gelöscht wurde) bleibt sie als einzelne, nicht drehende OMA-Fläche
  *  stehen — ein Flip auf eine leere Rückseite wäre sinnlos. */
-function IdentityFlipTile({ streamer }: { streamer: OverlayStreamer | null }) {
+export function IdentityFlipTile({ streamer }: { streamer: OverlayStreamer | null }) {
   const [flipped, setFlipped] = useState(false);
 
   useEffect(() => {
@@ -807,7 +807,7 @@ function IdentityFlipTile({ streamer }: { streamer: OverlayStreamer | null }) {
 
 /** Kleines Twitch-Glyphen-Icon (offizielles "Glitch"-Symbol, vereinfacht) — keine Icon-Library
  *  im Projekt führt Twitch, also als winziges Inline-SVG statt eines externen Assets. */
-function TwitchGlyph({ size = 14 }: { size?: number }) {
+export function TwitchGlyph({ size = 14 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="#9146FF" aria-hidden="true">
       <path d="M4.3 2 2 7.4v13h5.4V23l3.2-2.6h4.3L21.9 14V2H4.3Zm15.4 11-3.6 3.6h-4.3l-3.2 2.6v-2.6H5.7V3.6h14v9.4Z" />
@@ -837,7 +837,7 @@ function LiveInfoTile({ eventTitle, game, isLive }: { eventTitle: string; game: 
 }
 
 /** Lieblingsspiele-Showcase des Streamers (`favoriteGamesJson` aus dem Profil). */
-function FavoritesPanel({ games }: { games: FavoriteGame[] }) {
+export function FavoritesPanel({ games }: { games: FavoriteGame[] }) {
   return (
     <PanelShell title="Lieblingsspiele">
       <AutoScrollViewport axis="y" size={ELEMENT_SIZE.favorites.height - 40} gap={6}>
@@ -864,7 +864,7 @@ function FavoritesPanel({ games }: { games: FavoriteGame[] }) {
 }
 
 /** Abzeichen-Showcase des Streamers (`showcaseBadgesJson` aus dem Profil, max. 3 selbst gewählt). */
-function BadgesPanel({ badges }: { badges: ShowcaseBadge[] }) {
+export function BadgesPanel({ badges }: { badges: ShowcaseBadge[] }) {
   return (
     <PanelShell title="Abzeichen">
       <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
@@ -920,7 +920,7 @@ function FlipFace({
 
 /** Deutlich kräftigerer Live-Indikator als der vorherige einfache Opacity-Puls: ein
  *  auslaufender Leuchtring hinter einem hellen Kernpunkt. Im "Zuletzt"-Zustand ruhig. */
-function LiveBadge({ live }: { live: boolean }) {
+export function LiveBadge({ live }: { live: boolean }) {
   return (
     <span style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", width: 14, height: 14, flexShrink: 0 }}>
       {live && (
@@ -990,7 +990,7 @@ function MatchTicker({
   );
 }
 
-function TickerTile({
+export function TickerTile({
   children, breathe, bodyStyle,
 }: { children: React.ReactNode; breathe?: boolean; bodyStyle?: React.CSSProperties }) {
   return (
@@ -1020,7 +1020,7 @@ function TickerTile({
 
 /** Farbverlauf-Kante Teal → Weinrot oben an jeder Kachel — als eigenes Element statt
  *  `border-top`, weil ein CSS-Border keinen Verlauf einzeln je Seite unterstützt. */
-function TopEdge({ radius, breathe }: { radius: number; breathe?: boolean }) {
+export function TopEdge({ radius, breathe }: { radius: number; breathe?: boolean }) {
   return (
     <div
       className={breathe ? "oma-anim-breathe" : undefined}
@@ -1078,7 +1078,7 @@ function Score({ score1, score2 }: { score1: number | null; score2: number | nul
 }
 
 /* ── Panel-Shell: gemeinsamer Rahmen für Bracket/Tabelle/Teilnehmer ── */
-function PanelShell({ title, children }: { title: string; children: React.ReactNode }) {
+export function PanelShell({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div
       style={{

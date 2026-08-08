@@ -8,6 +8,7 @@ import WanderpocalSection from "@/components/WanderpocalSection";
 import FavoriteGamesSection from "@/app/(dashboard)/profile/FavoriteGamesSection";
 import NotificationPreferences from "@/components/NotificationPreferences";
 import { PushSubscribeButton } from "@/components/PushSubscribeButton";
+import ProfileOverlayButton from "@/components/ProfileOverlayButton";
 import RoomHeroPanel from "./RoomHeroPanel";
 import RoomStatTiles from "./RoomStatTiles";
 import RoomView from "./RoomView";
@@ -56,6 +57,7 @@ export default async function ZimmerPage() {
               <PushSubscribeButton />
             </div>
             <NotificationPreferences />
+            <ProfileOverlayButton hasTwitch={!!core.twitchLogin} />
           </div>
         }
       />

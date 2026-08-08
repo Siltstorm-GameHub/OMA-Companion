@@ -25,6 +25,9 @@ model User {
   lastLoginAt  DateTime? // Zeitpunkt des letzten Logins (NextAuth signIn)
 
   twitchLogin        String?   @unique
+  // Token für das persönliche OBS-Overlay (/overlay/profile/[userId]?token=…) — unabhängig von
+  // jedem Event, nur für User mit gesetztem twitchLogin erreichbar. Lazy erzeugt wie Event.overlayToken.
+  overlayToken       String?   @unique
   birthday           DateTime? // Nur Datum relevant (month/day)
   birthdayBoostUntil DateTime? // 2x Punkte bis zu diesem Zeitpunkt
   bio                String? // Kurzer Gruß / Beschreibung (max. 200 Zeichen)
