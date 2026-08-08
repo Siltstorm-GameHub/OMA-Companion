@@ -1,8 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { parseFavoriteGames } from "@/lib/favorite-games";
-import { getBadgeDef } from "@/lib/badges";
-import { badgeArt } from "@/lib/badge-art";
+import { resolveShowcaseEntries } from "@/lib/overlay-badges";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +11,6 @@ export const dynamic = "force-dynamic";
 const MAX_STREAM_MS  = 4 * 60 * 1000;
 const POLL_MS        = 1000;
 const HEARTBEAT_MS   = 15000;
-const MAX_SHOWCASE_BADGES = 3;
 
 async function loadOverlayState(eventId: string) {
   const event = await prisma.event.findUnique({
@@ -54,22 +52,6 @@ async function loadOverlayState(eventId: string) {
   };
 }
 
-/** Löst die vom User selbst gewählten Showcase-Abzeichen (max. 3) zu Icon/Name auf.
- *  Custom-Abzeichen (`custom:<id>`) haben aktuell keine eigene Bild-Registry (siehe
- *  lib/badge-art.ts) — sie bekommen einen generischen Platzhalter statt eines zusätzlichen
- *  DB-Joins, das ist die Ausnahme, nicht die Regel (System-Abzeichen decken den Großteil ab). */
-function resolveShowcaseBadges(json: string | null): { icon: string; name: string; image: string | null }[] {
-  let keys: string[] = [];
-  try { keys = json ? JSON.parse(json) : []; } catch { /* ignore */ }
-  return keys.slice(0, MAX_SHOWCASE_BADGES).map(key => {
-    if (key.startsWith("custom:")) {
-      return { icon: "🏅", name: "Sonderabzeichen", image: badgeArt(key) };
-    }
-    const def = getBadgeDef(key);
-    return { icon: def?.icon ?? "🏅", name: def?.name ?? key, image: badgeArt(key) };
-  });
-}
-
 async function loadStreamer(streamerId: string) {
   const user = await prisma.user.findUnique({
     where: { id: streamerId },
@@ -79,7 +61,7 @@ async function loadStreamer(streamerId: string) {
   return {
     id: user.id, name: user.name, username: user.username, image: user.image, rankPoints: user.rankPoints, twitchLogin: user.twitchLogin,
     favoriteGames: parseFavoriteGames(user.favoriteGamesJson),
-    badges: resolveShowcaseBadges(user.showcaseBadgesJson),
+    badges: await resolveShowcaseEntries(user.id, user.showcaseBadgesJson),
   };
 }
 

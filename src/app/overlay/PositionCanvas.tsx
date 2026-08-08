@@ -14,12 +14,16 @@ export type CanvasElementOption<K extends string> = {
   fixed?: boolean;
 };
 
+const SNAP_THRESHOLD_PCT = 1.2; // wie nah zwei Kanten sein müssen, um einzurasten
+
 /** 16:9-Vorschau des OBS-Canvas mit ziehbaren Boxen je aktivem Element — von beiden
  *  Overlay-Typen (Event, Profil) genutzt, daher generisch über den Element-Schlüsseltyp.
  *  - Fixe Elemente blocken jede Überlappung — die Box bleibt an der Kante des anderen
  *    Elements stehen.
  *  - Stapelbare Elemente rasten beim Überlappen eines anderen stapelbaren Elements exakt auf
- *    dessen Position ein (das IST die Stapelbildung), bleiben aber von fixen Elementen fern. */
+ *    dessen Position ein (das IST die Stapelbildung), bleiben aber von fixen Elementen fern.
+ *  - Beim Ziehen rasten linke/obere Kanten zusätzlich an denen anderer Elemente ein (Ausrichtungs-
+ *    Hilfslinien-Gefühl ohne die Linien selbst zu zeichnen), unabhängig je Achse. */
 export default function PositionCanvas<K extends string>({
   options, elementSize, activeElements, positions, onChange,
 }: {
@@ -63,11 +67,27 @@ export default function PositionCanvas<K extends string>({
       const size = pctSize(drag.key);
       const rawX = ((ev.clientX - r.left) / r.width) * 100 - drag.grabDx;
       const rawY = ((ev.clientY - r.top) / r.height) * 100 - drag.grabDy;
-      const candidate: Pos = {
-        x: Math.min(100 - size.w, Math.max(0, rawX)),
-        y: Math.min(100 - size.h, Math.max(0, rawY)),
-      };
       const others = activeElements.filter(k => k !== drag.key);
+
+      // Ausrichtung: liegt die linke bzw. obere Kante nah an der eines anderen Elements,
+      // rastet sie exakt darauf ein — unabhängig je Achse, damit sich Elemente sauber in
+      // einer Reihe oder Spalte anordnen lassen, ohne aufeinander zu stapeln.
+      let snappedX = rawX;
+      let bestDx = SNAP_THRESHOLD_PCT;
+      let snappedY = rawY;
+      let bestDy = SNAP_THRESHOLD_PCT;
+      for (const k of others) {
+        const dx = Math.abs(positions[k].x - rawX);
+        if (dx < bestDx) { bestDx = dx; snappedX = positions[k].x; }
+        const dy = Math.abs(positions[k].y - rawY);
+        if (dy < bestDy) { bestDy = dy; snappedY = positions[k].y; }
+      }
+
+      const candidate: Pos = {
+        x: Math.min(100 - size.w, Math.max(0, snappedX)),
+        y: Math.min(100 - size.h, Math.max(0, snappedY)),
+      };
+
       const fixedOthers = others.filter(isFixed);
       const hitsFixed = fixedOthers.some(k => overlaps(candidate, drag.key, positions[k], k));
       if (hitsFixed) return; // fixe Elemente blocken immer — Bewegung verwerfen
@@ -93,10 +113,16 @@ export default function PositionCanvas<K extends string>({
     window.addEventListener("pointerup", handleUp);
   }
 
-  // Stapel-Mitglieder an derselben Position bekommen einen kleinen Versatz in der Vorschau,
-  // sonst läge nur die zuletzt gerenderte Box sichtbar da — im echten Overlay rotieren sie
-  // stattdessen durch, hier reicht ein Fächer-Effekt zur Anzeige "hier stapelt sich was".
-  const stackOffset = new Map<string, number>();
+  // Stapel-Gruppen bilden: alle aktiven Elemente mit identischer Position (auf 0.1% gerundet)
+  // gehören zusammen. Statt sie deckungsgleich zu übereinanderzulegen (unlesbar, siehe Feedback),
+  // teilen sie sich die eine Box in gleich hohen, nicht überlappenden Bändern auf — jedes Band
+  // bleibt einzeln per Pointer-Down greifbar, um wieder herausgezogen zu werden.
+  const groups = new Map<string, K[]>();
+  for (const key of activeElements) {
+    const p = positions[key];
+    const posKey = `${p.x.toFixed(1)},${p.y.toFixed(1)}`;
+    (groups.get(posKey) ?? groups.set(posKey, []).get(posKey)!).push(key);
+  }
 
   return (
     <div
@@ -111,34 +137,45 @@ export default function PositionCanvas<K extends string>({
         backgroundSize: "5% 5%",
       }}
     >
-      {activeElements.map(key => {
-        const pos = positions[key];
-        const size = pctSize(key);
-        const option = optionByKey.get(key)!;
-        const Icon = option.icon;
-        const posKey = `${pos.x.toFixed(1)},${pos.y.toFixed(1)}`;
-        const fanIndex = stackOffset.get(posKey) ?? 0;
-        stackOffset.set(posKey, fanIndex + 1);
+      {[...groups.entries()].map(([posKey, keys]) => {
+        const pos = positions[keys[0]];
+        const boxSize = keys.reduce(
+          (acc, k) => { const s = pctSize(k); return { w: Math.max(acc.w, s.w), h: Math.max(acc.h, s.h) }; },
+          { w: 0, h: 0 }
+        );
+        const groupDragging = dragging != null && keys.includes(dragging);
         return (
           <div
-            key={key}
-            onPointerDown={e => startDrag(key, e)}
-            className={`absolute flex items-center gap-1.5 rounded-lg border px-2 text-[11px] font-medium cursor-grab active:cursor-grabbing transition-shadow ${
-              dragging === key
-                ? "bg-teal-500/25 border-teal-400/60 text-teal-100 shadow-lg shadow-teal-500/20 z-20"
-                : option.fixed
-                  ? "bg-violet-500/10 border-violet-500/30 text-violet-300 z-10"
-                  : "bg-teal-500/10 border-teal-500/30 text-teal-300"
-            }`}
+            key={posKey}
+            className="absolute rounded-lg overflow-hidden flex flex-col"
             style={{
-              left: `calc(${pos.x}% + ${fanIndex * 4}px)`, top: `calc(${pos.y}% + ${fanIndex * 4}px)`,
-              width: `${size.w}%`, height: `${size.h}%`,
-              zIndex: dragging === key ? 20 : 10 + fanIndex,
-              touchAction: "none",
+              left: `${pos.x}%`, top: `${pos.y}%`,
+              width: `${boxSize.w}%`, height: `${boxSize.h}%`,
+              zIndex: groupDragging ? 20 : 10,
+              boxShadow: keys.length > 1 ? "0 0 0 1px rgba(20,184,166,0.25)" : undefined,
             }}
           >
-            <Icon className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">{option.label}</span>
+            {keys.map(key => {
+              const option = optionByKey.get(key)!;
+              const Icon = option.icon;
+              return (
+                <div
+                  key={key}
+                  onPointerDown={e => startDrag(key, e)}
+                  className={`flex items-center gap-1.5 border px-2 text-[11px] font-medium cursor-grab active:cursor-grabbing transition-shadow ${
+                    dragging === key
+                      ? "bg-teal-500/25 border-teal-400/60 text-teal-100 shadow-lg shadow-teal-500/20"
+                      : option.fixed
+                        ? "bg-violet-500/10 border-violet-500/30 text-violet-300"
+                        : "bg-teal-500/10 border-teal-500/30 text-teal-300"
+                  }`}
+                  style={{ flex: 1, minHeight: 0, touchAction: "none" }}
+                >
+                  <Icon className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">{option.label}</span>
+                </div>
+              );
+            })}
           </div>
         );
       })}

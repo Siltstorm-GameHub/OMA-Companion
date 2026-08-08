@@ -81,15 +81,18 @@ export type LayoutPositions = Partial<Record<ElementKey, { x: number; y: number 
  *  den Einstellungen und für die Breite der jeweils aktiven Kachel im Overlay selbst. Etwas
  *  großzügiger als die tatsächliche Mindestgröße bemessen (Inhalt variiert), damit sich
  *  Elemente in den Einstellungen auch bei mehr Inhalt nie ungewollt berühren. */
+// Einheitliche Maße je Elementpaar (für sauberes Ausrichten in der Vorschau): OMA-Logo und
+// Live/Event/Spiel teilen sich eine Größe, Abzeichen und Lieblingsspiele ebenso, Tabelle und
+// Teilnehmer ebenso. Aktuelles Match und Turnierbaum behalten ihre eigene, inhaltsbedingte Größe.
 export const ELEMENT_SIZE: Record<ElementKey, { width: number; height: number }> = {
   brand:        { width: 300, height: 78 },
-  liveinfo:     { width: 320, height: 60 },
+  liveinfo:     { width: 300, height: 78 },
   ticker:       { width: 620, height: 78 },
   bracket:      { width: 620, height: 360 },
   table:        { width: 460, height: 310 },
   participants: { width: 460, height: 310 },
   favorites:    { width: 460, height: 220 },
-  badges:       { width: 460, height: 140 },
+  badges:       { width: 460, height: 220 },
 };
 
 export const PANEL_FADE_MS = 900;
@@ -421,7 +424,7 @@ export default function OverlayClient({
               isLive={ticker ? !ticker.winnerId && !ticker.playedAt : state.status === "active"}
             />
           )}
-          {showTicker && ticker && <MatchTicker match={ticker} userOf={userOf} />}
+          {showTicker && ticker && <MatchTicker match={ticker} userOf={userOf} format={fmt} statFields={state.statFields} />}
         </div>
       )}
 
@@ -526,7 +529,7 @@ function ElementContent({
     case "liveinfo":     return <LiveInfoTile eventTitle={eventTitle} game={game} isLive={isLive} />;
     case "ticker": {
       const match = pickTickerMatch(matches);
-      return match ? <MatchTicker match={match} userOf={userOf} /> : null;
+      return match ? <MatchTicker match={match} userOf={userOf} format={format} statFields={statFields} /> : null;
     }
     case "bracket":      return <BracketPanel matches={matches} userOf={userOf} />;
     case "table":        return <TablePanel matches={matches} participants={participants} format={format} statFields={statFields} />;
@@ -672,6 +675,30 @@ function useStackedElements(buckets: Record<string, { pos: { x: number; y: numbe
   }, [bucketsSig, rotateSeconds]);
 
   return { active, previous };
+}
+
+function parseStatFields(json: string | null | undefined): string[] {
+  try { return json ? JSON.parse(json) : []; } catch { return []; }
+}
+
+/** Formatiert die in dieser Runde für einen Teilnehmer eingetragenen Stat-Werte für den
+ *  Ticker — coop_stats zeigt vor allem Sieg/Niederlage (gilt für alle Spieler der Runde
+ *  gemeinsam, siehe FfaView), alle anderen Felder werden als "Feld Wert" angehängt. */
+function formatEntryStats(statsJson: string | null, fields: string[], isCoop: boolean): string {
+  if (!statsJson) return "";
+  let stats: Record<string, number> = {};
+  try { stats = JSON.parse(statsJson); } catch { return ""; }
+
+  const parts: string[] = [];
+  if (isCoop && "Match Win" in stats) {
+    parts.push(stats["Match Win"] > 0 ? "Sieg" : "Niederlage");
+  }
+  const relevantFields = fields.length > 0 ? fields : Object.keys(stats);
+  for (const f of relevantFields) {
+    if (f === "Match Win" || stats[f] == null) continue;
+    parts.push(`${stats[f]} ${f}`);
+  }
+  return parts.join(" · ");
 }
 
 function pickTickerMatch(matches: OverlayMatch[]): OverlayMatch | null {
@@ -944,11 +971,13 @@ export function LiveBadge({ live }: { live: boolean }) {
    bewusst als eigene Kachel statt einer über die volle Breite reichenden Leiste, damit
    dazwischen wieder Gameplay durchscheint. ── */
 function MatchTicker({
-  match, userOf,
-}: { match: OverlayMatch; userOf: (id: string | null) => OverlayUser | undefined }) {
+  match, userOf, format, statFields,
+}: { match: OverlayMatch; userOf: (id: string | null) => OverlayUser | undefined; format?: string | null; statFields?: string | null }) {
   const p1Winner = !!match.winnerId && match.winnerId === match.player1Id;
   const p2Winner = !!match.winnerId && match.winnerId === match.player2Id;
   const hasDuel = !!(match.player1Id || match.player2Id);
+  const isCoop = format === "coop_stats";
+  const fields = parseStatFields(statFields);
 
   return (
     <div>
@@ -964,13 +993,16 @@ function MatchTicker({
         ) : (
           // Alle Mitspieler dieser Runde, nicht nur die ersten paar — bei vielen Teilnehmern
           // (z.B. Coop-Runden mit 8+ Leuten) übernimmt AutoScrollViewport das Durchblättern,
-          // statt Namen stillschweigend abzuschneiden.
+          // statt Namen stillschweigend abzuschneiden. FFA/Coop/Avg-Stats-Matches tragen ihr
+          // Ergebnis in entry.statsJson, nicht in entry.score (das Feld bleibt dort ungenutzt) —
+          // ohne das hier auszulesen stünde neben jedem Namen nur nichts.
           <AutoScrollViewport axis="x" size={TICKER_ENTRIES_WIDTH}>
             {[...match.entries]
               .sort((a, b) => (a.placement ?? 99) - (b.placement ?? 99))
               .map((e, i) => {
                 const u = userOf(e.userId);
                 const first = e.placement === 1;
+                const statsLabel = formatEntryStats(e.statsJson, fields, isCoop);
                 return (
                   <div
                     key={e.id}
@@ -978,7 +1010,7 @@ function MatchTicker({
                   >
                     <RankedAvatar rankPoints={u?.rankPoints ?? 0} src={u?.image} alt={displayName(u)} size={30} />
                     <span style={{ fontSize: 16, fontWeight: first ? 700 : 500, color: first ? "#5eead4" : "#fff", whiteSpace: "nowrap" }}>
-                      {displayName(u)}{e.score != null ? ` · ${e.score}` : ""}
+                      {displayName(u)}{statsLabel ? ` · ${statsLabel}` : ""}
                     </span>
                   </div>
                 );

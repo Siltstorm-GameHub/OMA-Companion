@@ -33,7 +33,7 @@ export const PROFILE_ELEMENT_SIZE: Record<ProfileElementKey, { width: number; he
   rank:      { width: 320, height: 90 },
   nextEvent: { width: 380, height: 90 },
   favorites: { width: 460, height: 220 },
-  badges:    { width: 460, height: 140 },
+  badges:    { width: 460, height: 220 },
 };
 
 const EDGE_MARGIN = 28;
