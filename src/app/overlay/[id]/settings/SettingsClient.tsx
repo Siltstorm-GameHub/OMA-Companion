@@ -46,9 +46,7 @@ export default function SettingsClient({
     if (o.key === "badges") return hasBadges;
     return !o.forFormats || (format && o.forFormats.includes(format));
   });
-  const [enabled, setEnabled] = useState<Set<ElementKey>>(
-    new Set(relevantElements.filter(o => o.key !== "favorites" && o.key !== "badges").map(o => o.key))
-  );
+  const [enabled, setEnabled] = useState<Set<ElementKey>>(new Set(relevantElements.map(o => o.key)));
   const [rotateSeconds, setRotateSeconds] = useState(14);
   const [positions, setPositions] = useState<Record<ElementKey, Pos>>(DEFAULT_POSITIONS);
   const [copied, setCopied] = useState(false);
