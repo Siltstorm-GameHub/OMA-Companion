@@ -1097,6 +1097,15 @@ image.room-item-photo {
 }
 .room-neon { animation: room-neon-pulse 3.4s ease-in-out infinite; }
 
+/* Atmender Rahmen um anklickbare Möbel (Jobbrett, Vitrine, Röhrenmonitor) —
+   ohne ihn ist optisch nicht erkennbar, dass diese drei Stücke im Gegensatz
+   zu jedem anderen Möbel etwas öffnen, statt nur Deko zu sein. */
+@keyframes room-interactive-pulse {
+  0%, 100% { opacity: 0.18; }
+  50%      { opacity: 0.55; }
+}
+.room-interactive-glow { animation: room-interactive-pulse 2.6s ease-in-out infinite; }
+
 /* ── prefers-reduced-motion ─────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -1111,6 +1120,7 @@ image.room-item-photo {
   .animate-number-pop, .scan-on-load::before { animation: none !important; }
   /* Gaming-Zimmer: Blinken, Scanline und Neon-Puls stehen still */
   .room-led, .room-scanline, .room-neon { animation: none !important; }
+  .room-interactive-glow { animation: none !important; opacity: 0.35 !important; }
   .room-scanline { opacity: 0 !important; }
   .room-hit:hover { transform: none !important; }
 }

@@ -50,6 +50,15 @@ export interface RoomItemDef {
    * austauschbar, ohne Code-Änderung.
    */
   imageUrl?:   string;
+  /**
+   * Manche Canva-Fotos füllen ihre Rasterbox schlecht aus (z.B. ein hoher,
+   * schmaler Mikrofon-Schnitt in einer quadratischen 1×1-Box) und wirken
+   * dadurch neben besser ausfüllenden Nachbarn winzig. Ein moderater
+   * Boost-Faktor (>1) vergrößert das gerenderte Bild gleichmäßig um den
+   * unteren Mittelpunkt herum — bewusst klein gehalten (≤1.2), damit es
+   * nicht sichtbar in Nachbarzellen hineinragt.
+   */
+  renderScale?: number;
   starter?:    boolean;      // Teil der Grundausstattung (DEFAULT_ROOM)
   /** Klickbar auf der Bühne: öffnet das jeweilige Overlay. */
   interactive?: "crt" | "vitrine" | "jobboard";
@@ -190,7 +199,7 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     description: "Regenbogen an der Wand. Verbessert deine Reaktionszeit um exakt 0 %.",
     zone: "wall", category: "licht", w: 4, h: 1, price: 600, minTier: 1, maxOwned: 3,
     tags: ["light"], mustStandOn: null, accent: "violet",
-    imageUrl: "/room-items/led_stripe.png",
+    imageUrl: "/room-items/led_stripe.png", renderScale: 1.15,
   },
   {
     key: "pokalregal", label: "Pokalregal",
@@ -312,7 +321,7 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     description: "Sechsfach, mit Schalter. Die Grundlage jeder ernsthaften Karriere.",
     zone: "floor", category: "peripherie", w: 2, h: 1, price: 120, minTier: 1, maxOwned: 2,
     tags: ["powerstrip"], mustStandOn: "floor", accent: "slate",
-    imageUrl: "/room-items/steckdosenleiste.png",
+    imageUrl: "/room-items/steckdosenleiste.png", renderScale: 1.15,
   },
   {
     key: "webcam", label: "Webcam",
@@ -340,7 +349,7 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     description: "Nimmt jedes Wort auf — auch das Kühlschrankbrummen aus der Küche.",
     zone: "floor", category: "peripherie", w: 1, h: 1, price: 800, minTier: 2, maxOwned: 1,
     tags: ["mic"], mustStandOn: null, accent: "amber",
-    imageUrl: "/room-items/mikrofon.png",
+    imageUrl: "/room-items/mikrofon.png", renderScale: 1.2,
   },
   {
     key: "ringlicht", label: "Ringlicht",
@@ -354,7 +363,7 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     description: "Nimmt alles auf, auch die Runden, die niemand sehen sollte.",
     zone: "floor", category: "peripherie", w: 1, h: 1, price: 1400, minTier: 4, maxOwned: 1,
     tags: ["capture"], mustStandOn: null, accent: "rose",
-    imageUrl: "/room-items/capture.png",
+    imageUrl: "/room-items/capture.png", renderScale: 1.15,
   },
   {
     key: "streamdeck", label: "Stream-Deck",
@@ -370,13 +379,13 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     description: "Modul reinstecken, kurz reinpusten, läuft. Alte Schule eben.",
     zone: "floor", category: "konsole", w: 1, h: 1, price: 900, minTier: 2, maxOwned: 2,
     tags: ["console", "console_retro"], mustStandOn: null, accent: "amber",
-    imageUrl: "/room-items/konsole_retro.png",
+    imageUrl: "/room-items/konsole_retro.png", renderScale: 1.1,
   },
   {
     key: "konsole_neu", label: "Aktuelle Konsole",
     description: "Größer als der Fernseher, auf dem sie laufen sollte.",
     zone: "floor", category: "konsole", w: 1, h: 1, price: 2800, minTier: 3, maxOwned: 2,
-    tags: ["console"], mustStandOn: null, accent: "teal",
+    tags: ["console"], mustStandOn: null, accent: "teal", renderScale: 1.1,
     imageUrl: "/room-items/konsole_neu.png",
   },
 
