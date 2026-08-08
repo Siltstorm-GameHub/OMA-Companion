@@ -167,7 +167,7 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract, edit 
           }}
         >
           <title>{def.label}</title>
-          <RoomItemSprite itemKey={item.key} x={x} y={y} flipped={item.flipped} />
+          <RoomItemSprite itemKey={item.key} x={x} y={y} flipped={item.flipped} className="room-item-photo" />
           {(isSelected || isDragging) && (
             <rect
               x={x - 2} y={y - 2} width={def.w * CELL + 4} height={def.h * CELL + 4}
@@ -183,7 +183,7 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract, edit 
     const { x, y } = cellToSvg(item.zone, item.x, item.y);
 
     if (!def.interactive) {
-      return <RoomItemSprite key={item.id} itemKey={item.key} x={x} y={y} flipped={item.flipped} />;
+      return <RoomItemSprite key={item.id} itemKey={item.key} x={x} y={y} flipped={item.flipped} className="room-item-photo" />;
     }
 
     const target = def.interactive;
@@ -205,7 +205,7 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract, edit 
         }}
       >
         <title>{label}</title>
-        <RoomItemSprite itemKey={item.key} x={x} y={y} flipped={item.flipped} />
+        <RoomItemSprite itemKey={item.key} x={x} y={y} flipped={item.flipped} className="room-item-photo" />
       </g>
     );
   }
@@ -247,14 +247,16 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract, edit 
           </defs>
 
           {/* Wand */}
-          <rect x={0} y={0} width={STAGE.width} height={STAGE.wallHeight} fill="url(#room-wallpaper)" />
+          <rect x={0} y={0} width={STAGE.width} height={STAGE.wallHeight}
+            fill={state.wallpaperKey === "tapete_raufaser" ? "url(#room-wallpaper-photo)" : "url(#room-wallpaper)"} />
 
           <RoomWindow />
           <CeilingLamp />
 
           <rect x={0} y={0} width={STAGE.width} height={STAGE.wallHeight} fill="url(#room-wall-vignette)" />
           {/* Boden */}
-          <rect x={0} y={STAGE.floorTop} width={STAGE.width} height={GRID.floor.rows * CELL} fill="url(#room-floor)" />
+          <rect x={0} y={STAGE.floorTop} width={STAGE.width} height={GRID.floor.rows * CELL}
+            fill={state.floorKey === "boden_linoleum" ? "url(#room-floor-photo)" : "url(#room-floor)"} />
           <rect x={0} y={STAGE.floorTop} width={STAGE.width} height={GRID.floor.rows * CELL} fill="url(#room-floor-vignette)" />
 
           {/* Sockelleiste: beleuchtete Kante statt flacher Linie, damit sie neben
@@ -520,6 +522,16 @@ function SurfacePatterns({ wallpaperKey, floorKey }: { wallpaperKey: string; flo
         <stop offset="100%" stopColor="var(--room-shade)" stopOpacity={0.8} />
       </linearGradient>
 
+      {/* Fotografische Tapetentextur (Standard-Tapete) — dieselbe Bildhaftigkeit
+          wie die Canva-Möbelfotos, statt einer flach gezeichneten Fläche.
+          Kachel deckt die volle Wandhöhe ab und wiederholt sich nur seitlich;
+          die Datei selbst enthält bereits Bild + gespiegeltes Bild
+          nebeneinander, damit keine Kante beim Wiederholen sichtbar wird. */}
+      <pattern id="room-wallpaper-photo" width={512} height={STAGE.wallHeight} patternUnits="userSpaceOnUse">
+        <image href="/room-surfaces/wall-raufaser.png" x={0} y={0} width={512} height={STAGE.wallHeight} preserveAspectRatio="none" />
+        <rect width={512} height={STAGE.wallHeight} fill="var(--room-shade)" opacity={0.1} />
+      </pattern>
+
       <pattern id="room-wallpaper" width={64} height={64} patternUnits="userSpaceOnUse">
         <rect width={64} height={64} fill={wallpaperKey === "tapete_raufaser" ? "var(--room-wall-warm)" : "var(--room-wall)"} />
         {wallpaperKey === "tapete_pixel" && (
@@ -549,6 +561,12 @@ function SurfacePatterns({ wallpaperKey, floorKey }: { wallpaperKey: string; flo
         )}
         {/* Sanfter vertikaler Verlauf auf JEDER Tapete — Licht fällt von oben ein */}
         <rect width={64} height={64} fill="var(--room-shade)" opacity={0.08} />
+      </pattern>
+
+      {/* Fotografische Bodentextur (Standard-Boden) — analog zur Tapete. */}
+      <pattern id="room-floor-photo" width={640} height={GRID.floor.rows * CELL} patternUnits="userSpaceOnUse">
+        <image href="/room-surfaces/floor-linoleum.png" x={0} y={0} width={640} height={GRID.floor.rows * CELL} preserveAspectRatio="none" />
+        <rect width={640} height={GRID.floor.rows * CELL} fill="var(--room-shade)" opacity={0.1} />
       </pattern>
 
       <pattern id="room-floor" width={64} height={64} patternUnits="userSpaceOnUse">

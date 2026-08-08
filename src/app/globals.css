@@ -1042,6 +1042,15 @@ a.card-hover:active { transform: scale(0.985); }
   overflow-y: hidden;
   overscroll-behavior-x: contain;
 }
+/* Vereinheitlichende Nachbearbeitung für die Canva-Fotos: jedes Möbelstück
+   kam aus einer eigenen Studio-Aufnahme mit eigener Belichtung — ohne diesen
+   gemeinsamen Filter sitzen 30+ unabhängig fotografierte Objekte nebeneinander
+   wie ausgeschnittene Kataloghefte statt wie ein einziger Raum. Nur auf
+   `<image>` beschränkt (nicht auf `<g>`), damit die handgezeichneten
+   SVG-Sprites (noch ohne Foto, z.B. poster_retro) unangetastet bleiben. */
+image.room-item-photo {
+  filter: saturate(0.85) brightness(0.97) drop-shadow(0 3px 3px rgba(0,0,0,0.45));
+}
 /* Interaktive Möbel: Cursor + sanftes Anheben beim Hover */
 .room-hit {
   cursor: pointer;
