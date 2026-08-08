@@ -1288,8 +1288,7 @@ function buildFfaRanking(
 ): RankedRow[] {
   let statFields: string[] = [];
   try { statFields = statFieldsJson ? JSON.parse(statFieldsJson) : []; } catch { /* ignore */ }
-  const isAvg  = format === "avg_stats";
-  const isCoop = format === "coop_stats";
+  const isAvg = format === "avg_stats";
 
   const totals = new Map<string, { stats: Record<string, number>; matchCount: number }>(
     participants.map(p => [p.userId, { stats: {}, matchCount: 0 }])
@@ -1310,35 +1309,40 @@ function buildFfaRanking(
     }
   }
 
+  // coop_stats hat keinen sinnvollen "Sieger" (das Match-Win-Flag gilt für alle Spieler der
+  // Runde gemeinsam, siehe FfaView) — hier zählen wie bei reinem FFA die tatsächlich
+  // eingetragenen Stat-Felder, nicht ein Sieg-Zähler. Das Ranking selbst behandelt coop_stats
+  // deshalb identisch zu ffa; nur avg_stats (Durchschnitt statt Summe) bleibt ein Sonderfall.
+  const nonCoopStatFields = statFields.filter(f => f !== "Match Win");
+
   return participants
     .map(p => {
       const t = totals.get(p.userId) ?? { stats: {}, matchCount: 0 };
       let primary: string;
-      if (isCoop) {
-        primary = `${t.stats["Match Win"] ?? 0} Siege`;
-      } else if (isAvg) {
-        const avg = statFields.length > 0 && t.matchCount > 0
-          ? statFields.map(f => (t.stats[f] ?? 0) / t.matchCount).reduce((a, b) => a + b, 0) / statFields.length
+      let secondary = "";
+      if (isAvg) {
+        const avg = nonCoopStatFields.length > 0 && t.matchCount > 0
+          ? nonCoopStatFields.map(f => (t.stats[f] ?? 0) / t.matchCount).reduce((a, b) => a + b, 0) / nonCoopStatFields.length
           : 0;
         primary = t.matchCount > 0 ? `Ø ${avg.toFixed(1)}` : "–";
       } else {
-        const primaryField = statFields[0];
-        primary = primaryField ? `${t.stats[primaryField] ?? 0} ${primaryField}` : `${t.matchCount} Runden`;
+        const [firstField, ...restFields] = nonCoopStatFields;
+        primary = firstField ? `${t.stats[firstField] ?? 0} ${firstField}` : `${t.matchCount} Runden`;
+        secondary = restFields.filter(f => t.stats[f] != null).map(f => `${t.stats[f]} ${f}`).join(" · ");
       }
-      return { userId: p.userId, user: p.user, t, primary, secondary: "" };
+      return { userId: p.userId, user: p.user, t, primary, secondary };
     })
     .sort((a, b) => {
       if (a.t.matchCount === 0 && b.t.matchCount === 0) return 0;
       if (a.t.matchCount === 0) return 1;
       if (b.t.matchCount === 0) return -1;
-      if (isCoop) return (b.t.stats["Match Win"] ?? 0) - (a.t.stats["Match Win"] ?? 0);
       if (isAvg) {
-        const avgOf = (t: typeof a.t) => statFields.length > 0
-          ? statFields.map(f => (t.stats[f] ?? 0) / t.matchCount).reduce((s, v) => s + v, 0) / statFields.length
+        const avgOf = (t: typeof a.t) => nonCoopStatFields.length > 0
+          ? nonCoopStatFields.map(f => (t.stats[f] ?? 0) / t.matchCount).reduce((s, v) => s + v, 0) / nonCoopStatFields.length
           : 0;
         return avgOf(b.t) - avgOf(a.t);
       }
-      for (const f of statFields) {
+      for (const f of nonCoopStatFields) {
         const diff = (b.t.stats[f] ?? 0) - (a.t.stats[f] ?? 0);
         if (diff !== 0) return diff;
       }
