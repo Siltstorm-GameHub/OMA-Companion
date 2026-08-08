@@ -82,10 +82,12 @@ export default function SettingsClient({
 
         <div className="glass rounded-2xl p-5 mb-4">
           <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
-            Sichtbare Elemente
+            Elemente
           </h2>
           <p className="text-xs text-gray-500 mb-3">
-            Jedes Element lässt sich einzeln aus- und wieder einblenden.
+            Jedes Element lässt sich einzeln aus- und wieder einblenden. Turnierbaum/Tabelle und
+            Teilnehmer rotieren automatisch durch, wenn mehr als eins aktiv ist, damit dein
+            Gameplay sichtbar bleibt.
           </p>
           <div className="flex flex-wrap gap-2">
             <button
@@ -110,18 +112,6 @@ export default function SettingsClient({
               <Sparkles className="w-3.5 h-3.5" />
               Live/Event/Spiel &amp; Logo
             </button>
-          </div>
-        </div>
-
-        <div className="glass rounded-2xl p-5 mb-4">
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
-            Angezeigte Bereiche
-          </h2>
-          <p className="text-xs text-gray-500 mb-3">
-            Wähl, welche Bereiche im Overlay erscheinen sollen — bei mehreren rotieren sie
-            automatisch durch, damit dein Gameplay sichtbar bleibt.
-          </p>
-          <div className="flex flex-wrap gap-2">
             {relevantPanels.map(({ key, label, icon: Icon }) => {
               const active = enabled.has(key);
               return (
