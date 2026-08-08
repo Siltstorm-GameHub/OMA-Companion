@@ -4,7 +4,7 @@ import OverlayClient, { type Corner } from "./OverlayClient";
 
 const PANEL_KEYS = ["bracket", "table", "participants"] as const;
 type PanelKey = (typeof PANEL_KEYS)[number];
-const CORNERS: Corner[] = ["top-left", "top-right", "bottom-left", "bottom-right"];
+const CORNERS: Corner[] = ["top-left", "top-right", "bottom-left", "bottom-right", "middle-left", "middle-right"];
 
 export default async function OverlayPage({
   params,

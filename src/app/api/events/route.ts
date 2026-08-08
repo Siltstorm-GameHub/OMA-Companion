@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
   const {
     title, description, game, genre, category, startAt, maxPlayers, type, seriesId,
     discordChannelId, spectatorMode, spectatorRewardJson, pollsConfigJson,
-    placementRewardsJson,
+    placementRewardsJson, hidden,
   } = body;
 
   if (!title || !startAt) {
@@ -101,6 +101,7 @@ export async function POST(req: NextRequest) {
       type:            type ?? "community",
       seriesId:        seriesId || null,
       discordChannelId: discordChannelId || null,
+      hidden:          hidden ? true : false,
       spectatorMode:   spectatorMode ? true : false,
       spectatorRewardJson: spectatorRewardJson ? JSON.stringify(spectatorRewardJson) : null,
       pollsConfigJson: pollsConfigJson ? JSON.stringify(pollsConfigJson) : null,
@@ -119,53 +120,57 @@ export async function POST(req: NextRequest) {
     if (parsedRewards?.participationCoins != null) participationCoins = parsedRewards.participationCoins;
   } catch { /* skip */ }
 
-  // Discord Scheduled Event automatisch anlegen
-  const discordEventId = await createDiscordScheduledEvent({
-    title,
-    startAt:     startDate,
-    description: description ?? null,
-    game:        game ?? null,
-    coverImageUrl:       event.coverImageUrl,
-    seriesCoverImageUrl,
-  });
-  if (discordEventId) {
-    await prisma.event.update({
-      where: { id: event.id },
-      data: { discordEventId },
+  // Unsichtbar erstellte Events sind noch nicht veröffentlicht — keine Discord-Ankündigung/
+  // Scheduled Event/Push-Benachrichtigung, bis der Admin sie sichtbar schaltet.
+  if (!event.hidden) {
+    // Discord Scheduled Event automatisch anlegen
+    const discordEventId = await createDiscordScheduledEvent({
+      title,
+      startAt:     startDate,
+      description: description ?? null,
+      game:        game ?? null,
+      coverImageUrl:       event.coverImageUrl,
+      seriesCoverImageUrl,
     });
-    event.discordEventId = discordEventId;
-  }
+    if (discordEventId) {
+      await prisma.event.update({
+        where: { id: event.id },
+        data: { discordEventId },
+      });
+      event.discordEventId = discordEventId;
+    }
 
-  // Discord-Ankündigung — Message-ID speichern für späteres Löschen
-  const discordMessageId = await announceNewEvent({
-    eventId:          event.id,
-    title:            event.title,
-    game:             event.game,
-    format:           event.format,
-    genre:            event.genre,
-    startAt:          event.startAt,
-    maxPlayers:       event.maxPlayers,
-    pointReward:      participationCoins,
-    teilnehmer:       0,
-    discordChannelId: event.discordChannelId,
-  });
-  if (discordMessageId) {
-    await prisma.event.update({
-      where: { id: event.id },
-      data:  { discordMessageId },
+    // Discord-Ankündigung — Message-ID speichern für späteres Löschen
+    const discordMessageId = await announceNewEvent({
+      eventId:          event.id,
+      title:            event.title,
+      game:             event.game,
+      format:           event.format,
+      genre:            event.genre,
+      startAt:          event.startAt,
+      maxPlayers:       event.maxPlayers,
+      pointReward:      participationCoins,
+      teilnehmer:       0,
+      discordChannelId: event.discordChannelId,
     });
-    event.discordMessageId = discordMessageId;
-  }
+    if (discordMessageId) {
+      await prisma.event.update({
+        where: { id: event.id },
+        data:  { discordMessageId },
+      });
+      event.discordMessageId = discordMessageId;
+    }
 
-  // Push + In-App + Discord-DM (Discord-Kanal-Post übernimmt bereits announceNewEvent oben, inkl. Coverbild)
-  dispatchEventNotification("event_new", { id: event.id }, {
-    placeholders: {
-      "{eventName}": event.title,
-      "{game}":      event.game ?? "–",
-      "{date}":      event.startAt.toLocaleString("de-DE", { weekday: "long", day: "2-digit", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" }),
-    },
-    skipDiscordChannel: true,
-  }).catch(() => {});
+    // Push + In-App + Discord-DM (Discord-Kanal-Post übernimmt bereits announceNewEvent oben, inkl. Coverbild)
+    dispatchEventNotification("event_new", { id: event.id }, {
+      placeholders: {
+        "{eventName}": event.title,
+        "{game}":      event.game ?? "–",
+        "{date}":      event.startAt.toLocaleString("de-DE", { weekday: "long", day: "2-digit", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" }),
+      },
+      skipDiscordChannel: true,
+    }).catch(() => {});
+  }
 
   return NextResponse.json(event, { status: 201 });
 }

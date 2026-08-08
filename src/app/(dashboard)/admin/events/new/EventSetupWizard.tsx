@@ -169,6 +169,7 @@ export default function EventSetupWizard({
   const [statFields, setStatFields]   = useState<string[]>([]);
   const [ligaWinCoins, setLigaWinCoins] = useState(50);
   const [ligaDrawCoins, setLigaDrawCoins] = useState(20);
+  const [eventHidden, setEventHidden] = useState(false);
 
   // ── Series mode state ─────────────────────────────────────────────────────────
   const [seriesName, setSeriesName]     = useState(seasonPrefill?.name ?? "");
@@ -332,6 +333,7 @@ export default function EventSetupWizard({
       type: eventType,
       seriesId,
       discordChannelId: discordChannelId || null,
+      hidden: eventHidden,
       spectatorMode,
       spectatorRewardJson: spectatorMode ? { coins: spectatorCoins, rankPoints: spectatorRankPts } : null,
       placementRewardsJson: { participationCoins, participationRankPts: effectiveParticipationRankPts, placements: effectivePlacements },
@@ -627,6 +629,19 @@ export default function EventSetupWizard({
           <label className={labelCls}>Discord-Textkanal ID (optional)</label>
           <input type="text" value={discordChannelId} onChange={e => setDiscordChannelId(e.target.value)}
             placeholder="Leer = Standardkanal" className={inputCls} style={inputStyle} />
+        </div>
+
+        <div className="rounded-xl p-4 border border-white/8 bg-white/2">
+          <label className="flex items-start gap-3 cursor-pointer select-none">
+            <input type="checkbox" checked={eventHidden} onChange={e => setEventHidden(e.target.checked)}
+              className="w-4 h-4 mt-0.5 rounded accent-violet-500 shrink-0" />
+            <div>
+              <p className="text-sm text-gray-200">Unsichtbar erstellen</p>
+              <p className="text-[11px] text-gray-500 mt-0.5">
+                Das Event wird angelegt, aber noch nicht veröffentlicht (keine Discord-Ankündigung). Sichtbarkeit kann jederzeit in den Event-Einstellungen geändert werden.
+              </p>
+            </div>
+          </label>
         </div>
 
         <div className="rounded-xl p-3 space-y-3" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(20,184,166,0.10)" }}>
@@ -1395,6 +1410,7 @@ export default function EventSetupWizard({
             {seriesMode === "existing" && selectedSeries && <p>🔁 Reihe: {selectedSeries.name}</p>}
             {seriesMode === "new" && newSeriesName && <p>🔁 Neue Reihe: {newSeriesName}</p>}
             {discordChannelId && <p>📢 Kanal: {discordChannelId}</p>}
+            {eventHidden && <p className="text-violet-400">🔒 Unsichtbar – wird nicht veröffentlicht</p>}
           </div>
         </div>
         <div className="rounded-xl p-4 border border-white/8 bg-white/2 text-sm space-y-1.5 text-gray-400">

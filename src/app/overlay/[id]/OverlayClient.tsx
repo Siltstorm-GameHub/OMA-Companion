@@ -48,7 +48,7 @@ type OverlayState = {
 };
 
 type PanelKey = "bracket" | "table" | "participants";
-export type Corner = "top-left" | "top-right" | "bottom-left" | "bottom-right";
+export type Corner = "top-left" | "top-right" | "bottom-left" | "bottom-right" | "middle-left" | "middle-right";
 
 const PANEL_FADE_MS = 700;
 const PANEL_GAP_MS = 900; // vollständig transparente Pause zwischen zwei Panels — Spiel bleibt kurz frei sichtbar
@@ -65,7 +65,38 @@ function cornerStyle(corner: Corner): React.CSSProperties {
     case "top-right":    return { ...base, top: 56, right: 56 };
     case "bottom-left":  return { ...base, bottom: TICKER_CLEARANCE, left: 56 };
     case "bottom-right": return { ...base, bottom: TICKER_CLEARANCE, right: 56 };
+    case "middle-left":  return { ...base, top: "50%", left: 56 };
+    case "middle-right": return { ...base, top: "50%", right: 56 };
   }
+}
+
+/** Basis-Zentrierung der Ecke (nur bei "middle-*" nötig) mit dem Fade-Offset der Rotation
+ *  kombiniert — beide dürfen sich nicht gegenseitig überschreiben (siehe cornerStyle). */
+function panelTransform(corner: Corner, visible: boolean): string {
+  const centerY = corner.startsWith("middle") ? "translateY(-50%)" : "";
+  const fadeOffset = visible ? "translateY(0)" : `translateY(${corner.startsWith("bottom") ? "12px" : "-12px"})`;
+  return `${centerY} ${fadeOffset}`.trim();
+}
+
+/** Einmal eingebettete Keyframes für alle Bewegungs-Akzente im Overlay: Live-Puls, Score-Pop
+ *  bei Änderung, Sieger-Glow, Kachel-Entrance bei neuem Match, sanftes Atmen der Ränder. */
+function MotionStyles() {
+  return (
+    <style>{`
+      @keyframes oma-pulse   { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+      @keyframes oma-pop     { 0% { transform: scale(0.6); opacity: 0; } 65% { transform: scale(1.18); } 100% { transform: scale(1); opacity: 1; } }
+      @keyframes oma-flare   { 0% { box-shadow: 0 0 0 0 rgba(45,212,191,0); } 25% { box-shadow: 0 0 28px 6px rgba(45,212,191,0.55); } 100% { box-shadow: 0 0 0 0 rgba(45,212,191,0); } }
+      @keyframes oma-slidein { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+      @keyframes oma-breathe { 0%,100% { border-top-color: rgba(20,184,166,0.4); } 50% { border-top-color: rgba(20,184,166,0.85); } }
+      .oma-anim-pop     { animation: oma-pop 420ms cubic-bezier(0.16,1,0.3,1) both; }
+      .oma-anim-flare   { animation: oma-flare 1100ms ease-out; }
+      .oma-anim-slidein { animation: oma-slidein 480ms cubic-bezier(0.16,1,0.3,1) both; }
+      .oma-anim-breathe { animation: oma-breathe 3.2s ease-in-out infinite; }
+      @media (prefers-reduced-motion: reduce) {
+        .oma-anim-pop, .oma-anim-flare, .oma-anim-slidein, .oma-anim-breathe { animation: none !important; }
+      }
+    `}</style>
+  );
 }
 
 export default function OverlayClient({
@@ -141,6 +172,7 @@ export default function OverlayClient({
         overflow: "hidden",
       }}
     >
+      <MotionStyles />
       <BrandMark />
 
       {ticker && (
@@ -154,7 +186,7 @@ export default function OverlayClient({
             ...cornerStyle(corner),
             width: 620,
             opacity: rotator.visible ? 1 : 0,
-            transform: rotator.visible ? "translateY(0)" : `translateY(${corner.startsWith("bottom") ? "12px" : "-12px"})`,
+            transform: panelTransform(corner, rotator.visible),
             transition: `opacity ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1), transform ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1)`,
           }}
         >
@@ -255,7 +287,7 @@ function MatchTicker({
 
   return (
     <div style={{ position: "absolute", left: 56, bottom: 96, display: "flex", alignItems: "center", gap: 16 }}>
-      <TickerTile>
+      <TickerTile breathe={isLive}>
         <StatusPill live={isLive} />
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
           <span style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>
@@ -269,12 +301,14 @@ function MatchTicker({
         </div>
       </TickerTile>
 
-      <TickerTile>
+      {/* key=match.id lässt die Kachel bei jedem neuen laufenden/nächsten Match einmal
+         einschweben, statt kommentarlos den Inhalt zu tauschen. */}
+      <TickerTile key={match.id}>
         {hasDuel ? (
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <PlayerName user={userOf(match.player1Id)} winner={p1Winner} align="right" />
+            <PlayerName user={userOf(match.player1Id)} winner={p1Winner} winnerKey={match.winnerId} align="right" />
             <Score score1={match.score1} score2={match.score2} />
-            <PlayerName user={userOf(match.player2Id)} winner={p2Winner} align="left" />
+            <PlayerName user={userOf(match.player2Id)} winner={p2Winner} winnerKey={match.winnerId} align="left" />
           </div>
         ) : (
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
@@ -300,9 +334,10 @@ function MatchTicker({
   );
 }
 
-function TickerTile({ children }: { children: React.ReactNode }) {
+function TickerTile({ children, breathe }: { children: React.ReactNode; breathe?: boolean }) {
   return (
     <div
+      className={`oma-anim-slidein${breathe ? " oma-anim-breathe" : ""}`}
       style={{
         background: "rgba(9,9,14,0.82)",
         backdropFilter: "blur(18px) saturate(1.4)",
@@ -339,20 +374,25 @@ function StatusPill({ live }: { live: boolean }) {
         style={{
           width: 6, height: 6, borderRadius: 999,
           background: live ? "#f87171" : "#2dd4bf",
-          animation: live ? "oma-ov-pulse 1.4s ease-in-out infinite" : undefined,
+          animation: live ? "oma-pulse 1.4s ease-in-out infinite" : undefined,
         }}
       />
       {live ? "Live" : "Zuletzt"}
-      <style>{`@keyframes oma-ov-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }`}</style>
     </span>
   );
 }
 
-function PlayerName({ user, winner, align }: { user: OverlayUser | undefined; winner: boolean; align: "left" | "right" }) {
+function PlayerName({
+  user, winner, winnerKey, align,
+}: { user: OverlayUser | undefined; winner: boolean; winnerKey: string | null; align: "left" | "right" }) {
   const name = displayName(user);
   const row = (
     <>
-      <RankedAvatar rankPoints={user?.rankPoints ?? 0} src={user?.image} alt={name} size={40} />
+      {/* key=winnerKey lässt den Glow einmal aufflackern, sobald ein Sieger feststeht,
+         statt ihn dauerhaft leuchten zu lassen. */}
+      <div key={winner ? winnerKey : "pending"} className={winner ? "oma-anim-flare" : undefined} style={{ borderRadius: 999 }}>
+        <RankedAvatar rankPoints={user?.rankPoints ?? 0} src={user?.image} alt={name} size={40} />
+      </div>
       <span
         style={{
           fontSize: 24, fontWeight: winner ? 700 : 500,
@@ -377,9 +417,11 @@ function Score({ score1, score2 }: { score1: number | null; score2: number | nul
   }
   return (
     <span style={{ fontSize: 32, fontWeight: 700, letterSpacing: "-0.02em", display: "flex", gap: 10 }}>
-      <span>{score1 ?? 0}</span>
+      {/* key=score* lässt die Ziffer bei jeder Änderung einmal "poppen", statt sie
+         unbemerkt auszutauschen — genau das Signal, das ein Live-Score braucht. */}
+      <span key={`s1-${score1}`} className="oma-anim-pop">{score1 ?? 0}</span>
       <span style={{ opacity: 0.35 }}>:</span>
-      <span>{score2 ?? 0}</span>
+      <span key={`s2-${score2}`} className="oma-anim-pop">{score2 ?? 0}</span>
     </span>
   );
 }
