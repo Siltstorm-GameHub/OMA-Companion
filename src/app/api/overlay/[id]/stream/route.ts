@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { parseFavoriteGames } from "@/lib/favorite-games";
 import { resolveShowcaseEntries } from "@/lib/overlay-badges";
+import { computeEventPoints, type StatConfig } from "@/lib/series-event-points";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,8 @@ async function loadOverlayState(eventId: string) {
     where: { id: eventId },
     select: {
       id: true, title: true, status: true, format: true, tournamentStatus: true, game: true, statFields: true,
+      completionData: true,
+      series: { select: { seriesStatConfig: true } },
       matches: {
         orderBy: [{ round: "asc" }, { position: "asc" }],
         select: {
@@ -45,10 +48,29 @@ async function loadOverlayState(eventId: string) {
     ...event.registrations.filter(r => !seen.has(r.userId)),
   ];
 
+  // Ligapunkte, die dieses Event je Spieler zur Eventreihe beisteuert — identische Berechnung
+  // wie in der Gesamttabelle der Eventreihe (siehe tournament/[id]/page.tsx). Leer, solange das
+  // Event keiner Reihe angehört oder die Spielphase noch nicht abgeschlossen ist (dann liefert
+  // computeEventPoints selbst leere Maps zurück).
+  let ligaPunkteByUser: Record<string, number> = {};
+  if (event.series?.seriesStatConfig) {
+    let cfg: StatConfig;
+    try { cfg = JSON.parse(event.series.seriesStatConfig); } catch { cfg = { participationPoints: 0, stats: [] }; }
+    const allRegistrations = await prisma.eventRegistration.findMany({ where: { eventId }, select: { userId: true } });
+    ligaPunkteByUser = computeEventPoints(
+      {
+        completionData: event.completionData,
+        registrations: allRegistrations,
+        matches: event.matches.map(m => ({ entries: m.entries.map(e => ({ userId: e.userId, statsJson: e.statsJson })) })),
+      },
+      cfg,
+    ).pointsByUser;
+  }
+
   return {
     id: event.id, title: event.title, status: event.status, format: event.format,
     tournamentStatus: event.tournamentStatus, game: event.game, statFields: event.statFields,
-    matches: event.matches, participants: mergedParticipants,
+    matches: event.matches, participants: mergedParticipants, ligaPunkteByUser,
   };
 }
 
