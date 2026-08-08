@@ -342,12 +342,15 @@ function BrandFlipTile({ eventTitle, game, isLive }: { eventTitle: string; game:
   }, []);
 
   return (
-    <TickerTile breathe={isLive} bodyStyle={{ padding: 0, width: 300, height: 78, perspective: 500, overflow: "visible" }}>
+    <TickerTile breathe={isLive} bodyStyle={{ padding: 0, width: 300, height: 78, perspective: 500 }}>
       {/* `perspective` muss auf dem direkten Elternelement der rotierenden Fläche sitzen, sonst
          rendert der Browser die rotateY-Drehung flach statt räumlich — deshalb hier direkt auf
          der Tile-Chrome selbst (bodyStyle) statt auf einem zusätzlichen Wrapper darüber. Ein
          niedriger Perspektive-Wert (500 statt vorher 1200) macht die Drehung außerdem deutlich
-         kräftiger sichtbar — größere Werte wirken bei einer so kleinen Kachel kaum merklich 3D. */}
+         kräftiger sichtbar — größere Werte wirken bei einer so kleinen Kachel kaum merklich 3D.
+         `overflow: hidden` bleibt Standard (nicht "visible") — beide Flip-Flächen sind exakt
+         kachelgroß, es gibt also nichts zum Clippen, aber ohne "hidden" lief der Farbverlauf
+         (TopEdge) über die abgerundeten Ecken hinaus. */}
       <div
         className="oma-flip-inner"
         style={{
