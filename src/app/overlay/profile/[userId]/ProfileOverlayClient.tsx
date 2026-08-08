@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import RankedAvatar from "@/components/RankedAvatar";
 import {
   MotionStyles, PanelShell, IdentityFlipTile, FavoritesPanel, BadgesPanel, TopEdge,
-  panelMotionStyle, type Corner, type PanelPhase, type FavoriteGame, type ShowcaseBadge, type OverlayStreamer,
+  panelMotionStyle, combinedElementStyle, useVisibilityCycles,
+  type Corner, type PanelPhase, type FavoriteGame, type ShowcaseBadge, type OverlayStreamer, type ElementCycle,
 } from "@/app/overlay/[id]/OverlayClient";
 
 type ProfileState = {
@@ -26,7 +27,8 @@ type ProfileState = {
  *  wie beim Event-Overlay zu einer rotierenden Gruppe stapeln. */
 export type ProfileElementKey = "brand" | "rank" | "nextEvent" | "favorites" | "badges";
 export const PROFILE_STACKABLE: ProfileElementKey[] = ["rank", "nextEvent", "favorites", "badges"];
-export type ProfileLayoutPositions = Partial<Record<ProfileElementKey, { x: number; y: number }>>;
+export type ProfileLayoutEntry = { x: number; y: number; scale?: number; cycle?: ElementCycle };
+export type ProfileLayoutPositions = Partial<Record<ProfileElementKey, ProfileLayoutEntry>>;
 
 export const PROFILE_ELEMENT_SIZE: Record<ProfileElementKey, { width: number; height: number }> = {
   brand:     { width: 300, height: 78 },
@@ -150,6 +152,16 @@ export default function ProfileOverlayClient({
   const rotator = useStackedProfileElements(stacks, rotateSeconds);
   const corner: Corner = "top-right"; // nur für die Crossfade-Bewegungsrichtung relevant, keine echte Ecken-Positionierung hier
 
+  const cycles: Partial<Record<ProfileElementKey, ElementCycle>> = {};
+  if (layout) {
+    for (const key of Object.keys(layout) as ProfileElementKey[]) {
+      const cycle = layout[key]?.cycle;
+      if (cycle) cycles[key] = cycle;
+    }
+  }
+  const cycleVisible = useVisibilityCycles<ProfileElementKey>(cycles);
+  const isVisible = (key: ProfileElementKey) => cycleVisible[key] ?? true;
+
   return (
     <div
       style={{
@@ -161,7 +173,9 @@ export default function ProfileOverlayClient({
 
       {layout?.brand && (
         <div style={elementPositionStyle(layout.brand)}>
-          <IdentityFlipTile streamer={streamer} />
+          <div style={combinedElementStyle({}, layout.brand.scale, isVisible("brand"))}>
+            <IdentityFlipTile streamer={streamer} />
+          </div>
         </div>
       )}
 
@@ -174,22 +188,22 @@ export default function ProfileOverlayClient({
           <div key={posKey} style={{ ...elementPositionStyle(stack.pos), width }}>
             {prevSlot && (
               <div
-                style={{
-                  position: slot ? "absolute" : "static", inset: 0,
-                  transition: `opacity ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1), transform ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1), filter ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1)`,
-                  ...panelMotionStyle(corner, prevSlot.phase),
-                }}
+                style={combinedElementStyle(
+                  { position: slot ? "absolute" : "static", inset: 0, ...panelMotionStyle(corner, prevSlot.phase) },
+                  layout?.[prevSlot.key]?.scale,
+                  isVisible(prevSlot.key),
+                )}
               >
                 <ProfileElementContent elementKey={prevSlot.key} state={state} />
               </div>
             )}
             {slot && (
               <div
-                style={{
-                  position: prevSlot ? "absolute" : "static", inset: 0,
-                  transition: `opacity ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1), transform ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1), filter ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1)`,
-                  ...panelMotionStyle(corner, slot.phase),
-                }}
+                style={combinedElementStyle(
+                  { position: prevSlot ? "absolute" : "static", inset: 0, ...panelMotionStyle(corner, slot.phase) },
+                  layout?.[slot.key]?.scale,
+                  isVisible(slot.key),
+                )}
               >
                 <ProfileElementContent elementKey={slot.key} state={state} />
               </div>

@@ -78,7 +78,11 @@ export type Corner = "top-left" | "top-right" | "bottom-left" | "bottom-right" |
  *  wenn der Streamer sie in den Einstellungen aufeinander zieht. */
 export type ElementKey = "brand" | "liveinfo" | "ticker" | "bracket" | "table" | "participants" | "favorites" | "badges";
 export const STACKABLE_ELEMENTS: ElementKey[] = ["liveinfo", "ticker", "bracket", "table", "participants", "favorites", "badges"];
-export type LayoutPositions = Partial<Record<ElementKey, { x: number; y: number }>>; // Prozent von 1920×1080, oben links des Elements
+/** `cycle` lässt ein Element abwechselnd für `onSec` sichtbar und für `offSec` unsichtbar
+ *  sein statt dauerhaft zu stehen — z.B. um Platz mit dem Gameplay zu teilen, ohne zu stapeln. */
+export type ElementCycle = { onSec: number; offSec: number };
+export type LayoutEntry = { x: number; y: number; scale?: number; cycle?: ElementCycle };
+export type LayoutPositions = Partial<Record<ElementKey, LayoutEntry>>; // Prozent von 1920×1080, oben links des Elements
 
 /** Nominelle Kachelgrößen (px bei 1920×1080) — für die Kollisionsvermeidung beim Ziehen in
  *  den Einstellungen und für die Breite der jeweils aktiven Kachel im Overlay selbst. Etwas
@@ -145,6 +149,58 @@ export function panelMotionStyle(corner: Corner, phase: PanelPhase): React.CSSPr
   const towardEdge = corner.startsWith("bottom") ? 40 : -40;
   const offset = phase === "enter" ? -towardEdge : towardEdge;
   return { opacity: 0, filter: "blur(16px)", transform: `${centerY} translateY(${offset}px) scale(0.9)`.trim() };
+}
+
+export const CYCLE_FADE_MS = 650;
+
+/** Kombiniert die Kachel-Eigenskalierung (Größe, per Einstellungen frei wählbar) mit dem
+ *  Crossfade der Stapel-Rotation (`panelMotionStyle`) und dem Sichtbarkeits-Zyklus
+ *  (`useVisibilityCycles`) zu EINEM Style-Objekt für die jeweils innerste Kachel-Hülle.
+ *  Skalierung per CSS-Transform statt fester Pixelgrößen, damit der komplette Kachelinhalt
+ *  (Schrift, Avatare, Abstände) automatisch proportional mitwächst/-schrumpft. */
+export function combinedElementStyle(motion: React.CSSProperties, scale: number | undefined, cycleVisible: boolean): React.CSSProperties {
+  const s = scale ?? 1;
+  const cycleScale = cycleVisible ? 1 : 0.92;
+  const motionTransform = typeof motion.transform === "string" ? motion.transform : "";
+  const motionOpacity = typeof motion.opacity === "number" ? motion.opacity : 1;
+  return {
+    ...motion,
+    transform: `${motionTransform} scale(${s * cycleScale})`.trim(),
+    transformOrigin: "top left",
+    opacity: motionOpacity * (cycleVisible ? 1 : 0),
+    filter: cycleVisible ? motion.filter : "blur(14px)",
+    transition: `${motion.transition ? `${motion.transition}, ` : ""}opacity ${CYCLE_FADE_MS}ms ease, filter ${CYCLE_FADE_MS}ms ease, transform ${CYCLE_FADE_MS}ms cubic-bezier(0.16,1,0.3,1)`,
+    pointerEvents: cycleVisible ? undefined : "none",
+  };
+}
+
+/** Ob-sichtbar-Zustand je Element mit konfiguriertem Sichtbarkeits-Zyklus — EIN Hook für alle
+ *  Elemente (React verbietet Hooks in einer Schleife mit wechselnder Anzahl, siehe
+ *  useStackedElements weiter unten für dasselbe Muster), verwaltet intern einen Timer je
+ *  Element. Elemente ohne `cycle`-Konfiguration gelten immer als sichtbar. */
+export function useVisibilityCycles<K extends string>(cycles: Partial<Record<K, ElementCycle>>): Record<K, boolean> {
+  const [visible, setVisible] = useState<Record<string, boolean>>({});
+  const sig = Object.entries(cycles).map(([k, c]) => `${k}:${(c as ElementCycle).onSec}-${(c as ElementCycle).offSec}`).sort().join("|");
+
+  useEffect(() => {
+    const timers: ReturnType<typeof setTimeout>[] = [];
+
+    for (const [key, cfg] of Object.entries(cycles) as [string, ElementCycle][]) {
+      const onMs = Math.max(2, cfg.onSec) * 1000;
+      const offMs = Math.max(2, cfg.offSec) * 1000;
+      let isOn = true;
+      const tick = () => {
+        isOn = !isOn;
+        setVisible(v => ({ ...v, [key]: isOn }));
+        timers.push(setTimeout(tick, isOn ? onMs : offMs));
+      };
+      timers.push(setTimeout(tick, onMs));
+    }
+    return () => timers.forEach(clearTimeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sig]);
+
+  return visible as Record<K, boolean>;
 }
 
 /** Einmal eingebettete Keyframes für alle Bewegungs-Akzente im Overlay: Live-Puls, Score-Pop
@@ -401,6 +457,18 @@ export default function OverlayClient({
   }
   const stackedRotator = useStackedElements(stacks, rotateSeconds);
 
+  // Sichtbarkeits-Zyklen gelten je Roh-Element (auch für das fixe "brand") — welches Element
+  // in einem Stapel gerade aktiv ist, bestimmt, wessen Zyklus-Konfiguration greift.
+  const cycles: Partial<Record<ElementKey, ElementCycle>> = {};
+  if (layout) {
+    for (const key of Object.keys(layout) as ElementKey[]) {
+      const cycle = layout[key]?.cycle;
+      if (cycle) cycles[key] = cycle;
+    }
+  }
+  const cycleVisible = useVisibilityCycles<ElementKey>(cycles);
+  const isVisible = (key: ElementKey) => cycleVisible[key] ?? true;
+
   return (
     <div
       style={{
@@ -465,7 +533,9 @@ export default function OverlayClient({
       {/* ── Neues System: brand ist die einzige fixe, nie gestapelte Kachel ── */}
       {layout && state && layout.brand && (
         <div style={elementPositionStyle(layout.brand)}>
-          <IdentityFlipTile streamer={state.streamer} />
+          <div style={combinedElementStyle({}, layout.brand.scale, isVisible("brand"))}>
+            <IdentityFlipTile streamer={state.streamer} />
+          </div>
         </div>
       )}
 
@@ -479,24 +549,22 @@ export default function OverlayClient({
           <div key={posKey} style={{ ...elementPositionStyle(stack.pos), width }}>
             {prevSlot && (
               <div
-                style={{
-                  position: slot ? "absolute" : "static",
-                  inset: 0,
-                  transition: `opacity ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1), transform ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1), filter ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1)`,
-                  ...panelMotionStyle(corner, prevSlot.phase),
-                }}
+                style={combinedElementStyle(
+                  { position: slot ? "absolute" : "static", inset: 0, ...panelMotionStyle(corner, prevSlot.phase) },
+                  layout[prevSlot.key]?.scale,
+                  isVisible(prevSlot.key),
+                )}
               >
                 <ElementContent elementKey={prevSlot.key} matches={matches} userOf={userOf} format={fmt} statFields={state.statFields} participants={state.participants} streamer={state.streamer} eventTitle={state.title ?? eventTitle} game={state.game} isLive={ticker ? !ticker.winnerId && !ticker.playedAt : state.status === "active"} ligaPunkteByUser={state.ligaPunkteByUser} />
               </div>
             )}
             {slot && (
               <div
-                style={{
-                  position: prevSlot ? "absolute" : "static",
-                  inset: 0,
-                  transition: `opacity ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1), transform ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1), filter ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1)`,
-                  ...panelMotionStyle(corner, slot.phase),
-                }}
+                style={combinedElementStyle(
+                  { position: prevSlot ? "absolute" : "static", inset: 0, ...panelMotionStyle(corner, slot.phase) },
+                  layout[slot.key]?.scale,
+                  isVisible(slot.key),
+                )}
               >
                 <ElementContent elementKey={slot.key} matches={matches} userOf={userOf} format={fmt} statFields={state.statFields} participants={state.participants} streamer={state.streamer} eventTitle={state.title ?? eventTitle} game={state.game} isLive={ticker ? !ticker.winnerId && !ticker.playedAt : state.status === "active"} ligaPunkteByUser={state.ligaPunkteByUser} />
               </div>

@@ -7,19 +7,35 @@ type PanelKey = (typeof PANEL_KEYS)[number];
 const CORNERS: Corner[] = ["top-left", "top-right", "bottom-left", "bottom-right", "middle-left", "middle-right"];
 const ELEMENT_KEYS: ElementKey[] = ["brand", "liveinfo", "ticker", "bracket", "table", "participants", "favorites", "badges"];
 
-/** `?layout=brand:4.2,88.5;ticker:20.1,88.5;panel:65,4` — vom Streamer in den Overlay-
- *  Einstellungen per Drag & Drop zusammengestellt (Prozent von 1920×1080 je Element). */
+/** `?layout=brand:4.2,88.5;ticker:20.1,88.5,s1.3,c8-4;panel:65,4` — vom Streamer in den
+ *  Overlay-Einstellungen per Drag & Drop zusammengestellt (Prozent von 1920×1080 je Element).
+ *  Nach x,y folgen optionale Segmente: `s<scale>` (Kachelgröße, 1 = Standard) und
+ *  `c<onSec>-<offSec>` (Sichtbarkeits-Zyklus: so lange sichtbar, so lange danach ausgeblendet). */
 function parseLayout(raw: string | undefined): LayoutPositions | null {
   if (!raw) return null;
   const result: LayoutPositions = {};
   for (const part of raw.split(";")) {
     const [key, coords] = part.split(":");
     if (!coords || !(ELEMENT_KEYS as string[]).includes(key)) continue;
-    const [xStr, yStr] = coords.split(",");
-    const x = parseFloat(xStr);
-    const y = parseFloat(yStr);
+    const segments = coords.split(",");
+    const x = parseFloat(segments[0]);
+    const y = parseFloat(segments[1]);
     if (Number.isNaN(x) || Number.isNaN(y)) continue;
-    result[key as ElementKey] = { x: Math.min(100, Math.max(0, x)), y: Math.min(100, Math.max(0, y)) };
+    const entry: LayoutPositions[ElementKey] = { x: Math.min(100, Math.max(0, x)), y: Math.min(100, Math.max(0, y)) };
+    for (const seg of segments.slice(2)) {
+      if (seg.startsWith("s")) {
+        const scale = parseFloat(seg.slice(1));
+        if (!Number.isNaN(scale) && scale > 0) entry!.scale = Math.min(2, Math.max(0.5, scale));
+      } else if (seg.startsWith("c")) {
+        const [onStr, offStr] = seg.slice(1).split("-");
+        const onSec = parseFloat(onStr);
+        const offSec = parseFloat(offStr);
+        if (!Number.isNaN(onSec) && !Number.isNaN(offSec) && onSec > 0 && offSec > 0) {
+          entry!.cycle = { onSec, offSec };
+        }
+      }
+    }
+    result[key as ElementKey] = entry;
   }
   return Object.keys(result).length > 0 ? result : null;
 }

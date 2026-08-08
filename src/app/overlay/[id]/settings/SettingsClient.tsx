@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import {
-  Copy, ExternalLink, Tv2, Check, LayoutGrid, Table2, Users, Repeat, Swords, Sparkles, Move, Gamepad2, Award,
+  Copy, ExternalLink, Tv2, Check, LayoutGrid, Table2, Users, Repeat, Swords, Sparkles, Move, Gamepad2, Award, Maximize2, Timer,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ELEMENT_SIZE, STACKABLE_ELEMENTS, type ElementKey } from "../OverlayClient";
@@ -49,6 +49,7 @@ export default function SettingsClient({
   const [enabled, setEnabled] = useState<Set<ElementKey>>(new Set(relevantElements.map(o => o.key)));
   const [rotateSeconds, setRotateSeconds] = useState(14);
   const [positions, setPositions] = useState<Record<ElementKey, Pos>>(DEFAULT_POSITIONS);
+  const [cycles, setCycles] = useState<Partial<Record<ElementKey, { enabled: boolean; onSec: number; offSec: number }>>>({});
   const [copied, setCopied] = useState(false);
 
   const activeElements = useMemo(() => relevantElements.filter(o => enabled.has(o.key)).map(o => o.key), [relevantElements, enabled]);
@@ -72,10 +73,27 @@ export default function SettingsClient({
     const params = new URLSearchParams({ token });
     if (streamerId) params.set("streamer", streamerId);
     if (rotateSeconds !== 14) params.set("rotate", String(rotateSeconds));
-    const layout = activeElements.map(key => `${key}:${positions[key].x.toFixed(1)},${positions[key].y.toFixed(1)}`).join(";");
+    const layout = activeElements.map(key => {
+      const p = positions[key];
+      const parts = [p.x.toFixed(1), p.y.toFixed(1)];
+      if (p.scale && Math.abs(p.scale - 1) > 0.001) parts.push(`s${p.scale.toFixed(2)}`);
+      const c = cycles[key];
+      if (c?.enabled) parts.push(`c${c.onSec}-${c.offSec}`);
+      return `${key}:${parts.join(",")}`;
+    }).join(";");
     if (layout) params.set("layout", layout);
     return `${origin}/overlay/${eventId}?${params.toString()}`;
-  }, [eventId, token, streamerId, rotateSeconds, activeElements, positions]);
+  }, [eventId, token, streamerId, rotateSeconds, activeElements, positions, cycles]);
+
+  function setScale(key: ElementKey, scale: number) {
+    setPositions(prev => ({ ...prev, [key]: { ...prev[key], scale } }));
+  }
+  function setCycle(key: ElementKey, patch: Partial<{ enabled: boolean; onSec: number; offSec: number }>) {
+    setCycles(prev => ({
+      ...prev,
+      [key]: { enabled: false, onSec: 10, offSec: 6, ...prev[key], ...patch },
+    }));
+  }
 
   function toggle(key: ElementKey) {
     setEnabled(prev => {
@@ -154,6 +172,63 @@ export default function SettingsClient({
                 className="input-glass w-16 text-center"
               />
               <span className="text-sm text-gray-400">Sekunden</span>
+            </div>
+          )}
+
+          {activeElements.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-white/[0.06] space-y-3">
+              {activeElements.map(key => {
+                const option = relevantElements.find(o => o.key === key)!;
+                const scale = positions[key].scale ?? 1;
+                const cycle = cycles[key];
+                return (
+                  <div key={key} className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+                    <span className="flex items-center gap-1.5 text-gray-300 font-medium w-40 shrink-0">
+                      <option.icon className="w-3.5 h-3.5 text-gray-500" /> {option.label}
+                    </span>
+                    <span className="flex items-center gap-2 text-gray-500">
+                      <Maximize2 className="w-3.5 h-3.5" />
+                      <input
+                        type="range"
+                        min={0.6}
+                        max={1.6}
+                        step={0.05}
+                        value={scale}
+                        onChange={e => setScale(key, Number(e.target.value))}
+                        className="w-28 accent-teal-400"
+                      />
+                      <span className="text-xs text-gray-400 w-9 tabular-nums">{Math.round(scale * 100)}%</span>
+                    </span>
+                    <label className="flex items-center gap-1.5 text-gray-500 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={cycle?.enabled ?? false}
+                        onChange={e => setCycle(key, { enabled: e.target.checked })}
+                        className="accent-teal-400"
+                      />
+                      <Timer className="w-3.5 h-3.5" /> Zeitgesteuert
+                    </label>
+                    {cycle?.enabled && (
+                      <span className="flex items-center gap-1.5 text-gray-500">
+                        <input
+                          type="number" min={2} max={300}
+                          value={cycle.onSec}
+                          onChange={e => setCycle(key, { onSec: Math.min(300, Math.max(2, Number(e.target.value) || 10)) })}
+                          className="input-glass w-14 text-center"
+                        />
+                        <span className="text-xs">s sichtbar,</span>
+                        <input
+                          type="number" min={2} max={300}
+                          value={cycle.offSec}
+                          onChange={e => setCycle(key, { offSec: Math.min(300, Math.max(2, Number(e.target.value) || 6)) })}
+                          className="input-glass w-14 text-center"
+                        />
+                        <span className="text-xs">s ausgeblendet</span>
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
