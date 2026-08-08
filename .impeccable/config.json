@@ -1,0 +1,47 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "bounce-easing",
+        "value": "icon-bounce-new",
+        "createdAt": "2026-08-08T22:35:14.762Z",
+        "reason": "User confirmed icon-bounce-new is intentional"
+      },
+      {
+        "rule": "bounce-easing",
+        "value": "cubic-bezier(0.34, 1.56, 0.64, 1)",
+        "createdAt": "2026-08-08T22:35:16.145Z",
+        "reason": "User confirmed cubic-bezier(0.34, 1.56, 0.64, 1) is intentional"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "src/app/globals.css"
+        ],
+        "createdAt": "2026-08-08T22:35:17.510Z",
+        "reason": "User confirmed podium rank accent (gold/silver/bronze left border) is intentional, encodes leaderboard rank"
+      },
+      {
+        "rule": "gradient-text",
+        "value": "*",
+        "files": [
+          "src/app/globals.css"
+        ],
+        "createdAt": "2026-08-08T22:35:18.898Z",
+        "reason": "User confirmed brand gradient text utilities (text-gradient-gaming/gold/teal) are intentional gaming-identity branding"
+      },
+      {
+        "rule": "codex-grid-background",
+        "value": "*",
+        "files": [
+          "src/app/globals.css"
+        ],
+        "createdAt": "2026-08-08T22:35:20.306Z",
+        "reason": "User confirmed subtle dot-grid depth texture (.bg-grid) is intentional, not a blueprint/canvas grid"
+      }
+    ]
+  }
+}
