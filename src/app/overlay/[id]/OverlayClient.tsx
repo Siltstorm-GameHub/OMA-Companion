@@ -10,6 +10,7 @@ type OverlayEntry = {
   teamId: string | null;
   placement: number | null;
   score: number | null;
+  statsJson: string | null;
 };
 
 type OverlayMatch = {
@@ -43,6 +44,7 @@ type OverlayState = {
   format: string | null;
   tournamentStatus: string | null;
   game: string | null;
+  statFields: string | null;
   matches: OverlayMatch[];
   participants: OverlayParticipant[];
 };
@@ -50,8 +52,7 @@ type OverlayState = {
 type PanelKey = "bracket" | "table" | "participants";
 export type Corner = "top-left" | "top-right" | "bottom-left" | "bottom-right" | "middle-left" | "middle-right";
 
-const PANEL_FADE_MS = 700;
-const PANEL_GAP_MS = 900; // vollständig transparente Pause zwischen zwei Panels — Spiel bleibt kurz frei sichtbar
+const PANEL_FADE_MS = 900;
 const TICKER_CLEARANCE = 210; // Höhe des Lower-Third-Tickers + Abstand — Panels in unteren Ecken schieben sich darüber
 
 /** Absolute Positionierung für eine Ecke — Panels in den unteren Ecken rücken über den
@@ -70,12 +71,19 @@ function cornerStyle(corner: Corner): React.CSSProperties {
   }
 }
 
-/** Basis-Zentrierung der Ecke (nur bei "middle-*" nötig) mit dem Fade-Offset der Rotation
- *  kombiniert — beide dürfen sich nicht gegenseitig überschreiben (siehe cornerStyle). */
-function panelTransform(corner: Corner, visible: boolean): string {
+/** Opacity/Blur/Versatz für eine Rotations-Phase, kombiniert mit der Basis-Zentrierung der
+ *  Ecke (nur bei "middle-*" nötig — darf vom Versatz nicht überschrieben werden, siehe
+ *  cornerStyle). "enter" kommt leicht aus Richtung Bildschirmmitte verschwommen herein,
+ *  "leave" wandert in dieselbe Richtung weiter und verschwimmt wieder — zusammen eine klare
+ *  Bewegungsrichtung statt eines reinen Stand-Fades. */
+function panelMotionStyle(corner: Corner, phase: PanelPhase): React.CSSProperties {
   const centerY = corner.startsWith("middle") ? "translateY(-50%)" : "";
-  const fadeOffset = visible ? "translateY(0)" : `translateY(${corner.startsWith("bottom") ? "12px" : "-12px"})`;
-  return `${centerY} ${fadeOffset}`.trim();
+  if (phase === "settled") {
+    return { opacity: 1, filter: "blur(0px)", transform: `${centerY} translateY(0)`.trim() };
+  }
+  const towardEdge = corner.startsWith("bottom") ? 14 : -14;
+  const offset = phase === "enter" ? -towardEdge : towardEdge;
+  return { opacity: 0, filter: "blur(6px)", transform: `${centerY} translateY(${offset}px)`.trim() };
 }
 
 /** Einmal eingebettete Keyframes für alle Bewegungs-Akzente im Overlay: Live-Puls, Score-Pop
@@ -179,69 +187,116 @@ export default function OverlayClient({
         <MatchTicker match={ticker} userOf={userOf} eventTitle={state?.title ?? eventTitle} game={state?.game ?? null} />
       )}
 
-      {rotator.activeKey && state && (
-        <div
-          key={rotator.activeKey}
-          style={{
-            ...cornerStyle(corner),
-            width: 620,
-            opacity: rotator.visible ? 1 : 0,
-            transform: panelTransform(corner, rotator.visible),
-            transition: `opacity ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1), transform ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1)`,
-          }}
-        >
-          {rotator.activeKey === "bracket" && <BracketPanel matches={matches} userOf={userOf} />}
-          {rotator.activeKey === "table" && <TablePanel matches={matches} participants={state.participants} format={fmt} />}
-          {rotator.activeKey === "participants" && <ParticipantsPanel participants={state.participants} />}
+      {state && (rotator.active || rotator.previous) && (
+        <div style={{ ...cornerStyle(corner), width: 620 }}>
+          {/* Alte und neue Kachel überlappen sich für PANEL_FADE_MS — die alte blendet aus/verschwimmt,
+             während die neue schon einblendet, statt einer sichtbaren Lücke dazwischen. */}
+          {rotator.previous && (
+            <div
+              style={{
+                position: rotator.active ? "absolute" : "static",
+                inset: 0,
+                transition: `opacity ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1), transform ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1), filter ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1)`,
+                ...panelMotionStyle(corner, rotator.previous.phase),
+              }}
+            >
+              <PanelContent panelKey={rotator.previous.key} matches={matches} userOf={userOf} format={fmt} statFields={state.statFields} participants={state.participants} />
+            </div>
+          )}
+          {rotator.active && (
+            <div
+              style={{
+                position: rotator.previous ? "absolute" : "static",
+                inset: 0,
+                transition: `opacity ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1), transform ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1), filter ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1)`,
+                ...panelMotionStyle(corner, rotator.active.phase),
+              }}
+            >
+              <PanelContent panelKey={rotator.active.key} matches={matches} userOf={userOf} format={fmt} statFields={state.statFields} participants={state.participants} />
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-/* ── Rotation-Logik: zeigt genau ein Panel, blendet es aus, pausiert komplett
-   transparent, blendet das nächste ein. Bei genau einem Panel keine Rotation. ── */
-function usePanelRotator(panels: PanelKey[], rotateSeconds: number) {
-  const [index, setIndex] = useState(0);
-  const [visible, setVisible] = useState(true);
+function PanelContent({
+  panelKey, matches, userOf, format, statFields, participants,
+}: {
+  panelKey: PanelKey;
+  matches: OverlayMatch[];
+  userOf: (id: string | null) => OverlayUser | undefined;
+  format: string | null;
+  statFields: string | null;
+  participants: OverlayParticipant[];
+}) {
+  if (panelKey === "bracket") return <BracketPanel matches={matches} userOf={userOf} />;
+  if (panelKey === "table") return <TablePanel matches={matches} participants={participants} format={format} statFields={statFields} />;
+  return <ParticipantsPanel participants={participants} />;
+}
 
-  // Panel-Liste hat sich geändert (Format erkannt / Query-Param) — Index während des
+type PanelPhase = "enter" | "settled" | "leave";
+type PanelSlot = { key: PanelKey; phase: PanelPhase };
+
+/** Rotation als Crossfade: die neue Kachel beginnt einzublenden, während die alte noch
+ *  ausblendet ("previous") — kein Zeitpunkt, an dem beide unsichtbar sind. Beide Seiten
+ *  starten aus ihrem jeweiligen Zielzustand und flippen einen Tick später (setTimeout 30ms,
+ *  React braucht einen Paint dazwischen, sonst überspringt der Browser die CSS-Transition)
+ *  gleichzeitig in ihre Endposition. */
+function usePanelRotator(panels: PanelKey[], rotateSeconds: number) {
+  const indexRef = useRef(0);
+  const [active, setActive] = useState<PanelSlot | null>(panels.length ? { key: panels[0], phase: "settled" } : null);
+  const [previous, setPrevious] = useState<PanelSlot | null>(null);
+
+  // Panel-Liste hat sich geändert (Format erkannt / Query-Param) — Zustand während des
   // Renders zurücksetzen statt in einem Effect, siehe react.dev "Adjusting state on prop change".
   const panelsKey = panels.join("|");
   const [prevPanelsKey, setPrevPanelsKey] = useState(panelsKey);
   if (panelsKey !== prevPanelsKey) {
     setPrevPanelsKey(panelsKey);
-    setIndex(0);
-    setVisible(true);
+    indexRef.current = 0;
+    setActive(panels.length ? { key: panels[0], phase: "settled" } : null);
+    setPrevious(null);
   }
 
   useEffect(() => {
     if (panels.length <= 1) return;
     const showMs = Math.max(4, rotateSeconds) * 1000;
-    let hideTimer: ReturnType<typeof setTimeout>;
-    let nextTimer: ReturnType<typeof setTimeout>;
+    let flipTimer: ReturnType<typeof setTimeout>;
+    let clearTimer: ReturnType<typeof setTimeout>;
 
     const cycle = setInterval(() => {
-      setVisible(false);
-      hideTimer = setTimeout(() => {
-        setIndex(i => (i + 1) % panels.length);
-        nextTimer = setTimeout(() => setVisible(true), 30);
-      }, PANEL_FADE_MS + PANEL_GAP_MS);
-    }, showMs + PANEL_FADE_MS + PANEL_GAP_MS);
+      setActive(curr => {
+        if (curr) setPrevious({ key: curr.key, phase: "settled" });
+        indexRef.current = (indexRef.current + 1) % panels.length;
+        return { key: panels[indexRef.current], phase: "enter" };
+      });
+
+      flipTimer = setTimeout(() => {
+        setPrevious(p => (p ? { ...p, phase: "leave" } : p));
+        setActive(a => (a ? { ...a, phase: "settled" } : a));
+      }, 30);
+
+      clearTimer = setTimeout(() => setPrevious(null), 30 + PANEL_FADE_MS);
+    }, showMs);
 
     return () => {
       clearInterval(cycle);
-      clearTimeout(hideTimer);
-      clearTimeout(nextTimer);
+      clearTimeout(flipTimer);
+      clearTimeout(clearTimer);
     };
   }, [panels.length, rotateSeconds]);
 
-  return { activeKey: panels[index] ?? null, visible };
+  return { active, previous };
 }
 
 function pickTickerMatch(matches: OverlayMatch[]): OverlayMatch | null {
+  // FFA/Coop/Avg-Stats-Matches haben nie player1Id/player2Id gesetzt (die stecken in
+  // entries) — ohne den entries-Fallback hier würde ein anstehendes FFA-Match nie als
+  // "pending" erkannt und der Ticker zeigt nur je das zuletzt gespielte Match.
   const pending = matches
-    .filter(m => (m.player1Id || m.player2Id) && !m.winnerId && !m.playedAt)
+    .filter(m => (m.player1Id || m.player2Id || m.entries.length > 0) && !m.winnerId && !m.playedAt)
     .sort((a, b) => a.round - b.round || a.position - b.position);
   if (pending.length > 0) return pending[0];
   const played = [...matches].filter(m => m.playedAt).sort((a, b) =>
@@ -493,24 +548,24 @@ function Row({ user, score, winner }: { user: OverlayUser | undefined; score: nu
   );
 }
 
-/* ── Tabellen-Panel: Sieg-basiertes Ranking für Liga/Round-Robin ── */
+type RankedRow = { userId: string; user: OverlayUser; primary: string; secondary: string };
+
+/** Tabellen-Panel — die Berechnung unterscheidet sich bewusst je Turnierformat, weil die
+ *  zugrunde liegenden Datenfelder unterschiedlich sind: Liga/Round-Robin tragen Sieger in
+ *  `Match.winnerId`, FFA/Coop/Avg-Stats dagegen in `MatchEntry.placement`/`statsJson` — ein
+ *  reiner winnerId-Sieg-Zähler zeigt bei FFA-Formaten für jeden Teilnehmer 0 an. Spiegelt
+ *  die Logik aus LigaView/RoundRobinView/FfaView, nur kompakter fürs Overlay. */
 function TablePanel({
-  matches, participants, format,
-}: { matches: OverlayMatch[]; participants: OverlayParticipant[]; format: string | null }) {
-  const wins = new Map<string, number>();
-  const losses = new Map<string, number>();
-  for (const m of matches) {
-    if (!m.winnerId) continue;
-    wins.set(m.winnerId, (wins.get(m.winnerId) ?? 0) + 1);
-    const loserId = m.player1Id === m.winnerId ? m.player2Id : m.player1Id;
-    if (loserId) losses.set(loserId, (losses.get(loserId) ?? 0) + 1);
-  }
-  const ranked = [...participants]
-    .map(p => ({ ...p, w: wins.get(p.userId) ?? 0, l: losses.get(p.userId) ?? 0 }))
-    .sort((a, b) => b.w - a.w || a.l - b.l);
+  matches, participants, format, statFields,
+}: { matches: OverlayMatch[]; participants: OverlayParticipant[]; format: string | null; statFields: string | null }) {
+  const isFfaFamily = format === "ffa" || format === "coop_stats" || format === "avg_stats";
+  const title = format === "liga" ? "Liga-Tabelle" : isFfaFamily ? "Gesamtranking" : "Tabelle";
+  const ranked = isFfaFamily
+    ? buildFfaRanking(matches, participants, format, statFields)
+    : buildMatchRanking(matches, participants, format);
 
   return (
-    <PanelShell title={format === "liga" ? "Liga-Tabelle" : "Tabelle"}>
+    <PanelShell title={title}>
       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
         {ranked.slice(0, 12).map((p, i) => (
           <div
@@ -526,12 +581,124 @@ function TablePanel({
             <span style={{ flex: 1, fontSize: 15, fontWeight: i < 3 ? 700 : 400, color: i < 3 ? "#5eead4" : "#fff" }}>
               {displayName(p.user)}
             </span>
-            <span style={{ fontSize: 13, opacity: 0.6 }}>{p.w}S · {p.l}N</span>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", minWidth: 76 }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: i < 3 ? "#5eead4" : "#fff" }}>{p.primary}</span>
+              {p.secondary && <span style={{ fontSize: 11, opacity: 0.5 }}>{p.secondary}</span>}
+            </div>
           </div>
         ))}
       </div>
     </PanelShell>
   );
+}
+
+/** Liga (mit Unentschieden) / Round-Robin (ohne) — Sieg=3, Unentschieden=1, sortiert nach
+ *  Punkten, dann Siegen, dann Tordifferenz. Identische Punktelogik wie LigaView/RoundRobinView. */
+function buildMatchRanking(matches: OverlayMatch[], participants: OverlayParticipant[], format: string | null): RankedRow[] {
+  const supportsDraw = format === "liga";
+  type Acc = { w: number; d: number; l: number; pts: number; scored: number; conceded: number };
+  const map = new Map<string, Acc>(participants.map(p => [p.userId, { w: 0, d: 0, l: 0, pts: 0, scored: 0, conceded: 0 }]));
+
+  for (const m of matches) {
+    const isDraw = supportsDraw && !!m.playedAt && !m.winnerId;
+    if (!m.winnerId && !isDraw) continue;
+
+    if (isDraw) {
+      for (const uid of [m.player1Id, m.player2Id]) {
+        const s = uid ? map.get(uid) : undefined;
+        if (s) { s.d += 1; s.pts += 1; }
+      }
+    } else if (m.winnerId) {
+      const w = map.get(m.winnerId);
+      if (w) { w.w += 1; w.pts += 3; }
+      const loserId = m.player1Id === m.winnerId ? m.player2Id : m.player1Id;
+      const l = loserId ? map.get(loserId) : undefined;
+      if (l) l.l += 1;
+    }
+
+    if (m.player1Id && m.score1 != null) {
+      const s = map.get(m.player1Id);
+      if (s) { s.scored += m.score1; s.conceded += m.score2 ?? 0; }
+    }
+    if (m.player2Id && m.score2 != null) {
+      const s = map.get(m.player2Id);
+      if (s) { s.scored += m.score2; s.conceded += m.score1 ?? 0; }
+    }
+  }
+
+  return participants
+    .map(p => {
+      const s = map.get(p.userId)!;
+      const secondary = supportsDraw ? `${s.w}S · ${s.d}U · ${s.l}N` : `${s.w}S · ${s.l}N`;
+      return { userId: p.userId, user: p.user, s, secondary, primary: `${s.pts} Pkt.` };
+    })
+    .sort((a, b) => b.s.pts - a.s.pts || b.s.w - a.s.w || (b.s.scored - b.s.conceded) - (a.s.scored - a.s.conceded));
+}
+
+/** FFA / Coop-Stats / Avg-Stats — Sieger stecken in MatchEntry, nicht in Match.winnerId.
+ *  coop_stats zählt "Match Win"-Flags, avg_stats den Durchschnitt über alle Stat-Felder,
+ *  ffa die Summe des ersten (primären) Stat-Felds — identische Sortierlogik wie FfaView. */
+function buildFfaRanking(
+  matches: OverlayMatch[], participants: OverlayParticipant[], format: string, statFieldsJson: string | null,
+): RankedRow[] {
+  let statFields: string[] = [];
+  try { statFields = statFieldsJson ? JSON.parse(statFieldsJson) : []; } catch { /* ignore */ }
+  const isAvg  = format === "avg_stats";
+  const isCoop = format === "coop_stats";
+
+  const totals = new Map<string, { stats: Record<string, number>; matchCount: number }>(
+    participants.map(p => [p.userId, { stats: {}, matchCount: 0 }])
+  );
+  for (const m of matches) {
+    if (!m.playedAt) continue;
+    for (const e of m.entries) {
+      if (!e.userId) continue;
+      let t = totals.get(e.userId);
+      if (!t) { t = { stats: {}, matchCount: 0 }; totals.set(e.userId, t); }
+      t.matchCount += 1;
+      if (e.statsJson) {
+        try {
+          const s = JSON.parse(e.statsJson) as Record<string, number>;
+          for (const [k, v] of Object.entries(s)) t.stats[k] = (t.stats[k] ?? 0) + v;
+        } catch { /* ignore */ }
+      }
+    }
+  }
+
+  return participants
+    .map(p => {
+      const t = totals.get(p.userId) ?? { stats: {}, matchCount: 0 };
+      let primary: string;
+      if (isCoop) {
+        primary = `${t.stats["Match Win"] ?? 0} Siege`;
+      } else if (isAvg) {
+        const avg = statFields.length > 0 && t.matchCount > 0
+          ? statFields.map(f => (t.stats[f] ?? 0) / t.matchCount).reduce((a, b) => a + b, 0) / statFields.length
+          : 0;
+        primary = t.matchCount > 0 ? `Ø ${avg.toFixed(1)}` : "–";
+      } else {
+        const primaryField = statFields[0];
+        primary = primaryField ? `${t.stats[primaryField] ?? 0} ${primaryField}` : `${t.matchCount} Runden`;
+      }
+      return { userId: p.userId, user: p.user, t, primary, secondary: "" };
+    })
+    .sort((a, b) => {
+      if (a.t.matchCount === 0 && b.t.matchCount === 0) return 0;
+      if (a.t.matchCount === 0) return 1;
+      if (b.t.matchCount === 0) return -1;
+      if (isCoop) return (b.t.stats["Match Win"] ?? 0) - (a.t.stats["Match Win"] ?? 0);
+      if (isAvg) {
+        const avgOf = (t: typeof a.t) => statFields.length > 0
+          ? statFields.map(f => (t.stats[f] ?? 0) / t.matchCount).reduce((s, v) => s + v, 0) / statFields.length
+          : 0;
+        return avgOf(b.t) - avgOf(a.t);
+      }
+      for (const f of statFields) {
+        const diff = (b.t.stats[f] ?? 0) - (a.t.stats[f] ?? 0);
+        if (diff !== 0) return diff;
+      }
+      return 0;
+    });
 }
 
 /* ── Teilnehmer-Panel ── */
