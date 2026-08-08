@@ -561,10 +561,25 @@ function PanelShell({ title, children }: { title: string; children: React.ReactN
       }}
     >
       <TopEdge radius={16} />
-      <p style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#5eead4", margin: "0 0 9px" }}>
-        {title}
-      </p>
-      {children}
+      {/* Wasserzeichen — füllt die Kachel, bleibt aber weit im Hintergrund (niedrige Opacity,
+         z-index 0) und stört den eigentlichen Inhalt (z-index 1) nicht beim Lesen. */}
+      {/* eslint-disable-next-line @next/next/no-img-element -- OBS-Browser-Source, kein Next-Image-Optimierungspfad nötig */}
+      <img
+        src={BRAND_LOGO}
+        alt=""
+        style={{
+          position: "absolute", inset: 0, width: "100%", height: "100%",
+          objectFit: "contain", padding: 28,
+          opacity: 0.05, filter: "grayscale(1)",
+          pointerEvents: "none",
+        }}
+      />
+      <div style={{ position: "relative", zIndex: 1 }}>
+        <p style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#5eead4", margin: "0 0 9px" }}>
+          {title}
+        </p>
+        {children}
+      </div>
     </div>
   );
 }
