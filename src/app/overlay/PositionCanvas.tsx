@@ -3,7 +3,8 @@
 import { useRef, useState } from "react";
 import type { LucideIcon } from "lucide-react";
 
-export type Pos = { x: number; y: number }; // Prozent von 1920×1080, oben links des Elements
+/** scale skaliert die gesamte Kachel samt Inhalt (CSS transform) — 1 = Originalgröße. */
+export type Pos = { x: number; y: number; scale?: number }; // Prozent von 1920×1080, oben links des Elements
 
 export type CanvasElementOption<K extends string> = {
   key: K;
@@ -14,7 +15,11 @@ export type CanvasElementOption<K extends string> = {
   fixed?: boolean;
 };
 
-const SNAP_THRESHOLD_PCT = 1.2; // wie nah zwei Kanten sein müssen, um einzurasten
+const SNAP_THRESHOLD_PCT = 1.0; // wie nah zwei Kanten sein müssen, um einzurasten
+// Feste Rasterweite als Fallback, wenn keine Kante eines anderen Elements nah genug ist —
+// macht die Anzahl möglicher Einrastpunkte spürbar kleiner als stufenloses Ziehen.
+const GRID_STEP_PCT = 10;
+function snapToGrid(v: number): number { return Math.round(v / GRID_STEP_PCT) * GRID_STEP_PCT; }
 
 /** 16:9-Vorschau des OBS-Canvas mit ziehbaren Boxen je aktivem Element — von beiden
  *  Overlay-Typen (Event, Profil) genutzt, daher generisch über den Element-Schlüsseltyp.
@@ -41,7 +46,8 @@ export default function PositionCanvas<K extends string>({
   const isFixed = (key: K) => optionByKey.get(key)?.fixed ?? false;
 
   function pctSize(key: K): { w: number; h: number } {
-    return { w: (elementSize[key].width / 1920) * 100, h: (elementSize[key].height / 1080) * 100 };
+    const scale = positions[key]?.scale ?? 1;
+    return { w: (elementSize[key].width / 1920) * 100 * scale, h: (elementSize[key].height / 1080) * 100 * scale };
   }
   function overlaps(a: Pos, aKey: K, b: Pos, bKey: K): boolean {
     const sa = pctSize(aKey);
@@ -82,10 +88,16 @@ export default function PositionCanvas<K extends string>({
         const dy = Math.abs(positions[k].y - rawY);
         if (dy < bestDy) { bestDy = dy; snappedY = positions[k].y; }
       }
+      // Keine Kante eines anderen Elements nah genug — auf das gröbere feste Raster einrasten,
+      // statt frei/stufenlos zu bleiben ("weniger mögliche Einrastpunkte", siehe Feedback).
+      if (snappedX === rawX) snappedX = snapToGrid(rawX);
+      if (snappedY === rawY) snappedY = snapToGrid(rawY);
 
+      const ownScale = positions[drag.key]?.scale;
       const candidate: Pos = {
         x: Math.min(100 - size.w, Math.max(0, snappedX)),
         y: Math.min(100 - size.h, Math.max(0, snappedY)),
+        ...(ownScale !== undefined ? { scale: ownScale } : {}),
       };
 
       const fixedOthers = others.filter(isFixed);
@@ -101,7 +113,7 @@ export default function PositionCanvas<K extends string>({
 
       const stackable = others.filter(k => !isFixed(k));
       const stackPartner = stackable.find(k => overlaps(candidate, drag.key, positions[k], k));
-      onChange(drag.key, stackPartner ? positions[stackPartner] : candidate);
+      onChange(drag.key, stackPartner ? { ...positions[stackPartner], scale: ownScale ?? positions[stackPartner].scale } : candidate);
     };
     const handleUp = () => {
       dragState.current = null;
@@ -134,7 +146,7 @@ export default function PositionCanvas<K extends string>({
         border: "1px solid rgba(255,255,255,0.08)",
         backgroundImage:
           "linear-gradient(rgba(20,184,166,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(20,184,166,0.06) 1px, transparent 1px)",
-        backgroundSize: "5% 5%",
+        backgroundSize: `${GRID_STEP_PCT}% ${GRID_STEP_PCT}%`,
       }}
     >
       {[...groups.entries()].map(([posKey, keys]) => {

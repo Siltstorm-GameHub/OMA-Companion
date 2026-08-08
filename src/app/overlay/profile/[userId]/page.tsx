@@ -4,19 +4,34 @@ import ProfileOverlayClient, { type ProfileElementKey, type ProfileLayoutPositio
 
 const ELEMENT_KEYS: ProfileElementKey[] = ["brand", "rank", "nextEvent", "favorites", "badges"];
 
-/** `?layout=brand:1.5,90.6;rank:20,90.6` — Prozent von 1920×1080 je Element, siehe
- *  Event-Overlay-Pendant in overlay/[id]/page.tsx für die identische Notation. */
+/** `?layout=brand:1.5,90.6;rank:20,90.6,s1.2,c8-4` — Prozent von 1920×1080 je Element, siehe
+ *  Event-Overlay-Pendant in overlay/[id]/page.tsx für die identische Notation (optionale
+ *  `s<scale>`- und `c<onSec>-<offSec>`-Segmente). */
 function parseLayout(raw: string | undefined): ProfileLayoutPositions | null {
   if (!raw) return null;
   const result: ProfileLayoutPositions = {};
   for (const part of raw.split(";")) {
     const [key, coords] = part.split(":");
     if (!coords || !(ELEMENT_KEYS as string[]).includes(key)) continue;
-    const [xStr, yStr] = coords.split(",");
-    const x = parseFloat(xStr);
-    const y = parseFloat(yStr);
+    const segments = coords.split(",");
+    const x = parseFloat(segments[0]);
+    const y = parseFloat(segments[1]);
     if (Number.isNaN(x) || Number.isNaN(y)) continue;
-    result[key as ProfileElementKey] = { x: Math.min(100, Math.max(0, x)), y: Math.min(100, Math.max(0, y)) };
+    const entry: ProfileLayoutPositions[ProfileElementKey] = { x: Math.min(100, Math.max(0, x)), y: Math.min(100, Math.max(0, y)) };
+    for (const seg of segments.slice(2)) {
+      if (seg.startsWith("s")) {
+        const scale = parseFloat(seg.slice(1));
+        if (!Number.isNaN(scale) && scale > 0) entry!.scale = Math.min(2, Math.max(0.5, scale));
+      } else if (seg.startsWith("c")) {
+        const [onStr, offStr] = seg.slice(1).split("-");
+        const onSec = parseFloat(onStr);
+        const offSec = parseFloat(offStr);
+        if (!Number.isNaN(onSec) && !Number.isNaN(offSec) && onSec > 0 && offSec > 0) {
+          entry!.cycle = { onSec, offSec };
+        }
+      }
+    }
+    result[key as ProfileElementKey] = entry;
   }
   return Object.keys(result).length > 0 ? result : null;
 }
