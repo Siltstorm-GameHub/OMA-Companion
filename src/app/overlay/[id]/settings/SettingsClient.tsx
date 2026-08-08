@@ -6,7 +6,7 @@ import { toast } from "sonner";
 
 type PanelKey = "bracket" | "table" | "participants";
 type PanelOption = { key: PanelKey; label: string; icon: typeof LayoutGrid; forFormats: string[] | null };
-type Corner = "top-left" | "top-right" | "bottom-left" | "bottom-right";
+type Corner = "top-left" | "top-right" | "middle-left" | "middle-right" | "bottom-left" | "bottom-right";
 
 const PANEL_OPTIONS: PanelOption[] = [
   { key: "bracket",      label: "Turnierbaum",  icon: LayoutGrid, forFormats: ["single_elimination", "double_elimination"] },
@@ -17,6 +17,8 @@ const PANEL_OPTIONS: PanelOption[] = [
 const CORNERS: { key: Corner; label: string }[] = [
   { key: "top-left",     label: "Oben links" },
   { key: "top-right",    label: "Oben rechts" },
+  { key: "middle-left",  label: "Mitte links" },
+  { key: "middle-right", label: "Mitte rechts" },
   { key: "bottom-left",  label: "Unten links" },
   { key: "bottom-right", label: "Unten rechts" },
 ];

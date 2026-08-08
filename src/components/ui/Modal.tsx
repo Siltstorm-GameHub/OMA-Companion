@@ -24,19 +24,26 @@ export function Modal({ open, onClose, title, size = "md", children }: ModalProp
   const triggerRef = useRef<HTMLElement | null>(null);
   const isDrawer = size === "drawer";
 
+  // onClose per Ref referenzieren statt als Effekt-Dependency: Aufrufer geben hier oft bei jedem
+  // Render eine neue Funktionsreferenz rein (z.B. ConfirmDialog bei jedem Tastendruck im
+  // Eingabefeld) — mit onClose als Dependency würde der Effekt dann erneut laufen und
+  // panelRef.current?.focus() den Fokus aus dem Eingabefeld zurück aufs Panel reißen.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   useEffect(() => {
     if (!open) return;
     triggerRef.current = document.activeElement as HTMLElement | null;
     panelRef.current?.focus();
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") onCloseRef.current();
     };
     window.addEventListener("keydown", handler);
     return () => {
       window.removeEventListener("keydown", handler);
       triggerRef.current?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open && !isDrawer) return null;
 
