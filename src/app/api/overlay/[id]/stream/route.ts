@@ -1,5 +1,8 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseFavoriteGames } from "@/lib/favorite-games";
+import { getBadgeDef } from "@/lib/badges";
+import { badgeArt } from "@/lib/badge-art";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +12,7 @@ export const dynamic = "force-dynamic";
 const MAX_STREAM_MS  = 4 * 60 * 1000;
 const POLL_MS        = 1000;
 const HEARTBEAT_MS   = 15000;
+const MAX_SHOWCASE_BADGES = 3;
 
 async function loadOverlayState(eventId: string) {
   const event = await prisma.event.findUnique({
@@ -50,15 +54,50 @@ async function loadOverlayState(eventId: string) {
   };
 }
 
+/** Löst die vom User selbst gewählten Showcase-Abzeichen (max. 3) zu Icon/Name auf.
+ *  Custom-Abzeichen (`custom:<id>`) haben aktuell keine eigene Bild-Registry (siehe
+ *  lib/badge-art.ts) — sie bekommen einen generischen Platzhalter statt eines zusätzlichen
+ *  DB-Joins, das ist die Ausnahme, nicht die Regel (System-Abzeichen decken den Großteil ab). */
+function resolveShowcaseBadges(json: string | null): { icon: string; name: string; image: string | null }[] {
+  let keys: string[] = [];
+  try { keys = json ? JSON.parse(json) : []; } catch { /* ignore */ }
+  return keys.slice(0, MAX_SHOWCASE_BADGES).map(key => {
+    if (key.startsWith("custom:")) {
+      return { icon: "🏅", name: "Sonderabzeichen", image: badgeArt(key) };
+    }
+    const def = getBadgeDef(key);
+    return { icon: def?.icon ?? "🏅", name: def?.name ?? key, image: badgeArt(key) };
+  });
+}
+
+async function loadStreamer(streamerId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: streamerId },
+    select: { id: true, name: true, username: true, image: true, rankPoints: true, twitchLogin: true, favoriteGamesJson: true, showcaseBadgesJson: true },
+  });
+  if (!user) return null;
+  return {
+    id: user.id, name: user.name, username: user.username, image: user.image, rankPoints: user.rankPoints, twitchLogin: user.twitchLogin,
+    favoriteGames: parseFavoriteGames(user.favoriteGamesJson),
+    badges: resolveShowcaseBadges(user.showcaseBadgesJson),
+  };
+}
+
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: eventId } = await params;
   const token = req.nextUrl.searchParams.get("token");
+  const streamerId = req.nextUrl.searchParams.get("streamer");
   if (!token) return new Response("Missing token", { status: 401 });
 
   const event = await prisma.event.findUnique({ where: { id: eventId }, select: { overlayToken: true } });
   if (!event?.overlayToken || event.overlayToken !== token) {
     return new Response("Invalid token", { status: 403 });
   }
+
+  // Streamer-Profildaten ändern sich praktisch nie während eine Stream läuft (Lieblingsspiele/
+  // Abzeichen-Showcase werden im Profil gepflegt, nicht live) — einmal pro Verbindung laden statt
+  // bei jedem Poll-Tick erneut abzufragen.
+  const streamer = streamerId ? await loadStreamer(streamerId).catch(() => null) : null;
 
   const encoder = new TextEncoder();
   let closed = false;
@@ -80,10 +119,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         try {
           const state = await loadOverlayState(eventId);
           if (!state) return;
-          const payload = JSON.stringify(state);
-          if (payload !== lastPayload) {
-            lastPayload = payload;
-            send("update", state);
+          const payload = { ...state, streamer };
+          const payloadStr = JSON.stringify(payload);
+          if (payloadStr !== lastPayload) {
+            lastPayload = payloadStr;
+            send("update", payload);
           }
         } catch {
           // transienter DB-Fehler — beim nächsten Tick erneut versuchen

@@ -38,6 +38,19 @@ function displayName(u: OverlayUser | undefined | null): string {
   return u?.username ?? u?.name ?? "Unbekannt";
 }
 
+type FavoriteGame = { name: string; appId: number | null };
+type ShowcaseBadge = { icon: string; name: string; image: string | null };
+type OverlayStreamer = {
+  id: string;
+  name: string | null;
+  username: string | null;
+  image: string | null;
+  rankPoints: number;
+  twitchLogin: string | null;
+  favoriteGames: FavoriteGame[];
+  badges: ShowcaseBadge[];
+};
+
 type OverlayState = {
   id: string;
   title: string;
@@ -48,23 +61,35 @@ type OverlayState = {
   statFields: string | null;
   matches: OverlayMatch[];
   participants: OverlayParticipant[];
+  /** Profildaten des Streamers, der diesen Link erzeugt hat (siehe stream-register) — null bei
+   *  älteren Links ohne `streamer`-Parameter oder wenn der User seither gelöscht wurde. */
+  streamer: OverlayStreamer | null;
 };
 
 type PanelKey = "bracket" | "table" | "participants";
 export type Corner = "top-left" | "top-right" | "bottom-left" | "bottom-right" | "middle-left" | "middle-right";
 
 /** Frei platzierbare Overlay-Elemente — jedes lässt sich in den Overlay-Einstellungen einzeln
- *  per Drag & Drop positionieren. */
-export type ElementKey = "brand" | "ticker" | "panel";
+ *  per Drag & Drop positionieren. "brand" ist als einziges fix und nie Teil eines Stapels
+ *  (siehe STACKABLE_ELEMENTS) — alle anderen dürfen sich zu einer rotierenden Gruppe stapeln,
+ *  wenn der Streamer sie in den Einstellungen aufeinander zieht. */
+export type ElementKey = "brand" | "liveinfo" | "ticker" | "bracket" | "table" | "participants" | "favorites" | "badges";
+export const STACKABLE_ELEMENTS: ElementKey[] = ["liveinfo", "ticker", "bracket", "table", "participants", "favorites", "badges"];
 export type LayoutPositions = Partial<Record<ElementKey, { x: number; y: number }>>; // Prozent von 1920×1080, oben links des Elements
 
 /** Nominelle Kachelgrößen (px bei 1920×1080) — für die Kollisionsvermeidung beim Ziehen in
- *  den Einstellungen. Etwas großzügiger als die tatsächliche Mindestgröße bemessen (Ticker/
- *  Panel-Breite variiert mit Inhalt), damit sich Elemente auch bei mehr Inhalt nie berühren. */
+ *  den Einstellungen und für die Breite der jeweils aktiven Kachel im Overlay selbst. Etwas
+ *  großzügiger als die tatsächliche Mindestgröße bemessen (Inhalt variiert), damit sich
+ *  Elemente in den Einstellungen auch bei mehr Inhalt nie ungewollt berühren. */
 export const ELEMENT_SIZE: Record<ElementKey, { width: number; height: number }> = {
-  brand: { width: 300, height: 78 },
-  ticker: { width: 620, height: 78 },
-  panel: { width: 620, height: 360 },
+  brand:        { width: 300, height: 78 },
+  liveinfo:     { width: 320, height: 60 },
+  ticker:       { width: 620, height: 78 },
+  bracket:      { width: 620, height: 360 },
+  table:        { width: 460, height: 310 },
+  participants: { width: 460, height: 310 },
+  favorites:    { width: 460, height: 220 },
+  badges:       { width: 460, height: 140 },
 };
 
 const PANEL_FADE_MS = 900;
@@ -278,6 +303,7 @@ export default function OverlayClient({
   showTicker,
   showBrand,
   layout,
+  streamerId,
 }: {
   eventId: string;
   token: string;
@@ -293,6 +319,9 @@ export default function OverlayClient({
    *  greift die alte gruppierte/Ecken-basierte Standardplatzierung — bestehende Links bleiben
    *  dadurch gültig. */
   layout: LayoutPositions | null;
+  /** User, der den Link erzeugt hat (siehe stream-register) — versorgt die Flip-Kachel-Rückseite
+   *  sowie Lieblingsspiele/Abzeichen mit echten Profildaten. Null bei älteren Links. */
+  streamerId: string | null;
 }) {
   const [state, setState] = useState<OverlayState | null>(null);
   const esRef = useRef<EventSource | null>(null);
@@ -302,7 +331,8 @@ export default function OverlayClient({
 
     function connect() {
       if (cancelled) return;
-      const es = new EventSource(`/api/overlay/${eventId}/stream?token=${encodeURIComponent(token)}`);
+      const streamerParam = streamerId ? `&streamer=${encodeURIComponent(streamerId)}` : "";
+      const es = new EventSource(`/api/overlay/${eventId}/stream?token=${encodeURIComponent(token)}${streamerParam}`);
       esRef.current = es;
       es.addEventListener("update", (e) => {
         try { setState(JSON.parse((e as MessageEvent).data)); } catch { /* ignore */ }
@@ -318,7 +348,7 @@ export default function OverlayClient({
       cancelled = true;
       esRef.current?.close();
     };
-  }, [eventId, token]);
+  }, [eventId, token, streamerId]);
 
   const userByUserId = new Map((state?.participants ?? []).map(p => [p.userId, p.user]));
   const userOf = (userId: string | null): OverlayUser | undefined => (userId ? userByUserId.get(userId) : undefined);
@@ -326,6 +356,7 @@ export default function OverlayClient({
   const fmt = state?.format ?? format;
   const matches = state?.matches ?? [];
   const participantCount = state?.participants.length ?? 0;
+  const ticker = pickTickerMatch(matches);
 
   const isElimination = fmt === "single_elimination" || fmt === "double_elimination";
   const defaultPanels: PanelKey[] = isElimination ? ["bracket", "participants"] : ["table", "participants"];
@@ -335,9 +366,34 @@ export default function OverlayClient({
     if (key === "participants") return participantCount > 0;
     return false;
   });
+  const legacyRotator = usePanelRotator(availablePanels, rotateSeconds);
 
-  const rotator = usePanelRotator(availablePanels, rotateSeconds);
-  const ticker = pickTickerMatch(matches);
+  // Welche der stapelbaren Elemente überhaupt Inhalt hätten — dieselbe Datenverfügbarkeit wie
+  // im alten System, nur jetzt pro Einzelelement statt pro Panel-Gruppe geprüft.
+  const elementAvailable: Record<ElementKey, boolean> = {
+    brand: true,
+    liveinfo: !!(ticker || state?.status === "active" || state?.game),
+    ticker: !!ticker,
+    bracket: matches.length > 0,
+    table: matches.length > 0 || participantCount > 0,
+    participants: participantCount > 0,
+    favorites: !!state?.streamer?.favoriteGames.length,
+    badges: !!state?.streamer?.badges.length,
+  };
+
+  // Stapel bilden: alle aktiven, stapelbaren Elemente mit identischer Layout-Position (auf
+  // 0.1% gerundet, die Einstellungsseite rastet beim Übereinanderziehen exakt ein) landen in
+  // derselben rotierenden Gruppe. Unterschiedliche Positionen = eigenständige Kacheln.
+  const stacks: Record<string, { pos: { x: number; y: number }; keys: ElementKey[] }> = {};
+  if (layout) {
+    for (const key of STACKABLE_ELEMENTS) {
+      const pos = layout[key];
+      if (!pos || !elementAvailable[key]) continue;
+      const posKey = `${pos.x.toFixed(1)},${pos.y.toFixed(1)}`;
+      (stacks[posKey] ??= { pos, keys: [] }).keys.push(key);
+    }
+  }
+  const stackedRotator = useStackedElements(stacks, rotateSeconds);
 
   return (
     <div
@@ -353,13 +409,13 @@ export default function OverlayClient({
       <MotionStyles />
 
       {/* Ohne eigenes `layout` bleiben Brand- und Match-Kachel wie bisher als gemeinsame Reihe
-         unten links gruppiert (alte Links funktionieren unverändert). Mit `layout` bekommt
-         jedes Element seine frei gezogene Position — beide Zweige rendern dieselben
-         Unterkomponenten, nur der Positionierungs-Wrapper unterscheidet sich. */}
+         unten links gruppiert und Turnierbaum/Tabelle/Teilnehmer als eine feste Ecken-Gruppe
+         (alte Links funktionieren unverändert). Mit `layout` übernimmt das neue, vollständig
+         individuelle Stapel-System weiter unten. */}
       {!layout && state && (showBrand || (showTicker && ticker)) && (
         <div style={{ position: "absolute", left: EDGE_MARGIN, bottom: TICKER_BOTTOM, display: "flex", alignItems: "center", gap: 16 }}>
           {showBrand && (
-            <BrandFlipTile
+            <LegacyBrandFlipTile
               eventTitle={state.title ?? eventTitle}
               game={state.game}
               isLive={ticker ? !ticker.winnerId && !ticker.playedAt : state.status === "active"}
@@ -369,63 +425,116 @@ export default function OverlayClient({
         </div>
       )}
 
-      {layout && state && showBrand && (
-        <div style={elementPositionStyle(layout.brand)}>
-          <BrandFlipTile
-            eventTitle={state.title ?? eventTitle}
-            game={state.game}
-            isLive={ticker ? !ticker.winnerId && !ticker.playedAt : state.status === "active"}
-          />
-        </div>
-      )}
-      {layout && showTicker && ticker && (
-        <div style={elementPositionStyle(layout.ticker)}>
-          <MatchTicker match={ticker} userOf={userOf} />
+      {!layout && state && (legacyRotator.active || legacyRotator.previous) && (
+        <div style={{ ...cornerStyle(corner), width: panelWidthFor((legacyRotator.active ?? legacyRotator.previous)!.key) }}>
+          {/* Alte und neue Kachel überlappen sich für PANEL_FADE_MS — die alte blendet aus/verschwimmt,
+             während die neue schon einblendet, statt einer sichtbaren Lücke dazwischen. */}
+          {legacyRotator.previous && (
+            <div
+              style={{
+                position: legacyRotator.active ? "absolute" : "static",
+                inset: 0,
+                transition: `opacity ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1), transform ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1), filter ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1)`,
+                ...panelMotionStyle(corner, legacyRotator.previous.phase),
+              }}
+            >
+              <PanelContent panelKey={legacyRotator.previous.key} matches={matches} userOf={userOf} format={fmt} statFields={state.statFields} participants={state.participants} />
+            </div>
+          )}
+          {legacyRotator.active && (
+            <div
+              style={{
+                position: legacyRotator.previous ? "absolute" : "static",
+                inset: 0,
+                transition: `opacity ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1), transform ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1), filter ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1)`,
+                ...panelMotionStyle(corner, legacyRotator.active.phase),
+              }}
+            >
+              <PanelContent panelKey={legacyRotator.active.key} matches={matches} userOf={userOf} format={fmt} statFields={state.statFields} participants={state.participants} />
+            </div>
+          )}
         </div>
       )}
 
-      {state && (rotator.active || rotator.previous) && (
-        <div
-          style={
-            layout?.panel
-              ? { ...elementPositionStyle(layout.panel), width: panelWidthFor((rotator.active ?? rotator.previous)!.key) }
-              : { ...cornerStyle(corner), width: panelWidthFor((rotator.active ?? rotator.previous)!.key) }
-          }
-        >
-          {/* Alte und neue Kachel überlappen sich für PANEL_FADE_MS — die alte blendet aus/verschwimmt,
-             während die neue schon einblendet, statt einer sichtbaren Lücke dazwischen. */}
-          {rotator.previous && (
-            <div
-              style={{
-                position: rotator.active ? "absolute" : "static",
-                inset: 0,
-                transition: `opacity ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1), transform ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1), filter ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1)`,
-                ...panelMotionStyle(corner, rotator.previous.phase),
-              }}
-            >
-              <PanelContent panelKey={rotator.previous.key} matches={matches} userOf={userOf} format={fmt} statFields={state.statFields} participants={state.participants} />
-            </div>
-          )}
-          {rotator.active && (
-            <div
-              style={{
-                position: rotator.previous ? "absolute" : "static",
-                inset: 0,
-                transition: `opacity ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1), transform ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1), filter ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1)`,
-                ...panelMotionStyle(corner, rotator.active.phase),
-              }}
-            >
-              <PanelContent panelKey={rotator.active.key} matches={matches} userOf={userOf} format={fmt} statFields={state.statFields} participants={state.participants} />
-            </div>
-          )}
+      {/* ── Neues System: brand ist die einzige fixe, nie gestapelte Kachel ── */}
+      {layout && state && layout.brand && (
+        <div style={elementPositionStyle(layout.brand)}>
+          <IdentityFlipTile streamer={state.streamer} />
         </div>
       )}
+
+      {/* ── Jeder Stapel ist eine rotierende (oder bei nur einem Mitglied statische) Gruppe ── */}
+      {layout && state && Object.entries(stacks).map(([posKey, stack]) => {
+        const slot = stackedRotator.active[posKey] ?? null;
+        const prevSlot = stackedRotator.previous[posKey] ?? null;
+        if (!slot && !prevSlot) return null;
+        const width = Math.max(...stack.keys.map(k => ELEMENT_SIZE[k].width));
+        return (
+          <div key={posKey} style={{ ...elementPositionStyle(stack.pos), width }}>
+            {prevSlot && (
+              <div
+                style={{
+                  position: slot ? "absolute" : "static",
+                  inset: 0,
+                  transition: `opacity ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1), transform ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1), filter ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1)`,
+                  ...panelMotionStyle(corner, prevSlot.phase),
+                }}
+              >
+                <ElementContent elementKey={prevSlot.key} matches={matches} userOf={userOf} format={fmt} statFields={state.statFields} participants={state.participants} streamer={state.streamer} eventTitle={state.title ?? eventTitle} game={state.game} isLive={ticker ? !ticker.winnerId && !ticker.playedAt : state.status === "active"} />
+              </div>
+            )}
+            {slot && (
+              <div
+                style={{
+                  position: prevSlot ? "absolute" : "static",
+                  inset: 0,
+                  transition: `opacity ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1), transform ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1), filter ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1)`,
+                  ...panelMotionStyle(corner, slot.phase),
+                }}
+              >
+                <ElementContent elementKey={slot.key} matches={matches} userOf={userOf} format={fmt} statFields={state.statFields} participants={state.participants} streamer={state.streamer} eventTitle={state.title ?? eventTitle} game={state.game} isLive={ticker ? !ticker.winnerId && !ticker.playedAt : state.status === "active"} />
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
 
 function panelWidthFor(key: PanelKey): number {
   return key === "bracket" ? PANEL_WIDTH : PANEL_WIDTH_COMPACT;
+}
+
+/** Dispatcher fürs neue, vollständig generalisierte Stapel-System — analog zu PanelContent,
+ *  nur über den kompletten stapelbaren Elementsatz statt nur Bracket/Table/Participants. */
+function ElementContent({
+  elementKey, matches, userOf, format, statFields, participants, streamer, eventTitle, game, isLive,
+}: {
+  elementKey: ElementKey;
+  matches: OverlayMatch[];
+  userOf: (id: string | null) => OverlayUser | undefined;
+  format: string | null;
+  statFields: string | null;
+  participants: OverlayParticipant[];
+  streamer: OverlayStreamer | null;
+  eventTitle: string;
+  game: string | null;
+  isLive: boolean;
+}) {
+  switch (elementKey) {
+    case "liveinfo":     return <LiveInfoTile eventTitle={eventTitle} game={game} isLive={isLive} />;
+    case "ticker": {
+      const match = pickTickerMatch(matches);
+      return match ? <MatchTicker match={match} userOf={userOf} /> : null;
+    }
+    case "bracket":      return <BracketPanel matches={matches} userOf={userOf} />;
+    case "table":        return <TablePanel matches={matches} participants={participants} format={format} statFields={statFields} />;
+    case "participants": return <ParticipantsPanel participants={participants} />;
+    case "favorites":    return <FavoritesPanel games={streamer?.favoriteGames ?? []} />;
+    case "badges":       return <BadgesPanel badges={streamer?.badges ?? []} />;
+    default:              return null;
+  }
 }
 
 function PanelContent({
@@ -504,6 +613,67 @@ function usePanelRotator(panels: PanelKey[], rotateSeconds: number) {
   return { active, previous };
 }
 
+type ElementSlot = { key: ElementKey; phase: PanelPhase };
+
+/** Wie usePanelRotator, aber für eine zur Laufzeit variable Anzahl gleichzeitiger Stapel (ein
+ *  Stapel pro eindeutiger Layout-Position) — React verbietet, Hooks in einer Schleife mit
+ *  wechselnder Anzahl aufzurufen, daher hier EIN Hook, der intern eine Map von Position auf
+ *  Rotations-Zustand führt statt pro Stapel einen eigenen usePanelRotator-Aufruf zu brauchen. */
+function useStackedElements(buckets: Record<string, { pos: { x: number; y: number }; keys: ElementKey[] }>, rotateSeconds: number) {
+  const [active, setActive] = useState<Record<string, ElementSlot>>({});
+  const [previous, setPrevious] = useState<Record<string, ElementSlot | null>>({});
+
+  const bucketsSig = Object.entries(buckets).map(([pos, b]) => `${pos}=${b.keys.join(",")}`).sort().join("|");
+  const [prevSig, setPrevSig] = useState(bucketsSig);
+  if (bucketsSig !== prevSig) {
+    setPrevSig(bucketsSig);
+    const initActive: Record<string, ElementSlot> = {};
+    for (const [pos, b] of Object.entries(buckets)) {
+      if (b.keys.length) initActive[pos] = { key: b.keys[0], phase: "settled" };
+    }
+    setActive(initActive);
+    setPrevious({});
+  }
+
+  useEffect(() => {
+    const showMs = Math.max(4, rotateSeconds) * 1000;
+    const intervals: ReturnType<typeof setInterval>[] = [];
+    const timeouts: ReturnType<typeof setTimeout>[] = [];
+
+    for (const [pos, b] of Object.entries(buckets)) {
+      if (b.keys.length <= 1) continue;
+      const items = b.keys;
+      intervals.push(setInterval(() => {
+        setActive(curr => {
+          const currSlot = curr[pos];
+          if (currSlot) setPrevious(p => ({ ...p, [pos]: { key: currSlot.key, phase: "settled" } }));
+          const currIdx = currSlot ? items.indexOf(currSlot.key) : -1;
+          const nextIdx = (currIdx + 1) % items.length;
+          return { ...curr, [pos]: { key: items[nextIdx], phase: "enter" } };
+        });
+
+        timeouts.push(setTimeout(() => {
+          setPrevious(p => (p[pos] ? { ...p, [pos]: { key: p[pos]!.key, phase: "leave" } } : p));
+          setActive(a => (a[pos] ? { ...a, [pos]: { key: a[pos].key, phase: "settled" } } : a));
+        }, 30));
+
+        timeouts.push(setTimeout(() => {
+          setPrevious(p => ({ ...p, [pos]: null }));
+        }, 30 + PANEL_FADE_MS));
+      }, showMs));
+    }
+
+    return () => {
+      intervals.forEach(clearInterval);
+      timeouts.forEach(clearTimeout);
+    };
+    // `buckets` bewusst nicht in den Deps — siehe usePanelRotator, bucketsSig fängt echte Änderungen ab.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bucketsSig, rotateSeconds]);
+
+  return { active, previous };
+}
+
 function pickTickerMatch(matches: OverlayMatch[]): OverlayMatch | null {
   // FFA/Coop/Avg-Stats-Matches haben nie player1Id/player2Id gesetzt (die stecken in
   // entries) — ohne den entries-Fallback hier würde ein anstehendes FFA-Match nie als
@@ -523,14 +693,11 @@ const FLIP_DURATION_MS = 1100;
 const FLIP_WIDTH = 300;
 const FLIP_HEIGHT = 78;
 
-/** Flip-Card statt zweier separater Elemente: Vorderseite zeigt Live-Status/Spiel/Event,
- *  Rückseite Logo + Wortmarke — beide Infos bleiben so "immer sichtbar" (abwechselnd), ohne
- *  permanent eigenen Platz neben dem Match zu beanspruchen.
- *
- *  Wichtig: Hintergrund/Rahmen/Schatten/TopEdge sitzen jetzt auf JEDER der beiden Flächen
- *  einzeln (siehe FlipFace), nicht mehr auf einem gemeinsamen, unbeweglichen Rahmen darum —
- *  sonst dreht sich nur der Text, während die Kachel selbst optisch stillsteht. */
-function BrandFlipTile({ eventTitle, game, isLive }: { eventTitle: string; game: string | null; isLive: boolean }) {
+/** Legacy-Variante für Links ohne `layout` (vor der Einzelelement-Positionierung): Vorderseite
+ *  zeigt Live-Status/Spiel/Event, Rückseite Logo + Wortmarke. Neue, per Einstellungsseite
+ *  erzeugte Links nutzen stattdessen IdentityFlipTile (OMA-Logo ↔ Streamer) plus die separate
+ *  LiveInfoTile. */
+function LegacyBrandFlipTile({ eventTitle, game, isLive }: { eventTitle: string; game: string | null; isLive: boolean }) {
   const [flipped, setFlipped] = useState(false);
 
   useEffect(() => {
@@ -574,6 +741,148 @@ function BrandFlipTile({ eventTitle, game, isLive }: { eventTitle: string; game:
         </FlipFace>
       </div>
     </div>
+  );
+}
+
+/** Neue, fixe Marken-Kachel: Vorderseite OMA-Logo+Wortmarke, Rückseite Avatar+Name+Twitch-Icon
+ *  des Streamers, der diesen Link erzeugt hat. Ohne bekannten Streamer (sehr alte Links, oder
+ *  wenn der User seither gelöscht wurde) bleibt sie als einzelne, nicht drehende OMA-Fläche
+ *  stehen — ein Flip auf eine leere Rückseite wäre sinnlos. */
+function IdentityFlipTile({ streamer }: { streamer: OverlayStreamer | null }) {
+  const [flipped, setFlipped] = useState(false);
+
+  useEffect(() => {
+    if (!streamer) return;
+    const t = setInterval(() => setFlipped(f => !f), FLIP_INTERVAL_MS);
+    return () => clearInterval(t);
+  }, [streamer]);
+
+  const omaFace = (
+    <FlipFace justify="center">
+      {/* eslint-disable-next-line @next/next/no-img-element -- OBS-Browser-Source, kein Next-Image-Optimierungspfad nötig */}
+      <img src={BRAND_LOGO} alt="" width={32} height={32} style={{ display: "block", filter: "drop-shadow(0 0 8px rgba(20,184,166,0.4))" }} />
+      <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "#fff" }}>
+        Old Masters Ally
+      </span>
+    </FlipFace>
+  );
+
+  if (!streamer) {
+    return <div style={{ position: "relative", width: FLIP_WIDTH, height: FLIP_HEIGHT }}>{omaFace}</div>;
+  }
+
+  const name = displayName(streamer);
+  return (
+    <div style={{ position: "relative", width: FLIP_WIDTH, height: FLIP_HEIGHT, perspective: 500 }}>
+      <div
+        className="oma-flip-inner"
+        style={{
+          position: "relative",
+          width: "100%",
+          height: "100%",
+          transformStyle: "preserve-3d",
+          transition: `transform ${FLIP_DURATION_MS}ms cubic-bezier(0.6,0.04,0.32,0.96)`,
+          transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
+        }}
+      >
+        {omaFace}
+        <FlipFace back>
+          <RankedAvatar rankPoints={streamer.rankPoints} src={streamer.image} alt={name} size={36} />
+          <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {name}
+            </span>
+            {streamer.twitchLogin && (
+              <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 500, color: "#c4a3ff" }}>
+                <TwitchGlyph size={12} />
+                {streamer.twitchLogin}
+              </span>
+            )}
+          </div>
+        </FlipFace>
+      </div>
+    </div>
+  );
+}
+
+/** Kleines Twitch-Glyphen-Icon (offizielles "Glitch"-Symbol, vereinfacht) — keine Icon-Library
+ *  im Projekt führt Twitch, also als winziges Inline-SVG statt eines externen Assets. */
+function TwitchGlyph({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="#9146FF" aria-hidden="true">
+      <path d="M4.3 2 2 7.4v13h5.4V23l3.2-2.6h4.3L21.9 14V2H4.3Zm15.4 11-3.6 3.6h-4.3l-3.2 2.6v-2.6H5.7V3.6h14v9.4Z" />
+      <path d="M16.5 6.4h1.8v5.4h-1.8V6.4Zm-4.9 0h1.8v5.4h-1.8V6.4Z" />
+    </svg>
+  );
+}
+
+/** Eigenständige, nicht drehende Kachel für "Live + Eventname + Spielname" — bis vor Kurzem der
+ *  Vorderseite der Brand-Flip-Kachel, jetzt ein eigenes, frei positionierbares Element. */
+function LiveInfoTile({ eventTitle, game, isLive }: { eventTitle: string; game: string | null; isLive: boolean }) {
+  return (
+    <TickerTile breathe={isLive} bodyStyle={{ width: ELEMENT_SIZE.liveinfo.width, height: ELEMENT_SIZE.liveinfo.height, padding: "0 20px" }}>
+      <LiveBadge live={isLive} />
+      <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+        <span style={{ fontSize: 14, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {eventTitle}
+        </span>
+        {game && (
+          <span style={{ fontSize: 11, color: "rgba(94,234,212,0.75)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {game}
+          </span>
+        )}
+      </div>
+    </TickerTile>
+  );
+}
+
+/** Lieblingsspiele-Showcase des Streamers (`favoriteGamesJson` aus dem Profil). */
+function FavoritesPanel({ games }: { games: FavoriteGame[] }) {
+  return (
+    <PanelShell title="Lieblingsspiele">
+      <AutoScrollViewport axis="y" size={ELEMENT_SIZE.favorites.height - 40} gap={6}>
+        {games.map(g => (
+          <div key={g.name} style={{ display: "flex", alignItems: "center", gap: 10, width: "100%" }}>
+            {g.appId ? (
+              // eslint-disable-next-line @next/next/no-img-element -- OBS-Browser-Source, kein Next-Image-Optimierungspfad nötig
+              <img
+                src={`https://cdn.cloudflare.steamstatic.com/steam/apps/${g.appId}/capsule_616x353.jpg`}
+                alt="" width={44} height={20}
+                style={{ width: 44, height: 20, borderRadius: 4, objectFit: "cover", flexShrink: 0 }}
+              />
+            ) : (
+              <div style={{ width: 44, height: 20, borderRadius: 4, background: "rgba(255,255,255,0.06)", flexShrink: 0 }} />
+            )}
+            <span style={{ fontSize: 16, color: "#fff", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {g.name}
+            </span>
+          </div>
+        ))}
+      </AutoScrollViewport>
+    </PanelShell>
+  );
+}
+
+/** Abzeichen-Showcase des Streamers (`showcaseBadgesJson` aus dem Profil, max. 3 selbst gewählt). */
+function BadgesPanel({ badges }: { badges: ShowcaseBadge[] }) {
+  return (
+    <PanelShell title="Abzeichen">
+      <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+        {badges.map((b, i) => (
+          <div key={`${b.name}-${i}`} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minWidth: 0 }}>
+            {b.image ? (
+              // eslint-disable-next-line @next/next/no-img-element -- OBS-Browser-Source, kein Next-Image-Optimierungspfad nötig
+              <img src={b.image} alt="" width={40} height={40} style={{ width: 40, height: 40, objectFit: "contain" }} />
+            ) : (
+              <span style={{ fontSize: 32, lineHeight: 1 }}>{b.icon}</span>
+            )}
+            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 110 }}>
+              {b.name}
+            </span>
+          </div>
+        ))}
+      </div>
+    </PanelShell>
   );
 }
 

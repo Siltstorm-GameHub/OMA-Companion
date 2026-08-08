@@ -22,7 +22,11 @@ export function buildOverlayUrl(eventId: string, token: string): string {
 }
 
 /** Konfigurationsseite, auf der der Streamer die angezeigten Panels auswählt und
- *  sich den fertigen OBS-Link zusammenstellt — statt direkt den rohen Overlay-Link. */
-export function buildOverlaySettingsUrl(eventId: string, token: string): string {
-  return `${appBaseUrl()}/overlay/${eventId}/settings?token=${token}`;
+ *  sich den fertigen OBS-Link zusammenstellt — statt direkt den rohen Overlay-Link.
+ *  `streamerId` (der einloggte User, der sich gerade als Streamer anmeldet) wird mitgegeben,
+ *  damit Elemente wie die Flip-Kachel-Rückseite, Lieblingsspiele und Abzeichen mit den echten
+ *  Profildaten dieses einen Streamers befüllt werden können — ein Event-Overlay-Token ist
+ *  sonst nur ans Event gebunden, nicht an eine Person. */
+export function buildOverlaySettingsUrl(eventId: string, token: string, streamerId: string): string {
+  return `${appBaseUrl()}/overlay/${eventId}/settings?token=${token}&streamer=${streamerId}`;
 }
