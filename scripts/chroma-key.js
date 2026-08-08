@@ -38,16 +38,18 @@ async function chromaKey(inputPath, outputPath, innerThreshold = 65, outerThresh
     const alpha = Math.round((1 - t) * 255);
     data[i + 3] = Math.min(data[i + 3], alpha);
 
-    // Entfärben mit DERSELBEN Zahl t — nicht mit einer zweiten, unabhängigen
-    // Formel. Frühere Versuche berechneten Alpha und Entfärbung getrennt;
-    // genau an der Halbtransparenz-Grenze liefen sie leicht auseinander, das
-    // ergab einen sichtbaren magentafarbenen Saum an Kanten.
+    // Entfärben NICHT proportional zu t skaliert: ein Kantenpixel mit
+    // niedrigem t (knapp jenseits der inneren Schwelle, fast deckend)
+    // behält sonst einen sichtbaren Magenta-Stich, obwohl es schon als
+    // Übergangspixel erkannt wurde — bei kleinem t war der Korrekturbetrag
+    // (excess * t * 1.6) schlicht zu klein, um den Farbstich zu entfernen.
+    // Jedes Pixel in der Übergangszone (t > 0) wird deshalb vollständig
+    // entfärbt, unabhängig von seinem konkreten Alpha-Wert.
     if (t > 0) {
       const excess = Math.min(r, b) - g;
       if (excess > 0) {
-        const pull = excess * t * 1.6;
-        data[i]     = Math.max(0, Math.round(r - pull));
-        data[i + 2] = Math.max(0, Math.round(b - pull));
+        data[i]     = Math.max(0, Math.round(r - excess));
+        data[i + 2] = Math.max(0, Math.round(b - excess));
       }
     }
   }

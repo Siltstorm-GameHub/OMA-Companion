@@ -248,6 +248,10 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract, edit 
 
           {/* Wand */}
           <rect x={0} y={0} width={STAGE.width} height={STAGE.wallHeight} fill="url(#room-wallpaper)" />
+
+          <RoomWindow />
+          <CeilingLamp />
+
           <rect x={0} y={0} width={STAGE.width} height={STAGE.wallHeight} fill="url(#room-wall-vignette)" />
           {/* Boden */}
           <rect x={0} y={STAGE.floorTop} width={STAGE.width} height={GRID.floor.rows * CELL} fill="url(#room-floor)" />
@@ -258,6 +262,34 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract, edit 
           <rect x={0} y={STAGE.floorTop - 8} width={STAGE.width} height={12} fill="url(#room-skirting-bevel)" />
           <rect x={0} y={STAGE.floorTop - 8} width={STAGE.width} height={1.5} fill="var(--room-outline)" opacity={0.6} />
           <rect x={0} y={STAGE.floorTop + 3.5} width={STAGE.width} height={2} fill="var(--room-shade)" opacity={0.7} />
+
+          {/* Kontaktschatten: verankert jedes Bodenmöbel optisch am Boden statt
+              es auf der Textur schweben zu lassen — der Unterschied zwischen
+              einem Foto-Ausschnitt und einem Objekt, das wirklich im Raum steht. */}
+          {floorItems.map(item => {
+            const def = getRoomItem(item.key);
+            // Nur Möbel, deren Unterkante wirklich die Bodenzeile berührt —
+            // Monitore & Co. auf einem Tisch bekommen sonst einen Schatten,
+            // der mitten in der Luft über dem Boden schwebt.
+            if (!def || item.y + def.h !== GRID.floor.rows) return null;
+            const { x, y } = cellToSvg(item.zone, item.x, item.y);
+            const cx = x + (def.w * CELL) / 2;
+            const cy = y + def.h * CELL;
+            return (
+              <ellipse
+                key={`shadow-${item.id}`}
+                cx={cx} cy={cy}
+                rx={def.w * CELL * 0.44} ry={Math.min(9, def.h * CELL * 0.09)}
+                fill="#000000" opacity={0.4}
+                filter="url(#room-blur-md)"
+              />
+            );
+          })}
+
+          {/* Ecken-Tiefe: die Bühne ist eine Frontalansicht ohne Seitenwände —
+              ohne diese Verdunklung an den Rändern wirkt der Raum wie eine
+              endlos breite Fläche statt wie eine geschlossene Box. */}
+          <rect x={0} y={0} width={STAGE.width} height={STAGE.height} fill="url(#room-corner-vignette)" pointerEvents="none" />
 
           {wallItems.map(renderItem)}
           {floorItems.map(renderItem)}
@@ -366,6 +398,67 @@ function TrophySlot({ trophy, x, y, s }: { trophy: VitrineTrophy; x: number; y: 
   );
 }
 
+// ── Fenster, Deckenlampe ─────────────────────────────────────────────────────
+
+/**
+ * Ein Fenster mit Dämmerungs-Ausblick, fest links in der Wandzone verankert.
+ * Der Grund für ein einzelnes, unbewegliches Fenster statt eines Katalog-Items:
+ * es ist der stärkste einzelne Hinweis "hier ist drinnen", den eine reine
+ * Frontalansicht ohne Seitenwände oder Decke geben kann — ein Raum ohne jede
+ * Öffnung nach draußen liest sich als Lagerhalle, nicht als Zuhause.
+ */
+function RoomWindow() {
+  const x = 64, y = 10, w = 192, h = 180;
+  const paneX = x + 10, paneY = y + 10, paneW = w - 20, paneH = h - 20;
+  return (
+    <g>
+      <rect x={x - 6} y={y - 6} width={w + 12} height={h + 12} rx={4} fill="var(--room-wood)" />
+      <rect x={paneX} y={paneY} width={paneW} height={paneH} fill="url(#room-window-sky)" />
+
+      {/* Ferne, erleuchtete Fenster — deuten Nachbarhäuser an */}
+      <g opacity={0.85}>
+        <rect x={paneX + 14} y={paneY + paneH * 0.4} width={8} height={10} fill="var(--room-window-light)" filter="url(#room-blur-sm)" />
+        <rect x={paneX + 14} y={paneY + paneH * 0.4} width={8} height={10} fill="var(--room-window-light)" />
+        <rect x={paneX + 30} y={paneY + paneH * 0.55} width={7} height={9} fill="var(--room-window-light)" opacity={0.7} />
+        <rect x={paneX + paneW - 24} y={paneY + paneH * 0.3} width={7} height={9} fill="var(--room-window-light)" opacity={0.75} />
+      </g>
+
+      {/* Sprossen */}
+      <rect x={paneX + paneW / 2 - 2} y={paneY} width={4} height={paneH} fill="var(--room-wood)" opacity={0.9} />
+      <rect x={paneX} y={paneY + paneH / 2 - 2} width={paneW} height={4} fill="var(--room-wood)" opacity={0.9} />
+      <rect x={x - 6} y={y - 6} width={w + 12} height={h + 12} rx={4} fill="none" stroke="var(--room-wood-hi)" strokeWidth={2} opacity={0.5} />
+
+      {/* Fensterbank */}
+      <rect x={x - 16} y={y + h + 4} width={w + 32} height={9} rx={2} fill="var(--room-wood-hi)" />
+
+      {/* Vorhänge — gerafft an beiden Seiten, damit das Fenster nach echtem
+          Zimmer aussieht statt nach eingebautem Bildschirm. */}
+      <path d={`M${x - 10},${y - 8} Q${x + 6},${y + h * 0.5} ${x - 4},${y + h + 6} L${x - 22},${y + h + 2} Q${x - 16},${y + h * 0.5} ${x - 20},${y - 10} Z`}
+        fill="var(--room-fabric)" opacity={0.92} />
+      <path d={`M${x + w + 10},${y - 8} Q${x + w - 6},${y + h * 0.5} ${x + w + 4},${y + h + 6} L${x + w + 22},${y + h + 2} Q${x + w + 16},${y + h * 0.5} ${x + w + 20},${y - 10} Z`}
+        fill="var(--room-fabric)" opacity={0.92} />
+      <rect x={x - 26} y={y - 12} width={w + 52} height={6} rx={3} fill="var(--room-metal)" />
+    </g>
+  );
+}
+
+/** Pendelleuchte an der Decke, weit rechts vom Fenster — warmer Lichtfleck
+ *  gegen die kühlen Bildschirm-Töne der Peripherie-Möbel. */
+function CeilingLamp() {
+  const cx = STAGE.width * 0.62;
+  const bulbY = 46;
+  return (
+    <g pointerEvents="none">
+      <ellipse cx={cx} cy={bulbY + 6} rx={70} ry={40} fill="var(--room-lamp-glow)" filter="url(#room-blur-md)" />
+      <line x1={cx} y1={0} x2={cx} y2={bulbY - 8} stroke="var(--room-metal)" strokeWidth={2} />
+      <path d={`M${cx - 20},${bulbY - 8} L${cx + 20},${bulbY - 8} L${cx + 12},${bulbY + 10} L${cx - 12},${bulbY + 10} Z`}
+        fill="var(--room-metal)" stroke="var(--room-metal-hi)" strokeWidth={1} />
+      <circle cx={cx} cy={bulbY + 16} r={7} fill="var(--room-neon-amber)" filter="url(#room-blur-sm)" opacity={0.9} />
+      <circle cx={cx} cy={bulbY + 16} r={4} fill="var(--room-neon-amber)" />
+    </g>
+  );
+}
+
 // ── Wand- und Bodenmuster ────────────────────────────────────────────────────
 
 /**
@@ -385,6 +478,19 @@ function TrophySlot({ trophy, x, y, s }: { trophy: VitrineTrophy; x: number; y: 
 function SurfacePatterns({ wallpaperKey, floorKey }: { wallpaperKey: string; floorKey: string }) {
   return (
     <>
+      <filter id="room-blur-sm" x="-100%" y="-100%" width="300%" height="300%">
+        <feGaussianBlur stdDeviation={4} />
+      </filter>
+      <filter id="room-blur-md" x="-100%" y="-100%" width="300%" height="300%">
+        <feGaussianBlur stdDeviation={7} />
+      </filter>
+
+      {/* ── Dämmerungshimmel hinterm Fenster ── */}
+      <linearGradient id="room-window-sky" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stopColor="var(--room-window-sky-1)" />
+        <stop offset="100%" stopColor="var(--room-window-sky-2)" />
+      </linearGradient>
+
       {/* ── Umgebungslicht: dunklere Ecken, dezenter warmer Lichtkegel oben ── */}
       <radialGradient id="room-wall-vignette" cx="50%" cy="8%" r="85%">
         <stop offset="0%"  stopColor="var(--room-neon-amber)" stopOpacity={0.05} />
@@ -397,6 +503,15 @@ function SurfacePatterns({ wallpaperKey, floorKey }: { wallpaperKey: string; flo
         <stop offset="100%" stopColor="#000000" stopOpacity={0.38} />
       </radialGradient>
 
+      {/* ── Ecken-Tiefe: dunklere Bänder an den seitlichen Rändern, damit die
+          Bühne wie eine geschlossene Box statt einer endlosen Fläche wirkt. ── */}
+      <linearGradient id="room-corner-vignette" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%"   stopColor="#000000" stopOpacity={0.4} />
+        <stop offset="7%"   stopColor="#000000" stopOpacity={0} />
+        <stop offset="93%"  stopColor="#000000" stopOpacity={0} />
+        <stop offset="100%" stopColor="#000000" stopOpacity={0.4} />
+      </linearGradient>
+
       {/* ── Sockelleiste: kleine Fase statt einer flachen Linie ── */}
       <linearGradient id="room-skirting-bevel" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%"   stopColor="var(--room-outline)" stopOpacity={0.5} />
@@ -406,7 +521,7 @@ function SurfacePatterns({ wallpaperKey, floorKey }: { wallpaperKey: string; flo
       </linearGradient>
 
       <pattern id="room-wallpaper" width={64} height={64} patternUnits="userSpaceOnUse">
-        <rect width={64} height={64} fill="var(--room-wall)" />
+        <rect width={64} height={64} fill={wallpaperKey === "tapete_raufaser" ? "var(--room-wall-warm)" : "var(--room-wall)"} />
         {wallpaperKey === "tapete_pixel" && (
           <g fill="var(--room-neon-violet)" opacity={0.16}>
             {[0, 16, 32, 48].map(a => [0, 16, 32, 48].map(b => (
@@ -422,18 +537,22 @@ function SurfacePatterns({ wallpaperKey, floorKey }: { wallpaperKey: string; flo
           </g>
         )}
         {wallpaperKey === "tapete_raufaser" && (
-          <g fill="var(--room-wall-line)">
-            {[[9, 14], [27, 8], [46, 22], [17, 39], [38, 47], [55, 33], [6, 55], [50, 58]].map(([cx, cy], i) => (
-              <circle key={i} cx={cx} cy={cy} r={1.6} />
-            ))}
-          </g>
+          <>
+            <g fill="var(--room-wall-warm-hi)" opacity={0.5}>
+              {[[9, 14], [27, 8], [46, 22], [17, 39], [38, 47], [55, 33], [6, 55], [50, 58]].map(([cx, cy], i) => (
+                <circle key={i} cx={cx} cy={cy} r={1.6} />
+              ))}
+            </g>
+            {/* Bahnennaht der Tapetenrolle — jeder Zellenrand ein dezenter Stoß */}
+            <line x1={0} y1={0} x2={0} y2={64} stroke="var(--room-shade)" strokeWidth={1} opacity={0.4} />
+          </>
         )}
         {/* Sanfter vertikaler Verlauf auf JEDER Tapete — Licht fällt von oben ein */}
         <rect width={64} height={64} fill="var(--room-shade)" opacity={0.08} />
       </pattern>
 
       <pattern id="room-floor" width={64} height={64} patternUnits="userSpaceOnUse">
-        <rect width={64} height={64} fill="var(--room-floor)" />
+        <rect width={64} height={64} fill={floorKey === "boden_linoleum" ? "var(--room-floor-warm)" : "var(--room-floor)"} />
         {floorKey === "boden_holz" && (
           <g>
             <rect y={0}  width={64} height={31} fill="var(--room-wood)" opacity={0.55} />
@@ -453,10 +572,16 @@ function SurfacePatterns({ wallpaperKey, floorKey }: { wallpaperKey: string; flo
           </g>
         )}
         {floorKey === "boden_linoleum" && (
-          <g fill="var(--room-shade)" opacity={0.5}>
-            <ellipse cx={20} cy={24} rx={7} ry={4} />
-            <ellipse cx={48} cy={46} rx={5} ry={3} />
-          </g>
+          <>
+            <g fill="var(--room-floor-warm-hi)" opacity={0.35}>
+              <ellipse cx={14} cy={10} rx={16} ry={9} />
+              <ellipse cx={46} cy={42} rx={14} ry={8} />
+            </g>
+            <g fill="var(--room-shade)" opacity={0.5}>
+              <ellipse cx={20} cy={24} rx={7} ry={4} />
+              <ellipse cx={48} cy={46} rx={5} ry={3} />
+            </g>
+          </>
         )}
       </pattern>
     </>
