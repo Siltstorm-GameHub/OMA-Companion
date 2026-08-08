@@ -1,0 +1,455 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+
+type OverlayEntry = {
+  id: string;
+  userId: string | null;
+  teamId: string | null;
+  placement: number | null;
+  score: number | null;
+};
+
+type OverlayMatch = {
+  id: string;
+  round: number;
+  position: number;
+  title: string | null;
+  player1Id: string | null;
+  player2Id: string | null;
+  winnerId: string | null;
+  score1: number | null;
+  score2: number | null;
+  playedAt: string | null;
+  entries: OverlayEntry[];
+};
+
+type OverlayParticipant = {
+  userId: string;
+  user: { id: string; name: string | null; username: string | null; image: string | null };
+};
+
+type OverlayState = {
+  id: string;
+  title: string;
+  status: string;
+  format: string | null;
+  tournamentStatus: string | null;
+  matches: OverlayMatch[];
+  participants: OverlayParticipant[];
+};
+
+type PanelKey = "bracket" | "table" | "participants";
+
+const PANEL_FADE_MS = 700;
+const PANEL_GAP_MS = 900; // vollständig transparente Pause zwischen zwei Panels — Spiel bleibt kurz frei sichtbar
+
+export default function OverlayClient({
+  eventId,
+  token,
+  eventTitle,
+  format,
+  requestedPanels,
+  rotateSeconds,
+}: {
+  eventId: string;
+  token: string;
+  eventTitle: string;
+  format: string | null;
+  requestedPanels: PanelKey[] | null;
+  rotateSeconds: number;
+}) {
+  const [state, setState] = useState<OverlayState | null>(null);
+  const esRef = useRef<EventSource | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    function connect() {
+      if (cancelled) return;
+      const es = new EventSource(`/api/overlay/${eventId}/stream?token=${encodeURIComponent(token)}`);
+      esRef.current = es;
+      es.addEventListener("update", (e) => {
+        try { setState(JSON.parse((e as MessageEvent).data)); } catch { /* ignore */ }
+      });
+      es.onerror = () => {
+        es.close();
+        if (!cancelled) setTimeout(connect, 1500);
+      };
+    }
+
+    connect();
+    return () => {
+      cancelled = true;
+      esRef.current?.close();
+    };
+  }, [eventId, token]);
+
+  const nameByUserId = new Map((state?.participants ?? []).map(p => [p.userId, p.user.name ?? p.user.username ?? "Unbekannt"]));
+  const nameOf = (userId: string | null) => (userId ? nameByUserId.get(userId) ?? "?" : "–");
+
+  const fmt = state?.format ?? format;
+  const matches = state?.matches ?? [];
+  const participantCount = state?.participants.length ?? 0;
+
+  const isElimination = fmt === "single_elimination" || fmt === "double_elimination";
+  const defaultPanels: PanelKey[] = isElimination ? ["bracket", "participants"] : ["table", "participants"];
+  const availablePanels = (requestedPanels ?? defaultPanels).filter(key => {
+    if (key === "bracket") return matches.length > 0;
+    if (key === "table") return matches.length > 0 || participantCount > 0;
+    if (key === "participants") return participantCount > 0;
+    return false;
+  });
+
+  const rotator = usePanelRotator(availablePanels, rotateSeconds);
+  const ticker = pickTickerMatch(matches);
+
+  return (
+    <div
+      style={{
+        position: "relative",
+        width: "1920px",
+        height: "1080px",
+        fontFamily: "var(--font-display, 'Space Grotesk', sans-serif)",
+        color: "#fff",
+        overflow: "hidden",
+      }}
+    >
+      <BrandMark />
+
+      {ticker && (
+        <MatchTicker match={ticker} nameOf={nameOf} eventTitle={state?.title ?? eventTitle} />
+      )}
+
+      {rotator.activeKey && state && (
+        <div
+          key={rotator.activeKey}
+          style={{
+            position: "absolute",
+            top: 56,
+            right: 56,
+            width: 620,
+            opacity: rotator.visible ? 1 : 0,
+            transform: rotator.visible ? "translateY(0)" : "translateY(-12px)",
+            transition: `opacity ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1), transform ${PANEL_FADE_MS}ms cubic-bezier(0.16,1,0.3,1)`,
+          }}
+        >
+          {rotator.activeKey === "bracket" && <BracketPanel matches={matches} nameOf={nameOf} />}
+          {rotator.activeKey === "table" && <TablePanel matches={matches} participants={state.participants} format={fmt} />}
+          {rotator.activeKey === "participants" && <ParticipantsPanel participants={state.participants} />}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Rotation-Logik: zeigt genau ein Panel, blendet es aus, pausiert komplett
+   transparent, blendet das nächste ein. Bei genau einem Panel keine Rotation. ── */
+function usePanelRotator(panels: PanelKey[], rotateSeconds: number) {
+  const [index, setIndex] = useState(0);
+  const [visible, setVisible] = useState(true);
+
+  // Panel-Liste hat sich geändert (Format erkannt / Query-Param) — Index während des
+  // Renders zurücksetzen statt in einem Effect, siehe react.dev "Adjusting state on prop change".
+  const panelsKey = panels.join("|");
+  const [prevPanelsKey, setPrevPanelsKey] = useState(panelsKey);
+  if (panelsKey !== prevPanelsKey) {
+    setPrevPanelsKey(panelsKey);
+    setIndex(0);
+    setVisible(true);
+  }
+
+  useEffect(() => {
+    if (panels.length <= 1) return;
+    const showMs = Math.max(4, rotateSeconds) * 1000;
+    let hideTimer: ReturnType<typeof setTimeout>;
+    let nextTimer: ReturnType<typeof setTimeout>;
+
+    const cycle = setInterval(() => {
+      setVisible(false);
+      hideTimer = setTimeout(() => {
+        setIndex(i => (i + 1) % panels.length);
+        nextTimer = setTimeout(() => setVisible(true), 30);
+      }, PANEL_FADE_MS + PANEL_GAP_MS);
+    }, showMs + PANEL_FADE_MS + PANEL_GAP_MS);
+
+    return () => {
+      clearInterval(cycle);
+      clearTimeout(hideTimer);
+      clearTimeout(nextTimer);
+    };
+  }, [panels.length, rotateSeconds]);
+
+  return { activeKey: panels[index] ?? null, visible };
+}
+
+function pickTickerMatch(matches: OverlayMatch[]): OverlayMatch | null {
+  const pending = matches
+    .filter(m => (m.player1Id || m.player2Id) && !m.winnerId && !m.playedAt)
+    .sort((a, b) => a.round - b.round || a.position - b.position);
+  if (pending.length > 0) return pending[0];
+  const played = [...matches].filter(m => m.playedAt).sort((a, b) =>
+    new Date(b.playedAt!).getTime() - new Date(a.playedAt!).getTime()
+  );
+  return played[0] ?? null;
+}
+
+/* ── Broadcast-Branding: dezente Wortmarke unten links, dauerhaft sichtbar ── */
+function BrandMark() {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: 56,
+        bottom: 40,
+        display: "flex",
+        alignItems: "center",
+        gap: 9,
+        opacity: 0.55,
+      }}
+    >
+      <span style={{ width: 7, height: 7, borderRadius: 999, background: "#14b8a6", boxShadow: "0 0 8px #14b8a6" }} />
+      <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#e8e8f0" }}>
+        Old Masters Ally
+      </span>
+    </div>
+  );
+}
+
+/* ── Lower-Third: laufendes/nächstes Match, immer sichtbar ── */
+function MatchTicker({
+  match, nameOf, eventTitle,
+}: { match: OverlayMatch; nameOf: (id: string | null) => string; eventTitle: string }) {
+  const isLive = !match.winnerId && !match.playedAt;
+  const p1Winner = !!match.winnerId && match.winnerId === match.player1Id;
+  const p2Winner = !!match.winnerId && match.winnerId === match.player2Id;
+  const hasDuel = !!(match.player1Id || match.player2Id);
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: 56,
+        right: 56,
+        bottom: 96,
+        background: "rgba(9,9,14,0.82)",
+        backdropFilter: "blur(18px) saturate(1.4)",
+        WebkitBackdropFilter: "blur(18px) saturate(1.4)",
+        border: "1px solid rgba(255,255,255,0.08)",
+        borderTop: "2px solid rgba(20,184,166,0.65)",
+        borderRadius: 14,
+        boxShadow: "0 24px 60px rgba(0,0,0,0.55)",
+        padding: "20px 32px",
+        display: "flex",
+        alignItems: "center",
+        gap: 28,
+      }}
+    >
+      <StatusPill live={isLive} />
+      <span style={{ fontSize: 15, color: "rgba(255,255,255,0.45)", minWidth: 140 }}>
+        {eventTitle}
+      </span>
+
+      {hasDuel ? (
+        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 24 }}>
+          <PlayerName name={nameOf(match.player1Id)} winner={p1Winner} align="right" />
+          <Score score1={match.score1} score2={match.score2} />
+          <PlayerName name={nameOf(match.player2Id)} winner={p2Winner} align="left" />
+        </div>
+      ) : (
+        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 20 }}>
+          {[...match.entries]
+            .sort((a, b) => (a.placement ?? 99) - (b.placement ?? 99))
+            .slice(0, 6)
+            .map(e => (
+              <span
+                key={e.id}
+                style={{
+                  fontSize: 20,
+                  fontWeight: e.placement === 1 ? 700 : 500,
+                  color: e.placement === 1 ? "#5eead4" : "#fff",
+                }}
+              >
+                {nameOf(e.userId)}{e.score != null ? ` · ${e.score}` : ""}
+              </span>
+            ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StatusPill({ live }: { live: boolean }) {
+  return (
+    <span
+      style={{
+        display: "flex", alignItems: "center", gap: 7,
+        fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase",
+        padding: "6px 12px", borderRadius: 999,
+        color: live ? "#fca5a5" : "#5eead4",
+        background: live ? "rgba(239,68,68,0.12)" : "rgba(20,184,166,0.12)",
+        border: `1px solid ${live ? "rgba(239,68,68,0.35)" : "rgba(20,184,166,0.3)"}`,
+        flexShrink: 0,
+      }}
+    >
+      <span
+        style={{
+          width: 6, height: 6, borderRadius: 999,
+          background: live ? "#f87171" : "#2dd4bf",
+          animation: live ? "oma-ov-pulse 1.4s ease-in-out infinite" : undefined,
+        }}
+      />
+      {live ? "Live" : "Zuletzt"}
+      <style>{`@keyframes oma-ov-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }`}</style>
+    </span>
+  );
+}
+
+function PlayerName({ name, winner, align }: { name: string; winner: boolean; align: "left" | "right" }) {
+  return (
+    <span
+      style={{
+        fontSize: 26, fontWeight: winner ? 700 : 500,
+        color: winner ? "#5eead4" : "#fff",
+        textShadow: winner ? "0 0 18px rgba(45,212,191,0.5)" : "none",
+        textAlign: align, minWidth: 220,
+      }}
+    >
+      {name}
+    </span>
+  );
+}
+
+function Score({ score1, score2 }: { score1: number | null; score2: number | null }) {
+  if (score1 == null && score2 == null) {
+    return <span style={{ fontSize: 22, color: "rgba(255,255,255,0.3)", fontWeight: 600 }}>vs</span>;
+  }
+  return (
+    <span style={{ fontSize: 32, fontWeight: 700, letterSpacing: "-0.02em", display: "flex", gap: 10 }}>
+      <span>{score1 ?? 0}</span>
+      <span style={{ opacity: 0.35 }}>:</span>
+      <span>{score2 ?? 0}</span>
+    </span>
+  );
+}
+
+/* ── Panel-Shell: gemeinsamer Rahmen für Bracket/Tabelle/Teilnehmer ── */
+function PanelShell({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        background: "rgba(9,9,14,0.86)",
+        backdropFilter: "blur(20px) saturate(1.4)",
+        WebkitBackdropFilter: "blur(20px) saturate(1.4)",
+        border: "1px solid rgba(255,255,255,0.08)",
+        borderTop: "2px solid rgba(20,184,166,0.5)",
+        borderRadius: 16,
+        boxShadow: "0 24px 60px rgba(0,0,0,0.55)",
+        padding: "22px 24px",
+      }}
+    >
+      <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#5eead4", margin: "0 0 16px" }}>
+        {title}
+      </p>
+      {children}
+    </div>
+  );
+}
+
+/* ── Bracket-Panel: Runden nebeneinander, kompakt für Elimination-Formate ── */
+function BracketPanel({ matches, nameOf }: { matches: OverlayMatch[]; nameOf: (id: string | null) => string }) {
+  const rounds = [...new Set(matches.map(m => m.round))].sort((a, b) => a - b);
+  return (
+    <PanelShell title="Turnierbaum">
+      <div style={{ display: "flex", flexDirection: "column", gap: 14, maxHeight: 620, overflow: "hidden" }}>
+        {rounds.map(round => (
+          <div key={round}>
+            <p style={{ fontSize: 10, opacity: 0.45, textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 6px" }}>
+              Runde {round}
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {matches.filter(m => m.round === round).map(m => (
+                <BracketRow key={m.id} match={m} nameOf={nameOf} />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </PanelShell>
+  );
+}
+
+function BracketRow({ match, nameOf }: { match: OverlayMatch; nameOf: (id: string | null) => string }) {
+  const p1Winner = !!match.winnerId && match.winnerId === match.player1Id;
+  const p2Winner = !!match.winnerId && match.winnerId === match.player2Id;
+  return (
+    <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 8, padding: "7px 10px" }}>
+      <Row name={nameOf(match.player1Id)} score={match.score1} winner={p1Winner} />
+      <Row name={nameOf(match.player2Id)} score={match.score2} winner={p2Winner} />
+    </div>
+  );
+}
+
+function Row({ name, score, winner }: { name: string; score: number | null; winner: boolean }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, fontWeight: winner ? 700 : 400, color: winner ? "#5eead4" : "rgba(255,255,255,0.85)" }}>
+      <span>{name}</span>
+      {score != null && <span>{score}</span>}
+    </div>
+  );
+}
+
+/* ── Tabellen-Panel: Sieg-basiertes Ranking für Liga/Round-Robin ── */
+function TablePanel({
+  matches, participants, format,
+}: { matches: OverlayMatch[]; participants: OverlayParticipant[]; format: string | null }) {
+  const wins = new Map<string, number>();
+  const losses = new Map<string, number>();
+  for (const m of matches) {
+    if (!m.winnerId) continue;
+    wins.set(m.winnerId, (wins.get(m.winnerId) ?? 0) + 1);
+    const loserId = m.player1Id === m.winnerId ? m.player2Id : m.player1Id;
+    if (loserId) losses.set(loserId, (losses.get(loserId) ?? 0) + 1);
+  }
+  const ranked = [...participants]
+    .map(p => ({ ...p, w: wins.get(p.userId) ?? 0, l: losses.get(p.userId) ?? 0 }))
+    .sort((a, b) => b.w - a.w || a.l - b.l);
+
+  return (
+    <PanelShell title={format === "liga" ? "Liga-Tabelle" : "Tabelle"}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        {ranked.slice(0, 12).map((p, i) => (
+          <div
+            key={p.userId}
+            style={{
+              display: "flex", alignItems: "center", gap: 12,
+              padding: "7px 8px", borderRadius: 7,
+              background: i < 3 ? "rgba(20,184,166,0.06)" : "transparent",
+            }}
+          >
+            <span style={{ width: 20, fontSize: 13, opacity: 0.4, textAlign: "right" }}>{i + 1}</span>
+            <span style={{ flex: 1, fontSize: 15, fontWeight: i < 3 ? 700 : 400, color: i < 3 ? "#5eead4" : "#fff" }}>
+              {p.user.name ?? p.user.username ?? "Unbekannt"}
+            </span>
+            <span style={{ fontSize: 13, opacity: 0.6 }}>{p.w}S · {p.l}N</span>
+          </div>
+        ))}
+      </div>
+    </PanelShell>
+  );
+}
+
+/* ── Teilnehmer-Panel ── */
+function ParticipantsPanel({ participants }: { participants: OverlayParticipant[] }) {
+  return (
+    <PanelShell title="Teilnehmer">
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 16px" }}>
+        {participants.slice(0, 24).map(p => (
+          <span key={p.userId} style={{ fontSize: 14, color: "rgba(255,255,255,0.85)" }}>
+            {p.user.name ?? p.user.username ?? "Unbekannt"}
+          </span>
+        ))}
+      </div>
+    </PanelShell>
+  );
+}

@@ -238,6 +238,9 @@ model Event {
   status              String        @default("open")
   hidden              Boolean       @default(false) // true = nur im Admin sichtbar
   coverImageUrl       String? // Eigenes Event-Bild (Vercel Blob). Leer = Spiel-Cover, sonst EventCoverDefault
+  // Token für die öffentliche OBS-Overlay-Route (/overlay/[id]?token=…). Wird lazy bei der
+  // ersten Streamer-Anmeldung erzeugt, ein Event hat höchstens einen Link für alle Streamer.
+  overlayToken        String?       @unique
   discordEventId      String?       @unique
   discordMessageId    String? // Message-ID der Bot-Ankündigung (zum nachträglichen Löschen)
   discordChannelId    String? // Kanal-ID für Bot-Nachrichten (überschreibt DISCORD_EVENTS_CHANNEL_ID)

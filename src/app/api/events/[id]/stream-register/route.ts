@@ -1,8 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { ensureOverlayToken, buildOverlaySettingsUrl } from "@/lib/overlay";
 
 type Params = { params: Promise<{ id: string }> };
+
+export async function GET(_req: NextRequest, { params }: Params) {
+  const session = await auth();
+  if (!session?.user?.id) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
+  const { id: eventId } = await params;
+  const userId = session.user.id;
+
+  const streamer = await prisma.eventCommunityStreamer.findUnique({
+    where: { eventId_userId: { eventId, userId } },
+  });
+  if (!streamer) return NextResponse.json({ error: "Nicht als Streamer angemeldet" }, { status: 403 });
+
+  const token = await ensureOverlayToken(eventId);
+  return NextResponse.json({ overlayUrl: buildOverlaySettingsUrl(eventId, token) });
+}
 
 export async function POST(_req: NextRequest, { params }: Params) {
   const session = await auth();
@@ -28,7 +44,8 @@ export async function POST(_req: NextRequest, { params }: Params) {
     include: { user: { select: { id: true, name: true, username: true, image: true, twitchLogin: true } } },
   });
 
-  return NextResponse.json(record);
+  const token = await ensureOverlayToken(eventId);
+  return NextResponse.json({ ...record, overlayUrl: buildOverlaySettingsUrl(eventId, token) });
 }
 
 export async function DELETE(_req: NextRequest, { params }: Params) {

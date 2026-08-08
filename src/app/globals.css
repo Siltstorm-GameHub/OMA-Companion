@@ -77,6 +77,19 @@ html {
   --room-neon-rose:   #f43f5e;
   --room-outline:     rgba(255,255,255,0.14);
   --room-shade:       rgba(0,0,0,0.35);
+
+  /* Warme Standardflächen: "vergilbte Raufaser" + "Linoleum" sollen nach
+     abgewohnter Wohnung aussehen, nicht nach kühlem Serverraum — die
+     generischen --room-wall/-floor-Töne oben passen dagegen zu Sci-Fi-Tapete
+     und -Boden. Nur für diese zwei Standard-Flächen genutzt. */
+  --room-wall-warm:      #4a3f2c;
+  --room-wall-warm-hi:   #6b5a3c;
+  --room-floor-warm:     #362e22;
+  --room-floor-warm-hi:  #4f4534;
+  --room-window-sky-1:   #241f3a;
+  --room-window-sky-2:   #7a5342;
+  --room-window-light:   #ffd27a;
+  --room-lamp-glow:      rgba(245,158,11,0.38);
 }
 
 /* ── Dynamic Notch animations ──────────────────────────────────── */
@@ -823,6 +836,15 @@ select.input-glass option { background: #0f1117; }
   --room-screen:     #21242c;
   --room-outline:    rgba(13,31,28,0.18);
   --room-shade:      rgba(13,31,28,0.12);
+
+  --room-wall-warm:      #d8c9a0;
+  --room-wall-warm-hi:   #e8dcbc;
+  --room-floor-warm:     #c2b696;
+  --room-floor-warm-hi:  #d4c9a8;
+  --room-window-sky-1:   #bcd8ef;
+  --room-window-sky-2:   #f0b98a;
+  --room-window-light:   #fff0be;
+  --room-lamp-glow:      rgba(245,158,11,0.24);
 }
 [data-theme="light"] body { background-color: var(--bg-base); color: #0d1f1c; }
 [data-theme="light"] .text-white { color: #0d1f1c !important; }
