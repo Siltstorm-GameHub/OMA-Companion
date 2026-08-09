@@ -37,6 +37,13 @@ export async function loadRoom(userId: string): Promise<RoomState> {
     // Items, deren Katalog-Eintrag entfernt wurde, werden still übersprungen —
     // ein umbenannter Schlüssel darf nie die ganze Seite kippen.
     if (!getRoomItem(row.itemKey)) continue;
+    // Die Vitrine ist kein Raster-Platzierungsobjekt mehr, sondern ein fest
+    // positioniertes Element außerhalb des Rasters (siehe RoomStage.tsx,
+    // VitrinePanel). Ältere Zeilen aus der Zeit davor hätten hier noch ihre
+    // damalige Position/Größe — beim Speichern würde validateLayout() sie
+    // gegen die inzwischen viel größere Katalog-Größe prüfen und ablehnen
+    // ("passt nicht ins Raster"). Deshalb werden sie beim Laden ignoriert.
+    if (row.itemKey === "vitrine") continue;
     if (row.placed) {
       placed.push({
         id: row.id, key: row.itemKey, zone: row.zone === "wall" ? "wall" : "floor",
@@ -217,10 +224,12 @@ export async function saveLayout(
   storedIds   = storedIds.map(resolveId);
 
   // Nur Möbel, die der Katalog kennt und die überhaupt aufstellbar sind,
-  // müssen im Payload auftauchen. Flächen liegen auf der Room-Zeile.
+  // müssen im Payload auftauchen. Flächen liegen auf der Room-Zeile, die
+  // Vitrine steht fest außerhalb des Rasters (siehe loadRoom) und taucht im
+  // Editor darum nie im Payload auf.
   const relevant = rows.filter(r => {
     const def = getRoomItem(r.itemKey);
-    return !!def && !isSurface(def);
+    return !!def && !isSurface(def) && r.itemKey !== "vitrine";
   });
 
   const mentioned = new Set<string>();

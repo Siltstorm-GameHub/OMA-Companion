@@ -249,6 +249,18 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract, edit 
           className="room-interactive-glow" fill="none" stroke="var(--room-screen-on)" strokeWidth={2}
           pointerEvents="none"
         />
+        {/* Zusätzlicher Bildschirm-Leuchtschein NUR bei Monitoren — der
+            atmende Rahmen allein sagt "anklickbar", aber nicht "hier läuft
+            gerade etwas". Ein pulsierender Lichtschein hinter dem Gerät liest
+            sich eindeutig als eingeschalteter, aktiver Bildschirm. */}
+        {target === "crt" && (
+          <ellipse
+            cx={x + (def.w * CELL) / 2} cy={y + def.h * CELL * 0.42}
+            rx={def.w * CELL * 0.6} ry={def.h * CELL * 0.45}
+            className="room-screen-glow" fill="var(--room-screen-on)"
+            filter="url(#room-blur-md)" pointerEvents="none"
+          />
+        )}
         <RoomItemSprite itemKey={item.key} x={x} y={y} flipped={item.flipped} className="room-item-photo" />
       </g>
     );
@@ -278,9 +290,17 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract, edit 
         ))}
       </div>
 
-      <div className="glass card-shine rounded-2xl p-2 sm:p-3 room-stage-scroll scrollbar-none">
-        <svg
-          ref={svgRef}
+      {/* Vitrine + Raum nebeneinander, gleich hoch: die Vitrine ist bewusst
+          KEIN Rasterelement mehr (siehe VitrinePanel) — links neben dem
+          eigentlichen Zimmer, über dessen volle Höhe (Wand + Boden), damit
+          die Ausstellungsstücke deutlich größer und lesbarer sind, als es
+          eine einzelne Bodenzelle je erlauben würde. */}
+      <div className="flex items-stretch gap-3">
+        <VitrinePanel ownerName={ownerName} vitrine={vitrine} onInteract={onInteract} editing={!!edit} />
+
+        <div className="glass card-shine rounded-2xl p-2 sm:p-3 room-stage-scroll scrollbar-none min-w-0 flex-1">
+          <svg
+            ref={svgRef}
           className={cn("room-stage rounded-xl", screenZoom && "room-stage-zoom")}
           style={screenZoom ? { transformOrigin: `${screenZoom.x}% ${screenZoom.y}%` } : undefined}
           viewBox={VIEWBOX[view]}
@@ -340,8 +360,6 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract, edit 
           {wallItems.map(renderItem)}
           {floorItems.map(renderItem)}
 
-          <FixedVitrine ownerName={ownerName} vitrine={vitrine} onInteract={onInteract} editing={!!edit} />
-
           {/* ── Erlaubte Zielplätze ──────────────────────────────────
               Liegen über den Möbeln, damit sie immer treffbar sind.
               Berechnet mit derselben validatePlacement() wie der Server. */}
@@ -371,66 +389,80 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract, edit 
               </g>
             );
           })}
-        </svg>
+          </svg>
+        </div>
       </div>
     </div>
   );
 }
 
-// ── Vitrine: festes Bühnenelement ────────────────────────────────────────────
+// ── Vitrine: eigenständiges Panel, losgelöst vom Raster ─────────────────────
+
+/** Eigene Koordinatenbreite der Vitrine, an den 281×655-Bildausschnitt von
+ *  public/room-items/vitrine.png angenähert, bei fester Höhe = volle
+ *  Raumhöhe (Wand + Boden zusammen). */
+const VITRINE_PANEL_W = 240;
 
 /**
- * Die Vitrine ist bewusst KEIN normales Katalog-Möbelstück mehr, sondern ein
- * fest verankertes Bühnenelement: immer rechts am Bodenrand, immer über die
- * volle Bodenhöhe. Grund: wer die Vitrine eines fremden Zimmers ansehen will,
- * soll sie nicht erst suchen müssen — an jeder Tür der App steht sie am
- * selben Fleck. Die deutlich größere Fläche schafft außerdem erst den Platz
- * für die Namensplaketten unter jedem Pokal/Sammelstück/Abzeichen.
+ * Die Vitrine ist bewusst KEIN Katalog-Möbelstück im Raster mehr, sondern ein
+ * eigenständiges Panel links neben dem Zimmer, über dessen komplette Höhe.
+ * Zwei Gründe: (1) wer die Vitrine eines fremden Zimmers ansehen will, soll
+ * sie nicht erst zwischen anderen Möbeln suchen müssen — sie steht immer am
+ * selben Fleck, außerhalb jeder Umgestaltung. (2) losgelöst von einer
+ * Bodenzelle darf sie so groß sein, wie sie für lesbare Namensplaketten
+ * unter jedem Pokal/Sammelstück/Abzeichen tatsächlich sein muss, statt sich
+ * dem 64px-Raster unterzuordnen.
  */
-function FixedVitrine({
+function VitrinePanel({
   ownerName, vitrine, onInteract, editing,
 }: {
   ownerName: string;
   vitrine:   Props["vitrine"];
-  onInteract: (target: InteractTarget) => void;
+  onInteract: (target: InteractTarget, itemKey?: string) => void;
   editing:   boolean;
 }) {
-  const def = getRoomItem("vitrine");
-  if (!def) return null;
-  const gridX = GRID.floor.cols - def.w;
-  const gridY = GRID.floor.rows - def.h;
-  const { x, y } = cellToSvg("floor", gridX, gridY);
-  const w = def.w * CELL;
-  const h = def.h * CELL;
+  const vw = VITRINE_PANEL_W;
+  const vh = STAGE.height;
   const label = `Sammlung von ${ownerName} anzeigen`;
 
-  // Im Bearbeiten-Modus nur sichtbar, nicht anklickbar — sie lässt sich
-  // ohnehin nicht verschieben, ein Klick soll dort nicht mitten in der
-  // Möbel-Auswahl ein Modal aufreißen.
-  if (editing) {
-    return <RoomItemSprite itemKey="vitrine" x={x} y={y} className="room-item-photo" />;
-  }
-
   return (
-    <g
-      className="room-hit"
-      role="button"
-      tabIndex={0}
-      aria-label={label}
-      onClick={() => onInteract("vitrine")}
-      onKeyDown={e => {
-        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onInteract("vitrine"); }
-      }}
-    >
-      <title>{label}</title>
-      <rect
-        x={x - 4} y={y - 4} width={w + 8} height={h + 8} rx={6}
-        className="room-interactive-glow" fill="none" stroke="var(--room-screen-on)" strokeWidth={2}
-        pointerEvents="none"
-      />
-      <RoomItemSprite itemKey="vitrine" x={x} y={y} className="room-item-photo" />
-      <VitrineContent x={x} y={y} vitrine={vitrine} />
-    </g>
+    <div className="glass card-shine rounded-2xl p-2 sm:p-3 shrink-0 self-stretch">
+      <svg
+        viewBox={`0 0 ${vw} ${vh}`}
+        className="h-full w-auto rounded-xl"
+        role="img"
+        aria-label={label}
+      >
+        {/* Im Bearbeiten-Modus nur sichtbar, nicht anklickbar — sie lässt
+            sich ohnehin nicht verschieben, ein Klick soll dort nicht mitten
+            in der Möbel-Auswahl ein Modal aufreißen. */}
+        {editing ? (
+          <image href="/room-items/vitrine.png" x={0} y={0} width={vw} height={vh}
+            preserveAspectRatio="xMidYMax meet" className="room-item-photo" />
+        ) : (
+          <g
+            className="room-hit"
+            role="button"
+            tabIndex={0}
+            aria-label={label}
+            onClick={() => onInteract("vitrine")}
+            onKeyDown={e => {
+              if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onInteract("vitrine"); }
+            }}
+          >
+            <title>{label}</title>
+            <rect
+              x={2} y={2} width={vw - 4} height={vh - 4} rx={10}
+              className="room-interactive-glow" fill="none" stroke="var(--room-screen-on)" strokeWidth={2}
+              pointerEvents="none"
+            />
+            <image href="/room-items/vitrine.png" x={0} y={0} width={vw} height={vh}
+              preserveAspectRatio="xMidYMax meet" className="room-item-photo" />
+            <VitrineContent x={0} y={0} vitrine={vitrine} />
+          </g>
+        )}
+      </svg>
+    </div>
   );
 }
 
@@ -514,15 +546,15 @@ function TrophySlot({ trophy, x, y, s }: { trophy: VitrineTrophy; x: number; y: 
  * bleibt ohnehin VitrineModal vorbehalten, das beim Klick aufgeht.
  */
 function PlaqueLabel({ x, y, text }: { x: number; y: number; text: string }) {
-  const short = text.length > 14 ? `${text.slice(0, 13)}…` : text;
-  const plaqueW = Math.min(58, Math.max(24, short.length * 4.6));
+  const short = text.length > 16 ? `${text.slice(0, 15)}…` : text;
+  const plaqueW = Math.min(104, Math.max(44, short.length * 8.3));
   return (
     <g transform={`translate(${x},${y})`}>
       <title>{text}</title>
-      <rect x={-plaqueW / 2} y={0} width={plaqueW} height={9} rx={1.5}
-        fill="var(--room-metal-hi)" stroke="var(--room-shade)" strokeWidth={0.5} opacity={0.9} />
-      <text x={0} y={4.5} textAnchor="middle" dominantBaseline="central"
-        fontSize={5.5} fill="var(--room-plastic)" opacity={0.85}>
+      <rect x={-plaqueW / 2} y={0} width={plaqueW} height={16} rx={2.5}
+        fill="var(--room-metal-hi)" stroke="var(--room-shade)" strokeWidth={0.75} opacity={0.9} />
+      <text x={0} y={8} textAnchor="middle" dominantBaseline="central"
+        fontSize={10} fill="var(--room-plastic)" opacity={0.85}>
         {short}
       </text>
     </g>
