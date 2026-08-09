@@ -7,58 +7,51 @@
  * zeigt.
  */
 
-import { getRoomItem, isSurface, type RoomItemDef, type RoomTag, type RoomZone } from "./room-items";
+import { getRoomItem, isSurface, type RoomItemDef, type RoomTag } from "./room-items";
+import { ISO_GRID, type RoomSurface } from "./room-iso";
+
+export type { RoomSurface } from "./room-iso";
 
 /**
- * EIN gemeinsames Raster für Wand und Boden, keine zwei gestapelten Zonen
- * mehr. Grund: die Bühne ist eine reine Frontalansicht ohne Bodenperspektive
- * — man sieht in dieser Logik gar keine Bodenfläche, man blickt direkt auf
- * eine Wand. Zwei separate Flächen (Wandtextur oben, Bodentextur unten mit
- * eigener Sockelleiste) suggerierten fälschlich, Möbel würden auf einem
- * sichtbaren Boden LIEGEN statt vor der Wand STEHEN. Jetzt teilen sich Wand-
- * und Boden-Objekte dieselben 28×9 Zellen; der einzige verbleibende
- * Unterschied ist keine Geometrie mehr, sondern reine Platzierungsregel:
- * `mustStandOn: "floor"` zwingt ein Möbelstück mit der Unterkante in die
- * letzte Zeile (steht "auf dem Boden"), alles andere (Wanddeko, freie
- * Peripherie) darf irgendwo im Raster hängen.
+ * Drei Rasterflächen für die isometrische Eck-Ansicht (Rückwand, Seitenwand,
+ * Boden) — siehe src/lib/room-iso.ts für die Projektion. `GRID` bleibt der
+ * Name, den Validierung und Editor kennen; die konkreten Größen kommen aus
+ * `ISO_GRID`, damit Projektions- und Platzierungs-Raster nie auseinanderlaufen.
  *
- * `wall`/`floor` bleiben als IDENTISCHE Objekte bestehen (nicht zu einem
- * einzigen GRID vereinfacht), damit `GRID[zone]`-Aufrufe an anderer Stelle
- * unverändert funktionieren — die Zone existiert als Katalog-Feld weiter
- * (Shop-Gruppierung, Fehlertexte "gehört an die Wand"), bestimmt aber keine
- * eigene Koordinatenfläche mehr.
- *
- * 28 Spalten, 9 Zeilen (vorher 4 Wand- + 5 Bodenzeilen getrennt gestapelt —
- * in Summe dieselbe Bühnenhöhe wie zuvor, nur nicht mehr versetzt).
+ * `RoomItemDef.zone` (aus room-items.ts) bleibt die GROBE Katalog-Klassifikation
+ * ("wall" | "floor" — welche Art Möbelstück ist das). `PlacedItem.zone` ist die
+ * FEINE, tatsächliche Fläche, auf der es gerade steht/hängt (`RoomSurface`:
+ * "floor" | "wall_back" | "wall_side") — ein Wand-Objekt darf auf JEDER der
+ * beiden Wände stehen, ein Boden-Objekt nur auf dem Boden. Diese Entkopplung
+ * vermeidet, dass jedes Deko-Item im Katalog explizit "welche Wand" festlegen
+ * muss.
  */
-export const GRID = {
-  wall:  { cols: 28, rows: 9 },
-  floor: { cols: 28, rows: 9 },
-} as const;
+export const GRID = ISO_GRID;
 
-/** SVG-Einheiten pro Rasterzelle. Die Bühne ist 1792 × 576 groß. */
+/**
+ * SVG-Einheiten pro Rasterzelle — nur noch für die REINE Sprite-Größe
+ * (`RoomItemSprite.tsx`: `def.w * CELL`), nicht mehr für Positionierung. Die
+ * Positionierung läuft jetzt ausschließlich über die Projektionsfunktionen in
+ * room-iso.ts (`TILE_W`/`TILE_H`/`WALL_UNIT`). Zahlenwert bewusst identisch zu
+ * `WALL_UNIT`, damit ein Wandobjekt mit `w:2,h:2` optisch genauso groß bleibt
+ * wie vor der Umstellung.
+ */
 export const CELL = 64;
-
-export const STAGE = {
-  width:      GRID.wall.cols * CELL,   // 1792
-  wallHeight: GRID.wall.rows * CELL,   // 576 — jetzt die volle Bühnenhöhe
-  floorTop:   0,                       // kein Versatz mehr: Boden = Wand-Ursprung
-  height:     GRID.wall.rows * CELL,   // 576 (unverändert ggü. vorher 4+5 Zeilen)
-} as const;
-
-/** Rasterkoordinate → SVG-Koordinate. Wand und Boden teilen sich denselben
- *  Ursprung — `zone` bleibt Parameter für Aufrufer, beeinflusst aber die
- *  Position nicht mehr. */
-export function cellToSvg(_zone: RoomZone, x: number, y: number): { x: number; y: number } {
-  return { x: x * CELL, y: y * CELL };
-}
 
 export interface PlacedItem {
   /** RoomItem.id — bei DEFAULT_ROOM synthetisch, z.B. "default:schreibtisch_alt". */
   id:      string;
   key:     string;
-  zone:    RoomZone;
+  zone:    RoomSurface;
+  /** Spalte auf der jeweiligen Fläche (X-Achse in room-iso.ts). */
   x:       number;
+  /**
+   * Zweite Achse — ihre Bedeutung hängt von `zone` ab: auf "floor" ist es die
+   * Tiefe (Z, 0 = an der Rückwand), auf "wall_back"/"wall_side" ist es die
+   * Höhe ab Boden (Y). Bewusst weiter `y` genannt (nicht `z`/`depth`) statt
+   * eines dritten Feldes, damit sich am RoomItem-DB-Schema (x/y, kein z)
+   * nichts ändern muss — nur die Interpretation ist neu.
+   */
   y:       number;
   flipped: boolean;
   starter: boolean;
@@ -104,13 +97,17 @@ export const MAX_PLACED_ITEMS = 200;
  *
  * Kein Jobbrett mehr: die Jobbörse öffnet sich über den Button in der
  * Aktionsleiste unter dem Zimmer, ein zusätzliches Wand-Objekt dafür war
- * redundant (siehe room-items.ts).
+ * redundant (siehe room-items.ts). Ebenso kein Bett mehr — das Zimmer ist
+ * als Gaming-/Streaming-Setup gedacht, kein Schlafzimmer.
  */
-export const DEFAULT_PLACEMENTS: { key: string; zone: RoomZone; x: number; y: number }[] = [
-  { key: "bett",             zone: "floor", x: 1, y: 7 },
-  { key: "schreibtisch_alt", zone: "floor", x: 7, y: 6 },
-  { key: "roehrenmonitor",   zone: "floor", x: 9, y: 4 },
-  { key: "pc_billig",        zone: "floor", x: 15, y: 7 },
+export const DEFAULT_PLACEMENTS: { key: string; zone: RoomSurface; x: number; y: number }[] = [
+  // Boden: x = Spalte, y = Tiefe (0 = an der Rückwand). Der Schreibtisch
+  // steht mit der Vorderkante nah am Betrachter (großes y), der Monitor
+  // teilt sich dieselbe (x,y)-Grundfläche — er "steht" auf dem Tisch, siehe
+  // mustStandOn:"desk" in validatePlacement.
+  { key: "schreibtisch_alt", zone: "floor", x: 2, y: 3 },
+  { key: "roehrenmonitor",   zone: "floor", x: 4, y: 3 },
+  { key: "pc_billig",        zone: "floor", x: 0, y: 4 },
   // Vitrine bewusst NICHT hier: sie ist ein festes Bühnenelement mit fixer
   // Position (siehe RoomStage.tsx, VitrinePanel), kein Katalog-Platzierung.
 ];
@@ -146,7 +143,7 @@ export function rectsOverlap(a: Rect, b: Rect): boolean {
   return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 }
 
-export function fitsGrid(def: RoomItemDef, x: number, y: number, zone: RoomZone): boolean {
+export function fitsGrid(def: RoomItemDef, x: number, y: number, zone: RoomSurface): boolean {
   const grid = GRID[zone];
   return Number.isInteger(x) && Number.isInteger(y)
     && x >= 0 && y >= 0
@@ -154,7 +151,13 @@ export function fitsGrid(def: RoomItemDef, x: number, y: number, zone: RoomZone)
     && y + def.h <= grid.rows;
 }
 
-/** Alle Zellen, die von einem Tisch belegt sind — Basis für mustStandOn: "desk". */
+/**
+ * Alle Boden-Zellen (x,y=Tiefe), die von einem Tisch belegt sind — Basis für
+ * mustStandOn:"desk". In der isometrischen Ansicht "steht" ein Monitor auf
+ * einem Tisch, indem er dieselbe Grundfläche (x,y) belegt wie der Tisch
+ * selbst (visuell angehoben rendert RoomStage.tsx über einen festen
+ * Y-Höhenversatz, das ist reine Optik und fließt hier nicht mit ein).
+ */
 function deskCells(placed: PlacedItem[]): Set<string> {
   const cells = new Set<string>();
   for (const item of placed) {
@@ -178,7 +181,13 @@ export function validatePlacement(
   const def = getRoomItem(candidate.key);
   if (!def)               return { ok: false, error: "Unbekanntes Möbelstück" };
   if (isSurface(def))     return { ok: false, error: "Tapeten und Böden werden nicht aufgestellt" };
-  if (def.zone !== candidate.zone) {
+
+  // Katalog-Klassifikation (def.zone: grob "wall"/"floor") gegen die
+  // tatsächliche Fläche (candidate.zone: "floor"/"wall_back"/"wall_side") —
+  // ein Wand-Objekt darf auf JEDER der beiden Wände stehen, ein Boden-Objekt
+  // ausschließlich auf dem Boden.
+  const zoneOk = def.zone === "floor" ? candidate.zone === "floor" : candidate.zone !== "floor";
+  if (!zoneOk) {
     return {
       ok: false,
       error: def.zone === "wall"
@@ -190,28 +199,37 @@ export function validatePlacement(
     return { ok: false, error: `${def.label} passt nicht ins Raster` };
   }
 
-  // Wand- und Boden-Objekte teilen sich seit der Zusammenlegung dieselbe
-  // Koordinatenfläche — hier darf NICHT mehr nach Zone gefiltert werden,
-  // sonst würden Objekte unterschiedlicher (Katalog-)Zone sich unbemerkt
-  // überlappen dürfen.
-  const others = placed.filter(p => p.id !== candidate.id);
-  const rect   = rectOf(candidate, def);
+  // Überlappung nur zwischen Objekten auf DERSELBEN Fläche — Rückwand,
+  // Seitenwand und Boden sind jetzt drei getrennte Koordinatenräume, ein
+  // Wandobjekt bei (2,1) kann kein Bodenobjekt bei (2,1) überdecken.
+  //
+  // Ausnahme: ein mustStandOn:"desk"-Objekt (Monitor & Co.) TEILT sich
+  // absichtlich die Grundfläche mit seinem Tisch (siehe deskCells weiter
+  // unten) — das ist kein Konflikt, sondern "steht auf dem Tisch". Nur die
+  // Überlappung mit ANDEREN, nicht-desk-tragenden Objekten zählt.
+  const others = placed.filter(p => p.id !== candidate.id && p.zone === candidate.zone);
+  const rect    = rectOf(candidate, def);
   for (const other of others) {
     const otherDef = getRoomItem(other.key);
     if (!otherDef) continue;
+    const isDeskPairing =
+      (def.mustStandOn === "desk" && otherDef.tags.includes("desk")) ||
+      (otherDef.mustStandOn === "desk" && def.tags.includes("desk"));
+    if (isDeskPairing) continue;
     if (rectsOverlap(rect, rectOf(other, otherDef))) {
       return { ok: false, error: `Da steht schon etwas: ${otherDef.label}` };
     }
   }
 
-  if (def.mustStandOn === "floor" && candidate.y + def.h !== GRID.floor.rows) {
-    return { ok: false, error: `${def.label} muss auf dem Boden stehen` };
-  }
+  // mustStandOn:"floor" braucht keine geometrische Prüfung mehr: Boden-Objekte
+  // sind durch den Zonen-Check oben bereits zwingend auf der Bodenfläche.
   if (def.mustStandOn === "desk") {
-    const desks = deskCells(others);
+    const desks = deskCells(placed.filter(p => p.id !== candidate.id));
     for (let dx = 0; dx < def.w; dx++) {
-      if (!desks.has(`${candidate.x + dx},${candidate.y + def.h}`)) {
-        return { ok: false, error: `${def.label} muss auf einem Tisch stehen` };
+      for (let dy = 0; dy < def.h; dy++) {
+        if (!desks.has(`${candidate.x + dx},${candidate.y + dy}`)) {
+          return { ok: false, error: `${def.label} muss auf einem Tisch stehen` };
+        }
       }
     }
   }
@@ -294,16 +312,23 @@ export function roomLevel(placed: PlacedItem[]): number {
 
 /**
  * Freie Zielzellen für ein Item — der Editor leuchtet damit die erlaubten
- * Plätze aus, ohne eine zweite Regel-Implementierung zu brauchen.
+ * Plätze aus, ohne eine zweite Regel-Implementierung zu brauchen. Boden-Items
+ * durchsuchen nur die Bodenfläche; Wand-Items durchsuchen BEIDE Wände (ein
+ * Wandobjekt darf frei zwischen Rückwand und Seitenwand wechseln).
  */
-export function legalCells(placed: PlacedItem[], candidate: PlacedItem): { x: number; y: number }[] {
+export function legalCells(
+  placed: PlacedItem[], candidate: PlacedItem,
+): { zone: RoomSurface; x: number; y: number }[] {
   const def = getRoomItem(candidate.key);
   if (!def) return [];
-  const grid  = GRID[def.zone];
-  const cells: { x: number; y: number }[] = [];
-  for (let y = 0; y + def.h <= grid.rows; y++) {
-    for (let x = 0; x + def.w <= grid.cols; x++) {
-      if (validatePlacement(placed, { ...candidate, zone: def.zone, x, y }).ok) cells.push({ x, y });
+  const surfaces: RoomSurface[] = def.zone === "floor" ? ["floor"] : ["wall_back", "wall_side"];
+  const cells: { zone: RoomSurface; x: number; y: number }[] = [];
+  for (const zone of surfaces) {
+    const grid = GRID[zone];
+    for (let y = 0; y + def.h <= grid.rows; y++) {
+      for (let x = 0; x + def.w <= grid.cols; x++) {
+        if (validatePlacement(placed, { ...candidate, zone, x, y }).ok) cells.push({ zone, x, y });
+      }
     }
   }
   return cells;

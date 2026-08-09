@@ -474,20 +474,6 @@ const KonsoleNeu: Sprite = ({ w, h }) => (
 
 // ── Boden: Möbel & Deko ──────────────────────────────────────────────────────
 
-const Bett: Sprite = ({ w, h }) => (
-  <g>
-    <rect x={0} y={h * 0.34} width={w} height={h * 0.52} rx={4} fill={WOOD} stroke={OUT} strokeWidth={1.5} />
-    {/* Durchgelegene Matratze */}
-    <path d={`M 6 ${h * 0.42} h ${w - 12} v ${h * 0.1} q ${-w / 2} ${h * 0.16} ${-(w - 12)} 0 z`}
-      fill={FABRIC} stroke={OUT} strokeWidth={1.2} />
-    <rect x={10} y={h * 0.36} width={w * 0.28} height={h * 0.12} rx={5} fill={PLASTIC_HI} opacity={0.85} />
-    <rect x={0} y={h * 0.14} width={w * 0.1} height={h * 0.4} rx={3} fill={WOOD_HI} stroke={OUT} strokeWidth={1.2} />
-    <rect x={w - w * 0.06} y={h * 0.4} width={w * 0.06} height={h * 0.3} rx={2} fill={WOOD_HI} />
-    <rect x={8} y={h * 0.86} width={10} height={h * 0.14} fill={WOOD_HI} />
-    <rect x={w - 18} y={h * 0.86} width={10} height={h * 0.14} fill={WOOD_HI} />
-  </g>
-);
-
 const Vitrine: Sprite = ({ w, h }) => (
   <g>
     <rect x={2} y={2} width={w - 4} height={h - 4} rx={4} fill={WOOD} stroke={OUT} strokeWidth={2} />
@@ -612,7 +598,6 @@ export const SPRITES: Record<string, Sprite> = {
   streamdeck:       Streamdeck,
   konsole_retro:    KonsoleRetro,
   konsole_neu:      KonsoleNeu,
-  bett:             Bett,
   vitrine:          Vitrine,
   pflanze:          Pflanze,
   teppich:          Teppich,

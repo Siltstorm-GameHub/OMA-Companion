@@ -1,12 +1,23 @@
 import { prisma } from "./prisma";
 import { COIN_PREFIX } from "./points";
 import { getRank } from "./ranks";
-import { getRoomItem, isFixed, isSurface, STARTER_ITEM_KEYS, type RoomZone } from "./room-items";
+import { getRoomItem, isFixed, isSurface, STARTER_ITEM_KEYS } from "./room-items";
 import {
   DEFAULT_ROOM, DEFAULT_PLACEMENTS, DEFAULT_ID_PREFIX, MAX_PLACED_ITEMS,
-  countTags, validateLayout,
-  type PlacedItem, type RoomState, type StoredItem,
+  countTags, validateLayout, fitsGrid,
+  type PlacedItem, type RoomState, type StoredItem, type RoomSurface,
 } from "./room-layout";
+
+/**
+ * Ordnet einen rohen DB-Zonenstring einer gültigen RoomSurface zu. Vor der
+ * isometrischen Eck-Ansicht gab es nur "wall"/"floor" — solche Altzeilen
+ * (und alles sonst Unerwartete) werden defensiv auf "wall_back" bzw. "floor"
+ * abgebildet, statt einen Typfehler zu riskieren.
+ */
+function coerceSurface(raw: string): RoomSurface {
+  if (raw === "floor" || raw === "wall_back" || raw === "wall_side") return raw;
+  return raw === "wall" ? "wall_back" : "floor";
+}
 import { checkRequirements, formatMissing, getJob } from "./jobs";
 
 /**
@@ -45,10 +56,20 @@ export async function loadRoom(userId: string): Promise<RoomState> {
     // ("passt nicht ins Raster"). Deshalb werden sie beim Laden ignoriert.
     if (row.itemKey === "vitrine") continue;
     if (row.placed) {
-      placed.push({
-        id: row.id, key: row.itemKey, zone: row.zone === "wall" ? "wall" : "floor",
-        x: row.x, y: row.y, flipped: row.flipped, starter: row.starter,
-      });
+      // Zeilen aus der Zeit vor der isometrischen Eck-Ansicht (flaches
+      // 28×9-Raster) haben Koordinaten, die im neuen, kleineren Drei-Flächen-
+      // Raster oft nicht mehr passen. Statt die ganze Seite mit einem
+      // Validierungsfehler kippen zu lassen, wandern nicht mehr passende
+      // Altzeilen defensiv ins Lager — der User platziert sie einmal neu,
+      // verliert das Möbelstück aber nicht (gleiches Prinzip wie beim
+      // Vitrine-Rasterwechsel weiter oben).
+      const def  = getRoomItem(row.itemKey)!;
+      const zone = coerceSurface(row.zone);
+      if (fitsGrid(def, row.x, row.y, zone)) {
+        placed.push({ id: row.id, key: row.itemKey, zone, x: row.x, y: row.y, flipped: row.flipped, starter: row.starter });
+      } else {
+        stored.push({ id: row.id, key: row.itemKey });
+      }
     } else {
       stored.push({ id: row.id, key: row.itemKey });
     }
@@ -163,7 +184,10 @@ export async function purchaseRoomItem(userId: string, itemKey: string): Promise
 
     const row = await tx.roomItem.create({
       data: {
-        userId, itemKey, zone: def.zone, x: 0, y: 0,
+        // Solange placed:false (Lager), ist die Zone nur ein Platzhalter —
+        // der Editor setzt beim Aufstellen eine echte Fläche. Trotzdem ein
+        // gültiger RoomSurface-Wert, damit keine Altwerte ("wall") entstehen.
+        userId, itemKey, zone: def.zone === "floor" ? "floor" : "wall_back", x: 0, y: 0,
         flipped: false, placed: false, starter: false,
       },
       select: { id: true },
@@ -185,7 +209,7 @@ export async function purchaseRoomItem(userId: string, itemKey: string): Promise
 // ── Einrichten ───────────────────────────────────────────────────────────────
 
 export interface LayoutInput {
-  id: string; zone: RoomZone; x: number; y: number; flipped: boolean;
+  id: string; zone: RoomSurface; x: number; y: number; flipped: boolean;
 }
 
 /**
@@ -253,9 +277,11 @@ export async function saveLayout(
 
   const placed: PlacedItem[] = placedInput.map(p => {
     const row = byId.get(p.id)!;
-    const def = getRoomItem(row.itemKey)!;
     return {
-      id: p.id, key: row.itemKey, zone: def.zone,
+      // `p.zone` ist die vom Client gewählte Fläche (Boden oder EINE der
+      // beiden Wände) — validateLayout() gleich danach prüft, ob sie zur
+      // Katalog-Klassifikation des Items passt (def.zone "wall"/"floor").
+      id: p.id, key: row.itemKey, zone: p.zone,
       x: Math.trunc(p.x), y: Math.trunc(p.y),
       flipped: !!p.flipped, starter: row.starter,
     };

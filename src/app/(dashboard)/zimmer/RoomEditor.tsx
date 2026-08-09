@@ -6,8 +6,8 @@ import { toast } from "sonner";
 import {
   Save, X, Loader2, FlipHorizontal2, PackageOpen, Package, Lock, Paintbrush,
 } from "lucide-react";
-import { getRoomItem, isFixed, isSurface, ROOM_ITEMS, type RoomZone } from "@/lib/room-items";
-import { legalCells, type PlacedItem, type RoomState, type StoredItem } from "@/lib/room-layout";
+import { getRoomItem, isFixed, isSurface, ROOM_ITEMS } from "@/lib/room-items";
+import { legalCells, type PlacedItem, type RoomState, type RoomSurface, type StoredItem } from "@/lib/room-layout";
 import type { RoomProfileCore } from "@/lib/room-profile-data";
 import RoomStage from "./RoomStage";
 import { RoomItemPreview } from "./RoomItemSprite";
@@ -58,14 +58,20 @@ export default function RoomEditor({ state, core, owned, onDone }: Props) {
     if (!s) return null;
     const def = getRoomItem(s.key);
     if (!def) return null;
-    return { id: s.id, key: s.key, zone: def.zone, x: 0, y: 0, flipped: false, starter: false };
+    // Platzhalter-Fläche fürs erste Aufheben aus dem Lager — legalCells()
+    // gleich danach berechnet ohnehin BEIDE Wände für Wand-Items, diese
+    // Startfläche ist nur der Ausgangspunkt vor dem ersten echten Tap.
+    const zone: RoomSurface = def.zone === "floor" ? "floor" : "wall_back";
+    return { id: s.id, key: s.key, zone, x: 0, y: 0, flipped: false, starter: false };
   }, [selection, placed, stored]);
 
   /** Freie Plätze — dieselbe Regel-Implementierung, die auch der Server nutzt. */
   const legal = useMemo(() => {
     if (!candidate) return [];
     const others = placed.filter(p => p.id !== candidate.id);
-    return legalCells(others, candidate).map(c => ({ zone: candidate.zone, x: c.x, y: c.y }));
+    // legalCells() liefert die Fläche pro Zelle selbst mit — bei Wand-Items
+    // deckt das jetzt BEIDE Wände ab, nicht mehr nur `candidate.zone`.
+    return legalCells(others, candidate);
   }, [candidate, placed]);
 
   const ghost = useMemo(() => {
@@ -85,7 +91,7 @@ export default function RoomEditor({ state, core, owned, onDone }: Props) {
     setSelection({ id, from: "placed" });
   }
 
-  function handleDrop(zone: RoomZone, x: number, y: number) {
+  function handleDrop(zone: RoomSurface, x: number, y: number) {
     if (!candidate) return;
     if (selection?.from === "stored") {
       setStored(s => s.filter(i => i.id !== candidate.id));

@@ -18,7 +18,7 @@ export async function PUT(req: NextRequest) {
       !raw || typeof raw.id !== "string" ||
       typeof raw.x !== "number" || typeof raw.y !== "number" ||
       !Number.isFinite(raw.x) || !Number.isFinite(raw.y) ||
-      (raw.zone !== "wall" && raw.zone !== "floor")
+      (raw.zone !== "floor" && raw.zone !== "wall_back" && raw.zone !== "wall_side")
     ) {
       return NextResponse.json({ error: "Ungültige Position" }, { status: 400 });
     }
