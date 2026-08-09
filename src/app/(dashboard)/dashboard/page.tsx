@@ -32,6 +32,7 @@ import ClipContestWidget from "@/components/ClipContestWidget";
 import { HeroStatValue } from "@/components/HeroStatValue";
 import { computeStatStandings, type StatConfig, type LegacyStandingRow } from "@/lib/series-event-points";
 import GameserverWidget from "./GameserverWidget";
+import GuestLockOverlay from "@/components/GuestLockOverlay";
 
 const MONTH_NAMES = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
 
@@ -312,6 +313,38 @@ export default async function DashboardPage() {
         <div className="absolute bottom-0 inset-x-5 h-px"
           style={{ background: "linear-gradient(90deg, transparent, rgba(20,184,166,0.18), transparent)" }} />
 
+        {!userId && (
+          <div className="relative rounded-xl overflow-hidden" style={{ minHeight: "168px" }}>
+            {/* Skeleton-Platzhalter statt echter Hero-Daten */}
+            <div className="animate-pulse">
+              <div className="flex items-start gap-5">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg bg-white/[0.06] shrink-0" />
+                <div className="flex-1 min-w-0 pt-1 space-y-2.5">
+                  <div className="h-2.5 w-16 rounded bg-white/[0.06]" />
+                  <div className="h-7 w-40 rounded bg-white/[0.08]" />
+                  <div className="flex items-center gap-2 mt-3">
+                    <div className="h-5 w-16 rounded bg-white/[0.06]" />
+                    <div className="h-5 w-14 rounded bg-white/[0.06]" />
+                    <div className="h-5 w-14 rounded bg-white/[0.06]" />
+                  </div>
+                </div>
+                <div className="hidden sm:block w-20 h-16 rounded bg-white/[0.06] shrink-0" />
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4 sm:mt-6">
+                {[0, 1, 2, 3].map(i => (
+                  <div key={i} className="h-16 rounded-sm bg-white/[0.05]" />
+                ))}
+              </div>
+            </div>
+            <GuestLockOverlay
+              title="Login erforderlich"
+              message="Melde dich mit Discord an, um dein Profil, Punkte und Rang zu sehen."
+            />
+          </div>
+        )}
+
+        {userId && (
+        <>
         <div className="flex items-start gap-5">
           {/* Avatar mit Cut-Corner + Rang-Ring */}
           <div className="relative shrink-0">
@@ -488,12 +521,16 @@ export default async function DashboardPage() {
             </div>
           </Link>
         </div>
+        </>
+        )}
 
         {/* Freshness-Hinweis statt starrem Cache */}
-        <div className="flex items-center gap-1.5 mt-2.5 text-[10px] text-gray-700">
-          <span className="w-1 h-1 rounded-full bg-teal-500/50 animate-pulse" />
-          Daten aktualisiert {formatFreshness(fetchedAt)}
-        </div>
+        {userId && (
+          <div className="flex items-center gap-1.5 mt-2.5 text-[10px] text-gray-700">
+            <span className="w-1 h-1 rounded-full bg-teal-500/50 animate-pulse" />
+            Daten aktualisiert {formatFreshness(fetchedAt)}
+          </div>
+        )}
       </div>
 
       {/* ── Rotierender Banner-Slider: Ergebnisse / Mitteilung / WhatsApp ── */}
@@ -719,9 +756,24 @@ export default async function DashboardPage() {
                 Alle <ChevronRight className="w-3 h-3" />
               </Link>
             </div>
-            <div className="surface overflow-hidden"
+            <div className="surface overflow-hidden relative"
               style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.45)" }}>
-              {servers.length === 0 ? (
+              {!userId ? (
+                <>
+                  <div className="animate-pulse divide-y divide-white/[0.05]">
+                    {[0, 1, 2].map(i => (
+                      <div key={i} className="flex items-center gap-3 px-3.5 py-3">
+                        <div className="w-8 h-8 rounded-md bg-white/[0.06] shrink-0" />
+                        <div className="flex-1 space-y-1.5">
+                          <div className="h-2.5 w-24 rounded bg-white/[0.06]" />
+                          <div className="h-2 w-14 rounded bg-white/[0.05]" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <GuestLockOverlay message="Melde dich mit Discord an, um alle Gameserver live zu sehen." />
+                </>
+              ) : servers.length === 0 ? (
                 <div className="flex flex-col items-center gap-2.5 p-6 text-center">
                   <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: "rgba(20,184,166,0.06)" }}>
                     <Gamepad2 className="w-5 h-5 text-gray-700" style={{ animation: "float 3.5s ease-in-out infinite 0.3s" }} />
@@ -747,9 +799,27 @@ export default async function DashboardPage() {
                 Alle <ChevronRight className="w-3 h-3" />
               </Link>
             </div>
-            <div className="surface overflow-hidden"
+            <div className="surface overflow-hidden relative"
               style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.45)" }}>
-
+              {!userId && (
+                <>
+                  <div className="animate-pulse">
+                    <div className="px-3.5 py-3" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                      <div className="h-1.5 rounded-full bg-white/[0.06]" />
+                    </div>
+                    {[0, 1, 2, 3].map(i => (
+                      <div key={i} className="flex items-center gap-2.5 px-3.5 py-2.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                        <div className="w-4 h-4 rounded-full bg-white/[0.06] shrink-0" />
+                        <div className="flex-1 h-2.5 rounded bg-white/[0.06]" />
+                        <div className="w-8 h-2.5 rounded bg-white/[0.05] shrink-0" />
+                      </div>
+                    ))}
+                  </div>
+                  <GuestLockOverlay message="Melde dich mit Discord an, um deine Quests zu sehen und Belohnungen zu sammeln." />
+                </>
+              )}
+              {userId && (
+              <>
               {/* Fortschrittsanzeige oben */}
               <div className="px-3.5 py-3 flex items-center gap-3"
                 style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
@@ -818,6 +888,8 @@ export default async function DashboardPage() {
                   </div>
                 );
               })}
+              </>
+              )}
             </div>
           </div>
 

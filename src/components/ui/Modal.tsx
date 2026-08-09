@@ -10,6 +10,15 @@ export interface ModalProps {
   title?: string;
   size?: "sm" | "md" | "lg" | "drawer";
   children: ReactNode;
+  /**
+   * Ersetzt die Standard-Panel-Optik (glass-heavy, abgerundet) komplett —
+   * für Fälle, in denen das Modal selbst ein Bildschirm-Rahmen sein soll
+   * (Gaming-Zimmer: das Profil-Popup sieht aus wie der angeklickte Monitor).
+   * Wenn gesetzt, ersetzt diese Klasse `glass-heavy rounded-2xl` komplett,
+   * statt sie nur zu ergänzen — jeder Monitor-Skin bringt seine eigene
+   * Hintergrund-/Rahmenfarbe mit.
+   */
+  panelClassName?: string;
 }
 
 const PANEL_WIDTH: Record<"sm" | "md" | "lg", string> = {
@@ -18,7 +27,7 @@ const PANEL_WIDTH: Record<"sm" | "md" | "lg", string> = {
   lg: "max-w-2xl",
 };
 
-export function Modal({ open, onClose, title, size = "md", children }: ModalProps) {
+export function Modal({ open, onClose, title, size = "md", children, panelClassName }: ModalProps) {
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
@@ -70,7 +79,7 @@ export function Modal({ open, onClose, title, size = "md", children }: ModalProp
           className={
             isDrawer
               ? `w-full sm:w-[500px] h-full bg-gray-950 border-l border-white/[0.06] shadow-2xl flex flex-col transition-transform duration-300 ease-out outline-none ${open ? "translate-x-0" : "translate-x-full"}`
-              : `glass-heavy rounded-2xl w-full ${PANEL_WIDTH[size as "sm" | "md" | "lg"]} max-h-[90vh] flex flex-col outline-none`
+              : `${panelClassName ?? "glass-heavy rounded-2xl"} w-full ${PANEL_WIDTH[size as "sm" | "md" | "lg"]} max-h-[90vh] flex flex-col outline-none`
           }
         >
           {title && (

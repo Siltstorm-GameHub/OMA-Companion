@@ -46,7 +46,13 @@ interface Props {
     badges:       VitrineBadge[];
     trophies:     VitrineTrophy[];
   };
-  onInteract: (target: InteractTarget) => void;
+  /**
+   * `itemKey` ist nur bei `target === "crt"` gesetzt — RoomView reicht ihn an
+   * CrtProfileModal weiter, damit dessen Rahmen wie GENAU DER angeklickte
+   * Monitor aussieht (Röhre, Flachbildschirm oder 144Hz), nicht immer wie
+   * die Röhre.
+   */
+  onInteract: (target: InteractTarget, itemKey?: string) => void;
   /** Gesetzt = Bearbeiten-Modus: jedes Möbelstück ist anwählbar statt interaktiv. */
   edit?: EditHooks;
 }
@@ -75,6 +81,25 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract, edit 
   const [view, setView] = useState<ZoneView>("all");
   const [hover, setHover] = useState<{ zone: RoomZone; x: number; y: number } | null>(null);
 
+  // ── Bildschirm-Zoom: "in den Monitor reinzoomen" beim Anklicken ───────
+  // Ein kurzer Punch-in auf den Klickpunkt, bevor sich das Profil-Popup
+  // darüberlegt — rein kosmetisch, läuft unabhängig vom Modal-Zustand und
+  // setzt sich nach der Animation von selbst zurück.
+  const [screenZoom, setScreenZoom] = useState<{ x: number; y: number } | null>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+
+  function zoomIntoScreen(e: React.MouseEvent | React.KeyboardEvent) {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    const clientX = "clientX" in e ? e.clientX : rect.left + rect.width / 2;
+    const clientY = "clientY" in e ? e.clientY : rect.top + rect.height / 2;
+    const px = ((clientX - rect.left) / rect.width) * 100;
+    const py = ((clientY - rect.top) / rect.height) * 100;
+    setScreenZoom({ x: px, y: py });
+    window.setTimeout(() => setScreenZoom(null), 500);
+  }
+
   // ── Maus-Ziehen (Desktop-Zusatz zum Antippen) ─────────────────────────
   // Touch bleibt bewusst außen vor: Antippen funktioniert dort schon und
   // Ziehen auf einer vollbreiten Fläche kollidiert mit dem Seiten-Scroll.
@@ -91,10 +116,14 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract, edit 
     return { x: p.x, y: p.y };
   }
 
-  const wallItems  = state.placed.filter(p => p.zone === "wall");
+  // Die Vitrine ist kein Katalog-Platzierungsobjekt mehr, sondern ein festes
+  // Bühnenelement (siehe FixedVitrine unten) — ältere `placed`-Zeilen aus der
+  // Zeit davor (schon materialisierte Zimmer) werden hier defensiv
+  // rausgefiltert, damit sie nicht doppelt gerendert werden.
+  const placedWithoutVitrine = state.placed.filter(p => p.key !== "vitrine");
+  const wallItems  = placedWithoutVitrine.filter(p => p.zone === "wall");
   // Von hinten nach vorn zeichnen, damit tiefer stehende Möbel oben liegen.
-  const floorItems = [...state.placed.filter(p => p.zone === "floor")].sort((a, b) => a.y - b.y);
-  const vitrineItem = state.placed.find(p => p.key === "vitrine");
+  const floorItems = [...placedWithoutVitrine.filter(p => p.zone === "floor")].sort((a, b) => a.y - b.y);
 
   function renderItem(item: PlacedItem) {
     const def = getRoomItem(item.key);
@@ -199,15 +228,22 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract, edit 
         role="button"
         tabIndex={0}
         aria-label={label}
-        onClick={() => onInteract(target)}
+        onClick={e => {
+          if (target === "crt") zoomIntoScreen(e);
+          onInteract(target, item.key);
+        }}
         onKeyDown={e => {
-          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onInteract(target); }
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            if (target === "crt") zoomIntoScreen(e);
+            onInteract(target, item.key);
+          }
         }}
       >
         <title>{label}</title>
         {/* Atmender Rahmen: einziger Hinweis, dass dieses Möbelstück anklickbar
-            ist und nicht nur Deko — ohne ihn sehen Jobbrett, Vitrine und
-            Röhrenmonitor identisch zu jedem anderen Möbelstück aus. */}
+            ist und nicht nur Deko — ohne ihn sehen Jobbrett und Monitore
+            identisch zu jedem anderen Möbelstück aus. */}
         <rect
           x={x - 4} y={y - 4} width={def.w * CELL + 8} height={def.h * CELL + 8} rx={6}
           className="room-interactive-glow" fill="none" stroke="var(--room-screen-on)" strokeWidth={2}
@@ -244,7 +280,9 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract, edit 
 
       <div className="glass card-shine rounded-2xl p-2 sm:p-3 room-stage-scroll scrollbar-none">
         <svg
-          className="room-stage rounded-xl"
+          ref={svgRef}
+          className={cn("room-stage rounded-xl", screenZoom && "room-stage-zoom")}
+          style={screenZoom ? { transformOrigin: `${screenZoom.x}% ${screenZoom.y}%` } : undefined}
           viewBox={VIEWBOX[view]}
           preserveAspectRatio="xMidYMid meet"
           role="img"
@@ -302,9 +340,7 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract, edit 
           {wallItems.map(renderItem)}
           {floorItems.map(renderItem)}
 
-          {vitrineItem && !edit && (
-            <VitrineContent item={vitrineItem} vitrine={vitrine} />
-          )}
+          <FixedVitrine ownerName={ownerName} vitrine={vitrine} onInteract={onInteract} editing={!!edit} />
 
           {/* ── Erlaubte Zielplätze ──────────────────────────────────
               Liegen über den Möbeln, damit sie immer treffbar sind.
@@ -341,22 +377,83 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract, edit 
   );
 }
 
-// ── Vitrinen-Inhalt ──────────────────────────────────────────────────────────
+// ── Vitrine: festes Bühnenelement ────────────────────────────────────────────
 
-function VitrineContent({
-  item, vitrine,
+/**
+ * Die Vitrine ist bewusst KEIN normales Katalog-Möbelstück mehr, sondern ein
+ * fest verankertes Bühnenelement: immer rechts am Bodenrand, immer über die
+ * volle Bodenhöhe. Grund: wer die Vitrine eines fremden Zimmers ansehen will,
+ * soll sie nicht erst suchen müssen — an jeder Tür der App steht sie am
+ * selben Fleck. Die deutlich größere Fläche schafft außerdem erst den Platz
+ * für die Namensplaketten unter jedem Pokal/Sammelstück/Abzeichen.
+ */
+function FixedVitrine({
+  ownerName, vitrine, onInteract, editing,
 }: {
-  item: PlacedItem;
-  vitrine: Props["vitrine"];
+  ownerName: string;
+  vitrine:   Props["vitrine"];
+  onInteract: (target: InteractTarget) => void;
+  editing:   boolean;
 }) {
-  const { x: ox, y: oy } = cellToSvg(item.zone, item.x, item.y);
+  const def = getRoomItem("vitrine");
+  if (!def) return null;
+  const gridX = GRID.floor.cols - def.w;
+  const gridY = GRID.floor.rows - def.h;
+  const { x, y } = cellToSvg("floor", gridX, gridY);
+  const w = def.w * CELL;
+  const h = def.h * CELL;
+  const label = `Sammlung von ${ownerName} anzeigen`;
+
+  // Im Bearbeiten-Modus nur sichtbar, nicht anklickbar — sie lässt sich
+  // ohnehin nicht verschieben, ein Klick soll dort nicht mitten in der
+  // Möbel-Auswahl ein Modal aufreißen.
+  if (editing) {
+    return <RoomItemSprite itemKey="vitrine" x={x} y={y} className="room-item-photo" />;
+  }
 
   return (
-    <g pointerEvents="none" transform={`translate(${ox},${oy})`}>
+    <g
+      className="room-hit"
+      role="button"
+      tabIndex={0}
+      aria-label={label}
+      onClick={() => onInteract("vitrine")}
+      onKeyDown={e => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onInteract("vitrine"); }
+      }}
+    >
+      <title>{label}</title>
+      <rect
+        x={x - 4} y={y - 4} width={w + 8} height={h + 8} rx={6}
+        className="room-interactive-glow" fill="none" stroke="var(--room-screen-on)" strokeWidth={2}
+        pointerEvents="none"
+      />
+      <RoomItemSprite itemKey="vitrine" x={x} y={y} className="room-item-photo" />
+      <VitrineContent x={x} y={y} vitrine={vitrine} />
+    </g>
+  );
+}
+
+function VitrineContent({
+  x, y, vitrine,
+}: {
+  x: number; y: number;
+  vitrine: Props["vitrine"];
+}) {
+  return (
+    <g pointerEvents="none" transform={`translate(${x},${y})`}>
       {/* Pokale im oberen Fach */}
       {vitrine.trophies.slice(0, VITRINE_SLOTS.trophies.length).map((t, i) => {
         const slot = VITRINE_SLOTS.trophies[i];
-        return <TrophySlot key={`${t.scopeType}:${t.scopeValue}`} trophy={t} {...slot} />;
+        const title = t.scopeType === "genre"
+          ? GENRE_CONFIG[t.scopeValue]?.title ?? t.scopeValue
+          : CATEGORY_CONFIG[t.scopeValue]?.title ?? t.scopeValue;
+        return (
+          <g key={`${t.scopeType}:${t.scopeValue}`}>
+            <TrophySlot trophy={t} {...slot} />
+            <PlaqueLabel x={slot.x + slot.s / 2} y={slot.plaqueY} text={title} />
+          </g>
+        );
       })}
 
       {/* Sammlerstücke in den mittleren Fächern */}
@@ -373,6 +470,7 @@ function VitrineContent({
                   preserveAspectRatio="xMidYMid meet" />
               : <rect x={slot.x + 4} y={slot.y + 4} width={slot.s - 8} height={slot.s - 8} rx={3}
                   fill="var(--room-plastic-hi)" />}
+            <PlaqueLabel x={slot.x + slot.s / 2} y={slot.plaqueY} text={c.name} />
           </g>
         );
       })}
@@ -381,12 +479,15 @@ function VitrineContent({
       {vitrine.badges.slice(0, VITRINE_SLOTS.badges.length).map((b, i) => {
         const slot = VITRINE_SLOTS.badges[i];
         return (
-          <text
-            key={b.key} x={slot.x + slot.s / 2} y={slot.y + slot.s / 2}
-            textAnchor="middle" dominantBaseline="central" fontSize={slot.s}
-          >
-            {b.icon}
-          </text>
+          <g key={b.key}>
+            <text
+              x={slot.x + slot.s / 2} y={slot.y + slot.s / 2}
+              textAnchor="middle" dominantBaseline="central" fontSize={slot.s}
+            >
+              {b.icon}
+            </text>
+            <PlaqueLabel x={slot.x + slot.s / 2} y={slot.plaqueY} text={b.name} />
+          </g>
         );
       })}
     </g>
@@ -403,6 +504,28 @@ function TrophySlot({ trophy, x, y, s }: { trophy: VitrineTrophy; x: number; y: 
     <text x={x + s / 2} y={y + s / 2} textAnchor="middle" dominantBaseline="central" fontSize={s * 0.82}>
       {emoji}
     </text>
+  );
+}
+
+/**
+ * Kleine gravierte Plakette unter jedem Ausstellungsstück — bei der winzigen
+ * Größe auf der Bühne eher Textur als Fließtext lesbar, der volle Name steckt
+ * deshalb zusätzlich in einem `<title>`-Tooltip. Der eigentliche Lesetext
+ * bleibt ohnehin VitrineModal vorbehalten, das beim Klick aufgeht.
+ */
+function PlaqueLabel({ x, y, text }: { x: number; y: number; text: string }) {
+  const short = text.length > 14 ? `${text.slice(0, 13)}…` : text;
+  const plaqueW = Math.min(58, Math.max(24, short.length * 4.6));
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <title>{text}</title>
+      <rect x={-plaqueW / 2} y={0} width={plaqueW} height={9} rx={1.5}
+        fill="var(--room-metal-hi)" stroke="var(--room-shade)" strokeWidth={0.5} opacity={0.9} />
+      <text x={0} y={4.5} textAnchor="middle" dominantBaseline="central"
+        fontSize={5.5} fill="var(--room-plastic)" opacity={0.85}>
+        {short}
+      </text>
+    </g>
   );
 }
 

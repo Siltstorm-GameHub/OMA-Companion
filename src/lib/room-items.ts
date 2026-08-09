@@ -71,13 +71,18 @@ export function isSurface(def: RoomItemDef): boolean {
 
 /**
  * Fest eingebaut: darf verschoben, aber nie eingelagert werden.
- * Betrifft genau die drei interaktiven Möbel — sie sind der Zugang zum Profil
- * (Röhrenmonitor), zur Sammlung (Vitrine) und zur Jobbörse (schwarzes Brett).
+ * Betrifft genau die drei ursprünglichen Zugangspunkte — Profil
+ * (Röhrenmonitor), Sammlung (Vitrine) und Jobbörse (schwarzes Brett), an
+ * `starter` erkannt statt an `interactive` allein: seit auch gekaufte
+ * Monitore (Flachbildschirm, 144Hz) das Profil-Popup öffnen, wäre sonst
+ * jeder zusätzlich gekaufte Monitor plötzlich nicht mehr einlagerbar — dabei
+ * sollen die weiterhin frei getauscht werden können, nur der Röhrenmonitor
+ * aus der Grundausstattung ist der unverlierbare Zugang.
  * Die übrige Grundausstattung (Bett, Wackeltisch, Billig-PC, Bürostuhl) MUSS
  * einlagerbar bleiben, sonst passt später kein Endgame-Setup mehr auf den Boden.
  */
 export function isFixed(def: RoomItemDef): boolean {
-  return !!def.interactive;
+  return !!def.interactive && !!def.starter;
 }
 
 export const ROOM_CATEGORY_LABELS: Record<RoomCategory, string> = {
@@ -304,14 +309,17 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     key: "monitor_flach", label: "Flachbildschirm",
     description: "Flach, hell, unspektakulär. Ein echter Fortschritt.",
     zone: "floor", category: "bildschirm", w: 1, h: 1, price: 700, minTier: 1, maxOwned: 3,
-    tags: ["monitor"], mustStandOn: "desk", accent: "slate",
+    // Jeder Monitor öffnet dasselbe Profil-Popup wie der Röhrenmonitor — der
+    // Rahmen des Popups übernimmt dann die Optik genau dieses Bildschirmtyps
+    // (siehe CrtProfileModal, MONITOR_SKINS).
+    tags: ["monitor"], mustStandOn: "desk", accent: "slate", interactive: "crt",
     imageUrl: "/room-items/monitor_flach.png",
   },
   {
     key: "monitor_144", label: "144Hz-Monitor",
     description: "Ab jetzt sind alle Niederlagen wieder deine eigene Schuld.",
     zone: "floor", category: "bildschirm", w: 1, h: 1, price: 1900, minTier: 3, maxOwned: 3,
-    tags: ["monitor", "monitor_144"], mustStandOn: "desk", accent: "violet",
+    tags: ["monitor", "monitor_144"], mustStandOn: "desk", accent: "violet", interactive: "crt",
     imageUrl: "/room-items/monitor_144.png",
   },
 
@@ -400,7 +408,13 @@ export const ROOM_ITEMS: RoomItemDef[] = [
   {
     key: "vitrine", label: "Vitrine",
     description: "Deine Sammlung hinter Glas. Draufklicken und angeben.",
-    zone: "floor", category: "vitrine", w: 2, h: 3, price: 0, minTier: 1, maxOwned: 1,
+    // Bewusst deutlich höher als jedes andere Möbelstück (volle Bodenhöhe
+    // statt nur 3 Zeilen): die Vitrine ist kein normales Katalog-Item mehr,
+    // sondern ein festes, unbewegliches Bühnenelement (siehe RoomStage.tsx,
+    // FixedVitrine) — an fester Position, damit Besucher fremder Zimmer sie
+    // immer am selben Fleck finden, und groß genug, um Pokale, Sammelstücke
+    // und Abzeichen samt kleiner Namensplakette lesbar zu zeigen.
+    zone: "floor", category: "vitrine", w: 2, h: 5, price: 0, minTier: 1, maxOwned: 1,
     tags: ["vitrine"], mustStandOn: "floor", accent: "amber", starter: true, interactive: "vitrine",
     imageUrl: "/room-items/vitrine.png",
   },

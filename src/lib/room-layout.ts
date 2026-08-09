@@ -96,7 +96,8 @@ export const DEFAULT_PLACEMENTS: { key: string; zone: RoomZone; x: number; y: nu
   { key: "schreibtisch_alt", zone: "floor", x: 7, y: 3 },
   { key: "roehrenmonitor",   zone: "floor", x: 8, y: 2 },
   { key: "pc_billig",        zone: "floor", x: 10, y: 3 },
-  { key: "vitrine",          zone: "floor", x: 11, y: 2 },
+  // Vitrine bewusst NICHT hier: sie ist ein festes Bühnenelement mit fixer
+  // Position (siehe RoomStage.tsx, FixedVitrine), kein Katalog-Platzierung.
 ];
 
 /**
@@ -224,7 +225,10 @@ export function validateLayout(placed: PlacedItem[]): { ok: true } | { ok: false
 
 /** Zählt platzierte Tags — Grundlage der Job-Setup-Anforderungen. */
 export function countTags(placed: PlacedItem[]): Partial<Record<RoomTag, number>> {
-  const counts: Partial<Record<RoomTag, number>> = {};
+  // Die Vitrine steht als festes Bühnenelement fest, unabhängig von `placed`
+  // (siehe RoomStage.tsx, FixedVitrine) — für Job-Anforderungen zählt sie
+  // trotzdem immer als vorhanden, sonst würde z.B. "clan_boss" nie erfüllbar.
+  const counts: Partial<Record<RoomTag, number>> = { vitrine: 1 };
   for (const item of placed) {
     const def = getRoomItem(item.key);
     if (!def) continue;

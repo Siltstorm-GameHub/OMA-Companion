@@ -24,6 +24,10 @@ interface Props {
   details:     RoomProfileDetails;
   /** Nur im eigenen Zimmer: für den Profil-Editor (Bio, Geburtstag, Twitch, Banner). */
   core?:       RoomProfileCore;
+  /** Welcher Monitor angeklickt wurde (roehrenmonitor/monitor_flach/monitor_144)
+   *  — bestimmt den Rahmen-Skin. Fehlt er (z.B. externer Aufruf), fällt das
+   *  Popup auf die Röhren-Optik zurück. */
+  monitorKey?: string;
   /** Serverseitig gerendert, weil WanderpocalSection eine Server-Komponente ist. */
   trophySection: ReactNode;
   /** Nur im eigenen Zimmer: Push-Button und Benachrichtigungs-Einstellungen. */
@@ -31,14 +35,42 @@ interface Props {
 }
 
 /**
- * Was der Röhrenmonitor anzeigt: alles, was auf der Bühne keinen Platz hat.
+ * Jeder Monitor im Zimmer öffnet dasselbe Popup — der Rahmen übernimmt aber
+ * die Optik genau des angeklickten Bildschirmtyps, damit es sich anfühlt, als
+ * würde man tatsächlich in DIESEN Monitor hineinschauen statt immer in
+ * dieselbe generische Box.
+ */
+const MONITOR_SKINS: Record<string, { emoji: string; panelClassName: string }> = {
+  roehrenmonitor: {
+    emoji: "📺",
+    panelClassName:
+      "bg-[#0d0c0a] border-[14px] border-[#c9b98f] rounded-[36px] " +
+      "shadow-[0_0_0_1px_rgba(0,0,0,0.5)_inset,0_20px_60px_rgba(0,0,0,0.6)]",
+  },
+  monitor_flach: {
+    emoji: "🖥️",
+    panelClassName:
+      "bg-[#0a0a0d] border-[3px] border-black rounded-lg " +
+      "shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_20px_60px_rgba(0,0,0,0.6)]",
+  },
+  monitor_144: {
+    emoji: "🎮",
+    panelClassName:
+      "bg-[#0a0a0d] border-[3px] border-[#1a1a22] rounded-xl " +
+      "shadow-[0_0_0_2px_rgba(139,92,246,0.55),0_0_40px_rgba(139,92,246,0.3),0_20px_60px_rgba(0,0,0,0.6)]",
+  },
+};
+
+/**
+ * Was der Monitor anzeigt: alles, was auf der Bühne keinen Platz hat.
  * Bewusst hinter einem Klick — direkt sichtbar bleiben Hero, Stat-Kacheln und
  * Lieblingsspiele.
  */
 export default function CrtProfileModal({
-  open, onClose, displayName, readOnly, details, core, trophySection, settingsSection,
+  open, onClose, displayName, readOnly, details, core, monitorKey, trophySection, settingsSection,
 }: Props) {
   const [tab, setTab] = useState<TabKey>("aktivitaet");
+  const skin = MONITOR_SKINS[monitorKey ?? ""] ?? MONITOR_SKINS.roehrenmonitor;
 
   const tabs: { key: TabKey; label: string }[] = [
     { key: "aktivitaet", label: "Aktivität" },
@@ -52,7 +84,7 @@ export default function CrtProfileModal({
   ];
 
   return (
-    <Modal open={open} onClose={onClose} size="lg" title={`📺 ${displayName}`}>
+    <Modal open={open} onClose={onClose} size="lg" title={`${skin.emoji} ${displayName}`} panelClassName={skin.panelClassName}>
       {/* Tab-Leiste — horizontal scrollbar, damit sie auf dem Handy nicht umbricht */}
       <div className="flex gap-1.5 overflow-x-auto scrollbar-none -mx-1 px-1 pb-3 mb-4 border-b border-white/[0.06]">
         {tabs.map(t => (
