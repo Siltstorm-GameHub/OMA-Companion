@@ -30,26 +30,25 @@ const SHADE = "var(--room-shade)";
 
 /**
  * Positionen der Vitrinen-Fächer, damit RoomStage die Sammlung einsetzen kann.
- * Koordinaten liegen im lokalen 128×320-Koordinatenraum des Vitrinen-Sprites
- * (2×5 Rasterzellen à CELL=64 — die Vitrine ist als festes Bühnenelement
- * bewusst deutlich höher als jedes andere Möbelstück) und sind auf die vier
- * Glasböden im Canva-Bild public/room-items/vitrine.png abgestimmt — bei
- * einem Bildwechsel neu vermessen. Jeder Slot reserviert unter dem Icon
- * Platz für `plaqueY` — die kleine gravierte Namensplakette (siehe
- * PlaqueLabel in RoomStage.tsx).
+ * Koordinaten liegen im lokalen 240×576-Koordinatenraum des eigenständigen
+ * Vitrinen-Panels (VitrinePanel in RoomStage.tsx — losgelöst vom 64px-Raster,
+ * Höhe = volle Raumhöhe) und sind auf die vier Glasböden im Canva-Bild
+ * public/room-items/vitrine.png abgestimmt — bei einem Bildwechsel neu
+ * vermessen. Jeder Slot reserviert unter dem Icon Platz für `plaqueY` — die
+ * kleine gravierte Namensplakette (siehe PlaqueLabel in RoomStage.tsx).
  */
 export const VITRINE_SLOTS = {
   trophies: [
-    { x: 12, y: 48, s: 22, plaqueY: 74 }, { x: 40, y: 48, s: 22, plaqueY: 74 },
-    { x: 68, y: 48, s: 22, plaqueY: 74 }, { x: 96, y: 48, s: 22, plaqueY: 74 },
+    { x: 22, y: 86, s: 40, plaqueY: 133 }, { x: 72, y: 86, s: 40, plaqueY: 133 },
+    { x: 122, y: 86, s: 40, plaqueY: 133 }, { x: 173, y: 86, s: 40, plaqueY: 133 },
   ],
   collectibles: [
-    { x: 18, y: 110, s: 28, plaqueY: 142 }, { x: 54, y: 110, s: 28, plaqueY: 142 }, { x: 90, y: 110, s: 28, plaqueY: 142 },
-    { x: 18, y: 174, s: 28, plaqueY: 206 }, { x: 54, y: 174, s: 28, plaqueY: 206 }, { x: 90, y: 174, s: 28, plaqueY: 206 },
+    { x: 32, y: 198, s: 50, plaqueY: 256 }, { x: 97, y: 198, s: 50, plaqueY: 256 }, { x: 162, y: 198, s: 50, plaqueY: 256 },
+    { x: 32, y: 313, s: 50, plaqueY: 371 }, { x: 97, y: 313, s: 50, plaqueY: 371 }, { x: 162, y: 313, s: 50, plaqueY: 371 },
   ],
   badges: [
-    { x: 12, y: 244, s: 18, plaqueY: 268 }, { x: 34, y: 244, s: 18, plaqueY: 268 }, { x: 56, y: 244, s: 18, plaqueY: 268 },
-    { x: 78, y: 244, s: 18, plaqueY: 268 }, { x: 100, y: 244, s: 18, plaqueY: 268 },
+    { x: 22, y: 439, s: 32, plaqueY: 482 }, { x: 61, y: 439, s: 32, plaqueY: 482 }, { x: 101, y: 439, s: 32, plaqueY: 482 },
+    { x: 140, y: 439, s: 32, plaqueY: 482 }, { x: 180, y: 439, s: 32, plaqueY: 482 },
   ],
 } as const;
 
