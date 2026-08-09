@@ -10,42 +10,47 @@
 import { getRoomItem, isSurface, type RoomItemDef, type RoomTag, type RoomZone } from "./room-items";
 
 /**
- * Zwei getrennte Raster: oben die Wand, unten der Boden. Beide teilen sich
- * dieselbe Spaltenzahl, weil STAGE.width als eine gemeinsame Bühnenbreite für
- * beide Zonen übereinander gilt.
+ * EIN gemeinsames Raster für Wand und Boden, keine zwei gestapelten Zonen
+ * mehr. Grund: die Bühne ist eine reine Frontalansicht ohne Bodenperspektive
+ * — man sieht in dieser Logik gar keine Bodenfläche, man blickt direkt auf
+ * eine Wand. Zwei separate Flächen (Wandtextur oben, Bodentextur unten mit
+ * eigener Sockelleiste) suggerierten fälschlich, Möbel würden auf einem
+ * sichtbaren Boden LIEGEN statt vor der Wand STEHEN. Jetzt teilen sich Wand-
+ * und Boden-Objekte dieselben 28×9 Zellen; der einzige verbleibende
+ * Unterschied ist keine Geometrie mehr, sondern reine Platzierungsregel:
+ * `mustStandOn: "floor"` zwingt ein Möbelstück mit der Unterkante in die
+ * letzte Zeile (steht "auf dem Boden"), alles andere (Wanddeko, freie
+ * Peripherie) darf irgendwo im Raster hängen.
  *
- * 28 Spalten statt der ursprünglichen 12 — und die reine Flächenrechnung
- * (51 Wand- / 59 Bodenzellen für je ein Exemplar jedes Katalog-Objekts) war
- * dabei gar nicht die bindende Grenze. Der eigentliche Engpass: JEDES Objekt
- * mit mustStandOn:"floor" (Betten, Schreibtische, Stühle, PCs, Teppich, …—
- * 14 Objekte) muss mit der Unterkante exakt in der LETZTEN Bodenzeile stehen,
- * weil es in dieser Seitenansicht nur einen Boden gibt. Diese 14 Objekte sind
- * zusammen 25 Spalten breit — bei 18 Spalten Rasterbreite hätte also die
- * unterste Zeile allein schon nicht für ein Exemplar jedes Bodenobjekts
- * gereicht, selbst wenn im Rest des Rasters reichlich Fläche frei gewesen wäre.
- * 28 Spalten lassen dafür 3 Spalten Luft. Breiter statt höher, weil ein Raum
- * von Natur aus breiter als hoch wirkt und der bestehende Zonen-Tab/
- * Scroll-Mechanismus (.room-stage-scroll) genau für seitliches Scrollen auf
- * schmalen Bildschirmen gebaut ist.
+ * `wall`/`floor` bleiben als IDENTISCHE Objekte bestehen (nicht zu einem
+ * einzigen GRID vereinfacht), damit `GRID[zone]`-Aufrufe an anderer Stelle
+ * unverändert funktionieren — die Zone existiert als Katalog-Feld weiter
+ * (Shop-Gruppierung, Fehlertexte "gehört an die Wand"), bestimmt aber keine
+ * eigene Koordinatenfläche mehr.
+ *
+ * 28 Spalten, 9 Zeilen (vorher 4 Wand- + 5 Bodenzeilen getrennt gestapelt —
+ * in Summe dieselbe Bühnenhöhe wie zuvor, nur nicht mehr versetzt).
  */
 export const GRID = {
-  wall:  { cols: 28, rows: 4 },
-  floor: { cols: 28, rows: 5 },
+  wall:  { cols: 28, rows: 9 },
+  floor: { cols: 28, rows: 9 },
 } as const;
 
 /** SVG-Einheiten pro Rasterzelle. Die Bühne ist 1792 × 576 groß. */
 export const CELL = 64;
 
 export const STAGE = {
-  width:      GRID.wall.cols * CELL,                       // 1792
-  wallHeight: GRID.wall.rows * CELL,                       // 256
-  floorTop:   GRID.wall.rows * CELL,                       // 256
-  height:     (GRID.wall.rows + GRID.floor.rows) * CELL,   // 576
+  width:      GRID.wall.cols * CELL,   // 1792
+  wallHeight: GRID.wall.rows * CELL,   // 576 — jetzt die volle Bühnenhöhe
+  floorTop:   0,                       // kein Versatz mehr: Boden = Wand-Ursprung
+  height:     GRID.wall.rows * CELL,   // 576 (unverändert ggü. vorher 4+5 Zeilen)
 } as const;
 
-/** Rasterkoordinate → SVG-Koordinate (die Zonen liegen untereinander). */
-export function cellToSvg(zone: RoomZone, x: number, y: number): { x: number; y: number } {
-  return { x: x * CELL, y: (zone === "wall" ? 0 : STAGE.floorTop) + y * CELL };
+/** Rasterkoordinate → SVG-Koordinate. Wand und Boden teilen sich denselben
+ *  Ursprung — `zone` bleibt Parameter für Aufrufer, beeinflusst aber die
+ *  Position nicht mehr. */
+export function cellToSvg(_zone: RoomZone, x: number, y: number): { x: number; y: number } {
+  return { x: x * CELL, y: y * CELL };
 }
 
 export interface PlacedItem {
@@ -86,18 +91,25 @@ export const MAX_PLACED_ITEMS = 200;
  */
 /**
  * Die Grundausstattung sitzt bewusst mit deutlichem Rand nach links UND rechts:
- * bei 18 Spalten bleiben so über zehn Bodenspalten frei, damit sich gekaufte
+ * bei 28 Spalten bleiben so reichlich Bodenspalten frei, damit sich gekaufte
  * Möbel sofort aufstellen lassen, ohne vorher etwas einlagern zu müssen. Schon
  * die 120-Münzen-Steckdosenleiste wäre sonst eine Sackgasse.
+ *
+ * Boden-Objekte (mustStandOn:"floor") stehen mit der Unterkante in der
+ * letzten Zeile (y + h === GRID.floor.rows === 9) — es gibt keine separate
+ * Bodenzone mehr, "unten" ist einfach die unterste Zeile des gemeinsamen
+ * Rasters. Der Schreibtisch ist bewusst groß (siehe room-items.ts) und bildet
+ * das Herzstück; der Röhrenmonitor steht mit der Unterkante exakt auf seiner
+ * Tischplatte (mustStandOn:"desk").
  */
 export const DEFAULT_PLACEMENTS: { key: string; zone: RoomZone; x: number; y: number }[] = [
   { key: "jobbrett",         zone: "wall",  x: 6, y: 1 },
-  { key: "bett",             zone: "floor", x: 5, y: 3 },
-  { key: "schreibtisch_alt", zone: "floor", x: 7, y: 3 },
-  { key: "roehrenmonitor",   zone: "floor", x: 8, y: 2 },
-  { key: "pc_billig",        zone: "floor", x: 10, y: 3 },
+  { key: "bett",             zone: "floor", x: 1, y: 7 },
+  { key: "schreibtisch_alt", zone: "floor", x: 7, y: 6 },
+  { key: "roehrenmonitor",   zone: "floor", x: 9, y: 5 },
+  { key: "pc_billig",        zone: "floor", x: 15, y: 7 },
   // Vitrine bewusst NICHT hier: sie ist ein festes Bühnenelement mit fixer
-  // Position (siehe RoomStage.tsx, FixedVitrine), kein Katalog-Platzierung.
+  // Position (siehe RoomStage.tsx, VitrinePanel), kein Katalog-Platzierung.
 ];
 
 /**
@@ -175,10 +187,13 @@ export function validatePlacement(
     return { ok: false, error: `${def.label} passt nicht ins Raster` };
   }
 
+  // Wand- und Boden-Objekte teilen sich seit der Zusammenlegung dieselbe
+  // Koordinatenfläche — hier darf NICHT mehr nach Zone gefiltert werden,
+  // sonst würden Objekte unterschiedlicher (Katalog-)Zone sich unbemerkt
+  // überlappen dürfen.
   const others = placed.filter(p => p.id !== candidate.id);
   const rect   = rectOf(candidate, def);
   for (const other of others) {
-    if (other.zone !== candidate.zone) continue;
     const otherDef = getRoomItem(other.key);
     if (!otherDef) continue;
     if (rectsOverlap(rect, rectOf(other, otherDef))) {
