@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getRoomItem, type RoomZone } from "@/lib/room-items";
 import { CELL, GRID, STAGE, cellToSvg, type PlacedItem, type RoomState } from "@/lib/room-layout";
 import { CATEGORY_CONFIG, GENRE_CONFIG } from "@/lib/wanderpocal";
@@ -73,6 +73,28 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract, edit 
   // setzt sich nach der Animation von selbst zurück.
   const [screenZoom, setScreenZoom] = useState<{ x: number; y: number } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+
+  // ── Vitrinen-Höhe: exakt an die gerenderte Höhe der Bühne angleichen ──
+  // Rein CSS-basiert (Flex-Stretch + prozentuale SVG-Höhe) erwies sich als
+  // zu fragil — je nach Browser/Engine kollabierte oder explodierte die
+  // Vitrinen-Breite, weil ein Replaced Element mit `height:100%` in einem
+  // höhenauto-Flex-Geschwister eine Kette aus Sonderfall-Regeln durchläuft,
+  // die nicht überall gleich aufgelöst wird. ResizeObserver misst die
+  // TATSÄCHLICHE Pixel-Höhe der Bühne direkt und reicht sie der Vitrine als
+  // festen Wert durch — deterministisch, unabhängig von Stretch-Timing.
+  const stageWrapRef = useRef<HTMLDivElement>(null);
+  const [stageHeight, setStageHeight] = useState<number | null>(null);
+
+  useEffect(() => {
+    const el = stageWrapRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(entries => {
+      const h = entries[0]?.contentRect.height;
+      if (h) setStageHeight(h);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   function zoomIntoScreen(e: React.MouseEvent | React.KeyboardEvent) {
     const svg = svgRef.current;
@@ -260,9 +282,12 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract, edit 
           Ausstellungsstücke deutlich größer und lesbarer sind, als es eine
           einzelne Rasterzelle je erlauben würde. */}
       <div className="flex items-stretch gap-3">
-        <VitrinePanel ownerName={ownerName} vitrine={vitrine} onInteract={onInteract} editing={!!edit} />
+        <VitrinePanel
+          ownerName={ownerName} vitrine={vitrine} onInteract={onInteract} editing={!!edit}
+          measuredHeight={stageHeight}
+        />
 
-        <div className="glass card-shine rounded-2xl p-2 sm:p-3 room-stage-scroll scrollbar-none min-w-0 flex-1">
+        <div ref={stageWrapRef} className="glass card-shine rounded-2xl p-2 sm:p-3 room-stage-scroll scrollbar-none min-w-0 flex-1">
           <svg
             ref={svgRef}
           className={cn("room-stage rounded-xl", screenZoom && "room-stage-zoom")}
@@ -374,28 +399,38 @@ const VITRINE_PANEL_W = 240;
  * dem 64px-Raster unterzuordnen.
  */
 function VitrinePanel({
-  ownerName, vitrine, onInteract, editing,
+  ownerName, vitrine, onInteract, editing, measuredHeight,
 }: {
   ownerName: string;
   vitrine:   Props["vitrine"];
   onInteract: (target: InteractTarget, itemKey?: string) => void;
   editing:   boolean;
+  /**
+   * Per ResizeObserver gemessene Pixel-Höhe der Bühne nebenan (siehe
+   * RoomStage). `null` nur im allerersten Render, bevor der erste Messwert
+   * eintrifft — bis dahin greift `self-stretch` als CSS-Fallback, damit
+   * nichts zusammenklappt.
+   *
+   * Ein reiner CSS-Ansatz (Flex-Stretch + `height:100%` auf dem SVG) erwies
+   * sich als zu fragil: ein Replaced Element mit prozentualer Höhe in einem
+   * höhenauto-Flex-Geschwister durchläuft eine Kette von Sonderfällen
+   * (inline- vs. block-Display, Zeitpunkt der Stretch-Auflösung,
+   * aspect-ratio-Sonderregeln), die nicht in jeder Browser-Engine gleich
+   * aufgelöst wird — die Vitrine wurde dadurch mal unsichtbar schmal, mal
+   * riesig. Die tatsächliche Pixel-Höhe der Bühne zu MESSEN und der Vitrine
+   * direkt als festen Wert durchzureichen ist dagegen deterministisch.
+   */
+  measuredHeight: number | null;
 }) {
   const vw = VITRINE_PANEL_W;
   const vh = STAGE.height;
   const label = `Sammlung von ${ownerName} anzeigen`;
 
   return (
-    <div className="glass card-shine rounded-2xl p-2 sm:p-3 shrink-0 self-stretch">
-      {/* `block` ist Pflicht, kein Stil-Detail: SVGs sind standardmäßig
-          `display:inline`, und ein `height:100%` auf einem INLINE Replaced
-          Element in einem höhenauto-Flex-Geschwister ist zirkulär — der
-          Browser lässt die Höhe dabei bis zu mehreren tausend Pixeln
-          hochlaufen, statt sie sauber an das gestreckte Wand-Nachbarelement
-          anzugleichen (die Vitrine wirkte dadurch "kaum sichtbar", weil sie
-          weit über den Bildschirmrand hinausragte). `.room-stage` daneben
-          funktioniert nur, weil es in globals.css explizit `display:block`
-          bekommt. */}
+    <div
+      className={cn("glass card-shine rounded-2xl p-2 sm:p-3 shrink-0", measuredHeight == null && "self-stretch")}
+      style={measuredHeight != null ? { height: measuredHeight } : undefined}
+    >
       <svg
         viewBox={`0 0 ${vw} ${vh}`}
         className="block h-full w-auto rounded-xl"

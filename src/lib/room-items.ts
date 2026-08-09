@@ -179,13 +179,11 @@ export const ROOM_ITEMS: RoomItemDef[] = [
   },
 
   // ── Wand: Deko & Licht ────────────────────────────────────────────────────
-  {
-    key: "jobbrett", label: "Schwarzes Brett",
-    description: "Hier hängen die Stellenanzeigen. Draufklicken und bewerben.",
-    zone: "wall", category: "deko", w: 2, h: 2, price: 0, minTier: 1, maxOwned: 1,
-    tags: [], mustStandOn: null, accent: "amber", starter: true, interactive: "jobboard",
-    imageUrl: "/room-items/jobbrett.png",
-  },
+  // Kein Jobbrett mehr als Katalog-Objekt: die Jobbörse öffnet sich über den
+  // "Jobbörse"-Button in der Aktionsleiste unter dem Zimmer (siehe
+  // RoomView.tsx) — ein zusätzlicher Klickpunkt IM Raster war redundant.
+  // `interactive: "jobboard"` bleibt als Ziel-Typ bestehen (RoomStage.tsx,
+  // InteractTarget), nur eben ohne zugehöriges Möbelstück.
   {
     key: "poster_retro", label: "Retro-Gaming-Poster",
     description: "Ein Spiel, das du nie gespielt hast, aber das Cover ist unschlagbar.",
@@ -304,17 +302,21 @@ export const ROOM_ITEMS: RoomItemDef[] = [
   },
 
   // ── Boden: Bildschirme (auf dem Tisch) ────────────────────────────────────
+  // Doppelt so groß wie ursprünglich (2×2 statt 1×1): der Monitor ist neben
+  // dem Schreibtisch der zweite zentrale Zugangspunkt (Profil-Popup) und soll
+  // entsprechend Gewicht auf der Bühne haben, nicht als winzige Kachel
+  // zwischen den Peripherie-Objekten untergehen.
   {
     key: "roehrenmonitor", label: "Röhrenmonitor",
     description: "17 Zoll, 40 Kilo, flimmert. Zeigt dir alles, was du wissen willst — draufklicken!",
-    zone: "floor", category: "bildschirm", w: 1, h: 1, price: 0, minTier: 1, maxOwned: 1,
+    zone: "floor", category: "bildschirm", w: 2, h: 2, price: 0, minTier: 1, maxOwned: 1,
     tags: ["crt", "monitor"], mustStandOn: "desk", accent: "teal", starter: true, interactive: "crt",
     imageUrl: "/room-items/roehrenmonitor.png",
   },
   {
     key: "monitor_flach", label: "Flachbildschirm",
     description: "Flach, hell, unspektakulär. Ein echter Fortschritt.",
-    zone: "floor", category: "bildschirm", w: 1, h: 1, price: 700, minTier: 1, maxOwned: 3,
+    zone: "floor", category: "bildschirm", w: 2, h: 2, price: 700, minTier: 1, maxOwned: 3,
     // Jeder Monitor öffnet dasselbe Profil-Popup wie der Röhrenmonitor — der
     // Rahmen des Popups übernimmt dann die Optik genau dieses Bildschirmtyps
     // (siehe CrtProfileModal, MONITOR_SKINS).
@@ -324,7 +326,7 @@ export const ROOM_ITEMS: RoomItemDef[] = [
   {
     key: "monitor_144", label: "144Hz-Monitor",
     description: "Ab jetzt sind alle Niederlagen wieder deine eigene Schuld.",
-    zone: "floor", category: "bildschirm", w: 1, h: 1, price: 1900, minTier: 3, maxOwned: 3,
+    zone: "floor", category: "bildschirm", w: 2, h: 2, price: 1900, minTier: 3, maxOwned: 3,
     tags: ["monitor", "monitor_144"], mustStandOn: "desk", accent: "violet", interactive: "crt",
     imageUrl: "/room-items/monitor_144.png",
   },
