@@ -99,14 +99,17 @@ export const MAX_PLACED_ITEMS = 200;
  * letzten Zeile (y + h === GRID.floor.rows === 9) — es gibt keine separate
  * Bodenzone mehr, "unten" ist einfach die unterste Zeile des gemeinsamen
  * Rasters. Der Schreibtisch ist bewusst groß (siehe room-items.ts) und bildet
- * das Herzstück; der Röhrenmonitor steht mit der Unterkante exakt auf seiner
- * Tischplatte (mustStandOn:"desk").
+ * das Herzstück; der (ebenfalls große, 2×2) Röhrenmonitor steht mit der
+ * Unterkante exakt auf seiner Tischplatte (mustStandOn:"desk").
+ *
+ * Kein Jobbrett mehr: die Jobbörse öffnet sich über den Button in der
+ * Aktionsleiste unter dem Zimmer, ein zusätzliches Wand-Objekt dafür war
+ * redundant (siehe room-items.ts).
  */
 export const DEFAULT_PLACEMENTS: { key: string; zone: RoomZone; x: number; y: number }[] = [
-  { key: "jobbrett",         zone: "wall",  x: 6, y: 1 },
   { key: "bett",             zone: "floor", x: 1, y: 7 },
   { key: "schreibtisch_alt", zone: "floor", x: 7, y: 6 },
-  { key: "roehrenmonitor",   zone: "floor", x: 9, y: 5 },
+  { key: "roehrenmonitor",   zone: "floor", x: 9, y: 4 },
   { key: "pc_billig",        zone: "floor", x: 15, y: 7 },
   // Vitrine bewusst NICHT hier: sie ist ein festes Bühnenelement mit fixer
   // Position (siehe RoomStage.tsx, VitrinePanel), kein Katalog-Platzierung.

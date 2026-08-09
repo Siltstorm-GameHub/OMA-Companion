@@ -54,20 +54,6 @@ export const VITRINE_SLOTS = {
 
 // ── Wand ─────────────────────────────────────────────────────────────────────
 
-const Jobbrett: Sprite = ({ w, h }) => (
-  <g>
-    <rect x={2} y={2} width={w - 4} height={h - 4} rx={3} fill={SCREEN} stroke={WOOD} strokeWidth={5} />
-    {/* Angeheftete Zettel */}
-    <rect x={16} y={18} width={38} height={28} fill="#e8e4d8" transform="rotate(-4 35 32)" />
-    <rect x={68} y={26} width={34} height={26} fill="#e8e4d8" transform="rotate(3 85 39)" />
-    <rect x={26} y={62} width={44} height={30} fill="#e8e4d8" transform="rotate(2 48 77)" />
-    {[[35, 20], [85, 28], [48, 64]].map(([cx, cy], i) => (
-      <circle key={i} cx={cx} cy={cy} r={3.5} fill="var(--room-neon-rose)" />
-    ))}
-    <rect x={20} y={100} width={88} height={12} rx={2} fill={WOOD_HI} />
-  </g>
-);
-
 const PosterRetro: Sprite = ({ w, h }) => (
   <g>
     <rect x={4} y={4} width={w - 8} height={h - 8} fill={SCREEN} stroke={OUT} strokeWidth={2} />
@@ -597,7 +583,6 @@ const Fallback: Sprite = ({ w, h }) => (
 
 export const SPRITES: Record<string, Sprite> = {
   // Wand
-  jobbrett:         Jobbrett,
   poster_retro:     PosterRetro,
   regal_holz:       RegalHolz,
   pokalregal:       Pokalregal,
