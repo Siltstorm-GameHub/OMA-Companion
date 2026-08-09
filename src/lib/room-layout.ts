@@ -256,6 +256,43 @@ export function countTags(placed: PlacedItem[]): Partial<Record<RoomTag, number>
 }
 
 /**
+ * Investitions-Stufe des Zimmers: Fenster und Deckenlampe (feste
+ * Bühnenelemente, siehe RoomStage.tsx, RoomWindow/CeilingLamp) werten sich
+ * automatisch auf, je mehr Münzen aktuell in aufgestellte Möbel stecken —
+ * kein eigenes Katalog-Item, sondern ein Nebeneffekt des Einrichtens selbst.
+ * Bewusst nur AUFGESTELLTE Möbel zählen (nicht das Lager): die Stufe soll
+ * widerspiegeln, wie das Zimmer gerade tatsächlich AUSSIEHT, nicht was der
+ * User insgesamt besitzt. Grundausstattung kostet 0 und zieht die Stufe
+ * dadurch automatisch nicht hoch.
+ *
+ * Schwellen an der Preisspanne des Katalogs ausgerichtet (Summe aller
+ * kaufbaren Items ≈ 70.000): Stufe 1 ist mit ein bis zwei mittleren Käufen
+ * erreichbar, Stufe 3 verlangt einen echten Endgame-Einsatz (z.B. High-End-PC
+ * oder LED-Wand).
+ */
+export const ROOM_LEVEL_THRESHOLDS = [0, 2000, 8000, 20000] as const;
+
+/** Summe der Kaufpreise aller aktuell AUFGESTELLTEN (nicht eingelagerten) Möbel. */
+export function roomInvestment(placed: PlacedItem[]): number {
+  let total = 0;
+  for (const item of placed) {
+    const def = getRoomItem(item.key);
+    if (def) total += def.price;
+  }
+  return total;
+}
+
+/** 0 (Grundausstattung) bis ROOM_LEVEL_THRESHOLDS.length - 1 (voll ausgebaut). */
+export function roomLevel(placed: PlacedItem[]): number {
+  const total = roomInvestment(placed);
+  let level = 0;
+  for (let i = ROOM_LEVEL_THRESHOLDS.length - 1; i >= 0; i--) {
+    if (total >= ROOM_LEVEL_THRESHOLDS[i]) { level = i; break; }
+  }
+  return level;
+}
+
+/**
  * Freie Zielzellen für ein Item — der Editor leuchtet damit die erlaubten
  * Plätze aus, ohne eine zweite Regel-Implementierung zu brauchen.
  */

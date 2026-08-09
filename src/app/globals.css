@@ -90,6 +90,20 @@ html {
   --room-window-sky-2:   #7a5342;
   --room-window-light:   #ffd27a;
   --room-lamp-glow:      rgba(245,158,11,0.38);
+
+  /* Investitions-Stufen 1–3 für Fenster/Lampe (siehe room-layout.ts,
+     roomLevel) — je mehr im Zimmer steht, desto weniger "abgewohnt". */
+  --room-paint:          #d8d0bf;
+  --room-paint-hi:       #ece6d8;
+  --room-gold:           #b8902f;
+  --room-gold-hi:        #e0b854;
+  --room-sky-skyline-1:  #171a30;
+  --room-sky-skyline-2:  #3d3256;
+  --room-skyline:        #0d0e1c;
+  --room-sky-beach-1:    #ff9a56;
+  --room-sky-beach-2:    #ffcf7a;
+  --room-ocean:          #1c6e8c;
+  --room-ocean-hi:       #3fa0c0;
 }
 
 /* ── Dynamic Notch animations ──────────────────────────────────── */
@@ -845,6 +859,18 @@ select.input-glass option { background: #0f1117; }
   --room-window-sky-2:   #f0b98a;
   --room-window-light:   #fff0be;
   --room-lamp-glow:      rgba(245,158,11,0.24);
+
+  --room-paint:          #f3efe4;
+  --room-paint-hi:       #ffffff;
+  --room-gold:           #c9a227;
+  --room-gold-hi:        #e8c65a;
+  --room-sky-skyline-1:  #7d93c2;
+  --room-sky-skyline-2:  #d99a86;
+  --room-skyline:        #2b2f45;
+  --room-sky-beach-1:    #ffb27a;
+  --room-sky-beach-2:    #ffe1a8;
+  --room-ocean:          #3f95b8;
+  --room-ocean-hi:       #78c2dc;
 }
 [data-theme="light"] body { background-color: var(--bg-base); color: #0d1f1c; }
 [data-theme="light"] .text-white { color: #0d1f1c !important; }
