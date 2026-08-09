@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { getRoomItem, type RoomZone } from "@/lib/room-items";
-import { CELL, GRID, STAGE, cellToSvg, type PlacedItem, type RoomState } from "@/lib/room-layout";
+import { CELL, GRID, STAGE, cellToSvg, roomLevel, type PlacedItem, type RoomState } from "@/lib/room-layout";
 import { CATEGORY_CONFIG, GENRE_CONFIG } from "@/lib/wanderpocal";
 import type { VitrineBadge, VitrineCollectible, VitrineTrophy } from "@/lib/room-profile-data";
 import RoomItemSprite from "./RoomItemSprite";
@@ -133,6 +133,11 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract, edit 
   // EINE Liste, von hinten nach vorn nach y sortiert, damit weiter vorn
   // (weiter unten) stehende Möbel näher an der Wand hängende Deko überdecken.
   const items = [...state.placed.filter(p => p.key !== "vitrine")].sort((a, b) => a.y - b.y);
+
+  // Fenster und Deckenlampe werten sich mit der Einrichtung automatisch auf
+  // (siehe room-layout.ts, roomLevel) — reagiert live auf `state.placed`,
+  // funktioniert also unverändert auch im Editor mit dem Entwurfs-Layout.
+  const level = roomLevel(state.placed);
 
   function renderItem(item: PlacedItem) {
     const def = getRoomItem(item.key);
@@ -309,8 +314,8 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract, edit 
               STÜNDEN im Raum. */}
           <rect x={0} y={0} width={STAGE.width} height={STAGE.height} fill="url(#room-wallpaper-photo)" />
 
-          <RoomWindow />
-          <CeilingLamp />
+          <RoomWindow level={level} />
+          <CeilingLamp level={level} />
 
           <rect x={0} y={0} width={STAGE.width} height={STAGE.height} fill="url(#room-wall-vignette)" />
 
@@ -567,36 +572,68 @@ function PlaqueLabel({ x, y, text }: { x: number; y: number; text: string }) {
 
 // ── Fenster, Deckenlampe ─────────────────────────────────────────────────────
 
+/** Deutsche Namen der vier Investitions-Stufen — als `<title>`-Tooltip auf
+ *  Fenster und Lampe, damit der Aufstieg nachvollziehbar bleibt statt wie ein
+ *  zufälliger Grafikwechsel zu wirken. */
+const ROOM_LEVEL_LABEL = ["Abgewohnt", "Frisch renoviert", "Modern eingerichtet", "Luxuriös ausgestattet"];
+
+const WINDOW_FRAME: { base: string; hi: string; accent?: string }[] = [
+  { base: "var(--room-wood)",  hi: "var(--room-wood-hi)" },                                    // 0: Abgewohnt
+  { base: "var(--room-paint)", hi: "var(--room-paint-hi)" },                                    // 1: Renoviert
+  { base: "var(--room-metal)", hi: "var(--room-metal-hi)" },                                    // 2: Modern
+  { base: "var(--room-metal)", hi: "var(--room-gold-hi)", accent: "var(--room-gold)" },         // 3: Luxus
+];
+
 /**
- * Ein Fenster mit Dämmerungs-Ausblick, fest links in der Wandzone verankert.
- * Der Grund für ein einzelnes, unbewegliches Fenster statt eines Katalog-Items:
- * es ist der stärkste einzelne Hinweis "hier ist drinnen", den eine reine
- * Frontalansicht ohne Seitenwände oder Decke geben kann — ein Raum ohne jede
- * Öffnung nach draußen liest sich als Lagerhalle, nicht als Zuhause.
+ * Ein Fenster, fest links in der Wandzone verankert. Der Grund für ein
+ * einzelnes, unbewegliches Fenster statt eines Katalog-Items: es ist der
+ * stärkste einzelne Hinweis "hier ist drinnen", den eine reine Frontalansicht
+ * ohne Seitenwände oder Decke geben kann — ein Raum ohne jede Öffnung nach
+ * draußen liest sich als Lagerhalle, nicht als Zuhause.
+ *
+ * Rahmen UND Ausblick werten sich mit `level` automatisch auf (siehe
+ * room-layout.ts, roomLevel): abgewohntes Holz mit Dämmerungsblick → frisch
+ * gestrichener Rahmen → Alu-Rahmen mit Skyline → Alu/Gold-Rahmen mit
+ * Strand-Sonnenuntergang. Kein Katalog-Kauf, sondern der sichtbare Lohn
+ * dafür, überhaupt Möbel aufzustellen.
  */
-function RoomWindow() {
+function RoomWindow({ level }: { level: number }) {
   const x = 64, y = 10, w = 192, h = 180;
   const paneX = x + 10, paneY = y + 10, paneW = w - 20, paneH = h - 20;
+  const frame = WINDOW_FRAME[level] ?? WINDOW_FRAME[0];
+  const skyFill = level >= 3 ? "url(#room-window-sky-beach)" : level === 2 ? "url(#room-window-sky-skyline)" : "url(#room-window-sky)";
   return (
     <g>
-      <rect x={x - 6} y={y - 6} width={w + 12} height={h + 12} rx={4} fill="var(--room-wood)" />
-      <rect x={paneX} y={paneY} width={paneW} height={paneH} fill="url(#room-window-sky)" />
+      <title>{`Fenster — ${ROOM_LEVEL_LABEL[level] ?? ROOM_LEVEL_LABEL[0]}`}</title>
+      <rect x={x - 6} y={y - 6} width={w + 12} height={h + 12} rx={4} fill={frame.base} />
+      <rect x={paneX} y={paneY} width={paneW} height={paneH} fill={skyFill} />
 
-      {/* Ferne, erleuchtete Fenster — deuten Nachbarhäuser an */}
-      <g opacity={0.85}>
-        <rect x={paneX + 14} y={paneY + paneH * 0.4} width={8} height={10} fill="var(--room-window-light)" filter="url(#room-blur-sm)" />
-        <rect x={paneX + 14} y={paneY + paneH * 0.4} width={8} height={10} fill="var(--room-window-light)" />
-        <rect x={paneX + 30} y={paneY + paneH * 0.55} width={7} height={9} fill="var(--room-window-light)" opacity={0.7} />
-        <rect x={paneX + paneW - 24} y={paneY + paneH * 0.3} width={7} height={9} fill="var(--room-window-light)" opacity={0.75} />
-      </g>
+      {level <= 1 && (
+        /* Ferne, erleuchtete Fenster — deuten Nachbarhäuser an. Auf Stufe 1
+           zwei zusätzliche Lichter: ein bisschen mehr Leben im Viertel. */
+        <g opacity={0.85}>
+          <rect x={paneX + 14} y={paneY + paneH * 0.4} width={8} height={10} fill="var(--room-window-light)" filter="url(#room-blur-sm)" />
+          <rect x={paneX + 14} y={paneY + paneH * 0.4} width={8} height={10} fill="var(--room-window-light)" />
+          <rect x={paneX + 30} y={paneY + paneH * 0.55} width={7} height={9} fill="var(--room-window-light)" opacity={0.7} />
+          <rect x={paneX + paneW - 24} y={paneY + paneH * 0.3} width={7} height={9} fill="var(--room-window-light)" opacity={0.75} />
+          {level === 1 && (
+            <>
+              <rect x={paneX + paneW - 40} y={paneY + paneH * 0.5} width={6} height={8} fill="var(--room-window-light)" opacity={0.65} />
+              <rect x={paneX + 44} y={paneY + paneH * 0.65} width={7} height={9} fill="var(--room-window-light)" opacity={0.6} />
+            </>
+          )}
+        </g>
+      )}
+      {level === 2 && <WindowSkyline x={paneX} y={paneY} w={paneW} h={paneH} />}
+      {level >= 3 && <WindowBeach x={paneX} y={paneY} w={paneW} h={paneH} />}
 
       {/* Sprossen */}
-      <rect x={paneX + paneW / 2 - 2} y={paneY} width={4} height={paneH} fill="var(--room-wood)" opacity={0.9} />
-      <rect x={paneX} y={paneY + paneH / 2 - 2} width={paneW} height={4} fill="var(--room-wood)" opacity={0.9} />
-      <rect x={x - 6} y={y - 6} width={w + 12} height={h + 12} rx={4} fill="none" stroke="var(--room-wood-hi)" strokeWidth={2} opacity={0.5} />
+      <rect x={paneX + paneW / 2 - 2} y={paneY} width={4} height={paneH} fill={frame.base} opacity={0.9} />
+      <rect x={paneX} y={paneY + paneH / 2 - 2} width={paneW} height={4} fill={frame.base} opacity={0.9} />
+      <rect x={x - 6} y={y - 6} width={w + 12} height={h + 12} rx={4} fill="none" stroke={frame.accent ?? frame.hi} strokeWidth={2} opacity={0.5} />
 
       {/* Fensterbank */}
-      <rect x={x - 16} y={y + h + 4} width={w + 32} height={9} rx={2} fill="var(--room-wood-hi)" />
+      <rect x={x - 16} y={y + h + 4} width={w + 32} height={9} rx={2} fill={frame.hi} />
 
       {/* Vorhänge — gerafft an beiden Seiten, damit das Fenster nach echtem
           Zimmer aussieht statt nach eingebautem Bildschirm. */}
@@ -604,25 +641,132 @@ function RoomWindow() {
         fill="var(--room-fabric)" opacity={0.92} />
       <path d={`M${x + w + 10},${y - 8} Q${x + w - 6},${y + h * 0.5} ${x + w + 4},${y + h + 6} L${x + w + 22},${y + h + 2} Q${x + w + 16},${y + h * 0.5} ${x + w + 20},${y - 10} Z`}
         fill="var(--room-fabric)" opacity={0.92} />
-      <rect x={x - 26} y={y - 12} width={w + 52} height={6} rx={3} fill="var(--room-metal)" />
+      <rect x={x - 26} y={y - 12} width={w + 52} height={6} rx={3} fill={frame.accent ?? "var(--room-metal)"} />
     </g>
   );
 }
 
-/** Pendelleuchte an der Decke, weit rechts vom Fenster — warmer Lichtfleck
- *  gegen die kühlen Bildschirm-Töne der Peripherie-Möbel. */
-function CeilingLamp() {
+/** Stufe 2: Stadt-Silhouette statt einzelner Nachbarhäuser — deutlich mehr
+ *  "Ausblick" als eine Handvoll ferner Fenster. */
+function WindowSkyline({ x, y, w, h }: { x: number; y: number; w: number; h: number }) {
+  const base = y + h;
+  const buildings = [
+    { bx: 0.02, bw: 0.14, bh: 0.42 }, { bx: 0.17, bw: 0.10, bh: 0.62 }, { bx: 0.28, bw: 0.16, bh: 0.34 },
+    { bx: 0.46, bw: 0.11, bh: 0.72 }, { bx: 0.58, bw: 0.13, bh: 0.5 },  { bx: 0.72, bw: 0.10, bh: 0.6 },
+    { bx: 0.83, bw: 0.15, bh: 0.4 },
+  ];
+  return (
+    <g>
+      {buildings.map((b, i) => {
+        const bx = x + w * b.bx, bw = w * b.bw, bh = h * b.bh, by = base - bh;
+        return (
+          <g key={i}>
+            <rect x={bx} y={by} width={bw} height={bh} fill="var(--room-skyline)" />
+            {/* Erleuchtete Fenster-Raster: wenige, feste Punkte statt Zufall,
+                damit das Bild bei jedem Rerender identisch aussieht. */}
+            {[0.2, 0.45, 0.7].map(fy => [0.25, 0.6].map(fx => (
+              <rect key={`${fx}-${fy}`} x={bx + bw * fx} y={by + bh * fy} width={Math.max(2, bw * 0.12)} height={Math.max(2, bh * 0.06)}
+                fill="var(--room-window-light)" opacity={0.75} />
+            )))}
+          </g>
+        );
+      })}
+    </g>
+  );
+}
+
+/** Stufe 3: Strand-Sonnenuntergang — Sonne, Horizont, Wellen. Der Himmel-
+ *  Farbverlauf (inkl. Ozean-Anteil unten) kommt bereits aus der Pane-Füllung
+ *  (`room-window-sky-beach`), hier kommen nur die Silhouetten-Details dazu. */
+function WindowBeach({ x, y, w, h }: { x: number; y: number; w: number; h: number }) {
+  const sunCx = x + w * 0.62, sunCy = y + h * 0.36, horizonY = y + h * 0.58;
+  return (
+    <g>
+      <circle cx={sunCx} cy={sunCy} r={h * 0.16} fill="var(--room-sky-beach-2)" filter="url(#room-blur-sm)" opacity={0.9} />
+      <circle cx={sunCx} cy={sunCy} r={h * 0.11} fill="var(--room-sky-beach-2)" />
+      <rect x={x} y={horizonY} width={w} height={1.5} fill="var(--room-ocean-hi)" opacity={0.6} />
+      {[0.68, 0.8, 0.92].map((fy, i) => (
+        <path key={i} d={`M${x + w * 0.08},${y + h * fy} Q${x + w * 0.3},${y + h * (fy - 0.025)} ${x + w * 0.5},${y + h * fy} T${x + w * 0.92},${y + h * fy}`}
+          stroke="var(--room-ocean-hi)" strokeWidth={1.5} fill="none" opacity={0.5 - i * 0.1} />
+      ))}
+      {[[0.18, 0.22], [0.24, 0.19], [0.7, 0.24]].map(([gx, gy], i) => (
+        <path key={i} d={`M${x + w * gx - 4},${y + h * gy} Q${x + w * gx},${y + h * gy - 3} ${x + w * gx + 4},${y + h * gy}`}
+          stroke="var(--room-skyline)" strokeWidth={1.2} fill="none" opacity={0.55} />
+      ))}
+    </g>
+  );
+}
+
+/** Deckenleuchte, weit rechts vom Fenster — warmer Lichtfleck gegen die
+ *  kühlen Bildschirm-Töne der Peripherie-Möbel. Wertet sich mit `level`
+ *  parallel zum Fenster auf: nackte Glühbirne → Stoffschirm →
+ *  flaches LED-Rondell → kleiner Kronleuchter. */
+function CeilingLamp({ level }: { level: number }) {
   const cx = STAGE.width * 0.62;
   const bulbY = 46;
   return (
     <g pointerEvents="none">
+      <title>{`Deckenlampe — ${ROOM_LEVEL_LABEL[level] ?? ROOM_LEVEL_LABEL[0]}`}</title>
+      {level >= 3 ? <ChandelierLamp cx={cx} bulbY={bulbY} />
+        : level === 2 ? <DiscLamp cx={cx} bulbY={bulbY} />
+        : level === 1 ? <DrumShadeLamp cx={cx} bulbY={bulbY} />
+        : <BareBulbLamp cx={cx} bulbY={bulbY} />}
+    </g>
+  );
+}
+
+function BareBulbLamp({ cx, bulbY }: { cx: number; bulbY: number }) {
+  return (
+    <>
       <ellipse cx={cx} cy={bulbY + 6} rx={70} ry={40} fill="var(--room-lamp-glow)" filter="url(#room-blur-md)" />
       <line x1={cx} y1={0} x2={cx} y2={bulbY - 8} stroke="var(--room-metal)" strokeWidth={2} />
       <path d={`M${cx - 20},${bulbY - 8} L${cx + 20},${bulbY - 8} L${cx + 12},${bulbY + 10} L${cx - 12},${bulbY + 10} Z`}
         fill="var(--room-metal)" stroke="var(--room-metal-hi)" strokeWidth={1} />
       <circle cx={cx} cy={bulbY + 16} r={7} fill="var(--room-neon-amber)" filter="url(#room-blur-sm)" opacity={0.9} />
       <circle cx={cx} cy={bulbY + 16} r={4} fill="var(--room-neon-amber)" />
-    </g>
+    </>
+  );
+}
+
+function DrumShadeLamp({ cx, bulbY }: { cx: number; bulbY: number }) {
+  return (
+    <>
+      <ellipse cx={cx} cy={bulbY + 14} rx={62} ry={36} fill="var(--room-lamp-glow)" filter="url(#room-blur-md)" />
+      <line x1={cx} y1={0} x2={cx} y2={bulbY - 14} stroke="var(--room-metal)" strokeWidth={2} />
+      <path d={`M${cx - 22},${bulbY - 14} L${cx + 22},${bulbY - 14} L${cx + 16},${bulbY + 16} L${cx - 16},${bulbY + 16} Z`}
+        fill="var(--room-fabric)" stroke="var(--room-outline)" strokeWidth={1} opacity={0.95} />
+      <ellipse cx={cx} cy={bulbY + 17} rx={15} ry={3} fill="var(--room-neon-amber)" opacity={0.55} filter="url(#room-blur-sm)" />
+    </>
+  );
+}
+
+function DiscLamp({ cx, bulbY }: { cx: number; bulbY: number }) {
+  return (
+    <>
+      <ellipse cx={cx} cy={bulbY + 4} rx={80} ry={42} fill="var(--room-lamp-glow)" filter="url(#room-blur-md)" />
+      <rect x={cx - 2.5} y={0} width={5} height={bulbY - 16} fill="var(--room-metal)" />
+      <ellipse cx={cx} cy={bulbY - 14} rx={36} ry={8} fill="var(--room-metal)" stroke="var(--room-metal-hi)" strokeWidth={1} />
+      <ellipse cx={cx} cy={bulbY - 13} rx={27} ry={5} fill="var(--room-neon-amber)" opacity={0.85} filter="url(#room-blur-sm)" />
+      <ellipse cx={cx} cy={bulbY - 13} rx={27} ry={5} fill="var(--room-neon-amber)" opacity={0.6} />
+    </>
+  );
+}
+
+function ChandelierLamp({ cx, bulbY }: { cx: number; bulbY: number }) {
+  const arms = [-30, 0, 30];
+  return (
+    <>
+      <ellipse cx={cx} cy={bulbY + 10} rx={94} ry={46} fill="var(--room-lamp-glow)" filter="url(#room-blur-md)" />
+      <line x1={cx} y1={0} x2={cx} y2={bulbY - 20} stroke="var(--room-gold)" strokeWidth={2} />
+      <rect x={cx - 42} y={bulbY - 22} width={84} height={4} rx={2} fill="var(--room-gold)" stroke="var(--room-gold-hi)" strokeWidth={0.5} />
+      {arms.map(dx => (
+        <g key={dx}>
+          <line x1={cx + dx} y1={bulbY - 20} x2={cx + dx} y2={bulbY - 2} stroke="var(--room-gold)" strokeWidth={1.5} />
+          <circle cx={cx + dx} cy={bulbY + 4} r={6.5} fill="var(--room-neon-amber)" filter="url(#room-blur-sm)" opacity={0.9} />
+          <circle cx={cx + dx} cy={bulbY + 4} r={3.5} fill="var(--room-neon-amber)" />
+        </g>
+      ))}
+    </>
   );
 }
 
@@ -651,10 +795,24 @@ function SurfacePatterns({ wallpaperKey }: { wallpaperKey: string }) {
         <feGaussianBlur stdDeviation={7} />
       </filter>
 
-      {/* ── Dämmerungshimmel hinterm Fenster ── */}
+      {/* ── Dämmerungshimmel hinterm Fenster (Investitions-Stufe 0/1) ── */}
       <linearGradient id="room-window-sky" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%"   stopColor="var(--room-window-sky-1)" />
         <stop offset="100%" stopColor="var(--room-window-sky-2)" />
+      </linearGradient>
+      {/* ── Skyline-Dämmerung hinterm Fenster (Stufe 2, siehe WindowSkyline) ── */}
+      <linearGradient id="room-window-sky-skyline" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stopColor="var(--room-sky-skyline-1)" />
+        <stop offset="100%" stopColor="var(--room-sky-skyline-2)" />
+      </linearGradient>
+      {/* ── Strand-Sonnenuntergang hinterm Fenster (Stufe 3, siehe WindowBeach) —
+          der untere Streifen ist bereits der Ozean, WindowBeach setzt nur noch
+          Sonne/Horizont/Wellen obendrauf. ── */}
+      <linearGradient id="room-window-sky-beach" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%"   stopColor="var(--room-sky-beach-1)" />
+        <stop offset="52%"  stopColor="var(--room-sky-beach-2)" />
+        <stop offset="58%"  stopColor="var(--room-ocean-hi)" />
+        <stop offset="100%" stopColor="var(--room-ocean)" />
       </linearGradient>
 
       {/* ── Umgebungslicht: dunklere Ecken, dezenter warmer Lichtkegel oben ── */}
