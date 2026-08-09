@@ -10,7 +10,6 @@ import { VITRINE_SLOTS } from "./sprites";
 import { cn } from "@/lib/utils";
 
 export type InteractTarget = "crt" | "vitrine" | "jobboard";
-type ZoneView = "all" | "wall" | "floor";
 
 export interface EditHooks {
   /** Aktuell angehobenes Möbelstück (aus dem Raum oder aus dem Lager). */
@@ -57,18 +56,6 @@ interface Props {
   edit?: EditHooks;
 }
 
-const VIEWBOX: Record<ZoneView, string> = {
-  all:   `0 0 ${STAGE.width} ${STAGE.height}`,
-  wall:  `0 0 ${STAGE.width} ${STAGE.wallHeight}`,
-  floor: `0 ${STAGE.floorTop} ${STAGE.width} ${GRID.floor.rows * CELL}`,
-};
-
-const ZONE_TABS: { key: ZoneView; label: string }[] = [
-  { key: "all",   label: "Ganzer Raum" },
-  { key: "wall",  label: "Wand" },
-  { key: "floor", label: "Boden" },
-];
-
 /** Seltenheits-Glow der Vitrine — SVG braucht echte Farben, keine Tailwind-Klassen. */
 const RARITY_GLOW: Record<string, string> = {
   common:    "rgba(148,163,184,0.30)",
@@ -78,7 +65,6 @@ const RARITY_GLOW: Record<string, string> = {
 };
 
 export default function RoomStage({ state, ownerName, vitrine, onInteract, edit }: Props) {
-  const [view, setView] = useState<ZoneView>("all");
   const [hover, setHover] = useState<{ zone: RoomZone; x: number; y: number } | null>(null);
 
   // ── Bildschirm-Zoom: "in den Monitor reinzoomen" beim Anklicken ───────
@@ -117,13 +103,14 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract, edit 
   }
 
   // Die Vitrine ist kein Katalog-Platzierungsobjekt mehr, sondern ein festes
-  // Bühnenelement (siehe FixedVitrine unten) — ältere `placed`-Zeilen aus der
+  // Bühnenelement (siehe VitrinePanel unten) — ältere `placed`-Zeilen aus der
   // Zeit davor (schon materialisierte Zimmer) werden hier defensiv
   // rausgefiltert, damit sie nicht doppelt gerendert werden.
-  const placedWithoutVitrine = state.placed.filter(p => p.key !== "vitrine");
-  const wallItems  = placedWithoutVitrine.filter(p => p.zone === "wall");
-  // Von hinten nach vorn zeichnen, damit tiefer stehende Möbel oben liegen.
-  const floorItems = [...placedWithoutVitrine.filter(p => p.zone === "floor")].sort((a, b) => a.y - b.y);
+  //
+  // Wand und Boden teilen sich seit der Zusammenlegung dieselbe Fläche —
+  // EINE Liste, von hinten nach vorn nach y sortiert, damit weiter vorn
+  // (weiter unten) stehende Möbel näher an der Wand hängende Deko überdecken.
+  const items = [...state.placed.filter(p => p.key !== "vitrine")].sort((a, b) => a.y - b.y);
 
   function renderItem(item: PlacedItem) {
     const def = getRoomItem(item.key);
@@ -172,10 +159,9 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract, edit 
             setDrag(current => {
               if (!current || current.id !== item.id) return current;
               const p = svgPoint(svg, e.clientX, e.clientY);
-              const wallOffsetY = item.zone === "floor" ? STAGE.floorTop : 0;
               const grid = GRID[item.zone];
               let cellX = Math.round((p.x - current.dx) / CELL);
-              let cellY = Math.round((p.y - current.dy - wallOffsetY) / CELL);
+              let cellY = Math.round((p.y - current.dy) / CELL);
               cellX = Math.max(0, Math.min(grid.cols - def.w, cellX));
               cellY = Math.max(0, Math.min(grid.rows - def.h, cellY));
               if (cellX !== current.x || cellY !== current.y) dragMovedRef.current = true;
@@ -268,33 +254,11 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract, edit 
 
   return (
     <div className="space-y-3">
-      {/* ── Zonen-Umschalter ──────────────────────────────────────────
-          Auf schmalen Displays verdoppelt eine Zonenansicht die effektive
-          Zellgröße — damit werden auch 1×1-Möbel bequem antippbar. */}
-      <div className="flex items-center gap-1.5 rounded-xl bg-white/[0.04] border border-white/[0.06] p-1 w-fit">
-        {ZONE_TABS.map(tab => (
-          <button
-            key={tab.key}
-            type="button"
-            onClick={() => setView(tab.key)}
-            aria-pressed={view === tab.key}
-            className={cn(
-              "px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors",
-              view === tab.key
-                ? "bg-teal-500/15 text-teal-300 border border-teal-500/25"
-                : "text-gray-500 hover:text-gray-300 border border-transparent"
-            )}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
       {/* Vitrine + Raum nebeneinander, gleich hoch: die Vitrine ist bewusst
           KEIN Rasterelement mehr (siehe VitrinePanel) — links neben dem
-          eigentlichen Zimmer, über dessen volle Höhe (Wand + Boden), damit
-          die Ausstellungsstücke deutlich größer und lesbarer sind, als es
-          eine einzelne Bodenzelle je erlauben würde. */}
+          eigentlichen Zimmer, über dessen volle Höhe, damit die
+          Ausstellungsstücke deutlich größer und lesbarer sind, als es eine
+          einzelne Rasterzelle je erlauben würde. */}
       <div className="flex items-stretch gap-3">
         <VitrinePanel ownerName={ownerName} vitrine={vitrine} onInteract={onInteract} editing={!!edit} />
 
@@ -303,40 +267,37 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract, edit 
             ref={svgRef}
           className={cn("room-stage rounded-xl", screenZoom && "room-stage-zoom")}
           style={screenZoom ? { transformOrigin: `${screenZoom.x}% ${screenZoom.y}%` } : undefined}
-          viewBox={VIEWBOX[view]}
+          viewBox={`0 0 ${STAGE.width} ${STAGE.height}`}
           preserveAspectRatio="xMidYMid meet"
           role="img"
           aria-label={`Gaming-Zimmer von ${ownerName}`}
         >
           <defs>
-            <SurfacePatterns wallpaperKey={state.wallpaperKey} floorKey={state.floorKey} />
+            <SurfacePatterns wallpaperKey={state.wallpaperKey} />
           </defs>
 
-          {/* Wand */}
-          <rect x={0} y={0} width={STAGE.width} height={STAGE.wallHeight} fill="url(#room-wallpaper-photo)" />
+          {/* Eine durchgehende Wandfläche über die volle Bühnenhöhe — kein
+              separates Bodenstück mehr. In dieser reinen Frontalansicht gibt
+              es ohnehin keine sichtbare Bodenfläche, nur Möbel, die vor der
+              Wand stehen oder daran hängen; zwei optisch getrennte Flächen
+              hätten fälschlich suggeriert, Möbel LÄGEN auf einem Boden statt
+              STÜNDEN im Raum. */}
+          <rect x={0} y={0} width={STAGE.width} height={STAGE.height} fill="url(#room-wallpaper-photo)" />
 
           <RoomWindow />
           <CeilingLamp />
 
-          <rect x={0} y={0} width={STAGE.width} height={STAGE.wallHeight} fill="url(#room-wall-vignette)" />
-          {/* Boden */}
-          <rect x={0} y={STAGE.floorTop} width={STAGE.width} height={GRID.floor.rows * CELL} fill="url(#room-floor-photo)" />
-          <rect x={0} y={STAGE.floorTop} width={STAGE.width} height={GRID.floor.rows * CELL} fill="url(#room-floor-vignette)" />
+          <rect x={0} y={0} width={STAGE.width} height={STAGE.height} fill="url(#room-wall-vignette)" />
 
-          {/* Sockelleiste: beleuchtete Kante statt flacher Linie, damit sie neben
-              den jetzt fotorealistischen Möbel-Fotos nicht papierdünn wirkt. */}
-          <rect x={0} y={STAGE.floorTop - 8} width={STAGE.width} height={12} fill="url(#room-skirting-bevel)" />
-          <rect x={0} y={STAGE.floorTop - 8} width={STAGE.width} height={1.5} fill="var(--room-outline)" opacity={0.6} />
-          <rect x={0} y={STAGE.floorTop + 3.5} width={STAGE.width} height={2} fill="var(--room-shade)" opacity={0.7} />
-
-          {/* Kontaktschatten: verankert jedes Bodenmöbel optisch am Boden statt
-              es auf der Textur schweben zu lassen — der Unterschied zwischen
-              einem Foto-Ausschnitt und einem Objekt, das wirklich im Raum steht. */}
-          {floorItems.map(item => {
+          {/* Kontaktschatten: verankert jedes Möbelstück mit mustStandOn:"floor"
+              optisch am Boden statt es auf der Textur schweben zu lassen — der
+              Unterschied zwischen einem Foto-Ausschnitt und einem Objekt, das
+              wirklich im Raum steht. */}
+          {items.map(item => {
             const def = getRoomItem(item.key);
-            // Nur Möbel, deren Unterkante wirklich die Bodenzeile berührt —
-            // Monitore & Co. auf einem Tisch bekommen sonst einen Schatten,
-            // der mitten in der Luft über dem Boden schwebt.
+            // Nur Möbel, deren Unterkante wirklich die unterste Rasterzeile
+            // berührt — Monitore & Co. auf einem Tisch bekommen sonst einen
+            // Schatten, der mitten in der Luft schwebt.
             if (!def || item.y + def.h !== GRID.floor.rows) return null;
             const { x, y } = cellToSvg(item.zone, item.x, item.y);
             const cx = x + (def.w * CELL) / 2;
@@ -357,8 +318,7 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract, edit 
               endlos breite Fläche statt wie eine geschlossene Box. */}
           <rect x={0} y={0} width={STAGE.width} height={STAGE.height} fill="url(#room-corner-vignette)" pointerEvents="none" />
 
-          {wallItems.map(renderItem)}
-          {floorItems.map(renderItem)}
+          {items.map(renderItem)}
 
           {/* ── Erlaubte Zielplätze ──────────────────────────────────
               Liegen über den Möbeln, damit sie immer treffbar sind.
@@ -427,9 +387,18 @@ function VitrinePanel({
 
   return (
     <div className="glass card-shine rounded-2xl p-2 sm:p-3 shrink-0 self-stretch">
+      {/* `block` ist Pflicht, kein Stil-Detail: SVGs sind standardmäßig
+          `display:inline`, und ein `height:100%` auf einem INLINE Replaced
+          Element in einem höhenauto-Flex-Geschwister ist zirkulär — der
+          Browser lässt die Höhe dabei bis zu mehreren tausend Pixeln
+          hochlaufen, statt sie sauber an das gestreckte Wand-Nachbarelement
+          anzugleichen (die Vitrine wirkte dadurch "kaum sichtbar", weil sie
+          weit über den Bildschirmrand hinausragte). `.room-stage` daneben
+          funktioniert nur, weil es in globals.css explizit `display:block`
+          bekommt. */}
       <svg
         viewBox={`0 0 ${vw} ${vh}`}
-        className="h-full w-auto rounded-xl"
+        className="block h-full w-auto rounded-xl"
         role="img"
         aria-label={label}
       >
@@ -634,11 +603,10 @@ function CeilingLamp() {
  * eine gemeinsame Lichtstimmung im Hintergrund würden 30 unabhängig
  * beleuchtete Fotos nebeneinander nie wie ein einziger Raum wirken. Die
  * Gradienten sind bewusst objectBoundingBox-relativ (SVG-Standard) statt an
- * absoluten Bühnen-Koordinaten verankert, damit sie in der Wand- und der
- * Boden-Einzelansicht (Zonen-Tabs) jeweils sauber zentriert bleiben, nicht
- * nur in der "Ganzer Raum"-Ansicht.
+ * absoluten Bühnen-Koordinaten verankert, damit sie unabhängig von der
+ * tatsächlichen Bühnengröße sauber zentriert bleiben.
  */
-function SurfacePatterns({ wallpaperKey, floorKey }: { wallpaperKey: string; floorKey: string }) {
+function SurfacePatterns({ wallpaperKey }: { wallpaperKey: string }) {
   return (
     <>
       <filter id="room-blur-sm" x="-100%" y="-100%" width="300%" height="300%">
@@ -660,12 +628,6 @@ function SurfacePatterns({ wallpaperKey, floorKey }: { wallpaperKey: string; flo
         <stop offset="35%" stopColor="#000000" stopOpacity={0} />
         <stop offset="100%" stopColor="#000000" stopOpacity={0.32} />
       </radialGradient>
-      <radialGradient id="room-floor-vignette" cx="50%" cy="0%" r="95%">
-        <stop offset="0%"  stopColor="#000000" stopOpacity={0} />
-        <stop offset="55%" stopColor="#000000" stopOpacity={0} />
-        <stop offset="100%" stopColor="#000000" stopOpacity={0.38} />
-      </radialGradient>
-
       {/* ── Ecken-Tiefe: dunklere Bänder an den seitlichen Rändern, damit die
           Bühne wie eine geschlossene Box statt einer endlosen Fläche wirkt. ── */}
       <linearGradient id="room-corner-vignette" x1="0" y1="0" x2="1" y2="0">
@@ -675,32 +637,15 @@ function SurfacePatterns({ wallpaperKey, floorKey }: { wallpaperKey: string; flo
         <stop offset="100%" stopColor="#000000" stopOpacity={0.4} />
       </linearGradient>
 
-      {/* ── Sockelleiste: kleine Fase statt einer flachen Linie ── */}
-      <linearGradient id="room-skirting-bevel" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%"   stopColor="var(--room-outline)" stopOpacity={0.5} />
-        <stop offset="18%"  stopColor="var(--room-skirting)" />
-        <stop offset="60%"  stopColor="var(--room-skirting)" />
-        <stop offset="100%" stopColor="var(--room-shade)" stopOpacity={0.8} />
-      </linearGradient>
-
-      {/* Fotografische Wand-/Bodentextur — dieselbe Bildhaftigkeit wie die
-          Canva-Möbelfotos, statt einer flach gezeichneten Fläche. Alle drei
-          Tapeten- und alle drei Bodenoptionen haben inzwischen ein eigenes
-          Texturfoto (WALL_PHOTOS/FLOOR_PHOTOS), darum genügt je EIN Pattern
-          mit dynamischem href statt einem Pattern pro Fläche. Die Kachel
-          deckt die volle Wand-/Bodenhöhe ab und wiederholt sich nur seitlich;
-          jede Datei enthält bereits Bild + gespiegeltes Bild nebeneinander,
-          damit beim Wiederholen keine Kante sichtbar wird. */}
-      <pattern id="room-wallpaper-photo" width={512} height={STAGE.wallHeight} patternUnits="userSpaceOnUse">
+      {/* Fotografische Wandtextur über die volle Bühnenhöhe — dieselbe
+          Bildhaftigkeit wie die Canva-Möbelfotos, statt einer flach
+          gezeichneten Fläche. Die Kachel wiederholt sich nur seitlich; jede
+          Datei enthält bereits Bild + gespiegeltes Bild nebeneinander, damit
+          beim Wiederholen keine Kante sichtbar wird. */}
+      <pattern id="room-wallpaper-photo" width={512} height={STAGE.height} patternUnits="userSpaceOnUse">
         <image href={WALL_PHOTOS[wallpaperKey] ?? WALL_PHOTOS.tapete_raufaser}
-          x={0} y={0} width={512} height={STAGE.wallHeight} preserveAspectRatio="none" />
-        <rect width={512} height={STAGE.wallHeight} fill="var(--room-shade)" opacity={0.1} />
-      </pattern>
-
-      <pattern id="room-floor-photo" width={640} height={GRID.floor.rows * CELL} patternUnits="userSpaceOnUse">
-        <image href={FLOOR_PHOTOS[floorKey] ?? FLOOR_PHOTOS.boden_linoleum}
-          x={0} y={0} width={640} height={GRID.floor.rows * CELL} preserveAspectRatio="none" />
-        <rect width={640} height={GRID.floor.rows * CELL} fill="var(--room-shade)" opacity={0.1} />
+          x={0} y={0} width={512} height={STAGE.height} preserveAspectRatio="none" />
+        <rect width={512} height={STAGE.height} fill="var(--room-shade)" opacity={0.1} />
       </pattern>
     </>
   );
@@ -710,10 +655,4 @@ const WALL_PHOTOS: Record<string, string> = {
   tapete_raufaser: "/room-surfaces/wall-raufaser.png",
   tapete_pixel:    "/room-surfaces/wall-pixel.png",
   tapete_scifi:    "/room-surfaces/wall-scifi.png",
-};
-
-const FLOOR_PHOTOS: Record<string, string> = {
-  boden_linoleum: "/room-surfaces/floor-linoleum.png",
-  boden_holz:     "/room-surfaces/floor-holz.png",
-  boden_scifi:    "/room-surfaces/floor-scifi.png",
 };

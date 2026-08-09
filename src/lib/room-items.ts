@@ -244,16 +244,22 @@ export const ROOM_ITEMS: RoomItemDef[] = [
 
   // ── Boden: Schreibtische ──────────────────────────────────────────────────
   {
+    // Bewusst deutlich größer als jedes andere Bodenmöbel: der Schreibtisch
+    // ist das Herzstück des Zimmers. Die zusätzliche Breite/Tiefe schafft im
+    // gemeinsamen Raster echten Platz NEBEN dem Tisch (nicht "zwischen den
+    // Tischbeinen" — das axis-aligned-Kollisionssystem kennt kein Unter-den-
+    // Tisch-Schieben), auf dem PC-Towers und Gaming-Stuhl mit aufgestellt
+    // werden können, ohne dass es beengt wirkt.
     key: "schreibtisch_alt", label: "Wackeltisch",
     description: "Ein Bierdeckel unter dem linken Bein hält ihn seit Jahren im Gleichgewicht.",
-    zone: "floor", category: "schreibtisch", w: 3, h: 2, price: 0, minTier: 1, maxOwned: 1,
+    zone: "floor", category: "schreibtisch", w: 6, h: 3, price: 0, minTier: 1, maxOwned: 1,
     tags: ["desk"], mustStandOn: "floor", accent: "slate", starter: true,
     imageUrl: "/room-items/schreibtisch_alt.png",
   },
   {
     key: "schreibtisch_eck", label: "Eck-Gamingtisch",
     description: "Kabelkanal, Getränkehalter, Kopfhörerhaken. Endlich erwachsen.",
-    zone: "floor", category: "schreibtisch", w: 4, h: 2, price: 2600, minTier: 2, maxOwned: 1,
+    zone: "floor", category: "schreibtisch", w: 7, h: 3, price: 2600, minTier: 2, maxOwned: 1,
     tags: ["desk"], mustStandOn: "floor", accent: "teal",
     imageUrl: "/room-items/schreibtisch_eck.png",
   },
