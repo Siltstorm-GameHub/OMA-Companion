@@ -16,6 +16,18 @@ const FEATURES = [
 function ErrorBanner() {
   const searchParams = useSearchParams();
   const error = searchParams.get("error");
+  const notice = searchParams.get("notice");
+  if (notice === "login_required") {
+    return (
+      <div className="mb-6 flex items-start gap-2.5 px-3.5 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300">
+        <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+        <div>
+          <p className="font-semibold mb-0.5">Du bist nicht eingeloggt</p>
+          <p className="text-amber-300/70">Melde dich mit Discord an, um diesen Bereich zu nutzen.</p>
+        </div>
+      </div>
+    );
+  }
   if (!error) return null;
   return (
     <div className="mb-6 flex items-start gap-2.5 px-3.5 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-400">
@@ -33,7 +45,10 @@ export default function LoginPage() {
 
   function handleLogin() {
     setLoading(true);
-    signIn("discord", { callbackUrl: "/dashboard" });
+    // Direkt aus der URL gelesen statt useSearchParams(), damit diese Komponente
+    // ohne Suspense-Boundary bleiben kann — läuft ohnehin nur im Browser (Klick).
+    const callbackUrl = new URLSearchParams(window.location.search).get("callbackUrl") || "/dashboard";
+    signIn("discord", { callbackUrl });
   }
 
   return (

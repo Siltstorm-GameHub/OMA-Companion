@@ -1042,6 +1042,14 @@ a.card-hover:active { transform: scale(0.985); }
   overflow-y: hidden;
   overscroll-behavior-x: contain;
 }
+/* "In den Monitor reinzoomen": kurzer Punch-in Richtung Klickpunkt, bevor
+   sich das Profil-Popup darüberlegt (siehe RoomStage.tsx, zoomIntoScreen). */
+@keyframes room-stage-punch {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(1.14); }
+  100% { transform: scale(1.05); }
+}
+.room-stage-zoom { animation: room-stage-punch 0.5s cubic-bezier(0.22,1,0.36,1) both; }
 /* Vereinheitlichende Nachbearbeitung für die Canva-Fotos: jedes Möbelstück
    kam aus einer eigenen Studio-Aufnahme mit eigener Belichtung — ohne diesen
    gemeinsamen Filter sitzen 30+ unabhängig fotografierte Objekte nebeneinander
@@ -1119,7 +1127,7 @@ image.room-item-photo {
   .animate-glow-pulse, .aurora-text, .animate-blur-reveal,
   .animate-number-pop, .scan-on-load::before { animation: none !important; }
   /* Gaming-Zimmer: Blinken, Scanline und Neon-Puls stehen still */
-  .room-led, .room-scanline, .room-neon { animation: none !important; }
+  .room-led, .room-scanline, .room-neon, .room-stage-zoom { animation: none !important; }
   .room-interactive-glow { animation: none !important; opacity: 0.35 !important; }
   .room-scanline { opacity: 0 !important; }
   .room-hit:hover { transform: none !important; }

@@ -13,6 +13,12 @@ import PartnerFooter from "@/components/PartnerFooter";
 import { prisma } from "@/lib/prisma";
 import { getRoomConfig, roomVisibleFor } from "@/lib/room-config";
 
+// Seiten, die auch ohne Discord-Login sichtbar sein sollen (siehe Anforderung:
+// Dashboard, Events, Rangliste als "Schaufenster" für nicht eingeloggte Besucher).
+// Bewusst nur die exakten Übersichtsseiten, keine Unterseiten wie /events/series/[id]
+// oder /tournament/[id] — die verlangen weiterhin ein Login.
+const GUEST_ALLOWED_PATHS = ["/dashboard", "/events", "/leaderboard"];
+
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
   if (!session) {
@@ -30,12 +36,19 @@ export default async function DashboardLayout({ children }: { children: React.Re
     // Session und zeigen dann BotPreviewShell statt echter Daten. Da nur
     // verifizierte Bots ohne redirect() bis hierher kommen, reicht dort ein
     // einfaches "keine Session? → Platzhalter" ohne erneute UA-Prüfung.
-    const ua = (await headers()).get("user-agent");
-    if (!isLinkPreviewBot(ua)) redirect("/login");
-    return <>{children}</>;
+    const hdrs = await headers();
+    const ua = hdrs.get("user-agent");
+    if (isLinkPreviewBot(ua)) return <>{children}</>;
+
+    // Echte (nicht eingeloggte) Besucher dürfen ein paar Übersichtsseiten sehen —
+    // die Seiten selbst blenden dort Inhalte aus/hinter Login-Overlays, alles
+    // andere (Profil, Quests, Server, Turnier-Detail, …) bleibt hinter dem Login.
+    const pathname = hdrs.get("x-pathname") ?? "";
+    const isGuestAllowed = GUEST_ALLOWED_PATHS.includes(pathname);
+    if (!isGuestAllowed) redirect(`/login?notice=login_required&callbackUrl=${encodeURIComponent(pathname || "/dashboard")}`);
   }
 
-  const userId = session.user?.id;
+  const userId = session?.user?.id;
 
   const now = new Date();
   const currentQuestMonth = now.getMonth() + 1;
@@ -82,7 +95,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // Gaming-Zimmer: solange room_enabled aus ist, sehen nur Admins den Nav-Eintrag.
   const roomVisible = roomVisibleFor(
     await getRoomConfig(),
-    (session.user as { role?: string } | undefined)?.role,
+    (session?.user as { role?: string } | undefined)?.role,
   );
   const newsItems: NewsItem[] = [];
 

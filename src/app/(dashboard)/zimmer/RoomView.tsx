@@ -34,7 +34,15 @@ export default function RoomView({
   state, core, details, readOnly, owned, job, trophySection, settingsSection,
 }: Props) {
   const [openTarget, setOpenTarget] = useState<InteractTarget | null>(null);
+  // Welcher Monitor-Typ das Profil-Popup geöffnet hat — bestimmt, wie dessen
+  // Rahmen aussieht (Röhre/Flachbildschirm/144Hz). Nur bei target "crt" gesetzt.
+  const [openMonitorKey, setOpenMonitorKey] = useState<string | undefined>(undefined);
   const [editing, setEditing]       = useState(false);
+
+  function handleInteract(target: InteractTarget, itemKey?: string) {
+    setOpenTarget(target);
+    setOpenMonitorKey(itemKey);
+  }
 
   // Im Bearbeiten-Modus übernimmt der Editor die Bühne samt eigener Leiste.
   if (editing && !readOnly) {
@@ -54,7 +62,7 @@ export default function RoomView({
         state={state}
         ownerName={core.displayName}
         vitrine={core.vitrine}
-        onInteract={setOpenTarget}
+        onInteract={handleInteract}
       />
 
       {/* ── Lohn ─────────────────────────────────────────────────────
@@ -106,6 +114,7 @@ export default function RoomView({
       <CrtProfileModal
         open={openTarget === "crt"}
         onClose={() => setOpenTarget(null)}
+        monitorKey={openMonitorKey}
         displayName={core.displayName}
         readOnly={readOnly}
         details={details}

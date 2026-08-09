@@ -13,6 +13,8 @@ import Link from "next/link";
 import WanderpocalBadgeServer from "@/components/WanderpocalBadgeServer";
 import { getWanderpocalHoldersMap } from "@/lib/get-wanderpocal-holders";
 import LeaderboardSnapshotButton from "./LeaderboardSnapshotButton";
+import { headers } from "next/headers";
+import { isLinkPreviewBot } from "@/lib/link-preview-bots";
 
 const MEDALS = ["🥇", "🥈", "🥉"];
 
@@ -95,13 +97,16 @@ export const metadata: Metadata = {
 export default async function LeaderboardPage() {
   const me = await getSessionUser();
   if (!me) {
-    // Ohne Session kommt nur ein von (dashboard)/layout.tsx bereits geprüfter
-    // Link-Vorschau-Bot hierher — die teure Zusammenstellung unten (Nutzer,
-    // Wanderpokal-Ränge, Spenden, …) braucht der nicht, nur die Meta-Tags oben.
-    return <BotPreviewShell />;
+    // Ohne Session kommt entweder ein von (dashboard)/layout.tsx bereits
+    // geprüfter Link-Vorschau-Bot hierher (braucht nur die Meta-Tags, keine
+    // teure Zusammenstellung unten) oder ein echter, nicht eingeloggter
+    // Besucher — die Rangliste ist bewusst öffentlich einsehbar, nur eigene
+    // Rang-Badges und Profil-Links bleiben hinter dem Login.
+    const ua = (await headers()).get("user-agent");
+    if (isLinkPreviewBot(ua)) return <BotPreviewShell />;
   }
-  const userId = me.id;
-  const isAdmin = me.role === "admin" || me.role === "moderator";
+  const userId = me?.id;
+  const isAdmin = me?.role === "admin" || me?.role === "moderator";
 
   const [users, eventsWithWinners, donationGroups, holdersMap, latestSnapshot] = await Promise.all([
     prisma.user.findMany({
