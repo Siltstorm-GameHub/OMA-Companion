@@ -22,7 +22,7 @@ export type RoomTag =
   | "desk" | "chair" | "chair_gaming" | "pc" | "pc_gaming" | "pc_highend"
   | "monitor" | "monitor_144" | "crt" | "mic" | "cam" | "keyboard_mech"
   | "headset" | "streamdeck" | "capture" | "ringlight" | "console" | "console_retro"
-  | "light" | "neon" | "bed" | "plant" | "shelf" | "trophy_shelf" | "whiteboard"
+  | "light" | "neon" | "plant" | "shelf" | "trophy_shelf" | "whiteboard"
   | "powerstrip" | "led_wall" | "vitrine";
 
 export interface RoomItemDef {
@@ -127,7 +127,6 @@ export const ROOM_TAG_LABELS: Record<RoomTag, string> = {
   console_retro: "Retro-Konsole",
   light:         "Lichtquelle",
   neon:          "Neon-Element",
-  bed:           "Bett",
   plant:         "Pflanze",
   shelf:         "Regal",
   trophy_shelf:  "Pokalregal",
@@ -406,13 +405,6 @@ export const ROOM_ITEMS: RoomItemDef[] = [
   },
 
   // ── Boden: Möbel & Deko ───────────────────────────────────────────────────
-  {
-    key: "bett", label: "Durchgelegenes Bett",
-    description: "Die Matratze hat die Form deines Rückens angenommen. Rückwärts.",
-    zone: "floor", category: "moebel", w: 2, h: 2, price: 0, minTier: 1, maxOwned: 1,
-    tags: ["bed"], mustStandOn: "floor", accent: "slate", starter: true,
-    imageUrl: "/room-items/bett.png",
-  },
   {
     key: "vitrine", label: "Vitrine",
     description: "Deine Sammlung hinter Glas. Draufklicken und angeben.",
