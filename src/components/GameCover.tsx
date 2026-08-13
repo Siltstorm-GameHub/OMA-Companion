@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getGameCoverUrl, pickedCoverCache, normalizeForCoverCache } from "@/lib/game-cover";
+import { getGameCoverUrl, getGameFallbackGradient, pickedCoverCache, normalizeForCoverCache } from "@/lib/game-cover";
 import EventCoverDefault from "@/components/EventCoverDefault";
 import CoverBrandBadge from "@/components/CoverBrandBadge";
 
@@ -26,6 +26,13 @@ interface GameCoverProps {
    * (Listen, Icons) wirkt der Chip nur unruhig. Standard: aus.
    */
   brandBadge?: boolean;
+  /**
+   * Darstellung, wenn kein Cover gefunden wurde.
+   * "brand" (Standard) = OMA-Standardcover mit Logo, "plain" = schlichter
+   * Farbverlauf aus dem Spielnamen — für Stellen, an denen ausschließlich
+   * echte Spiel-Cover erscheinen sollen (z.B. Lieblingsspiele im Profil).
+   */
+  fallbackVariant?: "brand" | "plain";
 }
 
 /** Client-seitiger Cache: normalisierter Name → CDN-URL */
@@ -38,6 +45,7 @@ export default function GameCover({
   rounded = "rounded-lg",
   imgClassName = "w-full h-full object-cover",
   brandBadge = false,
+  fallbackVariant = "brand",
 }: GameCoverProps) {
   // Explizit übergebenes Cover schlägt fehl → auf Namens-Auflösung zurückfallen
   const [explicitFailed, setExplicitFailed] = useState(false);
@@ -98,6 +106,8 @@ export default function GameCover({
           />
           {brandBadge && <CoverBrandBadge />}
         </>
+      ) : fallbackVariant === "plain" ? (
+        <div className="w-full h-full" style={{ background: getGameFallbackGradient(game) }} />
       ) : (
         <EventCoverDefault brandBadge={brandBadge} />
       )}
