@@ -5,7 +5,7 @@ import { getRoomItem } from "@/lib/room-items";
 import { CELL, roomLevel, type PlacedItem, type RoomState, type RoomSurface } from "@/lib/room-layout";
 import {
   ISO_GRID, ISO_STAGE, surfaceToScreen, surfaceQuad, quadToPoints, depthKey,
-  screenToFloor, screenToWallBack, screenToWallSide, wallBackToScreen,
+  screenToFloor, screenToWallBack, screenToWallSide, wallBackToScreen, surfacePatternTransform,
 } from "@/lib/room-iso";
 import { CATEGORY_CONFIG, GENRE_CONFIG } from "@/lib/wanderpocal";
 import type { VitrineBadge, VitrineCollectible, VitrineTrophy } from "@/lib/room-profile-data";
@@ -401,14 +401,12 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract, edit 
 
 /**
  * Zeichnet die drei Flächen der Eck-Ansicht als Polygone (siehe
- * room-iso.ts, surfaceQuad). Die Fototexturen selbst werden NICHT
- * pixelgenau schräg verzerrt (das bräuchte eine passgenaue
- * `patternTransform`-Matrix je Fläche) — stattdessen deckt ein achsenparalleles
- * Foto die Bounding-Box der Fläche ab und wird per `clipPath` auf die exakte
- * Polygon-Silhouette zugeschnitten. Das ergibt die richtige RAUMFORM (die
- * Ecke, die Kanten, wo welche Fläche endet), auch wenn die Textur selbst noch
- * nicht perspektivisch mitläuft — ein bewusster Phase-1-Kompromiss, siehe
- * Plan-Dokument "isometrische Eck-Ansicht".
+ * room-iso.ts, surfaceQuad). Die Fototexturen werden über `patternTransform`
+ * (siehe room-iso.ts, `surfacePatternTransform`) exakt so geschert wie die
+ * Fläche selbst projiziert wird — dieselbe lineare Abbildung, einmal als
+ * Punktformel (für Möbel-Anker) und einmal als SVG-Matrix (für die Textur).
+ * Der `clipPath` schneidet danach nur noch sauber auf die Polygon-Silhouette
+ * zu, verzerrt aber nichts mehr selbst.
  */
 function RoomShell() {
   const floorQuad    = surfaceQuad("floor",     0, 0, ISO_GRID.floor.cols,     ISO_GRID.floor.rows);
@@ -418,11 +416,11 @@ function RoomShell() {
   return (
     <g>
       <g clipPath="url(#clip-wall-back)">
-        <rect x={0} y={0} width={ISO_STAGE.width} height={ISO_STAGE.height} fill="url(#room-wallpaper-photo)" />
+        <rect x={0} y={0} width={ISO_STAGE.width} height={ISO_STAGE.height} fill="url(#room-wallback-photo)" />
         <rect x={0} y={0} width={ISO_STAGE.width} height={ISO_STAGE.height} fill="url(#room-wall-vignette)" />
       </g>
       <g clipPath="url(#clip-wall-side)">
-        <rect x={0} y={0} width={ISO_STAGE.width} height={ISO_STAGE.height} fill="url(#room-wallpaper-photo)" />
+        <rect x={0} y={0} width={ISO_STAGE.width} height={ISO_STAGE.height} fill="url(#room-wallside-photo)" />
         {/* Etwas dunkler als die Rückwand: liest sich als von der Lichtquelle
             abgewandte Seitenfläche, nicht als exakt dieselbe Wand zweimal. */}
         <rect x={0} y={0} width={ISO_STAGE.width} height={ISO_STAGE.height} fill="#000000" opacity={0.28} />
@@ -632,11 +630,20 @@ const WINDOW_FRAME: { base: string; hi: string; accent?: string }[] = [
   { base: "var(--room-metal)", hi: "var(--room-gold-hi)", accent: "var(--room-gold)" },         // 3: Luxus
 ];
 
-/** Anker des Fensters auf der Rückwand, in Wand-Rasterzellen (x=Spalte,
- *  y=Höhe ab Boden). Nur der ANKERPUNKT ist echt projiziert — die
- *  Fenster-Grafik selbst bleibt (wie die Möbel-Billboards) unverzerrt
- *  aufrecht, siehe RoomShell-Kommentar zum Phase-1-Kompromiss. */
-const WINDOW_ANCHOR = { x: 2, y: 5 } as const;
+/**
+ * Anker des Fensters auf der Rückwand, in Wand-Rasterzellen (x=Spalte,
+ * y=Höhe ab Boden). Nur der ANKERPUNKT ist echt projiziert — die
+ * Fenster-Grafik selbst bleibt (wie die Möbel-Billboards) unverzerrt
+ * aufrecht, siehe RoomShell-Kommentar zum Phase-1-Kompromiss.
+ *
+ * WICHTIG: die Fenstergrafik hängt vom Anker aus 180px NACH OBEN (Vorhang,
+ * Rahmen). Ein zu hoher Anker (y nah an wall_back.rows) schiebt den oberen
+ * Rand der Grafik über y=0 hinaus — die SVG `viewBox` schneidet das dann
+ * hart ab, unabhängig vom Scroll-Zustand der Karte drumherum. y:3 lässt bei
+ * WALL_UNIT=64 selbst mit vollem Vorhang-Überstand komfortablen Abstand zur
+ * Decke (siehe room-iso.ts Projektionsformel für die genaue Rechnung).
+ */
+const WINDOW_ANCHOR = { x: 2, y: 3 } as const;
 
 /**
  * Ein Fenster, fest auf der Rückwand verankert. Rahmen UND Ausblick werten
@@ -881,18 +888,31 @@ function SurfacePatterns({ wallpaperKey, floorKey }: { wallpaperKey: string; flo
         <stop offset="100%" stopColor="#000000" stopOpacity={0.35} />
       </linearGradient>
 
-      {/* Fotografische Wandtextur, deckt die volle Bühne ab (wird per
-          clipPath auf Rückwand/Seitenwand zugeschnitten, siehe RoomShell). */}
-      <pattern id="room-wallpaper-photo" width={512} height={ISO_STAGE.height} patternUnits="userSpaceOnUse">
+      {/* Fotografische Wand-/Bodentexturen, je Fläche EXAKT so geschert wie
+          die Fläche selbst (siehe room-iso.ts, surfacePatternTransform) —
+          die Kachel ist in Flächen-lokalen Rasterzellen definiert (nicht
+          Pixeln) und deckt die Fläche einmal komplett ab, ohne Wiederholung;
+          `patternTransform` biegt sie danach exakt auf die Wand-/Boden-Ebene. */}
+      <pattern id="room-wallback-photo" patternUnits="userSpaceOnUse"
+        width={ISO_GRID.wall_back.cols} height={ISO_GRID.wall_back.rows}
+        patternTransform={surfacePatternTransform("wall_back")}>
         <image href={WALL_PHOTOS[wallpaperKey] ?? WALL_PHOTOS.tapete_raufaser}
-          x={0} y={0} width={512} height={ISO_STAGE.height} preserveAspectRatio="none" />
-        <rect width={512} height={ISO_STAGE.height} fill="var(--room-shade)" opacity={0.1} />
+          x={0} y={0} width={ISO_GRID.wall_back.cols} height={ISO_GRID.wall_back.rows} preserveAspectRatio="none" />
+        <rect width={ISO_GRID.wall_back.cols} height={ISO_GRID.wall_back.rows} fill="var(--room-shade)" opacity={0.1} />
       </pattern>
-      {/* Fotografische Bodentextur, analog zugeschnitten auf die Bodenfläche. */}
-      <pattern id="room-floor-photo" width={512} height={ISO_STAGE.height} patternUnits="userSpaceOnUse">
+      <pattern id="room-wallside-photo" patternUnits="userSpaceOnUse"
+        width={ISO_GRID.wall_side.cols} height={ISO_GRID.wall_side.rows}
+        patternTransform={surfacePatternTransform("wall_side")}>
+        <image href={WALL_PHOTOS[wallpaperKey] ?? WALL_PHOTOS.tapete_raufaser}
+          x={0} y={0} width={ISO_GRID.wall_side.cols} height={ISO_GRID.wall_side.rows} preserveAspectRatio="none" />
+        <rect width={ISO_GRID.wall_side.cols} height={ISO_GRID.wall_side.rows} fill="var(--room-shade)" opacity={0.1} />
+      </pattern>
+      <pattern id="room-floor-photo" patternUnits="userSpaceOnUse"
+        width={ISO_GRID.floor.cols} height={ISO_GRID.floor.rows}
+        patternTransform={surfacePatternTransform("floor")}>
         <image href={FLOOR_PHOTOS[floorKey] ?? FLOOR_PHOTOS.boden_linoleum}
-          x={0} y={0} width={512} height={ISO_STAGE.height} preserveAspectRatio="none" />
-        <rect width={512} height={ISO_STAGE.height} fill="var(--room-shade)" opacity={0.15} />
+          x={0} y={0} width={ISO_GRID.floor.cols} height={ISO_GRID.floor.rows} preserveAspectRatio="none" />
+        <rect width={ISO_GRID.floor.cols} height={ISO_GRID.floor.rows} fill="var(--room-shade)" opacity={0.15} />
       </pattern>
     </>
   );

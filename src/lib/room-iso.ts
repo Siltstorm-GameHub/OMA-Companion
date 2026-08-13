@@ -122,6 +122,27 @@ export function quadToPoints(quad: { x: number; y: number }[]): string {
 }
 
 /**
+ * SVG `patternTransform`-Matrix, die eine Textur EXAKT so schert, wie die
+ * jeweilige Fläche selbst projiziert wird — abgeleitet direkt aus `project()`
+ * (dieselbe lineare Abbildung, nur als 2×2-Matrix statt als Funktionsaufruf
+ * geschrieben). Ein Pattern, dessen Kachel in "Flächen-lokalen" Einheiten
+ * (Rasterzellen, nicht Pixel) definiert ist und diese Matrix als
+ * `patternTransform` bekommt, liegt danach bündig auf der Fläche — inklusive
+ * der Scherung, die die reine `clipPath`-Zuschneidung (siehe RoomStage.tsx)
+ * bewusst NICHT leistet. Jede Fläche fixiert dieselbe eine Achse wie beim
+ * Projizieren:
+ *   Rückwand (Z=0):     Spalte X → (TILE_W/2, TILE_H/2), Höhe Y → (0, -WALL_UNIT)
+ *   Seitenwand (X=0):   Tiefe Z → (-TILE_W/2, TILE_H/2), Höhe Y → (0, -WALL_UNIT)
+ *   Boden (Y=0):        Spalte X → (TILE_W/2, TILE_H/2), Tiefe Z → (-TILE_W/2, TILE_H/2)
+ */
+export function surfacePatternTransform(surface: RoomSurface): string {
+  const hw = TILE_W / 2, hh = TILE_H / 2;
+  if (surface === "wall_back") return `matrix(${hw},${hh},0,${-WALL_UNIT},${ORIGIN_X},${ORIGIN_Y})`;
+  if (surface === "wall_side") return `matrix(${-hw},${hh},0,${-WALL_UNIT},${ORIGIN_X},${ORIGIN_Y})`;
+  return `matrix(${hw},${hh},${-hw},${hh},${ORIGIN_X},${ORIGIN_Y})`;
+}
+
+/**
  * Tiefensortier-Schlüssel für den Painter's Algorithm: Rückwand-Objekte
  * zuerst, dann Seitenwand, dann Boden-Objekte von hinten (z klein) nach
  * vorne (z groß). Innerhalb der Wände nach Höhe (weiter unten hängende
