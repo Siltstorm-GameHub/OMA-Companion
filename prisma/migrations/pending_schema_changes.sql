@@ -81,12 +81,8 @@ END $$;
 -- 1. User: Gruß / Bio
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "bio" TEXT;
 
--- 2. CollectibleItem: aktiv/inaktiv Toggle
-ALTER TABLE "CollectibleItem" ADD COLUMN IF NOT EXISTS "active" BOOLEAN NOT NULL DEFAULT true;
-
--- 3. CollectibleItem: zeitlich begrenzter Sale
-ALTER TABLE "CollectibleItem" ADD COLUMN IF NOT EXISTS "salePrice" INTEGER;
-ALTER TABLE "CollectibleItem" ADD COLUMN IF NOT EXISTS "saleUntil" TIMESTAMP(3);
+-- 2./3. CollectibleItem-Spalten (active/salePrice/saleUntil) entfallen — die Tabelle
+-- wird weiter unten im Zuge der Pokale-Einführung komplett entfernt (siehe Ende der Datei).
 
 -- 4. EventSeries: statFields
 ALTER TABLE "EventSeries" ADD COLUMN IF NOT EXISTS "statFields" TEXT;
