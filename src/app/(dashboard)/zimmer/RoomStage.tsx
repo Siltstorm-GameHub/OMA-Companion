@@ -8,7 +8,9 @@ import {
   screenToFloor, screenToWallBack, screenToWallSide, wallBackToScreen, surfacePatternTransform,
 } from "@/lib/room-iso";
 import { CATEGORY_CONFIG, GENRE_CONFIG } from "@/lib/wanderpocal";
-import type { VitrineBadge, VitrineCollectible, VitrineTrophy } from "@/lib/room-profile-data";
+import { POKAL_CATEGORY_IMAGE } from "@/lib/pokal";
+import type { VitrineBadge, VitrineTrophy } from "@/lib/room-profile-data";
+import type { Pokal } from "@prisma/client";
 import RoomItemSprite from "./RoomItemSprite";
 import { VITRINE_SLOTS } from "./sprites";
 import { cn } from "@/lib/utils";
@@ -45,9 +47,9 @@ interface Props {
   state:     RoomState;
   ownerName: string;
   vitrine: {
-    collectibles: VitrineCollectible[];
-    badges:       VitrineBadge[];
-    trophies:     VitrineTrophy[];
+    pokale:   Pokal[];
+    badges:   VitrineBadge[];
+    trophies: VitrineTrophy[];
   };
   /**
    * `itemKey` ist nur bei `target === "crt"` gesetzt — RoomView reicht ihn an
@@ -59,14 +61,6 @@ interface Props {
   /** Gesetzt = Bearbeiten-Modus: jedes Möbelstück ist anwählbar statt interaktiv. */
   edit?: EditHooks;
 }
-
-/** Seltenheits-Glow der Vitrine — SVG braucht echte Farben, keine Tailwind-Klassen. */
-const RARITY_GLOW: Record<string, string> = {
-  common:    "rgba(148,163,184,0.30)",
-  rare:      "rgba(59,130,246,0.45)",
-  epic:      "rgba(139,92,246,0.50)",
-  legendary: "rgba(251,191,36,0.60)",
-};
 
 /**
  * Visueller Höhenversatz für Objekte mit mustStandOn:"desk" (Monitore & Co.):
@@ -543,21 +537,18 @@ function VitrineContent({
         );
       })}
 
-      {/* Sammlerstücke in den mittleren Fächern */}
-      {vitrine.collectibles.slice(0, VITRINE_SLOTS.collectibles.length).map((c, i) => {
-        const slot = VITRINE_SLOTS.collectibles[i];
+      {/* Pokale in den mittleren Fächern */}
+      {vitrine.pokale.slice(0, VITRINE_SLOTS.pokale.length).map((p, i) => {
+        const slot = VITRINE_SLOTS.pokale[i];
         return (
-          <g key={c.id}>
+          <g key={p.id}>
             <circle
-              cx={slot.x + slot.s / 2} cy={slot.y + slot.s / 2} r={slot.s * 0.55}
-              fill={RARITY_GLOW[c.rarity] ?? RARITY_GLOW.common}
+              cx={slot.x + slot.s / 2} cy={slot.y + slot.s / 2} r={slot.s * (p.isSeries ? 0.62 : 0.5)}
+              fill={p.isSeries ? "rgba(251,191,36,0.35)" : "rgba(148,163,184,0.25)"}
             />
-            {c.imageUrl
-              ? <image href={c.imageUrl} x={slot.x} y={slot.y} width={slot.s} height={slot.s}
-                  preserveAspectRatio="xMidYMid meet" />
-              : <rect x={slot.x + 4} y={slot.y + 4} width={slot.s - 8} height={slot.s - 8} rx={3}
-                  fill="var(--room-plastic-hi)" />}
-            <PlaqueLabel x={slot.x + slot.s / 2} y={slot.plaqueY} text={c.name} />
+            <image href={POKAL_CATEGORY_IMAGE[p.category]} x={slot.x} y={slot.y} width={slot.s} height={slot.s}
+              preserveAspectRatio="xMidYMid meet" />
+            <PlaqueLabel x={slot.x + slot.s / 2} y={slot.plaqueY} text={p.title} />
           </g>
         );
       })}

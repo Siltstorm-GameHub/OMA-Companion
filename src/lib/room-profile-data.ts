@@ -58,8 +58,9 @@ export interface RoomProfileCore {
   topGames:          string[];
   favoriteGames:     FavoriteGame[];
   vitrine: {
-    badges:       VitrineBadge[];
-    trophies:     VitrineTrophy[];
+    pokale:   Pokal[];
+    badges:   VitrineBadge[];
+    trophies: VitrineTrophy[];
   };
 }
 
@@ -114,7 +115,7 @@ export async function loadRoomProfileCore(userId: string): Promise<RoomProfileCo
 
   const [
     eventCount, startedEvents, higherRanked, totalUsers,
-    pokalCount, systemBadgeCount, customBadgeCount,
+    pokalCount, vitrinePokale, systemBadgeCount, customBadgeCount,
     showcaseCustomBadges, trophies, lulPollWins,
   ] = await Promise.all([
     prisma.eventRegistration.count({ where: { userId } }),
@@ -125,6 +126,9 @@ export async function loadRoomProfileCore(userId: string): Promise<RoomProfileCo
     prisma.user.count({ where: { rankPoints: { gt: user.rankPoints } } }),
     prisma.user.count(),
     prisma.pokal.count({ where: { userId } }),
+    // Nur so viele wie Vitrinen-Fächer für Pokale auf der Bühne existieren
+    // (siehe VITRINE_SLOTS.pokale in zimmer/sprites/index.tsx).
+    prisma.pokal.findMany({ where: { userId }, orderBy: { awardedAt: "desc" }, take: 6 }),
     prisma.userSystemBadge.count({ where: { userId } }),
     prisma.userCustomBadge.count({ where: { userId } }),
     customBadgeIds.length > 0
@@ -197,7 +201,8 @@ export async function loadRoomProfileCore(userId: string): Promise<RoomProfileCo
     topGames,
     favoriteGames:     parseFavoriteGames(user.favoriteGamesJson),
     vitrine: {
-      badges:       vitrineBadges,
+      pokale:   vitrinePokale,
+      badges:   vitrineBadges,
       trophies,
     },
   };

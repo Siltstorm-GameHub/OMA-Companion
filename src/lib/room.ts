@@ -154,8 +154,7 @@ export type PurchaseResult =
   | { error: string };
 
 /**
- * Kauft ein Möbelstück. Aufbau bewusst identisch zu purchaseCollectible()
- * in src/lib/collectibles.ts: erst lesen und validieren, dann genau eine
+ * Kauft ein Möbelstück: erst lesen und validieren, dann genau eine
  * Transaktion, die Münzen abbucht, das Ledger schreibt und das Möbelstück anlegt.
  *
  * Gekaufte Möbel landen im LAGER (placed: false) — aufgestellt wird im Zimmer.

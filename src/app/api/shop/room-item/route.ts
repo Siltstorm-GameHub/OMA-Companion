@@ -3,8 +3,7 @@ import { requireRoomAccess } from "@/lib/room-guard";
 import { purchaseRoomItem } from "@/lib/room";
 
 /**
- * Möbelkauf. Liegt bewusst unter /api/shop neben dem Collectible-Kauf —
- * für den User ist das derselbe Vorgang im selben Shop.
+ * Möbelkauf. Liegt bewusst unter /api/shop.
  */
 export async function POST(req: NextRequest) {
   const guard = await requireRoomAccess();

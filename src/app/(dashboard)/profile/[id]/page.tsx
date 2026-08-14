@@ -9,7 +9,6 @@ import RankedAvatar from "@/components/RankedAvatar";
 import RankIcon from "@/components/RankIcon";
 import BotPreviewShell from "@/components/BotPreviewShell";
 import { computeBadges } from "@/lib/badges";
-import { MAX_SHOWCASE } from "@/lib/collectibles";
 import {
   CalendarDays, Swords, Clock,
   MessageSquare, CheckCircle2, ArrowLeft,
@@ -20,7 +19,7 @@ import RankPointsIcon from "@/components/RankPointsIcon";
 import WinIcon from "@/components/WinIcon";
 import Link from "next/link";
 import BadgesSection from "../BadgesSection";
-import CollectiblesShowcase from "../CollectiblesShowcase";
+import PokalSection from "@/components/PokalSection";
 import FavoriteGamesSection from "../FavoriteGamesSection";
 import { parseFavoriteGames } from "@/lib/favorite-games";
 import WanderpocalSection from "@/components/WanderpocalSection";
@@ -88,14 +87,14 @@ export default async function PublicProfilePage({
   const month = now.getMonth() + 1;
   const year  = now.getFullYear();
 
-  const [user, eventRegs, eventCount, startedEvents, tournamentParticipations, tournamentCount, totalUsers, questsWithProgress, ownedCollectibles, userSystemBadges, userCustomBadges, wanderpocalTrophies, wanderpocalStats, coinsEarnedAgg, coinsSpentAgg, lulPollWins] =
+  const [user, eventRegs, eventCount, startedEvents, tournamentParticipations, tournamentCount, totalUsers, questsWithProgress, pokale, userSystemBadges, userCustomBadges, wanderpocalTrophies, wanderpocalStats, coinsEarnedAgg, coinsSpentAgg, lulPollWins] =
     await Promise.all([
       prisma.user.findUnique({
         where: { id },
         select: {
           id: true, name: true, username: true, image: true,
           points: true, rankPoints: true, createdAt: true,
-          showcaseJson: true, showcaseBadgesJson: true, favoriteGamesJson: true,
+          showcaseBadgesJson: true, favoriteGamesJson: true,
           bio: true, birthday: true, twitchLogin: true,
           voiceMinutesTotal: true, messagesTotal: true,
         },
@@ -130,14 +129,9 @@ export default async function PublicProfilePage({
         include: { progress: { where: { userId: id } } },
         orderBy: { createdAt: "asc" },
       }),
-      prisma.userCollectible.findMany({
+      prisma.pokal.findMany({
         where: { userId: id },
-        include: {
-          collectibleItem: {
-            include: { collection: { select: { id: true, name: true, coverImageUrl: true } } },
-          },
-        },
-        orderBy: { createdAt: "desc" },
+        orderBy: { awardedAt: "desc" },
       }),
       prisma.userSystemBadge.findMany({ where: { userId: id }, select: { badgeKey: true } }),
       prisma.userCustomBadge.findMany({
@@ -209,15 +203,6 @@ export default async function PublicProfilePage({
     try { return JSON.parse(user.showcaseBadgesJson ?? "[]"); } catch { return []; }
   })();
   const favoriteGames = parseFavoriteGames(user.favoriteGamesJson);
-
-  const showcaseIds: string[] = (() => {
-    try { return JSON.parse(user.showcaseJson ?? "[]"); } catch { return []; }
-  })();
-  const showcaseItems = showcaseIds
-    .map(sid => ownedCollectibles.find(o => o.collectibleItemId === sid)?.collectibleItem ?? null)
-    .filter(Boolean) as typeof ownedCollectibles[0]["collectibleItem"][];
-
-
 
   return (
     <div className="p-5 sm:p-6 max-w-7xl mx-auto space-y-5 animate-fade-in">
@@ -334,14 +319,14 @@ export default async function PublicProfilePage({
           </div>
         ))}
 
-        {/* Collectibles */}
+        {/* Pokale */}
         <div className="card-hover card-shine glass relative overflow-hidden rounded-2xl p-4 animate-slide-up stagger-5">
           <div className="absolute inset-0 bg-gradient-to-br from-pink-500/8 to-transparent pointer-events-none" />
           <div className="relative w-8 h-8 rounded-xl flex items-center justify-center mb-3 border text-pink-400 bg-pink-500/10 border-pink-500/15">
-            <Gamepad2 className="w-4 h-4" />
+            <Trophy className="w-4 h-4" />
           </div>
-          <p className="relative text-2xl font-black text-white tabular-nums">{ownedCollectibles.length}</p>
-          <p className="relative text-xs text-gray-400 mt-1.5">Collectibles</p>
+          <p className="relative text-2xl font-black text-white tabular-nums">{pokale.length}</p>
+          <p className="relative text-xs text-gray-400 mt-1.5">Pokale</p>
         </div>
 
         {/* Lieblingsspiel – Top 3 */}
@@ -371,15 +356,8 @@ export default async function PublicProfilePage({
         <FavoriteGamesSection games={favoriteGames} readOnly displayName={displayName} viewerId={viewerId} />
       )}
 
-      {/* ── Collectibles Showcase (read-only) ───────────────────────── */}
-      {showcaseItems.length > 0 && (
-        <CollectiblesShowcase
-          showcaseItems={showcaseItems.map(i => ({ id: i.id, name: i.name, imageUrl: i.imageUrl, rarity: i.rarity }))}
-          allOwned={[]}
-          maxSlots={MAX_SHOWCASE}
-          readOnly
-        />
-      )}
+      {/* ── Pokale (read-only) ───────────────────────────────────────── */}
+      <PokalSection pokale={pokale} ownerName={displayName} />
 
       {/* ── Haupt-Inhalt ─────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">

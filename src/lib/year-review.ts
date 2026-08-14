@@ -34,8 +34,7 @@ export type YearReview = {
 
   newBadges: { icon: string; name: string }[];
 
-  newCollectibles: { id: string; name: string; imageUrl: string | null; rarity: string }[];
-  rarestCollectible: { name: string; imageUrl: string | null; rarity: string } | null;
+  newPokale: { id: string; title: string; category: string; isSeries: boolean }[];
 
   lul: { spieltage: number; points: number; wins: number } | null;
   duels: { played: number; won: number } | null;
@@ -45,8 +44,6 @@ export type YearReview = {
   biggestWin: { amount: number; reason: string } | null;
   busiestMonth: { month: number; count: number } | null;
 };
-
-const RARITY_ORDER: Record<string, number> = { common: 0, rare: 1, epic: 2, legendary: 3 };
 
 export async function buildYearReview(userId: string, year: number): Promise<YearReview> {
   const yearStart = new Date(Date.UTC(year, 0, 1));
@@ -58,7 +55,7 @@ export async function buildYearReview(userId: string, year: number): Promise<Yea
     biggestWin, txInYear,
     eventRegs, tournamentParts,
     lulEntries, duelsRaw, predictionRows,
-    donationsAgg, systemBadges, customBadges, collectiblesAcquired,
+    donationsAgg, systemBadges, customBadges, pokaleAcquired,
   ] = await Promise.all([
     prisma.pointTransaction.aggregate({
       where: { userId, amount: { gt: 0 }, reason: { startsWith: "[Münzen]" }, createdAt: { gte: yearStart, lt: yearEnd } },
@@ -116,9 +113,9 @@ export async function buildYearReview(userId: string, year: number): Promise<Yea
       where:   { userId, earnedAt: { gte: yearStart, lt: yearEnd } },
       include: { badge: { select: { icon: true, name: true } } },
     }),
-    prisma.userCollectible.findMany({
-      where:   { userId, createdAt: { gte: yearStart, lt: yearEnd } },
-      include: { collectibleItem: { select: { id: true, name: true, imageUrl: true, rarity: true } } },
+    prisma.pokal.findMany({
+      where:  { userId, awardedAt: { gte: yearStart, lt: yearEnd } },
+      select: { id: true, title: true, category: true, isSeries: true },
     }),
   ]);
 
@@ -159,15 +156,7 @@ export async function buildYearReview(userId: string, year: number): Promise<Yea
     ...customBadges.map(c => ({ icon: c.badge.icon, name: c.badge.name })),
   ];
 
-  const newCollectibles = collectiblesAcquired.map(uc => ({
-    id:       uc.collectibleItem.id,
-    name:     uc.collectibleItem.name,
-    imageUrl: uc.collectibleItem.imageUrl,
-    rarity:   uc.collectibleItem.rarity,
-  }));
-  const rarestCollectible = newCollectibles.length > 0
-    ? [...newCollectibles].sort((a, b) => (RARITY_ORDER[b.rarity] ?? 0) - (RARITY_ORDER[a.rarity] ?? 0))[0]
-    : null;
+  const newPokale = pokaleAcquired;
 
   const lul = lulEntries.length > 0 ? {
     spieltage: lulEntries.length,
@@ -201,8 +190,7 @@ export async function buildYearReview(userId: string, year: number): Promise<Yea
     voiceHoursEstimate,
     messagesEstimate,
     newBadges,
-    newCollectibles,
-    rarestCollectible,
+    newPokale,
     lul,
     duels,
     predictions,

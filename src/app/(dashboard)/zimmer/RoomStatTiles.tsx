@@ -29,7 +29,7 @@ export default function RoomStatTiles({ core }: { core: RoomProfileCore }) {
       iconCls: "text-purple-400 bg-purple-500/10 border-purple-500/15", accent: "from-purple-500/8",
     },
     {
-      icon: <Gamepad2 className="w-4 h-4" />, label: "Collectibles", value: String(core.collectiblesCount),
+      icon: <Trophy className="w-4 h-4" />, label: "Pokale", value: String(core.pokalCount),
       iconCls: "text-pink-400 bg-pink-500/10 border-pink-500/15", accent: "from-pink-500/8",
     },
     {
