@@ -305,15 +305,13 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract, edit 
           className="room-interactive-glow" fill="none" stroke="var(--room-screen-on)" strokeWidth={2}
           pointerEvents="none"
         />
-        {target === "crt" && (
-          <ellipse
-            cx={x + w / 2} cy={y + h * 0.42}
-            rx={w * 0.6} ry={h * 0.45}
-            className="room-screen-glow" fill="var(--room-screen-on)"
-            filter="url(#room-blur-md)" pointerEvents="none"
-          />
-        )}
         <RoomItemSprite itemKey={item.key} x={x} y={y} flipped={item.flipped} className="room-item-photo" />
+        {/* Bildschirminhalt statt Deko-Leuchtschein: der alte Radial-Halo HINTER
+            dem Gerät sagte nur "hier ist ein Monitor", nicht "der läuft gerade".
+            Diese Attrappe liegt VOR dem Foto (screen-blend, hellt nur dunkle
+            Bildschirm-Pixel merklich auf, der helle Gehäuserand bleibt fast
+            unangetastet) und suggeriert echten UI-Inhalt statt nur Glühen. */}
+        {target === "crt" && <CrtScreenContent x={x} y={y} w={w} h={h} />}
       </g>
     );
   }
@@ -388,6 +386,35 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract, edit 
         </div>
       </div>
     </div>
+  );
+}
+
+// ── Monitor-Inhalt: "läuft gerade" statt "kann geklickt werden" ─────────────
+
+/**
+ * Attrappe eines aktiven Bildschirminhalts, über das Möbel-Foto gelegt.
+ * Kein präzises Masking auf die tatsächliche Bildschirmfläche jedes einzelnen
+ * Fotos (dafür bräuchte jedes Monitor-Bild eigene Koordinaten) — stattdessen
+ * eine grobzügige, weich ausgeblendete Zone in der oberen Bildschirmhälfte
+ * mit `mix-blend-mode: screen`: dunkle Pixel (der ausgeschaltete Bildschirm
+ * im Foto) hellen sich sichtbar auf, das ohnehin schon helle Gehäuse bleibt
+ * fast unverändert. Ein paar schmale horizontale Balken lesen sich als
+ * Textzeilen/UI, nicht nur als Lichtfleck.
+ */
+function CrtScreenContent({ x, y, w, h }: { x: number; y: number; w: number; h: number }) {
+  const cx = x + w * 0.5, cy = y + h * 0.34;
+  const cw = w * 0.5, ch = h * 0.3;
+  return (
+    <g pointerEvents="none" style={{ mixBlendMode: "screen" }}>
+      <ellipse cx={cx} cy={cy} rx={cw * 0.75} ry={ch * 0.85}
+        fill="var(--room-screen-on)" opacity={0.8} filter="url(#room-blur-sm)" />
+      <rect x={cx - cw * 0.35} y={cy - ch * 0.32} width={cw * 0.5} height={ch * 0.14} rx={2}
+        fill="#ffffff" opacity={0.65} />
+      <rect x={cx - cw * 0.35} y={cy - ch * 0.06} width={cw * 0.32} height={ch * 0.14} rx={2}
+        fill="#ffffff" opacity={0.5} />
+      <rect x={cx - cw * 0.35} y={cy + ch * 0.2} width={cw * 0.62} height={ch * 0.14} rx={2}
+        fill="#ffffff" opacity={0.4} />
+    </g>
   );
 }
 
