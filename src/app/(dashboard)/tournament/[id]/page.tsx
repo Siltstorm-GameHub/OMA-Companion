@@ -25,6 +25,7 @@ import PollsSection from "./PollsSection";
 import EventWinnerPredictionWidget from "./EventWinnerPredictionWidget";
 import EventTippsList from "./EventTippsList";
 import EventPokalWinners from "@/components/EventPokalWinners";
+import PokalPreview from "@/components/PokalPreview";
 import { EventCategory } from "@prisma/client";
 
 const GENRE_MAP: Record<string, { label: string; icon: string }> = {
@@ -664,6 +665,11 @@ export default async function TournamentDetailPage({
         {!event.seriesId && eventPokale.length > 0 && (
           <div className="mt-4">
             <EventPokalWinners pokale={eventPokale} label="Pokal" />
+          </div>
+        )}
+        {!event.seriesId && eventPokale.length === 0 && event.status !== "finished" && (
+          <div className="mt-4">
+            <PokalPreview category={event.category} isSeries={false} />
           </div>
         )}
 

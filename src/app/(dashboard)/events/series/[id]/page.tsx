@@ -21,6 +21,7 @@ import type { DeltaInfo } from "./SeriesStandingsTable";
 import { computeEventPoints, computeStatStandings, type StatConfig } from "@/lib/series-event-points";
 import { getEventEndedAt, isRecentlyFinished } from "@/lib/event-completion";
 import EventPokalWinners from "@/components/EventPokalWinners";
+import PokalPreview from "@/components/PokalPreview";
 
 type ArchivedSeason = {
   id: string; name: string; status: string; seasonNumber: number | null;
@@ -500,6 +501,9 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
       {/* ── Eventreihen-Pokale ─────────────────────────────────────────────── */}
       {seriesPokale.length > 0 && (
         <EventPokalWinners pokale={seriesPokale} label="Eventreihen-Pokal" />
+      )}
+      {seriesPokale.length === 0 && !isArchived && (
+        <PokalPreview category={series.category} isSeries={true} />
       )}
 
       {/* ── Cover ──────────────────────────────────────────────────────── */}
