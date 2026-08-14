@@ -61,3 +61,42 @@ export function parsePollsConfigJson(json: string | null | undefined): PollConfi
     return Array.isArray(parsed) ? parsed as PollConfig[] : [];
   } catch { return []; }
 }
+
+/** Liefert die bereits ausgewerteten (rewardsPaid) Umfragen eines Events mit ihrem Label (nicht
+ *  der Frage) und den aufgelösten Namen der Gewinner — für den Discord-Ergebnis-Post (Text +
+ *  Podium-Bild), die beide dieselbe Auflösung brauchen. Bei answerType "custom" ist der
+ *  gespeicherte winnerId bereits der Antworttext selbst, sonst eine User-ID. */
+export async function getEventPollWinners(
+  eventId: string,
+): Promise<{ label: string; names: string[] }[]> {
+  const polls = await prisma.eventPoll.findMany({
+    where: { eventId, rewardsPaid: true, winnerIds: { not: null } },
+    select: { label: true, winnerIds: true, answerType: true, createdAt: true },
+    orderBy: { createdAt: "asc" },
+  });
+
+  const parsedPolls = polls.map((p) => {
+    let ids: string[] = [];
+    try { ids = p.winnerIds ? JSON.parse(p.winnerIds) : []; } catch { ids = []; }
+    return { label: p.label, ids, answerType: p.answerType };
+  });
+
+  const userIdsNeeded = new Set<string>();
+  for (const p of parsedPolls) {
+    if (p.answerType !== "custom") for (const id of p.ids) userIdsNeeded.add(id);
+  }
+  const users = userIdsNeeded.size > 0
+    ? await prisma.user.findMany({
+        where: { id: { in: [...userIdsNeeded] } },
+        select: { id: true, name: true, username: true },
+      })
+    : [];
+  const nameById = new Map(users.map((u) => [u.id, u.name ?? u.username ?? "?"]));
+
+  return parsedPolls
+    .filter((p) => p.ids.length > 0)
+    .map((p) => ({
+      label: p.label,
+      names: p.answerType === "custom" ? p.ids : p.ids.map((id) => nameById.get(id) ?? "?"),
+    }));
+}

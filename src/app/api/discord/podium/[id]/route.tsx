@@ -3,6 +3,7 @@ import sharp from "sharp";
 import { prisma } from "@/lib/prisma";
 import { BRAND, OG_SIZE } from "@/lib/brand";
 import { OgFrame, OgBrandRow, loadLogoDataUri, loadRemoteImageDataUri } from "@/lib/og";
+import { getEventPollWinners } from "@/lib/event-polls";
 
 /**
  * Animiertes Sieger-Podium für Discord-Ergebnis-Ankündigungen.
@@ -183,6 +184,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     .map((place) => entries.find((e) => e.place === place))
     .filter((e): e is PodiumEntry => Boolean(e));
 
+  // Umfrage-Gewinner (Label, nicht die Frage) neben dem Podium — dieselbe Auflösung wie im
+  // Text-Embed (discord-events.ts), damit Text und Bild übereinstimmen.
+  const pollWinners = await getEventPollWinners(id).catch(() => []);
+
   // Genau EIN next/og-Aufruf — siehe Architektur-Kommentar oben.
   const base = new ImageResponse(
     (
@@ -191,10 +196,26 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         <div style={{ display: "flex", fontSize: 42, fontWeight: 800, color: BRAND.text, marginBottom: 32, maxWidth: 950 }}>
           🏆 {event.title.length > 42 ? event.title.slice(0, 41).trimEnd() + "…" : event.title}
         </div>
-        <div style={{ display: "flex", alignItems: "flex-end", gap: 24 }}>
-          {ordered.map((entry) => (
-            <PodiumBlock key={entry.place} entry={entry} />
-          ))}
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 40 }}>
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 24 }}>
+            {ordered.map((entry) => (
+              <PodiumBlock key={entry.place} entry={entry} />
+            ))}
+          </div>
+          {pollWinners.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 8, maxWidth: 280 }}>
+              {pollWinners.map((poll) => (
+                <div key={poll.label} style={{ display: "flex", flexDirection: "column" }}>
+                  <div style={{ display: "flex", fontSize: 20, fontWeight: 700, color: BRAND.tealLight, marginBottom: 4 }}>
+                    🗳️ {poll.label}
+                  </div>
+                  <div style={{ display: "flex", fontSize: 22, fontWeight: 600, color: BRAND.text }}>
+                    {poll.names.join(", ")}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </OgFrame>
     ),

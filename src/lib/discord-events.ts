@@ -2,6 +2,7 @@
 import { getGameCoverUrlAsync } from "@/lib/game-cover";
 import { generateBrandedCoverDataUri } from "@/lib/branded-cover";
 import { getNotificationRule, fillPlaceholders } from "@/lib/notify-dispatch";
+import { getEventPollWinners } from "@/lib/event-polls";
 import { formatLabel, genreLabel } from "@/lib/event-placeholders";
 import { DISCORD_COLORS } from "@/lib/discord-colors";
 
@@ -137,6 +138,10 @@ export async function announceEventResults(event: {
   const title = rule ? fillPlaceholders(rule.titleTemplate, placeholders) : `🏆 Ergebnisse: ${event.title}`;
   const desc  = rule ? fillPlaceholders(rule.bodyTemplate, placeholders) : "Das Event ist abgeschlossen — die Ergebnisse stehen fest!";
 
+  // Umfrage-Gewinner (Label, nicht die Frage) — dieselbe Auflösung wie im Podium-Bild
+  // (api/discord/podium/[id]/route.tsx), damit Text und Bild übereinstimmen.
+  const pollWinners = await getEventPollWinners(event.eventId).catch(() => []);
+
   const embed = {
     color:       DISCORD_COLORS.eventResult,
     title,
@@ -147,6 +152,7 @@ export async function announceEventResults(event: {
       ...(event.winnerNames && event.winnerNames.length > 0
         ? [{ name: "🥇 Sieger", value: event.winnerNames.join(", "), inline: true }]
         : []),
+      ...pollWinners.map((p) => ({ name: `🗳️ ${p.label}`, value: p.names.join(", "), inline: true })),
       ...(event.note ? [{ name: "📋 Notiz", value: event.note, inline: false }] : []),
     ],
     image:     { url: coverUrl },

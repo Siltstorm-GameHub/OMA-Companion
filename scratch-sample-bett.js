@@ -1,5 +1,5 @@
 const sharp = require('sharp');
-const path = 'scratch-schreibtisch_eck.png';
+const path = 'scratch-bett.png';
 
 async function sample(x, y, w, h, label) {
   const { data } = await sharp(path).extract({ left: x, top: y, width: w, height: h }).raw().toBuffer({ resolveWithObject: true });
@@ -13,11 +13,15 @@ async function sample(x, y, w, h, label) {
 async function main() {
   const meta = await sharp(path).metadata();
   console.log('size', meta.width, meta.height);
-  // top corner background
   await sample(10, 10, 30, 30, 'bg-top-left');
   await sample(meta.width - 40, 10, 30, 30, 'bg-top-right');
-  // bottom area near shadow (desk sits mid-lower, shadow likely under legs)
-  await sample(meta.width/2 - 15, meta.height - 40, 30, 30, 'bottom-center (shadow?)');
-  await sample(20, meta.height - 40, 30, 30, 'bottom-left');
+  await sample(10, meta.height - 40, 30, 30, 'bg-bottom-left');
+  await sample(meta.width - 40, meta.height - 40, 30, 30, 'bg-bottom-right');
+  // headboard fabric (gray) roughly upper-middle
+  await sample(Math.round(meta.width*0.3), Math.round(meta.height*0.35), 20, 20, 'headboard-fabric');
+  // duvet navy blue roughly center
+  await sample(Math.round(meta.width*0.55), Math.round(meta.height*0.55), 20, 20, 'duvet');
+  // shadow under bed frame
+  await sample(Math.round(meta.width*0.5), Math.round(meta.height*0.75), 20, 20, 'shadow-under-bed');
 }
 main();
