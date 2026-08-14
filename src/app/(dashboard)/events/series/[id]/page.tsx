@@ -20,6 +20,7 @@ import FullStandingsToggle from "./FullStandingsToggle";
 import type { DeltaInfo } from "./SeriesStandingsTable";
 import { computeEventPoints, computeStatStandings, type StatConfig } from "@/lib/series-event-points";
 import { getEventEndedAt, isRecentlyFinished } from "@/lib/event-completion";
+import EventPokalWinners from "@/components/EventPokalWinners";
 
 type ArchivedSeason = {
   id: string; name: string; status: string; seasonNumber: number | null;
@@ -438,6 +439,13 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
       })
     : [];
 
+  // Eventreihen-Pokal: nur hier auf der Reihen-Seite, nie auf der Seite eines
+  // einzelnen Events der Reihe (dort nur Pokale für Standalone-Events).
+  const seriesPokale = await prisma.pokal.findMany({
+    where: { seriesId: series.id, isSeries: true },
+    include: { user: { select: { name: true, username: true } } },
+  });
+
   return (
     <div className="px-4 pb-6 pt-0 sm:p-6 max-w-7xl mx-auto space-y-5 animate-fade-in">
 
@@ -487,6 +495,11 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
             )}
           </div>
         </div>
+      )}
+
+      {/* ── Eventreihen-Pokale ─────────────────────────────────────────────── */}
+      {seriesPokale.length > 0 && (
+        <EventPokalWinners pokale={seriesPokale} label="Eventreihen-Pokal" />
       )}
 
       {/* ── Cover ──────────────────────────────────────────────────────── */}

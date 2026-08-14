@@ -24,6 +24,7 @@ import ClipSubmitter from "./ClipSubmitter";
 import PollsSection from "./PollsSection";
 import EventWinnerPredictionWidget from "./EventWinnerPredictionWidget";
 import EventTippsList from "./EventTippsList";
+import EventPokalWinners from "@/components/EventPokalWinners";
 import { EventCategory } from "@prisma/client";
 
 const GENRE_MAP: Record<string, { label: string; icon: string }> = {
@@ -149,7 +150,7 @@ export default async function TournamentDetailPage({
   const allRegistrations = event.registrations.map(r => ({ userId: r.userId, role: r.role, user: r.user }));
   const myClipSubmission = event.clipSubmissions.find(c => c.userId === userId) ?? null;
 
-  const [holdersMap, myEventPrediction, minigamesConfig, allEventPredictions] = await Promise.all([
+  const [holdersMap, myEventPrediction, minigamesConfig, allEventPredictions, eventPokale] = await Promise.all([
     getWanderpocalHoldersMap(),
     prisma.eventWinnerPrediction.findUnique({
       where: { userId_eventId: { userId, eventId } },
@@ -168,6 +169,15 @@ export default async function TournamentDetailPage({
       },
       orderBy: { createdAt: "asc" },
     }),
+    // Pokale nur für Standalone-Events (seriesId === null) — Events innerhalb einer
+    // Eventreihe zeigen keinen eigenen Pokal, dafür gibt es den Eventreihen-Pokal
+    // auf der Seite der Eventreihe.
+    event.seriesId
+      ? Promise.resolve([])
+      : prisma.pokal.findMany({
+          where: { eventId, isSeries: false },
+          include: { user: { select: { name: true, username: true } } },
+        }),
   ]);
   const holdersList = [...holdersMap.values()];
   const isPredictionLocked = event.status === "finished" || event.startAt < new Date();
@@ -646,6 +656,14 @@ export default async function TournamentDetailPage({
               <p className="text-xs text-amber-600 uppercase tracking-wide font-medium">Turniersieger</p>
               <p className="text-white font-semibold">{userName(winner)}</p>
             </div>
+          </div>
+        )}
+
+        {/* Pokale gibt es nur für Standalone-Events — Events innerhalb einer Eventreihe
+            werden stattdessen mit dem Eventreihen-Pokal auf der Reihen-Seite ausgezeichnet. */}
+        {!event.seriesId && eventPokale.length > 0 && (
+          <div className="mt-4">
+            <EventPokalWinners pokale={eventPokale} label="Pokal" />
           </div>
         )}
 
