@@ -6,6 +6,7 @@ import { sendPushToUsers } from "@/lib/push";
 import { checkAndAwardBadges } from "@/lib/award-badges";
 import { createNotificationForUsers } from "@/lib/notifications";
 import { recomputeWanderpocalHolders } from "@/lib/recompute-wanderpocal";
+import { awardEventPokal } from "@/lib/award-pokal";
 import { resolveEventPredictions } from "@/lib/predictions";
 import { createPollsForEvent, parsePollsConfigJson } from "@/lib/event-polls";
 import { announceEventResults } from "@/lib/discord-events";
@@ -1233,6 +1234,14 @@ async function completeEvent(req: NextRequest, eventId: string) {
   recomputeWanderpocalHolders().catch((err) =>
     console.error("[Wanderpokal] Recompute failed:", err)
   );
+
+  // Pokal: digitalen Pokal an die Gewinner eines Standalone-Events vergeben (fire-and-forget,
+  // awardEventPokal() prüft selbst, ob das Event Teil einer Eventreihe ist)
+  if (!hasPendingPollPhase) {
+    awardEventPokal(eventId).catch((err) =>
+      console.error("[Pokal] Vergabe fehlgeschlagen:", err)
+    );
+  }
 
   return NextResponse.json({ ok: true, completionData, eventWinnerId });
 }

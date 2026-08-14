@@ -2,8 +2,7 @@
 
 import type { ReactNode } from "react";
 import { Modal } from "@/components/ui";
-import CollectiblesShowcase from "@/app/(dashboard)/profile/CollectiblesShowcase";
-import { MAX_SHOWCASE } from "@/lib/collectibles";
+import PokalSection from "@/components/PokalSection";
 import type { RoomProfileDetails } from "@/lib/room-profile-data";
 
 interface Props {
@@ -17,9 +16,7 @@ interface Props {
 }
 
 /**
- * Die Vitrine in groß: Sammlerstücke, Abzeichen und Wanderpokale.
- * Im eigenen Zimmer lässt sich hier auch bestimmen, was in der Vitrine steht —
- * dafür wird die bestehende CollectiblesShowcase-Komponente unverändert genutzt.
+ * Die Vitrine in groß: digitale Pokale, Abzeichen und Wanderpokale.
  */
 export default function VitrineModal({
   open, onClose, displayName, readOnly, details, trophySection,
@@ -27,20 +24,15 @@ export default function VitrineModal({
   return (
     <Modal open={open} onClose={onClose} size="lg" title={`🏆 Vitrine von ${displayName}`}>
       <div className="space-y-6">
-        <CollectiblesShowcase
-          showcaseItems={details.showcaseCollectibles}
-          allOwned={details.ownedCollectibles}
-          maxSlots={MAX_SHOWCASE}
-          readOnly={readOnly}
-        />
+        <PokalSection pokale={details.pokale} ownerName={displayName} />
 
         {(details.trophies.length > 0 || details.trophyStats.length > 0) && trophySection}
 
-        {details.showcaseCollectibles.length === 0 && details.trophies.length === 0 && (
+        {details.pokale.length === 0 && details.trophies.length === 0 && (
           <p className="text-xs text-gray-500 text-center py-4">
             {readOnly
-              ? `${displayName} hat noch nichts in die Vitrine gestellt.`
-              : "Deine Vitrine ist noch leer. Im Shop gibt es Sammlerstücke."}
+              ? `${displayName} hat noch keine Pokale gewonnen.`
+              : "Noch keine Pokale gewonnen."}
           </p>
         )}
       </div>
