@@ -498,12 +498,9 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
         </div>
       )}
 
-      {/* ── Eventreihen-Pokale ─────────────────────────────────────────────── */}
+      {/* ── Eventreihen-Pokale (bereits vergeben) ─────────────────────────────── */}
       {seriesPokale.length > 0 && (
         <EventPokalWinners pokale={seriesPokale} label="Eventreihen-Pokal" />
-      )}
-      {seriesPokale.length === 0 && !isArchived && (
-        <PokalPreview category={series.category} isSeries={true} />
       )}
 
       {/* ── Cover ──────────────────────────────────────────────────────── */}
@@ -581,9 +578,16 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
       {/* ── Punktesystem ─────────────────────────────────────────────────────── */}
       {punkteItems.length > 0 && (
         <div className="glass rounded-2xl p-5">
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-            <Zap className="w-3.5 h-3.5 text-teal-400" /> Punktesystem
-          </h2>
+          <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
+            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+              <Zap className="w-3.5 h-3.5 text-teal-400" /> Punktesystem
+            </h2>
+            {/* Pokal, der bei Abschluss der Reihe vergeben wird — bereits vergebene Pokale
+                stehen weiter oben (EventPokalWinners), diese Vorschau nur solange offen. */}
+            {seriesPokale.length === 0 && !isArchived && (
+              <PokalPreview category={series.category} isSeries={true} compact />
+            )}
+          </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
             {punkteItems.map((p, i) => (
               <div key={i} className="flex items-center gap-3 glass-heavy rounded-xl px-3 py-2.5">

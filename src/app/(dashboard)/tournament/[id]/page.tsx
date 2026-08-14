@@ -609,7 +609,7 @@ export default async function TournamentDetailPage({
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-3 mt-4">
+        <div className={`grid ${!event.seriesId && eventPokale.length === 0 && event.status !== "finished" ? "grid-cols-4" : "grid-cols-3"} gap-3 mt-4`}>
           <div className="glass-heavy rounded-xl p-3 text-center">
             <p className="text-lg font-semibold text-white">{event.registrations.length}</p>
             <p className="text-xs text-gray-500 mt-0.5">Teilnehmer</p>
@@ -642,6 +642,9 @@ export default async function TournamentDetailPage({
             </p>
             <p className="text-xs text-gray-500 mt-0.5">Matches gespielt</p>
           </div>
+          {!event.seriesId && eventPokale.length === 0 && event.status !== "finished" && (
+            <PokalPreview category={event.category} isSeries={false} tile />
+          )}
         </div>
 
         {event.description && (
@@ -665,11 +668,6 @@ export default async function TournamentDetailPage({
         {!event.seriesId && eventPokale.length > 0 && (
           <div className="mt-4">
             <EventPokalWinners pokale={eventPokale} label="Pokal" />
-          </div>
-        )}
-        {!event.seriesId && eventPokale.length === 0 && event.status !== "finished" && (
-          <div className="mt-4">
-            <PokalPreview category={event.category} isSeries={false} />
           </div>
         )}
 
