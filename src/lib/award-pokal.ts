@@ -11,11 +11,13 @@ import { prisma } from "@/lib/prisma";
 export async function awardEventPokal(eventId: string): Promise<void> {
   const event = await prisma.event.findUnique({
     where: { id: eventId },
-    select: { id: true, title: true, category: true, seriesId: true, completionData: true },
+    select: { id: true, title: true, category: true, seriesId: true, type: true, completionData: true },
   });
   if (!event) return;
   // Nur echte Standalone-Events (nicht Teil einer Eventreihe) erhalten einen Standalone-Pokal.
   if (event.seriesId) return;
+  // Nur Turniere haben einen Gewinner — Community-Events bekommen keinen Pokal.
+  if (event.type !== "tournament") return;
 
   let parsed: { eventWinnerIds?: string[] } = {};
   try {
@@ -65,9 +67,16 @@ export async function awardEventPokal(eventId: string): Promise<void> {
 export async function awardSeriesPokal(seriesId: string): Promise<void> {
   const series = await prisma.eventSeries.findUnique({
     where: { id: seriesId },
-    select: { id: true, name: true, category: true, seriesCompletionData: true },
+    select: {
+      id: true, name: true, category: true, seriesCompletionData: true,
+      // EventSeries hat kein eigenes "type"-Feld — jede Reihe wird im Setup-Wizard
+      // einheitlich als Turnier- oder Community-Reihe angelegt, daher reicht ein
+      // einzelnes Event der Reihe, um den Reihentyp zu bestimmen.
+      events: { select: { type: true }, take: 1 },
+    },
   });
   if (!series) return;
+  if (series.events[0]?.type !== "tournament") return;
 
   let parsed: { overallWinnerIds?: string[] } = {};
   try {

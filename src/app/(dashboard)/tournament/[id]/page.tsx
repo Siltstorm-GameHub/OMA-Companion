@@ -170,16 +170,19 @@ export default async function TournamentDetailPage({
       },
       orderBy: { createdAt: "asc" },
     }),
-    // Pokale nur für Standalone-Events (seriesId === null) — Events innerhalb einer
-    // Eventreihe zeigen keinen eigenen Pokal, dafür gibt es den Eventreihen-Pokal
+    // Pokale nur für Standalone-Turniere (seriesId === null, type === "tournament") —
+    // Community-Events haben keinen Gewinner und bekommen keinen Pokal; Events innerhalb
+    // einer Eventreihe zeigen keinen eigenen Pokal, dafür gibt es den Eventreihen-Pokal
     // auf der Seite der Eventreihe.
-    event.seriesId
+    event.seriesId || event.type !== "tournament"
       ? Promise.resolve([])
       : prisma.pokal.findMany({
           where: { eventId, isSeries: false },
           include: { user: { select: { name: true, username: true } } },
         }),
   ]);
+  const showPokalPreview = !event.seriesId && event.type === "tournament"
+    && eventPokale.length === 0 && event.status !== "finished";
   const holdersList = [...holdersMap.values()];
   const isPredictionLocked = event.status === "finished" || event.startAt < new Date();
   const predictionPot = allEventPredictions.reduce((sum, p) => sum + p.wager, 0);
@@ -609,7 +612,7 @@ export default async function TournamentDetailPage({
           </div>
         </div>
 
-        <div className={`grid ${!event.seriesId && eventPokale.length === 0 && event.status !== "finished" ? "grid-cols-4" : "grid-cols-3"} gap-3 mt-4`}>
+        <div className={`grid ${showPokalPreview ? "grid-cols-4" : "grid-cols-3"} gap-3 mt-4`}>
           <div className="glass-heavy rounded-xl p-3 text-center">
             <p className="text-lg font-semibold text-white">{event.registrations.length}</p>
             <p className="text-xs text-gray-500 mt-0.5">Teilnehmer</p>
@@ -642,7 +645,7 @@ export default async function TournamentDetailPage({
             </p>
             <p className="text-xs text-gray-500 mt-0.5">Matches gespielt</p>
           </div>
-          {!event.seriesId && eventPokale.length === 0 && event.status !== "finished" && (
+          {showPokalPreview && (
             <PokalPreview category={event.category} isSeries={false} tile />
           )}
         </div>
