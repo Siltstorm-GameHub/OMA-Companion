@@ -42,7 +42,7 @@ export const VITRINE_SLOTS = {
     { x: 22, y: 86, s: 40, plaqueY: 133 }, { x: 72, y: 86, s: 40, plaqueY: 133 },
     { x: 122, y: 86, s: 40, plaqueY: 133 }, { x: 173, y: 86, s: 40, plaqueY: 133 },
   ],
-  collectibles: [
+  pokale: [
     { x: 32, y: 198, s: 50, plaqueY: 256 }, { x: 97, y: 198, s: 50, plaqueY: 256 }, { x: 162, y: 198, s: 50, plaqueY: 256 },
     { x: 32, y: 313, s: 50, plaqueY: 371 }, { x: 97, y: 313, s: 50, plaqueY: 371 }, { x: 162, y: 313, s: 50, plaqueY: 371 },
   ],

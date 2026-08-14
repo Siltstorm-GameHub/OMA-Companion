@@ -8,7 +8,7 @@ import { getSessionUser } from "@/lib/roles";
  *
  * Erwartet multipart/form-data mit den Feldern:
  *   file  — die Bilddatei
- *   kind  — "event-cover" | "profile-banner" | "badge" | "collectible"
+ *   kind  — "event-cover" | "profile-banner" | "badge"
  *
  * Antwort: { url: string }
  *
@@ -84,7 +84,6 @@ const KINDS = {
   "event-cover":    { minRole: "moderator", maxBytes: 4_000_000 },
   "profile-banner": { minRole: "user",      maxBytes: 3_000_000 },
   "badge":          { minRole: "admin",     maxBytes: 1_000_000 },
-  "collectible":    { minRole: "admin",     maxBytes: 2_000_000 },
 } as const;
 
 type Kind = keyof typeof KINDS;

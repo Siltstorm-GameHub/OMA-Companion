@@ -97,7 +97,7 @@ export type SelectiveResetSummary = {
  * Setzt alles zurück außer den ausgewählten Eventreihen: Münzen aller User auf 0, Rang-Punkte
  * auf die Summe aus den bewahrten Reihen (siehe computeKeptSeriesRankPoints), löscht alle Events/
  * Eventreihen außerhalb der Auswahl vollständig sowie LuL, Quest-Fortschritt, Duelle, Event-
- * Vorhersagen und Shop-Collectibles. Unangetastet bleiben: Badges, Wanderpokale, Clip-Contests,
+ * Vorhersagen und Pokale. Unangetastet bleiben: Badges, Wanderpokale, Clip-Contests,
  * Spendenpool.
  */
 export async function resetAllExceptSeries(keepSeriesIds: string[]): Promise<SelectiveResetSummary> {
@@ -127,7 +127,7 @@ export async function resetAllExceptSeries(keepSeriesIds: string[]): Promise<Sel
     prisma.duelChallenge.deleteMany(),
     prisma.eventWinnerPrediction.deleteMany(),
     prisma.predictionStreak.deleteMany(),
-    prisma.userCollectible.deleteMany(),
+    prisma.pokal.deleteMany(),
     prisma.pointTransaction.deleteMany(),
 
     // ── Events außerhalb der Auswahl vollständig löschen (FK-sichere Reihenfolge) ──

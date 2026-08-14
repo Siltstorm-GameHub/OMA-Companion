@@ -3,18 +3,18 @@
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
-  Clock, MessageSquare, CheckCircle2, Swords, Gamepad2, Trophy, Gift, ChevronRight,
+  Clock, MessageSquare, CheckCircle2, Swords, Trophy, Gift, ChevronRight,
 } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
 import WinIcon from "@/components/WinIcon";
 import { Modal } from "@/components/ui";
 import BadgesSection from "@/app/(dashboard)/profile/BadgesSection";
 import ProfileEditor from "@/app/(dashboard)/profile/ProfileEditor";
-import { RARITY_CONFIG, type Rarity } from "@/lib/collectibles";
+import PokalSection from "@/components/PokalSection";
 import type { RoomProfileCore, RoomProfileDetails } from "@/lib/room-profile-data";
 import { cn } from "@/lib/utils";
 
-type TabKey = "aktivitaet" | "events" | "turniere" | "quests" | "abzeichen" | "sammlung" | "pokale" | "einstellungen";
+type TabKey = "aktivitaet" | "events" | "turniere" | "quests" | "abzeichen" | "pokale" | "einstellungen";
 
 interface Props {
   open:        boolean;
@@ -78,7 +78,6 @@ export default function CrtProfileModal({
     { key: "turniere",   label: "Turniere" },
     { key: "quests",     label: "Quests" },
     { key: "abzeichen",  label: "Abzeichen" },
-    { key: "sammlung",   label: "Sammlung" },
     { key: "pokale",     label: "Pokale" },
     ...(settingsSection ? [{ key: "einstellungen" as const, label: "Einstellungen" }] : []),
   ];
@@ -230,46 +229,15 @@ export default function CrtProfileModal({
         />
       )}
 
-      {tab === "sammlung" && (
-        details.collections.length === 0
-          ? <Empty text="Noch keine Sammlerstücke. Der Shop wartet." />
+      {tab === "pokale" && (
+        details.pokale.length === 0 && details.trophies.length === 0 && details.trophyStats.length === 0
+          ? <Empty text="Noch keine Pokale gewonnen." icon={<Trophy className="w-8 h-8" />} />
           : (
-            <div className="space-y-3">
-              {details.collections.map(col => (
-                <div key={col.id} className="rounded-2xl p-4 border border-white/[0.06]">
-                  <div className="flex items-center gap-2 mb-3">
-                    {col.coverImageUrl
-                      ? <img src={col.coverImageUrl} alt={col.name} className="w-7 h-7 object-contain rounded" loading="lazy" />
-                      : <Gamepad2 className="w-7 h-7 text-gray-600" />}
-                    <span className="text-sm font-semibold text-white">{col.name}</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.05] border border-white/[0.08] text-gray-500">
-                      {col.items.length} Figuren
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {col.items.map(item => {
-                      const rarity = RARITY_CONFIG[item.rarity as Rarity] ?? RARITY_CONFIG.common;
-                      return (
-                        <div key={item.id} title={item.name}
-                          className={cn("flex flex-col items-center gap-0.5 px-2.5 py-2 rounded-xl border bg-white/[0.02]", rarity.border, rarity.glow)}>
-                          {item.imageUrl
-                            ? <img src={item.imageUrl} alt={item.name} className="w-9 h-9 object-contain" loading="lazy" />
-                            : <Gamepad2 className="w-9 h-9 text-gray-600" />}
-                          <span className={cn("text-[9px] font-medium", rarity.color)}>{item.name}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+            <div className="space-y-5">
+              <PokalSection pokale={details.pokale} ownerName={displayName} />
+              {(details.trophies.length > 0 || details.trophyStats.length > 0) && trophySection}
             </div>
           )
-      )}
-
-      {tab === "pokale" && (
-        details.trophies.length === 0 && details.trophyStats.length === 0
-          ? <Empty text="Noch keine Wanderpokale erobert." icon={<Trophy className="w-8 h-8" />} />
-          : <>{trophySection}</>
       )}
 
       {tab === "einstellungen" && (

@@ -9,7 +9,7 @@ interface ImageUploadFieldProps {
   value: string;
   onChange: (url: string) => void;
   /** Muss einem `kind` aus /api/upload entsprechen — die Route prüft dagegen. */
-  kind: "event-cover" | "profile-banner" | "badge" | "collectible";
+  kind: "event-cover" | "profile-banner" | "badge";
   label?: string;
   hint?: string;
   /** Seitenverhältnis der Vorschau, z.B. "16/9" oder "4/1". */
@@ -21,8 +21,7 @@ interface ImageUploadFieldProps {
  *
  * Beide Wege bleiben bewusst offen: Uploads brauchen einen konfigurierten
  * Blob-Store, und ohne den (BLOB_READ_WRITE_TOKEN fehlt → 503) wäre das Feld
- * sonst tot. Die URL-Eingabe entspricht ausserdem dem, was die
- * Collectibles-Verwaltung heute schon macht.
+ * sonst tot.
  */
 export default function ImageUploadField({
   value,

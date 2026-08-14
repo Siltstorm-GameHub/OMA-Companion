@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/roles";
 import { getRankFullLabel } from "@/lib/ranks";
 import { getAvailableReviewYears, buildYearReview } from "@/lib/year-review";
-import { RARITY_CONFIG, type Rarity } from "@/lib/collectibles";
+import { POKAL_CATEGORY_IMAGE, getPokalCategoryLabel } from "@/lib/pokal";
 import { EmptyState } from "@/components/EmptyState";
 import { CountUp } from "@/components/CountUp";
 import BadgeIcon from "@/components/BadgeIcon";
@@ -202,30 +202,26 @@ export default async function YearReviewPage({
         </section>
       )}
 
-      {/* ── Neue Collectibles ────────────────────────────────────────── */}
-      {review.newCollectibles.length > 0 && (
+      {/* ── Neue Pokale ──────────────────────────────────────────────── */}
+      {review.newPokale.length > 0 && (
         <section>
           <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-            <Gamepad2 className="w-3.5 h-3.5" /> {review.newCollectibles.length} neue Figuren
-            {review.rarestCollectible && (
-              <span className="text-gray-600 font-normal normal-case tracking-normal">
-                · seltenste: {review.rarestCollectible.name}
-              </span>
-            )}
+            <Medal className="w-3.5 h-3.5" /> {review.newPokale.length} neue Pokale
           </h2>
           <div className="glass card-shine rounded-2xl p-4 flex flex-wrap gap-2">
-            {review.newCollectibles.map(item => {
-              const rarity = RARITY_CONFIG[item.rarity as Rarity] ?? RARITY_CONFIG.common;
-              return (
-                <div key={item.id} title={item.name}
-                  className={`flex flex-col items-center gap-0.5 px-2.5 py-2 rounded-xl border ${rarity.border} ${rarity.glow} bg-white/[0.02]`}>
-                  {item.imageUrl
-                    ? <img src={item.imageUrl} alt={item.name} className="w-9 h-9 object-contain" loading="lazy" />
-                    : <Gamepad2 className="w-9 h-9 text-gray-600" />}
-                  <span className={`text-[9px] font-medium ${rarity.color}`}>{item.name}</span>
-                </div>
-              );
-            })}
+            {review.newPokale.map(p => (
+              <div key={p.id} title={p.title}
+                className="flex flex-col items-center gap-0.5 px-2.5 py-2 rounded-xl border border-white/[0.08] bg-white/[0.02]">
+                {/* eslint-disable-next-line @next/next/no-img-element -- lokales, statisches Icon */}
+                <img
+                  src={POKAL_CATEGORY_IMAGE[p.category as keyof typeof POKAL_CATEGORY_IMAGE]}
+                  alt={getPokalCategoryLabel(p.category as keyof typeof POKAL_CATEGORY_IMAGE)}
+                  className={p.isSeries ? "w-12 h-12 object-contain" : "w-9 h-9 object-contain"}
+                  loading="lazy"
+                />
+                <span className="text-[9px] font-medium text-gray-300">{p.title}</span>
+              </div>
+            ))}
           </div>
         </section>
       )}

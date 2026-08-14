@@ -109,7 +109,7 @@ export async function POST() {
         await prisma.donation.updateMany({
           where: { userId: stub.id }, data: { userId: realUser.id },
         });
-        await prisma.userCollectible.updateMany({
+        await prisma.pokal.updateMany({
           where: { userId: stub.id }, data: { userId: realUser.id },
         });
         await prisma.lobbyMessage.updateMany({
@@ -291,7 +291,7 @@ export async function POST() {
           await tx.lulLegacyEntry.updateMany({ where: { userId: stub.id }, data: { userId: badUser.id } });
           await tx.dailySpin.updateMany({ where: { userId: stub.id }, data: { userId: badUser.id } });
           await tx.donation.updateMany({ where: { userId: stub.id }, data: { userId: badUser.id } });
-          await tx.userCollectible.updateMany({ where: { userId: stub.id }, data: { userId: badUser.id } });
+          await tx.pokal.updateMany({ where: { userId: stub.id }, data: { userId: badUser.id } });
           await tx.lobbyMessage.updateMany({ where: { userId: stub.id }, data: { userId: badUser.id } });
           await tx.pushSubscription.updateMany({ where: { userId: stub.id }, data: { userId: badUser.id } });
           try { await tx.tournamentParticipant.updateMany({ where: { userId: stub.id }, data: { userId: badUser.id } }); } catch { /* unique constraint */ }
