@@ -441,11 +441,17 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
     : [];
 
   // Eventreihen-Pokal: nur hier auf der Reihen-Seite, nie auf der Seite eines
-  // einzelnen Events der Reihe (dort nur Pokale für Standalone-Events).
-  const seriesPokale = await prisma.pokal.findMany({
-    where: { seriesId: series.id, isSeries: true },
-    include: { user: { select: { name: true, username: true } } },
-  });
+  // einzelnen Events der Reihe (dort nur Pokale für Standalone-Events). Nur Turnier-Reihen
+  // haben einen Gewinner — Community-Reihen bekommen keinen Pokal. EventSeries hat kein
+  // eigenes "type"-Feld, die Reihe wird im Wizard aber einheitlich angelegt, daher reicht
+  // der Typ des ersten Events.
+  const isTournamentSeries = series.events[0]?.type === "tournament";
+  const seriesPokale = isTournamentSeries
+    ? await prisma.pokal.findMany({
+        where: { seriesId: series.id, isSeries: true },
+        include: { user: { select: { name: true, username: true } } },
+      })
+    : [];
 
   return (
     <div className="px-4 pb-6 pt-0 sm:p-6 max-w-7xl mx-auto space-y-5 animate-fade-in">
@@ -584,7 +590,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
             </h2>
             {/* Pokal, der bei Abschluss der Reihe vergeben wird — bereits vergebene Pokale
                 stehen weiter oben (EventPokalWinners), diese Vorschau nur solange offen. */}
-            {seriesPokale.length === 0 && !isArchived && (
+            {isTournamentSeries && seriesPokale.length === 0 && !isArchived && (
               <PokalPreview category={series.category} isSeries={true} compact />
             )}
           </div>
