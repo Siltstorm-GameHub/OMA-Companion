@@ -1145,15 +1145,6 @@ image.room-item-photo {
 }
 .room-interactive-glow { animation: room-interactive-pulse 2.6s ease-in-out infinite; }
 
-/* Pulsierender Bildschirm-Leuchtschein hinter jedem Monitor — deutlich
-   kräftiger als der atmende Rahmen, damit sofort klar ist: dieser Bildschirm
-   zeigt gerade etwas an, es ist kein ausgeschaltetes Deko-Gerät. */
-@keyframes room-screen-glow-pulse {
-  0%, 100% { opacity: 0.25; }
-  50%      { opacity: 0.6;  }
-}
-.room-screen-glow { animation: room-screen-glow-pulse 2.1s ease-in-out infinite; }
-
 /* ── prefers-reduced-motion ─────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -1169,7 +1160,6 @@ image.room-item-photo {
   /* Gaming-Zimmer: Blinken, Scanline und Neon-Puls stehen still */
   .room-led, .room-scanline, .room-neon, .room-stage-zoom { animation: none !important; }
   .room-interactive-glow { animation: none !important; opacity: 0.35 !important; }
-  .room-screen-glow { animation: none !important; opacity: 0.4 !important; }
   .room-scanline { opacity: 0 !important; }
   .room-hit:hover { transform: none !important; }
 }
