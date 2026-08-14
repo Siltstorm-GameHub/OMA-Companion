@@ -571,6 +571,19 @@ export default async function TournamentDetailPage({
       {/* ── Regelwerk (über dem Punktesystem) ─────────────────────────────── */}
       <RulesSection rules={event.rules} className="mb-5" />
 
+      {/* Pokale gibt es nur für Standalone-Events — Events innerhalb einer Eventreihe
+          werden stattdessen mit dem Eventreihen-Pokal auf der Reihen-Seite ausgezeichnet. */}
+      {!event.seriesId && eventPokale.length > 0 && (
+        <div className="mb-5">
+          <EventPokalWinners pokale={eventPokale} label="Pokal" />
+        </div>
+      )}
+      {showPokalPreview && (
+        <div className="mb-5">
+          <PokalPreview category={event.category} isSeries={false} />
+        </div>
+      )}
+
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <div className="glass rounded-2xl p-5 mb-5">
         <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -660,19 +673,6 @@ export default async function TournamentDetailPage({
               <p className="text-xs text-amber-600 uppercase tracking-wide font-medium">Turniersieger</p>
               <p className="text-white font-semibold">{userName(winner)}</p>
             </div>
-          </div>
-        )}
-
-        {/* Pokale gibt es nur für Standalone-Events — Events innerhalb einer Eventreihe
-            werden stattdessen mit dem Eventreihen-Pokal auf der Reihen-Seite ausgezeichnet. */}
-        {!event.seriesId && eventPokale.length > 0 && (
-          <div className="mt-4">
-            <EventPokalWinners pokale={eventPokale} label="Pokal" />
-          </div>
-        )}
-        {showPokalPreview && (
-          <div className="mt-4">
-            <PokalPreview category={event.category} isSeries={false} />
           </div>
         )}
 
