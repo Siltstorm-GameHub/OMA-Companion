@@ -47,9 +47,10 @@ interface Props {
   state:     RoomState;
   ownerName: string;
   vitrine: {
-    pokale:   Pokal[];
-    badges:   VitrineBadge[];
-    trophies: VitrineTrophy[];
+    pokale:      Pokal[];
+    pokaleTotal: number;
+    badges:      VitrineBadge[];
+    trophies:    VitrineTrophy[];
   };
   /**
    * `itemKey` ist nur bei `target === "crt"` gesetzt — RoomView reicht ihn an
@@ -497,6 +498,7 @@ function VitrinePanel({
   const vw = VITRINE_PANEL_W;
   const vh = VITRINE_PANEL_H;
   const label = `Sammlung von ${ownerName} anzeigen`;
+  const isEmpty = vitrine.trophies.length === 0 && vitrine.pokale.length === 0 && vitrine.badges.length === 0;
 
   return (
     <div
@@ -534,7 +536,14 @@ function VitrinePanel({
             />
             <image href="/room-items/vitrine.png" x={0} y={0} width={vw} height={vh}
               preserveAspectRatio="xMidYMax meet" className="room-item-photo" />
-            <VitrineContent x={0} y={0} vitrine={vitrine} />
+            {isEmpty ? (
+              <text x={vw / 2} y={vh / 2} textAnchor="middle" dominantBaseline="central"
+                fontSize={11} fill="var(--room-plastic)" opacity={0.55}>
+                Noch nichts gesammelt
+              </text>
+            ) : (
+              <VitrineContent x={0} y={0} vitrine={vitrine} />
+            )}
           </g>
         )}
       </svg>
@@ -548,6 +557,10 @@ function VitrineContent({
   x: number; y: number;
   vitrine: Props["vitrine"];
 }) {
+  const trophyOverflow = vitrine.trophies.length - VITRINE_SLOTS.trophies.length;
+  const pokaleOverflow = vitrine.pokaleTotal - vitrine.pokale.length;
+  const badgeOverflow  = vitrine.badges.length - VITRINE_SLOTS.badges.length;
+
   return (
     <g pointerEvents="none" transform={`translate(${x},${y})`}>
       {/* Pokale im oberen Fach */}
@@ -563,8 +576,12 @@ function VitrineContent({
           </g>
         );
       })}
+      {trophyOverflow > 0 && (
+        <OverflowMarker slot={VITRINE_SLOTS.trophies[VITRINE_SLOTS.trophies.length - 1]} count={trophyOverflow} />
+      )}
 
-      {/* Pokale in den mittleren Fächern */}
+      {/* Pokale in den mittleren Fächern — Eventreihen-Pokale (isSeries) mit
+          goldenem Ring hervorgehoben, analog zum Rahmen in EventPokalWinners. */}
       {vitrine.pokale.slice(0, VITRINE_SLOTS.pokale.length).map((p, i) => {
         const slot = VITRINE_SLOTS.pokale[i];
         return (
@@ -572,6 +589,8 @@ function VitrineContent({
             <circle
               cx={slot.x + slot.s / 2} cy={slot.y + slot.s / 2} r={slot.s * (p.isSeries ? 0.62 : 0.5)}
               fill={p.isSeries ? "rgba(251,191,36,0.35)" : "rgba(148,163,184,0.25)"}
+              stroke={p.isSeries ? "rgba(251,191,36,0.75)" : "none"}
+              strokeWidth={p.isSeries ? 1.5 : 0}
             />
             <image href={POKAL_CATEGORY_IMAGE[p.category]} x={slot.x} y={slot.y} width={slot.s} height={slot.s}
               preserveAspectRatio="xMidYMid meet" />
@@ -579,6 +598,9 @@ function VitrineContent({
           </g>
         );
       })}
+      {pokaleOverflow > 0 && (
+        <OverflowMarker slot={VITRINE_SLOTS.pokale[VITRINE_SLOTS.pokale.length - 1]} count={pokaleOverflow} />
+      )}
 
       {/* Abzeichen auf der Sockelleiste */}
       {vitrine.badges.slice(0, VITRINE_SLOTS.badges.length).map((b, i) => {
@@ -595,6 +617,30 @@ function VitrineContent({
           </g>
         );
       })}
+      {badgeOverflow > 0 && (
+        <OverflowMarker slot={VITRINE_SLOTS.badges[VITRINE_SLOTS.badges.length - 1]} count={badgeOverflow} />
+      )}
+    </g>
+  );
+}
+
+/**
+ * "+N"-Hinweis oben rechts über dem letzten Fach einer Kategorie — sichtbar,
+ * sobald mehr Stücke existieren als Vitrinen-Fächer auf der Bühne (siehe
+ * VITRINE_SLOTS). Ohne ihn wirkte ein Abschneiden wie Datenverlust statt wie
+ * eine bewusste Vorschau; der volle Bestand bleibt im VitrineModal einsehbar.
+ */
+function OverflowMarker({ slot, count }: { slot: { x: number; y: number; s: number }; count: number }) {
+  const cx = slot.x + slot.s - 2;
+  const cy = slot.y + 2;
+  return (
+    <g transform={`translate(${cx},${cy})`}>
+      <title>{`+${count} weitere in der Vitrine`}</title>
+      <circle r={8} fill="var(--room-metal-hi)" stroke="var(--room-shade)" strokeWidth={0.75} />
+      <text x={0} y={0.5} textAnchor="middle" dominantBaseline="central" fontSize={8.5} fontWeight={700}
+        fill="var(--room-plastic)">
+        +{count}
+      </text>
     </g>
   );
 }
@@ -615,8 +661,12 @@ function TrophySlot({ trophy, x, y, s }: { trophy: VitrineTrophy; x: number; y: 
 /**
  * Kleine gravierte Plakette unter jedem Ausstellungsstück — bei der winzigen
  * Größe auf der Bühne eher Textur als Fließtext lesbar, der volle Name steckt
- * deshalb zusätzlich in einem `<title>`-Tooltip. Der eigentliche Lesetext
- * bleibt ohnehin VitrineModal vorbehalten, das beim Klick aufgeht.
+ * deshalb zusätzlich in einem `<title>`-Tooltip. Der Tooltip greift aber nur
+ * bei Maus-Hover — auf Touch ist er unerreichbar. Der eigentliche Lesetext
+ * bleibt deshalb bewusst VitrineModal vorbehalten: ein Tap irgendwo in der
+ * Vitrine (auch auf der Plakette) öffnet es, siehe onInteract in
+ * VitrinePanel — Touch-Nutzer verlieren also nichts, sie überspringen nur
+ * den Hover-Zwischenschritt.
  */
 function PlaqueLabel({ x, y, text }: { x: number; y: number; text: string }) {
   const short = text.length > 16 ? `${text.slice(0, 15)}…` : text;

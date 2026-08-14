@@ -59,6 +59,10 @@ export interface RoomProfileCore {
   favoriteGames:     FavoriteGame[];
   vitrine: {
     pokale:   Pokal[];
+    /** Gesamtzahl aller Pokale — `pokale` ist auf die Vitrinen-Fächer gekappt
+     *  (siehe VITRINE_SLOTS.pokale), damit die Bühne einen "+N"-Hinweis
+     *  zeigen kann, statt überzählige Pokale kommentarlos zu verschlucken. */
+    pokaleTotal: number;
     badges:   VitrineBadge[];
     trophies: VitrineTrophy[];
   };
@@ -127,8 +131,15 @@ export async function loadRoomProfileCore(userId: string): Promise<RoomProfileCo
     prisma.user.count(),
     prisma.pokal.count({ where: { userId } }),
     // Nur so viele wie Vitrinen-Fächer für Pokale auf der Bühne existieren
-    // (siehe VITRINE_SLOTS.pokale in zimmer/sprites/index.tsx).
-    prisma.pokal.findMany({ where: { userId }, orderBy: { awardedAt: "desc" }, take: 6 }),
+    // (siehe VITRINE_SLOTS.pokale in zimmer/sprites/index.tsx). Eventreihen-
+    // Pokale (isSeries) zuerst, weil sie die selteneren/wertvolleren sind —
+    // sonst verdrängt ein frischer Einzel-Pokal einen älteren Serien-Pokal
+    // rein nach Datum aus der Vorschau.
+    prisma.pokal.findMany({
+      where:   { userId },
+      orderBy: [{ isSeries: "desc" }, { awardedAt: "desc" }],
+      take:    6,
+    }),
     prisma.userSystemBadge.count({ where: { userId } }),
     prisma.userCustomBadge.count({ where: { userId } }),
     customBadgeIds.length > 0
@@ -201,8 +212,9 @@ export async function loadRoomProfileCore(userId: string): Promise<RoomProfileCo
     topGames,
     favoriteGames:     parseFavoriteGames(user.favoriteGamesJson),
     vitrine: {
-      pokale:   vitrinePokale,
-      badges:   vitrineBadges,
+      pokale:      vitrinePokale,
+      pokaleTotal: pokalCount,
+      badges:      vitrineBadges,
       trophies,
     },
   };
