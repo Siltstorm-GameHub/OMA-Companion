@@ -504,14 +504,6 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
         </div>
       )}
 
-      {/* ── Eventreihen-Pokal (vergeben oder Vorschau) ────────────────────────── */}
-      {seriesPokale.length > 0 && (
-        <EventPokalWinners pokale={seriesPokale} label="Eventreihen-Pokal" />
-      )}
-      {isTournamentSeries && seriesPokale.length === 0 && !isArchived && (
-        <PokalPreview category={series.category} isSeries={true} />
-      )}
-
       {/* ── Cover ──────────────────────────────────────────────────────── */}
       {/* Priorität: eigenes Reihen-Cover → Steam-Cover des fixen Spiels (falls
           gesetzt) → Default. Events der Reihe ohne eigenes Cover erben dieses
@@ -583,6 +575,14 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
 
       {/* ── Regelwerk ─────────────────────────────────────────────────────────── */}
       <RulesSection rules={series.rules} />
+
+      {/* ── Eventreihen-Pokal (vergeben oder Vorschau) ────────────────────────── */}
+      {seriesPokale.length > 0 && (
+        <EventPokalWinners pokale={seriesPokale} label="Eventreihen-Pokal" />
+      )}
+      {isTournamentSeries && seriesPokale.length === 0 && !isArchived && (
+        <PokalPreview category={series.category} isSeries={true} />
+      )}
 
       {/* ── Punktesystem ─────────────────────────────────────────────────────── */}
       {punkteItems.length > 0 && (
