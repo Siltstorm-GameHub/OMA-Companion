@@ -1,9 +1,8 @@
-import type { WanderpocalHolder, WanderpocalStat } from "@prisma/client";
+import type { WanderpocalHolder, WanderpocalStat, Pokal } from "@prisma/client";
 import { prisma } from "./prisma";
 import { getRankProgress, type RankEntry } from "./ranks";
 import { computeBadges, type Badge } from "./badges";
 import { parseFavoriteGames, type FavoriteGame } from "./favorite-games";
-import { MAX_SHOWCASE } from "./collectibles";
 import { QUEST_TYPE_META, type QuestType } from "./quests";
 import { getAvailableReviewYears } from "./year-review";
 
@@ -25,9 +24,6 @@ const CUSTOM_BADGE_PREFIX = "custom:";
 
 // ── Core ─────────────────────────────────────────────────────────────────────
 
-export interface VitrineCollectible {
-  id: string; name: string; imageUrl: string | null; rarity: string;
-}
 export interface VitrineBadge {
   key: string; icon: string; name: string;
 }
@@ -57,12 +53,11 @@ export interface RoomProfileCore {
   eventCount:       number;
   eventWins:        number;
   pollMasterCount:  number;
-  collectiblesCount: number;
+  pokalCount:        number;
   badgeCount:        number;
   topGames:          string[];
   favoriteGames:     FavoriteGame[];
   vitrine: {
-    collectibles: VitrineCollectible[];
     badges:       VitrineBadge[];
     trophies:     VitrineTrophy[];
   };
@@ -104,13 +99,12 @@ export async function loadRoomProfileCore(userId: string): Promise<RoomProfileCo
     select: {
       id: true, name: true, username: true, image: true, bio: true, createdAt: true,
       points: true, rankPoints: true, birthday: true, twitchLogin: true, bannerUrl: true,
-      showcaseJson: true, showcaseBadgesJson: true, favoriteGamesJson: true,
+      showcaseBadgesJson: true, favoriteGamesJson: true,
     },
   });
   if (!user) return null;
 
   const now = new Date();
-  const showcaseIds   = parseIdList(user.showcaseJson).slice(0, MAX_SHOWCASE);
   // Abzeichen-Showcase mischt System-Keys und Custom-Badges — letztere sind
   // mit "custom:" präfixiert (siehe BadgesSection.tsx).
   const showcaseBadge = parseIdList(user.showcaseBadgesJson).slice(0, 3);
@@ -120,8 +114,8 @@ export async function loadRoomProfileCore(userId: string): Promise<RoomProfileCo
 
   const [
     eventCount, startedEvents, higherRanked, totalUsers,
-    collectiblesCount, systemBadgeCount, customBadgeCount,
-    showcaseItems, showcaseCustomBadges, trophies, lulPollWins,
+    pokalCount, systemBadgeCount, customBadgeCount,
+    showcaseCustomBadges, trophies, lulPollWins,
   ] = await Promise.all([
     prisma.eventRegistration.count({ where: { userId } }),
     prisma.event.findMany({
@@ -130,15 +124,9 @@ export async function loadRoomProfileCore(userId: string): Promise<RoomProfileCo
     }),
     prisma.user.count({ where: { rankPoints: { gt: user.rankPoints } } }),
     prisma.user.count(),
-    prisma.userCollectible.count({ where: { userId } }),
+    prisma.pokal.count({ where: { userId } }),
     prisma.userSystemBadge.count({ where: { userId } }),
     prisma.userCustomBadge.count({ where: { userId } }),
-    showcaseIds.length > 0
-      ? prisma.userCollectible.findMany({
-          where:   { userId, collectibleItemId: { in: showcaseIds } },
-          include: { collectibleItem: { select: { id: true, name: true, imageUrl: true, rarity: true } } },
-        })
-      : [],
     customBadgeIds.length > 0
       ? prisma.userCustomBadge.findMany({
           where:   { userId, customBadgeId: { in: customBadgeIds } },
@@ -162,12 +150,6 @@ export async function loadRoomProfileCore(userId: string): Promise<RoomProfileCo
   const topGames = Object.entries(gameCounts).sort((a, b) => b[1] - a[1]).map(([g]) => g);
 
   const { rank, next, pct } = getRankProgress(user.rankPoints);
-
-  // Vitrine: Reihenfolge des Showcase beibehalten, nicht die der DB-Abfrage.
-  const itemById = new Map(showcaseItems.map(uc => [uc.collectibleItem.id, uc.collectibleItem]));
-  const vitrineCollectibles: VitrineCollectible[] = showcaseIds
-    .map(id => itemById.get(id))
-    .filter((i): i is NonNullable<typeof i> => !!i);
 
   // Abzeichen im Showcase sind entweder System-Keys (Code) oder CustomBadge-IDs.
   const customById = new Map(showcaseCustomBadges.map(uc => [uc.badge.id, uc.badge]));
@@ -210,12 +192,11 @@ export async function loadRoomProfileCore(userId: string): Promise<RoomProfileCo
     eventCount,
     eventWins,
     pollMasterCount,
-    collectiblesCount: collectiblesCount,
+    pokalCount,
     badgeCount:        systemBadgeCount + customBadgeCount,
     topGames,
     favoriteGames:     parseFavoriteGames(user.favoriteGamesJson),
     vitrine: {
-      collectibles: vitrineCollectibles,
       badges:       vitrineBadges,
       trophies,
     },
@@ -239,13 +220,8 @@ export interface RoomProfileDetails {
     id: string; title: string; target: number; reward: number;
     current: number; completed: boolean; icon: string; bar: string;
   }[];
-  collections: {
-    id: string; name: string; coverImageUrl: string | null;
-    items: { id: string; name: string; imageUrl: string | null; rarity: string }[];
-  }[];
-  /** Flache Liste für CollectiblesShowcase (erwartet collectionName je Item). */
-  ownedCollectibles: { id: string; name: string; imageUrl: string | null; rarity: string; collectionName: string }[];
-  showcaseCollectibles: { id: string; name: string; imageUrl: string | null; rarity: string }[];
+  /** Digitale Pokale (lösen die Collectibles als Vitrinen-Inhalt ab). */
+  pokale: Pokal[];
   badges:       Badge[];
   customBadges: { id: string; icon: string; name: string; desc: string; category: string; earnedAt: string }[];
   showcaseBadgeKeys: string[];
@@ -261,7 +237,7 @@ export async function loadRoomProfileDetails(userId: string): Promise<RoomProfil
   const year  = now.getFullYear();
 
   const [
-    user, eventRegs, startedEvents, tournaments, quests, owned,
+    user, eventRegs, startedEvents, tournaments, quests, pokale,
     systemBadgeKeys, customBadges, trophies, trophyStats,
     coinsEarnedAgg, coinsSpentAgg, eventCount, tournamentCount, lulPollWins, jobRow,
   ] = await Promise.all([
@@ -269,7 +245,7 @@ export async function loadRoomProfileDetails(userId: string): Promise<RoomProfil
       where:  { id: userId },
       select: {
         points: true, voiceMinutesTotal: true, messagesTotal: true,
-        showcaseBadgesJson: true, showcaseJson: true,
+        showcaseBadgesJson: true,
       },
     }),
     prisma.eventRegistration.findMany({
@@ -291,10 +267,9 @@ export async function loadRoomProfileDetails(userId: string): Promise<RoomProfil
       include: { progress: { where: { userId } } },
       orderBy: { createdAt: "asc" },
     }),
-    prisma.userCollectible.findMany({
+    prisma.pokal.findMany({
       where:   { userId },
-      include: { collectibleItem: { include: { collection: { select: { id: true, name: true, coverImageUrl: true } } } } },
-      orderBy: { createdAt: "desc" },
+      orderBy: { awardedAt: "desc" },
     }),
     prisma.userSystemBadge.findMany({ where: { userId }, select: { badgeKey: true } }),
     prisma.userCustomBadge.findMany({
@@ -333,29 +308,6 @@ export async function loadRoomProfileDetails(userId: string): Promise<RoomProfil
     trophyRanks[`${stat.scopeType}:${stat.scopeValue}`] = above + 1;
   }));
 
-  const collectionsMap = new Map<string, RoomProfileDetails["collections"][number]>();
-  const ownedCollectibles: RoomProfileDetails["ownedCollectibles"] = [];
-  for (const uc of owned) {
-    const col  = uc.collectibleItem.collection;
-    const item = {
-      id:       uc.collectibleItem.id,
-      name:     uc.collectibleItem.name,
-      imageUrl: uc.collectibleItem.imageUrl,
-      rarity:   uc.collectibleItem.rarity,
-    };
-    if (!collectionsMap.has(col.id)) {
-      collectionsMap.set(col.id, { id: col.id, name: col.name, coverImageUrl: col.coverImageUrl, items: [] });
-    }
-    collectionsMap.get(col.id)!.items.push(item);
-    ownedCollectibles.push({ ...item, collectionName: col.name });
-  }
-
-  const showcaseIds = parseIdList(user?.showcaseJson).slice(0, MAX_SHOWCASE);
-  const showcaseCollectibles = showcaseIds
-    .map(id => ownedCollectibles.find(o => o.id === id))
-    .filter((i): i is NonNullable<typeof i> => !!i)
-    .map(({ id, name, imageUrl, rarity }) => ({ id, name, imageUrl, rarity }));
-
   return {
     voiceHours,
     messageCount,
@@ -391,9 +343,7 @@ export async function loadRoomProfileDetails(userId: string): Promise<RoomProfil
         bar:  meta?.bar  ?? "from-teal-600 to-teal-400",
       };
     }),
-    collections: [...collectionsMap.values()],
-    ownedCollectibles,
-    showcaseCollectibles,
+    pokale,
     badges,
     customBadges: customBadges.map(uc => ({
       id: uc.badge.id, icon: uc.badge.icon, name: uc.badge.name,

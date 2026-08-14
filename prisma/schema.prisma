@@ -15,12 +15,12 @@ model User {
   emailVerified DateTime?
   image         String?
 
-  discordId  String?  @unique
-  username   String?
-  role       String   @default("user") // user | moderator | admin
-  points     Int      @default(0) // Münzen (Shop-Währung)
-  rankPoints Int      @default(0) // Prestige-Punkte (Events, Turniere, LuL)
-  createdAt  DateTime @default(now())
+  discordId    String?   @unique
+  username     String?
+  role         String    @default("user") // user | moderator | admin
+  points       Int       @default(0) // Münzen (Shop-Währung)
+  rankPoints   Int       @default(0) // Prestige-Punkte (Events, Turniere, LuL)
+  createdAt    DateTime  @default(now())
   lastActiveAt DateTime? // Zeitpunkt der letzten App-Aktivität (Presence/Online-Status)
   lastLoginAt  DateTime? // Zeitpunkt des letzten Logins (NextAuth signIn)
 
@@ -37,8 +37,6 @@ model User {
   voiceMinutesTotal Int @default(0)
   messagesTotal     Int @default(0)
 
-  // Collectibles Showcase: JSON-Array mit bis zu 5 CollectibleItem-IDs
-  showcaseJson       String?
   // Badge Showcase: JSON-Array mit bis zu 3 Badge-Keys (system oder custom-id)
   showcaseBadgesJson String?
   // Aktuelle Lieblingsspiele: JSON-Array mit bis zu 5 { name, appId } (Steam App-ID für das Cover)
@@ -58,7 +56,6 @@ model User {
   lulLegacyEntries         LulLegacyEntry[]
   dailySpins               DailySpin[]
   donations                Donation[]
-  collectibles             UserCollectible[]
   lobbyMessages            LobbyMessage[]
   pushSubscriptions        PushSubscription[]
   clipSubmissions          EventClipSubmission[]
@@ -87,52 +84,25 @@ model User {
   room                     Room?
   roomItems                RoomItem[]
   job                      UserJob?
+  pokale                   Pokal[]
 }
 
-// ── Collectibles ─────────────────────────────────────────────────────────────
+// ── Pokale ───────────────────────────────────────────────────────────────────
 
-model CollectibleCollection {
-  id            String   @id @default(cuid())
-  name          String
-  description   String?
-  game          String? // z.B. "Rocket League"
-  coverImageUrl String? // URL zum Cover-Bild (Supabase Storage)
-  active        Boolean  @default(true) // im Shop anzeigen?
-  sortOrder     Int      @default(0)
-  createdAt     DateTime @default(now())
+model Pokal {
+  id        String        @id @default(cuid())
+  userId    String
+  title     String // Titel des Events bzw. der Eventreihe zum Vergabezeitpunkt (Snapshot)
+  category  EventCategory
+  isSeries  Boolean       @default(false) // true = Eventreihen-Pokal (größer), false = Standalone-Event-Pokal
+  eventId   String? // gesetzt bei Standalone-Event-Pokal
+  seriesId  String? // gesetzt bei Eventreihen-Pokal
+  awardedAt DateTime      @default(now())
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  items CollectibleItem[]
-}
-
-model CollectibleItem {
-  id           String    @id @default(cuid())
-  collectionId String
-  name         String
-  description  String?
-  imageUrl     String? // URL zum Figuren-Bild (Supabase Storage)
-  rarity       String    @default("common") // common | rare | epic | legendary
-  price        Int
-  salePrice    Int? // Rabattpreis (null = kein Rabatt)
-  saleUntil    DateTime? // Rabatt läuft bis (null = unbegrenzt)
-  active       Boolean   @default(true) // im Shop anzeigen?
-  stock        Int? // null = unbegrenzt
-  sortOrder    Int       @default(0)
-  createdAt    DateTime  @default(now())
-
-  collection CollectibleCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  owners     UserCollectible[]
-}
-
-model UserCollectible {
-  id                String   @id @default(cuid())
-  userId            String
-  collectibleItemId String
-  createdAt         DateTime @default(now())
-
-  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  collectibleItem CollectibleItem @relation(fields: [collectibleItemId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, collectibleItemId])
+  @@unique([userId, eventId])
+  @@unique([userId, seriesId])
+  @@index([userId])
 }
 
 // ── Täglicher Gratis-Spin ──────────────────────────────────────────────────
@@ -581,18 +551,18 @@ model UserQuestProgress {
 // ── Minigames: Event-Gesamtsieger-Vorhersage ────────────────────────────────
 
 model EventWinnerPrediction {
-  id              String   @id @default(cuid())
-  userId          String // wer tippt
-  eventId         String
+  id                 String   @id @default(cuid())
+  userId             String // wer tippt
+  eventId            String
   // Vorhergesagter Gesamtsieger — beliebiger User, muss nicht am Event angemeldet sein
-  predictedUserId String
+  predictedUserId    String
   // Eingesetzte Münzen — wird bei Abgabe/Änderung sofort abgebucht (Escrow), bei Löschung vor
   // Sperre zurückerstattet. Bei richtigem Tipp: wager + Gewinn; bei falschem: Einsatz verloren.
-  wager           Int      @default(0)
-  createdAt       DateTime @default(now())
-  resolved        Boolean  @default(false)
-  correct         Boolean? // null = noch nicht ausgewertet
-  coinsAwarded    Int      @default(0)
+  wager              Int      @default(0)
+  createdAt          DateTime @default(now())
+  resolved           Boolean  @default(false)
+  correct            Boolean? // null = noch nicht ausgewertet
+  coinsAwarded       Int      @default(0)
   // Snapshot des PredictionStreak-Zustands (userId, current, best, lastPlayedDay) direkt vor dieser
   // Auflösung — ermöglicht sauberes Rückgängigmachen, falls der Event-Sieger nachträglich korrigiert
   // wird. Nur zu Anzeigezwecken relevant, hat keinen Einfluss auf die Pott-Auszahlung.
@@ -855,7 +825,6 @@ model LulPollVote {
   @@unique([pollId, voterId])
 }
 
-
 // ── Lobby-Chat ───────────────────────────────────────────────────────────────
 
 model LobbyMessage {
@@ -973,23 +942,23 @@ model DailyMessage {
 // ── Umfragen (Dashboard-Banner) ──────────────────────────────────────────────
 
 model DailyPoll {
-  id             String            @id @default(cuid())
-  title          String
-  question       String
-  startDate      DateTime
-  endDate        DateTime
-  isActive       Boolean           @default(true)
-  allowMultiple  Boolean           @default(false)
-  allowFreeText  Boolean           @default(false)
+  id               String            @id @default(cuid())
+  title            String
+  question         String
+  startDate        DateTime
+  endDate          DateTime
+  isActive         Boolean           @default(true)
+  allowMultiple    Boolean           @default(false)
+  allowFreeText    Boolean           @default(false)
   // true: Freitext wird durch eine Steam-Spielsuche ersetzt, Nutzer können mehrere Spiele vorschlagen
-  freeTextGameMode Boolean         @default(false)
-  rewardCoins    Int               @default(0)
-  createdBy      String
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
-  creator        User              @relation(fields: [createdBy], references: [id])
-  options        DailyPollOption[]
-  votes          DailyPollVote[]
+  freeTextGameMode Boolean           @default(false)
+  rewardCoins      Int               @default(0)
+  createdBy        String
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  creator          User              @relation(fields: [createdBy], references: [id])
+  options          DailyPollOption[]
+  votes            DailyPollVote[]
 }
 
 model DailyPollOption {
@@ -1003,17 +972,17 @@ model DailyPollOption {
 }
 
 model DailyPollVote {
-  id        String    @id @default(cuid())
-  pollId    String
-  poll      DailyPoll @relation(fields: [pollId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String    @id @default(cuid())
+  pollId        String
+  poll          DailyPoll @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   // JSON: ["optionId1", "optionId2"] — bei allowMultiple ggf. mehrere
-  optionIds String?
-  freeText  String?
+  optionIds     String?
+  freeText      String?
   // JSON: [{name: string, appId: number|null}] — bei freeTextGameMode, mehrere Spielevorschläge
   freeTextGames String?
-  createdAt DateTime  @default(now())
+  createdAt     DateTime  @default(now())
 
   @@unique([pollId, userId])
 }
@@ -1062,19 +1031,19 @@ model PushSubscription {
 // ── Community-Gameserver ─────────────────────────────────────────────────────
 
 model GameServer {
-  id          String   @id @default(cuid())
-  name        String
-  game        String // Freitext, z.B. "Minecraft", "ARK: Survival Ascended"
-  description String?
-  host        String // IP/Domain – nur für genehmigte User sichtbar
-  port        String?
-  password    String? // Server-Passwort – nur für genehmigte User sichtbar
+  id            String   @id @default(cuid())
+  name          String
+  game          String // Freitext, z.B. "Minecraft", "ARK: Survival Ascended"
+  description   String?
+  host          String // IP/Domain – nur für genehmigte User sichtbar
+  port          String?
+  password      String? // Server-Passwort – nur für genehmigte User sichtbar
   ampInstanceId String? // AMP-Controller Instance-ID für Live-Status/Spielerzahl
-  maxSlots    Int
-  isActive    Boolean  @default(true)
-  createdBy   String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  maxSlots      Int
+  isActive      Boolean  @default(true)
+  createdBy     String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   applications ServerApplication[]
 

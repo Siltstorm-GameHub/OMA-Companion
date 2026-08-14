@@ -1,59 +1,25 @@
-﻿import { prisma } from "@/lib/prisma";
-import { getSessionUser } from "@/lib/roles";
+﻿import { getSessionUser } from "@/lib/roles";
 import { ShoppingBag } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
 import { CountUp } from "@/components/CountUp";
-import CollectiblesShop from "./CollectiblesShop";
 import DailySpin from "./DailySpin";
 import RoomItemsShop from "./RoomItemsShop";
-import { effectivePrice } from "@/lib/collectibles";
 import { getRoomConfig, roomVisibleFor } from "@/lib/room-config";
 import { ownedItemCounts } from "@/lib/room";
 import { getRank } from "@/lib/ranks";
+import { prisma } from "@/lib/prisma";
 
 export default async function ShopPage() {
   const me     = await getSessionUser();
   const userId = me?.id;
 
-  const [collections, ownedRaw, todaySpin] = await Promise.all([
-    prisma.collectibleCollection.findMany({
-      where:   { active: true },
-      orderBy: { name: "asc" },
-      include: { items: { orderBy: { sortOrder: "asc" } } },
-    }),
-
-    userId
-      ? prisma.userCollectible.findMany({
-          where:  { userId },
-          select: { collectibleItemId: true },
-        })
-      : [],
-
-    userId
-      ? prisma.dailySpin.findFirst({
-          where: { userId, date: new Date().toISOString().slice(0, 10) },
-        }).catch(() => null)
-      : null,
-  ]);
-
-  const RARITY_ORDER: Record<string, number> = { common: 0, rare: 1, epic: 2, legendary: 3 };
-  const now = new Date();
-  const sortedCollections = collections.map(col => ({
-    ...col,
-    items: col.items
-      .filter(i => i.active)
-      .map(i => ({
-        ...i,
-        // effektiven Preis vorberechnen (Rabatt läuft ggf. ab)
-        displayPrice:   effectivePrice(i),
-        originalPrice:  i.price,
-        onSale: i.salePrice != null && (i.saleUntil == null || now <= new Date(i.saleUntil)),
-      }))
-      .sort((a, b) => (RARITY_ORDER[a.rarity] ?? 0) - (RARITY_ORDER[b.rarity] ?? 0)),
-  }));
+  const todaySpin = userId
+    ? await prisma.dailySpin.findFirst({
+        where: { userId, date: new Date().toISOString().slice(0, 10) },
+      }).catch(() => null)
+    : null;
 
   const myPoints  = me?.points ?? 0;
-  const ownedSet  = new Set((ownedRaw as { collectibleItemId: string }[]).map(o => o.collectibleItemId));
 
   // ── Gaming-Zimmer ──────────────────────────────────────────────────
   // Solange room_enabled aus ist, sehen nur Admins den Möbel-Bereich.
@@ -77,7 +43,7 @@ export default async function ShopPage() {
             </div>
             <div>
               <h1 className="font-display text-xl font-black text-white tracking-tight">Shop</h1>
-              <p className="text-[11px] text-gray-600">Sammle exklusive Figuren und vervollständige Sammlungen</p>
+              <p className="text-[11px] text-gray-600">Möbel und Deko für dein Gaming-Zimmer</p>
             </div>
           </div>
           {userId && (
@@ -101,14 +67,6 @@ export default async function ShopPage() {
           initialPoints={myPoints}
         />
       )}
-
-      {/* Sammlungen */}
-      <CollectiblesShop
-        collections={sortedCollections as Parameters<typeof CollectiblesShop>[0]["collections"]}
-        ownedIds={[...ownedSet]}
-        myPoints={myPoints}
-        isLoggedIn={!!userId}
-      />
 
       {/* Gaming-Zimmer: Möbel & Deko */}
       {roomVisible && (

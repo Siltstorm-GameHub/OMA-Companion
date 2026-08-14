@@ -24,6 +24,13 @@ interface Props {
 /** Was gerade angehoben ist: entweder aus dem Raum oder aus dem Lager. */
 type Selection = { id: string; from: "placed" | "stored" } | null;
 
+/** true genau beim Wechsel ZWISCHEN Rückwand und Seitenwand (in beide
+ *  Richtungen) — nicht bei einer Bewegung innerhalb derselben Wand oder auf
+ *  den Boden, wo die Blickrichtung des Fotos unverändert stimmt. */
+function isWallMirrorSwap(from: RoomSurface, to: RoomSurface): boolean {
+  return (from === "wall_back" && to === "wall_side") || (from === "wall_side" && to === "wall_back");
+}
+
 /**
  * Einrichten per Antippen: Möbelstück antippen, freie Plätze leuchten auf,
  * Zielzelle antippen. Bewusst kein Drag & Drop — Ziehen auf einer vollbreiten
@@ -98,7 +105,17 @@ export default function RoomEditor({ state, core, owned, onDone }: Props) {
       setPlaced(p => [...p, { ...candidate, zone, x, y }]);
       setSelection({ id: candidate.id, from: "placed" });
     } else {
-      setPlaced(p => p.map(i => (i.id === candidate.id ? { ...i, zone, x, y } : i)));
+      setPlaced(p => p.map(i => {
+        if (i.id !== candidate.id) return i;
+        // Rückwand und Seitenwand sind Spiegelbilder derselben Raumecke
+        // (siehe room-iso.ts) — ein Wandobjekt-Foto, das für die eine Wand
+        // "richtig herum" aussieht, blickt auf der anderen in die falsche
+        // Richtung. Beim Wechsel zwischen den beiden Wänden automatisch
+        // mitspiegeln, damit das nicht bei jedem Umzug von Hand nachgestellt
+        // werden muss — die "Spiegeln"-Taste bleibt für den Feinschliff.
+        const flipped = isWallMirrorSwap(i.zone, zone) ? !i.flipped : i.flipped;
+        return { ...i, zone, x, y, flipped };
+      }));
     }
   }
 

@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { randomUUID } from "crypto";
+import { awardSeriesPokal } from "@/lib/award-pokal";
 
 type PlacementReward = { place: number; coins: number; rankPoints: number };
 type RewardsConfig = { participationCoins: number; placements: PlacementReward[] };
@@ -213,6 +214,11 @@ export async function POST(
   // Die neue Saison wird nicht mehr hier direkt angelegt, sondern über den
   // Saison-Setup-Assistenten unter /admin/series/[id]/new-season, wo der Admin
   // alle Einstellungen (inkl. Start-/Enddatum) vor dem Erstellen noch anpassen kann.
+
+  // Pokal: digitalen (großen) Eventreihen-Pokal an die Gesamtsieger vergeben (fire-and-forget)
+  awardSeriesPokal(seriesId).catch((err) =>
+    console.error("[Pokal] Vergabe fehlgeschlagen:", err)
+  );
 
   return NextResponse.json({
     ok: true,

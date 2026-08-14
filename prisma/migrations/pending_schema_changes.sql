@@ -219,3 +219,28 @@ CREATE TABLE IF NOT EXISTS "UserJob" (
   "updatedAt"       TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT "UserJob_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE
 );
+
+-- ═══════════════════════════════════════════════════════════════
+-- Pokale: lösen das Collectibles-System ab
+-- ═══════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS "Pokal" (
+  "id"        TEXT          NOT NULL PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  "userId"    TEXT          NOT NULL,
+  "title"     TEXT          NOT NULL,
+  "category"  "EventCategory" NOT NULL,
+  "isSeries"  BOOLEAN       NOT NULL DEFAULT false,
+  "eventId"   TEXT,
+  "seriesId"  TEXT,
+  "awardedAt" TIMESTAMP(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "Pokal_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "Pokal_userId_eventId_key" ON "Pokal"("userId", "eventId");
+CREATE UNIQUE INDEX IF NOT EXISTS "Pokal_userId_seriesId_key" ON "Pokal"("userId", "seriesId");
+CREATE INDEX IF NOT EXISTS "Pokal_userId_idx" ON "Pokal"("userId");
+
+-- Collectibles-System entfernen (löst durch das neue Pokal-System ab)
+ALTER TABLE "User" DROP COLUMN IF EXISTS "showcaseJson";
+DROP TABLE IF EXISTS "UserCollectible";
+DROP TABLE IF EXISTS "CollectibleItem";
+DROP TABLE IF EXISTS "CollectibleCollection";

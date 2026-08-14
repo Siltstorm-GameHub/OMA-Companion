@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useEffect } from "react";
 import {
-  Users, LayoutDashboard, Star, ShoppingBag, Bell,
+  Users, LayoutDashboard, Star, Bell,
   CalendarDays, Heart, Medal,
   Wrench, Users2, Megaphone, Handshake, Clapperboard, Server, Gamepad2, Sofa,
 } from "lucide-react";
@@ -67,12 +67,11 @@ const CATEGORIES: {
     label: "Tools",
     icon: Wrench,
     minRole: "admin",
-    prefixes: ["/admin/shop", "/admin/notifications", "/admin/badges", "/admin/users", "/admin/minigames", "/admin/zimmer"],
+    prefixes: ["/admin/notifications", "/admin/badges", "/admin/users", "/admin/minigames", "/admin/zimmer"],
     tabs: [
       { href: "/admin/users",         label: "Nutzer & Rollen",  icon: Users,       minRole: "admin" },
       { href: "/admin/notifications", label: "Benachrichtigungen", icon: Bell,      minRole: "admin" },
       { href: "/admin/badges",        label: "Abzeichen",        icon: Medal,       minRole: "admin" },
-      { href: "/admin/shop",          label: "Shop",             icon: ShoppingBag, minRole: "admin" },
       { href: "/admin/minigames",     label: "Minigames",        icon: Gamepad2,    minRole: "admin" },
       { href: "/admin/zimmer",        label: "Gaming-Zimmer",    icon: Sofa,        minRole: "admin" },
     ],
