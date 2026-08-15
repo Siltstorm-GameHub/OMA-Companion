@@ -26,8 +26,8 @@ export type { RoomSurface } from "./room-grid";
 /** Eine Rasterzelle in Weltkoordinaten — Kantenlänge einer Bodenkachel. */
 export const WORLD_UNIT = 1;
 
-/** Wandstärke/-höhe der Raum-Shell, rein optisch (kein Grid-Bezug). */
-export const WALL_THICKNESS = 0.15;
+/** Wand-/Bodenstärke der Raum-Shell, rein optisch (kein Grid-Bezug). */
+export const WALL_THICKNESS = 0.25;
 
 /**
  * Mittelpunkt einer Rasterzelle (a,b) mit Größe (w,h) auf `surface`, in
