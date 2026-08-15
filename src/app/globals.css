@@ -1054,24 +1054,19 @@ a.card-hover:active { transform: scale(0.985); }
   display: block;
   width: 100%;
   height: auto;
-  /* Ohne Mindestbreite blieben Möbel-Bildschirme auf einem 375px-Handy weit
-     unter der 44px-Schwelle für Touch-Ziele. Der Container drumherum scrollt
-     dafür waagerecht; die Seite selbst bleibt frei von horizontalem Scroll.
-     Bezogen auf den isometrischen viewBox (1216×992, siehe room-iso.ts,
-     ISO_STAGE): 960px Mindestbreite ergibt eine Zellgröße nahe der
-     ursprünglichen ~48px UND eine Höhe (≈785px), die auf einem Handy noch
-     größtenteils ohne zusätzliches vertikales Scrollen der Bühne selbst
-     sichtbar ist — der alte Wert (1344px) war auf die vorherige, deutlich
-     breitere/flachere Frontalansicht (1792×576) zugeschnitten und hätte die
-     jetzt höhere Eck-Ansicht auf über 1090px Höhe aufgebläht. */
-  min-width: 960px;
+  /* Bewusst OHNE Mindestbreite: die Kachel drumherum bleibt fest in der
+     Größe, die das umgebende Layout ihr zuteilt (Grid/Flex), und die Bühne
+     skaliert per viewBox (siehe ISO_STAGE, room-iso.ts) komplett hinein —
+     kein horizontales Scrollen innerhalb der Kachel, auf keiner
+     Bildschirmgröße. Das nimmt auf sehr schmalen Handys zwar Touch-Ziel-
+     Größe (vorher: 960px-Mindestbreite + waagerechtes Scrollen), aber genau
+     das war der explizite Wunsch: immer alles sichtbar, ohne in der Kachel
+     scrollen zu müssen. */
   /* Pixelige Kanten bleiben scharf statt zu verwaschen */
   shape-rendering: crispEdges;
 }
 .room-stage-scroll {
-  overflow-x: auto;
-  overflow-y: hidden;
-  overscroll-behavior-x: contain;
+  overflow: hidden;
 }
 /* "In den Monitor reinzoomen": kurzer Punch-in Richtung Klickpunkt, bevor
    sich das Profil-Popup darüberlegt (siehe RoomStage.tsx, zoomIntoScreen). */
