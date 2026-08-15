@@ -712,73 +712,76 @@ const WINDOW_FRAME: { base: string; hi: string; accent?: string }[] = [
 ];
 
 /**
- * Anker des Fensters auf der Rückwand, in Wand-Rasterzellen (x=Spalte,
- * y=Höhe ab Boden). Nur der ANKERPUNKT ist echt projiziert — die
- * Fenster-Grafik selbst bleibt (wie die Möbel-Billboards) unverzerrt
- * aufrecht, siehe RoomShell-Kommentar zum Phase-1-Kompromiss.
- *
- * WICHTIG: die Fenstergrafik hängt vom Anker aus 180px NACH OBEN (Vorhang,
- * Rahmen). Ein zu hoher Anker (y nah an wall_back.rows) schiebt den oberen
- * Rand der Grafik über y=0 hinaus — die SVG `viewBox` schneidet das dann
- * hart ab, unabhängig vom Scroll-Zustand der Karte drumherum. y:3 lässt bei
- * WALL_UNIT=64 selbst mit vollem Vorhang-Überstand komfortablen Abstand zur
- * Decke (siehe room-iso.ts Projektionsformel für die genaue Rechnung).
+ * Fenster-Geometrie, komplett in Wand-Rasterzellen (lokale Einheiten der
+ * Rückwand-Scherung — siehe `surfacePatternTransform` in room-iso.ts): `x0`
+ * ist die linke Kante ab der Raumecke, `y0` die Sims-Höhe ab Boden, `w`/`h`
+ * Breite/Höhe des Rahmens. Der ganze Baum wird über EIN `transform` auf die
+ * Rückwand geschert (siehe RoomWindow) — dieselbe lineare Abbildung, die auch
+ * die Wandtextur selbst scherz. Anders als in Phase 1 (Fenster als
+ * unverzerrtes Billboard) sitzt das Fenster dadurch WIRKLICH auf der
+ * schrägen Fläche, statt wie ein aufgeklebter Frontal-Screenshot dagegen zu
+ * stehen. Ränder: y0+h = 5.5 bleibt unter wall_back.rows (6) → kein
+ * Überstand über die Decke; x0+Vorhang-Überstand bleibt unter
+ * wall_back.cols (12).
  */
-const WINDOW_ANCHOR = { x: 2, y: 3 } as const;
+const WINDOW_GEOM = { x0: 2, y0: 2.6, w: 2.6, h: 2.9 } as const;
 
 /**
- * Ein Fenster, fest auf der Rückwand verankert. Rahmen UND Ausblick werten
- * sich mit `level` automatisch auf (siehe room-layout.ts, roomLevel):
- * abgewohntes Holz mit Dämmerungsblick → frisch gestrichener Rahmen →
- * Alu-Rahmen mit Skyline → Alu/Gold-Rahmen mit Strand-Sonnenuntergang.
+ * Ein Fenster, fest auf der Rückwand verankert und in deren Scherung
+ * eingebettet (siehe WINDOW_GEOM-Kommentar) — Rahmen UND Ausblick werten sich
+ * mit `level` automatisch auf (siehe room-layout.ts, roomLevel): abgewohntes
+ * Holz mit Dämmerungsblick → frisch gestrichener Rahmen → Alu-Rahmen mit
+ * Skyline → Alu/Gold-Rahmen mit Strand-Sonnenuntergang.
  */
 function RoomWindow({ level }: { level: number }) {
-  const anchor = wallBackToScreen(WINDOW_ANCHOR.x, WINDOW_ANCHOR.y);
-  const w = 192, h = 180;
-  const x = anchor.x - w / 2, y = anchor.y - h;
-  const paneX = x + 10, paneY = y + 10, paneW = w - 20, paneH = h - 20;
+  const { x0, y0, w, h } = WINDOW_GEOM;
+  // Lokale Einheiten: Rahmenrand 0.1 Zellen, Vorhangüberstand seitlich 0.2,
+  // Vorhangstange/-fall 0.15 über/unter dem Rahmen.
   const frame = WINDOW_FRAME[level] ?? WINDOW_FRAME[0];
   const skyFill = level >= 3 ? "url(#room-window-sky-beach)" : level === 2 ? "url(#room-window-sky-skyline)" : "url(#room-window-sky)";
+  const paneX = x0 + 0.1, paneW = w - 0.2;
+  const paneYTop = y0 + h - 0.1, paneYBot = y0 + 0.1; // lokal wächst Y nach oben
+  const paneH = paneYTop - paneYBot;
   return (
-    <g>
+    <g transform={surfacePatternTransform("wall_back")}>
       <title>{`Fenster — ${ROOM_LEVEL_LABEL[level] ?? ROOM_LEVEL_LABEL[0]}`}</title>
-      <rect x={x - 6} y={y - 6} width={w + 12} height={h + 12} rx={4} fill={frame.base} />
-      <rect x={paneX} y={paneY} width={paneW} height={paneH} fill={skyFill} />
+      <rect x={x0} y={y0} width={w} height={h} rx={0.06} fill={frame.base} />
+      <rect x={paneX} y={paneYBot} width={paneW} height={paneH} fill={skyFill} />
 
       {level <= 1 && (
         /* Ferne, erleuchtete Fenster — deuten Nachbarhäuser an. Auf Stufe 1
            zwei zusätzliche Lichter: ein bisschen mehr Leben im Viertel. */
         <g opacity={0.85}>
-          <rect x={paneX + 14} y={paneY + paneH * 0.4} width={8} height={10} fill="var(--room-window-light)" filter="url(#room-blur-sm)" />
-          <rect x={paneX + 14} y={paneY + paneH * 0.4} width={8} height={10} fill="var(--room-window-light)" />
-          <rect x={paneX + 30} y={paneY + paneH * 0.55} width={7} height={9} fill="var(--room-window-light)" opacity={0.7} />
-          <rect x={paneX + paneW - 24} y={paneY + paneH * 0.3} width={7} height={9} fill="var(--room-window-light)" opacity={0.75} />
+          <rect x={paneX + paneW * 0.14} y={paneYBot + paneH * 0.4} width={paneW * 0.08} height={paneH * 0.16} fill="var(--room-window-light)" filter="url(#room-blur-sm)" />
+          <rect x={paneX + paneW * 0.14} y={paneYBot + paneH * 0.4} width={paneW * 0.08} height={paneH * 0.16} fill="var(--room-window-light)" />
+          <rect x={paneX + paneW * 0.3} y={paneYBot + paneH * 0.15} width={paneW * 0.07} height={paneH * 0.14} fill="var(--room-window-light)" opacity={0.7} />
+          <rect x={paneX + paneW * 0.75} y={paneYBot + paneH * 0.5} width={paneW * 0.07} height={paneH * 0.14} fill="var(--room-window-light)" opacity={0.75} />
           {level === 1 && (
             <>
-              <rect x={paneX + paneW - 40} y={paneY + paneH * 0.5} width={6} height={8} fill="var(--room-window-light)" opacity={0.65} />
-              <rect x={paneX + 44} y={paneY + paneH * 0.65} width={7} height={9} fill="var(--room-window-light)" opacity={0.6} />
+              <rect x={paneX + paneW * 0.58} y={paneYBot + paneH * 0.3} width={paneW * 0.06} height={paneH * 0.12} fill="var(--room-window-light)" opacity={0.65} />
+              <rect x={paneX + paneW * 0.44} y={paneYBot + paneH * 0.1} width={paneW * 0.07} height={paneH * 0.14} fill="var(--room-window-light)" opacity={0.6} />
             </>
           )}
         </g>
       )}
-      {level === 2 && <WindowSkyline x={paneX} y={paneY} w={paneW} h={paneH} />}
-      {level >= 3 && <WindowBeach x={paneX} y={paneY} w={paneW} h={paneH} />}
+      {level === 2 && <WindowSkyline x={paneX} y={paneYBot} w={paneW} h={paneH} />}
+      {level >= 3 && <WindowBeach x={paneX} y={paneYBot} w={paneW} h={paneH} />}
 
       {/* Sprossen */}
-      <rect x={paneX + paneW / 2 - 2} y={paneY} width={4} height={paneH} fill={frame.base} opacity={0.9} />
-      <rect x={paneX} y={paneY + paneH / 2 - 2} width={paneW} height={4} fill={frame.base} opacity={0.9} />
-      <rect x={x - 6} y={y - 6} width={w + 12} height={h + 12} rx={4} fill="none" stroke={frame.accent ?? frame.hi} strokeWidth={2} opacity={0.5} />
+      <rect x={paneX + paneW / 2 - 0.03} y={paneYBot} width={0.06} height={paneH} fill={frame.base} opacity={0.9} />
+      <rect x={paneX} y={paneYBot + paneH / 2 - 0.03} width={paneW} height={0.06} fill={frame.base} opacity={0.9} />
+      <rect x={x0} y={y0} width={w} height={h} rx={0.06} fill="none" stroke={frame.accent ?? frame.hi} strokeWidth={0.03} opacity={0.5} />
 
-      {/* Fensterbank */}
-      <rect x={x - 16} y={y + h + 4} width={w + 32} height={9} rx={2} fill={frame.hi} />
+      {/* Fensterbank — knapp unterhalb des Rahmens, seitlich leicht überstehend. */}
+      <rect x={x0 - 0.15} y={y0 - 0.18} width={w + 0.3} height={0.14} rx={0.02} fill={frame.hi} />
 
       {/* Vorhänge — gerafft an beiden Seiten, damit das Fenster nach echtem
           Zimmer aussieht statt nach eingebautem Bildschirm. */}
-      <path d={`M${x - 10},${y - 8} Q${x + 6},${y + h * 0.5} ${x - 4},${y + h + 6} L${x - 22},${y + h + 2} Q${x - 16},${y + h * 0.5} ${x - 20},${y - 10} Z`}
+      <path d={`M${x0 - 0.16},${y0 + h + 0.12} Q${x0 + 0.1},${y0 + h * 0.5} ${x0 - 0.06},${y0 - 0.1} L${x0 - 0.35},${y0 - 0.03} Q${x0 - 0.26},${y0 + h * 0.5} ${x0 - 0.32},${y0 + h + 0.16} Z`}
         fill="var(--room-fabric)" opacity={0.92} />
-      <path d={`M${x + w + 10},${y - 8} Q${x + w - 6},${y + h * 0.5} ${x + w + 4},${y + h + 6} L${x + w + 22},${y + h + 2} Q${x + w + 16},${y + h * 0.5} ${x + w + 20},${y - 10} Z`}
+      <path d={`M${x0 + w + 0.16},${y0 + h + 0.12} Q${x0 + w - 0.1},${y0 + h * 0.5} ${x0 + w + 0.06},${y0 - 0.1} L${x0 + w + 0.35},${y0 - 0.03} Q${x0 + w + 0.26},${y0 + h * 0.5} ${x0 + w + 0.32},${y0 + h + 0.16} Z`}
         fill="var(--room-fabric)" opacity={0.92} />
-      <rect x={x - 26} y={y - 12} width={w + 52} height={6} rx={3} fill={frame.accent ?? "var(--room-metal)"} />
+      <rect x={x0 - 0.42} y={y0 + h + 0.08} width={w + 0.84} height={0.1} rx={0.04} fill={frame.accent ?? "var(--room-metal)"} />
     </g>
   );
 }
