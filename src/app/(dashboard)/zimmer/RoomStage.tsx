@@ -577,6 +577,28 @@ function VitrinePanel({
   );
 }
 
+/**
+ * Größter Plakettentext, der zwischen zwei benachbarten Fächern derselben
+ * Reihe noch Platz hat, ohne die Nachbarplakette zu berühren — abgeleitet aus
+ * dem tatsächlichen Fächerabstand in VITRINE_SLOTS statt einer festen Breite,
+ * die bei enger stehenden Fächern (Abzeichen-Sockelleiste) längst überlappte.
+ */
+function slotMaxPlaqueWidth(slots: readonly { x: number; y: number; s: number }[]): number {
+  const xsByRow = new Map<number, number[]>();
+  for (const s of slots) xsByRow.set(s.y, [...(xsByRow.get(s.y) ?? []), s.x]);
+  let gap = Infinity;
+  for (const xs of xsByRow.values()) {
+    xs.sort((a, b) => a - b);
+    for (let i = 1; i < xs.length; i++) gap = Math.min(gap, xs[i] - xs[i - 1]);
+  }
+  // 6px Luft zwischen zwei Plaketten derselben Reihe.
+  return Number.isFinite(gap) ? gap - 6 : 104;
+}
+
+const TROPHY_PLAQUE_MAX_W = slotMaxPlaqueWidth(VITRINE_SLOTS.trophies);
+const POKAL_PLAQUE_MAX_W  = slotMaxPlaqueWidth(VITRINE_SLOTS.pokale);
+const BADGE_PLAQUE_MAX_W  = slotMaxPlaqueWidth(VITRINE_SLOTS.badges);
+
 function VitrineContent({
   x, y, vitrine,
 }: {
@@ -598,7 +620,7 @@ function VitrineContent({
         return (
           <g key={`${t.scopeType}:${t.scopeValue}`}>
             <TrophySlot trophy={t} {...slot} />
-            <PlaqueLabel x={slot.x + slot.s / 2} y={slot.plaqueY} text={title} />
+            <PlaqueLabel x={slot.x + slot.s / 2} y={slot.plaqueY} text={title} maxWidth={TROPHY_PLAQUE_MAX_W} />
           </g>
         );
       })}
@@ -620,7 +642,7 @@ function VitrineContent({
             />
             <image href={POKAL_CATEGORY_IMAGE[p.category]} x={slot.x} y={slot.y} width={slot.s} height={slot.s}
               preserveAspectRatio="xMidYMid meet" />
-            <PlaqueLabel x={slot.x + slot.s / 2} y={slot.plaqueY} text={p.title} />
+            <PlaqueLabel x={slot.x + slot.s / 2} y={slot.plaqueY} text={p.title} maxWidth={POKAL_PLAQUE_MAX_W} />
           </g>
         );
       })}
@@ -639,7 +661,7 @@ function VitrineContent({
             >
               {b.icon}
             </text>
-            <PlaqueLabel x={slot.x + slot.s / 2} y={slot.plaqueY} text={b.name} />
+            <PlaqueLabel x={slot.x + slot.s / 2} y={slot.plaqueY} text={b.name} maxWidth={BADGE_PLAQUE_MAX_W} />
           </g>
         );
       })}
@@ -694,9 +716,13 @@ function TrophySlot({ trophy, x, y, s }: { trophy: VitrineTrophy; x: number; y: 
  * VitrinePanel — Touch-Nutzer verlieren also nichts, sie überspringen nur
  * den Hover-Zwischenschritt.
  */
-function PlaqueLabel({ x, y, text }: { x: number; y: number; text: string }) {
-  const short = text.length > 16 ? `${text.slice(0, 15)}…` : text;
-  const plaqueW = Math.min(104, Math.max(44, short.length * 8.3));
+function PlaqueLabel({ x, y, text, maxWidth }: { x: number; y: number; text: string; maxWidth: number }) {
+  // Zeichenbudget aus der verfügbaren Breite ableiten, statt der Breite
+  // einen festen Zeichentext aufzuzwingen — sonst ragt die Plakette bei
+  // eng stehenden Fächern (z. B. Abzeichen-Sockelleiste) in die Nachbarin.
+  const maxChars = Math.max(3, Math.floor(maxWidth / 8.3));
+  const short = text.length > maxChars ? `${text.slice(0, maxChars - 1)}…` : text;
+  const plaqueW = Math.min(maxWidth, Math.max(24, short.length * 8.3));
   return (
     <g transform={`translate(${x},${y})`}>
       <title>{text}</title>
