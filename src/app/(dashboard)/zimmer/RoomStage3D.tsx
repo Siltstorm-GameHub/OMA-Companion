@@ -16,11 +16,11 @@
  * gerendert — Trophäen/Pokale/Details zeigt weiterhin VitrineModal.
  */
 
-import { useMemo, useRef, useState } from "react";
-import { Canvas, useFrame, type ThreeEvent } from "@react-three/fiber";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { OrthographicCamera, ContactShadows, RoundedBox, Html } from "@react-three/drei";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
-import type { Mesh } from "three";
+import { Vector3, type Mesh, type OrthographicCamera as ThreeOrthographicCamera } from "three";
 import {
   ROOM_SIZE, ROOM_CENTER, SHELL_COLORS, ACCENT_COLORS,
   WALL_COLOR_BY_KEY, FLOOR_COLOR_BY_KEY, shadeHex,
@@ -30,6 +30,7 @@ import { getRoomItem } from "@/lib/room-items";
 import { roomLevel, type PlacedItem, type RoomState, type RoomSurface as LayoutSurface } from "@/lib/room-layout";
 import type { VitrineItem } from "@/lib/room-vitrine";
 import { FurniturePrimitive } from "./furniture/FurniturePrimitive";
+import { RoomWindow3D, CeilingLamp3D } from "./RoomLevelFixtures";
 
 export type InteractTarget = "crt" | "vitrine" | "jobboard";
 
@@ -326,9 +327,59 @@ function EditLayer({ edit }: { edit: EditHooks }) {
   );
 }
 
+/**
+ * Berechnet den Orthografie-Zoom so, dass der komplette Raum (alle 8
+ * Eckpunkte der Bounding-Box) exakt in die aktuelle Canvas-Größe passt —
+ * statt eines fest verdrahteten Zoom-Werts, der nur zufällig zu EINER
+ * Container-Breite passt und auf schmalen/breiten Bildschirmen entweder
+ * abschneidet oder unnötig viel Leerraum lässt. Reagiert auf Resize über
+ * `useThree`s `size` (Canvas-Pixelgröße), reprojiziert die Eckpunkte auf die
+ * tatsächlichen Kamera-Achsen (robust gegenüber Kamerawinkel-Änderungen,
+ * ohne eine geschlossene Formel für die isometrische Projektion zu brauchen).
+ */
+function FitCamera({ camPos }: { camPos: readonly [number, number, number] }) {
+  const { size, camera } = useThree();
+
+  const zoom = useMemo(() => {
+    const eye = new Vector3(...camPos);
+    const forward = ROOM_CENTER.clone().sub(eye).normalize();
+    const worldUp = new Vector3(0, 1, 0);
+    const right = new Vector3().crossVectors(forward, worldUp).normalize();
+    const up = new Vector3().crossVectors(right, forward).normalize();
+
+    const { width, height, depth } = ROOM_SIZE;
+    const corners = [
+      [0, 0, 0], [width, 0, 0], [0, height, 0], [0, 0, depth],
+      [width, height, 0], [width, 0, depth], [0, height, depth], [width, height, depth],
+    ];
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const [x, y, z] of corners) {
+      const rel = new Vector3(x, y, z).sub(eye);
+      const px = rel.dot(right), py = rel.dot(up);
+      minX = Math.min(minX, px); maxX = Math.max(maxX, px);
+      minY = Math.min(minY, py); maxY = Math.max(maxY, py);
+    }
+    const margin = 0.86; // etwas Luft rundherum, statt bündig am Canvas-Rand zu clippen
+    return Math.min(size.width / (maxX - minX), size.height / (maxY - minY)) * margin;
+  }, [size.width, size.height, camPos]);
+
+  useEffect(() => {
+    const cam = camera as ThreeOrthographicCamera;
+    if (typeof cam.zoom !== "number") return;
+    // Three.js-Objekte sind bewusst mutable (kein React-State) — das direkte
+    // Setzen von camera.zoom + updateProjectionMatrix() ist der von R3F selbst
+    // dokumentierte Weg, siehe auch drei's eigene Kamera-Helper.
+    // eslint-disable-next-line react-hooks/immutability -- Three.js-Objekt, keine React-Hook-Semantik
+    cam.zoom = zoom;
+    cam.updateProjectionMatrix();
+  }, [zoom, camera]);
+
+  return null;
+}
+
 function RoomCanvas({
-  state, edit, onInteract, hiddenVitrineCount,
-}: Pick<Props, "state" | "edit" | "onInteract"> & { hiddenVitrineCount: number }) {
+  state, edit, onInteract, hiddenVitrineCount, level,
+}: Pick<Props, "state" | "edit" | "onInteract"> & { hiddenVitrineCount: number; level: number }) {
   const camPos = useMemo(() => {
     const d = Math.max(ROOM_SIZE.width, ROOM_SIZE.depth) * 1.4;
     return [ROOM_CENTER.x + d, d * 0.82, ROOM_CENTER.z + d] as const;
@@ -338,15 +389,17 @@ function RoomCanvas({
     <Canvas shadows dpr={[1, 1.5]} frameloop="always">
       <OrthographicCamera
         makeDefault
-        zoom={42}
         position={camPos}
         near={0.1}
         far={100}
         onUpdate={cam => cam.lookAt(ROOM_CENTER)}
       />
+      <FitCamera camPos={camPos} />
       <RoomLighting />
       <RoomShell wallpaperKey={state.wallpaperKey} floorKey={state.floorKey} />
       <NeonEdge />
+      <RoomWindow3D level={level} />
+      <CeilingLamp3D level={level} />
       <PlacedFurniture placed={state.placed} edit={edit} onInteract={onInteract} />
       {/* Im Bearbeiten-Modus nicht anklickbar — sie lässt sich ohnehin nicht
           verschieben, ein Klick soll dort nicht mitten in der Möbel-Auswahl
@@ -359,7 +412,14 @@ function RoomCanvas({
         blur={2.4} far={4}
       />
       <EffectComposer>
-        <Bloom intensity={0.9} luminanceThreshold={0.25} luminanceSmoothing={0.3} mipmapBlur />
+        {/*
+         * Schwelle bewusst höher als die leicht-emissiven Wand-/Möbelflächen
+         * (emissiveIntensity 0.35–0.55, siehe RoomShell/FurniturePrimitive) —
+         * sonst glüht der halbe Raum mit, statt nur die echten Neon-Akzente
+         * (Deckenkante, Monitor-Screens, Lampen — alle `toneMapped={false}`
+         * und deutlich heller) hervorzuheben.
+         */}
+        <Bloom intensity={0.7} luminanceThreshold={0.65} luminanceSmoothing={0.25} mipmapBlur />
       </EffectComposer>
     </Canvas>
   );
@@ -373,7 +433,7 @@ export default function RoomStage3D({ state, vitrine, onInteract, edit }: Props)
       title={`Zimmer-Stufe ${level + 1}`}
       className="w-full aspect-[6/5] overflow-hidden rounded-2xl bg-[#141018]"
     >
-      <RoomCanvas state={state} edit={edit} onInteract={onInteract} hiddenVitrineCount={vitrine.hiddenCount} />
+      <RoomCanvas state={state} edit={edit} onInteract={onInteract} hiddenVitrineCount={vitrine.hiddenCount} level={level} />
     </div>
   );
 }

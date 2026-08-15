@@ -59,12 +59,21 @@ function Monitor({ def }: ShapeProps) {
   const accent = ACCENT_COLORS[def.accent];
   return (
     <group position={[0, 0.85, 0]}>
+      <RoundedBox args={[0.24, 0.03, 0.16]} radius={0.01} position={[0, 0.015, 0]}>
+        <meshStandardMaterial {...matteProps(METAL)} roughness={0.5} metalness={0.5} />
+      </RoundedBox>
       <RoundedBox args={[0.1, 0.4, 0.1]} radius={0.02} position={[0, 0.2, 0]}>
         <meshStandardMaterial {...matteProps(METAL)} roughness={0.6} />
       </RoundedBox>
       <RoundedBox args={[def.w * 0.8, def.h * 0.45, 0.06]} radius={0.03} position={[0, 0.55, 0]}>
         <meshStandardMaterial {...matteProps("#252a38")} roughness={0.4} />
       </RoundedBox>
+      {/* Dünner heller Rahmen ums Screen-Glow — gibt dem Bildschirm eine
+          erkennbare Kante statt eines nahtlos ins Gehäuse übergehenden Flecks. */}
+      <mesh position={[0, 0.55, 0.033]}>
+        <planeGeometry args={[def.w * 0.72, def.h * 0.39]} />
+        <meshStandardMaterial {...matteProps("#0d0f16")} roughness={0.3} />
+      </mesh>
       <mesh position={[0, 0.55, 0.035]}>
         <planeGeometry args={[def.w * 0.68, def.h * 0.35]} />
         <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={1.4} toneMapped={false} />
@@ -80,9 +89,16 @@ function Tower({ def }: ShapeProps) {
       <RoundedBox args={[def.w * 0.7, def.h * 0.9, def.w * 0.6]} radius={0.04} position={[0, def.h * 0.45, 0]}>
         <meshStandardMaterial {...matteProps("#2b2e3a")} roughness={0.4} metalness={0.3} />
       </RoundedBox>
+      {/* Lüfter-Glow vorne */}
       <mesh position={[0, def.h * 0.6, def.w * 0.31]}>
         <circleGeometry args={[0.14, 24]} />
         <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={1.2} toneMapped={false} />
+      </mesh>
+      {/* Dünner Akzentstreifen an der Vorderkante — bricht die sonst flache
+          dunkle Gehäusefläche auf. */}
+      <mesh position={[0, def.h * 0.9 - 0.03, def.w * 0.31]}>
+        <boxGeometry args={[def.w * 0.68, 0.03, 0.01]} />
+        <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={0.9} toneMapped={false} />
       </mesh>
     </group>
   );
@@ -110,14 +126,27 @@ function Shelf({ def }: ShapeProps) {
   const boards = 3;
   return (
     <group>
-      {Array.from({ length: boards }).map((_, i) => (
-        <RoundedBox
-          key={i} args={[def.w * 0.92, 0.06, def.h * 0.8]} radius={0.02}
-          position={[0, (i + 1) * (def.h * 0.85 / boards), 0]}
-        >
-          <meshStandardMaterial {...matteProps(accent)} roughness={0.5} />
-        </RoundedBox>
-      ))}
+      {Array.from({ length: boards }).map((_, i) => {
+        const y = (i + 1) * (def.h * 0.85 / boards);
+        return (
+          <group key={i}>
+            <RoundedBox args={[def.w * 0.92, 0.06, def.h * 0.8]} radius={0.02} position={[0, y, 0]}>
+              <meshStandardMaterial {...matteProps(accent)} roughness={0.5} />
+            </RoundedBox>
+            {/* Winkel-Halterungen an beiden Enden — sonst wirken die Bretter
+                wie freischwebende Platten statt an der Wand montiert. */}
+            {[-1, 1].map(side => (
+              <RoundedBox
+                key={side}
+                args={[0.05, 0.08, 0.12]} radius={0.01}
+                position={[side * (def.w * 0.92 / 2 - 0.06), y - 0.05, -def.h * 0.3]}
+              >
+                <meshStandardMaterial {...matteProps(METAL)} roughness={0.5} metalness={0.4} />
+              </RoundedBox>
+            ))}
+          </group>
+        );
+      })}
     </group>
   );
 }
@@ -125,10 +154,9 @@ function Shelf({ def }: ShapeProps) {
 function LightStrip({ def }: ShapeProps) {
   const accent = ACCENT_COLORS[def.accent];
   return (
-    <mesh position={[0, def.h * 0.5, 0.02]}>
-      <boxGeometry args={[def.w * 0.95, def.h * 0.5, 0.04]} />
+    <RoundedBox args={[def.w * 0.95, def.h * 0.5, 0.04]} radius={0.02} position={[0, def.h * 0.5, 0.02]}>
       <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={2.2} toneMapped={false} />
-    </mesh>
+    </RoundedBox>
   );
 }
 
@@ -148,10 +176,22 @@ function Plant({ def }: ShapeProps) {
 
 function GenericBox({ def }: ShapeProps) {
   const accent = ACCENT_COLORS[def.accent];
+  const bodyH = def.h * 0.85;
   return (
-    <RoundedBox args={[def.w * 0.85, def.h * 0.85, def.w * 0.85]} radius={0.05} position={[0, def.h * 0.42, 0]}>
-      <meshStandardMaterial {...matteProps(accent)} roughness={0.5} metalness={0.15} />
-    </RoundedBox>
+    <group>
+      <RoundedBox args={[def.w * 0.85, bodyH, def.w * 0.85]} radius={0.05} position={[0, def.h * 0.42, 0]}>
+        <meshStandardMaterial {...matteProps("#2b2e3a")} roughness={0.5} metalness={0.15} />
+      </RoundedBox>
+      {/* Akzentfarbener Deckel-Streifen — sonst sind sehr unterschiedliche
+          Peripherie-Items (Mikro, Headset, Kaffeemaschine, …) alle nur ein
+          neutraler Würfel und kaum voneinander zu unterscheiden. */}
+      <RoundedBox
+        args={[def.w * 0.85, bodyH * 0.22, def.w * 0.85]} radius={0.05}
+        position={[0, def.h * 0.42 + bodyH * 0.39, 0]}
+      >
+        <meshStandardMaterial {...matteProps(accent)} roughness={0.4} metalness={0.15} />
+      </RoundedBox>
+    </group>
   );
 }
 
