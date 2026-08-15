@@ -18,6 +18,6 @@ export type RoomSurface = "floor" | "wall_back" | "wall_side";
  */
 export const ISO_GRID = {
   floor:     { cols: 12, rows: 7 },
-  wall_back: { cols: 12, rows: 6 },
-  wall_side: { cols: 7,  rows: 6 },
+  wall_back: { cols: 12, rows: 4 },
+  wall_side: { cols: 7,  rows: 4 },
 } as const;

@@ -23,7 +23,7 @@ import { EffectComposer, Bloom } from "@react-three/postprocessing";
 import { Vector3, Mesh, MeshStandardMaterial, type OrthographicCamera as ThreeOrthographicCamera } from "three";
 import { useGLTF } from "@react-three/drei";
 import {
-  ROOM_SIZE, ROOM_CENTER, SHELL_COLORS, ACCENT_COLORS,
+  ROOM_SIZE, ROOM_CENTER, SHELL_COLORS, ACCENT_COLORS, WALL_THICKNESS,
   WALL_COLOR_BY_KEY, FLOOR_COLOR_BY_KEY, shadeHex,
   gridToWorld, surfaceRotationY, worldToGrid, type RoomSurface,
 } from "@/lib/room-3d";
@@ -70,16 +70,23 @@ function RoomShell({ wallpaperKey, floorKey }: { wallpaperKey: string; floorKey:
        * besser zum flachen, nicht-photorealistischen Low-Poly-Zielbild als
        * reine PBR-Schattierung.
        */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[width / 2, 0, depth / 2]}>
-        <planeGeometry args={[width, depth]} />
+      {/*
+       * Boden/Wände als Boxen mit echter Stärke (WALL_THICKNESS) statt
+       * nulldicker Planes — flache Planes wirkten aus jedem Winkel, der die
+       * Kante zeigt, papierdünn. Die sichtbare Innenfläche bleibt exakt bei
+       * y=0/x=0/z=0 (dieselbe Koordinate, die gridToWorld für Möbel
+       * verwendet), die Box wächst nur nach außen/unten weiter.
+       */}
+      <mesh position={[width / 2, -WALL_THICKNESS / 2, depth / 2]}>
+        <boxGeometry args={[width, WALL_THICKNESS, depth]} />
         <meshStandardMaterial color={floorColor} emissive={floorColor} emissiveIntensity={0.55} roughness={0.85} />
       </mesh>
-      <mesh position={[width / 2, height / 2, 0]}>
-        <planeGeometry args={[width, height]} />
+      <mesh position={[width / 2, height / 2, -WALL_THICKNESS / 2]}>
+        <boxGeometry args={[width, height, WALL_THICKNESS]} />
         <meshStandardMaterial color={wallColor} emissive={wallColor} emissiveIntensity={0.55} roughness={0.9} />
       </mesh>
-      <mesh rotation={[0, Math.PI / 2, 0]} position={[0, height / 2, depth / 2]}>
-        <planeGeometry args={[depth, height]} />
+      <mesh position={[-WALL_THICKNESS / 2, height / 2, depth / 2]}>
+        <boxGeometry args={[WALL_THICKNESS, height, depth]} />
         <meshStandardMaterial
           color={shadeHex(wallColor, 0.72)} emissive={shadeHex(wallColor, 0.72)} emissiveIntensity={0.55}
           roughness={0.9}
@@ -250,9 +257,42 @@ function VitrineCabinet() {
   return <primitive object={cloned} />;
 }
 
+/**
+ * Kleine goldene Pokal-Silhouetten hinter dem Vitrinenglas — sonst wirkt die
+ * jetzt tatsächlich transparente Vitrine leer, obwohl der User Pokale/Abzeichen
+ * besitzt. Rein andeutend (Kelch-Form aus Kegel+Kugel), keine 1:1-Abbildung
+ * der 15 echten Fächer — bei bis zu 15 belegten Fächern wären Einzelmodelle
+ * im Miniaturmaßstab ohnehin nicht unterscheidbar.
+ */
+function VitrineTrophies({ count }: { count: number }) {
+  const shown = Math.min(count, 6);
+  if (shown === 0) return null;
+  const spacing = 1.7 / Math.max(shown - 1, 1);
+  const startX = shown > 1 ? -1.7 / 2 : 0;
+  return (
+    <group>
+      {Array.from({ length: shown }).map((_, i) => {
+        const x = shown > 1 ? startX + i * spacing : 0;
+        return (
+          <group key={i} position={[x, 0.78, 0]}>
+            <mesh position={[0, 0, 0]}>
+              <coneGeometry args={[0.07, 0.1, 12]} />
+              <meshStandardMaterial color="#ffcf6b" emissive="#ffcf6b" emissiveIntensity={0.9} roughness={0.3} metalness={0.6} />
+            </mesh>
+            <mesh position={[0, -0.08, 0]}>
+              <cylinderGeometry args={[0.015, 0.03, 0.08, 8]} />
+              <meshStandardMaterial color="#ffcf6b" emissive="#ffcf6b" emissiveIntensity={0.7} roughness={0.3} metalness={0.6} />
+            </mesh>
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
 function VitrineMarker({
-  hiddenCount, onClick,
-}: { hiddenCount: number; onClick: () => void }) {
+  hiddenCount, filledCount, onClick,
+}: { hiddenCount: number; filledCount: number; onClick: () => void }) {
   const world = gridToWorld(VITRINE_MARKER.zone, VITRINE_MARKER.x, VITRINE_MARKER.y, VITRINE_MARKER.w, VITRINE_MARKER.h);
   const ringRef = useRef<Mesh>(null);
   const [hovered, setHovered] = useState(false);
@@ -271,12 +311,13 @@ function VitrineMarker({
       onPointerOut={() => { setHovered(false); document.body.style.cursor = "auto"; }}
     >
       <VitrineCabinet />
-      <mesh position={[0, 1.5, 0]}>
-        <circleGeometry args={[0.32, 20]} />
+      <VitrineTrophies count={filledCount} />
+      <mesh position={[0, 1.95, 0]}>
+        <circleGeometry args={[0.28, 20]} />
         <meshStandardMaterial color="#ffcf6b" emissive="#ffcf6b" emissiveIntensity={1.6} toneMapped={false} />
       </mesh>
       <mesh ref={ringRef} position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.75, 0.85, 28]} />
+        <ringGeometry args={[1.0, 1.1, 28]} />
         <meshBasicMaterial color="#ffcf6b" transparent opacity={0.35} toneMapped={false} />
       </mesh>
       {hiddenCount > 0 && (
