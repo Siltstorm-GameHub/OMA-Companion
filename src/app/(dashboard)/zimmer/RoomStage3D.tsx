@@ -407,8 +407,8 @@ function FitCamera({ camPos }: { camPos: readonly [number, number, number] }) {
 }
 
 function RoomCanvas({
-  state, edit, onInteract, hiddenVitrineCount, level,
-}: Pick<Props, "state" | "edit" | "onInteract"> & { hiddenVitrineCount: number; level: number }) {
+  state, edit, onInteract, hiddenVitrineCount, filledVitrineCount, level,
+}: Pick<Props, "state" | "edit" | "onInteract"> & { hiddenVitrineCount: number; filledVitrineCount: number; level: number }) {
   const camPos = useMemo(() => {
     const d = Math.max(ROOM_SIZE.width, ROOM_SIZE.depth) * 1.4;
     return [ROOM_CENTER.x + d, d * 0.82, ROOM_CENTER.z + d] as const;
@@ -436,7 +436,9 @@ function RoomCanvas({
       {/* Im Bearbeiten-Modus nicht anklickbar — sie lässt sich ohnehin nicht
           verschieben, ein Klick soll dort nicht mitten in der Möbel-Auswahl
           ein Modal aufreißen (siehe altes VitrinePanel-Verhalten). */}
-      {!edit && <VitrineMarker hiddenCount={hiddenVitrineCount} onClick={() => onInteract("vitrine")} />}
+      {!edit && (
+        <VitrineMarker hiddenCount={hiddenVitrineCount} filledCount={filledVitrineCount} onClick={() => onInteract("vitrine")} />
+      )}
       {edit && <EditLayer edit={edit} />}
       <ContactShadows
         position={[ROOM_SIZE.width / 2, 0.01, ROOM_SIZE.depth / 2]}
@@ -459,13 +461,17 @@ function RoomCanvas({
 
 export default function RoomStage3D({ state, vitrine, onInteract, edit }: Props) {
   const level = roomLevel(state.placed);
+  const filledVitrineCount = vitrine.slots.filter(Boolean).length;
 
   return (
     <div
       title={`Zimmer-Stufe ${level + 1}`}
       className="w-full aspect-[6/5] overflow-hidden rounded-2xl bg-[#141018]"
     >
-      <RoomCanvas state={state} edit={edit} onInteract={onInteract} hiddenVitrineCount={vitrine.hiddenCount} level={level} />
+      <RoomCanvas
+        state={state} edit={edit} onInteract={onInteract}
+        hiddenVitrineCount={vitrine.hiddenCount} filledVitrineCount={filledVitrineCount} level={level}
+      />
     </div>
   );
 }
