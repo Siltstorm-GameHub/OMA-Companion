@@ -8,9 +8,9 @@
  */
 
 import { getRoomItem, isSurface, type RoomItemDef, type RoomTag } from "./room-items";
-import { ISO_GRID, type RoomSurface } from "./room-iso";
+import { ISO_GRID, type RoomSurface } from "./room-grid";
 
-export type { RoomSurface } from "./room-iso";
+export type { RoomSurface } from "./room-grid";
 
 /**
  * Drei Rasterflächen für die isometrische Eck-Ansicht (Rückwand, Seitenwand,

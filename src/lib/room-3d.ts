@@ -17,11 +17,11 @@
  */
 
 import * as THREE from "three";
-import { ISO_GRID, type RoomSurface } from "./room-iso";
+import { ISO_GRID, type RoomSurface } from "./room-grid";
 import type { RoomItemDef } from "./room-items";
 
-export { ISO_GRID } from "./room-iso";
-export type { RoomSurface } from "./room-iso";
+export { ISO_GRID } from "./room-grid";
+export type { RoomSurface } from "./room-grid";
 
 /** Eine Rasterzelle in Weltkoordinaten — Kantenlänge einer Bodenkachel. */
 export const WORLD_UNIT = 1;

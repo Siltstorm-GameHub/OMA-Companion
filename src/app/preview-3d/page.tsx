@@ -21,7 +21,12 @@ export default function Preview3DPage() {
   return (
     <div className="mx-auto max-w-3xl p-6">
       <h1 className="mb-4 text-lg font-semibold text-white">3D-Zimmer-Preview</h1>
-      <RoomStage3D placed={DEFAULT_ROOM.placed} />
+      <RoomStage3D
+        state={DEFAULT_ROOM}
+        ownerName="Preview"
+        vitrine={{ slots: Array(15).fill(null), hiddenCount: 0 }}
+        onInteract={(target) => console.log("interact:", target)}
+      />
     </div>
   );
 }

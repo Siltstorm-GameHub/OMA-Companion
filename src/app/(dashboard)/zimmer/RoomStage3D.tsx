@@ -3,17 +3,19 @@
 /**
  * 3D-Bühne des Gaming-Zimmers (Three.js/React Three Fiber) — Ersatz für das
  * SVG-basierte RoomStage.tsx. Übernimmt denselben Props-Vertrag 1:1
- * ({state, ownerName, vitrine, onInteract, edit}), damit RoomView.tsx und
- * RoomEditor.tsx unverändert bleiben können (siehe Plan-Dokument).
+ * ({state, ownerName, vitrine, vitrineReadOnly, onInteract, edit}), damit
+ * RoomView.tsx und RoomEditor.tsx nur den Import umstellen mussten.
  *
  * Raum-Shell + Möbel sind prozedural (kein Foto-Sprite, kein glTF) — siehe
  * FurniturePrimitive.tsx. Tapete/Boden sind Flachfarben (room-3d.ts), keine
- * Fototextur mehr.
+ * Fototextur mehr. Die Vitrine bleibt das bestehende SVG-Panel (VitrinePanel,
+ * geteilt mit der alten Bühne) — sie zeigt Trophäen/Pokale/Abzeichen als
+ * flache Icons, das ist kein isometrisches/3D-Element und lohnt keinen Rewrite.
  */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, type ThreeEvent } from "@react-three/fiber";
-import { OrthographicCamera, ContactShadows, RoundedBox } from "@react-three/drei";
+import { OrthographicCamera, ContactShadows } from "@react-three/drei";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
 import {
   ROOM_SIZE, ROOM_CENTER, SHELL_COLORS, ACCENT_COLORS,
@@ -23,6 +25,7 @@ import {
 import { getRoomItem } from "@/lib/room-items";
 import { roomLevel, type PlacedItem, type RoomState, type RoomSurface as LayoutSurface } from "@/lib/room-layout";
 import type { VitrineItem } from "@/lib/room-vitrine";
+import { VitrinePanel } from "./VitrinePanel";
 import { FurniturePrimitive } from "./furniture/FurniturePrimitive";
 
 export type InteractTarget = "crt" | "vitrine" | "jobboard";
@@ -40,11 +43,10 @@ interface Props {
   state:     RoomState;
   ownerName: string;
   vitrine: { slots: (VitrineItem | null)[]; hiddenCount: number };
+  vitrineReadOnly?: boolean;
   onInteract: (target: InteractTarget, itemKey?: string, slotIndex?: number) => void;
   edit?: EditHooks;
 }
-
-const VITRINE_POS = { zone: "floor" as RoomSurface, x: ROOM_SIZE.width - 2, y: ROOM_SIZE.depth - 5, w: 2, h: 5 };
 
 function RoomShell({ wallpaperKey, floorKey }: { wallpaperKey: string; floorKey: string }) {
   const { width, depth, height } = ROOM_SIZE;
@@ -93,19 +95,6 @@ function RoomLighting() {
   );
 }
 
-/** Feste Vitrine — Bühnenelement mit fester Position, kein Katalog-Platzierung (siehe room-items.ts). */
-function FixedVitrine({ onClick }: { onClick: () => void }) {
-  const world = gridToWorld(VITRINE_POS.zone, VITRINE_POS.x, VITRINE_POS.y, VITRINE_POS.w, VITRINE_POS.h);
-  return (
-    <group position={world} onClick={e => { e.stopPropagation(); onClick(); }}>
-      <RoundedBox args={[VITRINE_POS.w * 0.85, VITRINE_POS.h * 0.9, VITRINE_POS.w * 0.7]} radius={0.05}
-        position={[0, VITRINE_POS.h * 0.45, 0]}>
-        <meshStandardMaterial color="#caa86a" roughness={0.3} metalness={0.2} transparent opacity={0.85} />
-      </RoundedBox>
-    </group>
-  );
-}
-
 /** Halbtransparente Zellen-Fläche für Legal-Cell-Highlights & Ghost-Preview. */
 function CellHighlight({
   surface, x, y, w, h, color, opacity,
@@ -113,7 +102,7 @@ function CellHighlight({
   const world = gridToWorld(surface, x, y, w, h);
   const rotX = surface === "floor" ? -Math.PI / 2 : 0;
   const rotY = surfaceRotationY(surface);
-  const offset = surface === "floor" ? 0.01 : 0.01;
+  const offset = 0.01;
   const pos = surface === "floor"
     ? [world.x, offset, world.z] as const
     : surface === "wall_back"
@@ -183,11 +172,7 @@ function EditLayer({ edit }: { edit: EditHooks }) {
     // An der oberen/hinteren Zellkante ausrichten (nicht am Mittelpunkt), wie in room-layout.ts erwartet.
     const anchorA = Math.round(a - edit.ghost.w / 2);
     const anchorB = Math.round(b - edit.ghost.h / 2);
-    const match = edit.legal.find(c => {
-      const cx = surface === "floor" ? c.x : c.x;
-      const cy = c.y;
-      return c.zone === surface && cx === anchorA && cy === anchorB;
-    });
+    const match = edit.legal.find(c => c.zone === surface && c.x === anchorA && c.y === anchorB);
     setHover(match ? { zone: surface, x: match.x, y: match.y } : null);
   }
 
@@ -235,9 +220,7 @@ function EditLayer({ edit }: { edit: EditHooks }) {
         const rotY = surfaceRotationY(hover.zone);
         return (
           <group position={world} rotation={[0, rotY, 0]}>
-            <group>
-              <FurniturePrimitive def={def} />
-            </group>
+            <FurniturePrimitive def={def} />
           </group>
         );
       })()}
@@ -245,46 +228,70 @@ function EditLayer({ edit }: { edit: EditHooks }) {
   );
 }
 
-export default function RoomStage3D({ state, onInteract, vitrine, edit }: Props) {
+function RoomCanvas({ state, edit, onInteract }: Pick<Props, "state" | "edit" | "onInteract">) {
   const camPos = useMemo(() => {
     const d = Math.max(ROOM_SIZE.width, ROOM_SIZE.depth) * 1.4;
     return [ROOM_CENTER.x + d, d * 0.82, ROOM_CENTER.z + d] as const;
   }, []);
 
+  return (
+    <Canvas shadows dpr={[1, 1.5]} frameloop="always">
+      <OrthographicCamera
+        makeDefault
+        zoom={42}
+        position={camPos}
+        near={0.1}
+        far={100}
+        onUpdate={cam => cam.lookAt(ROOM_CENTER)}
+      />
+      <RoomLighting />
+      <RoomShell wallpaperKey={state.wallpaperKey} floorKey={state.floorKey} />
+      <NeonEdge />
+      <PlacedFurniture placed={state.placed} edit={edit} onInteract={onInteract} />
+      {edit && <EditLayer edit={edit} />}
+      <ContactShadows
+        position={[ROOM_SIZE.width / 2, 0.01, ROOM_SIZE.depth / 2]}
+        opacity={0.55} scale={Math.max(ROOM_SIZE.width, ROOM_SIZE.depth) * 1.2}
+        blur={2.4} far={4}
+      />
+      <EffectComposer>
+        <Bloom intensity={0.9} luminanceThreshold={0.25} luminanceSmoothing={0.3} mipmapBlur />
+      </EffectComposer>
+    </Canvas>
+  );
+}
+
+export default function RoomStage3D({ state, ownerName, vitrine, vitrineReadOnly, onInteract, edit }: Props) {
   const level = roomLevel(state.placed);
 
+  const stageWrapRef = useRef<HTMLDivElement>(null);
+  const [stageHeight, setStageHeight] = useState<number | null>(null);
+  useEffect(() => {
+    const el = stageWrapRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(entries => {
+      const h = entries[0]?.contentRect.height;
+      if (h) setStageHeight(h);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <div
-      className="w-full aspect-[6/5] overflow-hidden rounded-2xl bg-[#141018]"
-      title={`Zimmer-Stufe ${level + 1}`}
-    >
-      <Canvas shadows dpr={[1, 1.5]} frameloop="always">
-        <OrthographicCamera
-          makeDefault
-          zoom={42}
-          position={camPos}
-          near={0.1}
-          far={100}
-          onUpdate={cam => cam.lookAt(ROOM_CENTER)}
-        />
-        <RoomLighting />
-        <RoomShell wallpaperKey={state.wallpaperKey} floorKey={state.floorKey} />
-        <NeonEdge />
-        <PlacedFurniture placed={state.placed} edit={edit} onInteract={onInteract} />
-        <FixedVitrine onClick={() => onInteract("vitrine")} />
-        {edit && <EditLayer edit={edit} />}
-        <ContactShadows
-          position={[ROOM_SIZE.width / 2, 0.01, ROOM_SIZE.depth / 2]}
-          opacity={0.55} scale={Math.max(ROOM_SIZE.width, ROOM_SIZE.depth) * 1.2}
-          blur={2.4} far={4}
-        />
-        <EffectComposer>
-          <Bloom intensity={0.9} luminanceThreshold={0.25} luminanceSmoothing={0.3} mipmapBlur />
-        </EffectComposer>
-      </Canvas>
-      {vitrine.hiddenCount > 0 && (
-        <div className="sr-only">{vitrine.hiddenCount} weitere Sammelstücke im Lager</div>
-      )}
+    <div className="flex flex-col sm:flex-row items-stretch gap-3">
+      <VitrinePanel
+        ownerName={ownerName} vitrine={vitrine} readOnly={!!vitrineReadOnly}
+        onInteract={onInteract} editing={!!edit}
+        measuredHeight={stageHeight}
+      />
+
+      <div
+        ref={stageWrapRef}
+        title={`Zimmer-Stufe ${level + 1}`}
+        className="w-full aspect-[6/5] overflow-hidden rounded-2xl bg-[#141018] min-w-0 flex-1"
+      >
+        <RoomCanvas state={state} edit={edit} onInteract={onInteract} />
+      </div>
     </div>
   );
 }
