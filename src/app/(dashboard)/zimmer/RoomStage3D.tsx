@@ -13,7 +13,7 @@
  * flache Icons, das ist kein isometrisches/3D-Element und lohnt keinen Rewrite.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { Canvas, type ThreeEvent } from "@react-three/fiber";
 import { OrthographicCamera, ContactShadows } from "@react-three/drei";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
@@ -264,29 +264,26 @@ function RoomCanvas({ state, edit, onInteract }: Pick<Props, "state" | "edit" | 
 export default function RoomStage3D({ state, ownerName, vitrine, vitrineReadOnly, onInteract, edit }: Props) {
   const level = roomLevel(state.placed);
 
-  const stageWrapRef = useRef<HTMLDivElement>(null);
-  const [stageHeight, setStageHeight] = useState<number | null>(null);
-  useEffect(() => {
-    const el = stageWrapRef.current;
-    if (!el) return;
-    const observer = new ResizeObserver(entries => {
-      const h = entries[0]?.contentRect.height;
-      if (h) setStageHeight(h);
-    });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
   return (
     <div className="flex flex-col sm:flex-row items-stretch gap-3">
+      {/*
+       * `measuredHeight` bleibt bewusst `null`: die alte SVG-Bühne brauchte
+       * einen per ResizeObserver GEMESSENEN Höhenwert, weil ihre eigene Höhe
+       * vom Bildinhalt abhing (kein fester Seitenverhältnis-Container). Die
+       * 3D-Bühne hat mit `aspect-[6/5]` dagegen eine deterministische CSS-Höhe
+       * ab dem ersten Paint — die Vitrine kann per `sm:self-stretch` (siehe
+       * VitrinePanel) rein über Flexbox mitwachsen, ohne den asynchronen
+       * Messungs-Umweg samt kurzem Zwischenzustand vor dem ersten
+       * ResizeObserver-Callback (mögliche Ursache für einen sichtbaren
+       * Größensprung direkt beim Öffnen der Seite).
+       */}
       <VitrinePanel
         ownerName={ownerName} vitrine={vitrine} readOnly={!!vitrineReadOnly}
         onInteract={onInteract} editing={!!edit}
-        measuredHeight={stageHeight}
+        measuredHeight={null}
       />
 
       <div
-        ref={stageWrapRef}
         title={`Zimmer-Stufe ${level + 1}`}
         className="w-full aspect-[6/5] overflow-hidden rounded-2xl bg-[#141018] min-w-0 flex-1"
       >
