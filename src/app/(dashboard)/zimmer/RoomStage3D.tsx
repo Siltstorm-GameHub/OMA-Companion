@@ -18,7 +18,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
-import { OrthographicCamera, ContactShadows, RoundedBox, Html } from "@react-three/drei";
+import { OrthographicCamera, ContactShadows, Html } from "@react-three/drei";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
 import { Vector3, type Mesh, type OrthographicCamera as ThreeOrthographicCamera } from "three";
 import {
@@ -29,7 +29,7 @@ import {
 import { getRoomItem } from "@/lib/room-items";
 import { roomLevel, type PlacedItem, type RoomState, type RoomSurface as LayoutSurface } from "@/lib/room-layout";
 import type { VitrineItem } from "@/lib/room-vitrine";
-import { FurniturePrimitive } from "./furniture/FurniturePrimitive";
+import { FurniturePrimitive, GltfFurniture } from "./furniture/FurniturePrimitive";
 import { RoomWindow3D, CeilingLamp3D } from "./RoomLevelFixtures";
 
 export type InteractTarget = "crt" | "vitrine" | "jobboard";
@@ -239,9 +239,7 @@ function VitrineMarker({
       onPointerOver={e => { e.stopPropagation(); setHovered(true); document.body.style.cursor = "pointer"; }}
       onPointerOut={() => { setHovered(false); document.body.style.cursor = "auto"; }}
     >
-      <RoundedBox args={[1.3, 2.2, 1.1]} radius={0.06} position={[0, 1.1, 0]}>
-        <meshStandardMaterial color="#caa86a" roughness={0.25} metalness={0.3} transparent opacity={0.35} />
-      </RoundedBox>
+      <GltfFurniture path="/models/vitrine_glass.glb" />
       <mesh position={[0, 1.5, 0]}>
         <circleGeometry args={[0.32, 20]} />
         <meshStandardMaterial color="#ffcf6b" emissive="#ffcf6b" emissiveIntensity={1.6} toneMapped={false} />

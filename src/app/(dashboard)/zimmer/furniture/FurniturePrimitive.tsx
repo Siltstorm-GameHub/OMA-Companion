@@ -39,6 +39,9 @@ const GLB_MODELS: Partial<Record<string, string>> = {
   monitor_144:      "/models/monitor_curved.glb",
   monitor_flach:    "/models/monitor_flach_neu.glb",
   monitor_dreifach: "/models/monitor_triple.glb",
+  pc_violett:       "/models/pc_tower_purple.glb",
+  headset:          "/models/headset_gaming.glb",
+  pc_gaming:        "/models/pc_white_rgb.glb",
   pflanze:          "/models/plant_succulent.glb",
   stehlampe:         "/models/lamp_floor.glb",
   schreibtischlampe: "/models/lamp_desk.glb",
@@ -65,7 +68,7 @@ for (const path of Object.values(GLB_MODELS)) {
  * Three.js dazu bringen, es zwischen den beiden Eltern hin- und
  * herzureißen — nur die zuletzt gerenderte Stelle zeigt es dann noch an.
  */
-function GltfFurniture({ path }: { path: string }) {
+export function GltfFurniture({ path }: { path: string }) {
   const { scene } = useGLTF(path);
   const cloned = useMemo(() => {
     const clone = scene.clone(true);
