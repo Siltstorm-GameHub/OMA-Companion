@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  ChevronDown, ChevronUp, ShoppingCart, Check, Loader2, Lock, Sofa, Briefcase, Clock,
+  ChevronDown, ChevronUp, ShoppingCart, Check, Loader2, Lock, Sofa, Briefcase, Clock, RefreshCw,
 } from "lucide-react";
 import { RoomItemPreview } from "@/app/(dashboard)/zimmer/RoomItemSprite";
 import { shopItems, isSurface, ROOM_ITEMS, type RoomItemDef } from "@/lib/room-items";
@@ -233,8 +233,9 @@ function ItemCard({
         )}
 
         {isUpgrade && (
-          <p className="text-[9px] text-amber-400/80 leading-snug">
-            Ersetzt &quot;{currentSlotItemLabel}&quot; — wandert automatisch ins Lager
+          <p className="text-[9px] text-amber-400/80 leading-snug flex items-start gap-1">
+            <RefreshCw className="w-2.5 h-2.5 shrink-0 mt-0.5" />
+            <span>Ersetzt &quot;{currentSlotItemLabel}&quot; — wandert automatisch ins Lager</span>
           </p>
         )}
 

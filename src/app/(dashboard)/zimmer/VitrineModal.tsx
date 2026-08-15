@@ -26,15 +26,16 @@ export default function VitrineModal({
   return (
     <Modal open={open} onClose={onClose} size="lg" title={`🏆 Vitrine von ${displayName}`}>
       <div className="space-y-6">
-        {vitrineUpdatedAt && (
-          <p className="text-[10px] text-gray-600 -mt-2">
-            Zuletzt kuratiert am {new Date(vitrineUpdatedAt).toLocaleDateString("de-DE", {
-              day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Berlin",
-            })}
-          </p>
-        )}
-
-        <PokalSection pokale={details.pokale} ownerName={displayName} />
+        <div>
+          {vitrineUpdatedAt && (
+            <p className="text-[10px] text-gray-600 mb-3">
+              Zuletzt kuratiert am {new Date(vitrineUpdatedAt).toLocaleDateString("de-DE", {
+                day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Berlin",
+              })}
+            </p>
+          )}
+          <PokalSection pokale={details.pokale} ownerName={displayName} />
+        </div>
 
         {(details.trophies.length > 0 || details.trophyStats.length > 0) && trophySection}
 
