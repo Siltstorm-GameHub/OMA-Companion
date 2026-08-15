@@ -32,7 +32,7 @@ const METAL = "#3a3f4c";
  * unten) — kein Alles-oder-nichts-Umbau des Katalogs nötig.
  */
 const GLB_MODELS: Partial<Record<string, string>> = {
-  schreibtisch_alt: "/models/desk_alt.glb",
+  schreibtisch_alt: "/models/desk_simple.glb",
   schreibtisch_eck: "/models/desk_eck.glb",
   stuhl_gaming:     "/models/chair_gaming.glb",
   stuhl_buero:      "/models/chair_office.glb",
@@ -48,6 +48,9 @@ const GLB_MODELS: Partial<Record<string, string>> = {
   nanoleaf:          "/models/nanoleaf_tri.glb",
   neon_blitz:        "/models/neon_blitz.glb",
   schreibtisch_neon: "/models/desk_neon.glb",
+  stuhl_racing:      "/models/chair_racing.glb",
+  tastatur_mech:     "/models/keyboard_mech.glb",
+  gaming_maus:       "/models/mouse_gaming.glb",
 };
 
 for (const path of Object.values(GLB_MODELS)) {
