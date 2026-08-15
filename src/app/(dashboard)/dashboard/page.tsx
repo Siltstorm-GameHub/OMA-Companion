@@ -547,7 +547,7 @@ export default async function DashboardPage() {
           <Link
             href="/zimmer"
             className={`surface flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.99] ${
-              jobOverview.current?.capped ? "border-rose-500/25" : "border-white/[0.06]"
+              jobOverview.current?.capped ? "border-rose-500/25" : ""
             }`}
           >
             <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">

@@ -175,19 +175,25 @@ function Monitor({ def }: ShapeProps) {
 
 function Tower({ def }: ShapeProps) {
   const accent = ACCENT_COLORS[def.accent];
+  // Bewusst FEST bemessen statt an def.h skaliert: def.h ist bei Boden-Items
+  // wie diesem die Raster-TIEFE der Stellfläche (z.B. 2 Zellen bei
+  // "pc_billig", damit davor noch Platz zum Stehen bleibt), keine physische
+  // Höhe — skaliert machte den Tower bis zu 1.8m hoch (Schreibtischbeinhöhe
+  // ist 0.75m). Selbes Muster wie bei Monitor()/Shelf() weiter oben.
+  const towerH = 0.42;
   return (
     <group>
-      <RoundedBox args={[def.w * 0.7, def.h * 0.9, def.w * 0.6]} radius={0.04} position={[0, def.h * 0.45, 0]} castShadow receiveShadow>
+      <RoundedBox args={[def.w * 0.7, towerH, def.w * 0.6]} radius={0.04} position={[0, towerH / 2, 0]} castShadow receiveShadow>
         <meshStandardMaterial {...matteProps("#2b2e3a")} roughness={0.4} metalness={0.3} />
       </RoundedBox>
       {/* Lüfter-Glow vorne */}
-      <mesh position={[0, def.h * 0.6, def.w * 0.31]}>
-        <circleGeometry args={[0.14, 24]} />
+      <mesh position={[0, towerH * 0.6, def.w * 0.31]}>
+        <circleGeometry args={[0.1, 24]} />
         <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={1.2} toneMapped={false} />
       </mesh>
       {/* Dünner Akzentstreifen an der Vorderkante — bricht die sonst flache
           dunkle Gehäusefläche auf. */}
-      <mesh position={[0, def.h * 0.9 - 0.03, def.w * 0.31]}>
+      <mesh position={[0, towerH - 0.03, def.w * 0.31]}>
         <boxGeometry args={[def.w * 0.68, 0.03, 0.01]} />
         <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={0.9} toneMapped={false} />
       </mesh>

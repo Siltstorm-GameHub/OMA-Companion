@@ -36,8 +36,11 @@ export default function RoomLevelBar({ placed }: { placed: PlacedItem[] }) {
             <p className="text-[11px] text-amber-400 mt-0.5">Voll ausgebaut — mehr geht nicht rein</p>
           ) : (
             <p className="text-[11px] text-gray-500 mt-0.5 flex items-center gap-1 flex-wrap">
-              noch {(ceil - total).toLocaleString("de-DE")}
-              <CoinIcon size={10} /> Einrichtungswert bis {ROOM_LEVEL_LABEL[level + 1]}
+              noch
+              <span className="inline-flex items-center gap-0.5 text-gray-400 font-medium">
+                {(ceil - total).toLocaleString("de-DE")}<CoinIcon size={10} />
+              </span>
+              bis {ROOM_LEVEL_LABEL[level + 1]}
             </p>
           )}
         </div>
