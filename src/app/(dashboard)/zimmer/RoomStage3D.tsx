@@ -58,17 +58,30 @@ function RoomShell({ wallpaperKey, floorKey }: { wallpaperKey: string; floorKey:
   const trim = "#d8d2ea";
   return (
     <group>
+      {/*
+       * `emissive` = die eigene Flächenfarbe bei moderater Intensität: ohne
+       * das komprimiert Three.js' Standard-Tonemapping (ACES-artig) normal
+       * beleuchtete, matte Flächen erheblich dunkler als der reine Hex-Wert
+       * vermuten lässt — sichtbar nur die `toneMapped={false}`-Neon-Elemente,
+       * Wand/Boden verschwimmen mit dem Void dahinter. Ein Eigenleuchtanteil
+       * garantiert Mindesthelligkeit unabhängig vom Lichtwinkel — passt auch
+       * besser zum flachen, nicht-photorealistischen Low-Poly-Zielbild als
+       * reine PBR-Schattierung.
+       */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[width / 2, 0, depth / 2]}>
         <planeGeometry args={[width, depth]} />
-        <meshStandardMaterial color={floorColor} roughness={0.85} />
+        <meshStandardMaterial color={floorColor} emissive={floorColor} emissiveIntensity={0.55} roughness={0.85} />
       </mesh>
       <mesh position={[width / 2, height / 2, 0]}>
         <planeGeometry args={[width, height]} />
-        <meshStandardMaterial color={wallColor} roughness={0.9} />
+        <meshStandardMaterial color={wallColor} emissive={wallColor} emissiveIntensity={0.55} roughness={0.9} />
       </mesh>
       <mesh rotation={[0, Math.PI / 2, 0]} position={[0, height / 2, depth / 2]}>
         <planeGeometry args={[depth, height]} />
-        <meshStandardMaterial color={shadeHex(wallColor, 0.72)} roughness={0.9} />
+        <meshStandardMaterial
+          color={shadeHex(wallColor, 0.72)} emissive={shadeHex(wallColor, 0.72)} emissiveIntensity={0.55}
+          roughness={0.9}
+        />
       </mesh>
       {/*
        * Dünner heller Kantenrahmen um den Boden (alle vier Seiten): macht die

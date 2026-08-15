@@ -22,13 +22,25 @@ interface ShapeProps {
 
 const METAL = "#3a3f4c";
 
+/**
+ * Kleiner Eigenleuchtanteil auf jedem matten Material — ohne das komprimiert
+ * Three.js' Standard-Tonemapping normal beleuchtete Flächen erheblich dunkler
+ * als der reine Hex-Wert vermuten lässt (sichtbar wird dann fast nur, was
+ * `toneMapped={false}` gesetzt hat, z.B. Bildschirm-Glow). Ein moderater
+ * Eigenleuchtanteil garantiert Mindesthelligkeit, ohne wie eine Lichtquelle
+ * zu wirken (siehe RoomShell in RoomStage3D.tsx für dieselbe Begründung).
+ */
+function matteProps(color: string, intensity = 0.35) {
+  return { color, emissive: color, emissiveIntensity: intensity } as const;
+}
+
 function Desk({ def }: ShapeProps) {
   const accent = ACCENT_COLORS[def.accent];
   const legH = 0.75;
   return (
     <group>
       <RoundedBox args={[def.w * 0.94, 0.16, def.h * 0.9]} radius={0.04} position={[0, legH, 0]}>
-        <meshStandardMaterial color={accent} roughness={0.35} metalness={0.1} />
+        <meshStandardMaterial {...matteProps(accent)} roughness={0.35} metalness={0.1} />
       </RoundedBox>
       {[-1, 1].map(sx => [-1, 1].map(sz => (
         <RoundedBox
@@ -36,7 +48,7 @@ function Desk({ def }: ShapeProps) {
           args={[0.12, legH, 0.12]} radius={0.02}
           position={[sx * (def.w * 0.94 / 2 - 0.12), legH / 2, sz * (def.h * 0.9 / 2 - 0.12)]}
         >
-          <meshStandardMaterial color={METAL} roughness={0.5} metalness={0.4} />
+          <meshStandardMaterial {...matteProps(METAL)} roughness={0.5} metalness={0.4} />
         </RoundedBox>
       )))}
     </group>
@@ -48,10 +60,10 @@ function Monitor({ def }: ShapeProps) {
   return (
     <group position={[0, 0.85, 0]}>
       <RoundedBox args={[0.1, 0.4, 0.1]} radius={0.02} position={[0, 0.2, 0]}>
-        <meshStandardMaterial color={METAL} roughness={0.6} />
+        <meshStandardMaterial {...matteProps(METAL)} roughness={0.6} />
       </RoundedBox>
       <RoundedBox args={[def.w * 0.8, def.h * 0.45, 0.06]} radius={0.03} position={[0, 0.55, 0]}>
-        <meshStandardMaterial color="#161822" roughness={0.4} />
+        <meshStandardMaterial {...matteProps("#252a38")} roughness={0.4} />
       </RoundedBox>
       <mesh position={[0, 0.55, 0.035]}>
         <planeGeometry args={[def.w * 0.68, def.h * 0.35]} />
@@ -66,7 +78,7 @@ function Tower({ def }: ShapeProps) {
   return (
     <group>
       <RoundedBox args={[def.w * 0.7, def.h * 0.9, def.w * 0.6]} radius={0.04} position={[0, def.h * 0.45, 0]}>
-        <meshStandardMaterial color="#1a1c24" roughness={0.4} metalness={0.3} />
+        <meshStandardMaterial {...matteProps("#2b2e3a")} roughness={0.4} metalness={0.3} />
       </RoundedBox>
       <mesh position={[0, def.h * 0.6, def.w * 0.31]}>
         <circleGeometry args={[0.14, 24]} />
@@ -81,13 +93,13 @@ function Chair({ def }: ShapeProps) {
   return (
     <group>
       <RoundedBox args={[def.w * 0.85, 0.16, def.w * 0.85]} radius={0.05} position={[0, 0.55, 0]}>
-        <meshStandardMaterial color={accent} roughness={0.4} />
+        <meshStandardMaterial {...matteProps(accent)} roughness={0.4} />
       </RoundedBox>
       <RoundedBox args={[def.w * 0.8, def.h * 0.55, 0.14]} radius={0.05} position={[0, 1.0, -def.w * 0.35]}>
-        <meshStandardMaterial color={accent} roughness={0.4} />
+        <meshStandardMaterial {...matteProps(accent)} roughness={0.4} />
       </RoundedBox>
       <RoundedBox args={[0.1, 0.5, 0.1]} radius={0.03} position={[0, 0.28, 0]}>
-        <meshStandardMaterial color={METAL} roughness={0.5} metalness={0.4} />
+        <meshStandardMaterial {...matteProps(METAL)} roughness={0.5} metalness={0.4} />
       </RoundedBox>
     </group>
   );
@@ -103,7 +115,7 @@ function Shelf({ def }: ShapeProps) {
           key={i} args={[def.w * 0.92, 0.06, def.h * 0.8]} radius={0.02}
           position={[0, (i + 1) * (def.h * 0.85 / boards), 0]}
         >
-          <meshStandardMaterial color={accent} roughness={0.5} />
+          <meshStandardMaterial {...matteProps(accent)} roughness={0.5} />
         </RoundedBox>
       ))}
     </group>
@@ -124,11 +136,11 @@ function Plant({ def }: ShapeProps) {
   return (
     <group>
       <RoundedBox args={[def.w * 0.55, 0.4, def.w * 0.55]} radius={0.06} position={[0, 0.2, 0]}>
-        <meshStandardMaterial color="#5a4632" roughness={0.7} />
+        <meshStandardMaterial {...matteProps("#5a4632")} roughness={0.7} />
       </RoundedBox>
       <mesh position={[0, def.h * 0.55, 0]}>
         <sphereGeometry args={[def.w * 0.4, 12, 10]} />
-        <meshStandardMaterial color="#3f8f5c" roughness={0.6} />
+        <meshStandardMaterial {...matteProps("#3f8f5c")} roughness={0.6} />
       </mesh>
     </group>
   );
@@ -138,7 +150,7 @@ function GenericBox({ def }: ShapeProps) {
   const accent = ACCENT_COLORS[def.accent];
   return (
     <RoundedBox args={[def.w * 0.85, def.h * 0.85, def.w * 0.85]} radius={0.05} position={[0, def.h * 0.42, 0]}>
-      <meshStandardMaterial color={accent} roughness={0.5} metalness={0.15} />
+      <meshStandardMaterial {...matteProps(accent)} roughness={0.5} metalness={0.15} />
     </RoundedBox>
   );
 }
