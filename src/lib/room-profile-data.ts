@@ -5,6 +5,10 @@ import { computeBadges, type Badge } from "./badges";
 import { parseFavoriteGames, type FavoriteGame } from "./favorite-games";
 import { QUEST_TYPE_META, type QuestType } from "./quests";
 import { getAvailableReviewYears } from "./year-review";
+import {
+  VITRINE_SLOT_RANGES, VITRINE_TOTAL_SLOTS, parseVitrineSlotsJson, parseSlotValue,
+  type VitrineItem,
+} from "./room-vitrine";
 
 /** Präfix, mit dem BadgesSection Custom-Badges im Showcase markiert. */
 const CUSTOM_BADGE_PREFIX = "custom:";
@@ -23,13 +27,6 @@ const CUSTOM_BADGE_PREFIX = "custom:";
  */
 
 // ── Core ─────────────────────────────────────────────────────────────────────
-
-export interface VitrineBadge {
-  key: string; icon: string; name: string;
-}
-export interface VitrineTrophy {
-  scopeType: string; scopeValue: string;
-}
 
 export interface RoomProfileCore {
   id:              string;
@@ -58,13 +55,14 @@ export interface RoomProfileCore {
   topGames:          string[];
   favoriteGames:     FavoriteGame[];
   vitrine: {
-    pokale:   Pokal[];
-    /** Gesamtzahl aller Pokale — `pokale` ist auf die Vitrinen-Fächer gekappt
-     *  (siehe VITRINE_SLOTS.pokale), damit die Bühne einen "+N"-Hinweis
-     *  zeigen kann, statt überzählige Pokale kommentarlos zu verschlucken. */
-    pokaleTotal: number;
-    badges:   VitrineBadge[];
-    trophies: VitrineTrophy[];
+    /** Ein Eintrag je Vitrinen-Fach, index-gleich mit VITRINE_SLOT_RANGES
+     *  (0..14) — `null` = Fach ist leer (nichts vorhanden oder bewusst
+     *  freigelassen). Jedes Fach kann jeden der drei Typen zeigen, nicht nur
+     *  den seiner Standard-Reihe (siehe room-vitrine.ts). */
+    slots: (VitrineItem | null)[];
+    /** Wie viele besessene Pokale/Wanderpokale/Abzeichen gerade in KEINEM
+     *  Fach angezeigt werden — treibt den "+N"-Hinweis auf der Bühne. */
+    hiddenCount: number;
   };
 }
 
@@ -104,7 +102,7 @@ export async function loadRoomProfileCore(userId: string): Promise<RoomProfileCo
     select: {
       id: true, name: true, username: true, image: true, bio: true, createdAt: true,
       points: true, rankPoints: true, birthday: true, twitchLogin: true, bannerUrl: true,
-      showcaseBadgesJson: true, favoriteGamesJson: true,
+      showcaseBadgesJson: true, favoriteGamesJson: true, vitrineSlotsJson: true,
     },
   });
   if (!user) return null;
@@ -113,14 +111,11 @@ export async function loadRoomProfileCore(userId: string): Promise<RoomProfileCo
   // Abzeichen-Showcase mischt System-Keys und Custom-Badges — letztere sind
   // mit "custom:" präfixiert (siehe BadgesSection.tsx).
   const showcaseBadge = parseIdList(user.showcaseBadgesJson).slice(0, 3);
-  const customBadgeIds = showcaseBadge
-    .filter(k => k.startsWith(CUSTOM_BADGE_PREFIX))
-    .map(k => k.slice(CUSTOM_BADGE_PREFIX.length));
 
   const [
     eventCount, startedEvents, higherRanked, totalUsers,
-    pokalCount, vitrinePokale, systemBadgeCount, customBadgeCount,
-    showcaseCustomBadges, trophies, lulPollWins,
+    pokalCount, allPokale, systemBadgeCount, customBadgeCount,
+    allCustomBadges, trophies, lulPollWins,
   ] = await Promise.all([
     prisma.eventRegistration.count({ where: { userId } }),
     prisma.event.findMany({
@@ -130,28 +125,24 @@ export async function loadRoomProfileCore(userId: string): Promise<RoomProfileCo
     prisma.user.count({ where: { rankPoints: { gt: user.rankPoints } } }),
     prisma.user.count(),
     prisma.pokal.count({ where: { userId } }),
-    // Nur so viele wie Vitrinen-Fächer für Pokale auf der Bühne existieren
-    // (siehe VITRINE_SLOTS.pokale in zimmer/sprites/index.tsx). Eventreihen-
-    // Pokale (isSeries) zuerst, weil sie die selteneren/wertvolleren sind —
-    // sonst verdrängt ein frischer Einzel-Pokal einen älteren Serien-Pokal
-    // rein nach Datum aus der Vorschau.
+    // Eventreihen-Pokale (isSeries) zuerst, weil sie die selteneren/wertvolleren
+    // sind — sonst verdrängt ein frischer Einzel-Pokal einen älteren
+    // Serien-Pokal rein nach Datum aus der Standardbelegung. `take` ist eine
+    // großzügige Obergrenze, kein Vitrinen-Limit — die Fächer wählen selbst
+    // aus, was sie zeigen (siehe resolveVitrineSlots unten).
     prisma.pokal.findMany({
       where:   { userId },
       orderBy: [{ isSeries: "desc" }, { awardedAt: "desc" }],
-      take:    6,
+      take:    100,
     }),
     prisma.userSystemBadge.count({ where: { userId } }),
     prisma.userCustomBadge.count({ where: { userId } }),
-    customBadgeIds.length > 0
-      ? prisma.userCustomBadge.findMany({
-          where:   { userId, customBadgeId: { in: customBadgeIds } },
-          include: { badge: { select: { id: true, icon: true, name: true } } },
-        })
-      : [],
-    prisma.wanderpocalHolder.findMany({
-      where:  { userId },
-      select: { scopeType: true, scopeValue: true },
-    }).catch(() => []),
+    prisma.userCustomBadge.findMany({
+      where:   { userId },
+      include: { badge: { select: { id: true, icon: true, name: true } } },
+      orderBy: { earnedAt: "desc" },
+    }),
+    prisma.wanderpocalHolder.findMany({ where: { userId } }).catch(() => []),
     prisma.lulEntry.count({ where: { userId, communityChamp: true } }).catch(() => 0),
   ]);
 
@@ -166,24 +157,21 @@ export async function loadRoomProfileCore(userId: string): Promise<RoomProfileCo
 
   const { rank, next, pct } = getRankProgress(user.rankPoints);
 
-  // Abzeichen im Showcase sind entweder System-Keys (Code) oder CustomBadge-IDs.
-  const customById = new Map(showcaseCustomBadges.map(uc => [uc.badge.id, uc.badge]));
   const systemBadges = computeBadges(
     { points: user.points, voiceHours: 0, messageCount: 0, eventCount, tournamentCount: 0,
       tournamentWins: 0, eventWins, mvpCount: pollMasterCount },
     new Set<string>(),
   );
-  const systemById = new Map(systemBadges.map(b => [b.id, b]));
-  const vitrineBadges: VitrineBadge[] = showcaseBadge
-    .map(key => {
-      if (key.startsWith(CUSTOM_BADGE_PREFIX)) {
-        const custom = customById.get(key.slice(CUSTOM_BADGE_PREFIX.length));
-        return custom ? { key, icon: custom.icon, name: custom.name } : null;
-      }
-      const sys = systemById.get(key);
-      return sys ? { key, icon: sys.icon, name: sys.name } : null;
-    })
-    .filter((b): b is VitrineBadge => !!b);
+  const earnedSystemBadges = systemBadges.filter(b => b.earned);
+
+  const vitrine = resolveVitrineSlots({
+    slotsJson:   user.vitrineSlotsJson,
+    showcaseBadgeKeys: showcaseBadge,
+    pokale:      allPokale,
+    trophies,
+    systemBadges: earnedSystemBadges,
+    customBadges: allCustomBadges.map(uc => ({ ...uc.badge, earnedAt: uc.earnedAt })),
+  });
 
   return {
     id:              user.id,
@@ -211,13 +199,118 @@ export async function loadRoomProfileCore(userId: string): Promise<RoomProfileCo
     badgeCount:        systemBadgeCount + customBadgeCount,
     topGames,
     favoriteGames:     parseFavoriteGames(user.favoriteGamesJson),
-    vitrine: {
-      pokale:      vitrinePokale,
-      pokaleTotal: pokalCount,
-      badges:      vitrineBadges,
-      trophies,
-    },
+    vitrine,
   };
+}
+
+/**
+ * Löst das Fächer-JSON zu 15 konkreten Vitrinen-Inhalten auf.
+ *
+ * Zwei Durchgänge: zuerst die vom User bewusst gesetzten Fächer (Auswahl
+ * ODER explizit leer), danach füllt ein Cursor je Pool (Pokale/Trophäen/
+ * Abzeichen) die restlichen, vom User nicht angefassten Fächer nach der
+ * Standard-Reihenfolge auf — unter Auslassung bereits verbauter Stücke, damit
+ * kein Pokal doppelt auftaucht, nur weil er sowohl von Hand als auch
+ * automatisch einsortiert würde.
+ */
+function resolveVitrineSlots(input: {
+  slotsJson: string | null;
+  showcaseBadgeKeys: string[];
+  pokale: Pokal[];
+  trophies: WanderpocalHolder[];
+  systemBadges: Badge[];
+  customBadges: { id: string; icon: string; name: string; earnedAt: Date }[];
+}): RoomProfileCore["vitrine"] {
+  const { slotsJson, showcaseBadgeKeys, pokale, trophies, systemBadges, customBadges } = input;
+
+  const pokalById     = new Map(pokale.map(p => [p.id, p]));
+  const trophyByKey   = new Map(trophies.map(t => [`${t.scopeType}:${t.scopeValue}`, t]));
+  const systemById    = new Map(systemBadges.map(b => [b.id, b]));
+  const customById    = new Map(customBadges.map(b => [b.id, b]));
+
+  function toPokalItem(p: Pokal): VitrineItem {
+    return { kind: "pokal", id: p.id, title: p.title, category: p.category, isSeries: p.isSeries, awardedAt: p.awardedAt.toISOString() };
+  }
+  function toTrophyItem(t: WanderpocalHolder): VitrineItem {
+    return { kind: "trophy", scopeType: t.scopeType, scopeValue: t.scopeValue, heldSince: t.heldSince.toISOString(), winCount: t.winCount };
+  }
+  function toBadgeItem(key: string): VitrineItem | null {
+    if (key.startsWith(CUSTOM_BADGE_PREFIX)) {
+      const c = customById.get(key.slice(CUSTOM_BADGE_PREFIX.length));
+      return c ? { kind: "badge", key, icon: c.icon, name: c.name, desc: "", earnedAt: c.earnedAt.toISOString(), custom: true } : null;
+    }
+    const s = systemById.get(key);
+    return s ? { kind: "badge", key, icon: s.icon, name: s.name, desc: s.desc, earnedAt: null, custom: false } : null;
+  }
+  function resolveValue(value: string): VitrineItem | null {
+    const parsed = parseSlotValue(value);
+    if (!parsed) return null;
+    if (parsed.kind === "pokal") {
+      const p = pokalById.get(parsed.id);
+      return p ? toPokalItem(p) : null;
+    }
+    if (parsed.kind === "trophy") {
+      const t = trophyByKey.get(`${parsed.scopeType}:${parsed.scopeValue}`);
+      return t ? toTrophyItem(t) : null;
+    }
+    return toBadgeItem(parsed.key);
+  }
+
+  const overrides = parseVitrineSlotsJson(slotsJson);
+  const slots: (VitrineItem | null)[] = new Array(VITRINE_TOTAL_SLOTS).fill(null);
+  const usedPokalIds   = new Set<string>();
+  const usedTrophyKeys = new Set<string>();
+  const usedBadgeKeys  = new Set<string>();
+
+  function markUsed(item: VitrineItem) {
+    if (item.kind === "pokal") usedPokalIds.add(item.id);
+    else if (item.kind === "trophy") usedTrophyKeys.add(`${item.scopeType}:${item.scopeValue}`);
+    else usedBadgeKeys.add(item.key);
+  }
+
+  // Durchgang 1: vom User gesetzte Fächer (Auswahl oder bewusst leer).
+  for (const [idxStr, value] of Object.entries(overrides)) {
+    const idx = Number(idxStr);
+    if (value === null) continue; // bleibt leer, kein Auto-Fill
+    const item = resolveValue(value);
+    if (item) { slots[idx] = item; markUsed(item); }
+  }
+
+  // Durchgang 2: unangetastete Fächer je Reihe automatisch mit dem
+  // Standard-Pool auffüllen (Reihenfolge wie vor der freien Belegung).
+  let pokalCursor = 0;
+  for (let i = VITRINE_SLOT_RANGES.pokale[0]; i < VITRINE_SLOT_RANGES.pokale[1]; i++) {
+    if (i in overrides) continue;
+    while (pokalCursor < pokale.length && usedPokalIds.has(pokale[pokalCursor].id)) pokalCursor++;
+    if (pokalCursor >= pokale.length) break;
+    const item = toPokalItem(pokale[pokalCursor]);
+    slots[i] = item; markUsed(item); pokalCursor++;
+  }
+
+  let trophyCursor = 0;
+  for (let i = VITRINE_SLOT_RANGES.trophies[0]; i < VITRINE_SLOT_RANGES.trophies[1]; i++) {
+    if (i in overrides) continue;
+    while (trophyCursor < trophies.length && usedTrophyKeys.has(`${trophies[trophyCursor].scopeType}:${trophies[trophyCursor].scopeValue}`)) trophyCursor++;
+    if (trophyCursor >= trophies.length) break;
+    const item = toTrophyItem(trophies[trophyCursor]);
+    slots[i] = item; markUsed(item); trophyCursor++;
+  }
+
+  let badgeCursor = 0;
+  for (let i = VITRINE_SLOT_RANGES.badges[0]; i < VITRINE_SLOT_RANGES.badges[1]; i++) {
+    if (i in overrides) continue;
+    while (badgeCursor < showcaseBadgeKeys.length && usedBadgeKeys.has(showcaseBadgeKeys[badgeCursor])) badgeCursor++;
+    if (badgeCursor >= showcaseBadgeKeys.length) break;
+    const item = toBadgeItem(showcaseBadgeKeys[badgeCursor]);
+    badgeCursor++;
+    if (item) { slots[i] = item; markUsed(item); }
+  }
+
+  const totalOwned = pokale.length + trophies.length + systemBadges.length + customBadges.length;
+  const totalShown = usedPokalIds.size + usedTrophyKeys.size + usedBadgeKeys.size;
+  const hiddenCount = Math.max(0, totalOwned - totalShown);
+
+  return { slots, hiddenCount };
 }
 
 // ── Details (hinter dem Röhrenmonitor) ───────────────────────────────────────

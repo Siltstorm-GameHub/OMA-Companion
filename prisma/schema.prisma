@@ -39,6 +39,10 @@ model User {
 
   // Badge Showcase: JSON-Array mit bis zu 3 Badge-Keys (system oder custom-id)
   showcaseBadgesJson String?
+  // Vitrinen-Fächer: JSON-Objekt { "<slotIndex>": "pokal:<id>" | "trophy:<scopeType>:<scopeValue>" | "badge:<key>" | null }.
+  // Fehlt ein Index, füllt loadRoomProfileCore das Fach automatisch (siehe room-profile-data.ts).
+  // null als Wert = User hat das Fach bewusst leer gelassen (kein Auto-Fill).
+  vitrineSlotsJson   String?
   // Aktuelle Lieblingsspiele: JSON-Array mit bis zu 5 { name, appId } (Steam App-ID für das Cover)
   favoriteGamesJson  String?
   // Notification-Präferenzen: JSON-Objekt { badge: bool, quest: bool, event: bool, points: bool, clip: bool, admin: bool }
