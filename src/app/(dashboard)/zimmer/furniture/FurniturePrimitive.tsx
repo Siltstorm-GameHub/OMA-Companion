@@ -12,11 +12,11 @@
  * lokalen Ursprung (Fußmittelpunkt) herum modelliert.
  */
 
-import { useMemo } from "react";
-import { RoundedBox, useGLTF } from "@react-three/drei";
-import { Mesh, MeshStandardMaterial, type Material } from "three";
+import { useEffect, useMemo, useRef } from "react";
+import { RoundedBox, useGLTF, useTexture } from "@react-three/drei";
+import { Mesh, MeshStandardMaterial, SpotLight, Vector3, type Material } from "three";
 import { ACCENT_COLORS } from "@/lib/room-3d";
-import type { RoomItemDef } from "@/lib/room-items";
+import type { RoomItemDef, RoomTag } from "@/lib/room-items";
 
 interface ShapeProps {
   def: RoomItemDef;
@@ -55,6 +55,9 @@ const GLB_MODELS: Partial<Record<string, string>> = {
   stuhl_racing:      "/models/chair_racing.glb",
   tastatur_mech:     "/models/keyboard_mech.glb",
   gaming_maus:       "/models/mouse_gaming.glb",
+  kommode:           "/models/kommode_offen.glb",
+  konsolentisch:     "/models/tisch_lang.glb",
+  schreibtisch_modern: "/models/desk_modern_white.glb",
 };
 
 for (const path of Object.values(GLB_MODELS)) {
@@ -79,6 +82,8 @@ export function GltfFurniture({ path }: { path: string }) {
     // extra mit hoher Emission gebaut) bleiben unangetastet.
     clone.traverse(obj => {
       if (!(obj instanceof Mesh)) return;
+      obj.castShadow = true;
+      obj.receiveShadow = true;
       const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
       obj.material = Array.isArray(obj.material)
         ? mats.map(m => boostMatte(m))
@@ -94,19 +99,21 @@ function boostMatte(material: Material) {
   if (material.emissiveIntensity > 0.5) return material; // absichtlich schon leuchtend (z.B. Screen)
   const m = material.clone();
   m.emissive.copy(m.color);
-  m.emissiveIntensity = 0.35;
+  m.emissiveIntensity = 0.1;
   return m;
 }
 
 /**
- * Kleiner Eigenleuchtanteil auf jedem matten Material — ohne das komprimiert
- * Three.js' Standard-Tonemapping normal beleuchtete Flächen erheblich dunkler
- * als der reine Hex-Wert vermuten lässt (sichtbar wird dann fast nur, was
- * `toneMapped={false}` gesetzt hat, z.B. Bildschirm-Glow). Ein moderater
- * Eigenleuchtanteil garantiert Mindesthelligkeit, ohne wie eine Lichtquelle
- * zu wirken (siehe RoomShell in RoomStage3D.tsx für dieselbe Begründung).
+ * Minimaler Eigenleuchtanteil auf jedem matten Material — verhindert reines
+ * Schwarz in unbeleuchteten Winkeln, ist aber klein genug, dass die
+ * tatsächliche Beleuchtung (RoomLighting: Richtungslicht + Ambient, siehe
+ * RoomStage3D.tsx) die Haupthelligkeit trägt statt jedes Material sein
+ * eigenes Pseudo-Glühen mitzubringen. Vorher 0.35 (deutlich sichtbares
+ * Eigenglühen auf JEDER Fläche) — jetzt nur noch eine kleine Mindesthelligkeits-
+ * Reserve; echtes Leuchten (Lampen, Screens, Neon) bleibt über
+ * `toneMapped={false}` + hohe `emissiveIntensity` (>0.5) gesondert markiert.
  */
-function matteProps(color: string, intensity = 0.35) {
+function matteProps(color: string, intensity = 0.1) {
   return { color, emissive: color, emissiveIntensity: intensity } as const;
 }
 
@@ -115,7 +122,7 @@ function Desk({ def }: ShapeProps) {
   const legH = 0.75;
   return (
     <group>
-      <RoundedBox args={[def.w * 0.94, 0.16, def.h * 0.9]} radius={0.04} position={[0, legH, 0]}>
+      <RoundedBox args={[def.w * 0.94, 0.16, def.h * 0.9]} radius={0.04} position={[0, legH, 0]} castShadow receiveShadow>
         <meshStandardMaterial {...matteProps(accent)} roughness={0.35} metalness={0.1} />
       </RoundedBox>
       {[-1, 1].map(sx => [-1, 1].map(sz => (
@@ -123,6 +130,7 @@ function Desk({ def }: ShapeProps) {
           key={`${sx}-${sz}`}
           args={[0.12, legH, 0.12]} radius={0.02}
           position={[sx * (def.w * 0.94 / 2 - 0.12), legH / 2, sz * (def.h * 0.9 / 2 - 0.12)]}
+          castShadow
         >
           <meshStandardMaterial {...matteProps(METAL)} roughness={0.5} metalness={0.4} />
         </RoundedBox>
@@ -148,7 +156,7 @@ function Monitor({ def }: ShapeProps) {
       <RoundedBox args={[0.08, neckH, 0.08]} radius={0.02} position={[0, 0.03 + neckH / 2, 0]}>
         <meshStandardMaterial {...matteProps(METAL)} roughness={0.6} />
       </RoundedBox>
-      <RoundedBox args={[bezelW, bezelH, 0.06]} radius={0.02} position={[0, screenY, 0]}>
+      <RoundedBox args={[bezelW, bezelH, 0.06]} radius={0.02} position={[0, screenY, 0]} castShadow>
         <meshStandardMaterial {...matteProps("#252a38")} roughness={0.4} />
       </RoundedBox>
       {/* Dünner heller Rahmen ums Screen-Glow — gibt dem Bildschirm eine
@@ -169,7 +177,7 @@ function Tower({ def }: ShapeProps) {
   const accent = ACCENT_COLORS[def.accent];
   return (
     <group>
-      <RoundedBox args={[def.w * 0.7, def.h * 0.9, def.w * 0.6]} radius={0.04} position={[0, def.h * 0.45, 0]}>
+      <RoundedBox args={[def.w * 0.7, def.h * 0.9, def.w * 0.6]} radius={0.04} position={[0, def.h * 0.45, 0]} castShadow receiveShadow>
         <meshStandardMaterial {...matteProps("#2b2e3a")} roughness={0.4} metalness={0.3} />
       </RoundedBox>
       {/* Lüfter-Glow vorne */}
@@ -191,10 +199,10 @@ function Chair({ def }: ShapeProps) {
   const accent = ACCENT_COLORS[def.accent];
   return (
     <group>
-      <RoundedBox args={[def.w * 0.85, 0.16, def.w * 0.85]} radius={0.05} position={[0, 0.55, 0]}>
+      <RoundedBox args={[def.w * 0.85, 0.16, def.w * 0.85]} radius={0.05} position={[0, 0.55, 0]} castShadow receiveShadow>
         <meshStandardMaterial {...matteProps(accent)} roughness={0.4} />
       </RoundedBox>
-      <RoundedBox args={[def.w * 0.8, def.h * 0.55, 0.14]} radius={0.05} position={[0, 1.0, -def.w * 0.35]}>
+      <RoundedBox args={[def.w * 0.8, def.h * 0.55, 0.14]} radius={0.05} position={[0, 1.0, -def.w * 0.35]} castShadow>
         <meshStandardMaterial {...matteProps(accent)} roughness={0.4} />
       </RoundedBox>
       <RoundedBox args={[0.1, 0.5, 0.1]} radius={0.03} position={[0, 0.28, 0]}>
@@ -207,13 +215,19 @@ function Chair({ def }: ShapeProps) {
 function Shelf({ def }: ShapeProps) {
   const accent = ACCENT_COLORS[def.accent];
   const boards = 3;
+  // Bretter/Halterungen MÜSSEN vollständig auf der Rauminneren-Seite (Z>0
+  // lokal) liegen — vorher um Z=0 zentriert bzw. sogar bei negativem Z, wodurch
+  // die Hälfte im/hinter der (inzwischen dicken) Wand steckte und auf der
+  // Außenseite sichtbar herausragte. Feste, moderate Tiefe statt an def.h
+  // (das ist die Wandraster-HÖHE, keine physische Tiefe) skaliert.
+  const boardDepth = 0.22;
   return (
     <group>
       {Array.from({ length: boards }).map((_, i) => {
         const y = (i + 1) * (def.h * 0.85 / boards);
         return (
           <group key={i}>
-            <RoundedBox args={[def.w * 0.92, 0.06, def.h * 0.8]} radius={0.02} position={[0, y, 0]}>
+            <RoundedBox args={[def.w * 0.92, 0.06, boardDepth]} radius={0.02} position={[0, y, boardDepth / 2]} castShadow receiveShadow>
               <meshStandardMaterial {...matteProps(accent)} roughness={0.5} />
             </RoundedBox>
             {/* Winkel-Halterungen an beiden Enden — sonst wirken die Bretter
@@ -222,7 +236,7 @@ function Shelf({ def }: ShapeProps) {
               <RoundedBox
                 key={side}
                 args={[0.05, 0.08, 0.12]} radius={0.01}
-                position={[side * (def.w * 0.92 / 2 - 0.06), y - 0.05, -def.h * 0.3]}
+                position={[side * (def.w * 0.92 / 2 - 0.06), y - 0.05, 0.06]}
               >
                 <meshStandardMaterial {...matteProps(METAL)} roughness={0.5} metalness={0.4} />
               </RoundedBox>
@@ -246,10 +260,10 @@ function LightStrip({ def }: ShapeProps) {
 function Plant({ def }: ShapeProps) {
   return (
     <group>
-      <RoundedBox args={[def.w * 0.55, 0.4, def.w * 0.55]} radius={0.06} position={[0, 0.2, 0]}>
+      <RoundedBox args={[def.w * 0.55, 0.4, def.w * 0.55]} radius={0.06} position={[0, 0.2, 0]} castShadow receiveShadow>
         <meshStandardMaterial {...matteProps("#5a4632")} roughness={0.7} />
       </RoundedBox>
-      <mesh position={[0, def.h * 0.55, 0]}>
+      <mesh position={[0, def.h * 0.55, 0]} castShadow>
         <sphereGeometry args={[def.w * 0.4, 12, 10]} />
         <meshStandardMaterial {...matteProps("#3f8f5c")} roughness={0.6} />
       </mesh>
@@ -263,7 +277,7 @@ function WallPanel({ def }: ShapeProps) {
   const accent = ACCENT_COLORS[def.accent];
   return (
     <group position={[0, def.h / 2, 0]}>
-      <RoundedBox args={[def.w * 0.92, def.h * 0.92, 0.05]} radius={0.02} position={[0, 0, 0.025]}>
+      <RoundedBox args={[def.w * 0.92, def.h * 0.92, 0.05]} radius={0.02} position={[0, 0, 0.025]} castShadow receiveShadow>
         <meshStandardMaterial {...matteProps(accent)} roughness={0.5} />
       </RoundedBox>
       <mesh position={[0, 0, 0.052]}>
@@ -279,9 +293,31 @@ function WallPanel({ def }: ShapeProps) {
 function Rug({ def }: ShapeProps) {
   const accent = ACCENT_COLORS[def.accent];
   return (
-    <RoundedBox args={[def.w * 0.94, 0.03, def.h * 0.94]} radius={0.015} position={[0, 0.015, 0]}>
+    <RoundedBox args={[def.w * 0.94, 0.03, def.h * 0.94]} radius={0.015} position={[0, 0.015, 0]} receiveShadow>
       <meshStandardMaterial {...matteProps(accent)} roughness={0.85} />
     </RoundedBox>
+  );
+}
+
+/** Runder Standard-Teppich mit OMA-Logo — Serienausstattung, liegt zentral im
+ *  Zimmer. Zwei flache Kreis-Scheiben statt einer: die untere trägt die
+ *  Akzentfarbe als Rand, die obere (kleiner, leicht angehoben) das Logo als
+ *  transparentes PNG, damit der Rand als Teppichkante sichtbar bleibt. */
+function LogoRug({ def }: ShapeProps) {
+  const accent = ACCENT_COLORS[def.accent];
+  const logo = useTexture("/brand/logo-512.png");
+  const radius = Math.min(def.w, def.h) * 0.47;
+  return (
+    <group>
+      <mesh position={[0, 0.015, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <circleGeometry args={[radius, 48]} />
+        <meshStandardMaterial {...matteProps(accent)} roughness={0.85} />
+      </mesh>
+      <mesh position={[0, 0.018, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[radius * 0.6, 48]} />
+        <meshStandardMaterial map={logo} transparent roughness={0.75} />
+      </mesh>
+    </group>
   );
 }
 
@@ -292,7 +328,7 @@ function PowerStrip({ def }: ShapeProps) {
   const sockets = Math.max(2, def.w);
   return (
     <group>
-      <RoundedBox args={[def.w * 0.9, 0.12, def.h * 0.5]} radius={0.03} position={[0, 0.06, 0]}>
+      <RoundedBox args={[def.w * 0.9, 0.12, def.h * 0.5]} radius={0.03} position={[0, 0.06, 0]} castShadow receiveShadow>
         <meshStandardMaterial {...matteProps("#20242e")} roughness={0.5} metalness={0.2} />
       </RoundedBox>
       {Array.from({ length: sockets }).map((_, i) => {
@@ -316,7 +352,7 @@ function Gadget({ def, kind }: ShapeProps & { kind: "cam" | "mic" | "streamdeck"
   if (kind === "mic") {
     return (
       <group>
-        <RoundedBox args={[def.w * 0.4, 0.04, def.w * 0.4]} radius={0.02} position={[0, 0.02, 0]}>
+        <RoundedBox args={[def.w * 0.4, 0.04, def.w * 0.4]} radius={0.02} position={[0, 0.02, 0]} receiveShadow>
           <meshStandardMaterial {...matteProps("#20242e")} roughness={0.5} metalness={0.3} />
         </RoundedBox>
         <mesh position={[0, def.h * 0.32, 0]}>
@@ -333,7 +369,7 @@ function Gadget({ def, kind }: ShapeProps & { kind: "cam" | "mic" | "streamdeck"
   if (kind === "cam") {
     return (
       <group position={[0, def.h * 0.4, 0]}>
-        <RoundedBox args={[def.w * 0.55, def.h * 0.35, 0.16]} radius={0.05} position={[0, 0, 0]}>
+        <RoundedBox args={[def.w * 0.55, def.h * 0.35, 0.16]} radius={0.05} position={[0, 0, 0]} castShadow>
           <meshStandardMaterial {...matteProps("#20242e")} roughness={0.45} metalness={0.2} />
         </RoundedBox>
         <mesh position={[0, 0, 0.09]}>
@@ -346,7 +382,7 @@ function Gadget({ def, kind }: ShapeProps & { kind: "cam" | "mic" | "streamdeck"
   if (kind === "streamdeck") {
     return (
       <group>
-        <RoundedBox args={[def.w * 0.75, 0.05, def.w * 0.6]} radius={0.02} position={[0, 0.025, 0]}>
+        <RoundedBox args={[def.w * 0.75, 0.05, def.w * 0.6]} radius={0.02} position={[0, 0.025, 0]} receiveShadow>
           <meshStandardMaterial {...matteProps("#20242e")} roughness={0.5} metalness={0.2} />
         </RoundedBox>
         {[-1, 0, 1].flatMap(cx => [-1, 1].map(cz => (
@@ -361,7 +397,7 @@ function Gadget({ def, kind }: ShapeProps & { kind: "cam" | "mic" | "streamdeck"
   if (kind === "capture") {
     return (
       <group>
-        <RoundedBox args={[def.w * 0.7, 0.09, def.w * 0.45]} radius={0.03} position={[0, 0.045, 0]}>
+        <RoundedBox args={[def.w * 0.7, 0.09, def.w * 0.45]} radius={0.03} position={[0, 0.045, 0]} castShadow receiveShadow>
           <meshStandardMaterial {...matteProps("#20242e")} roughness={0.45} metalness={0.25} />
         </RoundedBox>
         <mesh position={[0, 0.045, def.w * 0.23]}>
@@ -374,7 +410,7 @@ function Gadget({ def, kind }: ShapeProps & { kind: "cam" | "mic" | "streamdeck"
   // "console" — flache, breite Konsolen-Schale statt eines hohen Würfels.
   return (
     <group>
-      <RoundedBox args={[def.w * 0.8, def.h * 0.28, def.w * 0.6]} radius={0.04} position={[0, def.h * 0.14, 0]}>
+      <RoundedBox args={[def.w * 0.8, def.h * 0.28, def.w * 0.6]} radius={0.04} position={[0, def.h * 0.14, 0]} castShadow receiveShadow>
         <meshStandardMaterial {...matteProps("#20242e")} roughness={0.4} metalness={0.2} />
       </RoundedBox>
       <mesh position={[0, def.h * 0.14, def.w * 0.31]}>
@@ -390,7 +426,7 @@ function CoffeeMaker({ def }: ShapeProps) {
   const accent = ACCENT_COLORS[def.accent];
   return (
     <group>
-      <RoundedBox args={[def.w * 0.75, def.h * 0.4, def.w * 0.6]} radius={0.04} position={[0, def.h * 0.2, 0]}>
+      <RoundedBox args={[def.w * 0.75, def.h * 0.4, def.w * 0.6]} radius={0.04} position={[0, def.h * 0.2, 0]} castShadow receiveShadow>
         <meshStandardMaterial {...matteProps("#2b2e3a")} roughness={0.4} metalness={0.2} />
       </RoundedBox>
       <RoundedBox args={[def.w * 0.5, def.h * 0.35, def.w * 0.4]} radius={0.03} position={[0, def.h * 0.58, 0]}>
@@ -410,7 +446,7 @@ function TunedRollator({ def }: ShapeProps) {
   const wheelY = 0.09;
   return (
     <group>
-      <RoundedBox args={[def.w * 0.7, 0.06, def.h * 0.7]} radius={0.02} position={[0, def.h * 0.5, 0]}>
+      <RoundedBox args={[def.w * 0.7, 0.06, def.h * 0.7]} radius={0.02} position={[0, def.h * 0.5, 0]} castShadow receiveShadow>
         <meshStandardMaterial {...matteProps("#3a3f4c")} roughness={0.4} metalness={0.5} />
       </RoundedBox>
       {[-1, 1].map(sx => [-1, 1].map(sz => (
@@ -437,7 +473,7 @@ function GenericBox({ def }: ShapeProps) {
   const bodyH = def.h * 0.85;
   return (
     <group>
-      <RoundedBox args={[def.w * 0.85, bodyH, def.w * 0.85]} radius={0.05} position={[0, def.h * 0.42, 0]}>
+      <RoundedBox args={[def.w * 0.85, bodyH, def.w * 0.85]} radius={0.05} position={[0, def.h * 0.42, 0]} castShadow receiveShadow>
         <meshStandardMaterial {...matteProps("#2b2e3a")} roughness={0.5} metalness={0.15} />
       </RoundedBox>
       {/* Akzentfarbener Deckel-Streifen — sonst sind sehr unterschiedliche
@@ -446,6 +482,7 @@ function GenericBox({ def }: ShapeProps) {
       <RoundedBox
         args={[def.w * 0.85, bodyH * 0.22, def.w * 0.85]} radius={0.05}
         position={[0, def.h * 0.42 + bodyH * 0.39, 0]}
+        castShadow
       >
         <meshStandardMaterial {...matteProps(accent)} roughness={0.4} metalness={0.15} />
       </RoundedBox>
@@ -453,8 +490,34 @@ function GenericBox({ def }: ShapeProps) {
   );
 }
 
-/** Ordnet ein Katalog-Item einem der obigen Shape-Rezepte zu und rendert es direkt. */
-export function FurniturePrimitive({ def }: ShapeProps) {
+/**
+ * Kleiner Deko-Pokal fürs Regal (mustStandOn:"shelf") — Höhe folgt derselben
+ * Formel wie das oberste Brett in Shelf() (def.h * 0.85), damit er optisch
+ * auf dem Regal steht statt mittig zu schweben oder im untersten Brett zu
+ * versinken.
+ */
+function ShelfTrophy({ def }: ShapeProps) {
+  const y = def.h * 0.85;
+  const gold = "#e9c874";
+  return (
+    <group position={[0, y, 0.1]}>
+      <mesh position={[0, 0.075, 0]} castShadow>
+        <cylinderGeometry args={[0.045, 0.018, 0.06, 10]} />
+        <meshStandardMaterial {...matteProps(gold, 0.3)} roughness={0.25} metalness={0.7} />
+      </mesh>
+      <mesh position={[0, 0.03, 0]} castShadow>
+        <cylinderGeometry args={[0.014, 0.014, 0.04, 8]} />
+        <meshStandardMaterial {...matteProps(gold, 0.3)} roughness={0.25} metalness={0.7} />
+      </mesh>
+      <mesh position={[0, 0.005, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[0.035, 0.035, 0.015, 12]} />
+        <meshStandardMaterial {...matteProps(gold, 0.3)} roughness={0.25} metalness={0.7} />
+      </mesh>
+    </group>
+  );
+}
+
+function pickShape(def: RoomItemDef) {
   const glbPath = GLB_MODELS[def.key];
   if (glbPath) return <GltfFurniture path={glbPath} />;
   if (def.tags.includes("desk")) return <Desk def={def} />;
@@ -472,8 +535,121 @@ export function FurniturePrimitive({ def }: ShapeProps) {
   if (def.tags.includes("console") || def.tags.includes("console_retro")) return <Gadget def={def} kind="console" />;
   if (def.tags.includes("whiteboard")) return <WallPanel def={def} />;
   if (def.key === "poster_retro") return <WallPanel def={def} />;
+  if (def.key === "deko_pokal") return <ShelfTrophy def={def} />;
   if (def.key === "teppich") return <Rug def={def} />;
+  if (def.key === "teppich_rund_logo") return <LogoRug def={def} />;
   if (def.key === "kaffeemaschine") return <CoffeeMaker def={def} />;
   if (def.key === "rollator") return <TunedRollator def={def} />;
   return <GenericBox def={def} />;
+}
+
+/**
+ * Tags, deren Möbelstücke im echten Leben selbst Licht abgeben — bekommen
+ * zusätzlich zu ihrem (bereits emissiven) Material eine ECHTE `pointLight`,
+ * die auch benachbarte Objekte/den Boden anstrahlt, statt nur selbst hell zu
+ * wirken. Bewusst OHNE `castShadow` (Performance: bei vielen gleichzeitig
+ * platzierten Lampen/Monitoren/Neon-Elementen wäre ein Schatten-Cubemap pro
+ * Licht zu teuer) — nur die eine Deckenlampe (siehe CeilingLamp3D) wirft
+ * echte Schatten, als "Hauptlichtquelle" des Raums.
+ */
+const GLOWING_TAGS: RoomTag[] = ["light", "neon", "ringlight", "monitor", "crt", "monitor_144"];
+
+/**
+ * Echte Lampen (Steh-/Schreibtischlampe) werfen ihr Licht real gerichtet nach
+ * unten ab, nicht gleichmäßig in alle Richtungen — ein `spotLight` statt
+ * `pointLight` an dieser Stelle ist kein kosmetischer Unterschied, sondern
+ * bildet ab, wie ein Lampenschirm tatsächlich funktioniert (Kegel nach unten,
+ * kein Licht nach oben durch den Schirm).
+ */
+const SPOTLIGHT_KEYS = new Set(["stehlampe", "schreibtischlampe"]);
+
+/**
+ * `SpotLight.target` ist ein eigenständiges Object3D, das NICHT automatisch
+ * im selben Gruppen-Zweig hängt wie das Licht — ein simples
+ * `target-position={[0,0,0]}` würde also einen festen WELT-Punkt anpeilen
+ * (die Raumecke), nicht "senkrecht unter der Lampe", egal wo sie im Zimmer
+ * steht. Hier stattdessen die tatsächliche Weltposition des Lichts auslesen
+ * (`getWorldPosition`, berücksichtigt die umschließende Platzierungs-Gruppe
+ * korrekt) und das Ziel direkt darunter auf Bodenhöhe setzen.
+ */
+function LampSpotLight({ color, lightY }: { color: string; lightY: number }) {
+  const ref = useRef<SpotLight>(null);
+  useEffect(() => {
+    const light = ref.current;
+    if (!light) return;
+    const worldPos = light.getWorldPosition(new Vector3());
+    light.target.position.set(worldPos.x, 0, worldPos.z);
+    light.target.updateMatrixWorld();
+  }, []);
+  return (
+    <spotLight
+      ref={ref} position={[0, lightY, 0]}
+      color={color} intensity={1.4} distance={3.5} decay={2}
+      angle={Math.PI / 3.2} penumbra={0.6}
+    />
+  );
+}
+
+/**
+ * Monitore, LED-Streifen und Neon-Panels sind physisch FLACHE leuchtende
+ * Flächen, keine Punktquellen — eine `rectAreaLight` (rechteckige Fläche,
+ * strahlt gerichtet in eine Richtung statt kugelförmig wie `pointLight`)
+ * bildet das treffender ab. Ringlicht bleibt bewusst bei `pointLight`: es ist
+ * als Ring geformt, keine flache Scheibe, und wirkt in der Praxis eher
+ * rundum-streuend.
+ *
+ * `rotation={[0, Math.PI, 0]}` ist kein Zufallswert: eine RectAreaLight
+ * strahlt entlang ihrer lokalen −Z-Achse, aber unsere Screen-/Panel-Flächen
+ * sind alle mit der Normalen nach +Z gebaut (dieselbe Konvention wie
+ * `surfaceRotationY`/wall_back) — ohne die 180°-Drehung würde das Licht
+ * rückwärts in die Wand/das Gehäuse scheinen statt sichtbar in den Raum.
+ */
+function isFlatPanelTag(def: RoomItemDef): boolean {
+  if (def.tags.includes("ringlight")) return false;
+  return def.tags.includes("light") || def.tags.includes("neon")
+    || def.tags.includes("monitor") || def.tags.includes("crt") || def.tags.includes("monitor_144");
+}
+
+/** Ordnet ein Katalog-Item einem der obigen Shape-Rezepte zu und rendert es direkt. */
+export function FurniturePrimitive({ def }: ShapeProps) {
+  const shape = pickShape(def);
+  const glows = def.tags.some(t => GLOWING_TAGS.includes(t));
+  if (!glows) return shape;
+
+  const accent = ACCENT_COLORS[def.accent];
+  const isMonitor = def.tags.includes("monitor") || def.tags.includes("crt");
+  const lightY = isMonitor ? 0.85 + 0.3 * def.h : def.h * 0.55;
+
+  if (SPOTLIGHT_KEYS.has(def.key)) {
+    return (
+      <>
+        {shape}
+        <LampSpotLight color={accent} lightY={lightY} />
+      </>
+    );
+  }
+
+  if (isFlatPanelTag(def)) {
+    const panelW = isMonitor ? 0.42 : def.w * 0.9;
+    const panelH = isMonitor ? 0.26 : def.h * 0.45;
+    return (
+      <>
+        {shape}
+        <rectAreaLight
+          position={[0, lightY, isMonitor ? 0.05 : 0.03]} rotation={[0, Math.PI, 0]}
+          color={accent} intensity={isMonitor ? 2.2 : 3.5} width={panelW} height={panelH}
+        />
+      </>
+    );
+  }
+
+  return (
+    <>
+      {shape}
+      <pointLight
+        position={[0, lightY, isMonitor ? 0.15 : 0]}
+        color={accent} intensity={isMonitor ? 0.35 : 0.55} distance={isMonitor ? 1.8 : 3} decay={2}
+      />
+    </>
+  );
 }

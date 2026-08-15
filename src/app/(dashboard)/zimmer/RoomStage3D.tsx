@@ -21,7 +21,14 @@ import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber"
 import { OrthographicCamera, ContactShadows, Html } from "@react-three/drei";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
 import { Vector3, Mesh, MeshStandardMaterial, type OrthographicCamera as ThreeOrthographicCamera } from "three";
+import { RectAreaLightUniformsLib } from "three/addons/lights/RectAreaLightUniformsLib.js";
 import { useGLTF } from "@react-three/drei";
+
+// Einmalig auf Modulebene, nicht in einem Component-Effect: RectAreaLight
+// (Monitor-Screens/Neon-Panels, siehe FurniturePrimitive.tsx) braucht diese
+// Uniform-Library, bevor der erste Frame gerendert wird — sonst bleibt das
+// erste Bild falsch/dunkel, bis ein Effect nachträglich greift.
+RectAreaLightUniformsLib.init();
 import {
   ROOM_SIZE, ROOM_CENTER, SHELL_COLORS, ACCENT_COLORS, WALL_THICKNESS,
   WALL_COLOR_BY_KEY, FLOOR_COLOR_BY_KEY, shadeHex,
@@ -31,7 +38,7 @@ import { getRoomItem } from "@/lib/room-items";
 import { roomLevel, type PlacedItem, type RoomState, type RoomSurface as LayoutSurface } from "@/lib/room-layout";
 import type { VitrineItem } from "@/lib/room-vitrine";
 import { FurniturePrimitive } from "./furniture/FurniturePrimitive";
-import { RoomWindow3D, CeilingLamp3D } from "./RoomLevelFixtures";
+import { RoomWindow3D, CeilingLamp3D, EntranceDoor3D } from "./RoomLevelFixtures";
 
 export type InteractTarget = "crt" | "vitrine" | "jobboard";
 
@@ -51,6 +58,13 @@ interface Props {
   vitrineReadOnly?: boolean;
   onInteract: (target: InteractTarget, itemKey?: string, slotIndex?: number) => void;
   edit?: EditHooks;
+  /**
+   * Aktuell offenes Interaktions-Overlay (Profil-Popup/Vitrine) — vom Aufrufer
+   * durchgereicht (siehe RoomView.tsx `openTarget`), damit die Kamera beim
+   * Öffnen ECHT auf das Objekt zuzoomt statt nur ein Popup aufreißen zu lassen,
+   * und beim Schließen wieder auf die normale Raumansicht zurückfährt.
+   */
+  focusTarget?: InteractTarget | null;
 }
 
 function RoomShell({
@@ -89,36 +103,40 @@ function RoomShell({
           seine Außenkante bündig mit der Wand-Außenseite abschließt statt an
           deren Innenkante eine Lücke zu lassen — unabhängig davon, welche
           zwei Wände gerade sichtbar sind. */}
-      <mesh position={[width / 2, -WALL_THICKNESS / 2, depth / 2]}>
+      {/* emissiveIntensity deutlich reduziert (war 0.55, pauschal für JEDE
+          Fläche) — die Grundhelligkeit kommt jetzt vom echten Licht in
+          RoomLighting, dieser Rest-Eigenleuchtanteil verhindert nur noch
+          reines Schwarz in unbeleuchteten Ecken. */}
+      <mesh position={[width / 2, -WALL_THICKNESS / 2, depth / 2]} receiveShadow>
         <boxGeometry args={[width + WALL_THICKNESS * 2, WALL_THICKNESS, depth + WALL_THICKNESS * 2]} />
-        <meshStandardMaterial color={floorColor} emissive={floorColor} emissiveIntensity={0.55} roughness={0.85} />
+        <meshStandardMaterial color={floorColor} emissive={floorColor} emissiveIntensity={0.12} roughness={0.85} />
       </mesh>
       {!hiddenWalls.has("wall_back") && (
-        <mesh position={[width / 2, height / 2, -WALL_THICKNESS / 2]}>
+        <mesh position={[width / 2, height / 2, -WALL_THICKNESS / 2]} receiveShadow castShadow>
           <boxGeometry args={[width, height, WALL_THICKNESS]} />
-          <meshStandardMaterial color={wallColor} emissive={wallColor} emissiveIntensity={0.55} roughness={0.9} />
+          <meshStandardMaterial color={wallColor} emissive={wallColor} emissiveIntensity={0.12} roughness={0.9} />
         </mesh>
       )}
       {!hiddenWalls.has("wall_front") && (
-        <mesh position={[width / 2, height / 2, depth + WALL_THICKNESS / 2]}>
+        <mesh position={[width / 2, height / 2, depth + WALL_THICKNESS / 2]} receiveShadow castShadow>
           <boxGeometry args={[width, height, WALL_THICKNESS]} />
-          <meshStandardMaterial color={wallColor} emissive={wallColor} emissiveIntensity={0.55} roughness={0.9} />
+          <meshStandardMaterial color={wallColor} emissive={wallColor} emissiveIntensity={0.12} roughness={0.9} />
         </mesh>
       )}
       {!hiddenWalls.has("wall_side") && (
-        <mesh position={[-WALL_THICKNESS / 2, height / 2, depth / 2]}>
+        <mesh position={[-WALL_THICKNESS / 2, height / 2, depth / 2]} receiveShadow castShadow>
           <boxGeometry args={[WALL_THICKNESS, height, depth]} />
           <meshStandardMaterial
-            color={shadeHex(wallColor, 0.72)} emissive={shadeHex(wallColor, 0.72)} emissiveIntensity={0.55}
+            color={shadeHex(wallColor, 0.72)} emissive={shadeHex(wallColor, 0.72)} emissiveIntensity={0.12}
             roughness={0.9}
           />
         </mesh>
       )}
       {!hiddenWalls.has("wall_right") && (
-        <mesh position={[width + WALL_THICKNESS / 2, height / 2, depth / 2]}>
+        <mesh position={[width + WALL_THICKNESS / 2, height / 2, depth / 2]} receiveShadow castShadow>
           <boxGeometry args={[WALL_THICKNESS, height, depth]} />
           <meshStandardMaterial
-            color={shadeHex(wallColor, 0.72)} emissive={shadeHex(wallColor, 0.72)} emissiveIntensity={0.55}
+            color={shadeHex(wallColor, 0.72)} emissive={shadeHex(wallColor, 0.72)} emissiveIntensity={0.12}
             roughness={0.9}
           />
         </mesh>
@@ -149,28 +167,39 @@ function RoomShell({
   );
 }
 
-function NeonEdge() {
-  const { width, depth, height } = ROOM_SIZE;
-  return (
-    <group>
-      <mesh position={[width / 2, height - 0.05, 0.05]}>
-        <boxGeometry args={[width * 0.96, 0.08, 0.08]} />
-        <meshStandardMaterial color="#5ee6ff" emissive="#5ee6ff" emissiveIntensity={2.5} toneMapped={false} />
-      </mesh>
-      <mesh rotation={[0, Math.PI / 2, 0]} position={[0.05, height - 0.05, depth / 2]}>
-        <boxGeometry args={[depth * 0.94, 0.08, 0.08]} />
-        <meshStandardMaterial color="#c07bff" emissive="#c07bff" emissiveIntensity={2.5} toneMapped={false} />
-      </mesh>
-    </group>
-  );
-}
-
+/**
+ * Beleuchtung des Raums — bewusst kein rein dekoratives Ambiente-Licht mehr
+ * (die frühere Deckenkanten-Neon-Linie, die unabhängig von jeder echten
+ * Lichtquelle immer lief, ist entfernt). Basis ist ein gedämpftes
+ * Umgebungslicht (verhindert reines Schwarz in Schattenbereichen) plus ein
+ * gerichtetes "Sonnenlicht" durchs Fenster, das ECHTE Schatten wirft
+ * (`castShadow`) — Möbel-Schatten kommen jetzt von einer echten Lichtquelle,
+ * nicht mehr nur vom gebackenen `ContactShadows`-Bodenschatten. Einzelne
+ * Leuchtmittel (Deckenlampe, Stehlampe, Monitore, Neon-Deko) tragen ihr
+ * eigenes `pointLight`/`rectAreaLight` direkt an ihrer Geometrie (siehe
+ * CeilingLamp3D, FurniturePrimitive.tsx) statt einer globalen Pauschale.
+ */
 function RoomLighting() {
+  const { width, depth } = ROOM_SIZE;
   return (
     <>
-      <ambientLight intensity={0.55} />
-      <hemisphereLight args={["#6a63a0", "#1c1830", 1.1]} />
-      <directionalLight position={[6, 10, 4]} intensity={1.1} color="#fff2e0" />
+      <ambientLight intensity={0.22} />
+      <hemisphereLight args={["#6a63a0", "#1c1830", 0.35]} />
+      <directionalLight
+        position={[width * 0.4, 6, depth * 1.3]}
+        intensity={1.3}
+        color="#fff2e0"
+        castShadow
+        shadow-mapSize-width={1024}
+        shadow-mapSize-height={1024}
+        shadow-camera-left={-Math.max(width, depth) * 0.7}
+        shadow-camera-right={Math.max(width, depth) * 0.7}
+        shadow-camera-top={Math.max(width, depth) * 0.7}
+        shadow-camera-bottom={-Math.max(width, depth) * 0.7}
+        shadow-camera-near={0.5}
+        shadow-camera-far={30}
+        shadow-bias={-0.0015}
+      />
     </>
   );
 }
@@ -472,8 +501,20 @@ function EditLayer({ edit, hiddenWalls }: { edit: EditHooks; hiddenWalls: Readon
  * tatsächlichen Kamera-Achsen (robust gegenüber Kamerawinkel-Änderungen,
  * ohne eine geschlossene Formel für die isometrische Projektion zu brauchen).
  */
-function FitCamera({ camPos }: { camPos: readonly [number, number, number] }) {
+/**
+ * Wie stark reingezoomt wird, wenn ein Monitor/die Vitrine angeklickt wird
+ * (siehe `focused`-Prop) — multipliziert auf den normalen Einpass-Zoom.
+ * `virtuell reinzoomen` statt eines Popups, das abrupt über der Bühne
+ * aufreißt: die Kamera fährt tatsächlich näher heran, während das
+ * (unverändert bestehende) Profil-/Vitrinen-Modal sich öffnet.
+ */
+const FOCUS_ZOOM_BOOST = 3.2;
+
+function FitCamera({
+  camPos, focused,
+}: { camPos: readonly [number, number, number]; focused: boolean }) {
   const { size, camera } = useThree();
+  const currentZoom = useRef<number | null>(null);
 
   const zoom = useMemo(() => {
     const eye = new Vector3(...camPos);
@@ -498,24 +539,39 @@ function FitCamera({ camPos }: { camPos: readonly [number, number, number] }) {
     return Math.min(size.width / (maxX - minX), size.height / (maxY - minY)) * margin;
   }, [size.width, size.height, camPos]);
 
-  useEffect(() => {
+  // Beim allerersten Frame direkt auf den Ziel-Zoom springen (kein sichtbares
+  // Auf-/Abschwellen beim Laden), danach für den Fokus-Zoom sanft interpolieren.
+  useEffect(() => { currentZoom.current = null; }, [zoom]);
+
+  /* eslint-disable react-hooks/immutability -- Three.js-Objekt (R3F `camera`),
+     keine React-Hook-Semantik: direktes Mutieren + updateProjectionMatrix()
+     pro Frame ist der von R3F selbst dokumentierte Animationsweg. */
+  useFrame((_, delta) => {
     const cam = camera as ThreeOrthographicCamera;
     if (typeof cam.zoom !== "number") return;
-    // Three.js-Objekte sind bewusst mutable (kein React-State) — das direkte
-    // Setzen von camera.zoom + updateProjectionMatrix() ist der von R3F selbst
-    // dokumentierte Weg, siehe auch drei's eigene Kamera-Helper.
-    // eslint-disable-next-line react-hooks/immutability -- Three.js-Objekt, keine React-Hook-Semantik
-    cam.zoom = zoom;
+    const target = zoom * (focused ? FOCUS_ZOOM_BOOST : 1);
+    if (currentZoom.current === null) {
+      currentZoom.current = target;
+    } else {
+      // Exponentielles Einschwingen (framerate-unabhängig) statt linearem
+      // Lerp — wirkt bei variabler Framerate gleich "weich".
+      const speed = 6;
+      currentZoom.current += (target - currentZoom.current) * Math.min(1, delta * speed);
+    }
+    cam.zoom = currentZoom.current;
     cam.updateProjectionMatrix();
-  }, [zoom, camera]);
+  });
+  /* eslint-enable react-hooks/immutability */
 
   return null;
 }
 
 function RoomCanvas({
-  state, edit, onInteract, hiddenVitrineCount, filledVitrineCount, level, rotation,
+  state, edit, onInteract, hiddenVitrineCount, filledVitrineCount, level, rotation, lampOn, blindsClosed,
+  focusTarget,
 }: Pick<Props, "state" | "edit" | "onInteract"> & {
   hiddenVitrineCount: number; filledVitrineCount: number; level: number; rotation: number;
+  lampOn: boolean; blindsClosed: boolean; focusTarget: InteractTarget | null;
 }) {
   const camPos = useMemo(() => {
     const d = Math.max(ROOM_SIZE.width, ROOM_SIZE.depth) * 1.4;
@@ -547,10 +603,14 @@ function RoomCanvas({
   }, [camPos]);
 
   return (
-    // Kein `shadows`-Prop: kein Mesh setzt castShadow/receiveShadow, das
-    // Shadow-Map-System bliebe reiner toter Overhead — ContactShadows bakt
-    // den Bodenschatten unabhängig davon in einem eigenen Offscreen-Render.
-    <Canvas dpr={[1, 1.5]} frameloop="always">
+    // `shadows` aktiviert Three.js' Shadow-Map-Pipeline — RoomLighting
+    // wirft jetzt ein echtes Richtungslicht mit `castShadow`, Boden/Wände
+    // empfangen (`receiveShadow` in RoomShell), Möbel werfen (`castShadow`
+    // in FurniturePrimitive.tsx). `ContactShadows` bleibt zusätzlich als
+    // weicher Kontaktschatten direkt unter jedem Objekt (rein optisch,
+    // unabhängig von der echten Lichtquelle) — beides zusammen ergibt
+    // sowohl harte Wurf- als auch weiche Kontaktschatten.
+    <Canvas dpr={[1, 1.5]} frameloop="always" shadows>
       <OrthographicCamera
         makeDefault
         position={camPos}
@@ -558,14 +618,15 @@ function RoomCanvas({
         far={100}
         onUpdate={cam => cam.lookAt(ROOM_CENTER)}
       />
-      <FitCamera camPos={camPos} />
+      <FitCamera camPos={camPos} focused={focusTarget === "crt" || focusTarget === "vitrine"} />
       <RoomLighting />
       <RoomShell wallpaperKey={state.wallpaperKey} floorKey={state.floorKey} hiddenWalls={hiddenWalls} />
-      <NeonEdge />
-      {/* An der Rückwand montiert — ohne sie würde es freischwebend im
-          leeren Raum hängen, sobald diese Wand kamerabedingt ausgeblendet ist. */}
-      {!hiddenWalls.has("wall_back") && <RoomWindow3D level={level} />}
-      <CeilingLamp3D level={level} />
+      {/* An der Rückwand bzw. Seitenwand montiert — ohne die Sichtbarkeits-
+          Prüfung würden sie freischwebend im leeren Raum hängen, sobald ihre
+          Wand kamerabedingt ausgeblendet ist. */}
+      {!hiddenWalls.has("wall_back") && <RoomWindow3D level={level} closed={blindsClosed} />}
+      {!hiddenWalls.has("wall_side") && <EntranceDoor3D level={level} />}
+      <CeilingLamp3D level={level} on={lampOn} />
       <PlacedFurniture placed={state.placed} edit={edit} onInteract={onInteract} hiddenWalls={hiddenWalls} />
       {/* Im Bearbeiten-Modus nicht anklickbar — sie lässt sich ohnehin nicht
           verschieben, ein Klick soll dort nicht mitten in der Möbel-Auswahl
@@ -596,7 +657,7 @@ function RoomCanvas({
 /** Radiant Kamera-Drehung pro Pixel horizontaler Zeigerbewegung. */
 const DRAG_SENSITIVITY = 0.008;
 
-export default function RoomStage3D({ state, vitrine, onInteract, edit }: Props) {
+export default function RoomStage3D({ state, vitrine, onInteract, edit, focusTarget = null }: Props) {
   const level = roomLevel(state.placed);
   const filledVitrineCount = vitrine.slots.filter(Boolean).length;
   const [rotation, setRotation] = useState(0);
@@ -604,6 +665,15 @@ export default function RoomStage3D({ state, vitrine, onInteract, edit }: Props)
   // zwei kamerafernen Wände ein (siehe hiddenWalls in RoomCanvas), es gibt
   // also keinen Winkel mehr, an dem man "an der Wand vorbei ins Nichts" sähe.
   const drag = useRef<{ pointerId: number; startX: number; startRotation: number } | null>(null);
+  // Hinweis "Ziehen zum Drehen" — nur bis zur ersten tatsächlichen Drehung
+  // sichtbar, damit erfahrene User nicht dauerhaft ein Overlay im Weg haben.
+  const [hasRotated, setHasRotated] = useState(false);
+  // Reine Anzeige-Umschalter (kein Katalog-/DB-Zustand, siehe CeilingLamp3D/
+  // RoomWindow3D) — lassen User die Lichtverhältnisse durchprobieren, um z.B.
+  // Neon-/LED-Deko bei ausgeschalteter Deckenlampe und geschlossenem Rolladen
+  // besser zur Geltung kommen zu sehen.
+  const [lampOn, setLampOn] = useState(true);
+  const [blindsClosed, setBlindsClosed] = useState(false);
 
   function handlePointerDown(e: ReactPointerEvent<HTMLDivElement>) {
     // Nur der primäre Zeiger (linke Maustaste / erster Touch-Punkt) — ein
@@ -615,6 +685,7 @@ export default function RoomStage3D({ state, vitrine, onInteract, edit }: Props)
   function handlePointerMove(e: ReactPointerEvent<HTMLDivElement>) {
     if (!drag.current || drag.current.pointerId !== e.pointerId) return;
     const dx = e.clientX - drag.current.startX;
+    if (Math.abs(dx) > 4) setHasRotated(true);
     setRotation(drag.current.startRotation + dx * DRAG_SENSITIVITY);
   }
   function handlePointerUp(e: ReactPointerEvent<HTMLDivElement>) {
@@ -633,8 +704,41 @@ export default function RoomStage3D({ state, vitrine, onInteract, edit }: Props)
       <RoomCanvas
         state={state} edit={edit} onInteract={onInteract}
         hiddenVitrineCount={vitrine.hiddenCount} filledVitrineCount={filledVitrineCount} level={level}
-        rotation={rotation}
+        rotation={rotation} lampOn={lampOn} blindsClosed={blindsClosed} focusTarget={focusTarget}
       />
+      {!hasRotated && !edit && (
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/55 border border-white/10 text-white/70 text-[11px] pointer-events-none select-none">
+          <span aria-hidden>↔</span> Ziehen, um die Ansicht zu drehen
+        </div>
+      )}
+      <div className="absolute top-3 right-3 flex gap-1.5 pointer-events-none">
+        <button
+          type="button"
+          aria-label={lampOn ? "Deckenlampe ausschalten" : "Deckenlampe einschalten"}
+          onClick={e => { e.stopPropagation(); setLampOn(v => !v); }}
+          onPointerDown={e => e.stopPropagation()}
+          className={`pointer-events-auto flex items-center gap-1 px-2.5 h-8 rounded-full border text-[11px] transition-colors ${
+            lampOn
+              ? "bg-amber-400/20 border-amber-300/40 text-amber-200"
+              : "bg-black/55 border-white/10 text-white/60 hover:bg-black/70"
+          }`}
+        >
+          <span aria-hidden>{lampOn ? "●" : "○"}</span> Lampe
+        </button>
+        <button
+          type="button"
+          aria-label={blindsClosed ? "Rolladen öffnen" : "Rolladen schließen"}
+          onClick={e => { e.stopPropagation(); setBlindsClosed(v => !v); }}
+          onPointerDown={e => e.stopPropagation()}
+          className={`pointer-events-auto flex items-center gap-1 px-2.5 h-8 rounded-full border text-[11px] transition-colors ${
+            blindsClosed
+              ? "bg-sky-400/20 border-sky-300/40 text-sky-200"
+              : "bg-black/55 border-white/10 text-white/60 hover:bg-black/70"
+          }`}
+        >
+          <span aria-hidden>{blindsClosed ? "▤" : "▢"}</span> Rolladen
+        </button>
+      </div>
     </div>
   );
 }

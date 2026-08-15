@@ -108,6 +108,9 @@ export const DEFAULT_PLACEMENTS: { key: string; zone: RoomSurface; x: number; y:
   { key: "schreibtisch_alt", zone: "floor", x: 2, y: 3 },
   { key: "roehrenmonitor",   zone: "floor", x: 4, y: 3 },
   { key: "pc_billig",        zone: "floor", x: 0, y: 4 },
+  // Runder OMA-Teppich: zentral im offenen Bereich zwischen Rückwand und
+  // Schreibtisch, x-mittig im 12 Spalten breiten Grid (4..6, Zentrum 5.5).
+  { key: "teppich_rund_logo", zone: "floor", x: 4, y: 0 },
   // Vitrine bewusst NICHT hier: sie ist ein festes Bühnenelement mit fixer
   // Position (siehe RoomStage.tsx, VitrinePanel), kein Katalog-Platzierung.
 ];
@@ -152,19 +155,45 @@ export function fitsGrid(def: RoomItemDef, x: number, y: number, zone: RoomSurfa
 }
 
 /**
- * Alle Boden-Zellen (x,y=Tiefe), die von einem Tisch belegt sind — Basis für
- * mustStandOn:"desk". In der isometrischen Ansicht "steht" ein Monitor auf
- * einem Tisch, indem er dieselbe Grundfläche (x,y) belegt wie der Tisch
- * selbst (visuell angehoben rendert RoomStage.tsx über einen festen
- * Y-Höhenversatz, das ist reine Optik und fließt hier nicht mit ein).
+ * Alle Boden-Zellen (x,y=Tiefe), die von einem Tisch ODER einer sonstigen
+ * Ablagefläche (Kommode, Konsolentisch — Tag "surface") belegt sind — Basis
+ * für mustStandOn:"desk". In der isometrischen Ansicht "steht" ein Monitor
+ * auf seiner Unterlage, indem er dieselbe Grundfläche (x,y) belegt (visuell
+ * angehoben rendert RoomStage3D.tsx über einen festen Y-Höhenversatz, das ist
+ * reine Optik und fließt hier nicht mit ein). "desk" und "surface" teilen
+ * sich dieselbe Prüfung — ein Monitor unterscheidet nicht, ob er auf einem
+ * echten Schreibtisch oder einer Kommode steht, beides ist eine gültige
+ * Stellfläche.
  */
-function deskCells(placed: PlacedItem[]): Set<string> {
+function standCells(placed: PlacedItem[]): Set<string> {
   const cells = new Set<string>();
   for (const item of placed) {
     const def = getRoomItem(item.key);
-    if (!def || item.zone !== "floor" || !def.tags.includes("desk")) continue;
+    if (!def || item.zone !== "floor") continue;
+    if (!def.tags.includes("desk") && !def.tags.includes("surface")) continue;
     for (let dx = 0; dx < def.w; dx++) {
       for (let dy = 0; dy < def.h; dy++) cells.add(`${item.x + dx},${item.y + dy}`);
+    }
+  }
+  return cells;
+}
+
+/**
+ * Wand-Pendant zu standCells: alle Zellen, die von einem Regal (Tag "shelf"/
+ * "trophy_shelf") belegt sind — Basis für mustStandOn:"shelf" (kleine Deko
+ * "im" Regal). Pro Wand getrennt (Rückschlüssel `zone:x,y`), damit ein Regal
+ * an der Rückwand keine Deko an der Seitenwand trägt, nur weil die (x,y)-
+ * Koordinaten zufällig übereinstimmen — die vier Wände sind eigene
+ * Koordinatenräume, siehe room-3d.ts.
+ */
+function shelfCells(placed: PlacedItem[]): Set<string> {
+  const cells = new Set<string>();
+  for (const item of placed) {
+    const def = getRoomItem(item.key);
+    if (!def || item.zone === "floor") continue;
+    if (!def.tags.includes("shelf") && !def.tags.includes("trophy_shelf")) continue;
+    for (let dx = 0; dx < def.w; dx++) {
+      for (let dy = 0; dy < def.h; dy++) cells.add(`${item.zone}:${item.x + dx},${item.y + dy}`);
     }
   }
   return cells;
@@ -203,19 +232,24 @@ export function validatePlacement(
   // Seitenwand und Boden sind jetzt drei getrennte Koordinatenräume, ein
   // Wandobjekt bei (2,1) kann kein Bodenobjekt bei (2,1) überdecken.
   //
-  // Ausnahme: ein mustStandOn:"desk"-Objekt (Monitor & Co.) TEILT sich
-  // absichtlich die Grundfläche mit seinem Tisch (siehe deskCells weiter
-  // unten) — das ist kein Konflikt, sondern "steht auf dem Tisch". Nur die
-  // Überlappung mit ANDEREN, nicht-desk-tragenden Objekten zählt.
+  // Ausnahme: ein mustStandOn:"desk"/"shelf"-Objekt (Monitor, Deko-Pokal & Co.)
+  // TEILT sich absichtlich die Fläche mit seiner Unterlage (Tisch/Kommode für
+  // "desk", Regal für "shelf" — siehe standCells/shelfCells weiter unten) —
+  // das ist kein Konflikt, sondern "steht drauf/drin". Nur die Überlappung
+  // mit ANDEREN, nicht-tragenden Objekten zählt.
   const others = placed.filter(p => p.id !== candidate.id && p.zone === candidate.zone);
   const rect    = rectOf(candidate, def);
   for (const other of others) {
     const otherDef = getRoomItem(other.key);
     if (!otherDef) continue;
-    const isDeskPairing =
-      (def.mustStandOn === "desk" && otherDef.tags.includes("desk")) ||
-      (otherDef.mustStandOn === "desk" && def.tags.includes("desk"));
-    if (isDeskPairing) continue;
+    const providesStand = (d: RoomItemDef) => d.tags.includes("desk") || d.tags.includes("surface");
+    const providesShelf = (d: RoomItemDef) => d.tags.includes("shelf") || d.tags.includes("trophy_shelf");
+    const isStandPairing =
+      (def.mustStandOn === "desk" && providesStand(otherDef)) ||
+      (otherDef.mustStandOn === "desk" && providesStand(def)) ||
+      (def.mustStandOn === "shelf" && providesShelf(otherDef)) ||
+      (otherDef.mustStandOn === "shelf" && providesShelf(def));
+    if (isStandPairing) continue;
     if (rectsOverlap(rect, rectOf(other, otherDef))) {
       return { ok: false, error: `Da steht schon etwas: ${otherDef.label}` };
     }
@@ -224,11 +258,21 @@ export function validatePlacement(
   // mustStandOn:"floor" braucht keine geometrische Prüfung mehr: Boden-Objekte
   // sind durch den Zonen-Check oben bereits zwingend auf der Bodenfläche.
   if (def.mustStandOn === "desk") {
-    const desks = deskCells(placed.filter(p => p.id !== candidate.id));
+    const stands = standCells(placed.filter(p => p.id !== candidate.id));
     for (let dx = 0; dx < def.w; dx++) {
       for (let dy = 0; dy < def.h; dy++) {
-        if (!desks.has(`${candidate.x + dx},${candidate.y + dy}`)) {
-          return { ok: false, error: `${def.label} muss auf einem Tisch stehen` };
+        if (!stands.has(`${candidate.x + dx},${candidate.y + dy}`)) {
+          return { ok: false, error: `${def.label} muss auf einem Tisch oder einer Ablage stehen` };
+        }
+      }
+    }
+  }
+  if (def.mustStandOn === "shelf") {
+    const shelves = shelfCells(placed.filter(p => p.id !== candidate.id));
+    for (let dx = 0; dx < def.w; dx++) {
+      for (let dy = 0; dy < def.h; dy++) {
+        if (!shelves.has(`${candidate.zone}:${candidate.x + dx},${candidate.y + dy}`)) {
+          return { ok: false, error: `${def.label} muss in einem Regal stehen` };
         }
       }
     }

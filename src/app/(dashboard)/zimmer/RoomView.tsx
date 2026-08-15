@@ -81,6 +81,7 @@ export default function RoomView({
         vitrine={core.vitrine}
         vitrineReadOnly={readOnly}
         onInteract={handleInteract}
+        focusTarget={openTarget}
       />
 
       {/* ── Lohn ─────────────────────────────────────────────────────
