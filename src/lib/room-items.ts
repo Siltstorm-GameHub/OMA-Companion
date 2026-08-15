@@ -23,7 +23,7 @@ export type RoomTag =
   | "monitor" | "monitor_144" | "crt" | "mic" | "cam" | "keyboard_mech"
   | "headset" | "streamdeck" | "capture" | "ringlight" | "console" | "console_retro"
   | "light" | "neon" | "plant" | "shelf" | "trophy_shelf" | "whiteboard"
-  | "powerstrip" | "led_wall" | "vitrine";
+  | "powerstrip" | "led_wall" | "vitrine" | "surface";
 
 export interface RoomItemDef {
   key:         string;
@@ -38,11 +38,14 @@ export interface RoomItemDef {
   maxOwned:    number;       // Wie viele Exemplare besitzbar sind
   tags:        RoomTag[];
   /**
-   * "desk"  = die Zellen direkt darunter müssen zu einem Tisch gehören
+   * "desk"  = die Zellen direkt darunter müssen zu einem Tisch ODER einer
+   *           sonstigen Ablagefläche gehören (Tag "desk"/"surface", Boden)
    * "floor" = muss auf dem Boden stehen (unterste Rasterzeile)
-   * null    = frei platzierbar. Nur für Zone "floor" relevant.
+   * "shelf" = dieselbe Wandzelle muss zu einem Regal gehören (Tag "shelf"/
+   *           "trophy_shelf", auf DERSELBEN Wand) — das Wand-Pendant zu "desk"
+   * null    = frei platzierbar.
    */
-  mustStandOn: "desk" | "floor" | null;
+  mustStandOn: "desk" | "floor" | "shelf" | null;
   accent:      "violet" | "teal" | "amber" | "rose" | "slate";
   /**
    * Optionales PNG-Sprite (Supabase Storage). Ist es gesetzt, rendert
@@ -146,6 +149,7 @@ export const ROOM_TAG_LABELS: Record<RoomTag, string> = {
   powerstrip:    "Steckdosenleiste",
   led_wall:      "LED-Wand",
   vitrine:       "Vitrine",
+  surface:       "Ablagefläche",
 };
 
 export const ROOM_ITEMS: RoomItemDef[] = [
@@ -207,6 +211,13 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     zone: "wall", category: "deko", w: 1, h: 3, price: 550, minTier: 2, maxOwned: 1,
     tags: [], mustStandOn: null, accent: "rose",
     imageUrl: "/room-items/gitarre_deko.png",
+  },
+  {
+    key: "deko_pokal", label: "Deko-Pokal",
+    description: "Nie ein Turnier gewonnen, aber im Regal macht er trotzdem was her.",
+    zone: "wall", category: "deko", w: 1, h: 1, price: 220, minTier: 1, maxOwned: 4,
+    tags: [], mustStandOn: "shelf", accent: "amber",
+    imageUrl: "/room-items/deko_pokal.png",
   },
   {
     key: "regal_holz", label: "Wandregal",
@@ -292,6 +303,13 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     zone: "floor", category: "schreibtisch", w: 3, h: 3, price: 4200, minTier: 3, maxOwned: 1,
     tags: ["desk"], mustStandOn: "floor", accent: "violet",
     imageUrl: "/room-items/schreibtisch_neon.png",
+  },
+  {
+    key: "schreibtisch_modern", label: "Moderner Schreibtisch",
+    description: "Weiße Platte, schwarzes Metallgestell. Sieht teurer aus, als er war.",
+    zone: "floor", category: "schreibtisch", w: 4, h: 2, price: 1800, minTier: 1, maxOwned: 1,
+    tags: ["desk"], mustStandOn: "floor", accent: "teal",
+    imageUrl: "/room-items/schreibtisch_modern.png",
   },
 
   // ── Boden: Sitzmöbel ──────────────────────────────────────────────────────
@@ -489,6 +507,20 @@ export const ROOM_ITEMS: RoomItemDef[] = [
 
   // ── Boden: Möbel & Deko ───────────────────────────────────────────────────
   {
+    key: "kommode", label: "Offene Kommode",
+    description: "Zwei offene Fächer für alles, was sonst auf dem Boden landen würde.",
+    zone: "floor", category: "moebel", w: 3, h: 1, price: 650, minTier: 2, maxOwned: 2,
+    tags: ["surface"], mustStandOn: "floor", accent: "amber",
+    imageUrl: "/room-items/kommode.png",
+  },
+  {
+    key: "konsolentisch", label: "Konsolentisch",
+    description: "Lang, schmal, genug Ablage für den Krempel, der sonst nirgends hinpasst.",
+    zone: "floor", category: "moebel", w: 3, h: 1, price: 900, minTier: 2, maxOwned: 1,
+    tags: ["surface"], mustStandOn: "floor", accent: "slate",
+    imageUrl: "/room-items/konsolentisch.png",
+  },
+  {
     key: "vitrine", label: "Vitrine",
     description: "Deine Sammlung hinter Glas. Draufklicken und angeben.",
     // Bewusst deutlich höher als jedes andere Möbelstück (volle Bodenhöhe
@@ -521,6 +553,13 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     zone: "floor", category: "deko", w: 3, h: 1, price: 300, minTier: 1, maxOwned: 2,
     tags: [], mustStandOn: "floor", accent: "rose",
     imageUrl: "/room-items/teppich.png",
+  },
+  {
+    key: "teppich_rund_logo", label: "OMA-Teppich",
+    description: "Runder Teppich mit dem OMA-Logo in der Mitte. Serienausstattung, liegt in jedem Zimmer.",
+    zone: "floor", category: "deko", w: 3, h: 3, price: 0, minTier: 1, maxOwned: 1,
+    tags: [], mustStandOn: "floor", accent: "teal", starter: true,
+    imageUrl: "/room-items/teppich_rund_logo.png",
   },
   {
     key: "kaffeemaschine", label: "Kaffeemaschine",
