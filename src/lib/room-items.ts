@@ -202,6 +202,13 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     tags: [], mustStandOn: null, accent: "rose",
   },
   {
+    key: "gitarre_deko", label: "E-Gitarre (Deko)",
+    description: "Drei Akkorde gelernt, dann für immer an die Wand gehängt.",
+    zone: "wall", category: "deko", w: 1, h: 3, price: 550, minTier: 2, maxOwned: 1,
+    tags: [], mustStandOn: null, accent: "rose",
+    imageUrl: "/room-items/gitarre_deko.png",
+  },
+  {
     key: "regal_holz", label: "Wandregal",
     description: "Platz für Krimskrams, den du nie wieder anfasst.",
     zone: "wall", category: "moebel", w: 3, h: 1, price: 400, minTier: 1, maxOwned: 3,
@@ -230,8 +237,8 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     imageUrl: "/room-items/whiteboard.png",
   },
   {
-    key: "nanoleaf", label: "Wabenpaneele",
-    description: "Leuchtende Sechsecke. Der halbe Stromverbrauch, der ganze Effekt.",
+    key: "nanoleaf", label: "Dreieck-Panels",
+    description: "Leuchtende Dreiecke in Regenbogenverlauf. Der halbe Stromverbrauch, der ganze Effekt.",
     zone: "wall", category: "licht", w: 3, h: 2, price: 2400, minTier: 3, maxOwned: 2,
     tags: ["light", "neon"], mustStandOn: null, accent: "violet",
     imageUrl: "/room-items/nanoleaf.png",
@@ -242,6 +249,13 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     zone: "wall", category: "licht", w: 3, h: 1, price: 3200, minTier: 4, maxOwned: 1,
     tags: ["neon", "light"], mustStandOn: null, accent: "rose",
     imageUrl: "/room-items/neon_schild.png",
+  },
+  {
+    key: "neon_blitz", label: "Neon-Blitz",
+    description: "Sieht aus wie Energie. Ist meistens nur Deko.",
+    zone: "wall", category: "licht", w: 1, h: 2, price: 2800, minTier: 4, maxOwned: 1,
+    tags: ["neon", "light"], mustStandOn: null, accent: "violet",
+    imageUrl: "/room-items/neon_blitz.png",
   },
   {
     key: "led_wand", label: "LED-Videowand",
@@ -271,6 +285,13 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     zone: "floor", category: "schreibtisch", w: 7, h: 3, price: 2600, minTier: 2, maxOwned: 1,
     tags: ["desk"], mustStandOn: "floor", accent: "teal",
     imageUrl: "/room-items/schreibtisch_eck.png",
+  },
+  {
+    key: "schreibtisch_neon", label: "Neon-Eckschreibtisch",
+    description: "Neonkante inklusive, Kabelsalat nicht.",
+    zone: "floor", category: "schreibtisch", w: 3, h: 3, price: 4200, minTier: 3, maxOwned: 1,
+    tags: ["desk"], mustStandOn: "floor", accent: "violet",
+    imageUrl: "/room-items/schreibtisch_neon.png",
   },
 
   // ── Boden: Sitzmöbel ──────────────────────────────────────────────────────
@@ -394,6 +415,20 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     imageUrl: "/room-items/ringlicht.png",
   },
   {
+    key: "stehlampe", label: "Stehlampe",
+    description: "Wirft warmes Licht und lange Schatten. Perfekt fürs dramatische Late-Night-Gaming.",
+    zone: "floor", category: "peripherie", w: 1, h: 1, price: 750, minTier: 2, maxOwned: 2,
+    tags: ["light"], mustStandOn: "floor", accent: "amber",
+    imageUrl: "/room-items/stehlampe.png",
+  },
+  {
+    key: "schreibtischlampe", label: "Schreibtischlampe",
+    description: "Klein, aber hell genug, um zu sehen, wie unaufgeräumt der Tisch wirklich ist.",
+    zone: "floor", category: "peripherie", w: 1, h: 1, price: 280, minTier: 1, maxOwned: 1,
+    tags: ["light"], mustStandOn: "desk", accent: "amber",
+    imageUrl: "/room-items/schreibtischlampe.png",
+  },
+  {
     key: "capture", label: "Capture-Karte",
     description: "Nimmt alles auf, auch die Runden, die niemand sehen sollte.",
     zone: "floor", category: "peripherie", w: 1, h: 1, price: 1400, minTier: 4, maxOwned: 1,
@@ -444,6 +479,13 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     zone: "floor", category: "deko", w: 1, h: 2, price: 180, minTier: 1, maxOwned: 3,
     tags: ["plant"], mustStandOn: "floor", accent: "teal",
     imageUrl: "/room-items/pflanze.png",
+  },
+  {
+    key: "plattenspieler", label: "Plattenspieler",
+    description: "Steht nur da, weil er gut aussieht. Vinyl hast du sowieso keins.",
+    zone: "floor", category: "deko", w: 1, h: 1, price: 650, minTier: 2, maxOwned: 1,
+    tags: [], mustStandOn: "desk", accent: "amber",
+    imageUrl: "/room-items/plattenspieler.png",
   },
   {
     key: "teppich", label: "Fleckenteppich",

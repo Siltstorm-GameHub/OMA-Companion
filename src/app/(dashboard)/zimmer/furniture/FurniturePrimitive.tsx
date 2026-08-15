@@ -14,6 +14,7 @@
 
 import { useMemo } from "react";
 import { RoundedBox, useGLTF } from "@react-three/drei";
+import { Mesh, MeshStandardMaterial, type Material } from "three";
 import { ACCENT_COLORS } from "@/lib/room-3d";
 import type { RoomItemDef } from "@/lib/room-items";
 
@@ -32,6 +33,21 @@ const METAL = "#3a3f4c";
  */
 const GLB_MODELS: Partial<Record<string, string>> = {
   schreibtisch_alt: "/models/desk_alt.glb",
+  schreibtisch_eck: "/models/desk_eck.glb",
+  stuhl_gaming:     "/models/chair_gaming.glb",
+  stuhl_buero:      "/models/chair_office.glb",
+  monitor_144:      "/models/monitor_curved.glb",
+  monitor_flach:    "/models/monitor_flach_neu.glb",
+  pflanze:          "/models/plant_succulent.glb",
+  stehlampe:         "/models/lamp_floor.glb",
+  schreibtischlampe: "/models/lamp_desk.glb",
+  gitarre_deko:      "/models/guitar_deco.glb",
+  konsole_neu:       "/models/console_modern.glb",
+  plattenspieler:    "/models/turntable.glb",
+  regal_holz:        "/models/regal_buecher.glb",
+  nanoleaf:          "/models/nanoleaf_tri.glb",
+  neon_blitz:        "/models/neon_blitz.glb",
+  schreibtisch_neon: "/models/desk_neon.glb",
 };
 
 for (const path of Object.values(GLB_MODELS)) {
@@ -47,8 +63,32 @@ for (const path of Object.values(GLB_MODELS)) {
  */
 function GltfFurniture({ path }: { path: string }) {
   const { scene } = useGLTF(path);
-  const cloned = useMemo(() => scene.clone(true), [scene]);
+  const cloned = useMemo(() => {
+    const clone = scene.clone(true);
+    // Dieselbe Tonemapping-Falle wie bei den Primitiven (siehe matteProps
+    // oben): Blender-Materialien ohne eigenes Glühen wirken unter Three.js'
+    // Standard-Tonemapping erheblich dunkler als beabsichtigt. Bereits
+    // bewusst leuchtende Materialien (z.B. der Bildschirm-Glow, in Blender
+    // extra mit hoher Emission gebaut) bleiben unangetastet.
+    clone.traverse(obj => {
+      if (!(obj instanceof Mesh)) return;
+      const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+      obj.material = Array.isArray(obj.material)
+        ? mats.map(m => boostMatte(m))
+        : boostMatte(mats[0]);
+    });
+    return clone;
+  }, [scene]);
   return <primitive object={cloned} />;
+}
+
+function boostMatte(material: Material) {
+  if (!(material instanceof MeshStandardMaterial)) return material;
+  if (material.emissiveIntensity > 0.5) return material; // absichtlich schon leuchtend (z.B. Screen)
+  const m = material.clone();
+  m.emissive.copy(m.color);
+  m.emissiveIntensity = 0.35;
+  return m;
 }
 
 /**
