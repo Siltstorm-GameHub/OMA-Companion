@@ -38,6 +38,7 @@ const GLB_MODELS: Partial<Record<string, string>> = {
   stuhl_buero:      "/models/chair_office.glb",
   monitor_144:      "/models/monitor_curved.glb",
   monitor_flach:    "/models/monitor_flach_neu.glb",
+  monitor_dreifach: "/models/monitor_triple.glb",
   pflanze:          "/models/plant_succulent.glb",
   stehlampe:         "/models/lamp_floor.glb",
   schreibtischlampe: "/models/lamp_desk.glb",
