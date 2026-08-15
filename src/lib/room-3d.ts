@@ -97,3 +97,31 @@ export const SHELL_COLORS = {
   wallSide: "#221d30",
   floor:    "#1c1826",
 } as const;
+
+/**
+ * Flachfarben je Tapeten-/Boden-Produkt — ersetzt die Foto-Texturen aus
+ * RoomStage.tsx (WALL_PHOTOS/FLOOR_PHOTOS): die Referenz-Screenshots zeigen
+ * gedeckte, nicht-photografische Farbflächen, kein Materialfoto. Seitenwand
+ * bekommt automatisch eine etwas dunklere Variante derselben Tapete (siehe
+ * `shadeHex`), damit die Raumecke räumlich lesbar bleibt.
+ */
+export const WALL_COLOR_BY_KEY: Record<string, string> = {
+  tapete_raufaser: "#332d40",
+  tapete_pixel:    "#3a2860",
+  tapete_scifi:    "#1c3a42",
+};
+
+export const FLOOR_COLOR_BY_KEY: Record<string, string> = {
+  boden_linoleum: "#241f2e",
+  boden_holz:     "#3c2c1e",
+  boden_scifi:    "#182226",
+};
+
+/** Multipliziert einen Hex-Farbwert (0..1) — für die abgedunkelte Seitenwand. */
+export function shadeHex(hex: string, factor: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  const r = Math.round(((n >> 16) & 0xff) * factor);
+  const g = Math.round(((n >> 8) & 0xff) * factor);
+  const b = Math.round((n & 0xff) * factor);
+  return `#${[r, g, b].map(v => Math.min(255, v).toString(16).padStart(2, "0")).join("")}`;
+}

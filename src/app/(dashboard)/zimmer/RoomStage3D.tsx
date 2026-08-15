@@ -2,52 +2,72 @@
 
 /**
  * 3D-Bühne des Gaming-Zimmers (Three.js/React Three Fiber) — Ersatz für das
- * SVG-basierte RoomStage.tsx. Phase 1+2 des 3D-Rewrites: statische Raum-Shell
- * (Boden + 2 Wände in Flachfarben) + feste Iso-Kamera + Neon-Lichtrig +
- * prozedural gebaute Möbel-Primitive an ihrer Grid-Position — noch ohne
- * Editor-Interaktion (kommt in Phase 3, siehe Plan-Dokument).
+ * SVG-basierte RoomStage.tsx. Übernimmt denselben Props-Vertrag 1:1
+ * ({state, ownerName, vitrine, onInteract, edit}), damit RoomView.tsx und
+ * RoomEditor.tsx unverändert bleiben können (siehe Plan-Dokument).
+ *
+ * Raum-Shell + Möbel sind prozedural (kein Foto-Sprite, kein glTF) — siehe
+ * FurniturePrimitive.tsx. Tapete/Boden sind Flachfarben (room-3d.ts), keine
+ * Fototextur mehr.
  */
 
-import { useMemo } from "react";
-import { Canvas } from "@react-three/fiber";
-import { OrthographicCamera, ContactShadows } from "@react-three/drei";
+import { useMemo, useState } from "react";
+import { Canvas, type ThreeEvent } from "@react-three/fiber";
+import { OrthographicCamera, ContactShadows, RoundedBox } from "@react-three/drei";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
 import {
-  ROOM_SIZE, ROOM_CENTER, SHELL_COLORS, WORLD_UNIT,
-  gridToWorld, surfaceRotationY,
+  ROOM_SIZE, ROOM_CENTER, SHELL_COLORS, ACCENT_COLORS,
+  WALL_COLOR_BY_KEY, FLOOR_COLOR_BY_KEY, shadeHex,
+  gridToWorld, surfaceRotationY, worldToGrid, type RoomSurface,
 } from "@/lib/room-3d";
 import { getRoomItem } from "@/lib/room-items";
-import type { PlacedItem } from "@/lib/room-layout";
+import { roomLevel, type PlacedItem, type RoomState, type RoomSurface as LayoutSurface } from "@/lib/room-layout";
+import type { VitrineItem } from "@/lib/room-vitrine";
 import { FurniturePrimitive } from "./furniture/FurniturePrimitive";
 
-interface RoomStage3DProps {
-  placed: PlacedItem[];
+export type InteractTarget = "crt" | "vitrine" | "jobboard";
+
+export interface EditHooks {
+  selectedId: string | null;
+  legal: { zone: LayoutSurface; x: number; y: number }[];
+  ghost: { w: number; h: number; key: string } | null;
+  onSelect: (id: string) => void;
+  onGrab:   (id: string) => void;
+  onDrop:   (zone: LayoutSurface, x: number, y: number) => void;
 }
 
-function RoomShell() {
+interface Props {
+  state:     RoomState;
+  ownerName: string;
+  vitrine: { slots: (VitrineItem | null)[]; hiddenCount: number };
+  onInteract: (target: InteractTarget, itemKey?: string, slotIndex?: number) => void;
+  edit?: EditHooks;
+}
+
+const VITRINE_POS = { zone: "floor" as RoomSurface, x: ROOM_SIZE.width - 2, y: ROOM_SIZE.depth - 5, w: 2, h: 5 };
+
+function RoomShell({ wallpaperKey, floorKey }: { wallpaperKey: string; floorKey: string }) {
   const { width, depth, height } = ROOM_SIZE;
+  const wallColor = WALL_COLOR_BY_KEY[wallpaperKey] ?? SHELL_COLORS.wallBack;
+  const floorColor = FLOOR_COLOR_BY_KEY[floorKey] ?? SHELL_COLORS.floor;
   return (
     <group>
-      {/* Boden */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[width / 2, 0, depth / 2]}>
         <planeGeometry args={[width, depth]} />
-        <meshStandardMaterial color={SHELL_COLORS.floor} roughness={0.85} />
+        <meshStandardMaterial color={floorColor} roughness={0.85} />
       </mesh>
-      {/* Rückwand (Z=0) */}
       <mesh position={[width / 2, height / 2, 0]}>
         <planeGeometry args={[width, height]} />
-        <meshStandardMaterial color={SHELL_COLORS.wallBack} roughness={0.9} />
+        <meshStandardMaterial color={wallColor} roughness={0.9} />
       </mesh>
-      {/* Seitenwand (X=0), zur Raummitte gedreht */}
       <mesh rotation={[0, Math.PI / 2, 0]} position={[0, height / 2, depth / 2]}>
         <planeGeometry args={[depth, height]} />
-        <meshStandardMaterial color={SHELL_COLORS.wallSide} roughness={0.9} />
+        <meshStandardMaterial color={shadeHex(wallColor, 0.72)} roughness={0.9} />
       </mesh>
     </group>
   );
 }
 
-/** Deckenkante als Neon-Strip — Bloom-Postprocessing macht daraus den weichen Glow. */
 function NeonEdge() {
   const { width, depth, height } = ROOM_SIZE;
   return (
@@ -73,7 +93,43 @@ function RoomLighting() {
   );
 }
 
-function PlacedFurniture({ placed }: { placed: PlacedItem[] }) {
+/** Feste Vitrine — Bühnenelement mit fester Position, kein Katalog-Platzierung (siehe room-items.ts). */
+function FixedVitrine({ onClick }: { onClick: () => void }) {
+  const world = gridToWorld(VITRINE_POS.zone, VITRINE_POS.x, VITRINE_POS.y, VITRINE_POS.w, VITRINE_POS.h);
+  return (
+    <group position={world} onClick={e => { e.stopPropagation(); onClick(); }}>
+      <RoundedBox args={[VITRINE_POS.w * 0.85, VITRINE_POS.h * 0.9, VITRINE_POS.w * 0.7]} radius={0.05}
+        position={[0, VITRINE_POS.h * 0.45, 0]}>
+        <meshStandardMaterial color="#caa86a" roughness={0.3} metalness={0.2} transparent opacity={0.85} />
+      </RoundedBox>
+    </group>
+  );
+}
+
+/** Halbtransparente Zellen-Fläche für Legal-Cell-Highlights & Ghost-Preview. */
+function CellHighlight({
+  surface, x, y, w, h, color, opacity,
+}: { surface: RoomSurface; x: number; y: number; w: number; h: number; color: string; opacity: number }) {
+  const world = gridToWorld(surface, x, y, w, h);
+  const rotX = surface === "floor" ? -Math.PI / 2 : 0;
+  const rotY = surfaceRotationY(surface);
+  const offset = surface === "floor" ? 0.01 : 0.01;
+  const pos = surface === "floor"
+    ? [world.x, offset, world.z] as const
+    : surface === "wall_back"
+      ? [world.x, world.y, offset] as const
+      : [offset, world.y, world.z] as const;
+  return (
+    <mesh position={pos} rotation={[rotX, rotY, 0]}>
+      <planeGeometry args={[w * 0.96, h * 0.96]} />
+      <meshBasicMaterial color={color} transparent opacity={opacity} toneMapped={false} />
+    </mesh>
+  );
+}
+
+function PlacedFurniture({
+  placed, edit, onInteract,
+}: { placed: PlacedItem[]; edit?: EditHooks; onInteract: Props["onInteract"] }) {
   const entries = useMemo(() => placed.map(item => {
     const def = getRoomItem(item.key);
     if (!def) return null;
@@ -84,24 +140,125 @@ function PlacedFurniture({ placed }: { placed: PlacedItem[] }) {
 
   return (
     <>
-      {entries.map(({ item, def, world, rotY }) => (
-        <group key={item.id} position={world} rotation={[0, rotY, 0]}>
-          <FurniturePrimitive def={def} />
-        </group>
-      ))}
+      {entries.map(({ item, def, world, rotY }) => {
+        const selected = edit?.selectedId === item.id;
+        function handleClick(e: ThreeEvent<MouseEvent>) {
+          e.stopPropagation();
+          if (edit) { edit.onSelect(item.id); return; }
+          if (def.interactive) onInteract(def.interactive, def.interactive === "crt" ? item.key : undefined);
+        }
+        function handlePointerDown(e: ThreeEvent<PointerEvent>) {
+          if (!edit) return;
+          e.stopPropagation();
+          edit.onGrab(item.id);
+        }
+        return (
+          <group
+            key={item.id} position={world} rotation={[0, rotY, 0]}
+            onClick={handleClick} onPointerDown={handlePointerDown}
+          >
+            <group scale={selected ? 1.06 : 1}>
+              <FurniturePrimitive def={def} />
+            </group>
+            {selected && (
+              <mesh position={[0, def.h * 0.5, 0]}>
+                <ringGeometry args={[Math.max(def.w, def.h) * 0.6, Math.max(def.w, def.h) * 0.68, 24]} />
+                <meshBasicMaterial color="#5ee6ff" transparent opacity={0.5} toneMapped={false} />
+              </mesh>
+            )}
+          </group>
+        );
+      })}
     </>
   );
 }
 
-export default function RoomStage3D({ placed }: RoomStage3DProps) {
+function EditLayer({ edit }: { edit: EditHooks }) {
+  const accent = edit.ghost ? ACCENT_COLORS[getRoomItem(edit.ghost.key)?.accent ?? "teal"] : "#5ee6ff";
+  const [hover, setHover] = useState<{ zone: RoomSurface; x: number; y: number } | null>(null);
+
+  function raycastToCell(surface: RoomSurface, e: ThreeEvent<PointerEvent>) {
+    if (!edit.ghost) return;
+    const { a, b } = worldToGrid(surface, e.point);
+    // An der oberen/hinteren Zellkante ausrichten (nicht am Mittelpunkt), wie in room-layout.ts erwartet.
+    const anchorA = Math.round(a - edit.ghost.w / 2);
+    const anchorB = Math.round(b - edit.ghost.h / 2);
+    const match = edit.legal.find(c => {
+      const cx = surface === "floor" ? c.x : c.x;
+      const cy = c.y;
+      return c.zone === surface && cx === anchorA && cy === anchorB;
+    });
+    setHover(match ? { zone: surface, x: match.x, y: match.y } : null);
+  }
+
+  return (
+    <>
+      {/* Klickflächen für Boden/Wände — nehmen Pointer-Events für Platzierung entgegen. */}
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]} position={[ROOM_SIZE.width / 2, 0, ROOM_SIZE.depth / 2]}
+        onPointerMove={e => raycastToCell("floor", e)}
+        onClick={e => { e.stopPropagation(); if (hover?.zone === "floor") edit.onDrop(hover.zone, hover.x, hover.y); }}
+        visible={false}
+      >
+        <planeGeometry args={[ROOM_SIZE.width, ROOM_SIZE.depth]} />
+      </mesh>
+      <mesh
+        position={[ROOM_SIZE.width / 2, ROOM_SIZE.height / 2, 0]}
+        onPointerMove={e => raycastToCell("wall_back", e)}
+        onClick={e => { e.stopPropagation(); if (hover?.zone === "wall_back") edit.onDrop(hover.zone, hover.x, hover.y); }}
+        visible={false}
+      >
+        <planeGeometry args={[ROOM_SIZE.width, ROOM_SIZE.height]} />
+      </mesh>
+      <mesh
+        rotation={[0, Math.PI / 2, 0]} position={[0, ROOM_SIZE.height / 2, ROOM_SIZE.depth / 2]}
+        onPointerMove={e => raycastToCell("wall_side", e)}
+        onClick={e => { e.stopPropagation(); if (hover?.zone === "wall_side") edit.onDrop(hover.zone, hover.x, hover.y); }}
+        visible={false}
+      >
+        <planeGeometry args={[ROOM_SIZE.depth, ROOM_SIZE.height]} />
+      </mesh>
+
+      {/* Freie Zellen leuchten aus. */}
+      {edit.ghost && edit.legal.map((c, i) => (
+        <CellHighlight
+          key={i} surface={c.zone} x={c.x} y={c.y} w={edit.ghost!.w} h={edit.ghost!.h}
+          color={accent} opacity={hover?.zone === c.zone && hover.x === c.x && hover.y === c.y ? 0.55 : 0.22}
+        />
+      ))}
+
+      {/* Ghost-Vorschau des angehobenen Stücks am Hover-Ziel. */}
+      {edit.ghost && hover && (() => {
+        const def = getRoomItem(edit.ghost.key);
+        if (!def) return null;
+        const world = gridToWorld(hover.zone, hover.x, hover.y, def.w, def.h);
+        const rotY = surfaceRotationY(hover.zone);
+        return (
+          <group position={world} rotation={[0, rotY, 0]}>
+            <group>
+              <FurniturePrimitive def={def} />
+            </group>
+          </group>
+        );
+      })()}
+    </>
+  );
+}
+
+export default function RoomStage3D({ state, onInteract, vitrine, edit }: Props) {
   const camPos = useMemo(() => {
     const d = Math.max(ROOM_SIZE.width, ROOM_SIZE.depth) * 1.4;
     return [ROOM_CENTER.x + d, d * 0.82, ROOM_CENTER.z + d] as const;
   }, []);
 
+  const level = roomLevel(state.placed);
+
   return (
-    <div className="w-full aspect-[6/5] overflow-hidden rounded-2xl bg-[#141018]">
-      <Canvas shadows dpr={[1, 1.5]} frameloop="demand">
+    <div
+      className="w-full aspect-[6/5] overflow-hidden rounded-2xl bg-[#141018]"
+      title={`Zimmer-Stufe ${level + 1}`}
+    >
+      <Canvas shadows dpr={[1, 1.5]} frameloop="always">
         <OrthographicCamera
           makeDefault
           zoom={42}
@@ -111,9 +268,11 @@ export default function RoomStage3D({ placed }: RoomStage3DProps) {
           onUpdate={cam => cam.lookAt(ROOM_CENTER)}
         />
         <RoomLighting />
-        <RoomShell />
+        <RoomShell wallpaperKey={state.wallpaperKey} floorKey={state.floorKey} />
         <NeonEdge />
-        <PlacedFurniture placed={placed} />
+        <PlacedFurniture placed={state.placed} edit={edit} onInteract={onInteract} />
+        <FixedVitrine onClick={() => onInteract("vitrine")} />
+        {edit && <EditLayer edit={edit} />}
         <ContactShadows
           position={[ROOM_SIZE.width / 2, 0.01, ROOM_SIZE.depth / 2]}
           opacity={0.55} scale={Math.max(ROOM_SIZE.width, ROOM_SIZE.depth) * 1.2}
@@ -123,8 +282,9 @@ export default function RoomStage3D({ placed }: RoomStage3DProps) {
           <Bloom intensity={0.9} luminanceThreshold={0.25} luminanceSmoothing={0.3} mipmapBlur />
         </EffectComposer>
       </Canvas>
+      {vitrine.hiddenCount > 0 && (
+        <div className="sr-only">{vitrine.hiddenCount} weitere Sammelstücke im Lager</div>
+      )}
     </div>
   );
 }
-
-export const ROOM_WORLD_UNIT = WORLD_UNIT;
