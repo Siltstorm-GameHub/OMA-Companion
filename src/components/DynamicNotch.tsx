@@ -8,6 +8,7 @@ import { useSession, signOut } from "next-auth/react";
 import {
   LayoutDashboard, CalendarDays, Trophy, User,
   ShieldCheck, Star, ShoppingBag, Heart, LogOut, AlignJustify, X,
+  type LucideIcon,
 } from "lucide-react";
 
 /* ── Navigation items ──────────────────────────────────────────────── */
@@ -59,7 +60,7 @@ const GLASS: React.CSSProperties = {
 function NavLink({
   label, href, icon: Icon, active, danger = false,
 }: {
-  label: string; href: string; icon: React.ElementType;
+  label: string; href: string; icon: LucideIcon;
   active: boolean; danger?: boolean;
 }) {
   const [hov, setHov] = useState(false);

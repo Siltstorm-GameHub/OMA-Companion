@@ -8,6 +8,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import {
   LayoutDashboard, CalendarDays, Star, Trophy, ShoppingBag,
   Heart, User, ShieldCheck, LogOut, ChevronDown, Sun, Moon, Bell, Settings, X, MessageCircleMore, Sofa,
+  type LucideIcon,
 } from "lucide-react";
 import { WHATSAPP_COMMUNITY_URL } from "@/lib/config";
 import PollBadge from "@/components/PollBadge";
@@ -93,7 +94,7 @@ function Tooltip({ label }: { label: string }) {
 
 /* ── NavIcon ──────────────────────────────────────────────────────────── */
 function NavIcon({ label, href, icon: Icon, active, danger = false }: {
-  label: string; href: string; icon: React.ElementType; active: boolean; danger?: boolean;
+  label: string; href: string; icon: LucideIcon; active: boolean; danger?: boolean;
 }) {
   const [hovered, setHovered] = useState(false);
   const color = danger ? (active ? "#f87171" : "#4b5563") : (active ? "#2dd4bf" : "#4b5563");
