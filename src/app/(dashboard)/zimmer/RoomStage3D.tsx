@@ -386,7 +386,10 @@ function RoomCanvas({
   }, []);
 
   return (
-    <Canvas shadows dpr={[1, 1.5]} frameloop="always">
+    // Kein `shadows`-Prop: kein Mesh setzt castShadow/receiveShadow, das
+    // Shadow-Map-System bliebe reiner toter Overhead — ContactShadows bakt
+    // den Bodenschatten unabhängig davon in einem eigenen Offscreen-Render.
+    <Canvas dpr={[1, 1.5]} frameloop="always">
       <OrthographicCamera
         makeDefault
         position={camPos}
