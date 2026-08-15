@@ -91,11 +91,17 @@ export const ACCENT_COLORS: Record<RoomItemDef["accent"], string> = {
   slate:  "#8b93a7",
 };
 
-/** Gedeckte Grundpalette für Raum-Shell (Wand/Boden), unabhängig vom Katalog. */
+/**
+ * Gedeckte Grundpalette für Raum-Shell (Wand/Boden), unabhängig vom Katalog.
+ * Bewusst deutlich heller als der Canvas-Hintergrund (`bg-[#141018]` in
+ * RoomStage3D.tsx) — sonst verschwimmen Wand/Boden optisch mit dem leeren
+ * Void dahinter und nur die (hellen, gesättigten) Möbel-Akzentfarben bleiben
+ * sichtbar, wodurch der Raum keinen erkennbaren Rahmen mehr hat.
+ */
 export const SHELL_COLORS = {
-  wallBack: "#2a2438",
-  wallSide: "#221d30",
-  floor:    "#1c1826",
+  wallBack: "#453d5c",
+  wallSide: "#332c47",
+  floor:    "#2e2840",
 } as const;
 
 /**
@@ -106,15 +112,15 @@ export const SHELL_COLORS = {
  * `shadeHex`), damit die Raumecke räumlich lesbar bleibt.
  */
 export const WALL_COLOR_BY_KEY: Record<string, string> = {
-  tapete_raufaser: "#332d40",
-  tapete_pixel:    "#3a2860",
-  tapete_scifi:    "#1c3a42",
+  tapete_raufaser: "#4a4260",
+  tapete_pixel:    "#4f3a80",
+  tapete_scifi:    "#2a5560",
 };
 
 export const FLOOR_COLOR_BY_KEY: Record<string, string> = {
-  boden_linoleum: "#241f2e",
-  boden_holz:     "#3c2c1e",
-  boden_scifi:    "#182226",
+  boden_linoleum: "#39324a",
+  boden_holz:     "#5a4230",
+  boden_scifi:    "#243840",
 };
 
 /** Multipliziert einen Hex-Farbwert (0..1) — für die abgedunkelte Seitenwand. */
