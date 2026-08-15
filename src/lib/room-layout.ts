@@ -13,18 +13,18 @@ import { ISO_GRID, type RoomSurface } from "./room-grid";
 export type { RoomSurface } from "./room-grid";
 
 /**
- * Drei Rasterflächen für die isometrische Eck-Ansicht (Rückwand, Seitenwand,
- * Boden) — siehe src/lib/room-iso.ts für die Projektion. `GRID` bleibt der
- * Name, den Validierung und Editor kennen; die konkreten Größen kommen aus
- * `ISO_GRID`, damit Projektions- und Platzierungs-Raster nie auseinanderlaufen.
+ * Fünf Rasterflächen (vier Wände + Boden) — siehe room-3d.ts für die
+ * Weltkoordinaten-Projektion. `GRID` bleibt der Name, den Validierung und
+ * Editor kennen; die konkreten Größen kommen aus `ISO_GRID`, damit
+ * Projektions- und Platzierungs-Raster nie auseinanderlaufen.
  *
  * `RoomItemDef.zone` (aus room-items.ts) bleibt die GROBE Katalog-Klassifikation
  * ("wall" | "floor" — welche Art Möbelstück ist das). `PlacedItem.zone` ist die
  * FEINE, tatsächliche Fläche, auf der es gerade steht/hängt (`RoomSurface`:
- * "floor" | "wall_back" | "wall_side") — ein Wand-Objekt darf auf JEDER der
- * beiden Wände stehen, ein Boden-Objekt nur auf dem Boden. Diese Entkopplung
- * vermeidet, dass jedes Deko-Item im Katalog explizit "welche Wand" festlegen
- * muss.
+ * "floor" | "wall_back" | "wall_side" | "wall_front" | "wall_right") — ein
+ * Wand-Objekt darf auf JEDER der vier Wände hängen, ein Boden-Objekt nur auf
+ * dem Boden. Diese Entkopplung vermeidet, dass jedes Deko-Item im Katalog
+ * explizit "welche Wand" festlegen muss.
  */
 export const GRID = ISO_GRID;
 
@@ -321,7 +321,9 @@ export function legalCells(
 ): { zone: RoomSurface; x: number; y: number }[] {
   const def = getRoomItem(candidate.key);
   if (!def) return [];
-  const surfaces: RoomSurface[] = def.zone === "floor" ? ["floor"] : ["wall_back", "wall_side"];
+  const surfaces: RoomSurface[] = def.zone === "floor"
+    ? ["floor"]
+    : ["wall_back", "wall_side", "wall_front", "wall_right"];
   const cells: { zone: RoomSurface; x: number; y: number }[] = [];
   for (const zone of surfaces) {
     const grid = GRID[zone];
