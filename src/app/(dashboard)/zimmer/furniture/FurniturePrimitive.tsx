@@ -133,25 +133,32 @@ function Desk({ def }: ShapeProps) {
 
 function Monitor({ def }: ShapeProps) {
   const accent = ACCENT_COLORS[def.accent];
+  // Bewusst FEST bemessen statt an def.w/def.h skaliert: die Grid-Zellen
+  // (typ. 2×2) beschreiben die Stellfläche, die der Monitor auf dem
+  // Schreibtisch reserviert — nicht die Größe des physischen Bildschirms.
+  // Skalierung an der Zellgröße machte den Bildschirm bislang riesig
+  // (bis zu 1.6 Einheiten breit statt eines realistischen ~46cm-Monitors).
+  const bezelW = 0.46, bezelH = 0.30, neckH = 0.22;
+  const screenY = 0.03 + neckH + bezelH / 2;
   return (
     <group position={[0, 0.85, 0]}>
       <RoundedBox args={[0.24, 0.03, 0.16]} radius={0.01} position={[0, 0.015, 0]}>
         <meshStandardMaterial {...matteProps(METAL)} roughness={0.5} metalness={0.5} />
       </RoundedBox>
-      <RoundedBox args={[0.1, 0.4, 0.1]} radius={0.02} position={[0, 0.2, 0]}>
+      <RoundedBox args={[0.08, neckH, 0.08]} radius={0.02} position={[0, 0.03 + neckH / 2, 0]}>
         <meshStandardMaterial {...matteProps(METAL)} roughness={0.6} />
       </RoundedBox>
-      <RoundedBox args={[def.w * 0.8, def.h * 0.45, 0.06]} radius={0.03} position={[0, 0.55, 0]}>
+      <RoundedBox args={[bezelW, bezelH, 0.06]} radius={0.02} position={[0, screenY, 0]}>
         <meshStandardMaterial {...matteProps("#252a38")} roughness={0.4} />
       </RoundedBox>
       {/* Dünner heller Rahmen ums Screen-Glow — gibt dem Bildschirm eine
           erkennbare Kante statt eines nahtlos ins Gehäuse übergehenden Flecks. */}
-      <mesh position={[0, 0.55, 0.033]}>
-        <planeGeometry args={[def.w * 0.72, def.h * 0.39]} />
+      <mesh position={[0, screenY, 0.033]}>
+        <planeGeometry args={[bezelW * 0.9, bezelH * 0.87]} />
         <meshStandardMaterial {...matteProps("#0d0f16")} roughness={0.3} />
       </mesh>
-      <mesh position={[0, 0.55, 0.035]}>
-        <planeGeometry args={[def.w * 0.68, def.h * 0.35]} />
+      <mesh position={[0, screenY, 0.035]}>
+        <planeGeometry args={[bezelW * 0.85, bezelH * 0.78]} />
         <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={1.4} toneMapped={false} />
       </mesh>
     </group>

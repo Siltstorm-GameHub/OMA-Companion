@@ -20,7 +20,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { OrthographicCamera, ContactShadows, Html } from "@react-three/drei";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
-import { Vector3, type Mesh, type OrthographicCamera as ThreeOrthographicCamera } from "three";
+import { Vector3, Mesh, MeshStandardMaterial, type OrthographicCamera as ThreeOrthographicCamera } from "three";
+import { useGLTF } from "@react-three/drei";
 import {
   ROOM_SIZE, ROOM_CENTER, SHELL_COLORS, ACCENT_COLORS,
   WALL_COLOR_BY_KEY, FLOOR_COLOR_BY_KEY, shadeHex,
@@ -29,7 +30,7 @@ import {
 import { getRoomItem } from "@/lib/room-items";
 import { roomLevel, type PlacedItem, type RoomState, type RoomSurface as LayoutSurface } from "@/lib/room-layout";
 import type { VitrineItem } from "@/lib/room-vitrine";
-import { FurniturePrimitive, GltfFurniture } from "./furniture/FurniturePrimitive";
+import { FurniturePrimitive } from "./furniture/FurniturePrimitive";
 import { RoomWindow3D, CeilingLamp3D } from "./RoomLevelFixtures";
 
 export type InteractTarget = "crt" | "vitrine" | "jobboard";
@@ -219,6 +220,36 @@ const VITRINE_MARKER = { zone: "floor" as RoomSurface, x: ROOM_SIZE.width - 2, y
  * (kein `slotIndex`) — das einzelne Anklicken je Trophäenfach gab es nur in
  * der SVG-Ansicht mit sichtbaren Einzel-Pedestalen.
  */
+/**
+ * Die Blender-Quelle exportiert "Glass1".."Glass6" mit einem regulär
+ * opaken PBR-Material (kein Blend-Mode/Transmission gesetzt) — ohne diesen
+ * Fix wirkt die Vitrine wie ein massiver dunkler Klotz statt einer
+ * Glasvitrine. `Frame` bleibt unangetastet (fertig texturiertes PBR-Holz,
+ * keine Transparenz nötig).
+ */
+function VitrineCabinet() {
+  const { scene } = useGLTF("/models/vitrine_glass.glb");
+  const cloned = useMemo(() => {
+    const clone = scene.clone(true);
+    clone.traverse(obj => {
+      if (!(obj instanceof Mesh)) return;
+      if (!obj.name.toLowerCase().startsWith("glass")) return;
+      const src = Array.isArray(obj.material) ? obj.material[0] : obj.material;
+      if (!(src instanceof MeshStandardMaterial)) return;
+      const glass = src.clone();
+      glass.transparent = true;
+      glass.opacity = 0.28;
+      glass.roughness = 0.05;
+      glass.metalness = 0;
+      glass.color.set("#bfe4ff");
+      glass.depthWrite = false;
+      obj.material = glass;
+    });
+    return clone;
+  }, [scene]);
+  return <primitive object={cloned} />;
+}
+
 function VitrineMarker({
   hiddenCount, onClick,
 }: { hiddenCount: number; onClick: () => void }) {
@@ -239,7 +270,7 @@ function VitrineMarker({
       onPointerOver={e => { e.stopPropagation(); setHovered(true); document.body.style.cursor = "pointer"; }}
       onPointerOut={() => { setHovered(false); document.body.style.cursor = "auto"; }}
     >
-      <GltfFurniture path="/models/vitrine_glass.glb" />
+      <VitrineCabinet />
       <mesh position={[0, 1.5, 0]}>
         <circleGeometry args={[0.32, 20]} />
         <meshStandardMaterial color="#ffcf6b" emissive="#ffcf6b" emissiveIntensity={1.6} toneMapped={false} />
