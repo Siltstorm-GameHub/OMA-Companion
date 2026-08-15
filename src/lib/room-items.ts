@@ -309,6 +309,13 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     tags: ["chair", "chair_gaming"], mustStandOn: "floor", accent: "rose",
     imageUrl: "/room-items/stuhl_gaming.png",
   },
+  {
+    key: "stuhl_racing", label: "Rennschalen-Stuhl",
+    description: "Sitzt wie ein Cockpit. Fährt trotzdem nirgendwohin.",
+    zone: "floor", category: "sitzen", w: 1, h: 2, price: 3400, minTier: 4, maxOwned: 1,
+    tags: ["chair", "chair_gaming"], mustStandOn: "floor", accent: "teal",
+    imageUrl: "/room-items/stuhl_racing.png",
+  },
 
   // ── Boden: Rechner ────────────────────────────────────────────────────────
   {
@@ -372,6 +379,13 @@ export const ROOM_ITEMS: RoomItemDef[] = [
   },
 
   // ── Boden: Peripherie ─────────────────────────────────────────────────────
+  {
+    key: "gaming_maus", label: "Gaming-Maus",
+    description: "16.000 DPI, von denen du exakt null brauchst.",
+    zone: "floor", category: "peripherie", w: 1, h: 1, price: 350, minTier: 1, maxOwned: 1,
+    tags: [], mustStandOn: null, accent: "teal",
+    imageUrl: "/room-items/gaming_maus.png",
+  },
   {
     key: "steckdosenleiste", label: "Steckdosenleiste",
     description: "Sechsfach, mit Schalter. Die Grundlage jeder ernsthaften Karriere.",
