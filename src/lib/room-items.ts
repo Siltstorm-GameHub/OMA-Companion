@@ -326,8 +326,15 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     imageUrl: "/room-items/pc_billig.png",
   },
   {
+    key: "pc_violett", label: "Violett-Tower",
+    description: "Gitterfront, ein einzelnes violettes Auge. Startet in vier Sekunden statt vier Minuten.",
+    zone: "floor", category: "rechner", w: 1, h: 1, price: 2200, minTier: 3, maxOwned: 1,
+    tags: ["pc"], mustStandOn: "floor", accent: "violet",
+    imageUrl: "/room-items/pc_violett.png",
+  },
+  {
     key: "pc_gaming", label: "Gaming-PC",
-    description: "Glasseitenteil, damit alle sehen, wie ordentlich du verkabelt hast.",
+    description: "Weißes Gehäuse, RGB-Streifen. Innen sieht es trotzdem aus wie bei dir zuhause.",
     zone: "floor", category: "rechner", w: 1, h: 2, price: 3500, minTier: 2, maxOwned: 1,
     tags: ["pc", "pc_gaming"], mustStandOn: "floor", accent: "violet",
     imageUrl: "/room-items/pc_gaming.png",
