@@ -77,8 +77,11 @@ function RoomShell({ wallpaperKey, floorKey }: { wallpaperKey: string; floorKey:
        * y=0/x=0/z=0 (dieselbe Koordinate, die gridToWorld für Möbel
        * verwendet), die Box wächst nur nach außen/unten weiter.
        */}
-      <mesh position={[width / 2, -WALL_THICKNESS / 2, depth / 2]}>
-        <boxGeometry args={[width, WALL_THICKNESS, depth]} />
+      {/* Boden um WALL_THICKNESS in die beiden Wandrichtungen (−X/−Z)
+          vergrößert, damit seine Außenkante bündig mit der Wand-Außenseite
+          abschließt statt an deren Innenkante eine Lücke zu lassen. */}
+      <mesh position={[(width - WALL_THICKNESS) / 2, -WALL_THICKNESS / 2, (depth - WALL_THICKNESS) / 2]}>
+        <boxGeometry args={[width + WALL_THICKNESS, WALL_THICKNESS, depth + WALL_THICKNESS]} />
         <meshStandardMaterial color={floorColor} emissive={floorColor} emissiveIntensity={0.55} roughness={0.85} />
       </mesh>
       <mesh position={[width / 2, height / 2, -WALL_THICKNESS / 2]}>
@@ -448,12 +451,24 @@ function FitCamera({ camPos }: { camPos: readonly [number, number, number] }) {
 }
 
 function RoomCanvas({
-  state, edit, onInteract, hiddenVitrineCount, filledVitrineCount, level,
-}: Pick<Props, "state" | "edit" | "onInteract"> & { hiddenVitrineCount: number; filledVitrineCount: number; level: number }) {
+  state, edit, onInteract, hiddenVitrineCount, filledVitrineCount, level, rotation,
+}: Pick<Props, "state" | "edit" | "onInteract"> & {
+  hiddenVitrineCount: number; filledVitrineCount: number; level: number; rotation: number;
+}) {
   const camPos = useMemo(() => {
     const d = Math.max(ROOM_SIZE.width, ROOM_SIZE.depth) * 1.4;
-    return [ROOM_CENTER.x + d, d * 0.82, ROOM_CENTER.z + d] as const;
-  }, []);
+    // Ursprüngliche feste Eckansicht war exakt (+d, +d) — das entspricht 45°
+    // um die Raummitte. `rotation` verschiebt diesen Winkel, der horizontale
+    // Radius (d·√2) und die Höhe (d·0.82) bleiben unverändert, damit der
+    // Zoom/Rahmen-Look beim Drehen erhalten bleibt.
+    const angle = Math.PI / 4 + rotation;
+    const horizontalRadius = d * Math.SQRT2;
+    return [
+      ROOM_CENTER.x + horizontalRadius * Math.cos(angle),
+      d * 0.82,
+      ROOM_CENTER.z + horizontalRadius * Math.sin(angle),
+    ] as const;
+  }, [rotation]);
 
   return (
     // Kein `shadows`-Prop: kein Mesh setzt castShadow/receiveShadow, das
@@ -500,19 +515,53 @@ function RoomCanvas({
   );
 }
 
+/**
+ * Wie weit sich die Kamera aus der ursprünglichen 45°-Eckansicht heraus
+ * drehen lässt. Bewusst eng begrenzt: die Raum-Shell modelliert nur zwei
+ * Wände (Rückwand + eine Seitenwand, klassische Iso-Eckansicht) — bei
+ * größeren Winkeln würde man an der fehlenden dritten/vierten Wand vorbei in
+ * den leeren Raum dahinter blicken. Sobald alle vier Wände existieren, kann
+ * dieses Limit aufgehoben werden.
+ */
+const ROTATE_STEP = Math.PI / 9; // 20°
+const ROTATE_MAX = Math.PI / 3; // 60°
+
 export default function RoomStage3D({ state, vitrine, onInteract, edit }: Props) {
   const level = roomLevel(state.placed);
   const filledVitrineCount = vitrine.slots.filter(Boolean).length;
+  const [rotation, setRotation] = useState(0);
+  const clamp = (r: number) => Math.max(-ROTATE_MAX, Math.min(ROTATE_MAX, r));
 
   return (
     <div
       title={`Zimmer-Stufe ${level + 1}`}
-      className="w-full aspect-[6/5] overflow-hidden rounded-2xl bg-[#141018]"
+      className="relative w-full aspect-[6/5] overflow-hidden rounded-2xl bg-[#141018]"
     >
       <RoomCanvas
         state={state} edit={edit} onInteract={onInteract}
         hiddenVitrineCount={vitrine.hiddenCount} filledVitrineCount={filledVitrineCount} level={level}
+        rotation={rotation}
       />
+      <div className="absolute bottom-3 right-3 flex gap-1.5 pointer-events-none">
+        <button
+          type="button"
+          aria-label="Ansicht nach links drehen"
+          onClick={() => setRotation(r => clamp(r - ROTATE_STEP))}
+          disabled={rotation <= -ROTATE_MAX}
+          className="pointer-events-auto flex items-center justify-center w-8 h-8 rounded-full bg-black/60 border border-white/15 text-white/80 hover:bg-black/80 hover:text-white disabled:opacity-30 disabled:hover:bg-black/60 transition-colors"
+        >
+          ‹
+        </button>
+        <button
+          type="button"
+          aria-label="Ansicht nach rechts drehen"
+          onClick={() => setRotation(r => clamp(r + ROTATE_STEP))}
+          disabled={rotation >= ROTATE_MAX}
+          className="pointer-events-auto flex items-center justify-center w-8 h-8 rounded-full bg-black/60 border border-white/15 text-white/80 hover:bg-black/80 hover:text-white disabled:opacity-30 disabled:hover:bg-black/60 transition-colors"
+        >
+          ›
+        </button>
+      </div>
     </div>
   );
 }
