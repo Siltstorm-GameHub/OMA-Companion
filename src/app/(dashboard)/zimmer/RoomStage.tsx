@@ -319,12 +319,13 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract, edit 
 
   return (
     <div className="space-y-3">
-      {/* Vitrine + Raum nebeneinander, gleich hoch: die Vitrine ist bewusst
-          KEIN Rasterelement mehr (siehe VitrinePanel) — links neben dem
-          eigentlichen Zimmer, über dessen volle Höhe, damit die
-          Ausstellungsstücke deutlich größer und lesbarer sind, als es eine
-          einzelne Rasterzelle je erlauben würde. */}
-      <div className="flex items-stretch gap-3">
+      {/* Vitrine + Raum: ab sm nebeneinander, gleich hoch (Vitrine links,
+          über die volle Bühnenhöhe — siehe VitrinePanel). Auf Mobilgeräten
+          ist dafür kein Platz: dort quetschte die feste Vitrinen-Breite das
+          eigentliche Zimmer auf einen schmalen Streifen zusammen, deshalb
+          wird unterhalb von sm gestapelt (Vitrine oben, volle Breite, eigene
+          Höhe über ihr Seitenverhältnis) statt nebeneinander gepresst. */}
+      <div className="flex flex-col sm:flex-row items-stretch gap-3">
         <VitrinePanel
           ownerName={ownerName} vitrine={vitrine} onInteract={onInteract} editing={!!edit}
           measuredHeight={stageHeight}
@@ -502,12 +503,24 @@ function VitrinePanel({
 
   return (
     <div
-      className={cn("glass card-shine rounded-2xl p-2 sm:p-3 shrink-0", measuredHeight == null && "self-stretch")}
-      style={measuredHeight != null ? { height: measuredHeight } : undefined}
+      className={cn(
+        "glass card-shine rounded-2xl p-2 sm:p-3 shrink-0",
+        // Mobil: volle Breite, Höhe folgt dem Seitenverhältnis der SVG (kein
+        // erzwungener Wert). Ab sm: feste Breite, Höhe = gemessene Bühnenhöhe
+        // (siehe measuredHeight-Kommentar oben) — oder self-stretch, bis der
+        // erste Messwert eintrifft.
+        "w-full sm:w-auto",
+        measuredHeight == null && "sm:self-stretch",
+      )}
+      style={measuredHeight != null ? { ["--vitrine-h" as string]: `${measuredHeight}px` } : undefined}
     >
       <svg
         viewBox={`0 0 ${vw} ${vh}`}
-        className="block h-full w-auto rounded-xl"
+        className={cn(
+          "block w-full h-auto max-h-[40vh] rounded-xl",
+          measuredHeight != null && "sm:h-[var(--vitrine-h)] sm:w-auto sm:max-h-none",
+          measuredHeight == null && "sm:h-full sm:w-auto",
+        )}
         role="img"
         aria-label={label}
       >
