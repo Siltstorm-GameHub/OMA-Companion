@@ -48,6 +48,25 @@ export interface RoomItemDef {
   mustStandOn: "desk" | "floor" | "shelf" | null;
   accent:      "violet" | "teal" | "amber" | "rose" | "slate";
   /**
+   * Upgrade-Kette (z.B. "schreibtisch", "rechner", "sitzen"): Items mit
+   * demselben Slot sind funktional dasselbe Möbelstück in verschiedenen
+   * Ausbaustufen. Kauft ein User ein neues Item desselben Slots, wird das
+   * aktuell AUFGESTELLTE Vorgänger-Objekt automatisch eingelagert (siehe
+   * purchaseRoomItem in room.ts) — verhindert, dass mehrere Schreibtische
+   * gleichzeitig im Zimmer stehen, ohne das alte Möbelstück zu löschen.
+   */
+  upgradeSlot?: string;
+  /**
+   * Zeitlich begrenzte Deko-Objekte: nur im Fenster [from,to] (Format
+   * "MM-DD", inklusive) im Shop kaufbar — außerhalb verschwindet das Item
+   * komplett aus shopItems(), statt ausgegraut/gesperrt angezeigt zu werden.
+   * `from > to` bedeutet ein Fenster über den Jahreswechsel (z.B. "12-01"
+   * bis "01-06" für die Weihnachtszeit). Bereits besessene/aufgestellte
+   * Exemplare bleiben außerhalb des Fensters unangetastet — nur der
+   * NEUKAUF ist gesperrt (siehe purchaseRoomItem in room.ts).
+   */
+  season?: { from: string; to: string };
+  /**
    * Optionales PNG-Sprite (Supabase Storage). Ist es gesetzt, rendert
    * RoomItemSprite das Bild statt des handgebauten Inline-SVG — pro Item
    * austauschbar, ohne Code-Änderung.
@@ -82,6 +101,14 @@ export interface RoomItemDef {
 /** Flächen werden gekauft, aber nie platziert — sie sitzen auf Room.wallpaperKey / floorKey. */
 export function isSurface(def: RoomItemDef): boolean {
   return def.category === "tapete" || def.category === "bodenbelag";
+}
+
+/** Ist `def.season` gerade aktiv (oder gar nicht gesetzt = immer verfügbar)? */
+export function isSeasonalActive(def: RoomItemDef, now: Date = new Date()): boolean {
+  if (!def.season) return true;
+  const mmdd = `${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const { from, to } = def.season;
+  return from <= to ? (mmdd >= from && mmdd <= to) : (mmdd >= from || mmdd <= to);
 }
 
 /**
@@ -202,76 +229,84 @@ export const ROOM_ITEMS: RoomItemDef[] = [
   {
     key: "poster_retro", label: "Retro-Gaming-Poster",
     description: "Ein Spiel, das du nie gespielt hast, aber das Cover ist unschlagbar.",
-    zone: "wall", category: "deko", w: 2, h: 2, price: 250, minTier: 1, maxOwned: 4,
+    zone: "wall", category: "deko", w: 2, h: 2, price: 250, minTier: 1, maxOwned: Infinity,
     tags: [], mustStandOn: null, accent: "rose",
+  },
+  {
+    key: "sommer_poster", label: "Sommer-Beach-Poster",
+    description: "Palmen, Meer, Cocktail mit Schirmchen. Deine Klimaanlage ist trotzdem kaputt.",
+    zone: "wall", category: "deko", w: 2, h: 2, price: 380, minTier: 1, maxOwned: Infinity,
+    tags: [], mustStandOn: null, accent: "teal",
+    imageUrl: "/room-items/sommer_poster.png",
+    season: { from: "06-01", to: "08-31" },
   },
   {
     key: "gitarre_deko", label: "E-Gitarre (Deko)",
     description: "Drei Akkorde gelernt, dann für immer an die Wand gehängt.",
-    zone: "wall", category: "deko", w: 1, h: 3, price: 550, minTier: 2, maxOwned: 1,
+    zone: "wall", category: "deko", w: 1, h: 3, price: 550, minTier: 2, maxOwned: Infinity,
     tags: [], mustStandOn: null, accent: "rose",
     imageUrl: "/room-items/gitarre_deko.png",
   },
   {
     key: "deko_pokal", label: "Deko-Pokal",
     description: "Nie ein Turnier gewonnen, aber im Regal macht er trotzdem was her.",
-    zone: "wall", category: "deko", w: 1, h: 1, price: 220, minTier: 1, maxOwned: 4,
+    zone: "wall", category: "deko", w: 1, h: 1, price: 220, minTier: 1, maxOwned: Infinity,
     tags: [], mustStandOn: "shelf", accent: "amber",
     imageUrl: "/room-items/deko_pokal.png",
   },
   {
     key: "regal_holz", label: "Wandregal",
     description: "Platz für Krimskrams, den du nie wieder anfasst.",
-    zone: "wall", category: "moebel", w: 3, h: 1, price: 400, minTier: 1, maxOwned: 3,
+    zone: "wall", category: "moebel", w: 3, h: 1, price: 400, minTier: 1, maxOwned: Infinity,
     tags: ["shelf"], mustStandOn: null, accent: "amber",
     imageUrl: "/room-items/regal_holz.png",
   },
   {
     key: "led_stripe", label: "LED-Stripe",
     description: "Regenbogen an der Wand. Verbessert deine Reaktionszeit um exakt 0 %.",
-    zone: "wall", category: "licht", w: 4, h: 1, price: 600, minTier: 1, maxOwned: 3,
+    zone: "wall", category: "licht", w: 4, h: 1, price: 600, minTier: 1, maxOwned: Infinity,
     tags: ["light"], mustStandOn: null, accent: "violet",
     imageUrl: "/room-items/led_stripe.png", renderScale: 1.15,
   },
   {
     key: "pokalregal", label: "Pokalregal",
     description: "Endlich ein Ort für die Trophäen, statt sie im Flur zu stapeln.",
-    zone: "wall", category: "moebel", w: 3, h: 1, price: 1800, minTier: 3, maxOwned: 1,
+    zone: "wall", category: "moebel", w: 3, h: 1, price: 1800, minTier: 3, maxOwned: Infinity,
     tags: ["shelf", "trophy_shelf"], mustStandOn: null, accent: "amber",
     imageUrl: "/room-items/pokalregal.png",
   },
   {
     key: "whiteboard", label: "Taktik-Whiteboard",
     description: "Pfeile, Kreise, Kaffeeflecken. Der Plan ergibt nur für dich Sinn.",
-    zone: "wall", category: "deko", w: 3, h: 2, price: 2000, minTier: 4, maxOwned: 1,
+    zone: "wall", category: "deko", w: 3, h: 2, price: 2000, minTier: 4, maxOwned: Infinity,
     tags: ["whiteboard"], mustStandOn: null, accent: "teal",
     imageUrl: "/room-items/whiteboard.png",
   },
   {
     key: "nanoleaf", label: "Dreieck-Panels",
     description: "Leuchtende Dreiecke in Regenbogenverlauf. Der halbe Stromverbrauch, der ganze Effekt.",
-    zone: "wall", category: "licht", w: 3, h: 2, price: 2400, minTier: 3, maxOwned: 2,
+    zone: "wall", category: "licht", w: 3, h: 2, price: 2400, minTier: 3, maxOwned: Infinity,
     tags: ["light", "neon"], mustStandOn: null, accent: "violet",
     imageUrl: "/room-items/nanoleaf.png",
   },
   {
     key: "neon_schild", label: 'Neon-Schild "ZOCKEN"',
     description: "Damit auch der Postbote weiß, was hier läuft.",
-    zone: "wall", category: "licht", w: 3, h: 1, price: 3200, minTier: 4, maxOwned: 1,
+    zone: "wall", category: "licht", w: 3, h: 1, price: 3200, minTier: 4, maxOwned: Infinity,
     tags: ["neon", "light"], mustStandOn: null, accent: "rose",
     imageUrl: "/room-items/neon_schild.png",
   },
   {
     key: "neon_blitz", label: "Neon-Blitz",
     description: "Sieht aus wie Energie. Ist meistens nur Deko.",
-    zone: "wall", category: "licht", w: 1, h: 2, price: 2800, minTier: 4, maxOwned: 1,
+    zone: "wall", category: "licht", w: 1, h: 2, price: 2800, minTier: 4, maxOwned: Infinity,
     tags: ["neon", "light"], mustStandOn: null, accent: "violet",
     imageUrl: "/room-items/neon_blitz.png",
   },
   {
     key: "led_wand", label: "LED-Videowand",
     description: "Sechs Felder pure Angeberei. Der Nachbar sieht das Flackern durchs Fenster.",
-    zone: "wall", category: "licht", w: 6, h: 3, price: 14000, minTier: 6, maxOwned: 1,
+    zone: "wall", category: "licht", w: 6, h: 3, price: 14000, minTier: 6, maxOwned: Infinity,
     tags: ["led_wall", "light"], mustStandOn: null, accent: "violet",
     imageUrl: "/room-items/led_wand.png",
   },
@@ -287,28 +322,28 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     key: "schreibtisch_alt", label: "Wackeltisch",
     description: "Ein Bierdeckel unter dem linken Bein hält ihn seit Jahren im Gleichgewicht.",
     zone: "floor", category: "schreibtisch", w: 6, h: 3, price: 0, minTier: 1, maxOwned: 1,
-    tags: ["desk"], mustStandOn: "floor", accent: "slate", starter: true,
+    tags: ["desk"], mustStandOn: "floor", accent: "slate", starter: true, upgradeSlot: "schreibtisch",
     imageUrl: "/room-items/schreibtisch_alt.png",
   },
   {
     key: "schreibtisch_eck", label: "Eck-Gamingtisch",
     description: "Kabelkanal, Getränkehalter, Kopfhörerhaken. Endlich erwachsen.",
     zone: "floor", category: "schreibtisch", w: 7, h: 3, price: 2600, minTier: 2, maxOwned: 1,
-    tags: ["desk"], mustStandOn: "floor", accent: "teal",
+    tags: ["desk"], mustStandOn: "floor", accent: "teal", upgradeSlot: "schreibtisch",
     imageUrl: "/room-items/schreibtisch_eck.png",
   },
   {
     key: "schreibtisch_neon", label: "Neon-Eckschreibtisch",
     description: "Neonkante inklusive, Kabelsalat nicht.",
     zone: "floor", category: "schreibtisch", w: 3, h: 3, price: 4200, minTier: 3, maxOwned: 1,
-    tags: ["desk"], mustStandOn: "floor", accent: "violet",
+    tags: ["desk"], mustStandOn: "floor", accent: "violet", upgradeSlot: "schreibtisch",
     imageUrl: "/room-items/schreibtisch_neon.png",
   },
   {
     key: "schreibtisch_modern", label: "Moderner Schreibtisch",
     description: "Weiße Platte, schwarzes Metallgestell. Sieht teurer aus, als er war.",
     zone: "floor", category: "schreibtisch", w: 4, h: 2, price: 1800, minTier: 1, maxOwned: 1,
-    tags: ["desk"], mustStandOn: "floor", accent: "teal",
+    tags: ["desk"], mustStandOn: "floor", accent: "teal", upgradeSlot: "schreibtisch",
     imageUrl: "/room-items/schreibtisch_modern.png",
   },
 
@@ -317,21 +352,21 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     key: "stuhl_buero", label: "Bürostuhl (quietscht)",
     description: "Die Gasfeder gibt nach zwanzig Minuten auf. Jedes Mal.",
     zone: "floor", category: "sitzen", w: 1, h: 2, price: 150, minTier: 1, maxOwned: 1,
-    tags: ["chair"], mustStandOn: "floor", accent: "slate",
+    tags: ["chair"], mustStandOn: "floor", accent: "slate", upgradeSlot: "sitzen",
     imageUrl: "/room-items/stuhl_buero.png",
   },
   {
     key: "stuhl_gaming", label: "Gaming-Thron",
     description: "RGB im Sitzkissen. Ergonomisch fragwürdig, optisch unverhandelbar.",
     zone: "floor", category: "sitzen", w: 1, h: 2, price: 2200, minTier: 3, maxOwned: 1,
-    tags: ["chair", "chair_gaming"], mustStandOn: "floor", accent: "rose",
+    tags: ["chair", "chair_gaming"], mustStandOn: "floor", accent: "rose", upgradeSlot: "sitzen",
     imageUrl: "/room-items/stuhl_gaming.png",
   },
   {
     key: "stuhl_racing", label: "Rennschalen-Stuhl",
     description: "Sitzt wie ein Cockpit. Fährt trotzdem nirgendwohin.",
     zone: "floor", category: "sitzen", w: 1, h: 2, price: 3400, minTier: 4, maxOwned: 1,
-    tags: ["chair", "chair_gaming"], mustStandOn: "floor", accent: "teal",
+    tags: ["chair", "chair_gaming"], mustStandOn: "floor", accent: "teal", upgradeSlot: "sitzen",
     imageUrl: "/room-items/stuhl_racing.png",
   },
 
@@ -340,28 +375,28 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     key: "pc_billig", label: "Billig-Kiste",
     description: "Startet in vier Minuten. Der Lüfter klingt wie ein Föhn aus den 90ern.",
     zone: "floor", category: "rechner", w: 1, h: 2, price: 0, minTier: 1, maxOwned: 1,
-    tags: ["pc"], mustStandOn: "floor", accent: "slate", starter: true,
+    tags: ["pc"], mustStandOn: "floor", accent: "slate", starter: true, upgradeSlot: "rechner",
     imageUrl: "/room-items/pc_billig.png",
   },
   {
     key: "pc_violett", label: "Violett-Tower",
     description: "Gitterfront, ein einzelnes violettes Auge. Startet in vier Sekunden statt vier Minuten.",
     zone: "floor", category: "rechner", w: 1, h: 1, price: 2200, minTier: 3, maxOwned: 1,
-    tags: ["pc"], mustStandOn: "floor", accent: "violet",
+    tags: ["pc"], mustStandOn: "floor", accent: "violet", upgradeSlot: "rechner",
     imageUrl: "/room-items/pc_violett.png",
   },
   {
     key: "pc_gaming", label: "Gaming-PC",
     description: "Weißes Gehäuse, RGB-Streifen. Innen sieht es trotzdem aus wie bei dir zuhause.",
     zone: "floor", category: "rechner", w: 1, h: 2, price: 3500, minTier: 2, maxOwned: 1,
-    tags: ["pc", "pc_gaming"], mustStandOn: "floor", accent: "violet",
+    tags: ["pc", "pc_gaming"], mustStandOn: "floor", accent: "violet", upgradeSlot: "rechner",
     imageUrl: "/room-items/pc_gaming.png",
   },
   {
     key: "pc_highend", label: "High-End-Rig",
     description: "Wasserkühlung, zu viele Lüfter, eigener Sicherungskasten.",
     zone: "floor", category: "rechner", w: 1, h: 2, price: 11000, minTier: 5, maxOwned: 1,
-    tags: ["pc", "pc_gaming", "pc_highend"], mustStandOn: "floor", accent: "teal",
+    tags: ["pc", "pc_gaming", "pc_highend"], mustStandOn: "floor", accent: "teal", upgradeSlot: "rechner",
     imageUrl: "/room-items/pc_highend.png",
   },
 
@@ -493,14 +528,14 @@ export const ROOM_ITEMS: RoomItemDef[] = [
   {
     key: "konsole_retro", label: "Retro-Konsole",
     description: "Modul reinstecken, kurz reinpusten, läuft. Alte Schule eben.",
-    zone: "floor", category: "konsole", w: 1, h: 1, price: 900, minTier: 2, maxOwned: 2,
+    zone: "floor", category: "konsole", w: 1, h: 1, price: 900, minTier: 2, maxOwned: Infinity,
     tags: ["console", "console_retro"], mustStandOn: null, accent: "amber",
     imageUrl: "/room-items/konsole_retro.png", renderScale: 1.1,
   },
   {
     key: "konsole_neu", label: "Aktuelle Konsole",
     description: "Größer als der Fernseher, auf dem sie laufen sollte.",
-    zone: "floor", category: "konsole", w: 1, h: 1, price: 2800, minTier: 3, maxOwned: 2,
+    zone: "floor", category: "konsole", w: 1, h: 1, price: 2800, minTier: 3, maxOwned: Infinity,
     tags: ["console"], mustStandOn: null, accent: "teal", renderScale: 1.1,
     imageUrl: "/room-items/konsole_neu.png",
   },
@@ -509,14 +544,14 @@ export const ROOM_ITEMS: RoomItemDef[] = [
   {
     key: "kommode", label: "Offene Kommode",
     description: "Zwei offene Fächer für alles, was sonst auf dem Boden landen würde.",
-    zone: "floor", category: "moebel", w: 3, h: 1, price: 650, minTier: 2, maxOwned: 2,
+    zone: "floor", category: "moebel", w: 3, h: 1, price: 650, minTier: 2, maxOwned: Infinity,
     tags: ["surface"], mustStandOn: "floor", accent: "amber",
     imageUrl: "/room-items/kommode.png",
   },
   {
     key: "konsolentisch", label: "Konsolentisch",
     description: "Lang, schmal, genug Ablage für den Krempel, der sonst nirgends hinpasst.",
-    zone: "floor", category: "moebel", w: 3, h: 1, price: 900, minTier: 2, maxOwned: 1,
+    zone: "floor", category: "moebel", w: 3, h: 1, price: 900, minTier: 2, maxOwned: Infinity,
     tags: ["surface"], mustStandOn: "floor", accent: "slate",
     imageUrl: "/room-items/konsolentisch.png",
   },
@@ -536,21 +571,21 @@ export const ROOM_ITEMS: RoomItemDef[] = [
   {
     key: "pflanze", label: "Zimmerpflanze (halbtot)",
     description: "Gießen war letzten Monat. Sie hält durch, aus Trotz.",
-    zone: "floor", category: "deko", w: 1, h: 2, price: 180, minTier: 1, maxOwned: 3,
+    zone: "floor", category: "deko", w: 1, h: 2, price: 180, minTier: 1, maxOwned: Infinity,
     tags: ["plant"], mustStandOn: "floor", accent: "teal",
     imageUrl: "/room-items/pflanze.png",
   },
   {
     key: "plattenspieler", label: "Plattenspieler",
     description: "Steht nur da, weil er gut aussieht. Vinyl hast du sowieso keins.",
-    zone: "floor", category: "deko", w: 1, h: 1, price: 650, minTier: 2, maxOwned: 1,
+    zone: "floor", category: "deko", w: 1, h: 1, price: 650, minTier: 2, maxOwned: Infinity,
     tags: [], mustStandOn: "desk", accent: "amber",
     imageUrl: "/room-items/plattenspieler.png",
   },
   {
     key: "teppich", label: "Fleckenteppich",
     description: "Jeder Fleck erzählt eine Geschichte. Die meisten handeln von Energydrinks.",
-    zone: "floor", category: "deko", w: 3, h: 1, price: 300, minTier: 1, maxOwned: 2,
+    zone: "floor", category: "deko", w: 3, h: 1, price: 300, minTier: 1, maxOwned: Infinity,
     tags: [], mustStandOn: "floor", accent: "rose",
     imageUrl: "/room-items/teppich.png",
   },
@@ -564,14 +599,14 @@ export const ROOM_ITEMS: RoomItemDef[] = [
   {
     key: "kaffeemaschine", label: "Kaffeemaschine",
     description: "Der eigentliche Motor deiner Karriere.",
-    zone: "floor", category: "deko", w: 1, h: 1, price: 450, minTier: 1, maxOwned: 1,
+    zone: "floor", category: "deko", w: 1, h: 1, price: 450, minTier: 1, maxOwned: Infinity,
     tags: [], mustStandOn: null, accent: "amber",
     imageUrl: "/room-items/kaffeemaschine.png",
   },
   {
     key: "rollator", label: "Getunter Rollator",
     description: "Unterbodenbeleuchtung, Getränkehalter, Spoiler. Fraktion Rollator grüßt.",
-    zone: "floor", category: "deko", w: 2, h: 2, price: 4000, minTier: 5, maxOwned: 1,
+    zone: "floor", category: "deko", w: 2, h: 2, price: 4000, minTier: 5, maxOwned: Infinity,
     tags: [], mustStandOn: "floor", accent: "violet",
     imageUrl: "/room-items/rollator.png",
   },
@@ -599,7 +634,7 @@ export function shopItems(): { category: RoomCategory; label: string; items: Roo
       category,
       label: ROOM_CATEGORY_LABELS[category],
       items: ROOM_ITEMS
-        .filter(i => i.category === category && i.price > 0)
+        .filter(i => i.category === category && i.price > 0 && isSeasonalActive(i))
         .sort((a, b) => a.price - b.price),
     }))
     .filter(g => g.items.length > 0);

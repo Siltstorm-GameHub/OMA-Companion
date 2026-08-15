@@ -106,10 +106,10 @@ function WindowGlass({ level }: { level: number }) {
  * Abendlicht bei Stufe 3, gedämpftes Dämmerlicht bei 0/1.
  */
 const WINDOW_LIGHT = [
-  { color: "#4a3f6b", intensity: 0.18 }, // 0: Dämmerung
-  { color: "#5a6a8a", intensity: 0.3 },  // 1: Abend
-  { color: "#bcd8f5", intensity: 1.1 },  // 2: Mittag
-  { color: "#ffb98a", intensity: 0.85 }, // 3: Sonnenuntergang
+  { color: "#4a3f6b", intensity: 0.35 }, // 0: Dämmerung
+  { color: "#5a6a8a", intensity: 0.55 }, // 1: Abend
+  { color: "#bcd8f5", intensity: 1.8 },  // 2: Mittag
+  { color: "#ffb98a", intensity: 1.3 },  // 3: Sonnenuntergang
 ] as const;
 
 /**
@@ -173,7 +173,7 @@ export function RoomWindow3D({ level, closed }: { level: number; closed: boolean
       {/* Echtes Licht, das ins Zimmer hineinfällt — deutlich vor die
           Scheibe versetzt (z=1.4), sonst beleuchtet es nur sich selbst.
           Bei geschlossenem Rolladen komplett aus. */}
-      {!closed && <pointLight position={[0, 0.2, 1.4]} color={light.color} intensity={light.intensity} distance={7} decay={1.8} />}
+      {!closed && <pointLight position={[0, 0.2, 1.4]} color={light.color} intensity={light.intensity} distance={10} decay={1.8} />}
       {/* Fensterbank */}
       <RoundedBox
         args={[WINDOW_GEOM.w * 1.15, 0.08, 0.22]} radius={0.02}
@@ -273,16 +273,22 @@ function Chandelier({ on }: { on: boolean }) {
 }
 
 /**
- * Lichtstärke/-farbe der Deckenlampe je Stufe — vorher fix (immer dieselbe
- * Helligkeit unabhängig von der Leuchten-Form), jetzt an dieselbe Stufe
- * gekoppelt wie die Kopf-Form: nackte Glühbirne leuchtet spürbar schwächer
- * als der Kronleuchter.
+ * Lichtstärke/-farbe/-reichweite der Deckenlampe je Stufe — vorher fix
+ * (immer dieselbe Helligkeit unabhängig von der Leuchten-Form), jetzt an
+ * dieselbe Stufe gekoppelt wie die Kopf-Form: nackte Glühbirne leuchtet
+ * spürbar schwächer als der Kronleuchter.
+ *
+ * `distance` ist bewusst Teil der Progression, nicht nur `intensity`: der
+ * Raum misst als Bodendiagonale ~13,9m (12×7, siehe ROOM_SIZE). Bei Stufe
+ * 0/1 bleibt `distance` klar darunter — die Lampe erhellt nur einen Pool um
+ * sich herum, die Ecken bleiben dunkel. Erst ab Stufe 2 überschreitet
+ * `distance` die Diagonale und flutet den ganzen Raum.
  */
 const CEILING_LAMP_LIGHT = [
-  { color: "#ffe9b8", intensity: 0.75 }, // 0: nackte Glühbirne
-  { color: "#ffdba0", intensity: 0.95 }, // 1: Stoffschirm
-  { color: "#eaf2ff", intensity: 1.3 },  // 2: modernes Deckenlicht (kühler)
-  { color: "#ffe9b8", intensity: 1.6 },  // 3: Kronleuchter
+  { color: "#ffe9b8", intensity: 1.0, distance: 6 },  // 0: nackte Glühbirne — kleiner Lichtkreis
+  { color: "#ffdba0", intensity: 1.6, distance: 8 },  // 1: Stoffschirm — heller, aber Ecken bleiben dunkel
+  { color: "#eaf2ff", intensity: 3.0, distance: 15 }, // 2: modernes Deckenlicht — flutet den ganzen Raum
+  { color: "#ffe9b8", intensity: 3.8, distance: 16 }, // 3: Kronleuchter — voll ausgeleuchtet
 ] as const;
 
 /**
@@ -314,7 +320,7 @@ export function CeilingLamp3D({ level, on }: { level: number; on: boolean }) {
             aus Performance-Gründen keine Schatten. */}
         {on && (
           <pointLight
-            position={[0, -0.05, 0]} color={light.color} intensity={light.intensity} distance={9} decay={2}
+            position={[0, -0.05, 0]} color={light.color} intensity={light.intensity} distance={light.distance} decay={2}
             castShadow shadow-mapSize-width={512} shadow-mapSize-height={512}
             shadow-bias={-0.003}
           />

@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { ShoppingBag, Pencil, Briefcase } from "lucide-react";
+import { ShoppingBag, Pencil, Briefcase, Lock } from "lucide-react";
 import type { RoomState } from "@/lib/room-layout";
 import type { RoomProfileCore, RoomProfileDetails } from "@/lib/room-profile-data";
 import type { JobOverview } from "@/lib/job-service";
@@ -61,6 +61,18 @@ export default function RoomView({
     setOpenSlotIndex(slotIndex ?? null);
   }
 
+  // Nächstes erreichbares Ziel: der Job mit den wenigsten fehlenden Objekten,
+  // dessen Rang aber schon reicht — ein greifbarer "noch 1 Objekt"-Anreiz
+  // direkt auf der Bühne, statt dass man das nur in der Jobbörse sieht.
+  // Rein aus dem ohnehin geladenen JobOverview berechnet, keine neuen Daten.
+  const nextJob = !readOnly && job
+    ? job.jobs
+        .filter(j => j.rankOk && !j.unlocked)
+        .map(j => ({ ...j, missing: j.requirements.filter(r => r.have < r.need) }))
+        .filter(j => j.missing.length > 0)
+        .sort((a, b) => a.missing.length - b.missing.length || a.coinsPerHour - b.coinsPerHour)[0]
+    : undefined;
+
   // Im Bearbeiten-Modus übernimmt der Editor die Bühne samt eigener Leiste.
   if (editing && !readOnly) {
     return (
@@ -95,6 +107,24 @@ export default function RoomView({
           onOpenBoard={() => setOpenTarget("jobboard")}
           onClaimed={() => { /* router.refresh() passiert im Widget */ }}
         />
+      )}
+
+      {/* ── Nächstes Ziel ────────────────────────────────────────────
+          Greifbarer nächster Job, direkt auf der Bühne statt versteckt
+          in der Jobbörse. */}
+      {nextJob && (
+        <button
+          type="button"
+          onClick={() => setOpenTarget("jobboard")}
+          className="w-full glass card-shine rounded-2xl px-4 py-2.5 flex items-center gap-2.5 text-left hover:bg-white/[0.03] transition-colors"
+        >
+          <Lock className="w-3.5 h-3.5 text-teal-400 shrink-0" />
+          <p className="flex-1 min-w-0 text-[11px] text-gray-400 truncate">
+            <span className="text-white font-semibold">{nextJob.emoji} {nextJob.label}</span>
+            {" "}— fehlt noch: {nextJob.missing.map(m => (m.need > 1 ? `${m.need}× ${m.label}` : m.label)).join(", ")}
+          </p>
+          <span className="text-[11px] text-teal-400 shrink-0">Jobbörse →</span>
+        </button>
       )}
 
       {/* ── Aktionsleiste ────────────────────────────────────────────
@@ -148,6 +178,7 @@ export default function RoomView({
         displayName={core.displayName}
         readOnly={readOnly}
         details={details}
+        vitrineUpdatedAt={core.vitrine.updatedAt}
         trophySection={trophySection}
       />
 

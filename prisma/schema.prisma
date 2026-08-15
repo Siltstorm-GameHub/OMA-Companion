@@ -43,6 +43,9 @@ model User {
   // Fehlt ein Index, füllt loadRoomProfileCore das Fach automatisch (siehe room-profile-data.ts).
   // null als Wert = User hat das Fach bewusst leer gelassen (kein Auto-Fill).
   vitrineSlotsJson   String?
+  // Zeitpunkt der letzten Vitrinen-Änderung (Fach gesetzt/geleert/auf Auto zurückgestellt) —
+  // treibt den "zuletzt aktualisiert"-Hinweis für Besucher (siehe VitrineModal.tsx).
+  vitrineUpdatedAt   DateTime?
   // Aktuelle Lieblingsspiele: JSON-Array mit bis zu 5 { name, appId } (Steam App-ID für das Cover)
   favoriteGamesJson  String?
   // Notification-Präferenzen: JSON-Objekt { badge: bool, quest: bool, event: bool, points: bool, clip: bool, admin: bool }

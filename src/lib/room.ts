@@ -1,7 +1,7 @@
 import { prisma } from "./prisma";
 import { COIN_PREFIX } from "./points";
 import { getRank } from "./ranks";
-import { getRoomItem, isFixed, isSurface, STARTER_ITEM_KEYS } from "./room-items";
+import { getRoomItem, isFixed, isSeasonalActive, isSurface, STARTER_ITEM_KEYS } from "./room-items";
 import {
   DEFAULT_ROOM, DEFAULT_PLACEMENTS, DEFAULT_ID_PREFIX, MAX_PLACED_ITEMS,
   countTags, validateLayout, fitsGrid,
@@ -165,10 +165,23 @@ export async function purchaseRoomItem(userId: string, itemKey: string): Promise
   const def = getRoomItem(itemKey);
   if (!def)            return { error: "Unbekanntes Möbelstück" };
   if (def.price <= 0)  return { error: "Das gibt es nicht zu kaufen" };
+  if (!isSeasonalActive(def)) return { error: "Gerade nicht erhältlich — saisonales Objekt" };
 
-  const [user, owned] = await Promise.all([
+  // Upgrade-Slot-Items (Schreibtisch/Rechner/Sitzmöbel) brauchen echte Zeilen,
+  // um das aktuell aufgestellte Vorgänger-Objekt zu finden — sonst würde bei
+  // der allerersten Aktion eines Users (Kauf vor jeder Materialisierung) der
+  // Slot-Abgleich die noch virtuelle Grundausstattung übersehen.
+  if (def.upgradeSlot) await materializeRoom(userId);
+
+  const [user, owned, placedRows, userJob] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId }, select: { points: true, rankPoints: true } }),
     prisma.roomItem.count({ where: { userId, itemKey } }),
+    def.upgradeSlot
+      ? prisma.roomItem.findMany({ where: { userId, placed: true } })
+      : Promise.resolve([]),
+    def.upgradeSlot
+      ? prisma.userJob.findUnique({ where: { userId }, select: { jobKey: true } }).catch(() => null)
+      : Promise.resolve(null),
   ]);
   if (!user) return { error: "Nicht eingeloggt" };
 
@@ -179,9 +192,37 @@ export async function purchaseRoomItem(userId: string, itemKey: string): Promise
   }
   if (user.points < def.price)  return { error: "Nicht genug Münzen" };
 
+  // Upgrade-Slot: das aktuell aufgestellte Vorgänger-Objekt automatisch
+  // einlagern, damit nicht z.B. zwei Schreibtische gleichzeitig im Zimmer
+  // stehen — außer ein aktiver Job braucht genau dieses Objekt gerade (dann
+  // bleibt es stehen, der Kauf klappt trotzdem, wie beim manuellen Einlagern
+  // in saveLayout).
+  let slotRowToStore: string | null = null;
+  if (def.upgradeSlot) {
+    const oldRow = placedRows.find(r => getRoomItem(r.itemKey)?.upgradeSlot === def.upgradeSlot);
+    if (oldRow) {
+      const activeJob = getJob(userJob?.jobKey);
+      if (!activeJob) {
+        slotRowToStore = oldRow.id;
+      } else {
+        const remaining: PlacedItem[] = placedRows
+          .filter(r => r.id !== oldRow.id)
+          .map(r => ({
+            id: r.id, key: r.itemKey, zone: coerceSurface(r.zone),
+            x: r.x, y: r.y, flipped: r.flipped, starter: r.starter,
+          }));
+        if (checkRequirements(activeJob, countTags(remaining)).met) slotRowToStore = oldRow.id;
+      }
+    }
+  }
+
   const created = await prisma.$transaction(async tx => {
     // Wer noch nie etwas verändert hat, bekommt hier sein Zimmer als echte Zeilen.
     await materializeRoom(userId, tx);
+
+    if (slotRowToStore) {
+      await tx.roomItem.update({ where: { id: slotRowToStore }, data: { placed: false } });
+    }
 
     const row = await tx.roomItem.create({
       data: {

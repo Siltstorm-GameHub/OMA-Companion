@@ -5,10 +5,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  ChevronDown, ChevronUp, ShoppingCart, Check, Loader2, Lock, Sofa, Briefcase,
+  ChevronDown, ChevronUp, ShoppingCart, Check, Loader2, Lock, Sofa, Briefcase, Clock,
 } from "lucide-react";
 import { RoomItemPreview } from "@/app/(dashboard)/zimmer/RoomItemSprite";
-import { shopItems, isSurface, type RoomItemDef } from "@/lib/room-items";
+import { shopItems, isSurface, ROOM_ITEMS, type RoomItemDef } from "@/lib/room-items";
 import { jobsUnlockedBy } from "@/lib/jobs";
 import { RANKS } from "@/lib/ranks";
 import { cn } from "@/lib/utils";
@@ -40,6 +40,14 @@ export default function RoomItemsShop({ owned, myPoints, rankTier, isLoggedIn }:
   const [buying, setBuying] = useState<string | null>(null);
   const [counts, setCounts] = useState<Record<string, number>>(owned);
   const [points, setPoints] = useState(myPoints);
+
+  // Slot -> Bezeichnung des aktuell besessenen Objekts dieser Upgrade-Kette
+  // (z.B. "schreibtisch" -> "Wackeltisch") — auch die kostenlose Grund-
+  // ausstattung zählt, obwohl sie selbst nicht im Shop auftaucht (price:0).
+  const slotOwner: Record<string, string> = {};
+  for (const item of ROOM_ITEMS) {
+    if (item.upgradeSlot && (counts[item.key] ?? 0) > 0) slotOwner[item.upgradeSlot] = item.label;
+  }
 
   async function handleBuy(def: RoomItemDef) {
     if (!isLoggedIn) { toast.error("Bitte einloggen"); return; }
@@ -86,11 +94,16 @@ export default function RoomItemsShop({ owned, myPoints, rankTier, isLoggedIn }:
       </div>
 
       {groups.map(group => {
-        const isOpen    = open[group.category] ?? false;
+        const isOpen = open[group.category] ?? false;
+        // Upgrade-Ketten (Schreibtisch, Rechner, Sitzmöbel): "alle besitzen"
+        // ist hier kein Sammel-Ziel, sondern das Gegenteil des Sinns der
+        // Kette — die Fortschrittsleiste/"Komplett"-Badge bleibt deshalb den
+        // echten Sammelkategorien vorbehalten.
+        const isUpgradeGroup = group.items.every(i => !!i.upgradeSlot);
         const ownedHere = group.items.filter(i => (counts[i.key] ?? 0) > 0).length;
         const total     = group.items.length;
         const pct       = total > 0 ? Math.round((ownedHere / total) * 100) : 0;
-        const complete  = ownedHere === total && total > 0;
+        const complete  = !isUpgradeGroup && ownedHere === total && total > 0;
 
         return (
           <div key={group.category} className="glass card-shine rounded-2xl overflow-hidden">
@@ -115,18 +128,24 @@ export default function RoomItemsShop({ owned, myPoints, rankTier, isLoggedIn }:
                     </span>
                   )}
                 </div>
-                <div className="mt-2 flex items-center gap-2">
-                  <div className="flex-1 h-1.5 bg-white/[0.05] rounded-full overflow-hidden">
-                    <div
-                      className={cn(
-                        "h-full rounded-full transition-all duration-700 bg-gradient-to-r",
-                        complete ? "from-amber-500 to-amber-300" : "from-violet-500 to-teal-500"
-                      )}
-                      style={{ width: `${pct}%` }}
-                    />
+                {isUpgradeGroup ? (
+                  <p className="mt-2 text-[10px] text-gray-500">
+                    Upgrade-Kette — nur eine Ausbaustufe gleichzeitig im Zimmer
+                  </p>
+                ) : (
+                  <div className="mt-2 flex items-center gap-2">
+                    <div className="flex-1 h-1.5 bg-white/[0.05] rounded-full overflow-hidden">
+                      <div
+                        className={cn(
+                          "h-full rounded-full transition-all duration-700 bg-gradient-to-r",
+                          complete ? "from-amber-500 to-amber-300" : "from-violet-500 to-teal-500"
+                        )}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <span className="text-[10px] text-gray-500 tabular-nums shrink-0">{ownedHere}/{total}</span>
                   </div>
-                  <span className="text-[10px] text-gray-500 tabular-nums shrink-0">{ownedHere}/{total}</span>
-                </div>
+                )}
               </div>
 
               {isOpen ? <ChevronUp className="w-4 h-4 text-gray-600 shrink-0" />
@@ -145,6 +164,7 @@ export default function RoomItemsShop({ owned, myPoints, rankTier, isLoggedIn }:
                     isLoggedIn={isLoggedIn}
                     loading={buying === def.key}
                     onBuy={() => handleBuy(def)}
+                    currentSlotItemLabel={def.upgradeSlot ? slotOwner[def.upgradeSlot] : undefined}
                   />
                 ))}
               </div>
@@ -157,15 +177,18 @@ export default function RoomItemsShop({ owned, myPoints, rankTier, isLoggedIn }:
 }
 
 function ItemCard({
-  def, owned, points, rankTier, isLoggedIn, loading, onBuy,
+  def, owned, points, rankTier, isLoggedIn, loading, onBuy, currentSlotItemLabel,
 }: {
   def: RoomItemDef; owned: number; points: number; rankTier: number;
   isLoggedIn: boolean; loading: boolean; onBuy: () => void;
+  /** Label des aktuell besessenen Objekts in derselben Upgrade-Kette (falls vorhanden). */
+  currentSlotItemLabel?: string;
 }) {
   const rankLocked = rankTier < def.minTier;
   const maxedOut   = owned >= def.maxOwned;
   const canAfford  = points >= def.price;
   const unlocks    = jobsUnlockedBy(def.key);
+  const isUpgrade  = !maxedOut && !!currentSlotItemLabel;
 
   const accentBorder = {
     violet: "border-violet-500/25", teal: "border-teal-500/25",
@@ -206,6 +229,19 @@ function ItemCard({
             <span className="truncate">
               {unlocks.length === 1 ? unlocks[0].label : `${unlocks.length} Jobs`}
             </span>
+          </span>
+        )}
+
+        {isUpgrade && (
+          <p className="text-[9px] text-amber-400/80 leading-snug">
+            Ersetzt &quot;{currentSlotItemLabel}&quot; — wandert automatisch ins Lager
+          </p>
+        )}
+
+        {def.season && (
+          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center gap-1 leading-tight">
+            <Clock className="w-2.5 h-2.5 shrink-0" />
+            Zeitlich begrenzt
           </span>
         )}
 
