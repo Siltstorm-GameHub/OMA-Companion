@@ -312,7 +312,7 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract, edit 
             Diese Attrappe liegt VOR dem Foto (screen-blend, hellt nur dunkle
             Bildschirm-Pixel merklich auf, der helle Gehäuserand bleibt fast
             unangetastet) und suggeriert echten UI-Inhalt statt nur Glühen. */}
-        {target === "crt" && <CrtScreenContent x={x} y={y} w={w} h={h} />}
+        {target === "crt" && <CrtScreenContent x={x} y={y} w={w} h={h} screenRect={def.screenRect} itemId={item.id} />}
       </g>
     );
   }
@@ -395,26 +395,39 @@ export default function RoomStage({ state, ownerName, vitrine, onInteract, edit 
 
 /**
  * Attrappe eines aktiven Bildschirminhalts, über das Möbel-Foto gelegt.
- * Kein präzises Masking auf die tatsächliche Bildschirmfläche jedes einzelnen
- * Fotos (dafür bräuchte jedes Monitor-Bild eigene Koordinaten) — stattdessen
- * eine grobzügige, weich ausgeblendete Zone in der oberen Bildschirmhälfte
- * mit `mix-blend-mode: screen`: dunkle Pixel (der ausgeschaltete Bildschirm
- * im Foto) hellen sich sichtbar auf, das ohnehin schon helle Gehäuse bleibt
- * fast unverändert. Ein paar schmale horizontale Balken lesen sich als
- * Textzeilen/UI, nicht nur als Lichtfleck.
+ * Nutzt `def.screenRect` (room-items.ts) — die am jeweiligen Foto ausgemessenen
+ * Bildschirmgrenzen, als Brüche der Rasterbox — um den Glow per `clipPath` HART
+ * auf die tatsächliche Anzeigefläche zu begrenzen: `mix-blend-mode:screen`
+ * hellt zwar nur dunkle Pixel spürbar auf, ohne Clip bleicht ein heller
+ * Gehäuserand darunter aber trotzdem sichtbar mit. Fehlt `screenRect` (z.B.
+ * für einen frisch gekauften Monitor-Typ ohne Kalibrierung), fällt die
+ * Funktion auf eine grobzügige, ungeclippte Standardzone zurück statt gar
+ * nichts zu zeigen.
  */
-function CrtScreenContent({ x, y, w, h }: { x: number; y: number; w: number; h: number }) {
-  const cx = x + w * 0.5, cy = y + h * 0.34;
-  const cw = w * 0.5, ch = h * 0.3;
+function CrtScreenContent({
+  x, y, w, h, screenRect, itemId,
+}: {
+  x: number; y: number; w: number; h: number;
+  screenRect?: { x0: number; y0: number; x1: number; y1: number };
+  itemId: string;
+}) {
+  const rect = screenRect
+    ? { x: x + w * screenRect.x0, y: y + h * screenRect.y0, w: w * (screenRect.x1 - screenRect.x0), h: h * (screenRect.y1 - screenRect.y0) }
+    : { x: x + w * 0.15, y: y + h * 0.06, w: w * 0.7, h: h * 0.6 };
+  const cx = rect.x + rect.w / 2, cy = rect.y + rect.h / 2;
+  const clipId = `crt-clip-${itemId}`;
   return (
-    <g pointerEvents="none" style={{ mixBlendMode: "screen" }}>
-      <ellipse cx={cx} cy={cy} rx={cw * 0.75} ry={ch * 0.85}
+    <g pointerEvents="none" style={{ mixBlendMode: "screen" }} clipPath={`url(#${clipId})`}>
+      <clipPath id={clipId}>
+        <rect x={rect.x} y={rect.y} width={rect.w} height={rect.h} />
+      </clipPath>
+      <ellipse cx={cx} cy={cy} rx={rect.w * 0.65} ry={rect.h * 0.75}
         fill="var(--room-screen-on)" opacity={0.8} filter="url(#room-blur-sm)" />
-      <rect x={cx - cw * 0.35} y={cy - ch * 0.32} width={cw * 0.5} height={ch * 0.14} rx={2}
+      <rect x={cx - rect.w * 0.32} y={cy - rect.h * 0.3} width={rect.w * 0.5} height={rect.h * 0.14} rx={2}
         fill="#ffffff" opacity={0.65} />
-      <rect x={cx - cw * 0.35} y={cy - ch * 0.06} width={cw * 0.32} height={ch * 0.14} rx={2}
+      <rect x={cx - rect.w * 0.32} y={cy - rect.h * 0.06} width={rect.w * 0.32} height={rect.h * 0.14} rx={2}
         fill="#ffffff" opacity={0.5} />
-      <rect x={cx - cw * 0.35} y={cy + ch * 0.2} width={cw * 0.62} height={ch * 0.14} rx={2}
+      <rect x={cx - rect.w * 0.32} y={cy + rect.h * 0.18} width={rect.w * 0.6} height={rect.h * 0.14} rx={2}
         fill="#ffffff" opacity={0.4} />
     </g>
   );

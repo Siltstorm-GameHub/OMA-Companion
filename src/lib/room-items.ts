@@ -62,6 +62,18 @@ export interface RoomItemDef {
   starter?:    boolean;      // Teil der Grundausstattung (DEFAULT_ROOM)
   /** Klickbar auf der Bühne: öffnet das jeweilige Overlay. */
   interactive?: "crt" | "vitrine" | "jobboard";
+  /**
+   * Nur für `interactive:"crt"`: wo genau die tatsächliche Anzeigefläche im
+   * gerenderten Foto liegt, als Bruchteile (0–1) der Rasterbox (w×h Zellen),
+   * NICHT des Rohfotos — die Box füllt das Foto per `preserveAspectRatio
+   * "xMidYMax meet"` unterschiedlich aus (Letterboxing hängt vom
+   * Seitenverhältnis des jeweiligen Fotos ab), diese Umrechnung ist hier
+   * schon eingepreist. Ohne Angabe fällt CrtScreenContent (RoomStage.tsx)
+   * auf eine grobe generische Mitte zurück — bei echten Fotos bekannter
+   * Statt: die realen Bildschirmgrenzen des jeweiligen Fotos ausmessen und
+   * hier eintragen, sonst läuft der "Bildschirm an"-Glow über den Rahmen.
+   */
+  screenRect?: { x0: number; y0: number; x1: number; y1: number };
 }
 
 /** Flächen werden gekauft, aber nie platziert — sie sitzen auf Room.wallpaperKey / floorKey. */
@@ -311,6 +323,10 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     zone: "floor", category: "bildschirm", w: 2, h: 2, price: 0, minTier: 1, maxOwned: 1,
     tags: ["crt", "monitor"], mustStandOn: "desk", accent: "teal", starter: true, interactive: "crt",
     imageUrl: "/room-items/roehrenmonitor.png",
+    // Ausgemessen am Foto (663×706, füllt die 2×2-Box höhenbündig,
+    // horizontal gecentert) — leicht nach innen eingerückt gegenüber der
+    // sichtbaren Röhren-Wölbung, damit der Glow sicher auf dem Glas bleibt.
+    screenRect: { x0: 0.14, y0: 0.18, x1: 0.58, y1: 0.75 },
   },
   {
     key: "monitor_flach", label: "Flachbildschirm",
@@ -321,6 +337,10 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     // (siehe CrtProfileModal, MONITOR_SKINS).
     tags: ["monitor"], mustStandOn: "desk", accent: "slate", interactive: "crt",
     imageUrl: "/room-items/monitor_flach.png",
+    // Ausgemessen am Foto (602×732, diagonal angeschnittener Bildschirm) —
+    // bewusst konservativ eingerückt, da ein achsenparalleles Rechteck den
+    // schrägen Rand sonst an den Ecken überschreiten würde.
+    screenRect: { x0: 0.32, y0: 0.30, x1: 0.68, y1: 0.62 },
   },
   {
     key: "monitor_144", label: "144Hz-Monitor",
