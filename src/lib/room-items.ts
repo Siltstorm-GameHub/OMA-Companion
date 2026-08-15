@@ -377,6 +377,13 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     tags: ["monitor", "monitor_144"], mustStandOn: "desk", accent: "violet", interactive: "crt",
     imageUrl: "/room-items/monitor_144.png",
   },
+  {
+    key: "monitor_dreifach", label: "Triple-Monitor-Setup",
+    description: "Drei Bildschirme, ein Blickfeld. Der Nacken gewöhnt sich irgendwann dran.",
+    zone: "floor", category: "bildschirm", w: 3, h: 2, price: 3200, minTier: 4, maxOwned: 1,
+    tags: ["monitor"], mustStandOn: "desk", accent: "teal",
+    imageUrl: "/room-items/monitor_dreifach.png",
+  },
 
   // ── Boden: Peripherie ─────────────────────────────────────────────────────
   {
