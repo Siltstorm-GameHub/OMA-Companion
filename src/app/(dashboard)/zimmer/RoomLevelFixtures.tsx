@@ -17,9 +17,14 @@ import { gridToWorld, ROOM_SIZE } from "@/lib/room-3d";
 
 export const ROOM_LEVEL_LABEL = ["Abgewohnt", "Frisch renoviert", "Modern eingerichtet", "Luxuriös ausgestattet"];
 
-/** Fenster-Geometrie in Wand-Rasterzellen (wall_back) — identisch zur alten
- *  SVG-Bühne, damit die Proportionen vertraut bleiben. */
-const WINDOW_GEOM = { x0: 2, y0: 2.6, w: 2.6, h: 2.9 } as const;
+/**
+ * Fenster-Geometrie in Wand-Rasterzellen (wall_back). Die ursprünglichen
+ * Maße (übernommen aus der alten SVG-Bühne) waren für den flachen 2D-Look
+ * gedacht — in echten 3D-Metern (1 Rasterzelle ≈ 1m) ergab das ein
+ * 2.6m×2.9m-Fenster, das die Rückwand dominierte. Auf realistische
+ * Fenster-/Brüstungshöhe reduziert.
+ */
+const WINDOW_GEOM = { x0: 2, y0: 1.0, w: 1.6, h: 1.7 } as const;
 
 const WINDOW_FRAME = [
   { base: "#6b4a30", trim: "#8a6440" },              // 0: Abgewohnt — Holz
