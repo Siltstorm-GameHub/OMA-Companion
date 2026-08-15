@@ -12,7 +12,8 @@
  * lokalen Ursprung (Fußmittelpunkt) herum modelliert.
  */
 
-import { RoundedBox } from "@react-three/drei";
+import { useMemo } from "react";
+import { RoundedBox, useGLTF } from "@react-three/drei";
 import { ACCENT_COLORS } from "@/lib/room-3d";
 import type { RoomItemDef } from "@/lib/room-items";
 
@@ -21,6 +22,34 @@ interface ShapeProps {
 }
 
 const METAL = "#3a3f4c";
+
+/**
+ * Authored-Modelle (Blender → GLB) für einzelne "Hero"-Möbelstücke, die mehr
+ * Detail verdienen als sich sinnvoll aus Primitiven zusammensetzen lässt.
+ * Key → Pfad unter public/, damit ein Item OHNE Eintrag hier automatisch auf
+ * sein prozedurales Shape-Rezept zurückfällt (siehe pickShape/Dispatcher
+ * unten) — kein Alles-oder-nichts-Umbau des Katalogs nötig.
+ */
+const GLB_MODELS: Partial<Record<string, string>> = {
+  schreibtisch_alt: "/models/desk_alt.glb",
+};
+
+for (const path of Object.values(GLB_MODELS)) {
+  if (path) useGLTF.preload(path);
+}
+
+/**
+ * Jede Instanz braucht ihre EIGENE Kopie der geladenen Szene: dasselbe
+ * `scene`-Objekt aus dem useGLTF-Cache zweimal gleichzeitig einzuhängen
+ * (z.B. platziertes Item + Ghost-Vorschau beim Verschieben im Editor) würde
+ * Three.js dazu bringen, es zwischen den beiden Eltern hin- und
+ * herzureißen — nur die zuletzt gerenderte Stelle zeigt es dann noch an.
+ */
+function GltfFurniture({ path }: { path: string }) {
+  const { scene } = useGLTF(path);
+  const cloned = useMemo(() => scene.clone(true), [scene]);
+  return <primitive object={cloned} />;
+}
 
 /**
  * Kleiner Eigenleuchtanteil auf jedem matten Material — ohne das komprimiert
@@ -197,6 +226,8 @@ function GenericBox({ def }: ShapeProps) {
 
 /** Ordnet ein Katalog-Item einem der obigen Shape-Rezepte zu und rendert es direkt. */
 export function FurniturePrimitive({ def }: ShapeProps) {
+  const glbPath = GLB_MODELS[def.key];
+  if (glbPath) return <GltfFurniture path={glbPath} />;
   if (def.tags.includes("desk")) return <Desk def={def} />;
   if (def.tags.includes("monitor") || def.tags.includes("crt")) return <Monitor def={def} />;
   if (def.tags.includes("pc")) return <Tower def={def} />;
