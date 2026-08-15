@@ -9,8 +9,7 @@ import {
 } from "@/lib/room-iso";
 import { CATEGORY_CONFIG, GENRE_CONFIG } from "@/lib/wanderpocal";
 import { POKAL_CATEGORY_IMAGE } from "@/lib/pokal";
-import type { VitrineBadge, VitrineTrophy } from "@/lib/room-profile-data";
-import type { Pokal } from "@prisma/client";
+import type { VitrineItem } from "@/lib/room-vitrine";
 import RoomItemSprite from "./RoomItemSprite";
 import { VITRINE_SLOTS } from "./sprites";
 import { cn } from "@/lib/utils";
@@ -47,18 +46,19 @@ interface Props {
   state:     RoomState;
   ownerName: string;
   vitrine: {
-    pokale:      Pokal[];
-    pokaleTotal: number;
-    badges:      VitrineBadge[];
-    trophies:    VitrineTrophy[];
+    /** Ein Eintrag je Vitrinen-Fach (0..14), `null` = leer. */
+    slots:       (VitrineItem | null)[];
+    /** Besessene Stücke, die gerade in keinem Fach stehen — treibt den "+N"-Hinweis. */
+    hiddenCount: number;
   };
   /**
    * `itemKey` ist nur bei `target === "crt"` gesetzt — RoomView reicht ihn an
    * CrtProfileModal weiter, damit dessen Rahmen wie GENAU DER angeklickte
    * Monitor aussieht (Röhre, Flachbildschirm oder 144Hz), nicht immer wie
-   * die Röhre.
+   * die Röhre. `slotIndex` ist nur bei `target === "vitrine"` gesetzt, wenn
+   * ein einzelnes Fach (statt der Hintergrundfläche) angeklickt wurde.
    */
-  onInteract: (target: InteractTarget, itemKey?: string) => void;
+  onInteract: (target: InteractTarget, itemKey?: string, slotIndex?: number) => void;
   /** Gesetzt = Bearbeiten-Modus: jedes Möbelstück ist anwählbar statt interaktiv. */
   edit?: EditHooks;
 }
@@ -500,7 +500,7 @@ function VitrinePanel({
 }: {
   ownerName: string;
   vitrine:   Props["vitrine"];
-  onInteract: (target: InteractTarget, itemKey?: string) => void;
+  onInteract: (target: InteractTarget, itemKey?: string, slotIndex?: number) => void;
   editing:   boolean;
   /**
    * Per ResizeObserver gemessene Pixel-Höhe der Bühne nebenan (siehe
@@ -512,7 +512,6 @@ function VitrinePanel({
   const vw = VITRINE_PANEL_W;
   const vh = VITRINE_PANEL_H;
   const label = `Sammlung von ${ownerName} anzeigen`;
-  const isEmpty = vitrine.trophies.length === 0 && vitrine.pokale.length === 0 && vitrine.badges.length === 0;
 
   return (
     <div
@@ -562,14 +561,7 @@ function VitrinePanel({
             />
             <image href="/room-items/vitrine.png" x={0} y={0} width={vw} height={vh}
               preserveAspectRatio="xMidYMax meet" className="room-item-photo" />
-            {isEmpty ? (
-              <text x={vw / 2} y={vh / 2} textAnchor="middle" dominantBaseline="central"
-                fontSize={11} fill="var(--room-plastic)" opacity={0.55}>
-                Noch nichts gesammelt
-              </text>
-            ) : (
-              <VitrineContent x={0} y={0} vitrine={vitrine} />
-            )}
+            <VitrineContent x={0} y={0} vitrine={vitrine} onSlotClick={idx => onInteract("vitrine", undefined, idx)} />
           </g>
         )}
       </svg>
@@ -599,109 +591,126 @@ const TROPHY_PLAQUE_MAX_W = slotMaxPlaqueWidth(VITRINE_SLOTS.trophies);
 const POKAL_PLAQUE_MAX_W  = slotMaxPlaqueWidth(VITRINE_SLOTS.pokale);
 const BADGE_PLAQUE_MAX_W  = slotMaxPlaqueWidth(VITRINE_SLOTS.badges);
 
+/**
+ * Flache Fach-Liste (Index 0..14), Reihenfolge Trophäen→Pokale→Abzeichen —
+ * muss mit VITRINE_SLOT_RANGES in room-vitrine.ts übereinstimmen, das den
+ * Server bestimmt, welcher Fach-Index welchen Standard-Inhalt bekommt.
+ */
+const ALL_SLOTS: { x: number; y: number; s: number; plaqueY: number; maxW: number }[] = [
+  ...VITRINE_SLOTS.trophies.map(s => ({ ...s, maxW: TROPHY_PLAQUE_MAX_W })),
+  ...VITRINE_SLOTS.pokale.map(s => ({ ...s, maxW: POKAL_PLAQUE_MAX_W })),
+  ...VITRINE_SLOTS.badges.map(s => ({ ...s, maxW: BADGE_PLAQUE_MAX_W })),
+];
+
+function itemLabel(item: VitrineItem): string {
+  if (item.kind === "trophy") {
+    return item.scopeType === "genre"
+      ? GENRE_CONFIG[item.scopeValue]?.title ?? item.scopeValue
+      : CATEGORY_CONFIG[item.scopeValue]?.title ?? item.scopeValue;
+  }
+  if (item.kind === "pokal") return item.title;
+  return item.name;
+}
+
 function VitrineContent({
-  x, y, vitrine,
+  x, y, vitrine, onSlotClick,
 }: {
   x: number; y: number;
   vitrine: Props["vitrine"];
+  onSlotClick: (index: number) => void;
 }) {
-  const trophyOverflow = vitrine.trophies.length - VITRINE_SLOTS.trophies.length;
-  const pokaleOverflow = vitrine.pokaleTotal - vitrine.pokale.length;
-  const badgeOverflow  = vitrine.badges.length - VITRINE_SLOTS.badges.length;
-
   return (
-    <g pointerEvents="none" transform={`translate(${x},${y})`}>
-      {/* Pokale im oberen Fach */}
-      {vitrine.trophies.slice(0, VITRINE_SLOTS.trophies.length).map((t, i) => {
-        const slot = VITRINE_SLOTS.trophies[i];
-        const title = t.scopeType === "genre"
-          ? GENRE_CONFIG[t.scopeValue]?.title ?? t.scopeValue
-          : CATEGORY_CONFIG[t.scopeValue]?.title ?? t.scopeValue;
+    <g transform={`translate(${x},${y})`}>
+      {ALL_SLOTS.map((slot, i) => {
+        const item = vitrine.slots[i] ?? null;
+        const label = item ? itemLabel(item) : "Fach frei — anklicken, um etwas auszustellen";
         return (
-          <g key={`${t.scopeType}:${t.scopeValue}`}>
-            <TrophySlot trophy={t} {...slot} />
-            <PlaqueLabel x={slot.x + slot.s / 2} y={slot.plaqueY} text={title} maxWidth={TROPHY_PLAQUE_MAX_W} />
+          <g
+            key={i}
+            className="room-hit"
+            role="button"
+            tabIndex={0}
+            aria-label={label}
+            onClick={e => { e.stopPropagation(); onSlotClick(i); }}
+            onKeyDown={e => {
+              if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onSlotClick(i); }
+            }}
+          >
+            <title>{label}</title>
+            <Pedestal x={slot.x} y={slot.y} s={slot.s} />
+            {item && (
+              <>
+                <VitrineItemVisual item={item} x={slot.x} y={slot.y} s={slot.s} />
+                <PlaqueLabel x={slot.x + slot.s / 2} y={slot.plaqueY} text={label} maxWidth={slot.maxW} />
+              </>
+            )}
           </g>
         );
       })}
-      {trophyOverflow > 0 && (
-        <OverflowMarker slot={VITRINE_SLOTS.trophies[VITRINE_SLOTS.trophies.length - 1]} count={trophyOverflow} />
-      )}
-
-      {/* Pokale in den mittleren Fächern — Eventreihen-Pokale (isSeries) mit
-          goldenem Ring hervorgehoben, analog zum Rahmen in EventPokalWinners. */}
-      {vitrine.pokale.slice(0, VITRINE_SLOTS.pokale.length).map((p, i) => {
-        const slot = VITRINE_SLOTS.pokale[i];
-        return (
-          <g key={p.id}>
-            <circle
-              cx={slot.x + slot.s / 2} cy={slot.y + slot.s / 2} r={slot.s * (p.isSeries ? 0.62 : 0.5)}
-              fill={p.isSeries ? "rgba(251,191,36,0.35)" : "rgba(148,163,184,0.25)"}
-              stroke={p.isSeries ? "rgba(251,191,36,0.75)" : "none"}
-              strokeWidth={p.isSeries ? 1.5 : 0}
-            />
-            <image href={POKAL_CATEGORY_IMAGE[p.category]} x={slot.x} y={slot.y} width={slot.s} height={slot.s}
-              preserveAspectRatio="xMidYMid meet" />
-            <PlaqueLabel x={slot.x + slot.s / 2} y={slot.plaqueY} text={p.title} maxWidth={POKAL_PLAQUE_MAX_W} />
-          </g>
-        );
-      })}
-      {pokaleOverflow > 0 && (
-        <OverflowMarker slot={VITRINE_SLOTS.pokale[VITRINE_SLOTS.pokale.length - 1]} count={pokaleOverflow} />
-      )}
-
-      {/* Abzeichen auf der Sockelleiste */}
-      {vitrine.badges.slice(0, VITRINE_SLOTS.badges.length).map((b, i) => {
-        const slot = VITRINE_SLOTS.badges[i];
-        return (
-          <g key={b.key}>
-            <text
-              x={slot.x + slot.s / 2} y={slot.y + slot.s / 2}
-              textAnchor="middle" dominantBaseline="central" fontSize={slot.s}
-            >
-              {b.icon}
-            </text>
-            <PlaqueLabel x={slot.x + slot.s / 2} y={slot.plaqueY} text={b.name} maxWidth={BADGE_PLAQUE_MAX_W} />
-          </g>
-        );
-      })}
-      {badgeOverflow > 0 && (
-        <OverflowMarker slot={VITRINE_SLOTS.badges[VITRINE_SLOTS.badges.length - 1]} count={badgeOverflow} />
+      {vitrine.hiddenCount > 0 && (
+        <g transform={`translate(${VITRINE_PANEL_W - 22},${16})`}>
+          <title>{`+${vitrine.hiddenCount} weitere in der Sammlung — insgesamt einsehbar per Klick auf ein Fach`}</title>
+          <circle r={9} fill="var(--room-metal-hi)" stroke="var(--room-shade)" strokeWidth={0.75} />
+          <text x={0} y={0.5} textAnchor="middle" dominantBaseline="central" fontSize={9} fontWeight={700}
+            fill="var(--room-plastic)" pointerEvents="none">
+            +{vitrine.hiddenCount}
+          </text>
+        </g>
       )}
     </g>
   );
 }
 
 /**
- * "+N"-Hinweis oben rechts über dem letzten Fach einer Kategorie — sichtbar,
- * sobald mehr Stücke existieren als Vitrinen-Fächer auf der Bühne (siehe
- * VITRINE_SLOTS). Ohne ihn wirkte ein Abschneiden wie Datenverlust statt wie
- * eine bewusste Vorschau; der volle Bestand bleibt im VitrineModal einsehbar.
+ * Kleine silberne Ausstellungsplattform — steht IMMER an jedem Fach, auch
+ * wenn (noch) nichts darauf ausgestellt ist. Ohne sie wirkte ein leeres Fach
+ * wie eine kaputte Stelle in der Vitrine statt wie eine Einladung, etwas
+ * hineinzustellen (siehe Screenshot-Vorlage des Users).
  */
-function OverflowMarker({ slot, count }: { slot: { x: number; y: number; s: number }; count: number }) {
-  const cx = slot.x + slot.s - 2;
-  const cy = slot.y + 2;
+function Pedestal({ x, y, s }: { x: number; y: number; s: number }) {
+  const w = s * 0.82;
+  const cx = x + s / 2;
+  const baseY = y + s * 0.98;
+  const capH = s * 0.1;
   return (
-    <g transform={`translate(${cx},${cy})`}>
-      <title>{`+${count} weitere in der Vitrine`}</title>
-      <circle r={8} fill="var(--room-metal-hi)" stroke="var(--room-shade)" strokeWidth={0.75} />
-      <text x={0} y={0.5} textAnchor="middle" dominantBaseline="central" fontSize={8.5} fontWeight={700}
-        fill="var(--room-plastic)">
-        +{count}
-      </text>
+    <g pointerEvents="none">
+      <ellipse cx={cx} cy={baseY} rx={w / 2} ry={capH * 0.6} fill="var(--room-shade)" opacity={0.35} />
+      <rect x={cx - w / 2} y={baseY - capH} width={w} height={capH} rx={capH * 0.3}
+        fill="var(--room-metal)" stroke="var(--room-shade)" strokeWidth={0.6} />
+      <ellipse cx={cx} cy={baseY - capH} rx={w / 2} ry={capH * 0.55}
+        fill="var(--room-metal-hi)" stroke="var(--room-shade)" strokeWidth={0.6} />
     </g>
   );
 }
 
-function TrophySlot({ trophy, x, y, s }: { trophy: VitrineTrophy; x: number; y: number; s: number }) {
-  const genre = trophy.scopeType === "genre" ? GENRE_CONFIG[trophy.scopeValue] : null;
-  if (genre) {
-    return <image href={genre.icon} x={x} y={y} width={s} height={s} preserveAspectRatio="xMidYMid meet" />;
+function VitrineItemVisual({ item, x, y, s }: { item: VitrineItem; x: number; y: number; s: number }) {
+  if (item.kind === "trophy") {
+    const genre = item.scopeType === "genre" ? GENRE_CONFIG[item.scopeValue] : null;
+    if (genre) return <image href={genre.icon} x={x} y={y} width={s} height={s} preserveAspectRatio="xMidYMid meet" />;
+    const emoji = CATEGORY_CONFIG[item.scopeValue]?.emoji ?? "🏆";
+    return (
+      <text x={x + s / 2} y={y + s / 2} textAnchor="middle" dominantBaseline="central" fontSize={s * 0.82}>
+        {emoji}
+      </text>
+    );
   }
-  const emoji = CATEGORY_CONFIG[trophy.scopeValue]?.emoji ?? "🏆";
+  if (item.kind === "pokal") {
+    return (
+      <>
+        <circle
+          cx={x + s / 2} cy={y + s / 2} r={s * (item.isSeries ? 0.62 : 0.5)}
+          fill={item.isSeries ? "rgba(251,191,36,0.35)" : "rgba(148,163,184,0.25)"}
+          stroke={item.isSeries ? "rgba(251,191,36,0.75)" : "none"}
+          strokeWidth={item.isSeries ? 1.5 : 0}
+        />
+        <image href={POKAL_CATEGORY_IMAGE[item.category as keyof typeof POKAL_CATEGORY_IMAGE]}
+          x={x} y={y} width={s} height={s} preserveAspectRatio="xMidYMid meet" />
+      </>
+    );
+  }
   return (
-    <text x={x + s / 2} y={y + s / 2} textAnchor="middle" dominantBaseline="central" fontSize={s * 0.82}>
-      {emoji}
+    <text x={x + s / 2} y={y + s / 2} textAnchor="middle" dominantBaseline="central" fontSize={s}>
+      {item.icon}
     </text>
   );
 }

@@ -10,6 +10,7 @@ import RoomStage, { type InteractTarget } from "./RoomStage";
 import RoomEditor from "./RoomEditor";
 import CrtProfileModal from "./CrtProfileModal";
 import VitrineModal from "./VitrineModal";
+import VitrineSlotModal from "./VitrineSlotModal";
 import JobBoardSheet from "./JobBoardSheet";
 import WageWidget from "./WageWidget";
 
@@ -37,11 +38,18 @@ export default function RoomView({
   // Welcher Monitor-Typ das Profil-Popup geöffnet hat — bestimmt, wie dessen
   // Rahmen aussieht (Röhre/Flachbildschirm/144Hz). Nur bei target "crt" gesetzt.
   const [openMonitorKey, setOpenMonitorKey] = useState<string | undefined>(undefined);
+  // Welches Vitrinen-Fach angeklickt wurde — `null` = Hintergrund der
+  // Vitrine (öffnet die Gesamtübersicht statt eines einzelnen Fachs).
+  const [openSlotIndex, setOpenSlotIndex] = useState<number | null>(null);
   const [editing, setEditing]       = useState(false);
 
-  function handleInteract(target: InteractTarget, itemKey?: string) {
+  function handleInteract(target: InteractTarget, itemKey?: string, slotIndex?: number) {
+    // Leeres Fach in einem fremden Zimmer: nichts zum Ansehen, nichts zum
+    // Bearbeiten — kein Modal aufreißen.
+    if (target === "vitrine" && slotIndex != null && readOnly && !core.vitrine.slots[slotIndex]) return;
     setOpenTarget(target);
     setOpenMonitorKey(itemKey);
+    setOpenSlotIndex(slotIndex ?? null);
   }
 
   // Im Bearbeiten-Modus übernimmt der Editor die Bühne samt eigener Leiste.
@@ -124,12 +132,22 @@ export default function RoomView({
       />
 
       <VitrineModal
-        open={openTarget === "vitrine"}
+        open={openTarget === "vitrine" && openSlotIndex === null}
         onClose={() => setOpenTarget(null)}
         displayName={core.displayName}
         readOnly={readOnly}
         details={details}
         trophySection={trophySection}
+      />
+
+      <VitrineSlotModal
+        key={openSlotIndex ?? "none"}
+        open={openTarget === "vitrine" && openSlotIndex !== null}
+        onClose={() => setOpenTarget(null)}
+        slotIndex={openSlotIndex}
+        item={openSlotIndex !== null ? core.vitrine.slots[openSlotIndex] ?? null : null}
+        readOnly={readOnly}
+        details={details}
       />
 
       <JobBoardSheet

@@ -240,3 +240,9 @@ ALTER TABLE "User" DROP COLUMN IF EXISTS "showcaseJson";
 DROP TABLE IF EXISTS "UserCollectible";
 DROP TABLE IF EXISTS "CollectibleItem";
 DROP TABLE IF EXISTS "CollectibleCollection";
+
+-- ═══════════════════════════════════════════════════════════════
+-- Vitrine: frei belegbare Fächer statt reinem Auto-Fill
+-- ═══════════════════════════════════════════════════════════════
+
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "vitrineSlotsJson" TEXT;
