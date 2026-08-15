@@ -15,7 +15,9 @@ import {
  * abgebildet, statt einen Typfehler zu riskieren.
  */
 function coerceSurface(raw: string): RoomSurface {
-  if (raw === "floor" || raw === "wall_back" || raw === "wall_side") return raw;
+  if (raw === "floor" || raw === "wall_back" || raw === "wall_side" || raw === "wall_front" || raw === "wall_right") {
+    return raw;
+  }
   return raw === "wall" ? "wall_back" : "floor";
 }
 import { checkRequirements, formatMissing, getJob } from "./jobs";
