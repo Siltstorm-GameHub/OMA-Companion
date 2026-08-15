@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -9,9 +10,15 @@ import {
 import { getRoomItem, isFixed, isSurface, ROOM_ITEMS } from "@/lib/room-items";
 import { legalCells, type PlacedItem, type RoomState, type RoomSurface, type StoredItem } from "@/lib/room-layout";
 import type { RoomProfileCore } from "@/lib/room-profile-data";
-import RoomStage from "./RoomStage";
 import { RoomItemPreview } from "./RoomItemSprite";
 import { cn } from "@/lib/utils";
+
+// Three.js/R3F laufen ausschließlich im Browser (WebGL-Kontext) — per
+// dynamic(ssr:false) geladen, siehe RoomView.tsx.
+const RoomStage3D = dynamic(() => import("./RoomStage3D"), {
+  ssr: false,
+  loading: () => <div className="w-full aspect-[6/5] rounded-2xl bg-[#141018] animate-pulse" />,
+});
 
 interface Props {
   state:  RoomState;
@@ -181,7 +188,7 @@ export default function RoomEditor({ state, core, owned, onDone }: Props) {
 
   return (
     <div className="space-y-3">
-      <RoomStage
+      <RoomStage3D
         state={draftState}
         ownerName={core.displayName}
         vitrine={core.vitrine}

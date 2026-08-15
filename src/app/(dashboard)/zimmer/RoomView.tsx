@@ -1,18 +1,27 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { ShoppingBag, Pencil, Briefcase } from "lucide-react";
 import type { RoomState } from "@/lib/room-layout";
 import type { RoomProfileCore, RoomProfileDetails } from "@/lib/room-profile-data";
 import type { JobOverview } from "@/lib/job-service";
-import RoomStage, { type InteractTarget } from "./RoomStage";
+import { type InteractTarget } from "./RoomStage3D";
 import RoomEditor from "./RoomEditor";
 import CrtProfileModal from "./CrtProfileModal";
 import VitrineModal from "./VitrineModal";
 import VitrineSlotModal from "./VitrineSlotModal";
 import JobBoardSheet from "./JobBoardSheet";
 import WageWidget from "./WageWidget";
+
+// Three.js/R3F laufen ausschließlich im Browser (WebGL-Kontext) — per
+// dynamic(ssr:false) geladen, damit weder das SSR-HTML noch der initiale
+// Server-Bundle-Anteil das Three.js-Gewicht (~500KB+) tragen müssen.
+const RoomStage3D = dynamic(() => import("./RoomStage3D"), {
+  ssr: false,
+  loading: () => <div className="w-full aspect-[6/5] rounded-2xl bg-[#141018] animate-pulse" />,
+});
 
 interface Props {
   state:       RoomState;
@@ -66,10 +75,11 @@ export default function RoomView({
 
   return (
     <>
-      <RoomStage
+      <RoomStage3D
         state={state}
         ownerName={core.displayName}
         vitrine={core.vitrine}
+        vitrineReadOnly={readOnly}
         onInteract={handleInteract}
       />
 

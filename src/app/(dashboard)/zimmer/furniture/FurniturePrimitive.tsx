@@ -143,19 +143,14 @@ function GenericBox({ def }: ShapeProps) {
   );
 }
 
-/** Ordnet ein Katalog-Item einem der obigen Shape-Rezepte zu. */
-function pickShape(def: RoomItemDef): React.ComponentType<ShapeProps> {
-  if (def.tags.includes("desk")) return Desk;
-  if (def.tags.includes("monitor") || def.tags.includes("crt")) return Monitor;
-  if (def.tags.includes("pc")) return Tower;
-  if (def.tags.includes("chair") || def.tags.includes("chair_gaming")) return Chair;
-  if (def.tags.includes("shelf") || def.tags.includes("trophy_shelf")) return Shelf;
-  if (def.tags.includes("light") || def.tags.includes("neon")) return LightStrip;
-  if (def.tags.includes("plant")) return Plant;
-  return GenericBox;
-}
-
+/** Ordnet ein Katalog-Item einem der obigen Shape-Rezepte zu und rendert es direkt. */
 export function FurniturePrimitive({ def }: ShapeProps) {
-  const Shape = pickShape(def);
-  return <Shape def={def} />;
+  if (def.tags.includes("desk")) return <Desk def={def} />;
+  if (def.tags.includes("monitor") || def.tags.includes("crt")) return <Monitor def={def} />;
+  if (def.tags.includes("pc")) return <Tower def={def} />;
+  if (def.tags.includes("chair") || def.tags.includes("chair_gaming")) return <Chair def={def} />;
+  if (def.tags.includes("shelf") || def.tags.includes("trophy_shelf")) return <Shelf def={def} />;
+  if (def.tags.includes("light") || def.tags.includes("neon")) return <LightStrip def={def} />;
+  if (def.tags.includes("plant")) return <Plant def={def} />;
+  return <GenericBox def={def} />;
 }
