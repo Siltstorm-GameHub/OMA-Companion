@@ -27,14 +27,14 @@ function Desk({ def }: ShapeProps) {
   const legH = 0.75;
   return (
     <group>
-      <RoundedBox args={[def.w * 0.94, 0.08, def.h * 0.9]} radius={0.04} position={[0, legH, 0]}>
+      <RoundedBox args={[def.w * 0.94, 0.16, def.h * 0.9]} radius={0.04} position={[0, legH, 0]}>
         <meshStandardMaterial color={accent} roughness={0.35} metalness={0.1} />
       </RoundedBox>
       {[-1, 1].map(sx => [-1, 1].map(sz => (
         <RoundedBox
           key={`${sx}-${sz}`}
-          args={[0.08, legH, 0.08]} radius={0.02}
-          position={[sx * (def.w * 0.94 / 2 - 0.1), legH / 2, sz * (def.h * 0.9 / 2 - 0.1)]}
+          args={[0.12, legH, 0.12]} radius={0.02}
+          position={[sx * (def.w * 0.94 / 2 - 0.12), legH / 2, sz * (def.h * 0.9 / 2 - 0.12)]}
         >
           <meshStandardMaterial color={METAL} roughness={0.5} metalness={0.4} />
         </RoundedBox>
@@ -80,13 +80,13 @@ function Chair({ def }: ShapeProps) {
   const accent = ACCENT_COLORS[def.accent];
   return (
     <group>
-      <RoundedBox args={[def.w * 0.8, 0.08, def.w * 0.8]} radius={0.04} position={[0, 0.55, 0]}>
+      <RoundedBox args={[def.w * 0.85, 0.16, def.w * 0.85]} radius={0.05} position={[0, 0.55, 0]}>
         <meshStandardMaterial color={accent} roughness={0.4} />
       </RoundedBox>
-      <RoundedBox args={[def.w * 0.75, def.h * 0.55, 0.08]} radius={0.04} position={[0, 1.0, -def.w * 0.35]}>
+      <RoundedBox args={[def.w * 0.8, def.h * 0.55, 0.14]} radius={0.05} position={[0, 1.0, -def.w * 0.35]}>
         <meshStandardMaterial color={accent} roughness={0.4} />
       </RoundedBox>
-      <RoundedBox args={[0.06, 0.5, 0.06]} radius={0.02} position={[0, 0.28, 0]}>
+      <RoundedBox args={[0.1, 0.5, 0.1]} radius={0.03} position={[0, 0.28, 0]}>
         <meshStandardMaterial color={METAL} roughness={0.5} metalness={0.4} />
       </RoundedBox>
     </group>

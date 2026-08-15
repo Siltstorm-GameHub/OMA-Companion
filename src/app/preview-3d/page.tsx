@@ -24,7 +24,7 @@ export default function Preview3DPage() {
       <RoomStage3D
         state={DEFAULT_ROOM}
         ownerName="Preview"
-        vitrine={{ slots: Array(15).fill(null), hiddenCount: 0 }}
+        vitrine={{ slots: Array(15).fill(null), hiddenCount: 3 }}
         onInteract={(target) => console.log("interact:", target)}
       />
     </div>
