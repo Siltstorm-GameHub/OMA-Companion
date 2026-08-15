@@ -32,7 +32,11 @@ export const WALL_THICKNESS = 0.25;
 /**
  * Mittelpunkt einer Rasterzelle (a,b) mit Größe (w,h) auf `surface`, in
  * Weltkoordinaten. `a`/`b` haben dieselbe Bedeutung wie in room-iso.ts:
- * floor → (x, z=Tiefe), wall_back → (x, y=Höhe), wall_side → (z=Tiefe, y=Höhe).
+ * floor → (x, z=Tiefe), wall_back/wall_front → (x, y=Höhe),
+ * wall_side/wall_right → (z=Tiefe, y=Höhe). "front"/"right" sind die
+ * Gegenüber-Wände von "back"/"side" (siehe ISO_GRID in room-grid.ts) — bei
+ * gleicher (a,b)-Spalten-/Höhenzählung wie ihr jeweiliges Gegenüber, nur an
+ * der anderen Raumkante (Z=depth statt Z=0, X=width statt X=0).
  */
 export function gridToWorld(
   surface: RoomSurface, a: number, b: number, w: number, h: number,
@@ -46,24 +50,34 @@ export function gridToWorld(
     // Rückwand bei Z=0, X=Spalte, Y=Höhe ab Boden.
     return new THREE.Vector3(a + halfW, b + halfH, 0);
   }
-  // wall_side bei X=0, a=Tiefe(Z), b=Höhe(Y).
-  return new THREE.Vector3(0, b + halfH, a + halfW);
+  if (surface === "wall_front") {
+    // Vorderwand (Gegenüber der Rückwand) bei Z=depth.
+    return new THREE.Vector3(a + halfW, b + halfH, ROOM_SIZE.depth);
+  }
+  if (surface === "wall_side") {
+    // Seitenwand bei X=0, a=Tiefe(Z), b=Höhe(Y).
+    return new THREE.Vector3(0, b + halfH, a + halfW);
+  }
+  // wall_right (Gegenüber der Seitenwand) bei X=width.
+  return new THREE.Vector3(ROOM_SIZE.width, b + halfH, a + halfW);
 }
 
 /** Rotation (Radiant um Y-Achse), damit ein Wandobjekt "aus der Wand schaut". */
 export function surfaceRotationY(surface: RoomSurface): number {
-  if (surface === "wall_side") return Math.PI / 2;
+  if (surface === "wall_side")  return Math.PI / 2;
+  if (surface === "wall_right") return -Math.PI / 2;
+  if (surface === "wall_front") return Math.PI;
   return 0; // floor + wall_back: keine Drehung nötig
 }
 
 /**
  * Umkehrung von gridToWorld für Raycast-Treffer (Pointer → Rasterzelle).
  * `point` ist der Weltpunkt auf der jeweiligen Fläche (eine Achse ist dort
- * konstant 0, wie in gridToWorld).
+ * konstant 0/width/depth, wie in gridToWorld).
  */
 export function worldToGrid(surface: RoomSurface, point: THREE.Vector3): { a: number; b: number } {
-  if (surface === "floor")     return { a: point.x, b: point.z };
-  if (surface === "wall_back") return { a: point.x, b: point.y };
+  if (surface === "floor")                                    return { a: point.x, b: point.z };
+  if (surface === "wall_back" || surface === "wall_front")     return { a: point.x, b: point.y };
   return { a: point.z, b: point.y };
 }
 

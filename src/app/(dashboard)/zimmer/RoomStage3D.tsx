@@ -16,7 +16,7 @@
  * gerendert — Trophäen/Pokale/Details zeigt weiterhin VitrineModal.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { OrthographicCamera, ContactShadows, Html } from "@react-three/drei";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
@@ -53,7 +53,9 @@ interface Props {
   edit?: EditHooks;
 }
 
-function RoomShell({ wallpaperKey, floorKey }: { wallpaperKey: string; floorKey: string }) {
+function RoomShell({
+  wallpaperKey, floorKey, hiddenWalls,
+}: { wallpaperKey: string; floorKey: string; hiddenWalls: ReadonlySet<RoomSurface> }) {
   const { width, depth, height } = ROOM_SIZE;
   const wallColor = WALL_COLOR_BY_KEY[wallpaperKey] ?? SHELL_COLORS.wallBack;
   const floorColor = FLOOR_COLOR_BY_KEY[floorKey] ?? SHELL_COLORS.floor;
@@ -74,27 +76,53 @@ function RoomShell({ wallpaperKey, floorKey }: { wallpaperKey: string; floorKey:
        * Boden/Wände als Boxen mit echter Stärke (WALL_THICKNESS) statt
        * nulldicker Planes — flache Planes wirkten aus jedem Winkel, der die
        * Kante zeigt, papierdünn. Die sichtbare Innenfläche bleibt exakt bei
-       * y=0/x=0/z=0 (dieselbe Koordinate, die gridToWorld für Möbel
-       * verwendet), die Box wächst nur nach außen/unten weiter.
+       * y=0/x=0/z=0/width/depth (dieselben Koordinaten, die gridToWorld für
+       * Möbel verwendet), die Box wächst nur nach außen/unten weiter.
+       *
+       * Vier Wände statt zwei: die Raum-Shell ist jetzt eine geschlossene
+       * Box, aber IMMER nur die zwei kamerafernen Wände werden gerendert
+       * (siehe `hiddenWalls`, kamerarelativ in RoomCanvas berechnet) — sonst
+       * würde die feste Iso-Kamera beim Drehen irgendwann direkt gegen eine
+       * nahe Wand schauen und nichts vom Rauminneren mehr sehen.
        */}
-      {/* Boden um WALL_THICKNESS in die beiden Wandrichtungen (−X/−Z)
-          vergrößert, damit seine Außenkante bündig mit der Wand-Außenseite
-          abschließt statt an deren Innenkante eine Lücke zu lassen. */}
-      <mesh position={[(width - WALL_THICKNESS) / 2, -WALL_THICKNESS / 2, (depth - WALL_THICKNESS) / 2]}>
-        <boxGeometry args={[width + WALL_THICKNESS, WALL_THICKNESS, depth + WALL_THICKNESS]} />
+      {/* Boden um WALL_THICKNESS nach allen vier Seiten vergrößert, damit
+          seine Außenkante bündig mit der Wand-Außenseite abschließt statt an
+          deren Innenkante eine Lücke zu lassen — unabhängig davon, welche
+          zwei Wände gerade sichtbar sind. */}
+      <mesh position={[width / 2, -WALL_THICKNESS / 2, depth / 2]}>
+        <boxGeometry args={[width + WALL_THICKNESS * 2, WALL_THICKNESS, depth + WALL_THICKNESS * 2]} />
         <meshStandardMaterial color={floorColor} emissive={floorColor} emissiveIntensity={0.55} roughness={0.85} />
       </mesh>
-      <mesh position={[width / 2, height / 2, -WALL_THICKNESS / 2]}>
-        <boxGeometry args={[width, height, WALL_THICKNESS]} />
-        <meshStandardMaterial color={wallColor} emissive={wallColor} emissiveIntensity={0.55} roughness={0.9} />
-      </mesh>
-      <mesh position={[-WALL_THICKNESS / 2, height / 2, depth / 2]}>
-        <boxGeometry args={[WALL_THICKNESS, height, depth]} />
-        <meshStandardMaterial
-          color={shadeHex(wallColor, 0.72)} emissive={shadeHex(wallColor, 0.72)} emissiveIntensity={0.55}
-          roughness={0.9}
-        />
-      </mesh>
+      {!hiddenWalls.has("wall_back") && (
+        <mesh position={[width / 2, height / 2, -WALL_THICKNESS / 2]}>
+          <boxGeometry args={[width, height, WALL_THICKNESS]} />
+          <meshStandardMaterial color={wallColor} emissive={wallColor} emissiveIntensity={0.55} roughness={0.9} />
+        </mesh>
+      )}
+      {!hiddenWalls.has("wall_front") && (
+        <mesh position={[width / 2, height / 2, depth + WALL_THICKNESS / 2]}>
+          <boxGeometry args={[width, height, WALL_THICKNESS]} />
+          <meshStandardMaterial color={wallColor} emissive={wallColor} emissiveIntensity={0.55} roughness={0.9} />
+        </mesh>
+      )}
+      {!hiddenWalls.has("wall_side") && (
+        <mesh position={[-WALL_THICKNESS / 2, height / 2, depth / 2]}>
+          <boxGeometry args={[WALL_THICKNESS, height, depth]} />
+          <meshStandardMaterial
+            color={shadeHex(wallColor, 0.72)} emissive={shadeHex(wallColor, 0.72)} emissiveIntensity={0.55}
+            roughness={0.9}
+          />
+        </mesh>
+      )}
+      {!hiddenWalls.has("wall_right") && (
+        <mesh position={[width + WALL_THICKNESS / 2, height / 2, depth / 2]}>
+          <boxGeometry args={[WALL_THICKNESS, height, depth]} />
+          <meshStandardMaterial
+            color={shadeHex(wallColor, 0.72)} emissive={shadeHex(wallColor, 0.72)} emissiveIntensity={0.55}
+            roughness={0.9}
+          />
+        </mesh>
+      )}
       {/*
        * Dünner heller Kantenrahmen um den Boden (alle vier Seiten): macht die
        * Raumgrenze auch bei dunkler Tapete/Boden sofort lesbar, statt dass
@@ -155,11 +183,15 @@ function CellHighlight({
   const rotX = surface === "floor" ? -Math.PI / 2 : 0;
   const rotY = surfaceRotationY(surface);
   const offset = 0.01;
-  const pos = surface === "floor"
-    ? [world.x, offset, world.z] as const
-    : surface === "wall_back"
-      ? [world.x, world.y, offset] as const
-      : [offset, world.y, world.z] as const;
+  // Leicht von der jeweiligen Wandfläche Richtung Rauminnere versetzt (gegen
+  // Z-Fighting mit der Wand selbst) — bei den beiden "fernen" Wänden
+  // (front/right, an Z=depth bzw. X=width) läuft der Versatz nach INNEN
+  // (subtrahiert), nicht nach außen.
+  const pos = surface === "floor" ? [world.x, offset, world.z] as const
+    : surface === "wall_back"  ? [world.x, world.y, offset] as const
+    : surface === "wall_front" ? [world.x, world.y, ROOM_SIZE.depth - offset] as const
+    : surface === "wall_side"  ? [offset, world.y, world.z] as const
+    : [ROOM_SIZE.width - offset, world.y, world.z] as const; // wall_right
   return (
     <mesh position={pos} rotation={[rotX, rotY, 0]}>
       <planeGeometry args={[w * 0.96, h * 0.96]} />
@@ -169,15 +201,19 @@ function CellHighlight({
 }
 
 function PlacedFurniture({
-  placed, edit, onInteract,
-}: { placed: PlacedItem[]; edit?: EditHooks; onInteract: Props["onInteract"] }) {
+  placed, edit, onInteract, hiddenWalls,
+}: { placed: PlacedItem[]; edit?: EditHooks; onInteract: Props["onInteract"]; hiddenWalls: ReadonlySet<RoomSurface> }) {
   const entries = useMemo(() => placed.map(item => {
+    // Ein Wandobjekt auf einer gerade kameraseits ausgeblendeten Wand (siehe
+    // RoomShell) würde ohne seine tragende Wand freischwebend im Void
+    // erscheinen — bleibt einfach unsichtbar, bis der User dorthin dreht.
+    if (hiddenWalls.has(item.zone)) return null;
     const def = getRoomItem(item.key);
     if (!def) return null;
     const world = gridToWorld(item.zone, item.x, item.y, def.w, def.h);
     const rotY = surfaceRotationY(item.zone);
     return { item, def, world, rotY };
-  }).filter((e): e is NonNullable<typeof e> => e !== null), [placed]);
+  }).filter((e): e is NonNullable<typeof e> => e !== null), [placed, hiddenWalls]);
 
   return (
     <>
@@ -334,9 +370,15 @@ function VitrineMarker({
   );
 }
 
-function EditLayer({ edit }: { edit: EditHooks }) {
+function EditLayer({ edit, hiddenWalls }: { edit: EditHooks; hiddenWalls: ReadonlySet<RoomSurface> }) {
   const accent = edit.ghost ? ACCENT_COLORS[getRoomItem(edit.ghost.key)?.accent ?? "teal"] : "#5ee6ff";
   const [hover, setHover] = useState<{ zone: RoomSurface; x: number; y: number } | null>(null);
+  // Nur Zellen auf gerade sichtbaren Wänden anbieten — sonst könnte man
+  // "blind" auf eine ausgeblendete Wand droppen (siehe RoomShell/hiddenWalls).
+  const visibleLegal = useMemo(
+    () => edit.legal.filter(c => !hiddenWalls.has(c.zone)),
+    [edit.legal, hiddenWalls],
+  );
 
   function raycastToCell(surface: RoomSurface, e: ThreeEvent<PointerEvent>) {
     if (!edit.ghost) return;
@@ -344,7 +386,7 @@ function EditLayer({ edit }: { edit: EditHooks }) {
     // An der oberen/hinteren Zellkante ausrichten (nicht am Mittelpunkt), wie in room-layout.ts erwartet.
     const anchorA = Math.round(a - edit.ghost.w / 2);
     const anchorB = Math.round(b - edit.ghost.h / 2);
-    const match = edit.legal.find(c => c.zone === surface && c.x === anchorA && c.y === anchorB);
+    const match = visibleLegal.find(c => c.zone === surface && c.x === anchorA && c.y === anchorB);
     setHover(match ? { zone: surface, x: match.x, y: match.y } : null);
   }
 
@@ -375,9 +417,29 @@ function EditLayer({ edit }: { edit: EditHooks }) {
       >
         <planeGeometry args={[ROOM_SIZE.depth, ROOM_SIZE.height]} />
       </mesh>
+      {!hiddenWalls.has("wall_front") && (
+        <mesh
+          rotation={[0, Math.PI, 0]} position={[ROOM_SIZE.width / 2, ROOM_SIZE.height / 2, ROOM_SIZE.depth]}
+          onPointerMove={e => raycastToCell("wall_front", e)}
+          onClick={e => { e.stopPropagation(); if (hover?.zone === "wall_front") edit.onDrop(hover.zone, hover.x, hover.y); }}
+          visible={false}
+        >
+          <planeGeometry args={[ROOM_SIZE.width, ROOM_SIZE.height]} />
+        </mesh>
+      )}
+      {!hiddenWalls.has("wall_right") && (
+        <mesh
+          rotation={[0, -Math.PI / 2, 0]} position={[ROOM_SIZE.width, ROOM_SIZE.height / 2, ROOM_SIZE.depth / 2]}
+          onPointerMove={e => raycastToCell("wall_right", e)}
+          onClick={e => { e.stopPropagation(); if (hover?.zone === "wall_right") edit.onDrop(hover.zone, hover.x, hover.y); }}
+          visible={false}
+        >
+          <planeGeometry args={[ROOM_SIZE.depth, ROOM_SIZE.height]} />
+        </mesh>
+      )}
 
       {/* Freie Zellen leuchten aus. */}
-      {edit.ghost && edit.legal.map((c, i) => (
+      {edit.ghost && visibleLegal.map((c, i) => (
         <CellHighlight
           key={i} surface={c.zone} x={c.x} y={c.y} w={edit.ghost!.w} h={edit.ghost!.h}
           color={accent} opacity={hover?.zone === c.zone && hover.x === c.x && hover.y === c.y ? 0.55 : 0.22}
@@ -458,9 +520,9 @@ function RoomCanvas({
   const camPos = useMemo(() => {
     const d = Math.max(ROOM_SIZE.width, ROOM_SIZE.depth) * 1.4;
     // Ursprüngliche feste Eckansicht war exakt (+d, +d) — das entspricht 45°
-    // um die Raummitte. `rotation` verschiebt diesen Winkel, der horizontale
-    // Radius (d·√2) und die Höhe (d·0.82) bleiben unverändert, damit der
-    // Zoom/Rahmen-Look beim Drehen erhalten bleibt.
+    // um die Raummitte. `rotation` verschiebt diesen Winkel (voller 360°-Bereich,
+    // kein Clamp mehr), der horizontale Radius (d·√2) und die Höhe (d·0.82)
+    // bleiben unverändert, damit der Zoom/Rahmen-Look beim Drehen erhalten bleibt.
     const angle = Math.PI / 4 + rotation;
     const horizontalRadius = d * Math.SQRT2;
     return [
@@ -469,6 +531,20 @@ function RoomCanvas({
       ROOM_CENTER.z + horizontalRadius * Math.sin(angle),
     ] as const;
   }, [rotation]);
+
+  /**
+   * Welche zwei der vier Wände gerade zwischen Kamera und Rauminnerem stehen
+   * würden (siehe ISO_GRID/RoomShell) — die werden ausgeblendet, damit man
+   * bei voller 360°-Drehung immer freie Sicht ins Zimmer behält. Reiner
+   * Vorzeichenvergleich zur Raummitte: Kamera auf der +Z-Seite → die NÄHERE
+   * der beiden Z-Wände (wall_front, an Z=depth) blockiert die Sicht.
+   */
+  const hiddenWalls = useMemo(() => {
+    const hidden = new Set<RoomSurface>();
+    hidden.add(camPos[2] >= ROOM_CENTER.z ? "wall_front" : "wall_back");
+    hidden.add(camPos[0] >= ROOM_CENTER.x ? "wall_right" : "wall_side");
+    return hidden;
+  }, [camPos]);
 
   return (
     // Kein `shadows`-Prop: kein Mesh setzt castShadow/receiveShadow, das
@@ -484,18 +560,20 @@ function RoomCanvas({
       />
       <FitCamera camPos={camPos} />
       <RoomLighting />
-      <RoomShell wallpaperKey={state.wallpaperKey} floorKey={state.floorKey} />
+      <RoomShell wallpaperKey={state.wallpaperKey} floorKey={state.floorKey} hiddenWalls={hiddenWalls} />
       <NeonEdge />
-      <RoomWindow3D level={level} />
+      {/* An der Rückwand montiert — ohne sie würde es freischwebend im
+          leeren Raum hängen, sobald diese Wand kamerabedingt ausgeblendet ist. */}
+      {!hiddenWalls.has("wall_back") && <RoomWindow3D level={level} />}
       <CeilingLamp3D level={level} />
-      <PlacedFurniture placed={state.placed} edit={edit} onInteract={onInteract} />
+      <PlacedFurniture placed={state.placed} edit={edit} onInteract={onInteract} hiddenWalls={hiddenWalls} />
       {/* Im Bearbeiten-Modus nicht anklickbar — sie lässt sich ohnehin nicht
           verschieben, ein Klick soll dort nicht mitten in der Möbel-Auswahl
           ein Modal aufreißen (siehe altes VitrinePanel-Verhalten). */}
       {!edit && (
         <VitrineMarker hiddenCount={hiddenVitrineCount} filledCount={filledVitrineCount} onClick={() => onInteract("vitrine")} />
       )}
-      {edit && <EditLayer edit={edit} />}
+      {edit && <EditLayer edit={edit} hiddenWalls={hiddenWalls} />}
       <ContactShadows
         position={[ROOM_SIZE.width / 2, 0.01, ROOM_SIZE.depth / 2]}
         opacity={0.55} scale={Math.max(ROOM_SIZE.width, ROOM_SIZE.depth) * 1.2}
@@ -515,53 +593,48 @@ function RoomCanvas({
   );
 }
 
-/**
- * Wie weit sich die Kamera aus der ursprünglichen 45°-Eckansicht heraus
- * drehen lässt. Bewusst eng begrenzt: die Raum-Shell modelliert nur zwei
- * Wände (Rückwand + eine Seitenwand, klassische Iso-Eckansicht) — bei
- * größeren Winkeln würde man an der fehlenden dritten/vierten Wand vorbei in
- * den leeren Raum dahinter blicken. Sobald alle vier Wände existieren, kann
- * dieses Limit aufgehoben werden.
- */
-const ROTATE_STEP = Math.PI / 9; // 20°
-const ROTATE_MAX = Math.PI / 3; // 60°
+/** Radiant Kamera-Drehung pro Pixel horizontaler Zeigerbewegung. */
+const DRAG_SENSITIVITY = 0.008;
 
 export default function RoomStage3D({ state, vitrine, onInteract, edit }: Props) {
   const level = roomLevel(state.placed);
   const filledVitrineCount = vitrine.slots.filter(Boolean).length;
   const [rotation, setRotation] = useState(0);
-  const clamp = (r: number) => Math.max(-ROTATE_MAX, Math.min(ROTATE_MAX, r));
+  // Unclamped (voller 360°-Bereich) — die Raum-Shell blendet dynamisch die
+  // zwei kamerafernen Wände ein (siehe hiddenWalls in RoomCanvas), es gibt
+  // also keinen Winkel mehr, an dem man "an der Wand vorbei ins Nichts" sähe.
+  const drag = useRef<{ pointerId: number; startX: number; startRotation: number } | null>(null);
+
+  function handlePointerDown(e: ReactPointerEvent<HTMLDivElement>) {
+    // Nur der primäre Zeiger (linke Maustaste / erster Touch-Punkt) — ein
+    // zweiter Finger (Pinch-Zoom-Geste o.ä.) soll die Drehung nicht kapern.
+    if (e.button !== 0 && e.pointerType === "mouse") return;
+    drag.current = { pointerId: e.pointerId, startX: e.clientX, startRotation: rotation };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+  function handlePointerMove(e: ReactPointerEvent<HTMLDivElement>) {
+    if (!drag.current || drag.current.pointerId !== e.pointerId) return;
+    const dx = e.clientX - drag.current.startX;
+    setRotation(drag.current.startRotation + dx * DRAG_SENSITIVITY);
+  }
+  function handlePointerUp(e: ReactPointerEvent<HTMLDivElement>) {
+    if (drag.current?.pointerId === e.pointerId) drag.current = null;
+  }
 
   return (
     <div
       title={`Zimmer-Stufe ${level + 1}`}
-      className="relative w-full aspect-[6/5] overflow-hidden rounded-2xl bg-[#141018]"
+      className="relative w-full aspect-[6/5] overflow-hidden rounded-2xl bg-[#141018] touch-none cursor-grab active:cursor-grabbing"
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
     >
       <RoomCanvas
         state={state} edit={edit} onInteract={onInteract}
         hiddenVitrineCount={vitrine.hiddenCount} filledVitrineCount={filledVitrineCount} level={level}
         rotation={rotation}
       />
-      <div className="absolute bottom-3 right-3 flex gap-1.5 pointer-events-none">
-        <button
-          type="button"
-          aria-label="Ansicht nach links drehen"
-          onClick={() => setRotation(r => clamp(r - ROTATE_STEP))}
-          disabled={rotation <= -ROTATE_MAX}
-          className="pointer-events-auto flex items-center justify-center w-8 h-8 rounded-full bg-black/60 border border-white/15 text-white/80 hover:bg-black/80 hover:text-white disabled:opacity-30 disabled:hover:bg-black/60 transition-colors"
-        >
-          ‹
-        </button>
-        <button
-          type="button"
-          aria-label="Ansicht nach rechts drehen"
-          onClick={() => setRotation(r => clamp(r + ROTATE_STEP))}
-          disabled={rotation >= ROTATE_MAX}
-          className="pointer-events-auto flex items-center justify-center w-8 h-8 rounded-full bg-black/60 border border-white/15 text-white/80 hover:bg-black/80 hover:text-white disabled:opacity-30 disabled:hover:bg-black/60 transition-colors"
-        >
-          ›
-        </button>
-      </div>
     </div>
   );
 }
