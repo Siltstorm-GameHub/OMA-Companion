@@ -50,7 +50,7 @@ export async function PATCH(req: NextRequest) {
 
   await prisma.user.update({
     where: { id: me.id },
-    data:  { vitrineSlotsJson: JSON.stringify(current) },
+    data:  { vitrineSlotsJson: JSON.stringify(current), vitrineUpdatedAt: new Date() },
   });
 
   return NextResponse.json({ ok: true });

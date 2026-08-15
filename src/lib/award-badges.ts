@@ -1,9 +1,15 @@
 import { prisma } from "@/lib/prisma";
 import { findNewlyEarnedBadges, getBadgeDef, type BadgeStats } from "@/lib/badges";
 import { dispatchNotification } from "@/lib/notify-dispatch";
+import { loadRoom } from "@/lib/room";
+import { roomLevel } from "@/lib/room-layout";
+import { getRoomItem } from "@/lib/room-items";
 
 async function loadStats(userId: string): Promise<BadgeStats> {
-  const [user, eventCount, tournamentWins, eventWins, mvpCount, job] = await Promise.all([
+  const [
+    user, eventCount, tournamentWins, eventWins, mvpCount, job,
+    room, upgradedRows, pokalCount, trophyCount, systemBadgeCount, customBadgeCount,
+  ] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
       select: { points: true, voiceMinutesTotal: true, messagesTotal: true },
@@ -29,6 +35,15 @@ async function loadStats(userId: string): Promise<BadgeStats> {
     prisma.userJob
       .findUnique({ where: { userId }, select: { totalEarned: true } })
       .catch(() => null),
+    // Zimmer-Ausbaustufe — faule Materialisierung, funktioniert auch ohne Room-Zeile.
+    loadRoom(userId).catch(() => null),
+    // Nicht-Grundausstattungs-Items: reicht, um "hasRoomUpgrade" zu prüfen
+    // (mind. eins mit upgradeSlot), ohne den ganzen Katalog zu laden.
+    prisma.roomItem.findMany({ where: { userId, starter: false }, select: { itemKey: true } }).catch(() => []),
+    prisma.pokal.count({ where: { userId } }).catch(() => 0),
+    prisma.wanderpocalHolder.count({ where: { userId } }).catch(() => 0),
+    prisma.userSystemBadge.count({ where: { userId } }).catch(() => 0),
+    prisma.userCustomBadge.count({ where: { userId } }).catch(() => 0),
   ]);
 
   // Tournament count = any tournament participation
@@ -43,7 +58,10 @@ async function loadStats(userId: string): Promise<BadgeStats> {
     tournamentWins,
     eventWins,
     mvpCount,
-    jobCoinsEarned: job?.totalEarned ?? 0,
+    jobCoinsEarned:  job?.totalEarned ?? 0,
+    roomLevel:       room ? roomLevel(room.placed) : 0,
+    hasRoomUpgrade:  upgradedRows.some(r => !!getRoomItem(r.itemKey)?.upgradeSlot),
+    vitrineItemCount: pokalCount + trophyCount + systemBadgeCount + customBadgeCount,
   };
 }
 

@@ -11,6 +11,7 @@ import { PushSubscribeButton } from "@/components/PushSubscribeButton";
 import ProfileOverlayButton from "@/components/ProfileOverlayButton";
 import RoomHeroPanel from "./RoomHeroPanel";
 import RoomStatTiles from "./RoomStatTiles";
+import RoomLevelBar from "./RoomLevelBar";
 import RoomView from "./RoomView";
 
 export const metadata = { title: "Gaming-Zimmer" };
@@ -36,6 +37,7 @@ export default async function ZimmerPage() {
     <div className="px-5 pb-5 pt-0 sm:p-6 max-w-7xl mx-auto space-y-5 animate-fade-in">
       <RoomHeroPanel core={core} />
       <RoomStatTiles core={core} />
+      <RoomLevelBar placed={state.placed} />
 
       <RoomView
         state={state}

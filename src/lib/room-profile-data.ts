@@ -5,6 +5,9 @@ import { computeBadges, type Badge } from "./badges";
 import { parseFavoriteGames, type FavoriteGame } from "./favorite-games";
 import { QUEST_TYPE_META, type QuestType } from "./quests";
 import { getAvailableReviewYears } from "./year-review";
+import { loadRoom } from "./room";
+import { roomLevel } from "./room-layout";
+import { getRoomItem } from "./room-items";
 import {
   VITRINE_SLOT_RANGES, VITRINE_TOTAL_SLOTS, parseVitrineSlotsJson, parseSlotValue,
   type VitrineItem,
@@ -63,6 +66,9 @@ export interface RoomProfileCore {
     /** Wie viele besessene Pokale/Wanderpokale/Abzeichen gerade in KEINEM
      *  Fach angezeigt werden — treibt den "+N"-Hinweis auf der Bühne. */
     hiddenCount: number;
+    /** ISO-Zeitpunkt der letzten bewussten Fach-Änderung, oder `null`, wenn
+     *  der User die Vitrine nie angefasst hat (reine Auto-Belegung). */
+    updatedAt: string | null;
   };
 }
 
@@ -102,7 +108,7 @@ export async function loadRoomProfileCore(userId: string): Promise<RoomProfileCo
     select: {
       id: true, name: true, username: true, image: true, bio: true, createdAt: true,
       points: true, rankPoints: true, birthday: true, twitchLogin: true, bannerUrl: true,
-      showcaseBadgesJson: true, favoriteGamesJson: true, vitrineSlotsJson: true,
+      showcaseBadgesJson: true, favoriteGamesJson: true, vitrineSlotsJson: true, vitrineUpdatedAt: true,
     },
   });
   if (!user) return null;
@@ -171,6 +177,7 @@ export async function loadRoomProfileCore(userId: string): Promise<RoomProfileCo
     trophies,
     systemBadges: earnedSystemBadges,
     customBadges: allCustomBadges.map(uc => ({ ...uc.badge, earnedAt: uc.earnedAt })),
+    updatedAt:   user.vitrineUpdatedAt,
   });
 
   return {
@@ -220,8 +227,9 @@ function resolveVitrineSlots(input: {
   trophies: WanderpocalHolder[];
   systemBadges: Badge[];
   customBadges: { id: string; icon: string; name: string; earnedAt: Date }[];
+  updatedAt: Date | null;
 }): RoomProfileCore["vitrine"] {
-  const { slotsJson, showcaseBadgeKeys, pokale, trophies, systemBadges, customBadges } = input;
+  const { slotsJson, showcaseBadgeKeys, pokale, trophies, systemBadges, customBadges, updatedAt } = input;
 
   const pokalById     = new Map(pokale.map(p => [p.id, p]));
   const trophyByKey   = new Map(trophies.map(t => [`${t.scopeType}:${t.scopeValue}`, t]));
@@ -310,7 +318,7 @@ function resolveVitrineSlots(input: {
   const totalShown = usedPokalIds.size + usedTrophyKeys.size + usedBadgeKeys.size;
   const hiddenCount = Math.max(0, totalOwned - totalShown);
 
-  return { slots, hiddenCount };
+  return { slots, hiddenCount, updatedAt: updatedAt ? updatedAt.toISOString() : null };
 }
 
 // ── Details (hinter dem Röhrenmonitor) ───────────────────────────────────────
@@ -350,6 +358,7 @@ export async function loadRoomProfileDetails(userId: string): Promise<RoomProfil
     user, eventRegs, startedEvents, tournaments, quests, pokale,
     systemBadgeKeys, customBadges, trophies, trophyStats,
     coinsEarnedAgg, coinsSpentAgg, eventCount, tournamentCount, lulPollWins, jobRow,
+    room, upgradedRows,
   ] = await Promise.all([
     prisma.user.findUnique({
       where:  { id: userId },
@@ -395,6 +404,8 @@ export async function loadRoomProfileDetails(userId: string): Promise<RoomProfil
     prisma.tournamentParticipant.count({ where: { userId } }),
     prisma.lulEntry.count({ where: { userId, communityChamp: true } }).catch(() => 0),
     prisma.userJob.findUnique({ where: { userId }, select: { totalEarned: true } }).catch(() => null),
+    loadRoom(userId).catch(() => null),
+    prisma.roomItem.findMany({ where: { userId, starter: false }, select: { itemKey: true } }).catch(() => []),
   ]);
 
   const voiceHours   = Math.floor((user?.voiceMinutesTotal ?? 0) / 60);
@@ -405,7 +416,10 @@ export async function loadRoomProfileDetails(userId: string): Promise<RoomProfil
   const badges = computeBadges(
     { points: user?.points ?? 0, voiceHours, messageCount, eventCount, tournamentCount,
       tournamentWins: 0, eventWins, mvpCount: pollMaster,
-      jobCoinsEarned: jobRow?.totalEarned ?? 0 },
+      jobCoinsEarned: jobRow?.totalEarned ?? 0,
+      roomLevel: room ? roomLevel(room.placed) : 0,
+      hasRoomUpgrade: upgradedRows.some(r => !!getRoomItem(r.itemKey)?.upgradeSlot),
+      vitrineItemCount: pokale.length + trophies.length + systemBadgeKeys.length + customBadges.length },
     new Set(systemBadgeKeys.map(b => b.badgeKey)),
   );
 

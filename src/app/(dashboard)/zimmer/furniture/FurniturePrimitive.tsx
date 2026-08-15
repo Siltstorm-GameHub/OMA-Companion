@@ -535,6 +535,7 @@ function pickShape(def: RoomItemDef) {
   if (def.tags.includes("console") || def.tags.includes("console_retro")) return <Gadget def={def} kind="console" />;
   if (def.tags.includes("whiteboard")) return <WallPanel def={def} />;
   if (def.key === "poster_retro") return <WallPanel def={def} />;
+  if (def.key === "sommer_poster") return <WallPanel def={def} />;
   if (def.key === "deko_pokal") return <ShelfTrophy def={def} />;
   if (def.key === "teppich") return <Rug def={def} />;
   if (def.key === "teppich_rund_logo") return <LogoRug def={def} />;
