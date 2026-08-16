@@ -413,15 +413,21 @@ function RoomShell({
  * eigenes `pointLight`/`rectAreaLight` direkt an ihrer Geometrie (siehe
  * CeilingLamp3D, FurniturePrimitive.tsx) statt einer globalen Pauschale.
  */
-function RoomLighting() {
+function RoomLighting({ blindsClosed }: { blindsClosed: boolean }) {
   const { width, depth } = ROOM_SIZE;
+  // Deutlich gedämpfte Grundhelligkeit (vorher 0.22/0.35): die einzelnen
+  // Lichtquellen (Deckenlampe, Fenster) sollen den Unterschied machen, nicht
+  // ein permanent helles Umgebungslicht, das an/aus kaum spürbar macht.
   return (
     <>
-      <ambientLight intensity={0.22} />
-      <hemisphereLight args={["#6a63a0", "#1c1830", 0.35]} />
+      <ambientLight intensity={0.1} />
+      <hemisphereLight args={["#6a63a0", "#1c1830", 0.16]} />
+      {/* Simuliert Tageslicht, das durchs Fenster hereinfällt — fällt fast
+          komplett weg, wenn der Rolladen unten ist, statt unabhängig vom
+          Fenster immer gleich hell zu bleiben. */}
       <directionalLight
         position={[width * 0.4, 6, depth * 1.3]}
-        intensity={1.3}
+        intensity={blindsClosed ? 0.12 : 1.5}
         color="#fff2e0"
         castShadow
         shadow-mapSize-width={1024}
@@ -877,7 +883,7 @@ function RoomCanvas({
         onUpdate={cam => cam.lookAt(ROOM_CENTER)}
       />
       <FitCamera camPos={camPos} focused={focusTarget === "crt" || focusTarget === "vitrine"} />
-      <RoomLighting />
+      <RoomLighting blindsClosed={blindsClosed} />
       <RoomShell level={level} hiddenWalls={hiddenWalls} />
       {/* An der Rückwand bzw. Seitenwand montiert — ohne die Sichtbarkeits-
           Prüfung würden sie freischwebend im leeren Raum hängen, sobald ihre
