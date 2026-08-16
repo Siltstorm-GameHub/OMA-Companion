@@ -185,7 +185,31 @@ export default function RoomEditor({ state, core, onDone, levelThresholds }: Pro
       // — echte 3D-Objekte richten sich über surfaceRotationY() an jeder der
       // vier Wände korrekt aus, ganz ohne Spiegelung. Die "Spiegeln"-Taste
       // (siehe flip() unten) bleibt als rein manuelle Fein-Justierung erhalten.
-      setPlaced(p => p.map(i => (i.id === candidate.id ? { ...i, zone, x, y } : i)));
+      const movedDef = getRoomItem(candidate.key);
+      const providesStand = !!movedDef && (movedDef.tags.includes("desk") || movedDef.tags.includes("surface"));
+      const dx = x - candidate.x;
+      const dy = y - candidate.y;
+      setPlaced(p => {
+        const moved = p.map(i => (i.id === candidate.id ? { ...i, zone, x, y } : i));
+        // Monitore (mustStandOn:"desk") sind fest an ihre Unterlage gebunden —
+        // wandert der Tisch, MUSS der Monitor exakt mitwandern. Sonst steht er
+        // beim nächsten Speichern ohne Unterlage darunter, validateLayout()
+        // lehnt das serverseitig ab, und der User müsste ihn jedes Mal manuell
+        // hinterherziehen, statt dass "Tisch verschieben" einfach funktioniert.
+        if (!providesStand || zone !== candidate.zone || (dx === 0 && dy === 0)) return moved;
+        const { w: deskW, h: deskH } = footprint(movedDef!, candidate.zone, candidate.rotation);
+        return moved.map(i => {
+          if (i.id === candidate.id) return i;
+          const iDef = getRoomItem(i.key);
+          if (!iDef || i.zone !== candidate.zone || iDef.mustStandOn !== "desk") return i;
+          const { w: iw, h: ih } = footprint(iDef, i.zone, i.rotation);
+          const withinOldDesk =
+            i.x >= candidate.x && i.y >= candidate.y
+            && i.x + iw <= candidate.x + deskW && i.y + ih <= candidate.y + deskH;
+          if (!withinOldDesk) return i;
+          return { ...i, x: i.x + dx, y: i.y + dy };
+        });
+      });
     }
     // Nach dem Platzieren nicht "in der Hand" behalten — wer weiter
     // verschieben will, tippt das Objekt erneut an.
