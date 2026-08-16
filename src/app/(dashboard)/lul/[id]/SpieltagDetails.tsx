@@ -115,6 +115,7 @@ export default function SpieltagDetails({
                     style={{ color: "#f59e0b", borderLeft: "1px solid rgba(255,255,255,0.05)" }}>
                     Ø
                   </th>
+                  <th />
                 </tr>
               )}
               <tr className="text-gray-600 border-b border-white/5">
@@ -142,6 +143,7 @@ export default function SpieltagDetails({
                         {maxRounds > 1 && <th className="text-center py-1 px-2 font-medium">Σ</th>}
                       </>
                 }
+                <th className="text-right py-1 pl-2 font-medium whitespace-nowrap">LuL-Pkt</th>
               </tr>
             </thead>
             <tbody>
@@ -231,6 +233,9 @@ export default function SpieltagDetails({
                             )}
                           </>
                     }
+                    <td className="text-right py-1 pl-2 tabular-nums font-semibold text-amber-400 whitespace-nowrap">
+                      {entry.lulPoints}
+                    </td>
                   </tr>
                 );
               })}

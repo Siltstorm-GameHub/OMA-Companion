@@ -739,6 +739,7 @@ async function completeEvent(req: NextRequest, eventId: string) {
   // ── Series-Standings (optional, nur wenn Event in einer Reihe ist) ──────────
   let updatedStandings: SeriesStandings | null = null;
   let appliedAggregatedStats: Record<string, Record<string, number>> = {};
+  let pollParticipationSeriesReward: { userId: string; points: number }[] = [];
   type DominionChange = { streakBefore: number; streakAfter: number; bonusAwarded: boolean; coins: number; seriesPoints: number };
   let dominionChanges: Record<string, DominionChange> = {};
   let seriesContrib: {
@@ -938,7 +939,8 @@ async function completeEvent(req: NextRequest, eventId: string) {
         for (const uid of oldPollWinners) addToUser(uid, oldLabel, -1);
       }
 
-      // Re-Edit: DB-basierte EventPoll-Standings rückbuchen
+      // Re-Edit: DB-basierte EventPoll-Standings rückbuchen (Serien-Rohtabelle + tatsächlich auf die
+      // globale Rangliste übertragene Sieger-Rang-Punkte, siehe statCfg.transferToGlobalRanking)
       const oldEpRewards = (oldCompletion.eventPollRewards as Array<{
         label: string; winnerIds: string[]; voterIds: string[];
         participationSeriesPoints: number; winnerRankPoints: number;
@@ -948,17 +950,44 @@ async function completeEvent(req: NextRequest, eventId: string) {
         for (const uid of old.voterIds) {
           addToUser(uid, `${old.label}_Abstimmungen`, -1);
           oldEventVoterSet.add(uid);
-          if (old.participationSeriesPoints > 0)
-            addToUser(uid, `${old.label}_Teilnahmepunkte`, -old.participationSeriesPoints);
         }
         for (const uid of old.winnerIds) {
           addToUser(uid, old.label, -1);
-          if (old.winnerRankPoints > 0)
+          if (old.winnerRankPoints > 0) {
             addToUser(uid, `${old.label}_Siegerpunkte`, -old.winnerRankPoints);
+            if (statCfg.transferToGlobalRanking) {
+              applyRankDelta(uid, -old.winnerRankPoints, `[Korrektur] Umfrage Sieger (${old.label}): ${event.title}`);
+            }
+          }
         }
       }
       for (const uid of oldEventVoterSet) {
         addToUser(uid, "Umfrage-Teilnahmen", -1);
+      }
+      // Alte, einmalige Teilnahme-Ligapunkte-Belohnung zurückbuchen (Betrag = höchster konfigurierter
+      // Wert unter den Umfragen, an denen teilgenommen wurde — nicht je Umfrage, siehe unten).
+      // Fallback für Alt-Daten (vor diesem Dedup-Fix gespeichert, ohne pollParticipationSeriesReward):
+      // dort wurden die Punkte noch je Umfrage einzeln vergeben.
+      const oldPollParticipationSeriesReward = oldCompletion.pollParticipationSeriesReward as
+        Array<{ userId: string; points: number }> | undefined;
+      if (oldPollParticipationSeriesReward) {
+        for (const { userId: uid, points } of oldPollParticipationSeriesReward) {
+          addToUser(uid, "Umfrage-Teilnahmepunkte", -points);
+          if (statCfg.transferToGlobalRanking) {
+            applyRankDelta(uid, -points, `[Korrektur] Umfrage Teilnahme: ${event.title}`);
+          }
+        }
+      } else {
+        for (const old of oldEpRewards) {
+          for (const uid of old.voterIds) {
+            if (old.participationSeriesPoints > 0) {
+              addToUser(uid, `${old.label}_Teilnahmepunkte`, -old.participationSeriesPoints);
+              if (statCfg.transferToGlobalRanking) {
+                applyRankDelta(uid, -old.participationSeriesPoints, `[Korrektur] Umfrage Teilnahme (${old.label}): ${event.title}`);
+              }
+            }
+          }
+        }
       }
     }
     // Neue Poll-Siege eintragen (multi-poll) — ausgeschlossene User erhalten keine Ligapunkte
@@ -974,19 +1003,20 @@ async function completeEvent(req: NextRequest, eventId: string) {
     // EventPoll series points: Abstimmungs-Tracking + Punkte pro Voter/Sieger (ausgeschlossene User
     // erhalten keine Ligapunkte/Rang-Punkte, bleiben aber als Abstimmende unangetastet)
     const eventVoterSet = new Set<string>(); // einmal pro Event für Umfrage-Teilnahmen
+    // Umfrage-Teilnahme-Ligapunkte werden — wie die Teilnahme-Münzen weiter oben — einmalig pro Event
+    // vergeben, nicht je Umfrage: über alle Umfragen dieses Events hinweg bekommt jeder Voter die
+    // Punkte nur einmal, in Höhe des höchsten konfigurierten Betrags unter den Umfragen, an denen er
+    // teilgenommen hat. Sieger-Ligapunkte dagegen gibt es je Umfragesieg (mehrere Siege in
+    // verschiedenen Umfragen desselben Events zählen jeweils).
+    const participationSeriesPointsByVoter: Record<string, number> = {};
     for (const ep of eventPollRewards) {
       for (const uid of ep.voterIds) {
         if (excludedSet.has(uid)) continue;
         // Abstimmungs-Zähler pro Umfrage
         addToUser(uid, `${ep.label}_Abstimmungen`, 1);
         eventVoterSet.add(uid);
-
-        // Ligapunkte für Abstimmung (nur wenn konfiguriert)
-        if (ep.participationSeriesPoints > 0) {
-          addToUser(uid, `${ep.label}_Teilnahmepunkte`, ep.participationSeriesPoints);
-          if (statCfg.transferToGlobalRanking) {
-            applyRankDelta(uid, ep.participationSeriesPoints, `[Rang-Punkte] Umfrage Teilnahme (${ep.label}): ${event.title}`);
-          }
+        if (ep.participationSeriesPoints > (participationSeriesPointsByVoter[uid] ?? 0)) {
+          participationSeriesPointsByVoter[uid] = ep.participationSeriesPoints;
         }
       }
       for (const uid of ep.winnerIds) {
@@ -1003,6 +1033,16 @@ async function completeEvent(req: NextRequest, eventId: string) {
     // +1 Umfrage-Teilnahmen pro Event (nicht pro Poll)
     for (const uid of eventVoterSet) {
       addToUser(uid, "Umfrage-Teilnahmen", 1);
+    }
+    // Einmalige Teilnahme-Ligapunkte pro Event auszahlen (Betrag = höchster konfigurierter Wert
+    // unter den Umfragen, an denen der jeweilige User teilgenommen hat)
+    for (const [uid, pts] of Object.entries(participationSeriesPointsByVoter)) {
+      if (pts <= 0) continue;
+      pollParticipationSeriesReward.push({ userId: uid, points: pts });
+      addToUser(uid, "Umfrage-Teilnahmepunkte", pts);
+      if (statCfg.transferToGlobalRanking) {
+        applyRankDelta(uid, pts, `[Rang-Punkte] Umfrage Teilnahme: ${event.title}`);
+      }
     }
 
     // ── Dominion Bonus ───────────────────────────────────────────────────────────
@@ -1143,6 +1183,7 @@ async function completeEvent(req: NextRequest, eventId: string) {
     pollPhaseComplete,
     eventPollRewards:        eventPollRewards.length > 0 ? eventPollRewards : null,
     pollParticipationReward: pollParticipationReward.length > 0 ? pollParticipationReward : null,
+    pollParticipationSeriesReward: pollParticipationSeriesReward.length > 0 ? pollParticipationSeriesReward : null,
     dominionChanges:         Object.keys(dominionChanges).length > 0 ? dominionChanges : null,
     lockedAt:                new Date().toISOString(),
   };

@@ -42,6 +42,7 @@ type CompletionData = {
   appliedAggregatedStats?: Record<string, Record<string, number>> | null;
   eventPollRewards?: EventPollReward[] | null;
   pollParticipationReward?: { userId: string; coins: number }[] | null;
+  pollParticipationSeriesReward?: { userId: string; points: number }[] | null;
   dominionChanges?: Record<string, DominionChange> | null;
   finalRanking?: string[] | null;
   finalRankingGroups?: string[][] | null;
@@ -170,11 +171,8 @@ export async function revertEventCompletion(eventId: string, opts: RevertOptions
     }
   }
 
-  // DB-basierte EventPoll-Belohnungen (Sieger-Münzen + Ligapunkte pro Umfrage, Rang-Punkte für Teilnahme)
+  // DB-basierte EventPoll-Belohnungen (Sieger-Münzen + Ligapunkte je Umfragesieg)
   for (const ep of cd.eventPollRewards ?? []) {
-    for (const userId of ep.voterIds ?? []) {
-      reverse(userId, 0, ep.participationSeriesPoints ?? 0);
-    }
     for (const userId of ep.winnerIds ?? []) {
       reverse(userId, ep.winnerCoins ?? 0, ep.winnerRankPoints ?? 0);
     }
@@ -183,6 +181,20 @@ export async function revertEventCompletion(eventId: string, opts: RevertOptions
   // Einmalige, event-weite Umfrage-Teilnahme-Belohnung (Münzen, nicht pro Umfrage)
   for (const pr of cd.pollParticipationReward ?? []) {
     reverse(pr.userId, pr.coins ?? 0, 0);
+  }
+
+  // Einmalige, event-weite Umfrage-Teilnahme-Ligapunkte (nicht pro Umfrage, siehe complete/route.ts).
+  // Fallback für Alt-Daten (vor dem Dedup-Fix): dort wurden die Punkte noch je Umfrage einzeln vergeben.
+  if (cd.pollParticipationSeriesReward) {
+    for (const pr of cd.pollParticipationSeriesReward) {
+      reverse(pr.userId, 0, pr.points ?? 0);
+    }
+  } else {
+    for (const ep of cd.eventPollRewards ?? []) {
+      for (const userId of ep.voterIds ?? []) {
+        reverse(userId, 0, ep.participationSeriesPoints ?? 0);
+      }
+    }
   }
 
   // Ausgeschlossene (disqualifizierte) User haben nie Basis-Belohnungen erhalten (siehe
@@ -394,7 +406,6 @@ export async function revertEventCompletion(eventId: string, opts: RevertOptions
           for (const uid of ep.voterIds ?? []) {
             sub(uid, `${ep.label}_Abstimmungen`, 1);
             pollVoterSet.add(uid);
-            if (ep.participationSeriesPoints > 0) sub(uid, `${ep.label}_Teilnahmepunkte`, ep.participationSeriesPoints);
           }
           for (const uid of ep.winnerIds ?? []) {
             sub(uid, ep.label, 1);
@@ -402,6 +413,18 @@ export async function revertEventCompletion(eventId: string, opts: RevertOptions
           }
         }
         for (const uid of pollVoterSet) sub(uid, "Umfrage-Teilnahmen", 1);
+        // Einmalige Teilnahme-Ligapunkte (nicht pro Umfrage); Fallback für Alt-Daten vor dem Dedup-Fix
+        if (cd.pollParticipationSeriesReward) {
+          for (const { userId, points } of cd.pollParticipationSeriesReward) {
+            sub(userId, "Umfrage-Teilnahmepunkte", points);
+          }
+        } else {
+          for (const ep of cd.eventPollRewards ?? []) {
+            for (const uid of ep.voterIds ?? []) {
+              if (ep.participationSeriesPoints > 0) sub(uid, `${ep.label}_Teilnahmepunkte`, ep.participationSeriesPoints);
+            }
+          }
+        }
 
         const dominionTriggerStats = statCfg.dominionBonus?.triggerStats
           ?? (statCfg.dominionBonus?.triggerStat ? [statCfg.dominionBonus.triggerStat] : []);

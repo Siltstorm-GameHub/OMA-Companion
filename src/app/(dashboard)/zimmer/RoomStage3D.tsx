@@ -424,9 +424,15 @@ function RoomLighting({ blindsClosed }: { blindsClosed: boolean }) {
       <hemisphereLight args={["#6a63a0", "#1c1830", 0.16]} />
       {/* Simuliert Tageslicht, das durchs Fenster hereinfällt — fällt fast
           komplett weg, wenn der Rolladen unten ist, statt unabhängig vom
-          Fenster immer gleich hell zu bleiben. */}
+          Fenster immer gleich hell zu bleiben. Position bewusst VOR der
+          Rückwand (negatives Z, außerhalb des Zimmers, ungefähr auf Höhe des
+          Fensters bei X≈width/2) und mit dem Standard-Zielpunkt (0,0,0) —
+          vorher stand das Licht auf der GEGENÜBERLIEGENDEN Raumseite
+          (Z=depth*1.3) und schien in Richtung Fenster statt hindurch, wodurch
+          Möbel ihren Schatten in die falsche Richtung (zur Fensterwand hin
+          statt von ihr weg) warfen. */}
       <directionalLight
-        position={[width * 0.4, 6, depth * 1.3]}
+        position={[width * 0.55, 5.5, -4]}
         intensity={blindsClosed ? 0.12 : 1.5}
         color="#fff2e0"
         castShadow

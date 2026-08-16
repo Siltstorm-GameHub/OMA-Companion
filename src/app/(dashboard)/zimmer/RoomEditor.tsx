@@ -10,7 +10,9 @@ import {
 import {
   getRoomItem, isFixed, CATEGORY_ORDER, ROOM_CATEGORY_LABELS, type RoomCategory,
 } from "@/lib/room-items";
-import { legalCells, type PlacedItem, type RoomState, type RoomSurface, type StoredItem } from "@/lib/room-layout";
+import {
+  legalCells, orphanedStandItems, type PlacedItem, type RoomState, type RoomSurface, type StoredItem,
+} from "@/lib/room-layout";
 import type { RoomProfileCore } from "@/lib/room-profile-data";
 import { RoomItemPreview } from "./RoomItemSprite";
 import { cn } from "@/lib/utils";
@@ -201,6 +203,20 @@ export default function RoomEditor({ state, core, onDone }: Props) {
     if (!candidate || !selectedDef) return;
     if (isFixed(selectedDef)) {
       toast.error(`${selectedDef.label} kann nicht eingelagert werden`);
+      return;
+    }
+    // Steht noch etwas auf/in diesem Objekt (Monitor auf dem Tisch, Pokal im
+    // Regal)? Dann würde es ohne Unterlage schwebend zurückbleiben und jede
+    // spätere Änderung am Speichern hindern (validateLayout lehnt schwebende
+    // Objekte ab) — lieber vorher blocken als den User in genau diesen
+    // Zustand laufen lassen.
+    const withoutCandidate = placed.filter(i => i.id !== candidate.id);
+    const orphans = orphanedStandItems(withoutCandidate).filter(o => o.id !== candidate.id);
+    if (orphans.length > 0) {
+      const labels = [...new Set(orphans.map(o => getRoomItem(o.key)?.label ?? o.key))];
+      toast.error(
+        `Erst wegräumen, was noch dort steht: ${labels.join(", ")}`,
+      );
       return;
     }
     setPlaced(p => p.filter(i => i.id !== candidate.id));
