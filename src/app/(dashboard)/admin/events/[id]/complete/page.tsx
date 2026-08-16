@@ -16,6 +16,14 @@ type SeriesStatConfig = {
   defaultWinnerStatField?: string;
   defaultWinnerTargetField?: string;
   eventPlacementCoins?: { place: number; coins: number }[];
+  dominionBonus?: {
+    enabled: boolean;
+    triggerStats?: string[];
+    triggerStat?: string;
+    threshold: number;
+    coins: number;
+    seriesPoints: number;
+  };
 };
 
 const DEFAULT_REWARDS: RewardsConfig = {

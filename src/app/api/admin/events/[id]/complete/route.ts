@@ -592,6 +592,12 @@ async function completeEvent(req: NextRequest, eventId: string) {
 
   // ── EventPoll-Belohnungen (DB-basiert, automatisch beim Abschluss) ───────────
   // Re-Edit: Rückbuchung bereits bezahlter Poll-Belohnungen
+  // Poll-IDs, deren rewardsPaid-Flag unten zurückgesetzt wird — event.polls wurde WEITER OBEN (vor
+  // dieser Rückbuchung) einmalig mit `where: { rewardsPaid: false }` geladen und enthält sie deshalb
+  // trotz des Resets noch NICHT (die Query lief bereits, bevor die Reset-Transaktion committet wird).
+  // Ohne Nachladen (siehe unten) blieben ihre Umfrage-Punkte in diesem Durchlauf ersatzlos verschwunden
+  // — zurückgebucht, aber nicht neu ausgezahlt — und kämen erst beim nächsten Speichern zurück.
+  const reopenedPollIds: string[] = [];
   if (isReEdit) {
     const oldPollRewards = (oldCompletion.eventPollRewards as Array<{
       pollId: string; winnerIds: string[]; voterIds: string[];
@@ -615,6 +621,7 @@ async function completeEvent(req: NextRequest, eventId: string) {
       // Rückbuchung raus: sonst könnte das Flag zurückgesetzt sein, ohne dass die alte
       // Auszahlung storniert wurde — die Umfrage würde dann ein zweites Mal auszahlen.
       pointOps.push(prisma.eventPoll.update({ where: { id: old.pollId }, data: { rewardsPaid: false } }));
+      if (old.pollId) reopenedPollIds.push(old.pollId);
     }
 
     // Reverse the one-time, event-wide Umfrage-Teilnahme-Belohnung (nicht pro Poll)
@@ -636,7 +643,18 @@ async function completeEvent(req: NextRequest, eventId: string) {
   // noch laufende Umfragen bleiben unbezahlt, bis das Event erneut abgeschlossen wird (Ligapunkte des
   // Umfrage-Gewinners kommen dann erst mit Abschluss der Umfrage dazu, nicht vorher).
   const now = new Date();
-  const allUnpaidPolls = event.polls ?? [];
+  let allUnpaidPolls = event.polls ?? [];
+  // Gerade oben zurückgebuchte Umfragen (reopenedPollIds) fehlen in der Prisma-Query von weiter oben
+  // (die lief vor dem Reset), müssen aber JETZT neu ausgewertet werden — sonst würde ihre Auszahlung
+  // erst beim nächsten Abschluss nachgeholt, siehe Kommentarblock oben.
+  const missingReopenedIds = reopenedPollIds.filter(id => !allUnpaidPolls.some(p => p.id === id));
+  if (missingReopenedIds.length > 0) {
+    const reopenedPolls = await prisma.eventPoll.findMany({
+      where: { id: { in: missingReopenedIds } },
+      include: { votes: { select: { voterId: true, targetId: true } } },
+    });
+    allUnpaidPolls = [...allUnpaidPolls, ...reopenedPolls];
+  }
 
   // Admin-only: noch offene Umfragen sofort schließen (Umfragephase manuell beenden,
   // statt auf das natürliche Ablaufen von endAt zu warten).

@@ -9,7 +9,7 @@ import SeriesIcon from "@/components/SeriesIcon";
 import LivePollsPanel from "./LivePollsPanel";
 import {
   ChevronLeft, CheckCircle2, Trophy, Vote,
-  ListOrdered, GripVertical, Coins, AlertTriangle, RotateCcw, Equal, Lock, Ban,
+  ListOrdered, GripVertical, Coins, AlertTriangle, RotateCcw, Equal, Lock, Ban, Flame,
 } from "lucide-react";
 
 /* ── Types ── */
@@ -27,7 +27,16 @@ type SeriesStatConfig = {
   defaultWinnerStatField?: string;
   defaultWinnerTargetField?: string;
   eventPlacementCoins?: { place: number; coins: number }[];
+  dominionBonus?: {
+    enabled: boolean;
+    triggerStats?: string[];
+    triggerStat?: string;
+    threshold: number;
+    coins: number;
+    seriesPoints: number;
+  };
 };
+type DominionChange = { streakBefore: number; streakAfter: number; bonusAwarded: boolean; coins: number; seriesPoints: number };
 
 interface Props {
   eventId: string;
@@ -231,6 +240,19 @@ export default function EventCompleteClient({
 
   /* ── Derived ── */
   const seriesStatFields = (seriesStatConfig?.stats ?? []).map(s => s.field);
+
+  /* ── Dominion Bonus ── */
+  const dominionCfg = seriesStatConfig?.dominionBonus;
+  const dominionTriggerLabel = dominionCfg
+    ? (dominionCfg.triggerStats?.length ? dominionCfg.triggerStats.join(", ") : (dominionCfg.triggerStat ?? ""))
+    : "";
+  // Ergebnis des letzten Abschlusses (Streak-Fortschritt/Bonus) — kommt erst nach dem ersten
+  // Speichern dazu, da der Streak-Stand server-seitig (Reihen-Standings) geführt wird und hier
+  // nicht vorab simulierbar ist.
+  const dominionChanges = (initialData?.dominionChanges ?? null) as Record<string, DominionChange> | null;
+  const dominionAwarded = dominionChanges
+    ? Object.entries(dominionChanges).filter(([, c]) => c.bonusAwarded)
+    : [];
 
   const rankingGroups = useMemo(() => computeGroups(rankingOrder, tiedAbove), [rankingOrder, tiedAbove]);
   const placementMap  = useMemo(() => computePlacementMap(rankingGroups), [rankingGroups]);
@@ -650,6 +672,47 @@ export default function EventCompleteClient({
                     </label>
                   ))}
                 </div>
+              )}
+            </div>
+          )}
+
+          {/* Dominion Bonus */}
+          {dominionCfg?.enabled && (
+            <div className="rounded-xl p-4 space-y-2" style={{ background: "rgba(249,115,22,0.05)", border: "1px solid rgba(249,115,22,0.15)" }}>
+              <div className="flex items-center gap-2">
+                <Flame className="w-3.5 h-3.5 text-orange-400" />
+                <span className="text-xs font-semibold text-orange-300">Dominion Bonus</span>
+              </div>
+              <p className="text-[10px] text-gray-600">
+                Bei {dominionCfg.threshold}x in Folge „{dominionTriggerLabel}&quot; gibt es
+                {dominionCfg.coins > 0 ? ` ${dominionCfg.coins} Münzen` : ""}
+                {dominionCfg.coins > 0 && dominionCfg.seriesPoints > 0 ? " + " : ""}
+                {dominionCfg.seriesPoints > 0 ? ` ${dominionCfg.seriesPoints} Punkte` : ""}
+                . Der Streak-Stand wird server-seitig geführt und ist vor dem Speichern nicht vorschaubar.
+              </p>
+              {dominionChanges ? (
+                dominionAwarded.length > 0 ? (
+                  <div className="space-y-1">
+                    {dominionAwarded.map(([uid, c]) => {
+                      const u = registeredUsers.find(x => x.id === uid) ?? spectatorUsers.find(x => x.id === uid);
+                      return (
+                        <div key={uid} className="flex items-center gap-2 text-sm text-white">
+                          <Trophy className="w-3.5 h-3.5 text-orange-400 shrink-0" />
+                          <span className="flex-1 truncate">{u ? userName(u) : uid}</span>
+                          <span className="text-xs text-gray-500 shrink-0">
+                            {c.coins > 0 ? `+${c.coins} Münzen` : ""}
+                            {c.coins > 0 && c.seriesPoints > 0 ? " + " : ""}
+                            {c.seriesPoints > 0 ? `+${c.seriesPoints} Punkte` : ""}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-600 italic">Bei diesem Abschluss hat niemand den Bonus erreicht.</p>
+                )
+              ) : (
+                <p className="text-xs text-gray-600 italic">Wird beim Speichern berechnet.</p>
               )}
             </div>
           )}
