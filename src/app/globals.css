@@ -1005,6 +1005,17 @@ select.input-glass option { background: #0f1117; }
   animation: scan-sweep 0.8s ease forwards;
 }
 
+/* ── Carousel-Fortschrittsbalken — füllt sich bis zur nächsten Rotation ── */
+@keyframes carousel-progress-fill {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+.carousel-progress-fill {
+  animation: carousel-progress-fill linear forwards;
+  animation-duration: var(--carousel-interval, 7000ms);
+  transform-origin: left;
+}
+
 /* ── active:scale für Link-Karten (card-hover) ──────────────────── */
 a.card-hover:active { transform: scale(0.985); }
 

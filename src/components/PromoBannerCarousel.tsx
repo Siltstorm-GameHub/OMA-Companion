@@ -1,7 +1,7 @@
 "use client";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { ChevronRight, Briefcase as BriefcaseIcon } from "lucide-react";
+import { ChevronRight, ChevronLeft, Briefcase as BriefcaseIcon } from "lucide-react";
 import { RecentResultsBanner, type RecentResultEvent } from "@/components/RecentResultsBanner";
 import { DailyMessageBanner } from "@/components/DailyMessageBanner";
 import WhatsAppCommunityBanner from "@/components/WhatsAppCommunityBanner";
@@ -116,6 +116,31 @@ export function PromoBannerCarousel({
     return () => clearInterval(t);
   }, [paused, visibleIds.length, interval]);
 
+  const goTo = useCallback(
+    (delta: number) => {
+      setActiveIndex(i => (i + delta + visibleIds.length) % visibleIds.length);
+    },
+    [visibleIds.length]
+  );
+
+  // Swipe-Geste (Touch): nur horizontale Wischbewegungen ab einer Mindestdistanz
+  // lösen einen Wechsel aus, damit vertikales Scrollen der Seite nicht blockiert wird.
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+  function onTouchStart(e: React.TouchEvent) {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  }
+  function onTouchEnd(e: React.TouchEvent) {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    const dy = e.changedTouches[0].clientY - touchStartY.current;
+    touchStartX.current = null;
+    touchStartY.current = null;
+    if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
+    goTo(dx < 0 ? 1 : -1);
+  }
+
   const activeId = visibleIds[activeIndex];
 
   // Alle Slides liegen in derselben Grid-Zelle übereinander — die Zelle wird dadurch
@@ -129,6 +154,29 @@ export function PromoBannerCarousel({
 
   return (
     <div onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
+      <div
+        className="relative"
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+      >
+      {visibleIds.length > 1 && (
+        <>
+          <button
+            onClick={() => goTo(-1)}
+            aria-label="Vorheriger Banner"
+            className="absolute left-1.5 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:text-white bg-black/40 hover:bg-black/60 backdrop-blur-sm transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => goTo(1)}
+            aria-label="Nächster Banner"
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 z-10 w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:text-white bg-black/40 hover:bg-black/60 backdrop-blur-sm transition-colors"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </>
+      )}
       <div className="grid">
         {candidateIds.includes("job") && jobReminder && (
           <div className={slideClass("job")} aria-hidden={activeId !== "job"}>
@@ -157,6 +205,7 @@ export function PromoBannerCarousel({
           <WhatsAppCommunityBanner onVisibilityChange={makeHandler("whatsapp")} fill />
         </div>
       </div>
+      </div>
 
       {visibleIds.length > 1 && (
         <div className="flex items-center justify-center gap-1.5 mt-2.5">
@@ -165,10 +214,22 @@ export function PromoBannerCarousel({
               key={id}
               onClick={() => setActiveIndex(i)}
               aria-label={`Banner ${i + 1} anzeigen`}
-              className={`h-1.5 rounded-full transition-all duration-300 ${
-                i === activeIndex ? "w-5 bg-teal-400" : "w-1.5 bg-white/15 hover:bg-white/30"
-              }`}
-            />
+              className="relative h-1.5 w-5 rounded-full overflow-hidden bg-white/15 hover:bg-white/25 transition-colors"
+            >
+              {i === activeIndex && (
+                <span
+                  key={id}
+                  className="absolute inset-0 rounded-full bg-teal-400 carousel-progress-fill"
+                  style={{
+                    animationDuration: `${interval}ms`,
+                    animationPlayState: paused ? "paused" : "running",
+                  }}
+                />
+              )}
+              {i < activeIndex && (
+                <span className="absolute inset-0 rounded-full bg-teal-400/50" />
+              )}
+            </button>
           ))}
         </div>
       )}
