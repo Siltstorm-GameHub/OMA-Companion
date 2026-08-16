@@ -67,7 +67,10 @@ export async function loadRoom(userId: string): Promise<RoomState> {
       const def  = getRoomItem(row.itemKey)!;
       const zone = coerceSurface(row.zone);
       if (fitsGrid(def, row.x, row.y, zone)) {
-        placed.push({ id: row.id, key: row.itemKey, zone, x: row.x, y: row.y, flipped: row.flipped, starter: row.starter });
+        placed.push({
+          id: row.id, key: row.itemKey, zone, x: row.x, y: row.y,
+          flipped: row.flipped, rotation: row.rotation, starter: row.starter,
+        });
       } else {
         stored.push({ id: row.id, key: row.itemKey });
       }
@@ -210,7 +213,7 @@ export async function purchaseRoomItem(userId: string, itemKey: string): Promise
           .filter(r => r.id !== oldRow.id)
           .map(r => ({
             id: r.id, key: r.itemKey, zone: coerceSurface(r.zone),
-            x: r.x, y: r.y, flipped: r.flipped, starter: r.starter,
+            x: r.x, y: r.y, flipped: r.flipped, rotation: r.rotation, starter: r.starter,
           }));
         if (checkRequirements(activeJob, countTags(remaining)).met) slotRowToStore = oldRow.id;
       }
@@ -252,7 +255,7 @@ export async function purchaseRoomItem(userId: string, itemKey: string): Promise
 // ── Einrichten ───────────────────────────────────────────────────────────────
 
 export interface LayoutInput {
-  id: string; zone: RoomSurface; x: number; y: number; flipped: boolean;
+  id: string; zone: RoomSurface; x: number; y: number; flipped: boolean; rotation: number;
 }
 
 /**
@@ -326,7 +329,7 @@ export async function saveLayout(
       // Katalog-Klassifikation des Items passt (def.zone "wall"/"floor").
       id: p.id, key: row.itemKey, zone: p.zone,
       x: Math.trunc(p.x), y: Math.trunc(p.y),
-      flipped: !!p.flipped, starter: row.starter,
+      flipped: !!p.flipped, rotation: ((Math.trunc(p.rotation) % 4) + 4) % 4, starter: row.starter,
     };
   });
 
@@ -355,7 +358,7 @@ export async function saveLayout(
     ...placed.map(p =>
       prisma.roomItem.update({
         where: { id: p.id },
-        data:  { placed: true, zone: p.zone, x: p.x, y: p.y, flipped: p.flipped },
+        data:  { placed: true, zone: p.zone, x: p.x, y: p.y, flipped: p.flipped, rotation: p.rotation },
       })
     ),
     ...[...storedSet].map(id =>

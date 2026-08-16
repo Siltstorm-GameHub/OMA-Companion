@@ -267,13 +267,6 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     imageUrl: "/room-items/regal_holz.png",
   },
   {
-    key: "led_stripe", label: "LED-Stripe",
-    description: "Regenbogen an der Wand. Verbessert deine Reaktionszeit um exakt 0 %.",
-    zone: "wall", category: "licht", w: 4, h: 1, price: 600, minTier: 1, maxOwned: Infinity,
-    tags: ["light"], mustStandOn: null, accent: "violet",
-    imageUrl: "/room-items/led_stripe.png", renderScale: 1.15,
-  },
-  {
     key: "pokalregal", label: "Pokalregal",
     description: "Endlich ein Ort für die Trophäen, statt sie im Flur zu stapeln.",
     zone: "wall", category: "moebel", w: 3, h: 1, price: 1800, minTier: 3, maxOwned: Infinity,
@@ -586,13 +579,6 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     zone: "floor", category: "deko", w: 1, h: 1, price: 650, minTier: 2, maxOwned: Infinity,
     tags: [], mustStandOn: "desk", accent: "amber",
     imageUrl: "/room-items/plattenspieler.png",
-  },
-  {
-    key: "teppich", label: "Fleckenteppich",
-    description: "Jeder Fleck erzählt eine Geschichte. Die meisten handeln von Energydrinks.",
-    zone: "floor", category: "deko", w: 3, h: 1, price: 300, minTier: 1, maxOwned: Infinity,
-    tags: [], mustStandOn: "floor", accent: "rose",
-    imageUrl: "/room-items/teppich.png",
   },
   {
     key: "teppich_rund_logo", label: "OMA-Teppich",

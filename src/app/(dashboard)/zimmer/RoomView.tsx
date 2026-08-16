@@ -132,14 +132,57 @@ export default function RoomView({
 
   return (
     <>
-      <RoomStage3D
-        state={state}
-        ownerName={core.displayName}
-        vitrine={core.vitrine}
-        vitrineReadOnly={readOnly}
-        onInteract={handleInteract}
-        focusTarget={focusTarget}
-      />
+      <div className="relative">
+        <RoomStage3D
+          state={state}
+          ownerName={core.displayName}
+          vitrine={core.vitrine}
+          vitrineReadOnly={readOnly}
+          onInteract={handleInteract}
+          focusTarget={focusTarget}
+        />
+
+        {/* ── Aktions-Buttons direkt auf der Kachel ─────────────────────
+            Einrichten/Möbel kaufen unten links, Jobbörse unten rechts —
+            als Overlay statt einer separaten Leiste unter der Bühne, damit
+            sie sofort als Teil des Zimmers lesbar sind. `stopPropagation`
+            auf onPointerDown verhindert, dass die Dreh-Geste der Bühne
+            (siehe RoomStage3D.tsx) den Klick kapert. */}
+        {!readOnly && (
+          <>
+            <div className="absolute bottom-3 left-3 flex flex-col gap-1.5 pointer-events-none">
+              <button
+                type="button"
+                onClick={() => setEditing(true)}
+                onPointerDown={e => e.stopPropagation()}
+                className="pointer-events-auto flex items-center gap-1.5 px-3 py-2 rounded-full text-[11px] font-semibold
+                           bg-violet-500/20 border border-violet-400/40 text-violet-200 hover:bg-violet-500/30 transition-colors backdrop-blur-sm"
+              >
+                <Pencil className="w-3.5 h-3.5" /> Einrichten
+              </button>
+              <Link
+                href="/shop#moebel"
+                onPointerDown={e => e.stopPropagation()}
+                className="pointer-events-auto flex items-center gap-1.5 px-3 py-2 rounded-full text-[11px] font-semibold
+                           bg-amber-500/20 border border-amber-400/40 text-amber-200 hover:bg-amber-500/30 transition-colors backdrop-blur-sm"
+              >
+                <ShoppingBag className="w-3.5 h-3.5" /> Möbel kaufen
+              </Link>
+            </div>
+            <div className="absolute bottom-3 right-3 pointer-events-none">
+              <button
+                type="button"
+                onClick={openJobboard}
+                onPointerDown={e => e.stopPropagation()}
+                className="pointer-events-auto flex items-center gap-1.5 px-3 py-2 rounded-full text-[11px] font-semibold
+                           bg-teal-500/20 border border-teal-400/40 text-teal-200 hover:bg-teal-500/30 transition-colors backdrop-blur-sm"
+              >
+                <Briefcase className="w-3.5 h-3.5" /> Jobbörse
+              </button>
+            </div>
+          </>
+        )}
+      </div>
 
       {/* ── Lohn ─────────────────────────────────────────────────────
           Direkt unter der Bühne, damit "Lohn abholen" der erste Griff

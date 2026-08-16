@@ -90,7 +90,7 @@ function rgbToHex(r: number, g: number, b: number): string {
   return `#${[r, g, b].map(v => clamp255(v).toString(16).padStart(2, "0")).join("")}`;
 }
 
-type TexturePattern = "grain" | "planks" | "grid" | "pixel" | "panels";
+type TexturePattern = "grain" | "planks" | "grid" | "panels";
 
 /**
  * Wand-Ausstattung je Zimmerstufe (0..3, siehe ROOM_LEVEL_LABEL in
@@ -111,14 +111,43 @@ const ROOM_FLOOR_STAGES: readonly { color: string; pattern: TexturePattern }[] =
   { color: "#243840", pattern: "grid" },   // 3: Luxuriös ausgestattet — Gitterrost-Boden
 ];
 
+/** Seeded PRNG (mulberry32) — reproduzierbares "organisches" Rauschen statt
+ *  echtem Math.random(), sonst ändert sich das Muster bei jedem Re-Render. */
+function makeRng(seed: number) {
+  let s = seed >>> 0;
+  return () => {
+    s = (s + 0x6d2b79f5) >>> 0;
+    let t = s;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 function drawGrain(ctx: CanvasRenderingContext2D, size: number, base: string) {
   ctx.fillStyle = base;
   ctx.fillRect(0, 0, size, size);
   const [r, g, b] = hexToRgb(base);
+  const rng = makeRng(size * 7 + r + g * 13 + b * 31);
+  // Große, weiche Schmutz-/Verfärbungsflecken zuerst (organische Wandflächen
+  // sind nie gleichmäßig eingefärbt) — danach feines Korn obendrauf. Ohne die
+  // Flecken wirkte reines Pixelrauschen wie digitales "TV-Schnee", nicht wie
+  // eine gealterte Fläche.
+  for (let i = 0; i < 10; i++) {
+    const cx = rng() * size, cy = rng() * size, rad = size * (0.12 + rng() * 0.22);
+    const dark = rng() > 0.5;
+    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, rad);
+    grad.addColorStop(0, `rgba(${dark ? 0 : 255},${dark ? 0 : 255},${dark ? 0 : 255},${0.05 + rng() * 0.06})`);
+    grad.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.arc(cx, cy, rad, 0, Math.PI * 2); ctx.fill();
+  }
   const img = ctx.getImageData(0, 0, size, size);
   for (let i = 0; i < img.data.length; i += 4) {
-    const n = (Math.random() - 0.5) * 24;
-    img.data[i] = clamp255(r + n); img.data[i + 1] = clamp255(g + n); img.data[i + 2] = clamp255(b + n);
+    const n = (rng() - 0.5) * 20;
+    img.data[i] = clamp255(img.data[i] + n);
+    img.data[i + 1] = clamp255(img.data[i + 1] + n);
+    img.data[i + 2] = clamp255(img.data[i + 2] + n);
   }
   ctx.putImageData(img, 0, 0);
 }
@@ -127,50 +156,71 @@ function drawPlanks(ctx: CanvasRenderingContext2D, size: number, base: string) {
   ctx.fillStyle = base;
   ctx.fillRect(0, 0, size, size);
   const [r, g, b] = hexToRgb(base);
-  const rows = 4, plankH = size / rows;
-  for (let i = 0; i < rows; i++) {
-    const shade = i % 2 === 0 ? 1.1 : 0.88;
-    ctx.fillStyle = rgbToHex(r * shade, g * shade, b * shade);
-    ctx.fillRect(0, i * plankH, size, plankH - 2);
-    ctx.fillStyle = "rgba(0,0,0,0.35)";
-    ctx.fillRect(0, i * plankH + plankH - 2, size, 2);
-  }
-  ctx.strokeStyle = "rgba(0,0,0,0.08)";
-  for (let x = 4; x < size; x += 9) {
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x + (Math.random() * 6 - 3), size);
-    ctx.stroke();
+  const rng = makeRng(size * 3 + g);
+  const rows = 5, plankH = size / rows;
+  const plankW = size / 2; // zwei Dielen pro Reihe, versetzte Stöße wie echtes Parkett
+  for (let row = 0; row < rows; row++) {
+    const offset = row % 2 === 0 ? 0 : plankW / 2;
+    for (let px = -plankW; px < size + plankW; px += plankW) {
+      const x = px + offset;
+      const shade = 0.85 + rng() * 0.35;
+      ctx.fillStyle = rgbToHex(r * shade, g * shade, b * shade);
+      ctx.fillRect(x, row * plankH, plankW - 2, plankH - 2);
+      // Organische Maserung: mehrere leicht wellige Linien statt gerader Striche.
+      ctx.strokeStyle = `rgba(0,0,0,${0.06 + rng() * 0.06})`;
+      ctx.lineWidth = 1;
+      for (let g2 = 0; g2 < 3; g2++) {
+        const gy = row * plankH + 3 + rng() * (plankH - 6);
+        ctx.beginPath();
+        ctx.moveTo(x, gy);
+        ctx.quadraticCurveTo(x + plankW / 2, gy + (rng() - 0.5) * 6, x + plankW, gy + (rng() - 0.5) * 4);
+        ctx.stroke();
+      }
+      // Gelegentlicher Astknoten.
+      if (rng() > 0.6) {
+        const kx = x + plankW * (0.2 + rng() * 0.6), ky = row * plankH + plankH * (0.3 + rng() * 0.4);
+        const kr = 2 + rng() * 2.5;
+        const kg = ctx.createRadialGradient(kx, ky, 0, kx, ky, kr);
+        kg.addColorStop(0, "rgba(0,0,0,0.32)");
+        kg.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = kg;
+        ctx.beginPath(); ctx.ellipse(kx, ky, kr, kr * 0.7, 0, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    // Fugenlinie samt leichtem Bevel (Schatten oben, Glanzkante darunter).
+    ctx.fillStyle = "rgba(0,0,0,0.4)";
+    ctx.fillRect(0, row * plankH + plankH - 2, size, 2);
+    ctx.fillStyle = "rgba(255,255,255,0.06)";
+    ctx.fillRect(0, row * plankH, size, 1);
   }
 }
 
 function drawGrid(ctx: CanvasRenderingContext2D, size: number, base: string) {
   ctx.fillStyle = base;
   ctx.fillRect(0, 0, size, size);
-  const step = size / 4;
-  ctx.strokeStyle = "rgba(0,0,0,0.5)";
-  ctx.lineWidth = 3;
-  for (let i = 0; i <= 4; i++) {
-    ctx.beginPath(); ctx.moveTo(i * step, 0); ctx.lineTo(i * step, size); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(0, i * step); ctx.lineTo(size, i * step); ctx.stroke();
+  const step = size / 5;
+  const barW = step * 0.22;
+  // Erhabene Metallstege statt reiner Linien: dunkler Kern-Strich, heller
+  // Glanzstreifen versetzt daneben — simuliert eine Kante, die Licht fängt.
+  ctx.lineCap = "square";
+  for (let i = 0; i <= 5; i++) {
+    const x = i * step, y = i * step;
+    ctx.strokeStyle = "rgba(0,0,0,0.55)"; ctx.lineWidth = barW;
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, size); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(size, y); ctx.stroke();
+    ctx.strokeStyle = "rgba(255,255,255,0.22)"; ctx.lineWidth = barW * 0.3;
+    ctx.beginPath(); ctx.moveTo(x - barW * 0.25, 0); ctx.lineTo(x - barW * 0.25, size); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, y - barW * 0.25); ctx.lineTo(size, y - barW * 0.25); ctx.stroke();
   }
-  ctx.strokeStyle = "rgba(255,255,255,0.12)";
-  ctx.lineWidth = 1;
-  for (let i = 0; i <= 4; i++) {
-    ctx.beginPath(); ctx.moveTo(i * step + 1, 0); ctx.lineTo(i * step + 1, size); ctx.stroke();
-  }
-}
-
-function drawPixelPattern(ctx: CanvasRenderingContext2D, size: number, base: string) {
-  ctx.fillStyle = base;
-  ctx.fillRect(0, 0, size, size);
-  const [r, g, b] = hexToRgb(base);
-  const block = size / 8;
-  ctx.fillStyle = rgbToHex(r * 1.18, g * 1.18, b * 1.18);
-  for (let y = 0; y < 8; y++) {
-    for (let x = 0; x < 8; x++) {
-      if ((x + y) % 2 === 0) continue;
-      ctx.fillRect(x * block, y * block, block, block);
+  // Niete an jeder Kreuzung.
+  for (let i = 0; i <= 5; i++) {
+    for (let j = 0; j <= 5; j++) {
+      const cx = i * step, cy = j * step;
+      const rg = ctx.createRadialGradient(cx - 1, cy - 1, 0, cx, cy, barW * 0.5);
+      rg.addColorStop(0, "rgba(255,255,255,0.5)");
+      rg.addColorStop(1, "rgba(0,0,0,0.4)");
+      ctx.fillStyle = rg;
+      ctx.beginPath(); ctx.arc(cx, cy, barW * 0.42, 0, Math.PI * 2); ctx.fill();
     }
   }
 }
@@ -178,30 +228,50 @@ function drawPixelPattern(ctx: CanvasRenderingContext2D, size: number, base: str
 function drawPanels(ctx: CanvasRenderingContext2D, size: number, base: string) {
   ctx.fillStyle = base;
   ctx.fillRect(0, 0, size, size);
-  const step = size / 3;
-  ctx.strokeStyle = "rgba(0,0,0,0.4)";
-  ctx.lineWidth = 2;
-  for (let i = 1; i < 3; i++) {
-    ctx.beginPath(); ctx.moveTo(i * step, 0); ctx.lineTo(i * step, size); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(0, i * step); ctx.lineTo(size, i * step); ctx.stroke();
-  }
-  ctx.strokeStyle = "rgba(150,220,255,0.25)";
-  ctx.lineWidth = 1;
-  for (let i = 1; i < 3; i++) {
-    ctx.beginPath(); ctx.moveTo(i * step + 1, 0); ctx.lineTo(i * step + 1, size); ctx.stroke();
+  const [r, g, b] = hexToRgb(base);
+  const rng = makeRng(size * 5 + b);
+  const cols = 2, rows = 2;
+  const pw = size / cols, ph = size / rows;
+  for (let cy = 0; cy < rows; cy++) {
+    for (let cx = 0; cx < cols; cx++) {
+      const x0 = cx * pw, y0 = cy * ph;
+      const shade = 0.94 + rng() * 0.14;
+      ctx.fillStyle = rgbToHex(r * shade, g * shade, b * shade);
+      ctx.fillRect(x0 + 1, y0 + 1, pw - 2, ph - 2);
+      // Gebürstetes Metall: feine diagonale Streifen in leichter Varianz.
+      ctx.strokeStyle = "rgba(255,255,255,0.04)";
+      ctx.lineWidth = 1;
+      for (let s = 0; s < 10; s++) {
+        const sy = y0 + (s / 10) * ph;
+        ctx.beginPath(); ctx.moveTo(x0, sy); ctx.lineTo(x0 + pw, sy + ph * 0.15); ctx.stroke();
+      }
+      // Bevel: helle Kante oben/links, dunkle Kante unten/rechts.
+      ctx.strokeStyle = "rgba(255,255,255,0.18)"; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(x0 + 1, y0 + ph - 1); ctx.lineTo(x0 + 1, y0 + 1); ctx.lineTo(x0 + pw - 1, y0 + 1); ctx.stroke();
+      ctx.strokeStyle = "rgba(0,0,0,0.35)"; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(x0 + pw - 1, y0 + 1); ctx.lineTo(x0 + pw - 1, y0 + ph - 1); ctx.lineTo(x0 + 1, y0 + ph - 1); ctx.stroke();
+      // Ecknieten.
+      for (const [rx, ry] of [[8, 8], [pw - 8, 8], [8, ph - 8], [pw - 8, ph - 8]]) {
+        const px = x0 + rx, py = y0 + ry;
+        const rg = ctx.createRadialGradient(px - 1, py - 1, 0, px, py, 3);
+        rg.addColorStop(0, "rgba(255,255,255,0.55)");
+        rg.addColorStop(1, "rgba(0,0,0,0.45)");
+        ctx.fillStyle = rg;
+        ctx.beginPath(); ctx.arc(px, py, 2.6, 0, Math.PI * 2); ctx.fill();
+      }
+    }
   }
 }
 
 /** Erzeugt (memoized) eine wiederholbare Canvas-Textur für ein Muster+Farbe. */
 function useRoomTexture(pattern: TexturePattern, baseColor: string, repeatX: number, repeatY: number): CanvasTexture {
   return useMemo(() => {
-    const size = 128;
+    const size = 256;
     const canvas = document.createElement("canvas");
     canvas.width = size; canvas.height = size;
     const ctx = canvas.getContext("2d")!;
     if (pattern === "planks") drawPlanks(ctx, size, baseColor);
     else if (pattern === "grid") drawGrid(ctx, size, baseColor);
-    else if (pattern === "pixel") drawPixelPattern(ctx, size, baseColor);
     else if (pattern === "panels") drawPanels(ctx, size, baseColor);
     else drawGrain(ctx, size, baseColor);
     const tex = new CanvasTexture(canvas);
@@ -404,7 +474,10 @@ function PlacedFurniture({
     const def = getRoomItem(item.key);
     if (!def) return null;
     const world = gridToWorld(item.zone, item.x, item.y, def.w, def.h);
-    const rotY = surfaceRotationY(item.zone);
+    // Nutzer-Drehung (0-3 × 90°) kommt nur bei Boden-Objekten oben drauf —
+    // Wand-Objekte bleiben an ihrer festen surfaceRotationY, sonst würden sie
+    // aus der Wandebene herausklappen (siehe rotate() in RoomEditor.tsx).
+    const rotY = surfaceRotationY(item.zone) + (item.zone === "floor" ? (item.rotation ?? 0) * (Math.PI / 2) : 0);
     return { item, def, world, rotY };
   }).filter((e): e is NonNullable<typeof e> => e !== null), [placed, hiddenWalls]);
 
@@ -412,13 +485,34 @@ function PlacedFurniture({
     <>
       {entries.map(({ item, def, world, rotY }) => {
         const selected = edit?.selectedId === item.id;
+        // Trägt DIESES Möbelstück gerade das gehaltene Objekt (Tisch/Ablage
+        // für ein mustStandOn:"desk"-Item wie einen Monitor, Regal für
+        // "shelf")? Dann darf der Klick NICHT hier stehenbleiben — sonst
+        // würde ein Klick auf den Tisch (um z.B. einen Monitor DARAUF zu
+        // stellen) immer nur den Tisch selbst auswählen, weil sein Mesh
+        // näher an der Kamera liegt als die unsichtbare Boden-Klickfläche
+        // darunter (siehe EditLayer). Der Klick wird dann bewusst NICHT
+        // gestoppt, damit er zur Klickfläche durchgereicht wird.
+        const holdsGhost = (() => {
+          if (!edit?.ghost) return false;
+          const ghostDef = getRoomItem(edit.ghost.key);
+          if (!ghostDef) return false;
+          if (ghostDef.mustStandOn === "desk") return def.tags.includes("desk") || def.tags.includes("surface");
+          if (ghostDef.mustStandOn === "shelf") return def.tags.includes("shelf") || def.tags.includes("trophy_shelf");
+          return false;
+        })();
         function handleClick(e: ThreeEvent<MouseEvent>) {
+          if (edit) {
+            if (holdsGhost) return; // durchreichen an die Klickfläche dahinter
+            e.stopPropagation();
+            edit.onSelect(item.id);
+            return;
+          }
           e.stopPropagation();
-          if (edit) { edit.onSelect(item.id); return; }
           if (def.interactive) onInteract(def.interactive, def.interactive === "crt" ? item.key : undefined);
         }
         function handlePointerDown(e: ThreeEvent<PointerEvent>) {
-          if (!edit) return;
+          if (!edit || holdsGhost) return;
           e.stopPropagation();
           edit.onGrab(item.id);
         }

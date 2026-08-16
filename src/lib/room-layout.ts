@@ -54,6 +54,10 @@ export interface PlacedItem {
    */
   y:       number;
   flipped: boolean;
+  /** Zusätzliche Boden-Drehung in 90°-Schritten (0-3), on top of der festen
+   *  Wand-Grundausrichtung (surfaceRotationY) — nur für Boden-Objekte
+   *  gedacht, Wand-Objekte bleiben unverändert flach an der Wand. */
+  rotation: number;
   starter: boolean;
 }
 
@@ -125,7 +129,7 @@ export const DEFAULT_ROOM: RoomState = {
   doorSign:     null,
   placed: DEFAULT_PLACEMENTS.map(p => ({
     id: `${DEFAULT_ID_PREFIX}${p.key}`, key: p.key, zone: p.zone, x: p.x, y: p.y,
-    flipped: false, starter: true,
+    flipped: false, rotation: 0, starter: true,
   })),
   stored:       [],
   materialized: false,
@@ -325,11 +329,14 @@ export function countTags(placed: PlacedItem[]): Partial<Record<RoomTag, number>
  * dadurch automatisch nicht hoch.
  *
  * Schwellen an der Preisspanne des Katalogs ausgerichtet (Summe aller
- * kaufbaren Items ≈ 70.000): Stufe 1 ist mit ein bis zwei mittleren Käufen
- * erreichbar, Stufe 3 verlangt einen echten Endgame-Einsatz (z.B. High-End-PC
- * oder LED-Wand).
+ * kaufbaren Einzel-Items ≈ 93.000, plus beliebig viel mehr durch unbegrenzt
+ * nachkaufbare Deko-Items). Bewusst deutlich angehoben (vorher 2.000/8.000/
+ * 20.000): seit die Rang-Schranke beim Kauf weggefallen ist (siehe
+ * purchaseRoomItem in room.ts), war die Endstufe zu schnell erreicht — jetzt
+ * ist Stufe 2 ein spürbares Zwischenziel, Stufe 4 ein echtes Langzeit-Ziel
+ * über mehrere Wochen Idle-Job-Verdienst statt ein paar Tage.
  */
-export const ROOM_LEVEL_THRESHOLDS = [0, 2000, 8000, 20000] as const;
+export const ROOM_LEVEL_THRESHOLDS = [0, 4000, 15000, 40000] as const;
 
 /** Summe der Kaufpreise aller aktuell AUFGESTELLTEN (nicht eingelagerten) Möbel. */
 export function roomInvestment(placed: PlacedItem[]): number {

@@ -1107,6 +1107,7 @@ model RoomItem {
   x         Int // Rasterspalte der linken oberen Ecke (0-basiert)
   y         Int // Rasterzeile der linken oberen Ecke (0-basiert)
   flipped   Boolean  @default(false) // horizontal gespiegelt
+  rotation  Int      @default(0) // Boden-Objekte: 0-3, je 90° zusätzlich zur Wand-Grundausrichtung
   placed    Boolean  @default(true) // false = im Lager (besessen, aber nicht aufgestellt)
   starter   Boolean  @default(false) // Grundausstattung: gratis, nicht einlagerbar
   createdAt DateTime @default(now())

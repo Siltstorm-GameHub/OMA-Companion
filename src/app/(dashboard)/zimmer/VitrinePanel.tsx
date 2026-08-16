@@ -181,6 +181,16 @@ function VitrineContent({
             } : undefined}
           >
             <title>{label}</title>
+            {/* Unsichtbares Hit-Target über der ganzen Fach-Fläche: Pedestal
+                UND EmptySlotAddButton haben `pointerEvents="none"` auf ihren
+                eigenen Formen (rein dekorativ gedacht) — ohne dieses Rect
+                gäbe es innerhalb dieses <g> nichts Klickbares, der Klick
+                würde zum Hintergrundbild durchfallen und beim äußeren,
+                fach-losen Vitrinen-Klick landen (siehe VitrinePanel) statt
+                hier onSlotClick auszulösen. `fill="transparent"` statt
+                `"none"`, weil nur ein GEFÜLLTES Element per Default
+                hit-testbar ist. */}
+            <rect x={slot.x} y={slot.y} width={slot.s} height={slot.s} fill="transparent" />
             <Pedestal x={slot.x} y={slot.y} s={slot.s} />
             {item ? (
               <>

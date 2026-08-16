@@ -11,9 +11,9 @@
  */
 
 import { useMemo } from "react";
-import { RoundedBox } from "@react-three/drei";
+import { RoundedBox, useTexture } from "@react-three/drei";
 import { DoubleSide } from "three";
-import { gridToWorld, surfaceRotationY, ROOM_SIZE } from "@/lib/room-3d";
+import { gridToWorld, surfaceRotationY, ROOM_SIZE, shadeHex } from "@/lib/room-3d";
 
 export const ROOM_LEVEL_LABEL = ["Abgewohnt", "Frisch renoviert", "Modern eingerichtet", "Luxuriös ausgestattet"];
 
@@ -34,57 +34,33 @@ const WINDOW_FRAME = [
   { base: "#6b7280", trim: "#e9c874" },              // 3: Luxus — Alu + Gold
 ] as const;
 
-/** Himmelfarbe hinterm Glas je Stufe — Dämmerung → Mittag → Sonnenuntergang. */
+/** Himmelfarbe fürs winzige Türfenster (Stufe 2+, siehe EntranceDoor3D) —
+ *  dort lohnt sich keine eigene Textur, ein Farbton reicht. Für die
+ *  eigentliche Fensteraussicht siehe VIEW_IMAGE (echtes Bild statt Form). */
 const SKY_COLOR = ["#241f38", "#2c3a52", "#4a7fb0", "#e8794f"];
 
+/**
+ * Echtes Ausblick-Bild statt prozedural gezeichneter Sterne/Skyline/Sonne —
+ * eine gemalte Stadtsilhouette je Stufe (Dämmerung → Abend → Mittag →
+ * Sonnenuntergang). Dieselbe Stufe bestimmt auch WINDOW_LIGHT weiter unten:
+ * welcher Himmel gerade zu sehen ist, bestimmt direkt Farbe/Stärke des
+ * Lichts, das durchs Fenster in den Raum fällt.
+ */
+const VIEW_IMAGE = [
+  "/room-window/level0_daemmerung.png",
+  "/room-window/level1_abend.png",
+  "/room-window/level2_mittag.png",
+  "/room-window/level3_sonnenuntergang.png",
+] as const;
+
 function WindowGlass({ level }: { level: number }) {
-  const sky = SKY_COLOR[level] ?? SKY_COLOR[0];
+  const view = useTexture(VIEW_IMAGE[level] ?? VIEW_IMAGE[0]);
   return (
     <group>
       <mesh position={[0, 0, 0.065]}>
         <planeGeometry args={[WINDOW_GEOM.w * 0.86, WINDOW_GEOM.h * 0.86]} />
-        <meshBasicMaterial color={sky} toneMapped={false} />
+        <meshBasicMaterial map={view} toneMapped={false} />
       </mesh>
-
-      {/* Stufe 0/1: ferne, erleuchtete Nachbarfenster. */}
-      {level <= 1 && (
-        <group position={[0, 0, 0.07]}>
-          {[[-0.55, 0.3], [-0.15, 0.6], [0.4, -0.1]].map(([x, y], i) => (
-            <mesh key={i} position={[x, y, 0]}>
-              <planeGeometry args={[0.14, 0.18]} />
-              <meshBasicMaterial color="#ffd98a" toneMapped={false} />
-            </mesh>
-          ))}
-        </group>
-      )}
-
-      {/* Stufe 2: Skyline-Silhouette. */}
-      {level === 2 && (
-        <group position={[0, -WINDOW_GEOM.h * 0.16, 0.07]}>
-          {[[-0.85, 0.55, 0.16], [-0.55, 0.85, 0.14], [-0.15, 0.4, 0.18], [0.25, 1.0, 0.15], [0.6, 0.6, 0.17]].map(
-            ([x, h, w], i) => (
-              <mesh key={i} position={[x * WINDOW_GEOM.w * 0.4, h * 0.3 - WINDOW_GEOM.h * 0.15, 0]}>
-                <planeGeometry args={[w, h * 0.6]} />
-                <meshBasicMaterial color="#1a2230" toneMapped={false} />
-              </mesh>
-            ),
-          )}
-        </group>
-      )}
-
-      {/* Stufe 3: Sonnenuntergang — Sonne + Horizont. */}
-      {level >= 3 && (
-        <group position={[0, 0, 0.07]}>
-          <mesh position={[0.3, 0.35, 0]}>
-            <circleGeometry args={[0.32, 24]} />
-            <meshBasicMaterial color="#ffdf9e" toneMapped={false} />
-          </mesh>
-          <mesh position={[0, -0.05, 0]}>
-            <planeGeometry args={[WINDOW_GEOM.w * 0.86, 0.03]} />
-            <meshBasicMaterial color="#ffb98a" toneMapped={false} />
-          </mesh>
-        </group>
-      )}
 
       {/* Sprossen */}
       <mesh position={[0, 0, 0.075]}>
@@ -246,24 +222,46 @@ export function RoomWindow3D({ level, closed }: { level: number; closed: boolean
   );
 }
 
-// Seitlich der Raummitte (Raum ist jetzt 8×8) — kollidiert dadurch weiterhin
-// nicht mit dem mittig stehenden Schreibtisch/Teppich.
-const LAMP_ANCHOR = { x: 5.5, y: 6.6, z: 2.5 } as const;
+// Nah der Raummitte (Raum ist 8×8, Mittelpunkt bei x=4,z=4) — in die offene
+// Lücke zwischen Teppich (y0-2) und Schreibtisch (y4-6) gerückt, damit sie
+// mit keinem der beiden kollidiert, aber trotzdem zentral wirkt.
+const LAMP_ANCHOR = { x: 4, y: 6.6, z: 3.3 } as const;
 
 /** Alle vier Leuchtenköpfe nehmen `on` entgegen: die tatsächlich leuchtenden
  *  Teile (toneMapped=false, sonst hohe emissiveIntensity) dimmen auf einen
  *  "aus"-Wert herunter — Fassung/Schirm selbst bleiben unverändert sichtbar,
  *  nur die Glühbirne/das Leuchtmittel geht aus. */
+/** Deckenbaldachin — die runde Abdeckplatte, aus der die Zuleitung kommt.
+ *  Gemeinsam für alle vier Stufen (echte Lampen haben immer eine), macht die
+ *  Aufhängung an der Decke plausibel statt eines nackt endenden Kabels. */
+function Canopy() {
+  return (
+    <mesh position={[0, 0.02, 0]}>
+      <cylinderGeometry args={[0.09, 0.1, 0.03, 16]} />
+      <meshStandardMaterial color="#2a2438" roughness={0.6} metalness={0.2} />
+    </mesh>
+  );
+}
+
 function BareBulb({ on }: { on: boolean }) {
   return (
     <>
+      {/* Fassung mit Gewindestruktur (mehrere schmale Ringe statt eines
+          einzelnen glatten Zylinders) statt eines reinen Blocks. */}
+      {[0, 0.02, 0.04, 0.06].map(y => (
+        <mesh key={y} position={[0, y, 0]}>
+          <cylinderGeometry args={[0.062 - y * 0.05, 0.062 - y * 0.05, 0.018, 12]} />
+          <meshStandardMaterial color="#3a3f4c" roughness={0.4} metalness={0.5} />
+        </mesh>
+      ))}
       <mesh position={[0, -0.1, 0]}>
         <sphereGeometry args={[0.12, 16, 12]} />
         <meshStandardMaterial color="#ffd98a" emissive="#ffcf6b" emissiveIntensity={on ? 2.2 : 0.1} toneMapped={false} />
       </mesh>
-      <mesh position={[0, 0.06, 0]}>
-        <cylinderGeometry args={[0.06, 0.06, 0.1, 12]} />
-        <meshStandardMaterial color="#3a3f4c" roughness={0.4} metalness={0.5} />
+      {/* Kleiner Glassockel zwischen Fassung und Birne. */}
+      <mesh position={[0, -0.02, 0]}>
+        <cylinderGeometry args={[0.03, 0.05, 0.04, 10]} />
+        <meshStandardMaterial color="#ffd98a" emissive="#ffcf6b" emissiveIntensity={on ? 1.2 : 0.06} toneMapped={false} transparent opacity={0.85} />
       </mesh>
     </>
   );
@@ -272,9 +270,28 @@ function BareBulb({ on }: { on: boolean }) {
 function DrumShade({ on }: { on: boolean }) {
   return (
     <>
+      {/* Aufhängestreben vom Baldachin zum Schirmrand — bisher schwebte der
+          Schirm scheinbar frei am Kabel. */}
+      {[0, 1, 2].map(i => {
+        const a = (i / 3) * Math.PI * 2;
+        return (
+          <mesh key={i} position={[Math.cos(a) * 0.14, 0.09, Math.sin(a) * 0.14]} rotation={[0, -a, Math.PI / 10]}>
+            <cylinderGeometry args={[0.006, 0.006, 0.14, 6]} />
+            <meshStandardMaterial color="#3a3f4c" roughness={0.5} metalness={0.4} />
+          </mesh>
+        );
+      })}
+      <mesh position={[0, 0.16, 0]}>
+        <torusGeometry args={[0.22, 0.012, 8, 20]} />
+        <meshStandardMaterial color="#6b5348" roughness={0.6} metalness={0.2} />
+      </mesh>
       <mesh position={[0, 0, 0]}>
         <cylinderGeometry args={[0.22, 0.28, 0.32, 20, 1, true]} />
         <meshStandardMaterial color="#8a6a5c" emissive="#8a6a5c" emissiveIntensity={0.4} roughness={0.7} side={DoubleSide} />
+      </mesh>
+      <mesh position={[0, -0.16, 0]}>
+        <torusGeometry args={[0.28, 0.012, 8, 20]} />
+        <meshStandardMaterial color="#6b5348" roughness={0.6} metalness={0.2} />
       </mesh>
       <mesh position={[0, -0.14, 0]}>
         <circleGeometry args={[0.24, 20]} />
@@ -287,9 +304,20 @@ function DrumShade({ on }: { on: boolean }) {
 function DiscLamp({ on }: { on: boolean }) {
   return (
     <>
+      {/* Kurzer Montagestab statt direkt am Kabel klebender Scheibe. */}
+      <mesh position={[0, 0.06, 0]}>
+        <cylinderGeometry args={[0.012, 0.012, 0.1, 8]} />
+        <meshStandardMaterial color="#3a3f4c" roughness={0.4} metalness={0.6} />
+      </mesh>
       <mesh>
         <cylinderGeometry args={[0.38, 0.38, 0.05, 28]} />
         <meshStandardMaterial color="#4a4f5e" emissive="#4a4f5e" emissiveIntensity={0.4} roughness={0.35} metalness={0.4} />
+      </mesh>
+      {/* Umlaufende Metallkante — betont die Scheibenform, wirkt weniger wie
+          ein flacher Zylinderklotz. */}
+      <mesh position={[0, -0.001, 0]}>
+        <torusGeometry args={[0.38, 0.012, 8, 32, Math.PI * 2]} rotation-x={Math.PI / 2} />
+        <meshStandardMaterial color="#6b7280" roughness={0.3} metalness={0.6} />
       </mesh>
       <mesh position={[0, -0.03, 0]}>
         <circleGeometry args={[0.32, 28]} />
@@ -303,6 +331,12 @@ function Chandelier({ on }: { on: boolean }) {
   const arms = 4;
   return (
     <group>
+      {/* Zentraler Schaft vom Baldachin zum Ring statt eines direkt
+          hängenden Rings. */}
+      <mesh position={[0, 0.14, 0]}>
+        <cylinderGeometry args={[0.02, 0.03, 0.24, 10]} />
+        <meshStandardMaterial color="#e9c874" emissive="#e9c874" emissiveIntensity={0.3} roughness={0.3} metalness={0.7} />
+      </mesh>
       <mesh>
         <torusGeometry args={[0.28, 0.03, 8, 24]} />
         <meshStandardMaterial color="#e9c874" emissive="#e9c874" emissiveIntensity={0.6} roughness={0.3} metalness={0.6} />
@@ -311,10 +345,23 @@ function Chandelier({ on }: { on: boolean }) {
         const angle = (i / arms) * Math.PI * 2;
         const x = Math.cos(angle) * 0.28, z = Math.sin(angle) * 0.28;
         return (
-          <mesh key={i} position={[x, -0.08, z]}>
-            <sphereGeometry args={[0.07, 12, 10]} />
-            <meshStandardMaterial color="#ffe29a" emissive="#ffcf6b" emissiveIntensity={on ? 2 : 0.1} toneMapped={false} />
-          </mesh>
+          <group key={i}>
+            {/* Verbindungsarm vom Ring zur Glühbirne — vorher schwebten die
+                Kugeln scheinbar lose um den Ring. */}
+            <mesh position={[x * 0.5, -0.04, z * 0.5]} rotation={[Math.atan2(x, 0.08) * -0.5, -angle, Math.PI / 2.3]}>
+              <cylinderGeometry args={[0.008, 0.008, Math.hypot(x, z) * 0.9, 6]} />
+              <meshStandardMaterial color="#e9c874" roughness={0.3} metalness={0.7} />
+            </mesh>
+            <mesh position={[x, -0.08, z]}>
+              <sphereGeometry args={[0.07, 12, 10]} />
+              <meshStandardMaterial color="#ffe29a" emissive="#ffcf6b" emissiveIntensity={on ? 2 : 0.1} toneMapped={false} />
+            </mesh>
+            {/* Kleiner Kristall-Tropfen unter jedem Arm. */}
+            <mesh position={[x, -0.17, z]} rotation={[Math.PI, 0, 0]}>
+              <coneGeometry args={[0.025, 0.06, 6]} />
+              <meshStandardMaterial color="#dff0ff" roughness={0.1} metalness={0.1} transparent opacity={0.75} />
+            </mesh>
+          </group>
         );
       })}
       <mesh position={[0, 0.08, 0]}>
@@ -358,6 +405,7 @@ export function CeilingLamp3D({ level, on }: { level: number; on: boolean }) {
   const light = CEILING_LAMP_LIGHT[level] ?? CEILING_LAMP_LIGHT[0];
   return (
     <group position={[LAMP_ANCHOR.x, baseY, LAMP_ANCHOR.z]}>
+      <Canopy />
       <mesh position={[0, -cordLen / 2, 0]}>
         <cylinderGeometry args={[0.015, 0.015, cordLen, 8]} />
         <meshStandardMaterial color="#2a2438" />
@@ -429,15 +477,39 @@ export function EntranceDoor3D({ level }: { level: number }) {
       <RoundedBox args={[DOOR_GEOM.w * 0.92, DOOR_GEOM.h * 0.94, 0.06]} radius={0.015} position={[0, 0, 0.07]}>
         <meshStandardMaterial color={frame.trim} emissive={frame.trim} emissiveIntensity={0.35} roughness={0.4} metalness={0.25} />
       </RoundedBox>
+      {/* Zwei eingelassene Füllungen (oben/unten) statt einer reinen
+          Flachfläche — klassische Zimmertür-Optik statt Klappe. Nur bis
+          Stufe 1: ab Stufe 2 übernimmt der Fenstereinsatz die obere Hälfte. */}
+      {level < 2 && [DOOR_GEOM.h * 0.22, -DOOR_GEOM.h * 0.24].map((py, i) => (
+        <RoundedBox key={i} args={[DOOR_GEOM.w * 0.68, DOOR_GEOM.h * 0.34, 0.015]} radius={0.008} position={[0, py, 0.099]}>
+          <meshStandardMaterial color={shadeHex(frame.trim, 0.85)} roughness={0.5} metalness={0.15} />
+        </RoundedBox>
+      ))}
       {/* Fenstereinsatz ab Stufe 2 ("Modern eingerichtet") — dieselbe
           Himmelsfarbe wie beim Fenster für einen zusammenhängenden Look. */}
       {level >= 2 && (
-        <mesh position={[0, DOOR_GEOM.h * 0.22, 0.101]}>
-          <planeGeometry args={[DOOR_GEOM.w * 0.42, DOOR_GEOM.h * 0.24]} />
-          <meshBasicMaterial color={SKY_COLOR[level] ?? SKY_COLOR[0]} toneMapped={false} />
-        </mesh>
+        <>
+          <mesh position={[0, DOOR_GEOM.h * 0.22, 0.101]}>
+            <planeGeometry args={[DOOR_GEOM.w * 0.42, DOOR_GEOM.h * 0.24]} />
+            <meshBasicMaterial color={SKY_COLOR[level] ?? SKY_COLOR[0]} toneMapped={false} />
+          </mesh>
+          <RoundedBox args={[DOOR_GEOM.w * 0.68, DOOR_GEOM.h * 0.34, 0.015]} radius={0.008} position={[0, -DOOR_GEOM.h * 0.24, 0.099]}>
+            <meshStandardMaterial color={shadeHex(frame.trim, 0.85)} roughness={0.5} metalness={0.15} />
+          </RoundedBox>
+        </>
       )}
-      {/* Türgriff */}
+      {/* Scharniere — drei kleine Zylinder an der Angelseite, sonst wirkt
+          das Türblatt wie eine bloß aufgeklebte Platte ohne Funktion. */}
+      {[-1, 0, 1].map(i => (
+        <mesh key={i} position={[-DOOR_GEOM.w * 0.44, i * DOOR_GEOM.h * 0.32, 0.08]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.012, 0.012, 0.04, 8]} />
+          <meshStandardMaterial color="#4a4f5e" roughness={0.4} metalness={0.6} />
+        </mesh>
+      ))}
+      {/* Türgriff samt Schild dahinter. */}
+      <RoundedBox args={[0.035, 0.14, 0.008]} radius={0.01} position={[DOOR_GEOM.w * 0.32, -DOOR_GEOM.h * 0.04, 0.1]}>
+        <meshStandardMaterial color={handleColor} roughness={0.4} metalness={0.6} />
+      </RoundedBox>
       <mesh position={[DOOR_GEOM.w * 0.32, -DOOR_GEOM.h * 0.04, 0.105]} rotation={[Math.PI / 2, 0, 0]}>
         <cylinderGeometry args={[0.014, 0.014, 0.12, 10]} />
         <meshStandardMaterial color={handleColor} emissive={handleColor} emissiveIntensity={0.4} roughness={0.3} metalness={0.7} />

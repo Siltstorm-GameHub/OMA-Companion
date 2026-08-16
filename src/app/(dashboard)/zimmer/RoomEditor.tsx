@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  Save, X, Loader2, FlipHorizontal2, PackageOpen, Package, Lock,
+  Loader2, FlipHorizontal2, RotateCw, PackageOpen, Package, Lock, Check,
 } from "lucide-react";
 import { getRoomItem, isFixed } from "@/lib/room-items";
 import { legalCells, type PlacedItem, type RoomState, type RoomSurface, type StoredItem } from "@/lib/room-layout";
@@ -33,14 +33,20 @@ interface Props {
 /** Was gerade angehoben ist: entweder aus dem Raum oder aus dem Lager. */
 type Selection = { id: string; from: "placed" | "stored" } | null;
 
+/** Debounce, bevor eine Änderung tatsächlich zum Server geschickt wird —
+ *  fasst mehrere schnelle Taps (z.B. Platzieren + direkt danach Drehen) in
+ *  einem Request zusammen, statt bei jedem einzelnen Klick zu speichern. */
+const AUTOSAVE_DEBOUNCE_MS = 600;
+
 /**
  * Einrichten per Antippen: Möbelstück antippen, freie Plätze leuchten auf,
  * Zielzelle antippen. Bewusst kein Drag & Drop — Ziehen auf einer vollbreiten
  * Fläche kämpft auf dem Handy mit dem Seiten-Scroll, und Antippen funktioniert
  * auf Maus und Finger identisch.
  *
- * Alles passiert auf einem Entwurf; erst "Speichern" schickt ihn zum Server,
- * der dieselben Regeln noch einmal prüft.
+ * Jede Änderung landet SOFORT (debounced) auf dem Server — kein separater
+ * Speichern-/Verwerfen-Schritt mehr. Ein aufgestelltes Objekt bleibt danach
+ * nicht "in der Hand": wer es weiter verschieben will, tippt es erneut an.
  */
 export default function RoomEditor({ state, core, onDone }: Props) {
   const router = useRouter();
@@ -49,10 +55,9 @@ export default function RoomEditor({ state, core, onDone }: Props) {
   const [stored,   setStored]   = useState<StoredItem[]>(state.stored);
   const [selection, setSelection] = useState<Selection>(null);
   const [saving,    setSaving]    = useState(false);
-
-  const dirty =
-    JSON.stringify(placed) !== JSON.stringify(state.placed) ||
-    JSON.stringify(stored) !== JSON.stringify(state.stored);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latest    = useRef({ placed, stored });
+  useEffect(() => { latest.current = { placed, stored }; }, [placed, stored]);
 
   /** Das angehobene Möbelstück als PlacedItem-Kandidat. */
   const candidate = useMemo<PlacedItem | null>(() => {
@@ -66,7 +71,7 @@ export default function RoomEditor({ state, core, onDone }: Props) {
     // gleich danach berechnet ohnehin BEIDE Wände für Wand-Items, diese
     // Startfläche ist nur der Ausgangspunkt vor dem ersten echten Tap.
     const zone: RoomSurface = def.zone === "floor" ? "floor" : "wall_back";
-    return { id: s.id, key: s.key, zone, x: 0, y: 0, flipped: false, starter: false };
+    return { id: s.id, key: s.key, zone, x: 0, y: 0, flipped: false, rotation: 0, starter: false };
   }, [selection, placed, stored]);
 
   /** Freie Plätze — dieselbe Regel-Implementierung, die auch der Server nutzt. */
@@ -86,6 +91,43 @@ export default function RoomEditor({ state, core, onDone }: Props) {
 
   const selectedDef = candidate ? getRoomItem(candidate.key) : null;
 
+  /** Schickt den aktuellen Stand debounced zum Server — bei jeder Änderung
+   *  aufgerufen, kein manueller Speichern-Button mehr nötig. */
+  function scheduleSave() {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      saveTimer.current = null;
+      setSaving(true);
+      try {
+        const { placed: p, stored: s } = latest.current;
+        const res = await fetch("/api/room/layout", {
+          method:  "PUT",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({
+            placed: p.map(item => ({
+              id: item.id, zone: item.zone, x: item.x, y: item.y,
+              flipped: item.flipped, rotation: item.rotation,
+            })),
+            stored: s.map(i => i.id),
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) { toast.error(data.error ?? "Speichern fehlgeschlagen"); return; }
+        router.refresh();
+      } catch {
+        toast.error("Netzwerkfehler — Änderung konnte nicht gespeichert werden");
+      } finally {
+        setSaving(false);
+      }
+    }, AUTOSAVE_DEBOUNCE_MS);
+  }
+
+  // Beim Verlassen der Seite mitten im Debounce-Fenster nicht die letzte
+  // Änderung verlieren — sofort flushen statt auf den Timer zu warten.
+  useEffect(() => () => {
+    if (saveTimer.current) { clearTimeout(saveTimer.current); saveTimer.current = null; }
+  }, []);
+
   function handleSelect(id: string) {
     setSelection(prev => (prev?.id === id ? null : { id, from: "placed" }));
   }
@@ -100,7 +142,6 @@ export default function RoomEditor({ state, core, onDone }: Props) {
     if (selection?.from === "stored") {
       setStored(s => s.filter(i => i.id !== candidate.id));
       setPlaced(p => [...p, { ...candidate, zone, x, y }]);
-      setSelection({ id: candidate.id, from: "placed" });
     } else {
       // Kein automatisches Mitspiegeln beim Wandwechsel mehr: das war eine
       // Eigenheit der alten 2D-Foto-Sprite-Bühne (room-iso.ts, längst entfernt)
@@ -109,11 +150,25 @@ export default function RoomEditor({ state, core, onDone }: Props) {
       // (siehe flip() unten) bleibt als rein manuelle Fein-Justierung erhalten.
       setPlaced(p => p.map(i => (i.id === candidate.id ? { ...i, zone, x, y } : i)));
     }
+    // Nach dem Platzieren nicht "in der Hand" behalten — wer weiter
+    // verschieben will, tippt das Objekt erneut an.
+    setSelection(null);
+    scheduleSave();
   }
 
   function flip() {
     if (!candidate || selection?.from !== "placed") return;
     setPlaced(p => p.map(i => (i.id === candidate.id ? { ...i, flipped: !i.flipped } : i)));
+    scheduleSave();
+  }
+
+  /** Nur für Boden-Objekte — Wand-Objekte richten sich schon automatisch an
+   *  ihrer Wand aus (surfaceRotationY), eine Zusatzdrehung würde sie aus der
+   *  Wandebene herausklappen. */
+  function rotate() {
+    if (!candidate || selection?.from !== "placed" || candidate.zone !== "floor") return;
+    setPlaced(p => p.map(i => (i.id === candidate.id ? { ...i, rotation: (i.rotation + 1) % 4 } : i)));
+    scheduleSave();
   }
 
   function toStorage() {
@@ -125,35 +180,7 @@ export default function RoomEditor({ state, core, onDone }: Props) {
     setPlaced(p => p.filter(i => i.id !== candidate.id));
     setStored(s => [...s, { id: candidate.id, key: candidate.key }]);
     setSelection(null);
-  }
-
-  async function save() {
-    setSaving(true);
-    try {
-      const res = await fetch("/api/room/layout", {
-        method:  "PUT",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({
-          placed: placed.map(p => ({ id: p.id, zone: p.zone, x: p.x, y: p.y, flipped: p.flipped })),
-          stored: stored.map(s => s.id),
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) { toast.error(data.error ?? "Speichern fehlgeschlagen"); return; }
-
-      toast.success("Zimmer gespeichert");
-      router.refresh();
-      onDone();
-    } catch {
-      toast.error("Netzwerkfehler");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  function cancel() {
-    if (dirty && !confirm("Änderungen verwerfen?")) return;
-    onDone();
+    scheduleSave();
   }
 
   const draftState: RoomState = { ...state, placed, stored };
@@ -189,6 +216,12 @@ export default function RoomEditor({ state, core, onDone }: Props) {
             <div className="flex items-center gap-2">
               {selection?.from === "placed" && (
                 <>
+                  {candidate?.zone === "floor" && (
+                    <button type="button" onClick={rotate}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-white/[0.05] border border-white/[0.08] text-gray-300 hover:bg-white/[0.1] transition-colors">
+                      <RotateCw className="w-3.5 h-3.5" /> Drehen
+                    </button>
+                  )}
                   <button type="button" onClick={flip}
                     className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-white/[0.05] border border-white/[0.08] text-gray-300 hover:bg-white/[0.1] transition-colors">
                     <FlipHorizontal2 className="w-3.5 h-3.5" /> Spiegeln
@@ -251,23 +284,16 @@ export default function RoomEditor({ state, core, onDone }: Props) {
         )}
       </div>
 
-      {/* ── Speichern / Abbrechen ───────────────────────────────────── */}
+      {/* ── Fertig ──────────────────────────────────────────────────── */}
       <div className="sticky bottom-20 lg:bottom-4 z-30 safe-area-pb">
-        <div className="glass-heavy rounded-2xl p-2 flex items-center gap-2">
+        <div className="glass-heavy rounded-2xl p-2">
           <button
-            type="button" onClick={cancel} disabled={saving}
-            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold
-                       bg-white/[0.05] border border-white/[0.08] text-gray-300 hover:bg-white/[0.1] transition-colors disabled:opacity-50"
+            type="button" onClick={onDone}
+            className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold
+                       bg-teal-500/20 border border-teal-500/30 text-teal-200 hover:bg-teal-500/30 transition-colors"
           >
-            <X className="w-3.5 h-3.5" /> Abbrechen
-          </button>
-          <button
-            type="button" onClick={save} disabled={saving || !dirty}
-            className="flex-[2] flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold
-                       bg-teal-500/20 border border-teal-500/30 text-teal-200 hover:bg-teal-500/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-            {saving ? "Speichert…" : dirty ? "Speichern" : "Nichts geändert"}
+            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+            {saving ? "Speichert…" : "Fertig"}
           </button>
         </div>
       </div>
