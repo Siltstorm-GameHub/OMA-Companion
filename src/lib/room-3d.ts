@@ -105,38 +105,6 @@ export const ACCENT_COLORS: Record<RoomItemDef["accent"], string> = {
   slate:  "#8b93a7",
 };
 
-/**
- * Gedeckte Grundpalette für Raum-Shell (Wand/Boden), unabhängig vom Katalog.
- * Bewusst deutlich heller als der Canvas-Hintergrund (`bg-[#141018]` in
- * RoomStage3D.tsx) — sonst verschwimmen Wand/Boden optisch mit dem leeren
- * Void dahinter und nur die (hellen, gesättigten) Möbel-Akzentfarben bleiben
- * sichtbar, wodurch der Raum keinen erkennbaren Rahmen mehr hat.
- */
-export const SHELL_COLORS = {
-  wallBack: "#453d5c",
-  wallSide: "#332c47",
-  floor:    "#2e2840",
-} as const;
-
-/**
- * Flachfarben je Tapeten-/Boden-Produkt — ersetzt die Foto-Texturen aus
- * RoomStage.tsx (WALL_PHOTOS/FLOOR_PHOTOS): die Referenz-Screenshots zeigen
- * gedeckte, nicht-photografische Farbflächen, kein Materialfoto. Seitenwand
- * bekommt automatisch eine etwas dunklere Variante derselben Tapete (siehe
- * `shadeHex`), damit die Raumecke räumlich lesbar bleibt.
- */
-export const WALL_COLOR_BY_KEY: Record<string, string> = {
-  tapete_raufaser: "#4a4260",
-  tapete_pixel:    "#4f3a80",
-  tapete_scifi:    "#2a5560",
-};
-
-export const FLOOR_COLOR_BY_KEY: Record<string, string> = {
-  boden_linoleum: "#39324a",
-  boden_holz:     "#5a4230",
-  boden_scifi:    "#243840",
-};
-
 /** Multipliziert einen Hex-Farbwert (0..1) — für die abgedunkelte Seitenwand. */
 export function shadeHex(hex: string, factor: number): string {
   const n = parseInt(hex.slice(1), 16);

@@ -59,6 +59,16 @@ const MONITOR_SKINS: Record<string, { emoji: string; panelClassName: string }> =
       "bg-[#0a0a0d] border-[3px] border-[#1a1a22] rounded-xl " +
       "shadow-[0_0_0_2px_rgba(139,92,246,0.55),0_0_40px_rgba(139,92,246,0.3),0_20px_60px_rgba(0,0,0,0.6)]",
   },
+  // Fehlte bisher — fiel auf die Röhren-Optik zurück, obwohl der Triple-
+  // Monitor in der 3D-Bühne wie ein flacher Bildschirm aussieht (teal-Akzent,
+  // siehe room-items.ts). Selber Rahmen wie monitor_flach, nur mit dem
+  // Teal-Glow der drei Panels statt schlichtem Schwarz.
+  monitor_dreifach: {
+    emoji: "🖥️",
+    panelClassName:
+      "bg-[#0a0a0d] border-[3px] border-black rounded-lg " +
+      "shadow-[0_0_0_2px_rgba(45,212,191,0.4),0_0_36px_rgba(45,212,191,0.22),0_20px_60px_rgba(0,0,0,0.6)]",
+  },
 };
 
 /**

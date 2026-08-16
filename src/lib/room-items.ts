@@ -143,9 +143,13 @@ export const ROOM_CATEGORY_LABELS: Record<RoomCategory, string> = {
 };
 
 /** Reihenfolge der Kategorien im Shop — günstig und nützlich zuerst. */
+// "tapete"/"bodenbelag" bewusst NICHT gelistet: Wand/Boden werten sich jetzt
+// automatisch mit der Zimmerstufe auf (siehe roomLevel() in room-layout.ts,
+// ROOM_WALL_STAGES/ROOM_FLOOR_STAGES in RoomStage3D.tsx) statt einzeln gekauft
+// und ausgewählt zu werden — kein Katalog-Kaufgegenstand mehr.
 const CATEGORY_ORDER: RoomCategory[] = [
   "schreibtisch", "sitzen", "rechner", "bildschirm", "peripherie",
-  "konsole", "licht", "deko", "moebel", "vitrine", "tapete", "bodenbelag",
+  "konsole", "licht", "deko", "moebel", "vitrine",
 ];
 
 export const ROOM_TAG_LABELS: Record<RoomTag, string> = {
@@ -441,7 +445,7 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     key: "monitor_dreifach", label: "Triple-Monitor-Setup",
     description: "Drei Bildschirme, ein Blickfeld. Der Nacken gewöhnt sich irgendwann dran.",
     zone: "floor", category: "bildschirm", w: 3, h: 2, price: 3200, minTier: 4, maxOwned: 1,
-    tags: ["monitor"], mustStandOn: "desk", accent: "teal",
+    tags: ["monitor"], mustStandOn: "desk", accent: "teal", interactive: "crt",
     imageUrl: "/room-items/monitor_dreifach.png",
   },
 

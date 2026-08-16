@@ -20,7 +20,10 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointer
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { OrthographicCamera, ContactShadows, Html } from "@react-three/drei";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
-import { Vector3, Mesh, MeshStandardMaterial, type OrthographicCamera as ThreeOrthographicCamera } from "three";
+import {
+  Vector3, Mesh, MeshStandardMaterial, CanvasTexture, RepeatWrapping, SRGBColorSpace,
+  type OrthographicCamera as ThreeOrthographicCamera,
+} from "three";
 import { RectAreaLightUniformsLib } from "three/addons/lights/RectAreaLightUniformsLib.js";
 import { useGLTF } from "@react-three/drei";
 
@@ -30,15 +33,14 @@ import { useGLTF } from "@react-three/drei";
 // erste Bild falsch/dunkel, bis ein Effect nachträglich greift.
 RectAreaLightUniformsLib.init();
 import {
-  ROOM_SIZE, ROOM_CENTER, SHELL_COLORS, ACCENT_COLORS, WALL_THICKNESS,
-  WALL_COLOR_BY_KEY, FLOOR_COLOR_BY_KEY, shadeHex,
+  ROOM_SIZE, ROOM_CENTER, ACCENT_COLORS, WALL_THICKNESS, shadeHex,
   gridToWorld, surfaceRotationY, worldToGrid, type RoomSurface,
 } from "@/lib/room-3d";
 import { getRoomItem } from "@/lib/room-items";
 import { roomLevel, type PlacedItem, type RoomState, type RoomSurface as LayoutSurface } from "@/lib/room-layout";
 import type { VitrineItem } from "@/lib/room-vitrine";
 import { FurniturePrimitive } from "./furniture/FurniturePrimitive";
-import { RoomWindow3D, CeilingLamp3D, EntranceDoor3D } from "./RoomLevelFixtures";
+import { RoomWindow3D, WindowLight, CeilingLamp3D, EntranceDoor3D } from "./RoomLevelFixtures";
 
 export type InteractTarget = "crt" | "vitrine" | "jobboard";
 
@@ -67,13 +69,168 @@ interface Props {
   focusTarget?: InteractTarget | null;
 }
 
+// ── Prozedurale Boden-/Wand-Texturen ────────────────────────────────────────
+// Reine Flachfarben (bloß `color`) wirkten leblos/plastikartig — hier kommt
+// ein kleines, per <canvas> gezeichnetes Tile-Muster dazu (kein Foto-Asset
+// nötig, bleibt beliebig re-skinnbar).
+//
+// Wand/Boden sind KEIN Katalog-Kauf mehr (siehe CATEGORY_ORDER in
+// room-items.ts) — sie werten sich automatisch mit der Zimmerstufe auf, genau
+// wie Deckenlampe/Fenster (RoomLevelFixtures.tsx): schäbige Grundausstattung
+// bis hin zu edel/luxuriös, ohne dass der User Tapete/Boden einzeln
+// aussuchen oder kaufen muss.
+function hexToRgb(hex: string): [number, number, number] {
+  const n = parseInt(hex.slice(1), 16);
+  return [(n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff];
+}
+function clamp255(v: number): number {
+  return Math.max(0, Math.min(255, Math.round(v)));
+}
+function rgbToHex(r: number, g: number, b: number): string {
+  return `#${[r, g, b].map(v => clamp255(v).toString(16).padStart(2, "0")).join("")}`;
+}
+
+type TexturePattern = "grain" | "planks" | "grid" | "pixel" | "panels";
+
+/**
+ * Wand-Ausstattung je Zimmerstufe (0..3, siehe ROOM_LEVEL_LABEL in
+ * RoomLevelFixtures.tsx) — von abgewohnter Raufaser bis zu edlem Sci-Fi-Panel.
+ */
+const ROOM_WALL_STAGES: readonly { color: string; pattern: TexturePattern }[] = [
+  { color: "#4a4260", pattern: "grain" },  // 0: Abgewohnt — vergilbte Raufaser
+  { color: "#584f78", pattern: "grain" },  // 1: Frisch renoviert — aufgefrischter Anstrich
+  { color: "#2a5560", pattern: "panels" }, // 2: Modern eingerichtet — Sci-Fi-Paneele
+  { color: "#241f40", pattern: "panels" }, // 3: Luxuriös ausgestattet — dunkles Edel-Panel
+];
+
+/** Boden-Ausstattung je Zimmerstufe — von fleckigem Linoleum bis Gitterrost. */
+const ROOM_FLOOR_STAGES: readonly { color: string; pattern: TexturePattern }[] = [
+  { color: "#39324a", pattern: "grain" },  // 0: Abgewohnt — fleckiges Linoleum
+  { color: "#5a4230", pattern: "planks" }, // 1: Frisch renoviert — Holzdielen
+  { color: "#6a5038", pattern: "planks" }, // 2: Modern eingerichtet — edlere Dielen
+  { color: "#243840", pattern: "grid" },   // 3: Luxuriös ausgestattet — Gitterrost-Boden
+];
+
+function drawGrain(ctx: CanvasRenderingContext2D, size: number, base: string) {
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, size, size);
+  const [r, g, b] = hexToRgb(base);
+  const img = ctx.getImageData(0, 0, size, size);
+  for (let i = 0; i < img.data.length; i += 4) {
+    const n = (Math.random() - 0.5) * 24;
+    img.data[i] = clamp255(r + n); img.data[i + 1] = clamp255(g + n); img.data[i + 2] = clamp255(b + n);
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+function drawPlanks(ctx: CanvasRenderingContext2D, size: number, base: string) {
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, size, size);
+  const [r, g, b] = hexToRgb(base);
+  const rows = 4, plankH = size / rows;
+  for (let i = 0; i < rows; i++) {
+    const shade = i % 2 === 0 ? 1.1 : 0.88;
+    ctx.fillStyle = rgbToHex(r * shade, g * shade, b * shade);
+    ctx.fillRect(0, i * plankH, size, plankH - 2);
+    ctx.fillStyle = "rgba(0,0,0,0.35)";
+    ctx.fillRect(0, i * plankH + plankH - 2, size, 2);
+  }
+  ctx.strokeStyle = "rgba(0,0,0,0.08)";
+  for (let x = 4; x < size; x += 9) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x + (Math.random() * 6 - 3), size);
+    ctx.stroke();
+  }
+}
+
+function drawGrid(ctx: CanvasRenderingContext2D, size: number, base: string) {
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, size, size);
+  const step = size / 4;
+  ctx.strokeStyle = "rgba(0,0,0,0.5)";
+  ctx.lineWidth = 3;
+  for (let i = 0; i <= 4; i++) {
+    ctx.beginPath(); ctx.moveTo(i * step, 0); ctx.lineTo(i * step, size); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, i * step); ctx.lineTo(size, i * step); ctx.stroke();
+  }
+  ctx.strokeStyle = "rgba(255,255,255,0.12)";
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    ctx.beginPath(); ctx.moveTo(i * step + 1, 0); ctx.lineTo(i * step + 1, size); ctx.stroke();
+  }
+}
+
+function drawPixelPattern(ctx: CanvasRenderingContext2D, size: number, base: string) {
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, size, size);
+  const [r, g, b] = hexToRgb(base);
+  const block = size / 8;
+  ctx.fillStyle = rgbToHex(r * 1.18, g * 1.18, b * 1.18);
+  for (let y = 0; y < 8; y++) {
+    for (let x = 0; x < 8; x++) {
+      if ((x + y) % 2 === 0) continue;
+      ctx.fillRect(x * block, y * block, block, block);
+    }
+  }
+}
+
+function drawPanels(ctx: CanvasRenderingContext2D, size: number, base: string) {
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, size, size);
+  const step = size / 3;
+  ctx.strokeStyle = "rgba(0,0,0,0.4)";
+  ctx.lineWidth = 2;
+  for (let i = 1; i < 3; i++) {
+    ctx.beginPath(); ctx.moveTo(i * step, 0); ctx.lineTo(i * step, size); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, i * step); ctx.lineTo(size, i * step); ctx.stroke();
+  }
+  ctx.strokeStyle = "rgba(150,220,255,0.25)";
+  ctx.lineWidth = 1;
+  for (let i = 1; i < 3; i++) {
+    ctx.beginPath(); ctx.moveTo(i * step + 1, 0); ctx.lineTo(i * step + 1, size); ctx.stroke();
+  }
+}
+
+/** Erzeugt (memoized) eine wiederholbare Canvas-Textur für ein Muster+Farbe. */
+function useRoomTexture(pattern: TexturePattern, baseColor: string, repeatX: number, repeatY: number): CanvasTexture {
+  return useMemo(() => {
+    const size = 128;
+    const canvas = document.createElement("canvas");
+    canvas.width = size; canvas.height = size;
+    const ctx = canvas.getContext("2d")!;
+    if (pattern === "planks") drawPlanks(ctx, size, baseColor);
+    else if (pattern === "grid") drawGrid(ctx, size, baseColor);
+    else if (pattern === "pixel") drawPixelPattern(ctx, size, baseColor);
+    else if (pattern === "panels") drawPanels(ctx, size, baseColor);
+    else drawGrain(ctx, size, baseColor);
+    const tex = new CanvasTexture(canvas);
+    tex.wrapS = tex.wrapT = RepeatWrapping;
+    tex.repeat.set(repeatX, repeatY);
+    tex.colorSpace = SRGBColorSpace;
+    tex.needsUpdate = true;
+    return tex;
+  }, [pattern, baseColor, repeatX, repeatY]);
+}
+
 function RoomShell({
-  wallpaperKey, floorKey, hiddenWalls,
-}: { wallpaperKey: string; floorKey: string; hiddenWalls: ReadonlySet<RoomSurface> }) {
+  level, hiddenWalls,
+}: { level: number; hiddenWalls: ReadonlySet<RoomSurface> }) {
   const { width, depth, height } = ROOM_SIZE;
-  const wallColor = WALL_COLOR_BY_KEY[wallpaperKey] ?? SHELL_COLORS.wallBack;
-  const floorColor = FLOOR_COLOR_BY_KEY[floorKey] ?? SHELL_COLORS.floor;
+  const wallStage = ROOM_WALL_STAGES[level] ?? ROOM_WALL_STAGES[0];
+  const floorStage = ROOM_FLOOR_STAGES[level] ?? ROOM_FLOOR_STAGES[0];
+  const wallColor = wallStage.color;
+  const floorColor = floorStage.color;
   const trim = "#d8d2ea";
+
+  // Ein Tile pro ~1.4 Weltmeter — grob abgestimmt, damit weder Wand noch
+  // Boden sichtbar "verwaschen groß" oder "unruhig klein" gekachelt wirken.
+  const TILE = 1.4;
+  const floorTex   = useRoomTexture(floorStage.pattern, floorColor, Math.round(width / TILE), Math.round(depth / TILE));
+  const wallTexWide = useRoomTexture(wallStage.pattern, wallColor, Math.round(width / TILE), Math.round(height / TILE));
+  const sideColor = shadeHex(wallColor, 0.72);
+  const wallTexDeepDark = useRoomTexture(wallStage.pattern, sideColor, Math.round(depth / TILE), Math.round(height / TILE));
+
   return (
     <group>
       {/*
@@ -107,27 +264,34 @@ function RoomShell({
           Fläche) — die Grundhelligkeit kommt jetzt vom echten Licht in
           RoomLighting, dieser Rest-Eigenleuchtanteil verhindert nur noch
           reines Schwarz in unbeleuchteten Ecken. */}
+      {/* `color` bleibt bei texturierten Flächen Weiß: die Canvas-Textur
+          backt die eigentliche Farbe schon ein (siehe drawGrain/drawPlanks/…)
+          — ein zusätzliches `color={floorColor}` würde mit der Textur
+          MULTIPLIZIEREN (Three.js' `map`-Verhalten) und die Fläche unnötig
+          verdunkeln/vermatschen, statt sie nur zu texturieren. `emissive`
+          bleibt unverändert additiv und behält seine ursprüngliche Aufgabe
+          (Mindesthelligkeit in unbeleuchteten Ecken). */}
       <mesh position={[width / 2, -WALL_THICKNESS / 2, depth / 2]} receiveShadow>
         <boxGeometry args={[width + WALL_THICKNESS * 2, WALL_THICKNESS, depth + WALL_THICKNESS * 2]} />
-        <meshStandardMaterial color={floorColor} emissive={floorColor} emissiveIntensity={0.12} roughness={0.85} />
+        <meshStandardMaterial map={floorTex} color="#ffffff" emissive={floorColor} emissiveIntensity={0.12} roughness={0.85} />
       </mesh>
       {!hiddenWalls.has("wall_back") && (
         <mesh position={[width / 2, height / 2, -WALL_THICKNESS / 2]} receiveShadow castShadow>
           <boxGeometry args={[width, height, WALL_THICKNESS]} />
-          <meshStandardMaterial color={wallColor} emissive={wallColor} emissiveIntensity={0.12} roughness={0.9} />
+          <meshStandardMaterial map={wallTexWide} color="#ffffff" emissive={wallColor} emissiveIntensity={0.12} roughness={0.9} />
         </mesh>
       )}
       {!hiddenWalls.has("wall_front") && (
         <mesh position={[width / 2, height / 2, depth + WALL_THICKNESS / 2]} receiveShadow castShadow>
           <boxGeometry args={[width, height, WALL_THICKNESS]} />
-          <meshStandardMaterial color={wallColor} emissive={wallColor} emissiveIntensity={0.12} roughness={0.9} />
+          <meshStandardMaterial map={wallTexWide} color="#ffffff" emissive={wallColor} emissiveIntensity={0.12} roughness={0.9} />
         </mesh>
       )}
       {!hiddenWalls.has("wall_side") && (
         <mesh position={[-WALL_THICKNESS / 2, height / 2, depth / 2]} receiveShadow castShadow>
           <boxGeometry args={[WALL_THICKNESS, height, depth]} />
           <meshStandardMaterial
-            color={shadeHex(wallColor, 0.72)} emissive={shadeHex(wallColor, 0.72)} emissiveIntensity={0.12}
+            map={wallTexDeepDark} color="#ffffff" emissive={sideColor} emissiveIntensity={0.12}
             roughness={0.9}
           />
         </mesh>
@@ -136,7 +300,7 @@ function RoomShell({
         <mesh position={[width + WALL_THICKNESS / 2, height / 2, depth / 2]} receiveShadow castShadow>
           <boxGeometry args={[WALL_THICKNESS, height, depth]} />
           <meshStandardMaterial
-            color={shadeHex(wallColor, 0.72)} emissive={shadeHex(wallColor, 0.72)} emissiveIntensity={0.12}
+            map={wallTexDeepDark} color="#ffffff" emissive={sideColor} emissiveIntensity={0.12}
             roughness={0.9}
           />
         </mesh>
@@ -620,10 +784,15 @@ function RoomCanvas({
       />
       <FitCamera camPos={camPos} focused={focusTarget === "crt" || focusTarget === "vitrine"} />
       <RoomLighting />
-      <RoomShell wallpaperKey={state.wallpaperKey} floorKey={state.floorKey} hiddenWalls={hiddenWalls} />
+      <RoomShell level={level} hiddenWalls={hiddenWalls} />
       {/* An der Rückwand bzw. Seitenwand montiert — ohne die Sichtbarkeits-
           Prüfung würden sie freischwebend im leeren Raum hängen, sobald ihre
           Wand kamerabedingt ausgeblendet ist. */}
+      {/* Das Licht selbst bleibt unabhängig von hiddenWalls — es kommt von
+          draußen, egal ob man die Rückwand gerade sieht (siehe WindowLight
+          in RoomLevelFixtures.tsx). Nur die sichtbare Geometrie wird
+          ausgeblendet, wenn die Kamera gerade wegdreht. */}
+      <WindowLight level={level} closed={blindsClosed} />
       {!hiddenWalls.has("wall_back") && <RoomWindow3D level={level} closed={blindsClosed} />}
       {!hiddenWalls.has("wall_side") && <EntranceDoor3D level={level} />}
       <CeilingLamp3D level={level} on={lampOn} />
