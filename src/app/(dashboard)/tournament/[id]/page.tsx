@@ -452,6 +452,24 @@ export default async function TournamentDetailPage({
       ).pointsByUser
     : {};
 
+  // Dominion-Bonus-Ergebnis DIESES Events je User — direkt aus completionData.dominionChanges
+  // (siehe complete/route.ts + dominion-bonus.ts), nicht aus dem aktuellen (live) Streak-Stand der
+  // Reihe: hier soll nur sichtbar sein, wer HIER +1 bekommen bzw. den Bonus ausgelöst hat.
+  const dominionResultByUser: Record<string, { streakAfter: number; bonusAwarded: boolean }> = (() => {
+    if (!seriesStatCfg.dominionBonus?.enabled || !event.completionData) return {};
+    try {
+      const cd = JSON.parse(event.completionData) as {
+        dominionChanges?: Record<string, { streakBefore: number; streakAfter: number; bonusAwarded: boolean }> | null;
+      };
+      const out: Record<string, { streakAfter: number; bonusAwarded: boolean }> = {};
+      for (const [uid, ch] of Object.entries(cd.dominionChanges ?? {})) {
+        const gotTriggerThisEvent = ch.bonusAwarded || ch.streakAfter === ch.streakBefore + 1;
+        if (gotTriggerThisEvent) out[uid] = { streakAfter: ch.streakAfter, bonusAwarded: ch.bonusAwarded };
+      }
+      return out;
+    } catch { return {}; }
+  })();
+
   // Punkte pro Platzierung aus pointsConfig
   type PcVal = number | { coins?: number; points?: number };
   const pcRaw: Record<string, PcVal> = (() => {
@@ -1101,6 +1119,8 @@ export default async function TournamentDetailPage({
                 statFields={event.statFields ? JSON.parse(event.statFields) : []}
                 statPointsPer={statPointsPer}
                 ligaPunkteByUser={ligaPunkteByUser}
+                dominionResultByUser={dominionResultByUser}
+                dominionThreshold={seriesStatCfg.dominionBonus?.threshold}
                 userId={userId}
                 format={format}
                 finalRankingGroups={rankingGroups}

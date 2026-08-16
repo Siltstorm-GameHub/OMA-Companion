@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronUp, Trophy, Clock, Vote, Eye, CheckCircle2, StickyNote } from "lucide-react";
+import { ChevronDown, ChevronUp, Trophy, Clock, Vote, Eye, CheckCircle2, StickyNote, Flame } from "lucide-react";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import RankedAvatar from "@/components/RankedAvatar";
 
@@ -34,6 +34,8 @@ export default function FfaView({
   statFields,
   statPointsPer = {},
   ligaPunkteByUser = {},
+  dominionResultByUser = {},
+  dominionThreshold,
   userId,
   format = "ffa",
   finalRankingGroups = null,
@@ -52,6 +54,9 @@ export default function FfaView({
   statPointsPer?: Record<string, number>;
   /** Ligapunkte, die dieses Event je Spieler insgesamt beigesteuert hat (identisch zur Berechnung in der Gesamttabelle der Eventreihe) */
   ligaPunkteByUser?: Record<string, number>;
+  /** Dominion-Bonus-Ergebnis DIESES Events je User (nur wer hier +1 bekommen bzw. den Bonus ausgelöst hat) */
+  dominionResultByUser?: Record<string, { streakAfter: number; bonusAwarded: boolean }>;
+  dominionThreshold?: number;
   userId: string;
   format?: string;
   finalRankingGroups?: string[][] | null;
@@ -247,6 +252,19 @@ export default function FfaView({
                                 <Vote className="w-2.5 h-2.5" />{label}
                               </span>
                             ))}
+                            {dominionResultByUser[r.userId] && (
+                              <span
+                                className="inline-flex items-center gap-1 text-[10px] font-semibold text-orange-400 bg-orange-500/10 px-1.5 py-0.5 rounded-full shrink-0"
+                                title={dominionResultByUser[r.userId].bonusAwarded
+                                  ? "Dominion Bonus hier ausgelöst!"
+                                  : `Dominion-Streak hier +1${dominionThreshold ? ` (${dominionResultByUser[r.userId].streakAfter}/${dominionThreshold})` : ""}`}
+                              >
+                                <Flame className="w-2.5 h-2.5" />
+                                {dominionResultByUser[r.userId].bonusAwarded
+                                  ? "Bonus!"
+                                  : `+1${dominionThreshold ? ` (${dominionResultByUser[r.userId].streakAfter}/${dominionThreshold})` : ""}`}
+                              </span>
+                            )}
                           </div>
                         </td>
                         {!isAvg && statFields.map(f => {
