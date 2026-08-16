@@ -412,18 +412,26 @@ export default function DynamicNotch() {
         {/* ── Nav links, always visible, with sliding active indicator ── */}
         <div ref={navRef} style={{ display: "flex", alignItems: "center", gap: 3, position: "relative" }}>
           {indicator && (
+            /*
+             * Transform-only slide: a 1px-wide box stretched via scaleX to the
+             * target width, positioned via translateX — avoids animating
+             * left/width (layout properties) in favor of the compositor-only
+             * transform property.
+             */
             <div style={{
               position: "absolute",
               top: 0,
-              left: indicator.left,
-              width: indicator.width,
+              left: 0,
+              width: 1,
               height: "100%",
               borderRadius: 10,
+              transformOrigin: "left center",
+              transform: `translateX(${indicator.left}px) scaleX(${indicator.width})`,
               background: activeIsDanger ? "rgba(153,27,27,0.15)" : "rgba(20,184,166,0.14)",
               boxShadow: activeIsDanger
                 ? "inset 0 0 0 1px rgba(153,27,27,0.24)"
                 : "inset 0 0 0 1px rgba(20,184,166,0.28)",
-              transition: "left 420ms cubic-bezier(0.16, 1, 0.3, 1), width 420ms cubic-bezier(0.16, 1, 0.3, 1), background 200ms ease, box-shadow 200ms ease",
+              transition: "transform 420ms cubic-bezier(0.16, 1, 0.3, 1), background 200ms ease, box-shadow 200ms ease",
               pointerEvents: "none",
             }} />
           )}
