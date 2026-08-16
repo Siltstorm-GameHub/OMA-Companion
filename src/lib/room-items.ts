@@ -46,6 +46,17 @@ export interface RoomItemDef {
    * null    = frei platzierbar.
    */
   mustStandOn: "desk" | "floor" | "shelf" | null;
+  /**
+   * Zusätzlich zur freien Platzierung (mustStandOn: null) ERLAUBT — nicht
+   * verlangt — dass dieses Item auch auf einem Tisch/einer Ablage oder in
+   * einem Regal steht (z.B. Headset, Mikrofon: mal frei auf dem Boden, mal
+   * bewusst auf den Schreibtisch gestellt). Anders als `mustStandOn` ist das
+   * hier optional: fehlt der Tisch/das Regal, bleibt die freie Boden-
+   * Platzierung weiterhin gültig. Steuert auch, ob RoomStage3D.tsx die
+   * Boden-Y-Position anhebt, wenn das Item gerade tatsächlich auf so einer
+   * Fläche steht (siehe DESK_STAND_HEIGHT).
+   */
+  canAlsoStandOn?: ("desk" | "shelf")[];
   accent:      "violet" | "teal" | "amber" | "rose" | "slate";
   /**
    * Upgrade-Kette (z.B. "schreibtisch", "rechner", "sitzen"): Items mit
@@ -448,7 +459,7 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     key: "gaming_maus", label: "Gaming-Maus",
     description: "16.000 DPI, von denen du exakt null brauchst.",
     zone: "floor", category: "peripherie", w: 1, h: 1, price: 350, minTier: 1, maxOwned: 1,
-    tags: [], mustStandOn: null, accent: "teal",
+    tags: [], mustStandOn: null, canAlsoStandOn: ["desk", "shelf"], accent: "teal",
     imageUrl: "/room-items/gaming_maus.png",
   },
   {
@@ -462,28 +473,28 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     key: "webcam", label: "Webcam",
     description: "Zeigt dein Gesicht und im Hintergrund deinen Wäscheberg.",
     zone: "floor", category: "peripherie", w: 1, h: 1, price: 550, minTier: 1, maxOwned: 1,
-    tags: ["cam"], mustStandOn: null, accent: "slate",
+    tags: ["cam"], mustStandOn: null, canAlsoStandOn: ["desk", "shelf"], accent: "slate",
     imageUrl: "/room-items/webcam.png",
   },
   {
     key: "headset", label: "Headset",
     description: "Das Ohrpolster löst sich langsam auf, aber der Sound sitzt.",
     zone: "floor", category: "peripherie", w: 1, h: 1, price: 600, minTier: 1, maxOwned: 1,
-    tags: ["headset"], mustStandOn: null, accent: "teal",
+    tags: ["headset"], mustStandOn: null, canAlsoStandOn: ["desk", "shelf"], accent: "teal",
     imageUrl: "/room-items/headset.png",
   },
   {
     key: "tastatur_mech", label: "Mechanische Tastatur",
     description: "Blaue Switches. Deine Mitbewohner hassen dich jetzt offiziell.",
     zone: "floor", category: "peripherie", w: 1, h: 1, price: 650, minTier: 2, maxOwned: 1,
-    tags: ["keyboard_mech"], mustStandOn: null, accent: "violet",
+    tags: ["keyboard_mech"], mustStandOn: null, canAlsoStandOn: ["desk", "shelf"], accent: "violet",
     imageUrl: "/room-items/tastatur_mech.png",
   },
   {
     key: "mikrofon", label: "Podcast-Mikrofon",
     description: "Nimmt jedes Wort auf — auch das Kühlschrankbrummen aus der Küche.",
     zone: "floor", category: "peripherie", w: 1, h: 1, price: 800, minTier: 2, maxOwned: 1,
-    tags: ["mic"], mustStandOn: null, accent: "amber",
+    tags: ["mic"], mustStandOn: null, canAlsoStandOn: ["desk", "shelf"], accent: "amber",
     imageUrl: "/room-items/mikrofon.png", renderScale: 1.2,
   },
   {
@@ -511,14 +522,14 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     key: "capture", label: "Capture-Karte",
     description: "Nimmt alles auf, auch die Runden, die niemand sehen sollte.",
     zone: "floor", category: "peripherie", w: 1, h: 1, price: 1400, minTier: 4, maxOwned: 1,
-    tags: ["capture"], mustStandOn: null, accent: "rose",
+    tags: ["capture"], mustStandOn: null, canAlsoStandOn: ["desk", "shelf"], accent: "rose",
     imageUrl: "/room-items/capture.png", renderScale: 1.15,
   },
   {
     key: "streamdeck", label: "Stream-Deck",
     description: "Fünfzehn Tasten, von denen du drei benutzt. Sieht trotzdem professionell aus.",
     zone: "floor", category: "peripherie", w: 1, h: 1, price: 1600, minTier: 4, maxOwned: 1,
-    tags: ["streamdeck"], mustStandOn: null, accent: "violet",
+    tags: ["streamdeck"], mustStandOn: null, canAlsoStandOn: ["desk", "shelf"], accent: "violet",
     imageUrl: "/room-items/streamdeck.png",
   },
 
@@ -591,7 +602,7 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     key: "kaffeemaschine", label: "Kaffeemaschine",
     description: "Der eigentliche Motor deiner Karriere.",
     zone: "floor", category: "deko", w: 1, h: 1, price: 450, minTier: 1, maxOwned: Infinity,
-    tags: [], mustStandOn: null, accent: "amber",
+    tags: [], mustStandOn: null, canAlsoStandOn: ["desk", "shelf"], accent: "amber",
     imageUrl: "/room-items/kaffeemaschine.png",
   },
   {

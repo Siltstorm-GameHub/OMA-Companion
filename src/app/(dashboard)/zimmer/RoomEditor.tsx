@@ -11,7 +11,7 @@ import {
   getRoomItem, isFixed, CATEGORY_ORDER, ROOM_CATEGORY_LABELS, type RoomCategory,
 } from "@/lib/room-items";
 import {
-  legalCells, orphanedStandItems, type PlacedItem, type RoomState, type RoomSurface, type StoredItem,
+  legalCells, orphanedStandItems, footprint, type PlacedItem, type RoomState, type RoomSurface, type StoredItem,
 } from "@/lib/room-layout";
 import type { RoomProfileCore } from "@/lib/room-profile-data";
 import { RoomItemPreview } from "./RoomItemSprite";
@@ -95,7 +95,14 @@ export default function RoomEditor({ state, core, onDone }: Props) {
   const ghost = useMemo(() => {
     if (!candidate) return null;
     const def = getRoomItem(candidate.key);
-    return def ? { w: def.w, h: def.h, key: candidate.key } : null;
+    if (!def) return null;
+    // Footprint statt roher Katalog-Maße: bei 90°/270°-Bodendrehung sind
+    // Breite/Tiefe vertauscht — Vorschau-Highlight, Hover-Ausrichtung UND
+    // Ghost-Mesh müssen dieselbe (gedrehte) Fläche zeigen wie legalCells()
+    // tatsächlich prüft, sonst passen Leuchtfelder und Silhouette nicht mehr
+    // zusammen, sobald man ein nicht-quadratisches Objekt dreht.
+    const { w, h } = footprint(def, candidate.zone, candidate.rotation);
+    return { w, h, key: candidate.key, rotation: candidate.rotation };
   }, [candidate]);
 
   const selectedDef = candidate ? getRoomItem(candidate.key) : null;
