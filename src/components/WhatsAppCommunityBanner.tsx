@@ -8,10 +8,13 @@ const STORAGE_KEY = "wa_banner_dismissed";
 export default function WhatsAppCommunityBanner({
   onVisibilityChange,
   fill = false,
+  insetLeft = false,
 }: {
   onVisibilityChange?: (visible: boolean) => void;
   /** Streckt die Box auf 100% der Höhe des Elternelements und zentriert den Inhalt vertikal (z.B. im Banner-Slider). */
   fill?: boolean;
+  /** Rückt den Inhalt links etwas ein, damit er nicht unter den Slider-Pfeilen verschwindet. */
+  insetLeft?: boolean;
 } = {}) {
   const [visible, setVisible] = useState(false);
 
@@ -34,7 +37,7 @@ export default function WhatsAppCommunityBanner({
   return (
     <div style={{
       position: "relative", display: "flex", alignItems: "center", gap: 12,
-      padding: "12px 16px", borderRadius: 12,
+      padding: insetLeft ? "12px 16px 12px 44px" : "12px 16px", borderRadius: 12,
       background: "linear-gradient(135deg, rgba(37,211,102,0.12) 0%, rgba(18,140,67,0.08) 100%)",
       border: "1px solid rgba(37,211,102,0.25)",
       boxShadow: "0 4px 16px rgba(0,0,0,0.25)",

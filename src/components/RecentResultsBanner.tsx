@@ -18,11 +18,14 @@ export function RecentResultsBanner({
   events,
   onVisibilityChange,
   fill = false,
+  insetLeft = false,
 }: {
   events: RecentResultEvent[];
   onVisibilityChange?: (visible: boolean) => void;
   /** Streckt die Box auf 100% der Höhe des Elternelements und zentriert den Inhalt vertikal (z.B. im Banner-Slider). */
   fill?: boolean;
+  /** Rückt den Inhalt links etwas ein, damit er nicht unter den Slider-Pfeilen verschwindet. */
+  insetLeft?: boolean;
 }) {
   const [dismissedIds, setDismissedIds] = useState<string[] | null>(null);
 
@@ -51,7 +54,7 @@ export function RecentResultsBanner({
   }
 
   return (
-    <div className="flex items-start gap-3 px-4 py-3.5 rounded-xl"
+    <div className={`flex items-start gap-3 ${insetLeft ? "pl-11 pr-4" : "px-4"} py-3.5 rounded-xl`}
       style={{
         background: "linear-gradient(135deg, rgba(245,158,11,0.12) 0%, rgba(245,158,11,0.04) 100%)",
         border: "1px solid rgba(245,158,11,0.25)",

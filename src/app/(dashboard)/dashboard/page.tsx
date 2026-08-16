@@ -549,7 +549,7 @@ export default async function DashboardPage() {
           } : null}
           jobReminder={userId && jobOverview?.enabled ? { current: jobOverview.current } : null}
           hasClipContest={!!activeClipContest}
-          clipContestSlot={activeClipContest ? <ClipContestWidget userId={userId} fill /> : null}
+          clipContestSlot={activeClipContest ? <ClipContestWidget userId={userId} fill insetLeft /> : null}
         />
       </div>
 

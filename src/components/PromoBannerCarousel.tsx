@@ -14,11 +14,11 @@ export type JobReminderData = {
 };
 type SlideId = "job" | "results" | "message" | "polls" | "clipContest" | "whatsapp";
 
-function JobReminderSlide({ jobReminder, fill }: { jobReminder: JobReminderData; fill: boolean }) {
+function JobReminderSlide({ jobReminder, fill, insetLeft }: { jobReminder: JobReminderData; fill: boolean; insetLeft: boolean }) {
   return (
     <Link
       href="/zimmer"
-      className={`surface flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.99] ${
+      className={`surface flex items-center gap-3 ${insetLeft ? "pl-11 pr-4" : "px-4"} py-3 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.99] ${
         jobReminder.current?.capped ? "border-rose-500/25" : ""
       }`}
       style={fill ? { height: "100%", boxSizing: "border-box" } : undefined}
@@ -142,6 +142,9 @@ export function PromoBannerCarousel({
   }
 
   const activeId = visibleIds[activeIndex];
+  // Bei mehreren Kandidaten liegen Pfeile über der Kachel — der Inhalt der Slides
+  // rückt dann etwas ein, damit er nicht unter den Pfeilen verschwindet.
+  const arrowsVisible = visibleIds.length > 1;
 
   // Alle Slides liegen in derselben Grid-Zelle übereinander — die Zelle wird dadurch
   // immer so hoch wie das größte Banner, unabhängig davon welches gerade aktiv ist.
@@ -159,7 +162,7 @@ export function PromoBannerCarousel({
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
-      {visibleIds.length > 1 && (
+      {arrowsVisible && (
         <>
           <button
             onClick={() => goTo(-1)}
@@ -177,24 +180,24 @@ export function PromoBannerCarousel({
           </button>
         </>
       )}
-      <div className={`grid ${visibleIds.length > 1 ? "pl-10" : ""}`}>
+      <div className="grid">
         {candidateIds.includes("job") && jobReminder && (
           <div className={slideClass("job")} aria-hidden={activeId !== "job"}>
-            <JobReminderSlide jobReminder={jobReminder} fill />
+            <JobReminderSlide jobReminder={jobReminder} fill insetLeft={arrowsVisible} />
           </div>
         )}
         {candidateIds.includes("results") && (
           <div className={slideClass("results")} aria-hidden={activeId !== "results"}>
-            <RecentResultsBanner events={recentResultEvents} onVisibilityChange={makeHandler("results")} fill />
+            <RecentResultsBanner events={recentResultEvents} onVisibilityChange={makeHandler("results")} fill insetLeft={arrowsVisible} />
           </div>
         )}
         {candidateIds.includes("message") && dailyMessage && (
           <div className={slideClass("message")} aria-hidden={activeId !== "message"}>
-            <DailyMessageBanner message={dailyMessage} onVisibilityChange={makeHandler("message")} fill />
+            <DailyMessageBanner message={dailyMessage} onVisibilityChange={makeHandler("message")} fill insetLeft={arrowsVisible} />
           </div>
         )}
         <div className={slideClass("polls")} aria-hidden={activeId !== "polls"}>
-          <DailyPollBanner onVisibilityChange={makeHandler("polls")} fill />
+          <DailyPollBanner onVisibilityChange={makeHandler("polls")} fill insetLeft={arrowsVisible} />
         </div>
         {candidateIds.includes("clipContest") && (
           <div className={slideClass("clipContest")} aria-hidden={activeId !== "clipContest"}>
@@ -202,7 +205,7 @@ export function PromoBannerCarousel({
           </div>
         )}
         <div className={slideClass("whatsapp")} aria-hidden={activeId !== "whatsapp"}>
-          <WhatsAppCommunityBanner onVisibilityChange={makeHandler("whatsapp")} fill />
+          <WhatsAppCommunityBanner onVisibilityChange={makeHandler("whatsapp")} fill insetLeft={arrowsVisible} />
         </div>
       </div>
       </div>
