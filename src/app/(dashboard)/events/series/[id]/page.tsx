@@ -238,19 +238,23 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
     } catch { return []; }
   })();
   const pollLabels: string[] = pollConfigs.map(p => p.label);
-  // Poll-related fields and winner stat keys should never appear as extra columns
+  // Poll-related fields and winner stat keys should never appear as extra columns in der kompakten
+  // Tabelle — die Umfrage-Siege selbst (pollLabels als eigene Spalte) gibt es NUR in der
+  // Vollständigen Tabelle (fullExtraCols unten), da diese sonst zu breit für "Aktueller Stand" wird.
   const pollRelatedFields = new Set<string>(["Umfrage-Teilnahmen", "Umfrage-Teilnahmepunkte"]);
   for (const label of pollLabels) {
     for (const suffix of ["", "_Abstimmungen", "_Teilnahmepunkte", "_Siegerpunkte"]) {
       pollRelatedFields.add(`${label}${suffix}`);
     }
   }
+  // Dominion Bonus: ebenfalls nur in der Vollständigen Tabelle, aus demselben Platzgrund.
+  const dominionFieldSet = new Set<string>(["Dominion Bonus", "Dominion Bonus Punkte"]);
   const winnerStatKeySet = new Set(statCfg.winnerStatKeys ?? []);
   // Collect extra fields: from event-derived data only (excluding poll-related, winner stats, internal)
   const allExtraFields = new Set<string>();
   for (const f of evStatFieldsSeen) {
     if (!configuredFields.has(f) && !reservedFields.has(f) && !isInternalField(f)
-        && !pollRelatedFields.has(f) && !winnerStatKeySet.has(f))
+        && !pollRelatedFields.has(f) && !winnerStatKeySet.has(f) && !dominionFieldSet.has(f))
       allExtraFields.add(f);
   }
   // Special fields first, then poll/dominion fields
@@ -259,6 +263,41 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
     ...[...allExtraFields].filter(f => !specialFields.has(f)).sort(),
   ].filter(f => standings.some(row => (row.stats[f] ?? 0) > 0));
   const showPoints = standings.some(r => r.totalPoints > 0);
+
+  // ── Vollständige Tabelle: zusätzliche Spalten ───────────────────────────────
+  // Umfrage-Siege (eine Spalte je konfigurierter Umfrage, Label = Umfragename) + Dominion Bonus
+  // (falls aktiv) — bewusst NICHT nach ">0 bei irgendjemandem" gefiltert (anders als extraCols oben):
+  // die Spalten sollen als Struktur sichtbar sein, auch bevor die erste Umfrage/der erste Bonus
+  // ausgewertet wurde.
+  const fullExtraCols = [
+    ...extraCols,
+    ...pollLabels,
+    ...(statCfg.dominionBonus?.enabled ? ["Dominion Bonus"] : []),
+  ];
+  // Zuschauer werden getrennt von Mitspielern gezählt, sobald mindestens ein Event der Reihe
+  // Zuschauer-Tracking aktiviert hat (unabhängig davon, ob bereits jemand als anwesend erfasst wurde).
+  const hasSpectatorTracking = series.events.some(e => e.spectatorMode);
+
+  // Aktueller Dominion-Streak je User (öffentlich sichtbar, nicht nur der eigene) — aus der
+  // Reihen-Rohtabelle (seriesStandingsJson), dieselbe Quelle wie im Moderatoren-Abschluss-Formular
+  // (siehe admin/events/[id]/complete/page.tsx). Wird erst befüllt, sobald ein Event abgeschlossen
+  // wurde, WÄHREND der Dominion Bonus aktiv konfiguriert war — bereits vorher abgeschlossene Events
+  // tragen rückwirkend nichts bei, solange sie nicht erneut gespeichert werden.
+  const dominionStreaks: Record<string, number> = (() => {
+    const cfg = statCfg.dominionBonus;
+    const triggerStats = cfg?.triggerStats ?? [];
+    if (!cfg?.enabled || triggerStats.length === 0 || !series.seriesStandingsJson) return {};
+    const streakKey = `_streak_[${triggerStats.join(",")}]`;
+    try {
+      const cache = JSON.parse(series.seriesStandingsJson) as { raw?: Record<string, Record<string, number>> };
+      const out: Record<string, number> = {};
+      for (const [uid, row] of Object.entries(cache.raw ?? {})) {
+        const val = row[streakKey] ?? 0;
+        if (val > 0) out[uid] = val;
+      }
+      return out;
+    } catch { return {}; }
+  })();
 
   // ── Delta since last game-phase-complete event ─────────────────────────────
   const gamePhaseCompleteEvents = series.events
@@ -373,12 +412,13 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
   // ── All-Time Leaderboard (alle Saisons der Gruppe) ────────────────────────
   let allTimeStandings: (typeof standings) = [];
   let allTimeUsers: typeof standingUsers = [];
+  let allTimeHasSpectatorTracking = false;
   if (series.groupId) {
     const allSeasonEvents = await prisma.event.findMany({
       where: { series: { groupId: series.groupId } },
       select: {
-        id: true, status: true, completionData: true, finalRankingJson: true,
-        registrations: { select: { userId: true } },
+        id: true, status: true, completionData: true, finalRankingJson: true, spectatorMode: true,
+        registrations: { select: { userId: true, role: true } },
         matches: { select: { entries: { select: { userId: true, statsJson: true } } } },
       },
     });
@@ -394,6 +434,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
       }),
     ];
     ({ rows: allTimeStandings } = computeStatStandings(allSeasonEvents, statCfg, allLegacy));
+    allTimeHasSpectatorTracking = allSeasonEvents.some(e => e.spectatorMode);
     const allTimeIds = allTimeStandings.map(r => r.userId);
     allTimeUsers = allTimeIds.length > 0
       ? await prisma.user.findMany({
@@ -642,6 +683,8 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
             currentUserId={userId}
             showPoints={showPoints}
             participationPoints={statCfg.participationPoints}
+            dominionStreaks={dominionStreaks}
+            dominionThreshold={statCfg.dominionBonus?.threshold}
             mode="compact"
           />
           {standings.length === 0 && (
@@ -686,6 +729,8 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
               lastEventDelta={hasDelta ? lastEventDelta : undefined}
               lastEventTitle={gamePhaseCompleteEvents[0]?.title}
               participationPoints={statCfg.participationPoints}
+              dominionStreaks={dominionStreaks}
+              dominionThreshold={statCfg.dominionBonus?.threshold}
               mode="compact"
             />
             {standings.length === 0 && (
@@ -703,12 +748,15 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
           rows={standings}
           users={standingUsers}
           statCols={statCfg.stats}
-          extraCols={extraCols}
+          extraCols={fullExtraCols}
           currentUserId={userId}
           showPoints={showPoints}
           lastEventDelta={hasDelta ? lastEventDelta : undefined}
           lastEventTitle={gamePhaseCompleteEvents[0]?.title}
           participationPoints={statCfg.participationPoints}
+          hasSpectatorTracking={hasSpectatorTracking}
+          dominionStreaks={dominionStreaks}
+          dominionThreshold={statCfg.dominionBonus?.threshold}
         />
       )}
 
@@ -723,9 +771,10 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
             rows={allTimeStandings}
             users={allTimeUsers}
             statCols={statCfg.stats}
-            extraCols={extraCols}
+            extraCols={fullExtraCols}
             currentUserId={userId}
             showPoints={showPoints}
+            hasSpectatorTracking={allTimeHasSpectatorTracking}
             defaultExpanded
           />
         </div>

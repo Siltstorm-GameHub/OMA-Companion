@@ -34,7 +34,7 @@ export async function computeKeptSeriesRankPoints(keepSeriesIds: string[]): Prom
       events: {
         select: {
           id: true, status: true, completionData: true, finalRankingJson: true,
-          registrations: { select: { userId: true } },
+          registrations: { select: { userId: true, role: true } },
           matches: { select: { entries: { select: { userId: true, statsJson: true } } } },
         },
       },

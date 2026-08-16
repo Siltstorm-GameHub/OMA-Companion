@@ -284,6 +284,14 @@ async function completeEvent(req: NextRequest, eventId: string) {
     }
   }
 
+  // Hat dieses Event überhaupt eine Umfrage (Legacy-Einzel- oder DB-Umfrage)? Falls ja, UND falls
+  // dies der erste Abschluss der Spielphase aus "aktiv" heraus ist (auch nach manuellem Zurücksetzen
+  // eines beendeten Events auf "aktiv"), soll das Event nie in einem Schritt direkt "finished" werden
+  // — selbst wenn zufällig schon Umfrage-Ergebnisse in derselben Anfrage mitgeschickt wurden. Die
+  // Umfragephase muss immer eigenständig bestätigt (oder angepasst) werden, siehe Nutzer-Vorgabe.
+  const eventHasAnyPollConfigured = legacyPollConfigured || event.polls.length > 0;
+  const forcePollPhase = event.status === "active" && eventHasAnyPollConfigured;
+
   // Per-User-Stats aus Match-Einträgen
   const userStats: Record<string, Record<string, number>> = {};
   for (const match of event.matches) {
@@ -544,8 +552,9 @@ async function completeEvent(req: NextRequest, eventId: string) {
     }
   }
 
-  // Neue Poll-Gewinner vergeben (legacy single poll)
-  const newPollWinners = (body.pollWinnerIds ?? []).filter(id => registeredSet.has(id) && !excludedSet.has(id));
+  // Neue Poll-Gewinner vergeben (legacy single poll) — bei forcePollPhase noch nicht auswerten, auch
+  // wenn im selben Request schon Stimmen mitgeschickt wurden (siehe forcePollPhase oben).
+  const newPollWinners = forcePollPhase ? [] : (body.pollWinnerIds ?? []).filter(id => registeredSet.has(id) && !excludedSet.has(id));
   const pollCoins = body.pollBonusCoins ?? 0;
   const pollRankPts = body.pollBonusRankPoints ?? 0;
 
@@ -566,8 +575,8 @@ async function completeEvent(req: NextRequest, eventId: string) {
     pointOps.push(...txns);
   }
 
-  // Multi-Poll-Belohnungen (pollResults array)
-  if (body.pollResults?.length) {
+  // Multi-Poll-Belohnungen (pollResults array) — bei forcePollPhase noch nicht auswerten (siehe oben)
+  if (!forcePollPhase && body.pollResults?.length) {
     for (const poll of body.pollResults) {
       const eligibleIds = poll.type === "spectator" ? spectatorIds : playerIds;
       const winners = (poll.winnerIds ?? []).filter(id => eligibleIds.includes(id) && !excludedSet.has(id));
@@ -671,8 +680,8 @@ async function completeEvent(req: NextRequest, eventId: string) {
   // keepPollOpen: Umfragen in diesem Durchlauf bewusst nicht auswerten (auch nicht bereits technisch
   // abgelaufene) und die Umfragephase so behandeln, als wäre noch etwas offen — nur so bleibt der
   // Event-Status trotz "Nur Änderungen speichern"-Button zuverlässig auf "umfrage".
-  const unpaidPolls = body.keepPollOpen ? [] : allUnpaidPolls.filter(p => new Date(p.endAt) <= now);
-  const hasOpenEventPoll = body.keepPollOpen ? true : allUnpaidPolls.some(p => new Date(p.endAt) > now);
+  const unpaidPolls = (body.keepPollOpen || forcePollPhase) ? [] : allUnpaidPolls.filter(p => new Date(p.endAt) <= now);
+  const hasOpenEventPoll = (body.keepPollOpen || forcePollPhase) ? true : allUnpaidPolls.some(p => new Date(p.endAt) > now);
   const eventPollRewards: Array<{
     pollId: string; winnerIds: string[]; voterIds: string[];
     participationCoins: number; participationSeriesPoints: number;
@@ -1008,10 +1017,13 @@ async function completeEvent(req: NextRequest, eventId: string) {
         }
       }
     }
-    // Neue Poll-Siege eintragen (multi-poll) — ausgeschlossene User erhalten keine Ligapunkte
-    for (const poll of (body.pollResults ?? [])) {
-      if (!poll.label || !poll.winnerIds?.length) continue;
-      for (const uid of poll.winnerIds) { if (!excludedSet.has(uid)) addToUser(uid, poll.label, 1); }
+    // Neue Poll-Siege eintragen (multi-poll) — ausgeschlossene User erhalten keine Ligapunkte;
+    // bei forcePollPhase noch nicht eintragen (siehe forcePollPhase oben)
+    if (!forcePollPhase) {
+      for (const poll of (body.pollResults ?? [])) {
+        if (!poll.label || !poll.winnerIds?.length) continue;
+        for (const uid of poll.winnerIds) { if (!excludedSet.has(uid)) addToUser(uid, poll.label, 1); }
+      }
     }
     // Legacy single poll (newPollWinners schließt ausgeschlossene User bereits aus)
     if (body.pollLabel && newPollWinners.length > 0) {
@@ -1098,8 +1110,13 @@ async function completeEvent(req: NextRequest, eventId: string) {
           if (t === "Zuschauer-Teilnahmen") return (body.spectatorAttendedIds ?? []).includes(userId);
           const pollMatch = eventPollRewards.find(ep => ep.label === t);
           if (pollMatch) return pollMatch.winnerIds.includes(userId);
-          if (appliedAggregatedStats[userId]?.[t]) return true;
+          // Regulärer Pro-Runde-Stat (z.B. "Siege"), wie er auch im Trigger-Stat-Picker der
+          // Admin-Konfiguration zur Auswahl steht (siehe SeriesDetailClient.tsx, statRows) — NICHT
+          // appliedAggregatedStats, das nur für statCfg.aggregatedStatFields befüllt wird, ein Feld,
+          // das aktuell in keiner Admin-UI gesetzt werden kann und daher immer leer bleibt.
+          if ((userStats[userId]?.[t] ?? 0) > 0) return true;
           if (winnerTargetKeys.includes(t) && eventWinnerIds.includes(userId)) return true;
+          if (forcePollPhase) return false; // Umfrage-Ergebnisse noch nicht bestätigt, siehe oben
           const pollResult = (body.pollResults ?? []).find(p => p.label === t);
           if (pollResult) return (pollResult.winnerIds ?? []).includes(userId);
           return false;
@@ -1182,7 +1199,9 @@ async function completeEvent(req: NextRequest, eventId: string) {
     pollBonusRankPoints:     pollRankPts > 0 ? pollRankPts : null,
     pollExcludedUserIds:     body.pollExcludedUserIds && body.pollExcludedUserIds.length > 0 ? body.pollExcludedUserIds : null,
     // Multi-poll results
-    pollResults:             body.pollResults?.length ? body.pollResults : null,
+    // forcePollPhase: noch nicht ausgewertet (siehe oben) — null lassen, sonst würde ein späteres
+    // Re-Edit fälschlich Belohnungen zurückbuchen, die hier nie tatsächlich vergeben wurden.
+    pollResults:             !forcePollPhase && body.pollResults?.length ? body.pollResults : null,
     // Spectator
     spectatorAttendedIds:    body.spectatorAttendedIds?.length ? body.spectatorAttendedIds : null,
     finalRanking:            body.finalRanking ?? null,

@@ -7,6 +7,7 @@ type StandingRow = {
   userId: string;
   totalPoints: number;
   participations: number;
+  spectatorParticipations: number;
   stats: Record<string, number>;
   hasLegacy: boolean;
   disqualifiedEventCount: number;
@@ -30,6 +31,11 @@ interface Props {
   lastEventTitle?: string;
   participationPoints?: number;
   defaultExpanded?: boolean;
+  /** Zuschauer getrennt von Mitspielern in eigener Spalte zeigen (statt kombiniert unter "Events"). */
+  hasSpectatorTracking?: boolean;
+  /** Aktueller Dominion-Streak je User (öffentlich, nicht nur der eigene) — nur für die aktuelle Saison. */
+  dominionStreaks?: Record<string, number>;
+  dominionThreshold?: number;
 }
 
 export default function FullStandingsToggle({ defaultExpanded, ...props }: Props) {
