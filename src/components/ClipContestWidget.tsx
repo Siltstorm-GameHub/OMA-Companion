@@ -5,7 +5,7 @@ import CountdownBadge from "@/components/CountdownBadge";
 
 const MONTH_NAMES = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
 
-export default async function ClipContestWidget({ userId }: { userId?: string }) {
+export default async function ClipContestWidget({ userId, fill = false }: { userId?: string; fill?: boolean }) {
   const activeContest = await prisma.monthlyClipContest.findFirst({
     where: { status: "voting" },
     orderBy: [{ year: "desc" }, { month: "desc" }],
@@ -23,7 +23,7 @@ export default async function ClipContestWidget({ userId }: { userId?: string })
   }
 
   return (
-    <div className="px-4 sm:px-6 max-w-7xl mx-auto">
+    <div className={fill ? "h-full flex flex-col justify-center" : "px-4 sm:px-6 max-w-7xl mx-auto"}>
       {/* Aktive Abstimmung — immer sichtbar, unabhängig vom eigenen Vote-Status */}
       <Link
         href="/clip-des-monats"
