@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, CalendarDays, ShoppingBag, Trophy, User, Heart, Gamepad2 } from "lucide-react";
+import { LayoutDashboard, CalendarDays, ShoppingBag, Trophy, User, Heart } from "lucide-react";
 import PollBadge from "@/components/PollBadge";
 
 const NAV = [
@@ -43,7 +43,7 @@ export default function BottomNav({ roomVisible = false }: { roomVisible?: boole
           const isProfile = href === "/profile";
           const effHref   = isProfile && roomVisible ? "/zimmer" : href;
           const effLabel  = label;
-          const Icon      = isProfile && roomVisible ? Gamepad2 : icon;
+          const Icon      = icon;
           const active = pathname === effHref || pathname.startsWith(effHref + "/");
           return (
             <Link
