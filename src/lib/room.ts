@@ -1,6 +1,5 @@
 import { prisma } from "./prisma";
 import { COIN_PREFIX } from "./points";
-import { getRank } from "./ranks";
 import { getRoomItem, isFixed, isSeasonalActive, isSurface, STARTER_ITEM_KEYS } from "./room-items";
 import {
   DEFAULT_ROOM, DEFAULT_PLACEMENTS, DEFAULT_ID_PREFIX, MAX_PLACED_ITEMS,
@@ -185,8 +184,10 @@ export async function purchaseRoomItem(userId: string, itemKey: string): Promise
   ]);
   if (!user) return { error: "Nicht eingeloggt" };
 
-  const tier = getRank(user.rankPoints).tier;
-  if (tier < def.minTier)      return { error: "Dafür reicht dein Rang noch nicht" };
+  // Bewusst KEINE Rang-Schranke mehr beim Kauf (anders als bei Jobs, siehe
+  // jobUnlockState in jobs.ts) — Münzen sind die einzige Hürde. `minTier`
+  // bleibt als Feld im Katalog stehen (siehe room-items.ts), hat aber keine
+  // Kauf-Sperrwirkung mehr.
   if (owned >= def.maxOwned) {
     return { error: def.maxOwned === 1 ? "Das besitzt du schon" : "Davon hast du schon genug" };
   }

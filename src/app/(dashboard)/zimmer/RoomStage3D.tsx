@@ -833,7 +833,7 @@ export default function RoomStage3D({ state, vitrine, onInteract, edit, focusTar
   // Unclamped (voller 360°-Bereich) — die Raum-Shell blendet dynamisch die
   // zwei kamerafernen Wände ein (siehe hiddenWalls in RoomCanvas), es gibt
   // also keinen Winkel mehr, an dem man "an der Wand vorbei ins Nichts" sähe.
-  const drag = useRef<{ pointerId: number; startX: number; startRotation: number } | null>(null);
+  const drag = useRef<{ pointerId: number; startX: number; startRotation: number; captured: boolean } | null>(null);
   // Hinweis "Ziehen zum Drehen" — nur bis zur ersten tatsächlichen Drehung
   // sichtbar, damit erfahrene User nicht dauerhaft ein Overlay im Weg haben.
   const [hasRotated, setHasRotated] = useState(false);
@@ -848,17 +848,35 @@ export default function RoomStage3D({ state, vitrine, onInteract, edit, focusTar
     // Nur der primäre Zeiger (linke Maustaste / erster Touch-Punkt) — ein
     // zweiter Finger (Pinch-Zoom-Geste o.ä.) soll die Drehung nicht kapern.
     if (e.button !== 0 && e.pointerType === "mouse") return;
-    drag.current = { pointerId: e.pointerId, startX: e.clientX, startRotation: rotation };
-    e.currentTarget.setPointerCapture(e.pointerId);
+    // NICHT sofort `setPointerCapture` aufrufen: das würde ALLE folgenden
+    // Pointer-Events (inkl. des Klicks) auf dieses Div umleiten, bevor sie
+    // den darunterliegenden R3F-Canvas erreichen — Möbel-Platzierung/Klicks
+    // auf Monitor/Vitrine würden dadurch komplett aufhören zu funktionieren,
+    // weil R3F's eigenes Raycasting nie mehr die pointerup/click-Events sieht
+    // (Pointer Capture liefert sie stattdessen direkt an dieses Div, ohne
+    // dass sie den Canvas als Ziel/Bubble-Pfad durchlaufen). Erst wenn
+    // tatsächlich gezogen wird (siehe handlePointerMove), wird gekapert —
+    // ein einfacher Tap bleibt dadurch ein normaler Klick im Canvas.
+    drag.current = { pointerId: e.pointerId, startX: e.clientX, startRotation: rotation, captured: false };
   }
   function handlePointerMove(e: ReactPointerEvent<HTMLDivElement>) {
     if (!drag.current || drag.current.pointerId !== e.pointerId) return;
     const dx = e.clientX - drag.current.startX;
-    if (Math.abs(dx) > 4) setHasRotated(true);
-    setRotation(drag.current.startRotation + dx * DRAG_SENSITIVITY);
+    if (!drag.current.captured && Math.abs(dx) > 4) {
+      drag.current.captured = true;
+      e.currentTarget.setPointerCapture(e.pointerId);
+      setHasRotated(true);
+    }
+    if (drag.current.captured) {
+      setRotation(drag.current.startRotation + dx * DRAG_SENSITIVITY);
+    }
   }
   function handlePointerUp(e: ReactPointerEvent<HTMLDivElement>) {
-    if (drag.current?.pointerId === e.pointerId) drag.current = null;
+    if (drag.current?.pointerId !== e.pointerId) return;
+    if (drag.current.captured) {
+      try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* schon freigegeben */ }
+    }
+    drag.current = null;
   }
 
   return (

@@ -6,7 +6,6 @@ import DailySpin from "./DailySpin";
 import RoomItemsShop from "./RoomItemsShop";
 import { getRoomConfig, roomVisibleFor } from "@/lib/room-config";
 import { ownedItemCounts } from "@/lib/room";
-import { getRank } from "@/lib/ranks";
 import { prisma } from "@/lib/prisma";
 
 export default async function ShopPage() {
@@ -26,7 +25,6 @@ export default async function ShopPage() {
   const roomCfg     = await getRoomConfig();
   const roomVisible = roomVisibleFor(roomCfg, me?.role);
   const roomOwned   = roomVisible && userId ? await ownedItemCounts(userId) : {};
-  const roomTier    = getRank(me?.rankPoints ?? 0).tier;
 
   return (
     <div className="px-5 pb-5 pt-0 sm:p-6 max-w-7xl mx-auto space-y-6 animate-fade-in">
@@ -73,7 +71,6 @@ export default async function ShopPage() {
         <RoomItemsShop
           owned={roomOwned}
           myPoints={myPoints}
-          rankTier={roomTier}
           isLoggedIn={!!userId}
         />
       )}
