@@ -25,6 +25,16 @@ const NAV = [
 export default function BottomNav({ roomVisible = false }: { roomVisible?: boolean }) {
   const pathname = usePathname();
 
+  const items = NAV.map(({ label, href, icon }) => {
+    const effHref = href === "/profile" && roomVisible ? "/zimmer" : href;
+    return {
+      label, href: effHref, icon,
+      active: pathname === effHref || pathname.startsWith(effHref + "/"),
+      showPollBadge: href === "/events",
+    };
+  });
+  const activeIndex = items.findIndex(n => n.active);
+
   return (
     <nav
       style={{
@@ -38,72 +48,70 @@ export default function BottomNav({ roomVisible = false }: { roomVisible?: boole
       }}
       className="backdrop-blur-2xl safe-area-pb"
     >
-      <div className="flex items-stretch h-16">
-        {NAV.map(({ label, href, icon }) => {
-          const isProfile = href === "/profile";
-          const effHref   = isProfile && roomVisible ? "/zimmer" : href;
-          const effLabel  = label;
-          const Icon      = icon;
-          const active = pathname === effHref || pathname.startsWith(effHref + "/");
-          return (
-            <Link
-              key={href}
-              href={effHref}
-              className="flex-1 flex flex-col items-center justify-center relative"
-            >
-              {/* Teal top indicator */}
-              {active && (
-                <span
-                  className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-[2px] rounded-b-full"
-                  style={{
-                    background: "#14b8a6",
-                    boxShadow: "0 0 10px rgba(20,184,166,0.9), 0 2px 16px rgba(20,184,166,0.5)",
-                  }}
-                />
-              )}
+      <div className="flex items-stretch h-16 relative">
+        {/*
+         * Sliding bump capsule — same motif as the desktop pill (FloatingPill):
+         * one solid teal capsule highlights the whole active tab (icon +
+         * label) and glides to the new tab on navigation. Slots are equal
+         * width (flex-1), so the slide is a pure index * 100% translateX of
+         * a same-width box — no measuring needed, fully transform-only.
+         */}
+        {activeIndex >= 0 && (
+          <div style={{
+            position: "absolute", top: 6, bottom: 6, left: 0,
+            width: `${100 / items.length}%`,
+            transform: `translateX(${activeIndex * 100}%)`,
+            transition: "transform 400ms cubic-bezier(0.16, 1, 0.3, 1)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            pointerEvents: "none", zIndex: 1,
+          }}>
+            <div style={{
+              width: "calc(100% - 12px)", height: "100%",
+              borderRadius: 18,
+              background: "#2dd4bf",
+              boxShadow: "0 4px 16px rgba(45,212,191,0.35)",
+            }} />
+          </div>
+        )}
 
-              {/* Icon chip */}
-              <div
-                className="flex items-center justify-center rounded-sm transition-all duration-200 relative"
+        {items.map(({ label, href, icon: Icon, active, showPollBadge }) => (
+          <Link
+            key={href}
+            href={href}
+            className="flex-1 flex flex-col items-center justify-center relative"
+            style={{ zIndex: 2 }}
+          >
+            {/* Icon */}
+            <div className="flex items-center justify-center relative">
+              <Icon
                 style={{
-                  width: active ? 36 : 28,
-                  height: 26,
-                  background: active ? "rgba(20,184,166,0.12)" : "transparent",
-                  boxShadow: active ? "0 0 16px rgba(20,184,166,0.15)" : "none",
-                  border: active ? "1px solid rgba(20,184,166,0.20)" : "1px solid transparent",
-                }}
-              >
-                <Icon
-                  style={{
-                    width: 17,
-                    height: 17,
-                    color: active ? "#2dd4bf" : "#4b5563",
-                    filter: active ? "drop-shadow(0 0 5px rgba(20,184,166,0.75))" : "none",
-                    strokeWidth: active ? 2.5 : 2,
-                    transition: "all 200ms",
-                  }}
-                />
-                {href === "/events" && <PollBadge />}
-              </div>
-
-              {/* Label */}
-              <span
-                style={{
-                  fontSize: 8,
-                  fontWeight: 600,
-                  letterSpacing: "0.04em",
-                  marginTop: 3,
-                  lineHeight: 1,
-                  color: active ? "#2dd4bf" : "rgba(107,114,128,0.85)",
+                  width: 17,
+                  height: 17,
+                  color: active ? "#04342c" : "#4b5563",
+                  strokeWidth: active ? 2.5 : 2,
                   transition: "color 200ms",
-                  userSelect: "none",
                 }}
-              >
-                {effLabel}
-              </span>
-            </Link>
-          );
-        })}
+              />
+              {showPollBadge && <PollBadge />}
+            </div>
+
+            {/* Label */}
+            <span
+              style={{
+                fontSize: 8,
+                fontWeight: 650,
+                letterSpacing: "0.04em",
+                marginTop: 3,
+                lineHeight: 1,
+                color: active ? "#04342c" : "rgba(107,114,128,0.85)",
+                transition: "color 200ms",
+                userSelect: "none",
+              }}
+            >
+              {label}
+            </span>
+          </Link>
+        ))}
       </div>
     </nav>
   );
