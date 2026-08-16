@@ -31,6 +31,16 @@ export async function PATCH(req: NextRequest) {
   if (mult !== undefined) patch.wageMultiplierPct = mult;
   if (lock !== undefined) patch.hireLockHours     = lock;
 
+  // Drei aufsteigende Schwellenwerte für Stufe 1/2/3 — Reihenfolge wird hier
+  // erzwungen (nicht nur geklemmt), sonst könnte ein Vertipper Stufe 2 unter
+  // Stufe 1 setzen und roomLevel() liefert nie mehr Stufe 2.
+  if (Array.isArray(body.levelThresholds) && body.levelThresholds.length === 3) {
+    const nums = body.levelThresholds.map((v: unknown) => clampNum(v, 0, 10_000_000));
+    if (nums.every((n: number | undefined) => n !== undefined) && nums[0] < nums[1] && nums[1] < nums[2]) {
+      patch.levelThresholds = nums as [number, number, number];
+    }
+  }
+
   if (Object.keys(patch).length === 0) {
     return NextResponse.json({ error: "Nichts zu ändern" }, { status: 400 });
   }

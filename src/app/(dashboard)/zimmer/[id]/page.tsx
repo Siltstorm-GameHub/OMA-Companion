@@ -64,6 +64,7 @@ export default async function FremdesZimmerPage({ params }: { params: Promise<{ 
         core={core}
         details={details}
         readOnly
+        levelThresholds={[0, ...cfg.levelThresholds]}
         trophySection={
           <WanderpocalSection
             trophies={details.trophies}

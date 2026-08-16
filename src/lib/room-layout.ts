@@ -400,22 +400,44 @@ export function countTags(placed: PlacedItem[]): Partial<Record<RoomTag, number>
  */
 export const ROOM_LEVEL_THRESHOLDS = [0, 4000, 15000, 40000] as const;
 
-/** Summe der Kaufpreise aller aktuell AUFGESTELLTEN (nicht eingelagerten) Möbel. */
-export function roomInvestment(placed: PlacedItem[]): number {
+/**
+ * Summe der Kaufpreise aller besessenen Möbel — AUFGESTELLT und EINGELAGERT
+ * zählen gleichermaßen. Die Ausbaustufe soll den investierten Münzwert
+ * widerspiegeln, nicht die aktuelle Zimmer-Deko: Ins Lager legen (z.B. um
+ * umzuräumen oder weil gerade kein Platz ist) darf die Stufe nicht wieder
+ * herabsetzen, sonst bestraft Aufräumen/Umdekorieren den User für etwas, das
+ * er längst bezahlt hat. `stored` ist optional (Default leer), damit ältere
+ * Aufrufer, die nur `placed` kennen, weiter kompilieren — liefert dann aber
+ * bewusst nur die aufgestellte Teilsumme.
+ */
+export function roomInvestment(placed: PlacedItem[], stored: StoredItem[] = []): number {
   let total = 0;
   for (const item of placed) {
+    const def = getRoomItem(item.key);
+    if (def) total += def.price;
+  }
+  for (const item of stored) {
     const def = getRoomItem(item.key);
     if (def) total += def.price;
   }
   return total;
 }
 
-/** 0 (Grundausstattung) bis ROOM_LEVEL_THRESHOLDS.length - 1 (voll ausgebaut). */
-export function roomLevel(placed: PlacedItem[]): number {
-  const total = roomInvestment(placed);
+/**
+ * 0 (Grundausstattung) bis thresholds.length - 1 (voll ausgebaut). `thresholds`
+ * ist optional (Default ROOM_LEVEL_THRESHOLDS) — Admins können die Stufe-1/2/3-
+ * Schwellen im Admin-Panel verstellen (siehe RoomConfig.levelThresholds in
+ * room-config.ts); Aufrufer mit Zugriff auf die aktuelle Config sollten
+ * `[0, ...cfg.levelThresholds]` durchreichen, alle anderen (z.B. Badge-
+ * Berechnung ohne geladene Config) fallen auf den Standard zurück.
+ */
+export function roomLevel(
+  placed: PlacedItem[], stored: StoredItem[] = [], thresholds: readonly number[] = ROOM_LEVEL_THRESHOLDS,
+): number {
+  const total = roomInvestment(placed, stored);
   let level = 0;
-  for (let i = ROOM_LEVEL_THRESHOLDS.length - 1; i >= 0; i--) {
-    if (total >= ROOM_LEVEL_THRESHOLDS[i]) { level = i; break; }
+  for (let i = thresholds.length - 1; i >= 0; i--) {
+    if (total >= thresholds[i]) { level = i; break; }
   }
   return level;
 }

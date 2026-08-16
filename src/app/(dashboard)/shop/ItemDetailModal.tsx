@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 // R3F/Three.js laufen ausschließlich im Browser (WebGL-Kontext).
 const RoomItem3DPreview = dynamic(
   () => import("./RoomItem3DPreview").then(m => m.RoomItem3DPreview),
-  { ssr: false, loading: () => <div className="w-full aspect-square rounded-xl bg-[#0d0b12] animate-pulse" /> },
+  { ssr: false, loading: () => <div className="w-48 sm:w-56 aspect-square mx-auto rounded-xl bg-[#0d0b12] animate-pulse" /> },
 );
 
 interface Props {
