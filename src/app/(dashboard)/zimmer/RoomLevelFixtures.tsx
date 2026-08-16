@@ -11,7 +11,7 @@
  */
 
 import { useMemo } from "react";
-import { RoundedBox, useTexture } from "@react-three/drei";
+import { RoundedBox } from "@react-three/drei";
 import { DoubleSide } from "three";
 import { gridToWorld, surfaceRotationY, ROOM_SIZE, shadeHex } from "@/lib/room-3d";
 
@@ -35,41 +35,122 @@ const WINDOW_FRAME = [
 ] as const;
 
 /** Himmelfarbe fürs winzige Türfenster (Stufe 2+, siehe EntranceDoor3D) —
- *  dort lohnt sich keine eigene Textur, ein Farbton reicht. Für die
- *  eigentliche Fensteraussicht siehe VIEW_IMAGE (echtes Bild statt Form). */
+ *  dort lohnt sich keine eigene Textur, ein Farbton reicht. */
 const SKY_COLOR = ["#241f38", "#2c3a52", "#4a7fb0", "#e8794f"];
 
 /**
- * Echtes Ausblick-Bild statt prozedural gezeichneter Sterne/Skyline/Sonne —
- * eine gemalte Stadtsilhouette je Stufe (Dämmerung → Abend → Mittag →
- * Sonnenuntergang). Dieselbe Stufe bestimmt auch WINDOW_LIGHT weiter unten:
- * welcher Himmel gerade zu sehen ist, bestimmt direkt Farbe/Stärke des
- * Lichts, das durchs Fenster in den Raum fällt.
+ * Skyline-Palette je Stufe (Dämmerung → Abend → Mittag → Sonnenuntergang) —
+ * dieselbe Stufe bestimmt auch WINDOW_LIGHT weiter unten: welcher Himmel
+ * gerade zu sehen ist, bestimmt direkt Farbe/Stärke des Lichts, das durchs
+ * Fenster in den Raum fällt.
  */
-const VIEW_IMAGE = [
-  "/room-window/level0_daemmerung.png",
-  "/room-window/level1_abend.png",
-  "/room-window/level2_mittag.png",
-  "/room-window/level3_sonnenuntergang.png",
+const SKYLINE_PALETTE = [
+  { sky: "#1c1830", horizon: "#332a52", building: "#131022", lit: "#f5d98a" }, // 0: Dämmerung
+  { sky: "#2a2f4a", horizon: "#4a3f5c", building: "#1a1e30", lit: "#ffb98a" }, // 1: Abend
+  { sky: "#8fc4ec", horizon: "#cfe8ff", building: "#5b6478", lit: "#ffffff" }, // 2: Mittag
+  { sky: "#3a2140", horizon: "#e8794f", building: "#201526", lit: "#ffdca0" }, // 3: Sonnenuntergang
 ] as const;
 
-function WindowGlass({ level, closed }: { level: number; closed: boolean }) {
-  const view = useTexture(VIEW_IMAGE[level] ?? VIEW_IMAGE[0]);
+/**
+ * Deterministische "Gebäude"-Layouts für zwei Tiefenebenen (Werte in Bruchteilen
+ * der Fensterbreite/-höhe, Ursprung Fenstermitte) — bewusst feste Zahlen statt
+ * Zufallsgenerator, damit die Silhouette bei jedem Render gleich aussieht.
+ */
+type Building = { x: number; w: number; h: number; lit: number[] };
+const SKYLINE_FAR: Building[] = [
+  { x: -0.62, w: 0.24, h: 0.5, lit: [0.15, 0.35] },
+  { x: -0.32, w: 0.32, h: 0.72, lit: [0.2, 0.4, 0.58] },
+  { x: 0.04, w: 0.22, h: 0.58, lit: [0.25, 0.42] },
+  { x: 0.34, w: 0.3, h: 0.82, lit: [0.15, 0.32, 0.5, 0.68] },
+  { x: 0.66, w: 0.2, h: 0.44, lit: [0.2] },
+];
+const SKYLINE_NEAR: Building[] = [
+  { x: -0.5, w: 0.28, h: 0.34, lit: [0.18] },
+  { x: -0.12, w: 0.36, h: 0.6, lit: [0.22, 0.42] },
+  { x: 0.3, w: 0.24, h: 0.32, lit: [0.15, 0.28] },
+  { x: 0.58, w: 0.3, h: 0.46, lit: [0.2, 0.35] },
+];
+
+/**
+ * Eine Reihe simpler Boxen als Stadtsilhouette, auf einer eigenen Tiefenebene
+ * (`z`) hinter der Scheibe. Mehrere Reihen auf unterschiedlichen `z`-Werten
+ * ergeben echten Parallaxen-Tiefeneindruck beim Drehen der Bühne — anders als
+ * ein einzelnes flaches Bild, das wie aufgeklebt wirkt (genau das war die
+ * Beschwerde: die alte Fensteraussicht war ein Foto auf einer Ebene).
+ */
+function SkylineRow({
+  buildings, z, color, litColor, scale,
+}: { buildings: Building[]; z: number; color: string; litColor: string; scale: number }) {
+  const baseY = -WINDOW_GEOM.h * 0.43;
   return (
     <group>
-      {/* Bei geschlossenem Rolladen NICHT nur von den Lamellen verdecken
-          lassen (die Schlitze zwischen den Lamellen ließen sonst schmale
-          Streifen der Aussicht durchschimmern) — stattdessen die Aussicht
-          komplett durch dunkles Glas ersetzen, das eigentlich hinter dem
-          Rolladen liegende Fenster ist dann wirklich nicht mehr zu sehen. */}
+      {buildings.map((b, i) => (
+        <group key={i}>
+          <mesh position={[b.x * WINDOW_GEOM.w, baseY + (b.h * scale) / 2, z]}>
+            <boxGeometry args={[b.w * WINDOW_GEOM.w, b.h * scale, 0.05]} />
+            <meshBasicMaterial color={color} toneMapped={false} />
+          </mesh>
+          {b.lit.map((ly, j) => (
+            <mesh key={j} position={[b.x * WINDOW_GEOM.w, baseY + ly * scale, z + 0.03]}>
+              <planeGeometry args={[0.035, 0.045]} />
+              <meshBasicMaterial color={litColor} toneMapped={false} />
+            </mesh>
+          ))}
+        </group>
+      ))}
+    </group>
+  );
+}
+
+/**
+ * Fensteraussicht als kleines, gestaffeltes 3D-Diorama statt eines flachen
+ * Fotos: Himmel-Backdrop ganz hinten, zwei Gebäude-Reihen auf unter-
+ * schiedlicher Tiefe davor, die Scheibe selbst (leicht getöntes Glas) ganz
+ * vorn. Beim Drehen der Bühne verschieben sich die Ebenen sichtbar
+ * gegeneinander — echte Parallaxe statt eines aufgeklebten Bildes.
+ */
+function WindowGlass({ level, closed }: { level: number; closed: boolean }) {
+  const palette = SKYLINE_PALETTE[level] ?? SKYLINE_PALETTE[0];
+  if (closed) {
+    return (
+      <group>
+        <mesh position={[0, 0, 0.065]}>
+          <planeGeometry args={[WINDOW_GEOM.w * 0.86, WINDOW_GEOM.h * 0.86]} />
+          <meshStandardMaterial color="#050508" roughness={0.6} />
+        </mesh>
+        <Muntins />
+      </group>
+    );
+  }
+  return (
+    <group>
+      {/* Himmel-Backdrop, tiefste Ebene */}
+      <mesh position={[0, WINDOW_GEOM.h * 0.08, -0.55]}>
+        <planeGeometry args={[WINDOW_GEOM.w * 1.4, WINDOW_GEOM.h * 1.4]} />
+        <meshBasicMaterial color={palette.sky} toneMapped={false} />
+      </mesh>
+      {/* Horizontglühen knapp über der Gebäudekante */}
+      <mesh position={[0, -WINDOW_GEOM.h * 0.1, -0.52]}>
+        <planeGeometry args={[WINDOW_GEOM.w * 1.4, WINDOW_GEOM.h * 0.4]} />
+        <meshBasicMaterial color={palette.horizon} toneMapped={false} transparent opacity={0.55} />
+      </mesh>
+      <SkylineRow buildings={SKYLINE_FAR} z={-0.34} color={palette.building} litColor={palette.lit} scale={WINDOW_GEOM.h * 0.62} />
+      <SkylineRow buildings={SKYLINE_NEAR} z={-0.16} color={shadeHex(palette.building, 1.25)} litColor={palette.lit} scale={WINDOW_GEOM.h * 0.5} />
+      {/* Leicht getöntes Glas ganz vorn, direkt hinter dem Rahmen */}
       <mesh position={[0, 0, 0.065]}>
         <planeGeometry args={[WINDOW_GEOM.w * 0.86, WINDOW_GEOM.h * 0.86]} />
-        {closed
-          ? <meshStandardMaterial color="#050508" roughness={0.6} />
-          : <meshBasicMaterial map={view} toneMapped={false} />}
+        <meshStandardMaterial color="#dfeeff" transparent opacity={0.08} roughness={0.15} metalness={0.1} />
       </mesh>
+      <Muntins />
+    </group>
+  );
+}
 
-      {/* Sprossen */}
+/** Sprossen — eigene Komponente, da sowohl bei offener als auch bei
+ *  geschlossenem Rolladen benötigt (liegt bei beiden knapp vor der Scheibe). */
+function Muntins() {
+  return (
+    <>
       <mesh position={[0, 0, 0.075]}>
         <boxGeometry args={[0.035, WINDOW_GEOM.h * 0.86, 0.01]} />
         <meshStandardMaterial color="#2a2438" />
@@ -78,7 +159,7 @@ function WindowGlass({ level, closed }: { level: number; closed: boolean }) {
         <boxGeometry args={[WINDOW_GEOM.w * 0.86, 0.035, 0.01]} />
         <meshStandardMaterial color="#2a2438" />
       </mesh>
-    </group>
+    </>
   );
 }
 
