@@ -1020,8 +1020,21 @@ export default function SeriesDetailClient({ series, allUsers, hasActiveSibling 
                           }`}
                         >{r.field}</button>
                       ))}
-                      {statRows.filter(r => r.field.trim()).length === 0 && (
-                        <p className="text-xs text-gray-600">Erst Stats hinzufügen</p>
+                      {polls.filter(p => p.label.trim()).map(p => (
+                        <button key={`poll:${p.label}`} type="button"
+                          onClick={() => setDominionTriggerStats(prev =>
+                            prev.includes(p.label) ? prev.filter(s => s !== p.label) : [...prev, p.label]
+                          )}
+                          title="Umfragesieg"
+                          className={`text-xs px-2 py-1 rounded-lg border transition-colors flex items-center gap-1 ${
+                            dominionTriggerStats.includes(p.label)
+                              ? "text-amber-300 bg-amber-500/10 border-amber-500/30"
+                              : "text-gray-500 border-white/[0.08] hover:border-white/20"
+                          }`}
+                        ><Vote className="w-3 h-3" />{p.label}</button>
+                      ))}
+                      {statRows.filter(r => r.field.trim()).length === 0 && polls.filter(p => p.label.trim()).length === 0 && (
+                        <p className="text-xs text-gray-600">Erst Stats oder Umfragen hinzufügen</p>
                       )}
                     </div>
                   </div>

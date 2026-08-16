@@ -1,6 +1,8 @@
 import { Home, Crown } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
-import { roomLevel, roomInvestment, ROOM_LEVEL_THRESHOLDS, type PlacedItem } from "@/lib/room-layout";
+import {
+  roomLevel, roomInvestment, ROOM_LEVEL_THRESHOLDS, type PlacedItem, type StoredItem,
+} from "@/lib/room-layout";
 import { ROOM_LEVEL_LABEL } from "./RoomLevelFixtures";
 
 /**
@@ -9,14 +11,16 @@ import { ROOM_LEVEL_LABEL } from "./RoomLevelFixtures";
  * wird dieselbe Zahl zum eigenständigen, sofort sichtbaren Ziel: jeder Kauf
  * zählt sichtbar, unabhängig vom trägeren Turnier-Rang.
  */
-export default function RoomLevelBar({ placed }: { placed: PlacedItem[] }) {
-  const total = roomInvestment(placed);
-  const level = roomLevel(placed);
-  const maxLevel = ROOM_LEVEL_THRESHOLDS.length - 1;
+export default function RoomLevelBar({
+  placed, stored, thresholds = ROOM_LEVEL_THRESHOLDS,
+}: { placed: PlacedItem[]; stored: StoredItem[]; thresholds?: readonly number[] }) {
+  const total = roomInvestment(placed, stored);
+  const level = roomLevel(placed, stored, thresholds);
+  const maxLevel = thresholds.length - 1;
   const isMax = level >= maxLevel;
 
-  const floor = ROOM_LEVEL_THRESHOLDS[level];
-  const ceil  = ROOM_LEVEL_THRESHOLDS[level + 1] ?? floor;
+  const floor = thresholds[level];
+  const ceil  = thresholds[level + 1] ?? floor;
   const pct   = isMax ? 100 : Math.min(100, Math.round(((total - floor) / (ceil - floor)) * 100));
 
   return (

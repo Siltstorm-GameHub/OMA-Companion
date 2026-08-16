@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { RoomItemPreview } from "@/app/(dashboard)/zimmer/RoomItemSprite";
 import { shopItems, isSurface, ROOM_ITEMS, type RoomItemDef } from "@/lib/room-items";
+import { applyPriceOverrides } from "@/lib/room-config";
 import { jobsUnlockedBy } from "@/lib/jobs";
 import { cn } from "@/lib/utils";
 import { ItemDetailModal } from "./ItemDetailModal";
@@ -18,6 +19,8 @@ interface Props {
   owned:      Record<string, number>;
   myPoints:   number;
   isLoggedIn: boolean;
+  /** Admin-Preis-Overrides je itemKey (siehe /admin/zimmer → Item-Preise). */
+  priceOverrides: Record<string, number>;
 }
 
 /**
@@ -29,9 +32,16 @@ interface Props {
  * jobs.ts) — Münzen sind die einzige Kaufhürde, `minTier` im Katalog ist nur
  * noch ein Datenfeld ohne Sperrwirkung.
  */
-export default function RoomItemsShop({ owned, myPoints, isLoggedIn }: Props) {
+export default function RoomItemsShop({ owned, myPoints, isLoggedIn, priceOverrides }: Props) {
   const router = useRouter();
-  const groups = shopItems();
+  const overriddenItems = useMemo(
+    () => applyPriceOverrides(ROOM_ITEMS, priceOverrides),
+    [priceOverrides],
+  );
+  const groups = useMemo(
+    () => shopItems().map(g => ({ ...g, items: applyPriceOverrides(g.items, priceOverrides) })),
+    [priceOverrides],
+  );
 
   const [open,   setOpen]   = useState<Record<string, boolean>>({});
   const [buying, setBuying] = useState<string | null>(null);
@@ -48,8 +58,8 @@ export default function RoomItemsShop({ owned, myPoints, isLoggedIn }: Props) {
   }
 
   const detailDef = useMemo(
-    () => (detailKey ? ROOM_ITEMS.find(i => i.key === detailKey) ?? null : null),
-    [detailKey],
+    () => (detailKey ? overriddenItems.find(i => i.key === detailKey) ?? null : null),
+    [detailKey, overriddenItems],
   );
 
   async function handleBuy(def: RoomItemDef) {
@@ -227,8 +237,8 @@ function ItemCard({
       )}
 
       <div className="relative p-3 flex flex-col items-center text-center gap-2">
-        <div className="h-16 flex items-center justify-center mt-1">
-          <RoomItemPreview itemKey={def.key} size={58} />
+        <div className="h-16 w-16 flex items-center justify-center mt-1 rounded-lg bg-white/[0.08] ring-1 ring-white/[0.06]">
+          <RoomItemPreview itemKey={def.key} size={52} />
         </div>
 
         <p className="text-xs font-semibold text-white leading-tight">{def.label}</p>

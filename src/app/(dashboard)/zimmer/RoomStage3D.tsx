@@ -38,7 +38,7 @@ import {
 } from "@/lib/room-3d";
 import { getRoomItem } from "@/lib/room-items";
 import {
-  roomLevel, standCells, footprint,
+  roomLevel, standCells, footprint, ROOM_LEVEL_THRESHOLDS,
   type PlacedItem, type RoomState, type RoomSurface as LayoutSurface,
 } from "@/lib/room-layout";
 import type { VitrineItem } from "@/lib/room-vitrine";
@@ -70,6 +70,10 @@ interface Props {
    * und beim Schließen wieder auf die normale Raumansicht zurückfährt.
    */
   focusTarget?: InteractTarget | null;
+  /** Admin-verstellbare Stufe-1/2/3-Investitionsschwellen (siehe RoomConfig
+   *  in room-config.ts) — Default ROOM_LEVEL_THRESHOLDS, falls der Aufrufer
+   *  die Config nicht geladen hat (z.B. Vorschau-Kontexte). */
+  levelThresholds?: readonly number[];
 }
 
 // ── Prozedurale Boden-/Wand-Texturen ────────────────────────────────────────
@@ -526,6 +530,29 @@ function CellHighlight({
  */
 const DESK_STAND_HEIGHT = 0.74;
 
+/**
+ * Dezenter, pulsierender Bodenring unter winzigen 1×1-Objekten (Webcam,
+ * Maus, Capture-Karte & Co.) — die gehen in der isometrischen Ansicht neben
+ * großen Möbelstücken sonst leicht unter. Rein optisch, kein Klickziel
+ * (siehe `raycast={() => null}`, damit der Ring keine Pointer-Events vom
+ * eigentlichen Objekt darunter/davor abfängt).
+ */
+function SmallItemMarker({ color }: { color: string }) {
+  const ref = useRef<Mesh>(null);
+  useFrame(({ clock }) => {
+    const mat = ref.current?.material;
+    if (mat && !Array.isArray(mat) && "opacity" in mat) {
+      mat.opacity = 0.22 + Math.sin(clock.elapsedTime * 2.2) * 0.12;
+    }
+  });
+  return (
+    <mesh ref={ref} position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]} raycast={() => null}>
+      <ringGeometry args={[0.32, 0.4, 28]} />
+      <meshBasicMaterial color={color} transparent opacity={0.3} toneMapped={false} />
+    </mesh>
+  );
+}
+
 function PlacedFurniture({
   placed, edit, onInteract, hiddenWalls,
 }: { placed: PlacedItem[]; edit?: EditHooks; onInteract: Props["onInteract"]; hiddenWalls: ReadonlySet<RoomSurface> }) {
@@ -612,6 +639,9 @@ function PlacedFurniture({
                 <meshBasicMaterial color="#5ee6ff" transparent opacity={0.5} toneMapped={false} />
               </mesh>
             )}
+            {!selected && item.zone === "floor" && def.w === 1 && def.h === 1 && (
+              <SmallItemMarker color={ACCENT_COLORS[def.accent]} />
+            )}
           </group>
         );
       })}
@@ -666,30 +696,48 @@ function VitrineCabinet() {
 }
 
 /**
- * Kleine goldene Pokal-Silhouetten hinter dem Vitrinenglas — sonst wirkt die
- * jetzt tatsächlich transparente Vitrine leer, obwohl der User Pokale/Abzeichen
- * besitzt. Rein andeutend (Kelch-Form aus Kegel+Kugel), keine 1:1-Abbildung
- * der 15 echten Fächer — bei bis zu 15 belegten Fächern wären Einzelmodelle
- * im Miniaturmaßstab ohnehin nicht unterscheidbar.
+ * Goldene Pokal-Silhouetten hinter dem Vitrinenglas — sonst wirkt die jetzt
+ * tatsächlich transparente Vitrine leer, obwohl der User Pokale/Abzeichen
+ * besitzt. Rein andeutend (Kelch-Form aus Kegel+Kugel+Fuß), keine 1:1-
+ * Abbildung der 15 echten Fächer — bei bis zu 15 belegten Fächern wären
+ * Einzelmodelle im Miniaturmaßstab ohnehin nicht unterscheidbar. Deutlich
+ * größer/heller als der erste Versuch (der ging neben dem Glas-Look optisch
+ * unter) plus ein eigenes warmes Punktlicht, damit der Inhalt auch ohne
+ * Bloom-Schwelle klar als "da drin liegt was" erkennbar ist.
  */
 function VitrineTrophies({ count }: { count: number }) {
   const shown = Math.min(count, 6);
   if (shown === 0) return null;
-  const spacing = 1.7 / Math.max(shown - 1, 1);
-  const startX = shown > 1 ? -1.7 / 2 : 0;
+  const spacing = 1.75 / Math.max(shown - 1, 1);
+  const startX = shown > 1 ? -1.75 / 2 : 0;
   return (
     <group>
+      <pointLight position={[0, 1.1, 0.3]} color="#ffcf6b" intensity={1.2} distance={3} decay={2} />
       {Array.from({ length: shown }).map((_, i) => {
         const x = shown > 1 ? startX + i * spacing : 0;
         return (
           <group key={i} position={[x, 0.78, 0]}>
-            <mesh position={[0, 0, 0]}>
-              <coneGeometry args={[0.07, 0.1, 12]} />
-              <meshStandardMaterial color="#ffcf6b" emissive="#ffcf6b" emissiveIntensity={0.9} roughness={0.3} metalness={0.6} />
+            {/* Kelch-Becher */}
+            <mesh position={[0, 0.13, 0]}>
+              <sphereGeometry args={[0.1, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.62]} />
+              <meshStandardMaterial color="#ffcf6b" emissive="#ffcf6b" emissiveIntensity={1.3} roughness={0.25} metalness={0.7} />
             </mesh>
-            <mesh position={[0, -0.08, 0]}>
-              <cylinderGeometry args={[0.015, 0.03, 0.08, 8]} />
-              <meshStandardMaterial color="#ffcf6b" emissive="#ffcf6b" emissiveIntensity={0.7} roughness={0.3} metalness={0.6} />
+            {/* Henkel links/rechts */}
+            {[-1, 1].map(side => (
+              <mesh key={side} position={[side * 0.11, 0.13, 0]} rotation={[0, 0, side * 0.5]}>
+                <torusGeometry args={[0.045, 0.012, 8, 12, Math.PI]} />
+                <meshStandardMaterial color="#ffcf6b" emissive="#ffcf6b" emissiveIntensity={1.1} roughness={0.3} metalness={0.6} />
+              </mesh>
+            ))}
+            {/* Stiel */}
+            <mesh position={[0, 0.02, 0]}>
+              <cylinderGeometry args={[0.018, 0.032, 0.11, 10]} />
+              <meshStandardMaterial color="#ffcf6b" emissive="#ffcf6b" emissiveIntensity={1.0} roughness={0.3} metalness={0.6} />
+            </mesh>
+            {/* Sockel */}
+            <mesh position={[0, -0.05, 0]}>
+              <cylinderGeometry args={[0.055, 0.06, 0.04, 12]} />
+              <meshStandardMaterial color="#7a5a2a" emissive="#7a5a2a" emissiveIntensity={0.5} roughness={0.5} metalness={0.3} />
             </mesh>
           </group>
         );
@@ -720,10 +768,6 @@ function VitrineMarker({
     >
       <VitrineCabinet />
       <VitrineTrophies count={filledCount} />
-      <mesh position={[0, 1.95, 0]}>
-        <circleGeometry args={[0.28, 20]} />
-        <meshStandardMaterial color="#ffcf6b" emissive="#ffcf6b" emissiveIntensity={1.6} toneMapped={false} />
-      </mesh>
       <mesh ref={ringRef} position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[1.0, 1.1, 28]} />
         <meshBasicMaterial color="#ffcf6b" transparent opacity={0.35} toneMapped={false} />
@@ -1007,8 +1051,10 @@ function RoomCanvas({
 /** Radiant Kamera-Drehung pro Pixel horizontaler Zeigerbewegung. */
 const DRAG_SENSITIVITY = 0.008;
 
-export default function RoomStage3D({ state, vitrine, onInteract, edit, focusTarget = null }: Props) {
-  const level = roomLevel(state.placed);
+export default function RoomStage3D({
+  state, vitrine, onInteract, edit, focusTarget = null, levelThresholds = ROOM_LEVEL_THRESHOLDS,
+}: Props) {
+  const level = roomLevel(state.placed, state.stored, levelThresholds);
   const filledVitrineCount = vitrine.slots.filter(Boolean).length;
   const [rotation, setRotation] = useState(0);
   // Unclamped (voller 360°-Bereich) — die Raum-Shell blendet dynamisch die

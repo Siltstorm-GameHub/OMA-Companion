@@ -1,6 +1,7 @@
 import { prisma } from "./prisma";
 import { COIN_PREFIX } from "./points";
 import { getRoomItem, isFixed, isSeasonalActive, isSurface, STARTER_ITEM_KEYS } from "./room-items";
+import { getPriceOverrides } from "./room-config";
 import {
   DEFAULT_ROOM, DEFAULT_PLACEMENTS, DEFAULT_ID_PREFIX, MAX_PLACED_ITEMS,
   countTags, validateLayout, fitsGrid, orphanedStandItems,
@@ -166,8 +167,13 @@ export type PurchaseResult =
 export async function purchaseRoomItem(userId: string, itemKey: string): Promise<PurchaseResult> {
   const def = getRoomItem(itemKey);
   if (!def)            return { error: "Unbekanntes Möbelstück" };
-  if (def.price <= 0)  return { error: "Das gibt es nicht zu kaufen" };
   if (!isSeasonalActive(def)) return { error: "Gerade nicht erhältlich — saisonales Objekt" };
+
+  // Admin-Preis-Override (siehe /admin/zimmer, room-config.ts) hat Vorrang
+  // vor dem Katalog-Grundpreis — dieselbe Zahl, die auch der Shop anzeigt.
+  const overrides = await getPriceOverrides();
+  const price = overrides[itemKey] ?? def.price;
+  if (price <= 0)  return { error: "Das gibt es nicht zu kaufen" };
 
   // Upgrade-Slot-Items (Schreibtisch/Rechner/Sitzmöbel) brauchen echte Zeilen,
   // um das aktuell aufgestellte Vorgänger-Objekt zu finden — sonst würde bei
@@ -194,7 +200,7 @@ export async function purchaseRoomItem(userId: string, itemKey: string): Promise
   if (owned >= def.maxOwned) {
     return { error: def.maxOwned === 1 ? "Das besitzt du schon" : "Davon hast du schon genug" };
   }
-  if (user.points < def.price)  return { error: "Nicht genug Münzen" };
+  if (user.points < price)  return { error: "Nicht genug Münzen" };
 
   // Upgrade-Slot: das aktuell aufgestellte Vorgänger-Objekt automatisch
   // einlagern, damit nicht z.B. zwei Schreibtische gleichzeitig im Zimmer
@@ -250,11 +256,11 @@ export async function purchaseRoomItem(userId: string, itemKey: string): Promise
     });
     const updated = await tx.user.update({
       where: { id: userId },
-      data:  { points: { decrement: def.price } },
+      data:  { points: { decrement: price } },
       select: { points: true },
     });
     await tx.pointTransaction.create({
-      data: { userId, amount: -def.price, reason: `${COIN_PREFIX} Zimmer: ${def.label} gekauft` },
+      data: { userId, amount: -price, reason: `${COIN_PREFIX} Zimmer: ${def.label} gekauft` },
     });
     return { id: row.id, points: updated.points };
   });

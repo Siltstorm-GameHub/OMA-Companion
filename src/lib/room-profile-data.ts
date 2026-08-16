@@ -417,7 +417,7 @@ export async function loadRoomProfileDetails(userId: string): Promise<RoomProfil
     { points: user?.points ?? 0, voiceHours, messageCount, eventCount, tournamentCount,
       tournamentWins: 0, eventWins, mvpCount: pollMaster,
       jobCoinsEarned: jobRow?.totalEarned ?? 0,
-      roomLevel: room ? roomLevel(room.placed) : 0,
+      roomLevel: room ? roomLevel(room.placed, room.stored) : 0,
       hasRoomUpgrade: upgradedRows.some(r => !!getRoomItem(r.itemKey)?.upgradeSlot),
       vitrineItemCount: pokale.length + trophies.length + systemBadgeKeys.length + customBadges.length },
     new Set(systemBadgeKeys.map(b => b.badgeKey)),

@@ -59,7 +59,7 @@ async function loadStats(userId: string): Promise<BadgeStats> {
     eventWins,
     mvpCount,
     jobCoinsEarned:  job?.totalEarned ?? 0,
-    roomLevel:       room ? roomLevel(room.placed) : 0,
+    roomLevel:       room ? roomLevel(room.placed, room.stored) : 0,
     hasRoomUpgrade:  upgradedRows.some(r => !!getRoomItem(r.itemKey)?.upgradeSlot),
     vitrineItemCount: pokalCount + trophyCount + systemBadgeCount + customBadgeCount,
   };

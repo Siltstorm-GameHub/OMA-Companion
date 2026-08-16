@@ -34,6 +34,8 @@ interface Props {
   job?:        JobOverview | null;
   trophySection:    ReactNode;
   settingsSection?: ReactNode;
+  /** Admin-verstellbare Stufe-1/2/3-Schwellen (siehe RoomConfig.levelThresholds). */
+  levelThresholds?: readonly number[];
 }
 
 /**
@@ -48,7 +50,7 @@ interface Props {
 const ZOOM_REVEAL_DELAY_MS = 550;
 
 export default function RoomView({
-  state, core, details, readOnly, owned, job, trophySection, settingsSection,
+  state, core, details, readOnly, owned, job, trophySection, settingsSection, levelThresholds,
 }: Props) {
   // Treibt die Kamera-Zoom-Animation in RoomStage3D — wird SOFORT beim Klick
   // gesetzt, damit die Kamera direkt losfährt.
@@ -126,6 +128,7 @@ export default function RoomView({
         core={core}
         owned={owned ?? {}}
         onDone={() => setEditing(false)}
+        levelThresholds={levelThresholds}
       />
     );
   }
@@ -140,6 +143,7 @@ export default function RoomView({
           vitrineReadOnly={readOnly}
           onInteract={handleInteract}
           focusTarget={focusTarget}
+          levelThresholds={levelThresholds}
         />
 
         {/* ── Aktions-Buttons direkt auf der Kachel ─────────────────────

@@ -37,7 +37,7 @@ export default async function ZimmerPage() {
     <div className="px-5 pb-5 pt-0 sm:p-6 max-w-7xl mx-auto space-y-5 animate-fade-in">
       <RoomHeroPanel core={core} />
       <RoomStatTiles core={core} />
-      <RoomLevelBar placed={state.placed} />
+      <RoomLevelBar placed={state.placed} stored={state.stored} thresholds={[0, ...cfg.levelThresholds]} />
 
       <RoomView
         state={state}
@@ -46,6 +46,7 @@ export default async function ZimmerPage() {
         readOnly={false}
         owned={owned}
         job={job}
+        levelThresholds={[0, ...cfg.levelThresholds]}
         trophySection={
           <WanderpocalSection
             trophies={details.trophies}

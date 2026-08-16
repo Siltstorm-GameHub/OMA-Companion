@@ -31,7 +31,7 @@ export function RoomItem3DPreview({ def }: { def: RoomItemDef }) {
   const targetY = Math.min(def.h, 2) * 0.4;
 
   return (
-    <div className="w-full aspect-square rounded-xl bg-[#0d0b12] overflow-hidden">
+    <div className="w-48 sm:w-56 aspect-square mx-auto rounded-xl bg-[#0d0b12] overflow-hidden">
       <Canvas dpr={[1, 1.5]} camera={{ position: [dist * 0.75, dist * 0.6, dist * 0.75], fov: 40 }}>
         <ambientLight intensity={0.75} />
         <hemisphereLight args={["#8890b0", "#1c1830", 0.5]} />

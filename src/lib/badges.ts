@@ -27,7 +27,7 @@ export type BadgeStats = {
   mvpCount?: number;
   /** Lebenszeit-Verdienst aus Idle-Jobs (UserJob.totalEarned). */
   jobCoinsEarned?: number;
-  /** Zimmer-Ausbaustufe (0..ROOM_LEVEL_THRESHOLDS.length-1), aus roomInvestment() der aufgestellten Möbel. */
+  /** Zimmer-Ausbaustufe (0..ROOM_LEVEL_THRESHOLDS.length-1), aus roomInvestment() aller besessenen Möbel (aufgestellt + eingelagert). */
   roomLevel?: number;
   /** Besitzt mind. ein gekauftes (nicht-Grundausstattungs-)Objekt in einer Upgrade-Kette (Schreibtisch/Rechner/Sitzmöbel). */
   hasRoomUpgrade?: boolean;

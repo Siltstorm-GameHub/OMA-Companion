@@ -93,6 +93,34 @@ export function RoomConfigPanel({ initial }: { initial: RoomConfig }) {
         </p>
       </div>
 
+      <div className="glass rounded-2xl p-4 space-y-4">
+        <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold">Zimmer-Ausbaustufen</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Field
+            label="Schwelle Stufe 2" min={1} max={10_000_000}
+            hint="Investitionssumme (Münzen), ab der Stufe 2 beginnt"
+            value={config.levelThresholds[0]}
+            onChange={v => set("levelThresholds", [v, config.levelThresholds[1], config.levelThresholds[2]])}
+          />
+          <Field
+            label="Schwelle Stufe 3" min={1} max={10_000_000}
+            hint="Investitionssumme (Münzen), ab der Stufe 3 beginnt"
+            value={config.levelThresholds[1]}
+            onChange={v => set("levelThresholds", [config.levelThresholds[0], v, config.levelThresholds[2]])}
+          />
+          <Field
+            label="Schwelle Stufe 4" min={1} max={10_000_000}
+            hint="Investitionssumme (Münzen), ab der Stufe 4 (voll ausgebaut) beginnt"
+            value={config.levelThresholds[2]}
+            onChange={v => set("levelThresholds", [config.levelThresholds[0], config.levelThresholds[1], v])}
+          />
+        </div>
+        <p className="text-[11px] text-gray-600 leading-relaxed">
+          Stufe 1 (Grundausstattung) beginnt immer bei 0. Jede Schwelle muss größer sein als die vorherige — eine
+          ungültige Reihenfolge wird beim Speichern verworfen. Zählt aufgestellte UND eingelagerte Möbel zusammen.
+        </p>
+      </div>
+
       <button
         onClick={save}
         disabled={saving}

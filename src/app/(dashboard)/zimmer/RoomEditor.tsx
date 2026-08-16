@@ -35,6 +35,8 @@ interface Props {
    *  bestehende Aufrufer (RoomView.tsx) ohne Anpassung weiter kompilieren. */
   owned?: Record<string, number>;
   onDone: () => void;
+  /** Admin-verstellbare Stufe-1/2/3-Schwellen (siehe RoomConfig.levelThresholds). */
+  levelThresholds?: readonly number[];
 }
 
 /** Was gerade angehoben ist: entweder aus dem Raum oder aus dem Lager. */
@@ -55,7 +57,7 @@ const AUTOSAVE_DEBOUNCE_MS = 600;
  * Speichern-/Verwerfen-Schritt mehr. Ein aufgestelltes Objekt bleibt danach
  * nicht "in der Hand": wer es weiter verschieben will, tippt es erneut an.
  */
-export default function RoomEditor({ state, core, onDone }: Props) {
+export default function RoomEditor({ state, core, onDone, levelThresholds }: Props) {
   const router = useRouter();
 
   const [placed,   setPlaced]   = useState<PlacedItem[]>(state.placed);
@@ -242,6 +244,7 @@ export default function RoomEditor({ state, core, onDone }: Props) {
           ownerName={core.displayName}
           vitrine={core.vitrine}
           onInteract={() => { /* im Bearbeiten-Modus öffnet nichts */ }}
+          levelThresholds={levelThresholds}
           edit={{
             selectedId: candidate?.id ?? null, legal, ghost,
             onSelect: handleSelect, onGrab: handleGrab, onDrop: handleDrop,
