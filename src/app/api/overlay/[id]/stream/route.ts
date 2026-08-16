@@ -56,7 +56,7 @@ async function loadOverlayState(eventId: string) {
   if (event.series?.seriesStatConfig) {
     let cfg: StatConfig;
     try { cfg = JSON.parse(event.series.seriesStatConfig); } catch { cfg = { participationPoints: 0, stats: [] }; }
-    const allRegistrations = await prisma.eventRegistration.findMany({ where: { eventId }, select: { userId: true } });
+    const allRegistrations = await prisma.eventRegistration.findMany({ where: { eventId }, select: { userId: true, role: true } });
     ligaPunkteByUser = computeEventPoints(
       {
         completionData: event.completionData,

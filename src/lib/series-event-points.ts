@@ -31,7 +31,9 @@ export function resolveWinnerTargetKeys(cfg: StatConfig, seriesWinnerTargetField
 
 export type EventForPoints = {
   completionData: string | null;
-  registrations: { userId: string }[];
+  /** role fehlt bei manchen Altabfragen (kein select) — dann als Mitspieler gezählt (Standard vor
+   *  Einführung des Zuschauer-Trackings), nur ein explizites "spectator" zählt als Zuschauer. */
+  registrations: { userId: string; role?: string }[];
   matches: { entries: { userId: string | null; statsJson: string | null }[] }[];
 };
 
@@ -52,6 +54,12 @@ export type EventCompletionData = {
     participationSeriesPoints: number;
     winnerRankPoints: number;
   }[];
+  /** Anwesende (nicht ausgeschlossene) Zuschauer dieses Events, siehe rewardLedger.spectatorRewards
+   *  in /api/admin/events/[id]/complete — Grundlage für die separate Zuschauer-Teilnahme-Zählung. */
+  spectatorAttendedIds?: string[] | null;
+  /** Dominion-Bonus-Ergebnis dieses Events je User (siehe complete/route.ts) — nur User mit
+   *  bonusAwarded fließen als "Dominion Bonus"-Stat in die Tabelle ein. */
+  dominionChanges?: Record<string, { streakBefore: number; streakAfter: number; bonusAwarded: boolean; coins: number; seriesPoints: number }> | null;
   /** Ausgeschlossene User (Disqualifikation): tragen nichts zu den Ligapunkten dieses Events bei */
   excludedUserIds?: string[] | null;
 };
@@ -61,6 +69,8 @@ export type EventPointsResult = {
    *  für ausgeschlossene User immer 0, siehe excludedFromPointsUserIds */
   pointsByUser: Record<string, number>;
   participationsByUser: Record<string, number>;
+  /** Zuschauer-Teilnahmen dieses Events je User — getrennt von participationsByUser (Mitspieler). */
+  spectatorParticipationsByUser: Record<string, number>;
   statsByUser: Record<string, Record<string, number>>;
   /** User, die für dieses Event ausgeschlossen (disqualifiziert) wurden: ihre Teilnahme/Stats werden
    *  weiterhin oben getrackt (participationsByUser/statsByUser), tragen aber keine Ligapunkte bei. */
@@ -68,7 +78,7 @@ export type EventPointsResult = {
 };
 
 const EMPTY_RESULT: EventPointsResult = {
-  pointsByUser: {}, participationsByUser: {}, statsByUser: {}, excludedFromPointsUserIds: [],
+  pointsByUser: {}, participationsByUser: {}, spectatorParticipationsByUser: {}, statsByUser: {}, excludedFromPointsUserIds: [],
 };
 
 /** Berechnet die Ligapunkte-Beiträge eines einzelnen Events. Liefert leere Maps, solange die
@@ -79,32 +89,39 @@ export type SeriesStandingRow = {
   userId: string;
   totalPoints: number;
   participations: number;
+  /** Zuschauer-Teilnahmen, getrennt von participations (Mitspieler) — siehe computeEventPoints. */
+  spectatorParticipations: number;
   stats: Record<string, number>;
   hasLegacy: boolean;
   disqualifiedEventCount: number;
 };
 
 /** Aggregiert die Ligapunkte aller Events einer Reihe (+ Legacy-Stand) zu einer Gesamttabelle
- *  pro User. Enthält Teilnahme, Stats und Umfragen — NICHT den Dominion Bonus (separat getrackt
- *  im seriesStandingsJson-Cache) und NICHT die Endplatzierungs-Belohnung der Gesamtreihe (separat
- *  in seriesCompletionData.placementRewards, erst bei Reihen-Abschluss vergeben). */
+ *  pro User. Enthält Teilnahme (Mitspieler + separat Zuschauer), Stats, Umfrage-Siege und Dominion-
+ *  Bonus-Treffer (als Stat-Felder "Dominion Bonus"/"Dominion Bonus Punkte") — NICHT die Endplatzierungs-
+ *  Belohnung der Gesamtreihe (separat in seriesCompletionData.placementRewards, erst bei
+ *  Reihen-Abschluss vergeben). */
 export function computeStatStandings(
   events: SeriesEventForStandings[],
   cfg: StatConfig,
   legacy: LegacyStandingRow[],
 ): { rows: SeriesStandingRow[]; evStatFieldsSeen: Set<string> } {
   const evPart: Record<string, number> = {};
+  const evSpectatorPart: Record<string, number> = {};
   const evStats: Record<string, Record<string, number>> = {};
   const evTotalPoints: Record<string, number> = {};
   const evExcludedCount: Record<string, number> = {};
 
   for (const ev of events) {
-    const { pointsByUser, participationsByUser, statsByUser, excludedFromPointsUserIds } = computeEventPoints(ev, cfg);
+    const { pointsByUser, participationsByUser, spectatorParticipationsByUser, statsByUser, excludedFromPointsUserIds } = computeEventPoints(ev, cfg);
     for (const [uid, pts] of Object.entries(pointsByUser)) {
       evTotalPoints[uid] = (evTotalPoints[uid] ?? 0) + pts;
     }
     for (const [uid, part] of Object.entries(participationsByUser)) {
       evPart[uid] = (evPart[uid] ?? 0) + part;
+    }
+    for (const [uid, part] of Object.entries(spectatorParticipationsByUser)) {
+      evSpectatorPart[uid] = (evSpectatorPart[uid] ?? 0) + part;
     }
     for (const [uid, stats] of Object.entries(statsByUser)) {
       if (!evStats[uid]) evStats[uid] = {};
@@ -130,7 +147,7 @@ export function computeStatStandings(
   }
 
   const allUids = new Set([
-    ...Object.keys(evPart), ...Object.keys(evStats),
+    ...Object.keys(evPart), ...Object.keys(evSpectatorPart), ...Object.keys(evStats),
     ...Object.keys(legPts), ...Object.keys(evTotalPoints),
   ]);
 
@@ -152,7 +169,9 @@ export function computeStatStandings(
       displayStats[f] = (displayStats[f] ?? 0) + v;
     }
     return {
-      userId: uid, totalPoints, participations: displayPart, stats: displayStats,
+      userId: uid, totalPoints, participations: displayPart,
+      spectatorParticipations: evSpectatorPart[uid] ?? 0,
+      stats: displayStats,
       hasLegacy: legacy.some(l => l.userId === uid),
       disqualifiedEventCount: evExcludedCount[uid] ?? 0,
     };
@@ -175,6 +194,7 @@ export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPo
   const excludedSet = new Set(cd.excludedUserIds ?? []);
 
   const evPart: Record<string, number> = {};
+  const evSpectatorPart: Record<string, number> = {};
   const evStats: Record<string, Record<string, number>> = {};
   const pollBonusPts: Record<string, number> = {};
 
@@ -183,8 +203,18 @@ export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPo
     evStats[uid][field] = (evStats[uid][field] ?? 0) + val;
   }
 
-  for (const { userId: uid } of ev.registrations) {
+  // Mitspieler-Teilnahmen — nur explizit als "spectator" markierte Registrierungen zählen NICHT
+  // dazu (fehlt role ganz, z.B. bei älteren/unvollständigen Abfragen, gilt das als Mitspieler,
+  // dem bisherigen Verhalten entsprechend).
+  for (const { userId: uid, role } of ev.registrations) {
+    if (role === "spectator") continue;
     evPart[uid] = (evPart[uid] ?? 0) + 1;
+  }
+  // Zuschauer-Teilnahmen — separat gezählt, aus den beim Abschluss erfassten anwesenden Zuschauern
+  // (nicht aus der Registrierung selbst, die nur die Anmeldung zeigt, nicht die Anwesenheit).
+  for (const uid of cd.spectatorAttendedIds ?? []) {
+    if (excludedSet.has(uid)) continue;
+    evSpectatorPart[uid] = (evSpectatorPart[uid] ?? 0) + 1;
   }
 
   const winnerStatSet = new Set(cfg.winnerStatKeys ?? []);
@@ -277,6 +307,15 @@ export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPo
     pollBonusPts[uid] = (pollBonusPts[uid] ?? 0) + pts;
   }
 
+  // Dominion Bonus: nur tatsächlich ausgelöste Treffer dieses Events fließen als Stat ein (die reine
+  // Streak-Fortschreibung ohne Bonus ist ein interner Zustand, kein anzeigbarer Stat). Ausgeschlossene
+  // User können laut complete/route.ts nie einen Bonus auslösen — hier zur Sicherheit nochmals geprüft.
+  for (const [uid, change] of Object.entries(cd.dominionChanges ?? {})) {
+    if (!change.bonusAwarded || excludedSet.has(uid)) continue;
+    addEv(uid, "Dominion Bonus", 1);
+    if (change.seriesPoints > 0) addEv(uid, "Dominion Bonus Punkte", change.seriesPoints);
+  }
+
   const allUids = new Set([...Object.keys(evPart), ...Object.keys(evStats), ...Object.keys(pollBonusPts)]);
   const pointsByUser: Record<string, number> = {};
   for (const uid of allUids) {
@@ -291,7 +330,7 @@ export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPo
   }
 
   return {
-    pointsByUser, participationsByUser: evPart, statsByUser: evStats,
+    pointsByUser, participationsByUser: evPart, spectatorParticipationsByUser: evSpectatorPart, statsByUser: evStats,
     excludedFromPointsUserIds: [...excludedSet].filter(uid => allUids.has(uid)),
   };
 }

@@ -63,7 +63,7 @@ const getGlobalDashboardData = unstable_cache(
             select: {
               id: true, startAt: true, status: true, game: true,
               completionData: true, finalRankingJson: true,
-              registrations: { select: { userId: true } },
+              registrations: { select: { userId: true, role: true } },
               matches: { select: { entries: { select: { userId: true, statsJson: true } } } },
             },
           },

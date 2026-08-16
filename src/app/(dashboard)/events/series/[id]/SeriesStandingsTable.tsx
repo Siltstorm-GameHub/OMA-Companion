@@ -1,13 +1,15 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { Medal, ChevronDown, ChevronUp, TrendingUp, TrendingDown, Minus, Ban } from "lucide-react";
+import { Medal, ChevronDown, ChevronUp, TrendingUp, TrendingDown, Minus, Ban, Flame } from "lucide-react";
 import RankedAvatar from "@/components/RankedAvatar";
 
 type StandingRow = {
   userId: string;
   totalPoints: number;
   participations: number;
+  /** Zuschauer-Teilnahmen, getrennt von participations (Mitspieler). */
+  spectatorParticipations: number;
   stats: Record<string, number>;
   hasLegacy: boolean;
   /** Anzahl Events, in denen der User ausgeschlossen (disqualifiziert) war — seine Teilnahme/Stats
@@ -42,6 +44,11 @@ interface Props {
   participationPoints?: number;
   /** "compact" = always compact; "full" = always full; "auto" (default) = compact mobile / full desktop */
   mode?: "compact" | "full" | "auto";
+  /** Zuschauer getrennt von Mitspielern in eigener Spalte zeigen (statt kombiniert unter "Events"). */
+  hasSpectatorTracking?: boolean;
+  /** Aktueller Dominion-Streak je User (öffentlich, nicht nur der eigene). */
+  dominionStreaks?: Record<string, number>;
+  dominionThreshold?: number;
 }
 
 const MEDALS = ["text-amber-400", "text-gray-300", "text-amber-600"];
@@ -128,19 +135,22 @@ function PointsCell({ value, rank, delta }: { value: number; rank: number; delta
 
 export default function SeriesStandingsTable({
   rows, users, statCols, extraCols, currentUserId, showPoints, lastEventDelta, lastEventTitle,
-  participationPoints, mode = "auto",
+  participationPoints, mode = "auto", hasSpectatorTracking = false, dominionStreaks, dominionThreshold,
 }: Props) {
   const [expanded, setExpanded] = useState(false);
   const userMap = new Map(users.map(u => [u.id, u]));
   const hasExtraData = statCols.length > 0 || extraCols.length > 0;
   const hasDelta = !!lastEventDelta && Object.keys(lastEventDelta).length > 0;
+  const hasStreakCol = !!dominionStreaks && Object.keys(dominionStreaks).length > 0;
 
   const statColW = "4.5rem";
   const fullGridCols = [
     "2.5rem",   // rank
     hasDelta ? "2.5rem" : "0px", // delta (hidden when no delta)
     "1fr",      // player
-    "3.5rem",   // events
+    "3.5rem",   // Mitspieler (bzw. "Events" kombiniert)
+    hasSpectatorTracking ? "3.5rem" : "0px", // Zuschauer
+    hasStreakCol ? "4.5rem" : "0px", // Dominion-Streak
     ...statCols.map(() => statColW),
     ...extraCols.map(() => statColW),
     ...(showPoints ? ["5rem"] : []),
@@ -158,14 +168,20 @@ export default function SeriesStandingsTable({
       { label: "#", cls: "text-center" },
       ...(deltaColPresent ? [{ label: "", cls: "" }] : []),
       { label: "Spieler", cls: "" },
-      { label: "Events", cls: "text-center" },
+      { label: hasSpectatorTracking ? "Mitspieler" : "Events", cls: "text-center" },
+      ...(hasSpectatorTracking ? [{ label: "Zuschauer", cls: "text-center" }] : []),
+      ...(hasStreakCol ? [{ label: "Streak", cls: "text-center" }] : []),
       ...statCols.map(s => ({ label: s.field, cls: "text-center" })),
       ...extraCols.map(f => ({ label: f, cls: "text-center" })),
       ...(showPoints ? [{ label: "Punkte", cls: "text-right" }] : []),
     ];
 
     return (
-      <div style={{ minWidth: `${(deltaColPresent ? 320 : 280) + (statCols.length + extraCols.length) * 72 + (showPoints ? 80 : 0)}px` }}>
+      <div style={{
+        minWidth: `${(deltaColPresent ? 320 : 280)
+          + (hasSpectatorTracking ? 56 : 0) + (hasStreakCol ? 72 : 0)
+          + (statCols.length + extraCols.length) * 72 + (showPoints ? 80 : 0)}px`,
+      }}>
         {/* Legend */}
         {hasDelta && lastEventTitle && (
           <div className="px-4 py-2 border-b border-white/[0.04] flex items-center gap-1.5">
@@ -229,6 +245,29 @@ export default function SeriesStandingsTable({
                   pointsPer={participationPoints}
                 />
               </div>
+              {hasSpectatorTracking && (
+                <div className="text-center">
+                  <span className="text-sm text-gray-300 tabular-nums leading-tight">
+                    {row.spectatorParticipations > 0
+                      ? row.spectatorParticipations.toLocaleString("de-DE")
+                      : <span className="text-gray-700">–</span>}
+                  </span>
+                </div>
+              )}
+              {hasStreakCol && (
+                <div className="text-center">
+                  {(dominionStreaks?.[row.userId] ?? 0) > 0 ? (
+                    <span
+                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-orange-500/10 border border-orange-500/25 text-[11px] font-semibold text-orange-400"
+                      title={dominionThreshold ? `Noch ${Math.max(dominionThreshold - dominionStreaks![row.userId], 0)}x bis zum Dominion Bonus` : undefined}
+                    >
+                      <Flame className="w-2.5 h-2.5" /> {dominionStreaks![row.userId]}{dominionThreshold ? `/${dominionThreshold}` : ""}
+                    </span>
+                  ) : (
+                    <span className="text-gray-700">–</span>
+                  )}
+                </div>
+              )}
               {statCols.map(s => (
                 <div key={s.field} className="text-center">
                   <StatDelta
@@ -321,6 +360,14 @@ export default function SeriesStandingsTable({
                   {row.disqualifiedEventCount > 0 && (
                     <span className="ml-1.5 shrink-0" title={`Bei ${row.disqualifiedEventCount} Event${row.disqualifiedEventCount > 1 ? "s" : ""} disqualifiziert`}>
                       <Ban className="w-3 h-3 text-gray-500" />
+                    </span>
+                  )}
+                  {(dominionStreaks?.[row.userId] ?? 0) > 0 && (
+                    <span
+                      className="ml-1.5 shrink-0 inline-flex items-center gap-0.5 px-1 py-0.5 rounded-full bg-orange-500/10 border border-orange-500/25 text-[9px] font-semibold text-orange-400"
+                      title={dominionThreshold ? `Dominion-Streak: noch ${Math.max(dominionThreshold - dominionStreaks![row.userId], 0)}x bis zum Bonus` : "Dominion-Streak"}
+                    >
+                      <Flame className="w-2.5 h-2.5" /> {dominionStreaks![row.userId]}
                     </span>
                   )}
                 </span>
