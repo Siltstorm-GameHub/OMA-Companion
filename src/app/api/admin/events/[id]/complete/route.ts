@@ -9,6 +9,7 @@ import { recomputeWanderpocalHolders } from "@/lib/recompute-wanderpocal";
 import { awardEventPokal } from "@/lib/award-pokal";
 import { resolveEventPredictions } from "@/lib/predictions";
 import { createPollsForEvent, parsePollsConfigJson } from "@/lib/event-polls";
+import { recomputeSeriesDominionBonus } from "@/lib/dominion-bonus";
 import { announceEventResults } from "@/lib/discord-events";
 import { isEventHidden } from "@/lib/event-visibility";
 
@@ -767,8 +768,6 @@ async function completeEvent(req: NextRequest, eventId: string) {
   let updatedStandings: SeriesStandings | null = null;
   let appliedAggregatedStats: Record<string, Record<string, number>> = {};
   let pollParticipationSeriesReward: { userId: string; points: number }[] = [];
-  type DominionChange = { streakBefore: number; streakAfter: number; bonusAwarded: boolean; coins: number; seriesPoints: number };
-  let dominionChanges: Record<string, DominionChange> = {};
   let seriesContrib: {
     participations: string[];
     statFieldsByUser: Record<string, Record<string, number>>;
@@ -1076,85 +1075,10 @@ async function completeEvent(req: NextRequest, eventId: string) {
     }
 
     // ── Dominion Bonus ───────────────────────────────────────────────────────────
-    const dominionCfg = statCfg.dominionBonus;
-
-    const dominionTriggerStats = dominionCfg?.triggerStats ?? (dominionCfg?.triggerStat ? [dominionCfg.triggerStat] : []);
-    const streakKey = `_streak_[${dominionTriggerStats.join(",")}]`;
-
-    if (dominionCfg?.enabled && dominionTriggerStats.length > 0) {
-      const allUserIds = [...new Set([...event.registrations.map(r => r.userId), ...Object.keys(raw)])];
-
-      // Re-Edit: roll back previous dominion changes
-      if (isReEdit) {
-        const oldChanges = (oldCompletion.dominionChanges ?? {}) as Record<string, DominionChange>;
-        for (const [userId, ch] of Object.entries(oldChanges)) {
-          // Undo streak delta
-          const streakDelta = ch.streakAfter - ch.streakBefore;
-          addToUser(userId, streakKey, -streakDelta);
-          // Undo bonus
-          if (ch.bonusAwarded) {
-            addToUser(userId, "Dominion Bonus", -1);
-            if (ch.seriesPoints > 0) addToUser(userId, "Dominion Bonus Punkte", -ch.seriesPoints);
-          }
-        }
-      }
-
-      for (const userId of allUserIds) {
-        if (excludedSet.has(userId)) continue; // ausgeschlossene User: Streak bleibt unangetastet, kein Bonus
-        const userRow = raw[userId] ?? {};
-        const streakBefore = userRow[streakKey] ?? 0;
-
-        // Did this user get +1 in ANY of the trigger stats this event?
-        const gotTrigger = dominionTriggerStats.some(t => {
-          if (t === "Teilnahmen") return event.registrations.some(r => r.userId === userId && r.role === "player");
-          if (t === "Zuschauer-Teilnahmen") return (body.spectatorAttendedIds ?? []).includes(userId);
-          const pollMatch = eventPollRewards.find(ep => ep.label === t);
-          if (pollMatch) return pollMatch.winnerIds.includes(userId);
-          // Regulärer Pro-Runde-Stat (z.B. "Siege"), wie er auch im Trigger-Stat-Picker der
-          // Admin-Konfiguration zur Auswahl steht (siehe SeriesDetailClient.tsx, statRows) — NICHT
-          // appliedAggregatedStats, das nur für statCfg.aggregatedStatFields befüllt wird, ein Feld,
-          // das aktuell in keiner Admin-UI gesetzt werden kann und daher immer leer bleibt.
-          if ((userStats[userId]?.[t] ?? 0) > 0) return true;
-          if (winnerTargetKeys.includes(t) && eventWinnerIds.includes(userId)) return true;
-          if (forcePollPhase) return false; // Umfrage-Ergebnisse noch nicht bestätigt, siehe oben
-          const pollResult = (body.pollResults ?? []).find(p => p.label === t);
-          if (pollResult) return (pollResult.winnerIds ?? []).includes(userId);
-          return false;
-        });
-
-        let streakAfter: number;
-        let bonusAwarded = false;
-
-        if (gotTrigger) {
-          streakAfter = streakBefore + 1;
-          if (streakAfter >= dominionCfg.threshold) {
-            // Award bonus
-            bonusAwarded = true;
-            streakAfter = 0; // reset after bonus
-            addToUser(userId, "Dominion Bonus", 1);
-            if (dominionCfg.seriesPoints > 0) {
-              addToUser(userId, "Dominion Bonus Punkte", dominionCfg.seriesPoints);
-              if (statCfg.transferToGlobalRanking) {
-                applyRankDelta(userId, dominionCfg.seriesPoints, `[Rang-Punkte] Dominion Bonus: ${event.series!.name}`);
-              }
-            }
-            if (dominionCfg.coins > 0) {
-              applyCoinDelta(userId, dominionCfg.coins, `[Münzen] Dominion Bonus: ${event.series!.name}`);
-            }
-          }
-        } else {
-          streakAfter = 0; // reset on miss
-        }
-
-        // Update streak in standings
-        const streakDelta = streakAfter - streakBefore;
-        if (streakDelta !== 0) addToUser(userId, streakKey, streakDelta);
-
-        if (streakBefore !== streakAfter || bonusAwarded) {
-          dominionChanges[userId] = { streakBefore, streakAfter, bonusAwarded, coins: dominionCfg.coins, seriesPoints: dominionCfg.seriesPoints };
-        }
-      }
-    }
+    // Wird NICHT mehr hier pro-Event inkrementell berechnet (das führte bei nachträglich
+    // korrigierten früheren Events zu falscher zeitlicher Reihenfolge) — stattdessen läuft nach dem
+    // Abschluss-Transaktion unten recomputeSeriesDominionBonus(), das die komplette Event-Historie
+    // der Reihe chronologisch nach event.startAt neu durchrechnet, siehe dominion-bonus.ts.
 
     seriesContrib = {
       participations: newParticipations,
@@ -1221,7 +1145,8 @@ async function completeEvent(req: NextRequest, eventId: string) {
     eventPollRewards:        eventPollRewards.length > 0 ? eventPollRewards : null,
     pollParticipationReward: pollParticipationReward.length > 0 ? pollParticipationReward : null,
     pollParticipationSeriesReward: pollParticipationSeriesReward.length > 0 ? pollParticipationSeriesReward : null,
-    dominionChanges:         Object.keys(dominionChanges).length > 0 ? dominionChanges : null,
+    // dominionChanges wird NICHT hier gesetzt — recomputeSeriesDominionBonus() unten schreibt es
+    // (chronologisch über die ganze Reihe neu berechnet) direkt in die DB, siehe dominion-bonus.ts.
     lockedAt:                new Date().toISOString(),
   };
 
@@ -1249,6 +1174,17 @@ async function completeEvent(req: NextRequest, eventId: string) {
         })]
       : []),
   ]);
+
+  // Dominion Bonus: komplette Event-Historie der Reihe chronologisch (event.startAt) neu berechnen —
+  // muss NACH der obigen Transaktion laufen, da hier alle Events der Reihe frisch aus der DB gelesen
+  // werden (inkl. der gerade eben gespeicherten completionData dieses Events). Siehe dominion-bonus.ts.
+  if (event.seriesId) {
+    try {
+      await recomputeSeriesDominionBonus(event.seriesId);
+    } catch (err) {
+      console.error("[Dominion Bonus] Neuberechnung fehlgeschlagen:", err);
+    }
+  }
 
   // Event-Gesamtsieger-Vorhersagen auswerten — beim ersten Abschluss, oder erneut beim Re-Edit,
   // falls sich der Sieger nachträglich geändert hat (Pott wird dann automatisch zurückgebucht
