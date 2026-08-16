@@ -143,6 +143,24 @@ export default function SeriesStandingsTable({
   const hasDelta = !!lastEventDelta && Object.keys(lastEventDelta).length > 0;
   const hasStreakCol = !!dominionStreaks && Object.keys(dominionStreaks).length > 0;
 
+  // Streak-Spalte wird direkt hinter "Dominion Bonus" einsortiert (nicht als eigener fester Slot) —
+  // bleibt Dominion Bonus dort, wo es aus fullExtraCols kommt, folgt die Streak unmittelbar danach.
+  // Fällt "Dominion Bonus" aus irgendeinem Grund nicht unter extraCols, wird die Streak sicherheitshalber
+  // trotzdem angehängt, statt komplett zu verschwinden.
+  type ExtraEntry = { type: "field"; field: string } | { type: "streak" };
+  const extraEntries: ExtraEntry[] = [];
+  {
+    let streakInserted = false;
+    for (const f of extraCols) {
+      extraEntries.push({ type: "field", field: f });
+      if (hasStreakCol && f === "Dominion Bonus") {
+        extraEntries.push({ type: "streak" });
+        streakInserted = true;
+      }
+    }
+    if (hasStreakCol && !streakInserted) extraEntries.push({ type: "streak" });
+  }
+
   const statColW = "4.5rem";
   const fullGridCols = [
     "2.5rem",   // rank
@@ -150,9 +168,8 @@ export default function SeriesStandingsTable({
     "1fr",      // player
     "3.5rem",   // Mitspieler (bzw. "Events" kombiniert)
     hasSpectatorTracking ? "3.5rem" : "0px", // Zuschauer
-    hasStreakCol ? "4.5rem" : "0px", // Dominion-Streak
     ...statCols.map(() => statColW),
-    ...extraCols.map(() => statColW),
+    ...extraEntries.map(() => statColW),
     ...(showPoints ? ["5rem"] : []),
   ].filter(c => c !== "0px").join(" ");
 
@@ -170,17 +187,16 @@ export default function SeriesStandingsTable({
       { label: "Spieler", cls: "" },
       { label: hasSpectatorTracking ? "Mitspieler" : "Events", cls: "text-center" },
       ...(hasSpectatorTracking ? [{ label: "Zuschauer", cls: "text-center" }] : []),
-      ...(hasStreakCol ? [{ label: "Streak", cls: "text-center" }] : []),
       ...statCols.map(s => ({ label: s.field, cls: "text-center" })),
-      ...extraCols.map(f => ({ label: f, cls: "text-center" })),
+      ...extraEntries.map(e => ({ label: e.type === "streak" ? "Streak" : e.field, cls: "text-center" })),
       ...(showPoints ? [{ label: "Punkte", cls: "text-right" }] : []),
     ];
 
     return (
       <div style={{
         minWidth: `${(deltaColPresent ? 320 : 280)
-          + (hasSpectatorTracking ? 56 : 0) + (hasStreakCol ? 72 : 0)
-          + (statCols.length + extraCols.length) * 72 + (showPoints ? 80 : 0)}px`,
+          + (hasSpectatorTracking ? 56 : 0)
+          + (statCols.length + extraEntries.length) * 72 + (showPoints ? 80 : 0)}px`,
       }}>
         {/* Legend */}
         {hasDelta && lastEventTitle && (
@@ -254,20 +270,6 @@ export default function SeriesStandingsTable({
                   </span>
                 </div>
               )}
-              {hasStreakCol && (
-                <div className="text-center">
-                  {(dominionStreaks?.[row.userId] ?? 0) > 0 ? (
-                    <span
-                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-orange-500/10 border border-orange-500/25 text-[11px] font-semibold text-orange-400"
-                      title={dominionThreshold ? `Noch ${Math.max(dominionThreshold - dominionStreaks![row.userId], 0)}x bis zum Dominion Bonus` : undefined}
-                    >
-                      <Flame className="w-2.5 h-2.5" /> {dominionStreaks![row.userId]}{dominionThreshold ? `/${dominionThreshold}` : ""}
-                    </span>
-                  ) : (
-                    <span className="text-gray-700">–</span>
-                  )}
-                </div>
-              )}
               {statCols.map(s => (
                 <div key={s.field} className="text-center">
                   <StatDelta
@@ -277,16 +279,29 @@ export default function SeriesStandingsTable({
                   />
                 </div>
               ))}
-              {extraCols.map(f => (
-                <div key={f} className="text-center">
+              {extraEntries.map((e, i) => e.type === "streak" ? (
+                <div key={`streak-${i}`} className="text-center">
+                  {(dominionStreaks?.[row.userId] ?? 0) > 0 ? (
+                    <span
+                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-orange-500/10 border border-orange-500/25 text-[11px] font-semibold text-orange-400"
+                      title={dominionThreshold ? `Noch ${Math.max(dominionThreshold - dominionStreaks![row.userId], 0)}x bis zum Dominion Bonus` : undefined}
+                    >
+                      <Flame className="w-2.5 h-2.5" /> {dominionStreaks![row.userId]}
+                    </span>
+                  ) : (
+                    <span className="text-gray-700">–</span>
+                  )}
+                </div>
+              ) : (
+                <div key={e.field} className="text-center">
                   <div className="flex flex-col items-center">
                     <span className="text-sm text-purple-300 tabular-nums leading-tight">
-                      {(row.stats[f] ?? 0) > 0
-                        ? row.stats[f].toLocaleString("de-DE")
+                      {(row.stats[e.field] ?? 0) > 0
+                        ? row.stats[e.field].toLocaleString("de-DE")
                         : <span className="text-gray-700">–</span>}
                     </span>
-                    {delta?.statDeltas[f] != null && delta.statDeltas[f] > 0 && (
-                      <span className="text-[9px] text-emerald-500 tabular-nums leading-none">+{delta.statDeltas[f]}</span>
+                    {delta?.statDeltas[e.field] != null && delta.statDeltas[e.field] > 0 && (
+                      <span className="text-[9px] text-emerald-500 tabular-nums leading-none">+{delta.statDeltas[e.field]}</span>
                     )}
                   </div>
                 </div>

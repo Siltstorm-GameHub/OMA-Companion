@@ -313,10 +313,17 @@ export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPo
   // Dominion Bonus: nur tatsächlich ausgelöste Treffer dieses Events fließen als Stat ein (die reine
   // Streak-Fortschreibung ohne Bonus ist ein interner Zustand, kein anzeigbarer Stat). Ausgeschlossene
   // User können laut complete/route.ts nie einen Bonus auslösen — hier zur Sicherheit nochmals geprüft.
+  // dominionBonusPts fließt unten zusätzlich in pointsByUser ein — "Dominion Bonus Punkte" ist zwar
+  // auch ein normaler Stat-Feld-Eintrag (für die Spalte in der Tabelle), aber KEIN Feld aus cfg.stats,
+  // die generische Stat-Punkte-Schleife dort würde es also sonst nie mitzählen.
+  const dominionBonusPts: Record<string, number> = {};
   for (const [uid, change] of Object.entries(cd.dominionChanges ?? {})) {
     if (!change.bonusAwarded || excludedSet.has(uid)) continue;
     addEv(uid, "Dominion Bonus", 1);
-    if (change.seriesPoints > 0) addEv(uid, "Dominion Bonus Punkte", change.seriesPoints);
+    if (change.seriesPoints > 0) {
+      addEv(uid, "Dominion Bonus Punkte", change.seriesPoints);
+      dominionBonusPts[uid] = (dominionBonusPts[uid] ?? 0) + change.seriesPoints;
+    }
   }
 
   const allUids = new Set([
@@ -330,7 +337,8 @@ export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPo
     const es = evStats[uid] ?? {};
     let pts = part * cfg.participationPoints
       + spectatorPart * (cfg.spectatorParticipationPoints ?? 0)
-      + (pollBonusPts[uid] ?? 0);
+      + (pollBonusPts[uid] ?? 0)
+      + (dominionBonusPts[uid] ?? 0);
     for (const { field, pointsPer } of cfg.stats) {
       pts += (es[field] ?? 0) * pointsPer;
     }

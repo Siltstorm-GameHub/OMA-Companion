@@ -257,12 +257,12 @@ export default function FfaView({
                                 className="inline-flex items-center gap-1 text-[10px] font-semibold text-orange-400 bg-orange-500/10 px-1.5 py-0.5 rounded-full shrink-0"
                                 title={dominionResultByUser[r.userId].bonusAwarded
                                   ? "Dominion Bonus hier ausgelöst!"
-                                  : `Dominion-Streak hier +1${dominionThreshold ? ` (${dominionResultByUser[r.userId].streakAfter}/${dominionThreshold})` : ""}`}
+                                  : `Dominion-Streak hier +1${dominionThreshold ? ` — jetzt bei ${dominionResultByUser[r.userId].streakAfter} von ${dominionThreshold}` : ""}`}
                               >
                                 <Flame className="w-2.5 h-2.5" />
                                 {dominionResultByUser[r.userId].bonusAwarded
                                   ? "Bonus!"
-                                  : `+1${dominionThreshold ? ` (${dominionResultByUser[r.userId].streakAfter}/${dominionThreshold})` : ""}`}
+                                  : dominionResultByUser[r.userId].streakAfter}
                               </span>
                             )}
                           </div>
