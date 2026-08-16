@@ -6,15 +6,13 @@ import { RecentResultsBanner, type RecentResultEvent } from "@/components/Recent
 import { DailyMessageBanner } from "@/components/DailyMessageBanner";
 import WhatsAppCommunityBanner from "@/components/WhatsAppCommunityBanner";
 import { DailyPollBanner } from "@/components/DailyPollBanner";
-import PartnerLiveBanner from "@/components/PartnerLiveBanner";
-import CommunityLiveBanner from "@/components/CommunityLiveBanner";
 import CoinIcon from "@/components/CoinIcon";
 
 type DailyMessage = { id: string; title: string; content: string; endDate: string };
 export type JobReminderData = {
   current: { accruedCoins: number; capped: boolean; label: string; emoji: string } | null;
 };
-type SlideId = "job" | "results" | "message" | "polls" | "clipContest" | "partner" | "community" | "whatsapp";
+type SlideId = "job" | "results" | "message" | "polls" | "clipContest" | "whatsapp";
 
 function JobReminderSlide({ jobReminder, fill }: { jobReminder: JobReminderData; fill: boolean }) {
   return (
@@ -60,9 +58,10 @@ function JobReminderSlide({ jobReminder, fill }: { jobReminder: JobReminderData;
  * gehen) und melden ihre tatsächliche Sichtbarkeit zurück. Der Slider
  * rotiert und zeigt Dots nur für bestätigt sichtbare Banner.
  *
- * Bündelt ausnahmslos alle Dashboard-Hinweise (Events, Job-Reminder, Umfragen,
- * Clip-Contest, Live-Streams, Mitteilungen, WhatsApp) in einer einzigen Kachel
- * zwischen Hero-Section und den Content-Kacheln.
+ * Bündelt alle Dashboard-Hinweise außer den Live-Stream-Bannern (Events, Job-Reminder,
+ * Umfragen, Clip-Contest, Mitteilungen, WhatsApp) in einer einzigen Kachel zwischen
+ * Hero-Section und den Content-Kacheln. Partner-/Community-Live-Streams bleiben eigene,
+ * dauerhaft sichtbare Blöcke (Video-Embeds passen nicht in eine kompakte Rotation).
  */
 export function PromoBannerCarousel({
   recentResultEvents,
@@ -86,8 +85,6 @@ export function PromoBannerCarousel({
     if (dailyMessage) ids.push("message");
     ids.push("polls");
     if (hasClipContest) ids.push("clipContest");
-    ids.push("partner");
-    ids.push("community");
     ids.push("whatsapp");
     return ids;
   }, [recentResultEvents.length, dailyMessage, jobReminder, hasClipContest]);
@@ -156,12 +153,6 @@ export function PromoBannerCarousel({
             {clipContestSlot}
           </div>
         )}
-        <div className={slideClass("partner")} aria-hidden={activeId !== "partner"}>
-          <PartnerLiveBanner onVisibilityChange={makeHandler("partner")} fill />
-        </div>
-        <div className={slideClass("community")} aria-hidden={activeId !== "community"}>
-          <CommunityLiveBanner onVisibilityChange={makeHandler("community")} fill />
-        </div>
         <div className={slideClass("whatsapp")} aria-hidden={activeId !== "whatsapp"}>
           <WhatsAppCommunityBanner onVisibilityChange={makeHandler("whatsapp")} fill />
         </div>
