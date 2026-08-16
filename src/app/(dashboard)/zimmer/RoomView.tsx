@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { ShoppingBag, Pencil, Briefcase, Lock } from "lucide-react";
@@ -40,9 +40,23 @@ interface Props {
  * Klammer um die Bühne: hält offen, welches Overlay gerade sichtbar ist.
  * Bewusst dünn — die Server-Seite liefert alle Daten, hier wird nur geschaltet.
  */
+// Grob abgestimmt auf FitCamera's Einschwingzeit in RoomStage3D.tsx
+// (exponentielles Einschwingen mit speed=6 erreicht nach ~3 Zeitkonstanten,
+// also ~500ms, praktisch den Zielzoom) — das Modal für Monitor/Vitrine soll
+// erst erscheinen, wenn die Kamera sichtbar herangefahren ist, statt sofort
+// aufzureißen und die laufende Zoom-Animation zu verdecken.
+const ZOOM_REVEAL_DELAY_MS = 550;
+
 export default function RoomView({
   state, core, details, readOnly, owned, job, trophySection, settingsSection,
 }: Props) {
+  // Treibt die Kamera-Zoom-Animation in RoomStage3D — wird SOFORT beim Klick
+  // gesetzt, damit die Kamera direkt losfährt.
+  const [focusTarget, setFocusTarget] = useState<InteractTarget | null>(null);
+  // Treibt die tatsächliche Sichtbarkeit der Modals — bei Monitor/Vitrine erst
+  // nach ZOOM_REVEAL_DELAY_MS gesetzt (siehe closeOverlay/handleInteract),
+  // damit man den Zoom tatsächlich sieht, statt dass das Modal ihn sofort
+  // verdeckt. Bei der Jobbörse (kein Zoom-Effekt) sofort.
   const [openTarget, setOpenTarget] = useState<InteractTarget | null>(null);
   // Welcher Monitor-Typ das Profil-Popup geöffnet hat — bestimmt, wie dessen
   // Rahmen aussieht (Röhre/Flachbildschirm/144Hz). Nur bei target "crt" gesetzt.
@@ -51,14 +65,45 @@ export default function RoomView({
   // Vitrine (öffnet die Gesamtübersicht statt eines einzelnen Fachs).
   const [openSlotIndex, setOpenSlotIndex] = useState<number | null>(null);
   const [editing, setEditing]       = useState(false);
+  const pendingReveal = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function handleInteract(target: InteractTarget, itemKey?: string, slotIndex?: number) {
     // Leeres Fach in einem fremden Zimmer: nichts zum Ansehen, nichts zum
     // Bearbeiten — kein Modal aufreißen.
     if (target === "vitrine" && slotIndex != null && readOnly && !core.vitrine.slots[slotIndex]) return;
-    setOpenTarget(target);
+
+    if (pendingReveal.current) { clearTimeout(pendingReveal.current); pendingReveal.current = null; }
+
+    setFocusTarget(target);
     setOpenMonitorKey(itemKey);
     setOpenSlotIndex(slotIndex ?? null);
+
+    // Nur Monitor/Vitrine haben einen Zoom-Effekt (siehe FitCamera in
+    // RoomStage3D.tsx) — die Jobbörse öffnet weiterhin sofort.
+    if (target === "crt" || target === "vitrine") {
+      pendingReveal.current = setTimeout(() => {
+        setOpenTarget(target);
+        pendingReveal.current = null;
+      }, ZOOM_REVEAL_DELAY_MS);
+    } else {
+      setOpenTarget(target);
+    }
+  }
+
+  function closeOverlay() {
+    if (pendingReveal.current) { clearTimeout(pendingReveal.current); pendingReveal.current = null; }
+    setFocusTarget(null);
+    setOpenTarget(null);
+  }
+
+  // Direkter Sprung in die Jobbörse (Lohn-Widget, Aktionsleiste, Ziel-Teaser)
+  // — kein Zoom-Effekt, aber ein noch laufender Reveal-Timer von einem eben
+  // angeklickten Monitor/der Vitrine muss trotzdem verworfen werden, sonst
+  // reißt er später das falsche Modal wieder auf.
+  function openJobboard() {
+    if (pendingReveal.current) { clearTimeout(pendingReveal.current); pendingReveal.current = null; }
+    setFocusTarget("jobboard");
+    setOpenTarget("jobboard");
   }
 
   // Nächstes erreichbares Ziel: der Job mit den wenigsten fehlenden Objekten,
@@ -93,7 +138,7 @@ export default function RoomView({
         vitrine={core.vitrine}
         vitrineReadOnly={readOnly}
         onInteract={handleInteract}
-        focusTarget={openTarget}
+        focusTarget={focusTarget}
       />
 
       {/* ── Lohn ─────────────────────────────────────────────────────
@@ -104,7 +149,7 @@ export default function RoomView({
           current={job.current}
           wageCapHours={job.wageCapHours}
           multiplierPct={job.wageMultiplierPct}
-          onOpenBoard={() => setOpenTarget("jobboard")}
+          onOpenBoard={openJobboard}
           onClaimed={() => { /* router.refresh() passiert im Widget */ }}
         />
       )}
@@ -115,7 +160,7 @@ export default function RoomView({
       {nextJob && (
         <button
           type="button"
-          onClick={() => setOpenTarget("jobboard")}
+          onClick={openJobboard}
           className="w-full glass card-shine rounded-2xl px-4 py-2.5 flex items-center gap-2.5 text-left hover:bg-white/[0.03] transition-colors"
         >
           <Lock className="w-3.5 h-3.5 text-teal-400 shrink-0" />
@@ -150,7 +195,7 @@ export default function RoomView({
             </Link>
             <button
               type="button"
-              onClick={() => setOpenTarget("jobboard")}
+              onClick={openJobboard}
               className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold
                          bg-teal-500/15 border border-teal-500/25 text-teal-300 hover:bg-teal-500/25 transition-colors"
             >
@@ -162,7 +207,7 @@ export default function RoomView({
 
       <CrtProfileModal
         open={openTarget === "crt"}
-        onClose={() => setOpenTarget(null)}
+        onClose={closeOverlay}
         monitorKey={openMonitorKey}
         displayName={core.displayName}
         readOnly={readOnly}
@@ -174,18 +219,17 @@ export default function RoomView({
 
       <VitrineModal
         open={openTarget === "vitrine" && openSlotIndex === null}
-        onClose={() => setOpenTarget(null)}
+        onClose={closeOverlay}
         displayName={core.displayName}
         readOnly={readOnly}
-        details={details}
-        vitrineUpdatedAt={core.vitrine.updatedAt}
-        trophySection={trophySection}
+        vitrine={core.vitrine}
+        onSlotClick={setOpenSlotIndex}
       />
 
       <VitrineSlotModal
         key={openSlotIndex ?? "none"}
         open={openTarget === "vitrine" && openSlotIndex !== null}
-        onClose={() => setOpenTarget(null)}
+        onClose={closeOverlay}
         slotIndex={openSlotIndex}
         item={openSlotIndex !== null ? core.vitrine.slots[openSlotIndex] ?? null : null}
         readOnly={readOnly}
@@ -194,7 +238,7 @@ export default function RoomView({
 
       <JobBoardSheet
         open={openTarget === "jobboard"}
-        onClose={() => setOpenTarget(null)}
+        onClose={closeOverlay}
         readOnly={readOnly}
         onChanged={() => { /* die Sheet aktualisiert sich selbst und ruft router.refresh() */ }}
       />

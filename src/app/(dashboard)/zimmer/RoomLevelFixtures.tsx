@@ -150,14 +150,42 @@ function RollerShutter({ closed }: { closed: number }) {
 }
 
 /**
+ * Das eigentliche Licht des Fensters — bewusst von der sichtbaren Geometrie
+ * (RoomWindow3D) getrennt: die Kamera blendet je nach Drehwinkel immer zwei
+ * der vier Wände aus (siehe hiddenWalls in RoomStage3D.tsx), damit man beim
+ * Rundherumdrehen nie gegen eine nahe Wand schaut. Hinge das Licht am
+ * gerenderten Fenster-Mesh, würde der Raum bei jeder Drehung, die die
+ * Rückwand ausblendet, ein Stück dunkler — falsch, das Licht kommt ja
+ * weiterhin von draußen, man sieht nur gerade die Wand nicht. Wird deshalb
+ * IMMER gerendert (siehe RoomCanvas), unabhängig von hiddenWalls — nur der
+ * Rolladen (`closed`) schaltet es tatsächlich aus.
+ */
+export function WindowLight({ level, closed }: { level: number; closed: boolean }) {
+  const light = WINDOW_LIGHT[level] ?? WINDOW_LIGHT[0];
+  const world = useMemo(
+    () => gridToWorld("wall_back", WINDOW_GEOM.x0, WINDOW_GEOM.y0, WINDOW_GEOM.w, WINDOW_GEOM.h),
+    [],
+  );
+  if (closed) return null;
+  return (
+    <pointLight
+      position={[world.x, world.y + 0.2, world.z + 1.4]}
+      color={light.color} intensity={light.intensity} distance={10} decay={1.8}
+    />
+  );
+}
+
+/**
  * Fenster auf der Rückwand — Position/Größe aus WINDOW_GEOM, Rahmenfarbe und
- * Ausblick werten sich mit `level` (0..3) automatisch auf. Wirft echtes
- * Licht in den Raum (siehe WINDOW_LIGHT), außer der Rolladen ist zu — `closed`
- * ist wie `on` bei der Deckenlampe ein reiner UI-Schalter, kein Katalogwert.
+ * Ausblick werten sich mit `level` (0..3) automatisch auf. Das tatsächliche
+ * Licht kommt von `WindowLight` (immer gerendert, siehe dort) — hier nur die
+ * sichtbare Geometrie plus ein fester, von der Zimmerstufe UNABHÄNGIGER
+ * Glührand ums Glas: macht auch bei Stufe 0/1 (dunkle Dämmerfarben, kaum
+ * Bloom-Schwelle erreicht) sofort erkennbar, dass HIER die Lichtquelle sitzt
+ * — nicht nur ein gemaltes Bild.
  */
 export function RoomWindow3D({ level, closed }: { level: number; closed: boolean }) {
   const frame = WINDOW_FRAME[level] ?? WINDOW_FRAME[0];
-  const light = WINDOW_LIGHT[level] ?? WINDOW_LIGHT[0];
   const world = useMemo(
     () => gridToWorld("wall_back", WINDOW_GEOM.x0, WINDOW_GEOM.y0, WINDOW_GEOM.w, WINDOW_GEOM.h),
     [],
@@ -169,11 +197,33 @@ export function RoomWindow3D({ level, closed }: { level: number; closed: boolean
         <meshStandardMaterial color={frame.base} emissive={frame.base} emissiveIntensity={0.4} roughness={0.5} metalness={0.2} />
       </RoundedBox>
       <WindowGlass level={level} />
+      {/* Fester Glührand — unabhängig von SKY_COLOR/level, damit "hier kommt
+          Licht her" auch bei den dunklen Dämmerungs-/Abendtönen sofort
+          ablesbar bleibt. Vier schmale Streifen entlang der Scheibenkante
+          statt eines Rings, damit die Form zum rechteckigen Fenster passt. */}
+      {!closed && (
+        <group position={[0, 0, 0.066]}>
+          {[
+            [0, WINDOW_GEOM.h * 0.86 / 2, WINDOW_GEOM.w * 0.9, 0.025],
+            [0, -WINDOW_GEOM.h * 0.86 / 2, WINDOW_GEOM.w * 0.9, 0.025],
+          ].map(([x, y, w, h], i) => (
+            <mesh key={`h${i}`} position={[x, y, 0]}>
+              <planeGeometry args={[w, h]} />
+              <meshBasicMaterial color="#fff3d0" transparent opacity={0.5} toneMapped={false} />
+            </mesh>
+          ))}
+          {[
+            [WINDOW_GEOM.w * 0.86 / 2, 0, 0.025, WINDOW_GEOM.h * 0.86],
+            [-WINDOW_GEOM.w * 0.86 / 2, 0, 0.025, WINDOW_GEOM.h * 0.86],
+          ].map(([x, y, w, h], i) => (
+            <mesh key={`v${i}`} position={[x, y, 0]}>
+              <planeGeometry args={[w, h]} />
+              <meshBasicMaterial color="#fff3d0" transparent opacity={0.5} toneMapped={false} />
+            </mesh>
+          ))}
+        </group>
+      )}
       <RollerShutter closed={closed ? 1 : 0} />
-      {/* Echtes Licht, das ins Zimmer hineinfällt — deutlich vor die
-          Scheibe versetzt (z=1.4), sonst beleuchtet es nur sich selbst.
-          Bei geschlossenem Rolladen komplett aus. */}
-      {!closed && <pointLight position={[0, 0.2, 1.4]} color={light.color} intensity={light.intensity} distance={10} decay={1.8} />}
       {/* Fensterbank */}
       <RoundedBox
         args={[WINDOW_GEOM.w * 1.15, 0.08, 0.22]} radius={0.02}
@@ -324,6 +374,18 @@ export function CeilingLamp3D({ level, on }: { level: number; on: boolean }) {
             castShadow shadow-mapSize-width={512} shadow-mapSize-height={512}
             shadow-bias={-0.003}
           />
+        )}
+        {/* Fester Glühpool unter der Lampe — unabhängig von der stufen-
+            abhängigen `light.intensity` (die steuert nur, wie weit das Licht
+            den RAUM erhellt). Ohne das ist bei Stufe 0/1 (kleiner `distance`,
+            siehe CEILING_LAMP_LIGHT) kaum zu erkennen, dass die Lampe
+            überhaupt brennt — der sichtbare Pool macht die Quelle selbst
+            immer klar erkennbar, auch wenn sie den Raum kaum ausleuchtet. */}
+        {on && (
+          <mesh position={[0, -0.06, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <circleGeometry args={[0.5, 24]} />
+            <meshBasicMaterial color="#ffe9b8" transparent opacity={0.3} toneMapped={false} />
+          </mesh>
         )}
       </group>
     </group>

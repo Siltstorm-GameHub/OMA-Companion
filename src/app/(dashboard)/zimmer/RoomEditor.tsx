@@ -5,9 +5,9 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  Save, X, Loader2, FlipHorizontal2, PackageOpen, Package, Lock, Paintbrush,
+  Save, X, Loader2, FlipHorizontal2, PackageOpen, Package, Lock,
 } from "lucide-react";
-import { getRoomItem, isFixed, isSurface, ROOM_ITEMS } from "@/lib/room-items";
+import { getRoomItem, isFixed } from "@/lib/room-items";
 import { legalCells, type PlacedItem, type RoomState, type RoomSurface, type StoredItem } from "@/lib/room-layout";
 import type { RoomProfileCore } from "@/lib/room-profile-data";
 import { RoomItemPreview } from "./RoomItemSprite";
@@ -23,8 +23,10 @@ const RoomStage3D = dynamic(() => import("./RoomStage3D"), {
 interface Props {
   state:  RoomState;
   core:   RoomProfileCore;
-  /** Besitzstand je itemKey — entscheidet, welche Tapeten/Böden wählbar sind. */
-  owned:  Record<string, number>;
+  /** Nicht mehr genutzt (Tapete/Boden werden jetzt automatisch mit der
+   *  Zimmerstufe hochgestuft, keine Kauf-/Auswahl-UI mehr) — Typ bleibt, damit
+   *  bestehende Aufrufer (RoomView.tsx) ohne Anpassung weiter kompilieren. */
+  owned?: Record<string, number>;
   onDone: () => void;
 }
 
@@ -40,22 +42,17 @@ type Selection = { id: string; from: "placed" | "stored" } | null;
  * Alles passiert auf einem Entwurf; erst "Speichern" schickt ihn zum Server,
  * der dieselben Regeln noch einmal prüft.
  */
-export default function RoomEditor({ state, core, owned, onDone }: Props) {
+export default function RoomEditor({ state, core, onDone }: Props) {
   const router = useRouter();
 
   const [placed,   setPlaced]   = useState<PlacedItem[]>(state.placed);
   const [stored,   setStored]   = useState<StoredItem[]>(state.stored);
-  const [wallpaper, setWallpaper] = useState(state.wallpaperKey);
-  const [floor,     setFloor]     = useState(state.floorKey);
   const [selection, setSelection] = useState<Selection>(null);
   const [saving,    setSaving]    = useState(false);
-  const [showSurfaces, setShowSurfaces] = useState(false);
 
   const dirty =
     JSON.stringify(placed) !== JSON.stringify(state.placed) ||
-    JSON.stringify(stored) !== JSON.stringify(state.stored) ||
-    wallpaper !== state.wallpaperKey ||
-    floor !== state.floorKey;
+    JSON.stringify(stored) !== JSON.stringify(state.stored);
 
   /** Das angehobene Möbelstück als PlacedItem-Kandidat. */
   const candidate = useMemo<PlacedItem | null>(() => {
@@ -144,19 +141,6 @@ export default function RoomEditor({ state, core, owned, onDone }: Props) {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { toast.error(data.error ?? "Speichern fehlgeschlagen"); return; }
 
-      if (wallpaper !== state.wallpaperKey || floor !== state.floorKey) {
-        const surf = await fetch("/api/room/surfaces", {
-          method:  "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body:    JSON.stringify({ wallpaperKey: wallpaper, floorKey: floor }),
-        });
-        if (!surf.ok) {
-          const d = await surf.json().catch(() => ({}));
-          toast.error(d.error ?? "Tapete/Boden konnten nicht gesetzt werden");
-          return;
-        }
-      }
-
       toast.success("Zimmer gespeichert");
       router.refresh();
       onDone();
@@ -172,7 +156,7 @@ export default function RoomEditor({ state, core, owned, onDone }: Props) {
     onDone();
   }
 
-  const draftState: RoomState = { ...state, placed, stored, wallpaperKey: wallpaper, floorKey: floor };
+  const draftState: RoomState = { ...state, placed, stored };
 
   return (
     <div className="space-y-3">
@@ -267,35 +251,6 @@ export default function RoomEditor({ state, core, owned, onDone }: Props) {
         )}
       </div>
 
-      {/* ── Tapete & Boden ──────────────────────────────────────────── */}
-      <div className="glass rounded-2xl px-4 py-3">
-        <button
-          type="button"
-          onClick={() => setShowSurfaces(v => !v)}
-          aria-expanded={showSurfaces}
-          className="w-full flex items-center gap-2 text-left"
-        >
-          <Paintbrush className="w-3.5 h-3.5 text-gray-500" />
-          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest flex-1">
-            Tapete &amp; Boden
-          </p>
-          <span className="text-[11px] text-gray-600">{showSurfaces ? "Schließen" : "Ändern"}</span>
-        </button>
-
-        {showSurfaces && (
-          <div className="mt-3 space-y-3">
-            <SurfaceRow
-              label="Tapete" category="tapete" owned={owned}
-              value={wallpaper} onChange={setWallpaper}
-            />
-            <SurfaceRow
-              label="Boden" category="bodenbelag" owned={owned}
-              value={floor} onChange={setFloor}
-            />
-          </div>
-        )}
-      </div>
-
       {/* ── Speichern / Abbrechen ───────────────────────────────────── */}
       <div className="sticky bottom-20 lg:bottom-4 z-30 safe-area-pb">
         <div className="glass-heavy rounded-2xl p-2 flex items-center gap-2">
@@ -316,42 +271,6 @@ export default function RoomEditor({ state, core, owned, onDone }: Props) {
           </button>
         </div>
       </div>
-    </div>
-  );
-}
-
-function SurfaceRow({
-  label, category, owned, value, onChange,
-}: {
-  label: string; category: "tapete" | "bodenbelag";
-  owned: Record<string, number>; value: string; onChange: (key: string) => void;
-}) {
-  // Grundausstattung (Preis 0) besitzt jeder, alles andere muss gekauft sein.
-  const options = ROOM_ITEMS.filter(
-    i => isSurface(i) && i.category === category && (i.price === 0 || (owned[i.key] ?? 0) > 0)
-  );
-
-  return (
-    <div>
-      <p className="text-[11px] text-gray-500 mb-1.5">{label}</p>
-      <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1">
-        {options.map(def => (
-          <button
-            key={def.key} type="button" onClick={() => onChange(def.key)}
-            aria-pressed={value === def.key}
-            className={cn(
-              "shrink-0 w-20 rounded-xl border p-2 flex flex-col items-center gap-1 transition-colors",
-              value === def.key ? "border-teal-500/50 bg-teal-500/10" : "border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.05]"
-            )}
-          >
-            <RoomItemPreview itemKey={def.key} size={38} />
-            <span className="text-[9px] text-gray-400 leading-tight text-center line-clamp-2">{def.label}</span>
-          </button>
-        ))}
-      </div>
-      {options.length === 1 && (
-        <p className="text-[10px] text-gray-600 mt-1">Weitere gibt es im Shop.</p>
-      )}
     </div>
   );
 }
