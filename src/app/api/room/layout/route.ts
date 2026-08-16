@@ -23,7 +23,10 @@ export async function PUT(req: NextRequest) {
     ) {
       return NextResponse.json({ error: "Ungültige Position" }, { status: 400 });
     }
-    placed.push({ id: raw.id, zone: raw.zone, x: raw.x, y: raw.y, flipped: !!raw.flipped });
+    placed.push({
+      id: raw.id, zone: raw.zone, x: raw.x, y: raw.y,
+      flipped: !!raw.flipped, rotation: Number.isFinite(raw.rotation) ? raw.rotation : 0,
+    });
   }
 
   const stored: string[] = [];
