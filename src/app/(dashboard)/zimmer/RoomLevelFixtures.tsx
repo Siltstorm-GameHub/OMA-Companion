@@ -53,13 +53,20 @@ const VIEW_IMAGE = [
   "/room-window/level3_sonnenuntergang.png",
 ] as const;
 
-function WindowGlass({ level }: { level: number }) {
+function WindowGlass({ level, closed }: { level: number; closed: boolean }) {
   const view = useTexture(VIEW_IMAGE[level] ?? VIEW_IMAGE[0]);
   return (
     <group>
+      {/* Bei geschlossenem Rolladen NICHT nur von den Lamellen verdecken
+          lassen (die Schlitze zwischen den Lamellen ließen sonst schmale
+          Streifen der Aussicht durchschimmern) — stattdessen die Aussicht
+          komplett durch dunkles Glas ersetzen, das eigentlich hinter dem
+          Rolladen liegende Fenster ist dann wirklich nicht mehr zu sehen. */}
       <mesh position={[0, 0, 0.065]}>
         <planeGeometry args={[WINDOW_GEOM.w * 0.86, WINDOW_GEOM.h * 0.86]} />
-        <meshBasicMaterial map={view} toneMapped={false} />
+        {closed
+          ? <meshStandardMaterial color="#050508" roughness={0.6} />
+          : <meshBasicMaterial map={view} toneMapped={false} />}
       </mesh>
 
       {/* Sprossen */}
@@ -82,11 +89,15 @@ function WindowGlass({ level }: { level: number }) {
  * den Raum mitbeleuchtet. Kühles, kräftiges Tageslicht bei Stufe 2, warmes
  * Abendlicht bei Stufe 3, gedämpftes Dämmerlicht bei 0/1.
  */
+// Deutlich kräftiger als vorher (0.35/0.55/1.8/1.3): seit die Grund-
+// beleuchtung des Raums (RoomLighting, RoomStage3D.tsx) stark gedämpft ist,
+// muss das Fensterlicht selbst den kompletten Unterschied zwischen offenem
+// und geschlossenem Rolladen tragen.
 const WINDOW_LIGHT = [
-  { color: "#4a3f6b", intensity: 0.35 }, // 0: Dämmerung
-  { color: "#5a6a8a", intensity: 0.55 }, // 1: Abend
-  { color: "#bcd8f5", intensity: 1.8 },  // 2: Mittag
-  { color: "#ffb98a", intensity: 1.3 },  // 3: Sonnenuntergang
+  { color: "#4a3f6b", intensity: 0.6 },  // 0: Dämmerung
+  { color: "#5a6a8a", intensity: 0.95 }, // 1: Abend
+  { color: "#bcd8f5", intensity: 2.8 },  // 2: Mittag
+  { color: "#ffb98a", intensity: 2.1 },  // 3: Sonnenuntergang
 ] as const;
 
 /**
@@ -173,7 +184,7 @@ export function RoomWindow3D({ level, closed }: { level: number; closed: boolean
       <RoundedBox args={[WINDOW_GEOM.w, WINDOW_GEOM.h, 0.08]} radius={0.03} position={[0, 0, 0.02]}>
         <meshStandardMaterial color={frame.base} emissive={frame.base} emissiveIntensity={0.4} roughness={0.5} metalness={0.2} />
       </RoundedBox>
-      <WindowGlass level={level} />
+      <WindowGlass level={level} closed={closed} />
       {/* Fester Glührand — unabhängig von SKY_COLOR/level, damit "hier kommt
           Licht her" auch bei den dunklen Dämmerungs-/Abendtönen sofort
           ablesbar bleibt. Vier schmale Streifen entlang der Scheibenkante
@@ -384,11 +395,17 @@ function Chandelier({ on }: { on: boolean }) {
  * sich herum, die Ecken bleiben dunkel. Erst ab Stufe 2 überschreitet
  * `distance` die Diagonale und flutet den ganzen Raum.
  */
+// Deutlich kräftiger als vorher (1.0/1.6/3.0/3.8): seit die Grundbeleuchtung
+// des Raums (RoomLighting, RoomStage3D.tsx) stark gedämpft ist, muss die
+// Lampe selbst den kompletten Unterschied zwischen an/aus tragen — inklusive
+// eines spürbar helleren Radius direkt um sie herum (decay=2 in CeilingLamp3D
+// sorgt ohnehin für Abfall zum Rand hin, aber mit höherer intensity fällt
+// dieser Abfall optisch viel deutlicher aus).
 const CEILING_LAMP_LIGHT = [
-  { color: "#ffe9b8", intensity: 1.0, distance: 6 },  // 0: nackte Glühbirne — kleiner Lichtkreis
-  { color: "#ffdba0", intensity: 1.6, distance: 8 },  // 1: Stoffschirm — heller, aber Ecken bleiben dunkel
-  { color: "#eaf2ff", intensity: 3.0, distance: 15 }, // 2: modernes Deckenlicht — flutet den ganzen Raum
-  { color: "#ffe9b8", intensity: 3.8, distance: 16 }, // 3: Kronleuchter — voll ausgeleuchtet
+  { color: "#ffe9b8", intensity: 1.8, distance: 6.5 }, // 0: nackte Glühbirne — kleiner, aber kräftiger Lichtkreis
+  { color: "#ffdba0", intensity: 2.8, distance: 8.5 }, // 1: Stoffschirm — heller, Ecken bleiben dunkel
+  { color: "#eaf2ff", intensity: 4.8, distance: 15 },  // 2: modernes Deckenlicht — flutet den ganzen Raum
+  { color: "#ffe9b8", intensity: 6.0, distance: 16 },  // 3: Kronleuchter — voll ausgeleuchtet
 ] as const;
 
 /**
