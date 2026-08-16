@@ -6,7 +6,6 @@ export const PAGE_LINKS: { label: string; url: string }[] = [
   { label: "Shop",             url: "/shop" },
   { label: "Profil",           url: "/profile" },
   { label: "Gaming-Zimmer",    url: "/zimmer" },
-  { label: "Level-Up-League",  url: "/lul" },
   { label: "Punkte-System",    url: "/points" },
   { label: "Quests",           url: "/quests" },
   { label: "Clip des Monats",  url: "/clip-des-monats" },

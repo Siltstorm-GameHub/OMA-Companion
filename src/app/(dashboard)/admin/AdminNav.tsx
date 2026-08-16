@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useEffect } from "react";
 import {
-  Users, LayoutDashboard, Star, Bell,
+  Users, LayoutDashboard, Bell,
   CalendarDays, Heart, Medal,
   Wrench, Users2, Megaphone, Handshake, Clapperboard, Server, Gamepad2, Sofa,
 } from "lucide-react";
@@ -42,10 +42,9 @@ const CATEGORIES: {
     label: "Events",
     icon: CalendarDays,
     minRole: "moderator",
-    prefixes: ["/admin/events", "/admin/series", "/admin/lul", "/admin/highlight-clips"],
+    prefixes: ["/admin/events", "/admin/series", "/admin/highlight-clips"],
     tabs: [
       { href: "/admin/events",          label: "Events",          icon: CalendarDays,  minRole: "moderator" },
-      { href: "/admin/lul",             label: "Level-Up-League", icon: Star,          minRole: "moderator" },
       { href: "/admin/highlight-clips", label: "Highlight Clips", icon: Clapperboard,  minRole: "moderator" },
     ],
   },

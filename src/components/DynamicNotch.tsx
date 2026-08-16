@@ -7,7 +7,7 @@ import RankedAvatar from "@/components/RankedAvatar";
 import { useSession, signOut } from "next-auth/react";
 import {
   LayoutDashboard, CalendarDays, Trophy, User,
-  ShieldCheck, Star, ShoppingBag, Heart, LogOut, AlignJustify, X,
+  ShieldCheck, ShoppingBag, Heart, LogOut, AlignJustify, X,
   type LucideIcon,
 } from "lucide-react";
 
@@ -16,7 +16,6 @@ const NAV_LEFT = [
   { label: "Dashboard", href: "/dashboard",  icon: LayoutDashboard },
   { label: "Events",    href: "/events",     icon: CalendarDays    },
   { label: "Shop",      href: "/shop",       icon: ShoppingBag     },
-  { label: "LuL",       href: "/lul",        icon: Star            },
 ];
 
 const NAV_RIGHT = [
@@ -29,7 +28,6 @@ const NAV_ALL = [
   { label: "Dashboard",      href: "/dashboard",  icon: LayoutDashboard },
   { label: "Events",         href: "/events",     icon: CalendarDays    },
   { label: "Shop",           href: "/shop",       icon: ShoppingBag     },
-  { label: "Level-Up-League",href: "/lul",        icon: Star            },
   { label: "Rangliste",      href: "/leaderboard",icon: Trophy          },
   { label: "Spendenpool",    href: "/donations",  icon: Heart           },
   { label: "Mein Profil",    href: "/profile",    icon: User            },
@@ -39,7 +37,6 @@ const ROUTE_TITLES: Record<string, string> = {
   "/dashboard":  "Dashboard",
   "/events":     "Events",
   "/shop":       "Shop",
-  "/lul":        "Level-Up-League",
   "/leaderboard":"Rangliste",
   "/donations":  "Spendenpool",
   "/profile":    "Mein Profil",

@@ -55,7 +55,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const currentQuestYear = now.getFullYear();
 
   // ── News-Feed-Daten ──────────────────────────────────────────────────
-  const [activeOrPollEvent, upcomingEvent, activeLulSeason, totalMonthQuests, completedMonthQuests, memberCount, myPoints, activeClipContest] = await Promise.all([
+  const [activeOrPollEvent, upcomingEvent, totalMonthQuests, completedMonthQuests, memberCount, myPoints, activeClipContest] = await Promise.all([
     // Currently running or in poll phase
     prisma.event.findFirst({
       where: { status: { in: ["active", "umfrage"] } },
@@ -67,10 +67,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
       where: { startAt: { gt: new Date() }, status: { not: "finished" } },
       orderBy: { startAt: "asc" },
       select: { id: true, title: true, startAt: true, game: true, status: true },
-    }),
-    prisma.lulSeason.findFirst({
-      where: { status: "active" },
-      include: { spieltage: { where: { status: { not: "finished" } }, orderBy: { number: "asc" }, take: 1, select: { game: true, scheduledAt: true } } },
     }),
     prisma.quest.count({ where: { month: currentQuestMonth, year: currentQuestYear } }),
     userId
@@ -147,21 +143,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
       text: `Clip des Monats ${monthNames[activeClipContest.month - 1]} – Abstimmung läuft`,
       href: "/clip-des-monats",
       accent: "amber",
-    });
-  }
-
-  // LuL-Saison
-  if (activeLulSeason) {
-    const nextST     = activeLulSeason.spieltage[0];
-    const seasonName = activeLulSeason.name ?? `Saison ${activeLulSeason.number}`;
-    newsItems.push({
-      id: "lul-season",
-      icon: "lul",
-      text: nextST
-        ? `LuL ${seasonName} läuft · Nächster Spieltag: ${nextST.game}`
-        : `Level-Up-League ${seasonName} ist aktiv`,
-      href: "/lul",
-      accent: "red",
     });
   }
 
