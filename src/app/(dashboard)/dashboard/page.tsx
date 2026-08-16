@@ -15,6 +15,8 @@ import { CountUp } from "@/components/CountUp";
 import { AnimatedBar } from "@/components/AnimatedBar";
 import GameCover from "@/components/GameCover";
 import EventCoverDefault from "@/components/EventCoverDefault";
+import PartnerLiveBanner from "@/components/PartnerLiveBanner";
+import CommunityLiveBanner from "@/components/CommunityLiveBanner";
 import { type RecentResultEvent } from "@/components/RecentResultsBanner";
 import { getEventEndedAt, isRecentlyFinished } from "@/lib/event-completion";
 import RankIcon from "@/components/RankIcon";
@@ -534,10 +536,10 @@ export default async function DashboardPage() {
       </div>
 
       {/* ── Rotierender Banner-Slider ─────────────────────────────────
-          Bündelt ausnahmslos alle Dashboard-Hinweise in einer Kachel: Job-Reminder
-          (Gaming-Zimmer), Ergebnisse, Mitteilung, Umfragen, Clip-Contest, Live-Streams
-          (Partner & Community) und WhatsApp. Ohne den Job-Reminder erfährt man vom
-          wartenden/verfallenden Lohn sonst nur, wenn man von sich aus ins Zimmer klickt. */}
+          Bündelt alle Dashboard-Hinweise außer den Live-Stream-Bannern in einer Kachel:
+          Job-Reminder (Gaming-Zimmer), Ergebnisse, Mitteilung, Umfragen, Clip-Contest und
+          WhatsApp. Ohne den Job-Reminder erfährt man vom wartenden/verfallenden Lohn sonst
+          nur, wenn man von sich aus ins Zimmer klickt. */}
       <div className="px-4 sm:px-6 pt-4 max-w-7xl mx-auto w-full">
         <PromoBannerCarousel
           recentResultEvents={recentResultEvents}
@@ -550,6 +552,12 @@ export default async function DashboardPage() {
           clipContestSlot={activeClipContest ? <ClipContestWidget userId={userId} fill /> : null}
         />
       </div>
+
+      {/* ── Partner Live-Streams ─────────────────────────────────── */}
+      <PartnerLiveBanner />
+
+      {/* ── Community Live-Streams ───────────────────────────────── */}
+      <CommunityLiveBanner />
 
       {/* ── Content ─────────────────────────────────────────────────── */}
       <div className="px-4 sm:px-6 py-5 max-w-7xl mx-auto space-y-5 relative">
