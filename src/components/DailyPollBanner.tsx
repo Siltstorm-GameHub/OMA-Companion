@@ -121,7 +121,7 @@ function PollCard({ poll, onVoted, onDismiss }: { poll: Poll; onVoted: (p: Poll)
   const total = poll.results?.totalVotes ?? 0;
 
   return (
-    <div className="mx-4 sm:mx-6 mt-4 px-4 py-3.5 rounded-xl max-w-7xl lg:mx-auto"
+    <div className="px-4 py-3.5 rounded-xl"
       style={{
         background: "linear-gradient(135deg, rgba(168,85,247,0.12) 0%, rgba(139,92,246,0.06) 100%)",
         border: "1px solid rgba(168,85,247,0.25)",
@@ -311,7 +311,14 @@ function PollCard({ poll, onVoted, onDismiss }: { poll: Poll; onVoted: (p: Poll)
   );
 }
 
-export function DailyPollBanner() {
+export function DailyPollBanner({
+  onVisibilityChange,
+  fill = false,
+}: {
+  onVisibilityChange?: (visible: boolean) => void;
+  /** Streckt die Box auf 100% der Höhe des Elternelements (z.B. im Banner-Slider). */
+  fill?: boolean;
+} = {}) {
   const [polls, setPolls] = useState<Poll[]>([]);
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
 
@@ -335,13 +342,19 @@ export function DailyPollBanner() {
   }
 
   const visible = polls.filter(p => !dismissedIds.has(p.id));
+
+  useEffect(() => {
+    onVisibilityChange?.(visible.length > 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible.length]);
+
   if (visible.length === 0) return null;
 
   return (
-    <>
+    <div className={`space-y-2.5 ${fill ? "h-full flex flex-col justify-center" : ""}`}>
       {visible.map(p => (
         <PollCard key={p.id} poll={p} onVoted={updatePoll} onDismiss={() => dismiss(p.id)} />
       ))}
-    </>
+    </div>
   );
 }

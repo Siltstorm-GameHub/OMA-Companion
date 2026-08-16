@@ -15,7 +15,14 @@ type LiveMember = {
   thumbnail_url: string;
 };
 
-export default function CommunityLiveBanner() {
+export default function CommunityLiveBanner({
+  onVisibilityChange,
+  fill = false,
+}: {
+  onVisibilityChange?: (visible: boolean) => void;
+  /** Streckt die Box auf 100% der Höhe des Elternelements (z.B. im Banner-Slider). */
+  fill?: boolean;
+} = {}) {
   const [streams, setStreams] = useState<LiveMember[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [activeChannel, setActiveChannel] = useState<string | null>(null);
@@ -27,12 +34,18 @@ export default function CommunityLiveBanner() {
       .catch(() => setLoaded(true));
   }, []);
 
-  if (!loaded || streams.length === 0) return null;
+  const visible = loaded && streams.length > 0;
+  useEffect(() => {
+    onVisibilityChange?.(visible);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
+
+  if (!visible) return null;
 
   const activeStream = streams.find((s) => s.user_login === activeChannel);
 
   return (
-    <div className="px-4 sm:px-6 pt-4 max-w-7xl mx-auto">
+    <div className={fill ? "h-full" : "px-4 sm:px-6 pt-4 max-w-7xl mx-auto"}>
       <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(20,211,150,0.15)", background: "rgba(20,211,150,0.03)" }}>
         <div className="flex items-center gap-2 px-4 pt-3.5 pb-2.5">
           <div className="relative flex-shrink-0">

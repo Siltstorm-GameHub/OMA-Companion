@@ -15,9 +15,6 @@ import { CountUp } from "@/components/CountUp";
 import { AnimatedBar } from "@/components/AnimatedBar";
 import GameCover from "@/components/GameCover";
 import EventCoverDefault from "@/components/EventCoverDefault";
-import { DailyPollBanner } from "@/components/DailyPollBanner";
-import PartnerLiveBanner from "@/components/PartnerLiveBanner";
-import CommunityLiveBanner from "@/components/CommunityLiveBanner";
 import { type RecentResultEvent } from "@/components/RecentResultsBanner";
 import { getEventEndedAt, isRecentlyFinished } from "@/lib/event-completion";
 import RankIcon from "@/components/RankIcon";
@@ -27,7 +24,6 @@ import RankRing from "@/components/RankRing";
 import RankUpFlare from "@/components/RankUpFlare";
 import { getVisibleServers } from "@/lib/gameservers";
 import { getJobOverview } from "@/lib/job-service";
-import { Briefcase as BriefcaseIcon } from "lucide-react";
 import { PromoBannerCarousel } from "@/components/PromoBannerCarousel";
 import ClipOfMonthTile from "@/components/ClipOfMonthTile";
 import ClipContestWidget from "@/components/ClipContestWidget";
@@ -537,48 +533,11 @@ export default async function DashboardPage() {
         )}
       </div>
 
-      {/* ── Gaming-Zimmer: Lohn-Reminder ─────────────────────────────
-          Ohne diesen Hinweis erfährt man vom wartenden/verfallenden Lohn nur,
-          wenn man von sich aus ins Zimmer klickt — der Hauptgrund, warum das
-          Idle-Job-System bisher kaum zum täglichen Wiederkommen motiviert
-          hat. Rendert nichts, wenn Jobs global deaktiviert sind. */}
-      {userId && jobOverview?.enabled && (
-        <div className="px-4 sm:px-6 pt-4 max-w-7xl mx-auto w-full">
-          <Link
-            href="/zimmer"
-            className={`surface flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.99] ${
-              jobOverview.current?.capped ? "border-rose-500/25" : ""
-            }`}
-          >
-            <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
-              <BriefcaseIcon className="w-4 h-4 text-amber-400" />
-            </div>
-            {jobOverview.current ? (
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-white flex items-center gap-1.5 flex-wrap">
-                  <span className="text-amber-400 tabular-nums flex items-center gap-1">
-                    {jobOverview.current.accruedCoins.toLocaleString("de-DE")}<CoinIcon size={13} />
-                  </span>
-                  warten in deinem Gaming-Zimmer
-                </p>
-                <p className={`text-[11px] mt-0.5 ${jobOverview.current.capped ? "text-rose-400" : "text-gray-500"}`}>
-                  {jobOverview.current.capped
-                    ? "Lohnfach ist voll — hol dir den Lohn, bevor mehr verfällt"
-                    : `als ${jobOverview.current.label} ${jobOverview.current.emoji}`}
-                </p>
-              </div>
-            ) : (
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-white">Du bist arbeitslos</p>
-                <p className="text-[11px] text-gray-500 mt-0.5">Am schwarzen Brett im Zimmer warten Jobs — Münzen nebenbei verdienen</p>
-              </div>
-            )}
-            <ChevronRight className="w-4 h-4 text-gray-700 shrink-0" />
-          </Link>
-        </div>
-      )}
-
-      {/* ── Rotierender Banner-Slider: Ergebnisse / Mitteilung / WhatsApp ── */}
+      {/* ── Rotierender Banner-Slider ─────────────────────────────────
+          Bündelt ausnahmslos alle Dashboard-Hinweise in einer Kachel: Job-Reminder
+          (Gaming-Zimmer), Ergebnisse, Mitteilung, Umfragen, Clip-Contest, Live-Streams
+          (Partner & Community) und WhatsApp. Ohne den Job-Reminder erfährt man vom
+          wartenden/verfallenden Lohn sonst nur, wenn man von sich aus ins Zimmer klickt. */}
       <div className="px-4 sm:px-6 pt-4 max-w-7xl mx-auto w-full">
         <PromoBannerCarousel
           recentResultEvents={recentResultEvents}
@@ -586,24 +545,11 @@ export default async function DashboardPage() {
             ...activeDailyMessage,
             endDate: activeDailyMessage.endDate.toISOString(),
           } : null}
+          jobReminder={userId && jobOverview?.enabled ? { current: jobOverview.current } : null}
+          hasClipContest={!!activeClipContest}
+          clipContestSlot={activeClipContest ? <ClipContestWidget userId={userId} fill /> : null}
         />
       </div>
-
-      {/* ── Partner Live-Streams ─────────────────────────────────── */}
-      <PartnerLiveBanner />
-
-      {/* ── Community Live-Streams ───────────────────────────────── */}
-      <CommunityLiveBanner />
-
-      {/* ── Umfragen ──────────────────────────────────────────────── */}
-      <DailyPollBanner />
-
-      {/* ── Clip des Monats: Abstimmung läuft ────────────────────── */}
-      {activeClipContest && (
-        <div className="pt-4">
-          <ClipContestWidget userId={userId} />
-        </div>
-      )}
 
       {/* ── Content ─────────────────────────────────────────────────── */}
       <div className="px-4 sm:px-6 py-5 max-w-7xl mx-auto space-y-5 relative">

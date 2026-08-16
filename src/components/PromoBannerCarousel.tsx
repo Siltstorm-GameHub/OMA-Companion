@@ -1,11 +1,57 @@
 "use client";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import Link from "next/link";
+import { ChevronRight, Briefcase as BriefcaseIcon } from "lucide-react";
 import { RecentResultsBanner, type RecentResultEvent } from "@/components/RecentResultsBanner";
 import { DailyMessageBanner } from "@/components/DailyMessageBanner";
 import WhatsAppCommunityBanner from "@/components/WhatsAppCommunityBanner";
+import { DailyPollBanner } from "@/components/DailyPollBanner";
+import PartnerLiveBanner from "@/components/PartnerLiveBanner";
+import CommunityLiveBanner from "@/components/CommunityLiveBanner";
+import CoinIcon from "@/components/CoinIcon";
 
 type DailyMessage = { id: string; title: string; content: string; endDate: string };
-type SlideId = "results" | "message" | "whatsapp";
+export type JobReminderData = {
+  current: { accruedCoins: number; capped: boolean; label: string; emoji: string } | null;
+};
+type SlideId = "job" | "results" | "message" | "polls" | "clipContest" | "partner" | "community" | "whatsapp";
+
+function JobReminderSlide({ jobReminder, fill }: { jobReminder: JobReminderData; fill: boolean }) {
+  return (
+    <Link
+      href="/zimmer"
+      className={`surface flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.99] ${
+        jobReminder.current?.capped ? "border-rose-500/25" : ""
+      }`}
+      style={fill ? { height: "100%", boxSizing: "border-box" } : undefined}
+    >
+      <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+        <BriefcaseIcon className="w-4 h-4 text-amber-400" />
+      </div>
+      {jobReminder.current ? (
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-white flex items-center gap-1.5 flex-wrap">
+            <span className="text-amber-400 tabular-nums flex items-center gap-1">
+              {jobReminder.current.accruedCoins.toLocaleString("de-DE")}<CoinIcon size={13} />
+            </span>
+            warten in deinem Gaming-Zimmer
+          </p>
+          <p className={`text-[11px] mt-0.5 ${jobReminder.current.capped ? "text-rose-400" : "text-gray-500"}`}>
+            {jobReminder.current.capped
+              ? "Lohnfach ist voll — hol dir den Lohn, bevor mehr verfällt"
+              : `als ${jobReminder.current.label} ${jobReminder.current.emoji}`}
+          </p>
+        </div>
+      ) : (
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-white">Du bist arbeitslos</p>
+          <p className="text-[11px] text-gray-500 mt-0.5">Am schwarzen Brett im Zimmer warten Jobs — Münzen nebenbei verdienen</p>
+        </div>
+      )}
+      <ChevronRight className="w-4 h-4 text-gray-700 shrink-0" />
+    </Link>
+  );
+}
 
 /**
  * Orchestriert den Banner-Slider. Die einzelnen Banner können sich intern
@@ -13,23 +59,38 @@ type SlideId = "results" | "message" | "whatsapp";
  * Kandidaten dauerhaft gemountet (ihr Dismiss-Zustand darf nicht verloren
  * gehen) und melden ihre tatsächliche Sichtbarkeit zurück. Der Slider
  * rotiert und zeigt Dots nur für bestätigt sichtbare Banner.
+ *
+ * Bündelt ausnahmslos alle Dashboard-Hinweise (Events, Job-Reminder, Umfragen,
+ * Clip-Contest, Live-Streams, Mitteilungen, WhatsApp) in einer einzigen Kachel
+ * zwischen Hero-Section und den Content-Kacheln.
  */
 export function PromoBannerCarousel({
   recentResultEvents,
   dailyMessage,
+  jobReminder = null,
+  hasClipContest = false,
+  clipContestSlot = null,
   interval = 7000,
 }: {
   recentResultEvents: RecentResultEvent[];
   dailyMessage: DailyMessage | null;
+  jobReminder?: JobReminderData | null;
+  hasClipContest?: boolean;
+  clipContestSlot?: ReactNode;
   interval?: number;
 }) {
   const candidateIds = useMemo<SlideId[]>(() => {
     const ids: SlideId[] = [];
+    if (jobReminder) ids.push("job");
     if (recentResultEvents.length > 0) ids.push("results");
     if (dailyMessage) ids.push("message");
+    ids.push("polls");
+    if (hasClipContest) ids.push("clipContest");
+    ids.push("partner");
+    ids.push("community");
     ids.push("whatsapp");
     return ids;
-  }, [recentResultEvents.length, dailyMessage]);
+  }, [recentResultEvents.length, dailyMessage, jobReminder, hasClipContest]);
 
   const [visibility, setVisibility] = useState<Partial<Record<SlideId, boolean>>>({});
   const [activeIndex, setActiveIndex] = useState(0);
@@ -42,7 +103,11 @@ export function PromoBannerCarousel({
     []
   );
 
-  const visibleIds = candidateIds.filter(id => visibility[id] === true);
+  // Job-Reminder und Clip-Contest haben keinen Client-Dismiss — ihre Sichtbarkeit
+  // steht bereits serverseitig fest, sobald sie als Kandidat übergeben werden.
+  const visibleIds = candidateIds.filter(id =>
+    id === "job" || id === "clipContest" ? true : visibility[id] === true
+  );
 
   useEffect(() => {
     if (activeIndex >= visibleIds.length) setActiveIndex(0);
@@ -68,6 +133,11 @@ export function PromoBannerCarousel({
   return (
     <div onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
       <div className="grid">
+        {candidateIds.includes("job") && jobReminder && (
+          <div className={slideClass("job")} aria-hidden={activeId !== "job"}>
+            <JobReminderSlide jobReminder={jobReminder} fill />
+          </div>
+        )}
         {candidateIds.includes("results") && (
           <div className={slideClass("results")} aria-hidden={activeId !== "results"}>
             <RecentResultsBanner events={recentResultEvents} onVisibilityChange={makeHandler("results")} fill />
@@ -78,6 +148,20 @@ export function PromoBannerCarousel({
             <DailyMessageBanner message={dailyMessage} onVisibilityChange={makeHandler("message")} fill />
           </div>
         )}
+        <div className={slideClass("polls")} aria-hidden={activeId !== "polls"}>
+          <DailyPollBanner onVisibilityChange={makeHandler("polls")} fill />
+        </div>
+        {candidateIds.includes("clipContest") && (
+          <div className={slideClass("clipContest")} aria-hidden={activeId !== "clipContest"}>
+            {clipContestSlot}
+          </div>
+        )}
+        <div className={slideClass("partner")} aria-hidden={activeId !== "partner"}>
+          <PartnerLiveBanner onVisibilityChange={makeHandler("partner")} fill />
+        </div>
+        <div className={slideClass("community")} aria-hidden={activeId !== "community"}>
+          <CommunityLiveBanner onVisibilityChange={makeHandler("community")} fill />
+        </div>
         <div className={slideClass("whatsapp")} aria-hidden={activeId !== "whatsapp"}>
           <WhatsAppCommunityBanner onVisibilityChange={makeHandler("whatsapp")} fill />
         </div>
