@@ -24,7 +24,8 @@ export const ROOM_LEVEL_LABEL = ["Abgewohnt", "Frisch renoviert", "Modern einger
  * 2.6m×2.9m-Fenster, das die Rückwand dominierte. Auf realistische
  * Fenster-/Brüstungshöhe reduziert.
  */
-const WINDOW_GEOM = { x0: 2, y0: 1.0, w: 1.6, h: 1.7 } as const;
+// Horizontal zentriert im jetzt 8 Zellen breiten Raum ((8-1.6)/2 = 3.2).
+const WINDOW_GEOM = { x0: 3.2, y0: 1.0, w: 1.6, h: 1.7 } as const;
 
 const WINDOW_FRAME = [
   { base: "#6b4a30", trim: "#8a6440" },              // 0: Abgewohnt — Holz
@@ -245,7 +246,9 @@ export function RoomWindow3D({ level, closed }: { level: number; closed: boolean
   );
 }
 
-const LAMP_ANCHOR = { x: 8, y: 6.6, z: 2.2 } as const;
+// Seitlich der Raummitte (Raum ist jetzt 8×8) — kollidiert dadurch weiterhin
+// nicht mit dem mittig stehenden Schreibtisch/Teppich.
+const LAMP_ANCHOR = { x: 5.5, y: 6.6, z: 2.5 } as const;
 
 /** Alle vier Leuchtenköpfe nehmen `on` entgegen: die tatsächlich leuchtenden
  *  Teile (toneMapped=false, sonst hohe emissiveIntensity) dimmen auf einen
@@ -397,7 +400,9 @@ export function CeilingLamp3D({ level, on }: { level: number; on: boolean }) {
  * dasselbe Prinzip wie WINDOW_GEOM: feste Position in Wand-Rasterzellen,
  * kein Katalog-Platzierung. Standard-Türmaße (~1m breit, ~2.1m hoch).
  */
-const DOOR_GEOM = { x0: 5, y0: 0, w: 1.0, h: 2.1 } as const;
+// wall_side ist jetzt genauso breit wie die Bodentiefe (8 Zellen, siehe
+// ISO_GRID) — grob zentriert statt am alten, schmaleren 7er-Raster.
+const DOOR_GEOM = { x0: 3.5, y0: 0, w: 1.0, h: 2.1 } as const;
 
 /**
  * Eingangstür — wertet sich mit `level` wie Fenster/Lampe auf: Holztür →

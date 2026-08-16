@@ -83,17 +83,14 @@ export const MAX_PLACED_ITEMS = 200;
  * umstellt, legt materializeRoom() genau diese Möbel als echte Zeilen an.
  */
 /**
- * Die Grundausstattung sitzt bewusst mit deutlichem Rand nach links UND rechts:
- * bei 28 Spalten bleiben so reichlich Bodenspalten frei, damit sich gekaufte
- * Möbel sofort aufstellen lassen, ohne vorher etwas einlagern zu müssen. Schon
- * die 120-Münzen-Steckdosenleiste wäre sonst eine Sackgasse.
- *
- * Boden-Objekte (mustStandOn:"floor") stehen mit der Unterkante in der
- * letzten Zeile (y + h === GRID.floor.rows === 9) — es gibt keine separate
- * Bodenzone mehr, "unten" ist einfach die unterste Zeile des gemeinsamen
- * Rasters. Der Schreibtisch ist bewusst groß (siehe room-items.ts) und bildet
- * das Herzstück; der (ebenfalls große, 2×2) Röhrenmonitor steht mit der
- * Unterkante exakt auf seiner Tischplatte (mustStandOn:"desk").
+ * Quadratisches 8×8-Bodenraster (siehe ISO_GRID in room-grid.ts). Der
+ * Schreibtisch ist bewusst groß (siehe room-items.ts) und bildet das
+ * Herzstück; der (ebenfalls große, 2×2) Röhrenmonitor steht mit der
+ * Unterkante exakt auf seiner Tischplatte (mustStandOn:"desk"). Die Vitrine
+ * beansprucht als festes Bühnenelement die rechten beiden Spalten
+ * (x = width-2..width-1, siehe VITRINE_MARKER in RoomStage3D.tsx) — Tisch,
+ * PC und Teppich sind bewusst so platziert, dass nichts davon in dieses
+ * feste Rechteck hineinragt.
  *
  * Kein Jobbrett mehr: die Jobbörse öffnet sich über den Button in der
  * Aktionsleiste unter dem Zimmer, ein zusätzliches Wand-Objekt dafür war
@@ -105,12 +102,12 @@ export const DEFAULT_PLACEMENTS: { key: string; zone: RoomSurface; x: number; y:
   // steht mit der Vorderkante nah am Betrachter (großes y), der Monitor
   // teilt sich dieselbe (x,y)-Grundfläche — er "steht" auf dem Tisch, siehe
   // mustStandOn:"desk" in validatePlacement.
-  { key: "schreibtisch_alt", zone: "floor", x: 2, y: 3 },
-  { key: "roehrenmonitor",   zone: "floor", x: 4, y: 3 },
-  { key: "pc_billig",        zone: "floor", x: 0, y: 4 },
-  // Runder OMA-Teppich: zentral im offenen Bereich zwischen Rückwand und
-  // Schreibtisch, x-mittig im 12 Spalten breiten Grid (4..6, Zentrum 5.5).
-  { key: "teppich_rund_logo", zone: "floor", x: 4, y: 0 },
+  { key: "schreibtisch_alt", zone: "floor", x: 0, y: 4 },
+  { key: "roehrenmonitor",   zone: "floor", x: 2, y: 4 },
+  { key: "pc_billig",        zone: "floor", x: 6, y: 5 },
+  // Runder OMA-Teppich: im offenen Bereich zwischen Rückwand und
+  // Schreibtisch, links der Vitrine-Spalten.
+  { key: "teppich_rund_logo", zone: "floor", x: 2, y: 0 },
   // Vitrine bewusst NICHT hier: sie ist ein festes Bühnenelement mit fixer
   // Position (siehe RoomStage.tsx, VitrinePanel), kein Katalog-Platzierung.
 ];

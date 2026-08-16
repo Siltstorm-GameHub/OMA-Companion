@@ -26,10 +26,13 @@ export type RoomSurface = "floor" | "wall_back" | "wall_side" | "wall_front" | "
  *   wall_front: wie wall_back (gegenüberliegende Wand, gleiche Breite)
  *   wall_right: wie wall_side (gegenüberliegende Wand, gleiche Tiefe)
  */
+// Quadratischer Grundriss (8×8 Bodenfelder statt vorher 12×7) — kleinere
+// Bodenfläche, Wandbreiten folgen automatisch (wall_back/front = floor.cols,
+// wall_side/right = floor.rows), nur die Raumhöhe (wall_*.rows) bleibt gleich.
 export const ISO_GRID = {
-  floor:      { cols: 12, rows: 7 },
-  wall_back:  { cols: 12, rows: 4 },
-  wall_side:  { cols: 7,  rows: 4 },
-  wall_front: { cols: 12, rows: 4 },
-  wall_right: { cols: 7,  rows: 4 },
+  floor:      { cols: 8, rows: 8 },
+  wall_back:  { cols: 8, rows: 4 },
+  wall_side:  { cols: 8, rows: 4 },
+  wall_front: { cols: 8, rows: 4 },
+  wall_right: { cols: 8, rows: 4 },
 } as const;

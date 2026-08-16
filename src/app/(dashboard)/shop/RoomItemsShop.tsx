@@ -10,29 +10,25 @@ import {
 import { RoomItemPreview } from "@/app/(dashboard)/zimmer/RoomItemSprite";
 import { shopItems, isSurface, ROOM_ITEMS, type RoomItemDef } from "@/lib/room-items";
 import { jobsUnlockedBy } from "@/lib/jobs";
-import { RANKS } from "@/lib/ranks";
 import { cn } from "@/lib/utils";
 
 interface Props {
   /** Besitzstand je itemKey (aufgestellt + im Lager). */
   owned:      Record<string, number>;
   myPoints:   number;
-  /** Rangstufe 1–6 des Users — entscheidet, was schon kaufbar ist. */
-  rankTier:   number;
   isLoggedIn: boolean;
-}
-
-/** Anzeigename der Rangstufe, z.B. "Rollator-Raser" — für gesperrte Möbel. */
-function tierLabel(tier: number): string {
-  return RANKS.find(r => r.tier === tier)?.label ?? `Stufe ${tier}`;
 }
 
 /**
  * Möbel-Bereich des Shops. Bewusst hier statt in einem eigenen Sheet im Zimmer:
  * Münzen ausgeben passiert in dieser App im Shop, und der Vergleich mit den
  * Sammlerstücken direkt darüber macht den Preis einordbar.
+ *
+ * Keine Rang-Schranke mehr (anders als bei Jobs, siehe jobUnlockState in
+ * jobs.ts) — Münzen sind die einzige Kaufhürde, `minTier` im Katalog ist nur
+ * noch ein Datenfeld ohne Sperrwirkung.
  */
-export default function RoomItemsShop({ owned, myPoints, rankTier, isLoggedIn }: Props) {
+export default function RoomItemsShop({ owned, myPoints, isLoggedIn }: Props) {
   const router = useRouter();
   const groups = shopItems();
 
@@ -160,7 +156,6 @@ export default function RoomItemsShop({ owned, myPoints, rankTier, isLoggedIn }:
                     def={def}
                     owned={counts[def.key] ?? 0}
                     points={points}
-                    rankTier={rankTier}
                     isLoggedIn={isLoggedIn}
                     loading={buying === def.key}
                     onBuy={() => handleBuy(def)}
@@ -177,14 +172,13 @@ export default function RoomItemsShop({ owned, myPoints, rankTier, isLoggedIn }:
 }
 
 function ItemCard({
-  def, owned, points, rankTier, isLoggedIn, loading, onBuy, currentSlotItemLabel,
+  def, owned, points, isLoggedIn, loading, onBuy, currentSlotItemLabel,
 }: {
-  def: RoomItemDef; owned: number; points: number; rankTier: number;
+  def: RoomItemDef; owned: number; points: number;
   isLoggedIn: boolean; loading: boolean; onBuy: () => void;
   /** Label des aktuell besessenen Objekts in derselben Upgrade-Kette (falls vorhanden). */
   currentSlotItemLabel?: string;
 }) {
-  const rankLocked = rankTier < def.minTier;
   const maxedOut   = owned >= def.maxOwned;
   const canAfford  = points >= def.price;
   const unlocks    = jobsUnlockedBy(def.key);
@@ -200,7 +194,7 @@ function ItemCard({
     <div className={cn(
       "relative rounded-xl border overflow-hidden transition-all duration-200 bg-white/[0.02]",
       accentBorder,
-      (maxedOut || rankLocked) && "opacity-60"
+      maxedOut && "opacity-60"
     )}>
       {owned > 0 && (
         <div className="absolute top-2 right-2 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 z-10">
@@ -253,18 +247,15 @@ function ItemCard({
         ) : (
           <button
             onClick={onBuy}
-            disabled={loading || rankLocked || !canAfford || !isLoggedIn}
-            title={rankLocked ? `Ab Rang ${tierLabel(def.minTier)}` : undefined}
+            disabled={loading || !canAfford || !isLoggedIn}
             className={cn(
               "w-full flex items-center justify-center gap-1.5 text-[11px] font-semibold px-2 py-1.5 rounded-lg transition-all active:scale-[0.97] disabled:cursor-not-allowed mt-1",
-              rankLocked  ? "bg-white/[0.04] text-gray-500 border border-white/[0.06]"
-            : !canAfford  ? "bg-white/[0.04] text-red-400 border border-red-500/15"
+              !canAfford  ? "bg-white/[0.04] text-red-400 border border-red-500/15"
             : !isLoggedIn ? "bg-white/[0.04] text-gray-500 border border-white/[0.06]"
             :               "bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 border border-amber-500/25"
             )}
           >
             {loading      ? <Loader2 className="w-3 h-3 animate-spin" />
-           : rankLocked   ? <><Lock className="w-3 h-3" /> {tierLabel(def.minTier)}</>
            : !canAfford   ? <><Lock className="w-3 h-3" /> {def.price.toLocaleString("de-DE")}</>
            :                <><ShoppingCart className="w-3 h-3" /> {def.price.toLocaleString("de-DE")}</>}
           </button>

@@ -279,16 +279,38 @@ function Plant({ def }: ShapeProps) {
 
 /** Flach an der Wand montiertes Panel (Poster, Whiteboard) — statt eines
  *  vollen Würfels ein gerahmtes, dünnes Rechteck mit sichtbarem Rahmen. */
+/**
+ * Flach an der Wand montiertes Panel (Poster, Whiteboard) — ein farbiger
+ * Rahmen um das tatsächliche Motiv aus `def.imageUrl`. Zeigte bisher NUR den
+ * Rahmen + eine dunkle Fläche dahinter, nie das Bild selbst (der eigentliche
+ * Bug hinter "Poster ist nur ein rot umrandetes schwarzes Quadrat") — jetzt
+ * als echte Textur, seitenverhältnistreu ins Passepartout eingepasst statt
+ * verzerrt gestreckt.
+ */
 function WallPanel({ def }: ShapeProps) {
   const accent = ACCENT_COLORS[def.accent];
+  const texture = useTexture(def.imageUrl ?? "/room-items/poster_retro.png");
+  const frameInnerW = def.w * 0.82;
+  const frameInnerH = def.h * 0.82;
+  const img = texture.image as { width?: number; height?: number } | undefined;
+  const aspect = img?.width && img.height ? img.width / img.height : 1;
+  const frameAspect = frameInnerW / frameInnerH;
+  const [picW, picH] = aspect > frameAspect
+    ? [frameInnerW, frameInnerW / aspect]
+    : [frameInnerH * aspect, frameInnerH];
   return (
     <group position={[0, def.h / 2, 0]}>
       <RoundedBox args={[def.w * 0.92, def.h * 0.92, 0.05]} radius={0.02} position={[0, 0, 0.025]} castShadow receiveShadow>
         <meshStandardMaterial {...matteProps(accent)} roughness={0.5} />
       </RoundedBox>
-      <mesh position={[0, 0, 0.052]}>
-        <planeGeometry args={[def.w * 0.8, def.h * 0.78]} />
+      {/* Dunkler Passepartout-Rand hinter dem Motiv. */}
+      <mesh position={[0, 0, 0.051]}>
+        <planeGeometry args={[frameInnerW, frameInnerH]} />
         <meshStandardMaterial {...matteProps("#1c1f29")} roughness={0.4} />
+      </mesh>
+      <mesh position={[0, 0, 0.053]}>
+        <planeGeometry args={[picW, picH]} />
+        <meshStandardMaterial map={texture} roughness={0.55} />
       </mesh>
     </group>
   );
@@ -313,13 +335,20 @@ function LogoRug({ def }: ShapeProps) {
   const accent = ACCENT_COLORS[def.accent];
   const logo = useTexture("/brand/logo-512.png");
   const radius = Math.min(def.w, def.h) * 0.47;
+  // Echte (wenn auch flache) Zylinder statt papierdünner circleGeometry-
+  // Scheiben: die lagen praktisch koplanar auf der Bodenfläche (y≈0.015 bei
+  // einer Bodenoberkante bei y=0) — seit der Boden zusätzlich eine Textur
+  // trägt (siehe RoomShell in RoomStage3D.tsx) ein plausibler Z-Fighting-
+  // Kandidat. Zylinder mit echter Höhe geben dem Teppich echten Abstand zum
+  // Boden, exakt das robuste Muster, das die rechteckige Rug()-Variante
+  // (RoundedBox statt Plane) schon die ganze Zeit nutzt.
   return (
     <group>
-      <mesh position={[0, 0.015, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <circleGeometry args={[radius, 48]} />
+      <mesh position={[0, 0.015, 0]} receiveShadow>
+        <cylinderGeometry args={[radius, radius, 0.03, 48]} />
         <meshStandardMaterial {...matteProps(accent)} roughness={0.85} />
       </mesh>
-      <mesh position={[0, 0.018, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh position={[0, 0.033, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[radius * 0.6, 48]} />
         <meshStandardMaterial map={logo} transparent roughness={0.75} />
       </mesh>

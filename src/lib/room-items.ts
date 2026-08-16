@@ -235,6 +235,7 @@ export const ROOM_ITEMS: RoomItemDef[] = [
     description: "Ein Spiel, das du nie gespielt hast, aber das Cover ist unschlagbar.",
     zone: "wall", category: "deko", w: 2, h: 2, price: 250, minTier: 1, maxOwned: Infinity,
     tags: [], mustStandOn: null, accent: "rose",
+    imageUrl: "/room-items/poster_retro.png",
   },
   {
     key: "sommer_poster", label: "Sommer-Beach-Poster",
