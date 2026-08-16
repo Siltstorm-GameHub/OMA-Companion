@@ -12,6 +12,7 @@ import AuroraBackground from "@/components/AuroraBackground";
 import PartnerFooter from "@/components/PartnerFooter";
 import { prisma } from "@/lib/prisma";
 import { getRoomConfig, roomVisibleFor } from "@/lib/room-config";
+import { getScopeTitle } from "@/lib/wanderpocal";
 
 // Seiten, die auch ohne Discord-Login sichtbar sein sollen (siehe Anforderung:
 // Dashboard, Events, Rangliste als "Schaufenster" für nicht eingeloggte Besucher).
@@ -55,7 +56,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const currentQuestYear = now.getFullYear();
 
   // ── News-Feed-Daten ──────────────────────────────────────────────────
-  const [activeOrPollEvent, upcomingEvent, totalMonthQuests, completedMonthQuests, memberCount, myPoints, activeClipContest] = await Promise.all([
+  const [activeOrPollEvent, upcomingEvent, totalMonthQuests, completedMonthQuests, memberCount, myPoints, activeClipContest, activeYearlyClipContest, activeDailyPoll, latestWanderpokal] = await Promise.all([
     // Currently running or in poll phase
     prisma.event.findFirst({
       where: { status: { in: ["active", "umfrage"] } },
@@ -82,6 +83,23 @@ export default async function DashboardLayout({ children }: { children: React.Re
       where: { status: "voting" },
       orderBy: [{ year: "desc" }, { month: "desc" }],
       select: { month: true, year: true },
+    }),
+    // Clip des Jahres – aktive Abstimmung
+    prisma.yearlyClipContest.findFirst({
+      where: { status: "voting" },
+      orderBy: { year: "desc" },
+      select: { year: true },
+    }),
+    // Tages-Umfrage – aktuell laufend (nicht erst kürzlich beendet)
+    prisma.dailyPoll.findFirst({
+      where: { isActive: true, startDate: { lte: now }, endDate: { gte: now } },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, title: true, question: true },
+    }),
+    // Wanderpokal – zuletzt vergebener Titel
+    prisma.wanderpocalHolder.findFirst({
+      orderBy: { heldSince: "desc" },
+      select: { scopeType: true, scopeValue: true, winCount: true, user: { select: { username: true, name: true } } },
     }),
   ]);
 
@@ -142,6 +160,41 @@ export default async function DashboardLayout({ children }: { children: React.Re
       icon: "clip",
       text: `Clip des Monats ${monthNames[activeClipContest.month - 1]} – Abstimmung läuft`,
       href: "/clip-des-monats",
+      accent: "amber",
+    });
+  }
+
+  // Clip des Jahres – aktive Abstimmung
+  if (activeYearlyClipContest) {
+    newsItems.push({
+      id: "yearly-clip-contest",
+      icon: "clip",
+      text: `Clip des Jahres ${activeYearlyClipContest.year} – Abstimmung läuft`,
+      href: "/clip-des-jahres",
+      accent: "amber",
+    });
+  }
+
+  // Tages-Umfrage
+  if (activeDailyPoll) {
+    newsItems.push({
+      id: "daily-poll",
+      icon: "poll",
+      text: `Umfrage: ${activeDailyPoll.title} – ${activeDailyPoll.question}`,
+      href: "/dashboard",
+      accent: "teal",
+    });
+  }
+
+  // Wanderpokal – zuletzt vergebener Titel
+  if (latestWanderpokal) {
+    const holderName = latestWanderpokal.user.username ?? latestWanderpokal.user.name ?? "Unbekannt";
+    const scopeTitle = getScopeTitle(latestWanderpokal.scopeType, latestWanderpokal.scopeValue);
+    newsItems.push({
+      id: "wanderpokal",
+      icon: "wanderpokal",
+      text: `${holderName} hält den Wanderpokal „${scopeTitle}" · ${latestWanderpokal.winCount} ${latestWanderpokal.winCount === 1 ? "Sieg" : "Siege"}`,
+      href: "/profile",
       accent: "amber",
     });
   }

@@ -1,0 +1,78 @@
+{
+  "brandbookElements": [],
+  "essentialKitApproved": true,
+  "logo": {
+    "approvalSummary": "User-supplied official OMA logo (raster PNG, not SVG) at public/brand/logo-512.png.",
+    "asset": {
+      "path": "C:\\Users\\sebas\\OneDrive\\Dokumente\\GitHub\\OMA-Companion\\public\\brand\\logo-512.png"
+    },
+    "geometryFingerprint": null,
+    "name": "Old Masters Ally (OMA) logo",
+    "origin": "user_supplied",
+    "revision": 1
+  },
+  "palette": {
+    "approvalSummary": "User-supplied official OMA app palette from src/app/globals.css: dark background with teal/cyan accent and semantic status colors.",
+    "colors": [
+      {
+        "hex": "#0b1120",
+        "name": "Deep Ink",
+        "role": "background"
+      },
+      {
+        "hex": "#14b8a6",
+        "name": "OMA Teal",
+        "role": "accent"
+      },
+      {
+        "hex": "#2dd4bf",
+        "name": "OMA Teal Bright",
+        "role": "accent"
+      },
+      {
+        "hex": "#f7f7f5",
+        "name": "Paper",
+        "role": "text"
+      },
+      {
+        "hex": "#ef4444",
+        "name": "Danger Red",
+        "role": "status"
+      },
+      {
+        "hex": "#10b981",
+        "name": "Success Green",
+        "role": "status"
+      },
+      {
+        "hex": "#f59e0b",
+        "name": "Warning Amber",
+        "role": "status"
+      }
+    ],
+    "gradients": [],
+    "origin": "user_supplied",
+    "revision": 1
+  },
+  "typography": {
+    "approvalSummary": "User-supplied official OMA app typography from src/app/globals.css: Space Grotesk as the display font.",
+    "body": {
+      "family": "Space Grotesk",
+      "source": "google:Space Grotesk",
+      "style": "normal",
+      "weight": 400
+    },
+    "display": {
+      "family": "Space Grotesk",
+      "source": "google:Space Grotesk",
+      "style": "normal",
+      "weight": 700
+    },
+    "fontLinks": [
+      "https://fonts.google.com/specimen/Space+Grotesk"
+    ],
+    "origin": "user_supplied",
+    "revision": 1
+  },
+  "version": 3
+}

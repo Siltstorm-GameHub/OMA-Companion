@@ -81,8 +81,8 @@ const NavLink = forwardRef<HTMLAnchorElement, {
 }>(function NavLink({ label, href, icon: Icon, active, danger = false }, ref) {
   const [hov, setHov] = useState(false);
   const activeColor   = danger ? "#f87171" : "#2dd4bf";
-  const inactiveColor = "#6b7280";
-  const color = active ? activeColor : hov ? "#d1d5db" : inactiveColor;
+  const inactiveColor = "var(--nav-icon-inactive)";
+  const color = active ? activeColor : hov ? "var(--nav-text-hover)" : inactiveColor;
 
   return (
     <Link
@@ -97,7 +97,7 @@ const NavLink = forwardRef<HTMLAnchorElement, {
         position: "relative",
         transition: "background 150ms ease, box-shadow 150ms ease",
         background: !active && hov
-          ? (danger ? "rgba(153,27,27,0.08)" : "rgba(255,255,255,0.05)")
+          ? (danger ? "rgba(153,27,27,0.08)" : "var(--nav-hover-bg)")
           : "transparent",
         boxShadow: !active && hov ? "inset 0 0 0 1px rgba(20,184,166,0.10)" : "none",
       }}
@@ -267,9 +267,9 @@ export default function FloatingPill({ roomVisible = false }: { roomVisible?: bo
     <div className="hidden lg:flex" style={{
       position: "fixed", top: "calc(2.25rem + 8px)", left: "50%",
       transform: "translateX(-50%)", zIndex: 45, alignItems: "center", gap: 2,
-      padding: "5px 8px", background: "rgba(13,13,15,0.94)",
-      border: "1px solid rgba(20,184,166,0.13)", borderRadius: 999,
-      boxShadow: "0 8px 32px rgba(0,0,0,0.60), 0 0 0 1px rgba(20,184,166,0.06)",
+      padding: "5px 8px", background: "var(--nav-glass-bg)",
+      border: "1px solid var(--nav-glass-border)", borderRadius: 999,
+      boxShadow: "var(--nav-shadow)",
       backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
     }}>
 
@@ -285,7 +285,7 @@ export default function FloatingPill({ roomVisible = false }: { roomVisible?: bo
         </div>
       </Link>
 
-      <div style={{ width: 1, height: 22, background: "rgba(255,255,255,0.07)", margin: "0 4px", flexShrink: 0 }} />
+      <div style={{ width: 1, height: 22, background: "var(--nav-divider)", margin: "0 4px", flexShrink: 0 }} />
 
       {/* Nav links, always visible, with a bump capsule over the active icon + label */}
       <div ref={navRef} style={{ display: "flex", alignItems: "center", gap: 1, position: "relative" }}>
@@ -307,8 +307,8 @@ export default function FloatingPill({ roomVisible = false }: { roomVisible?: bo
             padding: "0 10px",
             background: activeIsDanger ? "#f87171" : "#2dd4bf",
             boxShadow: activeIsDanger
-              ? "0 4px 12px rgba(248,113,113,0.45), 0 0 0 4px rgba(13,13,15,0.94)"
-              : "0 4px 12px rgba(45,212,191,0.45), 0 0 0 4px rgba(13,13,15,0.94)",
+              ? "0 4px 12px rgba(248,113,113,0.45), 0 0 0 4px var(--nav-glass-bg)"
+              : "0 4px 12px rgba(45,212,191,0.45), 0 0 0 4px var(--nav-glass-bg)",
             transition: "left 400ms cubic-bezier(0.16, 1, 0.3, 1), width 400ms cubic-bezier(0.16, 1, 0.3, 1), background 150ms ease, box-shadow 150ms ease",
             pointerEvents: "none", zIndex: 2, whiteSpace: "nowrap",
           }}>
@@ -336,7 +336,7 @@ export default function FloatingPill({ roomVisible = false }: { roomVisible?: bo
         ))}
       </div>
 
-      <div style={{ width: 1, height: 22, background: "rgba(255,255,255,0.07)", margin: "0 4px", flexShrink: 0 }} />
+      <div style={{ width: 1, height: 22, background: "var(--nav-divider)", margin: "0 4px", flexShrink: 0 }} />
 
       {/* Avatar + dropdown */}
       <div ref={dropRef} style={{ position: "relative", flexShrink: 0 }}>
@@ -348,10 +348,10 @@ export default function FloatingPill({ roomVisible = false }: { roomVisible?: bo
             border: "none", borderRadius: 8, padding: "3px 5px 3px 3px",
             cursor: "pointer", transition: "background 150ms", position: "relative",
           }}
-          className={!avatarOpen ? "hover:bg-white/[0.05]" : ""}
+          className={!avatarOpen ? "hover:bg-[var(--nav-hover-bg)]" : ""}
         >
           <div style={{
-            outline: avatarOpen ? "1.5px solid rgba(20,184,166,0.55)" : "1.5px solid rgba(255,255,255,0.10)",
+            outline: avatarOpen ? "1.5px solid rgba(20,184,166,0.55)" : "1.5px solid var(--nav-divider)",
             borderRadius: 8,
             transition: "outline 150ms",
           }}>
@@ -362,11 +362,11 @@ export default function FloatingPill({ roomVisible = false }: { roomVisible?: bo
             <span style={{
               position: "absolute", top: 1, right: 1, width: 8, height: 8,
               borderRadius: "50%", background: "#ef4444",
-              boxShadow: "0 0 0 2px rgba(13,13,15,0.9)",
+              boxShadow: "0 0 0 2px var(--nav-glass-bg)",
             }} />
           )}
           <ChevronDown style={{
-            width: 12, height: 12, color: "rgba(255,255,255,0.35)",
+            width: 12, height: 12, color: "var(--nav-icon-inactive)",
             transform: avatarOpen ? "rotate(180deg)" : "none", transition: "transform 200ms",
           }} />
         </button>
@@ -375,27 +375,27 @@ export default function FloatingPill({ roomVisible = false }: { roomVisible?: bo
         {avatarOpen && (
           <div style={{
             position: "absolute", top: "calc(100% + 10px)", right: 0,
-            width: 280, background: "rgba(13,13,15,0.97)",
-            border: "1px solid rgba(20,184,166,0.12)", borderRadius: 12,
-            boxShadow: "0 16px 48px rgba(0,0,0,0.7)", zIndex: 60,
+            width: 280, background: "var(--nav-dropdown-bg)",
+            border: "1px solid var(--nav-dropdown-border)", borderRadius: 12,
+            boxShadow: "var(--nav-dropdown-shadow)", zIndex: 60,
             overflow: "hidden",
           }}>
             {/* Header: Avatar + Username + Theme-Icon + Logout-Icon */}
             <div style={{
               display: "flex", alignItems: "center", gap: 8,
-              padding: "10px 12px", borderBottom: "1px solid rgba(255,255,255,0.06)",
+              padding: "10px 12px", borderBottom: "1px solid var(--nav-divider)",
             }}>
               <RankedAvatar rankPoints={myRankPoints} src={session?.user?.image} alt={userName} size={28} rounded="lg" />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: 12, fontWeight: 600, color: "#fff", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{userName}</p>
+                <p style={{ fontSize: 12, fontWeight: 600, color: "var(--nav-text-primary)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{userName}</p>
                 <p style={{ fontSize: 10, color: "rgba(20,184,166,0.6)", margin: "1px 0 0" }}>OMA-Mitglied</p>
               </div>
               {/* Theme toggle — icon only */}
               <button onClick={toggle} title={theme === "dark" ? "Light Mode" : "Dark Mode"}
                 style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center",
                   borderRadius: 7, background: "none", border: "none", cursor: "pointer",
-                  color: "#6b7280", flexShrink: 0 }}
-                className="hover:text-amber-400 hover:bg-white/[0.05] transition-colors">
+                  color: "var(--nav-icon-inactive)", flexShrink: 0 }}
+                className="hover:text-amber-400 hover:bg-[var(--nav-hover-bg)] transition-colors">
                 {theme === "dark"
                   ? <Sun style={{ width: 14, height: 14 }} />
                   : <Moon style={{ width: 14, height: 14 }} />}
@@ -405,7 +405,7 @@ export default function FloatingPill({ roomVisible = false }: { roomVisible?: bo
                 title="Abmelden"
                 style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center",
                   borderRadius: 7, background: "none", border: "none", cursor: "pointer",
-                  color: "#6b7280", flexShrink: 0 }}
+                  color: "var(--nav-icon-inactive)", flexShrink: 0 }}
                 className="hover:text-red-400 hover:bg-red-500/[0.08] transition-colors">
                 <LogOut style={{ width: 14, height: 14 }} />
               </button>
@@ -417,7 +417,7 @@ export default function FloatingPill({ roomVisible = false }: { roomVisible?: bo
                 padding: "8px 12px 6px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <Bell style={{ width: 12, height: 12, color: "rgba(20,184,166,0.7)" }} />
-                  <span style={{ fontSize: 11, fontWeight: 600, color: "#d1d5db" }}>Benachrichtigungen</span>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: "var(--nav-text-secondary)" }}>Benachrichtigungen</span>
                   {unreadCount > 0 && (
                     <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 999,
                       background: "rgba(20,184,166,0.2)", color: "#2dd4bf" }}>
@@ -429,13 +429,13 @@ export default function FloatingPill({ roomVisible = false }: { roomVisible?: bo
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     {unreadCount > 0 && (
                       <button onClick={markAllRead}
-                        style={{ fontSize: 10, color: "#6b7280", background: "none", border: "none", cursor: "pointer" }}
+                        style={{ fontSize: 10, color: "var(--nav-icon-inactive)", background: "none", border: "none", cursor: "pointer" }}
                         className="hover:text-teal-400 transition-colors">
                         Alle lesen
                       </button>
                     )}
                     <button onClick={deleteAll}
-                      style={{ fontSize: 10, color: "#6b7280", background: "none", border: "none", cursor: "pointer" }}
+                      style={{ fontSize: 10, color: "var(--nav-icon-inactive)", background: "none", border: "none", cursor: "pointer" }}
                       className="hover:text-red-400 transition-colors">
                       Alle löschen
                     </button>
@@ -445,8 +445,8 @@ export default function FloatingPill({ roomVisible = false }: { roomVisible?: bo
 
               {notifications.length === 0 ? (
                 <div style={{ padding: "12px 14px 14px", textAlign: "center" }}>
-                  <Bell style={{ width: 22, height: 22, color: "#374151", margin: "0 auto 6px" }} />
-                  <p style={{ fontSize: 12, color: "#6b7280", margin: 0 }}>Keine Benachrichtigungen</p>
+                  <Bell style={{ width: 22, height: 22, color: "var(--nav-icon-inactive)", margin: "0 auto 6px" }} />
+                  <p style={{ fontSize: 12, color: "var(--nav-icon-inactive)", margin: 0 }}>Keine Benachrichtigungen</p>
                 </div>
               ) : (
                 <div style={{ maxHeight: 260, overflowY: "auto" }}>
@@ -468,10 +468,10 @@ export default function FloatingPill({ roomVisible = false }: { roomVisible?: bo
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{ fontSize: 12, fontWeight: 600, margin: 0, overflow: "hidden",
                             textOverflow: "ellipsis", whiteSpace: "nowrap",
-                            color: n.read ? "#9ca3af" : "#e2e8f0" }}>
+                            color: n.read ? "var(--nav-text-tertiary)" : "var(--nav-text-primary)" }}>
                             {n.title}
                           </p>
-                          <p style={{ fontSize: 11, color: "#6b7280", margin: "1px 0 0", overflow: "hidden",
+                          <p style={{ fontSize: 11, color: "var(--nav-text-tertiary)", margin: "1px 0 0", overflow: "hidden",
                             textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {n.body}
                           </p>
@@ -488,7 +488,7 @@ export default function FloatingPill({ roomVisible = false }: { roomVisible?: bo
                           title="Löschen"
                           style={{ width: 18, height: 18, display: "flex", alignItems: "center",
                             justifyContent: "center", borderRadius: 4, background: "none", border: "none",
-                            cursor: "pointer", color: "#4b5563", opacity: 0, transition: "opacity 150ms" }}
+                            cursor: "pointer", color: "var(--nav-icon-inactive)", opacity: 0, transition: "opacity 150ms" }}
                           className="group-hover:opacity-100 hover:!text-red-400 hover:!bg-red-500/10">
                           <X style={{ width: 11, height: 11 }} />
                         </button>
@@ -498,7 +498,7 @@ export default function FloatingPill({ roomVisible = false }: { roomVisible?: bo
                 </div>
               )}
 
-              <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)", padding: "4px 6px" }}>
+              <div style={{ borderTop: "1px solid var(--nav-divider)", padding: "4px 6px" }}>
                 <a
                   href={WHATSAPP_COMMUNITY_URL}
                   target="_blank"
@@ -513,7 +513,7 @@ export default function FloatingPill({ roomVisible = false }: { roomVisible?: bo
                 </a>
                 <Link href="/profile?tab=notifications" onClick={() => setAvatarOpen(false)}
                   style={{ display: "flex", alignItems: "center", gap: 5,
-                    padding: "7px 12px", borderRadius: 8, fontSize: 11, color: "#6b7280",
+                    padding: "7px 12px", borderRadius: 8, fontSize: 11, color: "var(--nav-icon-inactive)",
                     textDecoration: "none" }}
                   className="hover:text-teal-400 hover:bg-teal-500/[0.06] transition-colors">
                   <Settings style={{ width: 11, height: 11 }} />

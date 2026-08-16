@@ -43,8 +43,8 @@ export default function BottomNav({ roomVisible = false }: { roomVisible?: boole
         left: 0,
         right: 0,
         zIndex: 50,
-        background: "rgba(13,13,15,0.97)",
-        borderTop: "1px solid rgba(20,184,166,0.10)",
+        background: "var(--nav-glass-bg)",
+        borderTop: "1px solid var(--nav-glass-border)",
       }}
       className="backdrop-blur-2xl safe-area-pb"
     >
@@ -87,7 +87,7 @@ export default function BottomNav({ roomVisible = false }: { roomVisible?: boole
                 style={{
                   width: 17,
                   height: 17,
-                  color: active ? "#04342c" : "#4b5563",
+                  color: active ? "#04342c" : "var(--nav-icon-inactive)",
                   strokeWidth: active ? 2.5 : 2,
                   transition: "color 200ms",
                 }}
@@ -103,7 +103,7 @@ export default function BottomNav({ roomVisible = false }: { roomVisible?: boole
                 letterSpacing: "0.04em",
                 marginTop: 3,
                 lineHeight: 1,
-                color: active ? "#04342c" : "rgba(107,114,128,0.85)",
+                color: active ? "#04342c" : "var(--nav-icon-inactive)",
                 transition: "color 200ms",
                 userSelect: "none",
               }}

@@ -1,0 +1,15 @@
+{
+  "source_summary": "User-supplied official OMA app palette from src/app/globals.css: dark background with teal/cyan accent and semantic status colors.",
+  "palette": {
+    "colors": [
+      { "hex": "#0B1120", "name": "Deep Ink", "role": "background" },
+      { "hex": "#14B8A6", "name": "OMA Teal", "role": "accent" },
+      { "hex": "#2DD4BF", "name": "OMA Teal Bright", "role": "accent" },
+      { "hex": "#F7F7F5", "name": "Paper", "role": "text" },
+      { "hex": "#EF4444", "name": "Danger Red", "role": "status" },
+      { "hex": "#10B981", "name": "Success Green", "role": "status" },
+      { "hex": "#F59E0B", "name": "Warning Amber", "role": "status" }
+    ],
+    "gradients": []
+  }
+}
