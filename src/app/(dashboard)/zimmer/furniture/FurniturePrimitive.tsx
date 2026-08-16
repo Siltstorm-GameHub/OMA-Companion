@@ -58,6 +58,12 @@ const GLB_MODELS: Partial<Record<string, string>> = {
   kommode:           "/models/kommode_offen.glb",
   konsolentisch:     "/models/tisch_lang.glb",
   schreibtisch_modern: "/models/desk_modern_white.glb",
+  pc_highend:        "/models/pc_highend.glb",
+  webcam:            "/models/webcam.glb",
+  roehrenmonitor:    "/models/roehrenmonitor.glb",
+  mikrofon:          "/models/mikrofon.glb",
+  ringlicht:         "/models/ringlicht.glb",
+  konsole_retro:     "/models/konsole_retro.glb",
 };
 
 for (const path of Object.values(GLB_MODELS)) {
