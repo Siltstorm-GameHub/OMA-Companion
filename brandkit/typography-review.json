@@ -1,0 +1,22 @@
+{
+  "reviews": [
+    {
+      "stage": "typography",
+      "name": "OMA Space Grotesk",
+      "premise": "Official OMA app typography, used verbatim for social specimen.",
+      "keywords": ["gamer", "cinematic", "teal"],
+      "palette": [
+        {"hex": "#0b1120", "name": "Deep Ink"},
+        {"hex": "#14b8a6", "name": "OMA Teal"},
+        {"hex": "#f7f7f5", "name": "Paper"}
+      ],
+      "logo_ideas": [],
+      "display_font": {"family": "Space Grotesk", "source": "google:Space Grotesk", "weight": 700},
+      "body_font": {"family": "Space Grotesk", "source": "google:Space Grotesk", "weight": 400},
+      "headline": "Old Masters Ally",
+      "body": "Events, Turniere und Punktesystem für Old Masters.",
+      "background_color": "#0b1120",
+      "text_color": "#f7f7f5"
+    }
+  ]
+}
