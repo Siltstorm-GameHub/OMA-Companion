@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, CalendarDays, ShoppingBag, Trophy, User, Heart, Sofa } from "lucide-react";
+import { LayoutDashboard, CalendarDays, ShoppingBag, Trophy, User, Heart, Gamepad2 } from "lucide-react";
 import PollBadge from "@/components/PollBadge";
 
 const NAV = [
@@ -15,10 +15,12 @@ const NAV = [
 
 /**
  * `roomVisible` kommt aus dem Dashboard-Layout, weil die Zimmer-Freischaltung
- * in der BotConfig liegt und nur serverseitig lesbar ist. Der Profil-Slot wird
- * zum Zimmer-Slot, sobald das Zimmer sichtbar ist — /profile leitet dann ohnehin
- * sofort auf /zimmer um, ein achter Slot für dasselbe Ziel wäre nur Redundanz
- * auf einer Leiste, die auf schmalen Geräten schon jetzt eng ist.
+ * in der BotConfig liegt und nur serverseitig lesbar ist. Der Profil-Slot
+ * verlinkt auf /zimmer, sobald das Zimmer sichtbar ist — /profile leitet dann
+ * ohnehin sofort auf /zimmer um, ein achter Slot für dasselbe Ziel wäre nur
+ * Redundanz auf einer Leiste, die auf schmalen Geräten schon jetzt eng ist.
+ * Label bleibt bewusst "Profil" (nicht "Zimmer") — das Gaming-Zimmer ERSETZT
+ * die alte Profilseite, ist für die User aber weiterhin "ihr Profil".
  */
 export default function BottomNav({ roomVisible = false }: { roomVisible?: boolean }) {
   const pathname = usePathname();
@@ -40,8 +42,8 @@ export default function BottomNav({ roomVisible = false }: { roomVisible?: boole
         {NAV.map(({ label, href, icon }) => {
           const isProfile = href === "/profile";
           const effHref   = isProfile && roomVisible ? "/zimmer" : href;
-          const effLabel  = isProfile && roomVisible ? "Zimmer" : label;
-          const Icon      = isProfile && roomVisible ? Sofa : icon;
+          const effLabel  = label;
+          const Icon      = isProfile && roomVisible ? Gamepad2 : icon;
           const active = pathname === effHref || pathname.startsWith(effHref + "/");
           return (
             <Link

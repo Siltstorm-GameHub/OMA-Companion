@@ -7,7 +7,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
   LayoutDashboard, CalendarDays, Trophy, ShoppingBag,
-  Heart, User, ShieldCheck, LogOut, ChevronDown, Sun, Moon, Bell, Settings, X, MessageCircleMore, Sofa,
+  Heart, User, ShieldCheck, LogOut, ChevronDown, Sun, Moon, Bell, Settings, X, MessageCircleMore, Gamepad2,
   type LucideIcon,
 } from "lucide-react";
 import { WHATSAPP_COMMUNITY_URL } from "@/lib/config";
@@ -245,13 +245,15 @@ export default function FloatingPill({ roomVisible = false }: { roomVisible?: bo
       <div style={{ width: 1, height: 22, background: "rgba(255,255,255,0.07)", margin: "0 4px", flexShrink: 0 }} />
 
       {NAV.map(({ label, href, icon }) => {
-        // Der Profil-Slot wird zum Zimmer-Slot, sobald das Zimmer für diesen
+        // Der Profil-Slot verlinkt auf /zimmer, sobald das Zimmer für diesen
         // User sichtbar ist — /profile leitet dann ohnehin sofort auf /zimmer
-        // um, ein zweiter Eintrag für dasselbe Ziel wäre nur Redundanz.
+        // um, ein zweiter Eintrag für dasselbe Ziel wäre nur Redundanz. Label
+        // bleibt bewusst "Profil" — das Gaming-Zimmer ersetzt die alte
+        // Profilseite, ist für die User aber weiterhin "ihr Profil".
         const isProfile  = href === "/profile";
         const effHref    = isProfile && roomVisible ? "/zimmer" : href;
-        const effLabel   = isProfile && roomVisible ? "Gaming-Zimmer" : label;
-        const effIcon    = isProfile && roomVisible ? Sofa : icon;
+        const effLabel   = label;
+        const effIcon    = isProfile && roomVisible ? Gamepad2 : icon;
         return (
           <div key={href} style={{ position: "relative" }}>
             <NavIcon label={effLabel} href={effHref} icon={effIcon}
