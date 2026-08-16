@@ -67,6 +67,8 @@ const GLB_MODELS: Partial<Record<string, string>> = {
   neon_schild:       "/models/neon_schild.glb",
   deko_pokal:        "/models/deko_pokal.glb",
   steckdosenleiste:  "/models/steckdosenleiste.glb",
+  rollator:          "/models/rollator.glb",
+  led_wand:          "/models/led_wand.glb",
 };
 
 for (const path of Object.values(GLB_MODELS)) {

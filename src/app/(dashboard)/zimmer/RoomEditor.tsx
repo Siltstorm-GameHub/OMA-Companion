@@ -5,13 +5,18 @@ import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
-  Loader2, FlipHorizontal2, RotateCw, PackageOpen, Package, Lock, Check,
+  Loader2, FlipHorizontal2, RotateCw, PackageOpen, Package, Lock, Check, ChevronDown,
 } from "lucide-react";
-import { getRoomItem, isFixed } from "@/lib/room-items";
+import {
+  getRoomItem, isFixed, CATEGORY_ORDER, ROOM_CATEGORY_LABELS, type RoomCategory,
+} from "@/lib/room-items";
 import { legalCells, type PlacedItem, type RoomState, type RoomSurface, type StoredItem } from "@/lib/room-layout";
 import type { RoomProfileCore } from "@/lib/room-profile-data";
 import { RoomItemPreview } from "./RoomItemSprite";
 import { cn } from "@/lib/utils";
+
+/** Reiter-Auswahl im Lager: "alle" ODER eine konkrete Katalog-Kategorie. */
+type LagerTab = "alle" | RoomCategory;
 
 // Three.js/R3F laufen ausschließlich im Browser (WebGL-Kontext) — per
 // dynamic(ssr:false) geladen, siehe RoomView.tsx.
@@ -55,6 +60,8 @@ export default function RoomEditor({ state, core, onDone }: Props) {
   const [stored,   setStored]   = useState<StoredItem[]>(state.stored);
   const [selection, setSelection] = useState<Selection>(null);
   const [saving,    setSaving]    = useState(false);
+  const [lagerOpen, setLagerOpen] = useState(false);
+  const [lagerTab,  setLagerTab]  = useState<LagerTab>("alle");
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latest    = useRef({ placed, stored });
   useEffect(() => { latest.current = { placed, stored }; }, [placed, stored]);
@@ -90,6 +97,25 @@ export default function RoomEditor({ state, core, onDone }: Props) {
   }, [candidate]);
 
   const selectedDef = candidate ? getRoomItem(candidate.key) : null;
+
+  /** Welche Kategorien aktuell überhaupt Lager-Items enthalten — nur die
+   *  bekommen einen eigenen Reiter, "Alles" steht immer an erster Stelle. */
+  const lagerCategories = useMemo(() => {
+    const present = new Set(
+      stored.map(i => getRoomItem(i.key)?.category).filter((c): c is RoomCategory => !!c),
+    );
+    return CATEGORY_ORDER.filter(c => present.has(c));
+  }, [stored]);
+
+  // Fällt auf "Alles" zurück, wenn der aktive Reiter durch Aufstellen/Kauf
+  // inzwischen leer ist — ohne dafür extra setState in einem Effect
+  // auszulösen, einfach als abgeleiteter Wert fürs Rendern.
+  const activeLagerTab: LagerTab = lagerTab === "alle" || lagerCategories.includes(lagerTab) ? lagerTab : "alle";
+
+  const lagerVisible = useMemo(() => {
+    if (activeLagerTab === "alle") return stored;
+    return stored.filter(i => getRoomItem(i.key)?.category === activeLagerTab);
+  }, [stored, activeLagerTab]);
 
   /** Schickt den aktuellen Stand debounced zum Server — bei jeder Änderung
    *  aufgerufen, kein manueller Speichern-Button mehr nötig. */
@@ -187,16 +213,35 @@ export default function RoomEditor({ state, core, onDone }: Props) {
 
   return (
     <div className="space-y-3">
-      <RoomStage3D
-        state={draftState}
-        ownerName={core.displayName}
-        vitrine={core.vitrine}
-        onInteract={() => { /* im Bearbeiten-Modus öffnet nichts */ }}
-        edit={{
-          selectedId: candidate?.id ?? null, legal, ghost,
-          onSelect: handleSelect, onGrab: handleGrab, onDrop: handleDrop,
-        }}
-      />
+      <div className="relative">
+        <RoomStage3D
+          state={draftState}
+          ownerName={core.displayName}
+          vitrine={core.vitrine}
+          onInteract={() => { /* im Bearbeiten-Modus öffnet nichts */ }}
+          edit={{
+            selectedId: candidate?.id ?? null, legal, ghost,
+            onSelect: handleSelect, onGrab: handleGrab, onDrop: handleDrop,
+          }}
+        />
+
+        {/* Lager-Griff — klebt am unteren Rand der Zimmer-Kachel, klappt die
+            Lager-Reihe darunter auf/zu statt (wie vorher) eine immer
+            sichtbare, separate Karte darzustellen. */}
+        <button
+          type="button"
+          onClick={() => setLagerOpen(o => !o)}
+          onPointerDown={e => e.stopPropagation()}
+          aria-expanded={lagerOpen}
+          className="absolute left-1/2 -translate-x-1/2 bottom-0 translate-y-1/2 z-10
+                     flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold
+                     bg-[#1a1522] border border-white/[0.12] text-gray-300 hover:text-white hover:bg-[#221b2c]
+                     transition-colors shadow-lg"
+        >
+          <Package className="w-3.5 h-3.5" /> Lager ({stored.length})
+          <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", lagerOpen && "rotate-180")} />
+        </button>
+      </div>
 
       {/* ── Hinweiszeile / Aktionen zum angehobenen Stück ───────────── */}
       <div className="glass rounded-2xl px-4 py-3 flex items-center gap-3 flex-wrap min-h-[3.25rem]">
@@ -246,43 +291,76 @@ export default function RoomEditor({ state, core, onDone }: Props) {
         )}
       </div>
 
-      {/* ── Lager ───────────────────────────────────────────────────── */}
-      <div className="glass rounded-2xl px-4 py-3">
-        <div className="flex items-center gap-2 mb-2">
-          <Package className="w-3.5 h-3.5 text-gray-500" />
-          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">
-            Lager ({stored.length})
-          </p>
-        </div>
-        {stored.length === 0 ? (
-          <p className="text-[11px] text-gray-600">
-            Leer. Gekaufte Möbel landen hier, bis du sie aufstellst.
-          </p>
-        ) : (
-          <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1">
-            {stored.map(item => {
-              const def = getRoomItem(item.key);
-              if (!def) return null;
-              const active = selection?.id === item.id;
-              return (
+      {/* ── Lager (aufklappbar über den Griff an der Zimmer-Kachel) ──── */}
+      {lagerOpen && (
+        <div className="glass rounded-2xl px-4 py-3">
+          {stored.length === 0 ? (
+            <p className="text-[11px] text-gray-600">
+              Leer. Gekaufte Möbel landen hier, bis du sie aufstellst.
+            </p>
+          ) : (
+            <>
+              {/* Reiter — "Alles" immer zuerst, danach nur Kategorien, die
+                  gerade tatsächlich Lager-Items enthalten. */}
+              <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-2 mb-2 -mx-1 px-1">
                 <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setSelection(active ? null : { id: item.id, from: "stored" })}
-                  aria-pressed={active}
+                  type="button" onClick={() => setLagerTab("alle")}
+                  aria-pressed={activeLagerTab === "alle"}
                   className={cn(
-                    "shrink-0 w-20 rounded-xl border p-2 flex flex-col items-center gap-1 transition-colors",
-                    active ? "border-teal-500/50 bg-teal-500/10" : "border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.05]"
+                    "shrink-0 px-2.5 py-1 rounded-full text-[10px] font-semibold border transition-colors",
+                    activeLagerTab === "alle"
+                      ? "border-teal-500/50 bg-teal-500/15 text-teal-200"
+                      : "border-white/[0.08] text-gray-400 hover:text-gray-200 hover:bg-white/[0.05]"
                   )}
                 >
-                  <RoomItemPreview itemKey={item.key} size={40} />
-                  <span className="text-[9px] text-gray-400 leading-tight text-center line-clamp-2">{def.label}</span>
+                  Alles ({stored.length})
                 </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
+                {lagerCategories.map(cat => {
+                  const count = stored.filter(i => getRoomItem(i.key)?.category === cat).length;
+                  return (
+                    <button
+                      key={cat}
+                      type="button" onClick={() => setLagerTab(cat)}
+                      aria-pressed={activeLagerTab === cat}
+                      className={cn(
+                        "shrink-0 px-2.5 py-1 rounded-full text-[10px] font-semibold border transition-colors",
+                        activeLagerTab === cat
+                          ? "border-teal-500/50 bg-teal-500/15 text-teal-200"
+                          : "border-white/[0.08] text-gray-400 hover:text-gray-200 hover:bg-white/[0.05]"
+                      )}
+                    >
+                      {ROOM_CATEGORY_LABELS[cat]} ({count})
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+                {lagerVisible.map(item => {
+                  const def = getRoomItem(item.key);
+                  if (!def) return null;
+                  const active = selection?.id === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setSelection(active ? null : { id: item.id, from: "stored" })}
+                      aria-pressed={active}
+                      className={cn(
+                        "rounded-xl border p-2 flex flex-col items-center gap-1 transition-colors",
+                        active ? "border-teal-500/50 bg-teal-500/10" : "border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.05]"
+                      )}
+                    >
+                      <RoomItemPreview itemKey={item.key} size={40} />
+                      <span className="text-[9px] text-gray-400 leading-tight text-center line-clamp-2">{def.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       {/* ── Fertig ──────────────────────────────────────────────────── */}
       <div className="sticky bottom-20 lg:bottom-4 z-30 safe-area-pb">

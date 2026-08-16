@@ -147,7 +147,7 @@ export const ROOM_CATEGORY_LABELS: Record<RoomCategory, string> = {
 // automatisch mit der Zimmerstufe auf (siehe roomLevel() in room-layout.ts,
 // ROOM_WALL_STAGES/ROOM_FLOOR_STAGES in RoomStage3D.tsx) statt einzeln gekauft
 // und ausgewählt zu werden — kein Katalog-Kaufgegenstand mehr.
-const CATEGORY_ORDER: RoomCategory[] = [
+export const CATEGORY_ORDER: RoomCategory[] = [
   "schreibtisch", "sitzen", "rechner", "bildschirm", "peripherie",
   "konsole", "licht", "deko", "moebel", "vitrine",
 ];
