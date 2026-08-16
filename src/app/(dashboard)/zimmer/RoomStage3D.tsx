@@ -746,6 +746,22 @@ function VitrineTrophies({ count }: { count: number }) {
   );
 }
 
+/**
+ * Runder OMA-Teppich mit Logo — festes Bühnenelement wie die Vitrine (siehe
+ * VITRINE_MARKER oben): liegt exakt in der Bodenmitte jedes Zimmers, ist kein
+ * Katalog-Platzierung mehr (siehe DEFAULT_PLACEMENTS in room-layout.ts) und
+ * darf im Editor weder eingelagert noch verschoben werden.
+ */
+function CenterRug() {
+  const def = getRoomItem("teppich_rund_logo");
+  if (!def) return null;
+  return (
+    <group position={[ROOM_SIZE.width / 2, 0, ROOM_SIZE.depth / 2]}>
+      <FurniturePrimitive def={def} />
+    </group>
+  );
+}
+
 function VitrineMarker({
   hiddenCount, filledCount, onClick,
 }: { hiddenCount: number; filledCount: number; onClick: () => void }) {
@@ -1021,6 +1037,7 @@ function RoomCanvas({
       {!hiddenWalls.has("wall_back") && <RoomWindow3D level={level} closed={blindsClosed} />}
       {!hiddenWalls.has("wall_side") && <EntranceDoor3D level={level} />}
       <CeilingLamp3D level={level} on={lampOn} />
+      <CenterRug />
       <PlacedFurniture placed={state.placed} edit={edit} onInteract={onInteract} hiddenWalls={hiddenWalls} />
       {/* Im Bearbeiten-Modus nicht anklickbar — sie lässt sich ohnehin nicht
           verschieben, ein Klick soll dort nicht mitten in der Möbel-Auswahl
