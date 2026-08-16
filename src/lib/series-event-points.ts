@@ -5,6 +5,9 @@
 
 export type StatConfig = {
   participationPoints: number;
+  /** Ligapunkte pro Event für anwesende (nicht ausgeschlossene) Zuschauer — unabhängig von
+   *  participationPoints (das gilt nur für Mitspieler), siehe complete/route.ts. */
+  spectatorParticipationPoints?: number;
   stats: { field: string; pointsPer: number }[];
   mvpStatField?: string;
   defaultWinnerStatField?: string;
@@ -316,13 +319,18 @@ export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPo
     if (change.seriesPoints > 0) addEv(uid, "Dominion Bonus Punkte", change.seriesPoints);
   }
 
-  const allUids = new Set([...Object.keys(evPart), ...Object.keys(evStats), ...Object.keys(pollBonusPts)]);
+  const allUids = new Set([
+    ...Object.keys(evPart), ...Object.keys(evSpectatorPart), ...Object.keys(evStats), ...Object.keys(pollBonusPts),
+  ]);
   const pointsByUser: Record<string, number> = {};
   for (const uid of allUids) {
     if (excludedSet.has(uid)) { pointsByUser[uid] = 0; continue; }
     const part = evPart[uid] ?? 0;
+    const spectatorPart = evSpectatorPart[uid] ?? 0;
     const es = evStats[uid] ?? {};
-    let pts = part * cfg.participationPoints + (pollBonusPts[uid] ?? 0);
+    let pts = part * cfg.participationPoints
+      + spectatorPart * (cfg.spectatorParticipationPoints ?? 0)
+      + (pollBonusPts[uid] ?? 0);
     for (const { field, pointsPer } of cfg.stats) {
       pts += (es[field] ?? 0) * pointsPer;
     }
