@@ -61,6 +61,7 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
             seriesStatConfig: true,
             placementRewardsJson: true,
             pollConfigJson: true,
+            seriesStandingsJson: true,
           },
         },
         registrations: { select: { userId: true, role: true } },
@@ -135,6 +136,25 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
     try { return JSON.parse(event.series.seriesStatConfig); } catch { return null; }
   })();
 
+  // Aktueller Dominion-Streak je registriertem User, VOR diesem Event — aus der Reihen-Rohtabelle
+  // (seriesStandingsJson), damit Moderatoren beim Ausfüllen sehen, wer bereits auf eine Serie
+  // aufbaut, statt es erst nach dem Speichern aus completionData.dominionChanges zu erfahren.
+  const currentDominionStreaks: Record<string, number> = (() => {
+    const cfg = seriesStatConfig?.dominionBonus;
+    const triggerStats = cfg?.triggerStats ?? (cfg?.triggerStat ? [cfg.triggerStat] : []);
+    if (!cfg?.enabled || triggerStats.length === 0 || !event.series?.seriesStandingsJson) return {};
+    const streakKey = `_streak_[${triggerStats.join(",")}]`;
+    try {
+      const standings = JSON.parse(event.series.seriesStandingsJson) as { raw?: Record<string, Record<string, number>> };
+      const out: Record<string, number> = {};
+      for (const [uid, row] of Object.entries(standings.raw ?? {})) {
+        const val = row[streakKey] ?? 0;
+        if (val > 0) out[uid] = val;
+      }
+      return out;
+    } catch { return {}; }
+  })();
+
   // Rewards: event-level overrides series, series overrides defaults
   const rewardsConfig = parseRewards(event.placementRewardsJson ?? event.series?.placementRewardsJson);
 
@@ -192,6 +212,7 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
       userStats={userStats}
       format={event.format}
       userAvgScore={userAvgScore}
+      currentDominionStreaks={currentDominionStreaks}
       seriesStatConfig={seriesStatConfig}
       rewardsConfig={rewardsConfig}
       pollConfig={pollConfig}

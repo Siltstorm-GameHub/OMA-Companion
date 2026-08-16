@@ -53,6 +53,9 @@ interface Props {
   format: string | null;
   /** Kombinierter Ø-Wert pro Runde (über alle Stat-Felder) je Spieler — nur bei format "avg_stats" */
   userAvgScore: Record<string, number>;
+  /** Aktueller Dominion-Streak je User VOR diesem Event (aus der Reihen-Rohtabelle) — nur User mit
+   *  Streak > 0 sind enthalten. Zeigt Moderatoren beim Ausfüllen, wer bereits auf den Bonus zusteuert. */
+  currentDominionStreaks: Record<string, number>;
   seriesStatConfig: SeriesStatConfig | null;
   rewardsConfig: RewardsConfig;
   pollConfig: PollConfig;
@@ -113,6 +116,7 @@ export default function EventCompleteClient({
   eventId, eventTitle, seriesId, seriesName, seriesIcon,
   registeredUsers, spectatorUsers, allUsers, tournamentStatFields, userStats, format, userAvgScore,
   seriesStatConfig, rewardsConfig, pollConfig, pollsConfig, pendingEventPolls, spectatorRewardJson,
+  currentDominionStreaks,
   isAdmin, isReEdit, status,
   initialData, initialFinalRanking, initialRankingGroups, initialFinalRankingNote,
 }: Props) {
@@ -1067,6 +1071,14 @@ export default function EventCompleteClient({
                         </span>
                         <Avatar u={u} size={5} />
                         <span className={`text-xs flex-1 truncate ${isExcluded ? "text-red-300/70 line-through" : "text-white"}`}>{userName(u)}</span>
+                        {!isExcluded && dominionCfg?.enabled && (currentDominionStreaks[uid] ?? 0) > 0 && (
+                          <span
+                            title={`Dominion-Streak: ${currentDominionStreaks[uid]}x in Folge „${dominionTriggerLabel}" — noch ${Math.max(dominionCfg.threshold - currentDominionStreaks[uid], 0)}x bis zum Bonus`}
+                            className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-orange-500/10 border border-orange-500/25 text-[10px] font-semibold text-orange-400 shrink-0"
+                          >
+                            <Flame className="w-2.5 h-2.5" /> {currentDominionStreaks[uid]}
+                          </span>
+                        )}
                         {isExcluded && (
                           <span className="text-[10px] text-red-400 shrink-0">Disqualifiziert</span>
                         )}
