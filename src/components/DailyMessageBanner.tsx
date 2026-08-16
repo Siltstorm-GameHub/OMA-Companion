@@ -14,11 +14,14 @@ export function DailyMessageBanner({
   message,
   onVisibilityChange,
   fill = false,
+  insetLeft = false,
 }: {
   message: Message;
   onVisibilityChange?: (visible: boolean) => void;
   /** Streckt die Box auf 100% der Höhe des Elternelements und zentriert den Inhalt vertikal (z.B. im Banner-Slider). */
   fill?: boolean;
+  /** Rückt den Inhalt links etwas ein, damit er nicht unter den Slider-Pfeilen verschwindet. */
+  insetLeft?: boolean;
 }) {
   const [visible, setVisible] = useState(false);
 
@@ -41,7 +44,7 @@ export function DailyMessageBanner({
 
   return (
     <div
-      className="flex gap-3 px-4 py-3.5 rounded-xl"
+      className={`flex gap-3 ${insetLeft ? "pl-11 pr-4" : "px-4"} py-3.5 rounded-xl`}
       style={{
         background: "linear-gradient(135deg, rgba(168,85,247,0.12) 0%, rgba(139,92,246,0.06) 100%)",
         border: "1px solid rgba(168,85,247,0.25)",

@@ -336,8 +336,13 @@ function WallPanel({ def }: ShapeProps) {
  *  breite Matte knapp über dem Boden. */
 function Rug({ def }: ShapeProps) {
   const accent = ACCENT_COLORS[def.accent];
+  // y=0.035 statt 0.015: die ContactShadows-Plane in RoomStage3D.tsx sitzt bei
+  // y=0.01, exakt innerhalb der 0–0.03-Spanne eines bei 0.015 zentrierten
+  // Teppichs. Die halbtransparente Shadow-Plane schneidet dann durch den
+  // massiven Teppich-Körper statt darunter zu bleiben, was den Teppich streckenweise
+  // verdeckt/dunkel einfärbt. Mit 0.035 liegt der Teppich vollständig über y=0.01.
   return (
-    <RoundedBox args={[def.w * 0.94, 0.03, def.h * 0.94]} radius={0.015} position={[0, 0.015, 0]} receiveShadow>
+    <RoundedBox args={[def.w * 0.94, 0.03, def.h * 0.94]} radius={0.015} position={[0, 0.035, 0]} receiveShadow>
       <meshStandardMaterial {...matteProps(accent)} roughness={0.85} />
     </RoundedBox>
   );
@@ -358,13 +363,19 @@ function LogoRug({ def }: ShapeProps) {
   // Kandidat. Zylinder mit echter Höhe geben dem Teppich echten Abstand zum
   // Boden, exakt das robuste Muster, das die rechteckige Rug()-Variante
   // (RoundedBox statt Plane) schon die ganze Zeit nutzt.
+  // y-Offset um 0.02 angehoben (0.015→0.035, 0.033→0.053): die ContactShadows-
+  // Plane in RoomStage3D.tsx liegt bei y=0.01, also mitten in der alten
+  // 0–0.03-Spanne des Teppich-Zylinders. Die halbtransparente Schatten-Plane
+  // schnitt dadurch durch den massiven Teppich statt sauber darunter zu bleiben
+  // — dadurch wirkte der Teppich streckenweise unsichtbar/"im Boden versunken".
+  // Mit dem Offset liegt der komplette Teppich oberhalb y=0.01.
   return (
     <group>
-      <mesh position={[0, 0.015, 0]} receiveShadow>
+      <mesh position={[0, 0.035, 0]} receiveShadow>
         <cylinderGeometry args={[radius, radius, 0.03, 48]} />
         <meshStandardMaterial {...matteProps(accent)} roughness={0.85} />
       </mesh>
-      <mesh position={[0, 0.033, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh position={[0, 0.053, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[radius * 0.6, 48]} />
         <meshStandardMaterial map={logo} transparent roughness={0.75} />
       </mesh>

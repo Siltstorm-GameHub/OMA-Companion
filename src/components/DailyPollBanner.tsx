@@ -38,7 +38,7 @@ async function refetchPoll(id: string): Promise<Poll | null> {
   return fresh.find(p => p.id === id) ?? null;
 }
 
-function PollCard({ poll, onVoted, onDismiss }: { poll: Poll; onVoted: (p: Poll) => void; onDismiss: () => void }) {
+function PollCard({ poll, onVoted, onDismiss, insetLeft }: { poll: Poll; onVoted: (p: Poll) => void; onDismiss: () => void; insetLeft: boolean }) {
   const [selected, setSelected]         = useState<string[]>(poll.myOptionIds);
   const [freeText, setFreeText]         = useState(poll.myFreeText ?? "");
   const [freeTextGames, setFreeTextGames] = useState<GameSuggestion[]>(poll.myFreeTextGames);
@@ -121,7 +121,7 @@ function PollCard({ poll, onVoted, onDismiss }: { poll: Poll; onVoted: (p: Poll)
   const total = poll.results?.totalVotes ?? 0;
 
   return (
-    <div className="px-4 py-3.5 rounded-xl"
+    <div className={`${insetLeft ? "pl-11 pr-4" : "px-4"} py-3.5 rounded-xl`}
       style={{
         background: "linear-gradient(135deg, rgba(168,85,247,0.12) 0%, rgba(139,92,246,0.06) 100%)",
         border: "1px solid rgba(168,85,247,0.25)",
@@ -314,10 +314,13 @@ function PollCard({ poll, onVoted, onDismiss }: { poll: Poll; onVoted: (p: Poll)
 export function DailyPollBanner({
   onVisibilityChange,
   fill = false,
+  insetLeft = false,
 }: {
   onVisibilityChange?: (visible: boolean) => void;
   /** Streckt die Box auf 100% der Höhe des Elternelements (z.B. im Banner-Slider). */
   fill?: boolean;
+  /** Rückt den Inhalt links etwas ein, damit er nicht unter den Slider-Pfeilen verschwindet. */
+  insetLeft?: boolean;
 } = {}) {
   const [polls, setPolls] = useState<Poll[]>([]);
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
@@ -353,7 +356,7 @@ export function DailyPollBanner({
   return (
     <div className={`space-y-2.5 ${fill ? "h-full flex flex-col justify-center" : ""}`}>
       {visible.map(p => (
-        <PollCard key={p.id} poll={p} onVoted={updatePoll} onDismiss={() => dismiss(p.id)} />
+        <PollCard key={p.id} poll={p} onVoted={updatePoll} onDismiss={() => dismiss(p.id)} insetLeft={insetLeft} />
       ))}
     </div>
   );
