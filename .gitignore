@@ -2,6 +2,9 @@
 .claude/skills/
 .agents/
 
+# Promo/marketing scratch assets (Higgsfield + Blender working files) — not app content
+brandkit/
+
 # Dependencies
 node_modules/
 .pnp
