@@ -177,7 +177,7 @@ export function PromoBannerCarousel({
           </button>
         </>
       )}
-      <div className="grid">
+      <div className={`grid ${visibleIds.length > 1 ? "pl-10" : ""}`}>
         {candidateIds.includes("job") && jobReminder && (
           <div className={slideClass("job")} aria-hidden={activeId !== "job"}>
             <JobReminderSlide jobReminder={jobReminder} fill />
