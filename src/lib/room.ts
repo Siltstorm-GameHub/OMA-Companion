@@ -56,7 +56,12 @@ export async function loadRoom(userId: string): Promise<RoomState> {
     // damalige Position/Größe — beim Speichern würde validateLayout() sie
     // gegen die inzwischen viel größere Katalog-Größe prüfen und ablehnen
     // ("passt nicht ins Raster"). Deshalb werden sie beim Laden ignoriert.
-    if (row.itemKey === "vitrine") continue;
+    // Der runde OMA-Teppich ist seit kurzem ein festes Bühnenelement wie die
+    // Vitrine (siehe RoomStage3D.tsx, CenterRug) — Altzeilen aus der Zeit, als
+    // er noch ein normales Raster-Item war (placed ODER im Lager), werden
+    // beim Laden ignoriert, damit er nicht mehr als einlagerbares/
+    // verschiebbares Objekt im Editor auftaucht.
+    if (row.itemKey === "vitrine" || row.itemKey === "teppich_rund_logo") continue;
     if (row.placed) {
       // Zeilen aus der Zeit vor der isometrischen Eck-Ansicht (flaches
       // 28×9-Raster) haben Koordinaten, die im neuen, kleineren Drei-Flächen-

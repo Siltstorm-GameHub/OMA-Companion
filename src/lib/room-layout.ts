@@ -109,11 +109,10 @@ export const DEFAULT_PLACEMENTS: { key: string; zone: RoomSurface; x: number; y:
   { key: "schreibtisch_alt", zone: "floor", x: 0, y: 4 },
   { key: "roehrenmonitor",   zone: "floor", x: 2, y: 4 },
   { key: "pc_billig",        zone: "floor", x: 6, y: 5 },
-  // Runder OMA-Teppich: im offenen Bereich zwischen Rückwand und
-  // Schreibtisch, links der Vitrine-Spalten.
-  { key: "teppich_rund_logo", zone: "floor", x: 2, y: 0 },
-  // Vitrine bewusst NICHT hier: sie ist ein festes Bühnenelement mit fixer
-  // Position (siehe RoomStage.tsx, VitrinePanel), kein Katalog-Platzierung.
+  // Vitrine UND runder OMA-Teppich bewusst NICHT hier: beide sind feste
+  // Bühnenelemente mit fixer Position außerhalb des Rasters (siehe
+  // RoomStage3D.tsx, VITRINE_MARKER bzw. CenterRug) — kein Katalog-
+  // Platzierung, nicht einlagerbar, nicht verschiebbar.
 ];
 
 /**
