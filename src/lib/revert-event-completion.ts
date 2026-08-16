@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { rollbackResolvedPredictions } from "@/lib/predictions";
+import { recomputeSeriesDominionBonus } from "@/lib/dominion-bonus";
 
 type SeriesStatConfig = {
   participationPoints?: number;
@@ -426,16 +427,11 @@ export async function revertEventCompletion(eventId: string, opts: RevertOptions
           }
         }
 
-        const dominionTriggerStats = statCfg.dominionBonus?.triggerStats
-          ?? (statCfg.dominionBonus?.triggerStat ? [statCfg.dominionBonus.triggerStat] : []);
-        const streakKey = `_streak_[${dominionTriggerStats.join(",")}]`;
-        for (const [userId, change] of Object.entries(cd.dominionChanges ?? {})) {
-          sub(userId, streakKey, change.streakAfter - change.streakBefore);
-          if (change.bonusAwarded) {
-            sub(userId, "Dominion Bonus", 1);
-            if (change.seriesPoints > 0) sub(userId, "Dominion Bonus Punkte", change.seriesPoints);
-          }
-        }
+        // Dominion-Bonus/Streak wird NICHT mehr hier per Delta zurückgerechnet — das würde bei
+        // nachträglich außer der Reihe editierten Events zur selben falschen Reihenfolge führen,
+        // die dieser komplette Umbau beheben soll. Stattdessen baut recomputeSeriesDominionBonus()
+        // weiter unten (nach dem Löschen von completionData) _streak_[...] und "Dominion Bonus
+        // Punkte" komplett neu auf, chronologisch über die verbleibende Event-Historie.
 
         standings.processedEventIds = standings.processedEventIds.filter(id => id !== eventId);
         standings.lastUpdated = new Date().toISOString();
@@ -468,4 +464,14 @@ export async function revertEventCompletion(eventId: string, opts: RevertOptions
   // completionData löschen, damit die Liga-Tabelle (computeStatStandings) das Event
   // nicht mehr zählt — die Anzeige liest ausschließlich aus event.completionData.
   await prisma.event.update({ where: { id: eventId }, data: { completionData: null } });
+
+  // Dominion Bonus der ganzen Reihe chronologisch neu berechnen — das Event fällt jetzt aus der
+  // Historie heraus, was verschieben kann, welches (spätere) Event einen Bonus auslöst.
+  if (event.seriesId) {
+    try {
+      await recomputeSeriesDominionBonus(event.seriesId);
+    } catch (err) {
+      console.error("[Dominion Bonus] Neuberechnung fehlgeschlagen:", err);
+    }
+  }
 }
