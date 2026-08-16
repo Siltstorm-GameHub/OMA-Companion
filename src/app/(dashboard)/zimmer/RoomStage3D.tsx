@@ -16,7 +16,10 @@
  * gerendert — Trophäen/Pokale/Details zeigt weiterhin VitrineModal.
  */
 
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  Component, useEffect, useMemo, useRef, useState,
+  type PointerEvent as ReactPointerEvent, type ReactNode,
+} from "react";
 import { Canvas, useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { OrthographicCamera, ContactShadows, Html } from "@react-three/drei";
 import { EffectComposer, Bloom } from "@react-three/postprocessing";
@@ -74,6 +77,61 @@ interface Props {
    *  in room-config.ts) — Default ROOM_LEVEL_THRESHOLDS, falls der Aufrufer
    *  die Config nicht geladen hat (z.B. Vorschau-Kontexte). */
   levelThresholds?: readonly number[];
+}
+
+/**
+ * Fängt Abstürze der WebGL-Bühne lokal ab, statt die GANZE Seite mit Next.js'
+ * generischer Fehlerseite ("Ein unerwarter Fehler ist aufgetreten") kippen zu
+ * lassen — auf manchen Mobil-GPUs (bislang beobachtet: Android/Chrome) kann
+ * die Postprocessing-Pipeline (siehe EffectComposer/Bloom in RoomCanvas)
+ * beim WebGL-Kontext-Aufbau werfen, obwohl Desktop-Browser dieselbe Szene
+ * anstandslos rendern. Ohne diese Grenze reißt der Fehler die komplette
+ * Zimmer-Seite (Kachel, Buttons, Lohn-Widget, …) mit runter, obwohl nur die
+ * 3D-Bühne selbst betroffen ist.
+ */
+class RoomCanvasBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { failed: false };
+  }
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidCatch(error: unknown) {
+    console.error("Zimmer-3D-Ansicht konnte nicht gerendert werden:", error);
+  }
+  render() {
+    if (this.state.failed) {
+      return (
+        <div className="w-full aspect-[6/5] rounded-2xl bg-[#141018] flex items-center justify-center px-6 text-center">
+          <p className="text-xs text-gray-500">
+            Dein Zimmer lässt sich auf diesem Gerät gerade nicht darstellen — probier es mit einem anderen Browser oder lade die Seite neu.
+          </p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+/**
+ * Grobe Geräteklasse via Zeiger-Typ statt Bildschirmbreite (ein Tablet im
+ * Querformat ist trotzdem ein Touch-Gerät) — Grundlage, um die Bloom-
+ * Postprocessing-Pipeline auf schwächeren/inkompatibleren Mobil-GPUs
+ * überhaupt nicht erst aufzubauen (siehe RoomCanvas), statt erst nach einem
+ * Absturz auf die Fehler-Kachel auszuweichen.
+ */
+function useIsCoarsePointer(): boolean {
+  const [coarse, setCoarse] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia("(pointer: coarse)");
+    const handler = (e: MediaQueryListEvent) => setCoarse(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return coarse;
 }
 
 // ── Prozedurale Boden-/Wand-Texturen ────────────────────────────────────────
@@ -1007,6 +1065,14 @@ function RoomCanvas({
     return hidden;
   }, [camPos]);
 
+  // Bloom/EffectComposer bauen eine eigene Render-Target-Pipeline auf
+  // (mipmapBlur braucht Float-Textur-Unterstützung) — auf manchen Touch-
+  // Geräten/Android-GPUs ist genau das die Absturzursache, während der Rest
+  // der Szene anstandslos rendert. Die Neon-Akzente bleiben ohne Bloom
+  // trotzdem klar erkennbar (siehe emissiveIntensity/toneMapped weiter
+  // unten) — ein sichtbares Zimmer ohne Glow schlägt ein unsichtbares mit.
+  const skipBloom = useIsCoarsePointer();
+
   return (
     // `shadows` aktiviert Three.js' Shadow-Map-Pipeline — RoomLighting
     // wirft jetzt ein echtes Richtungslicht mit `castShadow`, Boden/Wände
@@ -1051,16 +1117,18 @@ function RoomCanvas({
         opacity={0.55} scale={Math.max(ROOM_SIZE.width, ROOM_SIZE.depth) * 1.2}
         blur={2.4} far={4}
       />
-      <EffectComposer>
-        {/*
-         * Schwelle bewusst höher als die leicht-emissiven Wand-/Möbelflächen
-         * (emissiveIntensity 0.35–0.55, siehe RoomShell/FurniturePrimitive) —
-         * sonst glüht der halbe Raum mit, statt nur die echten Neon-Akzente
-         * (Deckenkante, Monitor-Screens, Lampen — alle `toneMapped={false}`
-         * und deutlich heller) hervorzuheben.
-         */}
-        <Bloom intensity={0.7} luminanceThreshold={0.65} luminanceSmoothing={0.25} mipmapBlur />
-      </EffectComposer>
+      {!skipBloom && (
+        <EffectComposer>
+          {/*
+           * Schwelle bewusst höher als die leicht-emissiven Wand-/Möbelflächen
+           * (emissiveIntensity 0.35–0.55, siehe RoomShell/FurniturePrimitive) —
+           * sonst glüht der halbe Raum mit, statt nur die echten Neon-Akzente
+           * (Deckenkante, Monitor-Screens, Lampen — alle `toneMapped={false}`
+           * und deutlich heller) hervorzuheben.
+           */}
+          <Bloom intensity={0.7} luminanceThreshold={0.65} luminanceSmoothing={0.25} mipmapBlur />
+        </EffectComposer>
+      )}
     </Canvas>
   );
 }
@@ -1124,6 +1192,7 @@ export default function RoomStage3D({
   }
 
   return (
+    <RoomCanvasBoundary>
     <div
       title={`Zimmer-Stufe ${level + 1}`}
       className="relative w-full aspect-[6/5] overflow-hidden rounded-2xl bg-[#141018] touch-none cursor-grab active:cursor-grabbing"
@@ -1171,5 +1240,6 @@ export default function RoomStage3D({
         </button>
       </div>
     </div>
+    </RoomCanvasBoundary>
   );
 }

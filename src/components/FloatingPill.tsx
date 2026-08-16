@@ -4,7 +4,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import RankedAvatar from "@/components/RankedAvatar";
 import { useSession, signOut } from "next-auth/react";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useLayoutEffect, forwardRef } from "react";
 import {
   LayoutDashboard, CalendarDays, Trophy, ShoppingBag,
   Heart, User, ShieldCheck, LogOut, ChevronDown, Sun, Moon, Bell, Settings, X, MessageCircleMore,
@@ -39,11 +39,10 @@ type Notification = {
 };
 
 function useTheme() {
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
-  useEffect(() => {
-    const saved = localStorage.getItem("theme") as "dark" | "light" | null;
-    if (saved) setTheme(saved);
-  }, []);
+  const [theme, setTheme] = useState<"dark" | "light">(() => {
+    if (typeof window === "undefined") return "dark";
+    return (localStorage.getItem("theme") as "dark" | "light" | null) ?? "dark";
+  });
   function toggle() {
     const next = theme === "dark" ? "light" : "dark";
     const apply = () => {
@@ -69,63 +68,60 @@ function timeAgo(dateStr: string) {
   return `vor ${d} Tag${d !== 1 ? "en" : ""}`;
 }
 
-/* ── Tooltip ──────────────────────────────────────────────────────────── */
-function Tooltip({ label }: { label: string }) {
-  return (
-    <div style={{
-      position: "absolute", top: "calc(100% + 8px)", left: "50%",
-      transform: "translateX(-50%)", background: "rgba(13,13,15,0.97)",
-      border: "1px solid rgba(255,255,255,0.08)", borderRadius: 6,
-      padding: "4px 9px", fontSize: 11, fontWeight: 500,
-      color: "rgba(255,255,255,0.75)", whiteSpace: "nowrap",
-      pointerEvents: "none", zIndex: 60, boxShadow: "0 4px 16px rgba(0,0,0,0.5)",
-    }}>
-      {label}
-      <div style={{
-        position: "absolute", top: -4, left: "50%",
-        transform: "translateX(-50%) rotate(45deg)", width: 7, height: 7,
-        background: "rgba(13,13,15,0.97)", border: "1px solid rgba(255,255,255,0.08)",
-        borderRight: "none", borderBottom: "none",
-      }} />
-    </div>
-  );
-}
-
-/* ── NavIcon ──────────────────────────────────────────────────────────── */
-function NavIcon({ label, href, icon: Icon, active, danger = false }: {
+/*
+ * ── NavLink ──────────────────────────────────────────────────────────────
+ * Icon + label are always visible (no more hover-only tooltip). The active
+ * item's icon is duplicated into a floating "bump" bubble rendered by the
+ * parent (see `bump` state in FloatingPill) — the real icon here just fades
+ * out (`data-navicon`, opacity 0) but keeps its layout box so the bump can
+ * measure and slide onto it.
+ */
+const NavLink = forwardRef<HTMLAnchorElement, {
   label: string; href: string; icon: LucideIcon; active: boolean; danger?: boolean;
-}) {
-  const [hovered, setHovered] = useState(false);
-  const color = danger ? (active ? "#f87171" : "#4b5563") : (active ? "#2dd4bf" : "#4b5563");
+}>(function NavLink({ label, href, icon: Icon, active, danger = false }, ref) {
+  const [hov, setHov] = useState(false);
+  const activeColor   = danger ? "#f87171" : "#2dd4bf";
+  const inactiveColor = "#6b7280";
+  const color = active ? activeColor : hov ? "#d1d5db" : inactiveColor;
+
   return (
-    <div style={{ position: "relative" }}
-      onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
-      <Link href={href} style={{
-        display: "flex", alignItems: "center", justifyContent: "center",
-        width: 36, height: 36, borderRadius: 8,
-        background: active ? (danger ? "rgba(153,27,27,0.16)" : "rgba(20,184,166,0.13)") : "transparent",
-        boxShadow: active && !danger ? "inset 0 0 0 1px rgba(20,184,166,0.24)"
-          : active && danger ? "inset 0 0 0 1px rgba(153,27,27,0.30)" : "none",
-        textDecoration: "none", transition: "background 150ms, box-shadow 150ms", position: "relative",
-      }} className={!active ? (danger ? "hover:bg-red-900/20" : "hover:bg-white/[0.05]") : ""}>
-        {active && (
-          <span style={{
-            position: "absolute", bottom: 3, left: "50%", transform: "translateX(-50%)",
-            width: 4, height: 4, borderRadius: "50%",
-            background: danger ? "#f87171" : "#2dd4bf",
-            boxShadow: danger ? "0 0 6px rgba(248,113,113,0.8)" : "0 0 6px rgba(45,212,191,0.8)",
-          }} />
-        )}
-        <Icon style={{
-          width: 17, height: 17, strokeWidth: active ? 2.4 : 1.8, color,
-          filter: active && !danger ? "drop-shadow(0 0 4px rgba(20,184,166,0.5))" : "none",
-          transition: "color 150ms", marginBottom: active ? 3 : 0,
-        }} />
-      </Link>
-      {hovered && <Tooltip label={label} />}
-    </div>
+    <Link
+      ref={ref}
+      href={href}
+      title={label}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        display: "flex", alignItems: "center", gap: 6,
+        padding: "6px 10px", borderRadius: 9, whiteSpace: "nowrap",
+        position: "relative",
+        transition: "background 150ms ease, box-shadow 150ms ease",
+        background: !active && hov
+          ? (danger ? "rgba(153,27,27,0.08)" : "rgba(255,255,255,0.05)")
+          : "transparent",
+        boxShadow: !active && hov ? "inset 0 0 0 1px rgba(20,184,166,0.10)" : "none",
+      }}
+    >
+      <span
+        data-navicon
+        style={{
+          display: "inline-flex", alignItems: "center", justifyContent: "center",
+          width: 17, height: 17, flexShrink: 0,
+          opacity: active ? 0 : 1,
+          transition: "opacity 150ms ease",
+        }}
+      >
+        <Icon style={{ width: 17, height: 17, strokeWidth: active ? 2.4 : 1.8, color, transition: "color 150ms" }} />
+      </span>
+      <span style={{
+        fontSize: 12.5, fontWeight: active ? 650 : 500, color,
+        transition: "color 150ms ease", lineHeight: 1, letterSpacing: "-0.01em",
+      }}>
+        {label}
+      </span>
+    </Link>
   );
-}
+});
 
 /* ── FloatingPill ─────────────────────────────────────────────────────── */
 /**
@@ -141,12 +137,55 @@ export default function FloatingPill({ roomVisible = false }: { roomVisible?: bo
   const [avatarOpen, setAvatarOpen]     = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount]   = useState(0);
+  const [bump, setBump] = useState<{ left: number; top: number } | null>(null);
   const dropRef = useRef<HTMLDivElement>(null);
+  const navRef        = useRef<HTMLDivElement>(null);
+  const activeLinkRef = useRef<HTMLAnchorElement>(null);
 
   const isStaff = (session?.user as { role?: string } | undefined)?.role === "moderator"
     || (session?.user as { role?: string } | undefined)?.role === "admin";
   const userName = session?.user?.name ?? session?.user?.email ?? "?";
   const myRankPoints = (session?.user as { rankPoints?: number } | undefined)?.rankPoints ?? 0;
+
+  /*
+   * Resolve nav items once: the Profil-slot points at /zimmer once the room
+   * is visible for this user, admin gets appended for staff, and each item
+   * carries its own active flag (see original NavIcon logic this replaces).
+   */
+  const NAV_ITEMS: { label: string; href: string; icon: LucideIcon; active: boolean; danger?: boolean; showPollBadge?: boolean }[] =
+    NAV.map(({ label, href, icon }) => {
+      const effHref = href === "/profile" && roomVisible ? "/zimmer" : href;
+      return {
+        label, href: effHref, icon,
+        active: pathname === effHref || (effHref !== "/dashboard" && pathname.startsWith(effHref)),
+        showPollBadge: href === "/events",
+      };
+    });
+  if (isStaff) {
+    NAV_ITEMS.push({ label: "Admin", href: "/admin", icon: ShieldCheck, active: pathname.startsWith("/admin"), danger: true });
+  }
+  const activeItem     = NAV_ITEMS.find(n => n.active);
+  const activeIsDanger = !!activeItem?.danger;
+  const ActiveIcon     = activeItem?.icon;
+
+  /* Slide the bump bubble onto whichever item is active */
+  useLayoutEffect(() => {
+    const measure = () => {
+      const nav  = navRef.current;
+      const link = activeLinkRef.current;
+      const icon = link?.querySelector<HTMLElement>("[data-navicon]");
+      if (!nav || !link || !icon) { setBump(null); return; }
+      const navBox  = nav.getBoundingClientRect();
+      const iconBox = icon.getBoundingClientRect();
+      setBump({
+        left: iconBox.left - navBox.left + iconBox.width / 2,
+        top:  iconBox.top  - navBox.top  + iconBox.height / 2,
+      });
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [pathname, isStaff, roomVisible]);
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -244,28 +283,42 @@ export default function FloatingPill({ roomVisible = false }: { roomVisible?: bo
 
       <div style={{ width: 1, height: 22, background: "rgba(255,255,255,0.07)", margin: "0 4px", flexShrink: 0 }} />
 
-      {NAV.map(({ label, href, icon }) => {
-        // Der Profil-Slot verlinkt auf /zimmer, sobald das Zimmer für diesen
-        // User sichtbar ist — /profile leitet dann ohnehin sofort auf /zimmer
-        // um, ein zweiter Eintrag für dasselbe Ziel wäre nur Redundanz. Label
-        // bleibt bewusst "Profil" — das Gaming-Zimmer ersetzt die alte
-        // Profilseite, ist für die User aber weiterhin "ihr Profil".
-        const isProfile  = href === "/profile";
-        const effHref    = isProfile && roomVisible ? "/zimmer" : href;
-        const effLabel   = label;
-        const effIcon    = icon;
-        return (
-          <div key={href} style={{ position: "relative" }}>
-            <NavIcon label={effLabel} href={effHref} icon={effIcon}
-              active={pathname === effHref || (effHref !== "/dashboard" && pathname.startsWith(effHref))} />
-            {href === "/events" && <PollBadge />}
+      {/* Nav links, always visible, with a bump bubble over the active icon */}
+      <div ref={navRef} style={{ display: "flex", alignItems: "center", gap: 1, position: "relative" }}>
+        {bump && ActiveIcon && (
+          /* Transform-only slide (no layout thrash) — see FloatingPill's NavLink for the matching fade-out icon. */
+          <div style={{
+            position: "absolute", top: 0, left: 0,
+            width: 30, height: 30, marginLeft: -15, marginTop: -26,
+            borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+            background: activeIsDanger ? "#f87171" : "#2dd4bf",
+            boxShadow: activeIsDanger
+              ? "0 4px 12px rgba(248,113,113,0.45), 0 0 0 4px rgba(13,13,15,0.94)"
+              : "0 4px 12px rgba(45,212,191,0.45), 0 0 0 4px rgba(13,13,15,0.94)",
+            transform: `translate(${bump.left}px, ${bump.top}px)`,
+            transition: "transform 400ms cubic-bezier(0.16, 1, 0.3, 1), background 150ms ease, box-shadow 150ms ease",
+            pointerEvents: "none", zIndex: 2,
+          }}>
+            <ActiveIcon style={{ width: 15, height: 15, strokeWidth: 2.4, color: activeIsDanger ? "#450a0a" : "#04342c" }} />
           </div>
-        );
-      })}
-      {isStaff && (
-        <NavIcon label="Admin" href="/admin" icon={ShieldCheck}
-          active={pathname.startsWith("/admin")} danger />
-      )}
+        )}
+        {/*
+         * Der Profil-Slot verlinkt auf /zimmer, sobald das Zimmer für diesen
+         * User sichtbar ist — /profile leitet dann ohnehin sofort auf /zimmer
+         * um, ein zweiter Eintrag für dasselbe Ziel wäre nur Redundanz. Label
+         * bleibt bewusst "Profil" — das Gaming-Zimmer ersetzt die alte
+         * Profilseite, ist für die User aber weiterhin "ihr Profil".
+         */}
+        {NAV_ITEMS.map(({ label, href, icon, active, danger, showPollBadge }) => (
+          <div key={href} style={{ position: "relative" }}>
+            <NavLink
+              ref={active ? activeLinkRef : undefined}
+              label={label} href={href} icon={icon} active={active} danger={danger}
+            />
+            {showPollBadge && <PollBadge />}
+          </div>
+        ))}
+      </div>
 
       <div style={{ width: 1, height: 22, background: "rgba(255,255,255,0.07)", margin: "0 4px", flexShrink: 0 }} />
 
