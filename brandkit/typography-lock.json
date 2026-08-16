@@ -1,0 +1,20 @@
+{
+  "source_summary": "User-supplied official OMA app typography from src/app/globals.css: Space Grotesk as the display font.",
+  "typography": {
+    "display": {
+      "family": "Space Grotesk",
+      "source": "google:Space Grotesk",
+      "style": "normal",
+      "weight": 700
+    },
+    "body": {
+      "family": "Space Grotesk",
+      "source": "google:Space Grotesk",
+      "style": "normal",
+      "weight": 400
+    },
+    "font_links": [
+      "https://fonts.google.com/specimen/Space+Grotesk"
+    ]
+  }
+}
