@@ -239,7 +239,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
   })();
   const pollLabels: string[] = pollConfigs.map(p => p.label);
   // Poll-related fields and winner stat keys should never appear as extra columns
-  const pollRelatedFields = new Set<string>(["Umfrage-Teilnahmen"]);
+  const pollRelatedFields = new Set<string>(["Umfrage-Teilnahmen", "Umfrage-Teilnahmepunkte"]);
   for (const label of pollLabels) {
     for (const suffix of ["", "_Abstimmungen", "_Teilnahmepunkte", "_Siegerpunkte"]) {
       pollRelatedFields.add(`${label}${suffix}`);

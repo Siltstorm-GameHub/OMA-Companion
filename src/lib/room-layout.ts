@@ -166,7 +166,7 @@ export function fitsGrid(def: RoomItemDef, x: number, y: number, zone: RoomSurfa
  * echten Schreibtisch oder einer Kommode steht, beides ist eine gültige
  * Stellfläche.
  */
-function standCells(placed: PlacedItem[]): Set<string> {
+export function standCells(placed: PlacedItem[]): Set<string> {
   const cells = new Set<string>();
   for (const item of placed) {
     const def = getRoomItem(item.key);
@@ -187,7 +187,7 @@ function standCells(placed: PlacedItem[]): Set<string> {
  * Koordinaten zufällig übereinstimmen — die vier Wände sind eigene
  * Koordinatenräume, siehe room-3d.ts.
  */
-function shelfCells(placed: PlacedItem[]): Set<string> {
+export function shelfCells(placed: PlacedItem[]): Set<string> {
   const cells = new Set<string>();
   for (const item of placed) {
     const def = getRoomItem(item.key);
@@ -198,6 +198,41 @@ function shelfCells(placed: PlacedItem[]): Set<string> {
     }
   }
   return cells;
+}
+
+/**
+ * Welche Items in `placed` gerade "schweben" — ihr mustStandOn-Anspruch
+ * (Tisch/Ablage bzw. Regal) ist NICHT durch den Rest von `placed` gedeckt.
+ * Wird gebraucht, um beim automatischen Einlagern eines Tisch-/Regal-Upgrades
+ * (siehe purchaseRoomItem in room.ts) alle darauf stehenden Objekte GLEICH
+ * MIT einzulagern, statt sie unsichtbar schwebend zurückzulassen — genau das
+ * ist sonst der Bug: ein neuer Schreibtisch verdrängt den alten, Monitore
+ * bleiben ohne Unterlage stehen und lassen sich später nicht mehr sauber
+ * speichern, weil validateLayout() jede weitere Änderung ablehnt, solange sie
+ * noch schweben.
+ */
+export function orphanedStandItems(placed: PlacedItem[]): PlacedItem[] {
+  const stands  = standCells(placed);
+  const shelves = shelfCells(placed);
+  return placed.filter(item => {
+    const def = getRoomItem(item.key);
+    if (!def) return false;
+    if (def.mustStandOn === "desk") {
+      for (let dx = 0; dx < def.w; dx++) {
+        for (let dy = 0; dy < def.h; dy++) {
+          if (!stands.has(`${item.x + dx},${item.y + dy}`)) return true;
+        }
+      }
+    }
+    if (def.mustStandOn === "shelf") {
+      for (let dx = 0; dx < def.w; dx++) {
+        for (let dy = 0; dy < def.h; dy++) {
+          if (!shelves.has(`${item.zone}:${item.x + dx},${item.y + dy}`)) return true;
+        }
+      }
+    }
+    return false;
+  });
 }
 
 /**

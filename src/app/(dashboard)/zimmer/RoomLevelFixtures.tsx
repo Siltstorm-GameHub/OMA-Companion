@@ -260,11 +260,29 @@ export function RoomWindow3D({ level, closed }: { level: number; closed: boolean
     [],
   );
 
+  // Der Rahmen MUSS ein echtes Loch in der Mitte haben (vier Leisten statt
+  // einer vollflächigen Box) — sonst verdeckt eine blickdichte Platte die
+  // gesamte Aussicht dahinter, egal wie transparent die Scheibe selbst ist.
+  // Frühere Version war eine einzige Box über die komplette Fensterfläche,
+  // die nur deshalb nicht auffiel, weil das alte Aussichtsbild davor genauso
+  // groß und blickdicht war (siehe Historie: "sieht aus wie aufgeklebt").
+  const frameBorder = 0.1;
   return (
     <group position={world}>
-      <RoundedBox args={[WINDOW_GEOM.w, WINDOW_GEOM.h, 0.08]} radius={0.03} position={[0, 0, 0.02]}>
-        <meshStandardMaterial color={frame.base} emissive={frame.base} emissiveIntensity={0.4} roughness={0.5} metalness={0.2} />
-      </RoundedBox>
+      <group position={[0, 0, 0.02]}>
+        <RoundedBox args={[WINDOW_GEOM.w, frameBorder, 0.08]} radius={0.02} position={[0, WINDOW_GEOM.h / 2 - frameBorder / 2, 0]}>
+          <meshStandardMaterial color={frame.base} emissive={frame.base} emissiveIntensity={0.4} roughness={0.5} metalness={0.2} />
+        </RoundedBox>
+        <RoundedBox args={[WINDOW_GEOM.w, frameBorder, 0.08]} radius={0.02} position={[0, -WINDOW_GEOM.h / 2 + frameBorder / 2, 0]}>
+          <meshStandardMaterial color={frame.base} emissive={frame.base} emissiveIntensity={0.4} roughness={0.5} metalness={0.2} />
+        </RoundedBox>
+        <RoundedBox args={[frameBorder, WINDOW_GEOM.h - frameBorder * 2, 0.08]} radius={0.02} position={[-WINDOW_GEOM.w / 2 + frameBorder / 2, 0, 0]}>
+          <meshStandardMaterial color={frame.base} emissive={frame.base} emissiveIntensity={0.4} roughness={0.5} metalness={0.2} />
+        </RoundedBox>
+        <RoundedBox args={[frameBorder, WINDOW_GEOM.h - frameBorder * 2, 0.08]} radius={0.02} position={[WINDOW_GEOM.w / 2 - frameBorder / 2, 0, 0]}>
+          <meshStandardMaterial color={frame.base} emissive={frame.base} emissiveIntensity={0.4} roughness={0.5} metalness={0.2} />
+        </RoundedBox>
+      </group>
       <WindowGlass level={level} closed={closed} />
       {/* Fester Glührand — unabhängig von SKY_COLOR/level, damit "hier kommt
           Licht her" auch bei den dunklen Dämmerungs-/Abendtönen sofort

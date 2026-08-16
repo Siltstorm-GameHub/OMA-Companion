@@ -130,8 +130,9 @@ export default function LulSpieltagEditor({
   // ── Filtered user lists ───────────────────────────────────────────────────────
   const filteredPlayerUsers = useMemo(() => {
     const q = playerSearch.toLowerCase().trim();
-    return q ? allUsers.filter(u => uname(u).toLowerCase().includes(q)) : allUsers;
-  }, [allUsers, playerSearch]);
+    const base = allUsers.filter(u => !spectatorIds.includes(u.id) && !voterIds.includes(u.id));
+    return q ? base.filter(u => uname(u).toLowerCase().includes(q)) : base;
+  }, [allUsers, playerSearch, spectatorIds, voterIds]);
 
   const filteredSpectatorUsers = useMemo(() => {
     const q = spectatorSearch.toLowerCase().trim();
@@ -160,7 +161,10 @@ export default function LulSpieltagEditor({
       setVoterIds(prev => prev.filter(id => id !== userId));
       setEntries(prev => { const n = { ...prev }; delete n[userId]; return n; });
     } else {
+      setPlayerIds(prev => prev.filter(id => id !== userId));
+      setSpectatorIds(prev => prev.filter(id => id !== userId));
       setVoterIds(prev => [...prev, userId]);
+      setStatsData(prev => { const n = { ...prev }; delete n[userId]; return n; });
       setEntries(prev => ({
         ...prev,
         [userId]: { role: "voter", rounds: Array(numRounds).fill(""), placement: "", gameWinner: false, communityChamp: false, trostpreis: false, voted: true },
@@ -207,6 +211,8 @@ export default function LulSpieltagEditor({
       setEntries(prev => { const n = { ...prev }; delete n[userId]; return n; });
       setStatsData(prev => { const n = { ...prev }; delete n[userId]; return n; });
     } else {
+      setSpectatorIds(prev => prev.filter(id => id !== userId));
+      setVoterIds(prev => prev.filter(id => id !== userId));
       setPlayerIds(prev => [...prev, userId]);
       ensureEntry(userId, "player");
       if (isStatFmt) {
@@ -223,7 +229,10 @@ export default function LulSpieltagEditor({
       setSpectatorIds(prev => prev.filter(id => id !== userId));
       setEntries(prev => { const n = { ...prev }; delete n[userId]; return n; });
     } else {
+      setPlayerIds(prev => prev.filter(id => id !== userId));
+      setVoterIds(prev => prev.filter(id => id !== userId));
       setSpectatorIds(prev => [...prev, userId]);
+      setStatsData(prev => { const n = { ...prev }; delete n[userId]; return n; });
       ensureEntry(userId, "spectator");
     }
   }

@@ -3,7 +3,7 @@ import { COIN_PREFIX } from "./points";
 import { getRoomItem, isFixed, isSeasonalActive, isSurface, STARTER_ITEM_KEYS } from "./room-items";
 import {
   DEFAULT_ROOM, DEFAULT_PLACEMENTS, DEFAULT_ID_PREFIX, MAX_PLACED_ITEMS,
-  countTags, validateLayout, fitsGrid,
+  countTags, validateLayout, fitsGrid, orphanedStandItems,
   type PlacedItem, type RoomState, type StoredItem, type RoomSurface,
 } from "./room-layout";
 
@@ -201,21 +201,31 @@ export async function purchaseRoomItem(userId: string, itemKey: string): Promise
   // stehen — außer ein aktiver Job braucht genau dieses Objekt gerade (dann
   // bleibt es stehen, der Kauf klappt trotzdem, wie beim manuellen Einlagern
   // in saveLayout).
-  let slotRowToStore: string | null = null;
+  //
+  // Steht auf dem alten Objekt noch etwas (Monitor auf dem Tisch, Pokal im
+  // Regal), MUSS das gleich mit eingelagert werden — sonst bleibt es
+  // unsichtbar "schwebend" zurück (kein Tisch mehr drunter) und jede
+  // spätere Einrichten-Aktion scheitert an validateLayout(), bis der User
+  // von Hand aufräumt. `orphanedStandItems` erkennt genau diesen Fall.
+  let slotRowsToStore: string[] = [];
   if (def.upgradeSlot) {
     const oldRow = placedRows.find(r => getRoomItem(r.itemKey)?.upgradeSlot === def.upgradeSlot);
     if (oldRow) {
+      const withoutOld: PlacedItem[] = placedRows
+        .filter(r => r.id !== oldRow.id)
+        .map(r => ({
+          id: r.id, key: r.itemKey, zone: coerceSurface(r.zone),
+          x: r.x, y: r.y, flipped: r.flipped, rotation: r.rotation, starter: r.starter,
+        }));
+      const orphans = orphanedStandItems(withoutOld);
+      const idsToStore = [oldRow.id, ...orphans.map(o => o.id)];
+
       const activeJob = getJob(userJob?.jobKey);
       if (!activeJob) {
-        slotRowToStore = oldRow.id;
+        slotRowsToStore = idsToStore;
       } else {
-        const remaining: PlacedItem[] = placedRows
-          .filter(r => r.id !== oldRow.id)
-          .map(r => ({
-            id: r.id, key: r.itemKey, zone: coerceSurface(r.zone),
-            x: r.x, y: r.y, flipped: r.flipped, rotation: r.rotation, starter: r.starter,
-          }));
-        if (checkRequirements(activeJob, countTags(remaining)).met) slotRowToStore = oldRow.id;
+        const remaining = withoutOld.filter(item => !orphans.some(o => o.id === item.id));
+        if (checkRequirements(activeJob, countTags(remaining)).met) slotRowsToStore = idsToStore;
       }
     }
   }
@@ -224,8 +234,8 @@ export async function purchaseRoomItem(userId: string, itemKey: string): Promise
     // Wer noch nie etwas verändert hat, bekommt hier sein Zimmer als echte Zeilen.
     await materializeRoom(userId, tx);
 
-    if (slotRowToStore) {
-      await tx.roomItem.update({ where: { id: slotRowToStore }, data: { placed: false } });
+    if (slotRowsToStore.length > 0) {
+      await tx.roomItem.updateMany({ where: { id: { in: slotRowsToStore } }, data: { placed: false } });
     }
 
     const row = await tx.roomItem.create({

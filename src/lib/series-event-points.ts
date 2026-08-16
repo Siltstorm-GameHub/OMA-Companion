@@ -245,13 +245,18 @@ export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPo
   // DB-basierte EventPoll-Belohnungen: Abstimmungs-Tracking + Ligapunkte (Abstimmungs-Zähler selbst
   // bleiben auch für ausgeschlossene User als Stat sichtbar, nur die Punkte-Boni werden ausgelassen)
   const eventVoterSet = new Set<string>(); // einmal pro Event für Umfrage-Teilnahmen
+  // Umfrage-Teilnahme-Ligapunkte gibt es nur einmal pro Event, nicht je Umfrage: über alle Umfragen
+  // des Events hinweg zählt nur der höchste konfigurierte Betrag unter den Umfragen, an denen
+  // teilgenommen wurde (sonst würden mehrere Umfragen desselben Events die Teilnahmepunkte
+  // mehrfach vergeben). Sieger-Ligapunkte gibt es dagegen je Umfragesieg — mehrere Siege in
+  // verschiedenen Umfragen desselben Events zählen jeweils.
+  const participationSeriesPointsByVoter: Record<string, number> = {};
   for (const ep of cd.eventPollRewards ?? []) {
     for (const uid of ep.voterIds ?? []) {
       addEv(uid, `${ep.label}_Abstimmungen`, 1);
       eventVoterSet.add(uid);
-      if (ep.participationSeriesPoints > 0 && !excludedSet.has(uid)) {
-        addEv(uid, `${ep.label}_Teilnahmepunkte`, ep.participationSeriesPoints);
-        pollBonusPts[uid] = (pollBonusPts[uid] ?? 0) + ep.participationSeriesPoints;
+      if (!excludedSet.has(uid) && ep.participationSeriesPoints > (participationSeriesPointsByVoter[uid] ?? 0)) {
+        participationSeriesPointsByVoter[uid] = ep.participationSeriesPoints;
       }
     }
     for (const uid of ep.winnerIds ?? []) {
@@ -265,6 +270,11 @@ export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPo
   // +1 Umfrage-Teilnahmen pro Event (nicht pro Poll)
   for (const uid of eventVoterSet) {
     addEv(uid, "Umfrage-Teilnahmen", 1);
+  }
+  for (const [uid, pts] of Object.entries(participationSeriesPointsByVoter)) {
+    if (pts <= 0) continue;
+    addEv(uid, "Umfrage-Teilnahmepunkte", pts);
+    pollBonusPts[uid] = (pollBonusPts[uid] ?? 0) + pts;
   }
 
   const allUids = new Set([...Object.keys(evPart), ...Object.keys(evStats), ...Object.keys(pollBonusPts)]);

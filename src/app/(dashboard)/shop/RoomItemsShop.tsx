@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -11,6 +11,7 @@ import { RoomItemPreview } from "@/app/(dashboard)/zimmer/RoomItemSprite";
 import { shopItems, isSurface, ROOM_ITEMS, type RoomItemDef } from "@/lib/room-items";
 import { jobsUnlockedBy } from "@/lib/jobs";
 import { cn } from "@/lib/utils";
+import { ItemDetailModal } from "./ItemDetailModal";
 
 interface Props {
   /** Besitzstand je itemKey (aufgestellt + im Lager). */
@@ -36,6 +37,7 @@ export default function RoomItemsShop({ owned, myPoints, isLoggedIn }: Props) {
   const [buying, setBuying] = useState<string | null>(null);
   const [counts, setCounts] = useState<Record<string, number>>(owned);
   const [points, setPoints] = useState(myPoints);
+  const [detailKey, setDetailKey] = useState<string | null>(null);
 
   // Slot -> Bezeichnung des aktuell besessenen Objekts dieser Upgrade-Kette
   // (z.B. "schreibtisch" -> "Wackeltisch") — auch die kostenlose Grund-
@@ -44,6 +46,11 @@ export default function RoomItemsShop({ owned, myPoints, isLoggedIn }: Props) {
   for (const item of ROOM_ITEMS) {
     if (item.upgradeSlot && (counts[item.key] ?? 0) > 0) slotOwner[item.upgradeSlot] = item.label;
   }
+
+  const detailDef = useMemo(
+    () => (detailKey ? ROOM_ITEMS.find(i => i.key === detailKey) ?? null : null),
+    [detailKey],
+  );
 
   async function handleBuy(def: RoomItemDef) {
     if (!isLoggedIn) { toast.error("Bitte einloggen"); return; }
@@ -159,6 +166,7 @@ export default function RoomItemsShop({ owned, myPoints, isLoggedIn }: Props) {
                     isLoggedIn={isLoggedIn}
                     loading={buying === def.key}
                     onBuy={() => handleBuy(def)}
+                    onOpenDetail={() => setDetailKey(def.key)}
                     currentSlotItemLabel={def.upgradeSlot ? slotOwner[def.upgradeSlot] : undefined}
                   />
                 ))}
@@ -167,15 +175,26 @@ export default function RoomItemsShop({ owned, myPoints, isLoggedIn }: Props) {
           </div>
         );
       })}
+
+      <ItemDetailModal
+        def={detailDef}
+        onClose={() => setDetailKey(null)}
+        owned={detailDef ? (counts[detailDef.key] ?? 0) : 0}
+        points={points}
+        isLoggedIn={isLoggedIn}
+        loading={!!detailDef && buying === detailDef.key}
+        onBuy={() => detailDef && handleBuy(detailDef)}
+        currentSlotItemLabel={detailDef?.upgradeSlot ? slotOwner[detailDef.upgradeSlot] : undefined}
+      />
     </section>
   );
 }
 
 function ItemCard({
-  def, owned, points, isLoggedIn, loading, onBuy, currentSlotItemLabel,
+  def, owned, points, isLoggedIn, loading, onBuy, onOpenDetail, currentSlotItemLabel,
 }: {
   def: RoomItemDef; owned: number; points: number;
-  isLoggedIn: boolean; loading: boolean; onBuy: () => void;
+  isLoggedIn: boolean; loading: boolean; onBuy: () => void; onOpenDetail: () => void;
   /** Label des aktuell besessenen Objekts in derselben Upgrade-Kette (falls vorhanden). */
   currentSlotItemLabel?: string;
 }) {
@@ -191,11 +210,15 @@ function ItemCard({
   }[def.accent];
 
   return (
-    <div className={cn(
-      "relative rounded-xl border overflow-hidden transition-all duration-200 bg-white/[0.02]",
-      accentBorder,
-      maxedOut && "opacity-60"
-    )}>
+    <div
+      role="button" tabIndex={0} onClick={onOpenDetail}
+      onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpenDetail(); } }}
+      className={cn(
+        "relative rounded-xl border overflow-hidden transition-all duration-200 bg-white/[0.02] cursor-pointer hover:bg-white/[0.04] hover:border-white/20",
+        accentBorder,
+        maxedOut && "opacity-60"
+      )}
+    >
       {owned > 0 && (
         <div className="absolute top-2 right-2 flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 z-10">
           <Check className="w-2.5 h-2.5 text-emerald-400" />
@@ -246,7 +269,7 @@ function ItemCard({
           </div>
         ) : (
           <button
-            onClick={onBuy}
+            onClick={e => { e.stopPropagation(); onBuy(); }}
             disabled={loading || !canAfford || !isLoggedIn}
             className={cn(
               "w-full flex items-center justify-center gap-1.5 text-[11px] font-semibold px-2 py-1.5 rounded-lg transition-all active:scale-[0.97] disabled:cursor-not-allowed mt-1",
