@@ -7,7 +7,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
   LayoutDashboard, CalendarDays, Trophy, ShoppingBag,
-  Heart, User, ShieldCheck, LogOut, ChevronDown, Sun, Moon, Bell, Settings, X, MessageCircleMore, Gamepad2,
+  Heart, User, ShieldCheck, LogOut, ChevronDown, Sun, Moon, Bell, Settings, X, MessageCircleMore,
   type LucideIcon,
 } from "lucide-react";
 import { WHATSAPP_COMMUNITY_URL } from "@/lib/config";
@@ -253,7 +253,7 @@ export default function FloatingPill({ roomVisible = false }: { roomVisible?: bo
         const isProfile  = href === "/profile";
         const effHref    = isProfile && roomVisible ? "/zimmer" : href;
         const effLabel   = label;
-        const effIcon    = isProfile && roomVisible ? Gamepad2 : icon;
+        const effIcon    = icon;
         return (
           <div key={href} style={{ position: "relative" }}>
             <NavIcon label={effLabel} href={effHref} icon={effIcon}
