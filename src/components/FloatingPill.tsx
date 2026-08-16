@@ -6,7 +6,7 @@ import RankedAvatar from "@/components/RankedAvatar";
 import { useSession, signOut } from "next-auth/react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
-  LayoutDashboard, CalendarDays, Star, Trophy, ShoppingBag,
+  LayoutDashboard, CalendarDays, Trophy, ShoppingBag,
   Heart, User, ShieldCheck, LogOut, ChevronDown, Sun, Moon, Bell, Settings, X, MessageCircleMore, Sofa,
   type LucideIcon,
 } from "lucide-react";
@@ -16,7 +16,6 @@ import PollBadge from "@/components/PollBadge";
 const NAV = [
   { label: "Dashboard",      href: "/dashboard",   icon: LayoutDashboard },
   { label: "Events",         href: "/events",       icon: CalendarDays    },
-  { label: "Level-Up-League",href: "/lul",          icon: Star            },
   { label: "Rangliste",      href: "/leaderboard",  icon: Trophy          },
   { label: "Shop",           href: "/shop",         icon: ShoppingBag     },
   { label: "Spendenpool",    href: "/donations",    icon: Heart           },

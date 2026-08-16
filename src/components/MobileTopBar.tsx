@@ -13,7 +13,6 @@ const ROUTE_TITLES: Record<string, string> = {
   "/events":     "Events",
   "/shop":       "Shop",
   "/tournament": "Turnier-Details",
-  "/lul":        "Level-Up-League",
   "/leaderboard":"Rangliste",
   "/donations":  "Spendenpool",
   "/profile":    "Mein Profil",

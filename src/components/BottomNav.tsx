@@ -1,14 +1,13 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, CalendarDays, ShoppingBag, Trophy, User, Swords, Heart, Sofa } from "lucide-react";
+import { LayoutDashboard, CalendarDays, ShoppingBag, Trophy, User, Heart, Sofa } from "lucide-react";
 import PollBadge from "@/components/PollBadge";
 
 const NAV = [
   { label: "Home",    href: "/dashboard",  icon: LayoutDashboard },
   { label: "Events",  href: "/events",      icon: CalendarDays },
   { label: "Shop",    href: "/shop",        icon: ShoppingBag },
-  { label: "LuL",     href: "/lul",         icon: Swords },
   { label: "Spenden", href: "/donations",   icon: Heart },
   { label: "Rang",    href: "/leaderboard", icon: Trophy },
   { label: "Profil",  href: "/profile",     icon: User },
