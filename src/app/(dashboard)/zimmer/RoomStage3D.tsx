@@ -37,17 +37,20 @@ import {
   gridToWorld, surfaceRotationY, worldToGrid, type RoomSurface,
 } from "@/lib/room-3d";
 import { getRoomItem } from "@/lib/room-items";
-import { roomLevel, type PlacedItem, type RoomState, type RoomSurface as LayoutSurface } from "@/lib/room-layout";
+import {
+  roomLevel, standCells, footprint,
+  type PlacedItem, type RoomState, type RoomSurface as LayoutSurface,
+} from "@/lib/room-layout";
 import type { VitrineItem } from "@/lib/room-vitrine";
 import { FurniturePrimitive } from "./furniture/FurniturePrimitive";
-import { RoomWindow3D, WindowLight, CeilingLamp3D, EntranceDoor3D } from "./RoomLevelFixtures";
+import { RoomWindow3D, WindowLight, CeilingLamp3D, EntranceDoor3D, WINDOW_GEOM } from "./RoomLevelFixtures";
 
 export type InteractTarget = "crt" | "vitrine" | "jobboard";
 
 export interface EditHooks {
   selectedId: string | null;
   legal: { zone: LayoutSurface; x: number; y: number }[];
-  ghost: { w: number; h: number; key: string } | null;
+  ghost: { w: number; h: number; key: string; rotation: number } | null;
   onSelect: (id: string) => void;
   onGrab:   (id: string) => void;
   onDrop:   (zone: LayoutSurface, x: number, y: number) => void;
@@ -301,6 +304,23 @@ function RoomShell({
   const sideColor = shadeHex(wallColor, 0.72);
   const wallTexDeepDark = useRoomTexture(wallStage.pattern, sideColor, Math.round(depth / TILE), Math.round(height / TILE));
 
+  // Die Rückwand bekommt eine ECHTE Öffnung an der Fensterposition (vier
+  // Segmente statt einer durchgehenden Box) — sonst sitzt eine blickdichte
+  // Wand direkt hinter dem (jetzt hohlen) Fensterrahmen, und die dahinter
+  // gestaffelte Aussichts-Diorama (RoomLevelFixtures.tsx, WindowGlass) ist
+  // unsichtbar, weil sie im/hinter dem massiven Wandkörper liegt. Jedes
+  // Segment bekommt seine eigene, proportional passende Textur-Wiederholung
+  // (wie floorTex/wallTexWide/wallTexDeepDark oben), sonst wirken die
+  // schmalen Streifen im Vergleich zu den breiten Seiten verzerrt gekachelt.
+  const backLeftW  = WINDOW_GEOM.x0;
+  const backRightW = width - (WINDOW_GEOM.x0 + WINDOW_GEOM.w);
+  const backTopH   = height - (WINDOW_GEOM.y0 + WINDOW_GEOM.h);
+  const backBottomH = WINDOW_GEOM.y0;
+  const backLeftTex   = useRoomTexture(wallStage.pattern, wallColor, Math.round(backLeftW / TILE) || 1, Math.round(height / TILE));
+  const backRightTex  = useRoomTexture(wallStage.pattern, wallColor, Math.round(backRightW / TILE) || 1, Math.round(height / TILE));
+  const backTopTex    = useRoomTexture(wallStage.pattern, wallColor, Math.round(WINDOW_GEOM.w / TILE) || 1, Math.round(backTopH / TILE) || 1);
+  const backBottomTex = useRoomTexture(wallStage.pattern, wallColor, Math.round(WINDOW_GEOM.w / TILE) || 1, Math.round(backBottomH / TILE) || 1);
+
   return (
     <group>
       {/*
@@ -346,10 +366,30 @@ function RoomShell({
         <meshStandardMaterial map={floorTex} color="#ffffff" emissive={floorColor} emissiveIntensity={0.12} roughness={0.85} />
       </mesh>
       {!hiddenWalls.has("wall_back") && (
-        <mesh position={[width / 2, height / 2, -WALL_THICKNESS / 2]} receiveShadow castShadow>
-          <boxGeometry args={[width, height, WALL_THICKNESS]} />
-          <meshStandardMaterial map={wallTexWide} color="#ffffff" emissive={wallColor} emissiveIntensity={0.12} roughness={0.9} />
-        </mesh>
+        <>
+          {/* Links/rechts vom Fenster — volle Wandhöhe */}
+          <mesh position={[backLeftW / 2, height / 2, -WALL_THICKNESS / 2]} receiveShadow castShadow>
+            <boxGeometry args={[backLeftW, height, WALL_THICKNESS]} />
+            <meshStandardMaterial map={backLeftTex} color="#ffffff" emissive={wallColor} emissiveIntensity={0.12} roughness={0.9} />
+          </mesh>
+          <mesh position={[WINDOW_GEOM.x0 + WINDOW_GEOM.w + backRightW / 2, height / 2, -WALL_THICKNESS / 2]} receiveShadow castShadow>
+            <boxGeometry args={[backRightW, height, WALL_THICKNESS]} />
+            <meshStandardMaterial map={backRightTex} color="#ffffff" emissive={wallColor} emissiveIntensity={0.12} roughness={0.9} />
+          </mesh>
+          {/* Über/unter dem Fenster — nur die Fensterbreite */}
+          {backTopH > 0 && (
+            <mesh position={[WINDOW_GEOM.x0 + WINDOW_GEOM.w / 2, WINDOW_GEOM.y0 + WINDOW_GEOM.h + backTopH / 2, -WALL_THICKNESS / 2]} receiveShadow castShadow>
+              <boxGeometry args={[WINDOW_GEOM.w, backTopH, WALL_THICKNESS]} />
+              <meshStandardMaterial map={backTopTex} color="#ffffff" emissive={wallColor} emissiveIntensity={0.12} roughness={0.9} />
+            </mesh>
+          )}
+          {backBottomH > 0 && (
+            <mesh position={[WINDOW_GEOM.x0 + WINDOW_GEOM.w / 2, backBottomH / 2, -WALL_THICKNESS / 2]} receiveShadow castShadow>
+              <boxGeometry args={[WINDOW_GEOM.w, backBottomH, WALL_THICKNESS]} />
+              <meshStandardMaterial map={backBottomTex} color="#ffffff" emissive={wallColor} emissiveIntensity={0.12} roughness={0.9} />
+            </mesh>
+          )}
+        </>
       )}
       {!hiddenWalls.has("wall_front") && (
         <mesh position={[width / 2, height / 2, depth + WALL_THICKNESS / 2]} receiveShadow castShadow>
@@ -475,9 +515,24 @@ function CellHighlight({
   );
 }
 
+/**
+ * Höhe der Tisch-/Ablage-Oberkante, auf die ein "desk"-stehendes Objekt
+ * angehoben wird — ein einzelner plausibler Schreibtisch-Wert statt einer
+ * Pro-Modell-Vermessung jedes einzelnen Tisches (die realen GLB-Tische
+ * variieren kaum genug, um das visuell zu rechtfertigen). Ohne diese
+ * Anhebung sitzt gridToWorld()'s Boden-Y=0 IMMER auf dem Fußboden, egal ob
+ * das Item eigentlich auf einem Tisch stehen soll — sichtbar z.B. am
+ * Röhrenmonitor, der sonst neben/unter statt auf dem Tisch stand.
+ */
+const DESK_STAND_HEIGHT = 0.74;
+
 function PlacedFurniture({
   placed, edit, onInteract, hiddenWalls,
 }: { placed: PlacedItem[]; edit?: EditHooks; onInteract: Props["onInteract"]; hiddenWalls: ReadonlySet<RoomSurface> }) {
+  // Alle Boden-Zellen, die gerade tatsächlich von einem Tisch/einer Ablage
+  // belegt sind — einmal pro Render-Durchlauf berechnet, nicht pro Item.
+  const deskCells = useMemo(() => standCells(placed), [placed]);
+
   const entries = useMemo(() => placed.map(item => {
     // Ein Wandobjekt auf einer gerade kameraseits ausgeblendeten Wand (siehe
     // RoomShell) würde ohne seine tragende Wand freischwebend im Void
@@ -486,12 +541,27 @@ function PlacedFurniture({
     const def = getRoomItem(item.key);
     if (!def) return null;
     const world = gridToWorld(item.zone, item.x, item.y, def.w, def.h);
+    // Steht dieses Boden-Objekt gerade WIRKLICH auf einem Tisch (Pflicht via
+    // mustStandOn ODER optional via canAlsoStandOn, siehe room-items.ts)?
+    // Dann seine komplette Footprint gegen deskCells prüfen — nicht nur die
+    // erste Zelle, sonst hebt sich ein großes Objekt schon durch eine
+    // einzelne überlappende Tischecke fälschlich an.
+    if (item.zone === "floor" && (def.mustStandOn === "desk" || def.canAlsoStandOn?.includes("desk"))) {
+      const { w, h } = footprint(def, item.zone, item.rotation);
+      let allOnDesk = true;
+      for (let dx = 0; dx < w && allOnDesk; dx++) {
+        for (let dy = 0; dy < h; dy++) {
+          if (!deskCells.has(`${item.x + dx},${item.y + dy}`)) { allOnDesk = false; break; }
+        }
+      }
+      if (allOnDesk) world.y += DESK_STAND_HEIGHT;
+    }
     // Nutzer-Drehung (0-3 × 90°) kommt nur bei Boden-Objekten oben drauf —
     // Wand-Objekte bleiben an ihrer festen surfaceRotationY, sonst würden sie
     // aus der Wandebene herausklappen (siehe rotate() in RoomEditor.tsx).
     const rotY = surfaceRotationY(item.zone) + (item.zone === "floor" ? (item.rotation ?? 0) * (Math.PI / 2) : 0);
     return { item, def, world, rotY };
-  }).filter((e): e is NonNullable<typeof e> => e !== null), [placed, hiddenWalls]);
+  }).filter((e): e is NonNullable<typeof e> => e !== null), [placed, hiddenWalls, deskCells]);
 
   return (
     <>
@@ -745,12 +815,17 @@ function EditLayer({ edit, hiddenWalls }: { edit: EditHooks; hiddenWalls: Readon
         />
       ))}
 
-      {/* Ghost-Vorschau des angehobenen Stücks am Hover-Ziel. */}
+      {/* Ghost-Vorschau des angehobenen Stücks am Hover-Ziel. `edit.ghost.w/h`
+          sind bereits die (bei Bodendrehung getauschte) Footprint-Maße —
+          dieselben, mit denen legalCells() die Zelle validiert hat, sonst
+          sitzt die Vorschau am falschen Mittelpunkt oder zeigt die falsche
+          Ausrichtung. */}
       {edit.ghost && hover && (() => {
         const def = getRoomItem(edit.ghost.key);
         if (!def) return null;
-        const world = gridToWorld(hover.zone, hover.x, hover.y, def.w, def.h);
-        const rotY = surfaceRotationY(hover.zone);
+        const world = gridToWorld(hover.zone, hover.x, hover.y, edit.ghost.w, edit.ghost.h);
+        const rotY = surfaceRotationY(hover.zone)
+          + (hover.zone === "floor" ? edit.ghost.rotation * (Math.PI / 2) : 0);
         return (
           <group position={world} rotation={[0, rotY, 0]}>
             <FurniturePrimitive def={def} />

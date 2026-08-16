@@ -25,7 +25,7 @@ export const ROOM_LEVEL_LABEL = ["Abgewohnt", "Frisch renoviert", "Modern einger
  * Fenster-/Brüstungshöhe reduziert.
  */
 // Horizontal zentriert im jetzt 8 Zellen breiten Raum ((8-1.6)/2 = 3.2).
-const WINDOW_GEOM = { x0: 3.2, y0: 1.0, w: 1.6, h: 1.7 } as const;
+export const WINDOW_GEOM = { x0: 3.2, y0: 1.0, w: 1.6, h: 1.7 } as const;
 
 const WINDOW_FRAME = [
   { base: "#6b4a30", trim: "#8a6440" },              // 0: Abgewohnt — Holz

@@ -139,20 +139,40 @@ export const DEFAULT_ROOM: RoomState = {
 
 interface Rect { x: number; y: number; w: number; h: number }
 
+/**
+ * Tatsächlicher Platzbedarf (w×h) unter Berücksichtigung der Boden-Drehung —
+ * bei 90°/270° (rotation 1 oder 3) tauschen Breite und Tiefe. Ohne das blieb
+ * die Kollisions-/Raster-Prüfung nach dem Drehen auf der UNGEDREHTEN Fläche
+ * hängen: ein 2×1-Objekt sah nach dem Drehen visuell wie 1×2 aus, wurde aber
+ * weiterhin als 2×1 kollidiert/validiert — bei nicht-quadratischen Objekten
+ * genau der Grund, warum sich Drehen "falsch" anfühlte (Überlappungen bzw.
+ * Rasterprüfung passten nicht zur sichtbaren Silhouette). Nur für den Boden
+ * relevant — Wand-Objekte drehen sich nicht per `rotation` (siehe rotate()
+ * in RoomEditor.tsx).
+ */
+export function footprint(def: RoomItemDef, zone: RoomSurface, rotation: number): { w: number; h: number } {
+  const swapped = zone === "floor" && (((rotation % 4) + 4) % 4) % 2 === 1;
+  return swapped ? { w: def.h, h: def.w } : { w: def.w, h: def.h };
+}
+
 function rectOf(item: PlacedItem, def: RoomItemDef): Rect {
-  return { x: item.x, y: item.y, w: def.w, h: def.h };
+  const { w, h } = footprint(def, item.zone, item.rotation);
+  return { x: item.x, y: item.y, w, h };
 }
 
 export function rectsOverlap(a: Rect, b: Rect): boolean {
   return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 }
 
-export function fitsGrid(def: RoomItemDef, x: number, y: number, zone: RoomSurface): boolean {
+export function fitsGrid(
+  def: RoomItemDef, x: number, y: number, zone: RoomSurface, rotation = 0,
+): boolean {
   const grid = GRID[zone];
+  const { w, h } = footprint(def, zone, rotation);
   return Number.isInteger(x) && Number.isInteger(y)
     && x >= 0 && y >= 0
-    && x + def.w <= grid.cols
-    && y + def.h <= grid.rows;
+    && x + w <= grid.cols
+    && y + h <= grid.rows;
 }
 
 /**
@@ -172,8 +192,9 @@ export function standCells(placed: PlacedItem[]): Set<string> {
     const def = getRoomItem(item.key);
     if (!def || item.zone !== "floor") continue;
     if (!def.tags.includes("desk") && !def.tags.includes("surface")) continue;
-    for (let dx = 0; dx < def.w; dx++) {
-      for (let dy = 0; dy < def.h; dy++) cells.add(`${item.x + dx},${item.y + dy}`);
+    const { w, h } = footprint(def, item.zone, item.rotation);
+    for (let dx = 0; dx < w; dx++) {
+      for (let dy = 0; dy < h; dy++) cells.add(`${item.x + dx},${item.y + dy}`);
     }
   }
   return cells;
@@ -218,8 +239,9 @@ export function orphanedStandItems(placed: PlacedItem[]): PlacedItem[] {
     const def = getRoomItem(item.key);
     if (!def) return false;
     if (def.mustStandOn === "desk") {
-      for (let dx = 0; dx < def.w; dx++) {
-        for (let dy = 0; dy < def.h; dy++) {
+      const { w, h } = footprint(def, item.zone, item.rotation);
+      for (let dx = 0; dx < w; dx++) {
+        for (let dy = 0; dy < h; dy++) {
           if (!stands.has(`${item.x + dx},${item.y + dy}`)) return true;
         }
       }
@@ -260,7 +282,7 @@ export function validatePlacement(
         : `${def.label} gehört auf den Boden`,
     };
   }
-  if (!fitsGrid(def, candidate.x, candidate.y, candidate.zone)) {
+  if (!fitsGrid(def, candidate.x, candidate.y, candidate.zone, candidate.rotation)) {
     return { ok: false, error: `${def.label} passt nicht ins Raster` };
   }
 
@@ -280,11 +302,16 @@ export function validatePlacement(
     if (!otherDef) continue;
     const providesStand = (d: RoomItemDef) => d.tags.includes("desk") || d.tags.includes("surface");
     const providesShelf = (d: RoomItemDef) => d.tags.includes("shelf") || d.tags.includes("trophy_shelf");
+    // canAlsoStandOn erlaubt dieselbe Überlappung wie mustStandOn, ist aber
+    // nicht verpflichtend — ein Headset darf auf dem Tisch stehen, MUSS aber
+    // nicht (anders als ein Monitor).
+    const mayStandOn = (d: RoomItemDef, kind: "desk" | "shelf") =>
+      d.mustStandOn === kind || !!d.canAlsoStandOn?.includes(kind);
     const isStandPairing =
-      (def.mustStandOn === "desk" && providesStand(otherDef)) ||
-      (otherDef.mustStandOn === "desk" && providesStand(def)) ||
-      (def.mustStandOn === "shelf" && providesShelf(otherDef)) ||
-      (otherDef.mustStandOn === "shelf" && providesShelf(def));
+      (mayStandOn(def, "desk") && providesStand(otherDef)) ||
+      (mayStandOn(otherDef, "desk") && providesStand(def)) ||
+      (mayStandOn(def, "shelf") && providesShelf(otherDef)) ||
+      (mayStandOn(otherDef, "shelf") && providesShelf(def));
     if (isStandPairing) continue;
     if (rectsOverlap(rect, rectOf(other, otherDef))) {
       return { ok: false, error: `Da steht schon etwas: ${otherDef.label}` };
@@ -410,8 +437,12 @@ export function legalCells(
   const cells: { zone: RoomSurface; x: number; y: number }[] = [];
   for (const zone of surfaces) {
     const grid = GRID[zone];
-    for (let y = 0; y + def.h <= grid.rows; y++) {
-      for (let x = 0; x + def.w <= grid.cols; x++) {
+    // Schleifengrenzen berücksichtigen die Boden-Drehung (footprint) — sonst
+    // übersieht das Absuchen Zellen nahe am Rand, die nur mit der gedrehten
+    // (getauschten) Breite/Tiefe passen würden.
+    const { w, h } = footprint(def, zone, candidate.rotation);
+    for (let y = 0; y + h <= grid.rows; y++) {
+      for (let x = 0; x + w <= grid.cols; x++) {
         if (validatePlacement(placed, { ...candidate, zone, x, y }).ok) cells.push({ zone, x, y });
       }
     }
