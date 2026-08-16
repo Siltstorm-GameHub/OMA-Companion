@@ -55,10 +55,10 @@ const GLASS: React.CSSProperties = {
 
 /* ── NavLink ───────────────────────────────────────────────────────── */
 /*
- * Active/hover background is no longer drawn here — the parent renders
- * one shared sliding indicator behind whichever link is active, so this
- * only needs to expose a ref (for the indicator to measure) and its own
- * icon/text coloring.
+ * The active item's icon is duplicated into a floating "bump" bubble that
+ * pops above the pill (see indicator in the main component) — so here the
+ * real icon fades out when active (opacity 0) but keeps its layout box via
+ * `data-navicon`, which the parent measures to position the bump.
  */
 const NavLink = forwardRef<HTMLAnchorElement, {
   label: string; href: string; icon: LucideIcon;
@@ -92,16 +92,24 @@ const NavLink = forwardRef<HTMLAnchorElement, {
         boxShadow: !active && hov ? "inset 0 0 0 1px rgba(20,184,166,0.12)" : "none",
       }}
     >
-      <Icon
+      <span
+        data-navicon
         style={{
-          width: 17, height: 17,
-          strokeWidth: active ? 2.5 : 2,
-          color,
-          filter: active && !danger ? "drop-shadow(0 0 5px rgba(20,184,166,0.7))" : active && danger ? `drop-shadow(0 0 5px ${color})` : "none",
-          transition: "color 200ms ease, filter 200ms ease",
-          flexShrink: 0,
+          display: "inline-flex", alignItems: "center", justifyContent: "center",
+          width: 17, height: 17, flexShrink: 0,
+          opacity: active ? 0 : 1,
+          transition: "opacity 200ms ease",
         }}
-      />
+      >
+        <Icon
+          style={{
+            width: 17, height: 17,
+            strokeWidth: active ? 2.5 : 2,
+            color,
+            transition: "color 200ms ease",
+          }}
+        />
+      </span>
       <span style={{
         fontSize: 13.5,
         fontWeight: active ? 650 : 500,
@@ -124,13 +132,17 @@ export default function DynamicNotch() {
   const [mobileOpen,     setMobileOpen]     = useState(false);
   const [mobileClosing,  setMobileClosing]  = useState(false);
   const [avatarOpen,     setAvatarOpen]     = useState(false);
-  const [isMobile,       setIsMobile]       = useState(false);
-  const [indicator,      setIndicator]      = useState<{ left: number; width: number } | null>(null);
+  /* Lazy initial read avoids calling setState synchronously inside an effect */
+  const [isMobile,       setIsMobile]       = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches
+  );
+  const [bump,           setBump]           = useState<{ left: number; top: number } | null>(null);
 
   const notchRef    = useRef<HTMLDivElement>(null);
   const navRef       = useRef<HTMLDivElement>(null);
   const activeLinkRef = useRef<HTMLAnchorElement>(null);
   const closeTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [prevPathname, setPrevPathname] = useState(pathname);
 
   /* Schließt das mobile Dropdown mit Animations-Vorlauf */
   const closeMobileMenu = useCallback(() => {
@@ -142,17 +154,24 @@ export default function DynamicNotch() {
     }, 320); // muss zur notch-slide-up duration passen
   }, []);
 
-  /* Detect breakpoint */
+  /* Track breakpoint changes (initial value comes from the lazy useState above) */
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 1023px)");
-    setIsMobile(mq.matches);
     const h = (e: MediaQueryListEvent) => setIsMobile(e.matches);
     mq.addEventListener("change", h);
     return () => mq.removeEventListener("change", h);
   }, []);
 
-  /* Close on route change */
-  useEffect(() => { closeMobileMenu(); setAvatarOpen(false); }, [pathname, closeMobileMenu]);
+  /*
+   * Close menus on route change — adjusted during render (comparing against
+   * the previous pathname held in state, not a ref — refs can't be read/written
+   * during render) per React's "adjusting state when a prop changes" pattern.
+   */
+  if (prevPathname !== pathname) {
+    setPrevPathname(pathname);
+    if (mobileOpen || mobileClosing) { setMobileOpen(false); setMobileClosing(false); }
+    if (avatarOpen) setAvatarOpen(false);
+  }
 
   /* Close on outside click */
   useEffect(() => {
@@ -182,18 +201,24 @@ export default function DynamicNotch() {
     ...(isStaff ? [{ label: "Admin", href: "/admin", icon: ShieldCheck, danger: true }] : []),
     ...NAV_RIGHT,
   ];
-  const isActiveHref = (href: string) => pathname === href || pathname.startsWith(href + "/");
-  const activeIsDanger = NAV_DESKTOP.some(n => isActiveHref(n.href) && n.danger);
+  const isActiveHref  = (href: string) => pathname === href || pathname.startsWith(href + "/");
+  const activeItem    = NAV_DESKTOP.find(n => isActiveHref(n.href));
+  const activeIsDanger = !!activeItem?.danger;
+  const ActiveIcon     = activeItem?.icon;
 
-  /* Slide the indicator behind whichever link is active */
+  /* Measure the active link's icon so the bump can slide to sit above it */
   useLayoutEffect(() => {
     if (isMobile) return;
     const nav  = navRef.current;
     const link = activeLinkRef.current;
-    if (!nav || !link) { setIndicator(null); return; }
+    const icon = link?.querySelector<HTMLElement>("[data-navicon]");
+    if (!nav || !link || !icon) { setBump(null); return; }
     const navBox  = nav.getBoundingClientRect();
-    const linkBox = link.getBoundingClientRect();
-    setIndicator({ left: linkBox.left - navBox.left, width: linkBox.width });
+    const iconBox = icon.getBoundingClientRect();
+    setBump({
+      left: iconBox.left - navBox.left + iconBox.width / 2,
+      top:  iconBox.top  - navBox.top  + iconBox.height / 2,
+    });
   }, [pathname, isMobile, isStaff]);
 
   /* ── Avatar button ───────────────────────────────────────────── */
@@ -409,31 +434,37 @@ export default function DynamicNotch() {
           </div>
         </Link>
 
-        {/* ── Nav links, always visible, with sliding active indicator ── */}
+        {/* ── Nav links, always visible, with a bump bubble over the active icon ── */}
         <div ref={navRef} style={{ display: "flex", alignItems: "center", gap: 3, position: "relative" }}>
-          {indicator && (
+          {bump && ActiveIcon && (
             /*
-             * Transform-only slide: a 1px-wide box stretched via scaleX to the
-             * target width, positioned via translateX — avoids animating
-             * left/width (layout properties) in favor of the compositor-only
-             * transform property.
+             * Floating bubble that pops above the pill edge over the active
+             * item's icon — position via translate only (compositor-only,
+             * no layout thrash) so it can glide smoothly between items.
              */
             <div style={{
               position: "absolute",
               top: 0,
               left: 0,
-              width: 1,
-              height: "100%",
-              borderRadius: 10,
-              transformOrigin: "left center",
-              transform: `translateX(${indicator.left}px) scaleX(${indicator.width})`,
-              background: activeIsDanger ? "rgba(153,27,27,0.15)" : "rgba(20,184,166,0.14)",
+              width: 34,
+              height: 34,
+              marginLeft: -17,
+              marginTop: -29,
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: activeIsDanger ? "#f87171" : "#2dd4bf",
               boxShadow: activeIsDanger
-                ? "inset 0 0 0 1px rgba(153,27,27,0.24)"
-                : "inset 0 0 0 1px rgba(20,184,166,0.28)",
+                ? "0 4px 14px rgba(248,113,113,0.45), 0 0 0 4px rgba(13,13,15,0.94)"
+                : "0 4px 14px rgba(45,212,191,0.45), 0 0 0 4px rgba(13,13,15,0.94)",
+              transform: `translate(${bump.left}px, ${bump.top}px)`,
               transition: "transform 420ms cubic-bezier(0.16, 1, 0.3, 1), background 200ms ease, box-shadow 200ms ease",
               pointerEvents: "none",
-            }} />
+              zIndex: 2,
+            }}>
+              <ActiveIcon style={{ width: 17, height: 17, strokeWidth: 2.5, color: activeIsDanger ? "#450a0a" : "#04342c" }} />
+            </div>
           )}
           {NAV_DESKTOP.map(({ label, href, icon, danger }) => {
             const active = isActiveHref(href);
