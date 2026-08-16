@@ -1,0 +1,8 @@
+Vertical 9:16 cinematic dark social media intro title-card for a gaming Discord community app called "Old Masters Ally" (OMA). Deep ink near-black background (#0B1120) with a dramatic glowing teal (#14B8A6 to #2DD4BF) burst of light radiating from the center, subtle particles/light streaks, glassy/blurred dark UI accents, atmospheric high-end gamer trailer aesthetic, no busy textures.
+
+Composition, centered:
+1. The exact supplied OMA logo (Image0), large and centered in the middle of the frame, unaltered colors and shape, with a glowing teal rim light behind it.
+2. Below the logo, bold display headline text in the exact supplied Space Grotesk typeface (matching Image1 specimen), in white/paper color (#F7F7F5), reading exactly: "Old Masters Ally"
+3. Below that, smaller subtext in Space Grotesk, teal color (#14B8A6), reading exactly: "Events, Turniere und Punktesystem"
+
+No other text, no QR code, no invented claims, no extra logos, no stock photography, no people. Clean, high-end trailer-card look, sharp focus, subtle vignette. This is the final reveal frame of a short intro sting animation.

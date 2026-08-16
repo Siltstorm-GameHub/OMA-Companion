@@ -1,0 +1,9 @@
+Vertical 9:16 cinematic dark social media outro card for a gaming Discord community app called "Old Masters Ally" (OMA). Deep ink near-black background (#0B1120) with a subtle glowing teal (#14B8A6 to #2DD4BF) radial glow behind the center, glassy/blurred dark UI accents, atmospheric gamer aesthetic, no busy textures.
+
+Composition, centered and vertically stacked:
+1. The exact supplied OMA logo (Image0), placed centered in the upper-middle area, moderate size with generous clear space around it, unaltered colors and shape.
+2. Below the logo, bold display headline text in the exact supplied Space Grotesk typeface (matching Image1 specimen), reading exactly: "Tritt dem Discord bei" in white/paper color (#F7F7F5).
+3. Below that headline, a plain white rounded-square QR code placeholder box (empty, no real QR pattern, just a clean white rounded square placeholder with a thin teal border) centered on the canvas.
+4. Small text below the placeholder box, in Space Grotesk, teal color (#14B8A6): "discord.gg/VQQQCYDTAn"
+
+No other text, no invented claims, no extra logos, no stock photography, no people. Clean, high-end trailer-card look, sharp focus, subtle vignette.

@@ -96,12 +96,21 @@ export default async function DashboardLayout({ children }: { children: React.Re
       orderBy: { createdAt: "desc" },
       select: { id: true, title: true, question: true },
     }),
-    // Wanderpokal – zuletzt vergebener Titel
+    // Wanderpokal – zuletzt vergebener Titel (nur der Scope, Halter werden unten separat geladen —
+    // bei Gleichstand teilen sich mehrere User denselben Scope)
     prisma.wanderpocalHolder.findFirst({
       orderBy: { heldSince: "desc" },
-      select: { scopeType: true, scopeValue: true, winCount: true, user: { select: { username: true, name: true } } },
+      select: { scopeType: true, scopeValue: true },
     }),
   ]);
+
+  // Wanderpokal – alle Halter des zuletzt vergebenen Scopes (Gleichstand möglich)
+  const wanderpokalHolders = latestWanderpokal
+    ? await prisma.wanderpocalHolder.findMany({
+        where: { scopeType: latestWanderpokal.scopeType, scopeValue: latestWanderpokal.scopeValue },
+        select: { winCount: true, user: { select: { username: true, name: true } } },
+      })
+    : [];
 
   const nextEvent = activeOrPollEvent ?? upcomingEvent;
   const openQuestsCount = userId ? Math.max(totalMonthQuests - completedMonthQuests, 0) : 0;
@@ -186,14 +195,18 @@ export default async function DashboardLayout({ children }: { children: React.Re
     });
   }
 
-  // Wanderpokal – zuletzt vergebener Titel
-  if (latestWanderpokal) {
-    const holderName = latestWanderpokal.user.username ?? latestWanderpokal.user.name ?? "Unbekannt";
+  // Wanderpokal – zuletzt vergebener Titel (bei Gleichstand alle Halter nennen)
+  if (latestWanderpokal && wanderpokalHolders.length > 0) {
+    const holderNames = wanderpokalHolders.map((h) => h.user.username ?? h.user.name ?? "Unbekannt");
+    const namesText = holderNames.length > 1
+      ? `${holderNames.slice(0, -1).join(", ")} & ${holderNames[holderNames.length - 1]}`
+      : holderNames[0];
     const scopeTitle = getScopeTitle(latestWanderpokal.scopeType, latestWanderpokal.scopeValue);
+    const winCount = wanderpokalHolders[0].winCount;
     newsItems.push({
       id: "wanderpokal",
       icon: "wanderpokal",
-      text: `${holderName} hält den Wanderpokal „${scopeTitle}" · ${latestWanderpokal.winCount} ${latestWanderpokal.winCount === 1 ? "Sieg" : "Siege"}`,
+      text: `${namesText} ${holderNames.length > 1 ? "halten" : "hält"} den Wanderpokal „${scopeTitle}" · ${winCount} ${winCount === 1 ? "Sieg" : "Siege"}`,
       href: "/profile",
       accent: "amber",
     });

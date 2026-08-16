@@ -1,0 +1,9 @@
+Vertical 9:16 video overlay design template, mostly transparent-looking dark composition meant as a lower-third text bar mockup for a gaming Discord community app called "Old Masters Ally" (OMA). Deep ink near-black background (#0B1120), only the lower third of the frame is designed, the rest is empty dark space to represent transparency.
+
+In the lower third of the frame:
+1. A horizontal glassy, blurred dark rounded rectangle bar with a thin glowing teal (#14B8A6) top border edge, positioned near the bottom of the frame.
+2. Inside the bar, on the left, a small circular badge containing the exact supplied OMA logo (Image0), unaltered.
+3. To the right of the logo badge, bold display headline text in the exact supplied Space Grotesk typeface (matching Image1 specimen), in white/paper color (#F7F7F5), reading exactly: "[FEATURE NAME]"
+4. Below the headline, smaller subtext in Space Grotesk, teal color (#14B8A6), reading exactly: "Old Masters Ally"
+
+No other elements, no QR code, no extra logos, no stock photography, no people, no additional text. Clean, high-end trailer-card look, sharp focus. This is a reusable lower-third template design specimen.
