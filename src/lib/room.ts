@@ -4,7 +4,7 @@ import { getRoomItem, isFixed, isSeasonalActive, isSurface, STARTER_ITEM_KEYS } 
 import { getPriceOverrides } from "./room-config";
 import {
   DEFAULT_ROOM, DEFAULT_PLACEMENTS, DEFAULT_ID_PREFIX, MAX_PLACED_ITEMS,
-  countTags, validateLayout, fitsGrid, orphanedStandItems,
+  countTags, validateLayout, fitsGrid, orphanedStandItems, footprint, rectsOverlap,
   type PlacedItem, type RoomState, type StoredItem, type RoomSurface,
 } from "./room-layout";
 
@@ -77,6 +77,40 @@ export async function loadRoom(userId: string): Promise<RoomState> {
       }
     } else {
       stored.push({ id: row.id, key: row.itemKey });
+    }
+  }
+
+  // Nachträglich zu DEFAULT_PLACEMENTS hinzugekommene Grundausstattung (z.B.
+  // der OMA-Teppich, seit dem 15.08.2026 Serienausstattung) fehlt bei Usern,
+  // deren Zimmer VOR dieser Ergänzung materialisiert wurde, komplett — die
+  // Erstausstattung wird nur einmalig beim allerersten Anlegen angelegt
+  // (siehe materializeRoom). Ohne dieses Nachholen bleibt ein Katalog-Item mit
+  // starter:true für Bestandsnutzer für immer unsichtbar, nicht wegen eines
+  // Render-Bugs, sondern weil dafür schlicht nie eine Zeile existiert.
+  const existingKeys = new Set(items.map(i => i.itemKey));
+  const missing = DEFAULT_PLACEMENTS.filter(p => !existingKeys.has(p.key));
+  for (const p of missing) {
+    const def = getRoomItem(p.key);
+    if (!def) continue;
+    const wantRect = { x: p.x, y: p.y, ...footprint(def, p.zone, 0) };
+    const overlaps = placed.some(existing => {
+      if (existing.zone !== p.zone) return false;
+      const existingDef = getRoomItem(existing.key);
+      if (!existingDef) return false;
+      const existingRect = { x: existing.x, y: existing.y, ...footprint(existingDef, existing.zone, existing.rotation) };
+      return rectsOverlap(existingRect, wantRect);
+    });
+    const canPlace = !overlaps && fitsGrid(def, p.x, p.y, p.zone);
+    const row = await prisma.roomItem.create({
+      data: {
+        userId, itemKey: p.key, zone: p.zone, x: p.x, y: p.y,
+        flipped: false, placed: canPlace, starter: true,
+      },
+    });
+    if (canPlace) {
+      placed.push({ id: row.id, key: p.key, zone: p.zone, x: p.x, y: p.y, flipped: false, rotation: 0, starter: true });
+    } else {
+      stored.push({ id: row.id, key: p.key });
     }
   }
 
