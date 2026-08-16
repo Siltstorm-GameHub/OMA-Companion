@@ -71,10 +71,10 @@ function timeAgo(dateStr: string) {
 /*
  * ── NavLink ──────────────────────────────────────────────────────────────
  * Icon + label are always visible (no more hover-only tooltip). The active
- * item's icon is duplicated into a floating "bump" bubble rendered by the
- * parent (see `bump` state in FloatingPill) — the real icon here just fades
- * out (`data-navicon`, opacity 0) but keeps its layout box so the bump can
- * measure and slide onto it.
+ * item's icon and label are duplicated into a floating "bump" capsule
+ * rendered by the parent (see `bump` state in FloatingPill) — the real
+ * icon/label here just fade out (opacity 0) but keep their layout box so
+ * the bump can measure the whole link and slide onto it.
  */
 const NavLink = forwardRef<HTMLAnchorElement, {
   label: string; href: string; icon: LucideIcon; active: boolean; danger?: boolean;
@@ -113,10 +113,14 @@ const NavLink = forwardRef<HTMLAnchorElement, {
       >
         <Icon style={{ width: 17, height: 17, strokeWidth: active ? 2.4 : 1.8, color, transition: "color 150ms" }} />
       </span>
-      <span style={{
-        fontSize: 12.5, fontWeight: active ? 650 : 500, color,
-        transition: "color 150ms ease", lineHeight: 1, letterSpacing: "-0.01em",
-      }}>
+      <span
+        data-navlabel
+        style={{
+          fontSize: 12.5, fontWeight: active ? 650 : 500, color,
+          transition: "color 150ms ease, opacity 150ms ease", lineHeight: 1, letterSpacing: "-0.01em",
+          opacity: active ? 0 : 1,
+        }}
+      >
         {label}
       </span>
     </Link>
@@ -137,7 +141,7 @@ export default function FloatingPill({ roomVisible = false }: { roomVisible?: bo
   const [avatarOpen, setAvatarOpen]     = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount]   = useState(0);
-  const [bump, setBump] = useState<{ left: number; top: number } | null>(null);
+  const [bump, setBump] = useState<{ left: number; top: number; width: number } | null>(null);
   const dropRef = useRef<HTMLDivElement>(null);
   const navRef        = useRef<HTMLDivElement>(null);
   const activeLinkRef = useRef<HTMLAnchorElement>(null);
@@ -168,18 +172,18 @@ export default function FloatingPill({ roomVisible = false }: { roomVisible?: bo
   const activeIsDanger = !!activeItem?.danger;
   const ActiveIcon     = activeItem?.icon;
 
-  /* Slide the bump bubble onto whichever item is active */
+  /* Slide the bump capsule onto whichever item is active — covers the whole link (icon + label), not just the icon */
   useLayoutEffect(() => {
     const measure = () => {
       const nav  = navRef.current;
       const link = activeLinkRef.current;
-      const icon = link?.querySelector<HTMLElement>("[data-navicon]");
-      if (!nav || !link || !icon) { setBump(null); return; }
+      if (!nav || !link) { setBump(null); return; }
       const navBox  = nav.getBoundingClientRect();
-      const iconBox = icon.getBoundingClientRect();
+      const linkBox = link.getBoundingClientRect();
       setBump({
-        left: iconBox.left - navBox.left + iconBox.width / 2,
-        top:  iconBox.top  - navBox.top  + iconBox.height / 2,
+        left:  linkBox.left - navBox.left,
+        top:   linkBox.top  - navBox.top,
+        width: linkBox.width,
       });
     };
     measure();
@@ -283,23 +287,35 @@ export default function FloatingPill({ roomVisible = false }: { roomVisible?: bo
 
       <div style={{ width: 1, height: 22, background: "rgba(255,255,255,0.07)", margin: "0 4px", flexShrink: 0 }} />
 
-      {/* Nav links, always visible, with a bump bubble over the active icon */}
+      {/* Nav links, always visible, with a bump capsule over the active icon + label */}
       <div ref={navRef} style={{ display: "flex", alignItems: "center", gap: 1, position: "relative" }}>
-        {bump && ActiveIcon && (
-          /* Transform-only slide (no layout thrash) — see FloatingPill's NavLink for the matching fade-out icon. */
+        {bump && ActiveIcon && activeItem && (
+          /*
+           * Position/size come from the measured link box, so `left`/`width`
+           * do change here (unlike the old icon-only circle, whose fixed
+           * diameter let it stay transform-only) — but this is a single,
+           * absolutely positioned, non-reflowing decorative element with no
+           * siblings to disturb, so the layout cost is negligible; that
+           * trade-off buys a correctly proportioned pill (a scaleX trick
+           * would squash the border-radius into sharp corners as it stretches).
+           */
           <div style={{
-            position: "absolute", top: 0, left: 0,
-            width: 30, height: 30, marginLeft: -15, marginTop: -26,
-            borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+            position: "absolute", top: 0, left: bump.left, width: bump.width,
+            height: 30, marginTop: -7,
+            borderRadius: 15,
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+            padding: "0 10px",
             background: activeIsDanger ? "#f87171" : "#2dd4bf",
             boxShadow: activeIsDanger
               ? "0 4px 12px rgba(248,113,113,0.45), 0 0 0 4px rgba(13,13,15,0.94)"
               : "0 4px 12px rgba(45,212,191,0.45), 0 0 0 4px rgba(13,13,15,0.94)",
-            transform: `translate(${bump.left}px, ${bump.top}px)`,
-            transition: "transform 400ms cubic-bezier(0.16, 1, 0.3, 1), background 150ms ease, box-shadow 150ms ease",
-            pointerEvents: "none", zIndex: 2,
+            transition: "left 400ms cubic-bezier(0.16, 1, 0.3, 1), width 400ms cubic-bezier(0.16, 1, 0.3, 1), background 150ms ease, box-shadow 150ms ease",
+            pointerEvents: "none", zIndex: 2, whiteSpace: "nowrap",
           }}>
-            <ActiveIcon style={{ width: 15, height: 15, strokeWidth: 2.4, color: activeIsDanger ? "#450a0a" : "#04342c" }} />
+            <ActiveIcon style={{ width: 15, height: 15, strokeWidth: 2.4, color: activeIsDanger ? "#450a0a" : "#04342c", flexShrink: 0 }} />
+            <span style={{ fontSize: 12.5, fontWeight: 650, color: activeIsDanger ? "#450a0a" : "#04342c", lineHeight: 1, letterSpacing: "-0.01em" }}>
+              {activeItem.label}
+            </span>
           </div>
         )}
         {/*
