@@ -1,16 +1,26 @@
 import type { RoomCategory } from "@/lib/room-items";
 
+export interface MancaveScreenRect { x0: number; y0: number; x1: number; y1: number; }
+
 /**
  * Kategorien, die "sinnvoll auf/um den Schreibtisch" stehen — genau die
  * Teilmenge der Gaming-Zimmer-Möbel, die in der Mancave-Szene als Gadgets
  * auftauchen. Tapeten/Böden/Poster/Pflanzen etc. bleiben draußen, die wirken
- * hier nur als Rauschen.
+ * hier nur als Rauschen. "schreibtisch" bewusst NICHT dabei — der Tisch IST
+ * die Bühne selbst, kein Gadget, das zusätzlich draufgestellt wird.
  */
 export const MANCAVE_GADGET_CATEGORIES: RoomCategory[] = [
-  "schreibtisch", "rechner", "bildschirm", "peripherie", "sitzen", "licht", "konsole",
+  "rechner", "bildschirm", "peripherie", "sitzen", "licht", "konsole",
 ];
 
-export type MancaveHotspotSlot = "monitor" | "desk" | "shelf" | "trophy";
+/** Wo in der Ego-Szene das echte Foto dieses Items landet. */
+export type MancaveRenderZone = "monitor" | "desk" | "floor";
+
+export function renderZoneFor(category: RoomCategory): MancaveRenderZone {
+  if (category === "bildschirm") return "monitor";
+  if (category === "peripherie" || category === "licht") return "desk";
+  return "floor"; // rechner, sitzen, konsole — steht neben/unter dem Tisch
+}
 
 export interface MancaveGadget {
   key:         string;
@@ -18,7 +28,14 @@ export interface MancaveGadget {
   description: string;
   imageUrl?:   string;
   accent:      "violet" | "teal" | "amber" | "rose" | "slate";
-  slot:        MancaveHotspotSlot;
+  category:    RoomCategory;
+  zone:        MancaveRenderZone;
+  /** Rastergröße aus dem Katalog (RoomItemDef.w/.h) — für das Seitenverhältnis der Foto-Box. */
+  w:           number;
+  h:           number;
+  /** Nur bei Monitoren: wo im Foto die tatsächliche Anzeigefläche liegt (siehe room-items.ts). */
+  screenRect?: MancaveScreenRect;
+  price:       number;
 }
 
 export interface MancaveBadge {
@@ -59,9 +76,5 @@ export interface MancaveData {
   gadgets:         MancaveGadget[];
 }
 
-/** Ordnet ein Gaming-Zimmer-Item einem Hotspot in der Mancave-Szene zu. */
-export function gadgetSlotFor(category: RoomCategory): MancaveHotspotSlot {
-  if (category === "bildschirm") return "monitor";
-  if (category === "sitzen" || category === "konsole") return "desk";
-  return "shelf";
-}
+/** Generischer Notfall-Bildschirmbereich für Monitore ohne ausgemessenes screenRect. */
+export const FALLBACK_SCREEN_RECT: MancaveScreenRect = { x0: 0.22, y0: 0.2, x1: 0.78, y1: 0.56 };
