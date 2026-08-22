@@ -1,31 +1,36 @@
 "use client";
-import { useState } from "react";
-import { Monitor, Trophy, Package, X, CalendarDays, Medal, Swords, Clock, MessageSquare, Gamepad2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Trophy, Package, X, CalendarDays, Medal, Swords, Clock, MessageSquare, Gamepad2 } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
-import type { MancaveData, MancaveHotspotSlot } from "./mancave-data";
+import type { MancaveData, MancaveGadget } from "./mancave-data";
+import { FALLBACK_SCREEN_RECT } from "./mancave-data";
 
 /**
  * Statische, illustrative Ego-Perspektive auf den Schreibtisch — bewusst kein
- * echtes 3D (siehe Scope-Entscheidung): eine gebaute SVG-Szene mit drei
- * Hotspots (Monitor, Pokalregal, Gadget-Regal), die jeweils ein Glass-Panel
- * mit echten Profildaten öffnen. Farbschema folgt der approvten Gaming-
- * Zimmer-Promo-Stimmung: nahezu schwarzer Grund, dominantes Teal-Randlicht,
- * gedeckelte Glow-Akzente (kein greller Screen-Blowout).
+ * echtes 3D (siehe Scope-Entscheidung). Anders als die erste Fassung stehen
+ * hier keine abstrakten Platzhalter mehr: jeder Monitor ist das tatsächlich
+ * besessene Gaming-Zimmer-Foto, und die restlichen Gadgets (PC, Peripherie,
+ * Konsolen, Stuhl, Licht) sind echte Fotos an ihrem jeweiligen Platz (Monitor/
+ * Tischplatte/Boden). Farbschema folgt der approvten Gaming-Zimmer-Promo-
+ * Stimmung: nahezu schwarzer Grund, dominantes Teal-Randlicht.
  */
 export default function MancaveDesktopScene({ data }: { data: MancaveData }) {
-  const [active, setActive] = useState<MancaveHotspotSlot | null>(null);
+  const [trophyOpen, setTrophyOpen] = useState(false);
 
-  const shelfGadgets = data.gadgets.filter(g => g.slot === "shelf");
-  const deskGadgets  = data.gadgets.filter(g => g.slot === "desk" || g.slot === "monitor");
+  const monitors = useMemo(() => data.gadgets.filter(g => g.zone === "monitor").sort((a, b) => b.price - a.price), [data.gadgets]);
+  const deskItems  = useMemo(() => data.gadgets.filter(g => g.zone === "desk"), [data.gadgets]);
+  const floorItems = useMemo(() => data.gadgets.filter(g => g.zone === "floor"), [data.gadgets]);
+  const primaryMonitor = monitors[0];
+  const extraMonitors   = monitors.slice(1, 3);
 
   return (
     <div className="relative w-full overflow-hidden rounded-3xl border border-white/[0.06]"
       style={{ aspectRatio: "16 / 9", background: "#050810" }}>
 
-      {/* ── Szene (SVG) ──────────────────────────────────────────────── */}
+      {/* ── Atmosphäre (Wand/Boden/Licht) ────────────────────────────── */}
       <svg viewBox="0 0 1600 900" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMid slice">
         <defs>
-          <radialGradient id="mc-rim" cx="50%" cy="30%" r="65%">
+          <radialGradient id="mc-rim" cx="50%" cy="26%" r="65%">
             <stop offset="0%" stopColor="#2dd4bf" stopOpacity="0.22" />
             <stop offset="55%" stopColor="#0f766e" stopOpacity="0.08" />
             <stop offset="100%" stopColor="#050810" stopOpacity="0" />
@@ -38,97 +43,71 @@ export default function MancaveDesktopScene({ data }: { data: MancaveData }) {
             <stop offset="0%" stopColor="#141b22" />
             <stop offset="100%" stopColor="#02050a" />
           </linearGradient>
-          <linearGradient id="mc-screen" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#0d3b36" />
-            <stop offset="100%" stopColor="#04211d" />
-          </linearGradient>
-          <linearGradient id="mc-screenglow" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#2dd4bf" stopOpacity="0.35" />
-            <stop offset="100%" stopColor="#2dd4bf" stopOpacity="0" />
-          </linearGradient>
         </defs>
-
-        {/* Rückwand */}
         <rect x="0" y="0" width="1600" height="640" fill="url(#mc-wall)" />
-        {/* Teal-Randlicht */}
         <rect x="0" y="0" width="1600" height="640" fill="url(#mc-rim)" />
-        {/* dünne Lichtfuge Wand/Boden */}
         <rect x="0" y="636" width="1600" height="3" fill="#2dd4bf" opacity="0.25" />
-
-        {/* Pokalregal links */}
-        <g opacity="0.9">
-          <rect x="110" y="150" width="330" height="14" rx="3" fill="#1a2530" />
-          <rect x="110" y="300" width="330" height="14" rx="3" fill="#1a2530" />
-          <rect x="118" y="164" width="14" height="136" fill="#141c24" />
-          <rect x="428" y="164" width="14" height="136" fill="#141c24" />
-          {Array.from({ length: 5 }).map((_, i) => (
-            <circle key={i} cx={160 + i * 55} cy={286} r="16" fill="#f59e0b" opacity={i < Math.min(5, data.pokaleCount) ? 0.85 : 0.12} />
-          ))}
-        </g>
-
-        {/* Gadget-Regal rechts */}
-        <g opacity="0.9">
-          <rect x="1160" y="150" width="330" height="14" rx="3" fill="#1a2530" />
-          <rect x="1160" y="300" width="330" height="14" rx="3" fill="#1a2530" />
-          <rect x="1168" y="164" width="14" height="136" fill="#141c24" />
-          <rect x="1478" y="164" width="14" height="136" fill="#141c24" />
-          {Array.from({ length: 5 }).map((_, i) => (
-            <rect key={i} x={1210 + i * 55} y={264} width="26" height="26" rx="5" fill="#2dd4bf" opacity={i < Math.min(5, shelfGadgets.length) ? 0.7 : 0.1} />
-          ))}
-        </g>
-
-        {/* Monitor-Glow hinter dem Bildschirm */}
-        <rect x="480" y="260" width="640" height="360" fill="url(#mc-screenglow)" opacity="0.6" />
-
-        {/* Monitor */}
-        <rect x="560" y="300" width="480" height="290" rx="14" fill="#0a0f14" stroke="#1e2a33" strokeWidth="3" />
-        <rect x="582" y="322" width="436" height="246" rx="6" fill="url(#mc-screen)" />
-        {/* Mini-Dashboard-Vorschau im Screen */}
-        <g opacity="0.85">
-          <rect x="602" y="342" width="140" height="16" rx="3" fill="#2dd4bf" opacity="0.5" />
-          <rect x="602" y="368" width="90" height="10" rx="2" fill="#9ca3af" opacity="0.35" />
-          {[0.4, 0.7, 0.5, 0.85, 0.6, 0.95].map((h, i) => (
-            <rect key={i} x={602 + i * 30} y={470 - h * 70} width="18" height={h * 70} rx="2" fill="#2dd4bf" opacity="0.55" />
-          ))}
-          <circle cx="920" cy="360" r="22" fill="none" stroke="#2dd4bf" strokeWidth="4" opacity="0.6" />
-          <circle cx="920" cy="360" r="22" fill="none" stroke="#2dd4bf" strokeWidth="4"
-            strokeDasharray={`${(data.rankPct / 100) * 138} 138`} strokeLinecap="round" transform="rotate(-90 920 360)" />
-        </g>
-        <rect x="740" y="596" width="140" height="10" rx="3" fill="#0a0f14" />
-        <rect x="770" y="602" width="80" height="34" fill="#0a0f14" />
-
-        {/* Schreibtisch */}
         <polygon points="0,640 1600,640 1600,900 0,900" fill="url(#mc-desk)" />
         <rect x="0" y="640" width="1600" height="4" fill="#2dd4bf" opacity="0.15" />
-        {/* Tastatur */}
-        <rect x="700" y="700" width="200" height="60" rx="8" fill="#0e151c" stroke="#1e2a33" strokeWidth="2" />
-        {/* Maus */}
-        <rect x="930" y="705" width="34" height="52" rx="14" fill="#0e151c" stroke="#1e2a33" strokeWidth="2" />
-        {/* Mug */}
-        <rect x="560" y="712" width="46" height="42" rx="6" fill="#101820" stroke="#1e2a33" strokeWidth="2" />
-
-        {/* Vignette unten (Körpernähe / Tischkante) */}
         <rect x="0" y="800" width="1600" height="100" fill="#000000" opacity="0.5" />
       </svg>
 
-      {/* ── Hotspots ─────────────────────────────────────────────────── */}
-      <Hotspot label="Dashboard" left="56%" top="52%" onClick={() => setActive("monitor")} Icon={Monitor} />
-      <Hotspot label="Pokale & Abzeichen" left="17%" top="30%" onClick={() => setActive("trophy")} Icon={Trophy} />
-      <Hotspot label="Gadgets" left="83%" top="30%" onClick={() => setActive("shelf")} Icon={Package} />
+      {/* ── Pokalregal links (echte Pokale/Abzeichen haben keine Fotos —
+           bleibt bewusst als kompakte Symbol-Vitrine) ───────────────── */}
+      <button onClick={() => setTrophyOpen(true)} title="Pokale & Abzeichen"
+        className="absolute group text-left" style={{ left: "5%", top: "11%", width: "20%" }}>
+        <div className="rounded-xl px-3 py-2.5 transition-transform group-hover:scale-[1.03]"
+          style={{ background: "rgba(4,10,9,0.55)", border: "1px solid rgba(245,158,11,0.22)", backdropFilter: "blur(3px)" }}>
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <Trophy className="w-3 h-3 text-amber-400" />
+            <span className="text-[9px] font-semibold text-amber-300 uppercase tracking-widest">Vitrine</span>
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {data.badges.slice(0, 6).map(b => (
+              <span key={b.key} className="text-[13px] leading-none">{b.icon}</span>
+            ))}
+            {data.pokale.length > 0 && (
+              <span className="text-[10px] text-amber-300/80 font-semibold ml-1">+{data.pokaleCount} Pokale</span>
+            )}
+          </div>
+        </div>
+      </button>
 
-      {/* ── Detail-Panel ─────────────────────────────────────────────── */}
-      {active && (
+      {/* ── Monitore (echte Fotos, Dashboard direkt auf dem Screen) ──── */}
+      <div className="absolute flex items-end justify-center gap-3" style={{ left: "50%", top: "20%", transform: "translateX(-50%)" }}>
+        {primaryMonitor
+          ? <MonitorPhoto gadget={primaryMonitor} data={data} width={260} primary />
+          : <MonitorPhoto gadget={null} data={data} width={260} primary />}
+        {extraMonitors.map(m => (
+          <MonitorPhoto key={m.key} gadget={m} data={data} width={130} primary={false} />
+        ))}
+      </div>
+
+      {/* ── Tischplatte: Peripherie & Licht ───────────────────────────── */}
+      {deskItems.length > 0 && (
+        <div className="absolute flex items-end gap-2.5" style={{ left: "50%", top: "62%", transform: "translateX(-50%)" }}>
+          {deskItems.slice(0, 6).map(g => <GadgetPhoto key={g.key} gadget={g} width={72} />)}
+        </div>
+      )}
+
+      {/* ── Boden neben dem Tisch: PC-Tower, Konsolen, Stuhl ──────────── */}
+      {floorItems.length > 0 && (
+        <div className="absolute flex items-end gap-2.5" style={{ left: "5%", top: "64%" }}>
+          {floorItems.slice(0, 5).map(g => <GadgetPhoto key={g.key} gadget={g} width={90} />)}
+        </div>
+      )}
+
+      {/* ── Pokal/Abzeichen-Detail ───────────────────────────────────── */}
+      {trophyOpen && (
         <div className="absolute inset-0 flex items-center justify-center p-6" style={{ background: "rgba(2,5,8,0.55)", backdropFilter: "blur(2px)" }}
-          onClick={() => setActive(null)}>
+          onClick={() => setTrophyOpen(false)}>
           <div onClick={e => e.stopPropagation()}
             className="glass card-shine rounded-2xl p-5 w-full max-w-md max-h-[85%] overflow-y-auto relative animate-fade-in">
-            <button onClick={() => setActive(null)} aria-label="Schließen"
+            <button onClick={() => setTrophyOpen(false)} aria-label="Schließen"
               className="absolute top-3 right-3 w-7 h-7 rounded-lg flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/[0.06] transition-colors">
               <X className="w-4 h-4" />
             </button>
-            {active === "monitor" && <MonitorPanel data={data} />}
-            {active === "trophy" && <TrophyPanel data={data} />}
-            {active === "shelf" && <ShelfPanel gadgets={deskGadgets.concat(shelfGadgets)} topGames={data.topGames} />}
+            <TrophyPanel data={data} />
           </div>
         </div>
       )}
@@ -136,49 +115,81 @@ export default function MancaveDesktopScene({ data }: { data: MancaveData }) {
   );
 }
 
-function Hotspot({ label, left, top, onClick, Icon }: { label: string; left: string; top: string; onClick: () => void; Icon: typeof Monitor }) {
+/**
+ * Ein Monitor-Foto aus dem echten Gaming-Zimmer-Bestand. Beim Primär-Monitor
+ * liegt das kompakte Dashboard direkt (ohne Klick) über der ausgemessenen
+ * Bildschirmfläche — dieselben Werte, die vorher nur im Popup steckten, sind
+ * jetzt permanent sichtbar. Fehlt ein ausgemessenes `screenRect` (nicht jeder
+ * Monitortyp hat eins), greift ein grober, aber plausibler Notfall-Bereich.
+ */
+function MonitorPhoto({ gadget, data, width, primary }: { gadget: MancaveGadget | null; data: MancaveData; width: number; primary: boolean }) {
+  const ratio = gadget ? gadget.w / gadget.h : 1;
+  const rect  = gadget?.screenRect ?? FALLBACK_SCREEN_RECT;
+
   return (
-    <button onClick={onClick} title={label}
-      className="absolute -translate-x-1/2 -translate-y-1/2 group"
-      style={{ left, top }}>
-      <span className="absolute inset-0 rounded-full animate-ping" style={{ background: "rgba(45,212,191,0.35)", animationDuration: "2.4s" }} />
-      <span className="relative flex items-center justify-center w-9 h-9 rounded-full border transition-transform group-hover:scale-110"
-        style={{ background: "rgba(4,10,9,0.85)", borderColor: "rgba(45,212,191,0.5)", boxShadow: "0 0 14px rgba(45,212,191,0.35)" }}>
-        <Icon className="w-4 h-4 text-teal-300" />
-      </span>
-    </button>
+    <div className="relative shrink-0" style={{ width, aspectRatio: `${ratio}` }}>
+      {gadget?.imageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element -- lokale public-Assets, Seitenverhältnis kommt aus dem Katalog
+        <img src={gadget.imageUrl} alt={gadget.label} className="absolute inset-0 w-full h-full object-contain object-bottom drop-shadow-[0_8px_20px_rgba(0,0,0,0.5)]" />
+      ) : (
+        <div className="absolute inset-0 rounded-lg" style={{ background: "#0a0f14", border: "3px solid #1e2a33" }} />
+      )}
+      {primary && (
+        <div className="absolute overflow-hidden rounded-[3px]"
+          style={{
+            left: `${rect.x0 * 100}%`, top: `${rect.y0 * 100}%`,
+            width: `${(rect.x1 - rect.x0) * 100}%`, height: `${(rect.y1 - rect.y0) * 100}%`,
+            background: "linear-gradient(180deg,#0d3b36,#04211d)",
+            boxShadow: "inset 0 0 12px rgba(45,212,191,0.25)",
+          }}>
+          <MonitorScreenContent data={data} />
+        </div>
+      )}
+    </div>
   );
 }
 
-function MonitorPanel({ data }: { data: MancaveData }) {
+/** Kompaktes, immer sichtbares Dashboard direkt auf dem Bildschirm. */
+function MonitorScreenContent({ data }: { data: MancaveData }) {
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Monitor className="w-4 h-4 text-teal-400" />
-        <h3 className="text-sm font-semibold text-white">Dashboard</h3>
-      </div>
+    <div className="w-full h-full flex flex-col justify-between p-[6%] overflow-hidden select-none">
       <div>
-        <div className="flex items-baseline justify-between mb-1">
-          <span className={`text-xs font-semibold ${data.rankColor}`}>{data.rankLabel}</span>
-          <span className="text-[10px] text-gray-500">#{data.leaderboardRank} von {data.totalUsers}</span>
+        <div className="flex items-center justify-between">
+          <span className={`font-bold leading-none ${data.rankColor}`} style={{ fontSize: 9 }}>
+            {data.rankLabel}
+          </span>
+          <span className="text-teal-300/70" style={{ fontSize: 7 }}>#{data.leaderboardRank}</span>
         </div>
-        <div className="h-1.5 rounded-full overflow-hidden bg-white/[0.05]">
+        <div className="mt-1 h-[3px] rounded-full overflow-hidden bg-white/10">
           <div className="h-full rounded-full" style={{ width: `${data.rankPct}%`, background: "linear-gradient(90deg,#14b8a6,#2dd4bf)" }} />
         </div>
-        {data.nextRankLabel && <p className="text-[10px] text-gray-600 mt-1">{data.rankPct}% bis {data.nextRankLabel}</p>}
       </div>
-      <div className="flex items-center gap-1.5">
-        <CoinIcon size={13} />
-        <span className="text-sm text-amber-400 font-medium tabular-nums">{data.totalPoints.toLocaleString("de-DE")} Münzen</span>
+      <div className="flex items-center gap-1">
+        <CoinIcon size={9} />
+        <span className="text-amber-300 font-semibold tabular-nums leading-none" style={{ fontSize: 10 }}>
+          {data.totalPoints.toLocaleString("de-DE")}
+        </span>
       </div>
-      <div className="grid grid-cols-2 gap-2 pt-1">
-        <StatTile icon={<CalendarDays className="w-3.5 h-3.5" />} label="Events" value={data.eventCount} color="text-emerald-400" />
-        <StatTile icon={<Medal className="w-3.5 h-3.5" />} label="Event-Siege" value={data.eventWins} color="text-amber-400" />
-        <StatTile icon={<Swords className="w-3.5 h-3.5" />} label="Poll-Master" value={data.pollMasterCount} color="text-purple-400" />
-        <StatTile icon={<Trophy className="w-3.5 h-3.5" />} label="Pokale" value={data.pokaleCount} color="text-pink-400" />
-        <StatTile icon={<Clock className="w-3.5 h-3.5" />} label="Voice-Std." value={`${data.voiceHours}h`} color="text-teal-400" />
-        <StatTile icon={<MessageSquare className="w-3.5 h-3.5" />} label="Nachrichten" value={data.messageCount} color="text-blue-400" />
+      <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-teal-100/80" style={{ fontSize: 7 }}>
+        <span>🏆 {data.eventWins}</span>
+        <span>📅 {data.eventCount}</span>
+        <span>🏅 {data.pokaleCount}</span>
+        <span>⭐ {data.pollMasterCount}</span>
       </div>
+    </div>
+  );
+}
+
+function GadgetPhoto({ gadget, width }: { gadget: MancaveGadget; width: number }) {
+  const ratio = gadget.w / gadget.h;
+  return (
+    <div className="shrink-0" style={{ width, aspectRatio: `${ratio}` }} title={gadget.label}>
+      {gadget.imageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element -- lokale public-Assets, Seitenverhältnis kommt aus dem Katalog
+        <img src={gadget.imageUrl} alt={gadget.label} className="w-full h-full object-contain object-bottom drop-shadow-[0_6px_14px_rgba(0,0,0,0.45)]" />
+      ) : (
+        <div className="w-full h-full rounded-lg bg-teal-500/10" />
+      )}
     </div>
   );
 }
@@ -210,34 +221,19 @@ function TrophyPanel({ data }: { data: MancaveData }) {
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-function ShelfPanel({ gadgets, topGames }: { gadgets: MancaveData["gadgets"]; topGames: string[] }) {
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Package className="w-4 h-4 text-teal-400" />
-        <h3 className="text-sm font-semibold text-white">Gadgets</h3>
-      </div>
-      {gadgets.length > 0 ? (
+      <div className="pt-2 border-t border-white/[0.06] space-y-2">
+        <p className="text-[10px] text-gray-500 uppercase tracking-widest flex items-center gap-1"><Package className="w-3 h-3" /> Aktivität & Spiele</p>
         <div className="grid grid-cols-2 gap-2">
-          {gadgets.map(g => (
-            <div key={g.key} className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-white/[0.03]">
-              {/* eslint-disable-next-line @next/next/no-img-element -- lokale public-Assets, kein next/image nötig */}
-              {g.imageUrl && <img src={g.imageUrl} alt="" className="w-7 h-7 object-contain shrink-0" />}
-              <span className="text-[11px] text-gray-300 truncate">{g.label}</span>
-            </div>
-          ))}
+          <StatTile icon={<CalendarDays className="w-3.5 h-3.5" />} label="Events" value={data.eventCount} color="text-emerald-400" />
+          <StatTile icon={<Medal className="w-3.5 h-3.5" />} label="Event-Siege" value={data.eventWins} color="text-amber-400" />
+          <StatTile icon={<Swords className="w-3.5 h-3.5" />} label="Poll-Master" value={data.pollMasterCount} color="text-purple-400" />
+          <StatTile icon={<Clock className="w-3.5 h-3.5" />} label="Voice-Std." value={`${data.voiceHours}h`} color="text-teal-400" />
+          <StatTile icon={<MessageSquare className="w-3.5 h-3.5" />} label="Nachrichten" value={data.messageCount} color="text-blue-400" />
         </div>
-      ) : <p className="text-xs text-gray-600">Noch keine Gadgets im Gaming-Zimmer aufgestellt.</p>}
-      {topGames.length > 0 && (
-        <div className="pt-1">
-          <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1.5 flex items-center gap-1"><Gamepad2 className="w-3 h-3" /> Lieblingsspiele</p>
-          <p className="text-xs text-gray-300">{topGames.slice(0, 3).join(" · ")}</p>
-        </div>
-      )}
+        {data.topGames.length > 0 && (
+          <p className="text-xs text-gray-300 flex items-center gap-1.5"><Gamepad2 className="w-3.5 h-3.5 text-blue-400 shrink-0" /> {data.topGames.slice(0, 3).join(" · ")}</p>
+        )}
+      </div>
     </div>
   );
 }

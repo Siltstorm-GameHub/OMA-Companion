@@ -8,7 +8,7 @@ import { loadRoom } from "@/lib/room";
 import { getRoomItem } from "@/lib/room-items";
 import { parseFavoriteGames } from "@/lib/favorite-games";
 import MancaveClient from "./MancaveClient";
-import { gadgetSlotFor, MANCAVE_GADGET_CATEGORIES, type MancaveGadget, type MancaveData } from "./mancave-data";
+import { renderZoneFor, MANCAVE_GADGET_CATEGORIES, type MancaveGadget, type MancaveData } from "./mancave-data";
 
 export default async function MancavePage() {
   const me = await getSessionUser();
@@ -19,13 +19,11 @@ export default async function MancavePage() {
   if (!mancaveVisibleFor(await getMancaveConfig(), me.role)) redirect("/profile");
 
   const userId = me.id;
-  const now   = new Date();
-  const month = now.getMonth() + 1;
-  const year  = now.getFullYear();
+  const now = new Date();
 
   const [
     user, eventCount, startedEvents, tournamentCount, pokale, leaderboardRank,
-    userSystemBadges, userCustomBadges, coinsEarnedAgg, coinsSpentAgg, lulPollWins, room,
+    userSystemBadges, userCustomBadges, lulPollWins, room,
   ] = await Promise.all([
     prisma.user.findUnique({
       where:  { id: userId },
@@ -98,7 +96,8 @@ export default async function MancavePage() {
     .filter((def): def is NonNullable<typeof def> => !!def && MANCAVE_GADGET_CATEGORIES.includes(def.category))
     .map(def => ({
       key: def.key, label: def.label, description: def.description,
-      imageUrl: def.imageUrl, accent: def.accent, slot: gadgetSlotFor(def.category),
+      imageUrl: def.imageUrl, accent: def.accent, category: def.category, zone: renderZoneFor(def.category),
+      w: def.w, h: def.h, screenRect: def.screenRect, price: def.price,
     }));
 
   const data: MancaveData = {
