@@ -1,9 +1,11 @@
 "use client";
-import { Trophy, Package, CalendarDays, Medal, Swords, Clock, MessageSquare, Gamepad2 } from "lucide-react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Trophy, Package, CalendarDays, Medal, Swords, Clock, MessageSquare, Gamepad2, Wrench, Lock, ArrowUpCircle } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
 import type { MancaveData } from "./mancave-data";
 
-export type MancavePanel = "trophy" | "gadgets" | null;
+export type MancavePanel = "trophy" | "gadgets" | "items" | null;
 
 /** Kompaktes, immer sichtbares Dashboard direkt auf dem Bildschirm. */
 export function MonitorScreenContent({ data }: { data: MancaveData }) {
@@ -100,6 +102,81 @@ export function GadgetsPanel({ data }: { data: MancaveData }) {
           ))}
         </div>
       ) : <p className="text-xs text-gray-600">Noch keine Gadgets im Gaming-Zimmer aufgestellt.</p>}
+    </div>
+  );
+}
+
+/**
+ * Ausbau-Panel des neuen Mancave-Systems (siehe mancave-items.ts,
+ * mancave-economy.ts) — Phase 1: nur Wirtschaft/Buttons, die Szene selbst
+ * sieht optisch noch gleich aus, bis es Blender-Stufenvarianten gibt.
+ * Boden/Wand/Fenster tauchen hier bewusst NICHT als eigene Kaufzeile auf —
+ * ihre Stufe steigt automatisch mit (Durchschnitt aller Objekt-Stufen).
+ */
+export function ItemsPanel({ data }: { data: MancaveData }) {
+  const router = useRouter();
+  const [pending, setPending] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function upgrade(itemKey: string) {
+    setPending(itemKey);
+    setError(null);
+    try {
+      const res = await fetch("/api/mancave/upgrade", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemKey }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(body.error ?? "Konnte nicht aufgerüstet werden");
+        return;
+      }
+      router.refresh();
+    } catch {
+      setError("Verbindung fehlgeschlagen");
+    } finally {
+      setPending(null);
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Wrench className="w-4 h-4 text-teal-400" />
+          <h3 className="text-sm font-semibold text-white">Ausbau</h3>
+        </div>
+        <span className="text-[10px] text-gray-500">Boden/Wand/Fenster: Stufe {data.surfaceTier}</span>
+      </div>
+      {error && <p className="text-[11px] text-rose-400">{error}</p>}
+      <div className="space-y-1.5">
+        {data.items.map(item => (
+          <div key={item.key} className="flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg bg-white/[0.03]">
+            <div className="min-w-0 flex items-center gap-2">
+              {item.tier === 0 ? <Lock className="w-3.5 h-3.5 text-gray-500 shrink-0" /> : <ArrowUpCircle className="w-3.5 h-3.5 text-teal-400 shrink-0" />}
+              <div className="min-w-0">
+                <p className="text-xs text-gray-200 truncate">{item.label}</p>
+                <p className="text-[10px] text-gray-500">{item.tier === 0 ? "Nicht freigeschaltet" : `Stufe ${item.tier}/${item.maxTier}`}</p>
+              </div>
+            </div>
+            {item.nextCost === null ? (
+              <span className="text-[10px] text-amber-300/80 shrink-0 whitespace-nowrap">Max</span>
+            ) : (
+              <button
+                onClick={() => upgrade(item.key)}
+                disabled={pending === item.key}
+                className="flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold shrink-0 whitespace-nowrap disabled:opacity-50"
+                style={{ background: "rgba(45,212,191,0.12)", border: "1px solid rgba(45,212,191,0.3)", color: "#5eead4" }}
+              >
+                <CoinIcon size={10} />
+                {pending === item.key ? "…" : item.nextCost.toLocaleString("de-DE")}
+                {item.tier === 0 && " · Freischalten"}
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

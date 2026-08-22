@@ -90,6 +90,7 @@ model User {
   serverApplications       ServerApplication[]
   room                     Room?
   roomItems                RoomItem[]
+  mancaveItems             MancaveItem[]
   job                      UserJob?
   pokale                   Pokal[]
 }
@@ -1075,6 +1076,25 @@ model ServerApplication {
   @@unique([serverId, userId])
   @@index([serverId, status])
   @@map("serverapplication")
+}
+
+// ── Mancave (neues Ausbausystem, parallel zum alten Gaming-Zimmer) ─────────────
+
+/// Stufe (0-4) eines Mancave-Ausbau-Slots. Katalog (Label, Grundausstattung
+/// ja/nein, Stufenkosten) steht im Code (src/lib/mancave-items.ts), hier nur
+/// wer welchen Slot auf welcher Stufe besitzt. Grundausstattungs-Slots ohne
+/// eigene Zeile gelten als Stufe 1, Zusatz-Slots ohne Zeile als Stufe 0
+/// (faule Materialisierung wie beim alten Room-System) — siehe
+/// mancave-economy.ts loadMancaveItems().
+model MancaveItem {
+  userId    String
+  itemKey   String // Schlüssel aus MANCAVE_ITEMS
+  tier      Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, itemKey])
 }
 
 // ── Gaming-Zimmer ────────────────────────────────────────────────────────────

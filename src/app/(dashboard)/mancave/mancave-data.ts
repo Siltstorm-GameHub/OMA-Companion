@@ -44,6 +44,17 @@ export interface MancavePokal {
   awardedAt: string;
 }
 
+/** Ausbau-Stand eines Mancave-Slots (siehe mancave-items.ts, mancave-economy.ts). */
+export interface MancaveItemStatus {
+  key:      string;
+  label:    string;
+  baseline: boolean;
+  tier:     number;
+  maxTier:  number;
+  /** Münzen für den nächsten Stufenschritt, null = Höchststufe erreicht. */
+  nextCost: number | null;
+}
+
 export interface MancaveData {
   displayName:     string;
   avatarUrl:       string | null;
@@ -67,10 +78,13 @@ export interface MancaveData {
   pokale:          MancavePokal[];
   gadgets:         MancaveGadget[];
   /**
-   * Alle aufgestellten Gaming-Zimmer-Item-Keys (ungefiltert, inkl. Schreibtisch/
-   * Stuhl/Tapete/etc.) — die echte 3D-Ego-Ansicht (`MancaveScene3D.tsx`) sucht
-   * sich daraus selbst Schreibtisch/Monitor/PC/Regal per Kategorie heraus und
-   * lädt dieselben GLB-Modelle wie das echte Gaming-Zimmer (`FurniturePrimitive`).
+   * Alle aufgestellten Gaming-Zimmer-Item-Keys (ungefiltert) — Restbestand aus
+   * der Zeit vor dem neuen Ausbausystem, aktuell nur noch für's Gadgets-Panel
+   * (Foto-Liste der besessenen Peripherie) relevant, siehe `gadgets` oben.
    */
   roomItemKeys: string[];
+  /** Ausbau-Stand aller Mancave-Slots — neues, vom Gaming-Zimmer unabhängiges System. */
+  items:        MancaveItemStatus[];
+  /** Boden/Wand/Fenster-Stufe, aus dem Durchschnitt aller `items`-Stufen berechnet. */
+  surfaceTier:  number;
 }
