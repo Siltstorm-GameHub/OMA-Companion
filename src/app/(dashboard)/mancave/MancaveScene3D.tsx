@@ -39,17 +39,19 @@ const EYE = new THREE.Vector3(0.05, 1.28, -0.95);
 const FORWARD = new THREE.Vector3(0.9598, -0.2806, 0);
 const LOOK_TARGET = EYE.clone().add(FORWARD);
 
-// Bildschirm-Mitte des Haupt-Monitors ("Cube.015" in der Blender-Szene, Material
-// "Pc screen3") — um 0.05 Richtung Kamera versetzt (entlang -FORWARD), sonst
-// verdeckt die Bildschirm-Fläche selbst das Html-Overlay (Selbst-Okklusion,
-// da die Position sonst exakt AUF der Glasfläche liegt statt knapp davor).
-const SCREEN_POS = new THREE.Vector3(1.215, 1.091, -0.741);
+// Bildschirm-Mitte des Haupt-Monitors — "Cube.015" + "Cube.002" bilden
+// zusammen EINEN hohen Bildschirm (dieselbe Wandposition, direkt vertikal
+// gestapelt: Cube.015 unten, Cube.002 oben, siehe Nachmessung), darum Mitte
+// über beide gemeinsam berechnet statt nur über eins der beiden Teilstücke —
+// die erste Fassung landete dadurch zu weit unten im Screen. Zusätzlich um
+// 0.05 Richtung Kamera versetzt (entlang -FORWARD), sonst verdeckt die
+// Bildschirm-Fläche selbst das Html-Overlay (Selbst-Okklusion).
+const SCREEN_POS = new THREE.Vector3(1.18, 1.25, -0.741);
 // PC-Tower-Position ("Cube.017") — Anker für den Gadgets-Hotspot.
 const PC_POS = new THREE.Vector3(1.05, 1.02, -0.29);
-// Wand-/Deko-Bereich (Nanoleaf-Panels über dem Schreibtisch) — Anker für den
-// Pokale-Hotspot. Y abgesenkt (war zu nah an der Decke, außerhalb des
-// sichtbaren Standard-Ausschnitts).
-const SHELF_POS = new THREE.Vector3(0.55, 1.7, -0.75);
+// Nanoleaf-Dreieck-Panels über dem Schreibtisch (Mittelpunkt aller 21
+// "Circle.*"-Meshes, nachgemessen) — Anker für den Pokale-Hotspot.
+const SHELF_POS = new THREE.Vector3(0.19, 1.56, -0.11);
 
 function RoomModel() {
   const { scene } = useGLTF(ROOM_MODEL_URL);
