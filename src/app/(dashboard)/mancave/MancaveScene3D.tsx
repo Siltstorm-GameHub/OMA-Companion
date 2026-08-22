@@ -61,17 +61,19 @@ function RoomModel() {
 function RoomLighting() {
   return (
     <>
-      {/* Etwas gedämpfter als zuvor: die neue Rauheits-Textur auf Tischmatte/
-          Couch/Teppich/PC-Gehäuse (siehe MODEL_TEXTURE-Notiz oben) braucht
-          Kontrast, um sichtbar zu sein — bei zu viel Licht liefen diese
-          hellen Flächen vorher komplett weiß aus (Tone-Mapping-Clipping),
-          das hat die Textur unsichtbar gemacht. */}
+      {/* Tisch/Couch/Raumschale ("Material.001") hatten trotz dunkler Grundfarbe
+          (0.045) große weißflächige Specular-Highlights: bei Roughness=0.4
+          reflektieren nahe Punktlichter auf einer flachen Fläche breit und hart,
+          unabhängig von der dunklen Diffusfarbe (Fresnel-Reflexion ist bei
+          Nicht-Metallen farbunabhängig). Fix: Rauheits-Textur auf Material.001
+          (siehe Blender-Export) + hier zusätzlich etwas weniger und weiter
+          entfernte Punktlichter, damit die Highlights nicht mehr ausbrennen. */}
       <ambientLight intensity={0.4} />
       <hemisphereLight args={["#5a7a90", "#141b26", 0.5]} />
-      <directionalLight position={[EYE.x - 1, 3.2, EYE.z + 1]} intensity={1.1} color="#fff3df" />
-      <pointLight position={[SCREEN_POS.x - 0.3, 1.9, SCREEN_POS.z]} intensity={1.0} color="#2dd4bf" distance={5} decay={2} />
-      <pointLight position={[EYE.x, 2.0, EYE.z]} intensity={0.55} color="#ffffff" distance={4} decay={2} />
-      <pointLight position={[SHELF_POS.x, SHELF_POS.y, SHELF_POS.z]} intensity={0.6} color="#a78bfa" distance={4} decay={2} />
+      <directionalLight position={[EYE.x - 1, 3.2, EYE.z + 1]} intensity={0.85} color="#fff3df" />
+      <pointLight position={[SCREEN_POS.x - 0.3, 1.9, SCREEN_POS.z]} intensity={0.7} color="#2dd4bf" distance={5} decay={2} />
+      <pointLight position={[EYE.x, 2.3, EYE.z]} intensity={0.4} color="#ffffff" distance={4.5} decay={2} />
+      <pointLight position={[SHELF_POS.x, SHELF_POS.y, SHELF_POS.z]} intensity={0.5} color="#a78bfa" distance={4} decay={2} />
     </>
   );
 }
