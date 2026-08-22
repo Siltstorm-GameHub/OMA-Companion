@@ -26,7 +26,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Html, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
-import { MonitorScreenContent, TrophyPanel, GadgetsPanel, type MancavePanel } from "./MancaveSharedUI";
+import { MonitorScreenContent, TrophyPanel, GadgetsPanel, ItemsPanel, type MancavePanel } from "./MancaveSharedUI";
 import type { MancaveData } from "./mancave-data";
 
 const ROOM_MODEL_URL = "/models/mancave_room.glb";
@@ -51,6 +51,9 @@ const PC_POS = new THREE.Vector3(1.05, 1.02, -0.29);
 // Nanoleaf-Dreieck-Panels über dem Schreibtisch (Mittelpunkt aller 21
 // "Circle.*"-Meshes, nachgemessen) — Anker für den Pokale-Hotspot.
 const SHELF_POS = new THREE.Vector3(0.19, 1.56, -0.11);
+// Vordere Tischkante ("Cube.001", Blender-Zentrum umgerechnet) — Anker für den
+// neuen Ausbau-Hotspot (Stufen-Upgrades, siehe mancave-items.ts).
+const DESK_FRONT_POS = new THREE.Vector3(0.95, 0.86, -0.55);
 
 function RoomModel() {
   const { scene } = useGLTF(ROOM_MODEL_URL);
@@ -140,6 +143,7 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const hasGadgets = data.gadgets.some(g => g.zone === "other");
+  const hasAffordableUpgrade = data.items.some(i => i.nextCost !== null && i.nextCost <= data.totalPoints);
 
   return (
     <div ref={containerRef}
@@ -166,6 +170,16 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full whitespace-nowrap"
               style={{ background: "rgba(4,10,9,0.7)", border: "1px solid rgba(245,158,11,0.3)", backdropFilter: "blur(3px)" }}>
               <span className="text-[10px] font-semibold text-amber-300">🏆 Pokale &amp; Abzeichen</span>
+            </button>
+          </Html>
+
+          {/* Ausbau (neues Stufen-Upgrade-System) — pulsiert, wenn sich ein
+              Upgrade gerade leisten lässt, damit es auffällt. */}
+          <Html position={DESK_FRONT_POS} center>
+            <button onClick={() => setPanel("items")}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full whitespace-nowrap ${hasAffordableUpgrade ? "animate-pulse" : ""}`}
+              style={{ background: "rgba(4,10,9,0.7)", border: "1px solid rgba(94,234,212,0.35)", backdropFilter: "blur(3px)" }}>
+              <span className="text-[10px] font-semibold text-teal-300">🛠️ Ausbau</span>
             </button>
           </Html>
 
@@ -198,6 +212,7 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
             </button>
             {panel === "trophy" && <TrophyPanel data={data} />}
             {panel === "gadgets" && <GadgetsPanel data={data} />}
+            {panel === "items" && <ItemsPanel data={data} />}
           </div>
         </div>
       )}

@@ -7,8 +7,10 @@ import { getMancaveConfig, mancaveVisibleFor } from "@/lib/mancave-config";
 import { loadRoom } from "@/lib/room";
 import { getRoomItem } from "@/lib/room-items";
 import { parseFavoriteGames } from "@/lib/favorite-games";
+import { loadMancaveTiers, surfaceTierFrom } from "@/lib/mancave-economy";
+import { MANCAVE_ITEMS, nextUpgradeCost } from "@/lib/mancave-items";
 import MancaveClient from "./MancaveClient";
-import { renderZoneFor, MANCAVE_GADGET_CATEGORIES, type MancaveGadget, type MancaveData } from "./mancave-data";
+import { renderZoneFor, MANCAVE_GADGET_CATEGORIES, type MancaveGadget, type MancaveItemStatus, type MancaveData } from "./mancave-data";
 
 export default async function MancavePage() {
   const me = await getSessionUser();
@@ -23,7 +25,7 @@ export default async function MancavePage() {
 
   const [
     user, eventCount, startedEvents, tournamentCount, pokale, leaderboardRank,
-    userSystemBadges, userCustomBadges, lulPollWins, room,
+    userSystemBadges, userCustomBadges, lulPollWins, room, tiers,
   ] = await Promise.all([
     prisma.user.findUnique({
       where:  { id: userId },
@@ -48,6 +50,7 @@ export default async function MancavePage() {
     }),
     prisma.lulEntry.count({ where: { userId, communityChamp: true } }),
     loadRoom(userId),
+    loadMancaveTiers(userId),
   ]);
 
   if (!user) redirect("/login");
@@ -101,6 +104,15 @@ export default async function MancavePage() {
       price: def.price,
     }));
 
+  const items: MancaveItemStatus[] = MANCAVE_ITEMS.map(def => {
+    const tier = tiers[def.key];
+    return {
+      key: def.key, label: def.label, baseline: def.baseline, tier,
+      maxTier: 4, nextCost: nextUpgradeCost(def, tier),
+    };
+  });
+  const surfaceTier = surfaceTierFrom(tiers);
+
   const data: MancaveData = {
     displayName:     user.username ?? user.name ?? "Unbekannt",
     avatarUrl:       user.image,
@@ -127,6 +139,8 @@ export default async function MancavePage() {
     pokale: pokale.map(p => ({ id: p.id, title: p.title, isSeries: p.isSeries, awardedAt: p.awardedAt.toISOString() })),
     gadgets,
     roomItemKeys: room.placed.map(p => p.key),
+    items,
+    surfaceTier,
   };
 
   return <MancaveClient data={data} />;
