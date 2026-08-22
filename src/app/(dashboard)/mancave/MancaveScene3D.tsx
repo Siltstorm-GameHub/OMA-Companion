@@ -227,31 +227,42 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
         <RoomShell />
         <LookAroundRig containerRef={containerRef} />
         <Suspense fallback={null}>
+          {/*
+           * Layout nach dem Vorbild der Blender-Referenzszene
+           * (3DAssetsRoom/LP_Ortographic_Gaming_Room.glb, siehe
+           * [[mancave-front-photos-project]] in memory): dort steht der PC
+           * NICHT auf dem Boden neben dem Tisch, sondern MIT auf der
+           * Tischplatte neben dem Monitor — alles an einer Wand versammelt,
+           * statt über den Boden verstreut. Monitor bleibt zentral/leicht
+           * links, PC rückt rechts daneben auf den Tisch.
+           */}
           <Item def={desk} position={[DESK_X, 0, DESK_Z]} />
-          <Item def={monitor} position={[DESK_X, DESK_STAND_HEIGHT, DESK_Z - 0.5]} />
-          <Item def={pc} position={[DESK_X - 2.6, 0, DESK_Z + 0.1]} />
+          <Item def={monitor} position={[DESK_X - 0.6, DESK_STAND_HEIGHT, DESK_Z - 0.5]} />
+          <Item def={pc} position={[DESK_X + 1.3, DESK_STAND_HEIGHT, DESK_Z - 0.35]} />
           {/* Peripherie steht IMMER auf der Tischplatte — nahe der Vorderkante
-              (größeres Z = näher an der Kamera/dem Sitzplatz), quer über die
-              Breite verteilt, damit sich Maus/Tastatur/Headset nicht überlappen. */}
+              (größeres Z = näher an der Kamera/dem Sitzplatz), unter dem
+              Monitor zentriert, damit sich Maus/Tastatur/Headset nicht mit
+              dem PC rechts überschneiden. */}
           {peripherals.map((d, i) => (
-            <Item key={d.key} def={d} position={[DESK_X - 0.7 + i * 0.7, DESK_STAND_HEIGHT, DESK_Z + 0.9]} />
+            <Item key={d.key} def={d} position={[DESK_X - 1.3 + i * 0.65, DESK_STAND_HEIGHT, DESK_Z + 0.9]} />
           ))}
           {/* Licht: nur Schreibtischlampen (mustStandOn "desk") stehen auf der
-              Tischplatte, Steh-/Ringlicht bleiben auf dem Boden daneben. */}
+              Tischplatte (freier Platz links vom Monitor), Steh-/Ringlicht
+              bleiben auf dem Boden daneben. */}
           {lights.map((d, i) => (
             <Item key={d.key} def={d}
               position={d.mustStandOn === "desk"
-                ? [DESK_X + 1.9, DESK_STAND_HEIGHT, DESK_Z - 0.3]
-                : [DESK_X + 2.3, 0, DESK_Z + 0.6 + i * 0.7]} />
+                ? [DESK_X - 2.2, DESK_STAND_HEIGHT, DESK_Z - 0.3]
+                : [DESK_X + 2.9, 0, DESK_Z + 0.6 + i * 0.7]} />
           ))}
           {konsolen.map((d, i) => (
-            <Item key={d.key} def={d} position={[DESK_X - 2.6, 0, DESK_Z + 0.8 + i * 0.5]} />
+            <Item key={d.key} def={d} position={[DESK_X - 3.0, 0, DESK_Z + 0.8 + i * 0.5]} />
           ))}
           {shelf && <Item def={shelf} position={[1.6, SHELF_Y, 0.12]} />}
 
           {/* Live-Dashboard direkt auf dem Monitor-Screen — 3D-verankert, immer sichtbar */}
           <Html center occlude
-            position={[DESK_X, 1.12, DESK_Z - 0.66]}
+            position={[DESK_X - 0.6, 1.12, DESK_Z - 0.66]}
             style={{ pointerEvents: "auto" }}>
             <div className="w-[150px] h-[84px] rounded-[3px] overflow-hidden shadow-[0_0_18px_rgba(45,212,191,0.35)]">
               <MonitorScreenContent data={data} />
@@ -269,9 +280,9 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
             </Html>
           )}
 
-          {/* Gadgets-Hotspot beim PC */}
+          {/* Gadgets-Hotspot beim PC (jetzt auf dem Tisch statt am Boden) */}
           {hasGadgets && (
-            <Html position={[DESK_X - 2.6, 1.0, DESK_Z + 0.1]} center>
+            <Html position={[DESK_X + 1.3, DESK_STAND_HEIGHT + 0.35, DESK_Z - 0.35]} center>
               <button onClick={() => setPanel("gadgets")}
                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full whitespace-nowrap"
                 style={{ background: "rgba(4,10,9,0.7)", border: "1px solid rgba(45,212,191,0.3)", backdropFilter: "blur(3px)" }}>
