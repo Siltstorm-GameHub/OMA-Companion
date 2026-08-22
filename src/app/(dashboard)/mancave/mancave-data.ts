@@ -85,7 +85,7 @@ export interface MancaveData {
 export const DESK_SCENE = {
   imageUrl: "/room-items/front/desk_scene_generic.png",
   w: 1600, h: 900,
-  screenRect: { x0: 0.3737, y0: 0, x1: 1.0, y1: 0.5039 } satisfies MancaveScreenRect,
+  screenRect: { x0: 0.468, y0: 0.2033, x1: 0.7785, y1: 0.5188 } satisfies MancaveScreenRect,
 };
 
 /** Generischer Notfall-Bildschirmbereich für Monitore ohne ausgemessenes screenRect. */
