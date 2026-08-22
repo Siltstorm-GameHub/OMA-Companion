@@ -46,8 +46,6 @@ export default async function MancavePage() {
       include: { badge: { select: { id: true, icon: true, name: true, desc: true } } },
       orderBy: { earnedAt: "asc" },
     }),
-    prisma.pointTransaction.aggregate({ where: { userId, amount: { gt: 0 } }, _sum: { amount: true } }),
-    prisma.pointTransaction.aggregate({ where: { userId, amount: { lt: 0 } }, _sum: { amount: true } }),
     prisma.lulEntry.count({ where: { userId, communityChamp: true } }),
     loadRoom(userId),
   ]);
@@ -119,7 +117,10 @@ export default async function MancavePage() {
     voiceHours,
     messageCount,
     topGames: topGames.length > 0 ? topGames : favoriteGames,
-    badges: badges.map(b => ({ key: b.id, icon: b.icon, name: b.name, desc: b.desc })),
+    badges: [
+      ...badges.map(b => ({ key: b.id, icon: b.icon, name: b.name, desc: b.desc })),
+      ...userCustomBadges.map(uc => ({ key: uc.badge.id, icon: uc.badge.icon, name: uc.badge.name, desc: uc.badge.desc })),
+    ],
     pokale: pokale.map(p => ({ id: p.id, title: p.title, isSeries: p.isSeries, awardedAt: p.awardedAt.toISOString() })),
     gadgets,
   };
