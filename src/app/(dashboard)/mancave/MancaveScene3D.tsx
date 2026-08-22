@@ -355,11 +355,14 @@ const DESKMAT_CFG: ExtraCfg = { url: "/models/mancave_deskmat.glb", fix: [0, 0, 
 const WEBCAM_CFG: ExtraCfg = { url: "/models/webcam.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(1.215, 1.38, -0.7) };
 // Headset am vorderen linken Tischrand — grobe Schätzung, nicht vermessen.
 const HEADSET_CFG: ExtraCfg = { url: "/models/headset_gaming.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(0.85, 0.82, -0.15) };
-// Couchtisch vor der Couch (Couch-Position aus "Cube.008" bekannt, gltf
-// ≈(0.01,-,0.41)) — leicht Richtung Raummitte versetzt, grobe Schätzung.
-// "tisch_lang.glb" ist mit 3 Einheiten Länge weit größer als ein Couchtisch,
-// daher stark herunterskaliert (0.27 ≈ Zieltiefe 0.8 / 3.0).
-const COUCHTISCH_CFG: ExtraCfg = { url: "/models/tisch_lang.glb", fix: [0, 0, 0], scale: 0.27, position: new THREE.Vector3(0.01, 0, -0.05) };
+// Couchtisch: User-Hinweis — "Cube.014" in der Referenzszene (Glasplatte,
+// Materialien "Pc glass"+"Material", Größe 0.641×0.528×0.334, nahe der
+// Couch) ist bereits ein passender Couchtisch, stilecht statt eines fremden
+// Katalog-Ersatzmodells. Als eigenes kleines GLB extrahiert
+// ("mancave_couchtisch.glb") und aus dem Haupt-Raum-Export entfernt, genau
+// wie Nanoleaf/Deskmat — `location=(0,0,0)` in Blender bestätigt (Weltposition
+// steckt in den Vertex-Daten selbst), daher position/fix beide [0,0,0].
+const COUCHTISCH_CFG: ExtraCfg = { url: "/models/mancave_couchtisch.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(0, 0, 0) };
 
 for (const m of [
   ...Object.values(PC_TIER_MODELS), ...Object.values(MONITOR_TIER_MODELS),
@@ -433,9 +436,26 @@ const FLOOR_TEXTURES = ["/mancave-textures/floor_tier1.jpg", "/mancave-textures/
 const WALL_TEXTURES = ["/mancave-textures/wall_tier1.jpg", "/mancave-textures/wall_tier2.jpg", "/mancave-textures/wall_tier3.jpg", "/mancave-textures/wall_tier4.jpg"];
 for (const url of [...FLOOR_TEXTURES, ...WALL_TEXTURES]) useTexture.preload(url);
 
-function RoomModel({ surfaceTier }: { surfaceTier: number }) {
+/**
+ * Schreibtisch-Politur je Stufe — bewusst NUR Material/Farbe, KEIN
+ * Modell-Tausch (User-Entscheidung: Tisch ist der Anker, an dem PC/Monitor/
+ * Stuhl/Ausbau-Hotspot alle relativ positioniert sind — ein echter Tausch
+ * würde jede Position neu kalibrieren). Behält die vorhandene Rauheits-
+ * Textur ("MC_Desk", Kopie von "Material.001" samt der früheren Politur-
+ * Textur) bei — nur `color` (Grundton) und `emissive` (Leucht-Akzent bei
+ * Stufe 4, passend zum restlichen Neon-Look der Szene) ändern sich.
+ */
+const DESK_TIER_STYLES = [
+  { color: "#232323", emissive: "#000000", emissiveIntensity: 0 },
+  { color: "#2e2b28", emissive: "#000000", emissiveIntensity: 0 },
+  { color: "#241c14", emissive: "#000000", emissiveIntensity: 0 },
+  { color: "#15181f", emissive: "#2dd4bf", emissiveIntensity: 0.12 },
+];
+
+function RoomModel({ surfaceTier, deskTier }: { surfaceTier: number; deskTier: number }) {
   const { scene } = useGLTF(ROOM_MODEL_URL);
   const idx = Math.min(4, Math.max(1, surfaceTier)) - 1;
+  const deskIdx = Math.min(4, Math.max(1, deskTier)) - 1;
   const floorTex = useTexture(FLOOR_TEXTURES[idx]);
   const wallTex = useTexture(WALL_TEXTURES[idx]);
   /* eslint-disable react-hooks/immutability -- geladene Three.js-Textur/Material-
@@ -445,6 +465,7 @@ function RoomModel({ surfaceTier }: { surfaceTier: number }) {
     const clone = scene.clone(true);
     floorTex.colorSpace = THREE.SRGBColorSpace;
     wallTex.colorSpace = THREE.SRGBColorSpace;
+    const deskStyle = DESK_TIER_STYLES[deskIdx];
     clone.traverse(obj => {
       if (!(obj instanceof THREE.Mesh)) return;
       const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
@@ -460,10 +481,16 @@ function RoomModel({ surfaceTier }: { surfaceTier: number }) {
         // die Foto-Textur ungedimmt durchkommt.
         if (mat.name === "MC_Floor") { mat.map = floorTex; mat.color.set(0xffffff); mat.needsUpdate = true; }
         if (mat.name === "MC_Wall") { mat.map = wallTex; mat.color.set(0xffffff); mat.needsUpdate = true; }
+        if (mat.name === "MC_Desk") {
+          mat.color.set(deskStyle.color);
+          mat.emissive.set(deskStyle.emissive);
+          mat.emissiveIntensity = deskStyle.emissiveIntensity;
+          mat.needsUpdate = true;
+        }
       }
     });
     return clone;
-  }, [scene, floorTex, wallTex]);
+  }, [scene, floorTex, wallTex, deskIdx]);
   /* eslint-enable react-hooks/immutability */
   return <primitive object={cloned} />;
 }
@@ -500,11 +527,6 @@ function WindowView({ surfaceTier }: { surfaceTier: number }) {
   return (
     <mesh position={[WINDOW_POS.x, WINDOW_POS.y, WINDOW_POS.z + WINDOW_VIEW_DISTANCE]}>
       <planeGeometry args={[WINDOW_VIEW_DISTANCE * 2.2, WINDOW_VIEW_DISTANCE * 1.6]} />
-      {/* side=DoubleSide: eine unrotierte PlaneGeometry zeigt ihre Vorderseite
-          nach lokal +Z — die Kamera (EYE.z=-0.95) sitzt aber auf der -Z-Seite
-          dieser Ebene (WINDOW_POS.z+DISTANCE ist deutlich positiver), sähe
-          also mit dem Standard-FrontSide-Material nur die Rückseite = nichts.
-          DoubleSide macht das unabhängig von der genauen Blickrichtung sichtbar. */}
       <meshBasicMaterial map={tex} toneMapped={false} fog={false} side={THREE.DoubleSide} />
     </mesh>
   );
@@ -652,6 +674,7 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const hasAffordableUpgrade = data.items.some(i => i.nextCost !== null && i.nextCost <= data.totalPoints);
+  const deskTier = data.items.find(i => i.key === "schreibtisch")?.tier ?? 1;
   const pcTier = data.items.find(i => i.key === "computer")?.tier ?? 1;
   const monitorTier = data.items.find(i => i.key === "monitor")?.tier ?? 1;
   const stuhlTier = data.items.find(i => i.key === "stuhl")?.tier ?? 1;
@@ -675,7 +698,7 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
         <RoomLighting />
         <LookAroundRig />
         <Suspense fallback={null}>
-          <RoomModel surfaceTier={data.surfaceTier} />
+          <RoomModel surfaceTier={data.surfaceTier} deskTier={deskTier} />
           <WindowFrame surfaceTier={data.surfaceTier} />
           <WindowView surfaceTier={data.surfaceTier} />
           <LogoRugStatic />
