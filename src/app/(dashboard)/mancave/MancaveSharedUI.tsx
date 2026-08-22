@@ -1,8 +1,9 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Trophy, Package, CalendarDays, Medal, Swords, Clock, MessageSquare, Gamepad2, Wrench, Lock, ArrowUpCircle } from "lucide-react";
+import { Trophy, Package, CalendarDays, Medal, Swords, Clock, MessageSquare, Gamepad2, Wrench, Lock, ArrowUpCircle, ArrowDownCircle, FlaskConical } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
+import { MANCAVE_DEV_FREE_MODE } from "@/lib/mancave-items";
 import type { MancaveData } from "./mancave-data";
 
 export type MancavePanel = "trophy" | "gadgets" | "items" | null;
@@ -118,18 +119,18 @@ export function ItemsPanel({ data }: { data: MancaveData }) {
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function upgrade(itemKey: string) {
+  async function run(url: string, itemKey: string, fallbackError: string) {
     setPending(itemKey);
     setError(null);
     try {
-      const res = await fetch("/api/mancave/upgrade", {
+      const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ itemKey }),
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(body.error ?? "Konnte nicht aufgerüstet werden");
+        setError(body.error ?? fallbackError);
         return;
       }
       router.refresh();
@@ -140,6 +141,9 @@ export function ItemsPanel({ data }: { data: MancaveData }) {
     }
   }
 
+  const upgrade   = (itemKey: string) => run("/api/mancave/upgrade", itemKey, "Konnte nicht aufgerüstet werden");
+  const downgrade = (itemKey: string) => run("/api/mancave/downgrade", itemKey, "Konnte nicht zurückgestuft werden");
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -149,9 +153,19 @@ export function ItemsPanel({ data }: { data: MancaveData }) {
         </div>
         <span className="text-[10px] text-gray-500">Boden/Wand/Fenster: Stufe {data.surfaceTier}</span>
       </div>
+      {MANCAVE_DEV_FREE_MODE && (
+        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] text-amber-200"
+          style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)" }}>
+          <FlaskConical className="w-3 h-3 shrink-0" />
+          Testphase: Upgrades sind kostenlos, Rückstufen ist möglich.
+        </div>
+      )}
       {error && <p className="text-[11px] text-rose-400">{error}</p>}
       <div className="space-y-1.5">
-        {data.items.map(item => (
+        {data.items.map(item => {
+          const minTier = item.baseline ? 1 : 0;
+          const canDowngrade = MANCAVE_DEV_FREE_MODE && item.tier > minTier;
+          return (
           <div key={item.key} className="flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg bg-white/[0.03]">
             <div className="min-w-0 flex items-center gap-2">
               {item.tier === 0 ? <Lock className="w-3.5 h-3.5 text-gray-500 shrink-0" /> : <ArrowUpCircle className="w-3.5 h-3.5 text-teal-400 shrink-0" />}
@@ -160,22 +174,36 @@ export function ItemsPanel({ data }: { data: MancaveData }) {
                 <p className="text-[10px] text-gray-500">{item.tier === 0 ? "Nicht freigeschaltet" : `Stufe ${item.tier}/${item.maxTier}`}</p>
               </div>
             </div>
-            {item.nextCost === null ? (
-              <span className="text-[10px] text-amber-300/80 shrink-0 whitespace-nowrap">Max</span>
-            ) : (
-              <button
-                onClick={() => upgrade(item.key)}
-                disabled={pending === item.key}
-                className="flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold shrink-0 whitespace-nowrap disabled:opacity-50"
-                style={{ background: "rgba(45,212,191,0.12)", border: "1px solid rgba(45,212,191,0.3)", color: "#5eead4" }}
-              >
-                <CoinIcon size={10} />
-                {pending === item.key ? "…" : item.nextCost.toLocaleString("de-DE")}
-                {item.tier === 0 && " · Freischalten"}
-              </button>
-            )}
+            <div className="flex items-center gap-1.5 shrink-0">
+              {canDowngrade && (
+                <button
+                  onClick={() => downgrade(item.key)}
+                  disabled={pending === item.key}
+                  aria-label={`${item.label} zurückstufen`}
+                  className="flex items-center justify-center w-6 h-6 rounded-full disabled:opacity-50"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "#9ca3af" }}
+                >
+                  <ArrowDownCircle className="w-3.5 h-3.5" />
+                </button>
+              )}
+              {item.nextCost === null ? (
+                <span className="text-[10px] text-amber-300/80 whitespace-nowrap">Max</span>
+              ) : (
+                <button
+                  onClick={() => upgrade(item.key)}
+                  disabled={pending === item.key}
+                  className="flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold whitespace-nowrap disabled:opacity-50"
+                  style={{ background: "rgba(45,212,191,0.12)", border: "1px solid rgba(45,212,191,0.3)", color: "#5eead4" }}
+                >
+                  {item.nextCost === 0 ? null : <CoinIcon size={10} />}
+                  {pending === item.key ? "…" : item.nextCost === 0 ? "Gratis" : item.nextCost.toLocaleString("de-DE")}
+                  {item.tier === 0 && " · Freischalten"}
+                </button>
+              )}
+            </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
