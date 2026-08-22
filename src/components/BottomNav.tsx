@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, CalendarDays, ShoppingBag, Trophy, User, Heart } from "lucide-react";
+import { LayoutDashboard, CalendarDays, ShoppingBag, Trophy, User, Heart, MonitorSmartphone } from "lucide-react";
 import PollBadge from "@/components/PollBadge";
 
 const NAV = [
@@ -21,8 +21,12 @@ const NAV = [
  * Redundanz auf einer Leiste, die auf schmalen Geräten schon jetzt eng ist.
  * Label bleibt bewusst "Profil" (nicht "Zimmer") — das Gaming-Zimmer ERSETZT
  * die alte Profilseite, ist für die User aber weiterhin "ihr Profil".
+ *
+ * `mancaveVisible` kommt aus demselben Layout, ist aber ein eigenständiger
+ * Zusatz-Slot (kein Ersatz für "Profil") — nur sichtbar, solange die Mancave
+ * noch admin-only ist.
  */
-export default function BottomNav({ roomVisible = false }: { roomVisible?: boolean }) {
+export default function BottomNav({ roomVisible = false, mancaveVisible = false }: { roomVisible?: boolean; mancaveVisible?: boolean }) {
   const pathname = usePathname();
 
   const items = NAV.map(({ label, href, icon }) => {
@@ -33,6 +37,12 @@ export default function BottomNav({ roomVisible = false }: { roomVisible?: boole
       showPollBadge: href === "/events",
     };
   });
+  if (mancaveVisible) {
+    items.push({
+      label: "Mancave", href: "/mancave", icon: MonitorSmartphone,
+      active: pathname.startsWith("/mancave"), showPollBadge: false,
+    });
+  }
   const activeIndex = items.findIndex(n => n.active);
 
   return (

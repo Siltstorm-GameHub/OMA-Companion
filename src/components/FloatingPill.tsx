@@ -8,6 +8,7 @@ import { useState, useRef, useEffect, useCallback, useLayoutEffect, forwardRef }
 import {
   LayoutDashboard, CalendarDays, Trophy, ShoppingBag,
   Heart, User, ShieldCheck, LogOut, ChevronDown, Sun, Moon, Bell, Settings, X, MessageCircleMore,
+  MonitorSmartphone,
   type LucideIcon,
 } from "lucide-react";
 import { WHATSAPP_COMMUNITY_URL } from "@/lib/config";
@@ -129,11 +130,13 @@ const NavLink = forwardRef<HTMLAnchorElement, {
 
 /* ── FloatingPill ─────────────────────────────────────────────────────── */
 /**
- * `roomVisible` kommt aus dem Layout, weil die Zimmer-Freischaltung in der
- * BotConfig liegt und damit nur serverseitig lesbar ist. Solange room_enabled
- * aus ist, ist der Eintrag nur für Admins sichtbar.
+ * `roomVisible`/`mancaveVisible` kommen aus dem Layout, weil beide Feature-
+ * Flags in der BotConfig liegen und damit nur serverseitig lesbar sind.
+ * Solange die jeweiligen Flags aus sind, ist der Eintrag nur für Admins
+ * sichtbar. Anders als der Zimmer-Umzug ERSETZT die Mancave "Profil" nicht,
+ * sondern kommt als eigener zusätzlicher Slot dazu.
  */
-export default function FloatingPill({ roomVisible = false }: { roomVisible?: boolean }) {
+export default function FloatingPill({ roomVisible = false, mancaveVisible = false }: { roomVisible?: boolean; mancaveVisible?: boolean }) {
   const pathname          = usePathname();
   const router            = useRouter();
   const { data: session } = useSession();
@@ -165,6 +168,9 @@ export default function FloatingPill({ roomVisible = false }: { roomVisible?: bo
         showPollBadge: href === "/events",
       };
     });
+  if (mancaveVisible) {
+    NAV_ITEMS.push({ label: "Mancave", href: "/mancave", icon: MonitorSmartphone, active: pathname.startsWith("/mancave") });
+  }
   if (isStaff) {
     NAV_ITEMS.push({ label: "Admin", href: "/admin", icon: ShieldCheck, active: pathname.startsWith("/admin"), danger: true });
   }
@@ -189,7 +195,7 @@ export default function FloatingPill({ roomVisible = false }: { roomVisible?: bo
     measure();
     window.addEventListener("resize", measure);
     return () => window.removeEventListener("resize", measure);
-  }, [pathname, isStaff, roomVisible]);
+  }, [pathname, isStaff, roomVisible, mancaveVisible]);
 
   const fetchNotifications = useCallback(async () => {
     try {
