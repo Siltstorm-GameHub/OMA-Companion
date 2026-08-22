@@ -73,14 +73,18 @@ const PC_LABEL_POS = new THREE.Vector3(1.05, 1.02, -0.29);
  * Stufenreihe aus. Bewusst NICHT versucht, die alte Referenz-Bounding-Box
  * exakt zu treffen — andere Modell-Silhouette, exaktes Nachbauen wäre nur Zufall.
  */
-interface TierModelCfg { url: string; fix: [number, number, number]; scale: number }
+interface TierModelCfg {
+  url: string; fix: [number, number, number]; scale: number;
+  /** Yaw-Korrektur (Radiant), falls die "Vorderseite" des Modells nicht schon lokal +Z/-X entspricht. */
+  rotationY?: number;
+}
 
 function SwappableProp({ tier, models, position }: { tier: number; models: Record<number, TierModelCfg>; position: THREE.Vector3 }) {
   const cfg = models[Math.min(4, Math.max(1, tier))];
   const { scene } = useGLTF(cfg.url);
   const cloned = useMemo(() => scene.clone(true), [scene]);
   return (
-    <group position={position}>
+    <group position={position} rotation={[0, cfg.rotationY ?? 0, 0]}>
       <group scale={cfg.scale}>
         <primitive object={cloned} position={cfg.fix} />
       </group>
@@ -107,9 +111,22 @@ const PC_TIER_MODELS: Record<number, TierModelCfg> = {
  * Tischhöhen-Annahme mit (ihr eigener Ursprung liegt NICHT am Boden, siehe
  * [[mancave-profile-project]] in memory), roehrenmonitor dagegen ist
  * boden-verankert und braucht die volle Anhebung.
+ *
+ * `rotationY`: die Modelle sind nicht einheitlich "nach vorne" (lokal -X,
+ * unsere Blickrichtung zur Bildschirmfläche) ausgerichtet exportiert worden.
+ * Für `roehrenmonitor` GEOMETRISCH bestätigt (nicht geraten!): sein
+ * "Screen.001"-Material sitzt als dünne Scheibe am lokalen +Z-Rand (X:
+ * [-0.192,0.191], Z:[0.209,0.231] von insgesamt [-0.25,0.25]) — geprüft per
+ * Node/three.js-Skript (Mesh-Bounding-Box je Material). Lokal +Z → Welt -X
+ * (Richtung Kamera) braucht -90°, daher rotationY=-Math.PI/2. Für
+ * flach/curved/triple ist die Blickrichtung NOCH NICHT geometrisch bestätigt
+ * (deren Screen-Material trägt keinen eindeutigen Namen wie "Screen"/"Glass",
+ * die Silhouetten sind mehrdeutig) — vorerst unrotiert gelassen (rotationY
+ * fehlt = 0), erst korrigieren, wenn ein User dort hochstuft und es
+ * sichtbar falsch aussieht.
  */
 const MONITOR_TIER_MODELS: Record<number, TierModelCfg> = {
-  1: { url: "/models/roehrenmonitor.glb",   fix: [0, 0.816, 0],      scale: 1 },
+  1: { url: "/models/roehrenmonitor.glb",   fix: [0, 0.816, 0],      scale: 1, rotationY: -Math.PI / 2 },
   2: { url: "/models/monitor_flach_neu.glb", fix: [0, 0.201, -0.4],  scale: 1 },
   3: { url: "/models/monitor_curved.glb",   fix: [0, -0.034, 0],     scale: 1 },
   4: { url: "/models/monitor_triple.glb",   fix: [0, -0.034, 0],     scale: 1 },
@@ -150,9 +167,23 @@ function RoomLighting() {
   );
 }
 
-/** Freies Umschauen per Drag — Kamera bleibt am festen Sitzplatz, nur die Blickrichtung dreht sich, unbegrenzt in alle Richtungen. */
-function LookAroundRig({ containerRef }: { containerRef: React.RefObject<HTMLDivElement | null> }) {
-  const { camera } = useThree();
+/**
+ * Freies Umschauen per Drag — Kamera bleibt am festen Sitzplatz, nur die
+ * Blickrichtung dreht sich, unbegrenzt in alle Richtungen.
+ *
+ * Die Pointer-Listener hängen bewusst am `<canvas>`-Element (`gl.domElement`),
+ * NICHT am äußeren Container-Div: die Html-Hotspot-Buttons (Ausbau/Gadgets/
+ * Pokale) werden von drei's `<Html>` als GESCHWISTER-Elemente des Canvas in
+ * denselben Container gerendert. Lägen die Listener am Container, würde JEDER
+ * Klick — auch auf einen Button — dort `pointerdown` auslösen und
+ * `setPointerCapture` aufrufen; laut Pointer-Events-Spec wird dadurch auch
+ * das synthetische `click`-Event auf das capture-haltende Element umgeleitet,
+ * sodass der Button-`onClick` nie feuert (genau der Bug, der hier gemeldet
+ * wurde — Ausbau/Gadgets/Pokale reagierten auf nichts). Am Canvas selbst
+ * hängend bekommen die Buttons diese Events gar nicht erst ab.
+ */
+function LookAroundRig() {
+  const { camera, gl } = useThree();
   const yaw = useRef(0);
   const pitch = useRef(0);
   const initialized = useRef(false);
@@ -181,8 +212,7 @@ function LookAroundRig({ containerRef }: { containerRef: React.RefObject<HTMLDiv
   /* eslint-enable react-hooks/immutability */
 
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
+    const el = gl.domElement;
     const onDown = (e: PointerEvent) => { dragging.current = true; last.current = { x: e.clientX, y: e.clientY }; el.setPointerCapture(e.pointerId); };
     const onMove = (e: PointerEvent) => {
       if (!dragging.current) return;
@@ -202,7 +232,7 @@ function LookAroundRig({ containerRef }: { containerRef: React.RefObject<HTMLDiv
       el.removeEventListener("pointerup", onUp);
       el.removeEventListener("pointercancel", onUp);
     };
-  }, [containerRef]);
+  }, [gl]);
 
   return null;
 }
@@ -224,7 +254,7 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
         <color attach="background" args={["#050810"]} />
         <fog attach="fog" args={["#050810", 5, 11]} />
         <RoomLighting />
-        <LookAroundRig containerRef={containerRef} />
+        <LookAroundRig />
         <Suspense fallback={null}>
           <RoomModel />
           <SwappableProp tier={pcTier} models={PC_TIER_MODELS} position={PC_POS} />
