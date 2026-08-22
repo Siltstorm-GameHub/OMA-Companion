@@ -78,3 +78,34 @@ export interface MancaveData {
 
 /** Generischer Notfall-Bildschirmbereich für Monitore ohne ausgemessenes screenRect. */
 export const FALLBACK_SCREEN_RECT: MancaveScreenRect = { x0: 0.22, y0: 0.2, x1: 0.78, y1: 0.56 };
+
+export interface MancaveFrontPhoto {
+  imageUrl:    string;
+  w:           number;
+  h:           number;
+  screenRect?: MancaveScreenRect;
+}
+
+/**
+ * Echte, in Blender aus den 3D-Assets (`3DAssetsRoom/`) frontal gerenderte
+ * Fotos — pro Katalog-Item-Key. Die Ego-Perspektive der Mancave braucht
+ * frontale Objekte, aber der bestehende `room-items.ts`-Katalog liefert nur
+ * 3/4-Winkel-Fotos für die isometrische Zimmer-Ansicht (siehe [[mancave-front-photos-project]]).
+ * Wird schrittweise befüllt — noch nicht vermessene Keys fallen auf
+ * `MANCAVE_FRONT_FALLBACK` (pro Kategorie) und zuletzt auf das Iso-Foto zurück.
+ */
+export const MANCAVE_FRONT_PHOTOS: Partial<Record<string, MancaveFrontPhoto>> = {};
+
+/** Fallback pro Kategorie, solange für den konkreten Item-Key noch kein eigenes Frontal-Render existiert. */
+export const MANCAVE_FRONT_FALLBACK: Partial<Record<RoomCategory, MancaveFrontPhoto>> = {
+  bildschirm: {
+    imageUrl: "/room-items/front/monitor_generic_front.png",
+    w: 1024, h: 1024,
+    screenRect: { x0: 0.068, y0: 0.178, x1: 0.932, y1: 0.605 },
+  },
+};
+
+/** Bestes verfügbares Frontal-Foto für ein Item — Key-genau, sonst Kategorie-Fallback, sonst nichts (Aufrufer fällt dann selbst auf das Iso-Foto zurück). */
+export function frontPhotoFor(key: string, category: RoomCategory): MancaveFrontPhoto | undefined {
+  return MANCAVE_FRONT_PHOTOS[key] ?? MANCAVE_FRONT_FALLBACK[category];
+}
