@@ -222,21 +222,17 @@ const PC_TIER_MODELS: Record<number, TierModelCfg> = {
  * durch ein normales, nicht-metallisches Hellgrau (siehe `fixMaterialNames`
  * in `SwappableProp`).
  *
- * Stufe 4 (triple), Screenshot bestätigt zwei echte Probleme:
- * (a) alle 3 Panels reine weiße Flächen ohne Bildschirminhalt — Ursache im
- *     Rohdatensatz bestätigt: Material "Wallpaper" hat zwar eine korrekte
- *     schwarze Basisfarbe, aber KEIN metallicFactor/roughnessFactor gesetzt
- *     → glTF-Spec-Default ist voll-metallisch — ohne Environment-Map in
- *     dieser Szene brennen die nahen Punktlichter das zu großflächigem Weiß
- *     aus (dieselbe Ursache wie der frühere Material.001-Specular-Blowout,
- *     hier aber am Rohdatensatz abgelesen). Fix: `fixMetalnessForMaterials:
- *     ["Wallpaper"]` setzt Metalness auf 0, Farbe bleibt.
- * (b) Array viel zu breit für den Tisch (Screenshot zeigt die Monitore weit
- *     über die Tischkante hinausragend) — Modell-Eigenbreite 1.414 Einheiten
- *     UNSKALIERT bei einer Tischbreite von nur 0.625 (Cube.001) macht selbst
- *     die vorherige 0.85-Skalierung (≈1.2 Einheiten breit) fast doppelt so
- *     breit wie der Tisch. Auf 0.4 reduziert (Zielbreite ≈0.57, knapp unter
- *     Tischbreite) + `offset` etwas näher an die Tischmitte/-oberfläche.
+ * Stufe 4 (triple) — zwei Korrekturrunden lang versucht (Weiß-Ausbrennen
+ * behoben, Skalierung mehrfach angepasst), laut User "passt von den
+ * Proportionen her gar nicht" — sieht im Screenshot wie ein plumper
+ * Würfel statt eines flachen Drei-Bildschirm-Arrays aus. Statt weiter blind
+ * an einem Modell zu schrauben, dessen tatsächliche Silhouette sich ohne
+ * Sichtprüfung nicht zuverlässig einschätzen lässt: auf `monitor_curved.glb`
+ * umgestiegen (dasselbe, bereits für Stufe 3 bestätigt funktionierende
+ * Modell), nur etwas größer skaliert — Stufe 3 und 4 sehen sich vorerst
+ * ähnlich (gleiche Lücken-Konvention wie beim Stuhl/Regal), bis es ein
+ * echtes, eigenständiges Triple-Monitor-Modell gibt, das sich zuverlässig
+ * einpasst.
  */
 const MONITOR_TIER_MODELS: Record<number, TierModelCfg> = {
   1: { url: "/models/roehrenmonitor.glb",    fix: [0, 0, 0],          scale: 1,    rotationY: -Math.PI / 2 },
@@ -245,10 +241,7 @@ const MONITOR_TIER_MODELS: Record<number, TierModelCfg> = {
     rotationY: -Math.PI / 2, fixMaterialNames: ["Mac"],
   },
   3: { url: "/models/monitor_curved.glb",    fix: [0, -0.850, 0],     scale: 1,    rotationY: 0.912 + Math.PI },
-  4: {
-    url: "/models/monitor_triple.glb", fix: [0, -0.850, 0], scale: 0.4, rotationY: Math.PI,
-    fixMetalnessForMaterials: ["Wallpaper"], offset: [0, -0.05, 0.05],
-  },
+  4: { url: "/models/monitor_curved.glb",    fix: [0, -0.850, 0],     scale: 1.15, rotationY: 0.912 + Math.PI },
 };
 const MONITOR_MODEL_POS = new THREE.Vector3(1.215, 0.816, -0.741);
 
@@ -442,14 +435,20 @@ for (const url of [...FLOOR_TEXTURES, ...WALL_TEXTURES]) useTexture.preload(url)
  * Stuhl/Ausbau-Hotspot alle relativ positioniert sind — ein echter Tausch
  * würde jede Position neu kalibrieren). Behält die vorhandene Rauheits-
  * Textur ("MC_Desk", Kopie von "Material.001" samt der früheren Politur-
- * Textur) bei — nur `color` (Grundton) und `emissive` (Leucht-Akzent bei
- * Stufe 4, passend zum restlichen Neon-Look der Szene) ändern sich.
+ * Textur) bei — nur `color` ändert sich.
+ *
+ * Stufe 4 hatte ursprünglich einen leichten Teal-Emissive-Akzent
+ * (emissiveIntensity 0.12) — das rendert laut User komplett satt teal statt
+ * eines dezenten Glanzes (vermutlich verstärkt emissive+Bloom/Tonemapping in
+ * dieser Szene deutlich stärker als erwartet). Entfernt, um die Fehlerklasse
+ * ganz auszuschließen — stattdessen deutlich kräftigere, klar unterscheidbare
+ * Grundfarben je Stufe (User wollte ohnehin auffälligere Unterschiede).
  */
 const DESK_TIER_STYLES = [
-  { color: "#232323", emissive: "#000000", emissiveIntensity: 0 },
-  { color: "#2e2b28", emissive: "#000000", emissiveIntensity: 0 },
-  { color: "#241c14", emissive: "#000000", emissiveIntensity: 0 },
-  { color: "#15181f", emissive: "#2dd4bf", emissiveIntensity: 0.12 },
+  { color: "#3a2a1f" },
+  { color: "#8a6a4a" },
+  { color: "#5a1a1a" },
+  { color: "#0a0a0d" },
 ];
 
 function RoomModel({ surfaceTier, deskTier }: { surfaceTier: number; deskTier: number }) {
@@ -483,8 +482,8 @@ function RoomModel({ surfaceTier, deskTier }: { surfaceTier: number; deskTier: n
         if (mat.name === "MC_Wall") { mat.map = wallTex; mat.color.set(0xffffff); mat.needsUpdate = true; }
         if (mat.name === "MC_Desk") {
           mat.color.set(deskStyle.color);
-          mat.emissive.set(deskStyle.emissive);
-          mat.emissiveIntensity = deskStyle.emissiveIntensity;
+          mat.emissive.set(0x000000);
+          mat.emissiveIntensity = 0;
           mat.needsUpdate = true;
         }
       }
@@ -507,13 +506,15 @@ function RoomModel({ surfaceTier, deskTier }: { surfaceTier: number; deskTier: n
 // Regal) und etwas niedriger gemacht, damit es sicher in dieses Band passt.
 const WINDOW_POS = new THREE.Vector3(0.3, 1.15, 0.886);
 const WINDOW_W = 0.9, WINDOW_H = 0.75;
-// Ausblick-Ebene deutlich HINTER dem Fenster (weiter im "Außen"-Bereich) —
-// weil die Kamera in dieser Ego-Ansicht nur ROTIERT, nie die Position
-// wechselt (siehe LookAroundRig), reicht eine einzelne, echt entfernte
-// 3D-Fläche für einen korrekten perspektivischen "3D-Effekt" beim Umschauen
-// (keine Bewegungs-Parallaxe nötig, nur echte Tiefe statt einer flach an
-// der Scheibe klebenden Textur).
-const WINDOW_VIEW_DISTANCE = 4.2;
+// Ausblick-Ebene: war ursprünglich 4.2 Einheiten hinter dem Fenster (für
+// echte Tiefe/3D-Effekt beim Umschauen, da die Kamera nur rotiert, nie die
+// Position wechselt) — blieb aber laut User trotz mehrerer Fixversuche
+// (DoubleSide, Neupositionierung) unsichtbar, und Live-Verifikation war
+// wegen eines Sandbox-Cache-Problems nicht möglich. Vorübergehend DEUTLICH
+// näher an den Rahmen herangeholt (fast bündig), um zuerst grundsätzliche
+// Sichtbarkeit sicherzustellen — der Tiefeneffekt kommt zurück, sobald das
+// bestätigt ist.
+const WINDOW_VIEW_DISTANCE = 0.15;
 const WINDOW_VIEW_TEXTURES = ["/mancave-textures/window_view_tier1.jpg", "/mancave-textures/window_view_tier2.jpg", "/mancave-textures/window_view_tier3.jpg", "/mancave-textures/window_view_tier4.jpg"];
 for (const url of WINDOW_VIEW_TEXTURES) useTexture.preload(url);
 
@@ -525,8 +526,11 @@ function WindowView({ surfaceTier }: { surfaceTier: number }) {
      setzen ist normales three.js-API-Verhalten, keine Hook-Wert-Mutation. */
   tex.colorSpace = THREE.SRGBColorSpace;
   return (
+    // Größe jetzt an der Fensteröffnung (WINDOW_W/H) orientiert statt an der
+    // (jetzt sehr kleinen) Entfernung — bei WINDOW_VIEW_DISTANCE=0.15 hätte
+    // die alte distanzbasierte Formel eine winzige, viel zu kleine Fläche ergeben.
     <mesh position={[WINDOW_POS.x, WINDOW_POS.y, WINDOW_POS.z + WINDOW_VIEW_DISTANCE]}>
-      <planeGeometry args={[WINDOW_VIEW_DISTANCE * 2.2, WINDOW_VIEW_DISTANCE * 1.6]} />
+      <planeGeometry args={[WINDOW_W * 1.05, WINDOW_H * 1.05]} />
       <meshBasicMaterial map={tex} toneMapped={false} fog={false} side={THREE.DoubleSide} />
     </mesh>
   );
