@@ -30,8 +30,9 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Html, useGLTF } from "@react-three/drei";
+import { Html, useGLTF, useTexture } from "@react-three/drei";
 import * as THREE from "three";
+import RankedAvatar from "@/components/RankedAvatar";
 import { MonitorScreenContent, TrophyPanel, GadgetsPanel, ItemsPanel, type MancavePanel } from "./MancaveSharedUI";
 import type { MancaveData } from "./mancave-data";
 
@@ -52,6 +53,8 @@ const LOOK_TARGET = EYE.clone().add(FORWARD);
 // Kamera versetzt (entlang -FORWARD), sonst verdeckt die Bildschirm-Fläche
 // selbst das Html-Overlay (Selbst-Okklusion).
 const SCREEN_POS = new THREE.Vector3(1.215, 1.091, -0.741);
+// Profil-Plakat über dem Monitor — gleiche X/Z wie der Screen, nur höher.
+const POSTER_POS = new THREE.Vector3(1.215, 1.48, -0.741);
 // PC-Tower-Position ("Cube.017", inzwischen aus dem Room-Export entfernt,
 // siehe SwappablePc) — Anker für den Gadgets-Hotspot UND den Tower selbst.
 // PC_POS ist die Tischoberfläche unter dem Tower (Blender-Z-min der alten
@@ -166,6 +169,37 @@ const SHELF_POS = new THREE.Vector3(0.19, 1.56, -0.11);
 // Vordere Tischkante ("Cube.001", Blender-Zentrum umgerechnet) — Anker für den
 // neuen Ausbau-Hotspot (Stufen-Upgrades, siehe mancave-items.ts).
 const DESK_FRONT_POS = new THREE.Vector3(0.95, 0.86, -0.55);
+
+// Teppich-Fläche der Referenzszene ("Plane", Material "Carpet") — Boden-
+// Mittelpunkt, aus Blender übernommen (Zentrum [-0.347,0.669,0.05], Größe
+// [1.755,1.755,0]) und umgerechnet; y auf 0 gesetzt (Bodenhöhe), der Radius
+// entspricht der halben gemessenen Kantenlänge.
+const RUG_POS = new THREE.Vector3(-0.347, 0, -0.669);
+const RUG_RADIUS = 0.88;
+
+/**
+ * Ersetzt die Referenz-Teppichfläche durch den echten runden OMA-Logo-
+ * Teppich (User-Wunsch) — gleiche visuelle Bauweise wie `LogoRug` im echten
+ * Gaming-Zimmer (`FurniturePrimitive.tsx`: flacher Zylinder + Logo-Kreis
+ * obendrauf), hier direkt nachgebaut statt `FurniturePrimitive` zu
+ * importieren (das ist an das Grid-Koordinatensystem des alten Zimmers
+ * gekoppelt, hier reicht die reine Geometrie).
+ */
+function LogoRugStatic() {
+  const logo = useTexture("/brand/logo-512.png");
+  return (
+    <group position={RUG_POS}>
+      <mesh position={[0, 0.035, 0]} receiveShadow>
+        <cylinderGeometry args={[RUG_RADIUS, RUG_RADIUS, 0.03, 48]} />
+        <meshStandardMaterial color="#3ee6c4" emissive="#3ee6c4" emissiveIntensity={0.1} roughness={0.85} />
+      </mesh>
+      <mesh position={[0, 0.053, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[RUG_RADIUS * 0.6, 48]} />
+        <meshStandardMaterial map={logo} transparent roughness={0.75} />
+      </mesh>
+    </group>
+  );
+}
 
 function RoomModel() {
   const { scene } = useGLTF(ROOM_MODEL_URL);
