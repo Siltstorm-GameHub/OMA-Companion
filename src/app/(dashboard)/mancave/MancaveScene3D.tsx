@@ -109,10 +109,11 @@ function SwappableProp({ tier, models, position }: { tier: number; models: Recor
  * PC-Turm (Stufen 1-4): pc_billig → pc_violett → pc_gaming → pc_highend.
  * Stufe 3/4-Rotation nach User-Feedback korrigiert (nicht geometrisch
  * hergeleitet wie bei Monitor Stufe 1 — hier direkt als "um X Grad drehen"
- * gemeldet): Stufe 3 (pc_white_rgb) 180°, Stufe 4 (pc_highend) 90° (Richtung
- * nicht spezifiziert, positive Drehrichtung als erster Versuch — bei Bedarf
- * Vorzeichen tauschen). Stufe 4 hatte außerdem eine mitgelieferte Boden-/
- * Sockel-Fläche direkt unter dem Gehäuse (Mesh "Object_6_24", Material
+ * gemeldet): Stufe 3 (pc_white_rgb) 180°. Stufe 4 (pc_highend) sollte 90°
+ * werden, die erste Vorzeichen-Wahl (+90°) drehte in die falsche Richtung —
+ * per User-Feedback um weitere 180° korrigiert, macht in Summe -90°
+ * (+90°+180° ≡ -90° modulo 360°). Stufe 4 hatte außerdem eine mitgelieferte
+ * Boden-/Sockel-Fläche direkt unter dem Gehäuse (Mesh "Object_6_24", Material
  * "Material.106", per Node/three.js-Messscript gefunden: eine dünne, flache
  * Platte, die fast genau die gesamte Grundfläche des Modells abdeckt) — als
  * `excludeMeshNames` entfernt, da sie laut User sichtbar störte.
@@ -123,7 +124,7 @@ const PC_TIER_MODELS: Record<number, TierModelCfg> = {
   3: { url: "/models/pc_white_rgb.glb",    fix: [0, 0, 0],                scale: 0.89, rotationY: Math.PI },
   4: {
     url: "/models/pc_highend.glb", fix: [-8.674, 0.721, 0.203], scale: 1.14,
-    rotationY: Math.PI / 2, excludeMeshNames: ["Object_6_24"],
+    rotationY: -Math.PI / 2, excludeMeshNames: ["Object_6_24"],
   },
 };
 
@@ -149,16 +150,27 @@ const PC_TIER_MODELS: Record<number, TierModelCfg> = {
  *   ebenfalls lokal +Z → -90° (gleiche Konvention wie roehrenmonitor)
  * - monitor_curved: "tv"-Mesh, Normale (-0.612,0.04,-0.79) — keine reine
  *   Kardinalrichtung (gekrümmter Screen), Rotationswinkel algebraisch gelöst
- *   (R(θ)·(x,z)=(-1,0)) → θ≈0.912rad (≈52°)
+ *   (R(θ)·(x,z)=(-1,0)) → θ≈0.912rad (≈52°) — laut User um weitere 180°
+ *   danebengelegen, also +Math.PI ergänzt (≈4.05rad).
  * - monitor_triple: die drei "Wallpaper"-Screen-Meshes zeigen alle
  *   überwiegend +X (Mitte (1,0,0), Seiten leicht nach ∓Z gefächert) → 180°
  * `scale` bei Stufe 4 von 1 auf 1.4 erhöht (User: "viel zu klein").
+ *
+ * Stufe 2 (flach) nach der -90°-Drehung laut User "in den Schreibtisch
+ * verschoben": das Modell ist kein flacher Screen, sondern Screen+Arm mit
+ * ungewöhnlicher lokaler Tiefe (0.92 Einheiten, siehe Bounding-Box-Messung
+ * oben in der Datei-Historie) — nach der Drehung liegt dieser Arm im
+ * Welt-X statt Welt-Z, genau dort, wo der Tisch (Cube.001, X:[0.639,1.264])
+ * sitzt. Nicht geometrisch neu vermessen (kein Screenshot verfügbar),
+ * sondern pragmatisch entschärft: kleiner skaliert (verkürzt die Armreichweite)
+ * und etwas höher angehoben (mehr Abstand zur Tischkante) — Bestätigung
+ * durch den User steht noch aus.
  */
 const MONITOR_TIER_MODELS: Record<number, TierModelCfg> = {
-  1: { url: "/models/roehrenmonitor.glb",    fix: [0, 0, 0],         scale: 1,   rotationY: -Math.PI / 2 },
-  2: { url: "/models/monitor_flach_neu.glb", fix: [0, -0.615, -0.4], scale: 1,   rotationY: -Math.PI / 2 },
-  3: { url: "/models/monitor_curved.glb",    fix: [0, -0.850, 0],    scale: 1,   rotationY: 0.912 },
-  4: { url: "/models/monitor_triple.glb",    fix: [0, -0.850, 0],    scale: 1.4, rotationY: Math.PI },
+  1: { url: "/models/roehrenmonitor.glb",    fix: [0, 0, 0],          scale: 1,    rotationY: -Math.PI / 2 },
+  2: { url: "/models/monitor_flach_neu.glb", fix: [0, -0.415, -0.4],  scale: 0.65, rotationY: -Math.PI / 2 },
+  3: { url: "/models/monitor_curved.glb",    fix: [0, -0.850, 0],     scale: 1,    rotationY: 0.912 + Math.PI },
+  4: { url: "/models/monitor_triple.glb",    fix: [0, -0.850, 0],     scale: 1.4,  rotationY: Math.PI },
 };
 const MONITOR_MODEL_POS = new THREE.Vector3(1.215, 0.816, -0.741);
 
@@ -332,6 +344,7 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
         <LookAroundRig />
         <Suspense fallback={null}>
           <RoomModel />
+          <LogoRugStatic />
           <SwappableProp tier={pcTier} models={PC_TIER_MODELS} position={PC_POS} />
           <SwappableProp tier={monitorTier} models={MONITOR_TIER_MODELS} position={MONITOR_MODEL_POS} />
 
@@ -339,6 +352,15 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
           <Html center position={SCREEN_POS} style={{ pointerEvents: "auto" }}>
             <div className="w-[150px] h-[84px] rounded-[3px] overflow-hidden shadow-[0_0_18px_rgba(45,212,191,0.35)]">
               <MonitorScreenContent data={data} />
+            </div>
+          </Html>
+
+          {/* Profil-Plakat über dem Monitor: Avatar mit Rangrahmen + Community-Claim. */}
+          <Html center position={POSTER_POS}>
+            <div className="w-[92px] aspect-square rounded-xl flex flex-col items-center justify-center gap-1.5 p-2"
+              style={{ background: "rgba(4,10,9,0.75)", border: "1px solid rgba(255,255,255,0.1)", backdropFilter: "blur(3px)" }}>
+              <RankedAvatar rankPoints={data.rankPoints} src={data.avatarUrl} alt={data.displayName} size={48} rounded="xl" />
+              <span className="text-[8px] font-semibold text-gray-300 text-center leading-tight">Old Masters Ally</span>
             </div>
           </Html>
 
@@ -380,14 +402,19 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
       </div>
 
       {panel && (
-        // z-index bewusst hoch gesetzt: drei's <Html>-Hotspots (Dashboard,
-        // Pokale/Ausbau/Gadgets-Buttons) werden per React-Portal in denselben
-        // Container gerendert, aber ERST asynchron beim R3F-Render-Loop
-        // angehängt — sie landen dadurch im rohen DOM NACH diesem Overlay,
-        // obwohl sie in der JSX weiter oben stehen. Ohne explizites z-index
-        // gewinnt reine DOM-Reihenfolge, und die Buttons lagen sichtbar über
-        // dem Popup statt darunter — das war der gemeldete Bug.
-        <div className="absolute inset-0 z-50 flex items-center justify-center p-6" style={{ background: "rgba(2,5,8,0.55)", backdropFilter: "blur(2px)" }}
+        // z-index MUSS als Inline-Style mit einer sehr hohen Zahl gesetzt
+        // werden, nicht als Tailwind-Klasse (z-50 = z-index:50): drei's
+        // <Html>-Hotspots setzen selbst ein inline z-index, berechnet aus dem
+        // Kamera-Abstand (`zIndexRange`, Default bis zu 16.777.271, siehe
+        // @react-three/drei/core/Html) — das schlägt jedes z-50 mühelos.
+        // Genau DAS war der Grund, warum die Buttons/das Dashboard trotz
+        // vorherigem z-50-Fix weiterhin über dem Popup lagen UND warum
+        // Scrollen im Popup nicht ankam (Maus-/Touch-Events an der Stelle
+        // gingen an die unsichtbar obenauf liegenden Html-Elemente, nicht an
+        // das Popup darunter). 2147483647 (max. 32-Bit-Int) liegt sicher
+        // über allem, was drei je vergibt.
+        <div className="absolute inset-0 flex items-center justify-center p-6"
+          style={{ background: "rgba(2,5,8,0.55)", backdropFilter: "blur(2px)", zIndex: 2147483647 }}
           onClick={() => setPanel(null)}>
           {/* min-h-0 ist Pflicht: als Flex-Kind von "items-center" hat dieses
               Div sonst ein implizites min-height:auto, das max-h+overflow-y-
