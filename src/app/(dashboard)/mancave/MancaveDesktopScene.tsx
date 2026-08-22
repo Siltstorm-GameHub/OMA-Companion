@@ -17,7 +17,18 @@ import { FALLBACK_SCREEN_RECT } from "./mancave-data";
 export default function MancaveDesktopScene({ data }: { data: MancaveData }) {
   const [trophyOpen, setTrophyOpen] = useState(false);
 
-  const monitors = useMemo(() => data.gadgets.filter(g => g.zone === "monitor").sort((a, b) => b.price - a.price), [data.gadgets]);
+  // Mehrere besessene Monitor-Typen teilen sich aktuell oft dasselbe generische
+  // Frontal-Render (noch nicht jeder Katalog-Key hat ein eigenes) — auf
+  // identisches Foto dedupen, sonst stehen optisch zwei Klone nebeneinander.
+  const monitors = useMemo(() => {
+    const sorted = [...data.gadgets].filter(g => g.zone === "monitor").sort((a, b) => b.price - a.price);
+    const seen = new Set<string>();
+    return sorted.filter(g => {
+      if (!g.imageUrl || seen.has(g.imageUrl)) return false;
+      seen.add(g.imageUrl);
+      return true;
+    });
+  }, [data.gadgets]);
   const deskItems  = useMemo(() => data.gadgets.filter(g => g.zone === "desk"), [data.gadgets]);
   const floorItems = useMemo(() => data.gadgets.filter(g => g.zone === "floor"), [data.gadgets]);
   const primaryMonitor = monitors[0];

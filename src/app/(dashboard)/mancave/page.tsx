@@ -8,7 +8,7 @@ import { loadRoom } from "@/lib/room";
 import { getRoomItem } from "@/lib/room-items";
 import { parseFavoriteGames } from "@/lib/favorite-games";
 import MancaveClient from "./MancaveClient";
-import { renderZoneFor, MANCAVE_GADGET_CATEGORIES, type MancaveGadget, type MancaveData } from "./mancave-data";
+import { renderZoneFor, frontPhotoFor, MANCAVE_GADGET_CATEGORIES, type MancaveGadget, type MancaveData } from "./mancave-data";
 
 export default async function MancavePage() {
   const me = await getSessionUser();
@@ -88,15 +88,24 @@ export default async function MancavePage() {
 
   // Gadgets: nur die aufgestellten Zimmer-Items, die sinnvoll am Schreibtisch
   // stehen (siehe MANCAVE_GADGET_CATEGORIES) — Tapeten, Böden, Poster & Co.
-  // bleiben draußen.
+  // bleiben draußen. Wo ein echtes Frontal-Render existiert (siehe
+  // frontPhotoFor), ersetzt das das 3/4-Winkel-Katalogfoto — die Ego-Ansicht
+  // braucht Objekte von vorne, nicht aus der isometrischen Zimmer-Perspektive.
   const gadgets: MancaveGadget[] = room.placed
     .map(p => getRoomItem(p.key))
     .filter((def): def is NonNullable<typeof def> => !!def && MANCAVE_GADGET_CATEGORIES.includes(def.category))
-    .map(def => ({
-      key: def.key, label: def.label, description: def.description,
-      imageUrl: def.imageUrl, accent: def.accent, category: def.category, zone: renderZoneFor(def.category),
-      w: def.w, h: def.h, screenRect: def.screenRect, price: def.price,
-    }));
+    .map(def => {
+      const front = frontPhotoFor(def.key, def.category);
+      return {
+        key: def.key, label: def.label, description: def.description,
+        accent: def.accent, category: def.category, zone: renderZoneFor(def.category),
+        price: def.price,
+        imageUrl:   front?.imageUrl   ?? def.imageUrl,
+        w:          front?.w          ?? def.w,
+        h:          front?.h          ?? def.h,
+        screenRect: front?.screenRect ?? def.screenRect,
+      };
+    });
 
   const data: MancaveData = {
     displayName:     user.username ?? user.name ?? "Unbekannt",
