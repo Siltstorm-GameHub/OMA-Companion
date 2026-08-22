@@ -18,8 +18,10 @@
  * SwappablePc als Pilot). Das ist ein bewusster Stilbruch (andere Assets als
  * die handgebaute Referenzszene) — Ziel ist erst die Swap-PIPELINE zu
  * validieren, echte stilgetreue Stufen-Modelle sind ein separater
- * Blender-Arbeitsblock für später. Das Gadgets-Panel zeigt die echten
- * besessenen Items weiterhin als Foto-Liste (siehe MancaveSharedUI).
+ * Blender-Arbeitsblock für später. Den separaten "Gadgets"-Hotspot (Foto-
+ * Liste der GAMING-ZIMMER-Items, altes System) gibt es nicht mehr — jedes
+ * Mancave-Objekt soll stattdessen direkt als 3D-Objekt im Raum stehen
+ * (`SwappableProp`/`ExtraProp`), nicht als zusätzliche Foto-Liste.
  *
  * Kamera-Position/-Blickrichtung sind 1:1 aus der Blender-Kamera (`DeskCam`)
  * übernommen, per Blender→glTF-Achsenkonvertierung (X→X, Z→Y, -Y→Z) — siehe
@@ -33,7 +35,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Html, useGLTF, useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import RankedAvatar from "@/components/RankedAvatar";
-import { MonitorScreenContent, TrophyPanel, GadgetsPanel, ItemsPanel, type MancavePanel } from "./MancaveSharedUI";
+import { MonitorScreenContent, TrophyPanel, ItemsPanel, type MancavePanel } from "./MancaveSharedUI";
 import type { MancaveData } from "./mancave-data";
 
 const ROOM_MODEL_URL = "/models/mancave_room.glb";
@@ -56,12 +58,9 @@ const SCREEN_POS = new THREE.Vector3(1.215, 1.091, -0.741);
 // Profil-Plakat über dem Monitor — gleiche X/Z wie der Screen, nur höher.
 const POSTER_POS = new THREE.Vector3(1.215, 1.48, -0.741);
 // PC-Tower-Position ("Cube.017", inzwischen aus dem Room-Export entfernt,
-// siehe SwappablePc) — Anker für den Gadgets-Hotspot UND den Tower selbst.
-// PC_POS ist die Tischoberfläche unter dem Tower (Blender-Z-min der alten
-// Cube.017-Bounding-Box), PC_LABEL_POS der alte visuelle Mittelpunkt (für
-// den Hotspot-Button, unabhängig von der aktuellen Tower-Höhe).
+// siehe SwappablePc) — Tischoberfläche unter dem Tower (Blender-Z-min der
+// alten Cube.017-Bounding-Box).
 const PC_POS = new THREE.Vector3(1.05, 0.816, -0.29);
-const PC_LABEL_POS = new THREE.Vector3(1.05, 1.02, -0.29);
 
 /**
  * Neues Stufen-Ausbausystem: pro Slot lädt `SwappableProp` je nach Stufe
@@ -82,6 +81,15 @@ interface TierModelCfg {
   rotationY?: number;
   /** Mesh-Namen, die nach dem Laden entfernt werden (z.B. eine mitgelieferte Boden-/Sockel-Fläche im Modell). */
   excludeMeshNames?: string[];
+  /**
+   * Objekt-Namen, deren Material auf ein normales, nicht-metallisches Weiß
+   * zurückgesetzt wird. Notwendig für glTF-Primitives OHNE Material-Zuweisung
+   * (`material: null` im Rohdatensatz) — glTF-Spec-Default dafür ist dann
+   * voll-metallisch/voll-rau OHNE Environment-Map in dieser Szene, was quasi
+   * schwarz und damit unsichtbar vor dem dunklen Hintergrund rendert (per
+   * direktem Blick in die exportierte glTF-JSON bestätigt, nicht geraten).
+   */
+  fixMaterialNames?: string[];
 }
 
 function SwappableProp({ tier, models, position }: { tier: number; models: Record<number, TierModelCfg>; position: THREE.Vector3 }) {
@@ -93,6 +101,13 @@ function SwappableProp({ tier, models, position }: { tier: number; models: Recor
       const toRemove: THREE.Object3D[] = [];
       clone.traverse(obj => { if (cfg.excludeMeshNames!.includes(obj.name)) toRemove.push(obj); });
       for (const obj of toRemove) obj.removeFromParent();
+    }
+    if (cfg.fixMaterialNames?.length) {
+      clone.traverse(obj => {
+        if (obj instanceof THREE.Mesh && cfg.fixMaterialNames!.includes(obj.name)) {
+          obj.material = new THREE.MeshStandardMaterial({ color: "#c7cdd6", metalness: 0, roughness: 0.6 });
+        }
+      });
     }
     return clone;
   }, [scene, cfg]);
@@ -163,24 +178,154 @@ const PC_TIER_MODELS: Record<number, TierModelCfg> = {
  * Welt-X statt Welt-Z, genau dort, wo der Tisch (Cube.001, X:[0.639,1.264])
  * sitzt. Nicht geometrisch neu vermessen (kein Screenshot verfügbar),
  * sondern pragmatisch entschärft: kleiner skaliert (verkürzt die Armreichweite)
- * und etwas höher angehoben (mehr Abstand zur Tischkante) — Bestätigung
- * durch den User steht noch aus.
+ * und etwas höher angehoben (mehr Abstand zur Tischkante).
+ *
+ * Stufe 2 war danach laut User komplett UNSICHTBAR — Ursache gefunden (nicht
+ * geraten): direkter Blick in die exportierte glTF-JSON zeigt, dass das
+ * "Mac"-Mesh (Node "Mac", Mesh-Datenblock "Plane.025") KEIN Material
+ * zugewiesen hat (`material: null` im Primitive). Der glTF-Spec-Default dafür
+ * ist voll-metallisch + voll-rau OHNE eigene Basisfarbe — ohne Environment-Map
+ * in dieser Szene rendert das nahezu schwarz vor dem dunklen Hintergrund,
+ * de facto unsichtbar. Fix: `fixMaterialNames: ["Mac"]` ersetzt das Material
+ * durch ein normales, nicht-metallisches Hellgrau (siehe `fixMaterialNames`
+ * in `SwappableProp`).
+ *
+ * Stufe 4 (triple) laut User "2 Monitore, aber sollen direkt nebeneinander
+ * auf dem Tisch stehen" — akzeptiert 2 sichtbare Screens (dritter vermutlich
+ * durch die vorherige Rotation verdeckt/nicht im Blickfeld), aber die
+ * Skalierung 1.4 war für den vorhandenen Tisch zu breit (Modell-Eigenbreite
+ * bereits 1.414 Einheiten UNSKALIERT — bei 1.4× würde das Array knapp 2m
+ * breit, deutlich über die Tischbreite hinaus). Auf 0.85 reduziert, damit
+ * das Array eher auf den Tisch passt statt auseinanderzulaufen — ebenfalls
+ * nicht geometrisch nachgemessen, pragmatische Korrektur.
  */
 const MONITOR_TIER_MODELS: Record<number, TierModelCfg> = {
   1: { url: "/models/roehrenmonitor.glb",    fix: [0, 0, 0],          scale: 1,    rotationY: -Math.PI / 2 },
-  2: { url: "/models/monitor_flach_neu.glb", fix: [0, -0.415, -0.4],  scale: 0.65, rotationY: -Math.PI / 2 },
+  2: {
+    url: "/models/monitor_flach_neu.glb", fix: [0, -0.415, -0.4], scale: 0.65,
+    rotationY: -Math.PI / 2, fixMaterialNames: ["Mac"],
+  },
   3: { url: "/models/monitor_curved.glb",    fix: [0, -0.850, 0],     scale: 1,    rotationY: 0.912 + Math.PI },
-  4: { url: "/models/monitor_triple.glb",    fix: [0, -0.850, 0],     scale: 1.4,  rotationY: Math.PI },
+  4: { url: "/models/monitor_triple.glb",    fix: [0, -0.850, 0],     scale: 0.85, rotationY: Math.PI },
 };
 const MONITOR_MODEL_POS = new THREE.Vector3(1.215, 0.816, -0.741);
 
-for (const m of [...Object.values(PC_TIER_MODELS), ...Object.values(MONITOR_TIER_MODELS)]) useGLTF.preload(m.url);
+/**
+ * Schreibtischstuhl (Stufen 1-4): der alte Katalog hat nur 3 Modelle
+ * (stuhl_buero/stuhl_gaming/stuhl_racing, Lücke bei Stufe 2) — Stufe 2 nutzt
+ * vorerst dasselbe Modell wie Stufe 1 (noch kein sichtbarer Unterschied,
+ * bis es echte Zwischenstufen-Assets gibt). Alle drei GLBs sind bereits
+ * boden-verankert UND horizontal zentriert (min.y≈0, center.x/z≈0, per
+ * Node/three.js-Messscript geprüft) — `fix` braucht daher kaum Korrektur.
+ * KEINE Rotation gesetzt: der Stuhl sitzt größtenteils außerhalb des
+ * Sichtfelds der Ego-Kamera (die Kamera SITZT quasi in ihm), Fehlausrichtung
+ * fällt hier viel weniger auf als beim Monitor — bewusst nicht vorab
+ * vermessen, nur bei tatsächlich gemeldetem Problem nachbessern.
+ */
+const STUHL_TIER_MODELS: Record<number, TierModelCfg> = {
+  1: { url: "/models/chair_office.glb", fix: [0, -0.017, 0], scale: 1 },
+  2: { url: "/models/chair_office.glb", fix: [0, -0.017, 0], scale: 1 },
+  3: { url: "/models/chair_gaming.glb", fix: [0, -0.009, 0], scale: 1 },
+  4: { url: "/models/chair_racing.glb", fix: [0, 0, 0],      scale: 1 },
+};
+// "Plane.002" (Material "chair", Rückenlehne) aus der Referenzszene entfernt
+// — X/Z hier übernommen, Y auf Bodenhöhe (0) gesetzt (Boden-verankerte Modelle).
+const STUHL_POS = new THREE.Vector3(0.367, 0, -0.921);
+
+/**
+ * Pokalregal (Stufen 1-4): alter Katalog hat nur 2 Modelle (regal_holz,
+ * pokalregal ab Stufe 3) — dieselbe Lücken-Konvention wie beim Stuhl: Stufe 1+2
+ * teilen sich regal_holz, Stufe 3+4 teilen sich pokalregal.
+ *
+ * Ersetzt "Cube.018"+"Cube.019" — zwei dünne, breite Bretter (Material
+ * "Material.001", dieselbe Materialfamilie wie Tisch/Couch), an der
+ * Wand mit dem kleinsten Y-Wert der Szene montiert (Blender-Y≈-0.886, praktisch
+ * identisch mit der gemessenen Raumschale-Untergrenze) — per Bounding-Box-
+ * Analyse als Wandregal identifiziert, nicht geraten. Position übernimmt
+ * "Cube.019" (die niedrigere, besser erreichbare der beiden Bretter).
+ *
+ * ACHTUNG — deutlich unsicherer als PC/Monitor/Stuhl: Wandmontage statt
+ * Boden-Aufstellung, die Blickrichtung der Wand (`+Y` in Blender, "-Z" in
+ * gltf, Richtung Schreibtisch/Kamera) wurde hergeleitet, aber NICHT wie beim
+ * Monitor durch eine Flächen-Normalen-Messung der Ersatz-Modelle bestätigt —
+ * `rotationY` bleibt vorerst 0, echte Ausrichtung erst nach Sichtprüfung
+ * korrigieren.
+ */
+const REGAL_TIER_MODELS: Record<number, TierModelCfg> = {
+  1: { url: "/models/regal_buecher.glb", fix: [0, 0, -0.277], scale: 0.4 },
+  2: { url: "/models/regal_buecher.glb", fix: [0, 0, -0.277], scale: 0.4 },
+  3: { url: "/models/pokalregal.glb",    fix: [0, -0.004, 0.001], scale: 0.885 },
+  4: { url: "/models/pokalregal.glb",    fix: [0, -0.004, 0.001], scale: 0.885 },
+};
+const REGAL_POS = new THREE.Vector3(0.207, 1.755, 0.886);
+
+/**
+ * Zusatzobjekte (Stufe 0-4, siehe mancave-items.ts EXTRA_ITEMS + "teppich"-
+ * artige Fälle): anders als die Slots oben haben diese noch keine echten
+ * Stufen-Modelle — EIN Modell erscheint einfach, sobald Stufe > 0 (statt
+ * Stufe 0 = "nicht besessen" = unsichtbar). Zwei Untergruppen:
+ *
+ * (a) `nanoleaf` und `deskmat` waren ORIGINAL Teil der Referenzszene
+ * (die 21 "Circle.*"-Nanoleaf-Panels bzw. "Plane.001", der Mousepad) — beide
+ * per Blender MCP in eigene kleine GLBs exportiert (`mancave_nanoleaf.glb`,
+ * `mancave_deskmat.glb`) und aus dem Haupt-Export entfernt, damit sie sich
+ * unabhängig ein-/ausblenden lassen. WICHTIG: beide Objekte hatten in Blender
+ * `location=(0,0,0)` — ihre tatsächliche Weltposition steckt bereits in den
+ * Vertex-Daten selbst (geprüft, nicht angenommen) — sie werden daher OHNE
+ * zusätzlichen `position`-Offset gerendert (position=[0,0,0] entspricht
+ * "genau da, wo sie ursprünglich in der Referenzszene standen").
+ *
+ * (b) `headset`, `webcam`, `couchtisch` existieren NICHT in der
+ * Referenzszene und haben auch keine passenden Katalog-Assets für
+ * "couchtisch" (im alten Katalog gab es dieses Möbelstück gar nicht) — hier
+ * wird auf bestehende Gaming-Zimmer-GLBs zurückgegriffen (webcam/headset
+ * passen thematisch, "tisch_lang.glb"/Konsolentisch als bester verfügbarer
+ * Ersatz für einen Couchtisch, stark herunterskaliert). Positionen sind
+ * VERMUTUNGEN ohne Bounding-Box-Abgleich mit der Szene — deutlich
+ * unsicherer als alles andere in dieser Datei, ausdrücklich als
+ * Platzhalter markiert, bis eine Sichtprüfung stattgefunden hat.
+ */
+interface ExtraCfg { url: string; fix: [number, number, number]; scale: number; position: THREE.Vector3; rotationY?: number }
+
+function ExtraProp({ tier, cfg }: { tier: number; cfg: ExtraCfg }) {
+  const { scene } = useGLTF(cfg.url);
+  const cloned = useMemo(() => scene.clone(true), [scene]);
+  if (tier <= 0) return null;
+  return (
+    <group position={cfg.position} rotation={[0, cfg.rotationY ?? 0, 0]}>
+      <group scale={cfg.scale}>
+        <primitive object={cloned} position={cfg.fix} />
+      </group>
+    </group>
+  );
+}
+
+const NANOLEAF_CFG: ExtraCfg = { url: "/models/mancave_nanoleaf.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(0, 0, 0) };
+const DESKMAT_CFG: ExtraCfg = { url: "/models/mancave_deskmat.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(0, 0, 0) };
+// Webcam oben auf dem Monitor — grobe Schätzung, nicht vermessen.
+const WEBCAM_CFG: ExtraCfg = { url: "/models/webcam.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(1.215, 1.38, -0.7) };
+// Headset am vorderen linken Tischrand — grobe Schätzung, nicht vermessen.
+const HEADSET_CFG: ExtraCfg = { url: "/models/headset_gaming.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(0.85, 0.82, -0.15) };
+// Couchtisch vor der Couch (Couch-Position aus "Cube.008" bekannt, gltf
+// ≈(0.01,-,0.41)) — leicht Richtung Raummitte versetzt, grobe Schätzung.
+// "tisch_lang.glb" ist mit 3 Einheiten Länge weit größer als ein Couchtisch,
+// daher stark herunterskaliert (0.27 ≈ Zieltiefe 0.8 / 3.0).
+const COUCHTISCH_CFG: ExtraCfg = { url: "/models/tisch_lang.glb", fix: [0, 0, 0], scale: 0.27, position: new THREE.Vector3(0.01, 0, -0.05) };
+
+for (const m of [
+  ...Object.values(PC_TIER_MODELS), ...Object.values(MONITOR_TIER_MODELS),
+  ...Object.values(STUHL_TIER_MODELS), ...Object.values(REGAL_TIER_MODELS),
+  NANOLEAF_CFG, DESKMAT_CFG, WEBCAM_CFG, HEADSET_CFG, COUCHTISCH_CFG,
+]) useGLTF.preload(m.url);
 // Nanoleaf-Dreieck-Panels über dem Schreibtisch (Mittelpunkt aller 21
 // "Circle.*"-Meshes, nachgemessen) — Anker für den Pokale-Hotspot.
 const SHELF_POS = new THREE.Vector3(0.19, 1.56, -0.11);
-// Vordere Tischkante ("Cube.001", Blender-Zentrum umgerechnet) — Anker für den
-// neuen Ausbau-Hotspot (Stufen-Upgrades, siehe mancave-items.ts).
-const DESK_FRONT_POS = new THREE.Vector3(0.95, 0.86, -0.55);
+// Linke vordere Tischkante — Anker für den Ausbau-Hotspot (Stufen-Upgrades,
+// siehe mancave-items.ts). Bewusst nach links/vorne verschoben (war vorher
+// (0.95,0.86,-0.55), nur ~0.28 Einheiten von PC_POS/PC_LABEL_POS entfernt —
+// wirkte zusammen mit dem Gadgets-Hotspot gedrängt); jetzt klarer getrennt
+// von der PC-Ecke rechts.
+const DESK_FRONT_POS = new THREE.Vector3(0.7, 0.86, -0.18);
 
 // Teppich-Fläche der Referenzszene ("Plane", Material "Carpet") — Boden-
 // Mittelpunkt, aus Blender übernommen (Zentrum [-0.347,0.669,0.05], Größe
@@ -200,7 +345,11 @@ const RUG_RADIUS = 0.88;
 function LogoRugStatic() {
   const logo = useTexture("/brand/logo-512.png");
   return (
-    <group position={RUG_POS}>
+    // rotationY=+Math.PI/2: 90° gegen den Uhrzeigersinn von oben betrachtet
+    // (three.js rechtshändige Rotation um +Y = Gegenuhrzeigersinn aus der
+    // Vogelperspektive) — User-Wunsch, nur für das Logo-Bild sichtbar
+    // relevant (der Zylinder selbst ist rotationssymmetrisch).
+    <group position={RUG_POS} rotation={[0, Math.PI / 2, 0]}>
       <mesh position={[0, 0.035, 0]} receiveShadow>
         <cylinderGeometry args={[RUG_RADIUS, RUG_RADIUS, 0.03, 48]} />
         <meshStandardMaterial color="#3ee6c4" emissive="#3ee6c4" emissiveIntensity={0.1} roughness={0.85} />
@@ -325,16 +474,22 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
   const [panel, setPanel] = useState<MancavePanel>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const hasGadgets = data.gadgets.some(g => g.zone === "other");
   const hasAffordableUpgrade = data.items.some(i => i.nextCost !== null && i.nextCost <= data.totalPoints);
   const pcTier = data.items.find(i => i.key === "computer")?.tier ?? 1;
   const monitorTier = data.items.find(i => i.key === "monitor")?.tier ?? 1;
+  const stuhlTier = data.items.find(i => i.key === "stuhl")?.tier ?? 1;
+  const regalTier = data.items.find(i => i.key === "regal")?.tier ?? 1;
+  const nanoleafTier = data.items.find(i => i.key === "nanoleaf")?.tier ?? 0;
+  const deskmatTier = data.items.find(i => i.key === "deskmat")?.tier ?? 0;
+  const webcamTier = data.items.find(i => i.key === "webcam")?.tier ?? 0;
+  const headsetTier = data.items.find(i => i.key === "headset")?.tier ?? 0;
+  const couchtischTier = data.items.find(i => i.key === "couchtisch")?.tier ?? 0;
 
   return (
     <div ref={containerRef}
       // touch-action:none absichtlich NICHT hier (siehe LookAroundRig-
       // Kommentar) — landet stattdessen gezielt nur auf dem Canvas, damit
-      // Touch-Scrollen in den Popups (Ausbau/Gadgets/Pokale) funktioniert.
+      // Touch-Scrollen in den Popups (Ausbau/Pokale) funktioniert.
       className="relative w-full overflow-hidden rounded-3xl border border-white/[0.06] select-none"
       style={{ aspectRatio: "16 / 9", background: "#050810", cursor: "grab" }}>
       <Canvas shadows dpr={[1, 1.5]} gl={{ antialias: true }}>
@@ -347,6 +502,13 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
           <LogoRugStatic />
           <SwappableProp tier={pcTier} models={PC_TIER_MODELS} position={PC_POS} />
           <SwappableProp tier={monitorTier} models={MONITOR_TIER_MODELS} position={MONITOR_MODEL_POS} />
+          <SwappableProp tier={stuhlTier} models={STUHL_TIER_MODELS} position={STUHL_POS} />
+          <SwappableProp tier={regalTier} models={REGAL_TIER_MODELS} position={REGAL_POS} />
+          <ExtraProp tier={nanoleafTier} cfg={NANOLEAF_CFG} />
+          <ExtraProp tier={deskmatTier} cfg={DESKMAT_CFG} />
+          <ExtraProp tier={webcamTier} cfg={WEBCAM_CFG} />
+          <ExtraProp tier={headsetTier} cfg={HEADSET_CFG} />
+          <ExtraProp tier={couchtischTier} cfg={COUCHTISCH_CFG} />
 
           {/* Live-Dashboard direkt auf dem Monitor-Screen — 3D-verankert, immer sichtbar */}
           <Html center position={SCREEN_POS} style={{ pointerEvents: "auto" }}>
@@ -383,16 +545,6 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
             </button>
           </Html>
 
-          {/* Gadgets (echte besessene Items als Foto-Liste im Panel) */}
-          {hasGadgets && (
-            <Html position={PC_LABEL_POS} center>
-              <button onClick={() => setPanel("gadgets")}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full whitespace-nowrap"
-                style={{ background: "rgba(4,10,9,0.7)", border: "1px solid rgba(45,212,191,0.3)", backdropFilter: "blur(3px)" }}>
-                <span className="text-[10px] font-semibold text-teal-200">🎮 Gadgets</span>
-              </button>
-            </Html>
-          )}
         </Suspense>
       </Canvas>
 
@@ -427,7 +579,6 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
               ✕
             </button>
             {panel === "trophy" && <TrophyPanel data={data} />}
-            {panel === "gadgets" && <GadgetsPanel data={data} />}
             {panel === "items" && <ItemsPanel data={data} />}
           </div>
         </div>
