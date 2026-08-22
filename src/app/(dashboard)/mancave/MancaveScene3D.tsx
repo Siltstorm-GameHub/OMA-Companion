@@ -9,11 +9,17 @@
  * (`FurniturePrimitive`) nachzubauen — ein früherer Versuch, sah aber nie
  * wie die echte Szene aus, weil das andere Assets mit anderem Stil sind.
  *
- * Konsequenz: die Szene zeigt (noch) NICHT die individuellen Gaming-Zimmer-
- * Items des Users, sondern die feste Referenz-Kulisse — passt zur
- * angekündigten Stufen-Planung (Position bleibt fix, nur das Aussehen pro
- * Slot wechselt später mit dem Ausbaustand). Das Gadgets-Panel zeigt die
- * echten besessenen Items weiterhin als Foto-Liste (siehe MancaveSharedUI).
+ * Konsequenz: die Szene zeigt größtenteils NICHT die individuellen Objekte
+ * des Users, sondern die feste Referenz-Kulisse — außer den Slots, die schon
+ * auf das neue Stufen-System (mancave-items.ts) umgestellt wurden: dafür
+ * wurde das jeweilige Referenz-Mesh aus `mancave_room.glb` entfernt (siehe
+ * Blender-Export-Notiz) und wird hier durch ein per Stufe austauschbares GLB
+ * aus dem alten Möbel-Katalog (`public/models/*.glb`) ersetzt (siehe
+ * SwappablePc als Pilot). Das ist ein bewusster Stilbruch (andere Assets als
+ * die handgebaute Referenzszene) — Ziel ist erst die Swap-PIPELINE zu
+ * validieren, echte stilgetreue Stufen-Modelle sind ein separater
+ * Blender-Arbeitsblock für später. Das Gadgets-Panel zeigt die echten
+ * besessenen Items weiterhin als Foto-Liste (siehe MancaveSharedUI).
  *
  * Kamera-Position/-Blickrichtung sind 1:1 aus der Blender-Kamera (`DeskCam`)
  * übernommen, per Blender→glTF-Achsenkonvertierung (X→X, Z→Y, -Y→Z) — siehe
@@ -46,8 +52,71 @@ const LOOK_TARGET = EYE.clone().add(FORWARD);
 // Kamera versetzt (entlang -FORWARD), sonst verdeckt die Bildschirm-Fläche
 // selbst das Html-Overlay (Selbst-Okklusion).
 const SCREEN_POS = new THREE.Vector3(1.215, 1.091, -0.741);
-// PC-Tower-Position ("Cube.017") — Anker für den Gadgets-Hotspot.
-const PC_POS = new THREE.Vector3(1.05, 1.02, -0.29);
+// PC-Tower-Position ("Cube.017", inzwischen aus dem Room-Export entfernt,
+// siehe SwappablePc) — Anker für den Gadgets-Hotspot UND den Tower selbst.
+// PC_POS ist die Tischoberfläche unter dem Tower (Blender-Z-min der alten
+// Cube.017-Bounding-Box), PC_LABEL_POS der alte visuelle Mittelpunkt (für
+// den Hotspot-Button, unabhängig von der aktuellen Tower-Höhe).
+const PC_POS = new THREE.Vector3(1.05, 0.816, -0.29);
+const PC_LABEL_POS = new THREE.Vector3(1.05, 1.02, -0.29);
+
+/**
+ * Neues Stufen-Ausbausystem: pro Slot lädt `SwappableProp` je nach Stufe
+ * eines der bestehenden Katalog-GLBs aus dem alten Gaming-Zimmer nach — die
+ * jeweilige Referenz-Geometrie wurde dafür aus `mancave_room.glb` entfernt
+ * (siehe Blender-Export-Notizen bei den einzelnen `_TIER_MODELS`-Konstanten).
+ * `fix` normalisiert jedes Modell auf "Ursprung am Boden-Mittelpunkt"
+ * (gemessen per Node/three.js-Skript, siehe [[mancave-profile-project]] in
+ * memory für die Mess-Methode) — die Modelle wurden nie für ein gemeinsames
+ * Koordinatensystem gebaut, jedes hat einen eigenen, willkürlichen Ursprung.
+ * `scale` gleicht grobe Größenunterschiede zwischen den Modellen einer
+ * Stufenreihe aus. Bewusst NICHT versucht, die alte Referenz-Bounding-Box
+ * exakt zu treffen — andere Modell-Silhouette, exaktes Nachbauen wäre nur Zufall.
+ */
+interface TierModelCfg { url: string; fix: [number, number, number]; scale: number }
+
+function SwappableProp({ tier, models, position }: { tier: number; models: Record<number, TierModelCfg>; position: THREE.Vector3 }) {
+  const cfg = models[Math.min(4, Math.max(1, tier))];
+  const { scene } = useGLTF(cfg.url);
+  const cloned = useMemo(() => scene.clone(true), [scene]);
+  return (
+    <group position={position}>
+      <group scale={cfg.scale}>
+        <primitive object={cloned} position={cfg.fix} />
+      </group>
+    </group>
+  );
+}
+
+// PC-Turm (Stufen 1-4): pc_billig → pc_violett → pc_gaming → pc_highend.
+const PC_TIER_MODELS: Record<number, TierModelCfg> = {
+  1: { url: "/models/pc_billig.glb",       fix: [-0.357, 0.011, -0.090], scale: 0.69 },
+  2: { url: "/models/pc_tower_purple.glb", fix: [0, 0, 0],                scale: 0.77 },
+  3: { url: "/models/pc_white_rgb.glb",    fix: [0, 0, 0],                scale: 0.89 },
+  4: { url: "/models/pc_highend.glb",      fix: [-8.674, 0.721, 0.203],   scale: 1.14 },
+};
+
+/**
+ * Monitor (Stufen 1-4): roehrenmonitor → monitor_flach → monitor_144(curved)
+ * → monitor_dreifach(triple). Ersetzt "Cube.015"+"Cube.002" aus der
+ * Referenzszene (zusammen EIN hoher Screen, siehe SCREEN_POS-Kommentar) —
+ * NICHT "Cube.016", ein separates zweites Screen-Objekt an anderer Position,
+ * das (noch) Teil der festen Kulisse bleibt. `fix.y` hebt jedes Modell so an,
+ * dass sein eigener Boden-Punkt exakt auf der echten Tischhöhe (0.816) landet
+ * — einige Modelle (flach/curved/triple) bringen bereits eine eingebaute
+ * Tischhöhen-Annahme mit (ihr eigener Ursprung liegt NICHT am Boden, siehe
+ * [[mancave-profile-project]] in memory), roehrenmonitor dagegen ist
+ * boden-verankert und braucht die volle Anhebung.
+ */
+const MONITOR_TIER_MODELS: Record<number, TierModelCfg> = {
+  1: { url: "/models/roehrenmonitor.glb",   fix: [0, 0.816, 0],      scale: 1 },
+  2: { url: "/models/monitor_flach_neu.glb", fix: [0, 0.201, -0.4],  scale: 1 },
+  3: { url: "/models/monitor_curved.glb",   fix: [0, -0.034, 0],     scale: 1 },
+  4: { url: "/models/monitor_triple.glb",   fix: [0, -0.034, 0],     scale: 1 },
+};
+const MONITOR_MODEL_POS = new THREE.Vector3(1.215, 0, -0.741);
+
+for (const m of [...Object.values(PC_TIER_MODELS), ...Object.values(MONITOR_TIER_MODELS)]) useGLTF.preload(m.url);
 // Nanoleaf-Dreieck-Panels über dem Schreibtisch (Mittelpunkt aller 21
 // "Circle.*"-Meshes, nachgemessen) — Anker für den Pokale-Hotspot.
 const SHELF_POS = new THREE.Vector3(0.19, 1.56, -0.11);
@@ -144,6 +213,8 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
 
   const hasGadgets = data.gadgets.some(g => g.zone === "other");
   const hasAffordableUpgrade = data.items.some(i => i.nextCost !== null && i.nextCost <= data.totalPoints);
+  const pcTier = data.items.find(i => i.key === "computer")?.tier ?? 1;
+  const monitorTier = data.items.find(i => i.key === "monitor")?.tier ?? 1;
 
   return (
     <div ref={containerRef}
@@ -156,6 +227,8 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
         <LookAroundRig containerRef={containerRef} />
         <Suspense fallback={null}>
           <RoomModel />
+          <SwappableProp tier={pcTier} models={PC_TIER_MODELS} position={PC_POS} />
+          <SwappableProp tier={monitorTier} models={MONITOR_TIER_MODELS} position={MONITOR_MODEL_POS} />
 
           {/* Live-Dashboard direkt auf dem Monitor-Screen — 3D-verankert, immer sichtbar */}
           <Html center position={SCREEN_POS} style={{ pointerEvents: "auto" }}>
@@ -185,7 +258,7 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
 
           {/* Gadgets (echte besessene Items als Foto-Liste im Panel) */}
           {hasGadgets && (
-            <Html position={PC_POS} center>
+            <Html position={PC_LABEL_POS} center>
               <button onClick={() => setPanel("gadgets")}
                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full whitespace-nowrap"
                 style={{ background: "rgba(4,10,9,0.7)", border: "1px solid rgba(45,212,191,0.3)", backdropFilter: "blur(3px)" }}>
