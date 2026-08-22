@@ -78,16 +78,38 @@ export interface MancaveData {
 /**
  * Die feste Hero-Kulisse der Desktop-Ego-Ansicht: ein einziges, in Blender aus
  * dem echten Schreibtisch+Monitor+Tastatur-Aufbau (`3DAssetsRoom/LP_Ortographic_Gaming_Room.glb`)
- * gerendertes Sitzperspektiven-Foto, statt einer handgezeichneten SVG-Szene.
- * `screenRect` markiert den sichtbaren Anzeigebereich des rechten/Haupt-
- * Monitors darin — dort liegt das Live-Dashboard direkt auf dem Foto.
+ * gerendertes Foto-Set, statt einer handgezeichneten SVG-Szene — mehrere
+ * Blickrichtungen von DERSELBEN Sitzposition aus (Kamera nur um die
+ * Hochachse gedreht), zwischen denen beim Umschauen weich überblendet wird.
+ * `screenRect`/`pcHotspot` beziehen sich nur auf den Schreibtisch-Blick
+ * (`DESK_TOUR_HOME_INDEX`) — dort liegt das Live-Dashboard direkt auf dem
+ * Foto. Der Raum-Asset selbst ist als Eck-Diorama gebaut (nur zwei Wände
+ * modelliert, siehe [[mancave-front-photos-project]]), deckt also keinen
+ * vollen 360°-Rundumblick ab — der Bogen 240°→330°→0° ist bewusst der
+ * gesamte tatsächlich möblierte/beleuchtete Bereich.
  */
+export interface MancaveTourFrame {
+  /** Gierwinkel relativ zur Home-Ansicht, nur zur Doku/Sortierung. */
+  deg:      number;
+  imageUrl: string;
+  w:        number;
+  h:        number;
+}
+
+export const DESK_TOUR_FRAMES: MancaveTourFrame[] = [
+  { deg: 240, imageUrl: "/room-items/front/tour/desk_tour_240.jpg", w: 1200, h: 1200 },
+  { deg: 270, imageUrl: "/room-items/front/tour/desk_tour_270.jpg", w: 1200, h: 1200 },
+  { deg: 300, imageUrl: "/room-items/front/tour/desk_tour_300.jpg", w: 1200, h: 1200 },
+  { deg: 330, imageUrl: "/room-items/front/tour/desk_tour_330.jpg", w: 1200, h: 1200 },
+  { deg: 0,   imageUrl: "/room-items/front/tour/desk_tour_0.jpg",   w: 1200, h: 1200 },
+];
+
+/** Index der Schreibtisch-Ansicht (der "Home"-Blick, wo Dashboard/Hotspots sitzen). */
+export const DESK_TOUR_HOME_INDEX = DESK_TOUR_FRAMES.length - 1;
+
 export const DESK_SCENE = {
-  imageUrl: "/room-items/front/desk_scene_generic.jpg",
-  /** Quadratisches Weitwinkel-Foto (mehr Bildfeld als der sichtbare Ausschnitt), damit die Szene per Maus etwas "umgeschaut" werden kann — siehe `MancaveDesktopScene.tsx`. */
-  w: 1600, h: 1600,
   screenRect: { x0: 0.4734, y0: 0.3609, x1: 0.7321, y1: 0.5088 } satisfies MancaveScreenRect,
-  /** Ungefähre Bildposition (Bruchteile) des PC-Towers im Foto, für den Gadgets-Hotspot. */
+  /** Ungefähre Bildposition (Bruchteile) des PC-Towers im Home-Blick, für den Gadgets-Hotspot. */
   pcHotspot: { x: 0.855, y: 0.484 },
 };
 

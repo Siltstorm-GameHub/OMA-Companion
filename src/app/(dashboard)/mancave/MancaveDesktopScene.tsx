@@ -3,75 +3,91 @@ import { useRef, useState } from "react";
 import { Trophy, Package, X, CalendarDays, Medal, Swords, Clock, MessageSquare, Gamepad2, MousePointer2 } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
 import type { MancaveData } from "./mancave-data";
-import { DESK_SCENE } from "./mancave-data";
+import { DESK_SCENE, DESK_TOUR_FRAMES, DESK_TOUR_HOME_INDEX } from "./mancave-data";
 
-/**
- * Wie viel größer als der sichtbare Ausschnitt das quadratische Weitwinkel-
- * Foto ist (135% der Container-Breite) — bestimmt zusammen mit MAX_LOOK_PCT
- * (siehe unten), wie weit man "umschauen" kann, ohne dass am Rand des
- * Fotos ein leerer Rand sichtbar würde.
- */
-const PAN_SCALE = 1.35;
-/** Maximaler Umschau-Ausschlag, als Bruchteil der Container-Breite — bewusst klein ("ein bisschen umschauen"), nicht dramatisch. */
-const MAX_LOOK_PCT = 0.05;
+/** Feine vertikale "Umschau"-Bewegung innerhalb eines Frames — bewusst klein ("ein bisschen"), nicht dramatisch. */
+const MAX_TILT_PCT = 0.04;
+/** Wie stark die vertikale Frame-Überhöhung ausfällt, um beim Tilt keinen leeren Rand zu zeigen. */
+const TILT_SCALE = 1.12;
+
+function frameWeight(heading: number, index: number) {
+  return Math.max(0, 1 - Math.abs(heading - index));
+}
 
 /**
  * Ego-Perspektive: der User sitzt selbst am Schreibtisch (kein Stuhl im
  * eigenen Blickfeld) und blickt auf Monitor + Tastatur. Statt einer
- * handgezeichneten SVG-Kulisse ist der Hintergrund ein einziges, in Blender
- * aus dem echten Schreibtisch-Aufbau gerendertes Weitwinkel-Sitzperspektiven-
- * Foto (siehe DESK_SCENE) — bewusst größer als der sichtbare Ausschnitt, damit
- * die Maus die Szene ein Stück in alle Richtungen umherschauen lässt (siehe
- * `handlePointerMove`), statt einer starren Standbild-Kulisse. Das Live-
- * Dashboard liegt direkt (ohne Klick nötig) auf dem ausgemessenen
- * Bildschirmbereich des Fotos und wandert beim Umschauen mit. Pokale/
- * Abzeichen ("Wandregal") und die übrigen besessenen Gadgets (PC, Controller,
- * Peripherie, Licht) hängen als Hotspots daneben — echte Fotos im Detail-
- * Panel statt fester Position im Bild, weil ihre isolierten Cutout-Renders
- * perspektivisch nicht zur Sitzperspektive passen würden.
+ * handgezeichneten SVG-Kulisse oder eines einzelnen Fotos ist der Hintergrund
+ * ein SET von Fotos (`DESK_TOUR_FRAMES`) — dieselbe Sitzposition, nur um die
+ * Hochachse gedreht (240°…0°) — zwischen denen die horizontale Mausposition
+ * weich überblendet: links im Container = Blick zur Couch, rechts = Blick
+ * zum Schreibtisch. Der Raum-Asset ist ein Eck-Diorama (nur zwei Wände
+ * modelliert, siehe [[mancave-front-photos-project]] in memory), der Bogen
+ * 240°→0° ist bewusst genau der tatsächlich möblierte Bereich — kein
+ * künstlich beschnittener Ausschnitt.
+ *
+ * Die vertikale Mausposition gibt zusätzlich ein kleines "Umschauen nach
+ * oben/unten" innerhalb des jeweils aktiven Frames (dieselbe Oversize-plus-
+ * Translate-Technik wie zuvor, nur nicht mehr horizontal, da das jetzt die
+ * Frame-Wahl übernimmt). Das Live-Dashboard liegt direkt auf dem
+ * ausgemessenen Bildschirmbereich des Schreibtisch-Frames (`DESK_TOUR_HOME_INDEX`)
+ * und blendet mit demselben Gewicht ein/aus wie dieser Frame selbst — sichtbar,
+ * sobald man (auch nur teilweise) zum Schreibtisch zurückschaut, kein Klick nötig.
  */
 export default function MancaveDesktopScene({ data }: { data: MancaveData }) {
   const [panel, setPanel] = useState<"trophy" | "gadgets" | null>(null);
-  const [look, setLook] = useState({ x: 0, y: 0 });
+  const [heading, setHeading] = useState(DESK_TOUR_HOME_INDEX);
+  const [tiltY, setTiltY] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
   function handlePointerMove(e: React.PointerEvent<HTMLDivElement>) {
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
-    const relX = (e.clientX - rect.left) / rect.width - 0.5;
+    const relX = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
     const relY = (e.clientY - rect.top) / rect.height - 0.5;
-    const maxOffset = rect.width * MAX_LOOK_PCT;
-    setLook({ x: -relX * 2 * maxOffset, y: -relY * 2 * maxOffset });
+    setHeading(relX * (DESK_TOUR_FRAMES.length - 1));
+    setTiltY(-relY * 2 * rect.width * MAX_TILT_PCT);
+  }
+  function handlePointerLeave() {
+    setHeading(DESK_TOUR_HOME_INDEX);
+    setTiltY(0);
   }
 
+  const homeWeight = frameWeight(heading, DESK_TOUR_HOME_INDEX);
+
   return (
-    <div ref={containerRef} onPointerMove={handlePointerMove} onPointerLeave={() => setLook({ x: 0, y: 0 })}
+    <div ref={containerRef} onPointerMove={handlePointerMove} onPointerLeave={handlePointerLeave}
       className="relative w-full overflow-hidden rounded-3xl border border-white/[0.06]"
       style={{ aspectRatio: "16 / 9", background: "#050810" }}>
 
-      {/* Umschau-Ebene: quadratisches Foto, 35% größer als der Ausschnitt, per Maus leicht verschoben */}
+      {/* Umschau-Ebene: alle Blickrichtungen gestapelt, per Deckkraft weich überblendet */}
       <div className="absolute" style={{
-        left: `${-(PAN_SCALE - 1) / 2 * 100}%`, top: `${-(PAN_SCALE * (16 / 9) - 1) / 2 * 100}%`,
-        width: `${PAN_SCALE * 100}%`, height: `${PAN_SCALE * (16 / 9) * 100}%`,
-        transform: `translate(${look.x}px, ${look.y}px)`,
+        left: 0, top: `${-(TILT_SCALE - 1) / 2 * 100}%`,
+        width: "100%", height: `${TILT_SCALE * 100}%`,
+        transform: `translateY(${tiltY}px)`,
         transition: "transform 220ms cubic-bezier(0.16, 1, 0.3, 1)",
       }}>
-        {/* eslint-disable-next-line @next/next/no-img-element -- lokales public-Asset, quadratisches Weitwinkel-Foto */}
-        <img src={DESK_SCENE.imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" draggable={false} />
+        {DESK_TOUR_FRAMES.map((frame, i) => (
+          // eslint-disable-next-line @next/next/no-img-element -- lokales public-Asset, quadratisches Foto
+          <img key={frame.deg} src={frame.imageUrl} alt="" draggable={false}
+            className="absolute inset-0 w-full h-full object-cover"
+            style={{ opacity: frameWeight(heading, i), willChange: "opacity", transition: "opacity 150ms linear" }} />
+        ))}
 
-        {/* Live-Dashboard direkt auf dem Monitor-Screen des Fotos — immer sichtbar, kein Klick nötig */}
+        {/* Live-Dashboard direkt auf dem Monitor-Screen des Schreibtisch-Frames — blendet mit demselben Gewicht ein wie dieser */}
         <div className="absolute overflow-hidden rounded-[2px]"
           style={{
             left: `${DESK_SCENE.screenRect.x0 * 100}%`, top: `${DESK_SCENE.screenRect.y0 * 100}%`,
             width: `${(DESK_SCENE.screenRect.x1 - DESK_SCENE.screenRect.x0) * 100}%`,
             height: `${(DESK_SCENE.screenRect.y1 - DESK_SCENE.screenRect.y0) * 100}%`,
+            opacity: homeWeight, pointerEvents: homeWeight > 0.5 ? "auto" : "none",
           }}>
           <MonitorScreenContent data={data} />
         </div>
 
         {/* ── Wandregal (Pokale & Abzeichen) ───────────────────────────── */}
         <button onClick={() => setPanel("trophy")} title="Pokale & Abzeichen"
-          className="absolute group text-left" style={{ left: "10%", top: "32%", width: "16%" }}>
+          className="absolute group text-left" style={{ left: "10%", top: "32%", width: "16%", opacity: homeWeight, pointerEvents: homeWeight > 0.5 ? "auto" : "none" }}>
           <div className="rounded-xl px-3 py-2.5 transition-transform group-hover:scale-[1.03]"
             style={{ background: "rgba(4,10,9,0.55)", border: "1px solid rgba(245,158,11,0.22)", backdropFilter: "blur(3px)" }}>
             <div className="flex items-center gap-1.5 mb-1.5">
@@ -89,11 +105,11 @@ export default function MancaveDesktopScene({ data }: { data: MancaveData }) {
           </div>
         </button>
 
-        {/* ── Gadgets (PC, Controller, Peripherie, Licht) — Position ≈ PC-Tower im Foto ── */}
+        {/* ── Gadgets (PC, Controller, Peripherie, Licht) — Position ≈ PC-Tower im Schreibtisch-Frame ── */}
         {data.gadgets.some(g => g.zone === "other") && (
           <button onClick={() => setPanel("gadgets")} title="Gadgets"
             className="absolute -translate-x-1/2 -translate-y-1/2 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full transition-transform hover:scale-[1.05]"
-            style={{ left: `${DESK_SCENE.pcHotspot.x * 100}%`, top: `${DESK_SCENE.pcHotspot.y * 100}%`, background: "rgba(4,10,9,0.65)", border: "1px solid rgba(45,212,191,0.3)", backdropFilter: "blur(3px)" }}>
+            style={{ left: `${DESK_SCENE.pcHotspot.x * 100}%`, top: `${DESK_SCENE.pcHotspot.y * 100}%`, opacity: homeWeight, pointerEvents: homeWeight > 0.5 ? "auto" : "none", background: "rgba(4,10,9,0.65)", border: "1px solid rgba(45,212,191,0.3)", backdropFilter: "blur(3px)" }}>
             <Package className="w-3.5 h-3.5 text-teal-300" />
             <span className="text-[10px] font-semibold text-teal-200">Gadgets</span>
           </button>
