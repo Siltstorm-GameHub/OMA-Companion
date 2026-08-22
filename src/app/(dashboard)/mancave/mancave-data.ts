@@ -5,21 +5,20 @@ export interface MancaveScreenRect { x0: number; y0: number; x1: number; y1: num
 /**
  * Kategorien, die "sinnvoll auf/um den Schreibtisch" stehen — genau die
  * Teilmenge der Gaming-Zimmer-Möbel, die in der Mancave-Szene als Gadgets
- * auftauchen. Tapeten/Böden/Poster/Pflanzen etc. bleiben draußen, die wirken
- * hier nur als Rauschen. "schreibtisch" bewusst NICHT dabei — der Tisch IST
- * die Bühne selbst, kein Gadget, das zusätzlich draufgestellt wird.
+ * auftauchen. Tapeten/Böden/Poster/Pflanzen/Vitrine etc. bleiben draußen.
+ * "schreibtisch" bewusst NICHT dabei — der Tisch IST die Bühne selbst.
+ * "sitzen" (Stuhl) bewusst NICHT dabei — die Ego-Perspektive sitzt der User
+ * SELBST auf dem Stuhl, der taucht im eigenen Blickfeld nicht auf.
  */
 export const MANCAVE_GADGET_CATEGORIES: RoomCategory[] = [
-  "rechner", "bildschirm", "peripherie", "sitzen", "licht", "konsole",
+  "rechner", "bildschirm", "peripherie", "licht", "konsole",
 ];
 
 /** Wo in der Ego-Szene das echte Foto dieses Items landet. */
-export type MancaveRenderZone = "monitor" | "desk" | "floor";
+export type MancaveRenderZone = "monitor" | "other";
 
 export function renderZoneFor(category: RoomCategory): MancaveRenderZone {
-  if (category === "bildschirm") return "monitor";
-  if (category === "peripherie" || category === "licht") return "desk";
-  return "floor"; // rechner, sitzen, konsole — steht neben/unter dem Tisch
+  return category === "bildschirm" ? "monitor" : "other";
 }
 
 export interface MancaveGadget {
@@ -76,6 +75,19 @@ export interface MancaveData {
   gadgets:         MancaveGadget[];
 }
 
+/**
+ * Die feste Hero-Kulisse der Desktop-Ego-Ansicht: ein einziges, in Blender aus
+ * dem echten Schreibtisch+Monitor+Tastatur-Aufbau (`3DAssetsRoom/LP_Ortographic_Gaming_Room.glb`)
+ * gerendertes Sitzperspektiven-Foto, statt einer handgezeichneten SVG-Szene.
+ * `screenRect` markiert den sichtbaren Anzeigebereich des rechten/Haupt-
+ * Monitors darin — dort liegt das Live-Dashboard direkt auf dem Foto.
+ */
+export const DESK_SCENE = {
+  imageUrl: "/room-items/front/desk_scene_generic.png",
+  w: 1600, h: 900,
+  screenRect: { x0: 0.3737, y0: 0, x1: 1.0, y1: 0.5039 } satisfies MancaveScreenRect,
+};
+
 /** Generischer Notfall-Bildschirmbereich für Monitore ohne ausgemessenes screenRect. */
 export const FALLBACK_SCREEN_RECT: MancaveScreenRect = { x0: 0.22, y0: 0.2, x1: 0.78, y1: 0.56 };
 
@@ -100,8 +112,16 @@ export const MANCAVE_FRONT_PHOTOS: Partial<Record<string, MancaveFrontPhoto>> = 
 export const MANCAVE_FRONT_FALLBACK: Partial<Record<RoomCategory, MancaveFrontPhoto>> = {
   bildschirm: {
     imageUrl: "/room-items/front/monitor_generic_front.png",
-    w: 1024, h: 1024,
-    screenRect: { x0: 0.068, y0: 0.178, x1: 0.932, y1: 0.605 },
+    w: 962, h: 718,
+    screenRect: { x0: 0.0402, y0: 0.0408, x1: 0.9598, y1: 0.6497 },
+  },
+  rechner: {
+    imageUrl: "/room-items/front/pc_generic_front.png",
+    w: 426, h: 931,
+  },
+  konsole: {
+    imageUrl: "/room-items/front/controller_generic_front.png",
+    w: 962, h: 659,
   },
 };
 
