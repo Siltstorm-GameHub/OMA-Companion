@@ -363,10 +363,121 @@ function LogoRugStatic() {
   );
 }
 
-function RoomModel() {
+/**
+ * Boden/Wand-Fotomaterial je Zimmerstufe (`surfaceTier`, aus
+ * `computeSurfaceTier` in mancave-items.ts — Durchschnitt aller Objekt-
+ * Stufen). Die Referenzszene hatte Boden+Wand+Decke bisher als EIN Mesh
+ * ("Cube", der Raumschale) mit EINEM Material — per Blender MCP nach
+ * Flächennormalen in drei eigene Materialien aufgeteilt (`MC_Floor`,
+ * `MC_Wall`, `MC_Ceiling`, unverändert am Mesh selbst, nur neue Material-
+ * Zuweisung pro Fläche), damit sich Boden und Wand hier zur Laufzeit
+ * unabhängig per Textur-Austausch umschalten lassen, ohne 4×4 Raum-
+ * Varianten aus Blender exportieren zu müssen. Die Decke bleibt bewusst
+ * unverändert (kein separates Deckenbild angefordert).
+ *
+ * Die vier Foto-Texturen pro Fläche (siehe public/mancave-textures/) sind
+ * KI-generiert (Canva `generate-design`, desktop_wallpaper), nicht
+ * garantiert nahtlos kachelbar — deshalb ohne RepeatWrapping-Vervielfachung
+ * eingesetzt (das vorhandene UV-Mapping der Szene entscheidet, wie oft es
+ * sich wiederholt; ungeprüft, ob das nahtlos wirkt oder sichtbare Kacheln zeigt).
+ */
+const FLOOR_TEXTURES = ["/mancave-textures/floor_tier1.jpg", "/mancave-textures/floor_tier2.jpg", "/mancave-textures/floor_tier3.jpg", "/mancave-textures/floor_tier4.jpg"];
+const WALL_TEXTURES = ["/mancave-textures/wall_tier1.jpg", "/mancave-textures/wall_tier2.jpg", "/mancave-textures/wall_tier3.jpg", "/mancave-textures/wall_tier4.jpg"];
+for (const url of [...FLOOR_TEXTURES, ...WALL_TEXTURES]) useTexture.preload(url);
+
+function RoomModel({ surfaceTier }: { surfaceTier: number }) {
   const { scene } = useGLTF(ROOM_MODEL_URL);
-  const cloned = useMemo(() => scene.clone(true), [scene]);
+  const idx = Math.min(4, Math.max(1, surfaceTier)) - 1;
+  const floorTex = useTexture(FLOOR_TEXTURES[idx]);
+  const wallTex = useTexture(WALL_TEXTURES[idx]);
+  /* eslint-disable react-hooks/immutability -- geladene Three.js-Textur/Material-
+     Objekte direkt zu konfigurieren (colorSpace, map, needsUpdate) ist normales
+     three.js-API-Verhalten, keine React-Hook-Wert-Mutation. */
+  const cloned = useMemo(() => {
+    const clone = scene.clone(true);
+    floorTex.colorSpace = THREE.SRGBColorSpace;
+    wallTex.colorSpace = THREE.SRGBColorSpace;
+    clone.traverse(obj => {
+      if (!(obj instanceof THREE.Mesh)) return;
+      const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+      for (const mat of mats) {
+        if (!(mat instanceof THREE.MeshStandardMaterial)) continue;
+        if (mat.name === "MC_Floor") { mat.map = floorTex; mat.needsUpdate = true; }
+        if (mat.name === "MC_Wall") { mat.map = wallTex; mat.needsUpdate = true; }
+      }
+    });
+    return clone;
+  }, [scene, floorTex, wallTex]);
+  /* eslint-enable react-hooks/immutability */
   return <primitive object={cloned} />;
+}
+
+// Fenster-Öffnung: die Referenzszene ist KEINE geschlossene Box, sondern ein
+// offenes Eck-Diorama (nur 2 echte Wände, der Rest ist absichtlich offen und
+// wird vom Nebel kaschiert, siehe [[mancave-profile-project]] in memory) —
+// deshalb kein Loch geschnitten, sondern eine bereits offene Stelle an der
+// -Y-Wand (derselben Wand wie das Regal) genutzt, per Bounding-Box-Analyse
+// als frei bestätigt (nur 1 Face in diesem Bereich).
+const WINDOW_POS = new THREE.Vector3(0.3, 1.5, 0.886);
+const WINDOW_W = 0.9, WINDOW_H = 1.1;
+// Ausblick-Ebene deutlich HINTER dem Fenster (weiter im "Außen"-Bereich) —
+// weil die Kamera in dieser Ego-Ansicht nur ROTIERT, nie die Position
+// wechselt (siehe LookAroundRig), reicht eine einzelne, echt entfernte
+// 3D-Fläche für einen korrekten perspektivischen "3D-Effekt" beim Umschauen
+// (keine Bewegungs-Parallaxe nötig, nur echte Tiefe statt einer flach an
+// der Scheibe klebenden Textur).
+const WINDOW_VIEW_DISTANCE = 4.2;
+const WINDOW_VIEW_TEXTURES = ["/mancave-textures/window_view_tier1.jpg", "/mancave-textures/window_view_tier2.jpg", "/mancave-textures/window_view_tier3.jpg", "/mancave-textures/window_view_tier4.jpg"];
+for (const url of WINDOW_VIEW_TEXTURES) useTexture.preload(url);
+
+/** Ausblick: große Fläche weit hinter dem Fenster, texturiert mit dem KI-generierten Stufenbild. */
+function WindowView({ surfaceTier }: { surfaceTier: number }) {
+  const idx = Math.min(4, Math.max(1, surfaceTier)) - 1;
+  const tex = useTexture(WINDOW_VIEW_TEXTURES[idx]);
+  /* eslint-disable-next-line react-hooks/immutability -- Textur-colorSpace direkt
+     setzen ist normales three.js-API-Verhalten, keine Hook-Wert-Mutation. */
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return (
+    <mesh position={[WINDOW_POS.x, WINDOW_POS.y, WINDOW_POS.z + WINDOW_VIEW_DISTANCE]}>
+      <planeGeometry args={[WINDOW_VIEW_DISTANCE * 2.2, WINDOW_VIEW_DISTANCE * 1.6]} />
+      <meshBasicMaterial map={tex} toneMapped={false} fog={false} />
+    </mesh>
+  );
+}
+
+/**
+ * Fensterrahmen: rein prozedural (kein Foto nötig), 4 Riegel um die Öffnung
+ * herum, Stil/Farbe wechselt mit der Zimmerstufe — Stufe 1 dünner rostiger
+ * Metallrahmen, Stufe 4 breiter dunkler Rahmen mit leicht leuchtender
+ * Teal-Kante (passend zum restlichen Neon-Akzent-Look der Szene).
+ */
+const WINDOW_FRAME_STYLES = [
+  { color: "#6b5a4a", thickness: 0.02, emissive: "#000000", emissiveIntensity: 0 },
+  { color: "#c9c4ba", thickness: 0.025, emissive: "#000000", emissiveIntensity: 0 },
+  { color: "#2a2e36", thickness: 0.03, emissive: "#0d3b36", emissiveIntensity: 0.15 },
+  { color: "#15181f", thickness: 0.035, emissive: "#2dd4bf", emissiveIntensity: 0.35 },
+];
+
+function WindowFrame({ surfaceTier }: { surfaceTier: number }) {
+  const style = WINDOW_FRAME_STYLES[Math.min(4, Math.max(1, surfaceTier)) - 1];
+  const t = style.thickness;
+  const mat = (
+    <meshStandardMaterial
+      color={style.color} roughness={0.5} metalness={0.4}
+      emissive={style.emissive} emissiveIntensity={style.emissiveIntensity} toneMapped={false}
+    />
+  );
+  return (
+    <group position={WINDOW_POS}>
+      <mesh position={[0, WINDOW_H / 2 + t / 2, 0]}><boxGeometry args={[WINDOW_W + t * 2, t, t]} />{mat}</mesh>
+      <mesh position={[0, -WINDOW_H / 2 - t / 2, 0]}><boxGeometry args={[WINDOW_W + t * 2, t, t]} />{mat}</mesh>
+      <mesh position={[WINDOW_W / 2 + t / 2, 0, 0]}><boxGeometry args={[t, WINDOW_H, t]} />{mat}</mesh>
+      <mesh position={[-WINDOW_W / 2 - t / 2, 0, 0]}><boxGeometry args={[t, WINDOW_H, t]} />{mat}</mesh>
+      {/* Mittelsprosse */}
+      <mesh position={[0, 0, 0]}><boxGeometry args={[WINDOW_W, t * 0.7, t * 0.7]} />{mat}</mesh>
+      <mesh position={[0, 0, 0]}><boxGeometry args={[t * 0.7, WINDOW_H, t * 0.7]} />{mat}</mesh>
+    </group>
+  );
 }
 
 function RoomLighting() {
@@ -499,7 +610,9 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
         <RoomLighting />
         <LookAroundRig />
         <Suspense fallback={null}>
-          <RoomModel />
+          <RoomModel surfaceTier={data.surfaceTier} />
+          <WindowFrame surfaceTier={data.surfaceTier} />
+          <WindowView surfaceTier={data.surfaceTier} />
           <LogoRugStatic />
           <SwappableProp tier={pcTier} models={PC_TIER_MODELS} position={PC_POS} />
           <SwappableProp tier={monitorTier} models={MONITOR_TIER_MODELS} position={MONITOR_MODEL_POS} />
