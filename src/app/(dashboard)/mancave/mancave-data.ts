@@ -83,9 +83,12 @@ export interface MancaveData {
  * Monitors darin — dort liegt das Live-Dashboard direkt auf dem Foto.
  */
 export const DESK_SCENE = {
-  imageUrl: "/room-items/front/desk_scene_generic.png",
-  w: 1600, h: 900,
-  screenRect: { x0: 0.468, y0: 0.2033, x1: 0.7785, y1: 0.5188 } satisfies MancaveScreenRect,
+  imageUrl: "/room-items/front/desk_scene_generic.jpg",
+  /** Quadratisches Weitwinkel-Foto (mehr Bildfeld als der sichtbare Ausschnitt), damit die Szene per Maus etwas "umgeschaut" werden kann — siehe `MancaveDesktopScene.tsx`. */
+  w: 1600, h: 1600,
+  screenRect: { x0: 0.4734, y0: 0.3609, x1: 0.7321, y1: 0.5088 } satisfies MancaveScreenRect,
+  /** Ungefähre Bildposition (Bruchteile) des PC-Towers im Foto, für den Gadgets-Hotspot. */
+  pcHotspot: { x: 0.855, y: 0.484 },
 };
 
 /** Generischer Notfall-Bildschirmbereich für Monitore ohne ausgemessenes screenRect. */
