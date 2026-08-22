@@ -212,21 +212,22 @@ const MONITOR_MODEL_POS = new THREE.Vector3(1.215, 0.816, -0.741);
 
 /**
  * Schreibtischstuhl (Stufen 1-4): der alte Katalog hat nur 3 Modelle
- * (stuhl_buero/stuhl_gaming/stuhl_racing, Lücke bei Stufe 2) — Stufe 2 nutzt
- * vorerst dasselbe Modell wie Stufe 1 (noch kein sichtbarer Unterschied,
- * bis es echte Zwischenstufen-Assets gibt). Alle drei GLBs sind bereits
- * boden-verankert UND horizontal zentriert (min.y≈0, center.x/z≈0, per
- * Node/three.js-Messscript geprüft) — `fix` braucht daher kaum Korrektur.
- * KEINE Rotation gesetzt: der Stuhl sitzt größtenteils außerhalb des
- * Sichtfelds der Ego-Kamera (die Kamera SITZT quasi in ihm), Fehlausrichtung
- * fällt hier viel weniger auf als beim Monitor — bewusst nicht vorab
- * vermessen, nur bei tatsächlich gemeldetem Problem nachbessern.
+ * (stuhl_buero/stuhl_gaming/stuhl_racing, Lücke bei Stufe 2) — Stufe 1 und 2
+ * sehen deshalb ABSICHTLICH gleich aus (dasselbe Modell, `chair_office.glb`),
+ * bis es ein echtes Zwischenstufen-Asset gibt — vom User bestätigt beobachtet,
+ * kein Bug. Alle drei GLBs sind bereits boden-verankert UND horizontal
+ * zentriert (min.y≈0, center.x/z≈0, per Node/three.js-Messscript geprüft) —
+ * `fix` braucht daher kaum Korrektur.
+ *
+ * `rotationY=Math.PI` (180°) für alle vier Stufen nach User-Feedback ergänzt
+ * — vorher unrotiert (Annahme war, Fehlausrichtung falle hier kaum auf, da
+ * die Kamera quasi im Stuhl sitzt; laut User war sie doch sichtbar falsch).
  */
 const STUHL_TIER_MODELS: Record<number, TierModelCfg> = {
-  1: { url: "/models/chair_office.glb", fix: [0, -0.017, 0], scale: 1 },
-  2: { url: "/models/chair_office.glb", fix: [0, -0.017, 0], scale: 1 },
-  3: { url: "/models/chair_gaming.glb", fix: [0, -0.009, 0], scale: 1 },
-  4: { url: "/models/chair_racing.glb", fix: [0, 0, 0],      scale: 1 },
+  1: { url: "/models/chair_office.glb", fix: [0, -0.017, 0], scale: 1, rotationY: Math.PI },
+  2: { url: "/models/chair_office.glb", fix: [0, -0.017, 0], scale: 1, rotationY: Math.PI },
+  3: { url: "/models/chair_gaming.glb", fix: [0, -0.009, 0], scale: 1, rotationY: Math.PI },
+  4: { url: "/models/chair_racing.glb", fix: [0, 0, 0],      scale: 1, rotationY: Math.PI },
 };
 // "Plane.002" (Material "chair", Rückenlehne) aus der Referenzszene entfernt
 // — X/Z hier übernommen, Y auf Bodenhöhe (0) gesetzt (Boden-verankerte Modelle).
