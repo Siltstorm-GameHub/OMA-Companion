@@ -39,14 +39,13 @@ const EYE = new THREE.Vector3(0.05, 1.28, -0.95);
 const FORWARD = new THREE.Vector3(0.9598, -0.2806, 0);
 const LOOK_TARGET = EYE.clone().add(FORWARD);
 
-// Bildschirm-Mitte des Haupt-Monitors — "Cube.015" + "Cube.002" bilden
-// zusammen EINEN hohen Bildschirm (dieselbe Wandposition, direkt vertikal
-// gestapelt: Cube.015 unten, Cube.002 oben, siehe Nachmessung), darum Mitte
-// über beide gemeinsam berechnet statt nur über eins der beiden Teilstücke —
-// die erste Fassung landete dadurch zu weit unten im Screen. Zusätzlich um
-// 0.05 Richtung Kamera versetzt (entlang -FORWARD), sonst verdeckt die
-// Bildschirm-Fläche selbst das Html-Overlay (Selbst-Okklusion).
-const SCREEN_POS = new THREE.Vector3(1.18, 1.25, -0.741);
+// Bildschirm-Mitte des Haupt-Monitors ("Cube.015") — bewusst NICHT auf die
+// höhere, gemeinsame Mitte von Cube.015+Cube.002 verschoben (das wurde
+// ausprobiert, vom User aber als schlechter beurteilt und zurückgesetzt) —
+// diese niedrigere Position bleibt der bevorzugte Stand. Um 0.05 Richtung
+// Kamera versetzt (entlang -FORWARD), sonst verdeckt die Bildschirm-Fläche
+// selbst das Html-Overlay (Selbst-Okklusion).
+const SCREEN_POS = new THREE.Vector3(1.215, 1.091, -0.741);
 // PC-Tower-Position ("Cube.017") — Anker für den Gadgets-Hotspot.
 const PC_POS = new THREE.Vector3(1.05, 1.02, -0.29);
 // Nanoleaf-Dreieck-Panels über dem Schreibtisch (Mittelpunkt aller 21
@@ -62,12 +61,17 @@ function RoomModel() {
 function RoomLighting() {
   return (
     <>
-      <ambientLight intensity={0.55} />
-      <hemisphereLight args={["#5a7a90", "#141b26", 0.7]} />
-      <directionalLight position={[EYE.x - 1, 3.2, EYE.z + 1]} intensity={1.6} color="#fff3df" />
-      <pointLight position={[SCREEN_POS.x - 0.3, 1.9, SCREEN_POS.z]} intensity={1.2} color="#2dd4bf" distance={5} decay={2} />
-      <pointLight position={[EYE.x, 2.0, EYE.z]} intensity={0.8} color="#ffffff" distance={4} decay={2} />
-      <pointLight position={[SHELF_POS.x, SHELF_POS.y, SHELF_POS.z]} intensity={0.7} color="#a78bfa" distance={4} decay={2} />
+      {/* Etwas gedämpfter als zuvor: die neue Rauheits-Textur auf Tischmatte/
+          Couch/Teppich/PC-Gehäuse (siehe MODEL_TEXTURE-Notiz oben) braucht
+          Kontrast, um sichtbar zu sein — bei zu viel Licht liefen diese
+          hellen Flächen vorher komplett weiß aus (Tone-Mapping-Clipping),
+          das hat die Textur unsichtbar gemacht. */}
+      <ambientLight intensity={0.4} />
+      <hemisphereLight args={["#5a7a90", "#141b26", 0.5]} />
+      <directionalLight position={[EYE.x - 1, 3.2, EYE.z + 1]} intensity={1.1} color="#fff3df" />
+      <pointLight position={[SCREEN_POS.x - 0.3, 1.9, SCREEN_POS.z]} intensity={1.0} color="#2dd4bf" distance={5} decay={2} />
+      <pointLight position={[EYE.x, 2.0, EYE.z]} intensity={0.55} color="#ffffff" distance={4} decay={2} />
+      <pointLight position={[SHELF_POS.x, SHELF_POS.y, SHELF_POS.z]} intensity={0.6} color="#a78bfa" distance={4} decay={2} />
     </>
   );
 }
