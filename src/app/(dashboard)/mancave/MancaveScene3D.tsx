@@ -572,9 +572,18 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
           {/* min-h-0 ist Pflicht: als Flex-Kind von "items-center" hat dieses
               Div sonst ein implizites min-height:auto, das max-h+overflow-y-
               auto aushebelt (Inhalt läuft über statt zu scrollen) — der
-              klassische Flexbox-Scroll-Bug, genau der gemeldete Fehler. */}
+              klassische Flexbox-Scroll-Bug.
+              overflowY hier zusätzlich als INLINE Style: die "card-shine"-
+              Klasse (globals.css, für den Hover-Glanzeffekt) setzt selbst
+              `overflow: hidden` — gleiche Spezifität wie Tailwinds
+              overflow-y-auto-Klasse, gewinnt aber durch spätere Position im
+              kompilierten Stylesheet und hebelte das Scrollen komplett aus
+              (der eigentliche Grund für den erneut gemeldeten Bug). Inline
+              Styles schlagen jede klassenbasierte Regel unabhängig von der
+              Cascade-Reihenfolge, daher hier der garantiert wirksame Fix. */}
           <div onClick={e => e.stopPropagation()}
-            className="glass card-shine rounded-2xl p-5 w-full max-w-md max-h-[85%] min-h-0 overflow-y-auto relative animate-fade-in">
+            className="glass card-shine rounded-2xl p-5 w-full max-w-md max-h-[85%] min-h-0 relative animate-fade-in"
+            style={{ overflowY: "auto" }}>
             <button onClick={() => setPanel(null)} aria-label="Schließen"
               className="absolute top-3 right-3 w-7 h-7 rounded-lg flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/[0.06] transition-colors">
               ✕
