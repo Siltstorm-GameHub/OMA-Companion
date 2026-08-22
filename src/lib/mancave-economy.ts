@@ -1,7 +1,7 @@
 import { prisma } from "./prisma";
 import { COIN_PREFIX } from "./points";
 import {
-  MANCAVE_ITEMS, computeSurfaceTier, defaultTier, getMancaveItem, nextUpgradeCost,
+  MANCAVE_DEV_FREE_MODE, MANCAVE_ITEMS, computeSurfaceTier, defaultTier, getMancaveItem, nextUpgradeCost,
 } from "./mancave-items";
 
 /** Stufe je Slot-Key, inklusive noch nicht materialisierter Slots (siehe Kommentar unten). */
@@ -61,6 +61,10 @@ export async function upgradeMancaveItem(userId: string, itemKey: string): Promi
       create: { userId, itemKey, tier: newTier },
       update: { tier: newTier },
     });
+    // Dev-Testphase (siehe MANCAVE_DEV_FREE_MODE): cost ist dann immer 0 —
+    // kein Punktabzug, kein Ledger-Eintrag, damit das echte Münz-Konto/-Log
+    // nicht mit Test-Upgrades vollgeschrieben wird.
+    if (cost === 0) return { points: user.points };
     const updated = await tx.user.update({
       where: { id: userId },
       data:  { points: { decrement: cost } },
@@ -73,4 +77,37 @@ export async function upgradeMancaveItem(userId: string, itemKey: string): Promi
   });
 
   return { ok: true, itemKey, newTier, points: result.points };
+}
+
+export type DowngradeResult =
+  | { ok: true; itemKey: string; newTier: number }
+  | { error: string };
+
+/**
+ * NUR für die Dev-Testphase (siehe MANCAVE_DEV_FREE_MODE): eine Stufe zurück,
+ * kostenlos, keine Erstattung — reines Test-Werkzeug, um Zustände erneut
+ * durchzuklicken. Läuft auf `defaultTier` (Grundausstattung nie unter 1,
+ * Zusatzobjekte nie unter 0) und ist im echten Rollout komplett gesperrt.
+ */
+export async function downgradeMancaveItem(userId: string, itemKey: string): Promise<DowngradeResult> {
+  if (!MANCAVE_DEV_FREE_MODE) return { error: "Nur in der Testphase verfügbar" };
+
+  const def = getMancaveItem(itemKey);
+  if (!def) return { error: "Unbekanntes Objekt" };
+
+  const existing = await prisma.mancaveItem.findUnique({
+    where: { userId_itemKey: { userId, itemKey } }, select: { tier: true },
+  });
+  const currentTier = existing?.tier ?? defaultTier(def);
+  const minTier = defaultTier(def);
+  if (currentTier <= minTier) return { error: "Bereits auf Mindeststufe" };
+
+  const newTier = currentTier - 1;
+  await prisma.mancaveItem.upsert({
+    where:  { userId_itemKey: { userId, itemKey } },
+    create: { userId, itemKey, tier: newTier },
+    update: { tier: newTier },
+  });
+
+  return { ok: true, itemKey, newTier };
 }
