@@ -1,6 +1,6 @@
 "use client";
 import { MonitorSmartphone } from "lucide-react";
-import MancaveDesktopScene from "./MancaveDesktopScene";
+import MancaveScene3D from "./MancaveScene3D";
 import MancaveMobileApp from "./MancaveMobileApp";
 import type { MancaveData } from "./mancave-data";
 
@@ -22,7 +22,7 @@ export default function MancaveClient({ data }: { data: MancaveData }) {
       </div>
 
       <div className="hidden lg:block">
-        <MancaveDesktopScene data={data} />
+        <MancaveScene3D data={data} />
       </div>
       <div className="lg:hidden">
         <MancaveMobileApp data={data} />
