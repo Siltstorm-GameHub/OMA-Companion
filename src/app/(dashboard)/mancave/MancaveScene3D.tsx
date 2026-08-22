@@ -153,22 +153,27 @@ function SwappableProp({ tier, models, position }: { tier: number; models: Recor
 }
 
 /**
- * PC-Turm (Stufen 1-4): pc_billig → pc_violett → pc_gaming → pc_highend.
- * Stufe 3/4-Rotation nach User-Feedback korrigiert (nicht geometrisch
- * hergeleitet wie bei Monitor Stufe 1 — hier direkt als "um X Grad drehen"
- * gemeldet): Stufe 3 (pc_white_rgb) 180°. Stufe 4 (pc_highend) sollte 90°
- * werden, die erste Vorzeichen-Wahl (+90°) drehte in die falsche Richtung —
- * per User-Feedback um weitere 180° korrigiert, macht in Summe -90°
- * (+90°+180° ≡ -90° modulo 360°). Stufe 4 hatte außerdem eine mitgelieferte
- * Boden-/Sockel-Fläche direkt unter dem Gehäuse (Mesh "Object_6_24", Material
- * "Material.106", per Node/three.js-Messscript gefunden: eine dünne, flache
- * Platte, die fast genau die gesamte Grundfläche des Modells abdeckt) — als
- * `excludeMeshNames` entfernt, da sie laut User sichtbar störte.
+ * PC-Turm (Stufen 1-4): pc_violett → pc_gaming → mancave_pc_reference →
+ * pc_highend. User-Wunsch: "Cube.017" aus der Referenzszene (das
+ * URSPRÜNGLICHE, handgebaute PC-Modell — genau das, was diesem Slot am
+ * Anfang der Session entnommen wurde, um ihn austauschbar zu machen, siehe
+ * PC_POS-Kommentar) ist der perfekte Computer für Stufe 3, und die bisherigen
+ * Stufen 2/3 rutschen je eine Stufe runter (2→1, 3→2). Stufe 1 (`pc_billig`)
+ * und Stufe 4 (`pc_highend`) bleiben inhaltlich, Stufe 4 behält ihre
+ * Sockel-Flächen-Bereinigung (Mesh "Object_6_24"/Material "Material.106",
+ * eine mitgelieferte Boden-Platte).
+ *
+ * `mancave_pc_reference.glb` ist wie Nanoleaf/Deskmat/Couchtisch direkt aus
+ * der Referenzszene extrahiert — `location=(0,0,0)` in Blender bestätigt
+ * (Weltposition steckt in den Vertex-Daten, nicht im Objekt-Transform).
+ * Da `SwappableProp` aber IMMER `position` (hier `PC_POS`) auf die Gruppe
+ * addiert, muss `fix` das exakt aufheben (`fix = -PC_POS`, scale=1), sonst
+ * würde die schon korrekte Weltposition ein zweites Mal verschoben.
  */
 const PC_TIER_MODELS: Record<number, TierModelCfg> = {
-  1: { url: "/models/pc_billig.glb",       fix: [-0.357, 0.011, -0.090], scale: 0.69 },
-  2: { url: "/models/pc_tower_purple.glb", fix: [0, 0, 0],                scale: 0.77 },
-  3: { url: "/models/pc_white_rgb.glb",    fix: [0, 0, 0],                scale: 0.89, rotationY: Math.PI },
+  1: { url: "/models/pc_tower_purple.glb", fix: [0, 0, 0], scale: 0.77 },
+  2: { url: "/models/pc_white_rgb.glb",    fix: [0, 0, 0], scale: 0.89, rotationY: Math.PI },
+  3: { url: "/models/mancave_pc_reference.glb", fix: [-PC_POS.x, -PC_POS.y, -PC_POS.z], scale: 1 },
   4: {
     url: "/models/pc_highend.glb", fix: [-8.674, 0.721, 0.203], scale: 1.14,
     rotationY: -Math.PI / 2, excludeMeshNames: ["Object_6_24"],
