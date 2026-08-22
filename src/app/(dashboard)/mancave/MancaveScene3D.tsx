@@ -305,7 +305,14 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
       </div>
 
       {panel && (
-        <div className="absolute inset-0 flex items-center justify-center p-6" style={{ background: "rgba(2,5,8,0.55)", backdropFilter: "blur(2px)" }}
+        // z-index bewusst hoch gesetzt: drei's <Html>-Hotspots (Dashboard,
+        // Pokale/Ausbau/Gadgets-Buttons) werden per React-Portal in denselben
+        // Container gerendert, aber ERST asynchron beim R3F-Render-Loop
+        // angehängt — sie landen dadurch im rohen DOM NACH diesem Overlay,
+        // obwohl sie in der JSX weiter oben stehen. Ohne explizites z-index
+        // gewinnt reine DOM-Reihenfolge, und die Buttons lagen sichtbar über
+        // dem Popup statt darunter — das war der gemeldete Bug.
+        <div className="absolute inset-0 z-50 flex items-center justify-center p-6" style={{ background: "rgba(2,5,8,0.55)", backdropFilter: "blur(2px)" }}
           onClick={() => setPanel(null)}>
           <div onClick={e => e.stopPropagation()}
             className="glass card-shine rounded-2xl p-5 w-full max-w-md max-h-[85%] overflow-y-auto relative animate-fade-in">
