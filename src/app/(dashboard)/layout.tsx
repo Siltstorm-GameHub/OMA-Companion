@@ -12,6 +12,7 @@ import AuroraBackground from "@/components/AuroraBackground";
 import PartnerFooter from "@/components/PartnerFooter";
 import { prisma } from "@/lib/prisma";
 import { getRoomConfig, roomVisibleFor } from "@/lib/room-config";
+import { getMancaveConfig, mancaveVisibleFor } from "@/lib/mancave-config";
 import { getScopeTitle } from "@/lib/wanderpocal";
 
 // Seiten, die auch ohne Discord-Login sichtbar sein sollen (siehe Anforderung:
@@ -118,6 +119,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // Gaming-Zimmer: solange room_enabled aus ist, sehen nur Admins den Nav-Eintrag.
   const roomVisible = roomVisibleFor(
     await getRoomConfig(),
+    (session?.user as { role?: string } | undefined)?.role,
+  );
+  // Mancave: eigener Flag, gleiches Muster — solange mancave_enabled aus ist,
+  // sehen nur Admins den zusätzlichen Nav-Eintrag (ersetzt NICHT "Profil").
+  const mancaveVisible = mancaveVisibleFor(
+    await getMancaveConfig(),
     (session?.user as { role?: string } | undefined)?.role,
   );
   const newsItems: NewsItem[] = [];
@@ -255,7 +262,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
       {/* ── Floating Pill Nav (nur Desktop) ─────────────────────── */}
       <div className="hidden lg:block">
-        <FloatingPill roomVisible={roomVisible} />
+        <FloatingPill roomVisible={roomVisible} mancaveVisible={mancaveVisible} />
       </div>
 
       {/* ── Main Content ────────────────────────────────────────── */}
@@ -277,7 +284,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
       {/* ── Mobile Bottom Nav (immer sichtbar auf Handy) ───────── */}
       <div className="lg:hidden">
-        <BottomNav roomVisible={roomVisible} />
+        <BottomNav roomVisible={roomVisible} mancaveVisible={mancaveVisible} />
       </div>
     </div>
   );
