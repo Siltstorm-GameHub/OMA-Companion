@@ -8,7 +8,7 @@ import { loadRoom } from "@/lib/room";
 import { getRoomItem } from "@/lib/room-items";
 import { parseFavoriteGames } from "@/lib/favorite-games";
 import MancaveClient from "./MancaveClient";
-import { renderZoneFor, frontPhotoFor, MANCAVE_GADGET_CATEGORIES, type MancaveGadget, type MancaveData } from "./mancave-data";
+import { renderZoneFor, MANCAVE_GADGET_CATEGORIES, type MancaveGadget, type MancaveData } from "./mancave-data";
 
 export default async function MancavePage() {
   const me = await getSessionUser();
@@ -88,24 +88,18 @@ export default async function MancavePage() {
 
   // Gadgets: nur die aufgestellten Zimmer-Items, die sinnvoll am Schreibtisch
   // stehen (siehe MANCAVE_GADGET_CATEGORIES) — Tapeten, Böden, Poster & Co.
-  // bleiben draußen. Wo ein echtes Frontal-Render existiert (siehe
-  // frontPhotoFor), ersetzt das das 3/4-Winkel-Katalogfoto — die Ego-Ansicht
-  // braucht Objekte von vorne, nicht aus der isometrischen Zimmer-Perspektive.
+  // bleiben draußen. Für die Bild-Liste im Gadgets-Panel reicht das normale
+  // Katalogfoto (def.imageUrl) — die echte 3D-Ego-Ansicht selbst lädt die
+  // Objekte ohnehin als echte GLB-Modelle, nicht als Foto (siehe roomItemKeys
+  // unten + MancaveScene3D.tsx).
   const gadgets: MancaveGadget[] = room.placed
     .map(p => getRoomItem(p.key))
     .filter((def): def is NonNullable<typeof def> => !!def && MANCAVE_GADGET_CATEGORIES.includes(def.category))
-    .map(def => {
-      const front = frontPhotoFor(def.key, def.category);
-      return {
-        key: def.key, label: def.label, description: def.description,
-        accent: def.accent, category: def.category, zone: renderZoneFor(def.category),
-        price: def.price,
-        imageUrl:   front?.imageUrl   ?? def.imageUrl,
-        w:          front?.w          ?? def.w,
-        h:          front?.h          ?? def.h,
-        screenRect: front?.screenRect ?? def.screenRect,
-      };
-    });
+    .map(def => ({
+      key: def.key, label: def.label, description: def.description,
+      imageUrl: def.imageUrl, accent: def.accent, category: def.category, zone: renderZoneFor(def.category),
+      price: def.price,
+    }));
 
   const data: MancaveData = {
     displayName:     user.username ?? user.name ?? "Unbekannt",
@@ -132,6 +126,7 @@ export default async function MancavePage() {
     ],
     pokale: pokale.map(p => ({ id: p.id, title: p.title, isSeries: p.isSeries, awardedAt: p.awardedAt.toISOString() })),
     gadgets,
+    roomItemKeys: room.placed.map(p => p.key),
   };
 
   return <MancaveClient data={data} />;
