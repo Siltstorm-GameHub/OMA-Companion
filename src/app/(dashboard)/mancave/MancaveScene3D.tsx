@@ -77,12 +77,22 @@ interface TierModelCfg {
   url: string; fix: [number, number, number]; scale: number;
   /** Yaw-Korrektur (Radiant), falls die "Vorderseite" des Modells nicht schon lokal +Z/-X entspricht. */
   rotationY?: number;
+  /** Mesh-Namen, die nach dem Laden entfernt werden (z.B. eine mitgelieferte Boden-/Sockel-Fläche im Modell). */
+  excludeMeshNames?: string[];
 }
 
 function SwappableProp({ tier, models, position }: { tier: number; models: Record<number, TierModelCfg>; position: THREE.Vector3 }) {
   const cfg = models[Math.min(4, Math.max(1, tier))];
   const { scene } = useGLTF(cfg.url);
-  const cloned = useMemo(() => scene.clone(true), [scene]);
+  const cloned = useMemo(() => {
+    const clone = scene.clone(true);
+    if (cfg.excludeMeshNames?.length) {
+      const toRemove: THREE.Object3D[] = [];
+      clone.traverse(obj => { if (cfg.excludeMeshNames!.includes(obj.name)) toRemove.push(obj); });
+      for (const obj of toRemove) obj.removeFromParent();
+    }
+    return clone;
+  }, [scene, cfg]);
   return (
     <group position={position} rotation={[0, cfg.rotationY ?? 0, 0]}>
       <group scale={cfg.scale}>
@@ -92,46 +102,62 @@ function SwappableProp({ tier, models, position }: { tier: number; models: Recor
   );
 }
 
-// PC-Turm (Stufen 1-4): pc_billig → pc_violett → pc_gaming → pc_highend.
+/**
+ * PC-Turm (Stufen 1-4): pc_billig → pc_violett → pc_gaming → pc_highend.
+ * Stufe 3/4-Rotation nach User-Feedback korrigiert (nicht geometrisch
+ * hergeleitet wie bei Monitor Stufe 1 — hier direkt als "um X Grad drehen"
+ * gemeldet): Stufe 3 (pc_white_rgb) 180°, Stufe 4 (pc_highend) 90° (Richtung
+ * nicht spezifiziert, positive Drehrichtung als erster Versuch — bei Bedarf
+ * Vorzeichen tauschen). Stufe 4 hatte außerdem eine mitgelieferte Boden-/
+ * Sockel-Fläche direkt unter dem Gehäuse (Mesh "Object_6_24", Material
+ * "Material.106", per Node/three.js-Messscript gefunden: eine dünne, flache
+ * Platte, die fast genau die gesamte Grundfläche des Modells abdeckt) — als
+ * `excludeMeshNames` entfernt, da sie laut User sichtbar störte.
+ */
 const PC_TIER_MODELS: Record<number, TierModelCfg> = {
   1: { url: "/models/pc_billig.glb",       fix: [-0.357, 0.011, -0.090], scale: 0.69 },
   2: { url: "/models/pc_tower_purple.glb", fix: [0, 0, 0],                scale: 0.77 },
-  3: { url: "/models/pc_white_rgb.glb",    fix: [0, 0, 0],                scale: 0.89 },
-  4: { url: "/models/pc_highend.glb",      fix: [-8.674, 0.721, 0.203],   scale: 1.14 },
+  3: { url: "/models/pc_white_rgb.glb",    fix: [0, 0, 0],                scale: 0.89, rotationY: Math.PI },
+  4: {
+    url: "/models/pc_highend.glb", fix: [-8.674, 0.721, 0.203], scale: 1.14,
+    rotationY: Math.PI / 2, excludeMeshNames: ["Object_6_24"],
+  },
 };
 
 /**
  * Monitor (Stufen 1-4): roehrenmonitor → monitor_flach → monitor_144(curved)
- * → monitor_dreifach(triple). Ersetzt "Cube.015"+"Cube.002" aus der
- * Referenzszene (zusammen EIN hoher Screen, siehe SCREEN_POS-Kommentar) —
- * NICHT "Cube.016", ein separates zweites Screen-Objekt an anderer Position,
- * das (noch) Teil der festen Kulisse bleibt. `fix.y` hebt jedes Modell so an,
- * dass sein eigener Boden-Punkt exakt auf der echten Tischhöhe (0.816) landet
- * — einige Modelle (flach/curved/triple) bringen bereits eine eingebaute
- * Tischhöhen-Annahme mit (ihr eigener Ursprung liegt NICHT am Boden, siehe
- * [[mancave-profile-project]] in memory), roehrenmonitor dagegen ist
- * boden-verankert und braucht die volle Anhebung.
+ * → monitor_dreifach(triple). Ersetzt "Cube.015"+"Cube.002" (der Haupt-
+ * Screen) UND "Cube.016" (ein zweiter, kleinerer Screen-Kasten links auf dem
+ * Tisch, der laut User ebenfalls entfernt werden sollte) aus der Referenzszene.
  *
- * `rotationY`: die Modelle sind nicht einheitlich "nach vorne" (lokal -X,
- * unsere Blickrichtung zur Bildschirmfläche) ausgerichtet exportiert worden.
- * Für `roehrenmonitor` GEOMETRISCH bestätigt (nicht geraten!): sein
- * "Screen.001"-Material sitzt als dünne Scheibe am lokalen +Z-Rand (X:
- * [-0.192,0.191], Z:[0.209,0.231] von insgesamt [-0.25,0.25]) — geprüft per
- * Node/three.js-Skript (Mesh-Bounding-Box je Material). Lokal +Z → Welt -X
- * (Richtung Kamera) braucht -90°, daher rotationY=-Math.PI/2. Für
- * flach/curved/triple ist die Blickrichtung NOCH NICHT geometrisch bestätigt
- * (deren Screen-Material trägt keinen eindeutigen Namen wie "Screen"/"Glass",
- * die Silhouetten sind mehrdeutig) — vorerst unrotiert gelassen (rotationY
- * fehlt = 0), erst korrigieren, wenn ein User dort hochstuft und es
- * sichtbar falsch aussieht.
+ * `fix.y` ist jetzt einheitlich "-eigene min.y" (Boden-Anker auf lokalen
+ * Ursprung 0) für ALLE vier Modelle — die eigentliche Tischhöhen-Anhebung
+ * (0.816) steckt in `MONITOR_MODEL_POS.y`, genau wie beim PC-Turm. Wichtig:
+ * diese Reihenfolge ist SKALIERUNGS-SICHER, weil sie auf 0 zielt (0*scale=0
+ * bleibt immer 0) — ein früherer Versuch zielte direkt auf einen absoluten
+ * Wert (0.816) INNERHALB der Skalierungs-Gruppe, was bei Stufe 4s neuer,
+ * größerer Skalierung (siehe unten) zu falscher Höhe geführt hätte.
+ *
+ * `rotationY`: geometrisch hergeleitet (nicht geraten), per Node/three.js-
+ * Skript — flächengewichteter Durchschnitts-Normalenvektor jedes Meshes
+ * (Dreiecksfläche × Normale, aufsummiert, normalisiert):
+ * - roehrenmonitor: "Screen.001"-Material, Normale (0,0,1) → lokal +Z → -90°
+ * - monitor_flach_neu: "Mac"-Mesh (größte Fläche), Normale (0,-0.02,1.0) →
+ *   ebenfalls lokal +Z → -90° (gleiche Konvention wie roehrenmonitor)
+ * - monitor_curved: "tv"-Mesh, Normale (-0.612,0.04,-0.79) — keine reine
+ *   Kardinalrichtung (gekrümmter Screen), Rotationswinkel algebraisch gelöst
+ *   (R(θ)·(x,z)=(-1,0)) → θ≈0.912rad (≈52°)
+ * - monitor_triple: die drei "Wallpaper"-Screen-Meshes zeigen alle
+ *   überwiegend +X (Mitte (1,0,0), Seiten leicht nach ∓Z gefächert) → 180°
+ * `scale` bei Stufe 4 von 1 auf 1.4 erhöht (User: "viel zu klein").
  */
 const MONITOR_TIER_MODELS: Record<number, TierModelCfg> = {
-  1: { url: "/models/roehrenmonitor.glb",   fix: [0, 0.816, 0],      scale: 1, rotationY: -Math.PI / 2 },
-  2: { url: "/models/monitor_flach_neu.glb", fix: [0, 0.201, -0.4],  scale: 1 },
-  3: { url: "/models/monitor_curved.glb",   fix: [0, -0.034, 0],     scale: 1 },
-  4: { url: "/models/monitor_triple.glb",   fix: [0, -0.034, 0],     scale: 1 },
+  1: { url: "/models/roehrenmonitor.glb",    fix: [0, 0, 0],         scale: 1,   rotationY: -Math.PI / 2 },
+  2: { url: "/models/monitor_flach_neu.glb", fix: [0, -0.615, -0.4], scale: 1,   rotationY: -Math.PI / 2 },
+  3: { url: "/models/monitor_curved.glb",    fix: [0, -0.850, 0],    scale: 1,   rotationY: 0.912 },
+  4: { url: "/models/monitor_triple.glb",    fix: [0, -0.850, 0],    scale: 1.4, rotationY: Math.PI },
 };
-const MONITOR_MODEL_POS = new THREE.Vector3(1.215, 0, -0.741);
+const MONITOR_MODEL_POS = new THREE.Vector3(1.215, 0.816, -0.741);
 
 for (const m of [...Object.values(PC_TIER_MODELS), ...Object.values(MONITOR_TIER_MODELS)]) useGLTF.preload(m.url);
 // Nanoleaf-Dreieck-Panels über dem Schreibtisch (Mittelpunkt aller 21
@@ -211,8 +237,18 @@ function LookAroundRig() {
   });
   /* eslint-enable react-hooks/immutability */
 
+  /* eslint-disable react-hooks/immutability -- gl.domElement ist das reale
+     <canvas>-DOM-Element (kein React-verwalteter Zustand); sein .style direkt
+     zu setzen ist normales DOM-API-Verhalten, keine Hook-Wert-Mutation. */
   useEffect(() => {
     const el = gl.domElement;
+    // touch-action:none NUR hier am Canvas, nicht am äußeren Container (siehe
+    // dessen Kommentar unten) — sonst schränkt die CSS-Spec-Regel "Kind-
+    // touch-action ist die Schnittmenge mit allen Vorfahren" auch das
+    // Scrollen im Ausbau/Gadgets/Pokale-Popup ein, das ja ein Nachfahre
+    // desselben Containers ist (genau der gemeldete "nicht scrollbar"-Bug).
+    const prevTouchAction = el.style.touchAction;
+    el.style.touchAction = "none";
     const onDown = (e: PointerEvent) => { dragging.current = true; last.current = { x: e.clientX, y: e.clientY }; el.setPointerCapture(e.pointerId); };
     const onMove = (e: PointerEvent) => {
       if (!dragging.current) return;
@@ -231,8 +267,10 @@ function LookAroundRig() {
       el.removeEventListener("pointermove", onMove);
       el.removeEventListener("pointerup", onUp);
       el.removeEventListener("pointercancel", onUp);
+      el.style.touchAction = prevTouchAction;
     };
   }, [gl]);
+  /* eslint-enable react-hooks/immutability */
 
   return null;
 }
@@ -248,7 +286,10 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
 
   return (
     <div ref={containerRef}
-      className="relative w-full overflow-hidden rounded-3xl border border-white/[0.06] touch-none select-none"
+      // touch-action:none absichtlich NICHT hier (siehe LookAroundRig-
+      // Kommentar) — landet stattdessen gezielt nur auf dem Canvas, damit
+      // Touch-Scrollen in den Popups (Ausbau/Gadgets/Pokale) funktioniert.
+      className="relative w-full overflow-hidden rounded-3xl border border-white/[0.06] select-none"
       style={{ aspectRatio: "16 / 9", background: "#050810", cursor: "grab" }}>
       <Canvas shadows dpr={[1, 1.5]} gl={{ antialias: true }}>
         <color attach="background" args={["#050810"]} />
@@ -314,8 +355,12 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
         // dem Popup statt darunter — das war der gemeldete Bug.
         <div className="absolute inset-0 z-50 flex items-center justify-center p-6" style={{ background: "rgba(2,5,8,0.55)", backdropFilter: "blur(2px)" }}
           onClick={() => setPanel(null)}>
+          {/* min-h-0 ist Pflicht: als Flex-Kind von "items-center" hat dieses
+              Div sonst ein implizites min-height:auto, das max-h+overflow-y-
+              auto aushebelt (Inhalt läuft über statt zu scrollen) — der
+              klassische Flexbox-Scroll-Bug, genau der gemeldete Fehler. */}
           <div onClick={e => e.stopPropagation()}
-            className="glass card-shine rounded-2xl p-5 w-full max-w-md max-h-[85%] overflow-y-auto relative animate-fade-in">
+            className="glass card-shine rounded-2xl p-5 w-full max-w-md max-h-[85%] min-h-0 overflow-y-auto relative animate-fade-in">
             <button onClick={() => setPanel(null)} aria-label="Schließen"
               className="absolute top-3 right-3 w-7 h-7 rounded-lg flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/[0.06] transition-colors">
               ✕
