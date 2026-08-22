@@ -90,6 +90,20 @@ interface TierModelCfg {
    * direktem Blick in die exportierte glTF-JSON bestätigt, nicht geraten).
    */
   fixMaterialNames?: string[];
+  /**
+   * MATERIAL-Namen (nicht Objekt-Namen — dasselbe Material kann auf mehreren
+   * unterschiedlich benannten Meshes liegen), deren Metalness auf 0 gesetzt
+   * wird, Farbe bleibt erhalten. Für Fälle wie `monitor_dreifach`s
+   * "Wallpaper"-Material: dunkle Basisfarbe korrekt gesetzt, aber
+   * metallicFactor/roughnessFactor im Rohdatensatz nicht gesetzt → glTF-
+   * Spec-Default ist voll-metallisch — ohne Environment-Map in dieser Szene
+   * brennen nahe Punktlichter das dann zu großflächigem Weiß aus (dieselbe
+   * Ursache wie beim früheren Material.001-Specular-Blowout, hier aber am
+   * Rohdatensatz bestätigt statt nur vermutet).
+   */
+  fixMetalnessForMaterials?: string[];
+  /** Zusätzlicher Welt-Versatz NUR für diese Stufe, addiert auf die geteilte `position`-Prop des Slots. */
+  offset?: [number, number, number];
 }
 
 function SwappableProp({ tier, models, position }: { tier: number; models: Record<number, TierModelCfg>; position: THREE.Vector3 }) {
@@ -109,10 +123,28 @@ function SwappableProp({ tier, models, position }: { tier: number; models: Recor
         }
       });
     }
+    if (cfg.fixMetalnessForMaterials?.length) {
+      clone.traverse(obj => {
+        if (!(obj instanceof THREE.Mesh)) return;
+        const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+        for (const mat of mats) {
+          if (mat instanceof THREE.MeshStandardMaterial && cfg.fixMetalnessForMaterials!.includes(mat.name)) {
+            mat.metalness = 0;
+            mat.roughness = 0.6;
+            mat.needsUpdate = true;
+          }
+        }
+      });
+    }
     return clone;
   }, [scene, cfg]);
+  const worldPos: [number, number, number] = [
+    position.x + (cfg.offset?.[0] ?? 0),
+    position.y + (cfg.offset?.[1] ?? 0),
+    position.z + (cfg.offset?.[2] ?? 0),
+  ];
   return (
-    <group position={position} rotation={[0, cfg.rotationY ?? 0, 0]}>
+    <group position={worldPos} rotation={[0, cfg.rotationY ?? 0, 0]}>
       <group scale={cfg.scale}>
         <primitive object={cloned} position={cfg.fix} />
       </group>
@@ -190,14 +222,21 @@ const PC_TIER_MODELS: Record<number, TierModelCfg> = {
  * durch ein normales, nicht-metallisches Hellgrau (siehe `fixMaterialNames`
  * in `SwappableProp`).
  *
- * Stufe 4 (triple) laut User "2 Monitore, aber sollen direkt nebeneinander
- * auf dem Tisch stehen" — akzeptiert 2 sichtbare Screens (dritter vermutlich
- * durch die vorherige Rotation verdeckt/nicht im Blickfeld), aber die
- * Skalierung 1.4 war für den vorhandenen Tisch zu breit (Modell-Eigenbreite
- * bereits 1.414 Einheiten UNSKALIERT — bei 1.4× würde das Array knapp 2m
- * breit, deutlich über die Tischbreite hinaus). Auf 0.85 reduziert, damit
- * das Array eher auf den Tisch passt statt auseinanderzulaufen — ebenfalls
- * nicht geometrisch nachgemessen, pragmatische Korrektur.
+ * Stufe 4 (triple), Screenshot bestätigt zwei echte Probleme:
+ * (a) alle 3 Panels reine weiße Flächen ohne Bildschirminhalt — Ursache im
+ *     Rohdatensatz bestätigt: Material "Wallpaper" hat zwar eine korrekte
+ *     schwarze Basisfarbe, aber KEIN metallicFactor/roughnessFactor gesetzt
+ *     → glTF-Spec-Default ist voll-metallisch — ohne Environment-Map in
+ *     dieser Szene brennen die nahen Punktlichter das zu großflächigem Weiß
+ *     aus (dieselbe Ursache wie der frühere Material.001-Specular-Blowout,
+ *     hier aber am Rohdatensatz abgelesen). Fix: `fixMetalnessForMaterials:
+ *     ["Wallpaper"]` setzt Metalness auf 0, Farbe bleibt.
+ * (b) Array viel zu breit für den Tisch (Screenshot zeigt die Monitore weit
+ *     über die Tischkante hinausragend) — Modell-Eigenbreite 1.414 Einheiten
+ *     UNSKALIERT bei einer Tischbreite von nur 0.625 (Cube.001) macht selbst
+ *     die vorherige 0.85-Skalierung (≈1.2 Einheiten breit) fast doppelt so
+ *     breit wie der Tisch. Auf 0.4 reduziert (Zielbreite ≈0.57, knapp unter
+ *     Tischbreite) + `offset` etwas näher an die Tischmitte/-oberfläche.
  */
 const MONITOR_TIER_MODELS: Record<number, TierModelCfg> = {
   1: { url: "/models/roehrenmonitor.glb",    fix: [0, 0, 0],          scale: 1,    rotationY: -Math.PI / 2 },
@@ -206,7 +245,10 @@ const MONITOR_TIER_MODELS: Record<number, TierModelCfg> = {
     rotationY: -Math.PI / 2, fixMaterialNames: ["Mac"],
   },
   3: { url: "/models/monitor_curved.glb",    fix: [0, -0.850, 0],     scale: 1,    rotationY: 0.912 + Math.PI },
-  4: { url: "/models/monitor_triple.glb",    fix: [0, -0.850, 0],     scale: 0.85, rotationY: Math.PI },
+  4: {
+    url: "/models/monitor_triple.glb", fix: [0, -0.850, 0], scale: 0.4, rotationY: Math.PI,
+    fixMetalnessForMaterials: ["Wallpaper"], offset: [0, -0.05, 0.05],
+  },
 };
 const MONITOR_MODEL_POS = new THREE.Vector3(1.215, 0.816, -0.741);
 
@@ -227,7 +269,13 @@ const STUHL_TIER_MODELS: Record<number, TierModelCfg> = {
   1: { url: "/models/chair_office.glb", fix: [0, -0.017, 0], scale: 1, rotationY: Math.PI },
   2: { url: "/models/chair_office.glb", fix: [0, -0.017, 0], scale: 1, rotationY: Math.PI },
   3: { url: "/models/chair_gaming.glb", fix: [0, -0.009, 0], scale: 1, rotationY: Math.PI },
-  4: { url: "/models/chair_racing.glb", fix: [0, 0, 0],      scale: 1, rotationY: Math.PI },
+  // Stufe 4 bewusst OHNE die 180°-Drehung der anderen Stufen: geometrisch
+  // vermessen (avgFaceNormal, wie beim Monitor) — "Plane048", die mit Abstand
+  // größte Fläche im Modell (Rückenlehne), zeigt bereits UNROTIERT nach lokal
+  // +X, was hier "weg vom Tisch" entspricht. Die pauschale 180°-Drehung der
+  // anderen 3 Stufen war für DIESES Modell falsch und drehte die Lehne genau
+  // in die Sichtlinie zum Monitor — laut User bestätigt gemeldet.
+  4: { url: "/models/chair_racing.glb", fix: [0, 0, 0],      scale: 1 },
 };
 // "Plane.002" (Material "chair", Rückenlehne) aus der Referenzszene entfernt
 // — X/Z hier übernommen, Y auf Bodenhöhe (0) gesetzt (Boden-verankerte Modelle).
@@ -402,8 +450,16 @@ function RoomModel({ surfaceTier }: { surfaceTier: number }) {
       const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
       for (const mat of mats) {
         if (!(mat instanceof THREE.MeshStandardMaterial)) continue;
-        if (mat.name === "MC_Floor") { mat.map = floorTex; mat.needsUpdate = true; }
-        if (mat.name === "MC_Wall") { mat.map = wallTex; mat.needsUpdate = true; }
+        // .color bleibt aus der Blender-Vorlage ("Material.001") ein sehr
+        // dunkler Grauton (#3c3c3f, ~24% Helligkeit) — der stammt aus einer
+        // früheren, komplett anderen Politur-Session (Specular-Blowout-Fix)
+        // und multipliziert sich mit JEDER Textur, die hier hineinkommt.
+        // Per Laufzeit-Debug bestätigt: das Foto WURDE korrekt zugewiesen,
+        // sah aber bei jeder Stufe fast schwarz aus — genau der gemeldete
+        // "hier ändert sich nichts"-Bug. Farbe auf Weiß zurücksetzen, damit
+        // die Foto-Textur ungedimmt durchkommt.
+        if (mat.name === "MC_Floor") { mat.map = floorTex; mat.color.set(0xffffff); mat.needsUpdate = true; }
+        if (mat.name === "MC_Wall") { mat.map = wallTex; mat.color.set(0xffffff); mat.needsUpdate = true; }
       }
     });
     return clone;
@@ -416,10 +472,14 @@ function RoomModel({ surfaceTier }: { surfaceTier: number }) {
 // offenes Eck-Diorama (nur 2 echte Wände, der Rest ist absichtlich offen und
 // wird vom Nebel kaschiert, siehe [[mancave-profile-project]] in memory) —
 // deshalb kein Loch geschnitten, sondern eine bereits offene Stelle an der
-// -Y-Wand (derselben Wand wie das Regal) genutzt, per Bounding-Box-Analyse
-// als frei bestätigt (nur 1 Face in diesem Bereich).
-const WINDOW_POS = new THREE.Vector3(0.3, 1.5, 0.886);
-const WINDOW_W = 0.9, WINDOW_H = 1.1;
+// -Y-Wand (derselben Wand wie das Regal) genutzt.
+// Ursprüngliche Position (Z=1.5, Höhe 1.1) überlappte laut User + Screenshot
+// mit dem Regal (Wandbretter "Cube.018"/"Cube.019" sitzen auf derselben Wand
+// bei Blender-Z≈1.755-2.105) — per erneuter Bounding-Box-Analyse tiefer
+// verschoben (Blender-Z-Band 0.75-1.55, bestätigt frei, deutlich unter dem
+// Regal) und etwas niedriger gemacht, damit es sicher in dieses Band passt.
+const WINDOW_POS = new THREE.Vector3(0.3, 1.15, 0.886);
+const WINDOW_W = 0.9, WINDOW_H = 0.75;
 // Ausblick-Ebene deutlich HINTER dem Fenster (weiter im "Außen"-Bereich) —
 // weil die Kamera in dieser Ego-Ansicht nur ROTIERT, nie die Position
 // wechselt (siehe LookAroundRig), reicht eine einzelne, echt entfernte
@@ -440,7 +500,12 @@ function WindowView({ surfaceTier }: { surfaceTier: number }) {
   return (
     <mesh position={[WINDOW_POS.x, WINDOW_POS.y, WINDOW_POS.z + WINDOW_VIEW_DISTANCE]}>
       <planeGeometry args={[WINDOW_VIEW_DISTANCE * 2.2, WINDOW_VIEW_DISTANCE * 1.6]} />
-      <meshBasicMaterial map={tex} toneMapped={false} fog={false} />
+      {/* side=DoubleSide: eine unrotierte PlaneGeometry zeigt ihre Vorderseite
+          nach lokal +Z — die Kamera (EYE.z=-0.95) sitzt aber auf der -Z-Seite
+          dieser Ebene (WINDOW_POS.z+DISTANCE ist deutlich positiver), sähe
+          also mit dem Standard-FrontSide-Material nur die Rückseite = nichts.
+          DoubleSide macht das unabhängig von der genauen Blickrichtung sichtbar. */}
+      <meshBasicMaterial map={tex} toneMapped={false} fog={false} side={THREE.DoubleSide} />
     </mesh>
   );
 }
