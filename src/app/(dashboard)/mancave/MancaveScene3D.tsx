@@ -39,12 +39,17 @@ const EYE = new THREE.Vector3(0.05, 1.28, -0.95);
 const FORWARD = new THREE.Vector3(0.9598, -0.2806, 0);
 const LOOK_TARGET = EYE.clone().add(FORWARD);
 
-// Bildschirm-Mitte des Haupt-Monitors ("Cube.015" in der Blender-Szene, Material "Pc screen3").
-const SCREEN_POS = new THREE.Vector3(1.263, 1.077, -0.741);
+// Bildschirm-Mitte des Haupt-Monitors ("Cube.015" in der Blender-Szene, Material
+// "Pc screen3") — um 0.05 Richtung Kamera versetzt (entlang -FORWARD), sonst
+// verdeckt die Bildschirm-Fläche selbst das Html-Overlay (Selbst-Okklusion,
+// da die Position sonst exakt AUF der Glasfläche liegt statt knapp davor).
+const SCREEN_POS = new THREE.Vector3(1.215, 1.091, -0.741);
 // PC-Tower-Position ("Cube.017") — Anker für den Gadgets-Hotspot.
 const PC_POS = new THREE.Vector3(1.05, 1.02, -0.29);
-// Wand-/Deko-Bereich (Nanoleaf-Panels über dem Schreibtisch) — Anker für den Pokale-Hotspot.
-const SHELF_POS = new THREE.Vector3(0.55, 2.05, -0.75);
+// Wand-/Deko-Bereich (Nanoleaf-Panels über dem Schreibtisch) — Anker für den
+// Pokale-Hotspot. Y abgesenkt (war zu nah an der Decke, außerhalb des
+// sichtbaren Standard-Ausschnitts).
+const SHELF_POS = new THREE.Vector3(0.55, 1.7, -0.75);
 
 function RoomModel() {
   const { scene } = useGLTF(ROOM_MODEL_URL);
@@ -141,7 +146,7 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
           <RoomModel />
 
           {/* Live-Dashboard direkt auf dem Monitor-Screen — 3D-verankert, immer sichtbar */}
-          <Html center occlude position={SCREEN_POS} style={{ pointerEvents: "auto" }}>
+          <Html center position={SCREEN_POS} style={{ pointerEvents: "auto" }}>
             <div className="w-[150px] h-[84px] rounded-[3px] overflow-hidden shadow-[0_0_18px_rgba(45,212,191,0.35)]">
               <MonitorScreenContent data={data} />
             </div>
