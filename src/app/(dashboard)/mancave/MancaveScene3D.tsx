@@ -32,6 +32,17 @@ const ROOM_H = 4;
 const DESK_X = ROOM_W * 0.5;
 const DESK_Z = 2.5;
 const EYE = new THREE.Vector3(DESK_X, 1.15, 4.45);
+/**
+ * Anhebung für "steht auf dem Schreibtisch"-Items (Monitor, Tastatur, Maus,
+ * Headset, Mikro, Webcam, Stream-Deck) — derselbe fixe Wert wie
+ * `DESK_STAND_HEIGHT` in RoomStage3D.tsx. Gilt NACH `MODEL_ORIGIN_FIX` (siehe
+ * unten) — manche GLBs bringen bereits eine eigene Tischhöhe mit, die zuerst
+ * auf den Fußpunkt Y=0 normalisiert wird, sonst würden sich beide Anhebungen
+ * addieren und das Item über der Tischplatte schweben lassen.
+ */
+const DESK_STAND_HEIGHT = 0.74;
+/** Wandregal-Höhe — grobe Augenhöhe, da das eigene Raum-Shell kein Grid-Koordinatensystem hat. */
+const SHELF_Y = 1.35;
 
 function pick(items: RoomItemDef[], category: RoomCategory): RoomItemDef | undefined {
   return items.find(d => d.category === category);
@@ -79,12 +90,19 @@ function RoomShell() {
 function RoomLighting() {
   return (
     <>
-      <ambientLight intensity={0.5} />
-      <hemisphereLight args={["#4d6a80", "#0a0f14", 0.6]} />
+      {/* Deutlich angehobener Grundpegel: die Raum-Hülle ist bewusst voll
+          umschlossen (kein Void beim 360°-Umschauen), muss also überall lesbar
+          bleiben — nicht nur am Schreibtisch, der Rest des Zimmers ist sonst
+          beim Umschauen fast schwarz. */}
+      <ambientLight intensity={0.85} />
+      <hemisphereLight args={["#5a7a90", "#141b26", 0.9]} />
       <directionalLight position={[DESK_X - 2, 3.5, DESK_Z + 2]} intensity={1.8} color="#fff3df" />
-      <pointLight position={[DESK_X, 1.8, DESK_Z + 1]} intensity={1.2} color="#2dd4bf" distance={6} decay={2} />
-      <pointLight position={[2, 1.6, ROOM_D - 1.5]} intensity={0.8} color="#2dd4bf" distance={6} decay={2} />
+      <pointLight position={[DESK_X, 1.8, DESK_Z + 1]} intensity={1.3} color="#2dd4bf" distance={7} decay={2} />
+      <pointLight position={[2, 1.6, ROOM_D - 1.5]} intensity={1.1} color="#2dd4bf" distance={7} decay={2} />
       <pointLight position={[DESK_X, 2.2, EYE.z]} intensity={0.9} color="#ffffff" distance={5} decay={2} />
+      {/* Zusätzliche Füll-Lichter für die möblierten Ecken (Wandregal, leere Raumhälfte) */}
+      <pointLight position={[1.6, SHELF_Y + 0.6, 0.6]} intensity={0.9} color="#ffd9a0" distance={4} decay={2} />
+      <pointLight position={[ROOM_W - 1.5, 2.0, ROOM_D - 2]} intensity={0.6} color="#4d6a80" distance={7} decay={2} />
     </>
   );
 }
@@ -138,10 +156,44 @@ function LookAroundRig({ containerRef }: { containerRef: React.RefObject<HTMLDiv
   return null;
 }
 
+/**
+ * Korrektur-Versatz je Katalog-Key, gemessen per Box3 an den echten GLBs
+ * (`public/models/*.glb`) — die Modelle sind NICHT einheitlich exportiert:
+ * manche sitzen sauber mit dem Fußpunkt bei (0,0,0) (z.B. `roehrenmonitor`,
+ * `gaming_maus`), andere haben ihren Ursprung an einer völlig beliebigen
+ * Stelle aus der ursprünglichen Blender-Szene stehen gelassen (`tastatur_mech`
+ * z.B. bei X≈-3.3/Z≈-2.8 statt bei 0) oder bringen bereits eine eigene
+ * Tischhöhe mit (`monitor_flach`/`monitor_144`/`monitor_dreifach`/
+ * `schreibtischlampe` starten alle schon bei Y≈0.85 statt bei 0). Dieser
+ * Versatz zentriert jedes Modell auf (X=0, Z=0, Y=Fußpunkt) — DANACH ist die
+ * einheitliche Außen-Platzierung (DESK_STAND_HEIGHT etc.) für alle Items
+ * gleich verlässlich, egal wie das einzelne GLB ursprünglich exportiert
+ * wurde. Fehlt ein Key hier, war das Modell beim Nachmessen bereits sauber.
+ */
+const MODEL_ORIGIN_FIX: Partial<Record<string, [number, number, number]>> = {
+  monitor_flach:      [0, -0.615, -0.4],
+  monitor_144:        [0, -0.85, 0],
+  monitor_dreifach:   [0, -0.85, 0],
+  pc_highend:         [-8.674, 0.721, 0.2025],
+  konsole_retro:      [1.321, 0, -1.7285],
+  steckdosenleiste:   [-0.059, 0.158, 2.448],
+  tastatur_mech:      [3.2795, -2.331, 2.811],
+  mikrofon:           [-3.2765, -0.082, 1.164],
+  schreibtischlampe:  [0, -0.85, 0],
+  stehlampe:          [-1.3905, -0.018, 0.509],
+  pc_billig:          [-0.357, 0.011, -0.09],
+  regal_holz:         [0, 0, -0.277],
+  schreibtisch_neon:  [0, -0.138, -0.2115],
+  schreibtisch_eck:   [0, -0.019, 0],
+};
+
 function Item({ def, position, rotationY = 0 }: { def: RoomItemDef; position: [number, number, number]; rotationY?: number }) {
+  const fix = MODEL_ORIGIN_FIX[def.key];
   return (
     <group position={position} rotation={[0, rotationY, 0]}>
-      <FurniturePrimitive def={def} />
+      <group position={fix ?? [0, 0, 0]}>
+        <FurniturePrimitive def={def} />
+      </group>
     </group>
   );
 }
@@ -170,24 +222,32 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
       style={{ aspectRatio: "16 / 9", background: "#050810", cursor: "grab" }}>
       <Canvas shadows dpr={[1, 1.5]} gl={{ antialias: true }}>
         <color attach="background" args={["#050810"]} />
-        <fog attach="fog" args={["#050810", 6, 13]} />
+        <fog attach="fog" args={["#050810", 9, 17]} />
         <RoomLighting />
         <RoomShell />
         <LookAroundRig containerRef={containerRef} />
         <Suspense fallback={null}>
           <Item def={desk} position={[DESK_X, 0, DESK_Z]} />
-          <Item def={monitor} position={[DESK_X, 0, DESK_Z - 0.35]} />
+          <Item def={monitor} position={[DESK_X, DESK_STAND_HEIGHT, DESK_Z - 0.5]} />
           <Item def={pc} position={[DESK_X - 2.6, 0, DESK_Z + 0.1]} />
+          {/* Peripherie steht IMMER auf der Tischplatte — nahe der Vorderkante
+              (größeres Z = näher an der Kamera/dem Sitzplatz), quer über die
+              Breite verteilt, damit sich Maus/Tastatur/Headset nicht überlappen. */}
           {peripherals.map((d, i) => (
-            <Item key={d.key} def={d} position={[DESK_X - 0.6 + i * 0.55, 0, DESK_Z - 0.55]} />
+            <Item key={d.key} def={d} position={[DESK_X - 0.7 + i * 0.7, DESK_STAND_HEIGHT, DESK_Z + 0.9]} />
           ))}
+          {/* Licht: nur Schreibtischlampen (mustStandOn "desk") stehen auf der
+              Tischplatte, Steh-/Ringlicht bleiben auf dem Boden daneben. */}
           {lights.map((d, i) => (
-            <Item key={d.key} def={d} position={[DESK_X + 1.3, 0, DESK_Z - 0.2 - i * 0.6]} />
+            <Item key={d.key} def={d}
+              position={d.mustStandOn === "desk"
+                ? [DESK_X + 1.9, DESK_STAND_HEIGHT, DESK_Z - 0.3]
+                : [DESK_X + 2.3, 0, DESK_Z + 0.6 + i * 0.7]} />
           ))}
           {konsolen.map((d, i) => (
             <Item key={d.key} def={d} position={[DESK_X - 2.6, 0, DESK_Z + 0.8 + i * 0.5]} />
           ))}
-          {shelf && <Item def={shelf} position={[1.6, 0, 0.12]} />}
+          {shelf && <Item def={shelf} position={[1.6, SHELF_Y, 0.12]} />}
 
           {/* Live-Dashboard direkt auf dem Monitor-Screen — 3D-verankert, immer sichtbar */}
           <Html center occlude
@@ -200,7 +260,7 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
 
           {/* Wandregal-Hotspot */}
           {shelf && (
-            <Html position={[1.6, 1.7, 0.15]} center>
+            <Html position={[1.6, SHELF_Y + 0.55, 0.15]} center>
               <button onClick={() => setPanel("trophy")}
                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full whitespace-nowrap"
                 style={{ background: "rgba(4,10,9,0.7)", border: "1px solid rgba(245,158,11,0.3)", backdropFilter: "blur(3px)" }}>
