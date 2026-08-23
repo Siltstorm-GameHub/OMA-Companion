@@ -245,7 +245,9 @@ const STUHL_TIER_MODELS: Record<number, TierModelCfg> = {
   // Normalenrichtung geprüft); `offset` schiebt nur DIESE Stufe etwas weiter
   // weg vom Schreibtisch/der Kamera, ohne STUHL_POS (das die anderen 3 Stufen
   // mitbenutzen) anzufassen.
-  3: { url: "/models/chair_gaming.glb", fix: [0, -0.009, 0], scale: 1, rotationY: Math.PI, offset: [-0.3, 0, 0.15] },
+  // User: etwas kleiner + zusätzlich 90° im Uhrzeigersinn (negative Y-Rotation
+  // in Three.js-Konvention) gedreht — macht netto π - π/2 = π/2.
+  3: { url: "/models/chair_gaming.glb", fix: [0, -0.009, 0], scale: 0.85, rotationY: Math.PI / 2, offset: [-0.3, 0, 0.15] },
   // Stufe 4 bewusst OHNE die 180°-Drehung der anderen Stufen: geometrisch
   // vermessen (avgFaceNormal, wie beim Monitor) — "Plane048", die mit Abstand
   // größte Fläche im Modell (Rückenlehne), zeigt bereits UNROTIERT nach lokal
@@ -469,27 +471,48 @@ const COUCHTISCH_CFG: ExtraCfg = { url: "/models/mancave_couchtisch.glb", fix: [
  * Accessor-Werte, siehe TASTATUR_UPGRADE_CFG-Kommentar für die Falle dabei).
  */
 // streamdeck.glb: bereits plausible Weltmaß-Größe (0.245×0.112×0.253),
-// scale=1. Auf dem Tisch, rechts von der Tastatur/Maus-Reihe (die bei X≈0.78
-// sitzt), gleiche Tiefe wie die Tastatur.
-const STREAMDECK_CFG: ExtraCfg = { url: "/models/streamdeck.glb", fix: [0.1298, 0.2546, -0.0884], scale: 1, position: new THREE.Vector3(1.0, 0.818, -0.9) };
+// scale=1. In Blender einzeln geprüft (Screenshot): liegt in seiner eigenen
+// Datei bereits korrekt flach auf einer Fläche — braucht also, GENAU wie die
+// Tastatur, dieselbe 90°-Korrektur zur (nicht achsenparallelen) Tischplatte
+// dieser Szene, nicht weil das Modell selbst falsch ist. Auf dem Tisch,
+// rechts von der Tastatur/Maus-Reihe (X≈0.78), gleiche Tiefe wie die Tastatur.
+const STREAMDECK_CFG: ExtraCfg = { url: "/models/streamdeck.glb", fix: [0.1298, 0.2546, -0.0884], scale: 1, position: new THREE.Vector3(1.0, 0.818, -0.9), rotationY: -Math.PI / 2 };
 // mikrofon.glb: Roh-Maße viel zu groß (1.85×1.64×2.17, wie beim Tastatur-
 // Bug) — scale=0.22 bringt die Höhe auf ~0.36 (realistischer Arm-Mikrofon-
-// Ständer). Auf dem Tisch, näher am vorderen Rand (Richtung Stuhl), rechts
-// vom Stream Deck.
-const MIKROFON_CFG: ExtraCfg = { url: "/models/mikrofon.glb", fix: [-3.2763, -0.0821, 1.1639], scale: 0.22, position: new THREE.Vector3(1.1, 0.818, -0.5) };
-// ringlicht.glb: bereits realistische Weltmaß-Größe (0.459×1.6×0.439 — ein
-// hohes Standlicht, ~1.6m, plausibel für ein echtes Ringlicht), min.y≈0
-// (schon boden-verankert). ACHTUNG — im Gegensatz zu den anderen beiden
-// bodenstehend statt auf dem Tisch, und die Position ist die unsicherste der
-// drei: kein vermessener freier Bodenbereich, nur eine plausible Lücke
-// zwischen Stuhl (X=0.367, Z=-0.921) und Tischkante gewählt.
-const RINGLICHT_CFG: ExtraCfg = { url: "/models/ringlicht.glb", fix: [0, 0, -0.0194], scale: 1, position: new THREE.Vector3(0.55, 0, -1.5) };
+// Ständer). Blender-Import dieser Datei ist leider größtenteils leer (43 von
+// 44 Objekten nur Struktur-Marker ohne Geometrie, Dateiproblem) — konnte die
+// Ausrichtung deshalb nicht visuell gegenprüfen wie bei Tastatur/Stream Deck,
+// dieselbe 90°-Korrektur trotzdem angewendet (gleiches systematisches
+// Tischplatten-Problem, siehe STREAMDECK_CFG). Neu positioniert: weiter
+// rechts (X=1.15, mehr Abstand zum Stream Deck) auf dem Tisch.
+const MIKROFON_CFG: ExtraCfg = { url: "/models/mikrofon.glb", fix: [-3.2763, -0.0821, 1.1639], scale: 0.22, position: new THREE.Vector3(1.15, 0.818, -0.9), rotationY: -Math.PI / 2 };
+// ringlicht.glb: bereits realistische Weltmaß-Größe (0.459×1.6×0.439), aber
+// User-Screenshot zeigte es riesig direkt vor der Kamera — die Position war
+// nur ~0.88 Einheiten von EYE entfernt, bei 1.6m Höhe dominiert das jeden
+// Blick. Deutlich kleiner (scale 1→0.5, Höhe dann ~0.8m) UND neu platziert:
+// neben dem Monitor/PC-Bereich (X=1.2, nahe der echten Wand bei X=1.292,
+// Z=-0.741 ≈ SCREEN_POS-Tiefe) statt direkt vor der Kamera.
+const RINGLICHT_CFG: ExtraCfg = { url: "/models/ringlicht.glb", fix: [0, 0, -0.0194], scale: 0.5, position: new THREE.Vector3(1.2, 0, -0.741) };
+
+/**
+ * PS5-Controller — aus der externen Datei "3DAssetsRoom/ps5.controller.blend"
+ * extrahiert (Collection "Dualsense controller PS5", 11 Mesh-Teile + 1
+ * Boden-Plane ausgeschlossen), als eigenes "ps5_controller.glb" exportiert.
+ * Bereits realistische Weltmaß-Größe (Root-Objekt-Rotation/Skalierung war
+ * Identität, kein Tastatur-Bug hier) — `fix` zentriert nur X/Z und hebt Y auf
+ * die Unterseite.
+ *
+ * Position: User-Wunsch — auf dem Couchtisch statt auf dem Schreibtisch.
+ * "Cube.014" (Couchtisch, siehe COUCHTISCH_CFG) direkt in Blender vermessen:
+ * Oberseite bei Y=0.370, Mittelpunkt X=-0.7825/Z=-0.2155.
+ */
+const PS5_CONTROLLER_CFG: ExtraCfg = { url: "/models/ps5_controller.glb", fix: [0.01415, 0.0123, 0.06455], scale: 1, position: new THREE.Vector3(-0.7825, 0.37, -0.2155) };
 
 for (const m of [
   ...Object.values(PC_TIER_MODELS),
   ...Object.values(STUHL_TIER_MODELS), ...Object.values(REGAL_TIER_MODELS),
   NANOLEAF_CFG, DESKMAT_CFG, WEBCAM_CFG, HEADSET_CFG, COUCHTISCH_CFG, TASTATUR_UPGRADE_CFG, MAUS_UPGRADE_CFG,
-  STREAMDECK_CFG, MIKROFON_CFG, RINGLICHT_CFG,
+  STREAMDECK_CFG, MIKROFON_CFG, RINGLICHT_CFG, PS5_CONTROLLER_CFG,
   MONITOR_SCREEN1_CFG, MONITOR_SCREEN2_CFG, MONITOR_SCREEN3_CFG, MONITOR_SCREEN4_CFG,
 ]) useGLTF.preload(m.url);
 // Nanoleaf-Dreieck-Panels über dem Schreibtisch (Mittelpunkt aller 21
@@ -781,11 +804,16 @@ function WindowExterior() {
  * Metallrahmen, Stufe 4 breiter dunkler Rahmen mit leicht leuchtender
  * Teal-Kante (passend zum restlichen Neon-Akzent-Look der Szene).
  */
+// Emissive bei Stufe 3/4 entfernt — User meldete: Stufe 4 rendert komplett
+// satt teal statt einem dezenten Akzent. Exakt derselbe Bug-Typ wie beim
+// Schreibtisch (DESK_TIER_STYLES-Kommentar): diese Szene verstärkt emissive
+// Farben (Bloom/Tonemapping) weit über die eingestellte Intensity hinaus.
+// Statt Emissive-Glanz jetzt kräftigere Grundfarben für den Stufen-Kontrast.
 const WINDOW_FRAME_STYLES = [
   { color: "#6b5a4a", thickness: 0.02, emissive: "#000000", emissiveIntensity: 0 },
   { color: "#c9c4ba", thickness: 0.025, emissive: "#000000", emissiveIntensity: 0 },
-  { color: "#2a2e36", thickness: 0.03, emissive: "#0d3b36", emissiveIntensity: 0.15 },
-  { color: "#15181f", thickness: 0.035, emissive: "#2dd4bf", emissiveIntensity: 0.35 },
+  { color: "#2a2e36", thickness: 0.03, emissive: "#000000", emissiveIntensity: 0 },
+  { color: "#0e3d38", thickness: 0.035, emissive: "#000000", emissiveIntensity: 0 },
 ];
 
 function WindowFrame({ surfaceTier }: { surfaceTier: number }) {
@@ -960,6 +988,7 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
   const streamdeckTier = data.items.find(i => i.key === "streamdeck")?.tier ?? 0;
   const mikrofonTier = data.items.find(i => i.key === "mikrofon")?.tier ?? 0;
   const ringlichtTier = data.items.find(i => i.key === "ringlicht")?.tier ?? 0;
+  const ps5ControllerTier = data.items.find(i => i.key === "ps5controller")?.tier ?? 0;
 
   return (
     <div ref={containerRef}
@@ -1000,6 +1029,7 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
           <ExtraProp tier={streamdeckTier} cfg={STREAMDECK_CFG} />
           <ExtraProp tier={mikrofonTier} cfg={MIKROFON_CFG} />
           <ExtraProp tier={ringlichtTier} cfg={RINGLICHT_CFG} />
+          <ExtraProp tier={ps5ControllerTier} cfg={PS5_CONTROLLER_CFG} />
 
           {/* Live-Dashboard direkt auf dem Monitor-Screen — 3D-verankert, immer sichtbar */}
           <Html center position={SCREEN_POS} style={{ pointerEvents: "auto" }}>

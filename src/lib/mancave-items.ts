@@ -59,6 +59,7 @@ const EXTRA_ITEMS: MancaveItemDef[] = [
   { key: "streamdeck", label: "Stream Deck",            baseline: false, costs: [ 700,  900, 1400, 2000] },
   { key: "mikrofon",   label: "Mikrofon",                baseline: false, costs: [ 650,  850, 1300, 1900] },
   { key: "ringlicht",  label: "Ringlicht",               baseline: false, costs: [ 500,  700, 1100, 1600] },
+  { key: "ps5controller", label: "PS5-Controller",        baseline: false, costs: [ 400,  600,  900, 1400] },
 ];
 
 export const MANCAVE_ITEMS: MancaveItemDef[] = [...BASELINE_ITEMS, ...EXTRA_ITEMS];
