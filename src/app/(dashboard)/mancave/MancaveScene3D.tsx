@@ -576,8 +576,20 @@ function RoomModel({ surfaceTier, deskTier, tastaturTier, mausTier }: { surfaceT
     // das echte Tausch-Modell (TASTATUR_UPGRADE_CFG/MAUS_UPGRADE_CFG) an
     // derselben Stelle. Per Name statt Entfernen aus dem Export, damit Stufe 1
     // (Grundausstattung, kein Kauf nötig) weiter die vorhandene Geometrie nutzt.
+    //
+    // GEFUNDENER BUG (User-Screenshot: alte Tastatur blieb trotz "Stufe 2"
+    // sichtbar): three.js' GLTFLoader sanitisiert Node-Namen beim Laden über
+    // `PropertyBinding.sanitizeNodeName` (wegen der Animation-Pfad-Syntax,
+    // die Punkte als Trenner nutzt) — reservierte Zeichen sind `[ ] . : /`
+    // (siehe node_modules/three/src/animation/PropertyBinding.js,
+    // `_RESERVED_CHARS_RE`). "Cylinder.002" aus dem glTF-JSON wird beim Laden
+    // dadurch zu "Cylinder002" (Punkt entfernt) — meine Suche nach dem
+    // Original-Namen mit Punkt fand deshalb NIE etwas, `if (kb)` schluckte
+    // das Fehlschlagen still, ohne Fehler. "Cylinder" (kein Punkt) war davon
+    // nicht betroffen, daher hat das Maus-Verstecken nie das gleiche Symptom
+    // gezeigt.
     if (tastaturTier >= 2) {
-      const kb = clone.getObjectByName("Cylinder.002");
+      const kb = clone.getObjectByName("Cylinder002");
       if (kb) kb.visible = false;
     }
     if (mausTier >= 2) {
