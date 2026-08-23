@@ -9,6 +9,7 @@ import { getRoomItem } from "@/lib/room-items";
 import { parseFavoriteGames } from "@/lib/favorite-games";
 import { loadMancaveTiers, surfaceTierFrom } from "@/lib/mancave-economy";
 import { MANCAVE_ITEMS, nextUpgradeCost } from "@/lib/mancave-items";
+import { getJobOverview } from "@/lib/job-service";
 import MancaveClient from "./MancaveClient";
 import { renderZoneFor, MANCAVE_GADGET_CATEGORIES, type MancaveGadget, type MancaveItemStatus, type MancaveData } from "./mancave-data";
 
@@ -25,7 +26,7 @@ export default async function MancavePage() {
 
   const [
     user, eventCount, startedEvents, tournamentCount, pokale, leaderboardRank,
-    userSystemBadges, userCustomBadges, lulPollWins, room, tiers,
+    userSystemBadges, userCustomBadges, lulPollWins, room, tiers, jobs,
   ] = await Promise.all([
     prisma.user.findUnique({
       where:  { id: userId },
@@ -51,6 +52,7 @@ export default async function MancavePage() {
     prisma.lulEntry.count({ where: { userId, communityChamp: true } }),
     loadRoom(userId),
     loadMancaveTiers(userId),
+    getJobOverview(userId),
   ]);
 
   if (!user) redirect("/login");
@@ -141,6 +143,7 @@ export default async function MancavePage() {
     roomItemKeys: room.placed.map(p => p.key),
     items,
     surfaceTier,
+    jobs,
   };
 
   return <MancaveClient data={data} />;

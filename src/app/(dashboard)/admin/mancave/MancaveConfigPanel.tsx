@@ -46,7 +46,7 @@ export function MancaveConfigPanel({ initial }: { initial: MancaveConfig }) {
           <p className="text-sm text-white font-medium">Mancave für alle</p>
           <p className="text-xs text-gray-500">
             Aus = nur Admins sehen die Mancave-Profilseite und den Nav-Eintrag. Die klassische
-            Profilseite und /zimmer bleiben davon unberührt.
+            Profilseite bleibt davon unberührt.
           </p>
         </div>
         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${

@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { requireRoomAccess } from "@/lib/room-guard";
+import { requireMancaveAccess } from "@/lib/mancave-guard";
 import { claimWage } from "@/lib/job-service";
 import { updateQuestProgress } from "@/lib/quests";
 import { checkAndAwardBadges } from "@/lib/award-badges";
 
 export async function POST() {
-  const guard = await requireRoomAccess();
+  const guard = await requireMancaveAccess();
   if ("response" in guard) return guard.response;
 
   const result = await claimWage(guard.userId);

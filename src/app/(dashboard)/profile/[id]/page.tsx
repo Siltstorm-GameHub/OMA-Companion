@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { notFound, redirect } from "next/navigation";
-import { getRoomConfig, roomVisibleFor } from "@/lib/room-config";
 import { QUEST_TYPE_META, type QuestType } from "@/lib/quests";
 import { getRank, getNextRank, getRankFullLabel } from "@/lib/ranks";
 import RankedAvatar from "@/components/RankedAvatar";
@@ -73,13 +72,6 @@ export default async function PublicProfilePage({
 
   // Eigenes Profil → weiterleiten
   if (viewerId === id) redirect("/profile");
-
-  // Ablösung: sobald das Gaming-Zimmer für den Betrachter sichtbar ist, zeigt
-  // dieser Link auf das Zimmer statt auf die klassische Profilseite — dieselbe
-  // Flag-Logik wie bei "/profile" selbst.
-  if (session?.user && roomVisibleFor(await getRoomConfig(), session.user.role)) {
-    redirect(`/zimmer/${id}`);
-  }
 
   const minigamesConfig = await getMinigamesConfig();
 

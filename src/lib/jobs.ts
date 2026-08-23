@@ -8,14 +8,15 @@
  * Der Lohn kennt bewusst KEINEN Kalendertag, sondern nur verstrichene Zeit seit
  * `accrualFrom`. Damit greift der Zeitzonen-Konflikt der App (todayStr() = UTC
  * vs. awardedToday() = serverlokal vs. Anzeige = Europe/Berlin) hier gar nicht.
+ *
+ * Freischaltung: früher an einzelne Möbel-Tags im alten Gaming-Zimmer-Grid
+ * gebunden (RoomTag-Anforderungen, z.B. "1x Mikrofon"). Das alte Zimmer wird
+ * mittelfristig entfernt — Jobs hängen jetzt stattdessen an `minRoomTier`,
+ * der Gesamt-Ausbaustufe der Mancave (`surfaceTierFrom()` in
+ * mancave-economy.ts, 1-4, Durchschnitt aller Mancave-Item-Stufen). Höhere
+ * Mancave-Stufe schaltet automatisch neue Jobs frei, ohne einzelne Items zu
+ * prüfen.
  */
-
-import { getRoomItem, ROOM_TAG_LABELS, ROOM_ITEMS, type RoomTag } from "./room-items";
-
-export interface JobRequirement {
-  tag:   RoomTag;
-  count: number;
-}
 
 export interface JobDef {
   key:          string;
@@ -23,13 +24,25 @@ export interface JobDef {
   emoji:        string;
   flavor:       string;   // Deutsch, ein Satz
   minTier:      number;   // Rangstufe 1–6 aus ranks.ts
+  minRoomTier:  number;   // Mancave-Gesamtstufe 1-4, siehe Kommentar oben
   coinsPerHour: number;
-  requirements: JobRequirement[];
   accent:       "slate" | "teal" | "violet" | "amber" | "rose";
 }
 
-/** Ab so vielen Stunden verfällt weiterer Lohn (überschreibbar per BotConfig). */
-export const WAGE_CAP_HOURS_DEFAULT = 24;
+/**
+ * Job-Einstellungen — früher über das (inzwischen entfernte) Gaming-Zimmer-
+ * Admin-Panel per BotConfig einstellbar (RoomConfig.jobsEnabled/wageCapHours/
+ * wageMultiplierPct/hireLockHours). Jetzt feste Konstanten hier, analog zu
+ * MANCAVE_DEV_FREE_MODE in mancave-items.ts — bei Bedarf später wieder an
+ * ein eigenes Mancave-Admin-Panel anbinden.
+ */
+export const JOBS_ENABLED = true;
+/** Ab so vielen Stunden verfällt weiterer Lohn. */
+export const WAGE_CAP_HOURS = 24;
+/** 100 = normaler Lohn, z.B. für zeitlich befristete Events anpassbar. */
+export const WAGE_MULTIPLIER_PCT = 100;
+/** Nach dem Einstellen/Wechseln so viele Stunden gesperrt, bevor erneut gewechselt werden kann. */
+export const HIRE_LOCK_HOURS = 4;
 /** Kürzere Schichten lassen sich nicht abrechnen — verhindert Klick-Spam. */
 export const MIN_CLAIM_MINUTES = 15;
 
@@ -37,111 +50,67 @@ export const JOBS: JobDef[] = [
   {
     key: "zocker_praktikant", label: "Zocker-Praktikant", emoji: "🎮",
     flavor: "Kaffee holen, Kabel halten, zusehen. Bezahlt wird in Erfahrung — und ein paar Münzen.",
-    minTier: 1, coinsPerHour: 3, requirements: [], accent: "slate",
+    minTier: 1, minRoomTier: 1, coinsPerHour: 3, accent: "slate",
   },
   {
     key: "kabeltraeger", label: "LAN-Kabelträger", emoji: "🔌",
     flavor: "Zwanzig Meter Cat-6 durch den Saal. Rückenschmerzen inklusive.",
-    minTier: 1, coinsPerHour: 5,
-    requirements: [{ tag: "powerstrip", count: 1 }], accent: "slate",
+    minTier: 1, minRoomTier: 1, coinsPerHour: 5, accent: "slate",
   },
   {
     key: "bingo_moderator", label: "Bingo-Moderator im Heim", emoji: "🎱",
     flavor: "\"Bee-fünf!\" Der Saal tobt. Gaming ist auch nur Bingo mit besserer Grafik.",
-    minTier: 2, coinsPerHour: 8,
-    requirements: [{ tag: "mic", count: 1 }], accent: "amber",
+    minTier: 2, minRoomTier: 1, coinsPerHour: 8, accent: "amber",
   },
   {
     key: "retro_konservator", label: "Retro-Konservator", emoji: "📼",
     flavor: "Du pustest berufsmäßig in Module. Die Nachwelt wird es dir danken.",
-    minTier: 2, coinsPerHour: 10,
-    requirements: [{ tag: "crt", count: 1 }, { tag: "console_retro", count: 1 }], accent: "amber",
+    minTier: 2, minRoomTier: 2, coinsPerHour: 10, accent: "amber",
   },
   {
     key: "casual_streamer", label: "Casual-Streamer", emoji: "📹",
     flavor: "Drei Zuschauer, zwei davon Bots. Der dritte ist deine Mutter.",
-    minTier: 2, coinsPerHour: 12,
-    requirements: [{ tag: "mic", count: 1 }, { tag: "cam", count: 1 }, { tag: "pc_gaming", count: 1 }],
-    accent: "teal",
+    minTier: 2, minRoomTier: 2, coinsPerHour: 12, accent: "teal",
   },
   {
     key: "ersatzbank", label: "Esports-Ersatzbank", emoji: "🪑",
     flavor: "Aufgewärmt, hochmotiviert, nie eingewechselt. Bezahlt wird trotzdem.",
-    minTier: 3, coinsPerHour: 15,
-    requirements: [
-      { tag: "chair_gaming", count: 1 }, { tag: "pc_gaming", count: 1 },
-      { tag: "keyboard_mech", count: 1 },
-    ],
-    accent: "teal",
-  },
-  {
-    key: "lets_player", label: "Let's-Player", emoji: "🎬",
-    flavor: "Vier Stunden Videomaterial, elf Minuten davon brauchbar.",
-    minTier: 3, coinsPerHour: 16,
-    requirements: [
-      { tag: "mic", count: 1 }, { tag: "monitor", count: 2 },
-      { tag: "pc_gaming", count: 1 }, { tag: "headset", count: 1 },
-    ],
-    accent: "violet",
+    minTier: 3, minRoomTier: 2, coinsPerHour: 15, accent: "teal",
   },
   {
     key: "clan_boss", label: "Clan-Boss (Fraktion Rollator)", emoji: "👑",
     flavor: "Du verwaltest sechzehn Leute, die alle gleichzeitig reden wollen.",
-    minTier: 4, coinsPerHour: 19,
-    requirements: [
-      { tag: "desk", count: 1 }, { tag: "trophy_shelf", count: 1 }, { tag: "vitrine", count: 1 },
-    ],
-    accent: "amber",
+    minTier: 4, minRoomTier: 2, coinsPerHour: 19, accent: "amber",
+  },
+  {
+    key: "lets_player", label: "Let's-Player", emoji: "🎬",
+    flavor: "Vier Stunden Videomaterial, elf Minuten davon brauchbar.",
+    minTier: 3, minRoomTier: 3, coinsPerHour: 16, accent: "violet",
   },
   {
     key: "content_creator", label: "Content-Creator", emoji: "✂️",
     flavor: "Schneiden, hochladen, Thumbnail bauen, verzweifeln, wiederholen.",
-    minTier: 4, coinsPerHour: 20,
-    requirements: [
-      { tag: "capture", count: 1 }, { tag: "ringlight", count: 1 },
-      { tag: "monitor", count: 2 }, { tag: "pc_gaming", count: 1 },
-    ],
-    accent: "rose",
+    minTier: 4, minRoomTier: 3, coinsPerHour: 20, accent: "rose",
   },
   {
     key: "esports_coach", label: "Esports-Coach", emoji: "📋",
     flavor: "Pfeile, Kreise, Kaffeeflecken. Der Plan ergibt nur für dich Sinn.",
-    minTier: 5, coinsPerHour: 24,
-    requirements: [
-      { tag: "whiteboard", count: 1 }, { tag: "monitor", count: 3 }, { tag: "mic", count: 1 },
-    ],
-    accent: "teal",
+    minTier: 5, minRoomTier: 3, coinsPerHour: 24, accent: "teal",
   },
   {
     key: "pro_gamer", label: "Pro-Gamer", emoji: "🏆",
     flavor: "Zwölf Stunden Training am Tag. Der Rücken zahlt die Rechnung.",
-    minTier: 5, coinsPerHour: 26,
-    requirements: [
-      { tag: "pc_highend", count: 1 }, { tag: "monitor_144", count: 2 },
-      { tag: "chair_gaming", count: 1 }, { tag: "headset", count: 1 },
-    ],
-    accent: "violet",
+    minTier: 5, minRoomTier: 4, coinsPerHour: 26, accent: "violet",
   },
   {
     key: "streamer_legende", label: "Streamer-Legende", emoji: "🌟",
     flavor: "Dein Alert-Sound ist ein Meme. Damit hast du es geschafft.",
-    minTier: 6, coinsPerHour: 34,
-    requirements: [
-      { tag: "pc_highend", count: 1 }, { tag: "streamdeck", count: 1 },
-      { tag: "ringlight", count: 1 }, { tag: "neon", count: 1 }, { tag: "monitor", count: 3 },
-    ],
-    accent: "rose",
+    minTier: 6, minRoomTier: 4, coinsPerHour: 34, accent: "rose",
   },
   {
     key: "oma_der_szene", label: "Old Master der Szene", emoji: "👵",
     flavor: "Du streamst seit 1998 und hast das Internet noch mit dem Rollator angeschoben.",
-    minTier: 6, coinsPerHour: 42,
-    requirements: [
-      { tag: "pc_highend", count: 1 }, { tag: "streamdeck", count: 1 },
-      { tag: "ringlight", count: 1 }, { tag: "neon", count: 1 },
-      { tag: "monitor", count: 3 }, { tag: "led_wall", count: 1 }, { tag: "vitrine", count: 1 },
-    ],
-    accent: "amber",
+    minTier: 6, minRoomTier: 4, coinsPerHour: 42, accent: "amber",
   },
 ];
 
@@ -153,68 +122,16 @@ export function getJob(key: string | null | undefined): JobDef | null {
   return JOB_MAP[key] ?? null;
 }
 
-// ── Anforderungen ────────────────────────────────────────────────────────────
-
-export interface MissingRequirement {
-  tag:   RoomTag;
-  label: string;
-  have:  number;
-  need:  number;
-}
-
-/** Prüft die Setup-Anforderungen gegen die im Zimmer AUFGESTELLTEN Möbel. */
-export function checkRequirements(
-  job:  JobDef,
-  tags: Partial<Record<RoomTag, number>>,
-): { met: boolean; missing: MissingRequirement[] } {
-  const missing: MissingRequirement[] = [];
-  for (const req of job.requirements) {
-    const have = tags[req.tag] ?? 0;
-    if (have < req.count) {
-      missing.push({ tag: req.tag, label: ROOM_TAG_LABELS[req.tag], have, need: req.count });
-    }
-  }
-  return { met: missing.length === 0, missing };
-}
+// ── Freischaltung ────────────────────────────────────────────────────────────
 
 export function jobUnlockState(
-  job:        JobDef,
-  rankTier:   number,
-  tags:       Partial<Record<RoomTag, number>>,
-): { unlocked: boolean; rankOk: boolean; setupOk: boolean; missing: MissingRequirement[] } {
-  const rankOk = rankTier >= job.minTier;
-  const { met, missing } = checkRequirements(job, tags);
-  return { unlocked: rankOk && met, rankOk, setupOk: met, missing };
-}
-
-/** Tags, die der aktive Job braucht — Grundlage der Einlagerungs-Sperre. */
-export function requiredTags(job: JobDef | null): Set<RoomTag> {
-  return new Set(job ? job.requirements.map(r => r.tag) : []);
-}
-
-/** Lesbare Auflistung fehlender Anforderungen, z.B. "Mikrofon, 2× Monitor". */
-export function formatMissing(missing: MissingRequirement[]): string {
-  return missing
-    .map(m => (m.need > 1 ? `${m.need}× ${m.label}` : m.label))
-    .join(", ");
-}
-
-/**
- * Welche Jobs ein Möbelstück freischaltet — der Kaufanreiz im Shop.
- * Liegt hier statt in room-items.ts, damit der Import nur in eine Richtung geht.
- */
-export function jobsUnlockedBy(itemKey: string): JobDef[] {
-  const def = getRoomItem(itemKey);
-  if (!def || def.tags.length === 0) return [];
-  return JOBS.filter(job => job.requirements.some(req => def.tags.includes(req.tag)));
-}
-
-/** Umgekehrt: welche Möbel eine Anforderung erfüllen können — Hinweis in der Jobbörse. */
-export function itemsProviding(tag: RoomTag): { key: string; label: string; price: number }[] {
-  return ROOM_ITEMS
-    .filter(i => i.tags.includes(tag))
-    .sort((a, b) => a.price - b.price)
-    .map(i => ({ key: i.key, label: i.label, price: i.price }));
+  job:      JobDef,
+  rankTier: number,
+  roomTier: number,
+): { unlocked: boolean; rankOk: boolean; roomTierOk: boolean } {
+  const rankOk     = rankTier >= job.minTier;
+  const roomTierOk = roomTier >= job.minRoomTier;
+  return { unlocked: rankOk && roomTierOk, rankOk, roomTierOk };
 }
 
 // ── Lohn ─────────────────────────────────────────────────────────────────────

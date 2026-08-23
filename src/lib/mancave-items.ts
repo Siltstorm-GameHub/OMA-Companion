@@ -52,13 +52,14 @@ const BASELINE_ITEMS: MancaveItemDef[] = [
 // ── Zusatzobjekte — Stufe 0 (nicht besessen), müssen erst freigeschaltet werden ──
 const EXTRA_ITEMS: MancaveItemDef[] = [
   { key: "nanoleaf",   label: "Beleuchtung",          baseline: false, costs: [2400, 1200, 2000, 3200] },
-  { key: "headset",    label: "Headset",              baseline: false, costs: [ 600,  800, 1200, 1800] },
-  { key: "webcam",     label: "Webcam",                baseline: false, costs: [ 550,  700, 1100, 1600] },
+  // Streaming-Equipment: EIN Slot, 4 kumulative Stufen — Headset(1), Webcam(2),
+  // Ringlicht(3), Stream Deck(4). Vorher vier getrennte Katalogeinträge mit je
+  // eigener Stufe; jetzt wie "Beleuchtung" ein gemeinsamer Fortschritt (siehe
+  // STREAMING_TIER_1-4_CFG in MancaveScene3D.tsx). "Mikrofon" komplett aus dem
+  // Katalog entfernt (User-Wunsch).
+  { key: "streaming",  label: "Streaming-Equipment",  baseline: false, costs: [ 600,  700, 1100, 1600] },
   { key: "couchtisch", label: "Couchtisch",            baseline: false, costs: [ 500,  800, 1200, 1800] },
   { key: "deskmat",    label: "Deskmat",                baseline: false, costs: [ 150,  250,  400,  600] },
-  { key: "streamdeck", label: "Stream Deck",            baseline: false, costs: [ 700,  900, 1400, 2000] },
-  { key: "mikrofon",   label: "Mikrofon",                baseline: false, costs: [ 650,  850, 1300, 1900] },
-  { key: "ringlicht",  label: "Ringlicht",               baseline: false, costs: [ 500,  700, 1100, 1600] },
   { key: "ps5controller", label: "PS5-Controller",        baseline: false, costs: [ 400,  600,  900, 1400] },
 ];
 

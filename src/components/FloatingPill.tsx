@@ -130,13 +130,12 @@ const NavLink = forwardRef<HTMLAnchorElement, {
 
 /* ── FloatingPill ─────────────────────────────────────────────────────── */
 /**
- * `roomVisible`/`mancaveVisible` kommen aus dem Layout, weil beide Feature-
- * Flags in der BotConfig liegen und damit nur serverseitig lesbar sind.
- * Solange die jeweiligen Flags aus sind, ist der Eintrag nur für Admins
- * sichtbar. Anders als der Zimmer-Umzug ERSETZT die Mancave "Profil" nicht,
- * sondern kommt als eigener zusätzlicher Slot dazu.
+ * `mancaveVisible` kommt aus dem Layout, weil das Feature-Flag in der
+ * BotConfig liegt und damit nur serverseitig lesbar ist. Solange es aus ist,
+ * ist der Eintrag nur für Admins sichtbar — die Mancave ERSETZT "Profil"
+ * nicht, sondern kommt als eigener zusätzlicher Slot dazu.
  */
-export default function FloatingPill({ roomVisible = false, mancaveVisible = false }: { roomVisible?: boolean; mancaveVisible?: boolean }) {
+export default function FloatingPill({ mancaveVisible = false }: { mancaveVisible?: boolean }) {
   const pathname          = usePathname();
   const router            = useRouter();
   const { data: session } = useSession();
@@ -155,19 +154,15 @@ export default function FloatingPill({ roomVisible = false, mancaveVisible = fal
   const myRankPoints = (session?.user as { rankPoints?: number } | undefined)?.rankPoints ?? 0;
 
   /*
-   * Resolve nav items once: the Profil-slot points at /zimmer once the room
-   * is visible for this user, admin gets appended for staff, and each item
+   * Resolve nav items once: admin gets appended for staff, and each item
    * carries its own active flag (see original NavIcon logic this replaces).
    */
   const NAV_ITEMS: { label: string; href: string; icon: LucideIcon; active: boolean; danger?: boolean; showPollBadge?: boolean }[] =
-    NAV.map(({ label, href, icon }) => {
-      const effHref = href === "/profile" && roomVisible ? "/zimmer" : href;
-      return {
-        label, href: effHref, icon,
-        active: pathname === effHref || (effHref !== "/dashboard" && pathname.startsWith(effHref)),
-        showPollBadge: href === "/events",
-      };
-    });
+    NAV.map(({ label, href, icon }) => ({
+      label, href, icon,
+      active: pathname === href || (href !== "/dashboard" && pathname.startsWith(href)),
+      showPollBadge: href === "/events",
+    }));
   if (mancaveVisible) {
     NAV_ITEMS.push({ label: "Mancave", href: "/mancave", icon: MonitorSmartphone, active: pathname.startsWith("/mancave") });
   }
@@ -195,7 +190,7 @@ export default function FloatingPill({ roomVisible = false, mancaveVisible = fal
     measure();
     window.addEventListener("resize", measure);
     return () => window.removeEventListener("resize", measure);
-  }, [pathname, isStaff, roomVisible, mancaveVisible]);
+  }, [pathname, isStaff, mancaveVisible]);
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -324,13 +319,6 @@ export default function FloatingPill({ roomVisible = false, mancaveVisible = fal
             </span>
           </div>
         )}
-        {/*
-         * Der Profil-Slot verlinkt auf /zimmer, sobald das Zimmer für diesen
-         * User sichtbar ist — /profile leitet dann ohnehin sofort auf /zimmer
-         * um, ein zweiter Eintrag für dasselbe Ziel wäre nur Redundanz. Label
-         * bleibt bewusst "Profil" — das Gaming-Zimmer ersetzt die alte
-         * Profilseite, ist für die User aber weiterhin "ihr Profil".
-         */}
         {NAV_ITEMS.map(({ label, href, icon, active, danger, showPollBadge }) => (
           <div key={href} style={{ position: "relative" }}>
             <NavLink

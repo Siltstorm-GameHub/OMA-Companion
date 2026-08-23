@@ -16,7 +16,6 @@ import {
   Trophy, CalendarDays, Swords, Clock, MessageSquare,
   CheckCircle2, Crown, Gamepad2, Medal, Gift, ChevronRight,
 } from "lucide-react";
-import { getRoomConfig, roomVisibleFor } from "@/lib/room-config";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import CoinIcon from "@/components/CoinIcon";
 import WinIcon from "@/components/WinIcon";
@@ -31,14 +30,6 @@ import ProfileOverlayButton from "@/components/ProfileOverlayButton";
 export default async function ProfilePage() {
   const me = await getSessionUser();
   if (!me) redirect("/login");
-
-  // Ablösung: sobald das Gaming-Zimmer für diesen User sichtbar ist, ist es die
-  // Profilseite. Der Umzug hängt am selben Feature-Flag wie alles andere am
-  // Zimmer — für Admins also immer, für alle anderen erst mit room_enabled=true.
-  // Diese klassische Seite bleibt bewusst bestehen (kein Löschen): sie ist der
-  // Rückfall, falls das Zimmer live ein Problem zeigt, das die Vorschau nicht
-  // aufgedeckt hat, und geht mit einer Flag-Änderung sofort wieder online.
-  if (roomVisibleFor(await getRoomConfig(), me.role)) redirect("/zimmer");
 
   const userId = me.id;
 

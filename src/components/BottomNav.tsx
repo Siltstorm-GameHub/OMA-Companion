@@ -14,29 +14,19 @@ const NAV = [
 ];
 
 /**
- * `roomVisible` kommt aus dem Dashboard-Layout, weil die Zimmer-Freischaltung
- * in der BotConfig liegt und nur serverseitig lesbar ist. Der Profil-Slot
- * verlinkt auf /zimmer, sobald das Zimmer sichtbar ist — /profile leitet dann
- * ohnehin sofort auf /zimmer um, ein achter Slot für dasselbe Ziel wäre nur
- * Redundanz auf einer Leiste, die auf schmalen Geräten schon jetzt eng ist.
- * Label bleibt bewusst "Profil" (nicht "Zimmer") — das Gaming-Zimmer ERSETZT
- * die alte Profilseite, ist für die User aber weiterhin "ihr Profil".
- *
- * `mancaveVisible` kommt aus demselben Layout, ist aber ein eigenständiger
- * Zusatz-Slot (kein Ersatz für "Profil") — nur sichtbar, solange die Mancave
- * noch admin-only ist.
+ * `mancaveVisible` kommt aus dem Dashboard-Layout, weil die Mancave-
+ * Freischaltung in der BotConfig liegt und nur serverseitig lesbar ist —
+ * ein eigenständiger Zusatz-Slot (kein Ersatz für "Profil"), nur sichtbar,
+ * solange die Mancave noch admin-only ist.
  */
-export default function BottomNav({ roomVisible = false, mancaveVisible = false }: { roomVisible?: boolean; mancaveVisible?: boolean }) {
+export default function BottomNav({ mancaveVisible = false }: { mancaveVisible?: boolean }) {
   const pathname = usePathname();
 
-  const items = NAV.map(({ label, href, icon }) => {
-    const effHref = href === "/profile" && roomVisible ? "/zimmer" : href;
-    return {
-      label, href: effHref, icon,
-      active: pathname === effHref || pathname.startsWith(effHref + "/"),
-      showPollBadge: href === "/events",
-    };
-  });
+  const items = NAV.map(({ label, href, icon }) => ({
+    label, href, icon,
+    active: pathname === href || pathname.startsWith(href + "/"),
+    showPollBadge: href === "/events",
+  }));
   if (mancaveVisible) {
     items.push({
       label: "Mancave", href: "/mancave", icon: MonitorSmartphone,

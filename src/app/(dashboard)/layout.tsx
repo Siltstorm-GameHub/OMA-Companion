@@ -11,7 +11,6 @@ import { FloatingLobbyChat } from "@/components/FloatingLobbyChat";
 import AuroraBackground from "@/components/AuroraBackground";
 import PartnerFooter from "@/components/PartnerFooter";
 import { prisma } from "@/lib/prisma";
-import { getRoomConfig, roomVisibleFor } from "@/lib/room-config";
 import { getMancaveConfig, mancaveVisibleFor } from "@/lib/mancave-config";
 import { getScopeTitle } from "@/lib/wanderpocal";
 
@@ -119,11 +118,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const nextEvent = activeOrPollEvent ?? upcomingEvent;
   const openQuestsCount = userId ? Math.max(totalMonthQuests - completedMonthQuests, 0) : 0;
 
-  // Gaming-Zimmer: solange room_enabled aus ist, sehen nur Admins den Nav-Eintrag.
-  const roomVisible = roomVisibleFor(
-    await getRoomConfig(),
-    (session?.user as { role?: string } | undefined)?.role,
-  );
   // Mancave: eigener Flag, gleiches Muster — solange mancave_enabled aus ist,
   // sehen nur Admins den zusätzlichen Nav-Eintrag (ersetzt NICHT "Profil").
   const mancaveVisible = mancaveVisibleFor(
@@ -268,7 +262,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
       {/* ── Floating Pill Nav (nur Desktop) ─────────────────────── */}
       <div className="hidden lg:block">
-        <FloatingPill roomVisible={roomVisible} mancaveVisible={mancaveVisible} />
+        <FloatingPill mancaveVisible={mancaveVisible} />
       </div>
 
       {/* ── Main Content ────────────────────────────────────────── */}
@@ -299,7 +293,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
       {/* ── Mobile Bottom Nav (immer sichtbar auf Handy) ───────── */}
       <div className="lg:hidden">
-        <BottomNav roomVisible={roomVisible} mancaveVisible={mancaveVisible} />
+        <BottomNav mancaveVisible={mancaveVisible} />
       </div>
     </div>
   );

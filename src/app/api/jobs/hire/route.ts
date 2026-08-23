@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireRoomAccess } from "@/lib/room-guard";
+import { requireMancaveAccess } from "@/lib/mancave-guard";
 import { hireJob } from "@/lib/job-service";
 
 export async function POST(req: NextRequest) {
-  const guard = await requireRoomAccess();
+  const guard = await requireMancaveAccess();
   if ("response" in guard) return guard.response;
 
   const { jobKey } = await req.json().catch(() => ({ jobKey: null }));

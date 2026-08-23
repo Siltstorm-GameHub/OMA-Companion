@@ -27,10 +27,6 @@ export type BadgeStats = {
   mvpCount?: number;
   /** Lebenszeit-Verdienst aus Idle-Jobs (UserJob.totalEarned). */
   jobCoinsEarned?: number;
-  /** Zimmer-Ausbaustufe (0..ROOM_LEVEL_THRESHOLDS.length-1), aus roomInvestment() aller besessenen Möbel (aufgestellt + eingelagert). */
-  roomLevel?: number;
-  /** Besitzt mind. ein gekauftes (nicht-Grundausstattungs-)Objekt in einer Upgrade-Kette (Schreibtisch/Rechner/Sitzmöbel). */
-  hasRoomUpgrade?: boolean;
   /** Pokale + Wanderpokale + Abzeichen zusammen — Proxy für "genug für eine volle Vitrine" (15 Fächer). */
   vitrineItemCount?: number;
 };
@@ -164,15 +160,6 @@ const BADGE_DEFS: BadgeDef[] = [
     id: "job_100k", icon: "🏭", name: "Lebenswerk", desc: "100.000 Münzen erarbeitet", category: "punkte",
     check: d => (d.jobCoinsEarned ?? 0) >= 100000,
     progress: d => ({ current: Math.min(d.jobCoinsEarned ?? 0, 100000), target: 100000 }),
-  },
-  // ── Zimmer-Einrichtung ────────────────────────────────────────────────
-  {
-    id: "room_first_upgrade", icon: "🔧", name: "Erstes Upgrade", desc: "Ein Möbelstück im Zimmer aufgewertet", category: "punkte",
-    check: d => !!d.hasRoomUpgrade,
-  },
-  {
-    id: "room_maxed", icon: "🏰", name: "Vollausgebaut", desc: "Zimmer-Ausbaustufe 4/4 erreicht", category: "punkte",
-    check: d => (d.roomLevel ?? 0) >= 3,
   },
   {
     id: "vitrine_full", icon: "🗄️", name: "Vitrinen-Sammler", desc: "Genug Pokale, Wanderpokale und Abzeichen für eine volle Vitrine (15 Fächer)", category: "punkte",

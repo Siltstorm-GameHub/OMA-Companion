@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { requireRoomAccess } from "@/lib/room-guard";
+import { requireMancaveAccess } from "@/lib/mancave-guard";
 import { quitJob } from "@/lib/job-service";
 
 export async function POST() {
-  const guard = await requireRoomAccess();
+  const guard = await requireMancaveAccess();
   if ("response" in guard) return guard.response;
 
   const result = await quitJob(guard.userId);

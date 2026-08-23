@@ -17,7 +17,7 @@ type SlideId = "job" | "results" | "message" | "polls" | "clipContest" | "whatsa
 function JobReminderSlide({ jobReminder, fill, insetLeft }: { jobReminder: JobReminderData; fill: boolean; insetLeft: boolean }) {
   return (
     <Link
-      href="/zimmer"
+      href="/mancave"
       className={`surface flex items-center gap-3 ${insetLeft ? "pl-11 pr-4" : "px-4"} py-3 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.99] ${
         jobReminder.current?.capped ? "border-rose-500/25" : ""
       }`}

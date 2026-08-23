@@ -35,7 +35,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Html, useGLTF, useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import RankedAvatar from "@/components/RankedAvatar";
-import { MonitorScreenContent, TrophyPanel, ItemsPanel, type MancavePanel } from "./MancaveSharedUI";
+import { MonitorScreenContent, TrophyPanel, ItemsPanel, JobsPanel, MailPanel, type MancavePanel } from "./MancaveSharedUI";
 import type { MancaveData } from "./mancave-data";
 
 const ROOM_MODEL_URL = "/models/mancave_room.glb";
@@ -564,19 +564,6 @@ const COUCHTISCH_CFG: ExtraCfg = { url: "/models/mancave_couchtisch.glb", fix: [
 // Nachjustieren, da (anders als bei der Tastatur) kein exakter Soll-Winkel
 // bekannt ist.
 const STREAMDECK_CFG: ExtraCfg = { url: "/models/streamdeck.glb", fix: [0.1298, 0.2546, -0.0884], scale: 1, position: new THREE.Vector3(1.0, 0.818, -0.9), rotationY: -3 * Math.PI / 4 };
-// mikrofon.glb entfernt (User-Wunsch — sucht später ein Ersatz-Modell).
-// Nachtrag zur Vorgeschichte: die anfängliche "unsichtbar"-Vermutung (Datei
-// unvollständig, nur ein winziges Gummi-Halterungsteil) war falsch — es war
-// tatsächlich der komplette Ständer (20k Polygone, per Blender-Screenshot
-// bestätigt), nur mit irreführendem Meshnamen. Der wahre Bug: 2 von 8
-// Materialien ("material.002"/"mic_net.001", vermutlich Mikrofonkörper und
-// -Gitter) hatten kein `metallicFactor` im glTF-JSON gesetzt — Spec-Default
-// dafür ist voll-metallisch, was ohne Environment-Map in dieser Szene
-// schwarz/falsch rendert (derselbe Bug-Typ wie beim PC/Monitor früher).
-// Bereits gefixt und als "mikrofon_fixed.glb" exportiert, falls das Modell
-// später doch wieder gebraucht wird — aktuell aber nicht mehr eingebunden.
-// Der Katalog-Slot "mikrofon" (mancave-items.ts) bleibt bestehen, damit er
-// weiter kaufbar ist, sobald ein neues Modell eingebunden wird.
 // ringlicht.glb: User-Wunsch (dritter Anlauf) — auf dem Tisch hinter den 4
 // Monitoren, so dass der Ring oben über sie hinausschaut, statt bodenstehend
 // (was weder "riesig vor der Kamera" noch "winzig am Boden" gut aussah).
@@ -629,13 +616,6 @@ for (const m of [
 // Nanoleaf-Dreieck-Panels über dem Schreibtisch (Mittelpunkt aller 21
 // "Circle.*"-Meshes, nachgemessen) — Anker für den Pokale-Hotspot.
 const SHELF_POS = new THREE.Vector3(0.19, 1.56, -0.11);
-// Linke vordere Tischkante — Anker für den Ausbau-Hotspot (Stufen-Upgrades,
-// siehe mancave-items.ts). Bewusst nach links/vorne verschoben (war vorher
-// (0.95,0.86,-0.55), nur ~0.28 Einheiten von PC_POS/PC_LABEL_POS entfernt —
-// wirkte zusammen mit dem Gadgets-Hotspot gedrängt); jetzt klarer getrennt
-// von der PC-Ecke rechts.
-const DESK_FRONT_POS = new THREE.Vector3(0.7, 0.86, -0.18);
-
 // Teppich-Fläche der Referenzszene ("Plane", Material "Carpet") — Boden-
 // Mittelpunkt, aus Blender übernommen (Zentrum [-0.347,0.669,0.05], Größe
 // [1.755,1.755,0]) und umgerechnet; y auf 0 gesetzt (Bodenhöhe), der Radius
@@ -1083,7 +1063,6 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
   const [panel, setPanel] = useState<MancavePanel>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const hasAffordableUpgrade = data.items.some(i => i.nextCost !== null && i.nextCost <= data.totalPoints);
   const deskTier = data.items.find(i => i.key === "schreibtisch")?.tier ?? 1;
   const tastaturTier = data.items.find(i => i.key === "tastatur")?.tier ?? 1;
   const mausTier = data.items.find(i => i.key === "maus")?.tier ?? 1;
@@ -1093,11 +1072,10 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
   const regalTier = data.items.find(i => i.key === "regal")?.tier ?? 1;
   const nanoleafTier = data.items.find(i => i.key === "nanoleaf")?.tier ?? 0;
   const deskmatTier = data.items.find(i => i.key === "deskmat")?.tier ?? 0;
-  const webcamTier = data.items.find(i => i.key === "webcam")?.tier ?? 0;
-  const headsetTier = data.items.find(i => i.key === "headset")?.tier ?? 0;
   const couchtischTier = data.items.find(i => i.key === "couchtisch")?.tier ?? 0;
-  const streamdeckTier = data.items.find(i => i.key === "streamdeck")?.tier ?? 0;
-  const ringlichtTier = data.items.find(i => i.key === "ringlicht")?.tier ?? 0;
+  // Streaming-Equipment: EIN Slot, 4 kumulative Stufen (Headset/Webcam/
+  // Ringlicht/Stream Deck), siehe mancave-items.ts.
+  const streamingTier = data.items.find(i => i.key === "streaming")?.tier ?? 0;
   const ps5ControllerTier = data.items.find(i => i.key === "ps5controller")?.tier ?? 0;
 
   return (
@@ -1148,20 +1126,25 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
             <pointLight position={LED_STRIPS_LIGHT_POS} intensity={0.6} color="#e0e7ff" distance={6} decay={2} />
           )}
           <ExtraProp tier={deskmatTier} cfg={DESKMAT_CFG} />
-          <ExtraProp tier={webcamTier} cfg={WEBCAM_CFG} />
-          <ExtraProp tier={headsetTier} cfg={HEADSET_CFG} />
           <ExtraProp tier={couchtischTier} cfg={COUCHTISCH_CFG} />
-          <ExtraProp tier={streamdeckTier} cfg={STREAMDECK_CFG} />
-          <ExtraProp tier={ringlichtTier} cfg={RINGLICHT_CFG} />
-          {ringlichtTier >= 1 && (
+          {/* Streaming-Equipment, kumulativ: Headset(1) -> Webcam(2) ->
+              Ringlicht(3) -> Stream Deck(4). */}
+          <ExtraProp tier={streamingTier >= 1 ? 1 : 0} cfg={HEADSET_CFG} />
+          <ExtraProp tier={streamingTier >= 2 ? 1 : 0} cfg={WEBCAM_CFG} />
+          <ExtraProp tier={streamingTier >= 3 ? 1 : 0} cfg={RINGLICHT_CFG} />
+          {streamingTier >= 3 && (
             <pointLight position={RINGLICHT_LIGHT_POS} intensity={0.6} color="#fff24a" distance={3} decay={2} />
           )}
+          <ExtraProp tier={streamingTier >= 4 ? 1 : 0} cfg={STREAMDECK_CFG} />
           <ExtraProp tier={ps5ControllerTier} cfg={PS5_CONTROLLER_CFG} />
 
-          {/* Live-Dashboard direkt auf dem Monitor-Screen — 3D-verankert, immer sichtbar */}
+          {/* Interaktives Dashboard direkt auf dem Monitor-Screen — 3D-verankert,
+              immer sichtbar. Dock-Icons öffnen Statistik/Jobs/Ausbau/Postfach
+              direkt am Rechner (ersetzt den früheren separaten Ausbau-Hotspot
+              auf dem Schreibtisch — Upgrades gehören jetzt an den Monitor). */}
           <Html center position={SCREEN_POS} style={{ pointerEvents: "auto" }}>
-            <div className="w-[150px] h-[84px] rounded-[3px] overflow-hidden shadow-[0_0_18px_rgba(45,212,191,0.35)]">
-              <MonitorScreenContent data={data} />
+            <div className="w-[150px] h-[104px] rounded-[3px] overflow-hidden shadow-[0_0_18px_rgba(45,212,191,0.35)]">
+              <MonitorScreenContent data={data} onOpenPanel={setPanel} />
             </div>
           </Html>
 
@@ -1180,16 +1163,6 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full whitespace-nowrap"
               style={{ background: "rgba(4,10,9,0.7)", border: "1px solid rgba(245,158,11,0.3)", backdropFilter: "blur(3px)" }}>
               <span className="text-[10px] font-semibold text-amber-300">🏆 Pokale &amp; Abzeichen</span>
-            </button>
-          </Html>
-
-          {/* Ausbau (neues Stufen-Upgrade-System) — pulsiert, wenn sich ein
-              Upgrade gerade leisten lässt, damit es auffällt. */}
-          <Html position={DESK_FRONT_POS} center>
-            <button onClick={() => setPanel("items")}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full whitespace-nowrap ${hasAffordableUpgrade ? "animate-pulse" : ""}`}
-              style={{ background: "rgba(4,10,9,0.7)", border: "1px solid rgba(94,234,212,0.35)", backdropFilter: "blur(3px)" }}>
-              <span className="text-[10px] font-semibold text-teal-300">🛠️ Ausbau</span>
             </button>
           </Html>
 
@@ -1237,6 +1210,8 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
             </button>
             {panel === "trophy" && <TrophyPanel data={data} />}
             {panel === "items" && <ItemsPanel data={data} />}
+            {panel === "jobs" && <JobsPanel data={data} />}
+            {panel === "mail" && <MailPanel data={data} onOpenPanel={setPanel} />}
           </div>
         </div>
       )}
