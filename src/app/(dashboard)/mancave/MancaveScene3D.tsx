@@ -350,23 +350,53 @@ const DESKMAT_CFG: ExtraCfg = { url: "/models/mancave_deskmat.glb", fix: [0, 0, 
 // saß laut Screenshot deutlich über der echten Bildschirm-Oberkante
 // (mancave_monitor_screen1.glb: Y bis 1.244, aus der Roh-glTF gemessen).
 const WEBCAM_CFG: ExtraCfg = { url: "/models/webcam.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(1.215, 1.25, -0.7), rotationY: -Math.PI / 2 };
-// Headset: User-Wunsch — flach auf den Tisch legen, ganz links. Modell steht
-// laut Messscript aufrecht (min.y=0, max.y=0.24, Fußabdruck ±0.106 in X/Z) —
-// 90°-Drehung um Z legt es um; `fix` verschiebt den Ursprung so, dass die neue
-// Unterseite nach der Drehung wieder bei lokal y=0 liegt (nach 90°-Z-Drehung
-// wird Welt-Y aus lokalem X, Welt-X aus lokalem -Y).
+// Headset: flach auf den Tisch legen. Modell steht laut Messscript aufrecht
+// (min.y=0, max.y=0.24, Fußabdruck ±0.106 in X/Z) — 90°-Drehung um Z legt es
+// um; `fix` verschiebt den Ursprung so, dass die neue Unterseite nach der
+// Drehung wieder bei lokal y=0 liegt (nach 90°-Z-Drehung wird Welt-Y aus
+// lokalem X, Welt-X aus lokalem -Y).
 //
-// User-Wunsch: links neben die Tastatur, mit etwas Abstand. Tastatur
-// identifiziert per Raycast auf der Tischfläche ("Cylinder.002", X 0.796-
-// 0.969, Z -1.098 bis -0.72). Physikalisch NICHT direkt links davon (gleiche
-// Tiefe) machbar: die Tischkante liegt bei X=0.701 — zwischen Kante und
-// Tastatur bleiben nur 0.095 Einheiten, das Headset braucht nach der Drehung
-// aber ±0.12 Fußabdruck (selbst stark verkleinert wäre kaum noch erkennbar).
-// Deshalb stattdessen etwas weiter vorne (kleineres Z, außerhalb des
-// Tastatur-Tiefenbands) und so weit links wie die Tischkante zulässt platziert
-// — bleibt klar links auf dem Tisch, berührt die Tastatur nicht, mit
-// sichtbarem Abstand in beide Richtungen (X UND Z).
-const HEADSET_CFG: ExtraCfg = { url: "/models/headset_gaming.glb", fix: [0.106, 0.12, 0], scale: 1, position: new THREE.Vector3(0.83, 0.818, -0.55), rotationZ: Math.PI / 2 };
+// Position: User zeigte per Screenshot explizit auf die sichtbar freie Lücke
+// links neben der Tastatur, zwischen ihr und der Wand — vorher fälschlich an
+// der zu schmal gemessenen Mousepad-Bbox orientiert (siehe TASTATUR_UPGRADE_
+// CFG-Kommentar) und deshalb an eine andere Tiefe ausgewichen. Jetzt mit der
+// korrekten, breiteren Tisch-Bbox (Cube.001, X 0.639-1.264) und der jetzt
+// kleineren Tastatur (scale 0.55, linke Kante bei X≈0.78) neu berechnet:
+// Headset zusätzlich verkleinert (scale 0.6, Fußabdruck dann ±0.072), damit
+// es in die Lücke zwischen Tischkante (0.639) und Tastatur (0.78) passt,
+// mit kleinem Abstand zu beiden Seiten. Gleiche Tiefe (Z) wie die Tastatur,
+// wie im Screenshot zu sehen.
+const HEADSET_CFG: ExtraCfg = { url: "/models/headset_gaming.glb", fix: [0.106, 0.12, 0], scale: 0.6, position: new THREE.Vector3(0.71, 0.818, -0.91), rotationZ: Math.PI / 2 };
+
+/**
+ * Tastatur/Maus-Stufen: `tastatur`/`maus` sind Grundausstattung mit 4
+ * kaufbaren Stufen im Katalog (mancave-items.ts), zeigten bisher aber NIE
+ * etwas anderes als das feste Referenzszenen-Objekt ("Cylinder.002"/
+ * "Cylinder", auf dem Tisch), egal welche Stufe gekauft wurde — reiner
+ * Wirtschafts-Slot ohne visuelle Wirkung. Jetzt: Stufe 1 bleibt das feste
+ * Szenen-Objekt (kostenlos, keine neue Geometrie nötig), ab Stufe 2 blendet
+ * `RoomModel` es aus (siehe `tastaturTier`/`mausTier`-Props dort) und
+ * `ExtraProp` mit `tier - 1` zeigt stattdessen das jeweils neue Modell —
+ * einziges verfügbares Ersatz-Modell pro Slot, Stufe 2/3/4 teilen es sich
+ * (dieselbe Lücken-Konvention wie bei Stuhl/Regal weiter oben).
+ *
+ * keyboard_mech.glb: realistische Weltmaß-Proportionen (0.367×0.147, breiter
+ * als tief — passt zu einer echten Tastatur), Ursprung an einer Ecke statt
+ * zentriert (min [0,-0.024,0], max [0.367,0.015,0.147], per Messscript) —
+ * `fix` zentriert X/Z und hebt Y auf die Unterseite. Deutlich verkleinert
+ * (scale 0.55, nicht nur 0.85): die echte Tischbreite ist "Cube.001" (X
+ * 0.639-1.264, 0.625 breit) — vorher fälschlich an der kleineren Mousepad-
+ * Bounding-Box gemessen. Bei 0.85 blieb links neben der Tastatur kaum Platz
+ * für das Headset (User-Screenshot zeigte dort deutlich sichtbaren freien
+ * Tisch), bei 0.55 bleibt eine echte Lücke.
+ */
+const TASTATUR_UPGRADE_CFG: ExtraCfg = { url: "/models/keyboard_mech.glb", fix: [-0.1835, 0.024, -0.0735], scale: 0.55, position: new THREE.Vector3(0.88, 0.818, -0.91) };
+// mouse_gaming.glb kam in absurd großen Roh-Maßen (~2×1×2 Einheiten) —
+// scale=0.045 bringt sie auf realistische Maus-Größe (~0.09×0.05×0.095).
+// `fix` zentriert X/Z (Ursprung lag bei [-0.03,0.4,0] statt am Modellzentrum)
+// und hebt Y auf die Unterseite (min.y=-0.145). Position rechts neben/vor der
+// Tastatur, mit Abstand zum jetzt links liegenden Headset.
+const MAUS_UPGRADE_CFG: ExtraCfg = { url: "/models/mouse_gaming.glb", fix: [0.0305, 0.145, 0], scale: 0.045, position: new THREE.Vector3(1.0, 0.818, -0.55) };
 // Couchtisch: User-Hinweis — "Cube.014" in der Referenzszene (Glasplatte,
 // Materialien "Pc glass"+"Material", Größe 0.641×0.528×0.334, nahe der
 // Couch) ist bereits ein passender Couchtisch, stilecht statt eines fremden
@@ -379,7 +409,7 @@ const COUCHTISCH_CFG: ExtraCfg = { url: "/models/mancave_couchtisch.glb", fix: [
 for (const m of [
   ...Object.values(PC_TIER_MODELS),
   ...Object.values(STUHL_TIER_MODELS), ...Object.values(REGAL_TIER_MODELS),
-  NANOLEAF_CFG, DESKMAT_CFG, WEBCAM_CFG, HEADSET_CFG, COUCHTISCH_CFG,
+  NANOLEAF_CFG, DESKMAT_CFG, WEBCAM_CFG, HEADSET_CFG, COUCHTISCH_CFG, TASTATUR_UPGRADE_CFG, MAUS_UPGRADE_CFG,
   MONITOR_SCREEN1_CFG, MONITOR_SCREEN2_CFG, MONITOR_SCREEN3_CFG, MONITOR_SCREEN4_CFG,
 ]) useGLTF.preload(m.url);
 // Nanoleaf-Dreieck-Panels über dem Schreibtisch (Mittelpunkt aller 21
@@ -471,7 +501,7 @@ const DESK_TIER_STYLES = [
   { color: "#0a0a0d" },
 ];
 
-function RoomModel({ surfaceTier, deskTier }: { surfaceTier: number; deskTier: number }) {
+function RoomModel({ surfaceTier, deskTier, tastaturTier, mausTier }: { surfaceTier: number; deskTier: number; tastaturTier: number; mausTier: number }) {
   const { scene } = useGLTF(ROOM_MODEL_URL);
   const idx = Math.min(4, Math.max(1, surfaceTier)) - 1;
   const deskIdx = Math.min(4, Math.max(1, deskTier)) - 1;
@@ -508,8 +538,22 @@ function RoomModel({ surfaceTier, deskTier }: { surfaceTier: number; deskTier: n
         }
       }
     });
+    // Feste Tastatur/Maus aus der Referenzszene ("Cylinder.002"/"Cylinder",
+    // per Raycast auf der Tischfläche identifiziert) ausblenden, sobald der
+    // jeweilige Katalog-Slot auf Stufe 2+ hochgestuft wurde — dann übernimmt
+    // das echte Tausch-Modell (TASTATUR_UPGRADE_CFG/MAUS_UPGRADE_CFG) an
+    // derselben Stelle. Per Name statt Entfernen aus dem Export, damit Stufe 1
+    // (Grundausstattung, kein Kauf nötig) weiter die vorhandene Geometrie nutzt.
+    if (tastaturTier >= 2) {
+      const kb = clone.getObjectByName("Cylinder.002");
+      if (kb) kb.visible = false;
+    }
+    if (mausTier >= 2) {
+      const mouse = clone.getObjectByName("Cylinder");
+      if (mouse) mouse.visible = false;
+    }
     return clone;
-  }, [scene, floorTex, wallTex, deskIdx]);
+  }, [scene, floorTex, wallTex, deskIdx, tastaturTier, mausTier]);
   /* eslint-enable react-hooks/immutability */
   return <primitive object={cloned} />;
 }
@@ -810,6 +854,8 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
 
   const hasAffordableUpgrade = data.items.some(i => i.nextCost !== null && i.nextCost <= data.totalPoints);
   const deskTier = data.items.find(i => i.key === "schreibtisch")?.tier ?? 1;
+  const tastaturTier = data.items.find(i => i.key === "tastatur")?.tier ?? 1;
+  const mausTier = data.items.find(i => i.key === "maus")?.tier ?? 1;
   const pcTier = data.items.find(i => i.key === "computer")?.tier ?? 1;
   const monitorTier = data.items.find(i => i.key === "monitor")?.tier ?? 1;
   const stuhlTier = data.items.find(i => i.key === "stuhl")?.tier ?? 1;
@@ -835,7 +881,9 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
         <Suspense fallback={null}>
           <WallExtensions surfaceTier={data.surfaceTier} />
           <Ceiling />
-          <RoomModel surfaceTier={data.surfaceTier} deskTier={deskTier} />
+          <RoomModel surfaceTier={data.surfaceTier} deskTier={deskTier} tastaturTier={tastaturTier} mausTier={mausTier} />
+          <ExtraProp tier={tastaturTier - 1} cfg={TASTATUR_UPGRADE_CFG} />
+          <ExtraProp tier={mausTier - 1} cfg={MAUS_UPGRADE_CFG} />
           <WindowFrame surfaceTier={data.surfaceTier} />
           <WindowView surfaceTier={data.surfaceTier} />
           <WindowExterior />
