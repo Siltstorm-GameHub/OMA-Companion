@@ -362,12 +362,18 @@ const WEBCAM_CFG: ExtraCfg = { url: "/models/webcam.glb", fix: [0, 0, 0], scale:
 // erklärt. fix.y=-0.12 zentriert den Bereich korrekt auf 0.
 //
 // Position: entlang der BLENDER-Y-Achse (= gltf Z, da gltf.z = -blender.y)
-// aufgereiht, gleiches X wie die Tastatur (≈0.95). User-Korrekturen dieser
-// Runde: Position mit Maus getauscht (jetzt hinten, Z=-1.1 statt vorne),
-// zusätzlich 180°-Drehung (rotationY, oben auf die bestehende liegende
-// rotationZ-Drehung drauf) und etwas größer (scale 0.45→0.55). Alle drei
-// zusammen näher an den vorderen Tischrand (gltf Z=-0.131) geschoben.
-const HEADSET_CFG: ExtraCfg = { url: "/models/headset_gaming.glb", fix: [0.106, -0.12, 0], scale: 0.55, position: new THREE.Vector3(0.95, 0.818, -1.1), rotationY: Math.PI, rotationZ: Math.PI / 2 };
+// aufgereiht. Mit Maus getauscht (jetzt hinten, Z=-1.3), 180°-Drehung
+// (rotationY, oben auf die bestehende liegende rotationZ-Drehung) und etwas
+// größer (scale 0.45→0.55).
+//
+// X-Korrektur (User: "vordere Tischkante" = die Kante, vor der der Stuhl
+// steht, nicht das Z-Ende, das ich zuletzt verschoben hatte): per Blender-
+// Geometrie bestätigt — STUHL_POS liegt viel näher an der X-min-Kante des
+// Tisches (Abstand 0.27) als an beiden Z-Enden (Abstand ~0.7-0.79 zu
+// beiden) — die "vordere Kante" ist X≈0.639, nicht eine Z-Grenze. Der
+// vorherige Z-Shift war deshalb die falsche Achse; zurückgesetzt, X place
+// stattdessen von 0.95 auf 0.78 gesenkt (näher an die Stuhl-Kante).
+const HEADSET_CFG: ExtraCfg = { url: "/models/headset_gaming.glb", fix: [0.106, -0.12, 0], scale: 0.55, position: new THREE.Vector3(0.78, 0.818, -1.3), rotationY: Math.PI, rotationZ: Math.PI / 2 };
 
 /**
  * Tastatur/Maus-Stufen: `tastatur`/`maus` sind Grundausstattung mit 4
@@ -424,9 +430,10 @@ const HEADSET_CFG: ExtraCfg = { url: "/models/headset_gaming.glb", fix: [0.106, 
 // ausgerichtet war. User-Anweisung: 90° im Uhrzeigersinn drehen, damit sie
 // richtig zum Nutzer hin auf dem Tisch liegt — in Three.js' Konvention ist
 // "im Uhrzeigersinn von oben betrachtet" eine NEGATIVE Y-Rotation.
-// Näher an den vorderen Tischrand geschoben (User-Wunsch, zusammen mit
-// Headset/Maus) — Z von -0.91 auf -0.71.
-const TASTATUR_UPGRADE_CFG: ExtraCfg = { url: "/models/keyboard_mech_fixed.glb", fix: [-0.8415, 0.112, -0.336], scale: 0.24, position: new THREE.Vector3(0.95, 0.818, -0.71), rotationY: -Math.PI / 2 };
+// Z zurückgesetzt auf -0.91 (falsche Achse letzte Runde, siehe HEADSET_CFG-
+// Kommentar), X stattdessen von 0.95 auf 0.78 gesenkt — näher an die Kante,
+// vor der der Stuhl steht.
+const TASTATUR_UPGRADE_CFG: ExtraCfg = { url: "/models/keyboard_mech_fixed.glb", fix: [-0.8415, 0.112, -0.336], scale: 0.24, position: new THREE.Vector3(0.78, 0.818, -0.91), rotationY: -Math.PI / 2 };
 // mouse_gaming.glb: nach korrekter (transformierter) Messung bereits winzig
 // und fast perfekt zentriert (Bbox size≈0.12×0.039×0.082, min.y≈0,
 // center.x/z≈0) — die vorherigen Roh-Maße (~2×1×2, "absurd groß") waren
@@ -436,10 +443,11 @@ const TASTATUR_UPGRADE_CFG: ExtraCfg = { url: "/models/keyboard_mech_fixed.glb",
 // nichts daran, dass sie relativ zur Tischplatte trotzdem falsch ausgerichtet
 // war (User-Feedback: "falsch gedreht" für beide zusammen). Gleiche 90°-
 // Uhrzeiger-Korrektur wie bei der Tastatur angewendet.
-// Position mit Headset getauscht (jetzt vorne statt hinten, Z=-0.3), plus
+// Position mit Headset getauscht (jetzt vorne statt hinten, Z=-0.5), plus
 // weitere +90° Rotation oben auf die bestehende -90° drauf (macht netto 0,
-// also lokale Ausgangsausrichtung) und näher an den vorderen Tischrand.
-const MAUS_UPGRADE_CFG: ExtraCfg = { url: "/models/mouse_gaming.glb", fix: [0, 0, 0], scale: 0.85, position: new THREE.Vector3(0.95, 0.818, -0.3), rotationY: 0 };
+// also lokale Ausgangsausrichtung). X von 0.95 auf 0.78 gesenkt, gleiche
+// Begründung wie bei Tastatur/Headset (Stuhl-Kante, nicht Z-Ende).
+const MAUS_UPGRADE_CFG: ExtraCfg = { url: "/models/mouse_gaming.glb", fix: [0, 0, 0], scale: 0.85, position: new THREE.Vector3(0.78, 0.818, -0.5), rotationY: 0 };
 // Couchtisch: User-Hinweis — "Cube.014" in der Referenzszene (Glasplatte,
 // Materialien "Pc glass"+"Material", Größe 0.641×0.528×0.334, nahe der
 // Couch) ist bereits ein passender Couchtisch, stilecht statt eines fremden
