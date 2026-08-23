@@ -182,7 +182,13 @@ export function JobsPanel({ data }: { data: MancaveData }) {
   async function reload() {
     const d: JobOverview = await fetch("/api/jobs").then(r => r.json()).catch(() => null);
     if (d && !("error" in d)) setOverview(d);
-    router?.refresh();
+    // Läuft dieses Panel im isolierten <Html>-React-Baum (Monitor-Screen,
+    // siehe useSafeRouter-Kommentar oben), gibt's keinen Router zum
+    // Revalidieren des restlichen Seiteninhalts — ein voller Reload ist dort
+    // die einzige Möglichkeit, den Rest der Seite (z.B. Münzstand) wieder
+    // korrekt zu bekommen. Selten genug ausgelöst (nur nach Job-Aktionen),
+    // dass das vertretbar ist.
+    if (router) router.refresh(); else window.location.reload();
   }
 
   async function hire(job: JobListEntry) {

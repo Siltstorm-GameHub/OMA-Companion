@@ -59,27 +59,45 @@ const LOOK_TARGET = EYE.clone().add(FORWARD);
 // ausprobiert, vom User aber als schlechter beurteilt und zurückgesetzt) —
 // diese niedrigere Position bleibt der bevorzugte Stand.
 const SCREEN_POS = new THREE.Vector3(1.215, 1.091, -0.741);
-// Echtes Seitenverhältnis der leuchtenden Bildschirm-Fläche (Material
-// "Pc screen3" in mancave_monitor_screen1.glb, NICHT das ganze Mesh inkl.
-// Rahmen) — per Blender bmesh direkt vermessen (nur Faces mit diesem
-// Material), Blender-Bbox (Z-up) in gltf-Koordinaten umgerechnet:
-// gltf.x=blender.x, gltf.y=blender.z, gltf.z=-blender.y. Blender-Bbox war
-// min=(1.2128,0.4785,0.9200) max=(1.2128,1.0041,1.2346) → Breite (blender Y)
-// 0.5257, Höhe (blender Z) 0.3146 → Verhältnis 1.671.
-//
-// <Html transform> (echte Weltmaß-Skalierung über den `scale`-Prop) wurde
-// versucht, aber verworfen: drei dividiert intern zusätzlich durch einen
-// distanceFactor-Faktor (Default 10/400=0.025, siehe Html.js) — ohne den
-// hier einzupreisen wurde der Screen um ein Vielfaches zu klein (kaum
-// sichtbarer Farbfleck). Zurück zum einfachen, bewährten Billboard-Modus
-// (<Html center>, feste CSS-Pixelgröße) — bei der festen Kameraposition
-// dieser Szene reicht ein einmal von Hand kalibrierter Wert.
-// User-Screenshot: bei 260px füllte die Box nur ~halbe Breite/⅔ Höhe des
-// Bildschirms, mit Leerraum oben/links im Rahmen — auf ~1.7x vergrößert
-// (Box bleibt um denselben, bereits bestätigten Anker SCREEN_POS zentriert,
-// wächst also gleichmäßig in alle Richtungen).
-const SCREEN_CONTENT_W = 440;
-const SCREEN_CONTENT_H = Math.round(SCREEN_CONTENT_W / 1.671);
+
+/**
+ * Interaktive Overlays auf ALLEN Monitor-Screens (nicht nur dem Haupt-
+ * Monitor) — ab Monitor-Stufe 2/3/4 kommen weitere Screens dazu (2x2-Raster:
+ * screen1 unten-rechts, screen2 unten-links, screen3 oben-rechts, screen4
+ * oben-links), jeder bekommt sein eigenes <Html transform>-Overlay.
+ *
+ * ECHTE 3D-Verankerung (`<Html transform>`) statt Billboard: User-Wunsch
+ * "dreht sich mit der Kamera mit" — beim Billboard-Modus (`<Html center>`,
+ * fixe CSS-Pixelgröße) bleibt der Screen immer flach zur Kamera ausgerichtet
+ * statt sich mit der 3D-Perspektive der Bildschirmfläche mitzudrehen.
+ *
+ * Größen-Bug beim ersten Versuch (Screen war ~40x zu klein, "Farbfleck"):
+ * drei's Html.js multipliziert die Objekt-Skalierung intern zusätzlich mit
+ * `(distanceFactor ?? 10) / 400` (siehe getObjectCSSMatrix + der `1 / ((distanceFactor
+ * || 10) / 400)`-Aufruf in Html.js). Mit explizitem `distanceFactor={400}`
+ * wird dieser Faktor zu 400/400=1 und hebt sich komplett auf — der `scale`-
+ * Prop wirkt dann 1:1 als "Weltmeter pro CSS-Pixel", genau wie ursprünglich
+ * angenommen.
+ *
+ * Alle vier Bildschirm-Flächen (Material "Pc screen3" in den jeweiligen
+ * mancave_monitor_screenN.glb, NICHT das Mesh inkl. Rahmen) per Blender
+ * bmesh vermessen (nur Faces mit diesem Material), Blender-Bbox (Z-up) in
+ * gltf-Koordinaten umgerechnet: gltf.x=blender.x, gltf.y=blender.z,
+ * gltf.z=-blender.y. Screen4 zusätzlich um die bekannten -0.02 (gltf-Y)
+ * korrigiert, siehe MONITOR_SCREEN4_CFG-Kommentar.
+ */
+interface MonitorScreenGeom { center: THREE.Vector3; widthM: number; heightM: number }
+const MONITOR_SCREENS: MonitorScreenGeom[] = [
+  { center: new THREE.Vector3(1.2128, 1.0773,  -0.7413), widthM: 0.5256, heightM: 0.3146 }, // screen1, unten-rechts
+  { center: new THREE.Vector3(1.1392, 1.07725, -1.2758), widthM: 0.5052, heightM: 0.3145 }, // screen2, unten-links
+  { center: new THREE.Vector3(1.15295, 1.4001, -0.7413), widthM: 0.5256, heightM: 0.2920 }, // screen3, oben-rechts
+  { center: new THREE.Vector3(1.1392, 1.41125, -1.2758), widthM: 0.5052, heightM: 0.3145 }, // screen4, oben-links (Y bereits -0.02 korrigiert)
+];
+// Content wird bei fester CSS-Pixelbreite gezeichnet und über `scale` auf
+// die echte Weltbreite der jeweiligen Bildschirmfläche herunterskaliert —
+// dadurch bleibt die "Auflösung" (Schärfe) auf allen vier Screens gleich,
+// obwohl sie leicht unterschiedlich groß sind.
+const SCREEN_CONTENT_PX = 640;
 // Profil-Plakat: saß ursprünglich über dem Monitor (überlappte damit), dann
 // links vom Fenster bei X=-0.55 — das war relativ zur ALTEN Fensterposition
 // (X=0.3) berechnet und wurde beim Verschieben des Fensters (jetzt X=0.7,
@@ -1161,16 +1179,25 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
           <ExtraProp tier={streamingTier >= 4 ? 1 : 0} cfg={STREAMDECK_CFG} />
           <ExtraProp tier={ps5ControllerTier} cfg={PS5_CONTROLLER_CFG} />
 
-          {/* Interaktives Dashboard direkt auf dem Monitor-Screen — 3D-verankert,
-              immer sichtbar. Dock-Icons öffnen Statistik/Jobs/Ausbau/Postfach
-              direkt am Rechner (ersetzt den früheren separaten Ausbau-Hotspot
-              auf dem Schreibtisch — Upgrades gehören jetzt an den Monitor). */}
-          <Html center position={SCREEN_POS} style={{ pointerEvents: "auto" }}>
-            <div style={{ width: SCREEN_CONTENT_W, height: SCREEN_CONTENT_H }}
-              className="overflow-hidden rounded-[3px] shadow-[0_0_18px_rgba(45,212,191,0.35)]">
-              <MonitorScreenContent data={data} />
-            </div>
-          </Html>
+          {/* Interaktives Dashboard auf JEDEM freigeschalteten Monitor-Screen —
+              echte 3D-Verankerung (<Html transform>, siehe MONITOR_SCREENS-
+              Kommentar oben), dreht sich also korrekt mit der Kamera/
+              Bildschirmfläche statt als flaches Billboard immer zur Kamera zu
+              zeigen. Dock-Icons öffnen Statistik/Jobs/Ausbau/Postfach direkt
+              am jeweiligen Rechner-Bildschirm (ersetzt den früheren separaten
+              Ausbau-Hotspot auf dem Schreibtisch). Jeder Screen hat seinen
+              eigenen, unabhängigen Panel-Zustand. */}
+          {MONITOR_SCREENS.slice(0, Math.max(1, monitorTier)).map((screen, i) => (
+            <Html key={i} transform distanceFactor={400} center occlude={false}
+              position={screen.center} rotation={[0, -Math.PI / 2, 0]}
+              scale={screen.widthM / SCREEN_CONTENT_PX}
+              style={{ pointerEvents: "auto" }}>
+              <div style={{ width: SCREEN_CONTENT_PX, height: SCREEN_CONTENT_PX / (screen.widthM / screen.heightM) }}
+                className="overflow-hidden shadow-[0_0_40px_rgba(45,212,191,0.35)]">
+                <MonitorScreenContent data={data} />
+              </div>
+            </Html>
+          ))}
 
           {/* Profil-Plakat über dem Monitor: Avatar mit Rangrahmen + Community-Claim. */}
           <Html center position={POSTER_POS}>
