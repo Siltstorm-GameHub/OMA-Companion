@@ -381,30 +381,36 @@ const HEADSET_CFG: ExtraCfg = { url: "/models/headset_gaming.glb", fix: [0.106, 
  * einziges verfügbares Ersatz-Modell pro Slot, Stufe 2/3/4 teilen es sich
  * (dieselbe Lücken-Konvention wie bei Stuhl/Regal weiter oben).
  *
- * keyboard_mech.glb: realistische Weltmaß-Proportionen (0.367×0.147, breiter
- * als tief — passt zu einer echten Tastatur), Ursprung an einer Ecke statt
- * zentriert (min [0,-0.024,0], max [0.367,0.015,0.147], per Messscript) —
- * `fix` zentriert X/Z und hebt Y auf die Unterseite. Deutlich verkleinert
- * (scale 0.55, nicht nur 0.85): die echte Tischbreite ist "Cube.001" (X
- * 0.639-1.264, 0.625 breit) — vorher fälschlich an der kleineren Mousepad-
- * Bounding-Box gemessen. Bei 0.85 blieb links neben der Tastatur kaum Platz
- * für das Headset (User-Screenshot zeigte dort deutlich sichtbaren freien
- * Tisch), bei 0.55 bleibt eine echte Lücke.
+ * GEFUNDENER ROOT-BUG (User meldete: "ändert sich nicht" bei Tastatur,
+ * "komplett unsichtbar" bei Maus, obwohl Stufe 2 im Ausbau-Panel bestätigt
+ * war): meine `fix`/`scale`-Werte kamen bisher aus den ROHEN glTF-Accessor-
+ * min/max — die ignorieren aber jeden Node-Transform (Translation/Rotation/
+ * Skalierung), der im Root-Node des Assets selbst gesetzt ist. Per direktem
+ * JSON-Dump von keyboard_mech.glb bestätigt: der Root-Node "Aluminium" trägt
+ * Translation≈(-3.4,2.5,-1.9), eine ~104°-Rotation UND Scale=4.58 — alles
+ * unsichtbar für die Roh-Accessor-Messung. Dasselbe (kleiner) bei
+ * mouse_gaming.glb. Fix: per echtem GLTFLoader.parse() geladen (wie der
+ * Browser es tut, inkl. `updateMatrixWorld`) und die TATSÄCHLICHE
+ * transformierte Bounding Box gemessen — DAS ist die korrekte Referenz für
+ * `fix`/`scale`, nicht die Roh-Accessor-Werte.
+ *
+ * keyboard_mech.glb: transformierte Bbox size≈(1.049,0.253,1.793), center≈
+ * (-3.280,2.457,-2.811), min.y=2.331. Bei scale=0.55 (mein vorheriger Wert,
+ * auf Basis der falschen Roh-Maße) wäre sie über 1 Einheit groß gewesen —
+ * eventuell der Grund, warum in der Szene nichts Neues auffiel (könnte weit
+ * außerhalb des sichtbaren Bereichs oder riesig-aber-außerhalb-des-Frustums
+ * gelandet sein). Jetzt scale=0.2 (bringt die Höhe auf ~0.05, realistisch für
+ * eine Tastatur), `fix` zentriert X/Z auf die echte transformierte Mitte und
+ * hebt Y auf die echte Unterseite.
  */
-const TASTATUR_UPGRADE_CFG: ExtraCfg = { url: "/models/keyboard_mech.glb", fix: [-0.1835, 0.024, -0.0735], scale: 0.55, position: new THREE.Vector3(0.88, 0.818, -0.91) };
-// mouse_gaming.glb kam in absurd großen Roh-Maßen (~2×1×2 Einheiten) —
-// scale — User meldet: bei 0.045 komplett unsichtbar (weder alte noch neue
-// Maus zu sehen). Datei/Material geprüft (gültiges glTF, metallicFactor/
-// roughnessFactor explizit gesetzt, kein "brennt schwarz"-Fall) — echte
-// Ursache ohne Live-Zugriff nicht sicher feststellbar, plausibelster
-// Verdacht: bei 0.045 auf einer dunklen Schreibtischfläche in dieser eher
-// dunklen Szene schlicht zu klein/kontrastarm, um aufzufallen. Deutlich
-// größer (0.07) und weiter rechts (frei von der jetzt kleineren Tastatur,
-// deren rechte Kante bei X≈0.98 liegt) als erster Korrekturversuch — bitte
-// nochmal gegenchecken, ob sie jetzt sichtbar ist.
-// `fix` zentriert X/Z (Ursprung lag bei [-0.03,0.4,0] statt am Modellzentrum)
-// und hebt Y auf die Unterseite (min.y=-0.145).
-const MAUS_UPGRADE_CFG: ExtraCfg = { url: "/models/mouse_gaming.glb", fix: [0.0305, 0.145, 0], scale: 0.07, position: new THREE.Vector3(1.08, 0.818, -0.55) };
+const TASTATUR_UPGRADE_CFG: ExtraCfg = { url: "/models/keyboard_mech.glb", fix: [3.28, -2.331, 2.811], scale: 0.2, position: new THREE.Vector3(0.88, 0.818, -0.91) };
+// mouse_gaming.glb: nach korrekter (transformierter) Messung bereits winzig
+// und fast perfekt zentriert (Bbox size≈0.12×0.039×0.082, min.y≈0,
+// center.x/z≈0) — die vorherigen Roh-Maße (~2×1×2, "absurd groß") waren
+// komplett falsch, dadurch war scale=0.045/0.07 draufmultipliziert eine
+// mikroskopische, unsichtbare Größe (0.07×0.12=0.0084 Einheiten!). Jetzt
+// scale=1, fix≈[0,0,0] (keine Korrektur nötig, schon zentriert/bodenverankert).
+const MAUS_UPGRADE_CFG: ExtraCfg = { url: "/models/mouse_gaming.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(1.08, 0.818, -0.55) };
 // Couchtisch: User-Hinweis — "Cube.014" in der Referenzszene (Glasplatte,
 // Materialien "Pc glass"+"Material", Größe 0.641×0.528×0.334, nahe der
 // Couch) ist bereits ein passender Couchtisch, stilecht statt eines fremden
