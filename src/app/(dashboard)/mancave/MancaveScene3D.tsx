@@ -41,6 +41,7 @@ import type { MancaveData } from "./mancave-data";
 const ROOM_MODEL_URL = "/models/mancave_room.glb";
 useGLTF.preload(ROOM_MODEL_URL);
 useGLTF.preload("/models/mancave_wall_extension.glb");
+useGLTF.preload("/models/mancave_ceiling.glb");
 
 // ── Kamera: 1:1 aus der Blender-Referenzkamera "DeskCam" übernommen ──────
 // Blender (Z-up): eye=(0.05,0.95,1.28), forward=(0.9598,0,-0.2806).
@@ -513,6 +514,17 @@ function WallExtensions({ surfaceTier }: { surfaceTier: number }) {
   return <primitive object={cloned} />;
 }
 
+// Decke fehlte komplett (Raycast nach oben traf vorher nichts) — schaute man
+// hoch, sah man ins Nichts. Genau wie die Wände: einfache, an die Bounding
+// Box angeschlossene Fläche, direkt in Blender erzeugt und separat
+// exportiert. Kein Stufen-Textur-Wechsel nötig (Decke bleibt optisch
+// neutral/dunkel über alle Stufen) — Material ist bereits fest im Export.
+function Ceiling() {
+  const { scene } = useGLTF("/models/mancave_ceiling.glb");
+  const cloned = useMemo(() => scene.clone(true), [scene]);
+  return <primitive object={cloned} />;
+}
+
 // Fenster-Öffnung: die Referenzszene ist KEINE geschlossene Box, sondern ein
 // offenes Eck-Diorama (nur 2 echte Wände, der Rest ist absichtlich offen und
 // wird vom Nebel kaschiert, siehe [[mancave-profile-project]] in memory) —
@@ -525,15 +537,17 @@ function WallExtensions({ surfaceTier }: { surfaceTier: number }) {
 // Regal) und etwas niedriger gemacht, damit es sicher in dieses Band passt.
 const WINDOW_POS = new THREE.Vector3(0.3, 1.15, 0.886);
 const WINDOW_W = 0.9, WINDOW_H = 0.75;
-// Ausblick-Ebene: war ursprünglich 4.2 Einheiten hinter dem Fenster (für
-// echte Tiefe/3D-Effekt beim Umschauen, da die Kamera nur rotiert, nie die
-// Position wechselt) — blieb aber laut User trotz mehrerer Fixversuche
-// (DoubleSide, Neupositionierung) unsichtbar, und Live-Verifikation war
-// wegen eines Sandbox-Cache-Problems nicht möglich. Vorübergehend DEUTLICH
-// näher an den Rahmen herangeholt (fast bündig), um zuerst grundsätzliche
-// Sichtbarkeit sicherzustellen — der Tiefeneffekt kommt zurück, sobald das
-// bestätigt ist.
-const WINDOW_VIEW_DISTANCE = 0.15;
+// Ausblick-Ebene: der eigentliche Grund, warum sie nie sichtbar war — per
+// Raycast in Blender bestätigt: die "bereits offene Stelle" an der -Y-Wand
+// (siehe Kommentar oben) existiert GAR NICHT, die echte Wand ("Cube") ist an
+// dieser Position massiv (Treffer bei Blender-Y≈-0.948, also gltf-Z≈0.948).
+// `WINDOW_POS.z + WINDOW_VIEW_DISTANCE` schob die Ausblicksfläche bei den
+// vorherigen Werten (4.2, dann 0.15) IMMER hinter diese massive Wand
+// (Z 0.886+0.15=1.036 > 0.948) — die Wand hat die Fläche schlicht verdeckt,
+// unabhängig von DoubleSide/Position. Jetzt deutlich unter dem Abstand zur
+// Wand (0.948-0.886=0.062) gehalten, damit die Fläche VOR der massiven Wand
+// bleibt (zwischen Rahmen und Wand, wie eine Fensterscheibe) statt dahinter.
+const WINDOW_VIEW_DISTANCE = 0.035;
 const WINDOW_VIEW_TEXTURES = ["/mancave-textures/window_view_tier1.jpg", "/mancave-textures/window_view_tier2.jpg", "/mancave-textures/window_view_tier3.jpg", "/mancave-textures/window_view_tier4.jpg"];
 for (const url of WINDOW_VIEW_TEXTURES) useTexture.preload(url);
 
@@ -722,6 +736,7 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
         <LookAroundRig />
         <Suspense fallback={null}>
           <WallExtensions surfaceTier={data.surfaceTier} />
+          <Ceiling />
           <RoomModel surfaceTier={data.surfaceTier} deskTier={deskTier} />
           <WindowFrame surfaceTier={data.surfaceTier} />
           <WindowView surfaceTier={data.surfaceTier} />
