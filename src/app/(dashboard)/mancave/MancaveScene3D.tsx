@@ -466,6 +466,59 @@ function RoomModel({ surfaceTier, deskTier }: { surfaceTier: number; deskTier: n
   return <primitive object={cloned} />;
 }
 
+// Die Referenzszene ist nur ein offenes Eck-Diorama (2 echte Wände, siehe
+// Kommentar unten) — dreht man die Kamera in die anderen Richtungen, sieht
+// man bisher nur die reine Hintergrundfarbe (der Nebel setzt erst ab 5
+// Einheiten Distanz ein, greift bei Zimmergröße also praktisch nie). Diese
+// unsichtbare "Hülle" schließt die Lücke: 4 dünne Wand-Boxen + Decke + Boden
+// deutlich außerhalb der echten Geometrie, mit derselben Stufen-Textur wie
+// die echten Wände/der Boden — wo eine echte Wand existiert, verdeckt sie
+// diese Hülle einfach (liegt näher an der Kamera), wo nicht, füllt die Hülle
+// die Lücke statt Leere zu zeigen. Bounding Box der echten Szene (Blender,
+// per bmesh-Scan ermittelt): X -1.33..1.4, Blender-Z(Höhe) -0.02..2.6,
+// Blender-Y(Tiefe) -1.01..1.64 → nach Blender→glTF-Konvention
+// (gltf.x=blender.x, gltf.y=blender.z, gltf.z=-blender.y) mit Sicherheitsrand.
+const ENCLOSURE_MIN = new THREE.Vector3(-1.7, -0.05, -1.9);
+const ENCLOSURE_MAX = new THREE.Vector3(1.7, 2.8, 1.3);
+
+function RoomEnclosure({ surfaceTier }: { surfaceTier: number }) {
+  const idx = Math.min(4, Math.max(1, surfaceTier)) - 1;
+  const wallTex = useTexture(WALL_TEXTURES[idx]);
+  const floorTex = useTexture(FLOOR_TEXTURES[idx]);
+  /* eslint-disable react-hooks/immutability -- s.o., Textur-colorSpace direkt
+     setzen ist normales three.js-API-Verhalten. */
+  const [wallMat, floorMat, ceilMat] = useMemo(() => {
+    wallTex.colorSpace = THREE.SRGBColorSpace;
+    floorTex.colorSpace = THREE.SRGBColorSpace;
+    // Etwas dunkler als die echten Oberflächen getönt, damit die Hülle als
+    // zurückweichende Tiefe wirkt statt wie eine exakte Dopplung im Vordergrund.
+    const wall = new THREE.MeshStandardMaterial({ map: wallTex, color: "#9a9a9a", roughness: 0.95, metalness: 0, side: THREE.DoubleSide });
+    const floor = new THREE.MeshStandardMaterial({ map: floorTex, color: "#9a9a9a", roughness: 0.95, metalness: 0, side: THREE.DoubleSide });
+    const ceil = new THREE.MeshStandardMaterial({ color: "#0d0f14", roughness: 1, metalness: 0, side: THREE.DoubleSide });
+    return [wall, floor, ceil];
+  }, [wallTex, floorTex]);
+  /* eslint-enable react-hooks/immutability */
+
+  const width  = ENCLOSURE_MAX.x - ENCLOSURE_MIN.x;
+  const height = ENCLOSURE_MAX.y - ENCLOSURE_MIN.y;
+  const depth  = ENCLOSURE_MAX.z - ENCLOSURE_MIN.z;
+  const cx = (ENCLOSURE_MIN.x + ENCLOSURE_MAX.x) / 2;
+  const cy = (ENCLOSURE_MIN.y + ENCLOSURE_MAX.y) / 2;
+  const cz = (ENCLOSURE_MIN.z + ENCLOSURE_MAX.z) / 2;
+  const t = 0.05; // Wandstärke der Hülle
+
+  return (
+    <group>
+      <mesh position={[ENCLOSURE_MIN.x, cy, cz]} material={wallMat}><boxGeometry args={[t, height, depth]} /></mesh>
+      <mesh position={[ENCLOSURE_MAX.x, cy, cz]} material={wallMat}><boxGeometry args={[t, height, depth]} /></mesh>
+      <mesh position={[cx, cy, ENCLOSURE_MIN.z]} material={wallMat}><boxGeometry args={[width, height, t]} /></mesh>
+      <mesh position={[cx, cy, ENCLOSURE_MAX.z]} material={wallMat}><boxGeometry args={[width, height, t]} /></mesh>
+      <mesh position={[cx, ENCLOSURE_MIN.y, cz]} material={floorMat}><boxGeometry args={[width, t, depth]} /></mesh>
+      <mesh position={[cx, ENCLOSURE_MAX.y, cz]} material={ceilMat}><boxGeometry args={[width, t, depth]} /></mesh>
+    </group>
+  );
+}
+
 // Fenster-Öffnung: die Referenzszene ist KEINE geschlossene Box, sondern ein
 // offenes Eck-Diorama (nur 2 echte Wände, der Rest ist absichtlich offen und
 // wird vom Nebel kaschiert, siehe [[mancave-profile-project]] in memory) —
@@ -666,14 +719,15 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
       // touch-action:none absichtlich NICHT hier (siehe LookAroundRig-
       // Kommentar) — landet stattdessen gezielt nur auf dem Canvas, damit
       // Touch-Scrollen in den Popups (Ausbau/Pokale) funktioniert.
-      className="relative w-full overflow-hidden rounded-3xl border border-white/[0.06] select-none"
-      style={{ aspectRatio: "16 / 9", background: "#050810", cursor: "grab" }}>
+      className="relative w-full h-full overflow-hidden select-none"
+      style={{ background: "#050810", cursor: "grab" }}>
       <Canvas shadows dpr={[1, 1.5]} gl={{ antialias: true }}>
         <color attach="background" args={["#050810"]} />
         <fog attach="fog" args={["#050810", 5, 11]} />
         <RoomLighting />
         <LookAroundRig />
         <Suspense fallback={null}>
+          <RoomEnclosure surfaceTier={data.surfaceTier} />
           <RoomModel surfaceTier={data.surfaceTier} deskTier={deskTier} />
           <WindowFrame surfaceTier={data.surfaceTier} />
           <WindowView surfaceTier={data.surfaceTier} />

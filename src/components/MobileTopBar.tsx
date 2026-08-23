@@ -177,7 +177,7 @@ export default function MobileTopBar() {
       ref={dropRef}
       style={{
         position: "fixed",
-        top: "calc(2.25rem + 3.5rem + 0.5rem)",
+        top: "calc(var(--top-ticker, 2.25rem) + 3.5rem + 0.5rem)",
         right: "1rem",
         zIndex: 9999,
         background: "rgba(4,10,9,0.97)",
@@ -321,7 +321,7 @@ export default function MobileTopBar() {
   return (
     <>
       <header
-        style={{ background: "rgba(4,10,9,0.95)", borderBottom: "1px solid rgba(20,184,166,0.09)", top: "2.25rem" }}
+        style={{ background: "rgba(4,10,9,0.95)", borderBottom: "1px solid rgba(20,184,166,0.09)", top: "var(--top-ticker, 2.25rem)" }}
         className="fixed left-0 right-0 z-50 lg:hidden h-14 backdrop-blur-2xl flex items-center px-4 gap-3"
       >
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-teal-500/40 to-transparent pointer-events-none" />

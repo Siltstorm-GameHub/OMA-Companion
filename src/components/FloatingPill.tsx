@@ -271,7 +271,7 @@ export default function FloatingPill({ roomVisible = false, mancaveVisible = fal
 
   return (
     <div className="hidden lg:flex" style={{
-      position: "fixed", top: "calc(2.25rem + 8px)", left: "50%",
+      position: "fixed", top: "calc(var(--top-ticker, 2.25rem) + 8px)", left: "50%",
       transform: "translateX(-50%)", zIndex: 45, alignItems: "center", gap: 2,
       padding: "5px 8px", background: "var(--nav-glass-bg)",
       border: "1px solid var(--nav-glass-border)", borderRadius: 999,

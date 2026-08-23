@@ -23,6 +23,11 @@ const GUEST_ALLOWED_PATHS = ["/dashboard", "/events", "/leaderboard"];
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
+  // Mancave läuft (anders als der Rest des Dashboards) im Vollbild ohne
+  // Kachel-Padding/Ticker/Footer — braucht den Pfad also auch außerhalb des
+  // Gastzugriffs-Zweigs unten.
+  const pathnameHdr = (await headers()).get("x-pathname") ?? "";
+  const isMancave = pathnameHdr === "/mancave" || pathnameHdr.startsWith("/mancave/");
   if (!session) {
     // redirect() macht aus der gesamten Antwort eine reine HTTP-Weiterleitung
     // ohne Body — die dynamischen Meta-Tags der jeweiligen Seite
@@ -38,16 +43,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
     // Session und zeigen dann BotPreviewShell statt echter Daten. Da nur
     // verifizierte Bots ohne redirect() bis hierher kommen, reicht dort ein
     // einfaches "keine Session? → Platzhalter" ohne erneute UA-Prüfung.
-    const hdrs = await headers();
-    const ua = hdrs.get("user-agent");
+    const ua = (await headers()).get("user-agent");
     if (isLinkPreviewBot(ua)) return <>{children}</>;
 
     // Echte (nicht eingeloggte) Besucher dürfen ein paar Übersichtsseiten sehen —
     // die Seiten selbst blenden dort Inhalte aus/hinter Login-Overlays, alles
     // andere (Profil, Quests, Server, Turnier-Detail, …) bleibt hinter dem Login.
-    const pathname = hdrs.get("x-pathname") ?? "";
-    const isGuestAllowed = GUEST_ALLOWED_PATHS.includes(pathname);
-    if (!isGuestAllowed) redirect(`/login?notice=login_required&callbackUrl=${encodeURIComponent(pathname || "/dashboard")}`);
+    const isGuestAllowed = GUEST_ALLOWED_PATHS.includes(pathnameHdr);
+    if (!isGuestAllowed) redirect(`/login?notice=login_required&callbackUrl=${encodeURIComponent(pathnameHdr || "/dashboard")}`);
   }
 
   const userId = session?.user?.id;
@@ -249,13 +252,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
   });
 
   return (
-    <div className="min-h-screen text-white" style={{ background: "var(--bg-base)" }}>
+    <div className="min-h-screen text-white" style={{ background: "var(--bg-base)", "--top-ticker": isMancave ? "0px" : "2.25rem" } as React.CSSProperties}>
 
       {/* ── Aurora Hintergrund ───────────────────────────────────── */}
-      <AuroraBackground />
+      {!isMancave && <AuroraBackground />}
 
       {/* ── News-Ticker (oben) ──────────────────────────────────── */}
-      <TopNewsFeed items={newsItems} />
+      {/* Mancave läuft im Vollbild ohne Ticker — CSS-Var --top-ticker oben
+          zieht den restlichen fixierten Chrome (MobileTopBar/FloatingPill)
+          dann automatisch mit nach oben, siehe deren top-Styles. */}
+      {!isMancave && <TopNewsFeed items={newsItems} />}
 
       {/* ── Mobile Top Bar (nur Handy, kein Logo) ───────────────── */}
       <MobileTopBar />
@@ -266,18 +272,27 @@ export default async function DashboardLayout({ children }: { children: React.Re
       </div>
 
       {/* ── Main Content ────────────────────────────────────────── */}
-      {/* Mobile:  2.25rem Ticker + 3.5rem MobileTopBar = 5.75rem */}
-      {/* Desktop: 36px Ticker + 44px Pill + 20px gap = 100px    */}
-      <main
-        className="min-w-0 px-0 pb-24 lg:pb-10 pt-[5.75rem] lg:pt-[100px]"
-        style={{ position: "relative", zIndex: 2 }}
-      >
-        {children}
-        <PartnerFooter />
-      </main>
+      {/* Mobile:  2.25rem Ticker + 3.5rem MobileTopBar = 5.75rem (ohne Ticker: 3.5rem) */}
+      {/* Desktop: 36px Ticker + 44px Pill + 20px gap = 100px (ohne Ticker: 72px)      */}
+      {isMancave ? (
+        <main
+          className="min-w-0 px-0 pt-14 lg:pt-[72px] pb-0 h-screen overflow-hidden"
+          style={{ position: "relative", zIndex: 2 }}
+        >
+          {children}
+        </main>
+      ) : (
+        <main
+          className="min-w-0 px-0 pb-24 lg:pb-10 pt-[5.75rem] lg:pt-[100px]"
+          style={{ position: "relative", zIndex: 2 }}
+        >
+          {children}
+          <PartnerFooter />
+        </main>
+      )}
 
       {/* Back to top */}
-      <BackToTop />
+      {!isMancave && <BackToTop />}
 
       {/* Community-Lobby-Chat */}
       <FloatingLobbyChat />

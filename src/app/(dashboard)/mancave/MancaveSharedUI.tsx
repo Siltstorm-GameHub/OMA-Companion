@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Trophy, Package, CalendarDays, Medal, Swords, Clock, MessageSquare, Gamepad2, Wrench, Lock, ArrowUpCircle, ArrowDownCircle, FlaskConical } from "lucide-react";
+import { Trophy, Package, CalendarDays, Medal, Swords, Clock, MessageSquare, Gamepad2, Wrench, Lock, ArrowUpCircle, ArrowDownCircle, FlaskConical, Home } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
 import { MANCAVE_DEV_FREE_MODE } from "@/lib/mancave-items";
 import type { MancaveData } from "./mancave-data";
@@ -123,12 +123,23 @@ export function ItemsPanel({ data }: { data: MancaveData }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Wrench className="w-4 h-4 text-teal-400" />
-          <h3 className="text-sm font-semibold text-white">Ausbau</h3>
+      <div className="flex items-center gap-2 pr-8">
+        <Wrench className="w-4 h-4 text-teal-400" />
+        <h3 className="text-sm font-semibold text-white">Ausbau</h3>
+      </div>
+      <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg"
+        style={{ background: "rgba(45,212,191,0.08)", border: "1px solid rgba(45,212,191,0.22)" }}>
+        <Home className="w-3.5 h-3.5 text-teal-300 shrink-0" />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-semibold text-teal-200">Boden/Wand/Fenster</span>
+            <span className="text-[10px] font-bold text-teal-300 tabular-nums">Stufe {data.surfaceTier}/4</span>
+          </div>
+          <div className="mt-1 h-[3px] rounded-full overflow-hidden bg-white/10">
+            <div className="h-full rounded-full transition-all"
+              style={{ width: `${(data.surfaceTier / 4) * 100}%`, background: "linear-gradient(90deg,#14b8a6,#2dd4bf)" }} />
+          </div>
         </div>
-        <span className="text-[10px] text-gray-500">Boden/Wand/Fenster: Stufe {data.surfaceTier}</span>
       </div>
       {MANCAVE_DEV_FREE_MODE && (
         <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] text-amber-200"
