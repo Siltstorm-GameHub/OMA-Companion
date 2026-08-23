@@ -531,29 +531,25 @@ function Ceiling() {
   return <primitive object={cloned} />;
 }
 
-// Fenster-Öffnung: die Referenzszene ist KEINE geschlossene Box, sondern ein
-// offenes Eck-Diorama (nur 2 echte Wände, der Rest ist absichtlich offen und
-// wird vom Nebel kaschiert, siehe [[mancave-profile-project]] in memory) —
-// deshalb kein Loch geschnitten, sondern eine bereits offene Stelle an der
-// -Y-Wand (derselben Wand wie das Regal) genutzt.
-// Ursprüngliche Position (Z=1.5, Höhe 1.1) überlappte laut User + Screenshot
-// mit dem Regal (Wandbretter "Cube.018"/"Cube.019" sitzen auf derselben Wand
-// bei Blender-Z≈1.755-2.105) — per erneuter Bounding-Box-Analyse tiefer
-// verschoben (Blender-Z-Band 0.75-1.55, bestätigt frei, deutlich unter dem
-// Regal) und etwas niedriger gemacht, damit es sicher in dieses Band passt.
-const WINDOW_POS = new THREE.Vector3(0.3, 1.15, 0.886);
-const WINDOW_W = 0.9, WINDOW_H = 0.75;
-// Ausblick-Ebene: der eigentliche Grund, warum sie nie sichtbar war — per
-// Raycast in Blender bestätigt: die "bereits offene Stelle" an der -Y-Wand
-// (siehe Kommentar oben) existiert GAR NICHT, die echte Wand ("Cube") ist an
-// dieser Position massiv (Treffer bei Blender-Y≈-0.948, also gltf-Z≈0.948).
-// `WINDOW_POS.z + WINDOW_VIEW_DISTANCE` schob die Ausblicksfläche bei den
-// vorherigen Werten (4.2, dann 0.15) IMMER hinter diese massive Wand
-// (Z 0.886+0.15=1.036 > 0.948) — die Wand hat die Fläche schlicht verdeckt,
-// unabhängig von DoubleSide/Position. Jetzt deutlich unter dem Abstand zur
-// Wand (0.948-0.886=0.062) gehalten, damit die Fläche VOR der massiven Wand
-// bleibt (zwischen Rahmen und Wand, wie eine Fensterscheibe) statt dahinter.
-const WINDOW_VIEW_DISTANCE = 0.035;
+// Fenster-Öffnung: ursprünglich nur ein "Trick" (Foto-Ebene flach vor die
+// massive, echte Wand gestellt — die Wand hatte nie ein echtes Loch, siehe
+// Git-Historie dieser Datei für die alten Kommentare zu diesem Umweg). Jetzt
+// stattdessen ein ECHTES rechteckiges Loch direkt in "Cube" geschnitten
+// (Blender Boolean-Modifier, per Raycast vor/nach bestätigt: Fensterbereich
+// offen, Umgebung weiterhin massiv) und `mancave_room.glb` neu exportiert.
+//
+// Position/Größe zusätzlich verschoben (User-Screenshot: alte Position bei
+// Z=1.5 überlappte Couch-Rückenlehne UND Nanoleaf-Wandcluster) — per
+// Blender-Bounding-Box-Messung freie Zone gefunden: Couch-Rückenlehne endet
+// bei Welt-Y=0.774, Nanoleaf-Cluster beginnt ab X>0.1 bei Welt-Y=1.144,
+// Regal-Unterkante liegt bei 1.575 → Fenster jetzt bei X=0.7 (rechts vom
+// Nanoleaf-Cluster) und Höhe 0.9-1.5 (über der Couch, unter dem Regal).
+const WINDOW_POS = new THREE.Vector3(0.7, 1.2, 0.886);
+const WINDOW_W = 0.8, WINDOW_H = 0.6;
+// Ausblicksfläche (Foto-Backdrop) kann jetzt, da ein echtes Loch existiert,
+// wieder weit hinten sitzen (echte Tiefe/Perspektive an den Fensterrändern
+// beim Umschauen) statt flach vor der Wand kleben zu müssen.
+const WINDOW_VIEW_DISTANCE = 3.4;
 const WINDOW_VIEW_TEXTURES = ["/mancave-textures/window_view_tier1.jpg", "/mancave-textures/window_view_tier2.jpg", "/mancave-textures/window_view_tier3.jpg", "/mancave-textures/window_view_tier4.jpg"];
 for (const url of WINDOW_VIEW_TEXTURES) useTexture.preload(url);
 
@@ -565,86 +561,54 @@ function WindowView({ surfaceTier }: { surfaceTier: number }) {
      setzen ist normales three.js-API-Verhalten, keine Hook-Wert-Mutation. */
   tex.colorSpace = THREE.SRGBColorSpace;
   return (
-    // Größe jetzt an der Fensteröffnung (WINDOW_W/H) orientiert statt an der
-    // (jetzt sehr kleinen) Entfernung — bei WINDOW_VIEW_DISTANCE=0.15 hätte
-    // die alte distanzbasierte Formel eine winzige, viel zu kleine Fläche ergeben.
+    // Weit hinten (WINDOW_VIEW_DISTANCE=3.4) durch das jetzt echte Loch
+    // sichtbar — entsprechend groß, damit sie den sichtbaren Ausschnitt aus
+    // jedem Blickwinkel innerhalb des Lochs füllt (kein Zuschneiden an den
+    // Rändern beim seitlichen Umschauen).
     <mesh position={[WINDOW_POS.x, WINDOW_POS.y, WINDOW_POS.z + WINDOW_VIEW_DISTANCE]}>
-      <planeGeometry args={[WINDOW_W * 1.05, WINDOW_H * 1.05]} />
+      <planeGeometry args={[7, 4.5]} />
       <meshBasicMaterial map={tex} toneMapped={false} fog={false} side={THREE.DoubleSide} />
     </mesh>
   );
 }
 
-/** Baut ein 4-Ecken-Quad (2 Dreiecke) aus 4 Positionen + 4 UVs — für die schrägen Laibungs-Streifen unten. */
-function quadGeometry(corners: THREE.Vector3[], uvs: [number, number][]): THREE.BufferGeometry {
-  const geo = new THREE.BufferGeometry();
-  const positions = new Float32Array(12);
-  corners.forEach((c, i) => { positions[i * 3] = c.x; positions[i * 3 + 1] = c.y; positions[i * 3 + 2] = c.z; });
-  const uvArr = new Float32Array(8);
-  uvs.forEach(([u, v], i) => { uvArr[i * 2] = u; uvArr[i * 2 + 1] = v; });
-  geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-  geo.setAttribute("uv", new THREE.BufferAttribute(uvArr, 2));
-  geo.setIndex([0, 1, 2, 0, 2, 3]);
-  geo.computeVertexNormals();
-  return geo;
-}
-
 /**
- * Fenster-Laibung ("Kulissen-Box"): echte, wenn auch sehr flache 3D-Geometrie
- * (nur ~0.045 Einheiten tief — mehr gibt die massive echte Wand direkt dahinter
- * nicht her, siehe WINDOW_VIEW_DISTANCE-Kommentar) statt einer einzelnen
- * flachen Ebene. 4 trapezförmige Streifen verbinden die Fensteröffnung mit der
- * etwas größeren Ausblicksfläche dahinter — jeder Streifen nutzt einen dünnen,
- * gestreckten Rand-Ausschnitt DESSELBEN Fotos (oben = Himmel-Zeile, unten =
- * Boden-Zeile, links/rechts = jeweilige Bildkante), damit die Ecken farblich
- * plausibel weiterlaufen statt eine sichtbare Naht zu zeigen.
+ * Vordergrund-Geometrie hinter dem (jetzt echten) Fensterloch: echte 3D-Boxen
+ * in schlichten Farben (kein neues Bildmaterial nötig) zwischen Rahmen und
+ * der weit entfernten Foto-Ebene (`WindowView`) — sorgt für echte
+ * Verdeckung/Größenperspektive beim Umschauen statt nur einer flachen Fläche.
+ * Bewusst schlicht (Straße + 2 Gebäude-Blöcke in unterschiedlicher Distanz),
+ * da für fotorealistischere Vordergrund-Objekte neue KI-Texturen nötig wären
+ * (Canva-Zugriff aktuell nicht autorisiert in dieser Sitzung).
  *
  * WICHTIG: erzeugt keine echte Bewegungsparallaxe (die Kamera rotiert nur,
  * wechselt nie die Position — Parallaxe braucht Translation). Was diese
- * Geometrie liefert, ist eine korrekte Perspektiv-Verjüngung an den Rändern
- * beim seitlichen Umschauen, statt einer optisch komplett flachen Fläche.
+ * Geometrie liefert, ist echte, korrekte Perspektive (nahe Objekte größer,
+ * verdecken ferne) beim Blick aus verschiedenen Winkeln durchs Loch.
  */
-function WindowReveal({ surfaceTier }: { surfaceTier: number }) {
-  const idx = Math.min(4, Math.max(1, surfaceTier)) - 1;
-  const tex = useTexture(WINDOW_VIEW_TEXTURES[idx]);
-  const halfW = WINDOW_W / 2, halfH = WINDOW_H / 2;
-  const halfWb = (WINDOW_W * 1.05) / 2, halfHb = (WINDOW_H * 1.05) / 2;
-  const dist = WINDOW_VIEW_DISTANCE;
-
-  /* eslint-disable react-hooks/immutability -- s.o., Textur-colorSpace direkt setzen. */
-  const geometries = useMemo(() => {
-    tex.colorSpace = THREE.SRGBColorSpace;
-    return {
-      top: quadGeometry(
-        [new THREE.Vector3(-halfW, halfH, 0), new THREE.Vector3(halfW, halfH, 0), new THREE.Vector3(halfWb, halfHb, dist), new THREE.Vector3(-halfWb, halfHb, dist)],
-        [[0, 1], [1, 1], [1, 0.97], [0, 0.97]],
-      ),
-      bottom: quadGeometry(
-        [new THREE.Vector3(-halfW, -halfH, 0), new THREE.Vector3(halfW, -halfH, 0), new THREE.Vector3(halfWb, -halfHb, dist), new THREE.Vector3(-halfWb, -halfHb, dist)],
-        [[0, 0], [1, 0], [1, 0.03], [0, 0.03]],
-      ),
-      left: quadGeometry(
-        [new THREE.Vector3(-halfW, halfH, 0), new THREE.Vector3(-halfW, -halfH, 0), new THREE.Vector3(-halfWb, -halfHb, dist), new THREE.Vector3(-halfWb, halfHb, dist)],
-        [[0, 1], [0, 0], [0.03, 0], [0.03, 1]],
-      ),
-      right: quadGeometry(
-        [new THREE.Vector3(halfW, halfH, 0), new THREE.Vector3(halfW, -halfH, 0), new THREE.Vector3(halfWb, -halfHb, dist), new THREE.Vector3(halfWb, halfHb, dist)],
-        [[1, 1], [1, 0], [0.97, 0], [0.97, 1]],
-      ),
-    };
-  }, [tex, halfW, halfH, halfWb, halfHb, dist]);
-  /* eslint-enable react-hooks/immutability */
-  const mat = useMemo(
-    () => new THREE.MeshBasicMaterial({ map: tex, toneMapped: false, fog: false, side: THREE.DoubleSide }),
-    [tex],
-  );
-
+function WindowExterior() {
+  // MeshBasicMaterial statt Standard: RoomLightings Punktlichter sind nur für
+  // die kleine echte Raumgröße kalibriert und reichen nicht bis hinter das
+  // Fensterloch — unbeleuchtetes Standard-Material würde hier (wie zuvor bei
+  // der Wand-Hülle) komplett schwarz rendern. Feste, leicht unterschiedlich
+  // helle Farben simulieren Tageslicht draußen, unabhängig vom Innenlicht.
   return (
     <group position={WINDOW_POS}>
-      <mesh geometry={geometries.top} material={mat} />
-      <mesh geometry={geometries.bottom} material={mat} />
-      <mesh geometry={geometries.left} material={mat} />
-      <mesh geometry={geometries.right} material={mat} />
+      {/* Straße/Gehweg, leicht unterhalb der Fensterhöhe, reicht bis zur Foto-Ebene */}
+      <mesh position={[0, -1.15, WINDOW_VIEW_DISTANCE / 2]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[4, WINDOW_VIEW_DISTANCE]} />
+        <meshBasicMaterial color="#55585d" fog={false} />
+      </mesh>
+      {/* Nahes Gebäude links */}
+      <mesh position={[-1.1, -0.35, 1.1]}>
+        <boxGeometry args={[0.9, 1.6, 0.9]} />
+        <meshBasicMaterial color="#9c8c78" fog={false} />
+      </mesh>
+      {/* Ferneres Gebäude rechts, größer (typisches Haus in mehr Distanz) */}
+      <mesh position={[1.3, -0.1, 2.3]}>
+        <boxGeometry args={[1.4, 2.1, 1.2]} />
+        <meshBasicMaterial color="#7d7568" fog={false} />
+      </mesh>
     </group>
   );
 }
@@ -704,9 +668,23 @@ function RoomLighting() {
   );
 }
 
+// Wie weit sich das Auge beim Umschauen aus der Sitzposition bewegen darf —
+// simuliert ein leichtes Kopf-Neigen/-Drehen (wie eine echte Person, die im
+// Stuhl sitzt und den Kopf wendet), NICHT freies Herumlaufen. sin() statt
+// linear in yaw/pitch-Delta: bleibt bei jedem Drehwinkel bounded (auch nach
+// mehreren vollen Umdrehungen), statt unbegrenzt mit dem Drehwinkel zu wachsen.
+const PARALLAX_AMOUNT = 0.055;
+
 /**
  * Freies Umschauen per Drag — Kamera bleibt am festen Sitzplatz, nur die
  * Blickrichtung dreht sich, unbegrenzt in alle Richtungen.
+ *
+ * Zusätzlich echte (wenn auch kleine) Bewegungsparallaxe: die Augenposition
+ * verschiebt sich minimal (± PARALLAX_AMOUNT) mit der aktuellen Blickrichtung
+ * relativ zur Ausgangsausrichtung — reine Rotation um einen fixen Punkt kann
+ * NIE Parallaxe erzeugen (das bräuchte echte Translation der Kamera), diese
+ * kleine gekoppelte Verschiebung schon: nahe Objekte (Monitor, PC) wandern
+ * beim Umschauen jetzt sichtbar anders als ferne (Fenster-Ausblick).
  *
  * Die Pointer-Listener hängen bewusst am `<canvas>`-Element (`gl.domElement`),
  * NICHT am äußeren Container-Div: die Html-Hotspot-Buttons (Ausbau/Gadgets/
@@ -723,9 +701,13 @@ function LookAroundRig() {
   const { camera, gl } = useThree();
   const yaw = useRef(0);
   const pitch = useRef(0);
+  const baseYaw = useRef(0);
+  const basePitch = useRef(0);
   const initialized = useRef(false);
   const dragging = useRef(false);
   const last = useRef({ x: 0, y: 0 });
+  const scratchRight = useRef(new THREE.Vector3());
+  const scratchPos = useRef(new THREE.Vector3());
 
   /* eslint-disable react-hooks/immutability -- Three.js-Objekt (R3F `camera`),
      keine React-Hook-Semantik: direktes Mutieren pro Frame ist der von R3F
@@ -737,14 +719,24 @@ function LookAroundRig() {
     const euler = new THREE.Euler().setFromQuaternion(camera.quaternion, "YXZ");
     yaw.current = euler.y;
     pitch.current = euler.x;
+    baseYaw.current = euler.y;
+    basePitch.current = euler.x;
     camera.rotation.order = "YXZ";
     initialized.current = true;
   }, [camera]);
 
   useFrame(() => {
     if (!initialized.current) return;
-    camera.position.copy(EYE);
     camera.rotation.set(pitch.current, yaw.current, 0);
+    // Rechts-Vektor der AKTUELLEN Blickrichtung (nach dem obigen rotation.set
+    // steht camera.quaternion schon auf dem neuen Stand — Object3D hält
+    // rotation/quaternion automatisch synchron).
+    const right = scratchRight.current.set(1, 0, 0).applyQuaternion(camera.quaternion);
+    const yawOffset = Math.sin(yaw.current - baseYaw.current) * PARALLAX_AMOUNT;
+    const pitchOffset = Math.sin(pitch.current - basePitch.current) * PARALLAX_AMOUNT * 0.6;
+    const pos = scratchPos.current.copy(EYE).addScaledVector(right, yawOffset);
+    pos.y -= pitchOffset;
+    camera.position.copy(pos);
   });
   /* eslint-enable react-hooks/immutability */
 
@@ -820,7 +812,7 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
           <RoomModel surfaceTier={data.surfaceTier} deskTier={deskTier} />
           <WindowFrame surfaceTier={data.surfaceTier} />
           <WindowView surfaceTier={data.surfaceTier} />
-          <WindowReveal surfaceTier={data.surfaceTier} />
+          <WindowExterior />
           <LogoRugStatic />
           <SwappableProp tier={pcTier} models={PC_TIER_MODELS} position={PC_POS} />
           {/* Kumulativ ab Stufe 1 die echten Referenz-Bildschirme (siehe
