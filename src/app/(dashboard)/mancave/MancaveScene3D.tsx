@@ -193,10 +193,9 @@ const PC_TIER_MODELS: Record<number, TierModelCfg> = {
   // "Object_59" — eine große flache Bodenplatte unter dem PC — laut Bbox-
   // Heuristik identifiziert und ausgeschlossen, User bestätigte das
   // unabhängig). Roh-Maße wieder viel zu groß (Höhe ~5.2 Einheiten) — scale
-  // bringt sie auf ~0.55m. Rotation nicht isoliert geprüft (anders als beim
-  // Gaming Chair) — falls schief, gleiche Korrektur wie bei Tastatur/Stream
-  // Deck nötig.
-  4: { url: "/models/pc_ultra.glb", fix: [-8.545, 2.841, -0.799], scale: 0.11 },
+  // bringt sie auf ~0.55m. User: 90° im Uhrzeigersinn gedreht (negative
+  // Y-Rotation).
+  4: { url: "/models/pc_ultra.glb", fix: [-8.545, 2.841, -0.799], scale: 0.11, rotationY: -Math.PI / 2 },
 };
 
 /**
@@ -247,23 +246,32 @@ const MONITOR_SCREEN4_CFG: ExtraCfg = { url: "/models/mancave_monitor_screen4.gl
 // (chair_gaming) auf Stufe 2 — Konfigurationen 1:1 mitgenommen, nur die
 // Stufen-Zuordnung verschoben, keine Werte neu berechnet.
 const STUHL_TIER_MODELS: Record<number, TierModelCfg> = {
-  1: { url: "/models/chair_office.glb", fix: [0, -0.017, 0], scale: 1, rotationY: Math.PI },
+  // User-Wunsch: durch den echten, einfachen Bürostuhl aus der
+  // Referenzszene ersetzt ("Plane.002" Sitz/Lehne + "Cylinder.001" Fuß/
+  // Säule, zusammen als "chair_simple_reference.glb" extrahiert — dabei
+  // zusätzlich aus dem Haupt-Raum-Export ausgeschlossen, um Dopplung zu
+  // vermeiden, mancave_room.glb neu exportiert). Direkt aus der Szene
+  // extrahiert (Location war [0,0,0] bei Plane.002, Weltposition steckt in
+  // den Vertex-Daten) — `fix = -STUHL_POS` hebt den von SwappableProp
+  // addierten `position`-Prop auf, exakt wie bei mancave_pc_reference.glb.
+  1: { url: "/models/chair_simple_reference.glb", fix: [-0.367, 0, 0.921], scale: 1 },
   // War Stufe 3: Rückenlehnen-Massepivot sitzt nah an EYE nach der 180°-
   // Drehung (siehe Git-Historie) — `offset` schiebt sie weiter weg, ohne
   // STUHL_POS anzufassen. User zusätzlich verkleinert + 90° im Uhrzeigersinn
   // (negative Y-Rotation) gedreht — macht netto π - π/2 = π/2.
   2: { url: "/models/chair_gaming.glb", fix: [0, -0.009, 0], scale: 0.85, rotationY: Math.PI / 2, offset: [-0.3, 0, 0.15] },
   // War Stufe 4: geometrisch vermessen (avgFaceNormal) — Rückenlehne zeigt
-  // bereits unrotiert nach lokal +X ("weg vom Tisch"), daher keine Drehung.
-  3: { url: "/models/chair_racing.glb", fix: [0, 0, 0], scale: 1 },
+  // bereits unrotiert nach lokal +X ("weg vom Tisch"), daher ursprünglich
+  // keine Drehung. User jetzt zusätzlich 90° gegen den Uhrzeigersinn
+  // (positive Y-Rotation) gedreht.
+  3: { url: "/models/chair_racing.glb", fix: [0, 0, 0], scale: 1, rotationY: Math.PI / 2 },
   // Neue Stufe 4: hochwertigeres Modell aus
   // "3DAssetsRoom/GamingChair_CG_Trader.blend" (31 Objekte, per Collection
   // extrahiert, als "chair_premium.glb" exportiert). In Blender direkt
   // INNERHALB der echten Raumszene geprüft (Screenshot) — stand dort bereits
-  // unrotiert korrekt zum Tisch hin ausgerichtet, deshalb keine rotationY
-  // nötig (anders als bei Tastatur/Stream Deck, die diese Korrektur
-  // brauchten — dieser Import geschah direkt im Raumkontext, nicht isoliert).
-  4: { url: "/models/chair_premium.glb", fix: [-0.045, -0.001, 0.033], scale: 1 },
+  // unrotiert korrekt zum Tisch hin ausgerichtet. User jetzt trotzdem
+  // zusätzlich 90° gegen den Uhrzeigersinn gedreht.
+  4: { url: "/models/chair_premium.glb", fix: [-0.045, -0.001, 0.033], scale: 1, rotationY: Math.PI / 2 },
 };
 // "Plane.002" (Material "chair", Rückenlehne) aus der Referenzszene entfernt
 // — X/Z hier übernommen, Y auf Bodenhöhe (0) gesetzt (Boden-verankerte Modelle).
@@ -490,24 +498,30 @@ const COUCHTISCH_CFG: ExtraCfg = { url: "/models/mancave_couchtisch.glb", fix: [
 // Nachjustieren, da (anders als bei der Tastatur) kein exakter Soll-Winkel
 // bekannt ist.
 const STREAMDECK_CFG: ExtraCfg = { url: "/models/streamdeck.glb", fix: [0.1298, 0.2546, -0.0884], scale: 1, position: new THREE.Vector3(1.0, 0.818, -0.9), rotationY: -3 * Math.PI / 4 };
-// mikrofon.glb: ACHTUNG — dieselbe Datei, bei der der Blender-Import fast
-// komplett leer war (43 von 44 Objekten nur Struktur-Marker), hat auch beim
-// direkten GLTFLoader-Test nur EIN einziges Mesh ergeben, benannt
-// "bot_spider_rubber_rubber_0" — laut Name ein winziges Gummi-Halterungsteil
-// (Shockmount-Ring), NICHT das komplette Mikrofon mit Ständer. Die Datei ist
-// mit hoher Wahrscheinlichkeit unvollständig/beschädigt — deshalb "sehe ich
-// jetzt nicht mehr" trotz Neupositionierung plausibel, unabhängig von
-// Position/Rotation. Trotzdem neu platziert (User-Wunsch), aber mit
-// Vorbehalt: könnte weiterhin unsichtbar/winzig bleiben, weil schlicht nicht
-// genug Geometrie in der Datei steckt.
-const MIKROFON_CFG: ExtraCfg = { url: "/models/mikrofon.glb", fix: [-3.2763, -0.0821, 1.1639], scale: 0.22, position: new THREE.Vector3(1.15, 0.818, -1.1), rotationY: -Math.PI / 2 };
-// ringlicht.glb: zweiter Positionsfehler gefunden — X=1.2 lag INNERHALB der
-// Tischbreite (Cube.001-Bbox X 0.639-1.264), stand also buchstäblich unter
-// der Tischplatte, daher kaum sichtbar (User-Screenshot zeigte die
-// Stativbeine unter dem Tisch hervorschauen). Jetzt klar AUSSERHALB des
-// Tisch-Footprints, links vom Stuhl auf freier Bodenfläche (X=0.2, Z=-0.5;
-// Stuhl selbst sitzt bei X=0.367/Z=-0.921, also mit Abstand).
-const RINGLICHT_CFG: ExtraCfg = { url: "/models/ringlicht.glb", fix: [0, 0, -0.0194], scale: 0.5, position: new THREE.Vector3(0.2, 0, -0.5) };
+// mikrofon.glb entfernt (User-Wunsch — sucht später ein Ersatz-Modell).
+// Nachtrag zur Vorgeschichte: die anfängliche "unsichtbar"-Vermutung (Datei
+// unvollständig, nur ein winziges Gummi-Halterungsteil) war falsch — es war
+// tatsächlich der komplette Ständer (20k Polygone, per Blender-Screenshot
+// bestätigt), nur mit irreführendem Meshnamen. Der wahre Bug: 2 von 8
+// Materialien ("material.002"/"mic_net.001", vermutlich Mikrofonkörper und
+// -Gitter) hatten kein `metallicFactor` im glTF-JSON gesetzt — Spec-Default
+// dafür ist voll-metallisch, was ohne Environment-Map in dieser Szene
+// schwarz/falsch rendert (derselbe Bug-Typ wie beim PC/Monitor früher).
+// Bereits gefixt und als "mikrofon_fixed.glb" exportiert, falls das Modell
+// später doch wieder gebraucht wird — aktuell aber nicht mehr eingebunden.
+// Der Katalog-Slot "mikrofon" (mancave-items.ts) bleibt bestehen, damit er
+// weiter kaufbar ist, sobald ein neues Modell eingebunden wird.
+// ringlicht.glb: User-Wunsch (dritter Anlauf) — auf dem Tisch hinter den 4
+// Monitoren, so dass der Ring oben über sie hinausschaut, statt bodenstehend
+// (was weder "riesig vor der Kamera" noch "winzig am Boden" gut aussah).
+// Monitor-Stapel-Bbox direkt vermessen (Cube.015/Cube.016/Cube.002, die 3
+// unteren der 4 kumulativen Bildschirme): Top bei Blender-Z≈1.558, der 4.
+// Bildschirm (Duplikat von Cube.016, +0.354 versetzt) schiebt das auf
+// ~1.9 gltf-Y. Fußpunkt jetzt auf der Tischfläche (Y=0.818) statt am Boden,
+// scale auf 0.75 erhöht (Ringlicht-Oberkante dann bei 0.818+0.75×1.6≈2.0,
+// klar über dem Monitor-Stapel, noch unter der Decke bei 2.6), Position
+// hinter den Monitoren (deren Z-Bereich bis -1.54 reicht, also Z=-1.55).
+const RINGLICHT_CFG: ExtraCfg = { url: "/models/ringlicht.glb", fix: [0, 0, -0.0194], scale: 0.75, position: new THREE.Vector3(1.15, 0.818, -1.55) };
 
 /**
  * PS5-Controller — aus der externen Datei "3DAssetsRoom/ps5.controller.blend"
@@ -527,7 +541,7 @@ for (const m of [
   ...Object.values(PC_TIER_MODELS),
   ...Object.values(STUHL_TIER_MODELS), ...Object.values(REGAL_TIER_MODELS),
   NANOLEAF_CFG, DESKMAT_CFG, WEBCAM_CFG, HEADSET_CFG, COUCHTISCH_CFG, TASTATUR_UPGRADE_CFG, MAUS_UPGRADE_CFG,
-  STREAMDECK_CFG, MIKROFON_CFG, RINGLICHT_CFG, PS5_CONTROLLER_CFG,
+  STREAMDECK_CFG, RINGLICHT_CFG, PS5_CONTROLLER_CFG,
   MONITOR_SCREEN1_CFG, MONITOR_SCREEN2_CFG, MONITOR_SCREEN3_CFG, MONITOR_SCREEN4_CFG,
 ]) useGLTF.preload(m.url);
 // Nanoleaf-Dreieck-Panels über dem Schreibtisch (Mittelpunkt aller 21
@@ -1001,7 +1015,6 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
   const headsetTier = data.items.find(i => i.key === "headset")?.tier ?? 0;
   const couchtischTier = data.items.find(i => i.key === "couchtisch")?.tier ?? 0;
   const streamdeckTier = data.items.find(i => i.key === "streamdeck")?.tier ?? 0;
-  const mikrofonTier = data.items.find(i => i.key === "mikrofon")?.tier ?? 0;
   const ringlichtTier = data.items.find(i => i.key === "ringlicht")?.tier ?? 0;
   const ps5ControllerTier = data.items.find(i => i.key === "ps5controller")?.tier ?? 0;
 
@@ -1042,7 +1055,6 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
           <ExtraProp tier={headsetTier} cfg={HEADSET_CFG} />
           <ExtraProp tier={couchtischTier} cfg={COUCHTISCH_CFG} />
           <ExtraProp tier={streamdeckTier} cfg={STREAMDECK_CFG} />
-          <ExtraProp tier={mikrofonTier} cfg={MIKROFON_CFG} />
           <ExtraProp tier={ringlichtTier} cfg={RINGLICHT_CFG} />
           <ExtraProp tier={ps5ControllerTier} cfg={PS5_CONTROLLER_CFG} />
 
