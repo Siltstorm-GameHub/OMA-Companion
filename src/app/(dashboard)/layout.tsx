@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getMancaveConfig, mancaveVisibleFor } from "@/lib/mancave-config";
 import { getScopeTitle } from "@/lib/wanderpocal";
 import DashboardChrome from "./DashboardChrome";
+import PartnerFooter from "@/components/PartnerFooter";
 import type { NewsItem } from "@/components/TopNewsFeed";
 
 // Seiten, die auch ohne Discord-Login sichtbar sein sollen (siehe Anforderung:

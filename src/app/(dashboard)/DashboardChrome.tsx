@@ -7,7 +7,6 @@ import BottomNav from "@/components/BottomNav";
 import { BackToTop } from "@/components/BackToTop";
 import { FloatingLobbyChat } from "@/components/FloatingLobbyChat";
 import AuroraBackground from "@/components/AuroraBackground";
-import PartnerFooter from "@/components/PartnerFooter";
 
 /**
  * Der gesamte Chrome (Ticker/TopBar/Pill-Nav/Main-Wrapper/BottomNav) hängt an
@@ -23,13 +22,24 @@ import PartnerFooter from "@/components/PartnerFooter";
  * Fix: `isMancave` hier CLIENTSEITIG per usePathname() bestimmen — das ist
  * ein React-Hook, der garantiert bei jeder Navigation neu auswertet, egal
  * wie Next.js das Server-Layout cached/wiederverwendet.
+ *
+ * `partnerFooter` kommt bewusst als bereits gerendertes ReactNode vom Server-
+ * Layout rein, statt hier `<PartnerFooter />` selbst zu importieren:
+ * PartnerFooter ist eine ASYNC SERVER COMPONENT, die direkt `prisma` aufruft.
+ * Ein direkter Import in dieser "use client"-Datei zieht Prisma (und alles,
+ * was es braucht) mit in den Client-Bundle — führte live zum Absturz
+ * ("PrismaClient is unable to run in this browser environment", dazu ein
+ * kaskadierender React-Fehler). Server-Komponenten mit Server-only-Code
+ * IMMER per Composition (als Prop/Children) an Client-Komponenten
+ * durchreichen, nie direkt importieren.
  */
 export default function DashboardChrome({
-  children, newsItems, mancaveVisible,
+  children, newsItems, mancaveVisible, partnerFooter,
 }: {
   children: React.ReactNode;
   newsItems: NewsItem[];
   mancaveVisible: boolean;
+  partnerFooter: React.ReactNode;
 }) {
   const pathname = usePathname();
   const isMancave = pathname === "/mancave" || pathname.startsWith("/mancave/");
@@ -70,7 +80,7 @@ export default function DashboardChrome({
           style={{ position: "relative", zIndex: 2 }}
         >
           {children}
-          <PartnerFooter />
+          {partnerFooter}
         </main>
       )}
 
