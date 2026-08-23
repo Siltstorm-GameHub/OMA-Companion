@@ -57,14 +57,16 @@ const LOOK_TARGET = EYE.clone().add(FORWARD);
 // Kamera versetzt (entlang -FORWARD), sonst verdeckt die Bildschirm-Fläche
 // selbst das Html-Overlay (Selbst-Okklusion).
 const SCREEN_POS = new THREE.Vector3(1.215, 1.091, -0.741);
-// Profil-Plakat: saß ursprünglich über dem Monitor (überlappte damit) —
-// jetzt rechts neben dem Fenster (gleiche Wand, gltf z=0.886, siehe
-// WINDOW_POS unten). "Rechts" = aus Sicht der Kamera, wenn sie zum Fenster
-// gedreht ist: bei einer Blickrichtung mit dominantem +Z-Anteil zeigt
-// "rechts" (cross(forward, up)) Richtung -X — deshalb deutlich kleinerer
-// X-Wert als das Fenster (dessen rechte Kante bei X=-0.15 liegt, siehe
-// WINDOW_W/WINDOW_POS.x), mit Abstand dazu.
-const POSTER_POS = new THREE.Vector3(-0.55, 1.15, 0.886);
+// Profil-Plakat: saß ursprünglich über dem Monitor (überlappte damit), dann
+// links vom Fenster bei X=-0.55 — das war relativ zur ALTEN Fensterposition
+// (X=0.3) berechnet und wurde beim Verschieben des Fensters (jetzt X=0.7,
+// wegen Überlappung mit Couch/Nanoleaf, siehe WINDOW_POS-Kommentar) nicht
+// mitgezogen. X=-0.55 läge jetzt außerdem mitten im Nanoleaf-Wandcluster
+// (X bis 0.1, per Blender-Messung). Stattdessen an die freie Ecke RECHTS vom
+// Fenster gesetzt (X=1.2, zwischen Fenster-Kante bei 1.1 und der echten
+// Wandkante bei 1.292) — dort weder Nanoleaf noch Regal noch Couch (deren
+// Rückenlehne endet bei Höhe 0.774, deutlich unter Y=1.2).
+const POSTER_POS = new THREE.Vector3(1.2, 1.2, 0.886);
 // PC-Tower-Position ("Cube.017", inzwischen aus dem Room-Export entfernt,
 // siehe SwappablePc) — Tischoberfläche unter dem Tower (Blender-Z-min der
 // alten Cube.017-Bounding-Box).
@@ -315,14 +317,19 @@ const REGAL_POS = new THREE.Vector3(0.207, 1.755, 0.886);
  * unsicherer als alles andere in dieser Datei, ausdrücklich als
  * Platzhalter markiert, bis eine Sichtprüfung stattgefunden hat.
  */
-interface ExtraCfg { url: string; fix: [number, number, number]; scale: number; position: THREE.Vector3; rotationY?: number }
+interface ExtraCfg {
+  url: string; fix: [number, number, number]; scale: number; position: THREE.Vector3;
+  rotationY?: number;
+  /** Für "flach hinlegen" o.ä. — X/Z-Achsen-Rotation, selten gebraucht (die meisten Assets stehen aufrecht). */
+  rotationX?: number; rotationZ?: number;
+}
 
 function ExtraProp({ tier, cfg }: { tier: number; cfg: ExtraCfg }) {
   const { scene } = useGLTF(cfg.url);
   const cloned = useMemo(() => scene.clone(true), [scene]);
   if (tier <= 0) return null;
   return (
-    <group position={cfg.position} rotation={[0, cfg.rotationY ?? 0, 0]}>
+    <group position={cfg.position} rotation={[cfg.rotationX ?? 0, cfg.rotationY ?? 0, cfg.rotationZ ?? 0]}>
       <group scale={cfg.scale}>
         <primitive object={cloned} position={cfg.fix} />
       </group>
@@ -332,10 +339,20 @@ function ExtraProp({ tier, cfg }: { tier: number; cfg: ExtraCfg }) {
 
 const NANOLEAF_CFG: ExtraCfg = { url: "/models/mancave_nanoleaf.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(0, 0, 0) };
 const DESKMAT_CFG: ExtraCfg = { url: "/models/mancave_deskmat.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(0, 0, 0) };
-// Webcam oben auf dem Monitor — grobe Schätzung, nicht vermessen.
-const WEBCAM_CFG: ExtraCfg = { url: "/models/webcam.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(1.215, 1.38, -0.7) };
-// Headset am vorderen linken Tischrand — grobe Schätzung, nicht vermessen.
-const HEADSET_CFG: ExtraCfg = { url: "/models/headset_gaming.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(0.85, 0.82, -0.15) };
+// Webcam oben auf dem Monitor — grobe Schätzung, nicht vermessen. User meldete:
+// zeigt in die falsche Richtung. Ohne Screenshot/Live-Zugriff nicht messbar,
+// welche — 180°-Drehung als naheliegendster erster Versuch (typischer
+// "steht andersrum" -Fall); ggf. nachjustieren.
+const WEBCAM_CFG: ExtraCfg = { url: "/models/webcam.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(1.215, 1.38, -0.7), rotationY: Math.PI };
+// Headset: User-Wunsch — flach auf den Tisch legen, ganz links (nicht mehr
+// aufrecht/vorne). Modell steht laut Messscript aufrecht (min.y=0, max.y=0.24,
+// Fußabdruck ±0.106 in X/Z) — 90°-Drehung um Z legt es um; `fix` verschiebt
+// dabei den Ursprung so, dass die neue Unterseite nach der Drehung wieder bei
+// lokal y=0 liegt (rechnerisch hergeleitet, nicht nur geraten: nach 90°-Z-
+// Drehung wird Welt-Y aus lokalem X, Welt-X aus lokalem -Y). Position deutlich
+// links von der Ausbau-Hotspot-Kante (DESK_FRONT_POS.x=0.7) und etwas weiter
+// hinten auf der Tischfläche, damit es den Button nicht überlappt.
+const HEADSET_CFG: ExtraCfg = { url: "/models/headset_gaming.glb", fix: [0.106, 0.12, 0], scale: 1, position: new THREE.Vector3(0.6, 0.82, -0.3), rotationZ: Math.PI / 2 };
 // Couchtisch: User-Hinweis — "Cube.014" in der Referenzszene (Glasplatte,
 // Materialien "Pc glass"+"Material", Größe 0.641×0.528×0.334, nahe der
 // Couch) ist bereits ein passender Couchtisch, stilecht statt eines fremden
