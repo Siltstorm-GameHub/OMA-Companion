@@ -180,14 +180,23 @@ function SwappableProp({ tier, models, position }: { tier: number; models: Recor
  * addiert, muss `fix` das exakt aufheben (`fix = -PC_POS`, scale=1), sonst
  * würde die schon korrekte Weltposition ein zweites Mal verschoben.
  */
+// User-Wunsch (nach Einführung von pc_ultra als neue Stufe 4): alle Stufen
+// um eins runter, die alte Stufe 1 (pc_tower_purple) komplett entfernt.
 const PC_TIER_MODELS: Record<number, TierModelCfg> = {
-  1: { url: "/models/pc_tower_purple.glb", fix: [0, 0, 0], scale: 0.77 },
-  2: { url: "/models/pc_white_rgb.glb",    fix: [0, 0, 0], scale: 0.89, rotationY: Math.PI },
-  3: { url: "/models/mancave_pc_reference.glb", fix: [-PC_POS.x, -PC_POS.y, -PC_POS.z], scale: 1 },
-  4: {
+  1: { url: "/models/pc_white_rgb.glb",    fix: [0, 0, 0], scale: 0.89, rotationY: Math.PI },
+  2: { url: "/models/mancave_pc_reference.glb", fix: [-PC_POS.x, -PC_POS.y, -PC_POS.z], scale: 1 },
+  3: {
     url: "/models/pc_highend.glb", fix: [-8.674, 0.721, 0.203], scale: 1.14,
     rotationY: -Math.PI / 2, excludeMeshNames: ["Object_6_24"],
   },
+  // Neue Stufe 4: aus "3DAssetsRoom/custom_gaming_pc.glb" (427 Meshes,
+  // "Object_59" — eine große flache Bodenplatte unter dem PC — laut Bbox-
+  // Heuristik identifiziert und ausgeschlossen, User bestätigte das
+  // unabhängig). Roh-Maße wieder viel zu groß (Höhe ~5.2 Einheiten) — scale
+  // bringt sie auf ~0.55m. Rotation nicht isoliert geprüft (anders als beim
+  // Gaming Chair) — falls schief, gleiche Korrektur wie bei Tastatur/Stream
+  // Deck nötig.
+  4: { url: "/models/pc_ultra.glb", fix: [-8.545, 2.841, -0.799], scale: 0.11 },
 };
 
 /**
