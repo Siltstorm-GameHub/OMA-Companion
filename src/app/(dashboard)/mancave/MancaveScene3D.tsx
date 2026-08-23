@@ -447,7 +447,8 @@ const TASTATUR_UPGRADE_CFG: ExtraCfg = { url: "/models/keyboard_mech_fixed.glb",
 // weitere +90° Rotation oben auf die bestehende -90° drauf (macht netto 0,
 // also lokale Ausgangsausrichtung). X von 0.95 auf 0.78 gesenkt, gleiche
 // Begründung wie bei Tastatur/Headset (Stuhl-Kante, nicht Z-Ende).
-const MAUS_UPGRADE_CFG: ExtraCfg = { url: "/models/mouse_gaming.glb", fix: [0, 0, 0], scale: 0.85, position: new THREE.Vector3(0.78, 0.818, -0.5), rotationY: 0 };
+// +180° weitere Drehung (User-Wunsch), macht netto rotationY=π.
+const MAUS_UPGRADE_CFG: ExtraCfg = { url: "/models/mouse_gaming.glb", fix: [0, 0, 0], scale: 0.85, position: new THREE.Vector3(0.78, 0.818, -0.5), rotationY: Math.PI };
 // Couchtisch: User-Hinweis — "Cube.014" in der Referenzszene (Glasplatte,
 // Materialien "Pc glass"+"Material", Größe 0.641×0.528×0.334, nahe der
 // Couch) ist bereits ein passender Couchtisch, stilecht statt eines fremden
@@ -549,7 +550,7 @@ const DESK_TIER_STYLES = [
   { color: "#3a2a1f" },
   { color: "#8a6a4a" },
   { color: "#5a1a1a" },
-  { color: "#0a0a0d" },
+  { color: "#2a2d33" }, // User: Stufe 4 etwas heller — war #0a0a0d (fast schwarz)
 ];
 
 function RoomModel({ surfaceTier, deskTier, tastaturTier, mausTier }: { surfaceTier: number; deskTier: number; tastaturTier: number; mausTier: number }) {
