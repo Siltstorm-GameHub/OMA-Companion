@@ -339,20 +339,31 @@ function ExtraProp({ tier, cfg }: { tier: number; cfg: ExtraCfg }) {
 
 const NANOLEAF_CFG: ExtraCfg = { url: "/models/mancave_nanoleaf.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(0, 0, 0) };
 const DESKMAT_CFG: ExtraCfg = { url: "/models/mancave_deskmat.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(0, 0, 0) };
-// Webcam oben auf dem Monitor — grobe Schätzung, nicht vermessen. User meldete:
-// zeigt in die falsche Richtung. Ohne Screenshot/Live-Zugriff nicht messbar,
-// welche — 180°-Drehung als naheliegendster erster Versuch (typischer
-// "steht andersrum" -Fall); ggf. nachjustieren.
-const WEBCAM_CFG: ExtraCfg = { url: "/models/webcam.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(1.215, 1.38, -0.7), rotationY: Math.PI };
-// Headset: User-Wunsch — flach auf den Tisch legen, ganz links (nicht mehr
-// aufrecht/vorne). Modell steht laut Messscript aufrecht (min.y=0, max.y=0.24,
-// Fußabdruck ±0.106 in X/Z) — 90°-Drehung um Z legt es um; `fix` verschiebt
-// dabei den Ursprung so, dass die neue Unterseite nach der Drehung wieder bei
-// lokal y=0 liegt (rechnerisch hergeleitet, nicht nur geraten: nach 90°-Z-
-// Drehung wird Welt-Y aus lokalem X, Welt-X aus lokalem -Y). Position deutlich
-// links von der Ausbau-Hotspot-Kante (DESK_FRONT_POS.x=0.7) und etwas weiter
-// hinten auf der Tischfläche, damit es den Button nicht überlappt.
-const HEADSET_CFG: ExtraCfg = { url: "/models/headset_gaming.glb", fix: [0.106, 0.12, 0], scale: 1, position: new THREE.Vector3(0.6, 0.82, -0.3), rotationZ: Math.PI / 2 };
+// Webcam: die 180°-Drehung aus der letzten Runde war falsch (User-Screenshot
+// bestätigt weiterhin verkehrt) — diesmal per avgFaceNormal-Messscript
+// (wie beim Monitor/Stuhl) statt geraten: die kleine "Blue"-Linse (das mit
+// Abstand kleinste, farblich abgesetzte Mesh — eindeutig die Linse) zeigt
+// UNROTIERT nach lokal +Z. Objektiv soll zum Nutzer zeigen (Richtung EYE),
+// von der Webcam-Position aus grob -X — rotationY=-90° dreht lokal +Z genau
+// dahin (rotationY(θ) bildet lokal (0,0,1) auf Welt (sinθ,0,cosθ) ab; bei
+// θ=-90°: (-1,0,0)). Position zusätzlich abgesenkt — die alte Höhe (1.38)
+// saß laut Screenshot deutlich über der echten Bildschirm-Oberkante
+// (mancave_monitor_screen1.glb: Y bis 1.244, aus der Roh-glTF gemessen).
+const WEBCAM_CFG: ExtraCfg = { url: "/models/webcam.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(1.215, 1.25, -0.7), rotationY: -Math.PI / 2 };
+// Headset: User-Wunsch — flach auf den Tisch legen, ganz links. Modell steht
+// laut Messscript aufrecht (min.y=0, max.y=0.24, Fußabdruck ±0.106 in X/Z) —
+// 90°-Drehung um Z legt es um; `fix` verschiebt den Ursprung so, dass die neue
+// Unterseite nach der Drehung wieder bei lokal y=0 liegt (nach 90°-Z-Drehung
+// wird Welt-Y aus lokalem X, Welt-X aus lokalem -Y).
+//
+// Position war beim ersten Versuch KOMPLETT NEBEN der Tischfläche (User-
+// Screenshot bestätigte "schwebt") — X=0.6/Z=-0.3 lagen außerhalb, wie erst
+// jetzt durch Messung der echten Deskmat-Bounding-Box klar wurde
+// (mancave_deskmat.glb: X 0.701-1.103, Y=0.818 exakt, Z -1.209 bis -0.448).
+// Jetzt mit Sicherheitsabstand INNERHALB dieses Bereichs, nahe der linken
+// Kante (X=0.85, Fußabdruck nach der Drehung ±0.12 → deckt X 0.73-0.97, klar
+// über der Kante bei 0.701) und mittig in der Tischtiefe (Z=-0.6).
+const HEADSET_CFG: ExtraCfg = { url: "/models/headset_gaming.glb", fix: [0.106, 0.12, 0], scale: 1, position: new THREE.Vector3(0.85, 0.818, -0.6), rotationZ: Math.PI / 2 };
 // Couchtisch: User-Hinweis — "Cube.014" in der Referenzszene (Glasplatte,
 // Materialien "Pc glass"+"Material", Größe 0.641×0.528×0.334, nahe der
 // Couch) ist bereits ein passender Couchtisch, stilecht statt eines fremden
@@ -590,41 +601,36 @@ function WindowView({ surfaceTier }: { surfaceTier: number }) {
 }
 
 /**
- * Vordergrund-Geometrie hinter dem (jetzt echten) Fensterloch: echte 3D-Boxen
- * in schlichten Farben (kein neues Bildmaterial nötig) zwischen Rahmen und
- * der weit entfernten Foto-Ebene (`WindowView`) — sorgt für echte
- * Verdeckung/Größenperspektive beim Umschauen statt nur einer flachen Fläche.
- * Bewusst schlicht (Straße + 2 Gebäude-Blöcke in unterschiedlicher Distanz),
- * da für fotorealistischere Vordergrund-Objekte neue KI-Texturen nötig wären
- * (Canva-Zugriff aktuell nicht autorisiert in dieser Sitzung).
+ * Vordergrund-Geometrie hinter dem (jetzt echten) Fensterloch: echter 3D-Boden
+ * zwischen Rahmen und der weit entfernten Foto-Ebene (`WindowView`) — sorgt
+ * für echte Tiefe/Perspektive statt nur einer flachen Fläche.
+ *
+ * Die ursprüngliche Version hatte zusätzlich 2 Gebäude-Boxen seitlich neben
+ * der Fenster-Mitte (lokal X=-1.1/+1.3) — die füllten laut User-Screenshot
+ * eine komplette Fensterscheibe mit einer flachen Farbfläche (die Boxen
+ * waren größer/näher als gedacht und blockierten bei der tatsächlichen
+ * Blickgeometrie mehr als beabsichtigt). Entfernt, statt weiter zu raten,
+ * ohne live nachprüfen zu können, ob eine kleinere/andere Position wirklich
+ * sauber aussieht — der Boden allein liefert schon echte Tiefe, ohne dieses
+ * Risiko.
  *
  * WICHTIG: erzeugt keine echte Bewegungsparallaxe (die Kamera rotiert nur,
- * wechselt nie die Position — Parallaxe braucht Translation). Was diese
- * Geometrie liefert, ist echte, korrekte Perspektive (nahe Objekte größer,
- * verdecken ferne) beim Blick aus verschiedenen Winkeln durchs Loch.
+ * wechselt nie die Position — Parallaxe braucht Translation, siehe
+ * `LookAroundRig`s PARALLAX_AMOUNT für den eigentlichen Parallaxe-Fix).
  */
 function WindowExterior() {
   // MeshBasicMaterial statt Standard: RoomLightings Punktlichter sind nur für
   // die kleine echte Raumgröße kalibriert und reichen nicht bis hinter das
   // Fensterloch — unbeleuchtetes Standard-Material würde hier (wie zuvor bei
-  // der Wand-Hülle) komplett schwarz rendern. Feste, leicht unterschiedlich
-  // helle Farben simulieren Tageslicht draußen, unabhängig vom Innenlicht.
+  // der Wand-Hülle) komplett schwarz rendern.
   return (
     <group position={WINDOW_POS}>
-      {/* Straße/Gehweg, leicht unterhalb der Fensterhöhe, reicht bis zur Foto-Ebene */}
+      {/* Straße/Gehweg, leicht unterhalb der Fensterhöhe, reicht bis zur Foto-Ebene.
+          Bewusst schmal (1.6 statt vorher 4) — genau breit genug für den
+          Blick durchs Loch, ohne seitlich in Fensterscheiben hineinzuragen. */}
       <mesh position={[0, -1.15, WINDOW_VIEW_DISTANCE / 2]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[4, WINDOW_VIEW_DISTANCE]} />
+        <planeGeometry args={[1.6, WINDOW_VIEW_DISTANCE]} />
         <meshBasicMaterial color="#55585d" fog={false} />
-      </mesh>
-      {/* Nahes Gebäude links */}
-      <mesh position={[-1.1, -0.35, 1.1]}>
-        <boxGeometry args={[0.9, 1.6, 0.9]} />
-        <meshBasicMaterial color="#9c8c78" fog={false} />
-      </mesh>
-      {/* Ferneres Gebäude rechts, größer (typisches Haus in mehr Distanz) */}
-      <mesh position={[1.3, -0.1, 2.3]}>
-        <boxGeometry args={[1.4, 2.1, 1.2]} />
-        <meshBasicMaterial color="#7d7568" fog={false} />
       </mesh>
     </group>
   );
