@@ -114,6 +114,15 @@ interface TierModelCfg {
   fixMetalnessForMaterials?: string[];
   /** Zusätzlicher Welt-Versatz NUR für diese Stufe, addiert auf die geteilte `position`-Prop des Slots. */
   offset?: [number, number, number];
+  /**
+   * Erzwingt `THREE.DoubleSide` auf ALLEN Materialien dieses Modells. Fix für
+   * Meshes mit inkonsistenten/invertierten Normalen (z.B. gespiegelte
+   * Geometrie ohne Normal-Korrektur) — sichtbar als scheinbar "halbierte"
+   * Flächen, weil Three.js standardmäßig nur die Vorderseite (FrontSide)
+   * rendert und in Blender ("Backface Culling" dort oft deaktiviert) das
+   * gleiche Mesh komplett aussieht.
+   */
+  doubleSided?: boolean;
 }
 
 function SwappableProp({ tier, models, position }: { tier: number; models: Record<number, TierModelCfg>; position: THREE.Vector3 }) {
@@ -141,6 +150,18 @@ function SwappableProp({ tier, models, position }: { tier: number; models: Recor
           if (mat instanceof THREE.MeshStandardMaterial && cfg.fixMetalnessForMaterials!.includes(mat.name)) {
             mat.metalness = 0;
             mat.roughness = 0.6;
+            mat.needsUpdate = true;
+          }
+        }
+      });
+    }
+    if (cfg.doubleSided) {
+      clone.traverse(obj => {
+        if (!(obj instanceof THREE.Mesh)) return;
+        const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+        for (const mat of mats) {
+          if (mat instanceof THREE.Material) {
+            mat.side = THREE.DoubleSide;
             mat.needsUpdate = true;
           }
         }
@@ -230,7 +251,7 @@ const MONITOR_SCREEN3_CFG: ExtraCfg = { url: "/models/mancave_monitor_screen3.gl
 // von Cube.016) hängt sichtbar leicht deplatziert — ein paar Zentimeter
 // tiefer geschoben (position.y statt der bisherigen [0,0,0], da die echte
 // Weltposition sonst komplett aus den Vertex-Daten kommt).
-const MONITOR_SCREEN4_CFG: ExtraCfg = { url: "/models/mancave_monitor_screen4.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(0, -0.04, 0) };
+const MONITOR_SCREEN4_CFG: ExtraCfg = { url: "/models/mancave_monitor_screen4.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(0, -0.02, 0) };
 
 /**
  * Schreibtischstuhl (Stufen 1-4): der alte Katalog hat nur 3 Modelle
@@ -268,8 +289,14 @@ const STUHL_TIER_MODELS: Record<number, TierModelCfg> = {
   // bereits unrotiert nach lokal +X ("weg vom Tisch"), daher ursprünglich
   // keine Drehung. User: 90° gegen den Uhrzeigersinn, danach nochmal
   // zusätzlich ~15° in dieselbe Richtung nachjustiert (macht netto π/2+π/12
-  // = 7π/12).
-  3: { url: "/models/chair_racing.glb", fix: [0, 0, 0], scale: 1, rotationY: 7 * Math.PI / 12 },
+  // = 7π/12). Sitzkissen ("Cube.043") und beide Rückenlehnen-Kissen wirkten
+  // im Spiel "halbiert" — Ursache: inkonsistente/invertierte Normalen auf
+  // diesen Meshes, Three.js rendert per Default nur die Vorderseite
+  // (FrontSide), Blenders Viewport hatte "Backface Culling" dort aus und
+  // zeigte die Kissen deshalb fälschlich komplett. `doubleSided` erzwingt
+  // beidseitiges Rendering als Fix, ohne die Original-Datei neu exportieren
+  // zu müssen.
+  3: { url: "/models/chair_racing.glb", fix: [0, 0, 0], scale: 1, rotationY: 7 * Math.PI / 12, doubleSided: true },
   // Neue Stufe 4: hochwertigeres Modell aus
   // "3DAssetsRoom/GamingChair_CG_Trader.blend" (31 Objekte, per Collection
   // extrahiert, als "chair_premium.glb" exportiert). In Blender direkt
@@ -533,7 +560,7 @@ const STREAMDECK_CFG: ExtraCfg = { url: "/models/streamdeck.glb", fix: [0.1298, 
 // -1.636) für maximalen "hinter den Monitoren"-Effekt. rotationY ergänzt —
 // dieselbe -90°-Korrektur, die Tastatur/Stream Deck/Mikrofon auf diesem
 // (nicht achsenparallelen) Tisch schon brauchten, jetzt auch hier versucht.
-const RINGLICHT_CFG: ExtraCfg = { url: "/models/ringlicht.glb", fix: [0, 0, -0.0194], scale: 0.75, position: new THREE.Vector3(1.22, 0.818, -1.6), rotationY: -Math.PI / 2 };
+const RINGLICHT_CFG: ExtraCfg = { url: "/models/ringlicht.glb", fix: [0, 0, -0.0194], scale: 0.75, position: new THREE.Vector3(1.22, 0.818, -1.5), rotationY: Math.PI / 2 };
 
 /**
  * PS5-Controller — aus der externen Datei "3DAssetsRoom/ps5.controller.blend"
