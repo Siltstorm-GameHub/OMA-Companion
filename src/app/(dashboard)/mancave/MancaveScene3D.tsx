@@ -55,8 +55,14 @@ const LOOK_TARGET = EYE.clone().add(FORWARD);
 // Kamera versetzt (entlang -FORWARD), sonst verdeckt die Bildschirm-Fläche
 // selbst das Html-Overlay (Selbst-Okklusion).
 const SCREEN_POS = new THREE.Vector3(1.215, 1.091, -0.741);
-// Profil-Plakat über dem Monitor — gleiche X/Z wie der Screen, nur höher.
-const POSTER_POS = new THREE.Vector3(1.215, 1.48, -0.741);
+// Profil-Plakat: saß ursprünglich über dem Monitor (überlappte damit) —
+// jetzt rechts neben dem Fenster (gleiche Wand, gltf z=0.886, siehe
+// WINDOW_POS unten). "Rechts" = aus Sicht der Kamera, wenn sie zum Fenster
+// gedreht ist: bei einer Blickrichtung mit dominantem +Z-Anteil zeigt
+// "rechts" (cross(forward, up)) Richtung -X — deshalb deutlich kleinerer
+// X-Wert als das Fenster (dessen rechte Kante bei X=-0.15 liegt, siehe
+// WINDOW_W/WINDOW_POS.x), mit Abstand dazu.
+const POSTER_POS = new THREE.Vector3(-0.55, 1.15, 0.886);
 // PC-Tower-Position ("Cube.017", inzwischen aus dem Room-Export entfernt,
 // siehe SwappablePc) — Tischoberfläche unter dem Tower (Blender-Z-min der
 // alten Cube.017-Bounding-Box).
