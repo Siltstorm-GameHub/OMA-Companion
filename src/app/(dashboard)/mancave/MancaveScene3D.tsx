@@ -226,7 +226,11 @@ const MONITOR_SCREEN3_CFG: ExtraCfg = { url: "/models/mancave_monitor_screen3.gl
 // (nicht die Vertex-Daten wie bei den anderen drei), macht aber keinen
 // Unterschied fürs Rendering: der glTF-Node-Transform wird beim Laden ganz
 // normal mit angewendet, ebenfalls position/fix [0,0,0].
-const MONITOR_SCREEN4_CFG: ExtraCfg = { url: "/models/mancave_monitor_screen4.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(0, 0, 0) };
+// User: Stufe-4-Monitor (das in Blender +0.354 nach oben versetzte Duplikat
+// von Cube.016) hängt sichtbar leicht deplatziert — ein paar Zentimeter
+// tiefer geschoben (position.y statt der bisherigen [0,0,0], da die echte
+// Weltposition sonst komplett aus den Vertex-Daten kommt).
+const MONITOR_SCREEN4_CFG: ExtraCfg = { url: "/models/mancave_monitor_screen4.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(0, -0.04, 0) };
 
 /**
  * Schreibtischstuhl (Stufen 1-4): der alte Katalog hat nur 3 Modelle
@@ -262,9 +266,10 @@ const STUHL_TIER_MODELS: Record<number, TierModelCfg> = {
   2: { url: "/models/chair_gaming.glb", fix: [0, -0.009, 0], scale: 0.85, rotationY: Math.PI / 2, offset: [-0.3, 0, 0.15] },
   // War Stufe 4: geometrisch vermessen (avgFaceNormal) — Rückenlehne zeigt
   // bereits unrotiert nach lokal +X ("weg vom Tisch"), daher ursprünglich
-  // keine Drehung. User jetzt zusätzlich 90° gegen den Uhrzeigersinn
-  // (positive Y-Rotation) gedreht.
-  3: { url: "/models/chair_racing.glb", fix: [0, 0, 0], scale: 1, rotationY: Math.PI / 2 },
+  // keine Drehung. User: 90° gegen den Uhrzeigersinn, danach nochmal
+  // zusätzlich ~15° in dieselbe Richtung nachjustiert (macht netto π/2+π/12
+  // = 7π/12).
+  3: { url: "/models/chair_racing.glb", fix: [0, 0, 0], scale: 1, rotationY: 7 * Math.PI / 12 },
   // Neue Stufe 4: hochwertigeres Modell aus
   // "3DAssetsRoom/GamingChair_CG_Trader.blend" (31 Objekte, per Collection
   // extrahiert, als "chair_premium.glb" exportiert). In Blender direkt
@@ -521,7 +526,14 @@ const STREAMDECK_CFG: ExtraCfg = { url: "/models/streamdeck.glb", fix: [0.1298, 
 // scale auf 0.75 erhöht (Ringlicht-Oberkante dann bei 0.818+0.75×1.6≈2.0,
 // klar über dem Monitor-Stapel, noch unter der Decke bei 2.6), Position
 // hinter den Monitoren (deren Z-Bereich bis -1.54 reicht, also Z=-1.55).
-const RINGLICHT_CFG: ExtraCfg = { url: "/models/ringlicht.glb", fix: [0, 0, -0.0194], scale: 0.75, position: new THREE.Vector3(1.15, 0.818, -1.55) };
+// User (4. Anlauf): Ständer kreuzte den linken Monitor (stand zu weit LINKS
+// im Monitor-X-Bereich statt hinter der ganzen Gruppe) und der Ring war
+// nicht zur Kamera ausgerichtet. X auf die Monitor-Mitte (~1.22) zentriert,
+// Z ans Ende der Tischfläche geschoben (-1.6, nahe der Tischkante bei
+// -1.636) für maximalen "hinter den Monitoren"-Effekt. rotationY ergänzt —
+// dieselbe -90°-Korrektur, die Tastatur/Stream Deck/Mikrofon auf diesem
+// (nicht achsenparallelen) Tisch schon brauchten, jetzt auch hier versucht.
+const RINGLICHT_CFG: ExtraCfg = { url: "/models/ringlicht.glb", fix: [0, 0, -0.0194], scale: 0.75, position: new THREE.Vector3(1.22, 0.818, -1.6), rotationY: -Math.PI / 2 };
 
 /**
  * PS5-Controller — aus der externen Datei "3DAssetsRoom/ps5.controller.blend"
