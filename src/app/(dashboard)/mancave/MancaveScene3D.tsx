@@ -363,11 +363,13 @@ const WEBCAM_CFG: ExtraCfg = { url: "/models/webcam.glb", fix: [0, 0, 0], scale:
 //
 // Position: User zeigte per Screenshot explizit auf die sichtbar freie Lücke
 // links neben der Tastatur, zwischen ihr und der Wand, auf gleicher Tiefe.
-// Mit der korrekten, breiteren Tisch-Bbox (Cube.001, X 0.639-1.264) und der
-// jetzt kleineren Tastatur (scale 0.55, linke Kante bei X≈0.78) bleiben dort
-// nur ~0.14 Einheiten Platz — Headset auf scale 0.5 verkleinert (Fußabdruck
-// dann ±0.06), damit es mit kleinem Rand zu beiden Seiten hineinpasst.
-const HEADSET_CFG: ExtraCfg = { url: "/models/headset_gaming.glb", fix: [0.106, -0.12, 0], scale: 0.5, position: new THREE.Vector3(0.709, 0.818, -0.91), rotationZ: Math.PI / 2 };
+// NEU BERECHNET, nachdem die Tastatur-Bbox korrigiert wurde (siehe
+// TASTATUR_UPGRADE_CFG-Kommentar) — die echte, realistisch-schmale Tastatur
+// (0.404 breit statt der vorherigen falsch-großen Annahme) sitzt jetzt
+// mittig auf dem Tisch (X=0.95, Tisch-Mitte), lässt symmetrisch ~0.11
+// Einheiten Platz auf beiden Seiten. Headset auf scale 0.35 verkleinert
+// (Fußabdruck dann ±0.037), damit es mit kleinem Rand hineinpasst.
+const HEADSET_CFG: ExtraCfg = { url: "/models/headset_gaming.glb", fix: [0.106, -0.12, 0], scale: 0.35, position: new THREE.Vector3(0.69, 0.818, -0.91), rotationZ: Math.PI / 2 };
 
 /**
  * Tastatur/Maus-Stufen: `tastatur`/`maus` sind Grundausstattung mit 4
@@ -394,23 +396,39 @@ const HEADSET_CFG: ExtraCfg = { url: "/models/headset_gaming.glb", fix: [0.106, 
  * transformierte Bounding Box gemessen — DAS ist die korrekte Referenz für
  * `fix`/`scale`, nicht die Roh-Accessor-Werte.
  *
- * keyboard_mech.glb: transformierte Bbox size≈(1.049,0.253,1.793), center≈
- * (-3.280,2.457,-2.811), min.y=2.331. Bei scale=0.55 (mein vorheriger Wert,
- * auf Basis der falschen Roh-Maße) wäre sie über 1 Einheit groß gewesen —
- * eventuell der Grund, warum in der Szene nichts Neues auffiel (könnte weit
- * außerhalb des sichtbaren Bereichs oder riesig-aber-außerhalb-des-Frustums
- * gelandet sein). Jetzt scale=0.2 (bringt die Höhe auf ~0.05, realistisch für
- * eine Tastatur), `fix` zentriert X/Z auf die echte transformierte Mitte und
- * hebt Y auf die echte Unterseite.
+ * keyboard_mech.glb war noch schlimmer als "nur" der Node-Transform: der
+ * Root-Node "Aluminium" trug zusätzlich eine ~104°-Rotation, die das Modell
+ * in der Szene sichtbar SCHIEF aussehen ließ (User-Screenshot: Tastatur lag
+ * diagonal verdreht). Per Blender-Screenshot bestätigt: es ist geometrisch
+ * eine ganz normale, flache Tastatur — nur mit einem beliebigen Gier-Winkel
+ * aus der Ursprungsszene exportiert, kein "kaputtes" Modell. In Blender
+ * bereinigt (Rotation/Skalierung/Position auf 0/1/0 gesetzt, `Apply
+ * Transform` auf alle 18 Teilobjekte, sodass die Geometrie jetzt selbst
+ * exakt achsenparallel und zentriert ist) und als eigene, saubere Datei neu
+ * exportiert: "keyboard_mech_fixed.glb". Bbox danach (Blender, garantiert
+ * ohne versteckten Node-Transform): X 0-1.683, Z(Höhe) -0.112 bis 0.067,
+ * Y(Tiefe) -0.673 bis 0.001 → gltf X 0-1.683/Y -0.112-0.067/Z -0.001-0.673.
+ * scale=0.24 bringt die Breite auf ~0.4 (realistische Tastaturbreite), Höhe
+ * dann ~0.043 und Tiefe ~0.16 — beides jetzt plausible Tastatur-Maße (anders
+ * als beim vorherigen, verdrehten Bbox-Messversuch, wo die Proportionen
+ * (0.253 hoch, 1.793 tief) gar nicht zu einer Tastatur passten — genau das
+ * Warnzeichen, das ich beim ersten Versuch übersehen hatte).
  */
-const TASTATUR_UPGRADE_CFG: ExtraCfg = { url: "/models/keyboard_mech.glb", fix: [3.28, -2.331, 2.811], scale: 0.2, position: new THREE.Vector3(0.88, 0.818, -0.91) };
+// Position auf Tischmitte (X=0.95, Cube.001-Bbox 0.639-1.264) statt am linken
+// Rand — lässt symmetrisch Platz für Headset links und Maus rechts (siehe
+// deren Kommentare).
+const TASTATUR_UPGRADE_CFG: ExtraCfg = { url: "/models/keyboard_mech_fixed.glb", fix: [-0.8415, 0.112, -0.336], scale: 0.24, position: new THREE.Vector3(0.95, 0.818, -0.91) };
 // mouse_gaming.glb: nach korrekter (transformierter) Messung bereits winzig
 // und fast perfekt zentriert (Bbox size≈0.12×0.039×0.082, min.y≈0,
 // center.x/z≈0) — die vorherigen Roh-Maße (~2×1×2, "absurd groß") waren
 // komplett falsch, dadurch war scale=0.045/0.07 draufmultipliziert eine
-// mikroskopische, unsichtbare Größe (0.07×0.12=0.0084 Einheiten!). Jetzt
-// scale=1, fix≈[0,0,0] (keine Korrektur nötig, schon zentriert/bodenverankert).
-const MAUS_UPGRADE_CFG: ExtraCfg = { url: "/models/mouse_gaming.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(1.08, 0.818, -0.55) };
+// mikroskopische, unsichtbare Größe (0.07×0.12=0.0084 Einheiten!). Root-Node-
+// Rotation ist laut Blender bereits Identität (kein Dreh-Bug wie bei der
+// Tastatur) — falls sie im letzten Screenshot schräg wirkte, war das
+// vermutlich nur die zweifarbige Form/Perspektive, keine echte Verdrehung.
+// scale leicht verkleinert (0.85) und rechts neben die jetzt mittige
+// Tastatur gesetzt, mit Sicherheitsabstand zur Tischkante (1.264).
+const MAUS_UPGRADE_CFG: ExtraCfg = { url: "/models/mouse_gaming.glb", fix: [0, 0, 0], scale: 0.85, position: new THREE.Vector3(1.21, 0.818, -0.91) };
 // Couchtisch: User-Hinweis — "Cube.014" in der Referenzszene (Glasplatte,
 // Materialien "Pc glass"+"Material", Größe 0.641×0.528×0.334, nahe der
 // Couch) ist bereits ein passender Couchtisch, stilecht statt eines fremden
