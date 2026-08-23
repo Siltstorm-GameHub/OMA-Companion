@@ -43,10 +43,12 @@ useGLTF.preload(ROOM_MODEL_URL);
 useGLTF.preload("/models/mancave_wall_extension.glb");
 useGLTF.preload("/models/mancave_ceiling.glb");
 
-// ── Kamera: 1:1 aus der Blender-Referenzkamera "DeskCam" übernommen ──────
+// ── Kamera: aus der Blender-Referenzkamera "DeskCam" übernommen ──────────
 // Blender (Z-up): eye=(0.05,0.95,1.28), forward=(0.9598,0,-0.2806).
 // glTF/three.js (Y-up): x→x, y→z_blender, z→-y_blender.
-const EYE = new THREE.Vector3(0.05, 1.28, -0.95);
+// Y (Höhe) auf User-Wunsch um 10cm angehoben (war 1.28) — wirkte zu tief/
+// nah an der Tischkante, X/Z und Blickrichtung unverändert.
+const EYE = new THREE.Vector3(0.05, 1.38, -0.95);
 const FORWARD = new THREE.Vector3(0.9598, -0.2806, 0);
 const LOOK_TARGET = EYE.clone().add(FORWARD);
 
