@@ -407,12 +407,21 @@ const BLITZ_CFG: ExtraCfg = { url: "/models/blitz.glb", fix: [0, 0, 0], scale: 1
 const NANOLEAF_MONITOR_CFG: ExtraCfg = { url: "/models/nanoleaf_monitor.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(0, 0, 0) };
 const NANOLEAF_WALL_CFG: ExtraCfg = { url: "/models/nanoleaf_wall.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(0, 0, 0) };
 const LED_STRIPS_CFG: ExtraCfg = { url: "/models/led_lightstrips.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(0, 0, 0) };
-// Weltpositions-Anker für die zugehörigen echten Lichtquellen (Blender-Bbox-
-// Mittelpunkte der jeweiligen Objektgruppen, in gltf-Koordinaten umgerechnet:
-// gltf.x=blender.x, gltf.y=blender.z, gltf.z=-blender.y).
-const BLITZ_LIGHT_POS = new THREE.Vector3(1.262, 1.141, 0.454);
-const NANOLEAF_MONITOR_LIGHT_POS = new THREE.Vector3(1.26, 1.795, -0.772);
-const NANOLEAF_WALL_LIGHT_POS = new THREE.Vector3(-0.391, 1.419, 0.942);
+// Weltpositions-Anker für die zugehörigen echten Lichtquellen — NICHT die
+// Bbox-Mitte des ganzen Objekts (kann bei dünnen Wandpanels mitten in der
+// Wand oder am Montage-Rand liegen), sondern die tatsächliche leuchtende
+// Vorderfläche (Blender-Bbox der Vorderseite, in gltf-Koordinaten
+// umgerechnet: gltf.x=blender.x, gltf.y=blender.z, gltf.z=-blender.y),
+// zusätzlich ~3cm Richtung Raum vorgezogen, damit das Licht nicht in der
+// Wandgeometrie selbst sitzt. Farben ebenfalls direkt aus den echten
+// Blender-Material-Emissionswerten übernommen (Principled-BSDF "Emission
+// Color", linear->sRGB umgerechnet), nicht geschätzt:
+// - Blitz ("NurbsPath", Material "RGB3"): Emission (0.384, 0, 1) -> #a700ff
+// - Nanoleaf (beide Gruppen, Materialien "RGB"/"RGB2"/"RGB3" im Wechsel
+//   pro Panel): Mittelwert der drei Emissionsfarben -> #7714ff
+const BLITZ_LIGHT_POS = new THREE.Vector3(1.225, 1.141, 0.454);
+const NANOLEAF_MONITOR_LIGHT_POS = new THREE.Vector3(1.2255, 1.795, -0.772);
+const NANOLEAF_WALL_LIGHT_POS = new THREE.Vector3(-0.391, 1.419, 0.908);
 const LED_STRIPS_LIGHT_POS = new THREE.Vector3(0.083, 1.178, -0.333);
 const DESKMAT_CFG: ExtraCfg = { url: "/models/mancave_deskmat.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(0, 0, 0) };
 // Webcam: die 180°-Drehung aus der letzten Runde war falsch (User-Screenshot
@@ -586,6 +595,14 @@ const STREAMDECK_CFG: ExtraCfg = { url: "/models/streamdeck.glb", fix: [0.1298, 
 // dieselbe -90°-Korrektur, die Tastatur/Stream Deck/Mikrofon auf diesem
 // (nicht achsenparallelen) Tisch schon brauchten, jetzt auch hier versucht.
 const RINGLICHT_CFG: ExtraCfg = { url: "/models/ringlicht.glb", fix: [0, 0, -0.0194], scale: 0.75, position: new THREE.Vector3(1.17, 0.818, -1.53), rotationY: Math.PI / 2 };
+// Weltposition des echten Leucht-Rings (NICHT die Bbox-Mitte des ganzen
+// Modells inkl. Stativ/Sockel): per Three.js-Objektgraph exakt nachgebaut
+// (gleiche Verschachtelung wie ExtraProp: outer-position -> outer-rotationY
+// -> scale-group -> primitive-fix) und die Bbox NUR des Meshes mit dem
+// leuchtenden Material ("Mat.1_1.001", KHR_materials_emissive_strength=10)
+// vermessen — Mittelpunkt dieser Bbox in Weltkoordinaten. Farbe direkt aus
+// dessen Emission Color (1, 0.89, 0.069) linear->sRGB umgerechnet.
+const RINGLICHT_LIGHT_POS = new THREE.Vector3(1.196, 1.873, -1.514);
 
 /**
  * PS5-Controller — aus der externen Datei "3DAssetsRoom/ps5.controller.blend"
@@ -1119,13 +1136,13 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
           <ExtraProp tier={nanoleafTier >= 3 ? 1 : 0} cfg={NANOLEAF_WALL_CFG} />
           <ExtraProp tier={nanoleafTier >= 4 ? 1 : 0} cfg={LED_STRIPS_CFG} />
           {nanoleafTier >= 1 && (
-            <pointLight position={BLITZ_LIGHT_POS} intensity={0.35} color="#7c3aed" distance={2.5} decay={2} />
+            <pointLight position={BLITZ_LIGHT_POS} intensity={0.35} color="#a700ff" distance={2.5} decay={2} />
           )}
           {nanoleafTier >= 2 && (
-            <pointLight position={NANOLEAF_MONITOR_LIGHT_POS} intensity={0.55} color="#38bdf8" distance={3.5} decay={2} />
+            <pointLight position={NANOLEAF_MONITOR_LIGHT_POS} intensity={0.55} color="#7714ff" distance={3.5} decay={2} />
           )}
           {nanoleafTier >= 3 && (
-            <pointLight position={NANOLEAF_WALL_LIGHT_POS} intensity={0.5} color="#f472b6" distance={4} decay={2} />
+            <pointLight position={NANOLEAF_WALL_LIGHT_POS} intensity={0.5} color="#7714ff" distance={4} decay={2} />
           )}
           {nanoleafTier >= 4 && (
             <pointLight position={LED_STRIPS_LIGHT_POS} intensity={0.6} color="#e0e7ff" distance={6} decay={2} />
@@ -1136,6 +1153,9 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
           <ExtraProp tier={couchtischTier} cfg={COUCHTISCH_CFG} />
           <ExtraProp tier={streamdeckTier} cfg={STREAMDECK_CFG} />
           <ExtraProp tier={ringlichtTier} cfg={RINGLICHT_CFG} />
+          {ringlichtTier >= 1 && (
+            <pointLight position={RINGLICHT_LIGHT_POS} intensity={0.6} color="#fff24a" distance={3} decay={2} />
+          )}
           <ExtraProp tier={ps5ControllerTier} cfg={PS5_CONTROLLER_CFG} />
 
           {/* Live-Dashboard direkt auf dem Monitor-Screen — 3D-verankert, immer sichtbar */}
