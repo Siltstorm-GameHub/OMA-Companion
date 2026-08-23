@@ -233,7 +233,16 @@ const MONITOR_SCREEN4_CFG: ExtraCfg = { url: "/models/mancave_monitor_screen4.gl
 const STUHL_TIER_MODELS: Record<number, TierModelCfg> = {
   1: { url: "/models/chair_office.glb", fix: [0, -0.017, 0], scale: 1, rotationY: Math.PI },
   2: { url: "/models/chair_office.glb", fix: [0, -0.017, 0], scale: 1, rotationY: Math.PI },
-  3: { url: "/models/chair_gaming.glb", fix: [0, -0.009, 0], scale: 1, rotationY: Math.PI },
+  // Stufe 3: Nutzer meldete die Rückenlehne als "komisches Objekt", das die
+  // Kamera blockiert. Per Vertex-Analyse (three.js/Node) bestätigt: die
+  // Rückenlehnen-Masse dieses Modells sitzt sehr nah am eigenen Pivot (anders
+  // als bei chair_office), sodass sie nach der 180°-Drehung nur ~0.25
+  // Einheiten von EYE entfernt landet — nah genug, um in die Near-Clip-Ebene
+  // der Kamera zu reichen. Die Drehung selbst ist korrekt (Rückenlehnen-
+  // Normalenrichtung geprüft); `offset` schiebt nur DIESE Stufe etwas weiter
+  // weg vom Schreibtisch/der Kamera, ohne STUHL_POS (das die anderen 3 Stufen
+  // mitbenutzen) anzufassen.
+  3: { url: "/models/chair_gaming.glb", fix: [0, -0.009, 0], scale: 1, rotationY: Math.PI, offset: [-0.3, 0, 0.15] },
   // Stufe 4 bewusst OHNE die 180°-Drehung der anderen Stufen: geometrisch
   // vermessen (avgFaceNormal, wie beim Monitor) — "Plane048", die mit Abstand
   // größte Fläche im Modell (Rückenlehne), zeigt bereits UNROTIERT nach lokal
