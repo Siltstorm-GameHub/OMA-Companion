@@ -388,7 +388,32 @@ function ExtraProp({ tier, cfg }: { tier: number; cfg: ExtraCfg }) {
   );
 }
 
-const NANOLEAF_CFG: ExtraCfg = { url: "/models/mancave_nanoleaf.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(0, 0, 0) };
+/**
+ * Katalogpunkt "Beleuchtung" (vormals nur "Nanoleaf-Beleuchtung", jetzt
+ * umbenannt — deckt jetzt 4 kumulative Stufen ab, jede fügt ein zusätzliches
+ * Leuchtmittel hinzu, nichts wird beim Hochstufen entfernt):
+ * Stufe 1: "Blitz"-Neonschild (Referenzszene: "NurbsPath", stand vorher IMMER
+ *   im Raum — jetzt aus mancave_room.glb ausgeschlossen und tier-gesteuert).
+ * Stufe 2: Nanoleaf-Dreieckspanels über dem Monitor ("Circle" – "Circle.008").
+ * Stufe 3: Nanoleaf-Panels an der gegenüberliegenden Wand ("Circle.011" –
+ *   "Circle.022").
+ * Stufe 4: LED-Lightstrips, die vorher standardmäßig im Raum standen
+ *   ("Cube.022"–"Cube.025", "Cube.027"–"Cube.033" — "Cube.026" bewusst
+ *   ausgenommen, bleibt fest im Raum-Mesh). Alle vier direkt aus der
+ *   Referenzszene extrahiert, Weltposition steckt bereits in den
+ *   Vertex-Daten (wie Nanoleaf/Deskmat/Couchtisch) — daher fix=[0,0,0].
+ */
+const BLITZ_CFG: ExtraCfg = { url: "/models/blitz.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(0, 0, 0) };
+const NANOLEAF_MONITOR_CFG: ExtraCfg = { url: "/models/nanoleaf_monitor.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(0, 0, 0) };
+const NANOLEAF_WALL_CFG: ExtraCfg = { url: "/models/nanoleaf_wall.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(0, 0, 0) };
+const LED_STRIPS_CFG: ExtraCfg = { url: "/models/led_lightstrips.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(0, 0, 0) };
+// Weltpositions-Anker für die zugehörigen echten Lichtquellen (Blender-Bbox-
+// Mittelpunkte der jeweiligen Objektgruppen, in gltf-Koordinaten umgerechnet:
+// gltf.x=blender.x, gltf.y=blender.z, gltf.z=-blender.y).
+const BLITZ_LIGHT_POS = new THREE.Vector3(1.262, 1.141, 0.454);
+const NANOLEAF_MONITOR_LIGHT_POS = new THREE.Vector3(1.26, 1.795, -0.772);
+const NANOLEAF_WALL_LIGHT_POS = new THREE.Vector3(-0.391, 1.419, 0.942);
+const LED_STRIPS_LIGHT_POS = new THREE.Vector3(0.083, 1.178, -0.333);
 const DESKMAT_CFG: ExtraCfg = { url: "/models/mancave_deskmat.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(0, 0, 0) };
 // Webcam: die 180°-Drehung aus der letzten Runde war falsch (User-Screenshot
 // bestätigt weiterhin verkehrt) — diesmal per avgFaceNormal-Messscript
@@ -579,7 +604,8 @@ const PS5_CONTROLLER_CFG: ExtraCfg = { url: "/models/ps5_controller.glb", fix: [
 for (const m of [
   ...Object.values(PC_TIER_MODELS),
   ...Object.values(STUHL_TIER_MODELS), ...Object.values(REGAL_TIER_MODELS),
-  NANOLEAF_CFG, DESKMAT_CFG, WEBCAM_CFG, HEADSET_CFG, COUCHTISCH_CFG, TASTATUR_UPGRADE_CFG, MAUS_UPGRADE_CFG,
+  BLITZ_CFG, NANOLEAF_MONITOR_CFG, NANOLEAF_WALL_CFG, LED_STRIPS_CFG,
+  DESKMAT_CFG, WEBCAM_CFG, HEADSET_CFG, COUCHTISCH_CFG, TASTATUR_UPGRADE_CFG, MAUS_UPGRADE_CFG,
   STREAMDECK_CFG, RINGLICHT_CFG, PS5_CONTROLLER_CFG,
   MONITOR_SCREEN1_CFG, MONITOR_SCREEN2_CFG, MONITOR_SCREEN3_CFG, MONITOR_SCREEN4_CFG,
 ]) useGLTF.preload(m.url);
@@ -1088,7 +1114,22 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
           <ExtraProp tier={monitorTier >= 4 ? 1 : 0} cfg={MONITOR_SCREEN4_CFG} />
           <SwappableProp tier={stuhlTier} models={STUHL_TIER_MODELS} position={STUHL_POS} />
           <SwappableProp tier={regalTier} models={REGAL_TIER_MODELS} position={REGAL_POS} />
-          <ExtraProp tier={nanoleafTier} cfg={NANOLEAF_CFG} />
+          <ExtraProp tier={nanoleafTier >= 1 ? 1 : 0} cfg={BLITZ_CFG} />
+          <ExtraProp tier={nanoleafTier >= 2 ? 1 : 0} cfg={NANOLEAF_MONITOR_CFG} />
+          <ExtraProp tier={nanoleafTier >= 3 ? 1 : 0} cfg={NANOLEAF_WALL_CFG} />
+          <ExtraProp tier={nanoleafTier >= 4 ? 1 : 0} cfg={LED_STRIPS_CFG} />
+          {nanoleafTier >= 1 && (
+            <pointLight position={BLITZ_LIGHT_POS} intensity={0.35} color="#7c3aed" distance={2.5} decay={2} />
+          )}
+          {nanoleafTier >= 2 && (
+            <pointLight position={NANOLEAF_MONITOR_LIGHT_POS} intensity={0.55} color="#38bdf8" distance={3.5} decay={2} />
+          )}
+          {nanoleafTier >= 3 && (
+            <pointLight position={NANOLEAF_WALL_LIGHT_POS} intensity={0.5} color="#f472b6" distance={4} decay={2} />
+          )}
+          {nanoleafTier >= 4 && (
+            <pointLight position={LED_STRIPS_LIGHT_POS} intensity={0.6} color="#e0e7ff" distance={6} decay={2} />
+          )}
           <ExtraProp tier={deskmatTier} cfg={DESKMAT_CFG} />
           <ExtraProp tier={webcamTier} cfg={WEBCAM_CFG} />
           <ExtraProp tier={headsetTier} cfg={HEADSET_CFG} />

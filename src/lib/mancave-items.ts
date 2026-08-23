@@ -51,7 +51,7 @@ const BASELINE_ITEMS: MancaveItemDef[] = [
 
 // ── Zusatzobjekte — Stufe 0 (nicht besessen), müssen erst freigeschaltet werden ──
 const EXTRA_ITEMS: MancaveItemDef[] = [
-  { key: "nanoleaf",   label: "Nanoleaf-Beleuchtung", baseline: false, costs: [2400, 1200, 2000, 3200] },
+  { key: "nanoleaf",   label: "Beleuchtung",          baseline: false, costs: [2400, 1200, 2000, 3200] },
   { key: "headset",    label: "Headset",              baseline: false, costs: [ 600,  800, 1200, 1800] },
   { key: "webcam",     label: "Webcam",                baseline: false, costs: [ 550,  700, 1100, 1600] },
   { key: "couchtisch", label: "Couchtisch",            baseline: false, costs: [ 500,  800, 1200, 1800] },
