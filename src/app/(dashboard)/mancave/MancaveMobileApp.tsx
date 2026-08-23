@@ -1,20 +1,21 @@
 "use client";
 import { useState } from "react";
-import { BarChart3, Trophy, Gamepad2, Activity, Wrench, CalendarDays, Medal, Swords, Clock, MessageSquare } from "lucide-react";
+import { BarChart3, Trophy, Gamepad2, Wrench, CalendarDays, Medal, Swords, Clock, MessageSquare } from "lucide-react";
 import RankedAvatar from "@/components/RankedAvatar";
 import RankIcon from "@/components/RankIcon";
 import CoinIcon from "@/components/CoinIcon";
 import { ItemsPanel } from "./MancaveSharedUI";
 import type { MancaveData } from "./mancave-data";
 
-type Tab = "stats" | "pokale" | "spiele" | "aktivitaet" | "ausbau";
+// User-Wunsch: "Statistik" + "Aktivität" sowie "Pokale" + "Spiele" auf
+// jeweils eine gemeinsame Seite zusammengelegt (mehr Inhalt pro Bildschirm
+// nach unten hin, statt vieler dünner Einzel-Tabs) — 3 statt 5 Reiter.
+type Tab = "stats" | "pokale" | "ausbau";
 
 const TABS: { key: Tab; label: string; icon: typeof BarChart3 }[] = [
-  { key: "stats",      label: "Statistik",  icon: BarChart3 },
-  { key: "pokale",     label: "Pokale",     icon: Trophy },
-  { key: "spiele",     label: "Spiele",     icon: Gamepad2 },
-  { key: "aktivitaet", label: "Aktivität",  icon: Activity },
-  { key: "ausbau",     label: "Ausbau",     icon: Wrench },
+  { key: "stats",  label: "Statistik", icon: BarChart3 },
+  { key: "pokale", label: "Pokale",    icon: Trophy },
+  { key: "ausbau", label: "Ausbau",    icon: Wrench },
 ];
 
 /**
@@ -138,7 +139,7 @@ export default function MancaveMobileApp({ data }: { data: MancaveData }) {
         </div>
 
         {/* App-Grid */}
-        <div className="grid grid-cols-5 gap-1.5">
+        <div className="grid grid-cols-3 gap-1.5">
           {TABS.map(t => {
             const active = tab === t.key;
             const Icon = t.icon;
@@ -155,10 +156,18 @@ export default function MancaveMobileApp({ data }: { data: MancaveData }) {
 
         {/* Content-Bereich */}
         <div className="min-h-[240px]" key={tab}>
-          {tab === "stats" && <StatsCard data={data} theme={theme} />}
-          {tab === "pokale" && <PokaleCard data={data} theme={theme} />}
-          {tab === "spiele" && <SpieleCard data={data} theme={theme} />}
-          {tab === "aktivitaet" && <AktivitaetCard data={data} theme={theme} />}
+          {tab === "stats" && (
+            <div className="space-y-4">
+              <StatsCard data={data} theme={theme} />
+              <AktivitaetCard data={data} theme={theme} />
+            </div>
+          )}
+          {tab === "pokale" && (
+            <div className="space-y-4">
+              <PokaleCard data={data} theme={theme} />
+              <SpieleCard data={data} theme={theme} />
+            </div>
+          )}
           {tab === "ausbau" && <ItemsPanel data={data} />}
         </div>
       </div>
