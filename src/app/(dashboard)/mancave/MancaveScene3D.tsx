@@ -74,7 +74,11 @@ const SCREEN_POS = new THREE.Vector3(1.215, 1.091, -0.741);
 // sichtbarer Farbfleck). Zurück zum einfachen, bewährten Billboard-Modus
 // (<Html center>, feste CSS-Pixelgröße) — bei der festen Kameraposition
 // dieser Szene reicht ein einmal von Hand kalibrierter Wert.
-const SCREEN_CONTENT_W = 260;
+// User-Screenshot: bei 260px füllte die Box nur ~halbe Breite/⅔ Höhe des
+// Bildschirms, mit Leerraum oben/links im Rahmen — auf ~1.7x vergrößert
+// (Box bleibt um denselben, bereits bestätigten Anker SCREEN_POS zentriert,
+// wächst also gleichmäßig in alle Richtungen).
+const SCREEN_CONTENT_W = 440;
 const SCREEN_CONTENT_H = Math.round(SCREEN_CONTENT_W / 1.671);
 // Profil-Plakat: saß ursprünglich über dem Monitor (überlappte damit), dann
 // links vom Fenster bei X=-0.55 — das war relativ zur ALTEN Fensterposition
