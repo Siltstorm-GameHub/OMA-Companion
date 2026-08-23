@@ -237,7 +237,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   });
 
   return (
-    <DashboardChrome newsItems={newsItems} mancaveVisible={mancaveVisible}>
+    <DashboardChrome newsItems={newsItems} mancaveVisible={mancaveVisible} partnerFooter={<PartnerFooter />}>
       {children}
     </DashboardChrome>
   );
