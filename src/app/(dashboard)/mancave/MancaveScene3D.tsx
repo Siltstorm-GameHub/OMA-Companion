@@ -233,28 +233,28 @@ const MONITOR_SCREEN4_CFG: ExtraCfg = { url: "/models/mancave_monitor_screen4.gl
  * — vorher unrotiert (Annahme war, Fehlausrichtung falle hier kaum auf, da
  * die Kamera quasi im Stuhl sitzt; laut User war sie doch sichtbar falsch).
  */
+// User-Wunsch (nach Einführung von chair_premium als neue Stufe 4): die
+// bisherige Stufe 4 (chair_racing) auf Stufe 3, die bisherige Stufe 3
+// (chair_gaming) auf Stufe 2 — Konfigurationen 1:1 mitgenommen, nur die
+// Stufen-Zuordnung verschoben, keine Werte neu berechnet.
 const STUHL_TIER_MODELS: Record<number, TierModelCfg> = {
   1: { url: "/models/chair_office.glb", fix: [0, -0.017, 0], scale: 1, rotationY: Math.PI },
-  2: { url: "/models/chair_office.glb", fix: [0, -0.017, 0], scale: 1, rotationY: Math.PI },
-  // Stufe 3: Nutzer meldete die Rückenlehne als "komisches Objekt", das die
-  // Kamera blockiert. Per Vertex-Analyse (three.js/Node) bestätigt: die
-  // Rückenlehnen-Masse dieses Modells sitzt sehr nah am eigenen Pivot (anders
-  // als bei chair_office), sodass sie nach der 180°-Drehung nur ~0.25
-  // Einheiten von EYE entfernt landet — nah genug, um in die Near-Clip-Ebene
-  // der Kamera zu reichen. Die Drehung selbst ist korrekt (Rückenlehnen-
-  // Normalenrichtung geprüft); `offset` schiebt nur DIESE Stufe etwas weiter
-  // weg vom Schreibtisch/der Kamera, ohne STUHL_POS (das die anderen 3 Stufen
-  // mitbenutzen) anzufassen.
-  // User: etwas kleiner + zusätzlich 90° im Uhrzeigersinn (negative Y-Rotation
-  // in Three.js-Konvention) gedreht — macht netto π - π/2 = π/2.
-  3: { url: "/models/chair_gaming.glb", fix: [0, -0.009, 0], scale: 0.85, rotationY: Math.PI / 2, offset: [-0.3, 0, 0.15] },
-  // Stufe 4 bewusst OHNE die 180°-Drehung der anderen Stufen: geometrisch
-  // vermessen (avgFaceNormal, wie beim Monitor) — "Plane048", die mit Abstand
-  // größte Fläche im Modell (Rückenlehne), zeigt bereits UNROTIERT nach lokal
-  // +X, was hier "weg vom Tisch" entspricht. Die pauschale 180°-Drehung der
-  // anderen 3 Stufen war für DIESES Modell falsch und drehte die Lehne genau
-  // in die Sichtlinie zum Monitor — laut User bestätigt gemeldet.
-  4: { url: "/models/chair_racing.glb", fix: [0, 0, 0],      scale: 1 },
+  // War Stufe 3: Rückenlehnen-Massepivot sitzt nah an EYE nach der 180°-
+  // Drehung (siehe Git-Historie) — `offset` schiebt sie weiter weg, ohne
+  // STUHL_POS anzufassen. User zusätzlich verkleinert + 90° im Uhrzeigersinn
+  // (negative Y-Rotation) gedreht — macht netto π - π/2 = π/2.
+  2: { url: "/models/chair_gaming.glb", fix: [0, -0.009, 0], scale: 0.85, rotationY: Math.PI / 2, offset: [-0.3, 0, 0.15] },
+  // War Stufe 4: geometrisch vermessen (avgFaceNormal) — Rückenlehne zeigt
+  // bereits unrotiert nach lokal +X ("weg vom Tisch"), daher keine Drehung.
+  3: { url: "/models/chair_racing.glb", fix: [0, 0, 0], scale: 1 },
+  // Neue Stufe 4: hochwertigeres Modell aus
+  // "3DAssetsRoom/GamingChair_CG_Trader.blend" (31 Objekte, per Collection
+  // extrahiert, als "chair_premium.glb" exportiert). In Blender direkt
+  // INNERHALB der echten Raumszene geprüft (Screenshot) — stand dort bereits
+  // unrotiert korrekt zum Tisch hin ausgerichtet, deshalb keine rotationY
+  // nötig (anders als bei Tastatur/Stream Deck, die diese Korrektur
+  // brauchten — dieser Import geschah direkt im Raumkontext, nicht isoliert).
+  4: { url: "/models/chair_premium.glb", fix: [-0.045, -0.001, 0.033], scale: 1 },
 };
 // "Plane.002" (Material "chair", Rückenlehne) aus der Referenzszene entfernt
 // — X/Z hier übernommen, Y auf Bodenhöhe (0) gesetzt (Boden-verankerte Modelle).
@@ -476,23 +476,29 @@ const COUCHTISCH_CFG: ExtraCfg = { url: "/models/mancave_couchtisch.glb", fix: [
 // Tastatur, dieselbe 90°-Korrektur zur (nicht achsenparallelen) Tischplatte
 // dieser Szene, nicht weil das Modell selbst falsch ist. Auf dem Tisch,
 // rechts von der Tastatur/Maus-Reihe (X≈0.78), gleiche Tiefe wie die Tastatur.
-const STREAMDECK_CFG: ExtraCfg = { url: "/models/streamdeck.glb", fix: [0.1298, 0.2546, -0.0884], scale: 1, position: new THREE.Vector3(1.0, 0.818, -0.9), rotationY: -Math.PI / 2 };
-// mikrofon.glb: Roh-Maße viel zu groß (1.85×1.64×2.17, wie beim Tastatur-
-// Bug) — scale=0.22 bringt die Höhe auf ~0.36 (realistischer Arm-Mikrofon-
-// Ständer). Blender-Import dieser Datei ist leider größtenteils leer (43 von
-// 44 Objekten nur Struktur-Marker ohne Geometrie, Dateiproblem) — konnte die
-// Ausrichtung deshalb nicht visuell gegenprüfen wie bei Tastatur/Stream Deck,
-// dieselbe 90°-Korrektur trotzdem angewendet (gleiches systematisches
-// Tischplatten-Problem, siehe STREAMDECK_CFG). Neu positioniert: weiter
-// rechts (X=1.15, mehr Abstand zum Stream Deck) auf dem Tisch.
-const MIKROFON_CFG: ExtraCfg = { url: "/models/mikrofon.glb", fix: [-3.2763, -0.0821, 1.1639], scale: 0.22, position: new THREE.Vector3(1.15, 0.818, -0.9), rotationY: -Math.PI / 2 };
-// ringlicht.glb: bereits realistische Weltmaß-Größe (0.459×1.6×0.439), aber
-// User-Screenshot zeigte es riesig direkt vor der Kamera — die Position war
-// nur ~0.88 Einheiten von EYE entfernt, bei 1.6m Höhe dominiert das jeden
-// Blick. Deutlich kleiner (scale 1→0.5, Höhe dann ~0.8m) UND neu platziert:
-// neben dem Monitor/PC-Bereich (X=1.2, nahe der echten Wand bei X=1.292,
-// Z=-0.741 ≈ SCREEN_POS-Tiefe) statt direkt vor der Kamera.
-const RINGLICHT_CFG: ExtraCfg = { url: "/models/ringlicht.glb", fix: [0, 0, -0.0194], scale: 0.5, position: new THREE.Vector3(1.2, 0, -0.741) };
+// User: "muss noch etwas weiter gedreht werden" — zusätzliche 45° in
+// dieselbe Richtung drauf (macht netto -135°/-3π/4). Reines Erfahrungswert-
+// Nachjustieren, da (anders als bei der Tastatur) kein exakter Soll-Winkel
+// bekannt ist.
+const STREAMDECK_CFG: ExtraCfg = { url: "/models/streamdeck.glb", fix: [0.1298, 0.2546, -0.0884], scale: 1, position: new THREE.Vector3(1.0, 0.818, -0.9), rotationY: -3 * Math.PI / 4 };
+// mikrofon.glb: ACHTUNG — dieselbe Datei, bei der der Blender-Import fast
+// komplett leer war (43 von 44 Objekten nur Struktur-Marker), hat auch beim
+// direkten GLTFLoader-Test nur EIN einziges Mesh ergeben, benannt
+// "bot_spider_rubber_rubber_0" — laut Name ein winziges Gummi-Halterungsteil
+// (Shockmount-Ring), NICHT das komplette Mikrofon mit Ständer. Die Datei ist
+// mit hoher Wahrscheinlichkeit unvollständig/beschädigt — deshalb "sehe ich
+// jetzt nicht mehr" trotz Neupositionierung plausibel, unabhängig von
+// Position/Rotation. Trotzdem neu platziert (User-Wunsch), aber mit
+// Vorbehalt: könnte weiterhin unsichtbar/winzig bleiben, weil schlicht nicht
+// genug Geometrie in der Datei steckt.
+const MIKROFON_CFG: ExtraCfg = { url: "/models/mikrofon.glb", fix: [-3.2763, -0.0821, 1.1639], scale: 0.22, position: new THREE.Vector3(1.15, 0.818, -1.1), rotationY: -Math.PI / 2 };
+// ringlicht.glb: zweiter Positionsfehler gefunden — X=1.2 lag INNERHALB der
+// Tischbreite (Cube.001-Bbox X 0.639-1.264), stand also buchstäblich unter
+// der Tischplatte, daher kaum sichtbar (User-Screenshot zeigte die
+// Stativbeine unter dem Tisch hervorschauen). Jetzt klar AUSSERHALB des
+// Tisch-Footprints, links vom Stuhl auf freier Bodenfläche (X=0.2, Z=-0.5;
+// Stuhl selbst sitzt bei X=0.367/Z=-0.921, also mit Abstand).
+const RINGLICHT_CFG: ExtraCfg = { url: "/models/ringlicht.glb", fix: [0, 0, -0.0194], scale: 0.5, position: new THREE.Vector3(0.2, 0, -0.5) };
 
 /**
  * PS5-Controller — aus der externen Datei "3DAssetsRoom/ps5.controller.blend"
