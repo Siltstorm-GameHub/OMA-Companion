@@ -88,6 +88,8 @@ export interface MancaveData {
   items:        MancaveItemStatus[];
   /** Boden/Wand/Fenster-Stufe, aus dem Durchschnitt aller `items`-Stufen berechnet. */
   surfaceTier:  number;
+  /** Testphase-Schalter aus dem Admin-Bereich (siehe mancave-config.ts). */
+  devFreeMode:  boolean;
   /** Idle-Jobs, jetzt an `surfaceTier` statt an einzelne Möbel gekoppelt (siehe jobs.ts). */
   jobs:         JobOverview;
 }

@@ -30,11 +30,11 @@ export interface JobDef {
 }
 
 /**
- * Job-Einstellungen — früher über das (inzwischen entfernte) Gaming-Zimmer-
- * Admin-Panel per BotConfig einstellbar (RoomConfig.jobsEnabled/wageCapHours/
- * wageMultiplierPct/hireLockHours). Jetzt feste Konstanten hier, analog zu
- * MANCAVE_DEV_FREE_MODE in mancave-items.ts — bei Bedarf später wieder an
- * ein eigenes Mancave-Admin-Panel anbinden.
+ * Globale Job-Einstellungen — früher über das (inzwischen entfernte)
+ * Gaming-Zimmer-Admin-Panel per BotConfig einstellbar (RoomConfig.jobsEnabled/
+ * wageCapHours/wageMultiplierPct/hireLockHours), noch feste Konstanten hier.
+ * Lohn/Mindest-Mancave-Stufe JE JOB sind dagegen schon admin-einstellbar,
+ * siehe job-config.ts + /admin/mancave.
  */
 export const JOBS_ENABLED = true;
 /** Ab so vielen Stunden verfällt weiterer Lohn. */
@@ -132,6 +132,29 @@ export function jobUnlockState(
   const rankOk     = rankTier >= job.minTier;
   const roomTierOk = roomTier >= job.minRoomTier;
   return { unlocked: rankOk && roomTierOk, rankOk, roomTierOk };
+}
+
+/** Admin-Überschreibung je Job — beide Felder optional, ungesetzte bleiben beim Katalogwert. */
+export interface JobOverride {
+  coinsPerHour?: number;
+  minRoomTier?:  number;
+}
+
+/**
+ * Wendet Admin-Overrides (siehe job-config.ts) auf den Katalog an — reine
+ * Funktion ohne Prisma-Zugriff, der Aufrufer lädt die Overrides vorher aus
+ * der DB. Jobs ohne eigenen Override-Eintrag bleiben unverändert.
+ */
+export function applyJobOverrides(jobs: JobDef[], overrides: Record<string, JobOverride>): JobDef[] {
+  return jobs.map(job => {
+    const o = overrides[job.key];
+    if (!o) return job;
+    return {
+      ...job,
+      coinsPerHour: o.coinsPerHour ?? job.coinsPerHour,
+      minRoomTier:  o.minRoomTier ?? job.minRoomTier,
+    };
+  });
 }
 
 // ── Lohn ─────────────────────────────────────────────────────────────────────

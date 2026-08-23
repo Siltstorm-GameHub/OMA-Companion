@@ -47,18 +47,37 @@ useGLTF.preload("/models/mancave_ceiling.glb");
 // Blender (Z-up): eye=(0.05,0.95,1.28), forward=(0.9598,0,-0.2806).
 // glTF/three.js (Y-up): x→x, y→z_blender, z→-y_blender.
 // Y (Höhe) auf User-Wunsch um 10cm angehoben (war 1.28) — wirkte zu tief/
-// nah an der Tischkante, X/Z und Blickrichtung unverändert.
-const EYE = new THREE.Vector3(0.05, 1.38, -0.95);
+// nah an der Tischkante. X (Tiefe) zusätzlich um 10cm Richtung Monitore
+// verschoben (war 0.05, Monitore stehen bei X≈1.21) — Z/Blickrichtung
+// unverändert.
+const EYE = new THREE.Vector3(0.15, 1.38, -0.95);
 const FORWARD = new THREE.Vector3(0.9598, -0.2806, 0);
 const LOOK_TARGET = EYE.clone().add(FORWARD);
 
 // Bildschirm-Mitte des Haupt-Monitors ("Cube.015") — bewusst NICHT auf die
 // höhere, gemeinsame Mitte von Cube.015+Cube.002 verschoben (das wurde
 // ausprobiert, vom User aber als schlechter beurteilt und zurückgesetzt) —
-// diese niedrigere Position bleibt der bevorzugte Stand. Um 0.05 Richtung
-// Kamera versetzt (entlang -FORWARD), sonst verdeckt die Bildschirm-Fläche
-// selbst das Html-Overlay (Selbst-Okklusion).
+// diese niedrigere Position bleibt der bevorzugte Stand.
 const SCREEN_POS = new THREE.Vector3(1.215, 1.091, -0.741);
+// Echte Weltmaße der leuchtenden Bildschirm-Fläche (Material "Pc screen3" in
+// mancave_monitor_screen1.glb, NICHT das ganze Mesh inkl. Rahmen) — per
+// Blender bmesh direkt vermessen (nur Faces mit diesem Material), Blender-
+// Bbox (Z-up) in gltf-Koordinaten umgerechnet: gltf.x=blender.x,
+// gltf.y=blender.z, gltf.z=-blender.y. Blender-Bbox war min=(1.2128,0.4785,
+// 0.9200) max=(1.2128,1.0041,1.2346) → Breite (blender Y) 0.5257, Höhe
+// (blender Z) 0.3146. Treibt Größe/Position des interaktiven <Html
+// transform>-Overlays unten, statt einer frei geschätzten Pixelgröße.
+const SCREEN_WIDTH_M = 0.5257;
+const SCREEN_HEIGHT_M = 0.3146;
+// Exakte gemessene Mitte, 1cm Richtung Kamera (-X) versetzt als Sicherheits-
+// abstand zur Rahmen-Geometrie (occlude={false} macht das eigentlich
+// überflüssig, schadet aber nicht).
+const SCREEN_CENTER = new THREE.Vector3(1.2028, 1.0773, -0.74129);
+// Content wird bei 300×180 CSS-Px gezeichnet (Seitenverhältnis 1.667, fast
+// exakt die gemessenen 0.5257/0.3146=1.671) und über `scale` auf die echte
+// Weltbreite herunterskaliert.
+const SCREEN_CONTENT_PX = 300;
+const SCREEN_SCALE = SCREEN_WIDTH_M / SCREEN_CONTENT_PX;
 // Profil-Plakat: saß ursprünglich über dem Monitor (überlappte damit), dann
 // links vom Fenster bei X=-0.55 — das war relativ zur ALTEN Fensterposition
 // (X=0.3) berechnet und wurde beim Verschieben des Fensters (jetzt X=0.7,
@@ -1144,8 +1163,11 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
               immer sichtbar. Dock-Icons öffnen Statistik/Jobs/Ausbau/Postfach
               direkt am Rechner (ersetzt den früheren separaten Ausbau-Hotspot
               auf dem Schreibtisch — Upgrades gehören jetzt an den Monitor). */}
-          <Html center position={SCREEN_POS} style={{ pointerEvents: "auto" }}>
-            <div className="w-[150px] h-[104px] rounded-[3px] overflow-hidden shadow-[0_0_18px_rgba(45,212,191,0.35)]">
+          <Html transform center occlude={false}
+            position={SCREEN_CENTER} rotation={[0, -Math.PI / 2, 0]} scale={SCREEN_SCALE}
+            style={{ pointerEvents: "auto" }}>
+            <div style={{ width: SCREEN_CONTENT_PX, height: SCREEN_CONTENT_PX / (SCREEN_WIDTH_M / SCREEN_HEIGHT_M) }}
+              className="overflow-hidden shadow-[0_0_18px_rgba(45,212,191,0.35)]">
               <MonitorScreenContent data={data} onOpenPanel={setPanel} />
             </div>
           </Html>

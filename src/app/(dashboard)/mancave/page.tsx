@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/roles";
 import { getRank, getNextRank, getRankFullLabel } from "@/lib/ranks";
 import { computeBadges } from "@/lib/badges";
-import { getMancaveConfig, mancaveVisibleFor } from "@/lib/mancave-config";
+import { getMancaveConfig, mancaveVisibleFor, effectiveCosts } from "@/lib/mancave-config";
 import { loadRoom } from "@/lib/room";
 import { getRoomItem } from "@/lib/room-items";
 import { parseFavoriteGames } from "@/lib/favorite-games";
@@ -19,7 +19,8 @@ export default async function MancavePage() {
 
   // Solange mancave_enabled aus ist, ist die Mancave admin-only — Nicht-Admins
   // landen unauffällig auf der ganz normalen Profilseite, ganz wie /zimmer.
-  if (!mancaveVisibleFor(await getMancaveConfig(), me.role)) redirect("/profile");
+  const mancaveCfg = await getMancaveConfig();
+  if (!mancaveVisibleFor(mancaveCfg, me.role)) redirect("/profile");
 
   const userId = me.id;
   const now = new Date();
@@ -110,7 +111,8 @@ export default async function MancavePage() {
     const tier = tiers[def.key];
     return {
       key: def.key, label: def.label, baseline: def.baseline, tier,
-      maxTier: 4, nextCost: nextUpgradeCost(def, tier),
+      maxTier: 4,
+      nextCost: nextUpgradeCost(def, tier, { devFreeMode: mancaveCfg.devFreeMode, costOverride: effectiveCosts(def, mancaveCfg) }),
     };
   });
   const surfaceTier = surfaceTierFrom(tiers);
@@ -143,6 +145,7 @@ export default async function MancavePage() {
     roomItemKeys: room.placed.map(p => p.key),
     items,
     surfaceTier,
+    devFreeMode: mancaveCfg.devFreeMode,
     jobs,
   };
 

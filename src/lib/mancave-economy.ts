@@ -1,8 +1,9 @@
 import { prisma } from "./prisma";
 import { COIN_PREFIX } from "./points";
 import {
-  MANCAVE_DEV_FREE_MODE, MANCAVE_ITEMS, computeSurfaceTier, defaultTier, getMancaveItem, nextUpgradeCost,
+  MANCAVE_ITEMS, computeSurfaceTier, defaultTier, getMancaveItem, nextUpgradeCost,
 } from "./mancave-items";
+import { getMancaveConfig, effectiveCosts } from "./mancave-config";
 
 /** Stufe je Slot-Key, inklusive noch nicht materialisierter Slots (siehe Kommentar unten). */
 export type MancaveTiers = Record<string, number>;
@@ -41,14 +42,15 @@ export async function upgradeMancaveItem(userId: string, itemKey: string): Promi
   const def = getMancaveItem(itemKey);
   if (!def) return { error: "Unbekanntes Objekt" };
 
-  const [user, existing] = await Promise.all([
+  const [user, existing, cfg] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId }, select: { points: true } }),
     prisma.mancaveItem.findUnique({ where: { userId_itemKey: { userId, itemKey } }, select: { tier: true } }),
+    getMancaveConfig(),
   ]);
   if (!user) return { error: "Nicht eingeloggt" };
 
   const currentTier = existing?.tier ?? defaultTier(def);
-  const cost = nextUpgradeCost(def, currentTier);
+  const cost = nextUpgradeCost(def, currentTier, { devFreeMode: cfg.devFreeMode, costOverride: effectiveCosts(def, cfg) });
   if (cost === null) return { error: "Bereits auf Höchststufe" };
   if (user.points < cost) return { error: "Nicht genug Münzen" };
 
@@ -61,7 +63,7 @@ export async function upgradeMancaveItem(userId: string, itemKey: string): Promi
       create: { userId, itemKey, tier: newTier },
       update: { tier: newTier },
     });
-    // Dev-Testphase (siehe MANCAVE_DEV_FREE_MODE): cost ist dann immer 0 —
+    // Dev-Testphase (siehe MancaveConfig.devFreeMode in mancave-config.ts): cost ist dann immer 0 —
     // kein Punktabzug, kein Ledger-Eintrag, damit das echte Münz-Konto/-Log
     // nicht mit Test-Upgrades vollgeschrieben wird.
     if (cost === 0) return { points: user.points };
@@ -84,13 +86,14 @@ export type DowngradeResult =
   | { error: string };
 
 /**
- * NUR für die Dev-Testphase (siehe MANCAVE_DEV_FREE_MODE): eine Stufe zurück,
+ * NUR für die Dev-Testphase (siehe MancaveConfig.devFreeMode in mancave-config.ts): eine Stufe zurück,
  * kostenlos, keine Erstattung — reines Test-Werkzeug, um Zustände erneut
  * durchzuklicken. Läuft auf `defaultTier` (Grundausstattung nie unter 1,
  * Zusatzobjekte nie unter 0) und ist im echten Rollout komplett gesperrt.
  */
 export async function downgradeMancaveItem(userId: string, itemKey: string): Promise<DowngradeResult> {
-  if (!MANCAVE_DEV_FREE_MODE) return { error: "Nur in der Testphase verfügbar" };
+  const cfg = await getMancaveConfig();
+  if (!cfg.devFreeMode) return { error: "Nur in der Testphase verfügbar" };
 
   const def = getMancaveItem(itemKey);
   if (!def) return { error: "Unbekanntes Objekt" };

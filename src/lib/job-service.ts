@@ -2,9 +2,10 @@ import { prisma } from "./prisma";
 import { COIN_PREFIX } from "./points";
 import { getRank } from "./ranks";
 import { loadMancaveTiers, surfaceTierFrom } from "./mancave-economy";
+import { getEffectiveJobs } from "./job-config";
 import {
-  JOBS, JOBS_ENABLED, WAGE_CAP_HOURS, WAGE_MULTIPLIER_PCT, HIRE_LOCK_HOURS, MIN_CLAIM_MINUTES,
-  computeAccrual, formatDuration, getJob, jobUnlockState, type JobDef,
+  JOBS_ENABLED, WAGE_CAP_HOURS, WAGE_MULTIPLIER_PCT, HIRE_LOCK_HOURS, MIN_CLAIM_MINUTES,
+  computeAccrual, formatDuration, jobUnlockState, type JobDef,
 } from "./jobs";
 
 /**
@@ -25,6 +26,9 @@ export interface JobContext {
   rankTier: number;
   roomTier: number;
   job:      JobDef | null;
+  /** Katalog MIT Admin-Overrides (Lohn/Mindest-Mancave-Stufe), siehe job-config.ts. */
+  effectiveJobs: JobDef[];
+  jobMap:   Map<string, JobDef>;
   row: {
     jobKey: string | null; hiredAt: Date | null; accrualFrom: Date | null;
     lastClaimAt: Date | null; totalEarned: number; hireLockedUntil: Date | null;
@@ -33,16 +37,20 @@ export interface JobContext {
 
 /** Alles, was für jede Job-Entscheidung gebraucht wird — in einem Rutsch. */
 async function loadContext(userId: string): Promise<JobContext> {
-  const [user, row, mancaveTiers] = await Promise.all([
+  const [user, row, mancaveTiers, effectiveJobs] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId }, select: { rankPoints: true } }),
     prisma.userJob.findUnique({ where: { userId } }).catch(() => null),
     loadMancaveTiers(userId),
+    getEffectiveJobs(),
   ]);
+  const jobMap = new Map(effectiveJobs.map(j => [j.key, j]));
 
   return {
     rankTier: getRank(user?.rankPoints ?? 0).tier,
     roomTier: surfaceTierFrom(mancaveTiers),
-    job:      getJob(row?.jobKey),
+    job:      row?.jobKey ? jobMap.get(row.jobKey) ?? null : null,
+    effectiveJobs,
+    jobMap,
     row:      row ?? null,
   };
 }
@@ -97,7 +105,7 @@ export async function getJobOverview(userId: string): Promise<JobOverview> {
       })()
     : null;
 
-  const jobs: JobListEntry[] = JOBS.map(job => {
+  const jobs: JobListEntry[] = ctx.effectiveJobs.map(job => {
     const st = jobUnlockState(job, ctx.rankTier, ctx.roomTier);
     return {
       key: job.key, label: job.label, emoji: job.emoji, flavor: job.flavor,
@@ -210,7 +218,7 @@ export async function hireJob(userId: string, jobKey: string): Promise<HireResul
   const ctx = await loadContext(userId);
   if (!JOBS_ENABLED) return { error: "Idle-Jobs sind gerade deaktiviert" };
 
-  const job = getJob(jobKey);
+  const job = ctx.jobMap.get(jobKey) ?? null;
   if (!job) return { error: "Unbekannter Job" };
   if (ctx.job?.key === job.key) return { error: "Da arbeitest du schon" };
 

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireMancaveAccess } from "@/lib/mancave-guard";
 import { downgradeMancaveItem } from "@/lib/mancave-economy";
 
-/** Nur für die Dev-Testphase (siehe MANCAVE_DEV_FREE_MODE in mancave-items.ts). */
+/** Nur für die Dev-Testphase (siehe MancaveConfig.devFreeMode in mancave-config.ts, admin-einstellbar). */
 export async function POST(req: NextRequest) {
   const guard = await requireMancaveAccess();
   if ("response" in guard) return guard.response;

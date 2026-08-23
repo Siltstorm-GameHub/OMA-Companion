@@ -11,7 +11,6 @@ import {
 import CoinIcon from "@/components/CoinIcon";
 import { useNow } from "@/lib/useNow";
 import { computeAccrual, formatDuration, getJob } from "@/lib/jobs";
-import { MANCAVE_DEV_FREE_MODE } from "@/lib/mancave-items";
 import { RANKS } from "@/lib/ranks";
 import type { JobListEntry, JobOverview } from "@/lib/job-service";
 import type { MancaveData } from "./mancave-data";
@@ -32,40 +31,53 @@ function notificationCount(data: MancaveData): number {
 }
 
 /**
- * Interaktives Dock direkt auf dem Monitor-Screen — der Einstieg in alle
- * Detail-Panels (Statistik, Jobs, Ausbau, Mail). Ersetzt die vorherige rein
- * passive Mini-Anzeige UND den separaten "Ausbau"-Hotspot auf dem
- * Schreibtisch (User-Wunsch: Upgrades gehören an den Rechner, nicht als
- * eigener Button im Raum).
+ * "Echter Desktop"-Look: dunkler Hintergrund mit großem, blassem OMA-Logo
+ * als Wallpaper-Wasserzeichen (wie ein echter PC-Desktop), oben rechts eine
+ * schmale "System-Tray"-Leiste (Rang + Münzen), unten ein Dock/Taskbar mit
+ * den Panel-Icons. Rendert jetzt bei fester Pixelgröße (300px breit, siehe
+ * SCREEN_CONTENT_PX in MancaveScene3D.tsx — das <Html transform>-Overlay
+ * skaliert das Ganze auf die echte, vermessene Bildschirmfläche herunter),
+ * daher feste px-Werte statt der früheren vw-Clamp-Werte (die waren für den
+ * alten viewport-relativen Billboard-Modus gedacht).
  */
 export function MonitorScreenContent({ data, onOpenPanel }: { data: MancaveData; onOpenPanel: (p: MancavePanel) => void }) {
   const notifs = notificationCount(data);
   return (
-    <div className="w-full h-full flex flex-col justify-between p-[3%] overflow-hidden select-none"
-      style={{ background: "linear-gradient(180deg,rgba(13,59,54,0.92),rgba(4,33,29,0.92))" }}>
-      <div>
-        <div className="flex items-center justify-between">
-          <span className={`font-bold leading-none ${data.rankColor}`} style={{ fontSize: "clamp(9px,1.6vw,15px)" }}>
-            {data.rankLabel}
-          </span>
-          <span className="text-teal-300/70" style={{ fontSize: "clamp(7px,1.2vw,11px)" }}>#{data.leaderboardRank}</span>
-        </div>
-        <div className="mt-1 h-[3px] rounded-full overflow-hidden bg-white/10">
+    <div className="relative w-full h-full overflow-hidden select-none" style={{ background: "#05100d" }}>
+      {/* Wallpaper: OMA-Logo als blasses, zentriertes Wasserzeichen */}
+      <div className="absolute inset-0" style={{
+        backgroundImage: "url(/OMALogoNew.png)", backgroundRepeat: "no-repeat",
+        backgroundPosition: "center", backgroundSize: "62%", opacity: 0.1,
+      }} />
+      <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 40%, rgba(13,59,54,0.35), rgba(3,8,7,0.85) 75%)" }} />
+
+      {/* System-Tray oben rechts: Rang + Münzen, wie eine echte OS-Menüleiste */}
+      <div className="absolute top-0 inset-x-0 flex items-center justify-end gap-2.5 px-3" style={{ height: 22 }}>
+        <span className={`font-bold leading-none ${data.rankColor}`} style={{ fontSize: 10 }}>
+          {data.rankLabel} <span className="text-teal-300/60 font-normal">#{data.leaderboardRank}</span>
+        </span>
+        <span className="flex items-center gap-1 text-amber-300 font-semibold tabular-nums leading-none" style={{ fontSize: 10 }}>
+          <CoinIcon size={10} />{data.totalPoints.toLocaleString("de-DE")}
+        </span>
+      </div>
+      <div className="absolute top-[22px] inset-x-0 h-px" style={{ background: "rgba(45,212,191,0.15)" }} />
+
+      {/* Rang-Fortschritt, dezent wie ein Desktop-Widget in der Ecke */}
+      <div className="absolute left-3 bottom-[46px] w-[110px]">
+        <div className="h-1 rounded-full overflow-hidden bg-white/10">
           <div className="h-full rounded-full" style={{ width: `${data.rankPct}%`, background: "linear-gradient(90deg,#14b8a6,#2dd4bf)" }} />
         </div>
       </div>
-      <div className="flex items-center gap-1.5">
-        <CoinIcon size={13} />
-        <span className="text-amber-300 font-semibold tabular-nums leading-none" style={{ fontSize: "clamp(9px,1.8vw,16px)" }}>
-          {data.totalPoints.toLocaleString("de-DE")}
-        </span>
-      </div>
-      {/* Dock — jedes Icon öffnet sein Panel im selben Klick-am-Rechner-Gefühl */}
-      <div className="grid grid-cols-4 gap-x-1">
-        <DockIcon icon={<BarChart3 />} onClick={() => onOpenPanel("trophy")} />
-        <DockIcon icon={<Briefcase />} onClick={() => onOpenPanel("jobs")} />
-        <DockIcon icon={<Wrench />} onClick={() => onOpenPanel("items")} />
-        <DockIcon icon={<Mail />} badge={notifs} onClick={() => onOpenPanel("mail")} />
+
+      {/* Taskbar/Dock unten — jedes Icon öffnet sein Panel im selben Klick-am-Rechner-Gefühl */}
+      <div className="absolute left-0 right-0 bottom-2 flex items-center justify-center gap-1.5">
+        <div className="flex items-center gap-1.5 px-1.5 py-1.5 rounded-lg"
+          style={{ background: "rgba(8,16,15,0.65)", border: "1px solid rgba(255,255,255,0.08)", backdropFilter: "blur(2px)" }}>
+          <DockIcon icon={<BarChart3 />} onClick={() => onOpenPanel("trophy")} />
+          <DockIcon icon={<Briefcase />} onClick={() => onOpenPanel("jobs")} />
+          <DockIcon icon={<Wrench />} onClick={() => onOpenPanel("items")} />
+          <DockIcon icon={<Mail />} badge={notifs} onClick={() => onOpenPanel("mail")} />
+        </div>
       </div>
     </div>
   );
@@ -74,12 +86,12 @@ export function MonitorScreenContent({ data, onOpenPanel }: { data: MancaveData;
 function DockIcon({ icon, badge, onClick }: { icon: React.ReactNode; badge?: number; onClick: () => void }) {
   return (
     <button onClick={onClick}
-      className="relative flex items-center justify-center rounded-[2px] transition-colors"
-      style={{ aspectRatio: "1", background: "rgba(45,212,191,0.1)", border: "1px solid rgba(45,212,191,0.25)" }}>
-      <span className="text-teal-300" style={{ width: "55%", height: "55%" }}>{icon}</span>
+      className="relative flex items-center justify-center rounded-[3px] transition-colors hover:brightness-125"
+      style={{ width: 24, height: 24, background: "rgba(45,212,191,0.12)", border: "1px solid rgba(45,212,191,0.3)" }}>
+      <span className="text-teal-300" style={{ width: 13, height: 13 }}>{icon}</span>
       {!!badge && badge > 0 && (
-        <span className="absolute -top-[3px] -right-[3px] flex items-center justify-center rounded-full bg-rose-500 text-white font-bold leading-none"
-          style={{ width: "38%", height: "38%", fontSize: "clamp(5px,1vw,8px)" }}>
+        <span className="absolute -top-1 -right-1 flex items-center justify-center rounded-full bg-rose-500 text-white font-bold leading-none"
+          style={{ width: 10, height: 10, fontSize: 7 }}>
           {badge > 9 ? "9+" : badge}
         </span>
       )}
@@ -462,7 +474,7 @@ export function ItemsPanel({ data }: { data: MancaveData }) {
           </div>
         </div>
       </div>
-      {MANCAVE_DEV_FREE_MODE && (
+      {data.devFreeMode && (
         <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] text-amber-200"
           style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)" }}>
           <FlaskConical className="w-3 h-3 shrink-0" />
@@ -473,7 +485,7 @@ export function ItemsPanel({ data }: { data: MancaveData }) {
       <div className="space-y-1.5">
         {data.items.map(item => {
           const minTier = item.baseline ? 1 : 0;
-          const canDowngrade = MANCAVE_DEV_FREE_MODE && item.tier > minTier;
+          const canDowngrade = data.devFreeMode && item.tier > minTier;
           return (
           <div key={item.key} className="flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg bg-white/[0.03]">
             <div className="min-w-0 flex items-center gap-2">

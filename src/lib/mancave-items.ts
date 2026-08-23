@@ -14,16 +14,6 @@
 
 export const MANCAVE_MAX_TIER = 4;
 
-/**
- * DEV-PHASE-SCHALTER: solange true, kosten Stufen-Upgrades keine Münzen
- * (`nextUpgradeCost` gibt 0 zurück) und Stufen können auch wieder
- * zurückgestuft werden (`downgradeMancaveItem` in mancave-economy.ts, sonst
- * gesperrt). NUR für die interne Testphase, solange die Mancave admin-only
- * ist — vor dem echten Rollout (mancave_enabled=true für alle) auf `false`
- * setzen bzw. diesen ganzen Block wieder entfernen.
- */
-export const MANCAVE_DEV_FREE_MODE = true;
-
 export interface MancaveItemDef {
   key: string;
   label: string;
@@ -76,11 +66,23 @@ export function defaultTier(def: MancaveItemDef): number {
   return def.baseline ? 1 : 0;
 }
 
-/** Kosten für den nächsten Stufenschritt, oder null wenn schon Stufe 4 erreicht. */
-export function nextUpgradeCost(def: MancaveItemDef, currentTier: number): number | null {
+/**
+ * Kosten für den nächsten Stufenschritt, oder null wenn schon Stufe 4 erreicht.
+ *
+ * `devFreeMode` und `costOverride` kommen von außen (siehe mancave-config.ts)
+ * statt hier fest verdrahtet zu sein — dieser Katalog bleibt bewusst reiner
+ * Code ohne Prisma-Zugriff, admin-einstellbare Werte lädt der Aufrufer
+ * (mancave-economy.ts / mancave/page.tsx) vorher aus der DB.
+ */
+export function nextUpgradeCost(
+  def: MancaveItemDef,
+  currentTier: number,
+  opts?: { devFreeMode?: boolean; costOverride?: [number, number, number, number] },
+): number | null {
   if (currentTier >= MANCAVE_MAX_TIER) return null;
-  if (MANCAVE_DEV_FREE_MODE) return 0;
-  return def.costs[currentTier];
+  if (opts?.devFreeMode) return 0;
+  const costs = opts?.costOverride ?? def.costs;
+  return costs[currentTier];
 }
 
 /**
