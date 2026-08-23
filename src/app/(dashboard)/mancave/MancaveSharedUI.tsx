@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import {
   Trophy, Package, CalendarDays, Medal, Swords, Clock, MessageSquare, Gamepad2, Wrench, Lock,
-  ArrowUpCircle, ArrowDownCircle, FlaskConical, Home, Mail, Briefcase, BarChart3, Loader2,
+  ArrowUpCircle, ArrowDownCircle, ArrowLeft, FlaskConical, Home, Mail, Briefcase, BarChart3, Loader2,
   Check, Sparkles,
 } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
@@ -30,18 +30,51 @@ function notificationCount(data: MancaveData): number {
   return jobCount + upgradeCount;
 }
 
+const PANEL_TITLES: Record<Exclude<MancavePanel, null>, string> = {
+  trophy: "Statistik", items: "Ausbau", jobs: "Jobbörse", mail: "Postfach",
+};
+
 /**
  * "Echter Desktop"-Look: dunkler Hintergrund mit großem, blassem OMA-Logo
  * als Wallpaper-Wasserzeichen (wie ein echter PC-Desktop), oben rechts eine
  * schmale "System-Tray"-Leiste (Rang + Münzen), unten ein Dock/Taskbar mit
- * den Panel-Icons. Rendert jetzt bei fester Pixelgröße (300px breit, siehe
- * SCREEN_CONTENT_PX in MancaveScene3D.tsx — das <Html transform>-Overlay
- * skaliert das Ganze auf die echte, vermessene Bildschirmfläche herunter),
- * daher feste px-Werte statt der früheren vw-Clamp-Werte (die waren für den
- * alten viewport-relativen Billboard-Modus gedacht).
+ * den Panel-Icons. Rendert bei fester Pixelgröße (siehe SCREEN_CONTENT_W/H
+ * in MancaveScene3D.tsx), daher feste px-Werte statt vw-Clamp-Werten.
+ *
+ * Verwaltet den geöffneten Panel-Zustand SELBST (statt über die 3D-Szene) —
+ * ein Klick auf ein Dock-Icon öffnet das Panel DIREKT AUF DEM MONITOR
+ * (schmale Titelleiste mit Zurück-Pfeil + scrollbarer Inhalt), statt eines
+ * bildschirmfüllenden Popups. User-Wunsch: "Anzeige bleibt auf dem Monitor".
+ * Der separate Pokale-Hotspot auf dem Schreibtisch (SHELF_POS) nutzt weiter
+ * das große Popup — das ist bewusst unverändert, hat nichts mit dem Monitor
+ * zu tun.
  */
-export function MonitorScreenContent({ data, onOpenPanel }: { data: MancaveData; onOpenPanel: (p: MancavePanel) => void }) {
+export function MonitorScreenContent({ data }: { data: MancaveData }) {
+  const [view, setView] = useState<MancavePanel>(null);
   const notifs = notificationCount(data);
+
+  if (view) {
+    return (
+      <div className="relative w-full h-full flex flex-col select-none" style={{ background: "#05100d" }}>
+        <div className="shrink-0 flex items-center gap-1.5 px-2" style={{ height: 20, background: "rgba(8,16,15,0.9)", borderBottom: "1px solid rgba(45,212,191,0.15)" }}>
+          <button onClick={() => setView(null)} aria-label="Zurück zum Desktop"
+            className="flex items-center justify-center rounded hover:bg-white/10 transition-colors" style={{ width: 14, height: 14 }}>
+            <ArrowLeft className="text-teal-300" style={{ width: 10, height: 10 }} />
+          </button>
+          <span className="text-teal-200 font-semibold" style={{ fontSize: 9 }}>{PANEL_TITLES[view]}</span>
+        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto p-2" style={{ fontSize: 9 }}>
+          <div style={{ transform: "scale(0.72)", transformOrigin: "top left", width: "138.9%" }}>
+            {view === "trophy" && <TrophyPanel data={data} />}
+            {view === "items" && <ItemsPanel data={data} />}
+            {view === "jobs" && <JobsPanel data={data} />}
+            {view === "mail" && <MailPanel data={data} onOpenPanel={setView} />}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative w-full h-full overflow-hidden select-none" style={{ background: "#05100d" }}>
       {/* Wallpaper: OMA-Logo als blasses, zentriertes Wasserzeichen */}
@@ -69,14 +102,14 @@ export function MonitorScreenContent({ data, onOpenPanel }: { data: MancaveData;
         </div>
       </div>
 
-      {/* Taskbar/Dock unten — jedes Icon öffnet sein Panel im selben Klick-am-Rechner-Gefühl */}
+      {/* Taskbar/Dock unten — jedes Icon öffnet sein Panel direkt auf dem Monitor */}
       <div className="absolute left-0 right-0 bottom-2 flex items-center justify-center gap-1.5">
         <div className="flex items-center gap-1.5 px-1.5 py-1.5 rounded-lg"
           style={{ background: "rgba(8,16,15,0.65)", border: "1px solid rgba(255,255,255,0.08)", backdropFilter: "blur(2px)" }}>
-          <DockIcon icon={<BarChart3 />} onClick={() => onOpenPanel("trophy")} />
-          <DockIcon icon={<Briefcase />} onClick={() => onOpenPanel("jobs")} />
-          <DockIcon icon={<Wrench />} onClick={() => onOpenPanel("items")} />
-          <DockIcon icon={<Mail />} badge={notifs} onClick={() => onOpenPanel("mail")} />
+          <DockIcon icon={<BarChart3 />} onClick={() => setView("trophy")} />
+          <DockIcon icon={<Briefcase />} onClick={() => setView("jobs")} />
+          <DockIcon icon={<Wrench />} onClick={() => setView("items")} />
+          <DockIcon icon={<Mail />} badge={notifs} onClick={() => setView("mail")} />
         </div>
       </div>
     </div>

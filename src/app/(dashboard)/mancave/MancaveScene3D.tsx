@@ -1164,7 +1164,7 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
           <Html center position={SCREEN_POS} style={{ pointerEvents: "auto" }}>
             <div style={{ width: SCREEN_CONTENT_W, height: SCREEN_CONTENT_H }}
               className="overflow-hidden rounded-[3px] shadow-[0_0_18px_rgba(45,212,191,0.35)]">
-              <MonitorScreenContent data={data} onOpenPanel={setPanel} />
+              <MonitorScreenContent data={data} />
             </div>
           </Html>
 
