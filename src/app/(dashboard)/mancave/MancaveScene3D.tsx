@@ -352,21 +352,22 @@ const DESKMAT_CFG: ExtraCfg = { url: "/models/mancave_deskmat.glb", fix: [0, 0, 
 const WEBCAM_CFG: ExtraCfg = { url: "/models/webcam.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(1.215, 1.25, -0.7), rotationY: -Math.PI / 2 };
 // Headset: flach auf den Tisch legen. Modell steht laut Messscript aufrecht
 // (min.y=0, max.y=0.24, Fußabdruck ±0.106 in X/Z) — 90°-Drehung um Z legt es
-// um; `fix` verschiebt den Ursprung so, dass die neue Unterseite nach der
-// Drehung wieder bei lokal y=0 liegt (nach 90°-Z-Drehung wird Welt-Y aus
-// lokalem X, Welt-X aus lokalem -Y).
+// um. VORZEICHENFEHLER in `fix.y` aus der letzten Runde gefunden und
+// korrigiert: nach der Rotationsmatrix für 90°-Z gilt world_x=-local_y,
+// world_y=local_x (nicht wie ich zuerst annahm world_x=local_y). Mit
+// fix.y=+0.12 lag der lokale Y-Bereich nach dem Verschieben bei [0.12,0.36]
+// statt zentriert bei [-0.12,0.12] — das Headset landete dadurch komplett
+// einseitig verschoben (rund 2× seines eigenen halben Fußabdrucks) statt
+// mittig auf `position`, was die falsche Position in JEDER bisherigen Runde
+// erklärt. fix.y=-0.12 zentriert den Bereich korrekt auf 0.
 //
 // Position: User zeigte per Screenshot explizit auf die sichtbar freie Lücke
-// links neben der Tastatur, zwischen ihr und der Wand — vorher fälschlich an
-// der zu schmal gemessenen Mousepad-Bbox orientiert (siehe TASTATUR_UPGRADE_
-// CFG-Kommentar) und deshalb an eine andere Tiefe ausgewichen. Jetzt mit der
-// korrekten, breiteren Tisch-Bbox (Cube.001, X 0.639-1.264) und der jetzt
-// kleineren Tastatur (scale 0.55, linke Kante bei X≈0.78) neu berechnet:
-// Headset zusätzlich verkleinert (scale 0.6, Fußabdruck dann ±0.072), damit
-// es in die Lücke zwischen Tischkante (0.639) und Tastatur (0.78) passt,
-// mit kleinem Abstand zu beiden Seiten. Gleiche Tiefe (Z) wie die Tastatur,
-// wie im Screenshot zu sehen.
-const HEADSET_CFG: ExtraCfg = { url: "/models/headset_gaming.glb", fix: [0.106, 0.12, 0], scale: 0.6, position: new THREE.Vector3(0.71, 0.818, -0.91), rotationZ: Math.PI / 2 };
+// links neben der Tastatur, zwischen ihr und der Wand, auf gleicher Tiefe.
+// Mit der korrekten, breiteren Tisch-Bbox (Cube.001, X 0.639-1.264) und der
+// jetzt kleineren Tastatur (scale 0.55, linke Kante bei X≈0.78) bleiben dort
+// nur ~0.14 Einheiten Platz — Headset auf scale 0.5 verkleinert (Fußabdruck
+// dann ±0.06), damit es mit kleinem Rand zu beiden Seiten hineinpasst.
+const HEADSET_CFG: ExtraCfg = { url: "/models/headset_gaming.glb", fix: [0.106, -0.12, 0], scale: 0.5, position: new THREE.Vector3(0.709, 0.818, -0.91), rotationZ: Math.PI / 2 };
 
 /**
  * Tastatur/Maus-Stufen: `tastatur`/`maus` sind Grundausstattung mit 4
@@ -392,11 +393,18 @@ const HEADSET_CFG: ExtraCfg = { url: "/models/headset_gaming.glb", fix: [0.106, 
  */
 const TASTATUR_UPGRADE_CFG: ExtraCfg = { url: "/models/keyboard_mech.glb", fix: [-0.1835, 0.024, -0.0735], scale: 0.55, position: new THREE.Vector3(0.88, 0.818, -0.91) };
 // mouse_gaming.glb kam in absurd großen Roh-Maßen (~2×1×2 Einheiten) —
-// scale=0.045 bringt sie auf realistische Maus-Größe (~0.09×0.05×0.095).
+// scale — User meldet: bei 0.045 komplett unsichtbar (weder alte noch neue
+// Maus zu sehen). Datei/Material geprüft (gültiges glTF, metallicFactor/
+// roughnessFactor explizit gesetzt, kein "brennt schwarz"-Fall) — echte
+// Ursache ohne Live-Zugriff nicht sicher feststellbar, plausibelster
+// Verdacht: bei 0.045 auf einer dunklen Schreibtischfläche in dieser eher
+// dunklen Szene schlicht zu klein/kontrastarm, um aufzufallen. Deutlich
+// größer (0.07) und weiter rechts (frei von der jetzt kleineren Tastatur,
+// deren rechte Kante bei X≈0.98 liegt) als erster Korrekturversuch — bitte
+// nochmal gegenchecken, ob sie jetzt sichtbar ist.
 // `fix` zentriert X/Z (Ursprung lag bei [-0.03,0.4,0] statt am Modellzentrum)
-// und hebt Y auf die Unterseite (min.y=-0.145). Position rechts neben/vor der
-// Tastatur, mit Abstand zum jetzt links liegenden Headset.
-const MAUS_UPGRADE_CFG: ExtraCfg = { url: "/models/mouse_gaming.glb", fix: [0.0305, 0.145, 0], scale: 0.045, position: new THREE.Vector3(1.0, 0.818, -0.55) };
+// und hebt Y auf die Unterseite (min.y=-0.145).
+const MAUS_UPGRADE_CFG: ExtraCfg = { url: "/models/mouse_gaming.glb", fix: [0.0305, 0.145, 0], scale: 0.07, position: new THREE.Vector3(1.08, 0.818, -0.55) };
 // Couchtisch: User-Hinweis — "Cube.014" in der Referenzszene (Glasplatte,
 // Materialien "Pc glass"+"Material", Größe 0.641×0.528×0.334, nahe der
 // Couch) ist bereits ein passender Couchtisch, stilecht statt eines fremden
