@@ -458,10 +458,38 @@ const MAUS_UPGRADE_CFG: ExtraCfg = { url: "/models/mouse_gaming.glb", fix: [0, 0
 // steckt in den Vertex-Daten selbst), daher position/fix beide [0,0,0].
 const COUCHTISCH_CFG: ExtraCfg = { url: "/models/mancave_couchtisch.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(0, 0, 0) };
 
+/**
+ * Neue Desk-Extras (Stream Deck / Mikrofon / Ringlicht) — bereits im Projekt
+ * vorhandene, bisher ungenutzte Kataloggmodelle, ergänzen den Katalog um
+ * komplett neue Slots statt bestehende zu befüllen. Wie Headset/Webcam/
+ * Couchtisch/Deskmat: nur EIN Modell pro Slot (Stufe 1-4 wirtschaftlich,
+ * aber optisch nur "an/aus", gleiche Konvention).
+ *
+ * Bbox aller drei per echtem GLTFLoader.parse() gemessen (nicht rohe
+ * Accessor-Werte, siehe TASTATUR_UPGRADE_CFG-Kommentar für die Falle dabei).
+ */
+// streamdeck.glb: bereits plausible Weltmaß-Größe (0.245×0.112×0.253),
+// scale=1. Auf dem Tisch, rechts von der Tastatur/Maus-Reihe (die bei X≈0.78
+// sitzt), gleiche Tiefe wie die Tastatur.
+const STREAMDECK_CFG: ExtraCfg = { url: "/models/streamdeck.glb", fix: [0.1298, 0.2546, -0.0884], scale: 1, position: new THREE.Vector3(1.0, 0.818, -0.9) };
+// mikrofon.glb: Roh-Maße viel zu groß (1.85×1.64×2.17, wie beim Tastatur-
+// Bug) — scale=0.22 bringt die Höhe auf ~0.36 (realistischer Arm-Mikrofon-
+// Ständer). Auf dem Tisch, näher am vorderen Rand (Richtung Stuhl), rechts
+// vom Stream Deck.
+const MIKROFON_CFG: ExtraCfg = { url: "/models/mikrofon.glb", fix: [-3.2763, -0.0821, 1.1639], scale: 0.22, position: new THREE.Vector3(1.1, 0.818, -0.5) };
+// ringlicht.glb: bereits realistische Weltmaß-Größe (0.459×1.6×0.439 — ein
+// hohes Standlicht, ~1.6m, plausibel für ein echtes Ringlicht), min.y≈0
+// (schon boden-verankert). ACHTUNG — im Gegensatz zu den anderen beiden
+// bodenstehend statt auf dem Tisch, und die Position ist die unsicherste der
+// drei: kein vermessener freier Bodenbereich, nur eine plausible Lücke
+// zwischen Stuhl (X=0.367, Z=-0.921) und Tischkante gewählt.
+const RINGLICHT_CFG: ExtraCfg = { url: "/models/ringlicht.glb", fix: [0, 0, -0.0194], scale: 1, position: new THREE.Vector3(0.55, 0, -1.5) };
+
 for (const m of [
   ...Object.values(PC_TIER_MODELS),
   ...Object.values(STUHL_TIER_MODELS), ...Object.values(REGAL_TIER_MODELS),
   NANOLEAF_CFG, DESKMAT_CFG, WEBCAM_CFG, HEADSET_CFG, COUCHTISCH_CFG, TASTATUR_UPGRADE_CFG, MAUS_UPGRADE_CFG,
+  STREAMDECK_CFG, MIKROFON_CFG, RINGLICHT_CFG,
   MONITOR_SCREEN1_CFG, MONITOR_SCREEN2_CFG, MONITOR_SCREEN3_CFG, MONITOR_SCREEN4_CFG,
 ]) useGLTF.preload(m.url);
 // Nanoleaf-Dreieck-Panels über dem Schreibtisch (Mittelpunkt aller 21
@@ -929,6 +957,9 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
   const webcamTier = data.items.find(i => i.key === "webcam")?.tier ?? 0;
   const headsetTier = data.items.find(i => i.key === "headset")?.tier ?? 0;
   const couchtischTier = data.items.find(i => i.key === "couchtisch")?.tier ?? 0;
+  const streamdeckTier = data.items.find(i => i.key === "streamdeck")?.tier ?? 0;
+  const mikrofonTier = data.items.find(i => i.key === "mikrofon")?.tier ?? 0;
+  const ringlichtTier = data.items.find(i => i.key === "ringlicht")?.tier ?? 0;
 
   return (
     <div ref={containerRef}
@@ -966,6 +997,9 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
           <ExtraProp tier={webcamTier} cfg={WEBCAM_CFG} />
           <ExtraProp tier={headsetTier} cfg={HEADSET_CFG} />
           <ExtraProp tier={couchtischTier} cfg={COUCHTISCH_CFG} />
+          <ExtraProp tier={streamdeckTier} cfg={STREAMDECK_CFG} />
+          <ExtraProp tier={mikrofonTier} cfg={MIKROFON_CFG} />
+          <ExtraProp tier={ringlichtTier} cfg={RINGLICHT_CFG} />
 
           {/* Live-Dashboard direkt auf dem Monitor-Screen — 3D-verankert, immer sichtbar */}
           <Html center position={SCREEN_POS} style={{ pointerEvents: "auto" }}>
