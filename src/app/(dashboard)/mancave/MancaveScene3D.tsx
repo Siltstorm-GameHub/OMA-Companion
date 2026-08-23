@@ -474,12 +474,17 @@ function RoomModel({ surfaceTier, deskTier }: { surfaceTier: number; deskTier: n
 // deutlich außerhalb der echten Geometrie, mit derselben Stufen-Textur wie
 // die echten Wände/der Boden — wo eine echte Wand existiert, verdeckt sie
 // diese Hülle einfach (liegt näher an der Kamera), wo nicht, füllt die Hülle
-// die Lücke statt Leere zu zeigen. Bounding Box der echten Szene (Blender,
-// per bmesh-Scan ermittelt): X -1.33..1.4, Blender-Z(Höhe) -0.02..2.6,
-// Blender-Y(Tiefe) -1.01..1.64 → nach Blender→glTF-Konvention
-// (gltf.x=blender.x, gltf.y=blender.z, gltf.z=-blender.y) mit Sicherheitsrand.
-const ENCLOSURE_MIN = new THREE.Vector3(-1.7, -0.05, -1.9);
-const ENCLOSURE_MAX = new THREE.Vector3(1.7, 2.8, 1.3);
+// die Lücke statt Leere zu zeigen.
+//
+// Erster Versuch saß nur ~0.3 Einheiten außerhalb der echten Bounding-Box
+// (X -1.33..1.4 etc.) — viel zu nah: in offenen Blickrichtungen füllte die
+// Wand fast den ganzen Bildschirm ("etwas blockiert mitten die Kamera",
+// User-Screenshot). Jetzt deutlich weiter weg (innerhalb der ohnehin
+// vorhandenen Nebel-Reichweite `args={["#050810", 5, 11]}` bei RoomLighting/
+// Canvas), damit sie wie ein weicher, vernebelter Hintergrund wirkt statt
+// wie eine nahe, hart begrenzende Wand.
+const ENCLOSURE_MIN = new THREE.Vector3(-9, -0.05, -9);
+const ENCLOSURE_MAX = new THREE.Vector3(9, 6, 9);
 
 function RoomEnclosure({ surfaceTier }: { surfaceTier: number }) {
   const idx = Math.min(4, Math.max(1, surfaceTier)) - 1;
