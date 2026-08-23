@@ -361,15 +361,17 @@ const WEBCAM_CFG: ExtraCfg = { url: "/models/webcam.glb", fix: [0, 0, 0], scale:
 // mittig auf `position`, was die falsche Position in JEDER bisherigen Runde
 // erklärt. fix.y=-0.12 zentriert den Bereich korrekt auf 0.
 //
-// Position: User zeigte per Screenshot explizit auf die sichtbar freie Lücke
-// links neben der Tastatur, zwischen ihr und der Wand, auf gleicher Tiefe.
-// NEU BERECHNET, nachdem die Tastatur-Bbox korrigiert wurde (siehe
-// TASTATUR_UPGRADE_CFG-Kommentar) — die echte, realistisch-schmale Tastatur
-// (0.404 breit statt der vorherigen falsch-großen Annahme) sitzt jetzt
-// mittig auf dem Tisch (X=0.95, Tisch-Mitte), lässt symmetrisch ~0.11
-// Einheiten Platz auf beiden Seiten. Headset auf scale 0.35 verkleinert
-// (Fußabdruck dann ±0.037), damit es mit kleinem Rand hineinpasst.
-const HEADSET_CFG: ExtraCfg = { url: "/models/headset_gaming.glb", fix: [0.106, -0.12, 0], scale: 0.35, position: new THREE.Vector3(0.69, 0.818, -0.91), rotationZ: Math.PI / 2 };
+// Position: User-Klarstellung — Headset/Tastatur/Maus sollen nebeneinander
+// auf der BLENDER-Y-Achse liegen (= gltf Z, da gltf.z = -blender.y), nicht
+// auf der X-Achse wie in den vorherigen Runden angenommen. Echte Tisch-Bbox
+// ("Cube.001", nicht nur die kleinere Mousepad-Grafik) per Blender gemessen:
+// Blender X 0.639-1.264, Y 0.131-1.636 → gltf X gleich, gltf Z -1.636 bis
+// -0.131 — viel mehr Platz als die vorher genutzte Mousepad-Fläche. Alle drei
+// jetzt auf gleichem X (≈0.95, wie die Tastatur-Mitte) aufgereiht, Headset
+// näher am vorderen Tischrand (Z=-0.5), Maus weiter hinten (Z=-1.3), mit
+// klarem Abstand zur Tastatur (Z=-0.91, Fußabdruck nach der Drehung ±0.202
+// entlang Z).
+const HEADSET_CFG: ExtraCfg = { url: "/models/headset_gaming.glb", fix: [0.106, -0.12, 0], scale: 0.45, position: new THREE.Vector3(0.95, 0.818, -0.5), rotationZ: Math.PI / 2 };
 
 /**
  * Tastatur/Maus-Stufen: `tastatur`/`maus` sind Grundausstattung mit 4
@@ -436,9 +438,11 @@ const TASTATUR_UPGRADE_CFG: ExtraCfg = { url: "/models/keyboard_mech_fixed.glb",
 // nichts daran, dass sie relativ zur Tischplatte trotzdem falsch ausgerichtet
 // war (User-Feedback: "falsch gedreht" für beide zusammen). Gleiche 90°-
 // Uhrzeiger-Korrektur wie bei der Tastatur angewendet.
-// scale leicht verkleinert (0.85) und rechts neben die jetzt mittige
-// Tastatur gesetzt, mit Sicherheitsabstand zur Tischkante (1.264).
-const MAUS_UPGRADE_CFG: ExtraCfg = { url: "/models/mouse_gaming.glb", fix: [0, 0, 0], scale: 0.85, position: new THREE.Vector3(1.21, 0.818, -0.91), rotationY: -Math.PI / 2 };
+// Position: User-Klarstellung (siehe HEADSET_CFG-Kommentar) — Anordnung
+// entlang Blender-Y (= gltf Z), nicht X. Gleiches X wie Tastatur (≈0.95),
+// hinter ihr auf dem Tisch (Z=-1.3, mit Abstand zur Tastatur-Kante bei
+// Z≈-1.112 nach deren Drehung).
+const MAUS_UPGRADE_CFG: ExtraCfg = { url: "/models/mouse_gaming.glb", fix: [0, 0, 0], scale: 0.85, position: new THREE.Vector3(0.95, 0.818, -1.3), rotationY: -Math.PI / 2 };
 // Couchtisch: User-Hinweis — "Cube.014" in der Referenzszene (Glasplatte,
 // Materialien "Pc glass"+"Material", Größe 0.641×0.528×0.334, nahe der
 // Couch) ist bereits ein passender Couchtisch, stilecht statt eines fremden
