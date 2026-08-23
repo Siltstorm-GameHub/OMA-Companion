@@ -476,15 +476,21 @@ function RoomModel({ surfaceTier, deskTier }: { surfaceTier: number; deskTier: n
 // diese Hülle einfach (liegt näher an der Kamera), wo nicht, füllt die Hülle
 // die Lücke statt Leere zu zeigen.
 //
-// Erster Versuch saß nur ~0.3 Einheiten außerhalb der echten Bounding-Box
-// (X -1.33..1.4 etc.) — viel zu nah: in offenen Blickrichtungen füllte die
-// Wand fast den ganzen Bildschirm ("etwas blockiert mitten die Kamera",
-// User-Screenshot). Jetzt deutlich weiter weg (innerhalb der ohnehin
-// vorhandenen Nebel-Reichweite `args={["#050810", 5, 11]}` bei RoomLighting/
-// Canvas), damit sie wie ein weicher, vernebelter Hintergrund wirkt statt
-// wie eine nahe, hart begrenzende Wand.
-const ENCLOSURE_MIN = new THREE.Vector3(-9, -0.05, -9);
-const ENCLOSURE_MAX = new THREE.Vector3(9, 6, 9);
+// Erster Versuch saß nur ~0.3 Einheiten außerhalb der echten Bounding-Box —
+// viel zu nah: in offenen Blickrichtungen füllte die Wand fast den ganzen
+// Bildschirm ("etwas blockiert mitten die Kamera"). Zweiter Versuch (9
+// Einheiten raus, MeshStandardMaterial) war umgekehrt falsch: außerhalb der
+// Reichweite von RoomLightings Punktlichtern (die nur für die kleine echte
+// Raumgröße kalibriert sind) rendert eine unbeleuchtete Standard-Material-
+// Fläche fast schwarz — bei einem ohnehin sehr dunklen Nebel/Hintergrund
+// (`#050810`) sah das wie ein hartes schwarzes Objekt vor der Kamera aus,
+// nicht wie ein weicher Hintergrund (User-Screenshot: schwarzer Keil).
+// Fix: moderate Distanz (statt extrem weit) UND MeshBasicMaterial (unbeleuchtet,
+// unabhängig von Punktlicht-Reichweite) mit fest gedimmter Farbe — dadurch
+// immer gleichmäßig sichtbar, nie schwarz, egal wie weit weg oder ob Licht
+// hinreicht.
+const ENCLOSURE_MIN = new THREE.Vector3(-3.3, -0.1, -3.6);
+const ENCLOSURE_MAX = new THREE.Vector3(3.3, 3.6, 3.0);
 
 function RoomEnclosure({ surfaceTier }: { surfaceTier: number }) {
   const idx = Math.min(4, Math.max(1, surfaceTier)) - 1;
@@ -495,11 +501,14 @@ function RoomEnclosure({ surfaceTier }: { surfaceTier: number }) {
   const [wallMat, floorMat, ceilMat] = useMemo(() => {
     wallTex.colorSpace = THREE.SRGBColorSpace;
     floorTex.colorSpace = THREE.SRGBColorSpace;
-    // Etwas dunkler als die echten Oberflächen getönt, damit die Hülle als
-    // zurückweichende Tiefe wirkt statt wie eine exakte Dopplung im Vordergrund.
-    const wall = new THREE.MeshStandardMaterial({ map: wallTex, color: "#9a9a9a", roughness: 0.95, metalness: 0, side: THREE.DoubleSide });
-    const floor = new THREE.MeshStandardMaterial({ map: floorTex, color: "#9a9a9a", roughness: 0.95, metalness: 0, side: THREE.DoubleSide });
-    const ceil = new THREE.MeshStandardMaterial({ color: "#0d0f14", roughness: 1, metalness: 0, side: THREE.DoubleSide });
+    // MeshBasicMaterial statt Standard: reagiert NICHT auf Szenen-Punktlichter
+    // (deren Reichweite nur für die kleine echte Raumgröße gedacht ist) —
+    // Helligkeit kommt allein aus `color` (Multiplikator auf die Textur), damit
+    // die Hülle immer gleich gedimmt-sichtbar bleibt statt bei zunehmender
+    // Distanz unvorhersehbar schwarz zu werden.
+    const wall = new THREE.MeshBasicMaterial({ map: wallTex, color: "#6e7176", side: THREE.DoubleSide });
+    const floor = new THREE.MeshBasicMaterial({ map: floorTex, color: "#6e7176", side: THREE.DoubleSide });
+    const ceil = new THREE.MeshBasicMaterial({ color: "#15181f", side: THREE.DoubleSide });
     return [wall, floor, ceil];
   }, [wallTex, floorTex]);
   /* eslint-enable react-hooks/immutability */
