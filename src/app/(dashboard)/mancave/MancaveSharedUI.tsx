@@ -19,6 +19,28 @@ import { cn } from "@/lib/utils";
 export type MancavePanel = "trophy" | "items" | "jobs" | "mail" | null;
 
 /**
+ * `<Html>` (drei, 3D-verankerte Overlays wie der Monitor-Screen) rendert
+ * seinen Inhalt NICHT als normales React-Portal, sondern über einen eigenen
+ * `ReactDOM.createRoot()` — ein komplett separater React-Baum ohne Zugriff
+ * auf JEDEN React-Context der App, inklusive Next.js' Router-Context.
+ * `useRouter()` wirft dort eine Exception ("invariant expected app router to
+ * be mounted"), was den ganzen Panel-Inhalt crashen und schwarz werden lässt
+ * (siehe JobsPanel/ItemsPanel — TrophyPanel/MailPanel ohne Router-Aufruf
+ * funktionieren deshalb dort problemlos). Diese Panels laufen aber AUCH im
+ * normalen React-Baum (großes Popup vom Schreibtisch-Hotspot aus) — dort
+ * soll `router.refresh()` weiter funktionieren. Deshalb hier defensiv
+ * abgefangen statt `useRouter()` komplett zu entfernen.
+ */
+function useSafeRouter() {
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks -- siehe Kommentar oben, Aufruf bleibt pro Instanz konstant
+    return useRouter();
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Wie viele Benachrichtigungen gerade anliegen (neue Jobs verfügbar,
  * bezahlbare Upgrades) — treibt den Mail-Badge im Monitor-Dock. Rein aus den
  * ohnehin geladenen Daten berechnet, kein eigener "gelesen"-Zustand (siehe
@@ -151,7 +173,7 @@ const JOB_ACCENT: Record<JobListEntry["accent"], string> = {
  * Daten (kein Ladeblitzer beim Öffnen), lädt nach jeder Aktion nach.
  */
 export function JobsPanel({ data }: { data: MancaveData }) {
-  const router = useRouter();
+  const router = useSafeRouter();
   const now = useNow(1000);
   const [overview, setOverview] = useState<JobOverview>(data.jobs);
   const [acting, setActing] = useState<string | null>(null);
@@ -160,7 +182,7 @@ export function JobsPanel({ data }: { data: MancaveData }) {
   async function reload() {
     const d: JobOverview = await fetch("/api/jobs").then(r => r.json()).catch(() => null);
     if (d && !("error" in d)) setOverview(d);
-    router.refresh();
+    router?.refresh();
   }
 
   async function hire(job: JobListEntry) {
