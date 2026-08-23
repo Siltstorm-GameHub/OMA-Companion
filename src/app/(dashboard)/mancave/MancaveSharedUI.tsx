@@ -486,7 +486,7 @@ export function TrophyPanel({ data }: { data: MancaveData }) {
  * ihre Stufe steigt automatisch mit (Durchschnitt aller Objekt-Stufen).
  */
 export function ItemsPanel({ data }: { data: MancaveData }) {
-  const router = useRouter();
+  const router = useSafeRouter();
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -504,7 +504,11 @@ export function ItemsPanel({ data }: { data: MancaveData }) {
         setError(body.error ?? fallbackError);
         return;
       }
-      router.refresh();
+      // Läuft dieses Panel im isolierten <Html>-React-Baum (Monitor-Screen,
+      // siehe useSafeRouter-Kommentar oben), gibt's keinen Router zum
+      // Revalidieren — ein voller Reload ist dort die einzige Möglichkeit,
+      // den Rest der Seite wieder korrekt zu bekommen.
+      if (router) router.refresh(); else window.location.reload();
     } catch {
       setError("Verbindung fehlgeschlagen");
     } finally {

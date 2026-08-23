@@ -86,12 +86,25 @@ const SCREEN_POS = new THREE.Vector3(1.215, 1.091, -0.741);
  * gltf.z=-blender.y. Screen4 zusätzlich um die bekannten -0.02 (gltf-Y)
  * korrigiert, siehe MONITOR_SCREEN4_CFG-Kommentar.
  */
-interface MonitorScreenGeom { center: THREE.Vector3; widthM: number; heightM: number }
+interface MonitorScreenGeom {
+  center: THREE.Vector3; widthM: number; heightM: number;
+  /** Euler [x,y,z] — NICHT bei allen Screens dieselbe reine Y-Rotation wie
+   * bei screen1: screen2/4 sind zusätzlich nach innen gedreht (Yaw), screen3
+   * zusätzlich nach unten geneigt (Pitch, keine Y-Komponente in seiner
+   * Normalen). Jeweils aus dem echten, per Blender gemessenen Flächen-
+   * Normalenvektor hergeleitet (rollfrei: lokale Rechts/Hoch/Vorwärts-Basis
+   * aus Normale+Welt-Up konstruiert, NICHT die naive "kürzeste Rotation"
+   * zwischen zwei Vektoren — die führt bei schräg stehenden Flächen zu einer
+   * ungewollten Drehung UM die Normale, wodurch der Inhalt schräg gerendert
+   * würde). Screen1/2/4 bestätigt roll-frei (Up bleibt exakt (0,1,0)).
+   */
+  rotation: [number, number, number];
+}
 const MONITOR_SCREENS: MonitorScreenGeom[] = [
-  { center: new THREE.Vector3(1.2128, 1.0773,  -0.7413), widthM: 0.5256, heightM: 0.3146 }, // screen1, unten-rechts
-  { center: new THREE.Vector3(1.1392, 1.07725, -1.2758), widthM: 0.5052, heightM: 0.3145 }, // screen2, unten-links
-  { center: new THREE.Vector3(1.15295, 1.4001, -0.7413), widthM: 0.5256, heightM: 0.2920 }, // screen3, oben-rechts
-  { center: new THREE.Vector3(1.1392, 1.41125, -1.2758), widthM: 0.5052, heightM: 0.3145 }, // screen4, oben-links (Y bereits -0.02 korrigiert)
+  { center: new THREE.Vector3(1.2128, 1.0773,  -0.7413), widthM: 0.5256, heightM: 0.3146, rotation: [0, -1.5708, 0] }, // screen1, unten-rechts
+  { center: new THREE.Vector3(1.1392, 1.07725, -1.2758), widthM: 0.5052, heightM: 0.3145, rotation: [0, -1.2905, 0] }, // screen2, unten-links
+  { center: new THREE.Vector3(1.15295, 1.4001, -0.7413), widthM: 0.5256, heightM: 0.2920, rotation: [1.5708, -1.1892, 1.5708] }, // screen3, oben-rechts (geneigt)
+  { center: new THREE.Vector3(1.1392, 1.41125, -1.2758), widthM: 0.5052, heightM: 0.3145, rotation: [0, -1.2905, 0] }, // screen4, oben-links
 ];
 // Content wird bei fester CSS-Pixelbreite gezeichnet und über `scale` auf
 // die echte Weltbreite der jeweiligen Bildschirmfläche herunterskaliert —
@@ -1189,7 +1202,7 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
               eigenen, unabhängigen Panel-Zustand. */}
           {MONITOR_SCREENS.slice(0, Math.max(1, monitorTier)).map((screen, i) => (
             <Html key={i} transform distanceFactor={400} center occlude={false}
-              position={screen.center} rotation={[0, -Math.PI / 2, 0]}
+              position={screen.center} rotation={screen.rotation}
               scale={screen.widthM / SCREEN_CONTENT_PX}
               style={{ pointerEvents: "auto" }}>
               <div style={{ width: SCREEN_CONTENT_PX, height: SCREEN_CONTENT_PX / (screen.widthM / screen.heightM) }}
