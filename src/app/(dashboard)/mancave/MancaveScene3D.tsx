@@ -40,6 +40,7 @@ import type { MancaveData } from "./mancave-data";
 
 const ROOM_MODEL_URL = "/models/mancave_room.glb";
 useGLTF.preload(ROOM_MODEL_URL);
+useGLTF.preload("/models/mancave_wall_extension.glb");
 
 // ── Kamera: 1:1 aus der Blender-Referenzkamera "DeskCam" übernommen ──────
 // Blender (Z-up): eye=(0.05,0.95,1.28), forward=(0.9598,0,-0.2806).
@@ -466,71 +467,41 @@ function RoomModel({ surfaceTier, deskTier }: { surfaceTier: number; deskTier: n
   return <primitive object={cloned} />;
 }
 
-// Die Referenzszene ist nur ein offenes Eck-Diorama (2 echte Wände, siehe
-// Kommentar unten) — dreht man die Kamera in die anderen Richtungen, sieht
-// man bisher nur die reine Hintergrundfarbe (der Nebel setzt erst ab 5
-// Einheiten Distanz ein, greift bei Zimmergröße also praktisch nie). Diese
-// unsichtbare "Hülle" schließt die Lücke: 4 dünne Wand-Boxen + Decke + Boden
-// deutlich außerhalb der echten Geometrie, mit derselben Stufen-Textur wie
-// die echten Wände/der Boden — wo eine echte Wand existiert, verdeckt sie
-// diese Hülle einfach (liegt näher an der Kamera), wo nicht, füllt die Hülle
-// die Lücke statt Leere zu zeigen.
-//
-// Erster Versuch saß nur ~0.3 Einheiten außerhalb der echten Bounding-Box —
-// viel zu nah: in offenen Blickrichtungen füllte die Wand fast den ganzen
-// Bildschirm ("etwas blockiert mitten die Kamera"). Zweiter Versuch (9
-// Einheiten raus, MeshStandardMaterial) war umgekehrt falsch: außerhalb der
-// Reichweite von RoomLightings Punktlichtern (die nur für die kleine echte
-// Raumgröße kalibriert sind) rendert eine unbeleuchtete Standard-Material-
-// Fläche fast schwarz — bei einem ohnehin sehr dunklen Nebel/Hintergrund
-// (`#050810`) sah das wie ein hartes schwarzes Objekt vor der Kamera aus,
-// nicht wie ein weicher Hintergrund (User-Screenshot: schwarzer Keil).
-// Fix: moderate Distanz (statt extrem weit) UND MeshBasicMaterial (unbeleuchtet,
-// unabhängig von Punktlicht-Reichweite) mit fest gedimmter Farbe — dadurch
-// immer gleichmäßig sichtbar, nie schwarz, egal wie weit weg oder ob Licht
-// hinreicht.
-const ENCLOSURE_MIN = new THREE.Vector3(-3.3, -0.1, -3.6);
-const ENCLOSURE_MAX = new THREE.Vector3(3.3, 3.6, 3.0);
-
-function RoomEnclosure({ surfaceTier }: { surfaceTier: number }) {
+// Die Referenzszene war ein offenes Eck-Diorama: von den 4 Wänden existierten
+// in Blender nur 2 als echte Geometrie ("Cube", per bmesh-Flächen-Scan
+// bestätigt: Wandfläche nur bei X=1.292 und Y=-0.978, an X=-1.329/Y=1.644 nur
+// hauchdünne Kanten-Fragmente). Zwei Versuche, das zur Laufzeit mit einer
+// prozeduralen Box zu kaschieren, scheiterten sichtbar (zu nah = blockiert
+// die Kamera, zu weit + unbeleuchtet = schwarzer Keil im Bild) — sauberer
+// Fix stattdessen direkt in Blender: zwei neue, exakt an die vorhandene
+// Bounding Box anschließende Wandflächen ("MC_Wall_West" bei X=-1.329,
+// "MC_Wall_North" bei Y=1.644, per bpy.ops.export_scene.gltf(use_selection)
+// separat exportiert) schließen den Raum jetzt bündig — per Raycast aus der
+// Kameraposition in alle 4 Richtungen bestätigt (kein offener Blick mehr).
+function WallExtensions({ surfaceTier }: { surfaceTier: number }) {
+  const { scene } = useGLTF("/models/mancave_wall_extension.glb");
   const idx = Math.min(4, Math.max(1, surfaceTier)) - 1;
   const wallTex = useTexture(WALL_TEXTURES[idx]);
-  const floorTex = useTexture(FLOOR_TEXTURES[idx]);
-  /* eslint-disable react-hooks/immutability -- s.o., Textur-colorSpace direkt
-     setzen ist normales three.js-API-Verhalten. */
-  const [wallMat, floorMat, ceilMat] = useMemo(() => {
+  /* eslint-disable react-hooks/immutability -- s.o., Textur-colorSpace/Material
+     direkt setzen ist normales three.js-API-Verhalten. */
+  const cloned = useMemo(() => {
+    const clone = scene.clone(true);
     wallTex.colorSpace = THREE.SRGBColorSpace;
-    floorTex.colorSpace = THREE.SRGBColorSpace;
-    // MeshBasicMaterial statt Standard: reagiert NICHT auf Szenen-Punktlichter
-    // (deren Reichweite nur für die kleine echte Raumgröße gedacht ist) —
-    // Helligkeit kommt allein aus `color` (Multiplikator auf die Textur), damit
-    // die Hülle immer gleich gedimmt-sichtbar bleibt statt bei zunehmender
-    // Distanz unvorhersehbar schwarz zu werden.
-    const wall = new THREE.MeshBasicMaterial({ map: wallTex, color: "#6e7176", side: THREE.DoubleSide });
-    const floor = new THREE.MeshBasicMaterial({ map: floorTex, color: "#6e7176", side: THREE.DoubleSide });
-    const ceil = new THREE.MeshBasicMaterial({ color: "#15181f", side: THREE.DoubleSide });
-    return [wall, floor, ceil];
-  }, [wallTex, floorTex]);
+    clone.traverse(obj => {
+      if (!(obj instanceof THREE.Mesh)) return;
+      const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+      for (const mat of mats) {
+        if (mat instanceof THREE.MeshStandardMaterial && mat.name === "MC_Wall") {
+          mat.map = wallTex;
+          mat.color.set(0xffffff);
+          mat.needsUpdate = true;
+        }
+      }
+    });
+    return clone;
+  }, [scene, wallTex]);
   /* eslint-enable react-hooks/immutability */
-
-  const width  = ENCLOSURE_MAX.x - ENCLOSURE_MIN.x;
-  const height = ENCLOSURE_MAX.y - ENCLOSURE_MIN.y;
-  const depth  = ENCLOSURE_MAX.z - ENCLOSURE_MIN.z;
-  const cx = (ENCLOSURE_MIN.x + ENCLOSURE_MAX.x) / 2;
-  const cy = (ENCLOSURE_MIN.y + ENCLOSURE_MAX.y) / 2;
-  const cz = (ENCLOSURE_MIN.z + ENCLOSURE_MAX.z) / 2;
-  const t = 0.05; // Wandstärke der Hülle
-
-  return (
-    <group>
-      <mesh position={[ENCLOSURE_MIN.x, cy, cz]} material={wallMat}><boxGeometry args={[t, height, depth]} /></mesh>
-      <mesh position={[ENCLOSURE_MAX.x, cy, cz]} material={wallMat}><boxGeometry args={[t, height, depth]} /></mesh>
-      <mesh position={[cx, cy, ENCLOSURE_MIN.z]} material={wallMat}><boxGeometry args={[width, height, t]} /></mesh>
-      <mesh position={[cx, cy, ENCLOSURE_MAX.z]} material={wallMat}><boxGeometry args={[width, height, t]} /></mesh>
-      <mesh position={[cx, ENCLOSURE_MIN.y, cz]} material={floorMat}><boxGeometry args={[width, t, depth]} /></mesh>
-      <mesh position={[cx, ENCLOSURE_MAX.y, cz]} material={ceilMat}><boxGeometry args={[width, t, depth]} /></mesh>
-    </group>
-  );
+  return <primitive object={cloned} />;
 }
 
 // Fenster-Öffnung: die Referenzszene ist KEINE geschlossene Box, sondern ein
@@ -741,7 +712,7 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
         <RoomLighting />
         <LookAroundRig />
         <Suspense fallback={null}>
-          <RoomEnclosure surfaceTier={data.surfaceTier} />
+          <WallExtensions surfaceTier={data.surfaceTier} />
           <RoomModel surfaceTier={data.surfaceTier} deskTier={deskTier} />
           <WindowFrame surfaceTier={data.surfaceTier} />
           <WindowView surfaceTier={data.surfaceTier} />
