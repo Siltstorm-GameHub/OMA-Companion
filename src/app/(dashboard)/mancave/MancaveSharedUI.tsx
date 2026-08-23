@@ -78,20 +78,22 @@ export function MonitorScreenContent({ data }: { data: MancaveData }) {
   if (view) {
     return (
       <div className="relative w-full h-full flex flex-col select-none" style={{ background: "#05100d" }}>
-        <div className="shrink-0 flex items-center gap-1.5 px-2" style={{ height: 20, background: "rgba(8,16,15,0.9)", borderBottom: "1px solid rgba(45,212,191,0.15)" }}>
+        <div className="shrink-0 flex items-center gap-2.5 px-4" style={{ height: 44, background: "rgba(8,16,15,0.9)", borderBottom: "1px solid rgba(45,212,191,0.15)" }}>
           <button onClick={() => setView(null)} aria-label="Zurück zum Desktop"
-            className="flex items-center justify-center rounded hover:bg-white/10 transition-colors" style={{ width: 14, height: 14 }}>
-            <ArrowLeft className="text-teal-300" style={{ width: 10, height: 10 }} />
+            className="flex items-center justify-center rounded-md hover:bg-white/10 transition-colors" style={{ width: 30, height: 30 }}>
+            <ArrowLeft className="text-teal-300" style={{ width: 20, height: 20 }} />
           </button>
-          <span className="text-teal-200 font-semibold" style={{ fontSize: 9 }}>{PANEL_TITLES[view]}</span>
+          <span className="text-teal-200 font-semibold" style={{ fontSize: 19 }}>{PANEL_TITLES[view]}</span>
         </div>
-        <div className="flex-1 min-h-0 overflow-y-auto p-2" style={{ fontSize: 9 }}>
-          <div style={{ transform: "scale(0.72)", transformOrigin: "top left", width: "138.9%" }}>
-            {view === "trophy" && <TrophyPanel data={data} />}
-            {view === "items" && <ItemsPanel data={data} />}
-            {view === "jobs" && <JobsPanel data={data} />}
-            {view === "mail" && <MailPanel data={data} onOpenPanel={setView} />}
-          </div>
+        {/* Panel-Inhalte in eigener Schriftgröße (für das große Popup vom
+            Schreibtisch-Hotspot ausgelegt, text-xs/text-[10-11px]) — auf dem
+            640px-Monitor-Canvas ist das gut lesbar, kein zusätzliches Skalieren
+            nötig (das hatte den Text vorher nur noch kleiner gemacht). */}
+        <div className="flex-1 min-h-0 overflow-y-auto p-5" style={{ fontSize: 15 }}>
+          {view === "trophy" && <TrophyPanel data={data} />}
+          {view === "items" && <ItemsPanel data={data} />}
+          {view === "jobs" && <JobsPanel data={data} />}
+          {view === "mail" && <MailPanel data={data} onOpenPanel={setView} />}
         </div>
       </div>
     );
@@ -107,26 +109,26 @@ export function MonitorScreenContent({ data }: { data: MancaveData }) {
       <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 40%, rgba(13,59,54,0.35), rgba(3,8,7,0.85) 75%)" }} />
 
       {/* System-Tray oben rechts: Rang + Münzen, wie eine echte OS-Menüleiste */}
-      <div className="absolute top-0 inset-x-0 flex items-center justify-end gap-2.5 px-3" style={{ height: 22 }}>
-        <span className={`font-bold leading-none ${data.rankColor}`} style={{ fontSize: 10 }}>
+      <div className="absolute top-0 inset-x-0 flex items-center justify-end gap-5 px-6" style={{ height: 46 }}>
+        <span className={`font-bold leading-none ${data.rankColor}`} style={{ fontSize: 21 }}>
           {data.rankLabel} <span className="text-teal-300/60 font-normal">#{data.leaderboardRank}</span>
         </span>
-        <span className="flex items-center gap-1 text-amber-300 font-semibold tabular-nums leading-none" style={{ fontSize: 10 }}>
-          <CoinIcon size={10} />{data.totalPoints.toLocaleString("de-DE")}
+        <span className="flex items-center gap-1.5 text-amber-300 font-semibold tabular-nums leading-none" style={{ fontSize: 21 }}>
+          <CoinIcon size={21} />{data.totalPoints.toLocaleString("de-DE")}
         </span>
       </div>
-      <div className="absolute top-[22px] inset-x-0 h-px" style={{ background: "rgba(45,212,191,0.15)" }} />
+      <div className="absolute top-[46px] inset-x-0 h-px" style={{ background: "rgba(45,212,191,0.15)" }} />
 
       {/* Rang-Fortschritt, dezent wie ein Desktop-Widget in der Ecke */}
-      <div className="absolute left-3 bottom-[46px] w-[110px]">
-        <div className="h-1 rounded-full overflow-hidden bg-white/10">
+      <div className="absolute left-6 bottom-[96px] w-[230px]">
+        <div className="h-2 rounded-full overflow-hidden bg-white/10">
           <div className="h-full rounded-full" style={{ width: `${data.rankPct}%`, background: "linear-gradient(90deg,#14b8a6,#2dd4bf)" }} />
         </div>
       </div>
 
       {/* Taskbar/Dock unten — jedes Icon öffnet sein Panel direkt auf dem Monitor */}
-      <div className="absolute left-0 right-0 bottom-2 flex items-center justify-center gap-1.5">
-        <div className="flex items-center gap-1.5 px-1.5 py-1.5 rounded-lg"
+      <div className="absolute left-0 right-0 bottom-4 flex items-center justify-center gap-3">
+        <div className="flex items-center gap-3 px-3 py-3 rounded-xl"
           style={{ background: "rgba(8,16,15,0.65)", border: "1px solid rgba(255,255,255,0.08)", backdropFilter: "blur(2px)" }}>
           <DockIcon icon={<BarChart3 />} onClick={() => setView("trophy")} />
           <DockIcon icon={<Briefcase />} onClick={() => setView("jobs")} />
@@ -141,12 +143,12 @@ export function MonitorScreenContent({ data }: { data: MancaveData }) {
 function DockIcon({ icon, badge, onClick }: { icon: React.ReactNode; badge?: number; onClick: () => void }) {
   return (
     <button onClick={onClick}
-      className="relative flex items-center justify-center rounded-[3px] transition-colors hover:brightness-125"
-      style={{ width: 24, height: 24, background: "rgba(45,212,191,0.12)", border: "1px solid rgba(45,212,191,0.3)" }}>
-      <span className="text-teal-300" style={{ width: 13, height: 13 }}>{icon}</span>
+      className="relative flex items-center justify-center rounded-md transition-colors hover:brightness-125"
+      style={{ width: 50, height: 50, background: "rgba(45,212,191,0.12)", border: "1px solid rgba(45,212,191,0.3)" }}>
+      <span className="text-teal-300" style={{ width: 27, height: 27 }}>{icon}</span>
       {!!badge && badge > 0 && (
-        <span className="absolute -top-1 -right-1 flex items-center justify-center rounded-full bg-rose-500 text-white font-bold leading-none"
-          style={{ width: 10, height: 10, fontSize: 7 }}>
+        <span className="absolute -top-2 -right-2 flex items-center justify-center rounded-full bg-rose-500 text-white font-bold leading-none"
+          style={{ width: 21, height: 21, fontSize: 14 }}>
           {badge > 9 ? "9+" : badge}
         </span>
       )}
