@@ -356,14 +356,17 @@ const WEBCAM_CFG: ExtraCfg = { url: "/models/webcam.glb", fix: [0, 0, 0], scale:
 // Unterseite nach der Drehung wieder bei lokal y=0 liegt (nach 90°-Z-Drehung
 // wird Welt-Y aus lokalem X, Welt-X aus lokalem -Y).
 //
-// Position war beim ersten Versuch KOMPLETT NEBEN der Tischfläche (User-
-// Screenshot bestätigte "schwebt") — X=0.6/Z=-0.3 lagen außerhalb, wie erst
-// jetzt durch Messung der echten Deskmat-Bounding-Box klar wurde
-// (mancave_deskmat.glb: X 0.701-1.103, Y=0.818 exakt, Z -1.209 bis -0.448).
-// Jetzt mit Sicherheitsabstand INNERHALB dieses Bereichs, nahe der linken
-// Kante (X=0.85, Fußabdruck nach der Drehung ±0.12 → deckt X 0.73-0.97, klar
-// über der Kante bei 0.701) und mittig in der Tischtiefe (Z=-0.6).
-const HEADSET_CFG: ExtraCfg = { url: "/models/headset_gaming.glb", fix: [0.106, 0.12, 0], scale: 1, position: new THREE.Vector3(0.85, 0.818, -0.6), rotationZ: Math.PI / 2 };
+// User-Wunsch: links neben die Tastatur, mit etwas Abstand. Tastatur
+// identifiziert per Raycast auf der Tischfläche ("Cylinder.002", X 0.796-
+// 0.969, Z -1.098 bis -0.72). Physikalisch NICHT direkt links davon (gleiche
+// Tiefe) machbar: die Tischkante liegt bei X=0.701 — zwischen Kante und
+// Tastatur bleiben nur 0.095 Einheiten, das Headset braucht nach der Drehung
+// aber ±0.12 Fußabdruck (selbst stark verkleinert wäre kaum noch erkennbar).
+// Deshalb stattdessen etwas weiter vorne (kleineres Z, außerhalb des
+// Tastatur-Tiefenbands) und so weit links wie die Tischkante zulässt platziert
+// — bleibt klar links auf dem Tisch, berührt die Tastatur nicht, mit
+// sichtbarem Abstand in beide Richtungen (X UND Z).
+const HEADSET_CFG: ExtraCfg = { url: "/models/headset_gaming.glb", fix: [0.106, 0.12, 0], scale: 1, position: new THREE.Vector3(0.83, 0.818, -0.55), rotationZ: Math.PI / 2 };
 // Couchtisch: User-Hinweis — "Cube.014" in der Referenzszene (Glasplatte,
 // Materialien "Pc glass"+"Material", Größe 0.641×0.528×0.334, nahe der
 // Couch) ist bereits ein passender Couchtisch, stilecht statt eines fremden
