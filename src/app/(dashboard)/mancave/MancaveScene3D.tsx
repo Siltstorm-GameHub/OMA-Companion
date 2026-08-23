@@ -417,18 +417,28 @@ const HEADSET_CFG: ExtraCfg = { url: "/models/headset_gaming.glb", fix: [0.106, 
 // Position auf Tischmitte (X=0.95, Cube.001-Bbox 0.639-1.264) statt am linken
 // Rand — lässt symmetrisch Platz für Headset links und Maus rechts (siehe
 // deren Kommentare).
-const TASTATUR_UPGRADE_CFG: ExtraCfg = { url: "/models/keyboard_mech_fixed.glb", fix: [-0.8415, 0.112, -0.336], scale: 0.24, position: new THREE.Vector3(0.95, 0.818, -0.91) };
+//
+// rotationY: User-Feedback nach mehreren Screenshots — Datei/Rotation war
+// (mehrfach verifiziert: frischer Blender-Reimport UND direkter Test mit
+// genau dem GLTFLoader, den der Browser nutzt) tatsächlich exakt Identität,
+// die "Verdrehung" lag also nicht an der Tastatur selbst, sondern daran, dass
+// sie relativ zur (offenbar nicht global-achsenparallelen) Tischplatte falsch
+// ausgerichtet war. User-Anweisung: 90° im Uhrzeigersinn drehen, damit sie
+// richtig zum Nutzer hin auf dem Tisch liegt — in Three.js' Konvention ist
+// "im Uhrzeigersinn von oben betrachtet" eine NEGATIVE Y-Rotation.
+const TASTATUR_UPGRADE_CFG: ExtraCfg = { url: "/models/keyboard_mech_fixed.glb", fix: [-0.8415, 0.112, -0.336], scale: 0.24, position: new THREE.Vector3(0.95, 0.818, -0.91), rotationY: -Math.PI / 2 };
 // mouse_gaming.glb: nach korrekter (transformierter) Messung bereits winzig
 // und fast perfekt zentriert (Bbox size≈0.12×0.039×0.082, min.y≈0,
 // center.x/z≈0) — die vorherigen Roh-Maße (~2×1×2, "absurd groß") waren
 // komplett falsch, dadurch war scale=0.045/0.07 draufmultipliziert eine
 // mikroskopische, unsichtbare Größe (0.07×0.12=0.0084 Einheiten!). Root-Node-
-// Rotation ist laut Blender bereits Identität (kein Dreh-Bug wie bei der
-// Tastatur) — falls sie im letzten Screenshot schräg wirkte, war das
-// vermutlich nur die zweifarbige Form/Perspektive, keine echte Verdrehung.
+// Rotation ist laut Blender Identität — aber wie bei der Tastatur ändert das
+// nichts daran, dass sie relativ zur Tischplatte trotzdem falsch ausgerichtet
+// war (User-Feedback: "falsch gedreht" für beide zusammen). Gleiche 90°-
+// Uhrzeiger-Korrektur wie bei der Tastatur angewendet.
 // scale leicht verkleinert (0.85) und rechts neben die jetzt mittige
 // Tastatur gesetzt, mit Sicherheitsabstand zur Tischkante (1.264).
-const MAUS_UPGRADE_CFG: ExtraCfg = { url: "/models/mouse_gaming.glb", fix: [0, 0, 0], scale: 0.85, position: new THREE.Vector3(1.21, 0.818, -0.91) };
+const MAUS_UPGRADE_CFG: ExtraCfg = { url: "/models/mouse_gaming.glb", fix: [0, 0, 0], scale: 0.85, position: new THREE.Vector3(1.21, 0.818, -0.91), rotationY: -Math.PI / 2 };
 // Couchtisch: User-Hinweis — "Cube.014" in der Referenzszene (Glasplatte,
 // Materialien "Pc glass"+"Material", Größe 0.641×0.528×0.334, nahe der
 // Couch) ist bereits ein passender Couchtisch, stilecht statt eines fremden
