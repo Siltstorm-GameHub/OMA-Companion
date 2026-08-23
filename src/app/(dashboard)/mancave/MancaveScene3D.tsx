@@ -560,7 +560,7 @@ const STREAMDECK_CFG: ExtraCfg = { url: "/models/streamdeck.glb", fix: [0.1298, 
 // -1.636) für maximalen "hinter den Monitoren"-Effekt. rotationY ergänzt —
 // dieselbe -90°-Korrektur, die Tastatur/Stream Deck/Mikrofon auf diesem
 // (nicht achsenparallelen) Tisch schon brauchten, jetzt auch hier versucht.
-const RINGLICHT_CFG: ExtraCfg = { url: "/models/ringlicht.glb", fix: [0, 0, -0.0194], scale: 0.75, position: new THREE.Vector3(1.22, 0.818, -1.5), rotationY: Math.PI / 2 };
+const RINGLICHT_CFG: ExtraCfg = { url: "/models/ringlicht.glb", fix: [0, 0, -0.0194], scale: 0.75, position: new THREE.Vector3(1.17, 0.818, -1.53), rotationY: Math.PI / 2 };
 
 /**
  * PS5-Controller — aus der externen Datei "3DAssetsRoom/ps5.controller.blend"
