@@ -181,76 +181,34 @@ const PC_TIER_MODELS: Record<number, TierModelCfg> = {
 };
 
 /**
- * Monitor (Stufen 1-4): roehrenmonitor → monitor_flach → monitor_144(curved)
- * → monitor_dreifach(triple). Ersetzt "Cube.015"+"Cube.002" (der Haupt-
- * Screen) UND "Cube.016" (ein zweiter, kleinerer Screen-Kasten links auf dem
- * Tisch, der laut User ebenfalls entfernt werden sollte) aus der Referenzszene.
- *
- * `fix.y` ist jetzt einheitlich "-eigene min.y" (Boden-Anker auf lokalen
- * Ursprung 0) für ALLE vier Modelle — die eigentliche Tischhöhen-Anhebung
- * (0.816) steckt in `MONITOR_MODEL_POS.y`, genau wie beim PC-Turm. Wichtig:
- * diese Reihenfolge ist SKALIERUNGS-SICHER, weil sie auf 0 zielt (0*scale=0
- * bleibt immer 0) — ein früherer Versuch zielte direkt auf einen absoluten
- * Wert (0.816) INNERHALB der Skalierungs-Gruppe, was bei Stufe 4s neuer,
- * größerer Skalierung (siehe unten) zu falscher Höhe geführt hätte.
- *
- * `rotationY`: geometrisch hergeleitet (nicht geraten), per Node/three.js-
- * Skript — flächengewichteter Durchschnitts-Normalenvektor jedes Meshes
- * (Dreiecksfläche × Normale, aufsummiert, normalisiert):
- * - roehrenmonitor: "Screen.001"-Material, Normale (0,0,1) → lokal +Z → -90°
- * - monitor_flach_neu: "Mac"-Mesh (größte Fläche), Normale (0,-0.02,1.0) →
- *   ebenfalls lokal +Z → -90° (gleiche Konvention wie roehrenmonitor)
- * - monitor_curved: "tv"-Mesh, Normale (-0.612,0.04,-0.79) — keine reine
- *   Kardinalrichtung (gekrümmter Screen), Rotationswinkel algebraisch gelöst
- *   (R(θ)·(x,z)=(-1,0)) → θ≈0.912rad (≈52°) — laut User um weitere 180°
- *   danebengelegen, also +Math.PI ergänzt (≈4.05rad).
- * - monitor_triple: die drei "Wallpaper"-Screen-Meshes zeigen alle
- *   überwiegend +X (Mitte (1,0,0), Seiten leicht nach ∓Z gefächert) → 180°
- * `scale` bei Stufe 4 von 1 auf 1.4 erhöht (User: "viel zu klein").
- *
- * Stufe 2 (flach) nach der -90°-Drehung laut User "in den Schreibtisch
- * verschoben": das Modell ist kein flacher Screen, sondern Screen+Arm mit
- * ungewöhnlicher lokaler Tiefe (0.92 Einheiten, siehe Bounding-Box-Messung
- * oben in der Datei-Historie) — nach der Drehung liegt dieser Arm im
- * Welt-X statt Welt-Z, genau dort, wo der Tisch (Cube.001, X:[0.639,1.264])
- * sitzt. Nicht geometrisch neu vermessen (kein Screenshot verfügbar),
- * sondern pragmatisch entschärft: kleiner skaliert (verkürzt die Armreichweite)
- * und etwas höher angehoben (mehr Abstand zur Tischkante).
- *
- * Stufe 2 war danach laut User komplett UNSICHTBAR — Ursache gefunden (nicht
- * geraten): direkter Blick in die exportierte glTF-JSON zeigt, dass das
- * "Mac"-Mesh (Node "Mac", Mesh-Datenblock "Plane.025") KEIN Material
- * zugewiesen hat (`material: null` im Primitive). Der glTF-Spec-Default dafür
- * ist voll-metallisch + voll-rau OHNE eigene Basisfarbe — ohne Environment-Map
- * in dieser Szene rendert das nahezu schwarz vor dem dunklen Hintergrund,
- * de facto unsichtbar. Fix: `fixMaterialNames: ["Mac"]` ersetzt das Material
- * durch ein normales, nicht-metallisches Hellgrau (siehe `fixMaterialNames`
- * in `SwappableProp`).
- *
- * Stufe 4 (triple, ALTE Architektur) — zwei Korrekturrunden lang versucht
- * (Weiß-Ausbrennen behoben, Skalierung mehrfach angepasst), laut User "passt
- * von den Proportionen her gar nicht". User-Entscheidung danach: komplett
- * umgebaut (siehe unten) — die generischen Katalog-Monitore werden ab Stufe 2
- * durch die ECHTEN Referenz-Bildschirme ersetzt, kumulativ statt getauscht:
- * Stufe 1 bleibt das bisherige generische Modell (ex-Stufe-4-Konfiguration,
- * `monitor_curved.glb`), Stufe 2 ersetzt es durch "Cube.015" (der untere Teil
- * des ursprünglichen Referenz-Hauptbildschirms), Stufe 3 fügt "Cube.016"
- * (der separate zweite Bildschirm, siehe Monitor-Investigation weiter oben)
- * HINZU, Stufe 4 fügt "Cube.002" (der obere Teil des Hauptbildschirms) HINZU
- * — am Ende alle drei gleichzeitig sichtbar. Ermöglicht laut User-Plan
- * später, Dashboard-Inhalte (Statistiken, Discord-Aktivität, Lieblingsspiele)
- * auf mehrere physische Bildschirme zu verteilen, sobald mehr als einer da
- * ist — architektonisch schon vorbereitet, da jedes Html-Overlay unabhängig
- * an einer 3D-Position verankert wird.
+ * Monitor (Stufen 1-4): NACH mehreren gescheiterten Anläufen mit generischen
+ * Katalog-Modellen (Weiß-Ausbrennen, falsche Rotation, Proportionen "passen
+ * gar nicht") komplett auf die ECHTEN Referenz-Bildschirme der Szene
+ * umgestellt, kumulativ statt getauscht — jede Stufe fügt einen weiteren
+ * echten Bildschirm hinzu, keiner wird ersetzt:
+ * - Stufe 1: "Cube.015" (unterer Teil des ursprünglichen Haupt-Bildschirms)
+ * - Stufe 2: + "Cube.016" (separater zweiter Bildschirm)
+ * - Stufe 3: + "Cube.002" (oberer Teil des Haupt-Bildschirms)
+ * - Stufe 4: + eine in Blender duplizierte Kopie von "Cube.016", direkt um
+ *   dessen eigene Höhe (0.354 Einheiten) nach oben versetzt ("Cube.016.dup_top",
+ *   nur für den Export angelegt, danach wieder aus der Blend-Datei gelöscht —
+ *   der Export selbst bleibt bestehen)
+ * Ermöglicht später, Dashboard-Inhalte (Statistiken, Discord-Aktivität,
+ * Lieblingsspiele) auf mehrere physische Bildschirme zu verteilen, sobald
+ * mehr als einer da ist — architektonisch schon vorbereitet, da jedes
+ * Html-Overlay unabhängig an einer 3D-Position verankert wird.
  */
-const MONITOR_TIER1_CFG: TierModelCfg = { url: "/models/monitor_curved.glb", fix: [0, -0.850, 0], scale: 1.15, rotationY: 0.912 + Math.PI };
-const MONITOR_MODEL_POS = new THREE.Vector3(1.215, 0.816, -0.741);
 
 // Echte Referenz-Bildschirme — "location=(0,0,0)" in Blender bestätigt
 // (Weltposition steckt in den Vertex-Daten), daher position/fix beide [0,0,0].
 const MONITOR_SCREEN1_CFG: ExtraCfg = { url: "/models/mancave_monitor_screen1.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(0, 0, 0) };
 const MONITOR_SCREEN2_CFG: ExtraCfg = { url: "/models/mancave_monitor_screen2.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(0, 0, 0) };
 const MONITOR_SCREEN3_CFG: ExtraCfg = { url: "/models/mancave_monitor_screen3.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(0, 0, 0) };
+// Duplikat von Cube.016, direkt darüber — Objekt-Transform trug den Versatz
+// (nicht die Vertex-Daten wie bei den anderen drei), macht aber keinen
+// Unterschied fürs Rendering: der glTF-Node-Transform wird beim Laden ganz
+// normal mit angewendet, ebenfalls position/fix [0,0,0].
+const MONITOR_SCREEN4_CFG: ExtraCfg = { url: "/models/mancave_monitor_screen4.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(0, 0, 0) };
 
 /**
  * Schreibtischstuhl (Stufen 1-4): der alte Katalog hat nur 3 Modelle
@@ -365,10 +323,10 @@ const HEADSET_CFG: ExtraCfg = { url: "/models/headset_gaming.glb", fix: [0, 0, 0
 const COUCHTISCH_CFG: ExtraCfg = { url: "/models/mancave_couchtisch.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(0, 0, 0) };
 
 for (const m of [
-  ...Object.values(PC_TIER_MODELS), MONITOR_TIER1_CFG,
+  ...Object.values(PC_TIER_MODELS),
   ...Object.values(STUHL_TIER_MODELS), ...Object.values(REGAL_TIER_MODELS),
   NANOLEAF_CFG, DESKMAT_CFG, WEBCAM_CFG, HEADSET_CFG, COUCHTISCH_CFG,
-  MONITOR_SCREEN1_CFG, MONITOR_SCREEN2_CFG, MONITOR_SCREEN3_CFG,
+  MONITOR_SCREEN1_CFG, MONITOR_SCREEN2_CFG, MONITOR_SCREEN3_CFG, MONITOR_SCREEN4_CFG,
 ]) useGLTF.preload(m.url);
 // Nanoleaf-Dreieck-Panels über dem Schreibtisch (Mittelpunkt aller 21
 // "Circle.*"-Meshes, nachgemessen) — Anker für den Pokale-Hotspot.
@@ -715,15 +673,12 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
           <WindowView surfaceTier={data.surfaceTier} />
           <LogoRugStatic />
           <SwappableProp tier={pcTier} models={PC_TIER_MODELS} position={PC_POS} />
-          {/* Stufe 1: generisches Einzel-Modell. Ab Stufe 2 kumulativ die
-              echten Referenz-Bildschirme (siehe Kommentar bei MONITOR_TIER1_CFG). */}
-          {monitorTier <= 1
-            ? <SwappableProp tier={1} models={{ 1: MONITOR_TIER1_CFG }} position={MONITOR_MODEL_POS} />
-            : <>
-                <ExtraProp tier={1} cfg={MONITOR_SCREEN1_CFG} />
-                <ExtraProp tier={monitorTier >= 3 ? 1 : 0} cfg={MONITOR_SCREEN2_CFG} />
-                <ExtraProp tier={monitorTier >= 4 ? 1 : 0} cfg={MONITOR_SCREEN3_CFG} />
-              </>}
+          {/* Kumulativ ab Stufe 1 die echten Referenz-Bildschirme (siehe
+              Kommentar bei MONITOR_SCREEN1_CFG). */}
+          <ExtraProp tier={1} cfg={MONITOR_SCREEN1_CFG} />
+          <ExtraProp tier={monitorTier >= 2 ? 1 : 0} cfg={MONITOR_SCREEN2_CFG} />
+          <ExtraProp tier={monitorTier >= 3 ? 1 : 0} cfg={MONITOR_SCREEN3_CFG} />
+          <ExtraProp tier={monitorTier >= 4 ? 1 : 0} cfg={MONITOR_SCREEN4_CFG} />
           <SwappableProp tier={stuhlTier} models={STUHL_TIER_MODELS} position={STUHL_POS} />
           <SwappableProp tier={regalTier} models={REGAL_TIER_MODELS} position={REGAL_POS} />
           <ExtraProp tier={nanoleafTier} cfg={NANOLEAF_CFG} />
