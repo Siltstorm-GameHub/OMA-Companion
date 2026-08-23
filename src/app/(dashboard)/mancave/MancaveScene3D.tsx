@@ -278,8 +278,14 @@ const STUHL_POS = new THREE.Vector3(0.367, 0, -0.921);
 const REGAL_TIER_MODELS: Record<number, TierModelCfg> = {
   1: { url: "/models/regal_buecher.glb", fix: [0, 0, -0.277], scale: 0.4 },
   2: { url: "/models/regal_buecher.glb", fix: [0, 0, -0.277], scale: 0.4 },
-  3: { url: "/models/pokalregal.glb",    fix: [0, -0.004, 0.001], scale: 0.885 },
-  4: { url: "/models/pokalregal.glb",    fix: [0, -0.004, 0.001], scale: 0.885 },
+  // Stufe 3/4 ("pokalregal.glb"): anders als "regal_buecher" NICHT boden-
+  // verankert, sondern lokal auf den eigenen Mittelpunkt zentriert (min.y=-0.42,
+  // max.y=+0.43 laut Messscript) — mit dem ursprünglichen fix.y hing die
+  // untere Hälfte bis Welt-Y≈1.38 herunter und überlappte das (jetzt sichtbare)
+  // Fenster, dessen Oberkante bei Y=1.525 liegt (User-Screenshot). fix.y
+  // angehoben, damit die Regal-Unterkante klar darüber bleibt.
+  3: { url: "/models/pokalregal.glb",    fix: [0, 0.217, 0.001], scale: 0.885 },
+  4: { url: "/models/pokalregal.glb",    fix: [0, 0.217, 0.001], scale: 0.885 },
 };
 const REGAL_POS = new THREE.Vector3(0.207, 1.755, 0.886);
 
@@ -569,6 +575,80 @@ function WindowView({ surfaceTier }: { surfaceTier: number }) {
   );
 }
 
+/** Baut ein 4-Ecken-Quad (2 Dreiecke) aus 4 Positionen + 4 UVs — für die schrägen Laibungs-Streifen unten. */
+function quadGeometry(corners: THREE.Vector3[], uvs: [number, number][]): THREE.BufferGeometry {
+  const geo = new THREE.BufferGeometry();
+  const positions = new Float32Array(12);
+  corners.forEach((c, i) => { positions[i * 3] = c.x; positions[i * 3 + 1] = c.y; positions[i * 3 + 2] = c.z; });
+  const uvArr = new Float32Array(8);
+  uvs.forEach(([u, v], i) => { uvArr[i * 2] = u; uvArr[i * 2 + 1] = v; });
+  geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  geo.setAttribute("uv", new THREE.BufferAttribute(uvArr, 2));
+  geo.setIndex([0, 1, 2, 0, 2, 3]);
+  geo.computeVertexNormals();
+  return geo;
+}
+
+/**
+ * Fenster-Laibung ("Kulissen-Box"): echte, wenn auch sehr flache 3D-Geometrie
+ * (nur ~0.045 Einheiten tief — mehr gibt die massive echte Wand direkt dahinter
+ * nicht her, siehe WINDOW_VIEW_DISTANCE-Kommentar) statt einer einzelnen
+ * flachen Ebene. 4 trapezförmige Streifen verbinden die Fensteröffnung mit der
+ * etwas größeren Ausblicksfläche dahinter — jeder Streifen nutzt einen dünnen,
+ * gestreckten Rand-Ausschnitt DESSELBEN Fotos (oben = Himmel-Zeile, unten =
+ * Boden-Zeile, links/rechts = jeweilige Bildkante), damit die Ecken farblich
+ * plausibel weiterlaufen statt eine sichtbare Naht zu zeigen.
+ *
+ * WICHTIG: erzeugt keine echte Bewegungsparallaxe (die Kamera rotiert nur,
+ * wechselt nie die Position — Parallaxe braucht Translation). Was diese
+ * Geometrie liefert, ist eine korrekte Perspektiv-Verjüngung an den Rändern
+ * beim seitlichen Umschauen, statt einer optisch komplett flachen Fläche.
+ */
+function WindowReveal({ surfaceTier }: { surfaceTier: number }) {
+  const idx = Math.min(4, Math.max(1, surfaceTier)) - 1;
+  const tex = useTexture(WINDOW_VIEW_TEXTURES[idx]);
+  const halfW = WINDOW_W / 2, halfH = WINDOW_H / 2;
+  const halfWb = (WINDOW_W * 1.05) / 2, halfHb = (WINDOW_H * 1.05) / 2;
+  const dist = WINDOW_VIEW_DISTANCE;
+
+  /* eslint-disable react-hooks/immutability -- s.o., Textur-colorSpace direkt setzen. */
+  const geometries = useMemo(() => {
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return {
+      top: quadGeometry(
+        [new THREE.Vector3(-halfW, halfH, 0), new THREE.Vector3(halfW, halfH, 0), new THREE.Vector3(halfWb, halfHb, dist), new THREE.Vector3(-halfWb, halfHb, dist)],
+        [[0, 1], [1, 1], [1, 0.97], [0, 0.97]],
+      ),
+      bottom: quadGeometry(
+        [new THREE.Vector3(-halfW, -halfH, 0), new THREE.Vector3(halfW, -halfH, 0), new THREE.Vector3(halfWb, -halfHb, dist), new THREE.Vector3(-halfWb, -halfHb, dist)],
+        [[0, 0], [1, 0], [1, 0.03], [0, 0.03]],
+      ),
+      left: quadGeometry(
+        [new THREE.Vector3(-halfW, halfH, 0), new THREE.Vector3(-halfW, -halfH, 0), new THREE.Vector3(-halfWb, -halfHb, dist), new THREE.Vector3(-halfWb, halfHb, dist)],
+        [[0, 1], [0, 0], [0.03, 0], [0.03, 1]],
+      ),
+      right: quadGeometry(
+        [new THREE.Vector3(halfW, halfH, 0), new THREE.Vector3(halfW, -halfH, 0), new THREE.Vector3(halfWb, -halfHb, dist), new THREE.Vector3(halfWb, halfHb, dist)],
+        [[1, 1], [1, 0], [0.97, 0], [0.97, 1]],
+      ),
+    };
+  }, [tex, halfW, halfH, halfWb, halfHb, dist]);
+  /* eslint-enable react-hooks/immutability */
+  const mat = useMemo(
+    () => new THREE.MeshBasicMaterial({ map: tex, toneMapped: false, fog: false, side: THREE.DoubleSide }),
+    [tex],
+  );
+
+  return (
+    <group position={WINDOW_POS}>
+      <mesh geometry={geometries.top} material={mat} />
+      <mesh geometry={geometries.bottom} material={mat} />
+      <mesh geometry={geometries.left} material={mat} />
+      <mesh geometry={geometries.right} material={mat} />
+    </group>
+  );
+}
+
 /**
  * Fensterrahmen: rein prozedural (kein Foto nötig), 4 Riegel um die Öffnung
  * herum, Stil/Farbe wechselt mit der Zimmerstufe — Stufe 1 dünner rostiger
@@ -740,6 +820,7 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
           <RoomModel surfaceTier={data.surfaceTier} deskTier={deskTier} />
           <WindowFrame surfaceTier={data.surfaceTier} />
           <WindowView surfaceTier={data.surfaceTier} />
+          <WindowReveal surfaceTier={data.surfaceTier} />
           <LogoRugStatic />
           <SwappableProp tier={pcTier} models={PC_TIER_MODELS} position={PC_POS} />
           {/* Kumulativ ab Stufe 1 die echten Referenz-Bildschirme (siehe
