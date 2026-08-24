@@ -32,7 +32,7 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Html, useGLTF, useTexture } from "@react-three/drei";
+import { Html, useGLTF, useTexture, RoundedBox } from "@react-three/drei";
 import * as THREE from "three";
 import RankedAvatar from "@/components/RankedAvatar";
 import { MonitorScreenContent, TrophyPanel, ItemsPanel, JobsPanel, MailPanel, WanderpokalePanel, EventPokalePanel, type MancavePanel } from "./MancaveSharedUI";
@@ -591,15 +591,35 @@ function ShelfHotspot({ label, center, size, onOpen, onHoverChange }: {
   onOpen: () => void; onHoverChange: (label: string | null, clientX: number, clientY: number) => void;
 }) {
   const [hovered, setHovered] = useState(false);
+  const radius = Math.min(size[0], size[1], size[2]) * 0.22;
   return (
-    <mesh position={center}
-      onPointerOver={e => { e.stopPropagation(); setHovered(true); onHoverChange(label, e.clientX, e.clientY); }}
-      onPointerMove={e => { e.stopPropagation(); onHoverChange(label, e.clientX, e.clientY); }}
-      onPointerOut={e => { e.stopPropagation(); setHovered(false); onHoverChange(null, e.clientX, e.clientY); }}
-      onClick={e => { e.stopPropagation(); onOpen(); }}>
-      <boxGeometry args={size} />
-      <meshBasicMaterial color="#f59e0b" transparent opacity={hovered ? 0.22 : 0} depthWrite={false} />
-    </mesh>
+    <group position={center}>
+      {/* Unsichtbare, scharfkantige Box als eigentliche Klick-/Hover-
+          Zielfläche — RoundedBox' verrundete Geometrie hat an den Kanten
+          Lücken/Überlappungen, die für zuverlässiges Raycasting ungeeignet
+          sind, deshalb getrennt von der rein visuellen Glow-Box unten. */}
+      <mesh
+        onPointerOver={e => { e.stopPropagation(); setHovered(true); onHoverChange(label, e.clientX, e.clientY); }}
+        onPointerMove={e => { e.stopPropagation(); onHoverChange(label, e.clientX, e.clientY); }}
+        onPointerOut={e => { e.stopPropagation(); setHovered(false); onHoverChange(null, e.clientX, e.clientY); }}
+        onClick={e => { e.stopPropagation(); onOpen(); }}>
+        <boxGeometry args={size} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
+      {/* Abgerundeter Glow: zwei gestaffelte RoundedBoxes (innen kräftiger,
+          außen größer/blasser, additives Blending) simulieren ein weiches
+          Leuchten ohne echtes Postprocessing-Bloom-Setup. */}
+      {hovered && (
+        <>
+          <RoundedBox args={[size[0] * 1.18, size[1] * 1.18, size[2] * 1.18]} radius={radius * 1.3} smoothness={4}>
+            <meshBasicMaterial color="#fbbf24" transparent opacity={0.16} depthWrite={false} blending={THREE.AdditiveBlending} />
+          </RoundedBox>
+          <RoundedBox args={size} radius={radius} smoothness={4}>
+            <meshBasicMaterial color="#f59e0b" transparent opacity={0.32} depthWrite={false} blending={THREE.AdditiveBlending} />
+          </RoundedBox>
+        </>
+      )}
+    </group>
   );
 }
 
@@ -1494,15 +1514,6 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
               <RankedAvatar rankPoints={data.rankPoints} src={data.avatarUrl} alt={data.displayName} size={48} rounded="xl" />
               <span className="text-[8px] font-semibold text-gray-300 text-center leading-tight">Old Masters Ally</span>
             </div>
-          </Html>
-
-          {/* Pokale & Abzeichen */}
-          <Html position={SHELF_POS} center>
-            <button onClick={() => setPanel("trophy")}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full whitespace-nowrap"
-              style={{ background: "rgba(4,10,9,0.7)", border: "1px solid rgba(245,158,11,0.3)", backdropFilter: "blur(3px)" }}>
-              <span className="text-[10px] font-semibold text-amber-300">🏆 Pokale &amp; Abzeichen</span>
-            </button>
           </Html>
 
         </Suspense>
