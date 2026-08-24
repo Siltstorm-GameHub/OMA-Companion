@@ -598,10 +598,23 @@ for (const scope of Object.keys(WANDERPOKAL_SLOTS)) useGLTF.preload(WANDERPOKAL_
  * Cube.020/021-Paar, das noch STATISCH im Referenzszenen-Export
  * (`mancave_room.glb`) hing (an der Wand hinter den Monitoren, ohne jede
  * Funktion) — mit derselben Spiegel-Technik wie das erste an dieselbe Wand
- * verschoben (Weltmitte X=-1.145 wie Regal 1, aber Welt-Z≈0.3 statt -0.95,
- * per Bbox-Scan als frei bestätigt), um MEHR Stellfläche für dieselben 6
- * Kategorien zu bieten statt neue Kategorien abzudecken — pro Kategorie
- * jetzt 2 Fächer (Regal 1 + Regal 2) x 3 Stapel-Plätze = 6 statt 3 sichtbar.
+ * verschoben, um MEHR Stellfläche für dieselben 6 Kategorien zu bieten
+ * statt neue Kategorien abzudecken — pro Kategorie jetzt 2 Fächer (Regal 1
+ * + Regal 2) x 3 Stapel-Plätze = 6 statt 3 sichtbar.
+ *
+ * Danach auf User-Wunsch nochmal angepasst: Regal 2 näher an Regal 1
+ * herangerückt (Welt-Z von 0.3 auf -0.15, per Bbox-Scan als noch
+ * kollisionsfrei bestätigt) UND die diagonale Staffel-Richtung der beiden
+ * Würfel gespiegelt, damit Regal 2 wie ein Spiegelbild von Regal 1 wirkt
+ * (obere Nische lehnt jetzt zu Regal 1 hin) statt in dieselbe Richtung wie
+ * Regal 1 zu staffeln. WICHTIG: nur die lokale Tiefen-Achse (Blender-Y,
+ * entlang der Wand) gespiegelt, NICHT die Öffnungs-Achse (Blender-X) — ein
+ * reiner Achsen-Mirror kehrt sonst die Flächen-Normalen um (Mesh wirkt von
+ * innen nach außen), deshalb nach dem Spiegeln explizit die Normalen
+ * neu ausgerichtet (`bpy.ops.mesh.flip_normals`). Die einzelnen Pokal-
+ * Modelle selbst bekommen dabei KEINE Rotation (User-Wunsch: "ohne die
+ * Slots zu drehen") — sie werden ohnehin unabhängig vom Regal an festen
+ * Weltpositionen gerendert, nie an die Regal-Transform gekoppelt.
  */
 const EVENT_POKAL_REGAL_2_CFG: ExtraCfg = { url: "/models/event_pokal_regal_2.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(0, 0, 0) };
 const EVENT_POKAL_SCALE = 0.0373;
@@ -620,12 +633,12 @@ const EVENT_POKAL_STACK_X = [-1.289, -1.145, -1.001]; // hinten -> vorne, pro Fa
  * hat daher ihr EIGENES Welt-Z-Zentrum, nicht ein gemeinsames pro Regal.
  */
 const EVENT_POKAL_CATEGORY_SLOTS: Record<string, { z: number; y: number }[]> = {
-  competitive:      [{ z: -1.278, y: 1.652 }, { z: -0.028, y: 1.652 }], // Regal 1 untere Nische, Regal 2 untere Nische
-  fun:              [{ z: -1.134, y: 1.652 }, { z:  0.116, y: 1.652 }],
-  casual:           [{ z: -0.990, y: 1.652 }, { z:  0.260, y: 1.652 }],
-  training:         [{ z: -0.910, y: 1.903 }, { z:  0.340, y: 1.903 }], // Regal 1 obere Nische, Regal 2 obere Nische
-  community_event:  [{ z: -0.766, y: 1.903 }, { z:  0.484, y: 1.903 }],
-  special:          [{ z: -0.622, y: 1.903 }, { z:  0.628, y: 1.903 }],
+  competitive:      [{ z: -1.278, y: 1.652 }, { z: -0.110, y: 1.652 }], // Regal 1 untere Nische, Regal 2 untere Nische
+  fun:              [{ z: -1.134, y: 1.652 }, { z:  0.034, y: 1.652 }],
+  casual:           [{ z: -0.990, y: 1.652 }, { z:  0.178, y: 1.652 }],
+  training:         [{ z: -0.910, y: 1.903 }, { z: -0.478, y: 1.903 }], // Regal 1 obere Nische, Regal 2 obere Nische
+  community_event:  [{ z: -0.766, y: 1.903 }, { z: -0.334, y: 1.903 }],
+  special:          [{ z: -0.622, y: 1.903 }, { z: -0.190, y: 1.903 }],
 };
 const EVENT_POKAL_MAX_VISIBLE = EVENT_POKAL_STACK_X.length * 2;
 
@@ -1603,9 +1616,9 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
           <ShelfHotspot label="Genre-Wanderpokale" onOpen={() => setPanel("wanderpokale-genre")} onHoverChange={handleHover}
             center={[WANDERPOKAL_REGAL_2_POS.x, 2.0, 0.85]} size={[1.15, 1.05, 0.35]} />
           <ShelfHotspot label="Event-Pokale" onOpen={() => setPanel("eventpokale")} onHoverChange={handleHover}
-            center={[-1.145, 1.94, -0.95]} size={[0.5, 0.75, 0.8]} />
+            center={[-1.145, 1.94, -0.95]} size={[0.5, 0.75, 0.65]} />
           <ShelfHotspot label="Event-Pokale" onOpen={() => setPanel("eventpokale")} onHoverChange={handleHover}
-            center={[-1.145, 1.94, 0.3]} size={[0.5, 0.75, 0.8]} />
+            center={[-1.145, 1.94, -0.15]} size={[0.5, 0.75, 0.65]} />
           <ShelfHotspot label="Abzeichen" onOpen={() => setPanel("trophy")} onHoverChange={handleHover}
             center={[-1.1, 0.31, -0.95]} size={[0.5, 0.7, 0.9]} />
           <ExtraProp tier={nanoleafTier >= 1 ? 1 : 0} cfg={BLITZ_CFG} />
