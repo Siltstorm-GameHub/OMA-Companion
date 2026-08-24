@@ -88,8 +88,18 @@ export function MonitorScreenContent({ data }: { data: MancaveData }) {
         {/* Panel-Inhalte in eigener Schriftgröße (für das große Popup vom
             Schreibtisch-Hotspot ausgelegt, text-xs/text-[10-11px]) — auf dem
             640px-Monitor-Canvas ist das gut lesbar, kein zusätzliches Skalieren
-            nötig (das hatte den Text vorher nur noch kleiner gemacht). */}
-        <div className="flex-1 min-h-0 overflow-y-auto p-5" style={{ fontSize: 15 }}>
+            nötig (das hatte den Text vorher nur noch kleiner gemacht).
+            Mausrad manuell auf scrollTop gemappt statt auf natives Scrollen zu
+            vertrauen — die Fläche liegt in einem <Html transform>-Overlay (3D-
+            verankert, eigener isolierter React-Baum, siehe useSafeRouter-
+            Kommentar), nativer Wheel-Scroll wirkte dort unzuverlässig (User-
+            Feedback: musste den winzigen Scrollbalken per Hand ziehen, gerade
+            bei der langen Ausbau-Liste). stopPropagation, damit das Rad-Event
+            nicht zusätzlich beim Kamera-Zoom (LookAroundRig, hängt am
+            <canvas>) landet — auch wenn Canvas und dieses Overlay ohnehin
+            getrennte DOM-Zweige sind, schadet die Absicherung nicht. */}
+        <div className="flex-1 min-h-0 overflow-y-auto p-5" style={{ fontSize: 15 }}
+          onWheel={e => { e.currentTarget.scrollTop += e.deltaY; e.stopPropagation(); }}>
           {view === "trophy" && <TrophyPanel data={data} />}
           {view === "items" && <ItemsPanel data={data} />}
           {view === "jobs" && <JobsPanel data={data} />}
