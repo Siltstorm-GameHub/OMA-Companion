@@ -403,6 +403,17 @@ const STUHL_POS = new THREE.Vector3(0.367, 0, -0.921);
 const WANDERPOKAL_REGAL_POS = new THREE.Vector3(0.207, 1.755, 0.886);
 const WANDERPOKAL_REGAL_CFG: ExtraCfg = { url: "/models/pokalregal.glb", fix: [0, 0.217, 0.001], scale: 0.885, position: WANDERPOKAL_REGAL_POS };
 
+// Zweites Kreuz-Regal (User-Wunsch: 6 Kategorie-Wanderpokale ins erste, 6
+// Genre-Wanderpokale in dieses zweite) — dasselbe Modell, an der Westwand
+// ("MC_Wall_West", dieselbe Wand wie Event-Pokal-Regal/Vitrine), per
+// rotationY=-90° um die eigene Position gedreht, damit die Fach-Reihe
+// entlang der Wand läuft statt von ihr weg zu zeigen. Position per
+// Bbox-Scan der Referenzszene bestätigt frei (nur Wand/Boden), einen
+// guten Meter vom Event-Pokal-Regal/der Vitrine entfernt (die sitzen bei
+// Welt-Z≈-0.95), damit sich nichts überlappt.
+const WANDERPOKAL_REGAL_2_POS = new THREE.Vector3(-1.145, 1.755, 0.3);
+const WANDERPOKAL_REGAL_2_CFG: ExtraCfg = { url: "/models/pokalregal.glb", fix: [0, 0.217, 0.001], scale: 0.885, position: WANDERPOKAL_REGAL_2_POS, rotationY: -Math.PI / 2 };
+
 const EVENT_POKAL_REGAL_CFG: ExtraCfg = { url: "/models/event_pokal_regal.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(0, 0, 0) };
 
 // Vitrine (Abzeichen): erste Platzierung (unter dem Wanderpokal-Regal) per
@@ -435,13 +446,29 @@ const ABZEICHEN_VITRINE_CFG: ExtraCfg = { url: "/models/vitrine_pokal.glb", fix:
  * sich vorerst den dezimierten Gold-Pokal (824k -> 41k Polys) als
  * Platzhalter, bis es mehr eigene Modelle gibt.
  *
- * WANDERPOKAL_SLOTS: 12 feste Weltpositionen, eine pro Scope — abgeleitet
- * aus den 4 ECHTEN Ablage-Ebenen von "pokalregal.glb" (per Flächen-Scan
- * gefunden: durchgehend nach oben zeigende, breite Flächen bei vier
- * unterschiedlichen Höhen, keine geschätzten Werte). Umrechnung
- * Regal-lokal -> Welt: world = WANDERPOKAL_REGAL_POS + 0.885 * (regal-fix +
- * lokale Regal-Koordinate), 3 Scopes pro Ebene, innerhalb der jeweils
- * verfügbaren Breite gleichmäßig verteilt.
+ * WANDERPOKAL_SLOTS: Erster Versuch nahm fälschlich 4 durchgehende, flache
+ * Ablage-Bretter an (Flächen-Scan fand vier Höhen-Bänder, aber ohne nach
+ * X zu clustern) — tatsächlich ist "pokalregal.glb" ein WÜRFEL-FACH-REGAL
+ * in Kreuzform mit genau 7 einzelnen, geschlossenen Fächern (per Ortho-
+ * Ansicht ausgezählt und live bestätigt: 1 oben, 4 in der Mitte, 2 unten),
+ * nicht 12 freie Plätze auf offenen Brettern — daher hatte ein Pokal über
+ * dem Regal geschwebt (Slot lag in Wirklichkeit auf halber Höhe ZWISCHEN
+ * zwei Fach-Ebenen) und ein anderer im Fach überlappt.
+ *
+ * Jeder der 7 Fach-Mittelpunkte wurde per Flächen-Scan einzeln vermessen
+ * (Boden-Fläche je Fach, nicht mehr pauschal pro Zeile) und mit derselben
+ * Formel wie beim Regal selbst in Weltkoordinaten umgerechnet: world =
+ * WANDERPOKAL_REGAL_POS + 0.885 * (regal-fix + lokale Fach-Koordinate).
+ *
+ * User-Wunsch statt "7 reichen nicht für 12": ZWEI Kreuz-Regale — eins nur
+ * für die 6 Kategorie-Scopes (WANDERPOKAL_REGAL_CFG, unveränderte Position),
+ * eins nur für die 6 Genre-Scopes (WANDERPOKAL_REGAL_2_CFG, um 90° gedreht
+ * an der Westwand). Jedes Regal nutzt 6 seiner 7 Fächer, je 1 bleibt leer.
+ * Slot-Koordinaten fürs zweite Regal: dieselben lokalen Fach-Offsets wie
+ * beim ersten, aber nach der 90°-Drehung wird aus dem X-Offset (Spalte)
+ * ein Z-Offset (Regal 2 hängt an der Wand, deren Normale in X-Richtung
+ * zeigt statt in Z-Richtung) — der Tiefen-Offset (~0, war Welt-Z beim
+ * ersten Regal) wird zum neuen, praktisch konstanten X-Offset.
  */
 const WANDERPOKAL_MODELS: Record<string, { url: string; fix: [number, number, number]; scale: number }> = {
   racing:    { url: "/models/wanderpokal_rennlegende.glb",    fix: [0, 0, 0], scale: 0.6294 },
@@ -450,22 +477,27 @@ const WANDERPOKAL_MODELS: Record<string, { url: string; fix: [number, number, nu
 const WANDERPOKAL_MODEL_DEFAULT = { url: "/models/wanderpokal_generic.glb", fix: [0, 0, 0] as [number, number, number], scale: 0.01637 };
 
 const WANDERPOKAL_SLOTS: Record<string, THREE.Vector3> = {
-  // Ebene 4 (oben, schmal, Welt-Y≈2.327)
-  competitive: new THREE.Vector3(0.225, 2.327, 0.887),
-  fun:         new THREE.Vector3(0.330, 2.327, 0.887),
-  casual:      new THREE.Vector3(0.435, 2.327, 0.887),
-  // Ebene 3 (Welt-Y≈2.084, breit)
-  training:         new THREE.Vector3(-0.246, 2.084, 0.887),
-  community_event:  new THREE.Vector3(0.207, 2.084, 0.887),
-  special:          new THREE.Vector3(0.660, 2.084, 0.887),
-  // Ebene 2 (Welt-Y≈1.840, breit)
-  arcade:     new THREE.Vector3(-0.246, 1.840, 0.887),
-  beat_em_up: new THREE.Vector3(0.207, 1.840, 0.887),
-  sport:      new THREE.Vector3(0.660, 1.840, 0.887),
-  // Ebene 1 (unten, Welt-Y≈1.595)
-  racing:    new THREE.Vector3(-0.012, 1.595, 0.887),
-  shooter:   new THREE.Vector3(0.207, 1.595, 0.887),
-  community: new THREE.Vector3(0.425, 1.595, 0.887),
+  // ── Regal 1 (Kategorie-Wanderpokale) ──────────────────────────────────
+  // Reihe 1 (oben, 1 Fach, Welt-Y≈2.327)
+  special:          new THREE.Vector3(0.333, 2.327, 0.887),
+  // Reihe 2 (Mitte, 4 Fächer, Welt-Y≈1.832)
+  competitive:      new THREE.Vector3(-0.170, 1.832, 0.887),
+  fun:              new THREE.Vector3(0.081, 1.832, 0.887),
+  casual:           new THREE.Vector3(0.333, 1.832, 0.887),
+  training:         new THREE.Vector3(0.584, 1.832, 0.887),
+  // Reihe 3 (unten, 2 Fächer, Welt-Y≈1.595) — 1 Fach bleibt leer
+  community_event:  new THREE.Vector3(0.081, 1.595, 0.887),
+
+  // ── Regal 2 (Genre-Wanderpokale, Westwand, 90° gedreht) ───────────────
+  // Reihe 1 (oben, 1 Fach, Welt-Y≈2.327)
+  community:  new THREE.Vector3(-1.145, 2.327, 0.426),
+  // Reihe 2 (Mitte, 4 Fächer, Welt-Y≈1.832)
+  racing:     new THREE.Vector3(-1.145, 1.832, -0.077),
+  arcade:     new THREE.Vector3(-1.145, 1.832, 0.174),
+  beat_em_up: new THREE.Vector3(-1.145, 1.832, 0.426),
+  sport:      new THREE.Vector3(-1.145, 1.832, 0.677),
+  // Reihe 3 (unten, 2 Fächer, Welt-Y≈1.595) — 1 Fach bleibt leer
+  shooter:    new THREE.Vector3(-1.145, 1.595, 0.174),
 };
 
 function WanderpokalTrophy({ scopeValue, position }: { scopeValue: string; position: THREE.Vector3 }) {
@@ -594,8 +626,15 @@ function ExtraProp({ tier, cfg }: { tier: number; cfg: ExtraCfg }) {
  * Stufe 1: "Blitz"-Neonschild (Referenzszene: "NurbsPath", stand vorher IMMER
  *   im Raum — jetzt aus mancave_room.glb ausgeschlossen und tier-gesteuert).
  * Stufe 2: Nanoleaf-Dreieckspanels über dem Monitor ("Circle" – "Circle.008").
- * Stufe 3: Nanoleaf-Panels an der gegenüberliegenden Wand ("Circle.011" –
- *   "Circle.022").
+ * Stufe 3: Nanoleaf-Panels ("Circle.011"–"Circle.022"). Ursprünglich an der
+ *   Wand hinter Fenster/Poster — überlappte nach Einführung des Kreuz-Regals
+ *   (Kategorie-Wanderpokale) mit dessen linker Fach-Spalte. Per Parent-
+ *   Clear-Technik (wie beim Event-Pokal-Regal) an "MC_Wall_North" verschoben
+ *   (die Wand hinter dem Monitor-Setup, gegenüber der ursprünglichen Wand) —
+ *   180°-Spiegelung nötig, da beide Wände parallel, aber die Panel-
+ *   Vorderseite von der jeweils EIGENEN Wand weg zeigen muss. X-Position auf
+ *   der neuen Wand per Bbox-Scan als frei bestätigt (links vom Schreibtisch-
+ *   Stuhl/Monitor-Cluster, die einzigen Objekte in diesem Höhenbereich).
  * Stufe 4: LED-Lightstrips, die vorher standardmäßig im Raum standen
  *   ("Cube.022"–"Cube.025", "Cube.027"–"Cube.033" — "Cube.026" bewusst
  *   ausgenommen, bleibt fest im Raum-Mesh). Alle vier direkt aus der
@@ -620,7 +659,7 @@ const LED_STRIPS_CFG: ExtraCfg = { url: "/models/led_lightstrips.glb", fix: [0, 
 //   pro Panel): Mittelwert der drei Emissionsfarben -> #7714ff
 const BLITZ_LIGHT_POS = new THREE.Vector3(1.225, 1.141, 0.454);
 const NANOLEAF_MONITOR_LIGHT_POS = new THREE.Vector3(1.2255, 1.795, -0.772);
-const NANOLEAF_WALL_LIGHT_POS = new THREE.Vector3(-0.391, 1.419, 0.908);
+const NANOLEAF_WALL_LIGHT_POS = new THREE.Vector3(-0.7, 1.419, -1.614);
 const LED_STRIPS_LIGHT_POS = new THREE.Vector3(0.083, 1.178, -0.333);
 const DESKMAT_CFG: ExtraCfg = { url: "/models/mancave_deskmat.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(0, 0, 0) };
 // Webcam: die 180°-Drehung aus der letzten Runde war falsch (User-Screenshot
@@ -1340,6 +1379,7 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
           {/* Fest verankertes Pokal-/Abzeichen-Möbel, kein Katalog-Upgrade
               mehr (siehe Kommentar bei WANDERPOKAL_REGAL_CFG). */}
           <ExtraProp tier={1} cfg={WANDERPOKAL_REGAL_CFG} />
+          <ExtraProp tier={1} cfg={WANDERPOKAL_REGAL_2_CFG} />
           <ExtraProp tier={1} cfg={EVENT_POKAL_REGAL_CFG} />
           <ExtraProp tier={1} cfg={ABZEICHEN_VITRINE_CFG} />
           {/* Nur was der User tatsächlich besitzt steht auf dem Regal — leere
@@ -1357,7 +1397,14 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
             <button onClick={() => setPanel("wanderpokale")}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full whitespace-nowrap"
               style={{ background: "rgba(4,10,9,0.7)", border: "1px solid rgba(245,158,11,0.3)", backdropFilter: "blur(3px)" }}>
-              <span className="text-[10px] font-semibold text-amber-300">🏆 Wanderpokale</span>
+              <span className="text-[10px] font-semibold text-amber-300">🏆 Kategorie-Wanderpokale</span>
+            </button>
+          </Html>
+          <Html position={[WANDERPOKAL_REGAL_2_POS.x, WANDERPOKAL_REGAL_2_POS.y + 0.35, WANDERPOKAL_REGAL_2_POS.z]} center>
+            <button onClick={() => setPanel("wanderpokale")}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full whitespace-nowrap"
+              style={{ background: "rgba(4,10,9,0.7)", border: "1px solid rgba(245,158,11,0.3)", backdropFilter: "blur(3px)" }}>
+              <span className="text-[10px] font-semibold text-amber-300">🏆 Genre-Wanderpokale</span>
             </button>
           </Html>
           <Html position={[-1.145, 2.45, -0.95]} center>
