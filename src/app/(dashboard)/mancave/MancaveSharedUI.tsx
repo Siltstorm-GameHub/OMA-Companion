@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
@@ -508,6 +509,15 @@ const WANDERPOKAL_SCOPE_LABEL: Record<"category" | "genre", string> = {
   category: "Kategorie-Wanderpokale", genre: "Genre-Wanderpokale",
 };
 
+// Vorschaubilder derselben 3D-Assets, die auch im Regal stehen (siehe
+// WANDERPOKAL_MODELS in MancaveScene3D.tsx) — nur 3 Stück, da 10 der 12
+// Scopes sich noch den generischen Gold-Pokal teilen.
+const WANDERPOKAL_THUMBS: Record<string, string> = {
+  racing: "/mancave-trophies/wanderpokal_rennlegende.png",
+  community: "/mancave-trophies/wanderpokal_communitystar.png",
+};
+const WANDERPOKAL_THUMB_DEFAULT = "/mancave-trophies/wanderpokal_generic.png";
+
 /**
  * Zeigt nur die 6 Scopes EINES Typs (Kategorie ODER Genre) — je nachdem,
  * welches der beiden Kreuz-Regale angeklickt wurde (User-Wunsch: getrennte
@@ -532,36 +542,43 @@ export function WanderpokalePanel({ data, scopeType }: { data: MancaveData; scop
           : "Du hältst aktuell keinen davon — bei jedem Sieg kann sich das ändern."}
       </p>
       <div className="space-y-1.5">
-        {rows.map(s => (
-          <div key={`${s.scopeType}:${s.scopeValue}`}
-            className={cn(
-              "flex items-center justify-between gap-2 text-xs px-2.5 py-2 rounded-lg",
-              s.ownedByMe ? "bg-amber-400/10 border border-amber-400/30" : "bg-white/[0.03]",
-            )}>
-            <div className="flex items-center gap-2 min-w-0">
-              {!s.ownedByMe && s.holderUserId ? (
-                <a href={`/profile/${s.holderUserId}`} className="shrink-0">
-                  <RankedAvatar rankPoints={s.holderRankPoints ?? 0} src={s.holderAvatarUrl} alt={s.holderName ?? "Halter"} size={22} rounded="full" />
-                </a>
-              ) : (
-                <Trophy className={cn("w-3.5 h-3.5 shrink-0", s.ownedByMe ? "text-amber-300" : "text-gray-600")} />
-              )}
-              <span className={cn("truncate", s.ownedByMe ? "text-amber-200 font-semibold" : "text-gray-300")}>{s.title}</span>
-            </div>
-            <div className="text-right shrink-0">
-              <div className={cn("text-[10px]", s.ownedByMe ? "text-amber-300/80" : "text-gray-500")}>
-                {s.ownedByMe
-                  ? `${s.winCount} ${s.winCount === 1 ? "Sieg" : "Siege"}`
-                  : s.holderUserId
-                    ? <a href={`/profile/${s.holderUserId}`} className="hover:underline">{s.holderName} · {s.winCount} {s.winCount === 1 ? "Sieg" : "Siege"}</a>
-                    : "noch nie vergeben"}
+        {rows.map(s => {
+          const winLabel = (n: number) => `${n} ${n === 1 ? "Sieg" : "Siege"}`;
+          return (
+            <div key={`${s.scopeType}:${s.scopeValue}`}
+              className={cn(
+                "flex items-center justify-between gap-2 text-xs px-2.5 py-2 rounded-lg",
+                s.ownedByMe ? "bg-amber-400/10 border border-amber-400/30" : "bg-white/[0.03]",
+              )}>
+              {/* 1) Pokal-Asset (dasselbe Modell, das auch im Regal steht) + Name */}
+              <div className="flex items-center gap-2 min-w-0">
+                <Image src={WANDERPOKAL_THUMBS[s.scopeValue] ?? WANDERPOKAL_THUMB_DEFAULT} alt="" width={36} height={36}
+                  className="w-9 h-9 object-contain shrink-0" unoptimized />
+                <span className={cn("truncate", s.ownedByMe ? "text-amber-200 font-semibold" : "text-gray-300")}>{s.title}</span>
               </div>
-              {!s.ownedByMe && (
-                <div className="text-[9px] text-gray-600">Du: {s.myWinCount} {s.myWinCount === 1 ? "Sieg" : "Siege"}</div>
-              )}
+              {/* 2) Profilbild inkl. Rangrahmen des aktuellen Besitzers (auch bei sich
+                  selbst) + dessen Siegzahl, darunter der eigene Vergleichswert. */}
+              <div className="text-right shrink-0">
+                {s.ownedByMe ? (
+                  <div className="flex items-center justify-end gap-1.5">
+                    <RankedAvatar rankPoints={data.rankPoints} src={data.avatarUrl} alt="Du" size={22} rounded="full" />
+                    <span className="text-[10px] text-amber-300/80">Du · {winLabel(s.winCount ?? 0)}</span>
+                  </div>
+                ) : s.holderUserId ? (
+                  <a href={`/profile/${s.holderUserId}`} className="flex items-center justify-end gap-1.5 hover:underline">
+                    <RankedAvatar rankPoints={s.holderRankPoints ?? 0} src={s.holderAvatarUrl} alt={s.holderName ?? "Halter"} size={22} rounded="full" />
+                    <span className="text-[10px] text-gray-400">{s.holderName} · {winLabel(s.winCount ?? 0)}</span>
+                  </a>
+                ) : (
+                  <span className="text-[10px] text-gray-500">noch nie vergeben</span>
+                )}
+                {!s.ownedByMe && (
+                  <div className="text-[9px] text-gray-600 mt-0.5">Du: {winLabel(s.myWinCount)}</div>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
