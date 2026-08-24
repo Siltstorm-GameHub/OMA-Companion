@@ -404,15 +404,17 @@ const WANDERPOKAL_REGAL_POS = new THREE.Vector3(0.207, 1.755, 0.886);
 const WANDERPOKAL_REGAL_CFG: ExtraCfg = { url: "/models/pokalregal.glb", fix: [0, 0.217, 0.001], scale: 0.885, position: WANDERPOKAL_REGAL_POS };
 
 // Zweites Kreuz-Regal (User-Wunsch: 6 Kategorie-Wanderpokale ins erste, 6
-// Genre-Wanderpokale in dieses zweite) — dasselbe Modell, an der Westwand
-// ("MC_Wall_West", dieselbe Wand wie Event-Pokal-Regal/Vitrine), per
-// rotationY=-90° um die eigene Position gedreht, damit die Fach-Reihe
-// entlang der Wand läuft statt von ihr weg zu zeigen. Position per
-// Bbox-Scan der Referenzszene bestätigt frei (nur Wand/Boden), einen
-// guten Meter vom Event-Pokal-Regal/der Vitrine entfernt (die sitzen bei
-// Welt-Z≈-0.95), damit sich nichts überlappt.
-const WANDERPOKAL_REGAL_2_POS = new THREE.Vector3(-1.145, 1.755, 0.3);
-const WANDERPOKAL_REGAL_2_CFG: ExtraCfg = { url: "/models/pokalregal.glb", fix: [0, 0.217, 0.001], scale: 0.885, position: WANDERPOKAL_REGAL_2_POS, rotationY: -Math.PI / 2 };
+// Genre-Wanderpokale in dieses zweite) — dasselbe Modell. War kurzzeitig um
+// 90° gedreht an der Westwand, auf User-Wunsch aber wieder zurück auf
+// dieselbe Wand wie Fenster/Regal 1 (bessere Sicht von der Kamera aus,
+// beide Regale zusammen), direkt LINKS neben Regal 1, unrotiert. Position
+// per Bbox-Scan geprüft: links von Regal 1 bis zur Raumecke (Westwand bei
+// X=-1.329) sind ca. 1.03m frei — genau die Breite eines Kreuz-Regals
+// (1.005m). Die beiden ungenutzten Referenz-Bretter "Cube.018"/"Cube.033"
+// in diesem Bereich sind NICHT im ausgelieferten "mancave_room.glb"
+// enthalten (per glTF-JSON geprüft) — kein Sichtkonflikt mit der Live-Szene.
+const WANDERPOKAL_REGAL_2_POS = new THREE.Vector3(-0.82, 1.755, 0.886);
+const WANDERPOKAL_REGAL_2_CFG: ExtraCfg = { url: "/models/pokalregal.glb", fix: [0, 0.217, 0.001], scale: 0.885, position: WANDERPOKAL_REGAL_2_POS };
 
 const EVENT_POKAL_REGAL_CFG: ExtraCfg = { url: "/models/event_pokal_regal.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(0, 0, 0) };
 
@@ -488,16 +490,16 @@ const WANDERPOKAL_SLOTS: Record<string, THREE.Vector3> = {
   // Reihe 3 (unten, 2 Fächer, Welt-Y≈1.595) — 1 Fach bleibt leer
   community_event:  new THREE.Vector3(0.081, 1.595, 0.887),
 
-  // ── Regal 2 (Genre-Wanderpokale, Westwand, 90° gedreht) ───────────────
+  // ── Regal 2 (Genre-Wanderpokale, gleiche Wand wie Regal 1, unrotiert) ──
   // Reihe 1 (oben, 1 Fach, Welt-Y≈2.327)
-  community:  new THREE.Vector3(-1.145, 2.327, 0.426),
+  community:  new THREE.Vector3(-0.694, 2.327, 0.887),
   // Reihe 2 (Mitte, 4 Fächer, Welt-Y≈1.832)
-  racing:     new THREE.Vector3(-1.145, 1.832, -0.077),
-  arcade:     new THREE.Vector3(-1.145, 1.832, 0.174),
-  beat_em_up: new THREE.Vector3(-1.145, 1.832, 0.426),
-  sport:      new THREE.Vector3(-1.145, 1.832, 0.677),
+  racing:     new THREE.Vector3(-1.197, 1.832, 0.887),
+  arcade:     new THREE.Vector3(-0.946, 1.832, 0.887),
+  beat_em_up: new THREE.Vector3(-0.694, 1.832, 0.887),
+  sport:      new THREE.Vector3(-0.443, 1.832, 0.887),
   // Reihe 3 (unten, 2 Fächer, Welt-Y≈1.595) — 1 Fach bleibt leer
-  shooter:    new THREE.Vector3(-1.145, 1.595, 0.174),
+  shooter:    new THREE.Vector3(-0.946, 1.595, 0.887),
 };
 
 function WanderpokalTrophy({ scopeValue, position }: { scopeValue: string; position: THREE.Vector3 }) {
