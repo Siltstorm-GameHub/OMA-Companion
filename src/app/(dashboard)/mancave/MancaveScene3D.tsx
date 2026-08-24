@@ -32,7 +32,7 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Html, useGLTF, useTexture, RoundedBox } from "@react-three/drei";
+import { Html, useGLTF, useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import RankedAvatar from "@/components/RankedAvatar";
 import { MonitorScreenContent, TrophyPanel, ItemsPanel, JobsPanel, MailPanel, WanderpokalePanel, EventPokalePanel, type MancavePanel } from "./MancaveSharedUI";
@@ -586,18 +586,65 @@ for (const cat of Object.keys(EVENT_POKAL_CATEGORY_SLOTS)) useGLTF.preload(`/mod
  * Die Box selbst ist die Klick-/Hover-Zielfläche (deutlich einfacher &
  * zuverlässiger zu treffen als die echte, verschachtelte Fach-Geometrie).
  */
+// Radial-Gradient-Textur fürs Glow-Sprite, einmalig per Canvas erzeugt und
+// gecacht (statt pro Hotspot neu zu bauen) — RoundedBox-Stapel vorher hatten
+// trotz Verrundung an den GEOMETRIE-Kanten einen harten Opazitäts-Sprung
+// (User-Feedback: "noch zu kantig"), weil die Fläche selbst gleichmäßig
+// eingefärbt war. Ein kamera-zugewandtes Sprite mit echtem Radialverlauf
+// (weiß -> amber -> transparent) gibt einen wirklich weichen Rand, ganz
+// ohne Postprocessing-Bloom-Setup. `document` nur lazy beim ersten Hover
+// anfassen, nicht auf Modulebene — läuft sonst beim SSR-Rendern der
+// Client-Komponente ins Leere (kein `document` auf dem Server).
+let glowTexture: THREE.Texture | null = null;
+function getGlowTexture(): THREE.Texture | null {
+  if (glowTexture) return glowTexture;
+  if (typeof document === "undefined") return null;
+  const size = 256;
+  const canvas = document.createElement("canvas");
+  canvas.width = size; canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  const gradient = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  gradient.addColorStop(0, "rgba(255,255,255,0.95)");
+  gradient.addColorStop(0.3, "rgba(251,191,36,0.85)");
+  gradient.addColorStop(0.65, "rgba(245,158,11,0.32)");
+  gradient.addColorStop(1, "rgba(245,158,11,0)");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, size, size);
+  glowTexture = new THREE.CanvasTexture(canvas);
+  return glowTexture;
+}
+
+/** Sanft pulsierendes, kamera-zugewandtes Glow-Sprite (weicher Radialverlauf). */
+function GlowSprite({ size }: { size: [number, number, number] }) {
+  const spriteRef = useRef<THREE.Sprite>(null);
+  const tex = useMemo(() => getGlowTexture(), []);
+  const baseScale = Math.max(size[0], size[1], size[2]) * 1.35;
+  useFrame(({ clock }) => {
+    if (!spriteRef.current) return;
+    const wave = Math.sin(clock.elapsedTime * 2.2);
+    const s = baseScale * (1 + 0.09 * wave);
+    spriteRef.current.scale.set(s, s, 1);
+    const mat = spriteRef.current.material as THREE.SpriteMaterial;
+    mat.opacity = 0.62 + 0.18 * wave;
+  });
+  if (!tex) return null;
+  return (
+    <sprite ref={spriteRef} scale={[baseScale, baseScale, 1]}>
+      <spriteMaterial map={tex} transparent depthWrite={false} blending={THREE.AdditiveBlending} />
+    </sprite>
+  );
+}
+
 function ShelfHotspot({ label, center, size, onOpen, onHoverChange }: {
   label: string; center: [number, number, number]; size: [number, number, number];
   onOpen: () => void; onHoverChange: (label: string | null, clientX: number, clientY: number) => void;
 }) {
   const [hovered, setHovered] = useState(false);
-  const radius = Math.min(size[0], size[1], size[2]) * 0.22;
   return (
     <group position={center}>
-      {/* Unsichtbare, scharfkantige Box als eigentliche Klick-/Hover-
-          Zielfläche — RoundedBox' verrundete Geometrie hat an den Kanten
-          Lücken/Überlappungen, die für zuverlässiges Raycasting ungeeignet
-          sind, deshalb getrennt von der rein visuellen Glow-Box unten. */}
+      {/* Unsichtbare Box als eigentliche Klick-/Hover-Zielfläche, komplett
+          getrennt vom rein visuellen Glow-Sprite unten. */}
       <mesh
         onPointerOver={e => { e.stopPropagation(); setHovered(true); onHoverChange(label, e.clientX, e.clientY); }}
         onPointerMove={e => { e.stopPropagation(); onHoverChange(label, e.clientX, e.clientY); }}
@@ -606,19 +653,7 @@ function ShelfHotspot({ label, center, size, onOpen, onHoverChange }: {
         <boxGeometry args={size} />
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
-      {/* Abgerundeter Glow: zwei gestaffelte RoundedBoxes (innen kräftiger,
-          außen größer/blasser, additives Blending) simulieren ein weiches
-          Leuchten ohne echtes Postprocessing-Bloom-Setup. */}
-      {hovered && (
-        <>
-          <RoundedBox args={[size[0] * 1.18, size[1] * 1.18, size[2] * 1.18]} radius={radius * 1.3} smoothness={4}>
-            <meshBasicMaterial color="#fbbf24" transparent opacity={0.16} depthWrite={false} blending={THREE.AdditiveBlending} />
-          </RoundedBox>
-          <RoundedBox args={size} radius={radius} smoothness={4}>
-            <meshBasicMaterial color="#f59e0b" transparent opacity={0.32} depthWrite={false} blending={THREE.AdditiveBlending} />
-          </RoundedBox>
-        </>
-      )}
+      {hovered && <GlowSprite size={size} />}
     </group>
   );
 }
