@@ -32,7 +32,7 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Html, useGLTF, useTexture } from "@react-three/drei";
+import { Html, useGLTF, useTexture, Text } from "@react-three/drei";
 import * as THREE from "three";
 import RankedAvatar from "@/components/RankedAvatar";
 import { MonitorScreenContent, TrophyPanel, ItemsPanel, JobsPanel, MailPanel, WanderpokalePanel, EventPokalePanel, type MancavePanel } from "./MancaveSharedUI";
@@ -434,6 +434,64 @@ const EVENT_POKAL_REGAL_CFG: ExtraCfg = { url: "/models/event_pokal_regal.glb", 
 // durchsichtig) — Rotation bleibt deshalb unkritisch.
 const ABZEICHEN_VITRINE_POS = new THREE.Vector3(-1.1, 0, -0.95);
 const ABZEICHEN_VITRINE_CFG: ExtraCfg = { url: "/models/vitrine_pokal.glb", fix: [0, 0, 0], scale: 0.9, position: ABZEICHEN_VITRINE_POS };
+
+/**
+ * Abzeichen-Pins in der Vitrine — echte Innen-Maße nachgemessen (nicht nur
+ * die äußere Frame-Bbox): 2 dünne Glas-Fachböden ("Glass1" bei lokal Z≈0.66,
+ * "Glass2" bei Z≈0.35, beide NICHT randvoll über die volle Breite — eher
+ * dekorative Zwischenböden als tragende Fächer). Ergibt 2 sinnvoll nutzbare
+ * Ebenen (Boden bis Glass2, Glass2 bis Glass1; der Rest bis zum Deckel ist
+ * mit nur 0.02m zu knapp). Pro Ebene ein 3×2-Raster (3 Spalten Breite, 2
+ * Reihen Tiefe) = 12 Plätze — mit 3 statt 4 Spalten bewusst mehr Abstand
+ * zwischen den Pins gelassen, sonst würden sich die Namens-Labels
+ * (`AbzeichenPin`) zwischen benachbarten Spalten überlappen. Reale Maße
+ * unbestätigt bzgl. Lesbarkeit im Spiel — wie üblich nach Live-Check ggf.
+ * nachjustieren.
+ */
+const ABZEICHEN_GRID_COLS_X = [-0.15, 0, 0.15]; // lokal, Breite
+const ABZEICHEN_GRID_ROWS_Z = [-0.22, 0.22]; // lokal, Tiefe
+const ABZEICHEN_TIERS_Y = [0.05, 0.39]; // lokal, Boden-Ebene / Ebene auf Glass2
+const ABZEICHEN_MAX_VISIBLE = ABZEICHEN_GRID_COLS_X.length * ABZEICHEN_GRID_ROWS_Z.length * ABZEICHEN_TIERS_Y.length;
+
+function abzeichenSlotPos(index: number): THREE.Vector3 | null {
+  const perTier = ABZEICHEN_GRID_COLS_X.length * ABZEICHEN_GRID_ROWS_Z.length;
+  const tier = Math.floor(index / perTier);
+  if (tier >= ABZEICHEN_TIERS_Y.length) return null;
+  const withinTier = index % perTier;
+  const col = withinTier % ABZEICHEN_GRID_COLS_X.length;
+  const row = Math.floor(withinTier / ABZEICHEN_GRID_COLS_X.length);
+  return new THREE.Vector3(
+    ABZEICHEN_VITRINE_POS.x + 0.9 * ABZEICHEN_GRID_COLS_X[col],
+    ABZEICHEN_VITRINE_POS.y + 0.9 * ABZEICHEN_TIERS_Y[tier],
+    ABZEICHEN_VITRINE_POS.z + 0.9 * ABZEICHEN_GRID_ROWS_Z[row],
+  );
+}
+
+// Dieselbe Farbpalette wie die geprüfte Vorschau (siehe Chat) — deterministisch
+// per Badge-Key gewählt (kein Kategorie-Feld in MancaveBadge verfügbar),
+// damit ein Abzeichen bei jedem Neuladen dieselbe Farbe behält.
+const ABZEICHEN_COLORS = ["#f04444", "#ed4a99", "#2dd4bf", "#3b82f6", "#22c55e", "#a855f7", "#fbbf24", "#e5e7eb"];
+function abzeichenColor(key: string): string {
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
+  return ABZEICHEN_COLORS[hash % ABZEICHEN_COLORS.length];
+}
+
+function AbzeichenPin({ badgeKey, name, position }: { badgeKey: string; name: string; position: THREE.Vector3 }) {
+  const color = useMemo(() => abzeichenColor(badgeKey), [badgeKey]);
+  return (
+    <group position={position}>
+      <mesh scale={[0.045, 0.025, 0.045]}>
+        <icosahedronGeometry args={[1, 1]} />
+        <meshStandardMaterial color={color} roughness={0.15} emissive={color} emissiveIntensity={0.35} />
+      </mesh>
+      <Text position={[0, -0.038, 0]} fontSize={0.013} color="#fde68a" anchorX="center" anchorY="top"
+        maxWidth={0.13} textAlign="center" outlineWidth={0.0012} outlineColor="#050810">
+        {name}
+      </Text>
+    </group>
+  );
+}
 
 /**
  * Einzelne Pokal-Modelle auf den beiden Regalen — nur was der User TATSÄCHLICH
@@ -1482,6 +1540,18 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
           {Object.keys(EVENT_POKAL_CATEGORY_SLOTS).map(cat => (
             <EventPokalStack key={cat} category={cat} count={pokaleByCategory[cat] ?? 0} />
           ))}
+          {data.badges.slice(0, ABZEICHEN_MAX_VISIBLE).map((b, i) => {
+            const slot = abzeichenSlotPos(i);
+            return slot ? <AbzeichenPin key={b.key} badgeKey={b.key} name={b.name} position={slot} /> : null;
+          })}
+          {data.badges.length > ABZEICHEN_MAX_VISIBLE && (
+            <Html position={[ABZEICHEN_VITRINE_POS.x, ABZEICHEN_VITRINE_POS.y + 0.62, ABZEICHEN_VITRINE_POS.z]} center>
+              <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold text-amber-200"
+                style={{ background: "rgba(4,10,9,0.8)", border: "1px solid rgba(245,158,11,0.4)" }}>
+                +{data.badges.length - ABZEICHEN_MAX_VISIBLE}
+              </span>
+            </Html>
+          )}
           {/* Hover-Zielflächen direkt an den Pokal-Möbeln — kein permanent
               sichtbarer Button mehr (User-Wunsch), stattdessen Glow-Effekt +
               mausfolgendes Tooltip (siehe ShelfHotspot/hoverTooltip). */}
