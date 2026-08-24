@@ -405,7 +405,21 @@ const WANDERPOKAL_REGAL_CFG: ExtraCfg = { url: "/models/pokalregal.glb", fix: [0
 
 const EVENT_POKAL_REGAL_CFG: ExtraCfg = { url: "/models/event_pokal_regal.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(0, 0, 0) };
 
-const ABZEICHEN_VITRINE_POS = new THREE.Vector3(0.207, 0, 0.53);
+// Vitrine (Abzeichen): erste Platzierung (unter dem Wanderpokal-Regal) per
+// Bbox-Abgleich mit der wieder geladenen Referenzszene verworfen — dort
+// steht die Couch (Cube.008 + Kissen/Griffe), die Vitrine hätte
+// hindurchgeclippt. Stattdessen an dieselbe Wand wie das Event-Pokal-Regal
+// gestellt (Blender-X=-1.329="MC_Wall_West", also bündig an der Wand),
+// auf Höhe des Event-Pokal-Regals darüber (Blender-Y≈0.95 bzw. gltf-Z≈
+// EYE.z=-0.95) — dort per Bbox-Scan bestätigt komplett frei (nur Wand,
+// Boden, Teppich). Reale Maße frisch aus dem exportierten glTF nachgemessen
+// (Frame-Objekt, Blender Z-up): Breite 0.508m, Tiefe 0.888m, Höhe 0.683m,
+// bereits boden-verankert (min.z=0) und in X/Y zentriert — bei fix=[0,0,0]
+// wandert daher `scale`*0.229 in X und `scale`*0.4 in Z vom Anker nach
+// beiden Seiten. Alle 6 "Glass"-Teile sind Seitenscheiben + 2 interne
+// Fachböden (keine "Vorderseite" nötig, die Vitrine ist rundum
+// durchsichtig) — Rotation bleibt deshalb unkritisch.
+const ABZEICHEN_VITRINE_POS = new THREE.Vector3(-1.1, 0, -0.95);
 const ABZEICHEN_VITRINE_CFG: ExtraCfg = { url: "/models/vitrine_pokal.glb", fix: [0, 0, 0], scale: 0.9, position: ABZEICHEN_VITRINE_POS };
 
 /**
