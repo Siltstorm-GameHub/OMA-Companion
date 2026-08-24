@@ -481,12 +481,21 @@ function AbzeichenPin({ badgeKey, name, position }: { badgeKey: string; name: st
   const color = useMemo(() => abzeichenColor(badgeKey), [badgeKey]);
   return (
     <group position={position}>
+      {/* detail=0 (nicht 1!) ist die eckige Basis-Ikosaeder-Form mit nur 20
+          Facetten, genau wie in der per Blender geprüften Vorschau
+          (subdivisions=1 dort entspricht three.js' detail=0) — detail=1
+          unterteilt einmal zusätzlich und wirkt dadurch rund/glatt statt
+          facettiert (User-Feedback: "Edelsteine sehen nicht toll aus").
+          Roughness hoch + wenig Emission, sonst verschluckt ein greller
+          Glanzpunkt in der Mitte die Facettenkanten komplett. */}
       <mesh scale={[0.045, 0.025, 0.045]}>
-        <icosahedronGeometry args={[1, 1]} />
-        <meshStandardMaterial color={color} roughness={0.15} emissive={color} emissiveIntensity={0.35} />
+        <icosahedronGeometry args={[1, 0]} />
+        <meshStandardMaterial color={color} roughness={0.55} metalness={0.1} emissive={color} emissiveIntensity={0.12} flatShading />
       </mesh>
-      <Text position={[0, -0.038, 0]} fontSize={0.013} color="#fde68a" anchorX="center" anchorY="top"
-        maxWidth={0.13} textAlign="center" outlineWidth={0.0012} outlineColor="#050810">
+      {/* 1.3cm Schriftgröße war im Raum praktisch unlesbar (~1.7m
+          Kameraabstand zur Vitrine) — deutlich vergrößert. */}
+      <Text position={[0, -0.045, 0]} fontSize={0.022} color="#fde68a" anchorX="center" anchorY="top"
+        maxWidth={0.14} textAlign="center" outlineWidth={0.0018} outlineColor="#050810">
         {name}
       </Text>
     </group>
@@ -677,7 +686,15 @@ function getGlowTexture(): THREE.Texture | null {
 function GlowSprite({ size }: { size: [number, number, number] }) {
   const spriteRef = useRef<THREE.Sprite>(null);
   const tex = useMemo(() => getGlowTexture(), []);
-  const baseScale = Math.max(size[0], size[1], size[2]) * 1.35;
+  // `sprite.scale` ist ein Weltmeter-Maß, keine relative Größe — der erste
+  // Versuch (Max aller 3 Seiten * 1.35) machte den Glow bei der Vitrine
+  // (0.9m Tiefe im Hitbox-Maß) über 1.2m breit, sichtbar riesig gegenüber
+  // der ~0.5m großen Vitrine (User-Feedback: "Hover-Effekt nicht gelungen").
+  // Jetzt nur Breite/Höhe gemittelt (Tiefe fließt bewusst nicht ein — die
+  // Hitbox ist oft tiefer als das sichtbare Möbel breit/hoch ist) und
+  // deutlich kleinerer Faktor, damit der Glow ungefähr die Silhouette des
+  // Möbels trifft statt sie zu verschlucken.
+  const baseScale = ((size[0] + size[1]) / 2) * 0.6;
   useFrame(({ clock }) => {
     if (!spriteRef.current) return;
     const wave = Math.sin(clock.elapsedTime * 2.2);
