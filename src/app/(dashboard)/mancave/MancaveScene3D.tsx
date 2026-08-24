@@ -1032,6 +1032,16 @@ const PARALLAX_AMOUNT = 0.055;
  * wurde — Ausbau/Gadgets/Pokale reagierten auf nichts). Am Canvas selbst
  * hängend bekommen die Buttons diese Events gar nicht erst ab.
  */
+// Mausrad-Zoom: R3F/three.js Default-FOV ist 75° (kein `fov`-Prop gesetzt).
+// Zoomen per FOV statt Kamera-Translation — bleibt konsistent mit dem
+// "fixer Sitzplatz, nur Drehen"-Designprinzip hier (EYE bewegt sich nie,
+// siehe PARALLAX_AMOUNT-Kommentar), und funktioniert unabhängig davon, wie
+// nah/fern das gerade angeschaute Objekt ist (anders als ein Kamera-Dolly,
+// der beim Reinzoomen in die Geometrie hineinfahren könnte).
+const FOV_DEFAULT = 75;
+const FOV_MIN = 25; // stärkster Zoom (z.B. um Text auf dem Monitor zu lesen)
+const FOV_MAX = FOV_DEFAULT;
+
 function LookAroundRig() {
   const { camera, gl } = useThree();
   const yaw = useRef(0);
@@ -1041,6 +1051,7 @@ function LookAroundRig() {
   const initialized = useRef(false);
   const dragging = useRef(false);
   const last = useRef({ x: 0, y: 0 });
+  const fov = useRef(FOV_DEFAULT);
   const scratchRight = useRef(new THREE.Vector3());
   const scratchPos = useRef(new THREE.Vector3());
 
@@ -1062,6 +1073,10 @@ function LookAroundRig() {
 
   useFrame(() => {
     if (!initialized.current) return;
+    if (camera instanceof THREE.PerspectiveCamera && camera.fov !== fov.current) {
+      camera.fov = fov.current;
+      camera.updateProjectionMatrix();
+    }
     camera.rotation.set(pitch.current, yaw.current, 0);
     // Rechts-Vektor der AKTUELLEN Blickrichtung (nach dem obigen rotation.set
     // steht camera.quaternion schon auf dem neuen Stand — Object3D hält
@@ -1096,15 +1111,24 @@ function LookAroundRig() {
       pitch.current = Math.min(0.9, Math.max(-0.9, pitch.current - dy * 0.0045));
     };
     const onUp = () => { dragging.current = false; };
+    // Mausrad zoomt rein/raus (FOV-basiert, siehe fov-Ref oben). passive:false
+    // + preventDefault, sonst scrollt die Seite dahinter mit (Canvas ist kein
+    // natives Scroll-Element, bekäme das Wheel-Event sonst nur zur Kenntnis).
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      fov.current = Math.min(FOV_MAX, Math.max(FOV_MIN, fov.current + e.deltaY * 0.04));
+    };
     el.addEventListener("pointerdown", onDown);
     el.addEventListener("pointermove", onMove);
     el.addEventListener("pointerup", onUp);
     el.addEventListener("pointercancel", onUp);
+    el.addEventListener("wheel", onWheel, { passive: false });
     return () => {
       el.removeEventListener("pointerdown", onDown);
       el.removeEventListener("pointermove", onMove);
       el.removeEventListener("pointerup", onUp);
       el.removeEventListener("pointercancel", onUp);
+      el.removeEventListener("wheel", onWheel);
       el.style.touchAction = prevTouchAction;
     };
   }, [gl]);
@@ -1235,7 +1259,7 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
 
       <div className="absolute bottom-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-full pointer-events-none"
         style={{ background: "rgba(4,10,9,0.5)", border: "1px solid rgba(255,255,255,0.08)" }}>
-        <span className="text-[9px] text-gray-400">Klicken &amp; ziehen zum Umschauen</span>
+        <span className="text-[9px] text-gray-400">Klicken &amp; ziehen zum Umschauen · Scrollen zum Zoomen</span>
       </div>
 
       {panel && (
