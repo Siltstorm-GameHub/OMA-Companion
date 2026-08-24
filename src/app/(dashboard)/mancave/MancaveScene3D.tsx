@@ -540,8 +540,12 @@ function AbzeichenPin({ badgeKey, name, position }: { badgeKey: string; name: st
  * ersten Regal) wird zum neuen, praktisch konstanten X-Offset.
  */
 const WANDERPOKAL_MODELS: Record<string, { url: string; fix: [number, number, number]; scale: number }> = {
-  racing:    { url: "/models/wanderpokal_rennlegende.glb",    fix: [0, 0, 0], scale: 0.6294 },
-  community: { url: "/models/wanderpokal_communitystar.glb",  fix: [0.0062, -6.371, 0.0656], scale: 0.0471 },
+  racing:     { url: "/models/wanderpokal_rennlegende.glb",   fix: [0, 0, 0], scale: 0.6294 },
+  community:  { url: "/models/wanderpokal_communitystar.glb", fix: [0.0062, -6.371, 0.0656], scale: 0.0471 },
+  arcade:     { url: "/models/wanderpokal_arcade.glb",        fix: [0, 5.5317, -0.0036], scale: 0.007348 },
+  sport:      { url: "/models/wanderpokal_sport.glb",         fix: [0, 0, 0], scale: 0.06491 },
+  beat_em_up: { url: "/models/wanderpokal_beat_em_up.glb",    fix: [0, 4.9633, 0.009], scale: 0.018013 },
+  special:    { url: "/models/wanderpokal_special.glb",       fix: [1.3144, -0.445, 6.2088], scale: 0.3342 },
 };
 const WANDERPOKAL_MODEL_DEFAULT = { url: "/models/wanderpokal_generic.glb", fix: [0, 0, 0] as [number, number, number], scale: 0.01637 };
 

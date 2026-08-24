@@ -510,11 +510,16 @@ const WANDERPOKAL_SCOPE_LABEL: Record<"category" | "genre", string> = {
 };
 
 // Vorschaubilder derselben 3D-Assets, die auch im Regal stehen (siehe
-// WANDERPOKAL_MODELS in MancaveScene3D.tsx) — nur 3 Stück, da 10 der 12
-// Scopes sich noch den generischen Gold-Pokal teilen.
+// WANDERPOKAL_MODELS in MancaveScene3D.tsx) — 6 eigene, die übrigen 6
+// Scopes (shooter + die 5 abstrakten Kategorien) teilen sich weiterhin den
+// generischen Gold-Pokal, bis es dafür passende Assets gibt.
 const WANDERPOKAL_THUMBS: Record<string, string> = {
   racing: "/mancave-trophies/wanderpokal_rennlegende.png",
   community: "/mancave-trophies/wanderpokal_communitystar.png",
+  arcade: "/mancave-trophies/wanderpokal_arcade.png",
+  sport: "/mancave-trophies/wanderpokal_sport.png",
+  beat_em_up: "/mancave-trophies/wanderpokal_beat_em_up.png",
+  special: "/mancave-trophies/wanderpokal_special.png",
 };
 const WANDERPOKAL_THUMB_DEFAULT = "/mancave-trophies/wanderpokal_generic.png";
 
