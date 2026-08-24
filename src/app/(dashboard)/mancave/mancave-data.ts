@@ -61,15 +61,22 @@ export interface MancaveWanderpokal {
 /**
  * ALLE 12 Wanderpokal-Scopes (6 Kategorie + 6 Genre), unabhängig vom eigenen
  * Besitz — für das Detail-Panel ("wer hält gerade die anderen Wanderpokale").
- * `holderName`/`winCount` sind null, wenn der Scope noch nie vergeben wurde.
+ * `holder*`/`winCount` sind null, wenn der Scope noch nie vergeben wurde.
+ * `myWinCount` kommt aus `WanderpocalStat` (kumulierte Siege pro Scope,
+ * unabhängig davon wer GERADE hält) — für den Vergleich "eigene Siege vs.
+ * aktueller Halter", auch wenn man selbst nie Halter war.
  */
 export interface MancaveWanderpokalStatus {
-  scopeType:   string;
-  scopeValue:  string;
-  title:       string;
-  ownedByMe:   boolean;
-  holderName:  string | null;
-  winCount:    number | null;
+  scopeType:        string;
+  scopeValue:        string;
+  title:             string;
+  ownedByMe:         boolean;
+  holderUserId:      string | null;
+  holderName:        string | null;
+  holderAvatarUrl:   string | null;
+  holderRankPoints:  number | null;
+  winCount:          number | null;
+  myWinCount:        number;
 }
 
 /** Ausbau-Stand eines Mancave-Slots (siehe mancave-items.ts, mancave-economy.ts). */

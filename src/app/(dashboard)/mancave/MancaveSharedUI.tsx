@@ -9,6 +9,7 @@ import {
   Check, Sparkles,
 } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
+import RankedAvatar from "@/components/RankedAvatar";
 import { useNow } from "@/lib/useNow";
 import { computeAccrual, formatDuration, getJob } from "@/lib/jobs";
 import { RANKS } from "@/lib/ranks";
@@ -17,7 +18,7 @@ import type { MancaveData } from "./mancave-data";
 import { cn } from "@/lib/utils";
 import { CATEGORY_CONFIG } from "@/lib/wanderpocal";
 
-export type MancavePanel = "trophy" | "items" | "jobs" | "mail" | "wanderpokale" | "eventpokale" | null;
+export type MancavePanel = "trophy" | "items" | "jobs" | "mail" | "wanderpokale-kategorie" | "wanderpokale-genre" | "eventpokale" | null;
 
 /**
  * `<Html>` (drei, 3D-verankerte Overlays wie der Monitor-Screen) rendert
@@ -55,7 +56,8 @@ function notificationCount(data: MancaveData): number {
 
 const PANEL_TITLES: Record<Exclude<MancavePanel, null>, string> = {
   trophy: "Statistik", items: "Ausbau", jobs: "Jobbörse", mail: "Postfach",
-  wanderpokale: "Wanderpokale", eventpokale: "Event-Pokale",
+  "wanderpokale-kategorie": "Kategorie-Wanderpokale", "wanderpokale-genre": "Genre-Wanderpokale",
+  eventpokale: "Event-Pokale",
 };
 
 /**
@@ -106,7 +108,8 @@ export function MonitorScreenContent({ data }: { data: MancaveData }) {
           {view === "items" && <ItemsPanel data={data} />}
           {view === "jobs" && <JobsPanel data={data} />}
           {view === "mail" && <MailPanel data={data} onOpenPanel={setView} />}
-          {view === "wanderpokale" && <WanderpokalePanel data={data} />}
+          {view === "wanderpokale-kategorie" && <WanderpokalePanel data={data} scopeType="category" />}
+          {view === "wanderpokale-genre" && <WanderpokalePanel data={data} scopeType="genre" />}
           {view === "eventpokale" && <EventPokalePanel data={data} />}
         </div>
       </div>
@@ -501,36 +504,62 @@ export function TrophyPanel({ data }: { data: MancaveData }) {
  * + Siegen (oder "noch nie vergeben"), damit man sieht, wen man als
  * nächstes ablösen könnte.
  */
-export function WanderpokalePanel({ data }: { data: MancaveData }) {
+const WANDERPOKAL_SCOPE_LABEL: Record<"category" | "genre", string> = {
+  category: "Kategorie-Wanderpokale", genre: "Genre-Wanderpokale",
+};
+
+/**
+ * Zeigt nur die 6 Scopes EINES Typs (Kategorie ODER Genre) — je nachdem,
+ * welches der beiden Kreuz-Regale angeklickt wurde (User-Wunsch: getrennte
+ * Panels statt einer gemeinsamen 12er-Liste). Für Scopes, die ein ANDERER
+ * User hält: dessen Profilbild samt Rang-Rahmen + Siege, klickbar zum
+ * Profil. Zusätzlich immer die eigene Siegzahl im selben Scope zum
+ * Vergleich (`myWinCount`, aus `WanderpocalStat` — unabhängig davon, ob man
+ * je Halter war).
+ */
+export function WanderpokalePanel({ data, scopeType }: { data: MancaveData; scopeType: "category" | "genre" }) {
+  const rows = data.wanderpokalStatus.filter(s => s.scopeType === scopeType);
+  const ownedCount = rows.filter(s => s.ownedByMe).length;
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <Trophy className="w-4 h-4 text-amber-400" />
-        <h3 className="text-sm font-semibold text-white">Wanderpokale</h3>
+        <h3 className="text-sm font-semibold text-white">{WANDERPOKAL_SCOPE_LABEL[scopeType]}</h3>
       </div>
       <p className="text-[11px] text-gray-500">
-        {data.wanderpokale.length > 0
-          ? `Du hältst gerade ${data.wanderpokale.length} von 12 Wanderpokalen.`
-          : "Du hältst aktuell keinen Wanderpokal — bei jedem Sieg kann sich das ändern."}
+        {ownedCount > 0
+          ? `Du hältst gerade ${ownedCount} von 6.`
+          : "Du hältst aktuell keinen davon — bei jedem Sieg kann sich das ändern."}
       </p>
       <div className="space-y-1.5">
-        {data.wanderpokalStatus.map(s => (
+        {rows.map(s => (
           <div key={`${s.scopeType}:${s.scopeValue}`}
             className={cn(
               "flex items-center justify-between gap-2 text-xs px-2.5 py-2 rounded-lg",
               s.ownedByMe ? "bg-amber-400/10 border border-amber-400/30" : "bg-white/[0.03]",
             )}>
             <div className="flex items-center gap-2 min-w-0">
-              <Trophy className={cn("w-3.5 h-3.5 shrink-0", s.ownedByMe ? "text-amber-300" : "text-gray-600")} />
+              {!s.ownedByMe && s.holderUserId ? (
+                <a href={`/profile/${s.holderUserId}`} className="shrink-0">
+                  <RankedAvatar rankPoints={s.holderRankPoints ?? 0} src={s.holderAvatarUrl} alt={s.holderName ?? "Halter"} size={22} rounded="full" />
+                </a>
+              ) : (
+                <Trophy className={cn("w-3.5 h-3.5 shrink-0", s.ownedByMe ? "text-amber-300" : "text-gray-600")} />
+              )}
               <span className={cn("truncate", s.ownedByMe ? "text-amber-200 font-semibold" : "text-gray-300")}>{s.title}</span>
             </div>
-            <span className={cn("text-[10px] shrink-0", s.ownedByMe ? "text-amber-300/80" : "text-gray-500")}>
-              {s.ownedByMe
-                ? `${s.winCount} ${s.winCount === 1 ? "Sieg" : "Siege"}`
-                : s.holderName
-                  ? `${s.holderName} · ${s.winCount} ${s.winCount === 1 ? "Sieg" : "Siege"}`
-                  : "noch nie vergeben"}
-            </span>
+            <div className="text-right shrink-0">
+              <div className={cn("text-[10px]", s.ownedByMe ? "text-amber-300/80" : "text-gray-500")}>
+                {s.ownedByMe
+                  ? `${s.winCount} ${s.winCount === 1 ? "Sieg" : "Siege"}`
+                  : s.holderUserId
+                    ? <a href={`/profile/${s.holderUserId}`} className="hover:underline">{s.holderName} · {s.winCount} {s.winCount === 1 ? "Sieg" : "Siege"}</a>
+                    : "noch nie vergeben"}
+              </div>
+              {!s.ownedByMe && (
+                <div className="text-[9px] text-gray-600">Du: {s.myWinCount} {s.myWinCount === 1 ? "Sieg" : "Siege"}</div>
+              )}
+            </div>
           </div>
         ))}
       </div>

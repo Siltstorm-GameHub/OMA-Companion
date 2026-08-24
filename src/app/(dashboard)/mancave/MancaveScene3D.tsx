@@ -1572,9 +1572,9 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
           {/* Hover-Zielflächen direkt an den Pokal-Möbeln — kein permanent
               sichtbarer Button mehr (User-Wunsch), stattdessen Glow-Effekt +
               mausfolgendes Tooltip (siehe ShelfHotspot/hoverTooltip). */}
-          <ShelfHotspot label="Kategorie-Wanderpokale" onOpen={() => setPanel("wanderpokale")} onHoverChange={handleHover}
+          <ShelfHotspot label="Kategorie-Wanderpokale" onOpen={() => setPanel("wanderpokale-kategorie")} onHoverChange={handleHover}
             center={[WANDERPOKAL_REGAL_POS.x, 2.0, 0.85]} size={[1.15, 1.05, 0.35]} />
-          <ShelfHotspot label="Genre-Wanderpokale" onOpen={() => setPanel("wanderpokale")} onHoverChange={handleHover}
+          <ShelfHotspot label="Genre-Wanderpokale" onOpen={() => setPanel("wanderpokale-genre")} onHoverChange={handleHover}
             center={[WANDERPOKAL_REGAL_2_POS.x, 2.0, 0.85]} size={[1.15, 1.05, 0.35]} />
           <ShelfHotspot label="Event-Pokale" onOpen={() => setPanel("eventpokale")} onHoverChange={handleHover}
             center={[-1.145, 1.94, -0.95]} size={[0.5, 0.75, 0.5]} />
@@ -1699,7 +1699,8 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
             {panel === "items" && <ItemsPanel data={data} />}
             {panel === "jobs" && <JobsPanel data={data} />}
             {panel === "mail" && <MailPanel data={data} onOpenPanel={setPanel} />}
-            {panel === "wanderpokale" && <WanderpokalePanel data={data} />}
+            {panel === "wanderpokale-kategorie" && <WanderpokalePanel data={data} scopeType="category" />}
+            {panel === "wanderpokale-genre" && <WanderpokalePanel data={data} scopeType="genre" />}
             {panel === "eventpokale" && <EventPokalePanel data={data} />}
           </div>
         </div>

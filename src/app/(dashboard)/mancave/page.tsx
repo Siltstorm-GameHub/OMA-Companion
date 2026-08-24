@@ -28,7 +28,7 @@ export default async function MancavePage() {
 
   const [
     user, eventCount, startedEvents, tournamentCount, pokale, leaderboardRank,
-    userSystemBadges, userCustomBadges, lulPollWins, room, tiers, jobs, wanderpokalHolders,
+    userSystemBadges, userCustomBadges, lulPollWins, room, tiers, jobs, wanderpokalHolders, myWanderpokalStats,
   ] = await Promise.all([
     prisma.user.findUnique({
       where:  { id: userId },
@@ -58,8 +58,14 @@ export default async function MancavePage() {
     // Alle 12 Scopes zusammen sind eine Handvoll Zeilen — genauso teuer, ALLE
     // Halter auf einmal zu laden (statt nur die des Users), damit das
     // Detail-Panel zeigen kann, wer die Wanderpokale hält, die man selbst
-    // nicht besitzt.
-    prisma.wanderpocalHolder.findMany({ include: { user: { select: { username: true, name: true } } } }),
+    // nicht besitzt. Inkl. Avatar/Rang für die Profilbild-Anzeige im Panel.
+    prisma.wanderpocalHolder.findMany({
+      include: { user: { select: { id: true, username: true, name: true, image: true, rankPoints: true } } },
+    }),
+    // Eigene kumulierte Siege pro Scope (WanderpocalStat, unabhängig vom
+    // AKTUELLEN Halter) — für den "Du: X Siege"-Vergleich im Detail-Panel,
+    // auch bei Scopes, die man selbst nie gehalten hat.
+    prisma.wanderpocalStat.findMany({ where: { userId } }),
   ]);
 
   if (!user) redirect("/login");
@@ -137,14 +143,19 @@ export default async function MancavePage() {
     ...Object.keys(CATEGORY_CONFIG).map((v): [string, string] => ["category", v]),
     ...Object.keys(GENRE_CONFIG).map((v): [string, string] => ["genre", v]),
   ];
+  const myStatsMap = new Map(myWanderpokalStats.map(s => [`${s.scopeType}:${s.scopeValue}`, s.winCount]));
   const wanderpokalStatus: MancaveWanderpokalStatus[] = allScopes.map(([scopeType, scopeValue]) => {
     const holder = wanderpokalHolders.find(h => h.scopeType === scopeType && h.scopeValue === scopeValue);
     return {
       scopeType, scopeValue,
-      title:      getScopeTitle(scopeType, scopeValue),
-      ownedByMe:  holder?.userId === userId,
-      holderName: holder ? (holder.user.username ?? holder.user.name ?? "Unbekannt") : null,
-      winCount:   holder?.winCount ?? null,
+      title:            getScopeTitle(scopeType, scopeValue),
+      ownedByMe:        holder?.userId === userId,
+      holderUserId:     holder?.userId ?? null,
+      holderName:       holder ? (holder.user.username ?? holder.user.name ?? "Unbekannt") : null,
+      holderAvatarUrl:  holder?.user.image ?? null,
+      holderRankPoints: holder?.user.rankPoints ?? null,
+      winCount:         holder?.winCount ?? null,
+      myWinCount:       myStatsMap.get(`${scopeType}:${scopeValue}`) ?? 0,
     };
   });
 
