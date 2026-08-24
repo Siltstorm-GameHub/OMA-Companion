@@ -35,7 +35,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Html, useGLTF, useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import RankedAvatar from "@/components/RankedAvatar";
-import { MonitorScreenContent, TrophyPanel, ItemsPanel, JobsPanel, MailPanel, type MancavePanel } from "./MancaveSharedUI";
+import { MonitorScreenContent, TrophyPanel, ItemsPanel, JobsPanel, MailPanel, WanderpokalePanel, EventPokalePanel, type MancavePanel } from "./MancaveSharedUI";
 import type { MancaveData } from "./mancave-data";
 
 const ROOM_MODEL_URL = "/models/mancave_room.glb";
@@ -421,6 +421,125 @@ const EVENT_POKAL_REGAL_CFG: ExtraCfg = { url: "/models/event_pokal_regal.glb", 
 // durchsichtig) — Rotation bleibt deshalb unkritisch.
 const ABZEICHEN_VITRINE_POS = new THREE.Vector3(-1.1, 0, -0.95);
 const ABZEICHEN_VITRINE_CFG: ExtraCfg = { url: "/models/vitrine_pokal.glb", fix: [0, 0, 0], scale: 0.9, position: ABZEICHEN_VITRINE_POS };
+
+/**
+ * Einzelne Pokal-Modelle auf den beiden Regalen — nur was der User TATSÄCHLICH
+ * besitzt wird gerendert (User-Wunsch: leere Sockel bleiben leer, keine
+ * generischen Platzhalter für unbesetzte Wanderpokal-Scopes).
+ *
+ * WANDERPOKAL_MODELS: pro Scope-Value ein Modell + individueller fix/scale
+ * (jedes Quell-Asset hat einen komplett anderen nativen Maßstab, per
+ * Blender-Messscript auf eine einheitliche reale Ziel-Höhe von ~0.18m
+ * umgerechnet). "racing" -> Rocket-League-Cup, "community" -> T20-Pokal
+ * (User-Wunsch, thematisch bewusst beliebig), alle anderen 10 Scopes teilen
+ * sich vorerst den dezimierten Gold-Pokal (824k -> 41k Polys) als
+ * Platzhalter, bis es mehr eigene Modelle gibt.
+ *
+ * WANDERPOKAL_SLOTS: 12 feste Weltpositionen, eine pro Scope — abgeleitet
+ * aus den 4 ECHTEN Ablage-Ebenen von "pokalregal.glb" (per Flächen-Scan
+ * gefunden: durchgehend nach oben zeigende, breite Flächen bei vier
+ * unterschiedlichen Höhen, keine geschätzten Werte). Umrechnung
+ * Regal-lokal -> Welt: world = WANDERPOKAL_REGAL_POS + 0.885 * (regal-fix +
+ * lokale Regal-Koordinate), 3 Scopes pro Ebene, innerhalb der jeweils
+ * verfügbaren Breite gleichmäßig verteilt.
+ */
+const WANDERPOKAL_MODELS: Record<string, { url: string; fix: [number, number, number]; scale: number }> = {
+  racing:    { url: "/models/wanderpokal_rennlegende.glb",    fix: [0, 0, 0], scale: 0.6294 },
+  community: { url: "/models/wanderpokal_communitystar.glb",  fix: [0.0062, -6.371, 0.0656], scale: 0.0471 },
+};
+const WANDERPOKAL_MODEL_DEFAULT = { url: "/models/wanderpokal_generic.glb", fix: [0, 0, 0] as [number, number, number], scale: 0.01637 };
+
+const WANDERPOKAL_SLOTS: Record<string, THREE.Vector3> = {
+  // Ebene 4 (oben, schmal, Welt-Y≈2.327)
+  competitive: new THREE.Vector3(0.225, 2.327, 0.887),
+  fun:         new THREE.Vector3(0.330, 2.327, 0.887),
+  casual:      new THREE.Vector3(0.435, 2.327, 0.887),
+  // Ebene 3 (Welt-Y≈2.084, breit)
+  training:         new THREE.Vector3(-0.246, 2.084, 0.887),
+  community_event:  new THREE.Vector3(0.207, 2.084, 0.887),
+  special:          new THREE.Vector3(0.660, 2.084, 0.887),
+  // Ebene 2 (Welt-Y≈1.840, breit)
+  arcade:     new THREE.Vector3(-0.246, 1.840, 0.887),
+  beat_em_up: new THREE.Vector3(0.207, 1.840, 0.887),
+  sport:      new THREE.Vector3(0.660, 1.840, 0.887),
+  // Ebene 1 (unten, Welt-Y≈1.595)
+  racing:    new THREE.Vector3(-0.012, 1.595, 0.887),
+  shooter:   new THREE.Vector3(0.207, 1.595, 0.887),
+  community: new THREE.Vector3(0.425, 1.595, 0.887),
+};
+
+function WanderpokalTrophy({ scopeValue, position }: { scopeValue: string; position: THREE.Vector3 }) {
+  const cfg = WANDERPOKAL_MODELS[scopeValue] ?? WANDERPOKAL_MODEL_DEFAULT;
+  const { scene } = useGLTF(cfg.url);
+  const cloned = useMemo(() => scene.clone(true), [scene]);
+  return (
+    <group position={position}>
+      <group scale={cfg.scale}>
+        <primitive object={cloned} position={cfg.fix} />
+      </group>
+    </group>
+  );
+}
+for (const scope of Object.keys(WANDERPOKAL_SLOTS)) useGLTF.preload(WANDERPOKAL_MODELS[scope]?.url ?? WANDERPOKAL_MODEL_DEFAULT.url);
+
+/**
+ * Event-Pokale: 6 Kategorie-Modelle (je ein individuell eingefärbter
+ * Edelstein am Sockel, siehe event_pokal_*.glb), pro Kategorie bis zu 3
+ * Stück sichtbar gestapelt (User-Wunsch), Rest nur als "+N"-Zahl.
+ *
+ * Slot-Achsen abgeleitet aus den beiden ECHTEN, offenen Fächern von
+ * "event_pokal_regal.glb" (per Vertex-Scan vermessen, zwei sauber
+ * getrennte 0.368m-Würfel-Nischen): World-X = Tiefe (hintere Wand bei
+ * -1.329 -> Öffnung bei -0.961) = Stapel-Achse, World-Z = Wandlänge =
+ * Kategorie-Achse, World-Y = welche Nische (untere/obere).
+ */
+const EVENT_POKAL_SCALE = 0.0373;
+const EVENT_POKAL_FIX: [number, number, number] = [0, 0, 0];
+const EVENT_POKAL_STACK_X = [-1.289, -1.145, -1.001]; // hinten -> vorne
+const EVENT_POKAL_CATEGORY_SLOTS: Record<string, { z: number; y: number }> = {
+  competitive:      { z: -1.094, y: 1.652 }, // untere Nische
+  fun:              { z: -0.950, y: 1.652 },
+  casual:           { z: -0.806, y: 1.652 },
+  training:         { z: -1.094, y: 1.999 }, // obere Nische
+  community_event:  { z: -0.950, y: 1.999 },
+  special:          { z: -0.806, y: 1.999 },
+};
+
+function EventPokalStack({ category, count }: { category: string; count: number }) {
+  const slot = EVENT_POKAL_CATEGORY_SLOTS[category];
+  const url = `/models/event_pokal_${category}.glb`;
+  const { scene } = useGLTF(url);
+  const visible = Math.min(count, EVENT_POKAL_STACK_X.length);
+  // Jede sichtbare Kopie braucht ein eigenes Object3D (kann nicht dieselbe
+  // Instanz an mehreren Positionen im Szenengraph teilen) — ein einzelnes
+  // useMemo für alle statt eins pro map()-Durchlauf (Hooks dürfen nicht
+  // bedingt/in Callbacks aufgerufen werden).
+  const clones = useMemo(
+    () => Array.from({ length: EVENT_POKAL_STACK_X.length }, () => scene.clone(true)),
+    [scene],
+  );
+  if (!slot || count === 0) return null;
+  return (
+    <>
+      {EVENT_POKAL_STACK_X.slice(0, visible).map((x, i) => (
+        <group key={i} position={[x, slot.y, slot.z]}>
+          <group scale={EVENT_POKAL_SCALE}>
+            <primitive object={clones[i]} position={EVENT_POKAL_FIX} />
+          </group>
+        </group>
+      ))}
+      {count > visible && (
+        <Html position={[EVENT_POKAL_STACK_X[visible - 1] + 0.06, slot.y + 0.05, slot.z]} center>
+          <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold text-amber-200"
+            style={{ background: "rgba(4,10,9,0.8)", border: "1px solid rgba(245,158,11,0.4)" }}>
+            +{count - visible}
+          </span>
+        </Html>
+      )}
+    </>
+  );
+}
+for (const cat of Object.keys(EVENT_POKAL_CATEGORY_SLOTS)) useGLTF.preload(`/models/event_pokal_${cat}.glb`);
 
 /**
  * Zusatzobjekte (Stufe 0-4, siehe mancave-items.ts EXTRA_ITEMS + "teppich"-
@@ -1168,6 +1287,12 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
   const [panel, setPanel] = useState<MancavePanel>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const pokaleByCategory = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const p of data.pokale) counts[p.category] = (counts[p.category] ?? 0) + 1;
+    return counts;
+  }, [data.pokale]);
+
   const deskTier = data.items.find(i => i.key === "schreibtisch")?.tier ?? 1;
   const tastaturTier = data.items.find(i => i.key === "tastatur")?.tier ?? 1;
   const mausTier = data.items.find(i => i.key === "maus")?.tier ?? 1;
@@ -1217,6 +1342,31 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
           <ExtraProp tier={1} cfg={WANDERPOKAL_REGAL_CFG} />
           <ExtraProp tier={1} cfg={EVENT_POKAL_REGAL_CFG} />
           <ExtraProp tier={1} cfg={ABZEICHEN_VITRINE_CFG} />
+          {/* Nur was der User tatsächlich besitzt steht auf dem Regal — leere
+              Scopes/Kategorien bleiben unbesetzt (User-Wunsch). */}
+          {data.wanderpokale.map(w => {
+            const slot = WANDERPOKAL_SLOTS[w.scopeValue];
+            return slot ? <WanderpokalTrophy key={w.scopeValue} scopeValue={w.scopeValue} position={slot} /> : null;
+          })}
+          {Object.keys(EVENT_POKAL_CATEGORY_SLOTS).map(cat => (
+            <EventPokalStack key={cat} category={cat} count={pokaleByCategory[cat] ?? 0} />
+          ))}
+          {/* Klick-Hotspots direkt an den Regalen — öffnen Detail-Panels statt
+              der allgemeinen Statistik (siehe WanderpokalePanel/EventPokalePanel). */}
+          <Html position={[WANDERPOKAL_REGAL_POS.x, WANDERPOKAL_REGAL_POS.y + 0.35, WANDERPOKAL_REGAL_POS.z]} center>
+            <button onClick={() => setPanel("wanderpokale")}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full whitespace-nowrap"
+              style={{ background: "rgba(4,10,9,0.7)", border: "1px solid rgba(245,158,11,0.3)", backdropFilter: "blur(3px)" }}>
+              <span className="text-[10px] font-semibold text-amber-300">🏆 Wanderpokale</span>
+            </button>
+          </Html>
+          <Html position={[-1.145, 2.45, -0.95]} center>
+            <button onClick={() => setPanel("eventpokale")}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full whitespace-nowrap"
+              style={{ background: "rgba(4,10,9,0.7)", border: "1px solid rgba(245,158,11,0.3)", backdropFilter: "blur(3px)" }}>
+              <span className="text-[10px] font-semibold text-amber-300">🏅 Event-Pokale</span>
+            </button>
+          </Html>
           <ExtraProp tier={nanoleafTier >= 1 ? 1 : 0} cfg={BLITZ_CFG} />
           <ExtraProp tier={nanoleafTier >= 2 ? 1 : 0} cfg={NANOLEAF_MONITOR_CFG} />
           <ExtraProp tier={nanoleafTier >= 3 ? 1 : 0} cfg={NANOLEAF_WALL_CFG} />
@@ -1330,6 +1480,8 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
             {panel === "items" && <ItemsPanel data={data} />}
             {panel === "jobs" && <JobsPanel data={data} />}
             {panel === "mail" && <MailPanel data={data} onOpenPanel={setPanel} />}
+            {panel === "wanderpokale" && <WanderpokalePanel data={data} />}
+            {panel === "eventpokale" && <EventPokalePanel data={data} />}
           </div>
         </div>
       )}

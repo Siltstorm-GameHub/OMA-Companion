@@ -41,8 +41,35 @@ export interface MancaveBadge {
 export interface MancavePokal {
   id:        string;
   title:     string;
+  category:  string;
   isSeries:  boolean;
   awardedAt: string;
+  /** Für den "Zur Turnierseite"-Link im Detail-Panel — genau eines von beiden ist gesetzt. */
+  eventId:   string | null;
+  seriesId:  string | null;
+}
+
+/** Wanderpokal-Scope, den der aktuelle User gerade hält (siehe wanderpocal.ts). */
+export interface MancaveWanderpokal {
+  scopeType:  string;
+  scopeValue: string;
+  title:      string;
+  winCount:   number;
+  heldSince:  string;
+}
+
+/**
+ * ALLE 12 Wanderpokal-Scopes (6 Kategorie + 6 Genre), unabhängig vom eigenen
+ * Besitz — für das Detail-Panel ("wer hält gerade die anderen Wanderpokale").
+ * `holderName`/`winCount` sind null, wenn der Scope noch nie vergeben wurde.
+ */
+export interface MancaveWanderpokalStatus {
+  scopeType:   string;
+  scopeValue:  string;
+  title:       string;
+  ownedByMe:   boolean;
+  holderName:  string | null;
+  winCount:    number | null;
 }
 
 /** Ausbau-Stand eines Mancave-Slots (siehe mancave-items.ts, mancave-economy.ts). */
@@ -77,6 +104,8 @@ export interface MancaveData {
   topGames:        string[];
   badges:          MancaveBadge[];
   pokale:          MancavePokal[];
+  wanderpokale:    MancaveWanderpokal[];
+  wanderpokalStatus: MancaveWanderpokalStatus[];
   gadgets:         MancaveGadget[];
   /**
    * Alle aufgestellten Gaming-Zimmer-Item-Keys (ungefiltert) — Restbestand aus

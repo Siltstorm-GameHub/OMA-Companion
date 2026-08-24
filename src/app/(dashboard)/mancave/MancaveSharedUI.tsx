@@ -15,8 +15,9 @@ import { RANKS } from "@/lib/ranks";
 import type { JobListEntry, JobOverview } from "@/lib/job-service";
 import type { MancaveData } from "./mancave-data";
 import { cn } from "@/lib/utils";
+import { CATEGORY_CONFIG } from "@/lib/wanderpocal";
 
-export type MancavePanel = "trophy" | "items" | "jobs" | "mail" | null;
+export type MancavePanel = "trophy" | "items" | "jobs" | "mail" | "wanderpokale" | "eventpokale" | null;
 
 /**
  * `<Html>` (drei, 3D-verankerte Overlays wie der Monitor-Screen) rendert
@@ -54,6 +55,7 @@ function notificationCount(data: MancaveData): number {
 
 const PANEL_TITLES: Record<Exclude<MancavePanel, null>, string> = {
   trophy: "Statistik", items: "Ausbau", jobs: "Jobbörse", mail: "Postfach",
+  wanderpokale: "Wanderpokale", eventpokale: "Event-Pokale",
 };
 
 /**
@@ -104,6 +106,8 @@ export function MonitorScreenContent({ data }: { data: MancaveData }) {
           {view === "items" && <ItemsPanel data={data} />}
           {view === "jobs" && <JobsPanel data={data} />}
           {view === "mail" && <MailPanel data={data} onOpenPanel={setView} />}
+          {view === "wanderpokale" && <WanderpokalePanel data={data} />}
+          {view === "eventpokale" && <EventPokalePanel data={data} />}
         </div>
       </div>
     );
@@ -486,6 +490,91 @@ export function TrophyPanel({ data }: { data: MancaveData }) {
           <p className="text-xs text-gray-300 flex items-center gap-1.5"><Gamepad2 className="w-3.5 h-3.5 text-blue-400 shrink-0" /> {data.topGames.slice(0, 3).join(" · ")}</p>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Detail-Panel fürs Wanderpokal-Regal (3D-Hotspot direkt am Möbel, siehe
+ * WANDERPOKAL_REGAL_CFG in MancaveScene3D.tsx) — zeigt ALLE 12 Scopes, nicht
+ * nur die eigenen: eigene Pokale hervorgehoben, fremde mit aktuellem Halter
+ * + Siegen (oder "noch nie vergeben"), damit man sieht, wen man als
+ * nächstes ablösen könnte.
+ */
+export function WanderpokalePanel({ data }: { data: MancaveData }) {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Trophy className="w-4 h-4 text-amber-400" />
+        <h3 className="text-sm font-semibold text-white">Wanderpokale</h3>
+      </div>
+      <p className="text-[11px] text-gray-500">
+        {data.wanderpokale.length > 0
+          ? `Du hältst gerade ${data.wanderpokale.length} von 12 Wanderpokalen.`
+          : "Du hältst aktuell keinen Wanderpokal — bei jedem Sieg kann sich das ändern."}
+      </p>
+      <div className="space-y-1.5">
+        {data.wanderpokalStatus.map(s => (
+          <div key={`${s.scopeType}:${s.scopeValue}`}
+            className={cn(
+              "flex items-center justify-between gap-2 text-xs px-2.5 py-2 rounded-lg",
+              s.ownedByMe ? "bg-amber-400/10 border border-amber-400/30" : "bg-white/[0.03]",
+            )}>
+            <div className="flex items-center gap-2 min-w-0">
+              <Trophy className={cn("w-3.5 h-3.5 shrink-0", s.ownedByMe ? "text-amber-300" : "text-gray-600")} />
+              <span className={cn("truncate", s.ownedByMe ? "text-amber-200 font-semibold" : "text-gray-300")}>{s.title}</span>
+            </div>
+            <span className={cn("text-[10px] shrink-0", s.ownedByMe ? "text-amber-300/80" : "text-gray-500")}>
+              {s.ownedByMe
+                ? `${s.winCount} ${s.winCount === 1 ? "Sieg" : "Siege"}`
+                : s.holderName
+                  ? `${s.holderName} · ${s.winCount} ${s.winCount === 1 ? "Sieg" : "Siege"}`
+                  : "noch nie vergeben"}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Detail-Panel fürs Event-Pokal-Regal — listet JEDEN einzelnen Pokal
+ * (nicht nur die ersten 3, die auf dem Regal stehen) mit Datum + Kategorie
+ * und einem Link zur jeweiligen Event-/Serienseite.
+ */
+export function EventPokalePanel({ data }: { data: MancaveData }) {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Medal className="w-4 h-4 text-amber-400" />
+        <h3 className="text-sm font-semibold text-white">Event-Pokale</h3>
+      </div>
+      {data.pokale.length > 0 ? (
+        <div className="space-y-1.5">
+          {data.pokale.map(p => {
+            const cat = CATEGORY_CONFIG[p.category];
+            const href = p.seriesId ? `/events/series/${p.seriesId}` : p.eventId ? `/tournament/${p.eventId}` : null;
+            const date = new Date(p.awardedAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
+            return (
+              <div key={p.id} className="flex items-center justify-between gap-2 text-xs px-2.5 py-2 rounded-lg bg-white/[0.03]">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="shrink-0">{cat?.emoji ?? "🏆"}</span>
+                  <div className="min-w-0">
+                    <p className="text-gray-300 truncate">{p.title}{p.isSeries && <span className="text-gray-500"> (Serie)</span>}</p>
+                    <p className="text-[10px] text-gray-500">{cat?.title ?? p.category} · {date}</p>
+                  </div>
+                </div>
+                {href && (
+                  <a href={href} className="shrink-0 text-[10px] text-teal-300 hover:text-teal-200 underline underline-offset-2">
+                    Zum Event
+                  </a>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : <p className="text-xs text-gray-600">Noch keine Event-Pokale gewonnen.</p>}
     </div>
   );
 }

@@ -10,8 +10,9 @@ import { parseFavoriteGames } from "@/lib/favorite-games";
 import { loadMancaveTiers, surfaceTierFrom } from "@/lib/mancave-economy";
 import { MANCAVE_ITEMS, nextUpgradeCost } from "@/lib/mancave-items";
 import { getJobOverview } from "@/lib/job-service";
+import { buildHoldersMap, getUserTrophies, getScopeTitle, CATEGORY_CONFIG, GENRE_CONFIG } from "@/lib/wanderpocal";
 import MancaveClient from "./MancaveClient";
-import { renderZoneFor, MANCAVE_GADGET_CATEGORIES, type MancaveGadget, type MancaveItemStatus, type MancaveData } from "./mancave-data";
+import { renderZoneFor, MANCAVE_GADGET_CATEGORIES, type MancaveGadget, type MancaveItemStatus, type MancaveData, type MancaveWanderpokal, type MancaveWanderpokalStatus } from "./mancave-data";
 
 export default async function MancavePage() {
   const me = await getSessionUser();
@@ -27,7 +28,7 @@ export default async function MancavePage() {
 
   const [
     user, eventCount, startedEvents, tournamentCount, pokale, leaderboardRank,
-    userSystemBadges, userCustomBadges, lulPollWins, room, tiers, jobs,
+    userSystemBadges, userCustomBadges, lulPollWins, room, tiers, jobs, wanderpokalHolders,
   ] = await Promise.all([
     prisma.user.findUnique({
       where:  { id: userId },
@@ -54,6 +55,11 @@ export default async function MancavePage() {
     loadRoom(userId),
     loadMancaveTiers(userId),
     getJobOverview(userId),
+    // Alle 12 Scopes zusammen sind eine Handvoll Zeilen — genauso teuer, ALLE
+    // Halter auf einmal zu laden (statt nur die des Users), damit das
+    // Detail-Panel zeigen kann, wer die Wanderpokale hält, die man selbst
+    // nicht besitzt.
+    prisma.wanderpocalHolder.findMany({ include: { user: { select: { username: true, name: true } } } }),
   ]);
 
   if (!user) redirect("/login");
@@ -117,6 +123,31 @@ export default async function MancavePage() {
   });
   const surfaceTier = surfaceTierFrom(tiers);
 
+  // Wanderpokale: eigene (für die 3D-Anzeige auf dem Regal) + alle 12 Scopes
+  // mit aktuellem Halter (fürs Detail-Panel, "wer hat den Rest").
+  const holdersMap = buildHoldersMap(wanderpokalHolders);
+  const wanderpokale: MancaveWanderpokal[] = getUserTrophies(holdersMap, userId).map(h => ({
+    scopeType:  h.scopeType,
+    scopeValue: h.scopeValue,
+    title:      getScopeTitle(h.scopeType, h.scopeValue),
+    winCount:   h.winCount,
+    heldSince:  h.heldSince.toISOString(),
+  }));
+  const allScopes: [string, string][] = [
+    ...Object.keys(CATEGORY_CONFIG).map((v): [string, string] => ["category", v]),
+    ...Object.keys(GENRE_CONFIG).map((v): [string, string] => ["genre", v]),
+  ];
+  const wanderpokalStatus: MancaveWanderpokalStatus[] = allScopes.map(([scopeType, scopeValue]) => {
+    const holder = wanderpokalHolders.find(h => h.scopeType === scopeType && h.scopeValue === scopeValue);
+    return {
+      scopeType, scopeValue,
+      title:      getScopeTitle(scopeType, scopeValue),
+      ownedByMe:  holder?.userId === userId,
+      holderName: holder ? (holder.user.username ?? holder.user.name ?? "Unbekannt") : null,
+      winCount:   holder?.winCount ?? null,
+    };
+  });
+
   const data: MancaveData = {
     displayName:     user.username ?? user.name ?? "Unbekannt",
     avatarUrl:       user.image,
@@ -140,7 +171,12 @@ export default async function MancavePage() {
       ...badges.map(b => ({ key: b.id, icon: b.icon, name: b.name, desc: b.desc })),
       ...userCustomBadges.map(uc => ({ key: uc.badge.id, icon: uc.badge.icon, name: uc.badge.name, desc: uc.badge.desc })),
     ],
-    pokale: pokale.map(p => ({ id: p.id, title: p.title, isSeries: p.isSeries, awardedAt: p.awardedAt.toISOString() })),
+    pokale: pokale.map(p => ({
+      id: p.id, title: p.title, category: p.category, isSeries: p.isSeries,
+      awardedAt: p.awardedAt.toISOString(), eventId: p.eventId, seriesId: p.seriesId,
+    })),
+    wanderpokale,
+    wanderpokalStatus,
     gadgets,
     roomItemKeys: room.placed.map(p => p.key),
     items,
