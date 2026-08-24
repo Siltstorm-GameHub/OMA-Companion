@@ -576,6 +576,34 @@ function EventPokalStack({ category, count }: { category: string; count: number 
 for (const cat of Object.keys(EVENT_POKAL_CATEGORY_SLOTS)) useGLTF.preload(`/models/event_pokal_${cat}.glb`);
 
 /**
+ * Unsichtbare Klick-/Hover-Fläche für die Pokal-Möbel (Regale + Vitrine) —
+ * User-Wunsch: keine permanent sichtbaren Buttons mehr, stattdessen ein
+ * auffälliger Hover-Effekt (halbtransparente Glow-Box über dem echten
+ * Möbel) plus ein Schriftzug, der der Maus folgt (nicht 3D-verankert im
+ * Raum, sondern echtes 2D-Tooltip über `clientX`/`clientY`, siehe
+ * `onHoverChange` in MancaveScene3D — ein <Html center>-Label würde nur an
+ * EINER festen Stelle im Raum kleben, nicht mit dem Cursor mitwandern).
+ * Die Box selbst ist die Klick-/Hover-Zielfläche (deutlich einfacher &
+ * zuverlässiger zu treffen als die echte, verschachtelte Fach-Geometrie).
+ */
+function ShelfHotspot({ label, center, size, onOpen, onHoverChange }: {
+  label: string; center: [number, number, number]; size: [number, number, number];
+  onOpen: () => void; onHoverChange: (label: string | null, clientX: number, clientY: number) => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <mesh position={center}
+      onPointerOver={e => { e.stopPropagation(); setHovered(true); onHoverChange(label, e.clientX, e.clientY); }}
+      onPointerMove={e => { e.stopPropagation(); onHoverChange(label, e.clientX, e.clientY); }}
+      onPointerOut={e => { e.stopPropagation(); setHovered(false); onHoverChange(null, e.clientX, e.clientY); }}
+      onClick={e => { e.stopPropagation(); onOpen(); }}>
+      <boxGeometry args={size} />
+      <meshBasicMaterial color="#f59e0b" transparent opacity={hovered ? 0.22 : 0} depthWrite={false} />
+    </mesh>
+  );
+}
+
+/**
  * Zusatzobjekte (Stufe 0-4, siehe mancave-items.ts EXTRA_ITEMS + "teppich"-
  * artige Fälle): anders als die Slots oben haben diese noch keine echten
  * Stufen-Modelle — EIN Modell erscheint einfach, sobald Stufe > 0 (statt
@@ -1327,6 +1355,12 @@ function LookAroundRig() {
 export default function MancaveScene3D({ data }: { data: MancaveData }) {
   const [panel, setPanel] = useState<MancavePanel>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [hoverTooltip, setHoverTooltip] = useState<{ label: string; x: number; y: number } | null>(null);
+  const handleHover = (label: string | null, clientX: number, clientY: number) => {
+    if (!label) { setHoverTooltip(null); return; }
+    const rect = containerRef.current?.getBoundingClientRect();
+    setHoverTooltip({ label, x: clientX - (rect?.left ?? 0), y: clientY - (rect?.top ?? 0) });
+  };
 
   const pokaleByCategory = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -1393,29 +1427,17 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
           {Object.keys(EVENT_POKAL_CATEGORY_SLOTS).map(cat => (
             <EventPokalStack key={cat} category={cat} count={pokaleByCategory[cat] ?? 0} />
           ))}
-          {/* Klick-Hotspots direkt an den Regalen — öffnen Detail-Panels statt
-              der allgemeinen Statistik (siehe WanderpokalePanel/EventPokalePanel). */}
-          <Html position={[WANDERPOKAL_REGAL_POS.x, WANDERPOKAL_REGAL_POS.y + 0.35, WANDERPOKAL_REGAL_POS.z]} center>
-            <button onClick={() => setPanel("wanderpokale")}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full whitespace-nowrap"
-              style={{ background: "rgba(4,10,9,0.7)", border: "1px solid rgba(245,158,11,0.3)", backdropFilter: "blur(3px)" }}>
-              <span className="text-[10px] font-semibold text-amber-300">🏆 Kategorie-Wanderpokale</span>
-            </button>
-          </Html>
-          <Html position={[WANDERPOKAL_REGAL_2_POS.x, WANDERPOKAL_REGAL_2_POS.y + 0.35, WANDERPOKAL_REGAL_2_POS.z]} center>
-            <button onClick={() => setPanel("wanderpokale")}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full whitespace-nowrap"
-              style={{ background: "rgba(4,10,9,0.7)", border: "1px solid rgba(245,158,11,0.3)", backdropFilter: "blur(3px)" }}>
-              <span className="text-[10px] font-semibold text-amber-300">🏆 Genre-Wanderpokale</span>
-            </button>
-          </Html>
-          <Html position={[-1.145, 2.45, -0.95]} center>
-            <button onClick={() => setPanel("eventpokale")}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full whitespace-nowrap"
-              style={{ background: "rgba(4,10,9,0.7)", border: "1px solid rgba(245,158,11,0.3)", backdropFilter: "blur(3px)" }}>
-              <span className="text-[10px] font-semibold text-amber-300">🏅 Event-Pokale</span>
-            </button>
-          </Html>
+          {/* Hover-Zielflächen direkt an den Pokal-Möbeln — kein permanent
+              sichtbarer Button mehr (User-Wunsch), stattdessen Glow-Effekt +
+              mausfolgendes Tooltip (siehe ShelfHotspot/hoverTooltip). */}
+          <ShelfHotspot label="Kategorie-Wanderpokale" onOpen={() => setPanel("wanderpokale")} onHoverChange={handleHover}
+            center={[WANDERPOKAL_REGAL_POS.x, 2.0, 0.85]} size={[1.15, 1.05, 0.35]} />
+          <ShelfHotspot label="Genre-Wanderpokale" onOpen={() => setPanel("wanderpokale")} onHoverChange={handleHover}
+            center={[WANDERPOKAL_REGAL_2_POS.x, 2.0, 0.85]} size={[1.15, 1.05, 0.35]} />
+          <ShelfHotspot label="Event-Pokale" onOpen={() => setPanel("eventpokale")} onHoverChange={handleHover}
+            center={[-1.145, 1.94, -0.95]} size={[0.5, 0.75, 0.5]} />
+          <ShelfHotspot label="Abzeichen" onOpen={() => setPanel("trophy")} onHoverChange={handleHover}
+            center={[-1.1, 0.31, -0.95]} size={[0.5, 0.7, 0.9]} />
           <ExtraProp tier={nanoleafTier >= 1 ? 1 : 0} cfg={BLITZ_CFG} />
           <ExtraProp tier={nanoleafTier >= 2 ? 1 : 0} cfg={NANOLEAF_MONITOR_CFG} />
           <ExtraProp tier={nanoleafTier >= 3 ? 1 : 0} cfg={NANOLEAF_WALL_CFG} />
@@ -1490,6 +1512,21 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
         style={{ background: "rgba(4,10,9,0.5)", border: "1px solid rgba(255,255,255,0.08)" }}>
         <span className="text-[9px] text-gray-400">Klicken &amp; ziehen zum Umschauen · Scrollen zum Zoomen</span>
       </div>
+
+      {/* Mausfolgendes Tooltip für die Pokal-Möbel-Hotspots (siehe
+          ShelfHotspot/handleHover) — echtes 2D-Overlay statt 3D-Html-Label,
+          damit es wirklich der Cursorposition folgt statt an einer festen
+          Raum-Stelle zu kleben. 16px Versatz, damit der Cursor selbst den
+          Text nicht verdeckt. */}
+      {hoverTooltip && (
+        <div className="absolute pointer-events-none whitespace-nowrap px-2.5 py-1.5 rounded-full text-[11px] font-semibold text-amber-200"
+          style={{
+            left: hoverTooltip.x + 16, top: hoverTooltip.y + 16, zIndex: 2147483647,
+            background: "rgba(4,10,9,0.85)", border: "1px solid rgba(245,158,11,0.4)", backdropFilter: "blur(3px)",
+          }}>
+          🏆 {hoverTooltip.label}
+        </div>
+      )}
 
       {panel && (
         // z-index MUSS als Inline-Style mit einer sehr hohen Zahl gesetzt
