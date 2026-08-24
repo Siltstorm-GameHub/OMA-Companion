@@ -364,37 +364,49 @@ const STUHL_TIER_MODELS: Record<number, TierModelCfg> = {
 const STUHL_POS = new THREE.Vector3(0.367, 0, -0.921);
 
 /**
- * Pokalregal (Stufen 1-4): alter Katalog hat nur 2 Modelle (regal_holz,
- * pokalregal ab Stufe 3) — dieselbe Lücken-Konvention wie beim Stuhl: Stufe 1+2
- * teilen sich regal_holz, Stufe 3+4 teilen sich pokalregal.
+ * Pokal-/Abzeichen-Möbel — vormals das Katalog-Upgrade "Pokalregal" (Stufen
+ * 1-4, siehe Git-Historie für die alte SwappableProp-Variante). Auf
+ * User-Wunsch entfernt: Wanderpokale/Event-Pokale/Abzeichen werden
+ * UNABHÄNGIG vom Mancave-Ausbau erspielt (Events, Voice-Zeit, Turniere...),
+ * ein Coin-Upgrade hätte sie in einem frischen Raum unsichtbar gemacht.
+ * Jetzt drei fest verankerte, immer sichtbare Möbelstücke statt einem
+ * tier-geschalteten Slot — je eins pro Trophäen-Gruppe:
  *
- * Ersetzt "Cube.018"+"Cube.019" — zwei dünne, breite Bretter (Material
- * "Material.001", dieselbe Materialfamilie wie Tisch/Couch), an der
- * Wand mit dem kleinsten Y-Wert der Szene montiert (Blender-Y≈-0.886, praktisch
- * identisch mit der gemessenen Raumschale-Untergrenze) — per Bounding-Box-
- * Analyse als Wandregal identifiziert, nicht geraten. Position übernimmt
- * "Cube.019" (die niedrigere, besser erreichbare der beiden Bretter).
+ *  - Wanderpokale (12 feste Scopes, siehe wanderpocal.ts, max. 1 Halter
+ *    je Scope) -> "pokalregal.glb", das GRÖSSERE der beiden Regal-Modelle
+ *    (fix/scale 1:1 von der früheren Stufe 3 übernommen, an ihrem bereits
+ *    geprüften Wandplatz) — soll laut User hervorstechen/größer wirken als
+ *    die Event-Pokale.
+ *  - Event-Pokale (`Pokal`-Modell, unbegrenzte Stückzahl pro User, 6
+ *    Kategorien) -> "event_pokal_regal.glb", NEU aus der Referenzszene
+ *    extrahiert (siehe unten) statt dem alten flachen "regal_buecher.glb".
+ *  - Abzeichen (25 feste System-Badges + admin-vergebene Custom-Badges,
+ *    unbegrenzt) -> "vitrine_pokal.glb" (Glasvitrine, vormals Stufe 4).
  *
- * ACHTUNG — deutlich unsicherer als PC/Monitor/Stuhl: Wandmontage statt
- * Boden-Aufstellung, die Blickrichtung der Wand (`+Y` in Blender, "-Z" in
- * gltf, Richtung Schreibtisch/Kamera) wurde hergeleitet, aber NICHT wie beim
- * Monitor durch eine Flächen-Normalen-Messung der Ersatz-Modelle bestätigt —
- * `rotationY` bleibt vorerst 0, echte Ausrichtung erst nach Sichtprüfung
- * korrigieren.
+ * "event_pokal_regal.glb": Ursprünglich "Cube.020"+"Cube.021" — zwei
+ * gestapelte, VORNE OFFENE Würfel-Regale (per Flächen-Normalen-Messung
+ * bestätigt: 8 kleine Facetten pro Würfel bilden eine echte Nische, keine
+ * geschlossene Box), nativ an der Wand VOR der Kamera montiert (neben den
+ * Monitoren, Öffnung Richtung Raum). User-Wunsch: stattdessen an der Wand
+ * HINTER der Kamera zeigen (mehr Fläche für die potenziell große Sammlung
+ * an Event-Pokalen, aus dem Sichtfeld der Monitore raus). Dafür in Blender
+ * dupliziert (Originale Cube.020/021 unangetastet), pro Würfel um 180° um
+ * die eigene Bbox-Mitte gedreht (kehrt die Öffnungsrichtung von -X auf +X
+ * um — nach der Messung bestätigt: die vormals bei -X liegenden Klein-
+ * facetten sitzen danach bei +X) und gemeinsam an die gegenüberliegende
+ * Wand (Blender-X von 1.398 auf -1.329, Blender-Y so verschoben, dass die
+ * Mitte auf Blender-Y≈0.95 bzw. gltf-Z≈EYE.z=-0.95 liegt, "direkt hinter
+ * der Kamera") verschoben, dann zu einem Objekt gejoint und exportiert.
+ * Weltposition steckt komplett in den Vertex-Daten (wie Nanoleaf/LED-
+ * Strips) — daher fix=[0,0,0], position=[0,0,0].
  */
-const REGAL_TIER_MODELS: Record<number, TierModelCfg> = {
-  1: { url: "/models/regal_buecher.glb", fix: [0, 0, -0.277], scale: 0.4 },
-  2: { url: "/models/regal_buecher.glb", fix: [0, 0, -0.277], scale: 0.4 },
-  // Stufe 3/4 ("pokalregal.glb"): anders als "regal_buecher" NICHT boden-
-  // verankert, sondern lokal auf den eigenen Mittelpunkt zentriert (min.y=-0.42,
-  // max.y=+0.43 laut Messscript) — mit dem ursprünglichen fix.y hing die
-  // untere Hälfte bis Welt-Y≈1.38 herunter und überlappte das (jetzt sichtbare)
-  // Fenster, dessen Oberkante bei Y=1.525 liegt (User-Screenshot). fix.y
-  // angehoben, damit die Regal-Unterkante klar darüber bleibt.
-  3: { url: "/models/pokalregal.glb",    fix: [0, 0.217, 0.001], scale: 0.885 },
-  4: { url: "/models/pokalregal.glb",    fix: [0, 0.217, 0.001], scale: 0.885 },
-};
-const REGAL_POS = new THREE.Vector3(0.207, 1.755, 0.886);
+const WANDERPOKAL_REGAL_POS = new THREE.Vector3(0.207, 1.755, 0.886);
+const WANDERPOKAL_REGAL_CFG: ExtraCfg = { url: "/models/pokalregal.glb", fix: [0, 0.217, 0.001], scale: 0.885, position: WANDERPOKAL_REGAL_POS };
+
+const EVENT_POKAL_REGAL_CFG: ExtraCfg = { url: "/models/event_pokal_regal.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(0, 0, 0) };
+
+const ABZEICHEN_VITRINE_POS = new THREE.Vector3(0.207, 0, 0.53);
+const ABZEICHEN_VITRINE_CFG: ExtraCfg = { url: "/models/vitrine_pokal.glb", fix: [0, 0, 0], scale: 0.9, position: ABZEICHEN_VITRINE_POS };
 
 /**
  * Zusatzobjekte (Stufe 0-4, siehe mancave-items.ts EXTRA_ITEMS + "teppich"-
@@ -661,10 +673,11 @@ const PS5_CONTROLLER_CFG: ExtraCfg = { url: "/models/ps5_controller.glb", fix: [
 
 for (const m of [
   ...Object.values(PC_TIER_MODELS),
-  ...Object.values(STUHL_TIER_MODELS), ...Object.values(REGAL_TIER_MODELS),
+  ...Object.values(STUHL_TIER_MODELS),
   BLITZ_CFG, NANOLEAF_MONITOR_CFG, NANOLEAF_WALL_CFG, LED_STRIPS_CFG,
   DESKMAT_CFG, WEBCAM_CFG, HEADSET_CFG, COUCHTISCH_CFG, TASTATUR_UPGRADE_CFG, MAUS_UPGRADE_CFG,
   STREAMDECK_CFG, RINGLICHT_CFG, PS5_CONTROLLER_CFG,
+  WANDERPOKAL_REGAL_CFG, EVENT_POKAL_REGAL_CFG, ABZEICHEN_VITRINE_CFG,
   MONITOR_SCREEN1_CFG, MONITOR_SCREEN2_CFG, MONITOR_SCREEN3_CFG, MONITOR_SCREEN4_CFG,
 ]) useGLTF.preload(m.url);
 // Nanoleaf-Dreieck-Panels über dem Schreibtisch (Mittelpunkt aller 21
@@ -1147,7 +1160,6 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
   const pcTier = data.items.find(i => i.key === "computer")?.tier ?? 1;
   const monitorTier = data.items.find(i => i.key === "monitor")?.tier ?? 1;
   const stuhlTier = data.items.find(i => i.key === "stuhl")?.tier ?? 1;
-  const regalTier = data.items.find(i => i.key === "regal")?.tier ?? 1;
   const nanoleafTier = data.items.find(i => i.key === "nanoleaf")?.tier ?? 0;
   const deskmatTier = data.items.find(i => i.key === "deskmat")?.tier ?? 0;
   const couchtischTier = data.items.find(i => i.key === "couchtisch")?.tier ?? 0;
@@ -1186,7 +1198,11 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
           <ExtraProp tier={monitorTier >= 3 ? 1 : 0} cfg={MONITOR_SCREEN3_CFG} />
           <ExtraProp tier={monitorTier >= 4 ? 1 : 0} cfg={MONITOR_SCREEN4_CFG} />
           <SwappableProp tier={stuhlTier} models={STUHL_TIER_MODELS} position={STUHL_POS} />
-          <SwappableProp tier={regalTier} models={REGAL_TIER_MODELS} position={REGAL_POS} />
+          {/* Fest verankertes Pokal-/Abzeichen-Möbel, kein Katalog-Upgrade
+              mehr (siehe Kommentar bei WANDERPOKAL_REGAL_CFG). */}
+          <ExtraProp tier={1} cfg={WANDERPOKAL_REGAL_CFG} />
+          <ExtraProp tier={1} cfg={EVENT_POKAL_REGAL_CFG} />
+          <ExtraProp tier={1} cfg={ABZEICHEN_VITRINE_CFG} />
           <ExtraProp tier={nanoleafTier >= 1 ? 1 : 0} cfg={BLITZ_CFG} />
           <ExtraProp tier={nanoleafTier >= 2 ? 1 : 0} cfg={NANOLEAF_MONITOR_CFG} />
           <ExtraProp tier={nanoleafTier >= 3 ? 1 : 0} cfg={NANOLEAF_WALL_CFG} />

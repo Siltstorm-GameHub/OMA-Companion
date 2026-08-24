@@ -34,7 +34,6 @@ const BASELINE_ITEMS: MancaveItemDef[] = [
   { key: "maus",         label: "Maus",                  baseline: true, costs: [0,  200,  350,  700] },
   { key: "computer",     label: "Computer",              baseline: true, costs: [0, 2200, 4000, 8000] },
   { key: "stuhl",        label: "Schreibtischstuhl",      baseline: true, costs: [0,  800, 2200, 3400] },
-  { key: "regal",        label: "Pokalregal",            baseline: true, costs: [0,  700, 1800, 3000] },
   { key: "couch",        label: "Couch",                  baseline: true, costs: [0, 1000, 2200, 3800] },
   { key: "teppich",      label: "Teppich (OMA-Logo)",     baseline: true, costs: [0,  500, 1200, 2400] },
 ];
