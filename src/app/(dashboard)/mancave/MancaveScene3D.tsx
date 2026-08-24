@@ -593,44 +593,57 @@ for (const scope of Object.keys(WANDERPOKAL_SLOTS)) useGLTF.preload(WANDERPOKAL_
  * getrennte 0.368m-Würfel-Nischen): World-X = Tiefe (hintere Wand bei
  * -1.329 -> Öffnung bei -0.961) = Stapel-Achse, World-Z = Wandlänge =
  * Kategorie-Achse, World-Y = welche Nische (untere/obere).
+ *
+ * Zweites Würfelregal (User-Wunsch) — ein bisher ungenutztes, zweites
+ * Cube.020/021-Paar, das noch STATISCH im Referenzszenen-Export
+ * (`mancave_room.glb`) hing (an der Wand hinter den Monitoren, ohne jede
+ * Funktion) — mit derselben Spiegel-Technik wie das erste an dieselbe Wand
+ * verschoben (Weltmitte X=-1.145 wie Regal 1, aber Welt-Z≈0.3 statt -0.95,
+ * per Bbox-Scan als frei bestätigt), um MEHR Stellfläche für dieselben 6
+ * Kategorien zu bieten statt neue Kategorien abzudecken — pro Kategorie
+ * jetzt 2 Fächer (Regal 1 + Regal 2) x 3 Stapel-Plätze = 6 statt 3 sichtbar.
  */
+const EVENT_POKAL_REGAL_2_CFG: ExtraCfg = { url: "/models/event_pokal_regal_2.glb", fix: [0, 0, 0], scale: 1, position: new THREE.Vector3(0, 0, 0) };
 const EVENT_POKAL_SCALE = 0.0373;
 const EVENT_POKAL_FIX: [number, number, number] = [0, 0, 0];
-const EVENT_POKAL_STACK_X = [-1.289, -1.145, -1.001]; // hinten -> vorne
-const EVENT_POKAL_CATEGORY_SLOTS: Record<string, { z: number; y: number }> = {
-  competitive:      { z: -1.094, y: 1.652 }, // untere Nische
-  fun:              { z: -0.950, y: 1.652 },
-  casual:           { z: -0.806, y: 1.652 },
-  training:         { z: -1.094, y: 1.999 }, // obere Nische
-  community_event:  { z: -0.950, y: 1.999 },
-  special:          { z: -0.806, y: 1.999 },
+const EVENT_POKAL_STACK_X = [-1.289, -1.145, -1.001]; // hinten -> vorne, pro Fach
+const EVENT_POKAL_CATEGORY_SLOTS: Record<string, { z: number; y: number }[]> = {
+  competitive:      [{ z: -1.094, y: 1.652 }, { z: 0.156, y: 1.652 }], // Regal 1 untere Nische, Regal 2 untere Nische
+  fun:              [{ z: -0.950, y: 1.652 }, { z: 0.300, y: 1.652 }],
+  casual:           [{ z: -0.806, y: 1.652 }, { z: 0.444, y: 1.652 }],
+  training:         [{ z: -1.094, y: 1.999 }, { z: 0.156, y: 1.999 }], // Regal 1 obere Nische, Regal 2 obere Nische
+  community_event:  [{ z: -0.950, y: 1.999 }, { z: 0.300, y: 1.999 }],
+  special:          [{ z: -0.806, y: 1.999 }, { z: 0.444, y: 1.999 }],
 };
+const EVENT_POKAL_MAX_VISIBLE = EVENT_POKAL_STACK_X.length * 2;
 
 function EventPokalStack({ category, count }: { category: string; count: number }) {
-  const slot = EVENT_POKAL_CATEGORY_SLOTS[category];
+  const slots = EVENT_POKAL_CATEGORY_SLOTS[category];
   const url = `/models/event_pokal_${category}.glb`;
   const { scene } = useGLTF(url);
-  const visible = Math.min(count, EVENT_POKAL_STACK_X.length);
+  const visible = Math.min(count, EVENT_POKAL_MAX_VISIBLE);
   // Jede sichtbare Kopie braucht ein eigenes Object3D (kann nicht dieselbe
   // Instanz an mehreren Positionen im Szenengraph teilen) — ein einzelnes
   // useMemo für alle statt eins pro map()-Durchlauf (Hooks dürfen nicht
   // bedingt/in Callbacks aufgerufen werden).
   const clones = useMemo(
-    () => Array.from({ length: EVENT_POKAL_STACK_X.length }, () => scene.clone(true)),
+    () => Array.from({ length: EVENT_POKAL_MAX_VISIBLE }, () => scene.clone(true)),
     [scene],
   );
-  if (!slot || count === 0) return null;
+  if (!slots || count === 0) return null;
+  const positions = slots.flatMap(slot => EVENT_POKAL_STACK_X.map(x => [x, slot.y, slot.z] as const));
+  const last = positions[visible - 1];
   return (
     <>
-      {EVENT_POKAL_STACK_X.slice(0, visible).map((x, i) => (
-        <group key={i} position={[x, slot.y, slot.z]}>
+      {positions.slice(0, visible).map((pos, i) => (
+        <group key={i} position={[pos[0], pos[1], pos[2]]}>
           <group scale={EVENT_POKAL_SCALE}>
             <primitive object={clones[i]} position={EVENT_POKAL_FIX} />
           </group>
         </group>
       ))}
       {count > visible && (
-        <Html position={[EVENT_POKAL_STACK_X[visible - 1] + 0.06, slot.y + 0.05, slot.z]} center>
+        <Html position={[last[0] + 0.06, last[1] + 0.05, last[2]]} center>
           <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold text-amber-200"
             style={{ background: "rgba(4,10,9,0.8)", border: "1px solid rgba(245,158,11,0.4)" }}>
             +{count - visible}
@@ -1547,6 +1560,7 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
           <ExtraProp tier={1} cfg={WANDERPOKAL_REGAL_CFG} />
           <ExtraProp tier={1} cfg={WANDERPOKAL_REGAL_2_CFG} />
           <ExtraProp tier={1} cfg={EVENT_POKAL_REGAL_CFG} />
+          <ExtraProp tier={1} cfg={EVENT_POKAL_REGAL_2_CFG} />
           <ExtraProp tier={1} cfg={ABZEICHEN_VITRINE_CFG} />
           {/* Nur was der User tatsächlich besitzt steht auf dem Regal — leere
               Scopes/Kategorien bleiben unbesetzt (User-Wunsch). */}
@@ -1578,6 +1592,8 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
             center={[WANDERPOKAL_REGAL_2_POS.x, 2.0, 0.85]} size={[1.15, 1.05, 0.35]} />
           <ShelfHotspot label="Event-Pokale" onOpen={() => setPanel("eventpokale")} onHoverChange={handleHover}
             center={[-1.145, 1.94, -0.95]} size={[0.5, 0.75, 0.5]} />
+          <ShelfHotspot label="Event-Pokale" onOpen={() => setPanel("eventpokale")} onHoverChange={handleHover}
+            center={[-1.145, 1.94, 0.3]} size={[0.5, 0.75, 0.5]} />
           <ShelfHotspot label="Abzeichen" onOpen={() => setPanel("trophy")} onHoverChange={handleHover}
             center={[-1.1, 0.31, -0.95]} size={[0.5, 0.7, 0.9]} />
           <ExtraProp tier={nanoleafTier >= 1 ? 1 : 0} cfg={BLITZ_CFG} />
