@@ -607,13 +607,25 @@ const EVENT_POKAL_REGAL_2_CFG: ExtraCfg = { url: "/models/event_pokal_regal_2.gl
 const EVENT_POKAL_SCALE = 0.0373;
 const EVENT_POKAL_FIX: [number, number, number] = [0, 0, 0];
 const EVENT_POKAL_STACK_X = [-1.289, -1.145, -1.001]; // hinten -> vorne, pro Fach
+/**
+ * WICHTIG: die beiden Würfel pro Regal sind NICHT einfach "gleiche Fläche,
+ * andere Höhe" — in der Referenzszene stehen sie WIRKLICH diagonal versetzt
+ * (0.368m sowohl in der Höhe ALS AUCH in der Tiefe entlang der Wand). Ein
+ * früherer "Fix" hatte diesen Versatz versehentlich entfernt (beide Würfel
+ * auf dieselbe Grundfläche projiziert) — sah dadurch wie ein einzelner
+ * hoher Kasten mit Zwischenboden aus statt wie zwei gestaffelte Nischen
+ * (User-Feedback: "seltsam ineinander verschoben"). Jetzt: Würfel-Paar
+ * VOR der Spiegelung/Verschiebung gejoint (nicht einzeln transformiert),
+ * damit ihr natürlicher Versatz automatisch erhalten bleibt — jede Nische
+ * hat daher ihr EIGENES Welt-Z-Zentrum, nicht ein gemeinsames pro Regal.
+ */
 const EVENT_POKAL_CATEGORY_SLOTS: Record<string, { z: number; y: number }[]> = {
-  competitive:      [{ z: -1.094, y: 1.652 }, { z: 0.156, y: 1.652 }], // Regal 1 untere Nische, Regal 2 untere Nische
-  fun:              [{ z: -0.950, y: 1.652 }, { z: 0.300, y: 1.652 }],
-  casual:           [{ z: -0.806, y: 1.652 }, { z: 0.444, y: 1.652 }],
-  training:         [{ z: -1.094, y: 1.999 }, { z: 0.156, y: 1.999 }], // Regal 1 obere Nische, Regal 2 obere Nische
-  community_event:  [{ z: -0.950, y: 1.999 }, { z: 0.300, y: 1.999 }],
-  special:          [{ z: -0.806, y: 1.999 }, { z: 0.444, y: 1.999 }],
+  competitive:      [{ z: -1.278, y: 1.652 }, { z: -0.028, y: 1.652 }], // Regal 1 untere Nische, Regal 2 untere Nische
+  fun:              [{ z: -1.134, y: 1.652 }, { z:  0.116, y: 1.652 }],
+  casual:           [{ z: -0.990, y: 1.652 }, { z:  0.260, y: 1.652 }],
+  training:         [{ z: -0.910, y: 1.903 }, { z:  0.340, y: 1.903 }], // Regal 1 obere Nische, Regal 2 obere Nische
+  community_event:  [{ z: -0.766, y: 1.903 }, { z:  0.484, y: 1.903 }],
+  special:          [{ z: -0.622, y: 1.903 }, { z:  0.628, y: 1.903 }],
 };
 const EVENT_POKAL_MAX_VISIBLE = EVENT_POKAL_STACK_X.length * 2;
 
@@ -1591,9 +1603,9 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
           <ShelfHotspot label="Genre-Wanderpokale" onOpen={() => setPanel("wanderpokale-genre")} onHoverChange={handleHover}
             center={[WANDERPOKAL_REGAL_2_POS.x, 2.0, 0.85]} size={[1.15, 1.05, 0.35]} />
           <ShelfHotspot label="Event-Pokale" onOpen={() => setPanel("eventpokale")} onHoverChange={handleHover}
-            center={[-1.145, 1.94, -0.95]} size={[0.5, 0.75, 0.5]} />
+            center={[-1.145, 1.94, -0.95]} size={[0.5, 0.75, 0.8]} />
           <ShelfHotspot label="Event-Pokale" onOpen={() => setPanel("eventpokale")} onHoverChange={handleHover}
-            center={[-1.145, 1.94, 0.3]} size={[0.5, 0.75, 0.5]} />
+            center={[-1.145, 1.94, 0.3]} size={[0.5, 0.75, 0.8]} />
           <ShelfHotspot label="Abzeichen" onOpen={() => setPanel("trophy")} onHoverChange={handleHover}
             center={[-1.1, 0.31, -0.95]} size={[0.5, 0.7, 0.9]} />
           <ExtraProp tier={nanoleafTier >= 1 ? 1 : 0} cfg={BLITZ_CFG} />
