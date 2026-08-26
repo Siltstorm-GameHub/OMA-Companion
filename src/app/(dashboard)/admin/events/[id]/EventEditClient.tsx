@@ -648,6 +648,38 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
       {/* ── Tab: Details (Reihen-Event: reduzierte Ansicht) ── */}
       {activeTab === "details" && isSeriesEvent && (
         <div className="space-y-4">
+          {/* Turnier fehlt (z.B. versehentlich gelöscht) — für Reihen mit festem Spiel gibt es sonst
+              keinen Reiter, über den sich das Format erneut setzen ließe, da der "Turnierbaum"-Reiter
+              erst erscheint, sobald ein Format gesetzt ist. */}
+          {!hasTournament && (
+            <div className="rounded-xl p-4 border border-red-500/20 bg-red-500/5 space-y-3">
+              <p className="text-sm font-medium text-red-300 flex items-center gap-1.5">
+                <AlertTriangle className="w-4 h-4" /> Kein Turnier vorhanden
+              </p>
+              <p className="text-xs text-gray-500">
+                Dieses Event hat aktuell kein Turnier-Format gesetzt — der Reiter „Turnierbaum" fehlt
+                deshalb. Format wählen und erstellen, um ihn wiederherzustellen. Vorherige Matches/
+                Ergebnisse sind dabei nicht wiederherstellbar und müssen neu eingetragen werden.
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {TMT_FORMATS.map(f => (
+                  <button key={f.value} type="button" onClick={() => setTmtFormat(f.value)}
+                    className={`text-left px-3 py-2.5 rounded-lg border transition-colors ${
+                      tmtFormat === f.value ? "border-amber-500 bg-amber-900/25 text-white" : "border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600"
+                    }`}>
+                    <p className="text-xs font-medium leading-tight">{f.label}</p>
+                    <p className="text-[10px] text-gray-500 mt-0.5 leading-tight">{f.desc}</p>
+                  </button>
+                ))}
+              </div>
+              <button onClick={saveTmtSettings} disabled={tmtLoading}
+                className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-white bg-red-700 hover:bg-red-600 transition-colors disabled:opacity-50">
+                <Trophy className="w-4 h-4" />
+                {tmtLoading ? "Wird erstellt…" : "Turnier erstellen & Reiter wiederherstellen"}
+              </button>
+            </div>
+          )}
+
           {/* Status */}
           <div className="flex items-center gap-3">
             <label className="text-xs text-gray-500 shrink-0">Status</label>
