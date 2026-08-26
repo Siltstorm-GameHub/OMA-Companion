@@ -116,7 +116,7 @@ export default async function TournamentDetailPage({
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     include: {
-      series: { select: { id: true, name: true, icon: true, hidden: true, seriesStatConfig: true, discordChannelId: true, pollConfigJson: true, coverImageUrl: true } },
+      series: { select: { id: true, name: true, icon: true, hidden: true, registrationLocked: true, seriesStatConfig: true, discordChannelId: true, pollConfigJson: true, coverImageUrl: true } },
       streamingPartners: { include: { partner: { include: { user: { select: { id: true } } } } } },
       communityStreamers: { include: { user: { select: { id: true, name: true, username: true, image: true, twitchLogin: true, rankPoints: true } } } },
       registrations: {
@@ -198,6 +198,7 @@ export default async function TournamentDetailPage({
   const isSpectator    = !!myReg && myReg.role === "spectator";
   const isFullEvent    = !!(event.maxPlayers && event.registrations.filter(r => r.role !== "spectator").length >= event.maxPlayers);
   const canRegister    = event.status === "open" || event.status === "active";
+  const isRegistrationLocked = event.registrationLocked || event.series?.registrationLocked || false;
   const discordEventUrl = event.discordEventId && GUILD_ID
     ? `https://discord.com/events/${GUILD_ID}/${event.discordEventId}` : null;
   const discordChannelId = event.discordChannelId ?? event.series?.discordChannelId ?? null;
@@ -754,11 +755,16 @@ export default async function TournamentDetailPage({
 
         {userId && (
           <div className="mt-4 flex items-center gap-3 flex-wrap">
-            {canRegister && (
+            {canRegister && (isRegistered || !isRegistrationLocked) && (
               <RegisterButton eventId={event.id} isRegistered={isRegistered} isFull={isFullEvent && !isRegistered} discordEventUrl={discordEventUrl} />
             )}
-            {canRegister && event.spectatorMode && !isRegistered && (
+            {canRegister && event.spectatorMode && !isRegistered && (isSpectator || !isRegistrationLocked) && (
               <SpectatorRegisterButton eventId={event.id} isSpectator={isSpectator} />
+            )}
+            {canRegister && !isRegistered && !isSpectator && isRegistrationLocked && (
+              <span className="flex items-center gap-1 text-xs text-gray-500">
+                🔒 Anmeldung nur durch Admins
+              </span>
             )}
             {event.status === "umfrage" && discordChannelUrl && initialPolls.length === 0 && (
               <a href={discordChannelUrl} target="_blank" rel="noopener noreferrer"

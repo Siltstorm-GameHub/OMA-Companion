@@ -58,6 +58,7 @@ type SeasonPrefill = {
   recurrenceType: "none" | RecurrenceType;
   recurrenceMonthlyMode: MonthlyMode;
   seriesHidden: boolean;
+  seriesRegistrationLocked: boolean;
   spectatorMode: boolean;
   spectatorCoins: number;
   spectatorRankPts: number;
@@ -170,6 +171,7 @@ export default function EventSetupWizard({
   const [ligaWinCoins, setLigaWinCoins] = useState(50);
   const [ligaDrawCoins, setLigaDrawCoins] = useState(20);
   const [eventHidden, setEventHidden] = useState(false);
+  const [eventRegistrationLocked, setEventRegistrationLocked] = useState(false);
 
   // ── Series mode state ─────────────────────────────────────────────────────────
   const [seriesName, setSeriesName]     = useState(seasonPrefill?.name ?? "");
@@ -191,6 +193,7 @@ export default function EventSetupWizard({
   const [statPtsToGlobalRanking, setStatPtsToGlobalRanking] = useState(seasonPrefill?.statPtsToGlobalRanking ?? false);
   const [statRows, setStatRows]         = useState<StatRow[]>(seasonPrefill?.statRows ?? []);
   const [seriesHidden, setSeriesHidden] = useState(seasonPrefill?.seriesHidden ?? false);
+  const [seriesRegistrationLocked, setSeriesRegistrationLocked] = useState(seasonPrefill?.seriesRegistrationLocked ?? false);
   const [eventStatFields, setEventStatFields] = useState<string[]>(seasonPrefill?.eventStatFields ?? []);
   const [winnerStatField, setWinnerStatField] = useState(seasonPrefill?.winnerStatField ?? "");
 
@@ -334,6 +337,7 @@ export default function EventSetupWizard({
       seriesId,
       discordChannelId: discordChannelId || null,
       hidden: eventHidden,
+      registrationLocked: eventRegistrationLocked,
       spectatorMode,
       spectatorRewardJson: spectatorMode ? { coins: spectatorCoins, rankPoints: spectatorRankPts } : null,
       placementRewardsJson: { participationCoins, participationRankPts: effectiveParticipationRankPts, placements: effectivePlacements },
@@ -412,6 +416,7 @@ export default function EventSetupWizard({
         endDate: seriesEndDate ? new Date(seriesEndDate + "T23:59:59").toISOString() : null,
         eventType,
         hidden: seriesHidden,
+        registrationLocked: seriesRegistrationLocked,
         spectatorMode,
         spectatorRewardJson: spectatorMode ? { coins: spectatorCoins, rankPoints: spectatorRankPts } : null,
         groupId: seasonPrefill?.groupId,
@@ -644,6 +649,20 @@ export default function EventSetupWizard({
           </label>
         </div>
 
+        <div className="rounded-xl p-4 border border-white/8 bg-white/2">
+          <label className="flex items-start gap-3 cursor-pointer select-none">
+            <input type="checkbox" checked={eventRegistrationLocked} onChange={e => setEventRegistrationLocked(e.target.checked)}
+              className="w-4 h-4 mt-0.5 rounded accent-violet-500 shrink-0" />
+            <div>
+              <p className="text-sm text-gray-200">Selbst-Anmeldung deaktivieren</p>
+              <p className="text-[11px] text-gray-500 mt-0.5">
+                User können sich nicht selbst anmelden — nur Admins/Moderatoren tragen Teilnehmer im
+                Tab „Teilnehmer" ein. Praktisch für Team-interne Events (z.B. Trainingsreihen).
+              </p>
+            </div>
+          </label>
+        </div>
+
         <div className="rounded-xl p-3 space-y-3" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(20,184,166,0.10)" }}>
           <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Eventreihe</p>
           <div className="flex gap-2 flex-wrap">
@@ -816,6 +835,21 @@ export default function EventSetupWizard({
               <p className="text-sm text-gray-200">Unsichtbar erstellen</p>
               <p className="text-[11px] text-gray-500 mt-0.5">
                 Die Reihe wird angelegt, aber noch nicht veröffentlicht. Sichtbarkeit kann jederzeit in den Reihen-Einstellungen geändert werden.
+              </p>
+            </div>
+          </label>
+        </div>
+
+        <div className="rounded-xl p-4 border border-white/8 bg-white/2">
+          <label className="flex items-start gap-3 cursor-pointer select-none">
+            <input type="checkbox" checked={seriesRegistrationLocked} onChange={e => setSeriesRegistrationLocked(e.target.checked)}
+              className="w-4 h-4 mt-0.5 rounded accent-violet-500 shrink-0" />
+            <div>
+              <p className="text-sm text-gray-200">Selbst-Anmeldung deaktivieren</p>
+              <p className="text-[11px] text-gray-500 mt-0.5">
+                User können sich für kein Event dieser Reihe selbst anmelden — nur Admins/Moderatoren
+                tragen Teilnehmer ein. Gilt automatisch auch für später generierte Termine der Reihe.
+                Praktisch für Team-interne Reihen (z.B. Trainingsserien).
               </p>
             </div>
           </label>
@@ -1032,6 +1066,12 @@ export default function EventSetupWizard({
         {isSeriesMode && (
           <div className="rounded-xl p-4 border border-indigo-500/20 bg-indigo-500/5 space-y-3">
             <p className="text-sm font-medium text-indigo-300">📊 Gesamttabelle</p>
+            <p className="text-[11px] text-gray-500 -mt-1">
+              Die Saison-Rangliste der ganzen Reihe (Ligapunkte, über alle Events aufsummiert). Die
+              Stat-Felder hier sind die <strong className="text-gray-400">Punkte-Formel</strong> — sie
+              zählen nur, wenn ein Event in Schritt 5 („Event-Einstellungen") einen{" "}
+              <em>gleichnamigen</em> Stat tatsächlich erfasst.
+            </p>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className={labelCls}>Punkte pro Mitspieler-Teilnahme <span className="text-gray-500 font-normal">(Ligatabelle)</span></label>
@@ -1247,15 +1287,52 @@ export default function EventSetupWizard({
         )}
 
         {!variousGames && (
-          <div className="rounded-xl p-4 border border-amber-500/20 bg-amber-500/5">
+          <div className="rounded-xl p-4 border border-amber-500/20 bg-amber-500/5 space-y-2">
             <p className="text-sm font-medium text-amber-300 mb-1">Trackte Statistiken je Event</p>
-            <p className="text-[11px] text-gray-500 mb-3">
-              Diese Stats werden pro Event erfasst. „Teilnahme" wird für jeden Mitspieler automatisch +1 getrackt.
+            <p className="text-[11px] text-gray-500">
+              Die Stat-Spalten, die beim Eintragen der Ergebnisse <strong className="text-gray-400">in jedem
+              einzelnen Event</strong> ausgefüllt werden. „Teilnahme" wird für jeden Mitspieler automatisch
+              +1 getrackt.
             </p>
+            {statRows.length > 0 && (
+              <p className="text-[11px] text-gray-500">
+                Damit ein Wert hier auch in der Saison-Gesamttabelle (Schritt 4) Punkte gibt, muss der
+                Feldname exakt mit einem dortigen Stat übereinstimmen — Felder, die es dort nicht gibt,
+                bleiben nur eine event-lokale Statistik ohne Ligapunkte.
+              </p>
+            )}
+            {statRows.length > 0 && (
+              <button type="button"
+                onClick={() => setEventStatFields(prev => [...new Set([...prev, ...statRows.map(r => r.field).filter(Boolean)])])}
+                className="flex items-center gap-1 text-[11px] text-amber-400 hover:text-amber-300 transition-colors">
+                <Plus className="w-3 h-3" /> Feldnamen aus Gesamttabelle übernehmen
+              </button>
+            )}
             <StatFieldEditor fields={eventStatFields} onChange={f => {
               setEventStatFields(f);
               if (!f.includes(winnerStatField)) setWinnerStatField("");
             }} />
+            {(() => {
+              const seriesFields = new Set(statRows.map(r => r.field).filter(Boolean));
+              const untracked = statRows.map(r => r.field).filter(f => f && !eventStatFields.includes(f));
+              const unlinked = eventStatFields.filter(f => !seriesFields.has(f));
+              return (
+                <>
+                  {untracked.length > 0 && (
+                    <p className="text-[11px] text-red-400/80 rounded-lg px-3 py-2 border border-red-500/20 bg-red-500/5">
+                      ⚠️ Gesamttabellen-Stat(s) „{untracked.join(", ")}" werden hier nicht erfasst — bleiben in
+                      der Saison-Rangliste immer 0.
+                    </p>
+                  )}
+                  {unlinked.length > 0 && (
+                    <p className="text-[11px] text-gray-500 rounded-lg px-3 py-2 border border-white/10 bg-white/5">
+                      ℹ️ „{unlinked.join(", ")}" {unlinked.length === 1 ? "ist" : "sind"} nur event-lokal — kein
+                      gleichnamiger Stat in der Gesamttabelle, also keine Ligapunkte daraus.
+                    </p>
+                  )}
+                </>
+              );
+            })()}
           </div>
         )}
 
@@ -1411,6 +1488,7 @@ export default function EventSetupWizard({
             {seriesMode === "new" && newSeriesName && <p>🔁 Neue Reihe: {newSeriesName}</p>}
             {discordChannelId && <p>📢 Kanal: {discordChannelId}</p>}
             {eventHidden && <p className="text-violet-400">🔒 Unsichtbar – wird nicht veröffentlicht</p>}
+            {eventRegistrationLocked && <p className="text-violet-400">🔐 Selbst-Anmeldung deaktiviert</p>}
           </div>
         </div>
         <div className="rounded-xl p-4 border border-white/8 bg-white/2 text-sm space-y-1.5 text-gray-400">
@@ -1456,6 +1534,7 @@ export default function EventSetupWizard({
             {seriesDiscordId && <p>📢 Kanal: {seriesDiscordId}</p>}
             {spectatorMode && <p>👁️ Zuschauer-Standard aktiv</p>}
             {seriesHidden && <p className="text-violet-400">🔒 Unsichtbar – wird nicht veröffentlicht</p>}
+            {seriesRegistrationLocked && <p className="text-violet-400">🔐 Selbst-Anmeldung deaktiviert</p>}
           </div>
         </div>
         <div className="rounded-xl p-4 border border-white/8 bg-white/2 text-sm space-y-1.5 text-gray-400">

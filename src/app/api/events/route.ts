@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
   const {
     title, description, game, genre, category, startAt, maxPlayers, type, seriesId,
     discordChannelId, spectatorMode, spectatorRewardJson, pollsConfigJson,
-    placementRewardsJson, hidden,
+    placementRewardsJson, hidden, registrationLocked,
   } = body;
 
   if (!title || !startAt) {
@@ -102,6 +102,7 @@ export async function POST(req: NextRequest) {
       seriesId:        seriesId || null,
       discordChannelId: discordChannelId || null,
       hidden:          hidden ? true : false,
+      registrationLocked: registrationLocked ? true : false,
       spectatorMode:   spectatorMode ? true : false,
       spectatorRewardJson: spectatorRewardJson ? JSON.stringify(spectatorRewardJson) : null,
       pollsConfigJson: pollsConfigJson ? JSON.stringify(pollsConfigJson) : null,

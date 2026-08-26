@@ -115,6 +115,7 @@ export default async function NewSeasonPage({ params }: { params: Promise<{ id: 
     recurrenceType: (series.recurrenceType ?? "none") as "none" | "weekly" | "biweekly" | "monthly",
     recurrenceMonthlyMode: (series.recurrenceMonthlyMode ?? "dayOfMonth") as "dayOfMonth" | "weekdayOfMonth",
     seriesHidden: series.hidden,
+    seriesRegistrationLocked: series.registrationLocked,
     spectatorMode: sampleEvent?.spectatorMode ?? false,
     spectatorCoins: spectatorReward.coins ?? 5,
     spectatorRankPts: spectatorReward.rankPoints ?? 0,

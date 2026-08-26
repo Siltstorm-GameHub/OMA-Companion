@@ -14,11 +14,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const event = await prisma.event.findUnique({
     where: { id: eventId },
-    include: { _count: { select: { registrations: { where: { role: "player" } } } } },
+    include: {
+      _count: { select: { registrations: { where: { role: "player" } } } },
+      series: { select: { registrationLocked: true } },
+    },
   });
   if (!event) return NextResponse.json({ error: "Event nicht gefunden" }, { status: 404 });
   if (event.status === "finished" || event.status === "closed")
     return NextResponse.json({ error: "Registrierung geschlossen" }, { status: 400 });
+  if (event.registrationLocked || event.series?.registrationLocked)
+    return NextResponse.json({ error: "Anmeldung ist geschlossen — nur Admins tragen Teilnehmer ein" }, { status: 403 });
   if (role === "spectator" && !event.spectatorMode)
     return NextResponse.json({ error: "Zuschauer-Registrierung nicht aktiviert" }, { status: 400 });
   if (role === "player" && event.maxPlayers && event._count.registrations >= event.maxPlayers)

@@ -91,6 +91,7 @@ export async function PATCH(req: NextRequest) {
       ...(fields.pollsConfigJson        !== undefined && { pollsConfigJson:       fields.pollsConfigJson }),
       ...(fields.category              !== undefined && { category:              fields.category || null }),
       ...(fields.hidden                !== undefined && { hidden:                fields.hidden }),
+      ...(fields.registrationLocked    !== undefined && { registrationLocked:    fields.registrationLocked }),
     },
   });
 

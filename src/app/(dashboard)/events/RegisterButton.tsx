@@ -49,9 +49,11 @@ export default function RegisterButton({
         }
         router.refresh();
       } else {
+        const err = await res.json().catch(() => ({}));
         toast.error("Aktion fehlgeschlagen", {
-          description: "Bitte versuche es erneut.",
+          description: (err as { error?: string }).error ?? "Bitte versuche es erneut.",
         });
+        router.refresh();
       }
     } catch {
       toast.error("Netzwerkfehler", {

@@ -8,7 +8,7 @@ import {
   ChevronLeft, ChevronRight, CalendarPlus, RefreshCw, Gamepad2,
   Swords, Hash, BarChart2, Plus, X, Trophy, Save, Coins,
   MessageSquare, ExternalLink, Archive, Vote, Trash2, Eye, EyeOff,
-  Monitor, Flame, Repeat, Clock,
+  Monitor, Flame, Repeat, Clock, Lock, Unlock,
 } from "lucide-react";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import SeriesIcon from "@/components/SeriesIcon";
@@ -226,6 +226,8 @@ export default function SeriesDetailClient({ series, allUsers, hasActiveSibling 
   const [propagateFormat, setPropagateFormat] = useState(false);
   const [hidden, setHidden]                   = useState<boolean>(series.hidden ?? false);
   const [hiddenBusy, setHiddenBusy]           = useState(false);
+  const [registrationLocked, setRegistrationLocked] = useState<boolean>(series.registrationLocked ?? false);
+  const [registrationLockedBusy, setRegistrationLockedBusy] = useState(false);
 
   // Stat config
   const initialStatCfg = (() => {
@@ -398,6 +400,23 @@ export default function SeriesDetailClient({ series, allUsers, hasActiveSibling 
     }
   }
 
+  async function toggleRegistrationLocked() {
+    setRegistrationLockedBusy(true);
+    const next = !registrationLocked;
+    const res = await fetch("/api/admin/event-series", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ seriesId: series.id, registrationLocked: next }),
+    });
+    setRegistrationLockedBusy(false);
+    if (res.ok) {
+      setRegistrationLocked(next);
+      toast.success(next ? "Selbst-Anmeldung für die ganze Reihe deaktiviert" : "Selbst-Anmeldung wieder aktiv");
+    } else {
+      toast.error("Fehler");
+    }
+  }
+
   function openGenerateModal() {
     const suggested = suggestedNextDate();
     setGenerateDateStr(toDatetimeLocal(suggested ?? new Date()));
@@ -517,6 +536,19 @@ export default function SeriesDetailClient({ series, allUsers, hasActiveSibling 
           >
             {hidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
             {hidden ? "Ausgeblendet" : "Sichtbar"}
+          </button>
+          <button
+            onClick={toggleRegistrationLocked}
+            disabled={registrationLockedBusy}
+            title={registrationLocked ? "Selbst-Anmeldung für die Reihe wieder erlauben" : "Selbst-Anmeldung für die ganze Reihe deaktivieren (nur Admins tragen Teilnehmer ein)"}
+            className={`flex items-center gap-1.5 text-xs border rounded-lg px-3 py-1.5 transition-all disabled:opacity-50 ${
+              registrationLocked
+                ? "text-amber-400 border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20"
+                : "text-gray-500 border-white/[0.08] hover:border-white/20 hover:text-gray-300"
+            }`}
+          >
+            {registrationLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+            {registrationLocked ? "Anmeldung gesperrt" : "Anmeldung offen"}
           </button>
           <Link
             href={`/events/series/${series.id}`}

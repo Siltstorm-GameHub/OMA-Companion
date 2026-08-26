@@ -8,7 +8,7 @@ import Link from "next/link";
 import {
   ChevronLeft, Save, Trophy, CheckCircle2, AlertTriangle, Trash2,
   Search, UserPlus, UserMinus, Repeat, ExternalLink, AlertCircle, Plus, Tv2, Clapperboard,
-  Eye, EyeOff,
+  Eye, EyeOff, Lock, Unlock,
 } from "lucide-react";
 import { EventCategory, EventGenre } from "@prisma/client";
 import SeriesIcon from "@/components/SeriesIcon";
@@ -235,6 +235,8 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
 
   const [hidden, setHidden] = useState<boolean>(event.hidden ?? false);
   const [hiddenBusy, setHiddenBusy] = useState(false);
+  const [registrationLocked, setRegistrationLocked] = useState<boolean>(event.registrationLocked ?? false);
+  const [registrationLockedBusy, setRegistrationLockedBusy] = useState(false);
 
   /* ── Series config state ── */
   const initialSeriesCfg = (() => {
@@ -259,6 +261,23 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
     if (res.ok) {
       setHidden(next);
       toast.success(next ? "Event ausgeblendet" : "Event wieder sichtbar");
+    } else {
+      toast.error("Fehler");
+    }
+  }
+
+  async function toggleRegistrationLocked() {
+    setRegistrationLockedBusy(true);
+    const next = !registrationLocked;
+    const res = await fetch("/api/admin/events", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ eventId: event.id, registrationLocked: next }),
+    });
+    setRegistrationLockedBusy(false);
+    if (res.ok) {
+      setRegistrationLocked(next);
+      toast.success(next ? "Selbst-Anmeldung deaktiviert" : "Selbst-Anmeldung wieder aktiv");
     } else {
       toast.error("Fehler");
     }
@@ -572,6 +591,19 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
           >
             {hidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
             {hidden ? "Ausgeblendet" : "Sichtbar"}
+          </button>
+          <button
+            onClick={toggleRegistrationLocked}
+            disabled={registrationLockedBusy}
+            title={registrationLocked ? "Selbst-Anmeldung wieder erlauben" : "Selbst-Anmeldung deaktivieren (nur Admins tragen Teilnehmer ein)"}
+            className={`flex items-center gap-1.5 text-xs border rounded-lg px-3 py-1.5 transition-all disabled:opacity-50 ${
+              registrationLocked
+                ? "text-amber-400 border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20"
+                : "text-gray-500 border-white/[0.08] hover:border-white/20 hover:text-gray-300"
+            }`}
+          >
+            {registrationLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+            {registrationLocked ? "Anmeldung gesperrt" : "Anmeldung offen"}
           </button>
           <Link href={`/tournament/${event.id}`}
             className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 border border-white/[0.08] hover:border-white/20 rounded-lg px-3 py-1.5 transition-all">

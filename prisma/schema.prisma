@@ -193,6 +193,7 @@ model EventSeries {
   groupId               String? // verbindet alle Saisons derselben Reihe
   status                String        @default("active") // "active" | "archived"
   hidden                Boolean       @default(false) // true = nur im Admin sichtbar
+  registrationLocked    Boolean       @default(false) // true = User können sich nicht selbst anmelden, nur Admins tragen Teilnehmer ein
   seasonNumber          Int? // 1, 2, 3 …
   archivedAt            DateTime?
   // JSON: analog zu event.completionData (overallWinnerIds, finalRanking, poll*, lockedAt)
@@ -218,6 +219,7 @@ model Event {
   type                String        @default("community")
   status              String        @default("open")
   hidden              Boolean       @default(false) // true = nur im Admin sichtbar
+  registrationLocked  Boolean       @default(false) // true = User können sich nicht selbst anmelden, nur Admins tragen Teilnehmer ein
   coverImageUrl       String? // Eigenes Event-Bild (Vercel Blob). Leer = Spiel-Cover, sonst EventCoverDefault
   // Token für die öffentliche OBS-Overlay-Route (/overlay/[id]?token=…). Wird lazy bei der
   // ersten Streamer-Anmeldung erzeugt, ein Event hat höchstens einen Link für alle Streamer.

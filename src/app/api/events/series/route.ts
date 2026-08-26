@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     category, genre, fixedGame, fixedFormat, discordChannelId,
     recurrenceType, recurrenceMonthlyMode,
     placementRewardsJson, pollsConfigJson, seriesStatConfig,
-    startDate, endDate, hidden,
+    startDate, endDate, hidden, registrationLocked,
     spectatorMode, spectatorRewardJson,
     groupId, seasonNumber,
   } = body;
@@ -50,6 +50,7 @@ export async function POST(req: NextRequest) {
         pollsConfigJson: pollsJson,
         seriesStatConfig: seriesStatConfig ?? null,
         hidden: hidden ?? false,
+        registrationLocked: registrationLocked ?? false,
         groupId: groupId ?? null,
         seasonNumber: seasonNumber ?? null,
       },
