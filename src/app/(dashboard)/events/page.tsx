@@ -54,7 +54,7 @@ export default async function EventsPage() {
       orderBy: { startAt: "asc" },
       include: {
         _count:        { select: { registrations: true } },
-        series:        { select: { id: true, name: true, icon: true, registrationLocked: true } },
+        series:        { select: { id: true, name: true, icon: true, registrationLocked: true, squadId: true } },
         registrations: { select: { userId: true } },
         streamingPartners: { include: { partner: { select: { userId: true } } } },
         communityStreamers: userId ? { where: { userId }, select: { userId: true } } : { select: { userId: true }, take: 0 },
@@ -117,6 +117,10 @@ export default async function EventsPage() {
         prisma.eventWinnerPrediction.count({ where: { userId, resolved: false } }),
       ])
     : [[], [], [], [], 0, emptyPredictionRows, null, 0];
+
+  const mySquadIds = userId
+    ? new Set((await prisma.squadMembership.findMany({ where: { userId }, select: { squadId: true } })).map(m => m.squadId))
+    : new Set<string>();
 
   const serializeDuels = (duels: Array<Record<string, unknown>>): DuelEntry[] =>
     duels.map(d => ({
@@ -197,6 +201,8 @@ export default async function EventsPage() {
         : false;
       const isFull       = !!(ev.maxPlayers && ev._count.registrations >= ev.maxPlayers);
       const isRegistrationLocked = ev.registrationLocked || ev.series?.registrationLocked || false;
+      const restrictedSquadId = ev.squadId ?? ev.series?.squadId ?? null;
+      const isSquadMember = restrictedSquadId ? mySquadIds.has(restrictedSquadId) : true;
       const canRegister  = ev.status === "open" || ev.status === "active";
       const isPartnerStreamer = userId
         ? (ev as unknown as { streamingPartners: { partner: { userId: string | null } }[] }).streamingPartners.some(sp => sp.partner.userId === userId)
@@ -275,7 +281,7 @@ export default async function EventsPage() {
                 </a>
               )}
             </div>
-            {userId && canRegister && (isRegistered || !isRegistrationLocked) && (
+            {userId && canRegister && (isRegistered || (!isRegistrationLocked && isSquadMember)) && (
               <div className="flex items-center gap-2 flex-wrap mt-2.5">
                 <RegisterButton
                   eventId={ev.id}
@@ -291,6 +297,11 @@ export default async function EventsPage() {
             {userId && canRegister && !isRegistered && isRegistrationLocked && (
               <p className="flex items-center gap-1 text-xs text-gray-500 mt-2.5">
                 🔒 Anmeldung nur durch Admins
+              </p>
+            )}
+            {userId && canRegister && !isRegistered && !isRegistrationLocked && !isSquadMember && (
+              <p className="flex items-center gap-1 text-xs text-gray-500 mt-2.5">
+                🛡️ Anmeldung nur für Squad-Mitglieder
               </p>
             )}
           </div>

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireRole } from "@/lib/roles";
+import { requireModeratorOrEventSquadCaptain } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  await requireRole("moderator");
   const { id: eventId } = await params;
+  await requireModeratorOrEventSquadCaptain(eventId);
   const { userId } = await req.json();
   if (!userId) return NextResponse.json({ error: "userId fehlt" }, { status: 400 });
 
@@ -22,8 +22,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  await requireRole("moderator");
   const { id: eventId } = await params;
+  await requireModeratorOrEventSquadCaptain(eventId);
   const { userId } = await req.json();
   if (!userId) return NextResponse.json({ error: "userId fehlt" }, { status: 400 });
 

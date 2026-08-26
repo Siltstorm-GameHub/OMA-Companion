@@ -1,4 +1,4 @@
-import { requireRole } from "@/lib/roles";
+import { requireModeratorOrEventSquadCaptain } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import EventCompleteClient from "./EventCompleteClient";
@@ -46,8 +46,8 @@ function parsePoll(json: string | null | undefined): PollConfig {
 }
 
 export default async function AdminEventCompletePage({ params }: { params: Promise<{ id: string }> }) {
-  const currentUser = await requireRole("moderator");
   const { id } = await params;
+  const currentUser = await requireModeratorOrEventSquadCaptain(id);
 
   const [event, allUsers] = await Promise.all([
     prisma.event.findUnique({

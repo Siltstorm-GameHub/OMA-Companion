@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { getSessionUser, hasMinRole } from "@/lib/roles";
 import { createDiscordScheduledEvent, announceNewEvent } from "@/lib/discord-events";
 import { dispatchEventNotification } from "@/lib/notify-dispatch";
 import { createPollsForEvent } from "@/lib/event-polls";
@@ -33,8 +34,25 @@ export async function POST(req: NextRequest) {
   const {
     title, description, game, genre, category, startAt, maxPlayers, type, seriesId,
     discordChannelId, spectatorMode, spectatorRewardJson, pollsConfigJson,
-    placementRewardsJson, hidden, registrationLocked,
+    placementRewardsJson, hidden, registrationLocked, squadId,
   } = body;
+
+  // Moderator/Admin dürfen immer Events erstellen. Reine Squad-Captains (globale Rolle "user") nur,
+  // wenn das Event direkt auf ihr eigenes Squad beschränkt wird (squadId gesetzt + sie sind dessen
+  // Captain) — ein Community-weites Event ohne Squad-Bindung bleibt Moderatoren/Admins vorbehalten.
+  const currentUser = await getSessionUser();
+  if (!currentUser) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
+  if (!hasMinRole(currentUser.role, "moderator")) {
+    // Bei Anhängen an eine bestehende Reihe zählt deren Squad-Bindung, sonst die des Events selbst.
+    const relevantSquadId = squadId || (seriesId
+      ? (await prisma.eventSeries.findUnique({ where: { id: seriesId }, select: { squadId: true } }))?.squadId
+      : null);
+    if (!relevantSquadId) return NextResponse.json({ error: "Keine Berechtigung" }, { status: 403 });
+    const membership = await prisma.squadMembership.findUnique({
+      where: { squadId_userId: { squadId: relevantSquadId, userId: currentUser.id } },
+    });
+    if (membership?.role !== "captain") return NextResponse.json({ error: "Keine Berechtigung" }, { status: 403 });
+  }
 
   if (!title || !startAt) {
     return NextResponse.json({ error: "Titel und Datum sind Pflichtfelder" }, { status: 400 });
@@ -103,6 +121,7 @@ export async function POST(req: NextRequest) {
       discordChannelId: discordChannelId || null,
       hidden:          hidden ? true : false,
       registrationLocked: registrationLocked ? true : false,
+      squadId:         squadId || null,
       spectatorMode:   spectatorMode ? true : false,
       spectatorRewardJson: spectatorRewardJson ? JSON.stringify(spectatorRewardJson) : null,
       pollsConfigJson: pollsConfigJson ? JSON.stringify(pollsConfigJson) : null,

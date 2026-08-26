@@ -184,7 +184,9 @@ function toDatetimeLocal(d: Date | string) {
 type TabKey = "details" | "rewards" | "tournament" | "bracket" | "participants" | "series";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export default function EventEditClient({ event, allUsers }: { event: any; allUsers: User[] }) {
+type SquadOption = { id: string; name: string };
+
+export default function EventEditClient({ event, allUsers, squads = [] }: { event: any; allUsers: User[]; squads?: SquadOption[] }) {
   const router        = useRouter();
   const { data: session } = useSession();
   const isAdmin       = session?.user?.role === "admin";
@@ -237,6 +239,8 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
   const [hiddenBusy, setHiddenBusy] = useState(false);
   const [registrationLocked, setRegistrationLocked] = useState<boolean>(event.registrationLocked ?? false);
   const [registrationLockedBusy, setRegistrationLockedBusy] = useState(false);
+  const [squadId, setSquadId] = useState<string>(event.squadId ?? "");
+  const [squadIdBusy, setSquadIdBusy] = useState(false);
 
   /* ── Series config state ── */
   const initialSeriesCfg = (() => {
@@ -278,6 +282,22 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
     if (res.ok) {
       setRegistrationLocked(next);
       toast.success(next ? "Selbst-Anmeldung deaktiviert" : "Selbst-Anmeldung wieder aktiv");
+    } else {
+      toast.error("Fehler");
+    }
+  }
+
+  async function saveSquadId(next: string) {
+    setSquadIdBusy(true);
+    const res = await fetch("/api/admin/events", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ eventId: event.id, squadId: next || null }),
+    });
+    setSquadIdBusy(false);
+    if (res.ok) {
+      setSquadId(next);
+      toast.success(next ? "Auf Squad beschränkt" : "Squad-Beschränkung entfernt");
     } else {
       toast.error("Fehler");
     }
@@ -613,6 +633,17 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
             {registrationLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
             {registrationLocked ? "Anmeldung gesperrt" : "Anmeldung offen"}
           </button>
+          {squads.length > 0 && (
+            <select value={squadId} disabled={squadIdBusy}
+              onChange={e => saveSquadId(e.target.value)}
+              title="Spieler-Anmeldung auf ein Squad beschränken"
+              className={`text-xs rounded-lg px-2.5 py-1.5 border outline-none transition-all disabled:opacity-50 ${
+                squadId ? "text-amber-400 border-amber-500/40 bg-amber-500/10" : "text-gray-500 border-white/[0.08] bg-transparent"
+              }`}>
+              <option value="">Für alle offen</option>
+              {squads.map(s => <option key={s.id} value={s.id}>Nur: {s.name}</option>)}
+            </select>
+          )}
           <Link href={`/tournament/${event.id}`}
             className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 border border-white/[0.08] hover:border-white/20 rounded-lg px-3 py-1.5 transition-all">
             <ExternalLink className="w-3.5 h-3.5" /> Öffentlich

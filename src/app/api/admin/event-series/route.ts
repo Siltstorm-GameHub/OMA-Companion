@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
-import { requireRole } from "@/lib/roles";
+import { requireRole, requireModeratorOrSeriesSquadCaptain, hasMinRole, getCaptainedSquadIds } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { createPollsForEvent, parsePollsConfigJson } from "@/lib/event-polls";
 
@@ -59,10 +59,17 @@ export async function GET(req: NextRequest) {
  * }
  */
 export async function PATCH(req: NextRequest) {
-  await requireRole("moderator");
   const body = await req.json();
   const { seriesId, propagateGame, propagateFormat, propagatePolls, propagateStatFields, ...fields } = body;
   if (!seriesId) return NextResponse.json({ error: "seriesId fehlt" }, { status: 400 });
+
+  const currentUser = await requireModeratorOrSeriesSquadCaptain(seriesId);
+  // Captains dürfen die Squad-Bindung ihrer Reihe nur auf ein eigenes Squad setzen, nicht entfernen
+  // oder auf ein fremdes Squad umbiegen.
+  if (!hasMinRole(currentUser.role, "moderator") && "squadId" in fields) {
+    const captainedSquadIds = await getCaptainedSquadIds(currentUser.id);
+    if (!fields.squadId || !captainedSquadIds.includes(fields.squadId)) delete fields.squadId;
+  }
 
   // Alten Namen merken, um die Event-Titel unten ggf. anzupassen
   const oldSeries = fields.name !== undefined
@@ -92,6 +99,7 @@ export async function PATCH(req: NextRequest) {
       ...(fields.category              !== undefined && { category:              fields.category || null }),
       ...(fields.hidden                !== undefined && { hidden:                fields.hidden }),
       ...(fields.registrationLocked    !== undefined && { registrationLocked:    fields.registrationLocked }),
+      ...(fields.squadId               !== undefined && { squadId:               fields.squadId || null }),
     },
   });
 

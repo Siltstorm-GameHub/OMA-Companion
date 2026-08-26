@@ -116,7 +116,7 @@ export default async function TournamentDetailPage({
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     include: {
-      series: { select: { id: true, name: true, icon: true, hidden: true, registrationLocked: true, seriesStatConfig: true, discordChannelId: true, pollConfigJson: true, coverImageUrl: true } },
+      series: { select: { id: true, name: true, icon: true, hidden: true, registrationLocked: true, squadId: true, seriesStatConfig: true, discordChannelId: true, pollConfigJson: true, coverImageUrl: true } },
       streamingPartners: { include: { partner: { include: { user: { select: { id: true } } } } } },
       communityStreamers: { include: { user: { select: { id: true, name: true, username: true, image: true, twitchLogin: true, rankPoints: true } } } },
       registrations: {
@@ -199,6 +199,10 @@ export default async function TournamentDetailPage({
   const isFullEvent    = !!(event.maxPlayers && event.registrations.filter(r => r.role !== "spectator").length >= event.maxPlayers);
   const canRegister    = event.status === "open" || event.status === "active";
   const isRegistrationLocked = event.registrationLocked || event.series?.registrationLocked || false;
+  const restrictedSquadId = event.squadId ?? event.series?.squadId ?? null;
+  const isSquadMember = restrictedSquadId
+    ? !!(await prisma.squadMembership.findUnique({ where: { squadId_userId: { squadId: restrictedSquadId, userId } } }))
+    : true;
   const discordEventUrl = event.discordEventId && GUILD_ID
     ? `https://discord.com/events/${GUILD_ID}/${event.discordEventId}` : null;
   const discordChannelId = event.discordChannelId ?? event.series?.discordChannelId ?? null;
@@ -755,7 +759,7 @@ export default async function TournamentDetailPage({
 
         {userId && (
           <div className="mt-4 flex items-center gap-3 flex-wrap">
-            {canRegister && (isRegistered || !isRegistrationLocked) && (
+            {canRegister && (isRegistered || (!isRegistrationLocked && isSquadMember)) && (
               <RegisterButton eventId={event.id} isRegistered={isRegistered} isFull={isFullEvent && !isRegistered} discordEventUrl={discordEventUrl} />
             )}
             {canRegister && event.spectatorMode && !isRegistered && (isSpectator || !isRegistrationLocked) && (
@@ -764,6 +768,11 @@ export default async function TournamentDetailPage({
             {canRegister && !isRegistered && !isSpectator && isRegistrationLocked && (
               <span className="flex items-center gap-1 text-xs text-gray-500">
                 🔒 Anmeldung nur durch Admins
+              </span>
+            )}
+            {canRegister && !isRegistered && !isSpectator && !isRegistrationLocked && !isSquadMember && (
+              <span className="flex items-center gap-1 text-xs text-gray-500">
+                🛡️ Anmeldung nur für Squad-Mitglieder
               </span>
             )}
             {event.status === "umfrage" && discordChannelUrl && initialPolls.length === 0 && (

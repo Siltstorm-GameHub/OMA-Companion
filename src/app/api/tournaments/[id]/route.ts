@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireRole } from "@/lib/roles";
+import { requireModeratorOrEventSquadCaptain } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { generateRoundRobin } from "@/app/api/tournaments/route";
 import { resolveEventPredictions } from "@/lib/predictions";
@@ -96,9 +96,9 @@ async function awardPoints(
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  await requireRole("moderator");
   // [id] ist jetzt die Event.id
   const { id: eventId } = await params;
+  await requireModeratorOrEventSquadCaptain(eventId);
   const body = await req.json();
   const { status, format, pointsConfig, statFields, generateMatches, finalRanking, finalRankingNote } = body;
 

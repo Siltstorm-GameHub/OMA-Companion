@@ -22,6 +22,8 @@ type SeriesOption = {
   _count: { events: number };
 };
 
+type SquadOption = { id: string; name: string };
+
 type PollConfig = {
   label: string;
   question: string;
@@ -59,6 +61,7 @@ type SeasonPrefill = {
   recurrenceMonthlyMode: MonthlyMode;
   seriesHidden: boolean;
   seriesRegistrationLocked: boolean;
+  seriesSquadId: string;
   spectatorMode: boolean;
   spectatorCoins: number;
   spectatorRankPts: number;
@@ -136,10 +139,21 @@ const labelCls   = "text-xs text-gray-500 mb-1 block";
 
 export default function EventSetupWizard({
   series,
+  squads = [],
+  forceSquad = false,
+  initialSquadId,
   initialMode = "select",
   seasonPrefill,
 }: {
   series: SeriesOption[];
+  squads?: SquadOption[];
+  /** true = Aufrufer ist ein reiner Squad-Captain (kein Moderator/Admin) — Event/Reihe muss auf eines
+   *  der übergebenen (bereits auf die eigenen Squads gefilterten) squads beschränkt bleiben, "für alle
+   *  offen" ist keine Option. */
+  forceSquad?: boolean;
+  /** Vorausgewähltes Squad (z.B. von der Squad-Seite aus "+ Neues Event" gestartet) — nur eine Vorbelegung,
+   *  bleibt bei forceSquad=false änderbar. */
+  initialSquadId?: string;
   initialMode?: "select" | "event" | "series";
   seasonPrefill?: SeasonPrefill;
 }) {
@@ -172,6 +186,7 @@ export default function EventSetupWizard({
   const [ligaDrawCoins, setLigaDrawCoins] = useState(20);
   const [eventHidden, setEventHidden] = useState(false);
   const [eventRegistrationLocked, setEventRegistrationLocked] = useState(false);
+  const [eventSquadId, setEventSquadId] = useState(initialSquadId ?? (forceSquad ? (squads[0]?.id ?? "") : ""));
 
   // ── Series mode state ─────────────────────────────────────────────────────────
   const [seriesName, setSeriesName]     = useState(seasonPrefill?.name ?? "");
@@ -194,6 +209,7 @@ export default function EventSetupWizard({
   const [statRows, setStatRows]         = useState<StatRow[]>(seasonPrefill?.statRows ?? []);
   const [seriesHidden, setSeriesHidden] = useState(seasonPrefill?.seriesHidden ?? false);
   const [seriesRegistrationLocked, setSeriesRegistrationLocked] = useState(seasonPrefill?.seriesRegistrationLocked ?? false);
+  const [seriesSquadId, setSeriesSquadId] = useState(seasonPrefill?.seriesSquadId ?? initialSquadId ?? (forceSquad ? (squads[0]?.id ?? "") : ""));
   const [eventStatFields, setEventStatFields] = useState<string[]>(seasonPrefill?.eventStatFields ?? []);
   const [winnerStatField, setWinnerStatField] = useState(seasonPrefill?.winnerStatField ?? "");
 
@@ -338,6 +354,7 @@ export default function EventSetupWizard({
       discordChannelId: discordChannelId || null,
       hidden: eventHidden,
       registrationLocked: eventRegistrationLocked,
+      squadId: eventSquadId || null,
       spectatorMode,
       spectatorRewardJson: spectatorMode ? { coins: spectatorCoins, rankPoints: spectatorRankPts } : null,
       placementRewardsJson: { participationCoins, participationRankPts: effectiveParticipationRankPts, placements: effectivePlacements },
@@ -417,6 +434,7 @@ export default function EventSetupWizard({
         eventType,
         hidden: seriesHidden,
         registrationLocked: seriesRegistrationLocked,
+        squadId: seriesSquadId || null,
         spectatorMode,
         spectatorRewardJson: spectatorMode ? { coins: spectatorCoins, rankPoints: spectatorRankPts } : null,
         groupId: seasonPrefill?.groupId,
@@ -663,6 +681,21 @@ export default function EventSetupWizard({
           </label>
         </div>
 
+        {squads.length > 0 && (
+          <div className="rounded-xl p-4 border border-white/8 bg-white/2">
+            <label className={labelCls}>{forceSquad ? "Squad" : "Nur für Squad (optional)"}</label>
+            <select value={eventSquadId} onChange={e => setEventSquadId(e.target.value)}
+              className={inputCls} style={inputStyle}>
+              {!forceSquad && <option value="">– Für alle offen –</option>}
+              {squads.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+            <p className="text-[11px] text-gray-500 mt-1.5">
+              Event bleibt für alle sichtbar, aber nur Mitglieder dieses Squads können sich als
+              Spieler anmelden (Zuschauer-Anmeldung bleibt offen).
+            </p>
+          </div>
+        )}
+
         <div className="rounded-xl p-3 space-y-3" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(20,184,166,0.10)" }}>
           <p className="text-xs text-gray-400 font-semibold uppercase tracking-wider">Eventreihe</p>
           <div className="flex gap-2 flex-wrap">
@@ -854,6 +887,21 @@ export default function EventSetupWizard({
             </div>
           </label>
         </div>
+
+        {squads.length > 0 && (
+          <div className="rounded-xl p-4 border border-white/8 bg-white/2">
+            <label className={labelCls}>{forceSquad ? "Squad" : "Nur für Squad (optional)"}</label>
+            <select value={seriesSquadId} onChange={e => setSeriesSquadId(e.target.value)}
+              className={inputCls} style={inputStyle}>
+              {!forceSquad && <option value="">– Für alle offen –</option>}
+              {squads.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+            <p className="text-[11px] text-gray-500 mt-1.5">
+              Gilt für alle Events der Reihe (auch später generierte) — bleiben für alle sichtbar,
+              aber nur Mitglieder dieses Squads können sich als Spieler anmelden.
+            </p>
+          </div>
+        )}
       </div>
     );
   }
@@ -1489,6 +1537,7 @@ export default function EventSetupWizard({
             {discordChannelId && <p>📢 Kanal: {discordChannelId}</p>}
             {eventHidden && <p className="text-violet-400">🔒 Unsichtbar – wird nicht veröffentlicht</p>}
             {eventRegistrationLocked && <p className="text-violet-400">🔐 Selbst-Anmeldung deaktiviert</p>}
+            {eventSquadId && <p className="text-violet-400">🛡️ Nur für Squad: {squads.find(s => s.id === eventSquadId)?.name}</p>}
           </div>
         </div>
         <div className="rounded-xl p-4 border border-white/8 bg-white/2 text-sm space-y-1.5 text-gray-400">
@@ -1535,6 +1584,7 @@ export default function EventSetupWizard({
             {spectatorMode && <p>👁️ Zuschauer-Standard aktiv</p>}
             {seriesHidden && <p className="text-violet-400">🔒 Unsichtbar – wird nicht veröffentlicht</p>}
             {seriesRegistrationLocked && <p className="text-violet-400">🔐 Selbst-Anmeldung deaktiviert</p>}
+            {seriesSquadId && <p className="text-violet-400">🛡️ Nur für Squad: {squads.find(s => s.id === seriesSquadId)?.name}</p>}
           </div>
         </div>
         <div className="rounded-xl p-4 border border-white/8 bg-white/2 text-sm space-y-1.5 text-gray-400">

@@ -1,13 +1,15 @@
-import { requireRole } from "@/lib/roles";
+import { requireModeratorOrSeriesSquadCaptain, hasMinRole, getCaptainedSquadIds } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import SeriesDetailClient from "./SeriesDetailClient";
 
 export default async function AdminSeriesDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireRole("moderator");
   const { id } = await params;
+  const user = await requireModeratorOrSeriesSquadCaptain(id);
+  const isModerator = hasMinRole(user.role, "moderator");
+  const captainedSquadIds = isModerator ? null : await getCaptainedSquadIds(user.id);
 
-  const [series, allUsers] = await Promise.all([
+  const [series, allUsers, squads] = await Promise.all([
     prisma.eventSeries.findUnique({
       where: { id },
       include: {
@@ -24,6 +26,11 @@ export default async function AdminSeriesDetailPage({ params }: { params: Promis
       select: { id: true, name: true, username: true, image: true },
       orderBy: { name: "asc" },
     }),
+    prisma.squad.findMany({
+      where: { hidden: false, ...(captainedSquadIds && { id: { in: captainedSquadIds } }) },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
   ]);
 
   if (!series) notFound();
@@ -32,5 +39,5 @@ export default async function AdminSeriesDetailPage({ params }: { params: Promis
     ? (await prisma.eventSeries.count({ where: { groupId: series.groupId, status: "active" } })) > 0
     : true;
 
-  return <SeriesDetailClient series={series} allUsers={allUsers} hasActiveSibling={hasActiveSibling} />;
+  return <SeriesDetailClient series={series} allUsers={allUsers} squads={squads} hasActiveSibling={hasActiveSibling} isModerator={isModerator} />;
 }

@@ -116,6 +116,7 @@ export default async function NewSeasonPage({ params }: { params: Promise<{ id: 
     recurrenceMonthlyMode: (series.recurrenceMonthlyMode ?? "dayOfMonth") as "dayOfMonth" | "weekdayOfMonth",
     seriesHidden: series.hidden,
     seriesRegistrationLocked: series.registrationLocked,
+    seriesSquadId: series.squadId ?? "",
     spectatorMode: sampleEvent?.spectatorMode ?? false,
     spectatorCoins: spectatorReward.coins ?? 5,
     spectatorRankPts: spectatorReward.rankPoints ?? 0,
@@ -142,5 +143,11 @@ export default async function NewSeasonPage({ params }: { params: Promise<{ id: 
     },
   };
 
-  return <EventSetupWizard series={[]} initialMode="series" seasonPrefill={prefill} />;
+  const squads = await prisma.squad.findMany({
+    where: { hidden: false },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true },
+  });
+
+  return <EventSetupWizard series={[]} squads={squads} initialMode="series" seasonPrefill={prefill} />;
 }

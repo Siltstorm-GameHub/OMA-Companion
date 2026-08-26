@@ -1,11 +1,14 @@
-import { requireRole } from "@/lib/roles";
+import { requireModeratorOrAnySquadCaptain } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import AdminEventsClient from "./AdminEventsClient";
 
 export default async function AdminEventsPage() {
-  await requireRole("moderator");
+  const { captainedSquadIds } = await requireModeratorOrAnySquadCaptain();
+  // Reine Captains (globale Rolle "user") sehen hier nur Events/Reihen ihrer eigenen Squad(s) —
+  // Moderator/Admin (captainedSquadIds === null) sehen wie bisher die gesamte Plattform.
+  const squadFilter = captainedSquadIds ? { in: captainedSquadIds } : undefined;
 
   const eventSelect = {
     id: true,
@@ -23,12 +26,12 @@ export default async function AdminEventsPage() {
 
   const [standaloneEvents, allSeries, pastEvents] = await Promise.all([
     prisma.event.findMany({
-      where: { seriesId: null, status: { notIn: ["finished", "closed"] } },
+      where: { seriesId: null, status: { notIn: ["finished", "closed"] }, ...(squadFilter && { squadId: squadFilter }) },
       orderBy: { startAt: "asc" },
       select: eventSelect,
     }),
     prisma.eventSeries.findMany({
-      where: { status: "active" },
+      where: { status: "active", ...(squadFilter && { squadId: squadFilter }) },
       orderBy: { name: "asc" },
       select: {
         id: true,
@@ -46,7 +49,10 @@ export default async function AdminEventsPage() {
       },
     }),
     prisma.event.findMany({
-      where: { status: { in: ["finished", "closed"] } },
+      where: {
+        status: { in: ["finished", "closed"] },
+        ...(squadFilter && { OR: [{ squadId: squadFilter }, { series: { squadId: squadFilter } }] }),
+      },
       orderBy: { startAt: "desc" },
       take: 30,
       select: eventSelect,

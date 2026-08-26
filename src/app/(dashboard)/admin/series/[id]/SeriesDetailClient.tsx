@@ -189,7 +189,9 @@ function EventHiddenToggle({ id, hidden }: { id: string; hidden: boolean }) {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export default function SeriesDetailClient({ series, allUsers, hasActiveSibling = true }: { series: any; allUsers: User[]; hasActiveSibling?: boolean }) {
+type SquadOption = { id: string; name: string };
+
+export default function SeriesDetailClient({ series, allUsers, squads = [], hasActiveSibling = true, isModerator = true }: { series: any; allUsers: User[]; squads?: SquadOption[]; hasActiveSibling?: boolean; isModerator?: boolean }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [activeSettingsTab, setActiveSettingsTab] = useState<SettingsTabKey>("general");
@@ -228,6 +230,8 @@ export default function SeriesDetailClient({ series, allUsers, hasActiveSibling 
   const [hiddenBusy, setHiddenBusy]           = useState(false);
   const [registrationLocked, setRegistrationLocked] = useState<boolean>(series.registrationLocked ?? false);
   const [registrationLockedBusy, setRegistrationLockedBusy] = useState(false);
+  const [squadId, setSquadId] = useState<string>(series.squadId ?? "");
+  const [squadIdBusy, setSquadIdBusy] = useState(false);
 
   // Stat config
   const initialStatCfg = (() => {
@@ -417,6 +421,22 @@ export default function SeriesDetailClient({ series, allUsers, hasActiveSibling 
     }
   }
 
+  async function saveSquadId(next: string) {
+    setSquadIdBusy(true);
+    const res = await fetch("/api/admin/event-series", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ seriesId: series.id, squadId: next || null }),
+    });
+    setSquadIdBusy(false);
+    if (res.ok) {
+      setSquadId(next);
+      toast.success(next ? "Reihe auf Squad beschränkt" : "Squad-Beschränkung entfernt");
+    } else {
+      toast.error("Fehler");
+    }
+  }
+
   function openGenerateModal() {
     const suggested = suggestedNextDate();
     setGenerateDateStr(toDatetimeLocal(suggested ?? new Date()));
@@ -550,6 +570,17 @@ export default function SeriesDetailClient({ series, allUsers, hasActiveSibling 
             {registrationLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
             {registrationLocked ? "Anmeldung gesperrt" : "Anmeldung offen"}
           </button>
+          {squads.length > 0 && (
+            <select value={squadId} disabled={squadIdBusy}
+              onChange={e => saveSquadId(e.target.value)}
+              title="Spieler-Anmeldung für die ganze Reihe auf ein Squad beschränken"
+              className={`text-xs rounded-lg px-2.5 py-1.5 border outline-none transition-all disabled:opacity-50 ${
+                squadId ? "text-amber-400 border-amber-500/40 bg-amber-500/10" : "text-gray-500 border-white/[0.08] bg-transparent"
+              }`}>
+              <option value="">Für alle offen</option>
+              {squads.map((s: SquadOption) => <option key={s.id} value={s.id}>Nur: {s.name}</option>)}
+            </select>
+          )}
           <Link
             href={`/events/series/${series.id}`}
             className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 border border-white/[0.08] hover:border-white/20 rounded-lg px-3 py-1.5 transition-all"
@@ -1336,7 +1367,8 @@ export default function SeriesDetailClient({ series, allUsers, hasActiveSibling 
         </div>
       </div>
 
-      {/* Danger Zone */}
+      {/* Danger Zone — Löschen bleibt Moderatoren/Admins vorbehalten, auch für Captains ihres eigenen Squads */}
+      {isModerator && (
       <div className="rounded-xl border border-red-900/30 bg-red-950/10 p-4 space-y-3">
         <p className="text-xs font-semibold text-red-400 uppercase tracking-widest">Danger Zone</p>
 
@@ -1408,6 +1440,7 @@ export default function SeriesDetailClient({ series, allUsers, hasActiveSibling 
           </div>
         )}
       </div>
+      )}
 
       {showGenerateModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">

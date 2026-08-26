@@ -21,6 +21,7 @@ import CoinIcon from "@/components/CoinIcon";
 import WinIcon from "@/components/WinIcon";
 import Link from "next/link";
 import FavoriteGamesSection from "./FavoriteGamesSection";
+import SquadsSection from "./SquadsSection";
 import ProfileEditor from "./ProfileEditor";
 import { parseFavoriteGames } from "@/lib/favorite-games";
 import { PushSubscribeButton } from "@/components/PushSubscribeButton";
@@ -37,7 +38,7 @@ export default async function ProfilePage() {
   const month = now.getMonth() + 1;
   const year  = now.getFullYear();
 
-  const [user, eventRegs, eventCount, startedEvents, tournamentParticipations, tournamentCount, questsWithProgress, pokale, leaderboardRank, userSystemBadges, userCustomBadges, wanderpocalTrophies, wanderpocalStats, coinsEarnedAgg, coinsSpentAgg, lulPollWins] =
+  const [user, eventRegs, eventCount, startedEvents, tournamentParticipations, tournamentCount, questsWithProgress, pokale, leaderboardRank, userSystemBadges, userCustomBadges, wanderpocalTrophies, wanderpocalStats, coinsEarnedAgg, coinsSpentAgg, lulPollWins, squadMemberships] =
     await Promise.all([
       prisma.user.findUnique({
         where:  { id: userId },
@@ -89,7 +90,14 @@ export default async function ProfilePage() {
       prisma.pointTransaction.aggregate({ where: { userId, amount: { gt: 0 } }, _sum: { amount: true } }),
       prisma.pointTransaction.aggregate({ where: { userId, amount: { lt: 0 } }, _sum: { amount: true } }),
       prisma.lulEntry.count({ where: { userId, communityChamp: true } }),
+      prisma.squadMembership.findMany({
+        where: { userId },
+        orderBy: [{ role: "asc" }, { joinedAt: "asc" }],
+        select: { role: true, squad: { select: { id: true, name: true, icon: true } } },
+      }),
     ]);
+
+  const squads = squadMemberships.map(m => ({ ...m.squad, role: m.role }));
 
   if (!user) redirect("/login");
 
@@ -323,6 +331,7 @@ export default async function ProfilePage() {
       />
 
       {/* ── Aktuelle Lieblingsspiele ─────────────────────────────────── */}
+      <SquadsSection squads={squads} />
       <FavoriteGamesSection games={favoriteGames} viewerId={userId} />
 
       {/* ── Pokale ───────────────────────────────────────────────────── */}

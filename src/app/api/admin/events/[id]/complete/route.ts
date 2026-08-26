@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireRole } from "@/lib/roles";
+import { requireModeratorOrEventSquadCaptain } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { sendPushToUsers } from "@/lib/push";
@@ -96,8 +96,8 @@ export async function POST(
   req: NextRequest,
   ctx: { params: Promise<{ id: string }> }
 ) {
-  await requireRole("moderator");
   const { id: eventId } = await ctx.params;
+  await requireModeratorOrEventSquadCaptain(eventId);
 
   // Abschluss gegen Parallelaufrufe sperren. Ohne das lesen zwei gleichzeitig speichernde
   // Moderatoren beide denselben Ausgangsstand (isReEdit === false) und zahlen beide die
@@ -129,7 +129,7 @@ export async function POST(
 }
 
 async function completeEvent(req: NextRequest, eventId: string) {
-  const currentUser = await requireRole("moderator");
+  const currentUser = await requireModeratorOrEventSquadCaptain(eventId);
 
   // Kleine Helfer für die Diff-basierte Vergabe unten: statt Münzen/Rang-Punkte nur einmalig beim
   // ersten Abschluss zu vergeben, wird bei jedem Speichern ein Delta gegen die zuletzt vergebenen
