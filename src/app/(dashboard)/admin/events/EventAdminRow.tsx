@@ -390,16 +390,6 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
     router.refresh();
   }
 
-  async function deleteTournament() {
-    if (!tournament) return;
-    if (!(await confirm({ title: "Turnier löschen", description: `Turnier für "${event.title}" wirklich löschen?\n\nAlle Matches und Teilnehmer-Daten werden entfernt. Das Event selbst bleibt bestehen.`, variant: "danger" }))) return;
-    setLoading(true);
-    await fetch(`/api/tournaments/${event.id}`, { method: "DELETE" });
-    setLoading(false);
-    toast.success("Turnier gelöscht");
-    router.refresh();
-  }
-
   async function saveTmtSettings() {
     setTmtLoading(true);
     const isLiga = tmtFormat === "liga";
@@ -1272,30 +1262,6 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                           <CheckCircle2 className="w-3.5 h-3.5" />
                           {event.completionData ? "Bearbeiten" : "Abschließen"}
                         </Link>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Turnier-Danger-Zone */}
-                  {tournament && (
-                    <div className="border border-red-900/40 rounded-lg p-3 bg-red-950/10">
-                      <div className="flex items-center justify-between gap-4 flex-wrap">
-                        <div>
-                          <p className="text-sm font-medium text-white flex items-center gap-2">
-                            <Trophy className="w-3.5 h-3.5 text-amber-400" />
-                            Turnier vorhanden
-                            <span className="text-xs text-gray-500 font-normal">
-                              · {tournament.format} · {tournament.matches.length} Matches · {tournament.participants.length} Teilnehmer
-                            </span>
-                          </p>
-                          <p className="text-xs text-gray-600 mt-0.5">
-                            Löscht alle Matches, Teilnehmer-Daten und den Turnierbaum. Das Event bleibt bestehen.
-                          </p>
-                        </div>
-                        <button onClick={deleteTournament} disabled={loading}
-                          className="flex items-center gap-1.5 text-sm text-red-400 hover:text-white hover:bg-red-700 border border-red-800/50 hover:border-red-700 rounded-lg px-3 py-2 transition-colors disabled:opacity-50 shrink-0">
-                          <Trash2 className="w-3.5 h-3.5" /> Turnier löschen
-                        </button>
                       </div>
                     </div>
                   )}

@@ -442,25 +442,6 @@ export default function TournamentManager({
     router.refresh();
   }
 
-  async function deleteTournament() {
-    if (!tournament || !(await confirm({
-      title: "Ganzes Turnier löschen",
-      description: "Löscht das komplette Turnier inkl. ALLER Matches, Teilnehmer und des Turnierbaums unwiderruflich. Um nur ein einzelnes Match zu entfernen, nutze stattdessen das Papierkorb-Symbol direkt am Match.",
-      variant: "danger",
-      typedConfirmText: "TURNIER LÖSCHEN",
-    }))) return;
-    setLoading(true);
-    const res = await fetch(`/api/tournaments/${tournament.id}`, { method: "DELETE" });
-    setLoading(false);
-    if (res.ok) {
-      toast.success("Turnier gelöscht");
-      setTournament(null);
-      router.refresh();
-    } else {
-      toast.error("Fehler beim Löschen des Turniers");
-    }
-  }
-
   async function generateRoundRobinMatches() {
     if (!tournament || !(await confirm({ title: "Paarungen generieren", description: "Alle Paarungen automatisch aus den aktuellen Teilnehmern generieren?" }))) return;
     setLoading(true);
@@ -667,13 +648,6 @@ export default function TournamentManager({
           {visibleStatFields.length > 0 && (
             <span className="text-xs text-gray-600">Stats: {visibleStatFields.join(", ")}</span>
           )}
-        </div>
-        <div className="flex items-center gap-1.5">
-          <button onClick={deleteTournament} disabled={loading}
-            title="Löscht das gesamte Turnier inkl. aller Matches — nicht nur ein einzelnes Match"
-            className="flex items-center gap-1 text-xs text-red-500 hover:text-red-400 hover:bg-red-900/20 px-2 py-1 rounded transition-colors disabled:opacity-50">
-            <Trash2 className="w-3.5 h-3.5" /> Turnier löschen
-          </button>
         </div>
       </div>
 

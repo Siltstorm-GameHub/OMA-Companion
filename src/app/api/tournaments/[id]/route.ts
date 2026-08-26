@@ -202,37 +202,3 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   return NextResponse.json(event);
 }
-
-export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  await requireRole("moderator");
-  const { id: eventId } = await params;
-
-  const event = await prisma.event.findUnique({
-    where:  { id: eventId },
-    select: { tournamentStatus: true, finalRankingJson: true, pointsConfig: true, title: true },
-  });
-  if (!event) return NextResponse.json({ error: "Nicht gefunden" }, { status: 404 });
-
-  // Punkte zurückbuchen falls Turnier bereits abgeschlossen war
-  if (event.tournamentStatus === "finished" && event.finalRankingJson) {
-    const oldRanking = JSON.parse(event.finalRankingJson) as string[];
-    const cfgRaw = event.pointsConfig ? JSON.parse(event.pointsConfig) : null;
-    await awardPoints(oldRanking, cfgRaw, event.title ?? eventId, -1);
-  }
-
-  // Turnier-Daten aus Event entfernen, zugehörige Matches/Teams/Participants löschen
-  await prisma.match.deleteMany({ where: { eventId } });
-  await prisma.team.deleteMany({ where: { eventId } });
-  await prisma.tournamentParticipant.deleteMany({ where: { eventId } });
-
-  await prisma.event.update({
-    where: { id: eventId },
-    data: {
-      format: null, tournamentStatus: null, pointsConfig: null,
-      statFields: null, finalRankingJson: null, finalRankingNote: null,
-      status: "open", type: "community",
-    },
-  });
-
-  return NextResponse.json({ ok: true });
-}
