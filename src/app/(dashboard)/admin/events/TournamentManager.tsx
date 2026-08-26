@@ -296,12 +296,16 @@ function CreationForm({
 
 // ─── Main Manager (tournament exists) ────────────────────────────────────────
 export default function TournamentManager({
-  event, tournament: initial, allUsers, winnerStatKeys = [],
+  event, tournament: initial, allUsers, winnerStatKeys = [], matchWinStatKeys = [],
 }: {
   event: Event;
   tournament: Tournament | null;
   allUsers: User[];
   winnerStatKeys?: string[];
+  /** Reihen-Stats, die aus der pro-Runde "Match Win"-Markierung gespeist werden (Schritt 4, ⚔️-Toggle).
+   *  Nur wenn hier mind. einer konfiguriert ist, macht die Match-Win-/Team-UI unten überhaupt Sinn —
+   *  sonst würde sie für jedes Kooperativ-Turnier angezeigt, auch wenn niemand die Stat nutzt. */
+  matchWinStatKeys?: string[];
 }) {
   const router = useRouter();
   const [tournament, setTournament] = useState<Tournament | null>(initial);
@@ -397,6 +401,9 @@ export default function TournamentManager({
   // ── Derived ──────────────────────────────────────────────────────────
   const isFfa  = tournament.format === "ffa" || tournament.format === "coop_stats" || tournament.format === "avg_stats";
   const isCoop = tournament.format === "coop_stats";
+  // Match Win/Team-Zuordnung nur anzeigen und erfassen, wenn die Reihe tatsächlich einen Stat darauf
+  // aufbaut (⚔️ in der Gesamttabellen-Konfiguration) — sonst unnötig für jedes Kooperativ-Turnier.
+  const trackMatchWin = isCoop && matchWinStatKeys.length > 0;
   const isLiga = tournament.format === "liga";
   const is1v1  = !isFfa;
   const isRoundRobin = tournament.format === "round_robin";
@@ -566,7 +573,7 @@ export default function TournamentManager({
     const teams = teamAssign[matchId] ?? {};
     // Kein Spieler zugeordnet → alle haben zusammen gespielt (kein Team-Modus).
     // Sobald mindestens einer zugeordnet ist, müssen alle Spieler ein Team haben.
-    const usesTeams = isCoop && matchEntries.some(e => e.userId && teams[e.userId]);
+    const usesTeams = trackMatchWin && matchEntries.some(e => e.userId && teams[e.userId]);
     if (usesTeams) {
       const missing = matchEntries.some(e => e.userId && !teams[e.userId]);
       if (missing) {
@@ -575,14 +582,14 @@ export default function TournamentManager({
       }
     }
     const winningTeam = usesTeams ? (matchWin[matchId] ?? null) : undefined;
-    const allWin = isCoop && !usesTeams ? (matchWinAll[matchId] ?? false) : undefined;
+    const allWin = trackMatchWin && !usesTeams ? (matchWinAll[matchId] ?? false) : undefined;
     const updated = matchEntries.map(e => {
       // Start with existing persisted stats so we don't overwrite fields that weren't touched
       const existing: Record<string, number | string> = e.statsJson ? JSON.parse(e.statsJson as string) : {};
       const row = ed[e.userId ?? ""] ?? {};
       const stats: Record<string, number | string> = { ...existing };
       visibleStatFields.forEach(f => { if (row[f] !== undefined && row[f] !== "") stats[f] = Number(row[f]); });
-      if (isCoop) {
+      if (trackMatchWin) {
         if (usesTeams) {
           // Spieler wird Team A oder B zugeordnet, Match Win geht nur an das gewinnende Team
           const team = e.userId ? teams[e.userId] : undefined;
@@ -839,14 +846,15 @@ export default function TournamentManager({
                   {isExp && (
                     <div className="p-3">
                       {match.notes && <p className="text-xs text-gray-500 mb-3">{match.notes}</p>}
-                      {visibleStatFields.length === 0 && !isCoop ? (
+                      {visibleStatFields.length === 0 && !trackMatchWin ? (
                         <div className="text-xs text-amber-400/80 bg-amber-900/10 border border-amber-800/30 rounded-lg px-3 py-2">
                           Keine Statistik-Felder konfiguriert. Bitte zuerst im Reiter <span className="font-semibold">Einstellungen</span> die gewünschten Stat-Felder eintragen und auf „Turnier-Einstellungen speichern" klicken.
                         </div>
                       ) : (
                       <>
-                        {/* Match Win für coop_stats: entweder alle zusammen (keine Team-Zuordnung) oder Team A vs. Team B */}
-                        {isCoop && (() => {
+                        {/* Match Win für coop_stats: entweder alle zusammen (keine Team-Zuordnung) oder Team A vs. Team B —
+                            nur wenn die Reihe einen Stat darauf aufbaut (matchWinStatKeys), siehe trackMatchWin oben */}
+                        {trackMatchWin && (() => {
                           const teams = teamAssign[match.id] ?? {};
                           const usesTeams = match.entries.some(e => e.userId && teams[e.userId]);
                           return usesTeams ? (
@@ -890,13 +898,13 @@ export default function TournamentManager({
                             </label>
                           );
                         })()}
-                        {(isCoop || visibleStatFields.length > 0) && (
+                        {(trackMatchWin || visibleStatFields.length > 0) && (
                         <div className="overflow-x-auto">
                           <table className="w-full text-xs">
                             <thead>
                               <tr className="text-gray-500 border-b border-gray-700">
                                 <th className="text-left py-1.5 pr-3 font-medium">Spieler</th>
-                                {isCoop && <th className="text-center py-1.5 px-2 font-medium">Team</th>}
+                                {trackMatchWin && <th className="text-center py-1.5 px-2 font-medium">Team</th>}
                                 {visibleStatFields.map(f => (
                                   <th key={f} className="text-center py-1.5 px-2 font-medium">{f}</th>
                                 ))}
@@ -913,7 +921,7 @@ export default function TournamentManager({
                                     <td className="py-1.5 pr-3 text-white whitespace-nowrap">
                                       {user ? userName(user) : "?"}
                                     </td>
-                                    {isCoop && (
+                                    {trackMatchWin && (
                                       <td className="py-1 px-2">
                                         <div className="flex gap-1 justify-center">
                                           {(["A", "B"] as const).map(team => (

@@ -1129,6 +1129,7 @@ export default async function TournamentDetailPage({
                 dominionThreshold={seriesStatCfg.dominionBonus?.threshold}
                 userId={userId}
                 format={format}
+                trackMatchWin={(seriesStatCfg.matchWinStatKeys ?? []).length > 0}
                 finalRankingGroups={rankingGroups}
                 excludedUserIds={[...excludedUserIds]}
                 pollWinnerIds={pollWinnerIds}

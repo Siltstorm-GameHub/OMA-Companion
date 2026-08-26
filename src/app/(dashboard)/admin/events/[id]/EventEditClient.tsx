@@ -544,6 +544,14 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
     } catch { return []; }
   })();
 
+  const bracketMatchWinStatKeys: string[] = (() => {
+    if (!event.series?.seriesStatConfig) return [];
+    try {
+      const cfg = JSON.parse(event.series.seriesStatConfig) as { matchWinStatKeys?: string[] };
+      return cfg.matchWinStatKeys ?? [];
+    } catch { return []; }
+  })();
+
   const bracketTournament = event.format ? {
     id: event.id,
     status: event.tournamentStatus ?? "active",
@@ -1182,6 +1190,7 @@ export default function EventEditClient({ event, allUsers }: { event: any; allUs
                 tournament={bracketTournament}
                 allUsers={bracketRegisteredUsers}
                 winnerStatKeys={bracketWinnerStatKeys}
+                matchWinStatKeys={bracketMatchWinStatKeys}
               />
             </div>
           )}

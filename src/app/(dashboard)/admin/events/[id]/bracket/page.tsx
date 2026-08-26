@@ -45,6 +45,14 @@ export default async function AdminEventBracketPage({ params }: { params: Promis
     } catch { return []; }
   })();
 
+  const matchWinStatKeys: string[] = (() => {
+    if (!event.series?.seriesStatConfig) return [];
+    try {
+      const cfg = JSON.parse(event.series.seriesStatConfig) as { matchWinStatKeys?: string[] };
+      return cfg.matchWinStatKeys ?? [];
+    } catch { return []; }
+  })();
+
   const tournament = event.format ? {
     id: event.id,
     status: event.tournamentStatus ?? "active",
@@ -85,6 +93,7 @@ export default async function AdminEventBracketPage({ params }: { params: Promis
         tournament={tournament}
         allUsers={registeredUsers}
         winnerStatKeys={winnerStatKeys}
+        matchWinStatKeys={matchWinStatKeys}
       />
     </div>
   );

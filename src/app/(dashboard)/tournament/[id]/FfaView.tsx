@@ -38,6 +38,7 @@ export default function FfaView({
   dominionThreshold,
   userId,
   format = "ffa",
+  trackMatchWin = false,
   finalRankingGroups = null,
   pollWinnerIds = [],
   pollLabel = null,
@@ -59,6 +60,9 @@ export default function FfaView({
   dominionThreshold?: number;
   userId: string;
   format?: string;
+  /** Zeigt die "Match Wins"-Spalte/Team-Zuordnung nur, wenn die Reihe tatsächlich einen Stat darauf
+   *  aufbaut (⚔️ in der Gesamttabellen-Konfiguration) — sonst irrelevant für dieses Event. */
+  trackMatchWin?: boolean;
   finalRankingGroups?: string[][] | null;
   pollWinnerIds?: string[];
   pollLabel?: string | null;
@@ -84,7 +88,6 @@ export default function FfaView({
     });
 
   const isAvg    = format === "avg_stats";
-  const isCoop   = format === "coop_stats";
   const findUser = (uid: string | null) =>
     uid ? participants.find(p => p.userId === uid)?.user : null;
   const votedSet = new Set(votedUserIds);
@@ -193,7 +196,7 @@ export default function FfaView({
                     {isAvg && (
                       <th className="text-center px-3 py-2.5 font-medium text-amber-400">Ø Gesamt</th>
                     )}
-                    {isCoop && (
+                    {trackMatchWin && (
                       <th className="text-center px-3 py-2.5 font-medium text-emerald-400">Match Wins</th>
                     )}
                     <th className="text-center px-3 py-2.5 font-medium text-teal-500/70">Ligapunkte</th>
@@ -292,7 +295,7 @@ export default function FfaView({
                             {combined !== null ? combined.toFixed(2) : "–"}
                           </td>
                         )}
-                        {isCoop && (
+                        {trackMatchWin && (
                           <td className="px-3 py-3 text-center tabular-nums font-semibold text-emerald-400">
                             {r.stats["Match Win"] ?? 0}
                           </td>
@@ -401,7 +404,7 @@ export default function FfaView({
 
               // Für coop_stats: "Match Win"-Haken dieser Runde auslesen (gilt für alle Spieler der Runde)
               let matchWin: boolean | null = null;
-              if (isCoop) {
+              if (trackMatchWin) {
                 const entryWithFlag = match.entries.find(e => {
                   if (!e.statsJson) return false;
                   try { return "Match Win" in (JSON.parse(e.statsJson) as Record<string, number>); } catch { return false; }
@@ -433,7 +436,7 @@ export default function FfaView({
                           {uname(findUser(matchWinnerId))}
                         </span>
                       )}
-                      {isCoop && matchWin !== null && (
+                      {trackMatchWin && matchWin !== null && (
                         <span className={`text-xs flex items-center gap-1 shrink-0 ${matchWin ? "text-emerald-400" : "text-gray-500"}`}>
                           <Trophy className="w-3 h-3" />
                           {matchWin ? "Sieg" : "Niederlage"}
