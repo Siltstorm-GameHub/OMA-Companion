@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireRole } from "@/lib/roles";
+import { requireModeratorOrEventSquadCaptain } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 
 // Standard round-robin scheduling algorithm (circle method)
@@ -96,9 +96,9 @@ function generateBracket(participantIds: string[], eventId: string): BracketMatc
 }
 
 export async function POST(req: NextRequest) {
-  await requireRole("moderator");
   const { eventId, format, participantIds, pointsConfig, statFields, autoGenerate } = await req.json();
   if (!eventId) return NextResponse.json({ error: "eventId ist Pflicht" }, { status: 400 });
+  await requireModeratorOrEventSquadCaptain(eventId);
 
   const existing = await prisma.event.findUnique({ where: { id: eventId }, select: { tournamentStatus: true } });
   if (existing?.tournamentStatus) return NextResponse.json({ error: "Turnier existiert bereits" }, { status: 400 });

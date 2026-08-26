@@ -5,7 +5,7 @@ import {
   CalendarDays, Users, ChevronRight,
   Clock, Scroll, CheckCircle2,
   Circle, Repeat, Newspaper, Server, Gamepad2,
-  ArrowUp, ArrowDown, Minus, Timer, UserPlus, Trophy,
+  ArrowUp, ArrowDown, Minus, Timer, UserPlus, Trophy, Shield, Crown,
 } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
 import EventCategoryBadge from "@/components/EventCategoryBadge";
@@ -209,6 +209,8 @@ export default async function DashboardPage() {
     activeClipContest,
     isRegisteredForNextEvent,
     jobOverview,
+    squadCount,
+    mySquadMembership,
   ] = await Promise.all([
     userId
       ? prisma.userQuestProgress.count({ where: { userId, completed: true, quest: { month, year } } })
@@ -261,6 +263,14 @@ export default async function DashboardPage() {
       ? prisma.eventRegistration.findFirst({ where: { userId, eventId: nextEvent.id }, select: { id: true } }).then(r => !!r)
       : false,
     userId ? getJobOverview(userId) : Promise.resolve(null),
+    prisma.squad.count({ where: { hidden: false } }),
+    userId
+      ? prisma.squadMembership.findFirst({
+          where: { userId },
+          orderBy: [{ role: "asc" }, { joinedAt: "asc" }],
+          select: { role: true, squad: { select: { id: true, name: true, icon: true } } },
+        })
+      : null,
   ]);
 
   const myPoints     = sessionUser?.points ?? 0;
@@ -662,6 +672,33 @@ export default async function DashboardPage() {
             finishedContestId={finishedClipContest?.id ?? null}
             activeContestId={activeClipContest?.id ?? null}
           />
+
+          {/* Squads Hub */}
+          <Link href="/squads"
+            className="surface animate-slide-up stagger-2 scan-on-load group block overflow-hidden relative transition-transform duration-200 hover:-translate-y-1 active:scale-[0.99]"
+            style={{ borderRadius: "6px", border: "1px solid rgba(245,158,11,0.16)", boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
+            <div className="relative overflow-hidden flex items-center justify-center" style={{ height: "108px" }}>
+              <div className="absolute inset-0"
+                style={{ background: "linear-gradient(135deg, #451a03 0%, #1c0a02 50%, #0d0d0f 100%)" }} />
+              <Shield className="relative w-8 h-8 text-amber-600/60" />
+            </div>
+            <div className="px-4 pb-4 pt-2.5">
+              <p className="text-[9px] text-amber-500/50 uppercase tracking-[0.18em] font-semibold mb-0.5">Squads</p>
+              <p className="font-display text-base font-black text-white leading-tight truncate">
+                {mySquadMembership ? mySquadMembership.squad.name : "eSports-Teams"}
+              </p>
+              <div className="flex items-center gap-3 mt-2 text-[11px] text-gray-500">
+                <span className="flex items-center gap-1">
+                  <Users className="w-3 h-3" /> {squadCount} Squad{squadCount === 1 ? "" : "s"}
+                </span>
+                {mySquadMembership?.role === "captain" && (
+                  <span className="flex items-center gap-1 text-amber-400">
+                    <Crown className="w-3 h-3" /> Captain
+                  </span>
+                )}
+              </div>
+            </div>
+          </Link>
         </div>
 
         {/* ── 3-Spalten: Events | Rangliste | Quests ──────────────── */}

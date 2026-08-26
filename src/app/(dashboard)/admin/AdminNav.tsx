@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import { useEffect } from "react";
 import {
   Users, LayoutDashboard, Bell,
-  CalendarDays, Heart, Medal,
+  CalendarDays, Heart, Medal, Shield,
   Wrench, Users2, Megaphone, Handshake, Clapperboard, Server, Gamepad2, MonitorSmartphone,
 } from "lucide-react";
 import ServerApplicationBadge from "@/components/ServerApplicationBadge";
@@ -18,13 +18,14 @@ function hasRole(userRole: string, minRole: Role) {
   return HIERARCHY.indexOf(userRole as Role) >= HIERARCHY.indexOf(minRole);
 }
 
-type Tab = { href: string; label: string; icon: typeof LayoutDashboard; exact?: boolean; minRole: Role };
+type Tab = { href: string; label: string; icon: typeof LayoutDashboard; exact?: boolean; minRole: Role; allowCaptain?: boolean };
 
 const CATEGORIES: {
   key: string;
   label: string;
   icon: typeof LayoutDashboard;
   minRole: Role;
+  allowCaptain?: boolean; // true = reine Squad-Captains (globale Rolle "user") sehen diese Kategorie auch
   direct?: string; // if set, clicking the category goes directly here (no sub-nav)
   tabs?: Tab[];
   prefixes?: string[]; // url prefixes that mark this category as active
@@ -42,9 +43,11 @@ const CATEGORIES: {
     label: "Events",
     icon: CalendarDays,
     minRole: "moderator",
-    prefixes: ["/admin/events", "/admin/series", "/admin/highlight-clips"],
+    allowCaptain: true,
+    prefixes: ["/admin/events", "/admin/series", "/admin/highlight-clips", "/admin/squads"],
     tabs: [
-      { href: "/admin/events",          label: "Events",          icon: CalendarDays,  minRole: "moderator" },
+      { href: "/admin/events",          label: "Events",          icon: CalendarDays,  minRole: "moderator", allowCaptain: true },
+      { href: "/admin/squads",          label: "Squads",          icon: Shield,        minRole: "moderator" },
       { href: "/admin/highlight-clips", label: "Highlight Clips", icon: Clapperboard,  minRole: "moderator" },
     ],
   },
@@ -77,10 +80,13 @@ const CATEGORIES: {
   },
 ];
 
-export default function AdminNav() {
+export default function AdminNav({ isCaptainOnly = false }: { isCaptainOnly?: boolean }) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const userRole = (session?.user as { role?: string })?.role ?? "user";
+
+  const canSee = (item: { minRole: Role; allowCaptain?: boolean }) =>
+    hasRole(userRole, item.minRole) || (isCaptainOnly && !!item.allowCaptain);
 
   const activeCategory = CATEGORIES.find(cat =>
     cat.prefixes?.some(p =>
@@ -96,13 +102,13 @@ export default function AdminNav() {
   }, [pathname, activeCategory]);
 
   const visibleCategories = CATEGORIES.filter(cat => {
-    if (!hasRole(userRole, cat.minRole)) return false;
+    if (!canSee(cat)) return false;
     // Hide category if user has no access to any of its tabs
-    if (cat.tabs) return cat.tabs.some(t => hasRole(userRole, t.minRole));
+    if (cat.tabs) return cat.tabs.some(canSee);
     return true;
   });
 
-  const visibleSubTabs = activeCategory.tabs?.filter(t => hasRole(userRole, t.minRole)) ?? [];
+  const visibleSubTabs = activeCategory.tabs?.filter(canSee) ?? [];
 
   return (
     <div className="mb-4 sm:mb-6 space-y-1">
@@ -112,7 +118,7 @@ export default function AdminNav() {
           const isActive = cat.key === activeCategory.key;
           const Icon = cat.icon;
           const href = cat.direct
-            ?? cat.tabs?.find(t => hasRole(userRole, t.minRole))?.href
+            ?? cat.tabs?.find(canSee)?.href
             ?? "/admin";
           return (
             <Link key={cat.key} href={href}

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireRole } from "@/lib/roles";
+import { requireModeratorOrEventSquadCaptain } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { awardPoints, revokePointsByReason } from "@/lib/points";
 
@@ -18,8 +18,8 @@ function loserOf(
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  await requireRole("moderator");
   const { id: eventId } = await params;
+  await requireModeratorOrEventSquadCaptain(eventId);
   const { title, round, position, player1Id, player2Id, scheduledAt, notes, entries } = await req.json();
 
   const resolvedRound = round ?? 1;
@@ -55,8 +55,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  await requireRole("moderator");
   const { id: eventId } = await params;
+  await requireModeratorOrEventSquadCaptain(eventId);
   const body = await req.json();
   const { matchId, winnerId, score1, score2, isDraw, entries, action } = body;
 
@@ -235,8 +235,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  await requireRole("moderator");
-  await params;
+  const { id: eventId } = await params;
+  await requireModeratorOrEventSquadCaptain(eventId);
   const { matchId } = await req.json();
   await prisma.match.delete({ where: { id: matchId } });
   return NextResponse.json({ ok: true });

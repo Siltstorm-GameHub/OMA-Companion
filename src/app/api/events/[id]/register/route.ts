@@ -16,7 +16,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     where: { id: eventId },
     include: {
       _count: { select: { registrations: { where: { role: "player" } } } },
-      series: { select: { registrationLocked: true } },
+      series: { select: { registrationLocked: true, squadId: true } },
     },
   });
   if (!event) return NextResponse.json({ error: "Event nicht gefunden" }, { status: 404 });
@@ -24,6 +24,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Registrierung geschlossen" }, { status: 400 });
   if (event.registrationLocked || event.series?.registrationLocked)
     return NextResponse.json({ error: "Anmeldung ist geschlossen — nur Admins tragen Teilnehmer ein" }, { status: 403 });
+  // Squad-Beschränkung gilt nur für Spieler, nicht für Zuschauer (siehe Event.squadId-Kommentar im Schema).
+  const restrictedSquadId = event.squadId ?? event.series?.squadId ?? null;
+  if (role === "player" && restrictedSquadId) {
+    const membership = await prisma.squadMembership.findUnique({
+      where: { squadId_userId: { squadId: restrictedSquadId, userId } },
+    });
+    if (!membership) return NextResponse.json({ error: "Anmeldung nur für Mitglieder des zugehörigen Squads" }, { status: 403 });
+  }
   if (role === "spectator" && !event.spectatorMode)
     return NextResponse.json({ error: "Zuschauer-Registrierung nicht aktiviert" }, { status: 400 });
   if (role === "player" && event.maxPlayers && event._count.registrations >= event.maxPlayers)

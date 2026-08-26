@@ -49,7 +49,7 @@ model User {
   // Aktuelle Lieblingsspiele: JSON-Array mit bis zu 5 { name, appId } (Steam App-ID für das Cover)
   favoriteGamesJson  String?
   // Notification-Präferenzen: JSON-Objekt { badge: bool, quest: bool, event: bool, points: bool, clip: bool, admin: bool }
-  notificationPrefs  String  @default("{}")
+  notificationPrefs  String    @default("{}")
 
   accounts                 Account[]
   sessions                 Session[]
@@ -57,6 +57,7 @@ model User {
   pointTransactions        PointTransaction[]
   tournamentParticipants   TournamentParticipant[]
   teamMemberships          TeamMember[]
+  squadMemberships         SquadMembership[]
   matchEntries             MatchEntry[]
   questProgress            UserQuestProgress[]
   lulEntries               LulEntry[]
@@ -93,6 +94,8 @@ model User {
   mancaveItems             MancaveItem[]
   job                      UserJob?
   pokale                   Pokal[]
+  battleCardUserCards      UserCard[]
+  battleCardBattles        Battle[]                 @relation("BattleCardPlayer")
 }
 
 // ── Pokale ───────────────────────────────────────────────────────────────────
@@ -194,6 +197,11 @@ model EventSeries {
   status                String        @default("active") // "active" | "archived"
   hidden                Boolean       @default(false) // true = nur im Admin sichtbar
   registrationLocked    Boolean       @default(false) // true = User können sich nicht selbst anmelden, nur Admins tragen Teilnehmer ein
+  // Wenn gesetzt: sichtbar für alle, Spieler-Selbst-Anmeldung nur für Mitglieder dieses Squads
+  // (Zuschauer-Anmeldung bleibt für alle offen). Unabhängig von registrationLocked — beide Felder
+  // können kombiniert sein (dann sperrt registrationLocked ausnahmslos alle, auch Squad-Mitglieder).
+  squadId               String?
+  squad                 Squad?        @relation(fields: [squadId], references: [id])
   seasonNumber          Int? // 1, 2, 3 …
   archivedAt            DateTime?
   // JSON: analog zu event.completionData (overallWinnerIds, finalRanking, poll*, lockedAt)
@@ -220,6 +228,10 @@ model Event {
   status              String        @default("open")
   hidden              Boolean       @default(false) // true = nur im Admin sichtbar
   registrationLocked  Boolean       @default(false) // true = User können sich nicht selbst anmelden, nur Admins tragen Teilnehmer ein
+  // Wenn gesetzt (oder über die Reihe geerbt): Spieler-Selbst-Anmeldung nur für Mitglieder dieses
+  // Squads. Event bleibt für alle sichtbar, Zuschauer-Anmeldung bleibt offen.
+  squadId             String?
+  squad               Squad?        @relation(fields: [squadId], references: [id])
   coverImageUrl       String? // Eigenes Event-Bild (Vercel Blob). Leer = Spiel-Cover, sonst EventCoverDefault
   // Token für die öffentliche OBS-Overlay-Route (/overlay/[id]?token=…). Wird lazy bei der
   // ersten Streamer-Anmeldung erzeugt, ein Event hat höchstens einen Link für alle Streamer.
@@ -478,6 +490,38 @@ model Team {
   event        Event        @relation(fields: [eventId], references: [id])
   members      TeamMember[]
   matchEntries MatchEntry[]
+}
+
+// ── Squads (persistente eSports-Teams, z.B. "Rocket League Team") ─────────────
+// Bewusst NICHT "Team" genannt — das ist oben bereits ein anderes, event-gebundenes
+// Konzept (Team A/B innerhalb eines einzelnen Turniers). Ein Squad existiert unabhängig
+// von einzelnen Events, ein User kann Mitglied in mehreren Squads gleichzeitig sein.
+model Squad {
+  id          String   @id @default(cuid())
+  name        String
+  game        String? // z.B. "Rocket League" — rein informativ, keine feste Bindung
+  description String?
+  icon        String? // Lucide-Icon-Name (aus src/lib/series-icons.ts), Fallback: Repeat
+  color       String? // Hex-Farbe für Badges — Fallback über resolveSeriesColor(icon)
+  hidden      Boolean  @default(false) // true = nur im Admin sichtbar
+  createdAt   DateTime @default(now())
+
+  memberships SquadMembership[]
+  events      Event[]
+  eventSeries EventSeries[]
+}
+
+model SquadMembership {
+  id       String   @id @default(cuid())
+  squadId  String
+  userId   String
+  role     String   @default("member") // "member" | "captain"
+  joinedAt DateTime @default(now())
+
+  squad Squad @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([squadId, userId])
 }
 
 model TeamMember {
@@ -1155,4 +1199,112 @@ model UserJob {
   updatedAt       DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ============================================
+// Battle Cards — Mini-Battler Kartenspiel
+// ============================================
+// Integriert aus dem eigenständigen "OMA Battle Cards"-Projekt. Nutzt die
+// bestehende User-Tabelle oben direkt mit (battleCardUserCards /
+// battleCardBattles) statt eines eigenen User-Modells.
+
+enum CardClass {
+  TANK
+  DAMAGE_DEALER
+  SUPPORT
+}
+
+enum CardRarity {
+  STANDARD
+  COMMUNITY
+}
+
+enum ActivityTier {
+  GHOST // 💤 ×0.85
+  NPC // 🎮 ×1.0
+  GAMER // 🎖 ×1.15
+  LEGENDE // 🔥 ×1.3
+  OLD_MASTER // 👑 ×1.45
+}
+
+// Feste Normalangriff-Sonderregel einzelner Karten: einzelne Karten können
+// feste Sonderregeln haben, z.B. Fernrohr greift immer höchste HP an.
+// null/fehlend = Standard-Regel (niedrigste DEF).
+enum NormalAttackTargetRule {
+  LOWEST_DEFENSE
+  HIGHEST_HP
+  LOWEST_HP
+  HIGHEST_ATTACK
+  RANDOM
+}
+
+model Card {
+  id         String     @id @default(cuid())
+  name       String // z.B. "Bastionella"
+  title      String // z.B. "Die Wächterin"
+  class      CardClass
+  rarity     CardRarity
+  flavorText String
+
+  // Basiswerte auf Stufe 1 (bei COMMUNITY-Karten: aus Generierung, außer überschrieben)
+  baseHp                 Int
+  baseAttack             Int
+  baseDefense            Int
+  speed                  Int // fix pro Karte, innerhalb Klassen-Spanne
+  normalAttackTargetRule NormalAttackTargetRule? // null = Standard (niedrigste DEF)
+
+  // Skills als strukturiertes JSON (flexibel für unterschiedliche Effekte)
+  passivePositive Json // { name, description, trigger, effects: [...] }
+  passiveNegative Json
+  activeSkill     Json // { name, description, cost: 50, effects: [...] }
+  ultimateSkill   Json // { name, description, cost: 100, effects: [...] }
+
+  // Nur relevant bei rarity = COMMUNITY
+  linkedDiscordId String?       @unique // Verknüpfung zum realen Community-Mitglied — 1 Karte pro Mitglied
+  activityTier    ActivityTier? // aktuelle Saison-Stufe (Ghost...Old Master)
+  sourceStatsJson Json? // Rohdaten-Snapshot, aus dem generiert wurde (Debugging/Nachvollziehbarkeit)
+
+  // Override-Steuerung: welche Felder sind manuell fixiert und werden bei
+  // der automatischen Saison-Generierung NICHT überschrieben.
+  overriddenFields String[]  @default([])
+  isAutoGenerated  Boolean   @default(false) // true = durch Pipeline erzeugt/zuletzt aktualisiert
+  lastGeneratedAt  DateTime?
+
+  imageUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userCards UserCard[]
+}
+
+model UserCard {
+  id         String   @id @default(cuid())
+  userId     String
+  cardId     String
+  level      Int      @default(1) // 1-5
+  duplicates Int      @default(1) // gesamt erhaltene Kopien (inkl. verbrauchte für Upgrades)
+  acquiredAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+  card Card @relation(fields: [cardId], references: [id])
+
+  @@unique([userId, cardId]) // ein UserCard-Eintrag pro Karte pro User
+}
+
+enum BattleResult {
+  WIN
+  LOSS
+  DRAW
+}
+
+model Battle {
+  id           String       @id @default(cuid())
+  playerId     String
+  opponentType String // z.B. "PVE_STANDARD", "PVP", "EVENT_BOSS"
+  result       BattleResult
+  teamSnapshot Json // Team-Zusammenstellung zum Zeitpunkt des Kampfes
+  battleLog    Json // vollständiger Rundenverlauf für Replay/Debugging
+  createdAt    DateTime     @default(now())
+
+  player User @relation("BattleCardPlayer", fields: [playerId], references: [id])
 }

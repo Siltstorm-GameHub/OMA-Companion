@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireRole } from "@/lib/roles";
+import { requireRole, requireModeratorOrSquadCaptain } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { calcNextDate } from "@/lib/recurrence";
 import type { RecurrenceType, MonthlyMode } from "@/lib/recurrence";
@@ -15,17 +15,21 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  await requireRole("moderator");
   const body = await req.json();
   const {
     name, description,
     category, genre, fixedGame, fixedFormat, discordChannelId,
     recurrenceType, recurrenceMonthlyMode,
     placementRewardsJson, pollsConfigJson, seriesStatConfig,
-    startDate, endDate, hidden, registrationLocked,
+    startDate, endDate, hidden, registrationLocked, squadId,
     spectatorMode, spectatorRewardJson,
     groupId, seasonNumber,
   } = body;
+
+  // Moderator/Admin dürfen immer. Reine Squad-Captains nur, wenn die neue Reihe direkt auf ihr
+  // eigenes Squad beschränkt wird — eine offene Community-Reihe bleibt Moderatoren/Admins vorbehalten.
+  if (squadId) await requireModeratorOrSquadCaptain(squadId);
+  else await requireRole("moderator");
 
   if (!name?.trim()) return NextResponse.json({ error: "Name fehlt" }, { status: 400 });
 
@@ -51,6 +55,7 @@ export async function POST(req: NextRequest) {
         seriesStatConfig: seriesStatConfig ?? null,
         hidden: hidden ?? false,
         registrationLocked: registrationLocked ?? false,
+        squadId: squadId || null,
         groupId: groupId ?? null,
         seasonNumber: seasonNumber ?? null,
       },

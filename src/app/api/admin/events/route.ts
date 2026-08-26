@@ -1,13 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireRole } from "@/lib/roles";
+import { requireRole, requireModeratorOrEventSquadCaptain, hasMinRole, getCaptainedSquadIds } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { revertEventCompletion } from "@/lib/revert-event-completion";
 import { deleteEventRecord } from "@/lib/delete-event";
 
 export async function PATCH(req: NextRequest) {
-  await requireRole("moderator");
   const body = await req.json();
   const { eventId, removeUserId, seriesScope, discordChannelId, category, genre, spectatorMode, spectatorRewardJson, pollsConfigJson, twitchClipUrl, seriesEventConfigJson, ...data } = body;
+  if (!eventId) return NextResponse.json({ error: "eventId fehlt" }, { status: 400 });
+
+  const currentUser = await requireModeratorOrEventSquadCaptain(eventId);
+  // Captains dürfen die Squad-Bindung ihres Events nur auf ein Squad setzen, das sie selbst
+  // captainen (nicht entfernen oder auf ein fremdes Squad umbiegen) — sonst könnten sie die
+  // Anmeldebeschränkung faktisch aufheben oder ein fremdes Team betreffen.
+  if (!hasMinRole(currentUser.role, "moderator") && "squadId" in data) {
+    const captainedSquadIds = await getCaptainedSquadIds(currentUser.id);
+    if (!data.squadId || !captainedSquadIds.includes(data.squadId)) delete data.squadId;
+  }
+
   if (twitchClipUrl !== undefined) data.twitchClipUrl = twitchClipUrl || null;
   if (discordChannelId !== undefined) data.discordChannelId = discordChannelId;
   if (category !== undefined) data.category = category;
@@ -16,7 +26,6 @@ export async function PATCH(req: NextRequest) {
   if (spectatorRewardJson !== undefined) data.spectatorRewardJson = spectatorRewardJson ? JSON.stringify(spectatorRewardJson) : null;
   if (pollsConfigJson !== undefined) data.pollsConfigJson = pollsConfigJson ? JSON.stringify(pollsConfigJson) : null;
   if (seriesEventConfigJson !== undefined) data.seriesEventConfigJson = seriesEventConfigJson || null;
-  if (!eventId) return NextResponse.json({ error: "eventId fehlt" }, { status: 400 });
 
   // Teilnehmer aus Event entfernen (Moderator-Aktion)
   if (removeUserId) {

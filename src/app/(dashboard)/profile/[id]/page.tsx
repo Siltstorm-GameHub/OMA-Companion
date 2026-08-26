@@ -20,6 +20,7 @@ import Link from "next/link";
 import BadgesSection from "../BadgesSection";
 import PokalSection from "@/components/PokalSection";
 import FavoriteGamesSection from "../FavoriteGamesSection";
+import SquadsSection from "../SquadsSection";
 import { parseFavoriteGames } from "@/lib/favorite-games";
 import WanderpocalSection from "@/components/WanderpocalSection";
 import DuelChallengeWidget from "@/components/DuelChallengeWidget";
@@ -79,7 +80,7 @@ export default async function PublicProfilePage({
   const month = now.getMonth() + 1;
   const year  = now.getFullYear();
 
-  const [user, eventRegs, eventCount, startedEvents, tournamentParticipations, tournamentCount, totalUsers, questsWithProgress, pokale, userSystemBadges, userCustomBadges, wanderpocalTrophies, wanderpocalStats, coinsEarnedAgg, coinsSpentAgg, lulPollWins] =
+  const [user, eventRegs, eventCount, startedEvents, tournamentParticipations, tournamentCount, totalUsers, questsWithProgress, pokale, userSystemBadges, userCustomBadges, wanderpocalTrophies, wanderpocalStats, coinsEarnedAgg, coinsSpentAgg, lulPollWins, squadMemberships] =
     await Promise.all([
       prisma.user.findUnique({
         where: { id },
@@ -136,9 +137,16 @@ export default async function PublicProfilePage({
       prisma.pointTransaction.aggregate({ where: { userId: id, amount: { gt: 0 } }, _sum: { amount: true } }),
       prisma.pointTransaction.aggregate({ where: { userId: id, amount: { lt: 0 } }, _sum: { amount: true } }),
       prisma.lulEntry.count({ where: { userId: id, communityChamp: true } }),
+      prisma.squadMembership.findMany({
+        where: { userId: id },
+        orderBy: [{ role: "asc" }, { joinedAt: "asc" }],
+        select: { role: true, squad: { select: { id: true, name: true, icon: true } } },
+      }),
     ]);
 
   if (!user) notFound();
+
+  const squads = squadMemberships.map(m => ({ ...m.squad, role: m.role }));
 
   const leaderboardRank = await prisma.user.count({ where: { rankPoints: { gt: user.rankPoints ?? 0 } } }) + 1;
 
@@ -342,6 +350,8 @@ export default async function PublicProfilePage({
           <p className="relative text-xs text-gray-400 mt-1.5">Lieblingsspiel</p>
         </div>
       </div>
+
+      <SquadsSection squads={squads} />
 
       {/* ── Aktuelle Lieblingsspiele (read-only) ────────────────────── */}
       {favoriteGames.length > 0 && (
