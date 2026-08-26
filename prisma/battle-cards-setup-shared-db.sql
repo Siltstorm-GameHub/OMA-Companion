@@ -1,17 +1,13 @@
 -- ============================================
--- Battle Cards — Setup in der geteilten OMA-Companion-Supabase-DB
+-- Battle Cards — neue Tabellen in der OMA-Companion-Supabase-DB
 -- ============================================
--- Legt NUR neue Objekte an: 5 Enums, 3 Tabellen (Card, UserCard, Battle)
--- und einen eigenen, eingeschränkten DB-User "battlecards_app".
+-- Legt nur neue Objekte an: 5 Enums, 3 Tabellen (Card, UserCard, Battle).
+-- Rührt keine bestehende Tabelle an (auch nicht "User").
 --
--- Rührt KEINE bestehende OMA-Companion-Tabelle an — außer einem lesenden
--- GRANT SELECT auf "User", damit Battle Cards Kartenbesitz prüfen und auf
--- Discord-Mitglieder verlinken kann (Community-Karten).
---
--- WICHTIG: Vor dem Ausführen ganz unten 'CHANGE_ME' durch ein eigenes,
--- starkes Passwort ersetzen. Bestehende Zugangsdaten (der postgres-User,
--- den Vercel/der Discord-Bot nutzt) werden dadurch NICHT verändert — das
--- hier ist ein zusätzlicher, komplett neuer Login.
+-- Kein separater DB-User nötig: Battle Cards ist inzwischen Teil dieser
+-- Next.js-App (siehe src/lib/battle-engine, src/lib/season,
+-- src/app/api/battles) und läuft über dieselbe DATABASE_URL/denselben
+-- Postgres-User wie der Rest von OMA-Companion.
 --
 -- Einmalig im Supabase SQL-Editor ausführen (kompletter Block).
 
@@ -81,16 +77,3 @@ CREATE TABLE "Battle" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "Battle_playerId_fkey" FOREIGN KEY ("playerId") REFERENCES "User"("id")
 );
-
--- ---------- 5) Eigener, eingeschränkter DB-User für Battle Cards ----------
-
-CREATE ROLE battlecards_app WITH LOGIN PASSWORD 'CHANGE_ME';
-
-GRANT CONNECT ON DATABASE postgres TO battlecards_app;
-GRANT USAGE ON SCHEMA public TO battlecards_app;
-
--- Nur lesend auf die bestehende, geteilte User-Tabelle
-GRANT SELECT ON TABLE "User" TO battlecards_app;
-
--- Volle Rechte auf die neuen, von Battle Cards verwalteten Tabellen
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE "Card", "UserCard", "Battle" TO battlecards_app;
