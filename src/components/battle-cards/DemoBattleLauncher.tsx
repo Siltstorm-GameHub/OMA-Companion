@@ -29,7 +29,8 @@ export default function DemoBattleLauncher() {
       const data = await res.json();
       if (!res.ok) {
         if (data.needsStarterPick) {
-          router.push("/battle-cards/starter-pick");
+          router.push("/battle-cards");
+          router.refresh();
           return;
         }
         throw new Error(data.error ?? "Kampf konnte nicht gestartet werden.");
@@ -51,7 +52,7 @@ export default function DemoBattleLauncher() {
           onClick={() => setBattle(null)}
           className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
         >
-          ← Zurück zum Katalog
+          ← Zurück zur Sammlung
         </button>
       </div>
     );
@@ -66,7 +67,7 @@ export default function DemoBattleLauncher() {
         className="flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-md bg-violet-500/15 text-violet-300 hover:bg-violet-500/25 transition-colors disabled:opacity-50"
       >
         {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Swords className="w-4 h-4" />}
-        Übungskampf starten
+        Übungskampf gegen 5 Zufallskarten starten
       </button>
       {error && <p className="text-xs text-rose-400">{error}</p>}
     </div>
