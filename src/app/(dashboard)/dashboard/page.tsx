@@ -296,7 +296,13 @@ export default async function DashboardPage() {
     prisma.card.count({ where: { rarity: "STANDARD" } }),
   ]);
 
-  const previewCoverImage = previewSquads.find(s => s.coverImageUrl)?.coverImageUrl ?? null;
+  // Für die Kachel: eigenes Squad (falls Mitglied) hat Vorrang, sonst das erste Vorschau-Squad
+  // mit Cover-Bild — beide werden identisch behandelt (volles Bild + kleiner Icon-Chip).
+  const featuredSquadCover = mySquadMembership?.squad.coverImageUrl
+    ? { url: mySquadMembership.squad.coverImageUrl, icon: mySquadMembership.squad.icon }
+    : previewSquads.find(s => s.coverImageUrl)
+      ? { url: previewSquads.find(s => s.coverImageUrl)!.coverImageUrl!, icon: previewSquads.find(s => s.coverImageUrl)!.icon }
+      : null;
 
   const myPoints     = sessionUser?.points ?? 0;
   const myRankPoints = sessionUser?.rankPoints ?? 0;
@@ -703,14 +709,16 @@ export default async function DashboardPage() {
             className="surface animate-slide-up stagger-2 scan-on-load group block overflow-hidden relative transition-transform duration-200 hover:-translate-y-1 active:scale-[0.99]"
             style={{ borderRadius: "6px", border: "1px solid rgba(245,158,11,0.16)", boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
             <div className="relative overflow-hidden" style={{ height: "108px" }}>
-              {mySquadMembership?.squad.coverImageUrl ? (
+              {featuredSquadCover ? (
                 <>
-                  <Image src={mySquadMembership.squad.coverImageUrl} alt="" fill
+                  {/* Echtes Squad-Cover in voller Farbe — nur der Verlauf unten sorgt für Textlesbarkeit,
+                      das Bild selbst bleibt ungedimmt. */}
+                  <Image src={featuredSquadCover.url} alt="" fill
                     className="object-cover scale-105 group-hover:scale-110 transition-transform duration-700" />
-                  <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(13,13,15,0.85), rgba(13,13,15,0.15) 55%)" }} />
+                  <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(13,13,15,0.85), rgba(13,13,15,0.05) 55%)" }} />
                   <div className="absolute bottom-3 right-3 w-8 h-8 rounded-lg flex items-center justify-center"
                     style={{ background: "rgba(13,13,15,0.55)", border: "1px solid rgba(255,255,255,0.12)" }}>
-                    <SeriesIcon name={mySquadMembership.squad.icon} className="w-4 h-4" />
+                    <SeriesIcon name={featuredSquadCover.icon} className="w-4 h-4" />
                   </div>
                 </>
               ) : (
@@ -721,7 +729,7 @@ export default async function DashboardPage() {
               {mySquadMembership ? (
                 <>
                   {/* Eigenes Squad-Wappen, in dessen echter Icon-Farbe — nur wenn kein Cover-Bild vorhanden ist */}
-                  {!mySquadMembership.squad.coverImageUrl && (
+                  {!featuredSquadCover && (
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="w-14 h-14 rounded-2xl flex items-center justify-center transition-transform duration-500 group-hover:scale-110"
                         style={{
@@ -756,16 +764,9 @@ export default async function DashboardPage() {
                     </div>
                   )}
                 </>
-              ) : previewSquads.length > 0 ? (
-                /* Kein eigenes Squad: lose gestreute Vorschau realer Squad-Icons statt eines Platzhalters,
-                   plus gedimmtes Cover-Bild eines echten Squads als Textur, falls eins existiert. */
-                <>
-                  {previewCoverImage && (
-                    <>
-                      <Image src={previewCoverImage} alt="" fill className="object-cover blur-[1px] scale-110 opacity-30" />
-                      <div className="absolute inset-0" style={{ background: "linear-gradient(160deg, rgba(13,13,15,0.55), rgba(13,13,15,0.85))" }} />
-                    </>
-                  )}
+              ) : !featuredSquadCover && previewSquads.length > 0 ? (
+                /* Kein eigenes Squad und keins der Vorschau-Squads hat ein Cover: lose gestreute
+                   Icon-Vorschau statt eines leeren Platzhalters. */
                 <div className="absolute inset-0 flex items-center justify-center">
                   {previewSquads.map((s, i) => {
                     const color = resolveSeriesColor(s.icon);
@@ -788,8 +789,7 @@ export default async function DashboardPage() {
                     );
                   })}
                 </div>
-                </>
-              ) : (
+              ) : !featuredSquadCover && (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <Shield className="w-8 h-8 text-amber-600/50" />
                 </div>
