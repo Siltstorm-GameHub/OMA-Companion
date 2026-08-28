@@ -223,7 +223,7 @@ export default function DailySpin({ alreadySpun, lastResult, initialPoints, priz
               colors: ["#f59e0b", "#fcd34d", "#fef08a", "#ffffff", "#fb923c"],
             });
           } else if (data.prize.type === "pack") {
-            toast.success(`🎴 Karten-Pack geöffnet: ${data.prize.cardName ?? "?"}!`);
+            toast.success("🎴 Karten-Pack gewonnen!", { description: "Öffne es auf der Battle-Cards-Seite." });
             confetti({
               particleCount: 140,
               spread: 75,

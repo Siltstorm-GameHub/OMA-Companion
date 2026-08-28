@@ -1,13 +1,21 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { openStandardPack } from "@/lib/battle-cards/packs";
+import { countPacksPurchasedToday, grantPack, PACK_DAILY_PURCHASE_LIMIT } from "@/lib/battle-cards/packs";
 import { getShopConfig } from "@/lib/shop-config";
 
 export async function POST() {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Nicht eingeloggt" }, { status: 401 });
   const userId = session.user.id;
+
+  const purchasedToday = await countPacksPurchasedToday(userId);
+  if (purchasedToday >= PACK_DAILY_PURCHASE_LIMIT) {
+    return NextResponse.json(
+      { error: `Heutiges Limit erreicht (max. ${PACK_DAILY_PURCHASE_LIMIT} Packs pro Tag).` },
+      { status: 400 }
+    );
+  }
 
   const { packCost } = await getShopConfig();
 
@@ -25,12 +33,7 @@ export async function POST() {
     data: { userId, amount: -packCost, reason: "Karten-Pack gekauft" },
   });
 
-  const result = await openStandardPack(userId);
+  await grantPack(userId, "PURCHASE");
 
-  return NextResponse.json({
-    ok: true,
-    card: { id: result.card.id, name: result.card.name, title: result.card.title, class: result.card.class },
-    isNewCard: result.isNewCard,
-    duplicates: result.duplicates,
-  });
+  return NextResponse.json({ ok: true, remainingToday: PACK_DAILY_PURCHASE_LIMIT - purchasedToday - 1 });
 }

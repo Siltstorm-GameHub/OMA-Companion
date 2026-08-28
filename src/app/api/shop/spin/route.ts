@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { updateQuestProgress } from "@/lib/quests";
-import { openStandardPack } from "@/lib/battle-cards/packs";
+import { grantPack } from "@/lib/battle-cards/packs";
 import { getShopConfig, type WheelPrize } from "@/lib/shop-config";
 
 function rollPrize(prizes: WheelPrize[]): WheelPrize {
@@ -63,17 +63,14 @@ export async function POST() {
 
   updateQuestProgress(userId, "DAILY_SPIN", 1).catch(() => {});
 
-  // Pack löst sich außerhalb der obigen Transaktion auf eigenem Weg auf
-  // (openStandardPack führt selbst eine Transaktion), damit ein Fehler beim
-  // Kartenziehen nicht den bereits protokollierten Spin rückgängig macht.
-  let cardName: string | null = null;
+  // Pack landet nur im Inventar, löst sich nicht auf — Öffnen passiert
+  // manuell auf /battle-cards.
   if (prize.type === "pack") {
-    const result = await openStandardPack(userId);
-    cardName = result.card.name;
+    await grantPack(userId, "WHEEL");
   }
 
   return NextResponse.json({
     ok: true,
-    prize: { type: prize.type, value: prize.value, label: prize.label, cardName },
+    prize: { type: prize.type, value: prize.value, label: prize.label },
   });
 }

@@ -6,6 +6,7 @@ import DailySpin from "./DailySpin";
 import BuyPack from "./BuyPack";
 import { prisma } from "@/lib/prisma";
 import { getShopConfig } from "@/lib/shop-config";
+import { countPacksPurchasedToday, PACK_DAILY_PURCHASE_LIMIT } from "@/lib/battle-cards/packs";
 
 export default async function ShopPage() {
   const me     = await getSessionUser();
@@ -18,6 +19,7 @@ export default async function ShopPage() {
     : null;
 
   const { packCost, wheelPrizes } = await getShopConfig();
+  const purchasedToday = userId ? await countPacksPurchasedToday(userId) : 0;
   const myPoints  = me?.points ?? 0;
 
   return (
@@ -60,7 +62,12 @@ export default async function ShopPage() {
             initialPoints={myPoints}
             prizes={wheelPrizes}
           />
-          <BuyPack cost={packCost} initialPoints={myPoints} />
+          <BuyPack
+            cost={packCost}
+            initialPoints={myPoints}
+            dailyLimit={PACK_DAILY_PURCHASE_LIMIT}
+            purchasedToday={purchasedToday}
+          />
         </div>
       )}
     </div>

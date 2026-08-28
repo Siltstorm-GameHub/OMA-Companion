@@ -96,6 +96,7 @@ model User {
   pokale                   Pokal[]
   battleCardUserCards      UserCard[]
   battleCardBattles        Battle[]                 @relation("BattleCardPlayer")
+  battleCardPacks          CardPack[]
 }
 
 // ── Pokale ───────────────────────────────────────────────────────────────────
@@ -1309,4 +1310,28 @@ model Battle {
   createdAt    DateTime     @default(now())
 
   player User @relation("BattleCardPlayer", fields: [playerId], references: [id])
+}
+
+// ── Karten-Packs ─────────────────────────────────────────────────────────────
+// Packs lösen sich NICHT automatisch auf — Kauf/Gewinn legt nur ein
+// ungeöffnetes Pack ins Inventar, geöffnet wird manuell auf /battle-cards
+// (mit Öffnen-Animation im Client). PURCHASE ist zusätzlich auf maximal
+// 5 Käufe/Tag begrenzt (siehe lib/battle-cards/packs.ts).
+
+enum CardPackSource {
+  PURCHASE
+  WHEEL
+}
+
+model CardPack {
+  id           String         @id @default(cuid())
+  userId       String
+  source       CardPackSource
+  createdAt    DateTime       @default(now())
+  openedAt     DateTime?
+  openedCardId String? // Snapshot der gezogenen Karten-ID, rein informativ
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
 }

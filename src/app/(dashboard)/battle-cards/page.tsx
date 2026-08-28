@@ -14,6 +14,7 @@ import { Repeat } from "lucide-react";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { hasStarterDeck } from "@/lib/battle-cards/starter-pick";
+import { countUnopenedPacks } from "@/lib/battle-cards/packs";
 import { parseActiveSkill, parsePassiveSkill } from "@/lib/battle-engine/skill-schema";
 import { resolveCardImageUrl } from "@/lib/battle-cards/resolve-image";
 import BattleCardView from "@/components/battle-cards/BattleCardView";
@@ -21,6 +22,7 @@ import type { BattleCardData } from "@/components/battle-cards/BattleCardView";
 import DuplicateProgress from "@/components/battle-cards/DuplicateProgress";
 import DemoBattleLauncher from "@/components/battle-cards/DemoBattleLauncher";
 import StarterPickFlow from "@/components/battle-cards/StarterPickFlow";
+import PackOpener from "@/components/battle-cards/PackOpener";
 
 export const metadata = {
   title: "Battle Cards | OMA",
@@ -120,6 +122,7 @@ export default async function BattleCardsPage() {
       })
     : [];
   const avatarByDiscordId = new Map(avatarUsers.map((u) => [u.discordId!, u.image]));
+  const unopenedPacks = await countUnopenedPacks(userId);
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
@@ -138,7 +141,10 @@ export default async function BattleCardsPage() {
         </Link>
       </div>
 
-      <DemoBattleLauncher />
+      <div className="flex items-center gap-2 flex-wrap">
+        <DemoBattleLauncher />
+        <PackOpener initialUnopenedCount={unopenedPacks} />
+      </div>
 
       {ownedUserCards.length === 0 ? (
         <p className="text-sm text-gray-500">Noch keine Karten in deiner Sammlung.</p>

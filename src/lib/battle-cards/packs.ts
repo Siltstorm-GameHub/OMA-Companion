@@ -1,15 +1,20 @@
 // ============================================
-// Karten-Packs — zufällige Standard-Karte
+// Karten-Packs — Kauf/Gewinn legt nur ein ungeöffnetes Pack an
 // ============================================
-// Ein Pack löst sich sofort auf (kein separates "Öffnen" später) — passt zum
-// bestehenden Shop-Muster (Tages-Spin gibt Preise auch sofort). Nur
-// Standard-Karten sind über Packs erhältlich, Community-Karten sind fest an
-// echte Discord-Mitglieder gebunden (siehe card-provisioning.ts).
+// Packs lösen sich NICHT mehr automatisch auf. Kauf (Shop) und Glücksrad-
+// Gewinn erzeugen beide nur eine CardPack-Zeile im Inventar — geöffnet wird
+// manuell auf /battle-cards (mit Öffnen-Animation im Client, siehe
+// PackOpener.tsx). Nur Standard-Karten sind über Packs erhältlich,
+// Community-Karten sind fest an echte Discord-Mitglieder gebunden.
 //
 // Der Pack-Preis ist admin-konfigurierbar, siehe lib/shop-config.ts.
 
 import { prisma } from "@/lib/prisma";
-import type { Card } from "@prisma/client";
+import type { Card, CardPackSource } from "@prisma/client";
+
+export const PACK_DAILY_PURCHASE_LIMIT = 5;
+
+export class PackError extends Error {}
 
 export interface OpenPackResult {
   card: Card;
@@ -17,10 +22,31 @@ export interface OpenPackResult {
   duplicates: number;
 }
 
-export async function openStandardPack(userId: string): Promise<OpenPackResult> {
+function startOfTodayUTC(): Date {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+}
+
+export async function countPacksPurchasedToday(userId: string): Promise<number> {
+  return prisma.cardPack.count({
+    where: { userId, source: "PURCHASE", createdAt: { gte: startOfTodayUTC() } },
+  });
+}
+
+export async function countUnopenedPacks(userId: string): Promise<number> {
+  return prisma.cardPack.count({ where: { userId, openedAt: null } });
+}
+
+/** Legt ein ungeöffnetes Pack ins Inventar — löst nichts auf. */
+export async function grantPack(userId: string, source: CardPackSource): Promise<void> {
+  await prisma.cardPack.create({ data: { userId, source } });
+}
+
+/** Zieht eine zufällige Standard-Karte und erhöht Duplikate, falls schon vorhanden. */
+async function drawStandardCard(userId: string): Promise<OpenPackResult> {
   const standardCards = await prisma.card.findMany({ where: { rarity: "STANDARD" } });
   if (standardCards.length === 0) {
-    throw new Error("Keine Standard-Karten vorhanden.");
+    throw new PackError("Keine Standard-Karten vorhanden.");
   }
   const picked = standardCards[Math.floor(Math.random() * standardCards.length)];
 
@@ -42,4 +68,27 @@ export async function openStandardPack(userId: string): Promise<OpenPackResult> 
     });
     return { card: picked, isNewCard: true, duplicates: 1 };
   });
+}
+
+/** Öffnet das älteste ungeöffnete Pack des Users. */
+export async function openNextPack(
+  userId: string
+): Promise<OpenPackResult & { remainingUnopened: number }> {
+  const pack = await prisma.cardPack.findFirst({
+    where: { userId, openedAt: null },
+    orderBy: { createdAt: "asc" },
+  });
+  if (!pack) {
+    throw new PackError("Keine ungeöffneten Packs vorhanden.");
+  }
+
+  const result = await drawStandardCard(userId);
+
+  await prisma.cardPack.update({
+    where: { id: pack.id },
+    data: { openedAt: new Date(), openedCardId: result.card.id },
+  });
+
+  const remainingUnopened = await countUnopenedPacks(userId);
+  return { ...result, remainingUnopened };
 }
