@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { parseActiveSkill, parsePassiveSkill } from "@/lib/battle-engine/skill-schema";
+import { resolveCardImageUrl } from "@/lib/battle-cards/resolve-image";
 import LineupEditor from "@/components/battle-cards/LineupEditor";
 import type { BattleCardData } from "@/components/battle-cards/BattleCardView";
 
@@ -25,6 +26,17 @@ export default async function LineupPage() {
     redirect("/battle-cards");
   }
 
+  const linkedDiscordIds = userCards
+    .filter((uc) => uc.card.rarity === "COMMUNITY" && uc.card.linkedDiscordId)
+    .map((uc) => uc.card.linkedDiscordId!);
+  const avatarUsers = linkedDiscordIds.length
+    ? await prisma.user.findMany({
+        where: { discordId: { in: linkedDiscordIds } },
+        select: { discordId: true, image: true },
+      })
+    : [];
+  const avatarByDiscordId = new Map(avatarUsers.map((u) => [u.discordId!, u.image]));
+
   const cards = userCards.map((uc) => ({
     cardId: uc.cardId,
     level: uc.level,
@@ -39,7 +51,7 @@ export default async function LineupPage() {
       baseDefense: uc.card.baseDefense,
       speed: uc.card.speed,
       activityTier: uc.card.activityTier,
-      imageUrl: uc.card.imageUrl,
+      imageUrl: resolveCardImageUrl(uc.card, avatarByDiscordId),
       passivePositive: parsePassiveSkill(uc.card.passivePositive, `${uc.card.name}.passivePositive`),
       passiveNegative: parsePassiveSkill(uc.card.passiveNegative, `${uc.card.name}.passiveNegative`),
       activeSkill: parseActiveSkill(uc.card.activeSkill, `${uc.card.name}.activeSkill`),

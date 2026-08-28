@@ -15,6 +15,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { hasStarterDeck } from "@/lib/battle-cards/starter-pick";
 import { parseActiveSkill, parsePassiveSkill } from "@/lib/battle-engine/skill-schema";
+import { resolveCardImageUrl } from "@/lib/battle-cards/resolve-image";
 import BattleCardView from "@/components/battle-cards/BattleCardView";
 import type { BattleCardData } from "@/components/battle-cards/BattleCardView";
 import DuplicateProgress from "@/components/battle-cards/DuplicateProgress";
@@ -38,12 +39,16 @@ function qualityRank(card: { rarity: string; activityTier: string | null }): num
   return 0;
 }
 
-function toCardData(card: {
-  id: string; name: string; title: string; class: BattleCardData["class"]; rarity: BattleCardData["rarity"];
-  flavorText: string; baseHp: number; baseAttack: number; baseDefense: number; speed: number;
-  activityTier: BattleCardData["activityTier"]; imageUrl: string | null;
-  passivePositive: unknown; passiveNegative: unknown; activeSkill: unknown; ultimateSkill: unknown;
-}): BattleCardData & { id: string } {
+function toCardData(
+  card: {
+    id: string; name: string; title: string; class: BattleCardData["class"]; rarity: BattleCardData["rarity"];
+    flavorText: string; baseHp: number; baseAttack: number; baseDefense: number; speed: number;
+    activityTier: BattleCardData["activityTier"]; imageUrl: string | null;
+    linkedDiscordId: string | null; overriddenFields: string[];
+    passivePositive: unknown; passiveNegative: unknown; activeSkill: unknown; ultimateSkill: unknown;
+  },
+  avatarByDiscordId?: Map<string, string | null>
+): BattleCardData & { id: string } {
   return {
     id: card.id,
     name: card.name,
@@ -56,7 +61,7 @@ function toCardData(card: {
     baseDefense: card.baseDefense,
     speed: card.speed,
     activityTier: card.activityTier,
-    imageUrl: card.imageUrl,
+    imageUrl: avatarByDiscordId ? resolveCardImageUrl(card, avatarByDiscordId) : card.imageUrl,
     passivePositive: parsePassiveSkill(card.passivePositive, `${card.name}.passivePositive`),
     passiveNegative: parsePassiveSkill(card.passiveNegative, `${card.name}.passiveNegative`),
     activeSkill: parseActiveSkill(card.activeSkill, `${card.name}.activeSkill`),
@@ -87,7 +92,7 @@ export default async function BattleCardsPage() {
             Zuerst je 1 Tank, 1 Support und 1 Damage Dealer — danach 2 weitere Karten nach Wahl.
           </p>
         </div>
-        <StarterPickFlow cards={standardCards.map(toCardData)} />
+        <StarterPickFlow cards={standardCards.map((c) => toCardData(c))} />
       </div>
     );
   }
@@ -103,6 +108,18 @@ export default async function BattleCardsPage() {
     where: { id: { notIn: ownedCardIds } },
   });
   otherCards.sort((a, b) => qualityRank(b) - qualityRank(a) || a.name.localeCompare(b.name));
+
+  // Community-Karten zeigen live das aktuelle Profilbild des verknüpften Mitglieds.
+  const linkedDiscordIds = [...ownedUserCards.map((uc) => uc.card), ...otherCards]
+    .filter((c) => c.rarity === "COMMUNITY" && c.linkedDiscordId)
+    .map((c) => c.linkedDiscordId!);
+  const avatarUsers = linkedDiscordIds.length
+    ? await prisma.user.findMany({
+        where: { discordId: { in: linkedDiscordIds } },
+        select: { discordId: true, image: true },
+      })
+    : [];
+  const avatarByDiscordId = new Map(avatarUsers.map((u) => [u.discordId!, u.image]));
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
@@ -129,7 +146,7 @@ export default async function BattleCardsPage() {
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
           {ownedUserCards.map((uc) => (
             <div key={uc.id}>
-              <BattleCardView card={{ ...toCardData(uc.card), level: uc.level }} />
+              <BattleCardView card={{ ...toCardData(uc.card, avatarByDiscordId), level: uc.level }} />
               <DuplicateProgress rarity={uc.card.rarity} level={uc.level} duplicates={uc.duplicates} />
             </div>
           ))}
@@ -148,7 +165,7 @@ export default async function BattleCardsPage() {
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
             {otherCards.map((card) => (
-              <BattleCardView key={card.id} card={toCardData(card)} dimmed />
+              <BattleCardView key={card.id} card={toCardData(card, avatarByDiscordId)} dimmed />
             ))}
           </div>
         </>
