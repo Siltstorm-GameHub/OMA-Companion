@@ -105,6 +105,7 @@ export async function POST(request: Request) {
       rounds: result.rounds,
       seed: result.seed,
       log: result.log,
+      roster: result.roster,
     });
   } catch (error) {
     if (error instanceof InvalidSkillDataError) {

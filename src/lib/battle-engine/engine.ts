@@ -27,6 +27,7 @@ import type {
   BattleUnitState,
   BattleWinner,
   Effect,
+  RosterEntry,
 } from "./types";
 
 function checkWinner(
@@ -212,5 +213,19 @@ export function runBattle(
 
   log.push({ type: "battleEnd", winner, round });
 
-  return { winner, rounds: round, seed, log };
+  const roster: RosterEntry[] = allUnits.map((u) => ({
+    instanceId: u.instanceId,
+    teamId: u.teamId,
+    cardId: u.def.cardId,
+    name: u.def.name,
+    class: u.def.class,
+    level: u.def.level,
+    maxHp: u.maxHp,
+    activeSkillName: u.def.activeSkill.name,
+    activeSkillDescription: u.def.activeSkill.description,
+    ultimateSkillName: u.def.ultimateSkill.name,
+    ultimateSkillDescription: u.def.ultimateSkill.description,
+  }));
+
+  return { winner, rounds: round, seed, log, roster };
 }

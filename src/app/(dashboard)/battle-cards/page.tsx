@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { parseActiveSkill, parsePassiveSkill } from "@/lib/battle-engine/skill-schema";
 import BattleCardView from "@/components/battle-cards/BattleCardView";
 import type { BattleCardData } from "@/components/battle-cards/BattleCardView";
+import DemoBattleLauncher from "@/components/battle-cards/DemoBattleLauncher";
 
 export const metadata = {
   title: "Battle Cards | OMA",
@@ -46,6 +47,8 @@ export default async function BattleCardsPage() {
           Die 6 Standard-Karten — antippen, um die Skill-Details auf der Rückseite zu sehen.
         </p>
       </div>
+
+      <DemoBattleLauncher />
 
       {cardData.length === 0 ? (
         <p className="text-sm text-gray-500">Noch keine Karten in der Datenbank.</p>

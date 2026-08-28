@@ -218,11 +218,27 @@ export type BattleLogEntry =
 
 export type BattleWinner = TeamId | "DRAW";
 
+/** Statische Metadaten einer Einheit für die UI (Name/Klasse/MaxHP/Skill-Texte) — keine Laufzeitwerte. */
+export interface RosterEntry {
+  instanceId: string;
+  teamId: TeamId;
+  cardId: string;
+  name: string;
+  class: UnitClass;
+  level: number;
+  maxHp: number;
+  activeSkillName: string;
+  activeSkillDescription: string;
+  ultimateSkillName: string;
+  ultimateSkillDescription: string;
+}
+
 export interface BattleResult {
   winner: BattleWinner;
   rounds: number;
   seed: number;
   log: BattleLogEntry[];
+  roster: RosterEntry[];
 }
 
 /** Optionale Hooks, um Engine-Verhalten anzupassen (z.B. später: Spieler wählt Ultimate-Ziel). */
