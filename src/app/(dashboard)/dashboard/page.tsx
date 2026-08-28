@@ -211,6 +211,7 @@ export default async function DashboardPage() {
     jobOverview,
     squadCount,
     mySquadMembership,
+    previewSquads,
   ] = await Promise.all([
     userId
       ? prisma.userQuestProgress.count({ where: { userId, completed: true, quest: { month, year } } })
@@ -268,9 +269,29 @@ export default async function DashboardPage() {
       ? prisma.squadMembership.findFirst({
           where: { userId },
           orderBy: [{ role: "asc" }, { joinedAt: "asc" }],
-          select: { role: true, squad: { select: { id: true, name: true, icon: true } } },
+          select: {
+            role: true,
+            squad: {
+              select: {
+                id: true, name: true, icon: true,
+                memberships: {
+                  where: { userId: { not: userId } },
+                  take: 5,
+                  orderBy: { joinedAt: "asc" },
+                  select: { user: { select: { id: true, name: true, username: true, image: true } } },
+                },
+              },
+            },
+          },
         })
       : null,
+    // Nur für die Vorschau-Collage der Kachel, wenn der Betrachter in keinem Squad ist.
+    prisma.squad.findMany({
+      where: { hidden: false },
+      orderBy: { createdAt: "desc" },
+      take: 4,
+      select: { icon: true },
+    }),
   ]);
 
   const myPoints     = sessionUser?.points ?? 0;
@@ -677,26 +698,84 @@ export default async function DashboardPage() {
           <Link href="/squads"
             className="surface animate-slide-up stagger-2 scan-on-load group block overflow-hidden relative transition-transform duration-200 hover:-translate-y-1 active:scale-[0.99]"
             style={{ borderRadius: "6px", border: "1px solid rgba(245,158,11,0.16)", boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
-            <div className="relative overflow-hidden flex items-center justify-center" style={{ height: "108px" }}>
+            <div className="relative overflow-hidden" style={{ height: "108px" }}>
               <div className="absolute inset-0"
-                style={{ background: "linear-gradient(135deg, #451a03 0%, #1c0a02 50%, #0d0d0f 100%)" }} />
-              <Shield className="relative w-8 h-8 text-amber-600/60" />
+                style={{ background: "radial-gradient(circle at 28% 22%, rgba(245,158,11,0.16), transparent 62%), linear-gradient(135deg, #29130a 0%, #1c0a02 55%, #0d0d0f 100%)" }} />
+
+              {mySquadMembership ? (
+                <>
+                  {/* Eigenes Squad-Wappen, in dessen echter Icon-Farbe */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center transition-transform duration-500 group-hover:scale-110"
+                      style={{
+                        background: `${resolveSeriesColor(mySquadMembership.squad.icon)}1f`,
+                        boxShadow: `0 0 28px ${resolveSeriesColor(mySquadMembership.squad.icon)}40`,
+                      }}>
+                      <SeriesIcon name={mySquadMembership.squad.icon} className="w-7 h-7" />
+                    </div>
+                  </div>
+                  {mySquadMembership.role === "captain" && (
+                    <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider"
+                      style={{ background: "rgba(245,158,11,0.16)", border: "1px solid rgba(245,158,11,0.3)", color: "#fbbf24" }}>
+                      <Crown className="w-3 h-3" /> Captain
+                    </div>
+                  )}
+                  {mySquadMembership.squad.memberships.length > 0 && (
+                    <div className="absolute bottom-3 left-3 flex items-center">
+                      {mySquadMembership.squad.memberships.slice(0, 4).map((m, i) => (
+                        <div key={m.user.id}
+                          className="w-6 h-6 rounded-full border-2 overflow-hidden bg-gray-700 flex items-center justify-center"
+                          style={{ borderColor: "#0d0d0f", marginLeft: i === 0 ? 0 : -8, zIndex: 4 - i }}>
+                          {m.user.image ? (
+                            <Image src={m.user.image} alt="" width={24} height={24} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-[9px] font-semibold text-gray-400">
+                              {(m.user.username ?? m.user.name ?? "?")[0]?.toUpperCase()}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : previewSquads.length > 0 ? (
+                /* Kein eigenes Squad: lose gestreute Vorschau realer Squad-Icons statt eines Platzhalters */
+                <div className="absolute inset-0 flex items-center justify-center">
+                  {previewSquads.map((s, i) => {
+                    const color = resolveSeriesColor(s.icon);
+                    const isCenter = i === 1 % previewSquads.length;
+                    const size = isCenter ? 42 : 30;
+                    return (
+                      <div key={i}
+                        className="rounded-xl flex items-center justify-center shrink-0 transition-transform duration-500 group-hover:scale-105"
+                        style={{
+                          width: size, height: size,
+                          background: `${color}1f`,
+                          border: `1px solid ${color}30`,
+                          marginLeft: i === 0 ? 0 : -10,
+                          transform: `translateY(${i % 2 === 0 ? 7 : -7}px) rotate(${(i - (previewSquads.length - 1) / 2) * 7}deg)`,
+                          opacity: isCenter ? 1 : 0.62,
+                          zIndex: isCenter ? 2 : 1,
+                        }}>
+                        <SeriesIcon name={s.icon} className={isCenter ? "w-5 h-5" : "w-3.5 h-3.5"} />
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Shield className="w-8 h-8 text-amber-600/50" />
+                </div>
+              )}
             </div>
             <div className="px-4 pb-4 pt-2.5">
               <p className="text-[9px] text-amber-500/50 uppercase tracking-[0.18em] font-semibold mb-0.5">Squads</p>
               <p className="font-display text-base font-black text-white leading-tight truncate">
                 {mySquadMembership ? mySquadMembership.squad.name : "eSports-Teams"}
               </p>
-              <div className="flex items-center gap-3 mt-2 text-[11px] text-gray-500">
-                <span className="flex items-center gap-1">
-                  <Users className="w-3 h-3" /> {squadCount} Squad{squadCount === 1 ? "" : "s"}
-                </span>
-                {mySquadMembership?.role === "captain" && (
-                  <span className="flex items-center gap-1 text-amber-400">
-                    <Crown className="w-3 h-3" /> Captain
-                  </span>
-                )}
-              </div>
+              <p className="text-[11px] text-gray-500 mt-2 flex items-center gap-1">
+                <Users className="w-3 h-3" /> {squadCount} Squad{squadCount === 1 ? "" : "s"}
+              </p>
             </div>
           </Link>
         </div>
