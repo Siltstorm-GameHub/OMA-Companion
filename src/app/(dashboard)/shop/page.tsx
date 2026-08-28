@@ -3,7 +3,9 @@ import { ShoppingBag } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
 import { CountUp } from "@/components/CountUp";
 import DailySpin from "./DailySpin";
+import BuyPack from "./BuyPack";
 import { prisma } from "@/lib/prisma";
+import { PACK_COST } from "@/lib/battle-cards/packs";
 
 export default async function ShopPage() {
   const me     = await getSessionUser();
@@ -46,15 +48,18 @@ export default async function ShopPage() {
         </div>
       </div>
 
-      {/* Tages-Spin */}
       {userId && (
-        <DailySpin
-          alreadySpun={!!todaySpin}
-          lastResult={todaySpin
-            ? { prizeLabel: todaySpin.prizeLabel, prizeType: todaySpin.prizeType }
-            : null}
-          initialPoints={myPoints}
-        />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+          {/* Tages-Spin */}
+          <DailySpin
+            alreadySpun={!!todaySpin}
+            lastResult={todaySpin
+              ? { prizeLabel: todaySpin.prizeLabel, prizeType: todaySpin.prizeType }
+              : null}
+            initialPoints={myPoints}
+          />
+          <BuyPack cost={PACK_COST} initialPoints={myPoints} />
+        </div>
       )}
     </div>
   );

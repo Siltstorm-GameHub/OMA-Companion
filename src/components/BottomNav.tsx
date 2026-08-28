@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, CalendarDays, ShoppingBag, Trophy, User, Heart, MonitorSmartphone } from "lucide-react";
+import { LayoutDashboard, CalendarDays, ShoppingBag, Trophy, User, Heart } from "lucide-react";
 import PollBadge from "@/components/PollBadge";
 
 const NAV = [
@@ -13,13 +13,7 @@ const NAV = [
   { label: "Profil",  href: "/profile",     icon: User },
 ];
 
-/**
- * `mancaveVisible` kommt aus dem Dashboard-Layout, weil die Mancave-
- * Freischaltung in der BotConfig liegt und nur serverseitig lesbar ist —
- * ein eigenständiger Zusatz-Slot (kein Ersatz für "Profil"), nur sichtbar,
- * solange die Mancave noch admin-only ist.
- */
-export default function BottomNav({ mancaveVisible = false }: { mancaveVisible?: boolean }) {
+export default function BottomNav() {
   const pathname = usePathname();
 
   const items = NAV.map(({ label, href, icon }) => ({
@@ -27,12 +21,6 @@ export default function BottomNav({ mancaveVisible = false }: { mancaveVisible?:
     active: pathname === href || pathname.startsWith(href + "/"),
     showPollBadge: href === "/events",
   }));
-  if (mancaveVisible) {
-    items.push({
-      label: "Mancave", href: "/mancave", icon: MonitorSmartphone,
-      active: pathname.startsWith("/mancave"), showPollBadge: false,
-    });
-  }
   const activeIndex = items.findIndex(n => n.active);
 
   return (

@@ -34,11 +34,10 @@ import AuroraBackground from "@/components/AuroraBackground";
  * durchreichen, nie direkt importieren.
  */
 export default function DashboardChrome({
-  children, newsItems, mancaveVisible, partnerFooter,
+  children, newsItems, partnerFooter,
 }: {
   children: React.ReactNode;
   newsItems: NewsItem[];
-  mancaveVisible: boolean;
   partnerFooter: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -61,7 +60,7 @@ export default function DashboardChrome({
 
       {/* ── Floating Pill Nav (nur Desktop) ─────────────────────── */}
       <div className="hidden lg:block">
-        <FloatingPill mancaveVisible={mancaveVisible} />
+        <FloatingPill />
       </div>
 
       {/* ── Main Content ────────────────────────────────────────── */}
@@ -92,7 +91,7 @@ export default function DashboardChrome({
 
       {/* ── Mobile Bottom Nav (immer sichtbar auf Handy) ───────── */}
       <div className="lg:hidden">
-        <BottomNav mancaveVisible={mancaveVisible} />
+        <BottomNav />
       </div>
     </div>
   );

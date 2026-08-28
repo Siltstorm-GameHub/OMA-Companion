@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { updateQuestProgress } from "@/lib/quests";
+import { openStandardPack } from "@/lib/battle-cards/packs";
 
 // Gewichtete Preistabelle
 const PRIZES = [
@@ -11,6 +12,7 @@ const PRIZES = [
   { type: "points", value: "100", label: "100 Münzen",  weight: 12 },
   { type: "points", value: "200", label: "200 Münzen ⭐", weight: 4  },
   { type: "points", value: "200", label: "200 Münzen",  weight: 8  },
+  { type: "pack",   value: "1",   label: "Karten-Pack",  weight: 3  },
   { type: "nothing", value: "0",  label: "Kein Glück",  weight: 1  },
 ] as const;
 
@@ -69,5 +71,17 @@ export async function POST() {
 
   updateQuestProgress(userId, "DAILY_SPIN", 1).catch(() => {});
 
-  return NextResponse.json({ ok: true, prize: { type: prize.type, value: prize.value, label: prize.label } });
+  // Pack löst sich außerhalb der obigen Transaktion auf eigenem Weg auf
+  // (openStandardPack führt selbst eine Transaktion), damit ein Fehler beim
+  // Kartenziehen nicht den bereits protokollierten Spin rückgängig macht.
+  let cardName: string | null = null;
+  if (prize.type === "pack") {
+    const result = await openStandardPack(userId);
+    cardName = result.card.name;
+  }
+
+  return NextResponse.json({
+    ok: true,
+    prize: { type: prize.type, value: prize.value, label: prize.label, cardName },
+  });
 }

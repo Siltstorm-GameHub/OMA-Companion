@@ -27,6 +27,8 @@ import { parseFavoriteGames } from "@/lib/favorite-games";
 import { PushSubscribeButton } from "@/components/PushSubscribeButton";
 import NotificationPreferences from "@/components/NotificationPreferences";
 import ProfileOverlayButton from "@/components/ProfileOverlayButton";
+import { getMancaveConfig, mancaveVisibleFor } from "@/lib/mancave-config";
+import { MonitorSmartphone } from "lucide-react";
 
 export default async function ProfilePage() {
   const me = await getSessionUser();

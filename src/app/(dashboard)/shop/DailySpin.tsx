@@ -33,6 +33,7 @@ const SEGMENTS = [
   { label: "Kein Glück",   line1: "Kein", line2: "Glück",     fill: "#0f172a", fillB: "#020617", rim: "#334155", text: "#475569" },
   { label: "200 Münzen",   line1: "200",  line2: "Münzen",    fill: "#c2410c", fillB: "#7c2d12", rim: "#fdba74", text: "#fed7aa" },
   { label: "25 Münzen",    line1: "25",   line2: "Münzen",    fill: "#1d4ed8", fillB: "#1e3a8a", rim: "#93c5fd", text: "#bfdbfe" },
+  { label: "Karten-Pack",  line1: "Karten", line2: "Pack",    fill: "#6d28d9", fillB: "#4c1d95", rim: "#c4b5fd", text: "#ede9fe" },
   { label: "50 Münzen",    line1: "50",   line2: "Münzen",    fill: "#047857", fillB: "#064e3b", rim: "#6ee7b7", text: "#a7f3d0" },
 ];
 
@@ -195,6 +196,14 @@ export default function DailySpin({ alreadySpun, lastResult, initialPoints }: Pr
               spread: 75,
               origin: { y: 0.55 },
               colors: ["#f59e0b", "#fcd34d", "#fef08a", "#ffffff", "#fb923c"],
+            });
+          } else if (data.prize.type === "pack") {
+            toast.success(`🎴 Karten-Pack geöffnet: ${data.prize.cardName ?? "?"}!`);
+            confetti({
+              particleCount: 140,
+              spread: 75,
+              origin: { y: 0.55 },
+              colors: ["#8b5cf6", "#c4b5fd", "#ede9fe", "#ffffff"],
             });
           } else {
             toast("🎰 Heute kein Glück — morgen wieder!", { description: "Drehe morgen erneut." });

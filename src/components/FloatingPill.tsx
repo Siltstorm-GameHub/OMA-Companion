@@ -8,7 +8,6 @@ import { useState, useRef, useEffect, useCallback, useLayoutEffect, forwardRef }
 import {
   LayoutDashboard, CalendarDays, Trophy, ShoppingBag,
   Heart, User, ShieldCheck, LogOut, ChevronDown, Sun, Moon, Bell, Settings, X, MessageCircleMore,
-  MonitorSmartphone,
   type LucideIcon,
 } from "lucide-react";
 import { WHATSAPP_COMMUNITY_URL } from "@/lib/config";
@@ -129,13 +128,7 @@ const NavLink = forwardRef<HTMLAnchorElement, {
 });
 
 /* ── FloatingPill ─────────────────────────────────────────────────────── */
-/**
- * `mancaveVisible` kommt aus dem Layout, weil das Feature-Flag in der
- * BotConfig liegt und damit nur serverseitig lesbar ist. Solange es aus ist,
- * ist der Eintrag nur für Admins sichtbar — die Mancave ERSETZT "Profil"
- * nicht, sondern kommt als eigener zusätzlicher Slot dazu.
- */
-export default function FloatingPill({ mancaveVisible = false }: { mancaveVisible?: boolean }) {
+export default function FloatingPill() {
   const pathname          = usePathname();
   const router            = useRouter();
   const { data: session } = useSession();
@@ -163,9 +156,6 @@ export default function FloatingPill({ mancaveVisible = false }: { mancaveVisibl
       active: pathname === href || (href !== "/dashboard" && pathname.startsWith(href)),
       showPollBadge: href === "/events",
     }));
-  if (mancaveVisible) {
-    NAV_ITEMS.push({ label: "Mancave", href: "/mancave", icon: MonitorSmartphone, active: pathname.startsWith("/mancave") });
-  }
   if (isStaff) {
     NAV_ITEMS.push({ label: "Admin", href: "/admin", icon: ShieldCheck, active: pathname.startsWith("/admin"), danger: true });
   }
@@ -190,7 +180,7 @@ export default function FloatingPill({ mancaveVisible = false }: { mancaveVisibl
     measure();
     window.addEventListener("resize", measure);
     return () => window.removeEventListener("resize", measure);
-  }, [pathname, isStaff, mancaveVisible]);
+  }, [pathname, isStaff]);
 
   const fetchNotifications = useCallback(async () => {
     try {

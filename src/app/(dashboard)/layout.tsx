@@ -3,7 +3,6 @@ import { headers } from "next/headers";
 import { auth } from "@/auth";
 import { isLinkPreviewBot } from "@/lib/link-preview-bots";
 import { prisma } from "@/lib/prisma";
-import { getMancaveConfig, mancaveVisibleFor } from "@/lib/mancave-config";
 import { getScopeTitle } from "@/lib/wanderpocal";
 import DashboardChrome from "./DashboardChrome";
 import PartnerFooter from "@/components/PartnerFooter";
@@ -109,12 +108,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const nextEvent = activeOrPollEvent ?? upcomingEvent;
   const openQuestsCount = userId ? Math.max(totalMonthQuests - completedMonthQuests, 0) : 0;
 
-  // Mancave: eigener Flag, gleiches Muster — solange mancave_enabled aus ist,
-  // sehen nur Admins den zusätzlichen Nav-Eintrag (ersetzt NICHT "Profil").
-  const mancaveVisible = mancaveVisibleFor(
-    await getMancaveConfig(),
-    (session?.user as { role?: string } | undefined)?.role,
-  );
   const newsItems: NewsItem[] = [];
 
   // Aktives / Umfragephase / Nächstes Event
@@ -237,7 +230,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   });
 
   return (
-    <DashboardChrome newsItems={newsItems} mancaveVisible={mancaveVisible} partnerFooter={<PartnerFooter />}>
+    <DashboardChrome newsItems={newsItems} partnerFooter={<PartnerFooter />}>
       {children}
     </DashboardChrome>
   );
