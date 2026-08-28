@@ -6,7 +6,7 @@ import { useEffect } from "react";
 import {
   Users, LayoutDashboard, Bell,
   CalendarDays, Heart, Medal, Shield,
-  Wrench, Users2, Megaphone, Handshake, Clapperboard, Server, Gamepad2, MonitorSmartphone, ShoppingBag,
+  Wrench, Users2, Megaphone, Handshake, Clapperboard, Server, Gamepad2, MonitorSmartphone, ShoppingBag, Swords,
 } from "lucide-react";
 import ServerApplicationBadge from "@/components/ServerApplicationBadge";
 import EventsActionBadge from "@/components/EventsActionBadge";
@@ -69,7 +69,7 @@ const CATEGORIES: {
     label: "Tools",
     icon: Wrench,
     minRole: "admin",
-    prefixes: ["/admin/notifications", "/admin/badges", "/admin/users", "/admin/minigames", "/admin/mancave", "/admin/shop"],
+    prefixes: ["/admin/notifications", "/admin/badges", "/admin/users", "/admin/minigames", "/admin/mancave", "/admin/shop", "/admin/battle-cards"],
     tabs: [
       { href: "/admin/users",         label: "Nutzer & Rollen",  icon: Users,       minRole: "admin" },
       { href: "/admin/notifications", label: "Benachrichtigungen", icon: Bell,      minRole: "admin" },
@@ -77,6 +77,7 @@ const CATEGORIES: {
       { href: "/admin/minigames",     label: "Minigames",        icon: Gamepad2,    minRole: "admin" },
       { href: "/admin/mancave",       label: "Mancave",          icon: MonitorSmartphone, minRole: "admin" },
       { href: "/admin/shop",          label: "Shop",             icon: ShoppingBag, minRole: "admin" },
+      { href: "/admin/battle-cards",  label: "Battle Cards",     icon: Swords,      minRole: "admin" },
     ],
   },
 ];
