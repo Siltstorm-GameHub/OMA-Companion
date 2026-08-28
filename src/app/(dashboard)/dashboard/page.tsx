@@ -212,7 +212,6 @@ export default async function DashboardPage() {
     squadCount,
     mySquadMembership,
     previewSquads,
-    battleCardCount,
   ] = await Promise.all([
     userId
       ? prisma.userQuestProgress.count({ where: { userId, completed: true, quest: { month, year } } })
@@ -293,7 +292,6 @@ export default async function DashboardPage() {
       take: 4,
       select: { icon: true, coverImageUrl: true },
     }),
-    prisma.card.count({ where: { rarity: "STANDARD" } }),
   ]);
 
   // Für die Kachel: eigenes Squad (falls Mitglied) hat Vorrang, sonst das erste Vorschau-Squad
@@ -819,11 +817,8 @@ export default async function DashboardPage() {
               </div>
             </div>
             <div className="px-4 pb-4 pt-2.5">
-              <p className="text-[9px] text-violet-500/50 uppercase tracking-[0.18em] font-semibold mb-0.5">Battle Cards</p>
-              <p className="font-display text-base font-black text-white leading-tight truncate">Kartenspiel</p>
-              <p className="text-[11px] text-gray-500 mt-2 flex items-center gap-1">
-                <Swords className="w-3 h-3" /> {battleCardCount} Karte{battleCardCount === 1 ? "" : "n"}
-              </p>
+              <p className="text-[9px] text-violet-500/50 uppercase tracking-[0.18em] font-semibold mb-0.5">Kartenspiel</p>
+              <p className="font-display text-base font-black text-white leading-tight truncate">OMA Battle Cards</p>
             </div>
           </Link>
         </div>
