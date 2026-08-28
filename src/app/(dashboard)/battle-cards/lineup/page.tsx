@@ -1,10 +1,8 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { parseActiveSkill, parsePassiveSkill } from "@/lib/battle-engine/skill-schema";
-import { resolveCardImageUrl } from "@/lib/battle-cards/resolve-image";
+import { toCardData, resolveAvatarsForCards } from "@/lib/battle-cards/card-view";
 import LineupEditor from "@/components/battle-cards/LineupEditor";
-import type { BattleCardData } from "@/components/battle-cards/BattleCardView";
 
 export const metadata = {
   title: "Startaufstellung | OMA Battle Cards",
@@ -26,37 +24,12 @@ export default async function LineupPage() {
     redirect("/battle-cards");
   }
 
-  const linkedDiscordIds = userCards
-    .filter((uc) => uc.card.rarity === "COMMUNITY" && uc.card.linkedDiscordId)
-    .map((uc) => uc.card.linkedDiscordId!);
-  const avatarUsers = linkedDiscordIds.length
-    ? await prisma.user.findMany({
-        where: { discordId: { in: linkedDiscordIds } },
-        select: { discordId: true, image: true },
-      })
-    : [];
-  const avatarByDiscordId = new Map(avatarUsers.map((u) => [u.discordId!, u.image]));
+  const avatarByDiscordId = await resolveAvatarsForCards(userCards.map((uc) => uc.card));
 
   const cards = userCards.map((uc) => ({
     cardId: uc.cardId,
     level: uc.level,
-    card: {
-      name: uc.card.name,
-      title: uc.card.title,
-      class: uc.card.class,
-      rarity: uc.card.rarity,
-      flavorText: uc.card.flavorText,
-      baseHp: uc.card.baseHp,
-      baseAttack: uc.card.baseAttack,
-      baseDefense: uc.card.baseDefense,
-      speed: uc.card.speed,
-      activityTier: uc.card.activityTier,
-      imageUrl: resolveCardImageUrl(uc.card, avatarByDiscordId),
-      passivePositive: parsePassiveSkill(uc.card.passivePositive, `${uc.card.name}.passivePositive`),
-      passiveNegative: parsePassiveSkill(uc.card.passiveNegative, `${uc.card.name}.passiveNegative`),
-      activeSkill: parseActiveSkill(uc.card.activeSkill, `${uc.card.name}.activeSkill`),
-      ultimateSkill: parseActiveSkill(uc.card.ultimateSkill, `${uc.card.name}.ultimateSkill`),
-    } satisfies BattleCardData,
+    card: toCardData(uc.card, avatarByDiscordId),
   }));
 
   const initialLineup = userCards.filter((uc) => uc.inLineup).map((uc) => uc.cardId);

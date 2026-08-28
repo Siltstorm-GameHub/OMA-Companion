@@ -6,7 +6,8 @@
 //    sind hier NUR als Auswahlgrundlage sichtbar, nicht als Katalog.
 //  - Start-Pack vorhanden → "Deine Karten": Startaufstellung zuerst, dann
 //    restliche eigene Karten, darunter visuell abgetrennt alle Karten, die
-//    es im Spiel gibt (inkl. aller Community-Karten), ausgegraut.
+//    es im Spiel gibt (inkl. aller Community-Karten), ausgegraut, gefiltert
+//    nach Klasse und seitenweise nachgeladen (siehe CardCollectionBrowser).
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -15,61 +16,16 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { hasStarterDeck } from "@/lib/battle-cards/starter-pick";
 import { countUnopenedPacks } from "@/lib/battle-cards/packs";
-import { parseActiveSkill, parsePassiveSkill } from "@/lib/battle-engine/skill-schema";
-import { resolveCardImageUrl } from "@/lib/battle-cards/resolve-image";
-import BattleCardView from "@/components/battle-cards/BattleCardView";
-import type { BattleCardData } from "@/components/battle-cards/BattleCardView";
-import DuplicateProgress from "@/components/battle-cards/DuplicateProgress";
-import DemoBattleLauncher from "@/components/battle-cards/DemoBattleLauncher";
+import { sortByQuality, toCardData, resolveAvatarsForCards } from "@/lib/battle-cards/card-view";
 import StarterPickFlow from "@/components/battle-cards/StarterPickFlow";
 import PackOpener from "@/components/battle-cards/PackOpener";
+import CardCollectionBrowser from "@/components/battle-cards/CardCollectionBrowser";
+
+const OTHER_CARDS_PAGE_SIZE = 12;
 
 export const metadata = {
   title: "Battle Cards | OMA",
 };
-
-const ACTIVITY_TIER_RANK: Record<string, number> = {
-  OLD_MASTER: 5,
-  LEGENDE: 4,
-  GAMER: 3,
-  NPC: 2,
-  GHOST: 1,
-};
-
-function qualityRank(card: { rarity: string; activityTier: string | null }): number {
-  if (card.rarity === "COMMUNITY") return 100 + (card.activityTier ? ACTIVITY_TIER_RANK[card.activityTier] ?? 0 : 0);
-  return 0;
-}
-
-function toCardData(
-  card: {
-    id: string; name: string; title: string; class: BattleCardData["class"]; rarity: BattleCardData["rarity"];
-    flavorText: string; baseHp: number; baseAttack: number; baseDefense: number; speed: number;
-    activityTier: BattleCardData["activityTier"]; imageUrl: string | null;
-    linkedDiscordId: string | null; overriddenFields: string[];
-    passivePositive: unknown; passiveNegative: unknown; activeSkill: unknown; ultimateSkill: unknown;
-  },
-  avatarByDiscordId?: Map<string, string | null>
-): BattleCardData & { id: string } {
-  return {
-    id: card.id,
-    name: card.name,
-    title: card.title,
-    class: card.class,
-    rarity: card.rarity,
-    flavorText: card.flavorText,
-    baseHp: card.baseHp,
-    baseAttack: card.baseAttack,
-    baseDefense: card.baseDefense,
-    speed: card.speed,
-    activityTier: card.activityTier,
-    imageUrl: avatarByDiscordId ? resolveCardImageUrl(card, avatarByDiscordId) : card.imageUrl,
-    passivePositive: parsePassiveSkill(card.passivePositive, `${card.name}.passivePositive`),
-    passiveNegative: parsePassiveSkill(card.passiveNegative, `${card.name}.passiveNegative`),
-    activeSkill: parseActiveSkill(card.activeSkill, `${card.name}.activeSkill`),
-    ultimateSkill: parseActiveSkill(card.ultimateSkill, `${card.name}.ultimateSkill`),
-  };
-}
 
 export default async function BattleCardsPage() {
   const session = await auth();
@@ -106,23 +62,24 @@ export default async function BattleCardsPage() {
   });
   const ownedCardIds = ownedUserCards.map((uc) => uc.cardId);
 
-  const otherCards = await prisma.card.findMany({
+  const otherCardsAll = await prisma.card.findMany({
     where: { id: { notIn: ownedCardIds } },
   });
-  otherCards.sort((a, b) => qualityRank(b) - qualityRank(a) || a.name.localeCompare(b.name));
+  const otherCardsSorted = sortByQuality(otherCardsAll);
+  const otherCardsFirstPage = otherCardsSorted.slice(0, OTHER_CARDS_PAGE_SIZE);
 
-  // Community-Karten zeigen live das aktuelle Profilbild des verknüpften Mitglieds.
-  const linkedDiscordIds = [...ownedUserCards.map((uc) => uc.card), ...otherCards]
-    .filter((c) => c.rarity === "COMMUNITY" && c.linkedDiscordId)
-    .map((c) => c.linkedDiscordId!);
-  const avatarUsers = linkedDiscordIds.length
-    ? await prisma.user.findMany({
-        where: { discordId: { in: linkedDiscordIds } },
-        select: { discordId: true, image: true },
-      })
-    : [];
-  const avatarByDiscordId = new Map(avatarUsers.map((u) => [u.discordId!, u.image]));
+  const avatarByDiscordId = await resolveAvatarsForCards([
+    ...ownedUserCards.map((uc) => uc.card),
+    ...otherCardsFirstPage,
+  ]);
   const unopenedPacks = await countUnopenedPacks(userId);
+
+  const ownedCards = ownedUserCards.map((uc) => ({
+    id: uc.id,
+    level: uc.level,
+    duplicates: uc.duplicates,
+    card: { ...toCardData(uc.card, avatarByDiscordId), level: uc.level },
+  }));
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
@@ -141,41 +98,13 @@ export default async function BattleCardsPage() {
         </Link>
       </div>
 
-      <div className="flex items-center gap-2 flex-wrap">
-        <DemoBattleLauncher />
-        <PackOpener initialUnopenedCount={unopenedPacks} />
-      </div>
+      <PackOpener initialUnopenedCount={unopenedPacks} />
 
-      {ownedUserCards.length === 0 ? (
-        <p className="text-sm text-gray-500">Noch keine Karten in deiner Sammlung.</p>
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-          {ownedUserCards.map((uc) => (
-            <div key={uc.id}>
-              <BattleCardView card={{ ...toCardData(uc.card, avatarByDiscordId), level: uc.level }} />
-              <DuplicateProgress rarity={uc.card.rarity} level={uc.level} duplicates={uc.duplicates} />
-            </div>
-          ))}
-        </div>
-      )}
-
-      {otherCards.length > 0 && (
-        <>
-          <div className="flex items-center gap-3 pt-2">
-            <div className="h-px flex-1 bg-white/[0.08]" />
-            <p className="text-[10px] text-gray-600 uppercase tracking-widest font-semibold shrink-0">
-              Alle Karten im Spiel
-            </p>
-            <div className="h-px flex-1 bg-white/[0.08]" />
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            {otherCards.map((card) => (
-              <BattleCardView key={card.id} card={toCardData(card, avatarByDiscordId)} dimmed />
-            ))}
-          </div>
-        </>
-      )}
+      <CardCollectionBrowser
+        ownedCards={ownedCards}
+        initialOtherCards={otherCardsFirstPage.map((c) => toCardData(c, avatarByDiscordId))}
+        initialOtherTotal={otherCardsSorted.length}
+      />
     </div>
   );
 }
