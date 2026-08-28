@@ -137,7 +137,7 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     baseDefense: 75,
     speed: 50,
     normalAttackTargetRule: null,
-    flavorText: "",
+    flavorText: "Manche Mauern hält man für unüberwindbar. Betonbert ist eine davon.",
     passivePositive: {
       name: "Steinhaut",
       description: "Seine Haut ist so hart wie Fels — dauerhaft erhöhte Verteidigung.",
@@ -204,7 +204,7 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     baseDefense: 40,
     speed: 85,
     normalAttackTargetRule: null,
-    flavorText: "",
+    flavorText: "Scharf genug, jede Rüstung zu durchtrennen. Zerbrechlich genug, beim ersten Gegenschlag zu splittern.",
     passivePositive: {
       name: "Scharfe Kante",
       description: "Jeder Treffer sitzt — dauerhaft erhöhter Angriff.",
@@ -271,7 +271,7 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     baseDefense: 55,
     speed: 78,
     normalAttackTargetRule: "HIGHEST_HP",
-    flavorText: "",
+    flavorText: "Ein Ziel zu verfehlen, kommt für Fernrohr nicht infrage. Deckung zu suchen allerdings auch nicht.",
     passivePositive: {
       name: "Weitsicht",
       description: "Der geübte Blick durchs Visier — dauerhaft erhöhter Angriff.",
@@ -338,7 +338,7 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     baseDefense: 60,
     speed: 60,
     normalAttackTargetRule: null,
-    flavorText: "",
+    flavorText: "Keine Schramme im Team ist zu klein, um sie zu übersehen. Die eigene Verletzlichkeit dagegen schon.",
     passivePositive: {
       name: "Sanfte Hand",
       description: "Am Rundenende heilt der Verbündete mit dem niedrigsten HP-Anteil leicht.",
@@ -413,7 +413,7 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     baseDefense: 55,
     speed: 65,
     normalAttackTargetRule: null,
-    flavorText: "",
+    flavorText: "Für jede Lage hat Kato_09 einen Plan. Nur nicht immer die Zeit, ihn rechtzeitig umzusetzen.",
     passivePositive: {
       name: "Kühle Analyse",
       description:
