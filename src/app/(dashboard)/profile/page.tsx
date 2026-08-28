@@ -36,6 +36,11 @@ export default async function ProfilePage() {
 
   const userId = me.id;
 
+  // Mancave hat keinen eigenen Nav-Eintrag mehr (User-Wunsch) — Zugang jetzt
+  // nur noch über diesen Button, weiterhin hinter demselben Feature-Flag wie
+  // vorher (solange mancave_enabled aus ist, sehen nur Admins ihn).
+  const showMancave = mancaveVisibleFor(await getMancaveConfig(), me.role);
+
   const now   = new Date();
   const month = now.getMonth() + 1;
   const year  = now.getFullYear();
@@ -254,6 +259,16 @@ export default async function ProfilePage() {
             <PointsInfoModal />
           </div>
         </div>
+
+        {/* Mancave: hat keinen eigenen Nav-Eintrag mehr (User-Wunsch, weder
+            Desktop-Pill noch Mobile-BottomNav) — einziger Zugang jetzt hier. */}
+        {showMancave && (
+          <Link href="/mancave"
+            className="relative mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-teal-300 border border-teal-500/25 bg-teal-500/10 hover:bg-teal-500/15 transition-colors">
+            <MonitorSmartphone className="w-4 h-4" />
+            Zur Mancave
+          </Link>
+        )}
       </div>
 
       {/* ── Stat-Karten ─────────────────────────────────────────────── */}
