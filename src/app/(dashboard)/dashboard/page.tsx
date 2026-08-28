@@ -5,7 +5,7 @@ import {
   CalendarDays, Users, ChevronRight,
   Clock, Scroll, CheckCircle2,
   Circle, Repeat, Newspaper, Server, Gamepad2,
-  ArrowUp, ArrowDown, Minus, Timer, UserPlus, Trophy, Shield, Crown, Swords,
+  ArrowUp, ArrowDown, Minus, Timer, UserPlus, Trophy, Shield, Crown,
 } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
 import EventCategoryBadge from "@/components/EventCategoryBadge";
@@ -808,13 +808,10 @@ export default async function DashboardPage() {
           <Link href="/battle-cards"
             className="surface animate-slide-up stagger-2 scan-on-load group block overflow-hidden relative transition-transform duration-200 hover:-translate-y-1 active:scale-[0.99]"
             style={{ borderRadius: "6px", border: "1px solid rgba(139,92,246,0.16)", boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
-            <div className="relative overflow-hidden flex items-center justify-center" style={{ height: "108px" }}>
-              <div className="absolute inset-0"
-                style={{ background: "radial-gradient(circle at 28% 22%, rgba(139,92,246,0.16), transparent 62%), linear-gradient(135deg, #1e1533 0%, #150d24 55%, #0d0d0f 100%)" }} />
-              <div className="relative w-14 h-14 rounded-2xl flex items-center justify-center transition-transform duration-500 group-hover:scale-110"
-                style={{ background: "rgba(139,92,246,0.12)", boxShadow: "0 0 28px rgba(139,92,246,0.25)" }}>
-                <Swords className="w-7 h-7 text-violet-400" />
-              </div>
+            <div className="relative overflow-hidden" style={{ height: "108px" }}>
+              <Image src="/battle-cards/cover.jpg" alt="" fill sizes="(min-width: 1024px) 320px, 45vw"
+                className="object-cover transition-transform duration-700 group-hover:scale-110"
+                style={{ objectPosition: "center 8%" }} />
             </div>
             <div className="px-4 pb-4 pt-2.5">
               <p className="text-[9px] text-violet-500/50 uppercase tracking-[0.18em] font-semibold mb-0.5">Kartenspiel</p>

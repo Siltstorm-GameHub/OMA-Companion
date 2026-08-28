@@ -80,7 +80,7 @@ function LevelStars({ level }: { level: number }) {
 
 function StatTile({ label, value }: { label: string; value: number }) {
   return (
-    <div className="surface rounded-md px-2 py-1.5 flex-1 text-center">
+    <div className="surface rounded-md px-2 py-1 flex-1 text-center">
       <p className="text-[9px] text-gray-500 uppercase tracking-widest">{label}</p>
       <p className="text-sm font-black tabular-nums text-white">{value}</p>
     </div>
@@ -140,13 +140,13 @@ export default function BattleCardView({ card }: { card: BattleCardData }) {
       >
         {/* ── Vorderseite ── */}
         <div
-          className="card-cut absolute inset-0 surface-elevated p-2.5 flex flex-col gap-2"
+          className="card-cut absolute inset-0 surface-elevated p-2 flex flex-col gap-1.5"
           style={{
             backfaceVisibility: "hidden",
             boxShadow: `var(--shadow-card), 0 0 0 1.5px ${borderColor}`,
           }}
         >
-          <div className="flex items-start justify-between gap-1">
+          <div className="flex items-start justify-between gap-1 shrink-0">
             <div className="min-w-0">
               <p className="text-[13px] font-black text-white leading-tight truncate">{card.name}</p>
               <LevelStars level={level} />
@@ -165,18 +165,23 @@ export default function BattleCardView({ card }: { card: BattleCardData }) {
           </div>
 
           <div
-            className="rounded-lg flex-1 flex items-center justify-center relative overflow-hidden"
+            className="rounded-lg flex-1 min-h-0 flex items-center justify-center relative overflow-hidden"
             style={{ background: `linear-gradient(160deg, ${classConfig.color}22, rgba(255,255,255,0.02))` }}
           >
             {card.imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={card.imageUrl} alt={card.name} className="w-full h-full object-cover" />
+              <img
+                src={card.imageUrl}
+                alt={card.name}
+                className="w-full h-full object-cover"
+                style={{ objectPosition: "50% 12%" }}
+              />
             ) : (
               <ClassIcon className="w-12 h-12" style={{ color: classConfig.color, opacity: 0.5 }} />
             )}
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 shrink-0">
             <ClassIcon className="w-3 h-3 shrink-0" style={{ color: classConfig.color }} />
             <span
               className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded"
@@ -188,16 +193,16 @@ export default function BattleCardView({ card }: { card: BattleCardData }) {
           </div>
 
           {card.flavorText && (
-            <p className="text-[10px] text-gray-500 italic leading-snug line-clamp-2">{card.flavorText}</p>
+            <p className="text-[10px] text-gray-500 italic leading-snug line-clamp-1 shrink-0">{card.flavorText}</p>
           )}
 
-          <div className="flex gap-1">
+          <div className="flex gap-1 shrink-0">
             <StatTile label="HP" value={card.baseHp} />
             <StatTile label="ATK" value={card.baseAttack} />
             <StatTile label="SPD" value={card.speed} />
           </div>
 
-          <div className="flex items-center justify-center gap-3 pt-0.5 border-t border-white/[0.06]">
+          <div className="flex items-center justify-center gap-3 pt-0.5 border-t border-white/[0.06] shrink-0">
             <span className="flex items-center gap-1 text-[10px] text-emerald-400" title={card.passivePositive.name}>
               <ThumbsUp className="w-3 h-3" /> {card.passivePositive.name}
             </span>
