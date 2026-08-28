@@ -177,6 +177,7 @@ export default function BattleCardView({ card }: { card: BattleCardData }) {
           </div>
 
           <div className="flex items-center gap-1.5">
+            <ClassIcon className="w-3 h-3 shrink-0" style={{ color: classConfig.color }} />
             <span
               className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded"
               style={{ background: `${classConfig.color}22`, color: classConfig.color }}

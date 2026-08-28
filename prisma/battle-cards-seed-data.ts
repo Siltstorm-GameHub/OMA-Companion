@@ -39,6 +39,7 @@ export interface StandardCardSeed {
   speed: number;
   normalAttackTargetRule: NormalAttackTargetRule | null;
   flavorText: string;
+  imageUrl: string | null;
   passivePositive: PassiveSkillData;
   passiveNegative: PassiveSkillData;
   activeSkill: ActiveSkillData;
@@ -57,6 +58,7 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     normalAttackTargetRule: null,
     flavorText:
       "Steht seit Jahren an vorderster Front und hat noch nie einen Schritt zurück gemacht.",
+    imageUrl: "/battle-cards/bastionella.png",
     passivePositive: {
       name: "Schildwall",
       description:
@@ -138,6 +140,7 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     speed: 50,
     normalAttackTargetRule: null,
     flavorText: "Manche Mauern hält man für unüberwindbar. Betonbert ist eine davon.",
+    imageUrl: "/battle-cards/betonbert.png",
     passivePositive: {
       name: "Steinhaut",
       description: "Seine Haut ist so hart wie Fels — dauerhaft erhöhte Verteidigung.",
@@ -205,6 +208,7 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     speed: 85,
     normalAttackTargetRule: null,
     flavorText: "Scharf genug, jede Rüstung zu durchtrennen. Zerbrechlich genug, beim ersten Gegenschlag zu splittern.",
+    imageUrl: "/battle-cards/scherbe.png",
     passivePositive: {
       name: "Scharfe Kante",
       description: "Jeder Treffer sitzt — dauerhaft erhöhter Angriff.",
@@ -272,6 +276,7 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     speed: 78,
     normalAttackTargetRule: "HIGHEST_HP",
     flavorText: "Ein Ziel zu verfehlen, kommt für Fernrohr nicht infrage. Deckung zu suchen allerdings auch nicht.",
+    imageUrl: "/battle-cards/fernrohr.png",
     passivePositive: {
       name: "Weitsicht",
       description: "Der geübte Blick durchs Visier — dauerhaft erhöhter Angriff.",
@@ -339,6 +344,7 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     speed: 60,
     normalAttackTargetRule: null,
     flavorText: "Keine Schramme im Team ist zu klein, um sie zu übersehen. Die eigene Verletzlichkeit dagegen schon.",
+    imageUrl: "/battle-cards/pflaesterchen.png",
     passivePositive: {
       name: "Sanfte Hand",
       description: "Am Rundenende heilt der Verbündete mit dem niedrigsten HP-Anteil leicht.",
@@ -414,6 +420,7 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     speed: 65,
     normalAttackTargetRule: null,
     flavorText: "Für jede Lage hat Kato_09 einen Plan. Nur nicht immer die Zeit, ihn rechtzeitig umzusetzen.",
+    imageUrl: "/battle-cards/kato-09.png",
     passivePositive: {
       name: "Kühle Analyse",
       description:
