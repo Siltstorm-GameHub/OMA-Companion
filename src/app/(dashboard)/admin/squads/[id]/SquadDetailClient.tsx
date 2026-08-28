@@ -8,12 +8,13 @@ import SeriesIcon from "@/components/SeriesIcon";
 import { SERIES_ICONS } from "@/lib/series-icons";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import SquadRosterManager from "@/components/squads/SquadRosterManager";
+import ImageUploadField from "@/components/ImageUploadField";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };
 type Membership = { id: string; userId: string; role: string; user: User };
 type Squad = {
   id: string; name: string; game: string | null; description: string | null;
-  icon: string | null; hidden: boolean; memberships: Membership[];
+  icon: string | null; coverImageUrl: string | null; hidden: boolean; memberships: Membership[];
 };
 
 const inputCls = "w-full rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
@@ -34,6 +35,7 @@ export default function SquadDetailClient({
   const [game, setGame]               = useState(squad.game ?? "");
   const [description, setDescription] = useState(squad.description ?? "");
   const [icon, setIcon]               = useState(squad.icon ?? "");
+  const [coverImageUrl, setCoverImageUrl] = useState(squad.coverImageUrl ?? "");
   const [hidden, setHidden]           = useState(squad.hidden);
   const [saving, setSaving]           = useState(false);
 
@@ -42,7 +44,7 @@ export default function SquadDetailClient({
     const res = await fetch(`/api/admin/squads/${squad.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, game: game || null, description: description || null, icon: icon || null, hidden }),
+      body: JSON.stringify({ name, game: game || null, description: description || null, icon: icon || null, coverImageUrl: coverImageUrl || null, hidden }),
     });
     setSaving(false);
     if (res.ok) { toast.success("Gespeichert"); router.refresh(); }
@@ -131,6 +133,14 @@ export default function SquadDetailClient({
               })}
             </div>
           </div>
+          <ImageUploadField
+            value={coverImageUrl}
+            onChange={setCoverImageUrl}
+            kind="event-cover"
+            label="Squad-Cover (optional)"
+            hint="Team-Foto oder Banner — erscheint auf der Dashboard-Kachel und der öffentlichen Squad-Seite. Ohne Cover zeigt die Kachel das Icon. Empfohlen: 1200×630."
+            previewAspect="1200/630"
+          />
           <label className="flex items-center gap-2 cursor-pointer select-none">
             <input type="checkbox" checked={hidden} onChange={e => setHidden(e.target.checked)}
               className="w-4 h-4 rounded accent-violet-500" />

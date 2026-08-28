@@ -67,18 +67,38 @@ export default async function SquadPublicPage({ params }: { params: Promise<{ id
         <ChevronLeft className="w-4 h-4" /> Squads
       </Link>
 
-      <div className="flex items-center gap-3">
-        <SeriesIcon name={squad.icon} className="w-8 h-8 shrink-0" />
-        <div>
-          <h1 className="text-xl font-black text-white">{squad.name}</h1>
-          {squad.game && <p className="text-sm text-gray-500">{squad.game}</p>}
+      {squad.coverImageUrl ? (
+        <div className="relative h-36 sm:h-44 rounded-xl overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element -- externe Blob-URL, siehe ImageUploadField-Konvention */}
+          <img src={squad.coverImageUrl} alt="" className="w-full h-full object-cover" />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(13,13,15,0.92), rgba(13,13,15,0.15) 60%)" }} />
+          <div className="absolute bottom-3 left-4 right-4 flex items-center gap-3">
+            <SeriesIcon name={squad.icon} className="w-7 h-7 shrink-0" />
+            <div className="min-w-0">
+              <h1 className="text-xl font-black text-white truncate">{squad.name}</h1>
+              {squad.game && <p className="text-sm text-gray-300">{squad.game}</p>}
+            </div>
+            {squad.hidden && (
+              <span className="flex items-center gap-1 text-[10px] text-gray-300 ml-auto shrink-0">
+                <EyeOff className="w-3 h-3" /> ausgeblendet
+              </span>
+            )}
+          </div>
         </div>
-        {squad.hidden && (
-          <span className="flex items-center gap-1 text-[10px] text-gray-500 ml-auto">
-            <EyeOff className="w-3 h-3" /> ausgeblendet
-          </span>
-        )}
-      </div>
+      ) : (
+        <div className="flex items-center gap-3">
+          <SeriesIcon name={squad.icon} className="w-8 h-8 shrink-0" />
+          <div>
+            <h1 className="text-xl font-black text-white">{squad.name}</h1>
+            {squad.game && <p className="text-sm text-gray-500">{squad.game}</p>}
+          </div>
+          {squad.hidden && (
+            <span className="flex items-center gap-1 text-[10px] text-gray-500 ml-auto">
+              <EyeOff className="w-3 h-3" /> ausgeblendet
+            </span>
+          )}
+        </div>
+      )}
 
       {squad.description && (
         <p className="text-sm text-gray-400 leading-relaxed">{squad.description}</p>

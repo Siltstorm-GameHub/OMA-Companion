@@ -296,6 +296,8 @@ export default async function DashboardPage() {
     prisma.card.count({ where: { rarity: "STANDARD" } }),
   ]);
 
+  const previewCoverImage = previewSquads.find(s => s.coverImageUrl)?.coverImageUrl ?? null;
+
   const myPoints     = sessionUser?.points ?? 0;
   const myRankPoints = sessionUser?.rankPoints ?? 0;
 

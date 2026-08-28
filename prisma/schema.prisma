@@ -503,6 +503,7 @@ model Squad {
   description String?
   icon        String? // Lucide-Icon-Name (aus src/lib/series-icons.ts), Fallback: Repeat
   color       String? // Hex-Farbe für Badges — Fallback über resolveSeriesColor(icon)
+  coverImageUrl String? // Eigenes Squad-Bild (Vercel Blob), z.B. Team-Foto/Banner — analog zu EventSeries.coverImageUrl
   hidden      Boolean  @default(false) // true = nur im Admin sichtbar
   createdAt   DateTime @default(now())
 

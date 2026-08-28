@@ -24,7 +24,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   await requireRole("admin");
   const { id } = await params;
   const body = await req.json();
-  const { name, game, description, icon, color, hidden } = body;
+  const { name, game, description, icon, color, coverImageUrl, hidden } = body;
 
   const squad = await prisma.squad.update({
     where: { id },
@@ -34,6 +34,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ...(description !== undefined && { description: description?.trim() || null }),
       ...(icon !== undefined && { icon: icon || null }),
       ...(color !== undefined && { color: color || null }),
+      ...(coverImageUrl !== undefined && { coverImageUrl: coverImageUrl || null }),
       ...(hidden !== undefined && { hidden }),
     },
   });
