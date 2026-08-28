@@ -5,7 +5,7 @@ import {
   CalendarDays, Users, ChevronRight,
   Clock, Scroll, CheckCircle2,
   Circle, Repeat, Newspaper, Server, Gamepad2,
-  ArrowUp, ArrowDown, Minus, Timer, UserPlus, Trophy, Shield, Crown,
+  ArrowUp, ArrowDown, Minus, Timer, UserPlus, Trophy, Shield, Crown, Swords,
 } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
 import EventCategoryBadge from "@/components/EventCategoryBadge";
@@ -212,6 +212,7 @@ export default async function DashboardPage() {
     squadCount,
     mySquadMembership,
     previewSquads,
+    battleCardCount,
   ] = await Promise.all([
     userId
       ? prisma.userQuestProgress.count({ where: { userId, completed: true, quest: { month, year } } })
@@ -273,7 +274,7 @@ export default async function DashboardPage() {
             role: true,
             squad: {
               select: {
-                id: true, name: true, icon: true,
+                id: true, name: true, icon: true, coverImageUrl: true,
                 memberships: {
                   where: { userId: { not: userId } },
                   take: 5,
@@ -290,8 +291,9 @@ export default async function DashboardPage() {
       where: { hidden: false },
       orderBy: { createdAt: "desc" },
       take: 4,
-      select: { icon: true },
+      select: { icon: true, coverImageUrl: true },
     }),
+    prisma.card.count({ where: { rarity: "STANDARD" } }),
   ]);
 
   const myPoints     = sessionUser?.points ?? 0;
@@ -699,21 +701,35 @@ export default async function DashboardPage() {
             className="surface animate-slide-up stagger-2 scan-on-load group block overflow-hidden relative transition-transform duration-200 hover:-translate-y-1 active:scale-[0.99]"
             style={{ borderRadius: "6px", border: "1px solid rgba(245,158,11,0.16)", boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
             <div className="relative overflow-hidden" style={{ height: "108px" }}>
-              <div className="absolute inset-0"
-                style={{ background: "radial-gradient(circle at 28% 22%, rgba(245,158,11,0.16), transparent 62%), linear-gradient(135deg, #29130a 0%, #1c0a02 55%, #0d0d0f 100%)" }} />
+              {mySquadMembership?.squad.coverImageUrl ? (
+                <>
+                  <Image src={mySquadMembership.squad.coverImageUrl} alt="" fill
+                    className="object-cover scale-105 group-hover:scale-110 transition-transform duration-700" />
+                  <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(13,13,15,0.85), rgba(13,13,15,0.15) 55%)" }} />
+                  <div className="absolute bottom-3 right-3 w-8 h-8 rounded-lg flex items-center justify-center"
+                    style={{ background: "rgba(13,13,15,0.55)", border: "1px solid rgba(255,255,255,0.12)" }}>
+                    <SeriesIcon name={mySquadMembership.squad.icon} className="w-4 h-4" />
+                  </div>
+                </>
+              ) : (
+                <div className="absolute inset-0"
+                  style={{ background: "radial-gradient(circle at 28% 22%, rgba(245,158,11,0.16), transparent 62%), linear-gradient(135deg, #29130a 0%, #1c0a02 55%, #0d0d0f 100%)" }} />
+              )}
 
               {mySquadMembership ? (
                 <>
-                  {/* Eigenes Squad-Wappen, in dessen echter Icon-Farbe */}
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center transition-transform duration-500 group-hover:scale-110"
-                      style={{
-                        background: `${resolveSeriesColor(mySquadMembership.squad.icon)}1f`,
-                        boxShadow: `0 0 28px ${resolveSeriesColor(mySquadMembership.squad.icon)}40`,
-                      }}>
-                      <SeriesIcon name={mySquadMembership.squad.icon} className="w-7 h-7" />
+                  {/* Eigenes Squad-Wappen, in dessen echter Icon-Farbe — nur wenn kein Cover-Bild vorhanden ist */}
+                  {!mySquadMembership.squad.coverImageUrl && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-14 h-14 rounded-2xl flex items-center justify-center transition-transform duration-500 group-hover:scale-110"
+                        style={{
+                          background: `${resolveSeriesColor(mySquadMembership.squad.icon)}1f`,
+                          boxShadow: `0 0 28px ${resolveSeriesColor(mySquadMembership.squad.icon)}40`,
+                        }}>
+                        <SeriesIcon name={mySquadMembership.squad.icon} className="w-7 h-7" />
+                      </div>
                     </div>
-                  </div>
+                  )}
                   {mySquadMembership.role === "captain" && (
                     <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider"
                       style={{ background: "rgba(245,158,11,0.16)", border: "1px solid rgba(245,158,11,0.3)", color: "#fbbf24" }}>
@@ -739,7 +755,15 @@ export default async function DashboardPage() {
                   )}
                 </>
               ) : previewSquads.length > 0 ? (
-                /* Kein eigenes Squad: lose gestreute Vorschau realer Squad-Icons statt eines Platzhalters */
+                /* Kein eigenes Squad: lose gestreute Vorschau realer Squad-Icons statt eines Platzhalters,
+                   plus gedimmtes Cover-Bild eines echten Squads als Textur, falls eins existiert. */
+                <>
+                  {previewCoverImage && (
+                    <>
+                      <Image src={previewCoverImage} alt="" fill className="object-cover blur-[1px] scale-110 opacity-30" />
+                      <div className="absolute inset-0" style={{ background: "linear-gradient(160deg, rgba(13,13,15,0.55), rgba(13,13,15,0.85))" }} />
+                    </>
+                  )}
                 <div className="absolute inset-0 flex items-center justify-center">
                   {previewSquads.map((s, i) => {
                     const color = resolveSeriesColor(s.icon);
@@ -762,6 +786,7 @@ export default async function DashboardPage() {
                     );
                   })}
                 </div>
+                </>
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <Shield className="w-8 h-8 text-amber-600/50" />
@@ -775,6 +800,27 @@ export default async function DashboardPage() {
               </p>
               <p className="text-[11px] text-gray-500 mt-2 flex items-center gap-1">
                 <Users className="w-3 h-3" /> {squadCount} Squad{squadCount === 1 ? "" : "s"}
+              </p>
+            </div>
+          </Link>
+
+          {/* Battle Cards */}
+          <Link href="/battle-cards"
+            className="surface animate-slide-up stagger-2 scan-on-load group block overflow-hidden relative transition-transform duration-200 hover:-translate-y-1 active:scale-[0.99]"
+            style={{ borderRadius: "6px", border: "1px solid rgba(139,92,246,0.16)", boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
+            <div className="relative overflow-hidden flex items-center justify-center" style={{ height: "108px" }}>
+              <div className="absolute inset-0"
+                style={{ background: "radial-gradient(circle at 28% 22%, rgba(139,92,246,0.16), transparent 62%), linear-gradient(135deg, #1e1533 0%, #150d24 55%, #0d0d0f 100%)" }} />
+              <div className="relative w-14 h-14 rounded-2xl flex items-center justify-center transition-transform duration-500 group-hover:scale-110"
+                style={{ background: "rgba(139,92,246,0.12)", boxShadow: "0 0 28px rgba(139,92,246,0.25)" }}>
+                <Swords className="w-7 h-7 text-violet-400" />
+              </div>
+            </div>
+            <div className="px-4 pb-4 pt-2.5">
+              <p className="text-[9px] text-violet-500/50 uppercase tracking-[0.18em] font-semibold mb-0.5">Battle Cards</p>
+              <p className="font-display text-base font-black text-white leading-tight truncate">Kartenspiel</p>
+              <p className="text-[11px] text-gray-500 mt-2 flex items-center gap-1">
+                <Swords className="w-3 h-3" /> {battleCardCount} Karte{battleCardCount === 1 ? "" : "n"}
               </p>
             </div>
           </Link>
