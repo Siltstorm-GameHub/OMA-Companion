@@ -50,6 +50,15 @@
         ],
         "createdAt": "2026-08-23T16:02:06.282Z",
         "reason": "Grau auf near-schwarz getönten (nicht satten) Flächen wie bg-white/[0.04-0.05] - user-bestätigt kein echtes Kontrastproblem"
+      },
+      {
+        "rule": "layout-transition",
+        "value": "*",
+        "files": [
+          "src/components/FloatingPill.tsx"
+        ],
+        "createdAt": "2026-08-28T15:55:44.567Z",
+        "reason": "Pre-existing, already documented in-code (comment above explains transform/scaleX was considered and rejected: it would squash the border-radius into sharp corners as the active-nav bump pill stretches). Not part of this turn's edit, a deliberate correctness trade-off, not an oversight."
       }
     ]
   }

@@ -1,10 +1,11 @@
 "use client";
 
-// Startet einen Übungskampf über /api/battles/demo und zeigt danach den
-// Kampf-Screen mit dem zurückgegebenen Log. Sorgt bei Bedarf serverseitig
-// für ein Starter-Deck (siehe lib/battle-cards/starter-deck.ts).
+// Startet einen Übungskampf über /api/battles/demo (mit den tatsächlich
+// besessenen Karten) und zeigt danach den Kampf-Screen mit dem
+// zurückgegebenen Log. Setzt ein gewähltes Start-Pack voraus.
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Swords, Loader2 } from "lucide-react";
 import BattleScreen from "./BattleScreen";
 import type { BattleLogEntry, RosterEntry } from "@/lib/battle-engine/types";
@@ -15,6 +16,7 @@ interface DemoBattleResponse {
 }
 
 export default function DemoBattleLauncher() {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [battle, setBattle] = useState<DemoBattleResponse | null>(null);
@@ -24,8 +26,14 @@ export default function DemoBattleLauncher() {
     setError(null);
     try {
       const res = await fetch("/api/battles/demo", { method: "POST" });
-      if (!res.ok) throw new Error("Kampf konnte nicht gestartet werden.");
-      const data: DemoBattleResponse = await res.json();
+      const data = await res.json();
+      if (!res.ok) {
+        if (data.needsStarterPick) {
+          router.push("/battle-cards/starter-pick");
+          return;
+        }
+        throw new Error(data.error ?? "Kampf konnte nicht gestartet werden.");
+      }
       setBattle(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unbekannter Fehler.");

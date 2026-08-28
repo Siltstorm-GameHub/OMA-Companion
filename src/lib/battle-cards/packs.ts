@@ -6,13 +6,10 @@
 // Standard-Karten sind über Packs erhältlich, Community-Karten sind fest an
 // echte Discord-Mitglieder gebunden (siehe card-provisioning.ts).
 //
-// PACK_COST ist ein Platzhalter (siehe PROJECT_CONTEXT.md — die
-// Wirtschaft/Balance ist insgesamt noch nicht final).
+// Der Pack-Preis ist admin-konfigurierbar, siehe lib/shop-config.ts.
 
 import { prisma } from "@/lib/prisma";
 import type { Card } from "@prisma/client";
-
-export const PACK_COST = 150;
 
 export interface OpenPackResult {
   card: Card;

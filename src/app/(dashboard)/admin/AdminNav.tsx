@@ -6,7 +6,7 @@ import { useEffect } from "react";
 import {
   Users, LayoutDashboard, Bell,
   CalendarDays, Heart, Medal, Shield,
-  Wrench, Users2, Megaphone, Handshake, Clapperboard, Server, Gamepad2, MonitorSmartphone,
+  Wrench, Users2, Megaphone, Handshake, Clapperboard, Server, Gamepad2, MonitorSmartphone, ShoppingBag,
 } from "lucide-react";
 import ServerApplicationBadge from "@/components/ServerApplicationBadge";
 import EventsActionBadge from "@/components/EventsActionBadge";
@@ -69,13 +69,14 @@ const CATEGORIES: {
     label: "Tools",
     icon: Wrench,
     minRole: "admin",
-    prefixes: ["/admin/notifications", "/admin/badges", "/admin/users", "/admin/minigames", "/admin/mancave"],
+    prefixes: ["/admin/notifications", "/admin/badges", "/admin/users", "/admin/minigames", "/admin/mancave", "/admin/shop"],
     tabs: [
       { href: "/admin/users",         label: "Nutzer & Rollen",  icon: Users,       minRole: "admin" },
       { href: "/admin/notifications", label: "Benachrichtigungen", icon: Bell,      minRole: "admin" },
       { href: "/admin/badges",        label: "Abzeichen",        icon: Medal,       minRole: "admin" },
       { href: "/admin/minigames",     label: "Minigames",        icon: Gamepad2,    minRole: "admin" },
       { href: "/admin/mancave",       label: "Mancave",          icon: MonitorSmartphone, minRole: "admin" },
+      { href: "/admin/shop",          label: "Shop",             icon: ShoppingBag, minRole: "admin" },
     ],
   },
 ];

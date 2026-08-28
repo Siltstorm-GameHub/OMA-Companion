@@ -4,7 +4,11 @@
 // Zeigt die 6 Standard-Karten aus der DB. Noch kein Sammel-/Besitz-Flow
 // (UserCard) — das ist ein Katalog, keine "meine Karten"-Ansicht.
 
+import Link from "next/link";
+import { Gift } from "lucide-react";
+import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { hasStarterDeck } from "@/lib/battle-cards/starter-pick";
 import { parseActiveSkill, parsePassiveSkill } from "@/lib/battle-engine/skill-schema";
 import BattleCardView from "@/components/battle-cards/BattleCardView";
 import type { BattleCardData } from "@/components/battle-cards/BattleCardView";
@@ -15,6 +19,9 @@ export const metadata = {
 };
 
 export default async function BattleCardsPage() {
+  const session = await auth();
+  const ownsStarterDeck = session?.user?.id ? await hasStarterDeck(session.user.id) : false;
+
   const cards = await prisma.card.findMany({
     where: { rarity: "STANDARD" },
     orderBy: { name: "asc" },
@@ -47,6 +54,21 @@ export default async function BattleCardsPage() {
           Die 6 Standard-Karten — antippen, um die Skill-Details auf der Rückseite zu sehen.
         </p>
       </div>
+
+      {session?.user?.id && !ownsStarterDeck && (
+        <Link
+          href="/battle-cards/starter-pick"
+          className="flex items-center gap-3 surface-elevated rounded-lg px-4 py-3 border border-violet-500/25 hover:border-violet-500/40 transition-colors"
+        >
+          <div className="w-9 h-9 rounded-lg bg-violet-500/15 flex items-center justify-center shrink-0">
+            <Gift className="w-4 h-4 text-violet-400" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-white">Hol dir dein Start-Pack</p>
+            <p className="text-[11px] text-gray-500">Wähle 5 Karten für den Anfang — kostenlos, einmalig.</p>
+          </div>
+        </Link>
+      )}
 
       <DemoBattleLauncher />
 

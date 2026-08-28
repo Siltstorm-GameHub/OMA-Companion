@@ -5,7 +5,7 @@ import { CountUp } from "@/components/CountUp";
 import DailySpin from "./DailySpin";
 import BuyPack from "./BuyPack";
 import { prisma } from "@/lib/prisma";
-import { PACK_COST } from "@/lib/battle-cards/packs";
+import { getShopConfig } from "@/lib/shop-config";
 
 export default async function ShopPage() {
   const me     = await getSessionUser();
@@ -17,6 +17,7 @@ export default async function ShopPage() {
       }).catch(() => null)
     : null;
 
+  const { packCost, wheelPrizes } = await getShopConfig();
   const myPoints  = me?.points ?? 0;
 
   return (
@@ -57,8 +58,9 @@ export default async function ShopPage() {
               ? { prizeLabel: todaySpin.prizeLabel, prizeType: todaySpin.prizeType }
               : null}
             initialPoints={myPoints}
+            prizes={wheelPrizes}
           />
-          <BuyPack cost={PACK_COST} initialPoints={myPoints} />
+          <BuyPack cost={packCost} initialPoints={myPoints} />
         </div>
       )}
     </div>

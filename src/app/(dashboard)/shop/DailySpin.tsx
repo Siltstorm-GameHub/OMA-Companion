@@ -1,9 +1,10 @@
 "use client";
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import CoinIcon from "@/components/CoinIcon";
+import type { WheelPrize } from "@/lib/shop-config";
 
 function useMidnightCountdown() {
   const [label, setLabel] = useState("");
@@ -25,33 +26,52 @@ function useMidnightCountdown() {
   return label;
 }
 
-// ── Segmente im Uhrzeigersinn ab 12 Uhr ───────────────────────────────────
-const SEGMENTS = [
-  { label: "200 Münzen ⭐", line1: "200",  line2: "Münzen ⭐", fill: "#b91c1c", fillB: "#7f1d1d", rim: "#fca5a5", text: "#fecaca" },
-  { label: "10 Münzen",    line1: "10",   line2: "Münzen",    fill: "#1f2937", fillB: "#111827", rim: "#4b5563", text: "#9ca3af" },
-  { label: "100 Münzen",   line1: "100",  line2: "Münzen",    fill: "#b45309", fillB: "#78350f", rim: "#fcd34d", text: "#fef08a" },
-  { label: "Kein Glück",   line1: "Kein", line2: "Glück",     fill: "#0f172a", fillB: "#020617", rim: "#334155", text: "#475569" },
-  { label: "200 Münzen",   line1: "200",  line2: "Münzen",    fill: "#c2410c", fillB: "#7c2d12", rim: "#fdba74", text: "#fed7aa" },
-  { label: "25 Münzen",    line1: "25",   line2: "Münzen",    fill: "#1d4ed8", fillB: "#1e3a8a", rim: "#93c5fd", text: "#bfdbfe" },
-  { label: "Karten-Pack",  line1: "Karten", line2: "Pack",    fill: "#6d28d9", fillB: "#4c1d95", rim: "#c4b5fd", text: "#ede9fe" },
-  { label: "50 Münzen",    line1: "50",   line2: "Münzen",    fill: "#047857", fillB: "#064e3b", rim: "#6ee7b7", text: "#a7f3d0" },
-];
+// ── Farbpaletten je Preis-Typ — Preise selbst kommen jetzt dynamisch von der
+// Admin-Konfiguration (lib/shop-config.ts), Segmente werden daraus gebaut. ──
+const PALETTE_BY_TYPE: Record<WheelPrize["type"], { fill: string; fillB: string; rim: string; text: string }[]> = {
+  points: [
+    { fill: "#b91c1c", fillB: "#7f1d1d", rim: "#fca5a5", text: "#fecaca" },
+    { fill: "#1f2937", fillB: "#111827", rim: "#4b5563", text: "#9ca3af" },
+    { fill: "#b45309", fillB: "#78350f", rim: "#fcd34d", text: "#fef08a" },
+    { fill: "#c2410c", fillB: "#7c2d12", rim: "#fdba74", text: "#fed7aa" },
+    { fill: "#1d4ed8", fillB: "#1e3a8a", rim: "#93c5fd", text: "#bfdbfe" },
+    { fill: "#047857", fillB: "#064e3b", rim: "#6ee7b7", text: "#a7f3d0" },
+  ],
+  pack: [{ fill: "#6d28d9", fillB: "#4c1d95", rim: "#c4b5fd", text: "#ede9fe" }],
+  nothing: [{ fill: "#0f172a", fillB: "#020617", rim: "#334155", text: "#475569" }],
+};
 
-const N   = SEGMENTS.length;
-const SEG = 360 / N;
+function splitLabel(label: string): { line1: string; line2: string } {
+  const words = label.split(" ");
+  if (words.length <= 1) return { line1: label, line2: "" };
+  const mid = Math.ceil(words.length / 2);
+  return { line1: words.slice(0, mid).join(" "), line2: words.slice(mid).join(" ") };
+}
+
+function buildSegments(prizes: WheelPrize[]) {
+  const typeCounters: Partial<Record<WheelPrize["type"], number>> = {};
+  return prizes.map((p) => {
+    const usedIdx = typeCounters[p.type] ?? 0;
+    typeCounters[p.type] = usedIdx + 1;
+    const palette = PALETTE_BY_TYPE[p.type] ?? PALETTE_BY_TYPE.points;
+    const colors = palette[usedIdx % palette.length];
+    return { label: p.label, ...splitLabel(p.label), ...colors };
+  });
+}
+
 const CX = 150, CY = 150, R = 137, R_TEXT = 92, R_RIM = 140;
 
 function pt(r: number, deg: number) {
   const rad = ((deg - 90) * Math.PI) / 180;
   return { x: CX + r * Math.cos(rad), y: CY + r * Math.sin(rad) };
 }
-function segPath(i: number) {
-  const { x: sx, y: sy } = pt(R, i * SEG);
-  const { x: ex, y: ey } = pt(R, (i + 1) * SEG);
+function segPath(i: number, seg: number) {
+  const { x: sx, y: sy } = pt(R, i * seg);
+  const { x: ex, y: ey } = pt(R, (i + 1) * seg);
   return `M${CX},${CY} L${sx},${sy} A${R},${R},0,0,1,${ex},${ey} Z`;
 }
-function rimPath(i: number) {
-  const a0 = i * SEG, a1 = (i + 1) * SEG;
+function rimPath(i: number, seg: number) {
+  const a0 = i * seg, a1 = (i + 1) * seg;
   const { x: s1x, y: s1y } = pt(R_RIM, a0);
   const { x: e1x, y: e1y } = pt(R_RIM, a1);
   const { x: s2x, y: s2y } = pt(R, a0);
@@ -82,11 +102,16 @@ interface Props {
   alreadySpun:   boolean;
   lastResult:    { prizeLabel: string; prizeType: string } | null;
   initialPoints: number;
+  prizes: WheelPrize[];
 }
 
-export default function DailySpin({ alreadySpun, lastResult, initialPoints }: Props) {
+export default function DailySpin({ alreadySpun, lastResult, initialPoints, prizes }: Props) {
   const countdown = useMidnightCountdown();
   const router = useRouter();
+
+  const SEGMENTS = useMemo(() => buildSegments(prizes), [prizes]);
+  const N = SEGMENTS.length;
+  const SEG = 360 / N;
 
   // Anfangsdrehung: letztes Ergebnis zentrieren falls vorhanden
   const initialDeg = React.useMemo(() => {
@@ -94,7 +119,7 @@ export default function DailySpin({ alreadySpun, lastResult, initialPoints }: Pr
     const idx = SEGMENTS.findIndex(s => s.label === lastResult.prizeLabel);
     if (idx < 0) return 0;
     return (360 - (idx + 0.5) * SEG + 3600) % 360;
-  }, [alreadySpun, lastResult]);
+  }, [alreadySpun, lastResult, SEGMENTS, SEG]);
 
   const [spinning,  setSpinning]  = useState(false);
   const [done,      setDone]      = useState(alreadySpun);
@@ -357,11 +382,11 @@ export default function DailySpin({ alreadySpun, lastResult, initialPoints }: Pr
                     return (
                       <g key={i}>
                         {/* Hauptfläche mit Radial-Gradient */}
-                        <path d={segPath(i)} fill={`url(#sg${i})`} />
+                        <path d={segPath(i, SEG)} fill={`url(#sg${i})`} />
                         {/* Schimmer-Overlay */}
-                        <path d={segPath(i)} fill="url(#sheen)" />
+                        <path d={segPath(i, SEG)} fill="url(#sheen)" />
                         {/* Farbiger Rand-Streifen */}
-                        <path d={rimPath(i)} fill={seg.rim} opacity="0.55" />
+                        <path d={rimPath(i, SEG)} fill={seg.rim} opacity="0.55" />
                         {/* Trennlinie */}
                         <line
                           x1={CX} y1={CY}

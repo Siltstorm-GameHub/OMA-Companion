@@ -3,27 +3,16 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { updateQuestProgress } from "@/lib/quests";
 import { openStandardPack } from "@/lib/battle-cards/packs";
+import { getShopConfig, type WheelPrize } from "@/lib/shop-config";
 
-// Gewichtete Preistabelle
-const PRIZES = [
-  { type: "points", value: "10",  label: "10 Münzen",   weight: 30 },
-  { type: "points", value: "25",  label: "25 Münzen",   weight: 25 },
-  { type: "points", value: "50",  label: "50 Münzen",   weight: 20 },
-  { type: "points", value: "100", label: "100 Münzen",  weight: 12 },
-  { type: "points", value: "200", label: "200 Münzen ⭐", weight: 4  },
-  { type: "points", value: "200", label: "200 Münzen",  weight: 8  },
-  { type: "pack",   value: "1",   label: "Karten-Pack",  weight: 3  },
-  { type: "nothing", value: "0",  label: "Kein Glück",  weight: 1  },
-] as const;
-
-function rollPrize() {
-  const total  = PRIZES.reduce((s, p) => s + p.weight, 0);
+function rollPrize(prizes: WheelPrize[]): WheelPrize {
+  const total = prizes.reduce((s, p) => s + p.weight, 0);
   let roll = Math.random() * total;
-  for (const prize of PRIZES) {
+  for (const prize of prizes) {
     roll -= prize.weight;
     if (roll <= 0) return prize;
   }
-  return PRIZES[0];
+  return prizes[0];
 }
 
 function todayStr() {
@@ -38,10 +27,12 @@ export async function GET() {
     where: { userId_date: { userId: session.user.id, date: todayStr() } },
   }).catch(() => null);
 
+  const { wheelPrizes } = await getShopConfig();
+
   return NextResponse.json({
     alreadySpun: !!existing,
     result: existing ?? null,
-    prizes: PRIZES.map(p => ({ label: p.label, type: p.type })), // für UI-Animation
+    prizes: wheelPrizes.map(p => ({ label: p.label, type: p.type })), // für UI-Animation
   });
 }
 
@@ -56,7 +47,8 @@ export async function POST() {
   }).catch(() => null);
   if (existing) return NextResponse.json({ error: "Heute bereits gedreht", result: existing }, { status: 400 });
 
-  const prize = rollPrize();
+  const { wheelPrizes } = await getShopConfig();
+  const prize = rollPrize(wheelPrizes);
   const amount = parseInt(prize.value);
 
   await prisma.$transaction(async tx => {
