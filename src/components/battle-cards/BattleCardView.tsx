@@ -117,7 +117,7 @@ function SkillRow({
   );
 }
 
-export default function BattleCardView({ card }: { card: BattleCardData }) {
+export default function BattleCardView({ card, dimmed = false }: { card: BattleCardData; dimmed?: boolean }) {
   const [flipped, setFlipped] = useState(false);
   const level = card.level ?? 1;
   const classConfig = CLASS_CONFIG[card.class];
@@ -129,7 +129,7 @@ export default function BattleCardView({ card }: { card: BattleCardData }) {
       type="button"
       onClick={() => setFlipped((f) => !f)}
       className="block w-full max-w-[240px] text-left cursor-pointer"
-      style={{ perspective: 1200 }}
+      style={{ perspective: 1200, opacity: dimmed ? 0.45 : 1, filter: dimmed ? "grayscale(0.85)" : undefined }}
       aria-label={`${card.name} — Tippen zum Umdrehen`}
     >
       <motion.div

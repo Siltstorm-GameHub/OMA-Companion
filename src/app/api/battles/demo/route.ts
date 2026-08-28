@@ -1,10 +1,10 @@
 // ============================================
 // POST /api/battles/demo
 // ============================================
-// Übungskampf: eigenes Team aus allen besessenen Karten (max. 5) gegen 5
-// zufällig gezogene Standard-Karten. Setzt ein gewähltes Start-Pack voraus
-// (siehe lib/battle-cards/starter-pick.ts) — kein automatisches Voll-Grant,
-// das würde die bewusste Auswahl umgehen.
+// Übungskampf: die aktuelle Startaufstellung (lib/battle-cards/lineup.ts)
+// gegen 5 zufällig gezogene Standard-Karten. Setzt ein gewähltes Start-Pack
+// voraus (siehe lib/battle-cards/starter-pick.ts) — kein automatisches
+// Voll-Grant, das würde die bewusste Auswahl umgehen.
 
 import { auth } from "@/auth";
 import { cardToBattleUnitDefinition } from "@/lib/battle-engine/adapters";
@@ -41,7 +41,9 @@ export async function POST() {
       { status: 400 }
     );
   }
-  const playerTeamCards = userCards.slice(0, TEAM_SIZE);
+
+  const lineup = userCards.filter((uc) => uc.inLineup);
+  const playerTeamCards = (lineup.length > 0 ? lineup : userCards).slice(0, TEAM_SIZE);
 
   const standardCards = await prisma.card.findMany({ where: { rarity: "STANDARD" } });
   const opponentCards = sampleWithoutReplacement(standardCards, TEAM_SIZE);

@@ -56,7 +56,7 @@ export async function grantStarterPick(userId: string, cardIds: string[]): Promi
     if (raceCheck > 0) throw new StarterPickError("Das Start-Pack wurde bereits gewählt.");
 
     for (const [cardId, duplicates] of counts) {
-      await tx.userCard.create({ data: { userId, cardId, level: 1, duplicates } });
+      await tx.userCard.create({ data: { userId, cardId, level: 1, duplicates, inLineup: true } });
     }
   });
 }

@@ -497,15 +497,15 @@ model Team {
 // Konzept (Team A/B innerhalb eines einzelnen Turniers). Ein Squad existiert unabhängig
 // von einzelnen Events, ein User kann Mitglied in mehreren Squads gleichzeitig sein.
 model Squad {
-  id          String   @id @default(cuid())
-  name        String
-  game        String? // z.B. "Rocket League" — rein informativ, keine feste Bindung
-  description String?
-  icon        String? // Lucide-Icon-Name (aus src/lib/series-icons.ts), Fallback: Repeat
-  color       String? // Hex-Farbe für Badges — Fallback über resolveSeriesColor(icon)
+  id            String   @id @default(cuid())
+  name          String
+  game          String? // z.B. "Rocket League" — rein informativ, keine feste Bindung
+  description   String?
+  icon          String? // Lucide-Icon-Name (aus src/lib/series-icons.ts), Fallback: Repeat
+  color         String? // Hex-Farbe für Badges — Fallback über resolveSeriesColor(icon)
   coverImageUrl String? // Eigenes Squad-Bild (Vercel Blob), z.B. Team-Foto/Banner — analog zu EventSeries.coverImageUrl
-  hidden      Boolean  @default(false) // true = nur im Admin sichtbar
-  createdAt   DateTime @default(now())
+  hidden        Boolean  @default(false) // true = nur im Admin sichtbar
+  createdAt     DateTime @default(now())
 
   memberships SquadMembership[]
   events      Event[]
@@ -1284,6 +1284,7 @@ model UserCard {
   cardId     String
   level      Int      @default(1) // 1-5
   duplicates Int      @default(1) // gesamt erhaltene Kopien (inkl. verbrauchte für Upgrades)
+  inLineup   Boolean  @default(false) // Teil der aktuellen Startaufstellung (max. 5 pro User)
   acquiredAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id])
