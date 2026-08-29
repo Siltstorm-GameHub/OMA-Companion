@@ -17,9 +17,11 @@ import { prisma } from "@/lib/prisma";
 import { hasStarterDeck } from "@/lib/battle-cards/starter-pick";
 import { countUnopenedPacks } from "@/lib/battle-cards/packs";
 import { sortByQuality, toCardData, resolveAvatarsForCards } from "@/lib/battle-cards/card-view";
+import { hasMinRole } from "@/lib/roles";
 import StarterPickFlow from "@/components/battle-cards/StarterPickFlow";
 import PackOpener from "@/components/battle-cards/PackOpener";
 import CardCollectionBrowser from "@/components/battle-cards/CardCollectionBrowser";
+import TestBattleLauncher from "@/components/battle-cards/TestBattleLauncher";
 
 const OTHER_CARDS_PAGE_SIZE = 12;
 
@@ -74,6 +76,8 @@ export default async function BattleCardsPage() {
   ]);
   const unopenedPacks = await countUnopenedPacks(userId);
   const pendingChallenges = await prisma.battleChallenge.count({ where: { opponentId: userId, status: "pending" } });
+  const currentUser = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+  const isModOrAdmin = !!currentUser && hasMinRole(currentUser.role, "moderator");
 
   const ownedCards = ownedUserCards.map((uc) => ({
     id: uc.id,
@@ -121,6 +125,8 @@ export default async function BattleCardsPage() {
       </div>
 
       <PackOpener initialUnopenedCount={unopenedPacks} />
+
+      {isModOrAdmin && <TestBattleLauncher />}
 
       <CardCollectionBrowser
         ownedCards={ownedCards}
