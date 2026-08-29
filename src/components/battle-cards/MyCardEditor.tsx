@@ -7,7 +7,7 @@ import { Save, Loader2 } from "lucide-react";
 import BattleCardView from "./BattleCardView";
 import type { BattleCardData } from "./BattleCardView";
 
-const TITLE_MAX = 60;
+const TITLE_MAX = 25;
 const FLAVOR_MAX = 240;
 
 export default function MyCardEditor({ card }: { card: BattleCardData & { id: string } }) {

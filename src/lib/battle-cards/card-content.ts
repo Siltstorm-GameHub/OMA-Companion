@@ -9,7 +9,7 @@
 
 import { prisma } from "@/lib/prisma";
 
-export const CARD_TITLE_MAX_LENGTH = 60;
+export const CARD_TITLE_MAX_LENGTH = 25;
 export const CARD_FLAVOR_TEXT_MAX_LENGTH = 240;
 
 export class CardContentError extends Error {}

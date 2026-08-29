@@ -222,22 +222,27 @@ export default function BattleCardView({ card, dimmed = false }: { card: BattleC
 
         {/* ── Rückseite ── */}
         <div
-          className="card-cut absolute inset-0 surface-elevated p-3 flex flex-col gap-2.5"
+          className="card-cut absolute inset-0 surface-elevated p-3 flex flex-col gap-2 overflow-hidden"
           style={{
             backfaceVisibility: "hidden",
             transform: "rotateY(180deg)",
             boxShadow: `var(--shadow-card), 0 0 0 1.5px ${borderColor}`,
           }}
         >
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between shrink-0">
             <p className="text-[11px] font-bold text-white uppercase tracking-wide">{card.name}</p>
             <RotateCcw className="w-3 h-3 text-gray-600" />
           </div>
 
-          <SkillRow icon={ThumbsUp} iconColor="#34d399" skill={card.passivePositive} />
-          <SkillRow icon={ThumbsDown} iconColor="#fb7185" skill={card.passiveNegative} />
-          <SkillRow icon={Zap} iconColor="#60a5fa" skill={card.activeSkill} />
-          <SkillRow icon={Flame} iconColor="#fbbf24" skill={card.ultimateSkill} />
+          <div
+            className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-2.5 pr-1 -mr-1"
+            style={{ WebkitOverflowScrolling: "touch" }}
+          >
+            <SkillRow icon={ThumbsUp} iconColor="#34d399" skill={card.passivePositive} />
+            <SkillRow icon={ThumbsDown} iconColor="#fb7185" skill={card.passiveNegative} />
+            <SkillRow icon={Zap} iconColor="#60a5fa" skill={card.activeSkill} />
+            <SkillRow icon={Flame} iconColor="#fbbf24" skill={card.ultimateSkill} />
+          </div>
         </div>
       </motion.div>
     </button>
