@@ -18,12 +18,12 @@ import type { NormalAttackTargetRule, CardClass } from "@prisma/client";
 import { LEVEL_STAT_MULTIPLIER } from "../src/lib/battle-engine/constants";
 import type { ActiveSkillData, PassiveSkillData } from "../src/lib/battle-engine/types";
 
-function curve(base: number): number[] {
+export function curve(base: number): number[] {
   return [1, 2, 3, 4, 5].map((level) => Math.round(base * LEVEL_STAT_MULTIPLIER[level]));
 }
 
 /** Wie curve(), aber für Anteilswerte (percent-Modifikatoren), gerundet auf 2 Nachkommastellen. */
-function curvePercent(base: number): number[] {
+export function curvePercent(base: number): number[] {
   return [1, 2, 3, 4, 5].map(
     (level) => Math.round(base * LEVEL_STAT_MULTIPLIER[level] * 100) / 100
   );

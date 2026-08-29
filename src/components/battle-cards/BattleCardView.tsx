@@ -176,12 +176,7 @@ export default function BattleCardView({ card, dimmed = false }: { card: BattleC
           >
             {card.imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={card.imageUrl}
-                alt={card.name}
-                className="w-full h-full object-cover"
-                style={{ objectPosition: "50% 12%" }}
-              />
+              <img src={card.imageUrl} alt={card.name} className="w-full h-full object-contain" />
             ) : (
               <ClassIcon className="w-12 h-12" style={{ color: classConfig.color, opacity: 0.5 }} />
             )}

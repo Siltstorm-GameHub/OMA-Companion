@@ -47,7 +47,7 @@ export async function POST(request: Request) {
 
   for (const card of cards) {
     const overridden = card.overriddenFields ?? [];
-    const template = getSkillTemplate(card.class);
+    const template = getSkillTemplate(card.class, card.linkedDiscordId ?? card.id);
 
     const updateData: Record<string, unknown> = {};
     if (!isOverridden(overridden, "passivePositive")) {

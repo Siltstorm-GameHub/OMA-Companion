@@ -73,7 +73,7 @@ export async function runSeasonUpdate(members: MemberSeasonInput[]) {
     // Skills müssen zur (ggf. neuen) Klasse passen — sonst behält eine Karte
     // nach einem Klassenwechsel z.B. Support-Heilskills bei Tank-Stats.
     // Nutzt dieselbe Vorlage wie der Cold-Start (card-provisioning.ts).
-    const skillTemplate = getSkillTemplate(effectiveClass);
+    const skillTemplate = getSkillTemplate(effectiveClass, card.linkedDiscordId ?? card.id);
     if (!isOverridden(overridden, "passivePositive")) {
       updateData.passivePositive = toJson(skillTemplate.passivePositive);
     }

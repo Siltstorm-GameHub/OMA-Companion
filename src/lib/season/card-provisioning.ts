@@ -66,7 +66,7 @@ export async function ensureCommunityCard(
   const cls = COLD_START_CLASS;
   const baseStats = CLASS_BASE_STATS[cls];
   const multiplier = TIER_MULTIPLIER.GHOST;
-  const template = getSkillTemplate(cls);
+  const template = getSkillTemplate(cls, member.discordId);
 
   try {
     const card = await prisma.$transaction(async (tx) => {
@@ -84,6 +84,7 @@ export async function ensureCommunityCard(
           baseAttack: Math.round(baseStats.attack * multiplier),
           baseDefense: Math.round(baseStats.defense * multiplier),
           speed: CLASS_SPEED_MIDPOINT[cls],
+          normalAttackTargetRule: template.normalAttackTargetRule,
           passivePositive: toJson(template.passivePositive),
           passiveNegative: toJson(template.passiveNegative),
           activeSkill: toJson(template.activeSkill),
