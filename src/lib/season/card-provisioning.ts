@@ -47,12 +47,6 @@ const SKILL_TEMPLATE_CARD_BY_CLASS: Record<CardClass, string> = {
   SUPPORT: "Pflästerchen",
 };
 
-const CLASS_PLACEHOLDER_TITLE: Record<CardClass, string> = {
-  TANK: "Tank",
-  DAMAGE_DEALER: "Damage Dealer",
-  SUPPORT: "Support",
-};
-
 // Mittelwert der dokumentierten Speed-Spanne je Klasse (Tank 40-55, Support
 // 55-70, Damage Dealer 75-90). Speed ist laut Schema "fix pro Karte" — wird
 // hier einmalig gesetzt und danach nie wieder verändert (auch nicht von
@@ -91,7 +85,10 @@ export async function ensureCommunityCard(
       const created = await tx.card.create({
         data: {
           name: member.displayName,
-          title: CLASS_PLACEHOLDER_TITLE[cls],
+          // Bewusst leer statt Klassen-Platzhalter ("Tank" etc.) — Untertitel/
+          // Beschreibung sind persönlich, bleiben leer, bis Admin oder das
+          // Mitglied selbst etwas einträgt (siehe lib/battle-cards/card-content.ts).
+          title: "",
           class: cls,
           rarity: "COMMUNITY",
           flavorText: "",

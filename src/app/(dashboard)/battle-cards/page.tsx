@@ -11,7 +11,7 @@
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Repeat } from "lucide-react";
+import { Repeat, IdCard } from "lucide-react";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { hasStarterDeck } from "@/lib/battle-cards/starter-pick";
@@ -90,12 +90,22 @@ export default async function BattleCardsPage() {
             Antippen, um die Skill-Details auf der Rückseite zu sehen.
           </p>
         </div>
-        <Link
-          href="/battle-cards/lineup"
-          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-md bg-violet-500/15 text-violet-300 hover:bg-violet-500/25 transition-colors shrink-0"
-        >
-          <Repeat className="w-3.5 h-3.5" /> Startaufstellung ändern
-        </Link>
+        <div className="flex items-center gap-2 flex-wrap">
+          {ownedUserCards.some((uc) => uc.card.rarity === "COMMUNITY") && (
+            <Link
+              href="/battle-cards/my-card"
+              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-md bg-white/[0.06] text-gray-300 hover:bg-white/[0.1] transition-colors shrink-0"
+            >
+              <IdCard className="w-3.5 h-3.5" /> Meine Community-Karte
+            </Link>
+          )}
+          <Link
+            href="/battle-cards/lineup"
+            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-md bg-violet-500/15 text-violet-300 hover:bg-violet-500/25 transition-colors shrink-0"
+          >
+            <Repeat className="w-3.5 h-3.5" /> Startaufstellung ändern
+          </Link>
+        </div>
       </div>
 
       <PackOpener initialUnopenedCount={unopenedPacks} />

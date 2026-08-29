@@ -111,7 +111,7 @@ export default function PackOpener({ initialUnopenedCount }: { initialUnopenedCo
               <X className="w-5 h-5" />
             </button>
 
-            <div className="flex flex-col items-center gap-5 max-w-xs w-full">
+            <div className="flex flex-col items-center gap-5 max-w-xs w-full" style={{ perspective: 1200 }}>
               {(phase === "ready" || phase === "opening") && (
                 <motion.button
                   type="button"
