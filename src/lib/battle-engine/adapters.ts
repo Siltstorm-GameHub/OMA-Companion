@@ -17,7 +17,11 @@ const NORMAL_ATTACK_TARGET_RULE_MAP: Record<NormalAttackTargetRule, SingleEnemyS
   RANDOM: "random",
 };
 
-export function cardToBattleUnitDefinition(card: Card, level: number): BattleUnitDefinition {
+export function cardToBattleUnitDefinition(
+  card: Card,
+  level: number,
+  imageUrl?: string | null
+): BattleUnitDefinition {
   return {
     cardId: card.id,
     name: card.name,
@@ -34,5 +38,6 @@ export function cardToBattleUnitDefinition(card: Card, level: number): BattleUni
     passiveNegative: parsePassiveSkill(card.passiveNegative, `${card.name}.passiveNegative`),
     activeSkill: parseActiveSkill(card.activeSkill, `${card.name}.activeSkill`),
     ultimateSkill: parseActiveSkill(card.ultimateSkill, `${card.name}.ultimateSkill`),
+    imageUrl: imageUrl !== undefined ? imageUrl : card.imageUrl,
   };
 }

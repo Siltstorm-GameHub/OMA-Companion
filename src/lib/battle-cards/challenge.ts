@@ -10,6 +10,8 @@ import { prisma } from "@/lib/prisma";
 import { cardToBattleUnitDefinition } from "@/lib/battle-engine/adapters";
 import { runBattle } from "@/lib/battle-engine/engine";
 import { serializeBattleLog } from "@/lib/battle-cards/battle-log";
+import { resolveAvatarsForCards } from "@/lib/battle-cards/card-view";
+import { resolveCardImageUrl } from "@/lib/battle-cards/resolve-image";
 import type { BattleChallenge } from "@prisma/client";
 
 export class ChallengeError extends Error {}
@@ -19,7 +21,10 @@ async function getLineupUnits(userId: string) {
     where: { userId, inLineup: true },
     include: { card: true },
   });
-  return userCards.map((uc) => cardToBattleUnitDefinition(uc.card, uc.level));
+  const avatarByDiscordId = await resolveAvatarsForCards(userCards.map((uc) => uc.card));
+  return userCards.map((uc) =>
+    cardToBattleUnitDefinition(uc.card, uc.level, resolveCardImageUrl(uc.card, avatarByDiscordId))
+  );
 }
 
 export async function createChallenge(challengerId: string, opponentId: string): Promise<BattleChallenge> {

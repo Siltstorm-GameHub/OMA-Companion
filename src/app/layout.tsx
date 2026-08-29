@@ -13,6 +13,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { ThemedToaster } from "@/components/ThemedToaster";
 import { AnimatedBackground } from "@/components/AnimatedBackground";
 import { CursorGlow } from "@/components/CursorGlow";
+import { ExitAppGuard } from "@/components/ExitAppGuard";
 import { appBaseUrl } from "@/lib/brand";
 
 export const metadata: Metadata = {
@@ -78,6 +79,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <SessionProvider>{children}</SessionProvider>
           </div>
           <ThemedToaster />
+          <ExitAppGuard />
         </ThemeProvider>
       </body>
     </html>

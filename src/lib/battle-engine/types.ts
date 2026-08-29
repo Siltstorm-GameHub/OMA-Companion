@@ -122,6 +122,8 @@ export interface BattleUnitDefinition {
   ultimateSkill: ActiveSkillData;
   /** Feste Normalangriff-Sonderregel, überschreibt die Standard-Zielregel (niedrigste DEF). */
   normalAttackTarget?: SingleEnemySelector;
+  /** Für den Kampf-Screen (siehe BattleScreen.tsx) — bei Community-Karten das live aufgelöste Profilbild. */
+  imageUrl?: string | null;
 }
 
 export interface ActiveStatModifier {
@@ -231,6 +233,7 @@ export interface RosterEntry {
   activeSkillDescription: string;
   ultimateSkillName: string;
   ultimateSkillDescription: string;
+  imageUrl?: string | null;
 }
 
 export interface BattleResult {

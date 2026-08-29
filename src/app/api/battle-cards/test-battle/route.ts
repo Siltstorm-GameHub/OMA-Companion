@@ -10,6 +10,8 @@ import { auth } from "@/auth";
 import { cardToBattleUnitDefinition } from "@/lib/battle-engine/adapters";
 import { runBattle } from "@/lib/battle-engine/engine";
 import { serializeBattleLog } from "@/lib/battle-cards/battle-log";
+import { resolveAvatarsForCards } from "@/lib/battle-cards/card-view";
+import { resolveCardImageUrl } from "@/lib/battle-cards/resolve-image";
 import { hasMinRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 
@@ -55,8 +57,16 @@ export async function POST() {
   const standardCards = await prisma.card.findMany({ where: { rarity: "STANDARD" } });
   const opponentCards = sampleWithoutReplacement(standardCards, TEAM_SIZE);
 
-  const playerTeam = playerTeamCards.map((uc) => cardToBattleUnitDefinition(uc.card, uc.level));
-  const opponentTeam = opponentCards.map((card) => cardToBattleUnitDefinition(card, 1));
+  const avatarByDiscordId = await resolveAvatarsForCards([
+    ...playerTeamCards.map((uc) => uc.card),
+    ...opponentCards,
+  ]);
+  const playerTeam = playerTeamCards.map((uc) =>
+    cardToBattleUnitDefinition(uc.card, uc.level, resolveCardImageUrl(uc.card, avatarByDiscordId))
+  );
+  const opponentTeam = opponentCards.map((card) =>
+    cardToBattleUnitDefinition(card, 1, resolveCardImageUrl(card, avatarByDiscordId))
+  );
 
   const result = runBattle(playerTeam, opponentTeam);
   const dbResult = result.winner === "A" ? "WIN" : result.winner === "B" ? "LOSS" : "DRAW";

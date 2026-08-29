@@ -163,24 +163,39 @@ function UnitTile({
       }}
     >
       {isActive && (
-        <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[8px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-teal-500 text-black whitespace-nowrap">
+        <span className="absolute -top-2 left-1/2 -translate-x-1/2 z-10 text-[8px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-teal-500 text-black whitespace-nowrap">
           Am Zug
         </span>
       )}
       {isTarget && !isActive && (
-        <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[8px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-rose-500 text-white whitespace-nowrap">
+        <span className="absolute -top-2 left-1/2 -translate-x-1/2 z-10 text-[8px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-rose-500 text-white whitespace-nowrap">
           Ziel
         </span>
       )}
 
       <div
-        className="w-9 h-9 mx-auto rounded-lg flex items-center justify-center mb-1"
+        className="w-full aspect-square rounded-md overflow-hidden mb-1"
         style={{ background: `${config.color}22` }}
       >
-        <Icon className="w-4 h-4" style={{ color: config.color }} />
+        {roster.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={roster.imageUrl}
+            alt={roster.name}
+            className="w-full h-full object-cover"
+            style={{ objectPosition: "50% 12%" }}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <Icon className="w-6 h-6" style={{ color: config.color, opacity: 0.5 }} />
+          </div>
+        )}
       </div>
 
-      <p className="text-[10px] font-semibold text-white text-center truncate">{roster.name}</p>
+      <div className="flex items-center justify-center gap-1 mb-0.5">
+        <Icon className="w-3 h-3 shrink-0" style={{ color: config.color }} />
+        <p className="text-[10px] font-semibold text-white text-center truncate">{roster.name}</p>
+      </div>
 
       <div className="mt-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
         <div
