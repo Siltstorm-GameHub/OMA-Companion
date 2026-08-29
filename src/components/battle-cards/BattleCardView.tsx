@@ -53,6 +53,12 @@ const LEVEL_BORDER: Record<number, string> = {
   5: "#a855f7", // prismatisch (Basiston, Glow ergänzt Regenbogen-Effekt)
 };
 
+// Reserviert genug Höhe für den maximal langen Beschreibungstext (siehe
+// CARD_FLAVOR_TEXT_MAX_LENGTH = 240 Zeichen, lib/battle-cards/card-content.ts),
+// auch auf schmalen Karten (2-spaltiges Mobil-Grid). Kürzere Texte lassen
+// hier einfach mehr Leerraum statt die Karte zu verkleinern.
+const FLAVOR_TEXT_MIN_HEIGHT = "150px";
+
 const ACTIVITY_TIER_ICON: Record<NonNullable<BattleCardData["activityTier"]>, string> = {
   GHOST: "💤",
   NPC: "🎮",
@@ -135,7 +141,7 @@ export default function BattleCardView({ card, dimmed = false }: { card: BattleC
       <motion.div
         animate={{ rotateY: flipped ? 180 : 0 }}
         transition={{ type: "spring", stiffness: 260, damping: 28 }}
-        className="relative w-full aspect-[5/7]"
+        className="relative w-full aspect-[1/2]"
         style={{ transformStyle: "preserve-3d" }}
       >
         {/* ── Vorderseite ── */}
@@ -192,9 +198,11 @@ export default function BattleCardView({ card, dimmed = false }: { card: BattleC
             <span className="text-[11px] text-gray-400 truncate">{card.title}</span>
           </div>
 
-          {card.flavorText && (
-            <p className="text-[10px] text-gray-500 italic leading-snug line-clamp-1 shrink-0">{card.flavorText}</p>
-          )}
+          <div className="shrink-0" style={{ minHeight: FLAVOR_TEXT_MIN_HEIGHT }}>
+            {card.flavorText && (
+              <p className="text-[10px] text-gray-500 italic leading-snug">{card.flavorText}</p>
+            )}
+          </div>
 
           <div className="flex gap-1 shrink-0">
             <StatTile label="HP" value={card.baseHp} />

@@ -11,6 +11,7 @@
 import { useState } from "react";
 import { Loader2, Shield, Swords, HeartPulse } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import CoinIcon from "@/components/CoinIcon";
 import BattleCardView from "./BattleCardView";
 import DuplicateProgress from "./DuplicateProgress";
 import type { BattleCardData } from "./BattleCardView";
@@ -34,18 +35,31 @@ export interface OwnedCardEntry {
 }
 
 export default function CardCollectionBrowser({
-  ownedCards,
+  ownedCards: initialOwnedCards,
   initialOtherCards,
   initialOtherTotal,
+  initialCoins,
 }: {
   ownedCards: OwnedCardEntry[];
   initialOtherCards: (BattleCardData & { id: string })[];
   initialOtherTotal: number;
+  initialCoins: number;
 }) {
   const [filter, setFilter] = useState<CardClassFilter>("ALL");
   const [otherCards, setOtherCards] = useState(initialOtherCards);
   const [otherTotal, setOtherTotal] = useState(initialOtherTotal);
   const [loading, setLoading] = useState(false);
+  const [ownedCards, setOwnedCards] = useState(initialOwnedCards);
+  const [coins, setCoins] = useState(initialCoins);
+
+  function handleUpgraded(userCardId: string, newLevel: number, newCoins: number) {
+    setOwnedCards((prev) =>
+      prev.map((oc) =>
+        oc.id === userCardId ? { ...oc, level: newLevel, card: { ...oc.card, level: newLevel } } : oc
+      )
+    );
+    setCoins(newCoins);
+  }
 
   const filteredOwned = ownedCards.filter((oc) => filter === "ALL" || oc.card.class === filter);
 
@@ -82,24 +96,30 @@ export default function CardCollectionBrowser({
 
   return (
     <div className="space-y-6">
-      {/* Klassen-Filter */}
-      <div className="flex items-center gap-2 flex-wrap">
-        {FILTERS.map(({ key, label, icon: Icon }) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => changeFilter(key)}
-            disabled={loading}
-            className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md transition-colors disabled:opacity-50 ${
-              filter === key
-                ? "bg-violet-500/25 text-violet-200"
-                : "bg-white/[0.04] text-gray-400 hover:bg-white/[0.08]"
-            }`}
-          >
-            {Icon && <Icon className="w-3.5 h-3.5" />}
-            {label}
-          </button>
-        ))}
+      {/* Klassen-Filter + Münzstand */}
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
+          {FILTERS.map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => changeFilter(key)}
+              disabled={loading}
+              className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md transition-colors disabled:opacity-50 ${
+                filter === key
+                  ? "bg-violet-500/25 text-violet-200"
+                  : "bg-white/[0.04] text-gray-400 hover:bg-white/[0.08]"
+              }`}
+            >
+              {Icon && <Icon className="w-3.5 h-3.5" />}
+              {label}
+            </button>
+          ))}
+        </div>
+        <span className="flex items-center gap-1.5 text-sm font-bold text-amber-300 tabular-nums px-3 py-1.5 rounded-md bg-amber-500/10">
+          <CoinIcon size={16} />
+          {coins.toLocaleString("de-DE")}
+        </span>
       </div>
 
       {/* Eigene Karten */}
@@ -110,7 +130,14 @@ export default function CardCollectionBrowser({
           {filteredOwned.map((oc) => (
             <div key={oc.id}>
               <BattleCardView card={oc.card} />
-              <DuplicateProgress rarity={oc.card.rarity} level={oc.level} duplicates={oc.duplicates} />
+              <DuplicateProgress
+                userCardId={oc.id}
+                rarity={oc.card.rarity}
+                level={oc.level}
+                duplicates={oc.duplicates}
+                coins={coins}
+                onUpgraded={(newLevel, newCoins) => handleUpgraded(oc.id, newLevel, newCoins)}
+              />
             </div>
           ))}
         </div>

@@ -76,7 +76,7 @@ export default async function BattleCardsPage() {
   ]);
   const unopenedPacks = await countUnopenedPacks(userId);
   const pendingChallenges = await prisma.battleChallenge.count({ where: { opponentId: userId, status: "pending" } });
-  const currentUser = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+  const currentUser = await prisma.user.findUnique({ where: { id: userId }, select: { role: true, points: true } });
   const isModOrAdmin = !!currentUser && hasMinRole(currentUser.role, "moderator");
 
   const ownedCards = ownedUserCards.map((uc) => ({
@@ -132,6 +132,7 @@ export default async function BattleCardsPage() {
         ownedCards={ownedCards}
         initialOtherCards={otherCardsFirstPage.map((c) => toCardData(c, avatarByDiscordId))}
         initialOtherTotal={otherCardsSorted.length}
+        initialCoins={currentUser?.points ?? 0}
       />
     </div>
   );
