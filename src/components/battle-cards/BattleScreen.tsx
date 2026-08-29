@@ -14,7 +14,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Shield, Swords, HeartPulse, Play, Pause, RotateCcw } from "lucide-react";
+import { Shield, Swords, HeartPulse, Play, Pause, RotateCcw, Sparkles, ArrowUp, ArrowDown, Zap } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { BattleLogEntry, RosterEntry, UnitClass } from "@/lib/battle-engine/types";
 
@@ -23,6 +23,158 @@ const CLASS_CONFIG: Record<UnitClass, { color: string; icon: LucideIcon }> = {
   DAMAGE_DEALER: { color: "#ef4444", icon: Swords },
   SUPPORT: { color: "#8b5cf6", icon: HeartPulse },
 };
+
+// ---------- Skill-Effekt-Overlay ----------
+// Statt jede der 36 Pool-Skills einzeln als Animation zu hinterlegen (driftet
+// sofort auseinander, sobald der Skill-Pool sich ändert), wird der Effekt-Typ
+// direkt aus dem tatsächlich abgespielten BattleLogEntry abgeleitet. Da sich
+// die Skills im Pool bereits in Effekt-Art + Ziel (einzeln/Fläche, Schaden/
+// Heilung/Schild/Buff/Debuff/Rage) unterscheiden, ergibt sich pro Skill ganz
+// von selbst ein eigenes, zutreffendes visuelles Bild.
+type VfxKind = "cast" | "damage" | "critDamage" | "heal" | "shield" | "buff" | "debuff" | "rage";
+
+interface VfxEvent {
+  kind: VfxKind;
+  targetId: string;
+  /** Wechselt bei jedem neuen Log-Eintrag, erzwingt einen Animations-Replay. */
+  key: number;
+}
+
+function vfxForEntry(e: BattleLogEntry | undefined, step: number): VfxEvent | null {
+  if (!e) return null;
+  switch (e.type) {
+    case "action":
+      return e.actionType === "active" ? { kind: "cast", targetId: e.actorId, key: step } : null;
+    case "damage":
+      return { kind: e.isCrit ? "critDamage" : "damage", targetId: e.targetId, key: step };
+    case "heal":
+      return { kind: "heal", targetId: e.targetId, key: step };
+    case "shieldApplied":
+      return { kind: "shield", targetId: e.targetId, key: step };
+    case "statModifierApplied":
+      return { kind: e.amount >= 0 ? "buff" : "debuff", targetId: e.targetId, key: step };
+    case "rageChange":
+      return e.reason === "skillEffect" ? { kind: "rage", targetId: e.unitId, key: step } : null;
+    default:
+      return null;
+  }
+}
+
+function SkillEffectOverlay({ vfx }: { vfx: VfxEvent }) {
+  switch (vfx.kind) {
+    case "cast":
+      return (
+        <motion.div
+          key={vfx.key}
+          className="absolute inset-0 rounded-full pointer-events-none"
+          style={{ boxShadow: "0 0 0 2px rgba(96,165,250,0.9)" }}
+          initial={{ opacity: 0, scale: 0.7 }}
+          animate={{ opacity: [0, 1, 0], scale: 1.25 }}
+          transition={{ duration: 0.45, ease: "easeOut" }}
+        />
+      );
+    case "damage":
+    case "critDamage": {
+      const crit = vfx.kind === "critDamage";
+      return (
+        <motion.div
+          key={vfx.key}
+          className="absolute inset-0 flex items-center justify-center pointer-events-none"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0, 1, 0], x: [0, crit ? -5 : -3, 5, -3, 0] }}
+          transition={{ duration: crit ? 0.5 : 0.4, ease: "easeOut" }}
+        >
+          <div
+            className="absolute inset-0 rounded-full"
+            style={{ background: crit ? "rgba(250,204,21,0.35)" : "rgba(239,68,68,0.3)" }}
+          />
+          {crit && <Sparkles className="w-6 h-6 relative" style={{ color: "#facc15" }} />}
+        </motion.div>
+      );
+    }
+    case "heal":
+      return (
+        <motion.div key={vfx.key} className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <motion.div
+            className="absolute inset-0 rounded-full"
+            style={{ background: "rgba(52,211,153,0.3)" }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0, 1, 0] }}
+            transition={{ duration: 0.5 }}
+          />
+          <motion.span
+            className="absolute text-emerald-300 font-bold text-lg"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: [0, 1, 0], y: -14 }}
+            transition={{ duration: 0.5 }}
+          >
+            +
+          </motion.span>
+        </motion.div>
+      );
+    case "shield":
+      return (
+        <motion.div
+          key={vfx.key}
+          className="absolute inset-0 rounded-full pointer-events-none"
+          style={{ boxShadow: "0 0 0 2px rgba(56,189,248,0.9)", background: "rgba(56,189,248,0.15)" }}
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: [0, 1, 0.4], scale: 1.15 }}
+          transition={{ duration: 0.55, ease: "easeOut" }}
+        />
+      );
+    case "buff":
+      return (
+        <motion.div
+          key={vfx.key}
+          className="absolute inset-0 flex items-center justify-center pointer-events-none"
+        >
+          <motion.div
+            className="absolute inset-0 rounded-full"
+            style={{ boxShadow: "0 0 0 2px rgba(74,222,128,0.85)" }}
+            initial={{ opacity: 0, scale: 0.85 }}
+            animate={{ opacity: [0, 1, 0], scale: 1.2 }}
+            transition={{ duration: 0.5 }}
+          />
+          <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: [0, 1, 0], y: -10 }} transition={{ duration: 0.5 }}>
+            <ArrowUp className="w-4 h-4" style={{ color: "#4ade80" }} />
+          </motion.div>
+        </motion.div>
+      );
+    case "debuff":
+      return (
+        <motion.div
+          key={vfx.key}
+          className="absolute inset-0 flex items-center justify-center pointer-events-none"
+        >
+          <motion.div
+            className="absolute inset-0 rounded-full"
+            style={{ boxShadow: "0 0 0 2px rgba(244,63,94,0.85)" }}
+            initial={{ opacity: 0, scale: 1.15 }}
+            animate={{ opacity: [0, 1, 0], scale: 0.85 }}
+            transition={{ duration: 0.5 }}
+          />
+          <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: [0, 1, 0], y: 10 }} transition={{ duration: 0.5 }}>
+            <ArrowDown className="w-4 h-4" style={{ color: "#fb7185" }} />
+          </motion.div>
+        </motion.div>
+      );
+    case "rage":
+      return (
+        <motion.div key={vfx.key} className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <motion.div
+            initial={{ opacity: 0, y: 4, scale: 0.7 }}
+            animate={{ opacity: [0, 1, 0], y: -12, scale: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <Zap className="w-5 h-5" style={{ color: "#60a5fa" }} />
+          </motion.div>
+        </motion.div>
+      );
+    default:
+      return null;
+  }
+}
 
 interface UnitRuntime {
   currentHp: number;
@@ -139,11 +291,13 @@ function UnitTile({
   runtime,
   isActive,
   isTarget,
+  vfx,
 }: {
   roster: RosterEntry;
   runtime: UnitRuntime;
   isActive: boolean;
   isTarget: boolean;
+  vfx: VfxEvent | null;
 }) {
   const config = CLASS_CONFIG[roster.class];
   const Icon = config.icon;
@@ -195,6 +349,7 @@ function UnitTile({
             <Icon className="w-6 h-6" style={{ color: config.color, opacity: 0.5 }} />
           </div>
         )}
+        <AnimatePresence>{vfx && <SkillEffectOverlay vfx={vfx} />}</AnimatePresence>
       </div>
 
       <div className="flex items-center justify-center gap-1 mb-0.5">
@@ -253,6 +408,7 @@ export default function BattleScreen({ roster, log }: { roster: RosterEntry[]; l
   }, [log, step, roster]);
 
   const lastEntry = step > 0 ? log[step - 1] : undefined;
+  const currentVfx = useMemo(() => vfxForEntry(lastEntry, step), [lastEntry, step]);
   const cutsceneActor =
     lastEntry?.type === "action" && lastEntry.actionType === "ultimate" ? rosterById.get(lastEntry.actorId) : null;
 
@@ -264,14 +420,13 @@ export default function BattleScreen({ roster, log }: { roster: RosterEntry[]; l
       style={{
         backgroundColor: "#12151a",
         backgroundImage: [
-          "radial-gradient(ellipse 70% 45% at 50% 8%, rgba(239,68,68,0.14), transparent 70%)",
-          "radial-gradient(ellipse 70% 45% at 50% 92%, rgba(20,184,166,0.14), transparent 70%)",
-          "radial-gradient(ellipse 90% 60% at 50% 50%, rgba(255,255,255,0.05), transparent 65%)",
-          "linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)",
-          "linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)",
-          "linear-gradient(180deg, #171b21 0%, #0d0f13 50%, #171b21 100%)",
+          "radial-gradient(ellipse 70% 45% at 50% 8%, rgba(239,68,68,0.18), transparent 70%)",
+          "radial-gradient(ellipse 70% 45% at 50% 92%, rgba(20,184,166,0.18), transparent 70%)",
+          "linear-gradient(180deg, rgba(13,15,19,0.55) 0%, rgba(13,15,19,0.25) 35%, rgba(13,15,19,0.25) 65%, rgba(13,15,19,0.55) 100%)",
+          "url(/battle-cards/arena-bg.jpg)",
         ].join(", "),
-        backgroundSize: "auto, auto, auto, 28px 28px, 28px 28px, auto",
+        backgroundSize: "auto, auto, auto, cover",
+        backgroundPosition: "center",
       }}
     >
       {/* Gegner-Reihe */}
@@ -286,6 +441,7 @@ export default function BattleScreen({ roster, log }: { roster: RosterEntry[]; l
               runtime={rt}
               isActive={derived.activeUnitId === r.instanceId}
               isTarget={derived.targetIds.has(r.instanceId)}
+              vfx={currentVfx?.targetId === r.instanceId ? currentVfx : null}
             />
           );
         })}
@@ -305,6 +461,7 @@ export default function BattleScreen({ roster, log }: { roster: RosterEntry[]; l
               runtime={rt}
               isActive={derived.activeUnitId === r.instanceId}
               isTarget={derived.targetIds.has(r.instanceId)}
+              vfx={currentVfx?.targetId === r.instanceId ? currentVfx : null}
             />
           );
         })}
