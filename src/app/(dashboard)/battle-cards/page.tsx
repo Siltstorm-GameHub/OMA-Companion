@@ -17,6 +17,7 @@ import { prisma } from "@/lib/prisma";
 import { hasStarterDeck } from "@/lib/battle-cards/starter-pick";
 import { countUnopenedPacks } from "@/lib/battle-cards/packs";
 import { sortByQuality, toCardData, resolveAvatarsForCards } from "@/lib/battle-cards/card-view";
+import { getUpgradeEconomyConfig } from "@/lib/battle-cards/upgrade-admin-config";
 import { hasMinRole } from "@/lib/roles";
 import StarterPickFlow from "@/components/battle-cards/StarterPickFlow";
 import PackOpener from "@/components/battle-cards/PackOpener";
@@ -78,6 +79,7 @@ export default async function BattleCardsPage() {
   const pendingChallenges = await prisma.battleChallenge.count({ where: { opponentId: userId, status: "pending" } });
   const currentUser = await prisma.user.findUnique({ where: { id: userId }, select: { role: true, points: true } });
   const isModOrAdmin = !!currentUser && hasMinRole(currentUser.role, "moderator");
+  const upgradeEconomy = await getUpgradeEconomyConfig();
 
   const ownedCards = ownedUserCards.map((uc) => ({
     id: uc.id,
@@ -133,6 +135,8 @@ export default async function BattleCardsPage() {
         initialOtherCards={otherCardsFirstPage.map((c) => toCardData(c, avatarByDiscordId))}
         initialOtherTotal={otherCardsSorted.length}
         initialCoins={currentUser?.points ?? 0}
+        duplicateThresholds={upgradeEconomy.duplicateThresholds}
+        upgradeCosts={upgradeEconomy.upgradeCosts}
       />
     </div>
   );

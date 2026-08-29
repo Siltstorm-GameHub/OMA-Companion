@@ -173,20 +173,20 @@ function UnitTile({
         </span>
       )}
 
-      <div
-        className="w-full aspect-square rounded-md overflow-hidden mb-1"
-        style={{ background: `${config.color}22` }}
-      >
+      <div className="w-full aspect-square mb-1 flex items-end justify-center">
         {roster.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={roster.imageUrl}
             alt={roster.name}
-            className="w-full h-full object-cover"
-            style={{ objectPosition: "50% 12%" }}
+            className="max-w-full max-h-full object-contain"
+            style={{ filter: "drop-shadow(0 3px 5px rgba(0,0,0,0.5))" }}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center">
+          <div
+            className="w-full h-full rounded-md flex items-center justify-center"
+            style={{ background: `${config.color}22` }}
+          >
             <Icon className="w-6 h-6" style={{ color: config.color, opacity: 0.5 }} />
           </div>
         )}

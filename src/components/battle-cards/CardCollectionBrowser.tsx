@@ -14,7 +14,10 @@ import type { LucideIcon } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
 import BattleCardView from "./BattleCardView";
 import DuplicateProgress from "./DuplicateProgress";
+import CardUpgradeOverlay from "./CardUpgradeOverlay";
+import type { CardUpgradeAnimationState } from "./CardUpgradeOverlay";
 import type { BattleCardData } from "./BattleCardView";
+import type { UpgradeTable } from "@/lib/battle-cards/upgrade-config";
 
 const PAGE_SIZE = 12;
 
@@ -39,11 +42,15 @@ export default function CardCollectionBrowser({
   initialOtherCards,
   initialOtherTotal,
   initialCoins,
+  duplicateThresholds,
+  upgradeCosts,
 }: {
   ownedCards: OwnedCardEntry[];
   initialOtherCards: (BattleCardData & { id: string })[];
   initialOtherTotal: number;
   initialCoins: number;
+  duplicateThresholds: UpgradeTable;
+  upgradeCosts: UpgradeTable;
 }) {
   const [filter, setFilter] = useState<CardClassFilter>("ALL");
   const [otherCards, setOtherCards] = useState(initialOtherCards);
@@ -51,14 +58,19 @@ export default function CardCollectionBrowser({
   const [loading, setLoading] = useState(false);
   const [ownedCards, setOwnedCards] = useState(initialOwnedCards);
   const [coins, setCoins] = useState(initialCoins);
+  const [upgradeAnimation, setUpgradeAnimation] = useState<CardUpgradeAnimationState | null>(null);
 
-  function handleUpgraded(userCardId: string, newLevel: number, newCoins: number) {
+  function handleUpgraded(userCardId: string, fromLevel: number, newLevel: number, newCoins: number) {
     setOwnedCards((prev) =>
       prev.map((oc) =>
         oc.id === userCardId ? { ...oc, level: newLevel, card: { ...oc.card, level: newLevel } } : oc
       )
     );
     setCoins(newCoins);
+    const upgradedCard = ownedCards.find((oc) => oc.id === userCardId)?.card;
+    if (upgradedCard) {
+      setUpgradeAnimation({ card: upgradedCard, fromLevel, toLevel: newLevel });
+    }
   }
 
   const filteredOwned = ownedCards.filter((oc) => filter === "ALL" || oc.card.class === filter);
@@ -136,7 +148,9 @@ export default function CardCollectionBrowser({
                 level={oc.level}
                 duplicates={oc.duplicates}
                 coins={coins}
-                onUpgraded={(newLevel, newCoins) => handleUpgraded(oc.id, newLevel, newCoins)}
+                duplicateThresholds={duplicateThresholds}
+                upgradeCosts={upgradeCosts}
+                onUpgraded={(fromLevel, newLevel, newCoins) => handleUpgraded(oc.id, fromLevel, newLevel, newCoins)}
               />
             </div>
           ))}
@@ -175,6 +189,8 @@ export default function CardCollectionBrowser({
           )}
         </>
       )}
+
+      <CardUpgradeOverlay state={upgradeAnimation} onClose={() => setUpgradeAnimation(null)} />
     </div>
   );
 }

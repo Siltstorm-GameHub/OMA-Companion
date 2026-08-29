@@ -6,12 +6,15 @@
 // Zeigt Fortschrittsbalken "X/Y Duplikate" + Münzkosten und bietet direkt den
 // Upgrade-Button an, sobald beide Bedingungen erfüllt sind. Duplikate zählen
 // kumulativ und werden beim Upgrade NICHT verbraucht (siehe upgrade.ts).
+// Schwellen/Kosten kommen als Tabelle von oben (Server-Komponente battle-
+// cards/page.tsx, siehe upgrade-admin-config.ts) statt fest verdrahtet zu
+// sein — Admins können sie unter /admin/battle-cards überschreiben.
 
 import { useState } from "react";
 import { toast } from "sonner";
 import { Loader2, ArrowUpCircle } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
-import { getDuplicateThreshold, getUpgradeCost, type CardRarity } from "@/lib/battle-cards/upgrade-config";
+import { tableValueForLevel, type CardRarity, type UpgradeTable } from "@/lib/battle-cards/upgrade-config";
 
 export default function DuplicateProgress({
   userCardId,
@@ -19,6 +22,8 @@ export default function DuplicateProgress({
   level,
   duplicates,
   coins,
+  duplicateThresholds,
+  upgradeCosts,
   onUpgraded,
 }: {
   userCardId: string;
@@ -26,7 +31,9 @@ export default function DuplicateProgress({
   level: number;
   duplicates: number;
   coins: number;
-  onUpgraded: (newLevel: number, newCoins: number) => void;
+  duplicateThresholds: UpgradeTable;
+  upgradeCosts: UpgradeTable;
+  onUpgraded: (fromLevel: number, newLevel: number, newCoins: number) => void;
 }) {
   const [loading, setLoading] = useState(false);
 
@@ -34,8 +41,8 @@ export default function DuplicateProgress({
     return <p className="text-[10px] text-amber-400 text-center mt-1.5 font-semibold">★ Maximale Stufe</p>;
   }
 
-  const needed = getDuplicateThreshold(rarity, level)!;
-  const cost = getUpgradeCost(rarity, level)!;
+  const needed = tableValueForLevel(duplicateThresholds, rarity, level)!;
+  const cost = tableValueForLevel(upgradeCosts, rarity, level)!;
   const pct = Math.min(100, Math.round((duplicates / needed) * 100));
   const hasEnoughDuplicates = duplicates >= needed;
   const hasEnoughCoins = coins >= cost;
@@ -55,8 +62,7 @@ export default function DuplicateProgress({
         toast.error(data.error ?? "Upgrade fehlgeschlagen.");
         return;
       }
-      toast.success(`Karte auf Stufe ${data.level} hochgestuft!`);
-      onUpgraded(data.level, data.points);
+      onUpgraded(level, data.level, data.points);
     } catch {
       toast.error("Netzwerkfehler");
     } finally {

@@ -45,7 +45,7 @@ const CLASS_CONFIG: Record<BattleCardData["class"], { label: string; color: stri
   SUPPORT: { label: "Support", color: "#8b5cf6", icon: HeartPulse },
 };
 
-const LEVEL_BORDER: Record<number, string> = {
+export const LEVEL_BORDER: Record<number, string> = {
   1: "#71717a", // grau
   2: "#b45309", // bronze
   3: "#a1a1aa", // silber
@@ -54,10 +54,10 @@ const LEVEL_BORDER: Record<number, string> = {
 };
 
 // Reserviert genug Höhe für den maximal langen Beschreibungstext (siehe
-// CARD_FLAVOR_TEXT_MAX_LENGTH = 240 Zeichen, lib/battle-cards/card-content.ts),
+// CARD_FLAVOR_TEXT_MAX_LENGTH = 100 Zeichen, lib/battle-cards/card-content.ts),
 // auch auf schmalen Karten (2-spaltiges Mobil-Grid). Kürzere Texte lassen
 // hier einfach mehr Leerraum statt die Karte zu verkleinern.
-const FLAVOR_TEXT_MIN_HEIGHT = "150px";
+const FLAVOR_TEXT_MIN_HEIGHT = "65px";
 
 const ACTIVITY_TIER_ICON: Record<NonNullable<BattleCardData["activityTier"]>, string> = {
   GHOST: "💤",

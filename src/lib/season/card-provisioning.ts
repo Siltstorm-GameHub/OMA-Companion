@@ -18,7 +18,7 @@ import { Prisma, type Card, type CardClass } from "@prisma/client";
 import { CLASS_BASE_STATS } from "./apply-season-results";
 import { TIER_MULTIPLIER } from "./season-engine";
 import { prisma } from "../prisma";
-import { STANDARD_CARDS } from "../../../prisma/battle-cards-seed-data";
+import { getSkillTemplate } from "../battle-cards/skill-templates";
 
 export interface NewCommunityMemberInput {
   userId: string;
@@ -36,16 +36,6 @@ export interface EnsureCommunityCardResult {
 // möglich — alle drei Säulen stünden bei 0. TANK ist hier eine willkürliche,
 // aber deterministische Wahl (nicht Teil des dokumentierten Konzepts).
 const COLD_START_CLASS: CardClass = "TANK";
-
-// Platzhalter-Skills fürs Cold-Start-Erscheinungsbild: geliehen von der
-// thematisch nächsten Standard-Karte derselben Klasse. Community-Karten
-// haben laut Kontext-Dokument keine eigenen dokumentierten Skills — bis das
-// entschieden ist, ist "geliehen" besser als leer oder erfunden.
-const SKILL_TEMPLATE_CARD_BY_CLASS: Record<CardClass, string> = {
-  TANK: "Bastionella",
-  DAMAGE_DEALER: "Scherbe",
-  SUPPORT: "Pflästerchen",
-};
 
 // Mittelwert der dokumentierten Speed-Spanne je Klasse (Tank 40-55, Support
 // 55-70, Damage Dealer 75-90). Speed ist laut Schema "fix pro Karte" — wird
@@ -76,9 +66,7 @@ export async function ensureCommunityCard(
   const cls = COLD_START_CLASS;
   const baseStats = CLASS_BASE_STATS[cls];
   const multiplier = TIER_MULTIPLIER.GHOST;
-  const template = STANDARD_CARDS.find(
-    (c) => c.name === SKILL_TEMPLATE_CARD_BY_CLASS[cls]
-  )!;
+  const template = getSkillTemplate(cls);
 
   try {
     const card = await prisma.$transaction(async (tx) => {

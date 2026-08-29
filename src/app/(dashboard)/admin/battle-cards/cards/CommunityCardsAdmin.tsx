@@ -66,7 +66,7 @@ function CardEditRow({ card }: { card: CardRow }) {
             <span className="text-xs text-gray-500">Beschreibung</span>
             <textarea
               value={flavorText}
-              maxLength={240}
+              maxLength={100}
               rows={3}
               onChange={(e) => setFlavorText(e.target.value)}
               placeholder="leer"

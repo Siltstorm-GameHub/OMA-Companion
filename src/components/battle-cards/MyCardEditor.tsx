@@ -8,7 +8,7 @@ import BattleCardView from "./BattleCardView";
 import type { BattleCardData } from "./BattleCardView";
 
 const TITLE_MAX = 25;
-const FLAVOR_MAX = 240;
+const FLAVOR_MAX = 100;
 
 export default function MyCardEditor({ card }: { card: BattleCardData & { id: string } }) {
   const router = useRouter();
