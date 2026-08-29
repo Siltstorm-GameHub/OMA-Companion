@@ -151,15 +151,10 @@ function UnitTile({
 
   return (
     <div
-      className="surface rounded-lg p-2 w-24 sm:w-28 shrink-0 relative transition-all"
+      className="w-24 sm:w-28 shrink-0 relative transition-all"
       style={{
         opacity: runtime.alive ? 1 : 0.35,
         filter: runtime.alive ? "none" : "grayscale(1)",
-        boxShadow: isActive
-          ? "0 0 0 2px #14b8a6, 0 0 16px rgba(20,184,166,0.5)"
-          : isTarget
-            ? "0 0 0 2px #ef4444, 0 0 16px rgba(239,68,68,0.4)"
-            : undefined,
       }}
     >
       {isActive && (
@@ -173,18 +168,28 @@ function UnitTile({
         </span>
       )}
 
-      <div className="w-full aspect-square mb-1 flex items-end justify-center">
+      <div className="w-full aspect-square mb-1 flex items-end justify-center relative">
+        {(isActive || isTarget) && (
+          <div
+            className="absolute inset-0 rounded-full"
+            style={{
+              background: isActive
+                ? "radial-gradient(closest-side, rgba(20,184,166,0.35), transparent 70%)"
+                : "radial-gradient(closest-side, rgba(239,68,68,0.3), transparent 70%)",
+            }}
+          />
+        )}
         {roster.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={roster.imageUrl}
             alt={roster.name}
-            className="max-w-full max-h-full object-contain"
-            style={{ filter: "drop-shadow(0 3px 5px rgba(0,0,0,0.5))" }}
+            className="max-w-full max-h-full object-contain relative"
+            style={{ filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.65))" }}
           />
         ) : (
           <div
-            className="w-full h-full rounded-md flex items-center justify-center"
+            className="w-full h-full rounded-md flex items-center justify-center relative"
             style={{ background: `${config.color}22` }}
           >
             <Icon className="w-6 h-6" style={{ color: config.color, opacity: 0.5 }} />
@@ -194,20 +199,22 @@ function UnitTile({
 
       <div className="flex items-center justify-center gap-1 mb-0.5">
         <Icon className="w-3 h-3 shrink-0" style={{ color: config.color }} />
-        <p className="text-[10px] font-semibold text-white text-center truncate">{roster.name}</p>
+        <p className="text-[10px] font-semibold text-white text-center truncate" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}>
+          {roster.name}
+        </p>
       </div>
 
-      <div className="mt-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
+      <div className="h-1.5 rounded-full bg-black/40 overflow-hidden" style={{ boxShadow: "0 0 0 1px rgba(255,255,255,0.06)" }}>
         <div
           className="h-full rounded-full transition-[width] duration-300 ease-out"
           style={{ width: `${hpPct * 100}%`, background: hpBarColor(hpPct) }}
         />
       </div>
-      <p className="text-[8px] text-gray-500 text-center tabular-nums mt-0.5">
+      <p className="text-[8px] text-gray-400 text-center tabular-nums mt-0.5" style={{ textShadow: "0 1px 2px rgba(0,0,0,0.9)" }}>
         {Math.max(0, runtime.currentHp)}/{runtime.maxHp}
       </p>
 
-      <div className="mt-0.5 h-1 rounded-full bg-white/10 overflow-hidden">
+      <div className="mt-0.5 h-1 rounded-full bg-black/40 overflow-hidden" style={{ boxShadow: "0 0 0 1px rgba(255,255,255,0.06)" }}>
         <div
           className="h-full rounded-full transition-[width] duration-300 ease-out"
           style={{ width: `${Math.min(100, runtime.rage)}%`, background: "#60a5fa" }}
@@ -252,9 +259,23 @@ export default function BattleScreen({ roster, log }: { roster: RosterEntry[]; l
   const isFinished = step >= log.length;
 
   return (
-    <div className="surface-elevated rounded-xl p-3 space-y-3 relative">
+    <div
+      className="surface-elevated rounded-xl p-3 space-y-3 relative overflow-hidden"
+      style={{
+        backgroundColor: "#12151a",
+        backgroundImage: [
+          "radial-gradient(ellipse 70% 45% at 50% 8%, rgba(239,68,68,0.14), transparent 70%)",
+          "radial-gradient(ellipse 70% 45% at 50% 92%, rgba(20,184,166,0.14), transparent 70%)",
+          "radial-gradient(ellipse 90% 60% at 50% 50%, rgba(255,255,255,0.05), transparent 65%)",
+          "linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)",
+          "linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)",
+          "linear-gradient(180deg, #171b21 0%, #0d0f13 50%, #171b21 100%)",
+        ].join(", "),
+        backgroundSize: "auto, auto, auto, 28px 28px, 28px 28px, auto",
+      }}
+    >
       {/* Gegner-Reihe */}
-      <div className="flex gap-2 justify-center flex-wrap">
+      <div className="flex gap-2 justify-center flex-wrap relative">
         {teamB.map((r) => {
           const rt = derived.units.get(r.instanceId);
           if (!rt) return null;
