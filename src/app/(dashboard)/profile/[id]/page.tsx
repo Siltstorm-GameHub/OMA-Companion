@@ -23,8 +23,7 @@ import FavoriteGamesSection from "../FavoriteGamesSection";
 import SquadsSection from "../SquadsSection";
 import { parseFavoriteGames } from "@/lib/favorite-games";
 import WanderpocalSection from "@/components/WanderpocalSection";
-import DuelChallengeWidget from "@/components/DuelChallengeWidget";
-import { getMinigamesConfig } from "@/lib/minigames-config";
+import BattleChallengeWidget from "@/components/battle-cards/BattleChallengeWidget";
 
 export async function generateMetadata({
   params,
@@ -73,8 +72,6 @@ export default async function PublicProfilePage({
 
   // Eigenes Profil → weiterleiten
   if (viewerId === id) redirect("/profile");
-
-  const minigamesConfig = await getMinigamesConfig();
 
   const now   = new Date();
   const month = now.getMonth() + 1;
@@ -219,12 +216,8 @@ export default async function PublicProfilePage({
             className="inline-flex items-center gap-2 text-xs glass border border-white/[0.08] hover:border-rose-500/30 text-gray-400 hover:text-white px-3 py-2 rounded-xl transition-all">
             ⚔️ Mit mir vergleichen
           </Link>
-          {viewerId && minigamesConfig.duelEnabled && (
-            <DuelChallengeWidget
-              opponentId={id}
-              opponentName={displayName}
-              config={{ min: minigamesConfig.duelMinWager, max: minigamesConfig.duelMaxWager }}
-            />
+          {viewerId && (
+            <BattleChallengeWidget opponentId={id} opponentName={displayName} />
           )}
         </div>
       </div>

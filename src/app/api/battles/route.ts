@@ -12,6 +12,7 @@ import { cardToBattleUnitDefinition } from "@/lib/battle-engine/adapters";
 import { runBattle } from "@/lib/battle-engine/engine";
 import { InvalidSkillDataError } from "@/lib/battle-engine/skill-schema";
 import type { BattleResult as EngineBattleResult } from "@/lib/battle-engine/types";
+import { serializeBattleLog } from "@/lib/battle-cards/battle-log";
 import { prisma } from "@/lib/prisma";
 import type { BattleResult as DbBattleResult } from "@prisma/client";
 
@@ -95,7 +96,7 @@ export async function POST(request: Request) {
           playerTeam: playerTeam.map((t) => t.userCardId),
           opponentTeam: opponentTeam,
         },
-        battleLog: result.log,
+        battleLog: serializeBattleLog(result.log, result.roster),
       },
     });
 

@@ -97,6 +97,8 @@ model User {
   battleCardUserCards      UserCard[]
   battleCardBattles        Battle[]                 @relation("BattleCardPlayer")
   battleCardPacks          CardPack[]
+  battleChallengesSent     BattleChallenge[]        @relation("BattleChallengeChallenger")
+  battleChallengesReceived BattleChallenge[]        @relation("BattleChallengeOpponent")
 }
 
 // ── Pokale ───────────────────────────────────────────────────────────────────
@@ -1334,4 +1336,25 @@ model CardPack {
   user User @relation(fields: [userId], references: [id])
 
   @@index([userId])
+}
+
+// ── Battle-Cards-Duelle (ersetzt das alte Münzen-Duell als Herausforderung
+// zwischen zwei Usern) ─────────────────────────────────────────────────────
+// Löst sich sofort bei Annahme auf (kein separates "Wird gespielt" nötig —
+// die Kampf-Engine ist deterministisch/serverseitig, keine Live-Eingabe).
+
+model BattleChallenge {
+  id           String    @id @default(cuid())
+  challengerId String
+  opponentId   String
+  status       String    @default("pending") // pending | declined | resolved | expired
+  battleId     String? // gesetzt sobald resolved, verweist auf Battle.id
+  winnerId     String?
+  createdAt    DateTime  @default(now())
+  respondedAt  DateTime?
+
+  challenger User @relation("BattleChallengeChallenger", fields: [challengerId], references: [id], onDelete: Cascade)
+  opponent   User @relation("BattleChallengeOpponent", fields: [opponentId], references: [id], onDelete: Cascade)
+
+  @@index([challengerId, opponentId, createdAt])
 }

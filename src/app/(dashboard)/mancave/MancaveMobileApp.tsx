@@ -1,21 +1,24 @@
 "use client";
 import { useState } from "react";
-import { BarChart3, Trophy, Gamepad2, Wrench, CalendarDays, Medal, Swords, Clock, MessageSquare } from "lucide-react";
+import { BarChart3, Trophy, Gamepad2, Wrench, Briefcase, CalendarDays, Medal, Swords, Clock, MessageSquare } from "lucide-react";
 import RankedAvatar from "@/components/RankedAvatar";
 import RankIcon from "@/components/RankIcon";
 import CoinIcon from "@/components/CoinIcon";
-import { ItemsPanel } from "./MancaveSharedUI";
+import { ItemsPanel, JobsPanel } from "./MancaveSharedUI";
 import type { MancaveData } from "./mancave-data";
 
 // User-Wunsch: "Statistik" + "Aktivität" sowie "Pokale" + "Spiele" auf
 // jeweils eine gemeinsame Seite zusammengelegt (mehr Inhalt pro Bildschirm
-// nach unten hin, statt vieler dünner Einzel-Tabs) — 3 statt 5 Reiter.
-type Tab = "stats" | "pokale" | "ausbau";
+// nach unten hin, statt vieler dünner Einzel-Tabs). "Jobs" (Lohn abholen +
+// die restlichen Job-Features) fehlte hier komplett — auf Desktop nur über
+// den Monitor-Dock erreichbar, auf Mobile bisher gar nicht.
+type Tab = "stats" | "pokale" | "ausbau" | "jobs";
 
 const TABS: { key: Tab; label: string; icon: typeof BarChart3 }[] = [
   { key: "stats",  label: "Statistik", icon: BarChart3 },
   { key: "pokale", label: "Pokale",    icon: Trophy },
   { key: "ausbau", label: "Ausbau",    icon: Wrench },
+  { key: "jobs",   label: "Jobs",      icon: Briefcase },
 ];
 
 /**
@@ -139,7 +142,7 @@ export default function MancaveMobileApp({ data }: { data: MancaveData }) {
         </div>
 
         {/* App-Grid */}
-        <div className="grid grid-cols-3 gap-1.5">
+        <div className="grid grid-cols-4 gap-1.5">
           {TABS.map(t => {
             const active = tab === t.key;
             const Icon = t.icon;
@@ -169,6 +172,7 @@ export default function MancaveMobileApp({ data }: { data: MancaveData }) {
             </div>
           )}
           {tab === "ausbau" && <ItemsPanel data={data} />}
+          {tab === "jobs" && <JobsPanel data={data} />}
         </div>
       </div>
     </div>

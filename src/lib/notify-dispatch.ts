@@ -44,6 +44,8 @@ const RULE_TYPE: Record<string, NotificationType> = {
   prediction_result:  "coins",
   duel_challenge:     "coins",
   duel_result:        "coins",
+  battle_challenge:   "coins",
+  battle_result:      "coins",
   badge_earned:       "badge",
   badge_awarded:      "badge",
   clip_started:       "clip",

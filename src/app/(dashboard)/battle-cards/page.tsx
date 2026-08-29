@@ -11,7 +11,7 @@
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Repeat, IdCard } from "lucide-react";
+import { Repeat, IdCard, Swords } from "lucide-react";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { hasStarterDeck } from "@/lib/battle-cards/starter-pick";
@@ -73,6 +73,7 @@ export default async function BattleCardsPage() {
     ...otherCardsFirstPage,
   ]);
   const unopenedPacks = await countUnopenedPacks(userId);
+  const pendingChallenges = await prisma.battleChallenge.count({ where: { opponentId: userId, status: "pending" } });
 
   const ownedCards = ownedUserCards.map((uc) => ({
     id: uc.id,
@@ -99,6 +100,17 @@ export default async function BattleCardsPage() {
               <IdCard className="w-3.5 h-3.5" /> Meine Community-Karte
             </Link>
           )}
+          <Link
+            href="/battle-cards/challenges"
+            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-md bg-rose-500/15 text-rose-300 hover:bg-rose-500/25 transition-colors shrink-0"
+          >
+            <Swords className="w-3.5 h-3.5" /> Herausforderungen
+            {pendingChallenges > 0 && (
+              <span className="flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold">
+                {pendingChallenges}
+              </span>
+            )}
+          </Link>
           <Link
             href="/battle-cards/lineup"
             className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-md bg-violet-500/15 text-violet-300 hover:bg-violet-500/25 transition-colors shrink-0"
