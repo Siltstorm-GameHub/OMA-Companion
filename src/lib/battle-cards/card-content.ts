@@ -17,6 +17,10 @@ export class CardContentError extends Error {}
 export interface CardContentPatch {
   title?: string;
   flavorText?: string;
+  /** Individuelles Avatar-Bild (z.B. per SD generiert, siehe /admin/battle-cards/cards).
+   *  Ein String setzt einen fixen Override, `null` löscht ihn wieder — die Karte zeigt
+   *  dann wieder automatisch das live aufgelöste Discord-Profilbild (resolve-image.ts). */
+  imageUrl?: string | null;
 }
 
 export async function updateCardContent(cardId: string, patch: CardContentPatch): Promise<void> {
@@ -34,7 +38,7 @@ export async function updateCardContent(cardId: string, patch: CardContentPatch)
   }
 
   const overridden = new Set(card.overriddenFields);
-  const data: { title?: string; flavorText?: string; overriddenFields?: string[] } = {};
+  const data: { title?: string; flavorText?: string; imageUrl?: string | null; overriddenFields?: string[] } = {};
 
   if (patch.title !== undefined) {
     data.title = patch.title.trim();
@@ -43,6 +47,15 @@ export async function updateCardContent(cardId: string, patch: CardContentPatch)
   if (patch.flavorText !== undefined) {
     data.flavorText = patch.flavorText.trim();
     overridden.add("flavorText");
+  }
+  if (patch.imageUrl !== undefined) {
+    if (patch.imageUrl === null) {
+      data.imageUrl = null;
+      overridden.delete("imageUrl");
+    } else {
+      data.imageUrl = patch.imageUrl;
+      overridden.add("imageUrl");
+    }
   }
   data.overriddenFields = Array.from(overridden);
 

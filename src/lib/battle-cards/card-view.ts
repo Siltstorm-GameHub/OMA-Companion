@@ -43,6 +43,16 @@ export async function resolveAvatarsForCards(cards: Card[]): Promise<Map<string,
 }
 
 export function toCardData(card: Card, avatarByDiscordId?: Map<string, string | null>): BattleCardData & { id: string } {
+  // Zeigt die Karte ein individuelles (überschriebenes) Avatar-Bild statt des
+  // live aufgelösten Discord-Profilbilds, bekommt sie zusätzlich das echte
+  // Profilbild als kleines Badge mit — das Mitglied bleibt so auf der Karte
+  // erkennbar, auch wenn das Hauptbild ein eigens generiertes Artwork ist.
+  const hasCustomImage = card.rarity === "COMMUNITY" && card.overriddenFields.includes("imageUrl");
+  const liveAvatar =
+    hasCustomImage && card.linkedDiscordId && avatarByDiscordId
+      ? avatarByDiscordId.get(card.linkedDiscordId)
+      : null;
+
   return {
     id: card.id,
     name: card.name,
@@ -56,6 +66,7 @@ export function toCardData(card: Card, avatarByDiscordId?: Map<string, string | 
     speed: card.speed,
     activityTier: card.activityTier,
     imageUrl: avatarByDiscordId ? resolveCardImageUrl(card, avatarByDiscordId) : card.imageUrl,
+    avatarBadgeUrl: liveAvatar ?? null,
     passivePositive: parsePassiveSkill(card.passivePositive, `${card.name}.passivePositive`),
     passiveNegative: parsePassiveSkill(card.passiveNegative, `${card.name}.passiveNegative`),
     activeSkill: parseActiveSkill(card.activeSkill, `${card.name}.activeSkill`),

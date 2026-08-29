@@ -11,6 +11,7 @@ import {
 const patchSchema = z.object({
   title: z.string().max(CARD_TITLE_MAX_LENGTH).optional(),
   flavorText: z.string().max(CARD_FLAVOR_TEXT_MAX_LENGTH).optional(),
+  imageUrl: z.string().url().nullable().optional(),
 });
 
 export async function PATCH(req: NextRequest, ctx: RouteContext<"/api/admin/battle-cards/cards/[cardId]">) {

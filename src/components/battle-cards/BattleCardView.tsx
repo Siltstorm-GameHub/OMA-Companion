@@ -37,6 +37,9 @@ export interface BattleCardData {
   ultimateSkill: BattleCardSkill;
   level?: number;
   imageUrl?: string | null;
+  /** Echtes Discord-Profilbild als kleines Badge — nur gesetzt, wenn imageUrl ein
+   *  individuelles Artwork ist (siehe card-view.ts toCardData). */
+  avatarBadgeUrl?: string | null;
 }
 
 const CLASS_CONFIG: Record<BattleCardData["class"], { label: string; color: string; icon: LucideIcon }> = {
@@ -179,6 +182,16 @@ export default function BattleCardView({ card, dimmed = false }: { card: BattleC
               <img src={card.imageUrl} alt={card.name} className="w-full h-full object-contain" />
             ) : (
               <ClassIcon className="w-12 h-12" style={{ color: classConfig.color, opacity: 0.5 }} />
+            )}
+            {card.avatarBadgeUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={card.avatarBadgeUrl}
+                alt=""
+                title="Echtes Profilbild"
+                className="absolute bottom-1 right-1 w-6 h-6 rounded-full object-cover"
+                style={{ border: "1.5px solid rgba(255,255,255,0.8)", boxShadow: "0 1px 4px rgba(0,0,0,0.6)" }}
+              />
             )}
           </div>
 
