@@ -809,7 +809,7 @@ export default async function DashboardPage() {
             className="surface animate-slide-up stagger-2 scan-on-load group block overflow-hidden relative transition-transform duration-200 hover:-translate-y-1 active:scale-[0.99]"
             style={{ borderRadius: "6px", border: "1px solid rgba(139,92,246,0.16)", boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
             <div className="relative overflow-hidden" style={{ height: "108px" }}>
-              <Image src="/battle-cards/cover.jpg" alt="" fill sizes="(min-width: 1024px) 320px, 45vw"
+              <Image src="/battle-cards/cover.jpg" alt="" fill sizes="(min-width: 640px) 50vw, 100vw" quality={90}
                 className="object-cover transition-transform duration-700 group-hover:scale-110"
                 style={{ objectPosition: "center 8%" }} />
             </div>
