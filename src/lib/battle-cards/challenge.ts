@@ -11,7 +11,7 @@ import { cardToBattleUnitDefinition } from "@/lib/battle-engine/adapters";
 import { runBattle } from "@/lib/battle-engine/engine";
 import { serializeBattleLog } from "@/lib/battle-cards/battle-log";
 import { resolveAvatarsForCards } from "@/lib/battle-cards/card-view";
-import { resolveCardImageUrl } from "@/lib/battle-cards/resolve-image";
+import { resolveCardImageUrl, resolveAvatarBadgeUrl } from "@/lib/battle-cards/resolve-image";
 import type { BattleChallenge } from "@prisma/client";
 
 export class ChallengeError extends Error {}
@@ -23,7 +23,12 @@ async function getLineupUnits(userId: string) {
   });
   const avatarByDiscordId = await resolveAvatarsForCards(userCards.map((uc) => uc.card));
   return userCards.map((uc) =>
-    cardToBattleUnitDefinition(uc.card, uc.level, resolveCardImageUrl(uc.card, avatarByDiscordId))
+    cardToBattleUnitDefinition(
+      uc.card,
+      uc.level,
+      resolveCardImageUrl(uc.card, avatarByDiscordId),
+      resolveAvatarBadgeUrl(uc.card, avatarByDiscordId)
+    )
   );
 }
 

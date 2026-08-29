@@ -20,7 +20,8 @@ const NORMAL_ATTACK_TARGET_RULE_MAP: Record<NormalAttackTargetRule, SingleEnemyS
 export function cardToBattleUnitDefinition(
   card: Card,
   level: number,
-  imageUrl?: string | null
+  imageUrl?: string | null,
+  avatarBadgeUrl?: string | null
 ): BattleUnitDefinition {
   return {
     cardId: card.id,
@@ -39,5 +40,6 @@ export function cardToBattleUnitDefinition(
     activeSkill: parseActiveSkill(card.activeSkill, `${card.name}.activeSkill`),
     ultimateSkill: parseActiveSkill(card.ultimateSkill, `${card.name}.ultimateSkill`),
     imageUrl: imageUrl !== undefined ? imageUrl : card.imageUrl,
+    avatarBadgeUrl: avatarBadgeUrl ?? null,
   };
 }

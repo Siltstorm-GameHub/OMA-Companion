@@ -124,6 +124,9 @@ export interface BattleUnitDefinition {
   normalAttackTarget?: SingleEnemySelector;
   /** Für den Kampf-Screen (siehe BattleScreen.tsx) — bei Community-Karten das live aufgelöste Profilbild. */
   imageUrl?: string | null;
+  /** Echtes Discord-Profilbild als kleines Badge — nur gesetzt, wenn imageUrl ein
+   *  individuelles Artwork statt des Profilbilds selbst ist (siehe resolve-image.ts). */
+  avatarBadgeUrl?: string | null;
 }
 
 export interface ActiveStatModifier {
@@ -234,6 +237,7 @@ export interface RosterEntry {
   ultimateSkillName: string;
   ultimateSkillDescription: string;
   imageUrl?: string | null;
+  avatarBadgeUrl?: string | null;
 }
 
 export interface BattleResult {

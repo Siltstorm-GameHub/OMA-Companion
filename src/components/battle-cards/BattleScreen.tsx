@@ -350,6 +350,16 @@ function UnitTile({
           </div>
         )}
         <AnimatePresence>{vfx && <SkillEffectOverlay vfx={vfx} />}</AnimatePresence>
+        {roster.avatarBadgeUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={roster.avatarBadgeUrl}
+            alt=""
+            title="Echtes Profilbild"
+            className="absolute bottom-0 right-0 w-5 h-5 rounded-full object-cover"
+            style={{ border: "1.5px solid rgba(255,255,255,0.85)", boxShadow: "0 1px 4px rgba(0,0,0,0.6)" }}
+          />
+        )}
       </div>
 
       <div className="flex items-center justify-center gap-1 mb-0.5">

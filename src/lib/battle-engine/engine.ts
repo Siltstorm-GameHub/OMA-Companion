@@ -226,6 +226,7 @@ export function runBattle(
     ultimateSkillName: u.def.ultimateSkill.name,
     ultimateSkillDescription: u.def.ultimateSkill.description,
     imageUrl: u.def.imageUrl,
+    avatarBadgeUrl: u.def.avatarBadgeUrl,
   }));
 
   return { winner, rounds: round, seed, log, roster };

@@ -14,7 +14,7 @@ import { InvalidSkillDataError } from "@/lib/battle-engine/skill-schema";
 import type { BattleResult as EngineBattleResult } from "@/lib/battle-engine/types";
 import { serializeBattleLog } from "@/lib/battle-cards/battle-log";
 import { resolveAvatarsForCards } from "@/lib/battle-cards/card-view";
-import { resolveCardImageUrl } from "@/lib/battle-cards/resolve-image";
+import { resolveCardImageUrl, resolveAvatarBadgeUrl } from "@/lib/battle-cards/resolve-image";
 import { prisma } from "@/lib/prisma";
 import type { BattleResult as DbBattleResult } from "@prisma/client";
 
@@ -87,12 +87,18 @@ export async function POST(request: Request) {
       return cardToBattleUnitDefinition(
         userCard.card,
         userCard.level,
-        resolveCardImageUrl(userCard.card, avatarByDiscordId)
+        resolveCardImageUrl(userCard.card, avatarByDiscordId),
+        resolveAvatarBadgeUrl(userCard.card, avatarByDiscordId)
       );
     });
     const teamB = opponentTeam.map((entry) => {
       const card = opponentCardById.get(entry.cardId)!;
-      return cardToBattleUnitDefinition(card, entry.level, resolveCardImageUrl(card, avatarByDiscordId));
+      return cardToBattleUnitDefinition(
+        card,
+        entry.level,
+        resolveCardImageUrl(card, avatarByDiscordId),
+        resolveAvatarBadgeUrl(card, avatarByDiscordId)
+      );
     });
 
     const result = runBattle(teamA, teamB, { seed });

@@ -5,7 +5,7 @@
 import type { Card, CardClass } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { parseActiveSkill, parsePassiveSkill } from "@/lib/battle-engine/skill-schema";
-import { resolveCardImageUrl } from "./resolve-image";
+import { resolveCardImageUrl, resolveAvatarBadgeUrl } from "./resolve-image";
 import type { BattleCardData } from "@/components/battle-cards/BattleCardView";
 
 const ACTIVITY_TIER_RANK: Record<string, number> = {
@@ -43,16 +43,6 @@ export async function resolveAvatarsForCards(cards: Card[]): Promise<Map<string,
 }
 
 export function toCardData(card: Card, avatarByDiscordId?: Map<string, string | null>): BattleCardData & { id: string } {
-  // Zeigt die Karte ein individuelles (überschriebenes) Avatar-Bild statt des
-  // live aufgelösten Discord-Profilbilds, bekommt sie zusätzlich das echte
-  // Profilbild als kleines Badge mit — das Mitglied bleibt so auf der Karte
-  // erkennbar, auch wenn das Hauptbild ein eigens generiertes Artwork ist.
-  const hasCustomImage = card.rarity === "COMMUNITY" && card.overriddenFields.includes("imageUrl");
-  const liveAvatar =
-    hasCustomImage && card.linkedDiscordId && avatarByDiscordId
-      ? avatarByDiscordId.get(card.linkedDiscordId)
-      : null;
-
   return {
     id: card.id,
     name: card.name,
@@ -66,7 +56,7 @@ export function toCardData(card: Card, avatarByDiscordId?: Map<string, string | 
     speed: card.speed,
     activityTier: card.activityTier,
     imageUrl: avatarByDiscordId ? resolveCardImageUrl(card, avatarByDiscordId) : card.imageUrl,
-    avatarBadgeUrl: liveAvatar ?? null,
+    avatarBadgeUrl: avatarByDiscordId ? resolveAvatarBadgeUrl(card, avatarByDiscordId) : null,
     passivePositive: parsePassiveSkill(card.passivePositive, `${card.name}.passivePositive`),
     passiveNegative: parsePassiveSkill(card.passiveNegative, `${card.name}.passiveNegative`),
     activeSkill: parseActiveSkill(card.activeSkill, `${card.name}.activeSkill`),
