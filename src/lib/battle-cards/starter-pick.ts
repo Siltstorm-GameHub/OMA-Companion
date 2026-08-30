@@ -4,9 +4,12 @@
 // Jeder Spieler wählt genau 5 Standard-Karten: mindestens 1 Tank, 1 Support,
 // 1 Damage Dealer darunter (die restlichen 2 Picks sind frei, auch
 // Zweitkopien einer schon gewählten Karte sind erlaubt). Nur einmalig
-// möglich — sobald der Spieler irgendeine UserCard besitzt, ist das
-// Start-Pack nicht mehr verfügbar (ersetzt das bisherige automatische
-// "alle 6 Karten"-Starter-Deck aus lib/battle-cards/starter-deck.ts).
+// möglich — sobald der Spieler eine Standard-Karte (rarity STANDARD) besitzt,
+// ist das Start-Pack nicht mehr verfügbar (ersetzt das bisherige automatische
+// "alle 6 Karten"-Starter-Deck aus lib/battle-cards/starter-deck.ts). Eine
+// automatisch generierte Community-Karte (siehe lib/season/card-provisioning.ts)
+// zählt bewusst nicht mit, damit Mitglieder mit reiner Community-Karte das
+// Start-Pack trotzdem noch wählen können.
 
 import { prisma } from "@/lib/prisma";
 import type { CardClass } from "@prisma/client";
@@ -17,7 +20,10 @@ const REQUIRED_CLASSES: CardClass[] = ["TANK", "SUPPORT", "DAMAGE_DEALER"];
 export class StarterPickError extends Error {}
 
 export async function hasStarterDeck(userId: string): Promise<boolean> {
-  const count = await prisma.userCard.count({ where: { userId } });
+  // Zählt nur selbst gewählte Start-Pack-Karten (rarity STANDARD) — Mitglieder, die
+  // bereits eine automatisch generierte Community-Karte besitzen (siehe
+  // lib/season/card-provisioning.ts), sollen weiterhin das Start-Pack wählen können.
+  const count = await prisma.userCard.count({ where: { userId, card: { rarity: "STANDARD" } } });
   return count > 0;
 }
 
@@ -52,7 +58,7 @@ export async function grantStarterPick(userId: string, cardIds: string[]): Promi
 
   await prisma.$transaction(async (tx) => {
     // Re-check innerhalb der Transaktion gegen ein Race (zwei parallele Submits).
-    const raceCheck = await tx.userCard.count({ where: { userId } });
+    const raceCheck = await tx.userCard.count({ where: { userId, card: { rarity: "STANDARD" } } });
     if (raceCheck > 0) throw new StarterPickError("Das Start-Pack wurde bereits gewählt.");
 
     for (const [cardId, duplicates] of counts) {
