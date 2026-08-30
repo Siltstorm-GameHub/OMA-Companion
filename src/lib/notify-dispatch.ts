@@ -46,6 +46,7 @@ const RULE_TYPE: Record<string, NotificationType> = {
   duel_result:        "coins",
   battle_challenge:   "coins",
   battle_result:      "coins",
+  battle_card_tier_up: "badge",
   badge_earned:       "badge",
   badge_awarded:      "badge",
   clip_started:       "clip",

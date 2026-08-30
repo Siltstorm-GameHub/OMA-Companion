@@ -224,8 +224,6 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
   const [discordChannelId, setDiscordChannelId] = useState<string>(series.discordChannelId ?? "");
   const [recurrenceType, setRecurrenceType] = useState<"" | "weekly" | "biweekly" | "monthly">(series.recurrenceType ?? "");
   const [recurrenceMonthlyMode, setRecurrenceMonthlyMode] = useState<"dayOfMonth" | "weekdayOfMonth">(series.recurrenceMonthlyMode ?? "dayOfMonth");
-  const [propagateGame, setPropagateGame]     = useState(false);
-  const [propagateFormat, setPropagateFormat] = useState(false);
   const [hidden, setHidden]                   = useState<boolean>(series.hidden ?? false);
   const [hiddenBusy, setHiddenBusy]           = useState(false);
   const [registrationLocked, setRegistrationLocked] = useState<boolean>(series.registrationLocked ?? false);
@@ -272,8 +270,6 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
   // Poll config — read from pollsConfigJson (wizard/create), fall back to pollConfigJson (legacy edit)
   const [polls, setPolls] = useState<PollConfig[]>(() => parsePollConfigs(series.pollsConfigJson ?? series.pollConfigJson));
   const [expandedPoll, setExpandedPoll] = useState<number | null>(null);
-  const [propagatePolls, setPropagatePolls] = useState(false);
-  const [propagateStatFields, setPropagateStatFields] = useState(false);
 
   const sortedSeriesEvents = [...(series.events as SeriesEvent[])].sort((a, b) => {
     const aDone = a.status === "finished";
@@ -341,8 +337,6 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
         discordChannelId:     discordChannelId.trim() || null,
         recurrenceType:       recurrenceType || null,
         recurrenceMonthlyMode: recurrenceType === "monthly" ? recurrenceMonthlyMode : null,
-        propagateGame,
-        propagateFormat,
         genre:    genre.trim() || null,
         platform: platforms.length > 0 ? platforms.join(", ") : null,
         seriesStatConfig: JSON.stringify({
@@ -370,17 +364,11 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
         legacyStandings:     JSON.stringify(legacyRows),
         placementRewardsJson: JSON.stringify({ placements: placementRewards }),
         pollsConfigJson:      JSON.stringify(polls),
-        propagatePolls,
-        propagateStatFields,
       }),
     });
     setSaving(false);
     if (res.ok) {
-      toast.success("Reihe gespeichert");
-      setPropagateGame(false);
-      setPropagateFormat(false);
-      setPropagatePolls(false);
-      setPropagateStatFields(false);
+      toast.success("Reihe gespeichert – Änderungen wurden auf alle offenen Events der Reihe übertragen");
       router.refresh();
     } else {
       toast.error("Fehler beim Speichern");
@@ -543,12 +531,12 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
           />
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 max-w-full overflow-x-auto scrollbar-none">
           <button
             onClick={toggleHidden}
             disabled={hiddenBusy}
             title={hidden ? "Reihe einblenden (für alle sichtbar machen)" : "Reihe ausblenden (nur im Admin sichtbar)"}
-            className={`flex items-center gap-1.5 text-xs border rounded-lg px-3 py-1.5 transition-all disabled:opacity-50 ${
+            className={`flex items-center gap-1.5 text-xs border rounded-lg px-3 py-1.5 transition-all disabled:opacity-50 whitespace-nowrap shrink-0 ${
               hidden
                 ? "text-amber-400 border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20"
                 : "text-gray-500 border-white/[0.08] hover:border-white/20 hover:text-gray-300"
@@ -561,7 +549,7 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
             onClick={toggleRegistrationLocked}
             disabled={registrationLockedBusy}
             title={registrationLocked ? "Selbst-Anmeldung für die Reihe wieder erlauben" : "Selbst-Anmeldung für die ganze Reihe deaktivieren (nur Admins tragen Teilnehmer ein)"}
-            className={`flex items-center gap-1.5 text-xs border rounded-lg px-3 py-1.5 transition-all disabled:opacity-50 ${
+            className={`flex items-center gap-1.5 text-xs border rounded-lg px-3 py-1.5 transition-all disabled:opacity-50 whitespace-nowrap shrink-0 ${
               registrationLocked
                 ? "text-amber-400 border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20"
                 : "text-gray-500 border-white/[0.08] hover:border-white/20 hover:text-gray-300"
@@ -574,7 +562,7 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
             <select value={squadId} disabled={squadIdBusy}
               onChange={e => saveSquadId(e.target.value)}
               title="Spieler-Anmeldung für die ganze Reihe auf ein Squad beschränken"
-              className={`text-xs rounded-lg px-2.5 py-1.5 border outline-none transition-all disabled:opacity-50 ${
+              className={`text-xs rounded-lg px-2.5 py-1.5 border outline-none transition-all disabled:opacity-50 shrink-0 ${
                 squadId ? "text-amber-400 border-amber-500/40 bg-amber-500/10" : "text-gray-500 border-white/[0.08] bg-transparent"
               }`}>
               <option value="">Für alle offen</option>
@@ -583,28 +571,28 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
           )}
           <Link
             href={`/events/series/${series.id}`}
-            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 border border-white/[0.08] hover:border-white/20 rounded-lg px-3 py-1.5 transition-all"
+            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 border border-white/[0.08] hover:border-white/20 rounded-lg px-3 py-1.5 transition-all whitespace-nowrap shrink-0"
           >
             <ExternalLink className="w-3.5 h-3.5" /> Öffentlich ansehen
           </Link>
           {series.status === "archived" ? (
             <Link
               href={`/admin/series/${series.id}/complete`}
-              className="flex items-center gap-1.5 text-xs text-violet-400 hover:text-violet-300 border border-violet-500/20 hover:border-violet-500/40 rounded-lg px-3 py-1.5 transition-all"
+              className="flex items-center gap-1.5 text-xs text-violet-400 hover:text-violet-300 border border-violet-500/20 hover:border-violet-500/40 rounded-lg px-3 py-1.5 transition-all whitespace-nowrap shrink-0"
             >
               <Vote className="w-3.5 h-3.5" /> Abschluss bearbeiten
             </Link>
           ) : (
             <Link
               href={`/admin/series/${series.id}/complete`}
-              className="flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 border border-amber-500/20 hover:border-amber-500/40 rounded-lg px-3 py-1.5 transition-all"
+              className="flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 border border-amber-500/20 hover:border-amber-500/40 rounded-lg px-3 py-1.5 transition-all whitespace-nowrap shrink-0"
             >
               <Archive className="w-3.5 h-3.5" /> Reihe abschließen
             </Link>
           )}
           <button
             onClick={saveSettings} disabled={saving}
-            className="flex items-center gap-1.5 text-xs bg-teal-700 hover:bg-teal-600 text-white rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 text-xs bg-teal-700 hover:bg-teal-600 text-white rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50 whitespace-nowrap shrink-0"
           >
             <Save className="w-3.5 h-3.5" />
             {saving ? "Speichert…" : "Speichern"}
@@ -684,7 +672,6 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
           <Section title="Spiel & Format">
             <Field label={<><Gamepad2 className="w-3 h-3" /> Festes Spiel</>}>
               <GameNameInput value={fixedGame} onChange={setFixedGame} placeholder="Leer = verschiedene Spiele" className={inputCls} />
-              <Checkbox checked={propagateGame} onChange={setPropagateGame} label="Auf bestehende Events übertragen" />
             </Field>
             <Field label={<><Swords className="w-3 h-3" /> Festes Turnierformat</>}>
               <select value={fixedFormat} onChange={e => setFixedFormat(e.target.value)} className={inputCls}>
@@ -697,7 +684,6 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
                 <option value="coop_stats">Kooperativ</option>
                 <option value="avg_stats">Durchschnittswerte</option>
               </select>
-              <Checkbox checked={propagateFormat} onChange={setPropagateFormat} label="Format, Belohnungen & Stat-Felder auf bestehende Events übertragen" />
             </Field>
             <Field label="Genre">
               <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
@@ -1001,11 +987,6 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
                   <Plus className="w-3 h-3" /> Umfrage hinzufügen
                 </button>
               )}
-              <Checkbox
-                checked={propagatePolls}
-                onChange={setPropagatePolls}
-                label="Umfragen auf alle kommenden Events übertragen (aktualisiert pollsConfigJson der Events)"
-              />
             </div>
           </Section>
           </>
@@ -1163,12 +1144,6 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
                   )}
                 </div>
               )}
-
-              <Checkbox
-                checked={propagateStatFields}
-                onChange={setPropagateStatFields}
-                label="Stat-Felder auf alle offenen Events übertragen (überschreibt individuell abweichende Event-Einstellungen)"
-              />
             </Section>
           )}
           </>

@@ -2,12 +2,13 @@
 
 // Wählt bis zu 5 der eigenen Karten als aktive Startaufstellung.
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Check, Loader2 } from "lucide-react";
+import { Check, Loader2, Sparkles } from "lucide-react";
 import type { BattleCardData } from "./BattleCardView";
 import BattleCardView from "./BattleCardView";
+import { computeSynergies } from "@/lib/battle-cards/synergy";
 
 const LINEUP_SIZE = 5;
 
@@ -27,6 +28,14 @@ export default function LineupEditor({
   const router = useRouter();
   const [selected, setSelected] = useState<string[]>(initialLineup);
   const [submitting, setSubmitting] = useState(false);
+
+  const cardById = useMemo(() => new Map(cards.map((c) => [c.cardId, c])), [cards]);
+  const activeSynergies = useMemo(() => {
+    const classes = selected
+      .map((id) => cardById.get(id)?.card.class)
+      .filter((c): c is BattleCardData["class"] => !!c);
+    return computeSynergies(classes);
+  }, [selected, cardById]);
 
   function toggle(cardId: string) {
     setSelected((prev) => {
@@ -94,6 +103,21 @@ export default function LineupEditor({
           );
         })}
       </div>
+
+      {activeSynergies.length > 0 && (
+        <div className="glass rounded-xl p-3 space-y-2">
+          <p className="text-[10px] uppercase tracking-widest font-semibold text-violet-300 flex items-center gap-1.5">
+            <Sparkles className="w-3 h-3" /> Aktive Team-Synergien
+          </p>
+          <div className="space-y-1.5">
+            {activeSynergies.map((s) => (
+              <p key={s.key} className="text-xs text-gray-400">
+                <span className="text-white font-semibold">{s.label}:</span> {s.description}
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
 
       <button
         type="button"

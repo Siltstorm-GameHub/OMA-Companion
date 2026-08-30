@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { respondToChallenge, ChallengeError } from "@/lib/battle-cards/challenge";
 import { dispatchNotification } from "@/lib/notify-dispatch";
+import { updateQuestProgress } from "@/lib/quests";
 
 export async function POST(req: NextRequest, ctx: RouteContext<"/api/battle-cards/challenges/[id]/respond">) {
   const session = await auth();
@@ -32,6 +33,9 @@ export async function POST(req: NextRequest, ctx: RouteContext<"/api/battle-card
         placeholders: { "{result}": `${opponentName} hat deine Herausforderung abgelehnt.` },
       }).catch(() => {});
     } else if (challenge.status === "resolved") {
+      updateQuestProgress(challenge.challengerId, "BATTLE_CARD_DUEL", 1).catch(() => {});
+      updateQuestProgress(challenge.opponentId, "BATTLE_CARD_DUEL", 1).catch(() => {});
+
       const url = challenge.battleId ? `/battle-cards/battles/${challenge.battleId}` : undefined;
       dispatchNotification("battle_result", {
         users: [challenge.challengerId],

@@ -1235,6 +1235,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
           tournament={bracketTournament}
           allUsers={bracketRegisteredUsers}
           winnerStatKeys={bracketWinnerStatKeys}
+          matchWinStatKeys={bracketMatchWinStatKeys}
         />
       )}
 

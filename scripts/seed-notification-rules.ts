@@ -127,6 +127,16 @@ const RULES: RuleSeed[] = [
     urlTemplate: "/events?tab=duels",
   },
   {
+    key: "battle_card_tier_up",
+    label: "Battle-Card-Stufenaufstieg",
+    description: "Wenn die Aktivitäts-Stufe der eigenen Community-Karte durch eine Saison-Neuberechnung steigt.",
+    category: "battle_cards",
+    pushEnabled: true, inAppEnabled: true, discordDmEnabled: false, discordChanEnabled: false,
+    titleTemplate: "🃏 Stufenaufstieg: {tier}",
+    bodyTemplate: "Deine Karte „{cardName}\" hat die Aktivitäts-Stufe **{tier}** erreicht!",
+    urlTemplate: "/battle-cards/my-card",
+  },
+  {
     key: "badge_earned",
     label: "System-Abzeichen freigeschaltet",
     description: "Wenn ein Nutzer automatisch ein System-Abzeichen erreicht.",
