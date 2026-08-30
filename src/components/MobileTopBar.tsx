@@ -1,11 +1,11 @@
 "use client";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { LogOut, Sun, Moon, Bell, Settings, X, ShieldAlert } from "lucide-react";
+import { LogOut, Sun, Moon, ShieldAlert } from "lucide-react";
 import PwaInstallButton from "@/components/PwaInstallButton";
 import RankedAvatar from "@/components/RankedAvatar";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 
 const ROUTE_TITLES: Record<string, string> = {
@@ -18,27 +18,6 @@ const ROUTE_TITLES: Record<string, string> = {
   "/profile":    "Mein Profil",
   "/points":     "Punktesystem",
   "/admin":      "Admin",
-};
-
-const NOTIF_ICONS: Record<string, string> = {
-  badge:        "🏅",
-  quest:        "⭐",
-  event_result: "✅",
-  event_start:  "⏰",
-  points:       "⭐",
-  coins:        "💰",
-  clip:         "🎬",
-  admin:        "📢",
-};
-
-type Notification = {
-  id: string;
-  type: string;
-  title: string;
-  body: string;
-  url?: string | null;
-  read: boolean;
-  createdAt: string;
 };
 
 function useTheme() {
@@ -63,20 +42,8 @@ function useTheme() {
   return { theme, toggle };
 }
 
-function timeAgo(dateStr: string) {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1)   return "Gerade eben";
-  if (mins < 60)  return `vor ${mins} Min`;
-  const h = Math.floor(mins / 60);
-  if (h < 24)     return `vor ${h} Std`;
-  const d = Math.floor(h / 24);
-  return `vor ${d} Tag${d !== 1 ? "en" : ""}`;
-}
-
 export default function MobileTopBar() {
   const pathname          = usePathname();
-  const router            = useRouter();
   const { data: session } = useSession();
   const myRankPoints      = (session?.user as { rankPoints?: number } | undefined)?.rankPoints ?? 0;
   const { theme, toggle } = useTheme();
@@ -85,25 +52,9 @@ export default function MobileTopBar() {
   const btnRef            = useRef<HTMLButtonElement>(null);
   const dropRef           = useRef<HTMLDivElement>(null);
 
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount]     = useState(0);
-
-  const fetchNotifications = useCallback(async () => {
-    try {
-      const res = await fetch("/api/notifications");
-      if (!res.ok) return;
-      const data = await res.json() as { notifications: Notification[]; unreadCount: number };
-      setNotifications(data.notifications);
-      setUnreadCount(data.unreadCount);
-    } catch { /* ignore */ }
-  }, []);
-
   useEffect(() => {
     setMounted(true);
-    fetchNotifications();
-    const id = setInterval(fetchNotifications, 30_000);
-    return () => clearInterval(id);
-  }, [fetchNotifications]);
+  }, []);
 
   // Schließen bei Außenklick
   useEffect(() => {
@@ -120,54 +71,6 @@ export default function MobileTopBar() {
 
   // Schließen bei Seitenwechsel
   useEffect(() => { setOpen(false); }, [pathname]);
-
-  async function markRead(id: string) {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-    setUnreadCount(prev => Math.max(0, prev - 1));
-    await fetch("/api/notifications/read", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    }).catch(() => {});
-  }
-
-  async function markAllRead() {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    setUnreadCount(0);
-    await fetch("/api/notifications/read", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ all: true }),
-    }).catch(() => {});
-  }
-
-  async function deleteNotification(id: string, e: React.MouseEvent) {
-    e.stopPropagation();
-    const wasUnread = notifications.find(n => n.id === id)?.read === false;
-    setNotifications(prev => prev.filter(n => n.id !== id));
-    if (wasUnread) setUnreadCount(prev => Math.max(0, prev - 1));
-    await fetch("/api/notifications/delete", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    }).catch(() => {});
-  }
-
-  async function deleteAll() {
-    setNotifications([]);
-    setUnreadCount(0);
-    await fetch("/api/notifications/delete", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ all: true }),
-    }).catch(() => {});
-  }
-
-  async function handleNotifClick(n: Notification) {
-    if (!n.read) await markRead(n.id);
-    setOpen(false);
-    if (n.url) router.push(n.url);
-  }
 
   const title = Object.entries(ROUTE_TITLES)
     .find(([p]) => pathname === p || pathname.startsWith(p + "/"))?.[1] ?? "OMA";
@@ -224,95 +127,8 @@ export default function MobileTopBar() {
       </div>
 
       {/* PWA Install (klein) */}
-      <div className="px-1 pt-1">
+      <div className="px-1 pt-1 pb-1">
         <PwaInstallButton />
-      </div>
-
-      {/* Benachrichtigungen */}
-      <div style={{ borderTop: "1px solid rgba(20,184,166,0.08)" }}>
-        <div className="flex items-center justify-between px-3 py-2">
-          <div className="flex items-center gap-1.5">
-            <Bell style={{ width: 12, height: 12, color: "rgba(20,184,166,0.7)" }} />
-            <span className="text-[11px] font-semibold text-gray-300">Benachrichtigungen</span>
-            {unreadCount > 0 && (
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                style={{ background: "rgba(20,184,166,0.2)", color: "#2dd4bf" }}>
-                {unreadCount}
-              </span>
-            )}
-          </div>
-          {notifications.length > 0 && (
-            <div className="flex items-center gap-2">
-              {unreadCount > 0 && (
-                <button onClick={markAllRead}
-                  className="text-[10px] text-gray-500 hover:text-teal-400 transition-colors">
-                  Alle lesen
-                </button>
-              )}
-              <button onClick={deleteAll}
-                className="text-[10px] text-gray-500 hover:text-red-400 transition-colors">
-                Alle löschen
-              </button>
-            </div>
-          )}
-        </div>
-
-        {notifications.length === 0 ? (
-          <div className="py-5 px-3 flex flex-col items-center gap-1.5">
-            <Bell style={{ width: 20, height: 20, color: "#374151" }} />
-            <p className="text-[11px] text-gray-600">Keine Benachrichtigungen</p>
-          </div>
-        ) : (
-          <div style={{ maxHeight: 240, overflowY: "auto" }}>
-            {notifications.slice(0, 5).map(n => (
-              <div
-                key={n.id}
-                className="group flex gap-2 items-start px-3 py-2 hover:bg-white/[0.03] transition-colors"
-                style={!n.read ? { background: "rgba(20,184,166,0.04)" } : undefined}
-              >
-                <button
-                  onClick={() => handleNotifClick(n)}
-                  className="flex gap-2 items-start flex-1 min-w-0 text-left"
-                >
-                  <span className="text-sm mt-0.5 shrink-0">{NOTIF_ICONS[n.type] ?? "🔔"}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[11px] font-semibold truncate"
-                      style={{ color: n.read ? "#9ca3af" : "#e2e8f0" }}>
-                      {n.title}
-                    </p>
-                    <p className="text-[10px] text-gray-500 truncate">{n.body}</p>
-                    <p className="text-[10px] mt-0.5" style={{ color: "rgba(20,184,166,0.5)" }}>
-                      {timeAgo(n.createdAt)}
-                    </p>
-                  </div>
-                </button>
-                <div className="flex items-center gap-1 mt-1 shrink-0">
-                  {!n.read && (
-                    <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#2dd4bf" }} />
-                  )}
-                  <button
-                    onClick={(e) => deleteNotification(n.id, e)}
-                    title="Löschen"
-                    className="opacity-0 group-hover:opacity-100 w-4 h-4 flex items-center justify-center rounded text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-all"
-                  >
-                    <X style={{ width: 10, height: 10 }} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div style={{ borderTop: "1px solid rgba(20,184,166,0.06)" }} className="p-1">
-          <Link
-            href="/profile?tab=notifications"
-            onClick={() => setOpen(false)}
-            className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[11px] text-gray-500 hover:text-teal-400 hover:bg-teal-500/8 transition-colors"
-          >
-            <Settings style={{ width: 11, height: 11 }} />
-            Einstellungen & alle anzeigen
-          </Link>
-        </div>
       </div>
     </div>,
     document.body
@@ -344,7 +160,7 @@ export default function MobileTopBar() {
           </Link>
         ) : null}
 
-        {/* Avatar Button mit Unread-Dot */}
+        {/* Avatar Button */}
         <button
           ref={btnRef}
           onClick={(e) => { e.stopPropagation(); setOpen(v => !v); }}
@@ -366,14 +182,6 @@ export default function MobileTopBar() {
             size={32}
             className={open ? "outline-2 outline-teal-500/50 outline-offset-2" : "outline-1 outline-teal-500/[0.22] outline-offset-1"}
           />
-          {unreadCount > 0 && (
-            <span
-              className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center"
-              style={{ background: "#ef4444", color: "#fff", zIndex: 201, lineHeight: 1 }}
-            >
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </span>
-          )}
         </button>
       </header>
 
