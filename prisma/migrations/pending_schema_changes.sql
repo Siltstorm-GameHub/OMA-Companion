@@ -246,3 +246,37 @@ DROP TABLE IF EXISTS "CollectibleCollection";
 -- ═══════════════════════════════════════════════════════════════
 
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "vitrineSlotsJson" TEXT;
+
+-- ═══════════════════════════════════════════════════════════════
+-- Battle-Cards-Matchmaking ("Zufallsgegner suchen")
+-- ═══════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS "BattleQueueEntry" (
+  "id"                 TEXT         NOT NULL PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  "userId"             TEXT         NOT NULL UNIQUE,
+  "createdAt"          TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "matchedChallengeId" TEXT,
+  CONSTRAINT "BattleQueueEntry_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE
+);
+
+-- Neue Notification-Regel für Battle-Card-Stufenaufstiege (entspricht dem Eintrag in
+-- scripts/seed-notification-rules.ts — hier als reines SQL-Äquivalent, falls das Skript
+-- nicht separat gegen Supabase ausgeführt wird). ON CONFLICT DO NOTHING = idempotent,
+-- lässt eine bereits existierende/manuell angepasste Zeile unangetastet.
+INSERT INTO "NotificationRule" (
+  "key", "label", "description", "category",
+  "pushEnabled", "inAppEnabled", "discordDmEnabled", "discordChanEnabled",
+  "titleTemplate", "bodyTemplate", "urlTemplate",
+  "updatedAt"
+) VALUES (
+  'battle_card_tier_up',
+  'Battle-Card-Stufenaufstieg',
+  'Wenn die Aktivitäts-Stufe der eigenen Community-Karte durch eine Saison-Neuberechnung steigt.',
+  'battle_cards',
+  true, true, false, false,
+  '🃏 Stufenaufstieg: {tier}',
+  'Deine Karte „{cardName}" hat die Aktivitäts-Stufe **{tier}** erreicht!',
+  '/battle-cards/my-card',
+  CURRENT_TIMESTAMP
+)
+ON CONFLICT ("key") DO NOTHING;
