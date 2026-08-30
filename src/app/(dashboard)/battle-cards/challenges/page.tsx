@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import ChallengesList from "@/components/battle-cards/ChallengesList";
+import ChallengeUserPicker from "@/components/battle-cards/ChallengeUserPicker";
 
 export const metadata = {
   title: "Herausforderungen | Battle Cards | OMA",
@@ -47,6 +48,7 @@ export default async function BattleChallengesPage() {
           Battle-Cards-Duelle werden sofort mit der aktuellen Startaufstellung beider Spieler aufgelöst.
         </p>
       </div>
+      <ChallengeUserPicker />
       <ChallengesList
         viewerId={userId}
         incoming={serialize(incoming)}
