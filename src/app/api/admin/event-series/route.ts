@@ -54,13 +54,15 @@ export async function GET(req: NextRequest) {
  *   description?: string | null,
  *   fixedGame?: string | null,
  *   fixedFormat?: string | null,
- *   propagateGame?: boolean,   // updateMany events.game
- *   propagateFormat?: boolean, // updateMany tournaments.format
  * }
+ * Änderungen an Spiel, Format, Stat-Feldern und Umfragen werden beim Speichern immer
+ * automatisch auf alle noch offenen Events der Reihe übertragen (nicht "finished"/"closed").
  */
+const OPEN_EVENT_STATUS_FILTER = { notIn: ["finished", "closed"] };
+
 export async function PATCH(req: NextRequest) {
   const body = await req.json();
-  const { seriesId, propagateGame, propagateFormat, propagatePolls, propagateStatFields, ...fields } = body;
+  const { seriesId, ...fields } = body;
   if (!seriesId) return NextResponse.json({ error: "seriesId fehlt" }, { status: 400 });
 
   const currentUser = await requireModeratorOrSeriesSquadCaptain(seriesId);
@@ -117,16 +119,16 @@ export async function PATCH(req: NextRequest) {
     }
   }
 
-  // 2) Optional: Spiel auf alle Events der Reihe übertragen
-  if (propagateGame && fields.fixedGame !== undefined) {
+  // 2) Spiel auf alle noch offenen Events der Reihe übertragen
+  if (fields.fixedGame !== undefined) {
     await prisma.event.updateMany({
-      where: { seriesId },
+      where: { seriesId, status: OPEN_EVENT_STATUS_FILTER },
       data:  { game: fields.fixedGame || null },
     });
   }
 
-  // 3) Optional: Turnier-Einstellungen auf alle Events übertragen (Format + Punkte)
-  if (propagateFormat && fields.fixedFormat) {
+  // 3) Turnier-Einstellungen auf alle noch offenen Events übertragen (Format + Punkte)
+  if (fields.fixedFormat) {
     // Convert placementRewardsJson → pointsConfig shape
     let pointsConfigJson: string | null = null;
     if (fields.fixedFormat !== "liga" && fields.placementRewardsJson) {
@@ -142,7 +144,7 @@ export async function PATCH(req: NextRequest) {
       } catch { /* skip */ }
     }
     await prisma.event.updateMany({
-      where: { seriesId },
+      where: { seriesId, status: OPEN_EVENT_STATUS_FILTER },
       data:  {
         format: fields.fixedFormat,
         ...(pointsConfigJson !== null && { pointsConfig: pointsConfigJson }),
@@ -150,11 +152,9 @@ export async function PATCH(req: NextRequest) {
     });
   }
 
-  // 3b) Optional: Getrackte Stats je Event (seriesStatConfig.eventStatFields / stats) auf alle
-  //     noch nicht abgeschlossenen Events der Reihe übertragen — abgeschlossene ("finished") Events bleiben unverändert.
-  //     Nur bei explizitem Opt-in, sonst würde jedes Speichern der Reihe (z.B. nur Name geändert) die
-  //     individuell pro Event gepflegten Stat-Felder überschreiben/zurücksetzen.
-  if (propagateStatFields && fields.seriesStatConfig !== undefined) {
+  // 3b) Getrackte Stats je Event (seriesStatConfig.eventStatFields / stats) auf alle noch offenen
+  //     Events der Reihe übertragen — abgeschlossene Events bleiben unverändert.
+  if (fields.seriesStatConfig !== undefined) {
     let statFieldsJson: string | null = null;
     if (fields.seriesStatConfig) {
       try {
@@ -171,7 +171,7 @@ export async function PATCH(req: NextRequest) {
       } catch { /* skip */ }
     }
     await prisma.event.updateMany({
-      where: { seriesId, status: { not: "finished" } },
+      where: { seriesId, status: OPEN_EVENT_STATUS_FILTER },
       data:  { statFields: statFieldsJson },
     });
   }
@@ -184,10 +184,10 @@ export async function PATCH(req: NextRequest) {
     });
   }
 
-  // 5) Umfragen auf alle kommenden Events übertragen (nur open/active Status)
-  if (propagatePolls && fields.pollsConfigJson !== undefined) {
+  // 5) Umfragen auf alle noch offenen Events übertragen
+  if (fields.pollsConfigJson !== undefined) {
     await prisma.event.updateMany({
-      where: { seriesId, status: { in: ["open", "active"] } },
+      where: { seriesId, status: OPEN_EVENT_STATUS_FILTER },
       data:  { pollsConfigJson: fields.pollsConfigJson },
     });
     // Echte EventPoll-Datensätze nachziehen — nur für Events, die noch keine haben, damit
@@ -195,7 +195,7 @@ export async function PATCH(req: NextRequest) {
     const pollsConfig = parsePollsConfigJson(fields.pollsConfigJson);
     if (pollsConfig.length > 0) {
       const eventsMissingPolls = await prisma.event.findMany({
-        where: { seriesId, status: { in: ["open", "active"] }, polls: { none: {} } },
+        where: { seriesId, status: OPEN_EVENT_STATUS_FILTER, polls: { none: {} } },
         select: { id: true, startAt: true },
       });
       for (const ev of eventsMissingPolls) {

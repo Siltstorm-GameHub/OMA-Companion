@@ -224,8 +224,6 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
   const [discordChannelId, setDiscordChannelId] = useState<string>(series.discordChannelId ?? "");
   const [recurrenceType, setRecurrenceType] = useState<"" | "weekly" | "biweekly" | "monthly">(series.recurrenceType ?? "");
   const [recurrenceMonthlyMode, setRecurrenceMonthlyMode] = useState<"dayOfMonth" | "weekdayOfMonth">(series.recurrenceMonthlyMode ?? "dayOfMonth");
-  const [propagateGame, setPropagateGame]     = useState(false);
-  const [propagateFormat, setPropagateFormat] = useState(false);
   const [hidden, setHidden]                   = useState<boolean>(series.hidden ?? false);
   const [hiddenBusy, setHiddenBusy]           = useState(false);
   const [registrationLocked, setRegistrationLocked] = useState<boolean>(series.registrationLocked ?? false);
@@ -272,8 +270,6 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
   // Poll config — read from pollsConfigJson (wizard/create), fall back to pollConfigJson (legacy edit)
   const [polls, setPolls] = useState<PollConfig[]>(() => parsePollConfigs(series.pollsConfigJson ?? series.pollConfigJson));
   const [expandedPoll, setExpandedPoll] = useState<number | null>(null);
-  const [propagatePolls, setPropagatePolls] = useState(false);
-  const [propagateStatFields, setPropagateStatFields] = useState(false);
 
   const sortedSeriesEvents = [...(series.events as SeriesEvent[])].sort((a, b) => {
     const aDone = a.status === "finished";
@@ -341,8 +337,6 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
         discordChannelId:     discordChannelId.trim() || null,
         recurrenceType:       recurrenceType || null,
         recurrenceMonthlyMode: recurrenceType === "monthly" ? recurrenceMonthlyMode : null,
-        propagateGame,
-        propagateFormat,
         genre:    genre.trim() || null,
         platform: platforms.length > 0 ? platforms.join(", ") : null,
         seriesStatConfig: JSON.stringify({
@@ -370,17 +364,11 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
         legacyStandings:     JSON.stringify(legacyRows),
         placementRewardsJson: JSON.stringify({ placements: placementRewards }),
         pollsConfigJson:      JSON.stringify(polls),
-        propagatePolls,
-        propagateStatFields,
       }),
     });
     setSaving(false);
     if (res.ok) {
-      toast.success("Reihe gespeichert");
-      setPropagateGame(false);
-      setPropagateFormat(false);
-      setPropagatePolls(false);
-      setPropagateStatFields(false);
+      toast.success("Reihe gespeichert – Änderungen wurden auf alle offenen Events der Reihe übertragen");
       router.refresh();
     } else {
       toast.error("Fehler beim Speichern");
@@ -684,7 +672,6 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
           <Section title="Spiel & Format">
             <Field label={<><Gamepad2 className="w-3 h-3" /> Festes Spiel</>}>
               <GameNameInput value={fixedGame} onChange={setFixedGame} placeholder="Leer = verschiedene Spiele" className={inputCls} />
-              <Checkbox checked={propagateGame} onChange={setPropagateGame} label="Auf bestehende Events übertragen" />
             </Field>
             <Field label={<><Swords className="w-3 h-3" /> Festes Turnierformat</>}>
               <select value={fixedFormat} onChange={e => setFixedFormat(e.target.value)} className={inputCls}>
@@ -697,7 +684,6 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
                 <option value="coop_stats">Kooperativ</option>
                 <option value="avg_stats">Durchschnittswerte</option>
               </select>
-              <Checkbox checked={propagateFormat} onChange={setPropagateFormat} label="Format, Belohnungen & Stat-Felder auf bestehende Events übertragen" />
             </Field>
             <Field label="Genre">
               <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
@@ -1001,11 +987,6 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
                   <Plus className="w-3 h-3" /> Umfrage hinzufügen
                 </button>
               )}
-              <Checkbox
-                checked={propagatePolls}
-                onChange={setPropagatePolls}
-                label="Umfragen auf alle kommenden Events übertragen (aktualisiert pollsConfigJson der Events)"
-              />
             </div>
           </Section>
           </>
@@ -1163,12 +1144,6 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
                   )}
                 </div>
               )}
-
-              <Checkbox
-                checked={propagateStatFields}
-                onChange={setPropagateStatFields}
-                label="Stat-Felder auf alle offenen Events übertragen (überschreibt individuell abweichende Event-Einstellungen)"
-              />
             </Section>
           )}
           </>

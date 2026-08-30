@@ -124,7 +124,7 @@ export default function AdminNav({ isCaptainOnly = false }: { isCaptainOnly?: bo
             ?? "/admin";
           return (
             <Link key={cat.key} href={href}
-              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-150 whitespace-nowrap flex-1 sm:flex-none justify-center sm:justify-start ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-150 whitespace-nowrap shrink-0 ${
                 isActive
                   ? "bg-purple-600/20 text-purple-300 shadow-[inset_0_0_0_1px_rgba(168,85,247,0.2)]"
                   : "text-gray-500 hover:text-gray-200 hover:bg-white/5"
