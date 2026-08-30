@@ -8,7 +8,7 @@ import { parseActiveSkill, parsePassiveSkill } from "@/lib/battle-engine/skill-s
 import { resolveCardImageUrl, resolveAvatarBadgeUrl } from "./resolve-image";
 import type { BattleCardData } from "@/components/battle-cards/BattleCardView";
 
-const ACTIVITY_TIER_RANK: Record<string, number> = {
+export const ACTIVITY_TIER_RANK: Record<string, number> = {
   OLD_MASTER: 5,
   LEGENDE: 4,
   GAMER: 3,

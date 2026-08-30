@@ -7,6 +7,16 @@ import { Prisma, CardClass } from "@prisma/client";
 import { prisma } from "../prisma";
 import { computeSeasonResults, MemberSeasonInput } from "./season-engine";
 import { getSkillTemplate } from "../battle-cards/skill-templates";
+import { ACTIVITY_TIER_RANK } from "../battle-cards/card-view";
+import { dispatchNotification } from "../notify-dispatch";
+
+const ACTIVITY_TIER_LABEL: Record<string, string> = {
+  GHOST: "Geist 💤",
+  NPC: "NPC 🎮",
+  GAMER: "Gamer 🎖",
+  LEGENDE: "Legende 🔥",
+  OLD_MASTER: "Old Master 👑",
+};
 
 function toJson<T>(value: T): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value));
@@ -57,8 +67,12 @@ export async function runSeasonUpdate(members: MemberSeasonInput[]) {
     if (!isOverridden(overridden, "class")) {
       updateData.class = result.cardClass;
     }
+    let tierUpgraded = false;
     if (!isOverridden(overridden, "activityTier")) {
       updateData.activityTier = result.activityTier;
+      const oldRank = ACTIVITY_TIER_RANK[card.activityTier ?? ""] ?? 0;
+      const newRank = ACTIVITY_TIER_RANK[result.activityTier] ?? 0;
+      tierUpgraded = newRank > oldRank;
     }
     if (!isOverridden(overridden, "baseHp")) {
       updateData.baseHp = Math.round(baseStats.hp * result.statMultiplier);
@@ -94,6 +108,17 @@ export async function runSeasonUpdate(members: MemberSeasonInput[]) {
       where: { id: card.id },
       data: updateData,
     });
+
+    if (tierUpgraded) {
+      dispatchNotification("battle_card_tier_up", {
+        users: [result.userId],
+        placeholders: {
+          "{cardName}": card.name,
+          "{tier}": ACTIVITY_TIER_LABEL[result.activityTier] ?? result.activityTier,
+        },
+        urlOverride: "/battle-cards/my-card",
+      }).catch(() => {});
+    }
   }
 
   return { updatedCount: results.length };

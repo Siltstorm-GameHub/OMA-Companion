@@ -7,7 +7,7 @@ import { sendDiscordDM } from "./discord-rest";
 export type QuestType =
   | "VOICE_MINUTES" | "MESSAGES" | "EVENT_ATTEND" | "TOURNAMENT"
   | "POLL_VOTE" | "DAILY_SPIN" | "DUEL_PLAYED" | "PREDICTION_MADE"
-  | "JOB_CLAIM";
+  | "JOB_CLAIM" | "BATTLE_CARD_DUEL";
 
 interface QuestTemplate {
   type: QuestType;
@@ -57,6 +57,13 @@ const TEMPLATES: QuestTemplate[] = [
     type: "DUEL_PLAYED",
     titles: ["Duellant", "Münzwurf-Zocker", "Risikofreudig", "Ehrensache"],
     descriptions: ["Spiele {target} Münzen-Duell(e)"],
+    targets: [3, 5, 8],
+    rewards: [150, 250, 400],
+  },
+  {
+    type: "BATTLE_CARD_DUEL",
+    titles: ["Kartenduellant", "Deck-Stratege", "Arena-Kämpfer", "Karten-Champion"],
+    descriptions: ["Spiele {target} Battle-Cards-Duell(e)"],
     targets: [3, 5, 8],
     rewards: [150, 250, 400],
   },
@@ -254,5 +261,9 @@ export const QUEST_TYPE_META: Record<
   JOB_CLAIM: {
     label: "Idle-Job",    unit: "Abholungen",  icon: "💼",
     color: "text-violet-300", bar: "from-violet-600 to-violet-400", bg: "from-violet-500/10",
+  },
+  BATTLE_CARD_DUEL: {
+    label: "Battle Cards", unit: "Duelle",     icon: "🃏",
+    color: "text-red-300",    bar: "from-red-600 to-red-400",       bg: "from-red-500/10",
   },
 };

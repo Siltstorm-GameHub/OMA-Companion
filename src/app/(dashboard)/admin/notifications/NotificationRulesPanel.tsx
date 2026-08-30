@@ -28,16 +28,17 @@ export type NotificationRuleRow = {
 interface DiscordEmoji { id: string; name: string; animated: boolean }
 
 const CATEGORY_LABELS: Record<string, string> = {
-  events:      "Events",
-  tournaments: "Turniere",
-  quests:      "Quests",
-  badges:      "Abzeichen",
-  clips:       "Clip des Monats",
-  rank:        "Rang",
-  system:      "System",
+  events:       "Events",
+  tournaments:  "Turniere",
+  quests:       "Quests",
+  badges:       "Abzeichen",
+  clips:        "Clip des Monats",
+  rank:         "Rang",
+  battle_cards: "Battle Cards",
+  system:       "System",
 };
 
-const CATEGORY_ORDER = ["events", "tournaments", "quests", "badges", "clips", "rank", "system"];
+const CATEGORY_ORDER = ["events", "tournaments", "quests", "badges", "clips", "rank", "battle_cards", "system"];
 
 // Welche Platzhalter pro Regel beim Versand ersetzt werden (siehe src/lib/notify-dispatch.ts Aufrufer)
 const PLACEHOLDERS: Record<string, { key: string; description: string }[]> = {

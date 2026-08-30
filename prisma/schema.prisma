@@ -99,6 +99,7 @@ model User {
   battleCardPacks          CardPack[]
   battleChallengesSent     BattleChallenge[]        @relation("BattleChallengeChallenger")
   battleChallengesReceived BattleChallenge[]        @relation("BattleChallengeOpponent")
+  battleQueueEntry         BattleQueueEntry?
 }
 
 // ── Pokale ───────────────────────────────────────────────────────────────────
@@ -1357,4 +1358,19 @@ model BattleChallenge {
   opponent   User @relation("BattleChallengeOpponent", fields: [opponentId], references: [id], onDelete: Cascade)
 
   @@index([challengerId, opponentId, createdAt])
+}
+
+// ── Battle-Cards-Matchmaking ("Zufallsgegner suchen") ───────────────────────
+// Ein User legt sich per Warteschlangen-Eintrag rein; der nächste, der ebenfalls
+// beitritt, matched sich sofort gegen den ältesten wartenden Eintrag (Kampf wird
+// serverseitig sofort aufgelöst wie bei BattleChallenge). matchedChallengeId wird
+// auf dem Eintrag des zuerst Wartenden gesetzt, damit dessen Poll-Request das
+// Ergebnis findet — der Eintrag wird danach von diesem Poll konsumiert (gelöscht).
+model BattleQueueEntry {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  createdAt          DateTime @default(now())
+  matchedChallengeId String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
