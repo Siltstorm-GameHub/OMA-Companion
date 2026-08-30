@@ -50,7 +50,7 @@ export default async function BattleCardsPage() {
         <div>
           <h1 className="text-lg font-black text-white">Wähle dein Start-Pack</h1>
           <p className="text-xs text-gray-500 mt-0.5">
-            Zuerst je 1 Tank, 1 Support und 1 Damage Dealer — danach 2 weitere Karten nach Wahl.
+            In 4 Schritten: Tank, Damage Dealer, Support — danach 2 weitere Karten nach Wahl.
           </p>
         </div>
         <StarterPickFlow cards={standardCards.map((c) => toCardData(c))} />
