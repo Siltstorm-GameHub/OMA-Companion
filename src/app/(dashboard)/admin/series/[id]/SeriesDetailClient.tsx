@@ -531,12 +531,12 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
           />
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 max-w-full overflow-x-auto scrollbar-none">
           <button
             onClick={toggleHidden}
             disabled={hiddenBusy}
             title={hidden ? "Reihe einblenden (für alle sichtbar machen)" : "Reihe ausblenden (nur im Admin sichtbar)"}
-            className={`flex items-center gap-1.5 text-xs border rounded-lg px-3 py-1.5 transition-all disabled:opacity-50 ${
+            className={`flex items-center gap-1.5 text-xs border rounded-lg px-3 py-1.5 transition-all disabled:opacity-50 whitespace-nowrap shrink-0 ${
               hidden
                 ? "text-amber-400 border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20"
                 : "text-gray-500 border-white/[0.08] hover:border-white/20 hover:text-gray-300"
@@ -549,7 +549,7 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
             onClick={toggleRegistrationLocked}
             disabled={registrationLockedBusy}
             title={registrationLocked ? "Selbst-Anmeldung für die Reihe wieder erlauben" : "Selbst-Anmeldung für die ganze Reihe deaktivieren (nur Admins tragen Teilnehmer ein)"}
-            className={`flex items-center gap-1.5 text-xs border rounded-lg px-3 py-1.5 transition-all disabled:opacity-50 ${
+            className={`flex items-center gap-1.5 text-xs border rounded-lg px-3 py-1.5 transition-all disabled:opacity-50 whitespace-nowrap shrink-0 ${
               registrationLocked
                 ? "text-amber-400 border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20"
                 : "text-gray-500 border-white/[0.08] hover:border-white/20 hover:text-gray-300"
@@ -562,7 +562,7 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
             <select value={squadId} disabled={squadIdBusy}
               onChange={e => saveSquadId(e.target.value)}
               title="Spieler-Anmeldung für die ganze Reihe auf ein Squad beschränken"
-              className={`text-xs rounded-lg px-2.5 py-1.5 border outline-none transition-all disabled:opacity-50 ${
+              className={`text-xs rounded-lg px-2.5 py-1.5 border outline-none transition-all disabled:opacity-50 shrink-0 ${
                 squadId ? "text-amber-400 border-amber-500/40 bg-amber-500/10" : "text-gray-500 border-white/[0.08] bg-transparent"
               }`}>
               <option value="">Für alle offen</option>
@@ -571,28 +571,28 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
           )}
           <Link
             href={`/events/series/${series.id}`}
-            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 border border-white/[0.08] hover:border-white/20 rounded-lg px-3 py-1.5 transition-all"
+            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 border border-white/[0.08] hover:border-white/20 rounded-lg px-3 py-1.5 transition-all whitespace-nowrap shrink-0"
           >
             <ExternalLink className="w-3.5 h-3.5" /> Öffentlich ansehen
           </Link>
           {series.status === "archived" ? (
             <Link
               href={`/admin/series/${series.id}/complete`}
-              className="flex items-center gap-1.5 text-xs text-violet-400 hover:text-violet-300 border border-violet-500/20 hover:border-violet-500/40 rounded-lg px-3 py-1.5 transition-all"
+              className="flex items-center gap-1.5 text-xs text-violet-400 hover:text-violet-300 border border-violet-500/20 hover:border-violet-500/40 rounded-lg px-3 py-1.5 transition-all whitespace-nowrap shrink-0"
             >
               <Vote className="w-3.5 h-3.5" /> Abschluss bearbeiten
             </Link>
           ) : (
             <Link
               href={`/admin/series/${series.id}/complete`}
-              className="flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 border border-amber-500/20 hover:border-amber-500/40 rounded-lg px-3 py-1.5 transition-all"
+              className="flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 border border-amber-500/20 hover:border-amber-500/40 rounded-lg px-3 py-1.5 transition-all whitespace-nowrap shrink-0"
             >
               <Archive className="w-3.5 h-3.5" /> Reihe abschließen
             </Link>
           )}
           <button
             onClick={saveSettings} disabled={saving}
-            className="flex items-center gap-1.5 text-xs bg-teal-700 hover:bg-teal-600 text-white rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 text-xs bg-teal-700 hover:bg-teal-600 text-white rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50 whitespace-nowrap shrink-0"
           >
             <Save className="w-3.5 h-3.5" />
             {saving ? "Speichert…" : "Speichern"}
