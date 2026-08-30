@@ -1,13 +1,13 @@
 "use client";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import RankedAvatar from "@/components/RankedAvatar";
 import { useSession, signOut } from "next-auth/react";
-import { useState, useRef, useEffect, useCallback, useLayoutEffect, forwardRef } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, forwardRef } from "react";
 import {
   LayoutDashboard, CalendarDays, Trophy, ShoppingBag,
-  Heart, User, ShieldCheck, LogOut, ChevronDown, Sun, Moon, Bell, Settings, X, MessageCircleMore,
+  Heart, User, ShieldCheck, LogOut, ChevronDown, Sun, Moon, MessageCircleMore,
   type LucideIcon,
 } from "lucide-react";
 import { WHATSAPP_COMMUNITY_URL } from "@/lib/config";
@@ -21,22 +21,6 @@ const NAV = [
   { label: "Spendenpool",    href: "/donations",    icon: Heart           },
   { label: "Profil",         href: "/profile",      icon: User            },
 ];
-
-const NOTIF_ICONS: Record<string, string> = {
-  badge:        "🏅",
-  quest:        "⭐",
-  event_result: "✅",
-  event_start:  "⏰",
-  points:       "⭐",
-  coins:        "💰",
-  clip:         "🎬",
-  admin:        "📢",
-};
-
-type Notification = {
-  id: string; type: string; title: string; body: string;
-  url?: string | null; read: boolean; createdAt: string;
-};
 
 function useTheme() {
   const [theme, setTheme] = useState<"dark" | "light">(() => {
@@ -55,17 +39,6 @@ function useTheme() {
     } else { apply(); }
   }
   return { theme, toggle };
-}
-
-function timeAgo(dateStr: string) {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1)   return "Gerade eben";
-  if (mins < 60)  return `vor ${mins} Min`;
-  const h = Math.floor(mins / 60);
-  if (h < 24)     return `vor ${h} Std`;
-  const d = Math.floor(h / 24);
-  return `vor ${d} Tag${d !== 1 ? "en" : ""}`;
 }
 
 /*
@@ -130,12 +103,9 @@ const NavLink = forwardRef<HTMLAnchorElement, {
 /* ── FloatingPill ─────────────────────────────────────────────────────── */
 export default function FloatingPill() {
   const pathname          = usePathname();
-  const router            = useRouter();
   const { data: session } = useSession();
   const { theme, toggle } = useTheme();
   const [avatarOpen, setAvatarOpen]     = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount]   = useState(0);
   const [bump, setBump] = useState<{ left: number; top: number; width: number } | null>(null);
   const dropRef = useRef<HTMLDivElement>(null);
   const navRef        = useRef<HTMLDivElement>(null);
@@ -182,22 +152,6 @@ export default function FloatingPill() {
     return () => window.removeEventListener("resize", measure);
   }, [pathname, isStaff]);
 
-  const fetchNotifications = useCallback(async () => {
-    try {
-      const res = await fetch("/api/notifications");
-      if (!res.ok) return;
-      const data = await res.json() as { notifications: Notification[]; unreadCount: number };
-      setNotifications(data.notifications);
-      setUnreadCount(data.unreadCount);
-    } catch { /* ignore */ }
-  }, []);
-
-  useEffect(() => {
-    fetchNotifications();
-    const id = setInterval(fetchNotifications, 30_000);
-    return () => clearInterval(id);
-  }, [fetchNotifications]);
-
   useEffect(() => {
     function handle(e: MouseEvent) {
       if (dropRef.current && !dropRef.current.contains(e.target as Node)) {
@@ -207,52 +161,6 @@ export default function FloatingPill() {
     document.addEventListener("mousedown", handle);
     return () => document.removeEventListener("mousedown", handle);
   }, []);
-
-  async function markRead(id: string) {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-    setUnreadCount(prev => Math.max(0, prev - 1));
-    await fetch("/api/notifications/read", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    }).catch(() => {});
-  }
-
-  async function markAllRead() {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    setUnreadCount(0);
-    await fetch("/api/notifications/read", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ all: true }),
-    }).catch(() => {});
-  }
-
-  async function deleteNotification(id: string, e: React.MouseEvent) {
-    e.stopPropagation();
-    setNotifications(prev => prev.filter(n => n.id !== id));
-    setUnreadCount(prev => {
-      const wasUnread = notifications.find(n => n.id === id)?.read === false;
-      return wasUnread ? Math.max(0, prev - 1) : prev;
-    });
-    await fetch("/api/notifications/delete", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    }).catch(() => {});
-  }
-
-  async function deleteAll() {
-    setNotifications([]);
-    setUnreadCount(0);
-    await fetch("/api/notifications/delete", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ all: true }),
-    }).catch(() => {});
-  }
-
-  async function handleNotifClick(n: Notification) {
-    if (!n.read) await markRead(n.id);
-    setAvatarOpen(false);
-    if (n.url) router.push(n.url);
-  }
 
   return (
     <div className="hidden lg:flex" style={{
@@ -341,14 +249,6 @@ export default function FloatingPill() {
           }}>
             <RankedAvatar rankPoints={myRankPoints} src={session?.user?.image} alt={userName} size={26} rounded="lg" />
           </div>
-          {/* Unread dot */}
-          {unreadCount > 0 && (
-            <span style={{
-              position: "absolute", top: 1, right: 1, width: 8, height: 8,
-              borderRadius: "50%", background: "#ef4444",
-              boxShadow: "0 0 0 2px var(--nav-glass-bg)",
-            }} />
-          )}
           <ChevronDown style={{
             width: 12, height: 12, color: "var(--nav-icon-inactive)",
             transform: avatarOpen ? "rotate(180deg)" : "none", transition: "transform 200ms",
@@ -395,115 +295,19 @@ export default function FloatingPill() {
               </button>
             </div>
 
-            {/* Benachrichtigungen */}
-            <div>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
-                padding: "8px 12px 6px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <Bell style={{ width: 12, height: 12, color: "rgba(20,184,166,0.7)" }} />
-                  <span style={{ fontSize: 11, fontWeight: 600, color: "var(--nav-text-secondary)" }}>Benachrichtigungen</span>
-                  {unreadCount > 0 && (
-                    <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 999,
-                      background: "rgba(20,184,166,0.2)", color: "#2dd4bf" }}>
-                      {unreadCount}
-                    </span>
-                  )}
-                </div>
-                {notifications.length > 0 && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    {unreadCount > 0 && (
-                      <button onClick={markAllRead}
-                        style={{ fontSize: 10, color: "var(--nav-icon-inactive)", background: "none", border: "none", cursor: "pointer" }}
-                        className="hover:text-teal-400 transition-colors">
-                        Alle lesen
-                      </button>
-                    )}
-                    <button onClick={deleteAll}
-                      style={{ fontSize: 10, color: "var(--nav-icon-inactive)", background: "none", border: "none", cursor: "pointer" }}
-                      className="hover:text-red-400 transition-colors">
-                      Alle löschen
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {notifications.length === 0 ? (
-                <div style={{ padding: "12px 14px 14px", textAlign: "center" }}>
-                  <Bell style={{ width: 22, height: 22, color: "var(--nav-icon-inactive)", margin: "0 auto 6px" }} />
-                  <p style={{ fontSize: 12, color: "var(--nav-icon-inactive)", margin: 0 }}>Keine Benachrichtigungen</p>
-                </div>
-              ) : (
-                <div style={{ maxHeight: 260, overflowY: "auto" }}>
-                  {notifications.slice(0, 5).map(n => (
-                    <div key={n.id}
-                      style={{
-                        display: "flex", alignItems: "flex-start", gap: 10,
-                        padding: "8px 12px", background: !n.read ? "rgba(20,184,166,0.04)" : "none",
-                        transition: "background 100ms", position: "relative",
-                      }}
-                      className="group hover:bg-white/[0.03]">
-                      <button onClick={() => handleNotifClick(n)}
-                        style={{ display: "flex", alignItems: "flex-start", gap: 10, flex: 1,
-                          background: "none", border: "none", cursor: "pointer", textAlign: "left",
-                          minWidth: 0, padding: 0 }}>
-                        <span style={{ fontSize: 15, marginTop: 1, flexShrink: 0 }}>
-                          {NOTIF_ICONS[n.type] ?? "🔔"}
-                        </span>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ fontSize: 12, fontWeight: 600, margin: 0, overflow: "hidden",
-                            textOverflow: "ellipsis", whiteSpace: "nowrap",
-                            color: n.read ? "var(--nav-text-tertiary)" : "var(--nav-text-primary)" }}>
-                            {n.title}
-                          </p>
-                          <p style={{ fontSize: 11, color: "var(--nav-text-tertiary)", margin: "1px 0 0", overflow: "hidden",
-                            textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {n.body}
-                          </p>
-                          <p style={{ fontSize: 10, color: "rgba(20,184,166,0.5)", margin: "2px 0 0" }}>
-                            {timeAgo(n.createdAt)}
-                          </p>
-                        </div>
-                      </button>
-                      <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0, marginTop: 1 }}>
-                        {!n.read && (
-                          <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#2dd4bf" }} />
-                        )}
-                        <button onClick={(e) => deleteNotification(n.id, e)}
-                          title="Löschen"
-                          style={{ width: 18, height: 18, display: "flex", alignItems: "center",
-                            justifyContent: "center", borderRadius: 4, background: "none", border: "none",
-                            cursor: "pointer", color: "var(--nav-icon-inactive)", opacity: 0, transition: "opacity 150ms" }}
-                          className="group-hover:opacity-100 hover:!text-red-400 hover:!bg-red-500/10">
-                          <X style={{ width: 11, height: 11 }} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div style={{ borderTop: "1px solid var(--nav-divider)", padding: "4px 6px" }}>
-                <a
-                  href={WHATSAPP_COMMUNITY_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ display: "flex", alignItems: "center", gap: 5,
-                    padding: "7px 12px", borderRadius: 8, fontSize: 11, color: "#4ade80",
-                    textDecoration: "none" }}
-                  className="hover:bg-green-500/[0.08] transition-colors"
-                >
-                  <MessageCircleMore style={{ width: 11, height: 11 }} />
-                  WhatsApp Community beitreten
-                </a>
-                <Link href="/profile?tab=notifications" onClick={() => setAvatarOpen(false)}
-                  style={{ display: "flex", alignItems: "center", gap: 5,
-                    padding: "7px 12px", borderRadius: 8, fontSize: 11, color: "var(--nav-icon-inactive)",
-                    textDecoration: "none" }}
-                  className="hover:text-teal-400 hover:bg-teal-500/[0.06] transition-colors">
-                  <Settings style={{ width: 11, height: 11 }} />
-                  Einstellungen & alle anzeigen
-                </Link>
-              </div>
+            <div style={{ padding: "4px 6px" }}>
+              <a
+                href={WHATSAPP_COMMUNITY_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ display: "flex", alignItems: "center", gap: 5,
+                  padding: "7px 12px", borderRadius: 8, fontSize: 11, color: "#4ade80",
+                  textDecoration: "none" }}
+                className="hover:bg-green-500/[0.08] transition-colors"
+              >
+                <MessageCircleMore style={{ width: 11, height: 11 }} />
+                WhatsApp Community beitreten
+              </a>
             </div>
           </div>
         )}
