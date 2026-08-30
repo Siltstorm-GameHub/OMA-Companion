@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { hasStarterDeck } from "@/lib/battle-cards/starter-pick";
 import ChallengesList from "@/components/battle-cards/ChallengesList";
 import ChallengeUserPicker from "@/components/battle-cards/ChallengeUserPicker";
 
@@ -16,6 +17,10 @@ export default async function BattleChallengesPage() {
     redirect("/login?notice=login_required&callbackUrl=/battle-cards/challenges");
   }
   const userId = session.user.id;
+
+  if (!(await hasStarterDeck(userId))) {
+    redirect("/battle-cards");
+  }
 
   const [incoming, outgoing, history] = await Promise.all([
     prisma.battleChallenge.findMany({

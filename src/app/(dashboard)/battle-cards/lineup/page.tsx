@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { toCardData, resolveAvatarsForCards } from "@/lib/battle-cards/card-view";
+import { hasStarterDeck } from "@/lib/battle-cards/starter-pick";
 import LineupEditor from "@/components/battle-cards/LineupEditor";
 
 export const metadata = {
@@ -14,15 +15,15 @@ export default async function LineupPage() {
     redirect("/login?notice=login_required&callbackUrl=/battle-cards/lineup");
   }
 
+  if (!(await hasStarterDeck(session.user.id))) {
+    redirect("/battle-cards");
+  }
+
   const userCards = await prisma.userCard.findMany({
     where: { userId: session.user.id },
     include: { card: true },
     orderBy: { acquiredAt: "asc" },
   });
-
-  if (userCards.length === 0) {
-    redirect("/battle-cards");
-  }
 
   const avatarByDiscordId = await resolveAvatarsForCards(userCards.map((uc) => uc.card));
 
