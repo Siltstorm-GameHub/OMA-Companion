@@ -4,16 +4,19 @@
 // NPC-Kampf — 3 Schwierigkeitsstufen, für alle User
 // ============================================
 // Startet einen interaktiven LiveBattle gegen 5 zufällige Standard-Karten,
-// hochskaliert je nach Stufe (Einfach/Mittel/Schwer). Aktuell unbegrenzt oft
-// spielbar, keine Belohnung. Der Spieler steuert jeden eigenen Zug selbst
-// (oder aktiviert Auto-Kampf) — siehe LiveBattleView.
+// hochskaliert je nach Stufe (Einfach/Mittel/Schwer). Bei Sieg gibt es Münzen
+// (siehe NPC_BATTLE_WIN_REWARD), max. NPC_BATTLE_DAILY_LIMIT Starts pro Tag
+// (über alle Stufen summiert), damit das nicht gefarmt werden kann. Der
+// Spieler steuert jeden eigenen Zug selbst (oder aktiviert Auto-Kampf) —
+// siehe LiveBattleView.
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Bot, Loader2 } from "lucide-react";
 import LiveBattleView from "./LiveBattleView";
 import MatchupBadge from "./MatchupBadge";
-import type { NpcDifficulty } from "@/lib/battle-cards/npc-battle-types";
+import CoinIcon from "@/components/CoinIcon";
+import { NPC_BATTLE_DAILY_LIMIT, NPC_BATTLE_WIN_REWARD, type NpcDifficulty } from "@/lib/battle-cards/npc-battle-types";
 import type { MatchupStrength } from "@/lib/battle-cards/matchup-strength";
 
 const DIFFICULTY_CONFIG: Record<NpcDifficulty, { label: string; color: string }> = {
@@ -87,11 +90,16 @@ export default function NpcBattleLauncher() {
                 <span className="text-xs font-semibold">{config.label}</span>
               )}
               <MatchupBadge strength={matchup[difficulty]} />
+              <span className="flex items-center gap-0.5 text-[10px] font-bold text-amber-300">
+                <CoinIcon size={10} /> {NPC_BATTLE_WIN_REWARD[difficulty]}
+              </span>
             </button>
           );
         })}
       </div>
-      <p className="text-[10px] text-gray-600">Unbegrenzt spielbar, aktuell ohne Belohnung. Du steuerst jeden Zug selbst.</p>
+      <p className="text-[10px] text-gray-600">
+        Max. {NPC_BATTLE_DAILY_LIMIT}x täglich · Münzen bei Sieg · Du steuerst jeden Zug selbst.
+      </p>
       {error && <p className="text-xs text-rose-400">{error}</p>}
     </div>
   );

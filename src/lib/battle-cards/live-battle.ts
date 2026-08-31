@@ -34,7 +34,12 @@ import { buildBattleTeam } from "@/lib/battle-cards/team-builder";
 import { resolveAvatarsForCards } from "@/lib/battle-cards/card-view";
 import { resolveCardImageUrl, resolveAvatarBadgeUrl } from "@/lib/battle-cards/resolve-image";
 import { applyWinStreak } from "@/lib/battle-cards/win-streak";
-import { DIFFICULTY_LEVEL, type NpcDifficulty } from "@/lib/battle-cards/npc-battle-types";
+import {
+  DIFFICULTY_LEVEL,
+  NPC_BATTLE_DAILY_LIMIT,
+  NPC_BATTLE_WIN_REWARD,
+  type NpcDifficulty,
+} from "@/lib/battle-cards/npc-battle-types";
 import type { LiveBattle } from "@prisma/client";
 import { dispatchNotification } from "@/lib/notify-dispatch";
 import { updateQuestProgress } from "@/lib/quests";
@@ -52,6 +57,24 @@ const PVP_AUTO_PACE_STEPS = 1;
 
 function advanceOptionsFor(playerBId: string | null): { maxAutoActions?: number } {
   return playerBId ? { maxAutoActions: PVP_AUTO_PACE_STEPS } : {};
+}
+
+function startOfTodayUTC(): Date {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+}
+
+/** Zählt heute (UTC) gestartete NPC-Kämpfe dieses Users, über alle Schwierigkeiten —
+ *  Grundlage für NPC_BATTLE_DAILY_LIMIT, damit die Münz-Belohnung nicht gefarmt werden kann. */
+async function countNpcBattlesStartedToday(userId: string): Promise<number> {
+  return prisma.liveBattle.count({
+    where: {
+      playerAId: userId,
+      playerBId: null,
+      mode: { startsWith: "PVE_" },
+      createdAt: { gte: startOfTodayUTC() },
+    },
+  });
 }
 
 function sampleWithoutReplacement<T>(items: T[], count: number): T[] {
@@ -211,6 +234,15 @@ async function finalizeLiveBattle(live: LiveBattle, state: InteractiveBattleStat
       }
       await notifyPvpBattleResolved(live.playerAId, live.playerBId, winnerId, battle.id);
     }
+  } else if (state.winner === "A" && live.mode.startsWith("PVE_")) {
+    const difficulty = live.mode.slice("PVE_".length) as NpcDifficulty;
+    const reward = NPC_BATTLE_WIN_REWARD[difficulty];
+    if (reward) {
+      await prisma.user.update({ where: { id: live.playerAId }, data: { points: { increment: reward } } });
+      await prisma.pointTransaction.create({
+        data: { userId: live.playerAId, amount: reward, reason: `NPC-Kampf gewonnen (${difficulty})` },
+      });
+    }
   }
 
   return battle;
@@ -305,6 +337,13 @@ async function createLiveBattle(
 }
 
 export async function startLivePveBattle(userId: string, difficulty: NpcDifficulty): Promise<LiveBattleSnapshot> {
+  const startedToday = await countNpcBattlesStartedToday(userId);
+  if (startedToday >= NPC_BATTLE_DAILY_LIMIT) {
+    throw new LiveBattleError(
+      `Heutiges Limit erreicht (max. ${NPC_BATTLE_DAILY_LIMIT} NPC-Kämpfe pro Tag). Versuch es morgen wieder.`
+    );
+  }
+
   const userCards = await prisma.userCard.findMany({
     where: { userId },
     include: { card: true },

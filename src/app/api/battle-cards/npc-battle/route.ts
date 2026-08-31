@@ -27,7 +27,8 @@ export async function POST(req: Request) {
     return Response.json(snapshot);
   } catch (error) {
     if (error instanceof LiveBattleError) {
-      return Response.json({ error: error.message, needsStarterPick: true }, { status: 400 });
+      const needsStarterPick = error.message.includes("Start-Pack");
+      return Response.json({ error: error.message, needsStarterPick }, { status: 400 });
     }
     throw error;
   }
