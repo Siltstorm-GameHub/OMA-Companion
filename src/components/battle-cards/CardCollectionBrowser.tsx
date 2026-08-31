@@ -12,7 +12,7 @@
 // Duplikat-Zähler direkt auf der Kachel, volle Karte samt Upgrade öffnet
 // sich erst im Detail-Modal beim Antippen.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2, Shield, Swords, HeartPulse } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
@@ -44,6 +44,10 @@ export interface OwnedCardEntry {
 }
 
 const NEW_CARD_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
+/** Pro Browser gemerkt (nicht serverseitig) — das "Neu"-Ribbon verschwindet
+ *  sofort, sobald die eigene Karte einmal im Detail-Modal geöffnet wurde,
+ *  unabhängig vom 3-Tage-Fenster. */
+const VIEWED_CARDS_STORAGE_KEY = "battleCardsViewedCardIds";
 
 type Selected = { kind: "owned"; userCardId: string } | { kind: "other"; cardId: string } | null;
 
@@ -70,6 +74,41 @@ export default function CardCollectionBrowser({
   const [coins, setCoins] = useState(initialCoins);
   const [upgradeAnimation, setUpgradeAnimation] = useState<CardUpgradeAnimationState | null>(null);
   const [selected, setSelected] = useState<Selected>(null);
+  const [viewedIds, setViewedIds] = useState<Set<string>>(new Set());
+
+  // localStorage kann erst nach dem Mount gelesen werden (SSR hat keinen Zugriff) —
+  // das "Neu"-Ribbon blitzt für bereits gesehene Karten also kurz auf, bevor dieser
+  // Effekt läuft. Gleichzeitig auf die aktuell besessenen Karten prunen, damit der
+  // Eintrag nicht unbegrenzt wächst (alte/nicht mehr besessene IDs raus).
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(VIEWED_CARDS_STORAGE_KEY);
+      const storedIds: string[] = stored ? JSON.parse(stored) : [];
+      const ownedIds = new Set(ownedCards.map((oc) => oc.id));
+      const pruned = storedIds.filter((id) => ownedIds.has(id));
+      setViewedIds(new Set(pruned));
+      if (pruned.length !== storedIds.length) {
+        localStorage.setItem(VIEWED_CARDS_STORAGE_KEY, JSON.stringify(pruned));
+      }
+    } catch {
+      // localStorage kann in seltenen Fällen (privater Modus etc.) werfen — Ribbon bleibt dann einfach zeitbasiert
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function markCardViewed(userCardId: string) {
+    setViewedIds((prev) => {
+      if (prev.has(userCardId)) return prev;
+      const next = new Set(prev);
+      next.add(userCardId);
+      try {
+        localStorage.setItem(VIEWED_CARDS_STORAGE_KEY, JSON.stringify([...next]));
+      } catch {
+        // s.o.
+      }
+      return next;
+    });
+  }
 
   function handleUpgraded(userCardId: string, fromLevel: number, newLevel: number, newCoins: number) {
     setOwnedCards((prev) =>
@@ -180,8 +219,11 @@ export default function CardCollectionBrowser({
               card={oc.card}
               level={oc.level}
               duplicates={oc.duplicates}
-              isNew={Date.now() - new Date(oc.acquiredAt).getTime() < NEW_CARD_WINDOW_MS}
-              onClick={() => setSelected({ kind: "owned", userCardId: oc.id })}
+              isNew={Date.now() - new Date(oc.acquiredAt).getTime() < NEW_CARD_WINDOW_MS && !viewedIds.has(oc.id)}
+              onClick={() => {
+                setSelected({ kind: "owned", userCardId: oc.id });
+                markCardViewed(oc.id);
+              }}
             />
           ))}
         </div>
