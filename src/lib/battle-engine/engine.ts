@@ -69,6 +69,21 @@ export function grantRage(
   }
 }
 
+/** Synthetischer Effekt eines Normalangriffs — kein echter Skill, sondern
+ *  fest verdrahtet (0 Bonus-Wert, Standard-Zielregel/Sonderregel der Karte).
+ *  Exportiert, damit decision.ts denselben Effekt für die Schadens-Vorschau
+ *  nutzen kann (siehe estimateActionEffect), statt ihn zu duplizieren. */
+export function normalAttackEffects(unit: BattleUnitState): Effect[] {
+  return [
+    {
+      type: "damage",
+      target: { kind: "singleEnemy", select: unit.def.normalAttackTarget ?? "lowestDefense" },
+      valuePerLevel: [0, 0, 0, 0, 0],
+      canCrit: true,
+    },
+  ];
+}
+
 /** `forcedTargetId`: interaktive Kämpfe — vom Spieler gewähltes Ziel für den
  *  ersten singleEnemy/singleAlly-Effekt der ausgeführten Aktion (siehe
  *  interactive.ts). Bei KI-gesteuerten Einheiten/Auto-Kampf bleibt es
@@ -89,14 +104,7 @@ export function performAction(
 
   if (actionType === "normalAttack") {
     skillName = "Normalangriff";
-    effects = [
-      {
-        type: "damage",
-        target: { kind: "singleEnemy", select: unit.def.normalAttackTarget ?? "lowestDefense" },
-        valuePerLevel: [0, 0, 0, 0, 0],
-        canCrit: true,
-      },
-    ];
+    effects = normalAttackEffects(unit);
   } else if (actionType === "active") {
     skillName = unit.def.activeSkill.name;
     effects = unit.def.activeSkill.effects;

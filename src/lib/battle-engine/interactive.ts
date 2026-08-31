@@ -282,7 +282,7 @@ export function describeCurrentDecision(state: InteractiveBattleState): PendingD
   const unit = allUnits.find((u) => u.instanceId === state.awaitingUnitId);
   if (!unit) return null;
 
-  const actions = describeAvailableActions(unit);
+  const actions = describeAvailableActions(unit, allUnits);
   const candidateTargetsByAction: Partial<Record<ActionType, string[]>> = {};
   for (const a of actions) {
     if (a.targetKind !== "none") {

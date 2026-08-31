@@ -56,6 +56,19 @@ interface AvailableAction {
   description: string;
   cost: number;
   targetKind: "enemy" | "ally" | "none";
+  estimate: { kind: "damage" | "heal"; min: number; max: number } | null;
+}
+
+function EstimateBadge({ estimate }: { estimate: AvailableAction["estimate"] }) {
+  if (!estimate) return null;
+  const isDamage = estimate.kind === "damage";
+  const label = estimate.min === estimate.max ? `${estimate.min}` : `${estimate.min}–${estimate.max}`;
+  return (
+    <span className={`text-[10px] font-bold tabular-nums shrink-0 ${isDamage ? "text-rose-400" : "text-emerald-400"}`}>
+      {isDamage ? "−" : "+"}
+      {label} HP
+    </span>
+  );
 }
 
 interface LiveSnapshot {
@@ -133,7 +146,7 @@ function UnitCard({
       type="button"
       disabled={!clickable}
       onClick={onClick}
-      className="w-16 sm:w-24 shrink-0 text-left relative"
+      className="w-20 sm:w-28 shrink-0 text-left relative"
       style={{ opacity: unit.isAlive ? 1 : 0.35, filter: unit.isAlive ? "none" : "grayscale(1)", cursor: clickable ? "pointer" : "default" }}
     >
       {isActing && (
@@ -466,15 +479,16 @@ function LiveBattleBody({
         </div>
       </div>
 
-      {/* Kampffeld */}
-      <div className="flex-1 flex flex-col justify-center gap-2 min-h-0 py-1">
-        <div className="flex gap-1.5 sm:gap-2 justify-center flex-wrap">
+      {/* Kampffeld — füllt den Freiraum, Helden werden ans untere Ende gesetzt
+          (direkt über der Entscheidung), statt in der Mitte zu schweben. */}
+      <div className="flex-1 flex flex-col justify-end gap-3 min-h-0 py-2">
+        <div className="flex gap-2 sm:gap-3 justify-center flex-wrap">
           {unitsByTeam(opponentTeam).map((u) => (
             <UnitCard key={u.instanceId} unit={u} isActing={snapshot.awaiting?.unitId === u.instanceId} glow={glowFor(u)} onClick={() => handleUnitClick(u)} />
           ))}
         </div>
         <div className="border-t border-white/10 mx-6" />
-        <div className="flex gap-1.5 sm:gap-2 justify-center flex-wrap">
+        <div className="flex gap-2 sm:gap-3 justify-center flex-wrap">
           {unitsByTeam(myTeam ?? "A").map((u) => (
             <UnitCard key={u.instanceId} unit={u} isActing={snapshot.awaiting?.unitId === u.instanceId} glow={glowFor(u)} onClick={() => handleUnitClick(u)} />
           ))}
@@ -501,8 +515,11 @@ function LiveBattleBody({
               <>
                 <div className="flex items-start gap-2">
                   <ActionIcon actionType={selectedAction.actionType} className="w-4 h-4 text-teal-300 mt-0.5 shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-white">{selectedAction.name}</p>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-semibold text-white">{selectedAction.name}</p>
+                      <EstimateBadge estimate={selectedAction.estimate} />
+                    </div>
                     <p className="text-[11px] text-gray-400">{selectedAction.description}</p>
                   </div>
                 </div>
@@ -538,11 +555,12 @@ function LiveBattleBody({
                     >
                       <ActionIcon actionType={action.actionType} className="w-3.5 h-3.5 text-teal-300 mt-0.5 shrink-0" />
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <p className="text-[13px] font-semibold text-white">{action.name}</p>
                           {action.cost > 0 && (
                             <span className="text-[10px] font-semibold text-amber-400 tabular-nums shrink-0">{action.cost} Rage</span>
                           )}
+                          <EstimateBadge estimate={action.estimate} />
                         </div>
                         <p className="text-[10px] text-gray-400 leading-snug truncate">{action.description}</p>
                       </div>

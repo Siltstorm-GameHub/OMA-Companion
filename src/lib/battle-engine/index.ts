@@ -17,4 +17,10 @@ export {
   type PlayerDecision,
   type Controller,
 } from "./interactive";
-export { describeAvailableActions, candidateTargetIds, type AvailableAction, type DecisionTargetKind } from "./decision";
+export {
+  describeAvailableActions,
+  candidateTargetIds,
+  type AvailableAction,
+  type ActionEstimate,
+  type DecisionTargetKind,
+} from "./decision";

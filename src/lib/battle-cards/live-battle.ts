@@ -400,7 +400,7 @@ export async function submitLiveBattleAction(
   const controllingPlayerId = unit.teamId === "A" ? live.playerAId : live.playerBId;
   if (controllingPlayerId !== viewerId) throw new LiveBattleError("Du bist gerade nicht am Zug.");
 
-  const available = describeAvailableActions(unit);
+  const available = describeAvailableActions(unit, allUnits);
   const chosen = available.find((a) => a.actionType === actionType);
   if (!chosen) throw new LiveBattleError("Diese Aktion ist gerade nicht verfügbar.");
 
