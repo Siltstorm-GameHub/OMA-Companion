@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Pencil, Check, X, Cake, MessageSquare, Loader2, Tv2 } from "lucide-react";
@@ -36,6 +36,14 @@ export default function ProfileEditor({ birthday: initBirthday, bio: initBio, tw
   const [savedBirthday, setSavedBirthday] = useState(initBirthday);
   const [savedBio,      setSavedBio]      = useState(initBio);
   const [savedTwitch,   setSavedTwitch]   = useState(initTwitch);
+
+  // Erlaubt der "Profil vervollständigen"-Checkliste, dieses Formular von
+  // außen aufzuklappen, ohne den State nach oben ziehen zu müssen.
+  useEffect(() => {
+    const handler = () => setOpen(true);
+    window.addEventListener("profile-open-editor", handler);
+    return () => window.removeEventListener("profile-open-editor", handler);
+  }, []);
 
   async function save() {
     setSaving(true);

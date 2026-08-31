@@ -23,6 +23,8 @@ import Link from "next/link";
 import FavoriteGamesSection from "./FavoriteGamesSection";
 import SquadsSection from "./SquadsSection";
 import ProfileEditor from "./ProfileEditor";
+import ProfileCompletion from "./ProfileCompletion";
+import { POINT_RULES } from "@/lib/points";
 import { parseFavoriteGames } from "@/lib/favorite-games";
 import { PushSubscribeButton } from "@/components/PushSubscribeButton";
 import NotificationPreferences from "@/components/NotificationPreferences";
@@ -271,6 +273,18 @@ export default async function ProfilePage() {
         )}
       </div>
 
+      {/* ── Profil vervollständigen ──────────────────────────────────── */}
+      <ProfileCompletion
+        done={{
+          bio:           !!user.bio,
+          birthday:      !!user.birthday,
+          banner:        !!user.bannerUrl,
+          twitch:        !!user.twitchLogin,
+          favoriteGames: favoriteGames.length > 0,
+        }}
+        rewardPerItem={POINT_RULES.PROFILE_BIO.amount}
+      />
+
       {/* ── Stat-Karten ─────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {([
@@ -338,18 +352,22 @@ export default async function ProfilePage() {
       )}
 
       {/* ── Profil-Editor (Geburtstag, Bio) ─────────────────────────── */}
-      <ProfileEditor
-        birthday={user.birthday
-          ? `${String(user.birthday.getDate()).padStart(2, "0")}-${String(user.birthday.getMonth() + 1).padStart(2, "0")}`
-          : null}
-        bio={user.bio ?? null}
-        twitchLogin={user.twitchLogin ?? null}
-        bannerUrl={user.bannerUrl ?? null}
-      />
+      <div id="profile-editor">
+        <ProfileEditor
+          birthday={user.birthday
+            ? `${String(user.birthday.getDate()).padStart(2, "0")}-${String(user.birthday.getMonth() + 1).padStart(2, "0")}`
+            : null}
+          bio={user.bio ?? null}
+          twitchLogin={user.twitchLogin ?? null}
+          bannerUrl={user.bannerUrl ?? null}
+        />
+      </div>
 
       {/* ── Aktuelle Lieblingsspiele ─────────────────────────────────── */}
       <SquadsSection squads={squads} />
-      <FavoriteGamesSection games={favoriteGames} viewerId={userId} />
+      <div id="favorite-games-section">
+        <FavoriteGamesSection games={favoriteGames} viewerId={userId} />
+      </div>
 
       {/* ── Pokale ───────────────────────────────────────────────────── */}
       <PokalSection pokale={pokale} ownerName={displayName} />
