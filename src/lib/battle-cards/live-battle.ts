@@ -84,6 +84,8 @@ export interface LiveBattleAwaiting {
   controlledByPlayerId: string;
   actions: AvailableAction[];
   candidateTargetsByAction: Partial<Record<ActionType, string[]>>;
+  /** Epoch-ms — ab hier entscheidet die KI-Logik automatisch, falls niemand reagiert. */
+  deadline: number | null;
 }
 
 export interface LiveBattleSnapshot {
@@ -131,7 +133,7 @@ function buildSnapshot(
   let awaiting: LiveBattleAwaiting | null = null;
   if (pendingDecision) {
     const controlledByPlayerId = pendingDecision.teamId === "A" ? live.playerAId : (live.playerBId as string);
-    awaiting = { ...pendingDecision, controlledByPlayerId };
+    awaiting = { ...pendingDecision, controlledByPlayerId, deadline: state.turnDeadline };
   }
 
   return {
@@ -362,9 +364,20 @@ export async function startLivePvpBattle(
 export async function getLiveBattleSnapshot(liveBattleId: string, viewerId: string): Promise<LiveBattleSnapshot> {
   const live = await requireAccess(liveBattleId, viewerId);
   const state = toState(live);
-  // Rein lesend — advance() NICHT aufrufen: das würde bei aktiviertem Auto-Kampf
-  // sofort weiterspielen, aber dieser Read-Pfad persistiert nichts, der Fortschritt
-  // ginge beim nächsten Poll wieder verloren (siehe describeCurrentDecision-Doku).
+
+  // Normalerweise rein lesend — advance() NICHT aufrufen: das würde bei aktiviertem
+  // Auto-Kampf sofort weiterspielen, aber ein reiner Read-Pfad persistiert nichts,
+  // der Fortschritt ginge beim nächsten Poll wieder verloren (siehe
+  // describeCurrentDecision-Doku). AUSNAHME: das Zug-Timeout ist abgelaufen — es gibt
+  // keinen Hintergrund-Job, der das sonst durchsetzen würde, also übernimmt genau
+  // dieser (ohnehin laufende) Poll-Request die KI-Entscheidung und persistiert sie.
+  const timedOut = !!state.awaitingUnitId && state.turnDeadline !== null && Date.now() >= state.turnDeadline;
+  if (timedOut) {
+    const { state: newState, pendingDecision } = advance(state);
+    const updated = await persistAndMaybeFinalize(live, newState);
+    return buildSnapshot(updated, newState, pendingDecision);
+  }
+
   return buildSnapshot(live, state, describeCurrentDecision(state));
 }
 

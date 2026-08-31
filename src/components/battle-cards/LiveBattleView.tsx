@@ -12,14 +12,12 @@
 // Reine Präsentations-/Steuerungskomponente — die eigentliche Kampflogik
 // läuft ausschließlich serverseitig (lib/battle-cards/live-battle.ts).
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Loader2, Zap, Swords, Bot, ChevronRight } from "lucide-react";
+import { Loader2, Zap, Swords, Bot, ChevronRight, Timer } from "lucide-react";
 import { getClassConfig, LEVEL_BORDER } from "./BattleCardView";
 import type { ActionType, TeamId, UnitClass } from "@/lib/battle-engine/types";
-
-const POLL_INTERVAL_MS = 2000;
 
 interface LiveUnit {
   instanceId: string;
@@ -57,6 +55,7 @@ interface LiveSnapshot {
     controlledByPlayerId: string;
     actions: AvailableAction[];
     candidateTargetsByAction: Partial<Record<ActionType, string[]>>;
+    deadline: number | null;
   } | null;
   autoA: boolean;
   autoB: boolean;
@@ -150,7 +149,7 @@ export default function LiveBattleView({ liveBattleId, viewerId }: { liveBattleI
   const [error, setError] = useState<string | null>(null);
   const [selectedAction, setSelectedAction] = useState<AvailableAction | null>(null);
   const [busy, setBusy] = useState(false);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [, setTick] = useState(0); // erzwingt einen Re-Render pro Sekunde für den Countdown
 
   async function fetchSnapshot() {
     try {
@@ -171,22 +170,24 @@ export default function LiveBattleView({ liveBattleId, viewerId }: { liveBattleI
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [liveBattleId]);
 
+  // Ein einziger Sekunden-Takt erledigt beides: den Countdown live halten UND —
+  // sobald das Zug-Timeout abläuft — genau einen Fetch auslösen, der den
+  // Server dazu bringt, die KI-Entscheidung zu übernehmen (siehe
+  // getLiveBattleSnapshot in live-battle.ts). Ist gerade NICHT die eigene
+  // Entscheidung dran, wird ohnehin jede Sekunde neu geladen (Gegner-Status).
   useEffect(() => {
-    const isMyDecision = !!snapshot?.awaiting && snapshot.awaiting.controlledByPlayerId === viewerId;
-    const shouldPoll = snapshot?.status !== "finished" && !isMyDecision;
+    if (snapshot?.status === "finished") return;
 
-    if (pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
-    }
-    if (shouldPoll) {
-      pollRef.current = setInterval(fetchSnapshot, POLL_INTERVAL_MS);
-    }
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
+    const interval = setInterval(() => {
+      setTick((t) => t + 1);
+      const isMyDecision = !!snapshot?.awaiting && snapshot.awaiting.controlledByPlayerId === viewerId;
+      const deadline = snapshot?.awaiting?.deadline;
+      const timedOut = typeof deadline === "number" && Date.now() >= deadline;
+      if (!isMyDecision || timedOut) fetchSnapshot();
+    }, 1000);
+    return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [snapshot?.status, snapshot?.awaiting?.unitId, viewerId]);
+  }, [snapshot?.status, snapshot?.awaiting?.unitId, snapshot?.awaiting?.deadline, viewerId]);
 
   async function submitAction(actionType: ActionType, targetId?: string) {
     if (busy) return;
@@ -249,6 +250,8 @@ export default function LiveBattleView({ liveBattleId, viewerId }: { liveBattleI
   const opponentTeam: TeamId = myTeam === "A" ? "B" : "A";
   const isMyDecision = !!snapshot.awaiting && snapshot.awaiting.controlledByPlayerId === viewerId;
   const myAuto = myTeam === "A" ? snapshot.autoA : snapshot.autoB;
+  const deadline = snapshot.awaiting?.deadline ?? null;
+  const remainingSeconds = deadline !== null ? Math.max(0, Math.ceil((deadline - Date.now()) / 1000)) : null;
 
   const unitsByTeam = (team: TeamId) => snapshot.units.filter((u) => u.teamId === team);
   const unitById = (id: string) => snapshot.units.find((u) => u.instanceId === id);
@@ -373,7 +376,14 @@ export default function LiveBattleView({ liveBattleId, viewerId }: { liveBattleI
             </>
           ) : (
             <>
-              <p className="text-xs text-gray-400">Du bist am Zug — wähle eine Aktion.</p>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs text-gray-400">Du bist am Zug — wähle eine Aktion.</p>
+                {remainingSeconds !== null && (
+                  <span className="flex items-center gap-1 text-[11px] font-semibold text-amber-400 tabular-nums shrink-0">
+                    <Timer className="w-3 h-3" /> {remainingSeconds}s
+                  </span>
+                )}
+              </div>
               <div className="flex flex-wrap gap-2">
                 {snapshot.awaiting.actions.map((action) => (
                   <button
@@ -400,7 +410,11 @@ export default function LiveBattleView({ liveBattleId, viewerId }: { liveBattleI
         </div>
       ) : (
         <p className="text-xs text-gray-600 text-center">
-          {myAuto ? "Auto-Kampf aktiv — deine Züge laufen automatisch." : "Gegner ist am Zug…"}
+          {myAuto
+            ? "Auto-Kampf aktiv — deine Züge laufen automatisch."
+            : remainingSeconds !== null
+              ? `Gegner ist am Zug… (${remainingSeconds}s)`
+              : "Gegner ist am Zug…"}
         </p>
       )}
     </div>

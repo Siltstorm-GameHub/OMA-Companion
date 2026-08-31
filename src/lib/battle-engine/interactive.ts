@@ -17,6 +17,7 @@ import {
   RAGE_PER_ROUND_END,
   ROUND_LIMIT,
   SUDDEN_DEATH_DAMAGE_MULTIPLIER_STEP,
+  TURN_DECISION_TIMEOUT_MS,
 } from "./constants";
 import { candidateTargetIds, describeAvailableActions, type AvailableAction } from "./decision";
 import { tickStatModifierDurations } from "./effects";
@@ -54,6 +55,10 @@ export interface InteractiveBattleState {
   /** Gesetzt, sobald turnStart für diese Einheit bereits geloggt wurde und auf eine
    *  menschliche Entscheidung gewartet wird — verhindert doppeltes turnStart beim Fortsetzen. */
   awaitingUnitId: string | null;
+  /** Epoch-ms, ab dem die KI-Logik automatisch für die wartende Einheit entscheidet,
+   *  falls bis dahin keine Spieler-Entscheidung eingetroffen ist. Nur relevant,
+   *  solange awaitingUnitId gesetzt ist. */
+  turnDeadline: number | null;
 }
 
 export interface PendingDecision {
@@ -104,6 +109,7 @@ export function createInteractiveState(
     autoA: false,
     autoB: false,
     awaitingUnitId: null,
+    turnDeadline: null,
   };
 }
 
@@ -159,18 +165,21 @@ function stepOnce(
       return "continue";
     }
     // Auto-Kampf kann zwischen Pause und Fortsetzen aktiviert worden sein (der
-    // Spieler entscheidet sich um, statt selbst zu wählen) — dann übernimmt die
-    // KI-Logik genau diese eine noch offene Entscheidung mit.
+    // Spieler entscheidet sich um, statt selbst zu wählen), ODER das Zug-Timeout
+    // ist abgelaufen — in beiden Fällen übernimmt die KI-Logik genau diese eine
+    // noch offene Entscheidung.
     let decision = playerDecision;
     if (!decision) {
-      if (isAutoForTeam(state, unit.teamId)) {
+      const timedOut = state.turnDeadline !== null && Date.now() >= state.turnDeadline;
+      if (isAutoForTeam(state, unit.teamId) || timedOut) {
         decision = { actionType: defaultDecideAction(unit) };
       } else {
-        return "paused"; // reines Polling, keine Entscheidung mitgeschickt
+        return "paused"; // reines Polling, keine Entscheidung mitgeschickt, Timeout noch nicht erreicht
       }
     }
     executeUnitAction(unit, decision.actionType, decision.targetId);
     state.awaitingUnitId = null;
+    state.turnDeadline = null;
     state.orderIndex += 1;
     state.winner = checkWinner(state.unitsA, state.unitsB);
     if (state.winner) {
@@ -224,6 +233,7 @@ function stepOnce(
   const isHuman = state.controllers[unit.teamId] === "human" && !isAutoForTeam(state, unit.teamId);
   if (isHuman) {
     state.awaitingUnitId = unit.instanceId;
+    state.turnDeadline = Date.now() + TURN_DECISION_TIMEOUT_MS;
     return "paused";
   }
 
