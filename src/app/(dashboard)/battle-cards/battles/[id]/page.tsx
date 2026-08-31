@@ -68,6 +68,23 @@ export default async function BattleReplayPage({ params }: { params: Promise<{ i
     winStreak = viewer?.battleWinStreak;
   }
 
+  // Team A ist immer der Herausforderer/Spieler (siehe live-battle.ts), Team B der
+  // Herausgeforderte bzw. bei PVE das NPC-Team — für die Kampf-Statistik: eigenes
+  // Team blau, gegnerisches rot, nur für den Betrachter als Teilnehmer bestimmbar.
+  const viewerTeamId = !challenge
+    ? "A"
+    : isParticipant
+      ? viewerId === challenge.challengerId
+        ? "A"
+        : "B"
+      : null;
+  const teamALabel = !challenge ? "Dein Team" : isParticipant && viewerId === challenge.challengerId ? "Dein Team" : challengerName;
+  const teamBLabel = !challenge
+    ? "Gegner (NPC)"
+    : isParticipant && viewerId === challenge.opponentId
+      ? "Dein Team"
+      : opponentName;
+
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
       <Link
@@ -83,7 +100,13 @@ export default async function BattleReplayPage({ params }: { params: Promise<{ i
       )}
       <BattleResultBanner outcome={outcome} label={outcomeLabel} winStreak={winStreak} />
       <BattleScreen roster={battle.battleLog.roster} log={battle.battleLog.log} />
-      <BattleStatsPanel roster={battle.battleLog.roster} log={battle.battleLog.log} />
+      <BattleStatsPanel
+        roster={battle.battleLog.roster}
+        log={battle.battleLog.log}
+        viewerTeamId={viewerTeamId}
+        teamALabel={teamALabel}
+        teamBLabel={teamBLabel}
+      />
     </div>
   );
 }

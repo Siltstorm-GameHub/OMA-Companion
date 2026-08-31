@@ -428,41 +428,13 @@ function LiveBattleBody({
 
   return (
     <div className="flex-1 flex flex-col min-h-0 relative z-10 px-3">
-      {/* Auto-Kampf + Als nächstes dran — kompakt, oberhalb der Helden */}
+      {/* Auto-Kampf + Als nächstes dran — oberhalb der Helden */}
       <div className="shrink-0 pt-1 space-y-1.5">
         <div className="flex items-center justify-between gap-2">
           {snapshot.upcoming.length > 0 ? (
-            <div className="flex items-center gap-1.5 overflow-x-auto min-w-0">
-              <span className="text-[9px] text-gray-500 uppercase tracking-widest shrink-0">Als nächstes</span>
-              <ChevronRight className="w-3 h-3 text-gray-600 shrink-0" />
-              {snapshot.upcoming.map((id, i) => {
-                const u = unitById(id);
-                if (!u) return null;
-                const isMine = myTeam !== null && u.teamId === myTeam;
-                const ringColor = isMine ? "#3b82f6" : "#ef4444";
-                const config = getClassConfig(u.class);
-                const Icon = config.icon;
-                return (
-                  <div
-                    key={`${id}-${i}`}
-                    className="w-7 h-7 rounded-full overflow-hidden shrink-0 relative"
-                    style={{ boxShadow: `0 0 0 2px ${ringColor}`, opacity: 1 - i * 0.1 }}
-                    title={u.name}
-                  >
-                    {u.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={u.imageUrl} alt={u.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center" style={{ background: `${config.color}33` }}>
-                        <Icon className="w-3.5 h-3.5" style={{ color: config.color }} />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+            <span className="text-[10px] text-gray-500 uppercase tracking-widest">Als nächstes dran</span>
           ) : (
-            <div />
+            <span />
           )}
           {snapshot.status !== "finished" && myTeam && (
             <button
@@ -477,6 +449,35 @@ function LiveBattleBody({
             </button>
           )}
         </div>
+        {snapshot.upcoming.length > 0 && (
+          <div className="flex items-center gap-2 overflow-x-auto">
+            {snapshot.upcoming.map((id, i) => {
+              const u = unitById(id);
+              if (!u) return null;
+              const isMine = myTeam !== null && u.teamId === myTeam;
+              const ringColor = isMine ? "#3b82f6" : "#ef4444";
+              const config = getClassConfig(u.class);
+              const Icon = config.icon;
+              return (
+                <div
+                  key={`${id}-${i}`}
+                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden shrink-0 relative"
+                  style={{ boxShadow: `0 0 0 3px ${ringColor}`, opacity: 1 - i * 0.08 }}
+                  title={u.name}
+                >
+                  {u.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={u.imageUrl} alt={u.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center" style={{ background: `${config.color}33` }}>
+                      <Icon className="w-6 h-6" style={{ color: config.color }} />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Kampffeld — füllt den Freiraum, Helden werden ans untere Ende gesetzt
