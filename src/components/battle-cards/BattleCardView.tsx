@@ -42,7 +42,7 @@ export interface BattleCardData {
   avatarBadgeUrl?: string | null;
 }
 
-const CLASS_CONFIG: Record<BattleCardData["class"], { label: string; color: string; icon: LucideIcon }> = {
+export const CLASS_CONFIG: Record<BattleCardData["class"], { label: string; color: string; icon: LucideIcon }> = {
   TANK: { label: "Tank", color: "#14b8a6", icon: Shield },
   DAMAGE_DEALER: { label: "Damage Dealer", color: "#ef4444", icon: Swords },
   SUPPORT: { label: "Support", color: "#8b5cf6", icon: HeartPulse },
