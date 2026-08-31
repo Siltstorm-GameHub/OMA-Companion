@@ -1,10 +1,11 @@
 // ============================================
-// POST /api/battle-cards/test-battle
+// POST /api/battle-cards/npc-battle
 // ============================================
-// Testkampf für Admins/Moderatoren zum Ausprobieren/Debuggen des
-// Kampfsystems während der Entwicklung: eigene Startaufstellung (oder erste
-// 5 eigene Karten) gegen 5 zufällige Standard-Karten (NPC). Nicht für
-// reguläre User zugänglich — kein Fortschritt/Belohnung, dient nur dem Test.
+// PVE-Kampf gegen zufällige Standard-Karten in 3 Schwierigkeitsstufen —
+// für alle eingeloggten User, vorerst unbegrenzt oft spielbar und ohne
+// Belohnung (kein Münzen-/Quest-Fortschritt). Die Schwierigkeit skaliert
+// die NPC-Karten einfach über die bestehende Stufen-Skalierung der Engine
+// (siehe lib/battle-engine/stats.ts) hoch — kein separates Balancing nötig.
 
 import { auth } from "@/auth";
 import { cardToBattleUnitDefinition } from "@/lib/battle-engine/adapters";
@@ -12,10 +13,16 @@ import { runBattle } from "@/lib/battle-engine/engine";
 import { serializeBattleLog } from "@/lib/battle-cards/battle-log";
 import { resolveAvatarsForCards } from "@/lib/battle-cards/card-view";
 import { resolveCardImageUrl, resolveAvatarBadgeUrl } from "@/lib/battle-cards/resolve-image";
-import { hasMinRole } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
+import type { NpcDifficulty } from "@/lib/battle-cards/npc-battle-types";
 
 const TEAM_SIZE = 5;
+
+const DIFFICULTY_LEVEL: Record<NpcDifficulty, number> = {
+  EASY: 1,
+  MEDIUM: 3,
+  HARD: 5,
+};
 
 function sampleWithoutReplacement<T>(items: T[], count: number): T[] {
   const pool = [...items];
@@ -27,17 +34,17 @@ function sampleWithoutReplacement<T>(items: T[], count: number): T[] {
   return picked;
 }
 
-export async function POST() {
+export async function POST(req: Request) {
   const session = await auth();
   const playerId = session?.user?.id;
   if (!playerId) {
     return Response.json({ error: "Nicht eingeloggt." }, { status: 401 });
   }
 
-  const user = await prisma.user.findUnique({ where: { id: playerId }, select: { role: true } });
-  if (!user || !hasMinRole(user.role, "moderator")) {
-    return Response.json({ error: "Nur für Admins und Moderatoren." }, { status: 403 });
-  }
+  const body = await req.json().catch(() => ({}));
+  const difficulty: NpcDifficulty =
+    body?.difficulty === "MEDIUM" || body?.difficulty === "HARD" ? body.difficulty : "EASY";
+  const npcLevel = DIFFICULTY_LEVEL[difficulty];
 
   const userCards = await prisma.userCard.findMany({
     where: { userId: playerId },
@@ -72,7 +79,7 @@ export async function POST() {
   const opponentTeam = opponentCards.map((card) =>
     cardToBattleUnitDefinition(
       card,
-      1,
+      npcLevel,
       resolveCardImageUrl(card, avatarByDiscordId),
       resolveAvatarBadgeUrl(card, avatarByDiscordId)
     )
@@ -84,11 +91,12 @@ export async function POST() {
   const battle = await prisma.battle.create({
     data: {
       playerId,
-      opponentType: "PVE_TEST",
+      opponentType: `PVE_${difficulty}`,
       result: dbResult,
       teamSnapshot: {
         playerTeam: playerTeamCards.map((uc) => uc.card.name),
         opponentTeam: opponentCards.map((c) => c.name),
+        difficulty,
       },
       battleLog: serializeBattleLog(result.log, result.roster),
     },
@@ -97,6 +105,7 @@ export async function POST() {
   return Response.json({
     battleId: battle.id,
     result: dbResult,
+    difficulty,
     rounds: result.rounds,
     seed: result.seed,
     log: result.log,

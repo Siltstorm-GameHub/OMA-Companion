@@ -5,7 +5,7 @@
 //  - Noch kein Start-Pack gewählt → Picker (StarterPickFlow), Standard-Karten
 //    sind hier NUR als Auswahlgrundlage sichtbar, nicht als Katalog.
 //  - Start-Pack vorhanden → drei Reiter:
-//    "Kampf" (Startbildschirm: Startaufstellung, Packs, Testkampf für Mods),
+//    "Kampf" (Startbildschirm: Startaufstellung, Packs, NPC-Kämpfe in 3 Stufen),
 //    "Karten" (Sammlung — siehe CardCollectionBrowser),
 //    "Community" (eigene offene Herausforderungen, Kampfhistorie aller
 //    User, Rangliste).
@@ -20,11 +20,10 @@ import { countUnopenedPacks } from "@/lib/battle-cards/packs";
 import { sortByQuality, toCardData, resolveAvatarsForCards } from "@/lib/battle-cards/card-view";
 import { getUpgradeEconomyConfig } from "@/lib/battle-cards/upgrade-admin-config";
 import { getBattleCardsLeaderboard } from "@/lib/battle-cards/leaderboard";
-import { hasMinRole } from "@/lib/roles";
 import StarterPickFlow from "@/components/battle-cards/StarterPickFlow";
 import PackOpener from "@/components/battle-cards/PackOpener";
 import CardCollectionBrowser from "@/components/battle-cards/CardCollectionBrowser";
-import TestBattleLauncher from "@/components/battle-cards/TestBattleLauncher";
+import NpcBattleLauncher from "@/components/battle-cards/NpcBattleLauncher";
 import BattleCardsTabs from "./BattleCardsTabs";
 import ChallengesList from "@/components/battle-cards/ChallengesList";
 import BattleLauncher from "@/components/battle-cards/BattleLauncher";
@@ -86,8 +85,7 @@ export default async function BattleCardsPage() {
   ]);
   const unopenedPacks = await countUnopenedPacks(userId);
   const pendingChallenges = await prisma.battleChallenge.count({ where: { opponentId: userId, status: "pending" } });
-  const currentUser = await prisma.user.findUnique({ where: { id: userId }, select: { role: true, points: true } });
-  const isModOrAdmin = !!currentUser && hasMinRole(currentUser.role, "moderator");
+  const currentUser = await prisma.user.findUnique({ where: { id: userId }, select: { points: true } });
   const upgradeEconomy = await getUpgradeEconomyConfig();
 
   const ownedCards = ownedUserCards.map((uc) => ({
@@ -168,7 +166,7 @@ export default async function BattleCardsPage() {
 
       <PackOpener initialUnopenedCount={unopenedPacks} />
 
-      {isModOrAdmin && <TestBattleLauncher />}
+      <NpcBattleLauncher />
     </div>
   );
 

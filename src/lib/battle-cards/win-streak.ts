@@ -2,7 +2,7 @@
 // Battle Cards — Sieges-Serie (Win-Streak) mit Münzen-Bonus
 // ============================================
 // Gilt nur für echte PVP-Kämpfe (Challenge-Annahme + Matchmaking), nicht für
-// PVE-Testkämpfe (siehe api/battle-cards/test-battle/route.ts, ruft
+// PVE-Kämpfe gegen NPC (siehe api/battle-cards/npc-battle/route.ts, ruft
 // playMatch() gar nicht auf). Eine Niederlage setzt die Serie des Verlierers
 // zurück, ein Unentschieden lässt beide Serien unangetastet.
 //
