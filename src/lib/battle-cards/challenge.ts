@@ -11,6 +11,7 @@ import { prisma } from "@/lib/prisma";
 import { runBattle } from "@/lib/battle-engine/engine";
 import { serializeBattleLog } from "@/lib/battle-cards/battle-log";
 import { buildBattleTeam } from "@/lib/battle-cards/team-builder";
+import { applyWinStreak } from "@/lib/battle-cards/win-streak";
 import type { Battle, BattleChallenge } from "@prisma/client";
 
 export class ChallengeError extends Error {}
@@ -39,6 +40,9 @@ async function playMatch(
       battleLog: serializeBattleLog(result.log, result.roster),
     },
   });
+
+  const loserId = winnerId === challengerId ? opponentId : challengerId;
+  await applyWinStreak(winnerId, loserId);
 
   return { battle, winnerId };
 }

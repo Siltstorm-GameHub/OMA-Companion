@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { isStoredBattleLog } from "@/lib/battle-cards/battle-log";
 import BattleScreen from "@/components/battle-cards/BattleScreen";
 import BattleResultBanner, { type BattleOutcome } from "@/components/battle-cards/BattleResultBanner";
+import BattleStatsPanel from "@/components/battle-cards/BattleStatsPanel";
 
 export const metadata = {
   title: "Kampf-Replay | Battle Cards | OMA",
@@ -59,6 +60,14 @@ export default async function BattleReplayPage({ params }: { params: Promise<{ i
     outcome = battle.result === "DRAW" ? "draw" : battle.result === "WIN" ? "win" : "loss";
   }
 
+  // Aktuelle Sieges-Serie nur für den Betrachter selbst bei eigenem Sieg abrufen (nicht
+  // als Zuschauer, nicht bei PVE-Testkämpfen ohne Challenge — dort wird keine gepflegt).
+  let winStreak: number | undefined;
+  if (challenge && isParticipant && outcome === "win") {
+    const viewer = await prisma.user.findUnique({ where: { id: viewerId }, select: { battleWinStreak: true } });
+    winStreak = viewer?.battleWinStreak;
+  }
+
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
       <Link
@@ -72,8 +81,9 @@ export default async function BattleReplayPage({ params }: { params: Promise<{ i
           {challengerName} <span className="text-gray-500 font-normal">vs.</span> {opponentName}
         </h1>
       )}
-      <BattleResultBanner outcome={outcome} label={outcomeLabel} />
+      <BattleResultBanner outcome={outcome} label={outcomeLabel} winStreak={winStreak} />
       <BattleScreen roster={battle.battleLog.roster} log={battle.battleLog.log} />
+      <BattleStatsPanel roster={battle.battleLog.roster} log={battle.battleLog.log} />
     </div>
   );
 }

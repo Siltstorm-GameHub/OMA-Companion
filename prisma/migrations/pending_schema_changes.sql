@@ -292,3 +292,10 @@ EXCEPTION
 END $$;
 
 ALTER TABLE "CardPack" ADD COLUMN IF NOT EXISTS "kind" "CardPackKind" NOT NULL DEFAULT 'STANDARD';
+
+-- ═══════════════════════════════════════════════════════════════
+-- Battle Cards: Sieges-Serie (Win-Streak) mit Münzen-Bonus
+-- ═══════════════════════════════════════════════════════════════
+
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "battleWinStreak" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "battleBestWinStreak" INTEGER NOT NULL DEFAULT 0;

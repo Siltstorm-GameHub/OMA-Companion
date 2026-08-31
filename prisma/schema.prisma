@@ -37,6 +37,11 @@ model User {
   voiceMinutesTotal Int @default(0)
   messagesTotal     Int @default(0)
 
+  // Battle Cards: aktuelle/beste Sieges-Serie in PVP-Kämpfen (Challenge + Matchmaking,
+  // keine Testkämpfe), siehe lib/battle-cards/win-streak.ts
+  battleWinStreak     Int @default(0)
+  battleBestWinStreak Int @default(0)
+
   // Badge Showcase: JSON-Array mit bis zu 3 Badge-Keys (system oder custom-id)
   showcaseBadgesJson String?
   // Vitrinen-Fächer: JSON-Objekt { "<slotIndex>": "pokal:<id>" | "trophy:<scopeType>:<scopeValue>" | "badge:<key>" | null }.

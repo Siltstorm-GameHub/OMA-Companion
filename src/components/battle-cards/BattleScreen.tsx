@@ -14,9 +14,26 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Shield, Swords, HeartPulse, Play, Pause, RotateCcw, Sparkles, ArrowUp, ArrowDown, Zap } from "lucide-react";
+import {
+  Shield,
+  Swords,
+  HeartPulse,
+  Play,
+  Pause,
+  RotateCcw,
+  Sparkles,
+  ArrowUp,
+  ArrowDown,
+  Zap,
+  ChevronsRight,
+  Volume2,
+  VolumeX,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { BattleLogEntry, RosterEntry, UnitClass } from "@/lib/battle-engine/types";
+import { playHitSfx, playCritSfx, playHealSfx, playUltimateSfx } from "@/lib/battle-cards/sfx";
+
+const SOUND_PREF_KEY = "battleCardsSoundOn";
 
 const CLASS_CONFIG: Record<UnitClass, { color: string; icon: LucideIcon }> = {
   TANK: { color: "#14b8a6", icon: Shield },
@@ -392,6 +409,28 @@ function UnitTile({
 export default function BattleScreen({ roster, log }: { roster: RosterEntry[]; log: BattleLogEntry[] }) {
   const [step, setStep] = useState(0);
   const [playing, setPlaying] = useState(true);
+  const [soundOn, setSoundOn] = useState(true);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(SOUND_PREF_KEY);
+      if (stored !== null) setSoundOn(stored === "1");
+    } catch {
+      // localStorage kann in seltenen Fällen (privater Modus etc.) werfen — Standard beibehalten
+    }
+  }, []);
+
+  function toggleSound() {
+    setSoundOn((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(SOUND_PREF_KEY, next ? "1" : "0");
+      } catch {
+        // s.o.
+      }
+      return next;
+    });
+  }
 
   const rosterById = useMemo(() => new Map(roster.map((r) => [r.instanceId, r])), [roster]);
   const teamB = useMemo(() => roster.filter((r) => r.teamId === "B"), [roster]);
@@ -421,6 +460,36 @@ export default function BattleScreen({ roster, log }: { roster: RosterEntry[]; l
   const currentVfx = useMemo(() => vfxForEntry(lastEntry, step), [lastEntry, step]);
   const cutsceneActor =
     lastEntry?.type === "action" && lastEntry.actionType === "ultimate" ? rosterById.get(lastEntry.actorId) : null;
+
+  // currentVfx wird bei jedem step neu erzeugt (kein gecachtes Objekt), das
+  // reicht als Trigger, ein Ultimate-Cast dagegen setzt kein currentVfx —
+  // dafür wird direkt auf den Log-Eintrag selbst reagiert (step als Schlüssel,
+  // damit ein zweiter Ultimate-Einsatz derselben Karte erneut auslöst).
+  useEffect(() => {
+    if (!soundOn || !currentVfx) return;
+    switch (currentVfx.kind) {
+      case "damage":
+        playHitSfx();
+        break;
+      case "critDamage":
+        playCritSfx();
+        break;
+      case "heal":
+        playHealSfx();
+        break;
+      default:
+        break;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentVfx, soundOn]);
+
+  useEffect(() => {
+    if (!soundOn) return;
+    if (lastEntry?.type === "action" && lastEntry.actionType === "ultimate") {
+      playUltimateSfx();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, soundOn]);
 
   const isFinished = step >= log.length;
 
@@ -504,15 +573,37 @@ export default function BattleScreen({ roster, log }: { roster: RosterEntry[]; l
             <RotateCcw className="w-3.5 h-3.5" /> Erneut ansehen
           </button>
         ) : (
-          <button
-            type="button"
-            onClick={() => setPlaying((p) => !p)}
-            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md bg-white/[0.06] text-gray-300 hover:bg-white/[0.1] transition-colors"
-          >
-            {playing ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-            {playing ? "Pause" : "Weiter"}
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => setPlaying((p) => !p)}
+              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md bg-white/[0.06] text-gray-300 hover:bg-white/[0.1] transition-colors"
+            >
+              {playing ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+              {playing ? "Pause" : "Weiter"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setPlaying(false);
+                setStep(log.length);
+              }}
+              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md bg-white/[0.06] text-gray-300 hover:bg-white/[0.1] transition-colors"
+              title="Zum Ergebnis springen"
+            >
+              <ChevronsRight className="w-3.5 h-3.5" /> Überspringen
+            </button>
+          </>
         )}
+        <button
+          type="button"
+          onClick={toggleSound}
+          className="flex items-center justify-center w-7 h-7 rounded-md bg-white/[0.06] text-gray-400 hover:text-gray-200 hover:bg-white/[0.1] transition-colors"
+          title={soundOn ? "Ton aus" : "Ton an"}
+          aria-label={soundOn ? "Ton aus" : "Ton an"}
+        >
+          {soundOn ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+        </button>
       </div>
 
       {/* Ultimate-Cutscene */}
