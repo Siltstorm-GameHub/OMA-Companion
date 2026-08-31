@@ -218,7 +218,12 @@ export default async function BattleCardsPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6">
-      <BattleCardsTabs kampfPanel={kampfPanel} kartenPanel={kartenPanel} communityPanel={communityPanel} />
+      <BattleCardsTabs
+        kampfPanel={kampfPanel}
+        kartenPanel={kartenPanel}
+        communityPanel={communityPanel}
+        communityBadge={pendingChallenges}
+      />
     </div>
   );
 }
