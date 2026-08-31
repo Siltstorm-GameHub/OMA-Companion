@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { MessageCircle, X, Send, Bell, Settings } from "lucide-react";
 import Link from "next/link";
 import RankedAvatar from "@/components/RankedAvatar";
-import { Tabs, TabPanel } from "@/components/admin/Tabs";
+import { Tabs } from "@/components/admin/Tabs";
+
+const NOTIF_DISPLAY_LIMIT = 30;
 
 interface LobbyMsg {
   id: string;
@@ -399,89 +401,93 @@ export function FloatingLobbyChat() {
           />
         </div>
 
-        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-          {/* ── Benachrichtigungen ────────────────────────────────────── */}
-          <TabPanel tabKey="notifications" active={activeTab}>
-            <div className="h-full flex flex-col min-h-0">
-              {notifications.length > 0 && (
-                <div className="flex items-center justify-end gap-3 px-4 py-2 flex-shrink-0">
-                  {notifUnread > 0 && (
-                    <button onClick={markAllRead}
-                      className="text-[11px] text-gray-500 hover:text-teal-400 transition-colors">
-                      Alle lesen
-                    </button>
-                  )}
-                  <button onClick={deleteAllNotifications}
-                    className="text-[11px] text-gray-500 hover:text-red-400 transition-colors">
-                    Alle löschen
+        {/* ── Benachrichtigungen ──────────────────────────────────────── */}
+        {activeTab === "notifications" && (
+          <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+            {notifications.length > 0 && (
+              <div className="flex items-center justify-end gap-3 px-4 py-2 flex-shrink-0">
+                {notifUnread > 0 && (
+                  <button onClick={markAllRead}
+                    className="text-[11px] text-gray-500 hover:text-teal-400 transition-colors">
+                    Alle lesen
                   </button>
-                </div>
-              )}
-
-              {notifications.length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center gap-2 py-10">
-                  <Bell style={{ width: 22, height: 22, color: "#374151" }} />
-                  <p className="text-xs text-gray-600">Keine Benachrichtigungen</p>
-                </div>
-              ) : (
-                <div className="flex-1 overflow-y-auto min-h-0">
-                  {notifications.map((n) => (
-                    <div
-                      key={n.id}
-                      className="group flex gap-2.5 items-start px-4 py-2.5 hover:bg-white/[0.03] transition-colors"
-                      style={!n.read ? { background: "rgba(20,184,166,0.04)" } : undefined}
-                    >
-                      <button
-                        onClick={() => handleNotifClick(n)}
-                        className="flex gap-2.5 items-start flex-1 min-w-0 text-left"
-                      >
-                        <span className="text-base mt-0.5 shrink-0">{NOTIF_ICONS[n.type] ?? "🔔"}</span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold truncate"
-                            style={{ color: n.read ? "#9ca3af" : "#e2e8f0" }}>
-                            {n.title}
-                          </p>
-                          <p className="text-[11px] text-gray-500 truncate">{n.body}</p>
-                          <p className="text-[10px] mt-0.5" style={{ color: "rgba(20,184,166,0.5)" }}>
-                            {timeAgo(n.createdAt)}
-                          </p>
-                        </div>
-                      </button>
-                      <div className="flex items-center gap-1 mt-1 shrink-0">
-                        {!n.read && (
-                          <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#2dd4bf" }} />
-                        )}
-                        <button
-                          onClick={(e) => deleteNotification(n.id, e)}
-                          title="Löschen"
-                          className="opacity-0 group-hover:opacity-100 w-4 h-4 flex items-center justify-center rounded text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-all"
-                        >
-                          <X style={{ width: 10, height: 10 }} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="flex-shrink-0 p-1" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-                <Link
-                  href="/profile?tab=notifications"
-                  onClick={() => setOpen(false)}
-                  className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[11px] text-gray-500 hover:text-teal-400 hover:bg-teal-500/8 transition-colors"
-                >
-                  <Settings style={{ width: 11, height: 11 }} />
-                  Einstellungen
-                </Link>
+                )}
+                <button onClick={deleteAllNotifications}
+                  className="text-[11px] text-gray-500 hover:text-red-400 transition-colors">
+                  Alle löschen
+                </button>
               </div>
-            </div>
-          </TabPanel>
+            )}
 
-          {/* ── Lobby ─────────────────────────────────────────────────── */}
-          <TabPanel tabKey="lobby" active={activeTab}>
-            <div className="h-full flex flex-col min-h-0">
-              {/* Online-Spieler */}
-              {onlineUsers.length > 0 && (
+            {notifications.length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center gap-2 py-10">
+                <Bell style={{ width: 22, height: 22, color: "#374151" }} />
+                <p className="text-xs text-gray-600">Keine Benachrichtigungen</p>
+              </div>
+            ) : (
+              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+                {notifications.slice(0, NOTIF_DISPLAY_LIMIT).map((n) => (
+                  <div
+                    key={n.id}
+                    className="group flex gap-2.5 items-start px-4 py-2.5 hover:bg-white/[0.03] transition-colors"
+                    style={!n.read ? { background: "rgba(20,184,166,0.04)" } : undefined}
+                  >
+                    <button
+                      onClick={() => handleNotifClick(n)}
+                      className="flex gap-2.5 items-start flex-1 min-w-0 text-left"
+                    >
+                      <span className="text-base mt-0.5 shrink-0">{NOTIF_ICONS[n.type] ?? "🔔"}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold truncate"
+                          style={{ color: n.read ? "#9ca3af" : "#e2e8f0" }}>
+                          {n.title}
+                        </p>
+                        <p className="text-[11px] text-gray-500 truncate">{n.body}</p>
+                        <p className="text-[10px] mt-0.5" style={{ color: "rgba(20,184,166,0.5)" }}>
+                          {timeAgo(n.createdAt)}
+                        </p>
+                      </div>
+                    </button>
+                    <div className="flex items-center gap-1 mt-1 shrink-0">
+                      {!n.read && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); markRead(n.id); }}
+                          title="Als gelesen markieren"
+                          className="w-3.5 h-3.5 rounded-full flex items-center justify-center"
+                          style={{ background: "#2dd4bf" }}
+                        />
+                      )}
+                      <button
+                        onClick={(e) => deleteNotification(n.id, e)}
+                        title="Löschen"
+                        className="opacity-0 group-hover:opacity-100 w-4 h-4 flex items-center justify-center rounded text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                      >
+                        <X style={{ width: 10, height: 10 }} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex-shrink-0 p-1" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+              <Link
+                href="/profile?tab=notifications"
+                onClick={() => setOpen(false)}
+                className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[11px] text-gray-500 hover:text-teal-400 hover:bg-teal-500/8 transition-colors"
+              >
+                <Settings style={{ width: 11, height: 11 }} />
+                Einstellungen
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* ── Lobby ───────────────────────────────────────────────────── */}
+        {activeTab === "lobby" && (
+          <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+            {/* Online-Spieler */}
+            {onlineUsers.length > 0 && (
                 <div
                   className="flex items-center gap-2 px-4 py-2 flex-shrink-0 overflow-x-auto"
                   style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
@@ -607,8 +613,7 @@ export function FloatingLobbyChat() {
                 )}
               </div>
             </div>
-          </TabPanel>
-        </div>
+        )}
       </div>
     </>
   );
