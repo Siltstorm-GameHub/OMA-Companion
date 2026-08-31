@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
-import { CLASS_CONFIG, LEVEL_BORDER, type BattleCardData } from "./BattleCardView";
+import { getClassConfig, LEVEL_BORDER, type BattleCardData } from "./BattleCardView";
 
 const LINEUP_SIZE = 5;
 
@@ -23,7 +23,7 @@ export default function LineupStrip({ cards }: { cards: { card: BattleCardData; 
               />
             );
           }
-          const classConfig = CLASS_CONFIG[entry.card.class];
+          const classConfig = getClassConfig(entry.card.class);
           const ClassIcon = classConfig.icon;
           const borderColor = LEVEL_BORDER[entry.level] ?? LEVEL_BORDER[1];
           return (

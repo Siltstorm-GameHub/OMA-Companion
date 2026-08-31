@@ -9,7 +9,7 @@
 // Detailansicht (BattleCardView + Upgrade) in einem Modal.
 
 import { Lock } from "lucide-react";
-import { CLASS_CONFIG, LEVEL_BORDER, type BattleCardData } from "./BattleCardView";
+import { getClassConfig, LEVEL_BORDER, type BattleCardData } from "./BattleCardView";
 
 export default function CardTile({
   card,
@@ -27,7 +27,7 @@ export default function CardTile({
   isNew?: boolean;
   onClick: () => void;
 }) {
-  const classConfig = CLASS_CONFIG[card.class];
+  const classConfig = getClassConfig(card.class);
   const ClassIcon = classConfig.icon;
   const borderColor = locked ? "rgba(255,255,255,0.1)" : LEVEL_BORDER[level] ?? LEVEL_BORDER[1];
 

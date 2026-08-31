@@ -48,6 +48,13 @@ export const CLASS_CONFIG: Record<BattleCardData["class"], { label: string; colo
   SUPPORT: { label: "Support", color: "#8b5cf6", icon: HeartPulse },
 };
 
+/** Fällt auf die Tank-Konfiguration zurück, falls `cls` unerwartet keiner der
+ *  drei bekannten Klassen entspricht (z.B. bei älteren/fehlerhaften Datensätzen)
+ *  — verhindert einen harten Crash statt eines schlicht falschen Icons/Farbe. */
+export function getClassConfig(cls: BattleCardData["class"]): { label: string; color: string; icon: LucideIcon } {
+  return CLASS_CONFIG[cls] ?? CLASS_CONFIG.TANK;
+}
+
 export const LEVEL_BORDER: Record<number, string> = {
   1: "#71717a", // grau
   2: "#b45309", // bronze
@@ -129,7 +136,7 @@ function SkillRow({
 export default function BattleCardView({ card, dimmed = false }: { card: BattleCardData; dimmed?: boolean }) {
   const [flipped, setFlipped] = useState(false);
   const level = card.level ?? 1;
-  const classConfig = CLASS_CONFIG[card.class];
+  const classConfig = getClassConfig(card.class);
   const ClassIcon = classConfig.icon;
   const borderColor = LEVEL_BORDER[level] ?? LEVEL_BORDER[1];
 
