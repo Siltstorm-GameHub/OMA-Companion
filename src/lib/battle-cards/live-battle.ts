@@ -34,7 +34,7 @@ import { buildBattleTeam } from "@/lib/battle-cards/team-builder";
 import { resolveAvatarsForCards } from "@/lib/battle-cards/card-view";
 import { resolveCardImageUrl, resolveAvatarBadgeUrl } from "@/lib/battle-cards/resolve-image";
 import { applyWinStreak } from "@/lib/battle-cards/win-streak";
-import type { NpcDifficulty } from "@/lib/battle-cards/npc-battle-types";
+import { DIFFICULTY_LEVEL, type NpcDifficulty } from "@/lib/battle-cards/npc-battle-types";
 import type { LiveBattle } from "@prisma/client";
 import { dispatchNotification } from "@/lib/notify-dispatch";
 import { updateQuestProgress } from "@/lib/quests";
@@ -42,7 +42,6 @@ import { updateQuestProgress } from "@/lib/quests";
 export class LiveBattleError extends Error {}
 
 const TEAM_SIZE = 5;
-const DIFFICULTY_LEVEL: Record<NpcDifficulty, number> = { EASY: 1, MEDIUM: 3, HARD: 5 };
 
 /** PVP mit beiden Seiten auf Auto-Kampf: pro advance()-Aufruf wird nur EIN Zug
  *  automatisch aufgelöst, statt sofort bis zum Ende durchzulaufen — so bleibt

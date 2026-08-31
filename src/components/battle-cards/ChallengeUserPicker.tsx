@@ -12,6 +12,8 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Search, Swords, X } from "lucide-react";
 import RankedAvatar from "@/components/RankedAvatar";
+import MatchupBadge from "./MatchupBadge";
+import type { MatchupStrength } from "@/lib/battle-cards/matchup-strength";
 
 type UserLite = { id: string; username: string | null; name: string | null; image: string | null; rankPoints: number };
 
@@ -23,6 +25,7 @@ export default function ChallengeUserPicker() {
   const [results, setResults] = useState<UserLite[]>([]);
   const [selected, setSelected] = useState<UserLite | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [matchup, setMatchup] = useState<MatchupStrength | null>(null);
 
   useEffect(() => {
     const t = setTimeout(async () => {
@@ -34,6 +37,19 @@ export default function ChallengeUserPicker() {
     }, 300);
     return () => clearTimeout(t);
   }, [query]);
+
+  useEffect(() => {
+    if (!selected) {
+      setMatchup(null);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/battle-cards/matchup?opponentId=${selected.id}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => { if (!cancelled) setMatchup(data?.strength ?? null); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [selected]);
 
   async function challenge() {
     if (submitting || !selected) return;
@@ -73,6 +89,7 @@ export default function ChallengeUserPicker() {
           <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-rose-500/[0.06] border border-rose-500/15">
             <RankedAvatar rankPoints={selected.rankPoints} src={selected.image} alt={uname(selected)} size={24} className="w-6 h-6" />
             <span className="flex-1 text-sm text-white truncate">{uname(selected)}</span>
+            <MatchupBadge strength={matchup} />
             <button onClick={() => setSelected(null)} className="text-gray-500 hover:text-white shrink-0">
               <X className="w-3.5 h-3.5" />
             </button>

@@ -8,11 +8,13 @@
 // spielbar, keine Belohnung. Der Spieler steuert jeden eigenen Zug selbst
 // (oder aktiviert Auto-Kampf) — siehe LiveBattleView.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Bot, Loader2 } from "lucide-react";
 import LiveBattleView from "./LiveBattleView";
+import MatchupBadge from "./MatchupBadge";
 import type { NpcDifficulty } from "@/lib/battle-cards/npc-battle-types";
+import type { MatchupStrength } from "@/lib/battle-cards/matchup-strength";
 
 const DIFFICULTY_CONFIG: Record<NpcDifficulty, { label: string; color: string }> = {
   EASY: { label: "Einfach", color: "#34d399" },
@@ -26,6 +28,14 @@ export default function NpcBattleLauncher() {
   const [loading, setLoading] = useState<NpcDifficulty | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [liveBattleId, setLiveBattleId] = useState<string | null>(null);
+  const [matchup, setMatchup] = useState<Partial<Record<NpcDifficulty, MatchupStrength | null>>>({});
+
+  useEffect(() => {
+    fetch("/api/battle-cards/matchup?npc=1")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => data && setMatchup(data))
+      .catch(() => {});
+  }, []);
 
   async function start(difficulty: NpcDifficulty) {
     setLoading(difficulty);
@@ -68,10 +78,15 @@ export default function NpcBattleLauncher() {
               type="button"
               onClick={() => start(difficulty)}
               disabled={loading !== null}
-              className="flex items-center justify-center gap-1.5 text-xs font-semibold py-2.5 rounded-md transition-colors disabled:opacity-50"
+              className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-md transition-colors disabled:opacity-50"
               style={{ background: `${config.color}1f`, color: config.color }}
             >
-              {loading === difficulty ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : config.label}
+              {loading === difficulty ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <span className="text-xs font-semibold">{config.label}</span>
+              )}
+              <MatchupBadge strength={matchup[difficulty]} />
             </button>
           );
         })}
