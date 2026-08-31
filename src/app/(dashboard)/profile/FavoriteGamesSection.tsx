@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Pencil, X, Check, Plus, Loader2, Gamepad2, Users } from "lucide-react";
@@ -27,6 +27,15 @@ export default function FavoriteGamesSection({ games, readOnly = false, displayN
   const [openGame, setOpenGame] = useState<FavoriteGame | null>(null);
 
   const displayGames = editing ? draft : games;
+
+  // Erlaubt der "Profil vervollständigen"-Checkliste, diese Sektion von außen
+  // in den Bearbeitungsmodus zu schalten (nur auf dem eigenen Profil relevant).
+  useEffect(() => {
+    if (readOnly) return;
+    const handler = () => setEditing(true);
+    window.addEventListener("profile-open-favorite-games", handler);
+    return () => window.removeEventListener("profile-open-favorite-games", handler);
+  }, [readOnly]);
 
   async function save() {
     setSaving(true);

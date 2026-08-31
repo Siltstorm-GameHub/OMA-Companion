@@ -23,6 +23,12 @@ export const POINT_RULES = {
   INVITE_MEMBER:          { amount:  150, reason: "Mitglied eingeladen 👥",   category: "community" },
   FIRST_LOGIN:            { amount:  100, reason: "Erstes Login 🎉",          category: "community" },
   BIRTHDAY:               { amount:  150, reason: "Geburtstag 🎂",            category: "community" },
+  // Profil vervollständigen — je erledigtem Punkt einmalig, siehe lib/profile-completion.ts
+  PROFILE_BIO:             { amount:  500, reason: "Profil: Bio ausgefüllt",          category: "community" },
+  PROFILE_BIRTHDAY:        { amount:  500, reason: "Profil: Geburtstag hinterlegt",   category: "community" },
+  PROFILE_BANNER:          { amount:  500, reason: "Profil: Banner hochgeladen",      category: "community" },
+  PROFILE_TWITCH:          { amount:  500, reason: "Profil: Twitch-Kanal verknüpft",  category: "community" },
+  PROFILE_FAVORITE_GAMES:  { amount:  500, reason: "Profil: Lieblingsspiele gewählt", category: "community" },
 } as const;
 
 export type PointRule     = keyof typeof POINT_RULES;

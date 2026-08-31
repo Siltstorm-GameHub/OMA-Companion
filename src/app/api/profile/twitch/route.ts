@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/roles";
 import { getTwitchUser } from "@/lib/twitch";
+import { awardProfileCompletionIfNeeded } from "@/lib/profile-completion";
 
 export async function POST(req: NextRequest) {
   const me = await getSessionUser();
@@ -18,6 +19,7 @@ export async function POST(req: NextRequest) {
       where: { id: me.id },
       data: { twitchLogin: login },
     });
+    await awardProfileCompletionIfNeeded(me.id, "PROFILE_TWITCH");
     return NextResponse.json({ twitchLogin: login, logoUrl: twitchUser.profile_image_url, displayName: twitchUser.display_name });
   }
 

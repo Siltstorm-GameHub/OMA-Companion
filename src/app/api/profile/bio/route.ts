@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { awardProfileCompletionIfNeeded } from "@/lib/profile-completion";
 
 const MAX_BIO = 200;
 
@@ -15,6 +16,8 @@ export async function POST(req: NextRequest) {
     where: { id: session.user.id },
     data:  { bio: cleaned || null },
   });
+
+  if (cleaned) await awardProfileCompletionIfNeeded(session.user.id, "PROFILE_BIO");
 
   return NextResponse.json({ ok: true });
 }
