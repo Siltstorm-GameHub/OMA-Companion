@@ -12,7 +12,8 @@
  * zweite Benachrichtigung an bereits abgefertigte User.
  */
 import { prisma } from "@/lib/prisma";
-import { PROFILE_COMPLETION_ITEMS, awardProfileCompletionIfNeeded } from "@/lib/profile-completion";
+import { PROFILE_COMPLETION_ITEMS } from "@/lib/profile-completion";
+import { awardProfileCompletionIfNeeded } from "@/lib/profile-completion-award";
 import { POINT_RULES } from "@/lib/points";
 import { createNotification } from "@/lib/notifications";
 import { parseFavoriteGames } from "@/lib/favorite-games";

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { awardProfileCompletionIfNeeded } from "@/lib/profile-completion";
+import { awardProfileCompletionIfNeeded } from "@/lib/profile-completion-award";
 
 export async function POST(req: NextRequest) {
   const session = await auth();

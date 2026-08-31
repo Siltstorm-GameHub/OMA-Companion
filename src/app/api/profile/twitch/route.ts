@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionUser } from "@/lib/roles";
 import { getTwitchUser } from "@/lib/twitch";
-import { awardProfileCompletionIfNeeded } from "@/lib/profile-completion";
+import { awardProfileCompletionIfNeeded } from "@/lib/profile-completion-award";
 
 export async function POST(req: NextRequest) {
   const me = await getSessionUser();

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { sanitizeFavoriteGames, MAX_FAVORITE_GAMES } from "@/lib/favorite-games";
-import { awardProfileCompletionIfNeeded } from "@/lib/profile-completion";
+import { awardProfileCompletionIfNeeded } from "@/lib/profile-completion-award";
 
 export async function PATCH(req: NextRequest) {
   const session = await auth();

@@ -1,4 +1,8 @@
-import { awardPoints, everAwarded, type PointRule } from "./points";
+import type { PointRule } from "./points";
+
+// Client-sicher: nur Konstanten/Typen, keine Laufzeit-Importe von Server-Code (prisma,
+// Discord-Bot etc.) — wird von der Client-Komponente ProfileCompletion.tsx importiert.
+// Die eigentliche Vergabe-Logik liegt in profile-completion-award.ts (Server-only).
 
 export interface ProfileCompletionItem {
   key: "bio" | "birthday" | "banner" | "twitch" | "favoriteGames";
@@ -17,25 +21,3 @@ export const PROFILE_COMPLETION_ITEMS: ProfileCompletionItem[] = [
   { key: "twitch",        label: "Twitch-Kanal verknüpfen",     rule: "PROFILE_TWITCH",         sectionId: "profile-editor",        openEvent: "profile-open-editor" },
   { key: "favoriteGames", label: "Lieblingsspiele auswählen",   rule: "PROFILE_FAVORITE_GAMES", sectionId: "favorite-games-section", openEvent: "profile-open-favorite-games" },
 ];
-
-/**
- * Vergibt den einmaligen Profil-Vervollständigen-Bonus für `rule`, falls noch nicht
- * geschehen. Wird direkt nach dem Speichern eines Profilfelds aufgerufen, sobald das
- * Feld nicht mehr leer ist. `everAwarded` prüft gegen die PointTransaction-Historie,
- * ein späteres Leeren + erneutes Befüllen des Felds zahlt also nicht doppelt aus.
- * Fehler beim Vergeben dürfen das eigentliche Speichern nicht blockieren.
- *
- * Gibt zurück, ob gerade tatsächlich vergeben wurde (false = war schon vorher vergeben,
- * oder ein Fehler ist aufgetreten) — genutzt vom Backfill-Skript, um zu wissen, welche
- * Items für die Zusammenfassungs-Benachrichtigung neu dazugekommen sind.
- */
-export async function awardProfileCompletionIfNeeded(userId: string, rule: PointRule): Promise<boolean> {
-  try {
-    if (await everAwarded(userId, rule)) return false;
-    await awardPoints(userId, rule);
-    return true;
-  } catch {
-    // Bonus ist ein Nice-to-have — ein Fehler hier darf den Profil-Save nicht kippen.
-    return false;
-  }
-}
