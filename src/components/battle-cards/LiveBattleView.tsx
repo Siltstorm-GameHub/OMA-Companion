@@ -578,9 +578,11 @@ function LiveBattleBody({
           <p className="text-xs text-gray-500 text-center py-1">
             {myAuto
               ? "Auto-Kampf aktiv — deine Züge laufen automatisch."
-              : remainingSeconds !== null
-                ? `Gegner ist am Zug… (${remainingSeconds}s)`
-                : "Gegner ist am Zug…"}
+              : !snapshot.awaiting
+                ? "Kampf läuft automatisch weiter…"
+                : remainingSeconds !== null
+                  ? `Gegner ist am Zug… (${remainingSeconds}s)`
+                  : "Gegner ist am Zug…"}
           </p>
         )}
       </div>

@@ -44,6 +44,17 @@ export class LiveBattleError extends Error {}
 const TEAM_SIZE = 5;
 const DIFFICULTY_LEVEL: Record<NpcDifficulty, number> = { EASY: 1, MEDIUM: 3, HARD: 5 };
 
+/** PVP mit beiden Seiten auf Auto-Kampf: pro advance()-Aufruf wird nur EIN Zug
+ *  automatisch aufgelöst, statt sofort bis zum Ende durchzulaufen — so bleibt
+ *  der Kampf für beide Spieler zuschaubar (Polling deckt den Rest ab). Bei PVE
+ *  bleibt es bewusst ungedrosselt (undefined), das entspricht dort weiterhin
+ *  einem "Zum Ende springen". */
+const PVP_AUTO_PACE_STEPS = 1;
+
+function advanceOptionsFor(playerBId: string | null): { maxAutoActions?: number } {
+  return playerBId ? { maxAutoActions: PVP_AUTO_PACE_STEPS } : {};
+}
+
 function sampleWithoutReplacement<T>(items: T[], count: number): T[] {
   const pool = [...items];
   const picked: T[] = [];
@@ -274,7 +285,7 @@ async function createLiveBattle(
   controllers: { A: Controller; B: Controller }
 ): Promise<LiveBattleSnapshot> {
   const created = createInteractiveState(teamA, teamB, controllers);
-  const { state, pendingDecision } = advance(created);
+  const { state, pendingDecision } = advance(created, undefined, advanceOptionsFor(playerBId));
 
   const live = await prisma.liveBattle.create({
     data: {
@@ -368,12 +379,17 @@ export async function getLiveBattleSnapshot(liveBattleId: string, viewerId: stri
   // Normalerweise rein lesend — advance() NICHT aufrufen: das würde bei aktiviertem
   // Auto-Kampf sofort weiterspielen, aber ein reiner Read-Pfad persistiert nichts,
   // der Fortschritt ginge beim nächsten Poll wieder verloren (siehe
-  // describeCurrentDecision-Doku). AUSNAHME: das Zug-Timeout ist abgelaufen — es gibt
-  // keinen Hintergrund-Job, der das sonst durchsetzen würde, also übernimmt genau
-  // dieser (ohnehin laufende) Poll-Request die KI-Entscheidung und persistiert sie.
+  // describeCurrentDecision-Doku). Zwei Ausnahmen, die beide fortsetzen + persistieren:
+  //  - Zug-Timeout abgelaufen: es gibt keinen Hintergrund-Job, der das sonst
+  //    durchsetzen würde, also übernimmt genau dieser Poll-Request die KI-Entscheidung.
+  //  - Mitten in einem gedrosselten Auto-Kampf-Durchlauf (beide PVP-Seiten auf Auto,
+  //    siehe PVP_AUTO_PACE_STEPS): weder Timeout noch awaitingUnitId, aber auch noch
+  //    nicht beendet — genau dieser Poll-Request löst den nächsten Zug aus, dadurch
+  //    entfaltet sich der Kampf für Zuschauer schrittweise statt in einem Sprung.
   const timedOut = !!state.awaitingUnitId && state.turnDeadline !== null && Date.now() >= state.turnDeadline;
-  if (timedOut) {
-    const { state: newState, pendingDecision } = advance(state);
+  const midAutoRun = !state.winner && !state.awaitingUnitId;
+  if (timedOut || midAutoRun) {
+    const { state: newState, pendingDecision } = advance(state, undefined, advanceOptionsFor(live.playerBId));
     const updated = await persistAndMaybeFinalize(live, newState);
     return buildSnapshot(updated, newState, pendingDecision);
   }
@@ -411,7 +427,11 @@ export async function submitLiveBattleAction(
     resolvedTargetId = targetId;
   }
 
-  const { state: newState, pendingDecision } = advance(state, { actionType, targetId: resolvedTargetId });
+  const { state: newState, pendingDecision } = advance(
+    state,
+    { actionType, targetId: resolvedTargetId },
+    advanceOptionsFor(live.playerBId)
+  );
   const updated = await persistAndMaybeFinalize(live, newState);
   return buildSnapshot(updated, newState, pendingDecision);
 }
@@ -424,7 +444,7 @@ export async function setLiveBattleAuto(liveBattleId: string, viewerId: string, 
   if (viewerId === live.playerAId) state.autoA = on;
   else state.autoB = on;
 
-  const { state: newState, pendingDecision } = advance(state);
+  const { state: newState, pendingDecision } = advance(state, undefined, advanceOptionsFor(live.playerBId));
   const updated = await persistAndMaybeFinalize(live, newState);
   return buildSnapshot(updated, newState, pendingDecision);
 }

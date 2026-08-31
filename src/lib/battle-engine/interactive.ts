@@ -59,7 +59,18 @@ export interface InteractiveBattleState {
    *  falls bis dahin keine Spieler-Entscheidung eingetroffen ist. Nur relevant,
    *  solange awaitingUnitId gesetzt ist. */
   turnDeadline: number | null;
+  /** Anzahl der Züge in Folge, die diese Seite per Timeout (nicht per Auto-Kampf)
+   *  verpasst hat — wird bei einer echten Spieler-Entscheidung zurückgesetzt. Ab
+   *  TIMEOUT_STREAK_AUTO_THRESHOLD aufeinanderfolgenden Timeouts wird Auto-Kampf
+   *  für diese Seite automatisch aktiviert (siehe stepOnce). */
+  timeoutStreakA: number;
+  timeoutStreakB: number;
 }
+
+/** Nach so vielen aufeinanderfolgenden verpassten Zügen (Zug-Timeout, siehe
+ *  TURN_DECISION_TIMEOUT_MS) wird Auto-Kampf automatisch für die betroffene
+ *  Seite aktiviert. */
+export const TIMEOUT_STREAK_AUTO_THRESHOLD = 3;
 
 export interface PendingDecision {
   unitId: string;
@@ -110,6 +121,8 @@ export function createInteractiveState(
     autoB: false,
     awaitingUnitId: null,
     turnDeadline: null,
+    timeoutStreakA: 0,
+    timeoutStreakB: 0,
   };
 }
 
@@ -120,12 +133,15 @@ function isAutoForTeam(state: InteractiveBattleState, teamId: TeamId): boolean {
 }
 
 /** Führt genau eine atomare Schrittigkeit aus (ein Sub-Schritt der Kampfschleife
- *  aus runBattle) und mutiert `state`/die Unit-Objekte in `allUnits` direkt. */
+ *  aus runBattle) und mutiert `state`/die Unit-Objekte in `allUnits` direkt.
+ *  `autoActionCounter`, falls übergeben, wird bei jeder tatsächlich ausgeführten
+ *  Zug-Entscheidung hochgezählt — Grundlage für die Drosselung in advance(). */
 function stepOnce(
   state: InteractiveBattleState,
   rng: ReturnType<typeof createRng>,
   allUnits: BattleUnitState[],
-  playerDecision?: PlayerDecision
+  playerDecision?: PlayerDecision,
+  autoActionCounter?: { count: number }
 ): StepStatus {
   const log = state.log;
   const findUnit = (id: string) => allUnits.find((u) => u.instanceId === id);
@@ -168,19 +184,39 @@ function stepOnce(
     // Spieler entscheidet sich um, statt selbst zu wählen), ODER das Zug-Timeout
     // ist abgelaufen — in beiden Fällen übernimmt die KI-Logik genau diese eine
     // noch offene Entscheidung.
+    const wasAlreadyAuto = isAutoForTeam(state, unit.teamId);
     let decision = playerDecision;
+    let missedByTimeout = false;
     if (!decision) {
       const timedOut = state.turnDeadline !== null && Date.now() >= state.turnDeadline;
-      if (isAutoForTeam(state, unit.teamId) || timedOut) {
+      if (wasAlreadyAuto || timedOut) {
         decision = { actionType: defaultDecideAction(unit) };
+        missedByTimeout = timedOut && !wasAlreadyAuto;
       } else {
         return "paused"; // reines Polling, keine Entscheidung mitgeschickt, Timeout noch nicht erreicht
       }
     }
     executeUnitAction(unit, decision.actionType, decision.targetId);
+    autoActionCounter && autoActionCounter.count++;
     state.awaitingUnitId = null;
     state.turnDeadline = null;
     state.orderIndex += 1;
+
+    // Timeout-Serie pflegen: eine echte Spieler-Entscheidung setzt sie zurück, ein
+    // verpasster Zug zählt hoch — ab TIMEOUT_STREAK_AUTO_THRESHOLD in Folge wird
+    // Auto-Kampf für diese Seite automatisch aktiviert.
+    if (playerDecision) {
+      if (unit.teamId === "A") state.timeoutStreakA = 0;
+      else state.timeoutStreakB = 0;
+    } else if (missedByTimeout) {
+      if (unit.teamId === "A") {
+        state.timeoutStreakA += 1;
+        if (state.timeoutStreakA >= TIMEOUT_STREAK_AUTO_THRESHOLD) state.autoA = true;
+      } else {
+        state.timeoutStreakB += 1;
+        if (state.timeoutStreakB >= TIMEOUT_STREAK_AUTO_THRESHOLD) state.autoB = true;
+      }
+    }
     state.winner = checkWinner(state.unitsA, state.unitsB);
     if (state.winner) {
       log.push({ type: "battleEnd", winner: state.winner, round: state.round });
@@ -238,6 +274,7 @@ function stepOnce(
   }
 
   executeUnitAction(unit, defaultDecideAction(unit), undefined);
+  autoActionCounter && autoActionCounter.count++;
   state.orderIndex += 1;
   state.winner = checkWinner(state.unitsA, state.unitsB);
   if (state.winner) {
@@ -248,12 +285,24 @@ function stepOnce(
 }
 
 /** Führt den Kampf so lange automatisch fort, bis entweder eine menschliche
- *  Einheit an der Reihe ist (pendingDecision gesetzt) oder der Kampf endet.
- *  `playerDecision` wird — falls vorhanden — nur EINMAL auf die zuvor
- *  pausierte Einheit angewendet (siehe awaitingUnitId), niemals auf spätere Einheiten. */
-export function advance(state: InteractiveBattleState, playerDecision?: PlayerDecision): AdvanceResult {
+ *  Einheit an der Reihe ist (pendingDecision gesetzt), der Kampf endet, oder —
+ *  falls `maxAutoActions` gesetzt ist — so viele automatische Zug-Entscheidungen
+ *  ausgeführt wurden. Letzteres drosselt den Fall, dass BEIDE Seiten Auto-Kampf
+ *  aktiviert haben: ohne Drosselung würde die Engine sonst ohne jede Pause bis
+ *  zum Kampfende durchlaufen (siehe live-battle.ts — dort nur für PVP gesetzt,
+ *  damit die interessierten Spieler dem Kampf weiter zusehen können, statt dass
+ *  er einfach fertig ist; bei PVE bleibt das bewusst ungedrosselt als
+ *  Sofort-Auflösung). `playerDecision` wird — falls vorhanden — nur EINMAL auf
+ *  die zuvor pausierte Einheit angewendet (siehe awaitingUnitId), niemals auf
+ *  spätere Einheiten. */
+export function advance(
+  state: InteractiveBattleState,
+  playerDecision?: PlayerDecision,
+  options: { maxAutoActions?: number } = {}
+): AdvanceResult {
   const rng = createRng(state.rngState);
   const allUnits = [...state.unitsA, ...state.unitsB];
+  const autoActionCounter = { count: 0 };
 
   let status: StepStatus = "continue";
   let first = true;
@@ -261,7 +310,8 @@ export function advance(state: InteractiveBattleState, playerDecision?: PlayerDe
   // Kampf braucht bei Weitem nicht so viele Sub-Schritte.
   let guard = 0;
   while (status === "continue" && guard < 5000) {
-    status = stepOnce(state, rng, allUnits, first ? playerDecision : undefined);
+    if (options.maxAutoActions !== undefined && autoActionCounter.count >= options.maxAutoActions) break;
+    status = stepOnce(state, rng, allUnits, first ? playerDecision : undefined, autoActionCounter);
     first = false;
     guard += 1;
   }
@@ -273,9 +323,13 @@ export function advance(state: InteractiveBattleState, playerDecision?: PlayerDe
 
 /** Rein lesend: beschreibt die aktuell offene Entscheidung (falls vorhanden), OHNE
  *  den Kampf fortzusetzen — für Snapshot-Lesezugriffe (Polling), die den
- *  persistierten Zustand nicht verändern dürfen. Jeder persistierte Zustand ist
- *  per Konstruktion entweder beendet (winner gesetzt) oder wartet auf genau eine
- *  Einheit (awaitingUnitId gesetzt) — hier wird nur diese Invariante ausgelesen. */
+ *  persistierten Zustand nicht verändern dürfen. Ein persistierter Zustand ist
+ *  entweder beendet (winner gesetzt), wartet auf genau eine Einheit
+ *  (awaitingUnitId gesetzt) — oder (nur bei per maxAutoActions gedrosseltem
+ *  Auto-Kampf, siehe advance()) mitten in einem noch laufenden automatischen
+ *  Durchlauf ohne aktuell wartende Einheit; für diesen dritten Fall liefert
+ *  diese Funktion korrekt null zurück (Aufrufer muss dann per advance()
+ *  weiter fortsetzen, siehe live-battle.ts). */
 export function describeCurrentDecision(state: InteractiveBattleState): PendingDecision | null {
   if (state.winner || !state.awaitingUnitId) return null;
   const allUnits = [...state.unitsA, ...state.unitsB];
