@@ -16,6 +16,7 @@
 // läuft ausschließlich serverseitig (lib/battle-cards/live-battle.ts).
 
 import { useEffect, useState, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -132,7 +133,7 @@ function UnitCard({
       type="button"
       disabled={!clickable}
       onClick={onClick}
-      className="w-14 sm:w-20 shrink-0 text-left relative"
+      className="w-16 sm:w-24 shrink-0 text-left relative"
       style={{ opacity: unit.isAlive ? 1 : 0.35, filter: unit.isAlive ? "none" : "grayscale(1)", cursor: clickable ? "pointer" : "default" }}
     >
       {isActing && (
@@ -194,6 +195,12 @@ function UnitCard({
       <div className="h-1.5 rounded-full bg-black/40 overflow-hidden" style={{ boxShadow: "0 0 0 1px rgba(255,255,255,0.06)" }}>
         <div className="h-full rounded-full transition-[width] duration-300 ease-out" style={{ width: `${hpPct * 100}%`, background: hpBarColor(hpPct) }} />
       </div>
+      <p
+        className="hidden sm:block text-[9px] text-gray-400 text-center tabular-nums mt-0.5"
+        style={{ textShadow: "0 1px 2px rgba(0,0,0,0.9)" }}
+      >
+        {Math.max(0, unit.currentHp)}/{unit.maxHp}
+      </p>
       <div className="mt-0.5 h-1 rounded-full bg-black/40 overflow-hidden" style={{ boxShadow: "0 0 0 1px rgba(255,255,255,0.06)" }}>
         <div className="h-full rounded-full transition-[width] duration-300 ease-out" style={{ width: `${Math.min(100, unit.rage)}%`, background: "#60a5fa" }} />
       </div>
@@ -217,6 +224,15 @@ export default function LiveBattleView({
   const [selectedAction, setSelectedAction] = useState<AvailableAction | null>(null);
   const [busy, setBusy] = useState(false);
   const [, setTick] = useState(0); // erzwingt einen Re-Render pro Sekunde für den Countdown
+  const [mounted, setMounted] = useState(false);
+
+  // Portal auf document.body (wie MobileTopBar.tsx) — sonst kann eine Ahnen-
+  // Komponente mit eigenem Stacking-Context (transform/opacity/filter) den
+  // eigentlich höheren z-index dieses Overlays einsperren, wodurch die fixe
+  // Top-/Bottom-Navigation der App trotzdem darüber gemalt wird.
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   function handleExit() {
     if (onExit) onExit();
@@ -307,8 +323,10 @@ export default function LiveBattleView({
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-[60] flex flex-col overflow-hidden" style={ARENA_BACKGROUND_STYLE}>
+  if (!mounted) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 flex flex-col overflow-hidden" style={{ ...ARENA_BACKGROUND_STYLE, zIndex: 9999 }}>
       {/* Kopfzeile */}
       <div className="flex items-center justify-between gap-2 px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2 shrink-0 relative z-10">
         <button
@@ -342,7 +360,8 @@ export default function LiveBattleView({
           toggleAuto={toggleAuto}
         />
       )}
-    </div>
+    </div>,
+    document.body
   );
 }
 
