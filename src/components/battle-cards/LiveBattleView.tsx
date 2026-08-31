@@ -450,7 +450,9 @@ function LiveBattleBody({
           )}
         </div>
         {snapshot.upcoming.length > 0 && (
-          <div className="flex items-center gap-2 overflow-x-auto">
+          // py-1.5 gibt dem Rahmen (boxShadow, ragt ~3px über den Kreis hinaus) Platz —
+          // sonst schneidet overflow-x-auto (erzwingt overflow-y: auto) ihn oben/unten ab.
+          <div className="flex items-center gap-2 overflow-x-auto py-1.5">
             {snapshot.upcoming.map((id, i) => {
               const u = unitById(id);
               if (!u) return null;
