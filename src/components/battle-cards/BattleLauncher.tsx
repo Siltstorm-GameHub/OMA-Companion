@@ -3,14 +3,16 @@
 // ============================================
 // "Kampf starten" — großer CTA-Button (Clash-Royale-artig)
 // ============================================
-// Blendet Matchmaking + Direkt-Herausforderung erst nach Antippen ein,
-// statt sie permanent nebeneinander zu zeigen — der große, chunky Button
-// ist bewusst der auffälligste Call-to-Action auf dem Kampf-Reiter.
+// Blendet die drei Kampf-Wege (Zufallsgegner, Direkt-Herausforderung, NPC in
+// 3 Stufen) erst nach Antippen ein, statt sie permanent auf dem Kampf-Reiter
+// zu zeigen — der große, chunky Button ist bewusst der auffälligste
+// Call-to-Action auf dem Kampf-Reiter.
 
 import { useState } from "react";
 import { Swords, ChevronUp } from "lucide-react";
 import MatchmakingWidget from "./MatchmakingWidget";
 import ChallengeUserPicker from "./ChallengeUserPicker";
+import NpcBattleLauncher from "./NpcBattleLauncher";
 
 export default function BattleLauncher() {
   const [open, setOpen] = useState(false);
@@ -44,6 +46,7 @@ export default function BattleLauncher() {
       </button>
       <MatchmakingWidget />
       <ChallengeUserPicker />
+      <NpcBattleLauncher />
     </div>
   );
 }

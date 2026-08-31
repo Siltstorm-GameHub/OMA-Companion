@@ -5,7 +5,9 @@
 //  - Noch kein Start-Pack gewählt → Picker (StarterPickFlow), Standard-Karten
 //    sind hier NUR als Auswahlgrundlage sichtbar, nicht als Katalog.
 //  - Start-Pack vorhanden → drei Reiter:
-//    "Kampf" (Startbildschirm: Startaufstellung, Packs, NPC-Kämpfe in 3 Stufen),
+//    "Kampf" (Startbildschirm: Startaufstellung, Packs, "Kampf starten"-Button
+//    öffnet Zufallsgegner/Direkt-Herausforderung/NPC in 3 Stufen — siehe
+//    BattleLauncher),
 //    "Karten" (Sammlung — siehe CardCollectionBrowser),
 //    "Community" (eigene offene Herausforderungen, Kampfhistorie aller
 //    User, Rangliste).
@@ -23,7 +25,6 @@ import { getBattleCardsLeaderboard } from "@/lib/battle-cards/leaderboard";
 import StarterPickFlow from "@/components/battle-cards/StarterPickFlow";
 import PackOpener from "@/components/battle-cards/PackOpener";
 import CardCollectionBrowser from "@/components/battle-cards/CardCollectionBrowser";
-import NpcBattleLauncher from "@/components/battle-cards/NpcBattleLauncher";
 import BattleCardsTabs from "./BattleCardsTabs";
 import ChallengesList from "@/components/battle-cards/ChallengesList";
 import BattleLauncher from "@/components/battle-cards/BattleLauncher";
@@ -148,7 +149,10 @@ export default async function BattleCardsPage() {
         </div>
       </div>
 
-      <LineupStrip cards={lineupCards} />
+      <div className="space-y-2">
+        <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Startaufstellung</h2>
+        <LineupStrip cards={lineupCards} />
+      </div>
 
       {pendingChallenges > 0 && (
         <Link
@@ -170,8 +174,6 @@ export default async function BattleCardsPage() {
       <BattleLauncher />
 
       <PackOpener initialUnopenedCount={unopenedPacks} />
-
-      <NpcBattleLauncher />
     </div>
   );
 
