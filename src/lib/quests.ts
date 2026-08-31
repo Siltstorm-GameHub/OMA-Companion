@@ -2,8 +2,9 @@ import { prisma } from "./prisma";
 import { dispatchNotification } from "./notify-dispatch";
 import { sendDiscordDM } from "./discord-rest";
 
-// TOURNAMENT ist aus dem aktiven Rotationspool entfernt (Turniere laufen inzwischen vollständig
-// über Events → EVENT_ATTEND), bleibt aber im Union-Typ für die History-Anzeige alter Quests.
+// TOURNAMENT und DUEL_PLAYED sind aus dem aktiven Rotationspool entfernt (Turniere laufen
+// inzwischen vollständig über Events → EVENT_ATTEND; das 1v1-Münzenduell wurde durch OMA Battle
+// Cards ersetzt, siehe BATTLE_CARD_DUEL), bleiben aber im Union-Typ für die History-Anzeige alter Quests.
 export type QuestType =
   | "VOICE_MINUTES" | "MESSAGES" | "EVENT_ATTEND" | "TOURNAMENT"
   | "POLL_VOTE" | "DAILY_SPIN" | "DUEL_PLAYED" | "PREDICTION_MADE"
@@ -52,13 +53,6 @@ const TEMPLATES: QuestTemplate[] = [
     descriptions: ["Drehe an {target} Tagen am Glücksrad"],
     targets: [5, 10, 15, 20],
     rewards: [100, 150, 200, 275],
-  },
-  {
-    type: "DUEL_PLAYED",
-    titles: ["Duellant", "Münzwurf-Zocker", "Risikofreudig", "Ehrensache"],
-    descriptions: ["Spiele {target} Münzen-Duell(e)"],
-    targets: [3, 5, 8],
-    rewards: [150, 250, 400],
   },
   {
     type: "BATTLE_CARD_DUEL",
@@ -251,7 +245,7 @@ export const QUEST_TYPE_META: Record<
     color: "text-yellow-300", bar: "from-yellow-600 to-yellow-400", bg: "from-yellow-500/10",
   },
   DUEL_PLAYED: {
-    label: "Duelle",      unit: "Duelle",      icon: "⚔️",
+    label: "Münzen-Duell (alt)", unit: "Duelle", icon: "⚔️",
     color: "text-rose-300",   bar: "from-rose-600 to-rose-400",     bg: "from-rose-500/10",
   },
   PREDICTION_MADE: {
