@@ -132,21 +132,21 @@ function UnitCard({
       type="button"
       disabled={!clickable}
       onClick={onClick}
-      className="w-20 sm:w-24 shrink-0 text-left relative"
+      className="w-14 sm:w-20 shrink-0 text-left relative"
       style={{ opacity: unit.isAlive ? 1 : 0.35, filter: unit.isAlive ? "none" : "grayscale(1)", cursor: clickable ? "pointer" : "default" }}
     >
       {isActing && (
-        <span className="absolute -top-2 left-1/2 -translate-x-1/2 z-10 text-[8px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-teal-500 text-black whitespace-nowrap">
+        <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 z-10 text-[7px] sm:text-[8px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-teal-500 text-black whitespace-nowrap">
           Am Zug
         </span>
       )}
       {glow === "enemy" && !isActing && (
-        <span className="absolute -top-2 left-1/2 -translate-x-1/2 z-10 text-[8px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-rose-500 text-white whitespace-nowrap">
+        <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 z-10 text-[7px] sm:text-[8px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-rose-500 text-white whitespace-nowrap">
           Ziel
         </span>
       )}
 
-      <div className="w-full aspect-square mb-1 flex items-center justify-center relative rounded-md overflow-hidden">
+      <div className="w-full aspect-square mb-0.5 flex items-center justify-center relative rounded-md overflow-hidden">
         {(isActing || glow) && (
           <div
             className="absolute inset-0 rounded-full pointer-events-none"
@@ -169,7 +169,7 @@ function UnitCard({
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center relative" style={{ background: `${config.color}22` }}>
-            <Icon className="w-7 h-7" style={{ color: config.color, opacity: 0.55 }} />
+            <Icon className="w-5 h-5 sm:w-7 sm:h-7" style={{ color: config.color, opacity: 0.55 }} />
           </div>
         )}
         <div
@@ -185,18 +185,15 @@ function UnitCard({
         />
       </div>
 
-      <div className="flex items-center justify-center gap-1 mb-0.5">
-        <Icon className="w-3 h-3 shrink-0" style={{ color: config.color }} />
-        <p className="text-[10px] font-semibold text-white text-center truncate" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}>
-          {unit.name}
-        </p>
-      </div>
+      <p
+        className="text-[9px] sm:text-[10px] font-semibold text-white text-center truncate mb-0.5"
+        style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}
+      >
+        {unit.name}
+      </p>
       <div className="h-1.5 rounded-full bg-black/40 overflow-hidden" style={{ boxShadow: "0 0 0 1px rgba(255,255,255,0.06)" }}>
         <div className="h-full rounded-full transition-[width] duration-300 ease-out" style={{ width: `${hpPct * 100}%`, background: hpBarColor(hpPct) }} />
       </div>
-      <p className="text-[8px] text-gray-400 text-center tabular-nums mt-0.5" style={{ textShadow: "0 1px 2px rgba(0,0,0,0.9)" }}>
-        {Math.max(0, unit.currentHp)}/{unit.maxHp}
-      </p>
       <div className="mt-0.5 h-1 rounded-full bg-black/40 overflow-hidden" style={{ boxShadow: "0 0 0 1px rgba(255,255,255,0.06)" }}>
         <div className="h-full rounded-full transition-[width] duration-300 ease-out" style={{ width: `${Math.min(100, unit.rage)}%`, background: "#60a5fa" }} />
       </div>
@@ -398,72 +395,77 @@ function LiveBattleBody({
   }
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 relative z-10">
+    <div className="flex-1 flex flex-col min-h-0 relative z-10 px-3">
+      {/* Auto-Kampf + Als nächstes dran — kompakt, oberhalb der Helden */}
+      <div className="shrink-0 pt-1 space-y-1.5">
+        <div className="flex items-center justify-between gap-2">
+          {snapshot.upcoming.length > 0 ? (
+            <div className="flex items-center gap-1.5 overflow-x-auto min-w-0">
+              <span className="text-[9px] text-gray-500 uppercase tracking-widest shrink-0">Als nächstes</span>
+              <ChevronRight className="w-3 h-3 text-gray-600 shrink-0" />
+              {snapshot.upcoming.map((id, i) => {
+                const u = unitById(id);
+                if (!u) return null;
+                const isMine = myTeam !== null && u.teamId === myTeam;
+                const ringColor = isMine ? "#3b82f6" : "#ef4444";
+                const config = getClassConfig(u.class);
+                const Icon = config.icon;
+                return (
+                  <div
+                    key={`${id}-${i}`}
+                    className="w-7 h-7 rounded-full overflow-hidden shrink-0 relative"
+                    style={{ boxShadow: `0 0 0 2px ${ringColor}`, opacity: 1 - i * 0.1 }}
+                    title={u.name}
+                  >
+                    {u.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={u.imageUrl} alt={u.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center" style={{ background: `${config.color}33` }}>
+                        <Icon className="w-3.5 h-3.5" style={{ color: config.color }} />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div />
+          )}
+          {snapshot.status !== "finished" && myTeam && (
+            <button
+              type="button"
+              onClick={() => toggleAuto(!myAuto)}
+              disabled={busy}
+              className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold transition-colors disabled:opacity-40 shrink-0 ${
+                myAuto ? "bg-violet-500/20 text-violet-300" : "bg-white/[0.06] text-gray-400 hover:bg-white/[0.1]"
+              }`}
+            >
+              <Bot className="w-3 h-3" /> Auto {myAuto ? "an" : "aus"}
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Kampffeld */}
-      <div className="flex-1 flex flex-col justify-center gap-3 px-3 min-h-0">
-        <div className="flex gap-2 justify-center flex-wrap">
+      <div className="flex-1 flex flex-col justify-center gap-2 min-h-0 py-1">
+        <div className="flex gap-1.5 sm:gap-2 justify-center flex-wrap">
           {unitsByTeam(opponentTeam).map((u) => (
             <UnitCard key={u.instanceId} unit={u} isActing={snapshot.awaiting?.unitId === u.instanceId} glow={glowFor(u)} onClick={() => handleUnitClick(u)} />
           ))}
         </div>
         <div className="border-t border-white/10 mx-6" />
-        <div className="flex gap-2 justify-center flex-wrap">
+        <div className="flex gap-1.5 sm:gap-2 justify-center flex-wrap">
           {unitsByTeam(myTeam ?? "A").map((u) => (
             <UnitCard key={u.instanceId} unit={u} isActing={snapshot.awaiting?.unitId === u.instanceId} glow={glowFor(u)} onClick={() => handleUnitClick(u)} />
           ))}
         </div>
       </div>
 
-      <div className="shrink-0 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 space-y-2">
-        {/* Als nächstes dran */}
-        {snapshot.upcoming.length > 0 && (
-          <div className="flex items-center gap-1.5 overflow-x-auto">
-            <span className="text-[10px] text-gray-500 uppercase tracking-widest shrink-0">Als nächstes</span>
-            <ChevronRight className="w-3 h-3 text-gray-600 shrink-0" />
-            {snapshot.upcoming.map((id, i) => {
-              const u = unitById(id);
-              if (!u) return null;
-              const isMine = myTeam !== null && u.teamId === myTeam;
-              const ringColor = isMine ? "#3b82f6" : "#ef4444";
-              const config = getClassConfig(u.class);
-              const Icon = config.icon;
-              return (
-                <div
-                  key={`${id}-${i}`}
-                  className="w-9 h-9 rounded-full overflow-hidden shrink-0 relative"
-                  style={{ boxShadow: `0 0 0 2px ${ringColor}`, opacity: 1 - i * 0.1 }}
-                  title={u.name}
-                >
-                  {u.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={u.imageUrl} alt={u.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center" style={{ background: `${config.color}33` }}>
-                      <Icon className="w-4 h-4" style={{ color: config.color }} />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Log */}
-        <div className="surface rounded-md px-3 py-2 min-h-[52px] flex flex-col justify-end gap-0.5 bg-black/30">
-          {snapshot.recentLog
-            .map((e) => describeLogEntry(e, nameOf))
-            .filter((line): line is string => !!line)
-            .slice(-3)
-            .map((line, i) => (
-              <p key={i} className="text-[11px] text-gray-300 leading-snug">
-                {line}
-              </p>
-            ))}
-        </div>
-
-        {/* Entscheidung */}
+      {/* Entscheidung — direkt unter den Helden */}
+      <div className="shrink-0 space-y-1.5">
         {snapshot.status === "finished" ? (
-          <div className="flex items-center justify-between gap-2 glass rounded-xl p-3">
+          <div className="flex items-center justify-between gap-2 glass rounded-xl p-2.5">
             <p className="text-sm text-white font-semibold">Kampf beendet.</p>
             {snapshot.resultBattleId && (
               <Link
@@ -474,87 +476,83 @@ function LiveBattleBody({
               </Link>
             )}
           </div>
-        ) : (
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex-1" />
-            {myTeam && (
-              <button
-                type="button"
-                onClick={() => toggleAuto(!myAuto)}
-                disabled={busy}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors disabled:opacity-40 ${
-                  myAuto ? "bg-violet-500/20 text-violet-300" : "bg-white/[0.06] text-gray-400 hover:bg-white/[0.1]"
-                }`}
-              >
-                <Bot className="w-3 h-3" /> Auto-Kampf {myAuto ? "an" : "aus"}
-              </button>
-            )}
-          </div>
-        )}
-
-        {snapshot.status !== "finished" &&
-          (isMyDecision && snapshot.awaiting ? (
-            <div className="glass rounded-xl p-3 space-y-2">
-              {selectedAction ? (
-                <>
-                  <div className="flex items-start gap-2">
-                    <ActionIcon actionType={selectedAction.actionType} className="w-4 h-4 text-teal-300 mt-0.5 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-white">{selectedAction.name}</p>
-                      <p className="text-[11px] text-gray-400">{selectedAction.description}</p>
-                    </div>
+        ) : isMyDecision && snapshot.awaiting ? (
+          <div className="glass rounded-xl p-2.5 space-y-1.5">
+            {selectedAction ? (
+              <>
+                <div className="flex items-start gap-2">
+                  <ActionIcon actionType={selectedAction.actionType} className="w-4 h-4 text-teal-300 mt-0.5 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white">{selectedAction.name}</p>
+                    <p className="text-[11px] text-gray-400">{selectedAction.description}</p>
                   </div>
+                </div>
+                <div className="flex items-center justify-between gap-2">
                   <p className="text-xs text-teal-300">Markierte Karte antippen, um das Ziel zu wählen.</p>
                   <button
                     type="button"
                     onClick={() => setSelectedAction(null)}
-                    className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                    className="text-xs text-gray-500 hover:text-gray-300 transition-colors shrink-0"
                   >
-                    ← Andere Aktion wählen
+                    ← Zurück
                   </button>
-                </>
-              ) : (
-                <>
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-xs text-gray-400">Du bist am Zug — wähle eine Aktion.</p>
-                    {remainingSeconds !== null && (
-                      <span className="flex items-center gap-1 text-[11px] font-semibold text-amber-400 tabular-nums shrink-0">
-                        <Timer className="w-3 h-3" /> {remainingSeconds}s
-                      </span>
-                    )}
-                  </div>
-                  <div className="space-y-1.5">
-                    {snapshot.awaiting.actions.map((action) => (
-                      <button
-                        key={action.actionType}
-                        type="button"
-                        onClick={() => handleActionClick(action)}
-                        disabled={busy}
-                        className="w-full flex items-start gap-2.5 text-left px-3 py-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] transition-colors disabled:opacity-50"
-                      >
-                        <ActionIcon actionType={action.actionType} className="w-4 h-4 text-teal-300 mt-0.5 shrink-0" />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5">
-                            <p className="text-sm font-semibold text-white">{action.name}</p>
-                            {action.cost > 0 && (
-                              <span className="text-[10px] font-semibold text-amber-400 tabular-nums shrink-0">{action.cost} Rage</span>
-                            )}
-                          </div>
-                          <p className="text-[11px] text-gray-400 leading-snug">{action.description}</p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs text-gray-400">Du bist am Zug — wähle eine Aktion.</p>
+                  {remainingSeconds !== null && (
+                    <span className="flex items-center gap-1 text-[11px] font-semibold text-amber-400 tabular-nums shrink-0">
+                      <Timer className="w-3 h-3" /> {remainingSeconds}s
+                    </span>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  {snapshot.awaiting.actions.map((action) => (
+                    <button
+                      key={action.actionType}
+                      type="button"
+                      onClick={() => handleActionClick(action)}
+                      disabled={busy}
+                      className="w-full flex items-start gap-2 text-left px-2.5 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] transition-colors disabled:opacity-50"
+                    >
+                      <ActionIcon actionType={action.actionType} className="w-3.5 h-3.5 text-teal-300 mt-0.5 shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-[13px] font-semibold text-white">{action.name}</p>
+                          {action.cost > 0 && (
+                            <span className="text-[10px] font-semibold text-amber-400 tabular-nums shrink-0">{action.cost} Rage</span>
+                          )}
                         </div>
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-          ) : (
-            <p className="text-xs text-gray-500 text-center">
-              {myAuto
-                ? "Auto-Kampf aktiv — deine Züge laufen automatisch."
-                : remainingSeconds !== null
-                  ? `Gegner ist am Zug… (${remainingSeconds}s)`
-                  : "Gegner ist am Zug…"}
+                        <p className="text-[10px] text-gray-400 leading-snug truncate">{action.description}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        ) : (
+          <p className="text-xs text-gray-500 text-center py-1">
+            {myAuto
+              ? "Auto-Kampf aktiv — deine Züge laufen automatisch."
+              : remainingSeconds !== null
+                ? `Gegner ist am Zug… (${remainingSeconds}s)`
+                : "Gegner ist am Zug…"}
+          </p>
+        )}
+      </div>
+
+      {/* Text, was passiert — unterhalb der Entscheidung */}
+      <div className="shrink-0 surface rounded-md px-3 py-1.5 mt-1.5 mb-[max(0.5rem,env(safe-area-inset-bottom))] h-[52px] flex flex-col justify-end overflow-hidden bg-black/30">
+        {snapshot.recentLog
+          .map((e) => describeLogEntry(e, nameOf))
+          .filter((line): line is string => !!line)
+          .slice(-2)
+          .map((line, i) => (
+            <p key={i} className="text-[11px] text-gray-300 leading-snug truncate">
+              {line}
             </p>
           ))}
       </div>
