@@ -164,6 +164,9 @@ export default async function BattleCardsPage() {
         </Link>
       )}
 
+      <MatchmakingWidget />
+      <ChallengeUserPicker />
+
       <PackOpener initialUnopenedCount={unopenedPacks} />
 
       {isModOrAdmin && <TestBattleLauncher />}
