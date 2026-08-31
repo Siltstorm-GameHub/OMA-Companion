@@ -44,6 +44,9 @@ export default function CardDetailModal({
                 coins={selection.owned.coins}
                 duplicateThresholds={selection.owned.duplicateThresholds}
                 upgradeCosts={selection.owned.upgradeCosts}
+                baseHp={selection.card.baseHp}
+                baseAttack={selection.card.baseAttack}
+                baseDefense={selection.card.baseDefense}
                 onUpgraded={selection.owned.onUpgraded}
               />
             </div>

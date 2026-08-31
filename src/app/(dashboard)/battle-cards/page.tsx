@@ -12,7 +12,7 @@
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Repeat, IdCard, Trophy, Swords } from "lucide-react";
+import { IdCard, Trophy, Swords } from "lucide-react";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { hasStarterDeck } from "@/lib/battle-cards/starter-pick";
@@ -29,8 +29,10 @@ import BattleCardsTabs from "./BattleCardsTabs";
 import ChallengesList from "@/components/battle-cards/ChallengesList";
 import ChallengeUserPicker from "@/components/battle-cards/ChallengeUserPicker";
 import MatchmakingWidget from "@/components/battle-cards/MatchmakingWidget";
+import BattleLauncher from "@/components/battle-cards/BattleLauncher";
 import BattleHistoryFeed from "@/components/battle-cards/BattleHistoryFeed";
 import LeaderboardList from "@/components/battle-cards/LeaderboardList";
+import LineupStrip from "@/components/battle-cards/LineupStrip";
 
 const OTHER_CARDS_PAGE_SIZE = 12;
 const userSelect = { id: true, username: true, name: true, image: true, rankPoints: true } as const;
@@ -94,8 +96,12 @@ export default async function BattleCardsPage() {
     id: uc.id,
     level: uc.level,
     duplicates: uc.duplicates,
+    acquiredAt: uc.acquiredAt.toISOString(),
     card: { ...toCardData(uc.card, avatarByDiscordId), level: uc.level },
   }));
+  const lineupCards = ownedUserCards
+    .filter((uc) => uc.inLineup)
+    .map((uc) => ({ card: toCardData(uc.card, avatarByDiscordId), level: uc.level }));
 
   // ── Community-Reiter: eigene offene Herausforderungen, Kampfhistorie aller User, Rangliste ──
   const [incoming, outgoing, allResolved, leaderboardRows] = await Promise.all([
@@ -138,14 +144,10 @@ export default async function BattleCardsPage() {
               <IdCard className="w-3.5 h-3.5" /> Meine Community-Karte
             </Link>
           )}
-          <Link
-            href="/battle-cards/lineup"
-            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-md bg-violet-500/15 text-violet-300 hover:bg-violet-500/25 transition-colors shrink-0"
-          >
-            <Repeat className="w-3.5 h-3.5" /> Startaufstellung ändern
-          </Link>
         </div>
       </div>
+
+      <LineupStrip cards={lineupCards} />
 
       {pendingChallenges > 0 && (
         <Link
@@ -164,8 +166,7 @@ export default async function BattleCardsPage() {
         </Link>
       )}
 
-      <MatchmakingWidget />
-      <ChallengeUserPicker />
+      <BattleLauncher />
 
       <PackOpener initialUnopenedCount={unopenedPacks} />
 

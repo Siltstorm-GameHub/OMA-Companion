@@ -16,12 +16,15 @@ export default function CardTile({
   level,
   duplicates,
   locked = false,
+  isNew = false,
   onClick,
 }: {
   card: BattleCardData;
   level: number;
   duplicates?: number;
   locked?: boolean;
+  /** Kürzlich erhalten — zeigt ein "NEU"-Ribbon in der oberen linken Ecke. */
+  isNew?: boolean;
   onClick: () => void;
 }) {
   const classConfig = CLASS_CONFIG[card.class];
@@ -70,6 +73,14 @@ export default function CardTile({
         {!locked && typeof duplicates === "number" && (
           <span className="absolute top-1 right-1 text-[9px] font-bold leading-none px-1.5 py-1 rounded-full bg-black/70 backdrop-blur-sm text-violet-300">
             ×{duplicates}
+          </span>
+        )}
+        {!locked && isNew && (
+          <span
+            className="absolute -left-6 top-2.5 w-20 text-center text-[8px] font-black uppercase tracking-widest text-black py-0.5 shadow-md"
+            style={{ background: "linear-gradient(90deg, #fbbf24, #f59e0b)", transform: "rotate(-45deg)" }}
+          >
+            Neu
           </span>
         )}
       </div>

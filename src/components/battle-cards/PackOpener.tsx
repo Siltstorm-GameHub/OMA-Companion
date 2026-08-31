@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
-import { Package, Sparkles, X } from "lucide-react";
+import { Package, X, Lock, LockOpen } from "lucide-react";
 import BattleCardView from "./BattleCardView";
 import type { BattleCardData } from "./BattleCardView";
 
@@ -90,7 +90,7 @@ export default function PackOpener({ initialUnopenedCount }: { initialUnopenedCo
         className="flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-md bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 transition-colors"
       >
         <Package className="w-4 h-4" />
-        {remaining} ungeöffnete{remaining === 1 ? "s" : ""} Pack{remaining === 1 ? "" : "s"}
+        {remaining} ungeöffnete Truhe{remaining === 1 ? "" : "n"}
       </button>
 
       <AnimatePresence>
@@ -123,16 +123,24 @@ export default function PackOpener({ initialUnopenedCount }: { initialUnopenedCo
                       : { rotate: 0, scale: 1 }
                   }
                   transition={{ duration: 0.9, ease: "easeInOut" }}
-                  className="w-40 h-56 rounded-xl flex flex-col items-center justify-center gap-3 cursor-pointer"
+                  className="relative w-40 h-56 rounded-xl flex flex-col items-center justify-center gap-3 cursor-pointer overflow-hidden"
                   style={{
-                    background: "linear-gradient(160deg, #6d28d9 0%, #2e1065 100%)",
-                    boxShadow: "0 0 40px rgba(139,92,246,0.45), 0 8px 24px rgba(0,0,0,0.6)",
+                    background: "linear-gradient(160deg, #d97706 0%, #78350f 100%)",
+                    boxShadow: "0 0 40px rgba(245,158,11,0.4), 0 8px 24px rgba(0,0,0,0.6), inset 0 2px 0 rgba(255,255,255,0.15)",
                   }}
                 >
-                  <Sparkles className="w-10 h-10 text-violet-200" />
-                  <p className="text-sm font-bold text-white">Karten-Pack</p>
-                  <p className="text-[11px] text-violet-200/70">
-                    {phase === "opening" ? "Öffnet…" : "Antippen zum Öffnen"}
+                  {/* Truhen-Deckel-Naht */}
+                  <div className="absolute top-[38%] left-0 right-0 h-1.5 bg-black/25" />
+                  <div className="absolute top-[38%] left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-amber-900/60 border border-amber-950/50" />
+
+                  {phase === "opening" ? (
+                    <LockOpen className="w-10 h-10 text-amber-100 relative z-10" />
+                  ) : (
+                    <Lock className="w-10 h-10 text-amber-100 relative z-10" />
+                  )}
+                  <p className="text-sm font-bold text-white relative z-10">Kartentruhe</p>
+                  <p className="text-[11px] text-amber-100/70 relative z-10">
+                    {phase === "opening" ? "Wird geöffnet…" : "Antippen zum Öffnen"}
                   </p>
                 </motion.button>
               )}
@@ -155,7 +163,7 @@ export default function PackOpener({ initialUnopenedCount }: { initialUnopenedCo
                         onClick={openAnother}
                         className="text-xs font-semibold px-3 py-2 rounded-md bg-violet-500/15 text-violet-300 hover:bg-violet-500/25 transition-colors"
                       >
-                        Nächstes Pack öffnen ({remaining})
+                        Nächste Truhe öffnen ({remaining})
                       </button>
                     )}
                     <button

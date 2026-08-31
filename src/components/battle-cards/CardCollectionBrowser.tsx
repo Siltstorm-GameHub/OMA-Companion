@@ -38,8 +38,12 @@ export interface OwnedCardEntry {
   id: string;
   level: number;
   duplicates: number;
+  /** ISO-Zeitstempel, wann die Karte erworben wurde — steuert das "Neu"-Ribbon. */
+  acquiredAt: string;
   card: BattleCardData & { id: string };
 }
+
+const NEW_CARD_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
 
 type Selected = { kind: "owned"; userCardId: string } | { kind: "other"; cardId: string } | null;
 
@@ -176,6 +180,7 @@ export default function CardCollectionBrowser({
               card={oc.card}
               level={oc.level}
               duplicates={oc.duplicates}
+              isNew={Date.now() - new Date(oc.acquiredAt).getTime() < NEW_CARD_WINDOW_MS}
               onClick={() => setSelected({ kind: "owned", userCardId: oc.id })}
             />
           ))}
