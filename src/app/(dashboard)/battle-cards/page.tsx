@@ -27,8 +27,6 @@ import CardCollectionBrowser from "@/components/battle-cards/CardCollectionBrows
 import TestBattleLauncher from "@/components/battle-cards/TestBattleLauncher";
 import BattleCardsTabs from "./BattleCardsTabs";
 import ChallengesList from "@/components/battle-cards/ChallengesList";
-import ChallengeUserPicker from "@/components/battle-cards/ChallengeUserPicker";
-import MatchmakingWidget from "@/components/battle-cards/MatchmakingWidget";
 import BattleLauncher from "@/components/battle-cards/BattleLauncher";
 import BattleHistoryFeed from "@/components/battle-cards/BattleHistoryFeed";
 import LeaderboardList from "@/components/battle-cards/LeaderboardList";
@@ -200,8 +198,6 @@ export default async function BattleCardsPage() {
         </p>
       </div>
 
-      <MatchmakingWidget />
-      <ChallengeUserPicker />
       <ChallengesList incoming={serialize(incoming)} outgoing={serialize(outgoing)} />
 
       <div className="space-y-3">
