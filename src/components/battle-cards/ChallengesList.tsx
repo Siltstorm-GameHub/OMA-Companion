@@ -8,7 +8,7 @@ import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Check, X, Eye, Swords, Clock } from "lucide-react";
+import { Check, X, Clock } from "lucide-react";
 import RankedAvatar from "@/components/RankedAvatar";
 
 interface ChallengeUser {
@@ -70,15 +70,11 @@ function VsCard({
 }
 
 export default function ChallengesList({
-  viewerId,
   incoming,
   outgoing,
-  history,
 }: {
-  viewerId: string;
   incoming: ChallengeItem[];
   outgoing: ChallengeItem[];
-  history: ChallengeItem[];
 }) {
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -168,43 +164,6 @@ export default function ChallengesList({
                 }
               />
             ))}
-          </div>
-        )}
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Verlauf</h2>
-        {history.length === 0 ? (
-          <p className="text-xs text-gray-600">Noch keine vergangenen Herausforderungen.</p>
-        ) : (
-          <div className="space-y-2">
-            {history.map((c) => {
-              const opponent = c.challengerId === viewerId ? c.opponent : c.challenger;
-              const won = c.winnerId === viewerId;
-              const lost = c.status === "resolved" && c.winnerId && c.winnerId !== viewerId;
-              return (
-                <div key={c.id} className="glass rounded-xl p-3 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <Swords className="w-4 h-4 text-gray-600 shrink-0" />
-                    <p className="text-sm text-gray-300 truncate">
-                      vs. <span className="font-semibold text-white">{displayName(opponent)}</span>
-                      {c.status === "declined" && <span className="text-gray-500"> — abgelehnt</span>}
-                      {won && <span className="text-emerald-400"> — gewonnen</span>}
-                      {lost && <span className="text-rose-400"> — verloren</span>}
-                      {c.status === "resolved" && !c.winnerId && <span className="text-gray-500"> — unentschieden</span>}
-                    </p>
-                  </div>
-                  {c.battleId && (
-                    <Link
-                      href={`/battle-cards/battles/${c.battleId}`}
-                      className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-md bg-white/[0.06] text-gray-300 hover:bg-white/[0.1] transition-colors shrink-0"
-                    >
-                      <Eye className="w-3.5 h-3.5" /> Ansehen
-                    </Link>
-                  )}
-                </div>
-              );
-            })}
           </div>
         )}
       </section>

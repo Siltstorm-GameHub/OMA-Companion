@@ -38,10 +38,10 @@ export default async function BattleReplayPage({ params }: { params: Promise<{ i
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
       <Link
-        href="/battle-cards/challenges"
+        href="/battle-cards?tab=community"
         className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-white transition-colors"
       >
-        <ArrowLeft className="w-3.5 h-3.5" /> Zurück zu den Herausforderungen
+        <ArrowLeft className="w-3.5 h-3.5" /> Zurück zur Community
       </Link>
       {challenge && (
         <h1 className="text-lg font-black text-white">
