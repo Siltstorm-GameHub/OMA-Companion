@@ -10,7 +10,15 @@ export const ULTIMATE_SKILL_COST = 100;
 export const RAGE_PER_ACTION = 25;
 export const RAGE_PER_ROUND_END = 10;
 
-export const ROUND_LIMIT = 15;
+/** Senkt nur die HP (nicht ATK/DEF) global ab — kürzere Kämpfe, ohne das
+ *  Kräfteverhältnis zwischen Klassen zu verschieben (die Schadensformel
+ *  zieht DEF nur flach ab, ein höherer ATK-Wert hätte Tanks relativ
+ *  geschwächt). Gilt überall, wo scaleStatsForLevel() genutzt wird — auch
+ *  in der Karten-/Upgrade-Vorschau, damit die angezeigten Werte mit dem
+ *  tatsächlichen Kampfverhalten übereinstimmen. */
+export const BATTLE_HP_MULTIPLIER = 0.65;
+
+export const ROUND_LIMIT = 10;
 /** Ab Runde 16 (Sudden Death): zusätzlicher Schadens-Multiplikator pro Sudden-Death-Runde. */
 export const SUDDEN_DEATH_DAMAGE_MULTIPLIER_STEP = 0.1;
 

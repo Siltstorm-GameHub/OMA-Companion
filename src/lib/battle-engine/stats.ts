@@ -2,7 +2,7 @@
 // Battle-Engine — Stufen-Skalierung & Einheiten-Erzeugung
 // ============================================
 
-import { LEVEL_STAT_MULTIPLIER } from "./constants";
+import { BATTLE_HP_MULTIPLIER, LEVEL_STAT_MULTIPLIER } from "./constants";
 import type { BattleUnitDefinition, BattleUnitState, RosterEntry, TeamId } from "./types";
 
 /** Stat-Multiplikator für eine gegebene Karten-Stufe (1-5). Fällt auf Stufe 1 zurück, falls unbekannt. */
@@ -20,7 +20,7 @@ export function scaleStatsForLevel(
 ): { hp: number; attack: number; defense: number } {
   const mult = levelMultiplier(def.level);
   return {
-    hp: Math.round(def.baseHp * mult),
+    hp: Math.round(def.baseHp * mult * BATTLE_HP_MULTIPLIER),
     attack: Math.round(def.baseAttack * mult),
     defense: Math.round(def.baseDefense * mult),
   };
