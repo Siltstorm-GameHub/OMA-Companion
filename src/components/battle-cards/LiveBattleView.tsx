@@ -1,23 +1,39 @@
 "use client";
 
 // ============================================
-// Interaktiver Kampf — Zug-für-Zug-Steuerung
+// Interaktiver Kampf — Vollbild-Zug-für-Zug-Steuerung
 // ============================================
+// Eigenes Vollbild-Fenster (fixed inset-0) im selben Arena-Look wie
+// BattleScreen.tsx (die reine Wiedergabekomponente für fertige Replays).
 // Zeigt den aktuellen LiveBattle-Zustand (Polling) und lässt den Spieler,
 // sobald seine Einheit an der Reihe ist, die Aktion (Normalangriff/Aktiv/
 // Ultimate) und — falls nötig — das Ziel wählen (Glow: rot Gegner, grün
-// Verbündete). "Als nächstes dran" zeigt die kommenden 5 Einheiten in
-// Zugreihenfolge. Auto-Kampf überlässt die eigenen Entscheidungen der KI.
+// Verbündete). "Als nächstes dran" zeigt die kommenden 5 Einheiten mit
+// Porträt + Rahmenfarbe (blau eigen, rot gegnerisch). Auto-Kampf überlässt
+// die eigenen Entscheidungen der KI.
 //
 // Reine Präsentations-/Steuerungskomponente — die eigentliche Kampflogik
 // läuft ausschließlich serverseitig (lib/battle-cards/live-battle.ts).
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Loader2, Zap, Swords, Bot, ChevronRight, Timer } from "lucide-react";
+import { Loader2, Zap, Swords, Bot, ChevronRight, ChevronLeft, Timer } from "lucide-react";
 import { getClassConfig, LEVEL_BORDER } from "./BattleCardView";
 import type { ActionType, TeamId, UnitClass } from "@/lib/battle-engine/types";
+
+const ARENA_BACKGROUND_STYLE: CSSProperties = {
+  backgroundColor: "#12151a",
+  backgroundImage: [
+    "radial-gradient(ellipse 70% 45% at 50% 8%, rgba(239,68,68,0.18), transparent 70%)",
+    "radial-gradient(ellipse 70% 45% at 50% 92%, rgba(20,184,166,0.18), transparent 70%)",
+    "linear-gradient(180deg, rgba(13,15,19,0.55) 0%, rgba(13,15,19,0.25) 35%, rgba(13,15,19,0.25) 65%, rgba(13,15,19,0.55) 100%)",
+    "url(/battle-cards/arena-bg.jpg)",
+  ].join(", "),
+  backgroundSize: "auto, auto, auto, cover",
+  backgroundPosition: "center",
+};
 
 interface LiveUnit {
   instanceId: string;
@@ -88,6 +104,12 @@ function describeLogEntry(entry: LiveSnapshot["recentLog"][number], nameOf: (id:
   }
 }
 
+function ActionIcon({ actionType, className }: { actionType: ActionType; className?: string }) {
+  if (actionType === "ultimate") return <Zap className={className} />;
+  if (actionType === "active") return <Bot className={className} />;
+  return <Swords className={className} />;
+}
+
 function UnitCard({
   unit,
   isActing,
@@ -110,46 +132,99 @@ function UnitCard({
       type="button"
       disabled={!clickable}
       onClick={onClick}
-      className="w-16 sm:w-20 shrink-0 text-left"
+      className="w-20 sm:w-24 shrink-0 text-left relative"
       style={{ opacity: unit.isAlive ? 1 : 0.35, filter: unit.isAlive ? "none" : "grayscale(1)", cursor: clickable ? "pointer" : "default" }}
     >
-      <div
-        className="w-full aspect-square rounded-lg flex items-center justify-center relative overflow-hidden mb-1"
-        style={{
-          background: `${config.color}22`,
-          boxShadow: isActing
-            ? "0 0 0 2px #14b8a6, 0 0 14px rgba(20,184,166,0.6)"
-            : glow === "enemy"
-              ? "0 0 0 2px #ef4444, 0 0 12px rgba(239,68,68,0.55)"
-              : glow === "ally"
-                ? "0 0 0 2px #22c55e, 0 0 12px rgba(34,197,94,0.55)"
-                : `0 0 0 1px ${borderColor}`,
-        }}
-      >
+      {isActing && (
+        <span className="absolute -top-2 left-1/2 -translate-x-1/2 z-10 text-[8px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-teal-500 text-black whitespace-nowrap">
+          Am Zug
+        </span>
+      )}
+      {glow === "enemy" && !isActing && (
+        <span className="absolute -top-2 left-1/2 -translate-x-1/2 z-10 text-[8px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-rose-500 text-white whitespace-nowrap">
+          Ziel
+        </span>
+      )}
+
+      <div className="w-full aspect-square mb-1 flex items-center justify-center relative rounded-md overflow-hidden">
+        {(isActing || glow) && (
+          <div
+            className="absolute inset-0 rounded-full pointer-events-none"
+            style={{
+              background: isActing
+                ? "radial-gradient(closest-side, rgba(20,184,166,0.35), transparent 70%)"
+                : glow === "enemy"
+                  ? "radial-gradient(closest-side, rgba(239,68,68,0.35), transparent 70%)"
+                  : "radial-gradient(closest-side, rgba(34,197,94,0.35), transparent 70%)",
+            }}
+          />
+        )}
         {unit.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={unit.imageUrl} alt={unit.name} className="w-full h-full object-cover" />
+          <img
+            src={unit.imageUrl}
+            alt={unit.name}
+            className="max-w-full max-h-full object-contain relative"
+            style={{ filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.65))" }}
+          />
         ) : (
-          <Icon className="w-6 h-6" style={{ color: config.color, opacity: 0.6 }} />
+          <div className="w-full h-full flex items-center justify-center relative" style={{ background: `${config.color}22` }}>
+            <Icon className="w-7 h-7" style={{ color: config.color, opacity: 0.55 }} />
+          </div>
         )}
+        <div
+          className="absolute inset-0 rounded-md pointer-events-none"
+          style={{
+            boxShadow:
+              glow === "enemy"
+                ? "0 0 0 2px #ef4444, 0 0 14px rgba(239,68,68,0.6)"
+                : glow === "ally"
+                  ? "0 0 0 2px #22c55e, 0 0 14px rgba(34,197,94,0.6)"
+                  : `0 0 0 1px ${borderColor}`,
+          }}
+        />
       </div>
-      <p className="text-[9px] text-white font-semibold truncate text-center">{unit.name}</p>
-      <div className="h-1.5 rounded-full bg-black/40 overflow-hidden mt-0.5">
-        <div className="h-full rounded-full transition-[width]" style={{ width: `${hpPct * 100}%`, background: hpBarColor(hpPct) }} />
+
+      <div className="flex items-center justify-center gap-1 mb-0.5">
+        <Icon className="w-3 h-3 shrink-0" style={{ color: config.color }} />
+        <p className="text-[10px] font-semibold text-white text-center truncate" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}>
+          {unit.name}
+        </p>
       </div>
-      <div className="h-1 rounded-full bg-black/40 overflow-hidden mt-0.5">
-        <div className="h-full rounded-full transition-[width]" style={{ width: `${Math.min(100, unit.rage)}%`, background: "#60a5fa" }} />
+      <div className="h-1.5 rounded-full bg-black/40 overflow-hidden" style={{ boxShadow: "0 0 0 1px rgba(255,255,255,0.06)" }}>
+        <div className="h-full rounded-full transition-[width] duration-300 ease-out" style={{ width: `${hpPct * 100}%`, background: hpBarColor(hpPct) }} />
+      </div>
+      <p className="text-[8px] text-gray-400 text-center tabular-nums mt-0.5" style={{ textShadow: "0 1px 2px rgba(0,0,0,0.9)" }}>
+        {Math.max(0, unit.currentHp)}/{unit.maxHp}
+      </p>
+      <div className="mt-0.5 h-1 rounded-full bg-black/40 overflow-hidden" style={{ boxShadow: "0 0 0 1px rgba(255,255,255,0.06)" }}>
+        <div className="h-full rounded-full transition-[width] duration-300 ease-out" style={{ width: `${Math.min(100, unit.rage)}%`, background: "#60a5fa" }} />
       </div>
     </button>
   );
 }
 
-export default function LiveBattleView({ liveBattleId, viewerId }: { liveBattleId: string; viewerId: string }) {
+export default function LiveBattleView({
+  liveBattleId,
+  viewerId,
+  onExit,
+}: {
+  liveBattleId: string;
+  viewerId: string;
+  /** Fehlt dieser Handler, navigiert der eingebaute Zurück-Button zur Community-Übersicht. */
+  onExit?: () => void;
+}) {
+  const router = useRouter();
   const [snapshot, setSnapshot] = useState<LiveSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedAction, setSelectedAction] = useState<AvailableAction | null>(null);
   const [busy, setBusy] = useState(false);
   const [, setTick] = useState(0); // erzwingt einen Re-Render pro Sekunde für den Countdown
+
+  function handleExit() {
+    if (onExit) onExit();
+    else router.push("/battle-cards?tab=community");
+  }
 
   async function fetchSnapshot() {
     try {
@@ -235,17 +310,62 @@ export default function LiveBattleView({ liveBattleId, viewerId }: { liveBattleI
     }
   }
 
-  if (error) {
-    return <p className="text-sm text-rose-400">{error}</p>;
-  }
-  if (!snapshot) {
-    return (
-      <div className="flex items-center justify-center py-10">
-        <Loader2 className="w-5 h-5 text-gray-500 animate-spin" />
+  return (
+    <div className="fixed inset-0 z-[60] flex flex-col overflow-hidden" style={ARENA_BACKGROUND_STYLE}>
+      {/* Kopfzeile */}
+      <div className="flex items-center justify-between gap-2 px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2 shrink-0 relative z-10">
+        <button
+          type="button"
+          onClick={handleExit}
+          className="flex items-center gap-1 text-xs font-semibold text-gray-300 hover:text-white transition-colors px-2 py-1.5 rounded-md bg-black/30"
+        >
+          <ChevronLeft className="w-4 h-4" /> Zurück
+        </button>
+        {snapshot && (
+          <span className="text-[11px] text-gray-400 bg-black/30 px-2.5 py-1 rounded-md">Runde {snapshot.round}</span>
+        )}
       </div>
-    );
-  }
 
+      {error ? (
+        <div className="flex-1 flex items-center justify-center px-4">
+          <p className="text-sm text-rose-400 text-center">{error}</p>
+        </div>
+      ) : !snapshot ? (
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="w-6 h-6 text-gray-400 animate-spin" />
+        </div>
+      ) : (
+        <LiveBattleBody
+          snapshot={snapshot}
+          viewerId={viewerId}
+          busy={busy}
+          selectedAction={selectedAction}
+          setSelectedAction={setSelectedAction}
+          submitAction={submitAction}
+          toggleAuto={toggleAuto}
+        />
+      )}
+    </div>
+  );
+}
+
+function LiveBattleBody({
+  snapshot,
+  viewerId,
+  busy,
+  selectedAction,
+  setSelectedAction,
+  submitAction,
+  toggleAuto,
+}: {
+  snapshot: LiveSnapshot;
+  viewerId: string;
+  busy: boolean;
+  selectedAction: AvailableAction | null;
+  setSelectedAction: (a: AvailableAction | null) => void;
+  submitAction: (actionType: ActionType, targetId?: string) => void;
+  toggleAuto: (on: boolean) => void;
+}) {
   const myTeam: TeamId | null = viewerId === snapshot.playerAId ? "A" : viewerId === snapshot.playerBId ? "B" : null;
   const opponentTeam: TeamId = myTeam === "A" ? "B" : "A";
   const isMyDecision = !!snapshot.awaiting && snapshot.awaiting.controlledByPlayerId === viewerId;
@@ -278,30 +398,15 @@ export default function LiveBattleView({ liveBattleId, viewerId }: { liveBattleI
   }
 
   return (
-    <div className="space-y-3">
-      {myTeam && (
-        <div className="flex items-center justify-between gap-2 text-[11px] text-gray-500">
-          <span>Runde {snapshot.round}</span>
-          <button
-            type="button"
-            onClick={() => toggleAuto(!myAuto)}
-            disabled={busy || snapshot.status === "finished"}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-md font-semibold transition-colors disabled:opacity-40 ${
-              myAuto ? "bg-violet-500/20 text-violet-300" : "bg-white/[0.06] text-gray-400 hover:bg-white/[0.1]"
-            }`}
-          >
-            <Bot className="w-3 h-3" /> Auto-Kampf {myAuto ? "an" : "aus"}
-          </button>
-        </div>
-      )}
-
-      <div className="surface-elevated rounded-xl p-3 space-y-3">
+    <div className="flex-1 flex flex-col min-h-0 relative z-10">
+      {/* Kampffeld */}
+      <div className="flex-1 flex flex-col justify-center gap-3 px-3 min-h-0">
         <div className="flex gap-2 justify-center flex-wrap">
           {unitsByTeam(opponentTeam).map((u) => (
             <UnitCard key={u.instanceId} unit={u} isActing={snapshot.awaiting?.unitId === u.instanceId} glow={glowFor(u)} onClick={() => handleUnitClick(u)} />
           ))}
         </div>
-        <div className="border-t border-white/[0.06]" />
+        <div className="border-t border-white/10 mx-6" />
         <div className="flex gap-2 justify-center flex-wrap">
           {unitsByTeam(myTeam ?? "A").map((u) => (
             <UnitCard key={u.instanceId} unit={u} isActing={snapshot.awaiting?.unitId === u.instanceId} glow={glowFor(u)} onClick={() => handleUnitClick(u)} />
@@ -309,114 +414,150 @@ export default function LiveBattleView({ liveBattleId, viewerId }: { liveBattleI
         </div>
       </div>
 
-      {/* Als nächstes dran */}
-      {snapshot.upcoming.length > 0 && (
-        <div className="flex items-center gap-1.5 overflow-x-auto">
-          <span className="text-[10px] text-gray-600 uppercase tracking-widest shrink-0">Als nächstes</span>
-          <ChevronRight className="w-3 h-3 text-gray-700 shrink-0" />
-          {snapshot.upcoming.map((id, i) => {
-            const u = unitById(id);
-            if (!u) return null;
-            const config = getClassConfig(u.class);
-            const Icon = config.icon;
-            return (
-              <div
-                key={`${id}-${i}`}
-                className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
-                style={{ background: `${config.color}22`, opacity: 1 - i * 0.12 }}
-                title={u.name}
-              >
-                <Icon className="w-3 h-3" style={{ color: config.color }} />
-              </div>
-            );
-          })}
-        </div>
-      )}
+      <div className="shrink-0 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 space-y-2">
+        {/* Als nächstes dran */}
+        {snapshot.upcoming.length > 0 && (
+          <div className="flex items-center gap-1.5 overflow-x-auto">
+            <span className="text-[10px] text-gray-500 uppercase tracking-widest shrink-0">Als nächstes</span>
+            <ChevronRight className="w-3 h-3 text-gray-600 shrink-0" />
+            {snapshot.upcoming.map((id, i) => {
+              const u = unitById(id);
+              if (!u) return null;
+              const isMine = myTeam !== null && u.teamId === myTeam;
+              const ringColor = isMine ? "#3b82f6" : "#ef4444";
+              const config = getClassConfig(u.class);
+              const Icon = config.icon;
+              return (
+                <div
+                  key={`${id}-${i}`}
+                  className="w-9 h-9 rounded-full overflow-hidden shrink-0 relative"
+                  style={{ boxShadow: `0 0 0 2px ${ringColor}`, opacity: 1 - i * 0.1 }}
+                  title={u.name}
+                >
+                  {u.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={u.imageUrl} alt={u.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center" style={{ background: `${config.color}33` }}>
+                      <Icon className="w-4 h-4" style={{ color: config.color }} />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
 
-      {/* Log */}
-      <div className="surface rounded-md px-3 py-2 min-h-[60px] flex flex-col justify-end gap-0.5">
-        {snapshot.recentLog
-          .map((e) => describeLogEntry(e, nameOf))
-          .filter((line): line is string => !!line)
-          .slice(-4)
-          .map((line, i) => (
-            <p key={i} className="text-[11px] text-gray-400 leading-snug">
-              {line}
+        {/* Log */}
+        <div className="surface rounded-md px-3 py-2 min-h-[52px] flex flex-col justify-end gap-0.5 bg-black/30">
+          {snapshot.recentLog
+            .map((e) => describeLogEntry(e, nameOf))
+            .filter((line): line is string => !!line)
+            .slice(-3)
+            .map((line, i) => (
+              <p key={i} className="text-[11px] text-gray-300 leading-snug">
+                {line}
+              </p>
+            ))}
+        </div>
+
+        {/* Entscheidung */}
+        {snapshot.status === "finished" ? (
+          <div className="flex items-center justify-between gap-2 glass rounded-xl p-3">
+            <p className="text-sm text-white font-semibold">Kampf beendet.</p>
+            {snapshot.resultBattleId && (
+              <Link
+                href={`/battle-cards/battles/${snapshot.resultBattleId}`}
+                className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-md bg-teal-500/15 text-teal-300 hover:bg-teal-500/25 transition-colors"
+              >
+                Zum Ergebnis <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex-1" />
+            {myTeam && (
+              <button
+                type="button"
+                onClick={() => toggleAuto(!myAuto)}
+                disabled={busy}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors disabled:opacity-40 ${
+                  myAuto ? "bg-violet-500/20 text-violet-300" : "bg-white/[0.06] text-gray-400 hover:bg-white/[0.1]"
+                }`}
+              >
+                <Bot className="w-3 h-3" /> Auto-Kampf {myAuto ? "an" : "aus"}
+              </button>
+            )}
+          </div>
+        )}
+
+        {snapshot.status !== "finished" &&
+          (isMyDecision && snapshot.awaiting ? (
+            <div className="glass rounded-xl p-3 space-y-2">
+              {selectedAction ? (
+                <>
+                  <div className="flex items-start gap-2">
+                    <ActionIcon actionType={selectedAction.actionType} className="w-4 h-4 text-teal-300 mt-0.5 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-white">{selectedAction.name}</p>
+                      <p className="text-[11px] text-gray-400">{selectedAction.description}</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-teal-300">Markierte Karte antippen, um das Ziel zu wählen.</p>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedAction(null)}
+                    className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                  >
+                    ← Andere Aktion wählen
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs text-gray-400">Du bist am Zug — wähle eine Aktion.</p>
+                    {remainingSeconds !== null && (
+                      <span className="flex items-center gap-1 text-[11px] font-semibold text-amber-400 tabular-nums shrink-0">
+                        <Timer className="w-3 h-3" /> {remainingSeconds}s
+                      </span>
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    {snapshot.awaiting.actions.map((action) => (
+                      <button
+                        key={action.actionType}
+                        type="button"
+                        onClick={() => handleActionClick(action)}
+                        disabled={busy}
+                        className="w-full flex items-start gap-2.5 text-left px-3 py-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] transition-colors disabled:opacity-50"
+                      >
+                        <ActionIcon actionType={action.actionType} className="w-4 h-4 text-teal-300 mt-0.5 shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-sm font-semibold text-white">{action.name}</p>
+                            {action.cost > 0 && (
+                              <span className="text-[10px] font-semibold text-amber-400 tabular-nums shrink-0">{action.cost} Rage</span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-gray-400 leading-snug">{action.description}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
+            <p className="text-xs text-gray-500 text-center">
+              {myAuto
+                ? "Auto-Kampf aktiv — deine Züge laufen automatisch."
+                : remainingSeconds !== null
+                  ? `Gegner ist am Zug… (${remainingSeconds}s)`
+                  : "Gegner ist am Zug…"}
             </p>
           ))}
       </div>
-
-      {/* Entscheidung */}
-      {snapshot.status === "finished" ? (
-        <div className="flex items-center justify-between gap-2 glass rounded-xl p-3">
-          <p className="text-sm text-white font-semibold">Kampf beendet.</p>
-          {snapshot.resultBattleId && (
-            <Link
-              href={`/battle-cards/battles/${snapshot.resultBattleId}`}
-              className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-md bg-teal-500/15 text-teal-300 hover:bg-teal-500/25 transition-colors"
-            >
-              Zum Ergebnis <ChevronRight className="w-3.5 h-3.5" />
-            </Link>
-          )}
-        </div>
-      ) : isMyDecision && snapshot.awaiting ? (
-        <div className="glass rounded-xl p-3 space-y-2">
-          {selectedAction ? (
-            <>
-              <p className="text-xs text-gray-400">
-                Ziel wählen für <span className="text-white font-semibold">{selectedAction.name}</span> — markierte Karte antippen.
-              </p>
-              <button
-                type="button"
-                onClick={() => setSelectedAction(null)}
-                className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
-              >
-                ← Andere Aktion wählen
-              </button>
-            </>
-          ) : (
-            <>
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs text-gray-400">Du bist am Zug — wähle eine Aktion.</p>
-                {remainingSeconds !== null && (
-                  <span className="flex items-center gap-1 text-[11px] font-semibold text-amber-400 tabular-nums shrink-0">
-                    <Timer className="w-3 h-3" /> {remainingSeconds}s
-                  </span>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {snapshot.awaiting.actions.map((action) => (
-                  <button
-                    key={action.actionType}
-                    type="button"
-                    onClick={() => handleActionClick(action)}
-                    disabled={busy}
-                    className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-md bg-teal-500/15 text-teal-300 hover:bg-teal-500/25 transition-colors disabled:opacity-50"
-                    title={action.description}
-                  >
-                    {action.actionType === "ultimate" ? (
-                      <Zap className="w-3.5 h-3.5" />
-                    ) : action.actionType === "active" ? (
-                      <Bot className="w-3.5 h-3.5" />
-                    ) : (
-                      <Swords className="w-3.5 h-3.5" />
-                    )}
-                    {action.name}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-      ) : (
-        <p className="text-xs text-gray-600 text-center">
-          {myAuto
-            ? "Auto-Kampf aktiv — deine Züge laufen automatisch."
-            : remainingSeconds !== null
-              ? `Gegner ist am Zug… (${remainingSeconds}s)`
-              : "Gegner ist am Zug…"}
-        </p>
-      )}
     </div>
   );
 }

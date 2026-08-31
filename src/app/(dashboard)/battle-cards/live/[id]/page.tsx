@@ -1,6 +1,4 @@
 import { notFound, redirect } from "next/navigation";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import LiveBattleView from "@/components/battle-cards/LiveBattleView";
@@ -25,16 +23,7 @@ export default async function LiveBattlePage({ params }: { params: Promise<{ id:
     redirect(`/battle-cards/battles/${live.resultBattleId}`);
   }
 
-  return (
-    <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
-      <Link
-        href="/battle-cards?tab=community"
-        className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-white transition-colors"
-      >
-        <ArrowLeft className="w-3.5 h-3.5" /> Zurück zur Community
-      </Link>
-      <h1 className="text-lg font-black text-white">Kampf läuft</h1>
-      <LiveBattleView liveBattleId={id} viewerId={viewerId} />
-    </div>
-  );
+  // LiveBattleView rendert sich selbst als Vollbild-Overlay (fixed inset-0) —
+  // der eingebaute Zurück-Button navigiert zur Community-Übersicht.
+  return <LiveBattleView liveBattleId={id} viewerId={viewerId} />;
 }

@@ -50,16 +50,7 @@ export default function NpcBattleLauncher() {
 
   if (liveBattleId && session?.user?.id) {
     return (
-      <div className="space-y-2">
-        <LiveBattleView liveBattleId={liveBattleId} viewerId={session.user.id} />
-        <button
-          type="button"
-          onClick={() => setLiveBattleId(null)}
-          className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
-        >
-          ← Kampf schließen
-        </button>
-      </div>
+      <LiveBattleView liveBattleId={liveBattleId} viewerId={session.user.id} onExit={() => setLiveBattleId(null)} />
     );
   }
 
