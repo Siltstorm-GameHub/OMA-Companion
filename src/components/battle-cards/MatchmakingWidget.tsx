@@ -33,11 +33,11 @@ export default function MatchmakingWidget() {
     }
   }
 
-  function handleMatch(battleId: string | null) {
+  function handleMatch(liveBattleId: string | null) {
     stopPolling();
     setWaiting(false);
-    toast.success("Zufallsgegner gefunden — Kampf ausgetragen!");
-    if (battleId) router.push(`/battle-cards/battles/${battleId}`);
+    toast.success("Zufallsgegner gefunden — Kampf startet!");
+    if (liveBattleId) router.push(`/battle-cards/live/${liveBattleId}`);
     router.refresh();
   }
 
@@ -52,7 +52,7 @@ export default function MatchmakingWidget() {
         return;
       }
       if (data.matched) {
-        handleMatch(data.battleId ?? null);
+        handleMatch(data.liveBattleId ?? null);
         return;
       }
       setWaiting(true);
@@ -61,7 +61,7 @@ export default function MatchmakingWidget() {
           const pollRes = await fetch("/api/battle-cards/queue");
           if (!pollRes.ok) return;
           const pollData = await pollRes.json();
-          if (pollData.matched) handleMatch(pollData.battleId ?? null);
+          if (pollData.matched) handleMatch(pollData.liveBattleId ?? null);
         } catch { /* ignore, try again next tick */ }
       }, POLL_INTERVAL_MS);
     } catch {

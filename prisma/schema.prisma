@@ -105,6 +105,8 @@ model User {
   battleChallengesSent     BattleChallenge[]        @relation("BattleChallengeChallenger")
   battleChallengesReceived BattleChallenge[]        @relation("BattleChallengeOpponent")
   battleQueueEntry         BattleQueueEntry?
+  liveBattlesAsA           LiveBattle[]             @relation("LiveBattlePlayerA")
+  liveBattlesAsB           LiveBattle[]             @relation("LiveBattlePlayerB")
 }
 
 // ── Pokale ───────────────────────────────────────────────────────────────────
@@ -1362,7 +1364,8 @@ model BattleChallenge {
   id           String    @id @default(cuid())
   challengerId String
   opponentId   String
-  status       String    @default("pending") // pending | declined | resolved | expired
+  status       String    @default("pending") // pending | live | declined | resolved | expired
+  liveBattleId String?   @unique // gesetzt während status="live", verweist auf LiveBattle.id
   battleId     String? // gesetzt sobald resolved, verweist auf Battle.id
   winnerId     String?
   createdAt    DateTime  @default(now())
@@ -1374,12 +1377,38 @@ model BattleChallenge {
   @@index([challengerId, opponentId, createdAt])
 }
 
+// ── Interaktive Kämpfe (Zug-für-Zug, Spieler steuert Ziel/Ultimate-Aktivierung) ─
+// Ein LiveBattle hält den seriell fortsetzbaren Kampf-Zustand (siehe
+// lib/battle-engine/interactive.ts) zwischen den einzelnen Zug-Requests. Für
+// PVE ist playerBId null (Team B = KI/NPC), bei PVP steuern beide Spieler
+// ihre eigene Seite. Nach Abschluss wird das Ergebnis wie bisher in ein
+// normales Battle (+ ggf. BattleChallenge) übernommen und LiveBattle bleibt
+// nur noch als Verlaufs-Datensatz stehen (status="finished").
+model LiveBattle {
+  id             String   @id @default(cuid())
+  mode           String // "PVE_EASY" | "PVE_MEDIUM" | "PVE_HARD" | "PVP_CHALLENGE" | "PVP_MATCHMAKING"
+  playerAId      String
+  playerBId      String? // null = Team B ist NPC/KI-gesteuert
+  stateJson      Json
+  status         String   @default("active") // active | finished
+  resultBattleId String?  @unique // gesetzt sobald finished, verweist auf Battle.id
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  playerA User  @relation("LiveBattlePlayerA", fields: [playerAId], references: [id], onDelete: Cascade)
+  playerB User? @relation("LiveBattlePlayerB", fields: [playerBId], references: [id], onDelete: Cascade)
+
+  @@index([playerAId])
+  @@index([playerBId])
+}
+
 // ── Battle-Cards-Matchmaking ("Zufallsgegner suchen") ───────────────────────
 // Ein User legt sich per Warteschlangen-Eintrag rein; der nächste, der ebenfalls
-// beitritt, matched sich sofort gegen den ältesten wartenden Eintrag (Kampf wird
-// serverseitig sofort aufgelöst wie bei BattleChallenge). matchedChallengeId wird
-// auf dem Eintrag des zuerst Wartenden gesetzt, damit dessen Poll-Request das
-// Ergebnis findet — der Eintrag wird danach von diesem Poll konsumiert (gelöscht).
+// beitritt, matched sich sofort gegen den ältesten wartenden Eintrag — es startet
+// direkt ein interaktiver LiveBattle (siehe oben), beide steuern ihre Seite selbst.
+// matchedChallengeId wird auf dem Eintrag des zuerst Wartenden gesetzt, damit
+// dessen Poll-Request den LiveBattle findet — der Eintrag wird danach von diesem
+// Poll konsumiert (gelöscht).
 model BattleQueueEntry {
   id                 String   @id @default(cuid())
   userId             String   @unique

@@ -99,8 +99,8 @@ export default async function BattleCardsPage() {
     .filter((uc) => uc.inLineup)
     .map((uc) => ({ card: toCardData(uc.card, avatarByDiscordId), level: uc.level }));
 
-  // ── Community-Reiter: eigene offene Herausforderungen, Kampfhistorie aller User, Rangliste ──
-  const [incoming, outgoing, allResolved, leaderboardRows] = await Promise.all([
+  // ── Community-Reiter: eigene offene/laufende Herausforderungen, Kampfhistorie aller User, Rangliste ──
+  const [incoming, outgoing, live, allResolved, leaderboardRows] = await Promise.all([
     prisma.battleChallenge.findMany({
       where: { opponentId: userId, status: "pending" },
       include: { challenger: { select: userSelect }, opponent: { select: userSelect } },
@@ -108,6 +108,11 @@ export default async function BattleCardsPage() {
     }),
     prisma.battleChallenge.findMany({
       where: { challengerId: userId, status: "pending" },
+      include: { challenger: { select: userSelect }, opponent: { select: userSelect } },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.battleChallenge.findMany({
+      where: { status: "live", OR: [{ challengerId: userId }, { opponentId: userId }] },
       include: { challenger: { select: userSelect }, opponent: { select: userSelect } },
       orderBy: { createdAt: "desc" },
     }),
@@ -196,7 +201,7 @@ export default async function BattleCardsPage() {
         </p>
       </div>
 
-      <ChallengesList incoming={serialize(incoming)} outgoing={serialize(outgoing)} />
+      <ChallengesList incoming={serialize(incoming)} outgoing={serialize(outgoing)} live={serialize(live)} />
 
       <div className="space-y-3">
         <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">

@@ -1,10 +1,11 @@
 // ============================================
 // Battle Cards — Sieges-Serie (Win-Streak) mit Münzen-Bonus
 // ============================================
-// Gilt nur für echte PVP-Kämpfe (Challenge-Annahme + Matchmaking), nicht für
-// PVE-Kämpfe gegen NPC (siehe api/battle-cards/npc-battle/route.ts, ruft
-// playMatch() gar nicht auf). Eine Niederlage setzt die Serie des Verlierers
-// zurück, ein Unentschieden lässt beide Serien unangetastet.
+// Gilt nur für echte PVP-Kämpfe (Challenge-Annahme + Matchmaking), angewendet
+// bei LiveBattle-Abschluss (siehe finalizeLiveBattle in live-battle.ts) — nicht
+// für PVE-Kämpfe gegen NPC (dort ist playerBId null, siehe live-battle.ts).
+// Eine Niederlage setzt die Serie des Verlierers zurück, ein Unentschieden
+// lässt beide Serien unangetastet.
 //
 // Die Bonus-Formel selbst steht in win-streak-constants.ts (kein Prisma-
 // Import), damit Client Components sie zur Anzeige mitnutzen können.

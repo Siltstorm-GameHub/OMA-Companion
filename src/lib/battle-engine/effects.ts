@@ -24,6 +24,8 @@ export interface EffectContext {
   log: BattleLogEntry[];
   skillName: string;
   suddenDeathMultiplier: number;
+  /** Interaktive Kämpfe: vom Spieler gewähltes Ziel für singleEnemy/singleAlly-Effekte. */
+  forcedTargetId?: string;
 }
 
 /** Liest den Wert für die aktuelle Kartenstufe aus einem valuePerLevel-Array (1-indiziert, geclamped). */
@@ -61,7 +63,7 @@ function applyDamageToUnit(
 
 export function executeEffect(effect: Effect, level: number, ctx: EffectContext): void {
   const value = getLevelValue(effect.valuePerLevel, level);
-  const targets = resolveEffectTargets(ctx.actor, ctx.allUnits, effect.target, ctx.rng);
+  const targets = resolveEffectTargets(ctx.actor, ctx.allUnits, effect.target, ctx.rng, ctx.forcedTargetId);
 
   switch (effect.type) {
     case "damage": {

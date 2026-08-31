@@ -2,50 +2,16 @@
 // Battle-Cards-Herausforderungen — ersetzt das alte Münzenduell
 // ============================================
 // Kein Wetteinsatz, keine Annahme-Verzögerung durch Cooldowns: der Gegner
-// nimmt an oder lehnt ab, bei Annahme wird der Kampf serverseitig sofort mit
-// der aktuellen Startaufstellung beider Spieler aufgelöst und persistiert
-// (Replay über battle-log.ts). playMatch() wird außerdem vom Matchmaking
-// (matchmaking.ts) für sofortige Zufallsgegner-Matches wiederverwendet.
+// nimmt an oder lehnt ab. Bei Annahme startet (statt einer sofortigen
+// serverseitigen Auflösung) ein interaktiver LiveBattle — beide Spieler
+// steuern ihre Seite zugweise selbst (siehe live-battle.ts). Dasselbe gilt
+// fürs Matchmaking (createInstantMatch, von matchmaking.ts genutzt).
 
 import { prisma } from "@/lib/prisma";
-import { runBattle } from "@/lib/battle-engine/engine";
-import { serializeBattleLog } from "@/lib/battle-cards/battle-log";
-import { buildBattleTeam } from "@/lib/battle-cards/team-builder";
-import { applyWinStreak } from "@/lib/battle-cards/win-streak";
-import type { Battle, BattleChallenge } from "@prisma/client";
+import { startLivePvpBattle, LiveBattleError } from "@/lib/battle-cards/live-battle";
+import type { BattleChallenge } from "@prisma/client";
 
 export class ChallengeError extends Error {}
-
-/** Löst einen Kampf zwischen zwei Usern serverseitig auf und persistiert das Battle-Ergebnis. */
-async function playMatch(
-  challengerId: string,
-  opponentId: string,
-  opponentType: "PVP_CHALLENGE" | "PVP_MATCHMAKING"
-): Promise<{ battle: Battle; winnerId: string | null }> {
-  const [teamA, teamB] = await Promise.all([buildBattleTeam(challengerId), buildBattleTeam(opponentId)]);
-  if (teamA.units.length === 0 || teamB.units.length === 0) {
-    throw new ChallengeError("Ein Spieler hat keine gültige Startaufstellung mehr.");
-  }
-
-  const result = runBattle(teamA.units, teamB.units);
-  const winnerId =
-    result.winner === "A" ? challengerId : result.winner === "B" ? opponentId : null;
-
-  const battle = await prisma.battle.create({
-    data: {
-      playerId: challengerId,
-      opponentType,
-      result: result.winner === "A" ? "WIN" : result.winner === "B" ? "LOSS" : "DRAW",
-      teamSnapshot: { challengerId, opponentId },
-      battleLog: serializeBattleLog(result.log, result.roster),
-    },
-  });
-
-  const loserId = winnerId === challengerId ? opponentId : challengerId;
-  await applyWinStreak(winnerId, loserId);
-
-  return { battle, winnerId };
-}
 
 export async function createChallenge(challengerId: string, opponentId: string): Promise<BattleChallenge> {
   if (challengerId === opponentId) {
@@ -67,7 +33,7 @@ export async function createChallenge(challengerId: string, opponentId: string):
 
   const existing = await prisma.battleChallenge.findFirst({
     where: {
-      status: "pending",
+      status: { in: ["pending", "live"] },
       OR: [
         { challengerId, opponentId },
         { challengerId: opponentId, opponentId: challengerId },
@@ -75,7 +41,7 @@ export async function createChallenge(challengerId: string, opponentId: string):
     },
   });
   if (existing) {
-    throw new ChallengeError("Es gibt bereits eine offene Herausforderung zwischen euch.");
+    throw new ChallengeError("Es gibt bereits eine offene Herausforderung oder einen laufenden Kampf zwischen euch.");
   }
 
   return prisma.battleChallenge.create({ data: { challengerId, opponentId } });
@@ -102,32 +68,38 @@ export async function respondToChallenge(
     });
   }
 
-  const { battle, winnerId } = await playMatch(challenge.challengerId, challenge.opponentId, "PVP_CHALLENGE");
-  return prisma.battleChallenge.update({
-    where: { id: challenge.id },
-    data: { status: "resolved", battleId: battle.id, winnerId, respondedAt: new Date() },
-  });
+  try {
+    await startLivePvpBattle(challenge.id, challenge.challengerId, challenge.opponentId, "PVP_CHALLENGE");
+  } catch (error) {
+    if (error instanceof LiveBattleError) throw new ChallengeError(error.message);
+    throw error;
+  }
+
+  return prisma.battleChallenge.findUniqueOrThrow({ where: { id: challenge.id } });
 }
 
 /**
- * Erstellt und löst sofort ein Match zwischen zwei Usern auf — für das
+ * Erstellt eine bereits "angenommene" Begegnung zwischen zwei Usern — für das
  * Matchmaking (kein Einladen/Annehmen nötig, Beitritt zur Warteschlange gilt
  * als Zustimmung). `challengerId` ist hier einfach, wer zuerst in der
- * Warteschlange wartete.
+ * Warteschlange wartete. Startet direkt einen LiveBattle (siehe oben).
  */
 export async function createInstantMatch(challengerId: string, opponentId: string): Promise<BattleChallenge> {
   if (challengerId === opponentId) {
     throw new ChallengeError("Du kannst nicht gegen dich selbst antreten.");
   }
-  const { battle, winnerId } = await playMatch(challengerId, opponentId, "PVP_MATCHMAKING");
-  return prisma.battleChallenge.create({
-    data: {
-      challengerId,
-      opponentId,
-      status: "resolved",
-      battleId: battle.id,
-      winnerId,
-      respondedAt: new Date(),
-    },
+
+  const challenge = await prisma.battleChallenge.create({
+    data: { challengerId, opponentId, status: "pending", respondedAt: new Date() },
   });
+
+  try {
+    await startLivePvpBattle(challenge.id, challengerId, opponentId, "PVP_MATCHMAKING");
+  } catch (error) {
+    await prisma.battleChallenge.delete({ where: { id: challenge.id } }).catch(() => {});
+    if (error instanceof LiveBattleError) throw new ChallengeError(error.message);
+    throw error;
+  }
+
+  return prisma.battleChallenge.findUniqueOrThrow({ where: { id: challenge.id } });
 }

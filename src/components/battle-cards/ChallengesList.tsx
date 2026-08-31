@@ -8,7 +8,7 @@ import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Check, X, Clock } from "lucide-react";
+import { Check, X, Clock, Swords } from "lucide-react";
 import RankedAvatar from "@/components/RankedAvatar";
 
 interface ChallengeUser {
@@ -25,6 +25,7 @@ export interface ChallengeItem {
   challengerId: string;
   opponentId: string;
   battleId: string | null;
+  liveBattleId: string | null;
   winnerId: string | null;
   createdAt: string;
   challenger?: ChallengeUser;
@@ -72,9 +73,11 @@ function VsCard({
 export default function ChallengesList({
   incoming,
   outgoing,
+  live = [],
 }: {
   incoming: ChallengeItem[];
   outgoing: ChallengeItem[];
+  live?: ChallengeItem[];
 }) {
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -93,7 +96,15 @@ export default function ChallengesList({
         toast.error(data.error ?? "Fehler");
         return;
       }
-      if (action === "decline") toast.success("Herausforderung abgelehnt.");
+      if (action === "decline") {
+        toast.success("Herausforderung abgelehnt.");
+        router.refresh();
+        return;
+      }
+      if (data.challenge?.liveBattleId) {
+        router.push(`/battle-cards/live/${data.challenge.liveBattleId}`);
+        return;
+      }
       router.refresh();
     } catch {
       toast.error("Netzwerkfehler");
@@ -104,6 +115,31 @@ export default function ChallengesList({
 
   return (
     <div className="space-y-8">
+      {live.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Laufende Kämpfe</h2>
+          <div className="space-y-2">
+            {live.map((c) => (
+              <VsCard
+                key={c.id}
+                challenger={c.challenger}
+                opponent={c.opponent}
+                footer={
+                  <div className="flex justify-center">
+                    <Link
+                      href={c.liveBattleId ? `/battle-cards/live/${c.liveBattleId}` : "#"}
+                      className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md bg-teal-500/15 text-teal-300 hover:bg-teal-500/25 transition-colors"
+                    >
+                      <Swords className="w-3.5 h-3.5" /> Weiterspielen
+                    </Link>
+                  </div>
+                }
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
       <section className="space-y-3">
         <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">
           Eingehende Herausforderungen

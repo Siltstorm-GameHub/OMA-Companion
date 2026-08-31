@@ -17,7 +17,7 @@ import { executeEffect, tickStatModifierDurations } from "./effects";
 import { computeInitiativeOrder } from "./initiative";
 import { triggerPassiveForUnit, triggerPassivesForAll } from "./passives";
 import { createRng, randomSeed } from "./rng";
-import { createTeamState } from "./stats";
+import { buildRosterFromUnits, createTeamState } from "./stats";
 import type {
   ActionType,
   BattleLogEntry,
@@ -30,7 +30,7 @@ import type {
   RosterEntry,
 } from "./types";
 
-function checkWinner(
+export function checkWinner(
   unitsA: BattleUnitState[],
   unitsB: BattleUnitState[]
 ): BattleWinner | null {
@@ -41,13 +41,13 @@ function checkWinner(
   return aAlive ? "A" : "B";
 }
 
-function defaultDecideAction(unit: BattleUnitState): ActionType {
+export function defaultDecideAction(unit: BattleUnitState): ActionType {
   if (unit.rage >= (unit.def.ultimateSkill.cost ?? ULTIMATE_SKILL_COST)) return "ultimate";
   if (unit.rage >= (unit.def.activeSkill.cost ?? ACTIVE_SKILL_COST)) return "active";
   return "normalAttack";
 }
 
-function grantRage(
+export function grantRage(
   unit: BattleUnitState,
   amount: number,
   round: number,
@@ -69,14 +69,19 @@ function grantRage(
   }
 }
 
-function performAction(
+/** `forcedTargetId`: interaktive Kämpfe — vom Spieler gewähltes Ziel für den
+ *  ersten singleEnemy/singleAlly-Effekt der ausgeführten Aktion (siehe
+ *  interactive.ts). Bei KI-gesteuerten Einheiten/Auto-Kampf bleibt es
+ *  undefined, dann greift die normale automatische Zielregel. */
+export function performAction(
   unit: BattleUnitState,
   actionType: ActionType,
   allUnits: BattleUnitState[],
   rng: ReturnType<typeof createRng>,
   round: number,
   log: BattleLogEntry[],
-  suddenDeathMultiplier: number
+  suddenDeathMultiplier: number,
+  forcedTargetId?: string
 ): void {
   let skillName: string;
   let effects: Effect[];
@@ -125,6 +130,7 @@ function performAction(
       log,
       skillName,
       suddenDeathMultiplier,
+      forcedTargetId,
     });
   }
 }
@@ -213,21 +219,7 @@ export function runBattle(
 
   log.push({ type: "battleEnd", winner, round });
 
-  const roster: RosterEntry[] = allUnits.map((u) => ({
-    instanceId: u.instanceId,
-    teamId: u.teamId,
-    cardId: u.def.cardId,
-    name: u.def.name,
-    class: u.def.class,
-    level: u.def.level,
-    maxHp: u.maxHp,
-    activeSkillName: u.def.activeSkill.name,
-    activeSkillDescription: u.def.activeSkill.description,
-    ultimateSkillName: u.def.ultimateSkill.name,
-    ultimateSkillDescription: u.def.ultimateSkill.description,
-    imageUrl: u.def.imageUrl,
-    avatarBadgeUrl: u.def.avatarBadgeUrl,
-  }));
+  const roster: RosterEntry[] = buildRosterFromUnits(allUnits);
 
   return { winner, rounds: round, seed, log, roster };
 }

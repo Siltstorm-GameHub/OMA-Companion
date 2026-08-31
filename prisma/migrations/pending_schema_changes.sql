@@ -299,3 +299,49 @@ ALTER TABLE "CardPack" ADD COLUMN IF NOT EXISTS "kind" "CardPackKind" NOT NULL D
 
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "battleWinStreak" INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "battleBestWinStreak" INTEGER NOT NULL DEFAULT 0;
+
+-- ═══════════════════════════════════════════════════════════════
+-- Battle Cards: interaktive Zug-für-Zug-Kämpfe (LiveBattle)
+-- ═══════════════════════════════════════════════════════════════
+
+ALTER TABLE "BattleChallenge" ADD COLUMN IF NOT EXISTS "liveBattleId" TEXT;
+DO $$ BEGIN
+  ALTER TABLE "BattleChallenge" ADD CONSTRAINT "BattleChallenge_liveBattleId_key" UNIQUE ("liveBattleId");
+EXCEPTION
+  WHEN duplicate_table THEN NULL;
+END $$;
+
+CREATE TABLE IF NOT EXISTS "LiveBattle" (
+  "id"             TEXT      NOT NULL PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  "mode"           TEXT      NOT NULL,
+  "playerAId"      TEXT      NOT NULL,
+  "playerBId"      TEXT,
+  "stateJson"      JSONB     NOT NULL,
+  "status"         TEXT      NOT NULL DEFAULT 'active',
+  "resultBattleId" TEXT,
+  "createdAt"      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt"      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+DO $$ BEGIN
+  ALTER TABLE "LiveBattle" ADD CONSTRAINT "LiveBattle_resultBattleId_key" UNIQUE ("resultBattleId");
+EXCEPTION
+  WHEN duplicate_table THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER TABLE "LiveBattle" ADD CONSTRAINT "LiveBattle_playerAId_fkey"
+    FOREIGN KEY ("playerAId") REFERENCES "User"("id") ON DELETE CASCADE;
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER TABLE "LiveBattle" ADD CONSTRAINT "LiveBattle_playerBId_fkey"
+    FOREIGN KEY ("playerBId") REFERENCES "User"("id") ON DELETE CASCADE;
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+CREATE INDEX IF NOT EXISTS "LiveBattle_playerAId_idx" ON "LiveBattle"("playerAId");
+CREATE INDEX IF NOT EXISTS "LiveBattle_playerBId_idx" ON "LiveBattle"("playerBId");

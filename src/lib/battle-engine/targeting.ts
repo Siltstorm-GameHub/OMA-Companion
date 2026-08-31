@@ -68,12 +68,17 @@ export function resolveNormalAttackTarget(
   return selectSingleEnemy(enemies, select, rng);
 }
 
-/** Löst ein EffectTarget zur Liste der tatsächlich betroffenen Einheiten auf. */
+/** Löst ein EffectTarget zur Liste der tatsächlich betroffenen Einheiten auf.
+ *  `forcedTargetId` (interaktive Kämpfe: vom Spieler gewähltes Ziel) überschreibt
+ *  die automatische Auswahl bei "singleEnemy"/"singleAlly", sofern das Ziel noch
+ *  lebt und zur passenden Seite gehört — sonst (z.B. zwischenzeitlich gestorben)
+ *  fällt es auf die normale Selektor-Logik zurück, statt hart zu scheitern. */
 export function resolveEffectTargets(
   actor: BattleUnitState,
   allUnits: BattleUnitState[],
   target: EffectTarget,
-  rng: Rng
+  rng: Rng,
+  forcedTargetId?: string
 ): BattleUnitState[] {
   const enemies = aliveUnits(allUnits).filter((u) => u.teamId !== actor.teamId);
   const allies = aliveUnits(allUnits).filter((u) => u.teamId === actor.teamId);
@@ -83,13 +88,15 @@ export function resolveEffectTargets(
       return actor.isAlive ? [actor] : [];
     }
     case "singleEnemy": {
-      const t = selectSingleEnemy(enemies, target.select, rng);
+      const forced = forcedTargetId ? enemies.find((u) => u.instanceId === forcedTargetId) : undefined;
+      const t = forced ?? selectSingleEnemy(enemies, target.select, rng);
       return t ? [t] : [];
     }
     case "allEnemies":
       return enemies;
     case "singleAlly": {
-      const t = selectSingleAlly(actor, allies, target.select, rng);
+      const forced = forcedTargetId ? allies.find((u) => u.instanceId === forcedTargetId) : undefined;
+      const t = forced ?? selectSingleAlly(actor, allies, target.select, rng);
       return t ? [t] : [];
     }
     case "allAllies":

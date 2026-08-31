@@ -3,7 +3,7 @@
 // ============================================
 
 import { LEVEL_STAT_MULTIPLIER } from "./constants";
-import type { BattleUnitDefinition, BattleUnitState, TeamId } from "./types";
+import type { BattleUnitDefinition, BattleUnitState, RosterEntry, TeamId } from "./types";
 
 /** Stat-Multiplikator für eine gegebene Karten-Stufe (1-5). Fällt auf Stufe 1 zurück, falls unbekannt. */
 export function levelMultiplier(level: number): number {
@@ -51,6 +51,26 @@ export function createBattleUnitState(
 
 export function createTeamState(team: BattleUnitDefinition[], teamId: TeamId): BattleUnitState[] {
   return team.map((def, index) => createBattleUnitState(def, teamId, `${teamId}-${index}-${def.cardId}`));
+}
+
+/** Statische Roster-Metadaten (Name/Klasse/Skill-Texte/Bilder) für UI/Replay —
+ *  gemeinsam genutzt von runBattle() und dem interaktiven Kampf (interactive.ts). */
+export function buildRosterFromUnits(units: BattleUnitState[]): RosterEntry[] {
+  return units.map((u) => ({
+    instanceId: u.instanceId,
+    teamId: u.teamId,
+    cardId: u.def.cardId,
+    name: u.def.name,
+    class: u.def.class,
+    level: u.def.level,
+    maxHp: u.maxHp,
+    activeSkillName: u.def.activeSkill.name,
+    activeSkillDescription: u.def.activeSkill.description,
+    ultimateSkillName: u.def.ultimateSkill.name,
+    ultimateSkillDescription: u.def.ultimateSkill.description,
+    imageUrl: u.def.imageUrl,
+    avatarBadgeUrl: u.def.avatarBadgeUrl,
+  }));
 }
 
 /**

@@ -3,7 +3,6 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { respondToChallenge, ChallengeError } from "@/lib/battle-cards/challenge";
 import { dispatchNotification } from "@/lib/notify-dispatch";
-import { updateQuestProgress } from "@/lib/quests";
 
 export async function POST(req: NextRequest, ctx: RouteContext<"/api/battle-cards/challenges/[id]/respond">) {
   const session = await auth();
@@ -20,11 +19,10 @@ export async function POST(req: NextRequest, ctx: RouteContext<"/api/battle-card
   try {
     const challenge = await respondToChallenge(id, userId, action);
 
-    const [challenger, opponent] = await Promise.all([
-      prisma.user.findUnique({ where: { id: challenge.challengerId }, select: { username: true, name: true } }),
-      prisma.user.findUnique({ where: { id: challenge.opponentId }, select: { username: true, name: true } }),
-    ]);
-    const challengerName = challenger?.username ?? challenger?.name ?? "Herausforderer";
+    const opponent = await prisma.user.findUnique({
+      where: { id: challenge.opponentId },
+      select: { username: true, name: true },
+    });
     const opponentName = opponent?.username ?? opponent?.name ?? "Gegner";
 
     if (challenge.status === "declined") {
@@ -32,36 +30,18 @@ export async function POST(req: NextRequest, ctx: RouteContext<"/api/battle-card
         users: [challenge.challengerId],
         placeholders: { "{result}": `${opponentName} hat deine Herausforderung abgelehnt.` },
       }).catch(() => {});
-    } else if (challenge.status === "resolved") {
-      updateQuestProgress(challenge.challengerId, "BATTLE_CARD_DUEL", 1).catch(() => {});
-      updateQuestProgress(challenge.opponentId, "BATTLE_CARD_DUEL", 1).catch(() => {});
-
-      const url = challenge.battleId ? `/battle-cards/battles/${challenge.battleId}` : undefined;
-      dispatchNotification("battle_result", {
+    } else if (challenge.status === "live" && challenge.liveBattleId) {
+      // Der Kampf läuft bereits (siehe live-battle.ts) — der Herausforderer weiß sonst
+      // nicht, dass er jetzt am Zug sein könnte. Ergebnis-Benachrichtigung + Quest-
+      // Fortschritt laufen zentral bei Abschluss (finalizeLiveBattle).
+      dispatchNotification("battle_challenge", {
         users: [challenge.challengerId],
-        urlOverride: url,
-        placeholders: {
-          "{result}":
-            challenge.winnerId === challenge.challengerId
-              ? `Du hast gegen ${opponentName} gewonnen!`
-              : challenge.winnerId === challenge.opponentId
-                ? `Du hast gegen ${opponentName} verloren.`
-                : `Unentschieden gegen ${opponentName}.`,
-        },
-      }).catch(() => {});
-      dispatchNotification("battle_result", {
-        users: [challenge.opponentId],
-        urlOverride: url,
-        placeholders: {
-          "{result}":
-            challenge.winnerId === challenge.opponentId
-              ? `Du hast gegen ${challengerName} gewonnen!`
-              : challenge.winnerId === challenge.challengerId
-                ? `Du hast gegen ${challengerName} verloren.`
-                : `Unentschieden gegen ${challengerName}.`,
-        },
+        placeholders: { "{challenger}": `${opponentName} hat deine Herausforderung angenommen — der Kampf läuft` },
+        urlOverride: `/battle-cards/live/${challenge.liveBattleId}`,
       }).catch(() => {});
     }
+    // status "resolved" (Kampf endete sofort, z.B. Sonderfall): Ergebnis-Benachrichtigung
+    // + Quest-Fortschritt liefen bereits zentral bei LiveBattle-Abschluss.
 
     return NextResponse.json({ ok: true, challenge });
   } catch (error) {

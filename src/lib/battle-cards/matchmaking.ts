@@ -3,15 +3,15 @@
 // ============================================
 // Alternative zur Direkt-Herausforderung: beitreten reiht in eine
 // Warteschlange ein; sobald ein zweiter User beitritt, wird sofort (ohne
-// Annahme-Schritt) ein Match zwischen den beiden ältesten wartenden Usern
-// aufgelöst — wiederverwendet dieselbe Kampf-Auflösung wie direkte
-// Herausforderungen (createInstantMatch).
+// Annahme-Schritt) eine Begegnung zwischen den beiden ältesten wartenden
+// Usern erstellt und startet direkt als interaktiver LiveBattle — wiederverwendet
+// dieselbe Erstellung wie direkte Herausforderungen (createInstantMatch).
 
 import { prisma } from "@/lib/prisma";
 import { createInstantMatch, ChallengeError } from "@/lib/battle-cards/challenge";
 
 export type QueueJoinResult =
-  | { matched: true; challengeId: string; battleId: string | null }
+  | { matched: true; challengeId: string; liveBattleId: string | null }
   | { matched: false; waiting: true };
 
 /** Tritt der Warteschlange bei — matched sofort, falls schon jemand wartet. */
@@ -21,10 +21,10 @@ export async function joinQueue(userId: string): Promise<QueueJoinResult> {
     if (mine.matchedChallengeId) {
       const challenge = await prisma.battleChallenge.findUnique({
         where: { id: mine.matchedChallengeId },
-        select: { battleId: true },
+        select: { liveBattleId: true },
       });
       await prisma.battleQueueEntry.delete({ where: { id: mine.id } });
-      return { matched: true, challengeId: mine.matchedChallengeId, battleId: challenge?.battleId ?? null };
+      return { matched: true, challengeId: mine.matchedChallengeId, liveBattleId: challenge?.liveBattleId ?? null };
     }
     return { matched: false, waiting: true };
   }
@@ -47,7 +47,7 @@ export async function joinQueue(userId: string): Promise<QueueJoinResult> {
       where: { id: opponentEntry.id },
       data: { matchedChallengeId: challenge.id },
     });
-    return { matched: true, challengeId: challenge.id, battleId: challenge.battleId };
+    return { matched: true, challengeId: challenge.id, liveBattleId: challenge.liveBattleId };
   } catch (error) {
     // Der wartende User hat inzwischen keine gültige Aufstellung mehr — dessen
     // Warteschlangen-Eintrag ist wertlos, entfernen und diesen User stattdessen
@@ -64,7 +64,7 @@ export async function joinQueue(userId: string): Promise<QueueJoinResult> {
 export type QueueStatus =
   | { inQueue: false; matched: false }
   | { inQueue: true; matched: false }
-  | { inQueue: false; matched: true; challengeId: string; battleId: string | null };
+  | { inQueue: false; matched: true; challengeId: string; liveBattleId: string | null };
 
 /** Für Polling: prüft, ob der wartende Eintrag zwischenzeitlich gematcht wurde. */
 export async function pollQueue(userId: string): Promise<QueueStatus> {
@@ -74,10 +74,10 @@ export async function pollQueue(userId: string): Promise<QueueStatus> {
   if (entry.matchedChallengeId) {
     const challenge = await prisma.battleChallenge.findUnique({
       where: { id: entry.matchedChallengeId },
-      select: { battleId: true },
+      select: { liveBattleId: true },
     });
     await prisma.battleQueueEntry.delete({ where: { id: entry.id } });
-    return { inQueue: false, matched: true, challengeId: entry.matchedChallengeId, battleId: challenge?.battleId ?? null };
+    return { inQueue: false, matched: true, challengeId: entry.matchedChallengeId, liveBattleId: challenge?.liveBattleId ?? null };
   }
 
   return { inQueue: true, matched: false };
