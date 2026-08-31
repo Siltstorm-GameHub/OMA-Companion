@@ -65,8 +65,11 @@ export function SeasonConfigPanel({ initial }: { initial: SeasonConfig }) {
       <div className="glass rounded-2xl p-4 space-y-3">
         <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold">Saison 1 — Startdatum</p>
         <p className="text-xs text-gray-500">
-          Ab diesem Datum läuft die nächste automatische Klassen-/Stats-Anpassung. Aktuell:{" "}
-          <span className="text-gray-300">{formatDate(config.season1StartAt)}</span>
+          Ab diesem Datum läuft die automatische Klassen-/Stats-Anpassung UND ein kompletter Reset aller
+          Karten in Besitz — jeder startet wieder bei 0 (Start-Pack erneut wählen). Dieser Zeitpunkt ist zugleich
+          der Startschuss der Ranglisten-Saison 1: danach läuft automatisch alle 3 Monate eine neue Saison,
+          jeweils mit Platz-1-3-Belohnung (siehe unten) — ohne dass Kämpfe/Karten dabei nochmal zurückgesetzt werden.
+          Aktuell: <span className="text-gray-300">{formatDate(config.season1StartAt)}</span>
         </p>
         <div className="flex gap-2 items-center flex-wrap">
           <input

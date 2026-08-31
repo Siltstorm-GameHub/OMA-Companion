@@ -12,10 +12,15 @@ export interface LeaderboardRow {
   winRate: number;
 }
 
-/** Aggregiert alle abgeschlossenen BattleChallenges zu einer nach Siegen sortierten Rangliste. */
-export async function getBattleCardsLeaderboard(): Promise<LeaderboardRow[]> {
+/** Aggregiert alle abgeschlossenen BattleChallenges zu einer nach Siegen sortierten Rangliste.
+ *  `window` schränkt auf eine Ranglisten-Saison ein (respondedAt im Zeitfenster) — ohne
+ *  Angabe zählt die gesamte Historie (Fallback, solange das Saison-System noch nicht aktiv ist). */
+export async function getBattleCardsLeaderboard(window?: { start: Date; end: Date }): Promise<LeaderboardRow[]> {
   const resolved = await prisma.battleChallenge.findMany({
-    where: { status: "resolved" },
+    where: {
+      status: "resolved",
+      ...(window ? { respondedAt: { gte: window.start, lt: window.end } } : {}),
+    },
     select: { challengerId: true, opponentId: true, winnerId: true },
   });
 

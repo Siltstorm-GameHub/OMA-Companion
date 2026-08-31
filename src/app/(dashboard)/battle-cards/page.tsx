@@ -22,6 +22,8 @@ import { countUnopenedPacks } from "@/lib/battle-cards/packs";
 import { sortByQuality, toCardData, resolveAvatarsForCards } from "@/lib/battle-cards/card-view";
 import { getUpgradeEconomyConfig } from "@/lib/battle-cards/upgrade-admin-config";
 import { getBattleCardsLeaderboard } from "@/lib/battle-cards/leaderboard";
+import { getSeasonConfig } from "@/lib/season/season-config";
+import { getCurrentSeasonNumber, getSeasonWindow } from "@/lib/battle-cards/ranked-season";
 import StarterPickFlow from "@/components/battle-cards/StarterPickFlow";
 import PackOpener from "@/components/battle-cards/PackOpener";
 import CardCollectionBrowser from "@/components/battle-cards/CardCollectionBrowser";
@@ -100,6 +102,14 @@ export default async function BattleCardsPage() {
     .filter((uc) => uc.inLineup)
     .map((uc) => ({ card: toCardData(uc.card, avatarByDiscordId), level: uc.level }));
 
+  // ── Ranglisten-Saison: solange Saison 1 noch nicht ausgelöst wurde, zählt die
+  //    gesamte Historie (Fallback); danach nur das aktuell laufende 3-Monats-Fenster. ──
+  const seasonConfig = await getSeasonConfig();
+  const seasonAnchor = seasonConfig.season1RanAt ? new Date(seasonConfig.season1RanAt) : null;
+  const currentSeasonWindow = seasonAnchor
+    ? getSeasonWindow(seasonAnchor, getCurrentSeasonNumber(seasonAnchor, new Date()))
+    : null;
+
   // ── Community-Reiter: eigene offene/laufende Herausforderungen, Kampfhistorie aller User, Rangliste ──
   const [incoming, outgoing, live, allResolved, leaderboardRows] = await Promise.all([
     prisma.battleChallenge.findMany({
@@ -123,7 +133,7 @@ export default async function BattleCardsPage() {
       orderBy: { respondedAt: "desc" },
       take: 30,
     }),
-    getBattleCardsLeaderboard(),
+    getBattleCardsLeaderboard(currentSeasonWindow ?? undefined),
   ]);
 
   function serialize<T extends { createdAt: Date }>(rows: T[]) {
@@ -213,9 +223,17 @@ export default async function BattleCardsPage() {
       </div>
 
       <div className="space-y-3">
-        <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
-          <Trophy className="w-3.5 h-3.5 text-amber-400" /> Rangliste
-        </h2>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
+            <Trophy className="w-3.5 h-3.5 text-amber-400" /> Rangliste
+            {currentSeasonWindow && ` · Saison ${currentSeasonWindow.seasonNumber}`}
+          </h2>
+          {currentSeasonWindow && (
+            <p className="text-[10px] text-gray-600">
+              Endet am {currentSeasonWindow.end.toLocaleDateString("de-DE")}
+            </p>
+          )}
+        </div>
         <LeaderboardList rows={leaderboardRows} viewerId={userId} />
       </div>
     </div>

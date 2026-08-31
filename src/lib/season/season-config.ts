@@ -8,13 +8,15 @@ import { prisma } from "@/lib/prisma";
 export interface SeasonConfig {
   season1StartAt: string | null; // ISO-Datum, ab wann Saison 1 automatisch läuft
   preSeasonRanAt: string | null; // ISO-Zeitstempel, wann die PreSeason zuletzt lief
-  season1RanAt: string | null; // ISO-Zeitstempel, wann Saison 1 automatisch ausgelöst wurde
+  season1RanAt: string | null; // ISO-Zeitstempel, wann Saison 1 automatisch ausgelöst wurde (= Anker für die Ranglisten-Saisons)
+  lastRewardedRankedSeason: number; // höchste Ranglisten-Saison-Nummer, für die Platz-1-3-Belohnungen bereits vergeben wurden (0 = noch keine)
 }
 
 const KEYS = {
   season1StartAt: "battlecards_season1_start_at",
   preSeasonRanAt: "battlecards_preseason_ran_at",
   season1RanAt: "battlecards_season1_ran_at",
+  lastRewardedRankedSeason: "battlecards_last_rewarded_ranked_season",
 } as const;
 
 export async function getSeasonConfig(): Promise<SeasonConfig> {
@@ -24,6 +26,7 @@ export async function getSeasonConfig(): Promise<SeasonConfig> {
     season1StartAt: map.get(KEYS.season1StartAt) ?? null,
     preSeasonRanAt: map.get(KEYS.preSeasonRanAt) ?? null,
     season1RanAt: map.get(KEYS.season1RanAt) ?? null,
+    lastRewardedRankedSeason: Number(map.get(KEYS.lastRewardedRankedSeason) ?? "0"),
   };
 }
 
@@ -52,5 +55,13 @@ export async function markSeason1Ran(): Promise<void> {
     where: { key: KEYS.season1RanAt },
     create: { key: KEYS.season1RanAt, value: new Date().toISOString() },
     update: { value: new Date().toISOString() },
+  });
+}
+
+export async function setLastRewardedRankedSeason(seasonNumber: number): Promise<void> {
+  await prisma.botConfig.upsert({
+    where: { key: KEYS.lastRewardedRankedSeason },
+    create: { key: KEYS.lastRewardedRankedSeason, value: String(seasonNumber) },
+    update: { value: String(seasonNumber) },
   });
 }
