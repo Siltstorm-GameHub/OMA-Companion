@@ -12,7 +12,7 @@ export const metadata = {
   title: "Herausforderungen | Battle Cards | OMA",
 };
 
-const userSelect = { id: true, username: true, name: true, image: true } as const;
+const userSelect = { id: true, username: true, name: true, image: true, rankPoints: true } as const;
 
 export default async function BattleChallengesPage() {
   const session = await auth();
@@ -28,12 +28,12 @@ export default async function BattleChallengesPage() {
   const [incoming, outgoing, history] = await Promise.all([
     prisma.battleChallenge.findMany({
       where: { opponentId: userId, status: "pending" },
-      include: { challenger: { select: userSelect } },
+      include: { challenger: { select: userSelect }, opponent: { select: userSelect } },
       orderBy: { createdAt: "desc" },
     }),
     prisma.battleChallenge.findMany({
       where: { challengerId: userId, status: "pending" },
-      include: { opponent: { select: userSelect } },
+      include: { challenger: { select: userSelect }, opponent: { select: userSelect } },
       orderBy: { createdAt: "desc" },
     }),
     prisma.battleChallenge.findMany({
