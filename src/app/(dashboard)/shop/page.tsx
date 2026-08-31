@@ -18,7 +18,7 @@ export default async function ShopPage() {
       }).catch(() => null)
     : null;
 
-  const { packCost, wheelPrizes } = await getShopConfig();
+  const { packPrices, wheelPrizes } = await getShopConfig();
   const purchasedToday = userId ? await countPacksPurchasedToday(userId) : 0;
   const myPoints  = me?.points ?? 0;
 
@@ -63,7 +63,7 @@ export default async function ShopPage() {
             prizes={wheelPrizes}
           />
           <BuyPack
-            cost={packCost}
+            packPrices={packPrices}
             initialPoints={myPoints}
             dailyLimit={PACK_DAILY_PURCHASE_LIMIT}
             purchasedToday={purchasedToday}

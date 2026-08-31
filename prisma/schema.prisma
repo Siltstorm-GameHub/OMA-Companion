@@ -1326,10 +1326,19 @@ enum CardPackSource {
   WHEEL
 }
 
+// Pack-Sorte bestimmt Kartenanzahl + Community-Karten-Chance beim Öffnen,
+// siehe COMMUNITY_CHANCE/PACK_CARD_COUNT in lib/battle-cards/packs.ts.
+enum CardPackKind {
+  STANDARD
+  PREMIUM
+  COMMUNITY
+}
+
 model CardPack {
   id           String         @id @default(cuid())
   userId       String
   source       CardPackSource
+  kind         CardPackKind   @default(STANDARD)
   createdAt    DateTime       @default(now())
   openedAt     DateTime?
   openedCardId String? // Snapshot der gezogenen Karten-ID, rein informativ

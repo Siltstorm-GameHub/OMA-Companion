@@ -280,3 +280,15 @@ INSERT INTO "NotificationRule" (
   CURRENT_TIMESTAMP
 )
 ON CONFLICT ("key") DO NOTHING;
+
+-- ═══════════════════════════════════════════════════════════════
+-- Shop: 3 Karten-Pack-Sorten (Standard/Premium/Community) statt nur einer
+-- ═══════════════════════════════════════════════════════════════
+
+DO $$ BEGIN
+  CREATE TYPE "CardPackKind" AS ENUM ('STANDARD', 'PREMIUM', 'COMMUNITY');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+ALTER TABLE "CardPack" ADD COLUMN IF NOT EXISTS "kind" "CardPackKind" NOT NULL DEFAULT 'STANDARD';

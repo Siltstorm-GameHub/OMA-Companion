@@ -18,10 +18,14 @@ import type { BattleCardData } from "./BattleCardView";
 
 type Phase = "closed" | "ready" | "opening" | "revealed";
 
-interface OpenPackResponse {
+interface RevealedCard {
   card: BattleCardData;
   isNewCard: boolean;
   duplicates: number;
+}
+
+interface OpenPackResponse {
+  cards: RevealedCard[];
   remainingUnopened: number;
 }
 
@@ -29,7 +33,8 @@ export default function PackOpener({ initialUnopenedCount }: { initialUnopenedCo
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("closed");
   const [remaining, setRemaining] = useState(initialUnopenedCount);
-  const [result, setResult] = useState<OpenPackResponse | null>(null);
+  const [results, setResults] = useState<RevealedCard[]>([]);
+  const [revealIndex, setRevealIndex] = useState(0);
   const [loading, setLoading] = useState(false);
 
   function startSession() {
@@ -42,7 +47,7 @@ export default function PackOpener({ initialUnopenedCount }: { initialUnopenedCo
     setPhase("opening");
     try {
       const res = await fetch("/api/battle-cards/open-pack", { method: "POST" });
-      const data = await res.json();
+      const data: OpenPackResponse & { error?: string } = await res.json();
       if (!res.ok) {
         toast.error(data.error ?? "Pack konnte nicht geöffnet werden.");
         setPhase("ready");
@@ -50,16 +55,20 @@ export default function PackOpener({ initialUnopenedCount }: { initialUnopenedCo
       }
       // kurze Verzoegerung, damit die Oeffnen-Animation sichtbar bleibt
       await new Promise((r) => setTimeout(r, 900));
-      setResult(data);
+      setResults(data.cards);
+      setRevealIndex(0);
       setRemaining(data.remainingUnopened);
       setPhase("revealed");
+      const hasCommunity = data.cards.some((c) => c.card.rarity === "COMMUNITY");
       confetti({
-        particleCount: 140,
+        particleCount: hasCommunity ? 200 : 140,
         spread: 75,
         origin: { y: 0.5 },
-        colors: data.isNewCard
-          ? ["#8b5cf6", "#c4b5fd", "#ede9fe", "#ffffff"]
-          : ["#f59e0b", "#fcd34d", "#ffffff"],
+        colors: hasCommunity
+          ? ["#f59e0b", "#fbbf24", "#fde68a", "#ffffff"]
+          : data.cards[0]?.isNewCard
+            ? ["#8b5cf6", "#c4b5fd", "#ede9fe", "#ffffff"]
+            : ["#f59e0b", "#fcd34d", "#ffffff"],
       });
       router.refresh();
     } catch {
@@ -72,11 +81,13 @@ export default function PackOpener({ initialUnopenedCount }: { initialUnopenedCo
 
   function close() {
     setPhase("closed");
-    setResult(null);
+    setResults([]);
+    setRevealIndex(0);
   }
 
   function openAnother() {
-    setResult(null);
+    setResults([]);
+    setRevealIndex(0);
     setPhase("ready");
   }
 
@@ -145,34 +156,56 @@ export default function PackOpener({ initialUnopenedCount }: { initialUnopenedCo
                 </motion.button>
               )}
 
-              {phase === "revealed" && result && (
+              {phase === "revealed" && results.length > 0 && (
                 <motion.div
+                  key={revealIndex}
                   initial={{ scale: 0.6, opacity: 0, rotateY: 90 }}
                   animate={{ scale: 1, opacity: 1, rotateY: 0 }}
                   transition={{ type: "spring", stiffness: 200, damping: 18 }}
                   className="flex flex-col items-center gap-3"
                 >
-                  <BattleCardView card={result.card} />
+                  <BattleCardView card={results[revealIndex].card} />
+                  {results.length > 1 && (
+                    <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">
+                      Karte {revealIndex + 1}/{results.length}
+                    </p>
+                  )}
                   <p className="text-xs text-gray-400">
-                    {result.isNewCard ? "Neue Karte für deine Sammlung!" : `Duplikat — jetzt ${result.duplicates}x`}
+                    {results[revealIndex].card.rarity === "COMMUNITY"
+                      ? "🎉 Community-Karte!"
+                      : results[revealIndex].isNewCard
+                        ? "Neue Karte für deine Sammlung!"
+                        : `Duplikat — jetzt ${results[revealIndex].duplicates}x`}
                   </p>
                   <div className="flex gap-2">
-                    {remaining > 0 && (
+                    {revealIndex < results.length - 1 ? (
                       <button
                         type="button"
-                        onClick={openAnother}
-                        className="text-xs font-semibold px-3 py-2 rounded-md bg-violet-500/15 text-violet-300 hover:bg-violet-500/25 transition-colors"
+                        onClick={() => setRevealIndex((i) => i + 1)}
+                        className="text-xs font-semibold px-3 py-2 rounded-md bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 transition-colors"
                       >
-                        Nächste Truhe öffnen ({remaining})
+                        Nächste Karte
                       </button>
+                    ) : (
+                      <>
+                        {remaining > 0 && (
+                          <button
+                            type="button"
+                            onClick={openAnother}
+                            className="text-xs font-semibold px-3 py-2 rounded-md bg-violet-500/15 text-violet-300 hover:bg-violet-500/25 transition-colors"
+                          >
+                            Nächste Truhe öffnen ({remaining})
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={close}
+                          className="text-xs font-semibold px-3 py-2 rounded-md bg-white/[0.06] text-gray-300 hover:bg-white/[0.1] transition-colors"
+                        >
+                          Fertig
+                        </button>
+                      </>
                     )}
-                    <button
-                      type="button"
-                      onClick={close}
-                      className="text-xs font-semibold px-3 py-2 rounded-md bg-white/[0.06] text-gray-300 hover:bg-white/[0.1] transition-colors"
-                    >
-                      Fertig
-                    </button>
                   </div>
                 </motion.div>
               )}

@@ -1,5 +1,31 @@
 import { auth } from "@/auth";
-import { openNextPack, PackError } from "@/lib/battle-cards/packs";
+import { openNextPack, PackError, type OpenPackResult } from "@/lib/battle-cards/packs";
+
+function serializeCard(result: OpenPackResult) {
+  const { card, isNewCard, duplicates } = result;
+  return {
+    card: {
+      id: card.id,
+      name: card.name,
+      title: card.title,
+      class: card.class,
+      rarity: card.rarity,
+      flavorText: card.flavorText,
+      baseHp: card.baseHp,
+      baseAttack: card.baseAttack,
+      baseDefense: card.baseDefense,
+      speed: card.speed,
+      activityTier: card.activityTier,
+      imageUrl: card.imageUrl,
+      passivePositive: card.passivePositive,
+      passiveNegative: card.passiveNegative,
+      activeSkill: card.activeSkill,
+      ultimateSkill: card.ultimateSkill,
+    },
+    isNewCard,
+    duplicates,
+  };
+}
 
 export async function POST() {
   const session = await auth();
@@ -10,26 +36,7 @@ export async function POST() {
   try {
     const result = await openNextPack(session.user.id);
     return Response.json({
-      card: {
-        id: result.card.id,
-        name: result.card.name,
-        title: result.card.title,
-        class: result.card.class,
-        rarity: result.card.rarity,
-        flavorText: result.card.flavorText,
-        baseHp: result.card.baseHp,
-        baseAttack: result.card.baseAttack,
-        baseDefense: result.card.baseDefense,
-        speed: result.card.speed,
-        activityTier: result.card.activityTier,
-        imageUrl: result.card.imageUrl,
-        passivePositive: result.card.passivePositive,
-        passiveNegative: result.card.passiveNegative,
-        activeSkill: result.card.activeSkill,
-        ultimateSkill: result.card.ultimateSkill,
-      },
-      isNewCard: result.isNewCard,
-      duplicates: result.duplicates,
+      cards: result.cards.map(serializeCard),
       remainingUnopened: result.remainingUnopened,
     });
   } catch (error) {
