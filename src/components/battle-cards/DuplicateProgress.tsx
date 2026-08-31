@@ -12,9 +12,46 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Loader2, ArrowUpCircle } from "lucide-react";
+import { Loader2, ArrowUpCircle, ArrowRight } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
 import { tableValueForLevel, type CardRarity, type UpgradeTable } from "@/lib/battle-cards/upgrade-config";
+import { scaleStatsForLevel } from "@/lib/battle-engine/stats";
+
+function NextLevelPreview({
+  baseHp,
+  baseAttack,
+  baseDefense,
+  level,
+}: {
+  baseHp: number;
+  baseAttack: number;
+  baseDefense: number;
+  level: number;
+}) {
+  const current = scaleStatsForLevel({ baseHp, baseAttack, baseDefense, level });
+  const next = scaleStatsForLevel({ baseHp, baseAttack, baseDefense, level: level + 1 });
+  const rows: { label: string; from: number; to: number }[] = [
+    { label: "HP", from: current.hp, to: next.hp },
+    { label: "ATK", from: current.attack, to: next.attack },
+    { label: "DEF", from: current.defense, to: next.defense },
+  ];
+  return (
+    <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] px-2.5 py-2 space-y-1">
+      <p className="text-[9px] text-gray-500 uppercase tracking-widest font-semibold">Nach Stufe {level + 1}</p>
+      {rows.map((r) => (
+        <div key={r.label} className="flex items-center justify-between text-[10px] tabular-nums">
+          <span className="text-gray-500 font-semibold">{r.label}</span>
+          <div className="flex items-center gap-1">
+            <span className="text-gray-500">{r.from}</span>
+            <ArrowRight className="w-2.5 h-2.5 text-emerald-500" />
+            <span className="text-white font-bold">{r.to}</span>
+            <span className="text-emerald-400 font-semibold">+{r.to - r.from}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function DuplicateProgress({
   userCardId,
@@ -24,6 +61,9 @@ export default function DuplicateProgress({
   coins,
   duplicateThresholds,
   upgradeCosts,
+  baseHp,
+  baseAttack,
+  baseDefense,
   onUpgraded,
 }: {
   userCardId: string;
@@ -33,6 +73,9 @@ export default function DuplicateProgress({
   coins: number;
   duplicateThresholds: UpgradeTable;
   upgradeCosts: UpgradeTable;
+  baseHp: number;
+  baseAttack: number;
+  baseDefense: number;
   onUpgraded: (fromLevel: number, newLevel: number, newCoins: number) => void;
 }) {
   const [loading, setLoading] = useState(false);
@@ -71,23 +114,27 @@ export default function DuplicateProgress({
   }
 
   return (
-    <div className="mt-1.5 space-y-1">
-      <div className="flex items-center justify-between text-[10px] tabular-nums">
-        <span className={hasEnoughDuplicates ? "text-violet-300 font-semibold" : "text-gray-400"}>
-          {duplicates}/{needed} Duplikate
-        </span>
-        <span className={`flex items-center gap-0.5 font-semibold ${hasEnoughCoins ? "text-amber-300" : "text-gray-500"}`}>
-          {cost}
-          <CoinIcon size={10} />
-        </span>
+    <div className="mt-1.5 space-y-2">
+      <div className="space-y-1">
+        <div className="flex items-center justify-between text-[10px] tabular-nums">
+          <span className={hasEnoughDuplicates ? "text-violet-300 font-semibold" : "text-gray-400"}>
+            {duplicates}/{needed} Duplikate
+          </span>
+          <span className={`flex items-center gap-0.5 font-semibold ${hasEnoughCoins ? "text-amber-300" : "text-gray-500"}`}>
+            {cost}
+            <CoinIcon size={10} />
+          </span>
+        </div>
+
+        <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all"
+            style={{ width: `${pct}%`, background: hasEnoughDuplicates ? "#8b5cf6" : "#52525b" }}
+          />
+        </div>
       </div>
 
-      <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
-        <div
-          className="h-full rounded-full transition-all"
-          style={{ width: `${pct}%`, background: hasEnoughDuplicates ? "#8b5cf6" : "#52525b" }}
-        />
-      </div>
+      <NextLevelPreview baseHp={baseHp} baseAttack={baseAttack} baseDefense={baseDefense} level={level} />
 
       <button
         type="button"

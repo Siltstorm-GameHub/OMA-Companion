@@ -20,7 +20,7 @@ import { EyeOff } from "lucide-react";
 import { getEventEndedAt, RECENTLY_FINISHED_MS } from "@/lib/event-completion";
 import { eventParticipationCoins } from "@/lib/event-placeholders";
 import EventsTabs from "./EventsTabs";
-import DuelsPredictionsPanel, { type DuelEntry } from "./DuelsPredictionsPanel";
+import EventPredictionsPanel from "./EventPredictionsPanel";
 import type { MyPrediction } from "@/components/MyPredictionsList";
 import { ScrollReveal } from "@/components/ScrollReveal";
 
@@ -72,38 +72,10 @@ export default async function EventsPage() {
       : Promise.resolve([]),
   ]);
 
-  const userSelect = { id: true, username: true, name: true, image: true, rankPoints: true } as const;
-  const startOfMonth = new Date();
-  startOfMonth.setDate(1);
-  startOfMonth.setHours(0, 0, 0, 0);
-
   const emptyPredictionRows: { event: { id: string; title: string; startAt: Date }; predictedUser: { id: string; username: string | null; name: string | null; image: string | null }; wager: number; resolved: boolean; correct: boolean | null; coinsAwarded: number }[] = [];
 
-  const [incomingDuels, outgoingDuels, myDuelHistory, monthDuelHistory, monthDuelTotal, myPredictionRows, predictionStreakRow, pendingPredictions] = userId
+  const [myPredictionRows, predictionStreakRow, pendingPredictions] = userId
     ? await Promise.all([
-        prisma.duelChallenge.findMany({
-          where: { opponentId: userId, status: "pending" },
-          include: { challenger: { select: userSelect } },
-          orderBy: { createdAt: "desc" },
-        }),
-        prisma.duelChallenge.findMany({
-          where: { challengerId: userId, status: "pending" },
-          include: { opponent: { select: userSelect } },
-          orderBy: { createdAt: "desc" },
-        }),
-        prisma.duelChallenge.findMany({
-          where: { OR: [{ challengerId: userId }, { opponentId: userId }], status: { in: ["resolved", "declined", "expired"] } },
-          include: { challenger: { select: userSelect }, opponent: { select: userSelect } },
-          orderBy: { createdAt: "desc" },
-          take: 20,
-        }),
-        prisma.duelChallenge.findMany({
-          where: { status: "resolved", resolvedAt: { gte: startOfMonth } },
-          include: { challenger: { select: userSelect }, opponent: { select: userSelect } },
-          orderBy: { resolvedAt: "desc" },
-          take: 20,
-        }),
-        prisma.duelChallenge.count({ where: { status: "resolved", resolvedAt: { gte: startOfMonth } } }),
         prisma.eventWinnerPrediction.findMany({
           where: { userId },
           include: {
@@ -116,19 +88,11 @@ export default async function EventsPage() {
         prisma.predictionStreak.findUnique({ where: { userId } }),
         prisma.eventWinnerPrediction.count({ where: { userId, resolved: false } }),
       ])
-    : [[], [], [], [], 0, emptyPredictionRows, null, 0];
+    : [emptyPredictionRows, null, 0];
 
   const mySquadIds = userId
     ? new Set((await prisma.squadMembership.findMany({ where: { userId }, select: { squadId: true } })).map(m => m.squadId))
     : new Set<string>();
-
-  const serializeDuels = (duels: Array<Record<string, unknown>>): DuelEntry[] =>
-    duels.map(d => ({
-      ...d,
-      createdAt: (d.createdAt as Date).toISOString(),
-      respondedAt: d.respondedAt ? (d.respondedAt as Date).toISOString() : null,
-      resolvedAt: d.resolvedAt ? (d.resolvedAt as Date).toISOString() : null,
-    })) as unknown as DuelEntry[];
 
   const myPredictions: MyPrediction[] = myPredictionRows.map(p => ({
     eventId: p.event.id,
@@ -500,22 +464,16 @@ export default async function EventsPage() {
         </div>
       )}
         </>}
-        duelsPanel={
+        predictionsPanel={
           userId ? (
-            <DuelsPredictionsPanel
-              userId={userId}
-              initialIncoming={serializeDuels(incomingDuels)}
-              initialOutgoing={serializeDuels(outgoingDuels)}
-              initialHistory={serializeDuels(myDuelHistory)}
-              initialMonthHistory={serializeDuels(monthDuelHistory)}
-              monthTotal={monthDuelTotal}
+            <EventPredictionsPanel
               myPredictions={myPredictions}
               predictionStreak={{ current: predictionStreakRow?.current ?? 0, best: predictionStreakRow?.best ?? 0 }}
               pendingPredictions={pendingPredictions}
             />
           ) : (
             <div className="glass rounded-2xl p-6 text-center text-gray-500 text-sm">
-              Melde dich an, um Duell-Historie und Vorhersagen zu sehen.
+              Melde dich an, um deine Vorhersagen zu sehen.
             </div>
           )
         }

@@ -4,18 +4,19 @@
 // Battle-Cards-Herausforderungen — Liste + Annehmen/Ablehnen
 // ============================================
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import { toast } from "sonner";
-import { Check, X, Eye, Swords } from "lucide-react";
+import { Check, X, Clock } from "lucide-react";
+import RankedAvatar from "@/components/RankedAvatar";
 
 interface ChallengeUser {
   id: string;
   username: string | null;
   name: string | null;
   image: string | null;
+  rankPoints: number;
 }
 
 export interface ChallengeItem {
@@ -34,16 +35,46 @@ function displayName(u?: ChallengeUser) {
   return u?.username ?? u?.name ?? "Unbekannt";
 }
 
+function PlayerBadge({ user }: { user?: ChallengeUser }) {
+  return (
+    <Link
+      href={user?.id ? `/profile/${user.id}` : "#"}
+      className="flex flex-col items-center gap-1.5 min-w-0 flex-1 hover:opacity-80 transition-opacity"
+    >
+      <RankedAvatar rankPoints={user?.rankPoints ?? 0} src={user?.image} alt={displayName(user)} size={40} className="w-10 h-10" />
+      <span className="text-xs text-white font-semibold truncate max-w-[92px]">{displayName(user)}</span>
+    </Link>
+  );
+}
+
+/** Einheitliche "Herausforderer vs. Herausgeforderter"-Darstellung für offene Herausforderungen. */
+function VsCard({
+  challenger,
+  opponent,
+  footer,
+}: {
+  challenger?: ChallengeUser;
+  opponent?: ChallengeUser;
+  footer: ReactNode;
+}) {
+  return (
+    <div className="glass rounded-xl p-3 space-y-3">
+      <div className="flex items-center justify-center gap-3">
+        <PlayerBadge user={challenger} />
+        <span className="text-xs font-black text-gray-600 shrink-0">vs.</span>
+        <PlayerBadge user={opponent} />
+      </div>
+      {footer}
+    </div>
+  );
+}
+
 export default function ChallengesList({
-  viewerId,
   incoming,
   outgoing,
-  history,
 }: {
-  viewerId: string;
   incoming: ChallengeItem[];
   outgoing: ChallengeItem[];
-  history: ChallengeItem[];
 }) {
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -82,38 +113,32 @@ export default function ChallengesList({
         ) : (
           <div className="space-y-2">
             {incoming.map((c) => (
-              <div key={c.id} className="glass rounded-xl p-3 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  {c.challenger?.image && (
-                    <Image
-                      src={c.challenger.image}
-                      alt={displayName(c.challenger)}
-                      width={32}
-                      height={32}
-                      className="rounded-full shrink-0"
-                    />
-                  )}
-                  <p className="text-sm text-white truncate">
-                    <span className="font-semibold">{displayName(c.challenger)}</span> fordert dich heraus
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    onClick={() => respond(c.id, "accept")}
-                    disabled={busyId === c.id}
-                    className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-md bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 disabled:opacity-40 transition-colors"
-                  >
-                    <Check className="w-3.5 h-3.5" /> Annehmen
-                  </button>
-                  <button
-                    onClick={() => respond(c.id, "decline")}
-                    disabled={busyId === c.id}
-                    className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-md bg-white/[0.06] text-gray-400 hover:bg-white/[0.1] disabled:opacity-40 transition-colors"
-                  >
-                    <X className="w-3.5 h-3.5" /> Ablehnen
-                  </button>
-                </div>
-              </div>
+              <VsCard
+                key={c.id}
+                challenger={c.challenger}
+                opponent={c.opponent}
+                footer={
+                  <div className="space-y-2">
+                    <p className="text-xs text-gray-500 text-center">Muss noch angenommen werden</p>
+                    <div className="flex items-center justify-center gap-2">
+                      <button
+                        onClick={() => respond(c.id, "accept")}
+                        disabled={busyId === c.id}
+                        className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-md bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 disabled:opacity-40 transition-colors"
+                      >
+                        <Check className="w-3.5 h-3.5" /> Annehmen
+                      </button>
+                      <button
+                        onClick={() => respond(c.id, "decline")}
+                        disabled={busyId === c.id}
+                        className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-md bg-white/[0.06] text-gray-400 hover:bg-white/[0.1] disabled:opacity-40 transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" /> Ablehnen
+                      </button>
+                    </div>
+                  </div>
+                }
+              />
             ))}
           </div>
         )}
@@ -128,58 +153,17 @@ export default function ChallengesList({
         ) : (
           <div className="space-y-2">
             {outgoing.map((c) => (
-              <div key={c.id} className="glass rounded-xl p-3 flex items-center gap-2.5">
-                {c.opponent?.image && (
-                  <Image
-                    src={c.opponent.image}
-                    alt={displayName(c.opponent)}
-                    width={32}
-                    height={32}
-                    className="rounded-full shrink-0"
-                  />
-                )}
-                <p className="text-sm text-white truncate">
-                  Wartet auf Antwort von <span className="font-semibold">{displayName(c.opponent)}</span>
-                </p>
-              </div>
+              <VsCard
+                key={c.id}
+                challenger={c.challenger}
+                opponent={c.opponent}
+                footer={
+                  <p className="flex items-center justify-center gap-1.5 text-xs text-gray-500">
+                    <Clock className="w-3.5 h-3.5 shrink-0" /> Wartet auf Antwort von {displayName(c.opponent)}
+                  </p>
+                }
+              />
             ))}
-          </div>
-        )}
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Verlauf</h2>
-        {history.length === 0 ? (
-          <p className="text-xs text-gray-600">Noch keine vergangenen Herausforderungen.</p>
-        ) : (
-          <div className="space-y-2">
-            {history.map((c) => {
-              const opponent = c.challengerId === viewerId ? c.opponent : c.challenger;
-              const won = c.winnerId === viewerId;
-              const lost = c.status === "resolved" && c.winnerId && c.winnerId !== viewerId;
-              return (
-                <div key={c.id} className="glass rounded-xl p-3 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <Swords className="w-4 h-4 text-gray-600 shrink-0" />
-                    <p className="text-sm text-gray-300 truncate">
-                      vs. <span className="font-semibold text-white">{displayName(opponent)}</span>
-                      {c.status === "declined" && <span className="text-gray-500"> — abgelehnt</span>}
-                      {won && <span className="text-emerald-400"> — gewonnen</span>}
-                      {lost && <span className="text-rose-400"> — verloren</span>}
-                      {c.status === "resolved" && !c.winnerId && <span className="text-gray-500"> — unentschieden</span>}
-                    </p>
-                  </div>
-                  {c.battleId && (
-                    <Link
-                      href={`/battle-cards/battles/${c.battleId}`}
-                      className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-md bg-white/[0.06] text-gray-300 hover:bg-white/[0.1] transition-colors shrink-0"
-                    >
-                      <Eye className="w-3.5 h-3.5" /> Ansehen
-                    </Link>
-                  )}
-                </div>
-              );
-            })}
           </div>
         )}
       </section>

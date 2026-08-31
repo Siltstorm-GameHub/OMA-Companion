@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     dispatchNotification("battle_challenge", {
       users: [parsed.data.opponentId],
       placeholders: { "{challenger}": me?.username ?? me?.name ?? "Ein Mitglied" },
-      urlOverride: "/battle-cards/challenges",
+      urlOverride: "/battle-cards?tab=community",
     }).catch(() => {});
 
     return NextResponse.json({ ok: true, challenge });

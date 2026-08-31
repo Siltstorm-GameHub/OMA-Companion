@@ -37,7 +37,6 @@ export function MinigamesConfigPanel({ initial }: { initial: MinigamesConfig }) 
       <div className="glass rounded-2xl divide-y divide-white/5">
         {([
           { key: "predictionEnabled" as const, label: "Event-Sieger-Vorhersage", desc: "Tipp auf den Gesamtsieger eines Events" },
-          { key: "duelEnabled" as const, label: "1v1 Münzen-Duell", desc: "User-vs-User-Wette per Münzwurf" },
         ]).map(item => (
           <label key={item.key} className="flex items-center gap-3 px-4 py-3 cursor-pointer">
             <input
@@ -65,9 +64,6 @@ export function MinigamesConfigPanel({ initial }: { initial: MinigamesConfig }) 
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Vorhersage Höchst-Einsatz" value={config.predictionMaxWager} onChange={v => set("predictionMaxWager", v)} />
-          <Field label="Duell Tages-Wettlimit (Münzen)" value={config.duelDailyWagerCap} onChange={v => set("duelDailyWagerCap", v)} />
-          <Field label="Duell Mindest-Einsatz" value={config.duelMinWager} onChange={v => set("duelMinWager", v)} />
-          <Field label="Duell Höchst-Einsatz" value={config.duelMaxWager} onChange={v => set("duelMaxWager", v)} />
         </div>
       </div>
 

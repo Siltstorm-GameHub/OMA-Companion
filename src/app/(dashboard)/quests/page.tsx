@@ -210,7 +210,7 @@ export default async function QuestsPage() {
             { icon: "📅", label: "Events",       desc: "Zählt bei der Anmeldung" },
             { icon: "🗳️", label: "Umfragen",     desc: "Zählt bei der ersten Abstimmung in einer Event-Umfrage" },
             { icon: "🎰", label: "Glücksrad",    desc: "Zählt bei jedem täglichen Dreh im Shop" },
-            { icon: "⚔️", label: "Duelle",       desc: "Zählt bei jedem aufgelösten Münzen-Duell" },
+            { icon: "🃏", label: "Battle Cards", desc: "Zählt bei jedem aufgelösten OMA-Duell (Herausforderung oder Zufallsgegner)" },
             { icon: "🎯", label: "Vorhersagen",  desc: "Zählt bei der ersten Sieger-Vorhersage zu einem Event" },
           ].map(item => (
             <li key={item.label} className="flex items-start gap-2">
