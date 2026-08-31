@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { getClassConfig, LEVEL_BORDER, type BattleCardData } from "./BattleCardView";
