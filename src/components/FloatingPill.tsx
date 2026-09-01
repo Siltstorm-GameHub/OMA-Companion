@@ -101,7 +101,7 @@ const NavLink = forwardRef<HTMLAnchorElement, {
 });
 
 /* ── FloatingPill ─────────────────────────────────────────────────────── */
-export default function FloatingPill() {
+export default function FloatingPill({ hideBrandAndProfile = false }: { hideBrandAndProfile?: boolean }) {
   const pathname          = usePathname();
   const { data: session } = useSession();
   const { theme, toggle } = useTheme();
@@ -172,19 +172,22 @@ export default function FloatingPill() {
       backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
     }}>
 
-      {/* Logo */}
-      <Link href="/dashboard" style={{ display: "flex", alignItems: "center", marginRight: 4, flexShrink: 0 }}>
-        <div style={{
-          width: 28, height: 28, borderRadius: 8, overflow: "hidden",
-          boxShadow: "0 0 10px rgba(20,184,166,0.28), 0 0 18px rgba(139,32,32,0.18)",
-          outline: "1px solid rgba(20,184,166,0.22)",
-        }}>
-          <Image src="/brand/logo-256.png" alt="OMA" width={28} height={28}
-            style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-        </div>
-      </Link>
-
-      <div style={{ width: 1, height: 22, background: "var(--nav-divider)", margin: "0 4px", flexShrink: 0 }} />
+      {/* Logo — auf Battle Cards ausgeblendet (eigener Header dort, siehe DashboardChrome) */}
+      {!hideBrandAndProfile && (
+        <>
+          <Link href="/dashboard" style={{ display: "flex", alignItems: "center", marginRight: 4, flexShrink: 0 }}>
+            <div style={{
+              width: 28, height: 28, borderRadius: 8, overflow: "hidden",
+              boxShadow: "0 0 10px rgba(20,184,166,0.28), 0 0 18px rgba(139,32,32,0.18)",
+              outline: "1px solid rgba(20,184,166,0.22)",
+            }}>
+              <Image src="/brand/logo-256.png" alt="OMA" width={28} height={28}
+                style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            </div>
+          </Link>
+          <div style={{ width: 1, height: 22, background: "var(--nav-divider)", margin: "0 4px", flexShrink: 0 }} />
+        </>
+      )}
 
       {/* Nav links, always visible, with a bump capsule over the active icon + label */}
       <div ref={navRef} style={{ display: "flex", alignItems: "center", gap: 1, position: "relative" }}>
@@ -228,9 +231,11 @@ export default function FloatingPill() {
         ))}
       </div>
 
+      {/* Avatar + Dropdown — auf Battle Cards ausgeblendet (siehe DashboardChrome) */}
+      {!hideBrandAndProfile && (
+      <>
       <div style={{ width: 1, height: 22, background: "var(--nav-divider)", margin: "0 4px", flexShrink: 0 }} />
 
-      {/* Avatar + dropdown */}
       <div ref={dropRef} style={{ position: "relative", flexShrink: 0 }}>
         <button
           onClick={() => setAvatarOpen(v => !v)}
@@ -312,6 +317,8 @@ export default function FloatingPill() {
           </div>
         )}
       </div>
+      </>
+      )}
     </div>
   );
 }

@@ -42,25 +42,33 @@ export default function DashboardChrome({
 }) {
   const pathname = usePathname();
   const isMancave = pathname === "/mancave" || pathname.startsWith("/mancave/");
+  // Battle Cards ist ein eigenständiger Spielmodus-Bereich — Partner-Footer,
+  // News-Ticker und der Header (OMA-Schriftzug/Logo + Profilbild) lenken dort
+  // nur ab. Die Navigation (BottomNav mobil, Nav-Links in der FloatingPill
+  // auf Desktop) bleibt bewusst erhalten, damit man den Bereich verlassen kann.
+  const isBattleCards = pathname === "/battle-cards" || pathname.startsWith("/battle-cards/");
+  const hideTicker = isMancave || isBattleCards;
 
   return (
-    <div className="min-h-screen text-white" style={{ background: "var(--bg-base)", "--top-ticker": isMancave ? "0px" : "2.25rem" } as React.CSSProperties}>
+    <div className="min-h-screen text-white" style={{ background: "var(--bg-base)", "--top-ticker": hideTicker ? "0px" : "2.25rem" } as React.CSSProperties}>
 
       {/* ── Aurora Hintergrund ───────────────────────────────────── */}
       {!isMancave && <AuroraBackground />}
 
       {/* ── News-Ticker (oben) ──────────────────────────────────── */}
-      {/* Mancave läuft im Vollbild ohne Ticker — CSS-Var --top-ticker oben
+      {/* Mancave/Battle Cards laufen ohne Ticker — CSS-Var --top-ticker oben
           zieht den restlichen fixierten Chrome (MobileTopBar/FloatingPill)
           dann automatisch mit nach oben, siehe deren top-Styles. */}
-      {!isMancave && <TopNewsFeed items={newsItems} />}
+      {!hideTicker && <TopNewsFeed items={newsItems} />}
 
       {/* ── Mobile Top Bar (nur Handy, kein Logo) ───────────────── */}
-      <MobileTopBar />
+      {/* Auf Battle Cards bewusst ausgeblendet (Seiten-Titel + Profilbild) —
+          die mobile Navigation bleibt über BottomNav unten erhalten. */}
+      {!isBattleCards && <MobileTopBar />}
 
       {/* ── Floating Pill Nav (nur Desktop) ─────────────────────── */}
       <div className="hidden lg:block">
-        <FloatingPill />
+        <FloatingPill hideBrandAndProfile={isBattleCards} />
       </div>
 
       {/* ── Main Content ────────────────────────────────────────── */}
@@ -69,6 +77,13 @@ export default function DashboardChrome({
       {isMancave ? (
         <main
           className="min-w-0 px-0 pt-14 lg:pt-[72px] pb-0 h-screen overflow-hidden"
+          style={{ position: "relative", zIndex: 2 }}
+        >
+          {children}
+        </main>
+      ) : isBattleCards ? (
+        <main
+          className="min-w-0 px-0 pb-24 lg:pb-10 pt-[max(0.75rem,env(safe-area-inset-top))] lg:pt-[72px]"
           style={{ position: "relative", zIndex: 2 }}
         >
           {children}
