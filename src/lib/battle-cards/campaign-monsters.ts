@@ -8,11 +8,12 @@
 // sich Stufen-Skalierung und Template-Format mit puzzle-monsters.ts (siehe
 // monster-content.ts).
 
-import { curve, curvePercent, type MonsterTemplate } from "./monster-content";
+import { curve, curvePercent, monsterImagePath, type MonsterTemplate } from "./monster-content";
 
 export const TUTORIAL_SLIME: MonsterTemplate = {
   cardId: "monster-tutorial-slime",
   name: "Tutorial-Slime",
+  imageUrl: monsterImagePath("tutorial-slime"),
   class: "TANK",
   baseHp: 500,
   baseAttack: 40,
@@ -47,6 +48,7 @@ export const TUTORIAL_SLIME: MonsterTemplate = {
 export const SESSION_TIMEOUT_ZOMBIE: MonsterTemplate = {
   cardId: "monster-session-timeout-zombie",
   name: "Session-Timeout-Zombie",
+  imageUrl: monsterImagePath("session-timeout-zombie"),
   class: "TANK",
   baseHp: 1300,
   baseAttack: 85,
@@ -81,6 +83,7 @@ export const SESSION_TIMEOUT_ZOMBIE: MonsterTemplate = {
 export const SERVERABSTURZ_KRAKEN: MonsterTemplate = {
   cardId: "monster-serverabsturz-kraken",
   name: "Serverabsturz-Kraken",
+  imageUrl: monsterImagePath("serverabsturz-kraken"),
   class: "TANK",
   baseHp: 1600,
   baseAttack: 110,
@@ -115,6 +118,7 @@ export const SERVERABSTURZ_KRAKEN: MonsterTemplate = {
 export const RAGE_QUIT_CONTROLLER: MonsterTemplate = {
   cardId: "monster-rage-quit-controller",
   name: "Rage-Quit-Controller",
+  imageUrl: monsterImagePath("rage-quit-controller"),
   class: "DAMAGE_DEALER",
   baseHp: 650,
   baseAttack: 195,
@@ -149,6 +153,7 @@ export const RAGE_QUIT_CONTROLLER: MonsterTemplate = {
 export const LAG_SPIKE: MonsterTemplate = {
   cardId: "monster-lag-spike",
   name: "Lag-Spike",
+  imageUrl: monsterImagePath("lag-spike"),
   class: "DAMAGE_DEALER",
   baseHp: 700,
   baseAttack: 170,
@@ -184,6 +189,7 @@ export const LAG_SPIKE: MonsterTemplate = {
 export const LOOT_GOBLIN: MonsterTemplate = {
   cardId: "monster-loot-goblin",
   name: "Loot-Goblin",
+  imageUrl: monsterImagePath("loot-goblin"),
   class: "DAMAGE_DEALER",
   baseHp: 680,
   baseAttack: 165,
@@ -218,6 +224,7 @@ export const LOOT_GOBLIN: MonsterTemplate = {
 export const GRIEFER_IMP: MonsterTemplate = {
   cardId: "monster-griefer-imp",
   name: "Griefer-Imp",
+  imageUrl: monsterImagePath("griefer-imp"),
   class: "DAMAGE_DEALER",
   baseHp: 640,
   baseAttack: 150,
@@ -258,6 +265,7 @@ export const GRIEFER_IMP: MonsterTemplate = {
 export const PAY2WIN_TRUHE: MonsterTemplate = {
   cardId: "monster-pay2win-truhe",
   name: "Pay2Win-Truhe",
+  imageUrl: monsterImagePath("pay2win-truhe"),
   class: "SUPPORT",
   baseHp: 750,
   baseAttack: 65,
@@ -298,6 +306,7 @@ export const PAY2WIN_TRUHE: MonsterTemplate = {
 export const AFK_FARMER: MonsterTemplate = {
   cardId: "monster-afk-farmer",
   name: "AFK-Farmer",
+  imageUrl: monsterImagePath("afk-farmer"),
   class: "SUPPORT",
   baseHp: 800,
   baseAttack: 55,
@@ -341,6 +350,7 @@ export const AFK_FARMER: MonsterTemplate = {
 export const SEASON_PASS_DRACHE: MonsterTemplate = {
   cardId: "monster-season-pass-drache",
   name: "Season-Pass-Drache",
+  imageUrl: monsterImagePath("season-pass-drache"),
   class: "TANK",
   baseHp: 2400,
   baseAttack: 150,

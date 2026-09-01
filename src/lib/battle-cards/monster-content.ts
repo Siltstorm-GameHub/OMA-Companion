@@ -16,7 +16,17 @@ export function curvePercent(base: number): number[] {
   return [1, 2, 3, 4, 5].map((level) => Math.round(base * LEVEL_STAT_MULTIPLIER[level] * 100) / 100);
 }
 
-export type MonsterTemplate = Omit<BattleUnitDefinition, "level" | "imageUrl" | "avatarBadgeUrl">;
+export type MonsterTemplate = Omit<BattleUnitDefinition, "level" | "avatarBadgeUrl">;
+
+/** Erwartete Ablage für Monster-Artwork — freistehende Figuren (transparenter
+ *  Hintergrund), nicht Karten-Ausschnitte, siehe public/battle-cards/monsters/README.md
+ *  für Stilvorgabe/Maße. Ein Monster ohne (noch) vorhandene Datei zeigt einfach
+ *  weiter den Klassen-Icon-Platzhalter (UnitCard fällt bei einem 404 automatisch
+ *  darauf zurück, siehe onError in LiveBattleView.tsx) — das Feld kann also schon
+ *  jetzt überall gesetzt werden, ohne dass die Datei bereits existieren muss. */
+export function monsterImagePath(slug: string): string {
+  return `/battle-cards/monsters/${slug}.png`;
+}
 
 /** Wandelt ein Monster-Template in eine einsatzbereite BattleUnitDefinition um.
  *  `statMultiplier` skaliert NUR die Basis-Stats (HP/ATK/DEF) zusätzlich zur
@@ -32,7 +42,6 @@ export function instantiateMonster(template: MonsterTemplate, level: number, sta
     baseHp: Math.round(template.baseHp * statMultiplier),
     baseAttack: Math.round(template.baseAttack * statMultiplier),
     baseDefense: Math.round(template.baseDefense * statMultiplier),
-    imageUrl: undefined,
     avatarBadgeUrl: null,
   };
 }

@@ -4,20 +4,23 @@
 // Eigene, fest hinterlegte Gegner-Riege statt der zufällig gezogenen
 // Standard-Karten aus dem Auto-Kampf (siehe buildPveTeams in live-battle.ts)
 // — die Gegner im Edelstein-Kampf sollen wie augenzwinkernde Monster wirken,
-// nicht wie reguläre Spieler-Helden. Kein eigenes Artwork vorhanden
-// (imageUrl bleibt undefined) — die UI fällt dann automatisch auf das
-// Klassen-Icon zurück (siehe getClassConfig in BattleCardView.tsx). Die
-// Stufen-Skalierung folgt derselben Kurve wie die Spieler-Karten
-// (LEVEL_STAT_MULTIPLIER), damit sich die Monster bei gleicher Schwierigkeit
-// vergleichbar stark anfühlen wie die echten NPC-Standardkarten.
+// nicht wie reguläre Spieler-Helden. `imageUrl` zeigt auf public/battle-cards/
+// monsters/<slug>.png (siehe monster-content.ts: monsterImagePath) — solange
+// die Datei dort noch nicht existiert, fällt die UI automatisch auf das
+// Klassen-Icon zurück (404-Fallback in LiveBattleView.tsx UnitCard), das Feld
+// kann also schon jetzt gesetzt werden. Die Stufen-Skalierung folgt derselben
+// Kurve wie die Spieler-Karten (LEVEL_STAT_MULTIPLIER), damit sich die
+// Monster bei gleicher Schwierigkeit vergleichbar stark anfühlen wie die
+// echten NPC-Standardkarten.
 
 import type { BattleUnitDefinition } from "@/lib/battle-engine/types";
-import { curve, curvePercent, instantiateMonster, type MonsterTemplate } from "./monster-content";
+import { curve, curvePercent, instantiateMonster, monsterImagePath, type MonsterTemplate } from "./monster-content";
 
 export const QUICKPLAY_MONSTER_TEMPLATES: MonsterTemplate[] = [
   {
     cardId: "monster-sockenmonster",
     name: "Sockenmonster",
+    imageUrl: monsterImagePath("sockenmonster"),
     class: "TANK",
     baseHp: 1250,
     baseAttack: 80,
@@ -55,6 +58,7 @@ export const QUICKPLAY_MONSTER_TEMPLATES: MonsterTemplate[] = [
   {
     cardId: "monster-bratwurstboss",
     name: "Bratwurstboss",
+    imageUrl: monsterImagePath("bratwurstboss"),
     class: "TANK",
     baseHp: 1150,
     baseAttack: 92,
@@ -92,6 +96,7 @@ export const QUICKPLAY_MONSTER_TEMPLATES: MonsterTemplate[] = [
   {
     cardId: "monster-karsten-kaktus",
     name: "Karsten Kaktus",
+    imageUrl: monsterImagePath("karsten-kaktus"),
     class: "DAMAGE_DEALER",
     baseHp: 720,
     baseAttack: 175,
@@ -129,6 +134,7 @@ export const QUICKPLAY_MONSTER_TEMPLATES: MonsterTemplate[] = [
   {
     cardId: "monster-frittatus",
     name: "Frittatus",
+    imageUrl: monsterImagePath("frittatus"),
     class: "DAMAGE_DEALER",
     baseHp: 780,
     baseAttack: 160,
@@ -167,6 +173,7 @@ export const QUICKPLAY_MONSTER_TEMPLATES: MonsterTemplate[] = [
   {
     cardId: "monster-oma-gisela",
     name: "Oma Gisela",
+    imageUrl: monsterImagePath("oma-gisela"),
     class: "SUPPORT",
     baseHp: 860,
     baseAttack: 60,
@@ -208,6 +215,7 @@ export const QUICKPLAY_MONSTER_TEMPLATES: MonsterTemplate[] = [
   {
     cardId: "monster-formularfresser",
     name: "Formularfresser",
+    imageUrl: monsterImagePath("formularfresser"),
     class: "SUPPORT",
     baseHp: 810,
     baseAttack: 58,

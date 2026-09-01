@@ -179,6 +179,12 @@ function UnitCard({
   const canFireUltimate = !glow && !!ultimateReady && !!onUltimateClick && unit.isAlive;
   const clickable = canPickTarget || canFireUltimate;
   const isHit = (effects ?? []).some((e) => e.kind === "damage" || e.kind === "crit");
+  // Monster-Artwork existiert nicht für jeden Gegner (siehe puzzle-monsters.ts/
+  // campaign-monsters.ts: imageUrl ist schon gesetzt, auch bevor die Datei
+  // vorliegt) — bei einem 404 fällt die Karte automatisch auf das Klassen-Icon
+  // zurück, statt ein kaputtes Bild-Icon zu zeigen.
+  const [imageFailed, setImageFailed] = useState(false);
+  const showImage = !!unit.imageUrl && !imageFailed;
 
   function handleClick() {
     if (canPickTarget) onClick?.();
@@ -242,13 +248,14 @@ function UnitCard({
             }}
           />
         )}
-        {unit.imageUrl ? (
+        {showImage ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={unit.imageUrl}
+            src={unit.imageUrl ?? undefined}
             alt={unit.name}
             className="max-w-full max-h-full object-contain relative"
             style={{ filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.65))" }}
+            onError={() => setImageFailed(true)}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center relative" style={{ background: `${config.color}22` }}>
