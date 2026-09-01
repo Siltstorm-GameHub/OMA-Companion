@@ -238,7 +238,7 @@ export default function BoardMatch3({
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 relative">
       <div className="flex items-center justify-between text-[10px] text-gray-400 uppercase tracking-widest">
         <span className="flex items-center gap-1">
           Edelstein-Brett
@@ -254,24 +254,32 @@ export default function BoardMatch3({
         <span className="tabular-nums">{Math.max(0, remaining)} Züge übrig</span>
       </div>
       {legendOpen && (
-        <div className="rounded-lg bg-black/25 px-2.5 py-2 space-y-1.5 text-[10px] text-gray-400 leading-snug">
-          {(Object.keys(TILE_ICON) as TileClassSymbol[]).map((symbol) => {
-            const icon = TILE_ICON[symbol];
-            return (
-              <div key={symbol} className="flex items-center gap-1.5">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={icon.src} alt="" className="w-3.5 h-3.5 object-contain shrink-0" />
-                <span>
-                  3+ verbinden = Rage für alle <span style={{ color: icon.color }}>{icon.alt}</span>-Helden
-                </span>
-              </div>
-            );
-          })}
-          <div className="flex items-center gap-1.5 pt-0.5 border-t border-white/5">
-            <Users className="w-3.5 h-3.5 text-amber-300 shrink-0" />
-            <span>5er-Match = Bonus-Rage fürs ganze Team. Volle Rage? Heldenkarte antippen für Ultimate — jederzeit.</span>
+        <>
+          {/* Unsichtbarer Klick-außerhalb-Bereich schliesst die Legende, statt
+              versehentlich einen Swap auf dem darunterliegenden Brett auszulösen —
+              die Legende schwebt bewusst ALS OVERLAY über dem Brett (position
+              absolute), statt es nach unten zu verdrängen (das ließ das feste
+              212px-Panel in LiveBattleView zuvor intern scrollen). */}
+          <div className="fixed inset-0 z-10" onClick={toggleLegend} />
+          <div className="absolute top-5 left-0 right-0 z-20 rounded-lg bg-[#14171f] border border-white/10 px-2.5 py-2 space-y-1.5 text-[10px] text-gray-400 leading-snug shadow-xl">
+            {(Object.keys(TILE_ICON) as TileClassSymbol[]).map((symbol) => {
+              const icon = TILE_ICON[symbol];
+              return (
+                <div key={symbol} className="flex items-center gap-1.5">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={icon.src} alt="" className="w-3.5 h-3.5 object-contain shrink-0" />
+                  <span>
+                    3+ verbinden = Rage für alle <span style={{ color: icon.color }}>{icon.alt}</span>-Helden
+                  </span>
+                </div>
+              );
+            })}
+            <div className="flex items-center gap-1.5 pt-0.5 border-t border-white/5">
+              <Users className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+              <span>5er-Match = Bonus-Rage fürs ganze Team. Volle Rage? Heldenkarte antippen für Ultimate — jederzeit.</span>
+            </div>
           </div>
-        </div>
+        </>
       )}
       <div
         className="grid gap-1 mx-auto"
