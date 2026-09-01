@@ -192,9 +192,6 @@ export default async function BattleCardsPage() {
     <div className="space-y-4">
       <div>
         <h1 className="text-lg font-black text-white">Kampagne</h1>
-        <p className="text-xs text-gray-500 mt-0.5">
-          12 Level, immer schwerer, immer humorvoller. Bis zu 3 Sterne pro Level.
-        </p>
       </div>
       <CampaignMap />
     </div>

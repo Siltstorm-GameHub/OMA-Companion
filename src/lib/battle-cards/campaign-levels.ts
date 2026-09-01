@@ -41,6 +41,11 @@ export interface CampaignLevelDef {
 
 export const CAMPAIGN_CHAPTER_NAME = "Kapitel 1: Server-Neustart";
 
+/** Kurze Story-Einführung, unter dem Kapitel-Titel auf der Kampagnen-Karte
+ *  angezeigt (siehe CampaignMap.tsx) — reiner Flavor-Text, keine Spiellogik. */
+export const CAMPAIGN_CHAPTER_INTRO =
+  "Mitten in der Nacht ist der Community-Server abgestürzt — und alles, was sonst nur nervt, ist plötzlich lebendig geworden. Tutorial-Slimes, Lag-Spikes, Rage-Quit-Controller: Sie alle wollen nur eins, dass du aufgibst, bevor der Neustart durch ist. Kämpf dich durch, bevor der nächste Patch alles wieder zurücksetzt.";
+
 export const CAMPAIGN_LEVELS: CampaignLevelDef[] = [
   {
     id: "lvl-01",

@@ -97,6 +97,7 @@ function LevelNode({ level, index, onSelect }: { level: CampaignBoardLevel; inde
 export default function CampaignMap() {
   const { data: session } = useSession();
   const [chapterName, setChapterName] = useState<string>("Kampagne");
+  const [chapterIntro, setChapterIntro] = useState<string>("");
   const [levels, setLevels] = useState<CampaignBoardLevel[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState<string | null>(null);
@@ -111,6 +112,7 @@ export default function CampaignMap() {
         return;
       }
       setChapterName(data.chapterName);
+      setChapterIntro(data.chapterIntro ?? "");
       setLevels(data.levels);
     } catch {
       setError("Netzwerkfehler.");
@@ -162,6 +164,7 @@ export default function CampaignMap() {
           <CoinIcon size={10} /> 100 pro neuem Stern
         </span>
       </div>
+      {chapterIntro && <p className="text-xs text-gray-400 leading-relaxed">{chapterIntro}</p>}
 
       {error && <p className="text-xs text-rose-400">{error}</p>}
 
