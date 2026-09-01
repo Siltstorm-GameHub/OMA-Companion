@@ -34,6 +34,7 @@ import type {
 } from "@/lib/battle-engine/types";
 import { serializeBattleLog } from "@/lib/battle-cards/battle-log";
 import { buildBattleTeam } from "@/lib/battle-cards/team-builder";
+import { puzzleMonsterRoster } from "@/lib/battle-cards/puzzle-monsters";
 import { resolveAvatarsForCards } from "@/lib/battle-cards/card-view";
 import { resolveCardImageUrl, resolveAvatarBadgeUrl } from "@/lib/battle-cards/resolve-image";
 import { applyWinStreak } from "@/lib/battle-cards/win-streak";
@@ -354,20 +355,22 @@ async function createLiveBattle(
   return buildSnapshot(fresh, state, pendingDecision);
 }
 
-/** Baut Spieler- und NPC-Team für einen PVE-Kampf (Auto-Kampf UND Puzzle-Modus
- *  teilen sich dieselbe Aufstellungs-/Gegner-Logik) — zentral hier, damit
- *  startLivePveBattle und startLivePvePuzzleBattle nicht auseinanderlaufen. */
-async function buildPveTeams(
-  userId: string,
-  difficulty: NpcDifficulty
-): Promise<{ teamA: BattleUnitDefinition[]; teamB: BattleUnitDefinition[] }> {
+/** Wirft einen Fehler, falls der User sein Tageslimit an NPC-Kämpfen erreicht
+ *  hat — zentral hier, damit Auto-Kampf UND Puzzle-Modus (siehe
+ *  countNpcBattlesStartedToday: zählt "PVE_"-Präfix-Modi zusammen) dieselbe
+ *  Fehlermeldung und dasselbe gemeinsame Tageslimit verwenden. */
+async function assertNpcDailyLimitNotReached(userId: string): Promise<void> {
   const startedToday = await countNpcBattlesStartedToday(userId);
   if (startedToday >= NPC_BATTLE_DAILY_LIMIT) {
     throw new LiveBattleError(
       `Heutiges Limit erreicht (max. ${NPC_BATTLE_DAILY_LIMIT} NPC-Kämpfe pro Tag). Versuch es morgen wieder.`
     );
   }
+}
 
+/** Lädt die aktuelle Startaufstellung des Users (Lineup, sonst die ersten
+ *  TEAM_SIZE eigenen Karten) — für Auto-Kampf UND Puzzle-Modus gleichermaßen. */
+async function loadPlayerLineup(userId: string) {
   const userCards = await prisma.userCard.findMany({
     where: { userId },
     include: { card: true },
@@ -376,7 +379,12 @@ async function buildPveTeams(
   if (userCards.length === 0) throw new LiveBattleError("Noch kein Start-Pack gewählt.");
 
   const lineup = userCards.filter((uc) => uc.inLineup);
-  const playerTeamCards = (lineup.length > 0 ? lineup : userCards).slice(0, TEAM_SIZE);
+  return (lineup.length > 0 ? lineup : userCards).slice(0, TEAM_SIZE);
+}
+
+export async function startLivePveBattle(userId: string, difficulty: NpcDifficulty): Promise<LiveBattleSnapshot> {
+  await assertNpcDailyLimitNotReached(userId);
+  const playerTeamCards = await loadPlayerLineup(userId);
 
   const standardCards = await prisma.card.findMany({ where: { rarity: "STANDARD" } });
   const opponentCards = sampleWithoutReplacement(standardCards, TEAM_SIZE);
@@ -403,20 +411,31 @@ async function buildPveTeams(
     )
   );
 
-  return { teamA, teamB };
-}
-
-export async function startLivePveBattle(userId: string, difficulty: NpcDifficulty): Promise<LiveBattleSnapshot> {
-  const { teamA, teamB } = await buildPveTeams(userId, difficulty);
   return createLiveBattle(`PVE_${difficulty}`, userId, null, teamA, teamB, { A: "human", B: "ai" });
 }
 
 /** Wie startLivePveBattle, aber im Match-3-"Edelstein-Kampf"-Modus (siehe
  *  board-match3.ts): der Spieler erzeugt Rage über ein Puzzle-Brett statt rein
- *  automatisch. Teilt sich Aufstellung/Gegner-Logik und Tageslimit mit dem
- *  bestehenden Auto-Kampf-PVE (siehe countNpcBattlesStartedToday). */
+ *  automatisch, UND die Gegner sind eine eigene Riege humorvoller Monster
+ *  (siehe puzzle-monsters.ts) statt der zufälligen Standard-Karten des
+ *  Auto-Kampfs — passend zum verspielteren Empires-&-Puzzles-Setting. Teilt
+ *  sich Aufstellung/Tageslimit mit dem bestehenden Auto-Kampf-PVE. */
 export async function startLivePvePuzzleBattle(userId: string, difficulty: NpcDifficulty): Promise<LiveBattleSnapshot> {
-  const { teamA, teamB } = await buildPveTeams(userId, difficulty);
+  await assertNpcDailyLimitNotReached(userId);
+  const playerTeamCards = await loadPlayerLineup(userId);
+
+  const avatarByDiscordId = await resolveAvatarsForCards(playerTeamCards.map((uc) => uc.card));
+  const teamA = playerTeamCards.map((uc) =>
+    cardToBattleUnitDefinition(
+      uc.card,
+      uc.level,
+      resolveCardImageUrl(uc.card, avatarByDiscordId),
+      resolveAvatarBadgeUrl(uc.card, avatarByDiscordId)
+    )
+  );
+  const npcLevel = DIFFICULTY_LEVEL[difficulty];
+  const teamB = sampleWithoutReplacement(puzzleMonsterRoster(npcLevel), TEAM_SIZE);
+
   return createLiveBattle(puzzleModeFor(difficulty), userId, null, teamA, teamB, { A: "human", B: "ai" }, true);
 }
 
