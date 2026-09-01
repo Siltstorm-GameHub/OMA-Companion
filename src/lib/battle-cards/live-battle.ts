@@ -35,6 +35,14 @@ import type {
 import { serializeBattleLog } from "@/lib/battle-cards/battle-log";
 import { buildBattleTeam } from "@/lib/battle-cards/team-builder";
 import { puzzleMonsterRoster } from "@/lib/battle-cards/puzzle-monsters";
+import {
+  buildCampaignEnemyTeam,
+  CAMPAIGN_COINS_PER_STAR,
+  computeStars,
+  getCampaignLevel,
+  isCampaignLevelUnlocked,
+  recordCampaignResult,
+} from "@/lib/battle-cards/campaign";
 import { resolveAvatarsForCards } from "@/lib/battle-cards/card-view";
 import { resolveCardImageUrl, resolveAvatarBadgeUrl } from "@/lib/battle-cards/resolve-image";
 import { applyWinStreak } from "@/lib/battle-cards/win-streak";
@@ -261,6 +269,25 @@ async function finalizeLiveBattle(live: LiveBattle, state: InteractiveBattleStat
         },
       });
     }
+  } else if (state.winner === "A" && live.mode.startsWith("CAMPAIGN_")) {
+    const levelId = live.mode.slice("CAMPAIGN_".length);
+    const stars = computeStars(state);
+    const { starsGained } = await recordCampaignResult(live.playerAId, levelId, stars);
+    // Münz-Belohnung nur für NEU erreichte Sterne (CAMPAIGN_COINS_PER_STAR je
+    // Stern) — schon erreichte Sterne zahlen bei erneutem Sieg nicht nochmal
+    // aus, sonst ließe sich durch wiederholtes Replayen unbegrenzt farmen.
+    if (starsGained > 0) {
+      const levelDef = getCampaignLevel(levelId);
+      const reward = starsGained * CAMPAIGN_COINS_PER_STAR;
+      await prisma.user.update({ where: { id: live.playerAId }, data: { points: { increment: reward } } });
+      await prisma.pointTransaction.create({
+        data: {
+          userId: live.playerAId,
+          amount: reward,
+          reason: `Kampagnen-Level: ${starsGained} neue${starsGained === 1 ? "r" : ""} Stern${starsGained === 1 ? "" : "e"} (${levelDef?.name ?? levelId})`,
+        },
+      });
+    }
   }
 
   return battle;
@@ -437,6 +464,34 @@ export async function startLivePvePuzzleBattle(userId: string, difficulty: NpcDi
   const teamB = sampleWithoutReplacement(puzzleMonsterRoster(npcLevel), TEAM_SIZE);
 
   return createLiveBattle(puzzleModeFor(difficulty), userId, null, teamA, teamB, { A: "human", B: "ai" }, true);
+}
+
+/** Startet ein Kampagnen-Level (siehe campaign-levels.ts/campaign.ts) — läuft
+ *  wie der Edelstein-Kampf über das Match-3-Brett (boardMode: true), aber mit
+ *  fest kuratiertem Gegner-Team statt zufälliger Monster und OHNE das
+ *  tägliche NPC-Limit (Kampagnen-Level lassen sich beliebig oft wiederholen,
+ *  um mehr Sterne zu holen — die Münz-Belohnung gibt es aber nur einmal pro
+ *  Level, siehe finalizeLiveBattle). */
+export async function startLiveCampaignBattle(userId: string, levelId: string): Promise<LiveBattleSnapshot> {
+  const levelDef = getCampaignLevel(levelId);
+  if (!levelDef) throw new LiveBattleError("Unbekanntes Kampagnen-Level.");
+
+  const unlocked = await isCampaignLevelUnlocked(userId, levelId);
+  if (!unlocked) throw new LiveBattleError("Dieses Level ist noch nicht freigeschaltet.");
+
+  const playerTeamCards = await loadPlayerLineup(userId);
+  const avatarByDiscordId = await resolveAvatarsForCards(playerTeamCards.map((uc) => uc.card));
+  const teamA = playerTeamCards.map((uc) =>
+    cardToBattleUnitDefinition(
+      uc.card,
+      uc.level,
+      resolveCardImageUrl(uc.card, avatarByDiscordId),
+      resolveAvatarBadgeUrl(uc.card, avatarByDiscordId)
+    )
+  );
+  const teamB = buildCampaignEnemyTeam(levelDef);
+
+  return createLiveBattle(`CAMPAIGN_${levelId}`, userId, null, teamA, teamB, { A: "human", B: "ai" }, true);
 }
 
 /** Erzeugt den LiveBattle zu einer bereits angenommenen/gematchten PVP-Begegnung

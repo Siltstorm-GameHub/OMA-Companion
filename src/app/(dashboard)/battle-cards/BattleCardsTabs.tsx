@@ -2,13 +2,13 @@
 import { Suspense, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { TabPanel } from "@/components/admin/Tabs";
-import { Swords, LayoutGrid, Users } from "lucide-react";
+import { Swords, LayoutGrid, Users, Map } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-type TabKey = "kampf" | "karten" | "community";
+type TabKey = "kampf" | "kampagne" | "karten" | "community";
 
 function isTabKey(v: string | null): v is TabKey {
-  return v === "kampf" || v === "karten" || v === "community";
+  return v === "kampf" || v === "kampagne" || v === "karten" || v === "community";
 }
 
 // Clash-Royale-artige Navigation: eine Banner-Leiste, aus der der aktive
@@ -16,17 +16,20 @@ function isTabKey(v: string | null): v is TabKey {
 // inaktive Reiter bleiben klein und grau flach in der Leiste sitzen.
 const TABS: { key: TabKey; label: string; icon: LucideIcon; accent: string; accentDark: string }[] = [
   { key: "kampf", label: "Kampf", icon: Swords, accent: "#fb7185", accentDark: "#9f1239" },
+  { key: "kampagne", label: "Kampagne", icon: Map, accent: "#34d399", accentDark: "#065f46" },
   { key: "karten", label: "Karten", icon: LayoutGrid, accent: "#a78bfa", accentDark: "#5b21b6" },
   { key: "community", label: "Community", icon: Users, accent: "#fbbf24", accentDark: "#b45309" },
 ];
 
 function BattleCardsTabsInner({
   kampfPanel,
+  kampagnePanel,
   kartenPanel,
   communityPanel,
   communityBadge = 0,
 }: {
   kampfPanel: ReactNode;
+  kampagnePanel: ReactNode;
   kartenPanel: ReactNode;
   communityPanel: ReactNode;
   communityBadge?: number;
@@ -99,6 +102,7 @@ function BattleCardsTabsInner({
       </div>
 
       <TabPanel tabKey="kampf" active={active}>{kampfPanel}</TabPanel>
+      <TabPanel tabKey="kampagne" active={active}>{kampagnePanel}</TabPanel>
       <TabPanel tabKey="karten" active={active}>{kartenPanel}</TabPanel>
       <TabPanel tabKey="community" active={active}>{communityPanel}</TabPanel>
     </div>
@@ -107,6 +111,7 @@ function BattleCardsTabsInner({
 
 export default function BattleCardsTabs(props: {
   kampfPanel: ReactNode;
+  kampagnePanel: ReactNode;
   kartenPanel: ReactNode;
   communityPanel: ReactNode;
   communityBadge?: number;

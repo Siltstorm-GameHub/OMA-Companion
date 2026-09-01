@@ -11,20 +11,10 @@
 // (LEVEL_STAT_MULTIPLIER), damit sich die Monster bei gleicher Schwierigkeit
 // vergleichbar stark anfühlen wie die echten NPC-Standardkarten.
 
-import { LEVEL_STAT_MULTIPLIER } from "@/lib/battle-engine/constants";
 import type { BattleUnitDefinition } from "@/lib/battle-engine/types";
+import { curve, curvePercent, instantiateMonster, type MonsterTemplate } from "./monster-content";
 
-function curve(base: number): number[] {
-  return [1, 2, 3, 4, 5].map((level) => Math.round(base * LEVEL_STAT_MULTIPLIER[level]));
-}
-
-function curvePercent(base: number): number[] {
-  return [1, 2, 3, 4, 5].map((level) => Math.round(base * LEVEL_STAT_MULTIPLIER[level] * 100) / 100);
-}
-
-type MonsterTemplate = Omit<BattleUnitDefinition, "level" | "imageUrl" | "avatarBadgeUrl">;
-
-const MONSTER_TEMPLATES: MonsterTemplate[] = [
+export const QUICKPLAY_MONSTER_TEMPLATES: MonsterTemplate[] = [
   {
     cardId: "monster-sockenmonster",
     name: "Sockenmonster",
@@ -262,10 +252,5 @@ const MONSTER_TEMPLATES: MonsterTemplate[] = [
  *  DIFFICULTY_LEVEL in npc-battle-types.ts) — die aufrufende Seite zieht
  *  daraus per sampleWithoutReplacement() ein zufälliges Gegner-Team. */
 export function puzzleMonsterRoster(level: number): BattleUnitDefinition[] {
-  return MONSTER_TEMPLATES.map((m) => ({
-    ...m,
-    level,
-    imageUrl: undefined,
-    avatarBadgeUrl: null,
-  }));
+  return QUICKPLAY_MONSTER_TEMPLATES.map((m) => instantiateMonster(m, level));
 }

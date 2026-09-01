@@ -107,6 +107,7 @@ model User {
   battleQueueEntry         BattleQueueEntry?
   liveBattlesAsA           LiveBattle[]             @relation("LiveBattlePlayerA")
   liveBattlesAsB           LiveBattle[]             @relation("LiveBattlePlayerB")
+  campaignProgress         UserCampaignProgress[]
 }
 
 // ── Pokale ───────────────────────────────────────────────────────────────────
@@ -1386,7 +1387,9 @@ model BattleChallenge {
 // nur noch als Verlaufs-Datensatz stehen (status="finished").
 model LiveBattle {
   id             String   @id @default(cuid())
-  mode           String // "PVE_EASY" | "PVE_MEDIUM" | "PVE_HARD" | "PVP_CHALLENGE" | "PVP_MATCHMAKING"
+  // "PVE_EASY" | "PVE_MEDIUM" | "PVE_HARD" | "PVE_PUZZLE_EASY" | "PVE_PUZZLE_MEDIUM" | "PVE_PUZZLE_HARD"
+  // | "PVP_CHALLENGE" | "PVP_MATCHMAKING" | "CAMPAIGN_<levelId>" (siehe campaign-levels.ts)
+  mode           String
   playerAId      String
   playerBId      String? // null = Team B ist NPC/KI-gesteuert
   stateJson      Json
@@ -1400,6 +1403,30 @@ model LiveBattle {
 
   @@index([playerAId])
   @@index([playerBId])
+}
+
+// ── Battle-Cards-Kampagne ("Edelstein-Kampf", siehe campaign-levels.ts) ────
+// Level-Inhalte (Gegner, Schwierigkeit, Münz-Belohnung) sind bewusst hart in
+// TypeScript hinterlegt (campaign-levels.ts) statt in der DB — hier landet
+// nur der Spieler-Fortschritt je Level. `levelId` referenziert die id aus
+// campaign-levels.ts als freier String, keine FK (Level-Inhalte leben
+// außerhalb der DB und werden per Deploy gepflegt, siehe puzzle-monsters.ts
+// für dasselbe Muster bei den Schnellkampf-Gegnern).
+model UserCampaignProgress {
+  id          String    @id @default(cuid())
+  userId      String
+  levelId     String
+  // Beste je erzielte Sternebewertung (1-3) für dieses Level, 0 = noch nie gewonnen.
+  stars       Int       @default(0)
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, levelId])
+  @@index([userId])
 }
 
 // ── Battle-Cards-Matchmaking ("Zufallsgegner suchen") ───────────────────────

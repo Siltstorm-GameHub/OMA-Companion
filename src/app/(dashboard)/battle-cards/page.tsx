@@ -33,6 +33,7 @@ import BattleLauncher from "@/components/battle-cards/BattleLauncher";
 import BattleHistoryFeed from "@/components/battle-cards/BattleHistoryFeed";
 import LeaderboardList from "@/components/battle-cards/LeaderboardList";
 import LineupStrip from "@/components/battle-cards/LineupStrip";
+import CampaignMap from "@/components/battle-cards/CampaignMap";
 
 const OTHER_CARDS_PAGE_SIZE = 12;
 const userSelect = { id: true, username: true, name: true, image: true, rankPoints: true } as const;
@@ -187,6 +188,18 @@ export default async function BattleCardsPage() {
     </div>
   );
 
+  const kampagnePanel = (
+    <div className="space-y-4">
+      <div>
+        <h1 className="text-lg font-black text-white">Kampagne</h1>
+        <p className="text-xs text-gray-500 mt-0.5">
+          12 Level, immer schwerer, immer humorvoller. Bis zu 3 Sterne pro Level.
+        </p>
+      </div>
+      <CampaignMap />
+    </div>
+  );
+
   const kartenPanel = (
     <div className="space-y-4">
       <div>
@@ -243,6 +256,7 @@ export default async function BattleCardsPage() {
     <div className="max-w-5xl mx-auto px-4 py-6">
       <BattleCardsTabs
         kampfPanel={kampfPanel}
+        kampagnePanel={kampagnePanel}
         kartenPanel={kartenPanel}
         communityPanel={communityPanel}
         communityBadge={pendingChallenges}
