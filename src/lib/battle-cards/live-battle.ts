@@ -15,6 +15,7 @@ import {
   createInteractiveState,
   describeCurrentDecision,
   previewUpcomingTurns,
+  recordBoardProgress,
   type Controller,
   type InteractiveBattleState,
   type PendingDecision,
@@ -138,8 +139,9 @@ export interface LiveBattleAwaiting {
   /** Epoch-ms — ab hier entscheidet die KI-Logik automatisch, falls niemand reagiert. */
   deadline: number | null;
   /** Nur im Puzzle-Modus (siehe board-match3.ts) — initiales Grid für die
-   *  Match-3-Mini-Session dieses Zugs. */
-  board: { grid: BoardGrid; moveBudget: number } | null;
+   *  Match-3-Mini-Session dieses Zugs sowie bislang bestätigte Swaps (für die
+   *  Wiederherstellung nach einem Reload, siehe saveBoardProgress). */
+  board: { grid: BoardGrid; moveBudget: number; appliedSwaps: SwapMove[] } | null;
 }
 
 export interface LiveBattleSnapshot {
@@ -617,6 +619,38 @@ export async function submitUltimateInterrupt(
 
   const updated = await persistAndMaybeFinalize(live, newState);
   return buildSnapshot(updated, newState, pendingDecision);
+}
+
+/** Speichert den bisherigen Fortschritt der laufenden Match-3-Mini-Session
+ *  (siehe BoardMatch3.tsx: nach jedem bestätigten Swap aufgerufen, fire-and-
+ *  forget) — reine Zustands-Aktualisierung ohne Turn-Order-Auswirkung, KEINE
+ *  Rage-Vergabe (die passiert weiterhin ausschließlich beim eigentlichen
+ *  Zug-Abschluss über /action). Ermöglicht, dass ein Reload mitten in der
+ *  Mini-Session den Fortschritt nicht verwirft. */
+export async function saveBoardProgress(
+  liveBattleId: string,
+  viewerId: string,
+  swaps: SwapMove[]
+): Promise<LiveBattleSnapshot> {
+  const live = await requireAccess(liveBattleId, viewerId);
+  if (live.status === "finished") throw new LiveBattleError("Dieser Kampf ist bereits beendet.");
+
+  const state = toState(live);
+  if (!state.awaitingUnitId) throw new LiveBattleError("Gerade wartet niemand auf eine Entscheidung.");
+
+  const allUnits = [...state.unitsA, ...state.unitsB];
+  const unit = allUnits.find((u) => u.instanceId === state.awaitingUnitId);
+  if (!unit) throw new LiveBattleError("Aktive Einheit nicht gefunden.");
+
+  const controllingPlayerId = unit.teamId === "A" ? live.playerAId : live.playerBId;
+  if (controllingPlayerId !== viewerId) throw new LiveBattleError("Du bist gerade nicht am Zug.");
+
+  if (!recordBoardProgress(state, swaps)) {
+    throw new LiveBattleError("Board-Fortschritt konnte nicht gespeichert werden.");
+  }
+
+  const updated = await persistAndMaybeFinalize(live, state);
+  return buildSnapshot(updated, state, describeCurrentDecision(state));
 }
 
 export async function setLiveBattleAuto(liveBattleId: string, viewerId: string, on: boolean): Promise<LiveBattleSnapshot> {

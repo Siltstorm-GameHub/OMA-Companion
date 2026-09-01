@@ -98,6 +98,8 @@ export default function CampaignMap() {
   const { data: session } = useSession();
   const [chapterName, setChapterName] = useState<string>("Kampagne");
   const [chapterIntro, setChapterIntro] = useState<string>("");
+  const [chapterBackground, setChapterBackground] = useState<string | null>(null);
+  const [backgroundFailed, setBackgroundFailed] = useState(false);
   const [levels, setLevels] = useState<CampaignBoardLevel[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState<string | null>(null);
@@ -113,6 +115,7 @@ export default function CampaignMap() {
       }
       setChapterName(data.chapterName);
       setChapterIntro(data.chapterIntro ?? "");
+      setChapterBackground(data.chapterBackground ?? null);
       setLevels(data.levels);
     } catch {
       setError("Netzwerkfehler.");
@@ -155,16 +158,36 @@ export default function CampaignMap() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-2">
-          <Swords className="w-4 h-4 text-rose-400" />
-          <h2 className="text-sm font-black text-white uppercase tracking-wide">{chapterName}</h2>
+      <div
+        className="relative overflow-hidden rounded-2xl px-4 py-3 space-y-2"
+        style={{
+          background:
+            chapterBackground && !backgroundFailed
+              ? undefined
+              : "linear-gradient(135deg, #1e1b2e 0%, #2a1830 100%)",
+        }}
+      >
+        {chapterBackground && !backgroundFailed && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={chapterBackground}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+            onError={() => setBackgroundFailed(true)}
+          />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20" />
+        <div className="relative flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Swords className="w-4 h-4 text-rose-400" />
+            <h2 className="text-sm font-black text-white uppercase tracking-wide">{chapterName}</h2>
+          </div>
+          <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-300">
+            <CoinIcon size={10} /> 100 pro neuem Stern
+          </span>
         </div>
-        <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-300">
-          <CoinIcon size={10} /> 100 pro neuem Stern
-        </span>
+        {chapterIntro && <p className="relative text-xs text-gray-300 leading-relaxed">{chapterIntro}</p>}
       </div>
-      {chapterIntro && <p className="text-xs text-gray-400 leading-relaxed">{chapterIntro}</p>}
 
       {error && <p className="text-xs text-rose-400">{error}</p>}
 

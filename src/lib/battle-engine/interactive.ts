@@ -76,9 +76,12 @@ export interface InteractiveBattleState {
   boardMode: boolean;
   /** Das für den GERADE wartenden menschlichen Zug generierte Brett — wird beim
    *  Pausieren erzeugt und beim Verarbeiten der Entscheidung wieder geleert.
-   *  Kein Fortschritt einer laufenden Mini-Session wird darüber hinaus
-   *  persistiert (siehe Plan: Reload verliert den Board-Fortschritt des Zugs). */
-  pendingBoard: { grid: BoardGrid; rngState: number } | null;
+   *  `appliedSwaps` hält den bisherigen Fortschritt der laufenden Mini-Session
+   *  fest (siehe recordBoardProgress) — wird bei jedem clientseitig bestätigten
+   *  Swap aktualisiert und mitpersistiert, damit ein Reload mitten im Zug den
+   *  Board-Fortschritt NICHT verwirft, sondern BoardMatch3.tsx ihn beim
+   *  Neuladen rekonstruieren kann. */
+  pendingBoard: { grid: BoardGrid; rngState: number; appliedSwaps: SwapMove[] } | null;
 }
 
 /** Nach so vielen aufeinanderfolgenden verpassten Zügen (Zug-Timeout, siehe
@@ -92,8 +95,10 @@ export interface PendingDecision {
   actions: AvailableAction[];
   candidateTargetsByAction: Partial<Record<ActionType, string[]>>;
   /** Nur gesetzt, wenn boardMode aktiv ist — das initiale Grid für die
-   *  Match-3-Mini-Session dieses Zugs (siehe board-match3.ts). */
-  board: { grid: BoardGrid; moveBudget: number } | null;
+   *  Match-3-Mini-Session dieses Zugs (siehe board-match3.ts) sowie die
+   *  bislang bestätigten Swaps (für die Wiederherstellung nach einem Reload,
+   *  siehe recordBoardProgress). */
+  board: { grid: BoardGrid; moveBudget: number; appliedSwaps: SwapMove[] } | null;
 }
 
 export interface AdvanceResult {
@@ -338,7 +343,7 @@ function stepOnce(
     state.turnDeadline = Date.now() + TURN_DECISION_TIMEOUT_MS;
     if (state.boardMode) {
       const boardSeed = Math.floor(rng() * 0xffffffff);
-      state.pendingBoard = generateBoard(boardSeed);
+      state.pendingBoard = { ...generateBoard(boardSeed), appliedSwaps: [] };
     }
     return "paused";
   }
@@ -415,10 +420,30 @@ export function describeCurrentDecision(state: InteractiveBattleState): PendingD
   }
   const board =
     state.boardMode && state.pendingBoard
-      ? { grid: state.pendingBoard.grid, moveBudget: BOARD_MOVE_BUDGET_PER_TURN }
+      ? {
+          grid: state.pendingBoard.grid,
+          moveBudget: BOARD_MOVE_BUDGET_PER_TURN,
+          appliedSwaps: state.pendingBoard.appliedSwaps,
+        }
       : null;
 
   return { unitId: unit.instanceId, teamId: unit.teamId, actions, candidateTargetsByAction, board };
+}
+
+/** Aktualisiert den bislang bestätigten Fortschritt der laufenden Match-3-
+ *  Mini-Session (siehe pendingBoard.appliedSwaps) — eine leichte Zustands-
+ *  Änderung ohne Turn-Order-Auswirkung, NICHT über advance()/stepOnce()
+ *  laufend: es wird weder Rage vergeben noch die Aktion ausgeführt, das
+ *  passiert weiterhin ausschließlich beim eigentlichen Zug-Abschluss (siehe
+ *  applyBoardRage). Dient nur dazu, dass ein Reload mitten in der Mini-Session
+ *  den Fortschritt nicht verwirft (siehe live-battle.ts: saveBoardProgress).
+ *  Gibt zurück, ob die Aktualisierung angewendet wurde (false z.B., wenn
+ *  gerade kein Board-Zug aussteht oder das Zug-Budget überschritten wäre). */
+export function recordBoardProgress(state: InteractiveBattleState, swaps: SwapMove[]): boolean {
+  if (!state.boardMode || !state.pendingBoard) return false;
+  if (swaps.length > BOARD_MOVE_BUDGET_PER_TURN) return false;
+  state.pendingBoard.appliedSwaps = swaps;
+  return true;
 }
 
 /** Nächste bis zu `count` Einheiten in der Zugreihenfolge — für die "Als nächstes

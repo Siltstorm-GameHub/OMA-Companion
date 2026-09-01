@@ -22,7 +22,7 @@
 // (CSS-Transition auf transform, siehe fallingCells) — statt nur stumpf das
 // Endergebnis einzublenden.
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   resolveBoardSession,
   type BoardAnimationStep,
@@ -32,6 +32,7 @@ import {
 } from "@/lib/battle-engine/board-match3";
 import { BOARD_COLS } from "@/lib/battle-engine/constants";
 import { randomSeed } from "@/lib/battle-engine/rng";
+import { playCommunityBonusSound, playInvalidSwapSound, playMatchSound, playSwapSound } from "@/lib/battle-cards/sound";
 
 const TILE_ICON: Record<TileClassSymbol, { src: string; alt: string; color: string }> = {
   SUPPORT: { src: "/Arcade%20Icon.png", alt: "Support", color: "#8b5cf6" },
@@ -78,12 +79,24 @@ export default function BoardMatch3({
   grid: initialGrid,
   moveBudget,
   disabled,
+  initialSwaps,
   onConfirm,
+  onProgress,
 }: {
   grid: BoardGrid;
   moveBudget: number;
   disabled?: boolean;
+  /** Bereits vor einem Reload bestätigte Swaps dieser Mini-Session (siehe
+   *  saveBoardProgress/live-battle.ts) — wird beim Mounten gegen `grid`
+   *  nachgespielt, damit ein Reload mitten im Zug den Fortschritt nicht
+   *  verwirft. Die dabei entstehenden Kaskaden können optisch leicht von der
+   *  ursprünglichen Session abweichen (neuer lokaler Vorschau-Seed), die
+   *  Zug-Struktur (welche Swaps stattfanden) bleibt aber identisch. */
+  initialSwaps?: SwapMove[];
   onConfirm: (swaps: SwapMove[]) => void;
+  /** Fire-and-forget nach jedem bestätigten Swap — sichert den Fortschritt
+   *  serverseitig, ohne auf eine Antwort zu warten (siehe saveBoardProgress). */
+  onProgress?: (swaps: SwapMove[]) => void;
 }) {
   // Rein lokaler Vorschau-Seed — muss NICHT mit dem serverseitigen rngState
   // übereinstimmen (der ist dem Client bewusst nicht bekannt, siehe Anti-Cheat-
@@ -92,19 +105,32 @@ export default function BoardMatch3({
   // ist davon unabhängig korrekt.
   const rngStateRef = useRef(randomSeed());
   const [board, setBoard] = useState<BoardGrid>(initialGrid);
-  const [swaps, setSwaps] = useState<SwapMove[]>([]);
+  const [swaps, setSwaps] = useState<SwapMove[]>(initialSwaps ?? []);
   const [selected, setSelected] = useState<number | null>(null);
   const [invalidCell, setInvalidCell] = useState<number | null>(null);
   const [destroyingCells, setDestroyingCells] = useState<Set<number>>(new Set());
   const [fallingCells, setFallingCells] = useState<Set<number>>(new Set());
   const [animating, setAnimating] = useState(false);
 
+  // Fortschritt aus einer vorherigen Session (vor einem Reload) einmalig gegen
+  // das initiale Grid nachspielen, um den sichtbaren Board-Zustand wiederherzustellen.
+  useEffect(() => {
+    if (initialSwaps && initialSwaps.length > 0) {
+      const result = resolveBoardSession(initialGrid, rngStateRef.current, initialSwaps, initialSwaps.length);
+      setBoard(result.finalGrid);
+      rngStateRef.current = result.finalRngState;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const remaining = moveBudget - swaps.length;
   const interactionLocked = disabled || remaining <= 0 || animating;
 
   async function playSteps(steps: BoardAnimationStep[]) {
-    for (const step of steps) {
+    for (let i = 0; i < steps.length; i++) {
+      const step = steps[i];
       setDestroyingCells(new Set(step.matchedCells));
+      playMatchSound(i);
       await sleep(DESTROY_ANIM_MS);
 
       setBoard(step.gridAfter);
@@ -140,15 +166,22 @@ export default function BoardMatch3({
     setSelected(null);
 
     if (result.matchedSwaps === 0) {
+      playInvalidSwapSound();
       setInvalidCell(cell);
       window.setTimeout(() => setInvalidCell(null), 300);
       return;
+    }
+
+    playSwapSound();
+    if (result.rageGrants.some((g) => g.targetClass === "ALL")) {
+      playCommunityBonusSound();
     }
 
     setAnimating(true);
     rngStateRef.current = result.finalRngState;
     const newSwaps = [...swaps, swap];
     setSwaps(newSwaps);
+    onProgress?.(newSwaps);
 
     // Den Swap selbst sofort zeigen, bevor die Match-Runden abgespielt werden.
     const swappedBoard = [...board];

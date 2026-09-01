@@ -46,6 +46,13 @@ export const CAMPAIGN_CHAPTER_NAME = "Kapitel 1: Server-Neustart";
 export const CAMPAIGN_CHAPTER_INTRO =
   "Mitten in der Nacht ist der Community-Server abgestürzt — und alles, was sonst nur nervt, ist plötzlich lebendig geworden. Tutorial-Slimes, Lag-Spikes, Rage-Quit-Controller: Sie alle wollen nur eins, dass du aufgibst, bevor der Neustart durch ist. Kämpf dich durch, bevor der nächste Patch alles wieder zurücksetzt.";
 
+/** Kapitel-Hintergrundbild für die Kampagnen-Karte (siehe CampaignMap.tsx) —
+ *  optionale Ablage unter public/battle-cards/backgrounds/, siehe README dort
+ *  für Stilvorgabe. Fehlt die Datei (noch), fällt die UI automatisch auf den
+ *  bisherigen reinen Verlaufshintergrund zurück (onError-Pattern, wie bei
+ *  monsterImagePath). */
+export const CAMPAIGN_CHAPTER_BACKGROUND = "/battle-cards/backgrounds/kapitel-1-server-neustart.png";
+
 export const CAMPAIGN_LEVELS: CampaignLevelDef[] = [
   {
     id: "lvl-01",

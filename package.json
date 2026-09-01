@@ -8,6 +8,7 @@
     "postinstall": "prisma generate",
     "start": "next start",
     "lint": "eslint",
+    "test": "tsx --test src/**/*.test.ts",
     "bot:dev": "npx tsx src/bot/run.ts",
     "bot:start": "npx tsx src/bot/run.ts"
   },

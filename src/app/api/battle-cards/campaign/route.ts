@@ -7,12 +7,17 @@
 
 import { auth } from "@/auth";
 import { getCampaignBoard } from "@/lib/battle-cards/campaign";
-import { CAMPAIGN_CHAPTER_INTRO, CAMPAIGN_CHAPTER_NAME } from "@/lib/battle-cards/campaign-levels";
+import { CAMPAIGN_CHAPTER_BACKGROUND, CAMPAIGN_CHAPTER_INTRO, CAMPAIGN_CHAPTER_NAME } from "@/lib/battle-cards/campaign-levels";
 
 export async function GET() {
   const session = await auth();
   if (!session?.user?.id) return Response.json({ error: "Nicht eingeloggt." }, { status: 401 });
 
   const levels = await getCampaignBoard(session.user.id);
-  return Response.json({ chapterName: CAMPAIGN_CHAPTER_NAME, chapterIntro: CAMPAIGN_CHAPTER_INTRO, levels });
+  return Response.json({
+    chapterName: CAMPAIGN_CHAPTER_NAME,
+    chapterIntro: CAMPAIGN_CHAPTER_INTRO,
+    chapterBackground: CAMPAIGN_CHAPTER_BACKGROUND,
+    levels,
+  });
 }

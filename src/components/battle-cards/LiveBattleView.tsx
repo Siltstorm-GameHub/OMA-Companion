@@ -20,11 +20,22 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Loader2, Zap, Swords, Bot, ChevronRight, ChevronLeft, Timer } from "lucide-react";
+import { Loader2, Zap, Swords, Bot, ChevronRight, ChevronLeft, Timer, Volume2, VolumeX } from "lucide-react";
 import { getClassConfig, LEVEL_BORDER } from "./BattleCardView";
 import BoardMatch3 from "./BoardMatch3";
 import type { BoardGrid, SwapMove } from "@/lib/battle-engine/board-match3";
 import type { ActionType, TeamId, UnitClass } from "@/lib/battle-engine/types";
+import {
+  isSoundMuted,
+  playCritSound,
+  playDamageSound,
+  playDefeatSound,
+  playHealSound,
+  playShieldSound,
+  playUltimateSound,
+  playVictorySound,
+  setSoundMuted,
+} from "@/lib/battle-cards/sound";
 
 const ARENA_BACKGROUND_STYLE: CSSProperties = {
   backgroundColor: "#12151a",
@@ -103,7 +114,7 @@ interface LiveSnapshot {
     actions: AvailableAction[];
     candidateTargetsByAction: Partial<Record<ActionType, string[]>>;
     deadline: number | null;
-    board: { grid: BoardGrid; moveBudget: number } | null;
+    board: { grid: BoardGrid; moveBudget: number; appliedSwaps: SwapMove[] } | null;
   } | null;
   autoA: boolean;
   autoB: boolean;
@@ -318,6 +329,14 @@ export default function LiveBattleView({
   const [mounted, setMounted] = useState(false);
   const [effects, setEffects] = useState<FloatingEffect[]>([]);
   const lastLogLengthRef = useRef<number | null>(null);
+  const [soundMuted, setSoundMutedState] = useState(isSoundMuted);
+  function toggleSoundMuted() {
+    setSoundMutedState((prev) => {
+      const next = !prev;
+      setSoundMuted(next);
+      return next;
+    });
+  }
 
   // Portal auf document.body (wie MobileTopBar.tsx) — sonst kann eine Ahnen-
   // Komponente mit eigenem Stacking-Context (transform/opacity/filter) den
@@ -396,6 +415,8 @@ export default function LiveBattleView({
           kind: entry.isCrit ? "crit" : "damage",
           text: `-${entry.amount as number}`,
         });
+        if (entry.isCrit) playCritSound();
+        else playDamageSound();
       } else if (entry.type === "heal") {
         spawned.push({
           id: `${Date.now()}-${Math.random()}`,
@@ -403,6 +424,7 @@ export default function LiveBattleView({
           kind: "heal",
           text: `+${entry.amount as number}`,
         });
+        playHealSound();
       } else if (entry.type === "shieldApplied") {
         spawned.push({
           id: `${Date.now()}-${Math.random()}`,
@@ -410,6 +432,9 @@ export default function LiveBattleView({
           kind: "shield",
           text: `+${entry.amount as number}`,
         });
+        playShieldSound();
+      } else if (entry.type === "action" && entry.actionType === "ultimate") {
+        playUltimateSound();
       }
     }
     if (spawned.length === 0) return;
@@ -469,6 +494,19 @@ export default function LiveBattleView({
     }
   }
 
+  /** Fire-and-forget: sichert den Fortschritt der laufenden Match-3-Mini-
+   *  Session serverseitig (siehe saveBoardProgress in live-battle.ts), damit
+   *  ein Reload mitten im Zug ihn nicht verwirft. Setzt bewusst NICHT `busy`
+   *  — das Brett soll dadurch nicht gesperrt werden, Fehler werden still
+   *  ignoriert (reiner Komfort, keine spielentscheidende Aktion). */
+  function saveBoardProgress(boardSwaps: SwapMove[]) {
+    fetch(`/api/battle-cards/live/${liveBattleId}/board-progress`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ swaps: boardSwaps }),
+    }).catch(() => {});
+  }
+
   async function toggleAuto(on: boolean) {
     if (busy) return;
     setBusy(true);
@@ -505,9 +543,19 @@ export default function LiveBattleView({
         >
           <ChevronLeft className="w-4 h-4" /> Zurück
         </button>
-        {snapshot && (
-          <span className="text-[11px] text-gray-400 bg-black/30 px-2.5 py-1 rounded-md">Runde {snapshot.round}</span>
-        )}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={toggleSoundMuted}
+            className="flex items-center justify-center text-gray-300 hover:text-white transition-colors w-8 h-8 rounded-md bg-black/30"
+            aria-label={soundMuted ? "Ton einschalten" : "Ton ausschalten"}
+          >
+            {soundMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+          </button>
+          {snapshot && (
+            <span className="text-[11px] text-gray-400 bg-black/30 px-2.5 py-1 rounded-md">Runde {snapshot.round}</span>
+          )}
+        </div>
       </div>
 
       {error ? (
@@ -529,6 +577,7 @@ export default function LiveBattleView({
           submitUltimate={submitUltimate}
           toggleAuto={toggleAuto}
           effects={effects}
+          saveBoardProgress={saveBoardProgress}
         />
       )}
     </div>,
@@ -546,6 +595,7 @@ function LiveBattleBody({
   submitUltimate,
   toggleAuto,
   effects,
+  saveBoardProgress,
 }: {
   snapshot: LiveSnapshot;
   viewerId: string;
@@ -556,6 +606,7 @@ function LiveBattleBody({
   submitUltimate: (casterId: string) => void;
   toggleAuto: (on: boolean) => void;
   effects: FloatingEffect[];
+  saveBoardProgress: (boardSwaps: SwapMove[]) => void;
 }) {
   const myTeam: TeamId | null = viewerId === snapshot.playerAId ? "A" : viewerId === snapshot.playerBId ? "B" : null;
   const opponentTeam: TeamId = myTeam === "A" ? "B" : "A";
@@ -592,6 +643,21 @@ function LiveBattleBody({
   useEffect(() => {
     setBoardSwaps(null);
   }, [awaitingUnitId]);
+
+  // Sieg-/Niederlage-Sound genau einmal abspielen, sobald der Kampf endet — der
+  // Ref verhindert ein erneutes Abspielen bei Re-Renders, solange der Kampf
+  // "finished" bleibt (Snapshot wird weiter gepollt).
+  const finishedSoundPlayedRef = useRef(false);
+  useEffect(() => {
+    if (snapshot.status !== "finished") {
+      finishedSoundPlayedRef.current = false;
+      return;
+    }
+    if (finishedSoundPlayedRef.current) return;
+    finishedSoundPlayedRef.current = true;
+    if (snapshot.winner === myTeam) playVictorySound();
+    else if (snapshot.winner !== null) playDefeatSound();
+  }, [snapshot.status, snapshot.winner, myTeam]);
 
   function handleActionClick(action: AvailableAction) {
     if (action.targetKind === "none") {
@@ -719,10 +785,13 @@ function LiveBattleBody({
           <div className="glass rounded-xl p-2.5 h-[212px] overflow-y-auto flex flex-col">
             {snapshot.awaiting.board && boardSwaps === null ? (
               <BoardMatch3
+                key={snapshot.awaiting.unitId}
                 grid={snapshot.awaiting.board.grid}
                 moveBudget={snapshot.awaiting.board.moveBudget}
                 disabled={busy}
+                initialSwaps={snapshot.awaiting.board.appliedSwaps}
                 onConfirm={(swaps) => setBoardSwaps(swaps)}
+                onProgress={saveBoardProgress}
               />
             ) : selectedAction ? (
               <div className="space-y-1.5">
