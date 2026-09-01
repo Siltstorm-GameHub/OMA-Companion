@@ -310,6 +310,14 @@ select.input-glass option { background: #0f1117; }
   letter-spacing: -0.03em;
 }
 
+/* ── Battle-Cards-eigene Display-Schrift ──────────────────────────
+   Nur für Battle-Cards-Überschriften (Kapitel-Titel, Sieg/Niederlage,
+   Karten-Namen) — bewusst eigenständig vom App-weiten .font-display. */
+.font-battle {
+  font-family: var(--font-battle, 'Russo One', system-ui, sans-serif);
+  letter-spacing: 0.01em;
+}
+
 /* ── Brand gradient text ────────────────────────────────────────── */
 /* Violet → Teal (Gaming Identity) */
 .text-gradient-gaming {

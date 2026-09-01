@@ -181,7 +181,7 @@ export default function CampaignMap() {
         <div className="relative flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2">
             <Swords className="w-4 h-4 text-rose-400" />
-            <h2 className="text-sm font-black text-white uppercase tracking-wide">{chapterName}</h2>
+            <h2 className="font-battle text-sm text-white uppercase tracking-wide">{chapterName}</h2>
           </div>
           <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-300">
             <CoinIcon size={10} /> 100 pro neuem Stern

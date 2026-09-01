@@ -337,6 +337,10 @@ export default function LiveBattleView({
   const [effects, setEffects] = useState<FloatingEffect[]>([]);
   const lastLogLengthRef = useRef<number | null>(null);
   const [soundMuted, setSoundMutedState] = useState(isSoundMuted);
+  // Splash-Art für den Lade-Zustand (siehe public/battle-cards/splash.png) —
+  // fehlt die Datei (noch nicht hochgeladen), fällt die Ansicht einfach auf
+  // den reinen Spinner zurück (onError-Pattern, wie beim Logo/Hintergrund).
+  const [splashFailed, setSplashFailed] = useState(false);
   function toggleSoundMuted() {
     setSoundMutedState((prev) => {
       const next = !prev;
@@ -570,8 +574,23 @@ export default function LiveBattleView({
           <ErrorNotice message={error} size="lg" />
         </div>
       ) : !snapshot ? (
-        <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="w-6 h-6 text-gray-400 animate-spin" />
+        <div className="flex-1 relative flex items-center justify-center overflow-hidden">
+          {!splashFailed && (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/battle-cards/splash.png"
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover"
+                onError={() => setSplashFailed(true)}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/40" />
+            </>
+          )}
+          <div className="relative flex flex-col items-center gap-2">
+            <Loader2 className="w-6 h-6 text-gray-300 animate-spin" />
+            <p className="font-battle text-[11px] text-gray-300 uppercase tracking-widest">Kampf wird geladen…</p>
+          </div>
         </div>
       ) : (
         <LiveBattleBody
@@ -807,7 +826,7 @@ function LiveBattleBody({
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-base font-black text-white uppercase tracking-wide">
+              <p className="font-battle text-base text-white uppercase tracking-wide">
                 {snapshot.winner === null ? "Unentschieden" : snapshot.winner === myTeam ? "Sieg!" : "Niederlage"}
               </p>
               <p className="text-[11px] text-gray-400">Kampf beendet.</p>

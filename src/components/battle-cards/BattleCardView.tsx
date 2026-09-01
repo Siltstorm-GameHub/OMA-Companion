@@ -164,7 +164,7 @@ export default function BattleCardView({ card, dimmed = false }: { card: BattleC
         >
           <div className="flex items-start justify-between gap-1 shrink-0">
             <div className="min-w-0">
-              <p className="text-[13px] font-black text-white leading-tight truncate">{card.name}</p>
+              <p className="font-battle text-[13px] text-white leading-tight truncate">{card.name}</p>
               <LevelStars level={level} />
             </div>
             {card.rarity === "COMMUNITY" && card.activityTier && (
@@ -245,7 +245,7 @@ export default function BattleCardView({ card, dimmed = false }: { card: BattleC
           }}
         >
           <div className="flex items-center justify-between shrink-0">
-            <p className="text-[11px] font-bold text-white uppercase tracking-wide">{card.name}</p>
+            <p className="font-battle text-[11px] text-white uppercase tracking-wide">{card.name}</p>
             <RotateCcw className="w-3 h-3 text-gray-600" />
           </div>
 

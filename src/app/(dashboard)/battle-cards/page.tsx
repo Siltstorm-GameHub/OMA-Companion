@@ -28,6 +28,7 @@ import StarterPickFlow from "@/components/battle-cards/StarterPickFlow";
 import PackOpener from "@/components/battle-cards/PackOpener";
 import CardCollectionBrowser from "@/components/battle-cards/CardCollectionBrowser";
 import BattleCardsTabs from "./BattleCardsTabs";
+import BattleCardsLogo from "@/components/battle-cards/BattleCardsLogo";
 import ChallengesList from "@/components/battle-cards/ChallengesList";
 import BattleLauncher from "@/components/battle-cards/BattleLauncher";
 import BattleHistoryFeed from "@/components/battle-cards/BattleHistoryFeed";
@@ -59,6 +60,7 @@ export default async function BattleCardsPage() {
 
     return (
       <div className="max-w-3xl mx-auto px-4 py-6 space-y-4">
+        <BattleCardsLogo />
         <div>
           <h1 className="text-lg font-black text-white">Wähle dein Start-Pack</h1>
           <p className="text-xs text-gray-500 mt-0.5">
@@ -239,7 +241,7 @@ export default async function BattleCardsPage() {
             {currentSeasonWindow && ` · Saison ${currentSeasonWindow.seasonNumber}`}
           </h2>
           {currentSeasonWindow && (
-            <p className="text-[10px] text-gray-600">
+            <p className="text-[10px] text-gray-500">
               Endet am {currentSeasonWindow.end.toLocaleDateString("de-DE")}
             </p>
           )}
@@ -251,6 +253,7 @@ export default async function BattleCardsPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6">
+      <BattleCardsLogo />
       <BattleCardsTabs
         kampfPanel={kampfPanel}
         kampagnePanel={kampagnePanel}

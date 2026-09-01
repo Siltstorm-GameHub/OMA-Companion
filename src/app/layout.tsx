@@ -1,11 +1,22 @@
 import type { Metadata, Viewport } from "next";
-import { Space_Grotesk } from "next/font/google";
+import { Space_Grotesk, Russo_One } from "next/font/google";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
   variable: "--font-display",
   weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
+
+// Eigene, markante Display-Schrift NUR für "OMA Battle Cards" (Kapitel-Titel,
+// Sieg/Niederlage-Screen, Karten-Namen) — grenzt den Spielmodus optisch vom
+// Rest der App ab (die weiterhin Space Grotesk/Systemfont nutzt), siehe
+// .font-battle in globals.css.
+const russoOne = Russo_One({
+  subsets: ["latin"],
+  variable: "--font-battle",
+  weight: "400",
   display: "swap",
 });
 import { SessionProvider } from "@/components/SessionProvider";
@@ -53,7 +64,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="de" data-theme="dark" suppressHydrationWarning className={spaceGrotesk.variable}>
+    <html lang="de" data-theme="dark" suppressHydrationWarning className={`${spaceGrotesk.variable} ${russoOne.variable}`}>
       <head>
         {/* Prevent flash of wrong theme */}
         <script

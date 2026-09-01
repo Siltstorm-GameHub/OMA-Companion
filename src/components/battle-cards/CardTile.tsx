@@ -84,7 +84,7 @@ export default function CardTile({
           </span>
         )}
       </div>
-      <p className={`text-[11px] font-semibold truncate w-full text-center ${locked ? "text-gray-600" : "text-white"}`}>
+      <p className={`font-battle text-[11px] truncate w-full text-center ${locked ? "text-gray-600" : "text-white"}`}>
         {card.name}
       </p>
     </button>
