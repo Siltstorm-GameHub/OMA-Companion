@@ -8,7 +8,8 @@
 // (klassische Match-3-Konvention, verbraucht keinen Zug). Jeder gültige Swap
 // wird lokal SOFORT ausgewertet (resolveBoardSession, siehe board-match3.ts)
 // — nur für Animation/Feedback, die tatsächlich gutgeschriebene Rage berechnet
-// der Server bei "Zug bestätigen" autoritativ neu aus derselben Swap-Sequenz
+// der Server autoritativ neu aus derselben Swap-Sequenz, sobald das Zug-
+// Budget aufgebraucht ist und automatisch zur Aktions-Auswahl übergeben wird
 // (Anti-Cheat, siehe live-battle.ts). Die drei Kachel-Symbole entsprechen den
 // drei CardClass-Werten und nutzen die bereits vorhandenen Spielgenre-Icons
 // (Arcade=Support, Shooter=Damage Dealer, Racing=Tank).
@@ -146,7 +147,8 @@ export default function BoardMatch3({
 
     setAnimating(true);
     rngStateRef.current = result.finalRngState;
-    setSwaps((prev) => [...prev, swap]);
+    const newSwaps = [...swaps, swap];
+    setSwaps(newSwaps);
 
     // Den Swap selbst sofort zeigen, bevor die Match-Runden abgespielt werden.
     const swappedBoard = [...board];
@@ -157,6 +159,12 @@ export default function BoardMatch3({
 
     await playSteps(result.steps);
     setAnimating(false);
+
+    // Kein "Zug bestätigen"-Button mehr — sobald das Zug-Budget aufgebraucht
+    // ist, geht es automatisch weiter zur Aktions-Auswahl.
+    if (newSwaps.length >= moveBudget) {
+      onConfirm(newSwaps);
+    }
   }
 
   return (
@@ -208,14 +216,6 @@ export default function BoardMatch3({
           );
         })}
       </div>
-      <button
-        type="button"
-        onClick={() => onConfirm(swaps)}
-        disabled={disabled || animating}
-        className="w-full py-2 rounded-lg text-xs font-semibold bg-teal-500/20 text-teal-300 hover:bg-teal-500/30 transition-colors disabled:opacity-50"
-      >
-        {swaps.length > 0 ? `Zug bestätigen (${swaps.length} Match${swaps.length === 1 ? "" : "es"})` : "Zug ohne Matches bestätigen"}
-      </button>
     </div>
   );
 }
