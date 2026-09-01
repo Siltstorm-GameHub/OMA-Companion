@@ -12,9 +12,10 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
-import { Package, X, Lock, LockOpen } from "lucide-react";
+import { Package, X, Lock, LockOpen, Sparkles } from "lucide-react";
 import BattleCardView from "./BattleCardView";
 import type { BattleCardData } from "./BattleCardView";
+import { playCardRevealSound, playRarePullSound } from "@/lib/battle-cards/sound";
 
 type Phase = "closed" | "ready" | "opening" | "revealed";
 
@@ -41,6 +42,11 @@ export default function PackOpener({ initialUnopenedCount }: { initialUnopenedCo
     setPhase("ready");
   }
 
+  function playRevealSoundFor(card: RevealedCard) {
+    if (card.card.rarity === "COMMUNITY") playRarePullSound();
+    else playCardRevealSound();
+  }
+
   async function openPack() {
     if (loading) return;
     setLoading(true);
@@ -59,6 +65,7 @@ export default function PackOpener({ initialUnopenedCount }: { initialUnopenedCo
       setRevealIndex(0);
       setRemaining(data.remainingUnopened);
       setPhase("revealed");
+      if (data.cards[0]) playRevealSoundFor(data.cards[0]);
       const hasCommunity = data.cards.some((c) => c.card.rarity === "COMMUNITY");
       confetti({
         particleCount: hasCommunity ? 200 : 140,
@@ -164,24 +171,40 @@ export default function PackOpener({ initialUnopenedCount }: { initialUnopenedCo
                   transition={{ type: "spring", stiffness: 200, damping: 18 }}
                   className="flex flex-col items-center gap-3"
                 >
-                  <BattleCardView card={results[revealIndex].card} />
+                  <div className="relative">
+                    {results[revealIndex].card.rarity === "COMMUNITY" && (
+                      <div
+                        className="absolute -inset-5 -z-10 rounded-full pointer-events-none"
+                        style={{ background: "radial-gradient(closest-side, rgba(245,158,11,0.4), transparent 72%)" }}
+                      />
+                    )}
+                    <BattleCardView card={results[revealIndex].card} />
+                  </div>
                   {results.length > 1 && (
                     <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">
                       Karte {revealIndex + 1}/{results.length}
                     </p>
                   )}
-                  <p className="text-xs text-gray-400">
-                    {results[revealIndex].card.rarity === "COMMUNITY"
-                      ? "🎉 Community-Karte!"
-                      : results[revealIndex].isNewCard
+                  {results[revealIndex].card.rarity === "COMMUNITY" ? (
+                    <p className="flex items-center gap-1.5 text-sm font-black uppercase tracking-wide" style={{ color: "#fbbf24" }}>
+                      <Sparkles className="w-4 h-4" /> Community-Karte! <Sparkles className="w-4 h-4" />
+                    </p>
+                  ) : (
+                    <p className="text-xs text-gray-400">
+                      {results[revealIndex].isNewCard
                         ? "Neue Karte für deine Sammlung!"
                         : `Duplikat — jetzt ${results[revealIndex].duplicates}x`}
-                  </p>
+                    </p>
+                  )}
                   <div className="flex gap-2">
                     {revealIndex < results.length - 1 ? (
                       <button
                         type="button"
-                        onClick={() => setRevealIndex((i) => i + 1)}
+                        onClick={() => {
+                          const next = revealIndex + 1;
+                          setRevealIndex(next);
+                          playRevealSoundFor(results[next]);
+                        }}
                         className="text-xs font-semibold px-3 py-2 rounded-md bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 transition-colors"
                       >
                         Nächste Karte

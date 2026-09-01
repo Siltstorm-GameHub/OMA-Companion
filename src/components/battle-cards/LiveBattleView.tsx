@@ -20,7 +20,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Loader2, Zap, Swords, Bot, ChevronRight, ChevronLeft, Timer, Volume2, VolumeX } from "lucide-react";
+import { Loader2, Zap, Swords, Bot, ChevronRight, ChevronLeft, Timer, Volume2, VolumeX, Trophy, Skull, Handshake } from "lucide-react";
 import { getClassConfig, LEVEL_BORDER } from "./BattleCardView";
 import BoardMatch3 from "./BoardMatch3";
 import type { BoardGrid, SwapMove } from "@/lib/battle-engine/board-match3";
@@ -36,6 +36,7 @@ import {
   playVictorySound,
   setSoundMuted,
 } from "@/lib/battle-cards/sound";
+import ErrorNotice from "./ErrorNotice";
 
 const ARENA_BACKGROUND_STYLE: CSSProperties = {
   backgroundColor: "#12151a",
@@ -245,6 +246,11 @@ function UnitCard({
       )}
 
       <div className="w-full aspect-square mb-0.5 flex items-center justify-center relative rounded-md overflow-hidden">
+        {/* Klassen-getönte Plate IMMER als Hintergrund — sonst schwebt freigestellte
+            Monster-Kunst (transparenter Hintergrund) im schwarzen Void, während echte
+            Spieler-Karten (die ihren Hintergrund selbst mitbringen) diese Plate ohnehin
+            komplett überdecken. Einheitliches Porträt-Format unabhängig von der Quelle. */}
+        <div className="absolute inset-0" style={{ background: `${config.color}22` }} />
         {(isActing || glow || canFireUltimate) && (
           <div
             className="absolute inset-0 rounded-full pointer-events-none"
@@ -269,9 +275,7 @@ function UnitCard({
             onError={() => setImageFailed(true)}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center relative" style={{ background: `${config.color}22` }}>
-            <Icon className="w-5 h-5 sm:w-7 sm:h-7" style={{ color: config.color, opacity: 0.55 }} />
-          </div>
+          <Icon className="w-5 h-5 sm:w-7 sm:h-7 relative" style={{ color: config.color, opacity: 0.55 }} />
         )}
         <div
           className="absolute inset-0 rounded-md pointer-events-none"
@@ -563,7 +567,7 @@ export default function LiveBattleView({
 
       {error ? (
         <div className="flex-1 flex items-center justify-center px-4">
-          <p className="text-sm text-rose-400 text-center">{error}</p>
+          <ErrorNotice message={error} size="lg" />
         </div>
       ) : !snapshot ? (
         <div className="flex-1 flex items-center justify-center">
@@ -770,12 +774,48 @@ function LiveBattleBody({
       {/* Entscheidung — direkt unter den Helden */}
       <div className="shrink-0 space-y-1.5">
         {snapshot.status === "finished" ? (
-          <div className="flex items-center justify-between gap-2 glass rounded-xl p-2.5">
-            <p className="text-sm text-white font-semibold">Kampf beendet.</p>
+          <div
+            className="flex items-center gap-3 rounded-xl p-3 overflow-hidden relative"
+            style={{
+              background:
+                snapshot.winner === null
+                  ? "linear-gradient(135deg, #27272a 0%, #18181b 100%)"
+                  : snapshot.winner === myTeam
+                    ? "linear-gradient(135deg, #78350f 0%, #451a03 100%)"
+                    : "linear-gradient(135deg, #3f1224 0%, #1c0a12 100%)",
+              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 4px 16px rgba(0,0,0,0.4)",
+            }}
+          >
+            <div
+              className="w-11 h-11 rounded-full flex items-center justify-center shrink-0"
+              style={{
+                background:
+                  snapshot.winner === null
+                    ? "radial-gradient(circle at 35% 28%, #9ca3af, #4b5563)"
+                    : snapshot.winner === myTeam
+                      ? "radial-gradient(circle at 35% 28%, #fde68a, #d97706)"
+                      : "radial-gradient(circle at 35% 28%, #fca5a5, #b91c1c)",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.25)",
+              }}
+            >
+              {snapshot.winner === null ? (
+                <Handshake className="w-5 h-5 text-black/70" strokeWidth={2.2} />
+              ) : snapshot.winner === myTeam ? (
+                <Trophy className="w-5 h-5 text-black/70" strokeWidth={2.2} />
+              ) : (
+                <Skull className="w-5 h-5 text-black/70" strokeWidth={2.2} />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-base font-black text-white uppercase tracking-wide">
+                {snapshot.winner === null ? "Unentschieden" : snapshot.winner === myTeam ? "Sieg!" : "Niederlage"}
+              </p>
+              <p className="text-[11px] text-gray-400">Kampf beendet.</p>
+            </div>
             {snapshot.resultBattleId && (
               <Link
                 href={`/battle-cards/battles/${snapshot.resultBattleId}`}
-                className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-md bg-teal-500/15 text-teal-300 hover:bg-teal-500/25 transition-colors"
+                className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-md bg-white/10 text-white hover:bg-white/15 transition-colors shrink-0"
               >
                 Zum Ergebnis <ChevronRight className="w-3.5 h-3.5" />
               </Link>

@@ -113,3 +113,13 @@ export function playVictorySound(): void {
 export function playDefeatSound(): void {
   [392, 349, 293, 233].forEach((freq, i) => beep(freq, 220, "sine", 0.07, i * 110));
 }
+
+/** Kartenreveal beim Pack-Öffnen — dezenter "Pop", damit jede Karte spürbar aufgedeckt wird. */
+export function playCardRevealSound(): void {
+  beep(440, 90, "triangle", 0.06);
+}
+
+/** Community-Karte gezogen — deutlich aufwendigere kleine Fanfare als der normale Reveal-Sound. */
+export function playRarePullSound(): void {
+  [440, 554, 659, 880].forEach((freq, i) => beep(freq, 180, "sine", 0.09, i * 80));
+}

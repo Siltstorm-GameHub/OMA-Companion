@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Eye } from "lucide-react";
+import { Eye, Swords } from "lucide-react";
 import RankedAvatar from "@/components/RankedAvatar";
 
 export interface BattleHistoryEntry {
@@ -17,7 +17,12 @@ const uname = (u: BattleHistoryEntry["challenger"]) => u.username ?? u.name ?? "
 /** Öffentlicher Feed aller aufgelösten Battle-Cards-Kämpfe (nicht auf den Betrachter beschränkt). */
 export default function BattleHistoryFeed({ entries }: { entries: BattleHistoryEntry[] }) {
   if (entries.length === 0) {
-    return <div className="glass rounded-2xl p-6 text-center text-gray-500 text-sm">Noch keine ausgetragenen Kämpfe.</div>;
+    return (
+      <div className="glass rounded-2xl p-6 flex flex-col items-center gap-2 text-center">
+        <Swords className="w-6 h-6 text-gray-600" />
+        <p className="text-sm text-gray-500">Noch keine ausgetragenen Kämpfe.</p>
+      </div>
+    );
   }
 
   return (
@@ -29,12 +34,12 @@ export default function BattleHistoryFeed({ entries }: { entries: BattleHistoryE
             <span className={`text-xs ${e.winnerId === e.challengerId ? "text-emerald-300 font-semibold" : "text-gray-400"}`}>
               {uname(e.challenger)}
             </span>
-            <span className="text-[10px] text-gray-600 shrink-0">vs.</span>
+            <span className="text-[10px] text-gray-500 shrink-0">vs.</span>
             <RankedAvatar rankPoints={e.opponent.rankPoints} src={e.opponent.image} alt={uname(e.opponent)} size={20} className="w-5 h-5 shrink-0" />
             <span className={`text-xs flex-1 min-w-0 truncate ${e.winnerId === e.opponentId ? "text-emerald-300 font-semibold" : "text-gray-400"}`}>
               {uname(e.opponent)}
             </span>
-            {!e.winnerId && <span className="text-[10px] text-gray-600 shrink-0">Unentschieden</span>}
+            {!e.winnerId && <span className="text-[10px] text-gray-500 shrink-0">Unentschieden</span>}
           </>
         );
         return e.battleId ? (

@@ -8,7 +8,7 @@ import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Check, X, Clock, Swords } from "lucide-react";
+import { Check, X, Clock, Swords, Mail, Send } from "lucide-react";
 import RankedAvatar from "@/components/RankedAvatar";
 
 interface ChallengeUser {
@@ -62,7 +62,7 @@ function VsCard({
     <div className="glass rounded-xl p-3 space-y-3">
       <div className="flex items-center justify-center gap-3">
         <PlayerBadge user={challenger} />
-        <span className="text-xs font-black text-gray-600 shrink-0">vs.</span>
+        <span className="text-xs font-black text-gray-500 shrink-0">vs.</span>
         <PlayerBadge user={opponent} />
       </div>
       {footer}
@@ -145,7 +145,9 @@ export default function ChallengesList({
           Eingehende Herausforderungen
         </h2>
         {incoming.length === 0 ? (
-          <p className="text-xs text-gray-600">Keine offenen Herausforderungen.</p>
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <Mail className="w-3.5 h-3.5 text-gray-600 shrink-0" /> Keine offenen Herausforderungen.
+          </div>
         ) : (
           <div className="space-y-2">
             {incoming.map((c) => (
@@ -185,7 +187,9 @@ export default function ChallengesList({
           Gesendete Herausforderungen
         </h2>
         {outgoing.length === 0 ? (
-          <p className="text-xs text-gray-600">Keine offenen Herausforderungen gesendet.</p>
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <Send className="w-3.5 h-3.5 text-gray-600 shrink-0" /> Keine offenen Herausforderungen gesendet.
+          </div>
         ) : (
           <div className="space-y-2">
             {outgoing.map((c) => (

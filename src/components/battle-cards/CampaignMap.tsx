@@ -16,6 +16,7 @@ import { useSession } from "next-auth/react";
 import { Lock, Star, Swords, Crown, Loader2 } from "lucide-react";
 import LiveBattleView from "./LiveBattleView";
 import CoinIcon from "@/components/CoinIcon";
+import ErrorNotice from "./ErrorNotice";
 
 export interface CampaignBoardLevel {
   id: string;
@@ -189,7 +190,7 @@ export default function CampaignMap() {
         {chapterIntro && <p className="relative text-xs text-gray-300 leading-relaxed">{chapterIntro}</p>}
       </div>
 
-      {error && <p className="text-xs text-rose-400">{error}</p>}
+      {error && <ErrorNotice message={error} />}
 
       {!levels ? (
         <div className="flex justify-center py-10">

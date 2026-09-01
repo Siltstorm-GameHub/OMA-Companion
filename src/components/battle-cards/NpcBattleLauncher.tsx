@@ -15,6 +15,7 @@ import { useSession } from "next-auth/react";
 import { Bot, Loader2 } from "lucide-react";
 import LiveBattleView from "./LiveBattleView";
 import MatchupBadge from "./MatchupBadge";
+import ErrorNotice from "./ErrorNotice";
 import CoinIcon from "@/components/CoinIcon";
 import { NPC_BATTLE_DAILY_LIMIT, NPC_BATTLE_WIN_REWARD, type NpcDifficulty } from "@/lib/battle-cards/npc-battle-types";
 import type { MatchupStrength } from "@/lib/battle-cards/matchup-strength";
@@ -100,7 +101,7 @@ export default function NpcBattleLauncher() {
       <p className="text-[10px] text-gray-500">
         <span className="text-gray-400 font-semibold">Normale Zug-Auswahl</span> · Max. {NPC_BATTLE_DAILY_LIMIT}x täglich (geteilt mit Edelstein-Kampf) · Münzen bei Sieg
       </p>
-      {error && <p className="text-xs text-rose-400">{error}</p>}
+      {error && <ErrorNotice message={error} />}
     </div>
   );
 }

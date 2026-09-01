@@ -549,7 +549,7 @@ export default function BattleScreen({ roster, log }: { roster: RosterEntry[]; l
       {/* Event-Log */}
       <div className="surface rounded-md px-3 py-2 min-h-[80px] flex flex-col justify-end gap-0.5">
         {recentLines.length === 0 ? (
-          <p className="text-[11px] text-gray-600 italic">Der Kampf beginnt…</p>
+          <p className="text-[11px] text-gray-500 italic">Der Kampf beginnt…</p>
         ) : (
           recentLines.map((line, i) => (
             <p key={i} className="text-[11px] text-gray-400 leading-snug">

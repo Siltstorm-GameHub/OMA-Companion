@@ -14,6 +14,7 @@ import { useSession } from "next-auth/react";
 import { Gem, Loader2 } from "lucide-react";
 import LiveBattleView from "./LiveBattleView";
 import MatchupBadge from "./MatchupBadge";
+import ErrorNotice from "./ErrorNotice";
 import CoinIcon from "@/components/CoinIcon";
 import { NPC_BATTLE_DAILY_LIMIT, NPC_BATTLE_WIN_REWARD, type NpcDifficulty } from "@/lib/battle-cards/npc-battle-types";
 import type { MatchupStrength } from "@/lib/battle-cards/matchup-strength";
@@ -99,7 +100,7 @@ export default function NpcPuzzleBattleLauncher() {
       <p className="text-[10px] text-gray-500">
         <span className="text-gray-400 font-semibold">Match-3-Brett statt Zug-Auswahl</span> · Max. {NPC_BATTLE_DAILY_LIMIT}x täglich (geteilt mit NPC-Kampf)
       </p>
-      {error && <p className="text-xs text-rose-400">{error}</p>}
+      {error && <ErrorNotice message={error} />}
     </div>
   );
 }

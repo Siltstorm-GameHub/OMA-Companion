@@ -124,6 +124,10 @@ export default function CardCollectionBrowser({
   }
 
   const filteredOwned = ownedCards.filter((oc) => filter === "ALL" || oc.card.class === filter);
+  // otherTotal ist bereits auf denselben Filter gescoped (siehe fetchPage) —
+  // gesammelt+fehlend ergibt so direkt die Gesamtzahl im aktuell sichtbaren Filter.
+  const totalInFilter = filteredOwned.length + otherTotal;
+  const collectedPct = totalInFilter > 0 ? Math.round((filteredOwned.length / totalInFilter) * 100) : 0;
 
   async function fetchPage(nextFilter: CardClassFilter, offset: number) {
     const params = new URLSearchParams({ offset: String(offset), limit: String(PAGE_SIZE) });
@@ -208,6 +212,21 @@ export default function CardCollectionBrowser({
         </span>
       </div>
 
+      {/* Sammel-Fortschritt — kontextuell zum aktuellen Klassenfilter */}
+      {totalInFilter > 0 && (
+        <div className="flex items-center gap-2.5">
+          <div className="flex-1 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-400 transition-[width] duration-500 ease-out"
+              style={{ width: `${collectedPct}%` }}
+            />
+          </div>
+          <span className="text-[11px] font-semibold text-gray-400 tabular-nums shrink-0">
+            {filteredOwned.length}/{totalInFilter} gesammelt
+          </span>
+        </div>
+      )}
+
       {/* Eigene Karten */}
       {filteredOwned.length === 0 ? (
         <p className="text-sm text-gray-500">Keine eigenen Karten in dieser Klasse.</p>
@@ -234,7 +253,7 @@ export default function CardCollectionBrowser({
         <>
           <div className="flex items-center gap-3 pt-2">
             <div className="h-px flex-1 bg-white/[0.08]" />
-            <p className="text-[10px] text-gray-600 uppercase tracking-widest font-semibold shrink-0">
+            <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold shrink-0">
               Alle Karten im Spiel ({otherTotal})
             </p>
             <div className="h-px flex-1 bg-white/[0.08]" />

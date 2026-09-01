@@ -9,7 +9,7 @@
 // Call-to-Action auf dem Kampf-Reiter.
 
 import { useState } from "react";
-import { Swords, ChevronUp } from "lucide-react";
+import { Swords, ChevronUp, Users, Bot } from "lucide-react";
 import MatchmakingWidget from "./MatchmakingWidget";
 import ChallengeUserPicker from "./ChallengeUserPicker";
 import NpcBattleLauncher from "./NpcBattleLauncher";
@@ -45,10 +45,25 @@ export default function BattleLauncher() {
       >
         <ChevronUp className="w-3.5 h-3.5" /> Einklappen
       </button>
-      <MatchmakingWidget />
-      <ChallengeUserPicker />
-      <NpcBattleLauncher />
-      <NpcPuzzleBattleLauncher />
+      <section className="space-y-2">
+        <p className="flex items-center gap-1.5 text-[10px] font-semibold text-gray-500 uppercase tracking-widest">
+          <Users className="w-3.5 h-3.5" /> Gegen Spieler
+        </p>
+        <div className="space-y-3">
+          <MatchmakingWidget />
+          <ChallengeUserPicker />
+        </div>
+      </section>
+
+      <section className="space-y-2">
+        <p className="flex items-center gap-1.5 text-[10px] font-semibold text-gray-500 uppercase tracking-widest">
+          <Bot className="w-3.5 h-3.5" /> Gegen NPC
+        </p>
+        <div className="space-y-3">
+          <NpcBattleLauncher />
+          <NpcPuzzleBattleLauncher />
+        </div>
+      </section>
     </div>
   );
 }

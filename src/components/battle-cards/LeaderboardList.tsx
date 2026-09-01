@@ -1,13 +1,39 @@
 import Link from "next/link";
+import { Trophy } from "lucide-react";
 import RankedAvatar from "@/components/RankedAvatar";
 import type { LeaderboardRow } from "@/lib/battle-cards/leaderboard";
 
-const MEDALS = ["🥇", "🥈", "🥉"];
+/** Eigene Rang-Plaketten statt Emoji-Medaillen (🥇🥈🥉 rendern je nach OS/
+ *  Browser unterschiedlich und fallen aus dem sonst durchgehend selbstgebauten
+ *  Icon-/Gradient-Stil heraus) — Gold/Silber/Bronze als radialer Verlauf,
+ *  passend zur restlichen UI (z.B. Level-Rahmen der Karten). */
+const RANK_STYLE = [
+  { gradient: "radial-gradient(circle at 35% 28%, #fde68a, #d97706)", ring: "#fbbf24" },
+  { gradient: "radial-gradient(circle at 35% 28%, #e5e7eb, #6b7280)", ring: "#d1d5db" },
+  { gradient: "radial-gradient(circle at 35% 28%, #fdba8c, #9a5b2e)", ring: "#f0a868" },
+];
+
+function RankBadge({ place }: { place: number }) {
+  const style = RANK_STYLE[place - 1];
+  if (!style) {
+    return <span className="w-6 text-center text-sm font-bold text-gray-500 shrink-0">{place}</span>;
+  }
+  return (
+    <div
+      className="w-6 h-6 rounded-full flex items-center justify-center shrink-0"
+      style={{ background: style.gradient, boxShadow: `0 0 0 1px ${style.ring}88, 0 2px 4px rgba(0,0,0,0.4)` }}
+      title={`Platz ${place}`}
+    >
+      <Trophy className="w-3 h-3 text-black/70" strokeWidth={2.5} />
+    </div>
+  );
+}
 
 export default function LeaderboardList({ rows, viewerId }: { rows: LeaderboardRow[]; viewerId: string }) {
   if (rows.length === 0) {
     return (
-      <div className="glass rounded-2xl p-6 text-center">
+      <div className="glass rounded-2xl p-6 flex flex-col items-center gap-2 text-center">
+        <Trophy className="w-6 h-6 text-gray-600" />
         <p className="text-sm text-gray-500">Noch keine ausgetragenen Kämpfe — sei der Erste!</p>
       </div>
     );
@@ -27,9 +53,7 @@ export default function LeaderboardList({ rows, viewerId }: { rows: LeaderboardR
               isViewer ? "ring-1 ring-rose-500/40 bg-rose-500/[0.04]" : ""
             }`}
           >
-            <span className="w-6 text-center text-sm font-bold text-gray-500 shrink-0">
-              {MEDALS[i] ?? i + 1}
-            </span>
+            <RankBadge place={i + 1} />
             <RankedAvatar rankPoints={row.rankPoints} src={row.image} alt={row.name} size={32} className="w-8 h-8 shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-sm text-white truncate font-semibold">{row.name}</p>
@@ -46,7 +70,7 @@ export default function LeaderboardList({ rows, viewerId }: { rows: LeaderboardR
         );
       })}
       {viewerRank === -1 && (
-        <p className="text-xs text-gray-600 text-center pt-1">
+        <p className="text-xs text-gray-500 text-center pt-1">
           Trage dein erstes Duell aus, um hier zu erscheinen.
         </p>
       )}
