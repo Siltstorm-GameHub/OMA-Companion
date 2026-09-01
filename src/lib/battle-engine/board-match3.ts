@@ -42,6 +42,15 @@ export interface RageGrant {
   amount: number;
 }
 
+/** Ein einzelner Auflösungsschritt (ein Match + die dadurch entfernten Zellen,
+ *  gefolgt vom Grid-Zustand NACH Schwerkraft/Nachfüllen) — für die UI, um die
+ *  Zerstörung/den Fall der Edelsteine Schritt für Schritt zu animieren (siehe
+ *  BoardMatch3.tsx), statt nur das Endergebnis zu zeigen. */
+export interface BoardAnimationStep {
+  matchedCells: number[];
+  gridAfter: BoardGrid;
+}
+
 export interface BoardResolveResult {
   finalGrid: BoardGrid;
   finalRngState: number;
@@ -50,6 +59,9 @@ export interface BoardResolveResult {
    *  (ungültige/wirkungslose Swaps werden automatisch zurückgesetzt). */
   matchedSwaps: number;
   totalRageGranted: number;
+  /** Ein Eintrag pro Match-Runde (direkter Match + jede weitere Kaskade), über
+   *  alle eingereichten Swaps hinweg, in der Reihenfolge, in der sie passiert sind. */
+  steps: BoardAnimationStep[];
 }
 
 function cellRow(cell: number): number {
@@ -175,9 +187,11 @@ function removeAndCascade(grid: BoardGrid, matchedCells: Set<number>, rng: Rng):
 /** Löst alle Matches im aktuellen Grid auf, inkl. Kaskaden durch nachrutschende
  *  Steine (jede weitere Kaskaden-Stufe gibt RAGE_PER_CASCADE_BONUS obendrauf).
  *  Ein 5er+-Match löst zusätzlich den teamweiten Community-Bonus aus. Mutiert
- *  `grid` direkt, gibt die dabei entstandenen Rage-Grants zurück. */
-function resolveCascades(grid: BoardGrid, rng: Rng): RageGrant[] {
+ *  `grid` direkt, gibt die dabei entstandenen Rage-Grants UND einen
+ *  Animations-Schritt pro Match-Runde zurück (siehe BoardAnimationStep). */
+function resolveCascades(grid: BoardGrid, rng: Rng): { grants: RageGrant[]; steps: BoardAnimationStep[] } {
   const grants: RageGrant[] = [];
+  const steps: BoardAnimationStep[] = [];
   const MAX_CASCADES = 20; // Sicherheitsnetz gegen einen theoretischen Endlos-Fall
   let cascadeIndex = 0;
 
@@ -197,10 +211,11 @@ function resolveCascades(grid: BoardGrid, rng: Rng): RageGrant[] {
     }
 
     removeAndCascade(grid, matchedCells, rng);
+    steps.push({ matchedCells: [...matchedCells], gridAfter: [...grid] });
     cascadeIndex++;
   }
 
-  return grants;
+  return { grants, steps };
 }
 
 function mergeGrants(grants: RageGrant[]): RageGrant[] {
@@ -227,6 +242,7 @@ export function resolveBoardSession(
   const grid: BoardGrid = [...initialGrid];
   const rng = createRng(rngState);
   const allGrants: RageGrant[] = [];
+  const allSteps: BoardAnimationStep[] = [];
   let matchedSwaps = 0;
 
   const cappedSwaps = swaps.slice(0, Math.max(0, moveBudget));
@@ -247,11 +263,13 @@ export function resolveBoardSession(
     }
 
     matchedSwaps++;
-    allGrants.push(...resolveCascades(grid, rng));
+    const { grants, steps } = resolveCascades(grid, rng);
+    allGrants.push(...grants);
+    allSteps.push(...steps);
   }
 
   const rageGrants = mergeGrants(allGrants);
   const totalRageGranted = rageGrants.reduce((sum, g) => sum + g.amount, 0);
 
-  return { finalGrid: grid, finalRngState: rng.getState(), rageGrants, matchedSwaps, totalRageGranted };
+  return { finalGrid: grid, finalRngState: rng.getState(), rageGrants, matchedSwaps, totalRageGranted, steps: allSteps };
 }

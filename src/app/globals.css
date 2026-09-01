@@ -419,6 +419,23 @@ select.input-glass option { background: #0f1117; }
 }
 .value-delta-pop { animation: value-delta-pop 2.4s cubic-bezier(0.16,1,0.3,1) both; }
 
+/* ── Battle Cards: Kampf-Treffer & Edelstein-Zerstörung ───────────── */
+@keyframes hit-shake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-4px); }
+  40%      { transform: translateX(4px); }
+  60%      { transform: translateX(-3px); }
+  80%      { transform: translateX(2px); }
+}
+.hit-shake { animation: hit-shake 0.35s ease-in-out; }
+
+@keyframes gem-destroy {
+  0%   { opacity: 1; transform: scale(1) rotate(0deg); }
+  55%  { opacity: 0.85; transform: scale(1.25) rotate(10deg); }
+  100% { opacity: 0; transform: scale(0) rotate(25deg); }
+}
+.gem-destroy { animation: gem-destroy 0.22s ease-in both; }
+
 /* ── Icon-Bounce für neuen Content seit letztem Besuch ────────────── */
 @keyframes icon-bounce-new {
   0%, 100% { transform: translateY(0) scale(1); }

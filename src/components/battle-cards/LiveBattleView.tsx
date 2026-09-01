@@ -15,7 +15,7 @@
 // Reine Präsentations-/Steuerungskomponente — die eigentliche Kampflogik
 // läuft ausschließlich serverseitig (lib/battle-cards/live-battle.ts).
 
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -74,6 +74,16 @@ function EstimateBadge({ estimate }: { estimate: AvailableAction["estimate"] }) 
   );
 }
 
+/** Ein neu eingetroffener Kampfeffekt (Schaden/Heilung/Schild) für die
+ *  Flug-Zahlen + den Treffer-Flash auf der betroffenen Heldenkarte — abgeleitet
+ *  aus neuen Log-Einträgen zwischen zwei Snapshots (siehe logLength unten). */
+interface FloatingEffect {
+  id: string;
+  unitId: string;
+  kind: "damage" | "crit" | "heal" | "shield";
+  text: string;
+}
+
 interface LiveSnapshot {
   id: string;
   mode: string;
@@ -82,6 +92,10 @@ interface LiveSnapshot {
   units: LiveUnit[];
   upcoming: string[];
   recentLog: { type: string; [key: string]: unknown }[];
+  /** Gesamtzahl aller Log-Einträge seit Kampfbeginn — dient dem Client dazu,
+   *  zwischen zwei Snapshots zuverlässig NEUE Einträge zu erkennen (siehe
+   *  FloatingEffect-Spawning in LiveBattleView). */
+  logLength: number;
   awaiting: {
     unitId: string;
     teamId: TeamId;
@@ -128,11 +142,19 @@ function ActionIcon({ actionType, className }: { actionType: ActionType; classNa
   return <Swords className={className} />;
 }
 
+const EFFECT_COLOR: Record<FloatingEffect["kind"], string> = {
+  damage: "#f87171",
+  crit: "#fb923c",
+  heal: "#34d399",
+  shield: "#7dd3fc",
+};
+
 function UnitCard({
   unit,
   isActing,
   glow,
   ultimateReady,
+  effects,
   onClick,
   onUltimateClick,
 }: {
@@ -143,6 +165,9 @@ function UnitCard({
    *  (Empires-&-Puzzles-Stil, siehe applyUltimateInterrupt), unabhängig davon, ob
    *  diese Einheit laut Zugreihenfolge gerade selbst am Zug ist. */
   ultimateReady?: boolean;
+  /** Gerade eingetroffene Kampfeffekte für DIESE Einheit — Flug-Zahlen +
+   *  Treffer-Flash bei Schaden (siehe FloatingEffect/LiveBattleView). */
+  effects?: FloatingEffect[];
   onClick?: () => void;
   onUltimateClick?: () => void;
 }) {
@@ -153,6 +178,7 @@ function UnitCard({
   const canPickTarget = !!glow && !!onClick && unit.isAlive;
   const canFireUltimate = !glow && !!ultimateReady && !!onUltimateClick && unit.isAlive;
   const clickable = canPickTarget || canFireUltimate;
+  const isHit = (effects ?? []).some((e) => e.kind === "damage" || e.kind === "crit");
 
   function handleClick() {
     if (canPickTarget) onClick?.();
@@ -164,9 +190,27 @@ function UnitCard({
       type="button"
       disabled={!clickable}
       onClick={handleClick}
-      className="w-20 sm:w-28 shrink-0 text-left relative"
+      className={`w-20 sm:w-28 shrink-0 text-left relative ${isHit ? "hit-shake" : ""}`}
       style={{ opacity: unit.isAlive ? 1 : 0.35, filter: unit.isAlive ? "none" : "grayscale(1)", cursor: clickable ? "pointer" : "default" }}
     >
+      {(effects ?? []).length > 0 && (
+        <div className="absolute -top-1 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center pointer-events-none">
+          {(effects ?? []).map((eff, i) => (
+            <span
+              key={eff.id}
+              className="value-delta-pop text-xs sm:text-sm font-black whitespace-nowrap"
+              style={{
+                color: EFFECT_COLOR[eff.kind],
+                textShadow: "0 1px 3px rgba(0,0,0,0.9)",
+                animationDelay: `${i * 90}ms`,
+              }}
+            >
+              {eff.text}
+              {eff.kind === "crit" && " !"}
+            </span>
+          ))}
+        </div>
+      )}
       {isActing && (
         <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 z-10 text-[7px] sm:text-[8px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-teal-500 text-black whitespace-nowrap">
           Am Zug
@@ -265,6 +309,8 @@ export default function LiveBattleView({
   const [busy, setBusy] = useState(false);
   const [, setTick] = useState(0); // erzwingt einen Re-Render pro Sekunde für den Countdown
   const [mounted, setMounted] = useState(false);
+  const [effects, setEffects] = useState<FloatingEffect[]>([]);
+  const lastLogLengthRef = useRef<number | null>(null);
 
   // Portal auf document.body (wie MobileTopBar.tsx) — sonst kann eine Ahnen-
   // Komponente mit eigenem Stacking-Context (transform/opacity/filter) den
@@ -316,6 +362,57 @@ export default function LiveBattleView({
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshot?.status, snapshot?.awaiting?.unitId, snapshot?.awaiting?.deadline, viewerId]);
+
+  // Kampfeffekte (Flug-Zahlen + Treffer-Flash): vergleicht logLength mit dem
+  // zuletzt gesehenen Stand, um neue Log-Einträge seit dem letzten Snapshot zu
+  // erkennen — recentLog ist nur ein Fenster der letzten 12 Einträge, logLength
+  // macht den Vergleich trotzdem zuverlässig (siehe live-battle.ts). Beim
+  // allerersten Snapshot wird nichts animiert (sonst würde die gesamte
+  // bisherige Kampfhistorie auf einen Schlag "aufblitzen").
+  useEffect(() => {
+    if (!snapshot) return;
+    if (lastLogLengthRef.current === null) {
+      lastLogLengthRef.current = snapshot.logLength;
+      return;
+    }
+    const newCount = snapshot.logLength - lastLogLengthRef.current;
+    lastLogLengthRef.current = snapshot.logLength;
+    if (newCount <= 0) return;
+
+    const newEntries = snapshot.recentLog.slice(-Math.min(newCount, snapshot.recentLog.length));
+    const spawned: FloatingEffect[] = [];
+    for (const entry of newEntries) {
+      if (entry.type === "damage") {
+        spawned.push({
+          id: `${Date.now()}-${Math.random()}`,
+          unitId: entry.targetId as string,
+          kind: entry.isCrit ? "crit" : "damage",
+          text: `-${entry.amount as number}`,
+        });
+      } else if (entry.type === "heal") {
+        spawned.push({
+          id: `${Date.now()}-${Math.random()}`,
+          unitId: entry.targetId as string,
+          kind: "heal",
+          text: `+${entry.amount as number}`,
+        });
+      } else if (entry.type === "shieldApplied") {
+        spawned.push({
+          id: `${Date.now()}-${Math.random()}`,
+          unitId: entry.targetId as string,
+          kind: "shield",
+          text: `+${entry.amount as number}`,
+        });
+      }
+    }
+    if (spawned.length === 0) return;
+
+    setEffects((prev) => [...prev, ...spawned]);
+    spawned.forEach((eff) => {
+      window.setTimeout(() => setEffects((prev) => prev.filter((e) => e.id !== eff.id)), 1300);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [snapshot?.logLength]);
 
   async function submitAction(actionType: ActionType, targetId?: string, boardSwaps?: SwapMove[]) {
     if (busy) return;
@@ -424,6 +521,7 @@ export default function LiveBattleView({
           submitAction={submitAction}
           submitUltimate={submitUltimate}
           toggleAuto={toggleAuto}
+          effects={effects}
         />
       )}
     </div>,
@@ -440,6 +538,7 @@ function LiveBattleBody({
   submitAction,
   submitUltimate,
   toggleAuto,
+  effects,
 }: {
   snapshot: LiveSnapshot;
   viewerId: string;
@@ -449,6 +548,7 @@ function LiveBattleBody({
   submitAction: (actionType: ActionType, targetId?: string, boardSwaps?: SwapMove[]) => void;
   submitUltimate: (casterId: string) => void;
   toggleAuto: (on: boolean) => void;
+  effects: FloatingEffect[];
 }) {
   const myTeam: TeamId | null = viewerId === snapshot.playerAId ? "A" : viewerId === snapshot.playerBId ? "B" : null;
   const opponentTeam: TeamId = myTeam === "A" ? "B" : "A";
@@ -472,6 +572,9 @@ function LiveBattleBody({
   }
   function ultimateReadyFor(unit: LiveUnit): boolean {
     return isPuzzleMode && myTeam !== null && unit.teamId === myTeam && unit.isAlive && unit.rage >= unit.ultimateCost;
+  }
+  function effectsFor(unit: LiveUnit): FloatingEffect[] {
+    return effects.filter((e) => e.unitId === unit.instanceId);
   }
 
   // Board-Fortschritt für den aktuell wartenden Zug — null = noch nicht bestätigt
@@ -561,7 +664,14 @@ function LiveBattleBody({
       <div className="flex-1 flex flex-col justify-end gap-3 min-h-0 py-2">
         <div className="flex gap-2 sm:gap-3 justify-center flex-wrap">
           {unitsByTeam(opponentTeam).map((u) => (
-            <UnitCard key={u.instanceId} unit={u} isActing={snapshot.awaiting?.unitId === u.instanceId} glow={glowFor(u)} onClick={() => handleUnitClick(u)} />
+            <UnitCard
+              key={u.instanceId}
+              unit={u}
+              isActing={snapshot.awaiting?.unitId === u.instanceId}
+              glow={glowFor(u)}
+              effects={effectsFor(u)}
+              onClick={() => handleUnitClick(u)}
+            />
           ))}
         </div>
         <div className="border-t border-white/10 mx-6" />
@@ -573,6 +683,7 @@ function LiveBattleBody({
               isActing={snapshot.awaiting?.unitId === u.instanceId}
               glow={glowFor(u)}
               ultimateReady={ultimateReadyFor(u)}
+              effects={effectsFor(u)}
               onClick={() => handleUnitClick(u)}
               onUltimateClick={() => handleUnitClick(u)}
             />

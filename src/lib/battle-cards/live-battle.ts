@@ -150,6 +150,11 @@ export interface LiveBattleSnapshot {
   units: LiveUnitSnapshot[];
   upcoming: string[];
   recentLog: BattleLogEntry[];
+  /** Gesamtzahl aller Log-Einträge seit Kampfbeginn (nicht nur `recentLog`,
+   *  das nur die letzten RECENT_LOG_TAIL zeigt) — der Client nutzt das, um
+   *  zwischen zwei Snapshots zuverlässig zu erkennen, welche Einträge NEU
+   *  sind (für Kampfeffekte/Animationen, siehe LiveBattleView.tsx). */
+  logLength: number;
   awaiting: LiveBattleAwaiting | null;
   autoA: boolean;
   autoB: boolean;
@@ -199,6 +204,7 @@ function buildSnapshot(
     units: allUnits.map(toUnitSnapshot),
     upcoming: previewUpcomingTurns(state, 5),
     recentLog: state.log.slice(-RECENT_LOG_TAIL),
+    logLength: state.log.length,
     awaiting,
     autoA: state.autoA,
     autoB: state.autoB,
