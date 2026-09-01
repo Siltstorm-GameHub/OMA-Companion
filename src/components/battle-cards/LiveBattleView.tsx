@@ -37,6 +37,7 @@ import {
   setSoundMuted,
 } from "@/lib/battle-cards/sound";
 import ErrorNotice from "./ErrorNotice";
+import { BRAND_LOGO } from "@/lib/brand";
 
 const ARENA_BACKGROUND_STYLE: CSSProperties = {
   backgroundColor: "#12151a",
@@ -574,7 +575,7 @@ export default function LiveBattleView({
           <ErrorNotice message={error} size="lg" />
         </div>
       ) : !snapshot ? (
-        <div className="flex-1 relative flex items-center justify-center overflow-hidden">
+        <div className="flex-1 relative flex flex-col items-center justify-end overflow-hidden pb-10">
           {!splashFailed && (
             <>
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -587,6 +588,11 @@ export default function LiveBattleView({
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/40" />
             </>
           )}
+          <div className="absolute top-6 left-0 right-0 flex items-center justify-center gap-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={BRAND_LOGO} alt="OMA" className="h-8 w-auto object-contain" />
+            <span className="font-battle text-base text-white uppercase tracking-wide">Battle Cards</span>
+          </div>
           <div className="relative flex flex-col items-center gap-2">
             <Loader2 className="w-6 h-6 text-gray-300 animate-spin" />
             <p className="font-battle text-[11px] text-gray-300 uppercase tracking-widest">Kampf wird geladen…</p>

@@ -1,27 +1,18 @@
-"use client";
-
 // ============================================
 // Battle-Cards-Wortmarke — Header
 // ============================================
-// Eigenes Logo/Emblem für den Battle-Cards-Bereich (siehe public/battle-cards/
-// logo.png). Fehlt die Datei (noch nicht hochgeladen), wird einfach nichts
-// gerendert (onError-Pattern, wie bei Monster-/Hintergrund-Bildern) — kein
-// Blocker, die Tabs darunter funktionieren unverändert.
+// Nutzt das echte OMA-Logo (BRAND_LOGO, wie auf der Login-Seite/CoverBrandBadge)
+// statt eines eigens generierten Emblems — plus "Battle Cards"-Schriftzug in der
+// Battle-Cards-eigenen Display-Schrift (siehe .font-battle in globals.css).
 
-import { useState } from "react";
+import { BRAND_LOGO } from "@/lib/brand";
 
 export default function BattleCardsLogo() {
-  const [failed, setFailed] = useState(false);
-  if (failed) return null;
   return (
-    <div className="flex justify-center pb-2">
+    <div className="flex items-center justify-center gap-2.5 pb-2">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src="/battle-cards/logo.png"
-        alt="OMA Battle Cards"
-        className="h-16 sm:h-20 w-auto object-contain"
-        onError={() => setFailed(true)}
-      />
+      <img src={BRAND_LOGO} alt="OMA" className="h-10 sm:h-12 w-auto object-contain" />
+      <span className="font-battle text-lg sm:text-xl text-white uppercase tracking-wide">Battle Cards</span>
     </div>
   );
 }
