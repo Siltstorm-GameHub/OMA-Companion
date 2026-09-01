@@ -22,6 +22,8 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { Loader2, Zap, Swords, Bot, ChevronRight, ChevronLeft, Timer } from "lucide-react";
 import { getClassConfig, LEVEL_BORDER } from "./BattleCardView";
+import BoardMatch3 from "./BoardMatch3";
+import type { BoardGrid, SwapMove } from "@/lib/battle-engine/board-match3";
 import type { ActionType, TeamId, UnitClass } from "@/lib/battle-engine/types";
 
 const ARENA_BACKGROUND_STYLE: CSSProperties = {
@@ -45,6 +47,7 @@ interface LiveUnit {
   currentHp: number;
   maxHp: number;
   rage: number;
+  ultimateCost: number;
   isAlive: boolean;
   imageUrl?: string | null;
   avatarBadgeUrl?: string | null;
@@ -86,6 +89,7 @@ interface LiveSnapshot {
     actions: AvailableAction[];
     candidateTargetsByAction: Partial<Record<ActionType, string[]>>;
     deadline: number | null;
+    board: { grid: BoardGrid; moveBudget: number } | null;
   } | null;
   autoA: boolean;
   autoB: boolean;
@@ -128,24 +132,38 @@ function UnitCard({
   unit,
   isActing,
   glow,
+  ultimateReady,
   onClick,
+  onUltimateClick,
 }: {
   unit: LiveUnit;
   isActing: boolean;
   glow: "enemy" | "ally" | null;
+  /** Rage-Balken voll UND puzzleMode aktiv — Karte ist per Klick sofort auslösbar
+   *  (Empires-&-Puzzles-Stil, siehe applyUltimateInterrupt), unabhängig davon, ob
+   *  diese Einheit laut Zugreihenfolge gerade selbst am Zug ist. */
+  ultimateReady?: boolean;
   onClick?: () => void;
+  onUltimateClick?: () => void;
 }) {
   const config = getClassConfig(unit.class);
   const Icon = config.icon;
   const hpPct = unit.maxHp > 0 ? Math.max(0, unit.currentHp / unit.maxHp) : 0;
   const borderColor = LEVEL_BORDER[unit.level] ?? LEVEL_BORDER[1];
-  const clickable = !!glow && !!onClick && unit.isAlive;
+  const canPickTarget = !!glow && !!onClick && unit.isAlive;
+  const canFireUltimate = !glow && !!ultimateReady && !!onUltimateClick && unit.isAlive;
+  const clickable = canPickTarget || canFireUltimate;
+
+  function handleClick() {
+    if (canPickTarget) onClick?.();
+    else if (canFireUltimate) onUltimateClick?.();
+  }
 
   return (
     <button
       type="button"
       disabled={!clickable}
-      onClick={onClick}
+      onClick={handleClick}
       className="w-20 sm:w-28 shrink-0 text-left relative"
       style={{ opacity: unit.isAlive ? 1 : 0.35, filter: unit.isAlive ? "none" : "grayscale(1)", cursor: clickable ? "pointer" : "default" }}
     >
@@ -159,9 +177,14 @@ function UnitCard({
           Ziel
         </span>
       )}
+      {canFireUltimate && !isActing && (
+        <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 z-10 text-[7px] sm:text-[8px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-amber-400 text-black whitespace-nowrap animate-pulse">
+          Ultimate bereit
+        </span>
+      )}
 
       <div className="w-full aspect-square mb-0.5 flex items-center justify-center relative rounded-md overflow-hidden">
-        {(isActing || glow) && (
+        {(isActing || glow || canFireUltimate) && (
           <div
             className="absolute inset-0 rounded-full pointer-events-none"
             style={{
@@ -169,7 +192,9 @@ function UnitCard({
                 ? "radial-gradient(closest-side, rgba(20,184,166,0.35), transparent 70%)"
                 : glow === "enemy"
                   ? "radial-gradient(closest-side, rgba(239,68,68,0.35), transparent 70%)"
-                  : "radial-gradient(closest-side, rgba(34,197,94,0.35), transparent 70%)",
+                  : glow === "ally"
+                    ? "radial-gradient(closest-side, rgba(34,197,94,0.35), transparent 70%)"
+                    : "radial-gradient(closest-side, rgba(251,191,36,0.35), transparent 70%)",
             }}
           />
         )}
@@ -194,7 +219,9 @@ function UnitCard({
                 ? "0 0 0 2px #ef4444, 0 0 14px rgba(239,68,68,0.6)"
                 : glow === "ally"
                   ? "0 0 0 2px #22c55e, 0 0 14px rgba(34,197,94,0.6)"
-                  : `0 0 0 1px ${borderColor}`,
+                  : canFireUltimate
+                    ? "0 0 0 2px #fbbf24, 0 0 14px rgba(251,191,36,0.6)"
+                    : `0 0 0 1px ${borderColor}`,
           }}
         />
       </div>
@@ -290,14 +317,14 @@ export default function LiveBattleView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshot?.status, snapshot?.awaiting?.unitId, snapshot?.awaiting?.deadline, viewerId]);
 
-  async function submitAction(actionType: ActionType, targetId?: string) {
+  async function submitAction(actionType: ActionType, targetId?: string, boardSwaps?: SwapMove[]) {
     if (busy) return;
     setBusy(true);
     try {
       const res = await fetch(`/api/battle-cards/live/${liveBattleId}/action`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ actionType, targetId }),
+        body: JSON.stringify({ actionType, targetId, boardSwaps }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -306,6 +333,31 @@ export default function LiveBattleView({
       }
       setSnapshot(data);
       setSelectedAction(null);
+    } catch {
+      toast.error("Netzwerkfehler");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** Löst ein Ultimate SOFORT aus (Empires-&-Puzzles-Stil, per Klick auf eine
+   *  Heldenkarte mit vollem Rage-Balken) — unabhängig davon, ob `casterId`
+   *  laut Zugreihenfolge gerade selbst am Zug ist (siehe applyUltimateInterrupt). */
+  async function submitUltimate(casterId: string) {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/battle-cards/live/${liveBattleId}/ultimate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ casterId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? "Ultimate fehlgeschlagen.");
+        return;
+      }
+      setSnapshot(data);
     } catch {
       toast.error("Netzwerkfehler");
     } finally {
@@ -370,6 +422,7 @@ export default function LiveBattleView({
           selectedAction={selectedAction}
           setSelectedAction={setSelectedAction}
           submitAction={submitAction}
+          submitUltimate={submitUltimate}
           toggleAuto={toggleAuto}
         />
       )}
@@ -385,6 +438,7 @@ function LiveBattleBody({
   selectedAction,
   setSelectedAction,
   submitAction,
+  submitUltimate,
   toggleAuto,
 }: {
   snapshot: LiveSnapshot;
@@ -392,7 +446,8 @@ function LiveBattleBody({
   busy: boolean;
   selectedAction: AvailableAction | null;
   setSelectedAction: (a: AvailableAction | null) => void;
-  submitAction: (actionType: ActionType, targetId?: string) => void;
+  submitAction: (actionType: ActionType, targetId?: string, boardSwaps?: SwapMove[]) => void;
+  submitUltimate: (casterId: string) => void;
   toggleAuto: (on: boolean) => void;
 }) {
   const myTeam: TeamId | null = viewerId === snapshot.playerAId ? "A" : viewerId === snapshot.playerBId ? "B" : null;
@@ -401,6 +456,10 @@ function LiveBattleBody({
   const myAuto = myTeam === "A" ? snapshot.autoA : snapshot.autoB;
   const deadline = snapshot.awaiting?.deadline ?? null;
   const remainingSeconds = deadline !== null ? Math.max(0, Math.ceil((deadline - Date.now()) / 1000)) : null;
+  // "Edelstein-Kampf" (Match-3-Puzzle-PvE, siehe board-match3.ts) — nur in diesem
+  // Modus zeigt der Server ein Brett im Snapshot UND sind Heldenkarten mit vollem
+  // Rage-Balken per Klick sofort auslösbar (siehe ultimateReady unten).
+  const isPuzzleMode = snapshot.mode.includes("PUZZLE");
 
   const unitsByTeam = (team: TeamId) => snapshot.units.filter((u) => u.teamId === team);
   const unitById = (id: string) => snapshot.units.find((u) => u.instanceId === id);
@@ -411,19 +470,34 @@ function LiveBattleBody({
     if (!selectedAction || !candidates.includes(unit.instanceId)) return null;
     return selectedAction.targetKind === "enemy" ? "enemy" : "ally";
   }
+  function ultimateReadyFor(unit: LiveUnit): boolean {
+    return isPuzzleMode && myTeam !== null && unit.teamId === myTeam && unit.isAlive && unit.rage >= unit.ultimateCost;
+  }
+
+  // Board-Fortschritt für den aktuell wartenden Zug — null = noch nicht bestätigt
+  // (Board wird angezeigt), sonst die gesammelten Swaps für die Aktions-Entscheidung.
+  // Zurückgesetzt, sobald eine ANDERE Einheit wartet (neuer Zug).
+  const [boardSwaps, setBoardSwaps] = useState<SwapMove[] | null>(null);
+  const awaitingUnitId = snapshot.awaiting?.unitId ?? null;
+  useEffect(() => {
+    setBoardSwaps(null);
+  }, [awaitingUnitId]);
 
   function handleActionClick(action: AvailableAction) {
     if (action.targetKind === "none") {
-      submitAction(action.actionType);
+      submitAction(action.actionType, undefined, boardSwaps ?? undefined);
     } else {
       setSelectedAction(action);
     }
   }
 
   function handleUnitClick(unit: LiveUnit) {
-    if (!selectedAction) return;
-    if (!candidates.includes(unit.instanceId)) return;
-    submitAction(selectedAction.actionType, unit.instanceId);
+    if (selectedAction) {
+      if (!candidates.includes(unit.instanceId)) return;
+      submitAction(selectedAction.actionType, unit.instanceId, boardSwaps ?? undefined);
+      return;
+    }
+    if (ultimateReadyFor(unit)) submitUltimate(unit.instanceId);
   }
 
   return (
@@ -493,7 +567,15 @@ function LiveBattleBody({
         <div className="border-t border-white/10 mx-6" />
         <div className="flex gap-2 sm:gap-3 justify-center flex-wrap">
           {unitsByTeam(myTeam ?? "A").map((u) => (
-            <UnitCard key={u.instanceId} unit={u} isActing={snapshot.awaiting?.unitId === u.instanceId} glow={glowFor(u)} onClick={() => handleUnitClick(u)} />
+            <UnitCard
+              key={u.instanceId}
+              unit={u}
+              isActing={snapshot.awaiting?.unitId === u.instanceId}
+              glow={glowFor(u)}
+              ultimateReady={ultimateReadyFor(u)}
+              onClick={() => handleUnitClick(u)}
+              onUltimateClick={() => handleUnitClick(u)}
+            />
           ))}
         </div>
       </div>
@@ -517,7 +599,14 @@ function LiveBattleBody({
           // Ansicht) — sonst verschieben sich die Helden darüber je nach Rage-Stand
           // von Zug zu Zug, weil dieses Panel mal höher, mal niedriger wäre.
           <div className="glass rounded-xl p-2.5 h-[212px] overflow-y-auto flex flex-col">
-            {selectedAction ? (
+            {snapshot.awaiting.board && boardSwaps === null ? (
+              <BoardMatch3
+                grid={snapshot.awaiting.board.grid}
+                moveBudget={snapshot.awaiting.board.moveBudget}
+                disabled={busy}
+                onConfirm={(swaps) => setBoardSwaps(swaps)}
+              />
+            ) : selectedAction ? (
               <div className="space-y-1.5">
                 <div className="flex items-start gap-2">
                   <ActionIcon actionType={selectedAction.actionType} className="w-4 h-4 text-teal-300 mt-0.5 shrink-0" />

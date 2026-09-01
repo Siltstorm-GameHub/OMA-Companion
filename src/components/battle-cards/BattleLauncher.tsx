@@ -13,6 +13,7 @@ import { Swords, ChevronUp } from "lucide-react";
 import MatchmakingWidget from "./MatchmakingWidget";
 import ChallengeUserPicker from "./ChallengeUserPicker";
 import NpcBattleLauncher from "./NpcBattleLauncher";
+import NpcPuzzleBattleLauncher from "./NpcPuzzleBattleLauncher";
 
 export default function BattleLauncher() {
   const [open, setOpen] = useState(false);
@@ -47,6 +48,7 @@ export default function BattleLauncher() {
       <MatchmakingWidget />
       <ChallengeUserPicker />
       <NpcBattleLauncher />
+      <NpcPuzzleBattleLauncher />
     </div>
   );
 }

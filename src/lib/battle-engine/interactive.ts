@@ -12,12 +12,16 @@
 // Seite) entscheiden weiterhin automatisch über defaultDecideAction() +
 // die eingebauten Zielregeln — exakt wie runBattle() bisher.
 
+import { generateBoard, resolveBoardSession, type BoardGrid, type SwapMove } from "./board-match3";
 import {
+  BOARD_MOVE_BUDGET_PER_TURN,
+  MAX_BOARD_RAGE_PER_TURN,
   RAGE_PER_ACTION,
   RAGE_PER_ROUND_END,
   ROUND_LIMIT,
   SUDDEN_DEATH_DAMAGE_MULTIPLIER_STEP,
   TURN_DECISION_TIMEOUT_MS,
+  ULTIMATE_SKILL_COST,
 } from "./constants";
 import { candidateTargetIds, describeAvailableActions, type AvailableAction } from "./decision";
 import { tickStatModifierDurations } from "./effects";
@@ -65,6 +69,16 @@ export interface InteractiveBattleState {
    *  für diese Seite automatisch aktiviert (siehe stepOnce). */
   timeoutStreakA: number;
   timeoutStreakB: number;
+  /** Puzzle-PvE-Modus ("Edelstein-Kampf", siehe board-match3.ts): zeigt bei
+   *  jedem menschlichen Zug zusätzlich ein Match-3-Brett, dessen Matches Rage
+   *  erzeugen, statt dass Rage rein automatisch steigt. Bei false (Standard-
+   *  Auto-Kampf-Modi, PvP) bleibt das gesamte Board-Verhalten inaktiv. */
+  boardMode: boolean;
+  /** Das für den GERADE wartenden menschlichen Zug generierte Brett — wird beim
+   *  Pausieren erzeugt und beim Verarbeiten der Entscheidung wieder geleert.
+   *  Kein Fortschritt einer laufenden Mini-Session wird darüber hinaus
+   *  persistiert (siehe Plan: Reload verliert den Board-Fortschritt des Zugs). */
+  pendingBoard: { grid: BoardGrid; rngState: number } | null;
 }
 
 /** Nach so vielen aufeinanderfolgenden verpassten Zügen (Zug-Timeout, siehe
@@ -77,6 +91,9 @@ export interface PendingDecision {
   teamId: TeamId;
   actions: AvailableAction[];
   candidateTargetsByAction: Partial<Record<ActionType, string[]>>;
+  /** Nur gesetzt, wenn boardMode aktiv ist — das initiale Grid für die
+   *  Match-3-Mini-Session dieses Zugs (siehe board-match3.ts). */
+  board: { grid: BoardGrid; moveBudget: number } | null;
 }
 
 export interface AdvanceResult {
@@ -87,13 +104,17 @@ export interface AdvanceResult {
 export interface PlayerDecision {
   actionType: ActionType;
   targetId?: string;
+  /** Nur bei boardMode: die vom Spieler in der Mini-Session gemachten Swaps —
+   *  wird serverseitig via resolveBoardSession() autoritativ neu berechnet
+   *  (siehe applyBoardRage), niemals unvalidiert übernommen. */
+  boardSwaps?: SwapMove[];
 }
 
 export function createInteractiveState(
   teamA: BattleUnitDefinition[],
   teamB: BattleUnitDefinition[],
   controllers: { A: Controller; B: Controller },
-  options: { seed?: number; roundLimit?: number } = {}
+  options: { seed?: number; roundLimit?: number; boardMode?: boolean } = {}
 ): InteractiveBattleState {
   const seed = options.seed ?? randomSeed();
   const rng = createRng(seed);
@@ -123,6 +144,8 @@ export function createInteractiveState(
     turnDeadline: null,
     timeoutStreakA: 0,
     timeoutStreakB: 0,
+    boardMode: options.boardMode ?? false,
+    pendingBoard: null,
   };
 }
 
@@ -130,6 +153,40 @@ type StepStatus = "continue" | "paused" | "finished";
 
 function isAutoForTeam(state: InteractiveBattleState, teamId: TeamId): boolean {
   return teamId === "A" ? state.autoA : state.autoB;
+}
+
+/** Löst die vom Spieler eingereichten Swaps AUTORITATIV serverseitig gegen das
+ *  bei der Pause generierte `state.pendingBoard` auf (siehe resolveBoardSession)
+ *  und schreibt die daraus resultierende Rage den betroffenen eigenen Helden
+ *  gut — der Client liefert nur die Swap-Sequenz, niemals eine fertige
+ *  Rage-Zahl (Anti-Cheat). Ein Hard-Cap (MAX_BOARD_RAGE_PER_TURN) deckelt das
+ *  Gesamtergebnis zusätzlich als Verteidigung gegen einen Replay-Bug. */
+function applyBoardRage(
+  state: InteractiveBattleState,
+  allUnits: BattleUnitState[],
+  teamId: TeamId,
+  swaps: SwapMove[]
+): void {
+  const pending = state.pendingBoard;
+  if (!pending) return;
+
+  const result = resolveBoardSession(pending.grid, pending.rngState, swaps, BOARD_MOVE_BUDGET_PER_TURN);
+
+  let grants = result.rageGrants;
+  if (result.totalRageGranted > MAX_BOARD_RAGE_PER_TURN && result.totalRageGranted > 0) {
+    const scale = MAX_BOARD_RAGE_PER_TURN / result.totalRageGranted;
+    grants = grants.map((g) => ({ ...g, amount: Math.floor(g.amount * scale) }));
+  }
+
+  const teamUnits = allUnits.filter((u) => u.teamId === teamId && u.isAlive);
+  for (const grant of grants) {
+    if (grant.amount <= 0) continue;
+    const recipients =
+      grant.targetClass === "ALL" ? teamUnits : teamUnits.filter((u) => u.def.class === grant.targetClass);
+    for (const unit of recipients) {
+      grantRage(unit, grant.amount, state.round, state.log, "boardMatch");
+    }
+  }
 }
 
 /** Führt genau eine atomare Schrittigkeit aus (ein Sub-Schritt der Kampfschleife
@@ -196,6 +253,15 @@ function stepOnce(
         return "paused"; // reines Polling, keine Entscheidung mitgeschickt, Timeout noch nicht erreicht
       }
     }
+
+    // Nur bei einer echten Spieler-Entscheidung (nicht bei Auto-Kampf/Timeout)
+    // wird das Board ausgewertet — die dabei erzeugte Rage landet VOR der
+    // eigentlichen Aktion bei den betroffenen Helden (siehe applyBoardRage).
+    if (playerDecision && state.boardMode) {
+      applyBoardRage(state, allUnits, unit.teamId, playerDecision.boardSwaps ?? []);
+    }
+    state.pendingBoard = null;
+
     executeUnitAction(unit, decision.actionType, decision.targetId);
     autoActionCounter && autoActionCounter.count++;
     state.awaitingUnitId = null;
@@ -270,6 +336,10 @@ function stepOnce(
   if (isHuman) {
     state.awaitingUnitId = unit.instanceId;
     state.turnDeadline = Date.now() + TURN_DECISION_TIMEOUT_MS;
+    if (state.boardMode) {
+      const boardSeed = Math.floor(rng() * 0xffffffff);
+      state.pendingBoard = generateBoard(boardSeed);
+    }
     return "paused";
   }
 
@@ -343,7 +413,12 @@ export function describeCurrentDecision(state: InteractiveBattleState): PendingD
       candidateTargetsByAction[a.actionType] = candidateTargetIds(unit, a.targetKind, allUnits);
     }
   }
-  return { unitId: unit.instanceId, teamId: unit.teamId, actions, candidateTargetsByAction };
+  const board =
+    state.boardMode && state.pendingBoard
+      ? { grid: state.pendingBoard.grid, moveBudget: BOARD_MOVE_BUDGET_PER_TURN }
+      : null;
+
+  return { unitId: unit.instanceId, teamId: unit.teamId, actions, candidateTargetsByAction, board };
 }
 
 /** Nächste bis zu `count` Einheiten in der Zugreihenfolge — für die "Als nächstes
@@ -371,4 +446,59 @@ export function previewUpcomingTurns(state: InteractiveBattleState, count = 5): 
   }
 
   return result;
+}
+
+export interface UltimateInterruptResult {
+  state: InteractiveBattleState;
+  pendingDecision: PendingDecision | null;
+  /** false, wenn das Ultimate NICHT ausgelöst wurde (Einheit tot/unbekannt,
+   *  nicht menschlich gesteuert, oder Rage unter den Kosten) — der Aufrufer
+   *  soll das dem Spieler dann als Fehler melden, statt es still zu ignorieren. */
+  applied: boolean;
+}
+
+/** Löst ein Ultimate SOFORT aus, unabhängig davon, ob `casterId` laut
+ *  Zugreihenfolge gerade selbst am Zug ist (Empires-&-Puzzles-Stil: voller
+ *  Rage-Balken → per Kartenklick jederzeit auslösbar). Zwei Fälle:
+ *  - `casterId` ist die gerade wartende Einheit: läuft 1:1 wie eine normale
+ *    Spieler-Entscheidung durch advance()/stepOnce() — orderIndex rückt vor.
+ *  - `casterId` ist eine ANDERE eigene, lebende Einheit: echter Interrupt —
+ *    die Zugreihenfolge (orderIndex/awaitingUnitId) bleibt unangetastet, die
+ *    Einheit handelt "zwischendurch" und ist später an ihrem regulären Zug
+ *    ganz normal wieder dran (dann ggf. mit niedrigerer Rage). */
+export function applyUltimateInterrupt(
+  state: InteractiveBattleState,
+  casterId: string,
+  targetId?: string
+): UltimateInterruptResult {
+  const allUnits = [...state.unitsA, ...state.unitsB];
+  const caster = allUnits.find((u) => u.instanceId === casterId);
+
+  if (state.winner || !caster || !caster.isAlive || state.controllers[caster.teamId] !== "human") {
+    return { state, pendingDecision: describeCurrentDecision(state), applied: false };
+  }
+
+  const ultimateCost = caster.def.ultimateSkill.cost ?? ULTIMATE_SKILL_COST;
+  if (caster.rage < ultimateCost) {
+    return { state, pendingDecision: describeCurrentDecision(state), applied: false };
+  }
+
+  if (state.awaitingUnitId === casterId) {
+    const result = advance(state, { actionType: "ultimate", targetId });
+    return { ...result, applied: true };
+  }
+
+  const rng = createRng(state.rngState);
+  const suddenDeathRounds = Math.max(0, state.round - state.roundLimit);
+  const suddenDeathMultiplier = 1 + suddenDeathRounds * SUDDEN_DEATH_DAMAGE_MULTIPLIER_STEP;
+
+  performAction(caster, "ultimate", allUnits, rng, state.round, state.log, suddenDeathMultiplier, targetId);
+  state.rngState = rng.getState();
+
+  state.winner = checkWinner(state.unitsA, state.unitsB);
+  if (state.winner) {
+    state.log.push({ type: "battleEnd", winner: state.winner, round: state.round });
+  }
+
+  return { state, pendingDecision: describeCurrentDecision(state), applied: true };
 }

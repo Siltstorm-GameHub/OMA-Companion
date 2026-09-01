@@ -214,7 +214,7 @@ export type BattleLogEntry =
       unitId: string;
       amount: number;
       newRage: number;
-      reason: "action" | "roundEnd" | "skillEffect";
+      reason: "action" | "roundEnd" | "skillEffect" | "boardMatch";
     }
   | { type: "death"; round: number; unitId: string }
   | { type: "roundEnd"; round: number }

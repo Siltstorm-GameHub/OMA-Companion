@@ -52,7 +52,7 @@ export function grantRage(
   amount: number,
   round: number,
   log: BattleLogEntry[],
-  reason: "action" | "roundEnd"
+  reason: "action" | "roundEnd" | "boardMatch"
 ): void {
   if (!unit.isAlive || amount === 0) return;
   const before = unit.rage;

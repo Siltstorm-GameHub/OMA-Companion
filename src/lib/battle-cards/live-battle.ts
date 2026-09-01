@@ -11,6 +11,7 @@
 import { prisma } from "@/lib/prisma";
 import {
   advance,
+  applyUltimateInterrupt,
   createInteractiveState,
   describeCurrentDecision,
   previewUpcomingTurns,
@@ -21,6 +22,8 @@ import {
 import { candidateTargetIds, describeAvailableActions, type AvailableAction } from "@/lib/battle-engine/decision";
 import { buildRosterFromUnits } from "@/lib/battle-engine/stats";
 import { cardToBattleUnitDefinition } from "@/lib/battle-engine/adapters";
+import type { BoardGrid, SwapMove } from "@/lib/battle-engine/board-match3";
+import { ULTIMATE_SKILL_COST } from "@/lib/battle-engine/constants";
 import type {
   ActionType,
   BattleLogEntry,
@@ -38,6 +41,8 @@ import {
   DIFFICULTY_LEVEL,
   NPC_BATTLE_DAILY_LIMIT,
   NPC_BATTLE_WIN_REWARD,
+  parseNpcMode,
+  puzzleModeFor,
   type NpcDifficulty,
 } from "@/lib/battle-cards/npc-battle-types";
 import type { LiveBattle } from "@prisma/client";
@@ -106,6 +111,10 @@ export interface LiveUnitSnapshot {
   currentHp: number;
   maxHp: number;
   rage: number;
+  /** Rage-Kosten des Ultimates dieser Einheit — der Client braucht das, um zu
+   *  wissen, wann eine Heldenkarte "voll" und per Klick sofort auslösbar ist
+   *  (siehe applyUltimateInterrupt / /live/[id]/ultimate). */
+  ultimateCost: number;
   isAlive: boolean;
   imageUrl?: string | null;
   avatarBadgeUrl?: string | null;
@@ -119,6 +128,9 @@ export interface LiveBattleAwaiting {
   candidateTargetsByAction: Partial<Record<ActionType, string[]>>;
   /** Epoch-ms — ab hier entscheidet die KI-Logik automatisch, falls niemand reagiert. */
   deadline: number | null;
+  /** Nur im Puzzle-Modus (siehe board-match3.ts) — initiales Grid für die
+   *  Match-3-Mini-Session dieses Zugs. */
+  board: { grid: BoardGrid; moveBudget: number } | null;
 }
 
 export interface LiveBattleSnapshot {
@@ -150,6 +162,7 @@ function toUnitSnapshot(u: BattleUnitState): LiveUnitSnapshot {
     currentHp: u.currentHp,
     maxHp: u.maxHp,
     rage: u.rage,
+    ultimateCost: u.def.ultimateSkill.cost ?? ULTIMATE_SKILL_COST,
     isAlive: u.isAlive,
     imageUrl: u.def.imageUrl,
     avatarBadgeUrl: u.def.avatarBadgeUrl,
@@ -235,12 +248,16 @@ async function finalizeLiveBattle(live: LiveBattle, state: InteractiveBattleStat
       await notifyPvpBattleResolved(live.playerAId, live.playerBId, winnerId, battle.id);
     }
   } else if (state.winner === "A" && live.mode.startsWith("PVE_")) {
-    const difficulty = live.mode.slice("PVE_".length) as NpcDifficulty;
-    const reward = NPC_BATTLE_WIN_REWARD[difficulty];
-    if (reward) {
+    const parsed = parseNpcMode(live.mode);
+    const reward = parsed ? NPC_BATTLE_WIN_REWARD[parsed.difficulty] : undefined;
+    if (parsed && reward) {
       await prisma.user.update({ where: { id: live.playerAId }, data: { points: { increment: reward } } });
       await prisma.pointTransaction.create({
-        data: { userId: live.playerAId, amount: reward, reason: `NPC-Kampf gewonnen (${difficulty})` },
+        data: {
+          userId: live.playerAId,
+          amount: reward,
+          reason: `${parsed.isPuzzle ? "Edelstein-Kampf" : "NPC-Kampf"} gewonnen (${parsed.difficulty})`,
+        },
       });
     }
   }
@@ -313,9 +330,10 @@ async function createLiveBattle(
   playerBId: string | null,
   teamA: BattleUnitDefinition[],
   teamB: BattleUnitDefinition[],
-  controllers: { A: Controller; B: Controller }
+  controllers: { A: Controller; B: Controller },
+  boardMode = false
 ): Promise<LiveBattleSnapshot> {
-  const created = createInteractiveState(teamA, teamB, controllers);
+  const created = createInteractiveState(teamA, teamB, controllers, { boardMode });
   const { state, pendingDecision } = advance(created, undefined, advanceOptionsFor(playerBId));
 
   const live = await prisma.liveBattle.create({
@@ -336,7 +354,13 @@ async function createLiveBattle(
   return buildSnapshot(fresh, state, pendingDecision);
 }
 
-export async function startLivePveBattle(userId: string, difficulty: NpcDifficulty): Promise<LiveBattleSnapshot> {
+/** Baut Spieler- und NPC-Team für einen PVE-Kampf (Auto-Kampf UND Puzzle-Modus
+ *  teilen sich dieselbe Aufstellungs-/Gegner-Logik) — zentral hier, damit
+ *  startLivePveBattle und startLivePvePuzzleBattle nicht auseinanderlaufen. */
+async function buildPveTeams(
+  userId: string,
+  difficulty: NpcDifficulty
+): Promise<{ teamA: BattleUnitDefinition[]; teamB: BattleUnitDefinition[] }> {
   const startedToday = await countNpcBattlesStartedToday(userId);
   if (startedToday >= NPC_BATTLE_DAILY_LIMIT) {
     throw new LiveBattleError(
@@ -379,7 +403,21 @@ export async function startLivePveBattle(userId: string, difficulty: NpcDifficul
     )
   );
 
+  return { teamA, teamB };
+}
+
+export async function startLivePveBattle(userId: string, difficulty: NpcDifficulty): Promise<LiveBattleSnapshot> {
+  const { teamA, teamB } = await buildPveTeams(userId, difficulty);
   return createLiveBattle(`PVE_${difficulty}`, userId, null, teamA, teamB, { A: "human", B: "ai" });
+}
+
+/** Wie startLivePveBattle, aber im Match-3-"Edelstein-Kampf"-Modus (siehe
+ *  board-match3.ts): der Spieler erzeugt Rage über ein Puzzle-Brett statt rein
+ *  automatisch. Teilt sich Aufstellung/Gegner-Logik und Tageslimit mit dem
+ *  bestehenden Auto-Kampf-PVE (siehe countNpcBattlesStartedToday). */
+export async function startLivePvePuzzleBattle(userId: string, difficulty: NpcDifficulty): Promise<LiveBattleSnapshot> {
+  const { teamA, teamB } = await buildPveTeams(userId, difficulty);
+  return createLiveBattle(puzzleModeFor(difficulty), userId, null, teamA, teamB, { A: "human", B: "ai" }, true);
 }
 
 /** Erzeugt den LiveBattle zu einer bereits angenommenen/gematchten PVP-Begegnung
@@ -439,7 +477,8 @@ export async function submitLiveBattleAction(
   liveBattleId: string,
   viewerId: string,
   actionType: ActionType,
-  targetId: string | undefined
+  targetId: string | undefined,
+  boardSwaps?: SwapMove[]
 ): Promise<LiveBattleSnapshot> {
   const live = await requireAccess(liveBattleId, viewerId);
   if (live.status === "finished") throw new LiveBattleError("Dieser Kampf ist bereits beendet.");
@@ -467,9 +506,35 @@ export async function submitLiveBattleAction(
 
   const { state: newState, pendingDecision } = advance(
     state,
-    { actionType, targetId: resolvedTargetId },
+    { actionType, targetId: resolvedTargetId, boardSwaps: state.boardMode ? boardSwaps : undefined },
     advanceOptionsFor(live.playerBId)
   );
+  const updated = await persistAndMaybeFinalize(live, newState);
+  return buildSnapshot(updated, newState, pendingDecision);
+}
+
+/** Löst ein Ultimate SOFORT aus, unabhängig von der Zugreihenfolge (siehe
+ *  applyUltimateInterrupt) — z.B. per Klick auf eine Heldenkarte mit vollem
+ *  Rage-Balken, auch während gerade eine ANDERE eigene Einheit am Zug ist. */
+export async function submitUltimateInterrupt(
+  liveBattleId: string,
+  viewerId: string,
+  casterId: string,
+  targetId: string | undefined
+): Promise<LiveBattleSnapshot> {
+  const live = await requireAccess(liveBattleId, viewerId);
+  if (live.status === "finished") throw new LiveBattleError("Dieser Kampf ist bereits beendet.");
+
+  const state = toState(live);
+  const caster = [...state.unitsA, ...state.unitsB].find((u) => u.instanceId === casterId);
+  if (!caster) throw new LiveBattleError("Einheit nicht gefunden.");
+
+  const controllingPlayerId = caster.teamId === "A" ? live.playerAId : live.playerBId;
+  if (controllingPlayerId !== viewerId) throw new LiveBattleError("Das ist nicht deine Einheit.");
+
+  const { state: newState, pendingDecision, applied } = applyUltimateInterrupt(state, casterId, targetId);
+  if (!applied) throw new LiveBattleError("Ultimate ist gerade nicht verfügbar (Rage zu niedrig?).");
+
   const updated = await persistAndMaybeFinalize(live, newState);
   return buildSnapshot(updated, newState, pendingDecision);
 }

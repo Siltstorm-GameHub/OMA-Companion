@@ -37,3 +37,29 @@ export const LEVEL_STAT_MULTIPLIER: Record<number, number> = {
   4: 1.42,
   5: 1.6,
 };
+
+// ============================================
+// Match-3-Brett ("Edelstein-Kampf" — Puzzle-PvE-Modus, siehe board-match3.ts)
+// ============================================
+// Auch diese Werte sind Platzhalter und müssen nach Playtests fein
+// ausbalanciert werden — insbesondere im Verhältnis zu RAGE_PER_ACTION/
+// RAGE_PER_ROUND_END, da ein Mensch pro Zug potenziell mehrere Matches macht.
+
+export const BOARD_ROWS = 6;
+export const BOARD_COLS = 7;
+
+/** Max. Anzahl Swaps, die eine Mini-Session (ein menschlicher Zug) zulässt. */
+export const BOARD_MOVE_BUDGET_PER_TURN = 8;
+
+export const RAGE_PER_MATCH3 = 12;
+export const RAGE_PER_MATCH4 = 20;
+export const RAGE_PER_MATCH5 = 32;
+/** Bonus pro zusätzlicher Kaskaden-Stufe (Match durch nachrutschende Steine ausgelöst). */
+export const RAGE_PER_CASCADE_BONUS = 5;
+/** Team-weiter Bonus (an alle Klassen), ausgelöst durch ein 5er-Match — repräsentiert
+ *  durch das wiederverwendete Community-Icon (siehe genre-icons.ts). */
+export const COMMUNITY_MATCH_TEAM_RAGE_BONUS = 15;
+
+/** Serverseitiger Hard-Cap pro Zug — Verteidigung gegen einen Replay-Bug/Exploit,
+ *  unabhängig vom tatsächlichen Ergebnis der Board-Auflösung (siehe live-battle.ts). */
+export const MAX_BOARD_RAGE_PER_TURN = 60;
