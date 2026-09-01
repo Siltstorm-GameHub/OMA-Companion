@@ -45,7 +45,7 @@ export const LEVEL_STAT_MULTIPLIER: Record<number, number> = {
 // ausbalanciert werden — insbesondere im Verhältnis zu RAGE_PER_ACTION/
 // RAGE_PER_ROUND_END, da ein Mensch pro Zug potenziell mehrere Matches macht.
 
-export const BOARD_ROWS = 6;
+export const BOARD_ROWS = 4;
 export const BOARD_COLS = 7;
 
 /** Max. Anzahl Swaps, die eine Mini-Session (ein menschlicher Zug) zulässt. */
