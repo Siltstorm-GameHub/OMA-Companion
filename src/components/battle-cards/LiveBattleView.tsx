@@ -303,8 +303,11 @@ function UnitCard({
       >
         {Math.max(0, unit.currentHp)}/{unit.maxHp}
       </p>
-      <div className="mt-0.5 h-1 rounded-full bg-black/40 overflow-hidden" style={{ boxShadow: "0 0 0 1px rgba(255,255,255,0.06)" }}>
-        <div className="h-full rounded-full transition-[width] duration-300 ease-out" style={{ width: `${Math.min(100, unit.rage)}%`, background: "#60a5fa" }} />
+      <div className="flex items-center gap-1 mt-0.5" title={`Rage: ${Math.round(unit.rage)}/100`}>
+        <Zap className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-sky-400 shrink-0" />
+        <div className="flex-1 h-1 rounded-full bg-black/40 overflow-hidden" style={{ boxShadow: "0 0 0 1px rgba(255,255,255,0.06)" }}>
+          <div className="h-full rounded-full transition-[width] duration-300 ease-out" style={{ width: `${Math.min(100, unit.rage)}%`, background: "#60a5fa" }} />
+        </div>
       </div>
     </button>
   );

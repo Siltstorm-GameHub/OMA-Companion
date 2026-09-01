@@ -96,8 +96,8 @@ export default function NpcPuzzleBattleLauncher() {
           );
         })}
       </div>
-      <p className="text-[10px] text-gray-600">
-        Max. {NPC_BATTLE_DAILY_LIMIT}x täglich (geteilt mit NPC-Kampf) · Matche Steine für Rage, Ultimate per Kartenklick.
+      <p className="text-[10px] text-gray-500">
+        <span className="text-gray-400 font-semibold">Match-3-Brett statt Zug-Auswahl</span> · Max. {NPC_BATTLE_DAILY_LIMIT}x täglich (geteilt mit NPC-Kampf)
       </p>
       {error && <p className="text-xs text-rose-400">{error}</p>}
     </div>

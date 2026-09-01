@@ -22,6 +22,7 @@
 // (CSS-Transition auf transform, siehe fallingCells) — statt nur stumpf das
 // Endergebnis einzublenden.
 
+import { HelpCircle, Users } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
   resolveBoardSession,
@@ -39,6 +40,24 @@ const TILE_ICON: Record<TileClassSymbol, { src: string; alt: string; color: stri
   DAMAGE_DEALER: { src: "/Shooter%20Icon.png", alt: "Damage Dealer", color: "#ef4444" },
   TANK: { src: "/Racing%20Icon.png", alt: "Tank", color: "#14b8a6" },
 };
+
+const BOARD_LEGEND_SEEN_KEY = "battle-cards-board-legend-seen";
+
+function hasSeenBoardLegend(): boolean {
+  try {
+    return window.localStorage.getItem(BOARD_LEGEND_SEEN_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function markBoardLegendSeen(): void {
+  try {
+    window.localStorage.setItem(BOARD_LEGEND_SEEN_KEY, "1");
+  } catch {
+    // localStorage kann in privaten Tabs fehlschlagen — kein Problem, nur Komfort.
+  }
+}
 
 const DESTROY_ANIM_MS = 220;
 const FALL_ANIM_MS = 260;
@@ -111,6 +130,16 @@ export default function BoardMatch3({
   const [destroyingCells, setDestroyingCells] = useState<Set<number>>(new Set());
   const [fallingCells, setFallingCells] = useState<Set<number>>(new Set());
   const [animating, setAnimating] = useState(false);
+  // Legende (Symbol→Klasse + Community-Bonus) ist beim allerersten Brett eines
+  // Users automatisch offen, danach per Klick auf das Info-Icon jederzeit
+  // wieder aufrufbar — reines Komfort-/Onboarding-Feature, kein Blocker.
+  const [legendOpen, setLegendOpen] = useState(() => !hasSeenBoardLegend());
+  // Nur das ERSTE Brett eines Users poppt automatisch auf — merken, damit
+  // spätere Bretter (auch nach einem Reload) nicht jedes Mal erneut aufklappen.
+  // Weiterhin jederzeit per Info-Icon manuell erneut aufrufbar.
+  useEffect(() => {
+    markBoardLegendSeen();
+  }, []);
 
   // Fortschritt aus einer vorherigen Session (vor einem Reload) einmalig gegen
   // das initiale Grid nachspielen, um den sichtbaren Board-Zustand wiederherzustellen.
@@ -200,12 +229,50 @@ export default function BoardMatch3({
     }
   }
 
+  function toggleLegend() {
+    setLegendOpen((prev) => {
+      const next = !prev;
+      if (!next) markBoardLegendSeen();
+      return next;
+    });
+  }
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between text-[10px] text-gray-400 uppercase tracking-widest">
-        <span>Edelstein-Brett</span>
+        <span className="flex items-center gap-1">
+          Edelstein-Brett
+          <button
+            type="button"
+            onClick={toggleLegend}
+            className="text-gray-500 hover:text-gray-300 transition-colors"
+            aria-label={legendOpen ? "Erklärung ausblenden" : "Wie funktioniert das Brett?"}
+          >
+            <HelpCircle className="w-3 h-3" />
+          </button>
+        </span>
         <span className="tabular-nums">{Math.max(0, remaining)} Züge übrig</span>
       </div>
+      {legendOpen && (
+        <div className="rounded-lg bg-black/25 px-2.5 py-2 space-y-1.5 text-[10px] text-gray-400 leading-snug">
+          {(Object.keys(TILE_ICON) as TileClassSymbol[]).map((symbol) => {
+            const icon = TILE_ICON[symbol];
+            return (
+              <div key={symbol} className="flex items-center gap-1.5">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={icon.src} alt="" className="w-3.5 h-3.5 object-contain shrink-0" />
+                <span>
+                  3+ verbinden = Rage für alle <span style={{ color: icon.color }}>{icon.alt}</span>-Helden
+                </span>
+              </div>
+            );
+          })}
+          <div className="flex items-center gap-1.5 pt-0.5 border-t border-white/5">
+            <Users className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+            <span>5er-Match = Bonus-Rage fürs ganze Team. Volle Rage? Heldenkarte antippen für Ultimate — jederzeit.</span>
+          </div>
+        </div>
+      )}
       <div
         className="grid gap-1 mx-auto"
         style={{ gridTemplateColumns: `repeat(${BOARD_COLS}, minmax(0, 1fr))`, maxWidth: 320 }}

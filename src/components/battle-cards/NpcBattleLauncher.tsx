@@ -97,8 +97,8 @@ export default function NpcBattleLauncher() {
           );
         })}
       </div>
-      <p className="text-[10px] text-gray-600">
-        Max. {NPC_BATTLE_DAILY_LIMIT}x täglich · Münzen bei Sieg · Du steuerst jeden Zug selbst.
+      <p className="text-[10px] text-gray-500">
+        <span className="text-gray-400 font-semibold">Normale Zug-Auswahl</span> · Max. {NPC_BATTLE_DAILY_LIMIT}x täglich (geteilt mit Edelstein-Kampf) · Münzen bei Sieg
       </p>
       {error && <p className="text-xs text-rose-400">{error}</p>}
     </div>
