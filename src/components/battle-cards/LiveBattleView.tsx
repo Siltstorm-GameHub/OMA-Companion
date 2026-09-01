@@ -38,18 +38,27 @@ import {
 } from "@/lib/battle-cards/sound";
 import ErrorNotice from "./ErrorNotice";
 import { BRAND_LOGO } from "@/lib/brand";
+import { CAMPAIGN_CHAPTER_BACKGROUND } from "@/lib/battle-cards/campaign-levels";
 
-const ARENA_BACKGROUND_STYLE: CSSProperties = {
-  backgroundColor: "#12151a",
-  backgroundImage: [
-    "radial-gradient(ellipse 70% 45% at 50% 8%, rgba(239,68,68,0.18), transparent 70%)",
-    "radial-gradient(ellipse 70% 45% at 50% 92%, rgba(20,184,166,0.18), transparent 70%)",
-    "linear-gradient(180deg, rgba(13,15,19,0.55) 0%, rgba(13,15,19,0.25) 35%, rgba(13,15,19,0.25) 65%, rgba(13,15,19,0.55) 100%)",
-    "url(/battle-cards/arena-bg.jpg)",
-  ].join(", "),
-  backgroundSize: "auto, auto, auto, cover",
-  backgroundPosition: "center",
-};
+/** Kampf-Hintergrund: die klassische Arena (arena-bg.jpg) für NPC-Kampf,
+ *  Edelstein-Kampf und PvP — Kampagnen-Kämpfe (mode "CAMPAIGN_...") zeigen
+ *  stattdessen das zum aktuellen Kapitel passende Hintergrundbild (aktuell
+ *  nur Kapitel 1, siehe CAMPAIGN_CHAPTER_BACKGROUND), statt der generischen
+ *  Arena — das ist der eigene Look der Kampagne. */
+function getArenaBackgroundStyle(mode: string | undefined): CSSProperties {
+  const backgroundUrl = mode?.startsWith("CAMPAIGN_") ? CAMPAIGN_CHAPTER_BACKGROUND : "/battle-cards/arena-bg.jpg";
+  return {
+    backgroundColor: "#12151a",
+    backgroundImage: [
+      "radial-gradient(ellipse 70% 45% at 50% 8%, rgba(239,68,68,0.18), transparent 70%)",
+      "radial-gradient(ellipse 70% 45% at 50% 92%, rgba(20,184,166,0.18), transparent 70%)",
+      "linear-gradient(180deg, rgba(13,15,19,0.55) 0%, rgba(13,15,19,0.25) 35%, rgba(13,15,19,0.25) 65%, rgba(13,15,19,0.55) 100%)",
+      `url(${backgroundUrl})`,
+    ].join(", "),
+    backgroundSize: "auto, auto, auto, cover",
+    backgroundPosition: "center",
+  };
+}
 
 interface LiveUnit {
   instanceId: string;
@@ -545,7 +554,7 @@ export default function LiveBattleView({
   if (!mounted) return null;
 
   return createPortal(
-    <div className="fixed inset-0 flex flex-col overflow-hidden" style={{ ...ARENA_BACKGROUND_STYLE, zIndex: 9999 }}>
+    <div className="fixed inset-0 flex flex-col overflow-hidden" style={{ ...getArenaBackgroundStyle(snapshot?.mode), zIndex: 9999 }}>
       {/* Kopfzeile */}
       <div className="flex items-center justify-between gap-2 px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2 shrink-0 relative z-10">
         <button
