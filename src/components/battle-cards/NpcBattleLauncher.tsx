@@ -69,10 +69,13 @@ export default function NpcBattleLauncher() {
   }
 
   return (
-    <div className="glass rounded-xl p-3 space-y-2.5">
-      <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
-        <Bot className="w-3.5 h-3.5" /> Kampf gegen NPC
-      </p>
+    <div className="glass rounded-2xl p-4 space-y-2.5">
+      <div className="flex items-center gap-2">
+        <div className="w-9 h-9 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center shrink-0">
+          <Bot className="w-4 h-4 text-teal-400" />
+        </div>
+        <p className="text-sm font-semibold text-white">Kampf gegen NPC</p>
+      </div>
       <div className="grid grid-cols-3 gap-2">
         {DIFFICULTY_ORDER.map((difficulty) => {
           const config = DIFFICULTY_CONFIG[difficulty];

@@ -40,9 +40,12 @@ export default function BattleLauncher() {
       <button
         type="button"
         onClick={() => setOpen(false)}
-        className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-300 transition-colors"
+        className="w-full flex items-center gap-2.5 rounded-xl px-3 py-2.5 transition-colors hover:bg-white/[0.04]"
+        style={{ background: "rgba(251,113,133,0.08)", border: "1px solid rgba(251,113,133,0.18)" }}
       >
-        <ChevronUp className="w-3.5 h-3.5" /> Einklappen
+        <Swords className="w-4 h-4 text-rose-400 shrink-0" />
+        <span className="flex-1 text-left text-sm font-semibold text-white">Kampf starten</span>
+        <ChevronUp className="w-4 h-4 text-rose-400 shrink-0" />
       </button>
       <section className="space-y-2">
         <p className="flex items-center gap-1.5 text-[10px] font-semibold text-gray-500 uppercase tracking-widest">
