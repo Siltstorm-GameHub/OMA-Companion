@@ -36,16 +36,19 @@ export default function BattleLauncher() {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <button
         type="button"
         onClick={() => setOpen(false)}
-        className="w-full flex items-center gap-2.5 rounded-xl px-3 py-2.5 transition-colors hover:bg-white/[0.04]"
-        style={{ background: "rgba(251,113,133,0.08)", border: "1px solid rgba(251,113,133,0.18)" }}
+        className="w-full py-2.5 rounded-xl text-white active:translate-y-0.5 transition-transform"
+        style={{
+          background: "linear-gradient(180deg, #fb7185 0%, #e11d48 55%, #9f1239 100%)",
+          boxShadow: "inset 0 1.5px 0 rgba(255,255,255,0.25), inset 0 -2px 0 rgba(0,0,0,0.2), 0 3px 0 #7f1130, 0 8px 16px rgba(225,29,72,0.4)",
+        }}
       >
-        <Swords className="w-4 h-4 text-rose-400 shrink-0" />
-        <span className="flex-1 text-left text-sm font-semibold text-white">Kampf starten</span>
-        <ChevronUp className="w-4 h-4 text-rose-400 shrink-0" />
+        <span className="flex items-center justify-center gap-2 text-sm font-black uppercase tracking-wide">
+          <Swords className="w-4 h-4" /> Kampf starten <ChevronUp className="w-4 h-4" />
+        </span>
       </button>
       <section className="space-y-2">
         <p className="flex items-center gap-1.5 text-[10px] font-semibold text-gray-500 uppercase tracking-widest">

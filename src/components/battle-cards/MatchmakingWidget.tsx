@@ -81,7 +81,13 @@ export default function MatchmakingWidget() {
 
   if (waiting) {
     return (
-      <div className="glass rounded-2xl p-4 flex items-center gap-3">
+      <div
+        className="rounded-2xl p-4 flex items-center gap-3"
+        style={{
+          background: "linear-gradient(180deg, #1c1710 0%, #14120c 100%)",
+          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), inset 0 0 0 1.5px rgba(251,191,36,0.35), 0 3px 0 rgba(120,53,15,0.6)",
+        }}
+      >
         <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
           <Loader2 className="w-4 h-4 text-amber-400 animate-spin" />
         </div>
@@ -103,7 +109,11 @@ export default function MatchmakingWidget() {
     <button
       onClick={join}
       disabled={busy}
-      className="w-full glass rounded-2xl p-4 flex items-center gap-3 text-left hover:bg-white/[0.04] transition-colors disabled:opacity-50"
+      className="w-full rounded-2xl p-4 flex items-center gap-3 text-left active:translate-y-0.5 transition-transform disabled:opacity-50"
+      style={{
+        background: "linear-gradient(180deg, #23191c 0%, #181215 100%)",
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), inset 0 0 0 1.5px rgba(251,113,133,0.35), 0 3px 0 #7f1130, 0 8px 16px rgba(225,29,72,0.2)",
+      }}
     >
       <div className="w-9 h-9 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center shrink-0">
         <Swords className="w-4 h-4 text-rose-400" />

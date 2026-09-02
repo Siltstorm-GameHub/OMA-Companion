@@ -78,7 +78,13 @@ export default function ChallengeUserPicker() {
   }
 
   return (
-    <div className="glass rounded-2xl p-4 space-y-3">
+    <div
+      className="rounded-2xl p-4 space-y-3"
+      style={{
+        background: "linear-gradient(180deg, #1c1826 0%, #14121b 100%)",
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), inset 0 0 0 1.5px rgba(167,139,250,0.35), 0 3px 0 #4c1d95",
+      }}
+    >
       <div className="flex items-center gap-2">
         <div className="w-9 h-9 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
           <Swords className="w-4 h-4 text-violet-400" />
@@ -99,7 +105,11 @@ export default function ChallengeUserPicker() {
           <button
             onClick={challenge}
             disabled={submitting}
-            className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-sm font-semibold transition-colors"
+            className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-white text-sm font-black uppercase tracking-wide active:translate-y-0.5 transition-transform disabled:opacity-40"
+            style={{
+              background: "linear-gradient(180deg, #c4b5fd 0%, #7c3aed 55%, #4c1d95 100%)",
+              boxShadow: "inset 0 1.5px 0 rgba(255,255,255,0.25), inset 0 -2px 0 rgba(0,0,0,0.2), 0 3px 0 #3b0764",
+            }}
           >
             <Swords className="w-3.5 h-3.5" /> {submitting ? "Sendet…" : "Herausfordern"}
           </button>

@@ -154,34 +154,16 @@ export default async function BattleCardsPage() {
 
   const kampfPanel = (
     <div className="space-y-6">
-      <div
-        className="relative overflow-hidden rounded-2xl p-4"
-        style={{
-          background:
-            "radial-gradient(ellipse 120% 100% at 0% 0%, rgba(251,113,133,0.16), transparent 60%), linear-gradient(135deg, #1e1418 0%, #14171f 100%)",
-          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), 0 4px 16px rgba(0,0,0,0.35)",
-        }}
-      >
-        <div className="relative flex items-start justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl bg-rose-500/15 border border-rose-500/25 flex items-center justify-center shrink-0">
-              <Swords className="w-5 h-5 text-rose-400" />
-            </div>
-            <div>
-              <h1 className="font-battle text-xl text-white uppercase tracking-wide">Kampf</h1>
-              <p className="text-xs text-gray-400 mt-0.5">Packs öffnen, Startaufstellung pflegen, loslegen.</p>
-            </div>
-          </div>
-          {ownedUserCards.some((uc) => uc.card.rarity === "COMMUNITY") && (
-            <Link
-              href="/battle-cards/my-card"
-              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-md bg-white/[0.06] text-gray-300 hover:bg-white/[0.1] transition-colors shrink-0"
-            >
-              <IdCard className="w-3.5 h-3.5" /> Meine Community-Karte
-            </Link>
-          )}
+      {ownedUserCards.some((uc) => uc.card.rarity === "COMMUNITY") && (
+        <div className="flex justify-end">
+          <Link
+            href="/battle-cards/my-card"
+            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-md bg-white/[0.06] text-gray-300 hover:bg-white/[0.1] transition-colors shrink-0"
+          >
+            <IdCard className="w-3.5 h-3.5" /> Meine Community-Karte
+          </Link>
         </div>
-      </div>
+      )}
 
       <TutorialProgressBanner step={tutorialStep} />
 
