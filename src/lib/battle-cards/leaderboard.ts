@@ -23,20 +23,31 @@ const MIN_MATCHES_FOR_RANKING = 5;
  *  ein (respondedAt im Zeitfenster) — ohne Angabe zählt die gesamte Historie (Fallback,
  *  solange das Saison-System noch nicht aktiv ist). `mode` filtert optional auf einen
  *  einzelnen Spielmodus ("DUELS" | "GEMS") — ohne Angabe zählen beide Modi zusammen (ein
- *  gemeinsamer Saison-Sieger über OMA Duels + OMA Gems PvP). */
+ *  gemeinsamer Saison-Sieger über OMA Duels + OMA Gems PvP).
+ *
+ *  Zeigt JEDEN User mit Start-Pack (hasStarterDeck, siehe starter-pick.ts) an — auch ohne
+ *  einen einzigen Kampf (dann 0/0/0, landet unten bei den "nicht eingestuften") — statt nur
+ *  User, die bereits gekämpft haben. */
 export async function getBattleCardsLeaderboard(
   window?: { start: Date; end: Date },
   mode?: "DUELS" | "GEMS"
 ): Promise<LeaderboardRow[]> {
-  const resolved = await prisma.battleChallenge.findMany({
-    where: {
-      status: "resolved",
-      countsForRanking: true,
-      ...(window ? { respondedAt: { gte: window.start, lt: window.end } } : {}),
-      ...(mode ? { mode } : {}),
-    },
-    select: { challengerId: true, opponentId: true, winnerId: true },
-  });
+  const [resolved, starterDeckUserIds] = await Promise.all([
+    prisma.battleChallenge.findMany({
+      where: {
+        status: "resolved",
+        countsForRanking: true,
+        ...(window ? { respondedAt: { gte: window.start, lt: window.end } } : {}),
+        ...(mode ? { mode } : {}),
+      },
+      select: { challengerId: true, opponentId: true, winnerId: true },
+    }),
+    prisma.userCard.findMany({
+      where: { card: { rarity: "STANDARD" } },
+      distinct: ["userId"],
+      select: { userId: true },
+    }),
+  ]);
 
   const stats = new Map<string, { wins: number; losses: number; draws: number }>();
   function bump(userId: string, key: "wins" | "losses" | "draws") {
@@ -55,7 +66,7 @@ export async function getBattleCardsLeaderboard(
     bump(loserId, "losses");
   }
 
-  const userIds = [...stats.keys()];
+  const userIds = [...new Set([...starterDeckUserIds.map((c) => c.userId), ...stats.keys()])];
   const users = userIds.length
     ? await prisma.user.findMany({
         where: { id: { in: userIds } },
@@ -66,7 +77,7 @@ export async function getBattleCardsLeaderboard(
 
   return userIds
     .map((userId) => {
-      const s = stats.get(userId)!;
+      const s = stats.get(userId) ?? { wins: 0, losses: 0, draws: 0 };
       const total = s.wins + s.losses + s.draws;
       const u = userById.get(userId);
       return {
@@ -79,11 +90,10 @@ export async function getBattleCardsLeaderboard(
         winRate: total > 0 ? s.wins / total : 0,
       };
     })
-    .filter((r) => r.total > 0)
     .sort((a, b) => {
       const aRanked = a.total >= MIN_MATCHES_FOR_RANKING;
       const bRanked = b.total >= MIN_MATCHES_FOR_RANKING;
       if (aRanked !== bRanked) return aRanked ? -1 : 1;
-      return b.winRate - a.winRate || b.wins - a.wins || b.total - a.total;
+      return b.winRate - a.winRate || b.wins - a.wins || b.total - a.total || a.name.localeCompare(b.name);
     });
 }
