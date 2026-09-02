@@ -770,6 +770,16 @@ function LiveBattleBody({
     setBoardSwaps(null);
   }, [awaitingUnitId]);
 
+  // Letztes bekanntes Brett merken (Match-3-Modus) — bleibt sichtbar (deaktiviert),
+  // solange der Gegner am Zug ist, statt beim Zugwechsel durch einen reinen
+  // Text-Platzhalter ersetzt zu werden.
+  const [lastBoard, setLastBoard] = useState<{ grid: BoardGrid; moveBudget: number } | null>(null);
+  useEffect(() => {
+    if (snapshot.awaiting?.board) {
+      setLastBoard({ grid: snapshot.awaiting.board.grid, moveBudget: snapshot.awaiting.board.moveBudget });
+    }
+  }, [snapshot.awaiting?.board]);
+
   // Gems-PvP-Sieges-Kiste: einmal eingesammelt, bleibt die Öffnen-Animation für
   // den Rest dieser Kampf-Ansicht ausgeblendet (Snapshot wird weiter gepollt).
   const [chestDismissed, setChestDismissed] = useState(false);
@@ -1020,6 +1030,21 @@ function LiveBattleBody({
                 </div>
               </div>
             )}
+          </div>
+        ) : snapshot.boardMode && lastBoard ? (
+          // Brett bleibt sichtbar (nur deaktiviert), solange der Gegner am Zug ist —
+          // verschwindet nicht mehr hinter einem reinen Text-Platzhalter.
+          <div className="glass rounded-xl p-2.5 h-[212px] overflow-y-auto flex flex-col gap-1.5">
+            <BoardMatch3
+              grid={lastBoard.grid}
+              moveBudget={lastBoard.moveBudget}
+              disabled
+              initialSwaps={[]}
+              onConfirm={() => {}}
+            />
+            <p className="text-[11px] text-gray-500 text-center shrink-0">
+              {!snapshot.awaiting ? "Kampf läuft automatisch weiter…" : "Gegner ist am Zug…"}
+            </p>
           </div>
         ) : (
           <p className="text-xs text-gray-500 text-center py-1">
