@@ -264,7 +264,12 @@ async function buildSnapshot(
     status: state.winner ? "finished" : "active",
     round: state.round,
     units: allUnits.map(toUnitSnapshot),
-    upcoming: previewUpcomingTurns(state, 5),
+    // Bei OMA Gems filtert der Client "upcoming" auf reine Gegner-Züge (siehe
+    // LiveBattleView.tsx: "Nächste Gegner-Angriffe" statt "Als nächstes dran",
+    // eigene Zug-Slots sind dort bedeutungslos, da alle eigenen Helden ohnehin
+    // gemeinsam per Match angreifen) — großzügigerer Vorschau-Puffer, damit nach
+    // dem Herausfiltern der eigenen Slots noch genug Gegner-Einträge übrig bleiben.
+    upcoming: previewUpcomingTurns(state, state.boardMode ? 12 : 5),
     recentLog: state.log.slice(-RECENT_LOG_TAIL),
     logLength: state.log.length,
     awaiting,

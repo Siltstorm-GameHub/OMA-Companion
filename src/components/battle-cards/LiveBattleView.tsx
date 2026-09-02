@@ -9,8 +9,11 @@
 // sobald seine Einheit an der Reihe ist, die Aktion (Normalangriff/Aktiv/
 // Ultimate) und — falls nötig — das Ziel wählen (Glow: rot Gegner, grün
 // Verbündete). "Als nächstes dran" zeigt die kommenden 5 Einheiten mit
-// Porträt + Rahmenfarbe (blau eigen, rot gegnerisch). Auto-Kampf überlässt
-// die eigenen Entscheidungen der KI.
+// Porträt + Rahmenfarbe (blau eigen, rot gegnerisch) — bei OMA Gems
+// (boardMode) stattdessen "Nächste Gegner-Angriffe" (nur Gegner-Slots, siehe
+// upcomingDisplay): eigene Zug-Slots sind dort bedeutungslos, da alle
+// eigenen Helden ohnehin gemeinsam per Match angreifen statt einzeln der
+// Reihe nach. Auto-Kampf überlässt die eigenen Entscheidungen der KI.
 //
 // Reine Präsentations-/Steuerungskomponente — die eigentliche Kampflogik
 // läuft ausschließlich serverseitig (lib/battle-cards/live-battle.ts).
@@ -835,6 +838,12 @@ function LiveBattleBody({
   const unitsByTeam = (team: TeamId) => snapshot.units.filter((u) => u.teamId === team);
   const unitById = (id: string) => snapshot.units.find((u) => u.instanceId === id);
   const nameOf = (id: string) => unitById(id)?.name ?? "?";
+  // Bei OMA Gems (boardMode) sind eigene Zug-Slots in der Vorschau bedeutungslos
+  // (siehe Kommentar am Render unten) — nur die Gegner-Slots zeigen, wann als
+  // Nächstes ein Angriff auf einen selbst zukommt.
+  const upcomingDisplay = snapshot.boardMode
+    ? snapshot.upcoming.filter((id) => unitById(id)?.teamId === opponentTeam).slice(0, 5)
+    : snapshot.upcoming;
 
   const candidates = selectedAction ? (snapshot.awaiting?.candidateTargetsByAction[selectedAction.actionType] ?? []) : [];
   function glowFor(unit: LiveUnit): "enemy" | "ally" | null {
@@ -908,11 +917,19 @@ function LiveBattleBody({
       {snapshot.status === "finished" && snapshot.chestPrize && !chestDismissed && (
         <VictoryChestReveal prize={snapshot.chestPrize} onClose={() => setChestDismissed(true)} />
       )}
-      {/* Auto-Kampf + Als nächstes dran — oberhalb der Helden */}
+      {/* Auto-Kampf + Als nächstes dran — oberhalb der Helden. Bei OMA Gems
+          (boardMode) ist die klassische Zugreihenfolge für den Spieler
+          bedeutungslos (alle eigenen Helden greifen ohnehin gemeinsam per
+          Match an, nie einzeln der Reihe nach) — hier zählt stattdessen, WANN
+          als Nächstes ein Gegner angreift, daher gefiltert auf reine
+          Gegner-Slots und umbenannt (siehe upcoming-Puffergröße in
+          live-battle.ts). */}
       <div className="shrink-0 pt-1 space-y-1.5">
         <div className="flex items-center justify-between gap-2">
-          {snapshot.upcoming.length > 0 ? (
-            <span className="text-[10px] text-gray-500 uppercase tracking-widest">Als nächstes dran</span>
+          {upcomingDisplay.length > 0 ? (
+            <span className="text-[10px] text-gray-500 uppercase tracking-widest">
+              {snapshot.boardMode ? "Nächste Gegner-Angriffe" : "Als nächstes dran"}
+            </span>
           ) : (
             <span />
           )}
@@ -929,11 +946,11 @@ function LiveBattleBody({
             </button>
           )}
         </div>
-        {snapshot.upcoming.length > 0 && (
+        {upcomingDisplay.length > 0 && (
           // py-1.5 gibt dem Rahmen (boxShadow, ragt ~3px über den Kreis hinaus) Platz —
           // sonst schneidet overflow-x-auto (erzwingt overflow-y: auto) ihn oben/unten ab.
           <div className="flex items-center gap-2 overflow-x-auto py-1.5">
-            {snapshot.upcoming.map((id, i) => {
+            {upcomingDisplay.map((id, i) => {
               const u = unitById(id);
               if (!u) return null;
               const isMine = myTeam !== null && u.teamId === myTeam;
@@ -984,7 +1001,11 @@ function LiveBattleBody({
             <UnitCard
               key={u.instanceId}
               unit={u}
-              isActing={snapshot.awaiting?.unitId === u.instanceId}
+              // Bei OMA Gems (boardMode) greifen ohnehin immer alle eigenen
+              // Helden gemeinsam per Match an — "Am Zug" für eine einzelne
+              // Einheit wäre hier irreführend, da es keine echte Einzel-Zug-
+              // Aktion mehr gibt (siehe applyBoardRage in interactive.ts).
+              isActing={!snapshot.boardMode && snapshot.awaiting?.unitId === u.instanceId}
               glow={glowFor(u)}
               ultimateReady={ultimateReadyFor(u)}
               effects={effectsFor(u)}
