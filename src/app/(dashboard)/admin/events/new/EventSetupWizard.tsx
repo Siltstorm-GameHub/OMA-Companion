@@ -188,6 +188,12 @@ export default function EventSetupWizard({
   const [eventRegistrationLocked, setEventRegistrationLocked] = useState(false);
   const [eventSquadId, setEventSquadId] = useState(initialSquadId ?? (forceSquad ? (squads[0]?.id ?? "") : ""));
 
+  // ── OMA-Gems-Turnier (nur bei game === "OMA Gems") ────────────────────────────
+  const [gemsEndAt, setGemsEndAt] = useState("");
+  const [gemsDifficulty, setGemsDifficulty] = useState<"EASY" | "MEDIUM" | "HARD">("MEDIUM");
+  const [gemsMaxAttempts, setGemsMaxAttempts] = useState("3");
+  const isGemsTournament = game === "OMA Gems";
+
   // ── Series mode state ─────────────────────────────────────────────────────────
   const [seriesName, setSeriesName]     = useState(seasonPrefill?.name ?? "");
   const [seriesDesc, setSeriesDesc]     = useState(seasonPrefill?.description ?? "");
@@ -364,6 +370,12 @@ export default function EventSetupWizard({
     if (eventType === "tournament") {
       body.format = format;
       if (hasStat) body.statFields = JSON.stringify(statFields);
+    }
+
+    if (isGemsTournament && gemsEndAt) {
+      body.gemsEndAt = new Date(gemsEndAt).toISOString();
+      body.gemsDifficulty = gemsDifficulty;
+      body.gemsMaxAttempts = Number(gemsMaxAttempts) || 3;
     }
 
     const res = await fetch("/api/events", {
@@ -602,9 +614,41 @@ export default function EventSetupWizard({
 
         <div>
           <label className={labelCls}>Spiel</label>
-          <GameNameInput value={game} onChange={setGame}
+          <GameNameInput value={game} onChange={(v) => { setGame(v); if (v === "OMA Gems") setEventType("tournament"); }}
             placeholder="z.B. Rocket League, R6 Siege …" className={inputCls} style={inputStyle} />
         </div>
+
+        {isGemsTournament && (
+          <div className="rounded-xl p-3 space-y-3" style={{ background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.2)" }}>
+            <p className="text-xs font-semibold text-violet-300">OMA Gems Turnier-Einstellungen</p>
+            <p className="text-[11px] text-gray-500 leading-relaxed">
+              Alle User treten im Zeitraum zwischen Start und Ende gegen dasselbe feste Gegner-Team an — ihr bester
+              Score zählt fürs Ranking. Auf der Battle-Cards-Seite erscheint dafür automatisch ein Banner mit
+              Countdown. Platzierungsbelohnungen werden weiter unten im Schritt Belohnungen festgelegt.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className={labelCls}>Turnier-Ende</label>
+                <input type="datetime-local" value={gemsEndAt} onChange={e => setGemsEndAt(e.target.value)}
+                  className={inputCls} style={inputStyle} />
+              </div>
+              <div>
+                <label className={labelCls}>Schwierigkeit</label>
+                <select value={gemsDifficulty} onChange={e => setGemsDifficulty(e.target.value as "EASY" | "MEDIUM" | "HARD")}
+                  className={inputCls} style={inputStyle}>
+                  <option value="EASY">Einfach</option>
+                  <option value="MEDIUM">Mittel</option>
+                  <option value="HARD">Schwer</option>
+                </select>
+              </div>
+              <div>
+                <label className={labelCls}>Max. Versuche pro User</label>
+                <input type="number" min="1" value={gemsMaxAttempts} onChange={e => setGemsMaxAttempts(e.target.value)}
+                  className={inputCls} style={inputStyle} />
+              </div>
+            </div>
+          </div>
+        )}
 
         {game && (
           <div>

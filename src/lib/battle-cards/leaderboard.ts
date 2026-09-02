@@ -14,12 +14,18 @@ export interface LeaderboardRow {
 
 /** Aggregiert alle abgeschlossenen BattleChallenges zu einer nach Siegen sortierten Rangliste.
  *  `window` schränkt auf eine Ranglisten-Saison ein (respondedAt im Zeitfenster) — ohne
- *  Angabe zählt die gesamte Historie (Fallback, solange das Saison-System noch nicht aktiv ist). */
-export async function getBattleCardsLeaderboard(window?: { start: Date; end: Date }): Promise<LeaderboardRow[]> {
+ *  Angabe zählt die gesamte Historie (Fallback, solange das Saison-System noch nicht aktiv ist).
+ *  `mode` filtert optional auf einen einzelnen Spielmodus ("DUELS" | "GEMS") — ohne Angabe
+ *  zählen beide Modi zusammen (ein gemeinsamer Saison-Sieger über OMA Duels + OMA Gems PvP). */
+export async function getBattleCardsLeaderboard(
+  window?: { start: Date; end: Date },
+  mode?: "DUELS" | "GEMS"
+): Promise<LeaderboardRow[]> {
   const resolved = await prisma.battleChallenge.findMany({
     where: {
       status: "resolved",
       ...(window ? { respondedAt: { gte: window.start, lt: window.end } } : {}),
+      ...(mode ? { mode } : {}),
     },
     select: { challengerId: true, opponentId: true, winnerId: true },
   });

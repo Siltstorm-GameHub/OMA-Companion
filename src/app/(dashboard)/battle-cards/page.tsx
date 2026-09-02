@@ -33,7 +33,9 @@ import BattleCardsLogo from "@/components/battle-cards/BattleCardsLogo";
 import ChallengesList from "@/components/battle-cards/ChallengesList";
 import BattleLauncher from "@/components/battle-cards/BattleLauncher";
 import BattleHistoryFeed from "@/components/battle-cards/BattleHistoryFeed";
-import LeaderboardList from "@/components/battle-cards/LeaderboardList";
+import LeaderboardTabs from "@/components/battle-cards/LeaderboardTabs";
+import GemsTournamentBanner from "@/components/battle-cards/GemsTournamentBanner";
+import GemsChallengeUserPicker from "@/components/battle-cards/GemsChallengeUserPicker";
 import LineupStrip from "@/components/battle-cards/LineupStrip";
 import CampaignMap from "@/components/battle-cards/CampaignMap";
 import TutorialProgressBanner from "@/components/battle-cards/TutorialProgressBanner";
@@ -123,7 +125,10 @@ export default async function BattleCardsPage() {
     : null;
 
   // ── Community-Reiter: eigene offene/laufende Herausforderungen, Kampfhistorie aller User, Rangliste ──
-  const [incoming, outgoing, live, allResolved, leaderboardRows] = await Promise.all([
+  // Drei Ranglisten-Varianten (Gesamt + je Modus einzeln) — OMA Duels und OMA Gems PvP zählen
+  // serverseitig bereits gemeinsam in "Gesamt" (siehe leaderboard.ts), hier zusätzlich einzeln
+  // abrufbar für den Umschalter in LeaderboardTabs.
+  const [incoming, outgoing, live, allResolved, leaderboardRows, duelsLeaderboardRows, gemsLeaderboardRows] = await Promise.all([
     prisma.battleChallenge.findMany({
       where: { opponentId: userId, status: "pending" },
       include: { challenger: { select: userSelect }, opponent: { select: userSelect } },
@@ -146,6 +151,8 @@ export default async function BattleCardsPage() {
       take: 30,
     }),
     getBattleCardsLeaderboard(currentSeasonWindow ?? undefined),
+    getBattleCardsLeaderboard(currentSeasonWindow ?? undefined, "DUELS"),
+    getBattleCardsLeaderboard(currentSeasonWindow ?? undefined, "GEMS"),
   ]);
 
   function serialize<T extends { createdAt: Date }>(rows: T[]) {
@@ -184,6 +191,8 @@ export default async function BattleCardsPage() {
       <div>
         <h1 className="text-lg font-black text-white">Kampagne</h1>
       </div>
+      <GemsTournamentBanner />
+      <GemsChallengeUserPicker />
       <CampaignMap />
     </div>
   );
@@ -251,7 +260,7 @@ export default async function BattleCardsPage() {
             </p>
           )}
         </div>
-        <LeaderboardList rows={leaderboardRows} viewerId={userId} />
+        <LeaderboardTabs overall={leaderboardRows} duels={duelsLeaderboardRows} gems={gemsLeaderboardRows} viewerId={userId} />
       </div>
     </div>
   );

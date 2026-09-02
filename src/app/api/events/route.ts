@@ -5,6 +5,10 @@ import { getSessionUser, hasMinRole } from "@/lib/roles";
 import { createDiscordScheduledEvent, announceNewEvent } from "@/lib/discord-events";
 import { dispatchEventNotification } from "@/lib/notify-dispatch";
 import { createPollsForEvent } from "@/lib/event-polls";
+import { generateGemsTournamentBossTeam } from "@/lib/battle-cards/gems-tournament";
+import type { NpcDifficulty } from "@/lib/battle-cards/npc-battle-types";
+
+const GEMS_DIFFICULTIES: NpcDifficulty[] = ["EASY", "MEDIUM", "HARD"];
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -35,6 +39,7 @@ export async function POST(req: NextRequest) {
     title, description, game, genre, category, startAt, maxPlayers, type, seriesId,
     discordChannelId, spectatorMode, spectatorRewardJson, pollsConfigJson,
     placementRewardsJson, hidden, registrationLocked, squadId,
+    gemsEndAt, gemsDifficulty, gemsMaxAttempts,
   } = body;
 
   // Moderator/Admin dürfen immer Events erstellen. Reine Squad-Captains (globale Rolle "user") nur,
@@ -133,6 +138,23 @@ export async function POST(req: NextRequest) {
   });
 
   await createPollsForEvent(event.id, event.startAt, pollsConfigJson);
+
+  // OMA-Gems-Turnier: automatisch angehängt, sobald game === "OMA Gems" gewählt wurde und ein
+  // Turnierende mitgeschickt wurde (siehe EventSetupWizard.tsx). Das Boss-Team wird EINMALIG
+  // erzeugt und persistiert, damit alle Teilnehmer exakt dasselbe Gegner-Team bekommen.
+  if (game === "OMA Gems" && gemsEndAt) {
+    const difficulty: NpcDifficulty = GEMS_DIFFICULTIES.includes(gemsDifficulty) ? gemsDifficulty : "MEDIUM";
+    const maxAttemptsPerUser = Number(gemsMaxAttempts) > 0 ? Number(gemsMaxAttempts) : 3;
+    await prisma.gemsTournament.create({
+      data: {
+        eventId: event.id,
+        endAt: new Date(gemsEndAt),
+        difficulty,
+        maxAttemptsPerUser,
+        bossTeamJson: JSON.stringify(generateGemsTournamentBossTeam(difficulty)),
+      },
+    });
+  }
 
   let participationCoins = 10;
   try {

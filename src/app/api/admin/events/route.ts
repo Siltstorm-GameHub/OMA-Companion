@@ -3,10 +3,17 @@ import { requireRole, requireModeratorOrEventSquadCaptain, hasMinRole, getCaptai
 import { prisma } from "@/lib/prisma";
 import { revertEventCompletion } from "@/lib/revert-event-completion";
 import { deleteEventRecord } from "@/lib/delete-event";
+import { generateGemsTournamentBossTeam } from "@/lib/battle-cards/gems-tournament";
+import type { NpcDifficulty } from "@/lib/battle-cards/npc-battle-types";
+
+const GEMS_DIFFICULTIES: NpcDifficulty[] = ["EASY", "MEDIUM", "HARD"];
 
 export async function PATCH(req: NextRequest) {
   const body = await req.json();
-  const { eventId, removeUserId, seriesScope, discordChannelId, category, genre, spectatorMode, spectatorRewardJson, pollsConfigJson, twitchClipUrl, seriesEventConfigJson, ...data } = body;
+  const {
+    eventId, removeUserId, seriesScope, discordChannelId, category, genre, spectatorMode, spectatorRewardJson,
+    pollsConfigJson, twitchClipUrl, seriesEventConfigJson, gemsEndAt, gemsDifficulty, gemsMaxAttempts, ...data
+  } = body;
   if (!eventId) return NextResponse.json({ error: "eventId fehlt" }, { status: 400 });
 
   const currentUser = await requireModeratorOrEventSquadCaptain(eventId);
@@ -75,6 +82,41 @@ export async function PATCH(req: NextRequest) {
   }
 
   const event = await prisma.event.update({ where: { id: eventId }, data });
+
+  // OMA-Gems-Turnier-Einstellungen (nur relevant, wenn dieses Event game === "OMA Gems" ist,
+  // siehe EventEditClient.tsx). Boss-Team wird nur neu erzeugt, wenn sich die Schwierigkeit
+  // ändert UND noch keine Versuche existieren — sonst bleiben laufende Angriffe fair vergleichbar.
+  if (gemsEndAt) {
+    const difficulty: NpcDifficulty = GEMS_DIFFICULTIES.includes(gemsDifficulty) ? gemsDifficulty : "MEDIUM";
+    const maxAttemptsPerUser = Number(gemsMaxAttempts) > 0 ? Number(gemsMaxAttempts) : 3;
+    const existing = await prisma.gemsTournament.findUnique({ where: { eventId } });
+    if (existing) {
+      const attemptCount = await prisma.gemsTournamentAttempt.count({ where: { tournamentId: existing.id } });
+      const difficultyChanged = existing.difficulty !== difficulty;
+      await prisma.gemsTournament.update({
+        where: { id: existing.id },
+        data: {
+          endAt: new Date(gemsEndAt),
+          difficulty,
+          maxAttemptsPerUser,
+          ...(difficultyChanged && attemptCount === 0
+            ? { bossTeamJson: JSON.stringify(generateGemsTournamentBossTeam(difficulty)) }
+            : {}),
+        },
+      });
+    } else {
+      await prisma.gemsTournament.create({
+        data: {
+          eventId,
+          endAt: new Date(gemsEndAt),
+          difficulty,
+          maxAttemptsPerUser,
+          bossTeamJson: JSON.stringify(generateGemsTournamentBossTeam(difficulty)),
+        },
+      });
+    }
+  }
+
   return NextResponse.json(event);
 }
 

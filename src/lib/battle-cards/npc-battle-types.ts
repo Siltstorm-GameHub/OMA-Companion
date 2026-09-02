@@ -39,3 +39,27 @@ export function parseNpcMode(mode: string): { difficulty: NpcDifficulty; isPuzzl
 
   return { difficulty, isPuzzle: prefix === PUZZLE_MODE_PREFIX };
 }
+
+// ── OMA-Gems-PvP (asynchroner Ghost-Angriff, siehe gems-pvp.ts) ────────────
+
+/** LiveBattle.mode für einen Gems-PvP-Kampf — kein Suffix nötig, der Gegner
+ *  steckt in LiveBattle.playerBId (Team B ist trotzdem KI-gesteuert, siehe
+ *  startLiveGemsPvpBattle). */
+export const PVP_GEMS_MODE = "PVP_GEMS";
+
+/** Max. Anzahl gestarteter Gems-PvP-Angriffe pro Tag (UTC) und User —
+ *  eigenständig vom NPC-Tageslimit, verhindert Farmen der Sieges-Kiste. */
+export const GEMS_PVP_DAILY_LIMIT = 5;
+
+// ── OMA-Gems-Turniere (Score-Attack, siehe gems-tournament.ts) ─────────────
+
+const TOURNAMENT_MODE_PREFIX = "TOURNAMENT_";
+
+export function tournamentModeFor(gemsTournamentId: string): string {
+  return `${TOURNAMENT_MODE_PREFIX}${gemsTournamentId}`;
+}
+
+export function parseTournamentMode(mode: string): { gemsTournamentId: string } | null {
+  if (!mode.startsWith(TOURNAMENT_MODE_PREFIX)) return null;
+  return { gemsTournamentId: mode.slice(TOURNAMENT_MODE_PREFIX.length) };
+}

@@ -109,6 +109,7 @@ model User {
   liveBattlesAsB           LiveBattle[]             @relation("LiveBattlePlayerB")
   campaignProgress         UserCampaignProgress[]
   tutorialProgress         UserTutorialProgress?
+  gemsTournamentAttempts   GemsTournamentAttempt[]
 }
 
 // ── Pokale ───────────────────────────────────────────────────────────────────
@@ -290,6 +291,7 @@ model Event {
   clipSubmissions    EventClipSubmission[]
   polls              EventPoll[]
   winnerPredictions  EventWinnerPrediction[]
+  gemsTournament     GemsTournament?
 }
 
 // ── Event-Umfragen ────────────────────────────────────────────────────────────
@@ -1334,6 +1336,7 @@ enum CardPackSource {
   PURCHASE
   WHEEL
   TUTORIAL
+  GEMS_PVP_CHEST
 }
 
 // Pack-Sorte bestimmt Kartenanzahl + Community-Karten-Chance beim Öffnen,
@@ -1372,6 +1375,10 @@ model BattleChallenge {
   challengerId String
   opponentId   String
   status       String    @default("pending") // pending | live | declined | resolved | expired
+  // "DUELS" (klassisches 5v5-PvP, mit Annahme-Schritt) | "GEMS" (asynchroner Match-3-Ghost-Angriff,
+  // startet direkt mit status="live", kein "pending"/Annahme) — beide zählen gemeinsam in die
+  // Saison-Rangliste (siehe leaderboard.ts), sind dort aber auch einzeln filterbar.
+  mode         String    @default("DUELS")
   liveBattleId String?   @unique // gesetzt während status="live", verweist auf LiveBattle.id
   battleId     String? // gesetzt sobald resolved, verweist auf Battle.id
   winnerId     String?
@@ -1394,7 +1401,8 @@ model BattleChallenge {
 model LiveBattle {
   id             String   @id @default(cuid())
   // "PVE_EASY" | "PVE_MEDIUM" | "PVE_HARD" | "PVE_PUZZLE_EASY" | "PVE_PUZZLE_MEDIUM" | "PVE_PUZZLE_HARD"
-  // | "PVP_CHALLENGE" | "PVP_MATCHMAKING" | "CAMPAIGN_<levelId>" (siehe campaign-levels.ts)
+  // | "PVP_CHALLENGE" | "PVP_MATCHMAKING" | "PVP_GEMS" | "CAMPAIGN_<levelId>" (campaign-levels.ts)
+  // | "TOURNAMENT_<gemsTournamentId>" (siehe GemsTournament unten)
   mode           String
   playerAId      String
   playerBId      String? // null = Team B ist NPC/KI-gesteuert
@@ -1409,6 +1417,39 @@ model LiveBattle {
 
   @@index([playerAId])
   @@index([playerBId])
+}
+
+// ── OMA-Gems-Turniere (Score-Attack) ────────────────────────────────────────
+// Ein Admin legt im generischen Event-Admin-Bereich (/admin/events) ein Event
+// mit game === "OMA Gems" an — das hängt automatisch diesen Datensatz an.
+// Alle Teilnehmer kämpfen im Zeitraum [Event.startAt, endAt] gegen dasselbe
+// feste Gegner-Team (bossTeamJson, einmalig bei Erstellung erzeugt, damit die
+// Ergebnisse fair vergleichbar sind), ihr bester Score zählt fürs Ranking.
+// Belohnungen nutzen das bereits vorhandene Event.placementRewardsJson.
+model GemsTournament {
+  id                 String    @id @default(cuid())
+  eventId            String    @unique
+  event              Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  endAt              DateTime
+  difficulty         String    @default("MEDIUM") // NpcDifficulty: EASY | MEDIUM | HARD
+  maxAttemptsPerUser Int       @default(3)
+  bossTeamJson       String
+  finalizedAt        DateTime? // gesetzt vom Cron nach Auszahlung der Platzierungsbelohnungen
+  createdAt          DateTime  @default(now())
+
+  attempts GemsTournamentAttempt[]
+}
+
+model GemsTournamentAttempt {
+  id           String         @id @default(cuid())
+  tournamentId String
+  tournament   GemsTournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bestScore    Int            @default(0)
+  updatedAt    DateTime       @updatedAt
+
+  @@unique([tournamentId, userId])
 }
 
 // ── Battle-Cards-Kampagne ("Edelstein-Kampf", siehe campaign-levels.ts) ────

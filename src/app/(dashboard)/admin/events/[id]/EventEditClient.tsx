@@ -206,6 +206,12 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
   const [maxPlayers, setMaxPlayers]   = useState<string>(event.maxPlayers?.toString() ?? "");
   const [discordChannelId, setDiscordChannelId] = useState<string>(event.discordChannelId ?? "");
   const [propagateTitleDesc, setPropagateTitleDesc] = useState(false);
+
+  /* ── OMA-Gems-Turnier (nur bei game === "OMA Gems") ── */
+  const isGemsTournament = game === "OMA Gems";
+  const [gemsEndAt, setGemsEndAt] = useState<string>(event.gemsTournament ? toDatetimeLocal(event.gemsTournament.endAt) : "");
+  const [gemsDifficulty, setGemsDifficulty] = useState<"EASY" | "MEDIUM" | "HARD">(event.gemsTournament?.difficulty ?? "MEDIUM");
+  const [gemsMaxAttempts, setGemsMaxAttempts] = useState<string>(String(event.gemsTournament?.maxAttemptsPerUser ?? 3));
   const titleDescChanged = title !== event.title || description !== (event.description ?? "");
 
   /* ── Rewards state ── */
@@ -402,6 +408,11 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
         twitchClipUrl: twitchClipUrl.trim() || null,
         coverImageUrl: coverImageUrl.trim() || null,
         seriesScope: scope,
+        ...(isGemsTournament && gemsEndAt && {
+          gemsEndAt: new Date(gemsEndAt).toISOString(),
+          gemsDifficulty,
+          gemsMaxAttempts: Number(gemsMaxAttempts) || 3,
+        }),
       }),
     });
     setLoading(false);
@@ -860,6 +871,30 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
             </label>
             <GameNameInput value={game} onChange={setGame} placeholder="z.B. Valorant" className={inputCls} />
           </div>
+
+          {isGemsTournament && (
+            <div className="rounded-xl p-3 space-y-3" style={{ background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.2)" }}>
+              <p className="text-xs font-semibold text-violet-300">OMA Gems Turnier-Einstellungen</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className={labelCls}>Turnier-Ende</label>
+                  <input type="datetime-local" value={gemsEndAt} onChange={e => setGemsEndAt(e.target.value)} className={inputCls} />
+                </div>
+                <div>
+                  <label className={labelCls}>Schwierigkeit</label>
+                  <select value={gemsDifficulty} onChange={e => setGemsDifficulty(e.target.value as "EASY" | "MEDIUM" | "HARD")} className={inputCls}>
+                    <option value="EASY">Einfach</option>
+                    <option value="MEDIUM">Mittel</option>
+                    <option value="HARD">Schwer</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={labelCls}>Max. Versuche pro User</label>
+                  <input type="number" min="1" value={gemsMaxAttempts} onChange={e => setGemsMaxAttempts(e.target.value)} className={inputCls} />
+                </div>
+              </div>
+            </div>
+          )}
 
           {game && (
             <div>

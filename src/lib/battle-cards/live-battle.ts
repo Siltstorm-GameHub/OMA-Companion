@@ -52,12 +52,17 @@ import { resolveCardImageUrl, resolveAvatarBadgeUrl } from "@/lib/battle-cards/r
 import { applyWinStreak } from "@/lib/battle-cards/win-streak";
 import {
   DIFFICULTY_LEVEL,
+  GEMS_PVP_DAILY_LIMIT,
   NPC_BATTLE_DAILY_LIMIT,
   NPC_BATTLE_WIN_REWARD,
   parseNpcMode,
+  parseTournamentMode,
+  PVP_GEMS_MODE,
   puzzleModeFor,
+  tournamentModeFor,
   type NpcDifficulty,
 } from "@/lib/battle-cards/npc-battle-types";
+import { grantGemsPvpVictoryChest } from "@/lib/battle-cards/gems-pvp";
 import type { LiveBattle } from "@prisma/client";
 import { dispatchNotification } from "@/lib/notify-dispatch";
 import { updateQuestProgress } from "@/lib/quests";
@@ -93,6 +98,23 @@ async function countNpcBattlesStartedToday(userId: string): Promise<number> {
       createdAt: { gte: startOfTodayUTC() },
     },
   });
+}
+
+/** Zählt heute (UTC) gestartete OMA-Gems-PvP-Angriffe dieses Users — Grundlage
+ *  für GEMS_PVP_DAILY_LIMIT, damit die Sieges-Kiste nicht gefarmt werden kann. */
+async function countGemsPvpBattlesStartedToday(userId: string): Promise<number> {
+  return prisma.liveBattle.count({
+    where: { playerAId: userId, mode: PVP_GEMS_MODE, createdAt: { gte: startOfTodayUTC() } },
+  });
+}
+
+async function assertGemsPvpDailyLimitNotReached(userId: string): Promise<void> {
+  const startedToday = await countGemsPvpBattlesStartedToday(userId);
+  if (startedToday >= GEMS_PVP_DAILY_LIMIT) {
+    throw new LiveBattleError(
+      `Heutiges Limit erreicht (max. ${GEMS_PVP_DAILY_LIMIT} OMA-Gems-Angriffe pro Tag). Versuch es morgen wieder.`
+    );
+  }
 }
 
 function sampleWithoutReplacement<T>(items: T[], count: number): T[] {
@@ -269,7 +291,35 @@ async function finalizeLiveBattle(live: LiveBattle, state: InteractiveBattleStat
         const loserId = winnerId === live.playerAId ? live.playerBId : live.playerAId;
         await applyWinStreak(winnerId, loserId);
       }
+      // OMA-Gems-Ghost-Angriff: nur der Angreifer (playerAId) spielt aktiv — bei
+      // dessen Sieg öffnet sich die Sieges-Kiste. Der Verteidiger bekommt nichts,
+      // er hat den Kampf nicht selbst bestritten.
+      if (challenge.mode === "GEMS" && winnerId === live.playerAId) {
+        await grantGemsPvpVictoryChest(live.playerAId);
+      }
       await notifyPvpBattleResolved(live.playerAId, live.playerBId, winnerId, battle.id);
+    }
+  } else if (live.mode.startsWith("TOURNAMENT_")) {
+    const parsed = parseTournamentMode(live.mode);
+    if (parsed) {
+      const hpTotal = state.unitsA.reduce((sum, u) => sum + u.maxHp, 0);
+      const hpRemaining = state.unitsA.reduce((sum, u) => sum + Math.max(0, u.currentHp), 0);
+      const hpPercent = hpTotal > 0 ? hpRemaining / hpTotal : 0;
+      const score = Math.max(
+        0,
+        (state.winner === "A" ? 1000 : 0) + Math.round(hpPercent * 500) - state.round * 10
+      );
+
+      const existing = await prisma.gemsTournamentAttempt.findUnique({
+        where: { tournamentId_userId: { tournamentId: parsed.gemsTournamentId, userId: live.playerAId } },
+      });
+      if (!existing || score > existing.bestScore) {
+        await prisma.gemsTournamentAttempt.upsert({
+          where: { tournamentId_userId: { tournamentId: parsed.gemsTournamentId, userId: live.playerAId } },
+          create: { tournamentId: parsed.gemsTournamentId, userId: live.playerAId, bestScore: score },
+          update: { bestScore: score },
+        });
+      }
     }
   } else if (state.winner === "A" && live.mode.startsWith("PVE_")) {
     const parsed = parseNpcMode(live.mode);
@@ -541,6 +591,98 @@ export async function startLivePvpBattle(
   });
 
   return snapshot;
+}
+
+/** OMA-Gems-Ghost-Angriff: sofortiger, asynchroner Kampf gegen einen KI-
+ *  gesteuerten Nachbau der AKTUELLEN Aufstellung eines anderen Users — der
+ *  Angegriffene muss weder online sein noch reagieren (kein Annahme-Schritt,
+ *  im Gegensatz zu startLivePvpBattle). Legt trotzdem eine BattleChallenge an
+ *  (mode: "GEMS"), damit der Kampf über denselben Resolve-Pfad läuft wie
+ *  klassisches PvP und in dieselbe Saison-Rangliste einfließt. */
+export async function startLiveGemsPvpBattle(challengerId: string, opponentId: string): Promise<LiveBattleSnapshot> {
+  if (challengerId === opponentId) {
+    throw new LiveBattleError("Du kannst dich nicht selbst herausfordern.");
+  }
+  await assertGemsPvpDailyLimitNotReached(challengerId);
+
+  const [teamAResult, teamBResult] = await Promise.all([buildBattleTeam(challengerId), buildBattleTeam(opponentId)]);
+  if (teamAResult.units.length === 0) {
+    throw new LiveBattleError("Noch kein Start-Pack gewählt.");
+  }
+  if (teamBResult.units.length === 0) {
+    throw new LiveBattleError("Dieser Nutzer hat noch keine gültige Startaufstellung.");
+  }
+
+  const snapshot = await createLiveBattle(
+    PVP_GEMS_MODE,
+    challengerId,
+    opponentId,
+    teamAResult.units,
+    teamBResult.units,
+    { A: "human", B: "ai" },
+    true
+  );
+
+  await prisma.battleChallenge.create({
+    data: {
+      challengerId,
+      opponentId,
+      mode: "GEMS",
+      status: snapshot.status === "finished" ? "resolved" : "live",
+      liveBattleId: snapshot.id,
+    },
+  });
+
+  return snapshot;
+}
+
+/** Startet einen Versuch in einem laufenden OMA-Gems-Turnier (Score-Attack
+ *  gegen das für alle Teilnehmer identische Boss-Team, siehe GemsTournament).
+ *  Belohnungen gibt es nicht pro Versuch, sondern erst bei Turnier-Ende nach
+ *  Platzierung (siehe cron/battle-cards-gems-tournament). */
+export async function startLiveGemsTournamentBattle(
+  userId: string,
+  gemsTournamentId: string
+): Promise<LiveBattleSnapshot> {
+  const tournament = await prisma.gemsTournament.findUnique({
+    where: { id: gemsTournamentId },
+    include: { event: true },
+  });
+  if (!tournament) throw new LiveBattleError("Unbekanntes Turnier.");
+  if (tournament.finalizedAt) throw new LiveBattleError("Dieses Turnier ist bereits beendet.");
+
+  const now = new Date();
+  if (now < tournament.event.startAt) throw new LiveBattleError("Dieses Turnier hat noch nicht begonnen.");
+  if (now > tournament.endAt) throw new LiveBattleError("Dieses Turnier ist bereits vorbei.");
+
+  const attemptsUsed = await prisma.liveBattle.count({
+    where: { playerAId: userId, mode: tournamentModeFor(tournament.id) },
+  });
+  if (attemptsUsed >= tournament.maxAttemptsPerUser) {
+    throw new LiveBattleError(`Maximale Anzahl Versuche erreicht (${tournament.maxAttemptsPerUser}).`);
+  }
+
+  const playerTeamCards = await loadPlayerLineup(userId);
+  const avatarByDiscordId = await resolveAvatarsForCards(playerTeamCards.map((uc) => uc.card));
+  const teamA = playerTeamCards.map((uc) =>
+    cardToBattleUnitDefinition(
+      uc.card,
+      uc.level,
+      resolveCardImageUrl(uc.card, avatarByDiscordId),
+      resolveAvatarBadgeUrl(uc.card, avatarByDiscordId)
+    )
+  );
+  const teamB = JSON.parse(tournament.bossTeamJson) as BattleUnitDefinition[];
+
+  return createLiveBattle(
+    tournamentModeFor(tournament.id),
+    userId,
+    null,
+    teamA,
+    teamB,
+    { A: "human", B: "ai" },
+    true
+  );
 }
 
 // ---------- Lesen / Aktion / Auto-Kampf ----------
