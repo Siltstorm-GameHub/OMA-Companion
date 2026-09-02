@@ -12,6 +12,13 @@
 //    damit sich auch die letzten Level noch spürbar steigern (siehe monster-content.ts)
 //  - Team-Größe/-Zusammensetzung: startet bei einem einzelnen schwachen Gegner,
 //    endet bei einem vollen 5er-Team samt Endgegner
+//
+// `statMultiplier`-Werte wurden angehoben (Stand: seit Helden bei OMA Gems pro
+// Match einen zusätzlichen echten Normalangriff auslösen, nicht mehr nur Rage
+// — siehe applyBoardRage in interactive.ts). Dadurch teilen Spieler-Teams pro
+// Runde deutlich mehr Schaden aus als zuvor; ohne Anpassung wären die Gegner-
+// HP/DEF/ATK-Werte relativ dazu zu niedrig gewesen. Level 1 bleibt bewusst
+// unverändert (reines Tutorial, ein einzelner schwacher Gegner).
 
 import type { MonsterTemplate } from "./monster-content";
 import {
@@ -70,7 +77,7 @@ export const CAMPAIGN_LEVELS: CampaignLevelDef[] = [
     tagline: "Kurz offline, dann geht's weiter.",
     monsters: [TUTORIAL_SLIME, SESSION_TIMEOUT_ZOMBIE],
     level: 1,
-    statMultiplier: 1.0,
+    statMultiplier: 1.05,
   },
   {
     id: "lvl-03",
@@ -79,7 +86,7 @@ export const CAMPAIGN_LEVELS: CampaignLevelDef[] = [
     tagline: "Willkommen bei 300ms Verzögerung.",
     monsters: [LAG_SPIKE, RAGE_QUIT_CONTROLLER],
     level: 2,
-    statMultiplier: 1.0,
+    statMultiplier: 1.15,
   },
   {
     id: "lvl-04",
@@ -88,7 +95,7 @@ export const CAMPAIGN_LEVELS: CampaignLevelDef[] = [
     tagline: "Alles glänzt, nichts ist geschenkt.",
     monsters: [LOOT_GOBLIN, PAY2WIN_TRUHE, TUTORIAL_SLIME],
     level: 2,
-    statMultiplier: 1.05,
+    statMultiplier: 1.2,
   },
   {
     id: "lvl-05",
@@ -97,7 +104,7 @@ export const CAMPAIGN_LEVELS: CampaignLevelDef[] = [
     tagline: "Hier wird nicht gespielt, hier wird getrollt.",
     monsters: [GRIEFER_IMP, GRIEFER_IMP, AFK_FARMER],
     level: 2,
-    statMultiplier: 1.1,
+    statMultiplier: 1.3,
   },
   {
     id: "lvl-06",
@@ -106,7 +113,7 @@ export const CAMPAIGN_LEVELS: CampaignLevelDef[] = [
     tagline: "504 Gateway Timeout — und keine Gnade.",
     monsters: [SERVERABSTURZ_KRAKEN, LAG_SPIKE, LAG_SPIKE],
     level: 3,
-    statMultiplier: 1.1,
+    statMultiplier: 1.35,
     isBoss: true,
   },
   {
@@ -116,7 +123,7 @@ export const CAMPAIGN_LEVELS: CampaignLevelDef[] = [
     tagline: "Wurde offiziell schwächer designt. Merkt man kaum.",
     monsters: [RAGE_QUIT_CONTROLLER, RAGE_QUIT_CONTROLLER, GRIEFER_IMP, AFK_FARMER],
     level: 3,
-    statMultiplier: 1.1,
+    statMultiplier: 1.35,
   },
   {
     id: "lvl-08",
@@ -125,7 +132,7 @@ export const CAMPAIGN_LEVELS: CampaignLevelDef[] = [
     tagline: "Hier kauft man sich den Sieg. Fast.",
     monsters: [PAY2WIN_TRUHE, PAY2WIN_TRUHE, LOOT_GOBLIN, LOOT_GOBLIN],
     level: 3,
-    statMultiplier: 1.15,
+    statMultiplier: 1.4,
   },
   {
     id: "lvl-09",
@@ -134,7 +141,7 @@ export const CAMPAIGN_LEVELS: CampaignLevelDef[] = [
     tagline: "Noch drei Level bis zum nächsten Item. Ehrlich.",
     monsters: [SESSION_TIMEOUT_ZOMBIE, SESSION_TIMEOUT_ZOMBIE, SESSION_TIMEOUT_ZOMBIE, GRIEFER_IMP],
     level: 4,
-    statMultiplier: 1.15,
+    statMultiplier: 1.45,
   },
   {
     id: "lvl-10",
@@ -143,7 +150,7 @@ export const CAMPAIGN_LEVELS: CampaignLevelDef[] = [
     tagline: "Alle haben Ranked-Erfahrung. Nur du nicht.",
     monsters: [RAGE_QUIT_CONTROLLER, LAG_SPIKE, GRIEFER_IMP, PAY2WIN_TRUHE, AFK_FARMER],
     level: 4,
-    statMultiplier: 1.2,
+    statMultiplier: 1.5,
   },
   {
     id: "lvl-11",
@@ -152,7 +159,7 @@ export const CAMPAIGN_LEVELS: CampaignLevelDef[] = [
     tagline: "Die Ladebildschirm-Musik wird schon bedrohlich.",
     monsters: [SERVERABSTURZ_KRAKEN, SERVERABSTURZ_KRAKEN, RAGE_QUIT_CONTROLLER, RAGE_QUIT_CONTROLLER, GRIEFER_IMP],
     level: 5,
-    statMultiplier: 1.2,
+    statMultiplier: 1.55,
   },
   {
     id: "lvl-12",
@@ -161,7 +168,7 @@ export const CAMPAIGN_LEVELS: CampaignLevelDef[] = [
     tagline: "End of Season. Kein Extra-Leben mehr.",
     monsters: [SEASON_PASS_DRACHE, SERVERABSTURZ_KRAKEN, SERVERABSTURZ_KRAKEN],
     level: 5,
-    statMultiplier: 1.35,
+    statMultiplier: 1.75,
     isBoss: true,
   },
 ];
