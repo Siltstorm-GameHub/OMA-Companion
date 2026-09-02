@@ -293,7 +293,7 @@ function UnitCard({
         <div className="absolute inset-0" style={{ background: `${config.color}22` }} />
         {(isActing || glow || canFireUltimate) && (
           <div
-            className="absolute inset-0 rounded-full pointer-events-none"
+            className={`absolute inset-0 rounded-full pointer-events-none ${canFireUltimate && !isActing ? "animate-pulse" : ""}`}
             style={{
               background: isActing
                 ? "radial-gradient(closest-side, rgba(20,184,166,0.35), transparent 70%)"
@@ -318,7 +318,7 @@ function UnitCard({
           <Icon className="w-5 h-5 sm:w-7 sm:h-7 relative" style={{ color: config.color, opacity: 0.55 }} />
         )}
         <div
-          className="absolute inset-0 rounded-md pointer-events-none"
+          className={`absolute inset-0 rounded-md pointer-events-none ${canFireUltimate && !glow ? "animate-pulse" : ""}`}
           style={{
             boxShadow:
               glow === "enemy"
@@ -745,10 +745,14 @@ function LiveBattleBody({
   const myAuto = myTeam === "A" ? snapshot.autoA : snapshot.autoB;
   const deadline = snapshot.awaiting?.deadline ?? null;
   const remainingSeconds = deadline !== null ? Math.max(0, Math.ceil((deadline - Date.now()) / 1000)) : null;
-  // "OMA Gems" (Match-3-Puzzle-PvE, siehe board-match3.ts) — nur in diesem
-  // Modus zeigt der Server ein Brett im Snapshot UND sind Heldenkarten mit vollem
-  // Rage-Balken per Klick sofort auslösbar (siehe ultimateReady unten).
-  const isPuzzleMode = snapshot.mode.includes("PUZZLE");
+  // OMA Gems (jeder Match-3-Brett-Modus: Puzzle-PvE, Kampagne, Gems-PvP, Turnier —
+  // siehe boardMode in live-battle.ts) — nur dort zeigt der Server ein Brett im
+  // Snapshot UND sind Heldenkarten mit vollem Rage-Balken per Klick sofort
+  // auslösbar (siehe ultimateReadyFor unten). Vorher fälschlich per
+  // `mode.includes("PUZZLE")` erkannt, was Kampagne/Gems-PvP/Turnier NICHT
+  // erfasste (deren Mode-Strings enthalten "PUZZLE" nicht) — dort ließ sich das
+  // Ultimate dadurch nie per Klick auslösen.
+  const isPuzzleMode = snapshot.boardMode;
 
   const unitsByTeam = (team: TeamId) => snapshot.units.filter((u) => u.teamId === team);
   const unitById = (id: string) => snapshot.units.find((u) => u.instanceId === id);
@@ -974,7 +978,13 @@ function LiveBattleBody({
                 moveBudget={snapshot.awaiting.board.moveBudget}
                 disabled={busy}
                 initialSwaps={snapshot.awaiting.board.appliedSwaps}
-                onConfirm={(swaps) => setBoardSwaps(swaps)}
+                // OMA Gems: kein Zwischenschritt "Aktion wählen" — sobald das Zug-
+                // Budget aufgebraucht ist, läuft der reguläre Zug automatisch (wie
+                // bei der KI, siehe interactive.ts); der Spieler greift ausschließlich
+                // per Ultimate-Klick auf eine voll aufgeladene Heldenkarte an. Der
+                // hier übergebene actionType wird serverseitig für boardMode-Züge
+                // ignoriert (Platzhalter).
+                onConfirm={(swaps) => submitAction("normalAttack", undefined, swaps)}
                 onProgress={saveBoardProgress}
               />
             ) : selectedAction ? (

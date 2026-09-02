@@ -77,7 +77,11 @@ export function executeEffect(effect: Effect, level: number, ctx: EffectContext)
     }
     case "heal": {
       for (const target of targets) {
-        const amount = Math.round(value);
+        // suddenDeathMultiplier skaliert nicht nur Sudden-Death-Runden hoch,
+        // sondern (bei OMA Gems) auch match-ausgelöste Angriffe nach Match-
+        // Größe (siehe applyBoardRage in interactive.ts) — Heilung soll dabei
+        // genauso stärker werden wie Schaden (rollDamage nutzt denselben Kanal).
+        const amount = Math.round(value * ctx.suddenDeathMultiplier);
         target.currentHp = Math.min(target.maxHp, target.currentHp + amount);
         ctx.log.push({
           type: "heal",

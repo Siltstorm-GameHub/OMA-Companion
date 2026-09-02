@@ -40,6 +40,12 @@ export interface SwapMove {
 export interface RageGrant {
   targetClass: TileClassSymbol | "ALL";
   amount: number;
+  /** Anzahl der in diesem einzelnen Match-/Kaskaden-Ereignis zerstörten Steine
+   *  (Gruppengröße, 3+) — nicht gesetzt beim "ALL"-Community-Bonus. Grundlage
+   *  für den Schadens-/Heilungs-Multiplikator ausgelöster Normalangriffe (siehe
+   *  applyBoardRage in interactive.ts: je mehr Steine zerstört wurden, desto
+   *  stärker der Angriff). */
+  tileCount?: number;
 }
 
 /** Ein einzelner Auflösungsschritt (ein Match + die dadurch entfernten Zellen,
@@ -55,6 +61,14 @@ export interface BoardResolveResult {
   finalGrid: BoardGrid;
   finalRngState: number;
   rageGrants: RageGrant[];
+  /** UNGEMERGTE Grants — ein Eintrag pro einzelnem Match-/Kaskaden-Ereignis (vor
+   *  mergeGrants), in der Reihenfolge, in der sie passiert sind. `rageGrants`
+   *  fasst diese pro Klasse zusammen (für die tatsächlich gutgeschriebene Rage,
+   *  inkl. MAX_BOARD_RAGE_PER_TURN-Deckelung) — für "jedes Match einer Klasse
+   *  löst zusätzlich einen echten Normalangriff aus" (siehe applyBoardRage in
+   *  interactive.ts) wird dagegen JEDES einzelne Ereignis gebraucht, nicht nur
+   *  die Summe. */
+  rawGrants: RageGrant[];
   /** Anzahl der eingereichten Swaps, die tatsächlich zu einem Match geführt haben
    *  (ungültige/wirkungslose Swaps werden automatisch zurückgesetzt). */
   matchedSwaps: number;
@@ -203,7 +217,7 @@ function resolveCascades(grid: BoardGrid, rng: Rng): { grants: RageGrant[]; step
     for (const group of groups) {
       const symbol = grid[group[0]];
       const amount = rageForGroupSize(group.length) + cascadeIndex * RAGE_PER_CASCADE_BONUS;
-      grants.push({ targetClass: symbol, amount });
+      grants.push({ targetClass: symbol, amount, tileCount: group.length });
       if (group.length >= 5) {
         grants.push({ targetClass: "ALL", amount: COMMUNITY_MATCH_TEAM_RAGE_BONUS });
       }
@@ -271,5 +285,5 @@ export function resolveBoardSession(
   const rageGrants = mergeGrants(allGrants);
   const totalRageGranted = rageGrants.reduce((sum, g) => sum + g.amount, 0);
 
-  return { finalGrid: grid, finalRngState: rng.getState(), rageGrants, matchedSwaps, totalRageGranted, steps: allSteps };
+  return { finalGrid: grid, finalRngState: rng.getState(), rageGrants, rawGrants: allGrants, matchedSwaps, totalRageGranted, steps: allSteps };
 }

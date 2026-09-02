@@ -170,12 +170,14 @@ function applyBoardRage(
   state: InteractiveBattleState,
   allUnits: BattleUnitState[],
   teamId: TeamId,
-  swaps: SwapMove[]
+  swaps: SwapMove[],
+  rng: ReturnType<typeof createRng>
 ): void {
   const pending = state.pendingBoard;
   if (!pending) return;
 
   const result = resolveBoardSession(pending.grid, pending.rngState, swaps, BOARD_MOVE_BUDGET_PER_TURN);
+  const log = state.log;
 
   let grants = result.rageGrants;
   if (result.totalRageGranted > MAX_BOARD_RAGE_PER_TURN && result.totalRageGranted > 0) {
@@ -189,7 +191,41 @@ function applyBoardRage(
     const recipients =
       grant.targetClass === "ALL" ? teamUnits : teamUnits.filter((u) => u.def.class === grant.targetClass);
     for (const unit of recipients) {
-      grantRage(unit, grant.amount, state.round, state.log, "boardMatch");
+      grantRage(unit, grant.amount, state.round, log, "boardMatch");
+    }
+  }
+
+  // Jedes einzelne Match/jede Kaskade einer Klasse löst zusätzlich einen echten
+  // Normalangriff der lebenden Helden dieser Klasse aus (Empires&Puzzles-artig,
+  // nicht nur Rage) — Grundlage ist die UNGEMERGTE rawGrants-Liste (ein Eintrag
+  // pro Match-/Kaskaden-Ereignis), nicht die oben gemergte/gedeckelte Rage-Summe:
+  // jedes Ereignis löst seinen eigenen Angriff aus. Schaden/Heilung skalieren
+  // über den bestehenden suddenDeathMultiplier-Kanal mit der Gruppengröße
+  // (mehr zerstörte Steine in einem Match = stärkerer Angriff). Der "ALL"-
+  // Community-Bonus (5er-Match) ist kein klassenspezifisches Match und löst
+  // daher selbst keinen Angriff aus.
+  for (const grant of result.rawGrants) {
+    if (grant.targetClass === "ALL" || !grant.tileCount) continue;
+    const attackers = teamUnits.filter((u) => u.def.class === grant.targetClass && u.isAlive);
+    if (attackers.length === 0) continue;
+    const matchScale = Math.max(1, grant.tileCount / 3);
+    for (const unit of attackers) {
+      if (!unit.isAlive) continue;
+      const before = log.length;
+      performAction(unit, "normalAttack", allUnits, rng, state.round, log, matchScale, undefined);
+
+      const dealtDamageTo = new Set<string>();
+      for (let i = before; i < log.length; i++) {
+        const entry = log[i];
+        if (entry.type === "damage" && entry.sourceId === unit.instanceId) dealtDamageTo.add(entry.targetId);
+      }
+      if (dealtDamageTo.size > 0) {
+        triggerPassiveForUnit("onDealDamage", unit, allUnits, rng, state.round, log);
+        for (const targetId of dealtDamageTo) {
+          const target = allUnits.find((u) => u.instanceId === targetId);
+          if (target) triggerPassiveForUnit("onTakeDamage", target, allUnits, rng, state.round, log);
+        }
+      }
     }
   }
 }
@@ -259,16 +295,25 @@ function stepOnce(
       }
     }
 
-    // Nur bei einer echten Spieler-Entscheidung (nicht bei Auto-Kampf/Timeout)
-    // wird das Board ausgewertet — die dabei erzeugte Rage landet VOR der
-    // eigentlichen Aktion bei den betroffenen Helden (siehe applyBoardRage).
-    if (playerDecision && state.boardMode) {
-      applyBoardRage(state, allUnits, unit.teamId, playerDecision.boardSwaps ?? []);
+    // Im Match-3-Brett-Modus (OMA Gems) gibt es keine separate Normalangriff-
+    // /Aktiv-Aktion für den regulären Zug mehr — jedes einzelne Match einer
+    // Klasse hat bereits WÄHREND der Board-Auswertung einen echten Angriff der
+    // Helden dieser Klasse ausgelöst (siehe applyBoardRage). Der Zug selbst
+    // "verstreicht" hier also nur noch (Reihenfolge weiterschalten), ohne eine
+    // weitere Aktion auszuführen. Zusätzliche Angriffe entstehen ausschließlich
+    // per Ultimate-Klick auf eine voll aufgeladene Heldenkarte, unabhängig von
+    // der Zugreihenfolge (siehe applyUltimateInterrupt). `decision.actionType/
+    // targetId` vom Client wird bei einer Board-Entscheidung daher ignoriert.
+    // Nur der Auto-Kampf-/Timeout-Fallback (kein playerDecision, s.o.) führt
+    // noch eine klassische automatische Aktion aus.
+    const isPlayerBoardDecision = !!playerDecision && state.boardMode;
+    if (isPlayerBoardDecision) {
+      applyBoardRage(state, allUnits, unit.teamId, playerDecision.boardSwaps ?? [], rng);
+    } else {
+      executeUnitAction(unit, decision.actionType, decision.targetId);
+      autoActionCounter && autoActionCounter.count++;
     }
     state.pendingBoard = null;
-
-    executeUnitAction(unit, decision.actionType, decision.targetId);
-    autoActionCounter && autoActionCounter.count++;
     state.awaitingUnitId = null;
     state.turnDeadline = null;
     state.orderIndex += 1;
