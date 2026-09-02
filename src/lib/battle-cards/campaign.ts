@@ -1,5 +1,5 @@
 // ============================================
-// Kampagnen-Logik — "Edelstein-Kampf"-Kampagne
+// Kampagnen-Logik — Kampagne im "OMA Gems"-Modus
 // ============================================
 // Bindeglied zwischen den hart hinterlegten Level-Inhalten (campaign-levels.ts)
 // und dem Spieler-Fortschritt in der DB (UserCampaignProgress, siehe

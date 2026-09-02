@@ -1,7 +1,7 @@
 "use client";
 
 // ============================================
-// Match-3-Brett — "Edelstein-Kampf" (Puzzle-PvE-Modus)
+// Match-3-Brett — "OMA Gems" (Puzzle-PvE-Modus)
 // ============================================
 // Interaktives Brett für den eigenen Zug: Tippen auf zwei benachbarte Kacheln
 // versucht einen Swap. Ergibt der Swap kein Match, springt er sichtbar zurück
@@ -241,7 +241,7 @@ export default function BoardMatch3({
     <div className="space-y-2 relative">
       <div className="flex items-center justify-between text-[10px] text-gray-400 uppercase tracking-widest">
         <span className="flex items-center gap-1">
-          Edelstein-Brett
+          OMA Gems
           <button
             type="button"
             onClick={toggleLegend}

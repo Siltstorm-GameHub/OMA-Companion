@@ -1,5 +1,5 @@
 // ============================================
-// Battle-Engine — Match-3-Brett ("Edelstein-Kampf")
+// Battle-Engine — Match-3-Brett ("OMA Gems")
 // ============================================
 // Reine, deterministische Match-3-Logik: Grid-Generierung aus einem Seed,
 // Swap-Validierung, Match-Erkennung (3/4/5 in einer Reihe/Spalte), Kaskaden/

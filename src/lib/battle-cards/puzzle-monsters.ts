@@ -1,9 +1,9 @@
 // ============================================
-// Humorvolle Monster-Gegner für den Edelstein-Kampf (Puzzle-PvE)
+// Humorvolle Monster-Gegner für OMA Gems (Puzzle-PvE)
 // ============================================
 // Eigene, fest hinterlegte Gegner-Riege statt der zufällig gezogenen
 // Standard-Karten aus dem Auto-Kampf (siehe buildPveTeams in live-battle.ts)
-// — die Gegner im Edelstein-Kampf sollen wie augenzwinkernde Monster wirken,
+// — die Gegner in OMA Gems sollen wie augenzwinkernde Monster wirken,
 // nicht wie reguläre Spieler-Helden. `imageUrl` zeigt auf public/battle-cards/
 // monsters/<slug>.png (siehe monster-content.ts: monsterImagePath) — solange
 // die Datei dort noch nicht existiert, fällt die UI automatisch auf das

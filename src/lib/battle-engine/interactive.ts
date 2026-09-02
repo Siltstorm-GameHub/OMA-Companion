@@ -69,7 +69,7 @@ export interface InteractiveBattleState {
    *  für diese Seite automatisch aktiviert (siehe stepOnce). */
   timeoutStreakA: number;
   timeoutStreakB: number;
-  /** Puzzle-PvE-Modus ("Edelstein-Kampf", siehe board-match3.ts): zeigt bei
+  /** Puzzle-PvE-Modus ("OMA Gems", siehe board-match3.ts): zeigt bei
    *  jedem menschlichen Zug zusätzlich ein Match-3-Brett, dessen Matches Rage
    *  erzeugen, statt dass Rage rein automatisch steigt. Bei false (Standard-
    *  Auto-Kampf-Modi, PvP) bleibt das gesamte Board-Verhalten inaktiv. */

@@ -1,7 +1,7 @@
 // ============================================
 // POST /api/battle-cards/npc-puzzle-battle
 // ============================================
-// Startet den Match-3-"Edelstein-Kampf"-Modus (siehe board-match3.ts) — analog
+// Startet den Match-3-"OMA Gems"-Modus (siehe board-match3.ts) — analog
 // zu npc-battle/route.ts, nur mit interaktivem Brett statt reinem Auto-Kampf.
 // Teilt sich Schwierigkeitsstufen, Belohnung und Tageslimit mit dem
 // bestehenden NPC-Auto-Kampf (siehe live-battle.ts: buildPveTeams).

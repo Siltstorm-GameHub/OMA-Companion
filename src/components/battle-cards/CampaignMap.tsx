@@ -1,7 +1,7 @@
 "use client";
 
 // ============================================
-// Kampagnen-Karte — "Edelstein-Kampf"-Kampagne
+// Kampagnen-Karte — Kampagne im "OMA Gems"-Modus
 // ============================================
 // Winding-Path-Level-Übersicht (Candy-Crush-artig): jedes Level ist ein
 // Knoten mit Nummer, Namen, humorvollem Untertitel und (nach Abschluss) 1-3
@@ -178,6 +178,7 @@ export default function CampaignMap() {
           />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20" />
+        <p className="relative text-[9px] font-bold text-violet-300 uppercase tracking-widest">OMA Gems</p>
         <div className="relative flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2">
             <Swords className="w-4 h-4 text-rose-400" />

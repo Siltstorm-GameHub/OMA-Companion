@@ -12,7 +12,7 @@
 // Schritte (streng sequenziell, jeder einzeln idempotent via *CompletedAt-
 // Zeitstempel):
 //  0. Start-Pack wählen            (StarterPickFlow, kein Tutorial-Feld nötig — hasStarterDeck())
-//  1. NPC-Kampf (Einfach) spielen  → +200 Münzen, Community-Kartenpack (garantiert eigene Karte)
+//  1. OMA Duels (Einfach) spielen  → +200 Münzen, Community-Kartenpack (garantiert eigene Karte)
 //  2. Community-Karte bearbeiten   → +500 Münzen
 //  3. Kampagne Kapitel 1, Level 1  → Premium-Pack
 //  → danach completedAt gesetzt, Tutorial-UI verschwindet dauerhaft.
@@ -90,9 +90,9 @@ export async function hasOwnCommunityCard(userId: string): Promise<boolean> {
   return !!owned;
 }
 
-/** Schritt 1: NPC-Kampf (Einfach) gespielt — nur aufrufen, wenn der Kampf
+/** Schritt 1: OMA Duels (Einfach) gespielt — nur aufrufen, wenn der Kampf
  *  tatsächlich gewonnen wurde (siehe finalizeLiveBattle) UND Schwierigkeit
- *  "EASY" im klassischen (nicht Edelstein-Kampf-)Modus war. No-op, falls kein
+ *  "EASY" im klassischen (nicht OMA-Gems-)Modus war. No-op, falls kein
  *  aktives Tutorial läuft oder dieser Schritt schon erledigt ist. */
 export async function markTutorialNpcBattleDone(userId: string): Promise<void> {
   const progress = await getTutorialProgress(userId);
@@ -102,7 +102,7 @@ export async function markTutorialNpcBattleDone(userId: string): Promise<void> {
     where: { userId },
     data: { npcBattleCompletedAt: new Date() },
   });
-  await grantCoins(userId, TUTORIAL_NPC_BATTLE_REWARD, "Tutorial: ersten NPC-Kampf gespielt");
+  await grantCoins(userId, TUTORIAL_NPC_BATTLE_REWARD, "Tutorial: ersten OMA Duels gespielt");
 
   // Garantiertes Community-Pack — nur, falls der User noch keine eigene
   // Community-Karte besitzt (Normalfall im Tutorial: "vorher haben sie diese
@@ -148,7 +148,7 @@ export async function markTutorialCampaignLevel1Done(userId: string): Promise<vo
 
 /** Für die UI: welcher Schritt gerade dran ist (bzw. "done", wenn alles erledigt
  *  oder gar kein Tutorial aktiv ist — Aufrufer soll dann keine Tutorial-UI zeigen).
- *  `ownsCommunityCard` unterscheidet Schritt 1 (NPC-Kampf gespielt, Pack liegt im
+ *  `ownsCommunityCard` unterscheidet Schritt 1 (OMA Duels gespielt, Pack liegt im
  *  Inventar, aber noch nicht geöffnet) von Schritt 2 (Karte bearbeiten, erst
  *  möglich sobald das Pack geöffnet wurde und die Karte tatsächlich im Besitz ist). */
 export function getTutorialStep(progress: TutorialProgress | null, ownsCommunityCard: boolean): TutorialStepKey {

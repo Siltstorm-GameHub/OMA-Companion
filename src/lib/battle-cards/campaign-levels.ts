@@ -1,5 +1,5 @@
 // ============================================
-// Kampagnen-Level — "Edelstein-Kampf"-Kampagne
+// Kampagnen-Level — Kampagne im "OMA Gems"-Modus
 // ============================================
 // Level-Inhalte sind bewusst hart in TypeScript hinterlegt (wie
 // puzzle-monsters.ts) statt admin-editierbar — Balancing läuft über Code-

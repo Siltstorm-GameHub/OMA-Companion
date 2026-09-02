@@ -1,5 +1,5 @@
 // ============================================
-// Kampagnen-Gegner — Gaming-Kultur-Monster ("Edelstein-Kampf"-Kampagne)
+// Kampagnen-Gegner — Gaming-Kultur-Monster (Kampagne im "OMA Gems"-Modus)
 // ============================================
 // Eigene, thematisch geschlossene Gegner-Riege für die Kampagne (siehe
 // campaign-levels.ts) — anders als die haushaltsthemierten Schnellkampf-

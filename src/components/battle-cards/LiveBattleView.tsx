@@ -40,8 +40,8 @@ import ErrorNotice from "./ErrorNotice";
 import { BRAND_LOGO } from "@/lib/brand";
 import { CAMPAIGN_CHAPTER_BACKGROUND } from "@/lib/battle-cards/campaign-levels";
 
-/** Kampf-Hintergrund: die klassische Arena (arena-bg.jpg) für NPC-Kampf,
- *  Edelstein-Kampf und PvP — Kampagnen-Kämpfe (mode "CAMPAIGN_...") zeigen
+/** Kampf-Hintergrund: die klassische Arena (arena-bg.jpg) für OMA Duels,
+ *  OMA Gems (Nicht-Kampagne) und PvP — Kampagnen-Kämpfe (mode "CAMPAIGN_...") zeigen
  *  stattdessen das zum aktuellen Kapitel passende Hintergrundbild (aktuell
  *  nur Kapitel 1, siehe CAMPAIGN_CHAPTER_BACKGROUND), statt der generischen
  *  Arena — das ist der eigene Look der Kampagne. */
@@ -736,7 +736,7 @@ function LiveBattleBody({
   const myAuto = myTeam === "A" ? snapshot.autoA : snapshot.autoB;
   const deadline = snapshot.awaiting?.deadline ?? null;
   const remainingSeconds = deadline !== null ? Math.max(0, Math.ceil((deadline - Date.now()) / 1000)) : null;
-  // "Edelstein-Kampf" (Match-3-Puzzle-PvE, siehe board-match3.ts) — nur in diesem
+  // "OMA Gems" (Match-3-Puzzle-PvE, siehe board-match3.ts) — nur in diesem
   // Modus zeigt der Server ein Brett im Snapshot UND sind Heldenkarten mit vollem
   // Rage-Balken per Klick sofort auslösbar (siehe ultimateReady unten).
   const isPuzzleMode = snapshot.mode.includes("PUZZLE");

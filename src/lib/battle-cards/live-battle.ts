@@ -280,11 +280,11 @@ async function finalizeLiveBattle(live: LiveBattle, state: InteractiveBattleStat
         data: {
           userId: live.playerAId,
           amount: reward,
-          reason: `${parsed.isPuzzle ? "Edelstein-Kampf" : "NPC-Kampf"} gewonnen (${parsed.difficulty})`,
+          reason: `${parsed.isPuzzle ? "OMA Gems" : "OMA Duels"} gewonnen (${parsed.difficulty})`,
         },
       });
     }
-    // Tutorial-Schritt 1: klassischer NPC-Kampf (nicht Edelstein-Kampf), Stufe Einfach.
+    // Tutorial-Schritt 1: klassisches OMA Duels (nicht OMA Gems), Stufe Einfach.
     if (parsed && !parsed.isPuzzle && parsed.difficulty === "EASY") {
       await markTutorialNpcBattleDone(live.playerAId);
     }
@@ -464,7 +464,7 @@ export async function startLivePveBattle(userId: string, difficulty: NpcDifficul
   return createLiveBattle(`PVE_${difficulty}`, userId, null, teamA, teamB, { A: "human", B: "ai" });
 }
 
-/** Wie startLivePveBattle, aber im Match-3-"Edelstein-Kampf"-Modus (siehe
+/** Wie startLivePveBattle, aber im Match-3-"OMA Gems"-Modus (siehe
  *  board-match3.ts): der Spieler erzeugt Rage über ein Puzzle-Brett statt rein
  *  automatisch, UND die Gegner sind eine eigene Riege humorvoller Monster
  *  (siehe puzzle-monsters.ts) statt der zufälligen Standard-Karten des
@@ -490,7 +490,7 @@ export async function startLivePvePuzzleBattle(userId: string, difficulty: NpcDi
 }
 
 /** Startet ein Kampagnen-Level (siehe campaign-levels.ts/campaign.ts) — läuft
- *  wie der Edelstein-Kampf über das Match-3-Brett (boardMode: true), aber mit
+ *  wie OMA Gems über das Match-3-Brett (boardMode: true), aber mit
  *  fest kuratiertem Gegner-Team statt zufälliger Monster und OHNE das
  *  tägliche NPC-Limit (Kampagnen-Level lassen sich beliebig oft wiederholen,
  *  um mehr Sterne zu holen — die Münz-Belohnung gibt es aber nur einmal pro

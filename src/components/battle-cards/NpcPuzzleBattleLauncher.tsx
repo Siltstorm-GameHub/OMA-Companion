@@ -1,13 +1,13 @@
 "use client";
 
 // ============================================
-// Edelstein-Kampf — Match-3-Puzzle-PvE, 3 Schwierigkeitsstufen
+// OMA Gems — Match-3-Puzzle-PvE, 3 Schwierigkeitsstufen
 // ============================================
 // Wie NpcBattleLauncher.tsx, nur im interaktiven Match-3-Modus (siehe
 // board-match3.ts): statt reinem Auto-Kampf erzeugt der Spieler seine Rage
 // selbst über ein Brett aus Genre-Icons (Arcade=Support, Shooter=Damage
-// Dealer, Racing=Tank). Teilt sich Schwierigkeit/Belohnung/Tageslimit mit dem
-// klassischen NPC-Kampf.
+// Dealer, Racing=Tank). Teilt sich Schwierigkeit/Belohnung/Tageslimit mit
+// OMA Duels.
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
@@ -70,7 +70,7 @@ export default function NpcPuzzleBattleLauncher() {
   return (
     <div className="glass rounded-xl p-3 space-y-2.5">
       <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
-        <Gem className="w-3.5 h-3.5" /> Edelstein-Kampf
+        <Gem className="w-3.5 h-3.5" /> OMA Gems
       </p>
       <div className="grid grid-cols-3 gap-2">
         {DIFFICULTY_ORDER.map((difficulty) => {
@@ -98,7 +98,7 @@ export default function NpcPuzzleBattleLauncher() {
         })}
       </div>
       <p className="text-[10px] text-gray-500">
-        <span className="text-gray-400 font-semibold">Match-3-Brett statt Zug-Auswahl</span> · Max. {NPC_BATTLE_DAILY_LIMIT}x täglich (geteilt mit NPC-Kampf)
+        <span className="text-gray-400 font-semibold">Match-3-Brett statt Zug-Auswahl</span> · Max. {NPC_BATTLE_DAILY_LIMIT}x täglich (geteilt mit OMA Duels)
       </p>
       {error && <ErrorNotice message={error} />}
     </div>

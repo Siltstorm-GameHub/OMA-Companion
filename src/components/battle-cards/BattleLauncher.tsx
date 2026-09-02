@@ -50,6 +50,7 @@ export default function BattleLauncher() {
           <Swords className="w-4 h-4" /> Kampf starten <ChevronUp className="w-4 h-4" />
         </span>
       </button>
+      <p className="text-center text-[10px] font-bold text-rose-300 uppercase tracking-widest">OMA Duels</p>
       <section className="space-y-2">
         <p className="flex items-center gap-1.5 text-[10px] font-semibold text-gray-500 uppercase tracking-widest">
           <Users className="w-3.5 h-3.5" /> Gegen Spieler

@@ -39,7 +39,7 @@ export const LEVEL_STAT_MULTIPLIER: Record<number, number> = {
 };
 
 // ============================================
-// Match-3-Brett ("Edelstein-Kampf" — Puzzle-PvE-Modus, siehe board-match3.ts)
+// Match-3-Brett ("OMA Gems" — Puzzle-PvE-Modus, siehe board-match3.ts)
 // ============================================
 // Auch diese Werte sind Platzhalter und müssen nach Playtests fein
 // ausbalanciert werden — insbesondere im Verhältnis zu RAGE_PER_ACTION/

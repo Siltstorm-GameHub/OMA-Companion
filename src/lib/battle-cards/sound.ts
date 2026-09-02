@@ -1,5 +1,5 @@
 // ============================================
-// Kampf-Sounds — Edelstein-Kampf
+// Kampf-Sounds — OMA Battle Cards
 // ============================================
 // Rein prozedural über die Web Audio API erzeugte Töne (kurze Sinus-/Sägezahn-
 // "Blips") — bewusst KEINE Audio-Dateien, da für dieses Projekt keine

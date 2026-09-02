@@ -14,7 +14,7 @@ export const NPC_BATTLE_WIN_REWARD: Record<NpcDifficulty, number> = { EASY: 100,
  *  Schwierigkeiten summiert — verhindert Farmen der Münz-Belohnung. */
 export const NPC_BATTLE_DAILY_LIMIT = 5;
 
-// ── Match-3-"Edelstein-Kampf" (Puzzle-PvE, siehe board-match3.ts) ──────────
+// ── Match-3-"OMA Gems" (Puzzle-PvE, siehe board-match3.ts) ──────────
 // Zusätzlicher LiveBattle.mode-Präfix neben dem bestehenden Auto-Kampf-PVE —
 // beide Modi laufen parallel, teilen sich aber Schwierigkeit/Belohnung/Limit.
 
