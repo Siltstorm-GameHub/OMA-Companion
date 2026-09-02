@@ -20,7 +20,8 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Loader2, Zap, Swords, Bot, ChevronRight, ChevronLeft, Timer, Volume2, VolumeX, Trophy, Skull, Handshake } from "lucide-react";
+import { Loader2, Zap, Swords, Bot, ChevronRight, ChevronLeft, Timer, Volume2, VolumeX, Trophy, Skull, Handshake, Star } from "lucide-react";
+import CoinIcon from "@/components/CoinIcon";
 import { getClassConfig, LEVEL_BORDER } from "./BattleCardView";
 import BoardMatch3 from "./BoardMatch3";
 import type { BoardGrid, SwapMove } from "@/lib/battle-engine/board-match3";
@@ -142,6 +143,9 @@ interface LiveSnapshot {
   resultBattleId: string | null;
   winner: "A" | "B" | "DRAW" | null;
   chestPrize: ChestPrize | null;
+  /** Nur bei einem gewonnenen Kampagnen-Kampf gesetzt — Sterne-Ergebnis für die
+   *  Animation im Kampfende-Screen (siehe computeStars in campaign.ts). */
+  campaignResult: { levelId: string; stars: 1 | 2 | 3; starsGained: number; coinsAwarded: number } | null;
 }
 
 function hpBarColor(pct: number): string {
@@ -206,6 +210,7 @@ function UnitCard({
   glow,
   ultimateReady,
   effects,
+  isAttacking,
   onClick,
   onUltimateClick,
 }: {
@@ -219,6 +224,10 @@ function UnitCard({
   /** Gerade eingetroffene Kampfeffekte für DIESE Einheit — Flug-Zahlen +
    *  Treffer-Flash bei Schaden (siehe FloatingEffect/LiveBattleView). */
   effects?: FloatingEffect[];
+  /** Diese Einheit hat GERADE (letzte ~550ms) einen Schadens-Angriff ausgeführt
+   *  — macht auch Angriffe sichtbar, die ohne eigene Zug-Handlung passieren
+   *  (match-ausgelöste Angriffe bei OMA Gems, siehe applyBoardRage). */
+  isAttacking?: boolean;
   onClick?: () => void;
   onUltimateClick?: () => void;
 }) {
@@ -256,7 +265,7 @@ function UnitCard({
     <button
       type="button"
       onClick={handleClick}
-      className={`w-20 sm:w-28 shrink-0 text-left relative ${isHit ? "hit-shake" : ""}`}
+      className={`w-20 sm:w-28 shrink-0 text-left relative ${isHit ? "hit-shake" : ""} ${isAttacking ? "attack-lunge" : ""}`}
       style={{ opacity: unit.isAlive ? 1 : 0.35, filter: unit.isAlive ? "none" : "grayscale(1)", cursor: clickable ? "pointer" : "default" }}
     >
       {(effects ?? []).length > 0 && (
@@ -295,6 +304,11 @@ function UnitCard({
           Ultimate bereit
         </span>
       )}
+      {isAttacking && (
+        <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 z-20 text-[7px] sm:text-[8px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-orange-500 text-white whitespace-nowrap">
+          Angriff!
+        </span>
+      )}
 
       <div className="w-full aspect-square mb-0.5 flex items-center justify-center relative rounded-md overflow-hidden">
         {/* Klassen-getönte Plate IMMER als Hintergrund — sonst schwebt freigestellte
@@ -302,6 +316,12 @@ function UnitCard({
             Spieler-Karten (die ihren Hintergrund selbst mitbringen) diese Plate ohnehin
             komplett überdecken. Einheitliches Porträt-Format unabhängig von der Quelle. */}
         <div className="absolute inset-0" style={{ background: `${config.color}22` }} />
+        {isAttacking && (
+          <div
+            className="absolute inset-0 rounded-full pointer-events-none"
+            style={{ background: "radial-gradient(closest-side, rgba(249,115,22,0.55), transparent 70%)" }}
+          />
+        )}
         {(isActing || glow || canFireUltimate) && (
           <div
             className={`absolute inset-0 rounded-full pointer-events-none ${canFireUltimate && !isActing ? "animate-pulse" : ""}`}
@@ -331,8 +351,9 @@ function UnitCard({
         <div
           className={`absolute inset-0 rounded-md pointer-events-none ${canFireUltimate && !glow ? "animate-pulse" : ""}`}
           style={{
-            boxShadow:
-              glow === "enemy"
+            boxShadow: isAttacking
+              ? "0 0 0 2px #f97316, 0 0 16px rgba(249,115,22,0.75)"
+              : glow === "enemy"
                 ? "0 0 0 2px #ef4444, 0 0 14px rgba(239,68,68,0.6)"
                 : glow === "ally"
                   ? "0 0 0 2px #22c55e, 0 0 14px rgba(34,197,94,0.6)"
@@ -441,6 +462,11 @@ export default function LiveBattleView({
   const [, setTick] = useState(0); // erzwingt einen Re-Render pro Sekunde für den Countdown
   const [mounted, setMounted] = useState(false);
   const [effects, setEffects] = useState<FloatingEffect[]>([]);
+  // Wer GERADE angreift (kurzzeitig, siehe unten) — macht Angriffe des Gegners
+  // (insbesondere match-ausgelöste Angriffe bei OMA Gems, die sonst ohne jede
+  // eigene Zug-Handlung "einfach passieren") sichtbar: der angreifende Held
+  // bekommt selbst einen kurzen Lunge/Glow-Effekt, nicht nur das getroffene Ziel.
+  const [attackingUnitIds, setAttackingUnitIds] = useState<Set<string>>(new Set());
   const lastLogLengthRef = useRef<number | null>(null);
   const [soundMuted, setSoundMutedState] = useState(isSoundMuted);
   // Splash-Art für den Lade-Zustand (siehe public/battle-cards/splash.png) —
@@ -524,6 +550,7 @@ export default function LiveBattleView({
 
     const newEntries = snapshot.recentLog.slice(-Math.min(newCount, snapshot.recentLog.length));
     const spawned: FloatingEffect[] = [];
+    const newAttackerIds = new Set<string>();
     for (const entry of newEntries) {
       if (entry.type === "damage") {
         spawned.push({
@@ -533,6 +560,7 @@ export default function LiveBattleView({
           text: `-${entry.amount as number}`,
           bonusPercent: entry.matchBonusPercent as number | undefined,
         });
+        if (entry.sourceId && entry.sourceId !== entry.targetId) newAttackerIds.add(entry.sourceId as string);
         if (entry.isCrit) playCritSound();
         else playDamageSound();
       } else if (entry.type === "heal") {
@@ -555,6 +583,19 @@ export default function LiveBattleView({
       } else if (entry.type === "action" && entry.actionType === "ultimate") {
         playUltimateSound();
       }
+    }
+    if (newAttackerIds.size > 0) {
+      setAttackingUnitIds((prev) => new Set([...prev, ...newAttackerIds]));
+      newAttackerIds.forEach((id) => {
+        window.setTimeout(() => {
+          setAttackingUnitIds((prev) => {
+            if (!prev.has(id)) return prev;
+            const next = new Set(prev);
+            next.delete(id);
+            return next;
+          });
+        }, 550);
+      });
     }
     if (spawned.length === 0) return;
 
@@ -720,6 +761,7 @@ export default function LiveBattleView({
             submitUltimate={submitUltimate}
             toggleAuto={toggleAuto}
             effects={effects}
+            attackingUnitIds={attackingUnitIds}
             saveBoardProgress={saveBoardProgress}
           />
         )}
@@ -739,6 +781,7 @@ function LiveBattleBody({
   submitUltimate,
   toggleAuto,
   effects,
+  attackingUnitIds,
   saveBoardProgress,
 }: {
   snapshot: LiveSnapshot;
@@ -750,6 +793,7 @@ function LiveBattleBody({
   submitUltimate: (casterId: string) => void;
   toggleAuto: (on: boolean) => void;
   effects: FloatingEffect[];
+  attackingUnitIds: Set<string>;
   saveBoardProgress: (boardSwaps: SwapMove[]) => void;
 }) {
   const myTeam: TeamId | null = viewerId === snapshot.playerAId ? "A" : viewerId === snapshot.playerBId ? "B" : null;
@@ -908,6 +952,7 @@ function LiveBattleBody({
               isActing={snapshot.awaiting?.unitId === u.instanceId}
               glow={glowFor(u)}
               effects={effectsFor(u)}
+              isAttacking={attackingUnitIds.has(u.instanceId)}
               onClick={() => handleUnitClick(u)}
             />
           ))}
@@ -922,6 +967,7 @@ function LiveBattleBody({
               glow={glowFor(u)}
               ultimateReady={ultimateReadyFor(u)}
               effects={effectsFor(u)}
+              isAttacking={attackingUnitIds.has(u.instanceId)}
               onClick={() => handleUnitClick(u)}
               onUltimateClick={() => handleUnitClick(u)}
             />
@@ -968,7 +1014,39 @@ function LiveBattleBody({
               <p className="font-battle text-base text-white uppercase tracking-wide">
                 {snapshot.winner === null ? "Unentschieden" : snapshot.winner === myTeam ? "Sieg!" : "Niederlage"}
               </p>
-              <p className="text-[11px] text-gray-400">Kampf beendet.</p>
+              {snapshot.campaignResult ? (
+                <div className="flex items-center gap-2 mt-0.5">
+                  <div className="flex items-center gap-0.5">
+                    {[1, 2, 3].map((n) => {
+                      const earned = n <= snapshot.campaignResult!.stars;
+                      const isNew = earned && n > snapshot.campaignResult!.stars - snapshot.campaignResult!.starsGained;
+                      return (
+                        <Star
+                          key={n}
+                          className={`w-4 h-4 animate-number-pop ${earned ? "text-amber-400" : "text-gray-700"} ${isNew ? "drop-shadow-[0_0_6px_rgba(251,191,36,0.8)]" : ""}`}
+                          style={{ animationDelay: `${n * 140}ms` }}
+                          fill={earned ? "currentColor" : "none"}
+                        />
+                      );
+                    })}
+                  </div>
+                  {snapshot.campaignResult.starsGained > 0 && (
+                    <span
+                      className="flex items-center gap-1 text-[11px] font-semibold text-amber-300 animate-number-pop"
+                      style={{ animationDelay: "560ms" }}
+                    >
+                      +{snapshot.campaignResult.starsGained} Stern{snapshot.campaignResult.starsGained === 1 ? "" : "e"}
+                      {snapshot.campaignResult.coinsAwarded > 0 && (
+                        <span className="flex items-center gap-0.5 text-gray-400 font-normal">
+                          (+{snapshot.campaignResult.coinsAwarded} <CoinIcon size={11} />)
+                        </span>
+                      )}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <p className="text-[11px] text-gray-400">Kampf beendet.</p>
+              )}
             </div>
             {snapshot.resultBattleId && (
               <Link
