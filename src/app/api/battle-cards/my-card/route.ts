@@ -10,6 +10,7 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { updateCardContent, CardContentError, CARD_TITLE_MAX_LENGTH, CARD_FLAVOR_TEXT_MAX_LENGTH } from "@/lib/battle-cards/card-content";
+import { markTutorialCommunityCardCustomized } from "@/lib/battle-cards/tutorial";
 
 const requestSchema = z.object({
   title: z.string().max(CARD_TITLE_MAX_LENGTH).optional(),
@@ -24,6 +25,7 @@ export async function PATCH(request: Request) {
   if (!discordId) {
     return Response.json({ error: "Nicht eingeloggt oder kein Discord verknüpft." }, { status: 401 });
   }
+  const userId = session!.user!.id;
 
   const body = await request.json().catch(() => null);
   const parsed = requestSchema.safeParse(body);
@@ -38,6 +40,7 @@ export async function PATCH(request: Request) {
 
   try {
     await updateCardContent(card.id, parsed.data);
+    await markTutorialCommunityCardCustomized(userId);
     return Response.json({ ok: true });
   } catch (error) {
     if (error instanceof CardContentError) {

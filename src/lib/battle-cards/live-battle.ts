@@ -39,11 +39,13 @@ import { puzzleMonsterRoster } from "@/lib/battle-cards/puzzle-monsters";
 import {
   buildCampaignEnemyTeam,
   CAMPAIGN_COINS_PER_STAR,
+  CAMPAIGN_LEVELS,
   computeStars,
   getCampaignLevel,
   isCampaignLevelUnlocked,
   recordCampaignResult,
 } from "@/lib/battle-cards/campaign";
+import { markTutorialCampaignLevel1Done, markTutorialNpcBattleDone } from "@/lib/battle-cards/tutorial";
 import { resolveAvatarsForCards } from "@/lib/battle-cards/card-view";
 import { resolveCardImageUrl, resolveAvatarBadgeUrl } from "@/lib/battle-cards/resolve-image";
 import { applyWinStreak } from "@/lib/battle-cards/win-streak";
@@ -277,6 +279,10 @@ async function finalizeLiveBattle(live: LiveBattle, state: InteractiveBattleStat
         },
       });
     }
+    // Tutorial-Schritt 1: klassischer NPC-Kampf (nicht Edelstein-Kampf), Stufe Einfach.
+    if (parsed && !parsed.isPuzzle && parsed.difficulty === "EASY") {
+      await markTutorialNpcBattleDone(live.playerAId);
+    }
   } else if (state.winner === "A" && live.mode.startsWith("CAMPAIGN_")) {
     const levelId = live.mode.slice("CAMPAIGN_".length);
     const stars = computeStars(state);
@@ -295,6 +301,10 @@ async function finalizeLiveBattle(live: LiveBattle, state: InteractiveBattleStat
           reason: `Kampagnen-Level: ${starsGained} neue${starsGained === 1 ? "r" : ""} Stern${starsGained === 1 ? "" : "e"} (${levelDef?.name ?? levelId})`,
         },
       });
+    }
+    // Tutorial-Schritt 3: erstes Kampagnen-Level gewonnen — schließt das Tutorial ab.
+    if (levelId === CAMPAIGN_LEVELS[0].id) {
+      await markTutorialCampaignLevel1Done(live.playerAId);
     }
   }
 

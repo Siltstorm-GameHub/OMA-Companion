@@ -108,6 +108,7 @@ model User {
   liveBattlesAsA           LiveBattle[]             @relation("LiveBattlePlayerA")
   liveBattlesAsB           LiveBattle[]             @relation("LiveBattlePlayerB")
   campaignProgress         UserCampaignProgress[]
+  tutorialProgress         UserTutorialProgress?
 }
 
 // ── Pokale ───────────────────────────────────────────────────────────────────
@@ -1332,6 +1333,7 @@ model Battle {
 enum CardPackSource {
   PURCHASE
   WHEEL
+  TUTORIAL
 }
 
 // Pack-Sorte bestimmt Kartenanzahl + Community-Karten-Chance beim Öffnen,
@@ -1343,13 +1345,17 @@ enum CardPackKind {
 }
 
 model CardPack {
-  id           String         @id @default(cuid())
-  userId       String
-  source       CardPackSource
-  kind         CardPackKind   @default(STANDARD)
-  createdAt    DateTime       @default(now())
-  openedAt     DateTime?
-  openedCardId String? // Snapshot der gezogenen Karten-ID, rein informativ
+  id              String         @id @default(cuid())
+  userId          String
+  source          CardPackSource
+  kind            CardPackKind   @default(STANDARD)
+  // Garantiert beim Öffnen GENAU diese Karte statt einer zufälligen Ziehung
+  // (siehe openNextPack in packs.ts) — bisher nur für das Tutorial-Community-
+  // Pack genutzt (garantiert die eigene Community-Karte des Users).
+  guaranteedCardId String?
+  createdAt       DateTime       @default(now())
+  openedAt        DateTime?
+  openedCardId    String? // Snapshot der gezogenen Karten-ID, rein informativ
 
   user User @relation(fields: [userId], references: [id])
 
@@ -1427,6 +1433,26 @@ model UserCampaignProgress {
 
   @@unique([userId, levelId])
   @@index([userId])
+}
+
+// ── Battle-Cards-Tutorial ────────────────────────────────────────────────
+// Startet, sobald ein User sein Start-Pack wählt (siehe grantStarterPick in
+// starter-pick.ts) — nicht rückwirkend für User, die ihr Start-Pack schon
+// vor Einführung des Tutorials gewählt hatten. Ein Saison-1-Reset (siehe
+// resetAllCardOwnership) zwingt User zurück in StarterPickFlow, was dieses
+// Tutorial automatisch neu startet (grantStarterPick setzt alle Felder
+// zurück auf null, siehe tutorial.ts: startOrResetTutorial).
+model UserTutorialProgress {
+  id                        String    @id @default(cuid())
+  userId                    String    @unique
+  npcBattleCompletedAt      DateTime? // Schritt 1: NPC-Kampf (Einfach) gespielt — +200 Münzen, Community-Pack
+  communityCardCustomizedAt DateTime? // Schritt 2: eigene Community-Karte bearbeitet — +500 Münzen
+  campaignLevel1CompletedAt DateTime? // Schritt 3: Kampagne Kapitel 1, Level 1 gewonnen — Premium-Pack
+  completedAt               DateTime? // alle Schritte erledigt
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 // ── Battle-Cards-Matchmaking ("Zufallsgegner suchen") ───────────────────────

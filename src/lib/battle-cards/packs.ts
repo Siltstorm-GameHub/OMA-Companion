@@ -71,17 +71,10 @@ export async function grantPack(
   await prisma.cardPack.create({ data: { userId, source, kind } });
 }
 
-/** Zieht eine zufällige Karte der angegebenen Seltenheit und erhöht
- *  Duplikate, falls schon vorhanden. */
-async function drawCard(userId: string, rarity: CardRarity): Promise<OpenPackResult> {
-  const pool = await prisma.card.findMany({ where: { rarity } });
-  if (pool.length === 0) {
-    throw new PackError(
-      rarity === "COMMUNITY" ? "Keine Community-Karten vorhanden." : "Keine Standard-Karten vorhanden."
-    );
-  }
-  const picked = pool[Math.floor(Math.random() * pool.length)];
-
+/** Schreibt eine gezogene Karte gut (neu oder +1 Duplikat) — gemeinsame
+ *  Transaktionslogik für zufällige (drawCard) und garantierte (drawExactCard)
+ *  Ziehungen. */
+async function awardDrawnCard(userId: string, picked: Card): Promise<OpenPackResult> {
   return prisma.$transaction(async (tx) => {
     const existing = await tx.userCard.findUnique({
       where: { userId_cardId: { userId, cardId: picked.id } },
@@ -100,6 +93,30 @@ async function drawCard(userId: string, rarity: CardRarity): Promise<OpenPackRes
     });
     return { card: picked, isNewCard: true, duplicates: 1 };
   });
+}
+
+/** Zieht eine zufällige Karte der angegebenen Seltenheit und erhöht
+ *  Duplikate, falls schon vorhanden. */
+async function drawCard(userId: string, rarity: CardRarity): Promise<OpenPackResult> {
+  const pool = await prisma.card.findMany({ where: { rarity } });
+  if (pool.length === 0) {
+    throw new PackError(
+      rarity === "COMMUNITY" ? "Keine Community-Karten vorhanden." : "Keine Standard-Karten vorhanden."
+    );
+  }
+  const picked = pool[Math.floor(Math.random() * pool.length)];
+  return awardDrawnCard(userId, picked);
+}
+
+/** Zieht GENAU die angegebene Karte (siehe CardPack.guaranteedCardId) —
+ *  für das Tutorial-Community-Pack, das immer die eigene Community-Karte
+ *  des Users enthalten soll, nicht eine zufällige. */
+async function drawExactCard(userId: string, cardId: string): Promise<OpenPackResult> {
+  const picked = await prisma.card.findUnique({ where: { id: cardId } });
+  if (!picked) {
+    throw new PackError("Die garantierte Karte existiert nicht mehr.");
+  }
+  return awardDrawnCard(userId, picked);
 }
 
 /** Zieht alle Karten für ein Pack der angegebenen Sorte. */
@@ -136,7 +153,9 @@ export async function openNextPack(
     throw new PackError("Keine ungeöffneten Packs vorhanden.");
   }
 
-  const cards = await drawCardsForPack(userId, pack.kind as PackKind);
+  const cards = pack.guaranteedCardId
+    ? [await drawExactCard(userId, pack.guaranteedCardId)]
+    : await drawCardsForPack(userId, pack.kind as PackKind);
 
   await prisma.cardPack.update({
     where: { id: pack.id },
@@ -145,4 +164,16 @@ export async function openNextPack(
 
   const remainingUnopened = await countUnopenedPacks(userId);
   return { cards, remainingUnopened };
+}
+
+/** Legt ein Pack an, das beim Öffnen garantiert `cardId` enthält (statt einer
+ *  zufälligen Ziehung) — für das Tutorial-Community-Pack (garantiert die
+ *  eigene Community-Karte). */
+export async function grantGuaranteedPack(
+  userId: string,
+  source: CardPackSource,
+  kind: PackKind,
+  cardId: string
+): Promise<void> {
+  await prisma.cardPack.create({ data: { userId, source, kind, guaranteedCardId: cardId } });
 }

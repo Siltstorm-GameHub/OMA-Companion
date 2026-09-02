@@ -13,6 +13,7 @@
 
 import { prisma } from "@/lib/prisma";
 import type { CardClass } from "@prisma/client";
+import { startOrResetTutorial } from "./tutorial";
 
 export const STARTER_PICK_COUNT = 5;
 const REQUIRED_CLASSES: CardClass[] = ["TANK", "SUPPORT", "DAMAGE_DEALER"];
@@ -65,4 +66,9 @@ export async function grantStarterPick(userId: string, cardIds: string[]): Promi
       await tx.userCard.create({ data: { userId, cardId, level: 1, duplicates, inLineup: true } });
     }
   });
+
+  // Startet das Tutorial (oder setzt es nach einem Saison-Reset frisch zurück) —
+  // siehe tutorial.ts. Bewusst NACH der Transaktion oben: das Start-Pack selbst
+  // muss in jedem Fall stehen, das Tutorial ist reine Zusatz-Führung.
+  await startOrResetTutorial(userId);
 }

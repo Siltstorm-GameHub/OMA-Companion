@@ -24,6 +24,7 @@ import { getUpgradeEconomyConfig } from "@/lib/battle-cards/upgrade-admin-config
 import { getBattleCardsLeaderboard } from "@/lib/battle-cards/leaderboard";
 import { getSeasonConfig } from "@/lib/season/season-config";
 import { getCurrentSeasonNumber, getSeasonWindow } from "@/lib/battle-cards/ranked-season";
+import { getTutorialProgress, getTutorialStep, hasOwnCommunityCard } from "@/lib/battle-cards/tutorial";
 import StarterPickFlow from "@/components/battle-cards/StarterPickFlow";
 import PackOpener from "@/components/battle-cards/PackOpener";
 import CardCollectionBrowser from "@/components/battle-cards/CardCollectionBrowser";
@@ -35,6 +36,7 @@ import BattleHistoryFeed from "@/components/battle-cards/BattleHistoryFeed";
 import LeaderboardList from "@/components/battle-cards/LeaderboardList";
 import LineupStrip from "@/components/battle-cards/LineupStrip";
 import CampaignMap from "@/components/battle-cards/CampaignMap";
+import TutorialProgressBanner from "@/components/battle-cards/TutorialProgressBanner";
 
 const OTHER_CARDS_PAGE_SIZE = 12;
 const userSelect = { id: true, username: true, name: true, image: true, rankPoints: true } as const;
@@ -93,6 +95,13 @@ export default async function BattleCardsPage() {
   const pendingChallenges = await prisma.battleChallenge.count({ where: { opponentId: userId, status: "pending" } });
   const currentUser = await prisma.user.findUnique({ where: { id: userId }, select: { points: true } });
   const upgradeEconomy = await getUpgradeEconomyConfig();
+
+  // ── Tutorial: nur relevant, falls für diesen User überhaupt eine Zeile existiert
+  //    (startet erst beim Wählen des Start-Packs, siehe tutorial.ts) ──
+  const tutorialProgress = await getTutorialProgress(userId);
+  const tutorialStep = tutorialProgress
+    ? getTutorialStep(tutorialProgress, await hasOwnCommunityCard(userId))
+    : "done";
 
   const ownedCards = ownedUserCards.map((uc) => ({
     id: uc.id,
@@ -161,6 +170,8 @@ export default async function BattleCardsPage() {
           )}
         </div>
       </div>
+
+      <TutorialProgressBanner step={tutorialStep} />
 
       <div className="space-y-2">
         <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Startaufstellung</h2>

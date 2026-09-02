@@ -70,6 +70,17 @@ export async function resetAllCardOwnership(): Promise<void> {
   ]);
 }
 
+/** Löscht den kompletten Kampagnen-Fortschritt aller User (Sterne/Freischaltung
+ *  je Level) — läuft zusammen mit resetAllCardOwnership beim Saison-1-Start
+ *  (siehe /api/cron/battle-cards-season): "jeder startet bei 0" gilt auch für
+ *  die Kampagne, nicht nur für die Kartensammlung. In Saison 1 wird wieder bei
+ *  Kapitel 1 begonnen (aktuell das einzige Kapitel). Das Tutorial selbst
+ *  startet unabhängig davon automatisch neu, sobald ein User danach sein
+ *  Start-Pack erneut wählt (siehe tutorial.ts: startOrResetTutorial). */
+export async function resetAllCampaignProgress(): Promise<void> {
+  await prisma.userCampaignProgress.deleteMany({});
+}
+
 // ---------- Platz-1-3-Belohnungen bei Saisonabschluss ----------
 
 async function grantPlacementReward(userId: string, reward: SeasonPlacementReward, seasonNumber: number) {

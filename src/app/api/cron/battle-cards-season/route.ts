@@ -5,8 +5,9 @@
 // Läuft täglich (siehe vercel.json), zwei voneinander unabhängige Teile:
 //  1. Saison 1 (einmalig): sobald das Admin-Startdatum erreicht ist und Saison 1
 //     noch nicht lief (season1RanAt), Klassen-/Stats-Neuklassifizierung UND
-//     kompletter Karten-Reset ("jeder startet bei 0") — season1RanAt ist danach
-//     zugleich der Anker für alle folgenden Ranglisten-Saisons.
+//     kompletter Karten- UND Kampagnen-Fortschritt-Reset ("jeder startet bei
+//     0", In Saison 1 wird wieder Kapitel 1 gespielt) — season1RanAt ist
+//     danach zugleich der Anker für alle folgenden Ranglisten-Saisons.
 //  2. Ranglisten-Saisons (wiederkehrend, alle 3 Monate ab dem Anker): sobald
 //     eine Saison vorbei ist, Platz-1-3-Belohnungen vergeben. Die Rangliste
 //     selbst braucht keinen aktiven Reset — sie filtert immer nur auf das
@@ -16,7 +17,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSeasonConfig, markSeason1Ran } from "@/lib/season/season-config";
 import { runFullSeasonUpdate } from "@/lib/season/run-season";
-import { resetAllCardOwnership, grantDueSeasonRewards } from "@/lib/battle-cards/ranked-season";
+import { resetAllCardOwnership, resetAllCampaignProgress, grantDueSeasonRewards } from "@/lib/battle-cards/ranked-season";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -43,8 +44,9 @@ export async function GET(req: NextRequest) {
   } else {
     const result = await runFullSeasonUpdate();
     await resetAllCardOwnership();
+    await resetAllCampaignProgress();
     await markSeason1Ran();
-    season1Result = { ...result, cardsReset: true };
+    season1Result = { ...result, cardsReset: true, campaignReset: true };
   }
 
   // ── Teil 2: fällige Ranglisten-Saison-Belohnungen (wiederkehrend, alle 3 Monate) ──
