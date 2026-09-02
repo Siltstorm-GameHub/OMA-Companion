@@ -5,9 +5,12 @@
 import { prisma } from "@/lib/prisma";
 import { puzzleMonsterRoster } from "@/lib/battle-cards/puzzle-monsters";
 import { DIFFICULTY_LEVEL, tournamentModeFor, type NpcDifficulty } from "@/lib/battle-cards/npc-battle-types";
+import { GEMS_MONSTER_TEAM_MAX, findGemsMonsterTemplate } from "@/lib/battle-cards/gems-monster-catalog";
+import { instantiateMonster } from "@/lib/battle-cards/monster-content";
+import { grantPack, type PackKind } from "@/lib/battle-cards/packs";
 import type { BattleUnitDefinition } from "@/lib/battle-engine/types";
 
-const TEAM_SIZE = 5;
+const TEAM_SIZE = GEMS_MONSTER_TEAM_MAX;
 
 function sampleWithoutReplacement<T>(items: T[], count: number): T[] {
   const pool = [...items];
@@ -20,12 +23,27 @@ function sampleWithoutReplacement<T>(items: T[], count: number): T[] {
 }
 
 /** Erzeugt EINMALIG das feste Boss-Team für ein neues OMA-Gems-Turnier — wird
- *  bei Erstellung (und bei einer Difficulty-Änderung ohne bestehende Attempts)
- *  im Admin-API-Layer aufgerufen und als bossTeamJson persistiert, damit
- *  wirklich alle Teilnehmer exakt dasselbe Gegner-Team bekommen (Fairness
- *  im Score-Vergleich). */
-export function generateGemsTournamentBossTeam(difficulty: NpcDifficulty): BattleUnitDefinition[] {
+ *  bei Erstellung (und bei einer Difficulty-/Monster-Änderung ohne bestehende
+ *  Attempts) im Admin-API-Layer aufgerufen und als bossTeamJson persistiert,
+ *  damit wirklich alle Teilnehmer exakt dasselbe Gegner-Team bekommen
+ *  (Fairness im Score-Vergleich). `monsterCardIds` (siehe gems-monster-
+ *  catalog.ts, Duplikate erlaubt, auf GEMS_MONSTER_TEAM_MAX gekappt) ersetzt
+ *  bei Angabe die bisherige rein zufällige Auswahl durch die vom Admin
+ *  gewählten Monster — jeweils mit der Stufe der gewählten Schwierigkeit
+ *  instanziiert, genau wie bei der Zufallsauswahl. */
+export function generateGemsTournamentBossTeam(
+  difficulty: NpcDifficulty,
+  monsterCardIds?: string[]
+): BattleUnitDefinition[] {
   const npcLevel = DIFFICULTY_LEVEL[difficulty];
+  if (monsterCardIds && monsterCardIds.length > 0) {
+    const capped = monsterCardIds.slice(0, GEMS_MONSTER_TEAM_MAX);
+    const team = capped
+      .map((cardId) => findGemsMonsterTemplate(cardId))
+      .filter((template): template is NonNullable<typeof template> => !!template)
+      .map((template) => instantiateMonster(template, npcLevel));
+    if (team.length > 0) return team;
+  }
   return sampleWithoutReplacement(puzzleMonsterRoster(npcLevel), TEAM_SIZE);
 }
 
@@ -95,8 +113,12 @@ export async function getCurrentGemsTournament(viewerId: string): Promise<GemsTo
 
 // ---------- Finalisierung (Cron) ----------
 
-type PlacementReward = { place: number; coins: number; rankPoints: number };
-type RewardsConfig = { participationCoins: number; placements: PlacementReward[] };
+/** `packKind`/`participationPackKind` sind optionale, admin-gesetzte Zusatzfelder
+ *  speziell für OMA-Gems-Turniere (siehe EventSetupWizard.tsx/EventEditClient.tsx)
+ *  — bei regulären Events bleiben sie einfach unbelegt und werden von deren
+ *  Abschluss-Logik ignoriert, da diese das JSON nicht auf diese Felder hin liest. */
+type PlacementReward = { place: number; coins: number; rankPoints: number; packKind?: PackKind | "" };
+type RewardsConfig = { participationCoins: number; participationPackKind?: PackKind | ""; placements: PlacementReward[] };
 
 function parseRewardsConfig(json: string | null): RewardsConfig {
   const fallback: RewardsConfig = { participationCoins: 10, placements: [] };
@@ -143,6 +165,15 @@ export async function finalizeDueGemsTournaments(): Promise<{ finalized: string[
       }
       if (placement?.rankPoints) {
         await prisma.user.update({ where: { id: attempt.userId }, data: { rankPoints: { increment: placement.rankPoints } } });
+      }
+      // Optionale Karten-Pack-Belohnung (Teilnahme + zusätzlich je nach Platzierung) —
+      // beide sind unabhängig voneinander optional, ein Teilnehmer kann also z.B. ein
+      // Teilnahme-Pack UND ein Platzierungs-Pack bekommen (zwei separate Packs).
+      if (rewards.participationPackKind) {
+        await grantPack(attempt.userId, "GEMS_TOURNAMENT_REWARD", rewards.participationPackKind as PackKind);
+      }
+      if (placement?.packKind) {
+        await grantPack(attempt.userId, "GEMS_TOURNAMENT_REWARD", placement.packKind as PackKind);
       }
     }
 

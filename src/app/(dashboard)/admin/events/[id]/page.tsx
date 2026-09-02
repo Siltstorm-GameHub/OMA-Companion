@@ -26,7 +26,7 @@ export default async function AdminEventEditPage({ params }: { params: Promise<{
           include: { entries: true },
         },
         teams: { include: { members: { include: { user: { select: { id: true, name: true, username: true } } } } } },
-        gemsTournament: { select: { id: true, endAt: true, difficulty: true, maxAttemptsPerUser: true } },
+        gemsTournament: { select: { id: true, endAt: true, difficulty: true, maxAttemptsPerUser: true, monsterCardIdsJson: true } },
       },
     }),
     prisma.user.findMany({

@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     title, description, game, genre, category, startAt, maxPlayers, type, seriesId,
     discordChannelId, spectatorMode, spectatorRewardJson, pollsConfigJson,
     placementRewardsJson, hidden, registrationLocked, squadId,
-    gemsEndAt, gemsDifficulty, gemsMaxAttempts,
+    gemsEndAt, gemsDifficulty, gemsMaxAttempts, gemsMonsterIds,
   } = body;
 
   // Moderator/Admin dürfen immer Events erstellen. Reine Squad-Captains (globale Rolle "user") nur,
@@ -150,13 +150,18 @@ export async function POST(req: NextRequest) {
   if (game === "OMA Gems" && gemsEndAt) {
     const difficulty: NpcDifficulty = GEMS_DIFFICULTIES.includes(gemsDifficulty) ? gemsDifficulty : "MEDIUM";
     const maxAttemptsPerUser = Number(gemsMaxAttempts) > 0 ? Number(gemsMaxAttempts) : 3;
+    const monsterCardIds: string[] | undefined =
+      Array.isArray(gemsMonsterIds) && gemsMonsterIds.every((id) => typeof id === "string")
+        ? gemsMonsterIds
+        : undefined;
     await prisma.gemsTournament.create({
       data: {
         eventId: event.id,
         endAt: new Date(gemsEndAt),
         difficulty,
         maxAttemptsPerUser,
-        bossTeamJson: JSON.stringify(generateGemsTournamentBossTeam(difficulty)),
+        bossTeamJson: JSON.stringify(generateGemsTournamentBossTeam(difficulty, monsterCardIds)),
+        monsterCardIdsJson: monsterCardIds?.length ? JSON.stringify(monsterCardIds) : null,
       },
     });
   }
