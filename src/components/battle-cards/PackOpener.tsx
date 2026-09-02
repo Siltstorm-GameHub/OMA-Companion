@@ -105,10 +105,17 @@ export default function PackOpener({ initialUnopenedCount }: { initialUnopenedCo
       <button
         type="button"
         onClick={startSession}
-        className="flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-md bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 transition-colors"
+        className="w-full glass rounded-2xl p-4 flex items-center gap-3 text-left hover:bg-white/[0.04] transition-colors"
       >
-        <Package className="w-4 h-4" />
-        {remaining} ungeöffnete Truhe{remaining === 1 ? "" : "n"}
+        <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+          <Package className="w-4 h-4 text-amber-400" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-white">Kartentruhen öffnen</p>
+          <p className="text-xs text-gray-500">
+            {remaining} ungeöffnete Truhe{remaining === 1 ? "" : "n"} warten auf dich.
+          </p>
+        </div>
       </button>
 
       <AnimatePresence>
@@ -171,7 +178,7 @@ export default function PackOpener({ initialUnopenedCount }: { initialUnopenedCo
                   transition={{ type: "spring", stiffness: 200, damping: 18 }}
                   className="flex flex-col items-center gap-3"
                 >
-                  <div className="relative">
+                  <div className="relative w-full max-w-[240px]">
                     {results[revealIndex].card.rarity === "COMMUNITY" && (
                       <div
                         className="absolute -inset-5 -z-10 rounded-full pointer-events-none"
