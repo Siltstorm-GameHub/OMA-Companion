@@ -12,11 +12,18 @@ export interface LeaderboardRow {
   winRate: number;
 }
 
-/** Aggregiert alle abgeschlossenen BattleChallenges zu einer nach Siegen sortierten Rangliste.
- *  `window` schränkt auf eine Ranglisten-Saison ein (respondedAt im Zeitfenster) — ohne
- *  Angabe zählt die gesamte Historie (Fallback, solange das Saison-System noch nicht aktiv ist).
- *  `mode` filtert optional auf einen einzelnen Spielmodus ("DUELS" | "GEMS") — ohne Angabe
- *  zählen beide Modi zusammen (ein gemeinsamer Saison-Sieger über OMA Duels + OMA Gems PvP). */
+/** Ab so vielen zählenden Kämpfen gilt ein User als "eingestuft" und wird primär nach
+ *  Winrate gerankt — verhindert, dass 1 Sieg aus 1 Kampf sofort Platz 1 verdrängt.
+ *  User darunter bleiben sichtbar, landen aber immer hinter den eingestuften. */
+const MIN_MATCHES_FOR_RANKING = 5;
+
+/** Aggregiert alle abgeschlossenen, für die Rangliste zählenden BattleChallenges (siehe
+ *  countsForRanking — Farm-Fairness-Deckel bei Gems-PvP-Wiederholungsgegnern) zu einer
+ *  primär nach Winrate sortierten Rangliste. `window` schränkt auf eine Ranglisten-Saison
+ *  ein (respondedAt im Zeitfenster) — ohne Angabe zählt die gesamte Historie (Fallback,
+ *  solange das Saison-System noch nicht aktiv ist). `mode` filtert optional auf einen
+ *  einzelnen Spielmodus ("DUELS" | "GEMS") — ohne Angabe zählen beide Modi zusammen (ein
+ *  gemeinsamer Saison-Sieger über OMA Duels + OMA Gems PvP). */
 export async function getBattleCardsLeaderboard(
   window?: { start: Date; end: Date },
   mode?: "DUELS" | "GEMS"
@@ -24,6 +31,7 @@ export async function getBattleCardsLeaderboard(
   const resolved = await prisma.battleChallenge.findMany({
     where: {
       status: "resolved",
+      countsForRanking: true,
       ...(window ? { respondedAt: { gte: window.start, lt: window.end } } : {}),
       ...(mode ? { mode } : {}),
     },
@@ -72,5 +80,10 @@ export async function getBattleCardsLeaderboard(
       };
     })
     .filter((r) => r.total > 0)
-    .sort((a, b) => b.wins - a.wins || b.winRate - a.winRate || b.total - a.total);
+    .sort((a, b) => {
+      const aRanked = a.total >= MIN_MATCHES_FOR_RANKING;
+      const bRanked = b.total >= MIN_MATCHES_FOR_RANKING;
+      if (aRanked !== bRanked) return aRanked ? -1 : 1;
+      return b.winRate - a.winRate || b.wins - a.wins || b.total - a.total;
+    });
 }

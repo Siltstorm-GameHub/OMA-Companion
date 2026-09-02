@@ -51,6 +51,14 @@ export const PVP_GEMS_MODE = "PVP_GEMS";
  *  eigenständig vom NPC-Tageslimit, verhindert Farmen der Sieges-Kiste. */
 export const GEMS_PVP_DAILY_LIMIT = 5;
 
+/** Max. Anzahl RESOLVTER Gems-PvP-Kämpfe desselben Angreifer/Gegner-Paars pro Tag
+ *  (UTC), die für Rangliste + Sieges-Kiste zählen — weitere Angriffe gegen denselben
+ *  Gegner am selben Tag dürfen weiterhin stattfinden, zählen aber nicht mehr (siehe
+ *  finalizeLiveBattle: BattleChallenge.countsForRanking). Verhindert, dass Farmen
+ *  desselben Gegners die Rangliste verzerrt und dem Gegner unbegrenzt Niederlagen
+ *  aufzwingt. */
+export const GEMS_PVP_OPPONENT_DAILY_CAP = 2;
+
 // ── OMA-Gems-Turniere (Score-Attack, siehe gems-tournament.ts) ─────────────
 
 const TOURNAMENT_MODE_PREFIX = "TOURNAMENT_";

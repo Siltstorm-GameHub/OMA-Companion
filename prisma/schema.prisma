@@ -1384,6 +1384,11 @@ model BattleChallenge {
   winnerId     String?
   createdAt    DateTime  @default(now())
   respondedAt  DateTime?
+  // false = zählt NICHT für Rangliste/Sieges-Kiste — bei GEMS-Kämpfen gesetzt, sobald dasselbe
+  // Angreifer/Gegner-Paar am selben Tag bereits GEMS_PVP_OPPONENT_DAILY_CAP resolvte Kämpfe hatte
+  // (verhindert Farmen: denselben Gegner beliebig oft anzugreifen darf keine beliebig große
+  // Rangliste-/Belohnungswirkung haben, siehe finalizeLiveBattle). Für DUELS immer true.
+  countsForRanking Boolean @default(true)
 
   challenger User @relation("BattleChallengeChallenger", fields: [challengerId], references: [id], onDelete: Cascade)
   opponent   User @relation("BattleChallengeOpponent", fields: [opponentId], references: [id], onDelete: Cascade)

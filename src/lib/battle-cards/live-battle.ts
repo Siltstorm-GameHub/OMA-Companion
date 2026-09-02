@@ -53,6 +53,7 @@ import { applyWinStreak } from "@/lib/battle-cards/win-streak";
 import {
   DIFFICULTY_LEVEL,
   GEMS_PVP_DAILY_LIMIT,
+  GEMS_PVP_OPPONENT_DAILY_CAP,
   NPC_BATTLE_DAILY_LIMIT,
   NPC_BATTLE_WIN_REWARD,
   parseNpcMode,
@@ -303,9 +304,28 @@ async function finalizeLiveBattle(live: LiveBattle, state: InteractiveBattleStat
     const challenge = await prisma.battleChallenge.findUnique({ where: { liveBattleId: live.id } });
     if (challenge) {
       const winnerId = state.winner === "A" ? live.playerAId : state.winner === "B" ? live.playerBId : null;
+
+      // Fairness-Deckel gegen Farmen: nur die ersten GEMS_PVP_OPPONENT_DAILY_CAP
+      // resolvten Kämpfe desselben Angreifer/Gegner-Paars pro Tag zählen für
+      // Rangliste + Sieges-Kiste — weitere Angriffe gegen denselben Gegner sind
+      // weiterhin möglich, wirken sich aber nicht mehr aus (siehe leaderboard.ts).
+      let countsForRanking = true;
+      if (challenge.mode === "GEMS") {
+        const pairMatchesToday = await prisma.battleChallenge.count({
+          where: {
+            mode: "GEMS",
+            status: "resolved",
+            challengerId: challenge.challengerId,
+            opponentId: challenge.opponentId,
+            respondedAt: { gte: startOfTodayUTC() },
+          },
+        });
+        countsForRanking = pairMatchesToday < GEMS_PVP_OPPONENT_DAILY_CAP;
+      }
+
       await prisma.battleChallenge.update({
         where: { id: challenge.id },
-        data: { status: "resolved", battleId: battle.id, winnerId, respondedAt: new Date() },
+        data: { status: "resolved", battleId: battle.id, winnerId, respondedAt: new Date(), countsForRanking },
       });
       if (winnerId) {
         const loserId = winnerId === live.playerAId ? live.playerBId : live.playerAId;
@@ -315,8 +335,9 @@ async function finalizeLiveBattle(live: LiveBattle, state: InteractiveBattleStat
       // dessen Sieg öffnet sich die Sieges-Kiste. Der Verteidiger bekommt nichts,
       // er hat den Kampf nicht selbst bestritten. Der Gewinn wird zusätzlich am
       // Battle-Datensatz gespeichert, damit der Client ihn direkt im nächsten
-      // Snapshot als Öffnen-Animation zeigen kann (siehe buildSnapshot).
-      if (challenge.mode === "GEMS" && winnerId === live.playerAId) {
+      // Snapshot als Öffnen-Animation zeigen kann (siehe buildSnapshot). Kein
+      // Kisten-Gewinn mehr, sobald der Fairness-Deckel gegen dasselbe Paar greift.
+      if (challenge.mode === "GEMS" && winnerId === live.playerAId && countsForRanking) {
         const prize = await grantGemsPvpVictoryChest(live.playerAId);
         await prisma.battle.update({
           where: { id: battle.id },
