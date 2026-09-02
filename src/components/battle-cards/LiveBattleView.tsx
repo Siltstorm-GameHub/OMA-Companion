@@ -841,9 +841,24 @@ function LiveBattleBody({
   // Bei OMA Gems (boardMode) sind eigene Zug-Slots in der Vorschau bedeutungslos
   // (siehe Kommentar am Render unten) — nur die Gegner-Slots zeigen, wann als
   // Nächstes ein Angriff auf einen selbst zukommt.
-  const upcomingDisplay = snapshot.boardMode
-    ? snapshot.upcoming.filter((id) => unitById(id)?.teamId === opponentTeam).slice(0, 5)
-    : snapshot.upcoming;
+  // `ownTurnsBefore`: Anzahl eigener Zug-Slots, die in der rohen Reihenfolge VOR
+  // diesem Gegner-Angriff liegen — 0 bedeutet "passiert direkt im Anschluss an
+  // deinen nächsten Zug" (der Server löst dazwischenliegende Gegner-Züge sofort
+  // mit auf, siehe advance() in interactive.ts), nicht "irgendwann später".
+  const upcomingDisplay: { id: string; ownTurnsBefore: number }[] = snapshot.boardMode
+    ? (() => {
+        const result: { id: string; ownTurnsBefore: number }[] = [];
+        let ownCount = 0;
+        for (const id of snapshot.upcoming) {
+          if (result.length >= 5) break;
+          const u = unitById(id);
+          if (!u) continue;
+          if (u.teamId === opponentTeam) result.push({ id, ownTurnsBefore: ownCount });
+          else ownCount++;
+        }
+        return result;
+      })()
+    : snapshot.upcoming.map((id) => ({ id, ownTurnsBefore: 0 }));
 
   const candidates = selectedAction ? (snapshot.awaiting?.candidateTargetsByAction[selectedAction.actionType] ?? []) : [];
   function glowFor(unit: LiveUnit): "enemy" | "ally" | null {
@@ -947,10 +962,11 @@ function LiveBattleBody({
           )}
         </div>
         {upcomingDisplay.length > 0 && (
-          // py-1.5 gibt dem Rahmen (boxShadow, ragt ~3px über den Kreis hinaus) Platz —
-          // sonst schneidet overflow-x-auto (erzwingt overflow-y: auto) ihn oben/unten ab.
-          <div className="flex items-center gap-2 overflow-x-auto py-1.5">
-            {upcomingDisplay.map((id, i) => {
+          // py-1.5 gibt dem Rahmen (boxShadow, ragt ~3px über den Kreis hinaus) Platz,
+          // bei boardMode zusätzlich Raum für das "sofort"/"in X"-Badge unterhalb jedes
+          // Kreises — sonst schneidet overflow-x-auto (erzwingt overflow-y: auto) ab.
+          <div className={`flex items-center gap-2 overflow-x-auto ${snapshot.boardMode ? "pt-1.5 pb-3" : "py-1.5"}`}>
+            {upcomingDisplay.map(({ id, ownTurnsBefore }, i) => {
               const u = unitById(id);
               if (!u) return null;
               const isMine = myTeam !== null && u.teamId === myTeam;
@@ -958,19 +974,28 @@ function LiveBattleBody({
               const config = getClassConfig(u.class);
               const Icon = config.icon;
               return (
-                <div
-                  key={`${id}-${i}`}
-                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden shrink-0 relative"
-                  style={{ boxShadow: `0 0 0 3px ${ringColor}`, opacity: 1 - i * 0.08 }}
-                  title={u.name}
-                >
-                  {u.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={u.imageUrl} alt={u.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center" style={{ background: `${config.color}33` }}>
-                      <Icon className="w-6 h-6" style={{ color: config.color }} />
-                    </div>
+                <div key={`${id}-${i}`} className="relative shrink-0" style={{ opacity: 1 - i * 0.08 }}>
+                  <div
+                    className="w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden"
+                    style={{ boxShadow: `0 0 0 3px ${ringColor}` }}
+                    title={u.name}
+                  >
+                    {u.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={u.imageUrl} alt={u.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center" style={{ background: `${config.color}33` }}>
+                        <Icon className="w-6 h-6" style={{ color: config.color }} />
+                      </div>
+                    )}
+                  </div>
+                  {snapshot.boardMode && (
+                    <span
+                      className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 z-10 text-[7px] sm:text-[8px] font-bold uppercase tracking-wide px-1 py-0.5 rounded-full whitespace-nowrap"
+                      style={{ background: ownTurnsBefore === 0 ? "#f97316" : "#3f3f46", color: ownTurnsBefore === 0 ? "#000" : "#d4d4d8" }}
+                    >
+                      {ownTurnsBefore === 0 ? "sofort" : `in ${ownTurnsBefore}`}
+                    </span>
                   )}
                 </div>
               );
