@@ -167,11 +167,6 @@ export default async function BattleCardsPage() {
 
       <TutorialProgressBanner step={tutorialStep} />
 
-      <div className="space-y-2">
-        <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Startaufstellung</h2>
-        <LineupStrip cards={lineupCards} />
-      </div>
-
       {pendingChallenges > 0 && (
         <Link
           href="/battle-cards?tab=community"
@@ -210,6 +205,12 @@ export default async function BattleCardsPage() {
         <h1 className="text-lg font-black text-white">Deine Karten</h1>
         <p className="text-xs text-gray-500 mt-0.5">Antippen, um die Skill-Details auf der Rückseite zu sehen.</p>
       </div>
+
+      <div className="space-y-2">
+        <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Startaufstellung</h2>
+        <LineupStrip cards={lineupCards} />
+      </div>
+
       <CardCollectionBrowser
         ownedCards={ownedCards}
         initialOtherCards={otherCardsFirstPage.map((c) => toCardData(c, avatarByDiscordId))}
