@@ -279,8 +279,10 @@ export default function EventSetupWizard({
   }, [seriesStartDate, seriesEndDate, recurrenceType, recurrenceMonthlyMode]);
 
   // ── Step lists ───────────────────────────────────────────────────────────────
-  // Event mode: skip tournament step if community
-  const eventStepComponents = eventType === "tournament"
+  // Event mode: skip tournament step if community ODER OMA Gems (Format/Bracket
+  // sind dort irrelevant — die Turnier-Einstellungen kommen stattdessen aus dem
+  // eigenen Block in renderStepEventData, siehe isGemsTournament oben).
+  const eventStepComponents = eventType === "tournament" && !isGemsTournament
     ? [renderStepCategory, renderStepEventData, renderStepTournament, renderStepRewards, renderStepEventSummary]
     : [renderStepCategory, renderStepEventData, renderStepRewards, renderStepEventSummary];
 
@@ -1575,7 +1577,10 @@ export default function EventSetupWizard({
             {game && <p>🎮 {game}{genreCfg ? ` · ${genreCfg.label}` : ""}</p>}
             {maxPlayers && <p>👥 Max. {maxPlayers} Spieler</p>}
             {spectatorMode && <p>👁️ Zuschauer-Modus aktiv</p>}
-            {eventType === "tournament" && <p>⚔️ Format: {FORMATS.find(f => f.value === format)?.label}</p>}
+            {eventType === "tournament" && !isGemsTournament && <p>⚔️ Format: {FORMATS.find(f => f.value === format)?.label}</p>}
+            {isGemsTournament && gemsEndAt && (
+              <p>💎 Turnier bis {new Date(gemsEndAt).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" })} · {gemsDifficulty === "EASY" ? "Einfach" : gemsDifficulty === "HARD" ? "Schwer" : "Mittel"} · max. {gemsMaxAttempts} Versuche</p>
+            )}
             {seriesMode === "existing" && selectedSeries && <p>🔁 Reihe: {selectedSeries.name}</p>}
             {seriesMode === "new" && newSeriesName && <p>🔁 Neue Reihe: {newSeriesName}</p>}
             {discordChannelId && <p>📢 Kanal: {discordChannelId}</p>}

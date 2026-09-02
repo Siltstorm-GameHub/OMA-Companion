@@ -9,6 +9,10 @@ import { generateGemsTournamentBossTeam } from "@/lib/battle-cards/gems-tourname
 import type { NpcDifficulty } from "@/lib/battle-cards/npc-battle-types";
 
 const GEMS_DIFFICULTIES: NpcDifficulty[] = ["EASY", "MEDIUM", "HARD"];
+// Standard-Coverbild für OMA-Gems-Turniere, falls der Admin kein eigenes hochlädt —
+// es gibt kein "Spiel-Cover" für OMA Gems (kein echtes Steam-Spiel), ohne das würde
+// sonst der generische OMA-Companion-Platzhalter (EventCoverDefault) angezeigt.
+const GEMS_TOURNAMENT_DEFAULT_COVER = "/battle-cards/gems-tournament-cover.png";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -131,6 +135,7 @@ export async function POST(req: NextRequest) {
       spectatorRewardJson: spectatorRewardJson ? JSON.stringify(spectatorRewardJson) : null,
       pollsConfigJson: pollsConfigJson ? JSON.stringify(pollsConfigJson) : null,
       placementRewardsJson: rewardsData,
+      ...(game === "OMA Gems" && { coverImageUrl: GEMS_TOURNAMENT_DEFAULT_COVER }),
       ...(seriesFormat       && { format:       seriesFormat }),
       ...(seriesPointsConfig && { pointsConfig: seriesPointsConfig }),
       ...(seriesStatFields   && { statFields:   seriesStatFields }),
