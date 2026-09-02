@@ -1,9 +1,12 @@
 // ============================================
 // Cron: finalisiert abgelaufene OMA-Gems-Turniere und vergibt Belohnungen
 // ============================================
-// Läuft stündlich (siehe vercel.json) — findet jedes GemsTournament mit
-// abgelaufenem endAt, das noch nicht finalisiert wurde, und ruft
-// finalizeDueGemsTournaments() auf (Idempotenz über GemsTournament.finalizedAt).
+// Läuft täglich (siehe vercel.json — Vercel Hobby erlaubt nur tägliche Cron
+// Jobs) — findet jedes GemsTournament mit abgelaufenem endAt, das noch nicht
+// finalisiert wurde, und ruft finalizeDueGemsTournaments() auf (Idempotenz
+// über GemsTournament.finalizedAt). Ein Turnier wird also nicht sofort bei
+// Ablauf, sondern binnen bis zu 24h finalisiert — für Belohnungsauszahlung
+// unkritisch.
 
 import { NextRequest, NextResponse } from "next/server";
 import { finalizeDueGemsTournaments } from "@/lib/battle-cards/gems-tournament";
