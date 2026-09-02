@@ -549,59 +549,80 @@ export default function LiveBattleView({
     if (newCount <= 0) return;
 
     const newEntries = snapshot.recentLog.slice(-Math.min(newCount, snapshot.recentLog.length));
-    const spawned: FloatingEffect[] = [];
-    const newAttackerIds = new Set<string>();
+
+    // Mehrere Aktionen können in EINER Server-Antwort aufgelöst werden — z.B.
+    // der eigene match-ausgelöste Angriff UND direkt im Anschluss (ohne
+    // eigene Zug-Handlung) ein oder mehrere Gegner-Züge, bevor der Server
+    // wieder auf die eigene Entscheidung pausiert (siehe advance() in
+    // interactive.ts). Ohne Staffelung würden alle Flug-Zahlen/Angriffs-
+    // Indikatoren gleichzeitig aufblitzen und der Gegner-Angriff ginge im
+    // eigenen unter. Jeder "action"-Log-Eintrag markiert daher den Beginn
+    // einer neuen "Welle" (ein Akteur + seine Effekte) — Wellen werden
+    // nacheinander mit Verzögerung angezeigt statt alle auf einmal.
+    const WAVE_DELAY_MS = 480;
+    type Wave = { effects: FloatingEffect[]; attackerIds: Set<string>; sounds: (() => void)[] };
+    const waves: Wave[] = [{ effects: [], attackerIds: new Set(), sounds: [] }];
+    const currentWave = () => waves[waves.length - 1];
+
     for (const entry of newEntries) {
+      if (entry.type === "action") {
+        if (currentWave().effects.length > 0 || currentWave().attackerIds.size > 0 || currentWave().sounds.length > 0) {
+          waves.push({ effects: [], attackerIds: new Set(), sounds: [] });
+        }
+        if (entry.actionType === "ultimate") currentWave().sounds.push(playUltimateSound);
+        continue;
+      }
       if (entry.type === "damage") {
-        spawned.push({
+        currentWave().effects.push({
           id: `${Date.now()}-${Math.random()}`,
           unitId: entry.targetId as string,
           kind: entry.isCrit ? "crit" : "damage",
           text: `-${entry.amount as number}`,
           bonusPercent: entry.matchBonusPercent as number | undefined,
         });
-        if (entry.sourceId && entry.sourceId !== entry.targetId) newAttackerIds.add(entry.sourceId as string);
-        if (entry.isCrit) playCritSound();
-        else playDamageSound();
+        if (entry.sourceId && entry.sourceId !== entry.targetId) currentWave().attackerIds.add(entry.sourceId as string);
+        currentWave().sounds.push(entry.isCrit ? playCritSound : playDamageSound);
       } else if (entry.type === "heal") {
-        spawned.push({
+        currentWave().effects.push({
           id: `${Date.now()}-${Math.random()}`,
           unitId: entry.targetId as string,
           kind: "heal",
           text: `+${entry.amount as number}`,
           bonusPercent: entry.matchBonusPercent as number | undefined,
         });
-        playHealSound();
+        currentWave().sounds.push(playHealSound);
       } else if (entry.type === "shieldApplied") {
-        spawned.push({
+        currentWave().effects.push({
           id: `${Date.now()}-${Math.random()}`,
           unitId: entry.targetId as string,
           kind: "shield",
           text: `+${entry.amount as number}`,
         });
-        playShieldSound();
-      } else if (entry.type === "action" && entry.actionType === "ultimate") {
-        playUltimateSound();
+        currentWave().sounds.push(playShieldSound);
       }
     }
-    if (newAttackerIds.size > 0) {
-      setAttackingUnitIds((prev) => new Set([...prev, ...newAttackerIds]));
-      newAttackerIds.forEach((id) => {
-        window.setTimeout(() => {
-          setAttackingUnitIds((prev) => {
-            if (!prev.has(id)) return prev;
-            const next = new Set(prev);
-            next.delete(id);
-            return next;
-          });
-        }, 550);
-      });
-    }
-    if (spawned.length === 0) return;
 
-    setEffects((prev) => [...prev, ...spawned]);
-    spawned.forEach((eff) => {
-      window.setTimeout(() => setEffects((prev) => prev.filter((e) => e.id !== eff.id)), 1300);
+    waves.forEach((wave, i) => {
+      if (wave.effects.length === 0 && wave.attackerIds.size === 0 && wave.sounds.length === 0) return;
+      window.setTimeout(() => {
+        wave.sounds.forEach((play) => play());
+        if (wave.attackerIds.size > 0) {
+          setAttackingUnitIds((prev) => new Set([...prev, ...wave.attackerIds]));
+          window.setTimeout(() => {
+            setAttackingUnitIds((prev) => {
+              const next = new Set(prev);
+              wave.attackerIds.forEach((id) => next.delete(id));
+              return next;
+            });
+          }, 550);
+        }
+        if (wave.effects.length > 0) {
+          setEffects((prev) => [...prev, ...wave.effects]);
+          wave.effects.forEach((eff) => {
+            window.setTimeout(() => setEffects((prev) => prev.filter((e) => e.id !== eff.id)), 1300);
+          });
+        }
+      }, i * WAVE_DELAY_MS);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshot?.logLength]);
