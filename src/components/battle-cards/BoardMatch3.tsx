@@ -282,8 +282,8 @@ export default function BoardMatch3({
         </>
       )}
       <div
-        className="grid gap-1 mx-auto"
-        style={{ gridTemplateColumns: `repeat(${BOARD_COLS}, minmax(0, 1fr))`, maxWidth: 320 }}
+        className="grid gap-1 lg:gap-1.5 mx-auto w-full max-w-[320px] lg:max-w-[420px]"
+        style={{ gridTemplateColumns: `repeat(${BOARD_COLS}, minmax(0, 1fr))` }}
       >
         {board.map((symbol, cell) => {
           const icon = TILE_ICON[symbol];

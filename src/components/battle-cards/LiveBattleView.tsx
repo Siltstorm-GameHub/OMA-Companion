@@ -640,72 +640,77 @@ export default function LiveBattleView({
 
   return createPortal(
     <div className="fixed inset-0 flex flex-col overflow-hidden" style={{ ...getArenaBackgroundStyle(snapshot?.mode), zIndex: 9999 }}>
-      {/* Kopfzeile */}
-      <div className="flex items-center justify-between gap-2 px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2 shrink-0 relative z-10">
-        <button
-          type="button"
-          onClick={handleExit}
-          className="flex items-center gap-1 text-xs font-semibold text-gray-300 hover:text-white transition-colors px-2 py-1.5 rounded-md bg-black/30"
-        >
-          <ChevronLeft className="w-4 h-4" /> Zurück
-        </button>
-        <div className="flex items-center gap-2">
+      {/* Auf großen Bildschirmen bleibt der (mobil-first gebaute) Kampfscreen eine
+          zentrierte, moderat breite Spalte statt über die volle Bildschirmbreite
+          zu strecken — die Arena-Hintergrund füllt weiterhin den ganzen Viewport. */}
+      <div className="flex-1 flex flex-col min-h-0 w-full lg:max-w-2xl xl:max-w-3xl mx-auto">
+        {/* Kopfzeile */}
+        <div className="flex items-center justify-between gap-2 px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-2 shrink-0 relative z-10">
           <button
             type="button"
-            onClick={toggleSoundMuted}
-            className="flex items-center justify-center text-gray-300 hover:text-white transition-colors w-8 h-8 rounded-md bg-black/30"
-            aria-label={soundMuted ? "Ton einschalten" : "Ton ausschalten"}
+            onClick={handleExit}
+            className="flex items-center gap-1 text-xs font-semibold text-gray-300 hover:text-white transition-colors px-2 py-1.5 rounded-md bg-black/30"
           >
-            {soundMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+            <ChevronLeft className="w-4 h-4" /> Zurück
           </button>
-          {snapshot && (
-            <span className="text-[11px] text-gray-400 bg-black/30 px-2.5 py-1 rounded-md">Runde {snapshot.round}</span>
-          )}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleSoundMuted}
+              className="flex items-center justify-center text-gray-300 hover:text-white transition-colors w-8 h-8 rounded-md bg-black/30"
+              aria-label={soundMuted ? "Ton einschalten" : "Ton ausschalten"}
+            >
+              {soundMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+            </button>
+            {snapshot && (
+              <span className="text-[11px] text-gray-400 bg-black/30 px-2.5 py-1 rounded-md">Runde {snapshot.round}</span>
+            )}
+          </div>
         </div>
-      </div>
 
-      {error ? (
-        <div className="flex-1 flex items-center justify-center px-4">
-          <ErrorNotice message={error} size="lg" />
-        </div>
-      ) : !snapshot ? (
-        <div className="flex-1 relative flex flex-col items-center justify-end overflow-hidden pb-10">
-          {!splashFailed && (
-            <>
+        {error ? (
+          <div className="flex-1 flex items-center justify-center px-4">
+            <ErrorNotice message={error} size="lg" />
+          </div>
+        ) : !snapshot ? (
+          <div className="flex-1 relative flex flex-col items-center justify-end overflow-hidden pb-10">
+            {!splashFailed && (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/battle-cards/splash.png"
+                  alt=""
+                  className="absolute inset-0 w-full h-full object-cover"
+                  onError={() => setSplashFailed(true)}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/40" />
+              </>
+            )}
+            <div className="absolute top-6 left-0 right-0 flex items-center justify-center gap-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/battle-cards/splash.png"
-                alt=""
-                className="absolute inset-0 w-full h-full object-cover"
-                onError={() => setSplashFailed(true)}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/40" />
-            </>
-          )}
-          <div className="absolute top-6 left-0 right-0 flex items-center justify-center gap-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={BRAND_LOGO} alt="OMA" className="h-8 w-auto object-contain" />
-            <span className="font-battle text-base text-white uppercase tracking-wide">Battle Cards</span>
+              <img src={BRAND_LOGO} alt="OMA" className="h-8 w-auto object-contain" />
+              <span className="font-battle text-base text-white uppercase tracking-wide">Battle Cards</span>
+            </div>
+            <div className="relative flex flex-col items-center gap-2">
+              <Loader2 className="w-6 h-6 text-gray-300 animate-spin" />
+              <p className="font-battle text-[11px] text-gray-300 uppercase tracking-widest">Kampf wird geladen…</p>
+            </div>
           </div>
-          <div className="relative flex flex-col items-center gap-2">
-            <Loader2 className="w-6 h-6 text-gray-300 animate-spin" />
-            <p className="font-battle text-[11px] text-gray-300 uppercase tracking-widest">Kampf wird geladen…</p>
-          </div>
-        </div>
-      ) : (
-        <LiveBattleBody
-          snapshot={snapshot}
-          viewerId={viewerId}
-          busy={busy}
-          selectedAction={selectedAction}
-          setSelectedAction={setSelectedAction}
-          submitAction={submitAction}
-          submitUltimate={submitUltimate}
-          toggleAuto={toggleAuto}
-          effects={effects}
-          saveBoardProgress={saveBoardProgress}
-        />
-      )}
+        ) : (
+          <LiveBattleBody
+            snapshot={snapshot}
+            viewerId={viewerId}
+            busy={busy}
+            selectedAction={selectedAction}
+            setSelectedAction={setSelectedAction}
+            submitAction={submitAction}
+            submitUltimate={submitUltimate}
+            toggleAuto={toggleAuto}
+            effects={effects}
+            saveBoardProgress={saveBoardProgress}
+          />
+        )}
+      </div>
     </div>,
     document.body
   );
@@ -961,7 +966,7 @@ function LiveBattleBody({
           // Feste Höhe (unabhängig von 1-3 verfügbaren Aktionen bzw. Ziel-Auswahl-
           // Ansicht) — sonst verschieben sich die Helden darüber je nach Rage-Stand
           // von Zug zu Zug, weil dieses Panel mal höher, mal niedriger wäre.
-          <div className="glass rounded-xl p-2.5 h-[212px] overflow-y-auto flex flex-col">
+          <div className="glass rounded-xl p-2.5 h-[212px] lg:h-[300px] overflow-y-auto flex flex-col">
             {snapshot.awaiting.board && boardSwaps === null ? (
               <BoardMatch3
                 key={snapshot.awaiting.unitId}
@@ -1034,7 +1039,7 @@ function LiveBattleBody({
         ) : snapshot.boardMode && lastBoard ? (
           // Brett bleibt sichtbar (nur deaktiviert), solange der Gegner am Zug ist —
           // verschwindet nicht mehr hinter einem reinen Text-Platzhalter.
-          <div className="glass rounded-xl p-2.5 h-[212px] overflow-y-auto flex flex-col gap-1.5">
+          <div className="glass rounded-xl p-2.5 h-[212px] lg:h-[300px] overflow-y-auto flex flex-col gap-1.5">
             <BoardMatch3
               grid={lastBoard.grid}
               moveBudget={lastBoard.moveBudget}
