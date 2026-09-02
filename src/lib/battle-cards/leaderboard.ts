@@ -10,12 +10,16 @@ export interface LeaderboardRow {
   draws: number;
   total: number;
   winRate: number;
+  /** true, sobald genug zählende Kämpfe für eine belastbare Winrate-Einstufung vorliegen
+   *  (siehe MIN_MATCHES_FOR_RANKING) — steuert Sortierung UND UI-Anzeige (Badge/Hinweis). */
+  isRanked: boolean;
 }
 
 /** Ab so vielen zählenden Kämpfen gilt ein User als "eingestuft" und wird primär nach
  *  Winrate gerankt — verhindert, dass 1 Sieg aus 1 Kampf sofort Platz 1 verdrängt.
- *  User darunter bleiben sichtbar, landen aber immer hinter den eingestuften. */
-const MIN_MATCHES_FOR_RANKING = 5;
+ *  User darunter bleiben sichtbar, landen aber immer hinter den eingestuften. Exportiert,
+ *  damit die UI (LeaderboardList) denselben Schwellenwert in ihrem Hinweistext nennt. */
+export const MIN_MATCHES_FOR_RANKING = 5;
 
 /** Aggregiert alle abgeschlossenen, für die Rangliste zählenden BattleChallenges (siehe
  *  countsForRanking — Farm-Fairness-Deckel bei Gems-PvP-Wiederholungsgegnern) zu einer
@@ -25,14 +29,17 @@ const MIN_MATCHES_FOR_RANKING = 5;
  *  einzelnen Spielmodus ("DUELS" | "GEMS") — ohne Angabe zählen beide Modi zusammen (ein
  *  gemeinsamer Saison-Sieger über OMA Duels + OMA Gems PvP).
  *
- *  Zeigt JEDEN User mit Start-Pack (hasStarterDeck, siehe starter-pick.ts) an — auch ohne
- *  einen einzigen Kampf (dann 0/0/0, landet unten bei den "nicht eingestuften") — statt nur
- *  User, die bereits gekämpft haben. */
+ *  Zeigt NUR User, die aktuell auch tatsächlich herausgefordert werden können (mind. 1 Karte
+ *  in der Startaufstellung, dieselbe Bedingung wie buildBattleTeam/die Herausforderungs-Suche
+ *  in /api/users/search) — wer (z.B. nach einem Saison-Reset) gerade keine gültige
+ *  Aufstellung hat, verschwindet aus der Liste, bis er wieder eine hat. Bisherige Kämpfe
+ *  bleiben dabei erhalten (Stats kommen aus der vollen Historie), nur die SICHTBARKEIT
+ *  hängt an der aktuellen Herausforderbarkeit. */
 export async function getBattleCardsLeaderboard(
   window?: { start: Date; end: Date },
   mode?: "DUELS" | "GEMS"
 ): Promise<LeaderboardRow[]> {
-  const [resolved, starterDeckUserIds] = await Promise.all([
+  const [resolved, challengeableUserIds] = await Promise.all([
     prisma.battleChallenge.findMany({
       where: {
         status: "resolved",
@@ -43,7 +50,7 @@ export async function getBattleCardsLeaderboard(
       select: { challengerId: true, opponentId: true, winnerId: true },
     }),
     prisma.userCard.findMany({
-      where: { card: { rarity: "STANDARD" } },
+      where: { inLineup: true },
       distinct: ["userId"],
       select: { userId: true },
     }),
@@ -66,7 +73,7 @@ export async function getBattleCardsLeaderboard(
     bump(loserId, "losses");
   }
 
-  const userIds = [...new Set([...starterDeckUserIds.map((c) => c.userId), ...stats.keys()])];
+  const userIds = challengeableUserIds.map((c) => c.userId);
   const users = userIds.length
     ? await prisma.user.findMany({
         where: { id: { in: userIds } },
@@ -88,12 +95,11 @@ export async function getBattleCardsLeaderboard(
         ...s,
         total,
         winRate: total > 0 ? s.wins / total : 0,
+        isRanked: total >= MIN_MATCHES_FOR_RANKING,
       };
     })
     .sort((a, b) => {
-      const aRanked = a.total >= MIN_MATCHES_FOR_RANKING;
-      const bRanked = b.total >= MIN_MATCHES_FOR_RANKING;
-      if (aRanked !== bRanked) return aRanked ? -1 : 1;
+      if (a.isRanked !== b.isRanked) return a.isRanked ? -1 : 1;
       return b.winRate - a.winRate || b.wins - a.wins || b.total - a.total || a.name.localeCompare(b.name);
     });
 }

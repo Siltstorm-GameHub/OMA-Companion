@@ -10,10 +10,11 @@ export async function GET(req: NextRequest) {
   if (q.length < 2) return NextResponse.json([]);
 
   // Optionaler Filter für die Battle-Cards-Herausforderungs-Picker (OMA Duels + OMA
-  // Gems): nur User mit gewähltem Start-Pack anzeigen — sonst könnte man jemanden
-  // ohne eigene Kampf-Aufstellung herausfordern und der Kampf ließe sich gar nicht
-  // starten (buildBattleTeam findet dann keine inLineup-Karten).
-  const hasStarterDeck = req.nextUrl.searchParams.get("hasStarterDeck") === "1";
+  // Gems): nur User mit AKTUELL gültiger Startaufstellung anzeigen (mind. 1 Karte
+  // mit inLineup:true — dieselbe Bedingung wie buildBattleTeam und die Rangliste,
+  // siehe leaderboard.ts) — sonst könnte man jemanden herausfordern, dessen Kampf
+  // sich gar nicht starten lässt.
+  const challengeable = req.nextUrl.searchParams.get("challengeable") === "1";
 
   const users = await prisma.user.findMany({
     where: {
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest) {
         { username: { contains: q, mode: "insensitive" } },
         { name:     { contains: q, mode: "insensitive" } },
       ],
-      ...(hasStarterDeck && { battleCardUserCards: { some: { card: { rarity: "STANDARD" } } } }),
+      ...(challengeable && { battleCardUserCards: { some: { inLineup: true } } }),
     },
     select: { id: true, username: true, name: true, image: true, points: true, rankPoints: true },
     take: 8,

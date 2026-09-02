@@ -31,7 +31,7 @@ export default function ChallengeUserPicker() {
     const t = setTimeout(async () => {
       if (query.trim().length < 2) { setResults([]); return; }
       try {
-        const res = await fetch(`/api/users/search?q=${encodeURIComponent(query)}&hasStarterDeck=1`);
+        const res = await fetch(`/api/users/search?q=${encodeURIComponent(query)}&challengeable=1`);
         if (res.ok) setResults(await res.json());
       } catch { /* ignore */ }
     }, 300);
