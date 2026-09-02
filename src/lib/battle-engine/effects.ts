@@ -26,6 +26,10 @@ export interface EffectContext {
   suddenDeathMultiplier: number;
   /** Interaktive Kämpfe: vom Spieler gewähltes Ziel für singleEnemy/singleAlly-Effekte. */
   forcedTargetId?: string;
+  /** Nur bei OMA Gems: Prozentualer Bonus aus einem überdurchschnittlich großen
+   *  Match-3-Match (siehe applyBoardRage in interactive.ts) — wird 1:1 in die
+   *  damage/heal-Log-Einträge übernommen, damit die UI ihn anzeigen kann. */
+  matchBonusPercent?: number;
 }
 
 /** Liest den Wert für die aktuelle Kartenstufe aus einem valuePerLevel-Array (1-indiziert, geclamped). */
@@ -53,6 +57,7 @@ function applyDamageToUnit(
     amount: hpDamage,
     isCrit,
     remainingHp: target.currentHp,
+    matchBonusPercent: ctx.matchBonusPercent,
   });
 
   if (target.currentHp <= 0 && target.isAlive) {
@@ -90,6 +95,7 @@ export function executeEffect(effect: Effect, level: number, ctx: EffectContext)
           targetId: target.instanceId,
           amount,
           newHp: target.currentHp,
+          matchBonusPercent: ctx.matchBonusPercent,
         });
       }
       break;

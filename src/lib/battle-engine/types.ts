@@ -182,6 +182,10 @@ export type BattleLogEntry =
       amount: number;
       isCrit: boolean;
       remainingHp: number;
+      /** Nur bei OMA Gems gesetzt: Prozentualer Bonus, weil der auslösende
+       *  Normalangriff aus einem Match-3-Match mit mehr als 3 Steinen (Match-4/5,
+       *  Kaskade) entstanden ist (siehe applyBoardRage in interactive.ts). */
+      matchBonusPercent?: number;
     }
   | {
       type: "heal";
@@ -190,6 +194,8 @@ export type BattleLogEntry =
       targetId: string;
       amount: number;
       newHp: number;
+      /** Siehe matchBonusPercent bei "damage". */
+      matchBonusPercent?: number;
     }
   | {
       type: "shieldApplied";

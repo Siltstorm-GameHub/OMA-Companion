@@ -98,6 +98,36 @@ function areAdjacent(a: number, b: number): boolean {
   return (ra === rb && Math.abs(ca - cb) === 1) || (ca === cb && Math.abs(ra - rb) === 1);
 }
 
+/** Prüft, ob auf dem aktuellen Grid überhaupt noch ein Swap existiert, der ein
+ *  Match ergäbe (Deadlock-Erkennung) — probiert dafür jeden benachbarten
+ *  Zellen-Tausch probeweise durch und macht ihn sofort wieder rückgängig.
+ *  Das Brett wird bei OMA Gems nur EINMALIG zu Kampfbeginn generiert und
+ *  danach über die gesamte Zug-Historie fortgeschrieben (siehe boardGrid in
+ *  interactive.ts) — nur wenn diese Funktion false liefert, wird ein neues
+ *  Brett gezogen. */
+export function hasAnyValidMove(grid: BoardGrid): boolean {
+  for (let row = 0; row < BOARD_ROWS; row++) {
+    for (let col = 0; col < BOARD_COLS; col++) {
+      const cell = row * BOARD_COLS + col;
+      const neighbors: number[] = [];
+      if (col + 1 < BOARD_COLS) neighbors.push(cell + 1);
+      if (row + 1 < BOARD_ROWS) neighbors.push(cell + BOARD_COLS);
+      for (const neighbor of neighbors) {
+        const a = grid[cell];
+        const b = grid[neighbor];
+        if (a === b) continue;
+        grid[cell] = b;
+        grid[neighbor] = a;
+        const hasMatch = findMatchGroups(grid).length > 0;
+        grid[cell] = a;
+        grid[neighbor] = b;
+        if (hasMatch) return true;
+      }
+    }
+  }
+  return false;
+}
+
 function randomRegularSymbol(rng: Rng): TileClassSymbol {
   return REGULAR_SYMBOLS[Math.floor(rng() * REGULAR_SYMBOLS.length)];
 }

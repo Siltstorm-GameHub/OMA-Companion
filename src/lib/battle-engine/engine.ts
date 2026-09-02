@@ -96,7 +96,8 @@ export function performAction(
   round: number,
   log: BattleLogEntry[],
   suddenDeathMultiplier: number,
-  forcedTargetId?: string
+  forcedTargetId?: string,
+  matchBonusPercent?: number
 ): void {
   let skillName: string;
   let effects: Effect[];
@@ -139,6 +140,7 @@ export function performAction(
       skillName,
       suddenDeathMultiplier,
       forcedTargetId,
+      matchBonusPercent,
     });
   }
 }

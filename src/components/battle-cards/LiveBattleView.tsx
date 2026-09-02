@@ -106,6 +106,10 @@ interface FloatingEffect {
   unitId: string;
   kind: "damage" | "crit" | "heal" | "shield";
   text: string;
+  /** Nur bei OMA Gems: gesetzt, wenn dieser Angriff aus einem Match-3-Match mit
+   *  mehr als 3 Steinen entstanden ist (siehe matchBonusPercent im Log-Eintrag) —
+   *  zeigt einen zusätzlichen "Match-Bonus"-Hinweis an der Flug-Zahl an. */
+  bonusPercent?: number;
 }
 
 interface LiveSnapshot {
@@ -150,10 +154,14 @@ function describeLogEntry(entry: LiveSnapshot["recentLog"][number], nameOf: (id:
   switch (entry.type) {
     case "action":
       return `${nameOf(entry.actorId as string)} setzt ${entry.skillName as string} ein.`;
-    case "damage":
-      return `${nameOf(entry.targetId as string)} erleidet ${entry.amount as number} Schaden${entry.isCrit ? " (kritisch!)" : ""}.`;
-    case "heal":
-      return `${nameOf(entry.targetId as string)} wird um ${entry.amount as number} HP geheilt.`;
+    case "damage": {
+      const bonus = entry.matchBonusPercent != null ? `, +${entry.matchBonusPercent as number}% Match-Bonus` : "";
+      return `${nameOf(entry.targetId as string)} erleidet ${entry.amount as number} Schaden${entry.isCrit ? " (kritisch!)" : ""}${bonus}.`;
+    }
+    case "heal": {
+      const bonus = entry.matchBonusPercent != null ? `, +${entry.matchBonusPercent as number}% Match-Bonus` : "";
+      return `${nameOf(entry.targetId as string)} wird um ${entry.amount as number} HP geheilt${bonus}.`;
+    }
     case "death":
       return `${nameOf(entry.unitId as string)} wurde besiegt.`;
     case "roundStart":
@@ -265,6 +273,9 @@ function UnitCard({
             >
               {eff.text}
               {eff.kind === "crit" && " !"}
+              {eff.bonusPercent != null && (
+                <span style={{ color: "#f59e0b" }}> ⚡+{eff.bonusPercent}%</span>
+              )}
             </span>
           ))}
         </div>
@@ -520,6 +531,7 @@ export default function LiveBattleView({
           unitId: entry.targetId as string,
           kind: entry.isCrit ? "crit" : "damage",
           text: `-${entry.amount as number}`,
+          bonusPercent: entry.matchBonusPercent as number | undefined,
         });
         if (entry.isCrit) playCritSound();
         else playDamageSound();
@@ -529,6 +541,7 @@ export default function LiveBattleView({
           unitId: entry.targetId as string,
           kind: "heal",
           text: `+${entry.amount as number}`,
+          bonusPercent: entry.matchBonusPercent as number | undefined,
         });
         playHealSound();
       } else if (entry.type === "shieldApplied") {
