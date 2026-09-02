@@ -340,7 +340,14 @@ function stepOnce(
   const isHuman = state.controllers[unit.teamId] === "human" && !isAutoForTeam(state, unit.teamId);
   if (isHuman) {
     state.awaitingUnitId = unit.instanceId;
-    state.turnDeadline = Date.now() + TURN_DECISION_TIMEOUT_MS;
+    // Kein Zug-Timeout im Match-3-Brett-Modus (OMA Gems): das Brett braucht echte
+    // Zeit zum Lösen, ein 10s-Timeout würde sonst nach wenigen verpassten Zügen
+    // automatisch Auto-Kampf für diese Seite aktivieren (TIMEOUT_STREAK_AUTO_THRESHOLD)
+    // — genau das soll bei OMA Gems nicht passieren. Nebeneffekt sonst auch: bei
+    // jedem automatisch übersprungenen Zug wird ein KOMPLETT NEUES Brett generiert,
+    // was wie ein zufälliges Verschieben der Edelsteine wirkt, obwohl der Spieler
+    // gar nicht am Zug war.
+    state.turnDeadline = state.boardMode ? null : Date.now() + TURN_DECISION_TIMEOUT_MS;
     if (state.boardMode) {
       const boardSeed = Math.floor(rng() * 0xffffffff);
       state.pendingBoard = { ...generateBoard(boardSeed), appliedSwaps: [] };
