@@ -39,6 +39,7 @@ import {
 import ErrorNotice from "./ErrorNotice";
 import { BRAND_LOGO } from "@/lib/brand";
 import { CAMPAIGN_CHAPTER_BACKGROUND } from "@/lib/battle-cards/campaign-levels";
+import VictoryChestReveal, { type ChestPrize } from "./VictoryChestReveal";
 
 /** Kampf-Hintergrund: die klassische Arena (arena-bg.jpg) für OMA Duels,
  *  OMA Gems (Nicht-Kampagne) und PvP — Kampagnen-Kämpfe (mode "CAMPAIGN_...") zeigen
@@ -110,6 +111,8 @@ interface FloatingEffect {
 interface LiveSnapshot {
   id: string;
   mode: string;
+  /** true bei allen OMA-Gems-Kämpfen — blendet den Auto-Kampf-Umschalter aus. */
+  boardMode: boolean;
   status: "active" | "finished";
   round: number;
   units: LiveUnit[];
@@ -134,6 +137,7 @@ interface LiveSnapshot {
   playerBId: string | null;
   resultBattleId: string | null;
   winner: "A" | "B" | "DRAW" | null;
+  chestPrize: ChestPrize | null;
 }
 
 function hpBarColor(pct: number): string {
@@ -766,6 +770,10 @@ function LiveBattleBody({
     setBoardSwaps(null);
   }, [awaitingUnitId]);
 
+  // Gems-PvP-Sieges-Kiste: einmal eingesammelt, bleibt die Öffnen-Animation für
+  // den Rest dieser Kampf-Ansicht ausgeblendet (Snapshot wird weiter gepollt).
+  const [chestDismissed, setChestDismissed] = useState(false);
+
   // Sieg-/Niederlage-Sound genau einmal abspielen, sobald der Kampf endet — der
   // Ref verhindert ein erneutes Abspielen bei Re-Renders, solange der Kampf
   // "finished" bleibt (Snapshot wird weiter gepollt).
@@ -800,6 +808,9 @@ function LiveBattleBody({
 
   return (
     <div className="flex-1 flex flex-col min-h-0 relative z-10 px-3">
+      {snapshot.status === "finished" && snapshot.chestPrize && !chestDismissed && (
+        <VictoryChestReveal prize={snapshot.chestPrize} onClose={() => setChestDismissed(true)} />
+      )}
       {/* Auto-Kampf + Als nächstes dran — oberhalb der Helden */}
       <div className="shrink-0 pt-1 space-y-1.5">
         <div className="flex items-center justify-between gap-2">
@@ -808,7 +819,7 @@ function LiveBattleBody({
           ) : (
             <span />
           )}
-          {snapshot.status !== "finished" && myTeam && (
+          {snapshot.status !== "finished" && myTeam && !snapshot.boardMode && (
             <button
               type="button"
               onClick={() => toggleAuto(!myAuto)}

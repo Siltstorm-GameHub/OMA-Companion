@@ -175,6 +175,9 @@ export interface LiveBattleAwaiting {
 export interface LiveBattleSnapshot {
   id: string;
   mode: string;
+  /** true bei allen OMA-Gems-Kämpfen (Puzzle-PvE, Kampagne, Gems-PvP, Turnier) — der Client
+   *  blendet dafür den Auto-Kampf-Umschalter aus, das Match-3-Brett soll aktiv gespielt werden. */
+  boardMode: boolean;
   status: "active" | "finished";
   round: number;
   units: LiveUnitSnapshot[];
@@ -192,6 +195,9 @@ export interface LiveBattleSnapshot {
   playerBId: string | null;
   resultBattleId: string | null;
   winner: BattleWinner | null;
+  /** Nur gesetzt für einen gewonnenen Gems-PvP-Ghost-Angriff — die Sieges-Kiste
+   *  (siehe gems-pvp.ts), die der Client als Öffnen-Animation zeigt. */
+  chestPrize: { kind: "coins"; amount: number } | { kind: "pack"; packKind: string } | null;
 }
 
 const RECENT_LOG_TAIL = 12;
@@ -214,11 +220,11 @@ function toUnitSnapshot(u: BattleUnitState): LiveUnitSnapshot {
   };
 }
 
-function buildSnapshot(
+async function buildSnapshot(
   live: Pick<LiveBattle, "id" | "mode" | "playerAId" | "playerBId" | "resultBattleId">,
   state: InteractiveBattleState,
   pendingDecision: PendingDecision | null
-): LiveBattleSnapshot {
+): Promise<LiveBattleSnapshot> {
   const allUnits = [...state.unitsA, ...state.unitsB];
 
   let awaiting: LiveBattleAwaiting | null = null;
@@ -227,9 +233,22 @@ function buildSnapshot(
     awaiting = { ...pendingDecision, controlledByPlayerId, deadline: state.turnDeadline };
   }
 
+  // Sieges-Kiste (Gems-PvP) — wird am Battle-Datensatz gespeichert (siehe
+  // finalizeLiveBattle), nur nachladen, wenn tatsächlich relevant.
+  let chestPrize: LiveBattleSnapshot["chestPrize"] = null;
+  if (live.mode === PVP_GEMS_MODE && live.resultBattleId) {
+    const battle = await prisma.battle.findUnique({
+      where: { id: live.resultBattleId },
+      select: { teamSnapshot: true },
+    });
+    const snapshotJson = battle?.teamSnapshot as { gemsChestPrize?: LiveBattleSnapshot["chestPrize"] } | null;
+    chestPrize = snapshotJson?.gemsChestPrize ?? null;
+  }
+
   return {
     id: live.id,
     mode: live.mode,
+    boardMode: state.boardMode,
     status: state.winner ? "finished" : "active",
     round: state.round,
     units: allUnits.map(toUnitSnapshot),
@@ -243,6 +262,7 @@ function buildSnapshot(
     playerBId: live.playerBId,
     resultBattleId: live.resultBattleId,
     winner: state.winner,
+    chestPrize,
   };
 }
 
@@ -293,9 +313,15 @@ async function finalizeLiveBattle(live: LiveBattle, state: InteractiveBattleStat
       }
       // OMA-Gems-Ghost-Angriff: nur der Angreifer (playerAId) spielt aktiv — bei
       // dessen Sieg öffnet sich die Sieges-Kiste. Der Verteidiger bekommt nichts,
-      // er hat den Kampf nicht selbst bestritten.
+      // er hat den Kampf nicht selbst bestritten. Der Gewinn wird zusätzlich am
+      // Battle-Datensatz gespeichert, damit der Client ihn direkt im nächsten
+      // Snapshot als Öffnen-Animation zeigen kann (siehe buildSnapshot).
       if (challenge.mode === "GEMS" && winnerId === live.playerAId) {
-        await grantGemsPvpVictoryChest(live.playerAId);
+        const prize = await grantGemsPvpVictoryChest(live.playerAId);
+        await prisma.battle.update({
+          where: { id: battle.id },
+          data: { teamSnapshot: { playerAId: live.playerAId, playerBId: live.playerBId, gemsChestPrize: prize } },
+        });
       }
       await notifyPvpBattleResolved(live.playerAId, live.playerBId, winnerId, battle.id);
     }
