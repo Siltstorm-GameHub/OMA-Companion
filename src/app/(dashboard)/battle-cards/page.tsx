@@ -154,17 +154,6 @@ export default async function BattleCardsPage() {
 
   const kampfPanel = (
     <div className="space-y-6">
-      {ownedUserCards.some((uc) => uc.card.rarity === "COMMUNITY") && (
-        <div className="flex justify-end">
-          <Link
-            href="/battle-cards/my-card"
-            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-md bg-white/[0.06] text-gray-300 hover:bg-white/[0.1] transition-colors shrink-0"
-          >
-            <IdCard className="w-3.5 h-3.5" /> Meine Community-Karte
-          </Link>
-        </div>
-      )}
-
       <TutorialProgressBanner step={tutorialStep} />
 
       {pendingChallenges > 0 && (
@@ -201,9 +190,19 @@ export default async function BattleCardsPage() {
 
   const kartenPanel = (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-lg font-black text-white">Deine Karten</h1>
-        <p className="text-xs text-gray-500 mt-0.5">Antippen, um die Skill-Details auf der Rückseite zu sehen.</p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-lg font-black text-white">Deine Karten</h1>
+          <p className="text-xs text-gray-500 mt-0.5">Antippen, um die Skill-Details auf der Rückseite zu sehen.</p>
+        </div>
+        {ownedUserCards.some((uc) => uc.card.rarity === "COMMUNITY") && (
+          <Link
+            href="/battle-cards/my-card"
+            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-md bg-white/[0.06] text-gray-300 hover:bg-white/[0.1] transition-colors shrink-0"
+          >
+            <IdCard className="w-3.5 h-3.5" /> Meine Community-Karte
+          </Link>
+        )}
       </div>
 
       <div className="space-y-2">
