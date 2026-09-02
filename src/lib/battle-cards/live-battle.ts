@@ -779,15 +779,25 @@ export async function submitLiveBattleAction(
   const controllingPlayerId = unit.teamId === "A" ? live.playerAId : live.playerBId;
   if (controllingPlayerId !== viewerId) throw new LiveBattleError("Du bist gerade nicht am Zug.");
 
-  const available = describeAvailableActions(unit, allUnits);
-  const chosen = available.find((a) => a.actionType === actionType);
-  if (!chosen) throw new LiveBattleError("Diese Aktion ist gerade nicht verfügbar.");
-
+  // Im Match-3-Brett-Modus (OMA Gems) wählt der Spieler nie manuell eine Aktion/
+  // ein Ziel — der Client schickt hier nur die Swap-Sequenz, `actionType`/
+  // `targetId` (aktuell hartkodiert "normalAttack" ohne Ziel, siehe
+  // BoardMatch3.tsx onConfirm) werden serverseitig ohnehin ignoriert (die
+  // eigentlichen Ziele entstehen automatisch pro Match, siehe applyBoardRage in
+  // interactive.ts). Die normale Aktions-/Ziel-Validierung unten passt dafür
+  // nicht (sie würde "normalAttack" ohne Ziel fälschlich als "Ungültiges Ziel"
+  // ablehnen) und wird daher für boardMode-Züge übersprungen.
   let resolvedTargetId: string | undefined;
-  if (chosen.targetKind !== "none") {
-    const candidates = candidateTargetIds(unit, chosen.targetKind, allUnits);
-    if (!targetId || !candidates.includes(targetId)) throw new LiveBattleError("Ungültiges Ziel.");
-    resolvedTargetId = targetId;
+  if (!state.boardMode) {
+    const available = describeAvailableActions(unit, allUnits);
+    const chosen = available.find((a) => a.actionType === actionType);
+    if (!chosen) throw new LiveBattleError("Diese Aktion ist gerade nicht verfügbar.");
+
+    if (chosen.targetKind !== "none") {
+      const candidates = candidateTargetIds(unit, chosen.targetKind, allUnits);
+      if (!targetId || !candidates.includes(targetId)) throw new LiveBattleError("Ungültiges Ziel.");
+      resolvedTargetId = targetId;
+    }
   }
 
   const { state: newState, pendingDecision } = advance(
