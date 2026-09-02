@@ -24,7 +24,7 @@ import { Loader2, Zap, Swords, Bot, ChevronRight, ChevronLeft, Timer, Volume2, V
 import { getClassConfig, LEVEL_BORDER } from "./BattleCardView";
 import BoardMatch3 from "./BoardMatch3";
 import type { BoardGrid, SwapMove } from "@/lib/battle-engine/board-match3";
-import type { ActionType, TeamId, UnitClass } from "@/lib/battle-engine/types";
+import type { ActionType, ActiveStatModifier, TeamId, UnitClass } from "@/lib/battle-engine/types";
 import {
   isSoundMuted,
   playCritSound,
@@ -73,6 +73,7 @@ interface LiveUnit {
   isAlive: boolean;
   imageUrl?: string | null;
   avatarBadgeUrl?: string | null;
+  statModifiers: ActiveStatModifier[];
 }
 
 interface AvailableAction {
@@ -171,6 +172,22 @@ const EFFECT_COLOR: Record<FloatingEffect["kind"], string> = {
   shield: "#7dd3fc",
 };
 
+const STAT_LABEL: Record<ActiveStatModifier["stat"], string> = {
+  attack: "Angriff",
+  defense: "Verteidigung",
+  speed: "Speed",
+};
+
+function formatModifierValue(m: ActiveStatModifier): string {
+  const sign = m.amount >= 0 ? "+" : "";
+  return m.mode === "percent" ? `${sign}${Math.round(m.amount * 100)}%` : `${sign}${m.amount}`;
+}
+
+function formatModifierDuration(m: ActiveStatModifier): string {
+  if (m.remainingRounds === "battle") return "bis Kampfende";
+  return `noch ${m.remainingRounds} ${m.remainingRounds === 1 ? "Runde" : "Runden"}`;
+}
+
 function UnitCard({
   unit,
   isActing,
@@ -207,6 +224,16 @@ function UnitCard({
   // zurück, statt ein kaputtes Bild-Icon zu zeigen.
   const [imageFailed, setImageFailed] = useState(false);
   const showImage = !!unit.imageUrl && !imageFailed;
+  // Buff/Debuff-Icons: ein Badge pro betroffenem Stat (nicht pro Modifier —
+  // mehrere Effekte auf denselben Stat sind selten und werden im Tooltip
+  // ohnehin einzeln aufgeführt). Tippen öffnet Details (Betrag, Restdauer,
+  // Quelle) — bewusst NICHT die native `disabled`-Eigenschaft am äußeren
+  // <button> genutzt (s.u.), sonst würden deaktivierte Karten (der
+  // Normalfall, wenn gerade kein Ziel gewählt wird) auch dieses Badge
+  // unklickbar machen (disabled-Buttons blockieren Pointer-Events auf
+  // Kind-Elementen).
+  const [modifiersOpen, setModifiersOpen] = useState(false);
+  const modifierStats = Array.from(new Set(unit.statModifiers.map((m) => m.stat)));
 
   function handleClick() {
     if (canPickTarget) onClick?.();
@@ -216,7 +243,6 @@ function UnitCard({
   return (
     <button
       type="button"
-      disabled={!clickable}
       onClick={handleClick}
       className={`w-20 sm:w-28 shrink-0 text-left relative ${isHit ? "hit-shake" : ""}`}
       style={{ opacity: unit.isAlive ? 1 : 0.35, filter: unit.isAlive ? "none" : "grayscale(1)", cursor: clickable ? "pointer" : "default" }}
@@ -300,7 +326,62 @@ function UnitCard({
                     : `0 0 0 1px ${borderColor}`,
           }}
         />
+        {modifierStats.length > 0 && (
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={(e) => {
+              e.stopPropagation();
+              setModifiersOpen((v) => !v);
+            }}
+            className="absolute bottom-0.5 left-0.5 z-10 flex gap-0.5"
+          >
+            {modifierStats.map((stat) => {
+              const netAmount = unit.statModifiers.filter((m) => m.stat === stat).reduce((sum, m) => sum + m.amount, 0);
+              const positive = netAmount >= 0;
+              return (
+                <span
+                  key={stat}
+                  className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] leading-none font-black"
+                  style={{
+                    background: positive ? "#34d399" : "#f87171",
+                    color: "#000",
+                    boxShadow: "0 1px 2px rgba(0,0,0,0.5)",
+                  }}
+                >
+                  {positive ? "▲" : "▼"}
+                </span>
+              );
+            })}
+          </div>
+        )}
       </div>
+      {modifiersOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-30"
+            onClick={(e) => {
+              e.stopPropagation();
+              setModifiersOpen(false);
+            }}
+          />
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="absolute bottom-full left-0 mb-1 z-40 w-40 rounded-lg bg-[#14171f] border border-white/10 shadow-xl px-2 py-1.5 space-y-1"
+          >
+            {unit.statModifiers.map((m, i) => (
+              <div key={i} className="text-[10px] leading-snug">
+                <p className="font-semibold" style={{ color: m.amount >= 0 ? "#34d399" : "#f87171" }}>
+                  {STAT_LABEL[m.stat]} {formatModifierValue(m)}
+                </p>
+                <p className="text-gray-500">
+                  {formatModifierDuration(m)} · {m.sourceName}
+                </p>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       <p
         className="text-[9px] sm:text-[10px] font-semibold text-white text-center truncate mb-0.5"

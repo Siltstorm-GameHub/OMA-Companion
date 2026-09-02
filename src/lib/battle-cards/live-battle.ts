@@ -27,6 +27,7 @@ import type { BoardGrid, SwapMove } from "@/lib/battle-engine/board-match3";
 import { ULTIMATE_SKILL_COST } from "@/lib/battle-engine/constants";
 import type {
   ActionType,
+  ActiveStatModifier,
   BattleLogEntry,
   BattleUnitDefinition,
   BattleUnitState,
@@ -130,6 +131,9 @@ export interface LiveUnitSnapshot {
   isAlive: boolean;
   imageUrl?: string | null;
   avatarBadgeUrl?: string | null;
+  /** Aktive Stat-Buffs/-Debuffs (Angriff/Verteidigung/Speed) — für die
+   *  Buff/Debuff-Icons auf der Heldenkarte, siehe UnitCard in LiveBattleView.tsx. */
+  statModifiers: ActiveStatModifier[];
 }
 
 export interface LiveBattleAwaiting {
@@ -184,6 +188,7 @@ function toUnitSnapshot(u: BattleUnitState): LiveUnitSnapshot {
     isAlive: u.isAlive,
     imageUrl: u.def.imageUrl,
     avatarBadgeUrl: u.def.avatarBadgeUrl,
+    statModifiers: u.statModifiers,
   };
 }
 
