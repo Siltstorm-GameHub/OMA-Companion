@@ -94,7 +94,9 @@ export default function AdminUsersClient({ users, loginCount, noLoginCount, firs
                         <p className="text-xs text-gray-500 truncate">{user.email ?? <span className="text-gray-700 italic">Kein Login</span>}</p>
                       </div>
                     </Link>
-                    {user.hasLogin ? (
+                    {user.leftServerAt ? (
+                      <Badge tone="warning" icon={<UserMinus className="w-3 h-3" />}>Ausgetreten</Badge>
+                    ) : user.hasLogin ? (
                       <Badge tone="success" icon={<LogIn className="w-3 h-3" />}>Aktiv</Badge>
                     ) : (
                       <Badge tone="neutral" icon={<UserX className="w-3 h-3" />}>Ausstehend</Badge>
@@ -198,7 +200,9 @@ export default function AdminUsersClient({ users, loginCount, noLoginCount, firs
 
                     {/* Status */}
                     <td className="px-4 py-3 text-center">
-                      {user.hasLogin ? (
+                      {user.leftServerAt ? (
+                        <Badge tone="warning" icon={<UserMinus className="w-3 h-3" />}>Ausgetreten</Badge>
+                      ) : user.hasLogin ? (
                         <Badge tone="success" icon={<LogIn className="w-3 h-3" />}>Aktiv</Badge>
                       ) : (
                         <Badge tone="neutral" icon={<UserX className="w-3 h-3" />}>Ausstehend</Badge>

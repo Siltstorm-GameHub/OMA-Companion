@@ -102,9 +102,18 @@ export default function PackOpener({ initialUnopenedCount }: { initialUnopenedCo
 
   return (
     <>
-      <button
+      <motion.button
         type="button"
         onClick={startSession}
+        whileTap={{ scale: 0.98 }}
+        animate={{
+          boxShadow: [
+            "inset 0 1px 0 rgba(255,255,255,0.04), 0 0 0 1px rgba(245,158,11,0.12)",
+            "inset 0 1px 0 rgba(255,255,255,0.04), 0 0 24px rgba(245,158,11,0.28), 0 0 0 1px rgba(245,158,11,0.3)",
+            "inset 0 1px 0 rgba(255,255,255,0.04), 0 0 0 1px rgba(245,158,11,0.12)",
+          ],
+        }}
+        transition={{ boxShadow: { duration: 2.6, repeat: Infinity, ease: "easeInOut" } }}
         className="w-full glass rounded-2xl p-4 flex items-center gap-3 text-left hover:bg-white/[0.04] transition-colors"
       >
         <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
@@ -116,7 +125,7 @@ export default function PackOpener({ initialUnopenedCount }: { initialUnopenedCo
             {remaining} ungeöffnete Truhe{remaining === 1 ? "" : "n"} warten auf dich.
           </p>
         </div>
-      </button>
+      </motion.button>
 
       <AnimatePresence>
         {phase !== "closed" && (
@@ -145,14 +154,23 @@ export default function PackOpener({ initialUnopenedCount }: { initialUnopenedCo
                   animate={
                     phase === "opening"
                       ? { rotate: [0, -4, 4, -4, 4, 0], scale: [1, 1.05, 1.05, 1.05, 1.05, 1.15] }
-                      : { rotate: 0, scale: 1 }
+                      : {
+                          rotate: 0,
+                          scale: 1,
+                          boxShadow: [
+                            "0 0 40px rgba(245,158,11,0.4), 0 8px 24px rgba(0,0,0,0.6), inset 0 2px 0 rgba(255,255,255,0.15)",
+                            "0 0 64px rgba(245,158,11,0.7), 0 8px 24px rgba(0,0,0,0.6), inset 0 2px 0 rgba(255,255,255,0.15)",
+                            "0 0 40px rgba(245,158,11,0.4), 0 8px 24px rgba(0,0,0,0.6), inset 0 2px 0 rgba(255,255,255,0.15)",
+                          ],
+                        }
                   }
-                  transition={{ duration: 0.9, ease: "easeInOut" }}
+                  transition={
+                    phase === "opening"
+                      ? { duration: 0.9, ease: "easeInOut" }
+                      : { boxShadow: { duration: 2, repeat: Infinity, ease: "easeInOut" } }
+                  }
                   className="relative w-40 h-56 rounded-xl flex flex-col items-center justify-center gap-3 cursor-pointer overflow-hidden"
-                  style={{
-                    background: "linear-gradient(160deg, #d97706 0%, #78350f 100%)",
-                    boxShadow: "0 0 40px rgba(245,158,11,0.4), 0 8px 24px rgba(0,0,0,0.6), inset 0 2px 0 rgba(255,255,255,0.15)",
-                  }}
+                  style={{ background: "linear-gradient(160deg, #d97706 0%, #78350f 100%)" }}
                 >
                   {/* Truhen-Deckel-Naht */}
                   <div className="absolute top-[38%] left-0 right-0 h-1.5 bg-black/25" />
@@ -205,8 +223,9 @@ export default function PackOpener({ initialUnopenedCount }: { initialUnopenedCo
                   )}
                   <div className="flex gap-2">
                     {revealIndex < results.length - 1 ? (
-                      <button
+                      <motion.button
                         type="button"
+                        whileTap={{ scale: 0.95 }}
                         onClick={() => {
                           const next = revealIndex + 1;
                           setRevealIndex(next);
@@ -215,25 +234,27 @@ export default function PackOpener({ initialUnopenedCount }: { initialUnopenedCo
                         className="text-xs font-semibold px-3 py-2 rounded-md bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 transition-colors"
                       >
                         Nächste Karte
-                      </button>
+                      </motion.button>
                     ) : (
                       <>
                         {remaining > 0 && (
-                          <button
+                          <motion.button
                             type="button"
+                            whileTap={{ scale: 0.95 }}
                             onClick={openAnother}
                             className="text-xs font-semibold px-3 py-2 rounded-md bg-violet-500/15 text-violet-300 hover:bg-violet-500/25 transition-colors"
                           >
                             Nächste Truhe öffnen ({remaining})
-                          </button>
+                          </motion.button>
                         )}
-                        <button
+                        <motion.button
                           type="button"
+                          whileTap={{ scale: 0.95 }}
                           onClick={close}
                           className="text-xs font-semibold px-3 py-2 rounded-md bg-white/[0.06] text-gray-300 hover:bg-white/[0.1] transition-colors"
                         >
                           Fertig
-                        </button>
+                        </motion.button>
                       </>
                     )}
                   </div>

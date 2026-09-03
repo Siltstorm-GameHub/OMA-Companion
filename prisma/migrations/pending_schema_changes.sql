@@ -345,3 +345,9 @@ END $$;
 
 CREATE INDEX IF NOT EXISTS "LiveBattle_playerAId_idx" ON "LiveBattle"("playerAId");
 CREATE INDEX IF NOT EXISTS "LiveBattle_playerBId_idx" ON "LiveBattle"("playerBId");
+
+-- ═══════════════════════════════════════════════════════════════
+-- Discord-Mitglieder-Sync: Ex-Mitglieder markieren statt löschen
+-- ═══════════════════════════════════════════════════════════════
+
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "leftServerAt" TIMESTAMP(3);
