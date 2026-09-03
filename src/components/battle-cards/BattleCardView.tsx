@@ -63,6 +63,18 @@ export const LEVEL_BORDER: Record<number, string> = {
   5: "#a855f7", // prismatisch (Basiston, Glow ergänzt Regenbogen-Effekt)
 };
 
+/** Canva-generierte Rahmen-Grafiken je Level (grau/bronze/silber/gold/prismatisch)
+ *  — reiner Schwarz-Hintergrund im PNG, per "screen"-Blend unsichtbar gemacht statt
+ *  echter Transparenz (Canvas transparent_background-Export entfernt keine im
+ *  Design selbst gezeichneten Hintergrundflächen, siehe BattleCardView unten). */
+export const LEVEL_FRAME_IMAGE: Record<number, string> = {
+  1: "/battle-cards/rarity-frame-1.png",
+  2: "/battle-cards/rarity-frame-2.png",
+  3: "/battle-cards/rarity-frame-3.png",
+  4: "/battle-cards/rarity-frame-4.png",
+  5: "/battle-cards/rarity-frame-5.png",
+};
+
 // Reserviert genug Höhe für den maximal langen Beschreibungstext (siehe
 // CARD_FLAVOR_TEXT_MAX_LENGTH = 100 Zeichen, lib/battle-cards/card-content.ts),
 // auch auf schmalen Karten (2-spaltiges Mobil-Grid). Kürzere Texte lassen
@@ -139,11 +151,14 @@ export default function BattleCardView({ card, dimmed = false }: { card: BattleC
   const classConfig = getClassConfig(card.class);
   const ClassIcon = classConfig.icon;
   const borderColor = LEVEL_BORDER[level] ?? LEVEL_BORDER[1];
+  const frameImage = LEVEL_FRAME_IMAGE[level] ?? LEVEL_FRAME_IMAGE[1];
   // Höchststufe (prismatisch) bekommt zusätzlich einen Glow + wiederkehrenden
   // Lichtsweep, damit sie sich auch in der vollen Flip-Karte (nicht nur der
   // CardTile-Kachel, siehe dortiges level>=5-Glow) als Top-Tier absetzt.
   const isMaxLevel = level >= 5;
-  const cardFaceShadow = `var(--shadow-card), 0 0 0 1.5px ${borderColor}${isMaxLevel ? `, 0 0 20px ${borderColor}77` : ""}`;
+  // Der Rahmen kommt jetzt als Artwork (frameImage) statt als reiner Farbring —
+  // die Box-Shadow liefert nur noch den weichen Ambient-Glow für Top-Tier-Karten.
+  const cardFaceShadow = `var(--shadow-card)${isMaxLevel ? `, 0 0 20px ${borderColor}77` : ""}`;
 
   return (
     <button
@@ -167,6 +182,14 @@ export default function BattleCardView({ card, dimmed = false }: { card: BattleC
             boxShadow: cardFaceShadow,
           }}
         >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={frameImage}
+            alt=""
+            aria-hidden
+            className="absolute inset-0 w-full h-full pointer-events-none z-10"
+            style={{ objectFit: "fill", mixBlendMode: "screen" }}
+          />
           {isMaxLevel && (
             <motion.div
               className="absolute inset-y-0 left-0 w-1/4 pointer-events-none z-10"
@@ -258,6 +281,14 @@ export default function BattleCardView({ card, dimmed = false }: { card: BattleC
             boxShadow: cardFaceShadow,
           }}
         >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={frameImage}
+            alt=""
+            aria-hidden
+            className="absolute inset-0 w-full h-full pointer-events-none z-10"
+            style={{ objectFit: "fill", mixBlendMode: "screen" }}
+          />
           <div className="flex items-center justify-between shrink-0">
             <p className="font-battle text-[11px] text-white uppercase tracking-wide">{card.name}</p>
             <RotateCcw className="w-3 h-3 text-gray-600" />

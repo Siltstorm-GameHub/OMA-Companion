@@ -9,7 +9,7 @@
 // Detailansicht (BattleCardView + Upgrade) in einem Modal.
 
 import { Lock } from "lucide-react";
-import { getClassConfig, LEVEL_BORDER, type BattleCardData } from "./BattleCardView";
+import { getClassConfig, LEVEL_BORDER, LEVEL_FRAME_IMAGE, type BattleCardData } from "./BattleCardView";
 
 export default function CardTile({
   card,
@@ -44,9 +44,11 @@ export default function CardTile({
           background: locked
             ? "rgba(255,255,255,0.03)"
             : `linear-gradient(160deg, ${classConfig.color}3a, rgba(12,12,16,0.92))`,
+          // Der Farbring entfällt für unlocked Karten — das Rahmen-Artwork (LEVEL_FRAME_IMAGE,
+          // per screen-Blend darübergelegt) übernimmt jetzt die Rand-Darstellung.
           boxShadow: locked
             ? `0 0 0 1.5px ${borderColor}`
-            : `0 0 0 2px ${borderColor}, 0 4px 14px rgba(0,0,0,0.55)${level >= 5 ? `, 0 0 16px ${borderColor}66` : ""}`,
+            : `0 4px 14px rgba(0,0,0,0.55)${level >= 5 ? `, 0 0 16px ${borderColor}66` : ""}`,
           opacity: locked ? 0.5 : 1,
           filter: locked ? "grayscale(0.9)" : undefined,
         }}
@@ -61,6 +63,17 @@ export default function CardTile({
             <ClassIcon className="w-8 h-8" style={{ color: classConfig.color, opacity: 0.55 }} />
           )}
         </div>
+
+        {!locked && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={LEVEL_FRAME_IMAGE[level] ?? LEVEL_FRAME_IMAGE[1]}
+            alt=""
+            aria-hidden
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            style={{ objectFit: "fill", mixBlendMode: "screen" }}
+          />
+        )}
 
         {!locked && (
           <span
