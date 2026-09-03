@@ -13,6 +13,7 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Bot, Loader2 } from "lucide-react";
+import { motion } from "motion/react";
 import LiveBattleView from "./LiveBattleView";
 import MatchupBadge from "./MatchupBadge";
 import ErrorNotice from "./ErrorNotice";
@@ -86,12 +87,13 @@ export default function NpcBattleLauncher() {
         {DIFFICULTY_ORDER.map((difficulty) => {
           const config = DIFFICULTY_CONFIG[difficulty];
           return (
-            <button
+            <motion.button
               key={difficulty}
               type="button"
+              whileTap={{ scale: 0.94, y: 1 }}
               onClick={() => start(difficulty)}
               disabled={loading !== null}
-              className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl text-black active:translate-y-0.5 transition-transform disabled:opacity-50"
+              className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl text-black transition-opacity disabled:opacity-50"
               style={{
                 background: `linear-gradient(180deg, ${config.color}ee 0%, ${config.color} 55%, ${config.colorDark} 100%)`,
                 boxShadow: `inset 0 1px 0 rgba(255,255,255,0.35), inset 0 -2px 0 rgba(0,0,0,0.15), 0 2px 0 ${config.colorDark}`,
@@ -108,7 +110,7 @@ export default function NpcBattleLauncher() {
               <span className="flex items-center gap-0.5 text-[10px] font-bold bg-black/20 px-1.5 py-0.5 rounded-full">
                 <CoinIcon size={10} /> {NPC_BATTLE_WIN_REWARD[difficulty]}
               </span>
-            </button>
+            </motion.button>
           );
         })}
       </div>

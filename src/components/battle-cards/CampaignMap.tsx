@@ -14,6 +14,7 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Lock, Star, Swords, Crown, Loader2 } from "lucide-react";
+import { motion } from "motion/react";
 import LiveBattleView from "./LiveBattleView";
 import CoinIcon from "@/components/CoinIcon";
 import ErrorNotice from "./ErrorNotice";
@@ -54,20 +55,53 @@ function StarRow({ stars, size = 12 }: { stars: number; size?: number }) {
   );
 }
 
-function LevelNode({ level, index, onSelect }: { level: CampaignBoardLevel; index: number; onSelect: () => void }) {
+function LevelNode({
+  level,
+  index,
+  isNextUp,
+  onSelect,
+}: {
+  level: CampaignBoardLevel;
+  index: number;
+  /** Erster unlocked-aber-nicht-abgeschlossener Level — bekommt einen pulsierenden
+   *  Ring als "Spiel mich als Nächstes"-Hinweis, wie man's aus Candy-Crush-artigen
+   *  Kampagnenkarten kennt. */
+  isNextUp: boolean;
+  onSelect: () => void;
+}) {
   const locked = !level.unlocked;
   const accent = level.isBoss ? "#f43f5e" : level.completed ? "#34d399" : "#60a5fa";
 
   return (
-    <div className="flex flex-col items-center" style={{ transform: `translateX(${offsetFor(index)}px)` }}>
-      <button
+    <motion.div
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: Math.min(index * 0.05, 0.5), duration: 0.3, ease: "easeOut" }}
+      className="flex flex-col items-center"
+      style={{ transform: `translateX(${offsetFor(index)}px)` }}
+    >
+      <motion.button
         type="button"
         onClick={onSelect}
         disabled={locked}
+        whileTap={locked ? undefined : { scale: 0.9 }}
         className="relative flex flex-col items-center gap-1.5 disabled:cursor-not-allowed"
       >
-        <div
-          className="w-16 h-16 rounded-full flex items-center justify-center shrink-0 transition-transform active:scale-95"
+        {isNextUp && (
+          <motion.div
+            className="absolute inset-0 rounded-full pointer-events-none"
+            animate={{ boxShadow: [`0 0 0 0px ${accent}66`, `0 0 0 8px ${accent}00`] }}
+            transition={{ duration: 1.6, repeat: Infinity, ease: "easeOut" }}
+          />
+        )}
+        <motion.div
+          className="w-16 h-16 rounded-full flex items-center justify-center shrink-0"
+          animate={
+            level.isBoss && !locked
+              ? { boxShadow: [`0 8px 18px ${accent}55`, `0 8px 30px ${accent}aa`, `0 8px 18px ${accent}55`] }
+              : undefined
+          }
+          transition={level.isBoss && !locked ? { duration: 2.2, repeat: Infinity, ease: "easeInOut" } : undefined}
           style={{
             background: locked
               ? "linear-gradient(180deg, #2a2f3a 0%, #1a1d24 100%)"
@@ -84,14 +118,14 @@ function LevelNode({ level, index, onSelect }: { level: CampaignBoardLevel; inde
           ) : (
             <span className="text-lg font-black text-white">{level.order}</span>
           )}
-        </div>
+        </motion.div>
         {!locked && <StarRow stars={level.stars} />}
-      </button>
+      </motion.button>
       <div className="mt-1 text-center max-w-[140px]">
         <p className={`text-xs font-bold ${locked ? "text-gray-600" : "text-white"}`}>{level.name}</p>
         {!locked && <p className="text-[10px] text-gray-500 leading-snug mt-0.5">{level.tagline}</p>}
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -157,9 +191,14 @@ export default function CampaignMap() {
     return <LiveBattleView liveBattleId={liveBattleId} viewerId={session.user.id} onExit={handleExitBattle} />;
   }
 
+  const nextUpLevelId = levels?.find((l) => l.unlocked && !l.completed)?.id;
+
   return (
     <div className="space-y-4">
-      <div
+      <motion.div
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
         className="relative overflow-hidden rounded-2xl px-4 py-3 space-y-2"
         style={{
           background:
@@ -189,7 +228,7 @@ export default function CampaignMap() {
           </span>
         </div>
         {chapterIntro && <p className="relative text-xs text-gray-300 leading-relaxed">{chapterIntro}</p>}
-      </div>
+      </motion.div>
 
       {error && <ErrorNotice message={error} />}
 
@@ -201,7 +240,12 @@ export default function CampaignMap() {
         <div className="glass rounded-2xl px-4 py-8 flex flex-col items-center gap-8">
           {levels.map((level, index) => (
             <div key={level.id} className="w-full flex flex-col items-center">
-              <LevelNode level={level} index={index} onSelect={() => start(level.id)} />
+              <LevelNode
+                level={level}
+                index={index}
+                isNextUp={level.id === nextUpLevelId}
+                onSelect={() => start(level.id)}
+              />
               {starting === level.id && (
                 <Loader2 className="w-4 h-4 text-gray-400 animate-spin mt-1.5" />
               )}

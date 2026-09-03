@@ -139,6 +139,11 @@ export default function BattleCardView({ card, dimmed = false }: { card: BattleC
   const classConfig = getClassConfig(card.class);
   const ClassIcon = classConfig.icon;
   const borderColor = LEVEL_BORDER[level] ?? LEVEL_BORDER[1];
+  // Höchststufe (prismatisch) bekommt zusätzlich einen Glow + wiederkehrenden
+  // Lichtsweep, damit sie sich auch in der vollen Flip-Karte (nicht nur der
+  // CardTile-Kachel, siehe dortiges level>=5-Glow) als Top-Tier absetzt.
+  const isMaxLevel = level >= 5;
+  const cardFaceShadow = `var(--shadow-card), 0 0 0 1.5px ${borderColor}${isMaxLevel ? `, 0 0 20px ${borderColor}77` : ""}`;
 
   return (
     <button
@@ -156,12 +161,21 @@ export default function BattleCardView({ card, dimmed = false }: { card: BattleC
       >
         {/* ── Vorderseite ── */}
         <div
-          className="card-cut absolute inset-0 surface-elevated p-2 flex flex-col gap-1.5"
+          className="card-cut absolute inset-0 surface-elevated p-2 flex flex-col gap-1.5 overflow-hidden"
           style={{
             backfaceVisibility: "hidden",
-            boxShadow: `var(--shadow-card), 0 0 0 1.5px ${borderColor}`,
+            boxShadow: cardFaceShadow,
           }}
         >
+          {isMaxLevel && (
+            <motion.div
+              className="absolute inset-y-0 left-0 w-1/4 pointer-events-none z-10"
+              style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent)", skewX: -20 }}
+              initial={{ x: "-220%" }}
+              animate={{ x: "520%" }}
+              transition={{ duration: 1.4, repeat: Infinity, repeatDelay: 2.6, ease: "easeInOut" }}
+            />
+          )}
           <div className="flex items-start justify-between gap-1 shrink-0">
             <div className="min-w-0">
               <p className="font-battle text-[13px] text-white leading-tight truncate">{card.name}</p>
@@ -241,7 +255,7 @@ export default function BattleCardView({ card, dimmed = false }: { card: BattleC
           style={{
             backfaceVisibility: "hidden",
             transform: "rotateY(180deg)",
-            boxShadow: `var(--shadow-card), 0 0 0 1.5px ${borderColor}`,
+            boxShadow: cardFaceShadow,
           }}
         >
           <div className="flex items-center justify-between shrink-0">

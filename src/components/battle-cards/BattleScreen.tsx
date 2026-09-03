@@ -320,9 +320,12 @@ function UnitTile({
   const Icon = config.icon;
   const hpPct = Math.max(0, runtime.currentHp / runtime.maxHp);
 
+  const attacking = vfx?.kind === "cast";
+  const hit = vfx?.kind === "damage" || vfx?.kind === "critDamage";
+
   return (
     <div
-      className="w-24 sm:w-28 shrink-0 relative transition-all"
+      className={`w-24 sm:w-28 shrink-0 relative transition-all ${attacking ? "attack-lunge" : ""} ${hit ? "hit-shake" : ""}`}
       style={{
         opacity: runtime.alive ? 1 : 0.35,
         filter: runtime.alive ? "none" : "grayscale(1)",
@@ -562,8 +565,9 @@ export default function BattleScreen({ roster, log }: { roster: RosterEntry[]; l
       {/* Steuerung */}
       <div className="flex items-center justify-center gap-2">
         {isFinished ? (
-          <button
+          <motion.button
             type="button"
+            whileTap={{ scale: 0.94 }}
             onClick={() => {
               setStep(0);
               setPlaying(true);
@@ -571,19 +575,21 @@ export default function BattleScreen({ roster, log }: { roster: RosterEntry[]; l
             className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md bg-teal-500/15 text-teal-300 hover:bg-teal-500/25 transition-colors"
           >
             <RotateCcw className="w-3.5 h-3.5" /> Erneut ansehen
-          </button>
+          </motion.button>
         ) : (
           <>
-            <button
+            <motion.button
               type="button"
+              whileTap={{ scale: 0.94 }}
               onClick={() => setPlaying((p) => !p)}
               className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md bg-white/[0.06] text-gray-300 hover:bg-white/[0.1] transition-colors"
             >
               {playing ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
               {playing ? "Pause" : "Weiter"}
-            </button>
-            <button
+            </motion.button>
+            <motion.button
               type="button"
+              whileTap={{ scale: 0.94 }}
               onClick={() => {
                 setPlaying(false);
                 setStep(log.length);
@@ -592,18 +598,19 @@ export default function BattleScreen({ roster, log }: { roster: RosterEntry[]; l
               title="Zum Ergebnis springen"
             >
               <ChevronsRight className="w-3.5 h-3.5" /> Überspringen
-            </button>
+            </motion.button>
           </>
         )}
-        <button
+        <motion.button
           type="button"
+          whileTap={{ scale: 0.9 }}
           onClick={toggleSound}
           className="flex items-center justify-center w-7 h-7 rounded-md bg-white/[0.06] text-gray-400 hover:text-gray-200 hover:bg-white/[0.1] transition-colors"
           title={soundOn ? "Ton aus" : "Ton an"}
           aria-label={soundOn ? "Ton aus" : "Ton an"}
         >
           {soundOn ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
-        </button>
+        </motion.button>
       </div>
 
       {/* Ultimate-Cutscene */}

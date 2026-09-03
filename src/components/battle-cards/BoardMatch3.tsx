@@ -302,13 +302,15 @@ export default function BoardMatch3({
               onClick={() => handleTap(cell)}
               className={`aspect-square rounded-md flex items-center justify-center transition-transform active:scale-95 disabled:opacity-60 ${
                 isDestroying ? "gem-destroy" : ""
-              }`}
+              } ${isInvalid ? "hit-shake" : ""}`}
               style={{
                 background: `${icon.color}22`,
+                transform: isSelected ? "scale(1.08)" : "scale(1)",
+                transition: "transform 150ms ease-out, box-shadow 150ms ease-out",
                 boxShadow: isInvalid
                   ? "0 0 0 2px #f43f5e, 0 0 10px rgba(244,63,94,0.6)"
                   : isSelected
-                    ? `0 0 0 2px ${icon.color}, 0 0 10px ${icon.color}99`
+                    ? `0 0 0 2px ${icon.color}, 0 0 14px ${icon.color}99`
                     : "0 0 0 1px rgba(255,255,255,0.06)",
               }}
             >
