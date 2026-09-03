@@ -176,7 +176,7 @@ export default function BattleCardView({ card, dimmed = false }: { card: BattleC
       >
         {/* ── Vorderseite ── */}
         <div
-          className="card-cut absolute inset-0 surface-elevated p-2 flex flex-col gap-1.5 overflow-hidden"
+          className="card-cut absolute inset-0 surface-elevated px-3.5 pt-9 pb-11 flex flex-col gap-2 overflow-hidden"
           style={{
             backfaceVisibility: "hidden",
             boxShadow: cardFaceShadow,
@@ -199,22 +199,13 @@ export default function BattleCardView({ card, dimmed = false }: { card: BattleC
               transition={{ duration: 1.4, repeat: Infinity, repeatDelay: 2.6, ease: "easeInOut" }}
             />
           )}
-          <div className="flex items-start justify-between gap-1 shrink-0">
-            <div className="min-w-0">
-              <p className="font-battle text-[13px] text-white leading-tight truncate">{card.name}</p>
-              <LevelStars level={level} />
-            </div>
-            {card.rarity === "COMMUNITY" && card.activityTier && (
-              <span className="shrink-0 text-[11px]" title={card.activityTier}>
-                {card.activityTier === "OLD_MASTER" ? (
-                  <span className="px-1.5 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-wide bg-amber-400/15 text-amber-300 border border-amber-400/30">
-                    Old Master
-                  </span>
-                ) : (
-                  ACTIVITY_TIER_ICON[card.activityTier]
-                )}
-              </span>
-            )}
+          {/* Name+Sterne zentriert statt linksbündig — die Rahmen-Ornamentik (Canva-Artwork)
+              reicht an den Ecken tief in die Karte hinein (bei x=5-10% bis zu 35% der Höhe),
+              zur horizontalen Mitte hin aber nur ~2-6%. Zentrierter Text bleibt so unterhalb
+              der Ornamentik statt darunter/dahinter zu verschwinden. */}
+          <div className="flex flex-col items-center text-center gap-0.5 shrink-0">
+            <p className="font-battle text-[13px] text-white leading-tight truncate max-w-full">{card.name}</p>
+            <LevelStars level={level} />
           </div>
 
           <div
@@ -226,6 +217,19 @@ export default function BattleCardView({ card, dimmed = false }: { card: BattleC
               <img src={card.imageUrl} alt={card.name} className="w-full h-full object-contain" />
             ) : (
               <ClassIcon className="w-12 h-12" style={{ color: classConfig.color, opacity: 0.5 }} />
+            )}
+            {/* Aktivitäts-Badge zieht in die Artwork-Box um — dort bereits ausreichend von
+                der Rahmen-Ornamentik entfernt, statt am äußeren Karten-Eck zu kollidieren. */}
+            {card.rarity === "COMMUNITY" && card.activityTier && (
+              <span className="absolute top-1 right-1 text-[11px]" title={card.activityTier}>
+                {card.activityTier === "OLD_MASTER" ? (
+                  <span className="px-1.5 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-wide bg-amber-400/15 text-amber-300 border border-amber-400/30 backdrop-blur-sm">
+                    Old Master
+                  </span>
+                ) : (
+                  <span className="px-1 py-0.5 rounded-full bg-black/50 backdrop-blur-sm">{ACTIVITY_TIER_ICON[card.activityTier]}</span>
+                )}
+              </span>
             )}
             {card.avatarBadgeUrl && (
               // eslint-disable-next-line @next/next/no-img-element
@@ -239,7 +243,7 @@ export default function BattleCardView({ card, dimmed = false }: { card: BattleC
             )}
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center justify-center gap-1.5 shrink-0">
             <ClassIcon className="w-3 h-3 shrink-0" style={{ color: classConfig.color }} />
             <span
               className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded"
@@ -252,11 +256,14 @@ export default function BattleCardView({ card, dimmed = false }: { card: BattleC
 
           <div className="shrink-0" style={{ minHeight: FLAVOR_TEXT_MIN_HEIGHT }}>
             {card.flavorText && (
-              <p className="text-[10px] text-gray-500 italic leading-snug">{card.flavorText}</p>
+              <p className="text-[10px] text-gray-500 italic leading-snug text-center">{card.flavorText}</p>
             )}
           </div>
 
-          <div className="flex gap-1 shrink-0">
+          {/* Stat-Kacheln als schmalere, zentrierte Gruppe statt volle Kartenbreite — die
+              äußeren Ecken der Kacheln würden sonst in die tiefer reichende Eck-Ornamentik
+              unten links/rechts hineinragen. */}
+          <div className="flex gap-1 shrink-0 max-w-[62%] mx-auto w-full">
             <StatTile label="HP" value={card.baseHp} />
             <StatTile label="ATK" value={card.baseAttack} />
             <StatTile label="SPD" value={card.speed} />
@@ -274,7 +281,7 @@ export default function BattleCardView({ card, dimmed = false }: { card: BattleC
 
         {/* ── Rückseite ── */}
         <div
-          className="card-cut absolute inset-0 surface-elevated p-3 flex flex-col gap-2 overflow-hidden"
+          className="card-cut absolute inset-0 surface-elevated px-4 pt-9 pb-6 flex flex-col gap-2 overflow-hidden"
           style={{
             backfaceVisibility: "hidden",
             transform: "rotateY(180deg)",
@@ -289,9 +296,9 @@ export default function BattleCardView({ card, dimmed = false }: { card: BattleC
             className="absolute inset-0 w-full h-full pointer-events-none z-10"
             style={{ objectFit: "fill", mixBlendMode: "screen" }}
           />
-          <div className="flex items-center justify-between shrink-0">
-            <p className="font-battle text-[11px] text-white uppercase tracking-wide">{card.name}</p>
-            <RotateCcw className="w-3 h-3 text-gray-600" />
+          <div className="relative flex items-center justify-center shrink-0">
+            <p className="font-battle text-[11px] text-white uppercase tracking-wide truncate max-w-[80%]">{card.name}</p>
+            <RotateCcw className="absolute right-0 w-3 h-3 text-gray-600" />
           </div>
 
           <div

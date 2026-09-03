@@ -59,6 +59,15 @@
         ],
         "createdAt": "2026-08-28T15:55:44.567Z",
         "reason": "Pre-existing, already documented in-code (comment above explains transform/scaleX was considered and rejected: it would squash the border-radius into sharp corners as the active-nav bump pill stretches). Not part of this turn's edit, a deliberate correctness trade-off, not an oversight."
+      },
+      {
+        "rule": "ai-color-palette",
+        "value": "violet-500,fuchsia-400",
+        "files": [
+          "src/components/battle-cards/CardCollectionBrowser.tsx"
+        ],
+        "createdAt": "2026-09-03T18:02:52.972Z",
+        "reason": "Pre-existing code, not touched this session; violet/fuchsia is this app's documented 'Gaming Identity' brand palette (see globals.css --violet-glow, accent-violet, text-gradient-gaming), used consistently app-wide, not an ad-hoc AI-slop gradient"
       }
     ]
   }

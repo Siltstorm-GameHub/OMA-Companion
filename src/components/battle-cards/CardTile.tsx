@@ -8,8 +8,60 @@
 // Duplikat-Zähler sitzen direkt auf der Kachel. Antippen öffnet die volle
 // Detailansicht (BattleCardView + Upgrade) in einem Modal.
 
-import { Lock } from "lucide-react";
+import { Lock, ArrowUpCircle } from "lucide-react";
 import { getClassConfig, LEVEL_BORDER, LEVEL_FRAME_IMAGE, type BattleCardData } from "./BattleCardView";
+import { tableValueForLevel, type UpgradeTable } from "@/lib/battle-cards/upgrade-config";
+import CoinIcon from "@/components/CoinIcon";
+
+/** Ein-Zeilen-Upgrade-Hinweis direkt unter der Kachel — spart das Öffnen des
+ *  Detail-Modals (DuplicateProgress dort), um zu sehen, ob ein Upgrade schon
+ *  möglich ist bzw. wie viele Duplikate dafür noch fehlen. */
+function CardUpgradeHint({
+  card,
+  level,
+  duplicates,
+  coins,
+  duplicateThresholds,
+  upgradeCosts,
+}: {
+  card: BattleCardData;
+  level: number;
+  duplicates: number;
+  coins: number;
+  duplicateThresholds: UpgradeTable;
+  upgradeCosts: UpgradeTable;
+}) {
+  if (level >= 5) {
+    return <p className="text-[9px] font-bold text-amber-400 text-center leading-none h-[11px]">★ Max. Stufe</p>;
+  }
+
+  const needed = tableValueForLevel(duplicateThresholds, card.rarity, level)!;
+  const cost = tableValueForLevel(upgradeCosts, card.rarity, level)!;
+  const hasEnoughDuplicates = duplicates >= needed;
+  const hasEnoughCoins = coins >= cost;
+
+  if (hasEnoughDuplicates && hasEnoughCoins) {
+    return (
+      <p className="flex items-center justify-center gap-0.5 text-[9px] font-bold text-emerald-400 leading-none h-[11px]">
+        <ArrowUpCircle className="w-2.5 h-2.5 shrink-0" /> {cost}
+        <CoinIcon size={8} />
+      </p>
+    );
+  }
+  if (hasEnoughDuplicates) {
+    return (
+      <p className="flex items-center justify-center gap-0.5 text-[9px] font-semibold text-gray-500 leading-none h-[11px]">
+        {cost}
+        <CoinIcon size={8} /> nötig
+      </p>
+    );
+  }
+  return (
+    <p className="text-[9px] font-semibold text-gray-500 text-center leading-none h-[11px]">
+      Noch {needed - duplicates}× nötig
+    </p>
+  );
+}
 
 export default function CardTile({
   card,
@@ -17,6 +69,9 @@ export default function CardTile({
   duplicates,
   locked = false,
   isNew = false,
+  coins,
+  duplicateThresholds,
+  upgradeCosts,
   onClick,
 }: {
   card: BattleCardData;
@@ -25,6 +80,12 @@ export default function CardTile({
   locked?: boolean;
   /** Kürzlich erhalten — zeigt ein "NEU"-Ribbon in der oberen linken Ecke. */
   isNew?: boolean;
+  /** Nur bei eigenen (nicht locked) Karten gesetzt — zusammen mit duplicates/
+   *  duplicateThresholds/upgradeCosts blendet das den Upgrade-Hinweis unter
+   *  der Kachel ein (siehe CardUpgradeHint). */
+  coins?: number;
+  duplicateThresholds?: UpgradeTable;
+  upgradeCosts?: UpgradeTable;
   onClick: () => void;
 }) {
   const classConfig = getClassConfig(card.class);
@@ -100,6 +161,20 @@ export default function CardTile({
       <p className={`font-battle text-[11px] truncate w-full text-center ${locked ? "text-gray-600" : "text-white"}`}>
         {card.name}
       </p>
+      {!locked &&
+        typeof duplicates === "number" &&
+        coins !== undefined &&
+        duplicateThresholds &&
+        upgradeCosts && (
+          <CardUpgradeHint
+            card={card}
+            level={level}
+            duplicates={duplicates}
+            coins={coins}
+            duplicateThresholds={duplicateThresholds}
+            upgradeCosts={upgradeCosts}
+          />
+        )}
     </button>
   );
 }

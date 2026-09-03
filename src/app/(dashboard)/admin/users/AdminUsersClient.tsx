@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { LogIn, UserX, History } from "lucide-react";
+import { LogIn, UserX, UserMinus, History } from "lucide-react";
 import UserPointsHistoryModal from "@/components/UserPointsHistoryModal";
 import { Badge, Select, Button } from "@/components/ui";
 
@@ -20,6 +20,7 @@ interface UserRow {
   discordId: string | null;
   hasLogin: boolean;
   lastLoginAt: string | null;
+  leftServerAt: string | null;
   eventCount: number;
 }
 

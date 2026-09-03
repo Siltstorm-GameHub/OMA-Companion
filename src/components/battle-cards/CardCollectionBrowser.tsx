@@ -238,6 +238,9 @@ export default function CardCollectionBrowser({
               card={oc.card}
               level={oc.level}
               duplicates={oc.duplicates}
+              coins={coins}
+              duplicateThresholds={duplicateThresholds}
+              upgradeCosts={upgradeCosts}
               isNew={Date.now() - new Date(oc.acquiredAt).getTime() < NEW_CARD_WINDOW_MS && !viewedIds.has(oc.id)}
               onClick={() => {
                 setSelected({ kind: "owned", userCardId: oc.id });

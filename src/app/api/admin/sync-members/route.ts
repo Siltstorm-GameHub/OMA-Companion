@@ -308,6 +308,38 @@ export async function POST() {
     }
   }
 
+  // ── Phase 3: Ex-Mitglieder markieren ──────────────────────────────────
+  // Wer nicht mehr in der aktuellen Guild-Mitgliederliste steckt, wird per
+  // leftServerAt markiert. Kein Löschen — Punkte/Historie bleiben erhalten,
+  // damit Rückkehrer nahtlos weitermachen können.
+  const currentDiscordIds = new Set(humans.map((m) => m.user.id));
+
+  const linkedUsers = await prisma.user.findMany({
+    where: { discordId: { not: null } },
+    select: { id: true, discordId: true, leftServerAt: true },
+  });
+
+  let markedLeft = 0;
+  let markedReturned = 0;
+
+  for (const u of linkedUsers) {
+    const isCurrentMember = currentDiscordIds.has(u.discordId!);
+
+    if (!isCurrentMember && !u.leftServerAt) {
+      await prisma.user.update({
+        where: { id: u.id },
+        data: { leftServerAt: new Date() },
+      });
+      markedLeft++;
+    } else if (isCurrentMember && u.leftServerAt) {
+      await prisma.user.update({
+        where: { id: u.id },
+        data: { leftServerAt: null },
+      });
+      markedReturned++;
+    }
+  }
+
   return NextResponse.json({
     success: true,
     total:   humans.length,
@@ -315,6 +347,8 @@ export async function POST() {
     updated,
     merged,
     fixed,
+    markedLeft,
+    markedReturned,
   });
 }
 

@@ -23,6 +23,7 @@ model User {
   createdAt    DateTime  @default(now())
   lastActiveAt DateTime? // Zeitpunkt der letzten App-Aktivität (Presence/Online-Status)
   lastLoginAt  DateTime? // Zeitpunkt des letzten Logins (NextAuth signIn)
+  leftServerAt DateTime? // Gesetzt vom Member-Sync, wenn der User den Discord-Server verlassen hat (null = aktuell Mitglied). History/Punkte bleiben erhalten.
 
   twitchLogin        String?   @unique
   // Token für das persönliche OBS-Overlay (/overlay/profile/[userId]?token=…) — unabhängig von

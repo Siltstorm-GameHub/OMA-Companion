@@ -20,6 +20,8 @@ export default function SyncMembersButton() {
         `${data.updated} aktualisiert`,
         data.merged > 0 ? `${data.merged} zusammengeführt` : null,
         data.fixed  > 0 ? `${data.fixed} repariert`        : null,
+        data.markedLeft     > 0 ? `${data.markedLeft} als ausgetreten markiert` : null,
+        data.markedReturned > 0 ? `${data.markedReturned} zurückgekehrt`        : null,
       ].filter(Boolean).join(" · ");
       setResult(parts);
       router.refresh();
