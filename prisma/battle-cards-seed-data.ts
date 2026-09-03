@@ -500,7 +500,7 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     speed: 40,
     normalAttackTargetRule: null,
     flavorText: "Jeder Treffer, der auf ihm landet, lädt ihn nur weiter auf.",
-    imageUrl: null,
+    imageUrl: "/battle-cards/kupferkurt.png",
     passivePositive: {
       name: "Erdung",
       description: "Jeder erlittene Treffer lädt ihn mit zusätzlicher Rage auf.",
@@ -578,7 +578,7 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     speed: 90,
     normalAttackTargetRule: "LOWEST_HP",
     flavorText: "Sie sucht sich nie den stärksten Gegner. Sie sucht sich den, der es zuerst nicht mehr überlebt.",
-    imageUrl: null,
+    imageUrl: "/battle-cards/nachtklinge.png",
     passivePositive: {
       name: "Blutzoll",
       description: "Jeder ausgeteilte Treffer heilt sie ein wenig.",
@@ -653,7 +653,7 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     speed: 62,
     normalAttackTargetRule: null,
     flavorText: "Sie muss ihr Team nicht stärker machen. Es reicht ihr, den Gegner schwächer zu machen.",
-    imageUrl: null,
+    imageUrl: "/battle-cards/truebsal.png",
     passivePositive: {
       name: "Zehrender Nebel",
       description: "Am Rundenende schwächt sie den gefährlichsten Gegner.",
