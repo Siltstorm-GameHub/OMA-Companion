@@ -1,27 +1,11 @@
 import { auth } from "@/auth";
 import { openNextPack, PackError, type OpenPackResult } from "@/lib/battle-cards/packs";
+import { resolveAvatarsForCards, toCardData } from "@/lib/battle-cards/card-view";
 
-function serializeCard(result: OpenPackResult) {
+function serializeCard(result: OpenPackResult, avatarByDiscordId: Map<string, string | null>) {
   const { card, isNewCard, duplicates } = result;
   return {
-    card: {
-      id: card.id,
-      name: card.name,
-      title: card.title,
-      class: card.class,
-      rarity: card.rarity,
-      flavorText: card.flavorText,
-      baseHp: card.baseHp,
-      baseAttack: card.baseAttack,
-      baseDefense: card.baseDefense,
-      speed: card.speed,
-      activityTier: card.activityTier,
-      imageUrl: card.imageUrl,
-      passivePositive: card.passivePositive,
-      passiveNegative: card.passiveNegative,
-      activeSkill: card.activeSkill,
-      ultimateSkill: card.ultimateSkill,
-    },
+    card: toCardData(card, avatarByDiscordId),
     isNewCard,
     duplicates,
   };
@@ -35,8 +19,9 @@ export async function POST() {
 
   try {
     const result = await openNextPack(session.user.id);
+    const avatarByDiscordId = await resolveAvatarsForCards(result.cards.map((r) => r.card));
     return Response.json({
-      cards: result.cards.map(serializeCard),
+      cards: result.cards.map((r) => serializeCard(r, avatarByDiscordId)),
       remainingUnopened: result.remainingUnopened,
     });
   } catch (error) {
