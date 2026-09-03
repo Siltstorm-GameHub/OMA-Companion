@@ -199,6 +199,11 @@ export interface LiveBattleSnapshot {
   /** Nur gesetzt für einen gewonnenen Gems-PvP-Ghost-Angriff — die Sieges-Kiste
    *  (siehe gems-pvp.ts), die der Client als Öffnen-Animation zeigt. */
   chestPrize: { kind: "coins"; amount: number } | { kind: "pack"; packKind: string } | null;
+  /** Nur gesetzt für einen gewonnenen Kampagnen-Kampf — Sterne-Ergebnis (siehe
+   *  computeStars/recordCampaignResult in campaign.ts), das der Client im
+   *  Kampfende-Screen mit Animation zeigt (neu hinzugekommene Sterne
+   *  hervorgehoben). */
+  campaignResult: { levelId: string; stars: 1 | 2 | 3; starsGained: number; coinsAwarded: number } | null;
 }
 
 const RECENT_LOG_TAIL = 12;
@@ -234,16 +239,22 @@ async function buildSnapshot(
     awaiting = { ...pendingDecision, controlledByPlayerId, deadline: state.turnDeadline };
   }
 
-  // Sieges-Kiste (Gems-PvP) — wird am Battle-Datensatz gespeichert (siehe
-  // finalizeLiveBattle), nur nachladen, wenn tatsächlich relevant.
+  // Sieges-Kiste (Gems-PvP) / Sterne-Ergebnis (Kampagne) — beide werden am
+  // Battle-Datensatz gespeichert (siehe finalizeLiveBattle), nur nachladen,
+  // wenn tatsächlich relevant.
   let chestPrize: LiveBattleSnapshot["chestPrize"] = null;
-  if (live.mode === PVP_GEMS_MODE && live.resultBattleId) {
+  let campaignResult: LiveBattleSnapshot["campaignResult"] = null;
+  if ((live.mode === PVP_GEMS_MODE || live.mode.startsWith("CAMPAIGN_")) && live.resultBattleId) {
     const battle = await prisma.battle.findUnique({
       where: { id: live.resultBattleId },
       select: { teamSnapshot: true },
     });
-    const snapshotJson = battle?.teamSnapshot as { gemsChestPrize?: LiveBattleSnapshot["chestPrize"] } | null;
+    const snapshotJson = battle?.teamSnapshot as {
+      gemsChestPrize?: LiveBattleSnapshot["chestPrize"];
+      campaignResult?: LiveBattleSnapshot["campaignResult"];
+    } | null;
     chestPrize = snapshotJson?.gemsChestPrize ?? null;
+    campaignResult = snapshotJson?.campaignResult ?? null;
   }
 
   return {
@@ -253,7 +264,12 @@ async function buildSnapshot(
     status: state.winner ? "finished" : "active",
     round: state.round,
     units: allUnits.map(toUnitSnapshot),
-    upcoming: previewUpcomingTurns(state, 5),
+    // Bei OMA Gems filtert der Client "upcoming" auf reine Gegner-Züge (siehe
+    // LiveBattleView.tsx: "Nächste Gegner-Angriffe" statt "Als nächstes dran",
+    // eigene Zug-Slots sind dort bedeutungslos, da alle eigenen Helden ohnehin
+    // gemeinsam per Match angreifen) — großzügigerer Vorschau-Puffer, damit nach
+    // dem Herausfiltern der eigenen Slots noch genug Gegner-Einträge übrig bleiben.
+    upcoming: previewUpcomingTurns(state, state.boardMode ? 12 : 5),
     recentLog: state.log.slice(-RECENT_LOG_TAIL),
     logLength: state.log.length,
     awaiting,
@@ -264,6 +280,7 @@ async function buildSnapshot(
     resultBattleId: live.resultBattleId,
     winner: state.winner,
     chestPrize,
+    campaignResult,
   };
 }
 
@@ -392,18 +409,32 @@ async function finalizeLiveBattle(live: LiveBattle, state: InteractiveBattleStat
     // Münz-Belohnung nur für NEU erreichte Sterne (CAMPAIGN_COINS_PER_STAR je
     // Stern) — schon erreichte Sterne zahlen bei erneutem Sieg nicht nochmal
     // aus, sonst ließe sich durch wiederholtes Replayen unbegrenzt farmen.
+    let coinsAwarded = 0;
     if (starsGained > 0) {
       const levelDef = getCampaignLevel(levelId);
-      const reward = starsGained * CAMPAIGN_COINS_PER_STAR;
-      await prisma.user.update({ where: { id: live.playerAId }, data: { points: { increment: reward } } });
+      coinsAwarded = starsGained * CAMPAIGN_COINS_PER_STAR;
+      await prisma.user.update({ where: { id: live.playerAId }, data: { points: { increment: coinsAwarded } } });
       await prisma.pointTransaction.create({
         data: {
           userId: live.playerAId,
-          amount: reward,
+          amount: coinsAwarded,
           reason: `Kampagnen-Level: ${starsGained} neue${starsGained === 1 ? "r" : ""} Stern${starsGained === 1 ? "" : "e"} (${levelDef?.name ?? levelId})`,
         },
       });
     }
+    // Sterne-Ergebnis am Battle-Datensatz speichern, damit der Client es direkt
+    // im nächsten Snapshot als Animation im Kampfende-Screen zeigen kann (siehe
+    // buildSnapshot, gleiches Muster wie gemsChestPrize).
+    await prisma.battle.update({
+      where: { id: battle.id },
+      data: {
+        teamSnapshot: {
+          playerAId: live.playerAId,
+          playerBId: live.playerBId,
+          campaignResult: { levelId, stars, starsGained, coinsAwarded },
+        },
+      },
+    });
     // Tutorial-Schritt 3: erstes Kampagnen-Level gewonnen — schließt das Tutorial ab.
     if (levelId === CAMPAIGN_LEVELS[0].id) {
       await markTutorialCampaignLevel1Done(live.playerAId);
@@ -779,15 +810,25 @@ export async function submitLiveBattleAction(
   const controllingPlayerId = unit.teamId === "A" ? live.playerAId : live.playerBId;
   if (controllingPlayerId !== viewerId) throw new LiveBattleError("Du bist gerade nicht am Zug.");
 
-  const available = describeAvailableActions(unit, allUnits);
-  const chosen = available.find((a) => a.actionType === actionType);
-  if (!chosen) throw new LiveBattleError("Diese Aktion ist gerade nicht verfügbar.");
-
+  // Im Match-3-Brett-Modus (OMA Gems) wählt der Spieler nie manuell eine Aktion/
+  // ein Ziel — der Client schickt hier nur die Swap-Sequenz, `actionType`/
+  // `targetId` (aktuell hartkodiert "normalAttack" ohne Ziel, siehe
+  // BoardMatch3.tsx onConfirm) werden serverseitig ohnehin ignoriert (die
+  // eigentlichen Ziele entstehen automatisch pro Match, siehe applyBoardRage in
+  // interactive.ts). Die normale Aktions-/Ziel-Validierung unten passt dafür
+  // nicht (sie würde "normalAttack" ohne Ziel fälschlich als "Ungültiges Ziel"
+  // ablehnen) und wird daher für boardMode-Züge übersprungen.
   let resolvedTargetId: string | undefined;
-  if (chosen.targetKind !== "none") {
-    const candidates = candidateTargetIds(unit, chosen.targetKind, allUnits);
-    if (!targetId || !candidates.includes(targetId)) throw new LiveBattleError("Ungültiges Ziel.");
-    resolvedTargetId = targetId;
+  if (!state.boardMode) {
+    const available = describeAvailableActions(unit, allUnits);
+    const chosen = available.find((a) => a.actionType === actionType);
+    if (!chosen) throw new LiveBattleError("Diese Aktion ist gerade nicht verfügbar.");
+
+    if (chosen.targetKind !== "none") {
+      const candidates = candidateTargetIds(unit, chosen.targetKind, allUnits);
+      if (!targetId || !candidates.includes(targetId)) throw new LiveBattleError("Ungültiges Ziel.");
+      resolvedTargetId = targetId;
+    }
   }
 
   const { state: newState, pendingDecision } = advance(

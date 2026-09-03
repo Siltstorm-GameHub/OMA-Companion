@@ -10,6 +10,8 @@ import StatFieldEditor from "@/components/StatFieldEditor";
 import { describeMonthlyModes, calcNextDate } from "@/lib/recurrence";
 import type { RecurrenceType, MonthlyMode } from "@/lib/recurrence";
 import InfoTooltip from "@/components/InfoTooltip";
+import { GEMS_MONSTER_CATALOG, GEMS_MONSTER_TEAM_MAX } from "@/lib/battle-cards/gems-monster-catalog";
+import { getClassConfig } from "@/components/battle-cards/BattleCardView";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -192,6 +194,12 @@ export default function EventSetupWizard({
   const [gemsEndAt, setGemsEndAt] = useState("");
   const [gemsDifficulty, setGemsDifficulty] = useState<"EASY" | "MEDIUM" | "HARD">("MEDIUM");
   const [gemsMaxAttempts, setGemsMaxAttempts] = useState("3");
+  // Leer = weiterhin die bisherige zufällige Boss-Team-Auswahl (siehe generateGemsTournamentBossTeam).
+  const [gemsMonsterIds, setGemsMonsterIds] = useState<string[]>([]);
+  const [gemsMonsterPick, setGemsMonsterPick] = useState(GEMS_MONSTER_CATALOG[0]?.cardId ?? "");
+  // Optionale Karten-Pack-Belohnung on top der Münzen/Rang-Punkte (siehe Schritt "Belohnungen").
+  const [gemsParticipationPack, setGemsParticipationPack] = useState<"" | "STANDARD" | "PREMIUM" | "COMMUNITY">("");
+  const [gemsPlacementPacks, setGemsPlacementPacks] = useState<("" | "STANDARD" | "PREMIUM" | "COMMUNITY")[]>(["", "", ""]);
   const isGemsTournament = game === "OMA Gems";
 
   // ── Series mode state ─────────────────────────────────────────────────────────
@@ -344,9 +352,15 @@ export default function EventSetupWizard({
     }
 
     const effectiveParticipationRankPts = eventType === "community" ? 0 : participationRankPts;
-    const effectivePlacements = eventType === "community"
+    const effectivePlacementsBase = eventType === "community"
       ? placements.map(p => ({ ...p, rankPoints: 0 }))
       : placements;
+    // Karten-Pack-Belohnungen sind nur bei OMA-Gems-Turnieren wählbar (siehe gems-tournament.ts:
+    // finalizeDueGemsTournaments liest packKind/participationPackKind, alle anderen Event-Typen
+    // ignorieren diese Zusatzfelder einfach).
+    const effectivePlacements = isGemsTournament
+      ? effectivePlacementsBase.map((p, i) => gemsPlacementPacks[i] ? { ...p, packKind: gemsPlacementPacks[i] } : p)
+      : effectivePlacementsBase;
 
     const body: Record<string, unknown> = {
       title: title.trim(),
@@ -365,7 +379,12 @@ export default function EventSetupWizard({
       squadId: eventSquadId || null,
       spectatorMode,
       spectatorRewardJson: spectatorMode ? { coins: spectatorCoins, rankPoints: spectatorRankPts } : null,
-      placementRewardsJson: { participationCoins, participationRankPts: effectiveParticipationRankPts, placements: effectivePlacements },
+      placementRewardsJson: {
+        participationCoins,
+        participationRankPts: effectiveParticipationRankPts,
+        placements: effectivePlacements,
+        ...(isGemsTournament && gemsParticipationPack && { participationPackKind: gemsParticipationPack }),
+      },
       pollsConfigJson: polls.length > 0 ? polls : null,
     };
 
@@ -378,6 +397,7 @@ export default function EventSetupWizard({
       body.gemsEndAt = new Date(gemsEndAt).toISOString();
       body.gemsDifficulty = gemsDifficulty;
       body.gemsMaxAttempts = Number(gemsMaxAttempts) || 3;
+      if (gemsMonsterIds.length > 0) body.gemsMonsterIds = gemsMonsterIds;
     }
 
     const res = await fetch("/api/events", {
@@ -648,6 +668,48 @@ export default function EventSetupWizard({
                 <input type="number" min="1" value={gemsMaxAttempts} onChange={e => setGemsMaxAttempts(e.target.value)}
                   className={inputCls} style={inputStyle} />
               </div>
+            </div>
+
+            <div>
+              <label className={labelCls}>Boss-Team ({gemsMonsterIds.length}/{GEMS_MONSTER_TEAM_MAX})</label>
+              <p className="text-[11px] text-gray-500 mb-2">
+                Leer lassen für eine zufällige Auswahl passend zur Schwierigkeit. Sonst gezielt bis zu{" "}
+                {GEMS_MONSTER_TEAM_MAX} Gegner wählen (auch mehrfach) — die Schwierigkeit oben bestimmt weiterhin
+                deren Stufe.
+              </p>
+              <div className="flex items-center gap-2">
+                <select value={gemsMonsterPick} onChange={e => setGemsMonsterPick(e.target.value)}
+                  className={inputCls} style={inputStyle}>
+                  {GEMS_MONSTER_CATALOG.map(m => (
+                    <option key={m.cardId} value={m.cardId}>
+                      {m.name} · {getClassConfig(m.class).label}
+                    </option>
+                  ))}
+                </select>
+                <button type="button"
+                  disabled={gemsMonsterIds.length >= GEMS_MONSTER_TEAM_MAX}
+                  onClick={() => setGemsMonsterIds(prev => [...prev, gemsMonsterPick])}
+                  className="shrink-0 px-3 py-2 rounded-lg text-xs font-semibold text-violet-300 bg-violet-500/10 border border-violet-500/30 hover:bg-violet-500/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                  + Hinzufügen
+                </button>
+              </div>
+              {gemsMonsterIds.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {gemsMonsterIds.map((cardId, i) => {
+                    const template = GEMS_MONSTER_CATALOG.find(m => m.cardId === cardId);
+                    return (
+                      <span key={`${cardId}-${i}`}
+                        className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] bg-white/5 border border-white/10 text-gray-300">
+                        {template?.name ?? cardId}
+                        <button type="button" onClick={() => setGemsMonsterIds(prev => prev.filter((_, ii) => ii !== i))}
+                          className="w-4 h-4 rounded-full flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/10 transition-colors">
+                          ×
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1097,6 +1159,19 @@ export default function EventSetupWizard({
           {isEventMode && seriesMode !== "none" && (
             <p className="text-[11px] text-gray-500 mt-2">Münzen pro Teilnahme sind seriesweit in der Gesamttabellen-Konfiguration der Eventreihe eingestellt.</p>
           )}
+          {isGemsTournament && (
+            <div className="mt-3">
+              <label className={labelCls}>Karten-Pack <span className="text-gray-500 font-normal">(optional, zusätzlich zu den Münzen)</span></label>
+              <select value={gemsParticipationPack}
+                onChange={e => setGemsParticipationPack(e.target.value as typeof gemsParticipationPack)}
+                className={inputCls} style={inputStyle}>
+                <option value="">Kein Pack</option>
+                <option value="STANDARD">Standard-Pack</option>
+                <option value="PREMIUM">Premium-Pack</option>
+                <option value="COMMUNITY">Community-Pack</option>
+              </select>
+            </div>
+          )}
         </div>
 
         <div className="rounded-xl p-4 border border-white/8 bg-white/2">
@@ -1126,6 +1201,23 @@ export default function EventSetupWizard({
                 </div>
               </div>
             ))}
+            {isGemsTournament && (
+              <div className="grid grid-cols-3 gap-3 pt-1">
+                {gemsPlacementPacks.map((pack, i) => (
+                  <div key={i}>
+                    <label className={labelCls}>{["🥇","🥈","🥉"][i]} Karten-Pack <span className="text-gray-500 font-normal">(optional)</span></label>
+                    <select value={pack}
+                      onChange={e => setGemsPlacementPacks(prev => prev.map((pp, ii) => ii === i ? e.target.value as typeof pp : pp))}
+                      className={inputCls} style={inputStyle}>
+                      <option value="">Kein Pack</option>
+                      <option value="STANDARD">Standard-Pack</option>
+                      <option value="PREMIUM">Premium-Pack</option>
+                      <option value="COMMUNITY">Community-Pack</option>
+                    </select>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 

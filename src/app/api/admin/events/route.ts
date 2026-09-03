@@ -12,7 +12,8 @@ export async function PATCH(req: NextRequest) {
   const body = await req.json();
   const {
     eventId, removeUserId, seriesScope, discordChannelId, category, genre, spectatorMode, spectatorRewardJson,
-    pollsConfigJson, twitchClipUrl, seriesEventConfigJson, gemsEndAt, gemsDifficulty, gemsMaxAttempts, ...data
+    pollsConfigJson, twitchClipUrl, seriesEventConfigJson, gemsEndAt, gemsDifficulty, gemsMaxAttempts,
+    gemsMonsterIds, ...data
   } = body;
   if (!eventId) return NextResponse.json({ error: "eventId fehlt" }, { status: 400 });
 
@@ -84,23 +85,33 @@ export async function PATCH(req: NextRequest) {
   const event = await prisma.event.update({ where: { id: eventId }, data });
 
   // OMA-Gems-Turnier-Einstellungen (nur relevant, wenn dieses Event game === "OMA Gems" ist,
-  // siehe EventEditClient.tsx). Boss-Team wird nur neu erzeugt, wenn sich die Schwierigkeit
-  // ändert UND noch keine Versuche existieren — sonst bleiben laufende Angriffe fair vergleichbar.
+  // siehe EventEditClient.tsx). Boss-Team wird nur neu erzeugt, wenn sich Schwierigkeit oder
+  // Monster-Auswahl ändert UND noch keine Versuche existieren — sonst bleiben laufende
+  // Angriffe fair vergleichbar.
   if (gemsEndAt) {
     const difficulty: NpcDifficulty = GEMS_DIFFICULTIES.includes(gemsDifficulty) ? gemsDifficulty : "MEDIUM";
     const maxAttemptsPerUser = Number(gemsMaxAttempts) > 0 ? Number(gemsMaxAttempts) : 3;
+    const monsterCardIds: string[] | undefined =
+      Array.isArray(gemsMonsterIds) && gemsMonsterIds.every((id) => typeof id === "string")
+        ? gemsMonsterIds
+        : undefined;
+    const monsterCardIdsJson = monsterCardIds?.length ? JSON.stringify(monsterCardIds) : null;
     const existing = await prisma.gemsTournament.findUnique({ where: { eventId } });
     if (existing) {
       const attemptCount = await prisma.gemsTournamentAttempt.count({ where: { tournamentId: existing.id } });
       const difficultyChanged = existing.difficulty !== difficulty;
+      const monstersChanged = (existing.monsterCardIdsJson ?? null) !== monsterCardIdsJson;
       await prisma.gemsTournament.update({
         where: { id: existing.id },
         data: {
           endAt: new Date(gemsEndAt),
           difficulty,
           maxAttemptsPerUser,
-          ...(difficultyChanged && attemptCount === 0
-            ? { bossTeamJson: JSON.stringify(generateGemsTournamentBossTeam(difficulty)) }
+          ...((difficultyChanged || monstersChanged) && attemptCount === 0
+            ? {
+                bossTeamJson: JSON.stringify(generateGemsTournamentBossTeam(difficulty, monsterCardIds)),
+                monsterCardIdsJson,
+              }
             : {}),
         },
       });
@@ -111,7 +122,8 @@ export async function PATCH(req: NextRequest) {
           endAt: new Date(gemsEndAt),
           difficulty,
           maxAttemptsPerUser,
-          bossTeamJson: JSON.stringify(generateGemsTournamentBossTeam(difficulty)),
+          bossTeamJson: JSON.stringify(generateGemsTournamentBossTeam(difficulty, monsterCardIds)),
+          monsterCardIdsJson,
         },
       });
     }

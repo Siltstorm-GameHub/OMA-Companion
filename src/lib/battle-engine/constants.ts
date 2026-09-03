@@ -48,8 +48,14 @@ export const LEVEL_STAT_MULTIPLIER: Record<number, number> = {
 export const BOARD_ROWS = 4;
 export const BOARD_COLS = 7;
 
-/** Max. Anzahl Swaps, die eine Mini-Session (ein menschlicher Zug) zulässt. */
-export const BOARD_MOVE_BUDGET_PER_TURN = 8;
+/** Max. Anzahl Swaps, die EINE Zug-Pause zulässt, bevor sie autoritativ aufgelöst
+ *  wird. Bewusst auf 1 gesetzt: jeder einzelne erfolgreiche Swap soll SOFORT als
+ *  eigene Entscheidung an den Server gehen und Rage/Angriffe auslösen (siehe
+ *  applyBoardRage in interactive.ts) — nicht erst, nachdem mehrere Swaps
+ *  gesammelt wurden. Das Brett selbst bleibt davon unberührt über den gesamten
+ *  Kampf bestehen (siehe boardGrid), nur die Auflösung passiert jetzt pro
+ *  Swap statt pro Batch. */
+export const BOARD_MOVE_BUDGET_PER_TURN = 1;
 
 export const RAGE_PER_MATCH3 = 12;
 export const RAGE_PER_MATCH4 = 20;

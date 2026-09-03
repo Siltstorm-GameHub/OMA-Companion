@@ -251,7 +251,10 @@ export default function BoardMatch3({
             <HelpCircle className="w-3 h-3" />
           </button>
         </span>
-        <span className="tabular-nums">{Math.max(0, remaining)} Züge übrig</span>
+        {/* Jeder erfolgreiche Swap löst sofort Rage + Angriff aus (siehe
+            BOARD_MOVE_BUDGET_PER_TURN=1) — kein Zug-Budget-Zähler mehr nötig,
+            das Brett sperrt sich nach dem Swap nur ganz kurz bis zum Nachladen. */}
+        {interactionLocked && <span className="text-teal-300">Angriff läuft …</span>}
       </div>
       {legendOpen && (
         <>

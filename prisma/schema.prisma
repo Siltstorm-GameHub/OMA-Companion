@@ -1337,6 +1337,7 @@ enum CardPackSource {
   WHEEL
   TUTORIAL
   GEMS_PVP_CHEST
+  GEMS_TOURNAMENT_REWARD
 }
 
 // Pack-Sorte bestimmt Kartenanzahl + Community-Karten-Chance beim Öffnen,
@@ -1439,6 +1440,11 @@ model GemsTournament {
   difficulty         String    @default("MEDIUM") // NpcDifficulty: EASY | MEDIUM | HARD
   maxAttemptsPerUser Int       @default(3)
   bossTeamJson       String
+  // Admin-gewählte Boss-Team-Zusammensetzung (JSON-Array von MonsterTemplate.cardId,
+  // Duplikate erlaubt, siehe gems-monster-catalog.ts) — null/leer bedeutet: bossTeamJson
+  // wurde per Zufallsauswahl erzeugt (siehe generateGemsTournamentBossTeam). Wird nur zur
+  // Anzeige/Neuberechnung im Edit-Formular gebraucht, nicht für die Kampflogik selbst.
+  monsterCardIdsJson String?
   finalizedAt        DateTime? // gesetzt vom Cron nach Auszahlung der Platzierungsbelohnungen
   createdAt          DateTime  @default(now())
 

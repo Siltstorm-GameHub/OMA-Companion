@@ -9,8 +9,11 @@
 // sobald seine Einheit an der Reihe ist, die Aktion (Normalangriff/Aktiv/
 // Ultimate) und — falls nötig — das Ziel wählen (Glow: rot Gegner, grün
 // Verbündete). "Als nächstes dran" zeigt die kommenden 5 Einheiten mit
-// Porträt + Rahmenfarbe (blau eigen, rot gegnerisch). Auto-Kampf überlässt
-// die eigenen Entscheidungen der KI.
+// Porträt + Rahmenfarbe (blau eigen, rot gegnerisch) — bei OMA Gems
+// (boardMode) stattdessen "Nächste Gegner-Angriffe" (nur Gegner-Slots, siehe
+// upcomingDisplay): eigene Zug-Slots sind dort bedeutungslos, da alle
+// eigenen Helden ohnehin gemeinsam per Match angreifen statt einzeln der
+// Reihe nach. Auto-Kampf überlässt die eigenen Entscheidungen der KI.
 //
 // Reine Präsentations-/Steuerungskomponente — die eigentliche Kampflogik
 // läuft ausschließlich serverseitig (lib/battle-cards/live-battle.ts).
@@ -20,7 +23,8 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Loader2, Zap, Swords, Bot, ChevronRight, ChevronLeft, Timer, Volume2, VolumeX, Trophy, Skull, Handshake } from "lucide-react";
+import { Loader2, Zap, Swords, Bot, ChevronRight, ChevronLeft, Timer, Volume2, VolumeX, Trophy, Skull, Handshake, Star } from "lucide-react";
+import CoinIcon from "@/components/CoinIcon";
 import { getClassConfig, LEVEL_BORDER } from "./BattleCardView";
 import BoardMatch3 from "./BoardMatch3";
 import type { BoardGrid, SwapMove } from "@/lib/battle-engine/board-match3";
@@ -142,6 +146,9 @@ interface LiveSnapshot {
   resultBattleId: string | null;
   winner: "A" | "B" | "DRAW" | null;
   chestPrize: ChestPrize | null;
+  /** Nur bei einem gewonnenen Kampagnen-Kampf gesetzt — Sterne-Ergebnis für die
+   *  Animation im Kampfende-Screen (siehe computeStars in campaign.ts). */
+  campaignResult: { levelId: string; stars: 1 | 2 | 3; starsGained: number; coinsAwarded: number } | null;
 }
 
 function hpBarColor(pct: number): string {
@@ -206,6 +213,7 @@ function UnitCard({
   glow,
   ultimateReady,
   effects,
+  isAttacking,
   onClick,
   onUltimateClick,
 }: {
@@ -219,6 +227,10 @@ function UnitCard({
   /** Gerade eingetroffene Kampfeffekte für DIESE Einheit — Flug-Zahlen +
    *  Treffer-Flash bei Schaden (siehe FloatingEffect/LiveBattleView). */
   effects?: FloatingEffect[];
+  /** Diese Einheit hat GERADE (letzte ~550ms) einen Schadens-Angriff ausgeführt
+   *  — macht auch Angriffe sichtbar, die ohne eigene Zug-Handlung passieren
+   *  (match-ausgelöste Angriffe bei OMA Gems, siehe applyBoardRage). */
+  isAttacking?: boolean;
   onClick?: () => void;
   onUltimateClick?: () => void;
 }) {
@@ -256,7 +268,7 @@ function UnitCard({
     <button
       type="button"
       onClick={handleClick}
-      className={`w-20 sm:w-28 shrink-0 text-left relative ${isHit ? "hit-shake" : ""}`}
+      className={`w-20 sm:w-28 shrink-0 text-left relative ${isHit ? "hit-shake" : ""} ${isAttacking ? "attack-lunge" : ""}`}
       style={{ opacity: unit.isAlive ? 1 : 0.35, filter: unit.isAlive ? "none" : "grayscale(1)", cursor: clickable ? "pointer" : "default" }}
     >
       {(effects ?? []).length > 0 && (
@@ -295,6 +307,11 @@ function UnitCard({
           Ultimate bereit
         </span>
       )}
+      {isAttacking && (
+        <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 z-20 text-[7px] sm:text-[8px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-orange-500 text-white whitespace-nowrap">
+          Angriff!
+        </span>
+      )}
 
       <div className="w-full aspect-square mb-0.5 flex items-center justify-center relative rounded-md overflow-hidden">
         {/* Klassen-getönte Plate IMMER als Hintergrund — sonst schwebt freigestellte
@@ -302,6 +319,12 @@ function UnitCard({
             Spieler-Karten (die ihren Hintergrund selbst mitbringen) diese Plate ohnehin
             komplett überdecken. Einheitliches Porträt-Format unabhängig von der Quelle. */}
         <div className="absolute inset-0" style={{ background: `${config.color}22` }} />
+        {isAttacking && (
+          <div
+            className="absolute inset-0 rounded-full pointer-events-none"
+            style={{ background: "radial-gradient(closest-side, rgba(249,115,22,0.55), transparent 70%)" }}
+          />
+        )}
         {(isActing || glow || canFireUltimate) && (
           <div
             className={`absolute inset-0 rounded-full pointer-events-none ${canFireUltimate && !isActing ? "animate-pulse" : ""}`}
@@ -331,8 +354,9 @@ function UnitCard({
         <div
           className={`absolute inset-0 rounded-md pointer-events-none ${canFireUltimate && !glow ? "animate-pulse" : ""}`}
           style={{
-            boxShadow:
-              glow === "enemy"
+            boxShadow: isAttacking
+              ? "0 0 0 2px #f97316, 0 0 16px rgba(249,115,22,0.75)"
+              : glow === "enemy"
                 ? "0 0 0 2px #ef4444, 0 0 14px rgba(239,68,68,0.6)"
                 : glow === "ally"
                   ? "0 0 0 2px #22c55e, 0 0 14px rgba(34,197,94,0.6)"
@@ -441,6 +465,11 @@ export default function LiveBattleView({
   const [, setTick] = useState(0); // erzwingt einen Re-Render pro Sekunde für den Countdown
   const [mounted, setMounted] = useState(false);
   const [effects, setEffects] = useState<FloatingEffect[]>([]);
+  // Wer GERADE angreift (kurzzeitig, siehe unten) — macht Angriffe des Gegners
+  // (insbesondere match-ausgelöste Angriffe bei OMA Gems, die sonst ohne jede
+  // eigene Zug-Handlung "einfach passieren") sichtbar: der angreifende Held
+  // bekommt selbst einen kurzen Lunge/Glow-Effekt, nicht nur das getroffene Ziel.
+  const [attackingUnitIds, setAttackingUnitIds] = useState<Set<string>>(new Set());
   const lastLogLengthRef = useRef<number | null>(null);
   const [soundMuted, setSoundMutedState] = useState(isSoundMuted);
   // Splash-Art für den Lade-Zustand (siehe public/battle-cards/splash.png) —
@@ -523,44 +552,80 @@ export default function LiveBattleView({
     if (newCount <= 0) return;
 
     const newEntries = snapshot.recentLog.slice(-Math.min(newCount, snapshot.recentLog.length));
-    const spawned: FloatingEffect[] = [];
+
+    // Mehrere Aktionen können in EINER Server-Antwort aufgelöst werden — z.B.
+    // der eigene match-ausgelöste Angriff UND direkt im Anschluss (ohne
+    // eigene Zug-Handlung) ein oder mehrere Gegner-Züge, bevor der Server
+    // wieder auf die eigene Entscheidung pausiert (siehe advance() in
+    // interactive.ts). Ohne Staffelung würden alle Flug-Zahlen/Angriffs-
+    // Indikatoren gleichzeitig aufblitzen und der Gegner-Angriff ginge im
+    // eigenen unter. Jeder "action"-Log-Eintrag markiert daher den Beginn
+    // einer neuen "Welle" (ein Akteur + seine Effekte) — Wellen werden
+    // nacheinander mit Verzögerung angezeigt statt alle auf einmal.
+    const WAVE_DELAY_MS = 480;
+    type Wave = { effects: FloatingEffect[]; attackerIds: Set<string>; sounds: (() => void)[] };
+    const waves: Wave[] = [{ effects: [], attackerIds: new Set(), sounds: [] }];
+    const currentWave = () => waves[waves.length - 1];
+
     for (const entry of newEntries) {
+      if (entry.type === "action") {
+        if (currentWave().effects.length > 0 || currentWave().attackerIds.size > 0 || currentWave().sounds.length > 0) {
+          waves.push({ effects: [], attackerIds: new Set(), sounds: [] });
+        }
+        if (entry.actionType === "ultimate") currentWave().sounds.push(playUltimateSound);
+        continue;
+      }
       if (entry.type === "damage") {
-        spawned.push({
+        currentWave().effects.push({
           id: `${Date.now()}-${Math.random()}`,
           unitId: entry.targetId as string,
           kind: entry.isCrit ? "crit" : "damage",
           text: `-${entry.amount as number}`,
           bonusPercent: entry.matchBonusPercent as number | undefined,
         });
-        if (entry.isCrit) playCritSound();
-        else playDamageSound();
+        if (entry.sourceId && entry.sourceId !== entry.targetId) currentWave().attackerIds.add(entry.sourceId as string);
+        currentWave().sounds.push(entry.isCrit ? playCritSound : playDamageSound);
       } else if (entry.type === "heal") {
-        spawned.push({
+        currentWave().effects.push({
           id: `${Date.now()}-${Math.random()}`,
           unitId: entry.targetId as string,
           kind: "heal",
           text: `+${entry.amount as number}`,
           bonusPercent: entry.matchBonusPercent as number | undefined,
         });
-        playHealSound();
+        currentWave().sounds.push(playHealSound);
       } else if (entry.type === "shieldApplied") {
-        spawned.push({
+        currentWave().effects.push({
           id: `${Date.now()}-${Math.random()}`,
           unitId: entry.targetId as string,
           kind: "shield",
           text: `+${entry.amount as number}`,
         });
-        playShieldSound();
-      } else if (entry.type === "action" && entry.actionType === "ultimate") {
-        playUltimateSound();
+        currentWave().sounds.push(playShieldSound);
       }
     }
-    if (spawned.length === 0) return;
 
-    setEffects((prev) => [...prev, ...spawned]);
-    spawned.forEach((eff) => {
-      window.setTimeout(() => setEffects((prev) => prev.filter((e) => e.id !== eff.id)), 1300);
+    waves.forEach((wave, i) => {
+      if (wave.effects.length === 0 && wave.attackerIds.size === 0 && wave.sounds.length === 0) return;
+      window.setTimeout(() => {
+        wave.sounds.forEach((play) => play());
+        if (wave.attackerIds.size > 0) {
+          setAttackingUnitIds((prev) => new Set([...prev, ...wave.attackerIds]));
+          window.setTimeout(() => {
+            setAttackingUnitIds((prev) => {
+              const next = new Set(prev);
+              wave.attackerIds.forEach((id) => next.delete(id));
+              return next;
+            });
+          }, 550);
+        }
+        if (wave.effects.length > 0) {
+          setEffects((prev) => [...prev, ...wave.effects]);
+          wave.effects.forEach((eff) => {
+            window.setTimeout(() => setEffects((prev) => prev.filter((e) => e.id !== eff.id)), 1300);
+          });
+        }
+      }, i * WAVE_DELAY_MS);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshot?.logLength]);
@@ -720,6 +785,7 @@ export default function LiveBattleView({
             submitUltimate={submitUltimate}
             toggleAuto={toggleAuto}
             effects={effects}
+            attackingUnitIds={attackingUnitIds}
             saveBoardProgress={saveBoardProgress}
           />
         )}
@@ -739,6 +805,7 @@ function LiveBattleBody({
   submitUltimate,
   toggleAuto,
   effects,
+  attackingUnitIds,
   saveBoardProgress,
 }: {
   snapshot: LiveSnapshot;
@@ -750,6 +817,7 @@ function LiveBattleBody({
   submitUltimate: (casterId: string) => void;
   toggleAuto: (on: boolean) => void;
   effects: FloatingEffect[];
+  attackingUnitIds: Set<string>;
   saveBoardProgress: (boardSwaps: SwapMove[]) => void;
 }) {
   const myTeam: TeamId | null = viewerId === snapshot.playerAId ? "A" : viewerId === snapshot.playerBId ? "B" : null;
@@ -770,6 +838,27 @@ function LiveBattleBody({
   const unitsByTeam = (team: TeamId) => snapshot.units.filter((u) => u.teamId === team);
   const unitById = (id: string) => snapshot.units.find((u) => u.instanceId === id);
   const nameOf = (id: string) => unitById(id)?.name ?? "?";
+  // Bei OMA Gems (boardMode) sind eigene Zug-Slots in der Vorschau bedeutungslos
+  // (siehe Kommentar am Render unten) — nur die Gegner-Slots zeigen, wann als
+  // Nächstes ein Angriff auf einen selbst zukommt.
+  // `ownTurnsBefore`: Anzahl eigener Zug-Slots, die in der rohen Reihenfolge VOR
+  // diesem Gegner-Angriff liegen — 0 bedeutet "passiert direkt im Anschluss an
+  // deinen nächsten Zug" (der Server löst dazwischenliegende Gegner-Züge sofort
+  // mit auf, siehe advance() in interactive.ts), nicht "irgendwann später".
+  const upcomingDisplay: { id: string; ownTurnsBefore: number }[] = snapshot.boardMode
+    ? (() => {
+        const result: { id: string; ownTurnsBefore: number }[] = [];
+        let ownCount = 0;
+        for (const id of snapshot.upcoming) {
+          if (result.length >= 5) break;
+          const u = unitById(id);
+          if (!u) continue;
+          if (u.teamId === opponentTeam) result.push({ id, ownTurnsBefore: ownCount });
+          else ownCount++;
+        }
+        return result;
+      })()
+    : snapshot.upcoming.map((id) => ({ id, ownTurnsBefore: 0 }));
 
   const candidates = selectedAction ? (snapshot.awaiting?.candidateTargetsByAction[selectedAction.actionType] ?? []) : [];
   function glowFor(unit: LiveUnit): "enemy" | "ally" | null {
@@ -843,11 +932,19 @@ function LiveBattleBody({
       {snapshot.status === "finished" && snapshot.chestPrize && !chestDismissed && (
         <VictoryChestReveal prize={snapshot.chestPrize} onClose={() => setChestDismissed(true)} />
       )}
-      {/* Auto-Kampf + Als nächstes dran — oberhalb der Helden */}
+      {/* Auto-Kampf + Als nächstes dran — oberhalb der Helden. Bei OMA Gems
+          (boardMode) ist die klassische Zugreihenfolge für den Spieler
+          bedeutungslos (alle eigenen Helden greifen ohnehin gemeinsam per
+          Match an, nie einzeln der Reihe nach) — hier zählt stattdessen, WANN
+          als Nächstes ein Gegner angreift, daher gefiltert auf reine
+          Gegner-Slots und umbenannt (siehe upcoming-Puffergröße in
+          live-battle.ts). */}
       <div className="shrink-0 pt-1 space-y-1.5">
         <div className="flex items-center justify-between gap-2">
-          {snapshot.upcoming.length > 0 ? (
-            <span className="text-[10px] text-gray-500 uppercase tracking-widest">Als nächstes dran</span>
+          {upcomingDisplay.length > 0 ? (
+            <span className="text-[10px] text-gray-500 uppercase tracking-widest">
+              {snapshot.boardMode ? "Nächste Gegner-Angriffe" : "Als nächstes dran"}
+            </span>
           ) : (
             <span />
           )}
@@ -864,11 +961,12 @@ function LiveBattleBody({
             </button>
           )}
         </div>
-        {snapshot.upcoming.length > 0 && (
-          // py-1.5 gibt dem Rahmen (boxShadow, ragt ~3px über den Kreis hinaus) Platz —
-          // sonst schneidet overflow-x-auto (erzwingt overflow-y: auto) ihn oben/unten ab.
-          <div className="flex items-center gap-2 overflow-x-auto py-1.5">
-            {snapshot.upcoming.map((id, i) => {
+        {upcomingDisplay.length > 0 && (
+          // py-1.5 gibt dem Rahmen (boxShadow, ragt ~3px über den Kreis hinaus) Platz,
+          // bei boardMode zusätzlich Raum für das "sofort"/"in X"-Badge unterhalb jedes
+          // Kreises — sonst schneidet overflow-x-auto (erzwingt overflow-y: auto) ab.
+          <div className={`flex items-center gap-2 overflow-x-auto ${snapshot.boardMode ? "pt-1.5 pb-3" : "py-1.5"}`}>
+            {upcomingDisplay.map(({ id, ownTurnsBefore }, i) => {
               const u = unitById(id);
               if (!u) return null;
               const isMine = myTeam !== null && u.teamId === myTeam;
@@ -876,19 +974,28 @@ function LiveBattleBody({
               const config = getClassConfig(u.class);
               const Icon = config.icon;
               return (
-                <div
-                  key={`${id}-${i}`}
-                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden shrink-0 relative"
-                  style={{ boxShadow: `0 0 0 3px ${ringColor}`, opacity: 1 - i * 0.08 }}
-                  title={u.name}
-                >
-                  {u.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={u.imageUrl} alt={u.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center" style={{ background: `${config.color}33` }}>
-                      <Icon className="w-6 h-6" style={{ color: config.color }} />
-                    </div>
+                <div key={`${id}-${i}`} className="relative shrink-0" style={{ opacity: 1 - i * 0.08 }}>
+                  <div
+                    className="w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden"
+                    style={{ boxShadow: `0 0 0 3px ${ringColor}` }}
+                    title={u.name}
+                  >
+                    {u.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={u.imageUrl} alt={u.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center" style={{ background: `${config.color}33` }}>
+                        <Icon className="w-6 h-6" style={{ color: config.color }} />
+                      </div>
+                    )}
+                  </div>
+                  {snapshot.boardMode && (
+                    <span
+                      className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 z-10 text-[7px] sm:text-[8px] font-bold uppercase tracking-wide px-1 py-0.5 rounded-full whitespace-nowrap"
+                      style={{ background: ownTurnsBefore === 0 ? "#f97316" : "#3f3f46", color: ownTurnsBefore === 0 ? "#000" : "#d4d4d8" }}
+                    >
+                      {ownTurnsBefore === 0 ? "sofort" : `in ${ownTurnsBefore}`}
+                    </span>
                   )}
                 </div>
               );
@@ -908,6 +1015,7 @@ function LiveBattleBody({
               isActing={snapshot.awaiting?.unitId === u.instanceId}
               glow={glowFor(u)}
               effects={effectsFor(u)}
+              isAttacking={attackingUnitIds.has(u.instanceId)}
               onClick={() => handleUnitClick(u)}
             />
           ))}
@@ -918,10 +1026,15 @@ function LiveBattleBody({
             <UnitCard
               key={u.instanceId}
               unit={u}
-              isActing={snapshot.awaiting?.unitId === u.instanceId}
+              // Bei OMA Gems (boardMode) greifen ohnehin immer alle eigenen
+              // Helden gemeinsam per Match an — "Am Zug" für eine einzelne
+              // Einheit wäre hier irreführend, da es keine echte Einzel-Zug-
+              // Aktion mehr gibt (siehe applyBoardRage in interactive.ts).
+              isActing={!snapshot.boardMode && snapshot.awaiting?.unitId === u.instanceId}
               glow={glowFor(u)}
               ultimateReady={ultimateReadyFor(u)}
               effects={effectsFor(u)}
+              isAttacking={attackingUnitIds.has(u.instanceId)}
               onClick={() => handleUnitClick(u)}
               onUltimateClick={() => handleUnitClick(u)}
             />
@@ -968,7 +1081,39 @@ function LiveBattleBody({
               <p className="font-battle text-base text-white uppercase tracking-wide">
                 {snapshot.winner === null ? "Unentschieden" : snapshot.winner === myTeam ? "Sieg!" : "Niederlage"}
               </p>
-              <p className="text-[11px] text-gray-400">Kampf beendet.</p>
+              {snapshot.campaignResult ? (
+                <div className="flex items-center gap-2 mt-0.5">
+                  <div className="flex items-center gap-0.5">
+                    {[1, 2, 3].map((n) => {
+                      const earned = n <= snapshot.campaignResult!.stars;
+                      const isNew = earned && n > snapshot.campaignResult!.stars - snapshot.campaignResult!.starsGained;
+                      return (
+                        <Star
+                          key={n}
+                          className={`w-4 h-4 animate-number-pop ${earned ? "text-amber-400" : "text-gray-700"} ${isNew ? "drop-shadow-[0_0_6px_rgba(251,191,36,0.8)]" : ""}`}
+                          style={{ animationDelay: `${n * 140}ms` }}
+                          fill={earned ? "currentColor" : "none"}
+                        />
+                      );
+                    })}
+                  </div>
+                  {snapshot.campaignResult.starsGained > 0 && (
+                    <span
+                      className="flex items-center gap-1 text-[11px] font-semibold text-amber-300 animate-number-pop"
+                      style={{ animationDelay: "560ms" }}
+                    >
+                      +{snapshot.campaignResult.starsGained} Stern{snapshot.campaignResult.starsGained === 1 ? "" : "e"}
+                      {snapshot.campaignResult.coinsAwarded > 0 && (
+                        <span className="flex items-center gap-0.5 text-gray-400 font-normal">
+                          (+{snapshot.campaignResult.coinsAwarded} <CoinIcon size={11} />)
+                        </span>
+                      )}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <p className="text-[11px] text-gray-400">Kampf beendet.</p>
+              )}
             </div>
             {snapshot.resultBattleId && (
               <Link

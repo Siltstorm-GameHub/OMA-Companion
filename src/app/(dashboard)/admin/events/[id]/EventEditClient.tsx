@@ -20,11 +20,14 @@ import ImageUploadField from "@/components/ImageUploadField";
 import EventCategoryBadge from "@/components/EventCategoryBadge";
 import TournamentManager from "../TournamentManager";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
+import { GEMS_MONSTER_CATALOG, GEMS_MONSTER_TEAM_MAX } from "@/lib/battle-cards/gems-monster-catalog";
+import { getClassConfig } from "@/components/battle-cards/BattleCardView";
 
 /* ── Types ── */
 type User = { id: string; name: string | null; username: string | null; image: string | null };
-type PlacementReward = { place: number; coins: number; rankPoints: number };
-type RewardsConfig   = { participationCoins: number; placements: PlacementReward[] };
+type PackKindOrNone = "" | "STANDARD" | "PREMIUM" | "COMMUNITY";
+type PlacementReward = { place: number; coins: number; rankPoints: number; packKind?: PackKindOrNone };
+type RewardsConfig   = { participationCoins: number; participationPackKind?: PackKindOrNone; placements: PlacementReward[] };
 type PollConfig = {
   label: string;
   question: string;
@@ -212,6 +215,15 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
   const [gemsEndAt, setGemsEndAt] = useState<string>(event.gemsTournament ? toDatetimeLocal(event.gemsTournament.endAt) : "");
   const [gemsDifficulty, setGemsDifficulty] = useState<"EASY" | "MEDIUM" | "HARD">(event.gemsTournament?.difficulty ?? "MEDIUM");
   const [gemsMaxAttempts, setGemsMaxAttempts] = useState<string>(String(event.gemsTournament?.maxAttemptsPerUser ?? 3));
+  // Leer = weiterhin die bisherige zufällige Boss-Team-Auswahl (siehe generateGemsTournamentBossTeam).
+  const [gemsMonsterIds, setGemsMonsterIds] = useState<string[]>(() => {
+    if (!event.gemsTournament?.monsterCardIdsJson) return [];
+    try {
+      const parsed = JSON.parse(event.gemsTournament.monsterCardIdsJson);
+      return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === "string") : [];
+    } catch { return []; }
+  });
+  const [gemsMonsterPick, setGemsMonsterPick] = useState(GEMS_MONSTER_CATALOG[0]?.cardId ?? "");
   const titleDescChanged = title !== event.title || description !== (event.description ?? "");
 
   /* ── Rewards state ── */
@@ -220,6 +232,11 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
     event.placementRewardsJson ? parseRewards(event.placementRewardsJson).participationCoins : (event.pointReward ?? initialRewards.participationCoins)
   );
   const [placements, setPlacements] = useState<PlacementReward[]>(initialRewards.placements);
+  // Optionale Karten-Pack-Belohnung on top der Münzen/Rang-Punkte — nur bei OMA-Gems-Turnieren wählbar.
+  const [gemsParticipationPack, setGemsParticipationPack] = useState<PackKindOrNone>(initialRewards.participationPackKind ?? "");
+  const [gemsPlacementPacks, setGemsPlacementPacks] = useState<PackKindOrNone[]>(
+    initialRewards.placements.map(p => p.packKind ?? "")
+  );
   const [polls, setPolls] = useState<PollConfig[]>(parsePolls(event.pollsConfigJson ?? event.pollConfigJson));
   const initialSpectatorReward = parseSpectatorReward(event.spectatorRewardJson);
   const [spectatorCoins, setSpectatorCoins] = useState(initialSpectatorReward.coins);
@@ -402,7 +419,13 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
         startAt: new Date(startAt).toISOString(),
         maxPlayers: maxPlayers ? Number(maxPlayers) : null,
         discordChannelId: discordChannelId.trim() || null,
-        placementRewardsJson: JSON.stringify({ participationCoins, placements }),
+        placementRewardsJson: JSON.stringify({
+          participationCoins,
+          placements: isGemsTournament
+            ? placements.map((p, i) => gemsPlacementPacks[i] ? { ...p, packKind: gemsPlacementPacks[i] } : p)
+            : placements,
+          ...(isGemsTournament && gemsParticipationPack && { participationPackKind: gemsParticipationPack }),
+        }),
         pollsConfigJson: polls.length > 0 ? polls : null,
         spectatorRewardJson: event.spectatorMode ? { coins: spectatorCoins, rankPoints: spectatorRankPts } : null,
         twitchClipUrl: twitchClipUrl.trim() || null,
@@ -412,6 +435,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
           gemsEndAt: new Date(gemsEndAt).toISOString(),
           gemsDifficulty,
           gemsMaxAttempts: Number(gemsMaxAttempts) || 3,
+          ...(gemsMonsterIds.length > 0 && { gemsMonsterIds }),
         }),
       }),
     });
@@ -893,6 +917,46 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                   <input type="number" min="1" value={gemsMaxAttempts} onChange={e => setGemsMaxAttempts(e.target.value)} className={inputCls} />
                 </div>
               </div>
+
+              <div>
+                <label className={labelCls}>Boss-Team ({gemsMonsterIds.length}/{GEMS_MONSTER_TEAM_MAX})</label>
+                <p className="text-[11px] text-gray-500 mb-2">
+                  Leer lassen für eine zufällige Auswahl passend zur Schwierigkeit. Änderungen wirken sich nur aus,
+                  solange noch niemand teilgenommen hat.
+                </p>
+                <div className="flex items-center gap-2">
+                  <select value={gemsMonsterPick} onChange={e => setGemsMonsterPick(e.target.value)} className={inputCls}>
+                    {GEMS_MONSTER_CATALOG.map(m => (
+                      <option key={m.cardId} value={m.cardId}>
+                        {m.name} · {getClassConfig(m.class).label}
+                      </option>
+                    ))}
+                  </select>
+                  <button type="button"
+                    disabled={gemsMonsterIds.length >= GEMS_MONSTER_TEAM_MAX}
+                    onClick={() => setGemsMonsterIds(prev => [...prev, gemsMonsterPick])}
+                    className="shrink-0 px-3 py-2 rounded-lg text-xs font-semibold text-violet-300 bg-violet-500/10 border border-violet-500/30 hover:bg-violet-500/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                    + Hinzufügen
+                  </button>
+                </div>
+                {gemsMonsterIds.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {gemsMonsterIds.map((cardId, i) => {
+                      const template = GEMS_MONSTER_CATALOG.find(m => m.cardId === cardId);
+                      return (
+                        <span key={`${cardId}-${i}`}
+                          className="flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-full text-[11px] bg-white/5 border border-white/10 text-gray-300">
+                          {template?.name ?? cardId}
+                          <button type="button" onClick={() => setGemsMonsterIds(prev => prev.filter((_, ii) => ii !== i))}
+                            className="w-4 h-4 rounded-full flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/10 transition-colors">
+                            ×
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -1031,6 +1095,17 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                     <label className={labelCls}>Münzen</label>
                     <input type="number" min={0} value={participationCoins} onChange={e => setParticipationCoins(Number(e.target.value))} className={inputCls} />
                   </div>
+                  {isGemsTournament && (
+                    <div>
+                      <label className={labelCls}>Karten-Pack <span className="text-gray-500 font-normal">(optional)</span></label>
+                      <select value={gemsParticipationPack} onChange={e => setGemsParticipationPack(e.target.value as PackKindOrNone)} className={inputCls}>
+                        <option value="">Kein Pack</option>
+                        <option value="STANDARD">Standard-Pack</option>
+                        <option value="PREMIUM">Premium-Pack</option>
+                        <option value="COMMUNITY">Community-Pack</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1043,7 +1118,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                   <span className="flex items-center gap-1 justify-center"><RankPointsIcon size={12} /> RP</span>
                   <span className="flex items-center gap-1 justify-center"><CoinIcon size={12} /> Münzen</span>
                 </div>
-                {placements.map(p => (
+                {placements.map((p, i) => (
                   <div key={p.place} className="grid grid-cols-[auto_1fr_auto_auto] gap-2 items-center">
                     <span className="text-base">{p.place === 1 ? "🥇" : p.place === 2 ? "🥈" : "🥉"}</span>
                     <span className="text-sm text-gray-300">{p.place}. Platz</span>
@@ -1053,6 +1128,16 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                     <input type="number" min={0} value={p.coins}
                       onChange={e => updatePlacement(p.place, "coins", Number(e.target.value))}
                       className={numCls} />
+                    {isGemsTournament && (
+                      <select value={gemsPlacementPacks[i] ?? ""}
+                        onChange={e => setGemsPlacementPacks(prev => prev.map((pp, ii) => ii === i ? e.target.value as PackKindOrNone : pp))}
+                        className={`${inputCls} col-span-4`}>
+                        <option value="">Kein Pack</option>
+                        <option value="STANDARD">Standard-Pack</option>
+                        <option value="PREMIUM">Premium-Pack</option>
+                        <option value="COMMUNITY">Community-Pack</option>
+                      </select>
+                    )}
                   </div>
                 ))}
               </div>
