@@ -22,8 +22,13 @@ export interface MemberSeasonInput {
   eventCount: number;
   questCount: number;
 
-  // DD-Säule
-  eventWins: number;
+  // DD-Säule — bewusst NICHT nur Turniersiege (Platz 1 ist extrem selten und
+  // hätte fast alle Mitglieder auf 0 belassen, siehe Analyse vom 2026-09-03):
+  // tournamentParticipationCount ist die reine Teilnahme (analog zu Tanks
+  // eventCount — "wer tritt oft kompetitiv an"), tournamentPerformanceScore
+  // ein Platzierungs-Bonus (0..1 je Turnier, 1 = Sieg, 0 = letzter Platz).
+  tournamentParticipationCount: number;
+  tournamentPerformanceScore: number;
   eventStatsScore: number; // z.B. normalisierte Kills/Tore/Scoring, vorab aggregiert
 
   // Support-Säule
@@ -64,20 +69,44 @@ const TIER_PERCENTILE_CEILING: { tier: ActivityTier; ceiling: number }[] = [
 ];
 
 const MAX_TIER_JUMP = 1; // max. Stufen-Sprung pro Saison
-const CLASS_TIE_THRESHOLD = 10; // Perzentil-Punkte, unter denen die alte Klasse bleibt
+// Am 2026-09-03 von 10 auf 5 gesenkt: bei 10 Punkten blieben zu viele Mitglieder
+// trotz klar niedrigerer DD-Säule (siehe tournamentParticipationCount-Fix oben)
+// in ihrer alten Tank/Support-Klasse hängen, weil der Vorsprung selten > 10
+// Perzentil-Punkte betrug.
+const CLASS_TIE_THRESHOLD = 5; // Perzentil-Punkte, unter denen die alte Klasse bleibt
 
 // ---------- Hilfsfunktionen ----------
 
-/** Berechnet für ein Array von Rohwerten die Perzentil-Ränge (0-100). */
-function computePercentiles(values: number[]): number[] {
+/** Einfacher, deterministischer String-Hash (djb2) — reicht für eine stabile Tiebreak-Reihenfolge. */
+function hashSeed(seed: string): number {
+  let hash = 5381;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash * 33) ^ seed.charCodeAt(i);
+  }
+  return hash >>> 0;
+}
+
+/**
+ * Berechnet für ein Array von Rohwerten die Perzentil-Ränge (0-100).
+ *
+ * `tieBreakKeys` (z.B. userId je Index) sorgt dafür, dass Mitglieder mit
+ * identischem Rohwert (häufig: mehrere mit 0, z.B. bei der DD-Säule) nicht
+ * einfach nach ursprünglicher Datenbank-Abfragereihenfolge sortiert werden —
+ * das hätte manchen Mitgliedern rein zufällig, aber systematisch reproduzierbar
+ * ein höheres Perzentil beschert als anderen mit exakt derselben Aktivität.
+ * Stattdessen wird bei Gleichstand nach einem gehashten Schlüssel sortiert:
+ * weiterhin deterministisch (gleiche Eingabe -> gleiches Ergebnis), aber
+ * unabhängig von der DB-Reihenfolge.
+ */
+function computePercentiles(values: number[], tieBreakKeys?: string[]): number[] {
   const n = values.length;
   if (n === 0) return [];
   if (n === 1) return [100];
 
-  // Index-sortierte Reihenfolge nach Wert aufsteigend
+  // Index-sortierte Reihenfolge nach Wert aufsteigend, bei Gleichstand nach Tiebreak-Hash
   const sortedIndices = values
-    .map((v, i) => ({ v, i }))
-    .sort((a, b) => a.v - b.v);
+    .map((v, i) => ({ v, i, tb: tieBreakKeys ? hashSeed(tieBreakKeys[i]) : i }))
+    .sort((a, b) => a.v - b.v || a.tb - b.tb);
 
   const percentiles = new Array(n).fill(0);
   sortedIndices.forEach((entry, rank) => {
@@ -151,20 +180,24 @@ export function computeSeasonResults(
   const n = members.length;
   if (n === 0) return [];
 
+  const tieBreakKeys = members.map((m) => m.userId);
+
   // ---- 1. Aktivitäts-Perzentil (Events + Quests) ----
   const activityRaw = members.map((m) => m.eventCount + m.questCount);
-  const activityPercentiles = computePercentiles(activityRaw);
+  const activityPercentiles = computePercentiles(activityRaw, tieBreakKeys);
 
   // ---- 2. Klassen-Säulen-Perzentile ----
-  const ddRaw = members.map((m) => m.eventWins + m.eventStatsScore);
+  const ddRaw = members.map(
+    (m) => m.tournamentParticipationCount + m.tournamentPerformanceScore + m.eventStatsScore
+  );
   const supportRaw = members.map(
     (m) => m.surveyParticipations + m.donationAmount + m.lobbyActivityScore
   );
   const tankRaw = members.map((m) => m.eventCount);
 
-  const ddPercentiles = computePercentiles(ddRaw);
-  const supportPercentiles = computePercentiles(supportRaw);
-  const tankPercentiles = computePercentiles(tankRaw);
+  const ddPercentiles = computePercentiles(ddRaw, tieBreakKeys);
+  const supportPercentiles = computePercentiles(supportRaw, tieBreakKeys);
+  const tankPercentiles = computePercentiles(tankRaw, tieBreakKeys);
 
   // ---- 3. Pro Mitglied zusammenführen ----
   return members.map((m, i) => {
