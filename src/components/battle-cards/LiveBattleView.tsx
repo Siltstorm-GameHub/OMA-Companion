@@ -331,7 +331,7 @@ function UnitCard({
         .map((eff) => (
           <span
             key={`ring-${eff.id}`}
-            className="archetype-hit-ring absolute inset-0 rounded-full pointer-events-none"
+            className="archetype-hit-ring absolute inset-0 rounded-full pointer-events-none z-30"
             style={{ ["--ring-color" as string]: getClassConfig(eff.casterClass!).color }}
           />
         ))}
@@ -346,7 +346,7 @@ function UnitCard({
         .map((eff) => (
           <motion.span
             key={`slash-${eff.id}`}
-            className="absolute inset-0 pointer-events-none"
+            className="absolute inset-0 pointer-events-none z-30"
             style={{
               background: getClassConfig("DAMAGE_DEALER").color,
               maskImage: "url(/battle-cards/vfx/slash.png)",
@@ -368,7 +368,7 @@ function UnitCard({
         .map((eff) => (
           <motion.span
             key={`magic-${eff.id}`}
-            className="absolute inset-0 pointer-events-none"
+            className="absolute inset-0 pointer-events-none z-30"
             style={{
               background: getClassConfig("SUPPORT").color,
               maskImage: "url(/battle-cards/vfx/magic-bolt.png)",
