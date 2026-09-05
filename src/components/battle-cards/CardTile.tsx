@@ -8,15 +8,17 @@
 // Duplikat-Zähler sitzen direkt auf der Kachel. Antippen öffnet die volle
 // Detailansicht (BattleCardView + Upgrade) in einem Modal.
 
-import { Lock, ArrowUpCircle } from "lucide-react";
+import { Lock, ArrowUp, Zap } from "lucide-react";
 import { getClassConfig, LEVEL_BORDER, LEVEL_FRAME_IMAGE, type BattleCardData } from "./BattleCardView";
 import { tableValueForLevel, type UpgradeTable } from "@/lib/battle-cards/upgrade-config";
 import CoinIcon from "@/components/CoinIcon";
 
-/** Ein-Zeilen-Upgrade-Hinweis direkt unter der Kachel — spart das Öffnen des
- *  Detail-Modals (DuplicateProgress dort), um zu sehen, ob ein Upgrade schon
- *  möglich ist bzw. wie viele Duplikate dafür noch fehlen. */
-function CardUpgradeHint({
+/** Clash-Royale-artiges Upgrade-Badge — ragt über den unteren Rand des
+ *  Kartenbilds statt als separate Textzeile unter der Kachel zu stehen (siehe
+ *  CardTile). Grün + Pulsieren, sobald ein Upgrade sofort möglich ist (Duplikate
+ *  UND Münzen reichen); sonst ein blauer "Tropfen"-Badge mit dem
+ *  Duplikat-Fortschritt, wie die Elixier-/Fortschritts-Badges in Clash Royale. */
+function CardUpgradeBadge({
   card,
   level,
   duplicates,
@@ -32,34 +34,68 @@ function CardUpgradeHint({
   upgradeCosts: UpgradeTable;
 }) {
   if (level >= 5) {
-    return <p className="text-[9px] font-bold text-amber-400 text-center leading-none h-[11px]">★ Max. Stufe</p>;
+    return (
+      <span
+        className="absolute -bottom-2 left-1/2 -translate-x-1/2 z-10 flex items-center gap-0.5 text-[9px] font-black leading-none px-2 py-1 rounded-full text-black whitespace-nowrap"
+        style={{
+          background: "linear-gradient(180deg, #fde68a, #f59e0b)",
+          boxShadow: "0 2px 6px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.5)",
+        }}
+      >
+        ★ MAX
+      </span>
+    );
   }
 
   const needed = tableValueForLevel(duplicateThresholds, card.rarity, level)!;
   const cost = tableValueForLevel(upgradeCosts, card.rarity, level)!;
   const hasEnoughDuplicates = duplicates >= needed;
   const hasEnoughCoins = coins >= cost;
+  const pct = Math.min(100, Math.round((duplicates / needed) * 100));
 
   if (hasEnoughDuplicates && hasEnoughCoins) {
     return (
-      <p className="flex items-center justify-center gap-0.5 text-[9px] font-bold text-emerald-400 leading-none h-[11px]">
-        <ArrowUpCircle className="w-2.5 h-2.5 shrink-0" /> {cost}
-        <CoinIcon size={8} />
-      </p>
-    );
-  }
-  if (hasEnoughDuplicates) {
-    return (
-      <p className="flex items-center justify-center gap-0.5 text-[9px] font-semibold text-gray-500 leading-none h-[11px]">
+      <span
+        className="absolute -bottom-2 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 text-[10px] font-black leading-none px-2.5 py-1 rounded-full text-black whitespace-nowrap animate-pulse"
+        style={{
+          background: "linear-gradient(180deg, #6ee7b7, #10b981)",
+          boxShadow: "0 0 10px rgba(16,185,129,0.7), inset 0 1px 0 rgba(255,255,255,0.5)",
+        }}
+      >
+        <ArrowUp className="w-3 h-3 shrink-0" strokeWidth={3} />
         {cost}
-        <CoinIcon size={8} /> nötig
-      </p>
+        <CoinIcon size={9} />
+      </span>
     );
   }
+
+  // Nicht bereit: blaues "Tropfen"-Badge mit Fortschrittsring-Optik (Balken im
+  // Hintergrund des Badges statt separatem Balken) — Duplikate reichen zwar
+  // ggf. schon (dann grau/Münzen fehlen), sonst zeigt es den X/Y-Fortschritt.
   return (
-    <p className="text-[9px] font-semibold text-gray-500 text-center leading-none h-[11px]">
-      Noch {needed - duplicates}× nötig
-    </p>
+    <span
+      className="absolute -bottom-2 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 text-[9px] font-bold leading-none px-2 py-1 rounded-full text-white whitespace-nowrap overflow-hidden"
+      style={{
+        background: "#1e293b",
+        boxShadow: "0 2px 6px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.12)",
+      }}
+    >
+      <span
+        className="absolute inset-y-0 left-0 transition-all"
+        style={{ width: `${pct}%`, background: hasEnoughDuplicates ? "#f59e0b" : "#3b82f6" }}
+      />
+      <Zap className="w-2.5 h-2.5 shrink-0 relative" style={{ color: hasEnoughDuplicates ? "#fef3c7" : "#bfdbfe" }} />
+      <span className="relative inline-flex items-center gap-0.5">
+        {hasEnoughDuplicates ? (
+          <>
+            {cost}
+            <CoinIcon size={8} />
+          </>
+        ) : (
+          `${duplicates}/${needed}`
+        )}
+      </span>
+    </span>
   );
 }
 
@@ -99,6 +135,10 @@ export default function CardTile({
       className="flex flex-col items-center gap-1.5 w-full text-left"
       aria-label={`${card.name} — Details ansehen`}
     >
+      {/* Äußerer Wrapper OHNE overflow-hidden — das Upgrade-Badge hängt bewusst
+          über den unteren Kartenrand hinaus (Clash-Royale-Optik) und würde vom
+          card-cut-sm-Zuschnitt der Kunst-Box sonst abgeschnitten. */}
+      <div className="relative w-full">
       <div
         className="card-cut-sm relative w-full aspect-[3/4] overflow-hidden"
         style={{
@@ -158,15 +198,12 @@ export default function CardTile({
           </span>
         )}
       </div>
-      <p className={`font-battle text-[11px] truncate w-full text-center ${locked ? "text-gray-600" : "text-white"}`}>
-        {card.name}
-      </p>
       {!locked &&
         typeof duplicates === "number" &&
         coins !== undefined &&
         duplicateThresholds &&
         upgradeCosts && (
-          <CardUpgradeHint
+          <CardUpgradeBadge
             card={card}
             level={level}
             duplicates={duplicates}
@@ -175,6 +212,12 @@ export default function CardTile({
             upgradeCosts={upgradeCosts}
           />
         )}
+      </div>
+      <p
+        className={`font-battle text-[11px] truncate w-full text-center mt-2 ${locked ? "text-gray-600" : "text-white"}`}
+      >
+        {card.name}
+      </p>
     </button>
   );
 }

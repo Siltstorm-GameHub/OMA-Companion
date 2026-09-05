@@ -100,6 +100,7 @@ export default function BoardMatch3({
   moveBudget,
   disabled,
   initialSwaps,
+  turnId,
   onConfirm,
   onProgress,
   onGemsDestroyed,
@@ -114,6 +115,16 @@ export default function BoardMatch3({
    *  ursprünglichen Session abweichen (neuer lokaler Vorschau-Seed), die
    *  Zug-Struktur (welche Swaps stattfanden) bleibt aber identisch. */
   initialSwaps?: SwapMove[];
+  /** Eindeutige Kennung des aktuellen Zugs (z.B. die wartende Einheit-ID) —
+   *  wechselt serverseitig bei jedem neuen Zug. Steuert NUR den internen
+   *  Reset unten (frisches Grid vom Server übernehmen, Zug-Budget/Auswahl
+   *  zurücksetzen) — bewusst KEIN React-`key` am Aufrufer: Ein Remount pro Zug
+   *  ließ das (serverseitig persistente, siehe interactive.ts boardGrid)
+   *  Brett zuvor bei jedem eigenen Zug sichtbar "neu aufpoppen", obwohl es
+   *  inhaltlich unverändert weiterlief — bei OMA Gems pausiert die Zugreihenfolge
+   *  einzeln pro eigenem Helden, nicht einmal pro Team-Runde, das Brett soll
+   *  aber über den gesamten Kampf optisch durchgängig bestehen bleiben. */
+  turnId?: string;
   onConfirm: (swaps: SwapMove[]) => void;
   /** Fire-and-forget nach jedem bestätigten Swap — sichert den Fortschritt
    *  serverseitig, ohne auf eine Antwort zu warten (siehe saveBoardProgress). */
@@ -153,16 +164,28 @@ export default function BoardMatch3({
     markBoardLegendSeen();
   }, []);
 
-  // Fortschritt aus einer vorherigen Session (vor einem Reload) einmalig gegen
-  // das initiale Grid nachspielen, um den sichtbaren Board-Zustand wiederherzustellen.
+  // Läuft NUR, wenn `turnId` sich ändert (ein wirklich neuer Zug beginnt) —
+  // NICHT bei jedem Server-Poll (das würde eine laufende Interaktion/Animation
+  // mitten im Zug unterbrechen, da jede Snapshot-Antwort ein frisches Grid-
+  // Array liefert, auch wenn sich am Zug nichts geändert hat). Übernimmt das
+  // vom Server gelieferte Grid 1:1 (Normalfall: initialSwaps leer) bzw. spielt
+  // bei einem Reload mitten im Zug die bereits bestätigten Swaps dagegen nach,
+  // und setzt den restlichen Zug-UI-Zustand für den neuen Zug zurück.
   useEffect(() => {
     if (initialSwaps && initialSwaps.length > 0) {
       const result = resolveBoardSession(initialGrid, rngStateRef.current, initialSwaps, initialSwaps.length);
       setBoard(result.finalGrid);
       rngStateRef.current = result.finalRngState;
+    } else {
+      setBoard(initialGrid);
     }
+    setSwaps(initialSwaps ?? []);
+    setSelected(null);
+    setInvalidCell(null);
+    setDestroyingCells(new Set());
+    setFallingCells(new Set());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [turnId]);
 
   const remaining = moveBudget - swaps.length;
   const interactionLocked = disabled || remaining <= 0 || animating;

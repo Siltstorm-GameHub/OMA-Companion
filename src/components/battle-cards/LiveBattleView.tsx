@@ -1274,7 +1274,7 @@ function LiveBattleBody({
           <div className="glass rounded-xl p-2.5 h-[212px] lg:h-[300px] overflow-y-auto flex flex-col">
             {snapshot.awaiting.board && boardSwaps === null ? (
               <BoardMatch3
-                key={snapshot.awaiting.unitId}
+                turnId={snapshot.awaiting.unitId}
                 grid={snapshot.awaiting.board.grid}
                 moveBudget={snapshot.awaiting.board.moveBudget}
                 disabled={busy}

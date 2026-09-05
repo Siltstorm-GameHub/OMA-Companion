@@ -158,6 +158,15 @@ export function playDamageSoundFor(casterClass: UnitClass | undefined, crit: boo
     if (crit) beep(1000, 100, "square", 0.06, 50);
     return;
   }
+  if (casterClass === "SUPPORT") {
+    // Arkaner Bolzen — zwei dicht benachbarte Frequenzen für eine leichte
+    // Schwebung ("Shimmer"), klingt gläsern/magisch statt dumpf oder scharf.
+    beep(900, crit ? 140 : 100, "sine", crit ? 0.1 : 0.07);
+    beep(918, crit ? 140 : 100, "triangle", crit ? 0.08 : 0.05, 5);
+    noiseBurst(50, crit ? 0.06 : 0.04, 6000, "highpass", 20);
+    if (crit) beep(1300, 160, "sine", 0.07, 60);
+    return;
+  }
   if (crit) playCritSound();
   else playDamageSound();
 }

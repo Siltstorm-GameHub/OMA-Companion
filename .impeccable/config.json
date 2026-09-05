@@ -77,6 +77,24 @@
         ],
         "createdAt": "2026-09-05T08:06:27.047Z",
         "reason": "pre-existing Auto-Kampf toggle button, unrelated to this edit; bg-white/[0.06] is near-transparent so text-gray-400 reads fine, not a real contrast issue"
+      },
+      {
+        "rule": "ai-color-palette",
+        "value": "*",
+        "files": [
+          "src/components/battle-cards/CardCollectionBrowser.tsx"
+        ],
+        "createdAt": "2026-09-05T08:31:29.644Z",
+        "reason": "violet/fuchsia is this codebase's established Battle-Cards accent color (matches CLASS_CONFIG, DuplicateProgress, PackOpener, admin panels), not incidental AI purple"
+      },
+      {
+        "rule": "ai-color-palette",
+        "value": "*",
+        "files": [
+          "src/app/(dashboard)/dashboard/page.tsx"
+        ],
+        "createdAt": "2026-09-05T08:31:29.727Z",
+        "reason": "violet is the dashboard's established per-feature accent for Quests/Battle-Cards tiles (teal=Events, amber=Squads, violet=Quests/Battle-Cards, rose=Challenges), consistent with the rest of the hub tiles"
       }
     ]
   }

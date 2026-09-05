@@ -127,12 +127,23 @@ function playDpsHitSfx(crit: boolean) {
   if (crit) beep(1000, 0.1, "square", 0.08, 0.06);
 }
 
+/** SUPPORT: arkaner Bolzen — zwei dicht benachbarte Frequenzen erzeugen eine
+ *  leichte Schwebung ("Shimmer"), plus ein winziges Hochton-Funkeln. Klingt
+ *  gläsern/magisch statt dumpf (Tank) oder scharf (DPS). */
+function playSupportHitSfx(crit: boolean) {
+  beep(900, crit ? 0.14 : 0.1, "sine", crit ? 0.1 : 0.07);
+  beep(918, crit ? 0.14 : 0.1, "triangle", crit ? 0.08 : 0.05, 0.005);
+  noiseBurst(0.05, crit ? 0.06 : 0.04, 6000, "highpass", 0.02);
+  if (crit) beep(1300, 0.16, "sine", 0.07, 0.06);
+}
+
 /** Zentraler Einstieg für Trefferschall — verzweigt nach der Klasse des
  *  ausführenden Helden (siehe casterClass in SkillEffectOverlay), damit ein
  *  Tank-Bash anders klingt als ein DPS-Treffer statt für alle derselbe Beep. */
 export function playHitSfxFor(casterClass: UnitClass | undefined, crit: boolean) {
   if (casterClass === "TANK") return playTankHitSfx(crit);
   if (casterClass === "DAMAGE_DEALER") return playDpsHitSfx(crit);
+  if (casterClass === "SUPPORT") return playSupportHitSfx(crit);
   if (crit) return playCritSfx();
   return playHitSfx();
 }
