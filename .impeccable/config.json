@@ -104,6 +104,24 @@
         ],
         "createdAt": "2026-09-05T08:54:27.772Z",
         "reason": "pre-existing Auto-Kampf toggle button (bg-white/[0.06] text-gray-400), unrelated to session edits; specific-value ignore for text-gray-400 kept re-firing on this line across multiple edits, broadening to * for this file/rule to stop repeat false positives"
+      },
+      {
+        "rule": "ai-color-palette",
+        "value": "text-violet-300",
+        "files": [
+          "src/lib/quests-meta.ts"
+        ],
+        "createdAt": "2026-09-05T13:14:47.148Z",
+        "reason": "pre-existing color, verbatim-moved from quests.ts (not new design), see bugfix for tls bundling issue"
+      },
+      {
+        "rule": "ai-color-palette",
+        "value": "text-cyan-300",
+        "files": [
+          "src/lib/quests-meta.ts"
+        ],
+        "createdAt": "2026-09-05T13:14:47.225Z",
+        "reason": "pre-existing color, verbatim-moved from quests.ts (not new design), see bugfix for tls bundling issue"
       }
     ]
   }
