@@ -18,13 +18,14 @@
 // in BattleScreen.tsx für das visuelle Gegenstück (gleiche Archetyp-Matrix).
 
 import type { UnitClass } from "@/lib/battle-engine/types";
+import { isSoundMuted } from "./sound-prefs";
 
 /** Spielt eine kurze Sample-Datei ab — eigenes HTMLAudioElement pro Aufruf,
  *  damit sich überlappende Treffer (mehrere Kaskaden-Hits) nicht gegenseitig
  *  abschneiden. Scheitert lautlos (Autoplay-Policy, fehlende Datei), da Sound
  *  hier rein kosmetisch ist. */
 function playSample(url: string, volume = 0.6) {
-  if (typeof window === "undefined") return;
+  if (isSoundMuted() || typeof window === "undefined") return;
   try {
     const audio = new Audio(url);
     audio.volume = Math.min(1, Math.max(0, volume));
@@ -50,6 +51,7 @@ function getCtx(): AudioContext | null {
 }
 
 function beep(freq: number, duration: number, type: OscillatorType, gain: number, delay = 0, freqTo?: number) {
+  if (isSoundMuted()) return;
   const ctx = getCtx();
   if (!ctx) return;
   const osc = ctx.createOscillator();
@@ -71,6 +73,7 @@ function beep(freq: number, duration: number, type: OscillatorType, gain: number
 /** Kurzer gefilterter Rausch-Burst — Basis für perkussive Treffer (Tank-Wucht,
  *  DPS-Klingenschnitt), die ein reiner Oscillator-Beep nicht glaubhaft trifft. */
 function noiseBurst(duration: number, gain: number, filterFreq: number, filterType: BiquadFilterType, delay = 0) {
+  if (isSoundMuted()) return;
   const ctx = getCtx();
   if (!ctx) return;
   const bufferSize = Math.max(1, Math.floor(ctx.sampleRate * duration));

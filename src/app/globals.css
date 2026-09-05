@@ -466,6 +466,15 @@ select.input-glass option { background: #0f1117; }
 }
 .gem-destroy { animation: gem-destroy 0.22s ease-in both; }
 
+/* Match-4/5 (bzw. jede Kaskaden-Runde ab 4 Steinen) — deutlich größerer Ausschlag
+   + goldener Glow statt des normalen 3er-Zerstören-Effekts, siehe BoardMatch3.tsx. */
+@keyframes gem-destroy-big {
+  0%   { opacity: 1; transform: scale(1) rotate(0deg); filter: brightness(1) drop-shadow(0 0 0 transparent); }
+  45%  { opacity: 1; transform: scale(1.55) rotate(-12deg); filter: brightness(1.6) drop-shadow(0 0 10px rgba(245,158,11,0.9)); }
+  100% { opacity: 0; transform: scale(0) rotate(-30deg); filter: brightness(1.2) drop-shadow(0 0 4px rgba(245,158,11,0.6)); }
+}
+.gem-destroy-big { animation: gem-destroy-big 0.32s ease-in both; }
+
 /* ── Icon-Bounce für neuen Content seit letztem Besuch ────────────── */
 @keyframes icon-bounce-new {
   0%, 100% { transform: translateY(0) scale(1); }

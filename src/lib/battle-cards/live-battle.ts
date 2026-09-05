@@ -51,6 +51,7 @@ import { resolveAvatarsForCards } from "@/lib/battle-cards/card-view";
 import { resolveCardImageUrl, resolveAvatarBadgeUrl } from "@/lib/battle-cards/resolve-image";
 import { applyWinStreak } from "@/lib/battle-cards/win-streak";
 import { applyEloResult, type EloResult } from "@/lib/battle-cards/elo";
+import { getBattleRank, getBattleRankFullLabel } from "@/lib/battle-cards/battle-rank";
 import {
   DIFFICULTY_LEVEL,
   GEMS_PVP_DAILY_LIMIT,
@@ -65,7 +66,7 @@ import {
   type NpcDifficulty,
 } from "@/lib/battle-cards/npc-battle-types";
 import { grantGemsPvpVictoryChest } from "@/lib/battle-cards/gems-pvp";
-import type { LiveBattle } from "@prisma/client";
+import type { LiveBattle, Prisma } from "@prisma/client";
 import { dispatchNotification } from "@/lib/notify-dispatch";
 import { updateQuestProgress } from "@/lib/quests";
 
@@ -205,6 +206,31 @@ export interface LiveBattleSnapshot {
    *  Kampfende-Screen mit Animation zeigt (neu hinzugekommene Sterne
    *  hervorgehoben). */
   campaignResult: { levelId: string; stars: 1 | 2 | 3; starsGained: number; coinsAwarded: number } | null;
+  /** Nur gesetzt, wenn der BETRACHTENDE Spieler durch dieses Kampfergebnis eine
+   *  neue Rang-Division erreicht hat (siehe computeRankUp/battle-rank.ts) — der
+   *  Client zeigt das als eigenen Feier-Moment im Kampfende-Screen. */
+  rankUp: RankUpInfo | null;
+}
+
+/** Ergebnis eines Rang-Divisions-Aufstiegs für EINEN Spieler — wird am
+ *  Battle-Datensatz gespeichert (gleiches Muster wie gemsChestPrize/
+ *  campaignResult) und in buildSnapshot je nach Betrachter (playerAId/
+ *  playerBId) auf `rankUp` gemappt. */
+export interface RankUpInfo {
+  mode: string;
+  fromLabel: string;
+  toLabel: string;
+  toEmoji: string;
+  elo: number;
+}
+
+/** Vergleicht die Rang-Division vor/nach einem Elo-Update — meldet nur einen
+ *  Aufstieg (nicht jede Elo-Änderung), Rangverlust wird bewusst NICHT gefeiert. */
+function computeRankUp(mode: string, before: number, after: number): RankUpInfo | null {
+  const from = getBattleRank(before);
+  const to = getBattleRank(after);
+  if (to.min <= from.min) return null;
+  return { mode, fromLabel: getBattleRankFullLabel(from), toLabel: getBattleRankFullLabel(to), toEmoji: to.emoji, elo: after };
 }
 
 const RECENT_LOG_TAIL = 12;
@@ -230,7 +256,8 @@ function toUnitSnapshot(u: BattleUnitState): LiveUnitSnapshot {
 async function buildSnapshot(
   live: Pick<LiveBattle, "id" | "mode" | "playerAId" | "playerBId" | "resultBattleId">,
   state: InteractiveBattleState,
-  pendingDecision: PendingDecision | null
+  pendingDecision: PendingDecision | null,
+  viewerId: string
 ): Promise<LiveBattleSnapshot> {
   const allUnits = [...state.unitsA, ...state.unitsB];
 
@@ -240,12 +267,16 @@ async function buildSnapshot(
     awaiting = { ...pendingDecision, controlledByPlayerId, deadline: state.turnDeadline };
   }
 
-  // Sieges-Kiste (Gems-PvP) / Sterne-Ergebnis (Kampagne) — beide werden am
-  // Battle-Datensatz gespeichert (siehe finalizeLiveBattle), nur nachladen,
-  // wenn tatsächlich relevant.
+  // Sieges-Kiste (Gems-PvP) / Sterne-Ergebnis (Kampagne) / Rang-Aufstieg — alle
+  // drei werden am Battle-Datensatz gespeichert (siehe finalizeLiveBattle), nur
+  // nachladen, wenn tatsächlich relevant. Rang-Aufstieg kann bei JEDER PvP-
+  // Challenge auftreten (DUELS oder GEMS), nicht nur GEMS — daher zusätzlich
+  // über `live.playerBId` erkannt (nur echte Spieler-gegen-Spieler-Kämpfe haben
+  // einen zweiten Spieler UND eine Elo-Änderung).
   let chestPrize: LiveBattleSnapshot["chestPrize"] = null;
   let campaignResult: LiveBattleSnapshot["campaignResult"] = null;
-  if ((live.mode === PVP_GEMS_MODE || live.mode.startsWith("CAMPAIGN_")) && live.resultBattleId) {
+  let rankUp: RankUpInfo | null = null;
+  if ((live.mode === PVP_GEMS_MODE || live.mode.startsWith("CAMPAIGN_") || live.playerBId) && live.resultBattleId) {
     const battle = await prisma.battle.findUnique({
       where: { id: live.resultBattleId },
       select: { teamSnapshot: true },
@@ -253,9 +284,12 @@ async function buildSnapshot(
     const snapshotJson = battle?.teamSnapshot as {
       gemsChestPrize?: LiveBattleSnapshot["chestPrize"];
       campaignResult?: LiveBattleSnapshot["campaignResult"];
+      rankUpA?: RankUpInfo;
+      rankUpB?: RankUpInfo;
     } | null;
     chestPrize = snapshotJson?.gemsChestPrize ?? null;
     campaignResult = snapshotJson?.campaignResult ?? null;
+    rankUp = (viewerId === live.playerAId ? snapshotJson?.rankUpA : snapshotJson?.rankUpB) ?? null;
   }
 
   return {
@@ -282,6 +316,7 @@ async function buildSnapshot(
     winner: state.winner,
     chestPrize,
     campaignResult,
+    rankUp,
   };
 }
 
@@ -301,7 +336,12 @@ async function requireAccess(liveBattleId: string, viewerId: string) {
  *  und schreibt beide Seiten in einer Transaktion zurück. Zweigt explizit auf
  *  mode auf statt mit computed property keys zu selecten/updaten — Letzteres
  *  lässt Prisma den Rückgabetyp nicht mehr sinnvoll inferieren. */
-async function applyEloForChallenge(mode: string, playerAId: string, playerBId: string, result: EloResult) {
+async function applyEloForChallenge(
+  mode: string,
+  playerAId: string,
+  playerBId: string,
+  result: EloResult
+): Promise<{ ratingA: number; newA: number; ratingB: number; newB: number } | undefined> {
   const [userA, userB] = await Promise.all([
     prisma.user.findUnique({
       where: { id: playerAId },
@@ -312,7 +352,7 @@ async function applyEloForChallenge(mode: string, playerAId: string, playerBId: 
       select: { eloDuels: true, eloDuelsMatches: true, eloGems: true, eloGemsMatches: true },
     }),
   ]);
-  if (!userA || !userB) return;
+  if (!userA || !userB) return undefined;
 
   const ratingA = mode === "GEMS" ? userA.eloGems : userA.eloDuels;
   const ratingB = mode === "GEMS" ? userB.eloGems : userB.eloDuels;
@@ -328,6 +368,8 @@ async function applyEloForChallenge(mode: string, playerAId: string, playerBId: 
     prisma.user.update({ where: { id: playerAId }, data: dataA }),
     prisma.user.update({ where: { id: playerBId }, data: dataB }),
   ]);
+
+  return { ratingA, newA, ratingB, newB };
 }
 
 async function finalizeLiveBattle(live: LiveBattle, state: InteractiveBattleState) {
@@ -386,21 +428,35 @@ async function finalizeLiveBattle(live: LiveBattle, state: InteractiveBattleStat
       // Gilt für Sieg/Niederlage UND Unentschieden — derselbe Farm-Fairness-Deckel
       // wie für Rangliste/Sieges-Kiste (countsForRanking), damit Elo nicht durch
       // wiederholte Angriffe auf denselben Gegner am selben Tag aufgepumpt wird.
+      let rankUpA: RankUpInfo | null = null;
+      let rankUpB: RankUpInfo | null = null;
       if (countsForRanking) {
         const eloResult: EloResult = winnerId === null ? "draw" : winnerId === live.playerAId ? "A" : "B";
-        await applyEloForChallenge(challenge.mode, live.playerAId, live.playerBId, eloResult);
+        const eloUpdate = await applyEloForChallenge(challenge.mode, live.playerAId, live.playerBId, eloResult);
+        if (eloUpdate) {
+          rankUpA = computeRankUp(challenge.mode, eloUpdate.ratingA, eloUpdate.newA);
+          rankUpB = computeRankUp(challenge.mode, eloUpdate.ratingB, eloUpdate.newB);
+        }
       }
       // OMA-Gems-Ghost-Angriff: nur der Angreifer (playerAId) spielt aktiv — bei
       // dessen Sieg öffnet sich die Sieges-Kiste. Der Verteidiger bekommt nichts,
-      // er hat den Kampf nicht selbst bestritten. Der Gewinn wird zusätzlich am
-      // Battle-Datensatz gespeichert, damit der Client ihn direkt im nächsten
-      // Snapshot als Öffnen-Animation zeigen kann (siehe buildSnapshot). Kein
-      // Kisten-Gewinn mehr, sobald der Fairness-Deckel gegen dasselbe Paar greift.
+      // er hat den Kampf nicht selbst bestritten. Kein Kisten-Gewinn mehr, sobald
+      // der Fairness-Deckel gegen dasselbe Paar greift.
+      let gemsChestPrize: LiveBattleSnapshot["chestPrize"] = null;
       if (challenge.mode === "GEMS" && winnerId === live.playerAId && countsForRanking) {
-        const prize = await grantGemsPvpVictoryChest(live.playerAId);
+        gemsChestPrize = await grantGemsPvpVictoryChest(live.playerAId);
+      }
+      // Kisten-Gewinn UND Rang-Aufstieg(e) gemeinsam am Battle-Datensatz speichern,
+      // damit der Client sie im nächsten Snapshot als Animation zeigen kann (siehe
+      // buildSnapshot) — ein einziger Write statt mehrerer sich überschreibender.
+      if (gemsChestPrize || rankUpA || rankUpB) {
+        const extraTeamSnapshot: Record<string, unknown> = { playerAId: live.playerAId, playerBId: live.playerBId };
+        if (gemsChestPrize) extraTeamSnapshot.gemsChestPrize = gemsChestPrize;
+        if (rankUpA) extraTeamSnapshot.rankUpA = rankUpA;
+        if (rankUpB) extraTeamSnapshot.rankUpB = rankUpB;
         await prisma.battle.update({
           where: { id: battle.id },
-          data: { teamSnapshot: { playerAId: live.playerAId, playerBId: live.playerBId, gemsChestPrize: prize } },
+          data: { teamSnapshot: extraTeamSnapshot as Prisma.InputJsonValue },
         });
       }
       await notifyPvpBattleResolved(live.playerAId, live.playerBId, winnerId, battle.id);
@@ -572,7 +628,7 @@ async function createLiveBattle(
   }
 
   const fresh = await prisma.liveBattle.findUniqueOrThrow({ where: { id: live.id } });
-  return buildSnapshot(fresh, state, pendingDecision);
+  return buildSnapshot(fresh, state, pendingDecision, playerAId);
 }
 
 /** Wirft einen Fehler, falls der User sein Tageslimit an NPC-Kämpfen erreicht
@@ -826,10 +882,10 @@ export async function getLiveBattleSnapshot(liveBattleId: string, viewerId: stri
   if (timedOut || midAutoRun) {
     const { state: newState, pendingDecision } = advance(state, undefined, advanceOptionsFor(live.playerBId));
     const updated = await persistAndMaybeFinalize(live, newState);
-    return buildSnapshot(updated, newState, pendingDecision);
+    return buildSnapshot(updated, newState, pendingDecision, viewerId);
   }
 
-  return buildSnapshot(live, state, describeCurrentDecision(state));
+  return buildSnapshot(live, state, describeCurrentDecision(state), viewerId);
 }
 
 export async function submitLiveBattleAction(
@@ -879,7 +935,7 @@ export async function submitLiveBattleAction(
     advanceOptionsFor(live.playerBId)
   );
   const updated = await persistAndMaybeFinalize(live, newState);
-  return buildSnapshot(updated, newState, pendingDecision);
+  return buildSnapshot(updated, newState, pendingDecision, viewerId);
 }
 
 /** Löst ein Ultimate SOFORT aus, unabhängig von der Zugreihenfolge (siehe
@@ -905,7 +961,7 @@ export async function submitUltimateInterrupt(
   if (!applied) throw new LiveBattleError("Ultimate ist gerade nicht verfügbar (Rage zu niedrig?).");
 
   const updated = await persistAndMaybeFinalize(live, newState);
-  return buildSnapshot(updated, newState, pendingDecision);
+  return buildSnapshot(updated, newState, pendingDecision, viewerId);
 }
 
 /** Speichert den bisherigen Fortschritt der laufenden Match-3-Mini-Session
@@ -937,7 +993,7 @@ export async function saveBoardProgress(
   }
 
   const updated = await persistAndMaybeFinalize(live, state);
-  return buildSnapshot(updated, state, describeCurrentDecision(state));
+  return buildSnapshot(updated, state, describeCurrentDecision(state), viewerId);
 }
 
 export async function setLiveBattleAuto(liveBattleId: string, viewerId: string, on: boolean): Promise<LiveBattleSnapshot> {
@@ -950,5 +1006,5 @@ export async function setLiveBattleAuto(liveBattleId: string, viewerId: string, 
 
   const { state: newState, pendingDecision } = advance(state, undefined, advanceOptionsFor(live.playerBId));
   const updated = await persistAndMaybeFinalize(live, newState);
-  return buildSnapshot(updated, newState, pendingDecision);
+  return buildSnapshot(updated, newState, pendingDecision, viewerId);
 }

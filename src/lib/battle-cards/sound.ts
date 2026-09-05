@@ -13,6 +13,9 @@
 // z.B. aus Snapshot-Poll-Effekten).
 
 import type { UnitClass } from "@/lib/battle-engine/types";
+import { isSoundMuted, setSoundMuted } from "./sound-prefs";
+
+export { isSoundMuted, setSoundMuted };
 
 /** Spielt eine kurze Sample-Datei ab — eigenes HTMLAudioElement pro Aufruf,
  *  damit sich überlappende Treffer (mehrere Kaskaden-Hits bei OMA Gems) nicht
@@ -39,25 +42,6 @@ function getContext(): AudioContext | null {
   }
   if (ctx.state === "suspended") ctx.resume().catch(() => {});
   return ctx;
-}
-
-const MUTE_KEY = "battle-cards-sound-muted";
-
-export function isSoundMuted(): boolean {
-  if (typeof window === "undefined") return false;
-  try {
-    return window.localStorage.getItem(MUTE_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-
-export function setSoundMuted(muted: boolean): void {
-  try {
-    window.localStorage.setItem(MUTE_KEY, muted ? "1" : "0");
-  } catch {
-    // localStorage kann in privaten Tabs/eingeschränkten Kontexten fehlschlagen — kein Problem, nur Komfort.
-  }
 }
 
 /** Ein einzelner Ton: `freq` in Hz, `durationMs` Ausklingzeit, `delayMs` optionaler
@@ -127,8 +111,8 @@ export function playUltimateSound(): void {
 /** Kurzer gefilterter Rausch-Burst — Basis für perkussive Archetyp-Treffer
  *  (Tank-Wucht, DPS-Klingenschnitt), die ein reiner Oscillator-Beep nicht
  *  glaubhaft trifft. Analog zu sfx.ts (dortiger Player: BattleScreen-Replay),
- *  hier lokal dupliziert, da dieses Modul den eigenen isSoundMuted-Schalter
- *  besitzt statt eines von außen übergebenen soundOn-Flags. */
+ *  hier lokal dupliziert, da beide Module ihren eigenen AudioContext führen
+ *  (der Mute-Schalter selbst kommt für beide aus sound-prefs.ts). */
 function noiseBurst(durationMs: number, gain: number, filterFreq: number, filterType: BiquadFilterType, delayMs = 0): void {
   if (isSoundMuted()) return;
   const audio = getContext();

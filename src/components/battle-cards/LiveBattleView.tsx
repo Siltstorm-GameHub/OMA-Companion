@@ -44,6 +44,7 @@ import ErrorNotice from "./ErrorNotice";
 import { BRAND_LOGO } from "@/lib/brand";
 import { CAMPAIGN_CHAPTER_BACKGROUND } from "@/lib/battle-cards/campaign-levels";
 import VictoryChestReveal, { type ChestPrize } from "./VictoryChestReveal";
+import RankUpOverlay from "./RankUpOverlay";
 import UltimateCutsceneOverlay from "./UltimateCutsceneOverlay";
 
 /** Kampf-Hintergrund: die klassische Arena (arena-bg.jpg) für OMA Duels,
@@ -154,6 +155,10 @@ interface LiveSnapshot {
   /** Nur bei einem gewonnenen Kampagnen-Kampf gesetzt — Sterne-Ergebnis für die
    *  Animation im Kampfende-Screen (siehe computeStars in campaign.ts). */
   campaignResult: { levelId: string; stars: 1 | 2 | 3; starsGained: number; coinsAwarded: number } | null;
+  /** Nur gesetzt, wenn DIESER Betrachter durch das Kampfergebnis eine neue
+   *  Rang-Division erreicht hat (siehe computeRankUp in live-battle.ts) — der
+   *  Client zeigt das als eigenen Feier-Moment (siehe RankUpOverlay). */
+  rankUp: { mode: string; fromLabel: string; toLabel: string; toEmoji: string; elo: number } | null;
 }
 
 function hpBarColor(pct: number): string {
@@ -1111,6 +1116,12 @@ function LiveBattleBody({
   // Gems-PvP-Sieges-Kiste: einmal eingesammelt, bleibt die Öffnen-Animation für
   // den Rest dieser Kampf-Ansicht ausgeblendet (Snapshot wird weiter gepollt).
   const [chestDismissed, setChestDismissed] = useState(false);
+  // Rang-Aufstieg (siehe RankUpOverlay) erscheint erst, NACHDEM eine eventuelle
+  // Sieges-Kiste weggeklickt wurde — sonst überlappen sich zwei Vollbild-Feier-
+  // Momente. Kein chestPrize? Dann ist chestDismissed weiterhin `false`, aber
+  // der Reveal unten prüft zusätzlich `!snapshot.chestPrize`, damit es nicht
+  // ewig darauf wartet.
+  const [rankUpDismissed, setRankUpDismissed] = useState(false);
 
   // Sieg-/Niederlage-Sound genau einmal abspielen, sobald der Kampf endet — der
   // Ref verhindert ein erneutes Abspielen bei Re-Renders, solange der Kampf
@@ -1150,6 +1161,12 @@ function LiveBattleBody({
       {snapshot.status === "finished" && snapshot.chestPrize && !chestDismissed && (
         <VictoryChestReveal prize={snapshot.chestPrize} onClose={() => setChestDismissed(true)} />
       )}
+      {snapshot.status === "finished" &&
+        snapshot.rankUp &&
+        !rankUpDismissed &&
+        (!snapshot.chestPrize || chestDismissed) && (
+          <RankUpOverlay rankUp={snapshot.rankUp} onClose={() => setRankUpDismissed(true)} />
+        )}
       <AnimatePresence>
         {ultimateCutscene && (
           <UltimateCutsceneOverlay

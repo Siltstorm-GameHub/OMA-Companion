@@ -32,9 +32,8 @@ import {
 import type { LucideIcon } from "lucide-react";
 import type { BattleLogEntry, RosterEntry, UnitClass } from "@/lib/battle-engine/types";
 import { playHitSfxFor, playHealSfx, playUltimateSfx, playShieldSfx, playBuffSfx, playDebuffSfx } from "@/lib/battle-cards/sfx";
+import { isSoundMuted, setSoundMuted } from "@/lib/battle-cards/sound-prefs";
 import UltimateCutsceneOverlay from "./UltimateCutsceneOverlay";
-
-const SOUND_PREF_KEY = "battleCardsSoundOn";
 
 const CLASS_CONFIG: Record<UnitClass, { color: string; icon: LucideIcon }> = {
   TANK: { color: "#14b8a6", icon: Shield },
@@ -558,25 +557,20 @@ function UnitTile({
 export default function BattleScreen({ roster, log }: { roster: RosterEntry[]; log: BattleLogEntry[] }) {
   const [step, setStep] = useState(0);
   const [playing, setPlaying] = useState(true);
+  // Geteilter Mute-Schalter mit dem Live-Kampf (LiveBattleView.tsx) — siehe
+  // sound-prefs.ts. Vorher hatte dieser Screen einen eigenen localStorage-Key
+  // ("battleCardsSoundOn"), wodurch "Ton aus" hier den Live-Kampf nicht
+  // mitstummschaltete (und umgekehrt).
   const [soundOn, setSoundOn] = useState(true);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(SOUND_PREF_KEY);
-      if (stored !== null) setSoundOn(stored === "1");
-    } catch {
-      // localStorage kann in seltenen Fällen (privater Modus etc.) werfen — Standard beibehalten
-    }
+    setSoundOn(!isSoundMuted());
   }, []);
 
   function toggleSound() {
     setSoundOn((prev) => {
       const next = !prev;
-      try {
-        localStorage.setItem(SOUND_PREF_KEY, next ? "1" : "0");
-      } catch {
-        // s.o.
-      }
+      setSoundMuted(!next);
       return next;
     });
   }

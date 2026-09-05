@@ -24,6 +24,7 @@
 
 import { HelpCircle, Users } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import type { UnitClass } from "@/lib/battle-engine/types";
 import {
   resolveBoardSession,
@@ -151,6 +152,11 @@ export default function BoardMatch3({
   const [selected, setSelected] = useState<number | null>(null);
   const [invalidCell, setInvalidCell] = useState<number | null>(null);
   const [destroyingCells, setDestroyingCells] = useState<Set<number>>(new Set());
+  // Match-4/5 (bzw. jede Kaskaden-Runde ab 4 Steinen) bekommt einen sichtbar
+  // größeren Zerstören-Effekt + eigenen Sound + kurzes Kombo-Label statt optisch
+  // genauso auszusehen wie ein normaler 3er-Match — vorher kaum zu unterscheiden.
+  const [bigMatchCells, setBigMatchCells] = useState<Set<number>>(new Set());
+  const [comboLabel, setComboLabel] = useState<{ text: string; key: number } | null>(null);
   const [fallingCells, setFallingCells] = useState<Set<number>>(new Set());
   const [animating, setAnimating] = useState(false);
   // Legende (Symbol→Klasse + Community-Bonus) ist beim allerersten Brett eines
@@ -193,8 +199,16 @@ export default function BoardMatch3({
   async function playSteps(steps: BoardAnimationStep[]) {
     for (let i = 0; i < steps.length; i++) {
       const step = steps[i];
+      const matchSize = step.matchedCells.length;
       setDestroyingCells(new Set(step.matchedCells));
-      playMatchSound(i);
+      if (matchSize >= 4) {
+        setBigMatchCells(new Set(step.matchedCells));
+        setComboLabel({ text: `${matchSize}ER-KOMBO!`, key: Date.now() });
+        playCommunityBonusSound();
+        window.setTimeout(() => setComboLabel(null), DESTROY_ANIM_MS + 350);
+      } else {
+        playMatchSound(i);
+      }
 
       if (onGemsDestroyed) {
         // Klasse pro zerstörter Zelle kommt aus `board` (dem Zustand VOR dieser
@@ -218,6 +232,7 @@ export default function BoardMatch3({
       setBoard(step.gridAfter);
       setFallingCells(computeFallingCells(step.matchedCells));
       setDestroyingCells(new Set());
+      setBigMatchCells(new Set());
       // Ein Frame mit der "angehobenen" Startposition rendern lassen, bevor die
       // Ziel-Position gesetzt wird — sonst läuft die CSS-Transition ins Leere,
       // weil Start- und Endzustand im selben Render landen.
@@ -337,6 +352,31 @@ export default function BoardMatch3({
           </div>
         </>
       )}
+      {/* Match-4/5-Kombo-Label — macht den Größenunterschied zum normalen 3er-
+          Match auch sprachlich sichtbar, nicht nur über den größeren
+          Zerstören-Effekt (gem-destroy-big) und den Bonus-Sound. */}
+      <AnimatePresence>
+        {comboLabel && (
+          <motion.div
+            key={comboLabel.key}
+            className="absolute left-1/2 top-1/2 z-30 pointer-events-none"
+            initial={{ opacity: 0, scale: 0.5, x: "-50%", y: "-50%" }}
+            animate={{ opacity: [0, 1, 1, 0], scale: [0.5, 1.15, 1, 0.9] }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: (DESTROY_ANIM_MS + 350) / 1000, times: [0, 0.25, 0.75, 1] }}
+          >
+            <p
+              className="font-battle text-2xl uppercase tracking-wide whitespace-nowrap"
+              style={{
+                color: "#fde68a",
+                textShadow: "0 0 12px rgba(245,158,11,0.9), 0 0 28px rgba(245,158,11,0.6), 0 2px 4px rgba(0,0,0,0.8)",
+              }}
+            >
+              {comboLabel.text}
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <div
         className="grid gap-1 lg:gap-1.5 mx-auto w-full max-w-[320px] lg:max-w-[420px]"
         style={{ gridTemplateColumns: `repeat(${BOARD_COLS}, minmax(0, 1fr))` }}
@@ -346,6 +386,7 @@ export default function BoardMatch3({
           const isSelected = selected === cell;
           const isInvalid = invalidCell === cell;
           const isDestroying = destroyingCells.has(cell);
+          const isBigMatch = bigMatchCells.has(cell);
           const isFalling = fallingCells.has(cell);
           return (
             <button
@@ -358,7 +399,7 @@ export default function BoardMatch3({
               disabled={interactionLocked}
               onClick={() => handleTap(cell)}
               className={`aspect-square rounded-md flex items-center justify-center transition-transform active:scale-95 disabled:opacity-60 ${
-                isDestroying ? "gem-destroy" : ""
+                isDestroying ? (isBigMatch ? "gem-destroy-big" : "gem-destroy") : ""
               } ${isInvalid ? "hit-shake" : ""}`}
               style={{
                 background: `${icon.color}22`,
