@@ -13,7 +13,7 @@
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { IdCard, Trophy, Swords } from "lucide-react";
+import { IdCard, Trophy, Swords, Users } from "lucide-react";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { hasStarterDeck } from "@/lib/battle-cards/starter-pick";
@@ -224,24 +224,51 @@ export default async function BattleCardsPage() {
 
   const communityPanel = (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-lg font-black text-white">Community</h1>
-        <p className="text-xs text-gray-500 mt-0.5">Herausforderungen und die Rangliste.</p>
+      <div
+        className="rounded-2xl p-4 flex items-center gap-3"
+        style={{
+          background: "linear-gradient(180deg, #2e2410 0%, #1a1305 100%)",
+          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), inset 0 0 0 1.5px rgba(251,191,36,0.35), 0 3px 0 #78350f",
+        }}
+      >
+        <div
+          className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
+          style={{
+            background: "radial-gradient(circle at 35% 28%, #fde68a, #d97706)",
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.4), 0 2px 6px rgba(0,0,0,0.4)",
+          }}
+        >
+          <Users className="w-5 h-5 text-black/70" strokeWidth={2.4} />
+        </div>
+        <div>
+          <h1 className="text-lg font-black text-white">Community</h1>
+          <p className="text-xs text-amber-200/70 mt-0.5">Herausforderungen und die Rangliste.</p>
+        </div>
       </div>
 
       <ChallengesList incoming={serialize(incoming)} outgoing={serialize(outgoing)} live={serialize(live)} />
 
-      <div className="space-y-3">
+      <div
+        className="rounded-2xl p-4 space-y-3"
+        style={{
+          background: "linear-gradient(180deg, #2e2410 0%, #1a1305 100%)",
+          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), inset 0 0 0 1.5px rgba(251,191,36,0.35), 0 3px 0 #78350f",
+        }}
+      >
         <div className="flex items-center justify-between gap-2 flex-wrap">
-          <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
-            <Trophy className="w-3.5 h-3.5 text-amber-400" /> Rangliste
-            {currentSeasonWindow && ` · Saison ${currentSeasonWindow.seasonNumber}`}
-          </h2>
-          {currentSeasonWindow && (
-            <p className="text-[10px] text-gray-500">
-              Endet am {currentSeasonWindow.end.toLocaleDateString("de-DE")}
-            </p>
-          )}
+          <div className="flex items-center gap-2">
+            <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+              <Trophy className="w-4 h-4 text-amber-300" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-white">Rangliste</p>
+              {currentSeasonWindow && (
+                <p className="text-[10px] text-gray-500">
+                  Saison {currentSeasonWindow.seasonNumber} · endet am {currentSeasonWindow.end.toLocaleDateString("de-DE")}
+                </p>
+              )}
+            </div>
+          </div>
         </div>
         <LeaderboardTabs overall={leaderboardRows} duels={duelsLeaderboardRows} gems={gemsLeaderboardRows} viewerId={userId} />
       </div>
