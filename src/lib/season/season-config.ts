@@ -12,7 +12,6 @@ export interface SeasonConfig {
   lastRewardedRankedSeason: number; // höchste Ranglisten-Saison-Nummer, für die Platz-1-3-Belohnungen bereits vergeben wurden (0 = noch keine)
   eloHardResetAt: string | null; // ISO-Datum, an dem admin-seitig ein einmaliger Elo-Hard-Reset (DUELS+GEMS) ausgelöst werden soll
   eloHardResetRanAt: string | null; // ISO-Zeitstempel, wann der Hard-Reset zu eloHardResetAt tatsächlich ausgeführt wurde (Idempotenz-Marker)
-  eloPlacementBackfillRanAt: string | null; // ISO-Zeitstempel, wann der einmalige Elo-Platzierungs-Nachtrag (siehe ranked-season.ts: backfillEloPlacementMatches) lief
 }
 
 const KEYS = {
@@ -22,7 +21,6 @@ const KEYS = {
   lastRewardedRankedSeason: "battlecards_last_rewarded_ranked_season",
   eloHardResetAt: "battlecards_elo_hard_reset_at",
   eloHardResetRanAt: "battlecards_elo_hard_reset_ran_at",
-  eloPlacementBackfillRanAt: "battlecards_elo_placement_backfill_ran_at",
 } as const;
 
 export async function getSeasonConfig(): Promise<SeasonConfig> {
@@ -35,7 +33,6 @@ export async function getSeasonConfig(): Promise<SeasonConfig> {
     lastRewardedRankedSeason: Number(map.get(KEYS.lastRewardedRankedSeason) ?? "0"),
     eloHardResetAt: map.get(KEYS.eloHardResetAt) ?? null,
     eloHardResetRanAt: map.get(KEYS.eloHardResetRanAt) ?? null,
-    eloPlacementBackfillRanAt: map.get(KEYS.eloPlacementBackfillRanAt) ?? null,
   };
 }
 
@@ -96,14 +93,6 @@ export async function markEloHardResetRan(): Promise<void> {
   await prisma.botConfig.upsert({
     where: { key: KEYS.eloHardResetRanAt },
     create: { key: KEYS.eloHardResetRanAt, value: new Date().toISOString() },
-    update: { value: new Date().toISOString() },
-  });
-}
-
-export async function markEloPlacementBackfillRan(): Promise<void> {
-  await prisma.botConfig.upsert({
-    where: { key: KEYS.eloPlacementBackfillRanAt },
-    create: { key: KEYS.eloPlacementBackfillRanAt, value: new Date().toISOString() },
     update: { value: new Date().toISOString() },
   });
 }
