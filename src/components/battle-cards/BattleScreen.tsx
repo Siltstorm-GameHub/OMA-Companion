@@ -32,6 +32,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import type { BattleLogEntry, RosterEntry, UnitClass } from "@/lib/battle-engine/types";
 import { playHitSfxFor, playHealSfx, playUltimateSfx, playShieldSfx, playBuffSfx, playDebuffSfx } from "@/lib/battle-cards/sfx";
+import UltimateCutsceneOverlay from "./UltimateCutsceneOverlay";
 
 const SOUND_PREF_KEY = "battleCardsSoundOn";
 
@@ -743,84 +744,17 @@ export default function BattleScreen({ roster, log }: { roster: RosterEntry[]; l
         </motion.button>
       </div>
 
-      {/* Ultimate-Cutscene */}
+      {/* Ultimate-Cutscene — geteilte Komponente mit LiveBattleView, damit ein
+          Ultimate dort denselben klassen-eigenen Look bekommt (siehe
+          UltimateCutsceneOverlay). */}
       <AnimatePresence>
         {cutsceneActor && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
-            className="absolute inset-0 rounded-xl flex flex-col items-center justify-center gap-3 z-10 overflow-hidden"
-            style={{ background: "rgba(5,5,8,0.92)" }}
-          >
-            {/* SUPPORT: statt der harten Abdunklung ein atmender, radialer
-                Licht-Puls + aufsteigende Lichtpartikel — soll ruhig/heilend
-                wirken statt "Impact", passend zum Klassen-Motiv (Heilung/
-                Segen) statt Wucht (Tank) oder Schärfe (DPS). */}
-            {cutsceneActor.class === "SUPPORT" && (
-              <>
-                <motion.div
-                  className="absolute inset-0 pointer-events-none"
-                  style={{ background: `radial-gradient(circle at 50% 55%, ${CLASS_CONFIG.SUPPORT.color}33, transparent 65%)` }}
-                  animate={{ opacity: [0.5, 1, 0.5] }}
-                  transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
-                />
-                {Array.from({ length: 7 }).map((_, i) => (
-                  <motion.span
-                    key={i}
-                    className="absolute rounded-full pointer-events-none"
-                    style={{
-                      width: 4,
-                      height: 4,
-                      left: `${18 + i * 10}%`,
-                      bottom: "38%",
-                      background: CLASS_CONFIG.SUPPORT.color,
-                      boxShadow: `0 0 6px 1px ${CLASS_CONFIG.SUPPORT.color}`,
-                    }}
-                    initial={{ y: 0, opacity: 0 }}
-                    animate={{ y: -140, opacity: [0, 1, 0] }}
-                    transition={{ duration: 2.4, repeat: Infinity, delay: i * 0.28, ease: "easeOut" }}
-                  />
-                ))}
-              </>
-            )}
-
-            <motion.div
-              initial={{ scale: 0.85 }}
-              animate={{ scale: 1 }}
-              className="relative w-20 h-20 rounded-2xl flex items-center justify-center"
-              style={{
-                background: `${CLASS_CONFIG[cutsceneActor.class].color}22`,
-                boxShadow: `0 0 48px ${CLASS_CONFIG[cutsceneActor.class].color}80`,
-              }}
-            >
-              {cutsceneActor.class === "SUPPORT" && (
-                <motion.span
-                  className="absolute -inset-2 rounded-full pointer-events-none"
-                  style={{ border: `1.5px dashed ${CLASS_CONFIG.SUPPORT.color}aa` }}
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 7, repeat: Infinity, ease: "linear" }}
-                />
-              )}
-              {(() => {
-                const Icon = CLASS_CONFIG[cutsceneActor.class].icon;
-                return <Icon className="w-10 h-10 relative" style={{ color: CLASS_CONFIG[cutsceneActor.class].color }} />;
-              })()}
-            </motion.div>
-            <p className="text-sm text-gray-400">{cutsceneActor.name}</p>
-            <p className="text-xl font-black text-white text-center px-4">{cutsceneActor.ultimateSkillName}</p>
-            <p className="text-xs text-gray-400 text-center px-8 max-w-xs">
-              {cutsceneActor.ultimateSkillDescription}
-            </p>
-            <motion.p
-              animate={{ opacity: [0.3, 1, 0.3] }}
-              transition={{ repeat: Infinity, duration: 1.1 }}
-              className="text-[10px] text-gray-600 uppercase tracking-[0.2em] mt-2"
-            >
-              ● ● ●
-            </motion.p>
-          </motion.div>
+          <UltimateCutsceneOverlay
+            actorName={cutsceneActor.name}
+            actorClass={cutsceneActor.class}
+            skillName={cutsceneActor.ultimateSkillName}
+            description={cutsceneActor.ultimateSkillDescription}
+          />
         )}
       </AnimatePresence>
     </div>

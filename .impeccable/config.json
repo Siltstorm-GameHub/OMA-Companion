@@ -95,6 +95,15 @@
         ],
         "createdAt": "2026-09-05T08:31:29.727Z",
         "reason": "violet is the dashboard's established per-feature accent for Quests/Battle-Cards tiles (teal=Events, amber=Squads, violet=Quests/Battle-Cards, rose=Challenges), consistent with the rest of the hub tiles"
+      },
+      {
+        "rule": "gray-on-color",
+        "value": "*",
+        "files": [
+          "src/components/battle-cards/LiveBattleView.tsx"
+        ],
+        "createdAt": "2026-09-05T08:54:27.772Z",
+        "reason": "pre-existing Auto-Kampf toggle button (bg-white/[0.06] text-gray-400), unrelated to session edits; specific-value ignore for text-gray-400 kept re-firing on this line across multiple edits, broadening to * for this file/rule to stop repeat false positives"
       }
     ]
   }

@@ -53,7 +53,7 @@ export default function ClipOfMonthTile({ winners, monthLabel, finishedContestId
       style={{ borderRadius: "6px", border: "1px solid rgba(145,70,255,0.18)", boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
 
       {/* Cover art area */}
-      <div className="relative overflow-hidden" style={{ height: "150px" }}>
+      <div className="relative overflow-hidden" style={{ height: "180px" }}>
         {/* Clip-Thumbnail */}
         {winner?.thumbnailUrl ? (
           // eslint-disable-next-line @next/next/no-img-element

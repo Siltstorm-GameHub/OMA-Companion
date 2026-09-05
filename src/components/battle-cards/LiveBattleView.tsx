@@ -44,6 +44,7 @@ import ErrorNotice from "./ErrorNotice";
 import { BRAND_LOGO } from "@/lib/brand";
 import { CAMPAIGN_CHAPTER_BACKGROUND } from "@/lib/battle-cards/campaign-levels";
 import VictoryChestReveal, { type ChestPrize } from "./VictoryChestReveal";
+import UltimateCutsceneOverlay from "./UltimateCutsceneOverlay";
 
 /** Kampf-Hintergrund: die klassische Arena (arena-bg.jpg) für OMA Duels,
  *  OMA Gems (Nicht-Kampagne) und PvP — Kampagnen-Kämpfe (mode "CAMPAIGN_...") zeigen
@@ -533,6 +534,10 @@ export default function LiveBattleView({
   // eigene Zug-Handlung "einfach passieren") sichtbar: der angreifende Held
   // bekommt selbst einen kurzen Lunge/Glow-Effekt, nicht nur das getroffene Ziel.
   const [attackingUnitIds, setAttackingUnitIds] = useState<Set<string>>(new Set());
+  // Ultimate-Cutscene (siehe UltimateCutsceneOverlay) — bringt denselben
+  // klassen-eigenen Vollbild-Moment wie im Kampf-Replay auch in den Live-Kampf,
+  // statt dass ein Ultimate dort nur am Sound erkennbar ist.
+  const [ultimateCutscene, setUltimateCutscene] = useState<{ name: string; class: UnitClass; skillName: string } | null>(null);
   const lastLogLengthRef = useRef<number | null>(null);
   const [soundMuted, setSoundMutedState] = useState(isSoundMuted);
   // Splash-Art für den Lade-Zustand (siehe public/battle-cards/splash.png) —
@@ -636,8 +641,18 @@ export default function LiveBattleView({
     const TEAM_SWITCH_DELAY_MS = 750;
     const unitTeamById = new Map(snapshot.units.map((u) => [u.instanceId, u.teamId]));
     const unitClassById = new Map(snapshot.units.map((u) => [u.instanceId, u.class]));
+    const unitNameById = new Map(snapshot.units.map((u) => [u.instanceId, u.name]));
 
-    type Wave = { team: TeamId | null; effects: FloatingEffect[]; attackerIds: Set<string>; sounds: (() => void)[] };
+    type Wave = {
+      team: TeamId | null;
+      effects: FloatingEffect[];
+      attackerIds: Set<string>;
+      sounds: (() => void)[];
+      /** Ultimate-Cutscene für diese Welle (siehe UltimateCutsceneOverlay) —
+       *  bringt den vollflächigen, klassen-eigenen Look, den es bisher nur im
+       *  Kampf-Replay (BattleScreen.tsx) gab, auch in den Live-Kampf. */
+      ultimate?: { name: string; class: UnitClass; skillName: string };
+    };
     const waves: Wave[] = [{ team: null, effects: [], attackerIds: new Set(), sounds: [] }];
     const currentWave = () => waves[waves.length - 1];
 
@@ -658,6 +673,13 @@ export default function LiveBattleView({
         if (entry.actionType === "ultimate") {
           const casterClass = unitClassById.get(entry.actorId as string);
           currentWave().sounds.push(() => playUltimateSoundFor(casterClass));
+          if (casterClass) {
+            currentWave().ultimate = {
+              name: unitNameById.get(entry.actorId as string) ?? "?",
+              class: casterClass,
+              skillName: entry.skillName as string,
+            };
+          }
         }
         continue;
       }
@@ -723,6 +745,10 @@ export default function LiveBattleView({
           wave.effects.forEach((eff) => {
             window.setTimeout(() => setEffects((prev) => prev.filter((e) => e.id !== eff.id)), 1300);
           });
+        }
+        if (wave.ultimate) {
+          setUltimateCutscene(wave.ultimate);
+          window.setTimeout(() => setUltimateCutscene(null), 1700);
         }
       }, delay);
     });
@@ -886,6 +912,7 @@ export default function LiveBattleView({
             effects={effects}
             attackingUnitIds={attackingUnitIds}
             saveBoardProgress={saveBoardProgress}
+            ultimateCutscene={ultimateCutscene}
           />
         )}
       </div>
@@ -906,6 +933,7 @@ function LiveBattleBody({
   effects,
   attackingUnitIds,
   saveBoardProgress,
+  ultimateCutscene,
 }: {
   snapshot: LiveSnapshot;
   viewerId: string;
@@ -918,6 +946,7 @@ function LiveBattleBody({
   effects: FloatingEffect[];
   attackingUnitIds: Set<string>;
   saveBoardProgress: (boardSwaps: SwapMove[]) => void;
+  ultimateCutscene: { name: string; class: UnitClass; skillName: string } | null;
 }) {
   const myTeam: TeamId | null = viewerId === snapshot.playerAId ? "A" : viewerId === snapshot.playerBId ? "B" : null;
   const opponentTeam: TeamId = myTeam === "A" ? "B" : "A";
@@ -1071,6 +1100,16 @@ function LiveBattleBody({
       {snapshot.status === "finished" && snapshot.chestPrize && !chestDismissed && (
         <VictoryChestReveal prize={snapshot.chestPrize} onClose={() => setChestDismissed(true)} />
       )}
+      <AnimatePresence>
+        {ultimateCutscene && (
+          <UltimateCutsceneOverlay
+            actorName={ultimateCutscene.name}
+            actorClass={ultimateCutscene.class}
+            skillName={ultimateCutscene.skillName}
+            fixed
+          />
+        )}
+      </AnimatePresence>
       {/* Auto-Kampf + Als nächstes dran — oberhalb der Helden. Bei OMA Gems
           (boardMode) ist die klassische Zugreihenfolge für den Spieler
           bedeutungslos (alle eigenen Helden greifen ohnehin gemeinsam per

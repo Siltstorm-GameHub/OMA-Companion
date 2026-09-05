@@ -604,7 +604,7 @@ export default async function DashboardPage() {
       <div className="px-4 sm:px-6 py-5 max-w-7xl mx-auto space-y-5 relative">
 
         {/* ── Hub-Kacheln: FACEIT-style ─────────────────────────────── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
 
           {/* Events Hub */}
           <Link href="/events"
@@ -612,7 +612,7 @@ export default async function DashboardPage() {
             style={{ borderRadius: "6px", border: "1px solid rgba(20,184,166,0.12)", boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
 
             {/* Cover art area */}
-            <div className="relative overflow-hidden" style={{ height: "200px" }}>
+            <div className="relative overflow-hidden" style={{ height: "240px" }}>
               {/* Game cover background */}
               {nextEvent?.game ? (
                 <GameCover
@@ -709,7 +709,7 @@ export default async function DashboardPage() {
           <Link href="/squads"
             className="surface animate-slide-up stagger-2 scan-on-load group block overflow-hidden relative transition-transform duration-200 hover:-translate-y-1 active:scale-[0.99]"
             style={{ borderRadius: "6px", border: "1px solid rgba(245,158,11,0.16)", boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
-            <div className="relative overflow-hidden" style={{ height: "150px" }}>
+            <div className="relative overflow-hidden" style={{ height: "180px" }}>
               {featuredSquadCover ? (
                 <>
                   {/* Echtes Squad-Cover in voller Farbe — nur der Verlauf unten sorgt für Textlesbarkeit,
@@ -811,7 +811,7 @@ export default async function DashboardPage() {
           <Link href="/battle-cards"
             className="surface animate-slide-up stagger-2 scan-on-load group block overflow-hidden relative transition-transform duration-200 hover:-translate-y-1 active:scale-[0.99]"
             style={{ borderRadius: "6px", border: "1px solid rgba(139,92,246,0.16)", boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
-            <div className="relative overflow-hidden" style={{ height: "150px" }}>
+            <div className="relative overflow-hidden" style={{ height: "180px" }}>
               <Image src="/battle-cards/cover.jpg" alt="" fill sizes="(min-width: 640px) 50vw, 100vw" quality={90}
                 className="object-cover transition-transform duration-700 group-hover:scale-110"
                 style={{ objectPosition: "center 8%" }} />
