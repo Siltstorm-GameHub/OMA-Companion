@@ -1,16 +1,32 @@
 // ============================================
 // Kampf-Sounds — OMA Battle Cards
 // ============================================
-// Rein prozedural über die Web Audio API erzeugte Töne (kurze Sinus-/Sägezahn-
-// "Blips") — bewusst KEINE Audio-Dateien, da für dieses Projekt keine
-// lizenzierten/produzierten Sound-Assets verfügbar sind. Passt zum verspielten
-// "Gaming-Kultur"-Ton der Kampagne (siehe campaign-monsters.ts) und braucht
-// keine zusätzlichen Dateien im Repo. Ein gemeinsamer AudioContext wird lazy
-// beim ersten Ton erzeugt/fortgesetzt — Browser verlangen dafür eine
-// vorausgehende Nutzer-Geste (ein Klick/Tap reicht, danach funktionieren auch
-// programmatisch ausgelöste Folge-Töne, z.B. aus Snapshot-Poll-Effekten).
+// Größtenteils weiterhin prozedural über die Web Audio API erzeugte Töne
+// (kurze Sinus-/Sägezahn-"Blips") — braucht keine zusätzlichen Dateien im
+// Repo. Die Tank-/DPS-Treffer-Archetypen (playDamageSoundFor) nutzen
+// zusätzlich echte Sample-Foley (Kenney "Impact Sounds", CC0, siehe
+// public/battle-cards/sfx/README.md), da ein reiner Oscillator-Beep die
+// dumpfe Wucht bzw. den scharfen Metall-Transient nicht überzeugend trifft.
+// Ein gemeinsamer AudioContext wird lazy beim ersten Ton erzeugt/fortgesetzt
+// — Browser verlangen dafür eine vorausgehende Nutzer-Geste (ein Klick/Tap
+// reicht, danach funktionieren auch programmatisch ausgelöste Folge-Töne,
+// z.B. aus Snapshot-Poll-Effekten).
 
 import type { UnitClass } from "@/lib/battle-engine/types";
+
+/** Spielt eine kurze Sample-Datei ab — eigenes HTMLAudioElement pro Aufruf,
+ *  damit sich überlappende Treffer (mehrere Kaskaden-Hits bei OMA Gems) nicht
+ *  gegenseitig abschneiden. Respektiert denselben Mute-Schalter wie beep(). */
+function playSample(url: string, volume = 0.6): void {
+  if (isSoundMuted() || typeof window === "undefined") return;
+  try {
+    const audio = new Audio(url);
+    audio.volume = Math.min(1, Math.max(0, volume));
+    audio.play().catch(() => {});
+  } catch {
+    // s.o.
+  }
+}
 
 let ctx: AudioContext | null = null;
 
@@ -147,15 +163,13 @@ function noiseBurst(durationMs: number, gain: number, filterFreq: number, filter
  *  Gegenstück derselben Archetyp-Matrix). */
 export function playDamageSoundFor(casterClass: UnitClass | undefined, crit: boolean): void {
   if (casterClass === "TANK") {
-    noiseBurst(160, crit ? 0.16 : 0.11, 220, "lowpass");
-    beep(90, crit ? 180 : 130, "sine", crit ? 0.12 : 0.09, 6);
-    if (crit) beep(60, 220, "sine", 0.08, 40);
+    playSample(crit ? "/battle-cards/sfx/tank-hit-crit.ogg" : "/battle-cards/sfx/tank-hit.ogg", crit ? 0.8 : 0.65);
+    beep(70, crit ? 180 : 130, "sine", crit ? 0.12 : 0.08, 6);
     return;
   }
   if (casterClass === "DAMAGE_DEALER") {
-    noiseBurst(70, crit ? 0.12 : 0.08, 4200, "highpass");
-    beep(crit ? 700 : 520, 80, "square", crit ? 0.1 : 0.07, 6);
-    if (crit) beep(1000, 100, "square", 0.06, 50);
+    playSample(crit ? "/battle-cards/sfx/dps-hit-crit.ogg" : "/battle-cards/sfx/dps-hit.ogg", crit ? 0.7 : 0.55);
+    beep(crit ? 1200 : 900, 60, "square", crit ? 0.08 : 0.05, 6);
     return;
   }
   if (casterClass === "SUPPORT") {

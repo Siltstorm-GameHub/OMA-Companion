@@ -30,13 +30,18 @@
  * — die Beleuchtung kommt komplett aus `RoomLighting` hier im Code.
  */
 
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Html, useGLTF, useTexture, Text } from "@react-three/drei";
+import { Html, useGLTF, useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import RankedAvatar from "@/components/RankedAvatar";
 import { MonitorScreenContent, TrophyPanel, ItemsPanel, JobsPanel, MailPanel, WanderpokalePanel, EventPokalePanel, type MancavePanel } from "./MancaveSharedUI";
-import type { MancaveData } from "./mancave-data";
+import type { MancaveData, MancavePokal } from "./mancave-data";
+import { WANDERPOKAL_MODELS, WANDERPOKAL_MODEL_DEFAULT, eventPokalModelUrl } from "./mancave-trophy-models";
+import { CAMERA_VIEWS, easeInOutCubic, VIEW_TRANSITION_MS, type CameraView } from "./mancave-camera-views";
+import { useSwipeNavigation } from "./useSwipeNavigation";
+import { MancaveCameraNav } from "./MancaveCameraNav";
+import { TrophyDetailModal, BadgeDetailModal } from "./MancaveDetailModals";
 
 const ROOM_MODEL_URL = "/models/mancave_room.glb";
 useGLTF.preload(ROOM_MODEL_URL);
@@ -477,10 +482,22 @@ function abzeichenColor(key: string): string {
   return ABZEICHEN_COLORS[hash % ABZEICHEN_COLORS.length];
 }
 
-function AbzeichenPin({ badgeKey, name, position }: { badgeKey: string; name: string; position: THREE.Vector3 }) {
+function AbzeichenPin({ badgeKey, name, position, onHover, onSelect }: {
+  badgeKey: string; name: string; position: THREE.Vector3;
+  onHover: (label: string | null, clientX: number, clientY: number) => void;
+  onSelect: (badgeKey: string) => void;
+}) {
   const color = useMemo(() => abzeichenColor(badgeKey), [badgeKey]);
   return (
-    <group position={position}>
+    // Permanent sichtbares <Text>-Namensschild entfernt (User-Wunsch: nur
+    // noch Hover-Tooltip, konsistent mit den Pokalen) — der Name erscheint
+    // jetzt über dasselbe mausfolgende 2D-Tooltip (`hoverTooltip`-State in
+    // der Hauptkomponente), das auch die Pokal-Hover-Fälle nutzen.
+    <group position={position}
+      onPointerOver={e => { e.stopPropagation(); onHover(name, e.clientX, e.clientY); }}
+      onPointerMove={e => { e.stopPropagation(); onHover(name, e.clientX, e.clientY); }}
+      onPointerOut={e => { e.stopPropagation(); onHover(null, e.clientX, e.clientY); }}
+      onClick={e => { e.stopPropagation(); onSelect(badgeKey); }}>
       {/* detail=0 (nicht 1!) ist die eckige Basis-Ikosaeder-Form mit nur 20
           Facetten, genau wie in der per Blender geprüften Vorschau
           (subdivisions=1 dort entspricht three.js' detail=0) — detail=1
@@ -492,12 +509,6 @@ function AbzeichenPin({ badgeKey, name, position }: { badgeKey: string; name: st
         <icosahedronGeometry args={[1, 0]} />
         <meshStandardMaterial color={color} roughness={0.55} metalness={0.1} emissive={color} emissiveIntensity={0.12} flatShading />
       </mesh>
-      {/* 1.3cm Schriftgröße war im Raum praktisch unlesbar (~1.7m
-          Kameraabstand zur Vitrine) — deutlich vergrößert. */}
-      <Text position={[0, -0.045, 0]} fontSize={0.022} color="#fde68a" anchorX="center" anchorY="top"
-        maxWidth={0.14} textAlign="center" outlineWidth={0.0018} outlineColor="#050810">
-        {name}
-      </Text>
     </group>
   );
 }
@@ -539,16 +550,6 @@ function AbzeichenPin({ badgeKey, name, position }: { badgeKey: string; name: st
  * zeigt statt in Z-Richtung) — der Tiefen-Offset (~0, war Welt-Z beim
  * ersten Regal) wird zum neuen, praktisch konstanten X-Offset.
  */
-const WANDERPOKAL_MODELS: Record<string, { url: string; fix: [number, number, number]; scale: number }> = {
-  racing:     { url: "/models/wanderpokal_rennlegende.glb",   fix: [0, 0, 0], scale: 0.6294 },
-  community:  { url: "/models/wanderpokal_communitystar.glb", fix: [0.0062, -6.371, 0.0656], scale: 0.0471 },
-  arcade:     { url: "/models/wanderpokal_arcade.glb",        fix: [0, 5.5317, -0.0036], scale: 0.007348 },
-  sport:      { url: "/models/wanderpokal_sport.glb",         fix: [0, 0, 0], scale: 0.06491 },
-  beat_em_up: { url: "/models/wanderpokal_beat_em_up.glb",    fix: [0, 4.9633, 0.009], scale: 0.018013 },
-  special:    { url: "/models/wanderpokal_special.glb",       fix: [1.3144, -0.445, 6.2088], scale: 0.3342 },
-};
-const WANDERPOKAL_MODEL_DEFAULT = { url: "/models/wanderpokal_generic.glb", fix: [0, 0, 0] as [number, number, number], scale: 0.01637 };
-
 const WANDERPOKAL_SLOTS: Record<string, THREE.Vector3> = {
   // ── Regal 1 (Kategorie-Wanderpokale, Zentrum X=0.57) ──────────────────
   // Reihe 1 (oben, 1 Fach, Welt-Y≈2.327)
@@ -573,12 +574,20 @@ const WANDERPOKAL_SLOTS: Record<string, THREE.Vector3> = {
   shooter:    new THREE.Vector3(-0.746, 1.595, 0.887),
 };
 
-function WanderpokalTrophy({ scopeValue, position }: { scopeValue: string; position: THREE.Vector3 }) {
+function WanderpokalTrophy({ scopeValue, title, position, onHover, onSelect }: {
+  scopeValue: string; title: string; position: THREE.Vector3;
+  onHover: (label: string | null, clientX: number, clientY: number) => void;
+  onSelect: (scopeValue: string) => void;
+}) {
   const cfg = WANDERPOKAL_MODELS[scopeValue] ?? WANDERPOKAL_MODEL_DEFAULT;
   const { scene } = useGLTF(cfg.url);
   const cloned = useMemo(() => scene.clone(true), [scene]);
   return (
-    <group position={position}>
+    <group position={position}
+      onPointerOver={e => { e.stopPropagation(); onHover(title, e.clientX, e.clientY); }}
+      onPointerMove={e => { e.stopPropagation(); onHover(title, e.clientX, e.clientY); }}
+      onPointerOut={e => { e.stopPropagation(); onHover(null, e.clientX, e.clientY); }}
+      onClick={e => { e.stopPropagation(); onSelect(scopeValue); }}>
       <group scale={cfg.scale}>
         <primitive object={cloned} position={cfg.fix} />
       </group>
@@ -646,10 +655,15 @@ const EVENT_POKAL_CATEGORY_SLOTS: Record<string, { z: number; y: number }[]> = {
 };
 const EVENT_POKAL_MAX_VISIBLE = EVENT_POKAL_STACK_X.length * 2;
 
-function EventPokalStack({ category, count }: { category: string; count: number }) {
+function EventPokalStack({ category, pokals, onHover, onSelect }: {
+  category: string; pokals: MancavePokal[];
+  onHover: (label: string | null, clientX: number, clientY: number) => void;
+  onSelect: (pokalId: string) => void;
+}) {
   const slots = EVENT_POKAL_CATEGORY_SLOTS[category];
-  const url = `/models/event_pokal_${category}.glb`;
+  const url = eventPokalModelUrl(category);
   const { scene } = useGLTF(url);
+  const count = pokals.length;
   const visible = Math.min(count, EVENT_POKAL_MAX_VISIBLE);
   // Jede sichtbare Kopie braucht ein eigenes Object3D (kann nicht dieselbe
   // Instanz an mehreren Positionen im Szenengraph teilen) — ein einzelnes
@@ -664,13 +678,24 @@ function EventPokalStack({ category, count }: { category: string; count: number 
   const last = positions[visible - 1];
   return (
     <>
-      {positions.slice(0, visible).map((pos, i) => (
-        <group key={i} position={[pos[0], pos[1], pos[2]]}>
-          <group scale={EVENT_POKAL_SCALE}>
-            <primitive object={clones[i]} position={EVENT_POKAL_FIX} />
+      {/* Jeder gestapelte Pokal bekommt jetzt seine EIGENE Identität (der
+          zugehörige MancavePokal aus der gefilterten Kategorie-Liste) statt
+          nur eine Anzahl — Voraussetzung für Einzel-Hover/-Klick statt des
+          alten "Klick aufs Regal -> Gesamtliste"-Hotspots. */}
+      {positions.slice(0, visible).map((pos, i) => {
+        const pokal = pokals[i];
+        return (
+          <group key={pokal.id} position={[pos[0], pos[1], pos[2]]}
+            onPointerOver={e => { e.stopPropagation(); onHover(pokal.title, e.clientX, e.clientY); }}
+            onPointerMove={e => { e.stopPropagation(); onHover(pokal.title, e.clientX, e.clientY); }}
+            onPointerOut={e => { e.stopPropagation(); onHover(null, e.clientX, e.clientY); }}
+            onClick={e => { e.stopPropagation(); onSelect(pokal.id); }}>
+            <group scale={EVENT_POKAL_SCALE}>
+              <primitive object={clones[i]} position={EVENT_POKAL_FIX} />
+            </group>
           </group>
-        </group>
-      ))}
+        );
+      })}
       {count > visible && (
         <Html position={[last[0] + 0.06, last[1] + 0.05, last[2]]} center>
           <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold text-amber-200"
@@ -682,98 +707,14 @@ function EventPokalStack({ category, count }: { category: string; count: number 
     </>
   );
 }
-for (const cat of Object.keys(EVENT_POKAL_CATEGORY_SLOTS)) useGLTF.preload(`/models/event_pokal_${cat}.glb`);
+for (const cat of Object.keys(EVENT_POKAL_CATEGORY_SLOTS)) useGLTF.preload(eventPokalModelUrl(cat));
 
-/**
- * Unsichtbare Klick-/Hover-Fläche für die Pokal-Möbel (Regale + Vitrine) —
- * User-Wunsch: keine permanent sichtbaren Buttons mehr, stattdessen ein
- * auffälliger Hover-Effekt (halbtransparente Glow-Box über dem echten
- * Möbel) plus ein Schriftzug, der der Maus folgt (nicht 3D-verankert im
- * Raum, sondern echtes 2D-Tooltip über `clientX`/`clientY`, siehe
- * `onHoverChange` in MancaveScene3D — ein <Html center>-Label würde nur an
- * EINER festen Stelle im Raum kleben, nicht mit dem Cursor mitwandern).
- * Die Box selbst ist die Klick-/Hover-Zielfläche (deutlich einfacher &
- * zuverlässiger zu treffen als die echte, verschachtelte Fach-Geometrie).
- */
-// Radial-Gradient-Textur fürs Glow-Sprite, einmalig per Canvas erzeugt und
-// gecacht (statt pro Hotspot neu zu bauen) — RoundedBox-Stapel vorher hatten
-// trotz Verrundung an den GEOMETRIE-Kanten einen harten Opazitäts-Sprung
-// (User-Feedback: "noch zu kantig"), weil die Fläche selbst gleichmäßig
-// eingefärbt war. Ein kamera-zugewandtes Sprite mit echtem Radialverlauf
-// (weiß -> amber -> transparent) gibt einen wirklich weichen Rand, ganz
-// ohne Postprocessing-Bloom-Setup. `document` nur lazy beim ersten Hover
-// anfassen, nicht auf Modulebene — läuft sonst beim SSR-Rendern der
-// Client-Komponente ins Leere (kein `document` auf dem Server).
-let glowTexture: THREE.Texture | null = null;
-function getGlowTexture(): THREE.Texture | null {
-  if (glowTexture) return glowTexture;
-  if (typeof document === "undefined") return null;
-  const size = 256;
-  const canvas = document.createElement("canvas");
-  canvas.width = size; canvas.height = size;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return null;
-  const gradient = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
-  gradient.addColorStop(0, "rgba(255,255,255,0.95)");
-  gradient.addColorStop(0.3, "rgba(251,191,36,0.85)");
-  gradient.addColorStop(0.65, "rgba(245,158,11,0.32)");
-  gradient.addColorStop(1, "rgba(245,158,11,0)");
-  ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, size, size);
-  glowTexture = new THREE.CanvasTexture(canvas);
-  return glowTexture;
-}
-
-/** Sanft pulsierendes, kamera-zugewandtes Glow-Sprite (weicher Radialverlauf). */
-function GlowSprite({ size }: { size: [number, number, number] }) {
-  const spriteRef = useRef<THREE.Sprite>(null);
-  const tex = useMemo(() => getGlowTexture(), []);
-  // `sprite.scale` ist ein Weltmeter-Maß, keine relative Größe — der erste
-  // Versuch (Max aller 3 Seiten * 1.35) machte den Glow bei der Vitrine
-  // (0.9m Tiefe im Hitbox-Maß) über 1.2m breit, sichtbar riesig gegenüber
-  // der ~0.5m großen Vitrine (User-Feedback: "Hover-Effekt nicht gelungen").
-  // Jetzt nur Breite/Höhe gemittelt (Tiefe fließt bewusst nicht ein — die
-  // Hitbox ist oft tiefer als das sichtbare Möbel breit/hoch ist) und
-  // deutlich kleinerer Faktor, damit der Glow ungefähr die Silhouette des
-  // Möbels trifft statt sie zu verschlucken.
-  const baseScale = ((size[0] + size[1]) / 2) * 0.6;
-  useFrame(({ clock }) => {
-    if (!spriteRef.current) return;
-    const wave = Math.sin(clock.elapsedTime * 2.2);
-    const s = baseScale * (1 + 0.09 * wave);
-    spriteRef.current.scale.set(s, s, 1);
-    const mat = spriteRef.current.material as THREE.SpriteMaterial;
-    mat.opacity = 0.62 + 0.18 * wave;
-  });
-  if (!tex) return null;
-  return (
-    <sprite ref={spriteRef} scale={[baseScale, baseScale, 1]}>
-      <spriteMaterial map={tex} transparent depthWrite={false} blending={THREE.AdditiveBlending} />
-    </sprite>
-  );
-}
-
-function ShelfHotspot({ label, center, size, onOpen, onHoverChange }: {
-  label: string; center: [number, number, number]; size: [number, number, number];
-  onOpen: () => void; onHoverChange: (label: string | null, clientX: number, clientY: number) => void;
-}) {
-  const [hovered, setHovered] = useState(false);
-  return (
-    <group position={center}>
-      {/* Unsichtbare Box als eigentliche Klick-/Hover-Zielfläche, komplett
-          getrennt vom rein visuellen Glow-Sprite unten. */}
-      <mesh
-        onPointerOver={e => { e.stopPropagation(); setHovered(true); onHoverChange(label, e.clientX, e.clientY); }}
-        onPointerMove={e => { e.stopPropagation(); onHoverChange(label, e.clientX, e.clientY); }}
-        onPointerOut={e => { e.stopPropagation(); setHovered(false); onHoverChange(null, e.clientX, e.clientY); }}
-        onClick={e => { e.stopPropagation(); onOpen(); }}>
-        <boxGeometry args={size} />
-        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
-      </mesh>
-      {hovered && <GlowSprite size={size} />}
-    </group>
-  );
-}
+// Frühere unsichtbare Klick-/Hover-Fläche fürs GESAMTE Regal/Vitrine
+// (`ShelfHotspot` + ihr `GlowSprite`-Glüheffekt, öffnete ein Listen-Popup mit
+// ALLEN Pokalen/Abzeichen eines Möbels) entfernt — ersetzt durch Einzel-
+// Hover/Klick direkt an jedem Pokal/Abzeichen (`WanderpokalTrophy`,
+// `EventPokalStack`, `AbzeichenPin` weiter oben), die dasselbe mausfolgende
+// 2D-Tooltip (`hoverTooltip`-State in MancaveScene3D) wiederverwenden.
 
 /**
  * Zusatzobjekte (Stufe 0-4, siehe mancave-items.ts EXTRA_ITEMS + "teppich"-
@@ -1390,142 +1331,110 @@ function RoomLighting() {
   );
 }
 
-// Wie weit sich das Auge beim Umschauen aus der Sitzposition bewegen darf —
-// simuliert ein leichtes Kopf-Neigen/-Drehen (wie eine echte Person, die im
-// Stuhl sitzt und den Kopf wendet), NICHT freies Herumlaufen. sin() statt
-// linear in yaw/pitch-Delta: bleibt bei jedem Drehwinkel bounded (auch nach
-// mehreren vollen Umdrehungen), statt unbegrenzt mit dem Drehwinkel zu wachsen.
-const PARALLAX_AMOUNT = 0.055;
-
 /**
- * Freies Umschauen per Drag — Kamera bleibt am festen Sitzplatz, nur die
- * Blickrichtung dreht sich, unbegrenzt in alle Richtungen.
+ * Ersetzt das frühere freie Umschauen per Drag (`LookAroundRig`, samt
+ * `PARALLAX_AMOUNT`-Bewegungsparallaxe und Mausrad-FOV-Zoom — komplett
+ * entfernt) durch sanfte Übergänge zwischen den 4 festen `CameraView`s
+ * (siehe mancave-camera-views.ts): Position per Lerp, Blickrichtung per
+ * Quaternion-Slerp (aus `Matrix4.lookAt(eye, lookAt, up)` gewonnen, damit
+ * KEIN Gimbal-Lock/Euler-Interpolationsartefakt bei den teils sehr
+ * unterschiedlichen Blickrichtungen der 4 Ansichten auftritt), FOV per
+ * linearem Lerp — reines `useFrame`, keine Animations-Bibliothek nötig.
  *
- * Zusätzlich echte (wenn auch kleine) Bewegungsparallaxe: die Augenposition
- * verschiebt sich minimal (± PARALLAX_AMOUNT) mit der aktuellen Blickrichtung
- * relativ zur Ausgangsausrichtung — reine Rotation um einen fixen Punkt kann
- * NIE Parallaxe erzeugen (das bräuchte echte Translation der Kamera), diese
- * kleine gekoppelte Verschiebung schon: nahe Objekte (Monitor, PC) wandern
- * beim Umschauen jetzt sichtbar anders als ferne (Fenster-Ausblick).
- *
- * Die Pointer-Listener hängen bewusst am `<canvas>`-Element (`gl.domElement`),
- * NICHT am äußeren Container-Div: die Html-Hotspot-Buttons (Ausbau/Gadgets/
- * Pokale) werden von drei's `<Html>` als GESCHWISTER-Elemente des Canvas in
- * denselben Container gerendert. Lägen die Listener am Container, würde JEDER
- * Klick — auch auf einen Button — dort `pointerdown` auslösen und
- * `setPointerCapture` aufrufen; laut Pointer-Events-Spec wird dadurch auch
- * das synthetische `click`-Event auf das capture-haltende Element umgeleitet,
- * sodass der Button-`onClick` nie feuert (genau der Bug, der hier gemeldet
- * wurde — Ausbau/Gadgets/Pokale reagierten auf nichts). Am Canvas selbst
- * hängend bekommen die Buttons diese Events gar nicht erst ab.
+ * Wechselt der Ziel-View MITTEN in einer laufenden Transition (schneller
+ * Doppelklick auf die Pfeile), wird NICHT neu angehängt/queued: der Effekt
+ * unten greift den aktuell interpolierten Kamera-Zustand (Position/
+ * Quaternion/FOV in dem Moment) als neuen Startpunkt ab — dadurch bleibt der
+ * Übergang immer glatt, ganz gleich wie oft man während einer Animation
+ * weiterklickt.
  */
-// Mausrad-Zoom: R3F/three.js Default-FOV ist 75° (kein `fov`-Prop gesetzt).
-// Zoomen per FOV statt Kamera-Translation — bleibt konsistent mit dem
-// "fixer Sitzplatz, nur Drehen"-Designprinzip hier (EYE bewegt sich nie,
-// siehe PARALLAX_AMOUNT-Kommentar), und funktioniert unabhängig davon, wie
-// nah/fern das gerade angeschaute Objekt ist (anders als ein Kamera-Dolly,
-// der beim Reinzoomen in die Geometrie hineinfahren könnte).
-const FOV_DEFAULT = 75;
-const FOV_MIN = 25; // stärkster Zoom (z.B. um Text auf dem Monitor zu lesen)
-const FOV_MAX = FOV_DEFAULT;
-
-function LookAroundRig() {
-  const { camera, gl } = useThree();
-  const yaw = useRef(0);
-  const pitch = useRef(0);
-  const baseYaw = useRef(0);
-  const basePitch = useRef(0);
+function CameraTransitionRig({ view }: { view: CameraView }) {
+  const { camera } = useThree();
+  const startPos = useRef(new THREE.Vector3());
+  const startQuat = useRef(new THREE.Quaternion());
+  const startFov = useRef(view.fov);
+  const startTime = useRef(0);
+  const prevViewId = useRef<string | null>(null);
   const initialized = useRef(false);
-  const dragging = useRef(false);
-  const last = useRef({ x: 0, y: 0 });
-  const fov = useRef(FOV_DEFAULT);
-  const scratchRight = useRef(new THREE.Vector3());
-  const scratchPos = useRef(new THREE.Vector3());
+  const targetQuat = useRef(new THREE.Quaternion());
+  const lookMatrix = useRef(new THREE.Matrix4());
+  const worldUp = useRef(new THREE.Vector3(0, 1, 0));
 
   /* eslint-disable react-hooks/immutability -- Three.js-Objekt (R3F `camera`),
-     keine React-Hook-Semantik: direktes Mutieren pro Frame ist der von R3F
-     selbst dokumentierte Weg, dieselbe Ausnahme wie in RoomStage3D.tsx. */
+     keine React-Hook-Semantik: direktes Mutieren ist der von R3F selbst
+     dokumentierte Weg, dieselbe Ausnahme wie zuvor in LookAroundRig. */
   useEffect(() => {
-    camera.position.copy(EYE);
-    camera.up.set(0, 1, 0);
-    camera.lookAt(LOOK_TARGET);
-    const euler = new THREE.Euler().setFromQuaternion(camera.quaternion, "YXZ");
-    yaw.current = euler.y;
-    pitch.current = euler.x;
-    baseYaw.current = euler.y;
-    basePitch.current = euler.x;
-    camera.rotation.order = "YXZ";
-    initialized.current = true;
-  }, [camera]);
+    if (!initialized.current) {
+      // Erster Mount: direkt auf die Start-Ansicht springen, keine Animation
+      // von "irgendwo" aus nötig.
+      camera.up.copy(worldUp.current);
+      camera.position.copy(view.eye);
+      lookMatrix.current.lookAt(view.eye, view.lookAt, worldUp.current);
+      camera.quaternion.setFromRotationMatrix(lookMatrix.current);
+      if (camera instanceof THREE.PerspectiveCamera) {
+        camera.fov = view.fov;
+        camera.updateProjectionMatrix();
+      }
+      // Start=Ziel setzen (statt nur die Kamera direkt zu setzen): ohne das
+      // würde useFrame gleich danach mit einem winzigen `t` (elapsed seit
+      // performance.now()=0) von einem nie initialisierten Null-Vektor aus
+      // in Richtung `view.eye` zu interpolieren beginnen und die gerade
+      // gesetzte Position sofort wieder verwerfen.
+      startPos.current.copy(view.eye);
+      startQuat.current.copy(camera.quaternion);
+      startFov.current = view.fov;
+      startTime.current = performance.now() - VIEW_TRANSITION_MS;
+      initialized.current = true;
+      prevViewId.current = view.id;
+      return;
+    }
+    if (prevViewId.current === view.id) return;
+    // Aktuellen (ggf. noch mitten in der vorigen Transition interpolierten)
+    // Kamera-Zustand als neuen Startpunkt übernehmen — kein Queueing.
+    startPos.current.copy(camera.position);
+    startQuat.current.copy(camera.quaternion);
+    startFov.current = camera instanceof THREE.PerspectiveCamera ? camera.fov : view.fov;
+    startTime.current = performance.now();
+    prevViewId.current = view.id;
+  }, [view, camera]);
 
   useFrame(() => {
-    if (!initialized.current) return;
-    if (camera instanceof THREE.PerspectiveCamera && camera.fov !== fov.current) {
-      camera.fov = fov.current;
+    if (!initialized.current || prevViewId.current !== view.id) return;
+    const elapsed = performance.now() - startTime.current;
+    const t = Math.min(1, elapsed / VIEW_TRANSITION_MS);
+    const eased = easeInOutCubic(t);
+    camera.position.lerpVectors(startPos.current, view.eye, eased);
+    lookMatrix.current.lookAt(view.eye, view.lookAt, worldUp.current);
+    targetQuat.current.setFromRotationMatrix(lookMatrix.current);
+    camera.quaternion.slerpQuaternions(startQuat.current, targetQuat.current, eased);
+    if (camera instanceof THREE.PerspectiveCamera) {
+      camera.fov = startFov.current + (view.fov - startFov.current) * eased;
       camera.updateProjectionMatrix();
     }
-    camera.rotation.set(pitch.current, yaw.current, 0);
-    // Rechts-Vektor der AKTUELLEN Blickrichtung (nach dem obigen rotation.set
-    // steht camera.quaternion schon auf dem neuen Stand — Object3D hält
-    // rotation/quaternion automatisch synchron).
-    const right = scratchRight.current.set(1, 0, 0).applyQuaternion(camera.quaternion);
-    const yawOffset = Math.sin(yaw.current - baseYaw.current) * PARALLAX_AMOUNT;
-    const pitchOffset = Math.sin(pitch.current - basePitch.current) * PARALLAX_AMOUNT * 0.6;
-    const pos = scratchPos.current.copy(EYE).addScaledVector(right, yawOffset);
-    pos.y -= pitchOffset;
-    camera.position.copy(pos);
   });
-  /* eslint-enable react-hooks/immutability */
-
-  /* eslint-disable react-hooks/immutability -- gl.domElement ist das reale
-     <canvas>-DOM-Element (kein React-verwalteter Zustand); sein .style direkt
-     zu setzen ist normales DOM-API-Verhalten, keine Hook-Wert-Mutation. */
-  useEffect(() => {
-    const el = gl.domElement;
-    // touch-action:none NUR hier am Canvas, nicht am äußeren Container (siehe
-    // dessen Kommentar unten) — sonst schränkt die CSS-Spec-Regel "Kind-
-    // touch-action ist die Schnittmenge mit allen Vorfahren" auch das
-    // Scrollen im Ausbau/Gadgets/Pokale-Popup ein, das ja ein Nachfahre
-    // desselben Containers ist (genau der gemeldete "nicht scrollbar"-Bug).
-    const prevTouchAction = el.style.touchAction;
-    el.style.touchAction = "none";
-    const onDown = (e: PointerEvent) => { dragging.current = true; last.current = { x: e.clientX, y: e.clientY }; el.setPointerCapture(e.pointerId); };
-    const onMove = (e: PointerEvent) => {
-      if (!dragging.current) return;
-      const dx = e.clientX - last.current.x, dy = e.clientY - last.current.y;
-      last.current = { x: e.clientX, y: e.clientY };
-      yaw.current -= dx * 0.0045;
-      pitch.current = Math.min(0.9, Math.max(-0.9, pitch.current - dy * 0.0045));
-    };
-    const onUp = () => { dragging.current = false; };
-    // Mausrad zoomt rein/raus (FOV-basiert, siehe fov-Ref oben). passive:false
-    // + preventDefault, sonst scrollt die Seite dahinter mit (Canvas ist kein
-    // natives Scroll-Element, bekäme das Wheel-Event sonst nur zur Kenntnis).
-    const onWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      fov.current = Math.min(FOV_MAX, Math.max(FOV_MIN, fov.current + e.deltaY * 0.04));
-    };
-    el.addEventListener("pointerdown", onDown);
-    el.addEventListener("pointermove", onMove);
-    el.addEventListener("pointerup", onUp);
-    el.addEventListener("pointercancel", onUp);
-    el.addEventListener("wheel", onWheel, { passive: false });
-    return () => {
-      el.removeEventListener("pointerdown", onDown);
-      el.removeEventListener("pointermove", onMove);
-      el.removeEventListener("pointerup", onUp);
-      el.removeEventListener("pointercancel", onUp);
-      el.removeEventListener("wheel", onWheel);
-      el.style.touchAction = prevTouchAction;
-    };
-  }, [gl]);
   /* eslint-enable react-hooks/immutability */
 
   return null;
 }
 
+/** Discriminated Union für den Einzel-Item-Detail-Zustand (ersetzt das alte
+ * "Klick auf Regal -> Gesamtliste"-Popup für Wanderpokale/Event-Pokale/
+ * Abzeichen) — `panel` (siehe oben) bleibt daneben unverändert für alles, was
+ * NICHT diese drei Fälle betrifft (aktuell nichts mehr in dieser Komponente,
+ * da die einzigen `setPanel`-Aufrufer die entfernten `ShelfHotspot`s waren —
+ * bewusst nicht entfernt, damit ein künftiger Hotspot für z.B. Ausbau/Jobs
+ * direkt am Schreibtisch weiter funktionieren würde, ohne den Monitor-Dock
+ * anzufassen, siehe MonitorScreenContent). */
+type DetailItem =
+  | { kind: "wanderpokal"; scopeValue: string }
+  | { kind: "eventpokal"; pokalId: string }
+  | { kind: "badge"; badgeKey: string }
+  | null;
+
 export default function MancaveScene3D({ data }: { data: MancaveData }) {
   const [panel, setPanel] = useState<MancavePanel>(null);
+  const [detailItem, setDetailItem] = useState<DetailItem>(null);
+  const [activeViewIndex, setActiveViewIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const [hoverTooltip, setHoverTooltip] = useState<{ label: string; x: number; y: number } | null>(null);
   const handleHover = (label: string | null, clientX: number, clientY: number) => {
@@ -1534,10 +1443,46 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
     setHoverTooltip({ label, x: clientX - (rect?.left ?? 0), y: clientY - (rect?.top ?? 0) });
   };
 
-  const pokaleByCategory = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const p of data.pokale) counts[p.category] = (counts[p.category] ?? 0) + 1;
-    return counts;
+  const activeView = CAMERA_VIEWS[activeViewIndex];
+  const navigateView = useCallback((delta: 1 | -1) => {
+    setActiveViewIndex(i => (i + delta + CAMERA_VIEWS.length) % CAMERA_VIEWS.length);
+  }, []);
+  const swipeLeft = useCallback(() => navigateView(1), [navigateView]);
+  const swipeRight = useCallback(() => navigateView(-1), [navigateView]);
+  useSwipeNavigation(containerRef, { onSwipeLeft: swipeLeft, onSwipeRight: swipeRight });
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "ArrowLeft") navigateView(-1);
+      else if (e.key === "ArrowRight") navigateView(1);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [navigateView]);
+
+  // Nach Scope-Value bzw. Pokal-Id, um beim Klick auf einen einzelnen Pokal
+  // schnell das passende Detail-Objekt fürs Modal nachzuschlagen (siehe
+  // detailItem-Rendering unten), statt bei jedem Klick erneut zu filtern.
+  const wanderpokalStatusByScope = useMemo(() => {
+    const map: Record<string, MancaveData["wanderpokalStatus"][number]> = {};
+    for (const s of data.wanderpokalStatus) map[s.scopeValue] = s;
+    return map;
+  }, [data.wanderpokalStatus]);
+  const pokalById = useMemo(() => {
+    const map: Record<string, MancavePokal> = {};
+    for (const p of data.pokale) map[p.id] = p;
+    return map;
+  }, [data.pokale]);
+  const badgeByKey = useMemo(() => {
+    const map: Record<string, MancaveData["badges"][number]> = {};
+    for (const b of data.badges) map[b.key] = b;
+    return map;
+  }, [data.badges]);
+
+  const pokalsByCategory = useMemo(() => {
+    const map: Record<string, MancavePokal[]> = {};
+    for (const p of data.pokale) (map[p.category] ??= []).push(p);
+    return map;
   }, [data.pokale]);
 
   const deskTier = data.items.find(i => i.key === "schreibtisch")?.tier ?? 1;
@@ -1565,7 +1510,7 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
         <color attach="background" args={["#050810"]} />
         <fog attach="fog" args={["#050810", 5, 11]} />
         <RoomLighting />
-        <LookAroundRig />
+        <CameraTransitionRig view={activeView} />
         <Suspense fallback={null}>
           <WallExtensions surfaceTier={data.surfaceTier} />
           <Ceiling />
@@ -1595,14 +1540,21 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
               Scopes/Kategorien bleiben unbesetzt (User-Wunsch). */}
           {data.wanderpokale.map(w => {
             const slot = WANDERPOKAL_SLOTS[w.scopeValue];
-            return slot ? <WanderpokalTrophy key={w.scopeValue} scopeValue={w.scopeValue} position={slot} /> : null;
+            return slot ? (
+              <WanderpokalTrophy key={w.scopeValue} scopeValue={w.scopeValue} title={w.title} position={slot}
+                onHover={handleHover} onSelect={sv => setDetailItem({ kind: "wanderpokal", scopeValue: sv })} />
+            ) : null;
           })}
           {Object.keys(EVENT_POKAL_CATEGORY_SLOTS).map(cat => (
-            <EventPokalStack key={cat} category={cat} count={pokaleByCategory[cat] ?? 0} />
+            <EventPokalStack key={cat} category={cat} pokals={pokalsByCategory[cat] ?? []}
+              onHover={handleHover} onSelect={id => setDetailItem({ kind: "eventpokal", pokalId: id })} />
           ))}
           {data.badges.slice(0, ABZEICHEN_MAX_VISIBLE).map((b, i) => {
             const slot = abzeichenSlotPos(i);
-            return slot ? <AbzeichenPin key={b.key} badgeKey={b.key} name={b.name} position={slot} /> : null;
+            return slot ? (
+              <AbzeichenPin key={b.key} badgeKey={b.key} name={b.name} position={slot}
+                onHover={handleHover} onSelect={k => setDetailItem({ kind: "badge", badgeKey: k })} />
+            ) : null;
           })}
           {data.badges.length > ABZEICHEN_MAX_VISIBLE && (
             <Html position={[ABZEICHEN_VITRINE_POS.x, ABZEICHEN_VITRINE_POS.y + 0.62, ABZEICHEN_VITRINE_POS.z]} center>
@@ -1612,19 +1564,6 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
               </span>
             </Html>
           )}
-          {/* Hover-Zielflächen direkt an den Pokal-Möbeln — kein permanent
-              sichtbarer Button mehr (User-Wunsch), stattdessen Glow-Effekt +
-              mausfolgendes Tooltip (siehe ShelfHotspot/hoverTooltip). */}
-          <ShelfHotspot label="Kategorie-Wanderpokale" onOpen={() => setPanel("wanderpokale-kategorie")} onHoverChange={handleHover}
-            center={[WANDERPOKAL_REGAL_POS.x, 2.0, 0.85]} size={[1.15, 1.05, 0.35]} />
-          <ShelfHotspot label="Genre-Wanderpokale" onOpen={() => setPanel("wanderpokale-genre")} onHoverChange={handleHover}
-            center={[WANDERPOKAL_REGAL_2_POS.x, 2.0, 0.85]} size={[1.15, 1.05, 0.35]} />
-          <ShelfHotspot label="Event-Pokale" onOpen={() => setPanel("eventpokale")} onHoverChange={handleHover}
-            center={[-1.145, 1.94, -0.95]} size={[0.5, 0.75, 0.65]} />
-          <ShelfHotspot label="Event-Pokale" onOpen={() => setPanel("eventpokale")} onHoverChange={handleHover}
-            center={[-1.145, 1.94, -0.15]} size={[0.5, 0.75, 0.65]} />
-          <ShelfHotspot label="Abzeichen" onOpen={() => setPanel("trophy")} onHoverChange={handleHover}
-            center={[-1.1, 0.31, -0.95]} size={[0.5, 0.7, 0.9]} />
           <ExtraProp tier={nanoleafTier >= 1 ? 1 : 0} cfg={BLITZ_CFG} />
           <ExtraProp tier={nanoleafTier >= 2 ? 1 : 0} cfg={NANOLEAF_MONITOR_CFG} />
           <ExtraProp tier={nanoleafTier >= 3 ? 1 : 0} cfg={NANOLEAF_WALL_CFG} />
@@ -1688,14 +1627,16 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
 
       <div className="absolute bottom-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-full pointer-events-none"
         style={{ background: "rgba(4,10,9,0.5)", border: "1px solid rgba(255,255,255,0.08)" }}>
-        <span className="text-[9px] text-gray-400">Klicken &amp; ziehen zum Umschauen · Scrollen zum Zoomen</span>
+        <span className="text-[9px] text-gray-400">Pfeile/← → zum Wechseln der Ansicht · Wischen · Pokale/Abzeichen anklicken für Details</span>
       </div>
 
-      {/* Mausfolgendes Tooltip für die Pokal-Möbel-Hotspots (siehe
-          ShelfHotspot/handleHover) — echtes 2D-Overlay statt 3D-Html-Label,
-          damit es wirklich der Cursorposition folgt statt an einer festen
-          Raum-Stelle zu kleben. 16px Versatz, damit der Cursor selbst den
-          Text nicht verdeckt. */}
+      <MancaveCameraNav activeIndex={activeViewIndex} views={CAMERA_VIEWS} onNavigate={navigateView} />
+
+      {/* Mausfolgendes Tooltip für einzelne Pokale/Abzeichen (siehe
+          WanderpokalTrophy/EventPokalStack/AbzeichenPin/handleHover) — echtes
+          2D-Overlay statt 3D-Html-Label, damit es wirklich der Cursorposition
+          folgt statt an einer festen Raum-Stelle zu kleben. 16px Versatz,
+          damit der Cursor selbst den Text nicht verdeckt. */}
       {hoverTooltip && (
         <div className="absolute pointer-events-none whitespace-nowrap px-2.5 py-1.5 rounded-full text-[11px] font-semibold text-amber-200"
           style={{
@@ -1747,6 +1688,34 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
             {panel === "wanderpokale-kategorie" && <WanderpokalePanel data={data} scopeType="category" />}
             {panel === "wanderpokale-genre" && <WanderpokalePanel data={data} scopeType="genre" />}
             {panel === "eventpokale" && <EventPokalePanel data={data} />}
+          </div>
+        </div>
+      )}
+
+      {detailItem && (
+        // Gleicher Vollbild-Overlay-Wrapper wie beim `panel`-Popup oben
+        // (siehe dessen z-index-Kommentar) — hier für die neue Einzel-Item-
+        // Detail-Ansicht (ersetzt für Wanderpokale/Event-Pokale/Abzeichen das
+        // alte Listen-Popup).
+        <div className="absolute inset-0 flex items-center justify-center p-6"
+          style={{ background: "rgba(2,5,8,0.55)", backdropFilter: "blur(2px)", zIndex: 2147483647 }}
+          onClick={() => setDetailItem(null)}>
+          <div onClick={e => e.stopPropagation()}
+            className="glass card-shine rounded-2xl p-5 w-full max-w-md max-h-[85%] min-h-0 relative animate-fade-in"
+            style={{ overflowY: "auto" }}>
+            <button onClick={() => setDetailItem(null)} aria-label="Schließen"
+              className="absolute top-3 right-3 w-7 h-7 rounded-lg flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/[0.06] transition-colors">
+              ✕
+            </button>
+            {detailItem.kind === "wanderpokal" && wanderpokalStatusByScope[detailItem.scopeValue] && (
+              <TrophyDetailModal kind="wanderpokal" status={wanderpokalStatusByScope[detailItem.scopeValue]} data={data} />
+            )}
+            {detailItem.kind === "eventpokal" && pokalById[detailItem.pokalId] && (
+              <TrophyDetailModal kind="eventpokal" pokal={pokalById[detailItem.pokalId]} />
+            )}
+            {detailItem.kind === "badge" && badgeByKey[detailItem.badgeKey] && (
+              <BadgeDetailModal badge={badgeByKey[detailItem.badgeKey]} />
+            )}
           </div>
         </div>
       )}

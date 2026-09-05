@@ -1,12 +1,16 @@
 "use client";
 
 // ============================================
-// Battle Cards — Kampf-Soundeffekte (Web Audio, synthetisiert)
+// Battle Cards — Kampf-Soundeffekte
 // ============================================
-// Keine Audio-Dateien nötig — kurze Beeps/Noise-Bursts werden per Oscillator/
-// AudioBuffer generiert. Der AudioContext wird lazy erzeugt und bei Bedarf
-// resumed (Autoplay-Policy verlangt eine vorherige User-Geste, die beim
-// Öffnen/Bedienen des Replays i.d.R. bereits stattgefunden hat).
+// Die meisten Töne sind weiterhin per Oscillator/AudioBuffer synthetisiert
+// (kein Datei-Overhead). Die Tank-/DPS-Treffer nutzen zusätzlich echte
+// Sample-Foley (Kenney "Impact Sounds", CC0, siehe public/battle-cards/sfx/
+// README.md) — ein reiner Oscillator-Beep trifft die dumpfe Wucht bzw. den
+// scharfen Metall-Transient nicht überzeugend, echte Samples schon. Der
+// AudioContext wird lazy erzeugt und bei Bedarf resumed (Autoplay-Policy
+// verlangt eine vorherige User-Geste, die beim Öffnen/Bedienen des Replays
+// i.d.R. bereits stattgefunden hat).
 //
 // Archetyp-Sounds: jede Klasse (TANK/DAMAGE_DEALER/SUPPORT) bekommt für ihre
 // typischen Effekt-Arten (Treffer, Schild, Buff/Debuff, Ultimate) eine eigene
@@ -14,6 +18,21 @@
 // in BattleScreen.tsx für das visuelle Gegenstück (gleiche Archetyp-Matrix).
 
 import type { UnitClass } from "@/lib/battle-engine/types";
+
+/** Spielt eine kurze Sample-Datei ab — eigenes HTMLAudioElement pro Aufruf,
+ *  damit sich überlappende Treffer (mehrere Kaskaden-Hits) nicht gegenseitig
+ *  abschneiden. Scheitert lautlos (Autoplay-Policy, fehlende Datei), da Sound
+ *  hier rein kosmetisch ist. */
+function playSample(url: string, volume = 0.6) {
+  if (typeof window === "undefined") return;
+  try {
+    const audio = new Audio(url);
+    audio.volume = Math.min(1, Math.max(0, volume));
+    audio.play().catch(() => {});
+  } catch {
+    // s.o.
+  }
+}
 
 let audioCtx: AudioContext | null = null;
 
@@ -116,15 +135,17 @@ export function playDebuffSfx() {
 // generischen Hit zurück, falls doch (z.B. Debuff-Schaden).
 
 function playTankHitSfx(crit: boolean) {
-  noiseBurst(0.16, crit ? 0.22 : 0.16, 220, "lowpass");
-  beep(90, crit ? 0.22 : 0.16, "sine", crit ? 0.16 : 0.12, 0.01);
-  if (crit) beep(60, 0.28, "sine", 0.1, 0.05);
+  playSample(crit ? "/battle-cards/sfx/tank-hit-crit.ogg" : "/battle-cards/sfx/tank-hit.ogg", crit ? 0.8 : 0.65);
+  // Sub-Bass-Layer obendrauf — das Sample allein hat wenig Tiefbass, der hier
+  // die spürbare "Wucht" liefert, die ein reines Foley-Sample nicht hat.
+  beep(70, crit ? 0.24 : 0.18, "sine", crit ? 0.14 : 0.1, 0.01);
 }
 
 function playDpsHitSfx(crit: boolean) {
-  noiseBurst(0.07, crit ? 0.16 : 0.11, 4200, "highpass");
-  beep(crit ? 700 : 520, 0.08, "square", crit ? 0.13 : 0.09, 0.01, crit ? 1400 : 900);
-  if (crit) beep(1000, 0.1, "square", 0.08, 0.06);
+  playSample(crit ? "/battle-cards/sfx/dps-hit-crit.ogg" : "/battle-cards/sfx/dps-hit.ogg", crit ? 0.7 : 0.55);
+  // Kurzer heller Beep obendrauf — gibt dem realistischen Metall-Sample den
+  // "Game-Zing", den ein reines Foley-Sample nicht hat.
+  beep(crit ? 1200 : 900, 0.06, "square", crit ? 0.09 : 0.06, 0.01);
 }
 
 /** SUPPORT: arkaner Bolzen — zwei dicht benachbarte Frequenzen erzeugen eine

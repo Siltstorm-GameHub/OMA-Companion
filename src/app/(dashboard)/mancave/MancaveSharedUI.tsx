@@ -513,7 +513,7 @@ const WANDERPOKAL_SCOPE_LABEL: Record<"category" | "genre", string> = {
 // WANDERPOKAL_MODELS in MancaveScene3D.tsx) — 6 eigene, die übrigen 6
 // Scopes (shooter + die 5 abstrakten Kategorien) teilen sich weiterhin den
 // generischen Gold-Pokal, bis es dafür passende Assets gibt.
-const WANDERPOKAL_THUMBS: Record<string, string> = {
+export const WANDERPOKAL_THUMBS: Record<string, string> = {
   racing: "/mancave-trophies/wanderpokal_rennlegende.png",
   community: "/mancave-trophies/wanderpokal_communitystar.png",
   arcade: "/mancave-trophies/wanderpokal_arcade.png",
@@ -521,7 +521,7 @@ const WANDERPOKAL_THUMBS: Record<string, string> = {
   beat_em_up: "/mancave-trophies/wanderpokal_beat_em_up.png",
   special: "/mancave-trophies/wanderpokal_special.png",
 };
-const WANDERPOKAL_THUMB_DEFAULT = "/mancave-trophies/wanderpokal_generic.png";
+export const WANDERPOKAL_THUMB_DEFAULT = "/mancave-trophies/wanderpokal_generic.png";
 
 /**
  * Zeigt nur die 6 Scopes EINES Typs (Kategorie ODER Genre) — je nachdem,

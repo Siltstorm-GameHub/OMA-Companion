@@ -136,15 +136,29 @@ function SkillEffectOverlay({ vfx }: { vfx: VfxEvent }) {
         );
       }
 
-      // ── DAMAGE_DEALER: scharfer, diagonaler Klingen-/Schuss-Schnitt + Funken. ──
+      // ── DAMAGE_DEALER: scharfer, diagonaler Klingen-/Schuss-Schnitt + Funken.
+      //    Nutzt das echte Slash-Sprite (Kenney Particle Pack, CC0, siehe
+      //    public/battle-cards/vfx/README.md) statt eines reinen CSS-Balkens —
+      //    per mask-image in die Klassenfarbe eingefärbt (das Sprite selbst ist
+      //    ein graustufiges Alpha-Silhouette, kein farbiges Bild). ──
       if (vfx.casterClass === "DAMAGE_DEALER") {
         return (
           <motion.div key={vfx.key} className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
             <motion.div
-              className="absolute h-[3px] rounded-full"
-              style={{ width: "140%", background: `linear-gradient(90deg, transparent, ${casterColor}, #fff, ${casterColor}, transparent)` }}
-              initial={{ opacity: 0, rotate: -35, scaleX: 0.2 }}
-              animate={{ opacity: [0, 1, 0], rotate: -35, scaleX: 1 }}
+              className="absolute inset-0"
+              style={{
+                background: casterColor,
+                maskImage: "url(/battle-cards/vfx/slash.png)",
+                WebkitMaskImage: "url(/battle-cards/vfx/slash.png)",
+                maskSize: "180% 180%",
+                WebkitMaskSize: "180% 180%",
+                maskRepeat: "no-repeat",
+                WebkitMaskRepeat: "no-repeat",
+                maskPosition: "center",
+                WebkitMaskPosition: "center",
+              }}
+              initial={{ opacity: 0, rotate: -30, scale: 0.7 }}
+              animate={{ opacity: [0, 1, 0], rotate: -30, scale: 1.15 }}
               transition={{ duration: crit ? 0.35 : 0.28, ease: "easeOut" }}
             />
             <motion.div
@@ -161,7 +175,8 @@ function SkillEffectOverlay({ vfx }: { vfx: VfxEvent }) {
 
       // ── SUPPORT: arkaner Bolzen — einschlagender Lichtsplitter statt Wucht
       //    oder Klinge: ein einwärts kollabierender Ring (Gegenrichtung zum
-      //    Tank-Schockwellenring) mit sich drehendem Funken-Glyph im Zentrum. ──
+      //    Tank-Schockwellenring) mit dem echten Magie-Sprite (Kenney Particle
+      //    Pack, CC0) statt eines generischen Lucide-Icons im Zentrum. ──
       if (vfx.casterClass === "SUPPORT") {
         return (
           <motion.div key={vfx.key} className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -173,12 +188,22 @@ function SkillEffectOverlay({ vfx }: { vfx: VfxEvent }) {
               transition={{ duration: crit ? 0.42 : 0.34, ease: "easeIn" }}
             />
             <motion.div
+              className="absolute inset-0"
+              style={{
+                background: casterColor,
+                maskImage: "url(/battle-cards/vfx/magic-bolt.png)",
+                WebkitMaskImage: "url(/battle-cards/vfx/magic-bolt.png)",
+                maskSize: "70% 70%",
+                WebkitMaskSize: "70% 70%",
+                maskRepeat: "no-repeat",
+                WebkitMaskRepeat: "no-repeat",
+                maskPosition: "center",
+                WebkitMaskPosition: "center",
+              }}
               initial={{ opacity: 0, scale: 0.3, rotate: 0 }}
               animate={{ opacity: [0, 1, 0], scale: 1, rotate: crit ? 300 : 200 }}
               transition={{ duration: crit ? 0.42 : 0.34, ease: "easeOut" }}
-            >
-              <Sparkles className="w-5 h-5 relative" style={{ color: casterColor }} />
-            </motion.div>
+            />
             {crit && (
               <motion.div
                 className="absolute inset-0 rounded-full"
