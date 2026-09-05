@@ -447,6 +447,18 @@ select.input-glass option { background: #0f1117; }
 }
 .attack-lunge { animation: attack-lunge 0.45s cubic-bezier(0.33,1,0.68,1) both; }
 
+/* ── Archetyp-Treffer-Ring — Farbe kommt von der Klasse des ausführenden
+   Helden (--ring-color, siehe LiveBattleView UnitCard) statt fix zu sein,
+   damit sichtbar wird WER zuschlägt, nicht nur DASS etwas passiert. ── */
+@keyframes archetype-hit-ring {
+  0%   { opacity: 0.9; transform: scale(0.55); }
+  100% { opacity: 0; transform: scale(1.7); }
+}
+.archetype-hit-ring {
+  animation: archetype-hit-ring 0.5s ease-out both;
+  box-shadow: 0 0 0 2px var(--ring-color, #fff);
+}
+
 @keyframes gem-destroy {
   0%   { opacity: 1; transform: scale(1) rotate(0deg); }
   55%  { opacity: 0.85; transform: scale(1.25) rotate(10deg); }

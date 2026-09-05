@@ -68,6 +68,15 @@
         ],
         "createdAt": "2026-09-03T18:02:52.972Z",
         "reason": "Pre-existing code, not touched this session; violet/fuchsia is this app's documented 'Gaming Identity' brand palette (see globals.css --violet-glow, accent-violet, text-gradient-gaming), used consistently app-wide, not an ad-hoc AI-slop gradient"
+      },
+      {
+        "rule": "gray-on-color",
+        "value": "text-gray-400",
+        "files": [
+          "src/components/battle-cards/LiveBattleView.tsx"
+        ],
+        "createdAt": "2026-09-05T08:06:27.047Z",
+        "reason": "pre-existing Auto-Kampf toggle button, unrelated to this edit; bg-white/[0.06] is near-transparent so text-gray-400 reads fine, not a real contrast issue"
       }
     ]
   }

@@ -128,8 +128,18 @@ export async function POST(
   }
 }
 
+/** Erlaubt dem Cron-Job (/api/cron/close-event-polls), diese Route ohne Admin-Session
+ *  aufzurufen, um eine abgelaufene Umfragephase automatisch abzuschließen — sonst identisch
+ *  zum normalen Admin-Abschluss (gleiche Sperre, gleiche Auszahlungslogik). */
+function isSystemCall(req: NextRequest): boolean {
+  const secret = process.env.CRON_SECRET;
+  return !!secret && req.headers.get("authorization") === `Bearer ${secret}`;
+}
+
 async function completeEvent(req: NextRequest, eventId: string) {
-  const currentUser = await requireModeratorOrEventSquadCaptain(eventId);
+  const currentUser = isSystemCall(req)
+    ? { role: "admin" as const }
+    : await requireModeratorOrEventSquadCaptain(eventId);
 
   // Kleine Helfer für die Diff-basierte Vergabe unten: statt Münzen/Rang-Punkte nur einmalig beim
   // ersten Abschluss zu vergeben, wird bei jedem Speichern ein Delta gegen die zuletzt vergebenen

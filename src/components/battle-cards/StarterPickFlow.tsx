@@ -89,7 +89,12 @@ function CardChoice({
       initial={{ opacity: 0, y: 28, scale: 0.94 }}
       animate={{ opacity: disabled ? 0.35 : 1, y: 0, scale: 1 }}
       transition={{ delay, duration: 0.35, ease: "easeOut" }}
-      className="flex flex-col items-center gap-2.5"
+      // Feste Breite statt nur max-w: BattleCardView nutzt intern w-full, das
+      // braucht eine eindeutige Bezugsbreite. Im Klassen-Schritt (flex-wrap
+      // ohne definierte Spur-Breite pro Karte) führte eine rein prozentuale
+      // Breite je nach Browser zu stark zusammengeschrumpften, kaum lesbaren
+      // Karten (Button-Text wirkte dadurch wie abgeschnitten/verzerrt).
+      className="flex flex-col items-center gap-2.5 w-36 sm:w-52 shrink-0"
     >
       <div
         className="relative rounded-2xl"
@@ -226,7 +231,7 @@ export default function StarterPickFlow({ cards }: { cards: CardWithId[] }) {
           {!isBonusStep ? (
             <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10 py-2">
               {classCards.map((card, i) => (
-                <div key={card.id} className="flex items-center gap-6 sm:gap-10">
+                <div key={card.id} className="flex items-center gap-6 sm:gap-10 shrink-0">
                   <CardChoice
                     card={card}
                     color={stepDef.color}

@@ -24,6 +24,7 @@
 
 import { HelpCircle, Users } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import type { UnitClass } from "@/lib/battle-engine/types";
 import {
   resolveBoardSession,
   type BoardAnimationStep,
@@ -101,6 +102,7 @@ export default function BoardMatch3({
   initialSwaps,
   onConfirm,
   onProgress,
+  onGemsDestroyed,
 }: {
   grid: BoardGrid;
   moveBudget: number;
@@ -116,6 +118,12 @@ export default function BoardMatch3({
   /** Fire-and-forget nach jedem bestätigten Swap — sichert den Fortschritt
    *  serverseitig, ohne auf eine Antwort zu warten (siehe saveBoardProgress). */
   onProgress?: (swaps: SwapMove[]) => void;
+  /** Feuert für jeden Animations-Schritt (siehe playSteps), sobald die
+   *  getroffenen Steine sichtbar zerstört werden — gruppiert nach Klasse, mit
+   *  den Bildschirm-Positionen der zerstörten Zellen. LiveBattleView nutzt das,
+   *  um einen Lichtstrahl von den zerstörten Steinen zu den Helden der
+   *  entsprechenden Klasse zu animieren (siehe dortiges handleGemsDestroyed). */
+  onGemsDestroyed?: (groups: { cls: UnitClass; rects: DOMRect[] }[]) => void;
 }) {
   // Rein lokaler Vorschau-Seed — muss NICHT mit dem serverseitigen rngState
   // übereinstimmen (der ist dem Client bewusst nicht bekannt, siehe Anti-Cheat-
@@ -123,6 +131,10 @@ export default function BoardMatch3({
   // der späteren Server-Berechnung abweichen, die tatsächliche Rage-Vergabe
   // ist davon unabhängig korrekt.
   const rngStateRef = useRef(randomSeed());
+  // Bildschirm-Positionen der Zell-Buttons — für den Lichtstrahl-Effekt
+  // (onGemsDestroyed) gebraucht, um zu wissen, WOHER die zerstörten Steine
+  // optisch starten. Reine DOM-Refs, keine Neu-Renders.
+  const cellElementsRef = useRef<Map<number, HTMLButtonElement>>(new Map());
   const [board, setBoard] = useState<BoardGrid>(initialGrid);
   const [swaps, setSwaps] = useState<SwapMove[]>(initialSwaps ?? []);
   const [selected, setSelected] = useState<number | null>(null);
@@ -160,6 +172,24 @@ export default function BoardMatch3({
       const step = steps[i];
       setDestroyingCells(new Set(step.matchedCells));
       playMatchSound(i);
+
+      if (onGemsDestroyed) {
+        // Klasse pro zerstörter Zelle kommt aus `board` (dem Zustand VOR dieser
+        // Runde) — step.gridAfter enthält bereits die nachgerückten/neuen Steine.
+        const rectsByClass = new Map<UnitClass, DOMRect[]>();
+        for (const cell of step.matchedCells) {
+          const cls = board[cell];
+          const el = cellElementsRef.current.get(cell);
+          if (!el) continue;
+          const list = rectsByClass.get(cls) ?? [];
+          list.push(el.getBoundingClientRect());
+          rectsByClass.set(cls, list);
+        }
+        if (rectsByClass.size > 0) {
+          onGemsDestroyed([...rectsByClass.entries()].map(([cls, rects]) => ({ cls, rects })));
+        }
+      }
+
       await sleep(DESTROY_ANIM_MS);
 
       setBoard(step.gridAfter);
@@ -297,6 +327,10 @@ export default function BoardMatch3({
           return (
             <button
               key={cell}
+              ref={(el) => {
+                if (el) cellElementsRef.current.set(cell, el);
+                else cellElementsRef.current.delete(cell);
+              }}
               type="button"
               disabled={interactionLocked}
               onClick={() => handleTap(cell)}

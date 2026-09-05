@@ -29,6 +29,10 @@
       "schedule": "0 3 * * *"
     },
     {
+      "path": "/api/cron/close-event-polls",
+      "schedule": "0 4 * * *"
+    },
+    {
       "path": "/api/cron/discord-activity-summary",
       "schedule": "0 17 * * *"
     },

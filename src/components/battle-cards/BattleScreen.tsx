@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { BattleLogEntry, RosterEntry, UnitClass } from "@/lib/battle-engine/types";
-import { playHitSfx, playCritSfx, playHealSfx, playUltimateSfx } from "@/lib/battle-cards/sfx";
+import { playHitSfxFor, playHealSfx, playUltimateSfx, playShieldSfx, playBuffSfx, playDebuffSfx } from "@/lib/battle-cards/sfx";
 
 const SOUND_PREF_KEY = "battleCardsSoundOn";
 
@@ -48,28 +48,43 @@ const CLASS_CONFIG: Record<UnitClass, { color: string; icon: LucideIcon }> = {
 // die Skills im Pool bereits in Effekt-Art + Ziel (einzeln/Fläche, Schaden/
 // Heilung/Schild/Buff/Debuff/Rage) unterscheiden, ergibt sich pro Skill ganz
 // von selbst ein eigenes, zutreffendes visuelles Bild.
+//
+// Archetyp-Erweiterung: zusätzlich zur Effekt-Art fließt die Klasse des
+// AUSFÜHRENDEN Helden (casterClass, über sourceId/actorId aus dem Log
+// aufgelöst) in die Darstellung ein — ein Tank-Treffer wummst anders als ein
+// DPS-Schnitt, ein Support-Heal glimmt anders als ein Tank-Rally-Schrei.
+// Gleiche Matrix auf der Audio-Seite, siehe playHitSfxFor/playUltimateSfx in
+// lib/battle-cards/sfx.ts.
 type VfxKind = "cast" | "damage" | "critDamage" | "heal" | "shield" | "buff" | "debuff" | "rage";
 
 interface VfxEvent {
   kind: VfxKind;
   targetId: string;
+  casterClass?: UnitClass;
   /** Wechselt bei jedem neuen Log-Eintrag, erzwingt einen Animations-Replay. */
   key: number;
 }
 
-function vfxForEntry(e: BattleLogEntry | undefined, step: number): VfxEvent | null {
+function vfxForEntry(e: BattleLogEntry | undefined, step: number, classOf: (id: string) => UnitClass | undefined): VfxEvent | null {
   if (!e) return null;
   switch (e.type) {
     case "action":
-      return e.actionType === "active" ? { kind: "cast", targetId: e.actorId, key: step } : null;
+      return e.actionType === "active"
+        ? { kind: "cast", targetId: e.actorId, casterClass: classOf(e.actorId), key: step }
+        : null;
     case "damage":
-      return { kind: e.isCrit ? "critDamage" : "damage", targetId: e.targetId, key: step };
+      return { kind: e.isCrit ? "critDamage" : "damage", targetId: e.targetId, casterClass: classOf(e.sourceId), key: step };
     case "heal":
-      return { kind: "heal", targetId: e.targetId, key: step };
+      return { kind: "heal", targetId: e.targetId, casterClass: classOf(e.sourceId), key: step };
     case "shieldApplied":
-      return { kind: "shield", targetId: e.targetId, key: step };
+      return { kind: "shield", targetId: e.targetId, casterClass: classOf(e.sourceId), key: step };
     case "statModifierApplied":
-      return { kind: e.amount >= 0 ? "buff" : "debuff", targetId: e.targetId, key: step };
+      return {
+        kind: e.amount >= 0 ? "buff" : "debuff",
+        targetId: e.targetId,
+        casterClass: classOf(e.sourceId),
+        key: step,
+      };
     case "rageChange":
       return e.reason === "skillEffect" ? { kind: "rage", targetId: e.unitId, key: step } : null;
     default:
@@ -78,13 +93,15 @@ function vfxForEntry(e: BattleLogEntry | undefined, step: number): VfxEvent | nu
 }
 
 function SkillEffectOverlay({ vfx }: { vfx: VfxEvent }) {
+  const casterColor = vfx.casterClass ? CLASS_CONFIG[vfx.casterClass].color : "#60a5fa";
+
   switch (vfx.kind) {
     case "cast":
       return (
         <motion.div
           key={vfx.key}
           className="absolute inset-0 rounded-full pointer-events-none"
-          style={{ boxShadow: "0 0 0 2px rgba(96,165,250,0.9)" }}
+          style={{ boxShadow: `0 0 0 2px ${casterColor}e6` }}
           initial={{ opacity: 0, scale: 0.7 }}
           animate={{ opacity: [0, 1, 0], scale: 1.25 }}
           transition={{ duration: 0.45, ease: "easeOut" }}
@@ -93,6 +110,55 @@ function SkillEffectOverlay({ vfx }: { vfx: VfxEvent }) {
     case "damage":
     case "critDamage": {
       const crit = vfx.kind === "critDamage";
+
+      // ── TANK: dumpfer Wuchtschlag — Boden-Schockwellenring statt Klingen-Motiv,
+      //    Ziel wird kurz "zusammengedrückt" statt seitlich zu wackeln. ──
+      if (vfx.casterClass === "TANK") {
+        return (
+          <motion.div key={vfx.key} className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <motion.div
+              className="absolute inset-0 rounded-full"
+              style={{ boxShadow: `0 0 0 2px ${casterColor}` }}
+              initial={{ opacity: 0.9, scale: 0.3 }}
+              animate={{ opacity: 0, scale: crit ? 1.6 : 1.3 }}
+              transition={{ duration: crit ? 0.5 : 0.4, ease: "easeOut" }}
+            />
+            <motion.div
+              className="absolute inset-0 rounded-full"
+              style={{ background: `${casterColor}33` }}
+              initial={{ opacity: 0, scaleY: 1 }}
+              animate={{ opacity: [0, 1, 0], scaleY: [1, 0.82, 1] }}
+              transition={{ duration: crit ? 0.4 : 0.3, ease: "easeOut" }}
+            />
+            {crit && <Sparkles className="w-6 h-6 relative" style={{ color: casterColor }} />}
+          </motion.div>
+        );
+      }
+
+      // ── DAMAGE_DEALER: scharfer, diagonaler Klingen-/Schuss-Schnitt + Funken. ──
+      if (vfx.casterClass === "DAMAGE_DEALER") {
+        return (
+          <motion.div key={vfx.key} className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+            <motion.div
+              className="absolute h-[3px] rounded-full"
+              style={{ width: "140%", background: `linear-gradient(90deg, transparent, ${casterColor}, #fff, ${casterColor}, transparent)` }}
+              initial={{ opacity: 0, rotate: -35, scaleX: 0.2 }}
+              animate={{ opacity: [0, 1, 0], rotate: -35, scaleX: 1 }}
+              transition={{ duration: crit ? 0.35 : 0.28, ease: "easeOut" }}
+            />
+            <motion.div
+              className="absolute inset-0 rounded-full"
+              style={{ background: `${casterColor}22` }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 1, 0] }}
+              transition={{ duration: 0.3 }}
+            />
+            {crit && <Sparkles className="w-6 h-6 relative" style={{ color: "#facc15" }} />}
+          </motion.div>
+        );
+      }
+
+      // ── Fallback (Support/unbekannt): generischer Treffer-Puls. ──
       return (
         <motion.div
           key={vfx.key}
@@ -119,6 +185,13 @@ function SkillEffectOverlay({ vfx }: { vfx: VfxEvent }) {
             animate={{ opacity: [0, 1, 0] }}
             transition={{ duration: 0.5 }}
           />
+          <motion.div
+            className="absolute inset-0 rounded-full pointer-events-none"
+            style={{ boxShadow: "0 0 0 2px rgba(110,231,183,0.7)" }}
+            initial={{ opacity: 0, scale: 1.3, rotate: 0 }}
+            animate={{ opacity: [0, 0.8, 0], scale: 0.9, rotate: 90 }}
+            transition={{ duration: 0.55, ease: "easeOut" }}
+          />
           <motion.span
             className="absolute text-emerald-300 font-bold text-lg"
             initial={{ opacity: 0, y: 6 }}
@@ -130,11 +203,25 @@ function SkillEffectOverlay({ vfx }: { vfx: VfxEvent }) {
         </motion.div>
       );
     case "shield":
-      return (
+      // TANK-Schild als eckiges Bollwerk (clip-path), Support/generisch als weiche Blase.
+      return vfx.casterClass === "TANK" ? (
+        <motion.div
+          key={vfx.key}
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: `${casterColor}2a`,
+            boxShadow: `0 0 0 2px ${casterColor}`,
+            clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)",
+          }}
+          initial={{ opacity: 0, scale: 0.75, rotate: -8 }}
+          animate={{ opacity: [0, 1, 0.5], scale: 1.1, rotate: 0 }}
+          transition={{ duration: 0.55, ease: "easeOut" }}
+        />
+      ) : (
         <motion.div
           key={vfx.key}
           className="absolute inset-0 rounded-full pointer-events-none"
-          style={{ boxShadow: "0 0 0 2px rgba(56,189,248,0.9)", background: "rgba(56,189,248,0.15)" }}
+          style={{ boxShadow: `0 0 0 2px ${casterColor}e6`, background: `${casterColor}26` }}
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: [0, 1, 0.4], scale: 1.15 }}
           transition={{ duration: 0.55, ease: "easeOut" }}
@@ -148,7 +235,7 @@ function SkillEffectOverlay({ vfx }: { vfx: VfxEvent }) {
         >
           <motion.div
             className="absolute inset-0 rounded-full"
-            style={{ boxShadow: "0 0 0 2px rgba(74,222,128,0.85)" }}
+            style={{ boxShadow: `0 0 0 2px ${casterColor}66, 0 0 0 4px rgba(74,222,128,0.7)` }}
             initial={{ opacity: 0, scale: 0.85 }}
             animate={{ opacity: [0, 1, 0], scale: 1.2 }}
             transition={{ duration: 0.5 }}
@@ -166,7 +253,7 @@ function SkillEffectOverlay({ vfx }: { vfx: VfxEvent }) {
         >
           <motion.div
             className="absolute inset-0 rounded-full"
-            style={{ boxShadow: "0 0 0 2px rgba(244,63,94,0.85)" }}
+            style={{ boxShadow: `0 0 0 2px ${casterColor}66, 0 0 0 4px rgba(244,63,94,0.7)` }}
             initial={{ opacity: 0, scale: 1.15 }}
             animate={{ opacity: [0, 1, 0], scale: 0.85 }}
             transition={{ duration: 0.5 }}
@@ -460,7 +547,8 @@ export default function BattleScreen({ roster, log }: { roster: RosterEntry[]; l
   }, [log, step, roster]);
 
   const lastEntry = step > 0 ? log[step - 1] : undefined;
-  const currentVfx = useMemo(() => vfxForEntry(lastEntry, step), [lastEntry, step]);
+  const classOf = (id: string) => rosterById.get(id)?.class;
+  const currentVfx = useMemo(() => vfxForEntry(lastEntry, step, classOf), [lastEntry, step, rosterById]);
   const cutsceneActor =
     lastEntry?.type === "action" && lastEntry.actionType === "ultimate" ? rosterById.get(lastEntry.actorId) : null;
 
@@ -472,13 +560,22 @@ export default function BattleScreen({ roster, log }: { roster: RosterEntry[]; l
     if (!soundOn || !currentVfx) return;
     switch (currentVfx.kind) {
       case "damage":
-        playHitSfx();
+        playHitSfxFor(currentVfx.casterClass, false);
         break;
       case "critDamage":
-        playCritSfx();
+        playHitSfxFor(currentVfx.casterClass, true);
         break;
       case "heal":
         playHealSfx();
+        break;
+      case "shield":
+        playShieldSfx();
+        break;
+      case "buff":
+        playBuffSfx();
+        break;
+      case "debuff":
+        playDebuffSfx();
         break;
       default:
         break;
@@ -489,7 +586,7 @@ export default function BattleScreen({ roster, log }: { roster: RosterEntry[]; l
   useEffect(() => {
     if (!soundOn) return;
     if (lastEntry?.type === "action" && lastEntry.actionType === "ultimate") {
-      playUltimateSfx();
+      playUltimateSfx(rosterById.get(lastEntry.actorId)?.class);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, soundOn]);

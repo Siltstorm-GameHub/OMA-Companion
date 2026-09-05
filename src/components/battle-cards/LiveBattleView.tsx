@@ -23,6 +23,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
+import { motion, AnimatePresence } from "motion/react";
 import { Loader2, Zap, Swords, Bot, ChevronRight, ChevronLeft, Timer, Volume2, VolumeX, Trophy, Skull, Handshake, Star } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
 import { getClassConfig, LEVEL_BORDER } from "./BattleCardView";
@@ -31,12 +32,11 @@ import type { BoardGrid, SwapMove } from "@/lib/battle-engine/board-match3";
 import type { ActionType, ActiveStatModifier, TeamId, UnitClass } from "@/lib/battle-engine/types";
 import {
   isSoundMuted,
-  playCritSound,
-  playDamageSound,
+  playDamageSoundFor,
   playDefeatSound,
   playHealSound,
   playShieldSound,
-  playUltimateSound,
+  playUltimateSoundFor,
   playVictorySound,
   setSoundMuted,
 } from "@/lib/battle-cards/sound";
@@ -114,6 +114,10 @@ interface FloatingEffect {
    *  mehr als 3 Steinen entstanden ist (siehe matchBonusPercent im Log-Eintrag) —
    *  zeigt einen zusätzlichen "Match-Bonus"-Hinweis an der Flug-Zahl an. */
   bonusPercent?: number;
+  /** Klasse des AUSFÜHRENDEN Helden (nicht des Ziels) — steuert Ring-Farbe und
+   *  Sound-Archetyp (Tank-Wucht vs. DPS-Schnitt), siehe UnitCard unten und
+   *  playDamageSoundFor in lib/battle-cards/sound.ts. */
+  casterClass?: UnitClass;
 }
 
 interface LiveSnapshot {
@@ -191,6 +195,47 @@ const EFFECT_COLOR: Record<FloatingEffect["kind"], string> = {
   shield: "#7dd3fc",
 };
 
+/** Ein Lichtstrahl von zerstörten OMA-Gems-Steinen zu einem Helden der
+ *  entsprechenden Klasse (siehe handleGemsDestroyed in LiveBattleBody).
+ *  Koordinaten sind Viewport-relativ (getBoundingClientRect), passend zur
+ *  `position: fixed`-Darstellung in GemBeamOverlay. */
+interface GemBeam {
+  id: string;
+  cls: UnitClass;
+  fromX: number;
+  fromY: number;
+  toX: number;
+  toY: number;
+}
+
+const GEM_BEAM_DURATION_MS = 420;
+
+function GemBeamOverlay({ beams }: { beams: GemBeam[] }) {
+  return (
+    <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 60 }}>
+      <AnimatePresence>
+        {beams.map((beam) => {
+          const color = getClassConfig(beam.cls).color;
+          return (
+            <motion.div
+              key={beam.id}
+              initial={{ left: beam.fromX, top: beam.fromY, opacity: 0, scale: 0.4 }}
+              animate={{ left: beam.toX, top: beam.toY, opacity: [0, 1, 1, 0], scale: [0.4, 1, 1, 0.6] }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: GEM_BEAM_DURATION_MS / 1000, ease: "easeIn" }}
+              className="absolute w-3 h-3 -ml-1.5 -mt-1.5 rounded-full"
+              style={{
+                background: color,
+                boxShadow: `0 0 12px 4px ${color}, 0 0 24px 8px ${color}88`,
+              }}
+            />
+          );
+        })}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 const STAT_LABEL: Record<ActiveStatModifier["stat"], string> = {
   attack: "Angriff",
   defense: "Verteidigung",
@@ -216,6 +261,7 @@ function UnitCard({
   isAttacking,
   onClick,
   onUltimateClick,
+  cardRef,
 }: {
   unit: LiveUnit;
   isActing: boolean;
@@ -233,6 +279,9 @@ function UnitCard({
   isAttacking?: boolean;
   onClick?: () => void;
   onUltimateClick?: () => void;
+  /** DOM-Ref auf die Karte — bei OMA Gems das Angriffsziel des Gems-Lichtstrahls
+   *  (siehe handleGemsDestroyed in LiveBattleBody). */
+  cardRef?: (el: HTMLButtonElement | null) => void;
 }) {
   const config = getClassConfig(unit.class);
   const Icon = config.icon;
@@ -266,11 +315,25 @@ function UnitCard({
 
   return (
     <button
+      ref={cardRef}
       type="button"
       onClick={handleClick}
       className={`w-20 sm:w-28 shrink-0 text-left relative ${isHit ? "hit-shake" : ""} ${isAttacking ? "attack-lunge" : ""}`}
       style={{ opacity: unit.isAlive ? 1 : 0.35, filter: unit.isAlive ? "none" : "grayscale(1)", cursor: clickable ? "pointer" : "default" }}
     >
+      {/* Archetyp-Treffer-Ring: farbiger Ring-Flash in der Farbe der Klasse des
+          AUSFÜHRENDEN Helden (nicht des getroffenen Ziels) — macht sichtbar, WER
+          zuschlägt, nicht nur dass etwas passiert. Gleiche Archetyp-Matrix wie
+          SkillEffectOverlay in BattleScreen.tsx. */}
+      {(effects ?? [])
+        .filter((e) => (e.kind === "damage" || e.kind === "crit") && e.casterClass)
+        .map((eff) => (
+          <span
+            key={`ring-${eff.id}`}
+            className="archetype-hit-ring absolute inset-0 rounded-full pointer-events-none"
+            style={{ ["--ring-color" as string]: getClassConfig(eff.casterClass!).color }}
+          />
+        ))}
       {(effects ?? []).length > 0 && (
         <div className="absolute -top-1 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center pointer-events-none">
           {(effects ?? []).map((eff, i) => (
@@ -559,32 +622,57 @@ export default function LiveBattleView({
     // wieder auf die eigene Entscheidung pausiert (siehe advance() in
     // interactive.ts). Ohne Staffelung würden alle Flug-Zahlen/Angriffs-
     // Indikatoren gleichzeitig aufblitzen und der Gegner-Angriff ginge im
-    // eigenen unter. Jeder "action"-Log-Eintrag markiert daher den Beginn
-    // einer neuen "Welle" (ein Akteur + seine Effekte) — Wellen werden
-    // nacheinander mit Verzögerung angezeigt statt alle auf einmal.
-    const WAVE_DELAY_MS = 480;
-    type Wave = { effects: FloatingEffect[]; attackerIds: Set<string>; sounds: (() => void)[] };
-    const waves: Wave[] = [{ effects: [], attackerIds: new Set(), sounds: [] }];
+    // eigenen unter.
+    //
+    // Wellen werden NACH TEAM gebildet, nicht pro Aktion: mehrere Einheiten
+    // DESSELBEN Teams (z.B. bei OMA Gems mehrere gleichzeitig ausgelöste
+    // Angriffe derselben Klasse) landen gemeinsam in einer Welle und wirken
+    // dadurch wie EIN gemeinsamer Angriffszug. Erst ein Team-Wechsel (eigenes
+    // Team -> gegnerisches Team oder umgekehrt) startet eine neue Welle mit
+    // spürbar größerem Abstand (TEAM_SWITCH_DELAY_MS) — sonst wirkt es, als
+    // würden eigene und gegnerische Helden gleichzeitig angreifen, und es ist
+    // nicht erkennbar, wer wen trifft.
+    const SAME_TEAM_DELAY_MS = 60; // minimaler Versatz innerhalb derselben Welle (Zahlen/Sounds nicht exakt deckungsgleich)
+    const TEAM_SWITCH_DELAY_MS = 750;
+    const unitTeamById = new Map(snapshot.units.map((u) => [u.instanceId, u.teamId]));
+    const unitClassById = new Map(snapshot.units.map((u) => [u.instanceId, u.class]));
+
+    type Wave = { team: TeamId | null; effects: FloatingEffect[]; attackerIds: Set<string>; sounds: (() => void)[] };
+    const waves: Wave[] = [{ team: null, effects: [], attackerIds: new Set(), sounds: [] }];
     const currentWave = () => waves[waves.length - 1];
 
     for (const entry of newEntries) {
       if (entry.type === "action") {
-        if (currentWave().effects.length > 0 || currentWave().attackerIds.size > 0 || currentWave().sounds.length > 0) {
-          waves.push({ effects: [], attackerIds: new Set(), sounds: [] });
+        const actorTeam = unitTeamById.get(entry.actorId as string) ?? null;
+        const wave = currentWave();
+        const hasContent = wave.effects.length > 0 || wave.attackerIds.size > 0 || wave.sounds.length > 0;
+        if (wave.team === null) {
+          wave.team = actorTeam;
+        } else if (actorTeam !== null && actorTeam !== wave.team) {
+          waves.push({ team: actorTeam, effects: [], attackerIds: new Set(), sounds: [] });
+        } else if (hasContent) {
+          // Gleiches Team, aber schon Inhalt in dieser Welle (z.B. zwei
+          // aufeinanderfolgende Log-Einträge desselben Zugs) — bleibt in
+          // derselben Welle, damit es weiterhin als EIN gemeinsamer Angriff wirkt.
         }
-        if (entry.actionType === "ultimate") currentWave().sounds.push(playUltimateSound);
+        if (entry.actionType === "ultimate") {
+          const casterClass = unitClassById.get(entry.actorId as string);
+          currentWave().sounds.push(() => playUltimateSoundFor(casterClass));
+        }
         continue;
       }
       if (entry.type === "damage") {
+        const casterClass = entry.sourceId ? unitClassById.get(entry.sourceId as string) : undefined;
         currentWave().effects.push({
           id: `${Date.now()}-${Math.random()}`,
           unitId: entry.targetId as string,
           kind: entry.isCrit ? "crit" : "damage",
           text: `-${entry.amount as number}`,
           bonusPercent: entry.matchBonusPercent as number | undefined,
+          casterClass,
         });
         if (entry.sourceId && entry.sourceId !== entry.targetId) currentWave().attackerIds.add(entry.sourceId as string);
-        currentWave().sounds.push(entry.isCrit ? playCritSound : playDamageSound);
+        currentWave().sounds.push(() => playDamageSoundFor(casterClass, !!entry.isCrit));
       } else if (entry.type === "heal") {
         currentWave().effects.push({
           id: `${Date.now()}-${Math.random()}`,
@@ -605,8 +693,19 @@ export default function LiveBattleView({
       }
     }
 
-    waves.forEach((wave, i) => {
+    // Kumulierte Verzögerung statt fixem i*Konstante: der große Sprung passiert
+    // NUR beim Team-Wechsel, innerhalb desselben Teams bleibt es fast simultan.
+    let cumulativeDelay = 0;
+    let previousTeam: TeamId | null = null;
+    waves.forEach((wave) => {
       if (wave.effects.length === 0 && wave.attackerIds.size === 0 && wave.sounds.length === 0) return;
+      if (previousTeam !== null && wave.team !== null && wave.team !== previousTeam) {
+        cumulativeDelay += TEAM_SWITCH_DELAY_MS;
+      } else if (previousTeam !== null) {
+        cumulativeDelay += SAME_TEAM_DELAY_MS;
+      }
+      previousTeam = wave.team ?? previousTeam;
+      const delay = cumulativeDelay;
       window.setTimeout(() => {
         wave.sounds.forEach((play) => play());
         if (wave.attackerIds.size > 0) {
@@ -625,7 +724,7 @@ export default function LiveBattleView({
             window.setTimeout(() => setEffects((prev) => prev.filter((e) => e.id !== eff.id)), 1300);
           });
         }
-      }, i * WAVE_DELAY_MS);
+      }, delay);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshot?.logLength]);
@@ -838,6 +937,45 @@ function LiveBattleBody({
   const unitsByTeam = (team: TeamId) => snapshot.units.filter((u) => u.teamId === team);
   const unitById = (id: string) => snapshot.units.find((u) => u.instanceId === id);
   const nameOf = (id: string) => unitById(id)?.name ?? "?";
+
+  // DOM-Positionen der Heldenkarten — für den Gems-Lichtstrahl gebraucht (siehe
+  // handleGemsDestroyed unten), um zu wissen, WOHIN die zerstörten Steine
+  // optisch fliegen sollen. Reine Refs, kein Re-Render.
+  const cardElementsRef = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const beamIdRef = useRef(0);
+  const [beams, setBeams] = useState<GemBeam[]>([]);
+
+  /** OMA Gems: fliegt einen Lichtstrahl von den gerade zerstörten Steinen zu
+   *  JEDEM lebenden eigenen Helden der entsprechenden Klasse — macht sichtbar,
+   *  welches Match welchen Helden gleich angreifen lässt, statt dass der
+   *  Angriff (nach dem Server-Roundtrip) optisch aus dem Nichts kommt. */
+  function handleGemsDestroyed(groups: { cls: UnitClass; rects: DOMRect[] }[]) {
+    if (!myTeam) return;
+    const newBeams: GemBeam[] = [];
+    for (const group of groups) {
+      const fromX = group.rects.reduce((sum, r) => sum + r.left + r.width / 2, 0) / group.rects.length;
+      const fromY = group.rects.reduce((sum, r) => sum + r.top + r.height / 2, 0) / group.rects.length;
+      const targets = unitsByTeam(myTeam).filter((u) => u.class === group.cls && u.isAlive);
+      for (const target of targets) {
+        const el = cardElementsRef.current.get(target.instanceId);
+        if (!el) continue;
+        const rect = el.getBoundingClientRect();
+        newBeams.push({
+          id: `beam-${beamIdRef.current++}`,
+          cls: group.cls,
+          fromX,
+          fromY,
+          toX: rect.left + rect.width / 2,
+          toY: rect.top + rect.height / 2,
+        });
+      }
+    }
+    if (newBeams.length === 0) return;
+    setBeams((prev) => [...prev, ...newBeams]);
+    newBeams.forEach((b) => {
+      window.setTimeout(() => setBeams((prev) => prev.filter((x) => x.id !== b.id)), GEM_BEAM_DURATION_MS + 80);
+    });
+  }
   // Bei OMA Gems (boardMode) sind eigene Zug-Slots in der Vorschau bedeutungslos
   // (siehe Kommentar am Render unten) — nur die Gegner-Slots zeigen, wann als
   // Nächstes ein Angriff auf einen selbst zukommt.
@@ -929,6 +1067,7 @@ function LiveBattleBody({
 
   return (
     <div className="flex-1 flex flex-col min-h-0 relative z-10 px-3">
+      <GemBeamOverlay beams={beams} />
       {snapshot.status === "finished" && snapshot.chestPrize && !chestDismissed && (
         <VictoryChestReveal prize={snapshot.chestPrize} onClose={() => setChestDismissed(true)} />
       )}
@@ -1037,6 +1176,10 @@ function LiveBattleBody({
               isAttacking={attackingUnitIds.has(u.instanceId)}
               onClick={() => handleUnitClick(u)}
               onUltimateClick={() => handleUnitClick(u)}
+              cardRef={(el) => {
+                if (el) cardElementsRef.current.set(u.instanceId, el);
+                else cardElementsRef.current.delete(u.instanceId);
+              }}
             />
           ))}
         </div>
@@ -1144,6 +1287,7 @@ function LiveBattleBody({
                 // ignoriert (Platzhalter).
                 onConfirm={(swaps) => submitAction("normalAttack", undefined, swaps)}
                 onProgress={saveBoardProgress}
+                onGemsDestroyed={handleGemsDestroyed}
               />
             ) : selectedAction ? (
               <div className="space-y-1.5">
