@@ -65,3 +65,12 @@ export function applyEloResult({ ratingA, ratingB, matchesA, matchesB, result }:
 export function softResetRating(rating: number): number {
   return ELO_BASE + Math.round((rating - ELO_BASE) / 2);
 }
+
+/** Kombiniertes Rating für den "Gesamt"-Tab der Rangliste: die beiden getrennten
+ *  Pools (OMA Duels/OMA Gems) lassen sich nicht sinnvoll mitteln oder addieren,
+ *  ohne die Basis zu verzerren — stattdessen zählt die Summe der Abweichungen
+ *  von der Basis. Wer in beiden Modi nie gespielt hat, landet exakt bei
+ *  ELO_BASE, wie in den Einzel-Pools auch. */
+export function getCombinedElo(eloDuels: number, eloGems: number): number {
+  return eloDuels + eloGems - ELO_BASE;
+}
