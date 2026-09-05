@@ -49,11 +49,11 @@ export default function ClipOfMonthTile({ winners, monthLabel, finishedContestId
 
   return (
     <Link href="/clip-des-monats"
-      className="surface animate-slide-up stagger-2 scan-on-load group block overflow-hidden relative transition-transform duration-200 hover:-translate-y-1 active:scale-[0.99]"
-      style={{ borderRadius: "6px", border: "1px solid rgba(145,70,255,0.18)", boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
+      className="surface animate-slide-up stagger-2 scan-on-load group flex flex-col overflow-hidden relative transition-transform duration-200 hover:-translate-y-1 active:scale-[0.99]"
+      style={{ borderRadius: "6px", border: "1px solid rgba(145,70,255,0.18)", boxShadow: "0 4px 24px rgba(0,0,0,0.5)", height: "296px" }}>
 
       {/* Cover art area */}
-      <div className="relative overflow-hidden" style={{ height: "180px" }}>
+      <div className="relative overflow-hidden shrink-0" style={{ height: "200px" }}>
         {/* Clip-Thumbnail */}
         {winner?.thumbnailUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -104,7 +104,7 @@ export default function ClipOfMonthTile({ winners, monthLabel, finishedContestId
       </div>
 
       {/* Info area */}
-      <div className="px-4 pb-4 pt-2">
+      <div className="px-4 pb-4 pt-2 flex-1 min-h-0">
         <p className="text-[9px] text-[#9146ff]/60 uppercase tracking-[0.18em] font-semibold mb-0.5">
           {showWinner && finishedContestId ? monthLabel : "Clip des Monats"}
         </p>
