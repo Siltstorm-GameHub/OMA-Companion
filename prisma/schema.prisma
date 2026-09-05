@@ -43,6 +43,15 @@ model User {
   battleWinStreak     Int @default(0)
   battleBestWinStreak Int @default(0)
 
+  // Battle Cards: getrennte Elo-Ratings je Spielmodus (siehe lib/battle-cards/elo.ts),
+  // saisonal sanft zurückgesetzt (ranked-season.ts: softResetAllElo) statt komplett
+  // genullt — die *Matches-Zähler laufen ab dem letzten Reset (Saisonwechsel ODER
+  // Admin-Hard-Reset) neu von 0, sie steuern den höheren Platzierungs-K-Faktor.
+  eloDuels        Int @default(1000)
+  eloDuelsMatches Int @default(0)
+  eloGems         Int @default(1000)
+  eloGemsMatches  Int @default(0)
+
   // Badge Showcase: JSON-Array mit bis zu 3 Badge-Keys (system oder custom-id)
   showcaseBadgesJson String?
   // Vitrinen-Fächer: JSON-Objekt { "<slotIndex>": "pokal:<id>" | "trophy:<scopeType>:<scopeValue>" | "badge:<key>" | null }.

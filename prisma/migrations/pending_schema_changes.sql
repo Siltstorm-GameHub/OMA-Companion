@@ -351,3 +351,12 @@ CREATE INDEX IF NOT EXISTS "LiveBattle_playerBId_idx" ON "LiveBattle"("playerBId
 -- ═══════════════════════════════════════════════════════════════
 
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "leftServerAt" TIMESTAMP(3);
+
+-- ═══════════════════════════════════════════════════════════════
+-- Battle Cards: getrennte Elo-Ratings je Modus (DUELS/GEMS)
+-- ═══════════════════════════════════════════════════════════════
+
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "eloDuels" INTEGER NOT NULL DEFAULT 1000;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "eloDuelsMatches" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "eloGems" INTEGER NOT NULL DEFAULT 1000;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "eloGemsMatches" INTEGER NOT NULL DEFAULT 0;

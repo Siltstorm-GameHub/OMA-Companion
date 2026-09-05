@@ -10,6 +10,8 @@ export interface SeasonConfig {
   preSeasonRanAt: string | null; // ISO-Zeitstempel, wann die PreSeason zuletzt lief
   season1RanAt: string | null; // ISO-Zeitstempel, wann Saison 1 automatisch ausgelöst wurde (= Anker für die Ranglisten-Saisons)
   lastRewardedRankedSeason: number; // höchste Ranglisten-Saison-Nummer, für die Platz-1-3-Belohnungen bereits vergeben wurden (0 = noch keine)
+  eloHardResetAt: string | null; // ISO-Datum, an dem admin-seitig ein einmaliger Elo-Hard-Reset (DUELS+GEMS) ausgelöst werden soll
+  eloHardResetRanAt: string | null; // ISO-Zeitstempel, wann der Hard-Reset zu eloHardResetAt tatsächlich ausgeführt wurde (Idempotenz-Marker)
 }
 
 const KEYS = {
@@ -17,6 +19,8 @@ const KEYS = {
   preSeasonRanAt: "battlecards_preseason_ran_at",
   season1RanAt: "battlecards_season1_ran_at",
   lastRewardedRankedSeason: "battlecards_last_rewarded_ranked_season",
+  eloHardResetAt: "battlecards_elo_hard_reset_at",
+  eloHardResetRanAt: "battlecards_elo_hard_reset_ran_at",
 } as const;
 
 export async function getSeasonConfig(): Promise<SeasonConfig> {
@@ -27,6 +31,8 @@ export async function getSeasonConfig(): Promise<SeasonConfig> {
     preSeasonRanAt: map.get(KEYS.preSeasonRanAt) ?? null,
     season1RanAt: map.get(KEYS.season1RanAt) ?? null,
     lastRewardedRankedSeason: Number(map.get(KEYS.lastRewardedRankedSeason) ?? "0"),
+    eloHardResetAt: map.get(KEYS.eloHardResetAt) ?? null,
+    eloHardResetRanAt: map.get(KEYS.eloHardResetRanAt) ?? null,
   };
 }
 
@@ -63,5 +69,30 @@ export async function setLastRewardedRankedSeason(seasonNumber: number): Promise
     where: { key: KEYS.lastRewardedRankedSeason },
     create: { key: KEYS.lastRewardedRankedSeason, value: String(seasonNumber) },
     update: { value: String(seasonNumber) },
+  });
+}
+
+/** Setzt/löscht das geplante Hard-Reset-Datum. Löscht dabei immer den
+ *  "ausgeführt am"-Marker — ein neu (oder erneut) gesetztes Datum soll den
+ *  Cron beim nächsten Erreichen wieder auslösen können, auch wenn zuvor
+ *  schon einmal ein Hard-Reset zu einem anderen Datum lief. */
+export async function setEloHardResetAt(dateIso: string | null): Promise<void> {
+  await prisma.botConfig.deleteMany({ where: { key: KEYS.eloHardResetRanAt } });
+  if (!dateIso) {
+    await prisma.botConfig.deleteMany({ where: { key: KEYS.eloHardResetAt } });
+    return;
+  }
+  await prisma.botConfig.upsert({
+    where: { key: KEYS.eloHardResetAt },
+    create: { key: KEYS.eloHardResetAt, value: dateIso },
+    update: { value: dateIso },
+  });
+}
+
+export async function markEloHardResetRan(): Promise<void> {
+  await prisma.botConfig.upsert({
+    where: { key: KEYS.eloHardResetRanAt },
+    create: { key: KEYS.eloHardResetRanAt, value: new Date().toISOString() },
+    update: { value: new Date().toISOString() },
   });
 }

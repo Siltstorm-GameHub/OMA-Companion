@@ -15,9 +15,14 @@
 // Beide Teile sind jeweils für sich idempotent, kein Doppel-Lauf möglich.
 
 import { NextRequest, NextResponse } from "next/server";
-import { getSeasonConfig, markSeason1Ran } from "@/lib/season/season-config";
+import { getSeasonConfig, markSeason1Ran, markEloHardResetRan } from "@/lib/season/season-config";
 import { runFullSeasonUpdate } from "@/lib/season/run-season";
-import { resetAllCardOwnership, resetAllCampaignProgress, grantDueSeasonRewards } from "@/lib/battle-cards/ranked-season";
+import {
+  resetAllCardOwnership,
+  resetAllCampaignProgress,
+  grantDueSeasonRewards,
+  hardResetAllElo,
+} from "@/lib/battle-cards/ranked-season";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -60,5 +65,19 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  return NextResponse.json({ ok: true, season1: season1Result, rewardedSeasons });
+  // ── Teil 3: admin-geplanter Elo-Hard-Reset (einmalig, unabhängig von Teil 1/2) ──
+  let eloHardReset: Record<string, unknown> | null = null;
+  if (!freshConfig.eloHardResetAt) {
+    eloHardReset = { skipped: "Kein Hard-Reset-Datum gesetzt" };
+  } else if (freshConfig.eloHardResetRanAt) {
+    eloHardReset = { skipped: "Hard-Reset wurde bereits ausgeführt" };
+  } else if (new Date() < new Date(freshConfig.eloHardResetAt)) {
+    eloHardReset = { skipped: "Hard-Reset-Datum noch nicht erreicht" };
+  } else {
+    await hardResetAllElo();
+    await markEloHardResetRan();
+    eloHardReset = { ranAt: new Date().toISOString() };
+  }
+
+  return NextResponse.json({ ok: true, season1: season1Result, rewardedSeasons, eloHardReset });
 }

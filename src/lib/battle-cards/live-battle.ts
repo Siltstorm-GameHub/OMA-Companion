@@ -50,6 +50,7 @@ import { markTutorialCampaignLevel1Done, markTutorialNpcBattleDone } from "@/lib
 import { resolveAvatarsForCards } from "@/lib/battle-cards/card-view";
 import { resolveCardImageUrl, resolveAvatarBadgeUrl } from "@/lib/battle-cards/resolve-image";
 import { applyWinStreak } from "@/lib/battle-cards/win-streak";
+import { applyEloResult, type EloResult } from "@/lib/battle-cards/elo";
 import {
   DIFFICULTY_LEVEL,
   GEMS_PVP_DAILY_LIMIT,
@@ -295,6 +296,40 @@ async function requireAccess(liveBattleId: string, viewerId: string) {
 
 // ---------- Abschluss: wie bisher als Battle (+ Challenge/Win-Streak) persistieren ----------
 
+/** Lädt die aktuellen Elo-Ratings beider Spieler für den jeweiligen Modus
+ *  (DUELS/GEMS haben getrennte Pools, siehe elo.ts), berechnet das neue Rating
+ *  und schreibt beide Seiten in einer Transaktion zurück. Zweigt explizit auf
+ *  mode auf statt mit computed property keys zu selecten/updaten — Letzteres
+ *  lässt Prisma den Rückgabetyp nicht mehr sinnvoll inferieren. */
+async function applyEloForChallenge(mode: string, playerAId: string, playerBId: string, result: EloResult) {
+  const [userA, userB] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: playerAId },
+      select: { eloDuels: true, eloDuelsMatches: true, eloGems: true, eloGemsMatches: true },
+    }),
+    prisma.user.findUnique({
+      where: { id: playerBId },
+      select: { eloDuels: true, eloDuelsMatches: true, eloGems: true, eloGemsMatches: true },
+    }),
+  ]);
+  if (!userA || !userB) return;
+
+  const ratingA = mode === "GEMS" ? userA.eloGems : userA.eloDuels;
+  const ratingB = mode === "GEMS" ? userB.eloGems : userB.eloDuels;
+  const matchesA = mode === "GEMS" ? userA.eloGemsMatches : userA.eloDuelsMatches;
+  const matchesB = mode === "GEMS" ? userB.eloGemsMatches : userB.eloDuelsMatches;
+
+  const { newA, newB } = applyEloResult({ ratingA, ratingB, matchesA, matchesB, result });
+
+  const dataA = mode === "GEMS" ? { eloGems: newA, eloGemsMatches: matchesA + 1 } : { eloDuels: newA, eloDuelsMatches: matchesA + 1 };
+  const dataB = mode === "GEMS" ? { eloGems: newB, eloGemsMatches: matchesB + 1 } : { eloDuels: newB, eloDuelsMatches: matchesB + 1 };
+
+  await prisma.$transaction([
+    prisma.user.update({ where: { id: playerAId }, data: dataA }),
+    prisma.user.update({ where: { id: playerBId }, data: dataB }),
+  ]);
+}
+
 async function finalizeLiveBattle(live: LiveBattle, state: InteractiveBattleState) {
   if (live.resultBattleId) return; // bereits abgeschlossen (defensiv, z.B. doppelter Request)
 
@@ -347,6 +382,13 @@ async function finalizeLiveBattle(live: LiveBattle, state: InteractiveBattleStat
       if (winnerId) {
         const loserId = winnerId === live.playerAId ? live.playerBId : live.playerAId;
         await applyWinStreak(winnerId, loserId);
+      }
+      // Gilt für Sieg/Niederlage UND Unentschieden — derselbe Farm-Fairness-Deckel
+      // wie für Rangliste/Sieges-Kiste (countsForRanking), damit Elo nicht durch
+      // wiederholte Angriffe auf denselben Gegner am selben Tag aufgepumpt wird.
+      if (countsForRanking) {
+        const eloResult: EloResult = winnerId === null ? "draw" : winnerId === live.playerAId ? "A" : "B";
+        await applyEloForChallenge(challenge.mode, live.playerAId, live.playerBId, eloResult);
       }
       // OMA-Gems-Ghost-Angriff: nur der Angreifer (playerAId) spielt aktiv — bei
       // dessen Sieg öffnet sich die Sieges-Kiste. Der Verteidiger bekommt nichts,
