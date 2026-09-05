@@ -17,6 +17,8 @@ export function SeasonConfigPanel({ initial }: { initial: SeasonConfig }) {
   const [savingEloReset, setSavingEloReset] = useState(false);
   const [running, setRunning] = useState(false);
   const [lastRunSummary, setLastRunSummary] = useState<string | null>(null);
+  const [runningBackfill, setRunningBackfill] = useState(false);
+  const [backfillSummary, setBackfillSummary] = useState<string | null>(null);
 
   async function saveDate() {
     setSaving(true);
@@ -89,6 +91,29 @@ export function SeasonConfigPanel({ initial }: { initial: SeasonConfig }) {
     }
   }
 
+  async function runEloPlacementBackfill() {
+    if (
+      !confirm(
+        "Elo-Platzierungs-Nachtrag jetzt ausführen? Zählt alle Kämpfe von VOR dem Elo-Launch nachträglich als Platzierungsspiele (die Elo-ZAHL bleibt bei 1000 — nur die Einstufungs-Schwelle wird rückwirkend erkannt). Sollte nur einmal laufen."
+      )
+    ) {
+      return;
+    }
+    setRunningBackfill(true);
+    try {
+      const res = await fetch("/api/admin/battle-cards/backfill-elo-placement", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? "Fehler beim Ausführen"); return; }
+      setBackfillSummary(`${data.usersUpdated} User nachträglich eingestuft.`);
+      toast.success("Nachtrag abgeschlossen");
+      setConfig((c) => ({ ...c, eloPlacementBackfillRanAt: new Date().toISOString() }));
+    } catch {
+      toast.error("Netzwerkfehler");
+    } finally {
+      setRunningBackfill(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="glass rounded-2xl p-4 space-y-3">
@@ -139,6 +164,28 @@ export function SeasonConfigPanel({ initial }: { initial: SeasonConfig }) {
         >
           {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
           {running ? "Läuft…" : "PreSeason jetzt starten"}
+        </button>
+      </div>
+
+      <div className="glass rounded-2xl p-4 space-y-3">
+        <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold">Elo-Platzierungs-Nachtrag</p>
+        <p className="text-xs text-gray-500">
+          Der Elo-Platzierungs-Zähler startet bei jedem User bei 0 — Kämpfe von VOR dem Elo-Launch zählen
+          dafür nicht automatisch mit, auch wenn die Kampfhistorie viel länger ist. Dieser einmalige Nachtrag
+          zählt die bisherige Kampfhistorie je Modus nach und schreibt sie den Platzierungs-Zählern gut, damit
+          aktive Mitglieder nicht dauerhaft als &quot;uneingestuft&quot; in der Rangliste stehen bleiben.
+        </p>
+        {config.eloPlacementBackfillRanAt && (
+          <p className="text-[11px] text-emerald-400">Zuletzt ausgeführt: {formatDate(config.eloPlacementBackfillRanAt)}</p>
+        )}
+        {backfillSummary && <p className="text-[11px] text-gray-400">{backfillSummary}</p>}
+        <button
+          onClick={runEloPlacementBackfill}
+          disabled={runningBackfill}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium transition-colors disabled:opacity-50"
+        >
+          {runningBackfill ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+          {runningBackfill ? "Läuft…" : "Nachtrag jetzt ausführen"}
         </button>
       </div>
 

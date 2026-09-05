@@ -154,6 +154,60 @@ export async function hardResetAllElo(): Promise<void> {
 }
 
 /**
+ * Einmaliger Nachtrag beim Elo-Launch: eloDuelsMatches/eloGemsMatches starten
+ * bei jedem User bei 0 (bewusst keine rückwirkende Neuberechnung der Elo-
+ * ZAHL selbst aus der alten Kampfhistorie — die wäre nur eine Simulation).
+ * Das bedeutet aber, dass User mit langer Kampfhistorie VOR dem Elo-Launch
+ * so aussehen, als hätten sie noch nie gespielt: PLACEMENT_MATCHES (5) greift
+ * erst nach 5 NEUEN Kämpfen, obwohl "X/5 Kämpfe" in der UI fälschlich die
+ * komplette Historie zeigt (row.total, nicht die Elo-Matches) — sie landen
+ * nie als "eingestuft", solange sie nicht erneut kämpfen.
+ * Dieser Backfill zählt einmalig die bisherige Kampfhistorie je Modus
+ * (resolved + countsForRanking, wie überall sonst) und schreibt sie den
+ * *Matches-Zählern gut — die Elo-ZAHL selbst bleibt bei 1000 (Basis), nur
+ * die Platzierungs-Schwelle wird rückwirkend als erfüllt erkannt. Läuft
+ * global genau einmal (siehe eloPlacementBackfillRanAt in season-config.ts),
+ * NICHT pro User, damit ein User, der zwischen Launch und Backfill bereits
+ * neue Kämpfe hatte, nicht doppelt gezählt wird.
+ */
+export async function backfillEloPlacementMatches(): Promise<{ usersUpdated: number }> {
+  const resolved = await prisma.battleChallenge.findMany({
+    where: { status: "resolved", countsForRanking: true },
+    select: { challengerId: true, opponentId: true, mode: true },
+  });
+
+  const matchCounts = new Map<string, { duels: number; gems: number }>();
+  function bump(userId: string, mode: string) {
+    const c = matchCounts.get(userId) ?? { duels: 0, gems: 0 };
+    if (mode === "GEMS") c.gems++;
+    else c.duels++;
+    matchCounts.set(userId, c);
+  }
+  for (const b of resolved) {
+    bump(b.challengerId, b.mode);
+    bump(b.opponentId, b.mode);
+  }
+
+  const userIds = [...matchCounts.keys()];
+  if (userIds.length === 0) return { usersUpdated: 0 };
+
+  await prisma.$transaction(
+    userIds.map((userId) => {
+      const c = matchCounts.get(userId)!;
+      return prisma.user.update({
+        where: { id: userId },
+        data: {
+          eloDuelsMatches: { increment: c.duels },
+          eloGemsMatches: { increment: c.gems },
+        },
+      });
+    })
+  );
+
+  return { usersUpdated: userIds.length };
+}
+
+/**
  * Vom täglichen Cron aufgerufen (siehe /api/cron/battle-cards-season), NACHDEM
  * feststeht, dass Saison 1 bereits läuft (season1RanAt gesetzt). Holt alle
  * seit dem letzten Lauf abgeschlossenen Saisons nach (Cron könnte mal
