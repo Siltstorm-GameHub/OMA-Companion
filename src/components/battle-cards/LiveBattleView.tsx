@@ -335,6 +335,56 @@ function UnitCard({
             style={{ ["--ring-color" as string]: getClassConfig(eff.casterClass!).color }}
           />
         ))}
+      {/* Echte Sprite-Overlays (Kenney Particle Pack, CC0, siehe
+          public/battle-cards/vfx/README.md) — dasselbe Bild wie im Kampf-
+          Replay (BattleScreen.tsx), per mask-image in die Klassenfarbe
+          eingefärbt. Bisher gab's im Live-Kampf nur den Ring-Flash oben, kein
+          Sprite — das war die eigentliche Lücke, die "keine sichtbare
+          Änderung" verursacht hat. */}
+      {(effects ?? [])
+        .filter((e) => (e.kind === "damage" || e.kind === "crit") && e.casterClass === "DAMAGE_DEALER")
+        .map((eff) => (
+          <motion.span
+            key={`slash-${eff.id}`}
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background: getClassConfig("DAMAGE_DEALER").color,
+              maskImage: "url(/battle-cards/vfx/slash.png)",
+              WebkitMaskImage: "url(/battle-cards/vfx/slash.png)",
+              maskSize: "180% 180%",
+              WebkitMaskSize: "180% 180%",
+              maskRepeat: "no-repeat",
+              WebkitMaskRepeat: "no-repeat",
+              maskPosition: "center",
+              WebkitMaskPosition: "center",
+            }}
+            initial={{ opacity: 0, rotate: -30, scale: 0.7 }}
+            animate={{ opacity: [0, 1, 0], rotate: -30, scale: 1.15 }}
+            transition={{ duration: eff.kind === "crit" ? 0.4 : 0.32, ease: "easeOut" }}
+          />
+        ))}
+      {(effects ?? [])
+        .filter((e) => (e.kind === "damage" || e.kind === "crit") && e.casterClass === "SUPPORT")
+        .map((eff) => (
+          <motion.span
+            key={`magic-${eff.id}`}
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background: getClassConfig("SUPPORT").color,
+              maskImage: "url(/battle-cards/vfx/magic-bolt.png)",
+              WebkitMaskImage: "url(/battle-cards/vfx/magic-bolt.png)",
+              maskSize: "70% 70%",
+              WebkitMaskSize: "70% 70%",
+              maskRepeat: "no-repeat",
+              WebkitMaskRepeat: "no-repeat",
+              maskPosition: "center",
+              WebkitMaskPosition: "center",
+            }}
+            initial={{ opacity: 0, scale: 0.3, rotate: 0 }}
+            animate={{ opacity: [0, 1, 0], scale: 1, rotate: eff.kind === "crit" ? 300 : 200 }}
+            transition={{ duration: eff.kind === "crit" ? 0.42 : 0.34, ease: "easeOut" }}
+          />
+        ))}
       {(effects ?? []).length > 0 && (
         <div className="absolute -top-1 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center pointer-events-none">
           {(effects ?? []).map((eff, i) => (
