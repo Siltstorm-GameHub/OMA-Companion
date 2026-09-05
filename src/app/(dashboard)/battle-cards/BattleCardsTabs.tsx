@@ -27,13 +27,13 @@ function BattleCardsTabsInner({
   kampagnePanel,
   kartenPanel,
   communityPanel,
-  communityBadge = 0,
+  kampfBadge = 0,
 }: {
   kampfPanel: ReactNode;
   kampagnePanel: ReactNode;
   kartenPanel: ReactNode;
   communityPanel: ReactNode;
-  communityBadge?: number;
+  kampfBadge?: number;
 }) {
   const searchParams = useSearchParams();
   const requestedTab = searchParams.get("tab");
@@ -57,7 +57,7 @@ function BattleCardsTabsInner({
         {TABS.map((tab) => {
           const isActive = tab.key === active;
           const Icon = tab.icon;
-          const showBadge = tab.key === "community" && communityBadge > 0;
+          const showBadge = tab.key === "kampf" && kampfBadge > 0;
           return (
             <motion.button
               key={tab.key}
@@ -93,7 +93,7 @@ function BattleCardsTabsInner({
                         transition={{ type: "spring", stiffness: 500, damping: 20 }}
                         className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center border-2 border-[#14171f] shadow-md"
                       >
-                        {communityBadge > 9 ? "9+" : communityBadge}
+                        {kampfBadge > 9 ? "9+" : kampfBadge}
                       </motion.span>
                     )}
                   </AnimatePresence>
@@ -103,7 +103,7 @@ function BattleCardsTabsInner({
                   <Icon className="w-5 h-5 text-gray-500" strokeWidth={2} />
                   {showBadge && (
                     <span className="absolute -top-0.5 right-0 min-w-[15px] h-[15px] px-0.5 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center border-2 border-[#14171f]">
-                      {communityBadge > 9 ? "9+" : communityBadge}
+                      {kampfBadge > 9 ? "9+" : kampfBadge}
                     </span>
                   )}
                 </div>
@@ -132,7 +132,7 @@ export default function BattleCardsTabs(props: {
   kampagnePanel: ReactNode;
   kartenPanel: ReactNode;
   communityPanel: ReactNode;
-  communityBadge?: number;
+  kampfBadge?: number;
 }) {
   return (
     <Suspense fallback={null}>

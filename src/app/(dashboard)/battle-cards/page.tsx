@@ -13,7 +13,7 @@
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { IdCard, Trophy, Swords, Users } from "lucide-react";
+import { IdCard, Trophy } from "lucide-react";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { hasStarterDeck } from "@/lib/battle-cards/starter-pick";
@@ -21,6 +21,7 @@ import { countUnopenedPacks } from "@/lib/battle-cards/packs";
 import { sortByQuality, toCardData, resolveAvatarsForCards } from "@/lib/battle-cards/card-view";
 import { getUpgradeEconomyConfig } from "@/lib/battle-cards/upgrade-admin-config";
 import { getBattleCardsLeaderboard } from "@/lib/battle-cards/leaderboard";
+import { getCombinedElo } from "@/lib/battle-cards/elo";
 import { getSeasonConfig } from "@/lib/season/season-config";
 import { getCurrentSeasonNumber, getSeasonWindow } from "@/lib/battle-cards/ranked-season";
 import { getTutorialProgress, getTutorialStep, hasOwnCommunityCard } from "@/lib/battle-cards/tutorial";
@@ -32,8 +33,6 @@ import BattleCardsLogo from "@/components/battle-cards/BattleCardsLogo";
 import ChallengesList from "@/components/battle-cards/ChallengesList";
 import BattleLauncher from "@/components/battle-cards/BattleLauncher";
 import LeaderboardTabs from "@/components/battle-cards/LeaderboardTabs";
-import GemsTournamentBanner from "@/components/battle-cards/GemsTournamentBanner";
-import GemsChallengeUserPicker from "@/components/battle-cards/GemsChallengeUserPicker";
 import LineupStrip from "@/components/battle-cards/LineupStrip";
 import CampaignMap from "@/components/battle-cards/CampaignMap";
 import TutorialProgressBanner from "@/components/battle-cards/TutorialProgressBanner";
@@ -93,7 +92,10 @@ export default async function BattleCardsPage() {
   ]);
   const unopenedPacks = await countUnopenedPacks(userId);
   const pendingChallenges = await prisma.battleChallenge.count({ where: { opponentId: userId, status: "pending" } });
-  const currentUser = await prisma.user.findUnique({ where: { id: userId }, select: { points: true } });
+  const currentUser = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { points: true, eloDuels: true, eloGems: true },
+  });
   const upgradeEconomy = await getUpgradeEconomyConfig();
 
   // ── Tutorial: nur relevant, falls für diesen User überhaupt eine Zeile existiert
@@ -151,28 +153,20 @@ export default async function BattleCardsPage() {
     return rows.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() }));
   }
 
+  const hasChallenges = incoming.length > 0 || outgoing.length > 0 || live.length > 0;
+  const eloDuels = currentUser?.eloDuels ?? 1000;
+  const eloGems = currentUser?.eloGems ?? 1000;
+  const eloOverall = getCombinedElo(eloDuels, eloGems);
+
   const kampfPanel = (
     <div className="space-y-6">
       <TutorialProgressBanner step={tutorialStep} />
 
-      {pendingChallenges > 0 && (
-        <Link
-          href="/battle-cards?tab=community"
-          className="flex items-center gap-2.5 glass rounded-xl p-3 hover:bg-white/[0.04] transition-colors"
-        >
-          <span className="w-8 h-8 rounded-lg bg-rose-500/15 flex items-center justify-center shrink-0">
-            <Swords className="w-4 h-4 text-rose-400" />
-          </span>
-          <span className="flex-1 text-sm text-white">
-            {pendingChallenges} offene {pendingChallenges === 1 ? "Herausforderung wartet" : "Herausforderungen warten"} auf dich
-          </span>
-          <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-rose-500 text-white text-[11px] font-bold shrink-0">
-            {pendingChallenges}
-          </span>
-        </Link>
-      )}
+      <BattleLauncher eloOverall={eloOverall} eloDuels={eloDuels} eloGems={eloGems} />
 
-      <BattleLauncher />
+      {hasChallenges && (
+        <ChallengesList incoming={serialize(incoming)} outgoing={serialize(outgoing)} live={serialize(live)} />
+      )}
 
       <PackOpener initialUnopenedCount={unopenedPacks} />
     </div>
@@ -183,8 +177,6 @@ export default async function BattleCardsPage() {
       <div>
         <h1 className="text-lg font-black text-white">Kampagne</h1>
       </div>
-      <GemsTournamentBanner />
-      <GemsChallengeUserPicker />
       <CampaignMap />
     </div>
   );
@@ -225,30 +217,6 @@ export default async function BattleCardsPage() {
   const communityPanel = (
     <div className="space-y-8">
       <div
-        className="rounded-2xl p-4 flex items-center gap-3"
-        style={{
-          background: "linear-gradient(180deg, #2e2410 0%, #1a1305 100%)",
-          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), inset 0 0 0 1.5px rgba(251,191,36,0.35), 0 3px 0 #78350f",
-        }}
-      >
-        <div
-          className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
-          style={{
-            background: "radial-gradient(circle at 35% 28%, #fde68a, #d97706)",
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.4), 0 2px 6px rgba(0,0,0,0.4)",
-          }}
-        >
-          <Users className="w-5 h-5 text-black/70" strokeWidth={2.4} />
-        </div>
-        <div>
-          <h1 className="text-lg font-black text-white">Community</h1>
-          <p className="text-xs text-amber-200/70 mt-0.5">Herausforderungen und die Rangliste.</p>
-        </div>
-      </div>
-
-      <ChallengesList incoming={serialize(incoming)} outgoing={serialize(outgoing)} live={serialize(live)} />
-
-      <div
         className="rounded-2xl p-4 space-y-3"
         style={{
           background: "linear-gradient(180deg, #2e2410 0%, #1a1305 100%)",
@@ -283,7 +251,7 @@ export default async function BattleCardsPage() {
         kampagnePanel={kampagnePanel}
         kartenPanel={kartenPanel}
         communityPanel={communityPanel}
-        communityBadge={pendingChallenges}
+        kampfBadge={pendingChallenges}
       />
     </div>
   );

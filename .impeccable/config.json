@@ -122,6 +122,15 @@
         ],
         "createdAt": "2026-09-05T13:14:47.225Z",
         "reason": "pre-existing color, verbatim-moved from quests.ts (not new design), see bugfix for tls bundling issue"
+      },
+      {
+        "rule": "ai-color-palette",
+        "value": "#8b5cf6",
+        "files": [
+          "src/components/battle-cards/ChallengesList.tsx"
+        ],
+        "createdAt": "2026-09-05T19:09:39.491Z",
+        "reason": "violet #8b5cf6 reused from existing app palette (Karten-tab accent + SUPPORT class color in BattleCardView.tsx), not a new AI-picked color"
       }
     ]
   }
