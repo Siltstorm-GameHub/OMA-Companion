@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Save, Play, Loader2 } from "lucide-react";
+import { Save, Play, Loader2, RotateCcw } from "lucide-react";
 import type { SeasonConfig } from "@/lib/season/season-config";
 
 function formatDate(iso: string | null): string {
@@ -12,7 +12,9 @@ function formatDate(iso: string | null): string {
 export function SeasonConfigPanel({ initial }: { initial: SeasonConfig }) {
   const [config, setConfig] = useState(initial);
   const [dateInput, setDateInput] = useState(initial.season1StartAt?.slice(0, 10) ?? "");
+  const [eloResetDateInput, setEloResetDateInput] = useState(initial.eloHardResetAt?.slice(0, 10) ?? "");
   const [saving, setSaving] = useState(false);
+  const [savingEloReset, setSavingEloReset] = useState(false);
   const [running, setRunning] = useState(false);
   const [lastRunSummary, setLastRunSummary] = useState<string | null>(null);
 
@@ -32,6 +34,33 @@ export function SeasonConfigPanel({ initial }: { initial: SeasonConfig }) {
       toast.error("Netzwerkfehler");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function saveEloHardReset() {
+    if (
+      eloResetDateInput &&
+      !confirm(
+        "Elo-Hard-Reset für dieses Datum planen? Sobald der Cron das Datum erreicht, werden ALLE Elo-Ratings (OMA Duels + OMA Gems) und Platzierungs-Zähler auf den Startwert zurückgesetzt — im Gegensatz zum sanften Saison-Reset."
+      )
+    ) {
+      return;
+    }
+    setSavingEloReset(true);
+    try {
+      const res = await fetch("/api/admin/battle-cards/season", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eloHardResetAt: eloResetDateInput ? new Date(eloResetDateInput).toISOString() : null }),
+      });
+      if (!res.ok) { toast.error("Speichern fehlgeschlagen"); return; }
+      const data: SeasonConfig = await res.json();
+      setConfig(data);
+      toast.success(eloResetDateInput ? "Hard-Reset-Datum gespeichert" : "Hard-Reset-Datum entfernt");
+    } catch {
+      toast.error("Netzwerkfehler");
+    } finally {
+      setSavingEloReset(false);
     }
   }
 
@@ -111,6 +140,36 @@ export function SeasonConfigPanel({ initial }: { initial: SeasonConfig }) {
           {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
           {running ? "Läuft…" : "PreSeason jetzt starten"}
         </button>
+      </div>
+
+      <div className="glass rounded-2xl p-4 space-y-3">
+        <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold">Elo Hard-Reset</p>
+        <p className="text-xs text-gray-500">
+          Am regulären Saisonende wird jedes Elo-Rating (OMA Duels + OMA Gems, getrennt) automatisch nur sanft
+          zur Basis hin zurückgezogen — Konstanz bleibt spürbar. Für Sonderfälle (z.B. großer Balance-Patch)
+          lässt sich hier zusätzlich ein einmaliger KOMPLETTER Reset auf ein festes Datum legen: sobald der
+          tägliche Cron dieses Datum erreicht, gehen alle Ratings + Platzierungs-Zähler auf den Startwert zurück.
+          Aktuell: <span className="text-gray-300">{formatDate(config.eloHardResetAt)}</span>
+        </p>
+        <div className="flex gap-2 items-center flex-wrap">
+          <input
+            type="date"
+            value={eloResetDateInput}
+            onChange={(e) => setEloResetDateInput(e.target.value)}
+            className="px-3 py-2 rounded-lg bg-white/[0.04] border border-white/10 text-white text-sm focus:outline-none focus:border-teal-500/50"
+          />
+          <button
+            onClick={saveEloHardReset}
+            disabled={savingEloReset}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-sm font-medium transition-colors disabled:opacity-50"
+          >
+            {savingEloReset ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
+            {savingEloReset ? "Speichert…" : "Hard-Reset planen"}
+          </button>
+        </div>
+        {config.eloHardResetRanAt && (
+          <p className="text-[11px] text-gray-600">Zuletzt ausgeführt am {formatDate(config.eloHardResetRanAt)}</p>
+        )}
       </div>
     </div>
   );

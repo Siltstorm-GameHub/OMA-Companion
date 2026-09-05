@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Trophy, Info } from "lucide-react";
 import RankedAvatar from "@/components/RankedAvatar";
+import BattleRankBadge from "@/components/battle-cards/BattleRankBadge";
+import { PLACEMENT_MATCHES } from "@/lib/battle-cards/elo";
 import { MIN_MATCHES_FOR_RANKING, type LeaderboardRow } from "@/lib/battle-cards/leaderboard";
 
 /** Eigene Rang-Plaketten statt Emoji-Medaillen (🥇🥈🥉 rendern je nach OS/
@@ -43,7 +45,17 @@ function RankBadge({ place, isRanked }: { place: number; isRanked: boolean }) {
   );
 }
 
-export default function LeaderboardList({ rows, viewerId }: { rows: LeaderboardRow[]; viewerId: string }) {
+export default function LeaderboardList({
+  rows,
+  viewerId,
+  showElo = false,
+}: {
+  rows: LeaderboardRow[];
+  viewerId: string;
+  /** true bei den Modus-Tabs (OMA Duels/OMA Gems) — zeigt Elo-Rang-Badge + Elo-Zahl statt
+   *  Platzierungs-Medaille/Winrate. Der "Gesamt"-Tab bleibt unverändert (kein Elo). */
+  showElo?: boolean;
+}) {
   if (rows.length === 0) {
     return (
       <div className="glass rounded-2xl p-6 flex flex-col items-center gap-2 text-center">
@@ -54,16 +66,19 @@ export default function LeaderboardList({ rows, viewerId }: { rows: LeaderboardR
   }
 
   const viewerRank = rows.findIndex((r) => r.userId === viewerId);
+  const placementLabel = showElo ? PLACEMENT_MATCHES : MIN_MATCHES_FOR_RANKING;
 
   return (
     <div className="space-y-2">
       <p className="flex items-center gap-1.5 text-[10px] text-gray-600 px-0.5">
         <Info className="w-3 h-3 shrink-0" />
-        Sortiert nach Gewinnquote · ab {MIN_MATCHES_FOR_RANKING} gewerteten Kämpfen eingestuft
+        {showElo
+          ? `Sortiert nach Elo · Rang ab ${placementLabel} Platzierungsspielen`
+          : `Sortiert nach Gewinnquote · ab ${placementLabel} gewerteten Kämpfen eingestuft`}
       </p>
       {rows.map((row, i) => {
         const isViewer = row.userId === viewerId;
-        const matchesToGo = MIN_MATCHES_FOR_RANKING - row.total;
+        const matchesToGo = placementLabel - row.total;
         return (
           <Link
             key={row.userId}
@@ -79,14 +94,23 @@ export default function LeaderboardList({ rows, viewerId }: { rows: LeaderboardR
               <p className="text-[11px] text-gray-500">
                 {row.isRanked
                   ? `${row.total} Kämpfe · ${Math.round(row.winRate * 100)}% Winrate`
-                  : `${row.total}/${MIN_MATCHES_FOR_RANKING} Kämpfe · noch ${matchesToGo} bis Einstufung`}
+                  : `${row.total}/${placementLabel} Kämpfe · noch ${matchesToGo} bis Einstufung`}
               </p>
             </div>
-            <div className="flex items-center gap-3 shrink-0 text-xs font-semibold">
-              <span className="text-emerald-400">{row.wins}S</span>
-              <span className="text-rose-400">{row.losses}N</span>
-              {row.draws > 0 && <span className="text-gray-500">{row.draws}U</span>}
-            </div>
+            {showElo ? (
+              <div className="flex items-center gap-2 shrink-0">
+                {row.isRanked && row.elo !== undefined && <BattleRankBadge elo={row.elo} />}
+                <span className="text-xs font-semibold text-gray-300 tabular-nums">
+                  {row.isRanked ? row.elo : "–"}
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 shrink-0 text-xs font-semibold">
+                <span className="text-emerald-400">{row.wins}S</span>
+                <span className="text-rose-400">{row.losses}N</span>
+                {row.draws > 0 && <span className="text-gray-500">{row.draws}U</span>}
+              </div>
+            )}
           </Link>
         );
       })}

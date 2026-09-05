@@ -15,6 +15,7 @@ import { prisma } from "@/lib/prisma";
 import { getBattleCardsLeaderboard } from "./leaderboard";
 import { getSeasonRewardConfig, type SeasonPlacementReward } from "./season-reward-config";
 import { setLastRewardedRankedSeason } from "@/lib/season/season-config";
+import { softResetRating, ELO_BASE } from "./elo";
 
 export const SEASON_LENGTH_MONTHS = 3;
 
@@ -106,6 +107,50 @@ async function grantSeasonEndRewards(seasonNumber: number, anchor: Date): Promis
     if (!row) break;
     await grantPlacementReward(row.userId, placements[i], seasonNumber);
   }
+
+  await softResetAllElo();
+}
+
+/**
+ * Saison-Soft-Reset der Elo-Ratings (DUELS + GEMS getrennt, siehe elo.ts):
+ * zieht jedes Rating zur Basis (1000) hin, statt es komplett zu kappen —
+ * anders als resetAllCardOwnership/resetAllCampaignProgress bei Saison 1
+ * ("jeder startet bei 0") soll Konstanz über Saisons hinweg spürbar bleiben.
+ * Die *Matches-Zähler gehen auf 0 zurück, damit jede Saison wieder mit
+ * Platzierungsspielen (höherer K-Faktor, siehe elo.ts) beginnt — wie bei
+ * Rocket League. Läuft NACH den Platz-1-3-Belohnungen, die noch auf Basis
+ * der zu Ende gegangenen Saison berechnet werden müssen.
+ */
+async function softResetAllElo(): Promise<void> {
+  const users = await prisma.user.findMany({
+    select: { id: true, eloDuels: true, eloGems: true },
+  });
+  await prisma.$transaction(
+    users.map((u) =>
+      prisma.user.update({
+        where: { id: u.id },
+        data: {
+          eloDuels: softResetRating(u.eloDuels),
+          eloDuelsMatches: 0,
+          eloGems: softResetRating(u.eloGems),
+          eloGemsMatches: 0,
+        },
+      })
+    )
+  );
+}
+
+/**
+ * Admin-gesteuerter Hard-Reset (siehe SeasonConfigPanel + season-config.ts:
+ * eloHardResetAt): anders als softResetAllElo() KEIN Hinziehen zur Basis,
+ * sondern kompletter Neustart aller Elo-Ratings + Platzierungs-Zähler. Für
+ * Sondersituationen gedacht (z.B. großer Balance-Patch), nicht Teil des
+ * normalen Saison-Rhythmus.
+ */
+export async function hardResetAllElo(): Promise<void> {
+  await prisma.user.updateMany({
+    data: { eloDuels: ELO_BASE, eloDuelsMatches: 0, eloGems: ELO_BASE, eloGemsMatches: 0 },
+  });
 }
 
 /**

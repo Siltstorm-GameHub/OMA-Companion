@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { PLACEMENT_MATCHES } from "./elo";
 
 export interface LeaderboardRow {
   userId: string;
@@ -11,14 +12,22 @@ export interface LeaderboardRow {
   total: number;
   winRate: number;
   /** true, sobald genug zählende Kämpfe für eine belastbare Winrate-Einstufung vorliegen
-   *  (siehe MIN_MATCHES_FOR_RANKING) — steuert Sortierung UND UI-Anzeige (Badge/Hinweis). */
+   *  (siehe MIN_MATCHES_FOR_RANKING) — steuert Sortierung UND UI-Anzeige (Badge/Hinweis).
+   *  Bei gesetztem `mode` (siehe getBattleCardsLeaderboard) bezieht sich das stattdessen
+   *  auf die Elo-Platzierungsspiele (PLACEMENT_MATCHES) — gleiche Bedeutung, andere Quelle. */
   isRanked: boolean;
+  /** Elo-Rating für den angefragten `mode` — nur gesetzt (und für die Sortierung
+   *  ausschlaggebend), wenn getBattleCardsLeaderboard mit einem `mode` aufgerufen wurde.
+   *  Beim "Gesamt"-Tab (kein mode) bleibt es undefined, da zwei getrennte Elo-Pools sich
+   *  nicht sinnvoll zu einer Zahl kombinieren lassen — dort zählt weiterhin die Winrate. */
+  elo?: number;
 }
 
 /** Ab so vielen zählenden Kämpfen gilt ein User als "eingestuft" und wird primär nach
  *  Winrate gerankt — verhindert, dass 1 Sieg aus 1 Kampf sofort Platz 1 verdrängt.
  *  User darunter bleiben sichtbar, landen aber immer hinter den eingestuften. Exportiert,
- *  damit die UI (LeaderboardList) denselben Schwellenwert in ihrem Hinweistext nennt. */
+ *  damit die UI (LeaderboardList) denselben Schwellenwert in ihrem Hinweistext nennt.
+ *  Gilt nur noch für den modus-losen "Gesamt"-Tab — DUELS/GEMS nutzen PLACEMENT_MATCHES. */
 export const MIN_MATCHES_FOR_RANKING = 5;
 
 /** Aggregiert alle abgeschlossenen, für die Rangliste zählenden BattleChallenges (siehe
@@ -77,29 +86,49 @@ export async function getBattleCardsLeaderboard(
   const users = userIds.length
     ? await prisma.user.findMany({
         where: { id: { in: userIds } },
-        select: { id: true, username: true, name: true, image: true, rankPoints: true },
+        select: {
+          id: true,
+          username: true,
+          name: true,
+          image: true,
+          rankPoints: true,
+          eloDuels: true,
+          eloDuelsMatches: true,
+          eloGems: true,
+          eloGemsMatches: true,
+        },
       })
     : [];
   const userById = new Map(users.map((u) => [u.id, u]));
 
-  return userIds
-    .map((userId) => {
-      const s = stats.get(userId) ?? { wins: 0, losses: 0, draws: 0 };
-      const total = s.wins + s.losses + s.draws;
-      const u = userById.get(userId);
-      return {
-        userId,
-        name: u?.username ?? u?.name ?? "Unbekannt",
-        image: u?.image ?? null,
-        rankPoints: u?.rankPoints ?? 0,
-        ...s,
-        total,
-        winRate: total > 0 ? s.wins / total : 0,
-        isRanked: total >= MIN_MATCHES_FOR_RANKING,
-      };
-    })
-    .sort((a, b) => {
+  const rows = userIds.map((userId) => {
+    const s = stats.get(userId) ?? { wins: 0, losses: 0, draws: 0 };
+    const total = s.wins + s.losses + s.draws;
+    const u = userById.get(userId);
+    const elo = mode ? (mode === "GEMS" ? u?.eloGems : u?.eloDuels) ?? 0 : undefined;
+    const eloMatches = mode ? (mode === "GEMS" ? u?.eloGemsMatches : u?.eloDuelsMatches) ?? 0 : 0;
+    return {
+      userId,
+      name: u?.username ?? u?.name ?? "Unbekannt",
+      image: u?.image ?? null,
+      rankPoints: u?.rankPoints ?? 0,
+      ...s,
+      total,
+      winRate: total > 0 ? s.wins / total : 0,
+      isRanked: mode ? eloMatches >= PLACEMENT_MATCHES : total >= MIN_MATCHES_FOR_RANKING,
+      elo,
+    };
+  });
+
+  if (mode) {
+    return rows.sort((a, b) => {
       if (a.isRanked !== b.isRanked) return a.isRanked ? -1 : 1;
-      return b.winRate - a.winRate || b.wins - a.wins || b.total - a.total || a.name.localeCompare(b.name);
+      return (b.elo ?? 0) - (a.elo ?? 0) || b.wins - a.wins || a.name.localeCompare(b.name);
     });
+  }
+
+  return rows.sort((a, b) => {
+    if (a.isRanked !== b.isRanked) return a.isRanked ? -1 : 1;
+    return b.winRate - a.winRate || b.wins - a.wins || b.total - a.total || a.name.localeCompare(b.name);
+  });
 }

@@ -49,7 +49,7 @@ export default function LeaderboardTabs({
           </button>
         ))}
       </div>
-      <LeaderboardList rows={rows} viewerId={viewerId} />
+      <LeaderboardList rows={rows} viewerId={viewerId} showElo={tab !== "overall"} />
     </div>
   );
 }
