@@ -1,7 +1,7 @@
 import { CheckCircle2, Swords } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
 import WinIcon from "@/components/WinIcon";
-import { QUEST_TYPE_META, type QuestType } from "@/lib/quests";
+import { QUEST_TYPE_META, type QuestType } from "@/lib/quests-meta";
 
 /**
  * Quest-Fortschritt + Turnier-Ergebnisse — extrahiert aus `page.tsx`, damit
