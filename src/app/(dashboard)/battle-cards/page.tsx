@@ -9,8 +9,7 @@
 //    öffnet Zufallsgegner/Direkt-Herausforderung/NPC in 3 Stufen — siehe
 //    BattleLauncher),
 //    "Karten" (Sammlung — siehe CardCollectionBrowser),
-//    "Community" (eigene offene Herausforderungen, Kampfhistorie aller
-//    User, Rangliste).
+//    "Community" (eigene offene Herausforderungen, Rangliste).
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -32,7 +31,6 @@ import BattleCardsTabs from "./BattleCardsTabs";
 import BattleCardsLogo from "@/components/battle-cards/BattleCardsLogo";
 import ChallengesList from "@/components/battle-cards/ChallengesList";
 import BattleLauncher from "@/components/battle-cards/BattleLauncher";
-import BattleHistoryFeed from "@/components/battle-cards/BattleHistoryFeed";
 import LeaderboardTabs from "@/components/battle-cards/LeaderboardTabs";
 import GemsTournamentBanner from "@/components/battle-cards/GemsTournamentBanner";
 import GemsChallengeUserPicker from "@/components/battle-cards/GemsChallengeUserPicker";
@@ -124,11 +122,11 @@ export default async function BattleCardsPage() {
     ? getSeasonWindow(seasonAnchor, getCurrentSeasonNumber(seasonAnchor, new Date()))
     : null;
 
-  // ── Community-Reiter: eigene offene/laufende Herausforderungen, Kampfhistorie aller User, Rangliste ──
+  // ── Community-Reiter: eigene offene/laufende Herausforderungen, Rangliste ──
   // Drei Ranglisten-Varianten (Gesamt + je Modus einzeln) — OMA Duels und OMA Gems PvP zählen
   // serverseitig bereits gemeinsam in "Gesamt" (siehe leaderboard.ts), hier zusätzlich einzeln
   // abrufbar für den Umschalter in LeaderboardTabs.
-  const [incoming, outgoing, live, allResolved, leaderboardRows, duelsLeaderboardRows, gemsLeaderboardRows] = await Promise.all([
+  const [incoming, outgoing, live, leaderboardRows, duelsLeaderboardRows, gemsLeaderboardRows] = await Promise.all([
     prisma.battleChallenge.findMany({
       where: { opponentId: userId, status: "pending" },
       include: { challenger: { select: userSelect }, opponent: { select: userSelect } },
@@ -143,12 +141,6 @@ export default async function BattleCardsPage() {
       where: { status: "live", OR: [{ challengerId: userId }, { opponentId: userId }] },
       include: { challenger: { select: userSelect }, opponent: { select: userSelect } },
       orderBy: { createdAt: "desc" },
-    }),
-    prisma.battleChallenge.findMany({
-      where: { status: "resolved" },
-      include: { challenger: { select: userSelect }, opponent: { select: userSelect } },
-      orderBy: { respondedAt: "desc" },
-      take: 30,
     }),
     getBattleCardsLeaderboard(currentSeasonWindow ?? undefined),
     getBattleCardsLeaderboard(currentSeasonWindow ?? undefined, "DUELS"),
@@ -234,19 +226,10 @@ export default async function BattleCardsPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-lg font-black text-white">Community</h1>
-        <p className="text-xs text-gray-500 mt-0.5">
-          Herausforderungen, Kampfhistorie aller Mitglieder und die Rangliste.
-        </p>
+        <p className="text-xs text-gray-500 mt-0.5">Herausforderungen und die Rangliste.</p>
       </div>
 
       <ChallengesList incoming={serialize(incoming)} outgoing={serialize(outgoing)} live={serialize(live)} />
-
-      <div className="space-y-3">
-        <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">
-          Kampfhistorie aller Mitglieder
-        </h2>
-        <BattleHistoryFeed entries={allResolved} />
-      </div>
 
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-2 flex-wrap">
