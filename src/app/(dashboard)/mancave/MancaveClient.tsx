@@ -1,12 +1,30 @@
 "use client";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import MancaveScene3D from "./MancaveScene3D";
-import MancaveMobileApp from "./MancaveMobileApp";
 import type { MancaveData } from "./mancave-data";
 
 /**
- * Splittet rein per CSS zwischen Ego-Perspektive (Desktop) und
- * Smartphone-in-Hand-Dashboard (Mobile) — kein JS-Viewport-Sniffing, damit
- * es ohne Hydration-Flackern sofort im richtigen Layout ankommt (gleiches
+ * Mobile hat keine eigene Mancave-App mehr (siehe Teil B des Umbau-Plans) —
+ * Statistik/Pokale/Ausbau/Jobs sind inhaltlich in die Profil-Reiter
+ * gewandert. Wer `/mancave` trotzdem direkt aufruft (Lesezeichen, alter
+ * Link), landet automatisch auf `/profile`.
+ */
+function MobileRedirect() {
+  const router = useRouter();
+  useEffect(() => { router.replace("/profile"); }, [router]);
+  return (
+    <div className="h-full flex items-center justify-center">
+      <Loader2 className="w-5 h-5 text-teal-400 animate-spin" />
+    </div>
+  );
+}
+
+/**
+ * Splittet rein per CSS zwischen Ego-Perspektive (Desktop) und der
+ * automatischen Weiterleitung (Mobile) — kein JS-Viewport-Sniffing, damit es
+ * ohne Hydration-Flackern sofort im richtigen Layout ankommt (gleiches
  * Muster wie FloatingPill/BottomNav im Dashboard-Layout).
  *
  * Läuft (anders als der Rest des Dashboards) im Vollbild ohne Kachel-Padding —
@@ -19,8 +37,8 @@ export default function MancaveClient({ data }: { data: MancaveData }) {
       <div className="hidden lg:block h-full">
         <MancaveScene3D data={data} />
       </div>
-      <div className="lg:hidden h-full overflow-y-auto px-5 py-4">
-        <MancaveMobileApp data={data} />
+      <div className="lg:hidden h-full">
+        <MobileRedirect />
       </div>
     </div>
   );

@@ -1,0 +1,193 @@
+import { prisma } from "@/lib/prisma";
+import { getRank, getNextRank, getRankFullLabel } from "@/lib/ranks";
+import { computeBadges } from "@/lib/badges";
+import { getMancaveConfig, effectiveCosts } from "@/lib/mancave-config";
+import { loadRoom } from "@/lib/room";
+import { getRoomItem } from "@/lib/room-items";
+import { parseFavoriteGames } from "@/lib/favorite-games";
+import { loadMancaveTiers, surfaceTierFrom } from "@/lib/mancave-economy";
+import { MANCAVE_ITEMS, nextUpgradeCost } from "@/lib/mancave-items";
+import { getJobOverview } from "@/lib/job-service";
+import { buildHoldersMap, getUserTrophies, getScopeTitle, CATEGORY_CONFIG, GENRE_CONFIG } from "@/lib/wanderpocal";
+import { renderZoneFor, MANCAVE_GADGET_CATEGORIES, type MancaveGadget, type MancaveItemStatus, type MancaveData, type MancaveWanderpokal, type MancaveWanderpokalStatus } from "@/app/(dashboard)/mancave/mancave-data";
+
+/**
+ * Aggregiert alle Daten für `MancaveData` — extrahiert aus `mancave/page.tsx`,
+ * damit sowohl die Mancave-Seite (Desktop-3D-Szene) als auch die mobile
+ * Profilseite (Job-Reiter + Trophy3DViewer, siehe Teil B des Umbau-Plans)
+ * dieselbe Aggregation nutzen, statt sie zu duplizieren.
+ */
+export async function loadMancaveData(userId: string): Promise<MancaveData> {
+  const mancaveCfg = await getMancaveConfig();
+  const now = new Date();
+
+  const [
+    user, eventCount, startedEvents, tournamentCount, pokale, leaderboardRank,
+    userSystemBadges, userCustomBadges, lulPollWins, room, tiers, jobs, wanderpokalHolders, myWanderpokalStats,
+  ] = await Promise.all([
+    prisma.user.findUnique({
+      where:  { id: userId },
+      select: { id: true, name: true, username: true, image: true, points: true, rankPoints: true, createdAt: true, favoriteGamesJson: true, voiceMinutesTotal: true, messagesTotal: true },
+    }),
+    prisma.eventRegistration.count({ where: { userId } }),
+    prisma.event.findMany({
+      where: { startAt: { lte: now }, registrations: { some: { userId } } },
+      select: { game: true, finalRankingJson: true, completionData: true },
+    }),
+    prisma.tournamentParticipant.count({ where: { userId } }),
+    prisma.pokal.findMany({ where: { userId }, orderBy: { awardedAt: "desc" } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { rankPoints: true } }).then(async (u) => {
+      const higher = await prisma.user.count({ where: { rankPoints: { gt: u?.rankPoints ?? 0 } } });
+      return higher + 1;
+    }),
+    prisma.userSystemBadge.findMany({ where: { userId }, select: { badgeKey: true } }),
+    prisma.userCustomBadge.findMany({
+      where: { userId },
+      include: { badge: { select: { id: true, icon: true, name: true, desc: true } } },
+      orderBy: { earnedAt: "asc" },
+    }),
+    prisma.lulEntry.count({ where: { userId, communityChamp: true } }),
+    loadRoom(userId),
+    loadMancaveTiers(userId),
+    getJobOverview(userId),
+    // Alle 12 Scopes zusammen sind eine Handvoll Zeilen — genauso teuer, ALLE
+    // Halter auf einmal zu laden (statt nur die des Users), damit das
+    // Detail-Panel zeigen kann, wer die Wanderpokale hält, die man selbst
+    // nicht besitzt. Inkl. Avatar/Rang für die Profilbild-Anzeige im Panel.
+    prisma.wanderpocalHolder.findMany({
+      include: { user: { select: { id: true, username: true, name: true, image: true, rankPoints: true } } },
+    }),
+    // Eigene kumulierte Siege pro Scope (WanderpocalStat, unabhängig vom
+    // AKTUELLEN Halter) — für den "Du: X Siege"-Vergleich im Detail-Panel,
+    // auch bei Scopes, die man selbst nie gehalten hat.
+    prisma.wanderpocalStat.findMany({ where: { userId } }),
+  ]);
+
+  if (!user) throw new Error("User nicht gefunden");
+
+  const eventWins = startedEvents.filter(e => {
+    try { const r = JSON.parse(e.finalRankingJson ?? "[]"); return Array.isArray(r) && r[0] === userId; }
+    catch { return false; }
+  }).length;
+  const pollWinsFromEvents = startedEvents.filter(e => {
+    try { const ids: string[] = (e.completionData ? JSON.parse(e.completionData) : {}).pollWinnerIds ?? []; return ids.includes(userId); }
+    catch { return false; }
+  }).length;
+  const pollMasterCount = pollWinsFromEvents + lulPollWins;
+  const gameCounts = startedEvents.reduce<Record<string, number>>((acc, e) => {
+    if (e.game) acc[e.game] = (acc[e.game] ?? 0) + 1;
+    return acc;
+  }, {});
+  const topGames = Object.entries(gameCounts).sort((a, b) => b[1] - a[1]).map(([g]) => g);
+  const favoriteGames = parseFavoriteGames(user.favoriteGamesJson).map(g => g.name);
+
+  const rankPoints  = user.rankPoints;
+  const currentRank = getRank(rankPoints);
+  const nextRank    = getNextRank(rankPoints);
+  const rankPct     = nextRank
+    ? Math.min(100, Math.round(((rankPoints - currentRank.min) / (nextRank.min - currentRank.min)) * 100))
+    : 100;
+
+  const voiceHours   = Math.floor((user.voiceMinutesTotal ?? 0) / 60);
+  const messageCount = user.messagesTotal ?? 0;
+  const earnedSystemKeys = new Set(userSystemBadges.map(b => b.badgeKey));
+  const badges = computeBadges(
+    { points: user.points, voiceHours, messageCount, eventCount, tournamentCount, tournamentWins: 0, eventWins, mvpCount: pollMasterCount },
+    earnedSystemKeys,
+  ).filter(b => b.earned);
+
+  const totalUsers  = await prisma.user.count();
+  const memberSince = new Date(user.createdAt).toLocaleDateString("de-DE", { month: "long", year: "numeric" });
+
+  // Gadgets: nur die aufgestellten Zimmer-Items, die sinnvoll am Schreibtisch
+  // stehen (siehe MANCAVE_GADGET_CATEGORIES) — Tapeten, Böden, Poster & Co.
+  // bleiben draußen. Für die Bild-Liste im Gadgets-Panel reicht das normale
+  // Katalogfoto (def.imageUrl) — die echte 3D-Ego-Ansicht selbst lädt die
+  // Objekte ohnehin als echte GLB-Modelle, nicht als Foto (siehe roomItemKeys
+  // unten + MancaveScene3D.tsx).
+  const gadgets: MancaveGadget[] = room.placed
+    .map(p => getRoomItem(p.key))
+    .filter((def): def is NonNullable<typeof def> => !!def && MANCAVE_GADGET_CATEGORIES.includes(def.category))
+    .map(def => ({
+      key: def.key, label: def.label, description: def.description,
+      imageUrl: def.imageUrl, accent: def.accent, category: def.category, zone: renderZoneFor(def.category),
+      price: def.price,
+    }));
+
+  const items: MancaveItemStatus[] = MANCAVE_ITEMS.map(def => {
+    const tier = tiers[def.key];
+    return {
+      key: def.key, label: def.label, baseline: def.baseline, tier,
+      maxTier: 4,
+      nextCost: nextUpgradeCost(def, tier, { devFreeMode: mancaveCfg.devFreeMode, costOverride: effectiveCosts(def, mancaveCfg) }),
+    };
+  });
+  const surfaceTier = surfaceTierFrom(tiers);
+
+  // Wanderpokale: eigene (für die 3D-Anzeige auf dem Regal) + alle 12 Scopes
+  // mit aktuellem Halter (fürs Detail-Panel, "wer hat den Rest").
+  const holdersMap = buildHoldersMap(wanderpokalHolders);
+  const wanderpokale: MancaveWanderpokal[] = getUserTrophies(holdersMap, userId).map(h => ({
+    scopeType:  h.scopeType,
+    scopeValue: h.scopeValue,
+    title:      getScopeTitle(h.scopeType, h.scopeValue),
+    winCount:   h.winCount,
+    heldSince:  h.heldSince.toISOString(),
+  }));
+  const allScopes: [string, string][] = [
+    ...Object.keys(CATEGORY_CONFIG).map((v): [string, string] => ["category", v]),
+    ...Object.keys(GENRE_CONFIG).map((v): [string, string] => ["genre", v]),
+  ];
+  const myStatsMap = new Map(myWanderpokalStats.map(s => [`${s.scopeType}:${s.scopeValue}`, s.winCount]));
+  const wanderpokalStatus: MancaveWanderpokalStatus[] = allScopes.map(([scopeType, scopeValue]) => {
+    const holder = wanderpokalHolders.find(h => h.scopeType === scopeType && h.scopeValue === scopeValue);
+    return {
+      scopeType, scopeValue,
+      title:            getScopeTitle(scopeType, scopeValue),
+      ownedByMe:        holder?.userId === userId,
+      holderUserId:     holder?.userId ?? null,
+      holderName:       holder ? (holder.user.username ?? holder.user.name ?? "Unbekannt") : null,
+      holderAvatarUrl:  holder?.user.image ?? null,
+      holderRankPoints: holder?.user.rankPoints ?? null,
+      winCount:         holder?.winCount ?? null,
+      myWinCount:       myStatsMap.get(`${scopeType}:${scopeValue}`) ?? 0,
+    };
+  });
+
+  return {
+    displayName:     user.username ?? user.name ?? "Unbekannt",
+    avatarUrl:       user.image,
+    rankPoints,
+    totalPoints:     user.points,
+    rankLabel:       getRankFullLabel(currentRank),
+    rankColor:       currentRank.color,
+    rankPct,
+    nextRankLabel:   nextRank ? getRankFullLabel(nextRank) : null,
+    leaderboardRank,
+    totalUsers,
+    memberSince,
+    eventCount,
+    eventWins,
+    pollMasterCount,
+    pokaleCount:     pokale.length,
+    voiceHours,
+    messageCount,
+    topGames: topGames.length > 0 ? topGames : favoriteGames,
+    badges: [
+      ...badges.map(b => ({ key: b.id, icon: b.icon, name: b.name, desc: b.desc })),
+      ...userCustomBadges.map(uc => ({ key: uc.badge.id, icon: uc.badge.icon, name: uc.badge.name, desc: uc.badge.desc })),
+    ],
+    pokale: pokale.map(p => ({
+      id: p.id, title: p.title, category: p.category, isSeries: p.isSeries,
+      awardedAt: p.awardedAt.toISOString(), eventId: p.eventId, seriesId: p.seriesId,
+    })),
+    wanderpokale,
+    wanderpokalStatus,
+    gadgets,
+    roomItemKeys: room.placed.map(p => p.key),
+    items,
+    surfaceTier,
+    devFreeMode: mancaveCfg.devFreeMode,
+    jobs,
+  };
+}
