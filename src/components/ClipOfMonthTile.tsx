@@ -50,10 +50,10 @@ export default function ClipOfMonthTile({ winners, monthLabel, finishedContestId
   return (
     <Link href="/clip-des-monats"
       className="surface animate-slide-up stagger-2 scan-on-load group flex flex-col overflow-hidden relative transition-transform duration-200 hover:-translate-y-1 active:scale-[0.99]"
-      style={{ borderRadius: "6px", border: "1px solid rgba(145,70,255,0.18)", boxShadow: "0 4px 24px rgba(0,0,0,0.5)", height: "296px" }}>
+      style={{ borderRadius: "6px", border: "1px solid rgba(145,70,255,0.18)", boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
 
       {/* Cover art area */}
-      <div className="relative overflow-hidden shrink-0" style={{ height: "200px" }}>
+      <div className="relative overflow-hidden shrink-0 aspect-[16/10]">
         {/* Clip-Thumbnail */}
         {winner?.thumbnailUrl ? (
           // eslint-disable-next-line @next/next/no-img-element

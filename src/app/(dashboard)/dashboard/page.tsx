@@ -32,6 +32,7 @@ import { computeStatStandings, type StatConfig, type LegacyStandingRow } from "@
 import GameserverWidget from "./GameserverWidget";
 import CommunityBoardWidget from "./CommunityBoardWidget";
 import GuestLockOverlay from "@/components/GuestLockOverlay";
+import { acc } from "@/lib/accentColors";
 
 const MONTH_NAMES = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
 
@@ -351,7 +352,7 @@ export default async function DashboardPage() {
       <div className="relative px-5 pt-0 sm:pt-8 pb-6 max-w-7xl mx-auto">
         {/* Dezente Trennlinie unten */}
         <div className="absolute bottom-0 inset-x-5 h-px"
-          style={{ background: "linear-gradient(90deg, transparent, rgba(20,184,166,0.18), transparent)" }} />
+          style={{ background: `linear-gradient(90deg, transparent, ${acc("teal", 0.18)}, transparent)` }} />
 
         {!userId && (
           <div className="relative rounded-xl overflow-hidden" style={{ minHeight: "168px" }}>
@@ -370,7 +371,7 @@ export default async function DashboardPage() {
                 </div>
                 <div className="hidden sm:block w-20 h-16 rounded bg-white/[0.06] shrink-0" />
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4 sm:mt-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4 sm:mt-6">
                 {[0, 1, 2, 3].map(i => (
                   <div key={i} className="h-16 rounded-sm bg-white/[0.05]" />
                 ))}
@@ -436,9 +437,9 @@ export default async function DashboardPage() {
           {leaderboardRank && (
             <Link href="/leaderboard"
               className="group card-cut surface px-5 py-3 text-center shrink-0 hidden sm:block relative overflow-hidden transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.98]"
-              style={{ boxShadow: "0 0 0 1px rgba(20,184,166,0.15), 0 0 24px rgba(20,184,166,0.05)" }}>
+              style={{ boxShadow: `0 0 0 1px ${acc("teal", 0.15)}, 0 0 24px ${acc("teal", 0.05)}` }}>
               <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-                style={{ background: "radial-gradient(circle at 50% 20%, rgba(20,184,166,0.22), transparent 70%)" }} />
+                style={{ background: `radial-gradient(circle at 50% 20%, ${acc("teal", 0.22)}, transparent 70%)` }} />
               <div className="relative">
                 <p className="text-[9px] text-gray-600 uppercase tracking-[0.15em] mb-1">Rang</p>
                 <p className="font-display text-3xl font-black tabular-nums leading-none text-gradient-gaming">
@@ -467,13 +468,13 @@ export default async function DashboardPage() {
         </div>
 
         {/* ── Stat-Streifen ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4 sm:mt-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4 sm:mt-6">
 
           {/* Teilgenommene Events → Profil */}
           <Link href="/profile"
             className="group relative overflow-hidden card-cut-sm surface-elevated px-4 py-3 block transition-all duration-200 hover:-translate-y-0.5 hover:border-teal-500/25 active:scale-[0.98]">
             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-              style={{ background: "radial-gradient(circle at 30% 15%, rgba(20,184,166,0.22), transparent 70%)" }} />
+              style={{ background: `radial-gradient(circle at 30% 15%, ${acc("teal", 0.22)}, transparent 70%)` }} />
             <div className="relative">
               <p className="font-display text-2xl font-black tabular-nums leading-tight animate-number-pop text-teal-400">
                 {myEventCount}
@@ -488,7 +489,7 @@ export default async function DashboardPage() {
           <Link href={nextRegisteredEvent ? `/tournament/${nextRegisteredEvent.id}` : "/events"}
             className="group relative overflow-hidden card-cut-sm surface-elevated px-4 py-3 block transition-all duration-200 hover:-translate-y-0.5 hover:border-amber-500/25 active:scale-[0.98]">
             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-              style={{ background: "radial-gradient(circle at 30% 15%, rgba(245,158,11,0.22), transparent 70%)" }} />
+              style={{ background: `radial-gradient(circle at 30% 15%, ${acc("amber", 0.22)}, transparent 70%)` }} />
             <div className="relative">
               {nextRegisteredEvent ? (() => {
                 const phase = nextRegisteredEvent.status === "active"
@@ -535,7 +536,7 @@ export default async function DashboardPage() {
           <Link href="/quests"
             className="group relative overflow-hidden card-cut-sm surface-elevated px-4 py-3 block transition-all duration-200 hover:-translate-y-0.5 hover:border-violet-500/25 active:scale-[0.98]">
             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-              style={{ background: "radial-gradient(circle at 30% 15%, rgba(167,139,250,0.22), transparent 70%)" }} />
+              style={{ background: `radial-gradient(circle at 30% 15%, ${acc("violetLight", 0.22)}, transparent 70%)` }} />
             <div className="relative">
               <p className="font-display text-2xl font-black tabular-nums leading-tight animate-number-pop text-violet-400">
                 {myQuestsDone}<span className="text-gray-600 text-base">/{totalMonthQuests}</span>
@@ -550,7 +551,7 @@ export default async function DashboardPage() {
           <Link href="/events"
             className="group relative overflow-hidden card-cut-sm surface-elevated px-4 py-3 block transition-all duration-200 hover:-translate-y-0.5 hover:border-rose-500/25 active:scale-[0.98]">
             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-              style={{ background: "radial-gradient(circle at 30% 15%, rgba(244,63,94,0.22), transparent 70%)" }} />
+              style={{ background: `radial-gradient(circle at 30% 15%, ${acc("rose", 0.22)}, transparent 70%)` }} />
             <div className="relative">
               <p className="font-display text-2xl font-black tabular-nums leading-tight animate-number-pop text-rose-400">
                 {activeEvents}
@@ -600,10 +601,10 @@ export default async function DashboardPage() {
           {/* Events Hub */}
           <Link href="/events"
             className="surface animate-slide-up stagger-1 scan-on-load group flex flex-col overflow-hidden relative transition-transform duration-200 hover:-translate-y-1 active:scale-[0.99]"
-            style={{ borderRadius: "6px", border: "1px solid rgba(20,184,166,0.12)", boxShadow: "0 4px 24px rgba(0,0,0,0.5)", height: "296px" }}>
+            style={{ borderRadius: "6px", border: `1px solid ${acc("teal", 0.12)}`, boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
 
             {/* Cover art area */}
-            <div className="relative overflow-hidden shrink-0" style={{ height: "200px" }}>
+            <div className="relative overflow-hidden shrink-0 aspect-[16/10]">
               {/* Game cover background */}
               {nextEvent?.game ? (
                 <GameCover
@@ -620,7 +621,7 @@ export default async function DashboardPage() {
               {/* Status badge */}
               {nextEvent && nextEvent.status === "active" ? (
                 <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider"
-                  style={{ background: "rgba(239,68,68,0.16)", border: "1px solid rgba(239,68,68,0.3)", color: "#f87171" }}>
+                  style={{ background: acc("red", 0.16), border: `1px solid ${acc("red", 0.3)}`, color: "#f87171" }}>
                   <span className="relative flex w-1.5 h-1.5">
                     <span className="absolute inline-flex w-full h-full rounded-full bg-red-400 animate-ping" />
                     <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-red-400" />
@@ -629,7 +630,7 @@ export default async function DashboardPage() {
                 </div>
               ) : nextEvent && nextEvent.status === "umfrage" ? (
                 <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider"
-                  style={{ background: "rgba(245,158,11,0.16)", border: "1px solid rgba(245,158,11,0.3)", color: "#fbbf24" }}>
+                  style={{ background: acc("amber", 0.16), border: `1px solid ${acc("amber", 0.3)}`, color: "#fbbf24" }}>
                   <span className="relative flex w-1.5 h-1.5">
                     <span className="absolute inline-flex w-full h-full rounded-full bg-amber-400 animate-ping" />
                     <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-amber-400" />
@@ -638,14 +639,14 @@ export default async function DashboardPage() {
                 </div>
               ) : (
                 <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider"
-                  style={{ background: "rgba(20,184,166,0.14)", border: "1px solid rgba(20,184,166,0.22)", color: "#2dd4bf" }}>
+                  style={{ background: acc("teal", 0.14), border: `1px solid ${acc("teal", 0.22)}`, color: "#2dd4bf" }}>
                   <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" />
                   <CountUp to={activeEvents} duration={700} /> aktiv
                 </div>
               )}
               {nextEvent && isRegisteredForNextEvent && (
                 <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-1 px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider"
-                  style={{ background: "rgba(20,184,166,0.14)", border: "1px solid rgba(20,184,166,0.22)", color: "#2dd4bf" }}>
+                  style={{ background: acc("teal", 0.14), border: `1px solid ${acc("teal", 0.22)}`, color: "#2dd4bf" }}>
                   <CheckCircle2 className="w-3 h-3" /> Angemeldet
                 </div>
               )}
@@ -696,8 +697,8 @@ export default async function DashboardPage() {
           {/* Squads Hub */}
           <Link href="/squads"
             className="surface animate-slide-up stagger-2 scan-on-load group flex flex-col overflow-hidden relative transition-transform duration-200 hover:-translate-y-1 active:scale-[0.99]"
-            style={{ borderRadius: "6px", border: "1px solid rgba(245,158,11,0.16)", boxShadow: "0 4px 24px rgba(0,0,0,0.5)", height: "296px" }}>
-            <div className="relative overflow-hidden shrink-0" style={{ height: "200px" }}>
+            style={{ borderRadius: "6px", border: `1px solid ${acc("amber", 0.16)}`, boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
+            <div className="relative overflow-hidden shrink-0 aspect-[16/10]">
               {featuredSquadCover ? (
                 <>
                   {/* Echtes Squad-Cover in voller Farbe — nur der Verlauf unten sorgt für Textlesbarkeit,
@@ -712,7 +713,7 @@ export default async function DashboardPage() {
                 </>
               ) : (
                 <div className="absolute inset-0"
-                  style={{ background: "radial-gradient(circle at 28% 22%, rgba(245,158,11,0.16), transparent 62%), linear-gradient(135deg, #29130a 0%, #1c0a02 55%, #0d0d0f 100%)" }} />
+                  style={{ background: `radial-gradient(circle at 28% 22%, ${acc("amber", 0.16)}, transparent 62%), linear-gradient(135deg, #29130a 0%, #1c0a02 55%, #0d0d0f 100%)` }} />
               )}
 
               {mySquadMembership ? (
@@ -731,7 +732,7 @@ export default async function DashboardPage() {
                   )}
                   {mySquadMembership.role === "captain" && (
                     <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider"
-                      style={{ background: "rgba(245,158,11,0.16)", border: "1px solid rgba(245,158,11,0.3)", color: "#fbbf24" }}>
+                      style={{ background: acc("amber", 0.16), border: `1px solid ${acc("amber", 0.3)}`, color: "#fbbf24" }}>
                       <Crown className="w-3 h-3" /> Captain
                     </div>
                   )}
@@ -798,8 +799,8 @@ export default async function DashboardPage() {
           {/* Battle Cards */}
           <Link href="/battle-cards"
             className="surface animate-slide-up stagger-2 scan-on-load group flex flex-col overflow-hidden relative transition-transform duration-200 hover:-translate-y-1 active:scale-[0.99]"
-            style={{ borderRadius: "6px", border: "1px solid rgba(139,92,246,0.16)", boxShadow: "0 4px 24px rgba(0,0,0,0.5)", height: "296px" }}>
-            <div className="relative overflow-hidden shrink-0" style={{ height: "200px" }}>
+            style={{ borderRadius: "6px", border: `1px solid ${acc("violet", 0.16)}`, boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
+            <div className="relative overflow-hidden shrink-0 aspect-[16/10]">
               <Image src="/battle-cards/cover.jpg" alt="" fill sizes="(min-width: 640px) 50vw, 100vw" quality={90}
                 className="object-cover transition-transform duration-700 group-hover:scale-110"
                 style={{ objectPosition: "center 8%" }} />
@@ -812,7 +813,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* ── 3-Spalten: Events | Rangliste | Quests ──────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 
           {/* Aktive Eventreihen */}
           <div className="animate-slide-up stagger-3">
@@ -828,7 +829,7 @@ export default async function DashboardPage() {
               style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.45)", borderColor: "rgba(255,255,255,0.06)" }}>
               {activeSeries.length === 0 ? (
                 <div className="flex flex-col items-center gap-2.5 p-6 text-center">
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: "rgba(20,184,166,0.06)" }}>
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: acc("teal", 0.06) }}>
                     <Repeat className="w-5 h-5 text-gray-700" style={{ animation: "float 3.5s ease-in-out infinite" }} />
                   </div>
                   <p className="text-xs text-gray-600">Keine aktiven Eventreihen</p>
@@ -921,7 +922,7 @@ export default async function DashboardPage() {
                 </>
               ) : servers.length === 0 ? (
                 <div className="flex flex-col items-center gap-2.5 p-6 text-center">
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: "rgba(20,184,166,0.06)" }}>
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: acc("teal", 0.06) }}>
                     <Gamepad2 className="w-5 h-5 text-gray-700" style={{ animation: "float 3.5s ease-in-out infinite 0.3s" }} />
                   </div>
                   <p className="text-xs text-gray-600">Keine Gameserver verfügbar</p>
@@ -999,7 +1000,7 @@ export default async function DashboardPage() {
               {/* Quest-Liste */}
               {myMonthQuests.length === 0 ? (
                 <div className="flex flex-col items-center gap-2.5 p-6 text-center">
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: "rgba(239,68,68,0.06)" }}>
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: acc("red", 0.06) }}>
                     <Scroll className="w-5 h-5 text-gray-700" style={{ animation: "float 3.5s ease-in-out infinite 0.6s" }} />
                   </div>
                   <p className="text-xs text-gray-600">Keine Quests diesen Monat</p>
@@ -1055,7 +1056,7 @@ export default async function DashboardPage() {
                 Alle Events <ChevronRight className="w-3 h-3" />
               </Link>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {recentSummaries.map(ev => (
                 <Link key={ev.id} href={`/tournament/${ev.id}`}
                   className="surface group block p-4 hover:border-teal-500/20 hover:-translate-y-0.5 active:scale-[0.99] transition-all duration-200"

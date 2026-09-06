@@ -90,6 +90,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   return NextResponse.json({
     id: event.id,
     name: event.title,
+    status: event.status,
     format: event.format,
     tournamentStatus: event.tournamentStatus,
     participants: event.participants.map((p) => ({
