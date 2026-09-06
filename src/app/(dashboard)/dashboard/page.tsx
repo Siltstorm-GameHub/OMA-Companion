@@ -626,9 +626,6 @@ export default async function DashboardPage() {
               ) : (
                 <EventCoverDefault className="absolute inset-0 w-full h-full" brandBadge />
               )}
-              {/* Overlay */}
-              <div className="absolute inset-0"
-                style={{ background: "rgba(13,13,15,0.6)" }} />
               {/* Status badge */}
               {nextEvent && nextEvent.status === "active" ? (
                 <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wider"

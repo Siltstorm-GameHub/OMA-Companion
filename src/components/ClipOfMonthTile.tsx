@@ -76,9 +76,6 @@ export default function ClipOfMonthTile({ winners, monthLabel, finishedContestId
             <Clapperboard className="w-8 h-8 text-gray-700" />
           </div>
         )}
-        {/* Overlay */}
-        <div className="absolute inset-0"
-          style={{ background: "rgba(13,13,15,0.6)" }} />
         {/* Play-Overlay (rein visuell — Kachel navigiert zur Clip-Seite) */}
         {winner && (
           <div className="absolute inset-0 flex items-center justify-center">
