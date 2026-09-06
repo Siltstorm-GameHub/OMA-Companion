@@ -1,55 +1,13 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import Link from "next/link";
-import { ChevronRight, ChevronLeft, Briefcase as BriefcaseIcon } from "lucide-react";
+import { ChevronRight, ChevronLeft } from "lucide-react";
 import { RecentResultsBanner, type RecentResultEvent } from "@/components/RecentResultsBanner";
 import { DailyMessageBanner } from "@/components/DailyMessageBanner";
 import WhatsAppCommunityBanner from "@/components/WhatsAppCommunityBanner";
 import { DailyPollBanner } from "@/components/DailyPollBanner";
-import CoinIcon from "@/components/CoinIcon";
 
 type DailyMessage = { id: string; title: string; content: string; endDate: string };
-export type JobReminderData = {
-  current: { accruedCoins: number; capped: boolean; label: string; emoji: string } | null;
-};
-type SlideId = "job" | "results" | "message" | "polls" | "clipContest" | "whatsapp";
-
-function JobReminderSlide({ jobReminder, fill, insetLeft }: { jobReminder: JobReminderData; fill: boolean; insetLeft: boolean }) {
-  return (
-    <Link
-      href="/mancave"
-      className={`surface flex items-center gap-3 ${insetLeft ? "pl-11 pr-4" : "px-4"} py-3 rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.99] ${
-        jobReminder.current?.capped ? "border-rose-500/25" : ""
-      }`}
-      style={fill ? { height: "100%", boxSizing: "border-box" } : undefined}
-    >
-      <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
-        <BriefcaseIcon className="w-4 h-4 text-amber-400" />
-      </div>
-      {jobReminder.current ? (
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-white flex items-center gap-1.5 flex-wrap">
-            <span className="text-amber-400 tabular-nums flex items-center gap-1">
-              {jobReminder.current.accruedCoins.toLocaleString("de-DE")}<CoinIcon size={13} />
-            </span>
-            warten in deinem Gaming-Zimmer
-          </p>
-          <p className={`text-[11px] mt-0.5 ${jobReminder.current.capped ? "text-rose-400" : "text-gray-500"}`}>
-            {jobReminder.current.capped
-              ? "Lohnfach ist voll — hol dir den Lohn, bevor mehr verfällt"
-              : `als ${jobReminder.current.label} ${jobReminder.current.emoji}`}
-          </p>
-        </div>
-      ) : (
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-white">Du bist arbeitslos</p>
-          <p className="text-[11px] text-gray-500 mt-0.5">Am schwarzen Brett im Zimmer warten Jobs — Münzen nebenbei verdienen</p>
-        </div>
-      )}
-      <ChevronRight className="w-4 h-4 text-gray-700 shrink-0" />
-    </Link>
-  );
-}
+type SlideId = "results" | "message" | "polls" | "clipContest" | "whatsapp";
 
 /**
  * Orchestriert den Banner-Slider. Die einzelnen Banner können sich intern
@@ -66,28 +24,25 @@ function JobReminderSlide({ jobReminder, fill, insetLeft }: { jobReminder: JobRe
 export function PromoBannerCarousel({
   recentResultEvents,
   dailyMessage,
-  jobReminder = null,
   hasClipContest = false,
   clipContestSlot = null,
   interval = 7000,
 }: {
   recentResultEvents: RecentResultEvent[];
   dailyMessage: DailyMessage | null;
-  jobReminder?: JobReminderData | null;
   hasClipContest?: boolean;
   clipContestSlot?: ReactNode;
   interval?: number;
 }) {
   const candidateIds = useMemo<SlideId[]>(() => {
     const ids: SlideId[] = [];
-    if (jobReminder) ids.push("job");
     if (recentResultEvents.length > 0) ids.push("results");
     if (dailyMessage) ids.push("message");
     ids.push("polls");
     if (hasClipContest) ids.push("clipContest");
     ids.push("whatsapp");
     return ids;
-  }, [recentResultEvents.length, dailyMessage, jobReminder, hasClipContest]);
+  }, [recentResultEvents.length, dailyMessage, hasClipContest]);
 
   const [visibility, setVisibility] = useState<Partial<Record<SlideId, boolean>>>({});
   const [activeIndex, setActiveIndex] = useState(0);
@@ -100,10 +55,10 @@ export function PromoBannerCarousel({
     []
   );
 
-  // Job-Reminder und Clip-Contest haben keinen Client-Dismiss — ihre Sichtbarkeit
-  // steht bereits serverseitig fest, sobald sie als Kandidat übergeben werden.
+  // Clip-Contest hat keinen Client-Dismiss — seine Sichtbarkeit steht bereits
+  // serverseitig fest, sobald er als Kandidat übergeben wird.
   const visibleIds = candidateIds.filter(id =>
-    id === "job" || id === "clipContest" ? true : visibility[id] === true
+    id === "clipContest" ? true : visibility[id] === true
   );
 
   useEffect(() => {
@@ -181,11 +136,6 @@ export function PromoBannerCarousel({
         </>
       )}
       <div className="grid">
-        {candidateIds.includes("job") && jobReminder && (
-          <div className={slideClass("job")} aria-hidden={activeId !== "job"}>
-            <JobReminderSlide jobReminder={jobReminder} fill insetLeft={arrowsVisible} />
-          </div>
-        )}
         {candidateIds.includes("results") && (
           <div className={slideClass("results")} aria-hidden={activeId !== "results"}>
             <RecentResultsBanner events={recentResultEvents} onVisibilityChange={makeHandler("results")} fill insetLeft={arrowsVisible} />

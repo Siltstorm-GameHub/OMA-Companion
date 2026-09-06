@@ -7,7 +7,6 @@ import { getRoomItem } from "@/lib/room-items";
 import { parseFavoriteGames } from "@/lib/favorite-games";
 import { loadMancaveTiers, surfaceTierFrom } from "@/lib/mancave-economy";
 import { MANCAVE_ITEMS, nextUpgradeCost } from "@/lib/mancave-items";
-import { getJobOverview } from "@/lib/job-service";
 import { buildHoldersMap, getUserTrophies, getScopeTitle, CATEGORY_CONFIG, GENRE_CONFIG } from "@/lib/wanderpocal";
 import { renderZoneFor, MANCAVE_GADGET_CATEGORIES, type MancaveGadget, type MancaveItemStatus, type MancaveData, type MancaveWanderpokal, type MancaveWanderpokalStatus } from "@/app/(dashboard)/mancave/mancave-data";
 
@@ -29,7 +28,7 @@ export async function loadMancaveData(userId: string, isAdmin: boolean): Promise
 
   const [
     user, eventCount, startedEvents, tournamentCount, pokale, leaderboardRank,
-    userSystemBadges, userCustomBadges, lulPollWins, room, tiers, jobs, wanderpokalHolders, myWanderpokalStats,
+    userSystemBadges, userCustomBadges, lulPollWins, room, tiers, wanderpokalHolders, myWanderpokalStats,
   ] = await Promise.all([
     prisma.user.findUnique({
       where:  { id: userId },
@@ -55,7 +54,6 @@ export async function loadMancaveData(userId: string, isAdmin: boolean): Promise
     prisma.lulEntry.count({ where: { userId, communityChamp: true } }),
     loadRoom(userId),
     loadMancaveTiers(userId),
-    getJobOverview(userId),
     // Alle 12 Scopes zusammen sind eine Handvoll Zeilen — genauso teuer, ALLE
     // Halter auf einmal zu laden (statt nur die des Users), damit das
     // Detail-Panel zeigen kann, wer die Wanderpokale hält, die man selbst
@@ -194,6 +192,5 @@ export async function loadMancaveData(userId: string, isAdmin: boolean): Promise
     items,
     surfaceTier,
     devFreeMode: devFree,
-    jobs,
   };
 }

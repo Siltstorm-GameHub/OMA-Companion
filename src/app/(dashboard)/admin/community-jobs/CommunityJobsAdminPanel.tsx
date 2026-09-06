@@ -11,7 +11,6 @@ interface JobRef { key: string; label: string; emoji: string }
 interface AdminApplication { id: string; jobKey: string; status: string; message: string | null; appliedAt: string; user: { id: string; username: string | null; name: string | null } }
 interface AdminMember { id: string; jobKey: string; status: string; contractEndAt: string; user: { id: string; username: string | null; name: string | null } }
 interface AdminDispute { kind: string; id: string; reason: string | null; voter: { username: string | null; name: string | null }; context: string; ownerId: string }
-interface BoardEntry { kind: string; id: string; caption?: string; author: { username: string | null; name: string | null }; adminConfirmedPosted?: boolean }
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, { ...init, headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) } });
@@ -29,21 +28,18 @@ export default function CommunityJobsAdminPanel({
   const [applications, setApplications] = useState<AdminApplication[]>([]);
   const [members, setMembers] = useState<AdminMember[]>([]);
   const [disputes, setDisputes] = useState<AdminDispute[]>([]);
-  const [marketingPosts, setMarketingPosts] = useState<BoardEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   async function reload() {
     try {
-      const [appsData, membersData, disputesData, boardData] = await Promise.all([
+      const [appsData, membersData, disputesData] = await Promise.all([
         api<{ applications: AdminApplication[] }>("/api/admin/community-jobs/applications"),
         api<{ members: AdminMember[] }>("/api/admin/community-jobs/members"),
         api<{ disputes: AdminDispute[] }>("/api/admin/community-jobs/disputes"),
-        api<{ feed: BoardEntry[] }>("/api/community-board?limit=50"),
       ]);
       setApplications(appsData.applications);
       setMembers(membersData.members);
       setDisputes(disputesData.disputes);
-      setMarketingPosts(boardData.feed.filter(e => e.kind === "marketing_post"));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Konnte Daten nicht laden");
     } finally {
@@ -82,16 +78,6 @@ export default function CommunityJobsAdminPanel({
         method: "PATCH", body: JSON.stringify({ action: "REASSIGN", targetApplicationId }),
       });
       toast.success("Job übergeben");
-      reload();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Fehlgeschlagen");
-    }
-  }
-
-  async function toggleConfirmedPosted(id: string, confirmed: boolean) {
-    try {
-      await api(`/api/admin/community-jobs/marketing-posts/${id}`, { method: "PATCH", body: JSON.stringify({ confirmed }) });
-      toast.success(confirmed ? "Als gepostet bestätigt" : "Bestätigung zurückgenommen");
       reload();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Fehlgeschlagen");
@@ -180,26 +166,6 @@ export default function CommunityJobsAdminPanel({
           ))}
         </div>
       </section>
-
-      {marketingPosts.length > 0 && (
-        <section className="space-y-2">
-          <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Marketing-Posts bestätigen</h2>
-          <div className="glass rounded-xl overflow-hidden divide-y divide-white/[0.04]">
-            {marketingPosts.map(p => (
-              <div key={p.id} className="p-3 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-xs text-gray-300 truncate">{p.caption}</p>
-                  <p className="text-[11px] text-gray-600">von {p.author.username ?? p.author.name}</p>
-                </div>
-                <Button size="sm" variant={p.adminConfirmedPosted ? "outline" : "primary"}
-                  onClick={() => toggleConfirmedPosted(p.id, !p.adminConfirmedPosted)}>
-                  {p.adminConfirmedPosted ? "Bestätigung zurücknehmen" : "Als gepostet bestätigen"}
-                </Button>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
 
       <JobSettingsSection jobs={jobs} effectiveSlots={effectiveSlots} channelOverrides={channelOverrides} />
       <VoteBonusSection initial={voteBonus} />

@@ -1,31 +1,17 @@
 import { requireRole } from "@/lib/roles";
 import { getMancaveConfig, effectiveCosts } from "@/lib/mancave-config";
 import { MANCAVE_ITEMS } from "@/lib/mancave-items";
-import { JOBS } from "@/lib/jobs";
-import { getJobOverrides, getEffectiveJobs } from "@/lib/job-config";
 import { MancaveConfigPanel } from "./MancaveConfigPanel";
 import { MancavePricesPanel } from "./MancavePricesPanel";
-import { MancaveJobsPanel } from "./MancaveJobsPanel";
 
 export default async function AdminMancavePage() {
   await requireRole("admin");
-  const [config, jobOverrides, effectiveJobs] = await Promise.all([
-    getMancaveConfig(), getJobOverrides(), getEffectiveJobs(),
-  ]);
+  const config = await getMancaveConfig();
 
   const priceRows = MANCAVE_ITEMS.map(def => ({
     key: def.key, label: def.label, baseline: def.baseline,
     defaultCosts: def.costs, costs: effectiveCosts(def, config),
     overridden: def.key in config.priceOverrides,
-  }));
-
-  const effectiveJobMap = new Map(effectiveJobs.map(j => [j.key, j]));
-  const jobRows = JOBS.map(def => ({
-    key: def.key, label: def.label, emoji: def.emoji, minTier: def.minTier,
-    defaultCoinsPerHour: def.coinsPerHour, defaultMinRoomTier: def.minRoomTier,
-    coinsPerHour: effectiveJobMap.get(def.key)?.coinsPerHour ?? def.coinsPerHour,
-    minRoomTier:  effectiveJobMap.get(def.key)?.minRoomTier ?? def.minRoomTier,
-    overridden: def.key in jobOverrides,
   }));
 
   return (
@@ -46,17 +32,6 @@ export default async function AdminMancavePage() {
           Preis (weicht vom Katalog-Default ab). Gilt für alle außer Admins im Testmodus (oben).
         </p>
         <MancavePricesPanel initial={priceRows} />
-      </section>
-
-      <section>
-        <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-4">
-          💼 Idle-Jobs
-        </h2>
-        <p className="text-xs text-gray-500 mb-4 -mt-2">
-          Lohn pro Stunde und ab welcher Mancave-Gesamtstufe ein Job zusätzlich zum Rang
-          verfügbar wird.
-        </p>
-        <MancaveJobsPanel initial={jobRows} />
       </section>
     </div>
   );

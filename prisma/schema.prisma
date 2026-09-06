@@ -107,7 +107,6 @@ model User {
   room                             Room?
   roomItems                        RoomItem[]
   mancaveItems                     MancaveItem[]
-  job                              UserJob?
   communityJobApplications         CommunityJobApplication[]
   communityJobApplicationsReviewed CommunityJobApplication[]   @relation("CommunityJobApplicationReviewer")
   communityJobMemberships          CommunityJobMember[]
@@ -1230,28 +1229,10 @@ model RoomItem {
   @@index([userId, placed])
 }
 
-// ── Idle-Jobs ────────────────────────────────────────────────────────────────
-
-/// Der (höchstens eine) Idle-Job eines Users. Der Lohn läuft in Echtzeit auf und
-/// wird beim Abholen FAUL berechnet — es gibt bewusst KEINEN Cron dafür
-/// (gleiche Philosophie wie DailySpin: gerechnet wird nur, wenn jemand hinschaut).
-model UserJob {
-  userId          String    @id
-  jobKey          String? // null = arbeitslos (gekündigt oder gefeuert)
-  hiredAt         DateTime? // Einstellungszeitpunkt (Anzeige "Betriebszugehörigkeit")
-  accrualFrom     DateTime? // Ab hier läuft unabgeholter Lohn auf; bei jedem Claim neu gesetzt
-  lastClaimAt     DateTime?
-  totalEarned     Int       @default(0) // Lebenszeit-Verdienst über alle Jobs (für Abzeichen)
-  hireLockedUntil DateTime? // Wechselsperre: vorher kein neuer Job
-  updatedAt       DateTime  @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
 // ── Community-Jobs (aktive, community-bewertete Jobs — Journalist, Fotograf, ────
-//    Marketing Manager, Coach/Manager, Visionär) — unabhängig vom Mancave-UserJob
-//    (Idle-Einkommen) oben. Siehe Plan "Community-Jobs mit Büro/Werkstatt und
-//    Wochengehalt". Phase 1 (Fundament): Bewerbung/Mitgliedschaft/Wochengehalt,
+//    Marketing Manager, Coach/Manager, Visionär) — die alten, passiv Münzen
+//    generierenden Idle-Jobs wurden abgeschafft. Siehe Plan "Community-Jobs mit
+//    Büro/Werkstatt und Wochengehalt". Phase 1 (Fundament): Bewerbung/Mitgliedschaft/Wochengehalt,
 //    jobspezifische Content-Modelle (JobReport etc.) folgen in späteren Phasen.
 
 model CommunityJobApplication {

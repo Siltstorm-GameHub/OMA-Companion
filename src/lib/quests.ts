@@ -65,13 +65,6 @@ const TEMPLATES: QuestTemplate[] = [
     rewards: [100, 175, 250],
   },
   {
-    type: "JOB_CLAIM",
-    titles: ["Fleißige Biene", "Schichtarbeiter", "Lohn-Abholer", "Pflichtbewusst"],
-    descriptions: ["Hole {target} Mal deinen Lohn aus dem Gaming-Zimmer ab"],
-    targets: [5, 10, 15, 20],
-    rewards: [100, 175, 250, 350],
-  },
-  {
     type: "COMMUNITY_JOB_VOTE",
     titles: ["Aufmerksamer Leser", "Community-Kritiker", "Fleißiger Bewerter"],
     descriptions: ["Bewerte {target} Community-Job-Beiträge anderer"],

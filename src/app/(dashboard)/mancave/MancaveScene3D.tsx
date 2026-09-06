@@ -35,7 +35,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Html, useGLTF, useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import RankedAvatar from "@/components/RankedAvatar";
-import { MonitorScreenContent, TrophyPanel, ItemsPanel, JobsPanel, MailPanel, WanderpokalePanel, EventPokalePanel, type MancavePanel } from "./MancaveSharedUI";
+import { MonitorScreenContent, TrophyPanel, ItemsPanel, MailPanel, WanderpokalePanel, EventPokalePanel, type MancavePanel } from "./MancaveSharedUI";
 import type { MancaveData, MancavePokal } from "./mancave-data";
 import { WANDERPOKAL_MODELS, WANDERPOKAL_MODEL_DEFAULT, eventPokalModelUrl } from "./mancave-trophy-models";
 import { CAMERA_VIEWS, easeInOutCubic, VIEW_TRANSITION_MS, type CameraView } from "./mancave-camera-views";
@@ -1735,7 +1735,6 @@ export default function MancaveScene3D({ data: initialData }: { data: MancaveDat
             </button>
             {panel === "trophy" && <TrophyPanel data={data} />}
             {panel === "items" && <ItemsPanel data={data} onDataChange={setData} />}
-            {panel === "jobs" && <JobsPanel data={data} onDataChange={setData} />}
             {panel === "mail" && <MailPanel data={data} onOpenPanel={setPanel} />}
             {panel === "wanderpokale-kategorie" && <WanderpokalePanel data={data} scopeType="category" />}
             {panel === "wanderpokale-genre" && <WanderpokalePanel data={data} scopeType="genre" />}

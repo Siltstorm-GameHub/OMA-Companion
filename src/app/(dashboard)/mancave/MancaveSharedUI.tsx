@@ -5,20 +5,15 @@ import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import {
   Trophy, Package, CalendarDays, Medal, Swords, Clock, MessageSquare, Gamepad2, Wrench, Lock,
-  ArrowUpCircle, ArrowDownCircle, ArrowLeft, FlaskConical, Home, Mail, Briefcase, BarChart3, Loader2,
-  Check, Sparkles,
+  ArrowUpCircle, ArrowDownCircle, ArrowLeft, FlaskConical, Home, Mail, BarChart3,
 } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
 import RankedAvatar from "@/components/RankedAvatar";
-import { useNow } from "@/lib/useNow";
-import { computeAccrual, formatDuration, getJob } from "@/lib/jobs";
-import { RANKS } from "@/lib/ranks";
-import type { JobListEntry, JobOverview } from "@/lib/job-service";
 import type { MancaveData } from "./mancave-data";
 import { cn } from "@/lib/utils";
 import { CATEGORY_CONFIG } from "@/lib/wanderpocal";
 
-export type MancavePanel = "trophy" | "items" | "jobs" | "mail" | "wanderpokale-kategorie" | "wanderpokale-genre" | "eventpokale" | null;
+export type MancavePanel = "trophy" | "items" | "mail" | "wanderpokale-kategorie" | "wanderpokale-genre" | "eventpokale" | null;
 
 /**
  * `<Html>` (drei, 3D-verankerte Overlays wie der Monitor-Screen) rendert
@@ -40,19 +35,16 @@ export type MancavePanel = "trophy" | "items" | "jobs" | "mail" | "wanderpokale-
  */
 
 /**
- * Wie viele Benachrichtigungen gerade anliegen (neue Jobs verfügbar,
- * bezahlbare Upgrades) — treibt den Mail-Badge im Monitor-Dock. Rein aus den
- * ohnehin geladenen Daten berechnet, kein eigener "gelesen"-Zustand (siehe
- * MailPanel-Kommentar).
+ * Wie viele Benachrichtigungen gerade anliegen (bezahlbare Upgrades) — treibt
+ * den Mail-Badge im Monitor-Dock. Rein aus den ohnehin geladenen Daten
+ * berechnet, kein eigener "gelesen"-Zustand (siehe MailPanel-Kommentar).
  */
 function notificationCount(data: MancaveData): number {
-  const jobCount = data.jobs.jobs.filter(j => j.unlocked && !j.isCurrent).length;
-  const upgradeCount = data.items.filter(i => i.nextCost !== null && i.nextCost <= data.totalPoints).length;
-  return jobCount + upgradeCount;
+  return data.items.filter(i => i.nextCost !== null && i.nextCost <= data.totalPoints).length;
 }
 
 const PANEL_TITLES: Record<Exclude<MancavePanel, null>, string> = {
-  trophy: "Statistik", items: "Ausbau", jobs: "Jobbörse", mail: "Postfach",
+  trophy: "Statistik", items: "Ausbau", mail: "Postfach",
   "wanderpokale-kategorie": "Kategorie-Wanderpokale", "wanderpokale-genre": "Genre-Wanderpokale",
   eventpokale: "Event-Pokale",
 };
@@ -124,7 +116,6 @@ export function MonitorScreenContent({ data: initialData }: { data: MancaveData 
           onWheel={e => { e.currentTarget.scrollTop += e.deltaY; e.stopPropagation(); }}>
           {view === "trophy" && <TrophyPanel data={data} />}
           {view === "items" && <ItemsPanel data={data} onDataChange={setData} />}
-          {view === "jobs" && <JobsPanel data={data} onDataChange={setData} />}
           {view === "mail" && <MailPanel data={data} onOpenPanel={setView} />}
           {view === "wanderpokale-kategorie" && <WanderpokalePanel data={data} scopeType="category" />}
           {view === "wanderpokale-genre" && <WanderpokalePanel data={data} scopeType="genre" />}
@@ -166,7 +157,6 @@ export function MonitorScreenContent({ data: initialData }: { data: MancaveData 
         <div className="flex items-center gap-3 px-3 py-3 rounded-xl"
           style={{ background: "rgba(8,16,15,0.65)", border: "1px solid rgba(255,255,255,0.08)", backdropFilter: "blur(2px)" }}>
           <DockIcon icon={<BarChart3 />} onClick={() => setView("trophy")} />
-          <DockIcon icon={<Briefcase />} onClick={() => setView("jobs")} />
           <DockIcon icon={<Wrench />} onClick={() => setView("items")} />
           <DockIcon icon={<Mail />} badge={notifs} onClick={() => setView("mail")} />
         </div>
@@ -191,233 +181,16 @@ function DockIcon({ icon, badge, onClick }: { icon: React.ReactNode; badge?: num
   );
 }
 
-function tierLabel(tier: number): string {
-  return RANKS.find(r => r.tier === tier)?.label ?? `Stufe ${tier}`;
-}
-
-const JOB_ACCENT: Record<JobListEntry["accent"], string> = {
-  slate:  "border-white/[0.08]",
-  teal:   "border-teal-500/25",
-  violet: "border-violet-500/25",
-  amber:  "border-amber-500/25",
-  rose:   "border-rose-500/25",
-};
-
 /**
- * Job-Börse direkt am Rechner. Jobs hängen jetzt an `data.surfaceTier` statt
- * an einzelnen Möbeln (siehe jobs.ts) — höhere Mancave-Stufe schaltet
- * automatisch neue Stellen frei. Startet mit den server-seitig geladenen
- * Daten (kein Ladeblitzer beim Öffnen), lädt nach jeder Aktion nach.
- */
-export function JobsPanel({ data, onDataChange }: { data: MancaveData; onDataChange: Dispatch<SetStateAction<MancaveData>> }) {
-  const now = useNow(1000);
-  const [overview, setOverview] = useState<JobOverview>(data.jobs);
-  const [acting, setActing] = useState<string | null>(null);
-  const [claimedAt, setClaimedAt] = useState(0);
-
-  // Holt nur die (leichtgewichtige) Job-Übersicht neu — kein Reload der
-  // ganzen Seite mehr nötig. Münzstand-Änderungen kommen direkt aus der
-  // jeweiligen Aktions-Response (siehe hire/quit/claim unten) und patchen
-  // MonitorScreenContents State über `onDataChange`.
-  async function reloadJobs() {
-    const d: JobOverview = await fetch("/api/jobs").then(r => r.json()).catch(() => null);
-    if (d && !("error" in d)) setOverview(d);
-  }
-
-  async function hire(job: JobListEntry) {
-    setActing(job.key);
-    try {
-      const res  = await fetch("/api/jobs/hire", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobKey: job.key }),
-      });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) { toast.error(body.error ?? "Bewerbung fehlgeschlagen"); return; }
-      confetti({ particleCount: 70, spread: 65, origin: { y: 0.7 } });
-      toast.success(
-        body.autoClaimed > 0
-          ? `${job.emoji} Eingestellt als ${job.label} — ${body.autoClaimed} Münzen vom alten Job abgerechnet`
-          : `${job.emoji} Eingestellt als ${job.label}!`
-      );
-      await reloadJobs();
-      if (body.autoClaimed > 0) onDataChange(prev => ({ ...prev, totalPoints: prev.totalPoints + body.autoClaimed }));
-    } catch {
-      toast.error("Netzwerkfehler");
-    } finally {
-      setActing(null);
-    }
-  }
-
-  async function quit() {
-    if (!confirm("Wirklich kündigen? Der aufgelaufene Lohn wird ausgezahlt.")) return;
-    setActing("__quit");
-    try {
-      const res  = await fetch("/api/jobs/quit", { method: "POST" });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) { toast.error(body.error ?? "Kündigung fehlgeschlagen"); return; }
-      toast.success(body.paidOut > 0 ? `Gekündigt — ${body.paidOut} Münzen ausgezahlt` : "Gekündigt");
-      await reloadJobs();
-      if (body.paidOut > 0) onDataChange(prev => ({ ...prev, totalPoints: prev.totalPoints + body.paidOut }));
-    } catch {
-      toast.error("Netzwerkfehler");
-    } finally {
-      setActing(null);
-    }
-  }
-
-  async function claim() {
-    setActing("__claim");
-    try {
-      const res  = await fetch("/api/jobs/claim", { method: "POST" });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) { toast.error(body.error ?? "Abholen fehlgeschlagen"); return; }
-      setClaimedAt(Date.now());
-      confetti({ particleCount: 90, spread: 70, origin: { y: 0.7 } });
-      toast.success(`+${body.coins} Münzen für ${formatDuration(body.countedMinutes)} Arbeit`);
-      if (body.fired) toast.error(body.fired, { duration: 8000 });
-      await reloadJobs();
-      onDataChange(prev => ({ ...prev, totalPoints: prev.totalPoints + body.coins }));
-    } catch {
-      toast.error("Netzwerkfehler");
-    } finally {
-      setActing(null);
-    }
-  }
-
-  if (!overview.enabled) {
-    return (
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <Briefcase className="w-4 h-4 text-teal-400" />
-          <h3 className="text-sm font-semibold text-white">Jobbörse</h3>
-        </div>
-        <p className="text-xs text-gray-600">Die Idle-Jobs sind gerade deaktiviert.</p>
-      </div>
-    );
-  }
-
-  const job = overview.current ? getJob(overview.current.jobKey) : null;
-  const accrual = overview.current && job
-    ? computeAccrual(
-        job,
-        Math.max(new Date(overview.current.accrualFrom!).getTime(), claimedAt),
-        now,
-        { wageCapHours: overview.wageCapHours, multiplierPct: overview.wageMultiplierPct },
-      )
-    : null;
-  const canClaim = (accrual?.countedMinutes ?? 0) >= overview.minClaimMinutes;
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2 pr-8">
-        <Briefcase className="w-4 h-4 text-teal-400" />
-        <h3 className="text-sm font-semibold text-white">Jobbörse</h3>
-      </div>
-      <p className="text-[11px] text-gray-500 leading-relaxed">
-        Ein Job auf einmal. Der Lohn läuft stündlich auf und wartet bis zu {overview.wageCapHours} Stunden
-        auf dich. Bessere Stellen verlangen einen höheren Rang <em>und</em> eine höhere Mancave-Stufe
-        (aktuell: Stufe {overview.roomTier}).
-      </p>
-
-      {overview.current && job && accrual && (
-        <div className="rounded-2xl border border-teal-500/25 bg-teal-500/[0.06] p-3 space-y-2.5">
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <span className="text-xl shrink-0">{job.emoji}</span>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-white truncate">{job.label}</p>
-              <p className="text-[11px] text-gray-400 tabular-nums">
-                seit {formatDuration(accrual.workedMinutes)} · {job.coinsPerHour} Münzen/h
-              </p>
-            </div>
-            <p className="text-lg font-black text-amber-400 tabular-nums flex items-center gap-1 leading-none shrink-0">
-              {accrual.coins.toLocaleString("de-DE")}<CoinIcon size={13} />
-            </p>
-          </div>
-          <div className="h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
-            <div className={cn(
-              "h-full rounded-full transition-all duration-500 bg-gradient-to-r",
-              accrual.capped ? "from-rose-600 to-rose-400" : "from-teal-600 to-teal-400"
-            )} style={{ width: `${Math.min(100, Math.round((accrual.countedMinutes / (overview.wageCapHours * 60)) * 100))}%` }} />
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={claim} disabled={acting !== null || !canClaim}
-              title={!canClaim ? `Erst ab ${overview.minClaimMinutes} Minuten Arbeit` : undefined}
-              className={cn(
-                "flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors",
-                canClaim ? "bg-amber-500/20 border border-amber-500/30 text-amber-200 hover:bg-amber-500/30"
-                         : "bg-white/[0.04] border border-white/[0.06] text-gray-600 cursor-not-allowed"
-              )}>
-              {acting === "__claim" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CoinIcon size={12} />}
-              Lohn abholen
-            </button>
-            <button onClick={quit} disabled={acting !== null}
-              className="px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-white/[0.05] border border-white/[0.08] text-gray-300 hover:bg-rose-500/15 hover:text-rose-300 hover:border-rose-500/25 transition-colors disabled:opacity-50">
-              {acting === "__quit" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Kündigen"}
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div className="space-y-1.5">
-        {overview.jobs.map(j => (
-          <div key={j.key} className={cn(
-            "rounded-xl border p-2.5 bg-white/[0.02] transition-opacity",
-            JOB_ACCENT[j.accent], !j.unlocked && !j.isCurrent && "opacity-60"
-          )}>
-            <div className="flex items-start gap-2.5">
-              <span className="text-lg shrink-0 leading-none mt-0.5">{j.emoji}</span>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <p className="text-xs font-semibold text-white">{j.label}</p>
-                  <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center gap-0.5 tabular-nums">
-                    {j.coinsPerHour}<CoinIcon size={8} />/h
-                  </span>
-                  {j.isCurrent && (
-                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-teal-500/15 border border-teal-500/25 text-teal-300 font-semibold">Aktuell</span>
-                  )}
-                </div>
-                <p className="text-[10px] text-gray-500 mt-0.5 leading-snug">{j.flavor}</p>
-                <div className="flex flex-wrap gap-1 mt-1.5">
-                  <span className={cn("text-[9px] px-1.5 py-0.5 rounded border",
-                    j.rankOk ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-white/[0.04] border-white/[0.08] text-gray-500")}>
-                    {j.rankOk ? "✓" : "🔒"} {tierLabel(j.minTier)}
-                  </span>
-                  <span className={cn("text-[9px] px-1.5 py-0.5 rounded border",
-                    j.roomTierOk ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-white/[0.04] border-white/[0.08] text-gray-500")}>
-                    {j.roomTierOk ? "✓" : "🔒"} Mancave-Stufe {j.minRoomTier}
-                  </span>
-                </div>
-              </div>
-              {!j.isCurrent ? (
-                <button onClick={() => hire(j)} disabled={!j.unlocked || acting !== null}
-                  className={cn(
-                    "shrink-0 px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-colors self-center",
-                    j.unlocked ? "bg-teal-500/15 border border-teal-500/25 text-teal-300 hover:bg-teal-500/25"
-                               : "bg-white/[0.04] border border-white/[0.06] text-gray-600 cursor-not-allowed"
-                  )}>
-                  {acting === j.key ? <Loader2 className="w-3 h-3 animate-spin" /> : !j.unlocked ? <Lock className="w-3 h-3" /> : "Bewerben"}
-                </button>
-              ) : <Check className="w-3.5 h-3.5 text-teal-400 shrink-0 self-center" />}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/**
- * "Postfach": zeigt gerade AKTUELL zutreffende Hinweise (neue erreichbare
- * Jobs, bezahlbare Upgrades) — bewusst kein persistenter Gelesen/Ungelesen-
- * Zustand (keine neue DB-Tabelle dafür), sondern live aus den ohnehin
- * geladenen Daten berechnet. Klick auf einen Eintrag springt direkt ins
- * passende Panel.
+ * "Postfach": zeigt gerade AKTUELL zutreffende Hinweise (bezahlbare
+ * Upgrades) — bewusst kein persistenter Gelesen/Ungelesen-Zustand (keine
+ * neue DB-Tabelle dafür), sondern live aus den ohnehin geladenen Daten
+ * berechnet. Klick auf einen Eintrag springt direkt ins passende Panel.
  */
 export function MailPanel({ data, onOpenPanel }: { data: MancaveData; onOpenPanel: (p: MancavePanel) => void }) {
-  const newJobs = data.jobs.jobs.filter(j => j.unlocked && !j.isCurrent);
   const affordable = data.items.filter(i => i.nextCost !== null && i.nextCost <= data.totalPoints);
 
-  const empty = newJobs.length === 0 && affordable.length === 0;
+  const empty = affordable.length === 0;
 
   return (
     <div className="space-y-4">
@@ -427,23 +200,6 @@ export function MailPanel({ data, onOpenPanel }: { data: MancaveData; onOpenPane
       </div>
       {empty && (
         <p className="text-xs text-gray-600">Keine neuen Nachrichten — schau später wieder vorbei.</p>
-      )}
-      {newJobs.length > 0 && (
-        <div className="space-y-1.5">
-          <p className="text-[10px] text-gray-500 uppercase tracking-widest flex items-center gap-1">
-            <Sparkles className="w-3 h-3" /> Neue Jobs verfügbar
-          </p>
-          {newJobs.map(j => (
-            <button key={j.key} onClick={() => onOpenPanel("jobs")}
-              className="w-full flex items-center gap-2.5 text-left px-2.5 py-2 rounded-lg bg-white/[0.03] hover:bg-white/[0.05] transition-colors">
-              <span className="text-base shrink-0">{j.emoji}</span>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs text-gray-200 truncate">{j.label} ist jetzt verfügbar</p>
-                <p className="text-[10px] text-gray-500">{j.coinsPerHour} Münzen/Stunde</p>
-              </div>
-            </button>
-          ))}
-        </div>
       )}
       {affordable.length > 0 && (
         <div className="space-y-1.5">

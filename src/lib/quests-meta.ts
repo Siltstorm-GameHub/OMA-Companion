@@ -1,6 +1,7 @@
-// TOURNAMENT und DUEL_PLAYED sind aus dem aktiven Rotationspool entfernt (Turniere laufen
-// inzwischen vollständig über Events → EVENT_ATTEND; das 1v1-Münzenduell wurde durch OMA Battle
-// Cards ersetzt, siehe BATTLE_CARD_DUEL), bleiben aber im Union-Typ für die History-Anzeige alter Quests.
+// TOURNAMENT, DUEL_PLAYED und JOB_CLAIM sind aus dem aktiven Rotationspool entfernt (Turniere
+// laufen inzwischen vollständig über Events → EVENT_ATTEND; das 1v1-Münzenduell wurde durch OMA
+// Battle Cards ersetzt, siehe BATTLE_CARD_DUEL; die Idle-Jobs wurden komplett abgeschafft),
+// bleiben aber im Union-Typ für die History-Anzeige alter Quests.
 //
 // Bewusst ausgelagert aus `quests.ts`: diese Datei hat KEINE Imports (kein prisma,
 // notify-dispatch, discord-rest, web-push), damit sie gefahrlos auch von Client-Components

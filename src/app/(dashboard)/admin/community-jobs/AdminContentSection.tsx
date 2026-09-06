@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Pencil, Download, Loader2, Newspaper, ImagePlus, Megaphone } from "lucide-react";
+import { Pencil, Download, Loader2, Newspaper, ImagePlus, Megaphone, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import ImageCropTool from "@/components/community-jobs/ImageCropTool";
@@ -27,6 +27,7 @@ interface FeedEntry {
   coverAsset?: { id: string; url: string } | null;
   imageUrl?: string | null;
   asset?: { id: string; url: string } | null;
+  adminConfirmedPosted?: boolean;
 }
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
@@ -61,6 +62,16 @@ export default function AdminContentSection() {
       .catch(() => setEntries([]));
   }
   useEffect(reload, []);
+
+  async function toggleConfirmedPosted(entry: FeedEntry, confirmed: boolean) {
+    try {
+      await api(`/api/admin/community-jobs/marketing-posts/${entry.id}`, { method: "PATCH", body: JSON.stringify({ confirmed }) });
+      toast.success(confirmed ? "Als gepostet bestätigt" : "Bestätigung zurückgenommen");
+      reload();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Fehlgeschlagen");
+    }
+  }
 
   async function downloadEntry(entry: FeedEntry) {
     const image = entryImage(entry);
@@ -99,6 +110,13 @@ export default function AdminContentSection() {
                 <p className="text-xs text-gray-300 truncate">{entry.title ?? entry.caption}</p>
               </div>
               <div className="flex gap-1.5 shrink-0">
+                {entry.kind === "marketing_post" && (
+                  <Button size="sm" variant={entry.adminConfirmedPosted ? "outline" : "primary"}
+                    icon={<CheckCircle2 className="w-3.5 h-3.5" />}
+                    onClick={() => toggleConfirmedPosted(entry, !entry.adminConfirmedPosted)}>
+                    {entry.adminConfirmedPosted ? "Bestätigung zurücknehmen" : "Als gepostet bestätigen"}
+                  </Button>
+                )}
                 <Button size="sm" variant="outline" icon={<Pencil className="w-3.5 h-3.5" />} onClick={() => setEditing(entry)}>Bearbeiten</Button>
                 <Button size="sm" variant="ghost" icon={<Download className="w-3.5 h-3.5" />} onClick={() => downloadEntry(entry)}>Download</Button>
               </div>

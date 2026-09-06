@@ -1,5 +1,4 @@
 import type { RoomCategory } from "@/lib/room-items";
-import type { JobOverview } from "@/lib/job-service";
 
 /**
  * Kategorien, die "sinnvoll auf/um den Schreibtisch" stehen — genau die
@@ -126,6 +125,4 @@ export interface MancaveData {
   surfaceTier:  number;
   /** Testphase-Schalter aus dem Admin-Bereich (siehe mancave-config.ts). */
   devFreeMode:  boolean;
-  /** Idle-Jobs, jetzt an `surfaceTier` statt an einzelne Möbel gekoppelt (siehe jobs.ts). */
-  jobs:         JobOverview;
 }

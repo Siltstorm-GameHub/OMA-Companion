@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  User, Briefcase, Settings, ChevronRight, Gift,
+  User, Wrench, Settings, ChevronRight, Gift,
   Clock, MessageSquare, Building2,
 } from "lucide-react";
 import RankedAvatar from "@/components/RankedAvatar";
@@ -18,7 +18,7 @@ import type { Badge } from "@/lib/badges";
 import type { FavoriteGame } from "@/lib/favorite-games";
 import type { WanderpocalHolder, WanderpocalStat } from "@/lib/wanderpocal";
 import type { MancaveData } from "../mancave/mancave-data";
-import { JobsPanel, ItemsPanel } from "../mancave/MancaveSharedUI";
+import { ItemsPanel } from "../mancave/MancaveSharedUI";
 import BadgesSection from "./BadgesSection";
 import FavoriteGamesSection from "./FavoriteGamesSection";
 import SquadsSection, { type ProfileSquad } from "./SquadsSection";
@@ -98,11 +98,11 @@ interface Props {
   wanderpocalHolders:  Record<string, WanderpocalHolderInfo>;
 }
 
-type Tab = "profil" | "job" | "community_jobs" | "einstellungen";
+type Tab = "profil" | "mancave" | "community_jobs" | "einstellungen";
 
 const TABS: { key: Tab; label: string; icon: typeof User }[] = [
   { key: "profil",         label: "Profil",         icon: User },
-  { key: "job",            label: "Job",            icon: Briefcase },
+  { key: "mancave",        label: "Mancave",        icon: Wrench },
   { key: "community_jobs", label: "Community-Jobs", icon: Building2 },
   { key: "einstellungen",  label: "Einstellungen",  icon: Settings },
 ];
@@ -127,7 +127,7 @@ export default function ProfileMobileView(props: Props) {
 
   const [tab, setTab] = useState<Tab>("profil");
   // Lokaler State statt direkt `initialMancaveData`, gleicher Zweck wie in
-  // MonitorScreenContent (MancaveSharedUI.tsx): ItemsPanel/JobsPanel patchen
+  // MonitorScreenContent (MancaveSharedUI.tsx): ItemsPanel patcht
   // Änderungen (Ausbau-Stufen, Münzstand) hier rein, ohne dass die ganze
   // Profilseite dafür neu geladen werden muss.
   const [mancaveData, setMancaveData] = useState(initialMancaveData);
@@ -295,11 +295,8 @@ export default function ProfileMobileView(props: Props) {
           </>
         )}
 
-        {tab === "job" && (
-          <>
-            <JobsPanel data={mancaveData} onDataChange={setMancaveData} />
-            <ItemsPanel data={mancaveData} onDataChange={setMancaveData} />
-          </>
+        {tab === "mancave" && (
+          <ItemsPanel data={mancaveData} onDataChange={setMancaveData} />
         )}
 
         {tab === "community_jobs" && <CommunityJobsPanel />}

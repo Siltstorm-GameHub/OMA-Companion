@@ -25,7 +25,6 @@ import { resolveSeriesColor } from "@/lib/series-icons";
 import RankRing from "@/components/RankRing";
 import RankUpFlare from "@/components/RankUpFlare";
 import { getVisibleServers } from "@/lib/gameservers";
-import { getJobOverview } from "@/lib/job-service";
 import { PromoBannerCarousel } from "@/components/PromoBannerCarousel";
 import ClipOfMonthTile from "@/components/ClipOfMonthTile";
 import ClipContestWidget from "@/components/ClipContestWidget";
@@ -211,7 +210,6 @@ export default async function DashboardPage() {
     finishedClipContest,
     activeClipContest,
     isRegisteredForNextEvent,
-    jobOverview,
     squadCount,
     mySquadMembership,
     previewSquads,
@@ -266,7 +264,6 @@ export default async function DashboardPage() {
     userId && nextEvent
       ? prisma.eventRegistration.findFirst({ where: { userId, eventId: nextEvent.id }, select: { id: true } }).then(r => !!r)
       : false,
-    userId ? getJobOverview(userId) : Promise.resolve(null),
     prisma.squad.count({ where: { hidden: false } }),
     userId
       ? prisma.squadMembership.findFirst({
@@ -579,9 +576,7 @@ export default async function DashboardPage() {
 
       {/* ── Rotierender Banner-Slider ─────────────────────────────────
           Bündelt alle Dashboard-Hinweise außer den Live-Stream-Bannern in einer Kachel:
-          Job-Reminder (Gaming-Zimmer), Ergebnisse, Mitteilung, Umfragen, Clip-Contest und
-          WhatsApp. Ohne den Job-Reminder erfährt man vom wartenden/verfallenden Lohn sonst
-          nur, wenn man von sich aus ins Zimmer klickt. */}
+          Ergebnisse, Mitteilung, Umfragen, Clip-Contest und WhatsApp. */}
       <div className="px-4 sm:px-6 pt-4 max-w-7xl mx-auto w-full">
         <PromoBannerCarousel
           recentResultEvents={recentResultEvents}
@@ -589,7 +584,6 @@ export default async function DashboardPage() {
             ...activeDailyMessage,
             endDate: activeDailyMessage.endDate.toISOString(),
           } : null}
-          jobReminder={userId && jobOverview?.enabled ? { current: jobOverview.current } : null}
           hasClipContest={!!activeClipContest}
           clipContestSlot={activeClipContest ? <ClipContestWidget userId={userId} fill insetLeft /> : null}
         />
