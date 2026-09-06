@@ -4,6 +4,12 @@ import Link from "next/link";
 import { ChevronDown, ChevronUp, Trophy, Clock, Vote, Eye, CheckCircle2, StickyNote, Flame } from "lucide-react";
 import RankPointsIcon from "@/components/RankPointsIcon";
 import RankedAvatar from "@/components/RankedAvatar";
+import { PLACEMENT_STAT_KEY } from "@/lib/series-event-points";
+
+/** Rundet auf bis zu 2 Nachkommastellen, ohne überflüssige Nullen (1 statt 1.00, 1.5 statt 1.50). */
+function fmtUpTo2(n: number): string {
+  return parseFloat(n.toFixed(2)).toString();
+}
 
 type User        = { id: string; name: string | null; username: string | null; image: string | null; rankPoints: number };
 type Participant = { userId: string; user: User; role?: string };
@@ -35,6 +41,9 @@ export default function FfaView({
   statPointsPer = {},
   ligaPunkteByUser = {},
   turnierpunkteByUser = {},
+  placementPoints,
+  isLigaPunkteLive = false,
+  projectedWinnerIds = [],
   dominionResultByUser = {},
   dominionThreshold,
   userId,
@@ -60,6 +69,18 @@ export default function FfaView({
    *  computeTurnierpunkte) — KEINE Ligapunkte, bestimmen nur die Endplatzierung/den Sieger dieses
    *  einzelnen Events. Anders als ligaPunkteByUser bereits sichtbar, solange das Event noch läuft. */
   turnierpunkteByUser?: Record<string, number>;
+  /** Punkte je Platz (Event-eigene statConfigJson, siehe EventEditClient "Turnier"-Reiter) — wenn
+   *  gesetzt, zeigt die Tabelle zusätzlich die Ø-Platzierung über alle Runden sowie die daraus
+   *  resultierenden Turnierpunkte je Spieler. */
+  placementPoints?: Record<string, number>;
+  /** true, solange die Spielphase noch nicht abgeschlossen ist — dann sind ligaPunkteByUser nur eine
+   *  Live-Vorschau (Teilnahme + bisherige Stats + projizierter Sieger-Bonus), keine endgültige
+   *  Vergabe. Steuert die pulsierende „Live"-Markierung an der Ligapunkte-Spalte. */
+  isLigaPunkteLive?: boolean;
+  /** User-IDs, die aktuell (nach Turnierpunkten) in Führung liegen und deshalb den in
+   *  ligaPunkteByUser eingerechneten Sieger-Bonus projiziert bekommen — nur relevant/gefüllt wenn
+   *  isLigaPunkteLive true ist. */
+  projectedWinnerIds?: string[];
   /** Dominion-Bonus-Ergebnis DIESES Events je User (nur wer hier +1 bekommen bzw. den Bonus ausgelöst hat) */
   dominionResultByUser?: Record<string, { streakAfter: number; bonusAwarded: boolean }>;
   dominionThreshold?: number;
@@ -98,17 +119,24 @@ export default function FfaView({
   const votedSet = new Set(votedUserIds);
 
   // ── Gesamtranking ─────────────────────────────────────────────────────────
-  type PlayerTotal = { userId: string; user: User; role?: string; stats: Record<string, number>; matchCount: number };
+  type PlayerTotal = {
+    userId: string; user: User; role?: string; stats: Record<string, number>; matchCount: number;
+    /** Anzahl Runden mit erfasster Platzierung (kann < matchCount sein, wenn nicht jede Runde eine
+     *  Platzierung bekam) — Grundlage der Ø-Platzierung, siehe placementPoints-Spalte unten. */
+    placementRounds: number;
+    /** Aus der Platzierung je Runde resultierende Turnierpunkte, über alle Runden summiert. */
+    placementPointsSum: number;
+  };
   const totals = new Map<string, PlayerTotal>();
 
   for (const p of participants) {
-    totals.set(p.userId, { userId: p.userId, user: p.user, role: p.role, stats: {}, matchCount: 0 });
+    totals.set(p.userId, { userId: p.userId, user: p.user, role: p.role, stats: {}, matchCount: 0, placementRounds: 0, placementPointsSum: 0 });
   }
   // Externe Wähler (ohne Event-Teilnahme) werden nur übergeben, wenn es Ligapunkte für die
   // Stimmabgabe gibt — dann tauchen sie unten im Gesamtranking als reine "Abgestimmt"-Zeile auf
   for (const v of externalVoters) {
     if (!totals.has(v.userId)) {
-      totals.set(v.userId, { userId: v.userId, user: v.user, role: "voter", stats: {}, matchCount: 0 });
+      totals.set(v.userId, { userId: v.userId, user: v.user, role: "voter", stats: {}, matchCount: 0, placementRounds: 0, placementPointsSum: 0 });
     }
   }
   for (const match of matches) {
@@ -119,7 +147,7 @@ export default function FfaView({
       if (!t) {
         const u = findUser(e.userId);
         if (!u) continue;
-        t = { userId: e.userId, user: u, role: "player", stats: {}, matchCount: 0 };
+        t = { userId: e.userId, user: u, role: "player", stats: {}, matchCount: 0, placementRounds: 0, placementPointsSum: 0 };
         totals.set(e.userId, t);
       }
       t.matchCount += 1;
@@ -127,6 +155,11 @@ export default function FfaView({
         const s = JSON.parse(e.statsJson) as Record<string, number>;
         for (const [k, v] of Object.entries(s)) {
           t.stats[k] = (t.stats[k] ?? 0) + v;
+        }
+        if (s[PLACEMENT_STAT_KEY] != null) {
+          t.placementRounds += 1;
+          const pts = placementPoints?.[String(s[PLACEMENT_STAT_KEY])];
+          if (pts) t.placementPointsSum += pts;
         }
       }
     }
@@ -195,6 +228,15 @@ export default function FfaView({
         <div>
           <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
             <Trophy className="w-3.5 h-3.5 text-amber-400" /> Gesamtranking
+            {isLigaPunkteLive && (
+              <span className="flex items-center gap-1.5 normal-case tracking-normal text-[10px] font-medium text-teal-400" title="Ligapunkte sind eine Live-Vorschau — das Turnier läuft noch, endgültig werden sie erst beim Abschluss vergeben">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-500" />
+                </span>
+                Ligapunkte live
+              </span>
+            )}
           </h2>
           <div className="glass rounded-2xl overflow-hidden">
             <div className="overflow-x-auto">
@@ -208,6 +250,9 @@ export default function FfaView({
                     ))}
                     {isAvg && (
                       <th className="text-center px-3 py-2.5 font-medium text-amber-400">Ø Gesamt</th>
+                    )}
+                    {!!placementPoints && (
+                      <th className="text-center px-3 py-2.5 font-medium">Ø Platzierung</th>
                     )}
                     {trackMatchWin && (
                       <th className="text-center px-3 py-2.5 font-medium text-emerald-400">Match Wins</th>
@@ -250,6 +295,14 @@ export default function FfaView({
                             </Link>
                             {r.role === "spectator" && (
                               <Eye className="w-3 h-3 text-gray-500 shrink-0" />
+                            )}
+                            {isLigaPunkteLive && projectedWinnerIds.includes(r.userId) && (
+                              <span
+                                className="inline-flex items-center gap-1 text-[10px] font-medium text-teal-400 bg-teal-500/10 px-1.5 py-0.5 rounded-full shrink-0"
+                                title="Führt aktuell nach Turnierpunkten — würde bei Abschluss jetzt den Sieger-Bonus in Ligapunkten bekommen"
+                              >
+                                <Trophy className="w-2.5 h-2.5" /> aktuell vorn
+                              </span>
                             )}
                             {excludedSet.has(r.userId) && (
                               <span className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-400 bg-white/5 px-1.5 py-0.5 rounded-full shrink-0">
@@ -311,6 +364,18 @@ export default function FfaView({
                             {combined !== null ? combined.toFixed(2) : "–"}
                           </td>
                         )}
+                        {!!placementPoints && (
+                          <td className="px-3 py-3 text-center">
+                            <div className="flex flex-col items-center gap-0">
+                              <span className="tabular-nums font-semibold text-gray-300">
+                                {r.placementRounds > 0 ? fmtUpTo2((r.stats[PLACEMENT_STAT_KEY] ?? 0) / r.placementRounds) : "–"}
+                              </span>
+                              {r.placementPointsSum > 0 && (
+                                <span className="text-[9px] text-emerald-500 tabular-nums leading-none">+{r.placementPointsSum} Pkt.</span>
+                              )}
+                            </div>
+                          </td>
+                        )}
                         {trackMatchWin && (
                           <td className="px-3 py-3 text-center tabular-nums font-semibold text-emerald-400">
                             {r.stats["Match Win"] ?? 0}
@@ -323,8 +388,9 @@ export default function FfaView({
                         )}
                         <td className="px-3 py-3 text-center">
                           {eventLigapunkte > 0
-                            ? <span className="text-[11px] text-teal-400 tabular-nums leading-tight inline-flex items-center gap-0.5">
-                                +{eventLigapunkte} <RankPointsIcon size={11} />
+                            ? <span className={`text-[11px] tabular-nums leading-tight inline-flex items-center gap-0.5 ${isLigaPunkteLive ? "text-teal-300/80" : "text-teal-400"}`}
+                                title={isLigaPunkteLive ? "Vorläufig — Turnier läuft noch" : undefined}>
+                                {isLigaPunkteLive && "~"}+{eventLigapunkte} <RankPointsIcon size={11} />
                               </span>
                             : <span className="text-sm text-gray-600">–</span>}
                         </td>

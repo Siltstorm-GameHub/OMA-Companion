@@ -123,6 +123,94 @@ export function resolveWinnerTargetKeys(cfg: StatConfig, seriesWinnerTargetField
   return [];
 }
 
+export type LiveLigaPunkteResult = {
+  /** Ligapunkte-Vorschau je User — Teilnahme + laufend erfasste Stats, plus der Sieger-Bonus, WENN
+   *  ein Sieger-Ziel-Feld konfiguriert ist, projiziert auf den aktuell nach Turnierpunkten führenden
+   *  Spieler. Nur eine Live-Vorschau, keine echte Vergabe (die passiert erst beim Event-Abschluss). */
+  pointsByUser: Record<string, number>;
+  /** User-IDs, die aktuell (nach Turnierpunkten) in Führung liegen — falls mehrere gleichauf, alle. */
+  projectedWinnerIds: string[];
+};
+
+/** Live-Vorschau der Ligapunkte, die dieses Event bislang beisteuert — nutzbar SOLANGE das Event noch
+ *  läuft (anders als computeEventPoints, das auf completionData.gamePhaseComplete wartet). Enthält
+ *  bewusst nur das, was schon aus den laufend erfassten Daten ableitbar ist: Teilnahme, Stats mit
+ *  eigenem pointsPer, und — falls ein Sieger-Ziel-Feld konfiguriert ist — den Sieger-Bonus projiziert
+ *  auf den aktuellen Turnierpunkte-Spitzenreiter. KEIN MVP/Umfrage-/Dominion-Bonus (die stehen erst
+ *  beim Abschluss fest) und keine ausgeschlossenen User (die gibt es vor dem Abschluss nicht). */
+export function computeLiveLigaPunkte(
+  ev: {
+    registrations: { userId: string; role?: string }[];
+    matches: { entries: { userId: string | null; statsJson: string | null }[] }[];
+  },
+  cfg: StatConfig,
+): LiveLigaPunkteResult {
+  const evPart: Record<string, number> = {};
+  for (const { userId: uid, role } of ev.registrations) {
+    if (role === "spectator") continue;
+    evPart[uid] = (evPart[uid] ?? 0) + 1;
+  }
+
+  const winnerStatSet = new Set(cfg.winnerStatKeys ?? []);
+  const matchWinStatSet = new Set(cfg.matchWinStatKeys ?? []);
+  const fieldsToAggregate = new Set([
+    ...cfg.stats.map(s => s.field).filter(f => !winnerStatSet.has(f) && !matchWinStatSet.has(f)),
+    ...(cfg.eventStatFields ?? []),
+  ]);
+  const evStats: Record<string, Record<string, number>> = {};
+  function addEv(uid: string, field: string, val: number) {
+    if (!evStats[uid]) evStats[uid] = {};
+    evStats[uid][field] = (evStats[uid][field] ?? 0) + val;
+  }
+  for (const match of ev.matches) {
+    for (const entry of match.entries) {
+      if (!entry.userId || !entry.statsJson) continue;
+      let s: Record<string, number> = {};
+      try { s = JSON.parse(entry.statsJson); } catch { continue; }
+      for (const field of fieldsToAggregate) {
+        const v = Number(s[field] ?? 0);
+        if (v) addEv(entry.userId, field, v);
+      }
+      if (matchWinStatSet.size > 0) {
+        const mw = Number(s["Match Win"] ?? 0);
+        if (mw) for (const key of matchWinStatSet) addEv(entry.userId, key, mw);
+      }
+    }
+  }
+
+  // Aktuell führender Spieler (nach Turnierpunkten) — Grundlage für den projizierten Sieger-Bonus.
+  const winnerTargetKeys = resolveWinnerTargetKeys(cfg);
+  let projectedWinnerIds: string[] = [];
+  if (winnerTargetKeys.length > 0) {
+    const turnierpunkte = computeTurnierpunkte(ev.matches, cfg);
+    let best = 0;
+    for (const [uid, pts] of Object.entries(turnierpunkte)) {
+      if (pts <= 0) continue;
+      if (pts > best) { best = pts; projectedWinnerIds = [uid]; }
+      else if (pts === best) projectedWinnerIds.push(uid);
+    }
+  }
+
+  const allUids = new Set([...Object.keys(evPart), ...Object.keys(evStats)]);
+  const pointsByUser: Record<string, number> = {};
+  for (const uid of allUids) {
+    const part = evPart[uid] ?? 0;
+    const es = evStats[uid] ?? {};
+    let pts = part * cfg.participationPoints;
+    for (const { field, pointsPer } of cfg.stats) {
+      pts += (es[field] ?? 0) * pointsPer;
+    }
+    if (projectedWinnerIds.includes(uid)) {
+      for (const key of winnerTargetKeys) {
+        pts += cfg.stats.find(s => s.field === key)?.pointsPer ?? 0;
+      }
+    }
+    pointsByUser[uid] = pts;
+  }
+
+  return { pointsByUser, projectedWinnerIds };
+}
+
 export type EventForPoints = {
   completionData: string | null;
   /** role fehlt bei manchen Altabfragen (kein select) — dann als Mitspieler gezählt (Standard vor

@@ -44,7 +44,7 @@ import LigaView from "./LigaView";
 import { getWanderpocalHoldersMap } from "@/lib/get-wanderpocal-holders";
 import { getMinigamesConfig } from "@/lib/minigames-config";
 import { PREDICTION_MIN_WAGER } from "@/lib/predictions";
-import { computeEventPoints, computeTurnierpunkte, applyEventStatOverride, type StatConfig } from "@/lib/series-event-points";
+import { computeEventPoints, computeTurnierpunkte, computeLiveLigaPunkte, applyEventStatOverride, type StatConfig } from "@/lib/series-event-points";
 
 const GUILD_ID = process.env.DISCORD_GUILD_ID ?? "";
 
@@ -452,13 +452,24 @@ export default async function TournamentDetailPage({
     return map;
   })();
   // Ligapunkte, die dieses Event je Spieler beigesteuert hat — identische Berechnung wie in der
-  // Gesamttabelle der Eventreihe (Teilnahme + Stats + Umfrage-Belohnungen alt & neu). Leer, solange
-  // die Spielphase nicht abgeschlossen ist (computeEventPoints prüft completionData.gamePhaseComplete).
-  const ligaPunkteByUser: Record<string, number> = event.series
-    ? computeEventPoints(
-        { completionData: event.completionData, registrations: event.registrations, matches: event.matches },
+  // Gesamttabelle der Eventreihe (Teilnahme + Stats + Umfrage-Belohnungen alt & neu), SOBALD die
+  // Spielphase abgeschlossen ist. Läuft das Event noch, zeigen wir stattdessen eine Live-Vorschau
+  // (Teilnahme + bisherige Stats + Sieger-Bonus projiziert auf den aktuellen Turnierpunkte-Spitzen-
+  // reiter) — klar als vorläufig markiert (isLigaPunkteLive), siehe computeLiveLigaPunkte.
+  const isLigaPunkteLive = !gamePhaseComplete;
+  const liveLigaPunkte = event.series && isLigaPunkteLive
+    ? computeLiveLigaPunkte(
+        { registrations: event.registrations, matches: event.matches },
         seriesStatCfg,
-      ).pointsByUser
+      )
+    : null;
+  const ligaPunkteByUser: Record<string, number> = event.series
+    ? (liveLigaPunkte
+        ? liveLigaPunkte.pointsByUser
+        : computeEventPoints(
+            { completionData: event.completionData, registrations: event.registrations, matches: event.matches },
+            seriesStatCfg,
+          ).pointsByUser)
     : {};
   // Turnierpunkte: reine Event-interne Gesamtpunktzahl aus Stats × Punkte-pro-Stat +
   // Platzierungspunkte (siehe computeTurnierpunkte) — KEINE Ligapunkte, dient nur der
@@ -1147,6 +1158,9 @@ export default async function TournamentDetailPage({
                 statPointsPer={statPointsPer}
                 ligaPunkteByUser={ligaPunkteByUser}
                 turnierpunkteByUser={turnierpunkteByUser}
+                placementPoints={seriesStatCfg.placementPoints}
+                isLigaPunkteLive={isLigaPunkteLive}
+                projectedWinnerIds={liveLigaPunkte?.projectedWinnerIds ?? []}
                 dominionResultByUser={dominionResultByUser}
                 dominionThreshold={seriesStatCfg.dominionBonus?.threshold}
                 userId={userId}
