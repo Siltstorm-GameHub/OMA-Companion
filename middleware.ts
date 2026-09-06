@@ -39,18 +39,42 @@ function getClientKey(request: NextRequest): string {
   return ip;
 }
 
+// CORS nur für die Widget-API (src/app/api/widget/**): der Touchscreen-Client läuft aus
+// einer eigenen, nicht-oma-app.de Origin (iCUE-Webview) und braucht daher explizite CORS-
+// Freigabe. Auth läuft dort ausschließlich über den statischen Bearer-Token (kein Cookie),
+// daher ist ein offenes Access-Control-Allow-Origin unkritisch: Origin-Prüfung schützt bei
+// Cookie-Auth vor fremden Seiten, die im Kontext eines eingeloggten Nutzers Requests
+// auslösen — hier gibt es aber keine Session, die ausgenutzt werden könnte.
+const WIDGET_CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Authorization, Content-Type",
+  "Access-Control-Max-Age": "86400",
+};
+
 // Reicht den Pfad als Header durch, damit (dashboard)/layout.tsx (Server Component,
 // hat keinen direkten Zugriff auf die Request-URL) weiß, welche Route gerade
 // aufgerufen wird — nötig, um einzelnen Seiten Gastzugriff ohne Discord-Login
 // zu erlauben (siehe GUEST_ALLOWED_PATHS in layout.tsx).
 export function middleware(request: NextRequest) {
+  const isWidgetApi = request.nextUrl.pathname.startsWith("/api/widget");
+
+  // Preflight: die Widget-Routen selbst definieren kein OPTIONS, also muss die
+  // Middleware das hier abfangen, bevor Next.js sonst mit 405 antworten würde.
+  if (isWidgetApi && request.method === "OPTIONS") {
+    return new NextResponse(null, { status: 204, headers: WIDGET_CORS_HEADERS });
+  }
+
   if (request.nextUrl.pathname.startsWith("/api")) {
     const key = getClientKey(request);
 
     if (isRateLimited(key)) {
       return NextResponse.json(
         { error: "Zu viele Anfragen. Bitte kurz warten." },
-        { status: 429, headers: { "Retry-After": "60" } },
+        {
+          status: 429,
+          headers: { "Retry-After": "60", ...(isWidgetApi ? WIDGET_CORS_HEADERS : {}) },
+        },
       );
     }
 
@@ -58,7 +82,13 @@ export function middleware(request: NextRequest) {
       cleanupExpiredEntries();
     }
 
-    return NextResponse.next();
+    const response = NextResponse.next();
+    if (isWidgetApi) {
+      for (const [headerName, value] of Object.entries(WIDGET_CORS_HEADERS)) {
+        response.headers.set(headerName, value);
+      }
+    }
+    return response;
   }
 
   const headers = new Headers(request.headers);
