@@ -437,30 +437,44 @@ export default async function TournamentDetailPage({
     return event.pointReward ?? 0;
   })();
 
-  // Ligapunkte pro Stat-Einheit aus der Reihen-Tabellenkonfiguration, überschrieben durch die
-  // Event-eigene statConfigJson (Reiter "Turnier" bei coop_stats, siehe schema.prisma) — für die
-  // Punkte-Anzeige je Stat und die Ligapunkte-/Turnierpunkte-Berechnung unten.
-  const seriesStatCfg: StatConfig = (() => {
-    let base: StatConfig;
-    try { base = event.series?.seriesStatConfig ? JSON.parse(event.series.seriesStatConfig) as StatConfig : { participationPoints: 0, stats: [] }; }
-    catch { base = { participationPoints: 0, stats: [] }; }
-    return applyEventStatOverride(base, event.statConfigJson);
+  // Reine Reihen-Konfiguration (KEIN applyEventStatOverride!) — Grundlage für die echten Ligapunkte
+  // der Reihe (Teilnahme, Stats mit seriesweitem pointsPer, Sieger-Ziel-Feld). Die Event-eigene
+  // statConfigJson (Reiter "Turnier" bei coop_stats) darf hier NICHT einfließen: sonst würden
+  // rotierende Spiele mit ihren eigenen, nur für dieses eine Event gültigen Punktewerten die
+  // seriesweite Ligatabelle verzerren — sie bestimmt ausschließlich die Turnierpunkte (s.u.).
+  const rawSeriesStatCfg: StatConfig = (() => {
+    try { return event.series?.seriesStatConfig ? JSON.parse(event.series.seriesStatConfig) as StatConfig : { participationPoints: 0, stats: [] }; }
+    catch { return { participationPoints: 0, stats: [] }; }
   })();
+  // Mit der Event-eigenen statConfigJson zusammengeführte Konfiguration — ausschließlich für die
+  // Turnierpunkte-Berechnung (Sieger-Ermittlung dieses einzelnen Events) und die Punkte-Anzeige je
+  // Stat-Spalte, die sich direkt auf die Turnierpunkte bezieht.
+  const turnierpunkteCfg: StatConfig = applyEventStatOverride(rawSeriesStatCfg, event.statConfigJson);
   const statPointsPer: Record<string, number> = (() => {
     const map: Record<string, number> = {};
-    for (const s of seriesStatCfg.stats ?? []) if (s.field) map[s.field] = s.pointsPer;
+    for (const s of turnierpunkteCfg.stats ?? []) if (s.field) map[s.field] = s.pointsPer;
     return map;
   })();
+  // Turnierpunkte: reine Event-interne Gesamtpunktzahl aus Stats × Punkte-pro-Stat +
+  // Platzierungspunkte (siehe computeTurnierpunkte) — KEINE Ligapunkte, dient nur der
+  // Endplatzierung/Sieger-Ermittlung dieses Events. Anders als ligaPunkteByUser bereits sichtbar,
+  // während das Event noch läuft (keine Abhängigkeit von completionData).
+  const turnierpunkteByUser: Record<string, number> =
+    (turnierpunkteCfg.stats?.length ?? 0) > 0 || turnierpunkteCfg.placementPoints
+      ? computeTurnierpunkte(event.matches, turnierpunkteCfg)
+      : {};
   // Ligapunkte, die dieses Event je Spieler beigesteuert hat — identische Berechnung wie in der
   // Gesamttabelle der Eventreihe (Teilnahme + Stats + Umfrage-Belohnungen alt & neu), SOBALD die
   // Spielphase abgeschlossen ist. Läuft das Event noch, zeigen wir stattdessen eine Live-Vorschau
-  // (Teilnahme + bisherige Stats + Sieger-Bonus projiziert auf den aktuellen Turnierpunkte-Spitzen-
-  // reiter) — klar als vorläufig markiert (isLigaPunkteLive), siehe computeLiveLigaPunkte.
+  // (Teilnahme Mitspieler + Zuschauer + bisherige Stats), mit dem Sieger-Bonus separat ausgewiesen —
+  // klar als vorläufig markiert (isLigaPunkteLive), siehe computeLiveLigaPunkte. Beide nutzen bewusst
+  // rawSeriesStatCfg, nicht turnierpunkteCfg — siehe dessen Kommentar oben.
   const isLigaPunkteLive = !gamePhaseComplete;
   const liveLigaPunkte = event.series && isLigaPunkteLive
     ? computeLiveLigaPunkte(
         { registrations: event.registrations, matches: event.matches },
-        seriesStatCfg,
+        rawSeriesStatCfg,
+        turnierpunkteByUser,
       )
     : null;
   const ligaPunkteByUser: Record<string, number> = event.series
@@ -468,23 +482,15 @@ export default async function TournamentDetailPage({
         ? liveLigaPunkte.pointsByUser
         : computeEventPoints(
             { completionData: event.completionData, registrations: event.registrations, matches: event.matches },
-            seriesStatCfg,
+            rawSeriesStatCfg,
           ).pointsByUser)
     : {};
-  // Turnierpunkte: reine Event-interne Gesamtpunktzahl aus Stats × Punkte-pro-Stat +
-  // Platzierungspunkte (siehe computeTurnierpunkte) — KEINE Ligapunkte, dient nur der
-  // Endplatzierung/Sieger-Ermittlung dieses Events. Anders als ligaPunkteByUser bereits sichtbar,
-  // während das Event noch läuft (keine Abhängigkeit von completionData).
-  const turnierpunkteByUser: Record<string, number> =
-    (seriesStatCfg.stats?.length ?? 0) > 0 || seriesStatCfg.placementPoints
-      ? computeTurnierpunkte(event.matches, seriesStatCfg)
-      : {};
 
   // Dominion-Bonus-Ergebnis DIESES Events je User — direkt aus completionData.dominionChanges
   // (siehe complete/route.ts + dominion-bonus.ts), nicht aus dem aktuellen (live) Streak-Stand der
   // Reihe: hier soll nur sichtbar sein, wer HIER +1 bekommen bzw. den Bonus ausgelöst hat.
   const dominionResultByUser: Record<string, { streakAfter: number; bonusAwarded: boolean }> = (() => {
-    if (!seriesStatCfg.dominionBonus?.enabled || !event.completionData) return {};
+    if (!rawSeriesStatCfg.dominionBonus?.enabled || !event.completionData) return {};
     try {
       const cd = JSON.parse(event.completionData) as {
         dominionChanges?: Record<string, { streakBefore: number; streakAfter: number; bonusAwarded: boolean }> | null;
@@ -1158,15 +1164,15 @@ export default async function TournamentDetailPage({
                 statPointsPer={statPointsPer}
                 ligaPunkteByUser={ligaPunkteByUser}
                 turnierpunkteByUser={turnierpunkteByUser}
-                placementPoints={seriesStatCfg.placementPoints}
+                placementPoints={turnierpunkteCfg.placementPoints}
                 isLigaPunkteLive={isLigaPunkteLive}
                 projectedWinnerIds={liveLigaPunkte?.projectedWinnerIds ?? []}
                 projectedWinnerBonusByUser={liveLigaPunkte?.projectedWinnerBonusByUser ?? {}}
                 dominionResultByUser={dominionResultByUser}
-                dominionThreshold={seriesStatCfg.dominionBonus?.threshold}
+                dominionThreshold={rawSeriesStatCfg.dominionBonus?.threshold}
                 userId={userId}
                 format={format}
-                trackMatchWin={(seriesStatCfg.matchWinStatKeys ?? []).length > 0}
+                trackMatchWin={(rawSeriesStatCfg.matchWinStatKeys ?? []).length > 0}
                 finalRankingGroups={rankingGroups}
                 excludedUserIds={[...excludedUserIds]}
                 pollWinnerIds={pollWinnerIds}

@@ -62,7 +62,6 @@ async function loadOverlayState(eventId: string) {
         completionData: event.completionData,
         registrations: allRegistrations,
         matches: event.matches.map(m => ({ entries: m.entries.map(e => ({ userId: e.userId, statsJson: e.statsJson })) })),
-        statConfigJson: event.statConfigJson,
       },
       cfg,
     ).pointsByUser;

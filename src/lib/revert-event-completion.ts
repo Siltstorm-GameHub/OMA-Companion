@@ -2,7 +2,6 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { rollbackResolvedPredictions } from "@/lib/predictions";
 import { recomputeSeriesDominionBonus } from "@/lib/dominion-bonus";
-import { applyEventStatOverride } from "@/lib/series-event-points";
 
 type SeriesStatConfig = {
   participationPoints?: number;
@@ -15,7 +14,6 @@ type SeriesStatConfig = {
   winnerSeriesStatKey?: string;
   matchWinStatKeys?: string[];
   eventPlacementCoins?: { place: number; coins: number }[];
-  placementPoints?: Record<string, number>;
   dominionBonus?: {
     triggerStats?: string[];
     triggerStat?: string;
@@ -131,7 +129,7 @@ export async function revertEventCompletion(eventId: string, opts: RevertOptions
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     select: {
-      id: true, title: true, seriesId: true, completionData: true, statConfigJson: true,
+      id: true, title: true, seriesId: true, completionData: true,
       placementRewardsJson: true, spectatorRewardJson: true,
       registrations: { select: { userId: true, role: true } },
       matches: { select: { entries: { select: { userId: true, statsJson: true } } } },
@@ -224,10 +222,11 @@ export async function revertEventCompletion(eventId: string, opts: RevertOptions
   } else if (includeBaseRewards) {
     const rewards = parseRewards(event.placementRewardsJson ?? event.series?.placementRewardsJson);
     const registeredSet = new Set(event.registrations.map(r => r.userId));
-    const statCfg: SeriesStatConfig = applyEventStatOverride((() => {
+    // Event-eigene statConfigJson fließt bewusst nicht ein — siehe complete/route.ts.
+    const statCfg: SeriesStatConfig = (() => {
       try { return event.series?.seriesStatConfig ? JSON.parse(event.series.seriesStatConfig) : {}; }
       catch { return {} as SeriesStatConfig; }
-    })(), event.statConfigJson);
+    })();
 
     // Teilnahme-Münzen: bei Events innerhalb einer Reihe seriesweit fix aus der
     // Gesamttabellen-Konfiguration, sonst aus den Event-Belohnungen
@@ -344,10 +343,8 @@ export async function revertEventCompletion(eventId: string, opts: RevertOptions
       };
 
       if (standings.processedEventIds.includes(eventId)) {
-        const statCfg: SeriesStatConfig = applyEventStatOverride(
-          event.series.seriesStatConfig ? JSON.parse(event.series.seriesStatConfig) : {},
-          event.statConfigJson,
-        );
+        // Event-eigene statConfigJson fließt bewusst nicht ein — siehe complete/route.ts.
+        const statCfg: SeriesStatConfig = event.series.seriesStatConfig ? JSON.parse(event.series.seriesStatConfig) : {};
 
         function sub(uid: string, field: string, val: number) {
           if (!standings.raw[uid]) return;

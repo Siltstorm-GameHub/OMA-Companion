@@ -12,7 +12,6 @@ import { createPollsForEvent, parsePollsConfigJson } from "@/lib/event-polls";
 import { recomputeSeriesDominionBonus } from "@/lib/dominion-bonus";
 import { announceEventResults } from "@/lib/discord-events";
 import { isEventHidden } from "@/lib/event-visibility";
-import { applyEventStatOverride } from "@/lib/series-event-points";
 
 type PlacementReward = { place: number; coins: number; rankPoints: number };
 type RewardsConfig = { participationCoins: number; placements: PlacementReward[] };
@@ -45,7 +44,6 @@ type SeriesStatConfig = {
   winnerStatKeys?: string[];        // new: array of series stat fields to +1 on event win
   winnerSeriesStatKey?: string;     // old: single field (backward compat)
   matchWinStatKeys?: string[];      // array of series stat fields fed by the per-round "Match Win" flag
-  placementPoints?: Record<string, number>; // Punkte je Endplatzierung ("Finale Platzierung" → Ligatabelle)
   eventPlacementCoins?: { place: number; coins: number }[]; // Bonus-Münzen für Platz 1-3 je Einzel-Event der Reihe
   dominionBonus?: {
     enabled: boolean;
@@ -239,11 +237,15 @@ async function completeEvent(req: NextRequest, eventId: string) {
 
   if (!event) return NextResponse.json({ error: "Event nicht gefunden" }, { status: 404 });
 
-  // Gesamttabellen-Konfiguration der Reihe (Ligapunkte + Teilnahme-Münzen, seriesweit fix)
-  const statCfg: SeriesStatConfig = applyEventStatOverride((() => {
+  // Gesamttabellen-Konfiguration der Reihe (Ligapunkte + Teilnahme-Münzen, seriesweit fix) — die
+  // Event-eigene statConfigJson (Reiter "Turnier" bei coop_stats) fließt hier BEWUSST NICHT ein: sie
+  // bestimmt nur die Turnierpunkte (Sieger-Ermittlung dieses Events), nicht die echten Ligapunkte der
+  // Reihe. Sonst würden rotierende Spiele mit ihren eigenen Punktewerten die seriesweite Ligatabelle
+  // verzerren, siehe computeTurnierpunkte.
+  const statCfg: SeriesStatConfig = (() => {
     try { return event.series?.seriesStatConfig ? JSON.parse(event.series.seriesStatConfig) : {}; }
     catch { return {} as SeriesStatConfig; }
-  })(), (event as { statConfigJson?: string | null }).statConfigJson);
+  })();
 
   const isReEdit = !!event.completionData;
   const oldCompletion: Record<string, unknown> = isReEdit

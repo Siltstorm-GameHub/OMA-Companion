@@ -174,8 +174,9 @@ export default function FfaView({
   // immer ganz unten und bekommen keinen (fiktiven) Durchschnittswert — sonst könnte eine ungespielte
   // "0" bei niedrigstem-Ø-gewinnt fälschlich als bester Wert durchgehen.
   // Ist eine Turnierpunkte-Konfiguration aktiv (Punkte pro Stat und/oder Platzierungspunkte, siehe
-  // computeTurnierpunkte), bestimmt die kombinierte Gesamtpunktzahl die Reihenfolge — sonst wie bisher
-  // lexikografisch nach den einzelnen Stat-Feldern.
+  // computeTurnierpunkte), bestimmt AUSSCHLIESSLICH die kombinierte Gesamtpunktzahl die Reihenfolge —
+  // nie eine einzelne Stat-Spalte. Nur ohne Turnierpunkte-Konfiguration (reines ffa/avg_stats ohne
+  // Punkte-Einstellungen) wird wie bisher lexikografisch nach den einzelnen Stat-Feldern sortiert.
   const hasTurnierpunkte = Object.keys(turnierpunkteByUser).length > 0;
   const ranked = [...totals.values()]
     .sort((a, b) => {
@@ -191,8 +192,7 @@ export default function FfaView({
         return avgOf(b) - avgOf(a);
       }
       if (hasTurnierpunkte) {
-        const diff = (turnierpunkteByUser[b.userId] ?? 0) - (turnierpunkteByUser[a.userId] ?? 0);
-        if (diff !== 0) return diff;
+        return (turnierpunkteByUser[b.userId] ?? 0) - (turnierpunkteByUser[a.userId] ?? 0);
       }
       for (const f of statFields) {
         const diff = (b.stats[f] ?? 0) - (a.stats[f] ?? 0);
@@ -417,8 +417,10 @@ export default function FfaView({
           <p className="text-[10px] text-gray-600 mt-1.5 px-1">
             {isAvg
               ? <>Sortiert nach kombiniertem Durchschnitt aller Felder</>
-              : <>Sortiert nach: <span className="text-gray-500">{statFields[0]}</span>
-                  {statFields.length > 1 && <> · Tiebreaker: {statFields.slice(1).join(", ")}</>}</>}
+              : hasTurnierpunkte
+                ? <>Sortiert nach Turnierpunkte</>
+                : <>Sortiert nach: <span className="text-gray-500">{statFields[0]}</span>
+                    {statFields.length > 1 && <> · Tiebreaker: {statFields.slice(1).join(", ")}</>}</>}
           </p>
         </div>
       )}

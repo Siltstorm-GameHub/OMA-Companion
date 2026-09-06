@@ -138,23 +138,29 @@ export type LiveLigaPunkteResult = {
 };
 
 /** Live-Vorschau der Ligapunkte, die dieses Event bislang beisteuert — nutzbar SOLANGE das Event noch
- *  läuft (anders als computeEventPoints, das auf completionData.gamePhaseComplete wartet). Enthält
- *  bewusst nur das, was schon aus den laufend erfassten Daten ableitbar ist: Teilnahme, Stats mit
- *  eigenem pointsPer. Der Sieger-Bonus (falls ein Sieger-Ziel-Feld konfiguriert ist) wird SEPARAT als
- *  projectedWinnerBonusByUser ausgewiesen, nicht in pointsByUser eingerechnet — er steht erst beim
- *  Abschluss endgültig fest. KEIN MVP/Umfrage-/Dominion-Bonus (die stehen erst beim Abschluss fest)
- *  und keine ausgeschlossenen User (die gibt es vor dem Abschluss nicht). */
+ *  läuft (anders als computeEventPoints, das auf completionData.gamePhaseComplete wartet). cfg ist
+ *  bewusst die REINE Reihen-Konfiguration (kein applyEventStatOverride!) — Event-eigene Stat-Punkte
+ *  bestimmen nur die Turnierpunkte, nie die echten Ligapunkte, siehe computeEventPoints. Enthält daher
+ *  nur: Teilnahme (Mitspieler + Zuschauer, live als "alle Angemeldeten nehmen teil" geschätzt) und
+ *  Stats mit eigenem seriesweitem pointsPer. Der Sieger-Bonus (falls ein Sieger-Ziel-Feld konfiguriert
+ *  ist) wird SEPARAT als projectedWinnerBonusByUser ausgewiesen, nicht in pointsByUser eingerechnet —
+ *  er steht erst beim Abschluss endgültig fest. turnierpunkteByUser (mit der Event-eigenen
+ *  Stat-Konfiguration berechnet, siehe computeTurnierpunkte) bestimmt dabei nur, WER aktuell führt.
+ *  KEIN MVP-/Umfrage-/Dominion-Bonus (die stehen erst beim Abschluss fest) und keine ausgeschlossenen
+ *  User (die gibt es vor dem Abschluss nicht). */
 export function computeLiveLigaPunkte(
   ev: {
     registrations: { userId: string; role?: string }[];
     matches: { entries: { userId: string | null; statsJson: string | null }[] }[];
   },
   cfg: StatConfig,
+  turnierpunkteByUser: Record<string, number>,
 ): LiveLigaPunkteResult {
   const evPart: Record<string, number> = {};
+  const evSpectatorPart: Record<string, number> = {};
   for (const { userId: uid, role } of ev.registrations) {
-    if (role === "spectator") continue;
-    evPart[uid] = (evPart[uid] ?? 0) + 1;
+    if (role === "spectator") evSpectatorPart[uid] = (evSpectatorPart[uid] ?? 0) + 1;
+    else evPart[uid] = (evPart[uid] ?? 0) + 1;
   }
 
   const winnerStatSet = new Set(cfg.winnerStatKeys ?? []);
@@ -184,25 +190,26 @@ export function computeLiveLigaPunkte(
     }
   }
 
-  // Aktuell führender Spieler (nach Turnierpunkten) — Grundlage für den projizierten Sieger-Bonus.
+  // Aktuell führender Spieler (nach den — mit der Event-eigenen Konfiguration berechneten —
+  // Turnierpunkten) — Grundlage für den projizierten Sieger-Bonus.
   const winnerTargetKeys = resolveWinnerTargetKeys(cfg);
   let projectedWinnerIds: string[] = [];
   if (winnerTargetKeys.length > 0) {
-    const turnierpunkte = computeTurnierpunkte(ev.matches, cfg);
     let best = 0;
-    for (const [uid, pts] of Object.entries(turnierpunkte)) {
+    for (const [uid, pts] of Object.entries(turnierpunkteByUser)) {
       if (pts <= 0) continue;
       if (pts > best) { best = pts; projectedWinnerIds = [uid]; }
       else if (pts === best) projectedWinnerIds.push(uid);
     }
   }
 
-  const allUids = new Set([...Object.keys(evPart), ...Object.keys(evStats)]);
+  const allUids = new Set([...Object.keys(evPart), ...Object.keys(evSpectatorPart), ...Object.keys(evStats)]);
   const pointsByUser: Record<string, number> = {};
   for (const uid of allUids) {
     const part = evPart[uid] ?? 0;
+    const spectatorPart = evSpectatorPart[uid] ?? 0;
     const es = evStats[uid] ?? {};
-    let pts = part * cfg.participationPoints;
+    let pts = part * cfg.participationPoints + spectatorPart * (cfg.spectatorParticipationPoints ?? 0);
     for (const { field, pointsPer } of cfg.stats) {
       pts += (es[field] ?? 0) * pointsPer;
     }
@@ -226,9 +233,6 @@ export type EventForPoints = {
    *  Einführung des Zuschauer-Trackings), nur ein explizites "spectator" zählt als Zuschauer. */
   registrations: { userId: string; role?: string }[];
   matches: { entries: { userId: string | null; statsJson: string | null }[] }[];
-  /** Event-eigene Stat-Konfiguration (siehe applyEventStatOverride) — überschreibt cfg für dieses
-   *  Event, falls gesetzt. Fehlt bei manchen Altabfragen (kein select), dann greift nur cfg. */
-  statConfigJson?: string | null;
 };
 
 export type EventCompletionData = {
@@ -376,7 +380,11 @@ export function computeStatStandings(
 
 export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPointsResult {
   if (!ev.completionData) return EMPTY_RESULT;
-  cfg = applyEventStatOverride(cfg, ev.statConfigJson);
+  // Event-eigene statConfigJson (Reiter "Turnier" bei coop_stats) fließt bewusst NICHT hier ein: die
+  // echten Ligapunkte der Reihe hängen ausschließlich an den Eventreihen-Einstellungen (Teilnahme,
+  // Sieger-Ziel-Feld, Dominion, …). Die Event-eigene Stat-Konfiguration bestimmt nur die
+  // Turnierpunkte (siehe computeTurnierpunkte) — sonst würden rotierende Spiele mit ihren eigenen
+  // Punktewerten die seriesweite Ligatabelle verzerren.
   let cd: EventCompletionData;
   try { cd = JSON.parse(ev.completionData); } catch { return EMPTY_RESULT; }
   if (!cd.gamePhaseComplete) return EMPTY_RESULT;

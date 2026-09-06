@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { deleteDiscordMessage, deleteDiscordScheduledEvent } from "@/lib/discord-events";
 import { revertEventCompletion } from "@/lib/revert-event-completion";
-import { applyEventStatOverride } from "@/lib/series-event-points";
 
 type DeleteEventOptions = {
   // Vergebene Münzen/Rang-Punkte dieses Events zurückbuchen (Best-Effort, siehe revertEventCompletion)
@@ -22,7 +21,7 @@ export async function deleteEventRecord(eventId: string, opts: DeleteEventOption
     where: { id: eventId },
     select: {
       discordEventId: true, discordMessageId: true, discordChannelId: true,
-      seriesId: true, completionData: true, statConfigJson: true,
+      seriesId: true, completionData: true,
       registrations: { select: { userId: true } },
       matches: { select: { entries: { select: { userId: true, statsJson: true } } } },
       series: { select: { seriesStandingsJson: true, seriesStatConfig: true } },
@@ -43,17 +42,15 @@ export async function deleteEventRecord(eventId: string, opts: DeleteEventOption
       };
 
       if (standings.processedEventIds.includes(eventId)) {
-        const statCfg = applyEventStatOverride(
-          event.series.seriesStatConfig
-            ? JSON.parse(event.series.seriesStatConfig) as {
-                stats: { field: string; pointsPer: number }[];
-                mvpStatField?: string;
-                matchWinStatKeys?: string[];
-                placementPoints?: Record<string, number>;
-              }
-            : { stats: [] },
-          event.statConfigJson,
-        );
+        // Event-eigene statConfigJson fließt bewusst nicht ein — sie bestimmt nur die Turnierpunkte
+        // dieses Events, nicht die echten Ligapunkte der Reihe, siehe complete/route.ts.
+        const statCfg = event.series.seriesStatConfig
+          ? JSON.parse(event.series.seriesStatConfig) as {
+              stats: { field: string; pointsPer: number }[];
+              mvpStatField?: string;
+              matchWinStatKeys?: string[];
+            }
+          : { stats: [] };
         const deleteMatchWinStatSet = new Set(statCfg.matchWinStatKeys ?? []);
 
         function sub(uid: string, field: string, val: number) {
