@@ -39,6 +39,27 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     event.participants.map((p) => [p.userId, p.user])
   );
 
+  // Manche Formate (z.B. avg_stats/coop_stats Leaderboards) tragen Spieler nur über
+  // Match.player1Id/player2Id bzw. MatchEntry.userId ein, ohne TournamentParticipant-Zeile.
+  // Ohne diesen Nachschlag würden solche Events durchgängig "Unbekannt" anzeigen, obwohl
+  // die User-Datensätze existieren.
+  const referencedUserIds = new Set<string>();
+  for (const m of event.matches) {
+    if (m.player1Id) referencedUserIds.add(m.player1Id);
+    if (m.player2Id) referencedUserIds.add(m.player2Id);
+    for (const e of m.entries) {
+      if (e.userId) referencedUserIds.add(e.userId);
+    }
+  }
+  const missingUserIds = [...referencedUserIds].filter((id) => !userMap.has(id));
+  if (missingUserIds.length > 0) {
+    const extraUsers = await prisma.user.findMany({
+      where: { id: { in: missingUserIds } },
+      select: { id: true, name: true, username: true },
+    });
+    for (const u of extraUsers) userMap.set(u.id, u);
+  }
+
   const resolvePlayer = (userId: string | null) =>
     userId ? { id: userId, displayName: displayNameOf(userMap.get(userId)) } : null;
 
