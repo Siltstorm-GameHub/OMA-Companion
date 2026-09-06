@@ -464,25 +464,41 @@ export default function BoardMatch3({
               type="button"
               disabled={interactionLocked}
               onClick={() => handleTap(cell)}
-              className={`aspect-square rounded-md flex items-center justify-center transition-transform active:scale-95 disabled:opacity-60 ${
+              className={`relative aspect-square rounded-lg flex items-center justify-center transition-transform active:scale-95 disabled:opacity-60 ${
                 isDestroying ? (isBigMatch ? "gem-destroy-big" : "gem-destroy") : ""
               } ${isInvalid ? "hit-shake" : ""} ${
                 special === "COLOR_BOMB" ? "gem-bomb" : special ? "gem-special" : ""
               } ${isSpawning ? "gem-special-spawn" : ""}`}
               style={
                 {
-                  background: `${classIcon.color}22`,
+                  // "Gem"-Look statt flacher Fläche: heller Glanzpunkt oben links,
+                  // dunklerer Rand unten (Bevel) — ersetzt eine spätere PNG-Bake
+                  // (Canva o.ä.), solange dafür kein Zugriff besteht, rein über CSS.
+                  background: `radial-gradient(circle at 32% 26%, ${classIcon.color}66 0%, ${classIcon.color}30 45%, ${classIcon.color}14 100%)`,
                   transform: isSelected ? "scale(1.08)" : "scale(1)",
                   transition: "transform 150ms ease-out, box-shadow 150ms ease-out",
-                  boxShadow: isInvalid
-                    ? "0 0 0 2px #f43f5e, 0 0 10px rgba(244,63,94,0.6)"
-                    : isSelected
-                      ? `0 0 0 2px ${classIcon.color}, 0 0 14px ${classIcon.color}99`
-                      : "0 0 0 1px rgba(255,255,255,0.06)",
+                  boxShadow: [
+                    isInvalid
+                      ? "0 0 0 2px #f43f5e, 0 0 10px rgba(244,63,94,0.6)"
+                      : isSelected
+                        ? `0 0 0 2px ${classIcon.color}, 0 0 14px ${classIcon.color}99`
+                        : "0 0 0 1px rgba(255,255,255,0.06)",
+                    "inset 0 1.5px 0 rgba(255,255,255,0.3)",
+                    "inset 0 -3px 4px rgba(0,0,0,0.4)",
+                  ].join(", "),
                   ...(special && special !== "COLOR_BOMB" ? { "--special-color": icon.color } : {}),
                 } as CSSProperties
               }
             >
+              {/* Glanzpunkt — statischer Bevel-Look reicht nicht als "Glas"-Eindruck,
+                  ein weicher heller Fleck oben links verkauft das Highlight erst
+                  wirklich. Rein dekorativ, pointer-events aus. */}
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  background: "radial-gradient(ellipse 55% 35% at 30% 18%, rgba(255,255,255,0.35), transparent 70%)",
+                }}
+              />
               <div
                 className="w-3/4 h-3/4 flex items-center justify-center"
                 style={{
@@ -492,7 +508,12 @@ export default function BoardMatch3({
                 }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={icon.src} alt={icon.alt} className="w-full h-full object-contain" />
+                <img
+                  src={icon.src}
+                  alt={icon.alt}
+                  className="w-full h-full object-contain"
+                  style={{ filter: "drop-shadow(0 1.5px 2px rgba(0,0,0,0.55))" }}
+                />
               </div>
             </button>
           );

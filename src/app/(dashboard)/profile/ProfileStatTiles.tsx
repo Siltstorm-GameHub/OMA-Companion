@@ -44,7 +44,7 @@ export default function ProfileStatTiles({ rankPoints, eventCount, eventWins, po
         <p className="relative text-xs text-gray-400 mt-1.5">Pokale</p>
       </div>
 
-      {/* Lieblingsspiel – Top 3 */}
+      {/* Meist gespielte Events – Top 3 */}
       <div className="card-hover card-shine glass relative overflow-hidden rounded-2xl p-4 animate-slide-up stagger-6">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-500/8 to-transparent pointer-events-none" />
         <div className="relative w-8 h-8 rounded-xl flex items-center justify-center mb-3 border text-blue-400 bg-blue-500/10 border-blue-500/15">
@@ -62,7 +62,7 @@ export default function ProfileStatTiles({ rankPoints, eventCount, eventWins, po
         ) : (
           <p className="relative text-lg font-black text-white">–</p>
         )}
-        <p className="relative text-xs text-gray-400 mt-1.5">Lieblingsspiel</p>
+        <p className="relative text-xs text-gray-400 mt-1.5">Meist gespielte Events</p>
       </div>
     </div>
   );
