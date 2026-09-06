@@ -394,9 +394,9 @@ export default function FfaView({
                         <td className="px-3 py-3 text-center">
                           <div className="flex flex-col items-center gap-0">
                             {eventLigapunkte > 0
-                              ? <span className={`text-[11px] tabular-nums leading-tight inline-flex items-center gap-0.5 ${isLigaPunkteLive ? "text-teal-300/80" : "text-teal-400"}`}
+                              ? <span className={`tabular-nums font-bold inline-flex items-center gap-0.5 ${isLigaPunkteLive ? "text-teal-300/80" : "text-teal-400"}`}
                                   title={isLigaPunkteLive ? "Vorläufig — Turnier läuft noch, kann sich noch ändern" : undefined}>
-                                  {isLigaPunkteLive && "~"}+{eventLigapunkte} <RankPointsIcon size={11} />
+                                  {isLigaPunkteLive && "~"}+{eventLigapunkte} <RankPointsIcon size={13} />
                                 </span>
                               : <span className="text-sm text-gray-600">–</span>}
                             {winnerBonusIfWon > 0 && (
