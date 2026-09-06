@@ -30,6 +30,7 @@ import ProfileQuestsAndTournaments, {
   type ProfileQuestEntry, type ProfileTournamentParticipationEntry,
 } from "./ProfileQuestsAndTournaments";
 import CommunityJobsPanel from "./CommunityJobsPanel";
+import ProfileJobBadge from "./ProfileJobBadge";
 
 interface CustomBadgeDisplay {
   id:       string;
@@ -166,6 +167,7 @@ export default function ProfileMobileView(props: Props) {
               <RankIcon rankPoints={rankPoints} size="xs" showPips={false} /> {rankLabel}
             </span>
             <p className="text-[11px] text-gray-500 mt-1">Mitglied seit {memberSince}</p>
+            <div className="mt-1"><ProfileJobBadge userId={userId} /></div>
             <div className="flex items-center gap-1 mt-1">
               <CoinIcon size={11} />
               <span className="text-[11px] text-amber-400 font-medium tabular-nums">{totalPoints.toLocaleString("de-DE")} Münzen</span>

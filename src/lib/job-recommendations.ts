@@ -15,6 +15,8 @@ export interface EventRecommendation {
   title: string;
   startAt: Date;
   reason: string;
+  /** Ziel-URL innerhalb der App, z.B. die Event-Detailseite — leer, wenn kein sinnvolles Ziel existiert. */
+  url?: string;
 }
 
 export interface JobRecommendations {
@@ -33,7 +35,7 @@ async function eventsWithoutReports(): Promise<EventRecommendation[]> {
     orderBy: { startAt: "desc" },
     take: 10,
   });
-  return events.map(e => ({ eventId: e.id, title: e.title, startAt: e.startAt, reason: "Noch kein Bericht" }));
+  return events.map(e => ({ eventId: e.id, title: e.title, startAt: e.startAt, reason: "Noch kein Bericht", url: `/tournament/${e.id}` }));
 }
 
 async function eventsWithoutAssets(): Promise<EventRecommendation[]> {
@@ -46,7 +48,7 @@ async function eventsWithoutAssets(): Promise<EventRecommendation[]> {
     orderBy: { startAt: "desc" },
     take: 10,
   });
-  return events.map(e => ({ eventId: e.id, title: e.title, startAt: e.startAt, reason: "Noch keine Fotos/Clips" }));
+  return events.map(e => ({ eventId: e.id, title: e.title, startAt: e.startAt, reason: "Noch keine Fotos/Clips", url: `/tournament/${e.id}` }));
 }
 
 /**
@@ -62,6 +64,7 @@ async function coachRecommendationsFor(userId: string): Promise<EventRecommendat
   return [{
     eventId: "coach-no-upcoming-session", title: "Noch kein Trainings-Termin geplant",
     startAt: new Date(), reason: "Lege einen neuen Trainings-Termin an, um neuen Spielern zu helfen",
+    url: "/profile", // führt zurück ins eigene Büro, wo der Termin angelegt wird
   }];
 }
 
@@ -75,7 +78,7 @@ async function upcomingEventsWithoutMarketingPost(): Promise<EventRecommendation
     orderBy: { startAt: "asc" },
     take: 10,
   });
-  return events.map(e => ({ eventId: e.id, title: e.title, startAt: e.startAt, reason: "Noch keine Werbung" }));
+  return events.map(e => ({ eventId: e.id, title: e.title, startAt: e.startAt, reason: "Noch keine Werbung", url: `/tournament/${e.id}` }));
 }
 
 export async function getRecommendationsForJob(jobKey: string, userId: string): Promise<JobRecommendations> {

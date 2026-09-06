@@ -1,13 +1,15 @@
 import { requireRole } from "@/lib/roles";
 import { COMMUNITY_JOBS } from "@/lib/community-jobs";
-import { getEffectiveCommunityJobs, getAnnouncementChannelOverrides, getVoteBonusConfig } from "@/lib/community-job-config";
+import {
+  getEffectiveCommunityJobs, getAnnouncementChannelOverrides, getVoteBonusConfig, getTestModeEnabled,
+} from "@/lib/community-job-config";
 import CommunityJobsAdminPanel from "./CommunityJobsAdminPanel";
 
 export default async function AdminCommunityJobsPage() {
   await requireRole("moderator");
 
-  const [effectiveJobs, channelOverrides, voteBonus] = await Promise.all([
-    getEffectiveCommunityJobs(), getAnnouncementChannelOverrides(), getVoteBonusConfig(),
+  const [effectiveJobs, channelOverrides, voteBonus, testModeEnabled] = await Promise.all([
+    getEffectiveCommunityJobs(), getAnnouncementChannelOverrides(), getVoteBonusConfig(), getTestModeEnabled(),
   ]);
 
   return (
@@ -21,6 +23,7 @@ export default async function AdminCommunityJobsPage() {
         effectiveSlots={Object.fromEntries(effectiveJobs.map(j => [j.key, j.maxSlots]))}
         channelOverrides={channelOverrides}
         voteBonus={voteBonus}
+        testModeEnabled={testModeEnabled}
       />
     </div>
   );

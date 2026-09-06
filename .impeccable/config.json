@@ -149,6 +149,15 @@
         ],
         "createdAt": "2026-09-06T13:49:00.865Z",
         "reason": "pre-existing inactive-state pill convention used across admin panels, text-gray-500 only paired with near-transparent bg-white/[0.04] not a saturated color, not part of this edit"
+      },
+      {
+        "rule": "gray-on-color",
+        "value": "bg-gray-900",
+        "files": [
+          "src/app/(dashboard)/profile/DesktopProfileTabs.tsx"
+        ],
+        "createdAt": "2026-09-06T14:21:41.494Z",
+        "reason": "reuses existing AdminNav.tsx category tab-bar pattern verbatim (text-gray-500 hover:text-gray-200 hover:bg-white/5 on bg-gray-900), not a new color choice"
       }
     ]
   }

@@ -1443,7 +1443,8 @@ model MarketingPost {
   id                   String    @id @default(cuid())
   authorId             String
   eventId              String // Pflicht — Marketing-Posts werben immer für ein konkretes Event
-  assetId              String? // → JobMediaAsset (Fotograf-Bild)
+  assetId              String? // → JobMediaAsset (wiederverwendetes Fotograf-Bild aus der Mediathek)
+  imageUrl             String? // eigene, im Studio erstellte Grafik (nicht aus der Fotograf-Mediathek — zählt zur eigenen Post-Bewertung, keine separate Attribution)
   caption              String
   createdAt            DateTime  @default(now())
   adminConfirmedPosted Boolean   @default(false) // Admin bestätigt: tatsächlich extern (z.B. Instagram) gepostet

@@ -11,6 +11,7 @@ const SLOTS_KEY = "community_job_slot_overrides";
 const TIERS_KEY = "community_job_payout_tiers";
 const BONUS_KEY = "community_job_vote_bonus_config";
 const CHANNELS_KEY = "community_job_announcement_channels";
+const TEST_MODE_KEY = "community_job_admin_test_mode";
 
 export interface PayoutTier {
   label: string; // z.B. "Herausragend"
@@ -156,4 +157,23 @@ export async function setAnnouncementChannel(jobKey: string, channelId: string |
 export async function getAnnouncementChannel(jobKey: string): Promise<string | null> {
   const overrides = await getAnnouncementChannelOverrides();
   return overrides[jobKey] ?? process.env.DISCORD_COMMUNITY_JOBS_CHANNEL_ID ?? null;
+}
+
+// ── Admin-Testmodus ──────────────────────────────────────────────────────────
+// Global ein-/ausschaltbar im Admin-Bereich. Gilt NUR für User mit Admin-Rolle
+// (per-Route-Check, nicht hier) — erlaubt ihnen, Community-Jobs ohne Sperrfrist
+// nach Entzug und ohne Rücksicht auf freie Slots sofort zu wechseln, um alle
+// Jobs durchzutesten.
+
+export async function getTestModeEnabled(): Promise<boolean> {
+  const row = await prisma.botConfig.findUnique({ where: { key: TEST_MODE_KEY } }).catch(() => null);
+  return row?.value === "true";
+}
+
+export async function setTestModeEnabled(enabled: boolean): Promise<void> {
+  await prisma.botConfig.upsert({
+    where: { key: TEST_MODE_KEY },
+    create: { key: TEST_MODE_KEY, value: String(enabled) },
+    update: { value: String(enabled) },
+  });
 }

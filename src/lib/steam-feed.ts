@@ -10,6 +10,11 @@ export interface SteamFeedItem {
   name: string;
   discountPercent?: number;
   headerImage?: string;
+  url: string;
+}
+
+function steamStoreUrl(appId: number): string {
+  return `https://store.steampowered.com/app/${appId}`;
 }
 
 const REVALIDATE_SECONDS = 60 * 60; // stündlich
@@ -35,12 +40,12 @@ export async function getCurrentSteamSales(limit = 5): Promise<SteamFeedItem[]> 
   const data = await fetchFeaturedCategories();
   const items = data?.specials?.items ?? [];
   return items.slice(0, limit).map(i => ({
-    id: i.id, name: i.name, discountPercent: i.discount_percent, headerImage: i.header_image,
+    id: i.id, name: i.name, discountPercent: i.discount_percent, headerImage: i.header_image, url: steamStoreUrl(i.id),
   }));
 }
 
 export async function getRecentSteamReleases(limit = 5): Promise<SteamFeedItem[]> {
   const data = await fetchFeaturedCategories();
   const items = data?.new_releases?.items ?? [];
-  return items.slice(0, limit).map(i => ({ id: i.id, name: i.name, headerImage: i.header_image }));
+  return items.slice(0, limit).map(i => ({ id: i.id, name: i.name, headerImage: i.header_image, url: steamStoreUrl(i.id) }));
 }

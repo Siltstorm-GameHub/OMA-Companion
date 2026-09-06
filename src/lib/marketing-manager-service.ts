@@ -25,14 +25,17 @@ export type CreatePostResult = { ok: true; postId: string } | { error: string };
 
 export async function createMarketingPost(
   authorId: string,
-  data: { eventId: string; caption: string; assetId?: string },
+  data: { eventId: string; caption: string; assetId?: string; imageUrl?: string },
 ): Promise<CreatePostResult> {
   if (!(await requireActiveMarketingManager(authorId))) return { error: "Du bist gerade kein aktiver Marketing Manager" };
   if (!data.eventId) return { error: "Event erforderlich" };
   if (!data.caption.trim()) return { error: "Text erforderlich" };
 
   const post = await prisma.marketingPost.create({
-    data: { authorId, eventId: data.eventId, caption: data.caption, assetId: data.assetId ?? null },
+    data: {
+      authorId, eventId: data.eventId, caption: data.caption,
+      assetId: data.assetId ?? null, imageUrl: data.imageUrl ?? null,
+    },
   });
   await prisma.communityJobMember.updateMany({
     where: { userId: authorId, jobKey: JOB_KEY, status: { in: ["ACTIVE", "WARNED"] } },

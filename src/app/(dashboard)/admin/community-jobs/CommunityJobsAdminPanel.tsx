@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Check, X, AlertTriangle, Plus, Trash2, Loader2 } from "lucide-react";
+import { Check, X, AlertTriangle, Plus, Trash2, Loader2, FlaskConical } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Select } from "@/components/ui/Select";
@@ -21,9 +21,10 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export default function CommunityJobsAdminPanel({
-  jobs, effectiveSlots, channelOverrides, voteBonus,
+  jobs, effectiveSlots, channelOverrides, voteBonus, testModeEnabled,
 }: {
-  jobs: JobRef[]; effectiveSlots: Record<string, number>; channelOverrides: Record<string, string>; voteBonus: VoteBonusConfig;
+  jobs: JobRef[]; effectiveSlots: Record<string, number>; channelOverrides: Record<string, string>;
+  voteBonus: VoteBonusConfig; testModeEnabled: boolean;
 }) {
   const [applications, setApplications] = useState<AdminApplication[]>([]);
   const [members, setMembers] = useState<AdminMember[]>([]);
@@ -114,6 +115,8 @@ export default function CommunityJobsAdminPanel({
 
   return (
     <div className="space-y-8">
+      <TestModeSection initial={testModeEnabled} />
+
       <section className="space-y-2">
         <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Offene Bewerbungen ({pending.length})</h2>
         <div className="glass rounded-xl overflow-hidden divide-y divide-white/[0.04]">
@@ -383,5 +386,39 @@ function MemberRow({
         </div>
       )}
     </div>
+  );
+}
+
+function TestModeSection({ initial }: { initial: boolean }) {
+  const [enabled, setEnabled] = useState(initial);
+  const [busy, setBusy] = useState(false);
+
+  async function toggle() {
+    const next = !enabled;
+    setBusy(true);
+    try {
+      await api("/api/admin/community-jobs/test-mode", { method: "PATCH", body: JSON.stringify({ enabled: next }) });
+      setEnabled(next);
+      toast.success(next ? "Testmodus aktiviert" : "Testmodus deaktiviert");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Fehlgeschlagen");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className={`rounded-xl p-4 flex items-center justify-between gap-3 border ${enabled ? "bg-amber-500/10 border-amber-500/30" : "glass border-white/[0.06]"}`}>
+      <div className="flex items-center gap-2.5">
+        <FlaskConical className={`w-4 h-4 ${enabled ? "text-amber-400" : "text-gray-500"}`} />
+        <div>
+          <p className="text-xs font-semibold text-white">Admin-Testmodus</p>
+          <p className="text-[11px] text-gray-500">Admins können Community-Jobs ohne Sperrfrist und ohne Rücksicht auf freie Slots wechseln, um alle Jobs durchzutesten.</p>
+        </div>
+      </div>
+      <Button size="sm" variant={enabled ? "danger" : "primary"} disabled={busy} onClick={toggle}>
+        {enabled ? "Deaktivieren" : "Aktivieren"}
+      </Button>
+    </section>
   );
 }

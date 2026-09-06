@@ -21,13 +21,15 @@ export async function POST(req: NextRequest) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
 
-  const { eventId, caption, assetId } = await req.json().catch(() => ({}));
+  const { eventId, caption, assetId, imageUrl } = await req.json().catch(() => ({}));
   if (typeof eventId !== "string" || typeof caption !== "string") {
     return NextResponse.json({ error: "Event und Text erforderlich" }, { status: 400 });
   }
 
   const result = await createMarketingPost(user.id, {
-    eventId, caption, assetId: typeof assetId === "string" ? assetId : undefined,
+    eventId, caption,
+    assetId: typeof assetId === "string" ? assetId : undefined,
+    imageUrl: typeof imageUrl === "string" ? imageUrl : undefined,
   });
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: 400 });
   return NextResponse.json(result);

@@ -78,6 +78,42 @@ export async function getActiveMembership(userId: string) {
   });
 }
 
+export type ProfileJobBadge =
+  | { employed: true; jobKey: string; jobLabel: string; jobEmoji: string; status: string; tierLabel: string | null }
+  | { employed: false; unemployedSinceMonths: number };
+
+/**
+ * Für die Profil-Hero-Section (eigenes UND fremde Profile): aktueller
+ * Community-Job + letzte Gehaltsstufe, oder "Arbeitslos seit N Monaten".
+ */
+export async function getProfileJobBadge(userId: string): Promise<ProfileJobBadge> {
+  const active = await getActiveMembership(userId);
+  if (active) {
+    const job = getCommunityJob(active.jobKey);
+    const lastPayout = await prisma.communityJobWeeklyPayout.findFirst({
+      where: { userId, jobKey: active.jobKey },
+      orderBy: { weekStart: "desc" },
+    });
+    return {
+      employed: true, jobKey: active.jobKey,
+      jobLabel: job?.label ?? active.jobKey, jobEmoji: job?.emoji ?? "💼",
+      status: active.status, tierLabel: lastPayout?.tierLabel ?? null,
+    };
+  }
+
+  const lastEnded = await prisma.communityJobMember.findFirst({
+    where: { userId, status: { in: ["REVOKED", "QUIT", "EXPIRED"] } },
+    orderBy: [{ revokedAt: "desc" }],
+  });
+  const endDates = [lastEnded?.revokedAt, lastEnded?.contractEndAt].filter((d): d is Date => !!d);
+  const since = endDates.length > 0
+    ? new Date(Math.max(...endDates.map(d => d.getTime())))
+    : (await prisma.user.findUnique({ where: { id: userId }, select: { createdAt: true } }))?.createdAt ?? new Date();
+
+  const months = Math.max(0, Math.floor((Date.now() - since.getTime()) / (30 * 86_400_000)));
+  return { employed: false, unemployedSinceMonths: months };
+}
+
 export interface CommunityJobCatalogEntry {
   key: string; label: string; emoji: string; description: string;
   maxSlots: number; filledSlots: number;
@@ -122,31 +158,62 @@ export async function getCommunityJobCatalog(): Promise<CommunityJobCatalogEntry
 
 // ── Bewerbung ────────────────────────────────────────────────────────────────
 
-export type ApplyResult = { ok: true; status: "PENDING" } | { error: string };
+export type ApplyResult = { ok: true; status: "ACTIVATED" | "WAITLISTED" } | { error: string };
 
-export async function applyForJob(userId: string, jobKey: string, message?: string): Promise<ApplyResult> {
+/**
+ * Bewerbungen auf Jobs mit freiem Slot werden automatisch angenommen — kein
+ * Admin-Zwischenschritt mehr nötig (User-Entscheidung). Ist der Job voll,
+ * landet die Bewerbung direkt auf der Warteliste, auch ohne PENDING-Status.
+ * `reviewApplication`/die Admin-Bewerbungs-Queue bleiben als manuelles
+ * Override-Werkzeug erhalten (z.B. für Sonderfälle), werden im Normalfall
+ * aber nicht mehr gebraucht.
+ */
+export async function applyForJob(
+  userId: string, jobKey: string, message?: string, opts: { adminTestBypass?: boolean } = {},
+): Promise<ApplyResult> {
   if (!getCommunityJob(jobKey)) return { error: "Unbekannter Job" };
+  const bypass = opts.adminTestBypass === true;
 
-  const activeElsewhere = await getActiveMembership(userId);
-  if (activeElsewhere) return { error: "Du übst bereits einen Community-Job aus" };
+  if (!bypass) {
+    const activeElsewhere = await getActiveMembership(userId);
+    if (activeElsewhere) return { error: "Du übst bereits einen Community-Job aus" };
+  } else {
+    // Testmodus: bestehenden Job automatisch verlassen statt Fehler zu werfen — "kündigen und was anderes machen" in einem Schritt.
+    const activeElsewhere = await getActiveMembership(userId);
+    if (activeElsewhere && activeElsewhere.jobKey !== jobKey) await quitCommunityJob(userId);
+  }
 
   const pending = await prisma.communityJobApplication.findFirst({
     where: { userId, jobKey, status: { in: ["PENDING", "WAITLISTED"] } },
   });
   if (pending) return { error: "Du hast dich für diesen Job bereits beworben" };
 
-  const lastRevoked = await prisma.communityJobMember.findFirst({
-    where: { userId, jobKey, status: "REVOKED" },
-    orderBy: { revokedAt: "desc" },
-  });
-  if (lastRevoked?.reapplyBlockedUntil && lastRevoked.reapplyBlockedUntil > new Date()) {
-    return { error: `Bewerbung erst wieder ab ${lastRevoked.reapplyBlockedUntil.toLocaleDateString("de-DE")} möglich` };
+  if (!bypass) {
+    const lastRevoked = await prisma.communityJobMember.findFirst({
+      where: { userId, jobKey, status: "REVOKED" },
+      orderBy: { revokedAt: "desc" },
+    });
+    if (lastRevoked?.reapplyBlockedUntil && lastRevoked.reapplyBlockedUntil > new Date()) {
+      return { error: `Bewerbung erst wieder ab ${lastRevoked.reapplyBlockedUntil.toLocaleDateString("de-DE")} möglich` };
+    }
   }
 
-  await prisma.communityJobApplication.create({
-    data: { userId, jobKey, message, status: "PENDING" },
+  const maxSlots = bypass ? Infinity : await getMaxSlots(jobKey);
+  const filled = await prisma.communityJobMember.count({
+    where: { jobKey, status: { in: ["ACTIVE", "WARNED"] } },
   });
-  return { ok: true, status: "PENDING" };
+
+  const application = await prisma.communityJobApplication.create({
+    data: { userId, jobKey, message, status: filled < maxSlots ? "PENDING" : "WAITLISTED" },
+  });
+
+  if (filled < maxSlots) {
+    await activateApplication(application.id, userId, jobKey);
+    notifyJob("community_job_approved", userId, jobKey);
+    return { ok: true, status: "ACTIVATED" };
+  }
+  notifyJob("community_job_waitlisted", userId, jobKey);
+  return { ok: true, status: "WAITLISTED" };
 }
 
 export type WithdrawResult = { ok: true } | { error: string };

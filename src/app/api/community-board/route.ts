@@ -107,6 +107,7 @@ export async function GET(req: NextRequest) {
       caption: p.caption,
       event: p.event,
       asset: p.asset,
+      imageUrl: p.imageUrl,
       author: p.author,
       upvotes: p._count.votes,
       votedByMe: p.votes.length > 0,

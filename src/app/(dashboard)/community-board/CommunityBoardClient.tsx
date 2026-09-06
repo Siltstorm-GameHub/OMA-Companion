@@ -27,6 +27,8 @@ interface FeedEntry {
   referencedMarketingPost?: SubEntity | null;
   contributions?: { id: string; bodyMarkdown: string; author: Author; upvotes: number }[];
   adminConfirmedPosted?: boolean;
+  imageUrl?: string | null;
+  asset?: { url: string } | null;
 }
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
@@ -91,7 +93,7 @@ function FeedCard({ entry, currentUserId, onChanged }: { entry: FeedEntry; curre
           <p className="text-sm font-semibold text-white">{entry.title}</p>
           {entry.coverAsset && (
             // eslint-disable-next-line @next/next/no-img-element -- beliebiger Blob-Host
-            <img src={entry.coverAsset.url} alt="" className="w-full rounded-lg max-h-64 object-cover" />
+            <img src={entry.coverAsset.url} alt="" className="w-full h-auto rounded-lg" />
           )}
           <div className="flex items-center gap-3 flex-wrap">
             <UpvoteButton votedByMe={entry.votedByMe} upvotes={entry.upvotes ?? 0}
@@ -147,7 +149,7 @@ function FeedCard({ entry, currentUserId, onChanged }: { entry: FeedEntry; curre
           {entry.caption && <p className="text-sm text-gray-300">{entry.caption}</p>}
           {entry.url && (
             // eslint-disable-next-line @next/next/no-img-element -- beliebiger Blob-Host
-            <img src={entry.url} alt="" className="w-full rounded-lg max-h-64 object-cover" />
+            <img src={entry.url} alt="" className="w-full h-auto rounded-lg" />
           )}
           <div className="flex items-center gap-2">
             <UpvoteButton votedByMe={entry.votedByMe} upvotes={entry.upvotes ?? 0}
@@ -163,6 +165,10 @@ function FeedCard({ entry, currentUserId, onChanged }: { entry: FeedEntry; curre
       {entry.kind === "marketing_post" && (
         <>
           <p className="text-sm text-gray-300">{entry.caption}</p>
+          {(entry.imageUrl || entry.asset?.url) && (
+            // eslint-disable-next-line @next/next/no-img-element -- beliebiger Blob-Host
+            <img src={entry.imageUrl ?? entry.asset!.url} alt="" className="w-full h-auto rounded-lg" />
+          )}
           <div className="flex items-center gap-2">
             <UpvoteButton votedByMe={entry.votedByMe} upvotes={entry.upvotes ?? 0}
               onVote={added => api(`/api/community-jobs/marketing-posts/${entry.id}/vote`, { method: added ? "POST" : "DELETE" })}

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import {
   Briefcase, Users, Coins, TrendingUp, Clock, ThumbsUp, Send, LogOut, RefreshCw,
@@ -9,8 +10,8 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
-import ImageUploadField from "@/components/ImageUploadField";
 import DisputeVotesModal from "@/components/community-jobs/DisputeVotesModal";
+import StudioEditor from "@/components/community-jobs/StudioEditor";
 
 /**
  * Community-Jobs-Reiter/-Sektion: eigenständig von der Mancave-Idle-Jobs-`JobsPanel`
@@ -70,7 +71,7 @@ export default function CommunityJobsPanel() {
       const result = await api<{ status: string }>("/api/community-jobs/apply", {
         method: "POST", body: JSON.stringify({ jobKey }),
       });
-      toast.success(result.status === "WAITLISTED" ? "Auf die Warteliste gesetzt" : "Bewerbung eingereicht");
+      toast.success(result.status === "WAITLISTED" ? "Auf die Warteliste gesetzt" : "Job automatisch angenommen — willkommen!");
       await reload();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Bewerbung fehlgeschlagen");
@@ -186,9 +187,9 @@ function CatalogView({
 // ── Büro (aktiver Job) ────────────────────────────────────────────────────────
 
 interface Recommendations {
-  events: { eventId: string; title: string; reason: string }[];
-  steamSales: { id: number; name: string; discountPercent?: number }[];
-  steamReleases: { id: number; name: string }[];
+  events: { eventId: string; title: string; reason: string; url?: string }[];
+  steamSales: { id: number; name: string; discountPercent?: number; url: string }[];
+  steamReleases: { id: number; name: string; url: string }[];
 }
 interface Payout { id: string; weekStart: string; rawScore: number; tierLabel: string | null; coinsAwarded: number; voteBonusMultiplier: number }
 interface WaitlistEntry { id: string; user: { id: string; username: string | null; name: string | null } }
@@ -287,13 +288,21 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
         <div className="p-4 border-b border-white/[0.04] space-y-1.5">
           <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">💡 Empfehlungen</p>
           {recs.events.map(e => (
-            <p key={e.eventId} className="text-xs text-gray-400">• {e.title} — <span className="text-amber-400">{e.reason}</span></p>
+            <p key={e.eventId} className="text-xs text-gray-400">
+              • {e.url ? <Link href={e.url} className="text-gray-300 hover:text-teal-300 underline underline-offset-2">{e.title}</Link> : e.title}
+              {" — "}<span className="text-amber-400">{e.reason}</span>
+            </p>
           ))}
           {recs.steamSales.map(s => (
-            <p key={`sale-${s.id}`} className="text-xs text-gray-400">🎮 Sale: {s.name}{s.discountPercent ? ` -${s.discountPercent}%` : ""}</p>
+            <p key={`sale-${s.id}`} className="text-xs text-gray-400">
+              🎮 Sale: <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-teal-300 underline underline-offset-2">{s.name}</a>
+              {s.discountPercent ? ` -${s.discountPercent}%` : ""}
+            </p>
           ))}
           {recs.steamReleases.map(s => (
-            <p key={`new-${s.id}`} className="text-xs text-gray-400">🆕 Neu: {s.name}</p>
+            <p key={`new-${s.id}`} className="text-xs text-gray-400">
+              🆕 Neu: <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-teal-300 underline underline-offset-2">{s.name}</a>
+            </p>
           ))}
         </div>
       )}
@@ -735,17 +744,20 @@ function UploadAssetForm({ onDone }: { onDone: () => void }) {
     }
   }
 
+  if (!url) return <StudioEditor onExported={setUrl} />;
+
   return (
     <div className="space-y-3">
+      {/* eslint-disable-next-line @next/next/no-img-element -- Vorschau des Studio-Exports, beliebiger Blob-Host */}
+      <img src={url} alt="" className="w-full rounded-lg" />
       <Select value={type} onChange={e => setType(e.target.value)} className="w-full">
         {ASSET_TYPE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </Select>
-      <ImageUploadField value={url} onChange={setUrl} kind="community-job-asset" label="Datei" />
       <input value={caption} onChange={e => setCaption(e.target.value)} placeholder="Bildunterschrift (optional)"
         className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
-      <div className="flex justify-end gap-2">
-        <Button variant="ghost" onClick={onDone}>Abbrechen</Button>
-        <Button loading={busy} disabled={!url} icon={<ChevronRight className="w-3.5 h-3.5" />} onClick={submit}>Hochladen</Button>
+      <div className="flex justify-between gap-2">
+        <Button variant="ghost" onClick={() => setUrl("")}>Neu gestalten</Button>
+        <Button loading={busy} icon={<ChevronRight className="w-3.5 h-3.5" />} onClick={submit}>Hochladen</Button>
       </div>
     </div>
   );
@@ -753,11 +765,15 @@ function UploadAssetForm({ onDone }: { onDone: () => void }) {
 
 interface EventOption { id: string; title: string; startAt: string }
 
+type PostImageMode = "none" | "library" | "studio";
+
 function CreateMarketingPostForm({ onDone }: { onDone: () => void }) {
   const [events, setEvents] = useState<EventOption[]>([]);
   const [eventId, setEventId] = useState("");
   const [caption, setCaption] = useState("");
   const [assetId, setAssetId] = useState("");
+  const [studioImageUrl, setStudioImageUrl] = useState("");
+  const [imageMode, setImageMode] = useState<PostImageMode>("none");
   const [assets, setAssets] = useState<{ id: string; caption: string | null; url: string }[]>([]);
   const [busy, setBusy] = useState(false);
 
@@ -774,7 +790,11 @@ function CreateMarketingPostForm({ onDone }: { onDone: () => void }) {
     setBusy(true);
     try {
       await api("/api/community-jobs/marketing-posts", {
-        method: "POST", body: JSON.stringify({ eventId, caption, assetId: assetId || undefined }),
+        method: "POST", body: JSON.stringify({
+          eventId, caption,
+          assetId: imageMode === "library" ? (assetId || undefined) : undefined,
+          imageUrl: imageMode === "studio" ? (studioImageUrl || undefined) : undefined,
+        }),
       });
       toast.success("Veröffentlicht");
       onDone();
@@ -794,12 +814,33 @@ function CreateMarketingPostForm({ onDone }: { onDone: () => void }) {
       <Select value={eventId} onChange={e => setEventId(e.target.value)} className="w-full">
         {events.map(e => <option key={e.id} value={e.id}>{e.title} — {new Date(e.startAt).toLocaleDateString("de-DE")}</option>)}
       </Select>
-      {assets.length > 0 && (
+
+      <div className="flex gap-1.5">
+        <Button size="sm" variant={imageMode === "none" ? "primary" : "outline"} onClick={() => setImageMode("none")}>Kein Bild</Button>
+        {assets.length > 0 && (
+          <Button size="sm" variant={imageMode === "library" ? "primary" : "outline"} onClick={() => setImageMode("library")}>Aus Mediathek</Button>
+        )}
+        <Button size="sm" variant={imageMode === "studio" ? "primary" : "outline"} onClick={() => setImageMode("studio")}>Im Studio erstellen</Button>
+      </div>
+
+      {imageMode === "library" && (
         <Select value={assetId} onChange={e => setAssetId(e.target.value)} className="w-full">
-          <option value="">Kein Bild</option>
+          <option value="">Bild wählen…</option>
           {assets.map(a => <option key={a.id} value={a.id}>{a.caption ?? a.id}</option>)}
         </Select>
       )}
+      {imageMode === "studio" && (
+        studioImageUrl ? (
+          <div className="space-y-2">
+            {/* eslint-disable-next-line @next/next/no-img-element -- Vorschau des Studio-Exports */}
+            <img src={studioImageUrl} alt="" className="w-full rounded-lg" />
+            <Button size="sm" variant="ghost" onClick={() => setStudioImageUrl("")}>Neu gestalten</Button>
+          </div>
+        ) : (
+          <StudioEditor onExported={setStudioImageUrl} />
+        )
+      )}
+
       <textarea value={caption} onChange={e => setCaption(e.target.value)} placeholder="Werbetext" rows={4}
         className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 resize-none" />
       <div className="flex justify-end gap-2">

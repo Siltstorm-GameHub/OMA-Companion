@@ -21,6 +21,8 @@ import ProfileCompletion from "./ProfileCompletion";
 import ProfileStatTiles from "./ProfileStatTiles";
 import ProfileRecentEvents from "./ProfileRecentEvents";
 import CommunityJobsPanel from "./CommunityJobsPanel";
+import DesktopProfileTabs from "./DesktopProfileTabs";
+import ProfileJobBadge from "./ProfileJobBadge";
 import ProfileQuestsAndTournaments from "./ProfileQuestsAndTournaments";
 import ProfileMobileView from "./ProfileMobileView";
 import { POINT_RULES } from "@/lib/points";
@@ -289,6 +291,7 @@ export default async function ProfilePage() {
               <p className="text-xs text-gray-500 mb-1">
                 Mitglied seit {memberSince} · {earnedBadges.length + userCustomBadges.length} Abzeichen
               </p>
+              <div className="mb-1"><ProfileJobBadge userId={userId} /></div>
               <div className="flex items-center gap-1 mb-2">
                 <CoinIcon size={12} />
                 <span className="text-xs text-amber-400 font-medium tabular-nums">{totalPoints.toLocaleString("de-DE")} Münzen</span>
@@ -393,13 +396,11 @@ export default async function ProfilePage() {
         {/* ── Pokale ───────────────────────────────────────────────────── */}
         <PokalSection pokale={pokale} ownerName={displayName} />
 
-        {/* ── Haupt-Inhalt ─────────────────────────────────────────────── */}
+        {/* ── Haupt-Inhalt (Übersicht/Community-Jobs als eigene Reiter) ─── */}
+        <DesktopProfileTabs communityJobs={<CommunityJobsPanel />} overview={
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           {/* ── Linke Spalte ─────────────────────────────────────────── */}
           <div className="lg:col-span-2 space-y-5">
-
-            {/* Community-Jobs (eigenständig von der Mancave-Idle-Jobs-JobsPanel) */}
-            <CommunityJobsPanel />
 
             {/* Abzeichen */}
             <BadgesSection
@@ -470,6 +471,7 @@ export default async function ProfilePage() {
 
           </div>
         </div>
+        } />
       </div>
 
       {/* ══════════════════════════════════════════════════════════════
