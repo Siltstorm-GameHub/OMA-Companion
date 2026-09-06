@@ -1,24 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser, hasMinRole } from "@/lib/roles";
-import { getVoteBonusConfig, setVoteBonusConfig } from "@/lib/community-job-config";
+import { getVoteBonusTiers, setVoteBonusTiers, type VoteBonusTier } from "@/lib/community-job-config";
 
+/** Bewusst für jeden angemeldeten User lesbar (nicht nur Admins) — die Büro-Erklärung im Profil-Reiter zeigt die aktuellen Stufen an. */
 export async function GET() {
-  return NextResponse.json(await getVoteBonusConfig());
+  const user = await getSessionUser();
+  if (!user) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
+  return NextResponse.json({ tiers: await getVoteBonusTiers() });
 }
 
-/** PATCH { voteBonusThreshold?, voteBonusMaxMultiplier? } — globale Aktivitäts-Bonus-Einstellung. */
+/** PATCH { tiers: VoteBonusTier[] } — komplette Aktivitäts-Bonus-Stufenliste ersetzen (jobübergreifend). */
 export async function PATCH(req: NextRequest) {
   const user = await getSessionUser();
   if (!user || !hasMinRole(user.role, "moderator")) {
     return NextResponse.json({ error: "Keine Berechtigung" }, { status: 403 });
   }
 
-  const { voteBonusThreshold, voteBonusMaxMultiplier } = await req.json().catch(() => ({}));
-  const patch: Record<string, number> = {};
-  if (typeof voteBonusThreshold === "number") patch.voteBonusThreshold = voteBonusThreshold;
-  if (typeof voteBonusMaxMultiplier === "number") patch.voteBonusMaxMultiplier = voteBonusMaxMultiplier;
-  if (Object.keys(patch).length === 0) return NextResponse.json({ error: "Keine gültigen Felder" }, { status: 400 });
+  const { tiers } = await req.json().catch(() => ({}));
+  if (!Array.isArray(tiers)) return NextResponse.json({ error: "tiers (Array) erforderlich" }, { status: 400 });
+  const valid = tiers.every((t): t is VoteBonusTier =>
+    typeof t?.label === "string" && typeof t?.minVotes === "number" && typeof t?.multiplier === "number",
+  );
+  if (!valid) return NextResponse.json({ error: "Ungültige Stufen" }, { status: 400 });
 
-  await setVoteBonusConfig(patch);
+  await setVoteBonusTiers(tiers);
   return NextResponse.json({ ok: true });
 }

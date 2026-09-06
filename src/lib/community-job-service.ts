@@ -4,8 +4,8 @@ import { getCommunityJob } from "./community-jobs";
 import { syncCommunityJobDiscordRole } from "./discord-roles";
 import { dispatchNotification } from "./notify-dispatch";
 import {
-  getEffectiveCommunityJobs, getMaxSlots, getPayoutTiers, getVoteBonusConfig,
-  resolveTier, computeVoteBonusMultiplier,
+  getEffectiveCommunityJobs, getMaxSlots, getPayoutTiers, getVoteBonusTiers,
+  resolveTier, resolveVoteBonusMultiplier,
 } from "./community-job-config";
 
 /** Setzt/entfernt die Discord-Job-Rolle — Fehler dürfen die eigentliche Aktion nie blockieren. */
@@ -414,8 +414,8 @@ export async function computeWeeklyPayout(
   let voteBonusMultiplier = 1;
   if (baseCoins > 0) {
     const ownVotes = await countOwnVotes(member.userId, weekStart, weekEnd);
-    const bonusConfig = await getVoteBonusConfig();
-    voteBonusMultiplier = computeVoteBonusMultiplier(ownVotes, bonusConfig);
+    const bonusTiers = await getVoteBonusTiers();
+    voteBonusMultiplier = resolveVoteBonusMultiplier(bonusTiers, ownVotes);
   }
 
   return {

@@ -5,7 +5,7 @@ import { Check, X, AlertTriangle, Plus, Trash2, Loader2, FlaskConical } from "lu
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Select } from "@/components/ui/Select";
-import type { PayoutTier, VoteBonusConfig } from "@/lib/community-job-config";
+import type { PayoutTier, VoteBonusTier } from "@/lib/community-job-config";
 
 interface JobRef { key: string; label: string; emoji: string }
 interface AdminApplication { id: string; jobKey: string; status: string; message: string | null; appliedAt: string; user: { id: string; username: string | null; name: string | null } }
@@ -24,7 +24,7 @@ export default function CommunityJobsAdminPanel({
   jobs, effectiveSlots, channelOverrides, voteBonus, testModeEnabled,
 }: {
   jobs: JobRef[]; effectiveSlots: Record<string, number>; channelOverrides: Record<string, string>;
-  voteBonus: VoteBonusConfig; testModeEnabled: boolean;
+  voteBonus: VoteBonusTier[]; testModeEnabled: boolean;
 }) {
   const [applications, setApplications] = useState<AdminApplication[]>([]);
   const [members, setMembers] = useState<AdminMember[]>([]);
@@ -212,6 +212,7 @@ function JobSettingsSection({
 }: { jobs: JobRef[]; effectiveSlots: Record<string, number>; channelOverrides: Record<string, string> }) {
   const [slots, setSlots] = useState(effectiveSlots);
   const [channels, setChannels] = useState(channelOverrides);
+  const [discordChannels, setDiscordChannels] = useState<{ id: string; name: string; category: string | null }[]>([]);
   const [selectedJob, setSelectedJob] = useState(jobs[0]?.key ?? "");
   const [tiers, setTiers] = useState<PayoutTier[]>([]);
   const [busy, setBusy] = useState(false);
@@ -220,6 +221,10 @@ function JobSettingsSection({
     if (!selectedJob) return;
     api<{ tiers: PayoutTier[] }>(`/api/admin/community-jobs/payout-tiers?jobKey=${selectedJob}`).then(d => setTiers(d.tiers)).catch(() => {});
   }, [selectedJob]);
+
+  useEffect(() => {
+    api<{ channels: typeof discordChannels }>("/api/community-jobs/discord-channels").then(d => setDiscordChannels(d.channels)).catch(() => {});
+  }, []);
 
   async function saveSlots(jobKey: string) {
     setBusy(true);
@@ -267,10 +272,17 @@ function JobSettingsSection({
             </label>
             <Button size="sm" variant="outline" disabled={busy} onClick={() => saveSlots(job.key)}>Speichern</Button>
             <label className="flex items-center gap-1.5 text-[11px] text-gray-500 flex-1 min-w-[180px]">
-              Discord-Kanal-ID
-              <input type="text" value={channels[job.key] ?? ""} placeholder="Fallback: Standard-Kanal"
-                onChange={e => setChannels(c => ({ ...c, [job.key]: e.target.value }))}
-                className="flex-1 bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white placeholder:text-gray-700" />
+              Discord-Kanal
+              {discordChannels.length > 0 ? (
+                <Select size="sm" value={channels[job.key] ?? ""} onChange={e => setChannels(c => ({ ...c, [job.key]: e.target.value }))} className="flex-1">
+                  <option value="">Fallback: Standard-Kanal</option>
+                  {discordChannels.map(c => <option key={c.id} value={c.id}>{c.category ? `${c.category} / ` : ""}#{c.name}</option>)}
+                </Select>
+              ) : (
+                <input type="text" value={channels[job.key] ?? ""} placeholder="Kanal-ID (Bot offline/ohne Rechte?)"
+                  onChange={e => setChannels(c => ({ ...c, [job.key]: e.target.value }))}
+                  className="flex-1 bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white placeholder:text-gray-700" />
+              )}
             </label>
             <Button size="sm" variant="outline" disabled={busy} onClick={() => saveChannel(job.key)}>Speichern</Button>
           </div>
@@ -314,14 +326,14 @@ function JobSettingsSection({
   );
 }
 
-function VoteBonusSection({ initial }: { initial: VoteBonusConfig }) {
-  const [config, setConfig] = useState(initial);
+function VoteBonusSection({ initial }: { initial: VoteBonusTier[] }) {
+  const [tiers, setTiers] = useState<VoteBonusTier[]>(initial);
   const [busy, setBusy] = useState(false);
 
   async function save() {
     setBusy(true);
     try {
-      await api("/api/admin/community-jobs/vote-bonus", { method: "PATCH", body: JSON.stringify(config) });
+      await api("/api/admin/community-jobs/vote-bonus", { method: "PATCH", body: JSON.stringify({ tiers }) });
       toast.success("Aktivitäts-Bonus gespeichert");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Fehlgeschlagen");
@@ -331,20 +343,35 @@ function VoteBonusSection({ initial }: { initial: VoteBonusConfig }) {
   return (
     <section className="space-y-2">
       <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Aktivitäts-Bonus (jobübergreifend)</h2>
-      <div className="glass rounded-xl p-4 flex items-center gap-4 flex-wrap">
-        <label className="flex items-center gap-1.5 text-[11px] text-gray-500">
-          Bewertungen für vollen Bonus
-          <input type="number" min={1} value={config.voteBonusThreshold}
-            onChange={e => setConfig(c => ({ ...c, voteBonusThreshold: Number(e.target.value) }))}
-            className="w-16 bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white" />
-        </label>
-        <label className="flex items-center gap-1.5 text-[11px] text-gray-500">
-          Max. Multiplikator
-          <input type="number" min={1} step={0.1} value={config.voteBonusMaxMultiplier}
-            onChange={e => setConfig(c => ({ ...c, voteBonusMaxMultiplier: Number(e.target.value) }))}
-            className="w-16 bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white" />
-        </label>
-        <Button size="sm" disabled={busy} onClick={save}>Speichern</Button>
+      <p className="text-[11px] text-gray-600">
+        Gestaffelter Multiplikator auf das Wochengehalt, abhängig davon, wie viele fremde Beiträge der Job-Inhaber diese Woche selbst bewertet hat.
+        Der Multiplikator kann auch unter 1× fallen (Abzug bei Nicht-Mitmachen) und ist nach oben auf 2× gedeckelt.
+      </p>
+      <div className="glass rounded-xl p-4 space-y-2">
+        {tiers.map((t, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <input value={t.label} placeholder="Label" onChange={e => setTiers(ts => ts.map((x, j) => j === i ? { ...x, label: e.target.value } : x))}
+              className="w-32 bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white" />
+            <label className="flex items-center gap-1 text-[10px] text-gray-600">
+              ab Bewertungen
+              <input type="number" min={0} value={t.minVotes} onChange={e => setTiers(ts => ts.map((x, j) => j === i ? { ...x, minVotes: Number(e.target.value) } : x))}
+                className="w-16 bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white" />
+            </label>
+            <label className="flex items-center gap-1 text-[10px] text-gray-600">
+              Multiplikator
+              <input type="number" step={0.1} value={t.multiplier} onChange={e => setTiers(ts => ts.map((x, j) => j === i ? { ...x, multiplier: Number(e.target.value) } : x))}
+                className="w-16 bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white" />
+            </label>
+            <button onClick={() => setTiers(ts => ts.filter((_, j) => j !== i))} className="text-gray-600 hover:text-red-400">
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ))}
+        <div className="flex gap-2">
+          <Button size="sm" variant="ghost" icon={<Plus className="w-3.5 h-3.5" />}
+            onClick={() => setTiers(ts => [...ts, { label: "Neue Stufe", minVotes: 0, multiplier: 1 }])}>Stufe hinzufügen</Button>
+          <Button size="sm" disabled={busy} onClick={save}>Speichern</Button>
+        </div>
       </div>
     </section>
   );

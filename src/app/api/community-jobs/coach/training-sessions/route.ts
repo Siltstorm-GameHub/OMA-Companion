@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
 
-  const { title, description, startAt, capacity } = await req.json().catch(() => ({}));
+  const { title, description, startAt, capacity, discordChannelId } = await req.json().catch(() => ({}));
   if (typeof title !== "string" || typeof startAt !== "string") {
     return NextResponse.json({ error: "Titel und Startzeit erforderlich" }, { status: 400 });
   }
@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
   const result = await createTrainingSession(user.id, {
     title, description: typeof description === "string" ? description : undefined,
     startAt: new Date(startAt), capacity: typeof capacity === "number" ? capacity : undefined,
+    discordChannelId: typeof discordChannelId === "string" ? discordChannelId : undefined,
   });
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: 400 });
   return NextResponse.json(result);

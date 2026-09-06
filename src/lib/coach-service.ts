@@ -1,6 +1,8 @@
 import { prisma } from "./prisma";
 import { registerScoreResolver, registerOwnVoteCounter } from "./community-job-service";
 import { onCommunityJobVoteCast } from "./community-job-vote-incentives";
+import { sendDiscordMessage } from "./discord-rest";
+import { DISCORD_COLORS } from "./discord-colors";
 
 /**
  * Coach/Manager: erstellt Trainings-Termine für neue/unerfahrene Spieler und
@@ -23,7 +25,7 @@ export type CreateSessionResult = { ok: true; sessionId: string } | { error: str
 
 export async function createTrainingSession(
   coachId: string,
-  data: { title: string; description?: string; startAt: Date; capacity?: number },
+  data: { title: string; description?: string; startAt: Date; capacity?: number; discordChannelId?: string },
 ): Promise<CreateSessionResult> {
   if (!(await requireActiveCoach(coachId))) return { error: "Du bist gerade kein aktiver Coach" };
   if (!data.title.trim()) return { error: "Titel erforderlich" };
@@ -39,6 +41,21 @@ export async function createTrainingSession(
     where: { userId: coachId, jobKey: JOB_KEY, status: { in: ["ACTIVE", "WARNED"] } },
     data: { lastContributionAt: new Date() },
   });
+
+  // Anders als die anderen Jobs bekommt der Coach keinen festen Admin-Kanal
+  // (siehe Discord-Anbindung im Plan — Coach nutzt Sterne-Bewertung statt
+  // Reaktionen) — hier entscheidet der Coach selbst je Termin, in welchen
+  // Kanal die Einladung geht. Rein informativ, kein Reaktions-Voting.
+  if (data.discordChannelId) {
+    sendDiscordMessage(data.discordChannelId, {
+      title: `🎓 Neuer Trainings-Termin: ${data.title.trim()}`,
+      description: data.description || "Neuer Trainings-Termin — meldet euch in der App an!",
+      color: DISCORD_COLORS.eventNew,
+      fields: [{ name: "📆 Start", value: data.startAt.toLocaleString("de-DE", { dateStyle: "full", timeStyle: "short" }), inline: true }],
+      footer: { text: "OMA Companion · Community-Jobs · Coach" },
+    }).catch(() => {});
+  }
+
   return { ok: true, sessionId: session.id };
 }
 

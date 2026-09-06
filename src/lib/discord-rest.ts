@@ -79,6 +79,34 @@ export function resolveChannelId(override?: string | null): string | undefined {
   return override ?? process.env.DISCORD_NEWS_CHANNEL_ID;
 }
 
+export interface DiscordTextChannel {
+  id: string;
+  name: string;
+  /** Kategorie-Name, falls der Kanal in einer Kategorie liegt — fürs gruppierte Dropdown. */
+  category: string | null;
+}
+
+/**
+ * Listet alle Text-/Ankündigungs-Kanäle des konfigurierten Servers (DISCORD_GUILD_ID) —
+ * für Dropdowns, die eine echte Kanalauswahl statt einer roh eingetippten Kanal-ID zeigen.
+ * Discord-Kanal-Typen: 0 = GUILD_TEXT, 5 = GUILD_ANNOUNCEMENT, 4 = GUILD_CATEGORY.
+ */
+export async function listGuildTextChannels(): Promise<DiscordTextChannel[]> {
+  const guildId = process.env.DISCORD_GUILD_ID;
+  if (!guildId || !process.env.DISCORD_BOT_TOKEN) return [];
+
+  const res = await fetch(`${BASE}/guilds/${guildId}/channels`, { headers: authHeader() });
+  if (!res.ok) return [];
+
+  const all = await res.json() as { id: string; name: string; type: number; parent_id: string | null; position: number }[];
+  const categories = new Map(all.filter(c => c.type === 4).map(c => [c.id, c.name]));
+
+  return all
+    .filter(c => c.type === 0 || c.type === 5)
+    .sort((a, b) => a.position - b.position)
+    .map(c => ({ id: c.id, name: c.name, category: c.parent_id ? categories.get(c.parent_id) ?? null : null }));
+}
+
 /** Datum auf Deutsch formatieren (Europe/Berlin) */
 export function fmtDateDE(d: Date): string {
   return d.toLocaleString("de-DE", {

@@ -19,15 +19,23 @@ export interface PayoutTier {
   coinsAwarded: number;
 }
 
-export interface VoteBonusConfig {
-  voteBonusThreshold: number; // Default 5 — Bewertungen/Woche für vollen Bonus
-  voteBonusMaxMultiplier: number; // Default 2.0
+export interface VoteBonusTier {
+  label: string; // z.B. "Sehr aktiv"
+  minVotes: number; // ab so vielen abgegebenen Bewertungen diese Woche gilt diese Stufe
+  multiplier: number; // z.B. 1.4 — darf auch unter 1 liegen (Abzug bei Nicht-Mitmachen)
 }
 
-const DEFAULT_VOTE_BONUS: VoteBonusConfig = {
-  voteBonusThreshold: 5,
-  voteBonusMaxMultiplier: 2,
-};
+/**
+ * Default-Stufen: 0 Bewertungen ist bewusst ein Malus (0.8×) statt neutral,
+ * oberste Stufe deckelt bei 2× — siehe Plan-Ergänzung "Aktivitäts-Bonus".
+ */
+const DEFAULT_VOTE_BONUS_TIERS: VoteBonusTier[] = [
+  { label: "Keine Bewertungen", minVotes: 0, multiplier: 0.8 },
+  { label: "Wenig aktiv", minVotes: 1, multiplier: 1.0 },
+  { label: "Aktiv", minVotes: 3, multiplier: 1.3 },
+  { label: "Sehr aktiv", minVotes: 5, multiplier: 1.6 },
+  { label: "Vorbild", minVotes: 8, multiplier: 2.0 },
+];
 
 /** Sinnvolle Default-Gehaltsstufen je Job — admin-überschreibbar. */
 const DEFAULT_TIERS: Record<string, PayoutTier[]> = {
@@ -121,20 +129,30 @@ export function resolveTier(tiers: PayoutTier[], score: number): PayoutTier | nu
 }
 
 // ── Aktivitäts-Bonus (Mitbewerten) ───────────────────────────────────────────
+// Gestaffelt wie die Gehaltsstufen, jobübergreifend (Bewerten zählt überall
+// gleich) — bewusst OHNE readJson()-Merge, da hier eine komplette Liste statt
+// eines partiell überschreibbaren Objekts gespeichert wird (ein Array-Spread
+// über {...fallback, ...parsed} würde in ein Objekt mit Zahlen-Keys entarten).
 
-export async function getVoteBonusConfig(): Promise<VoteBonusConfig> {
-  return readJson<VoteBonusConfig>(BONUS_KEY, DEFAULT_VOTE_BONUS);
+export async function getVoteBonusTiers(): Promise<VoteBonusTier[]> {
+  const row = await prisma.botConfig.findUnique({ where: { key: BONUS_KEY } }).catch(() => null);
+  if (!row) return DEFAULT_VOTE_BONUS_TIERS;
+  try {
+    const parsed = JSON.parse(row.value);
+    return Array.isArray(parsed) ? parsed : DEFAULT_VOTE_BONUS_TIERS;
+  } catch {
+    return DEFAULT_VOTE_BONUS_TIERS;
+  }
 }
 
-export async function setVoteBonusConfig(patch: Partial<VoteBonusConfig>): Promise<void> {
-  const current = await getVoteBonusConfig();
-  await writeJson(BONUS_KEY, { ...current, ...patch });
+export async function setVoteBonusTiers(tiers: VoteBonusTier[]): Promise<void> {
+  await writeJson(BONUS_KEY, tiers);
 }
 
-/** bonusMultiplier = 1 + min(1, ownVoteCount / threshold) * (maxMultiplier - 1), gedeckelt auf maxMultiplier. */
-export function computeVoteBonusMultiplier(ownVoteCount: number, config: VoteBonusConfig): number {
-  const ratio = config.voteBonusThreshold > 0 ? Math.min(1, ownVoteCount / config.voteBonusThreshold) : 0;
-  return 1 + ratio * (config.voteBonusMaxMultiplier - 1);
+/** Höchste Stufe, deren minVotes die abgegebene Anzahl erreicht — Stufe "0 Bewertungen" greift immer als Fallback. */
+export function resolveVoteBonusMultiplier(tiers: VoteBonusTier[], ownVoteCount: number): number {
+  const eligible = tiers.filter(t => ownVoteCount >= t.minVotes).sort((a, b) => b.minVotes - a.minVotes);
+  return eligible[0]?.multiplier ?? 1;
 }
 
 // ── Discord-Ankündigungskanal je Job ─────────────────────────────────────────

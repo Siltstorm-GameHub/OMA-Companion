@@ -4,7 +4,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import {
   Briefcase, Users, Coins, TrendingUp, Clock, ThumbsUp, Send, LogOut, RefreshCw,
-  ChevronRight, Loader2, Sparkles, ImagePlus, Newspaper, Megaphone, GraduationCap, Lightbulb,
+  ChevronRight, Loader2, Sparkles, ImagePlus, Newspaper, Megaphone, GraduationCap, Lightbulb, Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -198,6 +198,7 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
   const [recs, setRecs] = useState<Recommendations | null>(null);
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
+  const [bonusTiers, setBonusTiers] = useState<{ label: string; minVotes: number; multiplier: number }[]>([]);
   const [busy, setBusy] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -205,6 +206,7 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
     api<Recommendations>("/api/community-jobs/recommendations").then(setRecs).catch(() => {});
     api<{ payouts: Payout[] }>("/api/community-jobs/payouts").then(d => setPayouts(d.payouts)).catch(() => {});
     api<{ waitlist: WaitlistEntry[] }>(`/api/community-jobs/${membership.jobKey}/waitlist`).then(d => setWaitlist(d.waitlist)).catch(() => {});
+    api<{ tiers: typeof bonusTiers }>("/api/admin/community-jobs/vote-bonus").then(d => setBonusTiers(d.tiers)).catch(() => {});
   }, [membership.jobKey]);
 
   const contractEnd = new Date(membership.contractEndAt);
@@ -282,6 +284,25 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
         <DashTile icon={<Coins className="w-3.5 h-3.5" />} label="Zuletzt gezahlt" value={latestPayout ? `${latestPayout.coinsAwarded} Münzen` : "0 Münzen"} />
         <DashTile icon={<Sparkles className="w-3.5 h-3.5" />} label="Bonus" value={latestPayout ? `×${latestPayout.voteBonusMultiplier.toFixed(1)}` : "×1.0"} />
       </div>
+
+      {bonusTiers.length > 0 && (
+        <div className="px-4 py-3 border-b border-white/[0.04] space-y-1.5">
+          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
+            <Sparkles className="w-3 h-3 text-amber-400" /> Aktivitäts-Bonus
+          </p>
+          <p className="text-[11px] text-gray-500">
+            Bewerte selbst Beiträge anderer Community-Jobs — je mehr du diese Woche bewertest, desto höher dein Gehalts-Multiplikator.
+            Bewertest du gar nicht, sinkt er sogar unter ×1.
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {[...bonusTiers].sort((a, b) => a.minVotes - b.minVotes).map(t => (
+              <Badge key={t.label} tone={t.multiplier < 1 ? "danger" : t.multiplier > 1 ? "success" : "neutral"}>
+                ab {t.minVotes} · {t.label} · ×{t.multiplier.toFixed(1)}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Empfehlungen */}
       {recs && (recs.events.length > 0 || recs.steamSales.length > 0 || recs.steamReleases.length > 0) && (
@@ -674,10 +695,19 @@ function CreateContentForm({ jobKey, onDone }: { jobKey: string; onDone: () => v
 }
 
 /** Journalist (Bericht), Coach (Trainings-Termin), Visionär (Idee) — alle drei sind Titel + Text. */
+interface DiscordChannel { id: string; name: string; category: string | null }
+
 function TextContentForm({ jobKey, onDone }: { jobKey: string; onDone: () => void }) {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
+  const [channels, setChannels] = useState<DiscordChannel[]>([]);
+  const [channelId, setChannelId] = useState("");
+
+  useEffect(() => {
+    if (jobKey !== "coach") return;
+    api<{ channels: DiscordChannel[] }>("/api/community-jobs/discord-channels").then(d => setChannels(d.channels)).catch(() => {});
+  }, [jobKey]);
 
   async function submit() {
     setBusy(true);
@@ -686,7 +716,10 @@ function TextContentForm({ jobKey, onDone }: { jobKey: string; onDone: () => voi
         await api("/api/community-jobs/reports", { method: "POST", body: JSON.stringify({ title, bodyMarkdown: body }) });
       } else if (jobKey === "coach") {
         await api("/api/community-jobs/coach/training-sessions", {
-          method: "POST", body: JSON.stringify({ title, description: body, startAt: new Date(Date.now() + 86_400_000).toISOString() }),
+          method: "POST", body: JSON.stringify({
+            title, description: body, startAt: new Date(Date.now() + 86_400_000).toISOString(),
+            discordChannelId: channelId || undefined,
+          }),
         });
       } else if (jobKey === "visionaer") {
         await api("/api/community-jobs/ideas", { method: "POST", body: JSON.stringify({ title, description: body }) });
@@ -706,7 +739,17 @@ function TextContentForm({ jobKey, onDone }: { jobKey: string; onDone: () => voi
         className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
       <textarea value={body} onChange={e => setBody(e.target.value)} placeholder="Text" rows={5}
         className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40 resize-none" />
-      {jobKey === "coach" && <p className="text-[11px] text-gray-600">Termin wird standardmäßig für morgen angelegt — Zeitpunkt lässt sich später anpassen.</p>}
+      {jobKey === "coach" && (
+        <>
+          <p className="text-[11px] text-gray-600">Termin wird standardmäßig für morgen angelegt — Zeitpunkt lässt sich später anpassen.</p>
+          {channels.length > 0 && (
+            <Select value={channelId} onChange={e => setChannelId(e.target.value)} className="w-full">
+              <option value="">Keine Discord-Ankündigung</option>
+              {channels.map(c => <option key={c.id} value={c.id}>{c.category ? `${c.category} / ` : ""}#{c.name}</option>)}
+            </Select>
+          )}
+        </>
+      )}
       <div className="flex justify-end gap-2">
         <Button variant="ghost" onClick={onDone}>Abbrechen</Button>
         <Button loading={busy} disabled={!title.trim() || !body.trim()} icon={<ChevronRight className="w-3.5 h-3.5" />} onClick={submit}>
@@ -765,7 +808,7 @@ function UploadAssetForm({ onDone }: { onDone: () => void }) {
 
 interface EventOption { id: string; title: string; startAt: string }
 
-type PostImageMode = "none" | "library" | "studio";
+type PostImageMode = "none" | "library" | "studio" | "upload";
 
 function CreateMarketingPostForm({ onDone }: { onDone: () => void }) {
   const [events, setEvents] = useState<EventOption[]>([]);
@@ -773,9 +816,28 @@ function CreateMarketingPostForm({ onDone }: { onDone: () => void }) {
   const [caption, setCaption] = useState("");
   const [assetId, setAssetId] = useState("");
   const [studioImageUrl, setStudioImageUrl] = useState("");
+  const [uploadedImageUrl, setUploadedImageUrl] = useState("");
   const [imageMode, setImageMode] = useState<PostImageMode>("none");
   const [assets, setAssets] = useState<{ id: string; caption: string | null; url: string }[]>([]);
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  async function uploadOwnImage(file: File) {
+    setUploading(true);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      body.append("kind", "community-job-asset");
+      const res = await fetch("/api/upload", { method: "POST", body });
+      const data = (await res.json()) as { url?: string; error?: string };
+      if (!res.ok || !data.url) throw new Error(data.error ?? "Upload fehlgeschlagen");
+      setUploadedImageUrl(data.url);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload fehlgeschlagen");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   useEffect(() => {
     api<EventOption[]>("/api/events").then(all => {
@@ -793,7 +855,8 @@ function CreateMarketingPostForm({ onDone }: { onDone: () => void }) {
         method: "POST", body: JSON.stringify({
           eventId, caption,
           assetId: imageMode === "library" ? (assetId || undefined) : undefined,
-          imageUrl: imageMode === "studio" ? (studioImageUrl || undefined) : undefined,
+          imageUrl: imageMode === "studio" ? (studioImageUrl || undefined)
+            : imageMode === "upload" ? (uploadedImageUrl || undefined) : undefined,
         }),
       });
       toast.success("Veröffentlicht");
@@ -821,6 +884,7 @@ function CreateMarketingPostForm({ onDone }: { onDone: () => void }) {
           <Button size="sm" variant={imageMode === "library" ? "primary" : "outline"} onClick={() => setImageMode("library")}>Aus Mediathek</Button>
         )}
         <Button size="sm" variant={imageMode === "studio" ? "primary" : "outline"} onClick={() => setImageMode("studio")}>Im Studio erstellen</Button>
+        <Button size="sm" variant={imageMode === "upload" ? "primary" : "outline"} onClick={() => setImageMode("upload")}>Eigenes Bild hochladen</Button>
       </div>
 
       {imageMode === "library" && (
@@ -828,6 +892,22 @@ function CreateMarketingPostForm({ onDone }: { onDone: () => void }) {
           <option value="">Bild wählen…</option>
           {assets.map(a => <option key={a.id} value={a.id}>{a.caption ?? a.id}</option>)}
         </Select>
+      )}
+      {imageMode === "upload" && (
+        uploadedImageUrl ? (
+          <div className="space-y-2">
+            {/* eslint-disable-next-line @next/next/no-img-element -- beliebiger Blob-Host */}
+            <img src={uploadedImageUrl} alt="" className="w-full rounded-lg" />
+            <Button size="sm" variant="ghost" onClick={() => setUploadedImageUrl("")}>Anderes Bild</Button>
+          </div>
+        ) : (
+          <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-white/10 rounded-xl py-8 cursor-pointer hover:border-teal-500/30 transition-colors">
+            {uploading ? <Loader2 className="w-5 h-5 text-gray-500 animate-spin" /> : <Upload className="w-5 h-5 text-gray-500" />}
+            <span className="text-xs text-gray-500">Bild auswählen</span>
+            <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" disabled={uploading}
+              onChange={e => { const f = e.target.files?.[0]; if (f) uploadOwnImage(f); }} />
+          </label>
+        )
       )}
       {imageMode === "studio" && (
         studioImageUrl ? (
