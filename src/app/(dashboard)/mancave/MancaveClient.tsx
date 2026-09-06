@@ -13,7 +13,16 @@ import type { MancaveData } from "./mancave-data";
  */
 function MobileRedirect() {
   const router = useRouter();
-  useEffect(() => { router.replace("/profile"); }, [router]);
+  useEffect(() => {
+    // Tailwinds `lg:hidden` versteckt diesen Zweig nur per CSS — React
+    // mountet ihn (und damit diesen Effect) trotzdem IMMER mit, auch auf
+    // Desktop, wo `hidden lg:block` daneben die 3D-Szene zeigt. Ohne diesen
+    // Breakpoint-Check hat das jeden Aufruf von /mancave, egal auf welchem
+    // Gerät, sofort zurück auf /profile geschickt — der "Zur Mancave"-Button
+    // wirkte dadurch wie ein bloßes Neuladen der Profilseite.
+    if (window.matchMedia("(min-width: 1024px)").matches) return;
+    router.replace("/profile");
+  }, [router]);
   return (
     <div className="h-full flex items-center justify-center">
       <Loader2 className="w-5 h-5 text-teal-400 animate-spin" />

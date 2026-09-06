@@ -29,6 +29,8 @@ export const POINT_RULES = {
   PROFILE_BANNER:          { amount:  500, reason: "Profil: Banner hochgeladen",      category: "community" },
   PROFILE_TWITCH:          { amount:  500, reason: "Profil: Twitch-Kanal verknüpft",  category: "community" },
   PROFILE_FAVORITE_GAMES:  { amount:  500, reason: "Profil: Lieblingsspiele gewählt", category: "community" },
+  // Bewertungs-Anreiz für Community-Jobs — kleine Sofort-Belohnung, per DAILY_CAPS gegen Farming gedeckelt
+  COMMUNITY_JOB_VOTE:      { amount:    5, reason: "Community-Job-Beitrag bewertet",  category: "community" },
 } as const;
 
 export type PointRule     = keyof typeof POINT_RULES;
@@ -62,9 +64,10 @@ export const CATEGORY_LABELS: Record<PointCategory, string> = {
 
 // Tägliche Caps: verhindert Farming
 export const DAILY_CAPS: Partial<Record<PointRule, number>> = {
-  VOICE_HOUR:        90,  // max 6 Stunden/Tag gewertet
-  MESSAGE_10:        40,  // max 50 Nachrichten/Tag gewertet
-  REACTION_RECEIVED: 20,
+  VOICE_HOUR:          90,  // max 6 Stunden/Tag gewertet
+  MESSAGE_10:          40,  // max 50 Nachrichten/Tag gewertet
+  REACTION_RECEIVED:   20,
+  COMMUNITY_JOB_VOTE:  25,  // max 5 belohnte Bewertungen/Tag (5 Münzen je Bewertung)
 };
 
 // ─── Punkte vergeben ───────────────────────────────────────────────────────
@@ -119,7 +122,9 @@ export async function awardPoints(userId: string, rule: PointRule, customReason?
   const transaction = results[0] as { id: string; userId: string; amount: number; reason: string; createdAt: Date };
   const updated     = results[results.length - 1] as { id: string; points: number; rankPoints: number };
 
-  // Discord-Rolle synchronisieren wenn rankPoints sich geändert haben
+  // syncDiscordRole setzt seit der Community-Job-Umstellung keine Discord-Rolle
+  // mehr (siehe discord-roles.ts), löst aber weiterhin die Rang-Aufstiegs-
+  // Benachrichtigung aus.
   if (givesRankPoints) {
     syncDiscordRole(userId, before?.discordId, rankPointsBefore, updated.rankPoints).catch(() => {});
   }

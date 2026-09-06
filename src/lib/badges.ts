@@ -29,6 +29,8 @@ export type BadgeStats = {
   jobCoinsEarned?: number;
   /** Pokale + Wanderpokale + Abzeichen zusammen — Proxy für "genug für eine volle Vitrine" (15 Fächer). */
   vitrineItemCount?: number;
+  /** Abgegebene Bewertungen auf Community-Job-Beiträge anderer (Reports/Assets/Posts/Coach/Ideen). */
+  communityJobVoteCount?: number;
 };
 
 type BadgeDef = {
@@ -165,6 +167,16 @@ const BADGE_DEFS: BadgeDef[] = [
     id: "vitrine_full", icon: "🗄️", name: "Vitrinen-Sammler", desc: "Genug Pokale, Wanderpokale und Abzeichen für eine volle Vitrine (15 Fächer)", category: "punkte",
     check: d => (d.vitrineItemCount ?? 0) >= 15,
     progress: d => ({ current: Math.min(d.vitrineItemCount ?? 0, 15), target: 15 }),
+  },
+  {
+    id: "critic_10", icon: "🧐", name: "Kritiker", desc: "10 Community-Job-Beiträge anderer bewertet", category: "community",
+    check: d => (d.communityJobVoteCount ?? 0) >= 10,
+    progress: d => ({ current: Math.min(d.communityJobVoteCount ?? 0, 10), target: 10 }),
+  },
+  {
+    id: "critic_50", icon: "🗣️", name: "Community-Stimme", desc: "50 Community-Job-Beiträge anderer bewertet", category: "community",
+    check: d => (d.communityJobVoteCount ?? 0) >= 50,
+    progress: d => ({ current: Math.min(d.communityJobVoteCount ?? 0, 50), target: 50 }),
   },
 ];
 

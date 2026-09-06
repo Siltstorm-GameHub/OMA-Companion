@@ -47,6 +47,10 @@
     {
       "path": "/api/cron/battle-cards-challenge-cleanup",
       "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/community-job-payout",
+      "schedule": "0 8 * * *"
     }
   ]
 }

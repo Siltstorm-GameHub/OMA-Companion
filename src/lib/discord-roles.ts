@@ -62,7 +62,54 @@ export async function assignCurrentRole(
   return { ok, discordStatus: result.status, discordBody: result.body };
 }
 
-/** Synchronisiert die Discord-Rolle eines Users und benachrichtigt ihn, wenn sich sein Rang geändert hat. */
+// ── Community-Job-Rollen ─────────────────────────────────────────────────────
+// Löst die alte Rang-Rollen-Synchronisation ab (siehe Plan-Abschnitt
+// "Discord-Anbindung"): Discord-Rollen basieren jetzt auf dem aktiven
+// Community-Job statt auf dem Rang. Arbeitslose User bekommen keine Rolle.
+
+const COMMUNITY_JOB_ROLE_ENV_KEYS: Record<string, string> = {
+  journalist:         "DISCORD_ROLE_JOURNALIST",
+  fotograf:           "DISCORD_ROLE_FOTOGRAF",
+  marketing_manager:  "DISCORD_ROLE_MARKETING",
+  coach:              "DISCORD_ROLE_COACH",
+  visionaer:          "DISCORD_ROLE_VISIONAER",
+};
+
+/**
+ * Setzt die Discord-Rolle passend zum aktuellen Community-Job (oder entfernt
+ * alle Job-Rollen bei `jobKey=null`, z.B. nach Kündigung/Entzug/Vertragsende).
+ */
+export async function syncCommunityJobDiscordRole(
+  discordId: string | null | undefined, jobKey: string | null,
+): Promise<{ ok: boolean; error?: string }> {
+  const guildId = process.env.DISCORD_GUILD_ID;
+  if (!discordId || !guildId || !process.env.DISCORD_BOT_TOKEN) {
+    return { ok: false, error: "Discord nicht verknüpft oder nicht konfiguriert" };
+  }
+
+  const allRoleIds = [...new Set(Object.values(COMMUNITY_JOB_ROLE_ENV_KEYS).map(getRoleId).filter(Boolean))] as string[];
+  const newRoleId = jobKey ? getRoleId(COMMUNITY_JOB_ROLE_ENV_KEYS[jobKey] ?? "") : undefined;
+
+  const removeTargets = allRoleIds.filter(id => id !== newRoleId);
+  await Promise.allSettled(
+    removeTargets.map(roleId => discordRequest("DELETE", `/guilds/${guildId}/members/${discordId}/roles/${roleId}`)),
+  );
+
+  if (!newRoleId) return { ok: true }; // arbeitslos — keine Rolle zu setzen
+
+  const result = await discordRequest("PUT", `/guilds/${guildId}/members/${discordId}/roles/${newRoleId}`);
+  return { ok: result.status === 204 || result.status === 200 };
+}
+
+/**
+ * Benachrichtigt einen User, wenn sich sein Rang geändert hat.
+ *
+ * Setzt seit der Community-Job-Umstellung KEINE Discord-Rolle mehr (siehe Plan
+ * "Discord-Anbindung": Rang-Rollen-System abgeschafft, Rollen basieren jetzt auf
+ * dem aktiven Community-Job, siehe syncCommunityJobDiscordRole oben) — Name
+ * bewusst beibehalten, um die bestehenden Aufrufstellen (points.ts, Admin-
+ * Punktekorrektur) nicht anfassen zu müssen.
+ */
 export async function syncDiscordRole(
   userId: string,
   discordId: string | null | undefined,
@@ -72,14 +119,6 @@ export async function syncDiscordRole(
   const oldRank = getRank(oldPoints);
   const newRank = getRank(newPoints);
   if (oldRank.discordRoleEnvKey === newRank.discordRoleEnvKey) return;
-
-  if (discordId && process.env.DISCORD_GUILD_ID && process.env.DISCORD_BOT_TOKEN) {
-    try {
-      await assignCurrentRole(discordId, newPoints);
-    } catch {
-      // Niemals die App-Logik durch Discord-Fehler blockieren
-    }
-  }
 
   if (newRank.min > oldRank.min) {
     // Discord-Embeds brauchen eine öffentlich erreichbare Bild-URL (kein

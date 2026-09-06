@@ -148,6 +148,29 @@ client.on(Events.MessageReactionAdd, async (reaction, user) => {
   const authorId = reaction.message.author?.id;
   if (!authorId || authorId === user.id) return; // keine Selbst-Reaktionen werten
   await trackReaction(authorId);
+
+  // Community-Jobs: 👍 auf eine Report-/Asset-/Marketing-Post-Ankündigung zählt als In-App-Upvote.
+  try {
+    const { handleCommunityJobReaction } = await import("@/lib/community-job-discord-votes");
+    await handleCommunityJobReaction(user.id, reaction.message.id, true);
+  } catch {
+    // Community-Job-Voting ist ein Bonus-Pfad, darf das Reaktions-Tracking nie blockieren
+  }
+});
+
+// Zurückgezogene Reaktion entfernt den entsprechenden Community-Job-Upvote wieder.
+client.on(Events.MessageReactionRemove, async (reaction, user) => {
+  if (user.bot) return;
+  if (reaction.partial) {
+    try { await reaction.fetch(); } catch { return; }
+  }
+  if (!reaction.message.guild) return;
+  try {
+    const { handleCommunityJobReaction } = await import("@/lib/community-job-discord-votes");
+    await handleCommunityJobReaction(user.id, reaction.message.id, false);
+  } catch {
+    // s.o.
+  }
 });
 
 // Invite-Tracking: Invite-Nutzungen überwachen um Einladenden zu ermitteln

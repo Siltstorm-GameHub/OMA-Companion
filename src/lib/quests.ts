@@ -71,6 +71,13 @@ const TEMPLATES: QuestTemplate[] = [
     targets: [5, 10, 15, 20],
     rewards: [100, 175, 250, 350],
   },
+  {
+    type: "COMMUNITY_JOB_VOTE",
+    titles: ["Aufmerksamer Leser", "Community-Kritiker", "Fleißiger Bewerter"],
+    descriptions: ["Bewerte {target} Community-Job-Beiträge anderer"],
+    targets: [3, 5, 10],
+    rewards: [100, 150, 250],
+  },
 ];
 
 function pick<T>(arr: T[]): T {

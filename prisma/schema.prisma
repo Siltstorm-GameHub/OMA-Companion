@@ -66,60 +66,78 @@ model User {
   // Notification-Präferenzen: JSON-Objekt { badge: bool, quest: bool, event: bool, points: bool, clip: bool, admin: bool }
   notificationPrefs  String    @default("{}")
 
-  accounts                 Account[]
-  sessions                 Session[]
-  eventRegistrations       EventRegistration[]
-  pointTransactions        PointTransaction[]
-  tournamentParticipants   TournamentParticipant[]
-  teamMemberships          TeamMember[]
-  squadMemberships         SquadMembership[]
-  matchEntries             MatchEntry[]
-  questProgress            UserQuestProgress[]
-  lulEntries               LulEntry[]
-  lulLegacyEntries         LulLegacyEntry[]
-  dailySpins               DailySpin[]
-  donations                Donation[]
-  lobbyMessages            LobbyMessage[]
-  pushSubscriptions        PushSubscription[]
-  clipSubmissions          EventClipSubmission[]
-  clipNominations          ClipNomination[]
-  contestVotes             ClipContestVote[]
-  yearlyClipVotes          YearlyClipContestVote[]
-  eventPollVotes           EventPollVote[]
-  systemBadges             UserSystemBadge[]
-  customBadgeAwards        UserCustomBadge[]
-  dailyMessages            DailyMessage[]
-  dailyPolls               DailyPoll[]
-  dailyPollVotes           DailyPollVote[]
-  eventPredictionsMade     EventWinnerPrediction[]  @relation("EventPredictionAuthor")
-  eventPredictionsReceived EventWinnerPrediction[]  @relation("EventPredictionTarget")
-  predictionStreak         PredictionStreak?
-  duelChallengesSent       DuelChallenge[]          @relation("DuelChallenger")
-  duelChallengesReceived   DuelChallenge[]          @relation("DuelOpponent")
-  wanderpocalHoldings      WanderpocalHolder[]
-  wanderpocalStats         WanderpocalStat[]
-  communityStreams         EventCommunityStreamer[]
-  linkedPartner            Partner?
-  notifications            InAppNotification[]
-  lulPollVotesGiven        LulPollVote[]            @relation("LulPollVoter")
-  lulPollVotesReceived     LulPollVote[]            @relation("LulPollTarget")
-  serverApplications       ServerApplication[]
-  room                     Room?
-  roomItems                RoomItem[]
-  mancaveItems             MancaveItem[]
-  job                      UserJob?
-  pokale                   Pokal[]
-  battleCardUserCards      UserCard[]
-  battleCardBattles        Battle[]                 @relation("BattleCardPlayer")
-  battleCardPacks          CardPack[]
-  battleChallengesSent     BattleChallenge[]        @relation("BattleChallengeChallenger")
-  battleChallengesReceived BattleChallenge[]        @relation("BattleChallengeOpponent")
-  battleQueueEntry         BattleQueueEntry?
-  liveBattlesAsA           LiveBattle[]             @relation("LiveBattlePlayerA")
-  liveBattlesAsB           LiveBattle[]             @relation("LiveBattlePlayerB")
-  campaignProgress         UserCampaignProgress[]
-  tutorialProgress         UserTutorialProgress?
-  gemsTournamentAttempts   GemsTournamentAttempt[]
+  accounts                         Account[]
+  sessions                         Session[]
+  eventRegistrations               EventRegistration[]
+  pointTransactions                PointTransaction[]
+  tournamentParticipants           TournamentParticipant[]
+  teamMemberships                  TeamMember[]
+  squadMemberships                 SquadMembership[]
+  matchEntries                     MatchEntry[]
+  questProgress                    UserQuestProgress[]
+  lulEntries                       LulEntry[]
+  lulLegacyEntries                 LulLegacyEntry[]
+  dailySpins                       DailySpin[]
+  donations                        Donation[]
+  lobbyMessages                    LobbyMessage[]
+  pushSubscriptions                PushSubscription[]
+  clipSubmissions                  EventClipSubmission[]
+  clipNominations                  ClipNomination[]
+  contestVotes                     ClipContestVote[]
+  yearlyClipVotes                  YearlyClipContestVote[]
+  eventPollVotes                   EventPollVote[]
+  systemBadges                     UserSystemBadge[]
+  customBadgeAwards                UserCustomBadge[]
+  dailyMessages                    DailyMessage[]
+  dailyPolls                       DailyPoll[]
+  dailyPollVotes                   DailyPollVote[]
+  eventPredictionsMade             EventWinnerPrediction[]     @relation("EventPredictionAuthor")
+  eventPredictionsReceived         EventWinnerPrediction[]     @relation("EventPredictionTarget")
+  predictionStreak                 PredictionStreak?
+  duelChallengesSent               DuelChallenge[]             @relation("DuelChallenger")
+  duelChallengesReceived           DuelChallenge[]             @relation("DuelOpponent")
+  wanderpocalHoldings              WanderpocalHolder[]
+  wanderpocalStats                 WanderpocalStat[]
+  communityStreams                 EventCommunityStreamer[]
+  linkedPartner                    Partner?
+  notifications                    InAppNotification[]
+  lulPollVotesGiven                LulPollVote[]               @relation("LulPollVoter")
+  lulPollVotesReceived             LulPollVote[]               @relation("LulPollTarget")
+  serverApplications               ServerApplication[]
+  room                             Room?
+  roomItems                        RoomItem[]
+  mancaveItems                     MancaveItem[]
+  job                              UserJob?
+  communityJobApplications         CommunityJobApplication[]
+  communityJobApplicationsReviewed CommunityJobApplication[]   @relation("CommunityJobApplicationReviewer")
+  communityJobMemberships          CommunityJobMember[]
+  communityJobWeeklyPayouts        CommunityJobWeeklyPayout[]
+  jobReports                       JobReport[]
+  jobReportVotes                   JobReportVote[]
+  jobReportContributions           JobReportContribution[]
+  jobReportContributionVotes       JobReportContributionVote[]
+  jobMediaAssets                   JobMediaAsset[]
+  jobMediaAssetVotes               JobMediaAssetVote[]
+  marketingPosts                   MarketingPost[]
+  marketingPostVotes               MarketingPostVote[]
+  coachTrainingSessions            CoachTrainingSession[]
+  coachTrainingSignups             CoachTrainingSignup[]
+  coachRatingsReceived             CoachRating[]               @relation("CoachRatingTarget")
+  coachRatingsGiven                CoachRating[]               @relation("CoachRatingRater")
+  communityIdeas                   CommunityIdea[]
+  communityIdeaVotes               CommunityIdeaVote[]
+  pokale                           Pokal[]
+  battleCardUserCards              UserCard[]
+  battleCardBattles                Battle[]                    @relation("BattleCardPlayer")
+  battleCardPacks                  CardPack[]
+  battleChallengesSent             BattleChallenge[]           @relation("BattleChallengeChallenger")
+  battleChallengesReceived         BattleChallenge[]           @relation("BattleChallengeOpponent")
+  battleQueueEntry                 BattleQueueEntry?
+  liveBattlesAsA                   LiveBattle[]                @relation("LiveBattlePlayerA")
+  liveBattlesAsB                   LiveBattle[]                @relation("LiveBattlePlayerB")
+  campaignProgress                 UserCampaignProgress[]
+  tutorialProgress                 UserTutorialProgress?
+  gemsTournamentAttempts           GemsTournamentAttempt[]
 }
 
 // ── Pokale ───────────────────────────────────────────────────────────────────
@@ -302,6 +320,9 @@ model Event {
   polls              EventPoll[]
   winnerPredictions  EventWinnerPrediction[]
   gemsTournament     GemsTournament?
+  jobReports         JobReport[]
+  jobMediaAssets     JobMediaAsset[]
+  marketingPosts     MarketingPost[]
 }
 
 // ── Event-Umfragen ────────────────────────────────────────────────────────────
@@ -1227,6 +1248,332 @@ model UserJob {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+// ── Community-Jobs (aktive, community-bewertete Jobs — Journalist, Fotograf, ────
+//    Marketing Manager, Coach/Manager, Visionär) — unabhängig vom Mancave-UserJob
+//    (Idle-Einkommen) oben. Siehe Plan "Community-Jobs mit Büro/Werkstatt und
+//    Wochengehalt". Phase 1 (Fundament): Bewerbung/Mitgliedschaft/Wochengehalt,
+//    jobspezifische Content-Modelle (JobReport etc.) folgen in späteren Phasen.
+
+model CommunityJobApplication {
+  id           String    @id @default(cuid())
+  userId       String
+  jobKey       String // Schlüssel aus src/lib/community-jobs.ts (kein FK — Katalog ist Code, keine Tabelle)
+  status       String    @default("PENDING") // PENDING | REJECTED | WAITLISTED | ACTIVATED | WITHDRAWN
+  message      String? // optionale Motivation des Bewerbers
+  appliedAt    DateTime  @default(now())
+  reviewedById String?
+  reviewedAt   DateTime?
+  activatedAt  DateTime? // gesetzt, sobald aus der Bewerbung eine aktive Mitgliedschaft wurde
+
+  user       User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy User? @relation("CommunityJobApplicationReviewer", fields: [reviewedById], references: [id])
+
+  @@index([jobKey, status])
+  @@index([userId])
+}
+
+model CommunityJobMember {
+  id     String @id @default(cuid())
+  userId String
+  jobKey String
+  // ACTIVE | WARNED | REVOKED | QUIT | EXPIRED — bewusst KEIN @@unique([userId, jobKey]):
+  // ein User kann denselben Job im Lauf der Zeit mehrfach innehaben (Kündigung → Sperrfrist
+  // nach REVOKED → Neubewerbung), jede Zeile ist ein eigener "Amtszeit"-Datensatz.
+  status String @default("ACTIVE")
+
+  assignedAt          DateTime  @default(now())
+  contractStartAt     DateTime  @default(now())
+  contractEndAt       DateTime // = contractStartAt + 3 Monate, bei Verlängerung += 3 Monate
+  renewedAt           DateTime?
+  warnedAt            DateTime?
+  warningReason       String?
+  revokedAt           DateTime?
+  reapplyBlockedUntil DateTime? // nur bei REVOKED gesetzt (Default revokedAt + 2 Wochen)
+  lastContributionAt  DateTime? // für Inaktivitäts-Check
+  handedOffFromUserId String? // Snapshot-Info für Transparenz-Historie, kein FK
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, jobKey])
+  @@index([jobKey, status])
+}
+
+model CommunityJobWeeklyPayout {
+  id                  String   @id @default(cuid())
+  userId              String
+  jobKey              String
+  weekStart           DateTime
+  weekEnd             DateTime
+  rawScore            Float    @default(0)
+  tierLabel           String? // Snapshot des angewendeten Stufennamens (z.B. "Herausragend"), null = keine Bewertung erhalten
+  baseCoins           Int      @default(0) // Stufenbetrag vor Aktivitäts-Bonus
+  voteBonusMultiplier Float    @default(1) // 1.0–2.0, aus eigenen abgegebenen Bewertungen dieser Woche
+  coinsAwarded        Int      @default(0) // = round(baseCoins * voteBonusMultiplier)
+  paidAt              DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, jobKey, weekStart])
+  @@index([jobKey, weekStart])
+}
+
+// ── Journalist ───────────────────────────────────────────────────────────────
+
+model JobReport {
+  id                        String    @id @default(cuid())
+  authorId                  String
+  eventId                   String? // optional — ein Bericht kann, muss aber nicht an ein Event gekoppelt sein
+  title                     String
+  bodyMarkdown              String
+  coverAssetId              String? // → JobMediaAsset (Fotograf-Bild als Cover)
+  referencedMarketingPostId String? // → MarketingPost, falls der Bericht über eine Marketing-Aktion berichtet
+  publishedAt               DateTime  @default(now())
+  hiddenByAdminAt           DateTime? // redaktionelle Moderation, unabhängig von Stimmen-Anfechtungen
+  hiddenReason              String?
+  discordMessageId          String? // für Reaktions-Rückzuordnung (spätere Phase)
+
+  author                  User                    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  event                   Event?                  @relation(fields: [eventId], references: [id])
+  coverAsset              JobMediaAsset?          @relation(fields: [coverAssetId], references: [id])
+  referencedMarketingPost MarketingPost?          @relation("ReportReferencesMarketingPost", fields: [referencedMarketingPostId], references: [id])
+  votes                   JobReportVote[]
+  contributions           JobReportContribution[]
+
+  @@index([eventId])
+  @@index([authorId])
+}
+
+model JobReportVote {
+  id                  String   @id @default(cuid())
+  reportId            String
+  voterId             String
+  createdAt           DateTime @default(now())
+  disputed            Boolean  @default(false)
+  disputeReason       String?
+  disputeResolution   String? // PENDING | UPHELD | OVERTURNED
+  disputeResolvedById String?
+
+  report JobReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  voter  User      @relation(fields: [voterId], references: [id], onDelete: Cascade)
+
+  @@unique([reportId, voterId])
+}
+
+/**
+ * Ergänzung eines zweiten Journalisten zu einem bestehenden Bericht — eigener, unabhängig bewerteter Abschnitt.
+ */
+model JobReportContribution {
+  id                  String   @id @default(cuid())
+  reportId            String
+  authorId            String
+  bodyMarkdown        String
+  createdAt           DateTime @default(now())
+  disputed            Boolean  @default(false)
+  disputeReason       String?
+  disputeResolution   String?
+  disputeResolvedById String?
+
+  report JobReport                   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  author User                        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  votes  JobReportContributionVote[]
+
+  @@index([reportId])
+}
+
+model JobReportContributionVote {
+  id                  String   @id @default(cuid())
+  contributionId      String
+  voterId             String
+  createdAt           DateTime @default(now())
+  disputed            Boolean  @default(false)
+  disputeReason       String?
+  disputeResolution   String?
+  disputeResolvedById String?
+
+  contribution JobReportContribution @relation(fields: [contributionId], references: [id], onDelete: Cascade)
+  voter        User                  @relation(fields: [voterId], references: [id], onDelete: Cascade)
+
+  @@unique([contributionId, voterId])
+}
+
+// ── Fotograf / gemeinsame Mediathek ──────────────────────────────────────────
+
+model JobMediaAsset {
+  id               String    @id @default(cuid())
+  authorId         String
+  eventId          String?
+  type             String // CLIP | COLLAGE | SCREENSHOT | BANNER | GRAPHIC
+  url              String // Vercel Blob, via bestehende /api/upload-Route
+  caption          String?
+  createdAt        DateTime  @default(now())
+  usageCount       Int       @default(0) // hochgezählt, wenn ein anderer Job das Asset referenziert (z.B. als Report-Cover)
+  hiddenByAdminAt  DateTime?
+  hiddenReason     String?
+  discordMessageId String?
+
+  author        User                @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  event         Event?              @relation(fields: [eventId], references: [id])
+  votes         JobMediaAssetVote[]
+  usedAsCoverIn JobReport[]
+  MarketingPost MarketingPost[]
+
+  @@index([eventId])
+  @@index([authorId])
+}
+
+model JobMediaAssetVote {
+  id                  String   @id @default(cuid())
+  assetId             String
+  voterId             String
+  createdAt           DateTime @default(now())
+  disputed            Boolean  @default(false)
+  disputeReason       String?
+  disputeResolution   String?
+  disputeResolvedById String?
+
+  asset JobMediaAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  voter User          @relation(fields: [voterId], references: [id], onDelete: Cascade)
+
+  @@unique([assetId, voterId])
+}
+
+// ── Marketing Manager ────────────────────────────────────────────────────────
+
+model MarketingPost {
+  id                   String    @id @default(cuid())
+  authorId             String
+  eventId              String // Pflicht — Marketing-Posts werben immer für ein konkretes Event
+  assetId              String? // → JobMediaAsset (Fotograf-Bild)
+  caption              String
+  createdAt            DateTime  @default(now())
+  adminConfirmedPosted Boolean   @default(false) // Admin bestätigt: tatsächlich extern (z.B. Instagram) gepostet
+  hiddenByAdminAt      DateTime?
+  hiddenReason         String?
+  discordMessageId     String?
+
+  author              User                @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  event               Event               @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  asset               JobMediaAsset?      @relation(fields: [assetId], references: [id])
+  votes               MarketingPostVote[]
+  referencedByReports JobReport[]         @relation("ReportReferencesMarketingPost")
+
+  @@index([eventId])
+  @@index([authorId])
+}
+
+model MarketingPostVote {
+  id                  String   @id @default(cuid())
+  postId              String
+  voterId             String
+  createdAt           DateTime @default(now())
+  disputed            Boolean  @default(false)
+  disputeReason       String?
+  disputeResolution   String?
+  disputeResolvedById String?
+
+  post  MarketingPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  voter User          @relation(fields: [voterId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, voterId])
+}
+
+// ── Coach/Manager ────────────────────────────────────────────────────────────
+// Eigenständiges, leichtgewichtiges Trainings-Termin-Modell statt Wiederverwendung
+// von Event — Event-Erstellung ist Moderatoren/Admins bzw. Squad-Captains (nur
+// eigenes Squad) vorbehalten, siehe src/app/api/events/route.ts:49-60. Der Coach
+// ist bewusst unabhängig von Squads.
+
+model CoachTrainingSession {
+  id          String   @id @default(cuid())
+  coachId     String
+  title       String
+  description String?
+  startAt     DateTime
+  capacity    Int?
+  createdAt   DateTime @default(now())
+
+  coach   User                  @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  signups CoachTrainingSignup[]
+  ratings CoachRating[]
+
+  @@index([coachId])
+}
+
+model CoachTrainingSignup {
+  id        String   @id @default(cuid())
+  sessionId String
+  userId    String
+  createdAt DateTime @default(now())
+
+  session CoachTrainingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, userId])
+}
+
+model CoachRating {
+  id                  String   @id @default(cuid())
+  coachId             String
+  raterId             String
+  trainingSessionId   String? // null = Ad-hoc-Bewertung ohne Trainings-Bezug
+  stars               Int // 1-5
+  reason              String // Pflichttext — bleibt privat, nur Coach + Admin sehen ihn
+  createdAt           DateTime @default(now())
+  disputed            Boolean  @default(false)
+  disputeReason       String?
+  disputeResolution   String?
+  disputeResolvedById String?
+
+  coach           User                  @relation("CoachRatingTarget", fields: [coachId], references: [id], onDelete: Cascade)
+  rater           User                  @relation("CoachRatingRater", fields: [raterId], references: [id], onDelete: Cascade)
+  trainingSession CoachTrainingSession? @relation(fields: [trainingSessionId], references: [id], onDelete: Cascade)
+
+  @@unique([coachId, raterId, trainingSessionId])
+  @@index([coachId])
+}
+
+// ── Visionär ─────────────────────────────────────────────────────────────────
+// Bewusst eigenständig statt an Event gekoppelt — kein passendes bestehendes
+// Umfrage-Modell (EventPoll hängt fest an einem Event). Bleibt laut Plan auch
+// nach Ablauf der Abstimmungsfrist dauerhaft sicht- und bewertbar; `status`
+// ist rein kosmetisch (keine harte Sperre für weitere Stimmen).
+
+model CommunityIdea {
+  id               String    @id @default(cuid())
+  authorId         String
+  title            String
+  description      String
+  status           String    @default("OPEN") // OPEN | CLOSED — nur UI-Kennzeichnung
+  votingEndsAt     DateTime?
+  createdAt        DateTime  @default(now())
+  hiddenByAdminAt  DateTime?
+  hiddenReason     String?
+  discordMessageId String?
+
+  author User                @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  votes  CommunityIdeaVote[]
+
+  @@index([authorId])
+}
+
+model CommunityIdeaVote {
+  id                  String   @id @default(cuid())
+  ideaId              String
+  voterId             String
+  stars               Int // 1-5
+  reason              String // Pflichttext — bleibt privat, nur Autor + Admin sehen ihn
+  createdAt           DateTime @default(now())
+  disputed            Boolean  @default(false)
+  disputeReason       String?
+  disputeResolution   String?
+  disputeResolvedById String?
+
+  idea  CommunityIdea @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  voter User          @relation(fields: [voterId], references: [id], onDelete: Cascade)
+
+  @@unique([ideaId, voterId])
+}
+
 // ============================================
 // Battle Cards — Mini-Battler Kartenspiel
 // ============================================
@@ -1359,17 +1706,17 @@ enum CardPackKind {
 }
 
 model CardPack {
-  id              String         @id @default(cuid())
-  userId          String
-  source          CardPackSource
-  kind            CardPackKind   @default(STANDARD)
+  id               String         @id @default(cuid())
+  userId           String
+  source           CardPackSource
+  kind             CardPackKind   @default(STANDARD)
   // Garantiert beim Öffnen GENAU diese Karte statt einer zufälligen Ziehung
   // (siehe openNextPack in packs.ts) — bisher nur für das Tutorial-Community-
   // Pack genutzt (garantiert die eigene Community-Karte des Users).
   guaranteedCardId String?
-  createdAt       DateTime       @default(now())
-  openedAt        DateTime?
-  openedCardId    String? // Snapshot der gezogenen Karten-ID, rein informativ
+  createdAt        DateTime       @default(now())
+  openedAt         DateTime?
+  openedCardId     String? // Snapshot der gezogenen Karten-ID, rein informativ
 
   user User @relation(fields: [userId], references: [id])
 
@@ -1382,24 +1729,24 @@ model CardPack {
 // die Kampf-Engine ist deterministisch/serverseitig, keine Live-Eingabe).
 
 model BattleChallenge {
-  id           String    @id @default(cuid())
-  challengerId String
-  opponentId   String
-  status       String    @default("pending") // pending | live | declined | resolved | expired
+  id               String    @id @default(cuid())
+  challengerId     String
+  opponentId       String
+  status           String    @default("pending") // pending | live | declined | resolved | expired
   // "DUELS" (klassisches 5v5-PvP, mit Annahme-Schritt) | "GEMS" (asynchroner Match-3-Ghost-Angriff,
   // startet direkt mit status="live", kein "pending"/Annahme) — beide zählen gemeinsam in die
   // Saison-Rangliste (siehe leaderboard.ts), sind dort aber auch einzeln filterbar.
-  mode         String    @default("DUELS")
-  liveBattleId String?   @unique // gesetzt während status="live", verweist auf LiveBattle.id
-  battleId     String? // gesetzt sobald resolved, verweist auf Battle.id
-  winnerId     String?
-  createdAt    DateTime  @default(now())
-  respondedAt  DateTime?
+  mode             String    @default("DUELS")
+  liveBattleId     String?   @unique // gesetzt während status="live", verweist auf LiveBattle.id
+  battleId         String? // gesetzt sobald resolved, verweist auf Battle.id
+  winnerId         String?
+  createdAt        DateTime  @default(now())
+  respondedAt      DateTime?
   // false = zählt NICHT für Rangliste/Sieges-Kiste — bei GEMS-Kämpfen gesetzt, sobald dasselbe
   // Angreifer/Gegner-Paar am selben Tag bereits GEMS_PVP_OPPONENT_DAILY_CAP resolvte Kämpfe hatte
   // (verhindert Farmen: denselben Gegner beliebig oft anzugreifen darf keine beliebig große
   // Rangliste-/Belohnungswirkung haben, siehe finalizeLiveBattle). Für DUELS immer true.
-  countsForRanking Boolean @default(true)
+  countsForRanking Boolean   @default(true)
 
   challenger User @relation("BattleChallengeChallenger", fields: [challengerId], references: [id], onDelete: Cascade)
   opponent   User @relation("BattleChallengeOpponent", fields: [opponentId], references: [id], onDelete: Cascade)

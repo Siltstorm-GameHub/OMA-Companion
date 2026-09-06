@@ -38,6 +38,15 @@ async function loadStats(userId: string): Promise<BadgeStats> {
     prisma.userCustomBadge.count({ where: { userId } }).catch(() => 0),
   ]);
 
+  const communityJobVoteCount = await Promise.all([
+    prisma.jobReportVote.count({ where: { voterId: userId } }),
+    prisma.jobReportContributionVote.count({ where: { voterId: userId } }),
+    prisma.jobMediaAssetVote.count({ where: { voterId: userId } }),
+    prisma.marketingPostVote.count({ where: { voterId: userId } }),
+    prisma.coachRating.count({ where: { raterId: userId } }),
+    prisma.communityIdeaVote.count({ where: { voterId: userId } }),
+  ]).then(counts => counts.reduce((a, b) => a + b, 0)).catch(() => 0);
+
   // Tournament count = any tournament participation
   const tournamentCount = await prisma.tournamentParticipant.count({ where: { userId } });
 
@@ -52,6 +61,7 @@ async function loadStats(userId: string): Promise<BadgeStats> {
     mvpCount,
     jobCoinsEarned:  job?.totalEarned ?? 0,
     vitrineItemCount: pokalCount + trophyCount + systemBadgeCount + customBadgeCount,
+    communityJobVoteCount,
   };
 }
 

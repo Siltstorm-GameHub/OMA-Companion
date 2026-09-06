@@ -9,7 +9,7 @@
 export type QuestType =
   | "VOICE_MINUTES" | "MESSAGES" | "EVENT_ATTEND" | "TOURNAMENT"
   | "POLL_VOTE" | "DAILY_SPIN" | "DUEL_PLAYED" | "PREDICTION_MADE"
-  | "JOB_CLAIM" | "BATTLE_CARD_DUEL";
+  | "JOB_CLAIM" | "BATTLE_CARD_DUEL" | "COMMUNITY_JOB_VOTE";
 
 export const QUEST_TYPE_META: Record<
   QuestType,
@@ -54,5 +54,9 @@ export const QUEST_TYPE_META: Record<
   BATTLE_CARD_DUEL: {
     label: "Battle Cards", unit: "Duelle",     icon: "🃏",
     color: "text-red-300",    bar: "from-red-600 to-red-400",       bg: "from-red-500/10",
+  },
+  COMMUNITY_JOB_VOTE: {
+    label: "Community-Bewertungen", unit: "Bewertungen", icon: "👍",
+    color: "text-teal-300",   bar: "from-teal-600 to-teal-400",     bg: "from-teal-500/10",
   },
 };
