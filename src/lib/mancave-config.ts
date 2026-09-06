@@ -13,10 +13,14 @@ export interface MancaveConfig {
   /** false = nur Admins sehen die Mancave (Standard beim ersten Rollout). */
   mancaveEnabled: boolean;
   /**
-   * Testphase: Upgrades kosten nichts (`nextUpgradeCost` gibt 0 zurück) und
-   * Stufen lassen sich wieder zurückstufen (`downgradeMancaveItem`, sonst
-   * gesperrt). War vorher MANCAVE_DEV_FREE_MODE als fester Code-Schalter,
-   * jetzt hier admin-einstellbar.
+   * Admin-Testmodus: Upgrades kosten für Admins nichts (`nextUpgradeCost`
+   * gibt 0 zurück) und Stufen lassen sich für Admins wieder zurückstufen
+   * (`downgradeMancaveItem`, sonst gesperrt) — NICHT mehr für alle User, das
+   * war die frühere globale Testphase (per User-Wunsch beendet: echte Preise
+   * für alle außer Admins, siehe `resetAllMancaveUpgrades` in
+   * mancave-economy.ts für den einmaligen Übergangs-Reset). Die eigentliche
+   * Admin-Prüfung passiert in `upgradeMancaveItem`/`downgradeMancaveItem`
+   * (dieser Wert allein reicht nicht, siehe dort).
    */
   devFreeMode: boolean;
   /**

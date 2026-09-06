@@ -30,7 +30,7 @@
  * — die Beleuchtung kommt komplett aus `RoomLighting` hier im Code.
  */
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Html, useGLTF, useTexture } from "@react-three/drei";
 import * as THREE from "three";
@@ -1333,13 +1333,21 @@ function RoomLighting() {
 
 /**
  * Ersetzt das frühere freie Umschauen per Drag (`LookAroundRig`, samt
- * `PARALLAX_AMOUNT`-Bewegungsparallaxe und Mausrad-FOV-Zoom — komplett
- * entfernt) durch sanfte Übergänge zwischen den 4 festen `CameraView`s
- * (siehe mancave-camera-views.ts): Position per Lerp, Blickrichtung per
- * Quaternion-Slerp (aus `Matrix4.lookAt(eye, lookAt, up)` gewonnen, damit
- * KEIN Gimbal-Lock/Euler-Interpolationsartefakt bei den teils sehr
- * unterschiedlichen Blickrichtungen der 4 Ansichten auftritt), FOV per
- * linearem Lerp — reines `useFrame`, keine Animations-Bibliothek nötig.
+ * `PARALLAX_AMOUNT`-Bewegungsparallaxe — komplett entfernt) durch sanfte
+ * Übergänge zwischen den 4 festen `CameraView`s (siehe mancave-camera-
+ * views.ts): Position per Lerp, Blickrichtung per Quaternion-Slerp (aus
+ * `Matrix4.lookAt(eye, lookAt, up)` gewonnen, damit KEIN Gimbal-Lock/Euler-
+ * Interpolationsartefakt bei den teils sehr unterschiedlichen
+ * Blickrichtungen der 4 Ansichten auftritt), FOV per linearem Lerp — reines
+ * `useFrame`, keine Animations-Bibliothek nötig.
+ *
+ * Mausrad-FOV-Zoom bleibt (User-Wunsch: die festen Ansichten sollen trotzdem
+ * rein-/rauszoombar sein) — `zoomOffset` kommt als Ref vom Aufrufer (siehe
+ * `onWheel` in `MancaveScene3D`) und wird bei jedem Frame auf den Basis-FOV
+ * der aktuellen View addiert, statt selbst State zu halten: eine reine
+ * Zahlen-Mutation pro Wheel-Event braucht keinen Re-Render. Der Aufrufer
+ * setzt `zoomOffset.current` beim Wechsel der Ansicht zurück auf 0, damit
+ * jede Ansicht wieder mit ihrem kuratierten FOV startet.
  *
  * Wechselt der Ziel-View MITTEN in einer laufenden Transition (schneller
  * Doppelklick auf die Pfeile), wird NICHT neu angehängt/queued: der Effekt
@@ -1348,7 +1356,7 @@ function RoomLighting() {
  * Übergang immer glatt, ganz gleich wie oft man während einer Animation
  * weiterklickt.
  */
-function CameraTransitionRig({ view }: { view: CameraView }) {
+function CameraTransitionRig({ view, zoomOffset }: { view: CameraView; zoomOffset: RefObject<number> }) {
   const { camera } = useThree();
   const startPos = useRef(new THREE.Vector3());
   const startQuat = useRef(new THREE.Quaternion());
@@ -1372,7 +1380,7 @@ function CameraTransitionRig({ view }: { view: CameraView }) {
       lookMatrix.current.lookAt(view.eye, view.lookAt, worldUp.current);
       camera.quaternion.setFromRotationMatrix(lookMatrix.current);
       if (camera instanceof THREE.PerspectiveCamera) {
-        camera.fov = view.fov;
+        camera.fov = view.fov + zoomOffset.current;
         camera.updateProjectionMatrix();
       }
       // Start=Ziel setzen (statt nur die Kamera direkt zu setzen): ohne das
@@ -1396,7 +1404,7 @@ function CameraTransitionRig({ view }: { view: CameraView }) {
     startFov.current = camera instanceof THREE.PerspectiveCamera ? camera.fov : view.fov;
     startTime.current = performance.now();
     prevViewId.current = view.id;
-  }, [view, camera]);
+  }, [view, camera, zoomOffset]);
 
   useFrame(() => {
     if (!initialized.current || prevViewId.current !== view.id) return;
@@ -1408,7 +1416,8 @@ function CameraTransitionRig({ view }: { view: CameraView }) {
     targetQuat.current.setFromRotationMatrix(lookMatrix.current);
     camera.quaternion.slerpQuaternions(startQuat.current, targetQuat.current, eased);
     if (camera instanceof THREE.PerspectiveCamera) {
-      camera.fov = startFov.current + (view.fov - startFov.current) * eased;
+      const target = view.fov + zoomOffset.current;
+      camera.fov = startFov.current + (target - startFov.current) * eased;
       camera.updateProjectionMatrix();
     }
   });
@@ -1431,7 +1440,22 @@ type DetailItem =
   | { kind: "badge"; badgeKey: string }
   | null;
 
-export default function MancaveScene3D({ data }: { data: MancaveData }) {
+export default function MancaveScene3D({ data: initialData }: { data: MancaveData }) {
+  // Lokaler State statt direkt `initialData` — spiegelt denselben Zweck wie in
+  // MonitorScreenContent (MancaveSharedUI.tsx): ItemsPanel/JobsPanel patchen
+  // Änderungen (Ausbau-Stufen, Münzstand) hier rein, statt die Seite neu zu
+  // laden. `panel === "items"/"jobs"` sind über dieses große Popup aktuell
+  // nicht mehr erreichbar (kein Hotspot ruft mehr `setPanel` mit diesen
+  // Werten auf, siehe Kommentar bei `DetailItem` oben) — der State bleibt
+  // trotzdem konsistent zum Monitor-Dock, falls das wieder verdrahtet wird.
+  const [data, setData] = useState(initialData);
+  // React-empfohlenes Muster "State beim Prop-Wechsel anpassen" (react.dev)
+  // statt useEffect: läuft während des Renders, kein Cascading-Render-Risiko.
+  const [prevInitialData, setPrevInitialData] = useState(initialData);
+  if (initialData !== prevInitialData) {
+    setPrevInitialData(initialData);
+    setData(initialData);
+  }
   const [panel, setPanel] = useState<MancavePanel>(null);
   const [detailItem, setDetailItem] = useState<DetailItem>(null);
   const [activeViewIndex, setActiveViewIndex] = useState(0);
@@ -1444,7 +1468,14 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
   };
 
   const activeView = CAMERA_VIEWS[activeViewIndex];
+  // Abweichung vom kuratierten Basis-FOV der aktuellen Ansicht, per Mausrad
+  // gesteuert (siehe onWheel unten) — ein Ref statt State, weil CameraTransitionRig
+  // das ohnehin jeden Frame direkt liest, ein Re-Render pro Wheel-Tick wäre
+  // reine Verschwendung. Beim Wechsel der Ansicht zurückgesetzt, damit jede
+  // der 4 Ansichten wieder mit ihrem eigenen kuratierten FOV startet.
+  const zoomOffsetRef = useRef(0);
   const navigateView = useCallback((delta: 1 | -1) => {
+    zoomOffsetRef.current = 0;
     setActiveViewIndex(i => (i + delta + CAMERA_VIEWS.length) % CAMERA_VIEWS.length);
   }, []);
   const swipeLeft = useCallback(() => navigateView(1), [navigateView]);
@@ -1459,6 +1490,27 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [navigateView]);
+
+  // Zoom per Mausrad/Trackpad — die festen Ansichten bleiben fest (keine
+  // Rückkehr zum früheren freien Umschauen), aber sollen sich laut User
+  // trotzdem rein-/rauszoomen lassen. Nativer Listener statt onWheel-Prop,
+  // weil React Wheel-Handler standardmäßig passiv angehängt werden und
+  // `preventDefault()` dort sonst nur eine Konsolen-Warnung produziert, ohne
+  // das Seiten-Scrollen tatsächlich zu verhindern.
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ZOOM_SENSITIVITY = 0.05;
+    const ZOOM_RANGE = 25; // ± Grad Abweichung vom kuratierten Basis-FOV
+    function onWheel(e: WheelEvent) {
+      e.preventDefault();
+      zoomOffsetRef.current = Math.min(
+        ZOOM_RANGE, Math.max(-ZOOM_RANGE, zoomOffsetRef.current + e.deltaY * ZOOM_SENSITIVITY),
+      );
+    }
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
 
   // Nach Scope-Value bzw. Pokal-Id, um beim Klick auf einen einzelnen Pokal
   // schnell das passende Detail-Objekt fürs Modal nachzuschlagen (siehe
@@ -1510,7 +1562,7 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
         <color attach="background" args={["#050810"]} />
         <fog attach="fog" args={["#050810", 5, 11]} />
         <RoomLighting />
-        <CameraTransitionRig view={activeView} />
+        <CameraTransitionRig view={activeView} zoomOffset={zoomOffsetRef} />
         <Suspense fallback={null}>
           <WallExtensions surfaceTier={data.surfaceTier} />
           <Ceiling />
@@ -1627,7 +1679,7 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
 
       <div className="absolute bottom-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-full pointer-events-none"
         style={{ background: "rgba(4,10,9,0.5)", border: "1px solid rgba(255,255,255,0.08)" }}>
-        <span className="text-[9px] text-gray-400">Pfeile/← → zum Wechseln der Ansicht · Wischen · Pokale/Abzeichen anklicken für Details</span>
+        <span className="text-[9px] text-gray-400">Pfeile/← → zum Wechseln der Ansicht · Wischen · Scrollen zum Zoomen · Pokale/Abzeichen anklicken für Details</span>
       </div>
 
       <MancaveCameraNav activeIndex={activeViewIndex} views={CAMERA_VIEWS} onNavigate={navigateView} />
@@ -1682,8 +1734,8 @@ export default function MancaveScene3D({ data }: { data: MancaveData }) {
               ✕
             </button>
             {panel === "trophy" && <TrophyPanel data={data} />}
-            {panel === "items" && <ItemsPanel data={data} />}
-            {panel === "jobs" && <JobsPanel data={data} />}
+            {panel === "items" && <ItemsPanel data={data} onDataChange={setData} />}
+            {panel === "jobs" && <JobsPanel data={data} onDataChange={setData} />}
             {panel === "mail" && <MailPanel data={data} onOpenPanel={setPanel} />}
             {panel === "wanderpokale-kategorie" && <WanderpokalePanel data={data} scopeType="category" />}
             {panel === "wanderpokale-genre" && <WanderpokalePanel data={data} scopeType="genre" />}

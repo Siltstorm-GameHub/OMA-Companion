@@ -10,6 +10,7 @@ import { COMMUNITY_JOBS, type CommunityJobDef } from "./community-jobs";
 const SLOTS_KEY = "community_job_slot_overrides";
 const TIERS_KEY = "community_job_payout_tiers";
 const BONUS_KEY = "community_job_vote_bonus_config";
+const CHANNELS_KEY = "community_job_announcement_channels";
 
 export interface PayoutTier {
   label: string; // z.B. "Herausragend"
@@ -133,4 +134,26 @@ export async function setVoteBonusConfig(patch: Partial<VoteBonusConfig>): Promi
 export function computeVoteBonusMultiplier(ownVoteCount: number, config: VoteBonusConfig): number {
   const ratio = config.voteBonusThreshold > 0 ? Math.min(1, ownVoteCount / config.voteBonusThreshold) : 0;
   return 1 + ratio * (config.voteBonusMaxMultiplier - 1);
+}
+
+// ── Discord-Ankündigungskanal je Job ─────────────────────────────────────────
+// Admin entscheidet pro Job, in welchem Discord-Kanal neue Beiträge angekündigt
+// werden (Reports/Assets/Marketing-Posts — Coach/Visionär kündigen ohnehin nicht
+// an, siehe Discord-Anbindung). Fällt ohne Override auf DISCORD_COMMUNITY_JOBS_CHANNEL_ID zurück.
+
+export async function getAnnouncementChannelOverrides(): Promise<Record<string, string>> {
+  return readJson<Record<string, string>>(CHANNELS_KEY, {});
+}
+
+export async function setAnnouncementChannel(jobKey: string, channelId: string | null): Promise<void> {
+  const overrides = await getAnnouncementChannelOverrides();
+  const next = { ...overrides };
+  if (channelId == null || channelId === "") delete next[jobKey];
+  else next[jobKey] = channelId;
+  await writeJson(CHANNELS_KEY, next);
+}
+
+export async function getAnnouncementChannel(jobKey: string): Promise<string | null> {
+  const overrides = await getAnnouncementChannelOverrides();
+  return overrides[jobKey] ?? process.env.DISCORD_COMMUNITY_JOBS_CHANNEL_ID ?? null;
 }

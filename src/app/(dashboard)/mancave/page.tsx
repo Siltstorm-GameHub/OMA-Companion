@@ -13,7 +13,7 @@ export default async function MancavePage() {
   const mancaveCfg = await getMancaveConfig();
   if (!mancaveVisibleFor(mancaveCfg, me.role)) redirect("/profile");
 
-  const data = await loadMancaveData(me.id);
+  const data = await loadMancaveData(me.id, me.role === "admin");
 
   return <MancaveClient data={data} />;
 }

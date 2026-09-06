@@ -203,7 +203,10 @@ export default async function PublicProfilePage({
   // Für den 3D-Pokal-Viewer + "wer ist aktueller Halter"-Anzeige — dieselbe
   // Aggregation, die auch die eigene Profilseite nutzt (siehe page.tsx),
   // hier für den PROFILEIGENTÜMER (id) statt für den Betrachter geladen.
-  const mancaveData = await loadMancaveData(id);
+  // isAdmin=false: diese Seite zeigt fremde Zimmer nur lesend (Pokal-Viewer,
+  // Wer-hält-Anzeige) — Ausbau-Kosten/Testmodus-Flag aus `mancaveData` werden
+  // hier gar nicht gerendert, spielen für den Profileigentümer also keine Rolle.
+  const mancaveData = await loadMancaveData(id, false);
   const wanderpocalHolders: Record<string, { holderUserId: string | null; holderName: string | null; holderAvatarUrl: string | null; holderRankPoints: number | null }> = {};
   for (const s of mancaveData.wanderpokalStatus) {
     wanderpocalHolders[`${s.scopeType}:${s.scopeValue}`] = {

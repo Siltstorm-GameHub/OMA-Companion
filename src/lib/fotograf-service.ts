@@ -3,6 +3,7 @@ import { registerScoreResolver, registerOwnVoteCounter } from "./community-job-s
 import { onCommunityJobVoteCast } from "./community-job-vote-incentives";
 import { announceCommunityJobContent } from "./discord-community-jobs";
 import { getCommunityJob } from "./community-jobs";
+import { getAnnouncementChannel } from "./community-job-config";
 
 /**
  * Fotograf: lädt Clips/Collagen/Screenshots/Banner/Grafiken in die gemeinsame
@@ -45,11 +46,14 @@ export async function uploadAsset(
 }
 
 async function announceAndStore(assetId: string, authorId: string, title: string, imageUrl: string): Promise<void> {
-  const author = await prisma.user.findUnique({ where: { id: authorId }, select: { username: true, name: true } });
+  const [author, channelId] = await Promise.all([
+    prisma.user.findUnique({ where: { id: authorId }, select: { username: true, name: true } }),
+    getAnnouncementChannel(JOB_KEY),
+  ]);
   const messageId = await announceCommunityJobContent({
     title, description: "Neues Asset in der Community-Mediathek",
     authorName: author?.username ?? author?.name ?? "Unbekannt",
-    jobEmoji: getCommunityJob(JOB_KEY)?.emoji ?? "📸", imageUrl,
+    jobEmoji: getCommunityJob(JOB_KEY)?.emoji ?? "📸", imageUrl, channelId,
   });
   if (messageId) await prisma.jobMediaAsset.update({ where: { id: assetId }, data: { discordMessageId: messageId } });
 }

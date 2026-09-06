@@ -32,6 +32,7 @@ import ClipContestWidget from "@/components/ClipContestWidget";
 import { HeroStatValue } from "@/components/HeroStatValue";
 import { computeStatStandings, type StatConfig, type LegacyStandingRow } from "@/lib/series-event-points";
 import GameserverWidget from "./GameserverWidget";
+import CommunityBoardWidget from "./CommunityBoardWidget";
 import GuestLockOverlay from "@/components/GuestLockOverlay";
 
 const MONTH_NAMES = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
@@ -943,6 +944,9 @@ export default async function DashboardPage() {
               )}
             </div>
           </div>
+
+          {/* Community-Board (Community-Jobs) */}
+          <CommunityBoardWidget />
 
           {/* Quests diesen Monat */}
           <div className="animate-slide-up stagger-5">

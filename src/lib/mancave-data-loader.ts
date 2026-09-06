@@ -16,9 +16,15 @@ import { renderZoneFor, MANCAVE_GADGET_CATEGORIES, type MancaveGadget, type Manc
  * damit sowohl die Mancave-Seite (Desktop-3D-Szene) als auch die mobile
  * Profilseite (Job-Reiter + Trophy3DViewer, siehe Teil B des Umbau-Plans)
  * dieselbe Aggregation nutzen, statt sie zu duplizieren.
+ *
+ * `isAdmin` bestimmt, ob der Admin-Testmodus (`MancaveConfig.devFreeMode`,
+ * siehe mancave-config.ts) für DIESEN User tatsächlich greift — der Schalter
+ * macht Upgrades/Downgrades nur noch für Admins kostenlos, nicht mehr für
+ * alle (frühere globale Testphase, per User-Wunsch beendet).
  */
-export async function loadMancaveData(userId: string): Promise<MancaveData> {
+export async function loadMancaveData(userId: string, isAdmin: boolean): Promise<MancaveData> {
   const mancaveCfg = await getMancaveConfig();
+  const devFree = mancaveCfg.devFreeMode && isAdmin;
   const now = new Date();
 
   const [
@@ -119,7 +125,7 @@ export async function loadMancaveData(userId: string): Promise<MancaveData> {
     return {
       key: def.key, label: def.label, baseline: def.baseline, tier,
       maxTier: 4,
-      nextCost: nextUpgradeCost(def, tier, { devFreeMode: mancaveCfg.devFreeMode, costOverride: effectiveCosts(def, mancaveCfg) }),
+      nextCost: nextUpgradeCost(def, tier, { devFreeMode: devFree, costOverride: effectiveCosts(def, mancaveCfg) }),
     };
   });
   const surfaceTier = surfaceTierFrom(tiers);
@@ -187,7 +193,7 @@ export async function loadMancaveData(userId: string): Promise<MancaveData> {
     roomItemKeys: room.placed.map(p => p.key),
     items,
     surfaceTier,
-    devFreeMode: mancaveCfg.devFreeMode,
+    devFreeMode: devFree,
     jobs,
   };
 }

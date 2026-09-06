@@ -12,12 +12,13 @@ export async function announceCommunityJobContent(content: {
   description: string;
   authorName: string;
   jobEmoji: string;
+  channelId: string | null;
   url?: string;
   imageUrl?: string;
 }): Promise<string | null> {
-  const channelId = process.env.DISCORD_COMMUNITY_JOBS_CHANNEL_ID;
   const botToken = process.env.DISCORD_BOT_TOKEN;
-  if (!channelId || !botToken) return null;
+  if (!content.channelId || !botToken) return null;
+  const channelId = content.channelId;
 
   const embed = {
     color: DISCORD_COLORS.eventNew,

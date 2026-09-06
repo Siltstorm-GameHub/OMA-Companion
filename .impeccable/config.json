@@ -131,6 +131,24 @@
         ],
         "createdAt": "2026-09-05T19:09:39.491Z",
         "reason": "violet #8b5cf6 reused from existing app palette (Karten-tab accent + SUPPORT class color in BattleCardView.tsx), not a new AI-picked color"
+      },
+      {
+        "rule": "gray-on-color",
+        "value": "bg-white/[0.03]",
+        "files": [
+          "src/app/(dashboard)/community-board/CommunityBoardClient.tsx"
+        ],
+        "createdAt": "2026-09-06T13:39:34.999Z",
+        "reason": "near-transparent dark background, text-gray-500 is the app-wide convention on it (see CatalogView holder badges)"
+      },
+      {
+        "rule": "gray-on-color",
+        "value": "text-gray-500 bg-white/[0.04]",
+        "files": [
+          "src/app/(dashboard)/admin/mancave/MancaveConfigPanel.tsx"
+        ],
+        "createdAt": "2026-09-06T13:49:00.865Z",
+        "reason": "pre-existing inactive-state pill convention used across admin panels, text-gray-500 only paired with near-transparent bg-white/[0.04] not a saturated color, not part of this edit"
       }
     ]
   }

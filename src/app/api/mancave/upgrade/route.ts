@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Objekt fehlt" }, { status: 400 });
   }
 
-  const result = await upgradeMancaveItem(guard.userId, itemKey);
+  const result = await upgradeMancaveItem(guard.userId, itemKey, guard.role === "admin");
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: 400 });
 
   return NextResponse.json(result);

@@ -43,7 +43,7 @@ export default async function AdminMancavePage() {
         </h2>
         <p className="text-xs text-gray-500 mb-4 -mt-2">
           Kosten je Stufenübergang, in Münzen. Gelbe Punkte markieren Objekte mit eigenem
-          Preis (weicht vom Katalog-Default ab). Greift nur, solange die Testphase oben aus ist.
+          Preis (weicht vom Katalog-Default ab). Gilt für alle außer Admins im Testmodus (oben).
         </p>
         <MancavePricesPanel initial={priceRows} />
       </section>

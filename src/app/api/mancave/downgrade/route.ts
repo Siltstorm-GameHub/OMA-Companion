@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireMancaveAccess } from "@/lib/mancave-guard";
 import { downgradeMancaveItem } from "@/lib/mancave-economy";
 
-/** Nur für die Dev-Testphase (siehe MancaveConfig.devFreeMode in mancave-config.ts, admin-einstellbar). */
+/** Nur für Admins im Testmodus (siehe MancaveConfig.devFreeMode in mancave-config.ts, admin-einstellbar). */
 export async function POST(req: NextRequest) {
   const guard = await requireMancaveAccess();
   if ("response" in guard) return guard.response;
@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Objekt fehlt" }, { status: 400 });
   }
 
-  const result = await downgradeMancaveItem(guard.userId, itemKey);
+  const result = await downgradeMancaveItem(guard.userId, itemKey, guard.role === "admin");
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: 400 });
 
   return NextResponse.json(result);

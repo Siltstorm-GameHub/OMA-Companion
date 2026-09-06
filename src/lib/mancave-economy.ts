@@ -37,8 +37,13 @@ export type UpgradeResult =
 /**
  * Kauft die nächste Stufe eines Slots: erst lesen und validieren, dann genau
  * eine Transaktion, die Münzen abbucht, das Ledger schreibt und die Stufe hochzählt.
+ *
+ * `isAdmin` entscheidet, ob der Admin-Testmodus (`MancaveConfig.devFreeMode`,
+ * siehe mancave-config.ts) für DIESEN Aufruf greift — der Schalter macht
+ * Upgrades seit dem Rollout-Ende nur noch für Admins kostenlos, nicht mehr
+ * für alle User (User-Wunsch, um die frühere globale Testphase zu beenden).
  */
-export async function upgradeMancaveItem(userId: string, itemKey: string): Promise<UpgradeResult> {
+export async function upgradeMancaveItem(userId: string, itemKey: string, isAdmin: boolean): Promise<UpgradeResult> {
   const def = getMancaveItem(itemKey);
   if (!def) return { error: "Unbekanntes Objekt" };
 
@@ -50,7 +55,8 @@ export async function upgradeMancaveItem(userId: string, itemKey: string): Promi
   if (!user) return { error: "Nicht eingeloggt" };
 
   const currentTier = existing?.tier ?? defaultTier(def);
-  const cost = nextUpgradeCost(def, currentTier, { devFreeMode: cfg.devFreeMode, costOverride: effectiveCosts(def, cfg) });
+  const devFree = cfg.devFreeMode && isAdmin;
+  const cost = nextUpgradeCost(def, currentTier, { devFreeMode: devFree, costOverride: effectiveCosts(def, cfg) });
   if (cost === null) return { error: "Bereits auf Höchststufe" };
   if (user.points < cost) return { error: "Nicht genug Münzen" };
 
@@ -86,14 +92,15 @@ export type DowngradeResult =
   | { error: string };
 
 /**
- * NUR für die Dev-Testphase (siehe MancaveConfig.devFreeMode in mancave-config.ts): eine Stufe zurück,
- * kostenlos, keine Erstattung — reines Test-Werkzeug, um Zustände erneut
- * durchzuklicken. Läuft auf `defaultTier` (Grundausstattung nie unter 1,
- * Zusatzobjekte nie unter 0) und ist im echten Rollout komplett gesperrt.
+ * NUR für Admins im Testmodus (siehe MancaveConfig.devFreeMode in
+ * mancave-config.ts): eine Stufe zurück, kostenlos, keine Erstattung — reines
+ * Test-Werkzeug, um Zustände erneut durchzuklicken. Läuft auf `defaultTier`
+ * (Grundausstattung nie unter 1, Zusatzobjekte nie unter 0) und ist für alle
+ * anderen User komplett gesperrt.
  */
-export async function downgradeMancaveItem(userId: string, itemKey: string): Promise<DowngradeResult> {
+export async function downgradeMancaveItem(userId: string, itemKey: string, isAdmin: boolean): Promise<DowngradeResult> {
   const cfg = await getMancaveConfig();
-  if (!cfg.devFreeMode) return { error: "Nur in der Testphase verfügbar" };
+  if (!cfg.devFreeMode || !isAdmin) return { error: "Nur für Admins im Testmodus verfügbar" };
 
   const def = getMancaveItem(itemKey);
   if (!def) return { error: "Unbekanntes Objekt" };
@@ -113,4 +120,19 @@ export async function downgradeMancaveItem(userId: string, itemKey: string): Pro
   });
 
   return { ok: true, itemKey, newTier };
+}
+
+/**
+ * Setzt den Ausbau-Fortschritt ALLER User komplett zurück (löscht jede
+ * `MancaveItem`-Zeile) — einmalig gedacht für den Übergang von der früheren
+ * globalen Testphase (kostenlose Upgrades für alle) zu echten Preisen: ohne
+ * Reset behielten alle, die während der Testphase kostenlos hochgestuft
+ * hatten, ihre Stufen dauerhaft, während neue User bei Stufe 0 anfangen
+ * müssten — nicht fair. `loadMancaveTiers` fällt für jeden fehlenden Slot
+ * automatisch auf `defaultTier` zurück, ein Reset braucht also keine
+ * Sonderbehandlung für die Grundausstattung.
+ */
+export async function resetAllMancaveUpgrades(): Promise<{ deleted: number }> {
+  const result = await prisma.mancaveItem.deleteMany({});
+  return { deleted: result.count };
 }

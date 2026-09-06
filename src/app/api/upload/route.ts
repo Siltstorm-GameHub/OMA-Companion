@@ -81,10 +81,11 @@ function checkBlobToken(): { ok: true } | { ok: false; reason: string } {
 /** Was hochgeladen werden darf, und wer. Bewusst eine Whitelist: `kind` landet
  *  im Blob-Pfad, ein freier String wäre ein Path-Traversal-Vektor. */
 const KINDS = {
-  "event-cover":       { minRole: "moderator", maxBytes: 4_000_000 },
-  "profile-banner":    { minRole: "user",      maxBytes: 3_000_000 },
-  "badge":             { minRole: "admin",     maxBytes: 1_000_000 },
-  "battle-card-avatar": { minRole: "admin",    maxBytes: 8_000_000 },
+  "event-cover":         { minRole: "moderator", maxBytes: 4_000_000 },
+  "profile-banner":      { minRole: "user",      maxBytes: 3_000_000 },
+  "badge":               { minRole: "admin",     maxBytes: 1_000_000 },
+  "battle-card-avatar":  { minRole: "admin",     maxBytes: 8_000_000 },
+  "community-job-asset": { minRole: "user",      maxBytes: 6_000_000 }, // Fotograf-Uploads (Clips-Standbild/Collage/Screenshot/Banner/Grafik)
 } as const;
 
 type Kind = keyof typeof KINDS;

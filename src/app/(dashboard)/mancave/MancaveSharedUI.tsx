@@ -1,7 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useState, type Dispatch, type SetStateAction } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import {
@@ -26,22 +25,19 @@ export type MancavePanel = "trophy" | "items" | "jobs" | "mail" | "wanderpokale-
  * seinen Inhalt NICHT als normales React-Portal, sondern über einen eigenen
  * `ReactDOM.createRoot()` — ein komplett separater React-Baum ohne Zugriff
  * auf JEDEN React-Context der App, inklusive Next.js' Router-Context.
- * `useRouter()` wirft dort eine Exception ("invariant expected app router to
- * be mounted"), was den ganzen Panel-Inhalt crashen und schwarz werden lässt
- * (siehe JobsPanel/ItemsPanel — TrophyPanel/MailPanel ohne Router-Aufruf
- * funktionieren deshalb dort problemlos). Diese Panels laufen aber AUCH im
- * normalen React-Baum (großes Popup vom Schreibtisch-Hotspot aus) — dort
- * soll `router.refresh()` weiter funktionieren. Deshalb hier defensiv
- * abgefangen statt `useRouter()` komplett zu entfernen.
+ * `useRouter()` würde dort mit einer Exception crashen ("invariant expected
+ * app router to be mounted"). JobsPanel/ItemsPanel riefen früher genau
+ * deshalb `router.refresh()` (bzw. als Fallback `window.location.reload()`)
+ * auf, um nach einem Upgrade/einer Job-Aktion den Rest der Seite zu
+ * aktualisieren — das hat auf dem Monitor-Screen IMMER den kompletten
+ * Reload-Zweig getroffen, nie den Router-Zweig, und dadurch bei jeder
+ * Aktion die ganze 3D-Ansicht (Kamera, WebGL-Kontext, geladene Modelle) neu
+ * geladen (User-Feedback). Beide Panels patchen ihre Änderungen jetzt
+ * stattdessen über `onDataChange` direkt in `MonitorScreenContent`s
+ * lokalen State (siehe dort) — reine Prop-Callbacks funktionieren über die
+ * `<Html>`-Grenze hinweg problemlos, nur Context-basierte Hooks wie
+ * `useRouter()` nicht.
  */
-function useSafeRouter() {
-  try {
-    // eslint-disable-next-line react-hooks/rules-of-hooks -- siehe Kommentar oben, Aufruf bleibt pro Instanz konstant
-    return useRouter();
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Wie viele Benachrichtigungen gerade anliegen (neue Jobs verfügbar,
@@ -76,7 +72,26 @@ const PANEL_TITLES: Record<Exclude<MancavePanel, null>, string> = {
  * das große Popup — das ist bewusst unverändert, hat nichts mit dem Monitor
  * zu tun.
  */
-export function MonitorScreenContent({ data }: { data: MancaveData }) {
+export function MonitorScreenContent({ data: initialData }: { data: MancaveData }) {
+  // Lokaler State statt direkt `initialData`: Upgrade/Job-Aktionen (siehe
+  // ItemsPanel/JobsPanel unten) patchen hier rein, damit sich Münzstand/
+  // Ausbau-Stufen sofort im System-Tray und im jeweils offenen Panel zeigen
+  // — OHNE die ganze Seite/3D-Szene neu zu laden. Läuft der Screen im
+  // isolierten <Html>-React-Baum (siehe Kommentar weiter unten), gibt es
+  // dafür ohnehin keinen Router — ein `router.refresh()` hätte hier vorher
+  // nur per Fallback auf `window.location.reload()` funktioniert.
+  const [data, setData] = useState(initialData);
+  // React-empfohlenes Muster "State beim Prop-Wechsel anpassen" (react.dev)
+  // statt useEffect: läuft während des Renders, kein zusätzlicher Zyklus/
+  // Cascading-Render-Risiko. `initialData` ändert sich für eine gemountete
+  // Instanz zwar kaum noch (kein router.refresh()/reload mehr in diesem
+  // Feature), aber andere, unabhängige Refreshes derselben Seite (z.B.
+  // Profil-Bio bearbeiten) liefern trotzdem ein frisches Server-Objekt.
+  const [prevInitialData, setPrevInitialData] = useState(initialData);
+  if (initialData !== prevInitialData) {
+    setPrevInitialData(initialData);
+    setData(initialData);
+  }
   const [view, setView] = useState<MancavePanel>(null);
   const notifs = notificationCount(data);
 
@@ -96,18 +111,20 @@ export function MonitorScreenContent({ data }: { data: MancaveData }) {
             nötig (das hatte den Text vorher nur noch kleiner gemacht).
             Mausrad manuell auf scrollTop gemappt statt auf natives Scrollen zu
             vertrauen — die Fläche liegt in einem <Html transform>-Overlay (3D-
-            verankert, eigener isolierter React-Baum, siehe useSafeRouter-
-            Kommentar), nativer Wheel-Scroll wirkte dort unzuverlässig (User-
-            Feedback: musste den winzigen Scrollbalken per Hand ziehen, gerade
-            bei der langen Ausbau-Liste). stopPropagation, damit das Rad-Event
-            nicht zusätzlich beim Kamera-Zoom (LookAroundRig, hängt am
-            <canvas>) landet — auch wenn Canvas und dieses Overlay ohnehin
-            getrennte DOM-Zweige sind, schadet die Absicherung nicht. */}
+            verankert, eigener isolierter React-Baum ohne Router-Context —
+            siehe `<Html>`-Kommentar ganz oben in dieser Datei), nativer
+            Wheel-Scroll wirkte dort unzuverlässig (User-Feedback: musste den
+            winzigen Scrollbalken per Hand ziehen, gerade bei der langen
+            Ausbau-Liste).
+            stopPropagation, damit das Rad-Event nicht zusätzlich beim Kamera-
+            Zoom (LookAroundRig, hängt am <canvas>) landet — auch wenn Canvas
+            und dieses Overlay ohnehin getrennte DOM-Zweige sind, schadet die
+            Absicherung nicht. */}
         <div className="flex-1 min-h-0 overflow-y-auto p-5" style={{ fontSize: 15 }}
           onWheel={e => { e.currentTarget.scrollTop += e.deltaY; e.stopPropagation(); }}>
           {view === "trophy" && <TrophyPanel data={data} />}
-          {view === "items" && <ItemsPanel data={data} />}
-          {view === "jobs" && <JobsPanel data={data} />}
+          {view === "items" && <ItemsPanel data={data} onDataChange={setData} />}
+          {view === "jobs" && <JobsPanel data={data} onDataChange={setData} />}
           {view === "mail" && <MailPanel data={data} onOpenPanel={setView} />}
           {view === "wanderpokale-kategorie" && <WanderpokalePanel data={data} scopeType="category" />}
           {view === "wanderpokale-genre" && <WanderpokalePanel data={data} scopeType="genre" />}
@@ -192,23 +209,19 @@ const JOB_ACCENT: Record<JobListEntry["accent"], string> = {
  * automatisch neue Stellen frei. Startet mit den server-seitig geladenen
  * Daten (kein Ladeblitzer beim Öffnen), lädt nach jeder Aktion nach.
  */
-export function JobsPanel({ data }: { data: MancaveData }) {
-  const router = useSafeRouter();
+export function JobsPanel({ data, onDataChange }: { data: MancaveData; onDataChange: Dispatch<SetStateAction<MancaveData>> }) {
   const now = useNow(1000);
   const [overview, setOverview] = useState<JobOverview>(data.jobs);
   const [acting, setActing] = useState<string | null>(null);
   const [claimedAt, setClaimedAt] = useState(0);
 
-  async function reload() {
+  // Holt nur die (leichtgewichtige) Job-Übersicht neu — kein Reload der
+  // ganzen Seite mehr nötig. Münzstand-Änderungen kommen direkt aus der
+  // jeweiligen Aktions-Response (siehe hire/quit/claim unten) und patchen
+  // MonitorScreenContents State über `onDataChange`.
+  async function reloadJobs() {
     const d: JobOverview = await fetch("/api/jobs").then(r => r.json()).catch(() => null);
     if (d && !("error" in d)) setOverview(d);
-    // Läuft dieses Panel im isolierten <Html>-React-Baum (Monitor-Screen,
-    // siehe useSafeRouter-Kommentar oben), gibt's keinen Router zum
-    // Revalidieren des restlichen Seiteninhalts — ein voller Reload ist dort
-    // die einzige Möglichkeit, den Rest der Seite (z.B. Münzstand) wieder
-    // korrekt zu bekommen. Selten genug ausgelöst (nur nach Job-Aktionen),
-    // dass das vertretbar ist.
-    if (router) router.refresh(); else window.location.reload();
   }
 
   async function hire(job: JobListEntry) {
@@ -226,7 +239,8 @@ export function JobsPanel({ data }: { data: MancaveData }) {
           ? `${job.emoji} Eingestellt als ${job.label} — ${body.autoClaimed} Münzen vom alten Job abgerechnet`
           : `${job.emoji} Eingestellt als ${job.label}!`
       );
-      await reload();
+      await reloadJobs();
+      if (body.autoClaimed > 0) onDataChange(prev => ({ ...prev, totalPoints: prev.totalPoints + body.autoClaimed }));
     } catch {
       toast.error("Netzwerkfehler");
     } finally {
@@ -242,7 +256,8 @@ export function JobsPanel({ data }: { data: MancaveData }) {
       const body = await res.json().catch(() => ({}));
       if (!res.ok) { toast.error(body.error ?? "Kündigung fehlgeschlagen"); return; }
       toast.success(body.paidOut > 0 ? `Gekündigt — ${body.paidOut} Münzen ausgezahlt` : "Gekündigt");
-      await reload();
+      await reloadJobs();
+      if (body.paidOut > 0) onDataChange(prev => ({ ...prev, totalPoints: prev.totalPoints + body.paidOut }));
     } catch {
       toast.error("Netzwerkfehler");
     } finally {
@@ -260,7 +275,8 @@ export function JobsPanel({ data }: { data: MancaveData }) {
       confetti({ particleCount: 90, spread: 70, origin: { y: 0.7 } });
       toast.success(`+${body.coins} Münzen für ${formatDuration(body.countedMinutes)} Arbeit`);
       if (body.fired) toast.error(body.fired, { duration: 8000 });
-      await reload();
+      await reloadJobs();
+      onDataChange(prev => ({ ...prev, totalPoints: prev.totalPoints + body.coins }));
     } catch {
       toast.error("Netzwerkfehler");
     } finally {
@@ -637,8 +653,7 @@ export function EventPokalePanel({ data }: { data: MancaveData }) {
  * Boden/Wand/Fenster tauchen hier bewusst NICHT als eigene Kaufzeile auf —
  * ihre Stufe steigt automatisch mit (Durchschnitt aller Objekt-Stufen).
  */
-export function ItemsPanel({ data }: { data: MancaveData }) {
-  const router = useSafeRouter();
+export function ItemsPanel({ data, onDataChange }: { data: MancaveData; onDataChange: Dispatch<SetStateAction<MancaveData>> }) {
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -656,11 +671,13 @@ export function ItemsPanel({ data }: { data: MancaveData }) {
         setError(body.error ?? fallbackError);
         return;
       }
-      // Läuft dieses Panel im isolierten <Html>-React-Baum (Monitor-Screen,
-      // siehe useSafeRouter-Kommentar oben), gibt's keinen Router zum
-      // Revalidieren — ein voller Reload ist dort die einzige Möglichkeit,
-      // den Rest der Seite wieder korrekt zu bekommen.
-      if (router) router.refresh(); else window.location.reload();
+      // Kein Reload mehr nötig: der aktualisierte Ausbau-Ausschnitt (Stufen,
+      // Boden/Wand-Stufe, Münzstand) kommt leichtgewichtig per GET zurück
+      // (siehe /api/mancave/items) und wird direkt in den von
+      // MonitorScreenContent gehaltenen State gemergt — die 3D-Szene selbst
+      // bleibt dabei komplett unangetastet.
+      const summary = await fetch("/api/mancave/items").then(r => r.json()).catch(() => null);
+      if (summary && !("error" in summary)) onDataChange(prev => ({ ...prev, ...summary }));
     } catch {
       setError("Verbindung fehlgeschlagen");
     } finally {
@@ -695,7 +712,7 @@ export function ItemsPanel({ data }: { data: MancaveData }) {
         <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] text-amber-200"
           style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)" }}>
           <FlaskConical className="w-3 h-3 shrink-0" />
-          Testphase: Upgrades sind kostenlos, Rückstufen ist möglich.
+          Admin-Testmodus: Upgrades sind für dich kostenlos, Rückstufen ist möglich.
         </div>
       )}
       {error && <p className="text-[11px] text-rose-400">{error}</p>}

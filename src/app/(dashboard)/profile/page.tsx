@@ -20,6 +20,7 @@ import ProfileEditor from "./ProfileEditor";
 import ProfileCompletion from "./ProfileCompletion";
 import ProfileStatTiles from "./ProfileStatTiles";
 import ProfileRecentEvents from "./ProfileRecentEvents";
+import CommunityJobsPanel from "./CommunityJobsPanel";
 import ProfileQuestsAndTournaments from "./ProfileQuestsAndTournaments";
 import ProfileMobileView from "./ProfileMobileView";
 import { POINT_RULES } from "@/lib/points";
@@ -112,7 +113,7 @@ export default async function ProfilePage() {
       // Für den mobilen Job-Reiter + die 3D-Pokal-Viewer (siehe Teil B des
       // Mancave-Umbau-Plans, ProfileMobileView.tsx) — dieselbe Aggregation,
       // die auch mancave/page.tsx nutzt.
-      loadMancaveData(userId),
+      loadMancaveData(userId, me.role === "admin"),
     ]);
 
   const squads = squadMemberships.map(m => ({ ...m.squad, role: m.role }));
@@ -396,6 +397,9 @@ export default async function ProfilePage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           {/* ── Linke Spalte ─────────────────────────────────────────── */}
           <div className="lg:col-span-2 space-y-5">
+
+            {/* Community-Jobs (eigenständig von der Mancave-Idle-Jobs-JobsPanel) */}
+            <CommunityJobsPanel />
 
             {/* Abzeichen */}
             <BadgesSection

@@ -3,6 +3,7 @@ import { registerScoreResolver, registerOwnVoteCounter } from "./community-job-s
 import { onCommunityJobVoteCast } from "./community-job-vote-incentives";
 import { announceCommunityJobContent } from "./discord-community-jobs";
 import { getCommunityJob } from "./community-jobs";
+import { getAnnouncementChannel } from "./community-job-config";
 
 /**
  * Journalist: Berichte + Ergänzungen anderer Journalisten, Daumen-hoch-Bewertung.
@@ -49,11 +50,14 @@ export async function createReport(
 }
 
 async function announceAndStore(reportId: string, authorId: string, title: string, body: string): Promise<void> {
-  const author = await prisma.user.findUnique({ where: { id: authorId }, select: { username: true, name: true } });
+  const [author, channelId] = await Promise.all([
+    prisma.user.findUnique({ where: { id: authorId }, select: { username: true, name: true } }),
+    getAnnouncementChannel(JOB_KEY),
+  ]);
   const messageId = await announceCommunityJobContent({
     title, description: body.slice(0, 300),
     authorName: author?.username ?? author?.name ?? "Unbekannt",
-    jobEmoji: getCommunityJob(JOB_KEY)?.emoji ?? "📰",
+    jobEmoji: getCommunityJob(JOB_KEY)?.emoji ?? "📰", channelId,
   });
   if (messageId) await prisma.jobReport.update({ where: { id: reportId }, data: { discordMessageId: messageId } });
 }

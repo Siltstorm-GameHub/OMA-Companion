@@ -9,7 +9,7 @@ interface ImageUploadFieldProps {
   value: string;
   onChange: (url: string) => void;
   /** Muss einem `kind` aus /api/upload entsprechen — die Route prüft dagegen. */
-  kind: "event-cover" | "profile-banner" | "badge";
+  kind: "event-cover" | "profile-banner" | "badge" | "community-job-asset";
   label?: string;
   hint?: string;
   /** Seitenverhältnis der Vorschau, z.B. "16/9" oder "4/1". */

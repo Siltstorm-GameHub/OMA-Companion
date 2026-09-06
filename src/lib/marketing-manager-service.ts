@@ -3,6 +3,7 @@ import { registerScoreResolver, registerOwnVoteCounter } from "./community-job-s
 import { onCommunityJobVoteCast } from "./community-job-vote-incentives";
 import { announceCommunityJobContent } from "./discord-community-jobs";
 import { getCommunityJob } from "./community-jobs";
+import { getAnnouncementChannel } from "./community-job-config";
 
 /**
  * Marketing Manager: Werbe-Posts für kommende Events (Text + optionales Bild
@@ -43,11 +44,14 @@ export async function createMarketingPost(
 }
 
 async function announceAndStore(postId: string, authorId: string, caption: string): Promise<void> {
-  const author = await prisma.user.findUnique({ where: { id: authorId }, select: { username: true, name: true } });
+  const [author, channelId] = await Promise.all([
+    prisma.user.findUnique({ where: { id: authorId }, select: { username: true, name: true } }),
+    getAnnouncementChannel(JOB_KEY),
+  ]);
   const messageId = await announceCommunityJobContent({
     title: "Neue Werbeaktion", description: caption,
     authorName: author?.username ?? author?.name ?? "Unbekannt",
-    jobEmoji: getCommunityJob(JOB_KEY)?.emoji ?? "📣",
+    jobEmoji: getCommunityJob(JOB_KEY)?.emoji ?? "📣", channelId,
   });
   if (messageId) await prisma.marketingPost.update({ where: { id: postId }, data: { discordMessageId: messageId } });
 }
