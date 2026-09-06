@@ -59,6 +59,30 @@ export function applyEloResult({ ratingA, ratingB, matchesA, matchesB, result }:
   return { newA: ratingA + deltaA, newB: ratingB + deltaB, deltaA, deltaB };
 }
 
+export interface OneSidedEloUpdateInput {
+  ratingA: number;
+  ratingB: number;
+  matchesA: number;
+  result: EloResult;
+}
+
+export interface OneSidedEloUpdateOutput {
+  newA: number;
+  deltaA: number;
+}
+
+/** Wie applyEloResult, bewegt aber NUR Seite A — für OMA Gems: der Angreifer (A)
+ *  hat sich bewusst auf den Kampf eingelassen, der Verteidiger (B) wurde nur
+ *  automatisiert angegriffen und soll unabhängig vom Ausgang unberührt bleiben
+ *  (weder Gewinn noch Niederlage bewegen sein Rating). B's Rating fließt hier
+ *  nur als Gegner-Stärke in die Erwartungswert-Berechnung für A ein. */
+export function applyOneSidedEloResult({ ratingA, ratingB, matchesA, result }: OneSidedEloUpdateInput): OneSidedEloUpdateOutput {
+  const scoreA = result === "A" ? 1 : result === "B" ? 0 : 0.5;
+  const expectedA = expectedScore(ratingA, ratingB);
+  const deltaA = Math.round(kFactor(matchesA) * (scoreA - expectedA));
+  return { newA: ratingA + deltaA, deltaA };
+}
+
 /** Saison-Soft-Reset: zieht das Rating zur Basis hin, statt es komplett zu
  *  kappen — Konstanz über Saisons bleibt spürbar, aber jede Saison startet
  *  wieder enger beieinander (siehe ranked-season.ts: softResetAllElo). */

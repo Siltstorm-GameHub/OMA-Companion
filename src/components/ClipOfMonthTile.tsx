@@ -63,6 +63,13 @@ export default function ClipOfMonthTile({ winners, monthLabel, finishedContestId
             alt=""
             className="absolute inset-0 w-full h-full object-cover scale-105 group-hover:scale-110 transition-transform duration-700 animate-fade-in"
           />
+        ) : activeContestId ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src="/clip-contest-voting.png"
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover scale-105 group-hover:scale-110 transition-transform duration-700"
+          />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center"
             style={{ background: "linear-gradient(135deg, #2e1065 0%, #1a0b3d 50%, #0d0d0f 100%)" }}>

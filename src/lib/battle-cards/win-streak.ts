@@ -52,3 +52,39 @@ export async function applyWinStreak(
 
   return { streak, bonusCoins };
 }
+
+/** Wie applyWinStreak, aber nur für die aktiv angreifende Seite bei OMA Gems —
+ *  der Verteidiger hat den Kampf nie bewusst bestritten (asynchroner Ghost-
+ *  Angriff, siehe live-battle.ts) und bleibt deshalb in jedem Fall unberührt:
+ *  weder Streak-Reset bei einer Niederlage des Angreifers, noch -Erhöhung/
+ *  Münzen-Bonus bei einer erfolgreichen Verteidigung. */
+export async function applyAttackerOnlyWinStreak(
+  attackerId: string,
+  attackerWon: boolean
+): Promise<WinStreakUpdate | null> {
+  if (!attackerWon) {
+    await prisma.user.update({ where: { id: attackerId }, data: { battleWinStreak: 0 } });
+    return null;
+  }
+
+  const attacker = await prisma.user.update({
+    where: { id: attackerId },
+    data: { battleWinStreak: { increment: 1 } },
+    select: { battleWinStreak: true, battleBestWinStreak: true },
+  });
+  const streak = attacker.battleWinStreak;
+
+  if (streak > attacker.battleBestWinStreak) {
+    await prisma.user.update({ where: { id: attackerId }, data: { battleBestWinStreak: streak } });
+  }
+
+  const bonusCoins = winStreakBonusFor(streak);
+  if (bonusCoins > 0) {
+    await prisma.user.update({ where: { id: attackerId }, data: { points: { increment: bonusCoins } } });
+    await prisma.pointTransaction.create({
+      data: { userId: attackerId, amount: bonusCoins, reason: `Sieges-Serie Bonus (${streak}x in Folge)` },
+    });
+  }
+
+  return { streak, bonusCoins };
+}

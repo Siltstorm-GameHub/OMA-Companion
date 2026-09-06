@@ -52,7 +52,7 @@ export async function getBattleCardsLeaderboard(
         ...(window ? { respondedAt: { gte: window.start, lt: window.end } } : {}),
         ...(mode ? { mode } : {}),
       },
-      select: { challengerId: true, opponentId: true, winnerId: true },
+      select: { challengerId: true, opponentId: true, winnerId: true, mode: true },
     }),
     prisma.userCard.findMany({
       where: { inLineup: true },
@@ -68,6 +68,15 @@ export async function getBattleCardsLeaderboard(
     stats.set(userId, s);
   }
   for (const b of resolved) {
+    if (b.mode === "GEMS") {
+      // Nur der Angreifer (challenger) hat sich bewusst auf den Kampf eingelassen —
+      // der Verteidiger (opponent) wird bei OMA Gems nur automatisiert angegriffen
+      // und bleibt deshalb komplett außen vor (kein Sieg, keine Niederlage, kein
+      // Unentschieden auf seinem Konto), siehe elo.ts/win-streak.ts für dieselbe Regel.
+      if (!b.winnerId) { bump(b.challengerId, "draws"); continue; }
+      bump(b.challengerId, b.winnerId === b.challengerId ? "wins" : "losses");
+      continue;
+    }
     if (!b.winnerId) {
       bump(b.challengerId, "draws");
       bump(b.opponentId, "draws");

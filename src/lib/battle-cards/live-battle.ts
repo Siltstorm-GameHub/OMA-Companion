@@ -49,8 +49,8 @@ import {
 import { markTutorialCampaignLevel1Done, markTutorialNpcBattleDone } from "@/lib/battle-cards/tutorial";
 import { resolveAvatarsForCards } from "@/lib/battle-cards/card-view";
 import { resolveCardImageUrl, resolveAvatarBadgeUrl } from "@/lib/battle-cards/resolve-image";
-import { applyWinStreak } from "@/lib/battle-cards/win-streak";
-import { applyEloResult, type EloResult } from "@/lib/battle-cards/elo";
+import { applyWinStreak, applyAttackerOnlyWinStreak } from "@/lib/battle-cards/win-streak";
+import { applyEloResult, applyOneSidedEloResult, type EloResult } from "@/lib/battle-cards/elo";
 import { getBattleRank, getBattleRankFullLabel } from "@/lib/battle-cards/battle-rank";
 import {
   DIFFICULTY_LEVEL,
@@ -333,9 +333,16 @@ async function requireAccess(liveBattleId: string, viewerId: string) {
 
 /** Lädt die aktuellen Elo-Ratings beider Spieler für den jeweiligen Modus
  *  (DUELS/GEMS haben getrennte Pools, siehe elo.ts), berechnet das neue Rating
- *  und schreibt beide Seiten in einer Transaktion zurück. Zweigt explizit auf
- *  mode auf statt mit computed property keys zu selecten/updaten — Letzteres
- *  lässt Prisma den Rückgabetyp nicht mehr sinnvoll inferieren. */
+ *  und schreibt zurück. Zweigt explizit auf mode auf statt mit computed
+ *  property keys zu selecten/updaten — Letzteres lässt Prisma den
+ *  Rückgabetyp nicht mehr sinnvoll inferieren.
+ *
+ *  Bei GEMS bewegt sich NUR der Angreifer (A) — der Verteidiger (B) wurde nur
+ *  automatisiert angegriffen, hat sich also nie bewusst auf den Kampf
+ *  eingelassen (anders als bei DUELS, wo beide Seiten eine Challenge annehmen
+ *  mussten). B's Rating fließt nur als Gegner-Stärke in die Erwartungswert-
+ *  Berechnung ein, bleibt selbst aber unverändert, egal ob er gewinnt oder
+ *  verliert (siehe applyOneSidedEloResult in elo.ts). */
 async function applyEloForChallenge(
   mode: string,
   playerAId: string,
@@ -359,14 +366,20 @@ async function applyEloForChallenge(
   const matchesA = mode === "GEMS" ? userA.eloGemsMatches : userA.eloDuelsMatches;
   const matchesB = mode === "GEMS" ? userB.eloGemsMatches : userB.eloDuelsMatches;
 
+  if (mode === "GEMS") {
+    const { newA } = applyOneSidedEloResult({ ratingA, ratingB, matchesA, result });
+    await prisma.user.update({
+      where: { id: playerAId },
+      data: { eloGems: newA, eloGemsMatches: matchesA + 1 },
+    });
+    return { ratingA, newA, ratingB, newB: ratingB };
+  }
+
   const { newA, newB } = applyEloResult({ ratingA, ratingB, matchesA, matchesB, result });
 
-  const dataA = mode === "GEMS" ? { eloGems: newA, eloGemsMatches: matchesA + 1 } : { eloDuels: newA, eloDuelsMatches: matchesA + 1 };
-  const dataB = mode === "GEMS" ? { eloGems: newB, eloGemsMatches: matchesB + 1 } : { eloDuels: newB, eloDuelsMatches: matchesB + 1 };
-
   await prisma.$transaction([
-    prisma.user.update({ where: { id: playerAId }, data: dataA }),
-    prisma.user.update({ where: { id: playerBId }, data: dataB }),
+    prisma.user.update({ where: { id: playerAId }, data: { eloDuels: newA, eloDuelsMatches: matchesA + 1 } }),
+    prisma.user.update({ where: { id: playerBId }, data: { eloDuels: newB, eloDuelsMatches: matchesB + 1 } }),
   ]);
 
   return { ratingA, newA, ratingB, newB };
@@ -422,8 +435,14 @@ async function finalizeLiveBattle(live: LiveBattle, state: InteractiveBattleStat
         data: { status: "resolved", battleId: battle.id, winnerId, respondedAt: new Date(), countsForRanking },
       });
       if (winnerId) {
-        const loserId = winnerId === live.playerAId ? live.playerBId : live.playerAId;
-        await applyWinStreak(winnerId, loserId);
+        if (challenge.mode === "GEMS") {
+          // Nur der Angreifer (playerAId) hat sich bewusst auf den Kampf eingelassen —
+          // der Verteidiger bleibt unberührt, auch bei erfolgreicher Verteidigung.
+          await applyAttackerOnlyWinStreak(live.playerAId, winnerId === live.playerAId);
+        } else {
+          const loserId = winnerId === live.playerAId ? live.playerBId : live.playerAId;
+          await applyWinStreak(winnerId, loserId);
+        }
       }
       // Gilt für Sieg/Niederlage UND Unentschieden — derselbe Farm-Fairness-Deckel
       // wie für Rangliste/Sieges-Kiste (countsForRanking), damit Elo nicht durch
