@@ -1452,17 +1452,21 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                     {tmtStatConfig.placementPoints.map((row, i) => (
                       <div key={i} className="flex items-center gap-2">
                         <span className="text-xs text-gray-500 w-14 shrink-0">Platz</span>
-                        <input type="number" min={1} value={row.place}
-                          onChange={e => setTmtStatConfig(c => ({
-                            ...c, placementPoints: c.placementPoints.map((r, ri) => ri === i ? { ...r, place: Number(e.target.value) } : r),
-                          }))}
-                          className={`${inputCls} w-16 text-center`} />
+                        <div className="w-16 shrink-0">
+                          <input type="number" min={1} value={row.place}
+                            onChange={e => setTmtStatConfig(c => ({
+                              ...c, placementPoints: c.placementPoints.map((r, ri) => ri === i ? { ...r, place: Number(e.target.value) } : r),
+                            }))}
+                            className={`${inputCls} text-center`} />
+                        </div>
                         <span className="text-xs text-gray-500 shrink-0">Punkte</span>
-                        <input type="number" step="0.1" value={row.points}
-                          onChange={e => setTmtStatConfig(c => ({
-                            ...c, placementPoints: c.placementPoints.map((r, ri) => ri === i ? { ...r, points: Number(e.target.value) } : r),
-                          }))}
-                          className={`${inputCls} flex-1 text-center`} />
+                        <div className="flex-1">
+                          <input type="number" step="0.1" value={row.points}
+                            onChange={e => setTmtStatConfig(c => ({
+                              ...c, placementPoints: c.placementPoints.map((r, ri) => ri === i ? { ...r, points: Number(e.target.value) } : r),
+                            }))}
+                            className={`${inputCls} text-center`} />
+                        </div>
                         <button type="button"
                           onClick={() => setTmtStatConfig(c => ({ ...c, placementPoints: c.placementPoints.filter((_, ri) => ri !== i) }))}
                           className="p-2 text-gray-500 hover:text-red-400 transition-colors shrink-0">
