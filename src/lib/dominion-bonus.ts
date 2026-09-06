@@ -112,6 +112,16 @@ export async function recomputeSeriesDominionBonus(seriesId: string): Promise<vo
     let cd: Record<string, unknown>;
     try { cd = JSON.parse(ev.completionData as string); } catch { continue; }
     if (!cd.gamePhaseComplete) continue;
+    // Solange eine Umfrage dieses Events noch offen ist (Status "umfrage"), ist ihr Ausgang unbekannt
+    // — u.U. hält gerade sie den Streak am Leben (Trigger-Stat = ein Umfrage-Label). Dieses Event wird
+    // daher komplett übersprungen (streak[] bleibt auf dem Stand vor diesem Event stehen, die Badge
+    // zeigt also weiterhin den alten Streak), bis die Umfragephase abgeschlossen ist und der
+    // tatsächliche Ausgang feststeht — nicht schon beim Wechsel von "aktiv" zu "Umfrage" so behandeln,
+    // als hätte der User hier keinen Trigger mehr erreichen können. Explizit auf "=== false" statt
+    // "!cd.pollPhaseComplete" geprüft: Altdaten von vor Einführung dieses Felds haben es gar nicht
+    // gesetzt (undefined) und sollen wie bisher als abgeschlossen gelten, sonst würde deren fehlendes
+    // Feld die komplette chronologische Streak-Berechnung ab dort einfrieren.
+    if (cd.pollPhaseComplete === false) continue;
 
     const excludedSet = new Set<string>((cd.excludedUserIds as string[] | undefined) ?? []);
     const userStats: Record<string, Record<string, number>> = {};
