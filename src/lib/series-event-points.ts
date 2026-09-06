@@ -124,20 +124,26 @@ export function resolveWinnerTargetKeys(cfg: StatConfig, seriesWinnerTargetField
 }
 
 export type LiveLigaPunkteResult = {
-  /** Ligapunkte-Vorschau je User — Teilnahme + laufend erfasste Stats, plus der Sieger-Bonus, WENN
-   *  ein Sieger-Ziel-Feld konfiguriert ist, projiziert auf den aktuell nach Turnierpunkten führenden
-   *  Spieler. Nur eine Live-Vorschau, keine echte Vergabe (die passiert erst beim Event-Abschluss). */
+  /** Ligapunkte-Vorschau je User — NUR was schon sicher ist: Teilnahme + bisher erfasste Stats mit
+   *  eigenem pointsPer. Enthält bewusst NICHT den Sieger-Bonus (siehe projectedWinnerBonusByUser) —
+   *  der ist nur eine Momentaufnahme und würde die Summe sonst so aussehen lassen, als stünde er
+   *  schon fest. Nur eine Live-Vorschau, keine echte Vergabe (die passiert erst beim Event-Abschluss). */
   pointsByUser: Record<string, number>;
   /** User-IDs, die aktuell (nach Turnierpunkten) in Führung liegen — falls mehrere gleichauf, alle. */
   projectedWinnerIds: string[];
+  /** Zusätzliche Ligapunkte, die projectedWinnerIds bekämen, WENN das Event jetzt mit dieser
+   *  Platzierung enden würde (Sieger-Ziel-Feld × dessen pointsPer) — separat von pointsByUser, damit
+   *  die Live-Anzeige klar zwischen "schon sicher" und "nur falls Sieger" unterscheiden kann. */
+  projectedWinnerBonusByUser: Record<string, number>;
 };
 
 /** Live-Vorschau der Ligapunkte, die dieses Event bislang beisteuert — nutzbar SOLANGE das Event noch
  *  läuft (anders als computeEventPoints, das auf completionData.gamePhaseComplete wartet). Enthält
  *  bewusst nur das, was schon aus den laufend erfassten Daten ableitbar ist: Teilnahme, Stats mit
- *  eigenem pointsPer, und — falls ein Sieger-Ziel-Feld konfiguriert ist — den Sieger-Bonus projiziert
- *  auf den aktuellen Turnierpunkte-Spitzenreiter. KEIN MVP/Umfrage-/Dominion-Bonus (die stehen erst
- *  beim Abschluss fest) und keine ausgeschlossenen User (die gibt es vor dem Abschluss nicht). */
+ *  eigenem pointsPer. Der Sieger-Bonus (falls ein Sieger-Ziel-Feld konfiguriert ist) wird SEPARAT als
+ *  projectedWinnerBonusByUser ausgewiesen, nicht in pointsByUser eingerechnet — er steht erst beim
+ *  Abschluss endgültig fest. KEIN MVP/Umfrage-/Dominion-Bonus (die stehen erst beim Abschluss fest)
+ *  und keine ausgeschlossenen User (die gibt es vor dem Abschluss nicht). */
 export function computeLiveLigaPunkte(
   ev: {
     registrations: { userId: string; role?: string }[];
@@ -200,15 +206,18 @@ export function computeLiveLigaPunkte(
     for (const { field, pointsPer } of cfg.stats) {
       pts += (es[field] ?? 0) * pointsPer;
     }
-    if (projectedWinnerIds.includes(uid)) {
-      for (const key of winnerTargetKeys) {
-        pts += cfg.stats.find(s => s.field === key)?.pointsPer ?? 0;
-      }
-    }
     pointsByUser[uid] = pts;
   }
 
-  return { pointsByUser, projectedWinnerIds };
+  const winnerBonusPerHit = winnerTargetKeys.reduce(
+    (sum, key) => sum + (cfg.stats.find(s => s.field === key)?.pointsPer ?? 0), 0,
+  );
+  const projectedWinnerBonusByUser: Record<string, number> = {};
+  if (winnerBonusPerHit > 0) {
+    for (const uid of projectedWinnerIds) projectedWinnerBonusByUser[uid] = winnerBonusPerHit;
+  }
+
+  return { pointsByUser, projectedWinnerIds, projectedWinnerBonusByUser };
 }
 
 export type EventForPoints = {

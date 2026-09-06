@@ -44,6 +44,7 @@ export default function FfaView({
   placementPoints,
   isLigaPunkteLive = false,
   projectedWinnerIds = [],
+  projectedWinnerBonusByUser = {},
   dominionResultByUser = {},
   dominionThreshold,
   userId,
@@ -77,10 +78,13 @@ export default function FfaView({
    *  Live-Vorschau (Teilnahme + bisherige Stats + projizierter Sieger-Bonus), keine endgültige
    *  Vergabe. Steuert die pulsierende „Live"-Markierung an der Ligapunkte-Spalte. */
   isLigaPunkteLive?: boolean;
-  /** User-IDs, die aktuell (nach Turnierpunkten) in Führung liegen und deshalb den in
-   *  ligaPunkteByUser eingerechneten Sieger-Bonus projiziert bekommen — nur relevant/gefüllt wenn
+  /** User-IDs, die aktuell (nach Turnierpunkten) in Führung liegen — nur relevant/gefüllt wenn
    *  isLigaPunkteLive true ist. */
   projectedWinnerIds?: string[];
+  /** Sieger-Bonus, den projectedWinnerIds zusätzlich zu ligaPunkteByUser bekämen, WENN das Event
+   *  jetzt mit dieser Platzierung enden würde — bewusst NICHT in ligaPunkteByUser eingerechnet,
+   *  siehe computeLiveLigaPunkte. */
+  projectedWinnerBonusByUser?: Record<string, number>;
   /** Dominion-Bonus-Ergebnis DIESES Events je User (nur wer hier +1 bekommen bzw. den Bonus ausgelöst hat) */
   dominionResultByUser?: Record<string, { streakAfter: number; bonusAwarded: boolean }>;
   dominionThreshold?: number;
@@ -278,6 +282,7 @@ export default function FfaView({
                     const isPollWinner = pollWinnerIds.includes(r.userId);
                     const wonPollLabels = pollWinsByUser[r.userId] ?? [];
                     const eventLigapunkte = ligaPunkteByUser[r.userId] ?? 0;
+                    const winnerBonusIfWon = projectedWinnerBonusByUser[r.userId] ?? 0;
                     return (
                       <tr key={r.userId} className={`transition-colors ${isMe ? "bg-rose-950/30" : "hover:bg-white/[0.02]"}`}>
                         <td className="px-4 py-3 text-center">
@@ -387,12 +392,19 @@ export default function FfaView({
                           </td>
                         )}
                         <td className="px-3 py-3 text-center">
-                          {eventLigapunkte > 0
-                            ? <span className={`text-[11px] tabular-nums leading-tight inline-flex items-center gap-0.5 ${isLigaPunkteLive ? "text-teal-300/80" : "text-teal-400"}`}
-                                title={isLigaPunkteLive ? "Vorläufig — Turnier läuft noch" : undefined}>
-                                {isLigaPunkteLive && "~"}+{eventLigapunkte} <RankPointsIcon size={11} />
+                          <div className="flex flex-col items-center gap-0">
+                            {eventLigapunkte > 0
+                              ? <span className={`text-[11px] tabular-nums leading-tight inline-flex items-center gap-0.5 ${isLigaPunkteLive ? "text-teal-300/80" : "text-teal-400"}`}
+                                  title={isLigaPunkteLive ? "Vorläufig — Turnier läuft noch, kann sich noch ändern" : undefined}>
+                                  {isLigaPunkteLive && "~"}+{eventLigapunkte} <RankPointsIcon size={11} />
+                                </span>
+                              : <span className="text-sm text-gray-600">–</span>}
+                            {winnerBonusIfWon > 0 && (
+                              <span className="text-[9px] text-teal-500/70 tabular-nums leading-none" title="Zusätzlicher Sieger-Bonus, falls das Turnier jetzt mit dieser Platzierung enden würde">
+                                +{winnerBonusIfWon} falls Sieger
                               </span>
-                            : <span className="text-sm text-gray-600">–</span>}
+                            )}
+                          </div>
                         </td>
                         <td className="px-3 py-3 text-center text-gray-500 text-xs">{r.matchCount}</td>
                       </tr>

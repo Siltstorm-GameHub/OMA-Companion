@@ -1161,6 +1161,7 @@ export default async function TournamentDetailPage({
                 placementPoints={seriesStatCfg.placementPoints}
                 isLigaPunkteLive={isLigaPunkteLive}
                 projectedWinnerIds={liveLigaPunkte?.projectedWinnerIds ?? []}
+                projectedWinnerBonusByUser={liveLigaPunkte?.projectedWinnerBonusByUser ?? {}}
                 dominionResultByUser={dominionResultByUser}
                 dominionThreshold={seriesStatCfg.dominionBonus?.threshold}
                 userId={userId}
