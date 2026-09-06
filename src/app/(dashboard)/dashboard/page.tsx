@@ -15,8 +15,7 @@ import { CountUp } from "@/components/CountUp";
 import { AnimatedBar } from "@/components/AnimatedBar";
 import GameCover from "@/components/GameCover";
 import EventCoverDefault from "@/components/EventCoverDefault";
-import PartnerLiveBanner from "@/components/PartnerLiveBanner";
-import CommunityLiveBanner from "@/components/CommunityLiveBanner";
+import LiveStreamsBanner from "@/components/LiveStreamsBanner";
 import { type RecentResultEvent } from "@/components/RecentResultsBanner";
 import { getEventEndedAt, isRecentlyFinished } from "@/lib/event-completion";
 import RankIcon from "@/components/RankIcon";
@@ -589,11 +588,8 @@ export default async function DashboardPage() {
         />
       </div>
 
-      {/* ── Partner Live-Streams ─────────────────────────────────── */}
-      <PartnerLiveBanner />
-
-      {/* ── Community Live-Streams ───────────────────────────────── */}
-      <CommunityLiveBanner />
+      {/* ── Live-Streams (Partner & Community) ───────────────────── */}
+      <LiveStreamsBanner />
 
       {/* ── Content ─────────────────────────────────────────────────── */}
       <div className="px-4 sm:px-6 py-5 max-w-7xl mx-auto space-y-5 relative">
