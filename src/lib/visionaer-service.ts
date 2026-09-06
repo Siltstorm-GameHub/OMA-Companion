@@ -44,6 +44,27 @@ export async function closeIdea(authorId: string, ideaId: string): Promise<Submi
   return { ok: true, ideaId };
 }
 
+export type MutationResult = { ok: true } | { error: string };
+
+export async function updateIdea(authorId: string, ideaId: string, data: { title: string; description: string }): Promise<MutationResult> {
+  const idea = await prisma.communityIdea.findUnique({ where: { id: ideaId } });
+  if (!idea) return { error: "Idee nicht gefunden" };
+  if (idea.authorId !== authorId) return { error: "Nur der Autor kann diese Idee bearbeiten" };
+  if (!data.title.trim() || !data.description.trim()) return { error: "Titel und Beschreibung erforderlich" };
+
+  await prisma.communityIdea.update({ where: { id: ideaId }, data: { title: data.title.trim(), description: data.description } });
+  return { ok: true };
+}
+
+export async function deleteIdea(authorId: string, ideaId: string): Promise<MutationResult> {
+  const idea = await prisma.communityIdea.findUnique({ where: { id: ideaId } });
+  if (!idea) return { error: "Idee nicht gefunden" };
+  if (idea.authorId !== authorId) return { error: "Nur der Autor kann diese Idee löschen" };
+
+  await prisma.communityIdea.delete({ where: { id: ideaId } });
+  return { ok: true };
+}
+
 export type VoteResult = { ok: true } | { error: string };
 
 export async function voteIdea(voterId: string, ideaId: string, stars: number, reason: string): Promise<VoteResult> {

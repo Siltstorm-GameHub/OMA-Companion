@@ -13,5 +13,5 @@ export async function GET() {
   const membership = await getActiveMembership(user.id);
   if (!membership) return NextResponse.json({ count: 0 });
 
-  return NextResponse.json({ count: await getRecommendationCount(membership.jobKey) });
+  return NextResponse.json({ count: await getRecommendationCount(membership.jobKey, user.id) });
 }

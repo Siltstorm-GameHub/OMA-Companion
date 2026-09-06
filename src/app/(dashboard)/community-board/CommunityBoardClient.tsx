@@ -1,9 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { ThumbsUp, Loader2, Star, ImagePlus, Megaphone } from "lucide-react";
+import { ThumbsUp, Loader2, Star, ImagePlus, Megaphone, Flag } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import DisputeVotesModal, { type DisputeKind } from "@/components/community-jobs/DisputeVotesModal";
 
 interface Author { id: string; username: string | null; name: string | null }
 interface SubEntity { id: string; author: Author; upvotes: number; url?: string; caption?: string }
@@ -39,6 +41,8 @@ function authorLabel(a: Author): string {
 }
 
 export default function CommunityBoardClient() {
+  const { data: session } = useSession();
+  const currentUserId = (session?.user as { id?: string } | undefined)?.id;
   const [feed, setFeed] = useState<FeedEntry[] | null>(null);
 
   async function reload() {
@@ -61,12 +65,12 @@ export default function CommunityBoardClient() {
 
   return (
     <div className="space-y-3">
-      {feed.map(entry => <FeedCard key={`${entry.kind}-${entry.id}`} entry={entry} onChanged={reload} />)}
+      {feed.map(entry => <FeedCard key={`${entry.kind}-${entry.id}`} entry={entry} currentUserId={currentUserId} onChanged={reload} />)}
     </div>
   );
 }
 
-function FeedCard({ entry, onChanged }: { entry: FeedEntry; onChanged: () => void }) {
+function FeedCard({ entry, currentUserId, onChanged }: { entry: FeedEntry; currentUserId: string | undefined; onChanged: () => void }) {
   return (
     <div className="glass card-shine rounded-2xl p-4 space-y-3">
       <div className="flex items-center justify-between">
@@ -93,15 +97,28 @@ function FeedCard({ entry, onChanged }: { entry: FeedEntry; onChanged: () => voi
             <UpvoteButton votedByMe={entry.votedByMe} upvotes={entry.upvotes ?? 0}
               onVote={added => api(`/api/community-jobs/reports/${entry.id}/vote`, { method: added ? "POST" : "DELETE" })}
               onDone={onChanged} label="Bericht" />
+            {entry.author.id === currentUserId && (
+              <DisputeTrigger kind="jobReportVote" fetchUrl={`/api/community-jobs/reports/${entry.id}/votes`} listKey="votes" />
+            )}
             {entry.coverAsset && (
-              <UpvoteButton votedByMe={false} upvotes={entry.coverAsset.upvotes}
-                onVote={added => api(`/api/community-jobs/media/${entry.coverAsset!.id}/vote`, { method: added ? "POST" : "DELETE" })}
-                onDone={onChanged} label={`Bild von ${authorLabel(entry.coverAsset.author)}`} icon={<ImagePlus className="w-3 h-3" />} />
+              <>
+                <UpvoteButton votedByMe={false} upvotes={entry.coverAsset.upvotes}
+                  onVote={added => api(`/api/community-jobs/media/${entry.coverAsset!.id}/vote`, { method: added ? "POST" : "DELETE" })}
+                  onDone={onChanged} label={`Bild von ${authorLabel(entry.coverAsset.author)}`} icon={<ImagePlus className="w-3 h-3" />} />
+                {entry.coverAsset.author.id === currentUserId && (
+                  <DisputeTrigger kind="jobMediaAssetVote" fetchUrl={`/api/community-jobs/media/${entry.coverAsset.id}/votes`} listKey="votes" />
+                )}
+              </>
             )}
             {entry.referencedMarketingPost && (
-              <UpvoteButton votedByMe={false} upvotes={entry.referencedMarketingPost.upvotes}
-                onVote={added => api(`/api/community-jobs/marketing-posts/${entry.referencedMarketingPost!.id}/vote`, { method: added ? "POST" : "DELETE" })}
-                onDone={onChanged} label={`Post von ${authorLabel(entry.referencedMarketingPost.author)}`} icon={<Megaphone className="w-3 h-3" />} />
+              <>
+                <UpvoteButton votedByMe={false} upvotes={entry.referencedMarketingPost.upvotes}
+                  onVote={added => api(`/api/community-jobs/marketing-posts/${entry.referencedMarketingPost!.id}/vote`, { method: added ? "POST" : "DELETE" })}
+                  onDone={onChanged} label={`Post von ${authorLabel(entry.referencedMarketingPost.author)}`} icon={<Megaphone className="w-3 h-3" />} />
+                {entry.referencedMarketingPost.author.id === currentUserId && (
+                  <DisputeTrigger kind="marketingPostVote" fetchUrl={`/api/community-jobs/marketing-posts/${entry.referencedMarketingPost.id}/votes`} listKey="votes" />
+                )}
+              </>
             )}
           </div>
           {entry.contributions && entry.contributions.length > 0 && (
@@ -110,9 +127,14 @@ function FeedCard({ entry, onChanged }: { entry: FeedEntry; onChanged: () => voi
                 <div key={c.id} className="space-y-1">
                   <p className="text-[11px] text-gray-500">Ergänzung von {authorLabel(c.author)}</p>
                   <p className="text-xs text-gray-300">{c.bodyMarkdown}</p>
-                  <UpvoteButton votedByMe={false} upvotes={c.upvotes}
-                    onVote={added => api(`/api/community-jobs/reports/${entry.id}/contributions/${c.id}/vote`, { method: added ? "POST" : "DELETE" })}
-                    onDone={onChanged} label="Ergänzung" />
+                  <div className="flex items-center gap-2">
+                    <UpvoteButton votedByMe={false} upvotes={c.upvotes}
+                      onVote={added => api(`/api/community-jobs/reports/${entry.id}/contributions/${c.id}/vote`, { method: added ? "POST" : "DELETE" })}
+                      onDone={onChanged} label="Ergänzung" />
+                    {c.author.id === currentUserId && (
+                      <DisputeTrigger kind="jobReportContributionVote" fetchUrl={`/api/community-jobs/reports/${entry.id}/contributions/${c.id}/votes`} listKey="votes" />
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -127,18 +149,28 @@ function FeedCard({ entry, onChanged }: { entry: FeedEntry; onChanged: () => voi
             // eslint-disable-next-line @next/next/no-img-element -- beliebiger Blob-Host
             <img src={entry.url} alt="" className="w-full rounded-lg max-h-64 object-cover" />
           )}
-          <UpvoteButton votedByMe={entry.votedByMe} upvotes={entry.upvotes ?? 0}
-            onVote={added => api(`/api/community-jobs/media/${entry.id}/vote`, { method: added ? "POST" : "DELETE" })}
-            onDone={onChanged} label="Asset" />
+          <div className="flex items-center gap-2">
+            <UpvoteButton votedByMe={entry.votedByMe} upvotes={entry.upvotes ?? 0}
+              onVote={added => api(`/api/community-jobs/media/${entry.id}/vote`, { method: added ? "POST" : "DELETE" })}
+              onDone={onChanged} label="Asset" />
+            {entry.author.id === currentUserId && (
+              <DisputeTrigger kind="jobMediaAssetVote" fetchUrl={`/api/community-jobs/media/${entry.id}/votes`} listKey="votes" />
+            )}
+          </div>
         </>
       )}
 
       {entry.kind === "marketing_post" && (
         <>
           <p className="text-sm text-gray-300">{entry.caption}</p>
-          <UpvoteButton votedByMe={entry.votedByMe} upvotes={entry.upvotes ?? 0}
-            onVote={added => api(`/api/community-jobs/marketing-posts/${entry.id}/vote`, { method: added ? "POST" : "DELETE" })}
-            onDone={onChanged} label="Post" />
+          <div className="flex items-center gap-2">
+            <UpvoteButton votedByMe={entry.votedByMe} upvotes={entry.upvotes ?? 0}
+              onVote={added => api(`/api/community-jobs/marketing-posts/${entry.id}/vote`, { method: added ? "POST" : "DELETE" })}
+              onDone={onChanged} label="Post" />
+            {entry.author.id === currentUserId && (
+              <DisputeTrigger kind="marketingPostVote" fetchUrl={`/api/community-jobs/marketing-posts/${entry.id}/votes`} listKey="votes" />
+            )}
+          </div>
         </>
       )}
 
@@ -146,10 +178,28 @@ function FeedCard({ entry, onChanged }: { entry: FeedEntry; onChanged: () => voi
         <>
           <p className="text-sm font-semibold text-white">{entry.title}</p>
           <p className="text-xs text-gray-400">{entry.description}</p>
-          <IdeaVoteButton ideaId={entry.id} votedByMe={entry.votedByMe} voteCount={entry.voteCount ?? 0} onDone={onChanged} />
+          <div className="flex items-center gap-2">
+            <IdeaVoteButton ideaId={entry.id} votedByMe={entry.votedByMe} voteCount={entry.voteCount ?? 0} onDone={onChanged} />
+            {entry.author.id === currentUserId && (
+              <DisputeTrigger kind="communityIdeaVote" fetchUrl={`/api/community-jobs/ideas/${entry.id}/votes`} listKey="votes" />
+            )}
+          </div>
         </>
       )}
     </div>
+  );
+}
+
+function DisputeTrigger({ kind, fetchUrl, listKey }: { kind: DisputeKind; fetchUrl: string; listKey: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button onClick={() => setOpen(true)} title="Bewertungen ansehen/anfechten"
+        className="inline-flex items-center gap-1 text-[10px] text-gray-600 hover:text-amber-400 transition-colors">
+        <Flag className="w-3 h-3" />
+      </button>
+      <DisputeVotesModal open={open} onClose={() => setOpen(false)} kind={kind} fetchUrl={fetchUrl} listKey={listKey} />
+    </>
   );
 }
 

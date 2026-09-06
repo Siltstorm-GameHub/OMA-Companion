@@ -2,6 +2,7 @@ import { prisma } from "./prisma";
 import { COIN_PREFIX } from "./points";
 import { getCommunityJob } from "./community-jobs";
 import { syncCommunityJobDiscordRole } from "./discord-roles";
+import { dispatchNotification } from "./notify-dispatch";
 import {
   getEffectiveCommunityJobs, getMaxSlots, getPayoutTiers, getVoteBonusConfig,
   resolveTier, computeVoteBonusMultiplier,
@@ -11,6 +12,12 @@ import {
 async function syncDiscordRoleForUser(userId: string, jobKey: string | null): Promise<void> {
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { discordId: true } }).catch(() => null);
   await syncCommunityJobDiscordRole(user?.discordId, jobKey).catch(() => {});
+}
+
+/** Fehler beim Benachrichtigen dürfen die eigentliche Aktion nie blockieren. */
+function notifyJob(ruleKey: string, userId: string, jobKey: string, extra: Record<string, string> = {}): void {
+  const label = getCommunityJob(jobKey)?.label ?? jobKey;
+  dispatchNotification(ruleKey, { users: [userId], placeholders: { "{jobLabel}": label, ...extra } }).catch(() => {});
 }
 
 /**
@@ -27,6 +34,7 @@ const CONTRACT_MONTHS = 3;
 const RENEWAL_OPENS_AFTER_MONTHS = 2;
 const REAPPLY_BLOCK_DAYS = 14;
 const INACTIVITY_WARNING_DAYS = 14;
+const CONTRACT_REMINDER_DAYS = 14;
 
 function addMonths(date: Date, months: number): Date {
   const d = new Date(date);
@@ -186,6 +194,7 @@ export async function reviewApplication(
       where: { id: applicationId },
       data: { status: "REJECTED", reviewedById: adminId, reviewedAt: new Date() },
     });
+    notifyJob("community_job_rejected", app.userId, app.jobKey);
     return { ok: true, result: "REJECTED" };
   }
 
@@ -201,8 +210,10 @@ export async function reviewApplication(
 
   if (filled < maxSlots) {
     await activateApplication(applicationId, app.userId, app.jobKey);
+    notifyJob("community_job_approved", app.userId, app.jobKey);
     return { ok: true, result: "ACTIVATED" };
   }
+  notifyJob("community_job_waitlisted", app.userId, app.jobKey);
   return { ok: true, result: "WAITLISTED" };
 }
 
@@ -228,6 +239,7 @@ async function performHandoff(fromMemberId: string, targetApplicationId: string)
   });
   await syncDiscordRoleForUser(fromMember.userId, null);
   await activateApplication(targetApplicationId, targetApp.userId, targetApp.jobKey, fromMember.userId);
+  notifyJob("community_job_handoff_received", targetApp.userId, targetApp.jobKey);
   return { ok: true };
 }
 
@@ -256,6 +268,7 @@ export async function adminReassignJob(
   if (filled >= maxSlots) return { error: "Keine freien Slots — bitte einen bestehenden Inhaber zum Ersetzen angeben" };
 
   await activateApplication(targetApplicationId, targetApp.userId, jobKey);
+  notifyJob("community_job_approved", targetApp.userId, jobKey);
   return { ok: true };
 }
 
@@ -417,10 +430,12 @@ export async function runInactivityCheck(referenceDate: Date = new Date()): Prom
     },
   });
   for (const m of candidates) {
+    const reason = "Inaktivität: keine neuen Beiträge";
     await prisma.communityJobMember.update({
       where: { id: m.id },
-      data: { status: "WARNED", warnedAt: referenceDate, warningReason: "Inaktivität: keine neuen Beiträge" },
+      data: { status: "WARNED", warnedAt: referenceDate, warningReason: reason },
     });
+    notifyJob("community_job_warned", m.userId, m.jobKey, { "{reason}": reason });
   }
   return { warned: candidates.length };
 }
@@ -438,5 +453,27 @@ export async function revokeMembership(memberId: string, reason: string): Promis
     },
   });
   await syncDiscordRoleForUser(member.userId, null);
+  notifyJob("community_job_revoked", member.userId, member.jobKey, { "{reason}": reason });
   return { ok: true };
+}
+
+/**
+ * Erinnerung, wenn der Vertrag in den nächsten CONTRACT_REMINDER_DAYS abläuft und
+ * noch nicht verlängert wurde. Läuft täglich, sendet aber nur einmal (nutzt
+ * `renewedAt` als Marker: wurde seit der letzten Erinnerung nicht verlängert,
+ * würde ohne Deckelung jeden Tag erneut benachrichtigt — daher nur am Tag, an
+ * dem das Erinnerungsfenster beginnt).
+ */
+export async function runContractReminderCheck(referenceDate: Date = new Date()): Promise<{ reminded: number }> {
+  const windowStart = addDays(referenceDate, CONTRACT_REMINDER_DAYS);
+  const windowEnd = addDays(referenceDate, CONTRACT_REMINDER_DAYS + 1);
+  const members = await prisma.communityJobMember.findMany({
+    where: { status: "ACTIVE", contractEndAt: { gte: windowStart, lt: windowEnd } },
+  });
+  for (const m of members) {
+    notifyJob("community_job_contract_expiring", m.userId, m.jobKey, {
+      "{contractEndDate}": m.contractEndAt.toLocaleDateString("de-DE"),
+    });
+  }
+  return { reminded: members.length };
 }

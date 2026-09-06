@@ -12,5 +12,5 @@ export async function GET() {
   const membership = await getActiveMembership(user.id);
   if (!membership) return NextResponse.json({ events: [], steamSales: [], steamReleases: [] });
 
-  return NextResponse.json(await getRecommendationsForJob(membership.jobKey));
+  return NextResponse.json(await getRecommendationsForJob(membership.jobKey, user.id));
 }

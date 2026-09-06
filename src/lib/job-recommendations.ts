@@ -49,6 +49,22 @@ async function eventsWithoutAssets(): Promise<EventRecommendation[]> {
   return events.map(e => ({ eventId: e.id, title: e.title, startAt: e.startAt, reason: "Noch keine Fotos/Clips" }));
 }
 
+/**
+ * Coach hat aktuell keinen anstehenden Trainings-Termin — sanfter Anstoß,
+ * einen anzulegen. Keine externen Datensignale nötig (siehe Plan: "grobe
+ * Heuristik, kein Muss für v1"), bewusst simpel gehalten.
+ */
+async function coachRecommendationsFor(userId: string): Promise<EventRecommendation[]> {
+  const upcoming = await prisma.coachTrainingSession.count({
+    where: { coachId: userId, startAt: { gte: new Date() } },
+  });
+  if (upcoming > 0) return [];
+  return [{
+    eventId: "coach-no-upcoming-session", title: "Noch kein Trainings-Termin geplant",
+    startAt: new Date(), reason: "Lege einen neuen Trainings-Termin an, um neuen Spielern zu helfen",
+  }];
+}
+
 async function upcomingEventsWithoutMarketingPost(): Promise<EventRecommendation[]> {
   const until = new Date(Date.now() + LOOKAHEAD_DAYS * 86_400_000);
   const events = await prisma.event.findMany({
@@ -62,7 +78,7 @@ async function upcomingEventsWithoutMarketingPost(): Promise<EventRecommendation
   return events.map(e => ({ eventId: e.id, title: e.title, startAt: e.startAt, reason: "Noch keine Werbung" }));
 }
 
-export async function getRecommendationsForJob(jobKey: string): Promise<JobRecommendations> {
+export async function getRecommendationsForJob(jobKey: string, userId: string): Promise<JobRecommendations> {
   const [steamSales, steamReleases] = await Promise.all([
     getCurrentSteamSales(), getRecentSteamReleases(),
   ]);
@@ -71,6 +87,7 @@ export async function getRecommendationsForJob(jobKey: string): Promise<JobRecom
   if (jobKey === "journalist") events = await eventsWithoutReports();
   else if (jobKey === "fotograf") events = await eventsWithoutAssets();
   else if (jobKey === "marketing_manager") events = await upcomingEventsWithoutMarketingPost();
+  else if (jobKey === "coach") events = await coachRecommendationsFor(userId);
 
   // Steam-Realwelt-Bezug ist vor allem für Journalist/Visionär/Marketing Manager relevant.
   const wantsSteam = ["journalist", "visionaer", "marketing_manager"].includes(jobKey);
@@ -82,7 +99,7 @@ export async function getRecommendationsForJob(jobKey: string): Promise<JobRecom
   };
 }
 
-export async function getRecommendationCount(jobKey: string): Promise<number> {
-  const recs = await getRecommendationsForJob(jobKey);
+export async function getRecommendationCount(jobKey: string, userId: string): Promise<number> {
+  const recs = await getRecommendationsForJob(jobKey, userId);
   return recs.events.length;
 }

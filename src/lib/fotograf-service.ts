@@ -63,6 +63,26 @@ export async function markAssetUsed(assetId: string): Promise<void> {
   await prisma.jobMediaAsset.update({ where: { id: assetId }, data: { usageCount: { increment: 1 } } });
 }
 
+export type MutationResult = { ok: true } | { error: string };
+
+export async function updateAsset(authorId: string, assetId: string, caption: string): Promise<MutationResult> {
+  const asset = await prisma.jobMediaAsset.findUnique({ where: { id: assetId } });
+  if (!asset) return { error: "Asset nicht gefunden" };
+  if (asset.authorId !== authorId) return { error: "Nur der Autor kann dieses Asset bearbeiten" };
+
+  await prisma.jobMediaAsset.update({ where: { id: assetId }, data: { caption: caption || null } });
+  return { ok: true };
+}
+
+export async function deleteAsset(authorId: string, assetId: string): Promise<MutationResult> {
+  const asset = await prisma.jobMediaAsset.findUnique({ where: { id: assetId } });
+  if (!asset) return { error: "Asset nicht gefunden" };
+  if (asset.authorId !== authorId) return { error: "Nur der Autor kann dieses Asset löschen" };
+
+  await prisma.jobMediaAsset.delete({ where: { id: assetId } });
+  return { ok: true };
+}
+
 export type VoteResult = { ok: true } | { error: string };
 
 export async function voteAsset(voterId: string, assetId: string): Promise<VoteResult> {

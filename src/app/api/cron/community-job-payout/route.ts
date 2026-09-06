@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import "@/lib/community-job-bootstrap";
-import { runWeeklyPayout, runContractExpiryCheck, runInactivityCheck } from "@/lib/community-job-service";
+import { runWeeklyPayout, runContractExpiryCheck, runInactivityCheck, runContractReminderCheck } from "@/lib/community-job-service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
   const payout = await runWeeklyPayout();
   const expiry = await runContractExpiryCheck();
   const inactivity = await runInactivityCheck();
+  const reminder = await runContractReminderCheck();
 
-  return NextResponse.json({ payout, expiry, inactivity });
+  return NextResponse.json({ payout, expiry, inactivity, reminder });
 }

@@ -84,6 +84,49 @@ export async function addContribution(
   return { ok: true, contributionId: contribution.id };
 }
 
+export type MutationResult = { ok: true } | { error: string };
+
+/** Nur der Autor darf seinen eigenen Bericht bearbeiten. */
+export async function updateReport(
+  authorId: string, reportId: string, data: { title: string; bodyMarkdown: string },
+): Promise<MutationResult> {
+  const report = await prisma.jobReport.findUnique({ where: { id: reportId } });
+  if (!report) return { error: "Bericht nicht gefunden" };
+  if (report.authorId !== authorId) return { error: "Nur der Autor kann diesen Bericht bearbeiten" };
+  if (!data.title.trim() || !data.bodyMarkdown.trim()) return { error: "Titel und Text erforderlich" };
+
+  await prisma.jobReport.update({ where: { id: reportId }, data: { title: data.title.trim(), bodyMarkdown: data.bodyMarkdown } });
+  return { ok: true };
+}
+
+export async function deleteReport(authorId: string, reportId: string): Promise<MutationResult> {
+  const report = await prisma.jobReport.findUnique({ where: { id: reportId } });
+  if (!report) return { error: "Bericht nicht gefunden" };
+  if (report.authorId !== authorId) return { error: "Nur der Autor kann diesen Bericht löschen" };
+
+  await prisma.jobReport.delete({ where: { id: reportId } });
+  return { ok: true };
+}
+
+export async function updateContribution(authorId: string, contributionId: string, bodyMarkdown: string): Promise<MutationResult> {
+  const contribution = await prisma.jobReportContribution.findUnique({ where: { id: contributionId } });
+  if (!contribution) return { error: "Ergänzung nicht gefunden" };
+  if (contribution.authorId !== authorId) return { error: "Nur der Autor kann diese Ergänzung bearbeiten" };
+  if (!bodyMarkdown.trim()) return { error: "Text erforderlich" };
+
+  await prisma.jobReportContribution.update({ where: { id: contributionId }, data: { bodyMarkdown } });
+  return { ok: true };
+}
+
+export async function deleteContribution(authorId: string, contributionId: string): Promise<MutationResult> {
+  const contribution = await prisma.jobReportContribution.findUnique({ where: { id: contributionId } });
+  if (!contribution) return { error: "Ergänzung nicht gefunden" };
+  if (contribution.authorId !== authorId) return { error: "Nur der Autor kann diese Ergänzung löschen" };
+
+  await prisma.jobReportContribution.delete({ where: { id: contributionId } });
+  return { ok: true };
+}
+
 export type VoteResult = { ok: true } | { error: string };
 
 export async function voteReport(voterId: string, reportId: string): Promise<VoteResult> {

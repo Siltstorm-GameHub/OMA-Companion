@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
 import ImageUploadField from "@/components/ImageUploadField";
+import DisputeVotesModal from "@/components/community-jobs/DisputeVotesModal";
 
 /**
  * Community-Jobs-Reiter/-Sektion: eigenständig von der Mancave-Idle-Jobs-`JobsPanel`
@@ -356,7 +357,7 @@ function JobToolContent({ jobKey }: { jobKey: string }) {
   if (jobKey === "journalist") return <ReportList />;
   if (jobKey === "fotograf") return <AssetList />;
   if (jobKey === "marketing_manager") return <MarketingPostList />;
-  if (jobKey === "coach") return <TrainingSessionList />;
+  if (jobKey === "coach") return <><TrainingSessionList /><CoachRatingsReceived /></>;
   if (jobKey === "visionaer") return <IdeaList />;
   return null;
 }
@@ -369,18 +370,68 @@ function VoteRow({ upvotes, votedByMe }: { upvotes: number; votedByMe: boolean }
   );
 }
 
+/** Inline Bearbeiten/Löschen-Leiste für eigene Beiträge — gemeinsam für alle vier Listen unten. */
+function EditDeleteBar({
+  onEdit, onDelete,
+}: { onEdit: () => void; onDelete: () => void }) {
+  return (
+    <span className="flex items-center gap-1.5 shrink-0">
+      <button onClick={onEdit} className="text-[10px] text-gray-600 hover:text-teal-400 transition-colors">Bearbeiten</button>
+      <button onClick={onDelete} className="text-[10px] text-gray-600 hover:text-red-400 transition-colors">Löschen</button>
+    </span>
+  );
+}
+
 function ReportList() {
-  const [items, setItems] = useState<{ id: string; title: string; publishedAt: string; _count: { votes: number; contributions: number } }[]>([]);
-  useEffect(() => { api<{ reports: typeof items }>("/api/community-jobs/reports").then(d => setItems(d.reports)).catch(() => {}); }, []);
+  const [items, setItems] = useState<{ id: string; title: string; bodyMarkdown?: string; publishedAt: string; _count: { votes: number; contributions: number } }[]>([]);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+
+  function reload() {
+    api<{ reports: typeof items }>("/api/community-jobs/reports").then(d => setItems(d.reports)).catch(() => {});
+  }
+  useEffect(reload, []);
+
+  function startEdit(r: (typeof items)[number]) {
+    setEditing(r.id); setTitle(r.title); setBody(r.bodyMarkdown ?? "");
+  }
+  async function save(id: string) {
+    try {
+      await api(`/api/community-jobs/reports/${id}`, { method: "PATCH", body: JSON.stringify({ title, bodyMarkdown: body }) });
+      toast.success("Gespeichert");
+      setEditing(null); reload();
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Fehlgeschlagen"); }
+  }
+  async function remove(id: string) {
+    if (!confirm("Bericht wirklich löschen?")) return;
+    try {
+      await api(`/api/community-jobs/reports/${id}`, { method: "DELETE" });
+      toast.success("Gelöscht"); reload();
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Fehlgeschlagen"); }
+  }
+
   if (!items.length) return <p className="text-xs text-gray-600">Noch keine Berichte veröffentlicht.</p>;
   return (
     <div className="space-y-1.5">
-      {items.map(r => (
+      {items.map(r => editing === r.id ? (
+        <div key={r.id} className="space-y-1.5 bg-white/[0.03] rounded-lg p-2">
+          <input value={title} onChange={e => setTitle(e.target.value)}
+            className="w-full bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white" />
+          <textarea value={body} onChange={e => setBody(e.target.value)} rows={3}
+            className="w-full bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white resize-none" />
+          <div className="flex justify-end gap-1.5">
+            <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>Abbrechen</Button>
+            <Button size="sm" onClick={() => save(r.id)}>Speichern</Button>
+          </div>
+        </div>
+      ) : (
         <div key={r.id} className="flex items-center justify-between text-xs">
           <span className="text-gray-300 truncate">{r.title}</span>
           <span className="flex items-center gap-2 shrink-0 ml-2">
             <VoteRow upvotes={r._count.votes} votedByMe={false} />
             <span className="text-gray-600">{r._count.contributions} Ergänzungen</span>
+            <EditDeleteBar onEdit={() => startEdit(r)} onDelete={() => remove(r.id)} />
           </span>
         </div>
       ))}
@@ -390,14 +441,45 @@ function ReportList() {
 
 function AssetList() {
   const [items, setItems] = useState<{ id: string; caption: string | null; type: string; _count: { votes: number } }[]>([]);
-  useEffect(() => { api<{ assets: typeof items }>("/api/community-jobs/media?mine=1").then(d => setItems(d.assets)).catch(() => {}); }, []);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [caption, setCaption] = useState("");
+
+  function reload() {
+    api<{ assets: typeof items }>("/api/community-jobs/media?mine=1").then(d => setItems(d.assets)).catch(() => {});
+  }
+  useEffect(reload, []);
+
+  async function save(id: string) {
+    try {
+      await api(`/api/community-jobs/media/${id}`, { method: "PATCH", body: JSON.stringify({ caption }) });
+      toast.success("Gespeichert"); setEditing(null); reload();
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Fehlgeschlagen"); }
+  }
+  async function remove(id: string) {
+    if (!confirm("Asset wirklich löschen?")) return;
+    try {
+      await api(`/api/community-jobs/media/${id}`, { method: "DELETE" });
+      toast.success("Gelöscht"); reload();
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Fehlgeschlagen"); }
+  }
+
   if (!items.length) return <p className="text-xs text-gray-600">Noch keine Assets hochgeladen.</p>;
   return (
     <div className="space-y-1.5">
-      {items.map(a => (
+      {items.map(a => editing === a.id ? (
+        <div key={a.id} className="flex items-center gap-1.5 bg-white/[0.03] rounded-lg p-2">
+          <input value={caption} onChange={e => setCaption(e.target.value)} placeholder="Bildunterschrift"
+            className="flex-1 bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white" />
+          <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>Abbrechen</Button>
+          <Button size="sm" onClick={() => save(a.id)}>Speichern</Button>
+        </div>
+      ) : (
         <div key={a.id} className="flex items-center justify-between text-xs">
           <span className="text-gray-300 truncate">{a.caption ?? a.type}</span>
-          <VoteRow upvotes={a._count.votes} votedByMe={false} />
+          <span className="flex items-center gap-2 shrink-0">
+            <VoteRow upvotes={a._count.votes} votedByMe={false} />
+            <EditDeleteBar onEdit={() => { setEditing(a.id); setCaption(a.caption ?? ""); }} onDelete={() => remove(a.id)} />
+          </span>
         </div>
       ))}
     </div>
@@ -406,14 +488,47 @@ function AssetList() {
 
 function MarketingPostList() {
   const [items, setItems] = useState<{ id: string; caption: string; _count: { votes: number } }[]>([]);
-  useEffect(() => { api<{ posts: typeof items }>("/api/community-jobs/marketing-posts").then(d => setItems(d.posts)).catch(() => {}); }, []);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [caption, setCaption] = useState("");
+
+  function reload() {
+    api<{ posts: typeof items }>("/api/community-jobs/marketing-posts").then(d => setItems(d.posts)).catch(() => {});
+  }
+  useEffect(reload, []);
+
+  async function save(id: string) {
+    try {
+      await api(`/api/community-jobs/marketing-posts/${id}`, { method: "PATCH", body: JSON.stringify({ caption }) });
+      toast.success("Gespeichert"); setEditing(null); reload();
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Fehlgeschlagen"); }
+  }
+  async function remove(id: string) {
+    if (!confirm("Post wirklich löschen?")) return;
+    try {
+      await api(`/api/community-jobs/marketing-posts/${id}`, { method: "DELETE" });
+      toast.success("Gelöscht"); reload();
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Fehlgeschlagen"); }
+  }
+
   if (!items.length) return <p className="text-xs text-gray-600">Noch keine Werbe-Posts erstellt.</p>;
   return (
     <div className="space-y-1.5">
-      {items.map(p => (
+      {items.map(p => editing === p.id ? (
+        <div key={p.id} className="space-y-1.5 bg-white/[0.03] rounded-lg p-2">
+          <textarea value={caption} onChange={e => setCaption(e.target.value)} rows={2}
+            className="w-full bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white resize-none" />
+          <div className="flex justify-end gap-1.5">
+            <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>Abbrechen</Button>
+            <Button size="sm" onClick={() => save(p.id)}>Speichern</Button>
+          </div>
+        </div>
+      ) : (
         <div key={p.id} className="flex items-center justify-between text-xs">
           <span className="text-gray-300 truncate">{p.caption}</span>
-          <VoteRow upvotes={p._count.votes} votedByMe={false} />
+          <span className="flex items-center gap-2 shrink-0">
+            <VoteRow upvotes={p._count.votes} votedByMe={false} />
+            <EditDeleteBar onEdit={() => { setEditing(p.id); setCaption(p.caption); }} onDelete={() => remove(p.id)} />
+          </span>
         </div>
       ))}
     </div>
@@ -458,18 +573,82 @@ function TrainingSessionList() {
   );
 }
 
+function CoachRatingsReceived() {
+  const [items, setItems] = useState<{ id: string; stars: number; reason: string; disputed: boolean; rater: { username: string | null; name: string | null } }[] | null>(null);
+  const [disputeOpen, setDisputeOpen] = useState(false);
+
+  useEffect(() => {
+    api<{ ratings: typeof items }>("/api/community-jobs/coach/ratings").then(d => setItems(d.ratings)).catch(() => {});
+  }, []);
+
+  if (!items) return null;
+  return (
+    <div className="pt-3 mt-3 border-t border-white/[0.04] space-y-1.5">
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Meine Bewertungen</p>
+        {items.length > 0 && <Button size="sm" variant="ghost" onClick={() => setDisputeOpen(true)}>Ansehen/Anfechten</Button>}
+      </div>
+      {items.length === 0 && <p className="text-xs text-gray-600">Noch keine Bewertungen erhalten.</p>}
+      <DisputeVotesModal open={disputeOpen} onClose={() => setDisputeOpen(false)} kind="coachRating"
+        fetchUrl="/api/community-jobs/coach/ratings" listKey="ratings" voterField="rater" />
+    </div>
+  );
+}
+
 function IdeaList() {
-  const [items, setItems] = useState<{ id: string; title: string; status: string; _count: { votes: number } }[]>([]);
-  useEffect(() => { api<{ ideas: typeof items }>("/api/community-jobs/ideas").then(d => setItems(d.ideas)).catch(() => {}); }, []);
+  const [items, setItems] = useState<{ id: string; title: string; description?: string; status: string; _count: { votes: number } }[]>([]);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+
+  function reload() {
+    api<{ ideas: typeof items }>("/api/community-jobs/ideas?mine=1").then(d => setItems(d.ideas)).catch(() => {});
+  }
+  useEffect(reload, []);
+
+  async function save(id: string) {
+    try {
+      await api(`/api/community-jobs/ideas/${id}`, { method: "PATCH", body: JSON.stringify({ title, description }) });
+      toast.success("Gespeichert"); setEditing(null); reload();
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Fehlgeschlagen"); }
+  }
+  async function remove(id: string) {
+    if (!confirm("Idee wirklich löschen?")) return;
+    try {
+      await api(`/api/community-jobs/ideas/${id}`, { method: "DELETE" });
+      toast.success("Gelöscht"); reload();
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Fehlgeschlagen"); }
+  }
+  async function close(id: string) {
+    try {
+      await api(`/api/community-jobs/ideas/${id}/close`, { method: "POST" });
+      toast.success("Abstimmung beendet"); reload();
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Fehlgeschlagen"); }
+  }
+
   if (!items.length) return <p className="text-xs text-gray-600">Noch keine Ideen eingereicht.</p>;
   return (
     <div className="space-y-1.5">
-      {items.map(i => (
+      {items.map(i => editing === i.id ? (
+        <div key={i.id} className="space-y-1.5 bg-white/[0.03] rounded-lg p-2">
+          <input value={title} onChange={e => setTitle(e.target.value)}
+            className="w-full bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white" />
+          <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3}
+            className="w-full bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white resize-none" />
+          <div className="flex justify-end gap-1.5">
+            <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>Abbrechen</Button>
+            <Button size="sm" onClick={() => save(i.id)}>Speichern</Button>
+          </div>
+        </div>
+      ) : (
         <div key={i.id} className="flex items-center justify-between text-xs">
           <span className="text-gray-300 truncate">{i.title}</span>
           <span className="flex items-center gap-2 shrink-0 ml-2">
-            {i.status === "CLOSED" && <Badge tone="neutral">Beendet</Badge>}
+            {i.status === "CLOSED"
+              ? <Badge tone="neutral">Beendet</Badge>
+              : <button onClick={() => close(i.id)} className="text-[10px] text-gray-600 hover:text-amber-400 transition-colors">Beenden</button>}
             <VoteRow upvotes={i._count.votes} votedByMe={false} />
+            <EditDeleteBar onEdit={() => { setEditing(i.id); setTitle(i.title); setDescription(i.description ?? ""); }} onDelete={() => remove(i.id)} />
           </span>
         </div>
       ))}

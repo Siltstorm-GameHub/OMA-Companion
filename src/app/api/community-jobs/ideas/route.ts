@@ -5,13 +5,14 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-/** Alle Ideen (dauerhaft gelistet, auch nach Ablauf der Abstimmungsfrist). */
-export async function GET() {
+/** Alle Ideen (dauerhaft gelistet, auch nach Ablauf der Abstimmungsfrist) — oder nur die eigenen mit ?mine=1 (fürs Büro). */
+export async function GET(req: NextRequest) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "Nicht angemeldet" }, { status: 401 });
 
+  const mine = new URL(req.url).searchParams.get("mine") === "1";
   const ideas = await prisma.communityIdea.findMany({
-    where: { hiddenByAdminAt: null },
+    where: { hiddenByAdminAt: null, ...(mine ? { authorId: user.id } : {}) },
     orderBy: { createdAt: "desc" },
     include: {
       author: { select: { id: true, username: true, name: true } },

@@ -1,4 +1,5 @@
 import CommunityBoardClient from "./CommunityBoardClient";
+import CoachRatingSection from "./CoachRatingSection";
 
 export default function CommunityBoardPage() {
   return (
@@ -9,6 +10,7 @@ export default function CommunityBoardPage() {
           Berichte, Fotos, Werbung und Ideen der Community-Job-Inhaber — bewerte, was dir gefällt.
         </p>
       </div>
+      <CoachRatingSection />
       <CommunityBoardClient />
     </div>
   );

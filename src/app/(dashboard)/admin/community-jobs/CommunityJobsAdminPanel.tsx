@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Check, X, AlertTriangle, Plus, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { Select } from "@/components/ui/Select";
 import type { PayoutTier, VoteBonusConfig } from "@/lib/community-job-config";
 
 interface JobRef { key: string; label: string; emoji: string }
@@ -68,6 +69,18 @@ export default function CommunityJobsAdminPanel({
     try {
       await api(`/api/admin/community-jobs/members/${id}`, { method: "PATCH", body: JSON.stringify({ action: "REVOKE", reason }) });
       toast.success("Job entzogen");
+      reload();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Fehlgeschlagen");
+    }
+  }
+
+  async function reassign(memberId: string, targetApplicationId: string) {
+    try {
+      await api(`/api/admin/community-jobs/members/${memberId}`, {
+        method: "PATCH", body: JSON.stringify({ action: "REASSIGN", targetApplicationId }),
+      });
+      toast.success("Job übergeben");
       reload();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Fehlgeschlagen");
@@ -139,16 +152,9 @@ export default function CommunityJobsAdminPanel({
         <div className="glass rounded-xl overflow-hidden divide-y divide-white/[0.04]">
           {members.length === 0 && <p className="p-4 text-xs text-gray-600">Keine aktiven Mitglieder.</p>}
           {members.map(m => (
-            <div key={m.id} className="p-3 flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-xs text-white">{m.user.username ?? m.user.name} — {jobLabel(m.jobKey)}</p>
-                <p className="text-[11px] text-gray-500">
-                  {m.status === "WARNED" && <span className="text-amber-400">Verwarnt · </span>}
-                  Vertrag bis {new Date(m.contractEndAt).toLocaleDateString("de-DE")}
-                </p>
-              </div>
-              <Button size="sm" variant="danger" onClick={() => revoke(m.id)}>Entziehen</Button>
-            </div>
+            <MemberRow key={m.id} member={m} jobLabel={jobLabel(m.jobKey)}
+              waitlistForJob={waitlisted.filter(a => a.jobKey === m.jobKey)}
+              onRevoke={() => revoke(m.id)} onReassign={targetApplicationId => reassign(m.id, targetApplicationId)} />
           ))}
         </div>
       </section>
@@ -338,5 +344,44 @@ function VoteBonusSection({ initial }: { initial: VoteBonusConfig }) {
         <Button size="sm" disabled={busy} onClick={save}>Speichern</Button>
       </div>
     </section>
+  );
+}
+
+function MemberRow({
+  member, jobLabel, waitlistForJob, onRevoke, onReassign,
+}: {
+  member: AdminMember; jobLabel: string; waitlistForJob: AdminApplication[];
+  onRevoke: () => void; onReassign: (targetApplicationId: string) => void;
+}) {
+  const [reassigning, setReassigning] = useState(false);
+  const [target, setTarget] = useState(waitlistForJob[0]?.id ?? "");
+
+  return (
+    <div className="p-3 space-y-2">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs text-white">{member.user.username ?? member.user.name} — {jobLabel}</p>
+          <p className="text-[11px] text-gray-500">
+            {member.status === "WARNED" && <span className="text-amber-400">Verwarnt · </span>}
+            Vertrag bis {new Date(member.contractEndAt).toLocaleDateString("de-DE")}
+          </p>
+        </div>
+        <div className="flex gap-1.5 shrink-0">
+          {waitlistForJob.length > 0 && (
+            <Button size="sm" variant="outline" onClick={() => setReassigning(v => !v)}>Übergeben</Button>
+          )}
+          <Button size="sm" variant="danger" onClick={onRevoke}>Entziehen</Button>
+        </div>
+      </div>
+      {reassigning && (
+        <div className="flex items-center gap-2 pl-1">
+          <Select size="sm" value={target} onChange={e => setTarget(e.target.value)}>
+            {waitlistForJob.map(a => <option key={a.id} value={a.id}>{a.user.username ?? a.user.name}</option>)}
+          </Select>
+          <Button size="sm" onClick={() => { onReassign(target); setReassigning(false); }}>Bestätigen</Button>
+          <Button size="sm" variant="ghost" onClick={() => setReassigning(false)}>Abbrechen</Button>
+        </div>
+      )}
+    </div>
   );
 }

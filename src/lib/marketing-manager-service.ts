@@ -56,6 +56,27 @@ async function announceAndStore(postId: string, authorId: string, caption: strin
   if (messageId) await prisma.marketingPost.update({ where: { id: postId }, data: { discordMessageId: messageId } });
 }
 
+export type MutationResult = { ok: true } | { error: string };
+
+export async function updateMarketingPost(authorId: string, postId: string, caption: string): Promise<MutationResult> {
+  const post = await prisma.marketingPost.findUnique({ where: { id: postId } });
+  if (!post) return { error: "Post nicht gefunden" };
+  if (post.authorId !== authorId) return { error: "Nur der Autor kann diesen Post bearbeiten" };
+  if (!caption.trim()) return { error: "Text erforderlich" };
+
+  await prisma.marketingPost.update({ where: { id: postId }, data: { caption } });
+  return { ok: true };
+}
+
+export async function deleteMarketingPost(authorId: string, postId: string): Promise<MutationResult> {
+  const post = await prisma.marketingPost.findUnique({ where: { id: postId } });
+  if (!post) return { error: "Post nicht gefunden" };
+  if (post.authorId !== authorId) return { error: "Nur der Autor kann diesen Post löschen" };
+
+  await prisma.marketingPost.delete({ where: { id: postId } });
+  return { ok: true };
+}
+
 export type VoteResult = { ok: true } | { error: string };
 
 export async function voteMarketingPost(voterId: string, postId: string): Promise<VoteResult> {
