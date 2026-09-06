@@ -12,6 +12,7 @@ import { createPollsForEvent, parsePollsConfigJson } from "@/lib/event-polls";
 import { recomputeSeriesDominionBonus } from "@/lib/dominion-bonus";
 import { announceEventResults } from "@/lib/discord-events";
 import { isEventHidden } from "@/lib/event-visibility";
+import { applyEventStatOverride } from "@/lib/series-event-points";
 
 type PlacementReward = { place: number; coins: number; rankPoints: number };
 type RewardsConfig = { participationCoins: number; placements: PlacementReward[] };
@@ -238,10 +239,10 @@ async function completeEvent(req: NextRequest, eventId: string) {
   if (!event) return NextResponse.json({ error: "Event nicht gefunden" }, { status: 404 });
 
   // Gesamttabellen-Konfiguration der Reihe (Ligapunkte + Teilnahme-Münzen, seriesweit fix)
-  const statCfg: SeriesStatConfig = (() => {
+  const statCfg: SeriesStatConfig = applyEventStatOverride((() => {
     try { return event.series?.seriesStatConfig ? JSON.parse(event.series.seriesStatConfig) : {}; }
     catch { return {} as SeriesStatConfig; }
-  })();
+  })(), (event as { statConfigJson?: string | null }).statConfigJson);
 
   const isReEdit = !!event.completionData;
   const oldCompletion: Record<string, unknown> = isReEdit

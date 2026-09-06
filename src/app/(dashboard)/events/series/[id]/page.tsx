@@ -417,7 +417,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
     const allSeasonEvents = await prisma.event.findMany({
       where: { series: { groupId: series.groupId } },
       select: {
-        id: true, status: true, completionData: true, finalRankingJson: true, spectatorMode: true,
+        id: true, status: true, completionData: true, finalRankingJson: true, spectatorMode: true, statConfigJson: true,
         registrations: { select: { userId: true, role: true } },
         matches: { select: { entries: { select: { userId: true, statsJson: true } } } },
       },

@@ -25,6 +25,34 @@ export type StatConfig = {
   };
 };
 
+/** Event-eigene Überschreibung von Event.statConfigJson, siehe schema.prisma. */
+export type EventStatOverride = {
+  stats?: { field: string; pointsPer: number }[];
+  winnerStatKeys?: string[];
+  matchWinStatKeys?: string[];
+};
+
+/** Wendet eine Event-eigene Stat-Konfiguration (statConfigJson) auf die Reihen-Konfiguration an.
+ *  Nötig für Reihen ohne festes Format/Spiel (coop_stats), wo sich Stat-Felder, Match-Win- und
+ *  Winner-Stat von Event zu Event unterscheiden können — nur gesetzte, nicht-leere Arrays
+ *  überschreiben die Reihen-weiten Werte, alles andere (participationPoints, mvpStatField, …)
+ *  bleibt seriesweit fix. */
+export function applyEventStatOverride<T extends { stats?: { field: string; pointsPer: number }[]; winnerStatKeys?: string[]; matchWinStatKeys?: string[] }>(
+  cfg: T,
+  overrideJson: string | null | undefined,
+): T {
+  if (!overrideJson) return cfg;
+  let override: EventStatOverride;
+  try { override = JSON.parse(overrideJson); } catch { return cfg; }
+  if (!override.stats?.length && !override.winnerStatKeys?.length && !override.matchWinStatKeys?.length) return cfg;
+  return {
+    ...cfg,
+    ...(override.stats?.length ? { stats: override.stats } : {}),
+    ...(override.winnerStatKeys?.length ? { winnerStatKeys: override.winnerStatKeys } : {}),
+    ...(override.matchWinStatKeys?.length ? { matchWinStatKeys: override.matchWinStatKeys } : {}),
+  };
+}
+
 export function resolveWinnerTargetKeys(cfg: StatConfig, seriesWinnerTargetField?: string): string[] {
   if (cfg.winnerStatKeys?.length) return cfg.winnerStatKeys;
   if (cfg.winnerSeriesStatKey) return [cfg.winnerSeriesStatKey];
@@ -38,6 +66,9 @@ export type EventForPoints = {
    *  Einführung des Zuschauer-Trackings), nur ein explizites "spectator" zählt als Zuschauer. */
   registrations: { userId: string; role?: string }[];
   matches: { entries: { userId: string | null; statsJson: string | null }[] }[];
+  /** Event-eigene Stat-Konfiguration (siehe applyEventStatOverride) — überschreibt cfg für dieses
+   *  Event, falls gesetzt. Fehlt bei manchen Altabfragen (kein select), dann greift nur cfg. */
+  statConfigJson?: string | null;
 };
 
 export type EventCompletionData = {
@@ -185,6 +216,7 @@ export function computeStatStandings(
 
 export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPointsResult {
   if (!ev.completionData) return EMPTY_RESULT;
+  cfg = applyEventStatOverride(cfg, ev.statConfigJson);
   let cd: EventCompletionData;
   try { cd = JSON.parse(ev.completionData); } catch { return EMPTY_RESULT; }
   if (!cd.gamePhaseComplete) return EMPTY_RESULT;

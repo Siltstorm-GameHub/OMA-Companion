@@ -96,7 +96,7 @@ function generateBracket(participantIds: string[], eventId: string): BracketMatc
 }
 
 export async function POST(req: NextRequest) {
-  const { eventId, format, participantIds, pointsConfig, statFields, autoGenerate } = await req.json();
+  const { eventId, format, participantIds, pointsConfig, statFields, statConfig, autoGenerate } = await req.json();
   if (!eventId) return NextResponse.json({ error: "eventId ist Pflicht" }, { status: 400 });
   await requireModeratorOrEventSquadCaptain(eventId);
 
@@ -114,6 +114,7 @@ export async function POST(req: NextRequest) {
       type: "tournament",
       pointsConfig: pointsConfig ? JSON.stringify(pointsConfig) : null,
       statFields: statFields ? JSON.stringify(statFields) : null,
+      statConfigJson: statConfig ? JSON.stringify(statConfig) : null,
       participants: participantIds?.length
         ? { create: participantIds.map((userId: string, i: number) => ({ userId, seed: i + 1 })) }
         : undefined,

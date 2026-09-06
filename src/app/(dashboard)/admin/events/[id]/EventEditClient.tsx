@@ -129,6 +129,67 @@ function deriveStatFieldsFromSeries(series: { seriesStatConfig?: string | null }
   } catch { return null; }
 }
 
+type EventStatConfigForm = {
+  pointsByField: Record<string, number>;
+  matchWinField: string;
+  matchWinPoints: number;
+  winnerField: string;
+  winnerPoints: number;
+};
+
+const EMPTY_EVENT_STAT_CONFIG: EventStatConfigForm = {
+  pointsByField: {}, matchWinField: "", matchWinPoints: 1, winnerField: "", winnerPoints: 3,
+};
+
+/** Parst die Event-eigene Stat-Konfiguration (statConfigJson) für die Bearbeitungsform — siehe
+ * schema.prisma. Trennt die rohen Punkte-pro-Stat-Werte von den zwei Sonderfeldern (Match-Win-Stat,
+ * Sieger-Stat), die nicht manuell pro Runde eingetragen, sondern automatisch befüllt werden. */
+function parseEventStatConfig(json: string | null | undefined): EventStatConfigForm {
+  if (!json) return EMPTY_EVENT_STAT_CONFIG;
+  try {
+    const cfg = JSON.parse(json) as {
+      stats?: { field: string; pointsPer: number }[];
+      winnerStatKeys?: string[];
+      matchWinStatKeys?: string[];
+    };
+    const winnerField   = cfg.winnerStatKeys?.[0] ?? "";
+    const matchWinField = cfg.matchWinStatKeys?.[0] ?? "";
+    const pointsByField: Record<string, number> = {};
+    let winnerPoints = EMPTY_EVENT_STAT_CONFIG.winnerPoints;
+    let matchWinPoints = EMPTY_EVENT_STAT_CONFIG.matchWinPoints;
+    for (const s of cfg.stats ?? []) {
+      if (s.field === winnerField) winnerPoints = s.pointsPer;
+      else if (s.field === matchWinField) matchWinPoints = s.pointsPer;
+      else pointsByField[s.field] = s.pointsPer;
+    }
+    return { pointsByField, matchWinField, matchWinPoints, winnerField, winnerPoints };
+  } catch { return EMPTY_EVENT_STAT_CONFIG; }
+}
+
+/** Baut statConfigJson (siehe schema.prisma) aus der Bearbeitungsform. Gibt null zurück, wenn
+ * weder Punkte noch Match-Win-/Sieger-Stat gesetzt sind — dann gilt weiter die Reihen-Konfiguration. */
+function buildEventStatConfig(fields: string[], form: EventStatConfigForm): {
+  stats: { field: string; pointsPer: number }[];
+  winnerStatKeys: string[];
+  matchWinStatKeys: string[];
+} | null {
+  const stats = fields
+    .filter(f => (form.pointsByField[f] ?? 0) !== 0)
+    .map(f => ({ field: f, pointsPer: form.pointsByField[f] }));
+  const winnerStatKeys: string[] = [];
+  const matchWinStatKeys: string[] = [];
+  if (form.matchWinField.trim()) {
+    stats.push({ field: form.matchWinField.trim(), pointsPer: form.matchWinPoints });
+    matchWinStatKeys.push(form.matchWinField.trim());
+  }
+  if (form.winnerField.trim()) {
+    stats.push({ field: form.winnerField.trim(), pointsPer: form.winnerPoints });
+    winnerStatKeys.push(form.winnerField.trim());
+  }
+  if (stats.length === 0 && winnerStatKeys.length === 0 && matchWinStatKeys.length === 0) return null;
+  return { stats, winnerStatKeys, matchWinStatKeys };
+}
+
 const STATUS_OPTIONS = ["open", "active", "umfrage", "finished"];
 const STATUS_STYLES: Record<string, string> = {
   open:     "text-blue-400 bg-blue-500/10 border-blue-500/20",
@@ -253,6 +314,9 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
     }
     return deriveStatFieldsFromSeries(event.series) ?? ["Kills", "Assists", "Punkte"];
   });
+  /* Event-eigene Stat-Punkte-Konfiguration (nur relevant bei coop_stats) — überschreibt für dieses
+   * Event die Reihen-weite seriesStatConfig, siehe schema.prisma statConfigJson. */
+  const [tmtStatConfig, setTmtStatConfig] = useState<EventStatConfigForm>(() => parseEventStatConfig(event.statConfigJson));
   const [tmtLoading, setTmtLoading] = useState(false);
   const hasTournament = !!event.format;
   const hasStat       = ["ffa", "coop_stats", "avg_stats"].includes(tmtFormat);
@@ -456,11 +520,15 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
       : { "1": { coins: tmtPoints.coins1, points: tmtPoints.pts1 },
           "2": { coins: tmtPoints.coins2, points: tmtPoints.pts2 },
           "3": { coins: tmtPoints.coins3, points: tmtPoints.pts3 } };
+    // Event-eigene Stat-Punkte-Konfiguration nur bei coop_stats — überschreibt für dieses Event die
+    // Reihen-weite seriesStatConfig (nötig, wenn sich das Spiel/die Stat-Felder von Event zu Event
+    // ändern und daher kein seriesweit fixes Punktesystem greifen kann).
+    const statConfig = tmtFormat === "coop_stats" ? buildEventStatConfig(tmtStatFields, tmtStatConfig) : null;
     if (!hasTournament) {
       const res = await fetch("/api/tournaments", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ eventId: event.id, format: tmtFormat, pointsConfig: config,
-          statFields: hasStat ? tmtStatFields : null }),
+          statFields: hasStat ? tmtStatFields : null, statConfig }),
       });
       if (res.ok) { toast.success("Turnier erstellt"); router.refresh(); }
       else { const e = await res.json(); toast.error(e.error ?? "Fehler"); }
@@ -468,7 +536,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
       const res = await fetch(`/api/tournaments/${event.id}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ format: tmtFormat, pointsConfig: config,
-          statFields: hasStat ? tmtStatFields : null }),
+          statFields: hasStat ? tmtStatFields : null, statConfig }),
       });
       if (res.ok) { toast.success("Turnier-Einstellungen gespeichert"); router.refresh(); }
       else { toast.error("Fehler beim Speichern"); }
@@ -591,7 +659,15 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
       ];
 
   /* ── Turnierbaum-Daten (für Inline-Tab, analog zur admin/events/[id]/bracket-Seite) ── */
+  // Event-eigene Stat-Konfiguration (statConfigJson) hat Vorrang vor der Reihen-weiten
+  // seriesStatConfig — siehe schema.prisma und buildEventStatConfig/parseEventStatConfig oben.
   const bracketWinnerStatKeys: string[] = (() => {
+    if (event.statConfigJson) {
+      try {
+        const cfg = JSON.parse(event.statConfigJson) as { winnerStatKeys?: string[] };
+        if (cfg.winnerStatKeys?.length) return cfg.winnerStatKeys;
+      } catch { /* fällt durch zur Reihen-Konfiguration */ }
+    }
     if (!event.series?.seriesStatConfig) return [];
     try {
       const cfg = JSON.parse(event.series.seriesStatConfig) as { winnerStatKeys?: string[] };
@@ -600,6 +676,12 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
   })();
 
   const bracketMatchWinStatKeys: string[] = (() => {
+    if (event.statConfigJson) {
+      try {
+        const cfg = JSON.parse(event.statConfigJson) as { matchWinStatKeys?: string[] };
+        if (cfg.matchWinStatKeys?.length) return cfg.matchWinStatKeys;
+      } catch { /* fällt durch zur Reihen-Konfiguration */ }
+    }
     if (!event.series?.seriesStatConfig) return [];
     try {
       const cfg = JSON.parse(event.series.seriesStatConfig) as { matchWinStatKeys?: string[] };
@@ -1324,6 +1406,76 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
             <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
               <label className={labelCls}>Statistik-Felder</label>
               <StatFieldEditor fields={tmtStatFields} onChange={setTmtStatFields} isAvg={tmtFormat === "avg_stats"} />
+            </div>
+          )}
+
+          {/* Event-eigene Stat-Punkte-Konfiguration — nur bei Kooperativ (Stats) sinnvoll: legt fest,
+              wie viele Punkte jeder Stat gibt, und welcher Stat Match-Win- bzw. Sieger-Stat ist. Für
+              Reihen ohne festes Format/Spiel überschreibt das die Reihen-weite Konfiguration nur für
+              dieses eine Event. */}
+          {tmtFormat === "coop_stats" && (
+            <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-4">
+              <div>
+                <label className={labelCls}>Stat-Punkte-Konfiguration (nur dieses Event)</label>
+                <p className="text-[11px] text-gray-500 -mt-1 mb-2">
+                  Überschreibt für dieses Event die Punkte-Konfiguration der Reihe — praktisch, wenn sich
+                  das Spiel und damit die Stats von Event zu Event ändern. Leer lassen, um die
+                  Reihen-Konfiguration zu übernehmen.
+                </p>
+              </div>
+
+              {tmtStatFields.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-[11px] text-gray-500 uppercase tracking-wide">Punkte pro Stat</p>
+                  {tmtStatFields.map(f => (
+                    <div key={f} className="flex items-center gap-3">
+                      <span className="text-sm text-gray-300 flex-1 truncate">{f}</span>
+                      <input type="number" step="0.1"
+                        value={tmtStatConfig.pointsByField[f] ?? 0}
+                        onChange={e => setTmtStatConfig(c => ({
+                          ...c, pointsByField: { ...c.pointsByField, [f]: Number(e.target.value) },
+                        }))}
+                        className={`${inputCls} w-24 text-center`} />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-white/[0.06]">
+                <div>
+                  <label className={labelCls}>Match-Win-Stat</label>
+                  <p className="text-[10px] text-gray-500 mb-1">Name des Stats, den das Sieger-Team pro
+                    Runde erhält (⚔️-Markierung im Turnierbaum) — z.B. „Siege".</p>
+                  <input type="text" value={tmtStatConfig.matchWinField}
+                    onChange={e => setTmtStatConfig(c => ({ ...c, matchWinField: e.target.value }))}
+                    placeholder="z.B. Siege" className={inputCls} />
+                </div>
+                <div>
+                  <label className={labelCls}>Punkte pro Match-Win</label>
+                  <input type="number" step="0.1" value={tmtStatConfig.matchWinPoints}
+                    onChange={e => setTmtStatConfig(c => ({ ...c, matchWinPoints: Number(e.target.value) }))}
+                    disabled={!tmtStatConfig.matchWinField.trim()}
+                    className={`${inputCls} disabled:opacity-40`} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className={labelCls}>Winner-Stat</label>
+                  <p className="text-[10px] text-gray-500 mb-1">Name des Stats, den der Gesamtsieger
+                    dieses Events erhält (beim Event-Abschluss) — z.B. „Turniersiege".</p>
+                  <input type="text" value={tmtStatConfig.winnerField}
+                    onChange={e => setTmtStatConfig(c => ({ ...c, winnerField: e.target.value }))}
+                    placeholder="z.B. Turniersiege" className={inputCls} />
+                </div>
+                <div>
+                  <label className={labelCls}>Punkte für Sieg</label>
+                  <input type="number" step="0.1" value={tmtStatConfig.winnerPoints}
+                    onChange={e => setTmtStatConfig(c => ({ ...c, winnerPoints: Number(e.target.value) }))}
+                    disabled={!tmtStatConfig.winnerField.trim()}
+                    className={`${inputCls} disabled:opacity-40`} />
+                </div>
+              </div>
             </div>
           )}
 

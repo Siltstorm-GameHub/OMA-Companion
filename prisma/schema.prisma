@@ -294,6 +294,11 @@ model Event {
   tournamentStatus      String? // pending | active | complete | finalized
   pointsConfig          String? // JSON: {"1": 100, "2": 50, "3": 25} — legacy, nur Münzen
   statFields            String? // JSON: ["Kills","Assists"]
+  // Event-eigene Stat-Punkte-Konfiguration — überschreibt die Reihen-weite seriesStatConfig für
+  // dieses Event (nötig bei coop_stats-Reihen ohne festes Format/Spiel, wo sich die Stat-Felder
+  // von Event zu Event ändern). JSON: { stats: [{ field, pointsPer }], winnerStatKeys?: string[],
+  // matchWinStatKeys?: string[] } — nur gesetzte, nicht-leere Arrays überschreiben die Reihen-Werte.
+  statConfigJson        String?
   finalRankingJson      String? // JSON: ["userId1","userId2"]
   finalRankingNote      String?
   // JSON: { participationCoins: 10, placements: [{ place: 1, coins: 500, rankPoints: 3 }, ...] }

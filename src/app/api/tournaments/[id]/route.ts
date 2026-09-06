@@ -100,7 +100,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id: eventId } = await params;
   await requireModeratorOrEventSquadCaptain(eventId);
   const body = await req.json();
-  const { status, format, pointsConfig, statFields, generateMatches, finalRanking, finalRankingNote } = body;
+  const { status, format, pointsConfig, statFields, statConfig, generateMatches, finalRanking, finalRankingNote } = body;
 
   // Auto-generate round-robin matches
   if (generateMatches === "round_robin") {
@@ -144,6 +144,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ...(format           !== undefined && { format }),
       ...(pointsConfig     !== undefined && { pointsConfig: pointsConfig ? JSON.stringify(pointsConfig) : null }),
       ...(statFields       !== undefined && { statFields:   statFields   ? JSON.stringify(statFields)   : null }),
+      ...(statConfig       !== undefined && { statConfigJson: statConfig ? JSON.stringify(statConfig) : null }),
       ...(finalRanking     !== undefined && Array.isArray(finalRanking) && { finalRankingJson: JSON.stringify(finalRanking) }),
       ...(finalRankingNote !== undefined && { finalRankingNote: finalRankingNote?.trim() || null }),
     },
