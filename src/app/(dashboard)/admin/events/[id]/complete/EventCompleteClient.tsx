@@ -50,6 +50,10 @@ interface Props {
   /** Alle User der Plattform — für Umfragen mit voterEligibility "all" im Live-Umfragen-Panel */
   allUsers: User[];
   tournamentStatFields: string[];
+  /** Auswahloptionen für den Gewinner-Stat-Dropdown — wie tournamentStatFields, plus "Ligapunkte"
+   *  (berechnete Gesamtpunktzahl aus Stats × Punkte-pro-Stat + Platzierungspunkte), wenn dafür eine
+   *  Punkte-Konfiguration existiert. Fällt ohne Prop auf tournamentStatFields zurück. */
+  winnerStatFieldOptions?: string[];
   userStats: Record<string, Record<string, number>>;
   format: string | null;
   /** Kombinierter Ø-Wert pro Runde (über alle Stat-Felder) je Spieler — nur bei format "avg_stats" */
@@ -115,7 +119,7 @@ function computePlacementMap(groups: string[][]): Map<string, number> {
 
 export default function EventCompleteClient({
   eventId, eventTitle, seriesId, seriesName, seriesIcon,
-  registeredUsers, spectatorUsers, allUsers, tournamentStatFields, userStats, format, userAvgScore,
+  registeredUsers, spectatorUsers, allUsers, tournamentStatFields, winnerStatFieldOptions, userStats, format, userAvgScore,
   seriesStatConfig, rewardsConfig, pollConfig, pollsConfig, pendingEventPolls, spectatorRewardJson,
   currentDominionStreaks,
   isAdmin, isReEdit, status,
@@ -601,7 +605,7 @@ export default function EventCompleteClient({
                     className={`${inputCls} disabled:cursor-not-allowed disabled:opacity-60`}
                   >
                     <option value="">– kein Gewinner-Stat –</option>
-                    {tournamentStatFields.map(f => <option key={f} value={f}>{f}</option>)}
+                    {(winnerStatFieldOptions ?? tournamentStatFields).map(f => <option key={f} value={f}>{f}</option>)}
                   </select>
                 </div>
               )}
