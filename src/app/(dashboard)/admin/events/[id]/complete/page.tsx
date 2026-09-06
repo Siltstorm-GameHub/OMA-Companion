@@ -133,15 +133,21 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
     }
   }
 
-  // Series stat config — Event-eigene statConfigJson (nur bei Format coop_stats gepflegt, siehe
-  // Reiter "Turnier") überschreibt für dieses Event ausschließlich Stats/Platzierungspunkte, siehe
-  // applyEventStatOverride. Betrifft nie die Einstellungen der übrigen Reihe.
-  const seriesStatConfig: SeriesStatConfig | null = (() => {
-    let base: SeriesStatConfig | null = null;
-    try { base = event.series?.seriesStatConfig ? JSON.parse(event.series.seriesStatConfig) : null; } catch { base = null; }
-    if (!base && !event.statConfigJson) return base;
-    return applyEventStatOverride(base ?? { participationPoints: 0, stats: [] }, event.statConfigJson);
+  // Reine Reihen-Konfiguration (KEIN applyEventStatOverride!) — wird 1:1 als seriesStatConfig-Prop an
+  // den Client durchgereicht und bestimmt dort u.a. die Optionen im Dropdown "Sieg in Gesamttabelle
+  // tracken als …" (seriesStatFields in EventCompleteClient.tsx). Dort sollen ausschließlich die
+  // seriesweiten Gesamttabellen-Stats erscheinen — NIE die Event-eigenen Stat-Felder dieses einzelnen
+  // Events (deren Sieger erkennt man dort schon an der Turnierpunkte-basierten Platzierung).
+  const rawSeriesStatConfig: SeriesStatConfig | null = (() => {
+    try { return event.series?.seriesStatConfig ? JSON.parse(event.series.seriesStatConfig) : null; } catch { return null; }
   })();
+
+  // Mit der Event-eigenen statConfigJson zusammengeführte Konfiguration — ausschließlich für die
+  // Turnierpunkte-Berechnung (Sieger-Ermittlung dieses einzelnen Events), siehe computeTurnierpunkte.
+  // NIE als seriesStatConfig-Prop verwenden (s.o.).
+  const turnierpunkteCfg: SeriesStatConfig = applyEventStatOverride(
+    rawSeriesStatConfig ?? { participationPoints: 0, stats: [] }, event.statConfigJson,
+  );
 
   // Turnierpunkte-Vorschau je User (Stats × Punkte-pro-Stat + Platzierungspunkte, siehe
   // computeTurnierpunkte) — als zusätzliche, auswählbare "Gewinner-Stat"-Option (winnerStatField),
@@ -151,10 +157,9 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
   // ermittelte Sieger erhält seine Ligapunkte ganz normal über den bestehenden Weg. Direkt in
   // userStats injiziert, damit die bestehende Sortier-/Anzeige-Logik (userStats[uid]?.[winnerStatField])
   // sie ohne weitere Änderungen mitbenutzt.
-  const hasTurnierpunkteOption = !!seriesStatConfig
-    && ((seriesStatConfig.stats?.length ?? 0) > 0 || !!seriesStatConfig.placementPoints);
-  if (hasTurnierpunkteOption && seriesStatConfig) {
-    const turnierpunkteByUser = computeTurnierpunkte(event.matches, seriesStatConfig);
+  const hasTurnierpunkteOption = (turnierpunkteCfg.stats?.length ?? 0) > 0 || !!turnierpunkteCfg.placementPoints;
+  if (hasTurnierpunkteOption) {
+    const turnierpunkteByUser = computeTurnierpunkte(event.matches, turnierpunkteCfg);
     for (const uid of Object.keys(userStats)) {
       userStats[uid]["Turnierpunkte"] = turnierpunkteByUser[uid] ?? 0;
     }
@@ -165,7 +170,7 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
   // (seriesStandingsJson), damit Moderatoren beim Ausfüllen sehen, wer bereits auf eine Serie
   // aufbaut, statt es erst nach dem Speichern aus completionData.dominionChanges zu erfahren.
   const currentDominionStreaks: Record<string, number> = (() => {
-    const cfg = seriesStatConfig?.dominionBonus;
+    const cfg = rawSeriesStatConfig?.dominionBonus;
     const triggerStats = cfg?.triggerStats ?? (cfg?.triggerStat ? [cfg.triggerStat] : []);
     if (!cfg?.enabled || triggerStats.length === 0 || !event.series?.seriesStandingsJson) return {};
     const streakKey = `_streak_[${triggerStats.join(",")}]`;
@@ -239,7 +244,7 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
       format={event.format}
       userAvgScore={userAvgScore}
       currentDominionStreaks={currentDominionStreaks}
-      seriesStatConfig={seriesStatConfig}
+      seriesStatConfig={rawSeriesStatConfig}
       rewardsConfig={rewardsConfig}
       pollConfig={pollConfig}
       pollsConfig={pollsConfig}
