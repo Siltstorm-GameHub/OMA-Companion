@@ -11,6 +11,7 @@ import {
 import StatFieldEditor from "@/components/StatFieldEditor";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import InfoTooltip from "@/components/InfoTooltip";
+import { PLACEMENT_STAT_KEY } from "@/lib/series-event-points";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };
 type MatchEntry = {
@@ -296,7 +297,7 @@ function CreationForm({
 
 // ─── Main Manager (tournament exists) ────────────────────────────────────────
 export default function TournamentManager({
-  event, tournament: initial, allUsers, winnerStatKeys = [], matchWinStatKeys = [],
+  event, tournament: initial, allUsers, winnerStatKeys = [], matchWinStatKeys = [], placementPoints,
 }: {
   event: Event;
   tournament: Tournament | null;
@@ -306,6 +307,9 @@ export default function TournamentManager({
    *  Nur wenn hier mind. einer konfiguriert ist, macht die Match-Win-/Team-UI unten überhaupt Sinn —
    *  sonst würde sie für jedes Kooperativ-Turnier angezeigt, auch wenn niemand die Stat nutzt. */
   matchWinStatKeys?: string[];
+  /** Punkte je Platz (Event-eigene statConfigJson, siehe EventEditClient "Turnier"-Reiter, coop_stats) —
+   *  nur wenn gesetzt, wird die Platzierungs-Spalte pro Runde angezeigt (Schritt 4). */
+  placementPoints?: Record<string, number> | null;
 }) {
   const router = useRouter();
   const [tournament, setTournament] = useState<Tournament | null>(initial);
@@ -404,6 +408,9 @@ export default function TournamentManager({
   // Match Win/Team-Zuordnung nur anzeigen und erfassen, wenn die Reihe tatsächlich einen Stat darauf
   // aufbaut (⚔️ in der Gesamttabellen-Konfiguration) — sonst unnötig für jedes Kooperativ-Turnier.
   const trackMatchWin = isCoop && matchWinStatKeys.length > 0;
+  // Platzierungs-Spalte pro Runde nur anzeigen, wenn für dieses Event Punkte je Platz konfiguriert
+  // sind (Reiter "Turnier" → Format Kooperativ (Stats), siehe EventEditClient) — sonst unnötig.
+  const trackPlacement = isCoop && !!placementPoints && Object.keys(placementPoints).length > 0;
   const isLiga = tournament.format === "liga";
   const is1v1  = !isFfa;
   const isRoundRobin = tournament.format === "round_robin";
@@ -570,6 +577,10 @@ export default function TournamentManager({
       const row = ed[e.userId ?? ""] ?? {};
       const stats: Record<string, number | string> = { ...existing };
       visibleStatFields.forEach(f => { if (row[f] !== undefined && row[f] !== "") stats[f] = Number(row[f]); });
+      if (trackPlacement && row[PLACEMENT_STAT_KEY] !== undefined) {
+        if (row[PLACEMENT_STAT_KEY] === "") delete stats[PLACEMENT_STAT_KEY];
+        else stats[PLACEMENT_STAT_KEY] = Number(row[PLACEMENT_STAT_KEY]);
+      }
       if (trackMatchWin) {
         if (usesTeams) {
           // Spieler wird Team A oder B zugeordnet, Match Win geht nur an das gewinnende Team
@@ -820,7 +831,7 @@ export default function TournamentManager({
                   {isExp && (
                     <div className="p-3">
                       {match.notes && <p className="text-xs text-gray-500 mb-3">{match.notes}</p>}
-                      {visibleStatFields.length === 0 && !trackMatchWin ? (
+                      {visibleStatFields.length === 0 && !trackMatchWin && !trackPlacement ? (
                         <div className="text-xs text-amber-400/80 bg-amber-900/10 border border-amber-800/30 rounded-lg px-3 py-2">
                           Keine Statistik-Felder konfiguriert. Bitte zuerst im Reiter <span className="font-semibold">Einstellungen</span> die gewünschten Stat-Felder eintragen und auf „Turnier-Einstellungen speichern" klicken.
                         </div>
@@ -872,13 +883,21 @@ export default function TournamentManager({
                             </label>
                           );
                         })()}
-                        {(trackMatchWin || visibleStatFields.length > 0) && (
+                        {trackPlacement && placementPoints && (
+                          <p className="text-[11px] text-gray-500 mb-2">
+                            Platzierung dieser Runde → Punkte: {Object.entries(placementPoints)
+                              .sort(([a], [b]) => Number(a) - Number(b))
+                              .map(([place, pts]) => `Platz ${place} = ${pts}`).join(" · ")}
+                          </p>
+                        )}
+                        {(trackMatchWin || trackPlacement || visibleStatFields.length > 0) && (
                         <div className="overflow-x-auto">
                           <table className="w-full text-xs">
                             <thead>
                               <tr className="text-gray-500 border-b border-gray-700">
                                 <th className="text-left py-1.5 pr-3 font-medium">Spieler</th>
                                 {trackMatchWin && <th className="text-center py-1.5 px-2 font-medium">Team</th>}
+                                {trackPlacement && <th className="text-center py-1.5 px-2 font-medium">Platz</th>}
                                 {visibleStatFields.map(f => (
                                   <th key={f} className="text-center py-1.5 px-2 font-medium">{f}</th>
                                 ))}
@@ -918,6 +937,15 @@ export default function TournamentManager({
                                             </button>
                                           ))}
                                         </div>
+                                      </td>
+                                    )}
+                                    {trackPlacement && (
+                                      <td className="py-1 px-2 text-center">
+                                        <input type="number" min={1} placeholder="–"
+                                          value={row[PLACEMENT_STAT_KEY] ?? (existing[PLACEMENT_STAT_KEY] !== undefined ? String(existing[PLACEMENT_STAT_KEY]) : "")}
+                                          onChange={e => setFfaField(match.id, entry.userId ?? "", PLACEMENT_STAT_KEY, e.target.value)}
+                                          className="w-14 bg-gray-700 border border-gray-600 text-white rounded px-1.5 py-1 text-center text-xs"
+                                        />
                                       </td>
                                     )}
                                     {visibleStatFields.map(f => (

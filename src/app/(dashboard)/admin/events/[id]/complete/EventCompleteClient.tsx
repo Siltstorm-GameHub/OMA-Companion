@@ -27,6 +27,7 @@ type SeriesStatConfig = {
   defaultWinnerStatField?: string;
   defaultWinnerTargetField?: string;
   eventPlacementCoins?: { place: number; coins: number }[];
+  placementPoints?: Record<string, number>;
   dominionBonus?: {
     enabled: boolean;
     triggerStats?: string[];

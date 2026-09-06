@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { deleteDiscordMessage, deleteDiscordScheduledEvent } from "@/lib/discord-events";
 import { revertEventCompletion } from "@/lib/revert-event-completion";
-import { applyEventStatOverride } from "@/lib/series-event-points";
+import { applyEventStatOverride, extractPlacementPoints, PLACEMENT_POINTS_FIELD } from "@/lib/series-event-points";
 
 type DeleteEventOptions = {
   // Vergebene Münzen/Rang-Punkte dieses Events zurückbuchen (Best-Effort, siehe revertEventCompletion)
@@ -49,6 +49,7 @@ export async function deleteEventRecord(eventId: string, opts: DeleteEventOption
                 stats: { field: string; pointsPer: number }[];
                 mvpStatField?: string;
                 matchWinStatKeys?: string[];
+                placementPoints?: Record<string, number>;
               }
             : { stats: [] },
           event.statConfigJson,
@@ -65,7 +66,8 @@ export async function deleteEventRecord(eventId: string, opts: DeleteEventOption
         // Teilnahmen abziehen
         for (const { userId } of event.registrations) sub(userId, "participations", 1);
 
-        // Stat-Beiträge aus Match-Einträgen abziehen
+        // Stat-Beiträge + Platzierungspunkte (pro Runde, siehe extractPlacementPoints) aus
+        // Match-Einträgen abziehen
         for (const match of event.matches) {
           for (const entry of match.entries) {
             if (!entry.userId || !entry.statsJson) continue;
@@ -75,6 +77,8 @@ export async function deleteEventRecord(eventId: string, opts: DeleteEventOption
               const v = deleteMatchWinStatSet.has(field) ? Number(s["Match Win"] ?? 0) : Number(s[field] ?? 0);
               if (v) sub(entry.userId, field, v);
             }
+            const placementPts = extractPlacementPoints(s, statCfg.placementPoints);
+            if (placementPts) sub(entry.userId, PLACEMENT_POINTS_FIELD, placementPts);
           }
         }
 

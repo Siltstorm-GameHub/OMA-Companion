@@ -158,6 +158,15 @@
         ],
         "createdAt": "2026-09-06T14:21:41.494Z",
         "reason": "reuses existing AdminNav.tsx category tab-bar pattern verbatim (text-gray-500 hover:text-gray-200 hover:bg-white/5 on bg-gray-900), not a new color choice"
+      },
+      {
+        "rule": "gray-on-color",
+        "value": "*",
+        "files": [
+          "src/app/(dashboard)/admin/events/[id]/EventEditClient.tsx"
+        ],
+        "createdAt": "2026-09-06T18:25:15.689Z",
+        "reason": "false positive: hook flags gray text against a colored bg elsewhere in the same ternary className, but each branch actually pairs text-gray-400/500 with a neutral bg-gray-800/transparent border, not a colored background - pre-existing selector-button pattern (FORMATS/CATEGORIES/squad-select), not introduced this session"
       }
     ]
   }

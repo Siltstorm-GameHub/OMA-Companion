@@ -2,6 +2,7 @@ import { requireModeratorOrEventSquadCaptain } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import EventCompleteClient from "./EventCompleteClient";
+import { applyEventStatOverride } from "@/lib/series-event-points";
 
 type PlacementReward = { place: number; coins: number; rankPoints: number };
 type RewardsConfig = { participationCoins: number; placements: PlacementReward[] };
@@ -16,6 +17,7 @@ type SeriesStatConfig = {
   defaultWinnerStatField?: string;
   defaultWinnerTargetField?: string;
   eventPlacementCoins?: { place: number; coins: number }[];
+  placementPoints?: Record<string, number>;
   dominionBonus?: {
     enabled: boolean;
     triggerStats?: string[];
@@ -130,10 +132,14 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
     }
   }
 
-  // Series stat config
+  // Series stat config — Event-eigene statConfigJson (nur bei Format coop_stats gepflegt, siehe
+  // Reiter "Turnier") überschreibt für dieses Event ausschließlich Stats/Platzierungspunkte, siehe
+  // applyEventStatOverride. Betrifft nie die Einstellungen der übrigen Reihe.
   const seriesStatConfig: SeriesStatConfig | null = (() => {
-    if (!event.series?.seriesStatConfig) return null;
-    try { return JSON.parse(event.series.seriesStatConfig); } catch { return null; }
+    let base: SeriesStatConfig | null = null;
+    try { base = event.series?.seriesStatConfig ? JSON.parse(event.series.seriesStatConfig) : null; } catch { base = null; }
+    if (!base && !event.statConfigJson) return base;
+    return applyEventStatOverride(base ?? { participationPoints: 0, stats: [] }, event.statConfigJson);
   })();
 
   // Aktueller Dominion-Streak je registriertem User, VOR diesem Event — aus der Reihen-Rohtabelle

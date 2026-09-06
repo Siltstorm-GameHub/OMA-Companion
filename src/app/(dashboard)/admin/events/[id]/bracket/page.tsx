@@ -53,6 +53,15 @@ export default async function AdminEventBracketPage({ params }: { params: Promis
     } catch { return []; }
   })();
 
+  // Nur aus der Event-eigenen statConfigJson (Reiter "Turnier"), nie aus der Reihe.
+  const placementPoints: Record<string, number> | null = (() => {
+    if (!event.statConfigJson) return null;
+    try {
+      const cfg = JSON.parse(event.statConfigJson) as { placementPoints?: Record<string, number> };
+      return cfg.placementPoints && Object.keys(cfg.placementPoints).length > 0 ? cfg.placementPoints : null;
+    } catch { return null; }
+  })();
+
   const tournament = event.format ? {
     id: event.id,
     status: event.tournamentStatus ?? "active",
@@ -94,6 +103,7 @@ export default async function AdminEventBracketPage({ params }: { params: Promis
         allUsers={registeredUsers}
         winnerStatKeys={winnerStatKeys}
         matchWinStatKeys={matchWinStatKeys}
+        placementPoints={placementPoints}
       />
     </div>
   );
