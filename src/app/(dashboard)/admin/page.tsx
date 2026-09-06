@@ -26,7 +26,11 @@ export default async function AdminPage() {
     prisma.event.findMany({
       where: {
         tournamentStatus: { in: ["pending", "active"] },
-        status: { notIn: NOT_ACTIVE_STATUSES },
+        // tournamentStatus (Turnierbaum-Status) wird beim Abschluss der Spielphase NICHT mitgeändert
+        // — bleibt also "active", obwohl event.status schon auf "umfrage" gewechselt ist. Ohne den
+        // expliziten Ausschluss hier würde dasselbe Event doppelt auftauchen (hier UND unten bei
+        // pollPhaseEvents), siehe deren "status: umfrage"-Filter.
+        status: { notIn: [...NOT_ACTIVE_STATUSES, "umfrage"] },
       },
       orderBy: { startAt: "asc" },
       select: { id: true, title: true, game: true, startAt: true, tournamentStatus: true },
