@@ -15,10 +15,10 @@ import StudioEditor from "@/components/community-jobs/StudioEditor";
 import ImageCropTool from "@/components/community-jobs/ImageCropTool";
 
 /**
- * Community-Jobs-Reiter/-Sektion: eigenständig von der Mancave-Idle-Jobs-`JobsPanel`
- * (siehe Plan-Korrektur "eigener Reiter auf der Profilseite"). Lädt alle Daten
- * selbst per fetch — läuft immer im normalen React-Baum mit vollem Router,
- * kein Bezug zur 3D-Mancave-Szene.
+ * Community-Jobs-Reiter/-Sektion: eigenständig von der (inzwischen entfernten)
+ * passiven Mancave-Idle-Jobs-Mechanik. Lädt alle Daten selbst per fetch —
+ * läuft immer im normalen React-Baum mit vollem Router, kein Bezug zur
+ * 3D-Mancave-Szene.
  */
 
 const JOB_ICONS: Record<string, typeof Newspaper> = {

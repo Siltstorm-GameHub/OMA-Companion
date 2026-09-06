@@ -76,10 +76,10 @@ export default function CommunityBoardWidget() {
             const image = entryImage(entry);
             return (
               <Link key={`${entry.kind}-${entry.id}`} href="/community-board"
-                className="glass card-shine rounded-2xl overflow-hidden flex hover:bg-white/[0.03] transition-colors group">
+                className="glass card-shine rounded-2xl overflow-hidden flex items-stretch hover:bg-white/[0.03] transition-colors group">
                 {image && (
-                  // eslint-disable-next-line @next/next/no-img-element -- beliebiger Blob-Host
-                  <img src={image} alt="" className="w-20 h-20 object-cover shrink-0" />
+                  // eslint-disable-next-line @next/next/no-img-element -- beliebiger Blob-Host, Höhe folgt dem Seitenverhältnis (nie zugeschnitten)
+                  <img src={image} alt="" className="w-20 h-auto max-h-32 object-contain shrink-0 bg-black/20" />
                 )}
                 <div className="flex-1 min-w-0 p-3 flex flex-col justify-center gap-1">
                   <div className="flex items-center gap-1.5">

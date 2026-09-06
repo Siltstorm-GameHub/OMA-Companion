@@ -3,9 +3,9 @@ import { COMMUNITY_JOBS, type CommunityJobDef } from "./community-jobs";
 
 /**
  * Admin-einstellbare Community-Job-Werte — EIN JSON-Blob in der BotConfig-Tabelle
- * statt eigener Tabellen für Slots/Gehaltsstufen/Bonus-Einstellungen, gleiches
- * Muster wie mancave_job_overrides in job-config.ts. Der Job-Katalog selbst
- * (community-jobs.ts) bleibt reiner Code ohne Prisma.
+ * statt eigener Tabellen für Slots/Gehaltsstufen/Bonus-Einstellungen (gleiches
+ * Muster wie mancave_price_overrides in mancave-config.ts). Der Job-Katalog
+ * selbst (community-jobs.ts) bleibt reiner Code ohne Prisma.
  */
 const SLOTS_KEY = "community_job_slot_overrides";
 const TIERS_KEY = "community_job_payout_tiers";
