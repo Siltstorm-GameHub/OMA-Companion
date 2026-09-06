@@ -37,17 +37,24 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const { id: eventId } = await params;
 
-  const event = await prisma.event.findUnique({
-    where: { id: eventId },
-    include: {
-      participants: {
-        include: { user: { select: USER_SELECT } },
+  const [event, registrations] = await Promise.all([
+    prisma.event.findUnique({
+      where: { id: eventId },
+      include: {
+        participants: {
+          include: { user: { select: USER_SELECT } },
+        },
+        matches: {
+          include: { entries: true },
+        },
+        series: { select: { seriesStatConfig: true } },
       },
-      matches: {
-        include: { entries: true },
-      },
-    },
-  });
+    }),
+    prisma.eventRegistration.findMany({
+      where: { eventId },
+      include: { user: { select: USER_SELECT } },
+    }),
+  ]);
   if (!event) return NextResponse.json({ error: "Nicht gefunden" }, { status: 404 });
 
   const userMap = new Map<string, UserLite>(
@@ -130,15 +137,54 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     statFields = [];
   }
 
+  // Coop-Konfiguration: matchWinStatKeys kommt aus der Reihen-weiten seriesStatConfig,
+  // placementPoints bewusst aus der Event-eigenen statConfigJson — siehe EventEditClient.tsx
+  // bracketWinnerStatKeys/bracketMatchWinStatKeys/bracketPlacementPoints (Zeilen 658-683).
+  let matchWinStatKeys: string[] = [];
+  let winnerStatKeys: string[] = [];
+  if (event.series?.seriesStatConfig) {
+    try {
+      const cfg = JSON.parse(event.series.seriesStatConfig) as { matchWinStatKeys?: string[]; winnerStatKeys?: string[] };
+      matchWinStatKeys = cfg.matchWinStatKeys ?? [];
+      winnerStatKeys = cfg.winnerStatKeys ?? [];
+    } catch {
+      // ignore malformed config
+    }
+  }
+  let placementPoints: Record<string, number> | null = null;
+  if (event.statConfigJson) {
+    try {
+      const cfg = JSON.parse(event.statConfigJson) as { placementPoints?: Record<string, number> };
+      if (cfg.placementPoints && Object.keys(cfg.placementPoints).length > 0) placementPoints = cfg.placementPoints;
+    } catch {
+      // ignore malformed config
+    }
+  }
+  const isCoop = event.format === "coop_stats";
+  const coopConfig = {
+    trackMatchWin: isCoop && matchWinStatKeys.length > 0,
+    trackPlacement: isCoop && !!placementPoints,
+    placementPoints,
+  };
+  // winnerStatKeys werden bei der manuellen Eingabe ausgeblendet (bei Turnierabschluss automatisch gesetzt)
+  const visibleStatFields = statFields.filter((f) => !winnerStatKeys.includes(f));
+
+  const registeredUsers = registrations.map((r) => ({
+    userId: r.userId,
+    ...userSummary(r.user),
+  }));
+
   return NextResponse.json({
     id: event.id,
     name: event.title,
     status: event.status,
     format: event.format,
     tournamentStatus: event.tournamentStatus,
-    statFields,
+    statFields: visibleStatFields,
+    coopConfig,
     participants,
     participantsSource: hasRoster ? "roster" : "derived",
+    registeredUsers,
     matches,
   });
 }
