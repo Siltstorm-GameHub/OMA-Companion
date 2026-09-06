@@ -4,10 +4,18 @@ import { prisma } from "@/lib/prisma";
 import { requireWidgetKey } from "@/lib/widgetAuth";
 import { applyMatchResult, ApplyMatchResultError } from "@/lib/tournaments/applyMatchResult";
 
-type UserLite = { id: string; name: string | null; username: string | null };
+type UserLite = { id: string; name: string | null; username: string | null; image: string | null; rankPoints: number };
 
 function displayNameOf(u: UserLite | undefined | null): string {
   return u?.username ?? u?.name ?? "Unbekannt";
+}
+
+function userSummary(u: UserLite | undefined | null) {
+  return {
+    displayName: displayNameOf(u),
+    image: u?.image ?? null,
+    rankPoints: u?.rankPoints ?? 0,
+  };
 }
 
 /**
@@ -69,13 +77,13 @@ export async function PATCH(
   const users = userIds.length
     ? await prisma.user.findMany({
         where: { id: { in: userIds } },
-        select: { id: true, name: true, username: true },
+        select: { id: true, name: true, username: true, image: true, rankPoints: true },
       })
     : [];
   const userMap = new Map(users.map((u) => [u.id, u]));
 
   const resolvePlayer = (userId: string | null) =>
-    userId ? { id: userId, displayName: displayNameOf(userMap.get(userId)) } : null;
+    userId ? { id: userId, ...userSummary(userMap.get(userId)) } : null;
 
   return NextResponse.json({
     id: match.id,
@@ -91,11 +99,11 @@ export async function PATCH(
     entries: match.entries.map((e) => ({
       id: e.id,
       userId: e.userId,
-      displayName: e.userId ? displayNameOf(userMap.get(e.userId)) : null,
+      ...(e.userId ? userSummary(userMap.get(e.userId)) : { displayName: null, image: null, rankPoints: 0 }),
       teamId: e.teamId,
       placement: e.placement,
       score: e.score,
-      statsJson: e.statsJson,
+      statsJson: e.statsJson ? JSON.parse(e.statsJson) : null,
     })),
   });
 }

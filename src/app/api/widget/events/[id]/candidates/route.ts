@@ -18,7 +18,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const [registrations, participants] = await Promise.all([
     prisma.eventRegistration.findMany({
       where: { eventId },
-      include: { user: { select: { id: true, name: true, username: true } } },
+      include: { user: { select: { id: true, name: true, username: true, image: true, rankPoints: true } } },
     }),
     prisma.tournamentParticipant.findMany({
       where: { eventId },
@@ -33,6 +33,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     .map((r) => ({
       userId: r.userId,
       displayName: r.user.username ?? r.user.name ?? "Unbekannt",
+      image: r.user.image ?? null,
+      rankPoints: r.user.rankPoints ?? 0,
     }));
 
   return NextResponse.json({ candidates });
