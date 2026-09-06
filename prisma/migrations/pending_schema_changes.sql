@@ -360,3 +360,10 @@ ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "eloDuels" INTEGER NOT NULL DEFAULT 
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "eloDuelsMatches" INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "eloGems" INTEGER NOT NULL DEFAULT 1000;
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "eloGemsMatches" INTEGER NOT NULL DEFAULT 0;
+
+-- ═══════════════════════════════════════════════════════════════
+-- Event-eigene Stat-Punkte-Konfiguration (überschreibt seriesStatConfig pro Event,
+-- z.B. für coop_stats-Reihen ohne festes Format/Spiel)
+-- ═══════════════════════════════════════════════════════════════
+
+ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "statConfigJson" TEXT;
