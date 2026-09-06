@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  User, Briefcase, Settings, Cake, Tv2, ChevronRight, Gift,
+  User, Briefcase, Settings, ChevronRight, Gift,
   Clock, MessageSquare,
 } from "lucide-react";
 import RankedAvatar from "@/components/RankedAvatar";
@@ -10,14 +10,15 @@ import RankIcon from "@/components/RankIcon";
 import RankUpFlare from "@/components/RankUpFlare";
 import CoinIcon from "@/components/CoinIcon";
 import Trophy3DViewer, { type Trophy3DItem } from "@/components/Trophy3DViewer";
+import WanderpocalSection, { type WanderpocalHolderInfo } from "@/components/WanderpocalSection";
 import { PushSubscribeButton } from "@/components/PushSubscribeButton";
 import NotificationPreferences from "@/components/NotificationPreferences";
 import ProfileOverlayButton from "@/components/ProfileOverlayButton";
 import type { Badge } from "@/lib/badges";
 import type { FavoriteGame } from "@/lib/favorite-games";
+import type { WanderpocalHolder, WanderpocalStat } from "@/lib/wanderpocal";
 import type { MancaveData } from "../mancave/mancave-data";
 import { JobsPanel, ItemsPanel } from "../mancave/MancaveSharedUI";
-import { WANDERPOKAL_MODELS, WANDERPOKAL_MODEL_DEFAULT, eventPokalModelUrl } from "../mancave/mancave-trophy-models";
 import BadgesSection from "./BadgesSection";
 import FavoriteGamesSection from "./FavoriteGamesSection";
 import SquadsSection, { type ProfileSquad } from "./SquadsSection";
@@ -85,6 +86,14 @@ interface Props {
   // Einstellungen-Reiter
   hasTwitch: boolean;
   eventRegs: ProfileRecentEventEntry[];
+
+  // Wanderpokale (3D-Viewer + 2D-Liste inkl. aktuellem Halter, siehe page.tsx)
+  wanderpokalItems:    Trophy3DItem[];
+  eventPokalItems:     Trophy3DItem[];
+  wanderpocalTrophies: WanderpocalHolder[];
+  wanderpocalStats:    WanderpocalStat[];
+  wanderpocalRankMap:  Record<string, number>;
+  wanderpocalHolders:  Record<string, WanderpocalHolderInfo>;
 }
 
 type Tab = "profil" | "job" | "einstellungen";
@@ -94,14 +103,6 @@ const TABS: { key: Tab; label: string; icon: typeof User }[] = [
   { key: "job",           label: "Job",           icon: Briefcase },
   { key: "einstellungen", label: "Einstellungen", icon: Settings },
 ];
-
-// Lesbares Datum aus "TT-MM" — dasselbe Format wie ProfileEditor.
-function formatBirthday(ddmm: string | null) {
-  if (!ddmm) return null;
-  const [d, m] = ddmm.split("-");
-  const months = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
-  return `${parseInt(d)}. ${months[parseInt(m) - 1]}`;
-}
 
 /**
  * Mobile Ansicht der eigenen Profilseite (siehe Teil B des Mancave-Umbau-
@@ -118,26 +119,10 @@ export default function ProfileMobileView(props: Props) {
     systemBadges, customBadges, showcaseBadgeKeys, voiceHours, messageCount, coinsEarned, coinsSpent,
     questsWithProgress, tournamentParticipations, squads, profileCompletionDone, rewardPerItem, reviewYears,
     hasTwitch, eventRegs,
+    wanderpokalItems, eventPokalItems, wanderpocalTrophies, wanderpocalStats, wanderpocalRankMap, wanderpocalHolders,
   } = props;
 
   const [tab, setTab] = useState<Tab>("profil");
-
-  const wanderpokalItems: Trophy3DItem[] = mancaveData.wanderpokale.map(w => {
-    const cfg = WANDERPOKAL_MODELS[w.scopeValue] ?? WANDERPOKAL_MODEL_DEFAULT;
-    return {
-      id:       `${w.scopeType}:${w.scopeValue}`,
-      title:    w.title,
-      modelUrl: cfg.url,
-      meta:     `${w.winCount} ${w.winCount === 1 ? "Sieg" : "Siege"}`,
-    };
-  });
-
-  const eventPokalItems: Trophy3DItem[] = mancaveData.pokale.map(p => ({
-    id:       p.id,
-    title:    p.title,
-    modelUrl: eventPokalModelUrl(p.category),
-    meta:     new Date(p.awardedAt).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" }),
-  }));
 
   return (
     <div className="space-y-4">
@@ -174,24 +159,13 @@ export default function ProfileMobileView(props: Props) {
           </div>
         </div>
 
-        {editorBio && (
-          <p className="relative text-xs text-gray-400 mt-3 leading-relaxed">{editorBio}</p>
-        )}
-        <div className="relative flex items-center gap-4 flex-wrap mt-3">
-          {editorBirthday ? (
-            <span className="flex items-center gap-1.5 text-[11px] text-gray-400">
-              <Cake className="w-3.5 h-3.5 text-pink-400" /> {formatBirthday(editorBirthday)}
-            </span>
-          ) : null}
-          {editorTwitchLogin && (
-            <a href={`https://twitch.tv/${editorTwitchLogin}`} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-[11px] text-[#9146ff]">
-              <Tv2 className="w-3.5 h-3.5" /> twitch.tv/{editorTwitchLogin}
-            </a>
-          )}
-        </div>
-
-        <div className="relative mt-3">
+        {/* Gruß/Bio, Geburtstag, Twitch-Kanal + "Profil bearbeiten" — alles in
+            EINER Anzeige (ProfileEditor), nicht zusätzlich hier nochmal
+            manuell gerendert (das war vorher doppelt, siehe Desktop-Fix). */}
+        {/* Eigene id (nicht "profile-editor" wie im Desktop-Block) — beide
+            Blöcke sind wegen der CSS-only lg:hidden/lg:block-Weiche gleich-
+            zeitig im DOM, ein doppeltes id-Attribut wäre ungültiges HTML. */}
+        <div id="profile-editor-mobile" className="relative mt-3">
           <ProfileEditor
             birthday={editorBirthday}
             bio={editorBio}
@@ -252,9 +226,15 @@ export default function ProfileMobileView(props: Props) {
 
             <FavoriteGamesSection games={favoriteGames} viewerId={userId} />
 
-            <section>
-              <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">🏆 Wanderpokale</h2>
+            <section className="space-y-3">
+              <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">🏆 Wanderpokale</h2>
               <Trophy3DViewer items={wanderpokalItems} emptyMessage="Noch keine Wanderpokale gewonnen" />
+              <WanderpocalSection
+                trophies={wanderpocalTrophies}
+                userStats={wanderpocalStats}
+                rankMap={wanderpocalRankMap}
+                holders={wanderpocalHolders}
+              />
             </section>
 
             <section>

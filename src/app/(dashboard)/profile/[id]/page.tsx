@@ -2,20 +2,13 @@ import type { Metadata } from "next";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { notFound, redirect } from "next/navigation";
-import { QUEST_TYPE_META, type QuestType } from "@/lib/quests";
 import { getRank, getNextRank, getRankFullLabel } from "@/lib/ranks";
 import RankedAvatar from "@/components/RankedAvatar";
 import RankIcon from "@/components/RankIcon";
 import BotPreviewShell from "@/components/BotPreviewShell";
 import { computeBadges } from "@/lib/badges";
-import {
-  CalendarDays, Swords, Clock,
-  MessageSquare, CheckCircle2, ArrowLeft,
-  Crown, Gamepad2, Medal, Trophy,
-} from "lucide-react";
+import { Clock, MessageSquare, ArrowLeft, Crown } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
-import RankPointsIcon from "@/components/RankPointsIcon";
-import WinIcon from "@/components/WinIcon";
 import Link from "next/link";
 import BadgesSection from "../BadgesSection";
 import PokalSection from "@/components/PokalSection";
@@ -24,6 +17,12 @@ import SquadsSection from "../SquadsSection";
 import { parseFavoriteGames } from "@/lib/favorite-games";
 import WanderpocalSection from "@/components/WanderpocalSection";
 import BattleChallengeWidget from "@/components/battle-cards/BattleChallengeWidget";
+import ProfileStatTiles from "../ProfileStatTiles";
+import ProfileRecentEvents from "../ProfileRecentEvents";
+import ProfileQuestsAndTournaments from "../ProfileQuestsAndTournaments";
+import Trophy3DViewer, { type Trophy3DItem } from "@/components/Trophy3DViewer";
+import { WANDERPOKAL_MODELS, WANDERPOKAL_MODEL_DEFAULT, eventPokalModelUrl } from "../../mancave/mancave-trophy-models";
+import { loadMancaveData } from "@/lib/mancave-data-loader";
 
 export async function generateMetadata({
   params,
@@ -201,6 +200,32 @@ export default async function PublicProfilePage({
   })();
   const favoriteGames = parseFavoriteGames(user.favoriteGamesJson);
 
+  // Für den 3D-Pokal-Viewer + "wer ist aktueller Halter"-Anzeige — dieselbe
+  // Aggregation, die auch die eigene Profilseite nutzt (siehe page.tsx),
+  // hier für den PROFILEIGENTÜMER (id) statt für den Betrachter geladen.
+  const mancaveData = await loadMancaveData(id);
+  const wanderpocalHolders: Record<string, { holderUserId: string | null; holderName: string | null; holderAvatarUrl: string | null; holderRankPoints: number | null }> = {};
+  for (const s of mancaveData.wanderpokalStatus) {
+    wanderpocalHolders[`${s.scopeType}:${s.scopeValue}`] = {
+      holderUserId: s.holderUserId, holderName: s.holderName,
+      holderAvatarUrl: s.holderAvatarUrl, holderRankPoints: s.holderRankPoints,
+    };
+  }
+  const wanderpokalItems: Trophy3DItem[] = mancaveData.wanderpokale.map(w => {
+    const cfg = WANDERPOKAL_MODELS[w.scopeValue] ?? WANDERPOKAL_MODEL_DEFAULT;
+    const holder = wanderpocalHolders[`${w.scopeType}:${w.scopeValue}`];
+    return {
+      id: `${w.scopeType}:${w.scopeValue}`, title: w.title, modelUrl: cfg.url,
+      meta: `${w.winCount} ${w.winCount === 1 ? "Sieg" : "Siege"}`,
+      holderUserId: holder?.holderUserId, holderName: holder?.holderName,
+      holderAvatarUrl: holder?.holderAvatarUrl, holderRankPoints: holder?.holderRankPoints,
+    };
+  });
+  const eventPokalItems: Trophy3DItem[] = pokale.map(p => ({
+    id: p.id, title: p.title, modelUrl: eventPokalModelUrl(p.category),
+    meta: p.awardedAt.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" }),
+  }));
+
   return (
     <div className="p-5 sm:p-6 max-w-7xl mx-auto space-y-5 animate-fade-in">
 
@@ -297,52 +322,14 @@ export default async function PublicProfilePage({
       </div>
 
       {/* ── Stat-Karten ─────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {([
-          { icon: <RankPointsIcon size={16} />,         label: "Punkte",      value: rankPoints.toLocaleString("de-DE"), iconCls: "text-teal-400    bg-teal-500/10    border-teal-500/15",    accent: "from-teal-500/8"    },
-          { icon: <CalendarDays className="w-4 h-4" />, label: "Events",      value: String(eventCount),                 iconCls: "text-emerald-400 bg-emerald-500/10 border-emerald-500/15", accent: "from-emerald-500/8" },
-          { icon: <Medal className="w-4 h-4" />,        label: "Event-Siege", value: String(eventWins),                  iconCls: "text-amber-400   bg-amber-500/10   border-amber-500/15",   accent: "from-amber-500/8"   },
-          { icon: <Trophy className="w-4 h-4" />,       label: "Poll-Master", value: String(pollMasterCount),            iconCls: "text-purple-400  bg-purple-500/10  border-purple-500/15",  accent: "from-purple-500/8"  },
-        ]).map((s, i) => (
-          <div key={s.label} className={`card-hover card-shine glass relative overflow-hidden rounded-2xl p-4 animate-slide-up stagger-${i + 1}`}>
-            <div className={`absolute inset-0 bg-gradient-to-br ${s.accent} to-transparent pointer-events-none`} />
-            <div className={`relative w-8 h-8 rounded-xl flex items-center justify-center mb-3 border ${s.iconCls}`}>{s.icon}</div>
-            <p className="relative text-2xl font-black text-white tabular-nums">{s.value}</p>
-            <p className="relative text-xs text-gray-400 mt-1.5">{s.label}</p>
-          </div>
-        ))}
-
-        {/* Pokale */}
-        <div className="card-hover card-shine glass relative overflow-hidden rounded-2xl p-4 animate-slide-up stagger-5">
-          <div className="absolute inset-0 bg-gradient-to-br from-pink-500/8 to-transparent pointer-events-none" />
-          <div className="relative w-8 h-8 rounded-xl flex items-center justify-center mb-3 border text-pink-400 bg-pink-500/10 border-pink-500/15">
-            <Trophy className="w-4 h-4" />
-          </div>
-          <p className="relative text-2xl font-black text-white tabular-nums">{pokale.length}</p>
-          <p className="relative text-xs text-gray-400 mt-1.5">Pokale</p>
-        </div>
-
-        {/* Lieblingsspiel – Top 3 */}
-        <div className="card-hover card-shine glass relative overflow-hidden rounded-2xl p-4 animate-slide-up stagger-6">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/8 to-transparent pointer-events-none" />
-          <div className="relative w-8 h-8 rounded-xl flex items-center justify-center mb-3 border text-blue-400 bg-blue-500/10 border-blue-500/15">
-            <Gamepad2 className="w-4 h-4" />
-          </div>
-          {topGames.length > 0 ? (
-            <>
-              <p className="relative text-lg font-black text-white leading-tight">{topGames[0]}</p>
-              {topGames.slice(1, 3).length > 0 && (
-                <p className="relative text-[10px] text-gray-500 mt-1 leading-snug">
-                  {topGames.slice(1, 3).join(" · ")}
-                </p>
-              )}
-            </>
-          ) : (
-            <p className="relative text-lg font-black text-white">–</p>
-          )}
-          <p className="relative text-xs text-gray-400 mt-1.5">Lieblingsspiel</p>
-        </div>
-      </div>
+      <ProfileStatTiles
+        rankPoints={rankPoints}
+        eventCount={eventCount}
+        eventWins={eventWins}
+        pollMasterCount={pollMasterCount}
+        pokaleCount={pokale.length}
+        topGames={topGames}
+      />
 
       <SquadsSection squads={squads} />
 
@@ -379,81 +366,18 @@ export default async function PublicProfilePage({
             trophies={wanderpocalTrophies}
             userStats={wanderpocalStats}
             rankMap={wanderpocalRankMap}
+            holders={wanderpocalHolders}
           />
+          <Trophy3DViewer items={wanderpokalItems} emptyMessage="Noch keine Wanderpokale gewonnen" />
 
-          {/* Quest-Fortschritt */}
-          {questsWithProgress.length > 0 && (
-            <section>
-              <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">📜 Quests diesen Monat</h2>
-              <div className="space-y-2">
-                {questsWithProgress.map(quest => {
-                  const meta    = QUEST_TYPE_META[quest.type as QuestType];
-                  const p       = quest.progress[0];
-                  const current = Math.min(p?.current ?? 0, quest.target);
-                  const pct     = Math.round((current / quest.target) * 100);
-                  const done    = p?.completed ?? false;
-                  return (
-                    <div key={quest.id} className={`glass card-shine rounded-xl px-4 py-3 relative overflow-hidden ${done ? "border-emerald-500/20" : ""}`}>
-                      <div className={`absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b ${meta.bar} rounded-l-xl`} />
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-base">{meta.icon}</span>
-                          <span className={`text-sm font-medium ${done ? "text-emerald-300" : "text-white"}`}>{quest.title}</span>
-                          {done && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />}
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-xs text-gray-500">{current}/{quest.target}</span>
-                          <span className="text-xs text-amber-400 font-semibold flex items-center gap-0.5 tabular-nums">+{quest.reward}<CoinIcon size={10} /></span>
-                        </div>
-                      </div>
-                      <div className="h-1.5 bg-white/[0.05] rounded-full overflow-hidden">
-                        <div className={`h-full rounded-full bg-gradient-to-r ${meta.bar} transition-all`} style={{ width: `${pct}%` }} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          )}
+          {/* Event-Pokale (3D) */}
+          <Trophy3DViewer items={eventPokalItems} emptyMessage="Noch keine Event-Pokale gewonnen" />
 
-          {/* Turnier-Ergebnisse */}
-          {tournamentParticipations.length > 0 && (
-            <section>
-              <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
-                <Swords className="w-3.5 h-3.5" /> Turnier-Ergebnisse
-              </h2>
-              <div className="glass card-shine rounded-2xl overflow-hidden divide-y divide-white/[0.04]">
-                {tournamentParticipations.map(p => {
-                  const myMatches = p.event.matches;
-                  const winsCount = myMatches.filter(m => m.winnerId === id).length;
-                  const losses    = myMatches.filter(m => m.winnerId && m.winnerId !== id).length;
-                  return (
-                    <div key={p.id} className="flex items-center gap-3 px-4 py-3">
-                      <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/15 flex items-center justify-center shrink-0">
-                        <WinIcon size={16} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-white truncate">{p.event.title}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          {winsCount > 0 ? `${winsCount} Siege` : ""}
-                          {winsCount > 0 && losses > 0 ? " · " : ""}
-                          {losses > 0 ? `${losses} Niederlagen` : ""}
-                          {winsCount === 0 && losses === 0 ? "Keine Matches gespielt" : ""}
-                        </p>
-                      </div>
-                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border flex items-center gap-1 ${
-                        p.finalRank === 1  ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
-                        p.eliminated       ? "bg-white/[0.04] text-gray-500 border-white/[0.06]" :
-                                             "bg-white/[0.04] text-gray-400 border-white/[0.06]"
-                      }`}>
-                        {p.finalRank === 1 ? <><WinIcon size={11} /> Sieger</> : p.eliminated ? "Ausgeschieden" : "Aktiv"}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          )}
+          <ProfileQuestsAndTournaments
+            questsWithProgress={questsWithProgress}
+            tournamentParticipations={tournamentParticipations}
+            userId={id}
+          />
         </div>
 
         {/* ── Rechte Spalte ────────────────────────────────────────── */}
@@ -478,42 +402,7 @@ export default async function PublicProfilePage({
             </div>
           </section>
 
-          {/* Letzte Events */}
-          {eventRegs.length > 0 && (
-            <section>
-              <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">📅 Letzte Events</h2>
-              <div className="glass card-shine rounded-2xl overflow-hidden divide-y divide-white/[0.04]">
-                {eventRegs.map(reg => {
-                  let placement: number | null = null;
-                  try {
-                    const ranking: string[] = JSON.parse(reg.event.finalRankingJson ?? "[]");
-                    const idx = ranking.indexOf(id);
-                    if (idx !== -1) placement = idx + 1;
-                  } catch { /* ignore */ }
-                  return (
-                    <Link key={reg.id} href={`/tournament/${reg.event.id}`}
-                      className="flex items-center justify-between px-4 py-3 hover:bg-white/[0.03] transition-colors group">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-white truncate group-hover:text-rose-300 transition-colors">{reg.event.title}</p>
-                        <p className="text-[10px] text-gray-600 mt-0.5">
-                          {new Date(reg.event.startAt).toLocaleDateString("de-DE", { day: "2-digit", month: "short", year: "numeric" })}
-                          {reg.event.game ? ` · ${reg.event.game}` : ""}
-                        </p>
-                      </div>
-                      {placement !== null && (
-                        <span className={`ml-3 shrink-0 text-xs font-bold px-2 py-0.5 rounded-full border tabular-nums ${
-                          placement === 1 ? "bg-amber-500/10 text-amber-400 border-amber-500/20" :
-                          placement === 2 ? "bg-gray-400/10 text-gray-300 border-gray-400/20" :
-                          placement === 3 ? "bg-orange-700/10 text-orange-400 border-orange-700/20" :
-                                            "bg-white/[0.04] text-gray-500 border-white/[0.06]"
-                        }`}>#{placement}</span>
-                      )}
-                    </Link>
-                  );
-                })}
-              </div>
-            </section>
-          )}
+          <ProfileRecentEvents eventRegs={eventRegs} userId={id} />
         </div>
       </div>
     </div>

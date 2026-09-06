@@ -30,6 +30,8 @@ import ProfileOverlayButton from "@/components/ProfileOverlayButton";
 import { getMancaveConfig, mancaveVisibleFor } from "@/lib/mancave-config";
 import { loadMancaveData } from "@/lib/mancave-data-loader";
 import { MonitorSmartphone } from "lucide-react";
+import Trophy3DViewer, { type Trophy3DItem } from "@/components/Trophy3DViewer";
+import { WANDERPOKAL_MODELS, WANDERPOKAL_MODEL_DEFAULT, eventPokalModelUrl } from "../mancave/mancave-trophy-models";
 
 export default async function ProfilePage() {
   const me = await getSessionUser();
@@ -196,6 +198,39 @@ export default async function ProfilePage() {
     ? `${String(user.birthday.getDate()).padStart(2, "0")}-${String(user.birthday.getMonth() + 1).padStart(2, "0")}`
     : null;
 
+  // Aktueller Halter je Wanderpokal-Scope, für die "wer hält den Pokal
+  // gerade"-Anzeige (Klick auf Name/Avatar → dessen Profil) — sowohl in der
+  // 2D-Liste (WanderpocalSection) als auch im 3D-Viewer.
+  const wanderpocalHolders: Record<string, { holderUserId: string | null; holderName: string | null; holderAvatarUrl: string | null; holderRankPoints: number | null }> = {};
+  for (const s of mancaveData.wanderpokalStatus) {
+    wanderpocalHolders[`${s.scopeType}:${s.scopeValue}`] = {
+      holderUserId: s.holderUserId, holderName: s.holderName,
+      holderAvatarUrl: s.holderAvatarUrl, holderRankPoints: s.holderRankPoints,
+    };
+  }
+
+  const wanderpokalItems: Trophy3DItem[] = mancaveData.wanderpokale.map(w => {
+    const cfg = WANDERPOKAL_MODELS[w.scopeValue] ?? WANDERPOKAL_MODEL_DEFAULT;
+    const holder = wanderpocalHolders[`${w.scopeType}:${w.scopeValue}`];
+    return {
+      id:       `${w.scopeType}:${w.scopeValue}`,
+      title:    w.title,
+      modelUrl: cfg.url,
+      meta:     `${w.winCount} ${w.winCount === 1 ? "Sieg" : "Siege"}`,
+      holderUserId:     holder?.holderUserId,
+      holderName:       holder?.holderName,
+      holderAvatarUrl:  holder?.holderAvatarUrl,
+      holderRankPoints: holder?.holderRankPoints,
+    };
+  });
+
+  const eventPokalItems: Trophy3DItem[] = pokale.map(p => ({
+    id:       p.id,
+    title:    p.title,
+    modelUrl: eventPokalModelUrl(p.category),
+    meta:     p.awardedAt.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" }),
+  }));
+
   return (
     <div className="p-5 sm:p-6 max-w-7xl mx-auto space-y-5 animate-fade-in">
 
@@ -282,10 +317,18 @@ export default async function ProfilePage() {
                 )}
               </div>
 
-              {/* Bio */}
-              {user.bio && (
-                <p className="text-xs text-gray-400 mt-2 leading-relaxed max-w-sm">{user.bio}</p>
-              )}
+              {/* Gruß/Bio, Geburtstag, Twitch-Kanal + "Profil bearbeiten" —
+                  alles in einer Anzeige (ProfileEditor), damit es hier im
+                  Hero nur EINMAL steht statt doppelt (Bio stand vorher hier
+                  UND nochmal in ProfileEditor weiter unten). */}
+              <div id="profile-editor" className="mt-2 max-w-md">
+                <ProfileEditor
+                  birthday={editorBirthday}
+                  bio={user.bio ?? null}
+                  twitchLogin={user.twitchLogin ?? null}
+                  bannerUrl={user.bannerUrl ?? null}
+                />
+              </div>
             </div>
 
             {/* Rang-Block */}
@@ -340,16 +383,6 @@ export default async function ProfilePage() {
           </Link>
         )}
 
-        {/* ── Profil-Editor (Geburtstag, Bio) ─────────────────────────── */}
-        <div id="profile-editor">
-          <ProfileEditor
-            birthday={editorBirthday}
-            bio={user.bio ?? null}
-            twitchLogin={user.twitchLogin ?? null}
-            bannerUrl={user.bannerUrl ?? null}
-          />
-        </div>
-
         {/* ── Aktuelle Lieblingsspiele ─────────────────────────────────── */}
         <SquadsSection squads={squads} />
         <div id="favorite-games-section">
@@ -376,7 +409,9 @@ export default async function ProfilePage() {
               trophies={wanderpocalTrophies}
               userStats={wanderpocalStats}
               rankMap={wanderpocalRankMap}
+              holders={wanderpocalHolders}
             />
+            <Trophy3DViewer items={wanderpokalItems} emptyMessage="Noch keine Wanderpokale gewonnen" />
 
             <ProfileQuestsAndTournaments
               questsWithProgress={questsWithProgress}
@@ -473,6 +508,12 @@ export default async function ProfilePage() {
           reviewYears={reviewYears}
           hasTwitch={!!user.twitchLogin}
           eventRegs={eventRegs}
+          wanderpokalItems={wanderpokalItems}
+          eventPokalItems={eventPokalItems}
+          wanderpocalTrophies={wanderpocalTrophies}
+          wanderpocalStats={wanderpocalStats}
+          wanderpocalRankMap={wanderpocalRankMap}
+          wanderpocalHolders={wanderpocalHolders}
         />
       </div>
     </div>

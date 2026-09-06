@@ -1,9 +1,11 @@
 "use client";
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import * as THREE from "three";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, useGLTF } from "@react-three/drei";
 import { ChevronLeft, ChevronRight, Trophy } from "lucide-react";
+import RankedAvatar from "@/components/RankedAvatar";
 
 /**
  * Standalone 3D-Pokal-Viewer für den mobilen Profil-Reiter (siehe Teil B des
@@ -24,8 +26,13 @@ export interface Trophy3DItem {
   scale?:       number;
   /** Rotations-Korrektur in Radiant [x, y, z], falls das Modell schief importiert wurde. */
   fixRotation?: [number, number, number];
-  /** Zusatztext unter dem Titel, z.B. Halter oder Datum. */
+  /** Zusatztext unter dem Titel, z.B. Datum. */
   meta?:        string;
+  /** Aktueller Halter (bei Wanderpokalen) — verlinkt auf dessen Profil. */
+  holderUserId?:     string | null;
+  holderName?:       string | null;
+  holderAvatarUrl?:  string | null;
+  holderRankPoints?: number | null;
 }
 
 interface Props {
@@ -109,6 +116,16 @@ export default function Trophy3DViewer({ items, emptyMessage = "Noch keine Pokal
         <div className="flex-1 min-w-0 text-center">
           <p className="text-sm font-semibold text-white truncate">{current.title}</p>
           {current.meta && <p className="text-[11px] text-gray-500 mt-0.5 truncate">{current.meta}</p>}
+          {current.holderUserId && (
+            <Link href={`/profile/${current.holderUserId}`}
+              className="inline-flex items-center gap-1.5 mt-1 group/holder">
+              <RankedAvatar rankPoints={current.holderRankPoints ?? 0} src={current.holderAvatarUrl ?? null}
+                alt={current.holderName ?? "Halter"} size={16} />
+              <span className="text-[11px] text-gray-400 group-hover/holder:text-teal-300 transition-colors truncate">
+                {current.holderName ?? "Unbekannt"}
+              </span>
+            </Link>
+          )}
           {count > 1 && <p className="text-[10px] text-gray-600 mt-0.5 tabular-nums">Pokal {clampedIndex + 1} von {count}</p>}
         </div>
 

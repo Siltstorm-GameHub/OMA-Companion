@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import {
   CATEGORY_CONFIG,
   GENRE_CONFIG,
@@ -6,11 +7,36 @@ import {
   type WanderpocalHolder,
   type WanderpocalStat,
 } from "@/lib/wanderpocal";
+import RankedAvatar from "@/components/RankedAvatar";
+
+export interface WanderpocalHolderInfo {
+  holderUserId:     string | null;
+  holderName:       string | null;
+  holderAvatarUrl:  string | null;
+  holderRankPoints: number | null;
+}
 
 interface Props {
   trophies: WanderpocalHolder[];  // currently held (may be empty)
   userStats: WanderpocalStat[];   // all scopes where user has ≥1 win
   rankMap: Record<string, number>; // key: "scopeType:scopeValue" → 1-based rank
+  /** Aktueller Halter je Scope ("scopeType:scopeValue" → Halter-Info), für den Klick-zum-Profil-Chip. */
+  holders?: Record<string, WanderpocalHolderInfo>;
+}
+
+function HolderChip({ holder }: { holder: WanderpocalHolderInfo }) {
+  if (!holder.holderUserId) {
+    return <span className="text-[10px] text-gray-600 italic">noch nie vergeben</span>;
+  }
+  return (
+    <Link href={`/profile/${holder.holderUserId}`}
+      className="inline-flex items-center gap-1.5 group/holder">
+      <RankedAvatar rankPoints={holder.holderRankPoints ?? 0} src={holder.holderAvatarUrl} alt={holder.holderName ?? "Halter"} size={16} />
+      <span className="text-[10px] text-gray-500 group-hover/holder:text-teal-300 transition-colors truncate max-w-[90px]">
+        {holder.holderName ?? "Unbekannt"}
+      </span>
+    </Link>
+  );
 }
 
 function ScopeIcon({ scopeType, scopeValue, size = 20 }: { scopeType: string; scopeValue: string; size?: number }) {
@@ -27,7 +53,7 @@ function ordinalSuffix(n: number): string {
   return `#${n}`;
 }
 
-export default function WanderpocalSection({ trophies, userStats, rankMap }: Props) {
+export default function WanderpocalSection({ trophies, userStats, rankMap, holders }: Props) {
   if (!trophies.length && !userStats.length) return null;
 
   const categoryStats = userStats.filter((s) => s.scopeType === "category");
@@ -82,6 +108,7 @@ export default function WanderpocalSection({ trophies, userStats, rankMap }: Pro
                     const isHolder = trophies.some(
                       (t) => t.scopeType === stat.scopeType && t.scopeValue === stat.scopeValue
                     );
+                    const holder = holders?.[`${stat.scopeType}:${stat.scopeValue}`];
                     return (
                       <div
                         key={stat.id}
@@ -92,12 +119,17 @@ export default function WanderpocalSection({ trophies, userStats, rankMap }: Pro
                         <div className="w-5 h-5 flex items-center justify-center shrink-0">
                           <ScopeIcon scopeType={stat.scopeType} scopeValue={stat.scopeValue} size={18} />
                         </div>
-                        <span className="flex-1 text-gray-300 text-xs">
-                          {title}
-                          {isHolder && (
-                            <span className="ml-1.5 text-[10px] text-amber-400 font-medium">🏆 Pokalhalter</span>
+                        <div className="flex-1 min-w-0">
+                          <span className="text-gray-300 text-xs">
+                            {title}
+                            {isHolder && (
+                              <span className="ml-1.5 text-[10px] text-amber-400 font-medium">🏆 Pokalhalter</span>
+                            )}
+                          </span>
+                          {holder && !isHolder && (
+                            <div className="mt-1"><HolderChip holder={holder} /></div>
                           )}
-                        </span>
+                        </div>
                         <span className="text-xs text-gray-400 tabular-nums">
                           {stat.winCount} {stat.winCount === 1 ? "Sieg" : "Siege"}
                         </span>
