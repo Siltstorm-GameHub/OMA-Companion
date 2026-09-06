@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Plus, Trash2, ToggleLeft, ToggleRight, Loader2, Pencil, Users, Circle, Eye, EyeOff, Download } from "lucide-react";
+import { Plus, Trash2, ToggleLeft, ToggleRight, Loader2, Pencil, Users, Circle, Eye, EyeOff, Download, RefreshCw, Sparkles } from "lucide-react";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import GameNameInput from "@/components/GameNameInput";
 import GameCover from "@/components/GameCover";
@@ -45,6 +45,8 @@ type FormState = {
 
 const EMPTY_FORM: FormState = { name: "", game: "", description: "", host: "", port: "", password: "", ampInstanceId: "", maxSlots: "10" };
 
+type AmpSuggestion = { ampInstanceId: string; name: string; game: string; port: string | null };
+
 export default function ServerManager({ initialServers }: { initialServers: Server[] }) {
   const [servers, setServers] = useState<Server[]>(initialServers);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
@@ -54,7 +56,43 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
   const [showPassword, setShowPassword] = useState(false);
   const [showEditPassword, setShowEditPassword] = useState(false);
   const [fetchingAmp, setFetchingAmp] = useState<"create" | "edit" | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [ampSuggestions, setAmpSuggestions] = useState<AmpSuggestion[]>([]);
   const { confirm, ConfirmDialogElement } = useConfirm();
+
+  // Gleicht mit AMP ab: deaktiviert Server, deren Instanz verschwunden ist, und zeigt
+  // neue AMP-Instanzen ohne verknüpften Server als Vorschlag an.
+  async function syncWithAmp() {
+    setSyncing(true);
+    try {
+      const res = await fetch("/api/admin/amp/sync", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? "AMP-Abgleich fehlgeschlagen"); return; }
+      const { deactivated, suggestions } = data as { deactivated: { id: string; name: string }[]; suggestions: AmpSuggestion[] };
+      if (deactivated.length > 0) {
+        const deactivatedIds = new Set(deactivated.map((d) => d.id));
+        setServers((s) => s.map((x) => (deactivatedIds.has(x.id) ? { ...x, isActive: false } : x)));
+      }
+      setAmpSuggestions(suggestions);
+      if (deactivated.length === 0 && suggestions.length === 0) {
+        toast.success("Alles im Einklang mit AMP");
+      } else {
+        const parts = [];
+        if (deactivated.length > 0) parts.push(`${deactivated.length} deaktiviert (nicht mehr in AMP)`);
+        if (suggestions.length > 0) parts.push(`${suggestions.length} neue Instanz${suggestions.length === 1 ? "" : "en"} gefunden`);
+        toast.success(parts.join(" · "));
+      }
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  // Übernimmt einen AMP-Vorschlag in das "Server anlegen"-Formular; Host/Passwort/Slots bleiben manuell.
+  function useSuggestion(suggestion: AmpSuggestion) {
+    setForm({ ...EMPTY_FORM, name: suggestion.name, game: suggestion.game, port: suggestion.port ?? "", ampInstanceId: suggestion.ampInstanceId });
+    setAmpSuggestions((s) => s.filter((x) => x.ampInstanceId !== suggestion.ampInstanceId));
+    toast("Bitte Host/IP und ggf. Passwort ergänzen, dann anlegen", { icon: "ℹ️" });
+  }
 
   // Übernimmt Servername, Spiel und Spiel-Port von AMP für die angegebene Instance-ID.
   // Host/IP und Passwort liefert AMP nicht zuverlässig (nur interne Bind-Adresse,
@@ -168,6 +206,40 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
 
   return (
     <div className="space-y-6">
+      {/* ── AMP-Abgleich ─────────────────────────────────────── */}
+      <div className="glass rounded-2xl p-5 space-y-3" style={{ border: "1px solid rgba(255,255,255,0.07)" }}>
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-white">AMP-Abgleich</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Erkennt neue oder verschwundene Instanzen auf dem AMP-Controller.
+            </p>
+          </div>
+          <button onClick={syncWithAmp} disabled={syncing}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-teal-500/15 border border-teal-500/25 text-teal-300 hover:bg-teal-500/25 disabled:opacity-40 transition-colors shrink-0">
+            {syncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+            Mit AMP abgleichen
+          </button>
+        </div>
+        {ampSuggestions.length > 0 && (
+          <div className="space-y-1.5 pt-1">
+            {ampSuggestions.map((s) => (
+              <div key={s.ampInstanceId} className="flex items-center gap-3 rounded-xl bg-white/5 border border-white/10 px-3 py-2">
+                <Sparkles className="w-3.5 h-3.5 text-teal-300 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-white truncate">{s.name}</p>
+                  <p className="text-xs text-gray-500">{s.game || "unbekanntes Spiel"}{s.port ? ` · Port ${s.port}` : ""} · noch nicht angelegt</p>
+                </div>
+                <button onClick={() => useSuggestion(s)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-violet-500/20 border border-violet-500/30 text-violet-300 hover:bg-violet-500/30 transition-colors shrink-0">
+                  Übernehmen
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* ── Neuen Server anlegen ─────────────────────────────── */}
       <div className="glass rounded-2xl p-5 space-y-3" style={{ border: "1px solid rgba(255,255,255,0.07)" }}>
         <h2 className="text-sm font-semibold text-white">Server anlegen</h2>

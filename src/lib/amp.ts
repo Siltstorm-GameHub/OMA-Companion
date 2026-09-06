@@ -119,25 +119,37 @@ export type InstanceDetails = {
   port: string | null;
 };
 
-// Für den "Von AMP übernehmen"-Button im Admin-Formular: liefert die Felder, die AMP
-// zuverlässig kennt (Servername, Spiel, Spiel-Port). Host/IP und Passwort liefert AMP
-// NICHT verlässlich (nur interne Bind-Adresse 0.0.0.0/127.0.0.1, kein generisches
-// Passwort-Feld) — die bleiben bewusst außen vor und müssen manuell gepflegt werden.
-export async function getInstanceDetails(instanceId: string): Promise<InstanceDetails | null> {
-  const instances = await getInstances();
-  const instance = instances.find((i) => i.InstanceID === instanceId);
-  if (!instance) return null;
-
+// Extrahiert die Felder, die AMP zuverlässig kennt (Servername, Spiel, Spiel-Port).
+// Host/IP und Passwort liefert AMP NICHT verlässlich (nur interne Bind-Adresse
+// 0.0.0.0/127.0.0.1, kein generisches Passwort-Feld) — die bleiben bewusst außen vor
+// und müssen manuell gepflegt werden. Gemeinsam genutzt von getInstanceDetails (einzelne
+// Instanz fürs Admin-Formular) und getInstanceSummaries (alle Instanzen für den Sync-Abgleich).
+function summarizeInstance(instance: AmpInstance): InstanceDetails & { instanceId: string } {
   const primaryEndpoint =
     instance.ApplicationEndpoints?.find((e) => e.DisplayName === "Application Address") ??
     instance.ApplicationEndpoints?.[0];
   const port = primaryEndpoint?.Endpoint.split(":")[1] ?? null;
 
   return {
+    instanceId: instance.InstanceID,
     name: instance.FriendlyName || instance.InstanceName,
     game: instance.ModuleDisplayName || "",
     port,
   };
+}
+
+// Für den "Von AMP übernehmen"-Button im Admin-Formular: liefert die Felder, die AMP
+// zuverlässig kennt, für eine einzelne Instanz.
+export async function getInstanceDetails(instanceId: string): Promise<InstanceDetails | null> {
+  const instances = await getInstances();
+  const instance = instances.find((i) => i.InstanceID === instanceId);
+  return instance ? summarizeInstance(instance) : null;
+}
+
+// Für den Sync-Abgleich: liefert die zuverlässig bekannten Felder aller AMP-Instanzen auf einmal.
+export async function getInstanceSummaries(): Promise<(InstanceDetails & { instanceId: string })[]> {
+  const instances = await getInstances();
+  return instances.map(summarizeInstance);
 }
 
 export type InstanceStatus = {

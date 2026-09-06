@@ -46,6 +46,8 @@ import { CAMPAIGN_CHAPTER_BACKGROUND } from "@/lib/battle-cards/campaign-levels"
 import VictoryChestReveal, { type ChestPrize } from "./VictoryChestReveal";
 import RankUpOverlay from "./RankUpOverlay";
 import UltimateCutsceneOverlay from "./UltimateCutsceneOverlay";
+import GemsResultScreen, { type GemsReward } from "./GemsResultScreen";
+import { parseNpcMode, NPC_BATTLE_WIN_REWARD } from "@/lib/battle-cards/npc-battle-types";
 
 /** Kampf-Hintergrund: die klassische Arena (arena-bg.jpg) für OMA Duels,
  *  OMA Gems (Nicht-Kampagne) und PvP — Kampagnen-Kämpfe (mode "CAMPAIGN_...") zeigen
@@ -167,6 +169,29 @@ function hpBarColor(pct: number): string {
   return "#ef4444";
 }
 
+/** Belohnung für den OMA-Gems-Ergebnisbildschirm (siehe GemsResultScreen) —
+ *  Kampagne zeigt Sterne, ein gewonnener NPC-Kampf (Match-3-Puzzle-Variante)
+ *  Münzen mit Glücksrad-Dreh, alles andere (Turnier, Niederlage, Unentschieden)
+ *  keinen Belohnungs-Block. Die Gems-PvP-Sieges-Kiste läuft weiterhin separat
+ *  über VictoryChestReveal, kommt hier also nie als "coins"/"stars" durch. */
+function computeGemsReward(snapshot: LiveSnapshot, myTeam: TeamId | null): GemsReward {
+  if (snapshot.campaignResult) {
+    return {
+      kind: "stars",
+      stars: snapshot.campaignResult.stars,
+      starsGained: snapshot.campaignResult.starsGained,
+      coinsAwarded: snapshot.campaignResult.coinsAwarded,
+    };
+  }
+  if (myTeam !== null && snapshot.winner === myTeam) {
+    const parsed = parseNpcMode(snapshot.mode);
+    if (parsed?.isPuzzle) {
+      return { kind: "coins", amount: NPC_BATTLE_WIN_REWARD[parsed.difficulty] };
+    }
+  }
+  return { kind: "none" };
+}
+
 function describeLogEntry(entry: LiveSnapshot["recentLog"][number], nameOf: (id: string) => string): string | null {
   switch (entry.type) {
     case "action":
@@ -181,8 +206,9 @@ function describeLogEntry(entry: LiveSnapshot["recentLog"][number], nameOf: (id:
     }
     case "death":
       return `${nameOf(entry.unitId as string)} wurde besiegt.`;
-    case "roundStart":
-      return `— Runde ${entry.round as number} —`;
+    // "roundStart" erscheint nicht mehr im Text-Log — die Runde steht jetzt
+    // auffällig oben rechts (siehe Kopfzeile), eine zusätzliche "— Runde X —"-
+    // Zeile im ohnehin knappen Log-Bereich war redundant.
     default:
       return null;
   }
@@ -581,6 +607,14 @@ export default function LiveBattleView({
   const [error, setError] = useState<string | null>(null);
   const [selectedAction, setSelectedAction] = useState<AvailableAction | null>(null);
   const [busy, setBusy] = useState(false);
+  // Eigener Busy-Schalter fürs Ultimate statt des gemeinsamen `busy` — sonst
+  // verschluckt ein Ultimate-Klick, der zufällig während einer NOCH laufenden
+  // normalen Zug-Anfrage (submitAction, z.B. direkt nach einem Match-3-Swap)
+  // eintrifft, den Klick lautlos (early return, kein Fehler sichtbar): der
+  // Held wirkt "manchmal erst beim 2. Klick bereit". Ultimate läuft serverseitig
+  // ohnehin unabhängig vom Zug (siehe applyUltimateInterrupt), sollte also auch
+  // clientseitig nicht an denselben Schalter gekoppelt sein.
+  const [ultimateBusy, setUltimateBusy] = useState(false);
   const [, setTick] = useState(0); // erzwingt einen Re-Render pro Sekunde für den Countdown
   const [mounted, setMounted] = useState(false);
   const [effects, setEffects] = useState<FloatingEffect[]>([]);
@@ -837,8 +871,8 @@ export default function LiveBattleView({
    *  Heldenkarte mit vollem Rage-Balken) — unabhängig davon, ob `casterId`
    *  laut Zugreihenfolge gerade selbst am Zug ist (siehe applyUltimateInterrupt). */
   async function submitUltimate(casterId: string) {
-    if (busy) return;
-    setBusy(true);
+    if (ultimateBusy) return;
+    setUltimateBusy(true);
     try {
       const res = await fetch(`/api/battle-cards/live/${liveBattleId}/ultimate`, {
         method: "POST",
@@ -854,7 +888,7 @@ export default function LiveBattleView({
     } catch {
       toast.error("Netzwerkfehler");
     } finally {
-      setBusy(false);
+      setUltimateBusy(false);
     }
   }
 
@@ -921,7 +955,15 @@ export default function LiveBattleView({
               {soundMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
             </button>
             {snapshot && (
-              <span className="text-[11px] text-gray-400 bg-black/30 px-2.5 py-1 rounded-md">Runde {snapshot.round}</span>
+              <span
+                className="font-battle text-sm text-amber-300 uppercase tracking-wide px-3 py-1.5 rounded-md"
+                style={{
+                  background: "linear-gradient(180deg, rgba(245,158,11,0.18) 0%, rgba(0,0,0,0.35) 100%)",
+                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), inset 0 0 0 1px rgba(245,158,11,0.35), 0 0 12px rgba(245,158,11,0.25)",
+                }}
+              >
+                Runde {snapshot.round}
+              </span>
             )}
           </div>
         </div>
@@ -968,6 +1010,8 @@ export default function LiveBattleView({
             attackingUnitIds={attackingUnitIds}
             saveBoardProgress={saveBoardProgress}
             ultimateCutscene={ultimateCutscene}
+            ultimateBusy={ultimateBusy}
+            onExit={handleExit}
           />
         )}
       </div>
@@ -989,6 +1033,8 @@ function LiveBattleBody({
   attackingUnitIds,
   saveBoardProgress,
   ultimateCutscene,
+  ultimateBusy,
+  onExit,
 }: {
   snapshot: LiveSnapshot;
   viewerId: string;
@@ -1002,6 +1048,8 @@ function LiveBattleBody({
   attackingUnitIds: Set<string>;
   saveBoardProgress: (boardSwaps: SwapMove[]) => void;
   ultimateCutscene: { name: string; class: UnitClass; skillName: string } | null;
+  ultimateBusy: boolean;
+  onExit: () => void;
 }) {
   const myTeam: TeamId | null = viewerId === snapshot.playerAId ? "A" : viewerId === snapshot.playerBId ? "B" : null;
   const opponentTeam: TeamId = myTeam === "A" ? "B" : "A";
@@ -1088,7 +1136,14 @@ function LiveBattleBody({
     return selectedAction.targetKind === "enemy" ? "enemy" : "ally";
   }
   function ultimateReadyFor(unit: LiveUnit): boolean {
-    return isPuzzleMode && myTeam !== null && unit.teamId === myTeam && unit.isAlive && unit.rage >= unit.ultimateCost;
+    return (
+      isPuzzleMode &&
+      !ultimateBusy &&
+      myTeam !== null &&
+      unit.teamId === myTeam &&
+      unit.isAlive &&
+      unit.rage >= unit.ultimateCost
+    );
   }
   function effectsFor(unit: LiveUnit): FloatingEffect[] {
     return effects.filter((e) => e.unitId === unit.instanceId);
@@ -1166,6 +1221,22 @@ function LiveBattleBody({
         !rankUpDismissed &&
         (!snapshot.chestPrize || chestDismissed) && (
           <RankUpOverlay rankUp={snapshot.rankUp} onClose={() => setRankUpDismissed(true)} />
+        )}
+      {/* OMA Gems: direkt zum Ergebnisbildschirm statt über die kleine "Sieg!"-
+          Kachel + "Zum Ergebnis"-Link zur separaten Replay-Seite — die
+          Kampfwiederholung ist nur für OMA Duels sinnvoll (siehe unten in der
+          "Entscheidung"-Sektion, dort bleibt sie für Duels unverändert).
+          Erscheint erst NACH einer eventuellen Sieges-Kiste/Rang-Aufstieg,
+          damit sich die Vollbild-Feier-Momente nicht überlappen. */}
+      {snapshot.status === "finished" &&
+        snapshot.boardMode &&
+        (!snapshot.chestPrize || chestDismissed) &&
+        (!snapshot.rankUp || rankUpDismissed) && (
+          <GemsResultScreen
+            outcome={snapshot.winner === null ? "draw" : snapshot.winner === myTeam ? "win" : "loss"}
+            reward={computeGemsReward(snapshot, myTeam)}
+            onExit={onExit}
+          />
         )}
       <AnimatePresence>
         {ultimateCutscene && (
@@ -1293,7 +1364,11 @@ function LiveBattleBody({
 
       {/* Entscheidung — direkt unter den Helden */}
       <div className="shrink-0 space-y-1.5">
-        {snapshot.status === "finished" ? (
+        {snapshot.status === "finished" && snapshot.boardMode ? (
+          // OMA Gems: kein Zwischenschritt hier — der Vollbild-Ergebnisbildschirm
+          // (GemsResultScreen, s.o.) übernimmt bereits die gesamte Anzeige.
+          null
+        ) : snapshot.status === "finished" ? (
           <div
             className="flex items-center gap-3 rounded-xl p-3 overflow-hidden relative"
             style={{

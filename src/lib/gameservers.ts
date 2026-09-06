@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { getInstanceSummaries } from "@/lib/amp";
 
 export type TrafficLight = "green" | "yellow" | "red";
 
@@ -33,6 +34,46 @@ export async function getServersWithAdminCounts() {
       return { ...server, occupied, pendingCount, light: trafficLight(server.maxSlots - occupied, server.maxSlots) };
     })
   );
+}
+
+export type AmpSyncSuggestion = { ampInstanceId: string; name: string; game: string; port: string | null };
+export type AmpSyncResult = {
+  deactivated: { id: string; name: string }[];
+  suggestions: AmpSyncSuggestion[];
+};
+
+// Gleicht die verknüpften Server mit dem AMP-Controller ab:
+// - Server, deren AMP-Instanz nicht mehr existiert, werden automatisch deaktiviert
+//   (nicht gelöscht, damit Bewerbungshistorie erhalten bleibt).
+// - AMP-Instanzen ohne verknüpften Server werden als Vorschlag zurückgegeben; da AMP
+//   Host/IP und Passwort nicht zuverlässig liefert, legt der Sync sie nicht selbst an —
+//   ein Admin übernimmt Name/Spiel/Port per Klick und ergänzt den Rest manuell.
+export async function syncGameServersWithAmp(): Promise<AmpSyncResult> {
+  const instances = await getInstanceSummaries();
+  const instanceIds = new Set(instances.map((i) => i.instanceId));
+
+  const linkedServers = await prisma.gameServer.findMany({
+    where: { ampInstanceId: { not: null }, isActive: true },
+  });
+  const toDeactivate = linkedServers.filter((s) => s.ampInstanceId && !instanceIds.has(s.ampInstanceId));
+
+  if (toDeactivate.length > 0) {
+    await prisma.gameServer.updateMany({
+      where: { id: { in: toDeactivate.map((s) => s.id) } },
+      data: { isActive: false },
+    });
+  }
+
+  const knownInstanceIds = new Set(
+    (await prisma.gameServer.findMany({ where: { ampInstanceId: { not: null } }, select: { ampInstanceId: true } })).map(
+      (s) => s.ampInstanceId
+    )
+  );
+  const suggestions = instances
+    .filter((i) => !knownInstanceIds.has(i.instanceId))
+    .map((i) => ({ ampInstanceId: i.instanceId, name: i.name, game: i.game, port: i.port }));
+
+  return { deactivated: toDeactivate.map((s) => ({ id: s.id, name: s.name })), suggestions };
 }
 
 export type VisibleServer = {
