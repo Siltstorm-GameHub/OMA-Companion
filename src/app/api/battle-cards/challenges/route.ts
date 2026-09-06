@@ -24,7 +24,7 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     }),
     prisma.battleChallenge.findMany({
-      where: { OR: [{ challengerId: userId }, { opponentId: userId }], status: { in: ["resolved", "declined"] } },
+      where: { OR: [{ challengerId: userId }, { opponentId: userId }], status: { in: ["resolved", "declined", "expired"] } },
       include: { challenger: { select: userSelect }, opponent: { select: userSelect } },
       orderBy: { createdAt: "desc" },
       take: 20,

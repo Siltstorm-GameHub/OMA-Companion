@@ -3,18 +3,41 @@
 // ============================================
 // Alternative zur Direkt-Herausforderung: beitreten reiht in eine
 // Warteschlange ein; sobald ein zweiter User beitritt, wird sofort (ohne
-// Annahme-Schritt) eine Begegnung zwischen den beiden ältesten wartenden
-// Usern erstellt und startet direkt als interaktiver LiveBattle — wiederverwendet
-// dieselbe Erstellung wie direkte Herausforderungen (createInstantMatch).
+// Annahme-Schritt) eine Begegnung erstellt und startet direkt als interaktiver
+// LiveBattle — wiederverwendet dieselbe Erstellung wie direkte Herausforderungen
+// (createInstantMatch). Kämpfe hier laufen immer im DUELS-Elo-Pool (siehe
+// challenge.ts: createInstantMatch setzt kein `mode`, Default ist "DUELS").
+//
+// Gegner-Wahl ist Elo-bewusst statt reinem FIFO: unter allen wartenden Usern
+// wird der am längsten Wartende genommen, dessen Elo noch innerhalb eines mit
+// seiner Wartezeit wachsenden Fensters liegt (siehe eloWindowFor) — bei
+// gefundener Übereinstimmung sonst wird trotzdem selbst gewartet, statt eine
+// krasse Fehlpaarung zu erzwingen. Nach ELO_WINDOW_UNLIMITED_AFTER_MINUTES
+// entfällt die Elo-Schranke komplett, damit in einer kleinen Community niemand
+// unbegrenzt lange auf ein "perfektes" Match warten muss.
 
 import { prisma } from "@/lib/prisma";
 import { createInstantMatch, ChallengeError } from "@/lib/battle-cards/challenge";
+import { ELO_BASE } from "@/lib/battle-cards/elo";
 
 export type QueueJoinResult =
   | { matched: true; challengeId: string; liveBattleId: string | null }
   | { matched: false; waiting: true };
 
-/** Tritt der Warteschlange bei — matched sofort, falls schon jemand wartet. */
+const ELO_WINDOW_BASE = 150;
+const ELO_WINDOW_GROWTH_PER_MINUTE = 60;
+const ELO_WINDOW_UNLIMITED_AFTER_MINUTES = 5;
+
+/** Erlaubter Elo-Abstand für einen Wartenden, abhängig davon, wie lange er schon
+ *  wartet — wächst linear, ab ELO_WINDOW_UNLIMITED_AFTER_MINUTES unbegrenzt. */
+function eloWindowFor(waitMs: number): number {
+  const waitMinutes = waitMs / 60_000;
+  if (waitMinutes >= ELO_WINDOW_UNLIMITED_AFTER_MINUTES) return Infinity;
+  return ELO_WINDOW_BASE + waitMinutes * ELO_WINDOW_GROWTH_PER_MINUTE;
+}
+
+/** Tritt der Warteschlange bei — matched sofort, falls schon jemand mit passendem
+ *  (oder inzwischen ausreichend geweitetem) Elo-Fenster wartet. */
 export async function joinQueue(userId: string): Promise<QueueJoinResult> {
   const mine = await prisma.battleQueueEntry.findUnique({ where: { userId } });
   if (mine) {
@@ -29,11 +52,35 @@ export async function joinQueue(userId: string): Promise<QueueJoinResult> {
     return { matched: false, waiting: true };
   }
 
-  // Ältesten wartenden (noch nicht gematchten) Eintrag eines anderen Users suchen.
-  const opponentEntry = await prisma.battleQueueEntry.findFirst({
-    where: { userId: { not: userId }, matchedChallengeId: null },
-    orderBy: { createdAt: "asc" },
-  });
+  const [me, waitingEntries] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId }, select: { eloDuels: true } }),
+    // Älteste zuerst — bei mehreren im Elo-Fenster passenden Kandidaten gewinnt
+    // der am längsten Wartende (Fairness vor perfekter Passgenauigkeit).
+    prisma.battleQueueEntry.findMany({
+      where: { userId: { not: userId }, matchedChallengeId: null },
+      orderBy: { createdAt: "asc" },
+    }),
+  ]);
+  const myElo = me?.eloDuels ?? ELO_BASE;
+
+  let opponentEntry: (typeof waitingEntries)[number] | null = null;
+  if (waitingEntries.length > 0) {
+    const opponentUsers = await prisma.user.findMany({
+      where: { id: { in: waitingEntries.map((e) => e.userId) } },
+      select: { id: true, eloDuels: true },
+    });
+    const eloByUserId = new Map(opponentUsers.map((u) => [u.id, u.eloDuels]));
+    const now = Date.now();
+
+    for (const entry of waitingEntries) {
+      const opponentElo = eloByUserId.get(entry.userId) ?? ELO_BASE;
+      const window = eloWindowFor(now - entry.createdAt.getTime());
+      if (Math.abs(opponentElo - myElo) <= window) {
+        opponentEntry = entry;
+        break;
+      }
+    }
+  }
 
   if (!opponentEntry) {
     await prisma.battleQueueEntry.create({ data: { userId } });

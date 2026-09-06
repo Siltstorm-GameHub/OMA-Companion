@@ -4,12 +4,14 @@
 // Battle-Cards-Herausforderungen — Liste + Annehmen/Ablehnen
 // ============================================
 
-import { useState, type ReactNode } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Check, X, Clock, Swords, Mail } from "lucide-react";
 import RankedAvatar from "@/components/RankedAvatar";
+import MatchupBadge from "./MatchupBadge";
+import type { MatchupStrength } from "@/lib/battle-cards/matchup-strength";
 
 interface ChallengeUser {
   id: string;
@@ -98,6 +100,25 @@ export default function ChallengesList({
 }) {
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [matchups, setMatchups] = useState<Record<string, MatchupStrength | null>>({});
+
+  // Für eingehende Herausforderungen: Gewinnchance aus Sicht des Herausgeforderten
+  // (eigenes Team vs. Team des Herausforderers) — hilft bei der Annehmen/Ablehnen-
+  // Entscheidung, siehe matchup-strength.ts.
+  useEffect(() => {
+    let cancelled = false;
+    for (const c of incoming) {
+      fetch(`/api/battle-cards/matchup?opponentId=${c.challengerId}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (cancelled) return;
+          setMatchups((prev) => ({ ...prev, [c.id]: data?.strength ?? null }));
+        })
+        .catch(() => {});
+    }
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incoming.map((c) => c.id).join(",")]);
 
   async function respond(id: string, action: "accept" | "decline") {
     if (busyId) return;
@@ -176,9 +197,12 @@ export default function ChallengesList({
                 accent="#fb7185"
                 footer={
                   <div className="space-y-2">
-                    <p className="flex items-center justify-center gap-1.5 text-[11px] text-rose-200/70">
-                      <Mail className="w-3 h-3 shrink-0" /> Muss noch angenommen werden
-                    </p>
+                    <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                      <p className="flex items-center gap-1.5 text-[11px] text-rose-200/70">
+                        <Mail className="w-3 h-3 shrink-0" /> Muss noch angenommen werden
+                      </p>
+                      <MatchupBadge strength={matchups[c.id]} />
+                    </div>
                     <div className="flex items-center justify-center gap-2">
                       <button
                         onClick={() => respond(c.id, "accept")}

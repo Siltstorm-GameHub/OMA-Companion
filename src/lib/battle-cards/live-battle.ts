@@ -898,7 +898,12 @@ export async function getLiveBattleSnapshot(liveBattleId: string, viewerId: stri
   //    entfaltet sich der Kampf für Zuschauer schrittweise statt in einem Sprung.
   const timedOut = !!state.awaitingUnitId && state.turnDeadline !== null && Date.now() >= state.turnDeadline;
   const midAutoRun = !state.winner && !state.awaitingUnitId;
-  if (timedOut || midAutoRun) {
+  // live.status kann "finished" sein, ohne dass state.winner gesetzt ist — z.B. wenn
+  // die Challenge-Cleanup-Cron einen liegen gelassenen Kampf abgebrochen hat (siehe
+  // challenge-expiry.ts). In dem Fall NICHT weiterspielen/persistieren, sonst würde
+  // ein später zurückkehrender Spieler den eigentlich abgebrochenen Kampf unbemerkt
+  // wiederbeleben und am Ende doch noch reguläre Elo-/Sieges-Serien-Effekte auslösen.
+  if (live.status === "active" && (timedOut || midAutoRun)) {
     const { state: newState, pendingDecision } = advance(state, undefined, advanceOptionsFor(live.playerBId));
     const updated = await persistAndMaybeFinalize(live, newState);
     return buildSnapshot(updated, newState, pendingDecision, viewerId);

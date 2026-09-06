@@ -7,10 +7,12 @@
 // Cooldown-Timer im Client — der Kampf wird bei Annahme sofort serverseitig
 // mit der aktuellen Startaufstellung beider Spieler aufgelöst.
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Swords } from "lucide-react";
+import MatchupBadge from "./MatchupBadge";
+import type { MatchupStrength } from "@/lib/battle-cards/matchup-strength";
 
 export default function BattleChallengeWidget({
   opponentId,
@@ -22,6 +24,16 @@ export default function BattleChallengeWidget({
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
+  const [matchup, setMatchup] = useState<MatchupStrength | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/battle-cards/matchup?opponentId=${opponentId}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => { if (!cancelled) setMatchup(data?.strength ?? null); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [opponentId]);
 
   async function challenge() {
     if (submitting) return;
@@ -56,12 +68,15 @@ export default function BattleChallengeWidget({
   }
 
   return (
-    <button
-      onClick={challenge}
-      disabled={submitting}
-      className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl border border-rose-500/30 text-rose-300 hover:bg-rose-500/10 disabled:opacity-40 transition-colors"
-    >
-      <Swords className="w-3.5 h-3.5" /> {submitting ? "Sendet…" : "Mit Battle Cards herausfordern"}
-    </button>
+    <div className="flex items-center gap-2">
+      <button
+        onClick={challenge}
+        disabled={submitting}
+        className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl border border-rose-500/30 text-rose-300 hover:bg-rose-500/10 disabled:opacity-40 transition-colors"
+      >
+        <Swords className="w-3.5 h-3.5" /> {submitting ? "Sendet…" : "Mit Battle Cards herausfordern"}
+      </button>
+      <MatchupBadge strength={matchup} />
+    </div>
   );
 }
