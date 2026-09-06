@@ -34,6 +34,7 @@ export default function FfaView({
   statFields,
   statPointsPer = {},
   ligaPunkteByUser = {},
+  turnierpunkteByUser = {},
   dominionResultByUser = {},
   dominionThreshold,
   userId,
@@ -55,6 +56,10 @@ export default function FfaView({
   statPointsPer?: Record<string, number>;
   /** Ligapunkte, die dieses Event je Spieler insgesamt beigesteuert hat (identisch zur Berechnung in der Gesamttabelle der Eventreihe) */
   ligaPunkteByUser?: Record<string, number>;
+  /** Turnierpunkte dieses Events je Spieler (Stats × Punkte-pro-Stat + Platzierungspunkte, siehe
+   *  computeTurnierpunkte) — KEINE Ligapunkte, bestimmen nur die Endplatzierung/den Sieger dieses
+   *  einzelnen Events. Anders als ligaPunkteByUser bereits sichtbar, solange das Event noch läuft. */
+  turnierpunkteByUser?: Record<string, number>;
   /** Dominion-Bonus-Ergebnis DIESES Events je User (nur wer hier +1 bekommen bzw. den Bonus ausgelöst hat) */
   dominionResultByUser?: Record<string, { streakAfter: number; bonusAwarded: boolean }>;
   dominionThreshold?: number;
@@ -131,6 +136,10 @@ export default function FfaView({
   // keine einzige Runde gespielt haben, bleiben in der Tabelle sichtbar (matchCount 0), landen aber
   // immer ganz unten und bekommen keinen (fiktiven) Durchschnittswert — sonst könnte eine ungespielte
   // "0" bei niedrigstem-Ø-gewinnt fälschlich als bester Wert durchgehen.
+  // Ist eine Turnierpunkte-Konfiguration aktiv (Punkte pro Stat und/oder Platzierungspunkte, siehe
+  // computeTurnierpunkte), bestimmt die kombinierte Gesamtpunktzahl die Reihenfolge — sonst wie bisher
+  // lexikografisch nach den einzelnen Stat-Feldern.
+  const hasTurnierpunkte = Object.keys(turnierpunkteByUser).length > 0;
   const ranked = [...totals.values()]
     .sort((a, b) => {
       if (a.matchCount === 0 && b.matchCount === 0) return 0;
@@ -143,6 +152,10 @@ export default function FfaView({
                 .reduce((s, v) => s + v, 0) / statFields.length
             : 0;
         return avgOf(b) - avgOf(a);
+      }
+      if (hasTurnierpunkte) {
+        const diff = (turnierpunkteByUser[b.userId] ?? 0) - (turnierpunkteByUser[a.userId] ?? 0);
+        if (diff !== 0) return diff;
       }
       for (const f of statFields) {
         const diff = (b.stats[f] ?? 0) - (a.stats[f] ?? 0);
@@ -198,6 +211,9 @@ export default function FfaView({
                     )}
                     {trackMatchWin && (
                       <th className="text-center px-3 py-2.5 font-medium text-emerald-400">Match Wins</th>
+                    )}
+                    {hasTurnierpunkte && (
+                      <th className="text-center px-3 py-2.5 font-medium text-amber-400">Turnierpunkte</th>
                     )}
                     <th className="text-center px-3 py-2.5 font-medium text-teal-500/70">Ligapunkte</th>
                     <th className="text-center px-3 py-2.5 font-medium">Runden</th>
@@ -298,6 +314,11 @@ export default function FfaView({
                         {trackMatchWin && (
                           <td className="px-3 py-3 text-center tabular-nums font-semibold text-emerald-400">
                             {r.stats["Match Win"] ?? 0}
+                          </td>
+                        )}
+                        {hasTurnierpunkte && (
+                          <td className="px-3 py-3 text-center tabular-nums font-bold text-amber-300">
+                            {turnierpunkteByUser[r.userId] ?? 0}
                           </td>
                         )}
                         <td className="px-3 py-3 text-center">

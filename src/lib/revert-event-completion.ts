@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { rollbackResolvedPredictions } from "@/lib/predictions";
 import { recomputeSeriesDominionBonus } from "@/lib/dominion-bonus";
-import { applyEventStatOverride, extractPlacementPoints, PLACEMENT_POINTS_FIELD } from "@/lib/series-event-points";
+import { applyEventStatOverride } from "@/lib/series-event-points";
 
 type SeriesStatConfig = {
   participationPoints?: number;
@@ -357,7 +357,6 @@ export async function revertEventCompletion(eventId: string, opts: RevertOptions
         }
 
         const userStats: Record<string, Record<string, number>> = {};
-        const placementPtsByUser: Record<string, number> = {};
         for (const match of event.matches) {
           for (const entry of match.entries) {
             if (!entry.userId || !entry.statsJson) continue;
@@ -367,8 +366,6 @@ export async function revertEventCompletion(eventId: string, opts: RevertOptions
             for (const [field, val] of Object.entries(parsed)) {
               userStats[entry.userId][field] = (userStats[entry.userId][field] ?? 0) + Number(val);
             }
-            const placementPts = extractPlacementPoints(parsed, statCfg.placementPoints);
-            if (placementPts) placementPtsByUser[entry.userId] = (placementPtsByUser[entry.userId] ?? 0) + placementPts;
           }
         }
 
@@ -381,8 +378,6 @@ export async function revertEventCompletion(eventId: string, opts: RevertOptions
               : (userStats[userId]?.[field] ?? 0);
             if (val > 0) sub(userId, field, val);
           }
-          const placementPts = placementPtsByUser[userId] ?? 0;
-          if (placementPts > 0) sub(userId, PLACEMENT_POINTS_FIELD, placementPts);
         }
         for (const userId of cd.spectatorAttendedIds ?? []) {
           sub(userId, "Zuschauer-Teilnahmen", 1);

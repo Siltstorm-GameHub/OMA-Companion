@@ -44,7 +44,7 @@ import LigaView from "./LigaView";
 import { getWanderpocalHoldersMap } from "@/lib/get-wanderpocal-holders";
 import { getMinigamesConfig } from "@/lib/minigames-config";
 import { PREDICTION_MIN_WAGER } from "@/lib/predictions";
-import { computeEventPoints, type StatConfig } from "@/lib/series-event-points";
+import { computeEventPoints, computeTurnierpunkte, applyEventStatOverride, type StatConfig } from "@/lib/series-event-points";
 
 const GUILD_ID = process.env.DISCORD_GUILD_ID ?? "";
 
@@ -437,11 +437,14 @@ export default async function TournamentDetailPage({
     return event.pointReward ?? 0;
   })();
 
-  // Ligapunkte pro Stat-Einheit aus der Reihen-Tabellenkonfiguration (für die Punkte-Anzeige je Stat)
+  // Ligapunkte pro Stat-Einheit aus der Reihen-Tabellenkonfiguration, überschrieben durch die
+  // Event-eigene statConfigJson (Reiter "Turnier" bei coop_stats, siehe schema.prisma) — für die
+  // Punkte-Anzeige je Stat und die Ligapunkte-/Turnierpunkte-Berechnung unten.
   const seriesStatCfg: StatConfig = (() => {
-    if (!event.series?.seriesStatConfig) return { participationPoints: 0, stats: [] };
-    try { return JSON.parse(event.series.seriesStatConfig) as StatConfig; }
-    catch { return { participationPoints: 0, stats: [] }; }
+    let base: StatConfig;
+    try { base = event.series?.seriesStatConfig ? JSON.parse(event.series.seriesStatConfig) as StatConfig : { participationPoints: 0, stats: [] }; }
+    catch { base = { participationPoints: 0, stats: [] }; }
+    return applyEventStatOverride(base, event.statConfigJson);
   })();
   const statPointsPer: Record<string, number> = (() => {
     const map: Record<string, number> = {};
@@ -449,13 +452,22 @@ export default async function TournamentDetailPage({
     return map;
   })();
   // Ligapunkte, die dieses Event je Spieler beigesteuert hat — identische Berechnung wie in der
-  // Gesamttabelle der Eventreihe (Teilnahme + Stats + Umfrage-Belohnungen alt & neu)
+  // Gesamttabelle der Eventreihe (Teilnahme + Stats + Umfrage-Belohnungen alt & neu). Leer, solange
+  // die Spielphase nicht abgeschlossen ist (computeEventPoints prüft completionData.gamePhaseComplete).
   const ligaPunkteByUser: Record<string, number> = event.series
     ? computeEventPoints(
         { completionData: event.completionData, registrations: event.registrations, matches: event.matches },
         seriesStatCfg,
       ).pointsByUser
     : {};
+  // Turnierpunkte: reine Event-interne Gesamtpunktzahl aus Stats × Punkte-pro-Stat +
+  // Platzierungspunkte (siehe computeTurnierpunkte) — KEINE Ligapunkte, dient nur der
+  // Endplatzierung/Sieger-Ermittlung dieses Events. Anders als ligaPunkteByUser bereits sichtbar,
+  // während das Event noch läuft (keine Abhängigkeit von completionData).
+  const turnierpunkteByUser: Record<string, number> =
+    (seriesStatCfg.stats?.length ?? 0) > 0 || seriesStatCfg.placementPoints
+      ? computeTurnierpunkte(event.matches, seriesStatCfg)
+      : {};
 
   // Dominion-Bonus-Ergebnis DIESES Events je User — direkt aus completionData.dominionChanges
   // (siehe complete/route.ts + dominion-bonus.ts), nicht aus dem aktuellen (live) Streak-Stand der
@@ -1134,6 +1146,7 @@ export default async function TournamentDetailPage({
                 statFields={event.statFields ? JSON.parse(event.statFields) : []}
                 statPointsPer={statPointsPer}
                 ligaPunkteByUser={ligaPunkteByUser}
+                turnierpunkteByUser={turnierpunkteByUser}
                 dominionResultByUser={dominionResultByUser}
                 dominionThreshold={seriesStatCfg.dominionBonus?.threshold}
                 userId={userId}

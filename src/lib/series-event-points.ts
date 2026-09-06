@@ -35,6 +35,20 @@ export type EventStatOverride = {
   placementPoints?: Record<string, number>;
 };
 
+/** Führt die seriesweite stats-Liste mit der Event-eigenen Überschreibung zusammen: Felder, die die
+ *  Überschreibung nennt, werden ersetzt (neuer pointsPer für dieses Event) bzw. neu hinzugefügt —
+ *  alle anderen seriesweiten Felder (MVP-Stat, Sieger-Zielfeld, Umfrage-/Dominion-Bonus-Felder, …)
+ *  bleiben unangetastet. Eine komplette Ersetzung der Liste würde sonst deren pointsPer-Eintrag
+ *  verlieren und Boni, die über diese Felder in Punkte umgerechnet werden, stillschweigend auf 0 setzen. */
+function mergeStatsByField(
+  base: { field: string; pointsPer: number }[],
+  overrideStats: { field: string; pointsPer: number }[],
+): { field: string; pointsPer: number }[] {
+  const byField = new Map(base.map(s => [s.field, s]));
+  for (const s of overrideStats) byField.set(s.field, s);
+  return [...byField.values()];
+}
+
 /** Wendet eine Event-eigene Stat-Konfiguration (statConfigJson) auf die Reihen-Konfiguration an.
  *  Nötig für Reihen ohne festes Format/Spiel (coop_stats), wo sich Stat-Felder und Platzierungspunkte
  *  von Event zu Event unterscheiden können — nur gesetzte, nicht-leere Werte überschreiben die
@@ -50,7 +64,7 @@ export function applyEventStatOverride<T extends { stats?: { field: string; poin
   if (!override.stats?.length && !hasPlacementPoints) return cfg;
   return {
     ...cfg,
-    ...(override.stats?.length ? { stats: override.stats } : {}),
+    ...(override.stats?.length ? { stats: mergeStatsByField(cfg.stats ?? [], override.stats) } : {}),
     ...(hasPlacementPoints ? { placementPoints: override.placementPoints } : {}),
   };
 }
@@ -59,8 +73,6 @@ export function applyEventStatOverride<T extends { stats?: { field: string; poin
  *  Platzierung eines Spielers ablegt (analog zu "Match Win") — kein normales Stat-Feld, wird über
  *  StatConfig.placementPoints in Punkte umgerechnet, siehe extractPlacementPoints. */
 export const PLACEMENT_STAT_KEY = "Platzierung";
-/** Anzeigename der aus PLACEMENT_STAT_KEY berechneten Punkte in der Stats-Tabelle. */
-export const PLACEMENT_POINTS_FIELD = "Platzierungspunkte";
 
 /** Rechnet die in einem Match-Entry unter PLACEMENT_STAT_KEY erfasste rohe Platzierung (1 = Erster)
  *  über die Punkte-je-Platz-Tabelle (StatConfig.placementPoints) in Punkte um — undefined, wenn keine
@@ -70,6 +82,38 @@ export function extractPlacementPoints(stats: Record<string, unknown>, placement
   const place = Number(stats[PLACEMENT_STAT_KEY]);
   if (!place || place < 1) return undefined;
   return placementPoints[String(place)];
+}
+
+/** Berechnet die "Turnierpunkte" eines Events je User — Stats × Punkte-pro-Stat + Platzierungspunkte
+ *  pro Runde (siehe PLACEMENT_STAT_KEY/extractPlacementPoints). Dient AUSSCHLIESSLICH dazu, innerhalb
+ *  dieses einen Events eine Endplatzierung/einen Sieger zu ermitteln (z.B. als Gewinner-Stat-Option
+ *  beim Event-Abschluss, oder als Live-Zwischenstand auf der öffentlichen Event-Seite) — KEINE
+ *  Ligapunkte-Quelle: die echten Ligapunkte der Reihe werden ausschließlich über die
+ *  Eventreihen-Einstellungen vergeben (Teilnahme, Sieger-Ziel-Feld, Stats mit eigenem pointsPer, …),
+ *  siehe computeEventPoints. Winner-Stat-Felder (cfg.winnerStatKeys) werden ausgeklammert, da sie
+ *  erst durch die Sieger-Wahl selbst entstehen (sonst zirkulär). */
+export function computeTurnierpunkte(
+  matches: { entries: { userId: string | null; statsJson: string | null }[] }[],
+  cfg: { stats: { field: string; pointsPer: number }[]; matchWinStatKeys?: string[]; winnerStatKeys?: string[]; placementPoints?: Record<string, number> },
+): Record<string, number> {
+  const winnerStatSet = new Set(cfg.winnerStatKeys ?? []);
+  const matchWinStatSet = new Set(cfg.matchWinStatKeys ?? []);
+  const totals: Record<string, number> = {};
+  for (const match of matches) {
+    for (const entry of match.entries) {
+      if (!entry.userId || !entry.statsJson) continue;
+      let s: Record<string, number> = {};
+      try { s = JSON.parse(entry.statsJson); } catch { continue; }
+      for (const { field, pointsPer } of cfg.stats) {
+        if (winnerStatSet.has(field)) continue;
+        const val = matchWinStatSet.has(field) ? Number(s["Match Win"] ?? 0) : Number(s[field] ?? 0);
+        if (val) totals[entry.userId] = (totals[entry.userId] ?? 0) + val * pointsPer;
+      }
+      const placementPts = extractPlacementPoints(s, cfg.placementPoints);
+      if (placementPts) totals[entry.userId] = (totals[entry.userId] ?? 0) + placementPts;
+    }
+  }
+  return totals;
 }
 
 export function resolveWinnerTargetKeys(cfg: StatConfig, seriesWinnerTargetField?: string): string[] {
@@ -277,11 +321,9 @@ export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPo
     ...cfg.stats.map(s => s.field).filter(f => !winnerStatSet.has(f) && !matchWinStatSet.has(f)),
     ...(cfg.eventStatFields ?? []),
   ]);
-  // Platzierungspunkte: pro Runde erfasste Platzierung (PLACEMENT_STAT_KEY) wird über die
-  // Punkte-je-Platz-Tabelle (cfg.placementPoints) umgerechnet und über alle Runden summiert — anders
-  // als bei den übrigen Stats keine lineare pointsPer-Multiplikation, sondern eine Nachschlagetabelle,
-  // daher eigener Bonus-Topf statt Eintrag in cfg.stats (siehe placementBonusPts unten).
-  const placementBonusPts: Record<string, number> = {};
+  // Platzierung (PLACEMENT_STAT_KEY) fließt bewusst NICHT hier ein — sie ist keine Ligapunkte-Quelle,
+  // sondern nur Grundlage der Turnierpunkte (siehe computeTurnierpunkte), die ausschließlich die
+  // Endplatzierung/den Sieger dieses einzelnen Events bestimmen.
   for (const match of ev.matches) {
     for (const entry of match.entries) {
       if (!entry.userId || !entry.statsJson) continue;
@@ -295,11 +337,6 @@ export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPo
       if (matchWinStatSet.size > 0) {
         const mw = Number(s["Match Win"] ?? 0);
         if (mw) for (const key of matchWinStatSet) addEv(entry.userId, key, mw);
-      }
-      const placementPts = extractPlacementPoints(s, cfg.placementPoints);
-      if (placementPts) {
-        addEv(entry.userId, PLACEMENT_POINTS_FIELD, placementPts);
-        placementBonusPts[entry.userId] = (placementBonusPts[entry.userId] ?? 0) + placementPts;
       }
     }
   }
@@ -399,8 +436,7 @@ export function computeEventPoints(ev: EventForPoints, cfg: StatConfig): EventPo
     let pts = part * cfg.participationPoints
       + spectatorPart * (cfg.spectatorParticipationPoints ?? 0)
       + (pollBonusPts[uid] ?? 0)
-      + (dominionBonusPts[uid] ?? 0)
-      + (placementBonusPts[uid] ?? 0);
+      + (dominionBonusPts[uid] ?? 0);
     for (const { field, pointsPer } of cfg.stats) {
       pts += (es[field] ?? 0) * pointsPer;
     }

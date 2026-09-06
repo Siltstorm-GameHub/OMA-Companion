@@ -167,6 +167,15 @@
         ],
         "createdAt": "2026-09-06T18:25:15.689Z",
         "reason": "false positive: hook flags gray text against a colored bg elsewhere in the same ternary className, but each branch actually pairs text-gray-400/500 with a neutral bg-gray-800/transparent border, not a colored background - pre-existing selector-button pattern (FORMATS/CATEGORIES/squad-select), not introduced this session"
+      },
+      {
+        "rule": "gray-on-color",
+        "value": "*",
+        "files": [
+          "src/app/(dashboard)/tournament/[id]/FfaView.tsx"
+        ],
+        "createdAt": "2026-09-06T21:22:06.110Z",
+        "reason": "false positive: same ternary-branch misattribution as EventEditClient.tsx - hook pairs gray text from the unselected/non-highlighted branch with a colored bg from the other branch in the same className string; actual pairing (gray text on glass-heavy/transparent bg) is fine"
       }
     ]
   }

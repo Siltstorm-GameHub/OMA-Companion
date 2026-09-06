@@ -1442,9 +1442,10 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                   <span>Endplatzierung tracken</span>
                 </label>
                 <p className="text-[10px] text-gray-500 -mt-2">
-                  Beim Abschluss des Events kann dann jedem Teilnehmer ein Platz zugewiesen werden — die
-                  hier hinterlegten Punkte pro Platz fließen zusätzlich zu den Stat-Punkten in die
-                  Ligatabelle ein.
+                  Im Turnierbaum unten kann dann jedem Spieler pro Runde ein Platz zugewiesen werden. Die
+                  hier hinterlegten Punkte pro Platz ergeben zusammen mit den Stat-Punkten die
+                  Turnierpunkte dieses Events — sie bestimmen nur die Endplatzierung/den Sieger dieses
+                  Events, nicht die Ligapunkte der Reihe.
                 </p>
 
                 {tmtStatConfig.placementEnabled && (

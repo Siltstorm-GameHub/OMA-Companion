@@ -12,7 +12,7 @@ import { createPollsForEvent, parsePollsConfigJson } from "@/lib/event-polls";
 import { recomputeSeriesDominionBonus } from "@/lib/dominion-bonus";
 import { announceEventResults } from "@/lib/discord-events";
 import { isEventHidden } from "@/lib/event-visibility";
-import { applyEventStatOverride, extractPlacementPoints, PLACEMENT_POINTS_FIELD } from "@/lib/series-event-points";
+import { applyEventStatOverride } from "@/lib/series-event-points";
 
 type PlacementReward = { place: number; coins: number; rankPoints: number };
 type RewardsConfig = { participationCoins: number; placements: PlacementReward[] };
@@ -307,11 +307,6 @@ async function completeEvent(req: NextRequest, eventId: string) {
 
   // Per-User-Stats aus Match-Einträgen
   const userStats: Record<string, Record<string, number>> = {};
-  // Platzierungspunkte (optional, coop_stats): pro Runde im Turnier-Reiter erfasste Platzierung wird
-  // über statCfg.placementPoints (Punkte je Platz) umgerechnet und über alle Runden summiert — keine
-  // lineare pointsPer-Multiplikation wie bei normalen Stats, daher separat statt in userStats, siehe
-  // extractPlacementPoints.
-  const placementPtsByUser: Record<string, number> = {};
   for (const match of event.matches) {
     for (const entry of match.entries) {
       if (!entry.userId || !entry.statsJson) continue;
@@ -321,8 +316,6 @@ async function completeEvent(req: NextRequest, eventId: string) {
       for (const [field, val] of Object.entries(parsed)) {
         userStats[entry.userId][field] = (userStats[entry.userId][field] ?? 0) + Number(val);
       }
-      const placementPts = extractPlacementPoints(parsed, statCfg.placementPoints);
-      if (placementPts) placementPtsByUser[entry.userId] = (placementPtsByUser[entry.userId] ?? 0) + placementPts;
     }
   }
 
@@ -854,12 +847,6 @@ async function completeEvent(req: NextRequest, eventId: string) {
           newStatFieldsByUser[userId][field] = (newStatFieldsByUser[userId][field] ?? 0) + val;
         }
       }
-      const placementPts = placementPtsByUser[userId] ?? 0;
-      if (placementPts > 0) {
-        addToUser(userId, PLACEMENT_POINTS_FIELD, placementPts);
-        if (!newStatFieldsByUser[userId]) newStatFieldsByUser[userId] = {};
-        newStatFieldsByUser[userId][PLACEMENT_POINTS_FIELD] = (newStatFieldsByUser[userId][PLACEMENT_POINTS_FIELD] ?? 0) + placementPts;
-      }
     }
     // Ausgeschlossene (und sonst punktelose) registrierte Spieler trotzdem als Zeile in der
     // Serien-Rohtabelle anlegen, damit sie dort weiterhin sichtbar bleiben.
@@ -903,10 +890,10 @@ async function completeEvent(req: NextRequest, eventId: string) {
 
     // Stat-Tabellen-Punkte (pointsPer) + Platzierungspunkte → globale Rangliste
     const newTransferredStatPoints: Record<string, number> = {};
-    if (statCfg.transferToGlobalRanking && ((statCfg.stats ?? []).length > 0 || statCfg.placementPoints)) {
+    if (statCfg.transferToGlobalRanking && (statCfg.stats ?? []).length > 0) {
       for (const userId of newParticipations) {
         const eStats = userStats[userId] ?? {};
-        let total = placementPtsByUser[userId] ?? 0;
+        let total = 0;
         for (const { field, pointsPer } of statCfg.stats) {
           const val = statCfg.matchWinStatKeys?.includes(field) ? (eStats["Match Win"] ?? 0) : (eStats[field] ?? 0);
           total += val * pointsPer;

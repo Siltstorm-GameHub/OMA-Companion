@@ -2,7 +2,7 @@ import { requireModeratorOrEventSquadCaptain } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import EventCompleteClient from "./EventCompleteClient";
-import { applyEventStatOverride, extractPlacementPoints } from "@/lib/series-event-points";
+import { applyEventStatOverride, computeTurnierpunkte } from "@/lib/series-event-points";
 
 type PlacementReward = { place: number; coins: number; rankPoints: number };
 type RewardsConfig = { participationCoins: number; placements: PlacementReward[] };
@@ -143,39 +143,23 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
     return applyEventStatOverride(base ?? { participationPoints: 0, stats: [] }, event.statConfigJson);
   })();
 
-  // Ligapunkte-Vorschau je User (Stats × Punkte-pro-Stat + Platzierungspunkte, siehe
-  // series-event-points.ts) — als zusätzliche, auswählbare "Gewinner-Stat"-Option (winnerStatField),
-  // damit bei coop_stats-Events der Sieger auch nach der berechneten Gesamtpunktzahl statt nach einem
-  // einzelnen rohen Stat-Feld bestimmt werden kann. Direkt in userStats injiziert, damit die
-  // bestehende Sortier-/Anzeige-Logik (userStats[uid]?.[winnerStatField]) sie ohne weitere Änderungen
-  // mitbenutzt.
-  const hasLigapunkteOption = !!seriesStatConfig
+  // Turnierpunkte-Vorschau je User (Stats × Punkte-pro-Stat + Platzierungspunkte, siehe
+  // computeTurnierpunkte) — als zusätzliche, auswählbare "Gewinner-Stat"-Option (winnerStatField),
+  // damit bei coop_stats-Events der Sieger auch nach der berechneten Gesamtpunktzahl dieses Events
+  // statt nach einem einzelnen rohen Stat-Feld bestimmt werden kann. KEINE Ligapunkte — die bleiben
+  // ausschließlich Sache der Eventreihen-Einstellungen (Teilnahme, Sieger-Ziel-Feld, …); der so
+  // ermittelte Sieger erhält seine Ligapunkte ganz normal über den bestehenden Weg. Direkt in
+  // userStats injiziert, damit die bestehende Sortier-/Anzeige-Logik (userStats[uid]?.[winnerStatField])
+  // sie ohne weitere Änderungen mitbenutzt.
+  const hasTurnierpunkteOption = !!seriesStatConfig
     && ((seriesStatConfig.stats?.length ?? 0) > 0 || !!seriesStatConfig.placementPoints);
-  if (hasLigapunkteOption && seriesStatConfig) {
+  if (hasTurnierpunkteOption && seriesStatConfig) {
+    const turnierpunkteByUser = computeTurnierpunkte(event.matches, seriesStatConfig);
     for (const uid of Object.keys(userStats)) {
-      let total = 0;
-      for (const { field, pointsPer } of seriesStatConfig.stats ?? []) {
-        const val = seriesStatConfig.matchWinStatKeys?.includes(field) ? (userStats[uid]["Match Win"] ?? 0) : (userStats[uid][field] ?? 0);
-        total += val * pointsPer;
-      }
-      userStats[uid]["Ligapunkte"] = total;
-    }
-    if (seriesStatConfig.placementPoints) {
-      for (const match of event.matches) {
-        for (const entry of match.entries) {
-          if (!entry.userId || !entry.statsJson) continue;
-          let parsed: Record<string, number> = {};
-          try { parsed = JSON.parse(entry.statsJson); } catch { continue; }
-          const pts = extractPlacementPoints(parsed, seriesStatConfig.placementPoints);
-          if (pts) {
-            if (!userStats[entry.userId]) userStats[entry.userId] = { "Ligapunkte": 0 };
-            userStats[entry.userId]["Ligapunkte"] = (userStats[entry.userId]["Ligapunkte"] ?? 0) + pts;
-          }
-        }
-      }
+      userStats[uid]["Turnierpunkte"] = turnierpunkteByUser[uid] ?? 0;
     }
   }
-  const winnerStatFieldOptions = hasLigapunkteOption ? [...tournamentStatFields, "Ligapunkte"] : tournamentStatFields;
+  const winnerStatFieldOptions = hasTurnierpunkteOption ? [...tournamentStatFields, "Turnierpunkte"] : tournamentStatFields;
 
   // Aktueller Dominion-Streak je registriertem User, VOR diesem Event — aus der Reihen-Rohtabelle
   // (seriesStandingsJson), damit Moderatoren beim Ausfüllen sehen, wer bereits auf eine Serie

@@ -50,9 +50,10 @@ interface Props {
   /** Alle User der Plattform — für Umfragen mit voterEligibility "all" im Live-Umfragen-Panel */
   allUsers: User[];
   tournamentStatFields: string[];
-  /** Auswahloptionen für den Gewinner-Stat-Dropdown — wie tournamentStatFields, plus "Ligapunkte"
-   *  (berechnete Gesamtpunktzahl aus Stats × Punkte-pro-Stat + Platzierungspunkte), wenn dafür eine
-   *  Punkte-Konfiguration existiert. Fällt ohne Prop auf tournamentStatFields zurück. */
+  /** Auswahloptionen für den Gewinner-Stat-Dropdown — wie tournamentStatFields, plus "Turnierpunkte"
+   *  (berechnete Gesamtpunktzahl dieses Events aus Stats × Punkte-pro-Stat + Platzierungspunkte),
+   *  wenn dafür eine Punkte-Konfiguration existiert. KEINE Ligapunkte — nur zur Sieger-Ermittlung
+   *  dieses einzelnen Events. Fällt ohne Prop auf tournamentStatFields zurück. */
   winnerStatFieldOptions?: string[];
   userStats: Record<string, Record<string, number>>;
   format: string | null;
