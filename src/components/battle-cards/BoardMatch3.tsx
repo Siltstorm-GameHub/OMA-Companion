@@ -23,13 +23,15 @@
 // Endergebnis einzublenden.
 
 import { HelpCircle, Users } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import type { UnitClass } from "@/lib/battle-engine/types";
 import {
   resolveBoardSession,
   type BoardAnimationStep,
   type BoardGrid,
+  type SpecialGemKind,
+  type SpecialGrid,
   type SwapMove,
   type TileClassSymbol,
 } from "@/lib/battle-engine/board-match3";
@@ -41,6 +43,20 @@ const TILE_ICON: Record<TileClassSymbol, { src: string; alt: string; color: stri
   SUPPORT: { src: "/Arcade%20Icon.png", alt: "Support", color: "#8b5cf6" },
   DAMAGE_DEALER: { src: "/Shooter%20Icon.png", alt: "Damage Dealer", color: "#ef4444" },
   TANK: { src: "/Racing%20Icon.png", alt: "Tank", color: "#14b8a6" },
+};
+
+/** Sonder-Stein-Icons (siehe SpecialGemKind in board-match3.ts) — LINE_H/LINE_V
+ *  (4er-Reihe) nutzen das Community-Icon, AREA (5er-Reihe) das Win-Icon,
+ *  jeweils STATT des Klassen-Icons, damit ein Sonder-Stein auf den ersten
+ *  Blick als "kein normaler Stein" erkennbar ist (zusätzlich zum pulsierenden
+ *  Glow, siehe .gem-special in globals.css). COLOR_BOMB behält bewusst das
+ *  Klassen-Icon (repräsentiert die Klasse, die sie beim Auslösen komplett vom
+ *  Brett räumt) und hebt sich stattdessen über den mehrfarbigen, rotierenden
+ *  Rand ab (siehe .gem-bomb in globals.css). */
+const SPECIAL_ICON: Record<Exclude<SpecialGemKind, "COLOR_BOMB">, { src: string; alt: string; color: string }> = {
+  LINE_H: { src: "/Community%20Icon.png", alt: "Linien-Bombe (Reihe)", color: "#fde68a" },
+  LINE_V: { src: "/Community%20Icon.png", alt: "Linien-Bombe (Spalte)", color: "#fde68a" },
+  AREA: { src: "/Win%20Icon.png", alt: "Flächen-Bombe", color: "#38bdf8" },
 };
 
 const BOARD_LEGEND_SEEN_KEY = "battle-cards-board-legend-seen";
@@ -98,6 +114,7 @@ function computeFallingCells(matchedCells: number[]): Set<number> {
 
 export default function BoardMatch3({
   grid: initialGrid,
+  specials: initialSpecials,
   moveBudget,
   disabled,
   initialSwaps,
@@ -107,6 +124,8 @@ export default function BoardMatch3({
   onGemsDestroyed,
 }: {
   grid: BoardGrid;
+  /** Sonder-Steine (siehe SpecialGemKind) — parallel zu `grid`. */
+  specials: SpecialGrid;
   moveBudget: number;
   disabled?: boolean;
   /** Bereits vor einem Reload bestätigte Swaps dieser Mini-Session (siehe
@@ -148,15 +167,20 @@ export default function BoardMatch3({
   // optisch starten. Reine DOM-Refs, keine Neu-Renders.
   const cellElementsRef = useRef<Map<number, HTMLButtonElement>>(new Map());
   const [board, setBoard] = useState<BoardGrid>(initialGrid);
+  const [specials, setSpecials] = useState<SpecialGrid>(initialSpecials);
   const [swaps, setSwaps] = useState<SwapMove[]>(initialSwaps ?? []);
   const [selected, setSelected] = useState<number | null>(null);
   const [invalidCell, setInvalidCell] = useState<number | null>(null);
   const [destroyingCells, setDestroyingCells] = useState<Set<number>>(new Set());
-  // Match-4/5 (bzw. jede Kaskaden-Runde ab 4 Steinen) bekommt einen sichtbar
-  // größeren Zerstören-Effekt + eigenen Sound + kurzes Kombo-Label statt optisch
-  // genauso auszusehen wie ein normaler 3er-Match — vorher kaum zu unterscheiden.
+  // Match-4/5 (bzw. jede Kaskaden-Runde ab 4 Steinen) ODER das Auslösen eines
+  // bereits vorhandenen Sonder-Steins bekommt einen sichtbar größeren
+  // Zerstören-Effekt + eigenen Sound statt optisch genauso auszusehen wie ein
+  // normaler 3er-Match — vorher kaum zu unterscheiden.
   const [bigMatchCells, setBigMatchCells] = useState<Set<number>>(new Set());
   const [comboLabel, setComboLabel] = useState<{ text: string; key: number } | null>(null);
+  // Zellen, auf denen GERADE ein neuer Sonder-Stein entstanden ist — kurzes
+  // "Aufladen" (gem-special-spawn, globals.css) statt kommentarlosem Erscheinen.
+  const [spawningCells, setSpawningCells] = useState<Set<number>>(new Set());
   const [fallingCells, setFallingCells] = useState<Set<number>>(new Set());
   const [animating, setAnimating] = useState(false);
   // Legende (Symbol→Klasse + Community-Bonus) ist beim allerersten Brett eines
@@ -179,11 +203,13 @@ export default function BoardMatch3({
   // und setzt den restlichen Zug-UI-Zustand für den neuen Zug zurück.
   useEffect(() => {
     if (initialSwaps && initialSwaps.length > 0) {
-      const result = resolveBoardSession(initialGrid, rngStateRef.current, initialSwaps, initialSwaps.length);
+      const result = resolveBoardSession(initialGrid, initialSpecials, rngStateRef.current, initialSwaps, initialSwaps.length);
       setBoard(result.finalGrid);
+      setSpecials(result.finalSpecials);
       rngStateRef.current = result.finalRngState;
     } else {
       setBoard(initialGrid);
+      setSpecials(initialSpecials);
     }
     setSwaps(initialSwaps ?? []);
     setSelected(null);
@@ -199,11 +225,27 @@ export default function BoardMatch3({
   async function playSteps(steps: BoardAnimationStep[]) {
     for (let i = 0; i < steps.length; i++) {
       const step = steps[i];
-      const matchSize = step.matchedCells.length;
+      // Das Kombo-Label zeigt NUR noch echte Sonder-Stein-Ereignisse an (welche
+      // Reihen-/Spaltenlänge WIRKLICH ein einzelnes Match hatte) statt der
+      // Summe aller gleichzeitig getroffenen Zellen dieser Runde — Letzteres
+      // täuschte zuvor "6er"/"10er"-Kombos vor, obwohl z.B. zwei getrennte
+      // 3er-Matches gleichzeitig aufgelöst wurden (siehe SPECIAL_GEM_*-
+      // Konstanten in constants.ts). Ein bereits vorhandener, jetzt
+      // ausgelöster Sonder-Stein zählt ebenfalls als "groß", auch wenn er für
+      // sich nur eine einzelne Zelle war.
+      const createdKinds = new Set(step.specialsCreated.map((s) => s.kind));
+      const isBig = createdKinds.size > 0 || step.specialsActivated.length > 0;
       setDestroyingCells(new Set(step.matchedCells));
-      if (matchSize >= 4) {
-        setBigMatchCells(new Set(step.matchedCells));
-        setComboLabel({ text: `${matchSize}ER-KOMBO!`, key: Date.now() });
+      if (isBig) {
+        setBigMatchCells(new Set([...step.matchedCells, ...step.specialsActivated]));
+        const text = createdKinds.has("COLOR_BOMB")
+          ? "FARBBOMBE!"
+          : createdKinds.has("AREA")
+            ? "5ER-KOMBO!"
+            : createdKinds.has("LINE_H") || createdKinds.has("LINE_V")
+              ? "4ER-KOMBO!"
+              : "SONDER-STEIN AUSGELÖST!";
+        setComboLabel({ text, key: Date.now() });
         playCommunityBonusSound();
         window.setTimeout(() => setComboLabel(null), DESTROY_ANIM_MS + 350);
       } else {
@@ -230,9 +272,15 @@ export default function BoardMatch3({
       await sleep(DESTROY_ANIM_MS);
 
       setBoard(step.gridAfter);
+      setSpecials(step.specialsAfter);
       setFallingCells(computeFallingCells(step.matchedCells));
       setDestroyingCells(new Set());
       setBigMatchCells(new Set());
+      if (step.specialsCreated.length > 0) {
+        const spawnCells = new Set(step.specialsCreated.map((s) => s.cell));
+        setSpawningCells(spawnCells);
+        window.setTimeout(() => setSpawningCells(new Set()), 400);
+      }
       // Ein Frame mit der "angehobenen" Startposition rendern lassen, bevor die
       // Ziel-Position gesetzt wird — sonst läuft die CSS-Transition ins Leere,
       // weil Start- und Endzustand im selben Render landen.
@@ -259,7 +307,7 @@ export default function BoardMatch3({
     }
 
     const swap: SwapMove = { fromCell: selected, toCell: cell };
-    const result = resolveBoardSession(board, rngStateRef.current, [swap], 1);
+    const result = resolveBoardSession(board, specials, rngStateRef.current, [swap], 1);
     setSelected(null);
 
     if (result.matchedSwaps === 0) {
@@ -285,6 +333,10 @@ export default function BoardMatch3({
     swappedBoard[swap.fromCell] = board[swap.toCell];
     swappedBoard[swap.toCell] = board[swap.fromCell];
     setBoard(swappedBoard);
+    const swappedSpecials = [...specials];
+    swappedSpecials[swap.fromCell] = specials[swap.toCell];
+    swappedSpecials[swap.toCell] = specials[swap.fromCell];
+    setSpecials(swappedSpecials);
     await sleep(120);
 
     await playSteps(result.steps);
@@ -349,6 +401,15 @@ export default function BoardMatch3({
               <Users className="w-3.5 h-3.5 text-amber-300 shrink-0" />
               <span>5er-Match = Bonus-Rage fürs ganze Team. Volle Rage? Heldenkarte antippen für Ultimate — jederzeit.</span>
             </div>
+            <div className="flex items-center gap-1.5 pt-0.5 border-t border-white/5">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={SPECIAL_ICON.LINE_H.src} alt="" className="w-3.5 h-3.5 object-contain shrink-0" />
+              <span>4er-Reihe = Bombe (räumt die ganze Reihe/Spalte), 5er-Reihe = Bombe (räumt 3x3 um sich herum)</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-3.5 h-3.5 shrink-0 rounded-full gem-bomb" style={{ background: "rgba(255,255,255,0.08)" }} />
+              <span>10+ Steine in einer Runde = Farbbombe (räumt eine ganze Klasse vom Brett)</span>
+            </div>
           </div>
         </>
       )}
@@ -382,12 +443,17 @@ export default function BoardMatch3({
         style={{ gridTemplateColumns: `repeat(${BOARD_COLS}, minmax(0, 1fr))` }}
       >
         {board.map((symbol, cell) => {
-          const icon = TILE_ICON[symbol];
+          const classIcon = TILE_ICON[symbol];
+          const special = specials[cell];
+          // COLOR_BOMB behält bewusst das Klassen-Icon (siehe SPECIAL_ICON-Kommentar
+          // oben) — LINE_H/LINE_V/AREA zeigen stattdessen ihr eigenes Sonder-Icon.
+          const icon = special && special !== "COLOR_BOMB" ? SPECIAL_ICON[special] : classIcon;
           const isSelected = selected === cell;
           const isInvalid = invalidCell === cell;
           const isDestroying = destroyingCells.has(cell);
           const isBigMatch = bigMatchCells.has(cell);
           const isFalling = fallingCells.has(cell);
+          const isSpawning = spawningCells.has(cell);
           return (
             <button
               key={cell}
@@ -400,17 +466,22 @@ export default function BoardMatch3({
               onClick={() => handleTap(cell)}
               className={`aspect-square rounded-md flex items-center justify-center transition-transform active:scale-95 disabled:opacity-60 ${
                 isDestroying ? (isBigMatch ? "gem-destroy-big" : "gem-destroy") : ""
-              } ${isInvalid ? "hit-shake" : ""}`}
-              style={{
-                background: `${icon.color}22`,
-                transform: isSelected ? "scale(1.08)" : "scale(1)",
-                transition: "transform 150ms ease-out, box-shadow 150ms ease-out",
-                boxShadow: isInvalid
-                  ? "0 0 0 2px #f43f5e, 0 0 10px rgba(244,63,94,0.6)"
-                  : isSelected
-                    ? `0 0 0 2px ${icon.color}, 0 0 14px ${icon.color}99`
-                    : "0 0 0 1px rgba(255,255,255,0.06)",
-              }}
+              } ${isInvalid ? "hit-shake" : ""} ${
+                special === "COLOR_BOMB" ? "gem-bomb" : special ? "gem-special" : ""
+              } ${isSpawning ? "gem-special-spawn" : ""}`}
+              style={
+                {
+                  background: `${classIcon.color}22`,
+                  transform: isSelected ? "scale(1.08)" : "scale(1)",
+                  transition: "transform 150ms ease-out, box-shadow 150ms ease-out",
+                  boxShadow: isInvalid
+                    ? "0 0 0 2px #f43f5e, 0 0 10px rgba(244,63,94,0.6)"
+                    : isSelected
+                      ? `0 0 0 2px ${classIcon.color}, 0 0 14px ${classIcon.color}99`
+                      : "0 0 0 1px rgba(255,255,255,0.06)",
+                  ...(special && special !== "COLOR_BOMB" ? { "--special-color": icon.color } : {}),
+                } as CSSProperties
+              }
             >
               <div
                 className="w-3/4 h-3/4 flex items-center justify-center"

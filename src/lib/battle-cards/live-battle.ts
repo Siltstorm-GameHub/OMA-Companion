@@ -23,7 +23,7 @@ import {
 import { candidateTargetIds, describeAvailableActions, type AvailableAction } from "@/lib/battle-engine/decision";
 import { buildRosterFromUnits } from "@/lib/battle-engine/stats";
 import { cardToBattleUnitDefinition } from "@/lib/battle-engine/adapters";
-import type { BoardGrid, SwapMove } from "@/lib/battle-engine/board-match3";
+import type { BoardGrid, SpecialGrid, SwapMove } from "@/lib/battle-engine/board-match3";
 import { ULTIMATE_SKILL_COST } from "@/lib/battle-engine/constants";
 import type {
   ActionType,
@@ -172,7 +172,7 @@ export interface LiveBattleAwaiting {
   /** Nur im Puzzle-Modus (siehe board-match3.ts) — initiales Grid für die
    *  Match-3-Mini-Session dieses Zugs sowie bislang bestätigte Swaps (für die
    *  Wiederherstellung nach einem Reload, siehe saveBoardProgress). */
-  board: { grid: BoardGrid; moveBudget: number; appliedSwaps: SwapMove[] } | null;
+  board: { grid: BoardGrid; specials: SpecialGrid; moveBudget: number; appliedSwaps: SwapMove[] } | null;
 }
 
 export interface LiveBattleSnapshot {

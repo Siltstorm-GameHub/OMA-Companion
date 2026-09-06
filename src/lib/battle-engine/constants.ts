@@ -69,3 +69,22 @@ export const COMMUNITY_MATCH_TEAM_RAGE_BONUS = 15;
 /** Serverseitiger Hard-Cap pro Zug — Verteidigung gegen einen Replay-Bug/Exploit,
  *  unabhängig vom tatsächlichen Ergebnis der Board-Auflösung (siehe live-battle.ts). */
 export const MAX_BOARD_RAGE_PER_TURN = 60;
+
+// ============================================
+// Sonder-Steine (siehe SpecialGemKind in board-match3.ts)
+// ============================================
+
+/** Ab dieser Gruppengröße (gerade Reihe/Spalte) entsteht ein LINE-Sonder-Stein. */
+export const SPECIAL_GEM_LINE_MATCH_SIZE = 4;
+/** Ab dieser Gruppengröße entsteht statt LINE ein AREA-Sonder-Stein (3x3). */
+export const SPECIAL_GEM_AREA_MATCH_SIZE = 5;
+/** Erreicht die Summe aller Gruppengrößen EINER EINZELNEN Kaskaden-Runde (nicht
+ *  die gesamte Kaskaden-Kette eines Zugs) diesen Wert, entsteht zusätzlich ein
+ *  COLOR_BOMB-Sonder-Stein — unabhängig davon, ob diese Summe aus einem
+ *  einzelnen langen Match oder mehreren gleichzeitigen Matches stammt. Pro
+ *  qualifizierender Runde kann so theoretisch mehr als eine Farbbombe
+ *  innerhalb derselben Kaskaden-Kette entstehen. */
+export const SPECIAL_GEM_COLOR_BOMB_ROUND_TOTAL = 10;
+/** Rage pro zusätzlich (durch einen ausgelösten Sonder-Stein) mitzerstörter
+ *  Zelle, die nicht bereits Teil eines regulären Match-Grants war. */
+export const RAGE_PER_SPECIAL_SWEEP_TILE = 4;

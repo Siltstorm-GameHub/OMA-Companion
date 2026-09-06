@@ -22,10 +22,27 @@ import {
   RAGE_PER_MATCH3,
   RAGE_PER_MATCH4,
   RAGE_PER_MATCH5,
+  RAGE_PER_SPECIAL_SWEEP_TILE,
+  SPECIAL_GEM_AREA_MATCH_SIZE,
+  SPECIAL_GEM_COLOR_BOMB_ROUND_TOTAL,
+  SPECIAL_GEM_LINE_MATCH_SIZE,
 } from "./constants";
 
 export type TileClassSymbol = UnitClass;
 export type BoardGrid = TileClassSymbol[];
+
+/** Sonder-Steine, die aus überlangen Matches entstehen (klassische Match-3-
+ *  Konvention, z.B. Candy Crush): "LINE_H"/"LINE_V" aus einem geraden 4er-Match
+ *  (räumt beim Auslösen die ganze Reihe bzw. Spalte, in derselben Ausrichtung
+ *  wie das erzeugende Match), "AREA" aus einem 5er+-Match (räumt ein 3x3-Feld
+ *  um sich herum) und "COLOR_BOMB" aus einer einzelnen Kaskaden-Runde, deren
+ *  Matches zusammen SPECIAL_GEM_COLOR_BOMB_ROUND_TOTAL Steine erreichen (räumt
+ *  beim Auslösen alle Steine der eigenen Klasse auf dem ganzen Brett). Ein
+ *  Sonder-Stein ersetzt genau EINE Zelle des auslösenden Matches (die Zelle
+ *  "überlebt" statt zerstört zu werden) und bleibt liegen, bis er selbst Teil
+ *  eines späteren Matches wird — siehe activationCellsFor/resolveCascades. */
+export type SpecialGemKind = "LINE_H" | "LINE_V" | "AREA" | "COLOR_BOMB";
+export type SpecialGrid = (SpecialGemKind | null)[];
 
 const REGULAR_SYMBOLS: TileClassSymbol[] = ["TANK", "DAMAGE_DEALER", "SUPPORT"];
 
@@ -55,10 +72,23 @@ export interface RageGrant {
 export interface BoardAnimationStep {
   matchedCells: number[];
   gridAfter: BoardGrid;
+  /** Sonder-Steine, die in DIESER Kaskaden-Runde neu entstanden sind (Zelle +
+   *  Art) — ihre Zelle ist bewusst NICHT Teil von `matchedCells` (sie überlebt
+   *  die Runde, siehe SpecialGemKind). */
+  specialsCreated: { cell: number; kind: SpecialGemKind }[];
+  /** Zellen bereits VORHANDENER Sonder-Steine, die in dieser Runde ausgelöst
+   *  wurden (Teil eines Matches geworden) — für einen eigenen visuellen/Sound-
+   *  Effekt am Auslöse-Ort, getrennt von den regulär gematchten Zellen. */
+  specialsActivated: number[];
+  /** Zustand des Sonder-Stein-Grids NACH dieser Runde (Schwerkraft/Nachfüllen
+   *  bereits angewendet) — analog zu `gridAfter`, damit die UI Sonder-Icons
+   *  auch mitten in einer Kaskade korrekt weiterrendern kann. */
+  specialsAfter: SpecialGrid;
 }
 
 export interface BoardResolveResult {
   finalGrid: BoardGrid;
+  finalSpecials: SpecialGrid;
   finalRngState: number;
   rageGrants: RageGrant[];
   /** UNGEMERGTE Grants — ein Eintrag pro einzelnem Match-/Kaskaden-Ereignis (vor
@@ -137,7 +167,7 @@ function randomRegularSymbol(rng: Rng): TileClassSymbol {
  *  RNG-Zustand NACH der Generierung zurück — resolveBoardSession() setzt den
  *  RNG exakt dort fort, statt neu zu starten, damit Client (erste Anzeige)
  *  und Server (Zug-Auflösung) bei gleichem Seed dieselbe Zufallsfolge sehen. */
-export function generateBoard(seed: number): { grid: BoardGrid; rngState: number } {
+export function generateBoard(seed: number): { grid: BoardGrid; specials: SpecialGrid; rngState: number } {
   const rng = createRng(seed);
   const grid: BoardGrid = new Array(BOARD_ROWS * BOARD_COLS);
 
@@ -158,7 +188,7 @@ export function generateBoard(seed: number): { grid: BoardGrid; rngState: number
     }
   }
 
-  return { grid, rngState: rng.getState() };
+  return { grid, specials: new Array(BOARD_ROWS * BOARD_COLS).fill(null), rngState: rng.getState() };
 }
 
 /** Findet alle zusammenhängenden Match-Gruppen (Länge >= 3), horizontal und vertikal. */
@@ -208,32 +238,92 @@ function rageForGroupSize(size: number): number {
   return RAGE_PER_MATCH3;
 }
 
-/** Entfernt die getroffenen Zellen, lässt die restlichen Steine je Spalte nach
- *  unten fallen ("Schwerkraft") und füllt die freien Plätze oben mit neuen
- *  Zufallssymbolen auf — mutiert `grid` direkt. */
-function removeAndCascade(grid: BoardGrid, matchedCells: Set<number>, rng: Rng): void {
+/** true, wenn alle Zellen der Gruppe dieselbe Reihe teilen (findMatchGroups
+ *  liefert horizontale Gruppen immer in aufsteigender Spalten-Reihenfolge
+ *  derselben Reihe, vertikale entsprechend in derselben Spalte). */
+function isHorizontalGroup(group: number[]): boolean {
+  return group.length < 2 || cellRow(group[0]) === cellRow(group[1]);
+}
+
+/** Alle Zellen, die ein bestimmter Sonder-Stein beim Auslösen zusätzlich
+ *  zerstört — LINE räumt die eigene Reihe/Spalte, AREA ein 3x3-Feld um sich
+ *  herum, COLOR_BOMB alle Steine der eigenen Klasse auf dem GANZEN Brett
+ *  (die Klasse ist das Symbol, auf dem die Bombe gerade liegt, siehe
+ *  SpecialGemKind). `cell` selbst ist NICHT enthalten (wird bereits regulär
+ *  als Teil des Matches entfernt, das den Sonder-Stein ausgelöst hat). */
+function activationCellsFor(kind: SpecialGemKind, cell: number, grid: BoardGrid): number[] {
+  const row = cellRow(cell);
+  const col = cellCol(cell);
+  const extra: number[] = [];
+  if (kind === "LINE_H") {
+    for (let c = 0; c < BOARD_COLS; c++) if (c !== col) extra.push(row * BOARD_COLS + c);
+  } else if (kind === "LINE_V") {
+    for (let r = 0; r < BOARD_ROWS; r++) if (r !== row) extra.push(r * BOARD_COLS + col);
+  } else if (kind === "AREA") {
+    for (let r = row - 1; r <= row + 1; r++) {
+      for (let c = col - 1; c <= col + 1; c++) {
+        if (r === row && c === col) continue;
+        if (r >= 0 && r < BOARD_ROWS && c >= 0 && c < BOARD_COLS) extra.push(r * BOARD_COLS + c);
+      }
+    }
+  } else if (kind === "COLOR_BOMB") {
+    const targetClass = grid[cell];
+    for (let c = 0; c < grid.length; c++) if (c !== cell && grid[c] === targetClass) extra.push(c);
+  }
+  return extra;
+}
+
+/** Entfernt die getroffenen Zellen, lässt die restlichen Steine (samt ihrem
+ *  ggf. gesetzten Sonder-Stein, siehe `specials`) je Spalte nach unten fallen
+ *  ("Schwerkraft") und füllt die freien Plätze oben mit neuen Zufallssymbolen
+ *  OHNE Sonder-Stein auf — mutiert `grid`/`specials` direkt. */
+function removeAndCascade(grid: BoardGrid, specials: SpecialGrid, matchedCells: Set<number>, rng: Rng): void {
   for (let col = 0; col < BOARD_COLS; col++) {
-    const surviving: TileClassSymbol[] = [];
+    const survivingSymbols: TileClassSymbol[] = [];
+    const survivingSpecials: (SpecialGemKind | null)[] = [];
     for (let row = 0; row < BOARD_ROWS; row++) {
       const cell = row * BOARD_COLS + col;
-      if (!matchedCells.has(cell)) surviving.push(grid[cell]);
+      if (!matchedCells.has(cell)) {
+        survivingSymbols.push(grid[cell]);
+        survivingSpecials.push(specials[cell]);
+      }
     }
-    const missing = BOARD_ROWS - surviving.length;
-    const refilled: TileClassSymbol[] = [];
-    for (let i = 0; i < missing; i++) refilled.push(randomRegularSymbol(rng));
-    const column = [...refilled, ...surviving];
+    const missing = BOARD_ROWS - survivingSymbols.length;
+    const refilledSymbols: TileClassSymbol[] = [];
+    const refilledSpecials: (SpecialGemKind | null)[] = [];
+    for (let i = 0; i < missing; i++) {
+      refilledSymbols.push(randomRegularSymbol(rng));
+      refilledSpecials.push(null);
+    }
+    const columnSymbols = [...refilledSymbols, ...survivingSymbols];
+    const columnSpecials = [...refilledSpecials, ...survivingSpecials];
     for (let row = 0; row < BOARD_ROWS; row++) {
-      grid[row * BOARD_COLS + col] = column[row];
+      grid[row * BOARD_COLS + col] = columnSymbols[row];
+      specials[row * BOARD_COLS + col] = columnSpecials[row];
     }
   }
 }
 
 /** Löst alle Matches im aktuellen Grid auf, inkl. Kaskaden durch nachrutschende
  *  Steine (jede weitere Kaskaden-Stufe gibt RAGE_PER_CASCADE_BONUS obendrauf).
- *  Ein 5er+-Match löst zusätzlich den teamweiten Community-Bonus aus. Mutiert
- *  `grid` direkt, gibt die dabei entstandenen Rage-Grants UND einen
- *  Animations-Schritt pro Match-Runde zurück (siehe BoardAnimationStep). */
-function resolveCascades(grid: BoardGrid, rng: Rng): { grants: RageGrant[]; steps: BoardAnimationStep[] } {
+ *  Ein 5er+-Match löst zusätzlich den teamweiten Community-Bonus aus. Eine
+ *  gerade 4er-Reihe/Spalte erzeugt einen LINE-, eine 5er+-Reihe/Spalte einen
+ *  AREA-Sonder-Stein an ihrer mittleren Zelle (siehe SpecialGemKind); erreicht
+ *  die Summe aller Gruppengrößen EINER Kaskaden-Runde
+ *  SPECIAL_GEM_COLOR_BOMB_ROUND_TOTAL, entsteht zusätzlich (ggf. anstelle eines
+ *  kleineren Sonder-Steins auf derselben Zelle) eine Farbbombe an der Mitte
+ *  der größten Gruppe dieser Runde. Bereits vorhandene Sonder-Steine, die
+ *  durch diese Runde getroffen werden, lösen rekursiv ihre eigene Zerstörung
+ *  aus (siehe activationCellsFor) — die dadurch zusätzlich zerstörten Zellen
+ *  zählen NICHT in die 10er-Schwelle dieser Runde hinein (die bezieht sich nur
+ *  auf die reguläre Match-Summe). Mutiert `grid`/`specials` direkt, gibt die
+ *  dabei entstandenen Rage-Grants UND einen Animations-Schritt pro
+ *  Match-Runde zurück (siehe BoardAnimationStep). */
+function resolveCascades(
+  grid: BoardGrid,
+  specials: SpecialGrid,
+  rng: Rng
+): { grants: RageGrant[]; steps: BoardAnimationStep[] } {
   const grants: RageGrant[] = [];
   const steps: BoardAnimationStep[] = [];
   const MAX_CASCADES = 20; // Sicherheitsnetz gegen einen theoretischen Endlos-Fall
@@ -244,18 +334,71 @@ function resolveCascades(grid: BoardGrid, rng: Rng): { grants: RageGrant[]; step
     if (groups.length === 0) break;
 
     const matchedCells = new Set<number>();
+    const specialsCreatedByCell = new Map<number, SpecialGemKind>();
+    let roundRawSum = 0;
+    let largestGroup = groups[0];
+
     for (const group of groups) {
       const symbol = grid[group[0]];
       const amount = rageForGroupSize(group.length) + cascadeIndex * RAGE_PER_CASCADE_BONUS;
       grants.push({ targetClass: symbol, amount, tileCount: group.length });
+      roundRawSum += group.length;
+      if (group.length > largestGroup.length) largestGroup = group;
       if (group.length >= 5) {
         grants.push({ targetClass: "ALL", amount: COMMUNITY_MATCH_TEAM_RAGE_BONUS });
       }
       group.forEach((cell) => matchedCells.add(cell));
+
+      if (group.length >= SPECIAL_GEM_AREA_MATCH_SIZE) {
+        specialsCreatedByCell.set(group[Math.floor(group.length / 2)], "AREA");
+      } else if (group.length >= SPECIAL_GEM_LINE_MATCH_SIZE) {
+        const kind: SpecialGemKind = isHorizontalGroup(group) ? "LINE_H" : "LINE_V";
+        specialsCreatedByCell.set(group[Math.floor(group.length / 2)], kind);
+      }
     }
 
-    removeAndCascade(grid, matchedCells, rng);
-    steps.push({ matchedCells: [...matchedCells], gridAfter: [...grid] });
+    if (roundRawSum >= SPECIAL_GEM_COLOR_BOMB_ROUND_TOTAL) {
+      specialsCreatedByCell.set(largestGroup[Math.floor(largestGroup.length / 2)], "COLOR_BOMB");
+    }
+
+    // Die Spawn-Zelle jedes neu entstehenden Sonder-Steins überlebt diese
+    // Runde (wird gleich VOR dem Entfernen aus `matchedCells` genommen) —
+    // klassische Match-3-Konvention: das Match "verwandelt" sich an dieser
+    // einen Stelle in den Sonder-Stein, statt komplett zu verschwinden.
+    for (const cell of specialsCreatedByCell.keys()) matchedCells.delete(cell);
+
+    // Bereits vorhandene Sonder-Steine, die durch diese Runde getroffen werden,
+    // lösen aus — rekursiv, falls ihre Zerstörungs-Zellen selbst wieder einen
+    // Sonder-Stein treffen (Breitensuche über eine Warteschlange).
+    const activatedSpecialCells: number[] = [];
+    const queue = [...matchedCells];
+    const queued = new Set(queue);
+    while (queue.length > 0) {
+      const cell = queue.shift() as number;
+      const kind = specials[cell];
+      if (!kind || specialsCreatedByCell.has(cell)) continue;
+      activatedSpecialCells.push(cell);
+      for (const extra of activationCellsFor(kind, cell, grid)) {
+        if (!matchedCells.has(extra)) {
+          matchedCells.add(extra);
+          grants.push({ targetClass: grid[extra], amount: RAGE_PER_SPECIAL_SWEEP_TILE, tileCount: 1 });
+        }
+        if (!queued.has(extra)) {
+          queued.add(extra);
+          queue.push(extra);
+        }
+      }
+    }
+
+    for (const [cell, kind] of specialsCreatedByCell) specials[cell] = kind;
+    removeAndCascade(grid, specials, matchedCells, rng);
+    steps.push({
+      matchedCells: [...matchedCells],
+      gridAfter: [...grid],
+      specialsCreated: [...specialsCreatedByCell].map(([cell, kind]) => ({ cell, kind })),
+      specialsActivated: activatedSpecialCells,
+      specialsAfter: [...specials],
+    });
     cascadeIndex++;
   }
 
@@ -279,11 +422,13 @@ function mergeGrants(grants: RageGrant[]): RageGrant[] {
  *  gutgeschriebenen Rage, siehe live-battle.ts) rufen exakt diese Funktion auf. */
 export function resolveBoardSession(
   initialGrid: BoardGrid,
+  initialSpecials: SpecialGrid,
   rngState: number,
   swaps: SwapMove[],
   moveBudget: number
 ): BoardResolveResult {
   const grid: BoardGrid = [...initialGrid];
+  const specials: SpecialGrid = [...initialSpecials];
   const rng = createRng(rngState);
   const allGrants: RageGrant[] = [];
   const allSteps: BoardAnimationStep[] = [];
@@ -298,16 +443,22 @@ export function resolveBoardSession(
     const b = grid[toCell];
     grid[fromCell] = b;
     grid[toCell] = a;
+    const specialA = specials[fromCell];
+    const specialB = specials[toCell];
+    specials[fromCell] = specialB;
+    specials[toCell] = specialA;
 
     const groups = findMatchGroups(grid);
     if (groups.length === 0) {
       grid[fromCell] = a;
       grid[toCell] = b;
+      specials[fromCell] = specialA;
+      specials[toCell] = specialB;
       continue;
     }
 
     matchedSwaps++;
-    const { grants, steps } = resolveCascades(grid, rng);
+    const { grants, steps } = resolveCascades(grid, specials, rng);
     allGrants.push(...grants);
     allSteps.push(...steps);
   }
@@ -315,5 +466,14 @@ export function resolveBoardSession(
   const rageGrants = mergeGrants(allGrants);
   const totalRageGranted = rageGrants.reduce((sum, g) => sum + g.amount, 0);
 
-  return { finalGrid: grid, finalRngState: rng.getState(), rageGrants, rawGrants: allGrants, matchedSwaps, totalRageGranted, steps: allSteps };
+  return {
+    finalGrid: grid,
+    finalSpecials: specials,
+    finalRngState: rng.getState(),
+    rageGrants,
+    rawGrants: allGrants,
+    matchedSwaps,
+    totalRageGranted,
+    steps: allSteps,
+  };
 }

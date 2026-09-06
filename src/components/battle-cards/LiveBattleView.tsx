@@ -28,7 +28,7 @@ import { Loader2, Zap, Swords, Bot, ChevronRight, ChevronLeft, Timer, Volume2, V
 import CoinIcon from "@/components/CoinIcon";
 import { getClassConfig, LEVEL_BORDER } from "./BattleCardView";
 import BoardMatch3 from "./BoardMatch3";
-import type { BoardGrid, SwapMove } from "@/lib/battle-engine/board-match3";
+import type { BoardGrid, SpecialGrid, SwapMove } from "@/lib/battle-engine/board-match3";
 import type { ActionType, ActiveStatModifier, TeamId, UnitClass } from "@/lib/battle-engine/types";
 import {
   isSoundMuted,
@@ -145,7 +145,7 @@ interface LiveSnapshot {
     actions: AvailableAction[];
     candidateTargetsByAction: Partial<Record<ActionType, string[]>>;
     deadline: number | null;
-    board: { grid: BoardGrid; moveBudget: number; appliedSwaps: SwapMove[] } | null;
+    board: { grid: BoardGrid; specials: SpecialGrid; moveBudget: number; appliedSwaps: SwapMove[] } | null;
   } | null;
   autoA: boolean;
   autoB: boolean;
@@ -1161,10 +1161,16 @@ function LiveBattleBody({
   // Letztes bekanntes Brett merken (Match-3-Modus) — bleibt sichtbar (deaktiviert),
   // solange der Gegner am Zug ist, statt beim Zugwechsel durch einen reinen
   // Text-Platzhalter ersetzt zu werden.
-  const [lastBoard, setLastBoard] = useState<{ grid: BoardGrid; moveBudget: number } | null>(null);
+  const [lastBoard, setLastBoard] = useState<{ grid: BoardGrid; specials: SpecialGrid; moveBudget: number } | null>(
+    null
+  );
   useEffect(() => {
     if (snapshot.awaiting?.board) {
-      setLastBoard({ grid: snapshot.awaiting.board.grid, moveBudget: snapshot.awaiting.board.moveBudget });
+      setLastBoard({
+        grid: snapshot.awaiting.board.grid,
+        specials: snapshot.awaiting.board.specials,
+        moveBudget: snapshot.awaiting.board.moveBudget,
+      });
     }
   }, [snapshot.awaiting?.board]);
 
@@ -1457,6 +1463,7 @@ function LiveBattleBody({
               <BoardMatch3
                 turnId={snapshot.awaiting.unitId}
                 grid={snapshot.awaiting.board.grid}
+                specials={snapshot.awaiting.board.specials}
                 moveBudget={snapshot.awaiting.board.moveBudget}
                 disabled={busy}
                 initialSwaps={snapshot.awaiting.board.appliedSwaps}
@@ -1535,6 +1542,7 @@ function LiveBattleBody({
           <div className="glass rounded-xl p-2.5 h-[212px] lg:h-[300px] overflow-y-auto flex flex-col gap-1.5">
             <BoardMatch3
               grid={lastBoard.grid}
+              specials={lastBoard.specials}
               moveBudget={lastBoard.moveBudget}
               disabled
               initialSwaps={[]}

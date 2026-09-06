@@ -12,7 +12,14 @@
 // Seite) entscheiden weiterhin automatisch über defaultDecideAction() +
 // die eingebauten Zielregeln — exakt wie runBattle() bisher.
 
-import { generateBoard, hasAnyValidMove, resolveBoardSession, type BoardGrid, type SwapMove } from "./board-match3";
+import {
+  generateBoard,
+  hasAnyValidMove,
+  resolveBoardSession,
+  type BoardGrid,
+  type SpecialGrid,
+  type SwapMove,
+} from "./board-match3";
 import {
   BOARD_MOVE_BUDGET_PER_TURN,
   MAX_BOARD_RAGE_PER_TURN,
@@ -81,6 +88,9 @@ export interface InteractiveBattleState {
    *  neues Brett entsteht nur noch, wenn auf dem aktuellen keinerlei Zug mehr
    *  ein Match ergäbe (Deadlock, siehe hasAnyValidMove/regenerateBoardIfNeeded). */
   boardGrid: BoardGrid | null;
+  /** Sonder-Steine (siehe SpecialGemKind in board-match3.ts) — parallel zu
+   *  `boardGrid`, genauso persistent über den gesamten Kampfverlauf. */
+  boardSpecials: SpecialGrid | null;
   boardRngState: number;
   /** Das Brett für den GERADE wartenden menschlichen Zug — Grid/RngState werden
    *  beim Pausieren aus boardGrid/boardRngState übernommen (nicht neu erzeugt)
@@ -90,7 +100,7 @@ export interface InteractiveBattleState {
    *  aktualisiert und mitpersistiert, damit ein Reload mitten im Zug den
    *  Board-Fortschritt NICHT verwirft, sondern BoardMatch3.tsx ihn beim
    *  Neuladen rekonstruieren kann. */
-  pendingBoard: { grid: BoardGrid; rngState: number; appliedSwaps: SwapMove[] } | null;
+  pendingBoard: { grid: BoardGrid; specials: SpecialGrid; rngState: number; appliedSwaps: SwapMove[] } | null;
 }
 
 /** Nach so vielen aufeinanderfolgenden verpassten Zügen (Zug-Timeout, siehe
@@ -107,7 +117,7 @@ export interface PendingDecision {
    *  Match-3-Mini-Session dieses Zugs (siehe board-match3.ts) sowie die
    *  bislang bestätigten Swaps (für die Wiederherstellung nach einem Reload,
    *  siehe recordBoardProgress). */
-  board: { grid: BoardGrid; moveBudget: number; appliedSwaps: SwapMove[] } | null;
+  board: { grid: BoardGrid; specials: SpecialGrid; moveBudget: number; appliedSwaps: SwapMove[] } | null;
 }
 
 export interface AdvanceResult {
@@ -142,10 +152,12 @@ export function createInteractiveState(
 
   const boardMode = options.boardMode ?? false;
   let boardGrid: BoardGrid | null = null;
+  let boardSpecials: SpecialGrid | null = null;
   let boardRngState = 0;
   if (boardMode) {
     const initialBoard = pickPlayableBoard(rng);
     boardGrid = initialBoard.grid;
+    boardSpecials = initialBoard.specials;
     boardRngState = initialBoard.rngState;
   }
 
@@ -169,6 +181,7 @@ export function createInteractiveState(
     timeoutStreakB: 0,
     boardMode,
     boardGrid,
+    boardSpecials,
     boardRngState,
     pendingBoard: null,
   };
@@ -177,8 +190,9 @@ export function createInteractiveState(
 /** Zieht ein neues, garantiert spielbares Brett (mindestens ein Swap ergäbe ein
  *  Match) — `generateBoard` vermeidet nur bereits vorhandene 3er-Reihen im
  *  Ausgangs-Grid, schließt einen (extrem seltenen) Deadlock aber nicht
- *  grundsätzlich aus, daher die Wiederholungsschleife mit Sicherheitsnetz. */
-function pickPlayableBoard(rng: ReturnType<typeof createRng>): { grid: BoardGrid; rngState: number } {
+ *  grundsätzlich aus, daher die Wiederholungsschleife mit Sicherheitsnetz. Ein
+ *  frisches Brett hat nie Sonder-Steine (die entstehen erst durch Matches). */
+function pickPlayableBoard(rng: ReturnType<typeof createRng>): { grid: BoardGrid; specials: SpecialGrid; rngState: number } {
   let current = generateBoard(Math.floor(rng() * 0xffffffff));
   let guard = 0;
   while (!hasAnyValidMove(current.grid) && guard < 10) {
@@ -195,6 +209,7 @@ function regenerateBoardIfNeeded(state: InteractiveBattleState, rng: ReturnType<
   if (state.boardGrid && hasAnyValidMove(state.boardGrid)) return;
   const picked = pickPlayableBoard(rng);
   state.boardGrid = picked.grid;
+  state.boardSpecials = picked.specials;
   state.boardRngState = picked.rngState;
 }
 
@@ -220,13 +235,14 @@ function applyBoardRage(
   const pending = state.pendingBoard;
   if (!pending) return;
 
-  const result = resolveBoardSession(pending.grid, pending.rngState, swaps, BOARD_MOVE_BUDGET_PER_TURN);
+  const result = resolveBoardSession(pending.grid, pending.specials, pending.rngState, swaps, BOARD_MOVE_BUDGET_PER_TURN);
   const log = state.log;
 
   // Das Brett bleibt über den gesamten Kampf bestehen (kein Neu-Ziehen pro Zug,
   // siehe boardGrid) — das Ergebnis dieser Zug-Session wird daher als neuer
   // persistenter Stand übernommen statt verworfen zu werden.
   state.boardGrid = result.finalGrid;
+  state.boardSpecials = result.finalSpecials;
   state.boardRngState = result.finalRngState;
 
   let grants = result.rageGrants;
@@ -452,7 +468,12 @@ function stepOnce(
       // echten Deadlock ersetzt (siehe regenerateBoardIfNeeded), sonst über den
       // gesamten Kampf unverändert weitergeführt.
       regenerateBoardIfNeeded(state, rng);
-      state.pendingBoard = { grid: state.boardGrid as BoardGrid, rngState: state.boardRngState, appliedSwaps: [] };
+      state.pendingBoard = {
+        grid: state.boardGrid as BoardGrid,
+        specials: state.boardSpecials as SpecialGrid,
+        rngState: state.boardRngState,
+        appliedSwaps: [],
+      };
     }
     return "paused";
   }
@@ -531,6 +552,7 @@ export function describeCurrentDecision(state: InteractiveBattleState): PendingD
     state.boardMode && state.pendingBoard
       ? {
           grid: state.pendingBoard.grid,
+          specials: state.pendingBoard.specials,
           moveBudget: BOARD_MOVE_BUDGET_PER_TURN,
           appliedSwaps: state.pendingBoard.appliedSwaps,
         }
