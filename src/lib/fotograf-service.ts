@@ -65,19 +65,29 @@ export async function markAssetUsed(assetId: string): Promise<void> {
 
 export type MutationResult = { ok: true } | { error: string };
 
-export async function updateAsset(authorId: string, assetId: string, caption: string): Promise<MutationResult> {
+/** Autor ODER Admin (isAdmin) darf bearbeiten — `url` wird nur beim Admin-Zuschnitt mitgegeben. */
+export async function updateAsset(
+  authorId: string, assetId: string, data: { caption?: string; url?: string },
+  opts: { isAdmin?: boolean } = {},
+): Promise<MutationResult> {
   const asset = await prisma.jobMediaAsset.findUnique({ where: { id: assetId } });
   if (!asset) return { error: "Asset nicht gefunden" };
-  if (asset.authorId !== authorId) return { error: "Nur der Autor kann dieses Asset bearbeiten" };
+  if (asset.authorId !== authorId && !opts.isAdmin) return { error: "Keine Berechtigung, dieses Asset zu bearbeiten" };
 
-  await prisma.jobMediaAsset.update({ where: { id: assetId }, data: { caption: caption || null } });
+  await prisma.jobMediaAsset.update({
+    where: { id: assetId },
+    data: {
+      ...(data.caption !== undefined ? { caption: data.caption || null } : {}),
+      ...(data.url ? { url: data.url } : {}),
+    },
+  });
   return { ok: true };
 }
 
-export async function deleteAsset(authorId: string, assetId: string): Promise<MutationResult> {
+export async function deleteAsset(authorId: string, assetId: string, opts: { isAdmin?: boolean } = {}): Promise<MutationResult> {
   const asset = await prisma.jobMediaAsset.findUnique({ where: { id: assetId } });
   if (!asset) return { error: "Asset nicht gefunden" };
-  if (asset.authorId !== authorId) return { error: "Nur der Autor kann dieses Asset löschen" };
+  if (asset.authorId !== authorId && !opts.isAdmin) return { error: "Keine Berechtigung, dieses Asset zu löschen" };
 
   await prisma.jobMediaAsset.delete({ where: { id: assetId } });
   return { ok: true };

@@ -1,10 +1,10 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
   Briefcase, Users, Coins, TrendingUp, Clock, ThumbsUp, Send, LogOut, RefreshCw,
-  ChevronRight, Loader2, Sparkles, ImagePlus, Newspaper, Megaphone, GraduationCap, Lightbulb, Upload,
+  ChevronRight, Loader2, Sparkles, ImagePlus, Newspaper, Megaphone, GraduationCap, Lightbulb, Upload, Crop, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -12,6 +12,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
 import DisputeVotesModal from "@/components/community-jobs/DisputeVotesModal";
 import StudioEditor from "@/components/community-jobs/StudioEditor";
+import ImageCropTool from "@/components/community-jobs/ImageCropTool";
 
 /**
  * Community-Jobs-Reiter/-Sektion: eigenständig von der Mancave-Idle-Jobs-`JobsPanel`
@@ -412,6 +413,64 @@ function EditDeleteBar({
   );
 }
 
+/**
+ * Bild-Bearbeitung für eigene, bereits veröffentlichte Beiträge — Zuschneiden
+ * (wiederverwendet ImageCropTool), Ersetzen durch komplett neuen Upload,
+ * optional Entfernen. Jede Aktion speichert sofort (ruft `onSaved` mit der
+ * neuen URL bzw. `null` bei Entfernen auf), analog zum Admin-Bearbeiten-Muster
+ * in AdminContentSection.tsx.
+ */
+function ImageEditControls({
+  imageUrl, onSaved, allowRemove,
+}: { imageUrl: string | null; onSaved: (url: string | null) => void; allowRemove?: boolean }) {
+  const [cropping, setCropping] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function handleFile(file: File) {
+    setUploading(true);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      body.append("kind", "community-job-asset");
+      const res = await fetch("/api/upload", { method: "POST", body });
+      const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+      if (!res.ok || !data.url) throw new Error(data.error ?? "Upload fehlgeschlagen");
+      onSaved(data.url);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload fehlgeschlagen");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  return (
+    <div className="space-y-1.5">
+      {imageUrl && (
+        // eslint-disable-next-line @next/next/no-img-element -- Vorschau beliebiger Blob-URLs
+        <img src={imageUrl} alt="" className="w-full max-h-40 object-contain rounded-lg border border-white/10 bg-black/20" />
+      )}
+      <div className="flex flex-wrap gap-1.5">
+        {imageUrl && (
+          <Button size="sm" variant="outline" icon={<Crop className="w-3.5 h-3.5" />} onClick={() => setCropping(true)}>Zuschneiden</Button>
+        )}
+        <Button size="sm" variant="outline" loading={uploading} icon={<Upload className="w-3.5 h-3.5" />} onClick={() => fileRef.current?.click()}>
+          {imageUrl ? "Ersetzen" : "Bild hochladen"}
+        </Button>
+        {imageUrl && allowRemove && (
+          <Button size="sm" variant="outline" icon={<X className="w-3.5 h-3.5" />} onClick={() => onSaved(null)}>Entfernen</Button>
+        )}
+      </div>
+      <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden"
+        onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+      <Modal open={cropping} onClose={() => setCropping(false)} title="Bild zuschneiden" size="lg">
+        {imageUrl && <ImageCropTool imageUrl={imageUrl} onCropped={url => { setCropping(false); onSaved(url); }} onCancel={() => setCropping(false)} />}
+      </Modal>
+    </div>
+  );
+}
+
 function ReportList() {
   const [items, setItems] = useState<{ id: string; title: string; bodyMarkdown?: string; publishedAt: string; _count: { votes: number; contributions: number } }[]>([]);
   const [editing, setEditing] = useState<string | null>(null);
@@ -470,7 +529,7 @@ function ReportList() {
 }
 
 function AssetList() {
-  const [items, setItems] = useState<{ id: string; caption: string | null; type: string; _count: { votes: number } }[]>([]);
+  const [items, setItems] = useState<{ id: string; caption: string | null; type: string; url: string; _count: { votes: number } }[]>([]);
   const [editing, setEditing] = useState<string | null>(null);
   const [caption, setCaption] = useState("");
 
@@ -485,6 +544,12 @@ function AssetList() {
       toast.success("Gespeichert"); setEditing(null); reload();
     } catch (err) { toast.error(err instanceof Error ? err.message : "Fehlgeschlagen"); }
   }
+  async function saveImage(id: string, url: string) {
+    try {
+      await api(`/api/community-jobs/media/${id}`, { method: "PATCH", body: JSON.stringify({ url }) });
+      toast.success("Bild gespeichert"); reload();
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Fehlgeschlagen"); }
+  }
   async function remove(id: string) {
     if (!confirm("Asset wirklich löschen?")) return;
     try {
@@ -497,11 +562,14 @@ function AssetList() {
   return (
     <div className="space-y-1.5">
       {items.map(a => editing === a.id ? (
-        <div key={a.id} className="flex items-center gap-1.5 bg-white/[0.03] rounded-lg p-2">
-          <input value={caption} onChange={e => setCaption(e.target.value)} placeholder="Bildunterschrift"
-            className="flex-1 bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white" />
-          <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>Abbrechen</Button>
-          <Button size="sm" onClick={() => save(a.id)}>Speichern</Button>
+        <div key={a.id} className="space-y-1.5 bg-white/[0.03] rounded-lg p-2">
+          <div className="flex items-center gap-1.5">
+            <input value={caption} onChange={e => setCaption(e.target.value)} placeholder="Bildunterschrift"
+              className="flex-1 bg-white/[0.04] border border-white/10 rounded px-2 py-1 text-xs text-white" />
+            <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>Abbrechen</Button>
+            <Button size="sm" onClick={() => save(a.id)}>Speichern</Button>
+          </div>
+          <ImageEditControls imageUrl={a.url} onSaved={url => url && saveImage(a.id, url)} />
         </div>
       ) : (
         <div key={a.id} className="flex items-center justify-between text-xs">
@@ -517,7 +585,7 @@ function AssetList() {
 }
 
 function MarketingPostList() {
-  const [items, setItems] = useState<{ id: string; caption: string; _count: { votes: number } }[]>([]);
+  const [items, setItems] = useState<{ id: string; caption: string; imageUrl: string | null; assetId: string | null; asset?: { url: string } | null; _count: { votes: number } }[]>([]);
   const [editing, setEditing] = useState<string | null>(null);
   const [caption, setCaption] = useState("");
 
@@ -530,6 +598,12 @@ function MarketingPostList() {
     try {
       await api(`/api/community-jobs/marketing-posts/${id}`, { method: "PATCH", body: JSON.stringify({ caption }) });
       toast.success("Gespeichert"); setEditing(null); reload();
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Fehlgeschlagen"); }
+  }
+  async function saveImage(id: string, url: string | null) {
+    try {
+      await api(`/api/community-jobs/marketing-posts/${id}`, { method: "PATCH", body: JSON.stringify({ imageUrl: url }) });
+      toast.success(url ? "Bild gespeichert" : "Bild entfernt"); reload();
     } catch (err) { toast.error(err instanceof Error ? err.message : "Fehlgeschlagen"); }
   }
   async function remove(id: string) {
@@ -551,6 +625,7 @@ function MarketingPostList() {
             <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>Abbrechen</Button>
             <Button size="sm" onClick={() => save(p.id)}>Speichern</Button>
           </div>
+          <ImageEditControls imageUrl={p.imageUrl ?? p.asset?.url ?? null} allowRemove onSaved={url => saveImage(p.id, url)} />
         </div>
       ) : (
         <div key={p.id} className="flex items-center justify-between text-xs">

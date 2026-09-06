@@ -4,6 +4,7 @@ import {
   getEffectiveCommunityJobs, getAnnouncementChannelOverrides, getVoteBonusTiers, getTestModeEnabled,
 } from "@/lib/community-job-config";
 import CommunityJobsAdminPanel from "./CommunityJobsAdminPanel";
+import AdminContentSection from "./AdminContentSection";
 
 export default async function AdminCommunityJobsPage() {
   await requireRole("moderator");
@@ -25,6 +26,7 @@ export default async function AdminCommunityJobsPage() {
         voteBonus={voteBonus}
         testModeEnabled={testModeEnabled}
       />
+      <AdminContentSection />
     </div>
   );
 }

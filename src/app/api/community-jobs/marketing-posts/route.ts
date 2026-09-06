@@ -12,7 +12,7 @@ export async function GET() {
   const posts = await prisma.marketingPost.findMany({
     where: { authorId: user.id },
     orderBy: { createdAt: "desc" },
-    include: { _count: { select: { votes: true } } },
+    include: { _count: { select: { votes: true } }, asset: { select: { url: true } } },
   });
   return NextResponse.json({ posts });
 }

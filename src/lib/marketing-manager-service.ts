@@ -61,20 +61,41 @@ async function announceAndStore(postId: string, authorId: string, caption: strin
 
 export type MutationResult = { ok: true } | { error: string };
 
-export async function updateMarketingPost(authorId: string, postId: string, caption: string): Promise<MutationResult> {
+/**
+ * Autor ODER Admin dürfen bearbeiten — inkl. Bild ersetzen/entfernen:
+ * `imageUrl`/`assetId` gesetzt → übernehmen, `null` → explizit entfernen
+ * (z.B. "Bild entfernen"-Button), `undefined` → unverändert lassen.
+ * Neues `imageUrl` löscht automatisch ein evtl. gesetztes `assetId` und
+ * umgekehrt, ein Post hat immer nur eine Bildquelle gleichzeitig.
+ */
+export async function updateMarketingPost(
+  authorId: string, postId: string,
+  data: { caption?: string; imageUrl?: string | null; assetId?: string | null },
+  opts: { isAdmin?: boolean } = {},
+): Promise<MutationResult> {
   const post = await prisma.marketingPost.findUnique({ where: { id: postId } });
   if (!post) return { error: "Post nicht gefunden" };
-  if (post.authorId !== authorId) return { error: "Nur der Autor kann diesen Post bearbeiten" };
-  if (!caption.trim()) return { error: "Text erforderlich" };
+  if (post.authorId !== authorId && !opts.isAdmin) return { error: "Keine Berechtigung, diesen Post zu bearbeiten" };
+  if (data.caption !== undefined && !data.caption.trim()) return { error: "Text erforderlich" };
 
-  await prisma.marketingPost.update({ where: { id: postId }, data: { caption } });
+  const clearOther = data.imageUrl !== undefined ? { assetId: null } : data.assetId !== undefined ? { imageUrl: null } : {};
+
+  await prisma.marketingPost.update({
+    where: { id: postId },
+    data: {
+      ...(data.caption !== undefined ? { caption: data.caption } : {}),
+      ...(data.imageUrl !== undefined ? { imageUrl: data.imageUrl } : {}),
+      ...(data.assetId !== undefined ? { assetId: data.assetId } : {}),
+      ...clearOther,
+    },
+  });
   return { ok: true };
 }
 
-export async function deleteMarketingPost(authorId: string, postId: string): Promise<MutationResult> {
+export async function deleteMarketingPost(authorId: string, postId: string, opts: { isAdmin?: boolean } = {}): Promise<MutationResult> {
   const post = await prisma.marketingPost.findUnique({ where: { id: postId } });
   if (!post) return { error: "Post nicht gefunden" };
-  if (post.authorId !== authorId) return { error: "Nur der Autor kann diesen Post löschen" };
+  if (post.authorId !== authorId && !opts.isAdmin) return { error: "Keine Berechtigung, diesen Post zu löschen" };
 
   await prisma.marketingPost.delete({ where: { id: postId } });
   return { ok: true };

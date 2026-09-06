@@ -86,23 +86,37 @@ export async function addContribution(
 
 export type MutationResult = { ok: true } | { error: string };
 
-/** Nur der Autor darf seinen eigenen Bericht bearbeiten. */
+/**
+ * Autor ODER Admin (isAdmin) darf bearbeiten. `bodyMarkdown` ist bewusst optional
+ * (bleibt unverändert, wenn nicht mitgegeben) — die Admin-Moderationsansicht
+ * bekommt den Fließtext gar nicht erst geliefert (Community-Board-Feed liefert
+ * ihn nicht mit) und bearbeitet dort ohnehin nur Titel + Bild.
+ */
 export async function updateReport(
-  authorId: string, reportId: string, data: { title: string; bodyMarkdown: string },
+  authorId: string, reportId: string, data: { title: string; bodyMarkdown?: string; coverAssetId?: string | null },
+  opts: { isAdmin?: boolean } = {},
 ): Promise<MutationResult> {
   const report = await prisma.jobReport.findUnique({ where: { id: reportId } });
   if (!report) return { error: "Bericht nicht gefunden" };
-  if (report.authorId !== authorId) return { error: "Nur der Autor kann diesen Bericht bearbeiten" };
-  if (!data.title.trim() || !data.bodyMarkdown.trim()) return { error: "Titel und Text erforderlich" };
+  if (report.authorId !== authorId && !opts.isAdmin) return { error: "Keine Berechtigung, diesen Bericht zu bearbeiten" };
+  if (!data.title.trim()) return { error: "Titel erforderlich" };
+  if (data.bodyMarkdown !== undefined && !data.bodyMarkdown.trim()) return { error: "Text darf nicht leer sein" };
 
-  await prisma.jobReport.update({ where: { id: reportId }, data: { title: data.title.trim(), bodyMarkdown: data.bodyMarkdown } });
+  await prisma.jobReport.update({
+    where: { id: reportId },
+    data: {
+      title: data.title.trim(),
+      ...(data.bodyMarkdown !== undefined ? { bodyMarkdown: data.bodyMarkdown } : {}),
+      ...(data.coverAssetId !== undefined ? { coverAssetId: data.coverAssetId } : {}),
+    },
+  });
   return { ok: true };
 }
 
-export async function deleteReport(authorId: string, reportId: string): Promise<MutationResult> {
+export async function deleteReport(authorId: string, reportId: string, opts: { isAdmin?: boolean } = {}): Promise<MutationResult> {
   const report = await prisma.jobReport.findUnique({ where: { id: reportId } });
   if (!report) return { error: "Bericht nicht gefunden" };
-  if (report.authorId !== authorId) return { error: "Nur der Autor kann diesen Bericht löschen" };
+  if (report.authorId !== authorId && !opts.isAdmin) return { error: "Keine Berechtigung, diesen Bericht zu löschen" };
 
   await prisma.jobReport.delete({ where: { id: reportId } });
   return { ok: true };
