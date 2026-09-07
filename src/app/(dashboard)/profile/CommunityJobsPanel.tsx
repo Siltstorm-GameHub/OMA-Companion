@@ -283,7 +283,7 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
       <div className="grid grid-cols-3 divide-x divide-white/[0.04] border-b border-white/[0.04]">
         <DashTile icon={<TrendingUp className="w-3.5 h-3.5" />} label="Letzte Woche" value={latestPayout ? `${latestPayout.tierLabel ?? "–"}` : "–"} />
         <DashTile icon={<Coins className="w-3.5 h-3.5" />} label="Zuletzt gezahlt" value={latestPayout ? `${latestPayout.coinsAwarded} Münzen` : "0 Münzen"} />
-        <DashTile icon={<Sparkles className="w-3.5 h-3.5" />} label="Bonus" value={latestPayout ? `×${latestPayout.voteBonusMultiplier.toFixed(1)}` : "×1.0"} />
+        <DashTile icon={<Sparkles className="w-3.5 h-3.5" />} label="Bonus" value={latestPayout ? `×${latestPayout.voteBonusMultiplier.toFixed(1)}` : "–"} />
       </div>
 
       {bonusTiers.length > 0 && (

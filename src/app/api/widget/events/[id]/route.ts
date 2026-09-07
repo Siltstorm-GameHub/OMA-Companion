@@ -22,14 +22,16 @@ const USER_SELECT = { id: true, name: true, username: true, image: true, rankPoi
 /**
  * GET /api/widget/events/[id]
  *
- * Voller Event-Zustand fürs Touchscreen-Widget: Teilnehmer + Matches (inkl. Spieler-Namen,
- * Profilbild, Rangpunkten und Entries). `player1Id`/`player2Id` auf Match sind rohe User-IDs
- * (keine eigene FK-Relation im Schema) — Namen/Bilder werden über eine Map aufgelöst.
+ * Voller Event-Zustand fürs Touchscreen-Widget: Registrierungen + Matches (inkl. Spieler-
+ * Namen, Profilbild, Rangpunkten und Entries). `player1Id`/`player2Id` auf Match sind rohe
+ * User-IDs (keine eigene FK-Relation im Schema) — Namen/Bilder werden über eine Map aufgelöst.
  *
- * Für ffa/coop_stats/avg_stats-Formate gibt es i.d.R. keine TournamentParticipant-Zeilen
- * (siehe applyMatchResult.ts / Kommentar unten) — in dem Fall wird `participants` aus den
- * tatsächlich in Matches auftauchenden Usern abgeleitet (`participantsSource: "derived"`,
- * ohne Sitzplatz/Seed, nicht über die Widget-API entfernbar).
+ * "Teilnehmende" basiert auf EventRegistration (An-/Abmeldung, Rolle player|spectator) —
+ * das ist die tatsächliche "wer ist dabei"-Liste in OMA-Companion, unabhängig vom Format.
+ * TournamentParticipant (Sitzplatz/Seed) wird hier bewusst NICHT mehr verwendet: für
+ * ffa/coop_stats/avg_stats ist die Tabelle ohnehin leer, und auch für 1v1-Formate pflegt
+ * die App selbst keine separate Teilnehmerliste darüber (siehe addParticipant/removeParticipant
+ * in TournamentManager.tsx — Handler ohne zugehöriges UI, faktisch toter Code).
  */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const unauthorized = requireWidgetKey(req);
@@ -41,9 +43,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     prisma.event.findUnique({
       where: { id: eventId },
       include: {
-        participants: {
-          include: { user: { select: USER_SELECT } },
-        },
         matches: {
           include: { entries: true },
         },
@@ -53,18 +52,18 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     prisma.eventRegistration.findMany({
       where: { eventId },
       include: { user: { select: USER_SELECT } },
+      orderBy: { joinedAt: "asc" },
     }),
   ]);
   if (!event) return NextResponse.json({ error: "Nicht gefunden" }, { status: 404 });
 
   const userMap = new Map<string, UserLite>(
-    event.participants.map((p) => [p.userId, p.user])
+    registrations.map((r) => [r.userId, r.user])
   );
 
-  // Manche Formate (z.B. avg_stats/coop_stats Leaderboards) tragen Spieler nur über
-  // Match.player1Id/player2Id bzw. MatchEntry.userId ein, ohne TournamentParticipant-Zeile.
-  // Ohne diesen Nachschlag würden solche Events durchgängig "Unbekannt" anzeigen, obwohl
-  // die User-Datensätze existieren.
+  // Manche Spieler tauchen in Matches auf, ohne (mehr) eine EventRegistration zu haben
+  // (z.B. nachtraeglich ausgetragen). Ohne diesen Nachschlag wuerden solche Faelle
+  // "Unbekannt" anzeigen, obwohl der User-Datensatz existiert.
   const referencedUserIds: string[] = [];
   const seenUserIds = new Set<string>();
   for (const m of event.matches) {
@@ -111,25 +110,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       })),
     }));
 
-  const hasRoster = event.participants.length > 0;
-  const participants = hasRoster
-    ? event.participants.map((p) => ({
-        id: p.id,
-        userId: p.userId,
-        ...userSummary(p.user),
-        seed: p.seed,
-        eliminated: p.eliminated,
-        finalRank: p.finalRank,
-      }))
-    : referencedUserIds.map((uid) => ({
-        id: uid,
-        userId: uid,
-        ...userSummary(userMap.get(uid)),
-        seed: null,
-        eliminated: false,
-        finalRank: null,
-      }));
-
   let statFields: string[] = [];
   try {
     statFields = event.statFields ? JSON.parse(event.statFields) : [];
@@ -172,6 +152,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const registeredUsers = registrations.map((r) => ({
     userId: r.userId,
     ...userSummary(r.user),
+    role: r.role,
   }));
 
   return NextResponse.json({
@@ -180,10 +161,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     status: event.status,
     format: event.format,
     tournamentStatus: event.tournamentStatus,
+    category: event.category,
+    genre: event.genre,
     statFields: visibleStatFields,
     coopConfig,
-    participants,
-    participantsSource: hasRoster ? "roster" : "derived",
     registeredUsers,
     matches,
   });

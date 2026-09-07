@@ -411,12 +411,15 @@ export async function computeWeeklyPayout(
     baseCoins = Math.round(baseCoins * Math.max(0, Math.min(1, workedMs / totalMs)));
   }
 
-  let voteBonusMultiplier = 1;
-  if (baseCoins > 0) {
-    const ownVotes = await countOwnVotes(member.userId, weekStart, weekEnd);
-    const bonusTiers = await getVoteBonusTiers();
-    voteBonusMultiplier = resolveVoteBonusMultiplier(bonusTiers, ownVotes);
-  }
+  // Wird UNABHÄNGIG von baseCoins berechnet: bei baseCoins=0 ändert der
+  // Multiplikator zwar nichts am ausgezahlten Betrag (0 × irgendwas = 0),
+  // aber der gespeicherte/angezeigte Wert muss trotzdem die tatsächliche
+  // Stufe zeigen (z.B. ×0.5 bei 0 eigenen Bewertungen) — sonst zeigt die UI
+  // fälschlich immer ×1.0, sobald der Job-Inhaber diese Woche 0 Münzen
+  // verdient hat, unabhängig vom Admin-konfigurierten Tarif.
+  const ownVotes = await countOwnVotes(member.userId, weekStart, weekEnd);
+  const bonusTiers = await getVoteBonusTiers();
+  const voteBonusMultiplier = resolveVoteBonusMultiplier(bonusTiers, ownVotes);
 
   return {
     userId: member.userId, jobKey: member.jobKey, rawScore,

@@ -37,6 +37,8 @@ const eventSelect = {
   format: true,
   tournamentStatus: true,
   startAt: true,
+  category: true,
+  genre: true,
   _count: { select: { participants: true } },
 } as const;
 
@@ -47,6 +49,8 @@ function toWidgetEvent(e: {
   format: string | null;
   tournamentStatus: string | null;
   startAt: Date;
+  category: string;
+  genre: string | null;
   _count: { participants: number };
 }) {
   return {
@@ -56,6 +60,8 @@ function toWidgetEvent(e: {
     format: e.format,
     tournamentStatus: e.tournamentStatus,
     date: e.startAt,
+    category: e.category,
+    genre: e.genre,
     participantCount: e._count.participants,
   };
 }
