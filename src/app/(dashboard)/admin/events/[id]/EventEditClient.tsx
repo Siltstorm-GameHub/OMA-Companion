@@ -53,8 +53,7 @@ const DEFAULT_REWARDS: RewardsConfig = {
 
 const TMT_FORMATS = [
   { value: "single_elimination", label: "Einzel-Eliminierung", desc: "Klassisches K.O.-System" },
-  { value: "round_robin",        label: "Jeder gegen Jeden",   desc: "Alle spielen gegen alle" },
-  { value: "liga",               label: "Liga",                desc: "Spieltage, Tabelle S/U/N" },
+  { value: "round_robin",        label: "Jeder gegen Jeden",   desc: "Alle spielen gegen alle · optional Hin-/Rückrunde" },
   { value: "ffa",                label: "Free for All",        desc: "Alle gegeneinander" },
   { value: "coop_stats",         label: "Kooperativ (Stats)",  desc: "Individuelle Stats" },
   { value: "avg_stats",          label: "Durchschnittswerte",  desc: "Bester Schnitt gewinnt" },
@@ -300,7 +299,12 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
   const [spectatorRankPts, setSpectatorRankPts] = useState(initialSpectatorReward.rankPoints);
 
   /* ── Tournament state (übernimmt Format/Punkte/Stats der Eventreihe, falls am Event selbst noch nichts gesetzt ist) ── */
-  const [tmtFormat, setTmtFormat]       = useState<string>(event.format ?? event.series?.fixedFormat ?? "single_elimination");
+  const initialTmtFormat = event.format ?? event.series?.fixedFormat ?? "single_elimination";
+  // "liga" ist kein eigenständiger Auswahlwert mehr (siehe TMT_FORMATS) — intern bleibt es aber
+  // weiterhin der gespeicherte Format-String für Hin-/Rückrunde-Turniere (unverändertes Backend).
+  const [tmtFormat, setTmtFormat]       = useState<string>(initialTmtFormat === "liga" ? "round_robin" : initialTmtFormat);
+  const [tmtPlayHomeAway, setTmtPlayHomeAway] = useState<boolean>(initialTmtFormat === "liga");
+  const [tmtPointsMode, setTmtPointsMode] = useState<"placement" | "matchResult">(initialTmtFormat === "liga" ? "matchResult" : "placement");
   const [tmtPoints, setTmtPoints]       = useState(() =>
     parseTmtConfig(event.pointsConfig ?? derivePointsConfigFromSeries(event.series))
   );
@@ -316,7 +320,10 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
   const [tmtLoading, setTmtLoading] = useState(false);
   const hasTournament = !!event.format;
   const hasStat       = ["ffa", "coop_stats", "avg_stats"].includes(tmtFormat);
-  const isLiga        = tmtFormat === "liga";
+  const isRoundRobinFamily = tmtFormat === "round_robin";
+  const isLiga        = isRoundRobinFamily && tmtPlayHomeAway;
+  const usesMatchResultPoints = isRoundRobinFamily && tmtPointsMode === "matchResult";
+  const resolvedTmtFormat = isLiga ? "liga" : tmtFormat;
 
   const [hidden, setHidden] = useState<boolean>(event.hidden ?? false);
   const [hiddenBusy, setHiddenBusy] = useState(false);
@@ -511,7 +518,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
 
   async function saveTmtSettings() {
     setTmtLoading(true);
-    const config = isLiga
+    const config = usesMatchResultPoints
       ? { win: tmtPoints.win, draw: tmtPoints.draw }
       : { "1": { coins: tmtPoints.coins1, points: tmtPoints.pts1 },
           "2": { coins: tmtPoints.coins2, points: tmtPoints.pts2 },
@@ -519,11 +526,12 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
     // Event-eigene Stat-Punkte-Konfiguration nur bei coop_stats — überschreibt für dieses Event die
     // Reihen-weite seriesStatConfig (nötig, wenn sich das Spiel/die Stat-Felder von Event zu Event
     // ändern und daher kein seriesweit fixes Punktesystem greifen kann).
-    const statConfig = tmtFormat === "coop_stats" ? buildEventStatConfig(tmtStatFields, tmtStatConfig) : null;
+    const statConfig = ["ffa", "coop_stats", "avg_stats"].includes(tmtFormat)
+      ? buildEventStatConfig(tmtStatFields, tmtStatConfig) : null;
     if (!hasTournament) {
       const res = await fetch("/api/tournaments", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ eventId: event.id, format: tmtFormat, pointsConfig: config,
+        body: JSON.stringify({ eventId: event.id, format: resolvedTmtFormat, pointsConfig: config,
           statFields: hasStat ? tmtStatFields : null, statConfig }),
       });
       if (res.ok) { toast.success("Turnier erstellt"); router.refresh(); }
@@ -531,7 +539,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
     } else {
       const res = await fetch(`/api/tournaments/${event.id}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ format: tmtFormat, pointsConfig: config,
+        body: JSON.stringify({ format: resolvedTmtFormat, pointsConfig: config,
           statFields: hasStat ? tmtStatFields : null, statConfig }),
       });
       if (res.ok) { toast.success("Turnier-Einstellungen gespeichert"); router.refresh(); }
@@ -1378,8 +1386,37 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
             </div>
           </div>
 
+          {/* Round-Robin-Zusatzparameter (Hin-/Rückrunde + Punktemodus, ersetzt das ehemalige Format "liga") */}
+          {isRoundRobinFamily && (
+            <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={tmtPlayHomeAway}
+                  onChange={e => setTmtPlayHomeAway(e.target.checked)}
+                  className="rounded shrink-0" />
+                <span className="text-sm text-white">Hin- und Rückrunde spielen</span>
+              </label>
+              <div>
+                <label className={labelCls}>Punktemodus</label>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setTmtPointsMode("placement")}
+                    className={`flex-1 text-xs rounded-lg px-3 py-1.5 border transition-colors ${
+                      tmtPointsMode === "placement" ? "border-amber-500 bg-amber-900/25 text-white" : "border-gray-700 text-gray-400 hover:border-gray-600"
+                    }`}>
+                    Platzierungspunkte
+                  </button>
+                  <button type="button" onClick={() => setTmtPointsMode("matchResult")}
+                    className={`flex-1 text-xs rounded-lg px-3 py-1.5 border transition-colors ${
+                      tmtPointsMode === "matchResult" ? "border-amber-500 bg-amber-900/25 text-white" : "border-gray-700 text-gray-400 hover:border-gray-600"
+                    }`}>
+                    Sieg/Unentschieden-Münzen
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Belohnungen pro Platzierung werden zentral im Reiter "Belohnungen" gepflegt */}
-          {isLiga && (
+          {usesMatchResultPoints && (
             <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
               <label className="text-xs text-gray-500 block mb-3">Münzen pro Match-Ergebnis</label>
               <div className="grid grid-cols-2 gap-3">
@@ -1402,11 +1439,11 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
             </div>
           )}
 
-          {/* Event-eigene Stat-Punkte-Konfiguration — nur bei Kooperativ (Stats) sinnvoll: legt fest,
-              wie viele Punkte jeder Stat gibt, und optional wie viele Punkte welche Endplatzierung
-              gibt. Für Reihen ohne festes Format/Spiel überschreibt das die Reihen-weite Konfiguration
-              nur für dieses eine Event. */}
-          {tmtFormat === "coop_stats" && (
+          {/* Event-eigene Stat-Punkte-Konfiguration (Turnierpunkte) — für alle Stats-Formate (ffa,
+              coop_stats, avg_stats): legt fest, wie viele Punkte jeder Stat gibt, und optional wie
+              viele Punkte welche Endplatzierung gibt. Für Reihen ohne festes Format/Spiel überschreibt
+              das die Reihen-weite Konfiguration nur für dieses eine Event. */}
+          {["ffa", "coop_stats", "avg_stats"].includes(tmtFormat) && (
             <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-4">
               <div>
                 <label className={labelCls}>Stat-Punkte-Konfiguration (nur dieses Event)</label>
@@ -1442,7 +1479,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                   <span>Endplatzierung tracken</span>
                 </label>
                 <p className="text-[10px] text-gray-500 -mt-2">
-                  Im Turnierbaum unten kann dann jedem Spieler pro Runde ein Platz zugewiesen werden. Die
+                  Im Reiter „Turnier" kann dann jedem Spieler pro Runde ein Platz zugewiesen werden. Die
                   hier hinterlegten Punkte pro Platz ergeben zusammen mit den Stat-Punkten die
                   Turnierpunkte dieses Events — sie bestimmen nur die Endplatzierung/den Sieger dieses
                   Events, nicht die Ligapunkte der Reihe.

@@ -118,9 +118,7 @@ const PLATFORMS: { value: string; label: string; icon: string }[] = [
 
 const FORMATS: { value: string; label: string; desc: string; hasStat: boolean }[] = [
   { value: "single_elimination", label: "Single Elimination", desc: "Jede Niederlage scheidet aus", hasStat: false },
-  { value: "double_elimination", label: "Double Elimination", desc: "Zweite Chance nach erster Niederlage", hasStat: false },
-  { value: "round_robin",        label: "Round Robin",        desc: "Jeder spielt gegen jeden", hasStat: false },
-  { value: "liga",               label: "Liga",               desc: "Mehrere Spieltage, Punkte akkumulieren", hasStat: false },
+  { value: "round_robin",        label: "Round Robin",        desc: "Jeder spielt gegen jeden · optional Hin-/Rückrunde", hasStat: false },
   { value: "ffa",                label: "Free for All",       desc: "Alle gegen alle, Statistiken entscheiden", hasStat: true },
   { value: "coop_stats",         label: "Kooperativ",         desc: "Team gegen Ziel, gemeinsame Stats", hasStat: true },
   { value: "avg_stats",          label: "Durchschnittswerte", desc: "Individuelle Stats werden gemittelt", hasStat: true },
@@ -184,8 +182,6 @@ export default function EventSetupWizard({
   const [newSeriesDesc, setNewSeriesDesc] = useState("");
   const [format, setFormat]           = useState("single_elimination");
   const [statFields, setStatFields]   = useState<string[]>([]);
-  const [ligaWinCoins, setLigaWinCoins] = useState(50);
-  const [ligaDrawCoins, setLigaDrawCoins] = useState(20);
   const [eventHidden, setEventHidden] = useState(false);
   const [eventRegistrationLocked, setEventRegistrationLocked] = useState(false);
   const [eventSquadId, setEventSquadId] = useState(initialSquadId ?? (forceSquad ? (squads[0]?.id ?? "") : ""));
@@ -863,22 +859,11 @@ export default function EventSetupWizard({
           </div>
         )}
 
-        {format === "liga" && (
-          <div className="rounded-xl p-4 border border-amber-500/20 bg-amber-500/5">
-            <p className="text-sm font-medium text-amber-300 mb-3">Liga-Belohnungen</p>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className={labelCls}>Münzen pro Sieg</label>
-                <input type="number" min="0" value={ligaWinCoins} onChange={e => setLigaWinCoins(Number(e.target.value))}
-                  className={inputCls} style={inputStyle} />
-              </div>
-              <div>
-                <label className={labelCls}>Münzen pro Unentschieden</label>
-                <input type="number" min="0" value={ligaDrawCoins} onChange={e => setLigaDrawCoins(Number(e.target.value))}
-                  className={inputCls} style={inputStyle} />
-              </div>
-            </div>
-          </div>
+        {format === "round_robin" && (
+          <p className="text-xs text-gray-500">
+            Hin-/Rückrunde und Punktemodus (Platzierung vs. Sieg/Unentschieden-Münzen) lassen sich nach dem
+            Erstellen im Reiter „Turnier" des Events konfigurieren.
+          </p>
         )}
       </div>
     );

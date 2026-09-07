@@ -290,7 +290,7 @@ model Event {
   createdAt           DateTime      @default(now())
 
   // Ehem. Tournament-Felder (zusammengeführt)
-  format                String? // single_elimination | double_elimination | round_robin | ffa | coop_stats | avg_stats
+  format                String? // single_elimination | double_elimination (Legacy, nicht mehr wählbar) | round_robin | liga (= round_robin mit Hin-/Rückrunde) | ffa | coop_stats | avg_stats
   tournamentStatus      String? // pending | active | complete | finalized
   pointsConfig          String? // JSON: {"1": 100, "2": 50, "3": 25} — legacy, nur Münzen
   statFields            String? // JSON: ["Kills","Assists"]

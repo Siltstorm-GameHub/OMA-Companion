@@ -38,8 +38,7 @@ type Event = { id: string };
 
 const FORMATS = [
   { value: "single_elimination", label: "Einzel-Eliminierung",       desc: "Klassisches K.O.-System" },
-  { value: "round_robin",        label: "Jeder gegen Jeden",         desc: "Alle spielen gegen alle" },
-  { value: "liga",               label: "Liga",                      desc: "Spieltage, Tabelle mit S/U/N" },
+  { value: "round_robin",        label: "Jeder gegen Jeden",         desc: "Alle spielen gegen alle · optional Hin-/Rückrunde" },
   { value: "ffa",                label: "Free for All",              desc: "Alle gegeneinander, Platzierung zählt" },
   { value: "coop_stats",         label: "Kooperativ (Stats)",        desc: "Alle zusammen, individuelle Stats" },
   { value: "avg_stats",          label: "Durchschnittswerte",        desc: "Sieger = bester Durchschnitt (z.B. Kills/Runde)" },
@@ -72,7 +71,9 @@ function CreationForm({
   const [pts1, setPts1]               = useState(100);
   const [pts2, setPts2]               = useState(50);
   const [pts3, setPts3]               = useState(25);
-  // Liga
+  // Round-Robin-Zusatzparameter (ersetzt das ehemals eigenständige Format "liga")
+  const [playHomeAway, setPlayHomeAway] = useState(false);
+  const [pointsMode, setPointsMode]     = useState<"placement" | "matchResult">("placement");
   const [coinsWin, setCoinsWin]       = useState(30);
   const [coinsDraw, setCoinsDraw]     = useState(10);
   const [statFields, setStatFields]   = useState<string[]>(["Kills", "Assists", "Punkte"]);
@@ -80,23 +81,30 @@ function CreationForm({
   const [selected, setSelected]       = useState<string[]>([]);
   const [loading, setLoading]         = useState(false);
 
-  const supportsAutoGenerate = format === "single_elimination" || format === "round_robin" || format === "liga";
+  const isRoundRobinFamily = format === "round_robin";
+  const usesMatchResultPoints = isRoundRobinFamily && pointsMode === "matchResult";
+  // "liga" bleibt intern der gespeicherte Wert für Hin-/Rückrunde — die Backend-Logik
+  // (Match-Generierung, Ranking) unterscheidet weiterhin nach diesem String.
+  const resolvedFormat = isRoundRobinFamily && playHomeAway ? "liga" : format;
+  const supportsAutoGenerate = format === "single_elimination" || isRoundRobinFamily;
 
   const AUTO_LABEL: Record<string, string> = {
     single_elimination: "KO-Baum automatisch aus Teilnehmern generieren",
-    round_robin:        "Alle Paarungen (Jeder gegen Jeden) automatisch generieren",
-    liga:               "Spielplan (Hin- & Rückrunde) automatisch generieren",
+    round_robin: playHomeAway
+      ? "Spielplan (Hin- & Rückrunde) automatisch generieren"
+      : "Alle Paarungen (Jeder gegen Jeden) automatisch generieren",
   };
 
   const AUTO_DESC: Record<string, string> = {
     single_elimination: "Zufällige Auslosung · BYE-Freilose werden automatisch vergeben",
-    round_robin:        "Jeder spielt gegen jeden anderen genau einmal",
-    liga:               "Alle Spieltage werden als Hin- & Rückrunde angelegt",
+    round_robin: playHomeAway
+      ? "Alle Spieltage werden als Hin- & Rückrunde angelegt"
+      : "Jeder spielt gegen jeden anderen genau einmal",
   };
 
   async function create() {
     setLoading(true);
-    const config = format === "liga"
+    const config = usesMatchResultPoints
       ? { win: coinsWin, draw: coinsDraw }
       : {
           "1": { coins: coins1, points: pts1 },
@@ -110,7 +118,7 @@ function CreationForm({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        eventId: event.id, format, pointsConfig: config, statFields: fields,
+        eventId: event.id, format: resolvedFormat, pointsConfig: config, statFields: fields,
         participantIds: selected.length ? selected : undefined,
         autoGenerate,
       }),
@@ -140,12 +148,41 @@ function CreationForm({
         </div>
       </div>
 
+      {/* Round-Robin-Zusatzparameter (Hin-/Rückrunde + Punktemodus) */}
+      {isRoundRobinFamily && (
+        <div className="rounded-xl border border-gray-700 bg-gray-800/30 p-3 space-y-3">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked={playHomeAway}
+              onChange={e => setPlayHomeAway(e.target.checked)}
+              className="rounded shrink-0" />
+            <span className="text-sm text-white">Hin- und Rückrunde spielen</span>
+          </label>
+          <div>
+            <label className="text-xs text-gray-400 uppercase tracking-wide block mb-1.5">Punktemodus</label>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setPointsMode("placement")}
+                className={`flex-1 text-xs rounded-lg px-3 py-1.5 border transition-colors ${
+                  pointsMode === "placement" ? "border-rose-500 bg-rose-900/20 text-white" : "border-gray-700 text-gray-400 hover:border-gray-600"
+                }`}>
+                Platzierungspunkte
+              </button>
+              <button type="button" onClick={() => setPointsMode("matchResult")}
+                className={`flex-1 text-xs rounded-lg px-3 py-1.5 border transition-colors ${
+                  pointsMode === "matchResult" ? "border-rose-500 bg-rose-900/20 text-white" : "border-gray-700 text-gray-400 hover:border-gray-600"
+                }`}>
+                Sieg/Unentschieden-Münzen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Points */}
       <div>
         <label className="text-xs text-gray-400 uppercase tracking-wide block mb-2">
-          {format === "liga" ? <span className="flex items-center gap-1"><CoinIcon size={13} /> Münzen pro Match-Ergebnis</span> : "Belohnungen pro Platzierung"}
+          {usesMatchResultPoints ? <span className="flex items-center gap-1"><CoinIcon size={13} /> Münzen pro Match-Ergebnis</span> : "Belohnungen pro Platzierung"}
         </label>
-        {format === "liga" ? (
+        {usesMatchResultPoints ? (
           <div className="flex gap-3">
             {([["🏆 Sieg", coinsWin, setCoinsWin], ["🤝 Unentschieden", coinsDraw, setCoinsDraw]] as const).map(
               ([label, val, set]) => (
@@ -264,12 +301,12 @@ function CreationForm({
                   </label>
                 ))}
               </div>
-              {selected.length >= 2 && format === "round_robin" && (
+              {selected.length >= 2 && isRoundRobinFamily && !playHomeAway && (
                 <p className="text-[11px] text-gray-600">
                   → {selected.length} Spieler · {(selected.length * (selected.length - 1)) / 2} Matches
                 </p>
               )}
-              {selected.length >= 2 && format === "liga" && (
+              {selected.length >= 2 && isRoundRobinFamily && playHomeAway && (
                 <p className="text-[11px] text-gray-600">
                   → {selected.length} Spieler · {selected.length * (selected.length - 1)} Matches ({(selected.length - 1)} Spieltage)
                 </p>
@@ -435,8 +472,14 @@ export default function TournamentManager({
   };
   // Für Anzeige im Header (Münzen oder Punkte)
   const pointsConfig = pointsConfigRaw as Record<string, number>;
+  // Draw-Eingabe hängt am tatsächlich konfigurierten Punktemodus (win/draw-Keys), nicht mehr
+  // am Format-String — round_robin kann jetzt ebenfalls mit Sieg/Unentschieden-Münzen laufen.
+  const supportsDraw = "win" in pointsConfigRaw || "draw" in pointsConfigRaw;
   const rounds = tournament.matches.length ? Math.max(...tournament.matches.map(m => m.round)) : 0;
-  const formatLabel = FORMATS.find(f => f.value === tournament.format)?.label ?? tournament.format;
+  // "liga" ist kein eigenständiger Formateintrag mehr (siehe FORMATS oben) — eigenes Label nötig.
+  const formatLabel = isLiga
+    ? "Jeder gegen Jeden (Hin-/Rückrunde)"
+    : FORMATS.find(f => f.value === tournament.format)?.label ?? tournament.format;
 
   // ── Handlers ─────────────────────────────────────────────────────────
 
@@ -450,12 +493,16 @@ export default function TournamentManager({
   }
 
   async function generateRoundRobinMatches() {
-    if (!tournament || !(await confirm({ title: "Paarungen generieren", description: "Alle Paarungen automatisch aus den aktuellen Teilnehmern generieren?" }))) return;
+    if (!tournament) return;
+    const desc = isLiga
+      ? "Alle Spieltage (Hin- & Rückrunde) automatisch aus den aktuellen Teilnehmern generieren?"
+      : "Alle Paarungen automatisch aus den aktuellen Teilnehmern generieren?";
+    if (!(await confirm({ title: "Paarungen generieren", description: desc }))) return;
     setLoading(true);
     const res = await fetch(`/api/tournaments/${tournament.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ generateMatches: "round_robin" }),
+      body: JSON.stringify({ generateMatches: isLiga ? "liga" : "round_robin" }),
     });
     setLoading(false);
     if (res.ok) {
@@ -662,12 +709,14 @@ export default function TournamentManager({
         </div>
       </div>
 
-      {/* Round Robin auto-generate (direkt sichtbar wenn relevant) */}
-      {isRoundRobin && tournament.participants.length >= 2 && (
+      {/* Round Robin / Liga auto-generate (direkt sichtbar wenn relevant) */}
+      {(isRoundRobin || isLiga) && tournament.participants.length >= 2 && (
         <button onClick={generateRoundRobinMatches} disabled={loading}
           className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 bg-blue-900/20 hover:bg-blue-900/30 border border-blue-900/40 rounded-lg px-3 py-2 transition-colors w-full justify-center">
           <RefreshCw className="w-3.5 h-3.5" />
-          Alle Paarungen generieren ({tournament.participants.length} Spieler → {(tournament.participants.length * (tournament.participants.length - 1)) / 2} Matches)
+          {isLiga
+            ? `Alle Spieltage generieren (${tournament.participants.length} Spieler → ${tournament.participants.length * (tournament.participants.length - 1)} Matches)`
+            : `Alle Paarungen generieren (${tournament.participants.length} Spieler → ${(tournament.participants.length * (tournament.participants.length - 1)) / 2} Matches)`}
         </button>
       )}
 
@@ -675,7 +724,7 @@ export default function TournamentManager({
       <div className="space-y-2">
         {tournament.matches.length === 0 && (
           <div className="text-center py-6 bg-gray-800/50 rounded-lg text-gray-500 text-sm border border-gray-700 border-dashed">
-            {isRoundRobin
+            {(isRoundRobin || isLiga)
               ? 'Füge Teilnehmer im Reiter "Teilnehmer" hinzu, dann hier auf "Paarungen generieren" klicken.'
               : 'Noch keine Matches. Klicke unten auf "Match hinzufügen".'}
           </div>
@@ -777,7 +826,7 @@ export default function TournamentManager({
                                 className="flex-1 text-xs bg-gray-700 hover:bg-rose-600 text-white rounded px-2 py-1.5 transition-colors truncate">
                                 {p1 ? userName(p1) : "?"} gewinnt
                               </button>
-                              {isLiga && (
+                              {supportsDraw && (
                                 <button onClick={() => submit1v1(match.id, null, true)} disabled={loading}
                                   className="shrink-0 text-xs bg-gray-700 hover:bg-amber-700 text-amber-300 rounded px-2 py-1.5 transition-colors">
                                   Unentschieden

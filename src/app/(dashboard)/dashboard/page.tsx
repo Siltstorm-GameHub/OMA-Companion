@@ -595,6 +595,9 @@ export default async function DashboardPage() {
       {/* ── Content ─────────────────────────────────────────────────── */}
       <div className="px-4 sm:px-6 py-5 max-w-7xl mx-auto space-y-5 relative">
 
+        {/* ── Community-Feed: prominent, direkt unter "was ist gerade los" ── */}
+        <CommunityBoardWidget />
+
         {/* ── Hub-Kacheln: FACEIT-style ─────────────────────────────── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
 
@@ -812,7 +815,7 @@ export default async function DashboardPage() {
           </Link>
         </div>
 
-        {/* ── 3-Spalten: Events | Rangliste | Quests ──────────────── */}
+        {/* ── 3-Spalten: Eventreihen | Gameserver | Quests ──────────── */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 
           {/* Aktive Eventreihen */}
@@ -935,9 +938,6 @@ export default async function DashboardPage() {
               )}
             </div>
           </div>
-
-          {/* Community-Board (Community-Jobs) */}
-          <CommunityBoardWidget />
 
           {/* Quests diesen Monat */}
           <div className="animate-slide-up stagger-5">

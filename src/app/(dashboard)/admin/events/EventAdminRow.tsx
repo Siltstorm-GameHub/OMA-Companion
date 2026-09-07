@@ -49,12 +49,17 @@ const STATUS_OPTIONS = ["open", "active", "closed", "finished"];
 
 const TMT_FORMATS = [
   { value: "single_elimination", label: "Einzel-Eliminierung",  desc: "Klassisches K.O.-System" },
-  { value: "round_robin",        label: "Jeder gegen Jeden",    desc: "Alle spielen gegen alle" },
-  { value: "liga",               label: "Liga",                 desc: "Spieltage, Tabelle mit S/U/N" },
+  { value: "round_robin",        label: "Jeder gegen Jeden",    desc: "Alle spielen gegen alle · optional Hin-/Rückrunde" },
   { value: "ffa",                label: "Free for All",         desc: "Alle gegeneinander" },
   { value: "coop_stats",         label: "Kooperativ (Stats)",   desc: "Individuelle Stats" },
   { value: "avg_stats",          label: "Durchschnittswerte",   desc: "Bester Schnitt gewinnt" },
 ] as const;
+/** "liga" ist kein eigenständiger TMT_FORMATS-Auswahlwert mehr, bleibt aber als gespeicherter
+ * Format-String für Hin-/Rückrunde-Turniere bestehen — für Labels/Vergleiche extra behandeln. */
+function tmtFormatLabel(format: string): string {
+  if (format === "liga") return "Jeder gegen Jeden (Hin-/Rückrunde)";
+  return TMT_FORMATS.find(f => f.value === format)?.label ?? format;
+}
 
 function parseTmtConfig(pointsConfig: string | null) {
   const defaults = { coins1: 200, coins2: 100, coins3: 50, pts1: 100, pts2: 50, pts3: 25, win: 30, draw: 10 };
@@ -206,7 +211,12 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
   const [pendingSave, setPendingSave]       = useState<"single" | null>(null);
 
   /* ── Tournament settings state ── */
-  const [tmtFormat, setTmtFormat]   = useState(event.format ?? "single_elimination");
+  const initialTmtFormat = event.format ?? "single_elimination";
+  // "liga" ist kein eigenständiger Auswahlwert mehr — intern bleibt es der gespeicherte
+  // Format-String für Hin-/Rückrunde-Turniere.
+  const [tmtFormat, setTmtFormat]   = useState(initialTmtFormat === "liga" ? "round_robin" : initialTmtFormat);
+  const [tmtPlayHomeAway, setTmtPlayHomeAway] = useState(initialTmtFormat === "liga");
+  const [tmtPointsMode, setTmtPointsMode]     = useState<"placement" | "matchResult">(initialTmtFormat === "liga" ? "matchResult" : "placement");
   const [tmtPoints, setTmtPoints]   = useState(() => parseTmtConfig(event.pointsConfig));
   const [tmtStatFields, setTmtStatFields] = useState<string[]>(() => {
     if (!event.statFields) return ["Kills", "Assists", "Punkte"];
@@ -392,9 +402,12 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
 
   async function saveTmtSettings() {
     setTmtLoading(true);
-    const isLiga = tmtFormat === "liga";
+    const isRoundRobinFamily = tmtFormat === "round_robin";
+    const isLiga = isRoundRobinFamily && tmtPlayHomeAway;
+    const usesMatchResultPoints = isRoundRobinFamily && tmtPointsMode === "matchResult";
+    const resolvedTmtFormat = isLiga ? "liga" : tmtFormat;
     const hasStat = ["ffa", "coop_stats", "avg_stats"].includes(tmtFormat);
-    const config = isLiga
+    const config = usesMatchResultPoints
       ? { win: tmtPoints.win, draw: tmtPoints.draw }
       : {
           "1": { coins: tmtPoints.coins1, points: tmtPoints.pts1 },
@@ -406,7 +419,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          eventId: event.id, format: tmtFormat, pointsConfig: config,
+          eventId: event.id, format: resolvedTmtFormat, pointsConfig: config,
           statFields: hasStat ? tmtStatFields : null,
           ...(tmtAutoGenerate && tmtSelected.length >= 2 && { participantIds: tmtSelected, autoGenerate: true }),
         }),
@@ -418,7 +431,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          format: tmtFormat,
+          format: resolvedTmtFormat,
           pointsConfig: config,
           ...(hasStat && { statFields: tmtStatFields }),
           ...(!hasStat && { statFields: null }),
@@ -764,7 +777,6 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                             className={inputCls}>
                             <option value="">– Kein festes Format (wechselt) –</option>
                             <option value="single_elimination">Single Elimination</option>
-                            <option value="double_elimination">Double Elimination</option>
                             <option value="round_robin">Round Robin</option>
                             <option value="ffa">Free-for-All</option>
                             <option value="coop_stats">Coop / Stats</option>
@@ -1093,7 +1105,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                       <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Turnier-Einstellungen</span>
                       {tournament && (
                         <span className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
-                          {TMT_FORMATS.find(f => f.value === tournament.format)?.label ?? tournament.format}
+                          {tmtFormatLabel(tournament.format)}
                         </span>
                       )}
                     </div>
@@ -1114,22 +1126,51 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                           </button>
                         ))}
                       </div>
-                      {tournament && tmtFormat !== tournament.format && (
+                      {tournament && (tmtPlayHomeAway ? "liga" : tmtFormat) !== tournament.format && (
                         <p className="text-[11px] text-amber-500/80 mt-2">
-                          ⚠ Format wird geändert von „{TMT_FORMATS.find(f => f.value === tournament.format)?.label ?? tournament.format}" → „{TMT_FORMATS.find(f => f.value === tmtFormat)?.label}". Bestehende Matches bleiben erhalten.
+                          ⚠ Format wird geändert von „{tmtFormatLabel(tournament.format)}" → „{tmtFormatLabel(tmtPlayHomeAway ? "liga" : tmtFormat)}". Bestehende Matches bleiben erhalten.
                         </p>
                       )}
                     </div>
 
+                    {/* Round-Robin-Zusatzparameter (Hin-/Rückrunde + Punktemodus, ersetzt ehem. Format "liga") */}
+                    {tmtFormat === "round_robin" && (
+                      <div className="rounded-xl border border-gray-700 bg-gray-800/30 p-3 space-y-3">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input type="checkbox" checked={tmtPlayHomeAway}
+                            onChange={e => setTmtPlayHomeAway(e.target.checked)}
+                            className="rounded shrink-0" />
+                          <span className="text-sm text-white">Hin- und Rückrunde spielen</span>
+                        </label>
+                        <div>
+                          <label className="text-xs text-gray-500 block mb-1.5">Punktemodus</label>
+                          <div className="flex gap-2">
+                            <button type="button" onClick={() => setTmtPointsMode("placement")}
+                              className={`flex-1 text-xs rounded-lg px-3 py-1.5 border transition-colors ${
+                                tmtPointsMode === "placement" ? "border-amber-500 bg-amber-900/20 text-white" : "border-gray-700 text-gray-400 hover:border-gray-600"
+                              }`}>
+                              Platzierungspunkte
+                            </button>
+                            <button type="button" onClick={() => setTmtPointsMode("matchResult")}
+                              className={`flex-1 text-xs rounded-lg px-3 py-1.5 border transition-colors ${
+                                tmtPointsMode === "matchResult" ? "border-amber-500 bg-amber-900/20 text-white" : "border-gray-700 text-gray-400 hover:border-gray-600"
+                              }`}>
+                              Sieg/Unentschieden-Münzen
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Belohnungen */}
                     {(() => {
-                      const isLiga = tmtFormat === "liga";
+                      const usesMatchResultPoints = tmtFormat === "round_robin" && tmtPointsMode === "matchResult";
                       return (
                         <div>
                           <label className="text-xs text-gray-500 block mb-2">
-                            {isLiga ? <span className="flex items-center gap-1"><CoinIcon size={13} /> Münzen pro Match-Ergebnis</span> : "Belohnungen pro Platzierung"}
+                            {usesMatchResultPoints ? <span className="flex items-center gap-1"><CoinIcon size={13} /> Münzen pro Match-Ergebnis</span> : "Belohnungen pro Platzierung"}
                           </label>
-                          {isLiga ? (
+                          {usesMatchResultPoints ? (
                             <div className="flex gap-3">
                               {([["🏆 Sieg", "win"], ["🤝 Unentschieden", "draw"]] as const).map(([label, key]) => (
                                 <div key={key} className="flex-1">
@@ -1185,7 +1226,7 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                     )}
 
                     {/* Auto-Generierung (nur beim Erstellen, für passende Formate) */}
-                    {!tournament && ["single_elimination", "round_robin", "liga"].includes(tmtFormat) && (
+                    {!tournament && ["single_elimination", "round_robin"].includes(tmtFormat) && (
                       <div className={`rounded-xl border p-3 transition-colors ${
                         tmtAutoGenerate ? "border-amber-500/40 bg-amber-950/20" : "border-gray-700 bg-gray-800/30"
                       }`}>

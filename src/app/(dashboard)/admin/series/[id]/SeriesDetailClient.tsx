@@ -677,7 +677,6 @@ export default function SeriesDetailClient({ series, allUsers, squads = [], hasA
               <select value={fixedFormat} onChange={e => setFixedFormat(e.target.value)} className={inputCls}>
                 <option value="">– Kein festes Format –</option>
                 <option value="single_elimination">Single Elimination</option>
-                <option value="double_elimination">Double Elimination</option>
                 <option value="round_robin">Round Robin</option>
                 <option value="liga">Liga</option>
                 <option value="ffa">Free for All</option>

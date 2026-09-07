@@ -102,8 +102,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const body = await req.json();
   const { status, format, pointsConfig, statFields, statConfig, generateMatches, finalRanking, finalRankingNote } = body;
 
-  // Auto-generate round-robin matches
-  if (generateMatches === "round_robin") {
+  // Auto-generate round-robin (bzw. liga = Hin-/Rückrunde) matches
+  if (generateMatches === "round_robin" || generateMatches === "liga") {
     const existing = await prisma.match.count({ where: { eventId } });
     if (existing > 0) {
       return NextResponse.json({ error: "Es existieren bereits Matches. Zuerst alle löschen." }, { status: 409 });
@@ -115,7 +115,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (participants.length < 2) {
       return NextResponse.json({ error: "Mindestens 2 Teilnehmer benötigt." }, { status: 400 });
     }
-    const matchData = generateRoundRobin(participants.map(p => p.userId), eventId);
+    const participantIds = participants.map(p => p.userId);
+    let matchData;
+    if (generateMatches === "liga") {
+      const hinrunde   = generateRoundRobin(participantIds, eventId);
+      const maxRound   = hinrunde.length ? Math.max(...hinrunde.map(m => m.round)) : 0;
+      const rueckrunde = generateRoundRobin([...participantIds].reverse(), eventId).map(m => ({
+        ...m,
+        round: m.round + maxRound,
+      }));
+      matchData = [...hinrunde, ...rueckrunde];
+    } else {
+      matchData = generateRoundRobin(participantIds, eventId);
+    }
     await prisma.match.createMany({ data: matchData });
     return NextResponse.json({ generated: matchData.length });
   }

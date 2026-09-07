@@ -1156,6 +1156,10 @@ async function completeEvent(req: NextRequest, eventId: string) {
     seriesContrib:           seriesContrib,
     appliedAggregatedStats:  Object.keys(appliedAggregatedStats).length > 0 ? appliedAggregatedStats : null,
     gamePhaseComplete:       true,
+    // Freeze: friert die gerade für die Punkte-Vergabe oben verwendete Reihen-Konfiguration ein,
+    // damit spätere Änderungen an EventSeries.seriesStatConfig nicht rückwirkend die Ligapunkte/
+    // Standings dieses Events verändern (siehe computeEventPoints in series-event-points.ts).
+    frozenStatConfig:        statCfg,
     pollPhaseComplete,
     eventPollRewards:        eventPollRewards.length > 0 ? eventPollRewards : null,
     pollParticipationReward: pollParticipationReward.length > 0 ? pollParticipationReward : null,

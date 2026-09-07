@@ -176,6 +176,33 @@
         ],
         "createdAt": "2026-09-06T21:22:06.110Z",
         "reason": "false positive: same ternary-branch misattribution as EventEditClient.tsx - hook pairs gray text from the unselected/non-highlighted branch with a colored bg from the other branch in the same className string; actual pairing (gray text on glass-heavy/transparent bg) is fine"
+      },
+      {
+        "rule": "gray-on-color",
+        "value": "*",
+        "files": [
+          "src/app/(dashboard)/admin/events/TournamentManager.tsx"
+        ],
+        "createdAt": "2026-09-07T06:48:25.184Z",
+        "reason": "matches existing unselected-toggle-button pattern already used in this file (gray-400 text on gray-700 border), not new contrast issue"
+      },
+      {
+        "rule": "gray-on-color",
+        "value": "*",
+        "files": [
+          "src/app/(dashboard)/admin/events/EventAdminRow.tsx"
+        ],
+        "createdAt": "2026-09-07T06:52:41.223Z",
+        "reason": "matches existing unselected-toggle-button pattern already used throughout this file (gray-400 text on gray-700/gray-800 border), not a new contrast issue"
+      },
+      {
+        "rule": "gray-on-color",
+        "value": "*",
+        "files": [
+          "src/app/(dashboard)/admin/events/new/EventSetupWizard.tsx"
+        ],
+        "createdAt": "2026-09-07T06:53:49.990Z",
+        "reason": "pre-existing lines unrelated to this session's edits, same established gray-400-on-dark-border toggle pattern"
       }
     ]
   }

@@ -219,13 +219,13 @@ export async function applyMatchResult({
       for (const uid of [match.player1Id, match.player2Id]) {
         await prisma.$transaction([
           prisma.user.update({ where: { id: uid }, data: { points: { increment: drawPts } } }),
-          prisma.pointTransaction.create({ data: { userId: uid, amount: drawPts, reason: `Unentschieden im Liga-Match – ${eventId}` } }),
+          prisma.pointTransaction.create({ data: { userId: uid, amount: drawPts, reason: `Unentschieden im Match – ${eventId}` } }),
         ]);
       }
     } else if (!isDraw && winPts && winnerId) {
       await prisma.$transaction([
         prisma.user.update({ where: { id: winnerId }, data: { points: { increment: winPts } } }),
-        prisma.pointTransaction.create({ data: { userId: winnerId, amount: winPts, reason: `Sieg im Liga-Match – ${eventId}` } }),
+        prisma.pointTransaction.create({ data: { userId: winnerId, amount: winPts, reason: `Sieg im Match – ${eventId}` } }),
       ]);
     }
   }

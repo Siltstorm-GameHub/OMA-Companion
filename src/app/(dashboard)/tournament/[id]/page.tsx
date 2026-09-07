@@ -307,7 +307,7 @@ export default async function TournamentDetailPage({
       winner = finalMatch?.winnerId
         ? (mergedParticipants.find(p => p.userId === finalMatch.winnerId)?.user ?? null)
         : null;
-    } else if (isLiga) {
+    } else if (isLiga || isRoundRobin) {
       const winsMap = new Map<string, number>();
       for (const m of event.matches) {
         if (m.winnerId) winsMap.set(m.winnerId, (winsMap.get(m.winnerId) ?? 0) + 1);
@@ -461,7 +461,7 @@ export default async function TournamentDetailPage({
   // während das Event noch läuft (keine Abhängigkeit von completionData).
   const turnierpunkteByUser: Record<string, number> =
     (turnierpunkteCfg.stats?.length ?? 0) > 0 || turnierpunkteCfg.placementPoints
-      ? computeTurnierpunkte(event.matches, turnierpunkteCfg)
+      ? computeTurnierpunkte(event.matches, turnierpunkteCfg, format)
       : {};
   // Ligapunkte, die dieses Event je Spieler beigesteuert hat — identische Berechnung wie in der
   // Gesamttabelle der Eventreihe (Teilnahme + Stats + Umfrage-Belohnungen alt & neu), SOBALD die
@@ -509,6 +509,10 @@ export default async function TournamentDetailPage({
   const pcRaw: Record<string, PcVal> = (() => {
     try { return event.pointsConfig ? JSON.parse(event.pointsConfig) : {}; } catch { return {}; }
   })();
+  // Draw-Anzeige (LigaView statt RoundRobinView) hängt am tatsächlich konfigurierten Punktemodus
+  // (win/draw-Keys), nicht mehr allein am Format-String — round_robin kann jetzt ebenfalls mit
+  // Sieg/Unentschieden-Münzen laufen (siehe TournamentManager "Punktemodus").
+  const supportsDraw = isLiga || "win" in pcRaw || "draw" in pcRaw;
   function placementCoins(place: number): number {
     const v = pcRaw[String(place)];
     if (!v) return 0;
@@ -1138,7 +1142,7 @@ export default async function TournamentDetailPage({
                 holders={holdersList}
               />
             )}
-            {isRoundRobin && (
+            {isRoundRobin && !supportsDraw && (
               <RoundRobinView
                 matches={event.matches as Parameters<typeof RoundRobinView>[0]["matches"]}
                 participants={mergedParticipants}
@@ -1147,7 +1151,7 @@ export default async function TournamentDetailPage({
                 excludedUserIds={[...excludedUserIds]}
               />
             )}
-            {isLiga && (
+            {(isLiga || (isRoundRobin && supportsDraw)) && (
               <LigaView
                 matches={event.matches as Parameters<typeof LigaView>[0]["matches"]}
                 participants={mergedParticipants}

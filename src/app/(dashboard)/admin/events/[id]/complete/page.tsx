@@ -159,7 +159,7 @@ export default async function AdminEventCompletePage({ params }: { params: Promi
   // sie ohne weitere Änderungen mitbenutzt.
   const hasTurnierpunkteOption = (turnierpunkteCfg.stats?.length ?? 0) > 0 || !!turnierpunkteCfg.placementPoints;
   if (hasTurnierpunkteOption) {
-    const turnierpunkteByUser = computeTurnierpunkte(event.matches, turnierpunkteCfg);
+    const turnierpunkteByUser = computeTurnierpunkte(event.matches, turnierpunkteCfg, event.format ?? undefined);
     for (const uid of Object.keys(userStats)) {
       userStats[uid]["Turnierpunkte"] = turnierpunkteByUser[uid] ?? 0;
     }
