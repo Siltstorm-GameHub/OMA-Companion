@@ -231,10 +231,9 @@ export default function SeriesAdminRow({
                   <select value={fixedFormat} onChange={e => setFixedFormat(e.target.value)} className={inputCls}>
                     <option value="">– Kein festes Format –</option>
                     <option value="single_elimination">Single Elimination</option>
-                    <option value="round_robin">Round Robin</option>
-                    <option value="liga">Liga</option>
-                    <option value="ffa">Free-for-All</option>
-                    <option value="coop_stats">Coop / Stats</option>
+                    <option value="round_robin">Liga-Modus</option>
+                    <option value="liga">Liga-Modus (Hin-/Rückrunde)</option>
+                    <option value="coop_stats">Skill-Index Modus</option>
                   </select>
                   <label className="flex items-center gap-2 mt-1.5 cursor-pointer">
                     <input type="checkbox" checked={propagateFormat} onChange={e => setPropagateFormat(e.target.checked)} className="rounded accent-teal-500" />

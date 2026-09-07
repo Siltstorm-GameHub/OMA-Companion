@@ -4,10 +4,10 @@
 export const FORMAT_LABELS: Record<string, string> = {
   single_elimination: "K.O.-System",
   double_elimination: "Double Elimination",
-  round_robin:        "Jeder gegen Jeden",
-  liga:                "Liga",
-  ffa:                 "Free for All",
-  coop_stats:          "Kooperativ",
+  round_robin:        "Liga-Modus",
+  liga:                "Liga-Modus (Hin-/Rückrunde)",
+  ffa:                 "Free for All (Legacy)",
+  coop_stats:          "Skill-Index Modus",
   avg_stats:           "Durchschnitts-Statistiken",
 };
 

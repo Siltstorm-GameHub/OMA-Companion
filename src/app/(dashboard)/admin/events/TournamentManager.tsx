@@ -38,9 +38,8 @@ type Event = { id: string };
 
 const FORMATS = [
   { value: "single_elimination", label: "Einzel-Eliminierung",       desc: "Klassisches K.O.-System" },
-  { value: "round_robin",        label: "Jeder gegen Jeden",         desc: "Alle spielen gegen alle · optional Hin-/Rückrunde" },
-  { value: "ffa",                label: "Free for All",              desc: "Alle gegeneinander, Platzierung zählt" },
-  { value: "coop_stats",         label: "Kooperativ (Stats)",        desc: "Alle zusammen, individuelle Stats" },
+  { value: "round_robin",        label: "Liga-Modus",                desc: "Alle spielen gegen alle · optional Hin-/Rückrunde" },
+  { value: "coop_stats",         label: "Skill-Index Modus",         desc: "Individuelle Stats, optional Team-Match-Win" },
   { value: "avg_stats",          label: "Durchschnittswerte",        desc: "Sieger = bester Durchschnitt (z.B. Kills/Runde)" },
 ];
 
@@ -92,7 +91,7 @@ function CreationForm({
     single_elimination: "KO-Baum automatisch aus Teilnehmern generieren",
     round_robin: playHomeAway
       ? "Spielplan (Hin- & Rückrunde) automatisch generieren"
-      : "Alle Paarungen (Jeder gegen Jeden) automatisch generieren",
+      : "Alle Paarungen (Liga-Modus) automatisch generieren",
   };
 
   const AUTO_DESC: Record<string, string> = {
@@ -478,7 +477,7 @@ export default function TournamentManager({
   const rounds = tournament.matches.length ? Math.max(...tournament.matches.map(m => m.round)) : 0;
   // "liga" ist kein eigenständiger Formateintrag mehr (siehe FORMATS oben) — eigenes Label nötig.
   const formatLabel = isLiga
-    ? "Jeder gegen Jeden (Hin-/Rückrunde)"
+    ? "Liga-Modus (Hin-/Rückrunde)"
     : FORMATS.find(f => f.value === tournament.format)?.label ?? tournament.format;
 
   // ── Handlers ─────────────────────────────────────────────────────────

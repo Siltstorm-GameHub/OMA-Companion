@@ -49,15 +49,14 @@ const STATUS_OPTIONS = ["open", "active", "closed", "finished"];
 
 const TMT_FORMATS = [
   { value: "single_elimination", label: "Einzel-Eliminierung",  desc: "Klassisches K.O.-System" },
-  { value: "round_robin",        label: "Jeder gegen Jeden",    desc: "Alle spielen gegen alle · optional Hin-/Rückrunde" },
-  { value: "ffa",                label: "Free for All",         desc: "Alle gegeneinander" },
-  { value: "coop_stats",         label: "Kooperativ (Stats)",   desc: "Individuelle Stats" },
+  { value: "round_robin",        label: "Liga-Modus",           desc: "Alle spielen gegen alle · optional Hin-/Rückrunde" },
+  { value: "coop_stats",         label: "Skill-Index Modus",    desc: "Individuelle Stats, optional Team-Match-Win" },
   { value: "avg_stats",          label: "Durchschnittswerte",   desc: "Bester Schnitt gewinnt" },
 ] as const;
 /** "liga" ist kein eigenständiger TMT_FORMATS-Auswahlwert mehr, bleibt aber als gespeicherter
  * Format-String für Hin-/Rückrunde-Turniere bestehen — für Labels/Vergleiche extra behandeln. */
 function tmtFormatLabel(format: string): string {
-  if (format === "liga") return "Jeder gegen Jeden (Hin-/Rückrunde)";
+  if (format === "liga") return "Liga-Modus (Hin-/Rückrunde)";
   return TMT_FORMATS.find(f => f.value === format)?.label ?? format;
 }
 
@@ -777,9 +776,9 @@ export default function EventAdminRow({ event, allUsers, hideSeries = false }: {
                             className={inputCls}>
                             <option value="">– Kein festes Format (wechselt) –</option>
                             <option value="single_elimination">Single Elimination</option>
-                            <option value="round_robin">Round Robin</option>
-                            <option value="ffa">Free-for-All</option>
-                            <option value="coop_stats">Coop / Stats</option>
+                            <option value="round_robin">Liga-Modus</option>
+                            <option value="liga">Liga-Modus (Hin-/Rückrunde)</option>
+                            <option value="coop_stats">Skill-Index Modus</option>
                           </select>
                           <label className="flex items-center gap-2 mt-1.5 cursor-pointer">
                             <input type="checkbox" checked={propagateFormat}

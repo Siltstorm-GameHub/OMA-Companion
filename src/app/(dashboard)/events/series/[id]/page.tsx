@@ -81,10 +81,10 @@ function SaisonArchiv({ currentId, archivedSeasons }: { currentId: string; archi
 const FORMAT_LABELS: Record<string, string> = {
   single_elimination: "Single Elimination",
   double_elimination: "Double Elimination",
-  round_robin:        "Round Robin",
-  liga:               "Liga",
-  ffa:                "Free for All",
-  coop_stats:         "Kooperativ",
+  round_robin:        "Liga-Modus",
+  liga:               "Liga-Modus (Hin-/Rückrunde)",
+  ffa:                "Free for All (Legacy)",
+  coop_stats:         "Skill-Index Modus",
   avg_stats:          "Durchschnittswerte",
 };
 

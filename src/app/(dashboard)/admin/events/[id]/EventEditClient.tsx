@@ -53,9 +53,8 @@ const DEFAULT_REWARDS: RewardsConfig = {
 
 const TMT_FORMATS = [
   { value: "single_elimination", label: "Einzel-Eliminierung", desc: "Klassisches K.O.-System" },
-  { value: "round_robin",        label: "Jeder gegen Jeden",   desc: "Alle spielen gegen alle · optional Hin-/Rückrunde" },
-  { value: "ffa",                label: "Free for All",        desc: "Alle gegeneinander" },
-  { value: "coop_stats",         label: "Kooperativ (Stats)",  desc: "Individuelle Stats" },
+  { value: "round_robin",        label: "Liga-Modus",          desc: "Alle spielen gegen alle · optional Hin-/Rückrunde" },
+  { value: "coop_stats",         label: "Skill-Index Modus",   desc: "Individuelle Stats, optional Team-Match-Win" },
   { value: "avg_stats",          label: "Durchschnittswerte",  desc: "Bester Schnitt gewinnt" },
 ] as const;
 

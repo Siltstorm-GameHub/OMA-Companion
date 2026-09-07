@@ -118,9 +118,8 @@ const PLATFORMS: { value: string; label: string; icon: string }[] = [
 
 const FORMATS: { value: string; label: string; desc: string; hasStat: boolean }[] = [
   { value: "single_elimination", label: "Single Elimination", desc: "Jede Niederlage scheidet aus", hasStat: false },
-  { value: "round_robin",        label: "Round Robin",        desc: "Jeder spielt gegen jeden · optional Hin-/Rückrunde", hasStat: false },
-  { value: "ffa",                label: "Free for All",       desc: "Alle gegen alle, Statistiken entscheiden", hasStat: true },
-  { value: "coop_stats",         label: "Kooperativ",         desc: "Team gegen Ziel, gemeinsame Stats", hasStat: true },
+  { value: "round_robin",        label: "Liga-Modus",         desc: "Jeder spielt gegen jeden · optional Hin-/Rückrunde", hasStat: false },
+  { value: "coop_stats",         label: "Skill-Index Modus",  desc: "Individuelle Stats, optional Team-Match-Win", hasStat: true },
   { value: "avg_stats",          label: "Durchschnittswerte", desc: "Individuelle Stats werden gemittelt", hasStat: true },
 ];
 

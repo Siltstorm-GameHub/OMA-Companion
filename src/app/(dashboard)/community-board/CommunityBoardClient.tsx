@@ -66,7 +66,10 @@ export default function CommunityBoardClient() {
   }
 
   return (
-    <div className="space-y-3">
+    // Ab lg mehrspaltiger Masonry-Flow statt einer einzelnen langen Kette —
+    // die Karten haben durch Bilder/Contributions/Idea-Text stark unterschiedliche
+    // Höhen, CSS-Columns verteilen das ohne JS-Messen sinnvoll auf die Breite.
+    <div className="columns-1 lg:columns-2 xl:columns-3 gap-4">
       {feed.map(entry => <FeedCard key={`${entry.kind}-${entry.id}`} entry={entry} currentUserId={currentUserId} onChanged={reload} />)}
     </div>
   );
@@ -74,7 +77,7 @@ export default function CommunityBoardClient() {
 
 function FeedCard({ entry, currentUserId, onChanged }: { entry: FeedEntry; currentUserId: string | undefined; onChanged: () => void }) {
   return (
-    <div className="glass card-shine rounded-2xl p-4 space-y-3">
+    <div className="glass card-shine rounded-2xl p-4 space-y-3 mb-3 break-inside-avoid">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold text-white">{authorLabel(entry.author)}</span>

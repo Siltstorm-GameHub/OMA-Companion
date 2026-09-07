@@ -203,6 +203,15 @@
         ],
         "createdAt": "2026-09-07T06:53:49.990Z",
         "reason": "pre-existing lines unrelated to this session's edits, same established gray-400-on-dark-border toggle pattern"
+      },
+      {
+        "rule": "gray-on-color",
+        "value": "*",
+        "files": [
+          "src/app/(dashboard)/admin/series/[id]/SeriesDetailClient.tsx"
+        ],
+        "createdAt": "2026-09-07T07:22:02.659Z",
+        "reason": "pre-existing lines unrelated to this session's edits (platform selector toggle buttons)"
       }
     ]
   }
