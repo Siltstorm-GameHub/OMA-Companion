@@ -194,12 +194,14 @@ interface Recommendations {
 }
 interface Payout { id: string; weekStart: string; rawScore: number; tierLabel: string | null; coinsAwarded: number; voteBonusMultiplier: number }
 interface WaitlistEntry { id: string; user: { id: string; username: string | null; name: string | null } }
+interface ProjectedPayout { rawScore: number; tierLabel: string | null; voteBonusMultiplier: number; coinsAwarded: number; maxCoinsAwarded: number }
 
 function OfficeView({ membership, onChanged }: { membership: Membership; onChanged: () => void }) {
   const [recs, setRecs] = useState<Recommendations | null>(null);
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
   const [bonusTiers, setBonusTiers] = useState<{ label: string; minVotes: number; multiplier: number }[]>([]);
+  const [projected, setProjected] = useState<ProjectedPayout | null>(null);
   const [busy, setBusy] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -208,6 +210,7 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
     api<{ payouts: Payout[] }>("/api/community-jobs/payouts").then(d => setPayouts(d.payouts)).catch(() => {});
     api<{ waitlist: WaitlistEntry[] }>(`/api/community-jobs/${membership.jobKey}/waitlist`).then(d => setWaitlist(d.waitlist)).catch(() => {});
     api<{ tiers: typeof bonusTiers }>("/api/admin/community-jobs/vote-bonus").then(d => setBonusTiers(d.tiers)).catch(() => {});
+    api<ProjectedPayout>("/api/community-jobs/projected-payout").then(setProjected).catch(() => {});
   }, [membership.jobKey]);
 
   const contractEnd = new Date(membership.contractEndAt);
@@ -282,7 +285,9 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
       {/* Dashboard */}
       <div className="grid grid-cols-3 divide-x divide-white/[0.04] border-b border-white/[0.04]">
         <DashTile icon={<TrendingUp className="w-3.5 h-3.5" />} label="Letzte Woche" value={latestPayout ? `${latestPayout.tierLabel ?? "–"}` : "–"} />
-        <DashTile icon={<Coins className="w-3.5 h-3.5" />} label="Zuletzt gezahlt" value={latestPayout ? `${latestPayout.coinsAwarded} Münzen` : "0 Münzen"} />
+        <DashTile icon={<Coins className="w-3.5 h-3.5" />} label="Voraussichtlich diese Woche"
+          value={projected ? `${projected.coinsAwarded} Münzen` : "…"}
+          sub={projected ? `Maximal möglich: ${projected.maxCoinsAwarded} Münzen` : undefined} />
         <DashTile icon={<Sparkles className="w-3.5 h-3.5" />} label="Bonus" value={latestPayout ? `×${latestPayout.voteBonusMultiplier.toFixed(1)}` : "–"} />
       </div>
 
@@ -372,12 +377,13 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
   );
 }
 
-function DashTile({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+function DashTile({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: string; sub?: string }) {
   return (
     <div className="p-3 text-center">
       <div className="flex items-center justify-center gap-1 text-teal-400 mb-1">{icon}</div>
       <p className="text-xs font-semibold text-white truncate">{value}</p>
       <p className="text-[9px] text-gray-600">{label}</p>
+      {sub && <p className="text-[9px] text-gray-600 mt-1 truncate">{sub}</p>}
     </div>
   );
 }

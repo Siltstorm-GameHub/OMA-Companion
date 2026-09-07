@@ -389,6 +389,14 @@ async function countOwnVotes(userId: string, weekStart: Date, weekEnd: Date): Pr
   return counts.reduce((sum, c) => sum + c, 0);
 }
 
+/** Anteiliges Gehalt, falls die Mitgliedschaft mitten in der Woche begann — sonst unverändert. */
+function prorateForMidWeekStart(coins: number, contractStartAt: Date, weekStart: Date, weekEnd: Date): number {
+  if (coins <= 0 || contractStartAt <= weekStart) return coins;
+  const totalMs = weekEnd.getTime() - weekStart.getTime();
+  const workedMs = weekEnd.getTime() - contractStartAt.getTime();
+  return Math.round(coins * Math.max(0, Math.min(1, workedMs / totalMs)));
+}
+
 export interface WeeklyPayoutOutcome {
   userId: string; jobKey: string; rawScore: number;
   tierLabel: string | null; baseCoins: number; voteBonusMultiplier: number; coinsAwarded: number;
@@ -402,14 +410,7 @@ export async function computeWeeklyPayout(
   const tiers = await getPayoutTiers(member.jobKey);
   const tier = resolveTier(tiers, rawScore);
 
-  let baseCoins = tier?.coinsAwarded ?? 0;
-
-  // Anteiliges erstes Wochengehalt, falls die Mitgliedschaft mitten in der Woche begann.
-  if (baseCoins > 0 && member.contractStartAt > weekStart) {
-    const totalMs = weekEnd.getTime() - weekStart.getTime();
-    const workedMs = weekEnd.getTime() - member.contractStartAt.getTime();
-    baseCoins = Math.round(baseCoins * Math.max(0, Math.min(1, workedMs / totalMs)));
-  }
+  const baseCoins = prorateForMidWeekStart(tier?.coinsAwarded ?? 0, member.contractStartAt, weekStart, weekEnd);
 
   // Wird UNABHÄNGIG von baseCoins berechnet: bei baseCoins=0 ändert der
   // Multiplikator zwar nichts am ausgezahlten Betrag (0 × irgendwas = 0),
@@ -425,6 +426,39 @@ export async function computeWeeklyPayout(
     userId: member.userId, jobKey: member.jobKey, rawScore,
     tierLabel: tier?.label ?? null, baseCoins,
     voteBonusMultiplier, coinsAwarded: Math.round(baseCoins * voteBonusMultiplier),
+  };
+}
+
+export interface ProjectedPayout {
+  rawScore: number; tierLabel: string | null; voteBonusMultiplier: number;
+  /** Was JETZT ausgezahlt würde, wenn die laufende Woche sofort enden würde. */
+  coinsAwarded: number;
+  /** Theoretisches Maximum diese Woche: höchste Gehaltsstufe × höchster Aktivitäts-Bonus. */
+  maxCoinsAwarded: number;
+}
+
+/**
+ * Live-Vorschau fürs Büro-Dashboard: dieselbe Formel wie computeWeeklyPayout,
+ * aber für die noch LAUFENDE statt eine abgeschlossene Woche — Bewertungen mit
+ * `createdAt` in der Zukunft gibt es naturgemäß nicht, computeRawScore/
+ * countOwnVotes liefern also automatisch nur den bis jetzt aufgelaufenen Stand.
+ * Wird nirgends gespeichert, rein zur Anzeige.
+ */
+export async function getProjectedPayout(
+  member: { userId: string; jobKey: string; contractStartAt: Date },
+): Promise<ProjectedPayout> {
+  const { weekStart, weekEnd } = getWeekBounds(new Date());
+  const outcome = await computeWeeklyPayout(member, weekStart, weekEnd);
+
+  const [tiers, bonusTiers] = await Promise.all([getPayoutTiers(member.jobKey), getVoteBonusTiers()]);
+  const maxTierCoins = tiers.reduce((max, t) => Math.max(max, t.coinsAwarded), 0);
+  const maxBonusMultiplier = bonusTiers.reduce((max, t) => Math.max(max, t.multiplier), 1);
+  const maxBaseCoins = prorateForMidWeekStart(maxTierCoins, member.contractStartAt, weekStart, weekEnd);
+
+  return {
+    rawScore: outcome.rawScore, tierLabel: outcome.tierLabel, voteBonusMultiplier: outcome.voteBonusMultiplier,
+    coinsAwarded: outcome.coinsAwarded,
+    maxCoinsAwarded: Math.round(maxBaseCoins * maxBonusMultiplier),
   };
 }
 

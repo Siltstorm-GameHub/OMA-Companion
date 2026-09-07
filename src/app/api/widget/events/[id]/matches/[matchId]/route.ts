@@ -107,3 +107,28 @@ export async function PATCH(
     })),
   });
 }
+
+/**
+ * DELETE /api/widget/events/[id]/matches/[matchId]
+ * Identische Semantik zu DELETE /api/tournaments/[id]/matches (prisma.match.delete) —
+ * loescht die Runde inkl. ihrer MatchEntry-Zeilen (Cascade). Kein Bracket-Aufraeumen bei
+ * single_elimination, genau wie im bestehenden Admin-Handler.
+ */
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string; matchId: string }> }
+) {
+  const unauthorized = requireWidgetKey(req);
+  if (unauthorized) return unauthorized;
+
+  const { matchId } = await params;
+  try {
+    await prisma.match.delete({ where: { id: matchId } });
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
+      return NextResponse.json({ error: "Nicht gefunden" }, { status: 404 });
+    }
+    throw err;
+  }
+  return NextResponse.json({ success: true });
+}

@@ -163,6 +163,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     tournamentStatus: event.tournamentStatus,
     category: event.category,
     genre: event.genre,
+    spectatorMode: event.spectatorMode,
     statFields: visibleStatFields,
     coopConfig,
     registeredUsers,
