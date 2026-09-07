@@ -6,8 +6,9 @@ import { ThumbsUp, Loader2, Star, ImagePlus, Megaphone, Flag } from "lucide-reac
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import DisputeVotesModal, { type DisputeKind } from "@/components/community-jobs/DisputeVotesModal";
+import RankedAvatar from "@/components/RankedAvatar";
 
-interface Author { id: string; username: string | null; name: string | null }
+interface Author { id: string; username: string | null; name: string | null; image: string | null; rankPoints: number }
 interface SubEntity { id: string; author: Author; upvotes: number; url?: string; caption?: string }
 interface FeedEntry {
   kind: "report" | "asset" | "marketing_post" | "idea";
@@ -79,10 +80,13 @@ function FeedCard({ entry, currentUserId, onChanged }: { entry: FeedEntry; curre
   return (
     <div className="glass card-shine rounded-2xl p-4 space-y-3 mb-3 break-inside-avoid">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-white">{authorLabel(entry.author)}</span>
-          <span className="text-[10px] text-gray-600">{new Date(entry.publishedAt).toLocaleDateString("de-DE")}</span>
-        </div>
+        <a href={`/profile/${entry.author.id}`} className="flex items-center gap-2 min-w-0 hover:opacity-80 transition-opacity">
+          <RankedAvatar rankPoints={entry.author.rankPoints} src={entry.author.image} alt={authorLabel(entry.author)} size={28} />
+          <div className="min-w-0">
+            <span className="block text-xs font-semibold text-white truncate">{authorLabel(entry.author)}</span>
+            <span className="text-[10px] text-gray-600">{new Date(entry.publishedAt).toLocaleDateString("de-DE")}</span>
+          </div>
+        </a>
         {entry.kind === "marketing_post" && (
           <Badge tone={entry.adminConfirmedPosted ? "success" : "neutral"}>
             {entry.adminConfirmedPosted ? "Bestätigt gepostet" : "Post"}

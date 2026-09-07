@@ -23,11 +23,11 @@ export async function GET(req: NextRequest) {
       orderBy: { publishedAt: "desc" },
       take: limit,
       include: {
-        author: { select: { id: true, username: true, name: true } },
-        coverAsset: { include: { author: { select: { id: true, username: true, name: true } }, _count: { select: { votes: true } } } },
-        referencedMarketingPost: { include: { author: { select: { id: true, username: true, name: true } }, _count: { select: { votes: true } } } },
+        author: { select: { id: true, username: true, name: true, image: true, rankPoints: true } },
+        coverAsset: { include: { author: { select: { id: true, username: true, name: true, image: true, rankPoints: true } }, _count: { select: { votes: true } } } },
+        referencedMarketingPost: { include: { author: { select: { id: true, username: true, name: true, image: true, rankPoints: true } }, _count: { select: { votes: true } } } },
         contributions: {
-          include: { author: { select: { id: true, username: true, name: true } }, _count: { select: { votes: true } } },
+          include: { author: { select: { id: true, username: true, name: true, image: true, rankPoints: true } }, _count: { select: { votes: true } } },
         },
         votes: { where: { voterId: user.id }, select: { id: true } },
         _count: { select: { votes: true } },
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: "desc" },
       take: limit,
       include: {
-        author: { select: { id: true, username: true, name: true } },
+        author: { select: { id: true, username: true, name: true, image: true, rankPoints: true } },
         votes: { where: { voterId: user.id }, select: { id: true } },
         _count: { select: { votes: true } },
       },
@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: "desc" },
       take: limit,
       include: {
-        author: { select: { id: true, username: true, name: true } },
+        author: { select: { id: true, username: true, name: true, image: true, rankPoints: true } },
         asset: true,
         event: { select: { id: true, title: true } },
         votes: { where: { voterId: user.id }, select: { id: true } },
@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: "desc" },
       take: limit,
       include: {
-        author: { select: { id: true, username: true, name: true } },
+        author: { select: { id: true, username: true, name: true, image: true, rankPoints: true } },
         votes: { where: { voterId: user.id }, select: { id: true, stars: true } },
         _count: { select: { votes: true } },
       },

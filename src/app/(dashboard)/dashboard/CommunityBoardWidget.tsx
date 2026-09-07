@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronRight, ThumbsUp, Newspaper, ImagePlus, Megaphone, Lightbulb, Loader2 } from "lucide-react";
 import { acc, type AccentName } from "@/lib/accentColors";
+import RankedAvatar from "@/components/RankedAvatar";
 
 /**
  * Social-Media-artiges Feed-Widget fürs Dashboard — dieselbe API wie die volle
@@ -21,7 +22,7 @@ interface FeedEntry {
   title?: string;
   caption?: string;
   url?: string; // Bild-URL bei kind="asset"
-  author: { id: string; username: string | null; name: string | null };
+  author: { id: string; username: string | null; name: string | null; image: string | null; rankPoints: number };
   upvotes?: number;
   voteCount?: number;
   coverAsset?: { url: string } | null;
@@ -46,10 +47,6 @@ function entryImage(e: FeedEntry): string | null {
   if (e.kind === "report") return e.coverAsset?.url ?? null;
   if (e.kind === "marketing_post") return e.imageUrl ?? e.asset?.url ?? null;
   return null;
-}
-
-function authorInitial(e: FeedEntry): string {
-  return (e.author.username ?? e.author.name ?? "?")[0]?.toUpperCase() ?? "?";
 }
 
 export default function CommunityBoardWidget() {
@@ -108,10 +105,8 @@ export default function CommunityBoardWidget() {
                     {/* Nicht-absoluter Textblock → bestimmt die Kartenbreite anhand der Caption-Länge */}
                     <div className="relative h-full flex flex-col justify-end p-2.5 gap-1">
                       <div className="flex items-center gap-1.5">
-                        <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0"
-                          style={{ background: acc(accentName, 0.85) }}>
-                          {authorInitial(entry)}
-                        </span>
+                        <RankedAvatar rankPoints={entry.author.rankPoints} src={entry.author.image}
+                          alt={entry.author.username ?? entry.author.name ?? "?"} size={20} />
                         <span className="text-[10px] text-gray-300 truncate">
                           {entry.author.username ?? entry.author.name}
                         </span>
@@ -141,10 +136,8 @@ export default function CommunityBoardWidget() {
                     {/* Content unten: Avatar + Titel + Upvotes */}
                     <div className="absolute inset-x-0 bottom-0 p-2.5 flex flex-col gap-1">
                       <div className="flex items-center gap-1.5">
-                        <span className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0"
-                          style={{ background: acc(accentName, 0.85) }}>
-                          {authorInitial(entry)}
-                        </span>
+                        <RankedAvatar rankPoints={entry.author.rankPoints} src={entry.author.image}
+                          alt={entry.author.username ?? entry.author.name ?? "?"} size={20} />
                         <span className="text-[10px] text-gray-300 truncate">
                           {entry.author.username ?? entry.author.name}
                         </span>
