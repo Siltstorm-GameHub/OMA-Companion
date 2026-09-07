@@ -288,7 +288,7 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
         <DashTile icon={<Coins className="w-3.5 h-3.5" />} label="Voraussichtlich diese Woche"
           value={projected ? `${projected.coinsAwarded} Münzen` : "…"}
           sub={projected ? `Maximal möglich: ${projected.maxCoinsAwarded} Münzen` : undefined} />
-        <DashTile icon={<Sparkles className="w-3.5 h-3.5" />} label="Bonus" value={latestPayout ? `×${latestPayout.voteBonusMultiplier.toFixed(1)}` : "–"} />
+        <DashTile icon={<Sparkles className="w-3.5 h-3.5" />} label="Bonus" value={projected ? `×${projected.voteBonusMultiplier.toFixed(1)}` : "…"} />
       </div>
 
       {bonusTiers.length > 0 && (
