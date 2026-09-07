@@ -33,7 +33,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const format = event.format ?? "single_elimination";
   const userMap = new Map<string, UserLite>(event.participants.map((p) => [p.userId, p.user]));
 
-  let ranking: { userId: string; score: number; label: string }[] = [];
+  let ranking: { userId: string; score: number; label: string; stats?: Record<string, number> }[] = [];
 
   if (format === "ffa" || format === "coop_stats" || format === "avg_stats") {
     const fields: string[] = event.statFields ? JSON.parse(event.statFields) : [];
@@ -65,7 +65,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       const sorted = averaged.sort((a, b) => b.combined - a.combined);
       ranking = sorted.map((t) => {
         const display = t.combined % 1 === 0 ? String(t.combined) : t.combined.toFixed(2);
-        return { userId: t.userId, score: Math.round(t.combined * 100) / 100, label: `Ø ${display} (${t.rounds}R)` };
+        const totalsForUser = totals.get(t.userId)!;
+        const statsAvg: Record<string, number> = {};
+        for (const f of fields) {
+          const avg = totalsForUser.rounds > 0 ? (totalsForUser.stats[f] ?? 0) / totalsForUser.rounds : 0;
+          statsAvg[f] = Math.round(avg * 100) / 100;
+        }
+        return { userId: t.userId, score: Math.round(t.combined * 100) / 100, label: `Ø ${display} (${t.rounds}R)`, stats: statsAvg };
       });
     } else {
       const sorted = [...totals.values()].sort((a, b) => {
@@ -79,6 +85,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         userId: t.userId,
         score: fields[0] ? (t.stats[fields[0]] ?? 0) : 0,
         label: fields[0] ? `${t.stats[fields[0]] ?? 0} ${fields[0]}` : `Platz ${i + 1}`,
+        stats: t.stats,
       }));
     }
   } else if (format === "single_elimination") {
@@ -148,6 +155,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       rankPoints: user?.rankPoints ?? 0,
       score: r.score,
       label: r.label,
+      stats: r.stats ?? null,
       coins,
       rankPts,
     };
