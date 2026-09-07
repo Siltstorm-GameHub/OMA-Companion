@@ -10,11 +10,25 @@ import { requireWidgetKey } from "@/lib/widgetAuth";
  * Eigenständige Events: nur Status "open" | "active" | "umfrage" (wie im Admin-Panel) —
  * vergangene/abgeschlossene Standalone-Events werden im Widget nicht gebraucht.
  *
- * Event-Reihen: ALLE Events der Reihe, ungefiltert nach Status (neueste zuerst). Anders
- * als bei Standalone-Events soll man innerhalb einer Reihe bewusst auch auf vergangene
- * Events zugreifen können (z.B. um ein älteres Ergebnis zu korrigieren).
+ * Event-Reihen: ALLE Events der Reihe, ungefiltert nach Status, chronologisch aufsteigend
+ * (das naechste anstehende Event zuerst). Anders als bei Standalone-Events soll man innerhalb
+ * einer Reihe bewusst auch auf vergangene Events zugreifen können (z.B. um ein älteres
+ * Ergebnis zu korrigieren) — die stehen entsprechend weiter unten in der Liste.
  */
 const RELEVANT_STATUSES = ["open", "active", "umfrage"];
+const FINISHED_STATUSES = ["finished", "closed"];
+
+/**
+ * Innerhalb einer Reihe: offene/aktive Events chronologisch aufsteigend (naechstes zuerst),
+ * beendete/geschlossene Events dahinter angehaengt (ebenfalls aufsteigend). Ein reines
+ * "startAt asc" wuerde alte, laengst beendete Events vor den kommenden einsortieren.
+ */
+function sortSeriesEvents<T extends { status: string; startAt: Date }>(events: T[]): T[] {
+  const upcoming = events.filter((e) => !FINISHED_STATUSES.includes(e.status));
+  const finished = events.filter((e) => FINISHED_STATUSES.includes(e.status));
+  const byStartAtAsc = (a: T, b: T) => a.startAt.getTime() - b.startAt.getTime();
+  return [...upcoming.sort(byStartAtAsc), ...finished.sort(byStartAtAsc)];
+}
 
 const eventSelect = {
   id: true,
@@ -63,7 +77,6 @@ export async function GET(req: NextRequest) {
         id: true,
         name: true,
         events: {
-          orderBy: { startAt: "desc" },
           select: eventSelect,
         },
       },
@@ -78,7 +91,7 @@ export async function GET(req: NextRequest) {
         id: s.id,
         name: s.name,
         eventCount: s.events.length,
-        events: s.events.map(toWidgetEvent),
+        events: sortSeriesEvents(s.events).map(toWidgetEvent),
       })),
   });
 }
