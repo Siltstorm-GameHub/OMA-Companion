@@ -212,18 +212,25 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
     api<{ tiers: typeof bonusTiers }>("/api/admin/community-jobs/vote-bonus").then(d => setBonusTiers(d.tiers)).catch(() => {});
 
     // Der Bonus/Vorschau-Wert hängt von Bewertungen ab, die der User oft an
-    // ANDERER Stelle abgibt (z.B. Daumen-hoch im Community-Board, eine eigene
-    // Route/Seite) — ohne Refetch beim Zurückkommen bliebe die Kachel auf dem
-    // Stand vom ersten Öffnen des Büros hängen, auch wenn zwischenzeitlich neu
-    // bewertet wurde. Deshalb zusätzlich bei jedem Sichtbar-Werden neu laden.
+    // ANDERER Stelle abgibt (z.B. Daumen-hoch im Community-Board). `visibilitychange`/
+    // `focus` allein reichen NICHT: auf Desktop hält DesktopProfileTabs.tsx dieses
+    // Büro dauerhaft gemountet (nur per CSS `hidden` ausgeblendet, nie unmounted),
+    // und wer per In-App-Link zum Community-Board wechselt, dort bewertet und per
+    // Link zurückkehrt, bleibt die ganze Zeit im selben Tab/Fenster — es feuert
+    // also nie ein echtes Tab-Wechsel-/Fokus-Event, das Next.js-Router-Cache kann
+    // denselben Komponenten-Zustand ohne Remount/Refetch wiederverwenden. Deshalb
+    // zusätzlich ein kurzes Polling, damit die Kachel sich spätestens nach wenigen
+    // Sekunden von selbst korrigiert, unabhängig vom Navigationsweg.
     function reloadProjected() {
       api<ProjectedPayout>("/api/community-jobs/projected-payout").then(setProjected).catch(() => {});
     }
     reloadProjected();
+    const interval = setInterval(reloadProjected, 15_000);
     function onVisible() { if (!document.hidden) reloadProjected(); }
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("focus", reloadProjected);
     return () => {
+      clearInterval(interval);
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("focus", reloadProjected);
     };
