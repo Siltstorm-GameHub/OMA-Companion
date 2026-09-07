@@ -399,7 +399,7 @@ function prorateForMidWeekStart(coins: number, contractStartAt: Date, weekStart:
 
 export interface WeeklyPayoutOutcome {
   userId: string; jobKey: string; rawScore: number;
-  tierLabel: string | null; baseCoins: number; voteBonusMultiplier: number; coinsAwarded: number;
+  tierLabel: string | null; baseCoins: number; ownVotes: number; voteBonusMultiplier: number; coinsAwarded: number;
 }
 
 export async function computeWeeklyPayout(
@@ -424,13 +424,13 @@ export async function computeWeeklyPayout(
 
   return {
     userId: member.userId, jobKey: member.jobKey, rawScore,
-    tierLabel: tier?.label ?? null, baseCoins,
+    tierLabel: tier?.label ?? null, baseCoins, ownVotes,
     voteBonusMultiplier, coinsAwarded: Math.round(baseCoins * voteBonusMultiplier),
   };
 }
 
 export interface ProjectedPayout {
-  rawScore: number; tierLabel: string | null; voteBonusMultiplier: number;
+  rawScore: number; tierLabel: string | null; ownVotes: number; voteBonusMultiplier: number;
   /** Was JETZT ausgezahlt würde, wenn die laufende Woche sofort enden würde. */
   coinsAwarded: number;
   /** Theoretisches Maximum diese Woche: höchste Gehaltsstufe × höchster Aktivitäts-Bonus. */
@@ -456,8 +456,8 @@ export async function getProjectedPayout(
   const maxBaseCoins = prorateForMidWeekStart(maxTierCoins, member.contractStartAt, weekStart, weekEnd);
 
   return {
-    rawScore: outcome.rawScore, tierLabel: outcome.tierLabel, voteBonusMultiplier: outcome.voteBonusMultiplier,
-    coinsAwarded: outcome.coinsAwarded,
+    rawScore: outcome.rawScore, tierLabel: outcome.tierLabel, ownVotes: outcome.ownVotes,
+    voteBonusMultiplier: outcome.voteBonusMultiplier, coinsAwarded: outcome.coinsAwarded,
     maxCoinsAwarded: Math.round(maxBaseCoins * maxBonusMultiplier),
   };
 }

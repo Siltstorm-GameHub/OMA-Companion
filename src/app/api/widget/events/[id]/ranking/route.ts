@@ -200,6 +200,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const coins = raw === undefined ? 0 : typeof raw === "number" ? raw : raw.coins ?? 0;
     const rankPts = raw === undefined ? 0 : typeof raw === "number" ? 0 : raw.points ?? 0;
     const user = userMap.get(r.userId);
+    const rawTurnierpunkte = turnierpunkteByUser[r.userId];
     return {
       placement,
       userId: r.userId,
@@ -211,6 +212,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       stats: r.stats ?? null,
       coins,
       rankPts,
+      turnierpunkte: hasTurnierpunkteConfig ? Math.round((rawTurnierpunkte ?? 0) * 100) / 100 : null,
     };
   });
 

@@ -194,7 +194,7 @@ interface Recommendations {
 }
 interface Payout { id: string; weekStart: string; rawScore: number; tierLabel: string | null; coinsAwarded: number; voteBonusMultiplier: number }
 interface WaitlistEntry { id: string; user: { id: string; username: string | null; name: string | null } }
-interface ProjectedPayout { rawScore: number; tierLabel: string | null; voteBonusMultiplier: number; coinsAwarded: number; maxCoinsAwarded: number }
+interface ProjectedPayout { rawScore: number; tierLabel: string | null; ownVotes: number; voteBonusMultiplier: number; coinsAwarded: number; maxCoinsAwarded: number }
 
 function OfficeView({ membership, onChanged }: { membership: Membership; onChanged: () => void }) {
   const [recs, setRecs] = useState<Recommendations | null>(null);
@@ -210,7 +210,23 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
     api<{ payouts: Payout[] }>("/api/community-jobs/payouts").then(d => setPayouts(d.payouts)).catch(() => {});
     api<{ waitlist: WaitlistEntry[] }>(`/api/community-jobs/${membership.jobKey}/waitlist`).then(d => setWaitlist(d.waitlist)).catch(() => {});
     api<{ tiers: typeof bonusTiers }>("/api/admin/community-jobs/vote-bonus").then(d => setBonusTiers(d.tiers)).catch(() => {});
-    api<ProjectedPayout>("/api/community-jobs/projected-payout").then(setProjected).catch(() => {});
+
+    // Der Bonus/Vorschau-Wert hängt von Bewertungen ab, die der User oft an
+    // ANDERER Stelle abgibt (z.B. Daumen-hoch im Community-Board, eine eigene
+    // Route/Seite) — ohne Refetch beim Zurückkommen bliebe die Kachel auf dem
+    // Stand vom ersten Öffnen des Büros hängen, auch wenn zwischenzeitlich neu
+    // bewertet wurde. Deshalb zusätzlich bei jedem Sichtbar-Werden neu laden.
+    function reloadProjected() {
+      api<ProjectedPayout>("/api/community-jobs/projected-payout").then(setProjected).catch(() => {});
+    }
+    reloadProjected();
+    function onVisible() { if (!document.hidden) reloadProjected(); }
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", reloadProjected);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", reloadProjected);
+    };
   }, [membership.jobKey]);
 
   const contractEnd = new Date(membership.contractEndAt);
@@ -288,7 +304,14 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
         <DashTile icon={<Coins className="w-3.5 h-3.5" />} label="Voraussichtlich diese Woche"
           value={projected ? `${projected.coinsAwarded} Münzen` : "…"}
           sub={projected ? `Maximal möglich: ${projected.maxCoinsAwarded} Münzen` : undefined} />
-        <DashTile icon={<Sparkles className="w-3.5 h-3.5" />} label="Bonus" value={projected ? `×${projected.voteBonusMultiplier.toFixed(1)}` : "…"} />
+        <DashTile icon={<Sparkles className="w-3.5 h-3.5" />} label="Bonus"
+          value={projected ? `×${projected.voteBonusMultiplier.toFixed(1)}` : "…"}
+          valueClassName={projected ? (
+            projected.voteBonusMultiplier < 1 ? "text-red-400"
+              : projected.voteBonusMultiplier > 1 ? "text-emerald-400"
+              : "text-white"
+          ) : undefined}
+          sub={projected ? `${projected.ownVotes} ${projected.ownVotes === 1 ? "Bewertung" : "Bewertungen"} diese Woche` : undefined} />
       </div>
 
       {bonusTiers.length > 0 && (
