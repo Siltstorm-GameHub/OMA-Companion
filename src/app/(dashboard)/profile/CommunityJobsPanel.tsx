@@ -377,11 +377,11 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
   );
 }
 
-function DashTile({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: string; sub?: string }) {
+function DashTile({ icon, label, value, sub, valueClassName }: { icon: React.ReactNode; label: string; value: string; sub?: string; valueClassName?: string }) {
   return (
     <div className="p-3 text-center">
       <div className="flex items-center justify-center gap-1 text-teal-400 mb-1">{icon}</div>
-      <p className="text-xs font-semibold text-white truncate">{value}</p>
+      <p className={`text-xs font-semibold truncate ${valueClassName ?? "text-white"}`}>{value}</p>
       <p className="text-[9px] text-gray-600">{label}</p>
       {sub && <p className="text-[9px] text-gray-600 mt-1 truncate">{sub}</p>}
     </div>

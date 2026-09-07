@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireWidgetKey } from "@/lib/widgetAuth";
+import { applyEventStatOverride, computeTurnierpunkte, PLACEMENT_STAT_KEY, type StatConfig } from "@/lib/series-event-points";
 
 type UserLite = { id: string; name: string | null; username: string | null; image: string | null; rankPoints: number };
 
@@ -11,6 +12,10 @@ type UserLite = { id: string; name: string | null; username: string | null; imag
  * /api/tournaments/[id]/ranking/route.ts übernommen (bewusst dupliziert statt importiert:
  * jene Route ist Moderator-Session-geschützt, hier reiner Read ohne Nebenwirkungen, daher
  * geringes Risiko einer eigenen Kopie). Bei Abweichungen künftig dort UND hier pflegen.
+ *
+ * "Turnierpunkte" (computeTurnierpunkte, src/lib/series-event-points.ts) werden zusätzlich live
+ * berechnet — anders als die echten Ligapunkte (computeEventPoints) haengt diese Funktion NICHT an
+ * completionData, ist also schon waehrend eines laufenden Events verwendbar.
  */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const unauthorized = requireWidgetKey(req);
@@ -23,6 +28,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     include: {
       participants: { include: { user: { select: { id: true, name: true, username: true, image: true, rankPoints: true } } } },
       matches: { include: { entries: true }, where: { playedAt: { not: null } } },
+      series: { select: { seriesStatConfig: true } },
     },
   });
   if (!event) return NextResponse.json({ error: "Nicht gefunden" }, { status: 404 });
@@ -33,26 +39,73 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const format = event.format ?? "single_elimination";
   const userMap = new Map<string, UserLite>(event.participants.map((p) => [p.userId, p.user]));
 
+  // Turnierpunkte-Konfiguration: Reihen-weite StatConfig + Event-eigene Ueberschreibung (identisch
+  // zu applyEventStatOverride-Nutzung in EventEditClient.tsx / computeTurnierpunkte-Aufrufern).
+  const baseStatCfg: StatConfig = (() => {
+    try {
+      return event.series?.seriesStatConfig ? JSON.parse(event.series.seriesStatConfig) : null;
+    } catch {
+      return null;
+    }
+  })() ?? { participationPoints: 0, stats: [] };
+  const effectiveStatCfg = applyEventStatOverride(baseStatCfg, event.statConfigJson);
+  const hasTurnierpunkteConfig = effectiveStatCfg.stats.length > 0 || !!effectiveStatCfg.placementPoints;
+  const turnierpunkteByUser = hasTurnierpunkteConfig
+    ? computeTurnierpunkte(event.matches, effectiveStatCfg, format)
+    : {};
+
   let ranking: { userId: string; score: number; label: string; stats?: Record<string, number> }[] = [];
 
   if (format === "ffa" || format === "coop_stats" || format === "avg_stats") {
     const fields: string[] = event.statFields ? JSON.parse(event.statFields) : [];
-    const totals = new Map<string, { userId: string; stats: Record<string, number>; rounds: number }>();
+    const totals = new Map<
+      string,
+      { userId: string; stats: Record<string, number>; rounds: number; placementSum: number; placementCount: number }
+    >();
 
     for (const match of event.matches) {
       for (const entry of match.entries) {
         if (!entry.userId) continue;
-        if (!totals.has(entry.userId)) totals.set(entry.userId, { userId: entry.userId, stats: {}, rounds: 0 });
+        if (!totals.has(entry.userId)) {
+          totals.set(entry.userId, { userId: entry.userId, stats: {}, rounds: 0, placementSum: 0, placementCount: 0 });
+        }
         const t = totals.get(entry.userId)!;
         t.rounds += 1;
         if (entry.statsJson) {
           try {
-            const s = JSON.parse(entry.statsJson) as Record<string, number>;
-            for (const [k, v] of Object.entries(s)) t.stats[k] = (t.stats[k] ?? 0) + v;
+            const s = JSON.parse(entry.statsJson) as Record<string, unknown>;
+            // Nur konfigurierte Stat-Felder aufsummieren — nicht blind alle JSON-Keys (sonst
+            // landen interne Marker wie "_team" als NaN/String-Konkatenation in den Summen).
+            for (const f of fields) {
+              const v = Number(s[f] ?? 0);
+              if (v) t.stats[f] = (t.stats[f] ?? 0) + v;
+            }
+            // "Match Win" ist ein Zaehler (0/1 pro Runde) — Summe ist hier sinnvoll, daher normal
+            // aufaddiert, nicht wie Platzierung gemittelt.
+            if (s["Match Win"] != null) {
+              const mw = Number(s["Match Win"]);
+              if (mw) t.stats["Match Win"] = (t.stats["Match Win"] ?? 0) + mw;
+            }
+            // Platzierung ist ein Rang pro Runde (1 = Erster) — Summieren über mehrere Runden ist
+            // sinnlos, hier wird stattdessen der Durchschnitt gebildet (wie bei der Endplatzierung
+            // ueblich, siehe "Endplatzierung tracken" / PLACEMENT_STAT_KEY).
+            const placementRaw = s[PLACEMENT_STAT_KEY];
+            if (placementRaw != null) {
+              const p = Number(placementRaw);
+              if (p > 0) {
+                t.placementSum += p;
+                t.placementCount += 1;
+              }
+            }
           } catch {
             // malformed entry ueberspringen
           }
         }
+      }
+    }
+    for (const t of totals.values()) {
+      if (t.placementCount > 0) {
+        t.stats[`Ø ${PLACEMENT_STAT_KEY}`] = Math.round((t.placementSum / t.placementCount) * 100) / 100;
       }
     }
 
