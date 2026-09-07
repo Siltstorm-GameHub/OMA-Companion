@@ -1,0 +1,20 @@
+name: Twitch Chat Coins Cron
+
+# Vercels eigene Cron-Funktion erlaubt auf dem Hobby-Plan nur 1 Ausfuehrung pro Tag - fuer das
+# Live-Muenzen-Tracking braucht es aber einen Minutentakt. Deshalb triggert stattdessen dieser
+# Workflow den Endpoint von aussen. GitHub garantiert bei Scheduled Workflows kein exaktes
+# 5-Minuten-Intervall (kann sich um ein paar Minuten verschieben, besonders bei hoher Last),
+# das ist fuer eine Aktivitaets-Stichprobe aber ausreichend genau.
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call twitch-chat-coins cron endpoint
+        run: |
+          curl -sf -X GET "${{ vars.OMA_APP_URL }}/api/cron/twitch-chat-coins" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"

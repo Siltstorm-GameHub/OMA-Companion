@@ -16,6 +16,7 @@ type Partner = {
   isActive: boolean;
   order: number;
   user: LinkedUser;
+  ssnSessionId: string | null;
 };
 
 type TwitchPreview = { login: string; display_name: string; profile_image_url: string } | null;
@@ -134,6 +135,20 @@ export default function PartnerManager({ initialPartners }: { initialPartners: P
     } finally {
       setLinkSaving(false);
     }
+  }
+
+  async function saveSsnSessionId(partner: Partner, value: string) {
+    const trimmed = value.trim();
+    if (trimmed === (partner.ssnSessionId ?? "")) return; // unveraendert, kein Request noetig
+    const res = await fetch(`/api/partners/${partner.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ssnSessionId: trimmed || null }),
+    });
+    if (!res.ok) { toast.error("Fehler beim Speichern der SSN Session-ID"); return; }
+    const updated = await res.json();
+    setPartners((p) => p.map((x) => (x.id === partner.id ? { ...updated, user: x.user } : x)));
+    toast.success("SSN Session-ID gespeichert");
   }
 
   async function unlinkUser(partner: Partner) {
@@ -267,6 +282,18 @@ export default function PartnerManager({ initialPartners }: { initialPartners: P
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
+              </div>
+
+              {/* SSN Session-ID fuers Twitch-Chat-Coins-Tracking */}
+              <div className="px-4 pb-3 border-t border-white/[0.05] pt-2.5 flex items-center gap-2">
+                <span className="text-xs text-gray-500 whitespace-nowrap">SSN Session-ID</span>
+                <input
+                  type="text"
+                  placeholder="fuer Muenzen-Tracking waehrend Live-Streams"
+                  defaultValue={p.ssnSessionId ?? ""}
+                  onBlur={(e) => saveSsnSessionId(p, e.target.value)}
+                  className="flex-1 bg-white/5 border border-white/10 rounded-lg px-2.5 py-1 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-white/20"
+                />
               </div>
 
               {/* User-link panel */}
