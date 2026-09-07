@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import "@/lib/community-job-bootstrap";
 import { getSessionUser } from "@/lib/roles";
 import { getActiveMembership, getProjectedPayout } from "@/lib/community-job-service";
 
