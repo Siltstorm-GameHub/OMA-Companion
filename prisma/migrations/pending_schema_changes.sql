@@ -367,3 +367,17 @@ ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "eloGemsMatches" INTEGER NOT NULL DE
 -- ═══════════════════════════════════════════════════════════════
 
 ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "statConfigJson" TEXT;
+
+-- ═══════════════════════════════════════════════════════════════
+-- Büro-Empfehlungen: "nicht relevant" pro User dauerhaft ausblenden
+-- ═══════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS "JobRecommendationDismissal" (
+  "id"          TEXT         NOT NULL PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  "userId"      TEXT         NOT NULL,
+  "jobKey"      TEXT         NOT NULL,
+  "itemKey"     TEXT         NOT NULL,
+  "dismissedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "JobRecommendationDismissal_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE,
+  CONSTRAINT "JobRecommendationDismissal_userId_jobKey_itemKey_key" UNIQUE ("userId", "jobKey", "itemKey")
+);

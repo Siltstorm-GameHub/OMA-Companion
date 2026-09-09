@@ -189,7 +189,7 @@ function CatalogView({
 // ── Büro (aktiver Job) ────────────────────────────────────────────────────────
 
 interface Recommendations {
-  events: { eventId: string; title: string; reason: string; url?: string }[];
+  events: { eventId: string; title: string; reason: string; url?: string; urgency?: string; urgent?: boolean }[];
   steamSales: { id: number; name: string; discountPercent?: number; url: string }[];
   steamReleases: { id: number; name: string; url: string }[];
 }
@@ -205,6 +205,19 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
   const [projected, setProjected] = useState<ProjectedPayout | null>(null);
   const [busy, setBusy] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [createEventId, setCreateEventId] = useState<string | undefined>(undefined);
+  const [showAllEvents, setShowAllEvents] = useState(false);
+
+  function openCreateForm(eventId?: string) {
+    setCreateEventId(eventId);
+    setCreateOpen(true);
+  }
+
+  /** Blendet eine Empfehlung dauerhaft aus (optimistisch entfernt, Request läuft im Hintergrund). */
+  function dismissRecommendation(itemKey: string) {
+    setRecs(r => (r ? { ...r, events: r.events.filter(e => e.eventId !== itemKey) } : r));
+    api("/api/community-jobs/recommendations/dismiss", { method: "POST", body: JSON.stringify({ itemKey }) }).catch(() => {});
+  }
 
   useEffect(() => {
     api<Recommendations>("/api/community-jobs/recommendations").then(setRecs).catch(() => {});
@@ -390,17 +403,43 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
         <div className="p-4 border-b border-white/[0.04] bg-blue-500/[0.02] space-y-3">
           <SectionHeader tone="blue" icon={<Lightbulb className="w-3.5 h-3.5" />} title="Empfehlungen für deine Beiträge" />
 
-          {recs.events.length > 0 && (
-            <div className="space-y-1">
-              <p className="text-[10px] font-medium text-gray-500 flex items-center gap-1"><CalendarDays className="w-3 h-3" /> Events ohne Beitrag</p>
-              {recs.events.map(e => (
-                <p key={e.eventId} className="text-xs text-gray-400 pl-4">
-                  • {e.url ? <Link href={e.url} className="text-gray-300 hover:text-teal-300 underline underline-offset-2">{e.title}</Link> : e.title}
-                  {" — "}<span className="text-amber-400">{e.reason}</span>
-                </p>
-              ))}
-            </div>
-          )}
+          {recs.events.length > 0 && (() => {
+            const EVENT_CAP = 3;
+            const visibleEvents = showAllEvents ? recs.events : recs.events.slice(0, EVENT_CAP);
+            const hiddenCount = recs.events.length - visibleEvents.length;
+            // Nur Journalist/Fotograf/Marketing-Manager-Empfehlungen zeigen auf ein echtes Event —
+            // Coach/Visionär-Hinweise sind synthetische Ein-Item-Nudges ohne Event-Bezug.
+            const isEventScopedJob = ["journalist", "fotograf", "marketing_manager"].includes(membership.jobKey);
+            return (
+              <div className="space-y-1">
+                <p className="text-[10px] font-medium text-gray-500 flex items-center gap-1"><CalendarDays className="w-3 h-3" /> Events ohne Beitrag</p>
+                {visibleEvents.map(e => (
+                  <div key={e.eventId} className="flex items-center justify-between gap-2 pl-4">
+                    <p className="text-xs text-gray-400 min-w-0 truncate">
+                      • {e.url ? <Link href={e.url} className="text-gray-300 hover:text-teal-300 underline underline-offset-2">{e.title}</Link> : e.title}
+                      {" — "}<span className="text-amber-400">{e.reason}</span>
+                      {e.urgency && <span className={`ml-1.5 ${e.urgent ? "text-red-400" : "text-gray-600"}`}>· {e.urgency}</span>}
+                    </p>
+                    <span className="flex items-center gap-2 shrink-0">
+                      <button onClick={() => openCreateForm(isEventScopedJob ? e.eventId : undefined)}
+                        className="text-[10px] text-gray-600 hover:text-teal-400 transition-colors">
+                        Erstellen
+                      </button>
+                      <button onClick={() => dismissRecommendation(e.eventId)} title="Nicht relevant — ausblenden"
+                        className="text-gray-600 hover:text-red-400 transition-colors">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  </div>
+                ))}
+                {hiddenCount > 0 && (
+                  <button onClick={() => setShowAllEvents(true)} className="text-[10px] text-gray-600 hover:text-teal-400 transition-colors pl-4">
+                    +{hiddenCount} weitere
+                  </button>
+                )}
+              </div>
+            );
+          })()}
           {recs.steamSales.length > 0 && (
             <div className="space-y-1">
               <p className="text-[10px] font-medium text-gray-500 flex items-center gap-1"><Tag className="w-3 h-3" /> Aktuelle Sales</p>
@@ -428,7 +467,7 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
       {/* Werkzeuge */}
       <div className="p-4 border-b border-white/[0.04] space-y-3">
         <SectionHeader tone="teal" icon={<Wrench className="w-3.5 h-3.5" />} title="Werkzeuge"
-          action={<Button size="sm" onClick={() => setCreateOpen(true)}>Neuer Beitrag</Button>} />
+          action={<Button size="sm" onClick={() => openCreateForm()}>Neuer Beitrag</Button>} />
         <JobToolContent jobKey={membership.jobKey} />
       </div>
 
@@ -462,7 +501,7 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
       )}
 
       <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Neuer Beitrag" size="md">
-        <CreateContentForm jobKey={membership.jobKey} onDone={() => { setCreateOpen(false); onChanged(); }} />
+        <CreateContentForm jobKey={membership.jobKey} eventId={createEventId} onDone={() => { setCreateOpen(false); onChanged(); }} />
       </Modal>
     </div>
   );
@@ -909,16 +948,16 @@ function IdeaList() {
 
 // ── Erstellungs-Formulare ─────────────────────────────────────────────────────
 
-function CreateContentForm({ jobKey, onDone }: { jobKey: string; onDone: () => void }) {
-  if (jobKey === "fotograf") return <UploadAssetForm onDone={onDone} />;
-  if (jobKey === "marketing_manager") return <CreateMarketingPostForm onDone={onDone} />;
-  return <TextContentForm jobKey={jobKey} onDone={onDone} />;
+function CreateContentForm({ jobKey, eventId, onDone }: { jobKey: string; eventId?: string; onDone: () => void }) {
+  if (jobKey === "fotograf") return <UploadAssetForm eventId={eventId} onDone={onDone} />;
+  if (jobKey === "marketing_manager") return <CreateMarketingPostForm eventId={eventId} onDone={onDone} />;
+  return <TextContentForm jobKey={jobKey} eventId={eventId} onDone={onDone} />;
 }
 
 /** Journalist (Bericht), Coach (Trainings-Termin), Visionär (Idee) — alle drei sind Titel + Text. */
 interface DiscordChannel { id: string; name: string; category: string | null }
 
-function TextContentForm({ jobKey, onDone }: { jobKey: string; onDone: () => void }) {
+function TextContentForm({ jobKey, eventId, onDone }: { jobKey: string; eventId?: string; onDone: () => void }) {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
@@ -934,7 +973,7 @@ function TextContentForm({ jobKey, onDone }: { jobKey: string; onDone: () => voi
     setBusy(true);
     try {
       if (jobKey === "journalist") {
-        await api("/api/community-jobs/reports", { method: "POST", body: JSON.stringify({ title, bodyMarkdown: body }) });
+        await api("/api/community-jobs/reports", { method: "POST", body: JSON.stringify({ title, bodyMarkdown: body, eventId }) });
       } else if (jobKey === "coach") {
         await api("/api/community-jobs/coach/training-sessions", {
           method: "POST", body: JSON.stringify({
@@ -989,7 +1028,7 @@ const ASSET_TYPE_OPTIONS = [
   { value: "GRAPHIC", label: "Grafik" },
 ];
 
-function UploadAssetForm({ onDone }: { onDone: () => void }) {
+function UploadAssetForm({ eventId, onDone }: { eventId?: string; onDone: () => void }) {
   const [url, setUrl] = useState("");
   const [type, setType] = useState("SCREENSHOT");
   const [caption, setCaption] = useState("");
@@ -998,7 +1037,7 @@ function UploadAssetForm({ onDone }: { onDone: () => void }) {
   async function submit() {
     setBusy(true);
     try {
-      await api("/api/community-jobs/media", { method: "POST", body: JSON.stringify({ type, url, caption: caption || undefined }) });
+      await api("/api/community-jobs/media", { method: "POST", body: JSON.stringify({ type, url, caption: caption || undefined, eventId }) });
       toast.success("Hochgeladen");
       onDone();
     } catch (err) {
@@ -1031,9 +1070,9 @@ interface EventOption { id: string; title: string; startAt: string }
 
 type PostImageMode = "none" | "library" | "studio" | "upload";
 
-function CreateMarketingPostForm({ onDone }: { onDone: () => void }) {
+function CreateMarketingPostForm({ eventId: initialEventId, onDone }: { eventId?: string; onDone: () => void }) {
   const [events, setEvents] = useState<EventOption[]>([]);
-  const [eventId, setEventId] = useState("");
+  const [eventId, setEventId] = useState(initialEventId ?? "");
   const [caption, setCaption] = useState("");
   const [assetId, setAssetId] = useState("");
   const [studioImageUrl, setStudioImageUrl] = useState("");
@@ -1064,7 +1103,7 @@ function CreateMarketingPostForm({ onDone }: { onDone: () => void }) {
     api<EventOption[]>("/api/events").then(all => {
       const upcoming = all.filter(e => new Date(e.startAt).getTime() > Date.now());
       setEvents(upcoming);
-      if (upcoming[0]) setEventId(upcoming[0].id);
+      if (!initialEventId && upcoming[0]) setEventId(upcoming[0].id);
     }).catch(() => {});
     api<{ assets: typeof assets }>("/api/community-jobs/media").then(d => setAssets(d.assets)).catch(() => {});
   }, []);

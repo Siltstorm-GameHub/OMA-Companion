@@ -111,6 +111,7 @@ model User {
   communityJobApplicationsReviewed CommunityJobApplication[]   @relation("CommunityJobApplicationReviewer")
   communityJobMemberships          CommunityJobMember[]
   communityJobWeeklyPayouts        CommunityJobWeeklyPayout[]
+  jobRecommendationDismissals      JobRecommendationDismissal[]
   jobReports                       JobReport[]
   jobReportVotes                   JobReportVote[]
   jobReportContributions           JobReportContribution[]
@@ -1305,6 +1306,25 @@ model CommunityJobWeeklyPayout {
 
   @@unique([userId, jobKey, weekStart])
   @@index([jobKey, weekStart])
+}
+
+/**
+ * "Nicht relevant" auf eine Büro-Empfehlung (Event ohne Bericht/Fotos/Werbung,
+ * Coach-Terminhinweis, Visionär-Ideenhinweis) — blendet genau diesen Hinweis für
+ * diesen User dauerhaft aus, ohne die Empfehlungslogik selbst zu verändern.
+ * itemKey = die jeweilige EventRecommendation.eventId (bei synthetischen
+ * Hinweisen wie "coach-no-upcoming-session" der feste String-Schlüssel).
+ */
+model JobRecommendationDismissal {
+  id          String   @id @default(cuid())
+  userId      String
+  jobKey      String
+  itemKey     String
+  dismissedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, jobKey, itemKey])
 }
 
 // ── Journalist ───────────────────────────────────────────────────────────────
