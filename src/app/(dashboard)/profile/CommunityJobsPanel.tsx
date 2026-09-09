@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import {
   Briefcase, Users, Coins, TrendingUp, Clock, ThumbsUp, Send, LogOut, RefreshCw,
   ChevronRight, Loader2, Sparkles, ImagePlus, Newspaper, Megaphone, GraduationCap, Lightbulb, Upload, Crop, X,
-  Wrench, Wallet, UserPlus, CalendarDays, Tag, Rocket, Check,
+  Wrench, Wallet, UserPlus, CalendarDays, Tag, Rocket,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -327,10 +327,12 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
         const sortedTiers = [...bonusTiers].sort((a, b) => a.minVotes - b.minVotes);
         const ownVotes = projected?.ownVotes ?? 0;
         const nextTier = sortedTiers.find(t => t.minVotes > ownVotes);
-        const prevMin = [...sortedTiers].reverse().find(t => t.minVotes <= ownVotes)?.minVotes ?? 0;
-        const progressPct = nextTier
-          ? Math.min(100, Math.round(((ownVotes - prevMin) / (nextTier.minVotes - prevMin)) * 100))
-          : 100;
+        const minV = sortedTiers[0].minVotes;
+        const maxV = sortedTiers[sortedTiers.length - 1].minVotes;
+        const span = maxV - minV;
+        // Position auf der Gesamtskala (niedrigste bis höchste Stufe), nicht nur bis zur nächsten Stufe.
+        const posPct = (v: number) => (span > 0 ? Math.min(100, Math.max(0, ((v - minV) / span) * 100)) : 0);
+        const fillPct = posPct(ownVotes);
         return (
           <div className="p-4 border-b border-white/[0.04] bg-amber-500/[0.025] space-y-2.5">
             <SectionHeader tone="amber" icon={<Sparkles className="w-3.5 h-3.5" />} title="Aktivitäts-Bonus" />
@@ -341,10 +343,28 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
 
             {projected != null && (
               <div className="space-y-1">
-                <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
-                  <div className={`h-full rounded-full transition-all ${nextTier ? "bg-amber-400" : "bg-emerald-400"}`}
-                    style={{ width: `${progressPct}%` }} />
-                </div>
+                {span > 0 && (
+                  <div className="relative pt-2.5 pb-4">
+                    <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                      <div className={`h-full rounded-full transition-all ${nextTier ? "bg-amber-400" : "bg-emerald-400"}`}
+                        style={{ width: `${fillPct}%` }} />
+                    </div>
+                    {sortedTiers.map(t => {
+                      const isCurrent = t.multiplier === projected.voteBonusMultiplier;
+                      const p = posPct(t.minVotes);
+                      const anchor = p <= 1 ? "0%" : p >= 99 ? "-100%" : "-50%";
+                      return (
+                        <div key={t.label} className="absolute top-2.5 flex flex-col items-center"
+                          style={{ left: `${p}%`, transform: `translate(${anchor}, -50%)` }}>
+                          <div className={`w-2 h-2 rounded-full border ${isCurrent ? "bg-white border-white ring-2 ring-amber-400" : "bg-gray-700 border-white/20"}`} />
+                          <span className={`mt-1.5 text-[8px] whitespace-nowrap ${isCurrent ? "text-amber-300 font-semibold" : "text-gray-600"}`}>
+                            ×{t.multiplier.toFixed(1)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
                 <p className="text-[10px] text-gray-500">
                   {nextTier
                     ? <>Noch <span className="text-amber-400 font-medium">{nextTier.minVotes - ownVotes}</span> bis „{nextTier.label}“ (×{nextTier.multiplier.toFixed(1)})</>
@@ -352,20 +372,6 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
                 </p>
               </div>
             )}
-
-            <div className="flex flex-wrap gap-1.5">
-              {sortedTiers.map(t => {
-                const isCurrent = projected != null && t.multiplier === projected.voteBonusMultiplier;
-                return (
-                  <Badge key={t.label} tone={t.multiplier < 1 ? "danger" : t.multiplier > 1 ? "success" : "neutral"}
-                    icon={isCurrent ? <Check className="w-2.5 h-2.5" /> : undefined}
-                    className={isCurrent ? "ring-1 ring-white/40" : undefined}>
-                    ab {t.minVotes} · {t.label} · ×{t.multiplier.toFixed(1)}
-                    {isCurrent && " · Du bist hier"}
-                  </Badge>
-                );
-              })}
-            </div>
           </div>
         );
       })()}
