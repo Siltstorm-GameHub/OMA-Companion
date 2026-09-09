@@ -1317,14 +1317,15 @@ model CommunityJobWeeklyPayout {
  */
 model JobRecommendationDismissal {
   id          String   @id @default(cuid())
-  userId      String
-  jobKey      String
-  itemKey     String
-  dismissedAt DateTime @default(now())
+  userId      String   @map("userid")
+  jobKey      String   @map("jobkey")
+  itemKey     String   @map("itemkey")
+  dismissedAt DateTime @default(now()) @map("dismissedat")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, jobKey, itemKey])
+  @@map("jobrecommendationdismissal")
 }
 
 // ── Journalist ───────────────────────────────────────────────────────────────

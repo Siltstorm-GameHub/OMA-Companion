@@ -375,11 +375,14 @@ ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "statConfigJson" TEXT;
 -- Bewusst ohne Foreign-Key-Constraint (nur App-seitig über Prisma referenziert) und ohne
 -- DO-Block, um beim manuellen Einfügen ins Supabase SQL-Editor möglichst wenig
 -- Angriffsfläche für Copy/Paste-Probleme (z.B. Smart-Quotes) zu bieten.
-CREATE TABLE IF NOT EXISTS "JobRecommendationDismissal" (
-  "id" TEXT NOT NULL PRIMARY KEY DEFAULT gen_random_uuid()::text,
-  "userId" TEXT NOT NULL,
-  "jobKey" TEXT NOT NULL,
-  "itemKey" TEXT NOT NULL,
-  "dismissedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE ("userId", "jobKey", "itemKey")
+-- Komplett ohne doppelte Anführungszeichen (Tabelle/Spalten via @map auf Kleinschreibung
+-- gemappt) — drei Versuche mit "..." schlugen im Supabase SQL-Editor jedes Mal identisch
+-- an der letzten schließenden Klammer fehl, unabhängig vom sonstigen Aufbau der Anweisung.
+CREATE TABLE IF NOT EXISTS jobrecommendationdismissal (
+  id TEXT NOT NULL PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  userid TEXT NOT NULL,
+  jobkey TEXT NOT NULL,
+  itemkey TEXT NOT NULL,
+  dismissedat TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (userid, jobkey, itemkey)
 );
