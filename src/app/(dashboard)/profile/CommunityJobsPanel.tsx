@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import {
   Briefcase, Users, Coins, TrendingUp, Clock, ThumbsUp, Send, LogOut, RefreshCw,
   ChevronRight, Loader2, Sparkles, ImagePlus, Newspaper, Megaphone, GraduationCap, Lightbulb, Upload, Crop, X,
-  Wrench, Wallet, UserPlus, CalendarDays, Tag, Rocket, Check,
+  Wrench, Wallet, UserPlus, CalendarDays, Tag, Rocket,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -372,20 +372,6 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
                 </p>
               </div>
             )}
-
-            <div className="flex flex-wrap gap-1.5">
-              {sortedTiers.map(t => {
-                const isCurrent = projected != null && t.multiplier === projected.voteBonusMultiplier;
-                return (
-                  <Badge key={t.label} tone={t.multiplier < 1 ? "danger" : t.multiplier > 1 ? "success" : "neutral"}
-                    icon={isCurrent ? <Check className="w-2.5 h-2.5" /> : undefined}
-                    className={isCurrent ? "ring-1 ring-white/40" : undefined}>
-                    ab {t.minVotes} · {t.label} · ×{t.multiplier.toFixed(1)}
-                    {isCurrent && " · Du bist hier"}
-                  </Badge>
-                );
-              })}
-            </div>
           </div>
         );
       })()}
