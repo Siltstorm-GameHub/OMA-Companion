@@ -92,7 +92,7 @@ registerScoreResolver(JOB_KEY, async (userId, weekStart, weekEnd) => {
     where: {
       idea: { authorId: userId },
       createdAt: { gte: weekStart, lt: weekEnd },
-      disputeResolution: { not: "OVERTURNED" },
+      OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }],
     },
     _sum: { stars: true },
   });
@@ -101,6 +101,9 @@ registerScoreResolver(JOB_KEY, async (userId, weekStart, weekEnd) => {
 
 registerOwnVoteCounter(async (userId, weekStart, weekEnd) => {
   return prisma.communityIdeaVote.count({
-    where: { voterId: userId, createdAt: { gte: weekStart, lt: weekEnd }, disputeResolution: { not: "OVERTURNED" } },
+    where: {
+      voterId: userId, createdAt: { gte: weekStart, lt: weekEnd },
+      OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }],
+    },
   });
 });

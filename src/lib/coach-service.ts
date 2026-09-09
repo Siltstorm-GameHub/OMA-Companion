@@ -130,7 +130,10 @@ function validateRatingInput(raterId: string, coachId: string, stars: number, re
 /** Score = Ø Sterne × Anzahl gültiger Bewertungen diese Woche (siehe Plan-Gehaltsstufen). */
 registerScoreResolver(JOB_KEY, async (userId, weekStart, weekEnd) => {
   const agg = await prisma.coachRating.aggregate({
-    where: { coachId: userId, createdAt: { gte: weekStart, lt: weekEnd }, disputeResolution: { not: "OVERTURNED" } },
+    where: {
+      coachId: userId, createdAt: { gte: weekStart, lt: weekEnd },
+      OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }],
+    },
     _avg: { stars: true }, _count: { _all: true },
   });
   return (agg._avg.stars ?? 0) * agg._count._all;
@@ -138,6 +141,9 @@ registerScoreResolver(JOB_KEY, async (userId, weekStart, weekEnd) => {
 
 registerOwnVoteCounter(async (userId, weekStart, weekEnd) => {
   return prisma.coachRating.count({
-    where: { raterId: userId, createdAt: { gte: weekStart, lt: weekEnd }, disputeResolution: { not: "OVERTURNED" } },
+    where: {
+      raterId: userId, createdAt: { gte: weekStart, lt: weekEnd },
+      OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }],
+    },
   });
 });

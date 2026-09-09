@@ -191,14 +191,14 @@ registerScoreResolver(JOB_KEY, async (userId, weekStart, weekEnd) => {
       where: {
         report: { authorId: userId },
         createdAt: { gte: weekStart, lt: weekEnd },
-        disputeResolution: { not: "OVERTURNED" },
+        OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }],
       },
     }),
     prisma.jobReportContributionVote.count({
       where: {
         contribution: { authorId: userId },
         createdAt: { gte: weekStart, lt: weekEnd },
-        disputeResolution: { not: "OVERTURNED" },
+        OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }],
       },
     }),
   ]);
@@ -208,10 +208,16 @@ registerScoreResolver(JOB_KEY, async (userId, weekStart, weekEnd) => {
 registerOwnVoteCounter(async (userId, weekStart, weekEnd) => {
   const [reportVotes, contributionVotes] = await Promise.all([
     prisma.jobReportVote.count({
-      where: { voterId: userId, createdAt: { gte: weekStart, lt: weekEnd }, disputeResolution: { not: "OVERTURNED" } },
+      where: {
+        voterId: userId, createdAt: { gte: weekStart, lt: weekEnd },
+        OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }],
+      },
     }),
     prisma.jobReportContributionVote.count({
-      where: { voterId: userId, createdAt: { gte: weekStart, lt: weekEnd }, disputeResolution: { not: "OVERTURNED" } },
+      where: {
+        voterId: userId, createdAt: { gte: weekStart, lt: weekEnd },
+        OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }],
+      },
     }),
   ]);
   return reportVotes + contributionVotes;
