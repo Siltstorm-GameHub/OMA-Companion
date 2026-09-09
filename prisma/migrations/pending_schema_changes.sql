@@ -372,21 +372,14 @@ ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "statConfigJson" TEXT;
 -- Büro-Empfehlungen: "nicht relevant" pro User dauerhaft ausblenden
 -- ═══════════════════════════════════════════════════════════════
 
+-- Bewusst ohne Foreign-Key-Constraint (nur App-seitig über Prisma referenziert) und ohne
+-- DO-Block, um beim manuellen Einfügen ins Supabase SQL-Editor möglichst wenig
+-- Angriffsfläche für Copy/Paste-Probleme (z.B. Smart-Quotes) zu bieten.
 CREATE TABLE IF NOT EXISTS "JobRecommendationDismissal" (
-  "id"          TEXT         NOT NULL PRIMARY KEY DEFAULT gen_random_uuid()::text,
-  "userId"      TEXT         NOT NULL,
-  "jobKey"      TEXT         NOT NULL,
-  "itemKey"     TEXT         NOT NULL,
-  "dismissedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+  "id" TEXT NOT NULL PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  "userId" TEXT NOT NULL,
+  "jobKey" TEXT NOT NULL,
+  "itemKey" TEXT NOT NULL,
+  "dismissedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE ("userId", "jobKey", "itemKey")
 );
-
-DO $$
-BEGIN
-  ALTER TABLE "JobRecommendationDismissal" ADD CONSTRAINT "JobRecommendationDismissal_userId_fkey"
-    FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE;
-EXCEPTION
-  WHEN duplicate_object THEN NULL;
-END $$;
-
-CREATE UNIQUE INDEX IF NOT EXISTS "JobRecommendationDismissal_userId_jobKey_itemKey_key"
-  ON "JobRecommendationDismissal" ("userId", "jobKey", "itemKey");
