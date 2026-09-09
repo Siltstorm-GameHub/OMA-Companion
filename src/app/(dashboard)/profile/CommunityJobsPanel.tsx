@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import {
   Briefcase, Users, Coins, TrendingUp, Clock, ThumbsUp, Send, LogOut, RefreshCw,
   ChevronRight, Loader2, Sparkles, ImagePlus, Newspaper, Megaphone, GraduationCap, Lightbulb, Upload, Crop, X,
+  Wrench, Wallet, UserPlus, CalendarDays, Tag, Rocket, Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -307,11 +308,12 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
 
       {/* Dashboard */}
       <div className="grid grid-cols-3 divide-x divide-white/[0.04] border-b border-white/[0.04]">
-        <DashTile icon={<TrendingUp className="w-3.5 h-3.5" />} label="Letzte Woche" value={latestPayout ? `${latestPayout.tierLabel ?? "–"}` : "–"} />
-        <DashTile icon={<Coins className="w-3.5 h-3.5" />} label="Voraussichtlich diese Woche"
+        <DashTile tone="blue" icon={<TrendingUp className="w-3.5 h-3.5" />} label="Letzte Woche" value={latestPayout ? `${latestPayout.tierLabel ?? "–"}` : "–"} />
+        <DashTile tone="amber" icon={<Coins className="w-3.5 h-3.5" />} label="Voraussichtlich diese Woche"
           value={projected ? `${projected.coinsAwarded} Münzen` : "…"}
           sub={projected ? `Maximal möglich: ${projected.maxCoinsAwarded} Münzen` : undefined} />
-        <DashTile icon={<Sparkles className="w-3.5 h-3.5" />} label="Bonus"
+        <DashTile tone={projected && projected.voteBonusMultiplier < 1 ? "red" : projected && projected.voteBonusMultiplier > 1 ? "emerald" : "gray"}
+          icon={<Sparkles className="w-3.5 h-3.5" />} label="Aktivitäts-Bonus"
           value={projected ? `×${projected.voteBonusMultiplier.toFixed(1)}` : "…"}
           valueClassName={projected ? (
             projected.voteBonusMultiplier < 1 ? "text-red-400"
@@ -322,64 +324,82 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
       </div>
 
       {bonusTiers.length > 0 && (
-        <div className="px-4 py-3 border-b border-white/[0.04] space-y-1.5">
-          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
-            <Sparkles className="w-3 h-3 text-amber-400" /> Aktivitäts-Bonus
-          </p>
-          <p className="text-[11px] text-gray-500">
-            Bewerte selbst Beiträge anderer Community-Jobs — je mehr du diese Woche bewertest, desto höher dein Gehalts-Multiplikator.
-            Bewertest du gar nicht, sinkt er sogar unter ×1.
+        <div className="p-4 border-b border-white/[0.04] bg-amber-500/[0.025] space-y-2.5">
+          <SectionHeader tone="amber" icon={<Sparkles className="w-3.5 h-3.5" />} title="Aktivitäts-Bonus" />
+          <p className="text-[11px] text-gray-500 leading-relaxed">
+            Bewerte selbst Beiträge anderer Community-Jobs (z.B. Daumen-hoch im Community-Board) — je mehr du diese
+            Woche bewertest, desto höher dein Gehalts-Multiplikator. Bewertest du gar nicht, sinkt er sogar unter ×1.
           </p>
           <div className="flex flex-wrap gap-1.5">
-            {[...bonusTiers].sort((a, b) => a.minVotes - b.minVotes).map(t => (
-              <Badge key={t.label} tone={t.multiplier < 1 ? "danger" : t.multiplier > 1 ? "success" : "neutral"}>
-                ab {t.minVotes} · {t.label} · ×{t.multiplier.toFixed(1)}
-              </Badge>
-            ))}
+            {[...bonusTiers].sort((a, b) => a.minVotes - b.minVotes).map(t => {
+              const isCurrent = projected != null && t.multiplier === projected.voteBonusMultiplier;
+              return (
+                <Badge key={t.label} tone={t.multiplier < 1 ? "danger" : t.multiplier > 1 ? "success" : "neutral"}
+                  icon={isCurrent ? <Check className="w-2.5 h-2.5" /> : undefined}
+                  className={isCurrent ? "ring-1 ring-white/40" : undefined}>
+                  ab {t.minVotes} · {t.label} · ×{t.multiplier.toFixed(1)}
+                  {isCurrent && " · Du bist hier"}
+                </Badge>
+              );
+            })}
           </div>
         </div>
       )}
 
       {/* Empfehlungen */}
       {recs && (recs.events.length > 0 || recs.steamSales.length > 0 || recs.steamReleases.length > 0) && (
-        <div className="p-4 border-b border-white/[0.04] space-y-1.5">
-          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">💡 Empfehlungen</p>
-          {recs.events.map(e => (
-            <p key={e.eventId} className="text-xs text-gray-400">
-              • {e.url ? <Link href={e.url} className="text-gray-300 hover:text-teal-300 underline underline-offset-2">{e.title}</Link> : e.title}
-              {" — "}<span className="text-amber-400">{e.reason}</span>
-            </p>
-          ))}
-          {recs.steamSales.map(s => (
-            <p key={`sale-${s.id}`} className="text-xs text-gray-400">
-              🎮 Sale: <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-teal-300 underline underline-offset-2">{s.name}</a>
-              {s.discountPercent ? ` -${s.discountPercent}%` : ""}
-            </p>
-          ))}
-          {recs.steamReleases.map(s => (
-            <p key={`new-${s.id}`} className="text-xs text-gray-400">
-              🆕 Neu: <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-teal-300 underline underline-offset-2">{s.name}</a>
-            </p>
-          ))}
+        <div className="p-4 border-b border-white/[0.04] bg-blue-500/[0.02] space-y-3">
+          <SectionHeader tone="blue" icon={<Lightbulb className="w-3.5 h-3.5" />} title="Empfehlungen für deine Beiträge" />
+
+          {recs.events.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-[10px] font-medium text-gray-500 flex items-center gap-1"><CalendarDays className="w-3 h-3" /> Events ohne Beitrag</p>
+              {recs.events.map(e => (
+                <p key={e.eventId} className="text-xs text-gray-400 pl-4">
+                  • {e.url ? <Link href={e.url} className="text-gray-300 hover:text-teal-300 underline underline-offset-2">{e.title}</Link> : e.title}
+                  {" — "}<span className="text-amber-400">{e.reason}</span>
+                </p>
+              ))}
+            </div>
+          )}
+          {recs.steamSales.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-[10px] font-medium text-gray-500 flex items-center gap-1"><Tag className="w-3 h-3" /> Aktuelle Sales</p>
+              {recs.steamSales.map(s => (
+                <p key={`sale-${s.id}`} className="text-xs text-gray-400 pl-4">
+                  • <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-teal-300 underline underline-offset-2">{s.name}</a>
+                  {s.discountPercent ? <span className="text-emerald-400"> -{s.discountPercent}%</span> : ""}
+                </p>
+              ))}
+            </div>
+          )}
+          {recs.steamReleases.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-[10px] font-medium text-gray-500 flex items-center gap-1"><Rocket className="w-3 h-3" /> Neuveröffentlichungen</p>
+              {recs.steamReleases.map(s => (
+                <p key={`new-${s.id}`} className="text-xs text-gray-400 pl-4">
+                  • <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-teal-300 underline underline-offset-2">{s.name}</a>
+                </p>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
       {/* Werkzeuge */}
       <div className="p-4 border-b border-white/[0.04] space-y-3">
-        <div className="flex items-center justify-between">
-          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">🛠 Werkzeuge</p>
-          <Button size="sm" onClick={() => setCreateOpen(true)}>Neuer Beitrag</Button>
-        </div>
+        <SectionHeader tone="teal" icon={<Wrench className="w-3.5 h-3.5" />} title="Werkzeuge"
+          action={<Button size="sm" onClick={() => setCreateOpen(true)}>Neuer Beitrag</Button>} />
         <JobToolContent jobKey={membership.jobKey} />
       </div>
 
       {/* Warteliste */}
       {waitlist.length > 0 && (
-        <div className="p-4 border-b border-white/[0.04] space-y-2">
-          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">⚠️ {waitlist.length} Bewerber warten</p>
+        <div className="p-4 border-b border-white/[0.04] bg-orange-500/[0.025] space-y-2">
+          <SectionHeader tone="orange" icon={<UserPlus className="w-3.5 h-3.5" />} title={`${waitlist.length} ${waitlist.length === 1 ? "Bewerber wartet" : "Bewerber warten"}`} />
           {waitlist.map(w => (
-            <div key={w.id} className="flex items-center justify-between gap-2">
-              <span className="text-xs text-gray-400">{w.user.username ?? w.user.name}</span>
+            <div key={w.id} className="flex items-center justify-between gap-2 bg-white/[0.03] rounded-lg px-2.5 py-1.5">
+              <span className="text-xs text-gray-300">{w.user.username ?? w.user.name}</span>
               <Button size="sm" variant="outline" disabled={busy} onClick={() => handoff(w.id)}>Job übergeben</Button>
             </div>
           ))}
@@ -388,15 +408,17 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
 
       {/* Gehaltshistorie */}
       {payouts.length > 0 && (
-        <div className="p-4 space-y-1.5">
-          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">💰 Gehaltshistorie</p>
-          {payouts.map(p => (
-            <div key={p.id} className="flex items-center justify-between text-xs">
-              <span className="text-gray-500">{new Date(p.weekStart).toLocaleDateString("de-DE")}</span>
-              <span className="text-gray-400">{p.tierLabel ?? "Keine Bewertung"}</span>
-              <span className="text-amber-400 font-medium">{p.coinsAwarded} Münzen</span>
-            </div>
-          ))}
+        <div className="p-4 space-y-2">
+          <SectionHeader tone="emerald" icon={<Wallet className="w-3.5 h-3.5" />} title="Gehaltshistorie" />
+          <div className="space-y-1">
+            {payouts.map((p, i) => (
+              <div key={p.id} className={`flex items-center justify-between text-xs rounded-lg px-2.5 py-1.5 ${i === 0 ? "bg-white/[0.04]" : ""}`}>
+                <span className="text-gray-500 w-20 shrink-0">{new Date(p.weekStart).toLocaleDateString("de-DE")}</span>
+                <span className="text-gray-400 truncate flex-1 text-center">{p.tierLabel ?? "Keine Bewertung"}</span>
+                <span className={`font-medium w-24 text-right ${p.coinsAwarded > 0 ? "text-amber-400" : "text-gray-600"}`}>{p.coinsAwarded} Münzen</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -407,13 +429,46 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
   );
 }
 
-function DashTile({ icon, label, value, sub, valueClassName }: { icon: React.ReactNode; label: string; value: string; sub?: string; valueClassName?: string }) {
+const DASH_TILE_TONE_CLASSES: Record<"blue" | "amber" | "emerald" | "red" | "gray", string> = {
+  blue: "text-blue-400", amber: "text-amber-400", emerald: "text-emerald-400", red: "text-red-400", gray: "text-gray-500",
+};
+
+function DashTile({
+  icon, label, value, sub, valueClassName, tone = "blue",
+}: {
+  icon: React.ReactNode; label: string; value: string; sub?: string; valueClassName?: string;
+  tone?: "blue" | "amber" | "emerald" | "red" | "gray";
+}) {
   return (
     <div className="p-3 text-center">
-      <div className="flex items-center justify-center gap-1 text-teal-400 mb-1">{icon}</div>
+      <div className={`flex items-center justify-center gap-1 mb-1 ${DASH_TILE_TONE_CLASSES[tone]}`}>{icon}</div>
       <p className={`text-xs font-semibold truncate ${valueClassName ?? "text-white"}`}>{value}</p>
       <p className="text-[9px] text-gray-600">{label}</p>
       {sub && <p className="text-[9px] text-gray-600 mt-1 truncate">{sub}</p>}
+    </div>
+  );
+}
+
+/** Konsistenter Section-Header (Icon-Badge + Titel) für die Büro-Karten-Abschnitte — löst die
+ * bisherigen reinen Emoji-Prefixe ab, damit Abschnitte auf einen Blick unterscheidbar sind. */
+const SECTION_TONE_CLASSES: Record<"amber" | "blue" | "teal" | "orange" | "emerald", string> = {
+  amber: "bg-amber-500/10 border-amber-500/20 text-amber-400",
+  blue: "bg-blue-500/10 border-blue-500/20 text-blue-400",
+  teal: "bg-teal-500/10 border-teal-500/20 text-teal-400",
+  orange: "bg-orange-500/10 border-orange-500/20 text-orange-400",
+  emerald: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400",
+};
+
+function SectionHeader({
+  icon, tone, title, action,
+}: { icon: React.ReactNode; tone: "amber" | "blue" | "teal" | "orange" | "emerald"; title: string; action?: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center gap-2">
+        <div className={`w-6 h-6 rounded-lg border flex items-center justify-center shrink-0 ${SECTION_TONE_CLASSES[tone]}`}>{icon}</div>
+        <p className="text-[11px] font-semibold text-gray-300 uppercase tracking-widest">{title}</p>
+      </div>
+      {action}
     </div>
   );
 }
