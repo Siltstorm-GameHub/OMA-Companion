@@ -344,20 +344,29 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
             {projected != null && (
               <div className="space-y-1">
                 {span > 0 && (
-                  <div className="relative pt-2.5 pb-4">
-                    <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                  // Kein horizontales Padding auf dem Container: `left: %` für die Marker wird
+                  // sonst gegen eine andere Box (Padding-Box) berechnet als die Balkenbreite selbst
+                  // (normaler Fluss, durch das Padding eingerückt) — Marker und Balken würden dann
+                  // nicht mehr zueinander passen. Stattdessen wird nur das Label je Marker an den
+                  // Rändern per Ankerpunkt (0%/-50%/-100%) so verschoben, dass es nicht übersteht.
+                  <div className="relative pt-3 pb-5">
+                    <div className="h-2 rounded-full bg-white/10 overflow-hidden">
                       <div className={`h-full rounded-full transition-all ${nextTier ? "bg-amber-400" : "bg-emerald-400"}`}
                         style={{ width: `${fillPct}%` }} />
                     </div>
                     {sortedTiers.map(t => {
                       const isCurrent = t.multiplier === projected.voteBonusMultiplier;
                       const p = posPct(t.minVotes);
-                      const anchor = p <= 1 ? "0%" : p >= 99 ? "-100%" : "-50%";
+                      const labelAnchor = p <= 1 ? "0%" : p >= 99 ? "-100%" : "-50%";
                       return (
-                        <div key={t.label} className="absolute top-2.5 flex flex-col items-center"
-                          style={{ left: `${p}%`, transform: `translate(${anchor}, -50%)` }}>
-                          <div className={`w-2 h-2 rounded-full border ${isCurrent ? "bg-white border-white ring-2 ring-amber-400" : "bg-gray-700 border-white/20"}`} />
-                          <span className={`mt-1.5 text-[8px] whitespace-nowrap ${isCurrent ? "text-amber-300 font-semibold" : "text-gray-600"}`}>
+                        <div key={t.label} className="absolute top-4" style={{ left: `${p}%` }}>
+                          <div className={
+                            isCurrent
+                              ? "w-3.5 h-3.5 -ml-[7px] -mt-[7px] rounded-full bg-white border-2 border-amber-400 shadow-[0_0_0_3px_rgba(251,191,36,0.3)]"
+                              : "w-2.5 h-2.5 -ml-[5px] -mt-[5px] rounded-full bg-gray-900 border-2 border-gray-400"
+                          } />
+                          <span className={`absolute top-3 whitespace-nowrap text-[10px] ${isCurrent ? "text-amber-300 font-bold" : "text-gray-400 font-medium"}`}
+                            style={{ transform: `translateX(${labelAnchor})` }}>
                             ×{t.multiplier.toFixed(1)}
                           </span>
                         </div>
