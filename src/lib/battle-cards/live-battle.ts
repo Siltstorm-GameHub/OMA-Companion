@@ -35,6 +35,7 @@ import type {
   TeamId,
 } from "@/lib/battle-engine/types";
 import { serializeBattleLog } from "@/lib/battle-cards/battle-log";
+import type { AvatarAnimationSet } from "@/lib/battle-cards/avatar-animation";
 import { buildBattleTeam } from "@/lib/battle-cards/team-builder";
 import { puzzleMonsterRoster } from "@/lib/battle-cards/puzzle-monsters";
 import {
@@ -156,6 +157,7 @@ export interface LiveUnitSnapshot {
   isAlive: boolean;
   imageUrl?: string | null;
   avatarBadgeUrl?: string | null;
+  avatarAnimations?: AvatarAnimationSet | null;
   /** Aktive Stat-Buffs/-Debuffs (Angriff/Verteidigung/Speed) — für die
    *  Buff/Debuff-Icons auf der Heldenkarte, siehe UnitCard in LiveBattleView.tsx. */
   statModifiers: ActiveStatModifier[];
@@ -249,6 +251,7 @@ function toUnitSnapshot(u: BattleUnitState): LiveUnitSnapshot {
     isAlive: u.isAlive,
     imageUrl: u.def.imageUrl,
     avatarBadgeUrl: u.def.avatarBadgeUrl,
+    avatarAnimations: u.def.avatarAnimations,
     statModifiers: u.statModifiers,
   };
 }

@@ -48,6 +48,8 @@ import RankUpOverlay from "./RankUpOverlay";
 import UltimateCutsceneOverlay from "./UltimateCutsceneOverlay";
 import GemsResultScreen, { type GemsReward } from "./GemsResultScreen";
 import { parseNpcMode, NPC_BATTLE_WIN_REWARD } from "@/lib/battle-cards/npc-battle-types";
+import AnimatedAvatar from "./AnimatedAvatar";
+import type { AvatarAnimationSet } from "@/lib/battle-cards/avatar-animation";
 
 /** Kampf-Hintergrund: die klassische Arena (arena-bg.jpg) für OMA Duels,
  *  OMA Gems (Nicht-Kampagne) und PvP — Kampagnen-Kämpfe (mode "CAMPAIGN_...") zeigen
@@ -82,6 +84,7 @@ interface LiveUnit {
   isAlive: boolean;
   imageUrl?: string | null;
   avatarBadgeUrl?: string | null;
+  avatarAnimations?: AvatarAnimationSet | null;
   statModifiers: ActiveStatModifier[];
 }
 
@@ -291,6 +294,7 @@ function UnitCard({
   ultimateReady,
   effects,
   isAttacking,
+  isVictory,
   onClick,
   onUltimateClick,
   cardRef,
@@ -309,6 +313,9 @@ function UnitCard({
    *  — macht auch Angriffe sichtbar, die ohne eigene Zug-Handlung passieren
    *  (match-ausgelöste Angriffe bei OMA Gems, siehe applyBoardRage). */
   isAttacking?: boolean;
+  /** Kampf ist beendet UND diese Einheit steht im Gewinner-Team (siehe snapshot.winner
+   *  in LiveBattleBody) — spielt die Victory-Animation statt Idle, falls vorhanden. */
+  isVictory?: boolean;
   onClick?: () => void;
   onUltimateClick?: () => void;
   /** DOM-Ref auf die Karte — bei OMA Gems das Angriffsziel des Gems-Lichtstrahls
@@ -485,13 +492,14 @@ function UnitCard({
           />
         )}
         {showImage ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={unit.imageUrl ?? undefined}
+          <AnimatedAvatar
+            imageUrl={unit.imageUrl}
+            animations={unit.avatarAnimations}
+            state={isAttacking ? "attack" : isHit ? "hit" : isVictory ? "victory" : "idle"}
             alt={unit.name}
             className="max-w-full max-h-full object-contain relative"
             style={{ filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.65))" }}
-            onError={() => setImageFailed(true)}
+            onStaticImageError={() => setImageFailed(true)}
           />
         ) : (
           <Icon className="w-5 h-5 sm:w-7 sm:h-7 relative" style={{ color: config.color, opacity: 0.55 }} />
@@ -1338,6 +1346,7 @@ function LiveBattleBody({
               glow={glowFor(u)}
               effects={effectsFor(u)}
               isAttacking={attackingUnitIds.has(u.instanceId)}
+              isVictory={snapshot.status === "finished" && snapshot.winner === u.teamId && u.isAlive}
               onClick={() => handleUnitClick(u)}
             />
           ))}
@@ -1357,6 +1366,7 @@ function LiveBattleBody({
               ultimateReady={ultimateReadyFor(u)}
               effects={effectsFor(u)}
               isAttacking={attackingUnitIds.has(u.instanceId)}
+              isVictory={snapshot.status === "finished" && snapshot.winner === u.teamId && u.isAlive}
               onClick={() => handleUnitClick(u)}
               onUltimateClick={() => handleUnitClick(u)}
               cardRef={(el) => {

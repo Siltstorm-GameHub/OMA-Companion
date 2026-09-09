@@ -33,6 +33,7 @@ import type { LucideIcon } from "lucide-react";
 import type { BattleLogEntry, RosterEntry, UnitClass } from "@/lib/battle-engine/types";
 import { playHitSfxFor, playHealSfx, playUltimateSfx, playShieldSfx, playBuffSfx, playDebuffSfx } from "@/lib/battle-cards/sfx";
 import { isSoundMuted, setSoundMuted } from "@/lib/battle-cards/sound-prefs";
+import AnimatedAvatar from "./AnimatedAvatar";
 import UltimateCutsceneOverlay from "./UltimateCutsceneOverlay";
 
 const CLASS_CONFIG: Record<UnitClass, { color: string; icon: LucideIcon }> = {
@@ -453,12 +454,16 @@ function UnitTile({
   runtime,
   isActive,
   isTarget,
+  isVictory,
   vfx,
 }: {
   roster: RosterEntry;
   runtime: UnitRuntime;
   isActive: boolean;
   isTarget: boolean;
+  /** Kampf ist zu Ende UND diese Einheit steht im Gewinner-Team (siehe winner
+   *  in BattleScreen) — spielt die Victory-Animation statt Idle, falls vorhanden. */
+  isVictory: boolean;
   vfx: VfxEvent | null;
 }) {
   const config = CLASS_CONFIG[roster.class];
@@ -499,9 +504,10 @@ function UnitTile({
           />
         )}
         {roster.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={roster.imageUrl}
+          <AnimatedAvatar
+            imageUrl={roster.imageUrl}
+            animations={roster.avatarAnimations}
+            state={attacking ? "attack" : hit ? "hit" : isVictory ? "victory" : "idle"}
             alt={roster.name}
             className="max-w-full max-h-full object-contain relative"
             style={{ filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.65))" }}
@@ -645,6 +651,12 @@ export default function BattleScreen({ roster, log }: { roster: RosterEntry[]; l
   }, [step, soundOn]);
 
   const isFinished = step >= log.length;
+  /** Nur gesetzt, sobald der abgespielte Log so weit fortgeschritten ist, dass der
+   *  battleEnd-Eintrag bereits durchlaufen wurde — steuert die Victory-Pose. */
+  const winner = useMemo(() => {
+    const battleEnd = log.slice(0, step).find((e) => e.type === "battleEnd");
+    return battleEnd?.type === "battleEnd" ? battleEnd.winner : null;
+  }, [log, step]);
 
   return (
     <div
@@ -673,6 +685,7 @@ export default function BattleScreen({ roster, log }: { roster: RosterEntry[]; l
               runtime={rt}
               isActive={derived.activeUnitId === r.instanceId}
               isTarget={derived.targetIds.has(r.instanceId)}
+              isVictory={winner === r.teamId && rt.alive}
               vfx={currentVfx?.targetId === r.instanceId ? currentVfx : null}
             />
           );
@@ -693,6 +706,7 @@ export default function BattleScreen({ roster, log }: { roster: RosterEntry[]; l
               runtime={rt}
               isActive={derived.activeUnitId === r.instanceId}
               isTarget={derived.targetIds.has(r.instanceId)}
+              isVictory={winner === r.teamId && rt.alive}
               vfx={currentVfx?.targetId === r.instanceId ? currentVfx : null}
             />
           );

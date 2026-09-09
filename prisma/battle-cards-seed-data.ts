@@ -17,6 +17,7 @@
 import type { NormalAttackTargetRule, CardClass } from "@prisma/client";
 import { LEVEL_STAT_MULTIPLIER } from "../src/lib/battle-engine/constants";
 import type { ActiveSkillData, PassiveSkillData } from "../src/lib/battle-engine/types";
+import type { AvatarAnimationSet } from "../src/lib/battle-cards/avatar-animation";
 
 export function curve(base: number): number[] {
   return [1, 2, 3, 4, 5].map((level) => Math.round(base * LEVEL_STAT_MULTIPLIER[level]));
@@ -40,6 +41,11 @@ export interface StandardCardSeed {
   normalAttackTargetRule: NormalAttackTargetRule | null;
   flavorText: string;
   imageUrl: string | null;
+  /** Kampf-Avatar-Animationen (Idle/Attack/Hit/Victory) — siehe
+   *  lib/battle-cards/avatar-animation.ts. Fehlt bei allen Karten noch, bis die
+   *  Blender/Mixamo-Export-Pipeline die ersten Spritesheets liefert; die Karte
+   *  zeigt bis dahin im Kampf weiter das statische imageUrl. */
+  avatarAnimations?: AvatarAnimationSet | null;
   passivePositive: PassiveSkillData;
   passiveNegative: PassiveSkillData;
   activeSkill: ActiveSkillData;

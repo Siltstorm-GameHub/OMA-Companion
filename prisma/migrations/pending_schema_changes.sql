@@ -367,3 +367,9 @@ ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "eloGemsMatches" INTEGER NOT NULL DE
 -- ═══════════════════════════════════════════════════════════════
 
 ALTER TABLE "Event" ADD COLUMN IF NOT EXISTS "statConfigJson" TEXT;
+
+-- ═══════════════════════════════════════════════════════════════
+-- Battle Cards: Kampf-Avatar-Animationen (Idle/Attack/Hit/Victory)
+-- ═══════════════════════════════════════════════════════════════
+
+ALTER TABLE "Card" ADD COLUMN IF NOT EXISTS "avatarAnimationsJson" JSONB;
