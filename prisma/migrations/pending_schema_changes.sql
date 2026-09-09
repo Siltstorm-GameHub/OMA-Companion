@@ -377,7 +377,16 @@ CREATE TABLE IF NOT EXISTS "JobRecommendationDismissal" (
   "userId"      TEXT         NOT NULL,
   "jobKey"      TEXT         NOT NULL,
   "itemKey"     TEXT         NOT NULL,
-  "dismissedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT "JobRecommendationDismissal_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE,
-  CONSTRAINT "JobRecommendationDismissal_userId_jobKey_itemKey_key" UNIQUE ("userId", "jobKey", "itemKey")
+  "dismissedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+DO $$
+BEGIN
+  ALTER TABLE "JobRecommendationDismissal" ADD CONSTRAINT "JobRecommendationDismissal_userId_fkey"
+    FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE;
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+CREATE UNIQUE INDEX IF NOT EXISTS "JobRecommendationDismissal_userId_jobKey_itemKey_key"
+  ON "JobRecommendationDismissal" ("userId", "jobKey", "itemKey");
