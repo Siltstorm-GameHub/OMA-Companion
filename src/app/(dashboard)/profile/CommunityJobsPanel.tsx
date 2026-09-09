@@ -309,42 +309,66 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
       {/* Dashboard */}
       <div className="grid grid-cols-3 divide-x divide-white/[0.04] border-b border-white/[0.04]">
         <DashTile tone="blue" icon={<TrendingUp className="w-3.5 h-3.5" />} label="Letzte Woche" value={latestPayout ? `${latestPayout.tierLabel ?? "–"}` : "–"} />
-        <DashTile tone="amber" icon={<Coins className="w-3.5 h-3.5" />} label="Voraussichtlich diese Woche"
+        <DashTile tone="amber" icon={<Coins className="w-3.5 h-3.5" />} label="Diese Woche"
           value={projected ? `${projected.coinsAwarded} Münzen` : "…"}
-          sub={projected ? `Maximal möglich: ${projected.maxCoinsAwarded} Münzen` : undefined} />
+          sub={projected ? `Max. ${projected.maxCoinsAwarded}` : undefined} />
         <DashTile tone={projected && projected.voteBonusMultiplier < 1 ? "red" : projected && projected.voteBonusMultiplier > 1 ? "emerald" : "gray"}
-          icon={<Sparkles className="w-3.5 h-3.5" />} label="Aktivitäts-Bonus"
+          icon={<Sparkles className="w-3.5 h-3.5" />} label="Bonus"
           value={projected ? `×${projected.voteBonusMultiplier.toFixed(1)}` : "…"}
           valueClassName={projected ? (
             projected.voteBonusMultiplier < 1 ? "text-red-400"
               : projected.voteBonusMultiplier > 1 ? "text-emerald-400"
               : "text-white"
           ) : undefined}
-          sub={projected ? `${projected.ownVotes} ${projected.ownVotes === 1 ? "Bewertung" : "Bewertungen"} diese Woche` : undefined} />
+          sub={projected ? `${projected.ownVotes} ${projected.ownVotes === 1 ? "Bewertung" : "Bewertungen"}` : undefined} />
       </div>
 
-      {bonusTiers.length > 0 && (
-        <div className="p-4 border-b border-white/[0.04] bg-amber-500/[0.025] space-y-2.5">
-          <SectionHeader tone="amber" icon={<Sparkles className="w-3.5 h-3.5" />} title="Aktivitäts-Bonus" />
-          <p className="text-[11px] text-gray-500 leading-relaxed">
-            Bewerte selbst Beiträge anderer Community-Jobs (z.B. Daumen-hoch im Community-Board) — je mehr du diese
-            Woche bewertest, desto höher dein Gehalts-Multiplikator. Bewertest du gar nicht, sinkt er sogar unter ×1.
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {[...bonusTiers].sort((a, b) => a.minVotes - b.minVotes).map(t => {
-              const isCurrent = projected != null && t.multiplier === projected.voteBonusMultiplier;
-              return (
-                <Badge key={t.label} tone={t.multiplier < 1 ? "danger" : t.multiplier > 1 ? "success" : "neutral"}
-                  icon={isCurrent ? <Check className="w-2.5 h-2.5" /> : undefined}
-                  className={isCurrent ? "ring-1 ring-white/40" : undefined}>
-                  ab {t.minVotes} · {t.label} · ×{t.multiplier.toFixed(1)}
-                  {isCurrent && " · Du bist hier"}
-                </Badge>
-              );
-            })}
+      {bonusTiers.length > 0 && (() => {
+        const sortedTiers = [...bonusTiers].sort((a, b) => a.minVotes - b.minVotes);
+        const ownVotes = projected?.ownVotes ?? 0;
+        const nextTier = sortedTiers.find(t => t.minVotes > ownVotes);
+        const prevMin = [...sortedTiers].reverse().find(t => t.minVotes <= ownVotes)?.minVotes ?? 0;
+        const progressPct = nextTier
+          ? Math.min(100, Math.round(((ownVotes - prevMin) / (nextTier.minVotes - prevMin)) * 100))
+          : 100;
+        return (
+          <div className="p-4 border-b border-white/[0.04] bg-amber-500/[0.025] space-y-2.5">
+            <SectionHeader tone="amber" icon={<Sparkles className="w-3.5 h-3.5" />} title="Aktivitäts-Bonus" />
+            <p className="text-[11px] text-gray-500 leading-relaxed">
+              Bewerte selbst Beiträge anderer Community-Jobs (z.B. Daumen-hoch im Community-Board) — je mehr du diese
+              Woche bewertest, desto höher dein Gehalts-Multiplikator. Bewertest du gar nicht, sinkt er sogar unter ×1.
+            </p>
+
+            {projected != null && (
+              <div className="space-y-1">
+                <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                  <div className={`h-full rounded-full transition-all ${nextTier ? "bg-amber-400" : "bg-emerald-400"}`}
+                    style={{ width: `${progressPct}%` }} />
+                </div>
+                <p className="text-[10px] text-gray-500">
+                  {nextTier
+                    ? <>Noch <span className="text-amber-400 font-medium">{nextTier.minVotes - ownVotes}</span> bis „{nextTier.label}“ (×{nextTier.multiplier.toFixed(1)})</>
+                    : <span className="text-emerald-400">Höchste Stufe erreicht 🎉</span>}
+                </p>
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-1.5">
+              {sortedTiers.map(t => {
+                const isCurrent = projected != null && t.multiplier === projected.voteBonusMultiplier;
+                return (
+                  <Badge key={t.label} tone={t.multiplier < 1 ? "danger" : t.multiplier > 1 ? "success" : "neutral"}
+                    icon={isCurrent ? <Check className="w-2.5 h-2.5" /> : undefined}
+                    className={isCurrent ? "ring-1 ring-white/40" : undefined}>
+                    ab {t.minVotes} · {t.label} · ×{t.multiplier.toFixed(1)}
+                    {isCurrent && " · Du bist hier"}
+                  </Badge>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Empfehlungen */}
       {recs && (recs.events.length > 0 || recs.steamSales.length > 0 || recs.steamReleases.length > 0) && (
@@ -440,10 +464,10 @@ function DashTile({
   tone?: "blue" | "amber" | "emerald" | "red" | "gray";
 }) {
   return (
-    <div className="p-3 text-center">
+    <div className="p-2 sm:p-3 text-center min-w-0">
       <div className={`flex items-center justify-center gap-1 mb-1 ${DASH_TILE_TONE_CLASSES[tone]}`}>{icon}</div>
-      <p className={`text-xs font-semibold truncate ${valueClassName ?? "text-white"}`}>{value}</p>
-      <p className="text-[9px] text-gray-600">{label}</p>
+      <p className={`text-[11px] sm:text-xs font-semibold truncate ${valueClassName ?? "text-white"}`}>{value}</p>
+      <p className="text-[9px] text-gray-600 truncate">{label}</p>
       {sub && <p className="text-[9px] text-gray-600 mt-1 truncate">{sub}</p>}
     </div>
   );
@@ -501,6 +525,16 @@ function EditDeleteBar({
       <button onClick={onEdit} className="text-[10px] text-gray-600 hover:text-teal-400 transition-colors">Bearbeiten</button>
       <button onClick={onDelete} className="text-[10px] text-gray-600 hover:text-red-400 transition-colors">Löschen</button>
     </span>
+  );
+}
+
+/** Kleine quadratische Vorschau für Bild-Beiträge (Fotograf-Assets, Marketing-Posts) — macht die
+ * sonst reinen Text-Zeilen in "Werkzeuge" auf einen Blick erkennbar statt nur an der Caption. */
+function Thumb({ url }: { url: string | null }) {
+  if (!url) return <div className="w-8 h-8 rounded-md bg-white/[0.04] border border-white/10 shrink-0" />;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- kleine Listen-Vorschau beliebiger Blob-URLs
+    <img src={url} alt="" className="w-8 h-8 rounded-md object-cover border border-white/10 shrink-0" />
   );
 }
 
@@ -663,8 +697,11 @@ function AssetList() {
           <ImageEditControls imageUrl={a.url} onSaved={url => url && saveImage(a.id, url)} />
         </div>
       ) : (
-        <div key={a.id} className="flex items-center justify-between text-xs">
-          <span className="text-gray-300 truncate">{a.caption ?? a.type}</span>
+        <div key={a.id} className="flex items-center justify-between gap-2 text-xs">
+          <span className="flex items-center gap-2 min-w-0">
+            <Thumb url={a.url} />
+            <span className="text-gray-300 truncate">{a.caption ?? a.type}</span>
+          </span>
           <span className="flex items-center gap-2 shrink-0">
             <VoteRow upvotes={a._count.votes} votedByMe={false} />
             <EditDeleteBar onEdit={() => { setEditing(a.id); setCaption(a.caption ?? ""); }} onDelete={() => remove(a.id)} />
@@ -719,8 +756,11 @@ function MarketingPostList() {
           <ImageEditControls imageUrl={p.imageUrl ?? p.asset?.url ?? null} allowRemove onSaved={url => saveImage(p.id, url)} />
         </div>
       ) : (
-        <div key={p.id} className="flex items-center justify-between text-xs">
-          <span className="text-gray-300 truncate">{p.caption}</span>
+        <div key={p.id} className="flex items-center justify-between gap-2 text-xs">
+          <span className="flex items-center gap-2 min-w-0">
+            <Thumb url={p.imageUrl ?? p.asset?.url ?? null} />
+            <span className="text-gray-300 truncate">{p.caption}</span>
+          </span>
           <span className="flex items-center gap-2 shrink-0">
             <VoteRow upvotes={p._count.votes} votedByMe={false} />
             <EditDeleteBar onEdit={() => { setEditing(p.id); setCaption(p.caption); }} onDelete={() => remove(p.id)} />
