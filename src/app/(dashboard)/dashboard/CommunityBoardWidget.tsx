@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ChevronRight, ThumbsUp, Newspaper, ImagePlus, Megaphone, Lightbulb, Loader2 } from "lucide-react";
 import { acc, type AccentName } from "@/lib/accentColors";
 import RankedAvatar from "@/components/RankedAvatar";
+import { isVideoUrl } from "@/lib/upload-limits";
 
 /**
  * Social-Media-artiges Feed-Widget fürs Dashboard — dieselbe API wie die volle
@@ -94,10 +95,14 @@ export default function CommunityBoardWidget() {
                   maxWidth: image ? "300px" : "230px",
                 }}>
                 {image ? (
-                  // Bild ist das einzige nicht-absolute Kind → bestimmt die Kartenbreite
+                  // Bild/Video ist das einzige nicht-absolute Kind → bestimmt die Kartenbreite
                   // anhand des echten Seitenverhältnisses bei fester Kartenhöhe.
-                  // eslint-disable-next-line @next/next/no-img-element -- beliebiger Blob-Host, Breite folgt dem Seitenverhältnis
-                  <img src={image} alt="" className="relative h-full w-auto object-cover transition-transform duration-700 group-hover:scale-110" />
+                  isVideoUrl(image) ? (
+                    <video src={image} muted playsInline className="relative h-full w-auto object-cover transition-transform duration-700 group-hover:scale-110" />
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element -- beliebiger Blob-Host, Breite folgt dem Seitenverhältnis
+                    <img src={image} alt="" className="relative h-full w-auto object-cover transition-transform duration-700 group-hover:scale-110" />
+                  )
                 ) : (
                   <>
                     <div className="absolute inset-0"

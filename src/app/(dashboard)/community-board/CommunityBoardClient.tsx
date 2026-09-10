@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import DisputeVotesModal, { type DisputeKind } from "@/components/community-jobs/DisputeVotesModal";
 import RankedAvatar from "@/components/RankedAvatar";
+import { isVideoUrl } from "@/lib/upload-limits";
 
 interface Author { id: string; username: string | null; name: string | null; image: string | null; rankPoints: number }
 interface SubEntity { id: string; author: Author; upvotes: number; url?: string; caption?: string }
@@ -155,8 +156,10 @@ function FeedCard({ entry, currentUserId, onChanged }: { entry: FeedEntry; curre
         <>
           {entry.caption && <p className="text-sm text-gray-300">{entry.caption}</p>}
           {entry.url && (
-            // eslint-disable-next-line @next/next/no-img-element -- beliebiger Blob-Host
-            <img src={entry.url} alt="" className="w-full h-auto rounded-lg" />
+            isVideoUrl(entry.url)
+              ? <video src={entry.url} controls className="w-full h-auto rounded-lg" />
+              // eslint-disable-next-line @next/next/no-img-element -- beliebiger Blob-Host
+              : <img src={entry.url} alt="" className="w-full h-auto rounded-lg" />
           )}
           <div className="flex items-center gap-2">
             <UpvoteButton votedByMe={entry.votedByMe} upvotes={entry.upvotes ?? 0}

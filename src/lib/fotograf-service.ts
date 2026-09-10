@@ -16,7 +16,7 @@ const JOB_KEY = "fotograf";
 export const ASSET_TYPES = ["CLIP", "COLLAGE", "SCREENSHOT", "BANNER", "GRAPHIC"] as const;
 export type AssetType = (typeof ASSET_TYPES)[number];
 
-async function requireActiveFotograf(userId: string): Promise<boolean> {
+export async function requireActiveFotograf(userId: string): Promise<boolean> {
   const member = await prisma.communityJobMember.findFirst({
     where: { userId, jobKey: JOB_KEY, status: { in: ["ACTIVE", "WARNED"] } },
   });

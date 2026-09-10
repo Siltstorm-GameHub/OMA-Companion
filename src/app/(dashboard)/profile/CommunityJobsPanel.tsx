@@ -13,6 +13,8 @@ import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
 import GameCover from "@/components/GameCover";
 import { useAllLiveStatus } from "@/lib/useServerLiveStatus";
+import { upload } from "@vercel/blob/client";
+import { CLIP_MAX_BYTES, CLIP_ALLOWED_TYPES, CLIP_EXTENSION_BY_MIME, isVideoUrl } from "@/lib/upload-limits";
 import DisputeVotesModal from "@/components/community-jobs/DisputeVotesModal";
 import StudioEditor from "@/components/community-jobs/StudioEditor";
 import ImageCropTool from "@/components/community-jobs/ImageCropTool";
@@ -622,6 +624,9 @@ function EditDeleteBar({
  * sonst reinen Text-Zeilen in "Werkzeuge" auf einen Blick erkennbar statt nur an der Caption. */
 function Thumb({ url }: { url: string | null }) {
   if (!url) return <div className="w-8 h-8 rounded-md bg-white/[0.04] border border-white/10 shrink-0" />;
+  if (isVideoUrl(url)) {
+    return <video src={url} muted playsInline className="w-8 h-8 rounded-md object-cover border border-white/10 shrink-0" />;
+  }
   return (
     // eslint-disable-next-line @next/next/no-img-element -- kleine Listen-Vorschau beliebiger Blob-URLs
     <img src={url} alt="" className="w-8 h-8 rounded-md object-cover border border-white/10 shrink-0" />
@@ -784,7 +789,7 @@ function AssetList() {
             <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>Abbrechen</Button>
             <Button size="sm" onClick={() => save(a.id)}>Speichern</Button>
           </div>
-          <ImageEditControls imageUrl={a.url} onSaved={url => url && saveImage(a.id, url)} />
+          {!isVideoUrl(a.url) && <ImageEditControls imageUrl={a.url} onSaved={url => url && saveImage(a.id, url)} />}
         </div>
       ) : (
         <div key={a.id} className="flex items-center justify-between gap-2 text-xs">
@@ -1064,8 +1069,12 @@ const ASSET_TYPE_OPTIONS = [
   { value: "GRAPHIC", label: "Grafik" },
 ];
 
+type AssetUploadMode = "design" | "clip";
+
 function UploadAssetForm({ eventId, onDone }: { eventId?: string; onDone: () => void }) {
+  const [mode, setMode] = useState<AssetUploadMode>("design");
   const [url, setUrl] = useState("");
+  const [isVideo, setIsVideo] = useState(false);
   const [type, setType] = useState("SCREENSHOT");
   const [caption, setCaption] = useState("");
   const [busy, setBusy] = useState(false);
@@ -1083,22 +1092,91 @@ function UploadAssetForm({ eventId, onDone }: { eventId?: string; onDone: () => 
     }
   }
 
-  if (!url) return <StudioEditor onExported={setUrl} />;
+  function reset() {
+    setUrl("");
+    setIsVideo(false);
+  }
+
+  if (!url) {
+    return (
+      <div className="space-y-3">
+        <div className="flex gap-1.5">
+          <Button size="sm" variant={mode === "design" ? "primary" : "outline"} onClick={() => setMode("design")}>Bild gestalten</Button>
+          <Button size="sm" variant={mode === "clip" ? "primary" : "outline"} onClick={() => setMode("clip")}>Video-Clip hochladen</Button>
+        </div>
+        {mode === "design"
+          ? <StudioEditor onExported={u => { setUrl(u); setIsVideo(false); }} />
+          : <ClipUploadField onUploaded={u => { setUrl(u); setIsVideo(true); setType("CLIP"); }} />}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">
-      {/* eslint-disable-next-line @next/next/no-img-element -- Vorschau des Studio-Exports, beliebiger Blob-Host */}
-      <img src={url} alt="" className="w-full rounded-lg" />
-      <Select value={type} onChange={e => setType(e.target.value)} className="w-full">
-        {ASSET_TYPE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </Select>
+      {isVideo ? (
+        <video src={url} controls className="w-full rounded-lg" />
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element -- Vorschau des Studio-Exports, beliebiger Blob-Host
+        <img src={url} alt="" className="w-full rounded-lg" />
+      )}
+      {!isVideo && (
+        <Select value={type} onChange={e => setType(e.target.value)} className="w-full">
+          {ASSET_TYPE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </Select>
+      )}
       <input value={caption} onChange={e => setCaption(e.target.value)} placeholder="Bildunterschrift (optional)"
         className="w-full bg-white/[0.04] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
       <div className="flex justify-between gap-2">
-        <Button variant="ghost" onClick={() => setUrl("")}>Neu gestalten</Button>
+        <Button variant="ghost" onClick={reset}>{isVideo ? "Anderer Clip" : "Neu gestalten"}</Button>
         <Button loading={busy} icon={<ChevronRight className="w-3.5 h-3.5" />} onClick={submit}>Hochladen</Button>
       </div>
     </div>
+  );
+}
+
+/**
+ * Lädt eine Video-Datei direkt aus dem Browser zu Vercel Blob hoch (siehe
+ * /api/community-jobs/media/clip-upload) — Video-Dateien sind zu groß fürs
+ * Body-Limit einer normalen Server-Route wie /api/upload. Die eigentliche
+ * Größen-/Typ-Grenze erzwingt Vercel Blob serverseitig über das Upload-Token;
+ * die Prüfung hier ist nur ein schneller Client-Check ohne Netzwerk-Rundtrip.
+ */
+function ClipUploadField({ onUploaded }: { onUploaded: (url: string) => void }) {
+  const [uploading, setUploading] = useState(false);
+
+  async function handleFile(file: File) {
+    if (!CLIP_ALLOWED_TYPES.includes(file.type as (typeof CLIP_ALLOWED_TYPES)[number])) {
+      toast.error("Nur MP4, WebM oder MOV erlaubt");
+      return;
+    }
+    if (file.size > CLIP_MAX_BYTES) {
+      toast.error(`Datei zu groß (max. ${Math.round(CLIP_MAX_BYTES / 1_000_000)} MB)`);
+      return;
+    }
+    setUploading(true);
+    try {
+      const ext = CLIP_EXTENSION_BY_MIME[file.type as (typeof CLIP_ALLOWED_TYPES)[number]];
+      const blob = await upload(`community-job-clip/${crypto.randomUUID()}.${ext}`, file, {
+        access: "public",
+        handleUploadUrl: "/api/community-jobs/media/clip-upload",
+        contentType: file.type,
+      });
+      onUploaded(blob.url);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload fehlgeschlagen");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-white/10 rounded-xl py-10 cursor-pointer hover:border-teal-500/30 transition-colors">
+      {uploading ? <Loader2 className="w-5 h-5 text-gray-500 animate-spin" /> : <Upload className="w-5 h-5 text-gray-500" />}
+      <span className="text-xs text-gray-500">{uploading ? "Wird hochgeladen…" : "Video-Clip auswählen"}</span>
+      <span className="text-[10px] text-gray-700">MP4, WebM oder MOV — max. {Math.round(CLIP_MAX_BYTES / 1_000_000)} MB</span>
+      <input type="file" accept={CLIP_ALLOWED_TYPES.join(",")} className="hidden" disabled={uploading}
+        onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+    </label>
   );
 }
 
@@ -1141,7 +1219,8 @@ function CreateMarketingPostForm({ eventId: initialEventId, onDone }: { eventId?
       setEvents(upcoming);
       if (!initialEventId && upcoming[0]) setEventId(upcoming[0].id);
     }).catch(() => {});
-    api<{ assets: typeof assets }>("/api/community-jobs/media").then(d => setAssets(d.assets)).catch(() => {});
+    // Marketing-Post-Bild muss ein Standbild sein — Video-Clips aus der Mediathek ausschließen.
+    api<{ assets: typeof assets }>("/api/community-jobs/media").then(d => setAssets(d.assets.filter(a => !isVideoUrl(a.url)))).catch(() => {});
   }, []);
 
   async function submit() {

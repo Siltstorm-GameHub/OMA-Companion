@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import ImageCropTool from "@/components/community-jobs/ImageCropTool";
 import { downloadFile, downloadText } from "@/lib/download-file";
+import { isVideoUrl } from "@/lib/upload-limits";
 
 /**
  * Admin-Bearbeitung/-Zuschnitt/-Download für Berichte, Fotograf-Assets und
@@ -76,7 +77,7 @@ export default function AdminContentSection() {
   async function downloadEntry(entry: FeedEntry) {
     const image = entryImage(entry);
     try {
-      if (image) await downloadFile(image.url, `${entry.kind}-${entry.id}.png`);
+      if (image) await downloadFile(image.url, `${entry.kind}-${entry.id}.${isVideoUrl(image.url) ? "mp4" : "png"}`);
       const text = [entry.title, entry.caption, entry.bodyMarkdown].filter(Boolean).join("\n\n");
       if (text) downloadText(text, `${entry.kind}-${entry.id}.txt`);
       if (!image && !text) toast.error("Nichts zum Herunterladen vorhanden");
@@ -99,8 +100,10 @@ export default function AdminContentSection() {
           return (
             <div key={`${entry.kind}-${entry.id}`} className="p-3 flex items-center gap-3">
               {image && (
-                // eslint-disable-next-line @next/next/no-img-element -- kleine Vorschau, beliebiger Blob-Host
-                <img src={image.url} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0" />
+                isVideoUrl(image.url)
+                  ? <video src={image.url} muted playsInline className="w-12 h-12 rounded-lg object-cover shrink-0" />
+                  // eslint-disable-next-line @next/next/no-img-element -- kleine Vorschau, beliebiger Blob-Host
+                  : <img src={image.url} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0" />
               )}
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
@@ -199,9 +202,15 @@ function AdminEditForm({ entry, onDone }: { entry: FeedEntry; onDone: () => void
       )}
       {image && (
         <div className="space-y-2">
-          {/* eslint-disable-next-line @next/next/no-img-element -- Vorschau, beliebiger Blob-Host */}
-          <img src={image.url} alt="" className="w-full rounded-lg" />
-          <Button size="sm" variant="outline" onClick={() => setCropping(true)}>Bild zuschneiden</Button>
+          {isVideoUrl(image.url) ? (
+            <video src={image.url} controls className="w-full rounded-lg" />
+          ) : (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element -- Vorschau, beliebiger Blob-Host */}
+              <img src={image.url} alt="" className="w-full rounded-lg" />
+              <Button size="sm" variant="outline" onClick={() => setCropping(true)}>Bild zuschneiden</Button>
+            </>
+          )}
         </div>
       )}
       <div className="flex justify-end gap-2">
