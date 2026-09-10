@@ -386,3 +386,9 @@ CREATE TABLE IF NOT EXISTS jobrecommendationdismissal (
   dismissedat TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE (userid, jobkey, itemkey)
 );
+
+-- ═══════════════════════════════════════════════════════════════
+-- Battle Cards: Kampf-Avatar-Animationen (Idle/Attack/Hit/Victory)
+-- ═══════════════════════════════════════════════════════════════
+
+ALTER TABLE "Card" ADD COLUMN IF NOT EXISTS "avatarAnimationsJson" JSONB;

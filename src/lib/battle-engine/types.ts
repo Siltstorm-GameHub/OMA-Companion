@@ -8,6 +8,8 @@
 // (Skill-Details siehe Offene Punkte in PROJECT_CONTEXT.md) später rein als
 // Daten ergänzt werden, ohne die Engine anzufassen.
 
+import type { AvatarAnimationSet } from "@/lib/battle-cards/avatar-animation";
+
 export type UnitClass = "TANK" | "DAMAGE_DEALER" | "SUPPORT";
 
 export type TeamId = "A" | "B";
@@ -127,6 +129,10 @@ export interface BattleUnitDefinition {
   /** Echtes Discord-Profilbild als kleines Badge — nur gesetzt, wenn imageUrl ein
    *  individuelles Artwork statt des Profilbilds selbst ist (siehe resolve-image.ts). */
   avatarBadgeUrl?: string | null;
+  /** Idle/Attack/Hit/Victory-Spritesheets für den Kampf-Bildschirm — siehe
+   *  lib/battle-cards/avatar-animation.ts. `null`/fehlend = Kampf-UI bleibt beim
+   *  statischen imageUrl (Standard, solange keine Animationen exportiert sind). */
+  avatarAnimations?: AvatarAnimationSet | null;
 }
 
 export interface ActiveStatModifier {
@@ -244,6 +250,7 @@ export interface RosterEntry {
   ultimateSkillDescription: string;
   imageUrl?: string | null;
   avatarBadgeUrl?: string | null;
+  avatarAnimations?: AvatarAnimationSet | null;
 }
 
 export interface BattleResult {
