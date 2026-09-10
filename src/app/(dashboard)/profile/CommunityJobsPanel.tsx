@@ -5,12 +5,14 @@ import { toast } from "sonner";
 import {
   Briefcase, Users, Coins, TrendingUp, Clock, ThumbsUp, Send, LogOut, RefreshCw,
   ChevronRight, Loader2, Sparkles, ImagePlus, Newspaper, Megaphone, GraduationCap, Lightbulb, Upload, Crop, X,
-  Wrench, Wallet, UserPlus, CalendarDays, Tag, Rocket,
+  Wrench, Wallet, UserPlus, CalendarDays, Tag, Rocket, Server as ServerIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { Select } from "@/components/ui/Select";
+import GameCover from "@/components/GameCover";
+import { useAllLiveStatus } from "@/lib/useServerLiveStatus";
 import DisputeVotesModal from "@/components/community-jobs/DisputeVotesModal";
 import StudioEditor from "@/components/community-jobs/StudioEditor";
 import ImageCropTool from "@/components/community-jobs/ImageCropTool";
@@ -196,11 +198,14 @@ interface Recommendations {
 interface Payout { id: string; weekStart: string; rawScore: number; tierLabel: string | null; coinsAwarded: number; voteBonusMultiplier: number }
 interface WaitlistEntry { id: string; user: { id: string; username: string | null; name: string | null } }
 interface ProjectedPayout { rawScore: number; tierLabel: string | null; ownVotes: number; voteBonusMultiplier: number; coinsAwarded: number; maxCoinsAwarded: number }
+interface ServerSummary { id: string; name: string; game: string }
 
 function OfficeView({ membership, onChanged }: { membership: Membership; onChanged: () => void }) {
   const [recs, setRecs] = useState<Recommendations | null>(null);
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
+  const [servers, setServers] = useState<ServerSummary[]>([]);
+  const liveStatus = useAllLiveStatus();
   const [bonusTiers, setBonusTiers] = useState<{ label: string; minVotes: number; multiplier: number }[]>([]);
   const [projected, setProjected] = useState<ProjectedPayout | null>(null);
   const [busy, setBusy] = useState(false);
@@ -224,6 +229,7 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
     api<{ payouts: Payout[] }>("/api/community-jobs/payouts").then(d => setPayouts(d.payouts)).catch(() => {});
     api<{ waitlist: WaitlistEntry[] }>(`/api/community-jobs/${membership.jobKey}/waitlist`).then(d => setWaitlist(d.waitlist)).catch(() => {});
     api<{ tiers: typeof bonusTiers }>("/api/admin/community-jobs/vote-bonus").then(d => setBonusTiers(d.tiers)).catch(() => {});
+    api<ServerSummary[]>("/api/servers").then(setServers).catch(() => {});
 
     // Der Bonus/Vorschau-Wert hängt von Bewertungen ab, die der User oft an
     // ANDERER Stelle abgibt (z.B. Daumen-hoch im Community-Board). `visibilitychange`/
@@ -249,6 +255,10 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
       window.removeEventListener("focus", reloadProjected);
     };
   }, [membership.jobKey]);
+
+  const onlineServers = servers
+    .filter(s => liveStatus[s.id]?.online)
+    .sort((a, b) => (liveStatus[b.id]?.currentPlayers ?? 0) - (liveStatus[a.id]?.currentPlayers ?? 0));
 
   const contractEnd = new Date(membership.contractEndAt);
   const renewOpensAt = new Date(new Date(membership.contractStartAt).setMonth(new Date(membership.contractStartAt).getMonth() + 2));
@@ -461,6 +471,32 @@ function OfficeView({ membership, onChanged }: { membership: Membership; onChang
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Aktive Community-Server */}
+      {onlineServers.length > 0 && (
+        <div className="p-4 border-b border-white/[0.04] space-y-2">
+          <SectionHeader tone="teal" icon={<ServerIcon className="w-3.5 h-3.5" />} title="Aktive Community-Server" />
+          <div className="space-y-1">
+            {onlineServers.map(s => {
+              const status = liveStatus[s.id];
+              return (
+                <Link key={s.id} href="/servers"
+                  className="flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 bg-white/[0.03] hover:bg-white/[0.05] transition-colors">
+                  <GameCover game={s.game} className="w-7 h-7 shrink-0" rounded="rounded-sm" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-gray-300 truncate">{s.name}</p>
+                    <p className="text-[10px] text-gray-600 truncate">{s.game}</p>
+                  </div>
+                  <span className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full font-medium border shrink-0 text-teal-400 bg-teal-500/10 border-teal-500/20">
+                    <span className="w-1 h-1 rounded-full bg-teal-400 motion-safe:animate-pulse" />
+                    {status?.currentPlayers ?? 0}{status?.maxPlayers != null ? `/${status.maxPlayers}` : ""} online
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
         </div>
       )}
 
