@@ -77,6 +77,14 @@ export default function AnimatedAvatar({
       aria-label={alt}
       className={className}
       style={{
+        // `className` here is written for an <img> (e.g. "max-w-full max-h-full
+        // object-contain") and relies on the element's own intrinsic size — a
+        // plain background-image <div> has none, so inside a flex/`items-center`
+        // parent it collapses to 0×0 and vanishes. Force it to fill its parent
+        // explicitly; `style` (below) can still override if a caller ever needs to.
+        width: "100%",
+        height: "100%",
+        backgroundPosition: "center",
         ...style,
         backgroundImage: `url(${clip.spriteUrl})`,
         backgroundSize: `${clip.frames * 100}% 100%`,
