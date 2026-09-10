@@ -31,10 +31,6 @@ export const POINT_RULES = {
   PROFILE_FAVORITE_GAMES:  { amount:  500, reason: "Profil: Lieblingsspiele gewählt", category: "community" },
   // Bewertungs-Anreiz für Community-Jobs — kleine Sofort-Belohnung, per DAILY_CAPS gegen Farming gedeckelt
   COMMUNITY_JOB_VOTE:      { amount:    5, reason: "Community-Job-Beitrag bewertet",  category: "community" },
-  // Twitch-Chat-Aktivität waehrend ein Partner live ist — siehe src/app/api/cron/twitch-chat-coins.
-  // Naeherung statt echtem Watch-Time-Tracking: nur wer im Sample-Fenster tatsaechlich schreibt,
-  // wird erkannt (reine Zuschauer ohne Chat-Nachricht bekommen nichts). Per DAILY_CAPS gedeckelt.
-  TWITCH_CHAT_ACTIVITY:    { amount:    5, reason: "Im Partner-Twitch-Chat aktiv 💬",  category: "aktivitaet" },
 } as const;
 
 export type PointRule     = keyof typeof POINT_RULES;
@@ -72,7 +68,6 @@ export const DAILY_CAPS: Partial<Record<PointRule, number>> = {
   MESSAGE_10:          40,  // max 50 Nachrichten/Tag gewertet
   REACTION_RECEIVED:   20,
   COMMUNITY_JOB_VOTE:  25,  // max 5 belohnte Bewertungen/Tag (5 Münzen je Bewertung)
-  TWITCH_CHAT_ACTIVITY: 100, // max 20 gewertete Sample-Ticks/Tag (5 Münzen je Tick)
 };
 
 // ─── Punkte vergeben ───────────────────────────────────────────────────────

@@ -403,10 +403,6 @@ model Partner {
   userId      String?        @unique
   user        User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
   events      EventPartner[]
-  // Social-Stream-Ninja Session-ID dieses Partners (Chat-Sammel-Session ueber alle seine Kanaele/
-  // Plattformen). Wird vom Twitch-Chat-Coins-Cron genutzt, um waehrend eines Live-Streams
-  // aktive Chatter zu erkennen - siehe src/app/api/cron/twitch-chat-coins/route.ts.
-  ssnSessionId String?
 }
 
 model EventPartner {
