@@ -65,6 +65,12 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     flavorText:
       "Steht seit Jahren an vorderster Front und hat noch nie einen Schritt zurück gemacht.",
     imageUrl: "/battle-cards/bastionella.png",
+    avatarAnimations: {
+      idle: { spriteUrl: "/battle-cards/avatars/bastionella/idle.png", frames: 8, fps: 8 },
+      attack: { spriteUrl: "/battle-cards/avatars/bastionella/attack.png", frames: 10, fps: 24 },
+      hit: { spriteUrl: "/battle-cards/avatars/bastionella/hit.png", frames: 6, fps: 12 },
+      victory: { spriteUrl: "/battle-cards/avatars/bastionella/victory.png", frames: 8, fps: 8 },
+    },
     passivePositive: {
       name: "Schildwall",
       description:
