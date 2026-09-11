@@ -91,7 +91,13 @@ export default function AnimatedAvatar({
         backgroundRepeat: "no-repeat",
         animationName: "battle-avatar-sprite",
         animationDuration: `${clip.frames / clip.fps}s`,
-        animationTimingFunction: `steps(${clip.frames})`,
+        // steps(N) divides the 0%→100% background-position range into N equal
+        // time-slices, but N frames only have N-1 boundary jumps between them
+        // (frame 1→2→...→N). steps(N) lands each hold slightly off the true
+        // frame boundary, showing a torn blend of two adjacent frames instead
+        // of a clean snap — across a loop this reads as continuous sliding
+        // rather than discrete poses. steps(N-1) lands exactly on each frame.
+        animationTimingFunction: `steps(${Math.max(1, clip.frames - 1)})`,
         animationIterationCount: loop ? "infinite" : 1,
         animationFillMode: loop ? "none" : "forwards",
       }}
