@@ -49,6 +49,11 @@ interface Props {
   /** Aktueller Dominion-Streak je User (öffentlich, nicht nur der eigene). */
   dominionStreaks?: Record<string, number>;
   dominionThreshold?: number;
+  /** Feldname eines Stats (z.B. "Wochensieg"), der in der Kompakt-Ansicht anstelle der reinen
+   *  Teilnahmezahl angezeigt wird, solange noch niemand Ligapunkte hat (showPoints === false) —
+   *  typischerweise der konfigurierte Gewinner-Stat der Reihe. Ohne Angabe bleibt der bisherige
+   *  Fallback auf "Events"/Teilnahmen bestehen. */
+  fallbackStatField?: string;
 }
 
 const MEDALS = ["text-amber-400", "text-gray-300", "text-amber-600"];
@@ -136,6 +141,7 @@ function PointsCell({ value, rank, delta }: { value: number; rank: number; delta
 export default function SeriesStandingsTable({
   rows, users, statCols, extraCols, currentUserId, showPoints, lastEventDelta, lastEventTitle,
   participationPoints, mode = "auto", hasSpectatorTracking = false, dominionStreaks, dominionThreshold,
+  fallbackStatField,
 }: Props) {
   const [expanded, setExpanded] = useState(false);
   const userMap = new Map(users.map(u => [u.id, u]));
@@ -343,7 +349,7 @@ export default function SeriesStandingsTable({
           {deltaColPresent && <span />}
           <span className="text-[10px] font-semibold text-gray-600 uppercase tracking-widest">Spieler</span>
           <span className={`text-[10px] font-semibold text-gray-600 uppercase tracking-widest ${showPoints ? "text-right" : "text-center"}`}>
-            {showPoints ? "Punkte" : "Events"}
+            {showPoints ? "Punkte" : (fallbackStatField ?? "Events")}
           </span>
         </div>
         {rows.map((row, idx) => {
@@ -393,7 +399,9 @@ export default function SeriesStandingsTable({
                 </div>
               ) : (
                 <div className="text-center">
-                  <span className="text-sm text-gray-400 tabular-nums">{row.participations}</span>
+                  <span className="text-sm text-gray-400 tabular-nums">
+                    {fallbackStatField ? (row.stats[fallbackStatField] ?? 0) : row.participations}
+                  </span>
                 </div>
               )}
             </Link>

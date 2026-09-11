@@ -18,7 +18,7 @@ import SeriesStandingsTable from "./SeriesStandingsTable";
 import SeriesEventList, { type SeriesEventItem } from "./SeriesEventList";
 import FullStandingsToggle from "./FullStandingsToggle";
 import type { DeltaInfo } from "./SeriesStandingsTable";
-import { computeEventPoints, computeStatStandings, type StatConfig } from "@/lib/series-event-points";
+import { computeEventPoints, computeStatStandings, resolveWinnerTargetKeys, type StatConfig } from "@/lib/series-event-points";
 import { getEventEndedAt, isRecentlyFinished } from "@/lib/event-completion";
 import EventPokalWinners from "@/components/EventPokalWinners";
 import PokalPreview from "@/components/PokalPreview";
@@ -263,6 +263,10 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
     ...[...allExtraFields].filter(f => !specialFields.has(f)).sort(),
   ].filter(f => standings.some(row => (row.stats[f] ?? 0) > 0));
   const showPoints = standings.some(r => r.totalPoints > 0);
+  // Solange noch niemand Ligapunkte hat, zeigt die Kompakt-Tabelle statt der leeren Punkte-Spalte
+  // ersatzweise den konfigurierten Gewinner-Stat der Reihe (z.B. "Wochensieg") — aussagekräftiger
+  // als die reine Teilnahmezahl, ohne dafür ein eigenes Punktesystem konfigurieren zu müssen.
+  const fallbackStatField = showPoints ? undefined : resolveWinnerTargetKeys(statCfg)[0];
 
   // ── Vollständige Tabelle: zusätzliche Spalten ───────────────────────────────
   // Umfrage-Siege (eine Spalte je konfigurierter Umfrage, Label = Umfragename) + Dominion Bonus
@@ -685,6 +689,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
             participationPoints={statCfg.participationPoints}
             dominionStreaks={dominionStreaks}
             dominionThreshold={statCfg.dominionBonus?.threshold}
+            fallbackStatField={fallbackStatField}
             mode="compact"
           />
           {standings.length === 0 && (
@@ -731,6 +736,7 @@ export default async function SeriesDetailPage({ params }: { params: Promise<{ i
               participationPoints={statCfg.participationPoints}
               dominionStreaks={dominionStreaks}
               dominionThreshold={statCfg.dominionBonus?.threshold}
+              fallbackStatField={fallbackStatField}
               mode="compact"
             />
             {standings.length === 0 && (
