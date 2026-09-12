@@ -460,7 +460,7 @@ export default function OverlayClient({
     ticker: !!ticker,
     bracket: matches.length > 0,
     table: matches.length > 0 || participantCount > 0,
-    seriesTable: !!state?.seriesTable && state.seriesTable.ranking.length > 0,
+    seriesTable: (state?.seriesTable?.ranking.length ?? 0) > 0,
     participants: participantCount > 0,
     favorites: !!state?.streamer?.favoriteGames.length,
     badges: !!state?.streamer?.badges.length,
