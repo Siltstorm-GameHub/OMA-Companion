@@ -5,14 +5,19 @@
 // ============================================
 // Interaktives Brett für den eigenen Zug: Tippen auf zwei benachbarte Kacheln
 // versucht einen Swap. Ergibt der Swap kein Match, springt er sichtbar zurück
-// (klassische Match-3-Konvention, verbraucht keinen Zug). Jeder gültige Swap
-// wird lokal SOFORT ausgewertet (resolveBoardSession, siehe board-match3.ts)
-// — nur für Animation/Feedback, die tatsächlich gutgeschriebene Rage berechnet
-// der Server autoritativ neu aus derselben Swap-Sequenz, sobald das Zug-
-// Budget aufgebraucht ist und automatisch zur Aktions-Auswahl übergeben wird
-// (Anti-Cheat, siehe live-battle.ts). Die drei Kachel-Symbole entsprechen den
-// drei CardClass-Werten und nutzen die bereits vorhandenen Spielgenre-Icons
-// (Arcade=Support, Shooter=Damage Dealer, Racing=Tank).
+// (klassische Match-3-Konvention, verbraucht keinen Zug). Tippen auf einen
+// bereits vorhandenen Sonder-Stein löst ihn STATTDESSEN direkt aus (kein
+// zweiter Tap/Swap nötig) — orthogonal angrenzende Sonder-Steine werden
+// automatisch mitausgelöst (siehe activateSpecial/resolveTapActivation in
+// board-match3.ts). Beides verbraucht gleichermaßen einen Zug. Jeder gültige
+// Swap/jede Aktivierung wird lokal SOFORT ausgewertet (resolveBoardSession,
+// siehe board-match3.ts) — nur für Animation/Feedback, die tatsächlich
+// gutgeschriebene Rage berechnet der Server autoritativ neu aus derselben
+// Swap-Sequenz, sobald das Zug-Budget aufgebraucht ist und automatisch zur
+// Aktions-Auswahl übergeben wird (Anti-Cheat, siehe live-battle.ts). Die drei
+// Kachel-Symbole entsprechen den drei CardClass-Werten und nutzen die bereits
+// vorhandenen Spielgenre-Icons (Arcade=Support, Shooter=Damage Dealer,
+// Racing=Tank).
 //
 // Animation: resolveBoardSession liefert nicht nur das Endergebnis, sondern
 // auch `steps` — einen Eintrag pro Match-Runde (direkter Match + jede weitere
@@ -79,6 +84,7 @@ function markBoardLegendSeen(): void {
 
 const DESTROY_ANIM_MS = 220;
 const FALL_ANIM_MS = 260;
+const SWAP_ANIM_MS = 150;
 
 function areAdjacent(a: number, b: number): boolean {
   const ra = Math.floor(a / BOARD_COLS);
@@ -86,6 +92,32 @@ function areAdjacent(a: number, b: number): boolean {
   const rb = Math.floor(b / BOARD_COLS);
   const cb = b % BOARD_COLS;
   return (ra === rb && Math.abs(ca - cb) === 1) || (ca === cb && Math.abs(ra - rb) === 1);
+}
+
+/** Laufender Swap-Vertausch (siehe performSwap) — "toward" animiert beide
+ *  Zellen sichtbar aufeinander zu (in Prozent der eigenen Kachel-Größe, ohne
+ *  Grid-Gap zu berücksichtigen — bei den paar Pixeln Abstand nicht spürbar),
+ *  "back" nur bei einem ungültigen Swap: beide Zellen federn sichtbar wieder
+ *  zurück (siehe Datei-Kommentar oben: "springt er sichtbar zurück"), statt
+ *  wie bisher kommentarlos an Ort und Stelle zu bleiben. */
+interface SwapAnim {
+  fromCell: number;
+  toCell: number;
+  phase: "toward" | "back";
+}
+
+/** Verschiebung EINER der beiden beteiligten Zellen in % der eigenen Größe —
+ *  {0,0} für jede andere Zelle bzw. sobald phase "back" ist (dann federn
+ *  beide sichtbar auf ihre Ursprungsposition zurück). */
+function swapTranslateFor(anim: SwapAnim | null, cell: number): { x: number; y: number } {
+  if (!anim || anim.phase === "back") return { x: 0, y: 0 };
+  const { fromCell, toCell } = anim;
+  if (cell !== fromCell && cell !== toCell) return { x: 0, y: 0 };
+  const horizontal = Math.abs(toCell - fromCell) === 1;
+  const forward = toCell > fromCell; // Ziel liegt rechts bzw. unterhalb von fromCell
+  const towardTarget = cell === fromCell ? forward : !forward;
+  const amount = towardTarget ? 100 : -100;
+  return horizontal ? { x: amount, y: 0 } : { x: 0, y: amount };
 }
 
 function sleep(ms: number): Promise<void> {
@@ -171,6 +203,7 @@ export default function BoardMatch3({
   const [swaps, setSwaps] = useState<SwapMove[]>(initialSwaps ?? []);
   const [selected, setSelected] = useState<number | null>(null);
   const [invalidCell, setInvalidCell] = useState<number | null>(null);
+  const [swapAnim, setSwapAnim] = useState<SwapAnim | null>(null);
   const [destroyingCells, setDestroyingCells] = useState<Set<number>>(new Set());
   // Match-4/5 (bzw. jede Kaskaden-Runde ab 4 Steinen) ODER das Auslösen eines
   // bereits vorhandenen Sonder-Steins bekommt einen sichtbar größeren
@@ -290,33 +323,9 @@ export default function BoardMatch3({
     }
   }
 
-  async function handleTap(cell: number) {
-    if (interactionLocked) return;
-
-    if (selected === null) {
-      setSelected(cell);
-      return;
-    }
-    if (selected === cell) {
-      setSelected(null);
-      return;
-    }
-    if (!areAdjacent(selected, cell)) {
-      setSelected(cell);
-      return;
-    }
-
-    const swap: SwapMove = { fromCell: selected, toCell: cell };
-    const result = resolveBoardSession(board, specials, rngStateRef.current, [swap], 1);
-    setSelected(null);
-
-    if (result.matchedSwaps === 0) {
-      playInvalidSwapSound();
-      setInvalidCell(cell);
-      window.setTimeout(() => setInvalidCell(null), 300);
-      return;
-    }
-
+  /** Gemeinsamer Abschluss für Swap UND Tap-Aktivierung: Zug-Budget fortschreiben,
+   *  Fortschritt sichern, Animations-Schritte abspielen, ggf. Zug beenden. */
+  async function commitMove(move: SwapMove, result: ReturnType<typeof resolveBoardSession>) {
     playSwapSound();
     if (result.rageGrants.some((g) => g.targetClass === "ALL")) {
       playCommunityBonusSound();
@@ -324,20 +333,9 @@ export default function BoardMatch3({
 
     setAnimating(true);
     rngStateRef.current = result.finalRngState;
-    const newSwaps = [...swaps, swap];
+    const newSwaps = [...swaps, move];
     setSwaps(newSwaps);
     onProgress?.(newSwaps);
-
-    // Den Swap selbst sofort zeigen, bevor die Match-Runden abgespielt werden.
-    const swappedBoard = [...board];
-    swappedBoard[swap.fromCell] = board[swap.toCell];
-    swappedBoard[swap.toCell] = board[swap.fromCell];
-    setBoard(swappedBoard);
-    const swappedSpecials = [...specials];
-    swappedSpecials[swap.fromCell] = specials[swap.toCell];
-    swappedSpecials[swap.toCell] = specials[swap.fromCell];
-    setSpecials(swappedSpecials);
-    await sleep(120);
 
     await playSteps(result.steps);
     setAnimating(false);
@@ -347,6 +345,84 @@ export default function BoardMatch3({
     if (newSwaps.length >= moveBudget) {
       onConfirm(newSwaps);
     }
+  }
+
+  async function performSwap(fromCell: number, toCell: number) {
+    const swap: SwapMove = { fromCell, toCell };
+    const result = resolveBoardSession(board, specials, rngStateRef.current, [swap], 1);
+    setSelected(null);
+    // Sperrt die Interaktion schon während der reinen Swap-Animation, nicht
+    // erst ab commitMove — sonst könnte ein zweiter Tap mitten in der
+    // Bewegung einen weiteren Swap auslösen.
+    setAnimating(true);
+
+    // Beide Kacheln sichtbar aufeinander zu bewegen, bevor feststeht, ob der
+    // Swap überhaupt ein Match ergibt — noch rein optisch, die Board-Daten
+    // selbst bleiben bis zur Auflösung unangetastet.
+    setSwapAnim({ fromCell, toCell, phase: "toward" });
+    await sleep(SWAP_ANIM_MS);
+
+    if (result.matchedSwaps === 0) {
+      playInvalidSwapSound();
+      setSwapAnim({ fromCell, toCell, phase: "back" });
+      setInvalidCell(toCell);
+      await sleep(SWAP_ANIM_MS);
+      setSwapAnim(null);
+      setAnimating(false);
+      window.setTimeout(() => setInvalidCell(null), 300);
+      return;
+    }
+
+    // Board-Daten jetzt auf die bereits erreichte visuelle Position anziehen
+    // UND die Transform-Animation im selben Tick beenden — beide Kacheln
+    // stehen dadurch nahtlos an ihrem neuen Platz, statt sichtbar zurückzuspringen.
+    const swappedBoard = [...board];
+    swappedBoard[fromCell] = board[toCell];
+    swappedBoard[toCell] = board[fromCell];
+    setBoard(swappedBoard);
+    const swappedSpecials = [...specials];
+    swappedSpecials[fromCell] = specials[toCell];
+    swappedSpecials[toCell] = specials[fromCell];
+    setSpecials(swappedSpecials);
+    setSwapAnim(null);
+
+    await commitMove(swap, result);
+  }
+
+  /** Tap-Aktivierung: ein Sonder-Stein wird direkt ausgelöst (kein Swap nötig,
+   *  siehe SwapMove-Kommentar in board-match3.ts: fromCell === toCell). Orthogonal
+   *  angrenzende Sonder-Steine werden automatisch mitausgelöst. Verbraucht wie ein
+   *  normaler Swap einen Zug — es gibt hier bewusst nichts vorab zu "zeigen"
+   *  (nichts bewegt sich), es geht direkt in die Zerstören-Animation. */
+  async function activateSpecial(cell: number) {
+    const tap: SwapMove = { fromCell: cell, toCell: cell };
+    const result = resolveBoardSession(board, specials, rngStateRef.current, [tap], 1);
+
+    if (result.matchedSwaps === 0) return; // sollte durch die specials[cell]-Prüfung im Aufrufer nie passieren
+
+    await commitMove(tap, result);
+  }
+
+  async function handleTap(cell: number) {
+    if (interactionLocked) return;
+
+    if (selected !== null && selected !== cell && areAdjacent(selected, cell)) {
+      await performSwap(selected, cell);
+      return;
+    }
+    if (selected === cell) {
+      setSelected(null);
+      return;
+    }
+    // Ein Sonder-Stein wird per Tap IMMER direkt aktiviert, statt ihn nur
+    // auszuwählen — unabhängig davon, ob vorher schon eine andere (nicht
+    // angrenzende) Zelle ausgewählt war.
+    if (specials[cell]) {
+      setSelected(null);
+      await activateSpecial(cell);
+      return;
+    }
+    setSelected(cell);
   }
 
   function toggleLegend() {
@@ -410,6 +486,11 @@ export default function BoardMatch3({
               <span className="w-3.5 h-3.5 shrink-0 rounded-full gem-bomb" style={{ background: "rgba(255,255,255,0.08)" }} />
               <span>10+ Steine in einer Runde = Farbbombe (räumt eine ganze Klasse vom Brett)</span>
             </div>
+            <div className="flex items-center gap-1.5 pt-0.5 border-t border-white/5">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={SPECIAL_ICON.AREA.src} alt="" className="w-3.5 h-3.5 object-contain shrink-0" />
+              <span>Sonder-Stein direkt antippen = löst ihn sofort aus. Angrenzende Sonder-Steine zünden automatisch mit.</span>
+            </div>
           </div>
         </>
       )}
@@ -454,6 +535,7 @@ export default function BoardMatch3({
           const isBigMatch = bigMatchCells.has(cell);
           const isFalling = fallingCells.has(cell);
           const isSpawning = spawningCells.has(cell);
+          const swapTranslate = swapTranslateFor(swapAnim, cell);
           return (
             <button
               key={cell}
@@ -475,8 +557,9 @@ export default function BoardMatch3({
                   // dunklerer Rand unten (Bevel) — ersetzt eine spätere PNG-Bake
                   // (Canva o.ä.), solange dafür kein Zugriff besteht, rein über CSS.
                   background: `radial-gradient(circle at 32% 26%, ${classIcon.color}66 0%, ${classIcon.color}30 45%, ${classIcon.color}14 100%)`,
-                  transform: isSelected ? "scale(1.08)" : "scale(1)",
-                  transition: "transform 150ms ease-out, box-shadow 150ms ease-out",
+                  transform: `translate(${swapTranslate.x}%, ${swapTranslate.y}%) scale(${isSelected ? 1.08 : 1})`,
+                  transition: `transform ${SWAP_ANIM_MS}ms ease-in-out, box-shadow 150ms ease-out`,
+                  zIndex: swapTranslate.x !== 0 || swapTranslate.y !== 0 ? 5 : undefined,
                   boxShadow: [
                     isInvalid
                       ? "0 0 0 2px #f43f5e, 0 0 10px rgba(244,63,94,0.6)"

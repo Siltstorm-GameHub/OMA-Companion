@@ -46,6 +46,12 @@ export type SpecialGrid = (SpecialGemKind | null)[];
 
 const REGULAR_SYMBOLS: TileClassSymbol[] = ["TANK", "DAMAGE_DEALER", "SUPPORT"];
 
+/** `fromCell === toCell` ist kein echter Swap, sondern eine Tap-Aktivierung:
+ *  ein bereits vorhandener Sonder-Stein wird direkt ausgelöst, ohne ihn erst
+ *  in ein Match zu bringen (siehe resolveTapActivation). Verbraucht trotzdem
+ *  genau wie ein normaler Swap einen Zug aus dem Zug-Budget — dafür reicht
+ *  die bestehende SwapMove-Form völlig aus, ohne Client/Server-Schnittstellen
+ *  um einen eigenen Aktions-Typ erweitern zu müssen. */
 export interface SwapMove {
   fromCell: number;
   toCell: number;
@@ -405,6 +411,87 @@ function resolveCascades(
   return { grants, steps };
 }
 
+/** Die 4 orthogonal angrenzenden Zellen (oben/unten/links/rechts) — diagonal
+ *  zählt bewusst NICHT, analog zu den Match-Regeln selbst. */
+function orthogonalNeighbors(cell: number): number[] {
+  const row = cellRow(cell);
+  const col = cellCol(cell);
+  const neighbors: number[] = [];
+  if (col > 0) neighbors.push(cell - 1);
+  if (col < BOARD_COLS - 1) neighbors.push(cell + 1);
+  if (row > 0) neighbors.push(cell - BOARD_COLS);
+  if (row < BOARD_ROWS - 1) neighbors.push(cell + BOARD_COLS);
+  return neighbors;
+}
+
+/** Aktiviert einen vorhandenen Sonder-Stein per Tap, OHNE ihn erst in ein
+ *  Match zu bringen (siehe SwapMove-Kommentar: fromCell === toCell). Orthogonal
+ *  direkt angrenzende Sonder-Steine (oben/unten/links/rechts) werden automatisch
+ *  mitausgelöst — dieselbe Ketten-Reaktion wie in resolveCascades, nur mit dem
+ *  angetippten Stein (+ seinen direkten Sonder-Nachbarn) statt eines regulären
+ *  Matches als Startpunkt. Kein Sonder-Stein auf `cell` → `activated: false`,
+ *  Grid bleibt unverändert (der Aufrufer behandelt das wie einen wirkungslosen
+ *  Swap, kein Fehler). Nachrutschende Kaskaden werden im Anschluss ganz normal
+ *  über resolveCascades aufgelöst (können neue reguläre Matches ergeben). */
+function resolveTapActivation(
+  grid: BoardGrid,
+  specials: SpecialGrid,
+  rng: Rng,
+  cell: number
+): { grants: RageGrant[]; steps: BoardAnimationStep[]; activated: boolean } {
+  if (!specials[cell]) return { grants: [], steps: [], activated: false };
+
+  const destroyedCells = new Set<number>();
+  const activatedSpecialCells: number[] = [];
+  const grants: RageGrant[] = [];
+
+  const queue: number[] = [cell];
+  const queued = new Set<number>([cell]);
+  for (const neighbor of orthogonalNeighbors(cell)) {
+    if (specials[neighbor] && !queued.has(neighbor)) {
+      queue.push(neighbor);
+      queued.add(neighbor);
+    }
+  }
+
+  while (queue.length > 0) {
+    const current = queue.shift() as number;
+    const kind = specials[current];
+    if (!kind) continue;
+    destroyedCells.add(current);
+    activatedSpecialCells.push(current);
+    for (const extra of activationCellsFor(kind, current, grid)) {
+      if (!destroyedCells.has(extra)) {
+        destroyedCells.add(extra);
+        grants.push({ targetClass: grid[extra], amount: RAGE_PER_SPECIAL_SWEEP_TILE, tileCount: 1 });
+      }
+      if (!queued.has(extra)) {
+        queued.add(extra);
+        queue.push(extra);
+      }
+    }
+  }
+
+  removeAndCascade(grid, specials, destroyedCells, rng);
+  const steps: BoardAnimationStep[] = [
+    {
+      matchedCells: [...destroyedCells],
+      gridAfter: [...grid],
+      specialsCreated: [],
+      specialsActivated: activatedSpecialCells,
+      specialsAfter: [...specials],
+    },
+  ];
+
+  // Nachrutschende Steine können neue reguläre Matches ergeben — dieselbe
+  // Kaskaden-Logik wie nach einem normalen Swap-Match.
+  const cascadeResult = resolveCascades(grid, specials, rng);
+  grants.push(...cascadeResult.grants);
+  steps.push(...cascadeResult.steps);
+
+  return { grants, steps, activated: true };
+}
+
 function mergeGrants(grants: RageGrant[]): RageGrant[] {
   const byTarget = new Map<RageGrant["targetClass"], number>();
   for (const grant of grants) {
@@ -417,9 +504,12 @@ function mergeGrants(grants: RageGrant[]): RageGrant[] {
  *  (gedeckelt auf `moveBudget`) der Reihe nach auf `initialGrid` an, ausgehend
  *  vom RNG-Zustand `rngState` (siehe generateBoard). Ein Swap, der keinen
  *  Match erzeugt, wird automatisch zurückgesetzt (kein Rage-Effekt, klassische
- *  Match-3-Konvention) — nicht als Fehler behandelt. Sowohl Client (Vorschau/
- *  Animation) als auch Server (autoritative Berechnung der tatsächlich
- *  gutgeschriebenen Rage, siehe live-battle.ts) rufen exakt diese Funktion auf. */
+ *  Match-3-Konvention) — nicht als Fehler behandelt. Ein Eintrag mit
+ *  fromCell === toCell ist stattdessen eine Tap-Aktivierung eines Sonder-Steins
+ *  (siehe resolveTapActivation) — verbraucht genauso einen Zug. Sowohl Client
+ *  (Vorschau/Animation) als auch Server (autoritative Berechnung der
+ *  tatsächlich gutgeschriebenen Rage, siehe live-battle.ts) rufen exakt diese
+ *  Funktion auf. */
 export function resolveBoardSession(
   initialGrid: BoardGrid,
   initialSpecials: SpecialGrid,
@@ -437,7 +527,18 @@ export function resolveBoardSession(
   const cappedSwaps = swaps.slice(0, Math.max(0, moveBudget));
   for (const swap of cappedSwaps) {
     const { fromCell, toCell } = swap;
-    if (!isInBounds(fromCell) || !isInBounds(toCell) || !areAdjacent(fromCell, toCell)) continue;
+    if (!isInBounds(fromCell) || !isInBounds(toCell)) continue;
+
+    if (fromCell === toCell) {
+      const result = resolveTapActivation(grid, specials, rng, fromCell);
+      if (result.activated) {
+        matchedSwaps++;
+        allGrants.push(...result.grants);
+        allSteps.push(...result.steps);
+      }
+      continue;
+    }
+    if (!areAdjacent(fromCell, toCell)) continue;
 
     const a = grid[fromCell];
     const b = grid[toCell];

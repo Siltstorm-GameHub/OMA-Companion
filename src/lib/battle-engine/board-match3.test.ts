@@ -260,6 +260,50 @@ describe("resolveBoardSession", () => {
     }
   });
 
+  test("Tap auf eine Zelle ohne Sonder-Stein (fromCell === toCell) ist wirkungslos", () => {
+    const grid = matchFreeBaseGrid();
+    const result = resolveBoardSession(grid, emptySpecials(), 3, [{ fromCell: 0, toCell: 0 }], 8);
+    assert.equal(result.matchedSwaps, 0);
+    assert.deepEqual(result.finalGrid, grid);
+    assert.equal(result.steps.length, 0);
+  });
+
+  test("Tap auf einen einzelnen Sonder-Stein aktiviert ihn direkt, ohne Swap", () => {
+    const grid = matchFreeBaseGrid();
+    const specials = emptySpecials();
+    specials[0] = "LINE_H";
+
+    const result = resolveBoardSession(grid, specials, 3, [{ fromCell: 0, toCell: 0 }], 8);
+
+    assert.equal(result.matchedSwaps, 1);
+    assert.deepEqual(result.steps[0].specialsActivated, [0]);
+    // LINE_H räumt beim Auslösen die komplette Reihe 0 (alle 7 Spalten).
+    const matched = new Set(result.steps[0].matchedCells);
+    for (let col = 0; col < BOARD_COLS; col++) {
+      assert.ok(matched.has(col), `Zelle ${col} in Reihe 0 fehlt in matchedCells`);
+    }
+  });
+
+  test("Tap auf einen Sonder-Stein aktiviert orthogonal angrenzende Sonder-Steine automatisch mit", () => {
+    // Sonder-Stein auf Zelle 0 (Reihe 0, Spalte 0) angetippt. Zelle 1 (rechts
+    // daneben) und Zelle BOARD_COLS (darunter) sind orthogonal angrenzend und
+    // tragen ebenfalls Sonder-Steine — beide müssen mitausgelöst werden, ohne
+    // dass sie selbst angetippt wurden.
+    const grid = matchFreeBaseGrid();
+    const specials = emptySpecials();
+    specials[0] = "LINE_H";
+    specials[1] = "AREA";
+    specials[BOARD_COLS] = "AREA";
+
+    const result = resolveBoardSession(grid, specials, 3, [{ fromCell: 0, toCell: 0 }], 8);
+
+    assert.equal(result.matchedSwaps, 1);
+    assert.deepEqual(
+      [...result.steps[0].specialsActivated].sort((a, b) => a - b),
+      [0, 1, BOARD_COLS]
+    );
+  });
+
   test("moveBudget kappt die Anzahl berücksichtigter Swaps", () => {
     const pattern: TileClassSymbol[] = ["TANK", "DAMAGE_DEALER", "SUPPORT"];
     const grid: BoardGrid = [];
