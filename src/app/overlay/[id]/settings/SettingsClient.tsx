@@ -21,16 +21,19 @@ const ELEMENT_OPTIONS: ElementOption[] = [
   { key: "badges",       label: "Abzeichen",                     icon: Award,      forFormats: null },
 ];
 
-/** Ausgangspositionen (Prozent von 1920×1080). Turnierbaum/Tabelle/Teilnehmer teilen sich
- *  bewusst dieselbe Standardposition — sie stapeln sich dadurch von Anfang an genau wie im
- *  alten System, ohne dass der Streamer das erst manuell zusammenziehen muss. */
+/** Ausgangspositionen (Prozent von 1920×1080). Tabelle/Teilnehmer teilen sich bewusst dieselbe
+ *  Standardposition — sie stapeln sich dadurch von Anfang an genau wie im alten System, ohne
+ *  dass der Streamer das erst manuell zusammenziehen muss. Turnierbaum hat einen eigenen,
+ *  etwas kleineren x-Wert, weil er breiter ist (620px vs. 460px) — beide Werte sind so gewählt,
+ *  dass die jeweilige Kachel mit ca. EDGE_MARGIN (28px) Abstand rechtsbuendig am Bildschirmrand
+ *  sitzt (rechnerisch: (1920 − Kachelbreite − 28) / 1920 × 100). */
 const DEFAULT_POSITIONS: Record<ElementKey, Pos> = {
   brand:        { x: 1.5,  y: 90.6 },
   liveinfo:     { x: 19,   y: 90.6 },
   ticker:       { x: 40,   y: 90.6 },
   bracket:      { x: 66,   y: 2.6 },
-  table:        { x: 66,   y: 2.6 },
-  participants: { x: 66,   y: 2.6 },
+  table:        { x: 74.6, y: 2.6 },
+  participants: { x: 74.6, y: 2.6 },
   favorites:    { x: 5,    y: 40 },
   badges:       { x: 5,    y: 63 },
 };

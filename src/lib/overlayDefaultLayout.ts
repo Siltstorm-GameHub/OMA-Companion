@@ -9,8 +9,8 @@ const DEFAULT_POSITIONS: Record<ElementKey, { x: number; y: number }> = {
   liveinfo:     { x: 19,   y: 90.6 },
   ticker:       { x: 40,   y: 90.6 },
   bracket:      { x: 66,   y: 2.6 },
-  table:        { x: 66,   y: 2.6 },
-  participants: { x: 66,   y: 2.6 },
+  table:        { x: 74.6, y: 2.6 },
+  participants: { x: 74.6, y: 2.6 },
   favorites:    { x: 5,    y: 40 },
   badges:       { x: 5,    y: 63 },
 };
