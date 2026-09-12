@@ -19,6 +19,7 @@ import RankPointsIcon from "@/components/RankPointsIcon";
 import ImageUploadField from "@/components/ImageUploadField";
 import EventCategoryBadge from "@/components/EventCategoryBadge";
 import TournamentManager from "../TournamentManager";
+import { TOURNAMENT_FORMATS } from "@/lib/tournament-formats";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import { GEMS_MONSTER_CATALOG, GEMS_MONSTER_TEAM_MAX } from "@/lib/battle-cards/gems-monster-catalog";
 import { getClassConfig } from "@/components/battle-cards/BattleCardView";
@@ -51,12 +52,9 @@ const DEFAULT_REWARDS: RewardsConfig = {
   ],
 };
 
-const TMT_FORMATS = [
-  { value: "single_elimination", label: "Einzel-Eliminierung", desc: "Klassisches K.O.-System" },
-  { value: "round_robin",        label: "Liga-Modus",          desc: "Alle spielen gegen alle · optional Hin-/Rückrunde" },
-  { value: "coop_stats",         label: "Skill-Index Modus",   desc: "Individuelle Stats, optional Team-Match-Win" },
-  { value: "avg_stats",          label: "Durchschnittswerte",  desc: "Bester Schnitt gewinnt" },
-] as const;
+// Punkt 3: zentrale Format-Liste (siehe @/lib/tournament-formats) statt eigener Kopie —
+// verhindert, dass dieser Reiter, TournamentManager.tsx und der Erstellungs-Wizard auseinanderlaufen.
+const TMT_FORMATS = TOURNAMENT_FORMATS;
 
 const GENRES: { value: EventGenre; label: string; icon: string }[] = [
   { value: "arcade",    label: "Arcade",     icon: "/Arcade Icon.png" },
@@ -410,6 +408,14 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
   const [search, setSearch]             = useState("");
   const [bulkSelected, setBulkSelected] = useState<string[]>([]);
   const [bulkSelectedSpectators, setBulkSelectedSpectators] = useState<string[]>([]);
+  // Punkt 5: "Nicht angemeldet"-Liste wird bei großer Community sonst komplett ungepaginiert
+  // gerendert — hier nur ein anfängliches Kontingent zeigen, Rest per Klick nachladen.
+  const [notRegisteredLimit, setNotRegisteredLimit] = useState(40);
+  // Punkt 5: Liste von Namen/Usernamen einfügen (z.B. aus Discord kopiert) statt jeden Teilnehmer
+  // einzeln in der Liste suchen und anklicken zu müssen.
+  const [pasteImportOpen, setPasteImportOpen] = useState(false);
+  const [pasteImportText, setPasteImportText] = useState("");
+  const [pasteImportResult, setPasteImportResult] = useState<{ matched: number; unmatched: string[] } | null>(null);
   const registeredIds  = new Set(event.registrations.filter((r: { role: string }) => r.role !== "spectator").map((r: { userId: string }) => r.userId));
   const spectatorIds   = new Set(event.registrations.filter((r: { role: string }) => r.role === "spectator").map((r: { userId: string }) => r.userId));
   const userName = (u: User) => u.username ?? u.name ?? "?";
@@ -573,6 +579,23 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
     router.refresh();
   }
 
+  /** Punkt 5: Namen/Usernamen (z.B. aus Discord kopiert, per Zeile/Komma getrennt) gegen allUsers
+   *  matchen und Treffer in die Bulk-Auswahl übernehmen — spart das einzelne Durchsuchen+Anklicken
+   *  bei großen Listen. Reine Client-Vorauswahl, das eigentliche Hinzufügen läuft weiter über bulkAdd(). */
+  function applyPasteImport() {
+    const names = pasteImportText.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+    const matchedIds: string[] = [];
+    const unmatched: string[] = [];
+    for (const raw of names) {
+      const q = raw.toLowerCase();
+      const match = allUsers.find(u => userName(u).toLowerCase() === q);
+      if (match) matchedIds.push(match.id);
+      else unmatched.push(raw);
+    }
+    setBulkSelected(prev => [...new Set([...prev, ...matchedIds])]);
+    setPasteImportResult({ matched: matchedIds.length, unmatched });
+  }
+
   async function bulkAdd() {
     if (!bulkSelected.length) return;
     setLoading(true);
@@ -724,10 +747,16 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
         </div>
         <div className="flex items-center gap-2 flex-wrap shrink-0">
           <EventCategoryBadge category={event.category ?? "casual"} />
+          {/* Punkt 6: Diese drei Controls speichern sofort (eigener PATCH pro Klick) — anders als der
+              Rest des Formulars, das erst über den "Speichern"-Button unten persistiert wird. Damit das
+              nicht wie ein fehlendes Speichern wirkt, ist das hier explizit gekennzeichnet. */}
+          <span className="text-[9px] uppercase tracking-widest text-gray-600 hidden sm:inline" title="Diese drei Einstellungen werden bei jedem Klick sofort übernommen, unabhängig vom Speichern-Button unten.">
+            Sofort gespeichert:
+          </span>
           <button
             onClick={toggleHidden}
             disabled={hiddenBusy}
-            title={hidden ? "Event einblenden (für alle sichtbar machen)" : "Event ausblenden (nur im Admin sichtbar)"}
+            title={(hidden ? "Event einblenden (für alle sichtbar machen)" : "Event ausblenden (nur im Admin sichtbar)") + " — wird sofort gespeichert"}
             className={`flex items-center gap-1.5 text-xs border rounded-lg px-3 py-1.5 transition-all disabled:opacity-50 ${
               hidden
                 ? "text-amber-400 border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20"
@@ -740,7 +769,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
           <button
             onClick={toggleRegistrationLocked}
             disabled={registrationLockedBusy}
-            title={registrationLocked ? "Selbst-Anmeldung wieder erlauben" : "Selbst-Anmeldung deaktivieren (nur Admins tragen Teilnehmer ein)"}
+            title={(registrationLocked ? "Selbst-Anmeldung wieder erlauben" : "Selbst-Anmeldung deaktivieren (nur Admins tragen Teilnehmer ein)") + " — wird sofort gespeichert"}
             className={`flex items-center gap-1.5 text-xs border rounded-lg px-3 py-1.5 transition-all disabled:opacity-50 ${
               registrationLocked
                 ? "text-amber-400 border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20"
@@ -753,7 +782,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
           {squads.length > 0 && (
             <select value={squadId} disabled={squadIdBusy}
               onChange={e => saveSquadId(e.target.value)}
-              title="Spieler-Anmeldung auf ein Squad beschränken"
+              title="Spieler-Anmeldung auf ein Squad beschränken — wird sofort gespeichert"
               className={`text-xs rounded-lg px-2.5 py-1.5 border outline-none transition-all disabled:opacity-50 ${
                 squadId ? "text-amber-400 border-amber-500/40 bg-amber-500/10" : "text-gray-500 border-white/[0.08] bg-transparent"
               }`}>
@@ -915,6 +944,9 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
             <Save className="w-4 h-4" />
             {loading ? "Speichert…" : "Speichern"}
           </button>
+          <p className="text-[10px] text-gray-600 text-center -mt-2">
+            Sichtbarkeit, Anmeldesperre &amp; Squad oben rechts sind bereits gespeichert — nur die restlichen Felder brauchen diesen Button.
+          </p>
         </div>
       )}
 
@@ -1157,6 +1189,9 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
             <Save className="w-4 h-4" />
             {loading ? "Speichert…" : "Speichern"}
           </button>
+          <p className="text-[10px] text-gray-600 text-center -mt-2">
+            Sichtbarkeit, Anmeldesperre &amp; Squad oben rechts sind bereits gespeichert — nur die restlichen Felder brauchen diesen Button.
+          </p>
         </div>
       )}
 
@@ -1566,17 +1601,48 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
             <h2 className="text-sm font-semibold text-gray-400">
               Spieler ({[...registeredIds].length}{event.maxPlayers ? `/${event.maxPlayers}` : ""})
             </h2>
-            {bulkSelected.length > 0 && (
-              <button onClick={bulkAdd} disabled={loading}
-                className="flex items-center gap-1.5 text-xs bg-teal-700 hover:bg-teal-600 text-white rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50">
-                <UserPlus className="w-3.5 h-3.5" /> {bulkSelected.length} hinzufügen
+            <div className="flex items-center gap-2">
+              <button onClick={() => setPasteImportOpen(o => !o)}
+                className="text-[11px] text-gray-500 hover:text-white transition-colors">
+                {pasteImportOpen ? "Liste schließen" : "Liste einfügen"}
               </button>
-            )}
+              {bulkSelected.length > 0 && (
+                <button onClick={bulkAdd} disabled={loading}
+                  className="flex items-center gap-1.5 text-xs bg-teal-700 hover:bg-teal-600 text-white rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50">
+                  <UserPlus className="w-3.5 h-3.5" /> {bulkSelected.length} hinzufügen
+                </button>
+              )}
+            </div>
           </div>
+
+          {/* Punkt 5: Namen-Liste einfügen (z.B. aus Discord kopiert) statt einzeln zu suchen */}
+          {pasteImportOpen && (
+            <div className="rounded-lg border border-white/[0.08] bg-white/[0.02] p-3 space-y-2">
+              <p className="text-[11px] text-gray-500">
+                Namen/Usernamen einfügen (Zeilenumbruch oder Komma getrennt) — Treffer werden unten in der Liste vorausgewählt.
+              </p>
+              <textarea value={pasteImportText} onChange={e => setPasteImportText(e.target.value)}
+                rows={3} placeholder={"z.B.\nMaxMustermann\nErikaM"}
+                className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 placeholder:text-gray-600 resize-none" />
+              <div className="flex items-center gap-2">
+                <button onClick={applyPasteImport} disabled={!pasteImportText.trim()}
+                  className="text-xs bg-teal-700 hover:bg-teal-600 disabled:opacity-40 text-white rounded-lg px-3 py-1.5 transition-colors">
+                  Abgleichen &amp; auswählen
+                </button>
+                {pasteImportResult && (
+                  <span className="text-[11px] text-gray-500">
+                    {pasteImportResult.matched} gefunden
+                    {pasteImportResult.unmatched.length > 0 && `, nicht gefunden: ${pasteImportResult.unmatched.join(", ")}`}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="relative">
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-            <input type="text" placeholder="Spieler suchen…" value={search} onChange={e => setSearch(e.target.value)}
+            <input type="text" placeholder="Spieler suchen…" value={search}
+              onChange={e => { setSearch(e.target.value); setNotRegisteredLimit(40); }}
               className="w-full text-sm bg-gray-800 border border-gray-700 text-white rounded-lg pl-9 pr-3 py-2 placeholder:text-gray-600" />
           </div>
 
@@ -1615,7 +1681,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                 </button>
               </div>
               <div className="space-y-1 max-h-64 overflow-y-auto">
-                {filteredUsers.filter(u => !registeredIds.has(u.id) && !spectatorIds.has(u.id)).map(u => {
+                {filteredUsers.filter(u => !registeredIds.has(u.id) && !spectatorIds.has(u.id)).slice(0, notRegisteredLimit).map(u => {
                   const isSel = bulkSelected.includes(u.id);
                   return (
                     <div key={u.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
@@ -1637,6 +1703,12 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                   );
                 })}
               </div>
+              {filteredUsers.filter(u => !registeredIds.has(u.id) && !spectatorIds.has(u.id)).length > notRegisteredLimit && (
+                <button onClick={() => setNotRegisteredLimit(n => n + 40)}
+                  className="w-full text-center text-[11px] text-gray-500 hover:text-white py-1.5 transition-colors">
+                  {filteredUsers.filter(u => !registeredIds.has(u.id) && !spectatorIds.has(u.id)).length - notRegisteredLimit} weitere laden…
+                </button>
+              )}
             </div>
           )}
 
@@ -1679,7 +1751,7 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                     </button>
                   </div>
                   <div className="space-y-1 max-h-40 overflow-y-auto">
-                    {filteredUsers.filter(u => !registeredIds.has(u.id) && !spectatorIds.has(u.id)).map(u => {
+                    {filteredUsers.filter(u => !registeredIds.has(u.id) && !spectatorIds.has(u.id)).slice(0, notRegisteredLimit).map(u => {
                       const isSel = bulkSelectedSpectators.includes(u.id);
                       return (
                         <div key={u.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
@@ -1701,6 +1773,12 @@ export default function EventEditClient({ event, allUsers, squads = [] }: { even
                       );
                     })}
                   </div>
+                  {filteredUsers.filter(u => !registeredIds.has(u.id) && !spectatorIds.has(u.id)).length > notRegisteredLimit && (
+                    <button onClick={() => setNotRegisteredLimit(n => n + 40)}
+                      className="w-full text-center text-[11px] text-gray-500 hover:text-white py-1.5 transition-colors">
+                      {filteredUsers.filter(u => !registeredIds.has(u.id) && !spectatorIds.has(u.id)).length - notRegisteredLimit} weitere laden…
+                    </button>
+                  )}
                 </div>
               )}
             </div>

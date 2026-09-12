@@ -4,12 +4,14 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   ChevronDown, ChevronUp, Repeat, Gamepad2, Swords, Hash, RefreshCw,
-  CalendarPlus, BarChart2, Plus, X, Trophy, ExternalLink, Settings,
+  CalendarPlus, BarChart2, X, Trophy, ExternalLink, Settings,
 } from "lucide-react";
 import Link from "next/link";
 import { describeMonthlyModes } from "@/lib/recurrence";
 import GameNameInput from "@/components/GameNameInput";
 import EventAdminRow from "./EventAdminRow";
+import StatRowsEditor from "@/components/admin/StatRowsEditor";
+import { TOURNAMENT_FORMATS, LEGACY_LIGA_OPTION } from "@/lib/tournament-formats";
 
 const inputCls = "w-full rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors";
 
@@ -230,10 +232,8 @@ export default function SeriesAdminRow({
                   </label>
                   <select value={fixedFormat} onChange={e => setFixedFormat(e.target.value)} className={inputCls}>
                     <option value="">– Kein festes Format –</option>
-                    <option value="single_elimination">Single Elimination</option>
-                    <option value="round_robin">Liga-Modus</option>
-                    <option value="liga">Liga-Modus (Hin-/Rückrunde)</option>
-                    <option value="coop_stats">Skill-Index Modus</option>
+                    {TOURNAMENT_FORMATS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+                    <option value={LEGACY_LIGA_OPTION.value}>{LEGACY_LIGA_OPTION.label}</option>
                   </select>
                   <label className="flex items-center gap-2 mt-1.5 cursor-pointer">
                     <input type="checkbox" checked={propagateFormat} onChange={e => setPropagateFormat(e.target.checked)} className="rounded accent-teal-500" />
@@ -297,34 +297,7 @@ export default function SeriesAdminRow({
                       className="w-20 rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors" />
                   </div>
 
-                  <div className="space-y-1.5">
-                    {statRows.map((row, i) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          defaultValue={row.field}
-                          onBlur={e => { const v = e.target.value; setStatRows(prev => prev.map((r, j) => j === i ? { ...r, field: v } : r)); }}
-                          placeholder="Stat-Name (z.B. Kills)"
-                          className="min-w-0 flex-1 rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors"
-                        />
-                        <input
-                          type="number" min={0}
-                          defaultValue={row.pointsPer}
-                          onBlur={e => { const v = Number(e.target.value); setStatRows(prev => prev.map((r, j) => j === i ? { ...r, pointsPer: v } : r)); }}
-                          placeholder="Pkt./Einheit"
-                          className="w-24 shrink-0 rounded-lg px-3 py-2 text-sm text-white outline-none bg-gray-800 border border-gray-700 focus:border-teal-500/50 transition-colors"
-                        />
-                        <button type="button" onClick={() => setStatRows(prev => prev.filter((_, j) => j !== i))}
-                          className="text-gray-600 hover:text-red-400 transition-colors shrink-0">
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ))}
-                    <button type="button" onClick={() => setStatRows(prev => [...prev, { field: "", pointsPer: 1 }])}
-                      className="flex items-center gap-1 text-xs text-teal-500 hover:text-teal-300 transition-colors">
-                      <Plus className="w-3 h-3" /> Statistik hinzufügen
-                    </button>
-                  </div>
+                  <StatRowsEditor rows={statRows} onChange={setStatRows} />
                 </div>
 
                 {/* Legacy-Stand */}

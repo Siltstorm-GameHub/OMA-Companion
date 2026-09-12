@@ -733,10 +733,15 @@ export default function EventCompleteClient({
               <div className="flex items-center gap-2">
                 <Vote className="w-3.5 h-3.5 text-violet-400" />
                 <span className="text-xs font-semibold text-violet-300">
-                  Poll: „{pollConfig.question}"
+                  Poll (Alt-System): „{pollConfig.question}"
                 </span>
                 {isPollOnly && <span className="text-[10px] text-violet-400/60 ml-auto">ausstehend</span>}
               </div>
+              <p className="text-[10px] text-gray-600 -mt-1">
+                Diese Einzelumfrage stammt aus der alten, seriesweiten Umfrage-Konfiguration (nur noch bei Events/Reihen
+                vorhanden, die vor der Einführung der Mehrfach-Umfragen erstellt wurden). Neue Events nutzen ausschließlich
+                das Umfragen-Panel oben.
+              </p>
 
               {!isFinishedSummary && (
                 <>
@@ -842,7 +847,24 @@ export default function EventCompleteClient({
                   )}
                 </div>
               ) : (
-                <div className="space-y-1">
+                <div className="space-y-2">
+                  {/* Punkt 5: Bulk-Aktionen statt jeden Zuschauer einzeln anklicken zu müssen */}
+                  <div className="flex items-center gap-2">
+                    <button type="button"
+                      onClick={() => setSpectatorAttended(new Set(spectatorUsers.map(u => u.id)))}
+                      className="text-[11px] text-teal-400 hover:text-teal-300 transition-colors">
+                      Alle anwesend
+                    </button>
+                    <span className="text-gray-700">·</span>
+                    <button type="button"
+                      onClick={() => setSpectatorAttended(new Set())}
+                      className="text-[11px] text-gray-500 hover:text-white transition-colors">
+                      Keiner anwesend
+                    </button>
+                    <span className="text-[10px] text-gray-600 ml-auto">
+                      {spectatorAttended.size}/{spectatorUsers.length} anwesend
+                    </span>
+                  </div>
                   {spectatorUsers.map(u => (
                     <label key={u.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
                       spectatorAttended.has(u.id) ? "bg-teal-500/10 border border-teal-500/20" : "bg-white/[0.03] border border-transparent hover:border-white/[0.08]"
@@ -926,6 +948,21 @@ export default function EventCompleteClient({
             </div>
           )}
 
+          {/* Punkt 4: Inline-Validierung statt stiller 0-Belohnungsvorschau — wird sichtbar,
+              bevor gespeichert wird, nicht erst danach. */}
+          {!isFinishedSummary && !isPollOnly && registeredUsers.length > 0 && rankingOrder.length === 0 && (
+            <div className="flex items-center gap-2 text-xs text-red-300 bg-red-900/20 border border-red-700/40 rounded-xl px-4 py-3">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              Keine Teilnehmer in der Finalen Platzierung — es würden keine Platzierungs-Belohnungen vergeben.
+            </div>
+          )}
+          {!isFinishedSummary && !isPollOnly && !isAvgFormat && tournamentStatFields.length > 0 && !winnerStatField && (
+            <div className="flex items-center gap-2 text-xs text-amber-300 bg-amber-900/20 border border-amber-700/40 rounded-xl px-4 py-3">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              Kein Gewinner-Stat ausgewählt — die Rangliste rechts wird nicht automatisch sortiert, bitte manuell prüfen.
+            </div>
+          )}
+
           {/* Confirm buttons */}
           <div className="space-y-2">
             {/* Admins schließen mit dem Haupt-Button während der Umfragephase sonst automatisch die
@@ -943,7 +980,8 @@ export default function EventCompleteClient({
             )}
             <button
               onClick={() => handleConfirm(false)}
-              disabled={loading}
+              disabled={loading || (!isFinishedSummary && !isPollOnly && registeredUsers.length > 0 && rankingOrder.length === 0)}
+              title={(!isFinishedSummary && !isPollOnly && registeredUsers.length > 0 && rankingOrder.length === 0) ? "Keine Teilnehmer in der Finalen Platzierung" : undefined}
               className="w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-white bg-teal-700 hover:bg-teal-600 transition-colors disabled:opacity-50"
             >
               <CheckCircle2 className="w-4 h-4" />

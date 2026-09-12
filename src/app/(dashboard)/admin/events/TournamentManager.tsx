@@ -12,6 +12,7 @@ import StatFieldEditor from "@/components/StatFieldEditor";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import InfoTooltip from "@/components/InfoTooltip";
 import { PLACEMENT_STAT_KEY } from "@/lib/series-event-points";
+import { TOURNAMENT_FORMATS } from "@/lib/tournament-formats";
 
 type User = { id: string; name: string | null; username: string | null; image: string | null };
 type MatchEntry = {
@@ -36,12 +37,9 @@ type Event = { id: string };
 
 
 
-const FORMATS = [
-  { value: "single_elimination", label: "Einzel-Eliminierung",       desc: "Klassisches K.O.-System" },
-  { value: "round_robin",        label: "Liga-Modus",                desc: "Alle spielen gegen alle · optional Hin-/Rückrunde" },
-  { value: "coop_stats",         label: "Skill-Index Modus",         desc: "Individuelle Stats, optional Team-Match-Win" },
-  { value: "avg_stats",          label: "Durchschnittswerte",        desc: "Sieger = bester Durchschnitt (z.B. Kills/Runde)" },
-];
+// Punkt 3: FORMATS kommt jetzt zentral aus @/lib/tournament-formats (siehe dort) statt hier,
+// in EventEditClient.tsx und in EventSetupWizard.tsx dreifach unabhängig gepflegt zu werden.
+const FORMATS = TOURNAMENT_FORMATS;
 
 const STATUS_OPTIONS = ["active", "finished", "pending"];
 
@@ -601,23 +599,30 @@ export default function TournamentManager({
     router.refresh();
   }
 
-  async function submitFfa(matchId: string, matchEntries: MatchEntry[]) {
-    if (!tournament) return;
+  /** Prüft, ob die Team-Zuordnung eines Matches vollständig/konsistent ist — wird sowohl live
+   *  (Inline-Warnung während der Eingabe) als auch vor dem Speichern verwendet, damit der Fehler
+   *  nicht erst als Toast nach einem Klick auf "Speichern" auftaucht. */
+  function validateTeamAssignment(matchId: string, matchEntries: MatchEntry[]): string | null {
+    if (!trackMatchWin) return null;
+    const teams = teamAssign[matchId] ?? {};
+    const usesTeams = matchEntries.some(e => e.userId && teams[e.userId]);
+    if (!usesTeams) return null;
+    const missing = matchEntries.some(e => e.userId && !teams[e.userId]);
+    if (missing) {
+      return "Bitte alle Spieler einem Team zuweisen, bevor du speicherst — oder keinem Spieler ein Team zuweisen, wenn alle zusammen gespielt haben.";
+    }
+    return null;
+  }
+
+  /** Baut das PATCH-Payload für ein Match aus dem aktuellen Formularzustand — genutzt sowohl vom
+   *  Einzel-Speichern-Button als auch vom "Alle offenen speichern"-Sammel-Save (Punkt 1). */
+  function buildFfaEntries(matchId: string, matchEntries: MatchEntry[]) {
     const ed = ffaEdits[matchId] ?? {};
     const teams = teamAssign[matchId] ?? {};
-    // Kein Spieler zugeordnet → alle haben zusammen gespielt (kein Team-Modus).
-    // Sobald mindestens einer zugeordnet ist, müssen alle Spieler ein Team haben.
     const usesTeams = trackMatchWin && matchEntries.some(e => e.userId && teams[e.userId]);
-    if (usesTeams) {
-      const missing = matchEntries.some(e => e.userId && !teams[e.userId]);
-      if (missing) {
-        toast.error("Bitte alle Spieler einem Team zuweisen, bevor du speicherst — oder keinem Spieler ein Team zuweisen, wenn alle zusammen gespielt haben.");
-        return;
-      }
-    }
     const winningTeam = usesTeams ? (matchWin[matchId] ?? null) : undefined;
     const allWin = trackMatchWin && !usesTeams ? (matchWinAll[matchId] ?? false) : undefined;
-    const updated = matchEntries.map(e => {
+    return matchEntries.map(e => {
       // Start with existing persisted stats so we don't overwrite fields that weren't touched
       const existing: Record<string, number | string> = e.statsJson ? JSON.parse(e.statsJson as string) : {};
       const row = ed[e.userId ?? ""] ?? {};
@@ -644,15 +649,86 @@ export default function TournamentManager({
         statsJson: Object.keys(stats).length ? stats : null,
       };
     });
-    setLoading(true);
+  }
+
+  async function submitFfa(matchId: string, matchEntries: MatchEntry[], { silent = false } = {}) {
+    if (!tournament) return true;
+    const error = validateTeamAssignment(matchId, matchEntries);
+    if (error) {
+      if (!silent) toast.error(error);
+      return false;
+    }
+    const updated = buildFfaEntries(matchId, matchEntries);
+    if (!silent) setLoading(true);
     const res = await fetch(`/api/tournaments/${tournament.id}/matches`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ matchId, entries: updated }),
     });
+    if (!silent) setLoading(false);
+    if (!res.ok) {
+      const e = await res.json().catch(() => ({}));
+      if (!silent) toast.error(e.error ?? "Fehler beim Speichern");
+      return false;
+    }
+    if (!silent) router.refresh();
+    return true;
+  }
+
+  /** Punkt 1: statt jedes aufgeklappte Match einzeln zu speichern, alle offenen Matches mit
+   *  Änderungen in einem Rutsch sichern. Matches mit ungültiger Team-Zuordnung werden übersprungen
+   *  und am Ende zusammengefasst gemeldet, statt den ganzen Vorgang abzubrechen. */
+  async function saveAllExpanded() {
+    if (!tournament) return;
+    const candidates = tournament.matches.filter(m => expanded.has(m.id));
+    if (candidates.length === 0) return;
+    setLoading(true);
+    let saved = 0;
+    const failedTitles: string[] = [];
+    for (const m of candidates) {
+      const ok = await submitFfa(m.id, m.entries, { silent: true });
+      if (ok) saved++; else failedTitles.push(m.title || `Match ${m.position}`);
+    }
     setLoading(false);
-    if (!res.ok) { const e = await res.json().catch(() => ({})); toast.error(e.error ?? "Fehler beim Speichern"); return; }
+    if (saved > 0) toast.success(`${saved} Match(es) gespeichert`);
+    if (failedTitles.length > 0) toast.error(`Nicht gespeichert (Team-Zuordnung unvollständig): ${failedTitles.join(", ")}`);
     router.refresh();
+  }
+
+  /** Punkt 2: übernimmt Stats/Team-Zuordnung des vorherigen Matches für alle Spieler, die in
+   *  beiden Matches vorkommen — praktisch bei wiederkehrenden Konstellationen (z.B. gleiche Gruppe
+   *  über mehrere Runden), damit nicht jede Runde komplett neu eingetippt werden muss. */
+  function copyFromPreviousMatch(matchId: string) {
+    if (!tournament) return;
+    const idx = tournament.matches.findIndex(m => m.id === matchId);
+    if (idx <= 0) return;
+    const prev = tournament.matches[idx - 1];
+    const prevEdits = ffaEdits[prev.id] ?? {};
+    const prevTeams = teamAssign[prev.id] ?? {};
+    const currentEntryUserIds = tournament.matches[idx].entries.map(e => e.userId).filter((id): id is string => !!id);
+    // Vorab (rein lesend) ermitteln, ob es überhaupt etwas zu übernehmen gibt — die State-Updater
+    // unten bleiben dadurch reine Funktionen ohne Seiteneffekt auf äußere Variablen.
+    const copiedAny = currentEntryUserIds.some(uid => prevEdits[uid] || (trackMatchWin && prevTeams[uid]));
+    setFfaEdits(state => {
+      const next = { ...(state[matchId] ?? {}) };
+      for (const uid of currentEntryUserIds) {
+        const prevRow = prevEdits[uid];
+        if (prevRow) next[uid] = { ...prevRow };
+      }
+      return { ...state, [matchId]: next };
+    });
+    if (trackMatchWin) {
+      setTeamAssign(state => {
+        const next = { ...(state[matchId] ?? {}) };
+        for (const uid of currentEntryUserIds) {
+          const t = prevTeams[uid];
+          if (t) next[uid] = t;
+        }
+        return { ...state, [matchId]: next };
+      });
+    }
+    if (copiedAny) toast.success("Werte aus vorherigem Match übernommen — bitte prüfen und speichern");
+    else toast.error("Keine gemeinsamen Spieler mit dem vorherigen Match gefunden");
   }
 
   async function deleteMatch(matchId: string) {
@@ -720,6 +796,13 @@ export default function TournamentManager({
       )}
 
       {/* ── Match list ───────────────────────────────────────────────── */}
+      {/* Punkt 1: Sammel-Speichern für alle aufgeklappten Stat-Matches statt Klick pro Match */}
+      {!is1v1 && expanded.size > 0 && (
+        <button onClick={saveAllExpanded} disabled={loading}
+          className="flex items-center gap-1.5 text-xs bg-teal-700/80 hover:bg-teal-600 disabled:opacity-50 text-white rounded-lg px-3 py-2 w-full justify-center transition-colors">
+          <Save className="w-3.5 h-3.5" /> Alle {expanded.size} aufgeklappten Matches speichern
+        </button>
+      )}
       <div className="space-y-2">
         {tournament.matches.length === 0 && (
           <div className="text-center py-6 bg-gray-800/50 rounded-lg text-gray-500 text-sm border border-gray-700 border-dashed">
@@ -849,10 +932,12 @@ export default function TournamentManager({
               );
             })
           : /* ── FFA / coop view ─────────────────────────────────────── */
-            tournament.matches.map(match => {
+            tournament.matches.map((match, matchIdx) => {
               const isExp    = expanded.has(match.id);
               const isPlayed = !!match.playedAt;
               const ed       = ffaEdits[match.id] ?? {};
+              // Punkt 4: Team-Zuordnung live validieren statt erst beim Speichern per Toast zu melden
+              const teamError = validateTeamAssignment(match.id, match.entries);
               return (
                 <div key={match.id}
                   className={`rounded-lg border overflow-hidden ${isPlayed ? "border-gray-700" : "border-gray-600"}`}>
@@ -879,6 +964,18 @@ export default function TournamentManager({
                   {isExp && (
                     <div className="p-3">
                       {match.notes && <p className="text-xs text-gray-500 mb-3">{match.notes}</p>}
+                      {/* Punkt 2: Werte des vorherigen Matches übernehmen (gleiche Teilnehmer über mehrere Runden) */}
+                      {matchIdx > 0 && (
+                        <button type="button" onClick={() => copyFromPreviousMatch(match.id)}
+                          className="flex items-center gap-1.5 text-[11px] text-gray-400 hover:text-white border border-gray-700 hover:border-gray-500 rounded-lg px-2.5 py-1 mb-3 transition-colors">
+                          <RefreshCw className="w-3 h-3" /> Werte aus vorherigem Match übernehmen
+                        </button>
+                      )}
+                      {teamError && (
+                        <div className="flex items-center gap-2 text-xs text-amber-300 bg-amber-900/20 border border-amber-700/40 rounded-lg px-3 py-2 mb-3">
+                          <span>⚠️ {teamError}</span>
+                        </div>
+                      )}
                       {visibleStatFields.length === 0 && !trackMatchWin && !trackPlacement ? (
                         <div className="text-xs text-amber-400/80 bg-amber-900/10 border border-amber-800/30 rounded-lg px-3 py-2">
                           Keine Statistik-Felder konfiguriert. Bitte zuerst im Reiter <span className="font-semibold">Einstellungen</span> die gewünschten Stat-Felder eintragen und auf „Turnier-Einstellungen speichern" klicken.
@@ -1015,7 +1112,8 @@ export default function TournamentManager({
                       </>
                       )}
                       <div className="flex gap-2 mt-3">
-                        <button onClick={() => submitFfa(match.id, match.entries)} disabled={loading}
+                        <button onClick={() => submitFfa(match.id, match.entries)} disabled={loading || !!teamError}
+                          title={teamError ?? undefined}
                           className="flex items-center gap-1.5 text-xs bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white rounded px-3 py-1.5">
                           <Save className="w-3 h-3" /> Ergebnisse speichern
                         </button>

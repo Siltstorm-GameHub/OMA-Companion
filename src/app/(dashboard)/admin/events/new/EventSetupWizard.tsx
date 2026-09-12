@@ -7,6 +7,8 @@ import { ChevronLeft, ChevronRight, Check, Plus, Trash2, CalendarDays, Repeat } 
 import { EventCategory, EventGenre } from "@prisma/client";
 import GameNameInput from "@/components/GameNameInput";
 import StatFieldEditor from "@/components/StatFieldEditor";
+import StatRowsEditor from "@/components/admin/StatRowsEditor";
+import { TOURNAMENT_FORMATS } from "@/lib/tournament-formats";
 import { describeMonthlyModes, calcNextDate } from "@/lib/recurrence";
 import type { RecurrenceType, MonthlyMode } from "@/lib/recurrence";
 import InfoTooltip from "@/components/InfoTooltip";
@@ -116,12 +118,12 @@ const PLATFORMS: { value: string; label: string; icon: string }[] = [
   { value: "Mobile", label: "Mobile", icon: "📱" },
 ];
 
-const FORMATS: { value: string; label: string; desc: string; hasStat: boolean }[] = [
-  { value: "single_elimination", label: "Single Elimination", desc: "Jede Niederlage scheidet aus", hasStat: false },
-  { value: "round_robin",        label: "Liga-Modus",         desc: "Jeder spielt gegen jeden · optional Hin-/Rückrunde", hasStat: false },
-  { value: "coop_stats",         label: "Skill-Index Modus",  desc: "Individuelle Stats, optional Team-Match-Win", hasStat: true },
-  { value: "avg_stats",          label: "Durchschnittswerte", desc: "Individuelle Stats werden gemittelt", hasStat: true },
-];
+// Punkt 3: Wertebereich/Label/Beschreibung kommen zentral aus @/lib/tournament-formats (siehe dort) —
+// nur das wizard-eigene "hasStat"-Flag (zeigt den Stat-Felder-Editor im Turnier-Schritt) bleibt lokal.
+const FORMATS: { value: string; label: string; desc: string; hasStat: boolean }[] = TOURNAMENT_FORMATS.map(f => ({
+  ...f,
+  hasStat: f.value === "coop_stats" || f.value === "avg_stats",
+}));
 
 const RECURRENCE_OPTS: { value: string; label: string; desc: string }[] = [
   { value: "none",      label: "Keine",          desc: "Manuell Termine hinzufügen" },
@@ -1279,40 +1281,13 @@ export default function EventSetupWizard({
               <span className="text-xs text-gray-300">Tabellenpunkte bei Event-Abschluss auf Gesamtrangliste übertragen</span>
             </label>
             {eventType === "tournament" && (
-            <div className="space-y-2">
-              <p className="text-[11px] text-gray-500">Stat-Felder — Feldname → Punkte pro Einheit — 🏆 = +1 bei Event-Sieg — ⚔️ = +1 pro Match Win aus einzelnen Runden</p>
-              {statRows.map((row, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <input type="text" value={row.field}
-                    onChange={e => setStatRows(prev => prev.map((r, ri) => ri === i ? { ...r, field: e.target.value } : r))}
-                    placeholder="z.B. Kills" className={`${inputCls} flex-1`} style={inputStyle} />
-                  <input type="number" min="0" value={row.pointsPer}
-                    onChange={e => setStatRows(prev => prev.map((r, ri) => ri === i ? { ...r, pointsPer: Number(e.target.value) } : r))}
-                    placeholder="Pkt" className="w-16 rounded-xl px-2.5 py-2.5 text-sm text-white text-center outline-none shrink-0"
-                    style={inputStyle} />
-                  <button type="button"
-                    title="Dieser Stat bekommt +1 wenn ein Spieler ein Event in dieser Reihe gewinnt"
-                    onClick={() => setStatRows(prev => prev.map((r, ri) => ri === i ? { ...r, isWinnerStat: !r.isWinnerStat } : r))}
-                    className={`shrink-0 text-base transition-colors ${row.isWinnerStat ? "opacity-100" : "opacity-30 hover:opacity-60"}`}>
-                    🏆
-                  </button>
-                  <button type="button"
-                    title="Dieser Stat bekommt +1 pro Match Win, das pro Runde eines Events markiert wird"
-                    onClick={() => setStatRows(prev => prev.map((r, ri) => ri === i ? { ...r, isMatchWinStat: !r.isMatchWinStat } : r))}
-                    className={`shrink-0 text-base transition-colors ${row.isMatchWinStat ? "opacity-100" : "opacity-30 hover:opacity-60"}`}>
-                    ⚔️
-                  </button>
-                  <button type="button" onClick={() => setStatRows(prev => prev.filter((_, ri) => ri !== i))}
-                    className="text-gray-600 hover:text-red-400 transition-colors shrink-0">
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
-              <button type="button" onClick={() => setStatRows(prev => [...prev, { field: "", pointsPer: 0 }])}
-                className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 transition-colors mt-1">
-                <Plus className="w-3.5 h-3.5" /> Stat hinzufügen
-              </button>
-            </div>
+              <StatRowsEditor
+                rows={statRows}
+                onChange={setStatRows}
+                accentClassName="text-indigo-400 hover:text-indigo-300"
+                inputClassName={`${inputCls}`}
+                inputStyle={inputStyle}
+              />
             )}
           </div>
         )}
