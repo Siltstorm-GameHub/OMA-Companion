@@ -1471,7 +1471,15 @@ function LiveBattleBody({
           <div className="glass rounded-xl p-2.5 h-[212px] lg:h-[300px] overflow-y-auto flex flex-col">
             {snapshot.awaiting.board && boardSwaps === null ? (
               <BoardMatch3
-                turnId={snapshot.awaiting.unitId}
+                // Rundennummer mit in den Turn-Key aufnehmen: bleibt nur noch EINE
+                // eigene Einheit übrig, ist sie in jeder Runde die einzige, die für
+                // uns am Zug ist — unitId allein änderte sich dann über mehrere
+                // aufeinanderfolgende eigene Züge hinweg NIE, wodurch BoardMatch3s
+                // interner Zug-Budget-Reset (useEffect auf turnId) ausblieb und das
+                // Brett dauerhaft gesperrt blieb (kein Swap mehr möglich, Kampf nicht
+                // abschließbar). Jede Einheit bekommt pro Runde höchstens einen Zug,
+                // daher ist unitId+round zusammen immer eindeutig pro echtem Zug.
+                turnId={`${snapshot.awaiting.unitId}-${snapshot.round}`}
                 grid={snapshot.awaiting.board.grid}
                 specials={snapshot.awaiting.board.specials}
                 moveBudget={snapshot.awaiting.board.moveBudget}
