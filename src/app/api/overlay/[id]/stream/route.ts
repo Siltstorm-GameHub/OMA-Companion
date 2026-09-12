@@ -34,7 +34,7 @@ async function loadOverlayState(eventId: string) {
     where: { id: eventId },
     select: {
       id: true, title: true, status: true, format: true, tournamentStatus: true, game: true, statFields: true,
-      completionData: true, statConfigJson: true, overlayControlJson: true,
+      completionData: true, statConfigJson: true, overlayControlJson: true, seriesId: true,
       series: { select: { seriesStatConfig: true } },
       matches: {
         orderBy: [{ round: "asc" }, { position: "asc" }],
@@ -83,10 +83,16 @@ async function loadOverlayState(eventId: string) {
     ).pointsByUser;
   }
 
+  // Gesamttabelle der Eventreihe (separat von der Einzelevent-"table") — nur ueber
+  // loadSeriesRanking() (src/lib/seriesRanking.ts), dieselbe Funktion wie das Widget-Ranking,
+  // damit hier keine zweite Punkteberechnung entsteht. null, wenn das Event keiner Reihe
+  // angehoert — das Overlay blendet die Gesamttabelle dann einfach nie ein (contentAvailable).
+  const seriesTable = event.seriesId ? await loadSeriesRanking(event.seriesId).catch(() => null) : null;
+
   return {
     id: event.id, title: event.title, status: event.status, format: event.format,
     tournamentStatus: event.tournamentStatus, game: event.game, statFields: event.statFields,
-    matches: event.matches, participants: mergedParticipants, ligaPunkteByUser,
+    matches: event.matches, participants: mergedParticipants, ligaPunkteByUser, seriesTable,
     control: parseOverlayControl(event.overlayControlJson),
   };
 }

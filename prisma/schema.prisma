@@ -1908,7 +1908,7 @@ model BattleQueueEntry {
 model HeroBasePose {
   id        String   @id @default(cuid())
   classKey  String // z.B. "tank", "damage_dealer", "support"
-  poseKey   String // z.B. "neutral", "combat_ready" -- eindeutig je Klasse
+  poseKey   String   @default("neutral") // z.B. "neutral", "combat_ready" -- eindeutig je Klasse
   name      String
   imageUrl  String // Ganzkörper-Grafik, freigestellt (Vercel Blob)
   width     Int // Pixelmaße des Basis-Bildes -- Anker-Brüche beziehen sich darauf

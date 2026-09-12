@@ -10,6 +10,7 @@ const DEFAULT_POSITIONS: Record<ElementKey, { x: number; y: number }> = {
   ticker:       { x: 40,   y: 90.6 },
   bracket:      { x: 66,   y: 2.6 },
   table:        { x: 74.6, y: 2.6 },
+  seriesTable:  { x: 74.6, y: 2.6 },
   participants: { x: 74.6, y: 2.6 },
   favorites:    { x: 5,    y: 40 },
   badges:       { x: 5,    y: 63 },
@@ -30,10 +31,15 @@ const ELIMINATION_FORMATS = ["single_elimination", "double_elimination"];
  * (?streamer=... Parameter), den ein generischer Event-Link nicht kennt, und wuerden ohnehin
  * ohne Streamer-Kontext leer bleiben. Wer sie will, richtet sich einen personalisierten Link in
  * den Overlay-Einstellungen der App ein.
+ *
+ * `hasSeries`: gehoert das Event zu einer Eventreihe, wird "seriesTable" (Gesamttabelle) auf
+ * dieselbe Position wie "table"/"participants" gelegt — alle drei stapeln sich dann automatisch
+ * zu einer rotierenden Gruppe, ohne dass der Streamer das erst manuell zusammenziehen muss.
  */
-export function buildDefaultLayoutParam(format: string | null): string {
+export function buildDefaultLayoutParam(format: string | null, hasSeries: boolean = false): string {
   const isElimination = !!format && ELIMINATION_FORMATS.includes(format);
   const keys: ElementKey[] = ["brand", "liveinfo", "ticker", isElimination ? "bracket" : "table", "participants"];
+  if (hasSeries) keys.push("seriesTable");
   return keys
     .map(key => `${key}:${DEFAULT_POSITIONS[key].x},${DEFAULT_POSITIONS[key].y}`)
     .join(";");

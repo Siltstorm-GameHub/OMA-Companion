@@ -5,7 +5,7 @@ import OverlayClient, { type Corner, type LayoutPositions, type ElementKey } fro
 const PANEL_KEYS = ["bracket", "table", "participants"] as const;
 type PanelKey = (typeof PANEL_KEYS)[number];
 const CORNERS: Corner[] = ["top-left", "top-right", "bottom-left", "bottom-right", "middle-left", "middle-right"];
-const ELEMENT_KEYS: ElementKey[] = ["brand", "liveinfo", "ticker", "bracket", "table", "participants", "favorites", "badges"];
+const ELEMENT_KEYS: ElementKey[] = ["brand", "liveinfo", "ticker", "bracket", "table", "seriesTable", "participants", "favorites", "badges"];
 
 /** `?layout=brand:4.2,88.5;ticker:20.1,88.5,s1.3,c8-4;panel:65,4` — vom Streamer in den
  *  Overlay-Einstellungen per Drag & Drop zusammengestellt (Prozent von 1920×1080 je Element).

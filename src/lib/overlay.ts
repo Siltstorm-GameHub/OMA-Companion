@@ -19,9 +19,11 @@ export async function ensureOverlayToken(eventId: string): Promise<string> {
 }
 
 /** `format` steuert nur, ob standardmaessig der Turnierbaum oder die Tabelle aktiv ist
- *  (siehe buildDefaultLayoutParam) — ohne Angabe faellt es auf die Tabellen-Variante zurueck. */
-export function buildOverlayUrl(eventId: string, token: string, format: string | null = null): string {
-  const layout = buildDefaultLayoutParam(format);
+ *  (siehe buildDefaultLayoutParam) — ohne Angabe faellt es auf die Tabellen-Variante zurueck.
+ *  `hasSeries` blendet die Gesamttabelle standardmaessig mit ein, wenn das Event zu einer
+ *  Eventreihe gehoert. */
+export function buildOverlayUrl(eventId: string, token: string, format: string | null = null, hasSeries: boolean = false): string {
+  const layout = buildDefaultLayoutParam(format, hasSeries);
   return `${appBaseUrl()}/overlay/${eventId}?token=${token}&layout=${encodeURIComponent(layout)}`;
 }
 

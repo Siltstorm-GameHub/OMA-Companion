@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { BRAND_LOGO } from "@/lib/brand";
+import type { SeriesRankingRow } from "@/lib/seriesRanking";
 import RankedAvatar from "@/components/RankedAvatar";
 import { ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -67,6 +68,9 @@ type OverlayState = {
   /** Ligapunkte je User, die dieses Event zu seiner Eventreihe beiträgt — leer, wenn das Event
    *  zu keiner Reihe gehört oder die Spielphase noch nicht abgeschlossen ist. */
   ligaPunkteByUser: Record<string, number>;
+  /** Gesamttabelle der Eventreihe (separat von der Einzelevent-"table") — null, wenn das Event
+   *  zu keiner Reihe gehört. */
+  seriesTable: { seriesName: string; ranking: SeriesRankingRow[] } | null;
   /** Live-Steuerung durchs Touchscreen-Widget (Event.overlayControlJson, siehe schema.prisma) —
    *  `hidden` blendet Elemente unabhaengig vom URL-Standardlayout aus, `zoom` zeigt genau ein
    *  Element als Vollbild-Kachel. Fehlt der Server-Wert (aeltere/gecachte Antwort), greifen die
@@ -81,8 +85,8 @@ export type Corner = "top-left" | "top-right" | "bottom-left" | "bottom-right" |
  *  per Drag & Drop positionieren. "brand" ist als einziges fix und nie Teil eines Stapels
  *  (siehe STACKABLE_ELEMENTS) — alle anderen dürfen sich zu einer rotierenden Gruppe stapeln,
  *  wenn der Streamer sie in den Einstellungen aufeinander zieht. */
-export type ElementKey = "brand" | "liveinfo" | "ticker" | "bracket" | "table" | "participants" | "favorites" | "badges";
-export const STACKABLE_ELEMENTS: ElementKey[] = ["liveinfo", "ticker", "bracket", "table", "participants", "favorites", "badges"];
+export type ElementKey = "brand" | "liveinfo" | "ticker" | "bracket" | "table" | "seriesTable" | "participants" | "favorites" | "badges";
+export const STACKABLE_ELEMENTS: ElementKey[] = ["liveinfo", "ticker", "bracket", "table", "seriesTable", "participants", "favorites", "badges"];
 /** `cycle` lässt ein Element abwechselnd für `onSec` sichtbar und für `offSec` unsichtbar
  *  sein statt dauerhaft zu stehen — z.B. um Platz mit dem Gameplay zu teilen, ohne zu stapeln. */
 export type ElementCycle = { onSec: number; offSec: number };
@@ -102,6 +106,7 @@ export const ELEMENT_SIZE: Record<ElementKey, { width: number; height: number }>
   ticker:       { width: 620, height: 78 },
   bracket:      { width: 620, height: 360 },
   table:        { width: 460, height: 310 },
+  seriesTable:  { width: 460, height: 310 },
   participants: { width: 460, height: 310 },
   favorites:    { width: 460, height: 220 },
   badges:       { width: 460, height: 220 },
@@ -455,6 +460,7 @@ export default function OverlayClient({
     ticker: !!ticker,
     bracket: matches.length > 0,
     table: matches.length > 0 || participantCount > 0,
+    seriesTable: !!state?.seriesTable && state.seriesTable.ranking.length > 0,
     participants: participantCount > 0,
     favorites: !!state?.streamer?.favoriteGames.length,
     badges: !!state?.streamer?.badges.length,
@@ -470,6 +476,7 @@ export default function OverlayClient({
     ticker: !isHidden("ticker") && contentAvailable.ticker,
     bracket: !isHidden("bracket") && contentAvailable.bracket,
     table: !isHidden("table") && contentAvailable.table,
+    seriesTable: !isHidden("seriesTable") && contentAvailable.seriesTable,
     participants: !isHidden("participants") && contentAvailable.participants,
     favorites: !isHidden("favorites") && contentAvailable.favorites,
     badges: !isHidden("badges") && contentAvailable.badges,
@@ -587,7 +594,7 @@ export default function OverlayClient({
                   isVisible(prevSlot.key),
                 )}
               >
-                <ElementContent elementKey={prevSlot.key} matches={matches} userOf={userOf} format={fmt} statFields={state.statFields} participants={state.participants} streamer={state.streamer} eventTitle={state.title ?? eventTitle} game={state.game} isLive={ticker ? !ticker.winnerId && !ticker.playedAt : state.status === "active"} ligaPunkteByUser={state.ligaPunkteByUser} />
+                <ElementContent elementKey={prevSlot.key} matches={matches} userOf={userOf} format={fmt} statFields={state.statFields} participants={state.participants} streamer={state.streamer} eventTitle={state.title ?? eventTitle} game={state.game} isLive={ticker ? !ticker.winnerId && !ticker.playedAt : state.status === "active"} ligaPunkteByUser={state.ligaPunkteByUser} seriesTable={state.seriesTable} />
               </div>
             )}
             {slot && (
@@ -598,7 +605,7 @@ export default function OverlayClient({
                   isVisible(slot.key),
                 )}
               >
-                <ElementContent elementKey={slot.key} matches={matches} userOf={userOf} format={fmt} statFields={state.statFields} participants={state.participants} streamer={state.streamer} eventTitle={state.title ?? eventTitle} game={state.game} isLive={ticker ? !ticker.winnerId && !ticker.playedAt : state.status === "active"} ligaPunkteByUser={state.ligaPunkteByUser} />
+                <ElementContent elementKey={slot.key} matches={matches} userOf={userOf} format={fmt} statFields={state.statFields} participants={state.participants} streamer={state.streamer} eventTitle={state.title ?? eventTitle} game={state.game} isLive={ticker ? !ticker.winnerId && !ticker.playedAt : state.status === "active"} ligaPunkteByUser={state.ligaPunkteByUser} seriesTable={state.seriesTable} />
               </div>
             )}
           </div>
@@ -646,6 +653,8 @@ export default function OverlayClient({
                 game={state.game}
                 isLive={ticker ? !ticker.winnerId && !ticker.playedAt : state.status === "active"}
                 ligaPunkteByUser={state.ligaPunkteByUser}
+                seriesTable={state.seriesTable}
+                compact={false}
               />
             </div>
           </div>
@@ -719,6 +728,7 @@ function ZoomBanner({ eventId, eventTitle, game, isLive }: { eventId: string; ev
  *  nur über den kompletten stapelbaren Elementsatz statt nur Bracket/Table/Participants. */
 function ElementContent({
   elementKey, matches, userOf, format, statFields, participants, streamer, eventTitle, game, isLive, ligaPunkteByUser,
+  seriesTable, compact = true,
 }: {
   elementKey: ElementKey;
   matches: OverlayMatch[];
@@ -731,6 +741,11 @@ function ElementContent({
   game: string | null;
   isLive: boolean;
   ligaPunkteByUser: Record<string, number>;
+  seriesTable?: { seriesName: string; ranking: SeriesRankingRow[] } | null;
+  /** false nur in der Vollbild-Zoom-Ansicht: zeigt bei Tabelle/Gesamttabelle alle getrackten
+   *  Stats statt nur der jeweils entscheidenden — in der kleinen, stapelbaren Standardkachel
+   *  waere das zu viel Text fuer den verfuegbaren Platz. */
+  compact?: boolean;
 }) {
   switch (elementKey) {
     case "brand":        return <IdentityFlipTile streamer={streamer} />;
@@ -740,7 +755,8 @@ function ElementContent({
       return match ? <MatchTicker match={match} userOf={userOf} format={format} statFields={statFields} /> : null;
     }
     case "bracket":      return <BracketPanel matches={matches} userOf={userOf} />;
-    case "table":        return <TablePanel matches={matches} participants={participants} format={format} statFields={statFields} ligaPunkteByUser={ligaPunkteByUser} />;
+    case "table":        return <TablePanel matches={matches} participants={participants} format={format} statFields={statFields} ligaPunkteByUser={ligaPunkteByUser} compact={compact} />;
+    case "seriesTable":  return seriesTable ? <SeriesTablePanel seriesTable={seriesTable} compact={compact} /> : null;
     case "participants": return <ParticipantsPanel participants={participants} />;
     case "favorites":    return <FavoritesPanel games={streamer?.favoriteGames ?? []} />;
     case "badges":       return <BadgesPanel badges={streamer?.badges ?? []} />;
@@ -1419,20 +1435,23 @@ type RankedRow = {
  *  reiner winnerId-Sieg-Zähler zeigt bei FFA-Formaten für jeden Teilnehmer 0 an. Spiegelt
  *  die Logik aus LigaView/RoundRobinView/FfaView, nur kompakter fürs Overlay. */
 function TablePanel({
-  matches, participants, format, statFields, ligaPunkteByUser,
+  matches, participants, format, statFields, ligaPunkteByUser, compact = true,
 }: {
   matches: OverlayMatch[]; participants: OverlayParticipant[]; format: string | null; statFields: string | null;
   ligaPunkteByUser: Record<string, number>;
+  /** false in der Vollbild-Zoom-Ansicht: zeigt bei avg_stats zusaetzlich jedes einzelne Stat-
+   *  Feld statt nur des kombinierten Durchschnitts, und nutzt die groessere Listenhoehe. */
+  compact?: boolean;
 }) {
   const isFfaFamily = format === "ffa" || format === "coop_stats" || format === "avg_stats";
   const title = format === "liga" ? "Liga-Tabelle" : isFfaFamily ? "Gesamtranking" : "Tabelle";
   const ranked = isFfaFamily
-    ? buildFfaRanking(matches, participants, format, statFields, ligaPunkteByUser)
+    ? buildFfaRanking(matches, participants, format, statFields, ligaPunkteByUser, compact)
     : buildMatchRanking(matches, participants, format, ligaPunkteByUser);
 
   return (
     <PanelShell title={title}>
-      <AutoScrollViewport axis="y" size={PANEL_LIST_HEIGHT_COMPACT} gap={2}>
+      <AutoScrollViewport axis="y" size={compact ? PANEL_LIST_HEIGHT_COMPACT : PANEL_LIST_HEIGHT} gap={2}>
         {ranked.map((p, i) => (
           <div
             key={p.userId}
@@ -1462,6 +1481,51 @@ function TablePanel({
                   +{p.ligaPunkte} Ligapunkte
                 </span>
               )}
+            </div>
+          </div>
+        ))}
+      </AutoScrollViewport>
+    </PanelShell>
+  );
+}
+
+/** Gesamttabelle der Eventreihe — separat von TablePanel (das zeigt nur dieses eine Event).
+ *  Nutzt die vom Server per loadSeriesRanking() (src/lib/seriesRanking.ts) fertig berechneten
+ *  Zeilen, keine eigene Punktelogik hier. */
+function SeriesTablePanel({
+  seriesTable, compact = true,
+}: {
+  seriesTable: { seriesName: string; ranking: SeriesRankingRow[] };
+  /** false in der Vollbild-Zoom-Ansicht: listet zusaetzlich zu den Gesamtpunkten auch jede
+   *  einzelne getrackte Stat auf, statt nur die entscheidende Punktzahl zu zeigen. */
+  compact?: boolean;
+}) {
+  return (
+    <PanelShell title={`Gesamttabelle · ${seriesTable.seriesName}`}>
+      <AutoScrollViewport axis="y" size={compact ? PANEL_LIST_HEIGHT_COMPACT : PANEL_LIST_HEIGHT} gap={2}>
+        {seriesTable.ranking.map((r, i) => (
+          <div
+            key={r.userId}
+            style={{
+              display: "flex", alignItems: "center", gap: 13, width: "100%",
+              padding: "5px 8px", borderRadius: 7,
+              background: i < 3 ? "rgba(20,184,166,0.06)" : "transparent",
+            }}
+          >
+            <span style={{ width: 22, fontSize: 15, opacity: 0.4, textAlign: "right" }}>{i + 1}</span>
+            <RankedAvatar rankPoints={r.rankPoints} src={r.image} alt={r.displayName} size={30} />
+            <span style={{ flex: 1, fontSize: 18, fontWeight: i < 3 ? 700 : 400, color: i < 3 ? "#5eead4" : "#fff" }}>
+              {r.displayName}
+            </span>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 1, minWidth: 84, flexShrink: 0 }}>
+              <span style={{ fontSize: 16, fontWeight: 700, color: i < 3 ? "#5eead4" : "#fff", whiteSpace: "nowrap" }}>
+                {Math.round(r.totalPoints)} Pkt.
+              </span>
+              {!compact && Object.entries(r.stats).map(([key, val]) => (
+                <span key={key} style={{ fontSize: 14, fontWeight: 500, color: i < 3 ? "#5eead4" : "#fff", whiteSpace: "nowrap" }}>
+                  {Math.round(val)} {key}
+                </span>
+              ))}
             </div>
           </div>
         ))}
@@ -1521,7 +1585,7 @@ function buildMatchRanking(
  *  ffa die Summe des ersten (primären) Stat-Felds — identische Sortierlogik wie FfaView. */
 function buildFfaRanking(
   matches: OverlayMatch[], participants: OverlayParticipant[], format: string, statFieldsJson: string | null,
-  ligaPunkteByUser: Record<string, number>,
+  ligaPunkteByUser: Record<string, number>, compact: boolean = true,
 ): RankedRow[] {
   let statFields: string[] = [];
   try { statFields = statFieldsJson ? JSON.parse(statFieldsJson) : []; } catch { /* ignore */ }
@@ -1568,6 +1632,11 @@ function buildFfaRanking(
           ? nonCoopStatFields.map(f => (t.stats[f] ?? 0) / t.matchCount).reduce((a, b) => a + b, 0) / nonCoopStatFields.length
           : 0;
         primary = t.matchCount > 0 ? `Ø ${avg.toFixed(1)}` : "–";
+        // Vollbild-Ansicht: zusaetzlich zum kombinierten Durchschnitt (primary) auch den
+        // Durchschnitt je einzelnem Stat-Feld auflisten, statt nur die eine Zahl zu zeigen.
+        if (!compact && nonCoopStatFields.length > 1 && t.matchCount > 0) {
+          statLines.push(...nonCoopStatFields.map(f => `Ø ${((t.stats[f] ?? 0) / t.matchCount).toFixed(1)} ${f}`));
+        }
       } else if (nonCoopStatFields.length > 0) {
         // Jedes konfigurierte Feld bekommt seine eigene Zeile, statt alles in einen einzigen
         // String zu quetschen — sonst wirkten weitere Felder im schmalen Panel abgeschnitten

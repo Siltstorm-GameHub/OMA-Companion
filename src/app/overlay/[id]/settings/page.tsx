@@ -14,7 +14,7 @@ export default async function OverlaySettingsPage({
 
   const event = await prisma.event.findUnique({
     where: { id: eventId },
-    select: { id: true, title: true, format: true, overlayToken: true },
+    select: { id: true, title: true, format: true, overlayToken: true, seriesId: true },
   });
 
   if (!event || !token || event.overlayToken !== token) notFound();
@@ -47,6 +47,7 @@ export default async function OverlaySettingsPage({
       streamerId={streamer?.id ?? null}
       hasFavorites={hasFavorites}
       hasBadges={hasBadges}
+      hasSeries={!!event.seriesId}
     />
   );
 }
