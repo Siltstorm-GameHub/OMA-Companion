@@ -161,8 +161,8 @@ export function panelMotionStyle(corner: Corner, phase: PanelPhase): React.CSSPr
   return { opacity: 0, filter: "blur(16px)", transform: `${centerY} translateY(${offset}px) scale(0.9)`.trim() };
 }
 
-export const CYCLE_FADE_MS = 650;
-export const ZOOM_EXIT_MS = 320; // muss zur oma-zoom-out-Animationsdauer in MotionStyles passen
+export const CYCLE_FADE_MS = 1000;
+export const ZOOM_EXIT_MS = 500; // muss zur oma-zoom-out-Animationsdauer in MotionStyles passen
 
 /** Kombiniert die Kachel-Eigenskalierung (Größe, per Einstellungen frei wählbar) mit dem
  *  Crossfade der Stapel-Rotation (`panelMotionStyle`) und dem Sichtbarkeits-Zyklus
@@ -227,8 +227,8 @@ export function MotionStyles() {
       @keyframes oma-live-ring { 0% { transform: scale(1); opacity: 0.75; } 100% { transform: scale(2.8); opacity: 0; } }
       @keyframes oma-zoom-in  { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
       @keyframes oma-zoom-out { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.96); } }
-      .oma-anim-zoomin  { animation: oma-zoom-in 350ms cubic-bezier(0.16,1,0.3,1); }
-      .oma-anim-zoomout { animation: oma-zoom-out 320ms cubic-bezier(0.4,0,1,1) both; }
+      .oma-anim-zoomin  { animation: oma-zoom-in 550ms cubic-bezier(0.16,1,0.3,1); }
+      .oma-anim-zoomout { animation: oma-zoom-out 500ms cubic-bezier(0.4,0,1,1) both; }
       .oma-anim-pop     { animation: oma-pop 420ms cubic-bezier(0.16,1,0.3,1) both; }
       .oma-anim-flare   { animation: oma-flare 1100ms ease-out; }
       .oma-anim-slidein { animation: oma-slidein 480ms cubic-bezier(0.16,1,0.3,1) both; }
