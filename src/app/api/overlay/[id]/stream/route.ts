@@ -13,12 +13,27 @@ const MAX_STREAM_MS  = 4 * 60 * 1000;
 const POLL_MS        = 1000;
 const HEARTBEAT_MS   = 15000;
 
+/** Sicherer Default, falls overlayControlJson fehlt/leer/kaputt ist — Overlay verhaelt sich dann
+ *  exakt wie vor Einfuehrung der Live-Steuerung (siehe Feldkommentar in schema.prisma). */
+function parseOverlayControl(raw: string | null): { hidden: string[]; zoom: string | null } {
+  if (!raw) return { hidden: [], zoom: null };
+  try {
+    const parsed = JSON.parse(raw);
+    return {
+      hidden: Array.isArray(parsed.hidden) ? parsed.hidden.filter((k: unknown) => typeof k === "string") : [],
+      zoom: typeof parsed.zoom === "string" ? parsed.zoom : null,
+    };
+  } catch {
+    return { hidden: [], zoom: null };
+  }
+}
+
 async function loadOverlayState(eventId: string) {
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     select: {
       id: true, title: true, status: true, format: true, tournamentStatus: true, game: true, statFields: true,
-      completionData: true, statConfigJson: true,
+      completionData: true, statConfigJson: true, overlayControlJson: true,
       series: { select: { seriesStatConfig: true } },
       matches: {
         orderBy: [{ round: "asc" }, { position: "asc" }],
@@ -71,6 +86,7 @@ async function loadOverlayState(eventId: string) {
     id: event.id, title: event.title, status: event.status, format: event.format,
     tournamentStatus: event.tournamentStatus, game: event.game, statFields: event.statFields,
     matches: event.matches, participants: mergedParticipants, ligaPunkteByUser,
+    control: parseOverlayControl(event.overlayControlJson),
   };
 }
 

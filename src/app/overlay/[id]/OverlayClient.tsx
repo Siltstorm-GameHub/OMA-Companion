@@ -67,6 +67,11 @@ type OverlayState = {
   /** Ligapunkte je User, die dieses Event zu seiner Eventreihe beiträgt — leer, wenn das Event
    *  zu keiner Reihe gehört oder die Spielphase noch nicht abgeschlossen ist. */
   ligaPunkteByUser: Record<string, number>;
+  /** Live-Steuerung durchs Touchscreen-Widget (Event.overlayControlJson, siehe schema.prisma) —
+   *  `hidden` blendet Elemente unabhaengig vom URL-Standardlayout aus, `zoom` zeigt genau ein
+   *  Element als Vollbild-Kachel. Fehlt der Server-Wert (aeltere/gecachte Antwort), greifen die
+   *  Defaults unten (leer/null) — Overlay verhaelt sich dann wie vor der Live-Steuerung. */
+  control?: { hidden: ElementKey[]; zoom: ElementKey | null };
 };
 
 type PanelKey = "bracket" | "table" | "participants";
@@ -214,6 +219,8 @@ export function MotionStyles() {
       @keyframes oma-slidein  { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
       @keyframes oma-breathe  { 0%,100% { opacity: 0.55; } 50% { opacity: 1; } }
       @keyframes oma-live-ring { 0% { transform: scale(1); opacity: 0.75; } 100% { transform: scale(2.8); opacity: 0; } }
+      @keyframes oma-zoom-in  { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+      .oma-anim-zoomin  { animation: oma-zoom-in 350ms cubic-bezier(0.16,1,0.3,1); }
       .oma-anim-pop     { animation: oma-pop 420ms cubic-bezier(0.16,1,0.3,1) both; }
       .oma-anim-flare   { animation: oma-flare 1100ms ease-out; }
       .oma-anim-slidein { animation: oma-slidein 480ms cubic-bezier(0.16,1,0.3,1) both; }
@@ -420,9 +427,18 @@ export default function OverlayClient({
   const participantCount = state?.participants.length ?? 0;
   const ticker = pickTickerMatch(matches);
 
+  // Live-Steuerung durchs Touchscreen-Widget — leer/null, solange kein Widget je etwas gesetzt
+  // hat (safe default, siehe control-Feldkommentar oben). "zoom" gilt als eigene Vollbild-Kachel
+  // weiter unten und wird deshalb hier ebenfalls aus dem normalen Kachel-Fluss ausgeblendet.
+  const hiddenElements = new Set<ElementKey>(state?.control?.hidden ?? []);
+  const zoomElement = state?.control?.zoom ?? null;
+  if (zoomElement) hiddenElements.add(zoomElement);
+  const isHidden = (key: ElementKey) => hiddenElements.has(key);
+
   const isElimination = fmt === "single_elimination" || fmt === "double_elimination";
   const defaultPanels: PanelKey[] = isElimination ? ["bracket", "participants"] : ["table", "participants"];
   const availablePanels = (requestedPanels ?? defaultPanels).filter(key => {
+    if (isHidden(key)) return false;
     if (key === "bracket") return matches.length > 0;
     if (key === "table") return matches.length > 0 || participantCount > 0;
     if (key === "participants") return participantCount > 0;
@@ -430,9 +446,10 @@ export default function OverlayClient({
   });
   const legacyRotator = usePanelRotator(availablePanels, rotateSeconds);
 
-  // Welche der stapelbaren Elemente überhaupt Inhalt hätten — dieselbe Datenverfügbarkeit wie
-  // im alten System, nur jetzt pro Einzelelement statt pro Panel-Gruppe geprüft.
-  const elementAvailable: Record<ElementKey, boolean> = {
+  // Roh-Verfügbarkeit (hat das Element überhaupt Inhalt?) — unabhängig von der Live-Steuerung,
+  // damit die Vollbild-Zoom-Kachel weiter unten auch für ein per "zoom" gewähltes Element noch
+  // wissen kann, ob es tatsächlich etwas zu zeigen gäbe.
+  const contentAvailable: Record<ElementKey, boolean> = {
     brand: true,
     liveinfo: !!(ticker || state?.status === "active" || state?.game),
     ticker: !!ticker,
@@ -441,6 +458,21 @@ export default function OverlayClient({
     participants: participantCount > 0,
     favorites: !!state?.streamer?.favoriteGames.length,
     badges: !!state?.streamer?.badges.length,
+  };
+
+  // Welche der stapelbaren Elemente überhaupt Inhalt hätten — dieselbe Datenverfügbarkeit wie
+  // im alten System, nur jetzt pro Einzelelement statt pro Panel-Gruppe geprüft. Live per Widget
+  // ausgeblendete/gezoomte Elemente gelten hier bewusst als "nicht verfügbar" — sie werden dann
+  // NICHT Teil eines Stapels und rücken keine Rotation aus dem Takt.
+  const elementAvailable: Record<ElementKey, boolean> = {
+    brand: !isHidden("brand") && contentAvailable.brand,
+    liveinfo: !isHidden("liveinfo") && contentAvailable.liveinfo,
+    ticker: !isHidden("ticker") && contentAvailable.ticker,
+    bracket: !isHidden("bracket") && contentAvailable.bracket,
+    table: !isHidden("table") && contentAvailable.table,
+    participants: !isHidden("participants") && contentAvailable.participants,
+    favorites: !isHidden("favorites") && contentAvailable.favorites,
+    badges: !isHidden("badges") && contentAvailable.badges,
   };
 
   // Stapel bilden: alle aktiven, stapelbaren Elemente mit identischer Layout-Position (auf
@@ -486,16 +518,16 @@ export default function OverlayClient({
          unten links gruppiert und Turnierbaum/Tabelle/Teilnehmer als eine feste Ecken-Gruppe
          (alte Links funktionieren unverändert). Mit `layout` übernimmt das neue, vollständig
          individuelle Stapel-System weiter unten. */}
-      {!layout && state && (showBrand || (showTicker && ticker)) && (
+      {!layout && state && ((showBrand && !isHidden("brand")) || (showTicker && !isHidden("ticker") && ticker)) && (
         <div style={{ position: "absolute", left: EDGE_MARGIN, bottom: TICKER_BOTTOM, display: "flex", alignItems: "center", gap: 16 }}>
-          {showBrand && (
+          {showBrand && !isHidden("brand") && (
             <LegacyBrandFlipTile
               eventTitle={state.title ?? eventTitle}
               game={state.game}
               isLive={ticker ? !ticker.winnerId && !ticker.playedAt : state.status === "active"}
             />
           )}
-          {showTicker && ticker && <MatchTicker match={ticker} userOf={userOf} format={fmt} statFields={state.statFields} />}
+          {showTicker && !isHidden("ticker") && ticker && <MatchTicker match={ticker} userOf={userOf} format={fmt} statFields={state.statFields} />}
         </div>
       )}
 
@@ -572,6 +604,42 @@ export default function OverlayClient({
           </div>
         );
       })}
+
+      {/* Vollbild-Zoom: vom Touchscreen-Widget angefordert, z.B. um zwischen zwei Runden kurz
+         die Tabelle/den Turnierbaum gross zu zeigen. Rendert on top of allem Uebrigen (das
+         gezoomte Element ist oben in elementAvailable/hiddenElements bereits aus seiner
+         normalen Kachel-Position entfernt, es existiert also nirgends doppelt). Kein Effekt,
+         solange kein Widget je "zoom" gesetzt hat (state?.control ist dann undefined/leer). */}
+      {state && zoomElement && contentAvailable[zoomElement] && (
+        <div
+          className="oma-anim-zoomin"
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 50,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "rgba(0,0,0,0.55)",
+          }}
+        >
+          <div style={{ transform: "scale(1.8)" }}>
+            <ElementContent
+              elementKey={zoomElement}
+              matches={matches}
+              userOf={userOf}
+              format={fmt}
+              statFields={state.statFields}
+              participants={state.participants}
+              streamer={state.streamer}
+              eventTitle={state.title ?? eventTitle}
+              game={state.game}
+              isLive={ticker ? !ticker.winnerId && !ticker.playedAt : state.status === "active"}
+              ligaPunkteByUser={state.ligaPunkteByUser}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
