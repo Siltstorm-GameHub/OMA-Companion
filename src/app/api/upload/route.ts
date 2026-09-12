@@ -86,6 +86,7 @@ const KINDS = {
   "badge":               { minRole: "admin",     maxBytes: 1_000_000 },
   "battle-card-avatar":  { minRole: "admin",     maxBytes: 8_000_000 },
   "community-job-asset": { minRole: "user",      maxBytes: 6_000_000 }, // Fotograf-Uploads (Clips-Standbild/Collage/Screenshot/Banner/Grafik)
+  "hero-accessory":      { minRole: "admin",     maxBytes: 2_000_000 }, // Rig-Ausrüstungsgrafiken (Helden-Baukasten)
 } as const;
 
 type Kind = keyof typeof KINDS;

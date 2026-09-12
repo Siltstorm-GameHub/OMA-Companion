@@ -631,7 +631,10 @@ export default function OverlayClient({
             game={state.game}
             isLive={ticker ? !ticker.winnerId && !ticker.playedAt : state.status === "active"}
           />
-          <div style={{ transform: "scale(1.8)" }}>
+          {/* transformOrigin "top center": scale() vergroessert sonst symmetrisch um die eigene
+             Mitte und wuechse dabei nach oben in den Banner hinein (Transforms beeinflussen den
+             Flex-Layoutfluss/Gap nicht) — mit Ursprung oben waechst die Kachel nur nach unten. */}
+          <div style={{ transform: "scale(1.8)", transformOrigin: "top center" }}>
             <ElementContent
               elementKey={zoomElement}
               matches={matches}

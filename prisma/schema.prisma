@@ -1893,3 +1893,21 @@ model BattleQueueEntry {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+
+// ── Helden-Baukasten (DragonBones-Rig-Accessoires) ────────────────────────────
+// Admin-hochgeladene Ausrüstungs-Grafiken für die 2D-Skelett-Rigs. Jedes
+// Accessoire wird zur Laufzeit als eigener kleiner Textur-Atlas ins Rig
+// geladen und per Slot-Namen (Bone-Slot im Rig, z.B. "Waffe_R") ausgerüstet —
+// kein erneuter Export/Anfassen der Rig-Datei nötig. pivotX/pivotY sind
+// Brüche (0..1) der Bildbreite/-höhe und legen den Aufhängepunkt fest
+// (Standard 0/0.5 = Griff links, vertikal zentriert — passend für Waffen).
+model HeroAccessory {
+  id        String   @id @default(cuid())
+  name      String
+  slot      String // Bone-Slot im Rig, z.B. "Waffe_R"
+  imageUrl  String // Accessoire-Grafik (Vercel Blob)
+  pivotX    Float    @default(0)
+  pivotY    Float    @default(0.5)
+  createdAt DateTime @default(now())
+  createdBy String // Admin-User-ID
+}

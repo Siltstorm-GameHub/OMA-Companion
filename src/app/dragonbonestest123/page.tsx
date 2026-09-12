@@ -13,14 +13,24 @@
 
 import { useEffect, useRef, useState } from "react";
 
+type CatalogItem = { id: string; name: string; slot: string; imageUrl: string; pivotX: number; pivotY: number };
+
 export default function DragonBonesTest() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState("Lade…");
   const [weapon, setWeapon] = useState<"Schwert" | "Axt">("Schwert");
+  const [catalog, setCatalog] = useState<CatalogItem[]>([]);
+  const [equippedCatalogId, setEquippedCatalogId] = useState<string | null>(null);
+  const [catalogLoading, setCatalogLoading] = useState<string | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const factoryRef = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tankDisplayRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const betonbertDisplayRef = useRef<any>(null);
+  // Pro Katalog-Item einmalig geladene Mini-Atlas-Textur, damit ein erneutes
+  // Ausrüsten nicht jedes Mal neu von der Blob-URL lädt.
+  const loadedCatalogAtlasesRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     let disposed = false;
@@ -65,6 +75,7 @@ export default function DragonBonesTest() {
       armatureDisplay.scale.set(0.7);
       armatureDisplay.animation.play("Idle", -1);
       app.stage.addChild(armatureDisplay);
+      betonbertDisplayRef.current = armatureDisplay;
 
       const tankDisplay = factory.buildArmatureDisplay("Armature", "TankBase");
       if (!tankDisplay) {
@@ -88,22 +99,76 @@ export default function DragonBonesTest() {
       setStatus(`Fehler: ${err instanceof Error ? err.message : String(err)}`);
     });
 
+    // Admin-hochgeladene Accessoires für den Waffen-Slot laden -- unabhängig
+    // vom Rig-Setup oben, damit ein Katalog-Fehler (z.B. nicht eingeloggt) die
+    // Rig-Demo nicht blockiert.
+    fetch("/api/hero-accessories?slot=Waffe_R")
+      .then((r) => r.json())
+      .then((data: { items?: CatalogItem[] }) => setCatalog(data.items ?? []))
+      .catch(() => setCatalog([]));
+
     return () => {
       disposed = true;
       app?.destroy(true);
     };
   }, []);
 
-  function playAttack() {
+  async function equipCatalogItem(item: CatalogItem) {
+    const factory = factoryRef.current;
     const tankDisplay = tankDisplayRef.current;
-    if (!tankDisplay) return;
+    if (!factory || !tankDisplay) return;
+    const PIXI = await import("pixi.js");
+
+    const atlasName = `hero-accessory-${item.id}`;
+    setCatalogLoading(item.id);
+    try {
+      // Jedes Admin-Item ist sein EIGENER kleiner Textur-Atlas (eine Textur,
+      // ein SubTexture-Eintrag) -- so lässt sich der Katalog beliebig
+      // erweitern, ohne je einen gemeinsamen Atlas neu zusammenbauen zu
+      // müssen. Nur einmal pro Item laden, danach ist er im Factory-Cache.
+      if (!loadedCatalogAtlasesRef.current.has(atlasName)) {
+        const texture = await PIXI.Assets.load(item.imageUrl);
+        const texJson = {
+          width: texture.width,
+          height: texture.height,
+          imagePath: item.imageUrl,
+          name: atlasName,
+          SubTexture: [{ name: item.name, x: 0, y: 0, width: texture.width, height: texture.height }],
+        };
+        factory.parseTextureAtlasData(texJson, texture);
+        loadedCatalogAtlasesRef.current.add(atlasName);
+      }
+
+      const slot = tankDisplay.armature.getSlot(item.slot);
+      const display = factory.getTextureDisplay(item.name, atlasName);
+      if (slot && display) {
+        // Gleiches Pivot-Prinzip wie bei den fest verdrahteten Test-Waffen,
+        // nur mit dem admin-definierten Fraction-Pivot statt hartem 0/halbe-Höhe.
+        slot._pivotX = item.pivotX * display.width;
+        slot._pivotY = item.pivotY * display.height;
+        slot.display = display;
+        setEquippedCatalogId(item.id);
+      }
+    } finally {
+      setCatalogLoading(null);
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function playAttack(display: any) {
+    if (!display) return;
     // 30 Frames bei 24fps = 1250ms -- danach zurück zu Idle. Ein fixer
     // Timeout statt eines "complete"-Events, da dessen Dispatcher-API in
     // dieser Runtime-Version nicht eindeutig dokumentiert ist; die Dauer ist
     // hier ohnehin exakt bekannt (Attack-Animation duration:30 @ frameRate:24).
-    tankDisplay.animation.play("Attack", 1);
+    // Beide Rigs (Betonbert-Mesh + Tank-Platzhalter) haben dieselbe Attack-
+    // Animation mit identischer Bone-Namenskonvention (Oberarm_R/Unterarm_R/
+    // Torso_Root) erhalten, obwohl Betonbert eine echte DragonBones-Export-
+    // Datei ist -- die rotateFrame-Deltas sind unabhängig vom Bild (Mesh vs.
+    // Teile-Bilder), sie bewegen nur Bones.
+    display.animation.play("Attack", 1);
     window.setTimeout(() => {
-      tankDisplay.animation.play("Idle", -1);
+      display.animation.play("Idle", -1);
     }, 1250);
   }
 
@@ -155,16 +220,56 @@ export default function DragonBonesTest() {
           Axt ausrüsten
         </button>
         <button
-          onClick={playAttack}
+          onClick={() => playAttack(tankDisplayRef.current)}
           style={{
             padding: "6px 12px", borderRadius: 6, border: "1px solid #333", cursor: "pointer",
             background: "#7c3aed", color: "#fff", marginLeft: 12,
           }}
         >
-          Angriff
+          Angriff (Tank)
+        </button>
+        <button
+          onClick={() => playAttack(betonbertDisplayRef.current)}
+          style={{
+            padding: "6px 12px", borderRadius: 6, border: "1px solid #333", cursor: "pointer",
+            background: "#0f766e", color: "#fff",
+          }}
+        >
+          Angriff (Betonbert)
         </button>
       </div>
       <div ref={containerRef} style={{ display: "inline-block", border: "1px solid #333" }} />
+
+      <div style={{ marginTop: 20 }}>
+        <h2 style={{ fontSize: 13, color: "#999", marginBottom: 8 }}>
+          Admin-Katalog (Slot Waffe_R) — {catalog.length} Item{catalog.length === 1 ? "" : "s"}
+        </h2>
+        {catalog.length === 0 && (
+          <p style={{ fontSize: 12, color: "#666" }}>
+            Noch keine Accessoires im Admin-Bereich hochgeladen (/admin/hero-accessories).
+          </p>
+        )}
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {catalog.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => equipCatalogItem(item)}
+              disabled={catalogLoading === item.id}
+              style={{
+                display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 6,
+                border: "1px solid #333", cursor: "pointer",
+                background: equippedCatalogId === item.id ? "#0ea5e9" : "#222",
+                color: equippedCatalogId === item.id ? "#0d0d0f" : "#ccc",
+                opacity: catalogLoading === item.id ? 0.6 : 1,
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- beliebige Blob-URL */}
+              <img src={item.imageUrl} alt="" style={{ width: 20, height: 20, objectFit: "contain" }} />
+              {item.name}
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
