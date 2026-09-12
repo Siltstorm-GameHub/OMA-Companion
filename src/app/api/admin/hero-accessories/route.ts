@@ -4,9 +4,13 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 import { randomUUID } from "crypto";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   await requireRole("admin");
-  const items = await prisma.heroAccessory.findMany({ orderBy: { createdAt: "desc" } });
+  const basePoseId = req.nextUrl.searchParams.get("basePoseId");
+  const items = await prisma.heroAccessory.findMany({
+    where: basePoseId ? { basePoseId } : undefined,
+    orderBy: { createdAt: "desc" },
+  });
   return NextResponse.json({ items });
 }
 
@@ -20,26 +24,32 @@ export async function POST(req: NextRequest) {
     name?: string;
     slot?: string;
     imageUrl?: string;
-    pivotX?: number;
-    pivotY?: number;
+    basePoseId?: string;
+    anchorX?: number;
+    anchorY?: number;
+    width?: number;
+    height?: number;
   };
 
-  if (!body.name?.trim() || !body.slot?.trim() || !body.imageUrl?.trim()) {
-    return NextResponse.json({ error: "name, slot und imageUrl sind Pflichtfelder" }, { status: 400 });
+  if (!body.name?.trim() || !body.slot?.trim() || !body.imageUrl?.trim() || !body.basePoseId?.trim() || !body.width || !body.height) {
+    return NextResponse.json({ error: "name, slot, imageUrl, basePoseId, width und height sind Pflichtfelder" }, { status: 400 });
   }
 
-  const pivotX = Number.isFinite(body.pivotX) ? Math.min(1, Math.max(0, body.pivotX!)) : 0;
-  const pivotY = Number.isFinite(body.pivotY) ? Math.min(1, Math.max(0, body.pivotY!)) : 0.5;
+  const anchorX = Number.isFinite(body.anchorX) ? Math.min(1, Math.max(0, body.anchorX!)) : 0.5;
+  const anchorY = Number.isFinite(body.anchorY) ? Math.min(1, Math.max(0, body.anchorY!)) : 0.5;
 
   const item = await prisma.heroAccessory.create({
     data: {
-      id:        randomUUID(),
-      name:      body.name.trim(),
-      slot:      body.slot.trim(),
-      imageUrl:  body.imageUrl.trim(),
-      pivotX,
-      pivotY,
-      createdBy: adminId,
+      id:         randomUUID(),
+      name:       body.name.trim(),
+      slot:       body.slot.trim(),
+      imageUrl:   body.imageUrl.trim(),
+      width:      Math.round(body.width),
+      height:     Math.round(body.height),
+      basePoseId: body.basePoseId.trim(),
+      anchorX,
+      anchorY,
+      createdBy:  adminId,
     },
   });
 

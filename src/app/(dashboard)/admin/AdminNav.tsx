@@ -7,7 +7,7 @@ import {
   Users, LayoutDashboard, Bell,
   CalendarDays, Heart, Medal, Shield,
   Wrench, Users2, Megaphone, Handshake, Clapperboard, Server, Gamepad2, MonitorSmartphone, ShoppingBag, Swords,
-  Briefcase, PersonStanding,
+  Briefcase, PersonStanding, Image as ImageIcon,
 } from "lucide-react";
 import ServerApplicationBadge from "@/components/ServerApplicationBadge";
 import EventsActionBadge from "@/components/EventsActionBadge";
@@ -70,7 +70,7 @@ const CATEGORIES: {
     label: "Tools",
     icon: Wrench,
     minRole: "admin",
-    prefixes: ["/admin/notifications", "/admin/badges", "/admin/users", "/admin/minigames", "/admin/mancave", "/admin/shop", "/admin/battle-cards", "/admin/community-jobs", "/admin/hero-accessories"],
+    prefixes: ["/admin/notifications", "/admin/badges", "/admin/users", "/admin/minigames", "/admin/mancave", "/admin/shop", "/admin/battle-cards", "/admin/community-jobs", "/admin/hero-accessories", "/admin/hero-base-poses"],
     tabs: [
       { href: "/admin/users",         label: "Nutzer & Rollen",  icon: Users,       minRole: "admin" },
       { href: "/admin/notifications", label: "Benachrichtigungen", icon: Bell,      minRole: "admin" },
@@ -80,6 +80,7 @@ const CATEGORIES: {
       { href: "/admin/community-jobs", label: "Community-Jobs",  icon: Briefcase,   minRole: "moderator" },
       { href: "/admin/shop",          label: "Shop",             icon: ShoppingBag, minRole: "admin" },
       { href: "/admin/battle-cards",  label: "Battle Cards",     icon: Swords,      minRole: "admin" },
+      { href: "/admin/hero-base-poses", label: "Basis-Posen",    icon: ImageIcon,   minRole: "admin" },
       { href: "/admin/hero-accessories", label: "Helden-Baukasten", icon: PersonStanding, minRole: "admin" },
     ],
   },

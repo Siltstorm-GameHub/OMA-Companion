@@ -1894,20 +1894,45 @@ model BattleQueueEntry {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// ── Helden-Baukasten (DragonBones-Rig-Accessoires) ────────────────────────────
-// Admin-hochgeladene Ausrüstungs-Grafiken für die 2D-Skelett-Rigs. Jedes
-// Accessoire wird zur Laufzeit als eigener kleiner Textur-Atlas ins Rig
-// geladen und per Slot-Namen (Bone-Slot im Rig, z.B. "Waffe_R") ausgerüstet —
-// kein erneuter Export/Anfassen der Rig-Datei nötig. pivotX/pivotY sind
-// Brüche (0..1) der Bildbreite/-höhe und legen den Aufhängepunkt fest
-// (Standard 0/0.5 = Griff links, vertikal zentriert — passend für Waffen).
-model HeroAccessory {
+// ── Helden-Baukasten (Paperdoll) ───────────────────────────────────────────────
+// Statisches Ebenen-System statt Skelett-Rig: eine feste Ganzkörper-Basis-Pose
+// pro Klasse, Accessoires werden als Bild-Layer an einem admin-gesetzten
+// Anker-Punkt darübergelegt (CSS-Layering live, sharp-Compositing final) —
+// siehe Helden-Baukasten-Plan-Artefakt für den vollen Hintergrund.
+
+// Eine Ganzkörper-Basis-Pose pro Klasse (Tank/DamageDealer/Support), fest
+// stehend, frontal, freigestellt. Alle Accessoire-Anker beziehen sich auf die
+// Pixelmaße dieses Bildes.
+model HeroBasePose {
   id        String   @id @default(cuid())
+  classKey  String   @unique // z.B. "tank", "damage_dealer", "support"
   name      String
-  slot      String // Bone-Slot im Rig, z.B. "Waffe_R"
-  imageUrl  String // Accessoire-Grafik (Vercel Blob)
-  pivotX    Float    @default(0)
-  pivotY    Float    @default(0.5)
+  imageUrl  String // Ganzkörper-Grafik, freigestellt (Vercel Blob)
+  width     Int // Pixelmaße des Basis-Bildes -- Anker-Brüche beziehen sich darauf
+  height    Int
   createdAt DateTime @default(now())
   createdBy String // Admin-User-ID
+
+  accessories HeroAccessory[]
+}
+
+// Admin-hochgeladene Ausrüstungs-Grafik. anchorX/anchorY sind Brüche (0..1)
+// der Basis-Pose-Canvas und legen fest, wo der Griff/Aufhängepunkt des
+// Accessoires auf der Basis-Pose sitzt (z.B. in der Hand). Das Accessoire-Bild
+// selbst folgt der etablierten Zeichenkonvention "Griff links, vertikal
+// zentriert" -- keine eigene Pivot-Angabe mehr nötig.
+model HeroAccessory {
+  id         String   @id @default(cuid())
+  name       String
+  slot       String // Kategorie, z.B. "weapon" -- keine Bone-Referenz mehr
+  imageUrl   String // Accessoire-Grafik (Vercel Blob)
+  width      Int // Pixelmaße der Accessoire-Grafik -- für Skalierung relativ
+  height     Int // zur Basis-Pose bei jeder Wiedergabe nötig
+  basePoseId String // welche Klassen-Basis-Pose dieser Anker gilt
+  anchorX    Float    @default(0.5)
+  anchorY    Float    @default(0.5)
+  createdAt  DateTime @default(now())
+  createdBy  String // Admin-User-ID
+
+  basePose HeroBasePose @relation(fields: [basePoseId], references: [id], onDelete: Cascade)
 }
