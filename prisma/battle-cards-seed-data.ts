@@ -17,7 +17,6 @@
 import type { NormalAttackTargetRule, CardClass } from "@prisma/client";
 import { LEVEL_STAT_MULTIPLIER } from "../src/lib/battle-engine/constants";
 import type { ActiveSkillData, PassiveSkillData } from "../src/lib/battle-engine/types";
-import type { AvatarAnimationSet } from "../src/lib/battle-cards/avatar-animation";
 
 export function curve(base: number): number[] {
   return [1, 2, 3, 4, 5].map((level) => Math.round(base * LEVEL_STAT_MULTIPLIER[level]));
@@ -41,11 +40,6 @@ export interface StandardCardSeed {
   normalAttackTargetRule: NormalAttackTargetRule | null;
   flavorText: string;
   imageUrl: string | null;
-  /** Kampf-Avatar-Animationen (Idle/Attack/Hit/Victory) — siehe
-   *  lib/battle-cards/avatar-animation.ts. Fehlt bei allen Karten noch, bis die
-   *  Blender/Mixamo-Export-Pipeline die ersten Spritesheets liefert; die Karte
-   *  zeigt bis dahin im Kampf weiter das statische imageUrl. */
-  avatarAnimations?: AvatarAnimationSet | null;
   passivePositive: PassiveSkillData;
   passiveNegative: PassiveSkillData;
   activeSkill: ActiveSkillData;
@@ -65,13 +59,6 @@ export const STANDARD_CARDS: StandardCardSeed[] = [
     flavorText:
       "Steht seit Jahren an vorderster Front und hat noch nie einen Schritt zurück gemacht.",
     imageUrl: "/battle-cards/bastionella.png",
-    // Vorübergehend deaktiviert: die aktuell unter public/battle-cards/avatars/
-    // bastionella/ liegenden Spritesheets sind Platzhalter-Test-Assets (falsches
-    // Motiv, keine echte Bewegung zwischen den Frames — sah im Kampf wie ein
-    // ständig nach rechts driftendes Standbild aus statt einer Animation). Bis
-    // die Blender/Mixamo-Export-Pipeline echte, zur Karte passende Spritesheets
-    // liefert, bleibt avatarAnimations hier bewusst weg — die Karte zeigt dann
-    // wie vorgesehen das statische imageUrl (siehe AnimatedAvatar-Fallback).
     passivePositive: {
       name: "Schildwall",
       description:

@@ -33,7 +33,6 @@ import type { LucideIcon } from "lucide-react";
 import type { BattleLogEntry, RosterEntry, UnitClass } from "@/lib/battle-engine/types";
 import { playHitSfxFor, playHealSfx, playUltimateSfx, playShieldSfx, playBuffSfx, playDebuffSfx } from "@/lib/battle-cards/sfx";
 import { isSoundMuted, setSoundMuted } from "@/lib/battle-cards/sound-prefs";
-import AnimatedAvatar from "./AnimatedAvatar";
 import UltimateCutsceneOverlay from "./UltimateCutsceneOverlay";
 
 const CLASS_CONFIG: Record<UnitClass, { color: string; icon: LucideIcon }> = {
@@ -504,10 +503,9 @@ function UnitTile({
           />
         )}
         {roster.imageUrl ? (
-          <AnimatedAvatar
-            imageUrl={roster.imageUrl}
-            animations={roster.avatarAnimations}
-            state={attacking ? "attack" : hit ? "hit" : isVictory ? "victory" : "idle"}
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={roster.imageUrl}
             alt={roster.name}
             className="max-w-full max-h-full object-contain relative"
             style={{ filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.65))" }}

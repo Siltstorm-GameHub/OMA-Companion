@@ -7,7 +7,6 @@
 
 import type { Card, NormalAttackTargetRule } from "@prisma/client";
 import { parseActiveSkill, parsePassiveSkill } from "./skill-schema";
-import { parseAvatarAnimations } from "@/lib/battle-cards/avatar-animation";
 import type { BattleUnitDefinition, SingleEnemySelector } from "./types";
 
 const NORMAL_ATTACK_TARGET_RULE_MAP: Record<NormalAttackTargetRule, SingleEnemySelector> = {
@@ -42,6 +41,5 @@ export function cardToBattleUnitDefinition(
     ultimateSkill: parseActiveSkill(card.ultimateSkill, `${card.name}.ultimateSkill`),
     imageUrl: imageUrl !== undefined ? imageUrl : card.imageUrl,
     avatarBadgeUrl: avatarBadgeUrl ?? null,
-    avatarAnimations: parseAvatarAnimations(card.avatarAnimationsJson),
   };
 }

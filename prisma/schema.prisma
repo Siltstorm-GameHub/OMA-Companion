@@ -1658,12 +1658,6 @@ model Card {
 
   imageUrl  String?
 
-  // Kampf-Avatar-Animationen (Idle/Attack/Hit/Victory) als Spritesheets — siehe
-  // lib/battle-cards/avatar-animation.ts für Format & Validierung. Getrennt von
-  // imageUrl: die Sammlung zeigt weiterhin das statische Bild, nur der Kampf-
-  // Bildschirm nutzt dieses Feld (Rückfall aufs statische Bild, solange leer).
-  avatarAnimationsJson Json?
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

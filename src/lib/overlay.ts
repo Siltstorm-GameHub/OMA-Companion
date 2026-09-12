@@ -1,6 +1,7 @@
 import { randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { appBaseUrl } from "@/lib/brand";
+import { buildDefaultLayoutParam } from "@/lib/overlayDefaultLayout";
 
 /** Liest den Overlay-Token eines Events, legt bei Bedarf einen neuen an
  *  (ein Token pro Event, gemeinsam für alle angemeldeten Streamer). */
@@ -17,8 +18,11 @@ export async function ensureOverlayToken(eventId: string): Promise<string> {
   return updated.overlayToken!;
 }
 
-export function buildOverlayUrl(eventId: string, token: string): string {
-  return `${appBaseUrl()}/overlay/${eventId}?token=${token}`;
+/** `format` steuert nur, ob standardmaessig der Turnierbaum oder die Tabelle aktiv ist
+ *  (siehe buildDefaultLayoutParam) — ohne Angabe faellt es auf die Tabellen-Variante zurueck. */
+export function buildOverlayUrl(eventId: string, token: string, format: string | null = null): string {
+  const layout = buildDefaultLayoutParam(format);
+  return `${appBaseUrl()}/overlay/${eventId}?token=${token}&layout=${encodeURIComponent(layout)}`;
 }
 
 /** Konfigurationsseite, auf der der Streamer die angezeigten Panels auswählt und

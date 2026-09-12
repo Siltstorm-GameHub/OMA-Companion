@@ -48,8 +48,6 @@ import RankUpOverlay from "./RankUpOverlay";
 import UltimateCutsceneOverlay from "./UltimateCutsceneOverlay";
 import GemsResultScreen, { type GemsReward } from "./GemsResultScreen";
 import { parseNpcMode, NPC_BATTLE_WIN_REWARD } from "@/lib/battle-cards/npc-battle-types";
-import AnimatedAvatar from "./AnimatedAvatar";
-import type { AvatarAnimationSet } from "@/lib/battle-cards/avatar-animation";
 
 /** Kampf-Hintergrund: die klassische Arena (arena-bg.jpg) für OMA Duels,
  *  OMA Gems (Nicht-Kampagne) und PvP — Kampagnen-Kämpfe (mode "CAMPAIGN_...") zeigen
@@ -84,7 +82,6 @@ interface LiveUnit {
   isAlive: boolean;
   imageUrl?: string | null;
   avatarBadgeUrl?: string | null;
-  avatarAnimations?: AvatarAnimationSet | null;
   statModifiers: ActiveStatModifier[];
 }
 
@@ -492,14 +489,13 @@ function UnitCard({
           />
         )}
         {showImage ? (
-          <AnimatedAvatar
-            imageUrl={unit.imageUrl}
-            animations={unit.avatarAnimations}
-            state={isAttacking ? "attack" : isHit ? "hit" : isVictory ? "victory" : "idle"}
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={unit.imageUrl!}
             alt={unit.name}
             className="max-w-full max-h-full object-contain relative"
             style={{ filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.65))" }}
-            onStaticImageError={() => setImageFailed(true)}
+            onError={() => setImageFailed(true)}
           />
         ) : (
           <Icon className="w-5 h-5 sm:w-7 sm:h-7 relative" style={{ color: config.color, opacity: 0.55 }} />

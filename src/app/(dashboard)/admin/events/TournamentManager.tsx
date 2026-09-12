@@ -51,6 +51,14 @@ function fmtDate(iso: string | Date) {
   });
 }
 
+/** Aktueller Zeitpunkt im Format, das <input type="datetime-local"> erwartet (lokale Zeitzone,
+ *  nicht UTC) — Basis für die Vorbelegung "Datum & Uhrzeit" beim Öffnen von "Match hinzufügen". */
+function nowForDatetimeLocal(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 // ─── Creation Form ────────────────────────────────────────────────────────────
 function CreationForm({
   event, allUsers, onCreated,
@@ -1137,7 +1145,13 @@ export default function TournamentManager({
 
       {/* ── Add Match ────────────────────────────────────────────────── */}
       {!showAdd ? (
-        <button onClick={() => setShowAdd(true)}
+        <button onClick={() => {
+          setMScheduled(nowForDatetimeLocal());
+          // Bei Stat-basierten Formaten (FFA/coop_stats/avg_stats) standardmäßig alle Teilnehmer der
+          // Runde auswählen — abwählen ist die Ausnahme (wer diese Runde aussetzt), nicht der Regelfall.
+          if (isFfa) setMFfaIds(tournament.participants.map(p => p.userId));
+          setShowAdd(true);
+        }}
           className="flex items-center gap-2 text-sm text-gray-400 hover:text-white border border-gray-700 hover:border-gray-500 rounded-lg px-4 py-2 w-full justify-center transition-colors">
           <Plus className="w-4 h-4" /> Match hinzufügen
         </button>

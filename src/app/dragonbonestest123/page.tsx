@@ -94,6 +94,19 @@ export default function DragonBonesTest() {
     };
   }, []);
 
+  function playAttack() {
+    const tankDisplay = tankDisplayRef.current;
+    if (!tankDisplay) return;
+    // 30 Frames bei 24fps = 1250ms -- danach zurück zu Idle. Ein fixer
+    // Timeout statt eines "complete"-Events, da dessen Dispatcher-API in
+    // dieser Runtime-Version nicht eindeutig dokumentiert ist; die Dauer ist
+    // hier ohnehin exakt bekannt (Attack-Animation duration:30 @ frameRate:24).
+    tankDisplay.animation.play("Attack", 1);
+    window.setTimeout(() => {
+      tankDisplay.animation.play("Idle", -1);
+    }, 1250);
+  }
+
   function swapWeapon(name: "Schwert" | "Axt") {
     const factory = factoryRef.current;
     const tankDisplay = tankDisplayRef.current;
@@ -104,6 +117,15 @@ export default function DragonBonesTest() {
     const slot = tankDisplay.armature.getSlot("Waffe_R");
     const display = factory.getTextureDisplay(name, "TankBase");
     if (slot && display) {
+      // getTextureDisplay geht NICHT über die Skin-Display-Daten, also wird
+      // der intern gecachte Slot-Pivot NICHT für die neue Textur-Größe neu
+      // berechnet (er bleibt auf der vorherigen Waffe stehen -> Versatz, der
+      // sich bei jedem weiteren Tausch verschlimmert). Für einen echten, frei
+      // wachsenden Item-Katalog (beliebige zukünftige Waffengrößen) muss der
+      // Pivot deshalb hier pro Tausch selbst gesetzt werden: x=0 (Griff sitzt
+      // an der Hand), y=halbe Höhe der NEUEN Textur (quer zentriert).
+      slot._pivotX = 0;
+      slot._pivotY = display.height / 2;
       slot.display = display;
       setWeapon(name);
     }
@@ -131,6 +153,15 @@ export default function DragonBonesTest() {
           }}
         >
           Axt ausrüsten
+        </button>
+        <button
+          onClick={playAttack}
+          style={{
+            padding: "6px 12px", borderRadius: 6, border: "1px solid #333", cursor: "pointer",
+            background: "#7c3aed", color: "#fff", marginLeft: 12,
+          }}
+        >
+          Angriff
         </button>
       </div>
       <div ref={containerRef} style={{ display: "inline-block", border: "1px solid #333" }} />

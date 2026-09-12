@@ -563,7 +563,7 @@ export default function OverlayClient({
       )}
 
       {/* ── Neues System: brand ist die einzige fixe, nie gestapelte Kachel ── */}
-      {layout && state && layout.brand && (
+      {layout && state && layout.brand && !isHidden("brand") && (
         <div style={elementPositionStyle(layout.brand)}>
           <div style={combinedElementStyle({}, layout.brand.scale, isVisible("brand"))}>
             <IdentityFlipTile streamer={state.streamer} />
@@ -618,11 +618,19 @@ export default function OverlayClient({
             inset: 0,
             zIndex: 50,
             display: "flex",
+            flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
+            gap: 24,
             background: "rgba(0,0,0,0.55)",
           }}
         >
+          <ZoomBanner
+            eventId={eventId}
+            eventTitle={state.title ?? eventTitle}
+            game={state.game}
+            isLive={ticker ? !ticker.winnerId && !ticker.playedAt : state.status === "active"}
+          />
           <div style={{ transform: "scale(1.8)" }}>
             <ElementContent
               elementKey={zoomElement}
@@ -648,6 +656,49 @@ function panelWidthFor(key: PanelKey): number {
   return key === "bracket" ? PANEL_WIDTH : PANEL_WIDTH_COMPACT;
 }
 
+/** Banner über der Vollbild-Zoom-Kachel: OMA-Logo, Eventname, Spiel/Live-Status und das
+ *  gebrandete Event-Cover — nutzt denselben öffentlichen Cover-Endpunkt wie die Discord-Embeds
+ *  (eigenes Cover → Reihen-Cover → Spiel-Cover → Marken-Gradient), damit hier keine eigene
+ *  Bildquellen-Auflösung dupliziert werden muss. */
+function ZoomBanner({ eventId, eventTitle, game, isLive }: { eventId: string; eventTitle: string; game: string | null; isLive: boolean }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 16,
+        background: "rgba(10,10,14,0.85)",
+        border: "1px solid rgba(94,234,212,0.25)",
+        borderRadius: 14,
+        padding: "10px 24px 10px 10px",
+        boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+      }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element -- OBS-Browser-Source, kein Next-Image-Optimierungspfad nötig */}
+      <img
+        src={`/api/discord/cover/${eventId}`}
+        alt=""
+        width={72}
+        height={40}
+        style={{ width: 72, height: 40, borderRadius: 8, objectFit: "cover", flexShrink: 0 }}
+      />
+      {/* eslint-disable-next-line @next/next/no-img-element -- OBS-Browser-Source, kein Next-Image-Optimierungspfad nötig */}
+      <img src={BRAND_LOGO} alt="" width={28} height={28} style={{ display: "block", flexShrink: 0 }} />
+      <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+        <span style={{ fontSize: 18, fontWeight: 700, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 360 }}>
+          {eventTitle}
+        </span>
+        {game && (
+          <span style={{ fontSize: 13, color: "rgba(94,234,212,0.8)", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {game}
+          </span>
+        )}
+      </div>
+      <LiveBadge live={isLive} />
+    </div>
+  );
+}
+
 /** Dispatcher fürs neue, vollständig generalisierte Stapel-System — analog zu PanelContent,
  *  nur über den kompletten stapelbaren Elementsatz statt nur Bracket/Table/Participants. */
 function ElementContent({
@@ -666,6 +717,7 @@ function ElementContent({
   ligaPunkteByUser: Record<string, number>;
 }) {
   switch (elementKey) {
+    case "brand":        return <IdentityFlipTile streamer={streamer} />;
     case "liveinfo":     return <LiveInfoTile eventTitle={eventTitle} game={game} isLive={isLive} />;
     case "ticker": {
       const match = pickTickerMatch(matches);

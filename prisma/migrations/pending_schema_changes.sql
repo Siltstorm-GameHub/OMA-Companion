@@ -392,3 +392,11 @@ CREATE TABLE IF NOT EXISTS jobrecommendationdismissal (
 -- ═══════════════════════════════════════════════════════════════
 
 ALTER TABLE "Card" ADD COLUMN IF NOT EXISTS "avatarAnimationsJson" JSONB;
+
+-- ═══════════════════════════════════════════════════════════════
+-- Battle Cards: 3D/Spritesheet-Avatar-System (Quaternius/Blender) entfernt,
+-- Umstieg auf DragonBones — Spalte war nie produktiv befüllt (nur Bastionella
+-- testweise), gefahrlos löschbar. Optional, kein Code hängt mehr daran.
+-- ═══════════════════════════════════════════════════════════════
+
+ALTER TABLE "Card" DROP COLUMN IF EXISTS "avatarAnimationsJson";

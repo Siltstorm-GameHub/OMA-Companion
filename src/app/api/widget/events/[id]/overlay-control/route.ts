@@ -31,7 +31,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if (unauthorized) return unauthorized;
 
   const { id: eventId } = await params;
-  const event = await prisma.event.findUnique({ where: { id: eventId }, select: { overlayControlJson: true } });
+  const event = await prisma.event.findUnique({ where: { id: eventId }, select: { overlayControlJson: true, format: true } });
   if (!event) return NextResponse.json({ error: "Nicht gefunden" }, { status: 404 });
 
   // ensureOverlayToken legt bei Bedarf einen neuen Token an (gleiche Funktion, die auch die
@@ -39,7 +39,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   // Tabs verfuegbar, auch wenn sich noch nie ein Streamer fuer das Event registriert hat.
   const token = await ensureOverlayToken(eventId);
 
-  return NextResponse.json({ ...parseControl(event.overlayControlJson), overlayUrl: buildOverlayUrl(eventId, token) });
+  return NextResponse.json({ ...parseControl(event.overlayControlJson), overlayUrl: buildOverlayUrl(eventId, token, event.format) });
 }
 
 /**
