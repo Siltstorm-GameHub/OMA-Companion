@@ -212,6 +212,15 @@
         ],
         "createdAt": "2026-09-07T07:22:02.659Z",
         "reason": "pre-existing lines unrelated to this session's edits (platform selector toggle buttons)"
+      },
+      {
+        "rule": "gray-on-color",
+        "value": "text-gray-500",
+        "files": [
+          "src/app/(dashboard)/admin/hero-builder/HeroBuilderAdminClient.tsx"
+        ],
+        "createdAt": "2026-09-12T17:26:15.492Z",
+        "reason": "false positive: text-gray-500 is the inactive-tab branch of the ternary, never rendered on the purple active background; identical pattern already in production AdminNav.tsx sub-tabs"
       }
     ]
   }

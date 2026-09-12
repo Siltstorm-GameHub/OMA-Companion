@@ -70,7 +70,7 @@ const CATEGORIES: {
     label: "Tools",
     icon: Wrench,
     minRole: "admin",
-    prefixes: ["/admin/notifications", "/admin/badges", "/admin/users", "/admin/minigames", "/admin/mancave", "/admin/shop", "/admin/battle-cards", "/admin/community-jobs", "/admin/hero-accessories", "/admin/hero-base-poses"],
+    prefixes: ["/admin/notifications", "/admin/badges", "/admin/users", "/admin/minigames", "/admin/mancave", "/admin/shop", "/admin/battle-cards", "/admin/community-jobs", "/admin/hero-builder"],
     tabs: [
       { href: "/admin/users",         label: "Nutzer & Rollen",  icon: Users,       minRole: "admin" },
       { href: "/admin/notifications", label: "Benachrichtigungen", icon: Bell,      minRole: "admin" },
@@ -80,8 +80,7 @@ const CATEGORIES: {
       { href: "/admin/community-jobs", label: "Community-Jobs",  icon: Briefcase,   minRole: "moderator" },
       { href: "/admin/shop",          label: "Shop",             icon: ShoppingBag, minRole: "admin" },
       { href: "/admin/battle-cards",  label: "Battle Cards",     icon: Swords,      minRole: "admin" },
-      { href: "/admin/hero-base-poses", label: "Basis-Posen",    icon: ImageIcon,   minRole: "admin" },
-      { href: "/admin/hero-accessories", label: "Helden-Baukasten", icon: PersonStanding, minRole: "admin" },
+      { href: "/admin/hero-builder",  label: "Helden-Baukasten", icon: PersonStanding, minRole: "admin" },
     ],
   },
 ];

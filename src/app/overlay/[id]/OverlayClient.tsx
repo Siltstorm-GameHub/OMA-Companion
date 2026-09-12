@@ -1489,6 +1489,12 @@ function TablePanel({
   );
 }
 
+/** Roh-Feldnamen aus der Punkte-Konfiguration ("MVP_Abstimmungen") sind fuer den internen
+ *  Gebrauch benannt, nicht fuers Overlay — hier nur kosmetisch in Leerzeichen aufgeloest. */
+function formatStatLabel(key: string): string {
+  return key.replace(/_/g, " ");
+}
+
 /** Gesamttabelle der Eventreihe — separat von TablePanel (das zeigt nur dieses eine Event).
  *  Nutzt die vom Server per loadSeriesRanking() (src/lib/seriesRanking.ts) fertig berechneten
  *  Zeilen, keine eigene Punktelogik hier. */
@@ -1502,33 +1508,52 @@ function SeriesTablePanel({
 }) {
   return (
     <PanelShell title={`Gesamttabelle · ${seriesTable.seriesName}`}>
-      <AutoScrollViewport axis="y" size={compact ? PANEL_LIST_HEIGHT_COMPACT : PANEL_LIST_HEIGHT} gap={2}>
-        {seriesTable.ranking.map((r, i) => (
-          <div
-            key={r.userId}
-            style={{
-              display: "flex", alignItems: "center", gap: 13, width: "100%",
-              padding: "5px 8px", borderRadius: 7,
-              background: i < 3 ? "rgba(20,184,166,0.06)" : "transparent",
-            }}
-          >
-            <span style={{ width: 22, fontSize: 15, opacity: 0.4, textAlign: "right" }}>{i + 1}</span>
-            <RankedAvatar rankPoints={r.rankPoints} src={r.image} alt={r.displayName} size={30} />
-            <span style={{ flex: 1, fontSize: 18, fontWeight: i < 3 ? 700 : 400, color: i < 3 ? "#5eead4" : "#fff" }}>
-              {r.displayName}
-            </span>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 1, minWidth: 84, flexShrink: 0 }}>
-              <span style={{ fontSize: 16, fontWeight: 700, color: i < 3 ? "#5eead4" : "#fff", whiteSpace: "nowrap" }}>
-                {Math.round(r.totalPoints)} Pkt.
-              </span>
-              {!compact && Object.entries(r.stats).map(([key, val]) => (
-                <span key={key} style={{ fontSize: 14, fontWeight: 500, color: i < 3 ? "#5eead4" : "#fff", whiteSpace: "nowrap" }}>
-                  {Math.round(val)} {key}
+      <AutoScrollViewport axis="y" size={compact ? PANEL_LIST_HEIGHT_COMPACT : PANEL_LIST_HEIGHT} gap={compact ? 2 : 8}>
+        {seriesTable.ranking.map((r, i) => {
+          const statEntries = Object.entries(r.stats);
+          return (
+            <div
+              key={r.userId}
+              style={{
+                display: "flex", flexDirection: "column", gap: 6, width: "100%",
+                padding: compact ? "5px 8px" : "9px 12px",
+                borderRadius: 8,
+                background: i < 3 ? "rgba(20,184,166,0.08)" : "rgba(255,255,255,0.03)",
+                border: i < 3 ? "1px solid rgba(20,184,166,0.22)" : "1px solid transparent",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 13, width: "100%" }}>
+                <span style={{ width: 22, fontSize: 15, opacity: 0.45, textAlign: "right", flexShrink: 0 }}>{i + 1}</span>
+                <RankedAvatar rankPoints={r.rankPoints} src={r.image} alt={r.displayName} size={30} />
+                <span style={{ flex: 1, fontSize: 18, fontWeight: i < 3 ? 700 : 400, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {r.displayName}
                 </span>
-              ))}
+                <span style={{ fontSize: 17, fontWeight: 800, color: i < 3 ? "#5eead4" : "#fff", whiteSpace: "nowrap", flexShrink: 0 }}>
+                  {Math.round(r.totalPoints)} Pkt.
+                </span>
+              </div>
+              {!compact && statEntries.length > 0 && (
+                <div
+                  style={{
+                    display: "grid", gridTemplateColumns: "repeat(2, 1fr)", columnGap: 16, rowGap: 3,
+                    paddingLeft: 45, borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 6,
+                  }}
+                >
+                  {statEntries.map(([key, val]) => (
+                    <div key={key} style={{ display: "flex", justifyContent: "space-between", gap: 8, minWidth: 0 }}>
+                      <span style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {formatStatLabel(key)}
+                      </span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "#fff", flexShrink: 0 }}>
+                        {Math.round(val)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </AutoScrollViewport>
     </PanelShell>
   );
