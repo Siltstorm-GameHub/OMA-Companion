@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
 
   const items = await prisma.heroPoseSlot.findMany({
     where: { basePoseId },
-    select: { id: true, slot: true, anchorX: true, anchorY: true, rotation: true },
+    select: { id: true, slot: true, anchorX: true, anchorY: true, rotation: true, scale: true },
   });
 
   return NextResponse.json({ items });

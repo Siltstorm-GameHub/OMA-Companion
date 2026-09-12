@@ -15,7 +15,7 @@ type BasePose = {
   createdAt: string;
 };
 
-type PoseSlot = { id: string; basePoseId: string; slot: string; anchorX: number; anchorY: number; rotation: number };
+type PoseSlot = { id: string; basePoseId: string; slot: string; anchorX: number; anchorY: number; rotation: number; scale: number };
 type Accessory = { id: string; name: string; slot: string; imageUrl: string; width: number; height: number };
 
 const KNOWN_CLASSES = [
@@ -47,7 +47,7 @@ export default function HeroBasePosesAdminClient({
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const [configuringId, setConfiguringId] = useState<string | null>(null);
-  const [slotForm, setSlotForm] = useState({ slot: KNOWN_SLOTS[0], anchorX: 0.5, anchorY: 0.5, rotation: 0 });
+  const [slotForm, setSlotForm] = useState({ slot: KNOWN_SLOTS[0], anchorX: 0.5, anchorY: 0.5, rotation: 0, scale: 1 });
   const [refAccessoryId, setRefAccessoryId] = useState<string>(accessories[0]?.id ?? "");
   const [slotSaving, setSlotSaving] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
@@ -105,6 +105,7 @@ export default function HeroBasePosesAdminClient({
       anchorX: existing?.anchorX ?? 0.5,
       anchorY: existing?.anchorY ?? 0.5,
       rotation: existing?.rotation ?? 0,
+      scale: existing?.scale ?? 1,
     });
   }
 
@@ -116,6 +117,7 @@ export default function HeroBasePosesAdminClient({
       anchorX: existing?.anchorX ?? 0.5,
       anchorY: existing?.anchorY ?? 0.5,
       rotation: existing?.rotation ?? 0,
+      scale: existing?.scale ?? 1,
     });
   }
 
@@ -303,7 +305,7 @@ export default function HeroBasePosesAdminClient({
                       style={{
                         left: `${slotForm.anchorX * 100}%`,
                         top: `${slotForm.anchorY * 100}%`,
-                        width: refAccessory.width * displayScale,
+                        width: refAccessory.width * displayScale * slotForm.scale,
                         transformOrigin: "0% 50%",
                         transform: `translateY(-50%) rotate(${slotForm.rotation}deg)`,
                       }}
@@ -342,6 +344,13 @@ export default function HeroBasePosesAdminClient({
                   <label className="block text-[11px] text-gray-500 mb-1">Rotation ({slotForm.rotation.toFixed(0)}°)</label>
                   <input type="range" min={-180} max={180} step={1} value={slotForm.rotation}
                     onChange={e => setSlotForm(f => ({ ...f, rotation: parseFloat(e.target.value) }))}
+                    className="w-full accent-purple-500" />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] text-gray-500 mb-1">Größe ({(slotForm.scale * 100).toFixed(0)}%)</label>
+                  <input type="range" min={0.2} max={3} step={0.05} value={slotForm.scale}
+                    onChange={e => setSlotForm(f => ({ ...f, scale: parseFloat(e.target.value) }))}
                     className="w-full accent-purple-500" />
                 </div>
 

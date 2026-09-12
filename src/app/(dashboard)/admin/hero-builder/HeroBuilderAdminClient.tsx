@@ -5,7 +5,7 @@ import HeroBasePosesAdminClient from "../hero-base-poses/HeroBasePosesAdminClien
 import HeroAccessoriesAdminClient from "../hero-accessories/HeroAccessoriesAdminClient";
 
 type BasePose = { id: string; classKey: string; poseKey: string; name: string; imageUrl: string; width: number; height: number; createdAt: string };
-type PoseSlot = { id: string; basePoseId: string; slot: string; anchorX: number; anchorY: number; rotation: number };
+type PoseSlot = { id: string; basePoseId: string; slot: string; anchorX: number; anchorY: number; rotation: number; scale: number };
 type Accessory = { id: string; name: string; slot: string; imageUrl: string; width: number; height: number; createdAt: string };
 
 export default function HeroBuilderAdminClient({ basePoses, poseSlots, accessories }: {

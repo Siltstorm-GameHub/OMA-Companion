@@ -24,7 +24,7 @@ export default async function AdminHeroBuilderPage() {
 
   const clientPoseSlots = poseSlots.map(s => ({
     id: s.id, basePoseId: s.basePoseId, slot: s.slot,
-    anchorX: s.anchorX, anchorY: s.anchorY, rotation: s.rotation,
+    anchorX: s.anchorX, anchorY: s.anchorY, rotation: s.rotation, scale: s.scale,
   }));
 
   const clientAccessories = accessories.map(i => ({

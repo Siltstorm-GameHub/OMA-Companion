@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
     anchorX?: number;
     anchorY?: number;
     rotation?: number;
+    scale?: number;
   };
 
   if (!body.basePoseId?.trim() || !body.slot?.trim()) {
@@ -31,11 +32,12 @@ export async function POST(req: NextRequest) {
   const anchorX = Number.isFinite(body.anchorX) ? Math.min(1, Math.max(0, body.anchorX!)) : 0.5;
   const anchorY = Number.isFinite(body.anchorY) ? Math.min(1, Math.max(0, body.anchorY!)) : 0.5;
   const rotation = Number.isFinite(body.rotation) ? ((body.rotation! % 360) + 360) % 360 : 0;
+  const scale = Number.isFinite(body.scale) ? Math.min(5, Math.max(0.1, body.scale!)) : 1;
 
   const item = await prisma.heroPoseSlot.upsert({
     where: { basePoseId_slot: { basePoseId: body.basePoseId.trim(), slot: body.slot.trim() } },
-    create: { id: randomUUID(), basePoseId: body.basePoseId.trim(), slot: body.slot.trim(), anchorX, anchorY, rotation },
-    update: { anchorX, anchorY, rotation },
+    create: { id: randomUUID(), basePoseId: body.basePoseId.trim(), slot: body.slot.trim(), anchorX, anchorY, rotation, scale },
+    update: { anchorX, anchorY, rotation, scale },
   });
 
   return NextResponse.json({ item });

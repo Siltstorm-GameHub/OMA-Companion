@@ -162,6 +162,7 @@ export function panelMotionStyle(corner: Corner, phase: PanelPhase): React.CSSPr
 }
 
 export const CYCLE_FADE_MS = 650;
+export const ZOOM_EXIT_MS = 320; // muss zur oma-zoom-out-Animationsdauer in MotionStyles passen
 
 /** Kombiniert die Kachel-Eigenskalierung (Größe, per Einstellungen frei wählbar) mit dem
  *  Crossfade der Stapel-Rotation (`panelMotionStyle`) und dem Sichtbarkeits-Zyklus
@@ -225,14 +226,16 @@ export function MotionStyles() {
       @keyframes oma-breathe  { 0%,100% { opacity: 0.55; } 50% { opacity: 1; } }
       @keyframes oma-live-ring { 0% { transform: scale(1); opacity: 0.75; } 100% { transform: scale(2.8); opacity: 0; } }
       @keyframes oma-zoom-in  { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+      @keyframes oma-zoom-out { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.96); } }
       .oma-anim-zoomin  { animation: oma-zoom-in 350ms cubic-bezier(0.16,1,0.3,1); }
+      .oma-anim-zoomout { animation: oma-zoom-out 320ms cubic-bezier(0.4,0,1,1) both; }
       .oma-anim-pop     { animation: oma-pop 420ms cubic-bezier(0.16,1,0.3,1) both; }
       .oma-anim-flare   { animation: oma-flare 1100ms ease-out; }
       .oma-anim-slidein { animation: oma-slidein 480ms cubic-bezier(0.16,1,0.3,1) both; }
       .oma-anim-breathe { animation: oma-breathe 3.2s ease-in-out infinite; }
       .oma-live-ring    { animation: oma-live-ring 1.3s cubic-bezier(0,0,0.2,1) infinite; }
       @media (prefers-reduced-motion: reduce) {
-        .oma-anim-pop, .oma-anim-flare, .oma-anim-slidein, .oma-anim-breathe, .oma-live-ring { animation: none !important; }
+        .oma-anim-pop, .oma-anim-flare, .oma-anim-slidein, .oma-anim-breathe, .oma-live-ring, .oma-anim-zoomin, .oma-anim-zoomout { animation: none !important; }
       }
     `}</style>
   );
@@ -440,6 +443,29 @@ export default function OverlayClient({
   if (zoomElement) hiddenElements.add(zoomElement);
   const isHidden = (key: ElementKey) => hiddenElements.has(key);
 
+  // Vollbild-Zoom verzoegert sein Unmounten um ZOOM_EXIT_MS, statt beim Zuruecksetzen von
+  // "zoom" sofort zu verschwinden — dieselbe Auskling-Animation (oma-zoom-out) bekommt so Zeit
+  // abzuspielen, bevor die Kachel wirklich aus dem DOM entfernt wird.
+  const [zoomDisplay, setZoomDisplay] = useState<ElementKey | null>(zoomElement);
+  const [zoomLeaving, setZoomLeaving] = useState(false);
+  const zoomExitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (zoomElement) {
+      if (zoomExitTimer.current) { clearTimeout(zoomExitTimer.current); zoomExitTimer.current = null; }
+      setZoomDisplay(zoomElement);
+      setZoomLeaving(false);
+    } else if (zoomDisplay) {
+      setZoomLeaving(true);
+      zoomExitTimer.current = setTimeout(() => {
+        setZoomDisplay(null);
+        setZoomLeaving(false);
+      }, ZOOM_EXIT_MS);
+    }
+    return () => { if (zoomExitTimer.current) clearTimeout(zoomExitTimer.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- zoomDisplay bewusst nicht in den
+    // Deps: soll nur auf echte zoomElement-Wechsel reagieren, nicht auf die eigene Folgeaenderung.
+  }, [zoomElement]);
+
   const isElimination = fmt === "single_elimination" || fmt === "double_elimination";
   const defaultPanels: PanelKey[] = isElimination ? ["bracket", "participants"] : ["table", "participants"];
   const availablePanels = (requestedPanels ?? defaultPanels).filter(key => {
@@ -470,16 +496,20 @@ export default function OverlayClient({
   // im alten System, nur jetzt pro Einzelelement statt pro Panel-Gruppe geprüft. Live per Widget
   // ausgeblendete/gezoomte Elemente gelten hier bewusst als "nicht verfügbar" — sie werden dann
   // NICHT Teil eines Stapels und rücken keine Rotation aus dem Takt.
+  // Bewusst OHNE isHidden(): ein per Widget ausgeblendetes Element soll weiterhin Teil seines
+  // Stapels bleiben (sonst aendert sich bucketsSig in useStackedElements und die Rotation reset­
+  // tet hart ohne jede Animation, siehe dortiger "Adjusting state on prop change"-Zweig) — die
+  // Sichtbarkeit selbst wird stattdessen weiter unten weich per combinedElementStyle geregelt.
   const elementAvailable: Record<ElementKey, boolean> = {
-    brand: !isHidden("brand") && contentAvailable.brand,
-    liveinfo: !isHidden("liveinfo") && contentAvailable.liveinfo,
-    ticker: !isHidden("ticker") && contentAvailable.ticker,
-    bracket: !isHidden("bracket") && contentAvailable.bracket,
-    table: !isHidden("table") && contentAvailable.table,
-    seriesTable: !isHidden("seriesTable") && contentAvailable.seriesTable,
-    participants: !isHidden("participants") && contentAvailable.participants,
-    favorites: !isHidden("favorites") && contentAvailable.favorites,
-    badges: !isHidden("badges") && contentAvailable.badges,
+    brand: contentAvailable.brand,
+    liveinfo: contentAvailable.liveinfo,
+    ticker: contentAvailable.ticker,
+    bracket: contentAvailable.bracket,
+    table: contentAvailable.table,
+    seriesTable: contentAvailable.seriesTable,
+    participants: contentAvailable.participants,
+    favorites: contentAvailable.favorites,
+    badges: contentAvailable.badges,
   };
 
   // Stapel bilden: alle aktiven, stapelbaren Elemente mit identischer Layout-Position (auf
@@ -525,7 +555,7 @@ export default function OverlayClient({
          unten links gruppiert und Turnierbaum/Tabelle/Teilnehmer als eine feste Ecken-Gruppe
          (alte Links funktionieren unverändert). Mit `layout` übernimmt das neue, vollständig
          individuelle Stapel-System weiter unten. */}
-      {!layout && !zoomElement && state && ((showBrand && !isHidden("brand")) || (showTicker && !isHidden("ticker") && ticker)) && (
+      {!layout && !zoomDisplay && state && ((showBrand && !isHidden("brand")) || (showTicker && !isHidden("ticker") && ticker)) && (
         <div style={{ position: "absolute", left: EDGE_MARGIN, bottom: TICKER_BOTTOM, display: "flex", alignItems: "center", gap: 16 }}>
           {showBrand && !isHidden("brand") && (
             <LegacyBrandFlipTile
@@ -538,7 +568,7 @@ export default function OverlayClient({
         </div>
       )}
 
-      {!layout && !zoomElement && state && (legacyRotator.active || legacyRotator.previous) && (
+      {!layout && !zoomDisplay && state && (legacyRotator.active || legacyRotator.previous) && (
         <div style={{ ...cornerStyle(corner), width: panelWidthFor((legacyRotator.active ?? legacyRotator.previous)!.key) }}>
           {/* Alte und neue Kachel überlappen sich für PANEL_FADE_MS — die alte blendet aus/verschwimmt,
              während die neue schon einblendet, statt einer sichtbaren Lücke dazwischen. */}
@@ -570,16 +600,16 @@ export default function OverlayClient({
       )}
 
       {/* ── Neues System: brand ist die einzige fixe, nie gestapelte Kachel ── */}
-      {layout && !zoomElement && state && layout.brand && !isHidden("brand") && (
+      {layout && !zoomDisplay && state && layout.brand && (
         <div style={elementPositionStyle(layout.brand)}>
-          <div style={combinedElementStyle({}, layout.brand.scale, isVisible("brand"))}>
+          <div style={combinedElementStyle({}, layout.brand.scale, isVisible("brand") && !isHidden("brand"))}>
             <IdentityFlipTile streamer={state.streamer} />
           </div>
         </div>
       )}
 
       {/* ── Jeder Stapel ist eine rotierende (oder bei nur einem Mitglied statische) Gruppe ── */}
-      {layout && !zoomElement && state && Object.entries(stacks).map(([posKey, stack]) => {
+      {layout && !zoomDisplay && state && Object.entries(stacks).map(([posKey, stack]) => {
         const slot = stackedRotator.active[posKey] ?? null;
         const prevSlot = stackedRotator.previous[posKey] ?? null;
         if (!slot && !prevSlot) return null;
@@ -591,7 +621,7 @@ export default function OverlayClient({
                 style={combinedElementStyle(
                   { position: slot ? "absolute" : "static", inset: 0, ...panelMotionStyle(corner, prevSlot.phase) },
                   layout[prevSlot.key]?.scale,
-                  isVisible(prevSlot.key),
+                  isVisible(prevSlot.key) && !isHidden(prevSlot.key),
                 )}
               >
                 <ElementContent elementKey={prevSlot.key} matches={matches} userOf={userOf} format={fmt} statFields={state.statFields} participants={state.participants} streamer={state.streamer} eventTitle={state.title ?? eventTitle} game={state.game} isLive={ticker ? !ticker.winnerId && !ticker.playedAt : state.status === "active"} ligaPunkteByUser={state.ligaPunkteByUser} seriesTable={state.seriesTable} />
@@ -602,7 +632,7 @@ export default function OverlayClient({
                 style={combinedElementStyle(
                   { position: prevSlot ? "absolute" : "static", inset: 0, ...panelMotionStyle(corner, slot.phase) },
                   layout[slot.key]?.scale,
-                  isVisible(slot.key),
+                  isVisible(slot.key) && !isHidden(slot.key),
                 )}
               >
                 <ElementContent elementKey={slot.key} matches={matches} userOf={userOf} format={fmt} statFields={state.statFields} participants={state.participants} streamer={state.streamer} eventTitle={state.title ?? eventTitle} game={state.game} isLive={ticker ? !ticker.winnerId && !ticker.playedAt : state.status === "active"} ligaPunkteByUser={state.ligaPunkteByUser} seriesTable={state.seriesTable} />
@@ -617,9 +647,9 @@ export default function OverlayClient({
          gezoomte Element ist oben in elementAvailable/hiddenElements bereits aus seiner
          normalen Kachel-Position entfernt, es existiert also nirgends doppelt). Kein Effekt,
          solange kein Widget je "zoom" gesetzt hat (state?.control ist dann undefined/leer). */}
-      {state && zoomElement && contentAvailable[zoomElement] && (
+      {state && zoomDisplay && contentAvailable[zoomDisplay] && (
         <div
-          className="oma-anim-zoomin"
+          className={zoomLeaving ? "oma-anim-zoomout" : "oma-anim-zoomin"}
           style={{
             position: "absolute",
             inset: 0,
@@ -644,9 +674,9 @@ export default function OverlayClient({
                Kachelgroesse ausgelegt (ELEMENT_SIZE) und wuerden sonst nur vergroessert, ohne
                die zusaetzliche Bildschirmbreite im Vollbild tatsaechlich zu nutzen — Inhalte wie
                die Stat-Spalten der Tabelle bleiben dann schmal statt sich auszubreiten. */}
-            <div style={{ width: zoomWidthFor(zoomElement), transform: "scale(1.8)" }}>
+            <div style={{ width: zoomWidthFor(zoomDisplay), transform: "scale(1.8)" }}>
               <ElementContent
-                elementKey={zoomElement}
+                elementKey={zoomDisplay}
                 matches={matches}
                 userOf={userOf}
                 format={fmt}

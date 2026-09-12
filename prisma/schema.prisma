@@ -1932,6 +1932,7 @@ model HeroPoseSlot {
   anchorX    Float  @default(0.5) // Bruch (0..1) der Basis-Pose-Canvas
   anchorY    Float  @default(0.5)
   rotation   Float  @default(0) // Grad, im Uhrzeigersinn, auf die neutrale Accessoire-Grafik angewendet
+  scale      Float  @default(1) // Größen-Faktor relativ zur natürlichen Accessoire-Größe (1 = unverändert)
 
   basePose HeroBasePose @relation(fields: [basePoseId], references: [id], onDelete: Cascade)
 

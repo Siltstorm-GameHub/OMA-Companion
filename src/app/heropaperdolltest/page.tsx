@@ -13,7 +13,7 @@
 import { useEffect, useState } from "react";
 
 type BasePose = { id: string; classKey: string; poseKey: string; name: string; imageUrl: string; width: number; height: number };
-type PoseSlot = { id: string; slot: string; anchorX: number; anchorY: number; rotation: number };
+type PoseSlot = { id: string; slot: string; anchorX: number; anchorY: number; rotation: number; scale: number };
 type Accessory = { id: string; name: string; slot: string; imageUrl: string; width: number; height: number };
 
 const DISPLAY_WIDTH = 360;
@@ -109,7 +109,7 @@ export default function HeroPaperdollTest() {
                 position: "absolute",
                 left: `${weaponSlot.anchorX * 100}%`,
                 top: `${weaponSlot.anchorY * 100}%`,
-                width: equipped.width * displayScale,
+                width: equipped.width * displayScale * weaponSlot.scale,
                 transformOrigin: "0% 50%",
                 transform: `translateY(-50%) rotate(${weaponSlot.rotation}deg)`,
               }}
@@ -117,7 +117,7 @@ export default function HeroPaperdollTest() {
           )}
           {equipped && !weaponSlot && (
             <p style={{ position: "absolute", bottom: 8, left: 8, right: 8, fontSize: 11, color: "#f59e0b" }}>
-              Kein "weapon"-Slot für diese Pose konfiguriert (/admin/hero-base-poses → Slots).
+              Kein "weapon"-Slot für diese Pose konfiguriert (/admin/hero-builder → Basis-Posen → Slots).
             </p>
           )}
         </div>
