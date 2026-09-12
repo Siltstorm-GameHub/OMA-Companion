@@ -518,7 +518,7 @@ export default function OverlayClient({
          unten links gruppiert und Turnierbaum/Tabelle/Teilnehmer als eine feste Ecken-Gruppe
          (alte Links funktionieren unverändert). Mit `layout` übernimmt das neue, vollständig
          individuelle Stapel-System weiter unten. */}
-      {!layout && state && ((showBrand && !isHidden("brand")) || (showTicker && !isHidden("ticker") && ticker)) && (
+      {!layout && !zoomElement && state && ((showBrand && !isHidden("brand")) || (showTicker && !isHidden("ticker") && ticker)) && (
         <div style={{ position: "absolute", left: EDGE_MARGIN, bottom: TICKER_BOTTOM, display: "flex", alignItems: "center", gap: 16 }}>
           {showBrand && !isHidden("brand") && (
             <LegacyBrandFlipTile
@@ -531,7 +531,7 @@ export default function OverlayClient({
         </div>
       )}
 
-      {!layout && state && (legacyRotator.active || legacyRotator.previous) && (
+      {!layout && !zoomElement && state && (legacyRotator.active || legacyRotator.previous) && (
         <div style={{ ...cornerStyle(corner), width: panelWidthFor((legacyRotator.active ?? legacyRotator.previous)!.key) }}>
           {/* Alte und neue Kachel überlappen sich für PANEL_FADE_MS — die alte blendet aus/verschwimmt,
              während die neue schon einblendet, statt einer sichtbaren Lücke dazwischen. */}
@@ -563,7 +563,7 @@ export default function OverlayClient({
       )}
 
       {/* ── Neues System: brand ist die einzige fixe, nie gestapelte Kachel ── */}
-      {layout && state && layout.brand && !isHidden("brand") && (
+      {layout && !zoomElement && state && layout.brand && !isHidden("brand") && (
         <div style={elementPositionStyle(layout.brand)}>
           <div style={combinedElementStyle({}, layout.brand.scale, isVisible("brand"))}>
             <IdentityFlipTile streamer={state.streamer} />
@@ -572,7 +572,7 @@ export default function OverlayClient({
       )}
 
       {/* ── Jeder Stapel ist eine rotierende (oder bei nur einem Mitglied statische) Gruppe ── */}
-      {layout && state && Object.entries(stacks).map(([posKey, stack]) => {
+      {layout && !zoomElement && state && Object.entries(stacks).map(([posKey, stack]) => {
         const slot = stackedRotator.active[posKey] ?? null;
         const prevSlot = stackedRotator.previous[posKey] ?? null;
         if (!slot && !prevSlot) return null;
@@ -617,37 +617,37 @@ export default function OverlayClient({
             position: "absolute",
             inset: 0,
             zIndex: 50,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 24,
-            background: "rgba(0,0,0,0.55)",
+            background: "rgba(6,6,9,0.92)",
           }}
         >
-          <ZoomBanner
-            eventId={eventId}
-            eventTitle={state.title ?? eventTitle}
-            game={state.game}
-            isLive={ticker ? !ticker.winnerId && !ticker.playedAt : state.status === "active"}
-          />
-          {/* transformOrigin "top center": scale() vergroessert sonst symmetrisch um die eigene
-             Mitte und wuechse dabei nach oben in den Banner hinein (Transforms beeinflussen den
-             Flex-Layoutfluss/Gap nicht) — mit Ursprung oben waechst die Kachel nur nach unten. */}
-          <div style={{ transform: "scale(1.8)", transformOrigin: "top center" }}>
-            <ElementContent
-              elementKey={zoomElement}
-              matches={matches}
-              userOf={userOf}
-              format={fmt}
-              statFields={state.statFields}
-              participants={state.participants}
-              streamer={state.streamer}
+          {/* Logo + Banner fest oben, unabhaengig vom zentrierten Inhalt darunter positioniert
+             (eigene Ebene statt gemeinsamer Flex-Spalte) — so bleibt die gezoomte Kachel exakt
+             bildschirmzentriert, egal wie hoch Logo/Banner ausfallen. */}
+          <div style={{ position: "absolute", top: 36, left: 0, right: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
+            <ZoomLogo />
+            <ZoomBanner
+              eventId={eventId}
               eventTitle={state.title ?? eventTitle}
               game={state.game}
               isLive={ticker ? !ticker.winnerId && !ticker.playedAt : state.status === "active"}
-              ligaPunkteByUser={state.ligaPunkteByUser}
             />
+          </div>
+          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ transform: "scale(1.8)" }}>
+              <ElementContent
+                elementKey={zoomElement}
+                matches={matches}
+                userOf={userOf}
+                format={fmt}
+                statFields={state.statFields}
+                participants={state.participants}
+                streamer={state.streamer}
+                eventTitle={state.title ?? eventTitle}
+                game={state.game}
+                isLive={ticker ? !ticker.winnerId && !ticker.playedAt : state.status === "active"}
+                ligaPunkteByUser={state.ligaPunkteByUser}
+              />
+            </div>
           </div>
         </div>
       )}
@@ -659,10 +659,18 @@ function panelWidthFor(key: PanelKey): number {
   return key === "bracket" ? PANEL_WIDTH : PANEL_WIDTH_COMPACT;
 }
 
-/** Banner über der Vollbild-Zoom-Kachel: OMA-Logo, Eventname, Spiel/Live-Status und das
- *  gebrandete Event-Cover — nutzt denselben öffentlichen Cover-Endpunkt wie die Discord-Embeds
- *  (eigenes Cover → Reihen-Cover → Spiel-Cover → Marken-Gradient), damit hier keine eigene
- *  Bildquellen-Auflösung dupliziert werden muss. */
+/** Grosses, freistehendes OMA-Logo ueber der Zoom-Banner-Kachel — bewusst ohne eigene Kachel/
+ *  Hintergrundflaeche, nur das Wortzeichen selbst. */
+function ZoomLogo() {
+  // eslint-disable-next-line @next/next/no-img-element -- OBS-Browser-Source, kein Next-Image-Optimierungspfad nötig
+  return <img src={BRAND_LOGO} alt="" width={72} height={72} style={{ display: "block", filter: "drop-shadow(0 0 16px rgba(20,184,166,0.5))" }} />;
+}
+
+/** Banner-Kachel unter dem Logo: Eventname, Spiel, Status-Punkt (gruen = aktiv/offen, rot
+ *  pulsierend + "Live"-Schriftzug = laeuft gerade) und das gebrandete Event-Cover — nutzt
+ *  denselben oeffentlichen Cover-Endpunkt wie die Discord-Embeds (eigenes Cover → Reihen-Cover
+ *  → Spiel-Cover → Marken-Gradient), damit hier keine eigene Bildquellen-Auflösung dupliziert
+ *  werden muss. */
 function ZoomBanner({ eventId, eventTitle, game, isLive }: { eventId: string; eventTitle: string; game: string | null; isLive: boolean }) {
   return (
     <div
@@ -673,7 +681,7 @@ function ZoomBanner({ eventId, eventTitle, game, isLive }: { eventId: string; ev
         background: "rgba(10,10,14,0.85)",
         border: "1px solid rgba(94,234,212,0.25)",
         borderRadius: 14,
-        padding: "10px 24px 10px 10px",
+        padding: "10px 24px",
         boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
       }}
     >
@@ -685,8 +693,6 @@ function ZoomBanner({ eventId, eventTitle, game, isLive }: { eventId: string; ev
         height={40}
         style={{ width: 72, height: 40, borderRadius: 8, objectFit: "cover", flexShrink: 0 }}
       />
-      {/* eslint-disable-next-line @next/next/no-img-element -- OBS-Browser-Source, kein Next-Image-Optimierungspfad nötig */}
-      <img src={BRAND_LOGO} alt="" width={28} height={28} style={{ display: "block", flexShrink: 0 }} />
       <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
         <span style={{ fontSize: 18, fontWeight: 700, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 360 }}>
           {eventTitle}
@@ -697,7 +703,14 @@ function ZoomBanner({ eventId, eventTitle, game, isLive }: { eventId: string; ev
           </span>
         )}
       </div>
-      <LiveBadge live={isLive} />
+      <span style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+        <LiveBadge live={isLive} />
+        {isLive && (
+          <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#f87171" }}>
+            Live
+          </span>
+        )}
+      </span>
     </div>
   );
 }
