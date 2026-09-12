@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireWidgetKey } from "@/lib/widgetAuth";
+import { ensureOverlayToken, buildOverlayUrl } from "@/lib/overlay";
 
 /**
  * Live-Steuerungszustand des Overlays (Event.overlayControlJson) — siehe Kommentar am Feld in
@@ -33,7 +34,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const event = await prisma.event.findUnique({ where: { id: eventId }, select: { overlayControlJson: true } });
   if (!event) return NextResponse.json({ error: "Nicht gefunden" }, { status: 404 });
 
-  return NextResponse.json(parseControl(event.overlayControlJson));
+  // ensureOverlayToken legt bei Bedarf einen neuen Token an (gleiche Funktion, die auch die
+  // Overlay-Einstellungsseite nutzt) — die Overlay-URL ist damit ab dem ersten Oeffnen dieses
+  // Tabs verfuegbar, auch wenn sich noch nie ein Streamer fuer das Event registriert hat.
+  const token = await ensureOverlayToken(eventId);
+
+  return NextResponse.json({ ...parseControl(event.overlayControlJson), overlayUrl: buildOverlayUrl(eventId, token) });
 }
 
 /**

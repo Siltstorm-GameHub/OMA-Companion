@@ -28,6 +28,8 @@
     "motion": "^12.42.2",
     "next": "16.2.6",
     "next-auth": "^5.0.0-beta.31",
+    "pixi-dragonbones-runtime": "^8.0.3",
+    "pixi.js": "^8.20.1",
     "postprocessing": "^6.39.4",
     "prisma": "6.4.1",
     "react": "19.2.4",
