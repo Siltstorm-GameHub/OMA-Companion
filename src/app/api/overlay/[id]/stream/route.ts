@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { parseFavoriteGames } from "@/lib/favorite-games";
 import { resolveShowcaseEntries } from "@/lib/overlay-badges";
 import { computeEventPoints, type StatConfig } from "@/lib/series-event-points";
+import { loadSeriesRanking } from "@/lib/seriesRanking";
 
 export const dynamic = "force-dynamic";
 

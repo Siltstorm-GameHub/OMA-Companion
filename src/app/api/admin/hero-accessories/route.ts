@@ -6,9 +6,9 @@ import { randomUUID } from "crypto";
 
 export async function GET(req: NextRequest) {
   await requireRole("admin");
-  const basePoseId = req.nextUrl.searchParams.get("basePoseId");
+  const slot = req.nextUrl.searchParams.get("slot");
   const items = await prisma.heroAccessory.findMany({
-    where: basePoseId ? { basePoseId } : undefined,
+    where: slot ? { slot } : undefined,
     orderBy: { createdAt: "desc" },
   });
   return NextResponse.json({ items });
@@ -24,32 +24,23 @@ export async function POST(req: NextRequest) {
     name?: string;
     slot?: string;
     imageUrl?: string;
-    basePoseId?: string;
-    anchorX?: number;
-    anchorY?: number;
     width?: number;
     height?: number;
   };
 
-  if (!body.name?.trim() || !body.slot?.trim() || !body.imageUrl?.trim() || !body.basePoseId?.trim() || !body.width || !body.height) {
-    return NextResponse.json({ error: "name, slot, imageUrl, basePoseId, width und height sind Pflichtfelder" }, { status: 400 });
+  if (!body.name?.trim() || !body.slot?.trim() || !body.imageUrl?.trim() || !body.width || !body.height) {
+    return NextResponse.json({ error: "name, slot, imageUrl, width und height sind Pflichtfelder" }, { status: 400 });
   }
-
-  const anchorX = Number.isFinite(body.anchorX) ? Math.min(1, Math.max(0, body.anchorX!)) : 0.5;
-  const anchorY = Number.isFinite(body.anchorY) ? Math.min(1, Math.max(0, body.anchorY!)) : 0.5;
 
   const item = await prisma.heroAccessory.create({
     data: {
-      id:         randomUUID(),
-      name:       body.name.trim(),
-      slot:       body.slot.trim(),
-      imageUrl:   body.imageUrl.trim(),
-      width:      Math.round(body.width),
-      height:     Math.round(body.height),
-      basePoseId: body.basePoseId.trim(),
-      anchorX,
-      anchorY,
-      createdBy:  adminId,
+      id:        randomUUID(),
+      name:      body.name.trim(),
+      slot:      body.slot.trim(),
+      imageUrl:  body.imageUrl.trim(),
+      width:     Math.round(body.width),
+      height:    Math.round(body.height),
+      createdBy: adminId,
     },
   });
 

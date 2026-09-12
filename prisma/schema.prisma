@@ -1895,17 +1895,20 @@ model BattleQueueEntry {
 }
 
 // ── Helden-Baukasten (Paperdoll) ───────────────────────────────────────────────
-// Statisches Ebenen-System statt Skelett-Rig: eine feste Ganzkörper-Basis-Pose
-// pro Klasse, Accessoires werden als Bild-Layer an einem admin-gesetzten
-// Anker-Punkt darübergelegt (CSS-Layering live, sharp-Compositing final) —
-// siehe Helden-Baukasten-Plan-Artefakt für den vollen Hintergrund.
+// Statisches Ebenen-System statt Skelett-Rig: eine oder mehrere Ganzkörper-
+// Posen pro Klasse. Accessoire-Grafiken (z.B. Waffen) werden EINMAL in einer
+// neutralen Referenz-Ausrichtung gezeichnet (liegend, Griff links) und pro
+// Pose nur noch per Anker-Punkt + Rotationswinkel plaziert (HeroPoseSlot) --
+// so braucht ein wachsender Waffen-Katalog keine eigene Grafik pro Pose.
+// Siehe Helden-Baukasten-Plan-Artefakt für den vollen Hintergrund.
 
-// Eine Ganzkörper-Basis-Pose pro Klasse (Tank/DamageDealer/Support), fest
-// stehend, frontal, freigestellt. Alle Accessoire-Anker beziehen sich auf die
-// Pixelmaße dieses Bildes.
+// Eine Ganzkörper-Pose (z.B. "neutral", "combat_ready") für eine Klasse, fest
+// stehend, frontal, freigestellt. Slot-Anker (HeroPoseSlot) beziehen sich auf
+// die Pixelmaße dieses Bildes.
 model HeroBasePose {
   id        String   @id @default(cuid())
-  classKey  String   @unique // z.B. "tank", "damage_dealer", "support"
+  classKey  String // z.B. "tank", "damage_dealer", "support"
+  poseKey   String // z.B. "neutral", "combat_ready" -- eindeutig je Klasse
   name      String
   imageUrl  String // Ganzkörper-Grafik, freigestellt (Vercel Blob)
   width     Int // Pixelmaße des Basis-Bildes -- Anker-Brüche beziehen sich darauf
@@ -1913,26 +1916,39 @@ model HeroBasePose {
   createdAt DateTime @default(now())
   createdBy String // Admin-User-ID
 
-  accessories HeroAccessory[]
+  slots HeroPoseSlot[]
+
+  @@unique([classKey, poseKey])
 }
 
-// Admin-hochgeladene Ausrüstungs-Grafik. anchorX/anchorY sind Brüche (0..1)
-// der Basis-Pose-Canvas und legen fest, wo der Griff/Aufhängepunkt des
-// Accessoires auf der Basis-Pose sitzt (z.B. in der Hand). Das Accessoire-Bild
-// selbst folgt der etablierten Zeichenkonvention "Griff links, vertikal
-// zentriert" -- keine eigene Pivot-Angabe mehr nötig.
-model HeroAccessory {
-  id         String   @id @default(cuid())
-  name       String
-  slot       String // Kategorie, z.B. "weapon" -- keine Bone-Referenz mehr
-  imageUrl   String // Accessoire-Grafik (Vercel Blob)
-  width      Int // Pixelmaße der Accessoire-Grafik -- für Skalierung relativ
-  height     Int // zur Basis-Pose bei jeder Wiedergabe nötig
-  basePoseId String // welche Klassen-Basis-Pose dieser Anker gilt
-  anchorX    Float    @default(0.5)
-  anchorY    Float    @default(0.5)
-  createdAt  DateTime @default(now())
-  createdBy  String // Admin-User-ID
+// Pro Pose UND Ausrüstungs-Kategorie (slot, z.B. "weapon") ein admin-gesetzter
+// Anker-Punkt + Rotationswinkel -- gilt für JEDES Accessoire dieser Kategorie,
+// das in dieser Pose ausgerüstet wird. Das ist der eigentliche Hebel: neue
+// Waffen brauchen keinen neuen Eintrag hier, nur einen neuen HeroAccessory.
+model HeroPoseSlot {
+  id         String @id @default(cuid())
+  basePoseId String
+  slot       String // Kategorie, z.B. "weapon"
+  anchorX    Float  @default(0.5) // Bruch (0..1) der Basis-Pose-Canvas
+  anchorY    Float  @default(0.5)
+  rotation   Float  @default(0) // Grad, im Uhrzeigersinn, auf die neutrale Accessoire-Grafik angewendet
 
   basePose HeroBasePose @relation(fields: [basePoseId], references: [id], onDelete: Cascade)
+
+  @@unique([basePoseId, slot])
+}
+
+// Admin-hochgeladene Ausrüstungs-Grafik -- posen-unabhängig, in neutraler
+// Referenz-Ausrichtung gezeichnet (liegend, Griff/Aufhängepunkt am linken
+// Bildrand, vertikal zentriert). Wird bei der Wiedergabe um den Anker +
+// Rotationswinkel des jeweiligen HeroPoseSlot gedreht/plaziert.
+model HeroAccessory {
+  id        String   @id @default(cuid())
+  name      String
+  slot      String // Kategorie, z.B. "weapon"
+  imageUrl  String // Accessoire-Grafik (Vercel Blob)
+  width     Int // Pixelmaße -- für Skalierung relativ zur Basis-Pose nötig
+  height    Int
+  createdAt DateTime @default(now())
+  createdBy String // Admin-User-ID
 }

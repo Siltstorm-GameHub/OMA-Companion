@@ -18,21 +18,23 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json() as {
     classKey?: string;
+    poseKey?: string;
     name?: string;
     imageUrl?: string;
     width?: number;
     height?: number;
   };
 
-  if (!body.classKey?.trim() || !body.name?.trim() || !body.imageUrl?.trim() || !body.width || !body.height) {
-    return NextResponse.json({ error: "classKey, name, imageUrl, width und height sind Pflichtfelder" }, { status: 400 });
+  if (!body.classKey?.trim() || !body.poseKey?.trim() || !body.name?.trim() || !body.imageUrl?.trim() || !body.width || !body.height) {
+    return NextResponse.json({ error: "classKey, poseKey, name, imageUrl, width und height sind Pflichtfelder" }, { status: 400 });
   }
 
   const item = await prisma.heroBasePose.upsert({
-    where: { classKey: body.classKey.trim() },
+    where: { classKey_poseKey: { classKey: body.classKey.trim(), poseKey: body.poseKey.trim() } },
     create: {
       id:        randomUUID(),
       classKey:  body.classKey.trim(),
+      poseKey:   body.poseKey.trim(),
       name:      body.name.trim(),
       imageUrl:  body.imageUrl.trim(),
       width:     Math.round(body.width),

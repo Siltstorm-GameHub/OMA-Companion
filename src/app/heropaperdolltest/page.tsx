@@ -3,22 +3,25 @@
 // ============================================
 // Helden-Baukasten-Paperdoll-Test
 // ============================================
-// Validierungsseite für das neue statische Ebenen-System (siehe
-// Helden-Baukasten-Plan-Artefakt): lädt die Tank-Basis-Pose plus ihre
-// Accessoires über die öffentlichen APIs und legt sie live per CSS
-// übereinander -- kein Bone, kein Pivot, nur Basis-Bild + admin-gesetzter
-// Anker-Punkt pro Accessoire. Keine Produktiv-Route.
+// Validierungsseite für das statische Ebenen-System (siehe
+// Helden-Baukasten-Plan-Artefakt): lädt eine Basis-Pose + ihre Pose-Slots
+// (Anker + Rotation je Ausrüstungs-Kategorie) und legt ein gewähltes
+// Accessoire live per CSS darüber. Accessoires sind posen-unabhängig, in
+// neutraler Referenz-Ausrichtung gezeichnet -- Position UND Drehwinkel kommen
+// ausschließlich aus dem Pose-Slot. Keine Produktiv-Route.
 
 import { useEffect, useState } from "react";
 
-type BasePose = { id: string; classKey: string; name: string; imageUrl: string; width: number; height: number };
-type Accessory = { id: string; name: string; slot: string; imageUrl: string; width: number; height: number; basePoseId: string; anchorX: number; anchorY: number };
+type BasePose = { id: string; classKey: string; poseKey: string; name: string; imageUrl: string; width: number; height: number };
+type PoseSlot = { id: string; slot: string; anchorX: number; anchorY: number; rotation: number };
+type Accessory = { id: string; name: string; slot: string; imageUrl: string; width: number; height: number };
 
 const DISPLAY_WIDTH = 360;
 
 export default function HeroPaperdollTest() {
   const [status, setStatus] = useState("Lade…");
   const [basePose, setBasePose] = useState<BasePose | null>(null);
+  const [poseSlots, setPoseSlots] = useState<PoseSlot[]>([]);
   const [accessories, setAccessories] = useState<Accessory[]>([]);
   const [equippedId, setEquippedId] = useState<string | null>(null);
 
@@ -32,11 +35,16 @@ export default function HeroPaperdollTest() {
       }
       setBasePose(pose);
 
-      const accRes = await fetch(`/api/hero-accessories?basePoseId=${pose.id}`).then(r => r.json());
-      const items: Accessory[] = accRes.items ?? [];
-      setAccessories(items);
-      setEquippedId(items[0]?.id ?? null);
-      setStatus(`Basis-Pose "${pose.name}" geladen — ${items.length} Accessoire${items.length === 1 ? "" : "s"}.`);
+      const [slotsRes, accRes] = await Promise.all([
+        fetch(`/api/hero-pose-slots?basePoseId=${pose.id}`).then(r => r.json()),
+        fetch(`/api/hero-accessories?slot=weapon`).then(r => r.json()),
+      ]);
+      const slotsList: PoseSlot[] = slotsRes.items ?? [];
+      const accList: Accessory[] = accRes.items ?? [];
+      setPoseSlots(slotsList);
+      setAccessories(accList);
+      setEquippedId(accList[0]?.id ?? null);
+      setStatus(`Basis-Pose "${pose.name}" (${pose.poseKey}) geladen — ${slotsList.length} Slot${slotsList.length === 1 ? "" : "s"} konfiguriert, ${accList.length} Waffe${accList.length === 1 ? "" : "n"} verfügbar.`);
     }
     run().catch(err => {
       console.error(err);
@@ -46,6 +54,7 @@ export default function HeroPaperdollTest() {
 
   const displayScale = basePose ? DISPLAY_WIDTH / basePose.width : 1;
   const equipped = accessories.find(a => a.id === equippedId) ?? null;
+  const weaponSlot = poseSlots.find(s => s.slot === "weapon") ?? null;
 
   return (
     <div style={{ background: "#0d0d0f", minHeight: "100vh", padding: 32, color: "#ddd", fontFamily: "sans-serif" }}>
@@ -91,19 +100,25 @@ export default function HeroPaperdollTest() {
         >
           {/* eslint-disable-next-line @next/next/no-img-element -- beliebige Blob-URL */}
           <img src={basePose.imageUrl} alt={basePose.name} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain" }} />
-          {equipped && (
+          {equipped && weaponSlot && (
             // eslint-disable-next-line @next/next/no-img-element -- beliebige Blob-URL
             <img
               src={equipped.imageUrl}
               alt={equipped.name}
               style={{
                 position: "absolute",
-                left: `${equipped.anchorX * 100}%`,
-                top: `${equipped.anchorY * 100}%`,
+                left: `${weaponSlot.anchorX * 100}%`,
+                top: `${weaponSlot.anchorY * 100}%`,
                 width: equipped.width * displayScale,
-                transform: "translateY(-50%)",
+                transformOrigin: "0% 50%",
+                transform: `translateY(-50%) rotate(${weaponSlot.rotation}deg)`,
               }}
             />
+          )}
+          {equipped && !weaponSlot && (
+            <p style={{ position: "absolute", bottom: 8, left: 8, right: 8, fontSize: 11, color: "#f59e0b" }}>
+              Kein "weapon"-Slot für diese Pose konfiguriert (/admin/hero-base-poses → Slots).
+            </p>
           )}
         </div>
       )}
