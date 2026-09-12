@@ -640,7 +640,11 @@ export default function OverlayClient({
             />
           </div>
           <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <div style={{ transform: "scale(1.8)" }}>
+            {/* Explizite Breite VOR dem scale(): die Elemente sind fuer ihre normale, kleine
+               Kachelgroesse ausgelegt (ELEMENT_SIZE) und wuerden sonst nur vergroessert, ohne
+               die zusaetzliche Bildschirmbreite im Vollbild tatsaechlich zu nutzen — Inhalte wie
+               die Stat-Spalten der Tabelle bleiben dann schmal statt sich auszubreiten. */}
+            <div style={{ width: zoomWidthFor(zoomElement), transform: "scale(1.8)" }}>
               <ElementContent
                 elementKey={zoomElement}
                 matches={matches}
@@ -666,6 +670,14 @@ export default function OverlayClient({
 
 function panelWidthFor(key: PanelKey): number {
   return key === "bracket" ? PANEL_WIDTH : PANEL_WIDTH_COMPACT;
+}
+
+/** Breite (vor dem scale(1.8) der Vollbild-Zoom-Kachel) — deutlich groesser als die normale
+ *  ELEMENT_SIZE-Breite (die ist fuers kleine Stapel-Layout gedacht), aber gedeckelt, damit auch
+ *  die ohnehin schon breiteren Elemente (Turnierbaum/Ticker) nicht bis an den Bildschirmrand
+ *  reichen. */
+function zoomWidthFor(key: ElementKey): number {
+  return Math.min(ELEMENT_SIZE[key].width * 1.6, 900);
 }
 
 /** Grosses, freistehendes OMA-Logo ueber der Zoom-Banner-Kachel — bewusst ohne eigene Kachel/
