@@ -72,7 +72,19 @@ export default function PackOpener({
         setPhase("ready");
         return;
       }
-      // kurze Verzoegerung, damit die Oeffnen-Animation sichtbar bleibt
+      // Alle Kartenbilder JETZT schon im Hintergrund vorladen (nicht erst, wenn
+      // React die jeweilige Karte anzeigt) — sonst konkurriert der Bild-Download
+      // der ersten Karte mit router.refresh()/Konfetti um Bandbreite, während
+      // spätere Karten (Netz dann frei) prompt laden. Browser cachen das Ergebnis,
+      // sodass die <img>-Tags in BattleCardView es beim Anzeigen sofort parat haben.
+      data.cards.forEach((c) => {
+        if (c.card.imageUrl) {
+          const preload = new window.Image();
+          preload.src = c.card.imageUrl;
+        }
+      });
+      // kurze Verzoegerung, damit die Oeffnen-Animation sichtbar bleibt — gibt den
+      // Vorlade-Downloads oben gleichzeitig einen Kopfstart.
       await new Promise((r) => setTimeout(r, 900));
       setResults(data.cards);
       setRevealIndex(0);

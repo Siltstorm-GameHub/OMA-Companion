@@ -147,6 +147,9 @@ function SkillRow({
 
 export default function BattleCardView({ card, dimmed = false }: { card: BattleCardData; dimmed?: boolean }) {
   const [flipped, setFlipped] = useState(false);
+  // Fällt auf das Klassen-Icon zurück, falls das Artwork nicht lädt (Netzwerk-
+  // Hänger/Timeout), statt die Karte dauerhaft leer zu lassen.
+  const [imgFailed, setImgFailed] = useState(false);
   const level = card.level ?? 1;
   const classConfig = getClassConfig(card.class);
   const ClassIcon = classConfig.icon;
@@ -212,9 +215,14 @@ export default function BattleCardView({ card, dimmed = false }: { card: BattleC
             className="rounded-lg flex-1 min-h-0 flex items-center justify-center relative overflow-hidden"
             style={{ background: `linear-gradient(160deg, ${classConfig.color}22, rgba(255,255,255,0.02))` }}
           >
-            {card.imageUrl ? (
+            {card.imageUrl && !imgFailed ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={card.imageUrl} alt={card.name} className="w-full h-full object-contain" />
+              <img
+                src={card.imageUrl}
+                alt={card.name}
+                className="w-full h-full object-contain"
+                onError={() => setImgFailed(true)}
+              />
             ) : (
               <ClassIcon className="w-12 h-12" style={{ color: classConfig.color, opacity: 0.5 }} />
             )}
