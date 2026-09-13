@@ -9,7 +9,7 @@ import { resolveStoreId } from "@/lib/blob-store";
  *
  * Erwartet multipart/form-data mit den Feldern:
  *   file  — die Bilddatei
- *   kind  — "event-cover" | "profile-banner" | "badge"
+ *   kind  — "event-cover" | "profile-banner" | "badge" | "battle-card-avatar" | "tactic-card-art" | "community-job-asset"
  *
  * Antwort: { url: string }
  *
@@ -63,6 +63,7 @@ const KINDS = {
   "profile-banner":      { minRole: "user",      maxBytes: 3_000_000 },
   "badge":               { minRole: "admin",     maxBytes: 1_000_000 },
   "battle-card-avatar":  { minRole: "admin",     maxBytes: 8_000_000 },
+  "tactic-card-art":     { minRole: "admin",     maxBytes: 8_000_000 },
   "community-job-asset": { minRole: "user",      maxBytes: 6_000_000 }, // Fotograf-Uploads (Clips-Standbild/Collage/Screenshot/Banner/Grafik)
 } as const;
 

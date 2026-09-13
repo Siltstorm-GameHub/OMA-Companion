@@ -40,7 +40,7 @@ export default async function AdminBattleCardsPage() {
         />
       </section>
 
-      <section>
+      <section className="space-y-3">
         <Link
           href="/admin/battle-cards/cards"
           className="flex items-center justify-between gap-3 glass rounded-2xl p-4 hover:bg-white/[0.04] transition-colors"
@@ -48,6 +48,16 @@ export default async function AdminBattleCardsPage() {
           <div>
             <p className="text-sm font-semibold text-white">Community-Karten bearbeiten</p>
             <p className="text-xs text-gray-500">Untertitel & Beschreibung pro Mitglied setzen</p>
+          </div>
+          <ArrowRight className="w-4 h-4 text-gray-500 shrink-0" />
+        </Link>
+        <Link
+          href="/admin/battle-cards/tactic-cards"
+          className="flex items-center justify-between gap-3 glass rounded-2xl p-4 hover:bg-white/[0.04] transition-colors"
+        >
+          <div>
+            <p className="text-sm font-semibold text-white">Taktik-Karten bearbeiten</p>
+            <p className="text-xs text-gray-500">OMA Duels: Items & Fallen — Name, Text, Artwork</p>
           </div>
           <ArrowRight className="w-4 h-4 text-gray-500 shrink-0" />
         </Link>

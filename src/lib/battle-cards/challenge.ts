@@ -3,12 +3,18 @@
 // ============================================
 // Kein Wetteinsatz, keine Annahme-Verzögerung durch Cooldowns: der Gegner
 // nimmt an oder lehnt ab. Bei Annahme startet (statt einer sofortigen
-// serverseitigen Auflösung) ein interaktiver LiveBattle — beide Spieler
-// steuern ihre Seite zugweise selbst (siehe live-battle.ts). Dasselbe gilt
-// fürs Matchmaking (createInstantMatch, von matchmaking.ts genutzt).
+// serverseitigen Auflösung) ein OMA-Duels-Live-Kampf — beide Spieler steuern
+// ihre Seite über simultane Runden selbst (siehe duel-live-battle.ts). Dasselbe
+// gilt fürs Matchmaking (createInstantMatch, von matchmaking.ts genutzt).
+//
+// Ersetzt den alten sequentiellen Duell-Modus (live-battle.ts/interactive.ts,
+// "PVP_CHALLENGE"/"PVP_MATCHMAKING") vollständig — der Annahme-/Warteschlangen-
+// Ablauf drumherum bleibt unverändert, nur die dahinterliegende Engine/Aufstellung
+// wechselt von der 5er-PVE-Lineup auf das neue Duell-Deck (siehe duel-deck.ts).
 
 import { prisma } from "@/lib/prisma";
-import { startLivePvpBattle, LiveBattleError } from "@/lib/battle-cards/live-battle";
+import { startLiveDuelBattle, LiveDuelBattleError } from "@/lib/battle-cards/duel-live-battle";
+import { getActiveDuelDeck } from "@/lib/battle-cards/duel-deck";
 import type { BattleChallenge } from "@prisma/client";
 
 export class ChallengeError extends Error {}
@@ -18,17 +24,17 @@ export async function createChallenge(challengerId: string, opponentId: string):
     throw new ChallengeError("Du kannst dich nicht selbst herausfordern.");
   }
 
-  const [opponent, challengerLineupCount, opponentLineupCount] = await Promise.all([
+  const [opponent, challengerDeck, opponentDeck] = await Promise.all([
     prisma.user.findUnique({ where: { id: opponentId }, select: { id: true } }),
-    prisma.userCard.count({ where: { userId: challengerId, inLineup: true } }),
-    prisma.userCard.count({ where: { userId: opponentId, inLineup: true } }),
+    getActiveDuelDeck(challengerId),
+    getActiveDuelDeck(opponentId),
   ]);
   if (!opponent) throw new ChallengeError("Dieser Spieler wurde nicht gefunden.");
-  if (challengerLineupCount === 0) {
-    throw new ChallengeError("Du hast noch keine Startaufstellung — stelle zuerst deine Karten auf.");
+  if (!challengerDeck) {
+    throw new ChallengeError("Du hast noch kein Duell-Deck zusammengestellt — stelle zuerst dein Deck zusammen.");
   }
-  if (opponentLineupCount === 0) {
-    throw new ChallengeError("Dieser Spieler hat noch keine Startaufstellung.");
+  if (!opponentDeck) {
+    throw new ChallengeError("Dieser Spieler hat noch kein Duell-Deck zusammengestellt.");
   }
 
   const existing = await prisma.battleChallenge.findFirst({
@@ -69,9 +75,9 @@ export async function respondToChallenge(
   }
 
   try {
-    await startLivePvpBattle(challenge.id, challenge.challengerId, challenge.opponentId, "PVP_CHALLENGE");
+    await startLiveDuelBattle(challenge.id, challenge.challengerId, challenge.opponentId);
   } catch (error) {
-    if (error instanceof LiveBattleError) throw new ChallengeError(error.message);
+    if (error instanceof LiveDuelBattleError) throw new ChallengeError(error.message);
     throw error;
   }
 
@@ -94,10 +100,10 @@ export async function createInstantMatch(challengerId: string, opponentId: strin
   });
 
   try {
-    await startLivePvpBattle(challenge.id, challengerId, opponentId, "PVP_MATCHMAKING");
+    await startLiveDuelBattle(challenge.id, challengerId, opponentId);
   } catch (error) {
     await prisma.battleChallenge.delete({ where: { id: challenge.id } }).catch(() => {});
-    if (error instanceof LiveBattleError) throw new ChallengeError(error.message);
+    if (error instanceof LiveDuelBattleError) throw new ChallengeError(error.message);
     throw error;
   }
 

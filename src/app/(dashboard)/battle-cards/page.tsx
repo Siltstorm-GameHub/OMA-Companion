@@ -25,6 +25,8 @@ import { getCombinedElo } from "@/lib/battle-cards/elo";
 import { getSeasonConfig } from "@/lib/season/season-config";
 import { getCurrentSeasonNumber, getSeasonWindow } from "@/lib/battle-cards/ranked-season";
 import { getTutorialProgress, getTutorialStep, hasOwnCommunityCard } from "@/lib/battle-cards/tutorial";
+import { getActiveDuelDeck } from "@/lib/battle-cards/duel-deck";
+import { DUEL_DECK_TOTAL_SIZE } from "@/lib/battle-engine/duel-constants";
 import StarterPickFlow from "@/components/battle-cards/StarterPickFlow";
 import PackOpener from "@/components/battle-cards/PackOpener";
 import CardCollectionBrowser from "@/components/battle-cards/CardCollectionBrowser";
@@ -98,6 +100,8 @@ export default async function BattleCardsPage() {
     select: { points: true, eloDuels: true, eloGems: true },
   });
   const upgradeEconomy = await getUpgradeEconomyConfig();
+  const activeDuelDeck = await getActiveDuelDeck(userId);
+  const duelDeckCount = (activeDuelDeck?.unitCardIds.length ?? 0) + (activeDuelDeck?.tacticCardIds.length ?? 0);
 
   // ── Tutorial: nur relevant, falls für diesen User überhaupt eine Zeile existiert
   //    (startet erst beim Wählen des Start-Packs, siehe tutorial.ts) ──
@@ -202,6 +206,25 @@ export default async function BattleCardsPage() {
       <div className="space-y-2">
         <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Startaufstellung</h2>
         <LineupStrip cards={lineupCards} />
+      </div>
+
+      <div className="space-y-2">
+        <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">OMA Duels — Deck</h2>
+        <Link
+          href="/battle-cards/duel-deck"
+          className="flex items-center justify-between gap-3 glass rounded-2xl p-3 hover:bg-white/[0.04] transition-colors"
+        >
+          <span className="text-xs text-gray-300">
+            {duelDeckCount === DUEL_DECK_TOTAL_SIZE ? (
+              <span className="text-emerald-400 font-semibold">Deck vollständig ({duelDeckCount}/{DUEL_DECK_TOTAL_SIZE})</span>
+            ) : (
+              <span className="text-amber-400 font-semibold">
+                Deck einrichten ({duelDeckCount}/{DUEL_DECK_TOTAL_SIZE})
+              </span>
+            )}
+          </span>
+          <span className="text-xs font-semibold text-gray-400">Bearbeiten →</span>
+        </Link>
       </div>
 
       <CardCollectionBrowser

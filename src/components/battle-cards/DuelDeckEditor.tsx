@@ -1,0 +1,187 @@
+"use client";
+
+// Wählt genau DUEL_DECK_TOTAL_SIZE Karten (Einheiten- + Taktik-Karten, min.
+// DUEL_DECK_MIN_UNIT_CARDS Einheiten) als aktives OMA-Duels-Deck — Pendant zu
+// LineupEditor.tsx für den neuen Yu-Gi-Oh-artigen Live-PvP-Modus.
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Check, Loader2, Shield, Sparkles } from "lucide-react";
+import type { BattleCardData } from "./BattleCardView";
+import BattleCardView from "./BattleCardView";
+import { DUEL_DECK_MIN_UNIT_CARDS, DUEL_DECK_TOTAL_SIZE } from "@/lib/battle-engine/duel-constants";
+
+export interface DuelDeckUnitCard {
+  cardId: string;
+  card: BattleCardData;
+  level: number;
+}
+
+export interface DuelDeckTacticCard {
+  tacticCardId: string;
+  name: string;
+  kind: "INSTANT" | "TRAP";
+  flavorText: string;
+  description: string;
+}
+
+export default function DuelDeckEditor({
+  unitCards,
+  tacticCards,
+  initialUnitCardIds,
+  initialTacticCardIds,
+}: {
+  unitCards: DuelDeckUnitCard[];
+  tacticCards: DuelDeckTacticCard[];
+  initialUnitCardIds: string[];
+  initialTacticCardIds: string[];
+}) {
+  const router = useRouter();
+  const [selectedUnits, setSelectedUnits] = useState<string[]>(initialUnitCardIds);
+  const [selectedTactics, setSelectedTactics] = useState<string[]>(initialTacticCardIds);
+  const [submitting, setSubmitting] = useState(false);
+
+  const total = selectedUnits.length + selectedTactics.length;
+  const atCap = total >= DUEL_DECK_TOTAL_SIZE;
+  const hasEnoughUnits = selectedUnits.length >= DUEL_DECK_MIN_UNIT_CARDS;
+  const canSubmit = total === DUEL_DECK_TOTAL_SIZE && hasEnoughUnits;
+
+  function toggleUnit(cardId: string) {
+    setSelectedUnits((prev) => {
+      if (prev.includes(cardId)) return prev.filter((id) => id !== cardId);
+      if (atCap) return prev;
+      return [...prev, cardId];
+    });
+  }
+
+  function toggleTactic(tacticCardId: string) {
+    setSelectedTactics((prev) => {
+      if (prev.includes(tacticCardId)) return prev.filter((id) => id !== tacticCardId);
+      if (atCap) return prev;
+      return [...prev, tacticCardId];
+    });
+  }
+
+  async function submit() {
+    if (!canSubmit || submitting) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/battle-cards/duel-deck", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ unitCardIds: selectedUnits, tacticCardIds: selectedTactics }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(typeof data.error === "string" ? data.error : "Fehler beim Speichern");
+        return;
+      }
+      toast.success("Duell-Deck gespeichert!");
+      router.push("/battle-cards");
+      router.refresh();
+    } catch {
+      toast.error("Netzwerkfehler");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="glass rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <span className={total === DUEL_DECK_TOTAL_SIZE ? "text-emerald-400 font-semibold" : "text-gray-400"}>
+          {total}/{DUEL_DECK_TOTAL_SIZE} Karten gewählt
+        </span>
+        <span className={hasEnoughUnits ? "text-emerald-400 font-semibold" : "text-amber-400 font-semibold"}>
+          {selectedUnits.length}/{DUEL_DECK_MIN_UNIT_CARDS} Einheiten-Karten (Minimum)
+        </span>
+      </div>
+
+      <div className="space-y-2">
+        <h2 className="text-sm font-bold text-white">Einheiten-Karten</h2>
+        {unitCards.length === 0 ? (
+          <p className="text-xs text-gray-500">Du besitzt noch keine Einheiten-Karten.</p>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            {unitCards.map(({ cardId, card, level }) => {
+              const isSelected = selectedUnits.includes(cardId);
+              const isDisabled = !isSelected && atCap;
+              return (
+                <div key={cardId} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => toggleUnit(cardId)}
+                    disabled={isDisabled}
+                    className="block w-full text-left disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <div
+                      className="rounded-xl transition-shadow"
+                      style={{ boxShadow: isSelected ? "0 0 0 3px #14b8a6, 0 0 20px rgba(20,184,166,0.5)" : undefined }}
+                    >
+                      <BattleCardView card={{ ...card, level }} />
+                    </div>
+                  </button>
+                  {isSelected && (
+                    <span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-teal-500 flex items-center justify-center pointer-events-none">
+                      <Check className="w-3 h-3 text-black" />
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <h2 className="text-sm font-bold text-white">Taktik-Karten (Items &amp; Fallen)</h2>
+        {tacticCards.length === 0 ? (
+          <p className="text-xs text-gray-500">
+            Du besitzt noch keine Taktik-Karten — dein Deck lässt sich aktuell nur aus Einheiten-Karten füllen.
+          </p>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            {tacticCards.map((tc) => {
+              const isSelected = selectedTactics.includes(tc.tacticCardId);
+              const isDisabled = !isSelected && atCap;
+              const Icon = tc.kind === "TRAP" ? Shield : Sparkles;
+              return (
+                <button
+                  key={tc.tacticCardId}
+                  type="button"
+                  onClick={() => toggleTactic(tc.tacticCardId)}
+                  disabled={isDisabled}
+                  className={`relative text-left rounded-xl border p-3 space-y-1.5 transition disabled:opacity-40 disabled:cursor-not-allowed ${
+                    isSelected ? "border-teal-400 bg-teal-500/10" : "border-white/10 bg-white/[0.02] hover:bg-white/[0.05]"
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <Icon className={`w-3.5 h-3.5 shrink-0 ${tc.kind === "TRAP" ? "text-rose-400" : "text-amber-400"}`} />
+                    <span className="text-xs font-semibold text-white truncate">{tc.name}</span>
+                  </div>
+                  <p className="text-[10px] text-gray-500 italic">{tc.flavorText}</p>
+                  <p className="text-[10px] text-gray-400">{tc.description}</p>
+                  {isSelected && (
+                    <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-teal-500 flex items-center justify-center">
+                      <Check className="w-2.5 h-2.5 text-black" />
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <button
+        type="button"
+        onClick={submit}
+        disabled={!canSubmit || submitting}
+        className="w-full py-3 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 bg-teal-500 hover:bg-teal-400 text-black disabled:opacity-30 disabled:cursor-not-allowed"
+      >
+        {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Duell-Deck speichern"}
+      </button>
+    </div>
+  );
+}

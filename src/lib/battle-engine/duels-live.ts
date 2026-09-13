@@ -91,7 +91,9 @@ export type DuelLogEntry =
       defendingTeam: TeamId;
       amount: number;
       remainingLp: number;
-    };
+    }
+  | { type: "dodged"; round: number; attackerUnitId: string; defenderUnitId: string }
+  | { type: "blocked"; round: number; attackerUnitId: string; defenderUnitId: string };
 
 export interface LiveDuelState {
   seed: number;
@@ -458,9 +460,16 @@ function resolveFieldActions(
     const defenderAction = opponentSubmission.fieldActions.find((a) => a.slotIndex === targetSlotIndex)?.action;
 
     if (defenderAction === "dodge" && fieldAction.action !== "ultimate") {
+      log.push({ type: "dodged", round, attackerUnitId: attacker.instanceId, defenderUnitId: defenderUnit.instanceId });
       continue; // Angriff komplett vermieden (Ultimate ist nicht ausweichbar)
     }
 
+    // Eigener "blocked"-Marker VOR dem eigentlichen Schaden-Log-Eintrag, damit
+    // die UI einen abgeschwächten Treffer von einem regulären Volltreffer
+    // unterscheiden kann (siehe DuelLiveView.tsx: "Geblockt!" statt nur der Zahl).
+    if (defenderAction === "block") {
+      log.push({ type: "blocked", round, attackerUnitId: attacker.instanceId, defenderUnitId: defenderUnit.instanceId });
+    }
     const damageMultiplier = defenderAction === "block" ? DUEL_BLOCK_DAMAGE_MULTIPLIER : 1;
     performAction(attacker, fieldAction.action, allFieldUnits(state), rng, round, asBattleLog(log), damageMultiplier, defenderUnit.instanceId);
   }
@@ -507,6 +516,15 @@ function grantRoundRage(
   }
 }
 
+function clearDeadUnits(player: DuelPlayerState): void {
+  for (const slot of player.field) {
+    if (slot.unit && !slot.unit.isAlive) {
+      player.graveyardCardIds.push(slot.unit.def.cardId);
+      slot.unit = null;
+    }
+  }
+}
+
 export function checkDuelWinner(playerA: DuelPlayerState, playerB: DuelPlayerState): TeamId | "DRAW" | null {
   const aDown = playerA.lifePoints <= 0;
   const bDown = playerB.lifePoints <= 0;
@@ -548,9 +566,17 @@ function resolveDuelRound(state: LiveDuelState): LiveDuelState {
   resolveFieldActions("A", state, submissionA, submissionB, rng, log, round);
   resolveFieldActions("B", state, submissionB, submissionA, rng, log, round);
 
-  // 6. Rage-Vergabe (inkl. korrigierter Block-Basis-Rage + Comeback-Bonus)
+  // 6. Rage-Vergabe (inkl. korrigierter Block-Basis-Rage + Comeback-Bonus).
+  // grantRage() ignoriert bereits tote Einheiten (siehe engine.ts), Reihenfolge
+  // zur Feld-Bereinigung unten ist daher unkritisch.
   grantRoundRage("A", state, submissionA, submissionB, log, round);
   grantRoundRage("B", state, submissionB, submissionA, log, round);
+
+  // 6b. Tote Feld-Einheiten räumen — sonst bleibt der Slot für immer blockiert
+  // (ein "death"-Log-Eintrag wurde bereits beim tödlichen Treffer geschrieben,
+  // hier nur der stille Feld-Zustandswechsel).
+  clearDeadUnits(state.playerA);
+  clearDeadUnits(state.playerB);
 
   // 7. Sieg-Check
   state.winner = checkDuelWinner(state.playerA, state.playerB);

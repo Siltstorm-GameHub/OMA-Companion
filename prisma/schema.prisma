@@ -1734,12 +1734,14 @@ model BattleChallenge {
   challengerId     String
   opponentId       String
   status           String    @default("pending") // pending | live | declined | resolved | expired
-  // "DUELS_LIVE" (Yu-Gi-Oh-artiges Deck/Feld-PvP, mit Annahme-Schritt) | "GEMS" (asynchroner
+  // "DUELS" (Yu-Gi-Oh-artiges Deck/Feld-PvP, mit Annahme-Schritt — Wert bewusst unverändert
+  // gelassen, obwohl die Engine dahinter komplett neu ist: leaderboard.ts und die
+  // Battle-Cards-Seite filtern hart auf diesen String für die Rangliste, ein neuer Wert
+  // hätte neue Duelle dort stillschweigend verschwinden lassen) | "GEMS" (asynchroner
   // Match-3-Ghost-Angriff, startet direkt mit status="live", kein "pending"/Annahme) — beide
   // zählen gemeinsam in die Saison-Rangliste (siehe leaderboard.ts), sind dort aber auch einzeln
-  // filterbar. "DUELS" ist der abgelöste alte sequentielle Duell-Modus — nur noch für bereits
-  // resolvte Alt-Kämpfe relevant, wird für neue Herausforderungen nicht mehr vergeben.
-  mode             String    @default("DUELS_LIVE")
+  // filterbar.
+  mode             String    @default("DUELS")
   liveBattleId     String?   @unique // gesetzt während status="live", verweist auf LiveBattle.id
   battleId         String? // gesetzt sobald resolved, verweist auf Battle.id
   winnerId         String?

@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
-import { X, Sparkles, ScissorsLineDashed } from "lucide-react";
+import { X, Sparkles, ScissorsLineDashed, Shield, Zap } from "lucide-react";
 import BattleCardView from "./BattleCardView";
 import type { BattleCardData } from "./BattleCardView";
 import { playCardRevealSound, playRarePullSound } from "@/lib/battle-cards/sound";
@@ -20,17 +20,53 @@ import { PACK_CLIP_PATH, PACK_TEXTURE, PackCoverArt, type PackVisualKind } from 
 
 type Phase = "closed" | "ready" | "opening" | "revealed";
 
-interface RevealedCard {
-  card: BattleCardData;
-  isNewCard: boolean;
-  duplicates: number;
+interface RevealedTacticCard {
+  id: string;
+  name: string;
+  kind: "INSTANT" | "TRAP";
+  flavorText: string;
+  description: string;
+  imageUrl?: string | null;
+}
+
+type RevealedItem =
+  | { itemKind: "card"; card: BattleCardData; isNewCard: boolean; duplicates: number }
+  | { itemKind: "tactic"; tacticCard: RevealedTacticCard; isNewCard: boolean; duplicates: number };
+
+function imageUrlOf(item: RevealedItem): string | null | undefined {
+  return item.itemKind === "card" ? item.card.imageUrl : item.tacticCard.imageUrl;
 }
 
 interface OpenPackResponse {
-  cards: RevealedCard[];
+  cards: RevealedItem[];
   remainingUnopened: number;
   kind: PackVisualKind;
   nextKind: PackVisualKind | null;
+}
+
+/** Einfache Reveal-Kachel für Taktik-Karten (Items/Fallen) — bewusst schlichter
+ *  als BattleCardView, das auf Helden-Stats (Klasse/HP/Angriff/...) zugeschnitten
+ *  ist und für Taktik-Karten nicht passt. */
+function TacticCardReveal({ tacticCard }: { tacticCard: RevealedTacticCard }) {
+  const Icon = tacticCard.kind === "TRAP" ? Shield : Zap;
+  const accent = tacticCard.kind === "TRAP" ? "#f43f5e" : "#f59e0b";
+  return (
+    <div
+      className="w-full max-w-[240px] rounded-2xl p-5 space-y-2 text-center"
+      style={{
+        background: `linear-gradient(160deg, ${accent}22, rgba(12,12,16,0.92))`,
+        boxShadow: `0 0 0 1.5px ${accent}88, 0 8px 24px rgba(0,0,0,0.5)`,
+      }}
+    >
+      <Icon className="w-8 h-8 mx-auto" style={{ color: accent }} />
+      <p className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: accent }}>
+        {tacticCard.kind === "TRAP" ? "Falle" : "Item"}
+      </p>
+      <p className="text-sm font-black text-white">{tacticCard.name}</p>
+      <p className="text-[11px] text-gray-400 italic">{tacticCard.flavorText}</p>
+      <p className="text-[11px] text-gray-300">{tacticCard.description}</p>
+    </div>
+  );
 }
 
 const PACK_BODY_HEIGHT = 240; // px — muss zur h-60-Klasse des Pack-Körpers passen
@@ -46,7 +82,7 @@ export default function PackOpener({
   const [phase, setPhase] = useState<Phase>("closed");
   const [remaining, setRemaining] = useState(initialUnopenedCount);
   const [nextKind, setNextKind] = useState<PackVisualKind | null>(initialNextPackKind);
-  const [results, setResults] = useState<RevealedCard[]>([]);
+  const [results, setResults] = useState<RevealedItem[]>([]);
   const [revealIndex, setRevealIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const displayKind = nextKind ?? "STANDARD";
@@ -55,8 +91,8 @@ export default function PackOpener({
     setPhase("ready");
   }
 
-  function playRevealSoundFor(card: RevealedCard) {
-    if (card.card.rarity === "COMMUNITY") playRarePullSound();
+  function playRevealSoundFor(item: RevealedItem) {
+    if (item.itemKind === "card" && item.card.rarity === "COMMUNITY") playRarePullSound();
     else playCardRevealSound();
   }
 
@@ -78,9 +114,10 @@ export default function PackOpener({
       // spätere Karten (Netz dann frei) prompt laden. Browser cachen das Ergebnis,
       // sodass die <img>-Tags in BattleCardView es beim Anzeigen sofort parat haben.
       data.cards.forEach((c) => {
-        if (c.card.imageUrl) {
+        const url = imageUrlOf(c);
+        if (url) {
           const preload = new window.Image();
-          preload.src = c.card.imageUrl;
+          preload.src = url;
         }
       });
       // kurze Verzoegerung, damit die Oeffnen-Animation sichtbar bleibt — gibt den
@@ -92,7 +129,7 @@ export default function PackOpener({
       setNextKind(data.nextKind);
       setPhase("revealed");
       if (data.cards[0]) playRevealSoundFor(data.cards[0]);
-      const hasCommunity = data.cards.some((c) => c.card.rarity === "COMMUNITY");
+      const hasCommunity = data.cards.some((c) => c.itemKind === "card" && c.card.rarity === "COMMUNITY");
       confetti({
         particleCount: hasCommunity ? 200 : 140,
         spread: 75,
@@ -263,7 +300,10 @@ export default function PackOpener({
                 </button>
               )}
 
-              {phase === "revealed" && results.length > 0 && (
+              {phase === "revealed" && results.length > 0 && (() => {
+                const current = results[revealIndex];
+                const isCommunity = current.itemKind === "card" && current.card.rarity === "COMMUNITY";
+                return (
                 <motion.div
                   key={revealIndex}
                   initial={{ scale: 0.6, opacity: 0, rotateY: 90 }}
@@ -272,28 +312,34 @@ export default function PackOpener({
                   className="flex flex-col items-center gap-3"
                 >
                   <div className="relative w-full max-w-[240px]">
-                    {results[revealIndex].card.rarity === "COMMUNITY" && (
+                    {isCommunity && (
                       <div
                         className="absolute -inset-5 -z-10 rounded-full pointer-events-none"
                         style={{ background: "radial-gradient(closest-side, rgba(245,158,11,0.4), transparent 72%)" }}
                       />
                     )}
-                    <BattleCardView card={results[revealIndex].card} />
+                    {current.itemKind === "card" ? (
+                      <BattleCardView card={current.card} />
+                    ) : (
+                      <TacticCardReveal tacticCard={current.tacticCard} />
+                    )}
                   </div>
                   {results.length > 1 && (
                     <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">
                       Karte {revealIndex + 1}/{results.length}
                     </p>
                   )}
-                  {results[revealIndex].card.rarity === "COMMUNITY" ? (
+                  {isCommunity ? (
                     <p className="flex items-center gap-1.5 text-sm font-black uppercase tracking-wide" style={{ color: "#fbbf24" }}>
                       <Sparkles className="w-4 h-4" /> Community-Karte! <Sparkles className="w-4 h-4" />
                     </p>
                   ) : (
                     <p className="text-xs text-gray-400">
-                      {results[revealIndex].isNewCard
-                        ? "Neue Karte für deine Sammlung!"
-                        : `Duplikat — jetzt ${results[revealIndex].duplicates}x`}
+                      {current.isNewCard
+                        ? current.itemKind === "tactic"
+                          ? "Neue Taktik-Karte für dein Duell-Deck!"
+                          : "Neue Karte für deine Sammlung!"
+                        : `Duplikat — jetzt ${current.duplicates}x`}
                     </p>
                   )}
                   <div className="flex gap-2">
@@ -334,7 +380,8 @@ export default function PackOpener({
                     )}
                   </div>
                 </motion.div>
-              )}
+                );
+              })()}
             </div>
           </motion.div>
         )}

@@ -53,5 +53,6 @@ export function tacticCardToDefinition(card: TacticCard): TacticCardDefinition {
     kind: card.kind,
     effects: parseTacticEffects(card.effects, `${card.name}.effects`),
     triggerCondition: parseTacticTriggerCondition(card.triggerCondition, `${card.name}.triggerCondition`),
+    imageUrl: card.imageUrl,
   };
 }

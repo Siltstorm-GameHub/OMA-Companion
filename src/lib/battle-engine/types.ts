@@ -178,6 +178,7 @@ export interface TacticCardDefinition {
   effects: Effect[];
   /** Nur bei kind === "TRAP" gesetzt. */
   triggerCondition?: TrapTriggerCondition;
+  imageUrl?: string | null;
 }
 
 // ---------- Log / Replay ----------

@@ -19,6 +19,7 @@ import {
   type DuelRoundSubmission,
   type LiveDuelState,
 } from "@/lib/battle-engine/duels-live";
+import { ULTIMATE_SKILL_COST } from "@/lib/battle-engine/constants";
 import type { TeamId, UnitClass } from "@/lib/battle-engine/types";
 import { finalizePvpChallengeSideEffects } from "@/lib/battle-cards/live-battle";
 import { buildDuelDeckInput } from "@/lib/battle-cards/duel-deck";
@@ -60,8 +61,22 @@ export interface LiveDuelUnitSnapshot {
   currentHp: number;
   maxHp: number;
   rage: number;
+  /** Rage-Kosten des Ultimates — der Client nutzt das, um "bereit"
+   *  (rage >= ultimateCost) visuell hervorzuheben. */
+  ultimateCost: number;
   isAlive: boolean;
   imageUrl?: string | null;
+}
+
+export interface LiveDuelHandCard {
+  cardId: string;
+  kind: "unit" | "tactic";
+  name: string;
+  imageUrl?: string | null;
+  /** Nur bei kind === "unit". */
+  unitClass?: UnitClass;
+  /** Nur bei kind === "tactic". */
+  tacticKind?: "INSTANT" | "TRAP";
 }
 
 export interface LiveDuelPlayerSnapshot {
@@ -70,9 +85,10 @@ export interface LiveDuelPlayerSnapshot {
   deckCount: number;
   graveyardCount: number;
   trapCount: number;
-  /** Nur für den betrachtenden Spieler gesetzt (eigene Hand) — die gegnerische
-   *  Hand bleibt verdeckt, nur `handCount` verrät die Größe. */
-  handCardIds: string[] | null;
+  /** Nur für den betrachtenden Spieler gesetzt (eigene Hand, mit Anzeige-Infos
+   *  aus den bereits im State aufgelösten Definitionen) — die gegnerische Hand
+   *  bleibt verdeckt, nur `handCount` verrät die Größe. */
+  hand: LiveDuelHandCard[] | null;
   handCount: number;
   hasSubmitted: boolean;
 }
@@ -105,9 +121,20 @@ function toUnitSnapshot(slot: DuelFieldSlot, slotIndex: number): LiveDuelUnitSna
     currentHp: unit.currentHp,
     maxHp: unit.maxHp,
     rage: unit.rage,
+    ultimateCost: unit.def.ultimateSkill.cost ?? ULTIMATE_SKILL_COST,
     isAlive: unit.isAlive,
     imageUrl: unit.def.imageUrl,
   };
+}
+
+function toHandCard(player: DuelPlayerState, cardId: string): LiveDuelHandCard | null {
+  const unitDef = player.unitDefsByCardId[cardId];
+  if (unitDef) return { cardId, kind: "unit", name: unitDef.name, unitClass: unitDef.class, imageUrl: unitDef.imageUrl };
+
+  const tacticDef = player.tacticDefsById[cardId];
+  if (tacticDef) return { cardId, kind: "tactic", name: tacticDef.name, tacticKind: tacticDef.kind, imageUrl: tacticDef.imageUrl };
+
+  return null; // defensiv, sollte durch createDuelState/resolveDuelRound nicht vorkommen
 }
 
 function toPlayerSnapshot(player: DuelPlayerState, hasSubmitted: boolean, revealHand: boolean): LiveDuelPlayerSnapshot {
@@ -117,7 +144,9 @@ function toPlayerSnapshot(player: DuelPlayerState, hasSubmitted: boolean, reveal
     deckCount: player.deckCardIds.length,
     graveyardCount: player.graveyardCardIds.length,
     trapCount: player.setTraps.length,
-    handCardIds: revealHand ? player.handCardIds : null,
+    hand: revealHand
+      ? player.handCardIds.map((id) => toHandCard(player, id)).filter((c): c is LiveDuelHandCard => c !== null)
+      : null,
     handCount: player.handCardIds.length,
     hasSubmitted,
   };
