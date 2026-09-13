@@ -1,8 +1,8 @@
 // ============================================
 // Shop-Konfiguration (Pack-Preise je Sorte + Glücksrad-Preise)
 // ============================================
-// Nutzt dieselbe BotConfig-Key-Value-Tabelle wie job-config/mancave-config/
-// minigames-config — admin-editierbar über /admin/shop.
+// Nutzt dieselbe BotConfig-Key-Value-Tabelle wie job-config/minigames-config
+// — admin-editierbar über /admin/shop.
 
 import { prisma } from "./prisma";
 

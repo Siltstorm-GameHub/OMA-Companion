@@ -23,6 +23,8 @@ export async function POST() {
     return Response.json({
       cards: result.cards.map((r) => serializeCard(r, avatarByDiscordId)),
       remainingUnopened: result.remainingUnopened,
+      kind: result.kind,
+      nextKind: result.nextKind,
     });
   } catch (error) {
     if (error instanceof PackError) {

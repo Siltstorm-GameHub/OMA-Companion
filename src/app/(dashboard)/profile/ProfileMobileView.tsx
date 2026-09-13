@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  User, Wrench, Settings, ChevronRight, Gift,
+  User, Settings, ChevronRight, Gift,
   Clock, MessageSquare, Building2,
 } from "lucide-react";
 import RankedAvatar from "@/components/RankedAvatar";
@@ -17,8 +17,6 @@ import ProfileOverlayButton from "@/components/ProfileOverlayButton";
 import type { Badge } from "@/lib/badges";
 import type { FavoriteGame } from "@/lib/favorite-games";
 import type { WanderpocalHolder, WanderpocalStat } from "@/lib/wanderpocal";
-import type { MancaveData } from "../mancave/mancave-data";
-import { ItemsPanel } from "../mancave/MancaveSharedUI";
 import BadgesSection from "./BadgesSection";
 import FavoriteGamesSection from "./FavoriteGamesSection";
 import SquadsSection, { type ProfileSquad } from "./SquadsSection";
@@ -64,7 +62,6 @@ interface Props {
   pokaleCount:              number;
   topGames:                 string[];
   favoriteGames:            FavoriteGame[];
-  mancaveData:              MancaveData;
   systemBadges:             Badge[];
   customBadges:             CustomBadgeDisplay[];
   showcaseBadgeKeys:        string[];
@@ -98,27 +95,24 @@ interface Props {
   wanderpocalHolders:  Record<string, WanderpocalHolderInfo>;
 }
 
-type Tab = "profil" | "mancave" | "community_jobs" | "einstellungen";
+type Tab = "profil" | "community_jobs" | "einstellungen";
 
 const TABS: { key: Tab; label: string; icon: typeof User }[] = [
   { key: "profil",         label: "Profil",         icon: User },
-  { key: "mancave",        label: "Mancave",        icon: Wrench },
   { key: "community_jobs", label: "Community-Jobs", icon: Building2 },
   { key: "einstellungen",  label: "Einstellungen",  icon: Settings },
 ];
 
 /**
- * Mobile Ansicht der eigenen Profilseite (siehe Teil B des Mancave-Umbau-
- * Plans) — löst die separate `MancaveMobileApp` ab, deren Inhalte inhaltlich
- * ohnehin nur das Profil wiederholten. Immer sichtbare Hero-Section oben,
- * darunter 3 Reiter (Profil/Job/Einstellungen), gleiche Tab-Konvention wie
- * die alte `MancaveMobileApp` (lokaler State, Button-Grid mit lucide-Icons).
+ * Mobile Ansicht der eigenen Profilseite — immer sichtbare Hero-Section
+ * oben, darunter Reiter (Profil/Community-Jobs/Einstellungen), lokaler
+ * Tab-State mit Button-Grid aus lucide-Icons.
  */
 export default function ProfileMobileView(props: Props) {
   const {
     bannerUrl, displayName, avatarUrl, rankPoints, rankLabel, rankColor, memberSince, totalPoints,
     editorBirthday, editorBio, editorTwitchLogin, editorBannerUrl,
-    userId, eventCount, eventWins, pollMasterCount, pokaleCount, topGames, favoriteGames, mancaveData: initialMancaveData,
+    userId, eventCount, eventWins, pollMasterCount, pokaleCount, topGames, favoriteGames,
     systemBadges, customBadges, showcaseBadgeKeys, voiceHours, messageCount, coinsEarned, coinsSpent,
     questsWithProgress, tournamentParticipations, squads, profileCompletionDone, rewardPerItem, reviewYears,
     hasTwitch, eventRegs,
@@ -126,18 +120,6 @@ export default function ProfileMobileView(props: Props) {
   } = props;
 
   const [tab, setTab] = useState<Tab>("profil");
-  // Lokaler State statt direkt `initialMancaveData`, gleicher Zweck wie in
-  // MonitorScreenContent (MancaveSharedUI.tsx): ItemsPanel patcht
-  // Änderungen (Ausbau-Stufen, Münzstand) hier rein, ohne dass die ganze
-  // Profilseite dafür neu geladen werden muss.
-  const [mancaveData, setMancaveData] = useState(initialMancaveData);
-  // React-empfohlenes Muster "State beim Prop-Wechsel anpassen" (react.dev)
-  // statt useEffect: läuft während des Renders, kein Cascading-Render-Risiko.
-  const [prevInitialMancaveData, setPrevInitialMancaveData] = useState(initialMancaveData);
-  if (initialMancaveData !== prevInitialMancaveData) {
-    setPrevInitialMancaveData(initialMancaveData);
-    setMancaveData(initialMancaveData);
-  }
 
   return (
     <div className="space-y-4">
@@ -192,7 +174,7 @@ export default function ProfileMobileView(props: Props) {
       </div>
 
       {/* ── Reiter-Leiste ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-4 gap-1.5">
+      <div className="grid grid-cols-3 gap-1.5">
         {TABS.map(t => {
           const active = tab === t.key;
           const Icon = t.icon;
@@ -293,10 +275,6 @@ export default function ProfileMobileView(props: Props) {
             <SquadsSection squads={squads} />
             <ProfileCompletion done={profileCompletionDone} rewardPerItem={rewardPerItem} />
           </>
-        )}
-
-        {tab === "mancave" && (
-          <ItemsPanel data={mancaveData} onDataChange={setMancaveData} />
         )}
 
         {tab === "community_jobs" && <CommunityJobsPanel />}

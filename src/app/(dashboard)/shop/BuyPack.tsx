@@ -3,57 +3,36 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Sparkles, Loader2, Package, Gem, Crown } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { Loader2, Package } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
 import type { PackKind, PackPrices } from "@/lib/shop-config";
+import { PackCoverArt } from "@/components/battle-cards/pack-visuals";
 
-const PACK_INFO: Record<
-  PackKind,
-  { label: string; description: string; icon: LucideIcon; accent: string; glow: string }
-> = {
+const PACK_INFO: Record<PackKind, { label: string; description: string; accent: string; glow: string }> = {
   STANDARD: {
     label: "Standard-Pack",
     description: "1 Karte — sehr geringe Chance auf eine Community-Karte.",
-    icon: Sparkles,
     accent: "violet",
     glow: "rgba(139,92,246,0.35)",
   },
   PREMIUM: {
     label: "Premium-Pack",
     description: "5 Karten — deutlich erhöhte Chance (~25%) auf eine Community-Karte.",
-    icon: Gem,
     accent: "sky",
     glow: "rgba(56,189,248,0.35)",
   },
   COMMUNITY: {
     label: "Community-Pack",
     description: "1 Karte — garantiert eine Community-Karte!",
-    icon: Crown,
     accent: "amber",
     glow: "rgba(245,158,11,0.4)",
   },
 };
 
-const ACCENT_CLASSES: Record<string, { iconBg: string; iconBorder: string; iconText: string; button: string }> = {
-  violet: {
-    iconBg: "bg-violet-500/10",
-    iconBorder: "border-violet-500/20",
-    iconText: "text-violet-400",
-    button: "bg-violet-500 hover:bg-violet-400 text-black",
-  },
-  sky: {
-    iconBg: "bg-sky-500/10",
-    iconBorder: "border-sky-500/20",
-    iconText: "text-sky-400",
-    button: "bg-sky-500 hover:bg-sky-400 text-black",
-  },
-  amber: {
-    iconBg: "bg-amber-500/10",
-    iconBorder: "border-amber-500/20",
-    iconText: "text-amber-400",
-    button: "bg-amber-500 hover:bg-amber-400 text-black",
-  },
+const ACCENT_CLASSES: Record<string, { button: string }> = {
+  violet: { button: "bg-violet-500 hover:bg-violet-400 text-black" },
+  sky: { button: "bg-sky-500 hover:bg-sky-400 text-black" },
+  amber: { button: "bg-amber-500 hover:bg-amber-400 text-black" },
 };
 
 const PACK_ORDER: PackKind[] = ["STANDARD", "PREMIUM", "COMMUNITY"];
@@ -75,7 +54,6 @@ function PackCard({
   const [loading, setLoading] = useState(false);
   const info = PACK_INFO[kind];
   const accent = ACCENT_CLASSES[info.accent];
-  const Icon = info.icon;
   const canAfford = points >= cost;
 
   async function handleBuy() {
@@ -108,9 +86,7 @@ function PackCard({
     <div className="glass card-shine rounded-2xl border border-white/[0.06] overflow-hidden">
       <div className="p-5 space-y-4">
         <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-xl ${accent.iconBg} border ${accent.iconBorder} flex items-center justify-center shrink-0`}>
-            <Icon className={`w-5 h-5 ${accent.iconText}`} />
-          </div>
+          <PackCoverArt kind={kind} showLabel={false} className="w-14 h-[72px] shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-white">{info.label}</p>
             <p className="text-xs text-gray-500">{info.description}</p>

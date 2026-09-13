@@ -21,8 +21,8 @@ import ProfileStatTiles from "../ProfileStatTiles";
 import ProfileRecentEvents from "../ProfileRecentEvents";
 import ProfileQuestsAndTournaments from "../ProfileQuestsAndTournaments";
 import Trophy3DViewer, { type Trophy3DItem } from "@/components/Trophy3DViewer";
-import { WANDERPOKAL_MODELS, WANDERPOKAL_MODEL_DEFAULT, eventPokalModelUrl } from "../../mancave/mancave-trophy-models";
-import { loadMancaveData } from "@/lib/mancave-data-loader";
+import { WANDERPOKAL_MODELS, WANDERPOKAL_MODEL_DEFAULT, eventPokalModelUrl } from "@/lib/trophy-models";
+import { loadWanderpokalStatus } from "@/lib/wanderpokal-status";
 
 export async function generateMetadata({
   params,
@@ -203,18 +203,15 @@ export default async function PublicProfilePage({
   // Für den 3D-Pokal-Viewer + "wer ist aktueller Halter"-Anzeige — dieselbe
   // Aggregation, die auch die eigene Profilseite nutzt (siehe page.tsx),
   // hier für den PROFILEIGENTÜMER (id) statt für den Betrachter geladen.
-  // isAdmin=false: diese Seite zeigt fremde Zimmer nur lesend (Pokal-Viewer,
-  // Wer-hält-Anzeige) — Ausbau-Kosten/Testmodus-Flag aus `mancaveData` werden
-  // hier gar nicht gerendert, spielen für den Profileigentümer also keine Rolle.
-  const mancaveData = await loadMancaveData(id, false);
+  const wanderpokalStatusData = await loadWanderpokalStatus(id);
   const wanderpocalHolders: Record<string, { holderUserId: string | null; holderName: string | null; holderAvatarUrl: string | null; holderRankPoints: number | null }> = {};
-  for (const s of mancaveData.wanderpokalStatus) {
+  for (const s of wanderpokalStatusData.wanderpokalStatus) {
     wanderpocalHolders[`${s.scopeType}:${s.scopeValue}`] = {
       holderUserId: s.holderUserId, holderName: s.holderName,
       holderAvatarUrl: s.holderAvatarUrl, holderRankPoints: s.holderRankPoints,
     };
   }
-  const wanderpokalItems: Trophy3DItem[] = mancaveData.wanderpokale.map(w => {
+  const wanderpokalItems: Trophy3DItem[] = wanderpokalStatusData.wanderpokale.map(w => {
     const cfg = WANDERPOKAL_MODELS[w.scopeValue] ?? WANDERPOKAL_MODEL_DEFAULT;
     const holder = wanderpocalHolders[`${w.scopeType}:${w.scopeValue}`];
     return {

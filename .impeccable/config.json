@@ -221,6 +221,15 @@
         ],
         "createdAt": "2026-09-12T17:26:15.492Z",
         "reason": "false positive: text-gray-500 is the inactive-tab branch of the ternary, never rendered on the purple active background; identical pattern already in production AdminNav.tsx sub-tabs"
+      },
+      {
+        "rule": "gray-on-color",
+        "value": "text-gray-300",
+        "files": [
+          "src/components/battle-cards/HeroBuilderClient.tsx"
+        ],
+        "createdAt": "2026-09-13T07:00:40.673Z",
+        "reason": "false positive: text-gray-300 is the inactive-button branch of the ternary (paired with bg-white/[0.03], not the violet active background)"
       }
     ]
   }

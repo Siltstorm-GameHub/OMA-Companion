@@ -4,9 +4,9 @@ import {
 } from "./upgrade-config";
 
 /**
- * Admin-einstellbare Wirtschaft des Karten-Upgrade-Systems — gleiches Muster
- * wie mancave-config.ts: Tabellen als JSON-Blob in BotConfig statt eigener
- * Tabellen, der Katalog-Default (upgrade-config.ts) bleibt reiner Code.
+ * Admin-einstellbare Wirtschaft des Karten-Upgrade-Systems — Tabellen als
+ * JSON-Blob in BotConfig statt eigener Tabellen, der Katalog-Default
+ * (upgrade-config.ts) bleibt reiner Code.
  */
 export interface UpgradeEconomyConfig {
   duplicateThresholds: UpgradeTable;

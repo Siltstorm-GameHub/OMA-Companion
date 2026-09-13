@@ -104,9 +104,6 @@ model User {
   lulPollVotesGiven                LulPollVote[]               @relation("LulPollVoter")
   lulPollVotesReceived             LulPollVote[]               @relation("LulPollTarget")
   serverApplications               ServerApplication[]
-  room                             Room?
-  roomItems                        RoomItem[]
-  mancaveItems                     MancaveItem[]
   communityJobApplications         CommunityJobApplication[]
   communityJobApplicationsReviewed CommunityJobApplication[]   @relation("CommunityJobApplicationReviewer")
   communityJobMemberships          CommunityJobMember[]
@@ -133,6 +130,7 @@ model User {
   battleChallengesSent             BattleChallenge[]           @relation("BattleChallengeChallenger")
   battleChallengesReceived         BattleChallenge[]           @relation("BattleChallengeOpponent")
   battleQueueEntry                 BattleQueueEntry?
+  heroLoadout                      UserHeroLoadout?
   liveBattlesAsA                   LiveBattle[]                @relation("LiveBattlePlayerA")
   liveBattlesAsB                   LiveBattle[]                @relation("LiveBattlePlayerB")
   campaignProgress                 UserCampaignProgress[]
@@ -1181,65 +1179,6 @@ model ServerApplication {
   @@map("serverapplication")
 }
 
-// ── Mancave (neues Ausbausystem, parallel zum alten Gaming-Zimmer) ─────────────
-
-/// Stufe (0-4) eines Mancave-Ausbau-Slots. Katalog (Label, Grundausstattung
-/// ja/nein, Stufenkosten) steht im Code (src/lib/mancave-items.ts), hier nur
-/// wer welchen Slot auf welcher Stufe besitzt. Grundausstattungs-Slots ohne
-/// eigene Zeile gelten als Stufe 1, Zusatz-Slots ohne Zeile als Stufe 0
-/// (faule Materialisierung wie beim alten Room-System) — siehe
-/// mancave-economy.ts loadMancaveItems().
-model MancaveItem {
-  userId    String
-  itemKey   String // Schlüssel aus MANCAVE_ITEMS
-  tier      Int      @default(0)
-  updatedAt DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@id([userId, itemKey])
-}
-
-// ── Gaming-Zimmer ────────────────────────────────────────────────────────────
-
-/// Zustand des Gaming-Zimmers (Flächen + Metadaten).
-/// Die Zeile wird ERST beim ersten Eingriff angelegt ("faule Materialisierung"):
-/// Wer die Seite nur anschaut, sieht DEFAULT_ROOM aus src/lib/room-layout.ts —
-/// ohne einen einzigen Schreibzugriff. Existiert die Zeile, sind die
-/// RoomItem-Zeilen die alleinige Wahrheit.
-model Room {
-  userId       String   @id
-  wallpaperKey String   @default("tapete_raufaser") // Schlüssel aus ROOM_ITEMS, Kategorie "tapete"
-  floorKey     String   @default("boden_linoleum") // Schlüssel aus ROOM_ITEMS, Kategorie "bodenbelag"
-  doorSign     String? // Türschild-Freitext, max. 24 Zeichen (serverseitig gekürzt)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-/// Ein besessenes Möbelstück. Eine Zeile = ein Exemplar.
-/// Größe, Preis, Zone und Freischalt-Tags stehen NICHT hier, sondern im
-/// Code-Katalog (src/lib/room-items.ts) — so lassen sich Balancing-Werte
-/// ändern, ohne Daten zu migrieren. Hier steht nur, WEM es gehört und WO es steht.
-model RoomItem {
-  id        String   @id @default(cuid())
-  userId    String
-  itemKey   String // Schlüssel aus ROOM_ITEMS
-  zone      String // "wall" | "floor"
-  x         Int // Rasterspalte der linken oberen Ecke (0-basiert)
-  y         Int // Rasterzeile der linken oberen Ecke (0-basiert)
-  flipped   Boolean  @default(false) // horizontal gespiegelt
-  rotation  Int      @default(0) // Boden-Objekte: 0-3, je 90° zusätzlich zur Wand-Grundausrichtung
-  placed    Boolean  @default(true) // false = im Lager (besessen, aber nicht aufgestellt)
-  starter   Boolean  @default(false) // Grundausstattung: gratis, nicht einlagerbar
-  createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, placed])
-}
-
 // ── Community-Jobs (aktive, community-bewertete Jobs — Journalist, Fotograf, ────
 //    Marketing Manager, Coach/Manager, Visionär) — die alten, passiv Münzen
 //    generierenden Idle-Jobs wurden abgeschafft. Siehe Plan "Community-Jobs mit
@@ -1952,4 +1891,35 @@ model HeroAccessory {
   height    Int
   createdAt DateTime @default(now())
   createdBy String // Admin-User-ID
+
+  equippedIn UserHeroEquipment[]
+}
+
+// Der tatsächlich vom User gebaute Held: eine gewählte Klasse (Basis-Pose)
+// plus seine ausgerüsteten Accessoires (UserHeroEquipment). Ein Loadout pro
+// User -- Klasse UND Ausrüstung sind später jederzeit änderbar, nicht nur
+// einmalig bei der Erstellung.
+model UserHeroLoadout {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  classKey  String // welche Klasse gewählt wurde, z.B. "tank"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  equipment UserHeroEquipment[]
+}
+
+// Ein ausgerüstetes Accessoire je Slot-Kategorie innerhalb eines Loadouts,
+// z.B. { slot: "weapon", accessoryId: "..." }.
+model UserHeroEquipment {
+  id          String @id @default(cuid())
+  loadoutId   String
+  slot        String // Kategorie, z.B. "weapon"
+  accessoryId String
+
+  loadout   UserHeroLoadout @relation(fields: [loadoutId], references: [id], onDelete: Cascade)
+  accessory HeroAccessory   @relation(fields: [accessoryId], references: [id], onDelete: Cascade)
+
+  @@unique([loadoutId, slot])
 }

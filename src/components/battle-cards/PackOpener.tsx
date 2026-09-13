@@ -16,22 +16,7 @@ import { Package, X, Sparkles, ScissorsLineDashed } from "lucide-react";
 import BattleCardView from "./BattleCardView";
 import type { BattleCardData } from "./BattleCardView";
 import { playCardRevealSound, playRarePullSound } from "@/lib/battle-cards/sound";
-
-// Foliertes Plastikpack: oben/unten gecrimpte Zickzack-Kante, wie bei
-// echten Sammelkarten-Boosterpacks. Einmalig als Modul-Konstante berechnet.
-function crimpClipPath(teeth = 14): string {
-  const pts: string[] = [];
-  for (let i = 0; i <= teeth; i++) {
-    const x = (i / teeth) * 100;
-    pts.push(`${x}% ${i % 2 === 0 ? 0 : 6}%`);
-  }
-  for (let i = teeth; i >= 0; i--) {
-    const x = (i / teeth) * 100;
-    pts.push(`${x}% ${i % 2 === 0 ? 100 : 94}%`);
-  }
-  return `polygon(${pts.join(", ")})`;
-}
-const PACK_CLIP_PATH = crimpClipPath();
+import { PACK_CLIP_PATH, PACK_TEXTURE, PackCoverArt, type PackVisualKind } from "./pack-visuals";
 
 type Phase = "closed" | "ready" | "opening" | "revealed";
 
@@ -44,15 +29,27 @@ interface RevealedCard {
 interface OpenPackResponse {
   cards: RevealedCard[];
   remainingUnopened: number;
+  kind: PackVisualKind;
+  nextKind: PackVisualKind | null;
 }
 
-export default function PackOpener({ initialUnopenedCount }: { initialUnopenedCount: number }) {
+const PACK_BODY_HEIGHT = 240; // px — muss zur h-60-Klasse des Pack-Körpers passen
+
+export default function PackOpener({
+  initialUnopenedCount,
+  initialNextPackKind,
+}: {
+  initialUnopenedCount: number;
+  initialNextPackKind: PackVisualKind | null;
+}) {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("closed");
   const [remaining, setRemaining] = useState(initialUnopenedCount);
+  const [nextKind, setNextKind] = useState<PackVisualKind | null>(initialNextPackKind);
   const [results, setResults] = useState<RevealedCard[]>([]);
   const [revealIndex, setRevealIndex] = useState(0);
   const [loading, setLoading] = useState(false);
+  const displayKind = nextKind ?? "STANDARD";
 
   function startSession() {
     setPhase("ready");
@@ -80,6 +77,7 @@ export default function PackOpener({ initialUnopenedCount }: { initialUnopenedCo
       setResults(data.cards);
       setRevealIndex(0);
       setRemaining(data.remainingUnopened);
+      setNextKind(data.nextKind);
       setPhase("revealed");
       if (data.cards[0]) playRevealSoundFor(data.cards[0]);
       const hasCommunity = data.cards.some((c) => c.card.rarity === "COMMUNITY");
@@ -178,14 +176,12 @@ export default function PackOpener({ initialUnopenedCount }: { initialUnopenedCo
                     transition={{ duration: 0.9, times: [0, 0.5, 0.58, 1] }}
                   />
 
-                  {/* Abgerissener Kopfstreifen */}
+                  {/* Abgerissener Kopfstreifen — zeigt den oberen Ausschnitt derselben
+                      Pack-Textur wie der Körper darunter, damit es vor dem Riss wie
+                      ein durchgehendes Pack aussieht. */}
                   <motion.div
-                    className="absolute top-0 inset-x-0 h-10 z-20 flex items-center justify-center gap-1 overflow-hidden"
-                    style={{
-                      clipPath: PACK_CLIP_PATH,
-                      background: "repeating-linear-gradient(135deg, #fde68a 0 6px, #d97706 6px 12px)",
-                      boxShadow: "0 2px 6px rgba(0,0,0,0.35)",
-                    }}
+                    className="absolute top-0 inset-x-0 h-10 z-20 overflow-hidden"
+                    style={{ clipPath: PACK_CLIP_PATH, boxShadow: "0 2px 6px rgba(0,0,0,0.35)" }}
                     animate={
                       phase === "opening"
                         ? { y: -90, rotate: -28, opacity: 0 }
@@ -193,18 +189,23 @@ export default function PackOpener({ initialUnopenedCount }: { initialUnopenedCo
                     }
                     transition={{ duration: 0.7, ease: "easeIn" }}
                   >
-                    <ScissorsLineDashed className="w-3 h-3 text-black/50" />
-                    <span className="text-[8px] font-bold uppercase tracking-[0.15em] text-black/50">Hier aufreißen</span>
+                    <img
+                      src={PACK_TEXTURE[displayKind]}
+                      alt=""
+                      className="absolute inset-x-0 top-0 w-full object-cover"
+                      style={{ height: PACK_BODY_HEIGHT }}
+                    />
+                    <div className="absolute inset-0 bg-black/35" />
+                    <div className="absolute inset-0 flex items-center justify-center gap-1">
+                      <ScissorsLineDashed className="w-3 h-3 text-white/70" />
+                      <span className="text-[8px] font-bold uppercase tracking-[0.15em] text-white/70">Hier aufreißen</span>
+                    </div>
                   </motion.div>
 
-                  {/* Pack-Körper — foliert, glänzend */}
+                  {/* Pack-Körper — Sortentypische Foil-Textur + Logo/Schriftzug */}
                   <motion.div
-                    className="absolute inset-0 flex flex-col items-center justify-center gap-2 overflow-hidden"
-                    style={{
-                      clipPath: PACK_CLIP_PATH,
-                      background: "linear-gradient(160deg, #f59e0b 0%, #b45309 55%, #78350f 100%)",
-                      boxShadow: "0 8px 24px rgba(0,0,0,0.6), inset 0 2px 0 rgba(255,255,255,0.2)",
-                    }}
+                    className="absolute inset-0"
+                    style={{ boxShadow: "0 8px 24px rgba(0,0,0,0.6), inset 0 2px 0 rgba(255,255,255,0.2)" }}
                     animate={
                       phase === "opening"
                         ? { scaleY: [1, 0.96, 1.04, 1], scaleX: [1, 1.03, 0.98, 1] }
@@ -212,17 +213,7 @@ export default function PackOpener({ initialUnopenedCount }: { initialUnopenedCo
                     }
                     transition={phase === "opening" ? { duration: 0.9, ease: "easeInOut" } : undefined}
                   >
-                    {/* diagonaler Glanzstreifen */}
-                    <div
-                      className="absolute inset-0 pointer-events-none"
-                      style={{
-                        background:
-                          "linear-gradient(115deg, transparent 28%, rgba(255,255,255,0.38) 45%, rgba(255,255,255,0.06) 56%, transparent 70%)",
-                      }}
-                    />
-                    <Package className="w-9 h-9 text-amber-100 relative z-10" strokeWidth={1.6} />
-                    <p className="text-[13px] font-black uppercase tracking-wide text-white relative z-10">OMA Battle Cards</p>
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-amber-100/70 relative z-10">Kartenpack</p>
+                    <PackCoverArt kind={displayKind} cropped className="w-full h-full" />
                   </motion.div>
 
                   <p className="absolute -bottom-7 inset-x-0 text-[11px] text-amber-100/70 text-center">

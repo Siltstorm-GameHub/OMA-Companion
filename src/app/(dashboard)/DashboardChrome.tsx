@@ -9,20 +9,6 @@ import { FloatingLobbyChat } from "@/components/FloatingLobbyChat";
 import AuroraBackground from "@/components/AuroraBackground";
 
 /**
- * Der gesamte Chrome (Ticker/TopBar/Pill-Nav/Main-Wrapper/BottomNav) hängt an
- * `isMancave`, das lange serverseitig aus dem `x-pathname`-Header berechnet
- * wurde (in layout.tsx, einem geteilten Server-Layout). Bug dabei: bei einer
- * clientseitigen Navigation (Link-Klick) wird ein geteiltes Layout nicht
- * garantiert neu ausgeführt — nur das jeweilige `page.tsx` wird sicher
- * ausgetauscht. Verließ man /mancave (dort bekommt <main> h-screen
- * overflow-hidden) per Klick statt F5, blieb diese Klasse auf der neuen
- * Seite hängen → Seite unscrollbar, bis ein harter Reload das Layout
- * komplett neu berechnete.
- *
- * Fix: `isMancave` hier CLIENTSEITIG per usePathname() bestimmen — das ist
- * ein React-Hook, der garantiert bei jeder Navigation neu auswertet, egal
- * wie Next.js das Server-Layout cached/wiederverwendet.
- *
  * `partnerFooter` kommt bewusst als bereits gerendertes ReactNode vom Server-
  * Layout rein, statt hier `<PartnerFooter />` selbst zu importieren:
  * PartnerFooter ist eine ASYNC SERVER COMPONENT, die direkt `prisma` aufruft.
@@ -41,24 +27,23 @@ export default function DashboardChrome({
   partnerFooter: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const isMancave = pathname === "/mancave" || pathname.startsWith("/mancave/");
   // Battle Cards ist ein eigenständiger Spielmodus-Bereich — Partner-Footer,
   // News-Ticker und der Header (OMA-Schriftzug/Logo + Profilbild) lenken dort
   // nur ab. Die Navigation (BottomNav mobil, Nav-Links in der FloatingPill
   // auf Desktop) bleibt bewusst erhalten, damit man den Bereich verlassen kann.
   const isBattleCards = pathname === "/battle-cards" || pathname.startsWith("/battle-cards/");
-  const hideTicker = isMancave || isBattleCards;
+  const hideTicker = isBattleCards;
 
   return (
     <div className="min-h-screen text-white" style={{ background: "var(--bg-base)", "--top-ticker": hideTicker ? "0px" : "2.25rem" } as React.CSSProperties}>
 
       {/* ── Aurora Hintergrund ───────────────────────────────────── */}
-      {!isMancave && <AuroraBackground />}
+      <AuroraBackground />
 
       {/* ── News-Ticker (oben) ──────────────────────────────────── */}
-      {/* Mancave/Battle Cards laufen ohne Ticker — CSS-Var --top-ticker oben
-          zieht den restlichen fixierten Chrome (MobileTopBar/FloatingPill)
-          dann automatisch mit nach oben, siehe deren top-Styles. */}
+      {/* Battle Cards läuft ohne Ticker — CSS-Var --top-ticker oben zieht den
+          restlichen fixierten Chrome (MobileTopBar/FloatingPill) dann
+          automatisch mit nach oben, siehe deren top-Styles. */}
       {!hideTicker && <TopNewsFeed items={newsItems} />}
 
       {/* ── Mobile Top Bar (nur Handy, kein Logo) ───────────────── */}
@@ -74,14 +59,7 @@ export default function DashboardChrome({
       {/* ── Main Content ────────────────────────────────────────── */}
       {/* Mobile:  2.25rem Ticker + 3.5rem MobileTopBar = 5.75rem (ohne Ticker: 3.5rem) */}
       {/* Desktop: 36px Ticker + 44px Pill + 20px gap = 100px (ohne Ticker: 72px)      */}
-      {isMancave ? (
-        <main
-          className="min-w-0 px-0 pt-14 lg:pt-[72px] pb-0 h-screen overflow-hidden"
-          style={{ position: "relative", zIndex: 2 }}
-        >
-          {children}
-        </main>
-      ) : isBattleCards ? (
+      {isBattleCards ? (
         <main
           className="min-w-0 px-0 pb-24 lg:pb-10 pt-[max(0.75rem,env(safe-area-inset-top))] lg:pt-[72px]"
           style={{ position: "relative", zIndex: 2 }}
@@ -99,7 +77,7 @@ export default function DashboardChrome({
       )}
 
       {/* Back to top */}
-      {!isMancave && <BackToTop />}
+      <BackToTop />
 
       {/* Community-Lobby-Chat */}
       <FloatingLobbyChat />

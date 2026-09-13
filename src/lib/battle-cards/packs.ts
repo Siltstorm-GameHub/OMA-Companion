@@ -140,11 +140,23 @@ async function drawCardsForPack(userId: string, kind: PackKind): Promise<OpenPac
   return results;
 }
 
+/** Liefert die Sorte des ältesten ungeöffneten Packs (FIFO) — für die
+ *  Öffnen-Animation, damit das Pack-Cover schon vor dem Öffnen die
+ *  richtige Sorte zeigt. */
+export async function peekNextPackKind(userId: string): Promise<PackKind | null> {
+  const pack = await prisma.cardPack.findFirst({
+    where: { userId, openedAt: null },
+    orderBy: { createdAt: "asc" },
+    select: { kind: true },
+  });
+  return (pack?.kind as PackKind) ?? null;
+}
+
 /** Öffnet das älteste ungeöffnete Pack des Users (unabhängig von der Sorte —
  *  FIFO über alle Pack-Sorten hinweg). */
 export async function openNextPack(
   userId: string
-): Promise<{ cards: OpenPackResult[]; remainingUnopened: number }> {
+): Promise<{ cards: OpenPackResult[]; remainingUnopened: number; kind: PackKind; nextKind: PackKind | null }> {
   const pack = await prisma.cardPack.findFirst({
     where: { userId, openedAt: null },
     orderBy: { createdAt: "asc" },
@@ -163,7 +175,8 @@ export async function openNextPack(
   });
 
   const remainingUnopened = await countUnopenedPacks(userId);
-  return { cards, remainingUnopened };
+  const nextKind = await peekNextPackKind(userId);
+  return { cards, remainingUnopened, kind: pack.kind as PackKind, nextKind };
 }
 
 /** Legt ein Pack an, das beim Öffnen garantiert `cardId` enthält (statt einer

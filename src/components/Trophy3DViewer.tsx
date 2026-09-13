@@ -9,13 +9,11 @@ import RankedAvatar from "@/components/RankedAvatar";
 import { Modal } from "@/components/ui/Modal";
 
 /**
- * Standalone 3D-Pokal-Viewer für den mobilen Profil-Reiter (siehe Teil B des
- * Mancave-Umbau-Plans) — eigener kleiner `<Canvas>` mit eigener Kamera +
- * Licht, unabhängig von der großen Mancave-Raumszene. Zentriert jedes Modell
- * automatisch per `THREE.Box3` und normiert es auf eine einheitliche Größe,
- * damit unterschiedlich große GLBs (die in der Raumszene individuelle
- * fix/scale-Werte für die Regal-Platzierung brauchen, siehe
- * `mancave-trophy-models.ts`) hier alle gleich groß und mittig erscheinen.
+ * Standalone 3D-Pokal-Viewer für Wanderpokale/Event-Pokale auf der
+ * Profilseite — eigener kleiner `<Canvas>` mit eigener Kamera + Licht.
+ * Zentriert jedes Modell automatisch per `THREE.Box3` und normiert es auf
+ * eine einheitliche Größe, damit unterschiedlich große GLBs (siehe
+ * `@/lib/trophy-models.ts`) hier alle gleich groß und mittig erscheinen.
  * `scale`/`fixRotation` bleiben als optionale Fein-Korrektur erhalten, falls
  * ein Modell trotz Normierung schief oder falsch proportioniert wirkt.
  *

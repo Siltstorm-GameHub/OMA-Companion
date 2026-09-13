@@ -10,9 +10,11 @@
 // rein kosmetisch: von 9 Feldern zeigen genau 3 das tatsächliche Gewinn-
 // Symbol, die übrigen 6 verteilen sich zu je 2 auf die drei anderen
 // möglichen Preise, sodass niemals ein falsches Symbol 3× auftauchen kann.
-// Sobald der Spieler 3 gleiche Felder freirubbelt, geht es in den
-// bekannten Reveal-Screen über, der per "Einsammeln" den normalen
-// Kampf-Ende-Screen freigibt.
+// Jeder mögliche Gewinn hat eine fest zugeordnete Hintergrundfarbe, die erst
+// nach dem Aufrubbeln sichtbar wird — so ist auf einen Blick erkennbar,
+// welches Feld welchen Gewinn zeigt. Sobald 3 gleiche Felder freigelegt
+// sind, geht es in den bekannten Reveal-Screen über, der per "Einsammeln"
+// den normalen Kampf-Ende-Screen freigibt.
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
@@ -39,6 +41,22 @@ const CANDIDATE_PRIZES: ChestPrize[] = [
   { kind: "pack", packKind: "PREMIUM" },
 ];
 
+// Jeder Gewinn bekommt eine eigene, fest zugeordnete Farbe — wird erst nach
+// dem Aufrubbeln sichtbar, liegt hinter Icon/Beschriftung. Bronze/Gold für
+// die zwei Münz-Beträge, Marken-Teal/-Maroon (aus dem OMA-Logo) für die
+// zwei Pack-Sorten, damit alle vier auf einen Blick unterscheidbar sind.
+const PRIZE_COLOR: Record<string, { bg: string; glow: string; text: string }> = {
+  "coins-250": { bg: "linear-gradient(160deg, #c2762f 0%, #8a4a13 100%)", glow: "rgba(194,118,47,0.55)", text: "#fff" },
+  "coins-500": { bg: "linear-gradient(160deg, #fde047 0%, #ca8a04 100%)", glow: "rgba(250,204,21,0.6)", text: "#3f2d00" },
+  "pack-STANDARD": { bg: "linear-gradient(160deg, #2dd4bf 0%, #0f766e 100%)", glow: "rgba(45,212,191,0.55)", text: "#fff" },
+  "pack-PREMIUM": { bg: "linear-gradient(160deg, #b91c1c 0%, #7f1d1d 100%)", glow: "rgba(185,28,28,0.55)", text: "#fff" },
+};
+const DEFAULT_PRIZE_COLOR = { bg: "linear-gradient(160deg, #fde68a 0%, #b45309 100%)", glow: "rgba(251,191,36,0.55)", text: "#fff" };
+
+function colorFor(id: string) {
+  return PRIZE_COLOR[id] ?? DEFAULT_PRIZE_COLOR;
+}
+
 function buildScratchGrid(prize: ChestPrize): ChestPrize[] {
   const winId = prizeSymbolId(prize);
   const decoys = CANDIDATE_PRIZES.filter((p) => prizeSymbolId(p) !== winId);
@@ -53,18 +71,21 @@ function buildScratchGrid(prize: ChestPrize): ChestPrize[] {
 }
 
 function ScratchCellContent({ prize }: { prize: ChestPrize }) {
+  const color = colorFor(prizeSymbolId(prize));
   if (prize.kind === "coins") {
     return (
       <>
         <CoinIcon size={20} />
-        <span className="text-[11px] font-black text-white mt-0.5">{prize.amount}</span>
+        <span className="text-[11px] font-black mt-0.5" style={{ color: color.text }}>
+          {prize.amount}
+        </span>
       </>
     );
   }
   return (
     <>
-      <Gift className="w-5 h-5 text-white" strokeWidth={1.8} />
-      <span className="text-[9px] font-black text-white mt-0.5 text-center leading-none">
+      <Gift className="w-5 h-5" style={{ color: color.text }} strokeWidth={1.8} />
+      <span className="text-[9px] font-black mt-0.5 text-center leading-none" style={{ color: color.text }}>
         {PACK_LABEL_SHORT[prize.packKind] ?? prize.packKind}
       </span>
     </>
@@ -105,17 +126,37 @@ function ScratchChest({ prize, onMatched }: { prize: ChestPrize; onMatched: () =
       key="scratch"
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="flex flex-col items-center gap-4"
+      className="relative flex flex-col items-center gap-3 rounded-2xl px-5 pt-5 pb-6"
+      style={{
+        background: "linear-gradient(165deg, #f4f1ea 0%, #ded6c2 100%)",
+        border: "2px dashed rgba(0,0,0,0.25)",
+        boxShadow: "0 12px 32px rgba(0,0,0,0.5)",
+      }}
     >
-      <p className="text-sm font-bold text-white uppercase tracking-wide text-center">
-        Sieges-Kiste
-        <br />
-        <span className="text-amber-300">Rubbel 3 gleiche Felder frei!</span>
-      </p>
-      <div className="grid grid-cols-3 gap-2 p-3 rounded-2xl" style={{ background: "rgba(0,0,0,0.25)" }}>
+      {/* Lochung wie bei einem echten Los — links/rechts ausgestanzte Kerben */}
+      <div
+        className="absolute top-1/2 -left-2.5 -translate-y-1/2 w-5 h-5 rounded-full"
+        style={{ background: "#050508" }}
+      />
+      <div
+        className="absolute top-1/2 -right-2.5 -translate-y-1/2 w-5 h-5 rounded-full"
+        style={{ background: "#050508" }}
+      />
+
+      <div className="flex flex-col items-center gap-1">
+        <img src="/brand/logo-64.png" alt="OMA" className="w-10 h-10" />
+        <p className="text-sm font-black uppercase tracking-wide text-stone-900">Battle Cards</p>
+        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-amber-700">Sieges-Rubbellos</p>
+      </div>
+
+      <p className="text-[11px] text-stone-600 font-semibold text-center">Rubbel 3 gleiche Felder frei!</p>
+
+      <div className="grid grid-cols-3 gap-2 p-2.5 rounded-xl" style={{ background: "rgba(0,0,0,0.08)" }}>
         {grid.map((cellPrize, i) => {
           const isRevealed = revealed.has(i);
-          const isWinningCell = winSymbolId !== null && prizeSymbolId(cellPrize) === winSymbolId;
+          const symbolId = prizeSymbolId(cellPrize);
+          const isWinningCell = winSymbolId !== null && symbolId === winSymbolId;
+          const color = colorFor(symbolId);
           return (
             <motion.button
               key={i}
@@ -125,14 +166,16 @@ function ScratchChest({ prize, onMatched }: { prize: ChestPrize; onMatched: () =
               whileTap={isRevealed ? undefined : { scale: 0.9 }}
               animate={isWinningCell ? { scale: [1, 1.08, 1] } : undefined}
               transition={isWinningCell ? { duration: 0.5, repeat: 2 } : undefined}
-              className="relative w-16 h-16 rounded-xl flex flex-col items-center justify-center overflow-hidden"
+              className="relative w-16 h-16 rounded-lg flex flex-col items-center justify-center overflow-hidden"
               style={{
                 background: isRevealed
-                  ? "radial-gradient(circle at 35% 28%, #fde68a, #b45309)"
-                  : "linear-gradient(135deg, #cbd5e1 0%, #94a3b8 45%, #e2e8f0 55%, #94a3b8 100%)",
+                  ? color.bg
+                  : "repeating-linear-gradient(135deg, #b6bec9 0 4px, #8b95a3 4px 8px)",
                 boxShadow: isWinningCell
-                  ? "0 0 0 2px rgba(251,191,36,0.9), 0 0 16px rgba(251,191,36,0.7)"
-                  : "inset 0 2px 0 rgba(255,255,255,0.4), inset 0 -2px 0 rgba(0,0,0,0.2)",
+                  ? `0 0 0 2px rgba(251,191,36,0.9), 0 0 16px ${color.glow}`
+                  : isRevealed
+                    ? `inset 0 2px 0 rgba(255,255,255,0.3), 0 0 10px ${color.glow}`
+                    : "inset 0 2px 0 rgba(255,255,255,0.4), inset 0 -2px 0 rgba(0,0,0,0.25)",
               }}
             >
               <AnimatePresence mode="wait">
@@ -148,7 +191,7 @@ function ScratchChest({ prize, onMatched }: { prize: ChestPrize; onMatched: () =
                   </motion.div>
                 ) : (
                   <motion.div key="hidden" exit={{ opacity: 0 }} className="flex items-center justify-center">
-                    <Sparkles className="w-5 h-5 text-slate-500/70" strokeWidth={1.8} />
+                    <Sparkles className="w-5 h-5 text-slate-100/80" strokeWidth={1.8} />
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -196,8 +239,8 @@ export default function VictoryChestReveal({ prize, onClose }: { prize: ChestPri
                 animate={{ scale: 1, rotate: 0 }}
                 transition={{ type: "spring", stiffness: 260, damping: 16 }}
                 style={{
-                  background: "radial-gradient(circle at 35% 28%, #fde68a, #d97706)",
-                  boxShadow: "0 0 0 3px rgba(251,191,36,0.4), 0 8px 24px rgba(217,119,6,0.5), 0 0 60px rgba(251,191,36,0.5)",
+                  background: colorFor(prizeSymbolId(prize)).bg,
+                  boxShadow: `0 0 0 3px rgba(251,191,36,0.4), 0 8px 24px rgba(0,0,0,0.5), 0 0 60px ${colorFor(prizeSymbolId(prize)).glow}`,
                 }}
               >
                 {/* Lichtstrahlen-Burst hinterm Preis */}
@@ -206,7 +249,7 @@ export default function VictoryChestReveal({ prize, onClose }: { prize: ChestPri
                   initial={{ opacity: 0, scale: 0.3 }}
                   animate={{ opacity: [0, 0.7, 0], scale: 1.4 }}
                   transition={{ duration: 0.8, ease: "easeOut" }}
-                  style={{ background: "radial-gradient(closest-side, rgba(251,191,36,0.55), transparent 70%)" }}
+                  style={{ background: `radial-gradient(closest-side, ${colorFor(prizeSymbolId(prize)).glow}, transparent 70%)` }}
                 />
                 <motion.div
                   initial={{ scale: 0, rotate: -90 }}
@@ -216,7 +259,11 @@ export default function VictoryChestReveal({ prize, onClose }: { prize: ChestPri
                 >
                   <Sparkles className="w-5 h-5 text-white" />
                 </motion.div>
-                {prize.kind === "coins" ? <CoinIcon size={44} /> : <Gift className="w-12 h-12 text-black/70" strokeWidth={1.8} />}
+                {prize.kind === "coins" ? (
+                  <CoinIcon size={44} />
+                ) : (
+                  <Gift className="w-12 h-12" style={{ color: colorFor(prizeSymbolId(prize)).text }} strokeWidth={1.8} />
+                )}
               </motion.div>
               <motion.p
                 initial={{ opacity: 0, y: 8, scale: 0.85 }}

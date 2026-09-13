@@ -17,7 +17,7 @@ import { IdCard, Trophy } from "lucide-react";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { hasStarterDeck } from "@/lib/battle-cards/starter-pick";
-import { countUnopenedPacks } from "@/lib/battle-cards/packs";
+import { countUnopenedPacks, peekNextPackKind } from "@/lib/battle-cards/packs";
 import { sortByQuality, toCardData, resolveAvatarsForCards } from "@/lib/battle-cards/card-view";
 import { getUpgradeEconomyConfig } from "@/lib/battle-cards/upgrade-admin-config";
 import { getBattleCardsLeaderboard } from "@/lib/battle-cards/leaderboard";
@@ -91,6 +91,7 @@ export default async function BattleCardsPage() {
     ...otherCardsFirstPage,
   ]);
   const unopenedPacks = await countUnopenedPacks(userId);
+  const nextPackKind = unopenedPacks > 0 ? await peekNextPackKind(userId) : null;
   const pendingChallenges = await prisma.battleChallenge.count({ where: { opponentId: userId, status: "pending" } });
   const currentUser = await prisma.user.findUnique({
     where: { id: userId },
@@ -168,7 +169,7 @@ export default async function BattleCardsPage() {
         <ChallengesList incoming={serialize(incoming)} outgoing={serialize(outgoing)} live={serialize(live)} />
       )}
 
-      <PackOpener initialUnopenedCount={unopenedPacks} />
+      <PackOpener initialUnopenedCount={unopenedPacks} initialNextPackKind={nextPackKind} />
     </div>
   );
 
