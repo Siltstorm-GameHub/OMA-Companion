@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ChevronLeft, ChevronRight, RotateCcw, Trash2, Check, Minus, Plus as PlusIcon,
   RefreshCw, Swords, X,
@@ -138,19 +138,13 @@ export default function TournamentManagerMobile({
   // "Jetzt dran" = erstes noch offenes Match, sonst das erste überhaupt.
   const firstOpenIdx = matches.findIndex(m => is1v1 ? !(m.winnerId || m.playedAt) : !m.playedAt);
   const [focusIdx, setFocusIdx] = useState(() => (firstOpenIdx >= 0 ? firstOpenIdx : 0));
-  const focusRef = useRef(focusIdx);
-  focusRef.current = focusIdx;
-
-  // Springt automatisch zum nächsten offenen Match, sobald ein neues auftaucht — aber nur wenn der
-  // Admin gerade selbst noch auf dem letzten offenen Match steht (kein Wegreißen bei manueller Wahl).
-  useEffect(() => {
-    if (focusRef.current >= matches.length) setFocusIdx(Math.max(0, matches.length - 1));
-  }, [matches.length]);
 
   const [snackbar, setSnackbar] = useState<{ text: string; matchId: string } | null>(null);
 
   const hasMatches = matches.length > 0;
-  const focused = hasMatches ? matches[Math.min(focusIdx, matches.length - 1)] : null;
+  // Math.min hält den Fokus gültig, falls ein Match gelöscht wurde, seit focusIdx zuletzt gesetzt
+  // wurde — ohne dafür einen zusätzlichen Effekt zu brauchen (goto() clamped beim Navigieren genauso).
+  const focused = hasMatches ? matches[Math.max(0, Math.min(focusIdx, matches.length - 1))] : null;
   const isPlayed1v1 = !!focused?.winnerId || !!focused?.playedAt;
   const isPlayedFfa = !!focused?.playedAt;
 
@@ -290,14 +284,6 @@ export default function TournamentManagerMobile({
           {matches.map((m, idx) => {
             const played = is1v1 ? !!(m.winnerId || m.playedAt) : !!m.playedAt;
             const isFocused = idx === focusIdx;
-            let resultLabel: string | null = null;
-            if (is1v1 && played) {
-              if (!m.winnerId && m.playedAt) resultLabel = "Unentschieden";
-              else {
-                const w = allUsers.find(u => u.id === m.winnerId);
-                resultLabel = w ? `${userName(w)} gewinnt` : null;
-              }
-            }
             return (
               <button key={m.id} onClick={() => setFocusIdx(idx)}
                 className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-left transition-colors ${
