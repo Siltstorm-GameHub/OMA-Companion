@@ -86,6 +86,7 @@ export type VisibleServer = {
   available: number;
   light: TrafficLight;
   myStatus: "none" | "pending" | "approved" | "denied" | "revoked";
+  openAccess: boolean;
   host?: string;
   port?: string | null;
   password?: string | null;
@@ -123,6 +124,7 @@ export async function getVisibleServers(userId: string | undefined): Promise<Vis
         available,
         light: trafficLight(available, server.maxSlots),
         myStatus: hasApproved ? "approved" : ((application?.status as VisibleServer["myStatus"]) ?? "none"),
+        openAccess: server.openAccess,
         ...(hasApproved
           ? { host: server.host, port: server.port, password: server.password }
           : {}),

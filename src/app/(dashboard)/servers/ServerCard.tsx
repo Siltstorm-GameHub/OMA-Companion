@@ -29,6 +29,7 @@ type Server = {
   available: number;
   light: Light;
   myStatus: string;
+  openAccess: boolean;
   host?: string;
   port?: string | null;
   password?: string | null;
@@ -123,7 +124,9 @@ export default function ServerCard({ server }: { server: Server }) {
           )}
           {server.description && <p className="text-xs text-gray-400 mt-1">{server.description}</p>}
         </div>
-        <CapacityBar occupied={server.occupied} maxSlots={server.maxSlots} light={server.light} isOffline={isOffline} />
+        {!server.openAccess && (
+          <CapacityBar occupied={server.occupied} maxSlots={server.maxSlots} light={server.light} isOffline={isOffline} />
+        )}
       </div>
 
       <div className="flex items-center justify-end pt-1 border-t border-white/[0.05]">
