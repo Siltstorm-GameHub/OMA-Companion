@@ -19,6 +19,7 @@ export async function POST(req: NextRequest) {
     password?: string;
     ampInstanceId?: string;
     maxSlots?: number;
+    openAccess?: boolean;
   };
 
   if (!body.name?.trim() || !body.game?.trim() || !body.host?.trim() || !body.maxSlots || body.maxSlots < 1) {
@@ -35,6 +36,7 @@ export async function POST(req: NextRequest) {
       password: body.password?.trim() || null,
       ampInstanceId: body.ampInstanceId?.trim() || null,
       maxSlots: body.maxSlots,
+      openAccess: body.openAccess ?? false,
       createdBy: admin.id,
     },
   });

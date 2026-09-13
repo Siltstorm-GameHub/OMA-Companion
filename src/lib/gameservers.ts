@@ -109,7 +109,9 @@ export async function getVisibleServers(userId: string | undefined): Promise<Vis
       const occupied = await countOccupiedSlots(server.id);
       const available = server.maxSlots - occupied;
       const application = myApplicationByServer.get(server.id);
-      const hasApproved = application?.status === "approved";
+      // openAccess gewährt Zugangsdaten ohne Bewerbung — aber nur für angemeldete User (userId gesetzt).
+      // Nicht angemeldete User (userId undefined) sehen den Server nur, nie die Zugangsdaten.
+      const hasApproved = application?.status === "approved" || (server.openAccess && !!userId);
 
       return {
         id: server.id,
@@ -120,7 +122,7 @@ export async function getVisibleServers(userId: string | undefined): Promise<Vis
         occupied,
         available,
         light: trafficLight(available, server.maxSlots),
-        myStatus: (application?.status as VisibleServer["myStatus"]) ?? "none",
+        myStatus: hasApproved ? "approved" : ((application?.status as VisibleServer["myStatus"]) ?? "none"),
         ...(hasApproved
           ? { host: server.host, port: server.port, password: server.password }
           : {}),

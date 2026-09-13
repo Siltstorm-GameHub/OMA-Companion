@@ -1150,6 +1150,7 @@ model GameServer {
   ampInstanceId String? // AMP-Controller Instance-ID für Live-Status/Spielerzahl
   maxSlots      Int
   isActive      Boolean  @default(true)
+  openAccess    Boolean  @default(false) // true = Zugangsdaten für jeden eingeloggten User ohne Bewerbung sichtbar
   createdBy     String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

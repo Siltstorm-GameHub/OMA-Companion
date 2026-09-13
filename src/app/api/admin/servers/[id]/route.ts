@@ -16,6 +16,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     ampInstanceId: string | null;
     maxSlots: number;
     isActive: boolean;
+    openAccess: boolean;
   }>;
 
   const server = await prisma.gameServer.update({ where: { id }, data: body });

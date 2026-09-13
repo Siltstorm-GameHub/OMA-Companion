@@ -19,6 +19,8 @@ export const DISCORD_COLORS = {
   /** Ergebnis-Post — dieselbe Goldfarbe wie Platz 1 im Sieger-Podium-Bild,
    *  damit Embed-Rand und Bildinhalt zusammengehören. */
   eventResult: 0xf59e0b,
+  /** Umfragephase gestartet — dieselbe Amber-Farbe wie das "umfrage"-Statuslabel im Dashboard. */
+  eventPoll: 0xfbbf24,
   /** Standard-Broadcasts ohne spezifischeren Typ (DM wie Kanal). */
   default: hexToInt(BRAND.teal),
 } as const;

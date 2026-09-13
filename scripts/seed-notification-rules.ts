@@ -66,6 +66,16 @@ const RULES: RuleSeed[] = [
     legacyBotConfigKey: "event_started",
   },
   {
+    key: "event_poll_started",
+    label: "Umfragephase gestartet",
+    description: "Wenn ein Event vom Status 'Aktiv' in die Umfragephase wechselt (Spielphase beendet, Abstimmung läuft).",
+    category: "events",
+    pushEnabled: true, inAppEnabled: false, discordDmEnabled: false, discordChanEnabled: true,
+    titleTemplate: "🗳️ Umfrage gestartet: {eventName}",
+    bodyTemplate: "🗳️ Die Umfragephase für **{eventName}** hat begonnen — stimmt jetzt ab!",
+    isEventNotification: true, eventAudience: "participants",
+  },
+  {
     key: "event_ended",
     label: "Event beendet",
     description: "Wenn ein Event im Admin-Panel abgeschlossen wird. Titel/Text steuern auch direkt den Discord-Ergebnis-Embed.",

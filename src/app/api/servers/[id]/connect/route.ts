@@ -10,17 +10,21 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   const userId = session.user.id;
   const { id: serverId } = await params;
 
-  const application = await prisma.serverApplication.findUnique({
-    where: { serverId_userId: { serverId, userId } },
-  });
-  if (!application || application.status !== "approved") {
+  const [server, application] = await Promise.all([
+    prisma.gameServer.findUnique({ where: { id: serverId } }),
+    prisma.serverApplication.findUnique({ where: { serverId_userId: { serverId, userId } } }),
+  ]);
+  const hasAccess = server?.openAccess || application?.status === "approved";
+  if (!hasAccess) {
     return NextResponse.json({ error: "Kein aktiver Zugang" }, { status: 403 });
   }
 
-  await prisma.serverApplication.update({
-    where: { id: application.id },
-    data: { lastConnectedAt: new Date() },
-  });
+  if (application) {
+    await prisma.serverApplication.update({
+      where: { id: application.id },
+      data: { lastConnectedAt: new Date() },
+    });
+  }
 
   return NextResponse.json({ ok: true });
 }

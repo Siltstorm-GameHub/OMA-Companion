@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireWidgetKey } from "@/lib/widgetAuth";
 import { createPollsForEvent, parsePollsConfigJson } from "@/lib/event-polls";
+import { dispatchEventNotification } from "@/lib/notify-dispatch";
+import { DISCORD_COLORS } from "@/lib/discord-colors";
 
 /**
  * POST /api/widget/events/[id]/start-poll
@@ -10,9 +12,11 @@ import { createPollsForEvent, parsePollsConfigJson } from "@/lib/event-polls";
  * SOFORT ("jetzt" als Start-Anker, wie beim regulaeren Event-Abschluss — siehe Kommentar in
  * complete/route.ts) — unabhaengig vom vollen Turnierabschluss. Bewusst schlanker als
  * complete/route.ts: legt nur die EventPoll-Zeilen an und setzt den Event-Status auf
- * "umfrage", OHNE Punkte/Discord/Badges/Wanderpokal-Nebenwirkungen — das sind reine
- * Abschluss-Konzepte. Existierende, bereits genutzte Umfragen werden nicht angetastet
- * (createPollsForEvent ueberspringt Labels, die schon existieren).
+ * "umfrage", OHNE Punkte/Badges/Wanderpokal-Nebenwirkungen — das sind reine Abschluss-Konzepte.
+ * Einzige Ausnahme: der "event_poll_started"-Discord-Post beim Übergang "aktiv" → "umfrage",
+ * damit dieselbe Meldung unabhaengig davon rausgeht, ob die Umfrage per Widget-Button oder
+ * per Admin-Abschluss gestartet wird (siehe complete/route.ts). Existierende, bereits genutzte
+ * Umfragen werden nicht angetastet (createPollsForEvent ueberspringt Labels, die schon existieren).
  */
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const unauthorized = requireWidgetKey(req);
@@ -26,6 +30,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       id: true,
       status: true,
       pollsConfigJson: true,
+      discordChannelId: true,
       series: { select: { pollsConfigJson: true } },
     },
   });
@@ -55,6 +60,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   if (event.status !== "umfrage" && event.status !== "finished") {
     await prisma.event.update({ where: { id: eventId }, data: { status: "umfrage" } });
+
+    // Discord-Kanal-Post: nur beim tatsächlichen Übergang "aktiv" → "umfrage" — spiegelt die
+    // gleiche Bedingung wie in complete/route.ts (siehe Kommentar dort), damit derselbe
+    // Statuswechsel unabhängig vom Auslöser (Widget-Button vs. Admin-Abschluss) genau einmal postet.
+    if (event.status === "active") {
+      dispatchEventNotification("event_poll_started", { id: eventId }, {
+        discordChannelIdOverride: event.discordChannelId,
+        discordColor: DISCORD_COLORS.eventPoll,
+      }).catch((err) => console.error("[Discord] Umfrage-Start-Post fehlgeschlagen:", err));
+    }
   }
 
   const created = await prisma.eventPoll.findMany({

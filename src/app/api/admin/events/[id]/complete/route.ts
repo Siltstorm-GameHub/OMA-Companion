@@ -12,6 +12,8 @@ import { createPollsForEvent, parsePollsConfigJson } from "@/lib/event-polls";
 import { recomputeSeriesDominionBonus } from "@/lib/dominion-bonus";
 import { announceEventResults } from "@/lib/discord-events";
 import { isEventHidden } from "@/lib/event-visibility";
+import { dispatchEventNotification } from "@/lib/notify-dispatch";
+import { DISCORD_COLORS } from "@/lib/discord-colors";
 
 type PlacementReward = { place: number; coins: number; rankPoints: number };
 type RewardsConfig = { participationCoins: number; placements: PlacementReward[] };
@@ -1230,6 +1232,15 @@ async function completeEvent(req: NextRequest, eventId: string) {
   if (event.status === "active" && !isEventHidden(event)) {
     sendPushToUsers(participantIds, { title: eventNotifTitle, body: eventNotifBody, url: resultUrl }).catch(() => {});
     createNotificationForUsers(participantIds, { type: "event_result", title: eventNotifTitle, body: eventNotifBody, url: resultUrl }).catch(() => {});
+  }
+
+  // Discord-Kanal-Post: nur beim tatsächlichen Übergang "aktiv" → "umfrage" (siehe Bedingung
+  // oben) — nicht bei jedem erneuten Speichern während bereits laufender Umfragephase.
+  if (event.status === "active" && hasPendingPollPhase && !isEventHidden(event)) {
+    dispatchEventNotification("event_poll_started", { id: eventId }, {
+      discordChannelIdOverride: event.discordChannelId,
+      discordColor: DISCORD_COLORS.eventPoll,
+    }).catch((err) => console.error("[Discord] Umfrage-Start-Post fehlgeschlagen:", err));
   }
 
   // Automatischer Discord-Ergebnis-Post — nur beim tatsächlichen (ersten) Übergang in "finished",

@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Plus, Trash2, ToggleLeft, ToggleRight, Loader2, Pencil, Users, Circle, Eye, EyeOff, Download, RefreshCw, Sparkles } from "lucide-react";
+import { Plus, Trash2, ToggleLeft, ToggleRight, Loader2, Pencil, Users, Circle, Eye, EyeOff, Download, RefreshCw, Sparkles, Globe } from "lucide-react";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import GameNameInput from "@/components/GameNameInput";
 import GameCover from "@/components/GameCover";
@@ -21,6 +21,7 @@ type Server = {
   ampInstanceId: string | null;
   maxSlots: number;
   isActive: boolean;
+  openAccess: boolean;
   occupied: number;
   pendingCount: number;
   light: Light;
@@ -41,9 +42,10 @@ type FormState = {
   password: string;
   ampInstanceId: string;
   maxSlots: string;
+  openAccess: boolean;
 };
 
-const EMPTY_FORM: FormState = { name: "", game: "", description: "", host: "", port: "", password: "", ampInstanceId: "", maxSlots: "10" };
+const EMPTY_FORM: FormState = { name: "", game: "", description: "", host: "", port: "", password: "", ampInstanceId: "", maxSlots: "10", openAccess: false };
 
 type AmpSuggestion = { ampInstanceId: string; name: string; game: string; port: string | null };
 
@@ -131,6 +133,7 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
           password: form.password.trim() || undefined,
           ampInstanceId: form.ampInstanceId.trim() || undefined,
           maxSlots: Number(form.maxSlots),
+          openAccess: form.openAccess,
         }),
       });
       if (!res.ok) { toast.error("Fehler beim Anlegen"); return; }
@@ -155,6 +158,7 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
       password: server.password ?? "",
       ampInstanceId: server.ampInstanceId ?? "",
       maxSlots: String(server.maxSlots),
+      openAccess: server.openAccess,
     });
   }
 
@@ -173,6 +177,7 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
           password: editForm.password.trim() || null,
           ampInstanceId: editForm.ampInstanceId.trim() || null,
           maxSlots: Number(editForm.maxSlots),
+          openAccess: editForm.openAccess,
         }),
       });
       if (!res.ok) { toast.error("Fehler beim Speichern"); return; }
@@ -277,6 +282,12 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
             </button>
           </div>
         </div>
+        <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer select-none">
+          <input type="checkbox" checked={form.openAccess} onChange={(e) => setForm({ ...form, openAccess: e.target.checked })}
+            className="accent-teal-500 w-3.5 h-3.5" />
+          <Globe className="w-3.5 h-3.5 text-teal-400 shrink-0" />
+          Ohne Bewerbung für alle freigeben (jeder angemeldete User sieht die Zugangsdaten sofort)
+        </label>
         <button onClick={createServer} disabled={saving || !form.name.trim() || !form.game.trim() || !form.host.trim()}
           className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold bg-violet-500/20 border border-violet-500/30 text-violet-300 hover:bg-violet-500/30 disabled:opacity-40 transition-colors">
           {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
@@ -301,6 +312,11 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
                   <p className="text-sm font-semibold text-white truncate flex items-center gap-1.5">
                     <Circle className="w-2 h-2 shrink-0" style={{ color: LIGHT_COLOR[server.light], fill: LIGHT_COLOR[server.light] }} />
                     {server.name}
+                    {server.openAccess && (
+                      <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-teal-500/15 border border-teal-500/25 text-teal-300 shrink-0">
+                        <Globe className="w-2.5 h-2.5" /> Offen für alle
+                      </span>
+                    )}
                   </p>
                   <p className="text-xs text-gray-500">
                     {server.game} · {server.occupied}/{server.maxSlots} Plätze belegt
@@ -368,6 +384,12 @@ export default function ServerManager({ initialServers }: { initialServers: Serv
                       </button>
                     </div>
                   </div>
+                  <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer select-none">
+                    <input type="checkbox" checked={editForm.openAccess} onChange={(e) => setEditForm({ ...editForm, openAccess: e.target.checked })}
+                      className="accent-teal-500 w-3.5 h-3.5" />
+                    <Globe className="w-3.5 h-3.5 text-teal-400 shrink-0" />
+                    Ohne Bewerbung für alle freigeben (jeder angemeldete User sieht die Zugangsdaten sofort)
+                  </label>
                   <button onClick={() => saveEdit(server.id)} disabled={saving}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-violet-500/20 border border-violet-500/30 text-violet-300 hover:bg-violet-500/30 disabled:opacity-40 transition-colors">
                     {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}

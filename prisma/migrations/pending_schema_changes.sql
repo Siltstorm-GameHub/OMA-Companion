@@ -400,3 +400,9 @@ ALTER TABLE "Card" ADD COLUMN IF NOT EXISTS "avatarAnimationsJson" JSONB;
 -- ═══════════════════════════════════════════════════════════════
 
 ALTER TABLE "Card" DROP COLUMN IF EXISTS "avatarAnimationsJson";
+
+-- ═══════════════════════════════════════════════════════════════
+-- Community-Gameserver: Server ohne Bewerbung für alle freigeben
+-- ═══════════════════════════════════════════════════════════════
+
+ALTER TABLE "gameserver" ADD COLUMN IF NOT EXISTS "openAccess" BOOLEAN NOT NULL DEFAULT false;
