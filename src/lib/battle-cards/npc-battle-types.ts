@@ -19,6 +19,23 @@ export const NPC_BATTLE_WIN_REWARD: Record<NpcDifficulty, number> = { EASY: 100,
  *  NpcBattleLauncher.tsx/NpcPuzzleBattleLauncher.tsx: "Unbegrenzt" statt Zahl). */
 export const NPC_BATTLE_DAILY_LIMIT = Infinity;
 
+// ── OMA-Duels-NPC-Kämpfe (neuer Deck/Feld-Modus, siehe duels-live.ts) ──────
+// Ersetzt PVE_EASY/MEDIUM/HARD (alter sequentieller Modus, live-battle.ts/
+// interactive.ts — bleibt nur für bereits abgeschlossene Alt-Kämpfe relevant,
+// NpcBattleLauncher.tsx startet ab jetzt ausschließlich hierüber).
+
+const PVE_DUELS_PREFIX = "PVE_DUELS_";
+
+export function duelsPveModeFor(difficulty: NpcDifficulty): string {
+  return `${PVE_DUELS_PREFIX}${difficulty}`;
+}
+
+export function parseDuelsPveMode(mode: string): { difficulty: NpcDifficulty } | null {
+  if (!mode.startsWith(PVE_DUELS_PREFIX)) return null;
+  const difficulty = mode.slice(PVE_DUELS_PREFIX.length) as NpcDifficulty;
+  return difficulty in DIFFICULTY_LEVEL ? { difficulty } : null;
+}
+
 // ── Match-3-"OMA Gems" (Puzzle-PvE, siehe board-match3.ts) ──────────
 // Zusätzlicher LiveBattle.mode-Präfix neben dem bestehenden Auto-Kampf-PVE —
 // beide Modi laufen parallel, teilen sich aber Schwierigkeit/Belohnung/Limit.

@@ -1,13 +1,15 @@
 // ============================================
 // POST /api/battle-cards/npc-battle
 // ============================================
-// Startet einen interaktiven PVE-LiveBattle in 3 Schwierigkeitsstufen — für
-// alle eingeloggten User, vorerst unbegrenzt oft spielbar und ohne Belohnung.
-// Gibt sofort den ersten Snapshot zurück (der Spieler steuert Team A selbst,
-// siehe live-battle.ts); Folge-Züge laufen über /api/battle-cards/live/[id].
+// Startet einen OMA-Duels-NPC-Kampf im neuen Deck/Feld-Modus (siehe
+// duel-live-battle.ts) — ersetzt den alten sequentiellen PVE-LiveBattle
+// (startLivePveBattle/live-battle.ts). Gibt sofort den ersten Snapshot
+// zurück; Folge-Runden laufen über /api/battle-cards/duel/[id]/action.
+// Braucht ein bereits zusammengestelltes Duell-Deck (siehe /battle-cards/duel-deck).
 
 import { auth } from "@/auth";
-import { startLivePveBattle, LiveBattleError } from "@/lib/battle-cards/live-battle";
+import { startDuelPveBattle, LiveDuelBattleError } from "@/lib/battle-cards/duel-live-battle";
+import { DuelDeckError } from "@/lib/battle-cards/duel-deck";
 import type { NpcDifficulty } from "@/lib/battle-cards/npc-battle-types";
 
 const VALID_DIFFICULTIES: NpcDifficulty[] = ["EASY", "MEDIUM", "HARD"];
@@ -23,12 +25,14 @@ export async function POST(req: Request) {
   const difficulty: NpcDifficulty = VALID_DIFFICULTIES.includes(body?.difficulty) ? body.difficulty : "EASY";
 
   try {
-    const snapshot = await startLivePveBattle(playerId, difficulty);
+    const snapshot = await startDuelPveBattle(playerId, difficulty);
     return Response.json(snapshot);
   } catch (error) {
-    if (error instanceof LiveBattleError) {
-      const needsStarterPick = error.message.includes("Start-Pack");
-      return Response.json({ error: error.message, needsStarterPick }, { status: 400 });
+    if (error instanceof DuelDeckError) {
+      return Response.json({ error: error.message, needsDuelDeck: true }, { status: 400 });
+    }
+    if (error instanceof LiveDuelBattleError) {
+      return Response.json({ error: error.message }, { status: 400 });
     }
     throw error;
   }

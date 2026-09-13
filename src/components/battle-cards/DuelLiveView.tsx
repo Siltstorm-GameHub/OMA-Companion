@@ -302,8 +302,21 @@ function UnitSlot({
   );
 }
 
-export default function DuelLiveView({ liveBattleId, viewerId: _viewerId }: { liveBattleId: string; viewerId: string }) {
+export default function DuelLiveView({
+  liveBattleId,
+  viewerId: _viewerId,
+  onExit,
+}: {
+  liveBattleId: string;
+  viewerId: string;
+  /** Fehlt dieser Handler, navigiert der eingebaute Zurück-/Verlassen-Button zur Community-Übersicht. */
+  onExit?: () => void;
+}) {
   const router = useRouter();
+  function handleExit() {
+    if (onExit) onExit();
+    else router.push("/battle-cards?tab=community");
+  }
   const [snapshot, setSnapshot] = useState<LiveDuelSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -522,10 +535,7 @@ export default function DuelLiveView({ liveBattleId, viewerId: _viewerId }: { li
       <div className="fixed inset-0 z-50 bg-[#12151a] flex items-center justify-center p-6">
         <div className="max-w-sm w-full space-y-3">
           <ErrorNotice message={error} size="lg" />
-          <button
-            onClick={() => router.push("/battle-cards?tab=community")}
-            className="w-full rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm py-2"
-          >
+          <button onClick={handleExit} className="w-full rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm py-2">
             Zurück
           </button>
         </div>
@@ -640,10 +650,7 @@ export default function DuelLiveView({ liveBattleId, viewerId: _viewerId }: { li
       `}</style>
       <div className="max-w-2xl mx-auto px-4 py-4 space-y-4">
         <div className="flex items-center justify-between">
-          <button
-            onClick={() => router.push("/battle-cards?tab=community")}
-            className="flex items-center gap-1 text-slate-400 hover:text-slate-200 text-sm"
-          >
+          <button onClick={handleExit} className="flex items-center gap-1 text-slate-400 hover:text-slate-200 text-sm">
             <ChevronLeft className="w-4 h-4" /> Verlassen
           </button>
           <div className="flex items-center gap-3">

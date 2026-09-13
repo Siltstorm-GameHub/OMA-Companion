@@ -3,23 +3,27 @@
 // ============================================
 // OMA Duels — NPC-Kampf, 3 Schwierigkeitsstufen, für alle User
 // ============================================
-// Startet einen interaktiven LiveBattle gegen 5 zufällige Standard-Karten,
+// Startet einen OMA-Duels-NPC-Kampf im neuen Deck/Feld-Modus (siehe
+// duel-live-battle.ts) gegen ein KI-Deck aus allen Standard-Karten,
 // hochskaliert je nach Stufe (Einfach/Mittel/Schwer). Bei Sieg gibt es Münzen
 // (siehe NPC_BATTLE_WIN_REWARD), max. NPC_BATTLE_DAILY_LIMIT Starts pro Tag
-// (über alle Stufen summiert), damit das nicht gefarmt werden kann. Der
-// Spieler steuert jeden eigenen Zug selbst (oder aktiviert Auto-Kampf) —
-// siehe LiveBattleView.
+// (über alle Stufen summiert, geteilt mit OMA Gems), damit das nicht
+// gefarmt werden kann. Braucht ein zusammengestelltes Duell-Deck — ohne das
+// verweist die Fehlermeldung auf /battle-cards/duel-deck.
+//
+// Die Gewinnchancen-Vorschau (MatchupBadge) ist bewusst entfernt: sie basierte
+// auf der alten 5er-PVE-Lineup und passt nicht mehr aufs neue 20-Karten-Deck —
+// eine deck-basierte Neuberechnung wäre ein eigener Umbau.
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useSession } from "next-auth/react";
+import Link from "next/link";
 import { Bot, Loader2 } from "lucide-react";
 import { motion } from "motion/react";
-import LiveBattleView from "./LiveBattleView";
-import MatchupBadge from "./MatchupBadge";
+import DuelLiveView from "./DuelLiveView";
 import ErrorNotice from "./ErrorNotice";
 import CoinIcon from "@/components/CoinIcon";
 import { NPC_BATTLE_DAILY_LIMIT, NPC_BATTLE_WIN_REWARD, type NpcDifficulty } from "@/lib/battle-cards/npc-battle-types";
-import type { MatchupStrength } from "@/lib/battle-cards/matchup-strength";
 
 const DIFFICULTY_CONFIG: Record<NpcDifficulty, { label: string; color: string; colorDark: string }> = {
   EASY: { label: "Einfach", color: "#34d399", colorDark: "#065f46" },
@@ -32,19 +36,13 @@ export default function NpcBattleLauncher() {
   const { data: session } = useSession();
   const [loading, setLoading] = useState<NpcDifficulty | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [needsDuelDeck, setNeedsDuelDeck] = useState(false);
   const [liveBattleId, setLiveBattleId] = useState<string | null>(null);
-  const [matchup, setMatchup] = useState<Partial<Record<NpcDifficulty, MatchupStrength | null>>>({});
-
-  useEffect(() => {
-    fetch("/api/battle-cards/matchup?npc=1")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => data && setMatchup(data))
-      .catch(() => {});
-  }, []);
 
   async function start(difficulty: NpcDifficulty) {
     setLoading(difficulty);
     setError(null);
+    setNeedsDuelDeck(false);
     try {
       const res = await fetch("/api/battle-cards/npc-battle", {
         method: "POST",
@@ -53,6 +51,7 @@ export default function NpcBattleLauncher() {
       });
       const data = await res.json();
       if (!res.ok) {
+        setNeedsDuelDeck(!!data.needsDuelDeck);
         throw new Error(data.error ?? "Kampf konnte nicht gestartet werden.");
       }
       setLiveBattleId(data.id);
@@ -65,7 +64,7 @@ export default function NpcBattleLauncher() {
 
   if (liveBattleId && session?.user?.id) {
     return (
-      <LiveBattleView liveBattleId={liveBattleId} viewerId={session.user.id} onExit={() => setLiveBattleId(null)} />
+      <DuelLiveView liveBattleId={liveBattleId} viewerId={session.user.id} onExit={() => setLiveBattleId(null)} />
     );
   }
 
@@ -104,9 +103,6 @@ export default function NpcBattleLauncher() {
               ) : (
                 <span className="text-xs font-black uppercase">{config.label}</span>
               )}
-              <span className="bg-black/20 rounded-full">
-                <MatchupBadge strength={matchup[difficulty]} />
-              </span>
               <span className="flex items-center gap-0.5 text-[10px] font-bold bg-black/20 px-1.5 py-0.5 rounded-full">
                 <CoinIcon size={10} /> {NPC_BATTLE_WIN_REWARD[difficulty]}
               </span>
@@ -118,7 +114,16 @@ export default function NpcBattleLauncher() {
         <span className="text-gray-400 font-semibold">OMA Duels</span> ·{" "}
         {Number.isFinite(NPC_BATTLE_DAILY_LIMIT) ? `Max. ${NPC_BATTLE_DAILY_LIMIT}x täglich` : "Unbegrenzt"} · Münzen bei Sieg
       </p>
-      {error && <ErrorNotice message={error} />}
+      {error && (
+        <div className="space-y-1.5">
+          <ErrorNotice message={error} />
+          {needsDuelDeck && (
+            <Link href="/battle-cards/duel-deck" className="text-xs font-semibold text-teal-300 hover:text-teal-200 underline">
+              Jetzt Duell-Deck zusammenstellen →
+            </Link>
+          )}
+        </div>
+      )}
     </div>
   );
 }

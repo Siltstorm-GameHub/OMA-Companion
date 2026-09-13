@@ -119,7 +119,7 @@ async function assertGemsPvpDailyLimitNotReached(userId: string): Promise<void> 
   }
 }
 
-function sampleWithoutReplacement<T>(items: T[], count: number): T[] {
+export function sampleWithoutReplacement<T>(items: T[], count: number): T[] {
   const pool = [...items];
   const picked: T[] = [];
   while (pool.length > 0 && picked.length < count) {
@@ -650,7 +650,7 @@ async function createLiveBattle(
  *  hat — zentral hier, damit Auto-Kampf UND Puzzle-Modus (siehe
  *  countNpcBattlesStartedToday: zählt "PVE_"-Präfix-Modi zusammen) dieselbe
  *  Fehlermeldung und dasselbe gemeinsame Tageslimit verwenden. */
-async function assertNpcDailyLimitNotReached(userId: string): Promise<void> {
+export async function assertNpcDailyLimitNotReached(userId: string): Promise<void> {
   const startedToday = await countNpcBattlesStartedToday(userId);
   if (startedToday >= NPC_BATTLE_DAILY_LIMIT) {
     throw new LiveBattleError(

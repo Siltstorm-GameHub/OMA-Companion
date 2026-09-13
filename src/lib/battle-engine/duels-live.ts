@@ -289,13 +289,27 @@ function pickDefaultTargetSlot(opponent: DuelPlayerState): number {
   return found ? bestIndex : 0; // 0 kann ein leerer Slot sein -> Face-Damage in resolveFieldActions
 }
 
-function defaultDuelSubmission(player: DuelPlayerState, opponent: DuelPlayerState): DuelRoundSubmission {
+/** Einfache Standard-Entscheidung: greift mit jeder eigenen lebenden Feld-
+ *  Einheit die gegnerische Einheit mit der niedrigsten Verteidigung an, und
+ *  beschwört bei freiem Slot die erste Einheiten-Karte aus der Hand. Dient
+ *  zweifach: (1) Timeout-Fallback für einen säumigen menschlichen Spieler
+ *  (siehe checkDuelTimeout), (2) die komplette "KI" für OMA-Duels-NPC-Kämpfe
+ *  (siehe duel-live-battle.ts) — bewusst dieselbe simple Logik für beide
+ *  Fälle, statt eine eigene NPC-KI zu duplizieren. */
+export function computeAutoSubmission(player: DuelPlayerState, opponent: DuelPlayerState): DuelRoundSubmission {
   const fieldActions: DuelRoundFieldAction[] = [];
   player.field.forEach((slot, slotIndex) => {
     if (!slot.unit?.isAlive) return;
     fieldActions.push({ slotIndex, action: "normalAttack", targetSlotIndex: pickDefaultTargetSlot(opponent) });
   });
-  return { fieldActions };
+
+  const emptySlotIndex = player.field.findIndex((slot) => !slot.unit);
+  const summonCardId = emptySlotIndex >= 0 ? player.handCardIds.find((id) => player.unitDefsByCardId[id]) : undefined;
+
+  return {
+    summon: summonCardId ? { handCardId: summonCardId, slotIndex: emptySlotIndex } : undefined,
+    fieldActions,
+  };
 }
 
 export function checkDuelTimeout(state: LiveDuelState): LiveDuelState {
@@ -304,7 +318,7 @@ export function checkDuelTimeout(state: LiveDuelState): LiveDuelState {
 
   (["A", "B"] as const).forEach((team) => {
     if (state.pendingActions[team]) return;
-    state.pendingActions[team] = defaultDuelSubmission(playerState(state, team), playerState(state, opponentTeam(team)));
+    state.pendingActions[team] = computeAutoSubmission(playerState(state, team), playerState(state, opponentTeam(team)));
     if (team === "A") state.timeoutStreakA += 1;
     else state.timeoutStreakB += 1;
   });

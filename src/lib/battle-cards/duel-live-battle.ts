@@ -11,18 +11,29 @@ import { prisma } from "@/lib/prisma";
 import type { LiveBattle, Prisma } from "@prisma/client";
 import {
   checkDuelTimeout,
+  computeAutoSubmission,
   createDuelState,
   submitDuelAction as submitDuelActionPure,
   DuelLiveError,
+  type DuelDeckInput,
   type DuelFieldSlot,
   type DuelPlayerState,
   type DuelRoundSubmission,
   type LiveDuelState,
 } from "@/lib/battle-engine/duels-live";
 import { ULTIMATE_SKILL_COST } from "@/lib/battle-engine/constants";
-import type { TeamId, UnitClass } from "@/lib/battle-engine/types";
-import { finalizePvpChallengeSideEffects } from "@/lib/battle-cards/live-battle";
+import { cardToBattleUnitDefinition } from "@/lib/battle-engine/adapters";
+import type { BattleUnitDefinition, TeamId, UnitClass } from "@/lib/battle-engine/types";
+import { assertNpcDailyLimitNotReached, finalizePvpChallengeSideEffects } from "@/lib/battle-cards/live-battle";
 import { buildDuelDeckInput } from "@/lib/battle-cards/duel-deck";
+import { markTutorialNpcBattleDone } from "@/lib/battle-cards/tutorial";
+import {
+  DIFFICULTY_LEVEL,
+  NPC_BATTLE_WIN_REWARD,
+  duelsPveModeFor,
+  parseDuelsPveMode,
+  type NpcDifficulty,
+} from "@/lib/battle-cards/npc-battle-types";
 
 export class LiveDuelBattleError extends Error {}
 
@@ -39,7 +50,9 @@ function toJson(state: LiveDuelState) {
 async function requireAccess(liveBattleId: string, viewerId: string): Promise<LiveBattle> {
   const live = await prisma.liveBattle.findUnique({ where: { id: liveBattleId } });
   if (!live) throw new LiveDuelBattleError("Kampf nicht gefunden.");
-  if (live.mode !== DUEL_MODE) throw new LiveDuelBattleError("Das ist kein OMA-Duels-Kampf.");
+  if (live.mode !== DUEL_MODE && !parseDuelsPveMode(live.mode)) {
+    throw new LiveDuelBattleError("Das ist kein OMA-Duels-Kampf.");
+  }
   if (viewerId !== live.playerAId && viewerId !== live.playerBId) {
     throw new LiveDuelBattleError("Kein Zugriff auf diesen Kampf.");
   }
@@ -197,23 +210,53 @@ async function finalizeDuelBattle(live: LiveBattle, state: LiveDuelState) {
     data: { status: "finished", resultBattleId: battle.id },
   });
 
-  // Elo/Win-Streak/BattleChallenge-Abschluss + Benachrichtigung — geteilt mit
-  // dem alten sequentiellen Modus (siehe live-battle.ts), da diese Logik nur
-  // `winner`/IDs liest, nicht die interne Zustandsform einer Engine.
-  await finalizePvpChallengeSideEffects(live, state.winner, battle.id);
+  if (live.playerBId) {
+    // Elo/Win-Streak/BattleChallenge-Abschluss + Benachrichtigung — geteilt mit
+    // dem alten sequentiellen Modus (siehe live-battle.ts), da diese Logik nur
+    // `winner`/IDs liest, nicht die interne Zustandsform einer Engine.
+    await finalizePvpChallengeSideEffects(live, state.winner, battle.id);
+  } else if (state.winner === "A") {
+    // OMA-Duels-NPC-Kampf: Münz-Belohnung + Tutorial-Fortschritt, analog zum
+    // PVE_-Zweig in finalizeLiveBattle (live-battle.ts) für den alten Modus.
+    const pve = parseDuelsPveMode(live.mode);
+    if (pve) {
+      const reward = NPC_BATTLE_WIN_REWARD[pve.difficulty];
+      await prisma.user.update({ where: { id: live.playerAId }, data: { points: { increment: reward } } });
+      await prisma.pointTransaction.create({
+        data: { userId: live.playerAId, amount: reward, reason: `OMA Duels gewonnen (${pve.difficulty})` },
+      });
+      if (pve.difficulty === "EASY") {
+        await markTutorialNpcBattleDone(live.playerAId);
+      }
+    }
+  }
 
   return battle;
 }
 
-async function persistAndMaybeFinalizeDuel(live: LiveBattle, state: LiveDuelState) {
+/** Sorgt bei OMA-Duels-NPC-Kämpfen dafür, dass Team B (die KI) sofort für die
+ *  aktuelle Runde entscheidet, statt erst per Timeout nach 15s — sonst würde
+ *  jede Runde spürbar hängen, obwohl kein echter Mensch drüben sitzt. Nutzt
+ *  dieselbe computeAutoSubmission-Logik wie der Timeout-Fallback für säumige
+ *  Mitspieler (siehe duels-live.ts), daher keine separate KI nötig. */
+function maybeAutoSubmitBot(state: LiveDuelState, mode: string): LiveDuelState {
+  if (state.winner) return state;
+  if (!parseDuelsPveMode(mode)) return state;
+  if (state.pendingActions.B) return state;
+  return submitDuelActionPure(state, "B", computeAutoSubmission(state.playerB, state.playerA));
+}
+
+async function persistAndMaybeFinalizeDuel(live: LiveBattle, state: LiveDuelState): Promise<{ live: LiveBattle; state: LiveDuelState }> {
+  const readyState = maybeAutoSubmitBot(state, live.mode);
   await prisma.liveBattle.update({
     where: { id: live.id },
-    data: { stateJson: toJson(state), status: state.winner ? "finished" : "active" },
+    data: { stateJson: toJson(readyState), status: readyState.winner ? "finished" : "active" },
   });
-  if (state.winner) {
-    await finalizeDuelBattle(live, state);
+  if (readyState.winner) {
+    await finalizeDuelBattle(live, readyState);
   }
-  return prisma.liveBattle.findUniqueOrThrow({ where: { id: live.id } });
+  const fresh = await prisma.liveBattle.findUniqueOrThrow({ where: { id: live.id } });
+  return { live: fresh, state: readyState };
 }
 
 // ---------- Erzeugen ----------
@@ -253,6 +296,51 @@ export async function startLiveDuelBattle(
   return buildSnapshot(fresh, state, challengerId);
 }
 
+/** Baut ein einfaches KI-Deck aus allen vorhandenen Standard-Karten, hochskaliert
+ *  je nach Schwierigkeit (siehe DIFFICULTY_LEVEL) — analog zu startLivePveBattle
+ *  im alten Modus, aber ohne feste Teamgröße und bewusst ohne Taktik-Karten
+ *  (eine "KI spielt Items/Fallen"-Logik wäre deutlich mehr KI-Aufwand für
+ *  wenig Mehrwert in dieser ersten Version). */
+async function buildNpcDuelDeckInput(difficulty: NpcDifficulty): Promise<DuelDeckInput> {
+  const standardCards = await prisma.card.findMany({ where: { rarity: "STANDARD" } });
+  if (standardCards.length === 0) {
+    throw new LiveDuelBattleError("Keine Standard-Karten für den NPC-Gegner vorhanden.");
+  }
+
+  const level = DIFFICULTY_LEVEL[difficulty];
+  const unitDefs: Record<string, BattleUnitDefinition> = {};
+  for (const card of standardCards) {
+    unitDefs[card.id] = cardToBattleUnitDefinition(card, level);
+  }
+
+  return { unitDefs, tacticDefs: {}, cardIds: standardCards.map((c) => c.id) };
+}
+
+/** Startet einen OMA-Duels-NPC-Kampf im neuen Deck/Feld-Modus — ersetzt
+ *  startLivePveBattle (alter sequentieller Modus) für NpcBattleLauncher.tsx.
+ *  Braucht ein bereits zusammengestelltes Duell-Deck (siehe duel-deck.ts) —
+ *  wie bei PvP gibt es kein Ausweichen auf die alte 5er-PVE-Lineup mehr. */
+export async function startDuelPveBattle(userId: string, difficulty: NpcDifficulty): Promise<LiveDuelSnapshot> {
+  await assertNpcDailyLimitNotReached(userId);
+
+  const [playerDeck, npcDeck] = await Promise.all([buildDuelDeckInput(userId), buildNpcDuelDeckInput(difficulty)]);
+
+  const mode = duelsPveModeFor(difficulty);
+  let state = createDuelState(playerDeck, npcDeck);
+  state = maybeAutoSubmitBot(state, mode);
+
+  const live = await prisma.liveBattle.create({
+    data: { mode, playerAId: userId, playerBId: null, stateJson: toJson(state), status: state.winner ? "finished" : "active" },
+  });
+
+  if (state.winner) {
+    await finalizeDuelBattle(live, state);
+  }
+
+  const fresh = await prisma.liveBattle.findUniqueOrThrow({ where: { id: live.id } });
+  return buildSnapshot(fresh, state, userId);
+}
+
 // ---------- Lesen / Aktion ----------
 
 /** Rein lesend im Normalfall. Nur wenn die Runden-Frist bereits abgelaufen
@@ -265,8 +353,8 @@ export async function getLiveDuelSnapshot(liveBattleId: string, viewerId: string
 
   if (live.status === "active" && Date.now() >= state.roundDeadline) {
     const newState = checkDuelTimeout(state);
-    const updated = await persistAndMaybeFinalizeDuel(live, newState);
-    return buildSnapshot(updated, newState, viewerId);
+    const { live: updated, state: finalState } = await persistAndMaybeFinalizeDuel(live, newState);
+    return buildSnapshot(updated, finalState, viewerId);
   }
 
   return buildSnapshot(live, state, viewerId);
@@ -291,6 +379,6 @@ export async function submitLiveDuelAction(
     throw err;
   }
 
-  const updated = await persistAndMaybeFinalizeDuel(live, newState);
-  return buildSnapshot(updated, newState, viewerId);
+  const { live: updated, state: finalState } = await persistAndMaybeFinalizeDuel(live, newState);
+  return buildSnapshot(updated, finalState, viewerId);
 }
