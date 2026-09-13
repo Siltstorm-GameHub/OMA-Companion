@@ -30,11 +30,9 @@ import { parseFavoriteGames } from "@/lib/favorite-games";
 import { PushSubscribeButton } from "@/components/PushSubscribeButton";
 import NotificationPreferences from "@/components/NotificationPreferences";
 import ProfileOverlayButton from "@/components/ProfileOverlayButton";
-import { getMancaveConfig, mancaveVisibleFor } from "@/lib/mancave-config";
-import { loadMancaveData } from "@/lib/mancave-data-loader";
-import { MonitorSmartphone } from "lucide-react";
 import Trophy3DViewer, { type Trophy3DItem } from "@/components/Trophy3DViewer";
-import { WANDERPOKAL_MODELS, WANDERPOKAL_MODEL_DEFAULT, eventPokalModelUrl } from "../mancave/mancave-trophy-models";
+import { WANDERPOKAL_MODELS, WANDERPOKAL_MODEL_DEFAULT, eventPokalModelUrl } from "@/lib/trophy-models";
+import { loadWanderpokalStatus } from "@/lib/wanderpokal-status";
 
 export default async function ProfilePage() {
   const me = await getSessionUser();
@@ -42,18 +40,11 @@ export default async function ProfilePage() {
 
   const userId = me.id;
 
-  // Mancave hat keinen eigenen Nav-Eintrag mehr (User-Wunsch) — Zugang jetzt
-  // nur noch über diesen Button, weiterhin hinter demselben Feature-Flag wie
-  // vorher (solange mancave_enabled aus ist, sehen nur Admins ihn). Der Button
-  // existiert seit dem Mobile-Umbau (Teil B) nur noch im Desktop-Zweig — auf
-  // Mobile zeigt /profile jetzt selbst den Job-Reiter (siehe ProfileMobileView).
-  const showMancave = mancaveVisibleFor(await getMancaveConfig(), me.role);
-
   const now   = new Date();
   const month = now.getMonth() + 1;
   const year  = now.getFullYear();
 
-  const [[user, eventRegs, eventCount, startedEvents, tournamentParticipations, tournamentCount, questsWithProgress, pokale, leaderboardRank, userSystemBadges, userCustomBadges, wanderpocalTrophies, wanderpocalStats, coinsEarnedAgg, coinsSpentAgg, lulPollWins, squadMemberships], mancaveData] =
+  const [[user, eventRegs, eventCount, startedEvents, tournamentParticipations, tournamentCount, questsWithProgress, pokale, leaderboardRank, userSystemBadges, userCustomBadges, wanderpocalTrophies, wanderpocalStats, coinsEarnedAgg, coinsSpentAgg, lulPollWins, squadMemberships], wanderpokalStatusData] =
     await Promise.all([
       Promise.all([
         prisma.user.findUnique({
@@ -112,10 +103,8 @@ export default async function ProfilePage() {
           select: { role: true, squad: { select: { id: true, name: true, icon: true } } },
         }),
       ]),
-      // Für den mobilen Job-Reiter + die 3D-Pokal-Viewer (siehe Teil B des
-      // Mancave-Umbau-Plans, ProfileMobileView.tsx) — dieselbe Aggregation,
-      // die auch mancave/page.tsx nutzt.
-      loadMancaveData(userId, me.role === "admin"),
+      // Für den 3D-Pokal-Viewer (Trophy3DViewer) + "wer hält den Rest".
+      loadWanderpokalStatus(userId),
     ]);
 
   const squads = squadMemberships.map(m => ({ ...m.squad, role: m.role }));
@@ -205,14 +194,14 @@ export default async function ProfilePage() {
   // gerade"-Anzeige (Klick auf Name/Avatar → dessen Profil) — sowohl in der
   // 2D-Liste (WanderpocalSection) als auch im 3D-Viewer.
   const wanderpocalHolders: Record<string, { holderUserId: string | null; holderName: string | null; holderAvatarUrl: string | null; holderRankPoints: number | null }> = {};
-  for (const s of mancaveData.wanderpokalStatus) {
+  for (const s of wanderpokalStatusData.wanderpokalStatus) {
     wanderpocalHolders[`${s.scopeType}:${s.scopeValue}`] = {
       holderUserId: s.holderUserId, holderName: s.holderName,
       holderAvatarUrl: s.holderAvatarUrl, holderRankPoints: s.holderRankPoints,
     };
   }
 
-  const wanderpokalItems: Trophy3DItem[] = mancaveData.wanderpokale.map(w => {
+  const wanderpokalItems: Trophy3DItem[] = wanderpokalStatusData.wanderpokale.map(w => {
     const cfg = WANDERPOKAL_MODELS[w.scopeValue] ?? WANDERPOKAL_MODEL_DEFAULT;
     const holder = wanderpocalHolders[`${w.scopeType}:${w.scopeValue}`];
     return {

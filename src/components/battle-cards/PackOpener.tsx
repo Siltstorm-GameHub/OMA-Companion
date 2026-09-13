@@ -12,10 +12,26 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
-import { Package, X, Lock, LockOpen, Sparkles } from "lucide-react";
+import { Package, X, Sparkles, ScissorsLineDashed } from "lucide-react";
 import BattleCardView from "./BattleCardView";
 import type { BattleCardData } from "./BattleCardView";
 import { playCardRevealSound, playRarePullSound } from "@/lib/battle-cards/sound";
+
+// Foliertes Plastikpack: oben/unten gecrimpte Zickzack-Kante, wie bei
+// echten Sammelkarten-Boosterpacks. Einmalig als Modul-Konstante berechnet.
+function crimpClipPath(teeth = 14): string {
+  const pts: string[] = [];
+  for (let i = 0; i <= teeth; i++) {
+    const x = (i / teeth) * 100;
+    pts.push(`${x}% ${i % 2 === 0 ? 0 : 6}%`);
+  }
+  for (let i = teeth; i >= 0; i--) {
+    const x = (i / teeth) * 100;
+    pts.push(`${x}% ${i % 2 === 0 ? 100 : 94}%`);
+  }
+  return `polygon(${pts.join(", ")})`;
+}
+const PACK_CLIP_PATH = crimpClipPath();
 
 type Phase = "closed" | "ready" | "opening" | "revealed";
 
@@ -120,9 +136,9 @@ export default function PackOpener({ initialUnopenedCount }: { initialUnopenedCo
           <Package className="w-4 h-4 text-amber-400" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-white">Kartentruhen öffnen</p>
+          <p className="text-sm font-semibold text-white">Kartenpacks öffnen</p>
           <p className="text-xs text-gray-500">
-            {remaining} ungeöffnete Truhe{remaining === 1 ? "" : "n"} warten auf dich.
+            {remaining} ungeöffnete{remaining === 1 ? "s" : ""} Kartenpack{remaining === 1 ? "" : "s"} warten auf dich.
           </p>
         </div>
       </motion.button>
@@ -147,45 +163,72 @@ export default function PackOpener({ initialUnopenedCount }: { initialUnopenedCo
 
             <div className="flex flex-col items-center gap-5 max-w-xs w-full" style={{ perspective: 1200 }}>
               {(phase === "ready" || phase === "opening") && (
-                <motion.button
+                <button
                   type="button"
                   onClick={openPack}
                   disabled={loading}
-                  animate={
-                    phase === "opening"
-                      ? { rotate: [0, -4, 4, -4, 4, 0], scale: [1, 1.05, 1.05, 1.05, 1.05, 1.15] }
-                      : {
-                          rotate: 0,
-                          scale: 1,
-                          boxShadow: [
-                            "0 0 40px rgba(245,158,11,0.4), 0 8px 24px rgba(0,0,0,0.6), inset 0 2px 0 rgba(255,255,255,0.15)",
-                            "0 0 64px rgba(245,158,11,0.7), 0 8px 24px rgba(0,0,0,0.6), inset 0 2px 0 rgba(255,255,255,0.15)",
-                            "0 0 40px rgba(245,158,11,0.4), 0 8px 24px rgba(0,0,0,0.6), inset 0 2px 0 rgba(255,255,255,0.15)",
-                          ],
-                        }
-                  }
-                  transition={
-                    phase === "opening"
-                      ? { duration: 0.9, ease: "easeInOut" }
-                      : { boxShadow: { duration: 2, repeat: Infinity, ease: "easeInOut" } }
-                  }
-                  className="relative w-40 h-56 rounded-xl flex flex-col items-center justify-center gap-3 cursor-pointer overflow-hidden"
-                  style={{ background: "linear-gradient(160deg, #d97706 0%, #78350f 100%)" }}
+                  className="relative w-40 h-60 cursor-pointer"
+                  style={{ perspective: 800 }}
                 >
-                  {/* Truhen-Deckel-Naht */}
-                  <div className="absolute top-[38%] left-0 right-0 h-1.5 bg-black/25" />
-                  <div className="absolute top-[38%] left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-amber-900/60 border border-amber-950/50" />
+                  {/* Glanzlicht-Blitz im Riss-Moment */}
+                  <motion.div
+                    className="absolute inset-0 rounded-md bg-white pointer-events-none z-30"
+                    initial={{ opacity: 0 }}
+                    animate={phase === "opening" ? { opacity: [0, 0, 0.85, 0] } : { opacity: 0 }}
+                    transition={{ duration: 0.9, times: [0, 0.5, 0.58, 1] }}
+                  />
 
-                  {phase === "opening" ? (
-                    <LockOpen className="w-10 h-10 text-amber-100 relative z-10" />
-                  ) : (
-                    <Lock className="w-10 h-10 text-amber-100 relative z-10" />
-                  )}
-                  <p className="text-sm font-bold text-white relative z-10">Kartentruhe</p>
-                  <p className="text-[11px] text-amber-100/70 relative z-10">
-                    {phase === "opening" ? "Wird geöffnet…" : "Antippen zum Öffnen"}
+                  {/* Abgerissener Kopfstreifen */}
+                  <motion.div
+                    className="absolute top-0 inset-x-0 h-10 z-20 flex items-center justify-center gap-1 overflow-hidden"
+                    style={{
+                      clipPath: PACK_CLIP_PATH,
+                      background: "repeating-linear-gradient(135deg, #fde68a 0 6px, #d97706 6px 12px)",
+                      boxShadow: "0 2px 6px rgba(0,0,0,0.35)",
+                    }}
+                    animate={
+                      phase === "opening"
+                        ? { y: -90, rotate: -28, opacity: 0 }
+                        : { y: 0, rotate: 0, opacity: 1 }
+                    }
+                    transition={{ duration: 0.7, ease: "easeIn" }}
+                  >
+                    <ScissorsLineDashed className="w-3 h-3 text-black/50" />
+                    <span className="text-[8px] font-bold uppercase tracking-[0.15em] text-black/50">Hier aufreißen</span>
+                  </motion.div>
+
+                  {/* Pack-Körper — foliert, glänzend */}
+                  <motion.div
+                    className="absolute inset-0 flex flex-col items-center justify-center gap-2 overflow-hidden"
+                    style={{
+                      clipPath: PACK_CLIP_PATH,
+                      background: "linear-gradient(160deg, #f59e0b 0%, #b45309 55%, #78350f 100%)",
+                      boxShadow: "0 8px 24px rgba(0,0,0,0.6), inset 0 2px 0 rgba(255,255,255,0.2)",
+                    }}
+                    animate={
+                      phase === "opening"
+                        ? { scaleY: [1, 0.96, 1.04, 1], scaleX: [1, 1.03, 0.98, 1] }
+                        : { scale: 1 }
+                    }
+                    transition={phase === "opening" ? { duration: 0.9, ease: "easeInOut" } : undefined}
+                  >
+                    {/* diagonaler Glanzstreifen */}
+                    <div
+                      className="absolute inset-0 pointer-events-none"
+                      style={{
+                        background:
+                          "linear-gradient(115deg, transparent 28%, rgba(255,255,255,0.38) 45%, rgba(255,255,255,0.06) 56%, transparent 70%)",
+                      }}
+                    />
+                    <Package className="w-9 h-9 text-amber-100 relative z-10" strokeWidth={1.6} />
+                    <p className="text-[13px] font-black uppercase tracking-wide text-white relative z-10">OMA Battle Cards</p>
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-amber-100/70 relative z-10">Kartenpack</p>
+                  </motion.div>
+
+                  <p className="absolute -bottom-7 inset-x-0 text-[11px] text-amber-100/70 text-center">
+                    {phase === "opening" ? "Wird aufgerissen…" : "Antippen zum Aufreißen"}
                   </p>
-                </motion.button>
+                </button>
               )}
 
               {phase === "revealed" && results.length > 0 && (
@@ -244,7 +287,7 @@ export default function PackOpener({ initialUnopenedCount }: { initialUnopenedCo
                             onClick={openAnother}
                             className="text-xs font-semibold px-3 py-2 rounded-md bg-violet-500/15 text-violet-300 hover:bg-violet-500/25 transition-colors"
                           >
-                            Nächste Truhe öffnen ({remaining})
+                            Nächstes Pack öffnen ({remaining})
                           </motion.button>
                         )}
                         <motion.button
