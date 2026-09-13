@@ -46,6 +46,7 @@ export function createBattleUnitState(
     shield: 0,
     statModifiers: [],
     isAlive: true,
+    stance: "attack",
   };
 }
 

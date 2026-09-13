@@ -18,19 +18,18 @@ export const DUEL_START_HAND_SIZE = 4;
 export const DUEL_HAND_CAP = 6;
 export const DUEL_DRAW_PER_ROUND = 1;
 
-export const DUEL_ROUND_TIMEOUT_MS = 15_000;
+/** Zeitbudget pro Zug (Schachuhr-Prinzip: nur die Zeit der gerade aktiven
+ *  Seite läuft) — ersetzt das alte DUEL_ROUND_TIMEOUT_MS aus dem simultanen
+ *  Runden-Modell. */
+export const DUEL_TURN_TIMEOUT_MS = 30_000;
 
-/** Abschwächungsfaktor für geblockten Schaden — zweckentfremdet performAction()s
- *  suddenDeathMultiplier-Parameter (normalerweise Sudden-Death-Skalierung) als
- *  generischen Schadens-Multiplikator für einen simultan gewählten Block. */
-export const DUEL_BLOCK_DAMAGE_MULTIPLIER = 0.4;
-
-/** Bonus-Rage zusätzlich zur Basis-Rage (RAGE_PER_ACTION aus constants.ts), wenn
- *  Block/Ausweichen tatsächlich einen gegnerischen Angriff abgefangen hat —
- *  verhindert, dass Block strikt schlechter als Angreifen ist (ohne diesen Bonus
- *  wäre Block nur ein Rage-neutraler Gamble statt einer echten Alternative). */
-export const DUEL_BLOCK_SUCCESS_RAGE_BONUS = 15;
-export const DUEL_DODGE_SUCCESS_RAGE_BONUS = 20;
+/** Abschwächungsfaktor für Schaden gegen eine Einheit in Verteidigungsstellung
+ *  — zweckentfremdet performAction()s suddenDeathMultiplier-Parameter
+ *  (normalerweise Sudden-Death-Skalierung) als generischen Schadens-
+ *  Multiplikator. Anders als der frühere (simultane) Block-Mechanismus ist
+ *  das jetzt eine deterministische Eigenschaft der (öffentlich sichtbaren)
+ *  Zielstellung, keine erratene Reaktion mehr. */
+export const DUEL_DEFENSE_POSITION_DAMAGE_MULTIPLIER = 0.4;
 
 /** Comeback-Bonus: zusätzliche Rage proportional zu fehlenden HP% einer eigenen
  *  Feld-Einheit — hilft der zurückliegenden Seite, wieder ins Spiel zu kommen. */

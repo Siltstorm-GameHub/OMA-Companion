@@ -6,6 +6,10 @@
 // Ersetzt startLivePvpBattle/getLiveBattleSnapshot/submitLiveBattleAction für
 // die beiden alten Duell-Modi (PVP_CHALLENGE/PVP_MATCHMAKING); PVE/OMA-Gems
 // bleiben unverändert auf live-battle.ts/interactive.ts.
+//
+// Echter Zug-Wechsel (nicht mehr simultan): pro Zug ist genau eine Seite
+// aktiv (`state.activeTeam`), eine Einreichung wird SOFORT aufgelöst statt
+// auf eine zweite zu warten.
 
 import { prisma } from "@/lib/prisma";
 import type { LiveBattle, Prisma } from "@prisma/client";
@@ -18,7 +22,8 @@ import {
   type DuelDeckInput,
   type DuelFieldSlot,
   type DuelPlayerState,
-  type DuelRoundSubmission,
+  type DuelStance,
+  type DuelTurnSubmission,
   type LiveDuelState,
 } from "@/lib/battle-engine/duels-live";
 import { ULTIMATE_SKILL_COST } from "@/lib/battle-engine/constants";
@@ -41,7 +46,16 @@ export class LiveDuelBattleError extends Error {}
 export const DUEL_MODE = "PVP_DUELS_LIVE";
 
 function toState(live: Pick<LiveBattle, "stateJson">): LiveDuelState {
-  return live.stateJson as unknown as LiveDuelState;
+  const state = live.stateJson as unknown as LiveDuelState;
+  // Bestandsschutz: ein Kampf, der beim Deploy des Zug-Wechsel-Umbaus noch im
+  // alten simultanen Zustandsformat lief (kein `activeTeam`), lässt sich nicht
+  // sinnvoll fortsetzen — klarer Fehler statt stillschweigend falschem Verhalten.
+  if (!state || typeof state !== "object" || !("activeTeam" in state)) {
+    throw new LiveDuelBattleError(
+      "Dieses Duell nutzt ein veraltetes Format (vor der Umstellung auf Zug-Wechsel) und kann nicht fortgesetzt werden."
+    );
+  }
+  return state;
 }
 
 function toJson(state: LiveDuelState) {
@@ -80,9 +94,10 @@ export interface LiveDuelUnitSnapshot {
   ultimateCost: number;
   isAlive: boolean;
   imageUrl?: string | null;
+  /** Angriffs-/Verteidigungsstellung — öffentlich sichtbar für beide Seiten. */
+  stance: DuelStance;
   /** Kurze Klartext-Beschreibungen für Skill/Ultimate-Aktionsknöpfe (siehe
-   *  DuelLiveView.tsx describeAction) — Angriff/Block/Ausweichen sind fürs
-   *  UI statisch, diese beiden sind pro Karte unterschiedlich. */
+   *  DuelLiveView.tsx describeAction). */
   activeSkillName: string;
   activeSkillDescription: string;
   ultimateSkillName: string;
@@ -102,6 +117,10 @@ export interface LiveDuelHandCard {
   unitCard?: BattleCardData;
   /** Nur bei kind === "tactic". */
   tacticKind?: "INSTANT" | "TRAP";
+  /** Nur bei kind === "tactic" — Effekt-Klartext (inkl. Trigger-Bedingung bei
+   *  Fallen, z.B. "Löst aus, sobald der Gegner angreift — ..."), fürs
+   *  Karten-Detailpanel in DuelLiveView.tsx. */
+  tacticDescription?: string;
 }
 
 export interface LiveDuelPlayerSnapshot {
@@ -115,7 +134,6 @@ export interface LiveDuelPlayerSnapshot {
    *  bleibt verdeckt, nur `handCount` verrät die Größe. */
   hand: LiveDuelHandCard[] | null;
   handCount: number;
-  hasSubmitted: boolean;
 }
 
 export interface LiveDuelSnapshot {
@@ -123,8 +141,10 @@ export interface LiveDuelSnapshot {
   mode: string;
   status: "active" | "finished";
   round: number;
-  roundDeadline: number;
+  turnDeadline: number;
   viewerTeam: TeamId;
+  /** Wessen Zug gerade läuft — Client leitet "bin ich dran" per Vergleich mit `viewerTeam` ab. */
+  activeTeam: TeamId;
   self: LiveDuelPlayerSnapshot;
   opponent: LiveDuelPlayerSnapshot;
   log: LiveDuelState["log"];
@@ -149,6 +169,7 @@ function toUnitSnapshot(slot: DuelFieldSlot, slotIndex: number): LiveDuelUnitSna
     ultimateCost: unit.def.ultimateSkill.cost ?? ULTIMATE_SKILL_COST,
     isAlive: unit.isAlive,
     imageUrl: unit.def.imageUrl,
+    stance: unit.stance ?? "attack",
     activeSkillName: unit.def.activeSkill.name,
     activeSkillDescription: unit.def.activeSkill.description,
     ultimateSkillName: unit.def.ultimateSkill.name,
@@ -187,12 +208,21 @@ function toHandCard(player: DuelPlayerState, cardId: string): LiveDuelHandCard |
   }
 
   const tacticDef = player.tacticDefsById[cardId];
-  if (tacticDef) return { cardId, kind: "tactic", name: tacticDef.name, tacticKind: tacticDef.kind, imageUrl: tacticDef.imageUrl };
+  if (tacticDef) {
+    return {
+      cardId,
+      kind: "tactic",
+      name: tacticDef.name,
+      tacticKind: tacticDef.kind,
+      imageUrl: tacticDef.imageUrl,
+      tacticDescription: tacticDef.description,
+    };
+  }
 
-  return null; // defensiv, sollte durch createDuelState/resolveDuelRound nicht vorkommen
+  return null; // defensiv, sollte durch createDuelState/applyTurn nicht vorkommen
 }
 
-function toPlayerSnapshot(player: DuelPlayerState, hasSubmitted: boolean, revealHand: boolean): LiveDuelPlayerSnapshot {
+function toPlayerSnapshot(player: DuelPlayerState, revealHand: boolean): LiveDuelPlayerSnapshot {
   return {
     lifePoints: player.lifePoints,
     field: player.field.map(toUnitSnapshot),
@@ -203,13 +233,11 @@ function toPlayerSnapshot(player: DuelPlayerState, hasSubmitted: boolean, reveal
       ? player.handCardIds.map((id) => toHandCard(player, id)).filter((c): c is LiveDuelHandCard => c !== null)
       : null,
     handCount: player.handCardIds.length,
-    hasSubmitted,
   };
 }
 
 function buildSnapshot(live: LiveBattle, state: LiveDuelState, viewerId: string): LiveDuelSnapshot {
   const viewerTeam = teamOf(live, viewerId);
-  const opponentTeam: TeamId = viewerTeam === "A" ? "B" : "A";
   const selfPlayer = viewerTeam === "A" ? state.playerA : state.playerB;
   const opponentPlayer = viewerTeam === "A" ? state.playerB : state.playerA;
 
@@ -218,10 +246,11 @@ function buildSnapshot(live: LiveBattle, state: LiveDuelState, viewerId: string)
     mode: live.mode,
     status: state.winner ? "finished" : "active",
     round: state.round,
-    roundDeadline: state.roundDeadline,
+    turnDeadline: state.turnDeadline,
     viewerTeam,
-    self: toPlayerSnapshot(selfPlayer, !!state.pendingActions[viewerTeam], true),
-    opponent: toPlayerSnapshot(opponentPlayer, !!state.pendingActions[opponentTeam], false),
+    activeTeam: state.activeTeam,
+    self: toPlayerSnapshot(selfPlayer, true),
+    opponent: toPlayerSnapshot(opponentPlayer, false),
     log: state.log,
     winner: state.winner,
     playerAId: live.playerAId,
@@ -276,16 +305,21 @@ async function finalizeDuelBattle(live: LiveBattle, state: LiveDuelState) {
   return battle;
 }
 
-/** Sorgt bei OMA-Duels-NPC-Kämpfen dafür, dass Team B (die KI) sofort für die
- *  aktuelle Runde entscheidet, statt erst per Timeout nach 15s — sonst würde
- *  jede Runde spürbar hängen, obwohl kein echter Mensch drüben sitzt. Nutzt
- *  dieselbe computeAutoSubmission-Logik wie der Timeout-Fallback für säumige
- *  Mitspieler (siehe duels-live.ts), daher keine separate KI nötig. */
+/** Bei OMA-Duels-NPC-Kämpfen: sobald Team B (die KI) am Zug ist, lässt der
+ *  Server sie sofort ihren Zug spielen, statt auf einen Timeout zu warten —
+ *  sonst würde jeder KI-Zug spürbar hängen, obwohl kein echter Mensch drüben
+ *  sitzt. Da jeder Zug die aktive Seite umschaltet, kann das je Aufruf nur
+ *  EINEN Bot-Zug auslösen (die while-Schleife ist defensiv, nicht weil
+ *  mehrere Iterationen normal wären). Nutzt dieselbe computeAutoSubmission-
+ *  Logik wie der Timeout-Fallback für säumige Mitspieler (siehe
+ *  duels-live.ts), daher keine separate KI nötig. */
 function maybeAutoSubmitBot(state: LiveDuelState, mode: string): LiveDuelState {
-  if (state.winner) return state;
   if (!parseDuelsPveMode(mode)) return state;
-  if (state.pendingActions.B) return state;
-  return submitDuelActionPure(state, "B", computeAutoSubmission(state.playerB, state.playerA));
+  let current = state;
+  while (!current.winner && current.activeTeam === "B") {
+    current = submitDuelActionPure(current, "B", computeAutoSubmission(current.playerB, current.playerA));
+  }
+  return current;
 }
 
 async function persistAndMaybeFinalizeDuel(live: LiveBattle, state: LiveDuelState): Promise<{ live: LiveBattle; state: LiveDuelState }> {
@@ -361,7 +395,9 @@ async function buildNpcDuelDeckInput(difficulty: NpcDifficulty): Promise<DuelDec
 /** Startet einen OMA-Duels-NPC-Kampf im neuen Deck/Feld-Modus — ersetzt
  *  startLivePveBattle (alter sequentieller Modus) für NpcBattleLauncher.tsx.
  *  Braucht ein bereits zusammengestelltes Duell-Deck (siehe duel-deck.ts) —
- *  wie bei PvP gibt es kein Ausweichen auf die alte 5er-PVE-Lineup mehr. */
+ *  wie bei PvP gibt es kein Ausweichen auf die alte 5er-PVE-Lineup mehr. Der
+ *  Mensch (playerA) beginnt immer, daher löst maybeAutoSubmitBot hier direkt
+ *  nach der Erzeugung nichts aus — bleibt trotzdem für Robustheit stehen. */
 export async function startDuelPveBattle(userId: string, difficulty: NpcDifficulty): Promise<LiveDuelSnapshot> {
   await assertNpcDailyLimitNotReached(userId);
 
@@ -385,15 +421,15 @@ export async function startDuelPveBattle(userId: string, difficulty: NpcDifficul
 
 // ---------- Lesen / Aktion ----------
 
-/** Rein lesend im Normalfall. Nur wenn die Runden-Frist bereits abgelaufen
- *  ist, wird lazy weitergespielt + persistiert (kein Sweep-Job, analog zum
+/** Rein lesend im Normalfall. Nur wenn die Zug-Frist bereits abgelaufen ist,
+ *  wird lazy weitergespielt + persistiert (kein Sweep-Job, analog zum
  *  Timeout-Zweig in getLiveBattleSnapshot/live-battle.ts) — genau dieser
  *  Poll-Request übernimmt dann die Default-Entscheidung für die säumige Seite. */
 export async function getLiveDuelSnapshot(liveBattleId: string, viewerId: string): Promise<LiveDuelSnapshot> {
   const live = await requireAccess(liveBattleId, viewerId);
   const state = toState(live);
 
-  if (live.status === "active" && Date.now() >= state.roundDeadline) {
+  if (live.status === "active" && Date.now() >= state.turnDeadline) {
     const newState = checkDuelTimeout(state);
     const { live: updated, state: finalState } = await persistAndMaybeFinalizeDuel(live, newState);
     return buildSnapshot(updated, finalState, viewerId);
@@ -405,7 +441,7 @@ export async function getLiveDuelSnapshot(liveBattleId: string, viewerId: string
 export async function submitLiveDuelAction(
   liveBattleId: string,
   viewerId: string,
-  submission: DuelRoundSubmission
+  submission: DuelTurnSubmission
 ): Promise<LiveDuelSnapshot> {
   const live = await requireAccess(liveBattleId, viewerId);
   if (live.status === "finished") throw new LiveDuelBattleError("Dieses Duell ist bereits beendet.");

@@ -2,30 +2,35 @@
 // Battle-Engine — OMA Duels (Yu-Gi-Oh-artiges Live-PvP)
 // ============================================
 // Ersetzt den alten sequentiellen Duell-Modus (interactive.ts, Modi
-// "PVP_CHALLENGE"/"PVP_MATCHMAKING"): Deck/Hand/Feld/Beschwörung statt
-// "eine Einheit ist an der Reihe", simultane zeitlich begrenzte Runden statt
-// striktem Zug-Alternieren (das würde das Warte-Problem reproduzieren, das
-// dieser Modus eigentlich lösen soll).
+// "PVP_CHALLENGE"/"PVP_MATCHMAKING"): Deck/Hand/Feld/Beschwörung, echter
+// Zug-Wechsel (wie im echten Yu-Gi-Oh) statt "eine Einheit ist an der Reihe".
+//
+// Frühere Version dieses Moduls löste Runden SIMULTAN auf (beide Seiten
+// wählen blind, dann gemeinsame Auflösung, Block/Ausweichen als reaktive
+// Gegenwette). Das wurde bewusst auf echten Zug-Wechsel umgestellt: eine
+// Zug-Einreichung wird SOFORT aufgelöst (kein Warten auf eine zweite
+// Einreichung), Verteidigung kommt jetzt aus einer öffentlich sichtbaren
+// Angriffs-/Verteidigungsstellung (siehe DuelStance) statt einer verdeckten
+// Reaktion — der Angreifer sieht das gegnerische Feld ja bereits vollständig,
+// bevor er zuschlägt, es gibt nichts zu erraten.
 //
 // Reine Funktionen, keine DB-Abhängigkeit — analog zu interactive.ts/engine.ts.
 // Der komplette Zustand ist JSON-serialisierbar (LiveDuelState), lebt in
-// LiveBattle.stateJson (mode: "PVP_DUELS_LIVE").
+// LiveBattle.stateJson (mode: "PVP_DUELS_LIVE" / "PVE_DUELS_*").
 //
 // PVE/OMA-Gems (interactive.ts, board-match3.ts) sind NICHT betroffen — dieser
 // Modus ersetzt ausschließlich die beiden alten PvP-Duell-Modi.
 
 import { RAGE_PER_ACTION } from "./constants";
 import {
-  DUEL_BLOCK_DAMAGE_MULTIPLIER,
-  DUEL_BLOCK_SUCCESS_RAGE_BONUS,
   DUEL_COMEBACK_RAGE_FACTOR,
-  DUEL_DODGE_SUCCESS_RAGE_BONUS,
+  DUEL_DEFENSE_POSITION_DAMAGE_MULTIPLIER,
   DUEL_DRAW_PER_ROUND,
   DUEL_FIELD_SIZE,
   DUEL_HAND_CAP,
-  DUEL_ROUND_TIMEOUT_MS,
   DUEL_START_HAND_SIZE,
   DUEL_START_LP,
+  DUEL_TURN_TIMEOUT_MS,
 } from "./duel-constants";
 import { executeEffect } from "./effects";
 import { grantRage, performAction } from "./engine";
@@ -35,7 +40,12 @@ import type { BattleLogEntry, BattleUnitDefinition, BattleUnitState, TacticCardD
 
 export class DuelLiveError extends Error {}
 
-export type DuelActionType = "normalAttack" | "block" | "dodge" | "active" | "ultimate";
+export type DuelActionType = "normalAttack" | "active" | "ultimate";
+
+/** Angriffs-/Verteidigungsstellung einer Feld-Einheit — öffentlich sichtbare
+ *  Information für beide Seiten (wie in echtem Yu-Gi-Oh), beeinflusst den
+ *  Schadens-Multiplikator bei eingehenden Angriffen (siehe resolveAttacks). */
+export type DuelStance = "attack" | "defense";
 
 export interface DuelFieldSlot {
   unit: BattleUnitState | null;
@@ -59,18 +69,21 @@ export interface DuelPlayerState {
   lifePoints: number;
 }
 
-export interface DuelRoundFieldAction {
+export interface DuelAttackAction {
   slotIndex: number;
   action: DuelActionType;
-  /** Pflicht bei normalAttack/active/ultimate — gegnerischer Feld-Slot-Index
-   *  (auch wenn dieser leer ist: dann Face-Damage). */
+  /** Pflicht — gegnerischer Feld-Slot-Index (auch wenn dieser leer ist: dann
+   *  Face-Damage). */
   targetSlotIndex?: number;
 }
 
-export interface DuelRoundSubmission {
-  summon?: { handCardId: string; slotIndex: number };
+export interface DuelTurnSubmission {
+  summon?: { handCardId: string; slotIndex: number; stance: DuelStance };
+  /** Stellungswechsel für bereits VOR diesem Zug vorhandene Feld-Einheiten,
+   *  die diesen Zug noch nicht angegriffen haben (siehe validateSubmission). */
+  stanceChanges?: { slotIndex: number; stance: DuelStance }[];
   playTactic?: { handCardId: string; mode: "instant" | "setFaceDown"; slotIndex?: number };
-  fieldActions: DuelRoundFieldAction[];
+  attacks: DuelAttackAction[];
 }
 
 /** Erweitert die bestehenden BattleLogEntry-Varianten (damage/heal/death/
@@ -82,6 +95,7 @@ export type DuelLogEntry =
   | BattleLogEntry
   | { type: "duelStart"; round: number }
   | { type: "summon"; round: number; team: TeamId; slotIndex: number; unitId: string; cardId: string }
+  | { type: "stanceChanged"; round: number; team: TeamId; slotIndex: number; stance: DuelStance }
   | { type: "tacticPlayed"; round: number; team: TeamId; tacticCardId: string; mode: "instant" | "setFaceDown" }
   | { type: "trapTriggered"; round: number; team: TeamId; tacticCardId: string }
   | {
@@ -91,21 +105,21 @@ export type DuelLogEntry =
       defendingTeam: TeamId;
       amount: number;
       remainingLp: number;
-    }
-  | { type: "dodged"; round: number; attackerUnitId: string; defenderUnitId: string }
-  | { type: "blocked"; round: number; attackerUnitId: string; defenderUnitId: string };
+    };
 
 export interface LiveDuelState {
   seed: number;
   rngState: number;
+  /** Fortlaufende Zug-Nummer (nicht mehr "beide haben gewählt"-Runde) — UI zeigt "Zug X". */
   round: number;
+  activeTeam: TeamId;
   playerA: DuelPlayerState;
   playerB: DuelPlayerState;
-  pendingActions: { A: DuelRoundSubmission | null; B: DuelRoundSubmission | null };
-  /** Epoch-ms — NUR hier in stateJson, kein eigenes DB-Feld (siehe
-   *  getLiveBattleSnapshot/turnDeadline-Vorbild in interactive.ts/live-battle.ts:
-   *  Timeout wird lazy beim nächsten Poll geprüft, kein Sweep-Job nötig). */
-  roundDeadline: number;
+  /** Epoch-ms, Schachuhr-Prinzip: nur für die gerade aktive Seite relevant.
+   *  NUR hier in stateJson, kein eigenes DB-Feld (siehe getLiveBattleSnapshot/
+   *  turnDeadline-Vorbild in interactive.ts/live-battle.ts: Timeout wird lazy
+   *  beim nächsten Poll geprüft, kein Sweep-Job nötig). */
+  turnDeadline: number;
   log: DuelLogEntry[];
   winner: TeamId | "DRAW" | null;
   timeoutStreakA: number;
@@ -177,10 +191,10 @@ export function createDuelState(playerADeck: DuelDeckInput, playerBDeck: DuelDec
     seed,
     rngState: rng.getState(),
     round: 1,
+    activeTeam: "A",
     playerA,
     playerB,
-    pendingActions: { A: null, B: null },
-    roundDeadline: Date.now() + DUEL_ROUND_TIMEOUT_MS,
+    turnDeadline: Date.now() + DUEL_TURN_TIMEOUT_MS,
     log: [{ type: "duelStart", round: 1 }],
     winner: null,
     timeoutStreakA: 0,
@@ -215,7 +229,7 @@ function asBattleLog(log: DuelLogEntry[]): BattleLogEntry[] {
 
 // ---------- Validierung ----------
 
-function validateSubmission(player: DuelPlayerState, submission: DuelRoundSubmission): void {
+function validateSubmission(player: DuelPlayerState, submission: DuelTurnSubmission): void {
   if (submission.summon) {
     const { handCardId, slotIndex } = submission.summon;
     if (!player.handCardIds.includes(handCardId)) {
@@ -244,33 +258,40 @@ function validateSubmission(player: DuelPlayerState, submission: DuelRoundSubmis
     throw new DuelLiveError("Dieselbe Karte kann nicht gleichzeitig beschworen und als Taktik-Karte gespielt werden.");
   }
 
-  for (const action of submission.fieldActions) {
-    const slot = player.field[action.slotIndex];
+  // Stellungswechsel nur für Einheiten, die bereits VOR diesem Zug auf dem
+  // Feld standen (ein gerade erst beschworener Slot ist zu diesem Zeitpunkt
+  // noch leer, kann also gar nicht referenziert werden) und lebendig sind.
+  const stanceChangeSlots = new Set<number>();
+  for (const change of submission.stanceChanges ?? []) {
+    const slot = player.field[change.slotIndex];
     if (!slot?.unit || !slot.unit.isAlive) {
-      throw new DuelLiveError("Feld-Aktion für eine leere oder ungültige Position.");
+      throw new DuelLiveError("Stellungswechsel für eine leere oder ungültige Position.");
     }
-    if (
-      (action.action === "normalAttack" || action.action === "active" || action.action === "ultimate") &&
-      action.targetSlotIndex === undefined
-    ) {
+    stanceChangeSlots.add(change.slotIndex);
+  }
+
+  for (const attack of submission.attacks) {
+    const slot = player.field[attack.slotIndex];
+    if (!slot?.unit || !slot.unit.isAlive) {
+      throw new DuelLiveError("Angriff für eine leere oder ungültige Position.");
+    }
+    if (attack.targetSlotIndex === undefined) {
       throw new DuelLiveError("Für diese Aktion fehlt eine Zielposition.");
+    }
+    if (stanceChangeSlots.has(attack.slotIndex)) {
+      throw new DuelLiveError("Eine Einheit kann nicht im selben Zug Stellung wechseln und angreifen.");
     }
   }
 }
 
 // ---------- Einreichen ----------
 
-export function submitDuelAction(state: LiveDuelState, team: TeamId, submission: DuelRoundSubmission): LiveDuelState {
+export function submitDuelAction(state: LiveDuelState, team: TeamId, submission: DuelTurnSubmission): LiveDuelState {
   if (state.winner) throw new DuelLiveError("Dieses Duell ist bereits beendet.");
-  if (state.pendingActions[team]) throw new DuelLiveError("Für diese Runde wurde bereits eine Entscheidung eingereicht.");
+  if (team !== state.activeTeam) throw new DuelLiveError("Du bist gerade nicht am Zug.");
 
   validateSubmission(playerState(state, team), submission);
-  state.pendingActions[team] = submission;
-
-  if (state.pendingActions[opponentTeam(team)]) {
-    return resolveDuelRound(state);
-  }
-  return state;
+  return applyTurn(state, team, submission);
 }
 
 // ---------- Timeout (lazy, kein Sweep-Job — siehe getLiveBattleSnapshot-Vorbild) ----------
@@ -286,65 +307,75 @@ function pickDefaultTargetSlot(opponent: DuelPlayerState): number {
       found = true;
     }
   });
-  return found ? bestIndex : 0; // 0 kann ein leerer Slot sein -> Face-Damage in resolveFieldActions
+  return found ? bestIndex : 0; // 0 kann ein leerer Slot sein -> Face-Damage in resolveAttacks
 }
 
 /** Einfache Standard-Entscheidung: greift mit jeder eigenen lebenden Feld-
  *  Einheit die gegnerische Einheit mit der niedrigsten Verteidigung an, und
- *  beschwört bei freiem Slot die erste Einheiten-Karte aus der Hand. Dient
- *  zweifach: (1) Timeout-Fallback für einen säumigen menschlichen Spieler
- *  (siehe checkDuelTimeout), (2) die komplette "KI" für OMA-Duels-NPC-Kämpfe
- *  (siehe duel-live-battle.ts) — bewusst dieselbe simple Logik für beide
- *  Fälle, statt eine eigene NPC-KI zu duplizieren. */
-export function computeAutoSubmission(player: DuelPlayerState, opponent: DuelPlayerState): DuelRoundSubmission {
-  const fieldActions: DuelRoundFieldAction[] = [];
+ *  beschwört bei freiem Slot die erste Einheiten-Karte aus der Hand (immer in
+ *  Angriffsstellung). Dient zweifach: (1) Timeout-Fallback für einen
+ *  säumigen menschlichen Spieler (siehe checkDuelTimeout), (2) die komplette
+ *  "KI" für OMA-Duels-NPC-Kämpfe (siehe duel-live-battle.ts) — bewusst
+ *  dieselbe simple Logik für beide Fälle, statt eine eigene NPC-KI zu
+ *  duplizieren. */
+export function computeAutoSubmission(player: DuelPlayerState, opponent: DuelPlayerState): DuelTurnSubmission {
+  const attacks: DuelAttackAction[] = [];
   player.field.forEach((slot, slotIndex) => {
     if (!slot.unit?.isAlive) return;
-    fieldActions.push({ slotIndex, action: "normalAttack", targetSlotIndex: pickDefaultTargetSlot(opponent) });
+    attacks.push({ slotIndex, action: "normalAttack", targetSlotIndex: pickDefaultTargetSlot(opponent) });
   });
 
   const emptySlotIndex = player.field.findIndex((slot) => !slot.unit);
   const summonCardId = emptySlotIndex >= 0 ? player.handCardIds.find((id) => player.unitDefsByCardId[id]) : undefined;
 
   return {
-    summon: summonCardId ? { handCardId: summonCardId, slotIndex: emptySlotIndex } : undefined,
-    fieldActions,
+    summon: summonCardId ? { handCardId: summonCardId, slotIndex: emptySlotIndex, stance: "attack" } : undefined,
+    attacks,
   };
 }
 
 export function checkDuelTimeout(state: LiveDuelState): LiveDuelState {
   if (state.winner) return state;
-  if (Date.now() < state.roundDeadline) return state;
+  if (Date.now() < state.turnDeadline) return state;
 
-  (["A", "B"] as const).forEach((team) => {
-    if (state.pendingActions[team]) return;
-    state.pendingActions[team] = computeAutoSubmission(playerState(state, team), playerState(state, opponentTeam(team)));
-    if (team === "A") state.timeoutStreakA += 1;
-    else state.timeoutStreakB += 1;
-  });
+  const team = state.activeTeam;
+  const submission = computeAutoSubmission(playerState(state, team), playerState(state, opponentTeam(team)));
+  if (team === "A") state.timeoutStreakA += 1;
+  else state.timeoutStreakB += 1;
 
-  return resolveDuelRound(state);
+  return applyTurn(state, team, submission);
 }
 
-// ---------- Rundenauflösung ----------
+// ---------- Zug-Auflösung ----------
 
-function applySummon(team: TeamId, player: DuelPlayerState, submission: DuelRoundSubmission, log: DuelLogEntry[], round: number): void {
+function applySummon(team: TeamId, player: DuelPlayerState, submission: DuelTurnSubmission, log: DuelLogEntry[], round: number): void {
   if (!submission.summon) return;
-  const { handCardId, slotIndex } = submission.summon;
+  const { handCardId, slotIndex, stance } = submission.summon;
   const def = player.unitDefsByCardId[handCardId];
   const slot = player.field[slotIndex];
   if (!def || !slot || slot.unit) return; // defensiv, bereits in validateSubmission geprüft
 
   const instanceId = `${team}-${slotIndex}-${handCardId}-${round}`;
-  slot.unit = createBattleUnitState(def, team, instanceId);
+  const unit = createBattleUnitState(def, team, instanceId);
+  unit.stance = stance;
+  slot.unit = unit;
   player.handCardIds = player.handCardIds.filter((id) => id !== handCardId);
   log.push({ type: "summon", round, team, slotIndex, unitId: instanceId, cardId: handCardId });
+}
+
+function applyStanceChanges(team: TeamId, player: DuelPlayerState, submission: DuelTurnSubmission, log: DuelLogEntry[], round: number): void {
+  for (const change of submission.stanceChanges ?? []) {
+    const unit = player.field[change.slotIndex]?.unit;
+    if (!unit) continue; // defensiv, bereits in validateSubmission geprüft
+    unit.stance = change.stance;
+    log.push({ type: "stanceChanged", round, team, slotIndex: change.slotIndex, stance: change.stance });
+  }
 }
 
 function applyTacticPlay(
   team: TeamId,
   state: LiveDuelState,
-  submission: DuelRoundSubmission,
+  submission: DuelTurnSubmission,
   rng: Rng,
   log: DuelLogEntry[],
   round: number
@@ -385,15 +416,15 @@ function applyTacticPlay(
   player.graveyardCardIds.push(handCardId);
 }
 
-function matchesTrigger(condition: TacticCardDefinition["triggerCondition"], opponentSubmission: DuelRoundSubmission): boolean {
+function matchesTrigger(condition: TacticCardDefinition["triggerCondition"], attackerSubmission: DuelTurnSubmission): boolean {
   if (!condition) return false;
   switch (condition.type) {
     case "onEnemyAttack":
-      return opponentSubmission.fieldActions.some((a) => a.action === "normalAttack" || a.action === "active");
+      return attackerSubmission.attacks.some((a) => a.action === "normalAttack" || a.action === "active");
     case "onEnemySummon":
-      return !!opponentSubmission.summon;
+      return !!attackerSubmission.summon;
     case "onEnemyUltimate":
-      return opponentSubmission.fieldActions.some((a) => a.action === "ultimate");
+      return attackerSubmission.attacks.some((a) => a.action === "ultimate");
     default:
       return false;
   }
@@ -403,7 +434,7 @@ function triggerTraps(
   owner: TeamId,
   state: LiveDuelState,
   existingTraps: DuelTrapInPlay[],
-  opponentSubmission: DuelRoundSubmission,
+  attackerSubmission: DuelTurnSubmission,
   rng: Rng,
   log: DuelLogEntry[],
   round: number
@@ -411,7 +442,7 @@ function triggerTraps(
   const player = playerState(state, owner);
   for (const trap of existingTraps) {
     const def = player.tacticDefsById[trap.tacticCardId];
-    if (!def || !matchesTrigger(def.triggerCondition, opponentSubmission)) continue;
+    if (!def || !matchesTrigger(def.triggerCondition, attackerSubmission)) continue;
 
     const anchor = player.field.find((slot) => slot.unit?.isAlive)?.unit;
     if (anchor) {
@@ -433,11 +464,13 @@ function triggerTraps(
   }
 }
 
-function resolveFieldActions(
+/** Löst die deklarierten Angriffe EINER Seite auf — die Gegenseite hat in
+ *  diesem Zug nichts eingereicht, ihr Feld-Zustand (inkl. `stance`) ist
+ *  bereits bekannt/sichtbar, kein "Gegenreaktion erraten" mehr nötig. */
+function resolveAttacks(
   team: TeamId,
   state: LiveDuelState,
-  ownSubmission: DuelRoundSubmission,
-  opponentSubmission: DuelRoundSubmission,
+  submission: DuelTurnSubmission,
   rng: Rng,
   log: DuelLogEntry[],
   round: number
@@ -446,12 +479,10 @@ function resolveFieldActions(
   const opponentTeamId = opponentTeam(team);
   const opponent = playerState(state, opponentTeamId);
 
-  for (const fieldAction of ownSubmission.fieldActions) {
-    if (fieldAction.action === "block" || fieldAction.action === "dodge") continue; // rein reaktiv
-
-    const attacker = player.field[fieldAction.slotIndex]?.unit;
+  for (const attack of submission.attacks) {
+    const attacker = player.field[attack.slotIndex]?.unit;
     if (!attacker || !attacker.isAlive) continue;
-    const targetSlotIndex = fieldAction.targetSlotIndex;
+    const targetSlotIndex = attack.targetSlotIndex;
     if (targetSlotIndex === undefined) continue;
 
     const defenderUnit = opponent.field[targetSlotIndex]?.unit;
@@ -471,55 +502,23 @@ function resolveFieldActions(
       continue;
     }
 
-    const defenderAction = opponentSubmission.fieldActions.find((a) => a.slotIndex === targetSlotIndex)?.action;
-
-    if (defenderAction === "dodge" && fieldAction.action !== "ultimate") {
-      log.push({ type: "dodged", round, attackerUnitId: attacker.instanceId, defenderUnitId: defenderUnit.instanceId });
-      continue; // Angriff komplett vermieden (Ultimate ist nicht ausweichbar)
-    }
-
-    // Eigener "blocked"-Marker VOR dem eigentlichen Schaden-Log-Eintrag, damit
-    // die UI einen abgeschwächten Treffer von einem regulären Volltreffer
-    // unterscheiden kann (siehe DuelLiveView.tsx: "Geblockt!" statt nur der Zahl).
-    if (defenderAction === "block") {
-      log.push({ type: "blocked", round, attackerUnitId: attacker.instanceId, defenderUnitId: defenderUnit.instanceId });
-    }
-    const damageMultiplier = defenderAction === "block" ? DUEL_BLOCK_DAMAGE_MULTIPLIER : 1;
-    performAction(attacker, fieldAction.action, allFieldUnits(state), rng, round, asBattleLog(log), damageMultiplier, defenderUnit.instanceId);
+    const multiplier = defenderUnit.stance === "defense" ? DUEL_DEFENSE_POSITION_DAMAGE_MULTIPLIER : 1;
+    performAction(attacker, attack.action, allFieldUnits(state), rng, round, asBattleLog(log), multiplier, defenderUnit.instanceId);
   }
 }
 
-function grantRoundRage(
-  team: TeamId,
-  state: LiveDuelState,
-  ownSubmission: DuelRoundSubmission,
-  opponentSubmission: DuelRoundSubmission,
-  log: DuelLogEntry[],
-  round: number
-): void {
+function grantTurnRage(team: TeamId, state: LiveDuelState, submission: DuelTurnSubmission, log: DuelLogEntry[], round: number): void {
   const player = playerState(state, team);
 
-  for (const fieldAction of ownSubmission.fieldActions) {
-    const unit = player.field[fieldAction.slotIndex]?.unit;
+  for (const attack of submission.attacks) {
+    const unit = player.field[attack.slotIndex]?.unit;
     if (!unit || !unit.isAlive) continue;
-
-    // Basis-Rage für JEDE Aktion, inkl. Block/Ausweichen — sonst wäre Block
-    // strikt schlechter als Angreifen (siehe DUEL_BLOCK_SUCCESS_RAGE_BONUS-Doku).
     grantRage(unit, RAGE_PER_ACTION, round, asBattleLog(log), "action");
-
-    if (fieldAction.action === "block" || fieldAction.action === "dodge") {
-      const wasTargeted = opponentSubmission.fieldActions.some(
-        (a) => a.targetSlotIndex === fieldAction.slotIndex && a.action !== "block" && a.action !== "dodge"
-      );
-      if (wasTargeted) {
-        const bonus = fieldAction.action === "block" ? DUEL_BLOCK_SUCCESS_RAGE_BONUS : DUEL_DODGE_SUCCESS_RAGE_BONUS;
-        grantRage(unit, bonus, round, asBattleLog(log), "action");
-      }
-    }
   }
 
   // Comeback-Bonus: vereinfacht anhand aktuellem HP-Rückstand (nicht nur
-  // Schaden dieser Runde) — reicht fürs Grundgerüst, siehe Plan.
+  // Schaden dieses Zugs) — reicht fürs Grundgerüst, siehe Plan. Nur für die
+  // aktive Seite (wer gerade dran ist, bekommt ggf. etwas Aufholhilfe).
   for (const slot of player.field) {
     if (!slot.unit?.isAlive) continue;
     const missingPercent = 1 - slot.unit.currentHp / slot.unit.maxHp;
@@ -548,53 +547,35 @@ export function checkDuelWinner(playerA: DuelPlayerState, playerB: DuelPlayerSta
   return null;
 }
 
-function resolveDuelRound(state: LiveDuelState): LiveDuelState {
-  const submissionA = state.pendingActions.A;
-  const submissionB = state.pendingActions.B;
-  if (!submissionA || !submissionB) {
-    throw new DuelLiveError("Runde kann erst aufgelöst werden, wenn beide Seiten eingereicht haben.");
-  }
-
+/** Wertet EINEN kompletten Spielerzug sofort aus (kein Warten auf eine
+ *  zweite Einreichung — nur eine Seite ist pro Zug aktiv). */
+function applyTurn(state: LiveDuelState, team: TeamId, submission: DuelTurnSubmission): LiveDuelState {
   const rng = createRng(state.rngState);
   const round = state.round;
   const log = state.log;
+  const opponentTeamId = opponentTeam(team);
+  const opponent = playerState(state, opponentTeamId);
 
-  // Fallen-Snapshot VOR dem Setzen neuer Fallen dieser Runde — eine gerade
-  // erst verdeckt gesetzte Falle kann in derselben Runde noch nicht auslösen.
-  const existingTrapsA = [...state.playerA.setTraps];
-  const existingTrapsB = [...state.playerB.setTraps];
+  // Fallen-Snapshot VOR dieser Auflösung — eine gerade erst verdeckt
+  // gesetzte eigene Falle kann in DIESEM Zug (logisch: erst im nächsten
+  // gegnerischen Zug) noch nicht auslösen; hier geht es um die bereits
+  // VORHER liegenden Fallen der Gegenseite.
+  const existingOpponentTraps = [...opponent.setTraps];
 
-  // 1. Beschwörungen
-  applySummon("A", state.playerA, submissionA, log, round);
-  applySummon("B", state.playerB, submissionB, log, round);
+  applySummon(team, playerState(state, team), submission, log, round);
+  applyStanceChanges(team, playerState(state, team), submission, log, round);
+  applyTacticPlay(team, state, submission, rng, log, round);
+  triggerTraps(opponentTeamId, state, existingOpponentTraps, submission, rng, log, round);
+  resolveAttacks(team, state, submission, rng, log, round);
+  grantTurnRage(team, state, submission, log, round);
 
-  // 2+3. Taktik-Karten: Sofort-Wirkung oder verdecktes Setzen
-  applyTacticPlay("A", state, submissionA, rng, log, round);
-  applyTacticPlay("B", state, submissionB, rng, log, round);
-
-  // 4. Ausgelöste Fallen — gegen die jeweils gegnerische, gerade eingereichte Aktion
-  triggerTraps("A", state, existingTrapsA, submissionB, rng, log, round);
-  triggerTraps("B", state, existingTrapsB, submissionA, rng, log, round);
-
-  // 5. Kampf-Auflösung
-  resolveFieldActions("A", state, submissionA, submissionB, rng, log, round);
-  resolveFieldActions("B", state, submissionB, submissionA, rng, log, round);
-
-  // 6. Rage-Vergabe (inkl. korrigierter Block-Basis-Rage + Comeback-Bonus).
-  // grantRage() ignoriert bereits tote Einheiten (siehe engine.ts), Reihenfolge
-  // zur Feld-Bereinigung unten ist daher unkritisch.
-  grantRoundRage("A", state, submissionA, submissionB, log, round);
-  grantRoundRage("B", state, submissionB, submissionA, log, round);
-
-  // 6b. Tote Feld-Einheiten räumen — sonst bleibt der Slot für immer blockiert
-  // (ein "death"-Log-Eintrag wurde bereits beim tödlichen Treffer geschrieben,
-  // hier nur der stille Feld-Zustandswechsel).
+  // Tote Feld-Einheiten auf BEIDEN Seiten räumen — sonst bleibt der Slot für
+  // immer blockiert (ein "death"-Log-Eintrag wurde bereits beim tödlichen
+  // Treffer geschrieben, hier nur der stille Feld-Zustandswechsel).
   clearDeadUnits(state.playerA);
   clearDeadUnits(state.playerB);
 
-  // 7. Sieg-Check
   state.winner = checkDuelWinner(state.playerA, state.playerB);
-  state.pendingActions = { A: null, B: null };
   state.rngState = rng.getState();
 
   if (state.winner) {
@@ -602,12 +583,16 @@ function resolveDuelRound(state: LiveDuelState): LiveDuelState {
     return state;
   }
 
-  // 8. Draw-Phase für die nächste Runde
-  drawCards(state.playerA, DUEL_DRAW_PER_ROUND);
-  drawCards(state.playerB, DUEL_DRAW_PER_ROUND);
+  // Zug wechselt — die neue aktive Seite zieht 1 Karte. Kein Sonderfall für
+  // "kein Draw im allerersten Zug" nötig: Zug 1 (Startspieler) läuft direkt
+  // mit der Starthand ohne einen vorherigen Übergang, der erste tatsächliche
+  // Kartenzug passiert erst HIER beim Wechsel in Zug 2 — genau wie in echtem
+  // Yu-Gi-Oh, wo nur der Startspieler seine eigene erste Ziehphase auslässt.
+  drawCards(opponent, DUEL_DRAW_PER_ROUND);
   log.push({ type: "roundEnd", round });
+  state.activeTeam = opponentTeamId;
   state.round += 1;
-  state.roundDeadline = Date.now() + DUEL_ROUND_TIMEOUT_MS;
+  state.turnDeadline = Date.now() + DUEL_TURN_TIMEOUT_MS;
 
   return state;
 }

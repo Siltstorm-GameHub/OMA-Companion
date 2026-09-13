@@ -1,26 +1,31 @@
 // ============================================
 // POST /api/battle-cards/duel/[id]/action
 // ============================================
-// Spieler-Entscheidung für die aktuelle Runde: optionale Beschwörung,
-// optionale Taktik-Karte (sofort oder verdeckt gesetzt) + eine Aktion pro
-// eigener Feld-Einheit. Wird erst aufgelöst, sobald auch die Gegenseite
-// eingereicht hat (siehe submitDuelAction/resolveDuelRound in duels-live.ts).
+// Zug-Einreichung der aktiven Seite: optionale Beschwörung (mit Stellungswahl),
+// optionale Stellungswechsel bereits vorhandener Einheiten, optionale
+// Taktik-Karte (sofort oder verdeckt gesetzt) + Angriffe pro Feld-Einheit.
+// Wird SOFORT aufgelöst (kein Warten auf die Gegenseite — nur eine Seite ist
+// pro Zug aktiv, siehe submitDuelAction/applyTurn in duels-live.ts).
 
 import { auth } from "@/auth";
 import { z } from "zod";
 import { submitLiveDuelAction, LiveDuelBattleError } from "@/lib/battle-cards/duel-live-battle";
-import type { DuelRoundSubmission } from "@/lib/battle-engine/duels-live";
+import type { DuelTurnSubmission } from "@/lib/battle-engine/duels-live";
 
-const DUEL_ACTION_TYPES = ["normalAttack", "block", "dodge", "active", "ultimate"] as const;
+const DUEL_ACTION_TYPES = ["normalAttack", "active", "ultimate"] as const;
+const DUEL_STANCES = ["attack", "defense"] as const;
 
-const fieldActionSchema = z.object({
+const attackSchema = z.object({
   slotIndex: z.number().int().min(0),
   action: z.enum(DUEL_ACTION_TYPES),
   targetSlotIndex: z.number().int().min(0).optional(),
 });
 
 const submissionSchema = z.object({
-  summon: z.object({ handCardId: z.string().min(1), slotIndex: z.number().int().min(0) }).optional(),
+  summon: z
+    .object({ handCardId: z.string().min(1), slotIndex: z.number().int().min(0), stance: z.enum(DUEL_STANCES) })
+    .optional(),
+  stanceChanges: z.array(z.object({ slotIndex: z.number().int().min(0), stance: z.enum(DUEL_STANCES) })).optional(),
   playTactic: z
     .object({
       handCardId: z.string().min(1),
@@ -28,7 +33,7 @@ const submissionSchema = z.object({
       slotIndex: z.number().int().min(0).optional(),
     })
     .optional(),
-  fieldActions: z.array(fieldActionSchema),
+  attacks: z.array(attackSchema),
 });
 
 export async function POST(req: Request, ctx: RouteContext<"/api/battle-cards/duel/[id]/action">) {
@@ -43,7 +48,7 @@ export async function POST(req: Request, ctx: RouteContext<"/api/battle-cards/du
   }
 
   try {
-    const submission: DuelRoundSubmission = parsed.data;
+    const submission: DuelTurnSubmission = parsed.data;
     const snapshot = await submitLiveDuelAction(id, session.user.id, submission);
     return Response.json(snapshot);
   } catch (error) {

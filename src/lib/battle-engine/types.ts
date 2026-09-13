@@ -162,6 +162,11 @@ export interface BattleUnitState {
   shield: number;
   statModifiers: ActiveStatModifier[];
   isAlive: boolean;
+  /** Nur für OMA Duels (duels-live.ts) — Angriffs-/Verteidigungsstellung,
+   *  beeinflusst dort den Schadens-Multiplikator bei eingehenden Angriffen.
+   *  Optional, damit der alte sequentielle Modus (interactive.ts) unverändert
+   *  bleibt; dort schlicht ungenutzt. */
+  stance?: "attack" | "defense";
 }
 
 export type Team = BattleUnitDefinition[];
@@ -186,6 +191,10 @@ export interface TacticCardDefinition {
   /** Nur bei kind === "TRAP" gesetzt. */
   triggerCondition?: TrapTriggerCondition;
   imageUrl?: string | null;
+  /** Nur für Anzeige-Zwecke (Karten-Detailanzeige im OMA-Duels-Spielbrett,
+   *  siehe duel-live-battle.ts toHandCard) — beeinflusst keine Kampf-Logik. */
+  description?: string;
+  flavorText?: string;
 }
 
 // ---------- Log / Replay ----------
