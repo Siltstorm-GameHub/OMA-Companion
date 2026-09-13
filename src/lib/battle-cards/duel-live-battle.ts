@@ -24,6 +24,7 @@ import {
 import { ULTIMATE_SKILL_COST } from "@/lib/battle-engine/constants";
 import { cardToBattleUnitDefinition } from "@/lib/battle-engine/adapters";
 import type { BattleUnitDefinition, TeamId, UnitClass } from "@/lib/battle-engine/types";
+import type { BattleCardData } from "@/components/battle-cards/BattleCardView";
 import { assertNpcDailyLimitNotReached, finalizePvpChallengeSideEffects } from "@/lib/battle-cards/live-battle";
 import { buildDuelDeckInput } from "@/lib/battle-cards/duel-deck";
 import { markTutorialNpcBattleDone } from "@/lib/battle-cards/tutorial";
@@ -88,6 +89,10 @@ export interface LiveDuelHandCard {
   imageUrl?: string | null;
   /** Nur bei kind === "unit". */
   unitClass?: UnitClass;
+  /** Nur bei kind === "unit" — vollständige Kartendaten, damit der Client die
+   *  Handkarte als echte CardTile rendern kann (identisch zur Kartensammlung),
+   *  statt einer reduzierten Kurzform. */
+  unitCard?: BattleCardData;
   /** Nur bei kind === "tactic". */
   tacticKind?: "INSTANT" | "TRAP";
 }
@@ -142,7 +147,33 @@ function toUnitSnapshot(slot: DuelFieldSlot, slotIndex: number): LiveDuelUnitSna
 
 function toHandCard(player: DuelPlayerState, cardId: string): LiveDuelHandCard | null {
   const unitDef = player.unitDefsByCardId[cardId];
-  if (unitDef) return { cardId, kind: "unit", name: unitDef.name, unitClass: unitDef.class, imageUrl: unitDef.imageUrl };
+  if (unitDef) {
+    return {
+      cardId,
+      kind: "unit",
+      name: unitDef.name,
+      unitClass: unitDef.class,
+      imageUrl: unitDef.imageUrl,
+      unitCard: {
+        name: unitDef.name,
+        title: unitDef.title ?? "",
+        class: unitDef.class,
+        rarity: unitDef.rarity ?? "STANDARD",
+        flavorText: unitDef.flavorText ?? "",
+        baseHp: unitDef.baseHp,
+        baseAttack: unitDef.baseAttack,
+        baseDefense: unitDef.baseDefense,
+        speed: unitDef.speed,
+        passivePositive: unitDef.passivePositive,
+        passiveNegative: unitDef.passiveNegative,
+        activeSkill: unitDef.activeSkill,
+        ultimateSkill: unitDef.ultimateSkill,
+        level: unitDef.level,
+        imageUrl: unitDef.imageUrl,
+        avatarBadgeUrl: unitDef.avatarBadgeUrl,
+      },
+    };
+  }
 
   const tacticDef = player.tacticDefsById[cardId];
   if (tacticDef) return { cardId, kind: "tactic", name: tacticDef.name, tacticKind: tacticDef.kind, imageUrl: tacticDef.imageUrl };

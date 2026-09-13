@@ -20,7 +20,8 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Loader2, Shield, Sparkles, Swords, Volume2, VolumeX, Wind } from "lucide-react";
-import { getClassConfig } from "./BattleCardView";
+import { getClassConfig, type BattleCardData } from "./BattleCardView";
+import CardTile from "./CardTile";
 import ErrorNotice from "./ErrorNotice";
 import { DUEL_ROUND_TIMEOUT_MS } from "@/lib/battle-engine/duel-constants";
 import {
@@ -60,6 +61,7 @@ interface LiveDuelHandCard {
   name: string;
   imageUrl?: string | null;
   unitClass?: UnitClass;
+  unitCard?: BattleCardData;
   tacticKind?: "INSTANT" | "TRAP";
 }
 
@@ -771,31 +773,47 @@ export default function DuelLiveView({
               Hand ({snapshot.self.hand?.length ?? 0}) · Deck {snapshot.self.deckCount} · Fallen {snapshot.self.trapCount}
               {pendingSummonCardId && <span className="text-teal-300"> · Ziel-Slot wählen</span>}
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex gap-3 overflow-x-auto pb-1">
               {(snapshot.self.hand ?? []).map((card) => {
                 const isSelected = usedHandCardId === card.cardId;
-                const config = card.unitClass ? getClassConfig(card.unitClass) : null;
-                const Icon = config?.icon ?? (card.tacticKind === "TRAP" ? Shield : Sparkles);
+
+                if (card.kind === "unit" && card.unitCard) {
+                  return (
+                    <div
+                      key={card.cardId}
+                      className={`w-28 shrink-0 rounded-lg p-1 transition-colors ${isSelected ? "bg-teal-500/15 ring-2 ring-teal-400" : ""}`}
+                    >
+                      <CardTile card={card.unitCard} level={card.unitCard.level ?? 1} onClick={() => toggleHandCard(card)} />
+                    </div>
+                  );
+                }
+
+                const isTrap = card.tacticKind === "TRAP";
+                const Icon = isTrap ? Shield : Sparkles;
+                const accent = isTrap ? "#f43f5e" : "#f59e0b";
                 return (
                   <button
                     key={card.cardId}
+                    type="button"
                     disabled={alreadySubmitted}
                     onClick={() => toggleHandCard(card)}
-                    className={`flex flex-col items-center gap-1 rounded-lg border p-1.5 w-16 ${
-                      isSelected ? "border-teal-400 bg-teal-500/15" : "border-slate-700 bg-slate-900/60 hover:border-slate-500"
-                    }`}
+                    className="w-28 shrink-0 flex flex-col items-center gap-1.5 text-left"
                   >
                     <div
-                      className="w-full h-12 rounded overflow-hidden flex items-center justify-center bg-slate-800"
-                      style={
-                        card.imageUrl
-                          ? { backgroundImage: `url(${card.imageUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
-                          : undefined
-                      }
+                      className="card-cut-sm relative w-full aspect-[3/4] overflow-hidden flex items-center justify-center"
+                      style={{
+                        background: `linear-gradient(160deg, ${accent}3a, rgba(12,12,16,0.92))`,
+                        boxShadow: isSelected ? `0 0 0 2px ${accent}` : "0 4px 14px rgba(0,0,0,0.55)",
+                      }}
                     >
-                      {!card.imageUrl && <Icon className="w-5 h-5" style={{ color: config?.color ?? "#94a3b8" }} />}
+                      {card.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={card.imageUrl} alt={card.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <Icon className="w-8 h-8" style={{ color: accent, opacity: 0.75 }} />
+                      )}
                     </div>
-                    <span className="text-[10px] text-slate-200 truncate w-full text-center">{card.name}</span>
+                    <p className="font-battle text-[11px] truncate w-full text-center text-white">{card.name}</p>
                   </button>
                 );
               })}

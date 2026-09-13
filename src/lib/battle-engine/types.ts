@@ -127,6 +127,13 @@ export interface BattleUnitDefinition {
   /** Echtes Discord-Profilbild als kleines Badge — nur gesetzt, wenn imageUrl ein
    *  individuelles Artwork statt des Profilbilds selbst ist (siehe resolve-image.ts). */
   avatarBadgeUrl?: string | null;
+  /** Nur für Anzeige-Zwecke (z.B. Handkarten-Kacheln im OMA-Duels-Spielbrett,
+   *  siehe duel-live-battle.ts toHandCard) — beeinflusst keine Kampf-Logik.
+   *  Bei älteren, bereits als JSON serialisierten Definitionen (z.B.
+   *  GemsTournament.bossTeamJson) kann das fehlen, daher optional. */
+  title?: string;
+  rarity?: "STANDARD" | "COMMUNITY";
+  flavorText?: string;
 }
 
 export interface ActiveStatModifier {

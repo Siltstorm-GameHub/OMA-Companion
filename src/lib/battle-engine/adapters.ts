@@ -41,6 +41,9 @@ export function cardToBattleUnitDefinition(
     ultimateSkill: parseActiveSkill(card.ultimateSkill, `${card.name}.ultimateSkill`),
     imageUrl: imageUrl !== undefined ? imageUrl : card.imageUrl,
     avatarBadgeUrl: avatarBadgeUrl ?? null,
+    title: card.title,
+    rarity: card.rarity,
+    flavorText: card.flavorText,
   };
 }
 
