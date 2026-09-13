@@ -84,13 +84,11 @@ function PackCard({
 
   return (
     <div className="glass card-shine rounded-2xl border border-white/[0.06] overflow-hidden">
-      <div className="p-5 space-y-4">
-        <div className="flex items-center gap-3">
-          <PackCoverArt kind={kind} showLabel={false} className="w-14 h-[72px] shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-white">{info.label}</p>
-            <p className="text-xs text-gray-500">{info.description}</p>
-          </div>
+      <div className="p-5 flex flex-col items-center gap-4 text-center">
+        <PackCoverArt kind={kind} showLabel={false} className="w-32 h-[178px] shrink-0" />
+        <div>
+          <p className="text-sm font-semibold text-white">{info.label}</p>
+          <p className="text-xs text-gray-500 mt-1">{info.description}</p>
         </div>
 
         <button
@@ -146,7 +144,7 @@ export default function BuyPack({
         <Package className="w-3 h-3" />
         {boughtToday}/{dailyLimit} Packs heute gekauft
       </div>
-      <div className="grid grid-cols-1 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {PACK_ORDER.map((kind) => (
           <PackCard
             key={kind}

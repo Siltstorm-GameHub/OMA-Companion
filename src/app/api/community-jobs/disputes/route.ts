@@ -4,7 +4,7 @@ import { fileDispute, type VoteKind } from "@/lib/job-dispute-service";
 
 const VALID_KINDS: VoteKind[] = [
   "jobReportVote", "jobReportContributionVote", "jobMediaAssetVote", "marketingPostVote", "coachRating",
-  "communityIdeaVote",
+  "communityIdeaVote", "communityBoardCommentVote",
 ];
 
 /** Betroffener Job-Inhaber meldet eine Bewertung auf seinen eigenen Beitrag als Anfechtung an. */

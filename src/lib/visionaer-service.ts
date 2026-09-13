@@ -1,6 +1,7 @@
 import { prisma } from "./prisma";
 import { registerScoreResolver, registerOwnVoteCounter } from "./community-job-service";
 import { onCommunityJobVoteCast } from "./community-job-vote-incentives";
+import { countCommentVoteScore } from "./community-board-comment-service";
 
 /**
  * Visionär: reicht Ideen ein, die Community stimmt mit 1-5 Sternen + Begründung
@@ -86,17 +87,24 @@ export async function voteIdea(voterId: string, ideaId: string, stars: number, r
 
 // ── Anbindung ans Community-Job-Gehaltssystem ────────────────────────────────
 
-/** Score = Σ Sterne aller gültigen Stimmen, die die Ideen dieses Users diese Woche erhalten haben. */
+/**
+ * Score = Σ Sterne aller gültigen Stimmen, die die Ideen dieses Users diese
+ * Woche erhalten haben, PLUS Bewertungen auf eigene Community-Board-
+ * Kommentare (job-übergreifend, siehe community-board-comment-service.ts).
+ */
 registerScoreResolver(JOB_KEY, async (userId, weekStart, weekEnd) => {
-  const agg = await prisma.communityIdeaVote.aggregate({
-    where: {
-      idea: { authorId: userId },
-      createdAt: { gte: weekStart, lt: weekEnd },
-      OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }],
-    },
-    _sum: { stars: true },
-  });
-  return agg._sum.stars ?? 0;
+  const [agg, commentVotes] = await Promise.all([
+    prisma.communityIdeaVote.aggregate({
+      where: {
+        idea: { authorId: userId },
+        createdAt: { gte: weekStart, lt: weekEnd },
+        OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }],
+      },
+      _sum: { stars: true },
+    }),
+    countCommentVoteScore(userId, weekStart, weekEnd),
+  ]);
+  return (agg._sum.stars ?? 0) + commentVotes;
 });
 
 registerOwnVoteCounter(async (userId, weekStart, weekEnd) => {

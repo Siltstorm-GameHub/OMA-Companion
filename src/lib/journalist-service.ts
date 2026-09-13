@@ -4,6 +4,7 @@ import { onCommunityJobVoteCast } from "./community-job-vote-incentives";
 import { announceCommunityJobContent } from "./discord-community-jobs";
 import { getCommunityJob } from "./community-jobs";
 import { getAnnouncementChannel } from "./community-job-config";
+import { countCommentVoteScore } from "./community-board-comment-service";
 
 /**
  * Journalist: Berichte + Ergänzungen anderer Journalisten, Daumen-hoch-Bewertung.
@@ -186,7 +187,7 @@ export async function unvoteContribution(voterId: string, contributionId: string
 // ── Anbindung ans Community-Job-Gehaltssystem ────────────────────────────────
 
 registerScoreResolver(JOB_KEY, async (userId, weekStart, weekEnd) => {
-  const [reportVotes, contributionVotes] = await Promise.all([
+  const [reportVotes, contributionVotes, commentVotes] = await Promise.all([
     prisma.jobReportVote.count({
       where: {
         report: { authorId: userId },
@@ -201,8 +202,11 @@ registerScoreResolver(JOB_KEY, async (userId, weekStart, weekEnd) => {
         OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }],
       },
     }),
+    // Bewertungen auf eigene Community-Board-Kommentare — job-übergreifend,
+    // siehe community-board-comment-service.ts.
+    countCommentVoteScore(userId, weekStart, weekEnd),
   ]);
-  return reportVotes + contributionVotes;
+  return reportVotes + contributionVotes + commentVotes;
 });
 
 registerOwnVoteCounter(async (userId, weekStart, weekEnd) => {

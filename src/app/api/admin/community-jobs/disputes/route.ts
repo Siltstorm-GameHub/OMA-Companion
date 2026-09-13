@@ -12,7 +12,7 @@ export async function GET() {
     return NextResponse.json({ error: "Keine Berechtigung" }, { status: 403 });
   }
 
-  const [reportVotes, contributionVotes, assetVotes, marketingVotes, coachRatings, ideaVotes] = await Promise.all([
+  const [reportVotes, contributionVotes, assetVotes, marketingVotes, coachRatings, ideaVotes, commentVotes] = await Promise.all([
     prisma.jobReportVote.findMany({
       where: { disputed: true, disputeResolution: "PENDING" },
       include: { report: { select: { title: true, authorId: true } }, voter: { select: { username: true, name: true } } },
@@ -37,6 +37,10 @@ export async function GET() {
       where: { disputed: true, disputeResolution: "PENDING" },
       include: { idea: { select: { title: true, authorId: true } }, voter: { select: { username: true, name: true } } },
     }),
+    prisma.communityBoardCommentVote.findMany({
+      where: { disputed: true, disputeResolution: "PENDING" },
+      include: { comment: { select: { bodyMarkdown: true, authorId: true } }, voter: { select: { username: true, name: true } } },
+    }),
   ]);
 
   return NextResponse.json({
@@ -47,6 +51,7 @@ export async function GET() {
       ...marketingVotes.map(v => ({ kind: "marketingPostVote" as const, id: v.id, reason: v.disputeReason, voter: v.voter, context: v.post.caption, ownerId: v.post.authorId })),
       ...coachRatings.map(r => ({ kind: "coachRating" as const, id: r.id, reason: r.disputeReason, voter: r.rater, context: `Coach-Bewertung (${r.stars}★)`, ownerId: r.coach.id })),
       ...ideaVotes.map(v => ({ kind: "communityIdeaVote" as const, id: v.id, reason: v.disputeReason, voter: v.voter, context: v.idea.title, ownerId: v.idea.authorId })),
+      ...commentVotes.map(v => ({ kind: "communityBoardCommentVote" as const, id: v.id, reason: v.disputeReason, voter: v.voter, context: v.comment.bodyMarkdown.slice(0, 60), ownerId: v.comment.authorId })),
     ],
   });
 }
@@ -61,7 +66,7 @@ export async function PATCH(req: NextRequest) {
   const { kind, voteId, resolution } = await req.json().catch(() => ({}));
   const validKinds: VoteKind[] = [
     "jobReportVote", "jobReportContributionVote", "jobMediaAssetVote", "marketingPostVote", "coachRating",
-    "communityIdeaVote",
+    "communityIdeaVote", "communityBoardCommentVote",
   ];
   if (!validKinds.includes(kind) || (resolution !== "UPHELD" && resolution !== "OVERTURNED") || typeof voteId !== "string") {
     return NextResponse.json({ error: "Ungültige Anfrage" }, { status: 400 });

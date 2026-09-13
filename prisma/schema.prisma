@@ -123,6 +123,8 @@ model User {
   coachRatingsGiven                CoachRating[]               @relation("CoachRatingRater")
   communityIdeas                   CommunityIdea[]
   communityIdeaVotes               CommunityIdeaVote[]
+  communityBoardComments           CommunityBoardComment[]
+  communityBoardCommentVotes       CommunityBoardCommentVote[]
   pokale                           Pokal[]
   battleCardUserCards              UserCard[]
   battleCardBattles                Battle[]                    @relation("BattleCardPlayer")
@@ -1525,6 +1527,50 @@ model CommunityIdeaVote {
   voter User          @relation(fields: [voterId], references: [id], onDelete: Cascade)
 
   @@unique([ideaId, voterId])
+}
+
+// ── Community-Board: Kommentare ─────────────────────────────────────────────
+// Generisches Kommentar-Modell für alle vier Feed-Typen (Report, Asset,
+// Marketing-Post, Idee) statt vier separater Modelle — polymorph über
+// entityType + entityId, weil Kommentieren job-übergreifend jedem offensteht
+// (nicht nur dem jeweiligen Job-Inhaber). Bewertungen auf eigene Kommentare
+// zählen — analog zu JobReportContributionVote beim Journalisten — zusätzlich
+// in den Gehalts-Score des jeweils aktuellen Community-Jobs des Kommentators
+// (siehe registerScoreResolver-Erweiterung in journalist/fotograf/
+// marketing-manager/visionaer-service.ts).
+model CommunityBoardComment {
+  id                  String   @id @default(cuid())
+  entityType          String // report | asset | marketing_post | idea
+  entityId            String
+  authorId            String
+  bodyMarkdown        String
+  createdAt           DateTime @default(now())
+  disputed            Boolean  @default(false)
+  disputeReason       String?
+  disputeResolution   String? // PENDING | UPHELD | OVERTURNED
+  disputeResolvedById String?
+
+  author User                        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  votes  CommunityBoardCommentVote[]
+
+  @@index([entityType, entityId])
+  @@index([authorId])
+}
+
+model CommunityBoardCommentVote {
+  id                  String   @id @default(cuid())
+  commentId           String
+  voterId             String
+  createdAt           DateTime @default(now())
+  disputed            Boolean  @default(false)
+  disputeReason       String?
+  disputeResolution   String?
+  disputeResolvedById String?
+
+  comment CommunityBoardComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  voter   User                  @relation(fields: [voterId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, voterId])
 }
 
 // ============================================

@@ -15,7 +15,7 @@ import { prisma } from "./prisma";
 
 export type VoteKind =
   | "jobReportVote" | "jobReportContributionVote" | "jobMediaAssetVote" | "marketingPostVote" | "coachRating"
-  | "communityIdeaVote";
+  | "communityIdeaVote" | "communityBoardCommentVote";
 
 interface VoteOwnerLookup {
   getOwnerId(voteId: string): Promise<{ ownerId: string; voterId: string } | null>;
@@ -142,6 +142,27 @@ const lookups: Record<VoteKind, VoteOwnerLookup> = {
     },
     async resolveDispute(voteId, resolution, adminId) {
       await prisma.communityIdeaVote.update({
+        where: { id: voteId },
+        data: { disputeResolution: resolution, disputeResolvedById: adminId },
+      });
+    },
+  },
+  communityBoardCommentVote: {
+    async getOwnerId(voteId) {
+      const vote = await prisma.communityBoardCommentVote.findUnique({
+        where: { id: voteId },
+        include: { comment: { select: { authorId: true } } },
+      });
+      return vote ? { ownerId: vote.comment.authorId, voterId: vote.voterId } : null;
+    },
+    async setDispute(voteId, disputed, reason) {
+      await prisma.communityBoardCommentVote.update({
+        where: { id: voteId },
+        data: { disputed, disputeReason: reason, disputeResolution: disputed ? "PENDING" : null },
+      });
+    },
+    async resolveDispute(voteId, resolution, adminId) {
+      await prisma.communityBoardCommentVote.update({
         where: { id: voteId },
         data: { disputeResolution: resolution, disputeResolvedById: adminId },
       });

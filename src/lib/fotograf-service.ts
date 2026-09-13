@@ -4,6 +4,7 @@ import { onCommunityJobVoteCast } from "./community-job-vote-incentives";
 import { announceCommunityJobContent } from "./discord-community-jobs";
 import { getCommunityJob } from "./community-jobs";
 import { getAnnouncementChannel } from "./community-job-config";
+import { countCommentVoteScore } from "./community-board-comment-service";
 
 /**
  * Fotograf: lädt Clips/Collagen/Screenshots/Banner/Grafiken in die gemeinsame
@@ -118,13 +119,19 @@ export async function unvoteAsset(voterId: string, assetId: string): Promise<Vot
 // ── Anbindung ans Community-Job-Gehaltssystem ────────────────────────────────
 
 registerScoreResolver(JOB_KEY, async (userId, weekStart, weekEnd) => {
-  return prisma.jobMediaAssetVote.count({
-    where: {
-      asset: { authorId: userId },
-      createdAt: { gte: weekStart, lt: weekEnd },
-      OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }],
-    },
-  });
+  const [assetVotes, commentVotes] = await Promise.all([
+    prisma.jobMediaAssetVote.count({
+      where: {
+        asset: { authorId: userId },
+        createdAt: { gte: weekStart, lt: weekEnd },
+        OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }],
+      },
+    }),
+    // Bewertungen auf eigene Community-Board-Kommentare — job-übergreifend,
+    // siehe community-board-comment-service.ts.
+    countCommentVoteScore(userId, weekStart, weekEnd),
+  ]);
+  return assetVotes + commentVotes;
 });
 
 registerOwnVoteCounter(async (userId, weekStart, weekEnd) => {

@@ -30,6 +30,33 @@ function toJson<T>(value: T): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value));
 }
 
+/** Rein lesende Diagnose: gibt für jede Standard-Karte alle Zeilen zurück, die
+ *  denselben Namen tragen (inkl. wie viele UserCard-Einträge je Zeile hängen).
+ *  Hilft, doppelte Card-Zeilen aus einer früheren, nicht-idempotenten Seed-
+ *  Methode aufzuspüren — z.B. wenn nur eine der beiden Zeilen ein imageUrl
+ *  hat und der zufällige Pack-Draw manchmal die andere (bildlose) zieht. */
+export async function GET(request: Request) {
+  if (!isAuthorized(request)) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const cards = await prisma.card.findMany({
+    where: { rarity: "STANDARD" },
+    select: { id: true, name: true, imageUrl: true, createdAt: true, _count: { select: { userCards: true } } },
+    orderBy: [{ name: "asc" }, { createdAt: "asc" }],
+  });
+
+  const byName = new Map<string, typeof cards>();
+  for (const c of cards) {
+    byName.set(c.name, [...(byName.get(c.name) ?? []), c]);
+  }
+  const duplicates = [...byName.entries()]
+    .filter(([, rows]) => rows.length > 1)
+    .map(([name, rows]) => ({ name, rows }));
+
+  return Response.json({ totalStandardCards: cards.length, duplicateNames: duplicates.length, duplicates, all: cards });
+}
+
 export async function POST(request: Request) {
   if (!isAuthorized(request)) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });

@@ -55,7 +55,6 @@ import { getBattleRank, getBattleRankFullLabel } from "@/lib/battle-cards/battle
 import {
   DIFFICULTY_LEVEL,
   GEMS_PVP_DAILY_LIMIT,
-  GEMS_PVP_OPPONENT_DAILY_CAP,
   NPC_BATTLE_DAILY_LIMIT,
   NPC_BATTLE_WIN_REWARD,
   parseNpcMode,
@@ -412,23 +411,11 @@ async function finalizeLiveBattle(live: LiveBattle, state: InteractiveBattleStat
     if (challenge) {
       const winnerId = state.winner === "A" ? live.playerAId : state.winner === "B" ? live.playerBId : null;
 
-      // Fairness-Deckel gegen Farmen: nur die ersten GEMS_PVP_OPPONENT_DAILY_CAP
-      // resolvten Kämpfe desselben Angreifer/Gegner-Paars pro Tag zählen für
-      // Rangliste + Sieges-Kiste — weitere Angriffe gegen denselben Gegner sind
-      // weiterhin möglich, wirken sich aber nicht mehr aus (siehe leaderboard.ts).
-      let countsForRanking = true;
-      if (challenge.mode === "GEMS") {
-        const pairMatchesToday = await prisma.battleChallenge.count({
-          where: {
-            mode: "GEMS",
-            status: "resolved",
-            challengerId: challenge.challengerId,
-            opponentId: challenge.opponentId,
-            respondedAt: { gte: startOfTodayUTC() },
-          },
-        });
-        countsForRanking = pairMatchesToday < GEMS_PVP_OPPONENT_DAILY_CAP;
-      }
+      // Einziger Farm-Deckel ist jetzt GEMS_PVP_DAILY_LIMIT (max. Angriffe pro Tag,
+      // siehe assertGemsPvpDailyLimitNotReached) — jeder resolvte Kampf zählt für
+      // Rangliste + Sieges-Kiste, unabhängig davon, wie oft man denselben Gegner
+      // am selben Tag schon getroffen hat.
+      const countsForRanking = true;
 
       await prisma.battleChallenge.update({
         where: { id: challenge.id },
@@ -444,25 +431,19 @@ async function finalizeLiveBattle(live: LiveBattle, state: InteractiveBattleStat
           await applyWinStreak(winnerId, loserId);
         }
       }
-      // Gilt für Sieg/Niederlage UND Unentschieden — derselbe Farm-Fairness-Deckel
-      // wie für Rangliste/Sieges-Kiste (countsForRanking), damit Elo nicht durch
-      // wiederholte Angriffe auf denselben Gegner am selben Tag aufgepumpt wird.
       let rankUpA: RankUpInfo | null = null;
       let rankUpB: RankUpInfo | null = null;
-      if (countsForRanking) {
-        const eloResult: EloResult = winnerId === null ? "draw" : winnerId === live.playerAId ? "A" : "B";
-        const eloUpdate = await applyEloForChallenge(challenge.mode, live.playerAId, live.playerBId, eloResult);
-        if (eloUpdate) {
-          rankUpA = computeRankUp(challenge.mode, eloUpdate.ratingA, eloUpdate.newA);
-          rankUpB = computeRankUp(challenge.mode, eloUpdate.ratingB, eloUpdate.newB);
-        }
+      const eloResult: EloResult = winnerId === null ? "draw" : winnerId === live.playerAId ? "A" : "B";
+      const eloUpdate = await applyEloForChallenge(challenge.mode, live.playerAId, live.playerBId, eloResult);
+      if (eloUpdate) {
+        rankUpA = computeRankUp(challenge.mode, eloUpdate.ratingA, eloUpdate.newA);
+        rankUpB = computeRankUp(challenge.mode, eloUpdate.ratingB, eloUpdate.newB);
       }
       // OMA-Gems-Ghost-Angriff: nur der Angreifer (playerAId) spielt aktiv — bei
       // dessen Sieg öffnet sich die Sieges-Kiste. Der Verteidiger bekommt nichts,
-      // er hat den Kampf nicht selbst bestritten. Kein Kisten-Gewinn mehr, sobald
-      // der Fairness-Deckel gegen dasselbe Paar greift.
+      // er hat den Kampf nicht selbst bestritten.
       let gemsChestPrize: LiveBattleSnapshot["chestPrize"] = null;
-      if (challenge.mode === "GEMS" && winnerId === live.playerAId && countsForRanking) {
+      if (challenge.mode === "GEMS" && winnerId === live.playerAId) {
         gemsChestPrize = await grantGemsPvpVictoryChest(live.playerAId);
       }
       // Kisten-Gewinn UND Rang-Aufstieg(e) gemeinsam am Battle-Datensatz speichern,

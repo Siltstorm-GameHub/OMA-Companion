@@ -40,6 +40,7 @@ async function loadStats(userId: string): Promise<BadgeStats> {
     prisma.marketingPostVote.count({ where: { voterId: userId } }),
     prisma.coachRating.count({ where: { raterId: userId } }),
     prisma.communityIdeaVote.count({ where: { voterId: userId } }),
+    prisma.communityBoardCommentVote.count({ where: { voterId: userId } }),
   ]).then(counts => counts.reduce((a, b) => a + b, 0)).catch(() => 0);
 
   // Tournament count = any tournament participation

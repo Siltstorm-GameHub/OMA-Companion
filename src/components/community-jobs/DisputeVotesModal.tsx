@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/Badge";
 
 export type DisputeKind =
   | "jobReportVote" | "jobReportContributionVote" | "jobMediaAssetVote" | "marketingPostVote"
-  | "coachRating" | "communityIdeaVote";
+  | "coachRating" | "communityIdeaVote" | "communityBoardCommentVote";
 
 interface VoteEntry {
   id: string;

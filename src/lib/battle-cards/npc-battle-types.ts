@@ -47,17 +47,9 @@ export function parseNpcMode(mode: string): { difficulty: NpcDifficulty; isPuzzl
  *  startLiveGemsPvpBattle). */
 export const PVP_GEMS_MODE = "PVP_GEMS";
 
-/** Max. Anzahl gestarteter Gems-PvP-Angriffe pro Tag (UTC) und User —
- *  eigenständig vom NPC-Tageslimit, verhindert Farmen der Sieges-Kiste. */
+/** Max. Anzahl gestarteter Gems-PvP-Angriffe pro Tag (UTC) und User — einziger
+ *  Farm-Deckel für die Sieges-Kiste, eigenständig vom NPC-Tageslimit. */
 export const GEMS_PVP_DAILY_LIMIT = 5;
-
-/** Max. Anzahl RESOLVTER Gems-PvP-Kämpfe desselben Angreifer/Gegner-Paars pro Tag
- *  (UTC), die für Rangliste + Sieges-Kiste zählen — weitere Angriffe gegen denselben
- *  Gegner am selben Tag dürfen weiterhin stattfinden, zählen aber nicht mehr (siehe
- *  finalizeLiveBattle: BattleChallenge.countsForRanking). Verhindert, dass Farmen
- *  desselben Gegners die Rangliste verzerrt und dem Gegner unbegrenzt Niederlagen
- *  aufzwingt. */
-export const GEMS_PVP_OPPONENT_DAILY_CAP = 2;
 
 // ── OMA-Gems-Turniere (Score-Attack, siehe gems-tournament.ts) ─────────────
 

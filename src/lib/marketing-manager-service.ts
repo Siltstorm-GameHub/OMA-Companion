@@ -4,6 +4,7 @@ import { onCommunityJobVoteCast } from "./community-job-vote-incentives";
 import { announceCommunityJobContent } from "./discord-community-jobs";
 import { getCommunityJob } from "./community-jobs";
 import { getAnnouncementChannel } from "./community-job-config";
+import { countCommentVoteScore } from "./community-board-comment-service";
 
 /**
  * Marketing Manager: Werbe-Posts für kommende Events (Text + optionales Bild
@@ -133,13 +134,19 @@ export async function setAdminConfirmedPosted(postId: string, confirmed: boolean
 // ── Anbindung ans Community-Job-Gehaltssystem ────────────────────────────────
 
 registerScoreResolver(JOB_KEY, async (userId, weekStart, weekEnd) => {
-  return prisma.marketingPostVote.count({
-    where: {
-      post: { authorId: userId },
-      createdAt: { gte: weekStart, lt: weekEnd },
-      OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }],
-    },
-  });
+  const [postVotes, commentVotes] = await Promise.all([
+    prisma.marketingPostVote.count({
+      where: {
+        post: { authorId: userId },
+        createdAt: { gte: weekStart, lt: weekEnd },
+        OR: [{ disputeResolution: null }, { disputeResolution: { not: "OVERTURNED" } }],
+      },
+    }),
+    // Bewertungen auf eigene Community-Board-Kommentare — job-übergreifend,
+    // siehe community-board-comment-service.ts.
+    countCommentVoteScore(userId, weekStart, weekEnd),
+  ]);
+  return postVotes + commentVotes;
 });
 
 registerOwnVoteCounter(async (userId, weekStart, weekEnd) => {

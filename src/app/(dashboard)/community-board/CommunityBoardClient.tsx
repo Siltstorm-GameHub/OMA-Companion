@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { ThumbsUp, Loader2, Star, ImagePlus, Megaphone, Flag } from "lucide-react";
+import { ThumbsUp, Loader2, Star, ImagePlus, Megaphone, Flag, MessageCircle, Send, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import DisputeVotesModal, { type DisputeKind } from "@/components/community-jobs/DisputeVotesModal";
@@ -201,6 +201,115 @@ function FeedCard({ entry, currentUserId, onChanged }: { entry: FeedEntry; curre
             )}
           </div>
         </>
+      )}
+
+      <CommentSection entityType={entry.kind} entityId={entry.id} currentUserId={currentUserId} />
+    </div>
+  );
+}
+
+interface CommentEntry {
+  id: string; bodyMarkdown: string; createdAt: string; author: Author; upvotes: number; votedByMe: boolean;
+}
+
+/**
+ * Generische Kommentarfunktion für alle vier Community-Board-Eintragstypen —
+ * Bewertungen auf eigene Kommentare wirken sich zusätzlich positiv auf das
+ * Gehalt des aktuellen Community-Jobs des Kommentators aus (siehe
+ * community-board-comment-service.ts).
+ */
+function CommentSection({
+  entityType, entityId, currentUserId,
+}: { entityType: FeedEntry["kind"]; entityId: string; currentUserId: string | undefined }) {
+  const [open, setOpen] = useState(false);
+  const [comments, setComments] = useState<CommentEntry[] | null>(null);
+  const [draft, setDraft] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function load() {
+    try {
+      const data = await api<{ comments: CommentEntry[] }>(`/api/community-board/comments?entityType=${entityType}&entityId=${entityId}`);
+      setComments(data.comments);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Kommentare konnten nicht geladen werden");
+    }
+  }
+
+  useEffect(() => { if (open && comments === null) load(); }, [open]);
+
+  async function submit() {
+    if (!draft.trim()) return;
+    setBusy(true);
+    try {
+      await api("/api/community-board/comments", {
+        method: "POST", body: JSON.stringify({ entityType, entityId, bodyMarkdown: draft }),
+      });
+      setDraft("");
+      await load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Kommentar fehlgeschlagen");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove(commentId: string) {
+    try {
+      await api(`/api/community-board/comments/${commentId}`, { method: "DELETE" });
+      setComments(prev => prev?.filter(c => c.id !== commentId) ?? prev);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Löschen fehlgeschlagen");
+    }
+  }
+
+  return (
+    <div className="pt-2 border-t border-white/10">
+      <button onClick={() => setOpen(o => !o)}
+        className="inline-flex items-center gap-1.5 text-[11px] text-gray-500 hover:text-white transition-colors">
+        <MessageCircle className="w-3.5 h-3.5" />
+        {comments ? `${comments.length} Kommentar${comments.length === 1 ? "" : "e"}` : "Kommentare"}
+      </button>
+
+      {open && (
+        <div className="mt-2 space-y-2">
+          {comments === null ? (
+            <div className="flex justify-center py-3"><Loader2 className="w-4 h-4 text-teal-400 animate-spin" /></div>
+          ) : (
+            comments.map(c => (
+              <div key={c.id} className="bg-white/[0.03] rounded-lg p-2 space-y-1">
+                <div className="flex items-center justify-between gap-2">
+                  <a href={`/profile/${c.author.id}`} className="flex items-center gap-1.5 min-w-0 hover:opacity-80 transition-opacity">
+                    <RankedAvatar rankPoints={c.author.rankPoints} src={c.author.image} alt={authorLabel(c.author)} size={16} />
+                    <span className="text-[11px] font-medium text-white truncate">{authorLabel(c.author)}</span>
+                  </a>
+                  <span className="text-[10px] text-gray-600 shrink-0">{new Date(c.createdAt).toLocaleDateString("de-DE")}</span>
+                </div>
+                <p className="text-xs text-gray-300 whitespace-pre-wrap">{c.bodyMarkdown}</p>
+                <div className="flex items-center gap-2">
+                  <UpvoteButton votedByMe={c.votedByMe} upvotes={c.upvotes}
+                    onVote={added => api(`/api/community-board/comments/${c.id}/vote`, { method: added ? "POST" : "DELETE" })}
+                    onDone={load} label="Kommentar" />
+                  {c.author.id === currentUserId && (
+                    <>
+                      <DisputeTrigger kind="communityBoardCommentVote" fetchUrl={`/api/community-board/comments/${c.id}/votes`} listKey="votes" />
+                      <button onClick={() => remove(c.id)} title="Kommentar löschen"
+                        className="inline-flex items-center gap-1 text-[10px] text-gray-600 hover:text-red-400 transition-colors">
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+
+          <div className="flex items-center gap-2">
+            <input value={draft} onChange={e => setDraft(e.target.value)} placeholder="Kommentar schreiben…"
+              onKeyDown={e => { if (e.key === "Enter") submit(); }}
+              className="flex-1 min-w-0 bg-white/[0.04] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-teal-500/40" />
+            <Button size="sm" loading={busy} disabled={!draft.trim()} icon={<Send className="w-3.5 h-3.5" />} onClick={submit}>Senden</Button>
+          </div>
+        </div>
       )}
     </div>
   );
