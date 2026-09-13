@@ -1,12 +1,13 @@
 "use client";
-import { useMemo, useRef, useState } from "react";
-import { Plus, X, Trash2, MousePointerClick, Settings2 } from "lucide-react";
+import { useRef, useState } from "react";
+import { Plus, X, Trash2, MousePointerClick, Settings2, ChevronDown } from "lucide-react";
 import { EmptyState } from "@/components/EmptyState";
 import ImageUploadField from "@/components/ImageUploadField";
 
+type Archetype = { id: string; classKey: string; name: string; createdAt: string };
 type BasePose = {
   id: string;
-  classKey: string;
+  archetypeId: string;
   poseKey: string;
   name: string;
   imageUrl: string;
@@ -14,7 +15,6 @@ type BasePose = {
   height: number;
   createdAt: string;
 };
-
 type PoseSlot = { id: string; basePoseId: string; slot: string; anchorX: number; anchorY: number; rotation: number; scale: number };
 type Accessory = { id: string; name: string; slot: string; imageUrl: string; width: number; height: number };
 
@@ -36,15 +36,23 @@ function imageDimensions(url: string): Promise<{ width: number; height: number }
 }
 
 export default function HeroBasePosesAdminClient({
-  items: initialItems, slots: initialSlots, accessories,
-}: { items: BasePose[]; slots: PoseSlot[]; accessories: Accessory[] }) {
+  archetypes: initialArchetypes, items: initialItems, slots: initialSlots, accessories,
+}: { archetypes: Archetype[]; items: BasePose[]; slots: PoseSlot[]; accessories: Accessory[] }) {
+  const [archetypes, setArchetypes] = useState(initialArchetypes);
   const [items, setItems] = useState(initialItems);
   const [slots, setSlots] = useState(initialSlots);
-  const [creating, setCreating] = useState(false);
-  const [form, setForm] = useState({ classKey: KNOWN_CLASSES[0].key, poseKey: "neutral", name: KNOWN_CLASSES[0].label, imageUrl: "" });
-  const [formError, setFormError] = useState("");
-  const [formLoading, setFormLoading] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const [creatingArchetype, setCreatingArchetype] = useState(false);
+  const [archetypeForm, setArchetypeForm] = useState({ classKey: KNOWN_CLASSES[0].key, name: "" });
+  const [archetypeFormError, setArchetypeFormError] = useState("");
+  const [archetypeFormLoading, setArchetypeFormLoading] = useState(false);
+  const [deletingArchetypeId, setDeletingArchetypeId] = useState<string | null>(null);
+
+  const [creatingPoseFor, setCreatingPoseFor] = useState<string | null>(null);
+  const [poseForm, setPoseForm] = useState({ poseKey: "idle", name: "", imageUrl: "" });
+  const [poseFormError, setPoseFormError] = useState("");
+  const [poseFormLoading, setPoseFormLoading] = useState(false);
+  const [deletingPoseId, setDeletingPoseId] = useState<string | null>(null);
 
   const [configuringId, setConfiguringId] = useState<string | null>(null);
   const [slotForm, setSlotForm] = useState({ slot: KNOWN_SLOTS[0], anchorX: 0.5, anchorY: 0.5, rotation: 0, scale: 1 });
@@ -56,35 +64,76 @@ export default function HeroBasePosesAdminClient({
   const displayScale = configuring ? DISPLAY_WIDTH / configuring.width : 1;
   const refAccessory = accessories.find(a => a.id === refAccessoryId) ?? null;
 
-  async function handleCreate(e: React.FormEvent) {
+  async function handleCreateArchetype(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.classKey.trim() || !form.poseKey.trim() || !form.name.trim() || !form.imageUrl.trim()) {
-      setFormError("Klasse, Pose-Schlüssel, Name und Bild sind Pflichtfelder.");
+    if (!archetypeForm.classKey.trim() || !archetypeForm.name.trim()) {
+      setArchetypeFormError("Klasse und Name sind Pflichtfelder.");
       return;
     }
-    setFormLoading(true);
-    setFormError("");
+    setArchetypeFormLoading(true);
+    setArchetypeFormError("");
     try {
-      const { width, height } = await imageDimensions(form.imageUrl);
-      const res = await fetch("/api/admin/hero-base-poses", {
+      const res = await fetch("/api/admin/hero-archetypes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, width, height }),
+        body: JSON.stringify(archetypeForm),
       });
       if (!res.ok) throw new Error((await res.json()).error ?? "Fehler");
       const { item } = await res.json();
-      setItems(prev => [item, ...prev.filter(i => !(i.classKey === item.classKey && i.poseKey === item.poseKey))]);
-      setCreating(false);
-      setForm({ classKey: KNOWN_CLASSES[0].key, poseKey: "neutral", name: KNOWN_CLASSES[0].label, imageUrl: "" });
+      setArchetypes(prev => [...prev, item]);
+      setCreatingArchetype(false);
+      setArchetypeForm({ classKey: KNOWN_CLASSES[0].key, name: "" });
     } catch (err: unknown) {
-      setFormError(err instanceof Error ? err.message : "Fehler");
+      setArchetypeFormError(err instanceof Error ? err.message : "Fehler");
     } finally {
-      setFormLoading(false);
+      setArchetypeFormLoading(false);
     }
   }
 
-  async function handleDelete(id: string) {
-    setDeletingId(id);
+  async function handleDeleteArchetype(id: string) {
+    setDeletingArchetypeId(id);
+    try {
+      const res = await fetch(`/api/admin/hero-archetypes/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error();
+      setArchetypes(prev => prev.filter(a => a.id !== id));
+      setItems(prev => prev.filter(i => i.archetypeId !== id));
+    } catch {
+      // Löschen fehlgeschlagen -- Item bleibt sichtbar.
+    } finally {
+      setDeletingArchetypeId(null);
+    }
+  }
+
+  async function handleCreatePose(e: React.FormEvent) {
+    e.preventDefault();
+    if (!creatingPoseFor) return;
+    if (!poseForm.poseKey.trim() || !poseForm.name.trim() || !poseForm.imageUrl.trim()) {
+      setPoseFormError("Pose-Schlüssel, Name und Bild sind Pflichtfelder.");
+      return;
+    }
+    setPoseFormLoading(true);
+    setPoseFormError("");
+    try {
+      const { width, height } = await imageDimensions(poseForm.imageUrl);
+      const res = await fetch("/api/admin/hero-base-poses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ archetypeId: creatingPoseFor, ...poseForm, width, height }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error ?? "Fehler");
+      const { item } = await res.json();
+      setItems(prev => [item, ...prev.filter(i => !(i.archetypeId === item.archetypeId && i.poseKey === item.poseKey))]);
+      setCreatingPoseFor(null);
+      setPoseForm({ poseKey: "idle", name: "", imageUrl: "" });
+    } catch (err: unknown) {
+      setPoseFormError(err instanceof Error ? err.message : "Fehler");
+    } finally {
+      setPoseFormLoading(false);
+    }
+  }
+
+  async function handleDeletePose(id: string) {
+    setDeletingPoseId(id);
     try {
       const res = await fetch(`/api/admin/hero-base-poses/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error();
@@ -93,13 +142,13 @@ export default function HeroBasePosesAdminClient({
     } catch {
       // Löschen fehlgeschlagen -- Item bleibt sichtbar.
     } finally {
-      setDeletingId(null);
+      setDeletingPoseId(null);
     }
   }
 
   function openConfig(pose: BasePose) {
     setConfiguringId(pose.id);
-    const existing = slots.find(s => s.basePoseId === pose.id && s.slot === slotForm.slot);
+    const existing = slots.find(s => s.basePoseId === pose.id && s.slot === KNOWN_SLOTS[0]);
     setSlotForm({
       slot: KNOWN_SLOTS[0],
       anchorX: existing?.anchorX ?? 0.5,
@@ -148,129 +197,165 @@ export default function HeroBasePosesAdminClient({
     }
   }
 
-  const posesByClass = useMemo(() => {
-    const map = new Map<string, BasePose[]>();
-    for (const p of items) {
-      if (!map.has(p.classKey)) map.set(p.classKey, []);
-      map.get(p.classKey)!.push(p);
-    }
-    return map;
-  }, [items]);
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-white">Helden-Baukasten — Basis-Posen</h2>
-          <p className="text-xs text-gray-500 mt-0.5">{items.length} Pose{items.length === 1 ? "" : "n"} · pro Pose Anker + Rotation je Ausrüstungs-Slot konfigurierbar</p>
+          <h2 className="text-lg font-semibold text-white">Helden-Baukasten — Archetypen &amp; Posen</h2>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {archetypes.length} Archetyp{archetypes.length === 1 ? "" : "en"} · {items.length} Pose{items.length === 1 ? "" : "n"} · öffentlich sichtbar sind nur Archetyp- und Pose-Namen, nie die Klasse
+          </p>
         </div>
         <button
-          onClick={() => { setCreating(true); setFormError(""); }}
+          onClick={() => { setCreatingArchetype(true); setArchetypeFormError(""); }}
           className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors">
-          <Plus className="w-4 h-4" /> Basis-Pose hochladen
+          <Plus className="w-4 h-4" /> Neuer Archetyp
         </button>
       </div>
 
-      {creating && (
-        <form onSubmit={handleCreate} className="glass rounded-2xl p-5 space-y-4 border border-purple-500/20">
+      {creatingArchetype && (
+        <form onSubmit={handleCreateArchetype} className="glass rounded-2xl p-5 space-y-4 border border-purple-500/20">
           <div className="flex items-center justify-between mb-1">
-            <p className="text-sm font-semibold text-white">Basis-Pose hochladen</p>
-            <button type="button" onClick={() => setCreating(false)} className="text-gray-500 hover:text-gray-300">
+            <p className="text-sm font-semibold text-white">Archetyp anlegen</p>
+            <button type="button" onClick={() => setCreatingArchetype(false)} className="text-gray-500 hover:text-gray-300">
               <X className="w-4 h-4" />
             </button>
           </div>
-
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Klasse *</label>
-              <select
-                value={form.classKey}
-                onChange={e => {
-                  const cls = KNOWN_CLASSES.find(c => c.key === e.target.value);
-                  setForm(f => ({ ...f, classKey: e.target.value, name: cls?.label ?? f.name }));
-                }}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500/50">
-                {KNOWN_CLASSES.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
-              </select>
+              <label className="block text-xs text-gray-400 mb-1">Klasse (intern) *</label>
+              <div className="relative">
+                <select
+                  value={archetypeForm.classKey}
+                  onChange={e => setArchetypeForm(f => ({ ...f, classKey: e.target.value }))}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm appearance-none focus:outline-none focus:border-purple-500/50">
+                  {KNOWN_CLASSES.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+              </div>
+              <p className="text-[10px] text-gray-600 mt-1">Bestimmt die Gameplay-Rolle, wird Usern nie angezeigt.</p>
             </div>
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Pose-Schlüssel *</label>
-              <input value={form.poseKey} onChange={e => setForm(f => ({ ...f, poseKey: e.target.value }))}
-                placeholder="z.B. combat_ready" maxLength={40}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500/50" />
-              <p className="text-[10px] text-gray-600 mt-1">Gleicher Schlüssel + Klasse ersetzt die bestehende Pose.</p>
-            </div>
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">Anzeigename *</label>
-              <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                maxLength={60}
+              <label className="block text-xs text-gray-400 mb-1">Öffentlicher Name *</label>
+              <input value={archetypeForm.name} onChange={e => setArchetypeForm(f => ({ ...f, name: e.target.value }))}
+                placeholder="z.B. Der Fels" maxLength={60}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500/50" />
             </div>
           </div>
-
-          <ImageUploadField
-            value={form.imageUrl}
-            onChange={url => setForm(f => ({ ...f, imageUrl: url }))}
-            kind="hero-base-pose"
-            label="Ganzkörper-Grafik *"
-            hint="Freigestelltes PNG, Kopf bis Fuß, leere Hände für spätere Waffen-Overlays."
-            previewAspect="1/2"
-          />
-
-          {formError && <p className="text-red-400 text-sm">{formError}</p>}
+          {archetypeFormError && <p className="text-red-400 text-sm">{archetypeFormError}</p>}
           <div className="flex gap-3 justify-end">
-            <button type="button" onClick={() => setCreating(false)} className="text-sm text-gray-400 hover:text-white px-4 py-2">Abbrechen</button>
-            <button type="submit" disabled={formLoading}
+            <button type="button" onClick={() => setCreatingArchetype(false)} className="text-sm text-gray-400 hover:text-white px-4 py-2">Abbrechen</button>
+            <button type="submit" disabled={archetypeFormLoading}
               className="bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white text-sm font-medium px-5 py-2 rounded-xl transition-colors">
-              {formLoading ? "Speichern…" : "Speichern"}
+              {archetypeFormLoading ? "Speichern…" : "Anlegen"}
             </button>
           </div>
         </form>
       )}
 
-      {items.length === 0 ? (
+      {archetypes.length === 0 ? (
         <EmptyState
           type="generic"
-          title="Noch keine Basis-Pose hochgeladen"
-          description="Lade oben eine erste Ganzkörper-Pose (z.B. Tank) hoch."
+          title="Noch kein Archetyp angelegt"
+          description="Lege oben einen Archetyp an (z.B. für die Klasse Tank), dann kannst du ihm Posen hinzufügen."
         />
       ) : (
         <div className="space-y-6">
-          {Array.from(posesByClass.entries()).map(([classKey, poses]) => (
-            <div key={classKey}>
-              <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">{KNOWN_CLASSES.find(c => c.key === classKey)?.label ?? classKey}</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {poses.map(item => {
-                  const slotCount = slots.filter(s => s.basePoseId === item.id).length;
-                  return (
-                    <div key={item.id} className="glass rounded-2xl p-4 space-y-3">
-                      <div className="aspect-[3/4] rounded-xl overflow-hidden border border-white/10 bg-black/30 flex items-center justify-center">
-                        {/* eslint-disable-next-line @next/next/no-img-element -- beliebige Blob-URL */}
-                        <img src={item.imageUrl} alt={item.name} className="max-w-full max-h-full object-contain" />
+          {archetypes.map(archetype => {
+            const poses = items.filter(i => i.archetypeId === archetype.id);
+            return (
+              <div key={archetype.id} className="glass rounded-2xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-white">{archetype.name}</p>
+                    <p className="text-[10px] text-gray-600 mt-0.5">{KNOWN_CLASSES.find(c => c.key === archetype.classKey)?.label ?? archetype.classKey} · {poses.length} Pose{poses.length === 1 ? "" : "n"}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => { setCreatingPoseFor(archetype.id); setPoseFormError(""); }}
+                      className="flex items-center gap-1.5 text-xs text-purple-300 hover:text-purple-200 border border-purple-500/20 hover:border-purple-500/40 px-3 py-1.5 rounded-lg transition-colors">
+                      <Plus className="w-3.5 h-3.5" /> Pose
+                    </button>
+                    <button
+                      onClick={() => handleDeleteArchetype(archetype.id)}
+                      disabled={deletingArchetypeId === archetype.id}
+                      className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 border border-red-500/20 hover:border-red-500/40 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {creatingPoseFor === archetype.id && (
+                  <form onSubmit={handleCreatePose} className="rounded-xl p-4 space-y-3 border border-purple-500/20 bg-black/20">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1">Pose-Schlüssel *</label>
+                        <input value={poseForm.poseKey} onChange={e => setPoseForm(f => ({ ...f, poseKey: e.target.value }))}
+                          placeholder="z.B. idle, combat_ready, victory" maxLength={40}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500/50" />
+                        <p className="text-[10px] text-gray-600 mt-1">Intern, eindeutig je Archetyp. "idle" wird als Baukasten-Vorschau genutzt.</p>
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-white">{item.name}</p>
-                        <p className="text-[10px] text-gray-600 mt-0.5">{item.poseKey} · {slotCount} Slot{slotCount === 1 ? "" : "s"} konfiguriert</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => openConfig(item)}
-                          className="flex-1 flex items-center justify-center gap-1.5 text-xs text-purple-300 hover:text-purple-200 border border-purple-500/20 hover:border-purple-500/40 px-3 py-1.5 rounded-lg transition-colors">
-                          <Settings2 className="w-3.5 h-3.5" /> Slots
-                        </button>
-                        <button
-                          onClick={() => handleDelete(item.id)}
-                          disabled={deletingId === item.id}
-                          className="flex items-center justify-center gap-1.5 text-xs text-red-400 hover:text-red-300 border border-red-500/20 hover:border-red-500/40 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        <label className="block text-xs text-gray-400 mb-1">Öffentlicher Pose-Name *</label>
+                        <input value={poseForm.name} onChange={e => setPoseForm(f => ({ ...f, name: e.target.value }))}
+                          placeholder="z.B. Kampfbereit" maxLength={60}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500/50" />
                       </div>
                     </div>
-                  );
-                })}
+                    <ImageUploadField
+                      value={poseForm.imageUrl}
+                      onChange={url => setPoseForm(f => ({ ...f, imageUrl: url }))}
+                      kind="hero-base-pose"
+                      label="Ganzkörper-Grafik *"
+                      hint="Freigestelltes PNG, Kopf bis Fuß, leere Hände für spätere Waffen-Overlays."
+                      previewAspect="1/2"
+                    />
+                    {poseFormError && <p className="text-red-400 text-sm">{poseFormError}</p>}
+                    <div className="flex gap-3 justify-end">
+                      <button type="button" onClick={() => setCreatingPoseFor(null)} className="text-sm text-gray-400 hover:text-white px-4 py-2">Abbrechen</button>
+                      <button type="submit" disabled={poseFormLoading}
+                        className="bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white text-sm font-medium px-5 py-2 rounded-xl transition-colors">
+                        {poseFormLoading ? "Speichern…" : "Pose anlegen"}
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {poses.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {poses.map(pose => {
+                      const slotCount = slots.filter(s => s.basePoseId === pose.id).length;
+                      return (
+                        <div key={pose.id} className="rounded-xl border border-white/10 bg-black/20 p-3 space-y-2">
+                          <div className="aspect-[3/4] rounded-lg overflow-hidden border border-white/10 bg-black/30 flex items-center justify-center">
+                            {/* eslint-disable-next-line @next/next/no-img-element -- beliebige Blob-URL */}
+                            <img src={pose.imageUrl} alt={pose.name} className="max-w-full max-h-full object-contain" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-white">{pose.name}</p>
+                            <p className="text-[10px] text-gray-600 mt-0.5">{pose.poseKey} · {slotCount} Slot{slotCount === 1 ? "" : "s"}</p>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => openConfig(pose)}
+                              className="flex-1 flex items-center justify-center gap-1.5 text-xs text-purple-300 hover:text-purple-200 border border-purple-500/20 hover:border-purple-500/40 px-3 py-1.5 rounded-lg transition-colors">
+                              <Settings2 className="w-3.5 h-3.5" /> Slots
+                            </button>
+                            <button
+                              onClick={() => handleDeletePose(pose.id)}
+                              disabled={deletingPoseId === pose.id}
+                              className="flex items-center justify-center gap-1.5 text-xs text-red-400 hover:text-red-300 border border-red-500/20 hover:border-red-500/40 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

@@ -13,21 +13,22 @@ import { useConfirm } from "@/components/admin/ConfirmDialog";
 import InfoTooltip from "@/components/InfoTooltip";
 import { PLACEMENT_STAT_KEY } from "@/lib/series-event-points";
 import { TOURNAMENT_FORMATS } from "@/lib/tournament-formats";
+import TournamentManagerMobile from "./TournamentManagerMobile";
 
-type User = { id: string; name: string | null; username: string | null; image: string | null };
-type MatchEntry = {
+export type User = { id: string; name: string | null; username: string | null; image: string | null };
+export type MatchEntry = {
   id: string; userId: string | null; teamId: string | null;
   placement: number | null; score: number | null; statsJson: string | null;
 };
-type Match = {
+export type Match = {
   id: string; round: number; position: number;
   title: string | null; scheduledAt: string | Date | null; notes: string | null;
   player1Id: string | null; player2Id: string | null;
   winnerId: string | null; score1: number | null; score2: number | null;
   playedAt: string | Date | null; entries: MatchEntry[];
 };
-type Participant = { userId: string; user: User };
-type Tournament = {
+export type Participant = { userId: string; user: User };
+export type Tournament = {
   id: string; status: string; format: string;
   pointsConfig: string | null; statFields: string | null;
   finalRankingJson: string | null; finalRankingNote: string | null;
@@ -43,9 +44,9 @@ const FORMATS = TOURNAMENT_FORMATS;
 
 const STATUS_OPTIONS = ["active", "finished", "pending"];
 
-const userName = (u: User) => u.username ?? u.name ?? "?";
+export const userName = (u: User) => u.username ?? u.name ?? "?";
 
-function fmtDate(iso: string | Date) {
+export function fmtDate(iso: string | Date) {
   return new Date(iso).toLocaleString("de-DE", {
     day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
   });
@@ -53,7 +54,7 @@ function fmtDate(iso: string | Date) {
 
 /** Aktueller Zeitpunkt im Format, das <input type="datetime-local"> erwartet (lokale Zeitzone,
  *  nicht UTC) — Basis für die Vorbelegung "Datum & Uhrzeit" beim Öffnen von "Match hinzufügen". */
-function nowForDatetimeLocal(): string {
+export function nowForDatetimeLocal(): string {
   const d = new Date();
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -771,6 +772,68 @@ export default function TournamentManager({
   return (
     <div className="space-y-4">
 
+      {/* ══════════════════════════════════════════════════════════════
+          Mobile / Touchscreen — eigener Live-Modus statt verkleinerter
+          Desktop-Tabelle, siehe TournamentManagerMobile.
+          ══════════════════════════════════════════════════════════════ */}
+      <div className="lg:hidden">
+        <TournamentManagerMobile
+          tournament={tournament}
+          allUsers={allUsers}
+          loading={loading}
+          isFfa={isFfa}
+          isCoop={isCoop}
+          trackMatchWin={trackMatchWin}
+          trackPlacement={trackPlacement}
+          isLiga={isLiga}
+          is1v1={is1v1}
+          isRoundRobin={isRoundRobin}
+          formatLabel={formatLabel}
+          visibleStatFields={visibleStatFields}
+          placementPoints={placementPoints}
+          supportsDraw={supportsDraw}
+          rounds={rounds}
+          scores1v1={scores1v1}
+          setScores1v1={setScores1v1}
+          ffaEdits={ffaEdits}
+          setFfaField={setFfaField}
+          teamAssign={teamAssign}
+          setTeamAssign={setTeamAssign}
+          matchWin={matchWin}
+          setMatchWin={setMatchWin}
+          matchWinAll={matchWinAll}
+          setMatchWinAll={setMatchWinAll}
+          validateTeamAssignment={validateTeamAssignment}
+          submit1v1={submit1v1}
+          submitFfa={submitFfa}
+          resetMatch={resetMatch}
+          deleteMatch={deleteMatch}
+          generateRoundRobinMatches={generateRoundRobinMatches}
+          showAdd={showAdd}
+          setShowAdd={setShowAdd}
+          mTitle={mTitle}
+          setMTitle={setMTitle}
+          mScheduled={mScheduled}
+          setMScheduled={setMScheduled}
+          mNotes={mNotes}
+          setMNotes={setMNotes}
+          mRound={mRound}
+          setMRound={setMRound}
+          mP1={mP1}
+          setMP1={setMP1}
+          mP2={mP2}
+          setMP2={setMP2}
+          mFfaIds={mFfaIds}
+          setMFfaIds={setMFfaIds}
+          addMatch={addMatch}
+        />
+      </div>
+
+      {/* ══════════════════════════════════════════════════════════════
+          Desktop — bestehende Tabellen-/Bracket-Ansicht.
+          ══════════════════════════════════════════════════════════════ */}
+      <div className="hidden lg:block space-y-4">
+
       {/* ── Header bar ───────────────────────────────────────────────── */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2 flex-wrap">
@@ -1238,6 +1301,7 @@ export default function TournamentManager({
           </button>
         </div>
       )}
+      </div>
       {ConfirmDialogElement}
     </div>
   );

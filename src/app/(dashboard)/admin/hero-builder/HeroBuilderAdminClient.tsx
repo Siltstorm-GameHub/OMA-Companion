@@ -4,11 +4,13 @@ import { Image as ImageIcon, PersonStanding } from "lucide-react";
 import HeroBasePosesAdminClient from "../hero-base-poses/HeroBasePosesAdminClient";
 import HeroAccessoriesAdminClient from "../hero-accessories/HeroAccessoriesAdminClient";
 
-type BasePose = { id: string; classKey: string; poseKey: string; name: string; imageUrl: string; width: number; height: number; createdAt: string };
+type Archetype = { id: string; classKey: string; name: string; createdAt: string };
+type BasePose = { id: string; archetypeId: string; poseKey: string; name: string; imageUrl: string; width: number; height: number; createdAt: string };
 type PoseSlot = { id: string; basePoseId: string; slot: string; anchorX: number; anchorY: number; rotation: number; scale: number };
 type Accessory = { id: string; name: string; slot: string; imageUrl: string; width: number; height: number; createdAt: string };
 
-export default function HeroBuilderAdminClient({ basePoses, poseSlots, accessories }: {
+export default function HeroBuilderAdminClient({ archetypes, basePoses, poseSlots, accessories }: {
+  archetypes: Archetype[];
   basePoses: BasePose[];
   poseSlots: PoseSlot[];
   accessories: Accessory[];
@@ -23,7 +25,7 @@ export default function HeroBuilderAdminClient({ basePoses, poseSlots, accessori
           className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
             tab === "poses" ? "bg-purple-600/20 text-purple-300 shadow-[inset_0_0_0_1px_rgba(168,85,247,0.2)]" : "text-gray-500 hover:text-gray-200 hover:bg-white/5"
           }`}>
-          <ImageIcon className="w-3.5 h-3.5" /> Basis-Posen
+          <ImageIcon className="w-3.5 h-3.5" /> Archetypen &amp; Posen
         </button>
         <button
           onClick={() => setTab("accessories")}
@@ -35,7 +37,7 @@ export default function HeroBuilderAdminClient({ basePoses, poseSlots, accessori
       </div>
 
       {tab === "poses"
-        ? <HeroBasePosesAdminClient items={basePoses} slots={poseSlots} accessories={accessories} />
+        ? <HeroBasePosesAdminClient archetypes={archetypes} items={basePoses} slots={poseSlots} accessories={accessories} />
         : <HeroAccessoriesAdminClient items={accessories} />}
     </div>
   );

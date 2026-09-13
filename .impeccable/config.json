@@ -230,6 +230,15 @@
         ],
         "createdAt": "2026-09-13T07:00:40.673Z",
         "reason": "false positive: text-gray-300 is the inactive-button branch of the ternary (paired with bg-white/[0.03], not the violet active background)"
+      },
+      {
+        "rule": "gray-on-color",
+        "value": "*",
+        "files": [
+          "src/app/(dashboard)/admin/events/TournamentManagerMobile.tsx"
+        ],
+        "createdAt": "2026-09-13T07:14:36.667Z",
+        "reason": "false positive: gray-500/400 text sits on neutral bg-gray-800, same pattern as existing TournamentManager.tsx desktop buttons, not on the colored bg (colored bg only applies together with text-white in the active branch of the ternary)"
       }
     ]
   }

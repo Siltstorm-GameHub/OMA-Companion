@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
-import { Package, X, Sparkles, ScissorsLineDashed } from "lucide-react";
+import { X, Sparkles, ScissorsLineDashed } from "lucide-react";
 import BattleCardView from "./BattleCardView";
 import type { BattleCardData } from "./BattleCardView";
 import { playCardRevealSound, playRarePullSound } from "@/lib/battle-cards/sound";
@@ -114,32 +114,61 @@ export default function PackOpener({
 
   if (remaining <= 0 && phase === "closed") return null;
 
+  // Bis zu 3 sichtbare Lagen im Stapel — jede weiter hinten liegende Karte
+  // ist leicht versetzt/rotiert, damit klar ist, dass noch mehr dahinterliegen.
+  // Die genaue Anzahl steht zusätzlich im Zähler-Badge.
+  const stackDepth = Math.min(remaining, 3);
+
   return (
     <>
-      <motion.button
-        type="button"
-        onClick={startSession}
-        whileTap={{ scale: 0.98 }}
-        animate={{
-          boxShadow: [
-            "inset 0 1px 0 rgba(255,255,255,0.04), 0 0 0 1px rgba(245,158,11,0.12)",
-            "inset 0 1px 0 rgba(255,255,255,0.04), 0 0 24px rgba(245,158,11,0.28), 0 0 0 1px rgba(245,158,11,0.3)",
-            "inset 0 1px 0 rgba(255,255,255,0.04), 0 0 0 1px rgba(245,158,11,0.12)",
-          ],
-        }}
-        transition={{ boxShadow: { duration: 2.6, repeat: Infinity, ease: "easeInOut" } }}
-        className="w-full glass rounded-2xl p-4 flex items-center gap-3 text-left hover:bg-white/[0.04] transition-colors"
-      >
-        <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
-          <Package className="w-4 h-4 text-amber-400" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-white">Kartenpacks öffnen</p>
-          <p className="text-xs text-gray-500">
-            {remaining} ungeöffnete{remaining === 1 ? "s" : ""} Kartenpack{remaining === 1 ? "" : "s"} warten auf dich.
-          </p>
-        </div>
-      </motion.button>
+      <div className="flex flex-col items-center gap-2 py-2">
+        <motion.button
+          type="button"
+          onClick={startSession}
+          whileTap={{ scale: 0.97 }}
+          animate={{ y: [0, -5, 0] }}
+          transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
+          className="relative cursor-pointer"
+          style={{ width: 184, height: 258 }}
+        >
+          {Array.from({ length: stackDepth }, (_, i) => stackDepth - 1 - i).map((depth) => (
+            <motion.div
+              key={depth}
+              className="absolute inset-0"
+              animate={{
+                x: depth * 8,
+                y: depth * 8,
+                rotate: depth * -3,
+                boxShadow:
+                  depth === 0
+                    ? [
+                        "0 10px 26px rgba(0,0,0,0.55), 0 0 0px rgba(245,158,11,0)",
+                        "0 10px 34px rgba(0,0,0,0.55), 0 0 34px rgba(245,158,11,0.55)",
+                        "0 10px 26px rgba(0,0,0,0.55), 0 0 0px rgba(245,158,11,0)",
+                      ]
+                    : "0 6px 16px rgba(0,0,0,0.45)",
+              }}
+              transition={depth === 0 ? { boxShadow: { duration: 2.6, repeat: Infinity, ease: "easeInOut" } } : undefined}
+            >
+              <PackCoverArt kind={displayKind} cropped className="w-full h-full" />
+            </motion.div>
+          ))}
+
+          {remaining > 1 && (
+            <div
+              className="absolute -top-2 -right-2 z-10 min-w-[26px] h-[26px] px-1.5 rounded-full flex items-center justify-center text-[12px] font-black text-black"
+              style={{ background: "#fbbf24", boxShadow: "0 2px 6px rgba(0,0,0,0.5), 0 0 0 2px rgba(5,5,8,0.9)" }}
+            >
+              {remaining}
+            </div>
+          )}
+        </motion.button>
+
+        <p className="text-sm font-bold text-white">
+          {remaining} ungeöffnete{remaining === 1 ? "s" : ""} Kartenpack{remaining === 1 ? "" : "s"}
+        </p>
+        <p className="text-xs text-gray-500">Antippen zum Öffnen</p>
+      </div>
 
       <AnimatePresence>
         {phase !== "closed" && (

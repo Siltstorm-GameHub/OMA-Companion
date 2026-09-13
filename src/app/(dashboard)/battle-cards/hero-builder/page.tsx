@@ -13,8 +13,11 @@ export default async function HeroBuilderPage() {
     redirect("/login?notice=login_required&callbackUrl=/battle-cards/hero-builder");
   }
 
-  const [basePoses, accessories, loadout] = await Promise.all([
-    prisma.heroBasePose.findMany({ orderBy: { createdAt: "asc" } }),
+  const [archetypes, accessories, loadout] = await Promise.all([
+    prisma.heroArchetype.findMany({
+      orderBy: { createdAt: "asc" },
+      include: { basePoses: { orderBy: { createdAt: "asc" } } },
+    }),
     prisma.heroAccessory.findMany({ where: { slot: "weapon" }, orderBy: { createdAt: "asc" } }),
     prisma.userHeroLoadout.findUnique({
       where: { userId: session.user.id },
@@ -22,17 +25,20 @@ export default async function HeroBuilderPage() {
     }),
   ]);
 
-  // Pro Klasse genau eine Basis-Pose für den Baukasten -- die zuerst
-  // angelegte, solange es keine gewählte "aktive" Pose pro Klasse gibt.
-  const basePoseByClass = new Map<string, typeof basePoses[number]>();
-  for (const pose of basePoses) {
-    if (!basePoseByClass.has(pose.classKey)) basePoseByClass.set(pose.classKey, pose);
-  }
-
-  const clientBasePoses = Array.from(basePoseByClass.values()).map(p => ({
-    id: p.id, classKey: p.classKey, poseKey: p.poseKey, name: p.name,
-    imageUrl: p.imageUrl, width: p.width, height: p.height,
-  }));
+  // Für den Baukasten zählt pro Archetyp nur die "idle"-Pose (Vorschau/
+  // Kartenkunst) -- die anderen Posen (z.B. Kampf, Sieg) sind spätere
+  // Kontext-Darstellungen, keine User-Auswahl.
+  const clientArchetypes = archetypes
+    .map(a => {
+      const pose = a.basePoses.find(p => p.poseKey === "idle") ?? a.basePoses[0];
+      if (!pose) return null;
+      return {
+        id: a.id,
+        name: a.name,
+        basePose: { id: pose.id, imageUrl: pose.imageUrl, width: pose.width, height: pose.height },
+      };
+    })
+    .filter((a): a is NonNullable<typeof a> => a !== null);
 
   const clientAccessories = accessories.map(a => ({
     id: a.id, name: a.name, slot: a.slot, imageUrl: a.imageUrl, width: a.width, height: a.height,
@@ -40,7 +46,7 @@ export default async function HeroBuilderPage() {
 
   const clientLoadout = loadout
     ? {
-        classKey: loadout.classKey,
+        archetypeId: loadout.archetypeId,
         equipment: Object.fromEntries(loadout.equipment.map(e => [e.slot, e.accessoryId])),
       }
     : null;
@@ -50,10 +56,10 @@ export default async function HeroBuilderPage() {
       <div>
         <h1 className="text-lg font-black text-white">Helden-Baukasten</h1>
         <p className="text-xs text-gray-500 mt-0.5">
-          Wähle eine Klasse und deine Ausrüstung — du kannst beides jederzeit wieder ändern.
+          Wähle einen Archetyp und deine Ausrüstung — du kannst beides jederzeit wieder ändern.
         </p>
       </div>
-      <HeroBuilderClient basePoses={clientBasePoses} accessories={clientAccessories} initialLoadout={clientLoadout} />
+      <HeroBuilderClient archetypes={clientArchetypes} accessories={clientAccessories} initialLoadout={clientLoadout} />
     </div>
   );
 }

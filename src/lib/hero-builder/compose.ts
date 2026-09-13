@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 /**
  * Setzt eine Basis-Pose + ausgerüstete Accessoires serverseitig zu einem
  * flachen PNG zusammen -- das Gegenstück zur Live-CSS-Vorschau
- * (dragonbonestest-Nachfolger /heropaperdolltest, Admin-Slot-Dialog), für den
+ * (/heropaperdolltest, Admin-Slot-Dialog), für den
  * Fall, dass eine tatsächliche Bilddatei gebraucht wird (z.B. als
  * Card.imageUrl), nicht nur eine Browser-Darstellung.
  *

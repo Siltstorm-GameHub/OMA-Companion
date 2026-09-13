@@ -165,11 +165,11 @@ export default async function BattleCardsPage() {
 
       <BattleLauncher eloOverall={eloOverall} eloDuels={eloDuels} eloGems={eloGems} />
 
+      <PackOpener initialUnopenedCount={unopenedPacks} initialNextPackKind={nextPackKind} />
+
       {hasChallenges && (
         <ChallengesList incoming={serialize(incoming)} outgoing={serialize(outgoing)} live={serialize(live)} />
       )}
-
-      <PackOpener initialUnopenedCount={unopenedPacks} initialNextPackKind={nextPackKind} />
     </div>
   );
 

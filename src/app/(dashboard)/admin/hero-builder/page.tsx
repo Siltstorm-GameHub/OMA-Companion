@@ -5,21 +5,26 @@ import HeroBuilderAdminClient from "./HeroBuilderAdminClient";
 export default async function AdminHeroBuilderPage() {
   await requireRole("admin");
 
-  const [basePoses, poseSlots, accessories] = await Promise.all([
+  const [archetypes, basePoses, poseSlots, accessories] = await Promise.all([
+    prisma.heroArchetype.findMany({ orderBy: { createdAt: "asc" } }),
     prisma.heroBasePose.findMany({ orderBy: { createdAt: "desc" } }),
     prisma.heroPoseSlot.findMany(),
     prisma.heroAccessory.findMany({ orderBy: { createdAt: "desc" } }),
   ]);
 
+  const clientArchetypes = archetypes.map(a => ({
+    id: a.id, classKey: a.classKey, name: a.name, createdAt: a.createdAt.toISOString(),
+  }));
+
   const clientBasePoses = basePoses.map(i => ({
-    id:        i.id,
-    classKey:  i.classKey,
-    poseKey:   i.poseKey,
-    name:      i.name,
-    imageUrl:  i.imageUrl,
-    width:     i.width,
-    height:    i.height,
-    createdAt: i.createdAt.toISOString(),
+    id:          i.id,
+    archetypeId: i.archetypeId,
+    poseKey:     i.poseKey,
+    name:        i.name,
+    imageUrl:    i.imageUrl,
+    width:       i.width,
+    height:      i.height,
+    createdAt:   i.createdAt.toISOString(),
   }));
 
   const clientPoseSlots = poseSlots.map(s => ({
@@ -39,6 +44,7 @@ export default async function AdminHeroBuilderPage() {
 
   return (
     <HeroBuilderAdminClient
+      archetypes={clientArchetypes}
       basePoses={clientBasePoses}
       poseSlots={clientPoseSlots}
       accessories={clientAccessories}
