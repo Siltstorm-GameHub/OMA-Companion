@@ -114,7 +114,10 @@ export default function NpcPuzzleBattleLauncher() {
         })}
       </div>
       <p className="text-[10px] text-gray-500">
-        <span className="text-gray-400 font-semibold">OMA Gems</span> · Match-3-Brett statt Zug-Auswahl · Max. {NPC_BATTLE_DAILY_LIMIT}x täglich (geteilt mit OMA Duels)
+        <span className="text-gray-400 font-semibold">OMA Gems</span> · Match-3-Brett statt Zug-Auswahl ·{" "}
+        {Number.isFinite(NPC_BATTLE_DAILY_LIMIT)
+          ? `Max. ${NPC_BATTLE_DAILY_LIMIT}x täglich (geteilt mit OMA Duels)`
+          : "Unbegrenzt (geteilt mit OMA Duels)"}
       </p>
       {error && <ErrorNotice message={error} />}
     </div>

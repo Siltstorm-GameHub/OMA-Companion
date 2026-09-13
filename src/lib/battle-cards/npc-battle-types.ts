@@ -11,8 +11,13 @@ export const DIFFICULTY_LEVEL: Record<NpcDifficulty, number> = { EASY: 1, MEDIUM
 export const NPC_BATTLE_WIN_REWARD: Record<NpcDifficulty, number> = { EASY: 100, MEDIUM: 200, HARD: 300 };
 
 /** Max. Anzahl gestarteter NPC-Kämpfe pro Tag (UTC) und User, über alle
- *  Schwierigkeiten summiert — verhindert Farmen der Münz-Belohnung. */
-export const NPC_BATTLE_DAILY_LIMIT = 5;
+ *  Schwierigkeiten summiert — verhindert Farmen der Münz-Belohnung. Auf
+ *  Infinity gesetzt (unbegrenzt) für Playtests — betrifft gemeinsam OMA Duels
+ *  (PVE_EASY/MEDIUM/HARD) UND OMA Gems-NPC-Kämpfe (PVE_PUZZLE_*), da beide
+ *  denselben Zähler teilen (siehe countNpcBattlesStartedToday in
+ *  live-battle.ts). UI-Code muss den Sonderfall Infinity abfangen (siehe
+ *  NpcBattleLauncher.tsx/NpcPuzzleBattleLauncher.tsx: "Unbegrenzt" statt Zahl). */
+export const NPC_BATTLE_DAILY_LIMIT = Infinity;
 
 // ── Match-3-"OMA Gems" (Puzzle-PvE, siehe board-match3.ts) ──────────
 // Zusätzlicher LiveBattle.mode-Präfix neben dem bestehenden Auto-Kampf-PVE —

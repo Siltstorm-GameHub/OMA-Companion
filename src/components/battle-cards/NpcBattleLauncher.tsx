@@ -115,7 +115,8 @@ export default function NpcBattleLauncher() {
         })}
       </div>
       <p className="text-[10px] text-gray-500">
-        <span className="text-gray-400 font-semibold">OMA Duels</span> · Max. {NPC_BATTLE_DAILY_LIMIT}x täglich · Münzen bei Sieg
+        <span className="text-gray-400 font-semibold">OMA Duels</span> ·{" "}
+        {Number.isFinite(NPC_BATTLE_DAILY_LIMIT) ? `Max. ${NPC_BATTLE_DAILY_LIMIT}x täglich` : "Unbegrenzt"} · Münzen bei Sieg
       </p>
       {error && <ErrorNotice message={error} />}
     </div>
