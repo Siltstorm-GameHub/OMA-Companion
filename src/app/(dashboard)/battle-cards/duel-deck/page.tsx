@@ -43,6 +43,7 @@ export default async function DuelDeckPage() {
     kind: utc.tacticCard.kind,
     flavorText: utc.tacticCard.flavorText,
     description: utc.tacticCard.description,
+    imageUrl: utc.tacticCard.imageUrl,
   }));
 
   return (

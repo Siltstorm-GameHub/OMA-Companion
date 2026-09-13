@@ -19,9 +19,10 @@
 
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Loader2, Shield, Sparkles, Swords, Volume2, VolumeX, Wind } from "lucide-react";
+import { ChevronLeft, Loader2, Swords, Volume2, VolumeX, Wind } from "lucide-react";
 import { getClassConfig, type BattleCardData } from "./BattleCardView";
 import CardTile from "./CardTile";
+import TacticCardTile from "./TacticCardTile";
 import ErrorNotice from "./ErrorNotice";
 import { DUEL_ROUND_TIMEOUT_MS } from "@/lib/battle-engine/duel-constants";
 import {
@@ -788,33 +789,15 @@ export default function DuelLiveView({
                   );
                 }
 
-                const isTrap = card.tacticKind === "TRAP";
-                const Icon = isTrap ? Shield : Sparkles;
-                const accent = isTrap ? "#f43f5e" : "#f59e0b";
                 return (
-                  <button
-                    key={card.cardId}
-                    type="button"
-                    disabled={alreadySubmitted}
-                    onClick={() => toggleHandCard(card)}
-                    className="w-28 shrink-0 flex flex-col items-center gap-1.5 text-left"
-                  >
-                    <div
-                      className="card-cut-sm relative w-full aspect-[3/4] overflow-hidden flex items-center justify-center"
-                      style={{
-                        background: `linear-gradient(160deg, ${accent}3a, rgba(12,12,16,0.92))`,
-                        boxShadow: isSelected ? `0 0 0 2px ${accent}` : "0 4px 14px rgba(0,0,0,0.55)",
-                      }}
-                    >
-                      {card.imageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={card.imageUrl} alt={card.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <Icon className="w-8 h-8" style={{ color: accent, opacity: 0.75 }} />
-                      )}
-                    </div>
-                    <p className="font-battle text-[11px] truncate w-full text-center text-white">{card.name}</p>
-                  </button>
+                  <div key={card.cardId} className="w-28 shrink-0">
+                    <TacticCardTile
+                      card={{ id: card.cardId, name: card.name, kind: card.tacticKind ?? "INSTANT", imageUrl: card.imageUrl }}
+                      selected={isSelected}
+                      disabled={alreadySubmitted}
+                      onClick={() => toggleHandCard(card)}
+                    />
+                  </div>
                 );
               })}
             </div>
