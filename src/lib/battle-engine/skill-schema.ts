@@ -25,7 +25,9 @@ const effectTargetSchema = z.discriminatedUnion("kind", [
 
 const valuePerLevelSchema = z.array(z.number()).min(1).max(5);
 
-const effectSchema = z.discriminatedUnion("type", [
+// Exportiert, damit Taktik-Karten (siehe tacticEffectsSchema unten) dieselbe
+// Effect-Struktur validieren, statt sie zu duplizieren.
+export const effectSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("damage"),
     target: effectTargetSchema,
@@ -86,6 +88,30 @@ export function parseActiveSkill(json: unknown, context: string) {
 
 export function parsePassiveSkill(json: unknown, context: string) {
   const result = passiveSkillSchema.safeParse(json);
+  if (!result.success) throw new InvalidSkillDataError(context, result.error);
+  return result.data;
+}
+
+// ---------- Taktik-Karten (OMA Duels — Items/Fallen) ----------
+
+const tacticEffectsSchema = z.array(effectSchema);
+
+const tacticTriggerConditionSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("onEnemyAttack") }),
+  z.object({ type: z.literal("onEnemySummon") }),
+  z.object({ type: z.literal("onEnemyUltimate") }),
+]);
+
+export function parseTacticEffects(json: unknown, context: string) {
+  const result = tacticEffectsSchema.safeParse(json);
+  if (!result.success) throw new InvalidSkillDataError(context, result.error);
+  return result.data;
+}
+
+/** `json` ist bei INSTANT-Taktik-Karten null/undefined (kein Trigger nötig). */
+export function parseTacticTriggerCondition(json: unknown, context: string) {
+  if (json === null || json === undefined) return undefined;
+  const result = tacticTriggerConditionSchema.safeParse(json);
   if (!result.success) throw new InvalidSkillDataError(context, result.error);
   return result.data;
 }

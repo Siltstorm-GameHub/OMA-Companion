@@ -137,6 +137,8 @@ model User {
   campaignProgress                 UserCampaignProgress[]
   tutorialProgress                 UserTutorialProgress?
   gemsTournamentAttempts           GemsTournamentAttempt[]
+  duelDecks                        DuelDeck[]
+  userTacticCards                  UserTacticCard[]
 }
 
 // ── Pokale ───────────────────────────────────────────────────────────────────
@@ -1732,10 +1734,12 @@ model BattleChallenge {
   challengerId     String
   opponentId       String
   status           String    @default("pending") // pending | live | declined | resolved | expired
-  // "DUELS" (klassisches 5v5-PvP, mit Annahme-Schritt) | "GEMS" (asynchroner Match-3-Ghost-Angriff,
-  // startet direkt mit status="live", kein "pending"/Annahme) — beide zählen gemeinsam in die
-  // Saison-Rangliste (siehe leaderboard.ts), sind dort aber auch einzeln filterbar.
-  mode             String    @default("DUELS")
+  // "DUELS_LIVE" (Yu-Gi-Oh-artiges Deck/Feld-PvP, mit Annahme-Schritt) | "GEMS" (asynchroner
+  // Match-3-Ghost-Angriff, startet direkt mit status="live", kein "pending"/Annahme) — beide
+  // zählen gemeinsam in die Saison-Rangliste (siehe leaderboard.ts), sind dort aber auch einzeln
+  // filterbar. "DUELS" ist der abgelöste alte sequentielle Duell-Modus — nur noch für bereits
+  // resolvte Alt-Kämpfe relevant, wird für neue Herausforderungen nicht mehr vergeben.
+  mode             String    @default("DUELS_LIVE")
   liveBattleId     String?   @unique // gesetzt während status="live", verweist auf LiveBattle.id
   battleId         String? // gesetzt sobald resolved, verweist auf Battle.id
   winnerId         String?
@@ -1753,6 +1757,59 @@ model BattleChallenge {
   @@index([challengerId, opponentId, createdAt])
 }
 
+// ── OMA Duels (Yu-Gi-Oh-artiges Live-PvP) — Deck-Auswahl ────────────────────
+// Ersetzt die alte 5er-PVE-Lineup (lineup.ts) als Kampf-Zusammenstellung für
+// diesen Modus: Duell-Decks sind größer (fix DUEL_DECK_TOTAL_SIZE Karten,
+// siehe duel-constants.ts) und mischen Einheiten- mit Taktik-Karten.
+model DuelDeck {
+  id            String   @id @default(cuid())
+  userId        String
+  name          String   @default("Standard")
+  unitCardIds   String[] // Card-IDs, mind. DUEL_DECK_MIN_UNIT_CARDS
+  tacticCardIds String[] // TacticCard-IDs, Rest bis DUEL_DECK_TOTAL_SIZE
+  isActive      Boolean  @default(true) // aktuell für PVP_DUELS_LIVE-Herausforderungen gewähltes Deck
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+enum TacticCardKind {
+  INSTANT // wirkt sofort beim Ausspielen (Items, z.B. Energy-Drinks)
+  TRAP // verdeckt gesetzt, wirkt bei Trigger-Bedingung (z.B. Server-Lag)
+}
+
+// Items/Fallen fürs OMA-Duels-Deck — humorvoller Gaming-Bezug (Energy-Drinks,
+// Fast-Food, Lag, Rage-Quit, ...), gleicher Ton wie puzzle-monsters.ts.
+model TacticCard {
+  id               String         @id @default(cuid())
+  name             String
+  kind             TacticCardKind
+  flavorText       String
+  description      String
+  effects          Json // wiederverwendet Effect-Typen aus battle-engine/types.ts
+  triggerCondition Json? // nur TRAP, z.B. { type: "onEnemyAttack" }
+  imageUrl         String? // extern per ComfyUI generiert, per Admin-Upload gesetzt (wie Card.imageUrl)
+  rarity           CardRarity     @default(STANDARD)
+  createdAt        DateTime       @default(now())
+
+  userTacticCards UserTacticCard[]
+}
+
+model UserTacticCard {
+  id           String @id @default(cuid())
+  userId       String
+  tacticCardId String
+  quantity     Int    @default(1)
+
+  user       User       @relation(fields: [userId], references: [id])
+  tacticCard TacticCard @relation(fields: [tacticCardId], references: [id])
+
+  @@unique([userId, tacticCardId])
+}
+
 // ── Interaktive Kämpfe (Zug-für-Zug, Spieler steuert Ziel/Ultimate-Aktivierung) ─
 // Ein LiveBattle hält den seriell fortsetzbaren Kampf-Zustand (siehe
 // lib/battle-engine/interactive.ts) zwischen den einzelnen Zug-Requests. Für
@@ -1763,8 +1820,10 @@ model BattleChallenge {
 model LiveBattle {
   id             String   @id @default(cuid())
   // "PVE_EASY" | "PVE_MEDIUM" | "PVE_HARD" | "PVE_PUZZLE_EASY" | "PVE_PUZZLE_MEDIUM" | "PVE_PUZZLE_HARD"
-  // | "PVP_CHALLENGE" | "PVP_MATCHMAKING" | "PVP_GEMS" | "CAMPAIGN_<levelId>" (campaign-levels.ts)
+  // | "PVP_DUELS_LIVE" | "PVP_GEMS" | "CAMPAIGN_<levelId>" (campaign-levels.ts)
   // | "TOURNAMENT_<gemsTournamentId>" (siehe GemsTournament unten)
+  // "PVP_CHALLENGE"/"PVP_MATCHMAKING" sind der abgelöste alte sequentielle Duell-Modus —
+  // nur noch für bereits laufende/abgeschlossene Alt-Kämpfe relevant, wird nicht mehr neu vergeben.
   mode           String
   playerAId      String
   playerBId      String? // null = Team B ist NPC/KI-gesteuert

@@ -384,6 +384,74 @@ async function applyEloForChallenge(
   return { ratingA, newA, ratingB, newB };
 }
 
+/** Elo/Win-Streak/BattleChallenge-Abschluss + Benachrichtigung für eine
+ *  Spieler-gegen-Spieler-Begegnung — liest nur `winner`/IDs, nicht die interne
+ *  Zustandsform einer bestimmten Kampf-Engine. Dadurch von `finalizeLiveBattle`
+ *  (alter sequentieller Duell-/Gems-Modus) UND `finalizeDuelBattle` (neuer
+ *  OMA-Duels-Live-Modus, siehe duel-live-battle.ts) gemeinsam nutzbar, statt
+ *  die Elo-/Win-Streak-Logik zu duplizieren. */
+export async function finalizePvpChallengeSideEffects(
+  live: Pick<LiveBattle, "id" | "playerAId" | "playerBId">,
+  winner: TeamId | "DRAW" | null,
+  battleId: string
+): Promise<void> {
+  if (!live.playerBId) return;
+  const challenge = await prisma.battleChallenge.findUnique({ where: { liveBattleId: live.id } });
+  if (!challenge) return;
+
+  const winnerId = winner === "A" ? live.playerAId : winner === "B" ? live.playerBId : null;
+
+  // Einziger Farm-Deckel ist jetzt GEMS_PVP_DAILY_LIMIT (max. Angriffe pro Tag,
+  // siehe assertGemsPvpDailyLimitNotReached) — jeder resolvte Kampf zählt für
+  // Rangliste + Sieges-Kiste, unabhängig davon, wie oft man denselben Gegner
+  // am selben Tag schon getroffen hat.
+  const countsForRanking = true;
+
+  await prisma.battleChallenge.update({
+    where: { id: challenge.id },
+    data: { status: "resolved", battleId, winnerId, respondedAt: new Date(), countsForRanking },
+  });
+  if (winnerId) {
+    if (challenge.mode === "GEMS") {
+      // Nur der Angreifer (playerAId) hat sich bewusst auf den Kampf eingelassen —
+      // der Verteidiger bleibt unberührt, auch bei erfolgreicher Verteidigung.
+      await applyAttackerOnlyWinStreak(live.playerAId, winnerId === live.playerAId);
+    } else {
+      const loserId = winnerId === live.playerAId ? live.playerBId : live.playerAId;
+      await applyWinStreak(winnerId, loserId);
+    }
+  }
+  let rankUpA: RankUpInfo | null = null;
+  let rankUpB: RankUpInfo | null = null;
+  const eloResult: EloResult = winnerId === null ? "draw" : winnerId === live.playerAId ? "A" : "B";
+  const eloUpdate = await applyEloForChallenge(challenge.mode, live.playerAId, live.playerBId, eloResult);
+  if (eloUpdate) {
+    rankUpA = computeRankUp(challenge.mode, eloUpdate.ratingA, eloUpdate.newA);
+    rankUpB = computeRankUp(challenge.mode, eloUpdate.ratingB, eloUpdate.newB);
+  }
+  // OMA-Gems-Ghost-Angriff: nur der Angreifer (playerAId) spielt aktiv — bei
+  // dessen Sieg öffnet sich die Sieges-Kiste. Der Verteidiger bekommt nichts,
+  // er hat den Kampf nicht selbst bestritten.
+  let gemsChestPrize: LiveBattleSnapshot["chestPrize"] = null;
+  if (challenge.mode === "GEMS" && winnerId === live.playerAId) {
+    gemsChestPrize = await grantGemsPvpVictoryChest(live.playerAId);
+  }
+  // Kisten-Gewinn UND Rang-Aufstieg(e) gemeinsam am Battle-Datensatz speichern,
+  // damit der Client sie im nächsten Snapshot als Animation zeigen kann (siehe
+  // buildSnapshot) — ein einziger Write statt mehrerer sich überschreibender.
+  if (gemsChestPrize || rankUpA || rankUpB) {
+    const extraTeamSnapshot: Record<string, unknown> = { playerAId: live.playerAId, playerBId: live.playerBId };
+    if (gemsChestPrize) extraTeamSnapshot.gemsChestPrize = gemsChestPrize;
+    if (rankUpA) extraTeamSnapshot.rankUpA = rankUpA;
+    if (rankUpB) extraTeamSnapshot.rankUpB = rankUpB;
+    await prisma.battle.update({
+      where: { id: battleId },
+      data: { teamSnapshot: extraTeamSnapshot as Prisma.InputJsonValue },
+    });
+  }
+  await notifyPvpBattleResolved(live.playerAId, live.playerBId, winnerId, battleId);
+}
+
 async function finalizeLiveBattle(live: LiveBattle, state: InteractiveBattleState) {
   if (live.resultBattleId) return; // bereits abgeschlossen (defensiv, z.B. doppelter Request)
 
@@ -407,60 +475,7 @@ async function finalizeLiveBattle(live: LiveBattle, state: InteractiveBattleStat
   });
 
   if (live.playerBId) {
-    const challenge = await prisma.battleChallenge.findUnique({ where: { liveBattleId: live.id } });
-    if (challenge) {
-      const winnerId = state.winner === "A" ? live.playerAId : state.winner === "B" ? live.playerBId : null;
-
-      // Einziger Farm-Deckel ist jetzt GEMS_PVP_DAILY_LIMIT (max. Angriffe pro Tag,
-      // siehe assertGemsPvpDailyLimitNotReached) — jeder resolvte Kampf zählt für
-      // Rangliste + Sieges-Kiste, unabhängig davon, wie oft man denselben Gegner
-      // am selben Tag schon getroffen hat.
-      const countsForRanking = true;
-
-      await prisma.battleChallenge.update({
-        where: { id: challenge.id },
-        data: { status: "resolved", battleId: battle.id, winnerId, respondedAt: new Date(), countsForRanking },
-      });
-      if (winnerId) {
-        if (challenge.mode === "GEMS") {
-          // Nur der Angreifer (playerAId) hat sich bewusst auf den Kampf eingelassen —
-          // der Verteidiger bleibt unberührt, auch bei erfolgreicher Verteidigung.
-          await applyAttackerOnlyWinStreak(live.playerAId, winnerId === live.playerAId);
-        } else {
-          const loserId = winnerId === live.playerAId ? live.playerBId : live.playerAId;
-          await applyWinStreak(winnerId, loserId);
-        }
-      }
-      let rankUpA: RankUpInfo | null = null;
-      let rankUpB: RankUpInfo | null = null;
-      const eloResult: EloResult = winnerId === null ? "draw" : winnerId === live.playerAId ? "A" : "B";
-      const eloUpdate = await applyEloForChallenge(challenge.mode, live.playerAId, live.playerBId, eloResult);
-      if (eloUpdate) {
-        rankUpA = computeRankUp(challenge.mode, eloUpdate.ratingA, eloUpdate.newA);
-        rankUpB = computeRankUp(challenge.mode, eloUpdate.ratingB, eloUpdate.newB);
-      }
-      // OMA-Gems-Ghost-Angriff: nur der Angreifer (playerAId) spielt aktiv — bei
-      // dessen Sieg öffnet sich die Sieges-Kiste. Der Verteidiger bekommt nichts,
-      // er hat den Kampf nicht selbst bestritten.
-      let gemsChestPrize: LiveBattleSnapshot["chestPrize"] = null;
-      if (challenge.mode === "GEMS" && winnerId === live.playerAId) {
-        gemsChestPrize = await grantGemsPvpVictoryChest(live.playerAId);
-      }
-      // Kisten-Gewinn UND Rang-Aufstieg(e) gemeinsam am Battle-Datensatz speichern,
-      // damit der Client sie im nächsten Snapshot als Animation zeigen kann (siehe
-      // buildSnapshot) — ein einziger Write statt mehrerer sich überschreibender.
-      if (gemsChestPrize || rankUpA || rankUpB) {
-        const extraTeamSnapshot: Record<string, unknown> = { playerAId: live.playerAId, playerBId: live.playerBId };
-        if (gemsChestPrize) extraTeamSnapshot.gemsChestPrize = gemsChestPrize;
-        if (rankUpA) extraTeamSnapshot.rankUpA = rankUpA;
-        if (rankUpB) extraTeamSnapshot.rankUpB = rankUpB;
-        await prisma.battle.update({
-          where: { id: battle.id },
-          data: { teamSnapshot: extraTeamSnapshot as Prisma.InputJsonValue },
-        });
-      }
-      await notifyPvpBattleResolved(live.playerAId, live.playerBId, winnerId, battle.id);
-    }
+    await finalizePvpChallengeSideEffects(live, state.winner, battle.id);
   } else if (live.mode.startsWith("TOURNAMENT_")) {
     const parsed = parseTournamentMode(live.mode);
     if (parsed) {
