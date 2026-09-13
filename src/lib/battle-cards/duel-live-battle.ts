@@ -80,6 +80,13 @@ export interface LiveDuelUnitSnapshot {
   ultimateCost: number;
   isAlive: boolean;
   imageUrl?: string | null;
+  /** Kurze Klartext-Beschreibungen für Skill/Ultimate-Aktionsknöpfe (siehe
+   *  DuelLiveView.tsx describeAction) — Angriff/Block/Ausweichen sind fürs
+   *  UI statisch, diese beiden sind pro Karte unterschiedlich. */
+  activeSkillName: string;
+  activeSkillDescription: string;
+  ultimateSkillName: string;
+  ultimateSkillDescription: string;
 }
 
 export interface LiveDuelHandCard {
@@ -142,6 +149,10 @@ function toUnitSnapshot(slot: DuelFieldSlot, slotIndex: number): LiveDuelUnitSna
     ultimateCost: unit.def.ultimateSkill.cost ?? ULTIMATE_SKILL_COST,
     isAlive: unit.isAlive,
     imageUrl: unit.def.imageUrl,
+    activeSkillName: unit.def.activeSkill.name,
+    activeSkillDescription: unit.def.activeSkill.description,
+    ultimateSkillName: unit.def.ultimateSkill.name,
+    ultimateSkillDescription: unit.def.ultimateSkill.description,
   };
 }
 

@@ -19,7 +19,7 @@
 
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Loader2, Swords, Volume2, VolumeX, Wind } from "lucide-react";
+import { ChevronLeft, Loader2, Swords, Volume2, VolumeX, Wind, X } from "lucide-react";
 import { getClassConfig, type BattleCardData } from "./BattleCardView";
 import CardTile from "./CardTile";
 import TacticCardTile from "./TacticCardTile";
@@ -54,6 +54,10 @@ interface LiveDuelUnit {
   ultimateCost: number;
   isAlive: boolean;
   imageUrl?: string | null;
+  activeSkillName: string;
+  activeSkillDescription: string;
+  ultimateSkillName: string;
+  ultimateSkillDescription: string;
 }
 
 interface LiveDuelHandCard {
@@ -131,6 +135,20 @@ const ACTION_LABEL: Record<DuelActionType, string> = {
   active: "Skill",
   ultimate: "Ultimate",
 };
+
+/** Statische Kurzbeschreibungen für die drei generischen Aktionen — Skill/
+ *  Ultimate sind pro Karte unterschiedlich, siehe describeAction(). */
+const STATIC_ACTION_DESCRIPTION: Record<"normalAttack" | "block" | "dodge", string> = {
+  normalAttack: "Normaler Schaden auf ein gewähltes Ziel.",
+  block: "Schwächt eingehenden Schaden stark ab — gibt trotzdem Rage.",
+  dodge: "Weicht dem nächsten Angriff komplett aus (außer Ultimates).",
+};
+
+function describeAction(action: DuelActionType, unit: LiveDuelUnit): string {
+  if (action === "active") return `${unit.activeSkillName}: ${unit.activeSkillDescription}`;
+  if (action === "ultimate") return `${unit.ultimateSkillName}: ${unit.ultimateSkillDescription}`;
+  return STATIC_ACTION_DESCRIPTION[action];
+}
 
 const TONE_COLOR: Record<FloatingEffect["tone"], string> = {
   damage: "#fb7185",
@@ -322,6 +340,12 @@ export default function DuelLiveView({
   }
   const [snapshot, setSnapshot] = useState<LiveDuelSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Fehler NACH dem ersten erfolgreichen Laden (ungültige Aktion, kurzer
+  // Netzwerk-Hänger beim Poll, ...) — schließbarer Hinweis über dem laufenden
+  // Kampf statt der Vollbild-Fehleransicht, die den Kampf-Zustand verdeckt und
+  // deren "Zurück"-Button den Kampf fälschlich verlässt (siehe handleExit).
+  const [actionError, setActionError] = useState<string | null>(null);
+  const hasLoadedRef = useRef(false);
   const [busy, setBusy] = useState(false);
   const [, setTick] = useState(0);
   const [soundMuted, setSoundMutedState] = useState(isSoundMuted);
@@ -501,9 +525,12 @@ export default function DuelLiveView({
       const res = await fetch(`/api/battle-cards/duel/${liveBattleId}`);
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Kampf konnte nicht geladen werden.");
+        const message = data.error ?? "Kampf konnte nicht geladen werden.";
+        if (hasLoadedRef.current) setActionError(message);
+        else setError(message);
         return;
       }
+      hasLoadedRef.current = true;
       processNewLogEntries(data);
       setSnapshot(data);
       if (data.self?.hasSubmitted) {
@@ -607,6 +634,7 @@ export default function DuelLiveView({
 
   async function submitRound() {
     setBusy(true);
+    setActionError(null);
     try {
       const body = {
         summon: summonSlot ?? undefined,
@@ -620,7 +648,7 @@ export default function DuelLiveView({
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Runde konnte nicht eingereicht werden.");
+        setActionError(data.error ?? "Runde konnte nicht eingereicht werden.");
         return;
       }
       processNewLogEntries(data);
@@ -732,21 +760,27 @@ export default function DuelLiveView({
                     onClick={isSummonTarget ? () => pickSummonSlot(i) : undefined}
                   />
                   {slot?.isAlive && !alreadySubmitted && !finished && (
-                    <div className="flex flex-wrap gap-1">
-                      {(["normalAttack", "block", "dodge", "active", "ultimate"] as DuelActionType[]).map((action) => (
-                        <button
-                          key={action}
-                          onClick={() => setSlotAction(i, action)}
-                          className={`text-[10px] px-1.5 py-0.5 rounded border ${
-                            draft?.action === action
-                              ? "border-teal-400 bg-teal-500/20 text-teal-200"
-                              : "border-slate-700 text-slate-400 hover:border-slate-500"
-                          }`}
-                        >
-                          {ACTION_LABEL[action]}
-                        </button>
-                      ))}
-                    </div>
+                    <>
+                      <div className="flex flex-wrap gap-1">
+                        {(["normalAttack", "block", "dodge", "active", "ultimate"] as DuelActionType[]).map((action) => (
+                          <button
+                            key={action}
+                            onClick={() => setSlotAction(i, action)}
+                            title={describeAction(action, slot)}
+                            className={`text-[10px] px-1.5 py-0.5 rounded border ${
+                              draft?.action === action
+                                ? "border-teal-400 bg-teal-500/20 text-teal-200"
+                                : "border-slate-700 text-slate-400 hover:border-slate-500"
+                            }`}
+                          >
+                            {ACTION_LABEL[action]}
+                          </button>
+                        ))}
+                      </div>
+                      {draft && (
+                        <p className="text-[10px] text-slate-400 leading-snug">{describeAction(draft.action, slot)}</p>
+                      )}
+                    </>
                   )}
                   {configuringSlot === i && (
                     <div className="flex flex-wrap gap-1">
@@ -817,6 +851,21 @@ export default function DuelLiveView({
                 </button>
               </div>
             )}
+          </div>
+        )}
+
+        {actionError && (
+          <div className="flex items-center gap-2">
+            <div className="flex-1">
+              <ErrorNotice message={actionError} />
+            </div>
+            <button
+              onClick={() => setActionError(null)}
+              className="shrink-0 text-slate-500 hover:text-slate-300"
+              aria-label="Fehlermeldung schließen"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         )}
 
