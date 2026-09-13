@@ -1,13 +1,17 @@
 // ============================================
 // Gemeinsame Pack-Cover-Optik — Shop & Pack-Öffnen
 // ============================================
-// Jede Pack-Sorte hat eine per Canva generierte Foil-Textur (rein
-// Hintergrundmuster, kein Text/Logo — siehe public/battle-cards/packs/),
-// darüber liegen echtes OMA-Logo + "Battle Cards"-Schriftzug als normale
-// HTML-Ebene (scharf bei jeder Auflösung, keine Neu-Generierung bei
-// Text-Änderungen). Wird sowohl im Shop (BuyPack.tsx) als auch beim
-// Pack-Öffnen (PackOpener.tsx) verwendet, damit beide Stellen exakt
-// gleich aussehen.
+// Jede Pack-Sorte hat zwei per Canva generierte Bilder (siehe
+// public/battle-cards/packs/): eine abstrakte Foil-Textur als Untergrund
+// und ein gemaltes Helden-Artwork (je Sorte ein anderer Charakter/Stimmung,
+// im Stil des OMA-Gems-Turnier-Covers). Das Artwork liegt per
+// mix-blend-mode "screen" über der Textur — sein dunkler Hintergrund wird
+// dadurch transparent und die Foil-Textur scheint drumherum durch, während
+// der leuchtende Charakter klar sichtbar bleibt. OMA-Logo + "Battle
+// Cards"-Schriftzug sitzen als eigene, undurchsichtige Banner-Leiste ganz
+// unten — echte HTML-Ebene statt ins Bild gebackener Text, bleibt scharf
+// und deckt zuverlässig jeden Bildinhalt darunter ab. Wird sowohl im Shop
+// (BuyPack.tsx) als auch beim Pack-Öffnen (PackOpener.tsx) verwendet.
 
 export type PackVisualKind = "STANDARD" | "PREMIUM" | "COMMUNITY";
 
@@ -17,19 +21,25 @@ export const PACK_TEXTURE: Record<PackVisualKind, string> = {
   COMMUNITY: "/battle-cards/packs/community-texture.png",
 };
 
+const PACK_ART: Record<PackVisualKind, string> = {
+  STANDARD: "/battle-cards/packs/standard-art.png",
+  PREMIUM: "/battle-cards/packs/premium-art.png",
+  COMMUNITY: "/battle-cards/packs/community-art.png",
+};
+
 export const PACK_COVER_LABEL: Record<PackVisualKind, string> = {
   STANDARD: "Standard",
   PREMIUM: "Premium",
   COMMUNITY: "Community",
 };
 
-// Farbwäsche über der Textur je Sorte — Teal/Maroon aus dem OMA-Logo für
-// Standard/Premium, Violett für Community — sorgt für Markenbezug und
-// genug Kontrast, damit Logo/Schriftzug lesbar bleiben.
-const PACK_TINT: Record<PackVisualKind, string> = {
-  STANDARD: "linear-gradient(165deg, rgba(15,118,110,0.5) 0%, rgba(8,47,44,0.78) 100%)",
-  PREMIUM: "linear-gradient(165deg, rgba(127,29,29,0.5) 0%, rgba(69,10,10,0.8) 100%)",
-  COMMUNITY: "linear-gradient(165deg, rgba(88,28,135,0.42) 0%, rgba(30,10,60,0.78) 100%)",
+// Marken-Akzent je Sorte — Teal/Maroon aus dem OMA-Logo für Standard/Premium,
+// Violett für Community. Färbt die Textur leicht ein und dient als Akzent
+// für Badge/Trennlinie im Banner unten.
+const PACK_ACCENT: Record<PackVisualKind, { tint: string; badge: string }> = {
+  STANDARD: { tint: "rgba(15,118,110,0.35)", badge: "#2dd4bf" },
+  PREMIUM: { tint: "rgba(127,29,29,0.35)", badge: "#f87171" },
+  COMMUNITY: { tint: "rgba(88,28,135,0.35)", badge: "#c084fc" },
 };
 
 /** Gezackte Crimp-Kante wie bei echten Booster-Packs, oben und unten. */
@@ -47,8 +57,9 @@ function crimpClipPath(teeth = 14): string {
 }
 export const PACK_CLIP_PATH = crimpClipPath();
 
-/** Volles Pack-Cover mit Logo + Schriftzug. `cropped` schneidet die
- *  Crimp-Zacken zu (Öffnen-Animation), sonst abgerundetes Rechteck (Shop). */
+/** Volles Pack-Cover: Foil-Textur + Helden-Artwork (screen-geblendet) +
+ *  Logo/Schriftzug-Banner. `cropped` schneidet die Crimp-Zacken zu
+ *  (Öffnen-Animation), sonst abgerundetes Rechteck (Shop). */
 export function PackCoverArt({
   kind,
   cropped = false,
@@ -60,40 +71,47 @@ export function PackCoverArt({
   showLabel?: boolean;
   className?: string;
 }) {
+  const accent = PACK_ACCENT[kind];
   return (
     <div
       className={`relative overflow-hidden ${className}`}
       style={cropped ? { clipPath: PACK_CLIP_PATH } : { borderRadius: 14 }}
     >
       <img src={PACK_TEXTURE[kind]} alt="" className="absolute inset-0 w-full h-full object-cover" />
-      <div className="absolute inset-0" style={{ background: PACK_TINT[kind] }} />
+      <div className="absolute inset-0" style={{ background: accent.tint }} />
+      <img
+        src={PACK_ART[kind]}
+        alt=""
+        className="absolute inset-0 w-full h-full object-cover"
+        style={{ mixBlendMode: "screen" }}
+      />
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            "linear-gradient(115deg, transparent 28%, rgba(255,255,255,0.32) 45%, rgba(255,255,255,0.05) 56%, transparent 70%)",
+            "linear-gradient(115deg, transparent 28%, rgba(255,255,255,0.22) 45%, rgba(255,255,255,0.04) 56%, transparent 70%)",
         }}
       />
-      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-2 text-center">
-        <img
-          src="/brand/logo-64.png"
-          alt="OMA"
-          className="w-8 h-8"
-          style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.6))" }}
-        />
-        <p
-          className="text-[11px] font-black uppercase tracking-wide text-white"
-          style={{ textShadow: "0 1px 3px rgba(0,0,0,0.85)" }}
-        >
-          Battle Cards
-        </p>
+
+      {/* Undurchsichtige Banner-Leiste unten — deckt zuverlässig alles darüber ab,
+          damit Logo/Schriftzug immer lesbar bleiben, egal was im Artwork darüber liegt. */}
+      <div
+        className="absolute bottom-0 inset-x-0 flex flex-col items-center gap-1 pt-5 pb-2"
+        style={{
+          background: "linear-gradient(180deg, transparent 0%, rgba(4,4,7,0.75) 40%, rgba(4,4,7,0.97) 75%, #040407 100%)",
+        }}
+      >
+        <div className="flex items-center gap-1.5">
+          <img src="/brand/logo-64.png" alt="" className="w-5 h-5" />
+          <p className="text-[11px] font-black uppercase tracking-wider text-white leading-none">Battle Cards</p>
+        </div>
         {showLabel && (
-          <p
-            className="text-[9px] font-bold uppercase tracking-[0.25em] text-white/85"
-            style={{ textShadow: "0 1px 3px rgba(0,0,0,0.85)" }}
+          <span
+            className="text-[8px] font-bold uppercase tracking-[0.2em] px-2 py-0.5 rounded-full"
+            style={{ color: "#040407", background: accent.badge }}
           >
             {PACK_COVER_LABEL[kind]}
-          </p>
+          </span>
         )}
       </div>
     </div>
