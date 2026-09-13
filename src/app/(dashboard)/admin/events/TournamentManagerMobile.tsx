@@ -593,6 +593,15 @@ function FocusedFfaCard({
     return typeof existing[field] === "number" ? existing[field] : 0;
   }
 
+  // Anzahl erfasster Werte je Teilnehmer (Platzierung + Stat-Felder) bestimmt die Spaltenzahl des
+  // Stat-Grids — bei nur einem Wert bringt eine Mehrspaltigkeit nichts, ab drei Werten lohnt sich auf
+  // größeren Handys/Tablets (≥640px, innerhalb dieser Live-Ansicht bis Breakpoint lg) eine dritte Spalte.
+  const fieldCount = (trackPlacement ? 1 : 0) + visibleStatFields.length;
+  const statGridClass =
+    fieldCount <= 1 ? "grid-cols-1" :
+    fieldCount === 2 ? "grid-cols-2" :
+    "grid-cols-2 sm:grid-cols-3";
+
   return (
     <div className="space-y-3">
       {/* Match Win: Team-Modus oder "alle zusammen" */}
@@ -654,17 +663,17 @@ function FocusedFfaCard({
                   </div>
                 )}
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className={`grid gap-2 ${statGridClass}`}>
                 {trackPlacement && (
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] text-gray-500 w-10">Platz</span>
+                  <div className="flex flex-col gap-1 rounded-lg border border-gray-700 bg-gray-900/60 px-2 py-1.5">
+                    <span className="text-xs font-semibold text-gray-200 truncate">Platz</span>
                     <Stepper size="sm" min={0} value={val(entry, PLACEMENT_STAT_KEY)}
                       onChange={n => setFfaField(match.id, entry.userId ?? "", PLACEMENT_STAT_KEY, String(n))} />
                   </div>
                 )}
                 {visibleStatFields.map(f => (
-                  <div key={f} className="flex items-center gap-1.5">
-                    <span className="text-[10px] text-gray-500 max-w-[60px] truncate">{f}</span>
+                  <div key={f} className="flex flex-col gap-1 rounded-lg border border-gray-700 bg-gray-900/60 px-2 py-1.5">
+                    <span className="text-xs font-semibold text-gray-200 truncate">{f}</span>
                     <Stepper size="sm" value={val(entry, f)}
                       onChange={n => setFfaField(match.id, entry.userId ?? "", f, String(n))} />
                   </div>
