@@ -246,7 +246,7 @@ function UnitSlot({
         type="button"
         disabled={!selectable}
         onClick={onClick}
-        className={`relative h-28 rounded-lg border border-dashed flex items-center justify-center text-[11px] transition-colors ${
+        className={`relative w-full h-28 rounded-lg border border-dashed flex items-center justify-center text-[11px] text-center transition-colors ${
           selectable
             ? "border-teal-400 bg-teal-500/15 text-teal-200 hover:bg-teal-500/25 cursor-pointer duel-pulse-ring"
             : "border-slate-700 bg-slate-900/40 text-slate-600"
@@ -266,7 +266,7 @@ function UnitSlot({
       type="button"
       disabled={!onClick}
       onClick={onClick}
-      className={`relative h-28 rounded-lg border overflow-hidden text-left transition-transform ${
+      className={`relative w-full h-28 rounded-lg border overflow-hidden text-left transition-transform ${
         selected ? "border-teal-400" : ultimateReady ? "border-amber-400 duel-ultimate-glow" : "border-slate-700"
       } ${!unit.isAlive ? "opacity-40 grayscale" : ""} ${flashing ? "duel-hit-flash" : ""} ${lunging ? "duel-lunge" : ""}`}
       style={{
@@ -842,6 +842,10 @@ export default function DuelLiveView({
 
 function describeLogEntry(entry: DuelLogEntry): string {
   switch (entry.type) {
+    case "duelStart":
+      return "Das Duell beginnt!";
+    case "roundStart":
+      return `Runde ${entry.round} beginnt.`;
     case "summon":
       return "Eine Karte wurde beschworen.";
     case "faceDamage":
