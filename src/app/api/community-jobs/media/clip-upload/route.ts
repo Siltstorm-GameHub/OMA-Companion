@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { getSessionUser } from "@/lib/roles";
 import { requireActiveFotograf } from "@/lib/fotograf-service";
-import { CLIP_MAX_BYTES, CLIP_ALLOWED_TYPES } from "@/lib/upload-limits";
+import { CLIP_MAX_BYTES, CLIP_ALLOWED_TYPES, CLIP_UPLOAD_PREFIX } from "@/lib/upload-limits";
 
 /**
  * Direct-to-Blob-Upload für Fotograf-Video-Clips: die Datei geht vom Browser
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         }
         // Fester Ziel-Ordner statt frei wählbarem Pfad — sonst wäre `pathname`
         // ein Path-Traversal-Vektor (siehe gleiche Überlegung in /api/upload).
-        if (!pathname.startsWith("community-job-clip/")) {
+        if (!pathname.startsWith(CLIP_UPLOAD_PREFIX)) {
           throw new Error("Ungültiger Zielpfad");
         }
         return {

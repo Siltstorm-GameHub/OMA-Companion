@@ -51,6 +51,10 @@
     {
       "path": "/api/cron/community-job-payout",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/community-job-clip-cleanup",
+      "schedule": "0 2 * * *"
     }
   ]
 }

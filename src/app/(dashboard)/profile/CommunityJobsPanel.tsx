@@ -14,7 +14,7 @@ import { Select } from "@/components/ui/Select";
 import GameCover from "@/components/GameCover";
 import { useAllLiveStatus } from "@/lib/useServerLiveStatus";
 import { upload } from "@vercel/blob/client";
-import { CLIP_MAX_BYTES, CLIP_ALLOWED_TYPES, CLIP_EXTENSION_BY_MIME, isVideoUrl } from "@/lib/upload-limits";
+import { CLIP_MAX_BYTES, CLIP_ALLOWED_TYPES, CLIP_EXTENSION_BY_MIME, CLIP_UPLOAD_PREFIX, isVideoUrl } from "@/lib/upload-limits";
 import DisputeVotesModal from "@/components/community-jobs/DisputeVotesModal";
 import StudioEditor from "@/components/community-jobs/StudioEditor";
 import ImageCropTool from "@/components/community-jobs/ImageCropTool";
@@ -1061,8 +1061,11 @@ function TextContentForm({ jobKey, eventId, onDone }: { jobKey: string; eventId?
   );
 }
 
+// "CLIP" heißt hier bewusst "Clip-Vorschaubild" statt "Highlight-Clip" — dieses
+// Dropdown gilt nur im Bild-gestalten-Pfad (Studio-Export), das echte Video
+// lädt man über den zweiten Modus ("Video-Clip hochladen", ClipUploadField).
 const ASSET_TYPE_OPTIONS = [
-  { value: "CLIP", label: "Highlight-Clip" },
+  { value: "CLIP", label: "Clip-Vorschaubild" },
   { value: "COLLAGE", label: "Collage" },
   { value: "SCREENSHOT", label: "Screenshot" },
   { value: "BANNER", label: "Event-Banner" },
@@ -1104,6 +1107,11 @@ function UploadAssetForm({ eventId, onDone }: { eventId?: string; onDone: () => 
           <Button size="sm" variant={mode === "design" ? "primary" : "outline"} onClick={() => setMode("design")}>Bild gestalten</Button>
           <Button size="sm" variant={mode === "clip" ? "primary" : "outline"} onClick={() => setMode("clip")}>Video-Clip hochladen</Button>
         </div>
+        <p className="text-[10px] text-gray-600">
+          {mode === "design"
+            ? "Screenshot/Foto mit Vorlage + Logo zu einer Grafik zusammenstellen (z.B. Collage, Banner oder Vorschaubild für einen Clip)."
+            : "Lädt eine echte Videodatei hoch (z.B. einen Highlight-Clip)."}
+        </p>
         {mode === "design"
           ? <StudioEditor onExported={u => { setUrl(u); setIsVideo(false); }} />
           : <ClipUploadField onUploaded={u => { setUrl(u); setIsVideo(true); setType("CLIP"); }} />}
@@ -1143,6 +1151,7 @@ function UploadAssetForm({ eventId, onDone }: { eventId?: string; onDone: () => 
  */
 function ClipUploadField({ onUploaded }: { onUploaded: (url: string) => void }) {
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
 
   async function handleFile(file: File) {
     if (!CLIP_ALLOWED_TYPES.includes(file.type as (typeof CLIP_ALLOWED_TYPES)[number])) {
@@ -1154,12 +1163,14 @@ function ClipUploadField({ onUploaded }: { onUploaded: (url: string) => void }) 
       return;
     }
     setUploading(true);
+    setProgress(0);
     try {
       const ext = CLIP_EXTENSION_BY_MIME[file.type as (typeof CLIP_ALLOWED_TYPES)[number]];
-      const blob = await upload(`community-job-clip/${crypto.randomUUID()}.${ext}`, file, {
+      const blob = await upload(`${CLIP_UPLOAD_PREFIX}${crypto.randomUUID()}.${ext}`, file, {
         access: "public",
         handleUploadUrl: "/api/community-jobs/media/clip-upload",
         contentType: file.type,
+        onUploadProgress: p => setProgress(p.percentage),
       });
       onUploaded(blob.url);
     } catch (err) {
@@ -1172,7 +1183,12 @@ function ClipUploadField({ onUploaded }: { onUploaded: (url: string) => void }) 
   return (
     <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-white/10 rounded-xl py-10 cursor-pointer hover:border-teal-500/30 transition-colors">
       {uploading ? <Loader2 className="w-5 h-5 text-gray-500 animate-spin" /> : <Upload className="w-5 h-5 text-gray-500" />}
-      <span className="text-xs text-gray-500">{uploading ? "Wird hochgeladen…" : "Video-Clip auswählen"}</span>
+      <span className="text-xs text-gray-500">{uploading ? `Wird hochgeladen… ${Math.round(progress)}%` : "Video-Clip auswählen"}</span>
+      {uploading && (
+        <div className="w-40 h-1 rounded-full bg-white/10 overflow-hidden">
+          <div className="h-full bg-teal-400 transition-all" style={{ width: `${progress}%` }} />
+        </div>
+      )}
       <span className="text-[10px] text-gray-700">MP4, WebM oder MOV — max. {Math.round(CLIP_MAX_BYTES / 1_000_000)} MB</span>
       <input type="file" accept={CLIP_ALLOWED_TYPES.join(",")} className="hidden" disabled={uploading}
         onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />

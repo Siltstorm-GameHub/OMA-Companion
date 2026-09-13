@@ -87,38 +87,58 @@ export default function HeroPaperdollTest() {
       )}
 
       {basePose && (
-        <div
-          style={{
-            position: "relative",
-            width: DISPLAY_WIDTH,
-            height: basePose.height * displayScale,
-            border: "1px solid #333",
-            borderRadius: 8,
-            overflow: "hidden",
-            background: "#1a1a1a",
-          }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element -- beliebige Blob-URL */}
-          <img src={basePose.imageUrl} alt={basePose.name} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain" }} />
-          {equipped && weaponSlot && (
-            // eslint-disable-next-line @next/next/no-img-element -- beliebige Blob-URL
-            <img
-              src={equipped.imageUrl}
-              alt={equipped.name}
+        <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+          <div>
+            <p style={{ fontSize: 11, color: "#666", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Live-CSS-Vorschau</p>
+            <div
               style={{
-                position: "absolute",
-                left: `${weaponSlot.anchorX * 100}%`,
-                top: `${weaponSlot.anchorY * 100}%`,
-                width: equipped.width * displayScale * weaponSlot.scale,
-                transformOrigin: "0% 50%",
-                transform: `translateY(-50%) rotate(${weaponSlot.rotation}deg)`,
+                position: "relative",
+                width: DISPLAY_WIDTH,
+                height: basePose.height * displayScale,
+                border: "1px solid #333",
+                borderRadius: 8,
+                overflow: "hidden",
+                background: "#1a1a1a",
               }}
-            />
-          )}
-          {equipped && !weaponSlot && (
-            <p style={{ position: "absolute", bottom: 8, left: 8, right: 8, fontSize: 11, color: "#f59e0b" }}>
-              Kein "weapon"-Slot für diese Pose konfiguriert (/admin/hero-builder → Basis-Posen → Slots).
-            </p>
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- beliebige Blob-URL */}
+              <img src={basePose.imageUrl} alt={basePose.name} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain" }} />
+              {equipped && weaponSlot && (
+                // eslint-disable-next-line @next/next/no-img-element -- beliebige Blob-URL
+                <img
+                  src={equipped.imageUrl}
+                  alt={equipped.name}
+                  style={{
+                    position: "absolute",
+                    left: `${weaponSlot.anchorX * 100}%`,
+                    top: `${weaponSlot.anchorY * 100}%`,
+                    width: equipped.width * displayScale * weaponSlot.scale,
+                    transformOrigin: "0% 50%",
+                    transform: `translateY(-50%) rotate(${weaponSlot.rotation}deg)`,
+                  }}
+                />
+              )}
+              {equipped && !weaponSlot && (
+                <p style={{ position: "absolute", bottom: 8, left: 8, right: 8, fontSize: 11, color: "#f59e0b" }}>
+                  Kein "weapon"-Slot für diese Pose konfiguriert (/admin/hero-builder → Basis-Posen → Slots).
+                </p>
+              )}
+            </div>
+          </div>
+
+          {weaponSlot && (
+            <div>
+              <p style={{ fontSize: 11, color: "#666", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>Serverseitig geflacht (sharp)</p>
+              <div style={{ width: DISPLAY_WIDTH, height: basePose.height * displayScale, border: "1px solid #333", borderRadius: 8, overflow: "hidden", background: "#1a1a1a" }}>
+                {/* eslint-disable-next-line @next/next/no-img-element -- eigene API-Route, kein next/image-Loader nötig */}
+                <img
+                  key={equippedId ?? "none"}
+                  src={`/api/hero-builder/compose?basePoseId=${basePose.id}${equipped ? `&weapon=${equipped.id}` : ""}`}
+                  alt="Serverseitig zusammengesetzt"
+                  style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                />
+              </div>
+            </div>
           )}
         </div>
       )}
