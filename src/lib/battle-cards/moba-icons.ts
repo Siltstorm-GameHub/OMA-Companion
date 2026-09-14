@@ -46,6 +46,8 @@ export const MOBA_ICON = {
   navDungeon: `${BASE}/nav-dungeon.png`, // Kampagne-Reiter (Tor-Icon aus Referenz-Screenshot)
   navInventory: `${BASE}/nav-inventory.png`, // Karten-Reiter (Inventar-Icon aus Referenz-Screenshot)
   navRank: `${BASE}/nav-rank.png`, // Community-Reiter (Rang-Medaillen-Icon aus Referenz-Screenshot)
+  duelsIcon: `${BASE}/duels-icon.png`, // "Duels"-Button (Avatar-RPG-Kit, gekreuzte Schwerter)
+  gemsIcon: `${BASE}/gems-icon.png`, // "Gems"-Button (Avatar-RPG-Kit, Chaos-Edelstein)
 } as const;
 
 export type MobaIconName = keyof typeof MOBA_ICON;

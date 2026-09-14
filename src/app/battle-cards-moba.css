@@ -319,3 +319,120 @@
   border-style: solid;
   background: rgba(4, 6, 26, 0.5);
 }
+
+/* ── Bild-Button (btn4/btn5 aus INPUT/BUTTONS) — echte Kit-Grafik statt
+   selbstgebauter Hex-Form, mit separatem Hover-/Tap-Bild statt CSS-Filter. ── */
+.moba-img-button {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 449 / 200;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+.moba-img-button > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.moba-img-button .moba-img-button-hover {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.moba-img-button:hover .moba-img-button-hover,
+.moba-img-button:active .moba-img-button-hover {
+  opacity: 1;
+}
+.moba-img-button .moba-button-label {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
+  color: #fff;
+  font-weight: 800;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── Modus-Kopfzeile (nach Wahl von OMA Duels/OMA Gems) — Zurück-Button +
+   Titel, nachgebaut aus der Zurück-Leiste oben links in den Kit-Mockups
+   (Gold-/Orange-Gradient-Button mit Chevron statt schlichtem Textbutton). ── */
+.moba-mode-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.moba-mode-back {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1.5px solid #f2d78a;
+  background: linear-gradient(180deg, #ffc25c 0%, #e8961c 55%, #b8710a 100%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  flex-shrink: 0;
+}
+.moba-mode-back img {
+  /* Das Chevron-Icon ist selbst orange/gold eingefärbt — auf dem
+     Orange-Verlauf des Buttons sonst fast unsichtbar. */
+  filter: brightness(0) invert(1);
+}
+.moba-mode-title {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  color: #fff;
+}
+
+/* ── Abschnitts-Label ("Gegen Spieler"/"Gegen NPC") — goldener Diamant-Chip
+   mit Icon + auslaufender Linie statt schlichter grauer Caption. ── */
+.moba-section-label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.moba-section-label .moba-section-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  transform: rotate(45deg);
+  background: rgba(4, 6, 26, 0.85);
+  border: 1.5px solid #d99a2b;
+  flex-shrink: 0;
+}
+.moba-section-label .moba-section-icon img {
+  transform: rotate(-45deg);
+  width: 11px;
+  height: 11px;
+}
+.moba-section-label .moba-section-text {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--moba-accent);
+  white-space: nowrap;
+}
+.moba-section-label .moba-section-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, #d99a2b, transparent);
+  opacity: 0.55;
+}

@@ -10,8 +10,9 @@
 // Elo-Rang — Gesamt, solange kein Modus gewählt ist, sonst der Rang des
 // gewählten Modus (siehe getCombinedElo/getBattleRank).
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import MobaIcon from "./MobaIcon";
+import type { MobaIconName } from "@/lib/battle-cards/moba-icons";
 import { motion, AnimatePresence } from "motion/react";
 import MatchmakingWidget from "./MatchmakingWidget";
 import ChallengeUserPicker from "./ChallengeUserPicker";
@@ -23,6 +24,20 @@ import BattleRankBadge from "./BattleRankBadge";
 import { getBattleRank, getBattleRankFullLabel } from "@/lib/battle-cards/battle-rank";
 
 type Mode = "duels" | "gems" | null;
+
+/** Goldener Diamant-Chip + auslaufende Linie statt schlichter grauer Caption
+ *  — nachgebaut aus den Sektions-/Filter-Labels der Kit-Mockups. */
+function SectionLabel({ icon, children }: { icon: MobaIconName; children: ReactNode }) {
+  return (
+    <div className="moba-section-label">
+      <span className="moba-section-icon">
+        <MobaIcon name={icon} className="w-full h-full" />
+      </span>
+      <span className="moba-section-text">{children}</span>
+      <span className="moba-section-line" />
+    </div>
+  );
+}
 
 function RankRow({ mode, eloOverall, eloDuels, eloGems }: { mode: Mode; eloOverall: number; eloDuels: number; eloGems: number }) {
   const elo = mode === "duels" ? eloDuels : mode === "gems" ? eloGems : eloOverall;
@@ -67,23 +82,14 @@ export default function BattleLauncher({
             type="button"
             onClick={() => setMode("duels")}
             whileTap={{ scale: 0.96, y: 2 }}
-            className="moba-hex-button w-full"
-            style={{ ["--hex-accent" as string]: "#ffd9a0", ["--hex-glow" as string]: "rgba(232,150,28,0.6)" }}
+            className="moba-img-button"
           >
-            <div className="moba-hex-fill" style={{ background: "linear-gradient(180deg, #ffc25c 0%, #e8961c 55%, #b8710a 100%)" }} />
-            <div className="moba-hex-lattice" />
-            <div className="moba-hex-border" />
-            <div className="moba-hex-diamond left" />
-            <div className="moba-hex-diamond right" />
-            <motion.div
-              className="absolute inset-y-0 left-0 w-1/3 pointer-events-none z-[1]"
-              style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent)", skewX: -20 }}
-              initial={{ x: "-140%" }}
-              animate={{ x: "340%" }}
-              transition={{ duration: 1.8, repeat: Infinity, repeatDelay: 2.2, ease: "easeInOut" }}
-            />
-            <span className="moba-button-label relative flex items-center justify-center gap-2 text-base font-black uppercase tracking-wide">
-              <MobaIcon name="crossedSwords" className="w-6 h-6" /> OMA Duels
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/battle-cards/moba/buttons/btn5_normal.png" alt="" aria-hidden />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/battle-cards/moba/buttons/btn5_hovered.png" alt="" aria-hidden className="moba-img-button-hover" />
+            <span className="moba-button-label text-base">
+              <MobaIcon name="duelsIcon" className="w-6 h-6" /> Duels
             </span>
           </motion.button>
 
@@ -91,23 +97,14 @@ export default function BattleLauncher({
             type="button"
             onClick={() => setMode("gems")}
             whileTap={{ scale: 0.96, y: 2 }}
-            className="moba-hex-button w-full"
-            style={{ ["--hex-accent" as string]: "#a5e8ff", ["--hex-glow" as string]: "rgba(14,165,233,0.6)" }}
+            className="moba-img-button"
           >
-            <div className="moba-hex-fill" style={{ background: "linear-gradient(180deg, #7dd3fc 0%, #0ea5e9 55%, #075985 100%)" }} />
-            <div className="moba-hex-lattice" />
-            <div className="moba-hex-border" />
-            <div className="moba-hex-diamond left" />
-            <div className="moba-hex-diamond right" />
-            <motion.div
-              className="absolute inset-y-0 left-0 w-1/3 pointer-events-none z-[1]"
-              style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent)", skewX: -20 }}
-              initial={{ x: "-140%" }}
-              animate={{ x: "340%" }}
-              transition={{ duration: 1.8, repeat: Infinity, repeatDelay: 2.2, ease: "easeInOut", delay: 0.9 }}
-            />
-            <span className="moba-button-label relative flex items-center justify-center gap-2 text-base font-black uppercase tracking-wide">
-              <MobaIcon name="gem" className="w-6 h-6" /> OMA Gems
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/battle-cards/moba/buttons/btn4_normal.png" alt="" aria-hidden />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/battle-cards/moba/buttons/btn4_hovered.png" alt="" aria-hidden className="moba-img-button-hover" />
+            <span className="moba-button-label text-base">
+              <MobaIcon name="gemsIcon" className="w-6 h-6" /> Gems
             </span>
           </motion.button>
         </div>
@@ -126,26 +123,26 @@ export default function BattleLauncher({
     >
       <RankRow mode={mode} eloOverall={eloOverall} eloDuels={eloDuels} eloGems={eloGems} />
 
-      <motion.button
-        type="button"
-        onClick={() => setMode(null)}
-        whileTap={{ scale: 0.97, y: 1 }}
-        className="moba-button relative w-full py-2.5 rounded-xl text-white overflow-hidden"
-      >
-        <div
-          className="moba-button-fill"
-          style={{
-            background: isDuels
-              ? "linear-gradient(180deg, #ffc25c 0%, #e8961c 55%, #b8710a 100%)"
-              : "linear-gradient(180deg, #7dd3fc 0%, #0ea5e9 55%, #075985 100%)",
-          }}
-        />
-        <span className="moba-button-label relative flex items-center justify-center gap-2 text-sm font-black uppercase tracking-wide">
-          {isDuels ? <MobaIcon name="crossedSwords" className="w-4 h-4" /> : <MobaIcon name="gem" className="w-4 h-4" />}
-          {isDuels ? "OMA Duels" : "OMA Gems"}
-          <MobaIcon name="chevronUp" className="w-4 h-4" />
-        </span>
-      </motion.button>
+      <div className="moba-mode-header">
+        <motion.button
+          type="button"
+          onClick={() => setMode(null)}
+          whileTap={{ scale: 0.94, y: 1 }}
+          className="moba-mode-back"
+          aria-label="Zurück zur Moduswahl"
+          style={
+            !isDuels
+              ? { background: "linear-gradient(180deg, #7dd3fc 0%, #0ea5e9 55%, #075985 100%)" }
+              : undefined
+          }
+        >
+          <MobaIcon name="chevronLeft" className="w-5 h-5" />
+        </motion.button>
+        <div className="moba-mode-title font-battle text-base uppercase tracking-wide">
+          {isDuels ? <MobaIcon name="duelsIcon" className="w-5 h-5" /> : <MobaIcon name="gemsIcon" className="w-5 h-5" />}
+          {isDuels ? "Duels" : "Gems"}
+        </div>
+      </div>
 
       <AnimatePresence mode="wait">
         {isDuels ? (
@@ -156,9 +153,7 @@ export default function BattleLauncher({
               transition={{ delay: 0.05, duration: 0.25 }}
               className="space-y-2"
             >
-              <p className="flex items-center gap-1.5 text-[10px] font-semibold text-gray-500 uppercase tracking-widest">
-                <MobaIcon name="friends" className="w-3.5 h-3.5" /> Gegen Spieler
-              </p>
+              <SectionLabel icon="friends">Gegen Spieler</SectionLabel>
               <div className="space-y-3">
                 <MatchmakingWidget />
                 <ChallengeUserPicker />
@@ -171,9 +166,7 @@ export default function BattleLauncher({
               transition={{ delay: 0.1, duration: 0.25 }}
               className="space-y-2"
             >
-              <p className="flex items-center gap-1.5 text-[10px] font-semibold text-gray-500 uppercase tracking-widest">
-                <MobaIcon name="boss" className="w-3.5 h-3.5" /> Gegen NPC
-              </p>
+              <SectionLabel icon="boss">Gegen NPC</SectionLabel>
               <div className="space-y-3">
                 <NpcBattleLauncher />
               </div>
@@ -195,9 +188,7 @@ export default function BattleLauncher({
               transition={{ delay: 0.08, duration: 0.25 }}
               className="space-y-2"
             >
-              <p className="flex items-center gap-1.5 text-[10px] font-semibold text-gray-500 uppercase tracking-widest">
-                <MobaIcon name="friends" className="w-3.5 h-3.5" /> Gegen Spieler
-              </p>
+              <SectionLabel icon="friends">Gegen Spieler</SectionLabel>
               <div className="space-y-3">
                 <GemsChallengeUserPicker />
               </div>
@@ -209,9 +200,7 @@ export default function BattleLauncher({
               transition={{ delay: 0.12, duration: 0.25 }}
               className="space-y-2"
             >
-              <p className="flex items-center gap-1.5 text-[10px] font-semibold text-gray-500 uppercase tracking-widest">
-                <MobaIcon name="boss" className="w-3.5 h-3.5" /> Gegen NPC
-              </p>
+              <SectionLabel icon="boss">Gegen NPC</SectionLabel>
               <div className="space-y-3">
                 <NpcPuzzleBattleLauncher />
               </div>
