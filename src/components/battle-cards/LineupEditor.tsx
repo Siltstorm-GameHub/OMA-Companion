@@ -105,7 +105,7 @@ export default function LineupEditor({
       </div>
 
       {activeSynergies.length > 0 && (
-        <div className="glass rounded-xl p-3 space-y-2">
+        <div className="moba-panel rounded-xl p-3 space-y-2">
           <p className="text-[10px] uppercase tracking-widest font-semibold text-violet-300 flex items-center gap-1.5">
             <Sparkles className="w-3 h-3" /> Aktive Team-Synergien
           </p>
@@ -123,9 +123,17 @@ export default function LineupEditor({
         type="button"
         onClick={submit}
         disabled={selected.length === 0 || submitting}
-        className="w-full py-3 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 bg-violet-500 hover:bg-violet-400 text-black disabled:opacity-30 disabled:cursor-not-allowed"
+        className="moba-hex-button w-full disabled:opacity-30 disabled:cursor-not-allowed"
+        style={{ ["--hex-accent" as string]: "#c4b5fd", ["--hex-glow" as string]: "rgba(139,92,246,0.6)" }}
       >
-        {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Startaufstellung speichern"}
+        <div className="moba-hex-fill" style={{ background: "linear-gradient(180deg, #c4b5fd 0%, #8b5cf6 55%, #5b21b6 100%)" }} />
+        <div className="moba-hex-lattice" />
+        <div className="moba-hex-border" />
+        <div className="moba-hex-diamond left" />
+        <div className="moba-hex-diamond right" />
+        <span className="moba-button-label text-sm font-black">
+          {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Startaufstellung speichern"}
+        </span>
       </button>
     </div>
   );

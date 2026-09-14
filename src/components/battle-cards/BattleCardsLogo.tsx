@@ -26,7 +26,7 @@ export default function BattleCardsLogo() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={BRAND_LOGO} alt="OMA" className="relative h-10 sm:h-12 w-auto object-contain" />
       </div>
-      <span className="font-battle text-lg sm:text-xl text-white uppercase tracking-wide text-gradient-gaming">
+      <span className="font-battle text-lg sm:text-xl uppercase tracking-wide">
         Battle Cards
       </span>
     </motion.div>
