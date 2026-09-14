@@ -11,8 +11,9 @@
 
 import { useState } from "react";
 import { motion } from "motion/react";
-import { Shield, Swords, HeartPulse, ThumbsUp, ThumbsDown, Zap, Flame, RotateCcw } from "lucide-react";
+import { ThumbsUp, ThumbsDown, Zap, Flame, RotateCcw } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { CLASS_CONFIG, getClassConfig } from "@/lib/battle-cards/class-config";
 
 export interface BattleCardSkill {
   name: string;
@@ -42,18 +43,7 @@ export interface BattleCardData {
   avatarBadgeUrl?: string | null;
 }
 
-export const CLASS_CONFIG: Record<BattleCardData["class"], { label: string; color: string; icon: LucideIcon }> = {
-  TANK: { label: "Tank", color: "#14b8a6", icon: Shield },
-  DAMAGE_DEALER: { label: "Damage Dealer", color: "#ef4444", icon: Swords },
-  SUPPORT: { label: "Support", color: "#8b5cf6", icon: HeartPulse },
-};
-
-/** Fällt auf die Tank-Konfiguration zurück, falls `cls` unerwartet keiner der
- *  drei bekannten Klassen entspricht (z.B. bei älteren/fehlerhaften Datensätzen)
- *  — verhindert einen harten Crash statt eines schlicht falschen Icons/Farbe. */
-export function getClassConfig(cls: BattleCardData["class"]): { label: string; color: string; icon: LucideIcon } {
-  return CLASS_CONFIG[cls] ?? CLASS_CONFIG.TANK;
-}
+export { CLASS_CONFIG, getClassConfig };
 
 export const LEVEL_BORDER: Record<number, string> = {
   1: "#71717a", // grau
@@ -63,17 +53,11 @@ export const LEVEL_BORDER: Record<number, string> = {
   5: "#a855f7", // prismatisch (Basiston, Glow ergänzt Regenbogen-Effekt)
 };
 
-/** Canva-generierte Rahmen-Grafiken je Level (grau/bronze/silber/gold/prismatisch)
- *  — reiner Schwarz-Hintergrund im PNG, per "screen"-Blend unsichtbar gemacht statt
- *  echter Transparenz (Canvas transparent_background-Export entfernt keine im
- *  Design selbst gezeichneten Hintergrundflächen, siehe BattleCardView unten). */
-export const LEVEL_FRAME_IMAGE: Record<number, string> = {
-  1: "/battle-cards/rarity-frame-1.png",
-  2: "/battle-cards/rarity-frame-2.png",
-  3: "/battle-cards/rarity-frame-3.png",
-  4: "/battle-cards/rarity-frame-4.png",
-  5: "/battle-cards/rarity-frame-5.png",
-};
+/** MOBA-Style-Kartenrahmen (echte Alpha-Transparenz, KEIN Schwarz-Hintergrund/
+ *  screen-Blend wie die frühere Canva-Rahmen-Serie) — ein Rahmen für alle
+ *  Stufen, die Rarität zeigt sich stattdessen über LEVEL_BORDER als Farb-Glow
+ *  (siehe cardFaceShadow) + LevelStars. */
+export const MOBA_CARD_FRAME_IMAGE = "/battle-cards/moba/card-frame.png";
 
 // Reserviert genug Höhe für den maximal langen Beschreibungstext (siehe
 // CARD_FLAVOR_TEXT_MAX_LENGTH = 100 Zeichen, lib/battle-cards/card-content.ts),
@@ -108,9 +92,9 @@ function LevelStars({ level }: { level: number }) {
 
 function StatTile({ label, value }: { label: string; value: number }) {
   return (
-    <div className="surface rounded-md px-2 py-1 flex-1 text-center">
-      <p className="text-[9px] text-gray-500 uppercase tracking-widest">{label}</p>
-      <p className="text-sm font-black tabular-nums text-white">{value}</p>
+    <div className="rounded-md px-2 py-1 flex-1 text-center bg-black/30 border border-[color:var(--moba-accent-line)]">
+      <p className="text-[9px] text-[color:var(--moba-ink-dim)] uppercase tracking-widest">{label}</p>
+      <p className="text-sm font-black tabular-nums text-[color:var(--moba-accent)]">{value}</p>
     </div>
   );
 }
@@ -154,14 +138,13 @@ export default function BattleCardView({ card, dimmed = false }: { card: BattleC
   const classConfig = getClassConfig(card.class);
   const ClassIcon = classConfig.icon;
   const borderColor = LEVEL_BORDER[level] ?? LEVEL_BORDER[1];
-  const frameImage = LEVEL_FRAME_IMAGE[level] ?? LEVEL_FRAME_IMAGE[1];
-  // Höchststufe (prismatisch) bekommt zusätzlich einen Glow + wiederkehrenden
+  // Höchststufe (prismatisch) bekommt zusätzlich einen stärkeren Glow + wiederkehrenden
   // Lichtsweep, damit sie sich auch in der vollen Flip-Karte (nicht nur der
   // CardTile-Kachel, siehe dortiges level>=5-Glow) als Top-Tier absetzt.
   const isMaxLevel = level >= 5;
-  // Der Rahmen kommt jetzt als Artwork (frameImage) statt als reiner Farbring —
-  // die Box-Shadow liefert nur noch den weichen Ambient-Glow für Top-Tier-Karten.
-  const cardFaceShadow = `var(--shadow-card)${isMaxLevel ? `, 0 0 20px ${borderColor}77` : ""}`;
+  // MOBA-Skin: ein Rahmen-Asset für alle Stufen (s.o.), die Rarität zeigt sich
+  // über einen stufenfarbigen Glow statt über 5 unterschiedliche Rahmenbilder.
+  const cardFaceShadow = `var(--shadow-card), 0 0 ${isMaxLevel ? 22 : 12}px ${borderColor}66`;
 
   return (
     <button
@@ -179,7 +162,7 @@ export default function BattleCardView({ card, dimmed = false }: { card: BattleC
       >
         {/* ── Vorderseite ── */}
         <div
-          className="card-cut absolute inset-0 surface-elevated px-3.5 pt-9 pb-11 flex flex-col gap-2 overflow-hidden"
+          className="card-cut moba-panel absolute inset-0 px-3.5 pt-9 pb-11 flex flex-col gap-2 overflow-hidden"
           style={{
             backfaceVisibility: "hidden",
             boxShadow: cardFaceShadow,
@@ -187,11 +170,11 @@ export default function BattleCardView({ card, dimmed = false }: { card: BattleC
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={frameImage}
+            src={MOBA_CARD_FRAME_IMAGE}
             alt=""
             aria-hidden
             className="absolute inset-0 w-full h-full pointer-events-none z-10"
-            style={{ objectFit: "fill", mixBlendMode: "screen" }}
+            style={{ objectFit: "fill" }}
           />
           {isMaxLevel && (
             <motion.div
@@ -289,7 +272,7 @@ export default function BattleCardView({ card, dimmed = false }: { card: BattleC
 
         {/* ── Rückseite ── */}
         <div
-          className="card-cut absolute inset-0 surface-elevated px-4 pt-9 pb-6 flex flex-col gap-2 overflow-hidden"
+          className="card-cut moba-panel absolute inset-0 px-4 pt-9 pb-6 flex flex-col gap-2 overflow-hidden"
           style={{
             backfaceVisibility: "hidden",
             transform: "rotateY(180deg)",
@@ -298,11 +281,11 @@ export default function BattleCardView({ card, dimmed = false }: { card: BattleC
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={frameImage}
+            src={MOBA_CARD_FRAME_IMAGE}
             alt=""
             aria-hidden
             className="absolute inset-0 w-full h-full pointer-events-none z-10"
-            style={{ objectFit: "fill", mixBlendMode: "screen" }}
+            style={{ objectFit: "fill" }}
           />
           <div className="relative flex items-center justify-center shrink-0">
             <p className="font-battle text-[11px] text-white uppercase tracking-wide truncate max-w-[80%]">{card.name}</p>

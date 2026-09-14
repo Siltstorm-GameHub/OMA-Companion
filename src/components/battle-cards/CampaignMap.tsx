@@ -237,7 +237,7 @@ export default function CampaignMap() {
           <Loader2 className="w-5 h-5 text-gray-500 animate-spin" />
         </div>
       ) : (
-        <div className="glass rounded-2xl px-4 py-8 flex flex-col items-center gap-8">
+        <div className="moba-panel rounded-2xl px-4 py-8 flex flex-col items-center gap-8">
           {levels.map((level, index) => (
             <div key={level.id} className="w-full flex flex-col items-center">
               <LevelNode

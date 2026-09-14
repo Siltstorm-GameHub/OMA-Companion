@@ -12,14 +12,17 @@ function isTabKey(v: string | null): v is TabKey {
   return v === "kampf" || v === "kampagne" || v === "karten" || v === "community";
 }
 
-// Clash-Royale-artige Navigation: eine Banner-Leiste, aus der der aktive
-// Reiter als rundes, farbig umrandetes Medaillon nach oben "herauspoppt" —
-// inaktive Reiter bleiben klein und grau flach in der Leiste sitzen.
-const TABS: { key: TabKey; label: string; icon: LucideIcon; accent: string; accentDark: string }[] = [
-  { key: "kampf", label: "Kampf", icon: Swords, accent: "#fb7185", accentDark: "#9f1239" },
-  { key: "kampagne", label: "Kampagne", icon: Map, accent: "#34d399", accentDark: "#065f46" },
-  { key: "karten", label: "Karten", icon: LayoutGrid, accent: "#a78bfa", accentDark: "#5b21b6" },
-  { key: "community", label: "Community", icon: Users, accent: "#fbbf24", accentDark: "#b45309" },
+// MOBA-Style-Reiter: statt runder Medaillons (Clash-Royale-artig) jetzt
+// diamantförmige Akzente (siehe .moba-diamond-tab in battle-cards-moba.css)
+// — Grundprinzip (aktiver Reiter poppt aus der Leiste nach oben) bleibt,
+// nur die Form + der navy/orange Rahmen drumherum ändern sich. Die
+// Farbcodierung pro Reiter bleibt erhalten (wichtig für Wiedererkennung:
+// Kampf=Rose, Kampagne=Grün, Karten=Violett, Community=Amber).
+const TABS: { key: TabKey; label: string; icon: LucideIcon; accent: string; glow: string }[] = [
+  { key: "kampf", label: "Kampf", icon: Swords, accent: "#fb7185", glow: "rgba(251,113,133,0.7)" },
+  { key: "kampagne", label: "Kampagne", icon: Map, accent: "#34d399", glow: "rgba(52,211,153,0.7)" },
+  { key: "karten", label: "Karten", icon: LayoutGrid, accent: "#a78bfa", glow: "rgba(167,139,250,0.7)" },
+  { key: "community", label: "Community", icon: Users, accent: "#fbbf24", glow: "rgba(251,191,36,0.7)" },
 ];
 
 function BattleCardsTabsInner({
@@ -47,13 +50,7 @@ function BattleCardsTabsInner({
 
   return (
     <div className="space-y-5">
-      <div
-        className="flex items-end justify-around gap-1 px-2 pt-8 pb-2 rounded-2xl border border-white/10"
-        style={{
-          background: "linear-gradient(180deg, #232838 0%, #14171f 100%)",
-          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), 0 4px 0 rgba(0,0,0,0.35), 0 10px 24px rgba(0,0,0,0.45)",
-        }}
-      >
+      <div className="moba-panel flex items-end justify-around gap-1 px-2 pt-8 pb-2">
         {TABS.map((tab) => {
           const isActive = tab.key === active;
           const Icon = tab.icon;
@@ -69,20 +66,19 @@ function BattleCardsTabsInner({
             >
               {isActive ? (
                 <motion.div
-                  layoutId="tab-medallion"
+                  layoutId="tab-diamond"
                   transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                  className="relative -mt-9 w-14 h-14 rounded-full flex items-center justify-center shrink-0"
-                  style={{
-                    background: `radial-gradient(circle at 35% 28%, ${tab.accent}, ${tab.accentDark})`,
-                    boxShadow: `0 0 0 3px #14171f, 0 0 0 5px ${tab.accent}88, 0 6px 14px rgba(0,0,0,0.55), 0 0 22px ${tab.accent}77`,
-                  }}
+                  className="moba-diamond-tab active"
+                  style={{ ["--accent" as string]: tab.accent, ["--glow" as string]: tab.glow }}
                 >
+                  <div className="moba-diamond-shape" />
                   <motion.div
+                    className="moba-diamond-icon"
                     initial={{ scale: 0.4, rotate: -20, opacity: 0 }}
                     animate={{ scale: 1, rotate: 0, opacity: 1 }}
                     transition={{ type: "spring", stiffness: 420, damping: 18, delay: 0.05 }}
                   >
-                    <Icon className="w-7 h-7 text-white" strokeWidth={2.4} style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.4))" }} />
+                    <Icon className="w-6 h-6 text-white" strokeWidth={2.4} style={{ filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.4))" }} />
                   </motion.div>
                   <AnimatePresence>
                     {showBadge && (
@@ -91,7 +87,7 @@ function BattleCardsTabsInner({
                         animate={{ scale: 1, opacity: 1 }}
                         exit={{ scale: 0, opacity: 0 }}
                         transition={{ type: "spring", stiffness: 500, damping: 20 }}
-                        className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center border-2 border-[#14171f] shadow-md"
+                        className="absolute -top-1 -right-1 z-10 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-black flex items-center justify-center border-2 border-[#04061a] shadow-md"
                       >
                         {kampfBadge > 9 ? "9+" : kampfBadge}
                       </motion.span>
@@ -99,10 +95,13 @@ function BattleCardsTabsInner({
                   </AnimatePresence>
                 </motion.div>
               ) : (
-                <div className="relative w-9 h-9 flex items-center justify-center shrink-0">
-                  <Icon className="w-5 h-5 text-gray-500" strokeWidth={2} />
+                <div className="moba-diamond-tab">
+                  <div className="moba-diamond-shape" />
+                  <div className="moba-diamond-icon">
+                    <Icon className="w-4 h-4 text-[color:var(--moba-ink-dim)]" strokeWidth={2} />
+                  </div>
                   {showBadge && (
-                    <span className="absolute -top-0.5 right-0 min-w-[15px] h-[15px] px-0.5 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center border-2 border-[#14171f]">
+                    <span className="absolute -top-0.5 right-0 z-10 min-w-[15px] h-[15px] px-0.5 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center border-2 border-[#04061a]">
                       {kampfBadge > 9 ? "9+" : kampfBadge}
                     </span>
                   )}
@@ -110,7 +109,7 @@ function BattleCardsTabsInner({
               )}
               <span
                 className="text-[10px] font-black uppercase tracking-wide transition-colors"
-                style={{ color: isActive ? tab.accent : "#6b7280" }}
+                style={{ color: isActive ? tab.accent : "var(--moba-ink-dim)" }}
               >
                 {tab.label}
               </span>

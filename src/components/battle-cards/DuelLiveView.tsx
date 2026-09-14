@@ -164,8 +164,8 @@ function PhaseStepper({ phase, onSelect }: { phase: DuelPhase; onSelect: (p: Due
               isActive
                 ? "border-teal-400 bg-teal-500/15 text-teal-200"
                 : isPast
-                  ? "border-slate-600 text-slate-300 hover:border-slate-400 cursor-pointer"
-                  : "border-slate-800 text-slate-600 cursor-not-allowed"
+                  ? "border-[color:var(--moba-accent-line-strong)] text-[color:var(--moba-ink)] hover:border-[color:var(--moba-accent)] cursor-pointer"
+                  : "border-[color:var(--moba-accent-line)] text-[color:var(--moba-ink-dim)] cursor-not-allowed"
             }`}
           >
             {i + 1}. {p.label}
@@ -219,7 +219,7 @@ function LpBar({ lp }: { lp: number }) {
   const critical = lp <= START_LP * 0.25;
   return (
     <div className="flex items-center gap-2">
-      <div className="h-2.5 flex-1 rounded-full bg-slate-800 overflow-hidden border border-slate-700">
+      <div className="h-2.5 flex-1 rounded-full bg-black/40 overflow-hidden border border-[color:var(--moba-accent-line)]">
         <div
           className={`h-full rounded-full transition-all ${critical ? "duel-lp-critical" : ""}`}
           style={{
@@ -244,7 +244,7 @@ function RadialTimer({ secondsLeft }: { secondsLeft: number }) {
       className="relative w-10 h-10 rounded-full shrink-0"
       style={{ background: `conic-gradient(${color} ${deg}deg, #1e293b ${deg}deg)` }}
     >
-      <div className="absolute inset-[3px] rounded-full bg-[#12151a] flex items-center justify-center">
+      <div className="absolute inset-[3px] rounded-full bg-[#04061a] flex items-center justify-center">
         <span className="text-[11px] font-bold tabular-nums" style={{ color }}>
           {secondsLeft}
         </span>
@@ -257,7 +257,7 @@ function CardBack({ tone = "slate" }: { tone?: "slate" | "rose" }) {
   return (
     <div
       className={`w-8 h-11 rounded-md border shrink-0 ${
-        tone === "rose" ? "border-rose-500/40 bg-rose-500/10" : "border-slate-600 bg-slate-800"
+        tone === "rose" ? "border-rose-500/40 bg-rose-500/10" : "border-[color:var(--moba-accent-line)] bg-black/40"
       }`}
       style={{
         backgroundImage:
@@ -329,7 +329,7 @@ function UnitSlot({
         className={`relative w-full h-28 rounded-lg border border-dashed flex items-center justify-center text-[11px] text-center transition-colors ${
           selectable
             ? "border-teal-400 bg-teal-500/15 text-teal-200 hover:bg-teal-500/25 cursor-pointer duel-pulse-ring"
-            : "border-slate-700 bg-slate-900/40 text-slate-600"
+            : "border-[color:var(--moba-accent-line)] bg-black/20 text-[color:var(--moba-ink-dim)]"
         }`}
       >
         {selectable ? "Hierhin beschwören" : "Leer"}
@@ -616,10 +616,10 @@ export default function DuelLiveView({
 
   if (error) {
     return (
-      <div className="fixed inset-0 z-50 bg-[#12151a] flex items-center justify-center p-6">
+      <div className="fixed inset-0 z-50 bg-[#04061a] flex items-center justify-center p-6">
         <div className="max-w-sm w-full space-y-3">
           <ErrorNotice message={error} size="lg" />
-          <button onClick={handleExit} className="w-full rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm py-2">
+          <button onClick={handleExit} className="w-full rounded-lg bg-black/30 border border-[color:var(--moba-accent-line)] hover:bg-white/[0.06] text-[color:var(--moba-ink)] text-sm py-2">
             Zurück
           </button>
         </div>
@@ -629,7 +629,7 @@ export default function DuelLiveView({
 
   if (!snapshot) {
     return (
-      <div className="fixed inset-0 z-50 bg-[#12151a] flex items-center justify-center">
+      <div className="fixed inset-0 z-50 bg-[#04061a] flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-teal-400 animate-spin" />
       </div>
     );
@@ -726,7 +726,7 @@ export default function DuelLiveView({
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#12151a] text-slate-100 overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-[#04061a] text-[color:var(--moba-ink)] overflow-y-auto">
       <style>{`
         @keyframes duelFloatUp { 0% { opacity: 0; transform: translateY(4px) scale(0.9); } 15% { opacity: 1; transform: translateY(-6px) scale(1); } 100% { opacity: 0; transform: translateY(-32px) scale(1); } }
         .duel-float { animation: duelFloatUp 1.1s ease-out forwards; }
@@ -756,7 +756,7 @@ export default function DuelLiveView({
         </div>
 
         {finished ? (
-          <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-6 text-center space-y-3">
+          <div className="rounded-xl border border-[color:var(--moba-accent-line)] bg-black/30 p-6 text-center space-y-3">
             <div className="text-lg font-bold">{drew ? "Unentschieden!" : won ? "Sieg!" : "Niederlage."}</div>
             {snapshot.resultBattleId && (
               <a
@@ -802,7 +802,7 @@ export default function DuelLiveView({
           </div>
         </div>
 
-        <div className="h-px bg-slate-800" />
+        <div className="h-px bg-[color:var(--moba-accent-line)]" />
 
         {/* Eigenes Feld */}
         <div className="space-y-2">
@@ -965,7 +965,7 @@ export default function DuelLiveView({
                 if (selectedCard.kind === "unit" && selectedCard.unitCard) {
                   const u = selectedCard.unitCard;
                   return (
-                    <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-2.5 space-y-1.5 text-[11px]">
+                    <div className="rounded-lg border border-[color:var(--moba-accent-line)] bg-black/30 p-2.5 space-y-1.5 text-[11px]">
                       <p className="text-emerald-300">
                         <span className="font-semibold">{u.passivePositive.name}:</span> {u.passivePositive.description}
                       </p>
@@ -983,7 +983,7 @@ export default function DuelLiveView({
                   );
                 }
                 return (
-                  <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-2.5 text-[11px] text-slate-300">
+                  <div className="rounded-lg border border-[color:var(--moba-accent-line)] bg-black/30 p-2.5 text-[11px] text-[color:var(--moba-ink-dim)]">
                     {selectedCard.tacticDescription ?? "Keine Beschreibung verfügbar."}
                   </div>
                 );
@@ -994,7 +994,7 @@ export default function DuelLiveView({
 
         {/* Bestätigen — Zusammenfassung des gesamten Zugs */}
         {isMyTurn && !finished && phase === "confirm" && (
-          <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-3 space-y-1.5 text-xs">
+          <div className="rounded-lg border border-[color:var(--moba-accent-line)] bg-black/30 p-3 space-y-1.5 text-xs">
             <p className="text-slate-500 font-semibold uppercase tracking-wide text-[10px]">Zusammenfassung</p>
             <p className="text-slate-300">
               <span className="text-slate-500">Beschwörung: </span>
@@ -1059,7 +1059,7 @@ export default function DuelLiveView({
         )}
 
         {!finished && !isMyTurn && (
-          <button disabled className="w-full rounded-lg bg-slate-800 text-slate-400 text-sm font-semibold py-2.5 flex items-center justify-center gap-2">
+          <button disabled className="w-full rounded-lg bg-black/30 border border-[color:var(--moba-accent-line)] text-[color:var(--moba-ink-dim)] text-sm font-semibold py-2.5 flex items-center justify-center gap-2">
             <Wind className="w-4 h-4" /> Gegner ist am Zug …
           </button>
         )}
@@ -1077,7 +1077,7 @@ export default function DuelLiveView({
           <div className="flex gap-2">
             <button
               onClick={() => setPhase("main")}
-              className="flex-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-semibold py-2.5"
+              className="flex-1 rounded-lg bg-black/30 border border-[color:var(--moba-accent-line)] hover:bg-white/[0.06] text-[color:var(--moba-ink)] text-sm font-semibold py-2.5"
             >
               ← Zurück
             </button>
@@ -1094,7 +1094,7 @@ export default function DuelLiveView({
           <div className="flex gap-2">
             <button
               onClick={() => setPhase("battle")}
-              className="flex-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-semibold py-2.5"
+              className="flex-1 rounded-lg bg-black/30 border border-[color:var(--moba-accent-line)] hover:bg-white/[0.06] text-[color:var(--moba-ink)] text-sm font-semibold py-2.5"
             >
               ← Zurück
             </button>
@@ -1109,7 +1109,7 @@ export default function DuelLiveView({
           </div>
         )}
 
-        <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-2 max-h-40 overflow-y-auto text-[11px] text-slate-400 space-y-0.5">
+        <div className="rounded-lg border border-[color:var(--moba-accent-line)] bg-black/30 p-2 max-h-40 overflow-y-auto text-[11px] text-[color:var(--moba-ink-dim)] space-y-0.5">
           {snapshot.log.slice(-15).map((entry, i) => (
             <div key={i}>{describeLogEntry(entry)}</div>
           ))}

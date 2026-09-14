@@ -13,7 +13,7 @@ export default function LineupStrip({ cards }: { cards: { card: BattleCardData; 
   return (
     <Link
       href="/battle-cards/lineup"
-      className="flex items-center gap-3 glass rounded-2xl p-3 hover:bg-white/[0.04] transition-colors"
+      className="flex items-center gap-3 moba-panel rounded-2xl p-3 hover:bg-white/[0.04] transition-colors"
     >
       <div className="flex gap-1.5 flex-1 min-w-0">
         {slots.map((entry, i) => {
@@ -21,7 +21,7 @@ export default function LineupStrip({ cards }: { cards: { card: BattleCardData; 
             return (
               <div
                 key={i}
-                className="card-cut-sm flex-1 aspect-[3/4] border border-dashed border-white/10 bg-white/[0.02]"
+                className="card-cut-sm moba-slot-empty flex-1 aspect-[3/4]"
               />
             );
           }

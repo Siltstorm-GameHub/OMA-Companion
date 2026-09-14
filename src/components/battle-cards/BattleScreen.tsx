@@ -15,9 +15,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
-  Shield,
-  Swords,
-  HeartPulse,
   Play,
   Pause,
   RotateCcw,
@@ -29,17 +26,11 @@ import {
   Volume2,
   VolumeX,
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import type { BattleLogEntry, RosterEntry, UnitClass } from "@/lib/battle-engine/types";
 import { playHitSfxFor, playHealSfx, playUltimateSfx, playShieldSfx, playBuffSfx, playDebuffSfx } from "@/lib/battle-cards/sfx";
 import { isSoundMuted, setSoundMuted } from "@/lib/battle-cards/sound-prefs";
+import { CLASS_CONFIG } from "@/lib/battle-cards/class-config";
 import UltimateCutsceneOverlay from "./UltimateCutsceneOverlay";
-
-const CLASS_CONFIG: Record<UnitClass, { color: string; icon: LucideIcon }> = {
-  TANK: { color: "#14b8a6", icon: Shield },
-  DAMAGE_DEALER: { color: "#ef4444", icon: Swords },
-  SUPPORT: { color: "#8b5cf6", icon: HeartPulse },
-};
 
 // ---------- Skill-Effekt-Overlay ----------
 // Statt jede der 36 Pool-Skills einzeln als Animation zu hinterlegen (driftet
@@ -538,7 +529,7 @@ function UnitTile({
         </p>
       </div>
 
-      <div className="h-1.5 rounded-full bg-black/40 overflow-hidden" style={{ boxShadow: "0 0 0 1px rgba(255,255,255,0.06)" }}>
+      <div className="h-1.5 rounded-full bg-black/40 border border-[color:var(--moba-accent-line)] overflow-hidden">
         <div
           className="h-full rounded-full transition-[width] duration-300 ease-out"
           style={{ width: `${hpPct * 100}%`, background: hpBarColor(hpPct) }}
@@ -548,7 +539,7 @@ function UnitTile({
         {Math.max(0, runtime.currentHp)}/{runtime.maxHp}
       </p>
 
-      <div className="mt-0.5 h-1 rounded-full bg-black/40 overflow-hidden" style={{ boxShadow: "0 0 0 1px rgba(255,255,255,0.06)" }}>
+      <div className="mt-0.5 h-1 rounded-full bg-black/40 border border-[color:var(--moba-accent-line)] overflow-hidden">
         <div
           className="h-full rounded-full transition-[width] duration-300 ease-out"
           style={{ width: `${Math.min(100, runtime.rage)}%`, background: "#60a5fa" }}
@@ -658,13 +649,13 @@ export default function BattleScreen({ roster, log }: { roster: RosterEntry[]; l
 
   return (
     <div
-      className="surface-elevated rounded-xl p-3 space-y-3 relative overflow-hidden"
+      className="moba-panel rounded-xl p-3 space-y-3 relative overflow-hidden"
       style={{
-        backgroundColor: "#12151a",
+        backgroundColor: "#04061a",
         backgroundImage: [
           "radial-gradient(ellipse 70% 45% at 50% 8%, rgba(239,68,68,0.18), transparent 70%)",
           "radial-gradient(ellipse 70% 45% at 50% 92%, rgba(20,184,166,0.18), transparent 70%)",
-          "linear-gradient(180deg, rgba(13,15,19,0.55) 0%, rgba(13,15,19,0.25) 35%, rgba(13,15,19,0.25) 65%, rgba(13,15,19,0.55) 100%)",
+          "linear-gradient(180deg, rgba(4,6,26,0.6) 0%, rgba(4,6,26,0.3) 35%, rgba(4,6,26,0.3) 65%, rgba(4,6,26,0.6) 100%)",
           "url(/battle-cards/arena-bg.jpg)",
         ].join(", "),
         backgroundSize: "auto, auto, auto, cover",
@@ -712,12 +703,12 @@ export default function BattleScreen({ roster, log }: { roster: RosterEntry[]; l
       </div>
 
       {/* Event-Log */}
-      <div className="surface rounded-md px-3 py-2 min-h-[80px] flex flex-col justify-end gap-0.5">
+      <div className="rounded-md px-3 py-2 min-h-[80px] flex flex-col justify-end gap-0.5 bg-black/40 border border-[color:var(--moba-accent-line)]">
         {recentLines.length === 0 ? (
-          <p className="text-[11px] text-gray-500 italic">Der Kampf beginnt…</p>
+          <p className="text-[11px] text-[color:var(--moba-ink-dim)] italic">Der Kampf beginnt…</p>
         ) : (
           recentLines.map((line, i) => (
-            <p key={i} className="text-[11px] text-gray-400 leading-snug">
+            <p key={i} className="text-[11px] text-[color:var(--moba-ink-dim)] leading-snug">
               {line}
             </p>
           ))

@@ -1,0 +1,169 @@
+/* ============================================
+   Battle Cards — MOBA-Style-Skin
+   ============================================
+   Eigener, klar abgegrenzter Klassensatz statt die App-weiten .glass/.surface
+   zu überschreiben — greift ausschließlich unter .moba-skin (siehe
+   src/app/(dashboard)/battle-cards/layout.tsx). Assets liegen unter
+   public/battle-cards/moba/. Unabhängig von Light/Dark-Theme: MOBA-Style ist
+   grundsätzlich dunkel, wie im Referenz-Kit.
+*/
+
+.moba-skin {
+  --moba-bg: #04061a;
+  --moba-bg-elevated: #0a0e2e;
+  --moba-ink: #e9ecfb;
+  --moba-ink-dim: #9096c4;
+  --moba-accent: #ffbf80;
+  --moba-accent-line: rgba(255, 150, 60, 0.4);
+  --moba-accent-line-strong: rgba(255, 150, 60, 0.65);
+
+  background: var(--moba-bg);
+  color: var(--moba-ink);
+  min-height: 100%;
+}
+
+.moba-skin h1,
+.moba-skin h2,
+.moba-skin h3 {
+  font-family: var(--font-battle), sans-serif;
+}
+
+/* ── Panel: border-image-Rahmen um beliebige Rechtecke (Navy + Orange-Filigran) ── */
+.moba-panel {
+  position: relative;
+  border-radius: 10px;
+  background: radial-gradient(120% 70% at 50% 0%, var(--moba-bg-elevated) 0%, var(--moba-bg) 60%);
+  border: 1px solid var(--moba-accent-line);
+  box-shadow: 0 10px 24px -14px rgba(0, 0, 0, 0.6);
+}
+
+/* ── Kartenrahmen: ornamentales Overlay mit echter Alpha-Transparenz —
+   BEWUSST ohne mix-blend-mode (anders als das alte schwarz-Hintergrund/
+   screen-Verfahren bei rarity-frame-*.png), siehe BattleCardView.tsx. ── */
+.moba-card-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  pointer-events: none;
+  object-fit: fill;
+}
+
+/* ── Buttons: Glow-Pille (button-glow.png) + Farb-Tint per multiply ── */
+.moba-button {
+  position: relative;
+  overflow: hidden;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+}
+.moba-button .moba-button-fill {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+.moba-button .moba-button-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  mix-blend-mode: screen;
+  opacity: 0.9;
+  pointer-events: none;
+}
+.moba-button .moba-button-label {
+  position: relative;
+  z-index: 2;
+  font-family: var(--font-battle), sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+/* ── Pill: kleine Badges/Tags (Rang, Pack-Hinweis, "Am Zug"/"Ziel") ── */
+.moba-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--moba-accent-line);
+  color: var(--moba-accent);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+/* ── Diamant-Tab (Bottom-Nav / Reiter) ── */
+.moba-diamond-tab {
+  position: relative;
+  width: 40px;
+  height: 40px;
+}
+.moba-diamond-tab .moba-diamond-shape {
+  position: absolute;
+  inset: 0;
+  transform: rotate(45deg);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1.5px solid var(--moba-accent-line);
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+.moba-diamond-tab.active {
+  width: 50px;
+  height: 50px;
+  margin-top: -16px;
+}
+.moba-diamond-tab.active .moba-diamond-shape {
+  background: radial-gradient(circle at 35% 30%, #ffd9a0, var(--accent, #e8963c));
+  border-color: #ffd9a0;
+  box-shadow: 0 0 0 3px var(--moba-bg), 0 0 14px var(--glow, rgba(255, 180, 90, 0.7));
+}
+.moba-diamond-tab .moba-diamond-icon {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── HP-/Rage-/LP-Balken (bar3-Set: eine Bg + 5 Fill-Farben) ── */
+.moba-hp-bar {
+  position: relative;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--moba-accent-line);
+}
+.moba-hp-bar .moba-hp-fill {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease-out;
+}
+
+/* ── Leere Slots (Feld, Sammlung) ── */
+.moba-slot-empty {
+  border: 1.5px dashed var(--moba-accent-line);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* ── Aktiver Filter-/Leaderboard-Tab ── */
+.moba-tab-active {
+  background: rgba(255, 150, 60, 0.14);
+  border: 1px solid var(--moba-accent-line-strong);
+  color: var(--moba-accent);
+}

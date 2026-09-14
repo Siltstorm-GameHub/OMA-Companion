@@ -35,14 +35,14 @@ export default function LeaderboardTabs({
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-1.5 p-1 rounded-full bg-black/20 w-fit">
+      <div className="flex gap-1.5 p-1 rounded-full bg-black/30 border border-[color:var(--moba-accent-line)] w-fit">
         {TABS.map((t) => (
           <button
             key={t.key}
             type="button"
             onClick={() => setTab(t.key)}
             className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-              tab === t.key ? "bg-amber-500/20 text-amber-200" : "text-gray-500 hover:text-gray-300"
+              tab === t.key ? "moba-tab-active" : "text-[color:var(--moba-ink-dim)] hover:text-[color:var(--moba-ink)]"
             }`}
           >
             {t.label}

@@ -195,10 +195,8 @@ export default function CardCollectionBrowser({
               type="button"
               onClick={() => changeFilter(key)}
               disabled={loading}
-              className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md transition-colors disabled:opacity-50 ${
-                filter === key
-                  ? "bg-violet-500/25 text-violet-200"
-                  : "bg-white/[0.04] text-gray-400 hover:bg-white/[0.08]"
+              className={`moba-pill normal-case font-semibold transition-colors disabled:opacity-50 ${
+                filter === key ? "moba-tab-active" : "hover:bg-white/[0.06]"
               }`}
             >
               {Icon && <Icon className="w-3.5 h-3.5" />}
@@ -206,7 +204,7 @@ export default function CardCollectionBrowser({
             </button>
           ))}
         </div>
-        <span className="flex items-center gap-1.5 text-sm font-bold text-amber-300 tabular-nums px-3 py-1.5 rounded-md bg-amber-500/10">
+        <span className="moba-pill text-sm font-bold tabular-nums normal-case">
           <CoinIcon size={16} />
           {coins.toLocaleString("de-DE")}
         </span>
@@ -215,10 +213,10 @@ export default function CardCollectionBrowser({
       {/* Sammel-Fortschritt — kontextuell zum aktuellen Klassenfilter */}
       {totalInFilter > 0 && (
         <div className="flex items-center gap-2.5">
-          <div className="flex-1 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+          <div className="flex-1 h-1.5 rounded-full bg-black/40 border border-[color:var(--moba-accent-line)] overflow-hidden">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-400 transition-[width] duration-500 ease-out"
-              style={{ width: `${collectedPct}%` }}
+              className="h-full rounded-full transition-[width] duration-500 ease-out"
+              style={{ width: `${collectedPct}%`, background: "linear-gradient(90deg, #e8963c, #ffd9a0)" }}
             />
           </div>
           <span className="text-[11px] font-semibold text-gray-400 tabular-nums shrink-0">
@@ -280,7 +278,7 @@ export default function CardCollectionBrowser({
                 type="button"
                 onClick={loadMore}
                 disabled={loading}
-                className="flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-md bg-white/[0.06] text-gray-300 hover:bg-white/[0.1] transition-colors disabled:opacity-50"
+                className="moba-pill normal-case font-semibold px-4 py-2 hover:bg-white/[0.08] transition-colors disabled:opacity-50"
               >
                 {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 Mehr anzeigen ({otherCards.length}/{otherTotal})

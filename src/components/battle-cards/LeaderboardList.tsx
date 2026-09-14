@@ -48,7 +48,7 @@ function RankBadge({ place, isRanked }: { place: number; isRanked: boolean }) {
 export default function LeaderboardList({ rows, viewerId }: { rows: LeaderboardRow[]; viewerId: string }) {
   if (rows.length === 0) {
     return (
-      <div className="glass rounded-2xl p-6 flex flex-col items-center gap-2 text-center">
+      <div className="moba-panel rounded-2xl p-6 flex flex-col items-center gap-2 text-center">
         <Trophy className="w-6 h-6 text-gray-600" />
         <p className="text-sm text-gray-500">Noch keine ausgetragenen Kämpfe — sei der Erste!</p>
       </div>
@@ -70,7 +70,7 @@ export default function LeaderboardList({ rows, viewerId }: { rows: LeaderboardR
           <Link
             key={row.userId}
             href={`/profile/${row.userId}`}
-            className={`glass rounded-xl p-3 flex items-center gap-3 hover:bg-white/[0.04] transition-colors ${
+            className={`moba-panel rounded-xl p-3 flex items-center gap-3 hover:bg-white/[0.04] transition-colors ${
               isViewer ? "ring-1 ring-rose-500/40 bg-rose-500/[0.04]" : ""
             } ${!row.isRanked ? "opacity-70" : ""}`}
           >

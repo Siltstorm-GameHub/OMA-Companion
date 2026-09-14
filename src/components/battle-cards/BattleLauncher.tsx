@@ -75,17 +75,19 @@ export default function BattleLauncher({
               ],
             }}
             transition={{ boxShadow: { duration: 2.4, repeat: Infinity, ease: "easeInOut" } }}
-            className="relative py-4 rounded-2xl text-white overflow-hidden"
-            style={{ background: "linear-gradient(180deg, #fb7185 0%, #e11d48 55%, #9f1239 100%)" }}
+            className="moba-button relative py-4 rounded-2xl text-white overflow-hidden w-full"
           >
+            <div className="moba-button-fill" style={{ background: "linear-gradient(180deg, #fb7185 0%, #e11d48 55%, #9f1239 100%)" }} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/battle-cards/moba/button-glow.png" alt="" aria-hidden className="moba-button-frame" />
             <motion.div
-              className="absolute inset-y-0 left-0 w-1/3 pointer-events-none"
+              className="absolute inset-y-0 left-0 w-1/3 pointer-events-none z-[1]"
               style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent)", skewX: -20 }}
               initial={{ x: "-140%" }}
               animate={{ x: "340%" }}
               transition={{ duration: 1.8, repeat: Infinity, repeatDelay: 2.2, ease: "easeInOut" }}
             />
-            <span className="relative flex flex-col items-center justify-center gap-1 text-sm font-black uppercase tracking-wide">
+            <span className="moba-button-label relative flex flex-col items-center justify-center gap-1 text-sm font-black uppercase tracking-wide">
               <Swords className="w-5 h-5" /> OMA Duels
             </span>
           </motion.button>
@@ -102,17 +104,19 @@ export default function BattleLauncher({
               ],
             }}
             transition={{ boxShadow: { duration: 2.4, repeat: Infinity, ease: "easeInOut", delay: 0.3 } }}
-            className="relative py-4 rounded-2xl text-white overflow-hidden"
-            style={{ background: "linear-gradient(180deg, #c4b5fd 0%, #7c3aed 55%, #4c1d95 100%)" }}
+            className="moba-button relative py-4 rounded-2xl text-white overflow-hidden w-full"
           >
+            <div className="moba-button-fill" style={{ background: "linear-gradient(180deg, #c4b5fd 0%, #7c3aed 55%, #4c1d95 100%)" }} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/battle-cards/moba/button-glow.png" alt="" aria-hidden className="moba-button-frame" />
             <motion.div
-              className="absolute inset-y-0 left-0 w-1/3 pointer-events-none"
+              className="absolute inset-y-0 left-0 w-1/3 pointer-events-none z-[1]"
               style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent)", skewX: -20 }}
               initial={{ x: "-140%" }}
               animate={{ x: "340%" }}
               transition={{ duration: 1.8, repeat: Infinity, repeatDelay: 2.2, ease: "easeInOut", delay: 0.9 }}
             />
-            <span className="relative flex flex-col items-center justify-center gap-1 text-sm font-black uppercase tracking-wide">
+            <span className="moba-button-label relative flex flex-col items-center justify-center gap-1 text-sm font-black uppercase tracking-wide">
               <Gem className="w-5 h-5" /> OMA Gems
             </span>
           </motion.button>
@@ -136,20 +140,19 @@ export default function BattleLauncher({
         type="button"
         onClick={() => setMode(null)}
         whileTap={{ scale: 0.97, y: 1 }}
-        className="w-full py-2.5 rounded-xl text-white"
-        style={
-          isDuels
-            ? {
-                background: "linear-gradient(180deg, #fb7185 0%, #e11d48 55%, #9f1239 100%)",
-                boxShadow: "inset 0 1.5px 0 rgba(255,255,255,0.25), inset 0 -2px 0 rgba(0,0,0,0.2), 0 3px 0 #7f1130, 0 8px 16px rgba(225,29,72,0.4)",
-              }
-            : {
-                background: "linear-gradient(180deg, #c4b5fd 0%, #7c3aed 55%, #4c1d95 100%)",
-                boxShadow: "inset 0 1.5px 0 rgba(255,255,255,0.25), inset 0 -2px 0 rgba(0,0,0,0.2), 0 3px 0 #3b0764, 0 8px 16px rgba(124,58,237,0.4)",
-              }
-        }
+        className="moba-button relative w-full py-2.5 rounded-xl text-white overflow-hidden"
       >
-        <span className="flex items-center justify-center gap-2 text-sm font-black uppercase tracking-wide">
+        <div
+          className="moba-button-fill"
+          style={{
+            background: isDuels
+              ? "linear-gradient(180deg, #fb7185 0%, #e11d48 55%, #9f1239 100%)"
+              : "linear-gradient(180deg, #c4b5fd 0%, #7c3aed 55%, #4c1d95 100%)",
+          }}
+        />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/battle-cards/moba/button-glow.png" alt="" aria-hidden className="moba-button-frame" />
+        <span className="moba-button-label relative flex items-center justify-center gap-2 text-sm font-black uppercase tracking-wide">
           {isDuels ? <Swords className="w-4 h-4" /> : <Gem className="w-4 h-4" />}
           {isDuels ? "OMA Duels" : "OMA Gems"}
           <ChevronUp className="w-4 h-4" />

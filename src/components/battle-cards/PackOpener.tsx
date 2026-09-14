@@ -352,7 +352,7 @@ export default function PackOpener({
                           setRevealIndex(next);
                           playRevealSoundFor(results[next]);
                         }}
-                        className="text-xs font-semibold px-3 py-2 rounded-md bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 transition-colors"
+                        className="moba-pill normal-case font-semibold px-3 py-2 moba-tab-active"
                       >
                         Nächste Karte
                       </motion.button>
@@ -363,7 +363,7 @@ export default function PackOpener({
                             type="button"
                             whileTap={{ scale: 0.95 }}
                             onClick={openAnother}
-                            className="text-xs font-semibold px-3 py-2 rounded-md bg-violet-500/15 text-violet-300 hover:bg-violet-500/25 transition-colors"
+                            className="moba-pill normal-case font-semibold px-3 py-2 moba-tab-active"
                           >
                             Nächstes Pack öffnen ({remaining})
                           </motion.button>
@@ -372,7 +372,7 @@ export default function PackOpener({
                           type="button"
                           whileTap={{ scale: 0.95 }}
                           onClick={close}
-                          className="text-xs font-semibold px-3 py-2 rounded-md bg-white/[0.06] text-gray-300 hover:bg-white/[0.1] transition-colors"
+                          className="moba-pill normal-case font-semibold px-3 py-2 hover:bg-white/[0.06] transition-colors"
                         >
                           Fertig
                         </motion.button>

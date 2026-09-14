@@ -196,7 +196,7 @@ export default async function BattleCardsPage() {
         {ownedUserCards.some((uc) => uc.card.rarity === "COMMUNITY") && (
           <Link
             href="/battle-cards/my-card"
-            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-md bg-white/[0.06] text-gray-300 hover:bg-white/[0.1] transition-colors shrink-0"
+            className="moba-pill normal-case font-semibold px-3 py-2 hover:bg-white/[0.06] transition-colors shrink-0"
           >
             <IdCard className="w-3.5 h-3.5" /> Meine Community-Karte
           </Link>
@@ -212,7 +212,7 @@ export default async function BattleCardsPage() {
         <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">OMA Duels — Deck</h2>
         <Link
           href="/battle-cards/duel-deck"
-          className="flex items-center justify-between gap-3 glass rounded-2xl p-3 hover:bg-white/[0.04] transition-colors"
+          className="flex items-center justify-between gap-3 moba-panel rounded-2xl p-3 hover:bg-white/[0.04] transition-colors"
         >
           <span className="text-xs text-gray-300">
             {duelDeckCount === DUEL_DECK_TOTAL_SIZE ? (
@@ -240,22 +240,16 @@ export default async function BattleCardsPage() {
 
   const communityPanel = (
     <div className="space-y-8">
-      <div
-        className="rounded-2xl p-4 space-y-3"
-        style={{
-          background: "linear-gradient(180deg, #2e2410 0%, #1a1305 100%)",
-          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), inset 0 0 0 1.5px rgba(251,191,36,0.35), 0 3px 0 #78350f",
-        }}
-      >
+      <div className="moba-panel rounded-2xl p-4 space-y-3">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
-              <Trophy className="w-4 h-4 text-amber-300" />
+            <div className="w-9 h-9 rounded-xl bg-[color:var(--moba-accent)]/10 border border-[color:var(--moba-accent-line)] flex items-center justify-center shrink-0">
+              <Trophy className="w-4 h-4 text-[color:var(--moba-accent)]" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-white">Rangliste</p>
+              <p className="text-sm font-semibold text-[color:var(--moba-ink)]">Rangliste</p>
               {currentSeasonWindow && (
-                <p className="text-[10px] text-gray-500">
+                <p className="text-[10px] text-[color:var(--moba-ink-dim)]">
                   Saison {currentSeasonWindow.seasonNumber} · endet am {currentSeasonWindow.end.toLocaleDateString("de-DE")}
                 </p>
               )}
