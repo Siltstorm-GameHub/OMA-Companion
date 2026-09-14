@@ -123,15 +123,15 @@
   background: linear-gradient(180deg, var(--moba-bg-elevated) 0%, var(--moba-bg) 100%);
   border-top: 2px solid #d99a2b;
   border-radius: 0 0 10px 10px;
-  padding: 26px 12px 10px;
+  padding: 38px 16px 16px;
   gap: 2px;
   overflow: hidden;
 }
 .moba-nav-bar .moba-nav-corner {
   position: absolute;
   bottom: 0;
-  width: 60px;
-  height: 60px;
+  width: 76px;
+  height: 76px;
   pointer-events: none;
   opacity: 0.9;
 }
@@ -144,7 +144,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
+  gap: 6px;
   background: none;
   border: none;
   cursor: pointer;
@@ -153,24 +153,24 @@
   content: "";
   position: absolute;
   right: -1px;
-  bottom: 13px;
-  width: 4px;
-  height: 4px;
+  bottom: 18px;
+  width: 5px;
+  height: 5px;
   background: #d9ad4d;
   opacity: 0.45;
   transform: rotate(45deg);
 }
 .moba-nav-item .moba-nav-icon {
-  width: 22px;
-  height: 22px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .moba-nav-item .moba-nav-label {
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--moba-accent);
   opacity: 0.75;
@@ -183,10 +183,10 @@
 }
 .moba-nav-item .moba-nav-badge {
   position: absolute;
-  bottom: 22px;
-  width: 46px;
-  height: 46px;
-  border-radius: 11px;
+  bottom: 28px;
+  width: 68px;
+  height: 68px;
+  border-radius: 15px;
   background: radial-gradient(circle at 35% 25%, var(--accent, #ffb15c), var(--accent-dark, #c9660c));
   border: 2px solid var(--accent-light, #ffcf8a);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5), 0 0 16px var(--glow, rgba(255, 150, 50, 0.5));
@@ -194,23 +194,27 @@
   align-items: center;
   justify-content: center;
 }
+.moba-nav-item .moba-nav-badge img {
+  width: 36px;
+  height: 36px;
+}
 .moba-nav-item .moba-nav-badge::before {
   content: "";
   position: absolute;
-  top: -8px;
+  top: -10px;
   left: 50%;
   transform: translateX(-50%) rotate(45deg);
-  width: 7px;
-  height: 7px;
+  width: 9px;
+  height: 9px;
   background: var(--accent-light, #ffcf8a);
   box-shadow: 0 0 5px var(--glow, rgba(255, 180, 90, 0.8));
 }
 .moba-nav-item .moba-nav-notif {
   position: absolute;
-  top: -12px;
-  right: 14px;
-  width: 15px;
-  height: 15px;
+  top: -14px;
+  right: 8px;
+  width: 19px;
+  height: 19px;
   background: #e8481c;
   border: 1.5px solid var(--moba-bg);
   transform: rotate(45deg);
@@ -222,7 +226,7 @@
 .moba-nav-item .moba-nav-notif span {
   transform: rotate(-45deg);
   color: #fff;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 800;
 }
 
@@ -251,7 +255,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 13px 34px;
+  padding: 17px 34px;
   border: none;
   cursor: pointer;
   clip-path: polygon(4% 0%, 96% 0%, 100% 50%, 96% 100%, 4% 100%, 0% 50%);

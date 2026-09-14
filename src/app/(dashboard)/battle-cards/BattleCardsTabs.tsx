@@ -81,11 +81,11 @@ function BattleCardsTabsInner({
             >
               {isActive && (
                 <motion.div layoutId="tab-badge" transition={{ type: "spring", stiffness: 500, damping: 30 }} className="moba-nav-badge">
-                  <MobaIcon name={tab.icon} className="w-6 h-6" />
+                  <MobaIcon name={tab.icon} className="w-9 h-9" />
                 </motion.div>
               )}
               <span className="moba-nav-icon">
-                <MobaIcon name={tab.icon} className="w-[22px] h-[22px]" />
+                <MobaIcon name={tab.icon} className="w-9 h-9" />
               </span>
               <AnimatePresence>
                 {showBadge && (

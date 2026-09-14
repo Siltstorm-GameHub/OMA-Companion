@@ -82,8 +82,8 @@ export default function BattleLauncher({
               animate={{ x: "340%" }}
               transition={{ duration: 1.8, repeat: Infinity, repeatDelay: 2.2, ease: "easeInOut" }}
             />
-            <span className="moba-button-label relative flex items-center justify-center gap-2 text-sm font-black uppercase tracking-wide">
-              <MobaIcon name="crossedSwords" className="w-5 h-5" /> OMA Duels
+            <span className="moba-button-label relative flex items-center justify-center gap-2 text-base font-black uppercase tracking-wide">
+              <MobaIcon name="crossedSwords" className="w-6 h-6" /> OMA Duels
             </span>
           </motion.button>
 
@@ -106,8 +106,8 @@ export default function BattleLauncher({
               animate={{ x: "340%" }}
               transition={{ duration: 1.8, repeat: Infinity, repeatDelay: 2.2, ease: "easeInOut", delay: 0.9 }}
             />
-            <span className="moba-button-label relative flex items-center justify-center gap-2 text-sm font-black uppercase tracking-wide">
-              <MobaIcon name="gem" className="w-5 h-5" /> OMA Gems
+            <span className="moba-button-label relative flex items-center justify-center gap-2 text-base font-black uppercase tracking-wide">
+              <MobaIcon name="gem" className="w-6 h-6" /> OMA Gems
             </span>
           </motion.button>
         </div>
