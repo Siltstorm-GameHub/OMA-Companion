@@ -97,13 +97,14 @@ export default function RankUpOverlay({ rankUp, onClose }: { rankUp: RankUpData;
           animate={revealed ? { opacity: 1, y: 0 } : {}}
           transition={{ delay: 0.3 }}
           whileTap={{ scale: 0.95, y: 1 }}
-          className="px-5 py-2.5 rounded-xl text-black text-sm font-black uppercase tracking-wide"
-          style={{
-            background: "linear-gradient(180deg, #fde68a 0%, #d97706 100%)",
-            boxShadow: "inset 0 1.5px 0 rgba(255,255,255,0.35), inset 0 -2px 0 rgba(0,0,0,0.15), 0 3px 0 #78350f",
-          }}
+          className="moba-hex-button"
+          style={{ ["--hex-accent" as string]: "#fde68a", ["--hex-glow" as string]: "rgba(217,119,6,0.6)" }}
         >
-          Weiter
+          <div className="moba-hex-fill" style={{ background: "linear-gradient(180deg, #fde68a 0%, #d97706 100%)" }} />
+          <div className="moba-hex-border" />
+          <div className="moba-hex-diamond left" />
+          <div className="moba-hex-diamond right" />
+          <span className="moba-button-label text-sm font-black" style={{ color: "#2a1400" }}>Weiter</span>
         </motion.button>
       </div>
     </motion.div>

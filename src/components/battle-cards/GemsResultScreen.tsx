@@ -172,10 +172,14 @@ export default function GemsResultScreen({
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.35 }}
           whileTap={{ scale: 0.95, y: 1 }}
-          className="moba-button px-5 py-2.5 rounded-xl text-white text-sm font-black uppercase tracking-wide"
+          className="moba-hex-button"
+          style={{ ["--hex-accent" as string]: "#a5e8ff", ["--hex-glow" as string]: "rgba(14,165,233,0.6)" }}
         >
-          <div className="moba-button-fill" style={{ background: "linear-gradient(180deg, #7dd3fc 0%, #0ea5e9 55%, #075985 100%)" }} />
-          <span className="moba-button-label relative">Fertig</span>
+          <div className="moba-hex-fill" style={{ background: "linear-gradient(180deg, #7dd3fc 0%, #0ea5e9 55%, #075985 100%)" }} />
+          <div className="moba-hex-border" />
+          <div className="moba-hex-diamond left" />
+          <div className="moba-hex-diamond right" />
+          <span className="moba-button-label text-sm font-black">Fertig</span>
         </motion.button>
       </div>
     </motion.div>

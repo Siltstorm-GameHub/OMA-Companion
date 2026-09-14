@@ -172,10 +172,14 @@ export default function DuelDeckEditor({
         type="button"
         onClick={submit}
         disabled={!canSubmit || submitting}
-        className="moba-button w-full py-3 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed"
+        className="moba-hex-button w-full disabled:opacity-30 disabled:cursor-not-allowed"
+        style={{ ["--hex-accent" as string]: "#ffd9a0", ["--hex-glow" as string]: "rgba(232,150,28,0.6)" }}
       >
-        <div className="moba-button-fill" style={{ background: "linear-gradient(180deg, #ffc25c 0%, #e8961c 55%, #b8710a 100%)" }} />
-        <span className="moba-button-label relative">
+        <div className="moba-hex-fill" style={{ background: "linear-gradient(180deg, #ffc25c 0%, #e8961c 55%, #b8710a 100%)" }} />
+        <div className="moba-hex-border" />
+        <div className="moba-hex-diamond left" />
+        <div className="moba-hex-diamond right" />
+        <span className="moba-button-label text-sm font-black">
           {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Duell-Deck speichern"}
         </span>
       </button>

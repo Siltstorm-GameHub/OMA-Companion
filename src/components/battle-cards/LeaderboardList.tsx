@@ -70,7 +70,7 @@ export default function LeaderboardList({ rows, viewerId }: { rows: LeaderboardR
           <Link
             key={row.userId}
             href={`/profile/${row.userId}`}
-            className={`moba-panel rounded-xl p-3 flex items-center gap-3 hover:bg-white/[0.04] transition-colors ${
+            className={`moba-corner-row p-3 flex items-center gap-3 hover:bg-white/[0.04] transition-colors ${
               isViewer ? "ring-1 ring-rose-500/40 bg-rose-500/[0.04]" : ""
             } ${!row.isRanked ? "opacity-70" : ""}`}
           >

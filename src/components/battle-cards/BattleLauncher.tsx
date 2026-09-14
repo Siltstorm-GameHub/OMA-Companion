@@ -67,17 +67,13 @@ export default function BattleLauncher({
             type="button"
             onClick={() => setMode("duels")}
             whileTap={{ scale: 0.96, y: 2 }}
-            animate={{
-              boxShadow: [
-                "inset 0 2px 0 rgba(255,255,255,0.25), inset 0 -3px 0 rgba(0,0,0,0.2), 0 6px 0 #7a4a08, 0 14px 28px rgba(232,150,28,0.45)",
-                "inset 0 2px 0 rgba(255,255,255,0.25), inset 0 -3px 0 rgba(0,0,0,0.2), 0 6px 0 #7a4a08, 0 14px 40px rgba(232,150,28,0.75)",
-                "inset 0 2px 0 rgba(255,255,255,0.25), inset 0 -3px 0 rgba(0,0,0,0.2), 0 6px 0 #7a4a08, 0 14px 28px rgba(232,150,28,0.45)",
-              ],
-            }}
-            transition={{ boxShadow: { duration: 2.4, repeat: Infinity, ease: "easeInOut" } }}
-            className="moba-button relative py-4 rounded-2xl text-white overflow-hidden w-full"
+            className="moba-hex-button w-full"
+            style={{ ["--hex-accent" as string]: "#ffd9a0", ["--hex-glow" as string]: "rgba(232,150,28,0.6)" }}
           >
-            <div className="moba-button-fill" style={{ background: "linear-gradient(180deg, #ffc25c 0%, #e8961c 55%, #b8710a 100%)" }} />
+            <div className="moba-hex-fill" style={{ background: "linear-gradient(180deg, #ffc25c 0%, #e8961c 55%, #b8710a 100%)" }} />
+            <div className="moba-hex-border" />
+            <div className="moba-hex-diamond left" />
+            <div className="moba-hex-diamond right" />
             <motion.div
               className="absolute inset-y-0 left-0 w-1/3 pointer-events-none z-[1]"
               style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent)", skewX: -20 }}
@@ -94,17 +90,13 @@ export default function BattleLauncher({
             type="button"
             onClick={() => setMode("gems")}
             whileTap={{ scale: 0.96, y: 2 }}
-            animate={{
-              boxShadow: [
-                "inset 0 2px 0 rgba(255,255,255,0.25), inset 0 -3px 0 rgba(0,0,0,0.2), 0 6px 0 #0c4a6e, 0 14px 28px rgba(14,165,233,0.45)",
-                "inset 0 2px 0 rgba(255,255,255,0.25), inset 0 -3px 0 rgba(0,0,0,0.2), 0 6px 0 #0c4a6e, 0 14px 40px rgba(14,165,233,0.75)",
-                "inset 0 2px 0 rgba(255,255,255,0.25), inset 0 -3px 0 rgba(0,0,0,0.2), 0 6px 0 #0c4a6e, 0 14px 28px rgba(14,165,233,0.45)",
-              ],
-            }}
-            transition={{ boxShadow: { duration: 2.4, repeat: Infinity, ease: "easeInOut", delay: 0.3 } }}
-            className="moba-button relative py-4 rounded-2xl text-white overflow-hidden w-full"
+            className="moba-hex-button w-full"
+            style={{ ["--hex-accent" as string]: "#a5e8ff", ["--hex-glow" as string]: "rgba(14,165,233,0.6)" }}
           >
-            <div className="moba-button-fill" style={{ background: "linear-gradient(180deg, #7dd3fc 0%, #0ea5e9 55%, #075985 100%)" }} />
+            <div className="moba-hex-fill" style={{ background: "linear-gradient(180deg, #7dd3fc 0%, #0ea5e9 55%, #075985 100%)" }} />
+            <div className="moba-hex-border" />
+            <div className="moba-hex-diamond left" />
+            <div className="moba-hex-diamond right" />
             <motion.div
               className="absolute inset-y-0 left-0 w-1/3 pointer-events-none z-[1]"
               style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent)", skewX: -20 }}

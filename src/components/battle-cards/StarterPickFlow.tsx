@@ -283,16 +283,22 @@ export default function StarterPickFlow({ cards }: { cards: CardWithId[] }) {
           type="button"
           onClick={goNext}
           disabled={!stepValid || submitting}
-          className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed"
-          style={{ background: stepDef.color, color: "#000" }}
+          className="moba-hex-button flex-1 disabled:opacity-30 disabled:cursor-not-allowed"
+          style={{ ["--hex-accent" as string]: stepDef.color, ["--hex-glow" as string]: `${stepDef.color}99` }}
         >
-          {submitting ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : isLastStep ? (
-            "Start-Pack bestätigen"
-          ) : (
-            <>Weiter <MobaIcon name="chevronRight" className="w-4 h-4" /></>
-          )}
+          <div className="moba-hex-fill" style={{ background: `linear-gradient(180deg, ${stepDef.color} 0%, ${stepDef.color} 100%)` }} />
+          <div className="moba-hex-border" />
+          <div className="moba-hex-diamond left" />
+          <div className="moba-hex-diamond right" />
+          <span className="moba-button-label text-sm font-black flex items-center gap-2" style={{ color: "#000" }}>
+            {submitting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : isLastStep ? (
+              "Start-Pack bestätigen"
+            ) : (
+              <>Weiter <MobaIcon name="chevronRight" className="w-4 h-4" /></>
+            )}
+          </span>
         </button>
       </div>
     </div>
