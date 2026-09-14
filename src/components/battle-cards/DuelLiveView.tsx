@@ -115,6 +115,7 @@ interface DuelLogEntry {
   team?: TeamId;
   slotIndex?: number;
   stance?: DuelStance;
+  mode?: "instant" | "setFaceDown";
 }
 
 interface LiveDuelSnapshot {
@@ -148,6 +149,21 @@ interface FloatingEffect {
   anchor: { kind: "slot"; slotIndex: number } | { kind: "lp" };
   text: string;
   tone: "damage" | "crit" | "heal" | "shield" | "info";
+}
+
+/** Großer, kurzer Reveal-Effekt in Bildschirmmitte für aktivierte Items/
+ *  Fallen — deutlich auffälliger als die kleinen fliegenden Zahlen, damit
+ *  "eine Taktikkarte wurde gerade eingesetzt" nicht im Kampfgeschehen
+ *  untergeht. Bei eigenen Items kennen wir Name/Bild (aus der Hand, siehe
+ *  confirmTactic); bei gegnerischen Items und JEDER ausgelösten Falle (auch
+ *  der eigenen — welche Karte es war, verrät der Server nicht mehr, sobald
+ *  sie verdeckt liegt) bleibt es bewusst ein anonymer Karten-Rücken-Reveal. */
+interface CardRevealEffect {
+  id: string;
+  kind: "INSTANT" | "TRAP";
+  side: "self" | "opponent";
+  name?: string;
+  imageUrl?: string | null;
 }
 
 const START_LP = 4000;
@@ -324,6 +340,7 @@ function UnitSlot({
   selectable,
   selected,
   dragOver,
+  statHighlight,
   flashing,
   lunging,
   onClick,
@@ -336,6 +353,11 @@ function UnitSlot({
    *  Hervorhebung als das normale `selectable`, damit die Drop-Zone während
    *  des Ziehens eindeutig erkennbar ist. */
   dragOver?: boolean;
+  /** Welcher Stat (ATK/DEF) für die gerade laufende Aktion zählt — siehe
+   *  StatBadges. Für eigene Einheiten: ATK, sobald sie als Angreifer gewählt
+   *  wurden. Für gegnerische Einheiten: abhängig von ihrer eigenen Stellung
+   *  (Angriff -> ATK, Verteidigung -> DEF) während der Kampfphase. */
+  statHighlight?: "attack" | "defense" | null;
   flashing?: boolean;
   lunging?: boolean;
   onClick?: () => void;
@@ -412,7 +434,7 @@ function UnitSlot({
           <span className="text-[11px] font-semibold text-white truncate drop-shadow">{unit.name}</span>
           <span className="text-[9px] text-slate-300 shrink-0">Lv{unit.level}</span>
         </div>
-        <StatBadges attack={unit.attack} defense={unit.defense} />
+        <StatBadges attack={unit.attack} defense={unit.defense} highlight={statHighlight} />
         <HpBar current={unit.currentHp} max={unit.maxHp} />
         <div className="h-1 w-full rounded-full bg-black/40 overflow-hidden">
           <div
@@ -448,6 +470,15 @@ export default function DuelLiveView({
   const [, setTick] = useState(0);
   const [soundMuted, setSoundMutedState] = useState(isSoundMuted);
   const [floatingEffects, setFloatingEffects] = useState<FloatingEffect[]>([]);
+  const [cardReveals, setCardReveals] = useState<CardRevealEffect[]>([]);
+
+  function spawnCardReveal(effect: Omit<CardRevealEffect, "id">) {
+    const id = `reveal-${Date.now()}-${Math.random()}`;
+    setCardReveals((prev) => [...prev, { ...effect, id }]);
+    setTimeout(() => {
+      setCardReveals((prev) => prev.filter((e) => e.id !== id));
+    }, 1300);
+  }
   const [flashKeys, setFlashKeys] = useState<Set<string>>(new Set());
   const [lungeKeys, setLungeKeys] = useState<Set<string>>(new Set());
 
@@ -589,6 +620,7 @@ export default function DuelLiveView({
           break;
         }
         case "defenseDestroyed": {
+          const attacker = entry.attackerUnitId ? locateUnit(entry.attackerUnitId, candidates) : null;
           const target = entry.defenderUnitId ? locateUnit(entry.defenderUnitId, candidates) : null;
           if (target) {
             spawned.push({
@@ -600,10 +632,12 @@ export default function DuelLiveView({
             });
             pulse(`${target.side}-${target.unit.slotIndex}`, setFlashKeys, 450);
           }
+          if (attacker) pulse(`${attacker.side}-${attacker.unit.slotIndex}`, setLungeKeys, 300);
           playDamageSoundFor(target?.unit.class, true);
           break;
         }
         case "defenseReflect": {
+          const attacker = entry.attackerUnitId ? locateUnit(entry.attackerUnitId, candidates) : null;
           const side: "self" | "opponent" = entry.attackerTeam === newSnapshot.viewerTeam ? "self" : "opponent";
           spawned.push({
             id: `${spawned.length}-reflect-${entry.round}`,
@@ -612,10 +646,12 @@ export default function DuelLiveView({
             text: `-${entry.amount}`,
             tone: "damage",
           });
+          if (attacker) pulse(`${attacker.side}-${attacker.unit.slotIndex}`, setLungeKeys, 300);
           playDamageSoundFor(undefined, false);
           break;
         }
         case "defenseBounce": {
+          const attacker = entry.attackerUnitId ? locateUnit(entry.attackerUnitId, candidates) : null;
           const target = entry.defenderUnitId ? locateUnit(entry.defenderUnitId, candidates) : null;
           if (target) {
             spawned.push({
@@ -626,10 +662,12 @@ export default function DuelLiveView({
               tone: "info",
             });
           }
+          if (attacker) pulse(`${attacker.side}-${attacker.unit.slotIndex}`, setLungeKeys, 300);
           playShieldSound();
           break;
         }
         case "attackClash": {
+          const winner = entry.winnerUnitId ? locateUnit(entry.winnerUnitId, candidates) : null;
           const loser = entry.loserUnitId ? locateUnit(entry.loserUnitId, candidates) : null;
           if (loser) {
             spawned.push({
@@ -641,6 +679,7 @@ export default function DuelLiveView({
             });
             pulse(`${loser.side}-${loser.unit.slotIndex}`, setFlashKeys, 450);
           }
+          if (winner) pulse(`${winner.side}-${winner.unit.slotIndex}`, setLungeKeys, 300);
           const damagedSide: "self" | "opponent" = entry.damagedTeam === newSnapshot.viewerTeam ? "self" : "opponent";
           spawned.push({
             id: `${spawned.length}-clash-lp-${entry.round}`,
@@ -688,11 +727,23 @@ export default function DuelLiveView({
           }
           break;
         case "summon":
+          playCardRevealSound();
+          break;
         case "tacticPlayed":
           playCardRevealSound();
+          // Eigene Instant-Items zeigen wir bereits optimistisch beim Bestätigen
+          // (siehe confirmTactic) — hier nur den gegnerischen Fall nachholen,
+          // ohne Name/Bild (verdeckte gegnerische Hand kennen wir nicht).
+          if (entry.team !== newSnapshot.viewerTeam && entry.mode === "instant") {
+            spawnCardReveal({ kind: "INSTANT", side: "opponent" });
+          }
           break;
         case "trapTriggered":
           playShieldSound();
+          // Welche Karte es war, verrät der Server nicht mehr, sobald sie
+          // verdeckt liegt (gilt auch für die eigene Falle) — bewusst ein
+          // anonymer Reveal für beide Seiten.
+          spawnCardReveal({ kind: "TRAP", side: entry.team === newSnapshot.viewerTeam ? "self" : "opponent" });
           break;
         case "battleEnd":
           if (entry.winner === newSnapshot.viewerTeam) playVictorySound();
@@ -972,6 +1023,14 @@ export default function DuelLiveView({
   function confirmTactic() {
     if (!pendingTactic) return;
     if (pendingTactic.requiresTarget && pendingTactic.targetSlotIndex === undefined) return;
+    // Optimistischer Reveal mit Name/Bild, solange die Karte noch in der
+    // eigenen Hand steht — danach kennt der Snapshot sie nicht mehr (Items
+    // landen anonym im Friedhof, Fallen liegen verdeckt), siehe
+    // processNewLogEntries für den gegnerischen bzw. Fallen-Fall.
+    if (pendingTactic.mode === "instant") {
+      const card = (snapshot!.self.hand ?? []).find((c) => c.cardId === pendingTactic.handCardId);
+      if (card) spawnCardReveal({ kind: "INSTANT", side: "self", name: card.name, imageUrl: card.imageUrl });
+    }
     void postAction({
       type: "playTactic",
       handCardId: pendingTactic.handCardId,
@@ -999,6 +1058,15 @@ export default function DuelLiveView({
         .duel-pulse-ring { animation: duelPulseRing 1.6s ease-in-out infinite; }
         @keyframes duelLpCritical { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
         .duel-lp-critical { animation: duelLpCritical 1s ease-in-out infinite; }
+        @keyframes duelStatPop { 0% { transform: scale(0.85); } 50% { transform: scale(1.25); } 100% { transform: scale(1.1); } }
+        .duel-stat-pop { animation: duelStatPop 0.35s ease-out; }
+        @keyframes duelCardReveal {
+          0% { opacity: 0; transform: scale(0.4) rotateY(90deg); }
+          55% { opacity: 1; transform: scale(1.15) rotateY(0deg); }
+          75% { opacity: 1; transform: scale(1) rotateY(0deg); }
+          100% { opacity: 0; transform: scale(1) translateY(-14px); }
+        }
+        .duel-card-reveal { animation: duelCardReveal 1.3s ease-out forwards; }
       `}</style>
       <div className="max-w-2xl mx-auto px-4 py-4 space-y-4">
         <div className="flex items-center justify-between">
@@ -1075,6 +1143,13 @@ export default function DuelLiveView({
                 : isValidTacticTarget
                   ? () => pickTacticTarget(i)
                   : undefined;
+              // Ohne Erklärtext direkt ablesbar, welcher Wert für diese Einheit
+              // gerade zählt: in der Kampfphase entscheidet bei einem Angriff
+              // immer die eigene Stellung der Zieleinheit — Angriffsstellung
+              // vergleicht ATK gegen ATK, Verteidigung vergleicht gegnerischen
+              // ATK gegen die eigene DEF.
+              const statHighlight: "attack" | "defense" | null =
+                snapshot.phase === "battle" && slot?.isAlive ? (slot.stance === "defense" ? "defense" : "attack") : null;
               return (
                 <UnitSlot
                   key={i}
@@ -1084,6 +1159,7 @@ export default function DuelLiveView({
                   lunging={lungeKeys.has(`opponent-${i}`)}
                   selectable={selectable}
                   selected={pendingTactic?.requiresTarget === "enemy" && pendingTactic.targetSlotIndex === i}
+                  statHighlight={statHighlight}
                   onClick={onClick}
                 />
               );
@@ -1132,6 +1208,9 @@ export default function DuelLiveView({
                     selectable={isSummonTarget || isValidTacticTarget}
                     selected={isSelectedAttacker || isSelectedTacticTarget}
                     dragOver={dragHoverSlot === i}
+                    // Als Angreifer gewählt -> nur der eigene ATK-Wert zählt für
+                    // diese Aktion, egal welche Stellung das Ziel hat.
+                    statHighlight={isSelectedAttacker ? "attack" : null}
                     flashing={flashKeys.has(`self-${i}`)}
                     lunging={lungeKeys.has(`self-${i}`)}
                     onClick={isSummonTarget ? () => pickSummonSlot(i) : isValidTacticTarget ? () => pickTacticTarget(i) : undefined}
@@ -1420,6 +1499,40 @@ export default function DuelLiveView({
           )}
         </div>
       )}
+
+      {/* Item/Fallen-Aktivierung: kurzer, auffälliger Reveal in Bildschirmmitte
+          statt nur einem Sound — soll im Kampfgeschehen nicht untergehen. */}
+      {cardReveals.map((reveal) => (
+        <div key={reveal.id} className="pointer-events-none fixed inset-0 z-[600] flex items-center justify-center">
+          <div className="duel-card-reveal flex flex-col items-center gap-2">
+            <div
+              className={`w-20 h-28 rounded-lg border-2 flex items-center justify-center overflow-hidden ${
+                reveal.kind === "TRAP" ? "border-rose-400 bg-rose-950/80" : "border-amber-400 bg-amber-950/80"
+              }`}
+              style={{ boxShadow: `0 0 30px ${reveal.kind === "TRAP" ? "rgba(244,63,94,0.7)" : "rgba(251,191,36,0.7)"}` }}
+            >
+              {reveal.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={reveal.imageUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <img
+                  src={reveal.kind === "TRAP" ? MOBA_ICON.shield : MOBA_ICON.attack}
+                  alt=""
+                  aria-hidden
+                  className="w-8 h-8 object-contain opacity-70"
+                />
+              )}
+            </div>
+            <span
+              className={`text-xs font-black uppercase tracking-wide px-2 py-1 rounded ${
+                reveal.kind === "TRAP" ? "bg-rose-500/90 text-white" : "bg-amber-500/90 text-black"
+              }`}
+            >
+              {reveal.side === "self" ? "Du" : "Gegner"} · {reveal.name ?? (reveal.kind === "TRAP" ? "Falle ausgelöst!" : "Item eingesetzt")}
+            </span>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
