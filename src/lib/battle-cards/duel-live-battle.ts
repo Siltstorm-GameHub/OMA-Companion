@@ -91,6 +91,11 @@ export interface LiveDuelUnitSnapshot {
   level: number;
   currentHp: number;
   maxHp: number;
+  /** Effektive Werte inkl. aktiver statModifier (Taktikkarten-Buffs/-Debuffs)
+   *  — bewusst auf dem Spielfeld sichtbar, damit ATK/DEF-Vergleiche (v.a. bei
+   *  der Verteidigungsstellung) nachvollziehbar bleiben. */
+  attack: number;
+  defense: number;
   rage: number;
   /** Rage-Kosten des Ultimates — der Client nutzt das, um "bereit"
    *  (rage >= ultimateCost) visuell hervorzuheben. */
@@ -178,6 +183,8 @@ function toUnitSnapshot(slot: DuelFieldSlot, slotIndex: number): LiveDuelUnitSna
     level: unit.def.level,
     currentHp: unit.currentHp,
     maxHp: unit.maxHp,
+    attack: unit.attack,
+    defense: unit.defense,
     rage: unit.rage,
     ultimateCost: unit.def.ultimateSkill.cost ?? ULTIMATE_SKILL_COST,
     isAlive: unit.isAlive,

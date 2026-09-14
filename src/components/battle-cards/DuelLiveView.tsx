@@ -29,6 +29,7 @@ import CardTile from "./CardTile";
 import TacticCardTile from "./TacticCardTile";
 import ErrorNotice from "./ErrorNotice";
 import { DUEL_TURN_TIMEOUT_MS } from "@/lib/battle-engine/duel-constants";
+import { scaleStatsForLevel } from "@/lib/battle-engine/stats";
 import {
   isSoundMuted,
   playCardRevealSound,
@@ -55,6 +56,8 @@ interface LiveDuelUnit {
   level: number;
   currentHp: number;
   maxHp: number;
+  attack: number;
+  defense: number;
   rage: number;
   ultimateCost: number;
   isAlive: boolean;
@@ -254,6 +257,25 @@ function RadialTimer({ secondsLeft }: { secondsLeft: number }) {
   );
 }
 
+/** Kompakte ATK/DEF-Anzeige — auf dem Feld (mit allen aktiven Buffs/Debuffs
+ *  aus Taktikkarten) und auf Handkarten (Basiswerte auf aktueller Stufe)
+ *  gleichermaßen genutzt, damit diese Werte in beiden Situationen sofort
+ *  ablesbar sind (statt nur beim Öffnen der Kartendetails). */
+function StatBadges({ attack, defense }: { attack: number; defense: number }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="flex items-center gap-0.5 text-[10px] font-bold text-rose-200 bg-rose-950/70 rounded px-1 py-0.5">
+        <img src={MOBA_ICON.sword} alt="ATK" className="w-2.5 h-2.5 object-contain" />
+        {attack}
+      </span>
+      <span className="flex items-center gap-0.5 text-[10px] font-bold text-sky-200 bg-sky-950/70 rounded px-1 py-0.5">
+        <img src={MOBA_ICON.shield} alt="DEF" className="w-2.5 h-2.5 object-contain" />
+        {defense}
+      </span>
+    </div>
+  );
+}
+
 function CardBack({ tone = "slate" }: { tone?: "slate" | "rose" }) {
   return (
     <div
@@ -374,6 +396,7 @@ function UnitSlot({
           <span className="text-[11px] font-semibold text-white truncate drop-shadow">{unit.name}</span>
           <span className="text-[9px] text-slate-300 shrink-0">Lv{unit.level}</span>
         </div>
+        <StatBadges attack={unit.attack} defense={unit.defense} />
         <HpBar current={unit.currentHp} max={unit.maxHp} />
         <div className="h-1 w-full rounded-full bg-black/40 overflow-hidden">
           <div
@@ -935,12 +958,22 @@ export default function DuelLiveView({
                 const isDisabled = card.kind === "unit" && snapshot.normalSummonUsed;
 
                 if (card.kind === "unit" && card.unitCard) {
+                  const level = card.unitCard.level ?? 1;
+                  const { attack, defense } = scaleStatsForLevel({
+                    baseHp: card.unitCard.baseHp,
+                    baseAttack: card.unitCard.baseAttack,
+                    baseDefense: card.unitCard.baseDefense,
+                    level,
+                  });
                   return (
                     <div
                       key={card.cardId}
-                      className={`w-28 shrink-0 rounded-lg p-1 transition-colors ${isSelected ? "bg-teal-500/15 ring-2 ring-teal-400" : ""} ${isDisabled ? "opacity-40" : ""}`}
+                      className={`w-28 shrink-0 rounded-lg p-1 space-y-1 transition-colors ${isSelected ? "bg-teal-500/15 ring-2 ring-teal-400" : ""} ${isDisabled ? "opacity-40" : ""}`}
                     >
-                      <CardTile card={card.unitCard} level={card.unitCard.level ?? 1} onClick={() => selectHandCard(card)} />
+                      <CardTile card={card.unitCard} level={level} onClick={() => selectHandCard(card)} />
+                      <div className="flex justify-center">
+                        <StatBadges attack={attack} defense={defense} />
+                      </div>
                     </div>
                   );
                 }
