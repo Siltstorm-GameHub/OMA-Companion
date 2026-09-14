@@ -114,14 +114,13 @@ export default function GemsTournamentBanner() {
             type="button"
             onClick={start}
             disabled={starting || attemptsLeft <= 0}
-            className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-white text-sm font-black uppercase tracking-wide active:translate-y-0.5 transition-transform disabled:opacity-40"
-            style={{
-              background: "linear-gradient(180deg, #c4b5fd 0%, #7c3aed 55%, #4c1d95 100%)",
-              boxShadow: "inset 0 1.5px 0 rgba(255,255,255,0.25), inset 0 -2px 0 rgba(0,0,0,0.2), 0 3px 0 #3b0764",
-            }}
+            className="moba-button w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-white text-sm font-black uppercase tracking-wide active:translate-y-0.5 transition-transform disabled:opacity-40"
           >
-            {starting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Gem className="w-3.5 h-3.5" />}
-            {starting ? "Startet…" : "Jetzt kämpfen"}
+            <div className="moba-button-fill" style={{ background: "linear-gradient(180deg, #7dd3fc 0%, #0ea5e9 55%, #075985 100%)" }} />
+            <span className="moba-button-label relative flex items-center gap-1.5">
+              {starting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MobaIcon name="gem" className="w-3.5 h-3.5" />}
+              {starting ? "Startet…" : "Jetzt kämpfen"}
+            </span>
           </button>
 
           {tournament.topRows.length > 0 && (

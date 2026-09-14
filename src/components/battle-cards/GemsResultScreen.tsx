@@ -19,8 +19,9 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import confetti from "canvas-confetti";
-import { Trophy, Skull, Handshake, Star } from "lucide-react";
+import { Skull, Handshake, Star } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
+import MobaIcon from "./MobaIcon";
 
 export type GemsReward =
   | { kind: "stars"; stars: 1 | 2 | 3; starsGained: number; coinsAwarded: number }
@@ -55,11 +56,11 @@ export default function GemsResultScreen({
 
   const config =
     outcome === "win"
-      ? { icon: Trophy, label: "Sieg!", from: "#fde68a", to: "#d97706" }
+      ? { icon: "trophy" as const, label: "Sieg!", from: "#fde68a", to: "#d97706" }
       : outcome === "loss"
         ? { icon: Skull, label: "Niederlage", from: "#fca5a5", to: "#b91c1c" }
         : { icon: Handshake, label: "Unentschieden", from: "#9ca3af", to: "#4b5563" };
-  const Icon = config.icon;
+  const Icon = typeof config.icon === "string" ? null : config.icon;
 
   return (
     <motion.div
@@ -71,7 +72,7 @@ export default function GemsResultScreen({
         <motion.p
           initial={{ opacity: 0, y: -6 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-[10px] font-bold text-violet-300 uppercase tracking-widest"
+          className="text-[10px] font-bold text-sky-300 uppercase tracking-widest"
         >
           OMA Gems
         </motion.p>
@@ -86,7 +87,7 @@ export default function GemsResultScreen({
             boxShadow: `0 2px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.25), 0 0 40px ${config.from}55`,
           }}
         >
-          <Icon className="w-9 h-9 text-black/70" strokeWidth={2.2} />
+          {Icon ? <Icon className="w-9 h-9 text-black/70" strokeWidth={2.2} /> : <MobaIcon name="trophy" className="w-9 h-9" />}
         </motion.div>
 
         <motion.p
@@ -171,13 +172,10 @@ export default function GemsResultScreen({
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.35 }}
           whileTap={{ scale: 0.95, y: 1 }}
-          className="px-5 py-2.5 rounded-xl text-white text-sm font-black uppercase tracking-wide"
-          style={{
-            background: "linear-gradient(180deg, #c4b5fd 0%, #7c3aed 55%, #4c1d95 100%)",
-            boxShadow: "inset 0 1.5px 0 rgba(255,255,255,0.25), inset 0 -2px 0 rgba(0,0,0,0.2), 0 3px 0 #3b0764",
-          }}
+          className="moba-button px-5 py-2.5 rounded-xl text-white text-sm font-black uppercase tracking-wide"
         >
-          Fertig
+          <div className="moba-button-fill" style={{ background: "linear-gradient(180deg, #7dd3fc 0%, #0ea5e9 55%, #075985 100%)" }} />
+          <span className="moba-button-label relative">Fertig</span>
         </motion.button>
       </div>
     </motion.div>

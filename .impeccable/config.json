@@ -239,6 +239,15 @@
         ],
         "createdAt": "2026-09-13T07:14:36.667Z",
         "reason": "false positive: gray-500/400 text sits on neutral bg-gray-800, same pattern as existing TournamentManager.tsx desktop buttons, not on the colored bg (colored bg only applies together with text-white in the active branch of the ternary)"
+      },
+      {
+        "rule": "gradient-text",
+        "value": "*",
+        "files": [
+          "src/app/battle-cards-moba.css"
+        ],
+        "createdAt": "2026-09-14T08:16:23.845Z",
+        "reason": "user provided a reference screenshot explicitly asking for this exact gold-fill/dark-outline game-HUD text effect on .font-battle headings"
       }
     ]
   }

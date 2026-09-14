@@ -7,26 +7,27 @@
 // beim bestehenden dunklen Glass-Design; admin/battle-cards/* liegt
 // außerhalb dieses Route-Segments und ist nicht betroffen.
 //
-// Eigene Schrift statt der App-weiten Russo One: Rajdhani statt (zunächst
-// versuchtem) Cinzel — Cinzel wirkte zu verspielt/mittelalterlich und war bei
-// kleinen UI-Labels (Tab-Beschriftung) kaum lesbar. League of Legends nutzt
-// UI-seitig tatsächlich eine klare, leicht technische Groteskschrift statt
-// einer Fantasy-Zierschrift — Rajdhani trifft genau dieses "moderne Esports-
-// HUD"-Gefühl (klar, leicht kantig, gut lesbar auch klein). --font-battle
-// wird nur INNERHALB von .moba-skin überschrieben — die bestehende
-// .font-battle-Klasse (Kartennamen, Kapitel-Titel etc.) greift dadurch
-// automatisch, ohne dass jede Stelle einzeln angefasst werden muss.
+// Eigene Schrift statt der App-weiten Russo One — vierter Anlauf: Cinzel (zu
+// verspielt/mittelalterlich, bei kleinen Labels kaum lesbar) → Rajdhani (zu
+// technisch/dünn) → Titan One (traf den Gold/Outline-Effekt, aber die runde
+// Comic-Form passte nicht zum Diablo-artigen Vorbild) → jetzt Metamorphous:
+// sturdy gotische Serifen im Stil klassischer Dark-Fantasy-RPG-UIs (Diablo/
+// WoW-artig), bleibt zusammen mit dem Gold-Fill+dunklem-Outline-Textstil
+// unten (.moba-skin .font-battle) auch bei kleinen Tab-Labels lesbar (lokal
+// gegen 3 weitere Kandidaten geprüft). --font-battle wird nur INNERHALB von
+// .moba-skin überschrieben — die bestehende .font-battle-Klasse greift
+// dadurch automatisch überall.
 
-import { Rajdhani } from "next/font/google";
+import { Metamorphous } from "next/font/google";
 import "@/app/battle-cards-moba.css";
 
-const rajdhani = Rajdhani({
+const metamorphous = Metamorphous({
   subsets: ["latin"],
-  weight: ["600", "700"],
+  weight: "400",
   variable: "--font-battle",
   display: "swap",
 });
 
 export default function BattleCardsLayout({ children }: { children: React.ReactNode }) {
-  return <div className={`moba-skin ${rajdhani.variable}`}>{children}</div>;
+  return <div className={`moba-skin ${metamorphous.variable}`}>{children}</div>;
 }

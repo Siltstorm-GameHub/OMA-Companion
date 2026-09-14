@@ -9,7 +9,7 @@
 // da Taktik-Karten keine Einheiten-Stats/Level haben und daher nicht durch
 // CardTile selbst (das BattleCardData voraussetzt) dargestellt werden können.
 
-import { Shield, Sparkles } from "lucide-react";
+import { MOBA_ICON } from "@/lib/battle-cards/moba-icons";
 
 export interface TacticCardTileData {
   id: string;
@@ -31,7 +31,7 @@ export default function TacticCardTile({
 }) {
   const isTrap = card.kind === "TRAP";
   const accent = isTrap ? "#f43f5e" : "#f59e0b";
-  const Icon = isTrap ? Shield : Sparkles;
+  const iconSrc = isTrap ? MOBA_ICON.shield : MOBA_ICON.attack;
 
   return (
     <button
@@ -52,7 +52,7 @@ export default function TacticCardTile({
           // eslint-disable-next-line @next/next/no-img-element
           <img src={card.imageUrl} alt={card.name} className="w-full h-full object-cover" />
         ) : (
-          <Icon className="w-8 h-8" style={{ color: accent, opacity: 0.6 }} />
+          <img src={iconSrc} alt="" aria-hidden className="w-8 h-8 object-contain" style={{ opacity: 0.7 }} />
         )}
         <span
           className="absolute bottom-1 left-1 text-[9px] font-black leading-none px-1.5 py-1 rounded-md bg-black/70 backdrop-blur-sm"

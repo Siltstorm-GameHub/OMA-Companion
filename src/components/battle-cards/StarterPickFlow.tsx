@@ -13,31 +13,31 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "motion/react";
-import { Check, Shield, Swords, HeartPulse, Gift, ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
+import MobaIcon from "./MobaIcon";
+import type { MobaIconName } from "@/lib/battle-cards/moba-icons";
 import BattleCardView, { type BattleCardData } from "./BattleCardView";
 
 type ClassKey = "TANK" | "DAMAGE_DEALER" | "SUPPORT";
 type CardWithId = BattleCardData & { id: string };
 
-const CLASS_CONFIG: Record<ClassKey, { color: string; icon: LucideIcon; label: string }> = {
-  TANK: { color: "#14b8a6", icon: Shield, label: "Tank" },
-  DAMAGE_DEALER: { color: "#ef4444", icon: Swords, label: "Damage Dealer" },
-  SUPPORT: { color: "#8b5cf6", icon: HeartPulse, label: "Support" },
+const CLASS_CONFIG: Record<ClassKey, { color: string; icon: MobaIconName; label: string }> = {
+  TANK: { color: "#14b8a6", icon: "shield", label: "Tank" },
+  DAMAGE_DEALER: { color: "#ef4444", icon: "sword", label: "Damage Dealer" },
+  SUPPORT: { color: "#8b5cf6", icon: "magic", label: "Support" },
 };
 const CLASS_ORDER: ClassKey[] = ["TANK", "DAMAGE_DEALER", "SUPPORT"];
 
-type StepDef = { key: ClassKey | "bonus"; label: string; color: string; icon: LucideIcon };
+type StepDef = { key: ClassKey | "bonus"; label: string; color: string; icon: MobaIconName };
 const STEPS: StepDef[] = [
   ...CLASS_ORDER.map((cls) => ({ key: cls, label: CLASS_CONFIG[cls].label, color: CLASS_CONFIG[cls].color, icon: CLASS_CONFIG[cls].icon })),
-  { key: "bonus" as const, label: "Bonus-Karten", color: "#f59e0b", icon: Gift },
+  { key: "bonus" as const, label: "Bonus-Karten", color: "#f59e0b", icon: "chest" as MobaIconName },
 ];
 
 function StepProgress({ current }: { current: number }) {
   return (
     <div className="flex items-center">
       {STEPS.map((s, i) => {
-        const Icon = s.icon;
         const done = i < current;
         const active = i === current;
         return (
@@ -50,7 +50,7 @@ function StepProgress({ current }: { current: number }) {
                   background: done ? s.color : active ? `${s.color}22` : "transparent",
                 }}
               >
-                {done ? <Check className="w-4 h-4 text-black" /> : <Icon className="w-4 h-4" style={{ color: active ? s.color : "#52525b" }} />}
+                {done ? <Check className="w-4 h-4 text-black" /> : <MobaIcon name={s.icon} className="w-4 h-4" />}
               </div>
               <span
                 className="hidden sm:block text-[9px] uppercase tracking-wide font-semibold whitespace-nowrap"
@@ -277,7 +277,7 @@ export default function StarterPickFlow({ cards }: { cards: CardWithId[] }) {
           disabled={step === 0}
           className="flex items-center gap-1.5 px-4 py-3 rounded-xl text-sm font-semibold text-gray-400 hover:text-white disabled:opacity-0 disabled:pointer-events-none transition-all"
         >
-          <ArrowLeft className="w-4 h-4" /> Zurück
+          <MobaIcon name="chevronLeft" className="w-4 h-4" /> Zurück
         </button>
         <button
           type="button"
@@ -291,7 +291,7 @@ export default function StarterPickFlow({ cards }: { cards: CardWithId[] }) {
           ) : isLastStep ? (
             "Start-Pack bestätigen"
           ) : (
-            <>Weiter <ArrowRight className="w-4 h-4" /></>
+            <>Weiter <MobaIcon name="chevronRight" className="w-4 h-4" /></>
           )}
         </button>
       </div>

@@ -24,7 +24,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
-import { Loader2, Zap, Swords, Bot, ChevronRight, ChevronLeft, Timer, Volume2, VolumeX, Trophy, Skull, Handshake, Star } from "lucide-react";
+import { Loader2, Skull, Handshake, Star } from "lucide-react";
+import MobaIcon from "./MobaIcon";
 import CoinIcon from "@/components/CoinIcon";
 import { getClassConfig, LEVEL_BORDER } from "./BattleCardView";
 import BoardMatch3 from "./BoardMatch3";
@@ -57,7 +58,7 @@ import { parseNpcMode, NPC_BATTLE_WIN_REWARD } from "@/lib/battle-cards/npc-batt
 function getArenaBackgroundStyle(mode: string | undefined): CSSProperties {
   const backgroundUrl = mode?.startsWith("CAMPAIGN_") ? CAMPAIGN_CHAPTER_BACKGROUND : "/battle-cards/arena-bg.jpg";
   return {
-    backgroundColor: "#12151a",
+    backgroundColor: "#04061a",
     backgroundImage: [
       "radial-gradient(ellipse 70% 45% at 50% 8%, rgba(239,68,68,0.18), transparent 70%)",
       "radial-gradient(ellipse 70% 45% at 50% 92%, rgba(20,184,166,0.18), transparent 70%)",
@@ -215,9 +216,9 @@ function describeLogEntry(entry: LiveSnapshot["recentLog"][number], nameOf: (id:
 }
 
 function ActionIcon({ actionType, className }: { actionType: ActionType; className?: string }) {
-  if (actionType === "ultimate") return <Zap className={className} />;
-  if (actionType === "active") return <Bot className={className} />;
-  return <Swords className={className} />;
+  if (actionType === "ultimate") return <MobaIcon name="attack" className={className} />;
+  if (actionType === "active") return <MobaIcon name="magic" className={className} />;
+  return <MobaIcon name="sword" className={className} />;
 }
 
 const EFFECT_COLOR: Record<FloatingEffect["kind"], string> = {
@@ -555,7 +556,7 @@ function UnitCard({
           />
           <div
             onClick={(e) => e.stopPropagation()}
-            className="absolute bottom-full left-0 mb-1 z-40 w-40 rounded-lg bg-[#14171f] border border-white/10 shadow-xl px-2 py-1.5 space-y-1"
+            className="absolute bottom-full left-0 mb-1 z-40 w-40 rounded-lg bg-[#04061a] border border-[color:var(--moba-accent-line)] shadow-xl px-2 py-1.5 space-y-1"
           >
             {unit.statModifiers.map((m, i) => (
               <div key={i} className="text-[10px] leading-snug">
@@ -587,7 +588,7 @@ function UnitCard({
         {Math.max(0, unit.currentHp)}/{unit.maxHp}
       </p>
       <div className="flex items-center gap-1 mt-0.5" title={`Rage: ${Math.round(unit.rage)}/100`}>
-        <Zap className="w-2 h-2 sm:w-2.5 sm:h-2.5 text-sky-400 shrink-0" />
+        <MobaIcon name="attack" className="w-2 h-2 sm:w-2.5 sm:h-2.5 shrink-0" />
         <div className="flex-1 h-1 rounded-full bg-black/40 overflow-hidden" style={{ boxShadow: "0 0 0 1px rgba(255,255,255,0.06)" }}>
           <div className="h-full rounded-full transition-[width] duration-300 ease-out" style={{ width: `${Math.min(100, unit.rage)}%`, background: "#60a5fa" }} />
         </div>
@@ -947,7 +948,7 @@ export default function LiveBattleView({
             onClick={handleExit}
             className="flex items-center gap-1 text-xs font-semibold text-gray-300 hover:text-white transition-colors px-2 py-1.5 rounded-md bg-black/30"
           >
-            <ChevronLeft className="w-4 h-4" /> Zurück
+            <MobaIcon name="chevronLeft" className="w-4 h-4" /> Zurück
           </button>
           <div className="flex items-center gap-2">
             <button
@@ -956,7 +957,7 @@ export default function LiveBattleView({
               className="flex items-center justify-center text-gray-300 hover:text-white transition-colors w-8 h-8 rounded-md bg-black/30"
               aria-label={soundMuted ? "Ton einschalten" : "Ton ausschalten"}
             >
-              {soundMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+              <MobaIcon name={soundMuted ? "soundOff" : "soundOn"} className="w-4 h-4" />
             </button>
             {snapshot && (
               <span
@@ -1283,7 +1284,7 @@ function LiveBattleBody({
                 myAuto ? "bg-violet-500/20 text-violet-300" : "bg-white/[0.06] text-gray-400 hover:bg-white/[0.1]"
               }`}
             >
-              <Bot className="w-3 h-3" /> Auto {myAuto ? "an" : "aus"}
+              <MobaIcon name="boss" className="w-3 h-3" /> Auto {myAuto ? "an" : "aus"}
             </button>
           )}
         </div>
@@ -1408,7 +1409,7 @@ function LiveBattleBody({
               {snapshot.winner === null ? (
                 <Handshake className="w-5 h-5 text-black/70" strokeWidth={2.2} />
               ) : snapshot.winner === myTeam ? (
-                <Trophy className="w-5 h-5 text-black/70" strokeWidth={2.2} />
+                <MobaIcon name="trophy" className="w-5 h-5" />
               ) : (
                 <Skull className="w-5 h-5 text-black/70" strokeWidth={2.2} />
               )}
@@ -1456,7 +1457,7 @@ function LiveBattleBody({
                 href={`/battle-cards/battles/${snapshot.resultBattleId}`}
                 className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-md bg-white/10 text-white hover:bg-white/15 transition-colors shrink-0"
               >
-                Zum Ergebnis <ChevronRight className="w-3.5 h-3.5" />
+                Zum Ergebnis <MobaIcon name="chevronRight" className="w-3.5 h-3.5" />
               </Link>
             )}
           </div>
@@ -1464,7 +1465,7 @@ function LiveBattleBody({
           // Feste Höhe (unabhängig von 1-3 verfügbaren Aktionen bzw. Ziel-Auswahl-
           // Ansicht) — sonst verschieben sich die Helden darüber je nach Rage-Stand
           // von Zug zu Zug, weil dieses Panel mal höher, mal niedriger wäre.
-          <div className="glass rounded-xl p-2.5 h-[212px] lg:h-[300px] overflow-y-auto flex flex-col">
+          <div className="moba-panel rounded-xl p-2.5 h-[212px] lg:h-[300px] overflow-y-auto flex flex-col">
             {snapshot.awaiting.board && boardSwaps === null ? (
               <BoardMatch3
                 // Rundennummer mit in den Turn-Key aufnehmen: bleibt nur noch EINE
@@ -1520,7 +1521,7 @@ function LiveBattleBody({
                   <p className="text-xs text-gray-400">Du bist am Zug — wähle eine Aktion.</p>
                   {remainingSeconds !== null && (
                     <span className="flex items-center gap-1 text-[11px] font-semibold text-amber-400 tabular-nums shrink-0">
-                      <Timer className="w-3 h-3" /> {remainingSeconds}s
+                      <MobaIcon name="clock" className="w-3 h-3" /> {remainingSeconds}s
                     </span>
                   )}
                 </div>
@@ -1553,7 +1554,7 @@ function LiveBattleBody({
         ) : snapshot.boardMode && lastBoard ? (
           // Brett bleibt sichtbar (nur deaktiviert), solange der Gegner am Zug ist —
           // verschwindet nicht mehr hinter einem reinen Text-Platzhalter.
-          <div className="glass rounded-xl p-2.5 h-[212px] lg:h-[300px] overflow-y-auto flex flex-col gap-1.5">
+          <div className="moba-panel rounded-xl p-2.5 h-[212px] lg:h-[300px] overflow-y-auto flex flex-col gap-1.5">
             <BoardMatch3
               grid={lastBoard.grid}
               specials={lastBoard.specials}
@@ -1580,7 +1581,7 @@ function LiveBattleBody({
       </div>
 
       {/* Text, was passiert — unterhalb der Entscheidung */}
-      <div className="shrink-0 surface rounded-md px-3 py-1.5 mt-1.5 mb-[max(0.5rem,env(safe-area-inset-bottom))] h-[52px] flex flex-col justify-end overflow-hidden bg-black/30">
+      <div className="shrink-0 rounded-md border border-[color:var(--moba-accent-line)] px-3 py-1.5 mt-1.5 mb-[max(0.5rem,env(safe-area-inset-bottom))] h-[52px] flex flex-col justify-end overflow-hidden bg-black/30">
         {snapshot.recentLog
           .map((e) => describeLogEntry(e, nameOf))
           .filter((line): line is string => !!line)

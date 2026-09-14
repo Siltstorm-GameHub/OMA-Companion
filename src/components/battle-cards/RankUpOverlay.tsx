@@ -11,7 +11,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import confetti from "canvas-confetti";
-import { ArrowUp } from "lucide-react";
+import MobaIcon from "./MobaIcon";
 
 export interface RankUpData {
   mode: string;
@@ -84,7 +84,7 @@ export default function RankUpOverlay({ rankUp, onClose }: { rankUp: RankUpData;
           className="flex flex-col items-center gap-1"
         >
           <p className="flex items-center gap-1.5 text-xs text-gray-400">
-            {rankUp.fromLabel} <ArrowUp className="w-3 h-3 text-amber-400" />
+            {rankUp.fromLabel} <MobaIcon name="chevronUp" className="w-3 h-3" />
           </p>
           <p className="font-battle text-2xl text-white uppercase tracking-wide">{rankUp.toLabel}</p>
           <p className="text-[11px] text-gray-500">{rankUp.elo} Elo</p>

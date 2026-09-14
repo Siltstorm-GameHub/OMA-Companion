@@ -7,7 +7,8 @@
 // Team-Akzent je Zeile (Blau eigen/Rot gegnerisch, sofern der Betrachter
 // Teilnehmer war — sonst neutral, siehe viewerTeamId) plus Legende oben.
 
-import { Crown, Swords, HeartPulse } from "lucide-react";
+import { Crown } from "lucide-react";
+import MobaIcon from "./MobaIcon";
 import { computeBattleStats, findMvpId } from "@/lib/battle-cards/battle-stats";
 import type { BattleLogEntry, RosterEntry, TeamId } from "@/lib/battle-engine/types";
 
@@ -39,7 +40,7 @@ export default function BattleStatsPanel({
   const labelFor = (teamId: TeamId) => (teamId === "A" ? teamALabel : teamBLabel);
 
   return (
-    <div className="surface rounded-xl p-3 space-y-2.5">
+    <div className="moba-panel rounded-xl p-3 space-y-2.5">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">Kampf-Statistik</p>
         <div className="flex items-center gap-3">
@@ -73,10 +74,10 @@ export default function BattleStatsPanel({
                 />
               </div>
               <span className="text-[10px] text-rose-400 tabular-nums w-11 text-right flex items-center gap-0.5 justify-end shrink-0">
-                <Swords className="w-2.5 h-2.5" /> {s.damageDealt}
+                <MobaIcon name="sword" className="w-2.5 h-2.5" /> {s.damageDealt}
               </span>
               <span className="text-[10px] text-emerald-400 tabular-nums w-11 text-right flex items-center gap-0.5 justify-end shrink-0">
-                <HeartPulse className="w-2.5 h-2.5" /> {s.healingDone}
+                <MobaIcon name="magic" className="w-2.5 h-2.5" /> {s.healingDone}
               </span>
             </div>
           );

@@ -28,6 +28,19 @@
   font-family: var(--font-battle), sans-serif;
 }
 
+/* Gold-Fill + dunkler Outline — der "League of Legends"-HUD-Label-Look aus
+   dem Referenz-Screenshot. paint-order sorgt dafür, dass der Stroke UNTER dem
+   Fill liegt (sonst verschluckt er bei fetten Schriften wie Titan One die
+   Goldfarbe fast komplett) — erste Version mit background-clip:text +
+   -webkit-text-stroke hatte genau dieses Problem, lokal verifiziert. Ohne
+   -webkit-Präfix (Firefox) bleibt der Text einfach ohne Outline, aber lesbar. */
+.moba-skin .font-battle {
+  color: #f5cf6b;
+  -webkit-text-stroke: 0.6px #3a1c02;
+  paint-order: stroke fill;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
 /* ── Panel: border-image-Rahmen um beliebige Rechtecke (Navy + Orange-Filigran) ── */
 .moba-panel {
   position: relative;

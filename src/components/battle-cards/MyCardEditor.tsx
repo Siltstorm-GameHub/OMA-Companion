@@ -51,7 +51,7 @@ export default function MyCardEditor({ card }: { card: BattleCardData & { id: st
             maxLength={TITLE_MAX}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="z.B. Die Wächterin"
-            className="mt-1 w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/10 text-white text-sm focus:outline-none focus:border-violet-500/50"
+            className="mt-1 w-full px-3 py-2 rounded-lg bg-black/20 border border-[color:var(--moba-accent-line)] text-white text-sm focus:outline-none focus:border-[color:var(--moba-accent)]"
           />
         </label>
 
@@ -63,7 +63,7 @@ export default function MyCardEditor({ card }: { card: BattleCardData & { id: st
             onChange={(e) => setFlavorText(e.target.value)}
             rows={4}
             placeholder="Kurzer Flavor-Text für deine Karte…"
-            className="mt-1 w-full px-3 py-2 rounded-lg bg-white/[0.04] border border-white/10 text-white text-sm focus:outline-none focus:border-violet-500/50 resize-none"
+            className="mt-1 w-full px-3 py-2 rounded-lg bg-black/20 border border-[color:var(--moba-accent-line)] text-white text-sm focus:outline-none focus:border-[color:var(--moba-accent)] resize-none"
           />
         </label>
 
@@ -71,10 +71,13 @@ export default function MyCardEditor({ card }: { card: BattleCardData & { id: st
           type="button"
           onClick={save}
           disabled={saving}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium transition-colors disabled:opacity-50"
+          className="moba-button flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-medium transition-colors disabled:opacity-50"
         >
-          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          {saving ? "Speichert…" : "Speichern"}
+          <div className="moba-button-fill" style={{ background: "linear-gradient(180deg, #ffc25c 0%, #e8961c 55%, #b8710a 100%)" }} />
+          <span className="moba-button-label relative flex items-center gap-2">
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {saving ? "Speichert…" : "Speichern"}
+          </span>
         </button>
       </div>
     </div>

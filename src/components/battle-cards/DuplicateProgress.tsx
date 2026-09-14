@@ -12,8 +12,9 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Loader2, ArrowUpCircle, ArrowRight } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import CoinIcon from "@/components/CoinIcon";
+import MobaIcon from "./MobaIcon";
 import { tableValueForLevel, type CardRarity, type UpgradeTable } from "@/lib/battle-cards/upgrade-config";
 import { scaleStatsForLevel } from "@/lib/battle-engine/stats";
 
@@ -36,14 +37,14 @@ function NextLevelPreview({
     { label: "DEF", from: current.defense, to: next.defense },
   ];
   return (
-    <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] px-2.5 py-2 space-y-1">
+    <div className="rounded-lg bg-black/20 border border-[color:var(--moba-accent-line)] px-2.5 py-2 space-y-1">
       <p className="text-[9px] text-gray-500 uppercase tracking-widest font-semibold">Nach Stufe {level + 1}</p>
       {rows.map((r) => (
         <div key={r.label} className="flex items-center justify-between text-[10px] tabular-nums">
           <span className="text-gray-500 font-semibold">{r.label}</span>
           <div className="flex items-center gap-1">
             <span className="text-gray-500">{r.from}</span>
-            <ArrowRight className="w-2.5 h-2.5 text-emerald-500" />
+            <MobaIcon name="chevronRight" className="w-2.5 h-2.5" />
             <span className="text-white font-bold">{r.to}</span>
             <span className="text-emerald-400 font-semibold">+{r.to - r.from}</span>
           </div>
@@ -117,7 +118,7 @@ export default function DuplicateProgress({
     <div className="mt-1.5 space-y-2">
       <div className="space-y-1">
         <div className="flex items-center justify-between text-[10px] tabular-nums">
-          <span className={hasEnoughDuplicates ? "text-violet-300 font-semibold" : "text-gray-400"}>
+          <span className={hasEnoughDuplicates ? "text-[color:var(--moba-accent)] font-semibold" : "text-gray-400"}>
             {duplicates}/{needed} Duplikate
           </span>
           <span className={`flex items-center gap-0.5 font-semibold ${hasEnoughCoins ? "text-amber-300" : "text-gray-500"}`}>
@@ -126,10 +127,10 @@ export default function DuplicateProgress({
           </span>
         </div>
 
-        <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+        <div className="h-1.5 rounded-full bg-black/20 border border-[color:var(--moba-accent-line)] overflow-hidden">
           <div
             className="h-full rounded-full transition-all"
-            style={{ width: `${pct}%`, background: hasEnoughDuplicates ? "#8b5cf6" : "#52525b" }}
+            style={{ width: `${pct}%`, background: hasEnoughDuplicates ? "#e8961c" : "#52525b" }}
           />
         </div>
       </div>
@@ -143,14 +144,14 @@ export default function DuplicateProgress({
         title={!hasEnoughDuplicates ? "Nicht genug Duplikate" : !hasEnoughCoins ? "Nicht genug Münzen" : undefined}
         className={`w-full flex items-center justify-center gap-1 text-[10px] font-bold py-1 rounded-md transition-colors ${
           canUpgrade
-            ? "bg-violet-500/25 text-violet-200 hover:bg-violet-500/35"
-            : "bg-white/[0.03] text-gray-600 cursor-not-allowed"
+            ? "bg-orange-500/20 text-[color:var(--moba-accent)] hover:bg-orange-500/30"
+            : "bg-black/20 text-gray-600 cursor-not-allowed"
         }`}
       >
         {loading ? (
           <Loader2 className="w-3 h-3 animate-spin" />
         ) : (
-          <ArrowUpCircle className="w-3 h-3" />
+          <MobaIcon name="chevronUp" className="w-3 h-3" />
         )}
         {!hasEnoughDuplicates ? "Zu wenig Duplikate" : !hasEnoughCoins ? "Zu wenig Münzen" : "Upgrade"}
       </button>

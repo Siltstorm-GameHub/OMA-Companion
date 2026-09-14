@@ -91,7 +91,7 @@ export default function DuelDeckEditor({
 
   return (
     <div className="space-y-6">
-      <div className="glass rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+      <div className="moba-panel rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
         <span className={total === DUEL_DECK_TOTAL_SIZE ? "text-emerald-400 font-semibold" : "text-gray-400"}>
           {total}/{DUEL_DECK_TOTAL_SIZE} Karten gewählt
         </span>
@@ -172,9 +172,12 @@ export default function DuelDeckEditor({
         type="button"
         onClick={submit}
         disabled={!canSubmit || submitting}
-        className="w-full py-3 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 bg-teal-500 hover:bg-teal-400 text-black disabled:opacity-30 disabled:cursor-not-allowed"
+        className="moba-button w-full py-3 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed"
       >
-        {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Duell-Deck speichern"}
+        <div className="moba-button-fill" style={{ background: "linear-gradient(180deg, #ffc25c 0%, #e8961c 55%, #b8710a 100%)" }} />
+        <span className="moba-button-label relative">
+          {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Duell-Deck speichern"}
+        </span>
       </button>
     </div>
   );

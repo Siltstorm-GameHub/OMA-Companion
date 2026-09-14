@@ -12,9 +12,10 @@
 import { useEffect } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import confetti from "canvas-confetti";
-import { ArrowUp, X } from "lucide-react";
+import { X } from "lucide-react";
 import { scaleStatsForLevel } from "@/lib/battle-engine/stats";
 import BattleCardView, { LEVEL_BORDER } from "./BattleCardView";
+import MobaIcon from "./MobaIcon";
 import type { BattleCardData } from "./BattleCardView";
 
 export interface CardUpgradeAnimationState {
@@ -30,7 +31,7 @@ function StatDeltaRow({ label, from, to }: { label: string; from: number; to: nu
       <span className="text-[11px] text-gray-500 uppercase tracking-widest font-semibold">{label}</span>
       <div className="flex items-center gap-2 tabular-nums">
         <span className="text-sm text-gray-500">{from}</span>
-        <ArrowUp className="w-3 h-3 text-emerald-400" />
+        <MobaIcon name="chevronUp" className="w-3 h-3" />
         <span className="text-base font-black text-white">{to}</span>
         {delta > 0 && (
           <span className="text-xs font-bold text-emerald-400">+{delta}</span>
@@ -114,7 +115,7 @@ export default function CardUpgradeOverlay({
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.65 }}
-            className="w-full surface-elevated rounded-xl px-4 py-2"
+            className="w-full moba-panel rounded-xl px-4 py-2"
           >
             <StatDeltaRow label="HP" from={oldStats.hp} to={newStats.hp} />
             <StatDeltaRow label="Angriff" from={oldStats.attack} to={newStats.attack} />
@@ -127,7 +128,7 @@ export default function CardUpgradeOverlay({
             transition={{ delay: 0.8 }}
             type="button"
             onClick={onClose}
-            className="text-xs font-semibold px-4 py-2 rounded-md bg-white/[0.06] text-gray-300 hover:bg-white/[0.1] transition-colors"
+            className="moba-pill normal-case font-semibold px-4 py-2 hover:bg-white/[0.06] transition-colors"
           >
             Fertig
           </motion.button>

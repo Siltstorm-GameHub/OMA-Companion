@@ -27,7 +27,7 @@
 // (CSS-Transition auf transform, siehe fallingCells) — statt nur stumpf das
 // Endergebnis einzublenden.
 
-import { HelpCircle, Users } from "lucide-react";
+import MobaIcon from "./MobaIcon";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import type { UnitClass } from "@/lib/battle-engine/types";
@@ -444,7 +444,7 @@ export default function BoardMatch3({
             className="text-gray-500 hover:text-gray-300 transition-colors"
             aria-label={legendOpen ? "Erklärung ausblenden" : "Wie funktioniert das Brett?"}
           >
-            <HelpCircle className="w-3 h-3" />
+            <MobaIcon name="help" className="w-3 h-3" />
           </button>
         </span>
         {/* Jeder erfolgreiche Swap löst sofort Rage + Angriff aus (siehe
@@ -460,7 +460,7 @@ export default function BoardMatch3({
               absolute), statt es nach unten zu verdrängen (das ließ das feste
               212px-Panel in LiveBattleView zuvor intern scrollen). */}
           <div className="fixed inset-0 z-10" onClick={toggleLegend} />
-          <div className="absolute top-5 left-0 right-0 z-20 rounded-lg bg-[#14171f] border border-white/10 px-2.5 py-2 space-y-1.5 text-[10px] text-gray-400 leading-snug shadow-xl">
+          <div className="absolute top-5 left-0 right-0 z-20 rounded-lg bg-[#04061a] border border-[color:var(--moba-accent-line)] px-2.5 py-2 space-y-1.5 text-[10px] text-gray-400 leading-snug shadow-xl">
             {(Object.keys(TILE_ICON) as TileClassSymbol[]).map((symbol) => {
               const icon = TILE_ICON[symbol];
               return (
@@ -474,7 +474,7 @@ export default function BoardMatch3({
               );
             })}
             <div className="flex items-center gap-1.5 pt-0.5 border-t border-white/5">
-              <Users className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+              <MobaIcon name="friends" className="w-3.5 h-3.5 shrink-0" />
               <span>5er-Match = Bonus-Rage fürs ganze Team. Volle Rage? Heldenkarte antippen für Ultimate — jederzeit.</span>
             </div>
             <div className="flex items-center gap-1.5 pt-0.5 border-t border-white/5">
