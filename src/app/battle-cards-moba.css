@@ -138,22 +138,6 @@
   justify-content: center;
 }
 
-/* ── HP-/Rage-/LP-Balken (bar3-Set: eine Bg + 5 Fill-Farben) ── */
-.moba-hp-bar {
-  position: relative;
-  height: 8px;
-  border-radius: 4px;
-  overflow: hidden;
-  background: rgba(0, 0, 0, 0.45);
-  border: 1px solid var(--moba-accent-line);
-}
-.moba-hp-bar .moba-hp-fill {
-  display: block;
-  height: 100%;
-  border-radius: 3px;
-  transition: width 0.3s ease-out;
-}
-
 /* ── Leere Slots (Feld, Sammlung) ── */
 .moba-slot-empty {
   border: 1.5px dashed var(--moba-accent-line);
