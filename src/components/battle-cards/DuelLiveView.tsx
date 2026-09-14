@@ -1147,7 +1147,7 @@ export default function DuelLiveView({
             Hand-/Aktionsleiste bleiben fix (siehe Content-Rahmen oben). */}
         <div
           ref={boardRef}
-          className={`flex-1 min-h-0 space-y-4 rounded-xl transition-shadow ${dragHoverBoard ? "ring-2 ring-amber-400/70" : ""}`}
+          className={`flex-1 min-h-0 overflow-y-auto space-y-4 rounded-xl transition-shadow ${dragHoverBoard ? "ring-2 ring-amber-400/70" : ""}`}
         >
         {/* Gegner */}
         <div className="space-y-2">
