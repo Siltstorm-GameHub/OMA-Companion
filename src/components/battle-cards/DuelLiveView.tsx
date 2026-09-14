@@ -184,6 +184,17 @@ const ATTACK_LABEL: Record<DuelAttackType, string> = {
 
 const STANCE_LABEL: Record<DuelStance, string> = { attack: "Angriff", defense: "Verteidigung" };
 
+/** Das Ultimate wirkt in OMA Duels über eine feste, klassenabhängige Formel
+ *  statt über den freien Karten-Effekt (siehe applyClassUltimate in
+ *  duels-live.ts) — die Tooltip-Beschreibung beschreibt daher die Klasse,
+ *  nicht die einzelne Karte. Der Kartenname (ultimateSkillName) bleibt davon
+ *  unberührt individuell. */
+const CLASS_ULTIMATE_DESCRIPTION: Record<UnitClass, string> = {
+  TANK: "Rammt mit voller Wucht — Schaden basiert auf der eigenen Verteidigung, danach Schild fürs ganze Team.",
+  DAMAGE_DEALER: "Brutaler Burst-Schaden — besiegt er das Ziel, schlägt der Überschuss direkt auf die gegnerischen Lebenspunkte durch.",
+  SUPPORT: "Kein Angriff — heilt das gesamte eigene Team und gibt allen zusätzlich Rage.",
+};
+
 const TONE_COLOR: Record<FloatingEffect["tone"], string> = {
   damage: "#fb7185",
   crit: "#f43f5e",
@@ -892,7 +903,7 @@ export default function DuelLiveView({
                       {ultimateReady && (
                         <button
                           onClick={() => selectAttack(slot, "ultimate")}
-                          title={`${slot.ultimateSkillName}: ${slot.ultimateSkillDescription}`}
+                          title={`${slot.ultimateSkillName}: ${CLASS_ULTIMATE_DESCRIPTION[slot.class]}`}
                           className={`text-[10px] px-1.5 py-0.5 rounded border ${
                             isSelectedAttacker && pendingAttack?.attackType === "ultimate"
                               ? "border-amber-400 bg-amber-500/20 text-amber-200"
